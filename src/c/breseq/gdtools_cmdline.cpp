@@ -811,10 +811,9 @@ int do_count(int argc, char* argv[])
       }
     }
   }
-  
-  vector<string> mob_name_list = map_keys_to_list(mob_name_hash);
+  vector<string> mob_name_list = map_keys_to_list<string,bool>(mob_name_hash);
   sort(mob_name_list.begin(), mob_name_list.end());
-  vector<string> con_name_list = map_keys_to_list(con_name_hash);
+  vector<string> con_name_list = map_keys_to_list<string,bool>(con_name_hash);
   sort(con_name_list.begin(), con_name_list.end());
   
   vector<string> column_headers;
@@ -990,10 +989,11 @@ int do_count(int argc, char* argv[])
       int32_t called_bp = total_bp - un_bp;
    
       vector<string> this_columns;
+   
       this_columns.push_back(gd.metadata.run_name);
       this_columns.push_back(to_string(mut_list.size()));
-      
-      vector<int32_t> snp_type_counts = map_key_list_to_values(count["type"], snp_types);
+
+      vector<string> snp_type_counts = map_key_list_to_values_as_strings(count["type"], snp_types);
       this_columns.insert(this_columns.end(),snp_type_counts.begin(), snp_type_counts.end());
 
       
@@ -1006,12 +1006,12 @@ int do_count(int argc, char* argv[])
       this_columns.push_back(to_string(count["amp"][""]));
       this_columns.push_back(to_string(count["mobile_elements"][""]));
 
-      vector<int32_t> mob_type_counts = map_key_list_to_values(count["type"], mob_name_list);
+      vector<string> mob_type_counts = map_key_list_to_values_as_strings(count["type"], mob_name_list);
       this_columns.insert(this_columns.end(),mob_type_counts.begin(), mob_type_counts.end());
       
       this_columns.push_back(to_string(count["gene_conversion"][""]));
       
-      vector<int32_t> con_type_counts = map_key_list_to_values(count["type"], con_name_list);
+      vector<string> con_type_counts = map_key_list_to_values_as_strings(count["type"], con_name_list);
       this_columns.insert(this_columns.end(),con_type_counts.begin(), con_type_counts.end());
 
       this_columns.push_back(to_string(called_bp));
