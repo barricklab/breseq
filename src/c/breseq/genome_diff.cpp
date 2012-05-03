@@ -2359,7 +2359,399 @@ void VCFtoGD( const string& vcffile, const string& gdfile ){
     output.close();
 }
 
+void GDtoCircos(const vector<string> &gd_file_names, 
+                const vector<string> &reference_file_names,
+                const string &circos_directory){
+  //Due to circos' unchangeable method of reversing labels (including glyphs)
+  //after the 6 o'clock position on a graph, I am manually adding which
+  //genomes will be reversed on the MOB graph to compensate for this.
+  
+  //The author emailed me on 30/4/2012 saying that he's working on an
+  //option for enabling/disabling this. Until then, the intelligent method right
+  //now will be kept.
+  //Aaron
+  
+  cGenomeDiff combined_gd;
+  
+  int32_t number_of_mutations = 0;
+  
+  for (int32_t i = 0; i < gd_file_names.size(); i++){
+    cGenomeDiff single_gd(gd_file_names[i]);
+    combined_gd.merge(single_gd);
+    number_of_mutations += single_gd.mutation_list().size();
+  }
+  
+  cReferenceSequences ref;
+  ref.LoadFiles(reference_file_names);
+  ref.annotate_mutations(combined_gd, true);
+  const vector<string> seq_ids(ref.seq_ids());
+  
+  string make_me;
+  
+  Settings settings("");
+  
+  
+  create_path(circos_directory);
+  create_path(circos_directory + "/data");
+  create_path(circos_directory + "/etc");
+  
+  //copy run script
+  copy_file(settings.program_data_path + "/run_circos.sh", circos_directory + "/run_circos.sh");
+  
+  //filling circos_dir/etc
+  
+  copy_file(settings.program_data_path + "/ideogram.conf", circos_directory + "/etc/ideogram.conf");
+  copy_file(settings.program_data_path + "/karyotype.and.layout.conf", circos_directory + "/etc/karyotype.and.layout.conf");
+  copy_file(settings.program_data_path + "/indels.conf", circos_directory + "/etc/indels.conf");
+  copy_file(settings.program_data_path + "/mobs.conf", circos_directory + "/etc/mobs.conf");
+  copy_file(settings.program_data_path + "/mutations.conf", circos_directory + "/etc/mutations.conf");
+  copy_file(settings.program_data_path + "/combined_circos.conf", circos_directory + "/etc/combined_circos.conf");
+  
+  //filling circos_dir/data
+  
+  ofstream karyotype_file;
+  ofstream empty_file;
+  
+  make_me = circos_directory + "/data/karyotype.txt";
+  karyotype_file.open(make_me.c_str());
+  make_me = circos_directory + "/data/empty_data.txt";
+  empty_file.open(make_me.c_str());
+  
+  map <string, pair<int32_t, int32_t> > right_side;
+  map <string, pair<int32_t, int32_t> > left_side;
+  
+  pair<int32_t, int32_t> push_pair;
+  
+  //keeps track of current position when examining sequence sizes of genomes
+  int32_t current_position = 0;
+  bool push_left = false;
+  
+  int32_t half_ref_length;
+  half_ref_length = int32_t(ref.total_length() / 2) + 1;
+  
+  for (uint32_t i = 0; i < seq_ids.size(); i++){
+    uint32_t seq_size;
+    seq_size = ref[seq_ids[i]].get_sequence_size();
+    
+    karyotype_file << "chr - " << seq_ids[i] << " 1 1 " <<
+                      seq_size << " black" << endl;
+    empty_file << seq_ids[i] << " 1 2 1" << endl;
+    
+    //if seq_size goes past halfway point of total length of genomes,
+    //add this sequence and its bounds to the left_side vector.
+    current_position += seq_size;
+    
+    
+    if (!push_left){
+      //if current_position equals the cusp, enable left side
+      //and push current sequence to the right.
+      if (current_position == half_ref_length) {
+        push_left = true;
+        
+        push_pair.first = 1;
+        push_pair.second = seq_size;
+        right_side[seq_ids[i]] = push_pair;
+        
+        continue;
+      }
+      //if it's greater, fragment the sequence's bounds.
+      else if (current_position > half_ref_length) {
+        push_left = true;
+        
+        push_pair.first = 1;
+        push_pair.second = half_ref_length - (current_position - seq_size);
+        right_side[seq_ids[i]] = push_pair;
+        
+        push_pair.first = half_ref_length - (current_position - seq_size) + 1;
+        push_pair.second = seq_size;
+        left_side[seq_ids[i]] = push_pair;
+        
+        continue;
+      }
+    }
+    
+    push_pair.first = 1;
+    push_pair.second = seq_size;
+    
+    if (push_left){
+      left_side[seq_ids[i]] = push_pair;
+    }
+    else{
+      right_side[seq_ids[i]] = push_pair;
+    }
+    
+  }
+  
+  karyotype_file.close();
+  empty_file.close();
+  
+  //minimum tile size width for indel graph
+  const int32_t MIN_WIDTH = ref.total_length() * .0025;
+  
+  ofstream indel_file;
+  ofstream mob_file;
+  
+  ofstream synonymous_mutation_file;
+  ofstream nonsynonymous_mutation_file;
+  ofstream npi_mutation_file;
+  
+  make_me = circos_directory + "/data/indels_data.txt";
+  indel_file.open(make_me.c_str());
+  make_me = circos_directory + "/data/mobs_data.txt";
+  mob_file.open(make_me.c_str());
+  
+  make_me = circos_directory + "/data/syn_data.txt";
+  synonymous_mutation_file.open(make_me.c_str());
+  make_me = circos_directory + "/data/nonsyn_data.txt";
+  nonsynonymous_mutation_file.open(make_me.c_str());
+  make_me = circos_directory + "/data/npi_data.txt";
+  npi_mutation_file.open(make_me.c_str());
+  
+  map <string, string> mob_colors;
+  
+  //colors for mobs
+  const char* c_colors[] = {"vvdred", "vvdgreen", "vvdblue", "vvdorange", "vvdpurple",
+                            "vdred", "vdgreen", "vdblue", "vdorange", "vdpurple",
+                            "dred", "dgreen", "dblue", "dorange", "dpurple",
+                            "red", "green", "blue", "orange", "purple",
+                            "lred", "lgreen", "lblue", "lorange", "lpurple",
+                            "vlred", "vlgreen", "vlblue", "vlorange", "vlpurple",
+                            "vvlred", "vvlgreen", "vvlblue",  "vvlorange", "vvlpurple"};
+  
+  vector<string> colors(c_colors, c_colors + 35);
+  string color;
+  int32_t next_color = 0;
+  
+  diff_entry_list_t gd_data = combined_gd.mutation_list();
+  
+  for (diff_entry_list_t::iterator it = gd_data.begin(); it != gd_data.end(); it++){
+    
+    cDiffEntry diff = **it;
+    
+    int32_t width;
+    string direction;
+    
+    
+    if (diff._type == INS){
+      width = from_string<int32_t>(diff["new_seq"]);
+      if (width < MIN_WIDTH){
+        width = MIN_WIDTH;
+      }
+      indel_file << diff["seq_id"] << " " <<
+                    diff["position"] << " " <<
+                    from_string<int32_t>(diff["position"]) + width << " " <<
+                    "color=vdgreen" << endl;
+    }
+    else if (diff._type == AMP){
+      width = from_string<int32_t>(diff["size"]);
+      if (width < MIN_WIDTH){
+        width = MIN_WIDTH;
+      }
+      indel_file << diff["seq_id"] << " " <<
+                    diff["position"] << " " <<
+                    from_string<int32_t>(diff["position"]) + width << " " <<
+                    "color=vdgreen" << endl;
+    }
+    else if (diff._type == DEL){
+      width = from_string<int32_t>(diff["size"]);
+      if (width < MIN_WIDTH){
+        width = MIN_WIDTH;
+      }
+      indel_file << diff["seq_id"] << " " <<
+                    from_string<int32_t>(diff["position"]) - width << " " <<
+                    diff["position"] << " " <<
+                    "color=vdred" << endl;
+    }
+    else if(diff._type == SNP || diff._type == SUB){
+      if (diff["snp_type"] == "synonymous"){
+        synonymous_mutation_file << diff["seq_id"] << " " <<
+                                    diff["position"] << " " <<
+                                    diff["position"] << endl;
+      }
+      else if (diff["snp_type"] == "nonsynonymous"){
+        nonsynonymous_mutation_file << diff["seq_id"] << " " <<
+                                    diff["position"] << " " <<
+                                    diff["position"] << endl;
+      }
+      else{
+        npi_mutation_file << diff["seq_id"] << " " <<
+                                    diff["position"] << " " <<
+                                    diff["position"] << endl;
+      }
+      
+    }
+    else if(diff._type == MOB){
+      
+      //if mob is on left side of graph...reverse direction
+      if (left_side.count(diff["seq_id"]) > 0){
+        if (left_side[diff["seq_id"]].first <= from_string<int32_t>(diff["position"]) &&
+            from_string<int32_t>(diff["position"]) <= left_side[diff["seq_id"]].second){
+          if( diff["strand"] == "1"){
+            direction = "left";
+          }
+          else{
+            direction = "right";
+          }
+        }
+        else{
+          if ( diff["strand"] == "1"){
+            direction = "right";
+          }
+          else{
+            direction = "left";
+          }
+        }
+      }
+      else{
+        if( diff["strand"] == "1"){
+          direction = "right";
+        }
+        else{
+          direction = "left";
+        }
+      }
+      
+      if (mob_colors.count(diff["repeat_name"]) == 0){
+        color = colors[next_color];
+        mob_colors[diff["repeat_name"]] = color;
+        next_color++;
+      }
+      else{
+        color = mob_colors[diff["repeat_name"]];
+      }
+      
+      mob_file << diff["seq_id"] << " " <<
+                  diff["position"] << " " <<
+                  diff["position"] << " " <<
+                  "o" << direction << " " <<
+                  "color=" << color << endl;
+    }
+  }
+  
+//  diff_entry_list_t gd_data = combined_gd.mutation_list();
+  
+//  for (diff_entry_list_t::iterator it = gd_data.begin(); it != gd_data.end(); it++){
+    
+//    cDiffEntry diff = **it;
+  
+  //reference sequence MOBs
+  for(int32_t i = 0; i < ref.size(); i++){
+    cAnnotatedSequence ref_seq = ref[i];
+    
+    for(cSequenceFeatureList::iterator it = ref_seq.m_repeats.begin(); it != ref_seq.m_repeats.end(); it++){
+      cSequenceFeature seq_feature = **it;
+      int32_t middle = int32_t(seq_feature.m_start + seq_feature.m_end) / 2;
+      
+      string direction;
+      string color;
+      
+      if (left_side.count(ref_seq.m_seq_id) > 0){
+        if (left_side[ref_seq.m_seq_id].first <= middle &&
+            middle <= left_side[ref_seq.m_seq_id].second){
+          if (seq_feature.m_strand == 1){
+            direction = "left";
+          }
+          else{
+            direction = "right";
+          }
+        }
+        else{
+          if (seq_feature.m_strand == 1){
+            direction = "right";
+          } 
+          else{
+            direction = "left";
+          }
+        }
+      }
+      else{
+        if (seq_feature.m_strand == 1){
+          direction = "right";
+        } 
+        else{
+          direction = "left";
+        }
+      }
+      
+      if (mob_colors.count(seq_feature["name"]) == 0){
+        color = colors[next_color];
+        mob_colors[seq_feature["name"]] = color;
+        next_color++;
+      }
+      else{
+        color = mob_colors[seq_feature["name"]];
+      }
+      
+      mob_file << ref_seq.m_seq_id << " " <<
+                  seq_feature.m_start << " " <<
+                  seq_feature.m_end << " " <<
+                  "i" << direction << " " <<
+                  "color=" << color << endl;
+    }
+    
+    //seq.m_repeats
+    
+  }
+  
+  indel_file.close();
+  mob_file.close();
+  synonymous_mutation_file.close();
+  nonsynonymous_mutation_file.close();
+  npi_mutation_file.close();
+  
+}
 
+void MIRAtoGD(const string &mira_file_name, const string &gd_file_name){
+  //this was made on accident :(
+  //words cannot express, so I will use another :(
+  ifstream mira_file;
+  
+  mira_file.open(mira_file_name.c_str());
+  
+  if (!mira_file){
+    cerr << "Could not open " << mira_file_name << endl;
+    return;
+  }
+  
+  string line;
+  
+  cGenomeDiff gd;
+  
+  while (getline(mira_file, line)){
+    vector <string> items = split_on_whitespace(line);
+    
+    if (items[0] == "#"){
+      continue;
+    }
+    
+    
+    cDiffEntry mut(UNKNOWN);
+    
+    if (items[9] == "basechange"){
+      mut._type = SNP;
+      mut["seq_id"] = items[0].substr(0, items[0].length() - 3);
+      mut["position"] = items[4];
+      mut["new_seq"] = items[10].substr(items[10].length() - 1);
+    }
+    else if (items[9] == "insertion"){
+      mut._type = INS;
+      mut["seq_id"] = items[0].substr(0, items[0].length() - 3);
+      mut["position"] = items[4].substr(items[4].find(":") + 1);
+      mut["new_seq"] = items[10].substr(items[10].length() - 1);
+    }
+    else if (items[9] == "deletion"){
+      mut._type = DEL;
+      mut["seq_id"] = items[0].substr(0, items[0].length() - 3);
+      mut["position"] = items[4];
+      mut["size"] = "1";
+    }
+    if (mut._type != UNKNOWN) {
+      gd.add(mut);
+    }
+  }
+  gd.write(gd_file_name);
+  mira_file.close();
+}
 cGenomeDiff cGenomeDiff::from_vcf(const string &file_name)
 {
     //VCF Column order.

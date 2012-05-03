@@ -84,7 +84,15 @@ EXTRA_DIST = \
 	coverage_distribution.r \
 	plot_coverage.r \
 	plot_error_rate.r \
-	polymorphism_statistics.r
+	polymorphism_statistics.r \
+	run_circos.sh \
+	ideogram.conf \
+	indels.conf \
+	karyotype.and.layout.conf \
+	mobs.conf \
+	mutations.conf \
+	combined_circos.conf
+	
 
 install-data-local :
 
@@ -96,3 +104,10 @@ install-data-local :
 	cp plot_coverage.r $(BRESEQDATADIR)
 	cp plot_error_rate.r $(BRESEQDATADIR)
 	cp polymorphism_statistics.r $(BRESEQDATADIR)
+	cp run_circos.sh $(BRESEQDATADIR)
+	cp indels.conf $(BRESEQDATADIR)
+	cp mutations.conf $(BRESEQDATADIR)
+	cp karyotype.and.layout.conf $(BRESEQDATADIR)
+	cp mobs.conf $(BRESEQDATADIR)
+	cp ideogram.conf $(BRESEQDATADIR)
+	cp combined_circos.conf $(BRESEQDATADIR)

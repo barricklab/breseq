@@ -44,6 +44,7 @@ int gdtools_usage()
   uout("Format Conversions:");
   uout << "gd2gvf                 GD to Genome Variant Format(GVF)" << endl;
   uout << "vcf2gd                 Variant Call Format(VCF) to GD" << endl;
+  uout << "gd2circos              GD to Circos Data" << endl;
 
   uout("Set Operations:");
   uout << "subtract               remove mutations" << endl;
@@ -529,6 +530,73 @@ int do_convert_gd( int argc, char* argv[])
 
   gd.write(file_name);
 
+  return 0;
+}
+
+int do_convert_circos(int argc, char *argv[]){
+  AnyOption options("GD2CIRCOS --input <input.gd> --output <output_dir>");
+  
+  options
+    ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
+    ("input,i","gd file to convert") 
+    ("reference,r", "reference file(s) specified in gd file")
+    ("output,o","name of directory to save Circos files")
+    ;
+  options.processCommandArgs(argc, argv);
+  
+  options.addUsage("");
+  options.addUsage("Creates text files which can be read by Circos to create a visual representation of a GD file.");
+  
+  if (!options.count("input") && !options.count("output")){
+    options.printUsage();
+    return -1;
+  }
+  if (!options.count("input")){
+    options.printUsage();
+    return -1;
+  }
+  
+  try{
+    GDtoCircos(from_string<vector<string> >(options["input"]), 
+               from_string<vector<string> >(options["reference"]),
+               options["output"]);
+  } 
+  catch(...){ 
+      return -1; // failed 
+  }
+  
+  return 0;
+}
+
+int do_convert_mira(int argc, char* argv[]){
+  AnyOption options("MIRA2GD --input <input.gd> --output <output_dir>");
+  
+  options
+    ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
+    ("input,i","mira feature analysis file to convert") 
+    ("output,o","name of gd file to save")
+    ;
+  options.processCommandArgs(argc, argv);
+  
+  options.addUsage("");
+  options.addUsage("Creates a GD file from a MIRA feature analysis file. Be sure to normalize the GD created afterward.");
+  
+  if (!options.count("input") && !options.count("output")){
+    options.printUsage();
+    return -1;
+  }
+  if (!options.count("input")){
+    options.printUsage();
+    return -1;
+  }
+  
+  try{
+      MIRAtoGD( options["input"], options["output"]);
+  } 
+  catch(...){ 
+      return -1; // failed 
+  }
+  
   return 0;
 }
 
@@ -1297,6 +1365,10 @@ int main(int argc, char* argv[]) {
     return do_convert_gvf(argc_new, argv_new);
   } else if (command == "VCF2GD") {             
     return do_convert_gd( argc_new, argv_new);
+  } else if (command == "GD2CIRCOS"){
+    return do_convert_circos(argc_new, argv_new);
+  } else if(command == "MIRA2GD"){
+    return do_convert_mira(argc_new, argv_new);
   }
 
   return 0;
