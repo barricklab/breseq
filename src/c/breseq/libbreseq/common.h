@@ -89,7 +89,7 @@ namespace breseq {
       if (message.length() > 0) cerr << message << endl;
       cerr << "FILE: " << file << "   LINE: " << line << endl;
       cerr << "!!!!!!!!!!!!!!!!!!!!!!!> FATAL ERROR <!!!!!!!!!!!!!!!!!!!!!!!" << endl;
-      exit(-1);
+      assert(false);
     }
   }
   
@@ -494,7 +494,7 @@ namespace breseq {
   
   template <typename T> inline T from_string(const string &s)
 	{
-    assert(!s.empty());
+    ASSERT(!s.empty(), "Attempt to convert empty string");
     T t;
 		istringstream iss(s);
 		iss >> boolalpha >> t;
