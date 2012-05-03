@@ -424,6 +424,7 @@ namespace breseq {
     uint32_t best_greater_than;
     uint32_t left_greater_than;
     uint32_t right_greater_than;
+    int32_t max_error_threshold;
     
     //to skip the header
     string skip;
@@ -434,6 +435,8 @@ namespace breseq {
     ofstream history_file;
     
     randomizations = 100;
+    
+    max_error_threshold = int(randomizations * .05) + 1;
     
     srand(0);
     
@@ -647,6 +650,9 @@ namespace breseq {
       //cin.get();
       //examine the segment i + 1 to j further by randomizing its distribution and scoring it.
       //randomized_segment_scores.empty();
+      
+      
+      
       for ( int32_t examinations = 0; examinations < randomizations; examinations++ )
       {
         available_coverage.clear();
@@ -784,6 +790,11 @@ namespace breseq {
         if ( best_t_right > r_best_right ){
           right_greater_than++;
         }
+        
+        if ((examinations + 1) - best_greater_than > max_error_threshold){
+          break;
+        }
+        
       }
       //cout << "best" << best_greater_than << endl;
       //if 95% of the t scores of the randomized coverage are less than
