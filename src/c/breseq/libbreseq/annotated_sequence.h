@@ -551,7 +551,8 @@ namespace breseq {
     BaseSubstitutionEffects(cReferenceSequences& ref_seq_info)
     { (void)ref_seq_info; }
   
-  typedef vector<uint8_t[12]> SequenceBaseSubstitutionEffects;
+  //@GRC -> @JEB, Lonestar was not happy with uint8_t[12] being here.
+  typedef vector<string> SequenceBaseSubstitutionEffects;
   map<string,SequenceBaseSubstitutionEffects> m_bse;
     
   };
