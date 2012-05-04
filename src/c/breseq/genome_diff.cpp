@@ -140,13 +140,12 @@ cDiffEntry::cDiffEntry(const string &line)
   ,_evidence()
 {
   cDiffEntry *de = this;
-
-  stringstream ss_line(line);
   typedef vector<string> string_vector_t;
+  string_vector_t tokens = split_on_whitespace(line);
+  int COLUMN = 0;
 
   //! Step: Get the type. (Convert from string to enumeration.)
-  string type = "";
-  getline(ss_line, type, '\t');
+  string type = tokens[COLUMN++]; 
 
   //Find the string value in the lookup table and cast index to enumeration.
   const size_t lookup_table_size = gd_entry_type_lookup_table.size();
@@ -170,13 +169,12 @@ cDiffEntry::cDiffEntry(const string &line)
   }
 
   //! Step: Get the id.
-  getline(ss_line, de->_id, '\t');
+  de->_id = tokens[COLUMN++];
 
   /*! Step: If this diff entry is a mutation we need to get it's supporting
   evidence. */
   if (de->is_mutation()) {
-    string evidence = "";
-    getline(ss_line, evidence, '\t');
+    string evidence = tokens[COLUMN++];
 
     string_vector_t evidence_vector = split(evidence, ",");
 
@@ -189,19 +187,14 @@ cDiffEntry::cDiffEntry(const string &line)
       }
     } 
 
-  } else {
-    /*Evidence and validation diff entry types do not have evidence parameters
-    so we discard this segment from the stream and continue on. */
-    ss_line.ignore(254,'\t');
-  }
+  } 
 
   /*! Step: Get line specifications and assign them. */
   const string_vector_t &diff_entry_specs = line_specification[de->_type];
   const size_t diff_entry_specs_size = diff_entry_specs.size();
   for (size_t i = 0; i < diff_entry_specs_size; i++) {
      const diff_entry_key_t &key = diff_entry_specs[i];
-     diff_entry_value_t value = "";
-     getline(ss_line, value, '\t');
+     diff_entry_value_t value = COLUMN + 1 > tokens.size() ? "" : tokens[COLUMN++];
      if (value.empty()) {
        value = "?";
        string msg = "";
@@ -214,9 +207,8 @@ cDiffEntry::cDiffEntry(const string &line)
   }
 
   /*! Step: Get the rest of the fields.*/
-  while (ss_line.good()) {
-    string key_value_pair = "";
-    getline(ss_line, key_value_pair, '\t');
+  while (COLUMN < tokens.size()) {
+    string key_value_pair = tokens[COLUMN++];
     if (key_value_pair.empty()) {
       continue;
     }
