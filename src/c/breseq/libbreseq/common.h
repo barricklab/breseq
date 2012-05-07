@@ -434,6 +434,22 @@ namespace breseq {
 		lhs = split(value, ",");
 		return stream;
 	}*/
+	inline istream &operator >> (istream &stream, vector<string>& rhs)
+  {
+    /*
+     * NOTE: Can't rely on templated form to properly read in strings,
+     * since it will split them on whitespace (not \n) with the operator >>.
+     */
+    string value = "";
+
+    while(!stream.eof()) {
+      std::getline(stream, value, '\n');
+      rhs.push_back(value);
+    }
+
+    return stream;
+  }
+
 	template <typename T> inline istream &operator >> (istream &stream, vector<T>& rhs)
 	{
 		rhs.clear();
@@ -448,7 +464,6 @@ namespace breseq {
 		}
 		return stream;
 	}
-
 
 	template <typename T> inline string to_string (const T& t)
 	{
