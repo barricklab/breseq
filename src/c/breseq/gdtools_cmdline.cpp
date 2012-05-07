@@ -534,30 +534,46 @@ int do_convert_gd( int argc, char* argv[])
 }
 
 int do_convert_circos(int argc, char *argv[]){
-  AnyOption options("GD2CIRCOS --input <input.gd> --output <output_dir>");
+  
+  AnyOption options("GD2CIRCOS -r <reference> [-r <reference2> ...] -o <output_dir> input1.gd [input2.gd ...]");
   
   options
     ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-    ("input,i","gd file to convert") 
     ("reference,r", "reference file(s) specified in gd file")
     ("output,o","name of directory to save Circos files")
     ;
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
-  options.addUsage("Creates text files which can be read by Circos to create a visual representation of a GD file.");
+  options.addUsage("Creates text files which can be read by Circos to create a visual representation of a GD file. Executes Circos and saves images in the output directory.");
   
-  if (!options.count("input") && !options.count("output")){
+  if (!options.count("output")){
+    options.addUsage("");
+    options.addUsage("No output provided.");
     options.printUsage();
     return -1;
   }
-  if (!options.count("input")){
+  if (!options.count("reference")){
+    options.addUsage("");
+    options.addUsage("No reference provided.");
+    options.printUsage();
+    return -1;
+  }
+  
+  vector<string> gd_names;
+  for (int32_t i = 0; i < options.getArgc(); i++){
+    gd_names.push_back(options.getArgv(i));
+  }
+  
+  if (gd_names.size() == 0){
+    options.addUsage("");
+    options.addUsage("No input provided.");
     options.printUsage();
     return -1;
   }
   
   try{
-    GDtoCircos(from_string<vector<string> >(options["input"]), 
+    GDtoCircos(gd_names, 
                from_string<vector<string> >(options["reference"]),
                options["output"]);
   } 
@@ -569,6 +585,7 @@ int do_convert_circos(int argc, char *argv[]){
 }
 
 int do_convert_mira(int argc, char* argv[]){
+  //unsupported before it ever saw the light of day.
   AnyOption options("MIRA2GD --input <input.gd> --output <output_dir>");
   
   options
