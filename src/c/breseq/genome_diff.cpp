@@ -2487,6 +2487,7 @@ void GDtoCircos(const vector<string> &gd_file_names,
   
   //minimum tile size width for indel graph
   const int32_t MIN_WIDTH = ref.total_length() * .0025;
+  const int32_t MIN_DISPLAY_LENGTH = 51; //inclusive
   
   ofstream indel_file;
   ofstream mob_file;
@@ -2534,9 +2535,13 @@ void GDtoCircos(const vector<string> &gd_file_names,
     
     if (diff._type == INS){
       width = from_string<int32_t>(diff["new_seq"]);
+      if (width < MIN_DISPLAY_LENGTH){
+        continue;
+      }
       if (width < MIN_WIDTH){
         width = MIN_WIDTH;
       }
+      
       indel_file << diff["seq_id"] << " " <<
                     diff["position"] << " " <<
                     from_string<int32_t>(diff["position"]) + width << " " <<
@@ -2544,9 +2549,13 @@ void GDtoCircos(const vector<string> &gd_file_names,
     }
     else if (diff._type == AMP){
       width = from_string<int32_t>(diff["size"]);
+      if (width < MIN_DISPLAY_LENGTH){
+        continue;
+      }
       if (width < MIN_WIDTH){
         width = MIN_WIDTH;
       }
+      
       indel_file << diff["seq_id"] << " " <<
                     diff["position"] << " " <<
                     from_string<int32_t>(diff["position"]) + width << " " <<
@@ -2554,12 +2563,15 @@ void GDtoCircos(const vector<string> &gd_file_names,
     }
     else if (diff._type == DEL){
       width = from_string<int32_t>(diff["size"]);
+      if (width < MIN_DISPLAY_LENGTH){
+        continue;
+      }
       if (width < MIN_WIDTH){
         width = MIN_WIDTH;
       }
       indel_file << diff["seq_id"] << " " <<
-                    from_string<int32_t>(diff["position"]) - width << " " <<
                     diff["position"] << " " <<
+                    from_string<int32_t>(diff["position"]) + width << " " <<
                     "color=vdred" << endl;
     }
     else if(diff._type == SNP || diff._type == SUB){
@@ -2699,11 +2711,14 @@ void GDtoCircos(const vector<string> &gd_file_names,
   nonsynonymous_mutation_file.close();
   npi_mutation_file.close();
   
+  string command = "cd " + circos_directory + "; bash run_circos.sh; cd ..;";
+  SYSTEM(command.c_str());
+  
 }
 
 void MIRAtoGD(const string &mira_file_name, const string &gd_file_name){
   //this was made on accident :(
-  //words cannot express, so I will use another :(
+  //words cannot express, so I will use another sad face :(
   ifstream mira_file;
   
   mira_file.open(mira_file_name.c_str());
