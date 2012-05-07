@@ -2242,7 +2242,7 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
 
 std::string GetWord(std::string &s) {
   RemoveLeadingWhitespace(s);
-  int found = s.find_first_of(" =");
+  int found = s.find_first_of(" =\n\r");
   std::string w = s.substr(0,found);
   s.erase(0, found);
   return w;
