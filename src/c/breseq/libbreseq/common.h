@@ -1072,22 +1072,26 @@ inline bool cString::contains(const char chr) const
 }
 
 inline cString& cString::escape_shell_chars(void) {
-  static const string escapees[] = {"&", "|", "<", ">", ""}; //NOTE: Leave last one empty.
+  cString& value = *this;
+  char escapees[] = {'<', '>', '|', '&', '\0'};
+  char temp[1000];
 
-  uint32_t i = 0;
-  for (; escapees[i].size(); ++i) {
-    uint32_t pos1 = 0;
-    while (true) {
-      pos1 = this->find(escapees[i], pos1);
-      if (pos1 == string::npos) break;
-
-      if ((*this)[pos1 - 1] != '\\') {
-        this->insert(pos1, "\\");
+  uint32_t k = 0;
+  for(uint32_t i = 0; i < value.size(); ++i) {
+    char found = '\0';
+    for(uint32_t j = 0; escapees[j]; ++j) {
+      if (value[i] == escapees[j]) {
+        found = escapees[j];
       }
-
-      ++pos1;
     }
+    if (found) {
+      temp[k++] = '\\';
+    }
+    temp[k++] = value[i];
   }
+  temp[k] = '\0'; 
+
+  *this = temp;
 
   return *this;
 }
