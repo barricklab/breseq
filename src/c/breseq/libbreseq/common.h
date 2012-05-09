@@ -857,22 +857,7 @@ namespace breseq {
 		return s;
 	}
   
-  inline int SYSTEM(string command, bool silent = false, bool ignore_errors = false)
-  {
-    if (!silent) cerr << "[system] " << command << endl;
-    int return_value = system(command.c_str());
-    
-    string error_message = "Error running command:\n[system] " + command + "\nResult code: " + to_string(return_value);
-    if (ignore_errors)
-    {
-      if (return_value != 0) cerr << error_message;
-    }
-    else
-    {
-      ASSERT(return_value == 0, error_message);
-    }
-    return return_value;
-  }
+
   
   inline string remove_file(string path)
   {
@@ -919,7 +904,6 @@ inline int32_t sprintf(string &value, const char *format,...) {
 template <typename T, typename U>
 inline bool map_comp_second(const pair<T, U> & lhs, const pair<T, U> &rhs) { return lhs.second < rhs.second;}
 
-//! TODO refractor orginal SYSTEM_CAPTURE to be used with this?
 template<typename T> inline void SYSTEM_CAPTURE(T out_itr, string command, bool silent = false)
 {
   if (!silent) cout << "[system] " << command << endl;
@@ -988,6 +972,7 @@ class cString : public string
     cString remove_ending(const string &suffix);
     cString remove_starting(const string &prefix);
     cString trim_ends_of(const char val);
+    cString& escape_shell_chars(void);
 
     cString get_base_name() const;
     cString get_base_name_no_extension() const;
@@ -1086,6 +1071,45 @@ inline bool cString::contains(const char chr) const
   return this->find(chr) != string::npos;
 }
 
+inline cString& cString::escape_shell_chars(void) {
+  static const string escapees[] = {"&", "|", "<", ">", ""}; //NOTE: Leave last one empty.
+
+  uint32_t i = 0;
+  for (; escapees[i].size(); ++i) {
+    uint32_t pos1 = 0;
+    while (true) {
+      pos1 = this->find(escapees[i], pos1);
+      if (pos1 == string::npos) break;
+
+      if ((*this)[pos1 - 1] != '\\') {
+        this->insert(pos1, "\\");
+      }
+
+      ++pos1;
+    }
+  }
+
+  return *this;
+}
+  inline int SYSTEM(string command, bool silent = false, bool ignore_errors = false, bool escape_shell_chars = true)
+  {
+    if (escape_shell_chars) {
+      command = cString(command).escape_shell_chars();
+    }
+    if (!silent) cerr << "[system] " << command << endl;
+    int return_value = system(command.c_str());
+    
+    string error_message = "Error running command:\n[system] " + command + "\nResult code: " + to_string(return_value);
+    if (ignore_errors)
+    {
+      if (return_value != 0) cerr << error_message;
+    }
+    else
+    {
+      ASSERT(return_value == 0, error_message);
+    }
+    return return_value;
+  }
 } // breseq
 
 #endif

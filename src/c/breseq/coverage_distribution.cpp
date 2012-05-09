@@ -45,16 +45,17 @@ namespace breseq {
   {
     pid_t pid = getpid();
     string log_file_name = distribution_file_name + ".r.log";
-    string command = "R --vanilla < " + settings.program_data_path + "/coverage_distribution.r" + " > " + log_file_name;
-    command += " distribution_file=" + distribution_file_name;
-    command += " plot_file=" + plot_file;
+    string command = "R --vanilla < " + cString(settings.program_data_path).escape_shell_chars() +
+      "/coverage_distribution.r" + " > " + cString(log_file_name).escape_shell_chars();
+    command += " distribution_file=" + cString(distribution_file_name).escape_shell_chars();
+    command += " plot_file=" + cString(plot_file).escape_shell_chars();
     command += " deletion_propagation_pr_cutoff=" + to_string<double>(deletion_propagation_pr_cutoff);
     command += " junction_coverage_pr_cutoff=" + to_string<double>(junction_coverage_pr_cutoff);
     command += " junction_accept_pr_cutoff=" + to_string<double>(junction_accept_pr_cutoff);
     command += " junction_keep_pr_cutoff=" + to_string<double>(junction_keep_pr_cutoff);
     command += " junction_max_score=" + to_string<double>(junction_max_score);
     
-    SYSTEM(command);
+    SYSTEM(command, false, false, false); //NOTE: Not escaping shell characters here.
 
     ifstream ROUT(log_file_name.c_str());
     string line;
