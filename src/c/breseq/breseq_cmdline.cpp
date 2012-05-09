@@ -2091,8 +2091,11 @@ int breseq_default_action(int argc, char* argv[])
 			string plot_error_rates_r_script_file_name = settings.plot_error_rates_r_script_file_name;
 			string plot_error_rates_r_script_log_file_name = settings.file_name(settings.plot_error_rates_r_script_log_file_name, "#", base_name);
 			string error_rates_plot_file_name = settings.file_name(settings.error_rates_plot_file_name, "#", base_name);
-			command = "R --vanilla in_file=" + error_rates_base_qual_error_prob_file_name + " out_file=" + error_rates_plot_file_name + " < " + plot_error_rates_r_script_file_name + " > " + plot_error_rates_r_script_log_file_name;
-			SYSTEM(command);
+			command = "R --vanilla in_file=" + cString(error_rates_base_qual_error_prob_file_name).escape_shell_chars() +
+        " out_file=" + cString(error_rates_plot_file_name).escape_shell_chars() +
+        " < "        + cString(plot_error_rates_r_script_file_name).escape_shell_chars() +
+        " > "        + cString(plot_error_rates_r_script_log_file_name).escape_shell_chars();
+			SYSTEM(command,false, false, false); //NOTE: Not escaping shell characters here.
 		}
 
 		summary.unique_coverage.store(settings.error_rates_summary_file_name);

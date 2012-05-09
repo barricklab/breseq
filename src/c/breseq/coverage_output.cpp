@@ -59,18 +59,18 @@ void coverage_output::plot(const string& region, const string& output_file_name,
 	
   string log_file_name = m_intermediate_path + "/" + to_string(pid) + ".r.log";
   string command = "R --vanilla";
-  command += " in_file=" + tmp_coverage;
-  command += " out_file=" + _output_file_name;
+  command += " in_file=" + cString(tmp_coverage).escape_shell_chars();
+  command += " out_file=" + cString(_output_file_name).escape_shell_chars();
   command += " pdf_output=";
   command += ((m_output_format=="pdf") ? "1" : "0");
   command += " total_only=";
   command += ((m_total_only) ? "1" : "0");
   command += " window_start=" + to_string(start_pos);
   command += " window_end=" + to_string(end_pos);
-  command += " < " + m_r_script_file_name;
-  command += " > " + log_file_name;
+  command += " < " + cString(m_r_script_file_name).escape_shell_chars();
+  command += " > " + cString(log_file_name).escape_shell_chars();
   
-	SYSTEM(command, true);
+	SYSTEM(command, true, false, false); //NOTE: Not escaping shell characters here.
 	
 	remove(tmp_coverage.c_str());
 	remove(log_file_name.c_str());

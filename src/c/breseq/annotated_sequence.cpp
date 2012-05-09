@@ -2116,8 +2116,13 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
   string polymorphism_statistics_r_script_log_file_name = settings.polymorphism_statistics_r_script_log_file_name;
   uint32_t total_reference_length = summary.sequence_conversion.total_reference_sequence_length;
 
-  string command = "R --vanilla total_length=" + to_string<uint32_t>(total_reference_length) + " in_file=" + polymorphism_statistics_input_file_name + " out_file=" + polymorphism_statistics_output_file_name + " qual_file=" + genome_error_counts_file_name + " < " + polymorphism_statistics_r_script_file_name + " > " + polymorphism_statistics_r_script_log_file_name;
-  SYSTEM(command);
+  string command = "R --vanilla total_length=" + to_string<uint32_t>(total_reference_length) +
+    " in_file="   + cString(polymorphism_statistics_input_file_name).escape_shell_chars() +
+    " out_file="  + cString(polymorphism_statistics_output_file_name).escape_shell_chars() +
+    " qual_file=" + cString(genome_error_counts_file_name).escape_shell_chars() +
+    " < "         + cString(polymorphism_statistics_r_script_file_name).escape_shell_chars() +
+    " > "         + cString(polymorphism_statistics_r_script_log_file_name).escape_shell_chars();
+  SYSTEM(command, false, false, false); //NOTE: Not escaping shell characters here.
 
   // Read R file and add new results corresponding to all columns
   ifstream ROUT(polymorphism_statistics_output_file_name.c_str());
