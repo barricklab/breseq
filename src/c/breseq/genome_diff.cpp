@@ -139,109 +139,74 @@ cDiffEntry::cDiffEntry(const string &line)
   ,_id("")
   ,_evidence()
 {
-  cDiffEntry *de = this;
-  typedef vector<string> string_vector_t;
-  string_vector_t tokens = split_on_whitespace(line);
-  int COLUMN = 0;
+  cDiffEntry& de = *this;
+  vector<string> tokens = split(line, "\t");
 
-  //! Step: Get the type. (Convert from string to enumeration.)
-  string type = tokens[COLUMN++]; 
+  if (tokens.size() < 3) {
+    WARN("cDiffEntry::cDiffEntry(" + line + "): Is not recognized.");
+    return;
+  }
 
-  //Find the string value in the lookup table and cast index to enumeration.
-  const size_t lookup_table_size = gd_entry_type_lookup_table.size();
-  for (size_t i = 0; i < lookup_table_size; i++) {
+  uint32_t COLUMN = 0;
+  //Type.
+  string type = tokens[COLUMN];
+  RemoveLeadingTrailingWhitespace(type);
+  for (size_t i = 0; i < gd_entry_type_lookup_table.size(); i++) {
     if (type == gd_entry_type_lookup_table[i]) {
-      de->_type = (gd_entry_type) i;
+      de._type = (gd_entry_type) i;
       break;
     }
   }
 
-  /*Check that the type is set. If there is an error confirm that gd_entry_type
-   and the lookup table are identical in size and order and contain this type.*/
-  if (de->_type == UNKNOWN) {
-    string message = "";
-    sprintf(message,
-            "cDiffEntry::cDiffEntry(%s): Could not determine type.",
-            line.c_str()
-            );
-    WARN(message);
+  if (de._type == UNKNOWN) {
+    WARN("cDiffEntry::cDiffEntry(" + line + "): Could not determine type.");
     return;
   }
+  ++COLUMN;
 
-  //! Step: Get the id.
-  de->_id = tokens[COLUMN++];
+  //Id.
+  de._id = tokens[COLUMN];
+  RemoveLeadingTrailingWhitespace(de._id);
+  ++COLUMN;
 
-  /*! Step: If this diff entry is a mutation we need to get it's supporting
-  evidence. */
-  if (de->is_mutation()) {
-    string evidence = tokens[COLUMN++];
+  //Evidence.
+  if (de.is_mutation()) {
+    de._evidence = split(tokens[COLUMN], ",");
+    for (uint32_t i = 0; i < de._evidence.size(); ++i) {
+      RemoveLeadingTrailingWhitespace(de._evidence[i]);
+    }
+  }
+  ++COLUMN;
 
-    string_vector_t evidence_vector = split(evidence, ",");
-
-    const size_t evidence_vector_size = evidence_vector.size();
-    if (evidence_vector_size) {
-      de->_evidence.resize(evidence_vector_size);
-
-      for (size_t i = 0; i < evidence_vector_size; i++) {
-        de->_evidence[i] = evidence_vector[i];
-      }
-    } 
-
-  } 
-
-  /*! Step: Get line specifications and assign them. */
-  const string_vector_t &diff_entry_specs = line_specification[de->_type];
-  const size_t diff_entry_specs_size = diff_entry_specs.size();
-  for (size_t i = 0; i < diff_entry_specs_size; i++) {
-     const diff_entry_key_t &key = diff_entry_specs[i];
-     diff_entry_value_t value = COLUMN + 1 > tokens.size() ? "" : tokens[COLUMN++];
-     if (value.empty()) {
-       value = "?";
-       string msg = "";
-       sprintf(msg,
-               "cDiffEntry::cDiffEntry(%s): Line specification [%s] has no value.",
-               line.c_str(), key.c_str());
-       WARN(msg);
-     }
-     de->insert(pair<diff_entry_key_t, diff_entry_value_t>(key, value));
+  //Specs.
+  const vector<string>& specs = line_specification[de._type];
+  for (uint32_t i = 0; i < specs.size(); ++i) {
+    if (COLUMN < tokens.size()) {
+      de[specs[i]] = tokens[COLUMN];
+      RemoveLeadingTrailingWhitespace(de[specs[i]]);
+      ++COLUMN;
+    } else {
+      WARN("cDiffEntry::cDiffEntry(" + line + "): Line specification [" + specs[i] + "] has no value.");
+      de[specs[i]] = "?";
+    }
   }
 
-  /*! Step: Get the rest of the fields.*/
-  while (COLUMN < tokens.size()) {
-    string key_value_pair = tokens[COLUMN++];
-    if (key_value_pair.empty()) {
-      continue;
+  //Fields.
+  while(COLUMN < tokens.size()) {
+    cKeyValuePair kvp(tokens[COLUMN], '=');
+    if (kvp.check()) {
+      string key   = kvp.get_key();
+      string value = kvp.get_value();
+      RemoveLeadingTrailingWhitespace(key);
+      RemoveLeadingTrailingWhitespace(value);
+      de[key] = value;
+    } else {
+      WARN("cDiffEntry::cDiffEntry(" + line + "): Field " + kvp + " is not a key=value pair.");
     }
-
-    size_t equal_sign_pos = 0;
-    const size_t key_value_pair_size = key_value_pair.size();
-    for (size_t i = 0; i < key_value_pair_size; i++) {
-      if (key_value_pair[i] == '=') {
-        equal_sign_pos = i;
-        break;
-      }
-    }
-
-    //Confirm this is a key=value field.
-    if (!equal_sign_pos) {
-      string message = "";
-      sprintf(message,
-              "cDiffEntry::cDiffEntry(%s): Field %s is not a key=value pair.",
-              line.c_str(), key_value_pair.c_str()
-              );
-      WARN(message);
-      return;
-    }
-
-    const string &key   = key_value_pair.substr(0, equal_sign_pos);
-    const string &value = key_value_pair.substr(equal_sign_pos + 1,
-                                                key_value_pair_size);
-
-    de->insert(pair<string, string>(key, value));
+    ++COLUMN;
   }
-  //All done!
+
   return;
-
 }
 
 bool cDiffEntry::is_mutation() const
