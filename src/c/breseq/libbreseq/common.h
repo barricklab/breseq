@@ -713,6 +713,17 @@ namespace breseq {
     return path;
   }
   
+  inline vector<string> prefix_each_in_vector(const vector<string>& in_list, string prefix)
+  {
+    vector<string> return_list;
+    for (vector<string>::const_iterator it = in_list.begin(); it != in_list.end(); it++)
+    {
+      return_list.push_back(prefix + *it);
+    }
+    return return_list;
+  }
+  
+  
   template <typename T, typename U> vector<T> map_keys_to_list (map<T,U>& the_map)
   {
     vector<T> return_list;
@@ -733,11 +744,11 @@ namespace breseq {
     return return_list;
   }
   
-  template <typename T, typename U> vector<string> map_key_list_to_values_as_strings(map<T,U>& the_map,vector<T> the_keys)
+  template <typename T, typename U> vector<string> map_key_list_to_values_as_strings(map<T,U>& the_map,vector<T> the_keys, string prefix = "")
   {
     vector<string> return_list;
     for (class vector<T>::iterator it = the_keys.begin(); it != the_keys.end(); it++ ) {
-      return_list.push_back(to_string(the_map[*it]));
+      return_list.push_back(prefix + to_string(the_map[*it]));
     }
     return return_list;
   }
