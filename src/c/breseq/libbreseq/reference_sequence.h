@@ -16,8 +16,8 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
-#ifndef _BRESEQ_ANNOTATED_SEQUENCE_H_
-#define _BRESEQ_ANNOTATED_SEQUENCE_H_
+#ifndef _BRESEQ_REFERENCE_SEQUENCE_H_
+#define _BRESEQ_REFERENCE_SEQUENCE_H_
 
 #include "libbreseq/common.h"
 
@@ -27,7 +27,7 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/alignment.h"
 #include "libbreseq/anyoption.h"
 #include "libbreseq/settings.h"
-
+#include "libbreseq/summary.h"
 
 namespace breseq {
 	

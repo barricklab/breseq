@@ -22,7 +22,7 @@ LICENSE AND COPYRIGHT
 
 #include "libbreseq/anyoption.h"
 #include "libbreseq/alignment_output.h"
-#include "libbreseq/annotated_sequence.h"
+#include "libbreseq/reference_sequence.h"
 #include "libbreseq/calculate_trims.h"
 #include "libbreseq/candidate_junctions.h"
 #include "libbreseq/contingency_loci.h"
@@ -34,6 +34,7 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/identify_mutations.h"
 #include "libbreseq/resolve_alignments.h"
 #include "libbreseq/settings.h"
+#include "libbreseq/summary.h"
 #include "libbreseq/contingency_loci.h"
 #include "libbreseq/mutation_predictor.h"
 #include "libbreseq/rna_seq.h"

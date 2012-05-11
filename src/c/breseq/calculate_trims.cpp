@@ -19,7 +19,7 @@ LICENSE AND COPYRIGHT
 
 #include "libbreseq/calculate_trims.h"
 
-#include "libbreseq/annotated_sequence.h"
+#include "libbreseq/reference_sequence.h"
 #include "libbreseq/alignment.h"
 
 using namespace std;

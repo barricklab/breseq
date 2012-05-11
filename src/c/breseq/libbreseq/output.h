@@ -2,7 +2,7 @@
 #define _BRESEQ_OUTPUT_H_
 #include "libbreseq/common.h"
 #include "libbreseq/settings.h"
-#include "libbreseq/annotated_sequence.h"
+#include "libbreseq/reference_sequence.h"
 #include "libbreseq/genome_diff.h"
 //#include "cgicc/Cgicc.h"
 namespace breseq
