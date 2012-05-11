@@ -27,7 +27,7 @@ noinst_LTLIBRARIES = libbreseq.la
 libbreseq_la_SOURCES = \
 	alignment.cpp \
 	alignment_output.cpp \
-	annotated_sequence.cpp \
+	reference_sequence.cpp \
 	anyoption.cpp \
 	calculate_trims.cpp \
 	candidate_junctions.cpp \
@@ -49,7 +49,7 @@ libbreseq_la_SOURCES = \
 	settings.cpp \
 	libbreseq/alignment.h \
 	libbreseq/alignment_output.h \
-	libbreseq/annotated_sequence.h \
+	libbreseq/reference_sequence.h \
 	libbreseq/anyoption.h \
 	libbreseq/calculate_trims.h \
 	libbreseq/candidate_junctions.h \
