@@ -44,7 +44,7 @@ namespace breseq {
     // we get the inner repeat in nested cases
     for(cSequenceFeatureList::iterator it = repeat_list.begin(); it != repeat_list.end(); it++) {
       cSequenceFeaturePtr& test_repeat = *it;
-			if ((test_repeat->m_start <= position) && (position <= test_repeat->m_end))
+			if ((test_repeat->m_location.start <= position) && (position <= test_repeat->m_location.end))
 				repeat = test_repeat.get();
     }
 		return repeat;
@@ -168,10 +168,10 @@ namespace breseq {
 				if (is.get() != NULL)
 				{
 					j["_" + side_key + "_is"] = "1";
-					j["_" + side_key + "_is_start"] = s(is->m_start);
-					j["_" + side_key + "_is_end"] = s(is->m_end);
+					j["_" + side_key + "_is_start"] = s(is->m_location.start);
+					j["_" + side_key + "_is_end"] = s(is->m_location.end);
           j["_" + side_key + "_is_name"] = (*is)["name"];
-          j["_" + side_key + "_is_strand"] = s(is->m_strand);
+          j["_" + side_key + "_is_strand"] = s(is->m_location.strand);
 				}
 				
         uint32_t test_val = n(j[side_key + "_redundant"]);
@@ -310,8 +310,8 @@ namespace breseq {
           if (r1_pointer) 
           {
             // must match up to an end of the repeat
-            if ((n(jc_item["side_1_position"]) == static_cast<int32_t>(r1_pointer->m_start))
-             || (n(jc_item["side_1_position"]) == static_cast<int32_t>(r1_pointer->m_end)))
+            if ((n(jc_item["side_1_position"]) == static_cast<int32_t>(r1_pointer->m_location.start))
+             || (n(jc_item["side_1_position"]) == static_cast<int32_t>(r1_pointer->m_location.end)))
             {
               mut["mediated"] = (*r1_pointer)["name"];
             }
@@ -319,8 +319,8 @@ namespace breseq {
           else if (r2_pointer) 
           {
             // must match up to an end of the repeat
-            if ((n(jc_item["side_2_position"]) == static_cast<int32_t>(r2_pointer->m_start))
-                || (n(jc_item["side_2_position"]) == static_cast<int32_t>(r2_pointer->m_end)))
+            if ((n(jc_item["side_2_position"]) == static_cast<int32_t>(r2_pointer->m_location.start))
+                || (n(jc_item["side_2_position"]) == static_cast<int32_t>(r2_pointer->m_location.end)))
             {
               mut["mediated"] = (*r2_pointer)["name"];
             }
@@ -357,13 +357,13 @@ namespace breseq {
 
 				// there may be more evidence that one or the other is deleted...
 				int32_t r1_overlap_end = n(mc_item["start"]) + n(mc_item["start_range"]);
-				if (r1_overlap_end > r1.m_end)
-					r1_overlap_end = r1.m_end;
+				if (r1_overlap_end > r1.m_location.end)
+					r1_overlap_end = r1.m_location.end;
 				int32_t r1_overlap = r1_overlap_end - n(mc_item["start"]) + 1;
 
 				int32_t r2_overlap_start = n(mc_item["end"]) - n(mc_item["end_range"]);
-				if (r2_overlap_start < r1.m_start)
-					r2_overlap_start = r2.m_start;
+				if (r2_overlap_start < r1.m_location.start)
+					r2_overlap_start = r2.m_location.start;
 				int32_t r2_overlap = n(mc_item["end"]) - r2_overlap_start + 1;
 
 				// it may be really close...defined by read length of genome in which case
@@ -372,13 +372,13 @@ namespace breseq {
 				// prefer to delete the second copy
 				if ( (static_cast<uint32_t>(abs(r1_overlap - r2_overlap)) <= slop_distance) || (r2_overlap > r1_overlap ))
 				{
-					mut["position"] = s(r1.m_end + 1);
-					mut["size"] = s(r2.m_end - r1.m_end);
+					mut["position"] = s(r1.m_location.end + 1);
+					mut["size"] = s(r2.m_location.end - r1.m_location.end);
 				}
 				else // delete the first copy
 				{
-					mut["position"] = s(r1.m_start);
-					mut["size"] = s(r2.m_start - r1.m_start);
+					mut["position"] = s(r1.m_location.start);
+					mut["size"] = s(r2.m_location.start - r1.m_location.start);
 				}
 
 				// remember the name of the element
@@ -439,8 +439,8 @@ namespace breseq {
 
 				// check that IS is on the right strand
 				if (verbose)
-					cout << "Check 4: " << redundant_deletion_side << " * " << to_string(r.m_strand) << " != " << j[j["_is_interval"] + "_strand"] << " * " << j["_" + j["_is_interval"] + "_is_strand"] << endl;
-				if ( (redundant_deletion_side * r.m_strand) != (n(j[j["_is_interval"] + "_strand"]) * n(j["_" + j["_is_interval"] + "_is_strand"])) )
+					cout << "Check 4: " << redundant_deletion_side << " * " << to_string(r.m_location.strand) << " != " << j[j["_is_interval"] + "_strand"] << " * " << j["_" + j["_is_interval"] + "_is_strand"] << endl;
+				if ( (redundant_deletion_side * r.m_location.strand) != (n(j[j["_is_interval"] + "_strand"]) * n(j["_" + j["_is_interval"] + "_is_strand"])) )
 					continue;
 				if (verbose)
 					cout << "Pass 4" << endl;
@@ -456,13 +456,13 @@ namespace breseq {
 				// need to adjust the non-unique coords
 				if (redundant_deletion_side == -1)
 				{
-					uint32_t move_dist = r.m_end + 1 - n(mut["position"]);
+					uint32_t move_dist = r.m_location.end + 1 - n(mut["position"]);
 					mut["position"] = s(n(mut["position"]) + move_dist);
 					mut["size"] = s(n(mut["size"]) - move_dist);
 				}
 				else
 				{
-					int32_t move_dist = (n(mut["position"]) + n(mut["size"]) - 1) - (r.m_start - 1);
+					int32_t move_dist = (n(mut["position"]) + n(mut["size"]) - 1) - (r.m_location.start - 1);
 					mut["size"] = s(n(mut["size"]) - move_dist);
 				}
         

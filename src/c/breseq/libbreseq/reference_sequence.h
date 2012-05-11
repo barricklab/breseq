@@ -33,6 +33,26 @@ namespace breseq {
 	
 	/*! Interface for loading sequences and sequence features from GenBank files.
   */
+   struct cLocation {
+
+      cLocation() : start(0), end(0), strand(1) {};
+      cLocation(int32_t _start, int32_t _end, int8_t _strand) 
+       : start(_start), end(_end), strand(_strand) { }
+
+      int32_t start;
+      int32_t end;
+      char strand;
+      vector<cLocation> sub_locations;
+
+
+      void test() {
+        printf("start:%i\t", start);
+        printf("end:%i\t", end);
+        printf("strand:%i\t", strand);
+        printf("subs:%i\n", sub_locations.size());
+
+      }
+  };
   
   extern const vector<string> snp_types;
     
@@ -67,8 +87,7 @@ namespace breseq {
     public:
 
       // Could add accessors that convert strings to numbers...
-      int32_t m_start, m_end;
-      int8_t m_strand;
+      cLocation m_location;
       bool m_pseudo;
 
       map<string, vector<string> > m_gff_attributes;
@@ -76,16 +95,16 @@ namespace breseq {
       cSequenceFeature() : m_pseudo(0) {}
       cSequenceFeature(const cSequenceFeature& _in) : sequence_feature_map_t(_in) 
       {
-        m_start = _in.m_start;
-        m_end = _in.m_end;
-        m_strand = _in.m_strand;
+        m_location.start = _in.m_location.start;
+        m_location.end = _in.m_location.end;
+        m_location.strand = _in.m_location.strand;
         m_pseudo = _in.m_pseudo;
       }
       cSequenceFeature operator=(const cSequenceFeature& _in) 
       {
-        m_start = _in.m_start;
-        m_end = _in.m_end;
-        m_strand = _in.m_strand;
+        m_location.start = _in.m_location.start;
+        m_location.end = _in.m_location.end;
+        m_location.strand = _in.m_location.strand;
         m_pseudo = _in.m_pseudo;
         sequence_feature_map_t::operator=(_in);
         return *this;
@@ -93,9 +112,9 @@ namespace breseq {
     
       bool operator<(const cSequenceFeature& _in) const
       {
-        if (this->m_start == _in.m_start) 
-          return (this->m_end > _in.m_end);
-        return (this->m_start < _in.m_start);
+        if (this->m_location.start == _in.m_location.start)
+          return (this->m_location.end > _in.m_location.end);
+        return (this->m_location.start < _in.m_location.start);
       }
     
       //<! Safe accessor that returns empty string if not defined. 
@@ -124,7 +143,7 @@ namespace breseq {
         if(verbose)cout << endl;
       }
       
-      void ReadGenBankCoords(string& s, ifstream& in);
+      void ReadGenBankCoords(string& s, ifstream& in, bool is_sub_location = false);
       void ReadGenBankTag(string& tag, string& s, ifstream& in);
   };
   
@@ -146,9 +165,9 @@ namespace breseq {
       name = src["name"];
       product = src["product"];
       type = src["type"];
-      start = src.m_start;
-      end = src.m_end;
-      strand = (src.m_strand >= 1);
+      start = src.m_location.start;
+      end = src.m_location.end;
+      strand = (src.m_location.strand >= 1);
       pseudogene = src.m_pseudo;
       translation_table = 1;
       if (src.count("transl_table")) 
