@@ -22,7 +22,7 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/fastq.h"
 #include "libbreseq/fasta.h"
 #include "libbreseq/alignment.h"
-#include "libbreseq/annotated_sequence.h"
+#include "libbreseq/reference_sequence.h"
 #include "libbreseq/chisquare.h"
 #include "libbreseq/output.h"
 

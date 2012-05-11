@@ -15,7 +15,7 @@
  
  *****************************************************************************/
 
-#include "libbreseq/annotated_sequence.h"
+#include "libbreseq/reference_sequence.h"
 
 #include "libbreseq/error_count.h"
 

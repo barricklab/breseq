@@ -17,7 +17,7 @@ LICENSE AND COPYRIGHT
 *****************************************************************************/
 
 #include "libbreseq/genome_diff.h"
-#include "libbreseq/annotated_sequence.h"
+#include "libbreseq/reference_sequence.h"
 #include "libbreseq/output.h"
 
 namespace breseq {

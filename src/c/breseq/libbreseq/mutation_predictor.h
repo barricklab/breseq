@@ -22,7 +22,7 @@ LICENSE AND COPYRIGHT
 #include "common.h"
 
 #include "alignment.h"
-#include "annotated_sequence.h"
+#include "reference_sequence.h"
 #include "genome_diff.h"
 #include "settings.h"
 #include "fastq.h"

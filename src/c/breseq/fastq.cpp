@@ -16,7 +16,7 @@
  *****************************************************************************/
 
 #include "libbreseq/fastq.h"
-#include "libbreseq/annotated_sequence.h"
+#include "libbreseq/reference_sequence.h"
 
 using namespace std;
 

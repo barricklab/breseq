@@ -21,7 +21,7 @@ LICENSE AND COPYRIGHT
 
 #include "common.h"
 
-#include "annotated_sequence.h"
+#include "reference_sequence.h"
 #include "settings.h"
 
 using namespace std;

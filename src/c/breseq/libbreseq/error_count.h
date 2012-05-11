@@ -23,6 +23,7 @@ LICENSE AND COPYRIGHT
 #include "alignment.h"
 #include "pileup_base.h"
 #include "settings.h"
+#include "summary.h"
 
 using namespace std;
 

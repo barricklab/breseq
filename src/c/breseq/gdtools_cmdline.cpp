@@ -20,7 +20,7 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/settings.h"
 #include "libbreseq/anyoption.h"
 #include "libbreseq/genome_diff.h"
-#include "libbreseq/annotated_sequence.h"
+#include "libbreseq/reference_sequence.h"
 #include "libbreseq/output.h"
 
 using namespace breseq;

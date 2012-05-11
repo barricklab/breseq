@@ -21,7 +21,7 @@ LICENSE AND COPYRIGHT
 
 #include "libbreseq/common.h"
 #include "libbreseq/pileup_base.h"
-#include "libbreseq/annotated_sequence.h"
+#include "libbreseq/reference_sequence.h"
 
 using namespace std;
 
