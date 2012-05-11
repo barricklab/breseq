@@ -2332,7 +2332,7 @@ void GDtoCircos(const vector<string> &gd_file_names,
   
   int32_t number_of_mutations = 0;
   
-  for (int32_t i = 0; i < gd_file_names.size(); i++){
+  for (size_t i = 0; i < gd_file_names.size(); i++){
     cGenomeDiff single_gd(gd_file_names[i]);
     combined_gd.merge(single_gd);
     number_of_mutations += single_gd.mutation_list().size();
@@ -2604,7 +2604,7 @@ void GDtoCircos(const vector<string> &gd_file_names,
 //    cDiffEntry diff = **it;
   
   //reference sequence MOBs
-  for(int32_t i = 0; i < ref.size(); i++){
+  for(size_t i = 0; i < ref.size(); i++){
     cAnnotatedSequence ref_seq = ref[i];
     
     for(cSequenceFeatureList::iterator it = ref_seq.m_repeats.begin(); it != ref_seq.m_repeats.end(); it++){
