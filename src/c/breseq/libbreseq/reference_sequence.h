@@ -567,13 +567,23 @@ namespace breseq {
   //   that properly accounts for overlapping features.
   class BaseSubstitutionEffects {    
   public:
-    BaseSubstitutionEffects(cReferenceSequences& ref_seq_info)
-    { (void)ref_seq_info; }
-  
-  //@GRC -> @JEB, Lonestar was not happy with uint8_t[12] being here.
-  typedef vector<string> SequenceBaseSubstitutionEffects;
-  map<string,SequenceBaseSubstitutionEffects> m_bse;
+    BaseSubstitutionEffects(cReferenceSequences& ref_seq_info);
     
+    static map<string,uint8_t>  base_change_to_index;
+    static vector<string>       base_change_list;
+    static map<string,string>   base_change_to_base_pair_change;
+    static vector<string>       bsf_snp_types;
+    static map<string,uint8_t>  nt_type_list;
+    
+    typedef vector<uint8_t> SequenceBaseSubstitutionEffects;
+    map<string,SequenceBaseSubstitutionEffects> m_bse;
+    
+  };
+  
+  // For translation and codon mutation statistics
+  class cGeneticCode {
+  public:
+    cGeneticCode(uint32_t translation_table, bool count_synonymous_stop_codons);
   };
 
 } // breseq namespace

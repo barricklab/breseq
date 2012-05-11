@@ -110,8 +110,7 @@ namespace breseq
     
     options
 		("help,h", "Produce help message showing advanced options", TAKES_NO_ARGUMENT)
-		// convert to basing everything off the main output path, so we don't have to set so many options
-		("output,o", "Path to breseq output", "current directory")
+		("output,o", "Path to breseq output", ".")
 		("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files. (REQUIRED)")
     ("name,n", "Human-readable name of sample/run for output [empty]", "")
     ("no-junction-prediction,j", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
@@ -133,6 +132,7 @@ namespace breseq
     ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias", 0.05, ADVANCED_OPTION)
     ("polymorphism-frequency-cutoff", "Only predict polymorphisms where both allele frequencies are > than this value", 0.0, ADVANCED_OPTION)
     ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms where this many reads on each strand support alternative alleles", 0.0, ADVANCED_OPTION)
+    
     // Periodicity block
     ("periodicity", "Finding sum of differences squared of a coverage file", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("periodicity-method", "Which method to use for periodicity", 1, ADVANCED_OPTION)
@@ -231,20 +231,16 @@ namespace breseq
       this->mixed_base_prediction = false;
 
       // override with settings 
+      this->polymorphism_frequency_cutoff = from_string<double>(options["polymorphism-frequency-cutoff"]);
+      this->no_indel_polymorphisms = options.count("polymorphism-no-indels");
+      this->polymorphism_reject_homopolymer_length = from_string<int32_t>(options["polymorphism-reject-homopolymer-length"]);
       this->polymorphism_log10_e_value_cutoff = from_string<double>(options["polymorphism-score-cutoff"]);
       this->polymorphism_bias_p_value_cutoff = from_string<double>(options["polymorphism-bias-cutoff"]);
-      this->polymorphism_frequency_cutoff = from_string<double>(options["polymorphism-frequency-cutoff"]);
       this->polymorphism_minimum_new_coverage_each_strand = from_string<double>(options["polymorphism-minimum-coverage-each-strand"]);
-      this->polymorphism_reject_homopolymer_length = from_string<uint32_t>(options["polymorphism-reject-homopolymer-length"]);
-      this->no_indel_polymorphisms = options.count("polymorphism-no-indels");
-
-      int32_t polymorphism_minimum_new_coverage_each_strand; // Default = 1
-      uint32_t polymorphism_reject_homopolymer_length;        // Default = 0 (OFF)
-      bool no_indel_polymorphisms;                            // Default = false
-      
-      
     } 
     
+
+
     this->mutation_identification_per_position_file = options.count("per-position-file");
 
  

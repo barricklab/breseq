@@ -28,6 +28,8 @@
 		70367D2113EB232C000787CC /* coverage_distribution.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70367D2013EB232C000787CC /* coverage_distribution.cpp */; };
 		70436D5B13FF7675006448FB /* samtools in CopyFiles */ = {isa = PBXBuildFile; fileRef = 70436D5A13FF7675006448FB /* samtools */; };
 		707F211613478B7700ED2F3E /* candidate_junctions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 707F211513478B7700ED2F3E /* candidate_junctions.cpp */; };
+		707F349F155D970000F5C89F /* summary.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 707F349E155D970000F5C89F /* summary.cpp */; };
+		707F34A2155D97B900F5C89F /* reference_sequence.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 707F34A1155D97B900F5C89F /* reference_sequence.cpp */; };
 		7084E56713CFD471005B57D1 /* mutation_predictor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7084E56613CFD471005B57D1 /* mutation_predictor.cpp */; };
 		7087728812BC1660000F9B57 /* alignment.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7087728712BC1660000F9B57 /* alignment.cpp */; };
 		7087728E12BC169C000F9B57 /* error_count.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7087728912BC169C000F9B57 /* error_count.cpp */; };
@@ -43,7 +45,6 @@
 		70B48C4B13A9918E00BF2BF0 /* anyoption.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B48C4A13A9918E00BF2BF0 /* anyoption.cpp */; };
 		70B48C4F13A991BE00BF2BF0 /* chisquare.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B48C4E13A991BE00BF2BF0 /* chisquare.cpp */; };
 		70B4AEB01391F72200B9638D /* fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B4AEAF1391F72200B9638D /* fasta.cpp */; };
-		70B5B10013324D8300737DC1 /* annotated_sequence.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B5B0FF13324D8300737DC1 /* annotated_sequence.cpp */; };
 		70B69DE61369B8700001B750 /* breseq_cmdline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B69DE51369B8700001B750 /* breseq_cmdline.cpp */; };
 		70B69DF41369D8B20001B750 /* calculate_trims.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B69DE91369D3510001B750 /* calculate_trims.cpp */; };
 		70B69E061369E2440001B750 /* libbam.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B69E051369E2440001B750 /* libbam.a */; };
@@ -130,6 +131,11 @@
 		70616DD21400A0CE006E7800 /* breseq_small.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = breseq_small.png; path = breseq/breseq_small.png; sourceTree = "<group>"; };
 		70616DD31400A0CE006E7800 /* breseq.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = breseq.png; path = breseq/breseq.png; sourceTree = "<group>"; };
 		707F211513478B7700ED2F3E /* candidate_junctions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = candidate_junctions.cpp; path = breseq/candidate_junctions.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		707F349E155D970000F5C89F /* summary.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = summary.cpp; path = breseq/summary.cpp; sourceTree = SOURCE_ROOT; };
+		707F34A0155D973500F5C89F /* run_circos.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; name = run_circos.sh; path = breseq/run_circos.sh; sourceTree = "<group>"; };
+		707F34A1155D97B900F5C89F /* reference_sequence.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = reference_sequence.cpp; path = breseq/reference_sequence.cpp; sourceTree = SOURCE_ROOT; };
+		707F34A3155D9C9200F5C89F /* reference_sequence.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = reference_sequence.h; path = breseq/libbreseq/reference_sequence.h; sourceTree = SOURCE_ROOT; };
+		707F34A4155D9C9200F5C89F /* summary.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = summary.h; path = breseq/libbreseq/summary.h; sourceTree = SOURCE_ROOT; };
 		7084E56613CFD471005B57D1 /* mutation_predictor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = mutation_predictor.cpp; path = breseq/mutation_predictor.cpp; sourceTree = SOURCE_ROOT; };
 		7087728712BC1660000F9B57 /* alignment.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = alignment.cpp; path = breseq/alignment.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		7087728912BC169C000F9B57 /* error_count.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = error_count.cpp; path = breseq/error_count.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
@@ -147,7 +153,6 @@
 		70B48C4A13A9918E00BF2BF0 /* anyoption.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = anyoption.cpp; path = breseq/anyoption.cpp; sourceTree = SOURCE_ROOT; };
 		70B48C4E13A991BE00BF2BF0 /* chisquare.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = chisquare.cpp; path = breseq/chisquare.cpp; sourceTree = SOURCE_ROOT; };
 		70B4AEAF1391F72200B9638D /* fasta.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = fasta.cpp; path = breseq/fasta.cpp; sourceTree = SOURCE_ROOT; };
-		70B5B0FF13324D8300737DC1 /* annotated_sequence.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = annotated_sequence.cpp; path = breseq/annotated_sequence.cpp; sourceTree = SOURCE_ROOT; };
 		70B69DE51369B8700001B750 /* breseq_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = breseq_cmdline.cpp; path = breseq/breseq_cmdline.cpp; sourceTree = SOURCE_ROOT; };
 		70B69DE91369D3510001B750 /* calculate_trims.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = calculate_trims.cpp; path = breseq/calculate_trims.cpp; sourceTree = SOURCE_ROOT; };
 		70B69E051369E2440001B750 /* libbam.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libbam.a; path = "../../extern/samtools-0.1.15/libbam.a"; sourceTree = "<group>"; };
@@ -157,7 +162,6 @@
 		70B9320E1394008200885753 /* settings.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = settings.cpp; path = breseq/settings.cpp; sourceTree = SOURCE_ROOT; };
 		70CB720F140FEB6400D578EB /* alignment.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = alignment.h; sourceTree = "<group>"; };
 		70CB7210140FEB6400D578EB /* alignment_output.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = alignment_output.h; sourceTree = "<group>"; };
-		70CB7211140FEB6400D578EB /* annotated_sequence.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = annotated_sequence.h; sourceTree = "<group>"; };
 		70CB7212140FEB6400D578EB /* anyoption.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = anyoption.h; sourceTree = "<group>"; };
 		70CB7213140FEB6400D578EB /* calculate_trims.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = calculate_trims.h; sourceTree = "<group>"; };
 		70CB7214140FEB6400D578EB /* candidate_junctions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = candidate_junctions.h; sourceTree = "<group>"; };
@@ -254,7 +258,6 @@
 			children = (
 				7087728712BC1660000F9B57 /* alignment.cpp */,
 				70A8364C13477AAE0037F8DE /* alignment_output.cpp */,
-				70B5B0FF13324D8300737DC1 /* annotated_sequence.cpp */,
 				70B48C4A13A9918E00BF2BF0 /* anyoption.cpp */,
 				70B69DE51369B8700001B750 /* breseq_cmdline.cpp */,
 				70B69DE91369D3510001B750 /* calculate_trims.cpp */,
@@ -273,9 +276,11 @@
 				70D789D313C3CEB70036BEAB /* output.cpp */,
 				7087728D12BC169C000F9B57 /* pileup.cpp */,
 				7087728C12BC169C000F9B57 /* pileup_base.cpp */,
+				707F34A1155D97B900F5C89F /* reference_sequence.cpp */,
 				708D62431390B1D5007FF13C /* resolve_alignments.cpp */,
 				70990AE514D5A4FA005255D4 /* rna_seq.cpp */,
 				70B9320E1394008200885753 /* settings.cpp */,
+				707F349E155D970000F5C89F /* summary.cpp */,
 			);
 			name = breseq;
 			path = "breseq-1.0";
@@ -290,6 +295,7 @@
 				70436D5713FF6D7D006448FB /* coverage_distribution.r */,
 				70616DD21400A0CE006E7800 /* breseq_small.png */,
 				70616DD31400A0CE006E7800 /* breseq.png */,
+				707F34A0155D973500F5C89F /* run_circos.sh */,
 			);
 			name = "copied ";
 			sourceTree = "<group>";
@@ -309,7 +315,6 @@
 			children = (
 				70CB720F140FEB6400D578EB /* alignment.h */,
 				70CB7210140FEB6400D578EB /* alignment_output.h */,
-				70CB7211140FEB6400D578EB /* annotated_sequence.h */,
 				70CB7212140FEB6400D578EB /* anyoption.h */,
 				70CB7213140FEB6400D578EB /* calculate_trims.h */,
 				70CB7214140FEB6400D578EB /* candidate_junctions.h */,
@@ -327,10 +332,12 @@
 				70CB7220140FEB6400D578EB /* output.h */,
 				70CB7221140FEB6400D578EB /* pileup.h */,
 				70CB7222140FEB6400D578EB /* pileup_base.h */,
+				707F34A3155D9C9200F5C89F /* reference_sequence.h */,
 				70CB7223140FEB6400D578EB /* resolve_alignments.h */,
 				70990AE814D5A520005255D4 /* rna_seq.h */,
 				70CB7224140FEB6400D578EB /* settings.h */,
 				70CB7225140FEB6400D578EB /* storable.h */,
+				707F34A4155D9C9200F5C89F /* summary.h */,
 			);
 			name = libbreseq;
 			path = breseq/libbreseq;
@@ -473,7 +480,6 @@
 			files = (
 				7087728812BC1660000F9B57 /* alignment.cpp in Sources */,
 				70A8364D13477AAE0037F8DE /* alignment_output.cpp in Sources */,
-				70B5B10013324D8300737DC1 /* annotated_sequence.cpp in Sources */,
 				7087728E12BC169C000F9B57 /* error_count.cpp in Sources */,
 				702EABF713421A8400103019 /* fastq.cpp in Sources */,
 				7087728F12BC169C000F9B57 /* genome_diff.cpp in Sources */,
@@ -493,6 +499,8 @@
 				70367D2113EB232C000787CC /* coverage_distribution.cpp in Sources */,
 				7092FAF2140AC70200DDECA2 /* coverage_output.cpp in Sources */,
 				70990AE614D5A4FA005255D4 /* rna_seq.cpp in Sources */,
+				707F349F155D970000F5C89F /* summary.cpp in Sources */,
+				707F34A2155D97B900F5C89F /* reference_sequence.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
