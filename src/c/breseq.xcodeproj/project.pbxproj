@@ -121,6 +121,12 @@
 /* Begin PBXFileReference section */
 		421ACFAC1170F05500C2EB85 /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = /opt/local/lib/libz.a; sourceTree = "<absolute>"; };
 		701EE98213C4BB5200F2EC70 /* contingency_loci.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = contingency_loci.cpp; path = breseq/contingency_loci.cpp; sourceTree = SOURCE_ROOT; };
+		7024BBDB155DEC31007CCA5B /* combined_circos.conf */ = {isa = PBXFileReference; lastKnownFileType = text; name = combined_circos.conf; path = breseq/combined_circos.conf; sourceTree = "<group>"; };
+		7024BBDC155DEC31007CCA5B /* ideogram.conf */ = {isa = PBXFileReference; lastKnownFileType = text; name = ideogram.conf; path = breseq/ideogram.conf; sourceTree = "<group>"; };
+		7024BBDD155DEC31007CCA5B /* indels.conf */ = {isa = PBXFileReference; lastKnownFileType = text; name = indels.conf; path = breseq/indels.conf; sourceTree = "<group>"; };
+		7024BBDE155DEC31007CCA5B /* karyotype.and.layout.conf */ = {isa = PBXFileReference; lastKnownFileType = text; name = karyotype.and.layout.conf; path = breseq/karyotype.and.layout.conf; sourceTree = "<group>"; };
+		7024BBDF155DEC31007CCA5B /* mobs.conf */ = {isa = PBXFileReference; lastKnownFileType = text; name = mobs.conf; path = breseq/mobs.conf; sourceTree = "<group>"; };
+		7024BBE0155DEC31007CCA5B /* mutations.conf */ = {isa = PBXFileReference; lastKnownFileType = text; name = mutations.conf; path = breseq/mutations.conf; sourceTree = "<group>"; };
 		702EABF613421A8400103019 /* fastq.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = fastq.cpp; path = breseq/fastq.cpp; sourceTree = SOURCE_ROOT; };
 		70367D2013EB232C000787CC /* coverage_distribution.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = coverage_distribution.cpp; path = breseq/coverage_distribution.cpp; sourceTree = SOURCE_ROOT; };
 		70436D5713FF6D7D006448FB /* coverage_distribution.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = coverage_distribution.r; path = breseq/coverage_distribution.r; sourceTree = "<group>"; };
@@ -183,8 +189,6 @@
 		70CB7224140FEB6400D578EB /* settings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = settings.h; sourceTree = "<group>"; };
 		70CB7225140FEB6400D578EB /* storable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = storable.h; sourceTree = "<group>"; };
 		70D789D313C3CEB70036BEAB /* output.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = output.cpp; path = breseq/output.cpp; sourceTree = SOURCE_ROOT; };
-		70E92F07151AB71D00F86F2D /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
-		70E92F09151AB71D00F86F2D /* gdtools.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = gdtools.1; sourceTree = "<group>"; };
 		70E92F1B151AB74200F86F2D /* gdtools */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = gdtools; sourceTree = BUILT_PRODUCTS_DIR; };
 		70E92F21151AB8AF00F86F2D /* gdtools_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = gdtools_cmdline.cpp; path = breseq/gdtools_cmdline.cpp; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -229,7 +233,6 @@
 				4247E77F1268E175006A6D78 /* breseq */,
 				421ACF5F1170E06300C2EB85 /* lib */,
 				70436D5613FF6D5C006448FB /* copied  */,
-				70E92F06151AB71D00F86F2D /* gdtools */,
 				421ACF301170DF1800C2EB85 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -289,6 +292,12 @@
 		70436D5613FF6D5C006448FB /* copied  */ = {
 			isa = PBXGroup;
 			children = (
+				7024BBDB155DEC31007CCA5B /* combined_circos.conf */,
+				7024BBDC155DEC31007CCA5B /* ideogram.conf */,
+				7024BBDD155DEC31007CCA5B /* indels.conf */,
+				7024BBDE155DEC31007CCA5B /* karyotype.and.layout.conf */,
+				7024BBDF155DEC31007CCA5B /* mobs.conf */,
+				7024BBE0155DEC31007CCA5B /* mutations.conf */,
 				70616DCF1400A0C0006E7800 /* plot_coverage.r */,
 				70616DD01400A0C0006E7800 /* plot_error_rate.r */,
 				70616DD11400A0C0006E7800 /* polymorphism_statistics.r */,
@@ -341,15 +350,6 @@
 			);
 			name = libbreseq;
 			path = breseq/libbreseq;
-			sourceTree = "<group>";
-		};
-		70E92F06151AB71D00F86F2D /* gdtools */ = {
-			isa = PBXGroup;
-			children = (
-				70E92F07151AB71D00F86F2D /* main.c */,
-				70E92F09151AB71D00F86F2D /* gdtools.1 */,
-			);
-			path = gdtools;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
