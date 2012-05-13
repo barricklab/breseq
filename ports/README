@@ -1,0 +1,48 @@
+# 4/22/2011 @JEB
+# Instructions for rolling a DMG install of breseq for MacOS X 
+# using MacPorts.
+
+# Follow the MacPorts directions for "Local Portfile Repositories"
+# http://guide.macports.org/#development.local-repositories
+# First, configure your MacPorts to find
+# the local portfiles in under /ports
+
+edit /opt/local/etc/macports/sources.conf
+
+#Add this line above the rsync line
+file:///Users/<username>/path/to/breseq/ports
+
+#The build a local port index
+cd //Users/<username>/path/to/breseq/ports
+%% portindex
+
+# Be sure to toally clean (erase downloaded archive) when making breseq
+sudo port clean --all breseq
+sudo port -f -k mpkg breseq
+
+# -f forces
+# -k keeps the DESTROOT around so it can be packaged for dependencies
+
+# You my also need to 
+
+# You can make a DMG for download from teh MPKG this way:
+hdiutil create -srcfolder breseq.mpkg breseq-0.0.1.dmg
+
+# You can install from the command line with this:
+sudo installer -pkg breseq-0.0.1.mpkg -target /
+
+# Annoyingly, you will have to use the Developer Tools
+# PackageMaker to delete python27 from the port,
+# because its installation fails. Everything else is ok.
+
+
+==note from others===
+mpkg is a bit tricky. It needs the destroots of all ports to exist   
+when it tries to package them, but by default MacPorts removes them   
+after a port is installed. You should uninstall mplayer-devel and all   
+its dependencies, then edit your macports.conf and turn autoclean   
+off. Then you can run sudo port mpkg mplayer-devel and it will   
+rebuild itself and all the dependencies and leave a copy of them in   
+the destroot this time, where mpkg will be able to find them. 
+
+
