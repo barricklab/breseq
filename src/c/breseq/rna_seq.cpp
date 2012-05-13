@@ -109,10 +109,10 @@ void RNASeq::tam_to_gene_counts(cReferenceSequences& ref_seq_info, const string&
 
         cSequenceFeature& feat = **itr_feat;
         
-        if (feat.m_location.strand() != a->strand())
+        if (feat.m_location.get_strand() != a->strand())
           continue;
         
-        int32_t ulength = overlap_length(feat.m_location.start(), feat.m_location.end(), a->reference_start_1(), a->reference_end_1());
+        int32_t ulength = overlap_length(feat.m_location.get_start_1(), feat.m_location.get_end_1(), a->reference_start_1(), a->reference_end_1());
         
         if (ulength > best_overlap) {
           best_overlap = ulength;
@@ -124,8 +124,8 @@ void RNASeq::tam_to_gene_counts(cReferenceSequences& ref_seq_info, const string&
         Gene g(*best_gene);
         
         if (verbose)
-          cout << "  Best gene: " << g.name << " " << g.product << " " << best_gene->m_location.start() << "-" << best_gene->m_location.end() 
-            << "(" << static_cast<int32_t>(best_gene->m_location.strand()) << ")" << endl;
+          cout << "  Best gene: " << g.name << " " << g.product << " " << best_gene->m_location.get_start_1() << "-" << best_gene->m_location.get_end_1() 
+            << "(" << static_cast<int32_t>(best_gene->m_location.get_strand()) << ")" << endl;
         
 
         // because we print tab-delimited, they can really screw up our columns

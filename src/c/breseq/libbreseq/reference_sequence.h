@@ -33,48 +33,50 @@ namespace breseq {
 	
 	/*! Interface for loading sequences and sequence features from GenBank files.
   */
-   class cLocation {
-     public:
-       struct coord_t {
-         int32_t start;
-         int32_t end;
-       };
+  class cLocation {
+  public:
+    int32_t m_start, m_end; // 1-indexed
+    int8_t m_strand;
+    vector<cLocation> m_sub_locations;
+     
+    cLocation() : m_start(0), m_end(0), m_strand(0) {};
+    cLocation(int32_t _start, int32_t _end, int8_t _strand) 
+      : m_start(_start), m_end(_end), m_strand(_strand) { }
 
-      cLocation() : m_coords(1) {};
+    //>! Get 1-indexed start position
+    int32_t get_start_1() const {
+      return m_start;
+    }
+    //>! Get 1-indexed end position
+    int32_t get_end_1() const {
+      return m_end;
+    }
+    int8_t get_strand() const {
+      return m_strand;
+    }
 
-      int32_t start() const {
-        return m_coords.front().start;
-      };
-      int32_t end() const {
-        return m_coords.back().end;
-      };
-      char strand() const {
-        return m_strand;
-      };
-
-      void set_start(int32_t start) {
-        m_coords.front().start = start;
-      };
-      void set_end(int32_t end) {
-        m_coords.back().end = end;
-      };
-      void set_strand(char strand) {
-        m_strand = strand;
-      };
-
-
-      vector<cLocation::coord_t> coords() {
-        return m_coords;
+    vector<cLocation> get_all_sub_locations() {
+       
+      if (m_sub_locations.size() > 0) {
+        vector<cLocation> return_locations;
+        for (vector<cLocation>::iterator it=m_sub_locations.begin(); it!=m_sub_locations.end(); ++it) {
+          vector<cLocation> this_locations = it->get_all_sub_locations();
+          return_locations.insert(return_locations.end(), this_locations.begin(), this_locations.end());
+        }
+        return return_locations;
       }
-
-      void add_location(int32_t start, int32_t end) {
-        cLocation::coord_t coord  = {start, end};
-        m_coords.push_back(coord);
-      }
-
-     private:
-      vector<cLocation::coord_t> m_coords;
-      char m_strand;
+      return make_vector<cLocation>(*this);
+    }
+    
+    void set_start_1(int32_t _start) {
+      m_start = _start;
+    }
+    void set_end_1(int32_t _end) {
+      m_end = _end;
+    }
+    void set_strand(int8_t _strand) {
+      m_strand = _strand;
+    }
   };
   
   extern const vector<string> snp_types;
@@ -116,28 +118,12 @@ namespace breseq {
       map<string, vector<string> > m_gff_attributes;
     
       cSequenceFeature() : m_pseudo(0) {}
-      cSequenceFeature(const cSequenceFeature& _in) : sequence_feature_map_t(_in) 
-      {
-        m_location.set_start(_in.m_location.start());
-        m_location.set_end(_in.m_location.end());
-        m_location.set_strand(_in.m_location.strand());
-        m_pseudo = _in.m_pseudo;
-      }
-      cSequenceFeature operator=(const cSequenceFeature& _in) 
-      {
-        m_location.set_start(_in.m_location.start());
-        m_location.set_end(_in.m_location.end());
-        m_location.set_strand(_in.m_location.strand());
-        m_pseudo = _in.m_pseudo;
-        sequence_feature_map_t::operator=(_in);
-        return *this;
-      }
     
       bool operator<(const cSequenceFeature& _in) const
       {
-        if (this->m_location.start() == _in.m_location.start())
-          return (this->m_location.end() > _in.m_location.end());
-        return (this->m_location.start() < _in.m_location.start());
+        if (this->m_location.get_start_1() == _in.m_location.get_start_1())
+          return (this->m_location.get_end_1() > _in.m_location.get_end_1());
+        return (this->m_location.get_start_1() < _in.m_location.get_start_1());
       }
     
       //<! Safe accessor that returns empty string if not defined. 
@@ -148,6 +134,11 @@ namespace breseq {
         return it->second;
       }
     
+      //<! accessors
+      int32_t get_start_1()  const { return m_location.get_start_1();  }
+      int32_t get_end_1()    const { return m_location.get_end_1();    }
+      int32_t get_strand() const { return m_location.get_strand(); }
+
       //Mark it as pseudo
       void flag_pseudo(bool verbose=false)
       {
@@ -166,7 +157,11 @@ namespace breseq {
         if(verbose)cout << endl;
       }
       
-      void ReadGenBankCoords(string& s, ifstream& in, bool is_sub_location = false);
+      // Read GenBank coords
+      void ReadGenBankCoords(string& s, ifstream& in);
+      //Parse portion of GenBank coords string
+      static cLocation ParseGenBankCoords(string& s, int8_t in_strand = 1);
+    
       void ReadGenBankTag(string& tag, string& s, ifstream& in);
   };
   
@@ -180,7 +175,7 @@ namespace breseq {
     uint32_t translation_table;
     
     Gene() {};
-    Gene(cSequenceFeature& src)
+    Gene(cSequenceFeature& src) : cSequenceFeature(src)
     {
       name = src["name"];
       product = src["product"];
@@ -229,8 +224,12 @@ namespace breseq {
       string get_sequence_1(int32_t start_1, int32_t end_1) const
       {
         ASSERT(start_1 <= end_1, "start (" + to_string(start_1) + ") not less than or equal to end (" + to_string(end_1) + ")");
-        //if(start_1 > end_1)return "";
         return m_fasta_sequence.m_sequence.substr(start_1-1, end_1-start_1+1);
+      }
+    
+      char get_sequence_1(int32_t pos_1) const
+      {
+        return m_fasta_sequence.m_sequence.substr(pos_1-1, 1)[0];
       }
 
       string get_circular_sequence_1(const size_t start_1, const size_t size) const
@@ -592,8 +591,17 @@ namespace breseq {
     static vector<string>       bsf_snp_types;
     static map<string,uint8_t>  nt_type_list;
     
-    typedef vector<uint8_t> SequenceBaseSubstitutionEffects;
+    enum BaseSubstitutionEffect {
+      intergenic,
+      noncoding,
+      synonymous,
+      nonsynonymous
+    };
+    
+    typedef vector<BaseSubstitutionEffect> SequenceBaseSubstitutionEffects;
     map<string,SequenceBaseSubstitutionEffects> m_bse;
+    
+
     
   };
   
