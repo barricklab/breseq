@@ -1418,9 +1418,9 @@ cDiffEntry junction_to_diff_entry(
 		if (repeat_ptr.get() != NULL)
 		{
 			jc.sides[i].is = repeat_ptr;
-			jc.sides[i].is_interval = (repeat_ptr->m_location.strand == 1) 
-        ? to_string(repeat_ptr->m_location.start) + "-" + to_string(repeat_ptr->m_location.end) 
-        : to_string(repeat_ptr->m_location.end) + "-" + to_string(repeat_ptr->m_location.start);
+			jc.sides[i].is_interval = (repeat_ptr->m_location.strand() == 1) 
+        ? to_string(repeat_ptr->m_location.start()) + "-" + to_string(repeat_ptr->m_location.end()) 
+        : to_string(repeat_ptr->m_location.end()) + "-" + to_string(repeat_ptr->m_location.start());
 		}
 	}
 
@@ -1429,12 +1429,12 @@ cDiffEntry junction_to_diff_entry(
 	jc.is_side = UNDEFINED_UINT32;
 	if (jc.sides[0].is.get() && !jc.sides[1].is.get())
 	{
-		if (abs(static_cast<int32_t>(jc.sides[0].is->m_location.start) - static_cast<int32_t>(jc.sides[0].position)) <= 20)
+		if (abs(static_cast<int32_t>(jc.sides[0].is->m_location.start()) - static_cast<int32_t>(jc.sides[0].position)) <= 20)
 		{
 			jc.is_side = 0;
 			jc.sides[jc.is_side].is_side_key = "start";
 		}
-		else if (abs(static_cast<int32_t>(jc.sides[0].is->m_location.end) - static_cast<int32_t>(jc.sides[0].position)) <= 20 )
+		else if (abs(static_cast<int32_t>(jc.sides[0].is->m_location.end()) - static_cast<int32_t>(jc.sides[0].position)) <= 20 )
 		{
 			jc.is_side = 0;
 			jc.sides[jc.is_side].is_side_key = "end";
@@ -1444,12 +1444,12 @@ cDiffEntry junction_to_diff_entry(
 
 	else if (!jc.sides[0].is.get() && jc.sides[1].is.get())
 	{
-		if (abs(static_cast<int32_t>(jc.sides[1].is->m_location.start) - static_cast<int32_t>(jc.sides[1].position)) <= 20)
+		if (abs(static_cast<int32_t>(jc.sides[1].is->m_location.start()) - static_cast<int32_t>(jc.sides[1].position)) <= 20)
 		{
 			jc.is_side = 1;
 			jc.sides[jc.is_side].is_side_key = "start";
 		}
-		else if (abs(static_cast<int32_t>(jc.sides[1].is->m_location.end) - static_cast<int32_t>(jc.sides[1].position)) <= 20 )
+		else if (abs(static_cast<int32_t>(jc.sides[1].is->m_location.end()) - static_cast<int32_t>(jc.sides[1].position)) <= 20 )
 		{
 			jc.is_side = 1;
 			jc.sides[jc.is_side].is_side_key = "end";
@@ -1473,7 +1473,7 @@ cDiffEntry junction_to_diff_entry(
 			// first, adjust the repetitive sequence boundary to get as close to the IS as possible
       assert(jc.sides[jc.is_side].is_side_key.size() > 0);
 			int32_t move_dist = jc.sides[jc.is_side].strand * (static_cast<int32_t>((jc.sides[jc.is_side].is_side_key == "start" 
-          ? jc.sides[jc.is_side].is->m_location.start : jc.sides[jc.is_side].is->m_location.end)) - jc.sides[jc.is_side].position);
+          ? jc.sides[jc.is_side].is->m_location.start() : jc.sides[jc.is_side].is->m_location.end())) - jc.sides[jc.is_side].position);
 
 			if (move_dist < 0) move_dist = 0;
 			if (move_dist > jc.overlap) move_dist = jc.overlap ;

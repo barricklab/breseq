@@ -33,25 +33,48 @@ namespace breseq {
 	
 	/*! Interface for loading sequences and sequence features from GenBank files.
   */
-   struct cLocation {
+   class cLocation {
+     public:
+       struct coord_t {
+         int32_t start;
+         int32_t end;
+       };
 
-      cLocation() : start(0), end(0), strand(1) {};
-      cLocation(int32_t _start, int32_t _end, int8_t _strand) 
-       : start(_start), end(_end), strand(_strand) { }
+      cLocation() : m_coords(1) {};
 
-      int32_t start;
-      int32_t end;
-      char strand;
-      vector<cLocation> sub_locations;
+      int32_t start() const {
+        return m_coords.front().start;
+      };
+      int32_t end() const {
+        return m_coords.back().end;
+      };
+      char strand() const {
+        return m_strand;
+      };
+
+      void set_start(int32_t start) {
+        m_coords.front().start = start;
+      };
+      void set_end(int32_t end) {
+        m_coords.back().end = end;
+      };
+      void set_strand(char strand) {
+        m_strand = strand;
+      };
 
 
-      void test() {
-        printf("start:%i\t", start);
-        printf("end:%i\t", end);
-        printf("strand:%i\t", strand);
-        printf("subs:%i\n", sub_locations.size());
-
+      vector<cLocation::coord_t> coords() {
+        return m_coords;
       }
+
+      void add_location(int32_t start, int32_t end) {
+        cLocation::coord_t coord  = {start, end};
+        m_coords.push_back(coord);
+      }
+
+     private:
+      vector<cLocation::coord_t> m_coords;
+      char m_strand;
   };
   
   extern const vector<string> snp_types;
@@ -95,16 +118,16 @@ namespace breseq {
       cSequenceFeature() : m_pseudo(0) {}
       cSequenceFeature(const cSequenceFeature& _in) : sequence_feature_map_t(_in) 
       {
-        m_location.start = _in.m_location.start;
-        m_location.end = _in.m_location.end;
-        m_location.strand = _in.m_location.strand;
+        m_location.set_start(_in.m_location.start());
+        m_location.set_end(_in.m_location.end());
+        m_location.set_strand(_in.m_location.strand());
         m_pseudo = _in.m_pseudo;
       }
       cSequenceFeature operator=(const cSequenceFeature& _in) 
       {
-        m_location.start = _in.m_location.start;
-        m_location.end = _in.m_location.end;
-        m_location.strand = _in.m_location.strand;
+        m_location.set_start(_in.m_location.start());
+        m_location.set_end(_in.m_location.end());
+        m_location.set_strand(_in.m_location.strand());
         m_pseudo = _in.m_pseudo;
         sequence_feature_map_t::operator=(_in);
         return *this;
@@ -112,9 +135,9 @@ namespace breseq {
     
       bool operator<(const cSequenceFeature& _in) const
       {
-        if (this->m_location.start == _in.m_location.start)
-          return (this->m_location.end > _in.m_location.end);
-        return (this->m_location.start < _in.m_location.start);
+        if (this->m_location.start() == _in.m_location.start())
+          return (this->m_location.end() > _in.m_location.end());
+        return (this->m_location.start() < _in.m_location.start());
       }
     
       //<! Safe accessor that returns empty string if not defined. 
@@ -153,9 +176,6 @@ namespace breseq {
     string name;
     string product;
     string type;
-    int32_t start;
-    int32_t end;
-    bool strand;
     bool pseudogene; 
     uint32_t translation_table;
     
@@ -165,9 +185,6 @@ namespace breseq {
       name = src["name"];
       product = src["product"];
       type = src["type"];
-      start = src.m_location.start;
-      end = src.m_location.end;
-      strand = (src.m_location.strand >= 1);
       pseudogene = src.m_pseudo;
       translation_table = 1;
       if (src.count("transl_table")) 
