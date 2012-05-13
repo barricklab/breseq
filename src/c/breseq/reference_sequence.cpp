@@ -240,9 +240,6 @@ namespace breseq {
   // Using the strand, insert the repeat feaure at supplied position.
   // Also repeat any features inside the repeat.
   // verbose outputs messages to console.
-  //
-  //  TODO: Needs to check to be sure that it is getting a "typical" copy 
-  //  (not one that has an insertion in it or a non-consensus sequence) 
   void cAnnotatedSequence::repeat_feature_1(int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& ref_seq_info, const string &repeat_name, int8_t strand, int32_t region_pos, bool verbose)
   {
     // Go through all the reference sequences in ref_seq_info
@@ -1103,7 +1100,7 @@ bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in) {
  *  The string may cover multiple lines. Currently we do not handle discontinuous features,
  *  and features that cross the origin of a circular chromosome are returned with end < start. 
  */
-void cSequenceFeature::ReadGenBankCoords(string& s, ifstream& in, bool is_sub_location) {
+void cSequenceFeature::ReadGenBankCoords(string& s, ifstream& in) {
 
 // Typical coordinate strings:
 //   1485..1928
@@ -1113,121 +1110,86 @@ void cSequenceFeature::ReadGenBankCoords(string& s, ifstream& in, bool is_sub_lo
 //   complement(join(7504..7835,1..163))
 //
   
+  // Read through all parentheses and across multiple lines if necessary
+  int32_t parentheses_level = 0;
+  size_t parenthesis_pos = s.find_first_of("()");
+  
+  while(parenthesis_pos != string::npos) {
+  if (s.at(parenthesis_pos) == '(') {
+      parentheses_level++;
+    } else {
+      parentheses_level--;
+    }
+    parenthesis_pos = s.find_first_of("()", parenthesis_pos+1);
+  }
+    
+  // Add in remaining lines
+  string s2;
+  while ((parentheses_level > 0) && !in.eof()) {
+    std::getline(in, s2);
+    RemoveLeadingTrailingWhitespace(s2);
+  
+    size_t on_pos = s2.find_first_of("()");
+    while(on_pos != string::npos) {
+  
+      if (s2.at(on_pos) == '(') {
+        parentheses_level++;
+      } else {
+        parentheses_level--;
+      }
+      on_pos = s2.find_first_of("()", on_pos+1);
+    }
+    s += s2;
+  }
+  ASSERT(parentheses_level == 0, "Unmatched parenthesis in feature location.");
+  
+  // Clean <> and space characters.
+  s = substitute(s, "<", "");
+  s = substitute(s, ">", "");
+  s = substitute(s, " ", "");
+  s = substitute(s, "\t", "");
+  
+  m_location = ParseGenBankCoords(s);
+
+  return;
+}
+  
+// Parses a sub-part of the full location string
+cLocation cSequenceFeature::ParseGenBankCoords(string& s, int8_t in_strand)
+{
+  cLocation loc;
+  
   //Look for an operation.
   //complement().
   if (s.find("complement(") == 0) {
-    m_location.strand = - 1;
+    
     static uint32_t n = string("complement(").size();
     string value = s.substr(n, s.size() - n - 1);
-    ReadGenBankCoords(value, in);
+    loc = ParseGenBankCoords(value, -1 * in_strand);
   }
   //join()
-  if (s.find("join(") == 0) {
+  else if (s.find("join(") == 0) {
     static uint32_t n = string("join(").size();
     vector<string> tokens = split(s.substr(n, s.size() - n - 1), ",");
-
-    //Reverse the order if dealing with a negative strand.
-    if (m_location.strand == -1) {
-      reverse(tokens.begin(), tokens.end());
-    }
-
+    
     for (uint32_t i = 0; i < tokens.size(); ++i) {
-      ReadGenBankCoords(tokens[i], in, true);
+      cLocation sub_loc = ParseGenBankCoords(tokens[i], in_strand);
+      loc.sub_locations.push_back( sub_loc);
     }
-
+    
     //Get cLocation::start,end from outer sub_locations.
-    const vector<cLocation>& sub_locs = m_location.sub_locations;
-    m_location.start = sub_locs.front().start;
-    m_location.end = sub_locs.back().end;
+    loc.start = loc.sub_locations.front().start;
+    loc.end = loc.sub_locations.back().end;
   }
-
-  cLocation* location = &m_location;
+  else {
+    //Split on .. (usually 2)
+    vector<string> tokens = split(s, "..");
+    loc.strand = in_strand;
+    loc.start = atoi(tokens.front().c_str());
+    loc.end   = atoi(tokens.back().c_str());
+  }
   
-  if (is_sub_location) {
-    //Change our cLocation* to a new cLocation in cLocation::sub_locations.
-    vector<cLocation>* sub_locs = &m_location.sub_locations;
-    sub_locs->resize(sub_locs->size() + 1);
-    location = &sub_locs->back();
-    location->strand = m_location.strand;
-  }
-
-  //Split on .. (usually 2)
-  uint32_t n = std::count(s.begin(), s.end(), '.');
-  const vector<string>& tokens = split(s, "..");
-  location->start = atoi(tokens.front().c_str());
-  location->end   = atoi(tokens.back().c_str());
-
-  //Handle circular chromosome end < start.
-  if (tokens.size() == 1) {
-    --location->end;
-  }
-
-
-  //Reverse the order if dealing with a negative strand.
-  if (location->strand == -1) {
-    std::swap(location->start, location->end);
-  }
-
-  return;
-
-
-
-  //// Read through all parentheses
-  //int32_t parentheses_level = 0;
-  //size_t parenthesis_pos = s.find_first_of("()");
-
-  //while(parenthesis_pos != string::npos) {
-  //  if (s.at(parenthesis_pos) == '(') {
-  //    parentheses_level++;
-  //  } else {
-  //    parentheses_level--;
-  //  }
-  //  parenthesis_pos = s.find_first_of("()", parenthesis_pos+1);
-  //}
-
-  //string value = s;
-
-  //// Multiline
-  //while ((parentheses_level > 0) && !in.eof()) {
-  //  std::getline(in, s);
-  //  RemoveLeadingTrailingWhitespace(s);
-
-  //  size_t on_pos = s.find_first_of("()");
-  //  while(on_pos != string::npos) {
-
-  //    if (s.at(on_pos) == '(') {
-  //      parentheses_level++;
-  //    } else {
-  //      parentheses_level--;
-  //    }
-  //    on_pos = s.find_first_of("()", on_pos+1);
-  //  }
-  //  value += s;
-  //}
-  //assert(parentheses_level == 0);
-
-  //m_location.strand = 1;
-  //size_t start_complement = value.find("complement(");
-
-  //if (start_complement != string::npos) {
-  //  m_location.strand = -1;
-  //}
-
-  //size_t start_start_pos = value.find_first_of("1234567890");
-  //assert(start_start_pos != string::npos);
-  //size_t start_end_pos = value.find_first_not_of("1234567890", start_start_pos);
-  //if (start_end_pos == string::npos) start_end_pos = value.size() ;
-  //string start_s = value.substr(start_start_pos,start_end_pos-start_start_pos);
-
-  //size_t end_end_pos = value.find_last_of("1234567890");
-  //assert(end_end_pos != string::npos);
-  //size_t end_start_pos = value.find_last_not_of("1234567890", end_end_pos);
-  //if (end_start_pos == string::npos) start_end_pos = -1;
-
-  //string end_s = value.substr(end_start_pos+1,end_end_pos+1 - (end_start_pos+1));
-
-  //m_location.start = atoi(start_s.c_str());
-  //m_location.end = atoi(end_s.c_str());
+  return loc;
 }
 
 void cSequenceFeature::ReadGenBankTag(std::string& tag, std::string& s, std::ifstream& in) {
@@ -1420,7 +1382,7 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
       feature.m_gff_attributes["transl_table"] = make_vector<string>(feature["transl_table"]);
 
     
-    // add an extra copy of the feature if it crosses the origin of a circular chromosome
+    // Add an extra copy of the feature if it crosses the origin of a circular chromosome
     if (feature.m_location.end < feature.m_location.start) {
       cSequenceFeaturePtr bonus_circular_feature(new cSequenceFeature);
       *bonus_circular_feature = feature;
@@ -1439,7 +1401,6 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
 }
 
 void cReferenceSequences::ReadGenBankFileSequence(std::ifstream& in, cAnnotatedSequence& s) {
-  //std::cout << "sequence" << std::endl;
 
   s.m_fasta_sequence.m_name = s.m_seq_id;
 
@@ -2539,12 +2500,12 @@ map<string,uint8_t>  BaseSubstitutionEffects::nt_type_list = make_map<string,uin
 ("RNA",1)("PSEUDOGENE",2)("INTERGENIC",3)("NONSYNONYMOUS",4)("NONSYNONYMOUS",5)
 ;  
 
-
+  
 BaseSubstitutionEffects::BaseSubstitutionEffects(cReferenceSequences& ref_seq_info) 
 {    
   bool count_synonymous_stop_codons = true;
   bool verbose = true;
-  
+    
   map<string,string> codon_synonymous_changes;
   map<string,string> codon_nonsynonymous_changes;
   map<string,string> codon_num_synonymous_changes;
@@ -2559,7 +2520,7 @@ BaseSubstitutionEffects::BaseSubstitutionEffects(cReferenceSequences& ref_seq_in
   uint32_t total_nt_position = 0;
   
   map<char,uint32_t> total_bases = make_map<char,uint32_t>('A',0)('T',0)('C',0)('G',0);
-  //vector<char> base_char_list = make_vector<char>('A')('T')('C')('G');
+  vector<char> base_char_list = make_vector<char>('A')('T')('C')('G');
   
   uint32_t total_codons = 0;
   uint32_t total_orfs = 0;
@@ -2576,341 +2537,113 @@ BaseSubstitutionEffects::BaseSubstitutionEffects(cReferenceSequences& ref_seq_in
     }
     
     total_nt_position += seq.get_sequence_length();
-    if (verbose)
-      cout <<  "Allocating genome arrays...\n";
     
-    // Set up the entire thing as default intergenic
-    vector<uint8_t> base_change_type;
-    base_change_type.resize(seq.get_sequence_length(), nt_type_list["INTERGENIC"]);
+    // Allocate the entire thing as default intergenic    
+    SequenceBaseSubstitutionEffects& seq_bse = m_bse[seq.m_seq_id];
+    seq_bse.resize(seq.get_sequence_length()*4, intergenic);
     
     for(cSequenceFeatureList::iterator it2=seq.m_features.begin(); it2!=seq.m_features.end(); ++it2) {
       cSequenceFeature& f = **it2;
+      if (verbose) cout << f.SafeGet("name") << " " << f.get_start() << " " << f.get_end() << " " << f.get_strand() << endl;
+      
+      // Catches tRNA/rRNA/pseudogenes...
+      if (f[TYPE] == "gene") {
+
+        vector<cLocation> sub_locations = f.m_location.get_all_sub_locations();
+        for(vector<cLocation>::iterator it3=sub_locations.begin(); it3!=sub_locations.end(); ++it3) {
+          cLocation& loc = *it3;
+          for (int32_t i=loc.start; i<=loc.end; i++) {
+            int32_t this_location_0 = i-1;
+            for (size_t b=0; b<base_char_list.size(); b++)
+              seq_bse[i*4+b] = max(seq_bse[this_location_0*4+b], noncoding);
+          }
+        }
+      }
+      
+      // Remainder is only for coding sequences
+      if (f[TYPE] != "CDS")
+        continue;
+      
+      // initialize gene structure
+      Gene g(f);
+      
+      // Pseudogenes already counted from gene feature as noncoding
+      if (g.pseudogene)
+        continue;
+      
+      total_orfs++;
+            
+      // Piece together the gene - at each nucleotide make all three possible changes
+      
+      string this_codon = "   ";
+      size_t on_codon_index = 0;
+      vector<uint32_t> this_codon_locations_0(0, 3); // 0-indexed
+      
+      vector<cLocation> sub_locations = g.m_location.get_all_sub_locations();
+      int8_t strand = sub_locations.front().strand;
+      for(vector<cLocation>::iterator it3=sub_locations.begin(); it3!=sub_locations.end(); ++it3) {
+        
+        cLocation& loc = *it3;
+        ASSERT(strand == loc.strand, "CDS has sublocations on different strands: " + g["name"]);
+
+        for (int32_t i=loc.start; i<=loc.end; i++) {
+          
+          this_codon_locations_0[on_codon_index] = i-1;
+          this_codon[on_codon_index] = seq.get_sequence_1(i);
+        
+          on_codon_index++;
+
+          // The codon is filled, now make all mutations and assign to proper nucleotides
+          if (on_codon_index == 3) {
+            
+            // change the codon to the right strand
+            string original_codon = this_codon;
+            if (strand == -1)
+              original_codon = reverse_complement(original_codon);
+              
+            char original_amino_acid = cReferenceSequences::translate_codon(original_codon, g.translation_table);
+            
+            for (int32_t test_codon_index=0; test_codon_index<3; test_codon_index++) {
+              
+              for (size_t b=0; b<base_char_list.size(); b++) {
+
+                char mut_base = base_char_list[b];
+                
+                string test_codon = this_codon;
+                test_codon[test_codon_index] = mut_base;
+                
+                if (strand == -1)
+                  test_codon = reverse_complement(test_codon);
+                
+                char mut_amino_acid = cReferenceSequences::translate_codon(test_codon, g.translation_table);
+
+                if (mut_amino_acid == original_amino_acid)
+                  seq_bse[this_codon_locations_0[test_codon_index]*4+b] = max(seq_bse[this_codon_locations_0[test_codon_index]*4+b], synonymous);
+                else
+                  seq_bse[this_codon_locations_0[test_codon_index]*4+b] = max(seq_bse[this_codon_locations_0[test_codon_index]*4+b], nonsynonymous);
+                
+              }
+              
+            }
+              
+            on_codon_index = 0;
+          }
+        }
+      } // end sublocation loop
+      ASSERT(on_codon_index == 0, "Number of base pairs in CDS not a multiple of 3: " + g["name"]);
+    } // end feature loop
+    
+    if (verbose) {
+      for(size_t i=0; i<seq.get_sequence_length(); ++i) {
+        char base = seq.m_fasta_sequence.m_sequence[i];        
+        cout << (i+1) << "\t" << base << "\t" << seq_bse[i*4+0] << "\t" << seq_bse[i*4+1] << "\t" << seq_bse[i*4+2] << "\t" << seq_bse[i*4+3] << endl;
+      }
     }
     
-  }
-  
+  } // end sequence loop
 }    
 
-
-/*
- 
- ##Record proteins
- my $prev_gene;
- FEATURE: foreach my $f (@feature_list) 
- {		
- ## figure out position
- my @Location_List = $f->location->each_Location();
- 
- ## Record three categories: noncoding (RNA genes), pseudogenes, protein coding genes, intergenic (last is assumed if others not true)
- if (($f->primary_tag eq 'tRNA') || ($f->primary_tag eq 'rRNA') ) {
- 
- foreach my $loc (@Location_List) {
- for (my $i=$loc->start; $i<=$loc->end; $i++) {
- $nt_type[$i-1] = $k_nt_type_RNA if ($nt_type[$i-1] > $k_nt_type_RNA);
- }
- }
- next FEATURE;				
- }
- 
- next FEATURE if ($f->primary_tag ne 'CDS');
- 
- if ($f->has_tag("pseudo") || ( ($f->location->start_pos_type ne 'EXACT') || ($f->location->end_pos_type ne 'EXACT')) ) {
- 
- foreach my $loc (@Location_List) {
- for (my $i=$loc->start; $i<=$loc->end; $i++) {
- $nt_type[$i-1] = $k_nt_type_PSEUDOGENE if ($nt_type[$i-1] > $k_nt_type_PSEUDOGENE);						
- }
- }
- next FEATURE;
- }
- 
- #no gene fragments!
- 
- $total_orfs++;
- 
- my $p; 
- $p->{start} = $Location_List[0]->start if (!defined $p->{start});
- $p->{end} = $Location_List[$#Location_List]->end;
- $p->{strand} =  $f->location->strand;			$p->{gene} = GetTag($f, "gene");
- $p->{name} = ($p->{gene}) ? $p->{gene} : GetTag($f, "locus_tag");
- $p->{description} = GetTag($f, "product");
- $p->{locus_tag} = GetTag($f, "locus_tag");
- $p->{gene} = '-' if (!$p->{gene});
- 
- #print STDERR "$p->{gene}\n";
- 
- #Load a list of synonyms, format is likely to vary in each file...
- push @{$p->{synonyms}}, $p->{gene} if ($p->{gene});
- push @{$p->{synonyms}}, $p->{locus_tag} if ($p->{locus_tag});	
- 
- 
- 
- ## Use the correct genetic code
- ## Generate new pretermination table if this one has not been seen yet.
- $p->{translation_table} = GetTag($f, "transl_table");
- die "No translation table for CDS!" if (!$p->{translation_table});
- die if (defined $translation_table && ($translation_table != $p->{translation_table}));
- 
- if (!defined $translation_table)
- {
- $translation_table = $p->{translation_table};
- print STDERR "Using translation table: $p->{translation_table}\n" if ($verbose);
- 
- $nss =  GenomeDiff::SynonymousNonsynonymous->new(	
- 'translation_table' => $p->{translation_table}, 
- 'count_synonymous_stop_codons' => $count_synonymous_stop_codons,
- );
- %codon_synonymous_changes = %{$nss->{codon_synonymous_changes}};
- %codon_num_synonymous_changes = %{$nss->{codon_num_synonymous_changes}};
- %codon_nonsynonymous_changes = %{$nss->{codon_nonsynonymous_changes}};
- %codon_to_aa = %{$nss->{codon_to_aa}};
- %aa_to_codons = %{$nss->{aa_to_codons}};
- %codon_position_mutation_synonymous = %{$nss->{codon_position_mutation_synonymous}};
- 
- #print Dumper(%codon_position_mutation_synonymous);
- #print STDERR Dumper(%codon_num_synonymous_changes);
- #print STDERR Dumper(%codon_synonymous_changes, %codon_nonsynonymous_changes, %codon_to_aa, %aa_to_codons);
- 
- }
- elsif ($translation_table != $p->{translation_table})
- {
- #no need to die, but downstream programs need to worry about this
- die "Different translation tables used in the same organism! $translation_table and $p->{translation_table}\n";
- }
- 
- # Piece together the gene
- # Code should be savvy to an internal
- # frameshift (bacterial) or intron (eukaryotic).
- $p->{nt_seq} = '';
- my @gene_positions; #nt positions in referencethat correspond to each base of nt_seq
- my $on_nt_index = 0;
- foreach my $loc (@Location_List)
- {
- my $add_seq = $seq->trunc($loc->start, $loc->end);
- my $on_nt;
- if ($p->{strand} == -1)
- {
- $on_nt = $loc->end;
- $add_seq = $add_seq->revcom;
- $p->{nt_seq} = $add_seq->seq . $p->{nt_seq};
- }
- else
- {
- $on_nt = $loc->start;
- $p->{nt_seq} = $p->{nt_seq} . $add_seq->seq;
- }
- 
- for (my $pos = $loc->start-1;  $pos < $loc->end; $pos++)
- {
- while ($on_nt_index < length $p->{nt_seq})
- {
- $gene_positions[$on_nt_index] = $on_nt-1;
- $on_nt_index++;
- $on_nt += $p->{strand};
- }
- }
- }
- 
- #print Dumper($p);
- 
- #Split to codons
- my $nt_seq = $p->{nt_seq};
- my $codon_index = -1;
- CODON: while (my $codon = substr $nt_seq, 0, 3, "") {
- $codon_index++;
- 
- #add to codon list and keep track of codons used
- if (length $nt_seq == 0) {
- if ($codon_to_aa{$codon} ne '*') {
- print STDERR "WARNING: Reading frame has no stop codon: $p->{gene}|$p->{locus_tag}\n";
- }
- }
- 
- #check for stop codon
- if ($codon_to_aa{$codon} eq '*') {
- if (length $nt_seq > 0) {
- print STDERR "WARNING: Stop codon ($codon) is within gene: $p->{gene}|$p->{locus_tag}\n";
- }
- ## count or not?
- next CODON if (!$count_synonymous_stop_codons);
- }
- 
- push @{$p->{codon_list}}, $codon;
- 
- 
- #print $nt_seq . "\n";
- #print $codon . "\n";
- 
- if (length $codon != 3) {
- print STDERR "ERROR: Codon that is not of length 3 found!\n";
- print STDERR $nt_seq . "\n";
- print STDERR $codon . "\n";
- print STDERR Dumper($p);
- die;
- }
- 
- print "  $codon\n" if ($verbose);
- 
- ## update genome synonymous calls
- ## Note that stop codon has not been removed!
- foreach my $codon_position (1..3)
- { 
- my $gene_position = $codon_index * 3 + $codon_position - 1;
- my $genome_position = $gene_positions[$gene_position];
- 
- my $from_nt = substr $p->{nt_seq}, $gene_position, 1;
- ## note -> this is already on the coding strand
- 
- print "  $codon_position:$from_nt ($gene_position, $genome_position)\n" if ($verbose);
- 
- ## count this position as in a gene
- $nt_type[$genome_position] = $k_nt_type_PROTEIN if ($nt_type[$genome_position] > $k_nt_type_PROTEIN);
- 
- 
- TO_NT: foreach my $to_nt (@nt_list) {
- next TO_NT if ($from_nt eq $to_nt);
- #print STDERR "$genome_position $codon_index $gene_position $from_nt-$to_nt" . "\n";
- 
- if (!$codon_position_mutation_synonymous{$codon . "_" . $codon_position . "_" . $from_nt . "_" . $to_nt}) {	
- $nt_change_is_nonsynonymous[$genome_position * 6 + $bp_change_to_index->{"$from_nt-$to_nt"} ] = 1;
- }
- }		
- } # end codon position
- 
- } ## end codon
- 
- 
- 
- #Save length in AA
- $p->{length} = scalar @{$p->{codon_list}};
- 
- #Tabulate all codons used
- CODON: for (my $on_codon = 0; $on_codon < scalar @{$p->{codon_list}}; $on_codon++)
- {
- my $codon = $p->{codon_list}->[$on_codon];
- 
- #Need to catch these with /transl_except=(pos:1546010..1546012,aa:Sec)
- 
- if (!defined $codon_to_aa{$codon})
- {
- print STDERR "Undefined translation for codon ($codon) in the middle of this gene: $p->{gene}|$p->{locus_tag}\n";
- #print STDERR Dumper($p);
- next CODON;
- }
- elsif ( ($codon_to_aa{$codon} eq '*') && ($on_codon != scalar @{$p->{codon_list}}) - 1 )
- {
- print STDERR "Stop codon ($codon) in the middle of this gene: $p->{gene}|$p->{locus_tag}\n";
- #print STDERR Dumper($p);
- next CODON;
- } 
- }
- 
- } ## end feature
- 
- ###
- #  Per-Sequence Counting Loop
- ###
- 
- my $sequence = $seq->seq;
- print STDERR "Tallying per-position information...\n" if ($verbose);
- 
- ## Now go through the sequence and normalize expectations for overlapping genes
- ## If it is marked as nonsynonymous, then it's nonsynonymous even if others are synonymous
- for (my $genome_position=0; $genome_position<$seq_length; $genome_position++) {
- 
- ## only count coding positions
- next if ($nt_type[$genome_position] == $k_nt_type_PROTEIN);
- $total_codon_nt_positions++;
- 
- my $from_nt = substr $sequence, $genome_position, 1;
- 
- TO_NT: foreach my $to_nt (@nt_list) {
- 
- next TO_NT if ($from_nt eq $to_nt);
- #print STDERR "$genome_position $codon_index $gene_position $from_nt-$to_nt" . "\n";
- 
- my $key = "$from_nt-$to_nt";
- 
- 
- if ($nt_change_is_nonsynonymous[$genome_position * 6 + $bp_change_to_index->{"$from_nt-$to_nt"} ] == 1) {
- $nonsynonymous_mutations{$key}++;
- $total_num_nonsynonymous_changes++;
- } else {
- $synonymous_mutations{$key}++;
- $total_num_synonymous_changes++;
- }
- }
- }
- 
- ###
- #  / Per-Sequence Counting Loop
- ###
- 
- my @syn_labels = ("syn-AT.GC-CG.TA", "syn-AT.CG-CG.AT", "syn-AT.TA-CG.GC");
- @syn_labels = map { $_ . ".syn" } @syn_labels;
- my @tot_labels = ('Type');
- 
- foreach (my $i=0; $i<$seq_length; $i++)
- {
- my @tot_list;
- 
- my $from_nt = substr $sequence, $i, 1;
- 
- my $is_AT = 0;
- $is_AT = (($from_nt eq 'A') || ($from_nt eq 'T')) ? 1 : 0;
- 
- push @tot_list, $nt_type[$i];		
- 
- my @syn_list = ();
- if ($nt_type[$i] == $k_nt_type_PROTEIN) {
- 
- my $j_offset = 0;
- $j_offset = 3 if (!$is_AT);
- for (my $j=0; $j < 3; $j++) {
- push @syn_list, ($nt_change_is_nonsynonymous[$i*6+$j+$j_offset] == 0) ? 1 : 0;
- }
- }
- }
- 
- #save
- $self->{packed_data} = '';
- for (my $i=0; $i < $self->{seq_length}; $i++) 
- {	
- my $from_nt = substr $sequence, $i, 1;
- my $is_AT = 0;
- $is_AT = (($from_nt eq 'A') || ($from_nt eq 'T')) ? 1 : 0;
- my $offset = 0;
- $offset = 3 if (!$is_AT);
- 
- my $start = $i*6 + $offset;
- my $end = $start+2;
- 
- my $bit_string = '';
- 
- my ($this_nt_type, $this_bit);
- my $this_nt_type = $nt_type[$i];
- 
- $this_bit = $this_nt_type % 2;
- $bit_string .= $this_bit;
- $this_nt_type /= 2;
- $this_bit = $this_nt_type % 2;
- $bit_string .= $this_bit;
- 
- #print +($i+1) . " " . $nt_type[$i] . "\n";
- #print "$bit_string\n";
- for (my $j=$start; $j<=$end;$j++) 
- {
- $bit_string .= $nt_change_is_nonsynonymous[$j];
- }
- #print "$bit_string\n";
- $self->{packed_data} .= pack 'b8', $bit_string;
- }
- 
- return $self;
- }
- 
- */
-
+  
 
 /*
  
@@ -3177,8 +2910,11 @@ BaseSubstitutionEffects::BaseSubstitutionEffects(cReferenceSequences& ref_seq_in
  
  =cut
  */
+  
 cGeneticCode::cGeneticCode(uint32_t translation_table, bool count_synonymous_stop_codons)
 {
+  (void)translation_table;
+  (void)count_synonymous_stop_codons;
 }
 /*
  my($caller,%options) = @_;
