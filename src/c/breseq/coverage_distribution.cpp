@@ -422,7 +422,7 @@ namespace breseq {
     list<int32_t>::iterator available_coverage_it;
     list<int32_t> available_coverage;
     int32_t random_index;
-    uint32_t best_greater_than;
+    int32_t best_greater_than;
     uint32_t left_greater_than;
     uint32_t right_greater_than;
     int32_t max_error_threshold;

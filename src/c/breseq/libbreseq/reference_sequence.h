@@ -33,8 +33,8 @@ namespace breseq {
 	
 	/*! Interface for loading sequences and sequence features from GenBank files.
   */
-   struct cLocation {
-
+   class cLocation {
+   public:
       cLocation() : start(0), end(0), strand(1) {};
       cLocation(int32_t _start, int32_t _end, int8_t _strand) 
        : start(_start), end(_end), strand(_strand) { }
@@ -44,13 +44,24 @@ namespace breseq {
       char strand;
       vector<cLocation> sub_locations;
 
+      vector<cLocation> get_all_sub_locations() {
+       
+        if (sub_locations.size() > 0) {
+          vector<cLocation> return_locations;
+          for (vector<cLocation>::iterator it=sub_locations.begin(); it!=sub_locations.end(); ++it) {
+            vector<cLocation> this_locations = it->get_all_sub_locations();
+            return_locations.insert(return_locations.end(), this_locations.begin(), this_locations.end());
+          }
+          return return_locations;
+        }
+        return make_vector<cLocation>(*this);
+      }
 
       void test() {
         printf("start:%i\t", start);
         printf("end:%i\t", end);
         printf("strand:%i\t", strand);
-        printf("subs:%i\n", sub_locations.size());
-
+        printf("subs:%i\n", static_cast<int>(sub_locations.size()));
       }
   };
   
@@ -93,13 +104,7 @@ namespace breseq {
       map<string, vector<string> > m_gff_attributes;
     
       cSequenceFeature() : m_pseudo(0) {}
-      cSequenceFeature(const cSequenceFeature& _in) : sequence_feature_map_t(_in) 
-      {
-        m_location.start = _in.m_location.start;
-        m_location.end = _in.m_location.end;
-        m_location.strand = _in.m_location.strand;
-        m_pseudo = _in.m_pseudo;
-      }
+
       cSequenceFeature operator=(const cSequenceFeature& _in) 
       {
         m_location.start = _in.m_location.start;
@@ -125,7 +130,12 @@ namespace breseq {
         return it->second;
       }
     
-      //Mark it as pseudo
+      //<! accessors
+      int32_t get_start()  const { return m_location.start;  }
+      int32_t get_end()    const { return m_location.end;    }
+      int32_t get_strand() const { return m_location.strand; }
+
+    //Mark it as pseudo
       void flag_pseudo(bool verbose=false)
       {
         //If this feature is already pseudo or a region, do nothing.
@@ -143,7 +153,11 @@ namespace breseq {
         if(verbose)cout << endl;
       }
       
-      void ReadGenBankCoords(string& s, ifstream& in, bool is_sub_location = false);
+      // Read GenBank coords
+      void ReadGenBankCoords(string& s, ifstream& in);
+      //Parse portion of GenBank coords string
+      static cLocation ParseGenBankCoords(string& s, int8_t in_strand = 1);
+    
       void ReadGenBankTag(string& tag, string& s, ifstream& in);
   };
   
@@ -160,7 +174,7 @@ namespace breseq {
     uint32_t translation_table;
     
     Gene() {};
-    Gene(cSequenceFeature& src)
+    Gene(cSequenceFeature& src) : cSequenceFeature(src)
     {
       name = src["name"];
       product = src["product"];
@@ -212,8 +226,12 @@ namespace breseq {
       string get_sequence_1(int32_t start_1, int32_t end_1) const
       {
         ASSERT(start_1 <= end_1, "start (" + to_string(start_1) + ") not less than or equal to end (" + to_string(end_1) + ")");
-        //if(start_1 > end_1)return "";
         return m_fasta_sequence.m_sequence.substr(start_1-1, end_1-start_1+1);
+      }
+    
+      char get_sequence_1(int32_t pos_1) const
+      {
+        return m_fasta_sequence.m_sequence.substr(pos_1-1, 1)[0];
       }
 
       string get_circular_sequence_1(const size_t start_1, const size_t size) const
@@ -575,8 +593,17 @@ namespace breseq {
     static vector<string>       bsf_snp_types;
     static map<string,uint8_t>  nt_type_list;
     
-    typedef vector<uint8_t> SequenceBaseSubstitutionEffects;
+    enum BaseSubstitutionEffect {
+      intergenic,
+      noncoding,
+      synonymous,
+      nonsynonymous
+    };
+    
+    typedef vector<BaseSubstitutionEffect> SequenceBaseSubstitutionEffects;
     map<string,SequenceBaseSubstitutionEffects> m_bse;
+    
+
     
   };
   
