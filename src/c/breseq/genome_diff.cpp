@@ -2609,7 +2609,7 @@ void GDtoCircos(const vector<string> &gd_file_names,
     
     for(cSequenceFeatureList::iterator it = ref_seq.m_repeats.begin(); it != ref_seq.m_repeats.end(); it++){
       cSequenceFeature seq_feature = **it;
-      int32_t middle = int32_t(seq_feature.m_location.start() + seq_feature.m_location.end()) / 2;
+      int32_t middle = int32_t(seq_feature.m_location.get_start_1() + seq_feature.m_location.get_end_1()) / 2;
       
       string direction;
       string color;
@@ -2617,7 +2617,7 @@ void GDtoCircos(const vector<string> &gd_file_names,
       if (left_side.count(ref_seq.m_seq_id) > 0){
         if (left_side[ref_seq.m_seq_id].first <= middle &&
             middle <= left_side[ref_seq.m_seq_id].second){
-          if (seq_feature.m_location.strand() == 1){
+          if (seq_feature.m_location.get_strand() == 1){
             direction = "left";
           }
           else{
@@ -2625,7 +2625,7 @@ void GDtoCircos(const vector<string> &gd_file_names,
           }
         }
         else{
-          if (seq_feature.m_location.strand() == 1){
+          if (seq_feature.m_location.get_strand() == 1){
             direction = "right";
           } 
           else{
@@ -2634,7 +2634,7 @@ void GDtoCircos(const vector<string> &gd_file_names,
         }
       }
       else{
-        if (seq_feature.m_location.strand() == 1){
+        if (seq_feature.m_location.get_strand() == 1){
           direction = "right";
         } 
         else{
@@ -2652,8 +2652,8 @@ void GDtoCircos(const vector<string> &gd_file_names,
       }
       
       mob_file << ref_seq.m_seq_id << " " <<
-                  seq_feature.m_location.start() << " " <<
-                  seq_feature.m_location.end() << " " <<
+                  seq_feature.m_location.get_start_1() << " " <<
+                  seq_feature.m_location.get_end_1() << " " <<
                   "i" << direction << " " <<
                   "color=" << color << endl;
     }

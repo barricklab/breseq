@@ -926,6 +926,9 @@ int do_count(int argc, char* argv[])
   ofstream output_file(output_file_name.c_str());
   ASSERT(output_file.good(), "Error writing to file: " + output_file_name);
   
+  uout("Calculating base substitution effects in reference sequences") << endl;
+  BaseSubstitutionEffects my_bsf(ref_seq_info);
+  
   /*    
    if ($base_substitution_file) {
    
