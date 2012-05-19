@@ -148,6 +148,7 @@ void alignment_output::create_alignment ( const string& region, const string& co
     aligned_reference.target_id = target_id;
     aligned_reference.seq_id = m_alignment_output_pileup.target_name(target_id);
     aligned_reference.reference_length = m_alignment_output_pileup.target_length(target_id);
+    aligned_reference.strand = +1;
     m_alignment_output_pileup.aligned_references.push_back(aligned_reference);
   }
 
@@ -362,6 +363,7 @@ void alignment_output::create_alignment ( const string& region, const string& co
       uint32_t len = aligned_reference.end - aligned_reference.truncate_start + 1;
       aligned_reference.start = aligned_reference.ghost_start;
       aligned_reference.end = aligned_reference.start + aligned_reference.ghost_strand * (len - 1);
+      aligned_reference.strand = aligned_reference.ghost_strand; // due to the way strands are given in junctions
     }
     
     if (aligned_reference.truncate_end != 0)
@@ -369,6 +371,7 @@ void alignment_output::create_alignment ( const string& region, const string& co
       uint32_t len = aligned_reference.truncate_end - aligned_reference.start + 1;
       aligned_reference.end = aligned_reference.ghost_end;
       aligned_reference.start = aligned_reference.end + aligned_reference.ghost_strand * (len - 1);
+      aligned_reference.strand = -aligned_reference.ghost_strand;
     }
     
   }

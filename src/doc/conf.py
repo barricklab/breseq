@@ -56,7 +56,10 @@ rst_prolog = """
 .. |breseq| replace:: :program:`breseq`
 .. |SSAHA2| replace:: :program:`SSAHA2`
 .. |SAMtools| replace:: :program:`SAMtools`
+.. |Genome Diff| replace:: :program:`GenomeDiff`
 .. |GD| replace:: :program:`GenomeDiff`
+.. |gdtools| replace:: :program:`gdtools`
+
 
 """
 
