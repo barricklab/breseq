@@ -27,14 +27,13 @@ noinst_LTLIBRARIES = libbreseq.la
 libbreseq_la_SOURCES = \
 	alignment.cpp \
 	alignment_output.cpp \
-	reference_sequence.cpp \
 	anyoption.cpp \
 	calculate_trims.cpp \
 	candidate_junctions.cpp \
+	chisquare.cpp \
 	contingency_loci.cpp \
 	coverage_output.cpp \
 	coverage_distribution.cpp \
-	chisquare.cpp \
 	error_count.cpp \
 	fasta.cpp \
 	fastq.cpp \
@@ -42,20 +41,21 @@ libbreseq_la_SOURCES = \
 	identify_mutations.cpp \
 	mutation_predictor.cpp \
 	output.cpp \
-	pileup_base.cpp \
 	pileup.cpp \
+	pileup_base.cpp \
+	reference_sequence.cpp \
 	resolve_alignments.cpp \
 	rna_seq.cpp \
 	settings.cpp \
+	summary.cpp \
 	libbreseq/alignment.h \
 	libbreseq/alignment_output.h \
-	libbreseq/reference_sequence.h \
 	libbreseq/anyoption.h \
 	libbreseq/calculate_trims.h \
 	libbreseq/candidate_junctions.h \
 	libbreseq/chisquare.h \
-	libbreseq/contingency_loci.h \
 	libbreseq/common.h \
+	libbreseq/contingency_loci.h \
 	libbreseq/coverage_distribution.h \
 	libbreseq/coverage_output.h \
 	libbreseq/error_count.h \
@@ -65,12 +65,14 @@ libbreseq_la_SOURCES = \
 	libbreseq/identify_mutations.h \
 	libbreseq/mutation_predictor.h \
 	libbreseq/output.h \
-	libbreseq/pileup_base.h \
 	libbreseq/pileup.h \
+	libbreseq/pileup_base.h \
+	libbreseq/reference_sequence.h \
 	libbreseq/resolve_alignments.h \
 	libbreseq/rna_seq.h \
 	libbreseq/settings.h \
-	libbreseq/storable.h 
+	libbreseq/storable.h \
+	libbreseq/summary.h 
 	
 libbreseq_la_LIBADD = $(top_srcdir)/$(LIBBAM)/libbam.la
 
