@@ -14,7 +14,7 @@ Contents:
 
    Introduction <introduction>
    Installation <installation>
-   Usage <usage>  
+   Usage Summary <usage>  
    Test Drive <test_drive>
    Methods <methods>   
    Output <output>

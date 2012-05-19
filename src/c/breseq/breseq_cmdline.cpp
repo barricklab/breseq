@@ -139,30 +139,28 @@ int do_bam2aln(int argc, char* argv[]) {
  */
 int do_bam2cov(int argc, char* argv[]) {
   // setup and parse configuration options:
-	AnyOption options("Usage: bam2aln --bam=<reference.bam> --fasta=<reference.fasta> --region=<accession:start-end> --output=<output.html> [--max-reads=1000]");
+	AnyOption options("Usage: bam2aln -b reference.bam -f reference.fasta [--plot-format PNG -o output.png] seq_id1:start1-end1 [seq_id2:start2-end2 ...]");
 	options
-  ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
+  ("help,h", "Produce advanced help message", TAKES_NO_ARGUMENT)
   // required options
-  ("bam,b", "bam file containing sequences to be aligned", "data/reference.bam")
+  ("bam,b", "BAM file containing sequences to be aligned", "data/reference.bam")
 	("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
-  ("output,o", "base name of output file. Region (seq_id:start-end) appended if there are multiple output files. Defaults to seq_id:start-end for single regions.")
+  ("output,o", "Base name of output files. Region specification (seq_id:start-end) appended if there are multiple output files. Defaults to seq_id:start-end for single regions.")
   // which regions to create files for
-  ("region,r", "region to print (accession:start-end), may also be provided as unnamed arguments at the end of the command line", "")
-  ("tile-size", "size of tiles")
-  ("tile-overlap", "overlap between tiles (1/2 on each side)")
+  ("tile-size", "In tiling mode, the size of each tile", 0, ADVANCED_OPTION)
+  ("tile-overlap", "In tiling mode, overlap between adjacent tiles (1/2 on each side)", 0, ADVANCED_OPTION)
   // options controlling what files are output
-  ("plot,p", "create graphical plot of coverage", TAKES_NO_ARGUMENT)
-  ("plot-format", "plot format: PNG or PDF", "PNG")
-  ("table,t", "create text table of coverage", TAKES_NO_ARGUMENT)
+  ("plot-format", "Format of output plot: PNG or PDF", "PNG")
+  ("table,t", "Create tab delimited file of coverage instead of a plot", TAKES_NO_ARGUMENT)
 //  ("read_start_output,r", "file name for table file binned by read start bases (DEFAULT: OFF)")
 //  ("gc_output,g", "create additional table file binned by GC content of reads (DEFAULT: OFF)")
   // options controlling information that is output
-  ("total-only,1", "only plot/tabulate total coverage, not per strand coverage", TAKES_NO_ARGUMENT)
-  ("resolution", "rough number of positions to output coverage information for in interval (0=ALL)", 600)
+  ("total-only,1", "Only plot/tabulate total coverage, not per strand coverage", TAKES_NO_ARGUMENT)
+  ("resolution", "Number of positions to output coverage information for in interval (0=ALL)", 600)
   .processCommandArgs(argc, argv);
   
   options.addUsage("");
-  options.addUsage("If you do not specify the --plot or --table option, then the program defaults to --plot only mode.");
+  options.addUsage("Create a coverage plot or table for the specified region or regions.");
 
   // make sure that the required config options are good:
 	if(options.count("help")
@@ -173,14 +171,9 @@ int do_bam2cov(int argc, char* argv[]) {
 		return -1;
 	}
   
-  // Default is to draw plot, but you can specify both --table and --plot to make both
-  bool draw_plot =  options.count("plot") || !options.count("table");
-
   vector<string> region_list;
-  if (options.count("region"))
-    region_list= from_string<vector<string> >(options["region"]);
   
-  // also take regions off the command line
+  // Take regions off the command line
   for (int32_t i = 0; i < options.getArgc(); i++)
   {
     string region = options.getArgv(i);
@@ -197,7 +190,13 @@ int do_bam2cov(int argc, char* argv[]) {
     region_list.clear();
   }
   
-  ASSERT(tiling_mode || (region_list.size() > 0), "No regions specified.");
+  // Did they specify some regions?
+  if(!tiling_mode && (region_list.size() == 0)) {
+    options.addUsage("");
+    options.addUsage("No regions specified.");
+    options.printUsage();
+    return -1;
+  }
   
   // create empty settings object to have R script name
   Settings settings;
@@ -263,8 +262,7 @@ int do_bam2cov(int argc, char* argv[]) {
     if (options.count("table")) {
       cout << "Tabulating coverage for region: " << *it << endl;
       co.table(*it, file_name + ".tab", from_string<uint32_t>(options["resolution"]));
-    }
-    if (draw_plot) {
+    } else {
       cout << "Plotting coverage for region: " << *it << endl;
       co.plot(*it, file_name + "." + to_lower(options["plot-format"]) , from_string<uint32_t>(options["resolution"]));
     }
