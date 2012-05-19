@@ -56,31 +56,17 @@ int gdtools_usage()
 
 int do_intersection(int argc, char *argv[])
 {
-  AnyOption options("INTERSECT -o <output.gd> <input1.gd input2.gd ...>");
-  options("output,o",  "output GD file name");
-  options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
+  AnyOption options("gdtools INTERSECT [-o output.gd] input1.gd input2.gd ...");
+  options("output,o",  "Output Genome Diff file name", "output.gd");
+  options("verbose,v", "Verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 
   options.addUsage("");
-  options.addUsage("\tCreates a GD file of mutations and associated evidence that exists across all input GD files.");
-
-  if (!options.count("output")) {
-    options.addUsage("");
-    options.addUsage("No output provided.");
-    options.printUsage();
-    return -1;
-  }  
-
-  if (!options.getArgc()) {
-    options.addUsage("");
-    options.addUsage("No additional files provided.");
-    options.printUsage();
-    return -1;
-  }
+  options.addUsage("Creates a new Genome Diff file with mutations that are present in ALL input Genome Diff files.");
 
   if (options.getArgc() < 2) {
     options.addUsage("");
-    options.addUsage("Not enough additional files provided.");
+    options.addUsage("Must provide at least two input Genome Diff files.");
     options.printUsage();
     return -1;
   }
@@ -104,8 +90,8 @@ int do_intersection(int argc, char *argv[])
 
 int do_union(int argc, char *argv[])
 {
-  AnyOption options("UNION -o <output.gd> <input1.gd input2.gd ...>");
-  options("output,o",  "output GD file name");
+  AnyOption options("gdtools UNION [-o output.gd] input1.gd input2.gd ...");
+  options("output,o",  "output GD file name", "output.gd");
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 
@@ -113,23 +99,9 @@ int do_union(int argc, char *argv[])
   options.addUsage("\tCreates a GD file of mutations and associated evidence that exist in each input GD file.");
   options.addUsage("Duplicate mutations are merged into a single mutation.");
 
-  if (!options.count("output")) {
-    options.addUsage("");
-    options.addUsage("No output provided.");
-    options.printUsage();
-    return -1;
-  }  
-
-  if (!options.getArgc()) {
-    options.addUsage("");
-    options.addUsage("No additional files provided.");
-    options.printUsage();
-    return -1;
-  }
-
   if (options.getArgc() < 2) {
     options.addUsage("");
-    options.addUsage("Not enough additional files provided.");
+    options.addUsage("Must provide at least two input Genome Diff files.");
     options.printUsage();
     return -1;
   }
@@ -155,35 +127,21 @@ int do_union(int argc, char *argv[])
 
 int do_apply(int argc, char *argv[])
 {
-  AnyOption options("APPLY -o <output> -f <fasta/gff3> -r <reference> <input.gd>");
-  options("output,o",    "output file");
-  options("format,f",    "output file's format (Options: fasta, gff3)");
-  options("reference,r", ".gbk/.gff3/.fasta/.bull reference sequence file");
+  AnyOption options("gdtools APPLY [ -o output.gff3 -f GFF3 ] -r reference.gbk [-r reference2.gbk ] input.gd");
+  options("output,o",    "output file Default (output.*)");
+  options("format,f",    "output file's format (Options: FASTA, GFF3)", "FASTA");
+  options("reference,r", "Genbank, GFF3, or FASTA reference sequence file");
   options("verbose,v",   "Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
-  options.addUsage("Input a single GenomeDiff, and as many reference files");
-  options.addUsage("as you like.  Using the GenomeDiff, this will apply all");
+  options.addUsage("Input a single Genome Diff, and as many reference files");
+  options.addUsage("as you like.  Using the Genome Diff, this will apply all");
   options.addUsage("the mutations to the reference sequences, output is to");
-  options.addUsage("a single file that includes all the references.");
-  
-  if (!options.count("output")) {
-    options.addUsage("");
-    options.addUsage("No output provided.");
-    options.printUsage();
-    return -1;
-  }  
+  options.addUsage("a single file that includes all the references in the.");
+  options.addUsage("requested format.");
 
-  string format;
-  if (!options.count("format")) {
-    options.addUsage("");
-    options.addUsage("No format provided.");
-    options.printUsage();
-    return -1;
-  } else {
-    format = to_upper(options["format"]);
-  }
+  string format = to_upper(options["format"]);
 
   if ((format != "FASTA") && (format != "GFF3")) {
     options.addUsage("");
@@ -191,6 +149,14 @@ int do_apply(int argc, char *argv[])
     options.printUsage();
     return -1;
   }
+  
+  string output;
+  if (options.count("output")) {
+    output = options["output"];
+  }
+  else {
+    output = "output." + to_lower(format);
+  }  
 
   if (!options.getArgc()) {
     options.addUsage("");
@@ -222,11 +188,11 @@ int do_apply(int argc, char *argv[])
 
   if (format == "FASTA") {
     uout << options["fasta"] << endl;
-    new_ref_seq_info.WriteFASTA(options["output"], options.count("verbose"));
+    new_ref_seq_info.WriteFASTA(output, options.count("verbose"));
   }
   else if (format == "GFF3") {
     uout << options["gff3"] << endl;
-    new_ref_seq_info.WriteGFF(options["output"], options.count("verbose"));
+    new_ref_seq_info.WriteGFF(output, options.count("verbose"));
   }
 
   return 0;
@@ -234,24 +200,17 @@ int do_apply(int argc, char *argv[])
 
 int do_subtract(int argc, char *argv[])
 {
-  AnyOption options("SUBTRACT [-o output.gd] input.gd minus1.gd [minus2.gd ...]");
-  options("output,o",  "output GD file");
+  AnyOption options("gdtools SUBTRACT [-o output.gd] input.gd subtract1.gd [subtract2.gd ...]");
+  options("output,o",  "output GD file", "output.gd");
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
-  options.addUsage("Creates a GD file of mutations from the input.gd after removing mutations present in additional minus#.gd GD files.");
-  
-  if (!options.count("output")) {
-    options.addUsage("");
-    options.addUsage("No output provided.");
-    options.printUsage();
-    return -1;
-  }
+  options.addUsage("Creates a new Genome Diff file of mutations from the input file that are present after removing mutations present in any of the subtracted Genome Diff files.");
 
   if (options.getArgc() < 2) {
     options.addUsage("");
-    options.addUsage("Not enough input files provided.");
+    options.addUsage("Input Genome Diff and at least one Genome Diff to subtract not provided.");
     options.printUsage();
     return -1;
   }
@@ -278,8 +237,8 @@ int do_subtract(int argc, char *argv[])
 
 int do_merge(int argc, char *argv[])
 {
-  AnyOption options("MERGE -o <output.gd> <input1.gd input2.gd ...>");
-  options("output,o",     "output GD file");
+  AnyOption options("gdtools MERGE [-o output.gd] input1.gd input2.gd ...");
+  options("output,o",     "output GD file", "output.gd");
   options("unique,u",     "unique entries only", TAKES_NO_ARGUMENT);  
   options("id,i",         "reorder IDs", TAKES_NO_ARGUMENT);
   options("verbose,v",    "verbose mode", TAKES_NO_ARGUMENT);
@@ -292,20 +251,9 @@ int do_merge(int argc, char *argv[])
   options.addUsage("aren't unique will get new ones.  Mutations that use those");
   options.addUsage("IDs will be properly updated to acknowledge the change.");
   
-  if(argc == 1)  {
-    options.printUsage();
-    return -1;  }
-  
-  if (!options.getArgc()) {
+  if (options.getArgc() < 2) {
     options.addUsage("");
-    options.addUsage("No input provided.");
-    options.printUsage();
-    return -1;
-  }
-  
-  if (!options.count("output")) {
-    options.addUsage("");
-    options.addUsage("no output provided.");
+    options.addUsage("At least two input Genome Diff files must be provided.");
     options.printUsage();
     return -1;
   }
@@ -334,8 +282,8 @@ int do_merge(int argc, char *argv[])
 
 int do_weights(int argc, char* argv[])
 {
-  AnyOption options("WEIGHTS -o <output.gd> <input1.gd input2.gd ...>");
-  options("output,o",    "output GD file");
+  AnyOption options("gdtools WEIGHTS [-o output.gd input1.gd input2.gd ...");
+  options("output,o",    "output GD file", "output.gd");
   options("verbose,v",   "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 
@@ -345,16 +293,9 @@ int do_weights(int argc, char* argv[])
   options.addUsage("entry. The 'weight' field is the inverse of the frequency of that mutation occuring accross");
   options.addUsage("all input GD files. Unique mutations will therefor have a 'weight' of 1");
 
-  if (!options.count("output")) {
+  if (options.getArgc() < 2) {
     options.addUsage("");
-    options.addUsage("No output provided.");
-    options.printUsage();
-    return -1;
-  }
-
-  if (!options.getArgc()) {
-    options.addUsage("");
-    options.addUsage("No additional input provided.");
+    options.addUsage("At least two input Genome Diff files must be provided.");
     options.printUsage();
     return -1;
   }
@@ -424,8 +365,8 @@ int do_weights(int argc, char* argv[])
 
 int do_compare(int argc, char *argv[])
 {
-  AnyOption options("COMPARE -o <output.gd> <control.gd> <test.gd>");
-  options("output,o",  "output GD file");
+  AnyOption options("gdtools COMPARE [-o output.gd] control.gd test.gd");
+  options("output,o",  "output GD file", "output.gd");
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 
@@ -441,16 +382,9 @@ int do_compare(int argc, char *argv[])
   options.addUsage("The control and test GD files are merged into the given output GD file, for each");
   options.addUsage("mutation a 'compare' field will be added with a TP, FN, FP value. ");
 
-  if (!options.count("output")) {
+  if (options.getArgc() != 2) {
     options.addUsage("");
-    options.addUsage("No output provided.");
-    options.printUsage();
-    return -1;
-  }
-
-  if (options.getArgc() < 2) {
-    options.addUsage("");
-    options.addUsage("Not enough input file provided.");
+    options.addUsage("Exactly two input Genome Diff files must be provided.");
     options.printUsage();
     return -1;
   }
@@ -476,26 +410,30 @@ int do_compare(int argc, char *argv[])
   return 0;
 }
 
-int do_convert_gvf( int argc, char* argv[]){
-  AnyOption options("GD2GVF --input <input.gd> --output <output.gvf>"); 
+int do_gd2gvf( int argc, char* argv[]){
+  AnyOption options("gdtools GD2GVF [-o output.gvf] input.gd"); 
 
   options
     ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
+    ("output,o","name of output file", "output.gvf")
     ("input,i","gd file to convert") 
-    ("output,o","name of output file")
     ("snv-only", "only output SNV entries", TAKES_NO_ARGUMENT)
     ;
   options.processCommandArgs( argc,argv);
 
   options.addUsage("");
-  options.addUsage("Creates a Genome Variant Format(GVF) file of mutations present in a input GD file.");
+  options.addUsage("Creates a Genome Variant Format (GVF) file of mutations present in a input GD file.");
+  options.addUsage("GVF files are a type of GFF3 file for describing genomic changes.");
   
-  if( !options.count("input") || !options.count("output") ){
-      options.printUsage(); return -1;
+  if( options.getArgc() != 1 ){
+    options.addUsage("");
+    options.addUsage("Provide a single input Genome Diff file.");
+    options.printUsage();
+    return -1;
   }
   
   try{
-      GDtoGVF( options["input"], options["output"], options.count("snv-only") );
+      GDtoGVF( options.getArgv(0), options["output"], options.count("snv-only") );
   } 
   catch(...){ 
       return -1; // failed 
@@ -504,29 +442,27 @@ int do_convert_gvf( int argc, char* argv[]){
   return 0;
 }
 
-int do_convert_gd( int argc, char* argv[])
+int do_vcf2gd( int argc, char* argv[])
 {
-  AnyOption options("VCF2GD --input <intput.vcf> --output <output.gd>");
-  options("input,i","gd file to convert");
-  options("output,o","name of output file");
+  AnyOption options("VCF2GD [-o output.gd] intput.vcf");
+  options("output,o","name of output Genome Diff file", "output.gd");
   options.processCommandArgs( argc,argv);
 
   options.addUsage("");
-  options.addUsage("Creates a GD file of mutations present in a input Variant Call Format(VCF) file.");
+  options.addUsage("Creates a GD file of mutations present in a input Variant Call Format (VCF) file.");
   
-  if(!options.count("input") && !options.count("output")){
+  if( options.getArgc() != 1 ){
+    options.addUsage("");
+    options.addUsage("Provide a single input VCF file.");
     options.printUsage();
     return -1;
   }
-  if(!options.count("input")) {
-    options.printUsage();
-    return -1;
-  }
+  string input = options.getArgv(0);
   
-  cGenomeDiff gd = cGenomeDiff::from_vcf(options["input"]);
+  cGenomeDiff gd = cGenomeDiff::from_vcf(input);
   const string &file_name = options.count("output") ?
         options["output"] :
-        cString(options["input"]).remove_ending("vcf") + "gd";
+        cString(input).remove_ending("vcf") + "gd";
 
   gd.write(file_name);
 
@@ -535,7 +471,7 @@ int do_convert_gd( int argc, char* argv[])
 
 int do_convert_circos(int argc, char *argv[]){
   
-  AnyOption options("GD2CIRCOS -r <reference> [-r <reference2> ...] -o <output_dir> input1.gd [input2.gd ...]");
+  AnyOption options("gdtools GD2CIRCOS -r <reference> [-r <reference2> ...] -o <output_dir> input1.gd [input2.gd ...]");
   
   options
     ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
@@ -584,31 +520,30 @@ int do_convert_circos(int argc, char *argv[]){
   return 0;
 }
 
-int do_convert_mira(int argc, char* argv[]){
+int do_mira2gd(int argc, char* argv[]){
   //unsupported before it ever saw the light of day.
-  AnyOption options("MIRA2GD --input <input.gd> --output <output_dir>");
+  AnyOption options("gdtools MIRA2GD [-o output.gd] input.mira");
   
   options
     ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-    ("input,i","mira feature analysis file to convert") 
-    ("output,o","name of gd file to save")
+    ("output,o", "name of gd file to save", "output.gd")
+    ("input,i", "mira feature analysis file to convert") 
     ;
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
   options.addUsage("Creates a GD file from a MIRA feature analysis file. Be sure to normalize the GD created afterward.");
   
-  if (!options.count("input") && !options.count("output")){
+  if( options.getArgc() != 1 ){
+    options.addUsage("");
+    options.addUsage("Provide a single input MIRA file.");
     options.printUsage();
     return -1;
   }
-  if (!options.count("input")){
-    options.printUsage();
-    return -1;
-  }
+  string input = options.getArgv(0);
   
   try{
-      MIRAtoGD( options["input"], options["output"]);
+      MIRAtoGD( input, options["output"]);
   } 
   catch(...){ 
       return -1; // failed 
@@ -619,9 +554,8 @@ int do_convert_mira(int argc, char* argv[]){
 
 int do_not_evidence(int argc, char *argv[])
 {
-  AnyOption options("NOT_EVIDENCE -g <genomediff.gd> -o <output.gd>");
-  options("genomediff,g","input GD files");
-  options("output,o","output GD file");
+  AnyOption options("NOT_EVIDENCE [-o output.gd] input.gd");
+  options("output,o","output GD file", "output.gd");
   options("id,i","Reorder IDs (Flag)", TAKES_NO_ARGUMENT);
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
@@ -632,31 +566,26 @@ int do_not_evidence(int argc, char *argv[])
   options.addUsage("GenomeDiff file if specified.  If no output is specified,");
   options.addUsage("verbose will still inform what evidence isn't being used.");
   
-  if(argc == 1)  {
-    options.printUsage();
-    return -1;  }
-  
-  if (!options.count("genomediff")) {
+  if( options.getArgc() != 1 ){
     options.addUsage("");
-    options.addUsage("You must supply the --genomediff option for input.");
+    options.addUsage("Provide a single input Genome Diff file.");
     options.printUsage();
     return -1;
   }
+  string input = options.getArgv(0);
   
-  cGenomeDiff gd1(options["genomediff"]);
+  cGenomeDiff gd1(input);
   
   gd1.filter_not_used_as_evidence(options.count("verbose"));
   
-  if(options.count("output"))
+  if(options.count("id"))
   {
-    if(options.count("id"))
-    {
-      cGenomeDiff gd2;
-      gd2.merge(gd1, true, true);
-      gd2.write(options["output"]);
-    }
-    else  {
-      gd1.write(options["output"]);  }
+    cGenomeDiff gd2;
+    gd2.merge(gd1, true, true);
+    gd2.write(options["output"]);
+  }
+  else  {
+    gd1.write(options["output"]);  
   }
   
   return 0;
@@ -664,7 +593,7 @@ int do_not_evidence(int argc, char *argv[])
 
 int do_annotate(int argc, char* argv[])
 {
-  AnyOption options("ANNOTATE [-o annotated.* --html] -r reference.gbk input.1.gd [input.2.gd ... ]");
+  AnyOption options("gdtools ANNOTATE [-o annotated.* --html] -r reference.gbk input.1.gd [input.2.gd ... ]");
   
   options
   ("help,h", "produce advanced help message", TAKES_NO_ARGUMENT)
@@ -805,7 +734,7 @@ int do_annotate(int argc, char* argv[])
     html_compare(settings, output_file_name, "Mutation Comparison", gd, mt_options);
         
   } else {
-    uout("Writing output HTML file", options["output"]);
+    uout("Writing output Genome Diff file", options["output"]);
     gd.write(output_file_name);
   }
   
@@ -814,7 +743,7 @@ int do_annotate(int argc, char* argv[])
 
 int do_count(int argc, char* argv[])
 {
-  AnyOption options("COUNT [-o count.csv] -r reference.gbk input.1.gd [input.2.gd ... ]");
+  AnyOption options("gdtools COUNT [-o count.csv] -r reference.gbk input.1.gd [input.2.gd ... ]");
   options.addUsage("");
   options.addUsage("Counts the numbers of mutations and other statistics for each input GenomeDiff file.");
   options
@@ -1157,22 +1086,15 @@ int do_count(int argc, char* argv[])
 
 int do_normalize_gd(int argc, char* argv[])
 {
-  AnyOption options("NORMALIZE -o <output.gd> -r <reference> <input1.gd input2.gd input3.gd ...>");
+  AnyOption options("gdtools NORMALIZE [-o output.gd] -r reference.gbk input.gd");
   options
-  ("output,o"     , "output GD file.")
+  ("output,o"     , "output Genome Diff file.", "output.gd")
   ("reference,r"  , "input reference file.")
   ("verbose,v"    , "Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
 
   options.processCommandArgs(argc, argv);
   options.addUsage("");
   options.addUsage("Creates a GD file of mutations that have been normalized to the input reference files.");
-
-  if (!options.count("output")) {
-    options.addUsage("");
-    options.addUsage("No output provided.");
-    options.printUsage();
-    return -1;
-  }
 
   if (!options.count("reference")) {
     options.addUsage("");
@@ -1181,19 +1103,13 @@ int do_normalize_gd(int argc, char* argv[])
     return -1;
   }
 
-  if (!options.getArgc()) {
+  if( options.getArgc() != 1 ){
     options.addUsage("");
-    options.addUsage("No additional input provided.");
+    options.addUsage("Provide a single input Genome Diff file.");
     options.printUsage();
     return -1;
   }
-
-  if (!options.count("output")) {
-    options.addUsage("");
-    options.addUsage("You must supply the --output option for output.");
-    options.printUsage();
-    return -1;
-  }
+  string input = options.getArgv(0);
 
   bool verbose = options.count("verbose");
 
@@ -1204,6 +1120,9 @@ int do_normalize_gd(int argc, char* argv[])
   cReferenceSequences rs;
   rs.LoadFiles(rfns);
 
+  cGenomeDiff gd(input);
+  
+  /* @JEB used??
   uout("Merging input GD files") <<  options.getArgv(0) << endl;
   cGenomeDiff gd(options.getArgv(0));
 
@@ -1212,6 +1131,7 @@ int do_normalize_gd(int argc, char* argv[])
     cGenomeDiff temp_gd(options.getArgv(i));
     gd.merge(temp_gd, false, false, options.count("verbose"));
   }
+  */
 
   uout("Normalizing mutations");
   gd.normalize_to_sequence(rs);
@@ -1233,40 +1153,32 @@ int do_normalize_gd(int argc, char* argv[])
 }
 
 int do_filter_gd(int argc, char* argv[]) {
-  AnyOption options("FILTER -i <input.gd> -o <output.gd> -m <mutation type> <filters>");
-  options("input,i", "Genome diff file to be filtered.");
-  options("output,o", "Filter genome diff file.");
+  AnyOption options("gdtools FILTER  [-o output.gd] -f filter1 [-f filter2] [-m SNP] input.gd");
+  options("output,o", "Output Genome Diff file.", "output.gd");
   options("mut_type,m", "Only consider this mutation type for filtering.");
+  options("filter,f", "Filters to apply when selecting Genome Diff entries.");
   options.processCommandArgs(argc, argv);
 
   options.addUsage("");
   options.addUsage("Creates a GD file of mutations that evaluate as false to the input filtering expressions.");
 
-  if (!options.count("input")) {
+  UserOutput uout("FILTER");
+  
+  if (options.getArgc() != 1) {
     options.addUsage("");
-    options.addUsage("You must supply an input genome diff file to filter with option -g");
+    options.addUsage("Provide a single Genome Diff input file.");
     options.printUsage();
     return -1;
   }
 
-  if (!options.getArgc()) {
+  vector<string> filters = from_string<vector<string> >(options["reference"]);
+  if (!options.count("filter")) {
     options.addUsage("");
     options.addUsage("You must supply filter arguments.");
     options.printUsage();
     return -1;
   }
-
-  // Use original file as output if argument is not passed.
-  if (!options.count("output")) {
-    options["output"] = options["input"];
-  }
-
-  UserOutput uout("FILTER");
-
-  list<string> filters;
-  for(int32_t i = 0; i < options.getArgc(); ++i) {
-    filters.push_back(options.getArgv(i));
-  }
+  
   assert(filters.size());
 
   cGenomeDiff gd(options["input"]);
@@ -1300,7 +1212,7 @@ int do_filter_gd(int argc, char* argv[]) {
     cDiffEntry mut = **it;
 
     vector<string> reasons;
-    for (list<string>:: const_iterator jt = filters.begin(); jt != filters.end(); ++jt) {
+    for (vector<string>:: const_iterator jt = filters.begin(); jt != filters.end(); ++jt) {
       bool is_filtered = false;
       // Parse filter string.
       string filter = *jt;
@@ -1409,13 +1321,13 @@ int main(int argc, char* argv[]) {
   } else if (command == "WEIGHTS") {
     return do_weights(argc_new, argv_new);
   } else if (command == "GD2GVF") {             
-    return do_convert_gvf(argc_new, argv_new);
+    return do_gd2gvf(argc_new, argv_new);
   } else if (command == "VCF2GD") {             
-    return do_convert_gd( argc_new, argv_new);
+    return do_vcf2gd( argc_new, argv_new);
   } else if (command == "GD2CIRCOS"){
     return do_convert_circos(argc_new, argv_new);
   } else if(command == "MIRA2GD"){
-    return do_convert_mira(argc_new, argv_new);
+    return do_mira2gd(argc_new, argv_new);
   }
 
   return 0;

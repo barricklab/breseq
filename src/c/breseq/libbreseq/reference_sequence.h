@@ -597,11 +597,17 @@ namespace breseq {
       synonymous,
       nonsynonymous
     };
+    enum BaseCDSStrand {
+      no_CDS,
+      forward,
+      reverse,
+      conflict
+    };
     
     typedef vector<BaseSubstitutionEffect> SequenceBaseSubstitutionEffects;
     map<string,SequenceBaseSubstitutionEffects> m_bse;
-    
-
+    typedef vector<BaseCDSStrand> SequenceBaseCDSStrands;
+    map<string,SequenceBaseCDSStrands> m_bcs;
     
   };
   

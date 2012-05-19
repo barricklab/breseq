@@ -64,7 +64,7 @@ These commands compile and install not only |breseq|, but also some open-source 
 .. WARNING::
    Installing |breseq| will overwrite any other versions of :program:`SAMtools` that you have in the default ./configure install locations. To avoid this, you can follow the instructions in :ref:`installing-in-the-source-directory` or :ref:`installing-in-a-custom-location` to safely install |breseq| elsewhere.
 
-Finally, we recommend that you test that your |breseq| installation functions with this command after installatin::
+Finally, we recommend that you test that your |breseq| installation functions with this command after installation::
 
   make test
   

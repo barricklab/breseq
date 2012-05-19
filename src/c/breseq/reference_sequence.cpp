@@ -2541,13 +2541,15 @@ BaseSubstitutionEffects::BaseSubstitutionEffects(cReferenceSequences& ref_seq_in
     SequenceBaseSubstitutionEffects& seq_bse = m_bse[seq.m_seq_id];
     seq_bse.resize(seq.get_sequence_length()*4, intergenic);
     
+    SequenceBaseCDSStrands& seq_bcs = m_bcs[seq.m_seq_id];
+    seq_bcs.resize(seq.get_sequence_length(), no_CDS);
+    
     for(cSequenceFeatureList::iterator it2=seq.m_features.begin(); it2!=seq.m_features.end(); ++it2) {
       cSequenceFeature& f = **it2;
       if (verbose) cout << f.SafeGet("name") << " " << f.get_start_1() << " " << f.get_end_1() << " " << f.get_strand() << endl;
       
       // Catches tRNA/rRNA/pseudogenes...
       if (f[TYPE] == "gene") {
-
         vector<cLocation> sub_locations = f.m_location.get_all_sub_locations();
         for(vector<cLocation>::iterator it3=sub_locations.begin(); it3!=sub_locations.end(); ++it3) {
           cLocation& loc = *it3;
@@ -2586,7 +2588,25 @@ BaseSubstitutionEffects::BaseSubstitutionEffects(cReferenceSequences& ref_seq_in
         ASSERT(strand == loc.m_strand, "CDS has sublocations on different strands: " + g["name"]);
 
         for (int32_t i=loc.m_start; i<=loc.m_end; i++) {
+          int32_t i_0 = i - 1;
           
+          //// Remember the strand of the gene overlapping this position
+          if (seq_bcs[i_0] == conflict) {
+            // do nothing
+          }
+          // Don't count if we have genes on both strands overlapping same nucleotide
+          else if (seq_bcs[i_0] != no_CDS) {
+            if ((loc.get_strand() == 1) && (seq_bcs[i_0] == reverse) )
+              seq_bcs[i_0] = conflict;
+            if ((loc.get_strand() == -1) && (seq_bcs[i_0] == forward) )
+              seq_bcs[i_0] = conflict;
+          }
+          else
+          {
+            seq_bcs[i_0] = (loc.get_strand() == +1 ? forward : reverse);
+          }
+          
+          //// Handle codon synonymous/nonsynonymous changes
           this_codon_locations_0[on_codon_index] = i-1;
           this_codon[on_codon_index] = seq.get_sequence_1(i);
         
@@ -2633,9 +2653,10 @@ BaseSubstitutionEffects::BaseSubstitutionEffects(cReferenceSequences& ref_seq_in
     } // end feature loop
     
     if (verbose) {
-      for(size_t i=0; i<seq.get_sequence_length(); ++i) {
-        char base = seq.m_fasta_sequence.m_sequence[i];        
-        cout << (i+1) << "\t" << base << "\t" << seq_bse[i*4+0] << "\t" << seq_bse[i*4+1] << "\t" << seq_bse[i*4+2] << "\t" << seq_bse[i*4+3] << endl;
+      for(size_t i_0=0; i_0<seq.get_sequence_length(); ++i_0) {
+        char base = seq.m_fasta_sequence.m_sequence[i_0];        
+        cout << (i_0+1) << "\t" << base << "\t" << seq_bcs[i_0] << "\t" 
+            << seq_bse[i_0*4+0] << "\t" << seq_bse[i_0*4+1] << "\t" << seq_bse[i_0*4+2] << "\t" << seq_bse[i_0*4+3] << endl;
       }
     }
     
