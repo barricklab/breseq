@@ -1,19 +1,19 @@
 .. _genomediff-format:
 
 |gdtools| Utility Program
-====================
+===========================
 
 Performs various functions on genomediff formatted files. Options depend on the COMMAND supplied. Only a small subset of these commands are described below.
 For a full list of gdtools subcommands run it from the command line with no options::
 
-  >>> gdtools
+  gdtools
   
 Command: ANNOTATE
----------------
+-------------------
 
-Usage:
+Usage::
 
-   :program:`gdtools` ANNOTATE -r reference.gbk [--html -o output.html] input1.gd input2.gd ...
+  gdtools ANNOTATE -r reference.gbk [--html -o output.html] input1.gd input2.gd ...
 
 .. program:: gdtools ANNOTATE
 
@@ -40,9 +40,9 @@ input1.gd input2.gd ...
 Command: APPLY
 ----------------
 
-Usage:
+Usage::
 
-   :program:`gdtools` APPLY -r reference.gbk -f GFF3 [-o output.html] input.gd
+  gdtools APPLY -r reference.gbk -f GFF3 [-o output.html] input.gd
 
 .. program:: gdtools APPLY
 
@@ -66,9 +66,9 @@ input.gd
 Command: SUBTRACT
 -----------------
 
-Usage:
+Usage::
 
-   :program:`gdtools` SUBTRACT [-o output.gd] input.gd subtract1.gd [subtract2.gd ...]
+  gdtools SUBTRACT [-o output.gd] input.gd subtract1.gd [subtract2.gd ...]
 
 .. program:: gdtools SUBTRACT
 
@@ -87,11 +87,11 @@ subtract.gd [subtract2.gd ...]
    |Genome Diff| files to subtract from input file.
 
 Command: INTERSECT
------------------
+------------------
 
-Usage:
+Usage::
 
-   :program:`gdtools` INTERSECT [-o output.gd] input1.gd input2.gd ...
+  gdtools INTERSECT [-o output.gd] input1.gd input2.gd ...
 
 .. program:: gdtools INTERSECT
 
