@@ -140,14 +140,6 @@ namespace breseq {
         , m_location(copy.m_location)
         , m_pseudo(copy.m_pseudo) { }
 
-      cSequenceFeature& operator=(const cSequenceFeature& assign) {
-        *this       = assign;
-        m_location  = assign.m_location;
-        m_pseudo    = assign.m_pseudo;
-
-        return *this;
-      }
-
       bool operator<(const cSequenceFeature& _in) const
       {
         if (this->m_location.get_start_1() == _in.m_location.get_start_1())
