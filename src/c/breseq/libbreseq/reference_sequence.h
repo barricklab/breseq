@@ -40,8 +40,24 @@ namespace breseq {
     vector<cLocation> m_sub_locations;
      
     cLocation() : m_start(0), m_end(0), m_strand(0) {};
-    cLocation(int32_t _start, int32_t _end, int8_t _strand) 
-      : m_start(_start), m_end(_end), m_strand(_strand) { }
+    cLocation(int32_t start, int32_t end, int8_t strand) 
+      : m_start(start), m_end(end), m_strand(strand) { }
+
+    cLocation(const cLocation& copy)
+      : m_start(copy.m_start)
+      , m_end(copy.m_end)
+      , m_strand(copy.m_strand)
+      , m_sub_locations(copy.m_sub_locations) { }
+
+
+    cLocation& operator=(const cLocation& assign) {
+      m_start         = assign.m_start;
+      m_end           = assign.m_end;
+      m_strand        = assign.m_strand;
+      m_sub_locations = assign.m_sub_locations; 
+
+      return *this;
+    }
 
     //>! Get 1-indexed start position
     int32_t get_start_1() const {
@@ -118,7 +134,20 @@ namespace breseq {
       map<string, vector<string> > m_gff_attributes;
     
       cSequenceFeature() : m_pseudo(0) {}
-    
+
+      cSequenceFeature(const cSequenceFeature& copy) 
+        : sequence_feature_map_t(copy)
+        , m_location(copy.m_location)
+        , m_pseudo(copy.m_pseudo) { }
+
+      cSequenceFeature& operator=(const cSequenceFeature& assign) {
+        *this       = assign;
+        m_location  = assign.m_location;
+        m_pseudo    = assign.m_pseudo;
+
+        return *this;
+      }
+
       bool operator<(const cSequenceFeature& _in) const
       {
         if (this->m_location.get_start_1() == _in.m_location.get_start_1())
@@ -185,6 +214,17 @@ namespace breseq {
       if (src.count("transl_table")) 
         translation_table = from_string<uint32_t>(src["transl_table"]);
     }
+
+    Gene(const Gene& copy) : cSequenceFeature(copy)
+    {
+      name = copy.name;
+      product = copy.product;
+      type = copy.type;
+      pseudogene = copy.pseudogene;
+      translation_table = copy.translation_table;
+    }
+
+
   };
 
   typedef counted_ptr<Gene> cGenePtr;
@@ -219,7 +259,7 @@ namespace breseq {
         m_description("na"), 
         m_seq_id("na"),
         m_features(0) {} ;
-    
+
       // Utility to get top strand sequence
       string get_sequence_1(int32_t start_1, int32_t end_1) const
       {
@@ -327,6 +367,36 @@ namespace breseq {
         {
           m_genes.push_front(fp);
         }
+      }
+      
+      static cAnnotatedSequence deep_copy(cAnnotatedSequence in) {
+        cAnnotatedSequence copy;
+
+        copy.m_length = in.m_length;
+        copy.m_is_circular = in.m_is_circular;
+        copy.m_description = in.m_description;
+        copy.m_seq_id = in.m_seq_id;
+
+        cSequenceFeatureList::iterator it;
+        //Features.
+        for (it = in.m_features.begin(); it != in.m_features.end(); ++it) {
+          cSequenceFeature* temp = new cSequenceFeature(**it);
+          copy.m_features.push_back(cSequenceFeaturePtr(temp));
+        }
+
+        //Genes.
+        for (it = in.m_genes.begin(); it != in.m_genes.end(); ++it) {
+          cSequenceFeature* temp = new cSequenceFeature(**it);
+          copy.m_genes.push_back(cSequenceFeaturePtr(temp));
+        }
+
+        //Repeats.
+        for (it = in.m_repeats.begin(); it != in.m_repeats.end(); ++it) {
+          cSequenceFeature* temp = new cSequenceFeature(**it);
+          copy.m_repeats.push_back(cSequenceFeaturePtr(temp));
+        }
+
+        return copy;
       }
   };
 
@@ -550,6 +620,19 @@ namespace breseq {
       s = substitute(s, "%25", "%");
       return s;
     }    
+
+    static cReferenceSequences deep_copy(const cReferenceSequences& in) {
+      cReferenceSequences copy;
+
+      copy.resize(in.size());
+      for (uint32_t i = 0; i < in.size(); ++i) {
+        copy[i] = cAnnotatedSequence::deep_copy(in[i]);
+      }
+
+      return copy;
+    }
+
+
   };
     
   /*! Utility functions.
