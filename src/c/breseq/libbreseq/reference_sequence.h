@@ -304,11 +304,11 @@ namespace breseq {
       {
         m_features.push_back(fp);
         
-        if ((*fp)["type"] == "repeat_region")
+        if ( ((*fp)["type"] == "repeat_region") || ((*fp)["type"] == "mobile_element") )
         {
           m_repeats.push_back(fp);
         }
-        else if (((*fp)["type"] == "CDS") || ((*fp)["type"] == "tRNA") || ((*fp)["type"] == "rRNA") || ((*fp)["type"] == "RNA"))
+        else if ( ((*fp)["type"] == "CDS") || ((*fp)["type"] == "tRNA") || ((*fp)["type"] == "rRNA") || ((*fp)["type"] == "RNA") )
         { 
           m_genes.push_back(fp);
         }
