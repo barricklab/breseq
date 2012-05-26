@@ -389,6 +389,14 @@ namespace breseq
     // DATADIR is a preprocessor directive set by Automake in config.h
 		this->program_data_path = DATADIR; 
         
+    // Unless we are in "make test" mode where this environental variable is defined.
+    char * breseq_data_path;
+    breseq_data_path = getenv ("BRESEQ_DATA_PATH");
+    if (breseq_data_path!=NULL) {
+      this->program_data_path = breseq_data_path;
+      cerr << "In test mode. Program data path: " << breseq_data_path << endl;
+    }
+    
     ////////////////////
     //! Settings
     ////////////////////
@@ -575,9 +583,20 @@ namespace breseq
       this->installed["path"] = pPath;
     }
     
+    string test_command;
+    
     // SAMtools executables - look in the local bin path only
-    string test_command = "which " + this->bin_path + "/samtools";
+    test_command = "which " + this->bin_path + "/samtools";
 		this->installed["samtools"] = SYSTEM_CAPTURE(test_command, true);
+    
+    // Unless we are in "make test" mode where this environental variable is defined.
+    char * breseq_samtools_path;
+    breseq_samtools_path = getenv ("BRESEQ_SAMTOOLS_PATH");
+    if (breseq_samtools_path!=NULL) {
+      test_command = "which " + cString(breseq_samtools_path) + "/samtools";
+      this->installed["samtools"] = SYSTEM_CAPTURE(test_command, true);
+      cerr << "In test mode. Samtools path: " << breseq_samtools_path << endl;
+    }
     
 		// search first for ssaha2 in the same location as breseq    
     test_command = "which " + this->bin_path + "/ssaha2";

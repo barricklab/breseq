@@ -55,7 +55,10 @@ Open a terminal window and change directory to the root of the |breseq| source d
 
   ./configure
   make
+  make test
   sudo make install
+
+``make test`` is optional, but recommended. It should take less than 5 minutes to run and report success at the end if everything is operating correctly.
 
 These commands compile and install not only |breseq|, but also some open-source code developed by others. These packages are included in the |breseq| source distribution under /extern:
 
@@ -63,12 +66,6 @@ These commands compile and install not only |breseq|, but also some open-source 
 
 .. WARNING::
    Installing |breseq| will overwrite any other versions of :program:`SAMtools` that you have in the default ./configure install locations. To avoid this, you can follow the instructions in :ref:`installing-in-the-source-directory` or :ref:`installing-in-a-custom-location` to safely install |breseq| elsewhere.
-
-Finally, we recommend that you test that your |breseq| installation functions with this command after installation::
-
-  make test
-  
-This should take less than 5 minutes to run and report success at the end if everything is operating correctly.
 
 .. _installing-in-the-source-directory:
 
@@ -81,8 +78,8 @@ Open a terminal window and change directory to the root of the |breseq| source d
 
   ./configure --prefix=${PWD}
   make
-  make install
   make test
+  make install
 
 After installation, if you want to be able to call |breseq| commands without specifying the entire path to them, you will need to add the newly created "bin" directory within the |breseq| source to your $PATH.
 
@@ -101,6 +98,7 @@ We'll assume that you've chosen to install |breseq| in ``/mnt/home/me/local``. O
 
   ./configure --prefix=/mnt/home/me/local
   make
+  make test
   make install
 
 This will create a usual UNIX grouping of program directories (with sub-directories like ``bin``, ``lib``, ``man``, etc). 

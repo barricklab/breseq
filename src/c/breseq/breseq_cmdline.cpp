@@ -1493,7 +1493,7 @@ int breseq_default_action(int argc, char* argv[])
 			string convert_file_name =  settings.file_name(settings.converted_fastq_file_name, "#", base_name);
 
 			// Parse output
-			AnalyzeFastq s_rf = normalize_fastq(fastq_file_name, convert_file_name, i+1);
+      Summary::AnalyzeFastq s_rf = normalize_fastq(fastq_file_name, convert_file_name, i+1);
       
 			// Save the converted file name -- have to save it in summary because only that
 			// is reloaded if we skip this step.
@@ -1538,7 +1538,7 @@ int breseq_default_action(int argc, char* argv[])
   
   // @JEB -- This is a bit of an ugly wart from when converting the input file was optional.
 	// reload certain information into $settings from $summary  
-	for (map<string, AnalyzeFastq>::iterator it = summary.sequence_conversion.reads.begin(); it != summary.sequence_conversion.reads.end(); it++)
+	for (map<string, Summary::AnalyzeFastq>::iterator it = summary.sequence_conversion.reads.begin(); it != summary.sequence_conversion.reads.end(); it++)
 	{
 		string read_file = it->first;
 		if (it->second.converted_fastq_name.size() > 0)
@@ -2274,7 +2274,7 @@ int breseq_default_action(int argc, char* argv[])
 
     // Add additional header lines if needed.
     if (settings.add_metadata_to_gd){
-       for (storable_map<string, Coverage>::iterator it = summary.unique_coverage.begin();
+      for (storable_map<string, Summary::Coverage>::iterator it = summary.unique_coverage.begin();
             it != summary.unique_coverage.end(); it ++) {
          //Usually needed for gathering breseq data.
        }

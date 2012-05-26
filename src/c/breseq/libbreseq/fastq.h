@@ -19,8 +19,9 @@ LICENSE AND COPYRIGHT
 #ifndef _BRESEQ_FASTQ_H_
 #define _BRESEQ_FASTQ_H_
 
-#include "common.h"
-#include "settings.h"
+#include "libbreseq/common.h"
+#include "libbreseq/settings.h"
+#include "libbreseq/summary.h"
 
 namespace breseq {
 
@@ -34,7 +35,7 @@ class cAnnotatedSequence;
       Main function for this analysis. Prints summary information
       about fastq and converts file to SANGER format if necessary.
    */  
-  AnalyzeFastq normalize_fastq(const string &file_name, const string &convert_file_name, const uint32_t fastq_index);
+  Summary::AnalyzeFastq normalize_fastq(const string &file_name, const string &convert_file_name, const uint32_t fastq_index);
   
   // Utility function for converting FASTQ files between formats
   void convert_fastq(const string &from_file_name, const string &to_file_name, const string &from_format, const string &to_format);

@@ -57,9 +57,15 @@ all-local :
 ## otherwise a sudo make install creates superuser owned files in the
 ## distribution, that are not removed by make clean.
 	
+	## OLD method: 'make test' after 'make install'
 	## This saves the install path for the test script
-	echo "export TESTBINPREFIX=$(bindir)" > tests/test.config;
-
+	##echo "export TESTBINPREFIX=$(bindir)" > tests/test.config;
+	
+	## NEW method: 'make test' after 'make'
+	echo "export TESTBINPREFIX=$(ROOTDIR)/src/c/breseq" > tests/test.config;
+	echo "export BRESEQ_DATA_PATH=$(ROOTDIR)/src/c/breseq" >> tests/test.config;
+	echo "export BRESEQ_SAMTOOLS_PATH=$(ROOTDIR)/extern/samtools-0.1.15" >> tests/test.config;
+	
 install-exec-local :
 
 	

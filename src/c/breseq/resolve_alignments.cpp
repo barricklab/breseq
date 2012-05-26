@@ -185,11 +185,11 @@ uint32_t qmissing (double tail_value, double pr_missing)
 PosHashProbabilityTable::PosHashProbabilityTable(Summary& summary)
 {
   average_read_length = round(summary.sequence_conversion.avg_read_length);
-  for (map<string,Coverage>::iterator it=summary.preprocess_coverage.begin();
+  for (map<string,Summary::Coverage>::iterator it=summary.preprocess_coverage.begin();
        it != summary.preprocess_coverage.end(); it++) {
     
     string seq_id = it->first;
-    Coverage& cov = it->second;
+    Summary::Coverage& cov = it->second;
     
     Parameters p = {
           cov.nbinom_size_parameter,

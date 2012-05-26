@@ -29,7 +29,7 @@ namespace breseq {
 
    */
 
-  AnalyzeFastq normalize_fastq(const string &file_name, const string &convert_file_name, const uint32_t file_index) {
+  Summary::AnalyzeFastq normalize_fastq(const string &file_name, const string &convert_file_name, const uint32_t file_index) {
     
     // Set up maps between formats
     map<string,uint8_t> format_to_chr_offset;
@@ -154,7 +154,7 @@ namespace breseq {
     //cerr << "min_quality_score "     << (int)min_quality_score  << endl;
     //cerr << "max_quality_score "     << (int)max_quality_score  << endl;
     
-    AnalyzeFastq retval(max_read_length, num_reads, min_quality_score, max_quality_score, num_bases, quality_format, "SANGER", converted_fastq_name);
+    Summary::AnalyzeFastq retval(max_read_length, num_reads, min_quality_score, max_quality_score, num_bases, quality_format, "SANGER", converted_fastq_name);
     return retval;
   }
   

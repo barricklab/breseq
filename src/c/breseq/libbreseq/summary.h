@@ -25,10 +25,11 @@ LICENSE AND COPYRIGHT
 
 namespace breseq{
   
+
 	class Summary : public Storable
 	{
 	public:
-
+    
 		class AlignmentResolution : public Storable
 		{
     public:
@@ -94,6 +95,102 @@ namespace breseq{
 			}
 
 		} alignment_resolution;
+    
+    class Coverage : public Storable
+    {
+    public:
+      double deletion_coverage_propagation_cutoff;
+      double deletion_coverage_seed_cutoff;
+      double junction_coverage_cutoff;
+      double nbinom_size_parameter;
+      double nbinom_mean_parameter;
+      double nbinom_prob_parameter;
+      double average;
+      double variance;
+      double dispersion;
+      
+      void serialize(ofstream& f)
+      {
+        write_to_file(f, deletion_coverage_propagation_cutoff);
+        write_to_file(f, deletion_coverage_seed_cutoff);
+        write_to_file(f, junction_coverage_cutoff);
+        write_to_file(f, nbinom_size_parameter);
+        write_to_file(f, nbinom_mean_parameter);
+        write_to_file(f, nbinom_prob_parameter);
+        write_to_file(f, average);
+        write_to_file(f, variance);
+        write_to_file(f, dispersion);
+      }
+      void deserialize(ifstream& f)
+      {
+        read_from_file(f, deletion_coverage_propagation_cutoff);
+        read_from_file(f, deletion_coverage_seed_cutoff);
+        read_from_file(f, junction_coverage_cutoff);
+        read_from_file(f, nbinom_size_parameter);
+        read_from_file(f, nbinom_mean_parameter);
+        read_from_file(f, nbinom_prob_parameter);
+        read_from_file(f, average);
+        read_from_file(f, variance);
+        read_from_file(f, dispersion);
+      }
+    };
+    
+    class AnalyzeFastq : public Storable {
+    public:
+      uint32_t max_read_length;
+      uint32_t num_reads;
+      uint32_t min_quality_score;
+      uint32_t max_quality_score;
+      uint32_t num_bases;
+      string original_qual_format;
+      string quality_format;
+      string converted_fastq_name;
+      
+      AnalyzeFastq() {};
+      
+      AnalyzeFastq(
+                   uint32_t _max_read_length, 
+                   uint32_t _num_reads, 
+                   uint32_t _min_quality_score, 
+                   uint32_t _max_quality_score, 
+                   uint32_t _num_bases, 
+                   const string& _original_qual_format, 
+                   const string& _quality_format,
+                   const string& _converted_fastq_name
+                   )
+      : max_read_length(_max_read_length)
+      , num_reads(_num_reads)
+      , min_quality_score(_min_quality_score)
+      , max_quality_score(_max_quality_score)
+      , num_bases(_num_bases)
+      , original_qual_format(_original_qual_format)
+      , quality_format(_quality_format)
+      , converted_fastq_name(_converted_fastq_name)
+      { }
+      
+      void serialize(ofstream& f)
+      {
+        write_to_file(f, max_read_length);
+        write_to_file(f, num_reads);
+        write_to_file(f, min_quality_score);
+        write_to_file(f, max_quality_score);
+        write_to_file(f, num_bases);
+        write_to_file(f, original_qual_format);
+        write_to_file(f, quality_format);
+        write_to_file(f, converted_fastq_name);
+      }
+      void deserialize(ifstream& f)
+      {
+        read_from_file(f, max_read_length);
+        read_from_file(f, num_reads);
+        read_from_file(f, min_quality_score);
+        read_from_file(f, max_quality_score);
+        read_from_file(f, num_bases);
+        read_from_file(f, original_qual_format);
+        read_from_file(f, quality_format);
+        read_from_file(f, converted_fastq_name);
+      }
+    };
 
 		storable_map<string, Coverage> preprocess_coverage;
 		storable_map<string, Coverage> unique_coverage;

@@ -478,7 +478,7 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
                     th("bases") << th("longest") << "</tr>" << endl;
   for(cReadFiles::const_iterator it=settings.read_files.begin(); it!=settings.read_files.end(); it++)
   {
-    const AnalyzeFastq& s = summary.sequence_conversion.reads[it->m_base_name];
+    const Summary::AnalyzeFastq& s = summary.sequence_conversion.reads[it->m_base_name];
     
     HTML << "<tr>";
     HTML << td( a(Settings::relative_path( 
