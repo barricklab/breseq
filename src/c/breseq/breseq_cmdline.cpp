@@ -873,6 +873,8 @@ int do_runfile(int argc, char *argv[])
 
   const string &pwd = SYSTEM_CAPTURE("pwd", true);
 
+  job = job.size() ? job : "breseq";
+
   ofstream launcher(launcher_path.c_str());
   // #$ Parameters.
   fprintf(launcher, "#!/bin/csh\n");
