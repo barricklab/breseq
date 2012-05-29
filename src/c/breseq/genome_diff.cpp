@@ -192,7 +192,7 @@ cDiffEntry::cDiffEntry(const string &line)
   }
 
   //Fields.
-  while(COLUMN < tokens.size()) {
+  while(COLUMN < tokens.size() && tokens[tokens.size() - 1].size()) {
     cKeyValuePair kvp(tokens[COLUMN], '=');
     if (kvp.check()) {
       string key   = kvp.get_key();
