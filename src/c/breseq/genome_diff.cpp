@@ -1862,7 +1862,87 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
         add(new_item);
       }
     }  break;
+  
+    case AMP :
+    {
+      uint32_t opt_1 = 1;
+      uint32_t opt_2 = 1;      
+      set<uint32_t> used_positions;
       
+      switch(type_options.size())
+      {
+        case 1:  {
+        }  break;
+          
+        case 2:  {
+          opt_1 = from_string<uint32_t>(type_options[1]);
+          opt_2 = from_string<uint32_t>(type_options[1]);
+        }  break;
+          
+        case 3:  {
+          opt_1 = from_string<uint32_t>(type_options[1]);
+          opt_2 = from_string<uint32_t>(type_options[2]);
+        }  break;
+          
+        default:      
+          ERROR("CANNOT PARSE: " + type);
+      }
+      
+      if(verbose)  {
+        cout << "SIZE RANGE: " << opt_1 <<  " - " << opt_2 << endl;  }
+      
+      for(uint32_t i = 0; i < number && uAttempts < max_attempts; i++)
+      {
+        uAttempts++;
+        
+        uint32_t amp_size = (rand() % (opt_2 - opt_1 - 1)) + opt_1;
+        uint32_t rand_pos = (rand() % (ref_seq_info.get_sequence_size())) + 1;
+        
+        bool bRedo = false;
+        
+        for(map<uint32_t, uint32_t>::iterator j = match_list.begin(); j != match_list.end(); j++)
+        {
+          if(rand_pos >= (*j).first && rand_pos < ((*j).first + (*j).second))  {
+            bRedo = true;
+            break;  }
+        }
+        
+        if(bRedo)  {
+          i--;
+          continue;  }
+        
+        for(set<uint32_t>::iterator k = used_positions.begin(); k != used_positions.end(); k++)
+        {
+          if(abs(static_cast<int32_t>((*k) - rand_pos)) < uBuffer)  {
+            bRedo = true;
+            break;  }
+        }
+        
+        if(bRedo)  {
+          i--;
+          continue;  }
+        
+        cDiffEntry new_item;        
+        new_item._type = mut_type;
+        new_item["seq_id"] = ref_seq_info.m_seq_id;
+        new_item["position"] = to_string(rand_pos);      
+        new_item["size"] = to_string(amp_size);
+        new_item["new_copy_number"] = to_string((rand() % 2) + 2);
+        
+        uAttempts = 0;
+        
+        new_item.normalize_to_sequence(ref_seq_info);
+        if((from_string<uint32_t>(new_item["position"]) != rand_pos) || (new_item._type != mut_type))  {
+          i--;
+          continue;  }
+        
+        used_positions.insert(rand_pos);
+        
+        add(new_item);
+      }
+    }  break;
+    
+  
     case MOB :
     {      
       //ERROR("THE BRESEQENSTEIN MUTATION GENERATOR DOES NOT YET HANDLE MOBS\nESPECIALLY IF THEY HAVE TORCHES AND PITCHFORKS");
