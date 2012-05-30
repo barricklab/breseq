@@ -1329,7 +1329,7 @@ int do_rand_muts(int argc, char *argv[])
   options.addUsage("Not supplying --seq will use the first sequence in the reference.");
   options.addUsage("");
   options.addUsage("Required fields are -r, -o, and -t.");
-  options.addUsage("Valid types: SNP, INS, DEL, MOB");
+  options.addUsage("Valid types: SNP, INS, DEL, MOB, AMP");
   options.addUsage("INS:1-10 will generate insertions of size 1 to 10.");
   options.addUsage("DEL:1-10 will generate deletions of size 1 to 10.");
   

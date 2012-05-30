@@ -1097,7 +1097,7 @@ namespace breseq {
       
       // @JEB create the genome diff evidence entry if mean is not one
       
-      if (new_segment_mean != 1.0) {
+      if (new_segment_mean > 1) {
         cDiffEntry item(CN);
         item[SEQ_ID] = seq_id;
         item[START] = to_string<uint32_t>(position_start);
