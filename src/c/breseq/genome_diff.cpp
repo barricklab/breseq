@@ -2406,6 +2406,8 @@ void GDtoCircos(const vector<string> &gd_file_names,
   //The author emailed me on 30/4/2012 saying that he's working on an
   //option for enabling/disabling this. Until then, the intelligent method right
   //now will be kept.
+  //This issue has been fixed as of Circos 0.60 but this method of reversing will
+  //be kept.
   //Aaron
   
   cGenomeDiff combined_gd;
@@ -2571,7 +2573,7 @@ void GDtoCircos(const vector<string> &gd_file_names,
     
     
     if (diff._type == INS){
-      width = from_string<int32_t>(diff["new_seq"]);
+      width = diff["new_seq"].size();
       if (width < MIN_DISPLAY_LENGTH){
         continue;
       }
