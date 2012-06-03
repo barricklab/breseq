@@ -1338,13 +1338,25 @@ namespace breseq {
 		
 	}
   
-  map<string,uint8_t>  BaseSubstitutionEffects::base_change_to_index = make_map<string,uint8_t>
-  ("A-G",0)("A-C",1)("A-T",2)("G-A",3)("G-T",4)("G-C",5)
-  ("T-C",0)("T-G",1)("T-A",2)("C-T",3)("C-A",4)("C-G",5)
+
+  
+  string BaseSubstitutionEffects::separator = ".";
+  
+  map<base_char, uint8_t> BaseSubstitutionEffects::base_to_index = make_map<base_char, uint8_t>
+  ('A', 0)('T', 1)('C', 2)('G', 3)
+  ;
+  
+  vector<base_char> BaseSubstitutionEffects::base_list = make_vector<base_char>
+  ('A')('T')('C')('G')
   ;
   
   vector<string>  BaseSubstitutionEffects::base_change_list = make_vector<string>
-  ("A-G")("T-C")("A-C")("T-G")("A-T")("T-A")("G-A")("C-T")("G-T")("C-A")("G-C")("C-G")
+  ("A.G")("T.C")("A.C")("T.G")("A.T")("T.A")("G.A")("C.T")("G.T")("C.A")("G.C")("C.G")
+  ;
+  
+  map<string,uint8_t>  BaseSubstitutionEffects::base_change_to_index = make_map<string,uint8_t>
+  ("A.G",0)("A.C",1)("A.T",2)("G.A",3)("G.T",4)("G.C",5)
+  ("T.C",0)("T.G",1)("T.A",2)("C.T",3)("C.A",4)("C.G",5)
   ;
   
   vector<string>  BaseSubstitutionEffects::base_pair_change_list = make_vector<string>
@@ -1358,21 +1370,27 @@ namespace breseq {
   ("G.A","CG.TA")("G.T","CG.AT")("G.C","CG.GC")
   ;
   
-  vector<string> BaseSubstitutionEffects::snp_types = make_vector<string> 
-  //("PROTEIN")("RNA")("PSEUDOGENE")("INTERGENIC")("NONSYNONYMOUS")("SYNONYMOUS")("TOTAL")
-  ("INTERGENIC")("NONCODING")("SYNONYMOUS")("NONSYNONYMOUS")("TOTAL")  
+  vector<string> BaseSubstitutionEffects::base_change_type_list = make_vector<string> 
+  ("INTERGENIC")("NONCODING")("PSEUDOGENE")("SYNONYMOUS")("NONSYNONYMOUS")("NO_CHANGE")("TOTAL")  
   ;
+ 
+   vector<string>  BaseSubstitutionEffects::base_type_list = make_vector<string>
+  ("INTERGENIC")("NONCODING")("PSEUDOGENE")("PROTEIN")("TOTAL")
+  ;  
   
-  map<string,uint8_t>  BaseSubstitutionEffects::nt_type_list = make_map<string,uint8_t>
-  //("RNA",1)("PSEUDOGENE",2)("INTERGENIC",3)("NONSYNONYMOUS",4)("NONSYNONYMOUS",5)
-  ("INTERGENIC",0)("NONCODING",1)("SYNONYMOUS",2)("NONSYNONYMOUS",3)
+  map<BaseSubstitutionEffect,BaseType>  BaseSubstitutionEffects::snp_type_to_base_type = make_map<BaseSubstitutionEffect,BaseType>
+  (intergenic_base_substitution,intergenic_base)
+  (pseudogene_base_substitution,pseudogene_base)
+  (noncoding_base_substitution,noncoding_base)
+  (synonymous_base_substitution,protein_base)
+  (nonsynonymous_base_substitution,protein_base)
   ;  
   
   
   void BaseSubstitutionEffects::initialize_from_sequence(cReferenceSequences& ref_seq_info) 
   {    
     bool count_synonymous_stop_codons = true;
-    bool verbose = true;
+    bool verbose = false;
     
     map<string,string> codon_synonymous_changes;
     map<string,string> codon_nonsynonymous_changes;
@@ -1408,13 +1426,13 @@ namespace breseq {
       
       // Allocate the entire thing as default intergenic    
       SequenceBaseSubstitutionEffects& seq_bse = m_bse[seq.m_seq_id];
-      seq_bse.resize(seq.get_sequence_length()*4, intergenic);
+      seq_bse.resize(seq.get_sequence_length()*4, intergenic_base_substitution);
       
       // But set the bases that are no change to no_change
       for (uint32_t this_location_0 = 0; this_location_0 < seq.get_sequence_length(); ++this_location_0)
         for (size_t b=0; b<base_char_list.size(); b++)
           if (base_char_list[b] == seq.get_sequence_1(this_location_0+1) )
-            seq_bse[this_location_0*4+b] = max(seq_bse[this_location_0*4+b], no_change);
+            seq_bse[this_location_0*4+b] = max(seq_bse[this_location_0*4+b], no_change_base_substitution);
       
       SequenceBaseCDSStrands& seq_bcs = m_bcs[seq.m_seq_id];
       seq_bcs.resize(seq.get_sequence_length(), no_CDS);
@@ -1431,7 +1449,7 @@ namespace breseq {
             for (int32_t i=loc.get_start_1(); i<=loc.get_end_1(); i++) {
               int32_t this_location_0 = i-1;
               for (size_t b=0; b<base_char_list.size(); b++)
-                seq_bse[i*4+b] = max(seq_bse[this_location_0*4+b], noncoding);
+                seq_bse[i*4+b] = max(seq_bse[this_location_0*4+b], noncoding_base_substitution);
             }
           }
         }
@@ -1512,9 +1530,9 @@ namespace breseq {
                   char mut_amino_acid = cReferenceSequences::translate_codon(test_codon, g.translation_table);
                   
                   if (mut_amino_acid == original_amino_acid)
-                    seq_bse[this_codon_locations_0[test_codon_index]*4+b] = max(seq_bse[this_codon_locations_0[test_codon_index]*4+b], synonymous);
+                    seq_bse[this_codon_locations_0[test_codon_index]*4+b] = max(seq_bse[this_codon_locations_0[test_codon_index]*4+b], synonymous_base_substitution);
                   else
-                    seq_bse[this_codon_locations_0[test_codon_index]*4+b] = max(seq_bse[this_codon_locations_0[test_codon_index]*4+b], nonsynonymous);
+                    seq_bse[this_codon_locations_0[test_codon_index]*4+b] = max(seq_bse[this_codon_locations_0[test_codon_index]*4+b], nonsynonymous_base_substitution);
                   
                 }
                 
@@ -1538,121 +1556,15 @@ namespace breseq {
     } // end sequence loop
   }    
   
-  
-  
-  /*
-   
-   sub read
-   {
-   my ($caller,%options) = @_;
-   my $count_synonymous_stop_codons = 1;
-   my $verbose = 0;
-   
-   my $self = { }; #and I
-   my $class = ref($caller) || $caller;
-   bless ($self, $class);
-   
-   $self->{nt_sequence} = $options{nt_sequence};
-   defined ($self->{nt_sequence}) or die "Undefined nt_sequence.";
-   $self->{nt_sequence} = "\U$self->{nt_sequence}";
-   
-   my $input_file = $options{input_file};
-   defined ($input_file) or die "Undefined input_file.";
-   
-   open IN, "<$input_file" or die "Could'd open file $input_file";
-   $self->{packed_data} = '';
-   while (<IN>) {
-   $self->{packed_data} .= $_;
-   }
-   close IN;
-   
-   return $self;
-   }
-   
-   =comment
-   
-   ## print out the synonymous / nonsynonymous table
-   print OUT "#Probabilities of synonymous mutations (NCBI Translation Table $translation_table)\n";
-   print OUT +join("\t", 'aa', 'codon', 'synonymous_muts', 'total_muts') . "\n";
-   foreach my $aa (sort keys %aa_to_codons)
-   {
-   foreach my $codon (sort @{$aa_to_codons{$aa}})
-   {
-   print OUT +join("\t", $aa, $codon, $codon_num_synonymous_changes{$codon}, 9) . "\n";
-   }
-   }
-   print OUT "\n";
-   
-   print OUT "#total_nt_positions\t$total_nt_position\n";
-   print OUT "#total_aa_coding_nt_positions\t$total_codon_nt_positions\n";
-   print OUT "\n";
-   
-   my $total_possible_mutations = $total_nt_position * 3;
-   print OUT "#total_possible_mutations $total_possible_mutations\n";
-   my $total_possible_aa_coding_mutations = $total_codon_nt_positions * 3;
-   print OUT "#total_possible_aa_coding_mutations $total_possible_aa_coding_mutations\n";
-   
-   print OUT "\n";
-   print OUT "#total_num_synonymous_changes\t$total_num_synonymous_changes\n";
-   print OUT "#total_num_nonsynonymous_changes\t$total_num_nonsynonymous_changes\n";
-   
-   print OUT "\n";
-   my $chance_of_genome_mutation_synonymous = $total_num_synonymous_changes / $total_possible_mutations;
-   print OUT "#chance_of_genome_mutation_synonymous\t$chance_of_genome_mutation_synonymous\n";
-   my $chance_of_aa_coding_mutation_synonymous = $total_num_synonymous_changes / $total_possible_aa_coding_mutations;
-   print OUT "#chance_of_aa_coding_mutation_synonymous\t$chance_of_aa_coding_mutation_synonymous\n";
-   
-   print OUT "\n";
-   print OUT "#Base distribution for entire genome\n";
-   print OUT +join("\t", 'base', 'num') . "\n";
-   foreach my $base (keys %$total_bases)
-   {
-   print OUT +join("\t", $base, $total_bases->{$base}) . "\n";
-   }
-   
-   print OUT "\n";
-   print OUT "#Probabilities of synonymous mutations given base change over entire genome (NCBI Translation Table $translation_table)\n";
-   print OUT +join("\t", "mutation", "fr_synonymous", "fr_nonsynonymous") . "\n";
-   foreach my $key (sort keys %nonsynonymous_mutations)
-   {
-   next if ($nonsynonymous_mutations{$key} + $synonymous_mutations{$key} == 0);
-   my $total = $nonsynonymous_mutations{$key} + $synonymous_mutations{$key};
-   print OUT +join("\t",  $key, $synonymous_mutations{$key} / $total, $nonsynonymous_mutations{$key} / $total) . "\n";
-   }
-   
-   ## print out probabilities of all mutations GIVEN a synonymous mutation
-   print OUT "#Probabilities of base changes GIVEN synonymous mutation (NCBI Translation Table $translation_table)\n";
-   print OUT +join("\t", 'from-bp', 'to-bp', 'probability') . "\n";
-   
-   #print Dumper(\%nonsynonymous_mutations);
-   #print Dumper(\@bp_change_list);
-   
-   foreach (my $i = 0; $i < scalar @bp_change_list; $i++)
-   {
-   my ($from_bp_change, $to_bp_change) = ($bp_change_list[$i]->[0], $bp_change_list[$i]->[1]);
-   my $probability = ($synonymous_mutations{$from_bp_change} + $synonymous_mutations{$to_bp_change} ) / $total_num_synonymous_changes;	
-   my ($from_bp, $to_bp) = ($bp_change_label_list[$i]->[0], $bp_change_label_list[$i]->[1]);
-   print OUT +join("\t", $from_bp, $to_bp, $probability) . "\n";
-   }
-   print OUT "\n";
-   
-   =cut
-   
-   sub write 
-   {
-   my ($self, $output_file) = @_;
-   
-   open OUT, ">$output_file";
-   print OUT "$self->{packed_data}";
-   close OUT;
-   }
-   */
-  
   void BaseSubstitutionEffectCounts::initialize_totals(cReferenceSequences& ref_seq_info, BaseSubstitutionEffects& bse)
   {
-    for (vector<string>::iterator seq_id_it = ref_seq_info.seq_ids().begin(); seq_id_it != ref_seq_info.seq_ids().end(); ++seq_id_it)
-      for (uint32_t i=1; i <= ref_seq_info[*seq_id_it].get_sequence_length(); i++)
-       add_position_1_to_totals(ref_seq_info, bse, *seq_id_it, i);
+    vector<string> seq_ids = ref_seq_info.seq_ids();
+    for (vector<string>::iterator seq_id_it = seq_ids.begin(); seq_id_it != seq_ids.end(); ++seq_id_it) {
+      for (uint32_t i=1; i <= ref_seq_info[*seq_id_it].get_sequence_length(); i++) {
+        //cout << *seq_id_it << " " << i << endl;
+        add_position_1_to_totals(ref_seq_info, bse, *seq_id_it, i);
+      }
+    }
   }
    
    
@@ -1668,114 +1580,80 @@ namespace breseq {
    
   void BaseSubstitutionEffectCounts::change_position_1_totals(cReferenceSequences& ref_seq_info, BaseSubstitutionEffects& bse, string seq_id, uint32_t pos_1, int32_t inc)
   {
-    /*
-   #print Dumper($totals);
-   #print "$on_pos, $inc\n";
+    BaseSubstitutionEffectPositionInfo pos_info = bse.position_info_1(ref_seq_info, seq_id, pos_1);
    
-   my $pos_info = $self->pos_info_1($on_pos);
+    // counts of the total number of bases in the genome in category
+    m_base_counts[pos_info.m_base_type]["nt"] += inc;
+    if ( (pos_info.m_base == 'G') || (pos_info.m_base == 'C') )
+      m_base_counts[pos_info.m_base_type]["gc"] += inc;
+    else
+      m_base_counts[pos_info.m_base_type]["at"] += inc;
+        
+    // counts of the total number of base changes in the genome in category
+    for (size_t this_base_index = 0; this_base_index < BaseSubstitutionEffects::base_list.size(); ++this_base_index) {
+      
+      base_char this_base_char = BaseSubstitutionEffects::base_list[this_base_index];
+      string base_key = pos_info.m_base + BaseSubstitutionEffects::separator + this_base_char;
+      string base_pair_key = BaseSubstitutionEffects::base_change_to_base_pair_change[base_key];
+      
+      m_base_pair_change_counts[pos_info.m_base_substitution_effect[this_base_index]][base_pair_key] += inc;
+      m_base_pair_change_counts[pos_info.m_base_substitution_effect[this_base_index]]["TOTAL"] += inc;
+    }
    
-   #print Dumper($pos_info);
+  }
    
-   $totals->[$pos_info->{nt_type}]->{nt} += $inc;
-   if ($pos_info->{is_GC}) {
-   $totals->[$pos_info->{nt_type}]->{GC} += $inc;
-   } else {
-   $totals->[$pos_info->{nt_type}]->{AT} += $inc;
-   }
-   
-   foreach my $bp_mutation (@{$pos_info->{bp_mutations}})
-   {
-   $totals->[$pos_info->{nt_type}]->{$bp_mutation} += $inc;
-   $totals->[$pos_info->{nt_type}]->{TOTAL} += $inc;
-   
-   ##keep track of total in each category
-   $totals->[6]->{$bp_mutation} += $inc;
-   $totals->[6]->{TOTAL} += $inc;
-   }
-   
-   ## extra things to keep track of for proteins
-   if ($pos_info->{nt_type} == 0)
-   {
-   for (my $j=0; $j< scalar @{$pos_info->{bp_mutations}}; $j++)
-   {
-   ##NS
-   $totals->[($pos_info->{bp_mutation_nonsynonymous}->[$j]) ? 4 : 5]->{$pos_info->{bp_mutations}->[$j]} += $inc;
-   $totals->[($pos_info->{bp_mutation_nonsynonymous}->[$j]) ? 4 : 5]->{TOTAL} += $inc;
-   }
-   }
-   
-   #print Dumper($totals);
-   return $totals;
-     */
-   }
-   
-  void BaseSubstitutionEffectCounts::add_base_pair_change_to_totals(cReferenceSequences& ref_seq_info, BaseSubstitutionEffects& bse, string seq_id, uint32_t pos_1, string base_pair_change)
+  void BaseSubstitutionEffectCounts::add_base_change_to_totals(cReferenceSequences& ref_seq_info, BaseSubstitutionEffects& bse, string seq_id, uint32_t pos_1, string base_change)
   {
-     
-     /*
-   my ($self, $totals, $on_pos, $bp_change) = @_;
-   my $inc = +1;
-   my $pos_info = $self->pos_info_1($on_pos);
+
+    string base_pair_key = BaseSubstitutionEffects::base_change_to_base_pair_change[base_change];	
+    int32_t inc = +1;
+    BaseSubstitutionEffectPositionInfo pos_info = bse.position_info_1(ref_seq_info, seq_id, pos_1);
+    
+    size_t this_base_index = BaseSubstitutionEffects::base_change_to_index[base_pair_key];
+    m_base_pair_change_counts[pos_info.m_base_substitution_effect[this_base_index]][base_pair_key] += inc;
+    m_base_pair_change_counts[pos_info.m_base_substitution_effect[this_base_index]]["TOTAL"] += inc;
+    
+  }
    
-   $totals->[$pos_info->{nt_type}]->{$bp_change} += $inc;
-   $totals->[$pos_info->{nt_type}]->{TOTAL} += $inc;
+  
+  BaseSubstitutionEffectPositionInfo 
+  BaseSubstitutionEffects::position_info_1(
+                                           cReferenceSequences& ref_seq_info, 
+                                           string seq_id, 
+                                           uint32_t pos_1 
+                                           )
+  {
+    uint32_t pos_0 = pos_1 - 1;
+    BaseSubstitutionEffectPositionInfo pos_info;
    
-   ##keep track of total in each category
-   $totals->[6]->{$bp_change} += $inc;
-   $totals->[6]->{TOTAL} += $inc;
-   
-   ## extra things to keep track of for proteins
-   if ($pos_info->{nt_type} == 0)
-   {
-   for (my $j=0; $j< scalar @{$pos_info->{bp_mutations}}; $j++)
-   {
-   if ($pos_info->{bp_mutations}->[$j] eq $bp_change)
-   {
-   $totals->[($pos_info->{bp_mutation_nonsynonymous}->[$j]) ? 4 : 5]->{$bp_change} += $inc;
-   $totals->[($pos_info->{bp_mutation_nonsynonymous}->[$j]) ? 4 : 5]->{TOTAL} += $inc;
-   }
-   }
-   }
-   
-   return $totals;		
-      */
-   }
-   /*
-   sub pos_info_1
-   {
-   my ($self, $i) = @_;
-   my $pos = $i-1;
-   my $pos_info;
-   
-   my $base = substr $self->{nt_sequence}, $pos, 1;
-   my $is_GC = (($base eq 'G') || ($base eq 'C')) ? 1 : 0;
-   $pos_info->{base} = $base;
-   $pos_info->{is_GC} = $is_GC;
-   
-   my $offset = 3*$is_GC;
-   @{$pos_info->{bp_mutations}} = @bp_change_label_list[$offset..$offset+2];
-   
-   #print "Length of packed data: " . +(length $self->{packed_data}) . "\n";
-   
-   my $encoded_char = substr $self->{packed_data}, $pos, 1;
-   my ($nt_type_1, $nt_type_2, @is_nonsynonymous) =
-   split( //, unpack( 'b8', $encoded_char ) );
-   
-   #print "$nt_type_1, $nt_type_2, @is_nonsynonymous\n";
-   
-   $pos_info->{nt_type} = $nt_type_1 + 2*$nt_type_2;
-   
-   for (my $j=0; $j< scalar @{$pos_info->{bp_mutations}}; $j++)
-   {
-   $pos_info->{bp_mutation_nonsynonymous}->[$j] = $is_nonsynonymous[$j];
-   }
-   
-   return $pos_info;
-   }
-   
-   
-   
- */
+    pos_info.m_base = ref_seq_info[seq_id].get_sequence_1(pos_1);
+    
+    SequenceBaseSubstitutionEffects::iterator bse_it = m_bse[seq_id].begin() + pos_0 * 4;
+    
+
+    for (size_t i=0; i<4; i++)
+    {
+      BaseSubstitutionEffect this_bse = *bse_it;
+      if (this_bse != no_change_base_substitution) {
+        pos_info.m_base_type = snp_type_to_base_type[this_bse];
+        break;
+      }
+      ++bse_it;
+    }
+    
+    
+    pos_info.m_base_substitution_effect.insert(
+                                              pos_info.m_base_substitution_effect.begin(),
+                                              bse_it, bse_it+3
+                                              );
+
+    
+    
+    SequenceBaseCDSStrands::iterator bcs_it = m_bcs[seq_id].begin() + pos_0;
+    pos_info.m_base_cds_strand = *bcs_it;
+    
+    return pos_info;
+  }
   
   void MutationCountFile(
                          cReferenceSequences& ref_seq_info, 
@@ -1844,32 +1722,32 @@ namespace breseq {
     ofstream output_file(output_file_name.c_str());
     ASSERT(output_file.good(), "Error writing to file: " + output_file_name);
     
-    BaseSubstitutionEffectCounts bsec;
+    BaseSubstitutionEffectCounts total_bsec;
     BaseSubstitutionEffects bse;
     
     if (base_substitution_statistics) {
       //uout("Calculating base substitution effects in reference sequences") << endl;
       bse.initialize_from_sequence(ref_seq_info);
-      bsec.initialize_totals(ref_seq_info, bse);
+      total_bsec.initialize_totals(ref_seq_info, bse);
     }
     
         
     if (base_substitution_statistics) {
      
-     for (vector<string>::const_iterator snp_type = BaseSubstitutionEffects::snp_types.begin();
-          snp_type != BaseSubstitutionEffects::snp_types.end(); ++snp_type) {
+     for (vector<string>::const_iterator snp_type = BaseSubstitutionEffects::base_change_type_list.begin();
+          snp_type != BaseSubstitutionEffects::base_change_type_list.end(); ++snp_type) {
        for (vector<string>::const_iterator bp_change = BaseSubstitutionEffects::base_pair_change_list.begin();
             bp_change != BaseSubstitutionEffects::base_pair_change_list.end(); ++bp_change) {
-         column_headers.push_back("POSSIBLE." + *snp_type + "." + *bp_change);
+         column_headers.push_back("POSSIBLE." + *snp_type + BaseSubstitutionEffects::separator + *bp_change);
        }
        column_headers.push_back("POSSIBLE." + *snp_type + ".TOTAL");
      }
      
-     for (vector<string>::const_iterator snp_type = BaseSubstitutionEffects::snp_types.begin();
-          snp_type != BaseSubstitutionEffects::snp_types.end(); ++snp_type) {
+     for (vector<string>::const_iterator snp_type = BaseSubstitutionEffects::base_change_type_list.begin();
+          snp_type != BaseSubstitutionEffects::base_change_type_list.end(); ++snp_type) {
        for (vector<string>::const_iterator bp_change = BaseSubstitutionEffects::base_pair_change_list.begin();
             bp_change != BaseSubstitutionEffects::base_pair_change_list.end(); ++bp_change) {
-         column_headers.push_back("OBSERVED." + *snp_type + "." + *bp_change);
+         column_headers.push_back("OBSERVED." + *snp_type + BaseSubstitutionEffects::separator + *bp_change);
        }
        column_headers.push_back("OBSERVED." + *snp_type + ".TOTAL");
      }
@@ -1886,7 +1764,7 @@ namespace breseq {
       BaseSubstitutionEffectCounts this_bsec;
       // deep copy totals of entire sequence
       if (base_substitution_statistics)
-        this_bsec = bsec;
+        this_bsec = total_bsec;
       
       // Zero out counts
       int32_t total_deleted = 0;
@@ -1925,10 +1803,9 @@ namespace breseq {
         //count SNPs and examples of mobile element insertions
         if (mut._type == SNP) {
           count["base_substitution"][""]++;
-          string base_change = mut[REF_BASE] + "-" + mut[NEW_BASE];
-          string base_pair_change = BaseSubstitutionEffects::base_change_to_base_pair_change[base_change];	
+          string base_change = mut[REF_BASE] + BaseSubstitutionEffects::separator + mut[NEW_BASE];
           if (base_substitution_statistics) {
-            this_bsec.add_base_pair_change_to_totals(ref_seq_info, bse, mut[SEQ_ID], from_string<uint32_t>(mut[POSITION]), base_pair_change);					
+            this_bsec.add_base_change_to_totals(ref_seq_info, bse, mut[SEQ_ID], from_string<uint32_t>(mut[POSITION]), base_change);					
           }
           count["type"][mut["snp_type"]]++;
         }
@@ -2056,205 +1933,33 @@ namespace breseq {
       
       
       if (base_substitution_statistics) {	
-        /*
-        for (my $i = 0; $i < scalar @$this_bs_totals; $i++) {
-        foreach my $bp_change (@GenomeDiff::BaseSubstitutionFile::bp_change_label_list, 'TOTAL') {
-        push @this_columns, (defined $this_bs_totals->[$i]->{$bp_change}) ? $this_bs_totals->[$i]->{$bp_change} : '0';
+        
+        for(size_t i=0; i<BaseSubstitutionEffects::base_change_type_list.size(); ++i) {
+          
+          string& this_base_change_type = BaseSubstitutionEffects::base_change_type_list[i];
+          
+          for(vector<string>::iterator it = BaseSubstitutionEffects::base_pair_change_list.begin();
+              it != BaseSubstitutionEffects::base_pair_change_list.end(); ++it) {
+          
+            this_columns.push_back( s( total_bsec.m_base_pair_change_counts[ static_cast<BaseSubstitutionEffect>(i)][*it] ) );
+          }          
         }
+        
+        for(size_t i=0; i<BaseSubstitutionEffects::base_change_type_list.size(); ++i) {
+          
+          string& this_base_change_type = BaseSubstitutionEffects::base_change_type_list[i];
+          
+          for(vector<string>::iterator it = BaseSubstitutionEffects::base_pair_change_list.begin();
+              it != BaseSubstitutionEffects::base_pair_change_list.end(); ++it) {
+            
+            this_columns.push_back( s( this_bsec.m_base_pair_change_counts[ static_cast<BaseSubstitutionEffect>(i)][*it] ) );
+          }          
         }
-
-
-        for (my $i = 0; $i < scalar @$this_bs_counts; $i++) {
-        foreach my $bp_change (@GenomeDiff::BaseSubstitutionFile::bp_change_label_list, 'TOTAL') {
-        push @this_columns, (defined $this_bs_counts->[$i]->{$bp_change}) ? $this_bs_counts->[$i]->{$bp_change} : '0';
-        }
-        }*/
       }
        
       output_file << join(this_columns, ",") << endl;
     }	
   }
   
-  /*
-  package GenomeDiff::SynonymousNonsynonymous;
-  use vars qw(@ISA);
-  use strict;
-  
-  use Bio::Seq;
-  
-  @ISA = qw();
-  
-  use Data::Dumper;
-  
-  =head2 new
-  
-  Title   : new
-  Usage   : $sn = Codon::SynonymousNonsynonymous>new( -filename => 'input.sto' );
-Function: 
-  Returns : Options = {count_synonymous_stop_codons}
-  
-  =cut
-  */
-  
-  cGeneticCode::cGeneticCode(uint32_t translation_table, bool count_synonymous_stop_codons)
-  {
-    (void)translation_table;
-    (void)count_synonymous_stop_codons;
-  }
-  /*
-   my($caller,%options) = @_;
-   
-   #Default to bacterial genetic code
-   $options{translation_table} = 11 if ( !defined $options{translation_table} );	
-   $options{count_synonymous_stop_codons} = $options{count_synonymous_stop_codons};	
-   
-   my $self = { }; #and I
-   my $class = ref($caller) || $caller;
-   bless ($self, $class);
-   
-   #Construct the table	
-   my @nt_list = ('A', 'G', 'T', 'C');
-   
-   #Information we will be saving
-   my %codon_to_aa;
-   my %aa_to_codons;
-   my %codon_synonymous_changes;
-   my %codon_nonsynonymous_changes;
-   my %codon_num_synonymous_changes;
-   my %codon_num_mutT_synonymous_changes;
-   
-   ## structure: contains keys of form A/C/T/G_A/C/T/G and values are number of such changes per codon.
-   
-   #calls to bioperl are slow, do only once
-   my %basic_codons_to_aa;
-   foreach my $nt_1 (@nt_list)
-   {
-   foreach my $nt_2 (@nt_list)
-   {	
-   foreach my $nt_3 (@nt_list)
-   {
-   my $codon = $nt_1 . $nt_2 . $nt_3;
-   
-   #if it is a stop codon, then we're done
-   my $codon_seq = Bio::Seq->new('-seq' => $codon);
-   my $aa = $codon_seq->translate( undef, undef, undef, $options{translation_table} )->seq();
-   $codon_to_aa{$codon} = $aa;
-   push @{$aa_to_codons{$aa}}, $codon;
-   
-   }
-   }
-   }
-   
-   ##zero counts so nothing is undefined
-   foreach my $nt_1 (@nt_list)
-   {
-   foreach my $nt_2 (@nt_list)
-   {
-   foreach my $codon (keys %codon_to_aa)
-   {
-   $codon_synonymous_changes{$codon}->{"$nt_1-$nt_2"} = 0;
-   $codon_nonsynonymous_changes{$codon}->{"$nt_1-$nt_2"} = 0;
-   $codon_num_synonymous_changes{$codon} = 0;
-   $codon_num_mutT_synonymous_changes{$codon} = 0;
-   }
-   }
-   }
-   
-   foreach my $nt_1 (@nt_list)
-   {
-   foreach my $nt_2 (@nt_list)
-   {		
-   foreach my $nt_3 (@nt_list)
-   {
-   my $codon = $nt_1 . $nt_2 . $nt_3;
-   
-   #if it is a stop codon, then we're done
-   #my $codon_seq = Bio::Seq->new('-seq' => $codon);
-   #my $aa = $codon_seq->translate( undef, undef, undef, $options{translation_table} )->seq();
-   my $aa = $codon_to_aa{$codon};
-   
-   #we don't count stop codons
-   next if (($aa =~ m/^*) && (!$options{count_synonymous_stop_codons}));
-   
-   #try all one-neighbors
-   for (my $pos = 0; $pos < 3; $pos++)
-   {
-   NB_NT: foreach my $nb_nt (@nt_list)
-   {
-   my $nb_codon = $codon;
-   my $old_nt = substr ($nb_codon, $pos, 1, $nb_nt);
-   
-   #bail if same codon
-   next NB_NT if ($old_nt eq $nb_nt);
-   
-   #my $nb_codon_seq = Bio::Seq->new('-seq' => $nb_codon);
-   #my $nb_aa = $nb_codon_seq->translate( undef, undef, undef, $options{translation_table} )->seq();
-   my $nb_aa = $codon_to_aa{$nb_codon};
-   
-   ## this is an interesting question, what do we do about stop codons?
-   #for now we count them as nonsynonymous
-   #next if ($nb_aa ne '*');
-   
-   if ($aa eq $nb_aa)
-   {
-   $codon_synonymous_changes{$codon}->{"$old_nt-$nb_nt"}++;
-   $codon_num_synonymous_changes{$codon}++;
-   }
-   else
-   {
-   $codon_nonsynonymous_changes{$codon}->{"$old_nt-$nb_nt"}++;
-   }
-   }
-   #end all one-neighbors	
-   }	
-   }	
-   }	
-   }
-   
-   my %codon_position_mutation_synonymous;
-   
-   foreach my $from_codon (sort keys %codon_to_aa)
-   {	
-   foreach my $pos (1..3)
-   {
-   my $from_nt = substr($from_codon, $pos-1, 1);
-   my $from_aa = $codon_to_aa{$from_codon};
-   foreach my $to_nt (@nt_list)
-   {				
-   my $new_codon = $from_codon;
-   substr($new_codon, $pos-1, 1) = $to_nt;
-   my $new_aa = $codon_to_aa{$new_codon};
-   
-   if ($from_aa eq $new_aa)
-   {
-   $codon_position_mutation_synonymous{$from_codon . "_" . $pos . "_" . $from_nt . "_" . $to_nt} = 1;
-   }
-   }
-   }
-   }
-   
-   
-   #save all of the tables we have calculated
-   
-   $self->{codon_to_aa} = \%codon_to_aa;
-   $self->{aa_to_codons} = \%aa_to_codons;
-   $self->{codon_synonymous_changes} = \%codon_synonymous_changes;
-   $self->{codon_nonsynonymous_changes} = \%codon_nonsynonymous_changes;
-   $self->{codon_num_synonymous_changes} = \%codon_num_synonymous_changes;
-   $self->{codon_position_mutation_synonymous} = \%codon_position_mutation_synonymous;
-   
-   return $self;
-   }
-   
-   
-   return 1;
-   
-   
-   
-   
-   
-   */
-
-
 
 } // namespace breseq

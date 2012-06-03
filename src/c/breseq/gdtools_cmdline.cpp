@@ -19,6 +19,7 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/common.h"
 #include "libbreseq/settings.h"
 #include "libbreseq/anyoption.h"
+#include "libbreseq/mutation_predictor.h"
 #include "libbreseq/genome_diff.h"
 #include "libbreseq/reference_sequence.h"
 #include "libbreseq/output.h"
@@ -469,7 +470,7 @@ int do_vcf2gd( int argc, char* argv[])
   return 0;
 }
 
-int do_convert_circos(int argc, char *argv[]){
+int do_gd2circos(int argc, char *argv[]){
   
   AnyOption options("gdtools GD2CIRCOS -r <reference> [-r <reference2> ...] -o <output_dir> input1.gd [input2.gd ...]");
   
@@ -1037,7 +1038,7 @@ int main(int argc, char* argv[]) {
   } else if (command == "VCF2GD") {             
     return do_vcf2gd( argc_new, argv_new);
   } else if (command == "GD2CIRCOS"){
-    return do_convert_circos(argc_new, argv_new);
+    return do_gd2circos(argc_new, argv_new);
   } else if(command == "MIRA2GD"){
     return do_mira2gd(argc_new, argv_new);
   }
