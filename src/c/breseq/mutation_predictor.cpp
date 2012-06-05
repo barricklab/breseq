@@ -1342,19 +1342,19 @@ namespace breseq {
   
   string BaseSubstitutionEffects::separator = ".";
   
-  map<base_char, uint8_t> BaseSubstitutionEffects::base_to_index = make_map<base_char, uint8_t>
-  ('A', 0)('T', 1)('C', 2)('G', 3)
+  vector<base_char> BaseSubstitutionEffects::base_char_list = make_vector<base_char>
+  ('A')('T')('C')('G')
   ;
   
-  vector<base_char> BaseSubstitutionEffects::base_list = make_vector<base_char>
-  ('A')('T')('C')('G')
+  map<base_char, uint8_t> BaseSubstitutionEffects::base_char_to_base_index = make_map<base_char, uint8_t>
+  ('A',0)('T',1)('C',2)('G',3)
   ;
   
   vector<string>  BaseSubstitutionEffects::base_change_list = make_vector<string>
   ("A.G")("T.C")("A.C")("T.G")("A.T")("T.A")("G.A")("C.T")("G.T")("C.A")("G.C")("C.G")
   ;
   
-  map<string,uint8_t>  BaseSubstitutionEffects::base_change_to_index = make_map<string,uint8_t>
+  map<string,uint8_t>  BaseSubstitutionEffects::base_change_to_base_pair_change_index = make_map<string,uint8_t>
   ("A.G",0)("A.C",1)("A.T",2)("G.A",3)("G.T",4)("G.C",5)
   ("T.C",0)("T.G",1)("T.A",2)("C.T",3)("C.A",4)("C.G",5)
   ;
@@ -1377,6 +1377,14 @@ namespace breseq {
    vector<string>  BaseSubstitutionEffects::base_type_list = make_vector<string>
   ("INTERGENIC")("NONCODING")("PSEUDOGENE")("PROTEIN")("TOTAL")
   ;  
+  
+  vector<string> BaseSubstitutionEffectCounts::base_pair_change_count_list = make_vector<string> 
+  ("AT.GC")("AT.CG")("AT.TA")("CG.TA")("CG.AT")("CG.GC")("TOTAL")
+  ;
+  
+  vector<string> BaseSubstitutionEffectCounts::base_change_type_count_list = make_vector<string> 
+  ("INTERGENIC")("NONCODING")("PSEUDOGENE")("SYNONYMOUS")("NONSYNONYMOUS")("TOTAL")  
+  ;
   
   map<BaseSubstitutionEffect,BaseType>  BaseSubstitutionEffects::snp_type_to_base_type = make_map<BaseSubstitutionEffect,BaseType>
   (intergenic_base_substitution,intergenic_base)
@@ -1406,7 +1414,6 @@ namespace breseq {
     uint32_t total_nt_position = 0;
     
     map<char,uint32_t> total_bases = make_map<char,uint32_t>('A',0)('T',0)('C',0)('G',0);
-    vector<char> base_char_list = make_vector<char>('A')('T')('C')('G');
     
     uint32_t total_codons = 0;
     uint32_t total_orfs = 0;
@@ -1430,8 +1437,8 @@ namespace breseq {
       
       // But set the bases that are no change to no_change
       for (uint32_t this_location_0 = 0; this_location_0 < seq.get_sequence_length(); ++this_location_0)
-        for (size_t b=0; b<base_char_list.size(); b++)
-          if (base_char_list[b] == seq.get_sequence_1(this_location_0+1) )
+        for (size_t b=0; b<BaseSubstitutionEffects::base_char_list.size(); b++)
+          if (BaseSubstitutionEffects::base_char_list[b] == seq.get_sequence_1(this_location_0+1) )
             seq_bse[this_location_0*4+b] = max(seq_bse[this_location_0*4+b], no_change_base_substitution);
       
       SequenceBaseCDSStrands& seq_bcs = m_bcs[seq.m_seq_id];
@@ -1446,62 +1453,70 @@ namespace breseq {
           vector<cLocation> sub_locations = f.m_location.get_all_sub_locations();
           for(vector<cLocation>::iterator it3=sub_locations.begin(); it3!=sub_locations.end(); ++it3) {
             cLocation& loc = *it3;
-            for (int32_t i=loc.get_start_1(); i<=loc.get_end_1(); i++) {
-              int32_t this_location_0 = i-1;
-              for (size_t b=0; b<base_char_list.size(); b++)
-                seq_bse[i*4+b] = max(seq_bse[this_location_0*4+b], noncoding_base_substitution);
+            for (int32_t this_location_1=loc.get_start_1(); this_location_1<=loc.get_end_1(); this_location_1++) {
+              int32_t this_location_0 = this_location_1-1;
+              for (size_t b=0; b<BaseSubstitutionEffects::base_char_list.size(); b++)
+                seq_bse[this_location_0*4+b] = max(seq_bse[this_location_0*4+b], f.m_pseudo ? pseudogene_base_substitution : noncoding_base_substitution);
             }
           }
         }
         
-        // Remainder is only for coding sequences
-        if (f[TYPE] != "CDS")
+        // Remainder is only for coding sequences (and not pseudogenes)
+        if ((f[TYPE] != "CDS") || f.m_pseudo)
           continue;
         
         // initialize gene structure
         Gene g(f);
-        
-        // Pseudogenes already counted from gene feature as noncoding
-        if (g.pseudogene)
-          continue;
         
         total_orfs++;
         
         // Piece together the gene - at each nucleotide make all three possible changes
         
         string this_codon = "   ";
+        vector<cLocation> sub_locations = g.m_location.get_all_sub_locations();
         size_t on_codon_index = 0;
         vector<uint32_t> this_codon_locations_0(0, 3); // 0-indexed
         
-        vector<cLocation> sub_locations = g.m_location.get_all_sub_locations();
+        uint32_t total_nucleotide_length = 0; 
+        int32_t cds_strand = g.m_location.m_strand;
+        
+        for(vector<cLocation>::iterator it3=sub_locations.begin(); it3!=sub_locations.end(); ++it3) {
+          cLocation& loc = *it3;
+          total_nucleotide_length += loc.m_end - loc.m_start + 1;
+        }
+        uint32_t total_amino_acid_length = total_nucleotide_length / 3;
+        uint32_t on_codon_pos_1 = 1;
+        if (cds_strand == -1) on_codon_pos_1 = total_amino_acid_length;
+
+        
         int8_t strand = sub_locations.front().m_strand;
         for(vector<cLocation>::iterator it3=sub_locations.begin(); it3!=sub_locations.end(); ++it3) {
           
           cLocation& loc = *it3;
           ASSERT(strand == loc.m_strand, "CDS has sublocations on different strands: " + g["name"]);
           
-          for (int32_t i=loc.m_start; i<=loc.m_end; i++) {
-            int32_t i_0 = i - 1;
+          for (int32_t pos_1=loc.m_start; pos_1<=loc.m_end; pos_1++) {
+            int32_t pos_0 = pos_1 - 1;
             
             //// Remember the strand of the gene overlapping this position
-            if (seq_bcs[i_0] == conflict) {
+            if (seq_bcs[pos_0] == conflict) {
               // do nothing
             }
             // Don't count if we have genes on both strands overlapping same nucleotide
-            else if (seq_bcs[i_0] != no_CDS) {
-              if ((loc.get_strand() == 1) && (seq_bcs[i_0] == reverse) )
-                seq_bcs[i_0] = conflict;
-              if ((loc.get_strand() == -1) && (seq_bcs[i_0] == forward) )
-                seq_bcs[i_0] = conflict;
+            else if (seq_bcs[pos_0] != no_CDS) {
+              if ((loc.get_strand() == 1) && (seq_bcs[pos_0] == reverse) )
+                seq_bcs[pos_0] = conflict;
+              if ((loc.get_strand() == -1) && (seq_bcs[pos_0] == forward) )
+                seq_bcs[pos_0] = conflict;
             }
             else
             {
-              seq_bcs[i_0] = (loc.get_strand() == +1 ? forward : reverse);
+              seq_bcs[pos_0] = (loc.get_strand() == +1 ? forward : reverse);
             }
             
             //// Handle codon synonymous/nonsynonymous changes
-            this_codon_locations_0[on_codon_index] = i-1;
-            this_codon[on_codon_index] = seq.get_sequence_1(i);
+            this_codon_locations_0[on_codon_index] = pos_0;
+            this_codon[on_codon_index] = seq.get_sequence_1(pos_1);
             
             on_codon_index++;
             
@@ -1513,13 +1528,13 @@ namespace breseq {
               if (strand == -1)
                 original_codon = reverse_complement(original_codon);
               
-              char original_amino_acid = cReferenceSequences::translate_codon(original_codon, g.translation_table);
+              char original_amino_acid = cReferenceSequences::translate_codon(original_codon, g.translation_table, on_codon_pos_1);
               
               for (int32_t test_codon_index=0; test_codon_index<3; test_codon_index++) {
                 
-                for (size_t b=0; b<base_char_list.size(); b++) {
+                for (size_t b=0; b<BaseSubstitutionEffects::base_char_list.size(); b++) {
                   
-                  char mut_base = base_char_list[b];
+                  char mut_base = BaseSubstitutionEffects::base_char_list[b];
                   
                   string test_codon = this_codon;
                   test_codon[test_codon_index] = mut_base;
@@ -1527,7 +1542,7 @@ namespace breseq {
                   if (strand == -1)
                     test_codon = reverse_complement(test_codon);
                   
-                  char mut_amino_acid = cReferenceSequences::translate_codon(test_codon, g.translation_table);
+                  char mut_amino_acid = cReferenceSequences::translate_codon(test_codon, g.translation_table, on_codon_pos_1);
                   
                   if (mut_amino_acid == original_amino_acid)
                     seq_bse[this_codon_locations_0[test_codon_index]*4+b] = max(seq_bse[this_codon_locations_0[test_codon_index]*4+b], synonymous_base_substitution);
@@ -1538,6 +1553,7 @@ namespace breseq {
                 
               }
               
+              on_codon_pos_1 += cds_strand;
               on_codon_index = 0;
             }
           }
@@ -1556,62 +1572,70 @@ namespace breseq {
     } // end sequence loop
   }    
   
-  void BaseSubstitutionEffectCounts::initialize_totals(cReferenceSequences& ref_seq_info, BaseSubstitutionEffects& bse)
+  void BaseSubstitutionEffectCounts::initialize_possible_totals(cReferenceSequences& ref_seq_info, BaseSubstitutionEffects& bse)
   {
     vector<string> seq_ids = ref_seq_info.seq_ids();
     for (vector<string>::iterator seq_id_it = seq_ids.begin(); seq_id_it != seq_ids.end(); ++seq_id_it) {
       for (uint32_t i=1; i <= ref_seq_info[*seq_id_it].get_sequence_length(); i++) {
         //cout << *seq_id_it << " " << i << endl;
-        add_position_1_to_totals(ref_seq_info, bse, *seq_id_it, i);
+        change_position_1_possible_totals(ref_seq_info, bse, *seq_id_it, i, +1);
       }
     }
   }
    
-   
-  void BaseSubstitutionEffectCounts::add_position_1_to_totals(cReferenceSequences& ref_seq_info, BaseSubstitutionEffects& bse, string seq_id, uint32_t on_pos)
-  {
-    change_position_1_totals(ref_seq_info, bse, seq_id, on_pos, +1);
-  }
-  
-  void BaseSubstitutionEffectCounts::subtract_position_1_from_totals(cReferenceSequences& ref_seq_info, BaseSubstitutionEffects& bse, string seq_id, uint32_t on_pos)
-  {
-    change_position_1_totals(ref_seq_info, bse, seq_id, on_pos, -1);
-  }
-   
-  void BaseSubstitutionEffectCounts::change_position_1_totals(cReferenceSequences& ref_seq_info, BaseSubstitutionEffects& bse, string seq_id, uint32_t pos_1, int32_t inc)
+  void BaseSubstitutionEffectCounts::change_position_1_possible_totals(cReferenceSequences& ref_seq_info, BaseSubstitutionEffects& bse, string seq_id, uint32_t pos_1, int32_t inc)
   {
     BaseSubstitutionEffectPositionInfo pos_info = bse.position_info_1(ref_seq_info, seq_id, pos_1);
    
     // counts of the total number of bases in the genome in category
     m_base_counts[pos_info.m_base_type]["nt"] += inc;
-    if ( (pos_info.m_base == 'G') || (pos_info.m_base == 'C') )
+    if ( (pos_info.m_base_char == 'G') || (pos_info.m_base_char == 'C') )
       m_base_counts[pos_info.m_base_type]["gc"] += inc;
     else
       m_base_counts[pos_info.m_base_type]["at"] += inc;
         
     // counts of the total number of base changes in the genome in category
-    for (size_t this_base_index = 0; this_base_index < BaseSubstitutionEffects::base_list.size(); ++this_base_index) {
+    for (size_t this_base_index = 0; this_base_index < BaseSubstitutionEffects::base_char_list.size(); ++this_base_index) {
       
-      base_char this_base_char = BaseSubstitutionEffects::base_list[this_base_index];
-      string base_key = pos_info.m_base + BaseSubstitutionEffects::separator + this_base_char;
+      base_char this_base_char = BaseSubstitutionEffects::base_char_list[this_base_index];
+      
+      // Don't try to count if the base is the same -- lookup of base pair change will fail
+      if (pos_info.m_base_char == this_base_char) 
+        continue;
+      
+      string base_key = pos_info.m_base_char + BaseSubstitutionEffects::separator + this_base_char;
       string base_pair_key = BaseSubstitutionEffects::base_change_to_base_pair_change[base_key];
       
-      m_base_pair_change_counts[pos_info.m_base_substitution_effect[this_base_index]][base_pair_key] += inc;
-      m_base_pair_change_counts[pos_info.m_base_substitution_effect[this_base_index]]["TOTAL"] += inc;
+      string base_change_type_key = BaseSubstitutionEffects::base_change_type_list[pos_info.m_base_substitution_effect[this_base_index]];
+      
+      m_possible_base_pair_change_counts[base_change_type_key][base_pair_key] += inc;
+      m_possible_base_pair_change_counts[base_change_type_key]["TOTAL"] += inc;
+      
+      m_possible_base_pair_change_counts["TOTAL"][base_pair_key] += inc;
+      m_possible_base_pair_change_counts["TOTAL"]["TOTAL"] += inc;
     }
    
   }
    
-  void BaseSubstitutionEffectCounts::add_base_change_to_totals(cReferenceSequences& ref_seq_info, BaseSubstitutionEffects& bse, string seq_id, uint32_t pos_1, string base_change)
+  void BaseSubstitutionEffectCounts::change_position_1_observed_totals(cReferenceSequences& ref_seq_info, BaseSubstitutionEffects& bse, string seq_id, uint32_t pos_1, string new_base, int32_t inc)
   {
-
-    string base_pair_key = BaseSubstitutionEffects::base_change_to_base_pair_change[base_change];	
-    int32_t inc = +1;
+    ASSERT(new_base.size()==1,"Unexpected base string size.");
+    base_char new_base_char = new_base[0];
     BaseSubstitutionEffectPositionInfo pos_info = bse.position_info_1(ref_seq_info, seq_id, pos_1);
+    string base_change = pos_info.m_base_char + BaseSubstitutionEffects::separator + new_base;
     
-    size_t this_base_index = BaseSubstitutionEffects::base_change_to_index[base_pair_key];
-    m_base_pair_change_counts[pos_info.m_base_substitution_effect[this_base_index]][base_pair_key] += inc;
-    m_base_pair_change_counts[pos_info.m_base_substitution_effect[this_base_index]]["TOTAL"] += inc;
+    size_t new_base_index = BaseSubstitutionEffects::base_char_to_base_index[new_base_char];
+    string base_change_type_key = BaseSubstitutionEffects::base_change_type_list[pos_info.m_base_substitution_effect[new_base_index]];
+    
+    ASSERT(pos_info.m_base_substitution_effect[new_base_index] != no_change_base_substitution, "Attempt to count base substitution that does not change base");
+    
+    string base_pair_key = BaseSubstitutionEffects::base_change_to_base_pair_change[base_change];	
+    
+    m_observed_base_pair_change_counts[base_change_type_key][base_pair_key] += inc;
+    m_observed_base_pair_change_counts[base_change_type_key]["TOTAL"] += inc;
+    
+    m_observed_base_pair_change_counts["TOTAL"][base_pair_key] += inc;
+    m_observed_base_pair_change_counts["TOTAL"]["TOTAL"] += inc;
     
   }
    
@@ -1626,13 +1650,12 @@ namespace breseq {
     uint32_t pos_0 = pos_1 - 1;
     BaseSubstitutionEffectPositionInfo pos_info;
    
-    pos_info.m_base = ref_seq_info[seq_id].get_sequence_1(pos_1);
+    pos_info.m_base_char = ref_seq_info[seq_id].get_sequence_1(pos_1);
     
     SequenceBaseSubstitutionEffects::iterator bse_it = m_bse[seq_id].begin() + pos_0 * 4;
     
 
-    for (size_t i=0; i<4; i++)
-    {
+    for (size_t i=0; i<4; i++) {
       BaseSubstitutionEffect this_bse = *bse_it;
       if (this_bse != no_change_base_substitution) {
         pos_info.m_base_type = snp_type_to_base_type[this_bse];
@@ -1641,10 +1664,18 @@ namespace breseq {
       ++bse_it;
     }
     
+    bse_it = m_bse[seq_id].begin() + pos_0 * 4;
+    
+    /*
+    cout << BaseSubstitutionEffects::base_change_type_list[m_bse[seq_id][pos_0 * 4]] << endl;
+    cout << BaseSubstitutionEffects::base_change_type_list[m_bse[seq_id][pos_0 * 4+1]] << endl;
+    cout << BaseSubstitutionEffects::base_change_type_list[m_bse[seq_id][pos_0 * 4+2]] << endl;
+    cout << BaseSubstitutionEffects::base_change_type_list[m_bse[seq_id][pos_0 * 4+3]] << endl;
+    */
     
     pos_info.m_base_substitution_effect.insert(
                                               pos_info.m_base_substitution_effect.begin(),
-                                              bse_it, bse_it+3
+                                              bse_it, bse_it+4
                                               );
 
     
@@ -1725,32 +1756,32 @@ namespace breseq {
     BaseSubstitutionEffectCounts total_bsec;
     BaseSubstitutionEffects bse;
     
+    // Populate information about the effects of every base substitution in the genome.
     if (base_substitution_statistics) {
       //uout("Calculating base substitution effects in reference sequences") << endl;
       bse.initialize_from_sequence(ref_seq_info);
-      total_bsec.initialize_totals(ref_seq_info, bse);
+      total_bsec.initialize_possible_totals(ref_seq_info, bse);
     }
     
-        
+    
+    // Create the column headings for the detailed base substitution counts.
     if (base_substitution_statistics) {
      
-     for (vector<string>::const_iterator snp_type = BaseSubstitutionEffects::base_change_type_list.begin();
-          snp_type != BaseSubstitutionEffects::base_change_type_list.end(); ++snp_type) {
-       for (vector<string>::const_iterator bp_change = BaseSubstitutionEffects::base_pair_change_list.begin();
-            bp_change != BaseSubstitutionEffects::base_pair_change_list.end(); ++bp_change) {
+     for (vector<string>::const_iterator snp_type = BaseSubstitutionEffectCounts::base_change_type_count_list.begin();
+          snp_type != BaseSubstitutionEffectCounts::base_change_type_count_list.end(); ++snp_type) {
+       for (vector<string>::const_iterator bp_change = BaseSubstitutionEffectCounts::base_pair_change_count_list.begin();
+            bp_change != BaseSubstitutionEffectCounts::base_pair_change_count_list.end(); ++bp_change) {
          column_headers.push_back("POSSIBLE." + *snp_type + BaseSubstitutionEffects::separator + *bp_change);
        }
-       column_headers.push_back("POSSIBLE." + *snp_type + ".TOTAL");
      }
      
-     for (vector<string>::const_iterator snp_type = BaseSubstitutionEffects::base_change_type_list.begin();
-          snp_type != BaseSubstitutionEffects::base_change_type_list.end(); ++snp_type) {
-       for (vector<string>::const_iterator bp_change = BaseSubstitutionEffects::base_pair_change_list.begin();
-            bp_change != BaseSubstitutionEffects::base_pair_change_list.end(); ++bp_change) {
-         column_headers.push_back("OBSERVED." + *snp_type + BaseSubstitutionEffects::separator + *bp_change);
-       }
-       column_headers.push_back("OBSERVED." + *snp_type + ".TOTAL");
-     }
+      for (vector<string>::const_iterator snp_type = BaseSubstitutionEffectCounts::base_change_type_count_list.begin();
+           snp_type != BaseSubstitutionEffectCounts::base_change_type_count_list.end(); ++snp_type) {
+        for (vector<string>::const_iterator bp_change = BaseSubstitutionEffectCounts::base_pair_change_count_list.begin();
+             bp_change != BaseSubstitutionEffectCounts::base_pair_change_count_list.end(); ++bp_change) {
+          column_headers.push_back("OBSERVED." + *snp_type + BaseSubstitutionEffects::separator + *bp_change);
+        }
+      }
      
     } //if (base_substitution_statistics)
     
@@ -1791,21 +1822,20 @@ namespace breseq {
       count["gene_conversion"][""] = 0;
       count["mobile_element_insertion"][""] = 0;
       
-      //my $this_bs_counts = [];
       
+      // BEGIN for each mutation
       diff_entry_list_t mut_list = gd.mutation_list();
       for (diff_entry_list_t::iterator it=mut_list.begin(); it != mut_list.end(); ++it) {		
         
         cDiffEntry& mut = **it;
         
+        // Don't count mutations that were hidden by later deletions, but kept for phylogenetic inference.
         if (mut.is_marked_deleted()) continue;
         
-        //count SNPs and examples of mobile element insertions
         if (mut._type == SNP) {
           count["base_substitution"][""]++;
-          string base_change = mut[REF_BASE] + BaseSubstitutionEffects::separator + mut[NEW_BASE];
           if (base_substitution_statistics) {
-            this_bsec.add_base_change_to_totals(ref_seq_info, bse, mut[SEQ_ID], from_string<uint32_t>(mut[POSITION]), base_change);					
+            this_bsec.change_position_1_observed_totals(ref_seq_info, bse, mut[SEQ_ID], from_string<int32_t>(mut[POSITION]), mut[NEW_SEQ], +1);					
           }
           count["type"][mut["snp_type"]]++;
         }
@@ -1895,12 +1925,14 @@ namespace breseq {
         cDiffEntry& un = **it;
         un_bp += from_string<int32_t>(un[END]) - from_string<int32_t>(un[START]) + 1;
         
-        if (base_substitution_statistics) {
-          for (uint32_t pos_1 = from_string<uint32_t>(un[START]); pos_1 <= from_string<uint32_t>(un[END]); pos_1++) {
-            this_bsec.subtract_position_1_from_totals(ref_seq_info, bse, un[SEQ_ID], pos_1);					
-          }
-        }
+        // subtract these positions from the possible observations of base pair statistics
+        if (base_substitution_statistics)
+          for (uint32_t pos_1 = from_string<uint32_t>(un[START]); pos_1 <= from_string<uint32_t>(un[END]); pos_1++)
+            this_bsec.change_position_1_possible_totals(ref_seq_info, bse, un[SEQ_ID], pos_1, -1);					
+        
       }
+      // END for each mutation
+
       
       int32_t called_bp = total_bp - un_bp;
       
@@ -1934,29 +1966,28 @@ namespace breseq {
       
       if (base_substitution_statistics) {	
         
-        for(size_t i=0; i<BaseSubstitutionEffects::base_change_type_list.size(); ++i) {
+        for(vector<string>::iterator this_base_change_type = BaseSubstitutionEffectCounts::base_change_type_count_list.begin();
+            this_base_change_type != BaseSubstitutionEffectCounts::base_change_type_count_list.end(); ++this_base_change_type) {
+                    
+          for(vector<string>::iterator this_base_pair_change = BaseSubstitutionEffectCounts::base_pair_change_count_list.begin();
+              this_base_pair_change != BaseSubstitutionEffectCounts::base_pair_change_count_list.end(); ++this_base_pair_change) {
           
-          string& this_base_change_type = BaseSubstitutionEffects::base_change_type_list[i];
+            this_columns.push_back( s( this_bsec.m_possible_base_pair_change_counts[*this_base_change_type][*this_base_pair_change] ) );
+          }
           
-          for(vector<string>::iterator it = BaseSubstitutionEffects::base_pair_change_list.begin();
-              it != BaseSubstitutionEffects::base_pair_change_list.end(); ++it) {
-          
-            this_columns.push_back( s( total_bsec.m_base_pair_change_counts[ static_cast<BaseSubstitutionEffect>(i)][*it] ) );
-          }          
         }
         
-        for(size_t i=0; i<BaseSubstitutionEffects::base_change_type_list.size(); ++i) {
+        for(vector<string>::iterator this_base_change_type = BaseSubstitutionEffectCounts::base_change_type_count_list.begin();
+            this_base_change_type != BaseSubstitutionEffectCounts::base_change_type_count_list.end(); ++this_base_change_type) {
           
-          string& this_base_change_type = BaseSubstitutionEffects::base_change_type_list[i];
-          
-          for(vector<string>::iterator it = BaseSubstitutionEffects::base_pair_change_list.begin();
-              it != BaseSubstitutionEffects::base_pair_change_list.end(); ++it) {
+          for(vector<string>::iterator this_base_pair_change = BaseSubstitutionEffectCounts::base_pair_change_count_list.begin();
+              this_base_pair_change != BaseSubstitutionEffectCounts::base_pair_change_count_list.end(); ++this_base_pair_change) {
             
-            this_columns.push_back( s( this_bsec.m_base_pair_change_counts[ static_cast<BaseSubstitutionEffect>(i)][*it] ) );
+            this_columns.push_back( s( this_bsec.m_observed_base_pair_change_counts[*this_base_change_type][*this_base_pair_change] ) );
           }          
         }
-      }
-       
+      } // if (base_substitution_statistics)
+        
       output_file << join(this_columns, ",") << endl;
     }	
   }

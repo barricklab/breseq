@@ -85,14 +85,10 @@ namespace breseq {
   
   // Organizes information about a single position for easier counting
   struct BaseSubstitutionEffectPositionInfo {
-    //bool                          m_is_GC;
-    base_char                       m_base;
+    base_char                       m_base_char;
     BaseType                        m_base_type;
     vector<BaseSubstitutionEffect>  m_base_substitution_effect; // For change to ('A')('T')('C')('G')
     BaseCDSStrand                   m_base_cds_strand;          // For change to ('A')('T')('C')('G')
-    
-    //vector<string>          m_base_pair_mutations;
-    //vector<bool>            m_base_pair_mutations_nonsynonymous;
   };
   
   //<! Class for annotating effects of base substitution mutations
@@ -101,9 +97,9 @@ namespace breseq {
   public:
         
     static string                   separator;
-    static vector<base_char>        base_list;
-    static map<base_char, uint8_t>  base_to_index;
-    static map<string,uint8_t>      base_change_to_index;
+    static vector<base_char>        base_char_list;
+    static map<base_char, uint8_t>  base_char_to_base_index;
+    static map<string,uint8_t>      base_change_to_base_pair_change_index;
     static vector<string>           base_change_list;
     static vector<string>           base_pair_change_list;
     static map<string,string>       base_change_to_base_pair_change;
@@ -127,13 +123,12 @@ namespace breseq {
   
   class BaseSubstitutionEffectCounts  {
   public:
-    void initialize_totals(cReferenceSequences& ref_seq_info, BaseSubstitutionEffects& bse);
-    
-    void add_position_1_to_totals(cReferenceSequences& ref_seq_info, BaseSubstitutionEffects& bse, string seq_id, uint32_t on_pos);
-    void subtract_position_1_from_totals(cReferenceSequences& ref_seq_info, BaseSubstitutionEffects& bse, string seq_id, uint32_t on_pos);
-    void change_position_1_totals(cReferenceSequences& ref_seq_info, BaseSubstitutionEffects& bse, string seq_id, uint32_t pos_1, int32_t inc);
-    
-    void add_base_change_to_totals(cReferenceSequences& ref_seq_info, BaseSubstitutionEffects& bse, string seq_id, uint32_t pos_1, string base_change);
+    void initialize_possible_totals(cReferenceSequences& ref_seq_info, BaseSubstitutionEffects& bse);
+    void change_position_1_possible_totals(cReferenceSequences& ref_seq_info, BaseSubstitutionEffects& bse, string seq_id, uint32_t pos_1, int32_t inc);
+    void change_position_1_observed_totals(cReferenceSequences& ref_seq_info, BaseSubstitutionEffects& bse, string seq_id, uint32_t pos_1, string new_base, int32_t inc);
+
+    static vector<string> base_pair_change_count_list; 
+    static vector<string> base_change_type_count_list;
 
     struct BaseTypeCounts : public map<string,int32_t> {
       
@@ -154,10 +149,11 @@ namespace breseq {
         }
         (*this)["TOTAL"] = 0;
       }
-    };
+    }; //class BaseSubstitutionEffectCounts
     
     map<BaseType, BaseTypeCounts > m_base_counts;
-    map<BaseSubstitutionEffect, BasePairChangeCounts > m_base_pair_change_counts;
+    map<string, BasePairChangeCounts > m_possible_base_pair_change_counts;
+    map<string, BasePairChangeCounts > m_observed_base_pair_change_counts;
 
   };
   
