@@ -1354,24 +1354,17 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
       feature["accession"] = feature.SafeGet("locus_tag");
 
       // Is this feature marked as pseudo?
-      if (feature.count("pseudo") != 0)
-      {
-        // Is it a gene type?  Rename it
-        if(feature["type"] == "gene")feature["type"] = "pseudogene";
-        // Flag it as pseudo
-        feature.m_pseudo = true;
-      }
+      feature.m_pseudo = (feature.count("pseudo") != 0);
     }
         
     // transfer to GFF
     feature["phase"] = "0";
     if (feature.SafeGet("locus_tag") != "")
       feature.m_gff_attributes["ID"] = make_vector<string>(feature["locus_tag"]);
-    if (feature.SafeGet("product") != "") // Need special case for pseudo
-    {
+    if (feature.SafeGet("product") != "")
       feature.m_gff_attributes["Note"] = make_vector<string>(feature["product"]);
-      if(feature.m_pseudo)feature.m_gff_attributes["Pseudo"].push_back("true");
-    }
+    if (feature.m_pseudo) 
+      feature.m_gff_attributes["Pseudo"].push_back("true");
     if (feature.SafeGet("accession") != "")
       feature.m_gff_attributes["Alias"] = make_vector<string>(feature["accession"]);
     if (feature.SafeGet("name") != "")
@@ -1676,6 +1669,7 @@ void cReferenceSequences::find_nearby_genes(
 
 // Retrieved from http://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi on 04-21-2012
 vector<string> cReferenceSequences::translation_tables = make_vector<string>
+  ("") // 0 placeholder to make vector 1-indexed
   ("FFLLSSSSYY**CC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG") // 1
   ("FFLLSSSSYY**CCWWLLLLPPPPHHQQRRRRIIMMTTTTNNKKSS**VVVVAAAADDEEGGGG") // 2
   ("FFLLSSSSYY**CCWWTTTTPPPPHHQQRRRRIIMMTTTTNNKKSSRRVVVVAAAADDEEGGGG") // 3
@@ -1702,6 +1696,34 @@ vector<string> cReferenceSequences::translation_tables = make_vector<string>
   ("FFLLSSSSYY**CCWWLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSSKVVVVAAAADDEEGGGG") // 24
 ;
   
+  vector<string> cReferenceSequences::initiation_codon_translation_tables = make_vector<string>
+  ("") // 0 placeholder to make vector 1-indexed
+  ("FFLMSSSSYY**CC*WLLLMPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG") // 1
+  ("FFLLSSSSYY**CCWWLLLLPPPPHHQQRRRRMMMMTTTTNNKKSS**VVVMAAAADDEEGGGG") // 2
+  ("FFLLSSSSYY**CCWWTTTTPPPPHHQQRRRRIIMMTTTTNNKKSSRRVVVVAAAADDEEGGGG") // 3
+  ("FFMMSSSSYY**CCWWLLLMPPPPHHQQRRRRMMMMTTTTNNKKSSRRVVVMAAAADDEEGGGG") // 4
+  ("FFLMSSSSYY**CCWWLLLLPPPPHHQQRRRRMMMMTTTTNNKKSSSSVVVMAAAADDEEGGGG") // 5
+  ("FFLLSSSSYYQQCC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG") // 6
+  ("") // 7 deleted
+  ("") // 8 deleted
+  ("FFLLSSSSYY**CCWWLLLLPPPPHHQQRRRRIIIMTTTTNNNKSSSSVVVMAAAADDEEGGGG") // 9
+  ("FFLLSSSSYY**CCCWLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG") // 10
+  ("FFLMSSSSYY**CC*WLLLMPPPPHHQQRRRRMMMMTTTTNNKKSSRRVVVMAAAADDEEGGGG") // 11
+  ("FFLLSSSSYY**CC*WLLLMPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG") // 12
+  ("FFLMSSSSYY**CCWWLLLLPPPPHHQQRRRRIIMMTTTTNNKKSSGGVVVMAAAADDEEGGGG") // 13
+  ("FFLLSSSSYYY*CCWWLLLLPPPPHHQQRRRRIIIMTTTTNNNKSSSSVVVVAAAADDEEGGGG") // 14
+  ("FFLLSSSSYY*QCC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG") // 15
+  ("FFLLSSSSYY*LCC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG") // 16
+  ("") // 17 deleted
+  ("") // 18 deleted
+  ("") // 19 deleted
+  ("") // 20 deleted
+  ("FFLLSSSSYY**CCWWLLLLPPPPHHQQRRRRIIMMTTTTNNNKSSSSVVVMAAAADDEEGGGG") // 21
+  ("FFLLSS*SYY*LCC*WLLLLPPPPHHQQRRRRIIIMTTTTNNKKSSRRVVVVAAAADDEEGGGG") // 22
+  ("FF*LSSSSYY**CC*WLLLLPPPPHHQQRRRRMIIMTTTTNNKKSSRRVVVMAAAADDEEGGGG") // 23
+  ("FFLMSSSSYY**CCWWLLLMPPPPHHQQRRRRIIIMTTTTNNKKSSSKVVVMAAAADDEEGGGG") // 24
+  ;
+  
 map<string,uint16_t> cReferenceSequences::codon_to_aa_index = make_map<string,uint16_t>
   ("TTT",  0)("TTC",  1)("TTA",  2)("TTG",  3)
   ("TCT",  4)("TCC",  5)("TCA",  6)("TCG",  7)
@@ -1721,11 +1743,14 @@ map<string,uint16_t> cReferenceSequences::codon_to_aa_index = make_map<string,ui
   ("GGT", 60)("GGC", 61)("GGA", 62)("GGG", 63)
 ;
 
-char cReferenceSequences::translate_codon(string seq, uint32_t translation_table)
+char cReferenceSequences::translate_codon(string seq, uint32_t translation_table, uint32_t codon_pos_1)
 {
   ASSERT(seq.size()==3, "Attempt to translate codon without three bases.");
-  ASSERT(translation_table < cReferenceSequences::translation_tables.size(), "Unknown translation table requested.");
-  string& tt = cReferenceSequences::translation_tables[translation_table];
+  ASSERT(translation_table <= cReferenceSequences::translation_tables.size(), "Unknown translation table requested.");
+  string& tt = (codon_pos_1 == 1) 
+    ? cReferenceSequences::translation_tables[translation_table]
+    : cReferenceSequences::initiation_codon_translation_tables[translation_table]
+  ;
   ASSERT(tt.size() == 64, "Unknown translation table requested.");
   
   return (cReferenceSequences::codon_to_aa_index.count(seq) == 0) 
@@ -1877,7 +1902,8 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
 
     // determine the old and new translation of this codon
     mut["aa_position"] = to_string((from_string<uint32_t>(mut["gene_position"]) - 1) / 3 + 1); // 1 indexed
-    mut["codon_position"] = to_string<int32_t>(int(abs(static_cast<int32_t>(start) - within_gene_start)) % 3 + 1); // 1 indexed
+    uint32_t codon_pos_1 = int(abs(static_cast<int32_t>(start) - within_gene_start)) % 3 + 1;
+    mut["codon_position"] = to_string<int32_t>(codon_pos_1); // 1 indexed
     
     string& ref_string = (*this)[seq_id].m_fasta_sequence.m_sequence;
     string codon_seq = (gene.get_strand())
@@ -1885,14 +1911,14 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
       : reverse_complement(ref_string.substr(gene.get_end_1() - 3 * from_string<uint32_t>(mut["aa_position"]), 3));
 
     mut["codon_ref_seq"] = codon_seq;
-    mut["aa_ref_seq"] = translate_codon(mut["codon_ref_seq"], gene.translation_table);
+    mut["aa_ref_seq"] = translate_codon(mut["codon_ref_seq"], gene.translation_table, codon_pos_1);
 
     mut["codon_new_seq"] = codon_seq;
     //#remember to revcom the change if gene is on opposite strand
     mut["codon_new_seq"][from_string<uint32_t>(mut["codon_position"]) - 1] = gene.get_strand() ?
       mut["new_seq"][0]
       : reverse_complement(mut["new_seq"])[0];
-    mut["aa_new_seq"] =  translate_codon(mut["codon_new_seq"], gene.translation_table);
+    mut["aa_new_seq"] =  translate_codon(mut["codon_new_seq"], gene.translation_table, codon_pos_1);
 
     mut["snp_type"] = (mut["aa_ref_seq"] != mut["aa_new_seq"]) ? "nonsynonymous" : "synonymous";
   }

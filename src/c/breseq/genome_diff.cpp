@@ -2525,7 +2525,7 @@ void GDtoCircos(const vector<string> &gd_file_names,
   empty_file.close();
   
   //minimum tile size width for indel graph
-  const int32_t MIN_WIDTH = ref.total_length() * .0025;
+  const int32_t MIN_WIDTH = ref.total_length() * 0.000;
   const int32_t MIN_DISPLAY_LENGTH = 51; //inclusive
   
   ofstream indel_file;
@@ -2584,7 +2584,7 @@ void GDtoCircos(const vector<string> &gd_file_names,
       indel_file << diff["seq_id"] << " " <<
                     diff["position"] << " " <<
                     from_string<int32_t>(diff["position"]) + width << " " <<
-                    "color=vdgreen" << endl;
+                    "color=green" << endl;
     }
     else if (diff._type == AMP){
       width = from_string<int32_t>(diff["size"]);
@@ -2598,7 +2598,7 @@ void GDtoCircos(const vector<string> &gd_file_names,
       indel_file << diff["seq_id"] << " " <<
                     diff["position"] << " " <<
                     from_string<int32_t>(diff["position"]) + width << " " <<
-                    "color=vdgreen" << endl;
+                    "color=green" << endl;
     }
     else if (diff._type == DEL){
       width = from_string<int32_t>(diff["size"]);
@@ -2611,7 +2611,7 @@ void GDtoCircos(const vector<string> &gd_file_names,
       indel_file << diff["seq_id"] << " " <<
                     diff["position"] << " " <<
                     from_string<int32_t>(diff["position"]) + width << " " <<
-                    "color=vdred" << endl;
+                    "color=red" << endl;
     }
     else if(diff._type == SNP || diff._type == SUB){
       if (diff["snp_type"] == "synonymous"){
@@ -2679,12 +2679,6 @@ void GDtoCircos(const vector<string> &gd_file_names,
     }
   }
   
-//  diff_entry_list_t gd_data = combined_gd.mutation_list();
-  
-//  for (diff_entry_list_t::iterator it = gd_data.begin(); it != gd_data.end(); it++){
-    
-//    cDiffEntry diff = **it;
-  
   //reference sequence MOBs
   for(size_t i = 0; i < ref.size(); i++){
     cAnnotatedSequence ref_seq = ref[i];
@@ -2739,9 +2733,6 @@ void GDtoCircos(const vector<string> &gd_file_names,
                   "i" << direction << " " <<
                   "color=" << color << endl;
     }
-    
-    //seq.m_repeats
-    
   }
   
   indel_file.close();

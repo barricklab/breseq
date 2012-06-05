@@ -168,14 +168,13 @@ namespace breseq {
           return;
         
         //Notify the user of the action
-        if(verbose){cout << "PSEUDO\t" << (*this)["type"] << "\t" << m_gff_attributes["ID"];}
+        if(verbose) cout << "PSEUDO\t" << (*this)["type"] << "\t" << m_gff_attributes["ID"];
         
         m_pseudo = true;
         m_gff_attributes["Pseudo"].push_back("true");
-        if((*this)["type"] == "gene"){(*this)["type"] = "pseudogene";if(verbose){cout << "\tto\t" << (*this)["type"];}}
         
         //Notify the user of the action (cont.)
-        if(verbose)cout << endl;
+        if(verbose) cout << endl;
       }
       
       // Read GenBank coords
@@ -569,11 +568,12 @@ namespace breseq {
     
     // Translation tables
     static vector<string> translation_tables;
+    static vector<string> initiation_codon_translation_tables;
     static map<string,uint16_t> codon_to_aa_index;
 
     static cSequenceFeaturePtr find_closest_repeat_region_boundary(int32_t position, cSequenceFeatureList& repeat_list, int32_t max_distance, int32_t direction);
     static cSequenceFeaturePtr get_overlapping_feature(cSequenceFeatureList& feature_list, int32_t pos);
-    static char translate_codon(string seq, uint32_t translation_table);
+    static char translate_codon(string seq, uint32_t translation_table, uint32_t codon_pos_1);
     static void find_nearby_genes(
                                   cSequenceFeatureList& gene_list, 
                                   int32_t pos_1, 
@@ -652,12 +652,6 @@ namespace breseq {
 
     private:
       string m_name;
-  };
-    
-  // For translation and codon mutation statistics
-  class cGeneticCode {
-  public:
-    cGeneticCode(uint32_t translation_table, bool count_synonymous_stop_codons);
   };
 
 } // breseq namespace
