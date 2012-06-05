@@ -430,10 +430,6 @@ namespace breseq {
     void Verify();
     bool Initialized() {return m_initialized;}
     
-    //!< Read/Write a tab delimited feature 
-    void ReadFeatureTable(const string &file_name); //(TODO: deprecate)
-    void WriteFeatureTable(const string &file_name); //(TODO: deprecate)
-    
     //!< Read/Write FASTA file     
     void ReadFASTA(const std::string &file_name);
     void ReadFASTA(cFastaFile& ff);
