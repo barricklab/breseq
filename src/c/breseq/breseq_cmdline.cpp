@@ -310,8 +310,6 @@ int do_convert_fastq(int argc, char* argv[])
   
 }
 
-
-
 int do_convert_genbank(int argc, char* argv[]) {
 	
 	// setup and parse configuration options:
@@ -329,7 +327,7 @@ int do_convert_genbank(int argc, char* argv[]) {
 		return -1;
 	}
 
-  if (!options.count("fasta") || !options.count("gff")) {
+  if (!options.count("fasta") && !options.count("gff")) {
     options.addUsage("No output path and format given.");
 		options.printUsage();
 		return -1;

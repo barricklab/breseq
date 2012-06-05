@@ -93,6 +93,10 @@ namespace breseq {
     void set_strand(int8_t _strand) {
       m_strand = _strand;
     }
+
+    void add_sub_location( const cLocation& value) {
+      m_sub_locations.push_back(value);
+    }
   };
   
   extern const vector<string> snp_types;
