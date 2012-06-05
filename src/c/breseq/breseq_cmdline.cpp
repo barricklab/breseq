@@ -310,68 +310,39 @@ int do_convert_fastq(int argc, char* argv[])
   
 }
 
-/*! Convert Genbank
- 
- Create a tab-delimited file of information about genes and a
- FASTA sequence file from an input GenBank file.
- */
 
-// Helper function
-void convert_genbank(const vector<string>& in, const string& fasta, const string& ft, const string& gff3 ) {
-
-  cReferenceSequences refseqs;
-
-  // Load the GenBank file
-  
-  
-  for (vector<string>::const_iterator it = in.begin(); it < in.end(); it++) 
-  {
-    refseqs.ReadGenBank(*it);
-  }
-  
-  // Output sequence
-  if (fasta != "") refseqs.WriteFASTA(fasta);
-
-  // Output feature table
-  if (ft != "") refseqs.WriteFeatureTable(ft);
-
-  if (gff3 != "" ) refseqs.WriteGFF( gff3 );
-}
 
 int do_convert_genbank(int argc, char* argv[]) {
 	
 	// setup and parse configuration options:
-	AnyOption options("Usage: breseq CONVERT_GENBANK --input <sequence.gbk> [--fasta <output.fasta> --features <output.tab>]");
+	AnyOption options("Usage: breseq CONVERT-REFERENCE --input <reference> [--fasta <output.fasta>] OR [--gff <output.gff>]");
 	options
-		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-		("input,i", "input GenBank flatfile (multiple allowed, comma-separated)")
-		("features,g", "output feature table", "")
-		("fasta,f", "FASTA file of reference sequences", "")
-    ("gff3,v", "GFF file of features", "" )
+		("input,i", "Input reference file(s). (Format: Fasta, GFF, GenBank)")
+		("fasta",   "FASTA format output path.")
+    ("gff",     "GFF format output path.")
 	.processCommandArgs(argc, argv);
 	
 	// make sure that the config options are good:
-	if(options.count("help")
-		 || !options.count("input")
-		 || (!options.count("features") && !options.count("fasta"))  
-		 ) {
+  if (!options.count("input")) {
+    options.addUsage("No input reference file given.");
 		options.printUsage();
 		return -1;
 	}
-  
-	// attempt to calculate error calibrations:
-	try {
-        
-		convert_genbank(  
-                    from_string<vector<string> >(options["input"]),
-                    options["fasta"],
-                    options["features"],
-                    options["gff3"]
-                    );
-  } catch(...) {
-		// failed; 
+
+  if (!options.count("fasta") || !options.count("gff")) {
+    options.addUsage("No output path and format given.");
+		options.printUsage();
 		return -1;
-	}
+  }
+
+  
+  cReferenceSequences refs;
+  refs.LoadFiles(from_string<vector<string> >(options["input"]));
+
+  if (options.count("fasta")) refs.WriteFASTA(options["fasta"]);
+
+  if (options.count("gff")) refs.WriteGFF(options["gff"]);
+
 	
 	return 0;
 }
@@ -2362,7 +2333,7 @@ int main(int argc, char* argv[]) {
   // Sequence Utility Commands:
   if (command == "CONVERT-FASTQ") {
 		return do_convert_fastq(argc_new, argv_new);
-	} else if (command == "CONVERT-GENBANK") {
+	} else if (command == "CONVERT-REFERENCE") {
 		return do_convert_genbank(argc_new, argv_new);
   } else if ((command == "SUBSEQUENCE") || (command == "GET-SEQUENCE")) {
     return do_subsequence(argc_new, argv_new);
