@@ -638,6 +638,7 @@ namespace breseq {
     ASSERT(!in.fail(), "Could not open GFF file: " + file_name);
     //! Step 1: Header //! cFastaFile removes first line, so no header...
     string line;
+    map<string, vector<cSequenceFeature*> > id_features_table; 
     while (!in.eof() && getline(in,line)) {
       cSequenceFeaturePtr fp(new cSequenceFeature);
       cSequenceFeature& feature = *fp;
@@ -742,16 +743,16 @@ namespace breseq {
         feature["transl_table"] = feature.m_gff_attributes["transl_table"][0];
 
     
-//! Step 4: Determine if sequence already exists (find or create if not found)
+      //! Step 4: Determine if sequence already exists (find or create if not found)
       this->add_new_seq(seq_id);
-      (*this)[seq_id].feature_push_back(fp);
       
       // Handle features that cross the origin by adding them twice (only one will be written)
+      // @GRC Should this be handled with cLocation rather then a 'bonus feature'
       if (feature.get_end_1() > (*this)[seq_id].m_length) {
         cSequenceFeaturePtr bonus_circular_feature_ptr(new cSequenceFeature);
         *bonus_circular_feature_ptr = feature;
-        bonus_circular_feature_ptr->m_location.set_start_1( bonus_circular_feature_ptr->get_start_1() + 1 - (*this)[seq_id].m_length);
-        bonus_circular_feature_ptr->m_location.set_end_1( bonus_circular_feature_ptr->get_end_1() - (*this)[seq_id].m_length);
+        bonus_circular_feature_ptr->m_location.set_start_1(bonus_circular_feature_ptr->get_start_1() + 1 - (*this)[seq_id].m_length);
+        bonus_circular_feature_ptr->m_location.set_end_1(bonus_circular_feature_ptr->get_end_1() - (*this)[seq_id].m_length);
         (*this)[seq_id].feature_push_front(bonus_circular_feature_ptr);
       }
     
@@ -759,9 +760,39 @@ namespace breseq {
       if ((feature["type"] == "region") && (feature.get_start_1() == 1) && (feature.get_end_1() == (*this)[seq_id].m_length)) {
         if (feature.m_gff_attributes.count("Is_circular"))
           (*this)[seq_id].m_is_circular = (feature.m_gff_attributes["Is_circular"][0] == "true");
+
         if (feature.m_gff_attributes.count("Note"))
           (*this)[seq_id].m_description = feature.m_gff_attributes["Note"][0];
       }
+
+      // Add feature / determine if it needs to be added as a sub_location to another feature.
+      if (feature.m_gff_attributes.count("ID")) {
+        string id = feature.m_gff_attributes["ID"][0];
+        if (id_features_table.count(id))  {
+          vector<cSequenceFeature*> features = id_features_table[id];
+          bool is_sub_location = false;
+          
+          //Search to see if 'type' matches also.
+          for (uint32_t i = 0; i < features.size();  ++i) {
+            if ((*features[i])["type"] == feature["type"]) {
+              //Update cLocation to include this sublocation.
+              features[i]->m_location.add_sub_location(feature.m_location);
+              is_sub_location = true;
+              break;
+            }
+          }
+
+          if (is_sub_location) {
+            continue; //Don't add to feature lists.
+          } else { 
+            id_features_table[id].push_back(&feature);
+          }
+
+        }
+      }
+
+      (*this)[seq_id].feature_push_back(fp);
+
     }
     
     // sort because they may now be out of order
@@ -808,39 +839,19 @@ void cReferenceSequences::WriteGFF( const string &file_name, bool verbose ){
       // skip first example of doubly-loaded feature that overlaps circular genome
       if (feat.get_start_1() < 1)
         continue;
-      
-      out << it_as->m_seq_id;
 
-      if (feat.SafeGet("source") == "")
-        out << "\t.";
-      else
-        out << "\t" << feat["source"];
-      
-      if (feat.SafeGet("type") == "")
-        out << "\t.";
-      else
-        out << "\t" << feat["type"];
+      enum {SEQID = 0, SOURCE, TYPE, START_1, END_1, SCORE, STRAND, PHASE, ATTRIBUTES};
+      vector<string> columns(9, ".");
 
-      out << "\t" << feat.get_start_1();
-      out << "\t" << feat.get_end_1();
-
-      if (feat.SafeGet("score") == "")
-        out << "\t.";
-      else
-        out << "\t" << feat["score"];
-
-      if (feat.get_strand() > 0)
-        out << "\t" << "+";
-      else
-        out << "\t" << "-";
-
-      if (feat.SafeGet("phase") == "")
-        out << "\t" << ".";
-      else
-        out << "\t" << feat["phase"];
+      columns[SEQID] = it_as->m_seq_id;
+      if (feat.count("source")) columns[SOURCE] = feat["source"];
+      if (feat.count("type"))   columns[TYPE] = feat["type"];
+      //Note: Will add start_1 and end_1 below.
+      if (feat.count("score"))  columns[SCORE] = feat["score"];
+      columns[STRAND] = feat.get_strand() > 0 ? "+" : "-";
+      if (feat.count("phase"))  columns[PHASE] = feat["phase"];
 
       //Attributes
-      out << "\t";
       vector<string> attributes;
       map<string,vector<string> >::const_iterator itr;
       for (itr = feat.m_gff_attributes.begin(); itr != feat.m_gff_attributes.end(); itr++) {
@@ -854,9 +865,18 @@ void cReferenceSequences::WriteGFF( const string &file_name, bool verbose ){
         
         if(s.size())attributes.push_back(key + "=" + join(s, ","));
       }
-      out << join(attributes, ";");
+      columns[ATTRIBUTES] = join(attributes, ";");
 
-      out << std::endl;
+      const vector<cLocation> locations = feat.m_location.get_all_sub_locations();
+      for (uint32_t i = 0; i < locations.size(); ++i) {
+        columns[START_1] = to_string(locations[i].get_start_1());
+        columns[END_1]   = to_string(locations[i].get_end_1());
+
+        out << join(columns, "\t") << endl;
+
+      }
+
+
     }
   }
   //! Step 3: Fasta, one command writes out all sequences
