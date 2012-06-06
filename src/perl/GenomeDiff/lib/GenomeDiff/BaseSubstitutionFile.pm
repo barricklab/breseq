@@ -206,7 +206,6 @@ sub new
 			next FEATURE;				
 		}
 
-		next FEATURE if ($f->primary_tag ne 'CDS');
 
 		if ($f->has_tag("pseudo") || ( ($f->location->start_pos_type ne 'EXACT') || ($f->location->end_pos_type ne 'EXACT')) ) {
 
@@ -217,6 +216,9 @@ sub new
 			}
 			next FEATURE;
 		}
+		
+		next FEATURE if ($f->primary_tag ne 'CDS');
+		
 
 		#no gene fragments!
 
@@ -436,6 +438,22 @@ sub new
 		#}
 		#print "\n";
 		## end consistency code
+		
+		#my $print_num;
+		#if ($nt_type[$genome_position] == $k_nt_type_PROTEIN) {
+		#	$print_num = 3;
+		#}
+		#if ($nt_type[$genome_position] == $k_nt_type_RNA) {
+		#	$print_num = 1;
+		#}
+		#if ($nt_type[$genome_position] == $k_nt_type_PSEUDOGENE) {
+		#	$print_num = 2;
+		#}
+		#if ($nt_type[$genome_position] == $k_nt_type_INTERGENIC) {
+		#	$print_num = 0;
+		#}
+		#print " " . $print_num . "\n";
+		
 		
 		## only count coding positions
 		next if ($nt_type[$genome_position] != $k_nt_type_PROTEIN);
