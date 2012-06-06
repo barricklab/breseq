@@ -277,9 +277,10 @@ sub new
 		# frameshift (bacterial) or intron (eukaryotic).
 		$p->{nt_seq} = '';
 		my @gene_positions; #nt positions in referencethat correspond to each base of nt_seq
-		my $on_nt_index = 0;
 		foreach my $loc (@Location_List)
 		{
+			#print STDERR $loc->start . " " .  $loc->end . "\n";
+			
 			my $add_seq = $seq->trunc($loc->start, $loc->end);
 			my $on_nt;
 			if ($p->{strand} == -1)
@@ -294,21 +295,27 @@ sub new
 				$p->{nt_seq} = $p->{nt_seq} . $add_seq->seq;
 			}
 
+			my @new_gene_positions;
+			my $on_nt_index = 0;
 			for (my $pos = $loc->start-1;  $pos < $loc->end; $pos++)
 			{
-				while ($on_nt_index < length $p->{nt_seq})
-				{
-					$gene_positions[$on_nt_index] = $on_nt-1;
-					$on_nt_index++;
-					$on_nt += $p->{strand};
-				}
+				$new_gene_positions[$on_nt_index] = $on_nt-1;
+				$on_nt_index++;
+				$on_nt += $p->{strand};
+			}
+			if ($p->{strand} == +1) {
+				push @gene_positions, @new_gene_positions;
+			} else {
+				unshift @gene_positions, @new_gene_positions;
 			}
 		}
 
-		#print Dumper($p);
+		#print STDERR Dumper($p);
+
 
 		#Split to codons
 		my $nt_seq = $p->{nt_seq};
+		my @aa_list;
 		my $codon_index = -1;
 		CODON: while (my $codon = substr $nt_seq, 0, 3, "") {
 			$codon_index++;
@@ -330,7 +337,7 @@ sub new
 			}
 
 			push @{$p->{codon_list}}, $codon;
-
+			push @aa_list, $codon_to_aa{$codon};
 
 			#print $nt_seq . "\n";
 			#print $codon . "\n";
@@ -398,7 +405,13 @@ sub new
 				next CODON;
 			} 
 		}
-
+		
+		
+		## debug code
+		#print ">$p->{name}\n";
+		#print +(join "", @{$p->{codon_list}}) . "\n";
+		#print +(join "", @aa_list) . "\n";
+			
 	} ## end feature
 
 	###
@@ -411,12 +424,23 @@ sub new
 	## Now go through the sequence and normalize expectations for overlapping genes
 	## If it is marked as nonsynonymous, then it's nonsynonymous even if others are synonymous
 	for (my $genome_position=0; $genome_position<$seq_length; $genome_position++) {
-
+		
+		my $from_nt = substr $sequence, $genome_position, 1;
+		
+		
+		## debug code for consistency with C++
+		#print +($genome_position+1) . " " . $from_nt;
+		#TO_NT: foreach my $to_nt ('A', 'T', 'C', 'G') {
+		#	#print +($genome_position+1) . " " . $from_nt . " " . $to_nt . " " . (($from_nt != $to_nt) ? "1" : "0") . " " . (($nt_change_is_nonsynonymous[$genome_position * 6 + $bp_change_to_index->{"$from_nt-$to_nt"} ] == 1) ? "1" : "0") . "\n";
+		#	print " " . ((($from_nt ne $to_nt) && ($nt_change_is_nonsynonymous[$genome_position * 6 + $bp_change_to_index->{"$from_nt-$to_nt"} ] == 1)) ? "1" : "0");
+		#}
+		#print "\n";
+		## end consistency code
+		
 		## only count coding positions
-		next if ($nt_type[$genome_position] == $k_nt_type_PROTEIN);
+		next if ($nt_type[$genome_position] != $k_nt_type_PROTEIN);
 		$total_codon_nt_positions++;
 
-		my $from_nt = substr $sequence, $genome_position, 1;
 
 		TO_NT: foreach my $to_nt (@nt_list) {
 
