@@ -1448,6 +1448,10 @@ namespace breseq {
         cSequenceFeature& f = **it2;
         if (verbose) cout << f.SafeGet("name") << " " << f.get_start_1() << " " << f.get_end_1() << " " << f.get_strand() << endl;
         
+        
+        // By taking anything within a gene as NONCODING, it will also include **introns** in this category
+        // instead of an alternative strategy which might be to give them their own category or call them intergenic.
+        
         // Catches tRNA/rRNA/pseudogenes...
         if (f[TYPE] == "gene") {
           vector<cLocation> sub_locations = f.m_location.get_all_sub_locations();
@@ -1599,13 +1603,18 @@ namespace breseq {
         cout << pos_1 << " " << seq.get_sequence_1(pos_1);
         size_t pos_0 = pos_1-1;
         
-        for (uint8_t base_index=0; base_index<4; ++base_index) {
-          cout << " " << ((seq_bse[pos_0*4+base_index] == nonsynonymous_base_substitution) ? "1" : "0");
-        }
+        BaseSubstitutionEffectPositionInfo position_info = position_info_1(ref_seq_info, seq.m_seq_id, pos_1);
+        BaseType bt = position_info.m_base_type;
+        
+        cout << " " << bt;
+        
+        //for (uint8_t base_index=0; base_index<4; ++base_index) {
+        //  cout << " " << ((seq_bse[pos_0*4+base_index] == nonsynonymous_base_substitution) ? "1" : "0");
+        //}
         
         cout << endl;
       }
-       */
+      */
       
     } // end sequence loop
   }    
