@@ -230,7 +230,6 @@ void GDtoCircos(const vector<string> &gd_file_names,
                 const vector<string> &reference_file_names,
                 const string &circos_directory,
                 double distance_scale,
-                double space_scale,
                 double feature_scale);
 
 //! Convert MIRA feature analysis file to GD
