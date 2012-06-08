@@ -628,9 +628,9 @@ namespace breseq {
   void FastqSimulationUtilities::GaussianRNG::box_muller_transform(int* z0, int* z1) {
   static const float PI =
   3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706f;
-    //Two random variables [0, 1) with a precision of .001
-    float u1 = static_cast<float>((rand() % 999) / 1000.f);
-    float u2 = static_cast<float>((rand() % 999) / 1000.f);
+    //Two random variables in the interval (0, 1] with a precision of .001
+    float u1 = static_cast<float>((rand() % 1000 + 1) / 1000.f);
+    float u2 = static_cast<float>((rand() % 1000 + 1) / 1000.f);
 
     *z0 = round(sqrtf(-2.f * log(u1)) * std::cos(2.f * PI * u2)); 
     *z1 = round(sqrtf(-2.f * log(u1)) * std::sin(2.f * PI * u2)); 
