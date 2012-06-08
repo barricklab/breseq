@@ -1,0 +1,2061 @@
+#!/usr/bin/env perl
+
+###
+# Pod Documentation
+###
+
+=head1 NAME
+
+genome_diff
+
+=head1 SYNOPSIS
+
+Usage: genomediff COMMAND [options]
+
+Performs various functions on genomediff formatted files. Options depend on
+the command. Valid COMMANDs are: HTML, COMPARE, VALIDATE, SUBTRACT. See the HTML
+manual for options and usage.
+
+=head1 AUTHOR
+
+Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
+
+=head1 LICENSE
+
+Copyright (C) 2011 The University of Texas at Austion; 2010 Michigan State University.
+
+This is free software; you can redistribute it and/or modify it under the terms the 
+GNU General Public License as published by the Free Software Foundation; either 
+version 1, or (at your option) any later version.
+
+=cut
+
+###
+# End Pod Documentation
+###
+
+our $VERSION = '0';
+
+#### Standard Perl Modules ####
+use strict;
+use Data::Dumper;
+use List::Util qw(min);
+use Storable qw(dclone);
+use Getopt::Long;
+use Pod::Usage;
+use POSIX qw(ceil floor);
+
+#allows us to load modules and call other scripts in same directory
+use FindBin;
+use lib $FindBin::Bin;
+$ENV{PATH} = "$ENV{PATH}:" . $FindBin::Bin;
+
+#### Paths to Locally Installed Modules ####
+use Config;
+use lib $FindBin::Bin . "/../lib/perl5";
+use lib $FindBin::Bin . "/../lib/perl5/$Config{version}";
+use lib $FindBin::Bin . "/../lib/perl5/$Config{archname}";
+use lib $FindBin::Bin . "/../lib/perl5/site_perl/$Config{archname}/$Config{version}";
+
+use lib $FindBin::Bin . "/../lib/perl5/site_perl";
+use lib $FindBin::Bin . "/../lib/perl5/site_perl/$Config{archname}";
+use lib $FindBin::Bin . "/../lib/perl5/site_perl/$Config{archname}/$Config{version}";
+
+use lib $FindBin::Bin . "/../lib/perl5/vendor_perl";
+use lib $FindBin::Bin . "/../lib/perl5/vendor_perl/$Config{archname}";
+use lib $FindBin::Bin . "/../lib/perl5/vendor_perl/$Config{archname}/$Config{version}";
+
+#### Bio Perl ####
+use Bio::SeqIO;
+
+#### breseq ####
+use GenomeDiff;
+use GenomeDiff::BaseSubstitutionFile;
+
+##First argument is always the COMMAND
+my $command = shift @ARGV;
+$command = "\U$command";
+
+# Would ne nice to auto-complete abbreviated commands here by making a hash of functions
+# where the keys are COMMANDs...
+
+if ($command eq 'FILTER') {
+	do_filter();
+} elsif ($command eq 'HTML') {
+	do_html();
+} elsif ($command eq 'COMPARE') {
+	do_compare();
+} elsif ("\U$command" eq 'COMPARE_POLYMORPHISMS') {
+	do_compare_polymorphisms();
+} elsif ("\U$command" eq 'MUTATION_TREE') { 
+	do_mutation_tree();
+} elsif ("\U$command" eq 'COUNT') {
+	do_count();
+} elsif ("\U$command" eq 'ORPHAN_EVIDENCE') {
+	do_orphan_evidence();
+} elsif ( ("\U$command" eq 'MUTATE') ||  ("\U$command" eq 'APPLY') ) {
+	do_mutate();
+} elsif ("\U$command" eq 'MERGE') {
+	do_merge();
+} elsif ("\U$command" eq 'UNION') {
+	do_merge();
+} elsif ("\U$command" eq 'INTERSECTION') {
+	do_intersection();
+} elsif ("\U$command" eq 'SUBTRACT') {
+	do_subtract();
+} elsif ("\U$command" eq 'GENE_TABLE') {
+	do_mutated_gene_table();
+} elsif ("\U$command" eq 'POLYMORPHISM') {
+	do_polymorphism_analysis();
+} elsif ("\U$command" eq 'STRIP-EVIDENCE') {
+	do_strip_evidence();
+} elsif ("\U$command" eq 'VALIDATE') {
+	do_validate();
+} elsif ("\U$command" eq 'CGVIEW') {
+	do_cgview();
+} elsif ("\U$command" eq 'SNP_POSITIONS') {
+	do_SNP_positions();
+} elsif ("\U$command" eq 'YAML') {
+	do_yaml();
+} elsif ("\U$command" eq 'BASE_SUBSTITUTION_FILE') {
+	do_base_substitution_file();
+} else {
+	if (!defined $command) {	
+		pod2usage(-message => "No COMMAND provided." -exitstatus => 1, -verbose => 1);
+	} else {
+		pod2usage(-message => "Unknown COMMAND." -exitstatus => 1, -verbose => 1);
+	}
+}
+
+exit 0;
+
+sub load_ref_seq_info
+{
+	##summaryand create_fasta are optional
+	my ($genbank_file_names_ref, $junction_only_genbank_file_names_ref, $summary, $reference_fasta_file_name) = @_;
+			
+	print STDERR "Loading reference sequences...\n";
+
+	$summary->{sequence_conversion}->{total_reference_sequence_length} = 0 if (defined $summary);
+	
+	my $ref_seq_info;
+	my $i = 0;
+	my $s;
+
+	# get two pieces of information from $settings
+	my @genbank_file_names = (); 
+	@genbank_file_names = @$genbank_file_names_ref if ($genbank_file_names_ref); 
+	
+	my @junction_only_genbank_file_names = ();
+	@junction_only_genbank_file_names = @$junction_only_genbank_file_names_ref if ($junction_only_genbank_file_names_ref); 
+
+	my %junction_only_hash;
+	foreach my $jo (@junction_only_genbank_file_names)
+	{
+		$junction_only_hash{$jo} = 1;
+	}
+	
+	## optionally create FASTA for writing to...
+	my $fasta_o;
+	if ($reference_fasta_file_name)
+	{
+		$fasta_o = Bio::SeqIO->new( -format => "FASTA", -file => ">$reference_fasta_file_name");
+	}	
+
+	foreach my $genbank_file_name (@genbank_file_names, @junction_only_genbank_file_names)
+	{
+		## open this GenBank file
+		my $ref_i = Bio::SeqIO->new( -file => "<$genbank_file_name");
+		print STDERR "  Loading File::$genbank_file_name\n";
+
+		my $junction_only = $junction_only_hash{$genbank_file_name};
+
+		while (my $ref_seq = $ref_i->next_seq)
+		{			
+			my $seq_id = $ref_seq->id;
+			die "Duplicate reference sequence id: $seq_id\n" if (defined $ref_seq_info->{ref_strings}->{$seq_id});
+			
+			print STDERR "    Sequence::$seq_id loaded.\n";
+			
+			$s->{$seq_id}->{seq_id} = $seq_id;
+			$s->{$seq_id}->{length} = $ref_seq->length;
+			$s->{$seq_id}->{definition} = $ref_seq->desc;
+			$s->{$seq_id}->{version} = $ref_seq->display_id;			
+			
+			$summary->{sequence_conversion}->{total_reference_sequence_length} += $ref_seq->length if (defined $summary);
+			
+			## it would be nice to get rid of storing the whole genome in memory
+			$ref_seq_info->{bioperl_ref_seqs}->{$seq_id} = $ref_seq;
+
+			##it is much faster to use substr to create the lists for nt comparisons than BioPerl trunc
+			
+			#load the reference sequence, uppercase it, and scrub degenerate bases to N's 
+			$ref_seq_info->{ref_strings}->{$seq_id} = $ref_seq->seq;
+			$ref_seq_info->{ref_strings}->{$seq_id} = uc($ref_seq_info->{ref_strings}->{$seq_id});
+			$ref_seq_info->{ref_strings}->{$seq_id} =~ s/[^ATCG]/N/g;
+			$ref_seq->seq($ref_seq_info->{ref_strings}->{$seq_id});						
+			$ref_seq_info->{seq_order}->{$seq_id} = $i++;
+			
+			## optionally write out FASTA -- AFTER scrubbing sequence
+			$fasta_o->write_seq($ref_seq) if ($reference_fasta_file_name);
+			
+			if (!$junction_only)
+			{
+				push @{$ref_seq_info->{seq_ids}}, $seq_id;
+			}
+			else
+			{
+				push @{$ref_seq_info->{junction_only_seq_ids}}, $seq_id;
+			}
+
+			##load the genbank record
+			my @Feature_List = $ref_seq->get_SeqFeatures();
+			my @gene_list;
+			my @repeat_list;
+			
+			FEATURE: foreach my $Feature ( @Feature_List ) 
+			{ 	
+				if ($Feature->primary_tag eq 'repeat_region')
+				{	
+					my $r;
+					$r->{name} = get_tag($Feature, "mobile_element");
+					$r->{name} =~ s/insertion sequence:// if ($r->{name});
+					$r->{name} =~ s/(IS\d+)\D+/$1/ if ($r->{name}); #strip additional words
+					#print get_tag($Feature, "mobile_element") . " $r->{name}\n";
+
+					## don't add unnamed ones to list...
+					#$r->{name} = "unknown_repeat" if (!$r->{name});
+					next FEATURE if (!$r->{name});
+					
+					$r->{product} = "repeat region";
+					$r->{start} = $Feature->start;
+					$r->{end} = $Feature->end;
+					$r->{strand} = $Feature->strand;
+					push @repeat_list, $r;
+					next FEATURE;
+				}
+				
+				## add additional information to the last 
+				if (   ($Feature->primary_tag eq 'CDS') 
+					|| ($Feature->primary_tag eq 'tRNA') 
+					|| ($Feature->primary_tag eq 'rRNA') )
+
+				{
+					#Add information to last gene
+					my $gene;
+					$gene->{name} = get_tag($Feature, "gene");
+					$gene->{name} = get_tag($Feature, "locus_tag") if (!$gene->{name});
+					$gene->{start} = $Feature->start;
+					$gene->{end} = $Feature->end;
+					$gene->{strand} = $Feature->strand;
+					$gene->{product} = "";
+					$gene->{note} = get_tag($Feature, "note");
+					$gene->{cds} = 1 if ($Feature->primary_tag eq 'CDS');
+					
+					#$gene->{accession} = get_tag($Feature, "protein_id");
+					$gene->{product} = get_tag($Feature, "product");
+					
+					#set a type for the feature
+					$gene->{type} = $Feature->primary_tag;
+					$gene->{type} = "protein" if ($gene->{type} eq 'CDS');
+					$gene->{pseudogene} = get_tag($Feature, "pseudo");
+					$gene->{type} = "pseudogene" if ($gene->{pseudogene});
+									
+					push @gene_list, $gene;		
+				}
+			}
+			
+			$ref_seq_info->{gene_lists}->{$seq_id} = \@gene_list;
+			$ref_seq_info->{repeat_lists}->{$seq_id} = \@repeat_list;	
+		}
+	}
+			
+	#save statistics if requested
+	$summary->{sequence_conversion}->{reference_sequences} = $s if (defined $summary);
+
+	return $ref_seq_info;
+}
+
+sub get_tag
+{
+	my ($Feature, $Tag, $Allow_Array) = @_;
+	$Allow_Array = 0 if (!defined $Allow_Array);
+	
+	return '' if (!$Feature->has_tag("$Tag"));
+	my @Tag_Values = $Feature->get_tag_values("$Tag");
+	return '' if (scalar @Tag_Values == 0);
+	return $Tag_Values[0] if (!$Allow_Array);
+	return @Tag_Values;
+}
+
+sub do_filter
+{	
+	my ($help, $man, $verbose);
+	my $output = 'output.gd'; 
+	my $removed = 'removed.gd';
+	my $input = ();
+	
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'verbose|v' => \$verbose,
+		'output|o=s' => \$output,
+		'input|i=s' => \$input,
+		'removed|r=s' => \$removed,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+
+	my @input_conditions = @ARGV;
+
+	our @conditions = ();
+	foreach my $ic (@input_conditions)
+	{		
+		my $c;
+	 	if (!($ic =~ m/^(.+?)\s*?(==|<=|>=|<|>|!=|\s+eq\s+|\s+ne\s+|\s+lt\s+|\s+gt\s+|\s+le\s+|\s+ge\s+)\s*?(.+)$/))
+		{
+			print STDERR "Could not interpret filter: $ic\n";
+			next;
+		}
+		
+		$c->{key} = $1;
+		$c->{value} = $3;
+		$c->{comparison} = $2;
+		push @conditions, $c;
+		
+		print STDERR "Condition: $c->{key} | $c->{comparison} | $c->{value}\n";
+	}
+	
+	my $gd = GenomeDiff->new({FILE_NAME => $input});
+		
+	### screen out polymorphism predictions at this step
+	sub mutation_filter
+	{
+		my ($mut) = @_;
+		
+		
+		my $accept = 1;
+		
+		foreach my $c (@conditions)
+		{						
+			next if (!defined $mut->{$c->{key}});
+			
+			#print STDERR "return (\"$mut->{$c->{key}}\" $c->{comparison} \"$c->{value}\")\n";
+			
+			my $res = 1;
+			if ($c->{comparison} =~ m/(>)/)
+			{
+				$res = eval "return ($mut->{$c->{key}} $c->{comparison} $c->{value})";
+			}
+			else
+			{
+				$res = eval "return (\"$mut->{$c->{key}}\" $c->{comparison} \"$c->{value}\")";
+			}
+		 	$accept = ($accept && $res);
+		}
+		
+		return $accept;
+	}	
+		
+	my $removed_gd = $gd->filter(\&mutation_filter);
+	$removed_gd->write($removed) if ($removed);	
+	$gd->write($output);
+}
+
+sub do_html
+{
+	use GenomeDiff::ReferenceSequence;
+	use GenomeDiff::Output;
+	
+	my ($help, $man);
+	my $output_file_name;
+	my @reference_genbank_file_names;
+	my $settings;
+	$settings->{no_evidence} = 1;
+	
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+	## Options for input and output files
+		'output|o=s' => \$output_file_name,	
+		'reference-sequence|r=s' => \@reference_genbank_file_names,		
+	) or pod2usage(2);
+	
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @ARGV == 0);
+	pod2usage(1) if (!defined $output_file_name);
+	
+	my $gd_file_name = shift @ARGV;
+	if (scalar @ARGV > 0) {
+		print STDERR "Multiple genomdiff args were provided. Only ONE is allowed for this command.\n"; 	
+		pod2usage(1);
+	}
+	
+	#title
+	my $title = $gd_file_name;
+	$title =~ s/\.gd$//;
+	$title =~ s/^.+\///;
+	
+	#output file name
+	if (!defined $output_file_name) {
+		$output_file_name = $gd_file_name;
+		$output_file_name =~ s/\.gd$/\.html/;
+	}
+	
+	my $ref_seq_info = load_ref_seq_info(\@reference_genbank_file_names);
+	my $one_ref_seq = scalar keys %{$ref_seq_info->{gene_lists}} == 1;
+	
+	my $gd = GenomeDiff->new({in=>$gd_file_name});
+	GenomeDiff::ReferenceSequence::annotate_mutations($ref_seq_info, $gd, 1);
+	
+	GenomeDiff::Output::html_compare($settings, $output_file_name, $title, $gd, $one_ref_seq);
+}
+
+sub do_compare
+{
+	use GenomeDiff::ReferenceSequence;
+	use GenomeDiff::Output;
+	
+	my ($help, $man);
+	my $output = "compare.html";
+	my @reference_genbank_file_names;
+	my $phylip_input_file;
+	my $offending_polymorphisms;
+	my $ignore_ambiguous;
+	my $phylip_for_mix;
+	my $settings;
+	my $dcamp;
+
+	$settings->{no_evidence} = 1;
+	$settings->{no_header} = 1;
+	
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+	## Options for input and output files
+		'output|o=s' => \$output,	
+		'reference-sequence|r=s' => \@reference_genbank_file_names,
+		'phylip-input-file|p=s' => \$phylip_input_file,
+		'phylip-for-mix' => \$phylip_for_mix,
+		'--ignore-ambiguous' => \$ignore_ambiguous,
+		'shade-frequencies' => \$settings->{shade_frequencies},	
+		'lenski-format' => 	\$settings->{lenski_format},							
+		'--dcamp' => \$dcamp,
+		
+	) or pod2usage(2);
+
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @reference_genbank_file_names == 0);
+	pod2usage(1) if (scalar @ARGV == 0);
+	
+	my @gd_file_name_list = @ARGV;	
+	my ($gd_name_list_ref, $composite_gd, $one_ref_seq) = _compile_compare_gd(\@reference_genbank_file_names, \@gd_file_name_list, $dcamp);
+
+	##
+	# Annotate mutations
+	##
+	my $title = "Mutation Comparison";
+	my $options = { repeat_header => 10 };
+	GenomeDiff::Output::html_compare($settings, $output, $title, $composite_gd, $one_ref_seq, $gd_name_list_ref, $options);
+
+	##
+	# Input file for PHYLIP (dnapars program)
+	##	
+	if ($phylip_input_file)
+	{
+		my @mutations = $composite_gd->mutation_list;
+
+		if ($ignore_ambiguous)
+		{
+			MUT: for (my $i=0; $i<scalar @mutations; $i++)
+			{
+				my $mut = $mutations[$i];
+				foreach my $gd_name (@$gd_name_list_ref)
+				{
+					my $f = $mut->{"frequency_$gd_name"};
+					if ($f eq '?')
+					{
+							$mut->{"frequency_$gd_name"} = ($mut->{type} eq 'SNP') ? $mut->{_ref_seq} : 'A';
+					}
+				}
+			} 
+		}
+		
+		open KEYFILE, ">$phylip_input_file.key" or die "Could not open file: $phylip_input_file.key";
+		MUT: for (my $i=0; $i<scalar @mutations; $i++)
+		{
+			my $mut = $mutations[$i];
+			print KEYFILE +join("\t", $i, $mut->{type}, $mut->{position}) . "\n"; 
+		}
+		close KEYFILE;
+		
+		open PHYLIP, ">$phylip_input_file" or die "Could not open file: $phylip_input_file";
+		#first line is number of species, then number of sites
+		print PHYLIP +(scalar @$gd_name_list_ref) . " " . +(scalar @mutations) . "\n";
+
+		foreach my $gd_name (@$gd_name_list_ref)
+		{			
+			my $mut_str;
+			foreach my $mut (@mutations)
+			{
+				my $f = $mut->{"frequency_$gd_name"};
+				my $b = '?';
+				if ($f eq '?')
+				{
+					if ($phylip_for_mix)
+					{
+						$b = '?'; #ancestor
+					}
+					else
+					{
+						$b = 'N';
+					}
+				}
+				elsif (($f == 1) || ($f eq 'H'))
+				{
+					if ($phylip_for_mix)
+					{
+						$b = '1';
+					}
+					else
+					{
+						$b = ($mut->{type} eq 'SNP') ? $mut->{new_seq} : 'T';
+					}
+				}
+				elsif ($f == 0)
+				{
+					if ($phylip_for_mix)
+					{
+						$b = '0';
+					}
+					else
+					{
+						$b = ($mut->{type} eq 'SNP') ? $mut->{_ref_seq} : 'A';
+					}
+				}
+				else
+				{
+					die "Unknown frequency: $f\n";
+				}
+				$mut_str .= $b;				
+			}
+			
+			printf PHYLIP "%-10.10s%s\n", $gd_name, $mut_str;
+		}
+		
+		close PHYLIP;
+	}
+}
+
+sub _compile_compare_gd
+{
+	my ($reference_genbank_file_names_ref, $gd_file_name_list_ref, $dcamp) = @_;
+	
+	## load information about reference sequences from GenBank files
+	my $ref_seq_info = load_ref_seq_info($reference_genbank_file_names_ref);
+	my $one_ref_seq = scalar keys %{$ref_seq_info->{gene_lists}} == 1;
+
+	my @gd_name_list;
+	my @gd_list; 
+	my @mut_lists; #altered during processing
+	foreach my $gd_file_name (@$gd_file_name_list_ref)
+	{
+		print "$gd_file_name\n";
+		
+		my $gd_name = $gd_file_name;
+		#Dcamp: Rename gd_file_names to output pipeline name.
+		if ($dcamp) 
+		{
+			if ($gd_name =~ m/^*\/(.*)\/.*\/.*$/)
+			{
+			  $gd_name = ucfirst($1);
+				print $gd_name;
+			}
+			else
+			{
+		  	die "Paths are not recognized for option dcamp";
+			}
+
+		}
+		else
+		{
+			$gd_name =~ s/^.+\///;		
+			$gd_name =~ s/\.[^.]+$//;		
+		}
+		push @gd_name_list, $gd_name;
+		
+		my $gd = GenomeDiff->new({in=>$gd_file_name});
+		push @gd_list, $gd;
+		GenomeDiff::ReferenceSequence::annotate_mutations($ref_seq_info, $gd, 1);
+		
+		my @mut_list = $gd->mutation_list(1);	
+		@mut_list = grep {!$_->{deleted}} @mut_list;
+		push @mut_lists, \@mut_list;
+	}	
+	
+	my $composite_gd = GenomeDiff->new();
+	my $next_mut;
+	while (1)
+	{
+		## find the next mutation by position
+		foreach my $mut_list (@mut_lists)
+		{
+			next if (scalar (@$mut_list) == 0);
+			my $test_mut = $mut_list->[0];
+			$next_mut = $test_mut if (!defined $next_mut || (GenomeDiff::cmp_mutations($next_mut, $test_mut) > 0 ) );
+		}
+		last if (!defined $next_mut);
+
+		#compile frequencies across all files for this mutation
+		for (my $i=0; $i<scalar @mut_lists; $i++)
+		{
+			my $mut_list = $mut_lists[$i];
+			my $gd_name = $gd_name_list[$i];
+			my $gd = $gd_list[$i];
+			
+			my $test_mut = $mut_list->[0];
+			
+			my $this_freq = 0;
+			$next_mut->{"frequency_$gd_name"} = $this_freq;
+			next if (!defined $test_mut);
+			
+			if (GenomeDiff::equivalent_mutations($test_mut, $next_mut))
+			{				
+				$this_freq = 1;
+				if (defined $test_mut->{frequency})
+				{
+					$this_freq = $test_mut->{frequency};
+				}
+				shift @$mut_list;
+			}
+			elsif ($gd->mutation_deleted($next_mut))
+			{
+				$this_freq = 'D';
+			}
+			elsif ($gd->mutation_unknown($next_mut))
+			{
+				$this_freq = '?';
+			}			
+			
+			$next_mut->{"frequency_$gd_name"} = $this_freq;	
+		}
+		
+		delete $next_mut->{id};			
+		delete $next_mut->{frequency};
+				
+		$composite_gd->add($next_mut);
+		undef $next_mut;
+	}
+	
+	
+	return (\@gd_name_list, $composite_gd, $one_ref_seq);
+}
+
+
+sub freq_to_string
+{
+	my ($mut, $key) = @_;
+	$key = "frequency" if (!defined $key);
+	my $freq = $mut->{$key};
+	return 'H' if ($freq eq 'H');
+	$freq = 1 if (!defined $freq);
+	return '?' if ($freq eq '?');
+	return "0%" if ($freq == 0);
+	my $frequency_string = sprintf("%4.1f%%", $freq*100);
+	$frequency_string = "100%" if ($freq == 1); # No "100.0%"
+	return $frequency_string;
+}
+
+#map all mutations onto a tree
+sub do_mutation_tree
+{
+	use GenomeDiff::ReferenceSequence;
+	use GenomeDiff::Output;
+	
+	my ($help, $man);
+	my $output_file_name = "tree";
+	my @reference_genbank_file_names;
+	my $offending_polymorphisms;
+	my $tree_file_name;
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+	## Options for input and output files
+		'output|o=s' => \$output_file_name,	
+		'reference-sequence|r=s' => \@reference_genbank_file_names,
+		'tree-file-name|t=s' => \$tree_file_name,
+	) or pod2usage(2);
+
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @reference_genbank_file_names == 0);
+	pod2usage(1) if (scalar @ARGV == 0);
+	
+	my @gd_file_name_list = @ARGV;	
+	my ($gd_name_list_ref, $composite_gd) = _compile_compare_gd(\@reference_genbank_file_names, \@gd_file_name_list);
+	
+	#make a file for every mutation with frequency mapped on
+	#just subtitute in frequency
+	open TREE, "<$tree_file_name";
+	my @tree_lines = <TREE>;
+	chomp @tree_lines;
+	my $tree_data = join "", @tree_lines;
+	close TREE;
+	
+	foreach my $mut ($composite_gd->mutation_list)
+	{
+		print Dumper($mut);
+		
+		my $mutation_key = GenomeDiff::mutation_key($mut);	
+		my $this_output_file_name = $output_file_name . "$mutation_key";
+		
+		print "Creating tree $this_output_file_name\n";
+		
+		my $this_tree_data = $tree_data;
+		
+		foreach my $gd_name (@$gd_name_list_ref)
+		{
+			#"_freq_[name]" keys were made							
+			my $replace_str = $gd_name . "=" .freq_to_string($mut, "frequency_$gd_name");
+			$this_tree_data	=~ s/([:,()])$gd_name([:,()])/$1$replace_str$2/;
+		}
+		
+		
+		open OUTTREE, ">$this_output_file_name" or die "Could not open file: $this_output_file_name";
+		print OUTTREE $this_tree_data . "\n";
+		close OUTTREE;		
+	}
+}
+
+sub do_compare_polymorphisms
+{
+	use GenomeDiff::ReferenceSequence;
+	use GenomeDiff::Output;
+	
+	my ($help, $man);
+	my $output = "compare.html";
+	my @reference_genbank_file_names;
+	my $phylip_input_file;
+	my $offending_polymorphisms;
+	my $settings;
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+	## Options for input and output files
+		'output|o=s' => \$output,	
+		'reference-sequence|r=s' => \@reference_genbank_file_names,
+	) or pod2usage(2);
+
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @reference_genbank_file_names == 0);
+	pod2usage(1) if (scalar @ARGV == 0);
+		
+	my @gd_file_name_list = @ARGV;	
+				
+	## load information about reference sequences from GenBank files
+	my $ref_seq_info = load_ref_seq_info(\@reference_genbank_file_names);
+	my $one_ref_seq = scalar keys %{$ref_seq_info->{gene_lists}} == 1;
+
+	my @gd_name_list;
+	my @gd_list; 
+	my @mut_lists; #altered during processing
+	foreach my $gd_file_name (@gd_file_name_list)
+	{
+		print "$gd_file_name\n";
+		
+		my $gd_name = $gd_file_name;
+		$gd_name =~ s/^.+\///;		
+		$gd_name =~ s/\.[^.]+$//;		
+		push @gd_name_list, $gd_name;
+		
+		my $gd = GenomeDiff->new({in=>$gd_file_name});
+		GenomeDiff::ReferenceSequence::annotate_mutations($ref_seq_info, $gd);
+		
+		my @mut_list = $gd->list('RA');	
+		@mut_list = grep {$_->{frequency} != 0} @mut_list;
+		@mut_list = grep {$_->{frequency} != 1} @mut_list;
+
+		@mut_list = sort { (($a->{frequency}-0.5)**2 <=> ($b->{frequency}-0.5)**2) } @mut_list;
+		
+		GenomeDiff::Output::html_compare_polymorphisms($settings, $output, "Title", \@mut_list);
+	}	
+	
+}
+
+
+sub do_count
+{
+	use GenomeDiff::ReferenceSequence;
+	use GenomeDiff::Output;
+	
+	my ($help, $man);
+	my $output = "count.tab";
+	my $base_substitution_file;
+	my @reference_genbank_file_names;
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+	## Options for input and output files
+		'output|o=s' => \$output,	
+		'reference-sequence|r=s' => \@reference_genbank_file_names,
+		'base-substitution-file|s=s' => \$base_substitution_file,
+	) or pod2usage(2);
+
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @reference_genbank_file_names == 0);
+	pod2usage(1) if (scalar @ARGV == 0);
+	
+	my @gd_file_name_list = @ARGV;	
+				
+	## load information about reference sequences from GenBank files
+	my $ref_seq_info = load_ref_seq_info(\@reference_genbank_file_names);
+	my $one_ref_seq = scalar keys %{$ref_seq_info->{gene_lists}} == 1;
+
+	my $total_bp = 0;
+	
+	foreach my $seq_id (keys %{$ref_seq_info->{ref_strings}})
+	{
+		$total_bp += length $ref_seq_info->{ref_strings}->{$seq_id};
+	}
+
+	## how many repeat columns
+	my $mob_name_hash;
+	my $con_name_hash;
+	foreach my $gd_file_name (@gd_file_name_list)
+	{
+		print "$gd_file_name\n";
+		
+		my $gd_name = $gd_file_name;
+		$gd_name =~ s/^.+\///;		
+		$gd_name =~ s/\.[^.]+$//;		
+		
+		my $gd = GenomeDiff->new({in=>$gd_file_name});
+		foreach my $mut ($gd->list('MOB'))
+		{
+			$mob_name_hash->{$mut->{repeat_name}} = 1;
+		}
+		foreach my $mut ($gd->list('CON'))
+		{
+			$con_name_hash->{$mut->{mediated}} = 1 if ($mut->{mediated});
+		}
+		foreach my $mut ($gd->list('DEL'))
+		{
+			$mob_name_hash->{$mut->{mediated}} = 1 if ($mut->{mediated});
+		}
+		
+	}
+	my @mod_name_list = sort keys %$mob_name_hash;
+	my @con_name_list = sort keys %$con_name_hash;
+	
+	
+	my $main_seq_id = $ref_seq_info->{seq_ids}->[0];
+	my $main_seq_length = length $ref_seq_info->{ref_strings}->{$main_seq_id};
+
+		
+	my $bsf;
+	my $bs_totals;
+	if ($base_substitution_file)
+	{
+		$bsf = GenomeDiff::BaseSubstitutionFile->read(input_file => $base_substitution_file, nt_sequence => $ref_seq_info->{ref_strings}->{$main_seq_id});
+		$bs_totals = $bsf->totals;
+		print Dumper($bs_totals);
+	}
+	
+	##not by base change
+	my @snp_types = ( 'nonsynonymous', 'synonymous', 'noncoding', 'pseudogene', 'intergenic');
+	
+	open OUT, ">$output" or die "Count not open file: $output";
+	
+	my @column_headers = (
+		'strain', 
+		'total', 
+		@snp_types, 
+		'small_indel',
+		'substitution',
+		'large_del',
+		'deleted_bp',
+		'inserted_bp', 
+		'repeat_inserted_bp',
+		'amplification',
+		'mobile_element',
+		@mod_name_list,
+		'gene_conversion',
+		@con_name_list,
+		'called_bp', 
+		'total_bp',
+	);
+	
+	if ($base_substitution_file) {
+
+		foreach my $snp_type (@GenomeDiff::BaseSubstitutionFile::bsf_snp_types) {
+			foreach my $bp_change (@GenomeDiff::BaseSubstitutionFile::bp_change_label_list, 'TOTAL') {
+				push @column_headers, "POSSIBLE.$snp_type\.$bp_change";
+			}
+		}
+		foreach my $snp_type (@GenomeDiff::BaseSubstitutionFile::bsf_snp_types) {
+			foreach my $bp_change (@GenomeDiff::BaseSubstitutionFile::bp_change_label_list, 'TOTAL') {
+				push @column_headers, "OBSERVED.$snp_type\.$bp_change";
+			}
+		}
+	}
+	
+	print OUT join ("\t", @column_headers) . "\n";
+	
+	
+	## count SNPs and examples of mobile element insertions
+	
+	my @gd_name_list;
+	my @gd_list; 
+	my @mut_lists; #altered during processing
+	foreach my $gd_file_name (@gd_file_name_list)
+	{
+		print "$gd_file_name\n";
+		
+		my $gd_name = $gd_file_name;
+		$gd_name =~ s/^.+\///;		
+		$gd_name =~ s/\.[^.]+$//;		
+		
+		my $gd = GenomeDiff->new({in=>$gd_file_name});
+		GenomeDiff::ReferenceSequence::annotate_mutations($ref_seq_info, $gd, 1);
+
+		#deep copy sums
+		my $this_bs_totals;
+		if ($base_substitution_file) {
+			$this_bs_totals = dclone($bs_totals);
+		}
+		
+		my @mut_list = $gd->mutation_list();
+		@mut_list = grep {!$_->{deleted}} @mut_list;
+		
+		my $count;
+		
+
+		foreach my $st (@snp_types)
+		{
+			$count->{type}->{$st} = 0;
+		}
+		foreach my $mob_name (@mod_name_list)
+		{
+			$count->{mob}->{$mob_name} = 0;
+		}
+		
+		my $total_deleted = 0;
+		my $total_inserted = 0;
+		my $total_repeat_inserted = 0;
+		my $small_size_cutoff = 50;
+		
+		my $this_bs_counts = [];
+		foreach my $mut (@mut_list)
+		{
+			if ($mut->{type} eq 'SNP')
+			{				
+				my $base_change = $mut->{_ref_seq} . "." . $mut->{new_seq};
+				my $bp_change = $GenomeDiff::BaseSubstitutionFile::base_to_bp_change->{$base_change};				
+				$count->{type}->{$mut->{snp_type}}++;				
+				
+				## SCF snp count	
+				if ($base_substitution_file) {
+					$this_bs_counts = $bsf->add_bp_change_to_totals($this_bs_counts, $mut->{position}, $bp_change);					
+				}
+			}
+			
+			if ($mut->{type} eq 'DEL')
+			{
+				$total_deleted += $mut->{size};
+				$count->{mob}->{$mut->{mediated}}++ if ($mut->{mediated});
+				
+				if ($mut->{size} > $small_size_cutoff) 
+				{
+					$count->{large_del}++;
+				}
+				else 
+				{
+					$count->{small_indel}++;
+				}
+			}
+			
+			if ($mut->{type} eq 'INS')
+			{
+				$total_inserted += $mut->{size};
+				$count->{mob}->{$mut->{mediated}}++ if ($mut->{mediated});
+				
+				if ($mut->{size} <= $small_size_cutoff) 
+				{
+					$count->{small_indel}++;
+				}
+			}
+			
+			if ($mut->{type} eq 'CON')
+			{
+				#need calculation of size change here
+				$count->{con}->{$mut->{mediated}}++ if ($mut->{mediated});
+				$count->{gene_conversion}++;
+			}
+			
+			if ($mut->{type} eq 'MOB')
+			{
+				#this returns shortest example				
+				my $repeat_seq = GenomeDiff::ReferenceSequence::repeat_example($ref_seq_info, $mut->{repeat_name}, 1);
+				my $this_length = length($repeat_seq);
+				$total_inserted += $this_length;
+				$total_repeat_inserted += $this_length;
+				print "Repeat $mut->{repeat_name} $this_length bp\n";
+				
+				$count->{mob}->{$mut->{repeat_name}}++;
+				$count->{mobile_elements}++;
+			}			
+			
+			if ($mut->{type} eq 'AMP')
+			{
+				$total_inserted += $mut->{size};
+				if ($mut->{size} * ($mut->{new_copy_number}-1) > $small_size_cutoff)
+				{
+					$count->{amp}++;
+				}
+				else
+				{
+					$count->{small_indel}++;
+				}
+			}
+			
+			if ($mut->{type} eq 'SUB')
+			{
+				if ($mut->{size} > $small_size_cutoff)
+				{
+					$count->{sub}++;
+				}
+				else
+				{
+					$count->{small_indel}++;
+				}
+			}
+		}
+		
+		##statistics for UN
+		my $un_bp = 0; 
+		foreach my $un ($gd->list('UN'))
+		{
+			$un_bp += $un->{end} - $un->{start} + 1;
+			if ($base_substitution_file)
+			{
+				my $ref_string = $ref_seq_info->{ref_strings}->{$main_seq_id};
+				
+				for (my $p = $un->{start}; $p <= $un->{end}; $p++)
+				{
+					### subroutine to subtract certain position info
+					$bsf->subtract_position_1_from_totals($this_bs_totals, $p);					
+				}
+			}
+		}
+		
+		print Dumper($bs_totals);
+		
+		my $called_bp = $total_bp - $un_bp;
+		
+		my @this_columns = (
+			$gd_name, 
+			scalar(@mut_list),  
+			map({$count->{type}->{$_} } @snp_types),
+			defined $count->{small_indel} ? $count->{small_indel} : "0",
+			defined $count->{sub} ? $count->{sub} : "0",
+			defined $count->{large_del} ? $count->{large_del} : "0",
+			$total_deleted, 
+			$total_inserted, 
+			$total_repeat_inserted,
+			defined $count->{amp} ? $count->{amp} : "0",
+			defined $count->{mobile_elements} ? $count->{mobile_elements} : "0",
+			map({$count->{mob}->{$_}} @mod_name_list), 
+			defined $count->{gene_conversion} ? $count->{gene_conversion} : "0",
+			map({$count->{con}->{$_}} @con_name_list), 
+			$called_bp, 
+			$total_bp
+		);
+		
+		
+		if ($base_substitution_file) {			
+			for (my $i = 0; $i < scalar @$this_bs_totals; $i++) {
+				foreach my $bp_change (@GenomeDiff::BaseSubstitutionFile::bp_change_label_list, 'TOTAL') {
+					push @this_columns, (defined $this_bs_totals->[$i]->{$bp_change}) ? $this_bs_totals->[$i]->{$bp_change} : '0';
+				}
+			}
+			
+		
+			for (my $i = 0; $i < scalar @$this_bs_counts; $i++) {
+				foreach my $bp_change (@GenomeDiff::BaseSubstitutionFile::bp_change_label_list, 'TOTAL') {
+					push @this_columns, (defined $this_bs_counts->[$i]->{$bp_change}) ? $this_bs_counts->[$i]->{$bp_change} : '0';
+				}
+			}
+		}
+		
+		print OUT join("\t", @this_columns) . "\n";
+		#print Dumper ($count);
+	}	
+	print "Done\n";
+	close OUT;
+}
+
+sub do_orphan_evidence
+{
+	use GenomeDiff::ReferenceSequence;
+	use GenomeDiff::Output;
+	
+	my ($help, $man);
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+	## Options for input and output files
+	) or pod2usage(2);
+
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @ARGV == 0);
+	
+	my @gd_file_name_list = @ARGV;
+	
+	foreach my $gd_file_name (@gd_file_name_list)
+	{
+		print "\n>>>> $gd_file_name <<<<\n";
+		
+		my $gd_name = $gd_file_name;
+		$gd_name =~ s/^.+\///;		
+		$gd_name =~ s/\.[^.]+$//;		
+		
+		my $gd = GenomeDiff->new({in=>$gd_file_name});
+		my @evidence = $gd->get_evidence_list;
+		@evidence = $gd->filter_used_as_evidence(@evidence);
+		
+		foreach my $ev (@evidence)
+		{
+			next if ($ev->{type} eq 'UN');			
+			next if ($ev->{reject});
+			next if ($ev->{deleted});
+			next if ($ev->{circular_chromosome});
+			print $gd->_item_to_line($ev) . "\n";
+		}
+	}
+}
+
+
+sub do_mutate
+{
+	my ($help, $man, $verbose);
+	my $output = 'output.gbk'; 
+	my @input_refseq_files;
+	my $input_genome_diff;
+	
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'verbose|v' => \$verbose,
+		'output|o=s' => \$output,
+		'input|r=s' => \@input_refseq_files,
+	) or pod2usage(2);
+	$input_genome_diff = shift @ARGV;
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
+	print "Ignoring extra command line: @ARGV\n" if (scalar @ARGV > 0);	
+	pod2usage(-message => "No GenomeDiff file provided (\@ARGV)." -exitstatus => 0, -verbose => 2) if (!$input_genome_diff);	
+	pod2usage(-message => "No reference sequence files provided (-r|--input)." -exitstatus => 0, -verbose => 2) if (scalar @input_refseq_files == 0);	
+
+	our $gd = GenomeDiff->new({FILE_NAME => $input_genome_diff});
+	
+	## Read the sequences
+	#  Reference to hash of raw sequences as strings, keys are accessions
+	my $ref_seq_info = load_ref_seq_info(\@input_refseq_files);
+	my $new_ref_strings = $gd->apply_to_sequences($ref_seq_info);
+	
+	my $out = Bio::SeqIO->new(-format=>'GENBANK', -file => ">$output");
+	foreach my $seq_id (keys %{$new_ref_strings})
+	{
+		print "Writing Sequence: $seq_id\n";
+		my $s = Bio::Seq->new();
+		$s->seq($new_ref_strings->{$seq_id});
+		$s->display_id($seq_id);
+		$out->write_seq($s);
+	}
+}
+
+sub do_merge
+{
+	my ($help, $man, $verbose);
+	my $output = 'output.gd'; 
+	my @input_gd_files = ();
+	
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'verbose|v' => \$verbose,
+		'output|o=s' => \$output,			
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	my @input_gd_files = @ARGV;
+	pod2usage(1) if (scalar @ARGV == 0);
+
+	my @gds;
+	foreach my $gd_file (@input_gd_files)
+	{
+		my $gd = GenomeDiff->new({FILE_NAME => $gd_file});
+		push @gds, $gd;
+	}
+
+	my $output_gd = GenomeDiff::merge(@gds);
+	$output_gd->write($output);
+}
+
+sub do_intersection
+{	
+	my ($help, $man, $verbose);
+	my $output = 'output.gd'; 
+	my @input_gd_files = ();
+	
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'verbose|v' => \$verbose,
+		'output|o=s' => \$output,
+		'input|i=s' => \@input_gd_files,
+			
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+
+	my @gds;
+	foreach my $gd_file (@input_gd_files)
+	{
+		my $gd = GenomeDiff->new({FILE_NAME => $gd_file});
+		push @gds, $gd;
+	}
+
+	my $output_gd = GenomeDiff::intersection(\@gds);
+	$output_gd->write($output);
+}
+
+sub do_subtract
+{
+	my ($help, $man, $verbose);
+	my @input1_gd_files = ();
+	my @input2_gd_files = ();
+	my $output_file_name = 'output.gd'; 
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'verbose|v' => \$verbose,
+		'output|o=s' => \$output_file_name,
+		'input1|1=s' => \@input1_gd_files,
+		'input2|2=s' => \@input2_gd_files,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if ((!@input1_gd_files) || (!@input2_gd_files));
+
+	my @gds1;
+	foreach my $gd1_file (@input1_gd_files)
+	{
+		my $gd1 = GenomeDiff->new({FILE_NAME => $gd1_file});
+		push @gds1, $gd1;
+	}
+	
+	my @gds2;
+	foreach my $gd2_file (@input2_gd_files)
+	{
+		my $gd2 = GenomeDiff->new({FILE_NAME => $gd2_file});
+		push @gds2, $gd2;
+	}	
+		
+	my $output_gd = GenomeDiff::subtract(\@gds1, \@gds2);
+	$output_gd->write($output_file_name);
+}
+
+## Create a table of unambiguously mutated genes
+## 
+## Excludes synonymous SNPs, deletions impacting more than one gene,
+## inversions, duplications impacting more than one gene, intergenic mutations
+
+sub do_mutated_gene_table
+{
+	my ($help, $man, $verbose);
+	my $output = 'output.tab'; 
+	my @reference_genbank_file_names;
+	my @treatments = ();
+	my $ignore_transposons = 0; ## very primitive, ignores genes beginning in 'ins' 
+	my $num_replicates = 10000;
+	my @ignore_gene_list;
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+		'verbose|v' => \$verbose,
+		'output|o=s' => \$output,
+		'reference-sequence|r=s' => \@reference_genbank_file_names,
+		'treatment|t=s' => \@treatments,
+		'ignore-transposons' => \$ignore_transposons,
+		'ignore-gene=s' => \@ignore_gene_list,
+		'num-replicates|n=s' => \$num_replicates,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @reference_genbank_file_names == 0);
+	pod2usage(1) if (scalar @ARGV == 0);
+	
+	my @gd_file_name_list = @ARGV;
+	my @gd_name_list;
+	
+	
+	print "Ignoring genes: " . +join(",", @ignore_gene_list) . ".\n" if (scalar @ignore_gene_list > 0);
+	print "Ignoring transposons (ins*).\n" if ($ignore_transposons);
+
+	##Hash (gene) of hashes (gd_name)
+	my $gene_gd_hash;
+	my $gene_hash;
+	
+	die "Unequal number of GenomeDiff files and treatments\n" 
+		if ((scalar @treatments > 0) && (scalar @treatments != scalar @gd_file_name_list));
+	
+	my $ref_seq_info = load_ref_seq_info(\@reference_genbank_file_names);
+	
+	foreach my $gd_file_name (@gd_file_name_list)
+	{
+		my $gd_name = $gd_file_name;
+		$gd_name =~ s/^.+\///;		
+		$gd_name =~ s/\.[^.]+$//;
+		push @gd_name_list, $gd_name;
+		print STDERR "$gd_name\n";
+		
+		my $gd = GenomeDiff->new({in=>$gd_file_name});
+		GenomeDiff::ReferenceSequence::annotate_mutations($ref_seq_info, $gd, 1);
+		
+		my @mutations = $gd->mutation_list;
+		MUT: foreach my $mut (@mutations)
+		{
+			#did it hit a single gene
+			next MUT if (scalar @{$mut->{gene_list}} != 1);
+			
+			my $gene_name = $mut->{gene_list}->[0];
+			next MUT if (($ignore_transposons) && ($gene_name =~ m/^ins/));
+			
+			foreach my $ignore_gene (@ignore_gene_list)
+			{
+				next MUT if ("\U$ignore_gene" eq "\U$gene_name");
+			}
+			
+			if (   (($mut->{type} eq 'SNP') && ($mut->{snp_type} eq 'nonsynonymous'))
+				|| ($mut->{type} eq 'DEL') || ($mut->{type} eq 'INS') || ($mut->{type} eq 'SUB') || ($mut->{type} eq 'AMP') || ($mut->{type} eq 'MOB') )
+			{
+				$gene_gd_hash->{$gene_name}->{$gd_name}++;
+			}			
+		}
+	}
+	
+	## Print output
+	open OUT, ">$output";
+	print OUT join("\t", ('', @gd_name_list)) . "\n";
+	my @gene_list = sort keys %$gene_gd_hash;
+	foreach my $gene_name (@gene_list)
+	{
+		print OUT "$gene_name\t";
+		print OUT join("\t", map { defined($gene_gd_hash->{$gene_name}->{$_}) ? 1 : 0 } @gd_name_list );
+		print OUT "\n";
+	}
+	
+	## done if treatments not included
+	return if (scalar @treatments == 0);
+	
+	my $treatment_hash = _treatment_list_to_hash(\@gd_name_list, \@treatments, 0);
+	my @treatment_names = sort keys %$treatment_hash;
+	
+	print OUT "\n";
+	print OUT +join("\t", ('', @treatment_names)) . "\n";
+	foreach my $gene_name (@gene_list)
+	{
+		print OUT "$gene_name";
+		foreach my $t (@treatment_names)
+		{
+			my $s = 0;
+			foreach my $gd_name (@{$treatment_hash->{$t}})
+			{
+				$s += (defined($gene_gd_hash->{$gene_name}->{$gd_name}) ? 1 : 0);
+			}
+			print OUT "\t$s";
+		}
+		print OUT "\n";
+	}
+	
+	OUT->autoflush(1);
+	close OUT;
+		
+	print ">>>Treatment ALL :: ALL\n";	
+	#_calculate_in_similarity_significance($gene_gd_hash, \@gd_name_list, \@treatments, $num_replicates);
+	_calculate_es_significance($gene_gd_hash, \@gd_name_list, \@treatments, $num_replicates);
+	die;
+	
+	for (my $i=0; $i<scalar @treatment_names; $i++)
+	{
+		for (my $j=$i+1; $j<scalar @treatment_names; $j++)
+		{
+			## create the subsetted data
+			my $_treatment_hash;
+			$_treatment_hash->{$treatment_names[$i]} = $treatment_hash->{$treatment_names[$i]};
+			$_treatment_hash->{$treatment_names[$j]} = $treatment_hash->{$treatment_names[$j]};
+			
+			my @_gd_name_list;
+			push @_gd_name_list, @{$_treatment_hash->{$treatment_names[$i]}};
+			push @_gd_name_list, @{$_treatment_hash->{$treatment_names[$j]}};
+			
+			my @_treatments;
+			foreach my $t (@{$_treatment_hash->{$treatment_names[$i]}})
+			{
+				push @_treatments, $treatment_names[$i];
+			}
+			foreach my $t (@{$_treatment_hash->{$treatment_names[$j]}})
+			{
+				push @_treatments, $treatment_names[$j];
+			}
+
+			#print Dumper(\@_gd_name_list, \@_treatments);
+			print ">>> Treatment $treatment_names[$i] :: $treatment_names[$j]\n";
+			
+			_calculate_in_similarity_significance($gene_gd_hash, \@_gd_name_list, \@_treatments, $num_replicates);
+			#_calculate_es_significance($gene_gd_hash, \@_gd_name_list, \@_treatments, $num_replicates);
+		}
+	}	
+	
+}
+
+sub _randomize_gene_gd_hash
+{
+	my ($gene_gd_hash) = @_;
+	#convert the hash to two lists
+	# (1) Each gene occurring as many times as it does
+	# (2) Each genome occurring as many times as it does
+	
+	TRY: while (1)
+	{
+		#strategy = randomly pick and then resolve multiple per genome problems
+		
+		my @gd_name_list;
+		my @gene_name_list;
+		foreach my $gene_name (sort keys %$gene_gd_hash)
+		{
+			foreach my $gd_name (sort keys %{$gene_gd_hash->{$gene_name}})
+			{
+				push @gd_name_list, $gd_name;
+				push @gene_name_list, $gene_name;
+			}
+		}
+		
+		#print Dumper(\@gd_name_list, \@gene_name_list);
+	
+		my $gd_gene_hash;
+		while (my $gene_name = shift @gene_name_list)
+		{
+			my $i = int rand scalar @gd_name_list;
+			my $gd_name = splice @gd_name_list, $i, 1;
+			$gd_gene_hash->{$gd_name}->{$gene_name}++;
+			
+		#	print Dumper($gd_gene_hash);
+			next TRY if ($gd_gene_hash->{$gd_name}->{$gene_name} > 1);
+		}
+#		print Dumper($gd_gene_hash);
+		
+		my $rgene_gd_hash;
+		foreach my $gd_name ( keys %$gd_gene_hash)
+		{
+			foreach my $gene_name (sort keys %{$gd_gene_hash->{$gd_name}})
+			{
+				$rgene_gd_hash->{$gene_name}->{$gd_name}++;
+			}
+		}
+		
+		#print Dumper($rgene_gd_hash);
+		
+		return $rgene_gd_hash;
+	}
+}
+
+sub _calculate_in_similarity_significance
+{
+	my ($gene_gd_hash, $gd_name_list_ref, $treatments_ref, $num_replicates) = @_;
+	my @gd_name_list = @$gd_name_list_ref;
+	my @treatments = @$treatments_ref;
+	
+	my $treatment_hash = _treatment_list_to_hash(\@gd_name_list, \@treatments, 0);
+	my $actual_es = _in_similarity($gene_gd_hash, $treatment_hash);
+	#print "Actual in_sim = $actual_es\n";
+	my $p = 0;
+	
+	#per-gene significance
+	my $p_gene_hash;
+	my $gene_actual_sim;
+	
+	my $p_gene_max_hash;
+	my $gene_actual_max;
+	
+	my @gene_list = sort keys %$gene_gd_hash;
+	foreach my $gene_name (@gene_list)
+	{
+		$p_gene_hash->{$gene_name} = 0;
+		$gene_actual_sim->{$gene_name} = _in_similarity( { $gene_name => $gene_gd_hash->{$gene_name} } , $treatment_hash);
+		$p_gene_max_hash->{$gene_name} = 0;
+		$gene_actual_max->{$gene_name} = _treatment_max( { $gene_name => $gene_gd_hash->{$gene_name} } , $treatment_hash);
+	}
+	
+	for (my $i=0; $i<$num_replicates; $i++)
+	{
+		print STDERR ($i+1) . "\n" if (($i+1) % 1000 == 0);
+	#	my $rtreatment_hash = _treatment_list_to_hash(\@gd_name_list, \@treatments, 1);
+		
+		my $rgene_gd_hash = _randomize_gene_gd_hash($gene_gd_hash);
+		
+		#print Dumper($rgene_gd_hash);
+		my $random_es = _in_similarity($rgene_gd_hash, $treatment_hash);
+		#print "$i\t$random_es\n";
+		$p++ if ($random_es > $actual_es);
+		$p+=0.5 if ($random_es == $actual_es);
+
+		foreach my $gene_name (@gene_list)
+		{
+			my $random_gene_sim = _in_similarity( { $gene_name => $rgene_gd_hash->{$gene_name} } , $treatment_hash);
+			$p_gene_hash->{$gene_name}++ if ($random_gene_sim >= $gene_actual_sim->{$gene_name});
+			
+			my $random_gene_max = _treatment_max( { $gene_name => $rgene_gd_hash->{$gene_name} } , $treatment_hash);
+			$p_gene_max_hash->{$gene_name}++ if ($random_gene_max >= $gene_actual_max->{$gene_name});			
+		}
+	}
+	
+	foreach my $gene_name (@gene_list)
+	{
+		$p_gene_hash->{$gene_name} /= $num_replicates;
+		$p_gene_max_hash->{$gene_name} /= $num_replicates;
+	}
+	$p/= $num_replicates;
+	
+		
+	print "*** Overall within treatment similarity P-value = $p ($num_replicates replicates)\n";	
+
+	print "Per-gene within treatments similarity P-values\n";
+	foreach my $gene_name (sort { $p_gene_hash->{$a} <=> $p_gene_hash->{$b} } keys %$p_gene_hash )
+	{
+		print "$gene_name $p_gene_hash->{$gene_name}\n";
+	}
+	
+	print "Per-gene max within any one treatment P-values\n";
+	foreach my $gene_name (sort { $p_gene_max_hash->{$a} <=> $p_gene_max_hash->{$b} } keys %$p_gene_max_hash )
+	{
+		print "$gene_name $p_gene_max_hash->{$gene_name}\n";
+	}
+	
+}
+
+#calculates the number of 
+sub _in_similarity
+{
+	my ($gene_gd_hash, $treatment_hash) = @_;
+		
+	my $sim = 0;
+	foreach my $gene_name (sort keys %$gene_gd_hash)
+	{
+		foreach my $t (keys %$treatment_hash)
+		{
+			my $count = 0;
+			
+			foreach my $gd_name (@{$treatment_hash->{$t}})
+			{			
+				$count++ if ($gene_gd_hash->{$gene_name}->{$gd_name});
+			}
+			
+			#count number of times gene occurs multiple times in same treatment
+			$sim += $count - 1 if ($count > 1);
+		}
+	}	
+	return $sim;
+}
+
+sub _treatment_max {
+	my ($gene_gd_hash, $treatment_hash) = @_;
+		
+	my $max = 0;
+	foreach my $gene_name (sort keys %$gene_gd_hash)
+	{
+		foreach my $t (keys %$treatment_hash)
+		{
+			my $count = 0;
+			
+			foreach my $gd_name (@{$treatment_hash->{$t}})
+			{			
+				$count++ if ($gene_gd_hash->{$gene_name}->{$gd_name});
+			}
+			
+			#count number of times gene occurs multiple times in same treatment
+			$max = $count if ($count > $max);
+		}
+	}	
+	return $max;
+}
+
+
+sub _calculate_es_significance
+{
+	my ($gene_gd_hash, $gd_name_list_ref, $treatments_ref, $num_replicates) = @_;
+	my @gd_name_list = @$gd_name_list_ref;
+	my @treatments = @$treatments_ref;
+	
+	my $treatment_hash = _treatment_list_to_hash(\@gd_name_list, \@treatments, 0);
+	my ($actual_es, $actual_within, $actual_other) = _calculate_es($gene_gd_hash, $treatment_hash);
+	print "Actual Excess Dice Similarity = $actual_es\n";
+	print "Actual Within Dice Similarity = $actual_within\n";
+	print "Actual Between Dice Similarity = $actual_other\n";
+
+	my $p = 0;
+	for (my $i=0; $i<$num_replicates; $i++)
+	{
+		print STDERR ($i+1) . "\n" if (($i+1) % 1000 == 0);
+		my $rtreatment_hash = _treatment_list_to_hash(\@gd_name_list, \@treatments, 1);
+		my $random_es = _calculate_es($gene_gd_hash, $rtreatment_hash);
+		print "$i\t$random_es\n";
+		$p++ if ($random_es >= $actual_es);
+	}
+	
+	$p/= $num_replicates;
+	print "P-value = $p ($num_replicates replicates)\n";
+}
+
+sub _calculate_es 
+{
+	my ($gene_gd_hash, $treatment_hash) = @_;
+	
+	my $self_sim = 0;
+	my $other_sim = 0;
+	
+	foreach my $t (sort keys %$treatment_hash)
+	{		
+		my $this_self_sim = _dice_similarity($gene_gd_hash, $treatment_hash->{$t}, $treatment_hash->{$t});
+		
+		my @outside_treatment_gd_list = ();
+		foreach my $ot (sort keys %$treatment_hash)
+		{
+			next if ($ot eq $t);
+			push @outside_treatment_gd_list, @{$treatment_hash->{$ot}};
+		}
+		#print Dumper(\@outside_treatment_gd_list);
+		my $this_other_sim = _dice_similarity($gene_gd_hash, $treatment_hash->{$t}, \@outside_treatment_gd_list);
+	#	print OUT "$t\t$self_sim\t$other_sim\n";
+		
+		$self_sim += $this_self_sim;
+		$other_sim += $this_other_sim;
+		
+	}
+
+	$self_sim /= scalar keys %$treatment_hash;
+	$other_sim /= scalar keys %$treatment_hash;
+	
+	#es = excess similarity
+	my $es = $self_sim - $other_sim;
+	
+	return ($es, $self_sim, $other_sim), 
+}
+
+#calculates the average within group similarity
+sub _dice_similarity
+{
+	my ($gene_gd_hash, $gd_name_list_ref_1, $gd_name_list_ref_2) = @_;
+
+	my $num_1 = scalar @$gd_name_list_ref_1;
+	my $num_2 = scalar @$gd_name_list_ref_2;
+	#print STDERR "Num1 $num_1 Num2 $num_2\n";
+	#print STDERR Dumper($gd_name_list_ref_1);
+	#print STDERR Dumper($gd_name_list_ref_2);
+	
+	#calculate similarity for each pair
+	my $sim = 0;
+	my $tot = 0;
+	for (my $i = 0; $i < scalar @$gd_name_list_ref_1; $i++)
+	{
+		my $gd_name_1 = $gd_name_list_ref_1->[$i];
+		for (my $j = 0; $j < scalar @$gd_name_list_ref_2; $j++)
+		{
+			my $gd_name_2 = $gd_name_list_ref_2->[$j];
+			#print STDERR "$gd_name_1 :: $gd_name_2\n";
+			next if ($gd_name_1 eq $gd_name_2); ## assures we do each unique pair only once
+			#print STDERR "Accepted\n";
+			my $int_count = 0;
+			my $a_count = 0;
+			my $b_count = 0;
+			
+			foreach my $gene_name (keys %$gene_gd_hash)
+			{
+				if ($gene_gd_hash->{$gene_name}->{$gd_name_1})
+				{
+					$a_count++;
+					if ($gene_gd_hash->{$gene_name}->{$gd_name_2})
+					{
+						$int_count++;
+					}
+				}
+				
+				if ($gene_gd_hash->{$gene_name}->{$gd_name_2})
+				{
+					$b_count++;
+				}
+			}		
+			my $this_sim = 2 * $int_count / ($a_count + $b_count);
+			
+			$tot++;
+			$sim+=$this_sim;
+		}
+	}
+	##normalize by number of pairs
+	
+	#print STDERR "RAWSIM $sim TOTAL $tot\n";
+	$sim /= $tot;
+
+	return $sim;
+}
+
+#randomize labels
+sub _treatment_list_to_hash
+{
+	my ($gd_name_list_ref, $treatment_list_ref, $randomize) = @_;
+	
+	my @treatments = @$treatment_list_ref;
+	if ($randomize)
+	{
+		my @rtreatments = ();
+		while (@treatments)
+		{
+			my $i = int rand scalar @treatments;
+			push @rtreatments, splice(@treatments, $i, 1);
+		}
+		@treatments = @rtreatments;
+	}
+	
+	my $treatment_hash;
+	for (my $i=0; $i< scalar @treatments; $i++)
+	{
+		my $t = $treatments[$i];
+		push @{$treatment_hash->{$t}}, $gd_name_list_ref->[$i];
+	}
+	
+	return $treatment_hash;
+}
+
+sub do_polymorphism_analysis
+{
+	my ($help, $man, $verbose);
+	my $output = 'output.tab'; 
+	my @reference_genbank_file_names;
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man, 'verbose|v' => \$verbose,
+		'output|o=s' => \$output,
+		'reference-sequence|r=s' => \@reference_genbank_file_names,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @reference_genbank_file_names == 0);
+	pod2usage(1) if (scalar @ARGV == 0);
+
+	#doesn't really need to take multiple...
+	my @gd_file_name_list = @ARGV;
+	
+	my $ref_seq_info = load_ref_seq_info(\@reference_genbank_file_names);
+	
+	
+	open OUT, ">$output";
+	print OUT +join("\t", 
+		'seq_id', 
+		'position', 
+		'ref_base',
+		'new_base',
+		'frequency', 
+		'quality', 
+		'fisher_strand_p_value',
+		'ks_quality_p_value',
+		'min_cov',
+		'new_top',
+		'new_bot',
+		'ref_top',
+		'ref_bot',
+		'gene_position', 
+		'gene_name',
+		'aa_position',
+		'aa_ref_seq',
+		'aa_new_seq',
+		'codon_ref_seq',
+		'codon_new_seq',
+	) . "\n";
+		
+	foreach my $gd_file_name (@gd_file_name_list)
+	{
+		my $gd = GenomeDiff->new({in=>$gd_file_name});
+		GenomeDiff::ReferenceSequence::annotate_mutations($ref_seq_info, $gd);
+		
+		my @mutations = $gd->list('RA');
+		@mutations = grep { ($_->{frequency} >= 0.01) && ($_->{frequency} <= 0.99) } @mutations;
+		
+		MUT: foreach my $p (@mutations)
+		{
+			($p->{new_top}, $p->{new_bot}) = split /\//, $p->{new_cov};
+			($p->{ref_top}, $p->{ref_bot}) = split /\//, $p->{ref_cov};
+			$p->{min_cov} = min($p->{new_top}, $p->{new_bot}, $p->{ref_top}, $p->{ref_bot});
+		}
+		
+		@mutations = sort { -($a->{min_cov} <=> $b->{min_cov}) } @mutations;
+		
+		MUT: foreach my $p (@mutations)
+		{
+			
+			print OUT +join("\t", 
+				$p->{seq_id}, 
+				$p->{position}, 
+				$p->{ref_base},
+				$p->{new_base},
+				$p->{frequency}, 
+				$p->{quality},
+				$p->{fisher_strand_p_value}, 
+				$p->{ks_quality_p_value}, 
+				$p->{min_cov},
+				$p->{new_top},
+				$p->{new_bot},
+				$p->{ref_top},
+				$p->{ref_bot},
+				$p->{gene_position}, 
+				$p->{gene_name},
+				$p->{aa_position},
+				$p->{aa_ref_seq},
+				$p->{aa_new_seq},
+				$p->{codon_ref_seq},
+				$p->{codon_new_seq},								
+			) . "\n";
+		}
+	}
+	close OUT;
+	
+}
+
+## Removes all evidence that is not referenced by any mutation
+sub do_strip_evidence
+{
+	my ($help, $man, $verbose);
+	my $output_path; 
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man, 'verbose|v' => \$verbose,
+		'output-path|o=s' => \$output_path,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @ARGV == 0);
+	pod2usage(1) if (!defined $output_path);
+
+	#doesn't really need to take multiple...
+	my @gd_file_name_list = @ARGV;
+		
+	foreach my $gd_file_name (@gd_file_name_list)
+	{
+		my $gd_name = $gd_file_name;
+		$gd_name =~ s/^.+\///;		
+		$gd_name =~ s/\.[^.]+$//;
+		print STDERR "$gd_name\n";
+		
+		my $gd = GenomeDiff->new({in=>$gd_file_name});
+		$gd->strip_evidence;
+		
+		my $output_file_name = "$output_path/$gd_name\.gd";
+		$gd->write($output_file_name);
+	}
+}
+
+## Checks and optionally cleans up a genome diff file.
+sub do_validate
+{
+	my ($help, $man, $verbose);
+	my $output_file_name; 
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man, 'verbose|v' => \$verbose,
+		'output-path|o=s' => \$output_file_name,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @ARGV == 0);
+	pod2usage(1) if (!defined $output_file_name);
+
+	#doesn't really need to take multiple...
+	my $gd_file_name = shift @ARGV;
+	if (scalar @ARGV > 0) {
+		print STDERR "Multiple genomdiff args were provided. Only ONE is allowed for this command.\n"; 	
+		pod2usage(1);
+	}
+	
+	#output file name
+	if (!defined $output_file_name) {
+		$output_file_name = $gd_file_name;
+		$output_file_name =~ s/\.gd$/\.validated\.gd/;
+	}
+		
+	my $gd_name = $gd_file_name;
+	$gd_name =~ s/^.+\///;		
+	$gd_name =~ s/\.[^.]+$//;
+	#print STDERR "Validating $gd_name\n";
+	
+	my $gd = GenomeDiff->new({in=>$gd_file_name});
+	$gd->strip_evidence;
+	$gd->strip_tags;
+
+	$gd->write($output_file_name);
+}
+
+
+sub do_cgview
+{
+	my ($help, $man, $verbose);
+	my $output_file_name; 
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man, 'verbose|v' => \$verbose,
+		'output-path|o=s' => \$output_file_name,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @ARGV == 0);
+
+	my $ignore_transposons = 1;
+
+	#doesn't really need to take multiple...
+	my $gd_file_name = shift @ARGV;
+	if (scalar @ARGV > 0) {
+		print STDERR "Multiple genomdiff args were provided. Only ONE is allowed for this command.\n"; 	
+		pod2usage(1);
+	}
+	
+	# default output file name
+	if (!defined $output_file_name) {
+		$output_file_name = $gd_file_name . ".cgview.xml";
+	}
+		
+	my $gd_name = $gd_file_name;
+	$gd_name =~ s/^.+\///;		
+	$gd_name =~ s/\.[^.]+$//;
+	
+	my $gd = GenomeDiff->new({in=>$gd_file_name});
+	
+	open OUT, ">$output_file_name" or die "Could not open output file: $output_file_name\n";
+	
+	print OUT <<END;
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- java -jar ~/bin/cgview/cgview.jar -f svg -i ara-1_v3.xml -o ara-1_v3.svg -->	
+<cgview backboneRadius="90" sequenceLength="4629812" height="600" width="600" featureThickness="medium" showBorder="false" labelLineLength="x-small" labelFont="SansSerif,plain,8" labelLineThickness="xx-small" color="white" backboneThickness="0" labelPlacementQuality="best" featureSlotSpacing="2">
+  <featureSlot strand="direct">
+  <feature color="rgb(240,240,240)" proportionOfThickness="0.2" radiusAdjustment="0.5" showLabel="false"><featureRange start="1" stop="4629812" /></feature>
+END
+
+	my @mutations = $gd->mutation_list;
+	MUT: foreach my $mut (@mutations)
+	{
+		#did it hit a single gene
+		next if ($mut->{type} ne 'SNP');
+		
+		if ($ignore_transposons) {
+			foreach my $gene (@{$mut->{gene_list}}) {
+				next MUT if ($gene =~ m/^ins/);
+			}
+		}
+				
+		print OUT <<LINE
+    <feature color="black" label="" showLabel="false"><featureRange start="$mut->{position}" stop="$mut->{position}" /></feature>
+LINE
+	}
+			
+	print OUT <<END
+  </featureSlot>
+</cgview>
+END
+}
+
+sub do_yaml
+{
+	my ($help, $man, $verbose);
+	my $output_file_name; 
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man, 'verbose|v' => \$verbose,
+		'output-path|o=s' => \$output_file_name,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @ARGV == 0);
+	
+	#doesn't really need to take multiple...
+	my $gd_file_name = shift @ARGV;
+	if (scalar @ARGV > 0) {
+		print STDERR "Multiple genomdiff args were provided. Only ONE is allowed for this command.\n"; 	
+		pod2usage(1);
+	}
+	
+	my $gd = GenomeDiff->new({in=>$gd_file_name});
+	$gd->write_yaml($output_file_name);
+}
+
+sub do_SNP_positions
+{
+	my ($help, $man, $verbose);
+	my $output_file_name; 
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man, 'verbose|v' => \$verbose,
+		'output-path|o=s' => \$output_file_name,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @ARGV == 0);
+
+	my $ignore_transposons = 1;
+
+	#doesn't really need to take multiple...
+	my $gd_file_name = shift @ARGV;
+	if (scalar @ARGV > 0) {
+		print STDERR "Multiple genomdiff args were provided. Only ONE is allowed for this command.\n"; 	
+		pod2usage(1);
+	}
+
+	# default output file name
+	if (!defined $output_file_name) {
+		$output_file_name = $gd_file_name . ".snppos.tab";
+	}
+
+	my $gd_name = $gd_file_name;
+	$gd_name =~ s/^.+\///;		
+	$gd_name =~ s/\.[^.]+$//;
+
+	my $gd = GenomeDiff->new({in=>$gd_file_name});
+
+	open OUT, ">$output_file_name" or die "Could not open output file: $output_file_name\n";
+	my @mutations = $gd->mutation_list;
+	MUT: foreach my $mut (@mutations)
+	{
+		#did it hit a single gene
+		next if ($mut->{type} ne 'SNP');
+
+		if ($ignore_transposons) {
+			foreach my $gene (@{$mut->{gene_list}}) {
+				next MUT if ($gene =~ m/^ins/);
+			}
+		}
+		
+		print OUT $mut->{position} . "\n";
+	}
+}
+
+sub do_base_substitution_file 
+{
+	eval{ require 'GenomeDiff::BaseSubstitutionFile' };
+	my ($help, $man, $verbose);
+	my ($input_file, $output_path); 
+	$output_path = ".";
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man, 'verbose|v' => \$verbose,
+		'output-path|o=s' => \$output_path,
+	) or pod2usage(2);
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @ARGV == 0);
+	
+	(-d $output_path) or die "Output directory path ($output_path) does not exist\n";
+	
+	foreach my $input_file (@ARGV) {
+		my $in = Bio::SeqIO->new(-file => "<$input_file", -format => "genbank");
+		$in or die "Could not open sequence file $input_file\n";
+		while (my $seq = $in->next_seq)
+		{
+			my $bs_file = GenomeDiff::BaseSubstitutionFile->new(sequence=>$seq);
+			$bs_file->write("$output_path/" . $seq->id . ".bsf");
+		}
+	}
+}
+
