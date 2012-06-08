@@ -1448,6 +1448,10 @@ namespace breseq {
         cSequenceFeature& f = **it2;
         if (verbose) cout << f.SafeGet("name") << " " << f.get_start_1() << " " << f.get_end_1() << " " << f.get_strand() << endl;
         
+        
+        // By taking anything within a gene as NONCODING, it will also include **introns** in this category
+        // instead of an alternative strategy which might be to give them their own category or call them intergenic.
+        
         // Catches tRNA/rRNA/pseudogenes...
         if (f[TYPE] == "gene") {
           vector<cLocation> sub_locations = f.m_location.get_all_sub_locations();
@@ -1478,7 +1482,7 @@ namespace breseq {
         vector<uint32_t> this_codon_locations_0(0, 3); // 0-indexed
         
         uint32_t total_nucleotide_length = 0; 
-        int32_t cds_strand = g.m_location.m_strand;
+        int8_t strand = sub_locations.front().m_strand;
         
         for(vector<cLocation>::iterator it3=sub_locations.begin(); it3!=sub_locations.end(); ++it3) {
           cLocation& loc = *it3;
@@ -1486,10 +1490,14 @@ namespace breseq {
         }
         uint32_t total_amino_acid_length = total_nucleotide_length / 3;
         uint32_t on_codon_pos_1 = 1;
-        if (cds_strand == -1) on_codon_pos_1 = total_amino_acid_length;
+        if (strand == -1) on_codon_pos_1 = total_amino_acid_length;
 
+        /// code to debug consistency with Perl
+        /*
+        string amino_acid_sequence;
+        string codon_sequence;
+        */
         
-        int8_t strand = sub_locations.front().m_strand;
         for(vector<cLocation>::iterator it3=sub_locations.begin(); it3!=sub_locations.end(); ++it3) {
           
           cLocation& loc = *it3;
@@ -1530,6 +1538,18 @@ namespace breseq {
               
               char original_amino_acid = cReferenceSequences::translate_codon(original_codon, g.translation_table, on_codon_pos_1);
               
+              /*
+              /// code to debug consistency with Perl
+              if (strand == -1) {
+                codon_sequence = original_codon + codon_sequence;
+                amino_acid_sequence = original_amino_acid + amino_acid_sequence;
+              } else {
+                codon_sequence = codon_sequence + original_codon;
+                amino_acid_sequence = amino_acid_sequence + original_amino_acid;
+              }
+              /// end debug code
+              */
+               
               for (int32_t test_codon_index=0; test_codon_index<3; test_codon_index++) {
                 
                 for (size_t b=0; b<BaseSubstitutionEffects::base_char_list.size(); b++) {
@@ -1553,12 +1573,20 @@ namespace breseq {
                 
               }
               
-              on_codon_pos_1 += cds_strand;
+              on_codon_pos_1 += strand;
               on_codon_index = 0;
             }
           }
         } // end sublocation loop
         ASSERT(on_codon_index == 0, "Number of base pairs in CDS not a multiple of 3: " + g["name"]);
+        
+        /// code to debug consistency with Perl
+        /*
+        cout << ">" << g.name << endl;
+        cout << codon_sequence << endl;
+        cout << amino_acid_sequence << endl;
+        */
+        
       } // end feature loop
       
       if (verbose) {
@@ -1568,6 +1596,25 @@ namespace breseq {
           << seq_bse[i_0*4+0] << "\t" << seq_bse[i_0*4+1] << "\t" << seq_bse[i_0*4+2] << "\t" << seq_bse[i_0*4+3] << endl;
         }
       }
+      
+      // For debugging consistency with Perl
+      /*
+      for(size_t pos_1=1; pos_1 <= seq.get_sequence_length(); pos_1++) {
+        cout << pos_1 << " " << seq.get_sequence_1(pos_1);
+        size_t pos_0 = pos_1-1;
+        
+        BaseSubstitutionEffectPositionInfo position_info = position_info_1(ref_seq_info, seq.m_seq_id, pos_1);
+        BaseType bt = position_info.m_base_type;
+        
+        cout << " " << bt;
+        
+        //for (uint8_t base_index=0; base_index<4; ++base_index) {
+        //  cout << " " << ((seq_bse[pos_0*4+base_index] == nonsynonymous_base_substitution) ? "1" : "0");
+        //}
+        
+        cout << endl;
+      }
+      */
       
     } // end sequence loop
   }    

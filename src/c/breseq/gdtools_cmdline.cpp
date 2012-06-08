@@ -477,7 +477,9 @@ int do_gd2circos(int argc, char *argv[]){
   options
     ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
     ("reference,r", "reference file(s) specified in gd file")
-    ("output,o","name of directory to save Circos files")
+    ("output,o", "name of directory to save Circos files")
+    ("distance,d", "the distance from the center the first axis will be in proportion to the default size", "1.0")
+    ("feature,f", "the scale of the features in proportion to the default size", "1.0")
     ;
   options.processCommandArgs(argc, argv);
   
@@ -497,6 +499,12 @@ int do_gd2circos(int argc, char *argv[]){
     return -1;
   }
   
+  double distance_scale;
+  double feature_scale;
+  
+  distance_scale = from_string<double>(options["distance"]);
+  feature_scale = from_string<double>(options["feature"]);
+  
   vector<string> gd_names;
   for (int32_t i = 0; i < options.getArgc(); i++){
     gd_names.push_back(options.getArgv(i));
@@ -512,7 +520,9 @@ int do_gd2circos(int argc, char *argv[]){
   try{
     GDtoCircos(gd_names, 
                from_string<vector<string> >(options["reference"]),
-               options["output"]);
+               options["output"],
+               distance_scale,
+               feature_scale);
   } 
   catch(...){ 
       return -1; // failed 
