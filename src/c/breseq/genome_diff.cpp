@@ -2459,116 +2459,116 @@ void GDtoCircos(const vector<string> &gd_file_names,
   //distance
   //inner ring
   command.str("");
-  command << "sed -i 's/ = inner_distance_value_1/ = " << distance_value << "r/' " << circos_directory  << "/etc/*.conf";
+  command << "sed -i \"\"  's/ = inner_distance_value_1/ = " << distance_value << "r/' " << circos_directory  << "/etc/*.conf";
   SYSTEM(command.str());
   command.str("");
-  command << "sed -i 's/ = inner_distance_value_2/ = " << distance_value + .01 << "r/' " << circos_directory  << "/etc/*.conf";
+  command << "sed -i \"\"  's/ = inner_distance_value_2/ = " << distance_value + .01 << "r/' " << circos_directory  << "/etc/*.conf";
   SYSTEM(command.str());
   //inner ring ticks
   command.str("");
-  command << "sed -i 's/ = inner_ticks/ = " << distance_value << "r/' " << circos_directory  << "/etc/*.conf";
+  command << "sed -i \"\"  's/ = inner_ticks/ = " << distance_value << "r/' " << circos_directory  << "/etc/*.conf";
   SYSTEM(command.str());
   
   //space
   //synonymous axis
   command.str("");
-  command << "sed -i 's/ = syn_axis_value_1/ = " << (distance_value + (2 * space_value)) << "r/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"  's/ = syn_axis_value_1/ = " << (distance_value + (2 * space_value)) << "r/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   command.str("");
-  command << "sed -i 's/ = syn_axis_value_2/ = " << (distance_value + (2 * space_value) + .01) << "r/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = syn_axis_value_2/ = " << (distance_value + (2 * space_value) + .01) << "r/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   //nonsynonymous axis
   command.str("");
-  command << "sed -i 's/ = nonsyn_axis_value_1/ = " << (distance_value + (3 * space_value)) << "r/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = nonsyn_axis_value_1/ = " << (distance_value + (3 * space_value)) << "r/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   command.str("");
-  command << "sed -i 's/ = nonsyn_axis_value_2/ = " << (distance_value + (3 * space_value) + .01) << "r/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = nonsyn_axis_value_2/ = " << (distance_value + (3 * space_value) + .01) << "r/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   //npi axis
   command.str("");
-  command << "sed -i 's/ = npi_axis_value_1/ = " << (distance_value + (4 * space_value)) << "r/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = npi_axis_value_1/ = " << (distance_value + (4 * space_value)) << "r/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   command.str("");
-  command << "sed -i 's/ = npi_axis_value_2/ = " << (distance_value + (4 * space_value) + .01) << "r/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = npi_axis_value_2/ = " << (distance_value + (4 * space_value) + .01) << "r/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   //mob_1 axis
   command.str("");
-  command << "sed -i 's/ = mob_1_axis_value_1/ = " << (distance_value + (5 * space_value)) << "r/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = mob_1_axis_value_1/ = " << (distance_value + (5 * space_value)) << "r/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   command.str("");
-  command << "sed -i 's/ = mob_1_axis_value_2/ = " << (distance_value + (5 * space_value) + .01) << "r/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = mob_1_axis_value_2/ = " << (distance_value + (5 * space_value) + .01) << "r/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   //mob_2 axis
   command.str("");
-  command << "sed -i 's/ = mob_2_axis_value_1/ = " << (distance_value + (6 * space_value)) << "r/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = mob_2_axis_value_1/ = " << (distance_value + (6 * space_value)) << "r/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   command.str("");
-  command << "sed -i 's/ = mob_2_axis_value_2/ = " << (distance_value + (6 * space_value) + .01) << "r/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = mob_2_axis_value_2/ = " << (distance_value + (6 * space_value) + .01) << "r/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   //outer ring
   command.str("");
-  command << "sed -i 's/ = outer_axis_value_1/ = " << (distance_value + (7 * space_value)) << "r/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = outer_axis_value_1/ = " << (distance_value + (7 * space_value)) << "r/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   command.str("");
-  command << "sed -i 's/ = outer_axis_value_2/ = " << (distance_value + (7 * space_value) + .01) << "r/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = outer_axis_value_2/ = " << (distance_value + (7 * space_value) + .01) << "r/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   //outer ring ticks
   command.str("");
-  command << "sed -i 's/ = outer_ticks/ = " << (distance_value + (7 * space_value)) << "r/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = outer_ticks/ = " << (distance_value + (7 * space_value)) << "r/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   //indel distance
   command.str("");
-  command << "sed -i 's/ = indel_distance/ = " << (distance_value + (7 * space_value) + .01) << "r/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = indel_distance/ = " << (distance_value + (7 * space_value) + .01) << "r/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   //mob distance
   command.str("");
-  command << "sed -i 's/ = mob_distance/ = " << (distance_value + (5 * space_value)) << "r + " << (400 * .7 * space_value * .5) - (feature_value * 2.5) << "p/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = mob_distance/ = " << (distance_value + (5 * space_value)) << "r + " << (400 * .7 * space_value * .5) - (feature_value * 2.5) << "p/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   //syn distance
   command.str("");
-  command << "sed -i 's/ = syn_distance/ = " << (distance_value + (2 * space_value)) << "r - " << feature_value * 1.5 << "p/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = syn_distance/ = " << (distance_value + (2 * space_value)) << "r - " << feature_value * 1.5 << "p/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   //nonsyn distance
   command.str("");
-  command << "sed -i 's/ = nonsyn_distance/ = " << (distance_value + (3 * space_value)) << "r - " << feature_value * 1.5 << "p/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = nonsyn_distance/ = " << (distance_value + (3 * space_value)) << "r - " << feature_value * 1.5 << "p/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   //npi distance
   command.str("");
-  command << "sed -i 's/ = npi_distance/ = " << (distance_value + (4 * space_value)) << "r - " << feature_value * 1.5 << "p/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = npi_distance/ = " << (distance_value + (4 * space_value)) << "r - " << feature_value * 1.5 << "p/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   //feature
   
   //indels
   command.str("");
-  command << "sed -i 's/ = indel_value/ = " << feature_value * 4 << "p/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = indel_value/ = " << feature_value * 4 << "p/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   //mobs
   command.str("");
-  command << "sed -i 's/ = mob_value/ = " << feature_value * 5 << "p/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = mob_value/ = " << feature_value * 5 << "p/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   //snps
   command.str("");
-  command << "sed -i 's/ = snp_value/ = " << feature_value * 3 << "p/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = snp_value/ = " << feature_value * 3 << "p/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   //individual graphs
@@ -2578,54 +2578,54 @@ void GDtoCircos(const vector<string> &gd_file_names,
   //axes
   //syn
   command.str("");
-  command << "sed -i 's/ = ind_syn_axis_value_1/ = " << (1 + (1 * space_value)) << "r/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = ind_syn_axis_value_1/ = " << (1 + (1 * space_value)) << "r/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   command.str("");
-  command << "sed -i 's/ = ind_syn_axis_value_2/ = " << (1 + (1 * space_value) + .01) << "r/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = ind_syn_axis_value_2/ = " << (1 + (1 * space_value) + .01) << "r/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   //nonsyn
   command.str("");
-  command << "sed -i 's/ = ind_nonsyn_axis_value_1/ = " << (1 + (2 * space_value)) << "r/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = ind_nonsyn_axis_value_1/ = " << (1 + (2 * space_value)) << "r/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   command.str("");
-  command << "sed -i 's/ = ind_nonsyn_axis_value_2/ = " << (1 + (2 * space_value) + .01) << "r/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = ind_nonsyn_axis_value_2/ = " << (1 + (2 * space_value) + .01) << "r/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   //npi
   command.str("");
-  command << "sed -i 's/ = ind_npi_axis_value_1/ = " << (1 + (3 * space_value)) << "r/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = ind_npi_axis_value_1/ = " << (1 + (3 * space_value)) << "r/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   command.str("");
-  command << "sed -i 's/ = ind_npi_axis_value_2/ = " << (1 + (3 * space_value) + .01) << "r/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = ind_npi_axis_value_2/ = " << (1 + (3 * space_value) + .01) << "r/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   //distances
   //syn
   command.str("");
-  command << "sed -i 's/ = ind_syn_distance/ = " << (1 + (1 * space_value)) << "r - " << feature_value * 1.5 << "p/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = ind_syn_distance/ = " << (1 + (1 * space_value)) << "r - " << feature_value * 1.5 << "p/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   //nonsyn
   command.str("");
-  command << "sed -i 's/ = ind_nonsyn_distance/ = " << (1 + (2 * space_value)) << "r - " << feature_value * 1.5 << "p/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = ind_nonsyn_distance/ = " << (1 + (2 * space_value)) << "r - " << feature_value * 1.5 << "p/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   //npi
   command.str("");
-  command << "sed -i 's/ = ind_npi_distance/ = " << (1 + (3 * space_value)) << "r - " << feature_value * 1.5 << "p/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = ind_npi_distance/ = " << (1 + (3 * space_value)) << "r - " << feature_value * 1.5 << "p/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   //arbitrary...
   command.str("");
-  command << "sed -i 's/ = space_value_in_pixels/ = " << space_value * 300 << "p/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = space_value_in_pixels/ = " << space_value * 300 << "p/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   command.str("");
-  command << "sed -i 's/ = ind_scale/ = " << .7 * distance_scale << "r/' " << circos_directory << "/etc/*.conf";
+  command << "sed -i \"\"   's/ = ind_scale/ = " << .7 * distance_scale << "r/' " << circos_directory << "/etc/*.conf";
   SYSTEM(command.str());
   
   //filling circos_dir/data
@@ -2929,6 +2929,96 @@ void GDtoCircos(const vector<string> &gd_file_names,
   command << "cd " << circos_directory << "; bash run_circos.sh; cd " << current_dir;
   SYSTEM(command.str());
   
+}
+  
+void GD2Phylip( const vector<string>& gd_file_names, 
+                const vector<string>& reference_file_names,
+                const string& output_phylip_file_name)
+{
+/*
+
+		my @mutations = $composite_gd->mutation_list;
+    
+		if ($ignore_ambiguous)
+		{
+    MUT: for (my $i=0; $i<scalar @mutations; $i++)
+    {
+      my $mut = $mutations[$i];
+      foreach my $gd_name (@$gd_name_list_ref)
+      {
+        my $f = $mut->{"frequency_$gd_name"};
+        if ($f eq '?')
+        {
+          $mut->{"frequency_$gd_name"} = ($mut->{type} eq 'SNP') ? $mut->{_ref_seq} : 'A';
+        }
+      }
+    } 
+		}
+		
+		open KEYFILE, ">$phylip_input_file.key" or die "Could not open file: $phylip_input_file.key";
+  MUT: for (my $i=0; $i<scalar @mutations; $i++)
+  {
+    my $mut = $mutations[$i];
+    print KEYFILE +join("\t", $i, $mut->{type}, $mut->{position}) . "\n"; 
+  }
+		close KEYFILE;
+		
+		open PHYLIP, ">$phylip_input_file" or die "Could not open file: $phylip_input_file";
+#first line is number of species, then number of sites
+		print PHYLIP +(scalar @$gd_name_list_ref) . " " . +(scalar @mutations) . "\n";
+    
+		foreach my $gd_name (@$gd_name_list_ref)
+		{			
+			my $mut_str;
+			foreach my $mut (@mutations)
+			{
+				my $f = $mut->{"frequency_$gd_name"};
+				my $b = '?';
+				if ($f eq '?')
+				{
+					if ($phylip_for_mix)
+					{
+						$b = '?'; #ancestor
+					}
+					else
+					{
+						$b = 'N';
+					}
+				}
+				elsif (($f == 1) || ($f eq 'H'))
+				{
+					if ($phylip_for_mix)
+					{
+						$b = '1';
+					}
+					else
+					{
+						$b = ($mut->{type} eq 'SNP') ? $mut->{new_seq} : 'T';
+					}
+				}
+				elsif ($f == 0)
+				{
+					if ($phylip_for_mix)
+					{
+						$b = '0';
+					}
+					else
+					{
+						$b = ($mut->{type} eq 'SNP') ? $mut->{_ref_seq} : 'A';
+					}
+				}
+				else
+				{
+					die "Unknown frequency: $f\n";
+				}
+				$mut_str .= $b;				
+			}
+			
+			printf PHYLIP "%-10.10s%s\n", $gd_name, $mut_str;
+		}
+		
+		close PHYLIP;
+*/
 }
 
 void MIRAtoGD(const string &mira_file_name, const string &gd_file_name){
