@@ -226,7 +226,12 @@ void GDtoGVF( const string& gdfile, const string& gvffile, bool snv_only = false
 void VCFtoGD( const string& vcffile, const string& gfffile );
 
 //! Convert GD to Circos files
-void GDtoCircos(const vector<string> &gd_file_names, const vector<string> &reference_file_names, const string &circos_directory);
+void GDtoCircos(const vector<string> &gd_file_names,
+                const vector<string> &reference_file_names,
+                const string &circos_directory,
+                double distance_scale,
+                double space_scale,
+                double feature_scale);
 
 //! Convert MIRA feature analysis file to GD
 void MIRAtoGD(const string &mira_file_name, const string &gd_file_name);
