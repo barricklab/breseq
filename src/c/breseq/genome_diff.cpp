@@ -2400,7 +2400,6 @@ void GDtoCircos(const vector<string> &gd_file_names,
                 const vector<string> &reference_file_names,
                 const string &circos_directory,
                 double distance_scale,
-                double space_scale,
                 double feature_scale){
   //Due to circos' unchangeable method of reversing labels (including glyphs)
   //after the 6 o'clock position on a graph, I am manually adding which

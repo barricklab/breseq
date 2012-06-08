@@ -479,7 +479,6 @@ int do_gd2circos(int argc, char *argv[]){
     ("reference,r", "reference file(s) specified in gd file")
     ("output,o", "name of directory to save Circos files")
     ("distance,d", "the distance from the center the first axis will be in proportion to the default size", "1.0")
-    ("space,s", "the distance each axis will be from one another in proportion to the default size", "1.0")
     ("feature,f", "the scale of the features in proportion to the default size", "1.0")
     ;
   options.processCommandArgs(argc, argv);
@@ -501,11 +500,9 @@ int do_gd2circos(int argc, char *argv[]){
   }
   
   double distance_scale;
-  double space_scale;
   double feature_scale;
   
   distance_scale = from_string<double>(options["distance"]);
-  space_scale = from_string<double>(options["space"]);
   feature_scale = from_string<double>(options["feature"]);
   
   vector<string> gd_names;
@@ -525,7 +522,6 @@ int do_gd2circos(int argc, char *argv[]){
                from_string<vector<string> >(options["reference"]),
                options["output"],
                distance_scale,
-               space_scale,
                feature_scale);
   } 
   catch(...){ 
