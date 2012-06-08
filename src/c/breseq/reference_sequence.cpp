@@ -1619,12 +1619,12 @@ map<string,uint16_t> cReferenceSequences::codon_to_aa_index = make_map<string,ui
 ;
 
 char cReferenceSequences::translate_codon(string seq, uint32_t translation_table, uint32_t codon_pos_1)
-{
+{  
   ASSERT(seq.size()==3, "Attempt to translate codon without three bases.");
   ASSERT(translation_table <= cReferenceSequences::translation_tables.size(), "Unknown translation table requested.");
   string& tt = (codon_pos_1 == 1) 
-    ? cReferenceSequences::translation_tables[translation_table]
-    : cReferenceSequences::initiation_codon_translation_tables[translation_table]
+    ? cReferenceSequences::initiation_codon_translation_tables[translation_table]
+    : cReferenceSequences::translation_tables[translation_table]
   ;
   ASSERT(tt.size() == 64, "Unknown translation table requested.");
   

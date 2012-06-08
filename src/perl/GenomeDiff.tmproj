@@ -49,6 +49,36 @@
 			<key>firstVisibleLine</key>
 			<integer>947</integer>
 		</dict>
+		<key>GenomeDiff/GenomeDiff-1.00/lib/GenomeDiff/BaseSubstitutionFile.pm</key>
+		<dict>
+			<key>caret</key>
+			<dict>
+				<key>column</key>
+				<integer>18</integer>
+				<key>line</key>
+				<integer>95</integer>
+			</dict>
+			<key>columnSelection</key>
+			<false/>
+			<key>firstVisibleColumn</key>
+			<integer>0</integer>
+			<key>firstVisibleLine</key>
+			<integer>74</integer>
+			<key>selectFrom</key>
+			<dict>
+				<key>column</key>
+				<integer>4</integer>
+				<key>line</key>
+				<integer>95</integer>
+			</dict>
+			<key>selectTo</key>
+			<dict>
+				<key>column</key>
+				<integer>18</integer>
+				<key>line</key>
+				<integer>95</integer>
+			</dict>
+		</dict>
 		<key>GenomeDiff/GenomeDiff-1.00/lib/GenomeDiff/ReferenceSequence.pm</key>
 		<dict>
 			<key>caret</key>
@@ -156,14 +186,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>0</integer>
+				<integer>9</integer>
 				<key>line</key>
-				<integer>207</integer>
+				<integer>342</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>183</integer>
+			<integer>457</integer>
 		</dict>
 		<key>GenomeDiff/lib/GenomeDiff/Output.pm</key>
 		<dict>
@@ -184,14 +214,14 @@
 			<key>caret</key>
 			<dict>
 				<key>column</key>
-				<integer>2</integer>
+				<integer>30</integer>
 				<key>line</key>
-				<integer>76</integer>
+				<integer>129</integer>
 			</dict>
 			<key>firstVisibleColumn</key>
 			<integer>0</integer>
 			<key>firstVisibleLine</key>
-			<integer>25</integer>
+			<integer>123</integer>
 		</dict>
 		<key>GenomeDiff/lib/GenomeDiff/ReferenceSequence.pm</key>
 		<dict>
@@ -250,12 +280,13 @@
 		<string>GenomeDiff/GenomeDiff-1.00/lib/GenomeDiff/ReferenceSequence.pm</string>
 		<string>GenomeDiff/bin/tree_utils</string>
 		<string>GenomeDiff/lib/GenomeDiff/BaseSubstitutionFile.pm</string>
+		<string>GenomeDiff/GenomeDiff-1.00/lib/GenomeDiff/BaseSubstitutionFile.pm</string>
 		<string>GenomeDiff/lib/GenomeDiff/PreterminationTables.pm</string>
 		<string>GenomeDiff/lib/GenomeDiff/SynonymousNonsynonymous.pm</string>
 	</array>
 	<key>showFileHierarchyDrawer</key>
 	<true/>
 	<key>windowFrame</key>
-	<string>{{506, 229}, {735, 649}}</string>
+	<string>{{348, 130}, {876, 713}}</string>
 </dict>
 </plist>
