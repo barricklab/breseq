@@ -625,12 +625,59 @@ namespace breseq {
     return (1 == (rand() % insertion_probability));
   }
 
+  void FastqSimulationUtilities::GaussianRNG::box_muller_transform(int* z0, int* z1) {
+  static const float PI =
+  3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706f;
+    //Two random variables [0, 1) with a precision of .001
+    float u1 = static_cast<float>((rand() % 999) / 1000.f);
+    float u2 = static_cast<float>((rand() % 999) / 1000.f);
+
+    *z0 = round(sqrtf(-2.f * log(u1)) * std::cos(2.f * PI * u2)); 
+    *z1 = round(sqrtf(-2.f * log(u1)) * std::sin(2.f * PI * u2)); 
+
+    return;
+  }
+
+  FastqSimulationUtilities::GaussianRNG::GaussianRNG(int mean, int stdev) 
+    : m_mean(mean)
+    , m_stdev(stdev) {
+
+    srand(time(NULL));
+    GaussianRNG::box_muller_transform(&m_z0, &m_z1);
+    m_z0 = (m_z0 * m_stdev) + m_mean; 
+    m_z1 = (m_z1 * m_stdev) + m_mean; 
+
+    return;
+  }
+
+  int32_t FastqSimulationUtilities::GaussianRNG::sample() {
+    int32_t ret_val = m_z0;
+    m_store = m_z1;
+
+    GaussianRNG::box_muller_transform(&m_z0, &m_z1);
+    m_z0 = (m_z0 * m_stdev) + m_mean; 
+    m_z1 = (m_z1 * m_stdev) + m_mean; 
+
+    return ret_val;
+  }
+
+
+  vector<int32_t> FastqSimulationUtilities::GaussianRNG::samples(int size) {
+    vector<int32_t> ret_val(size, 0);
+    for (uint32_t i = 0; i < size; ++i) {
+      ret_val[i] = this->sample();
+    }
+    return ret_val;
+  }
+
+
   cFastqSequenceVector
   cFastqSequenceVector::simulate_from_sequence(const cAnnotatedSequence &ref_sequence,
                                                const uint32_t &average_coverage,
                                                const uint32_t &read_size,
                                                const bool pair_ended,
-                                               const uint32_t gap_size,
+                                               const uint32_t mean_gap,
+                                               const uint32_t stdev_gap,
                                                const bool verbose)
   {
     //! Step: Initialize return value.
@@ -890,6 +937,7 @@ namespace breseq {
        */
 
       ret_val.resize(num_reads * 2);
+      FastqSimulationUtilities::GaussianRNG gap_size(mean_gap, stdev_gap);
 
       for (uint32_t i = 0; i < num_reads; ++i) {
         cSimFastqSequence *p1 = &ret_val[i];
@@ -908,7 +956,8 @@ namespace breseq {
         p2->m_qualities.resize(read_size);
 
         //! Step: Determine the shifted start position and sequence.
-        uint32_t shift_distance = read_size + gap_size;
+        int random_gap_size = gap_size.sample();
+        uint32_t shift_distance = read_size + random_gap_size;
         if (p1->m_strand == 1) {
           p2->m_strand = -1;
 
@@ -947,6 +996,9 @@ namespace breseq {
 
             if (is_first || is_last || is_other) {
               printf("READ-%i\n", i);
+              printf("\tGap Size: %i\n", random_gap_size);
+              printf("\n");
+
               printf("\tPAIR 1:\n");
               printf("\t\t[start_1]:%i\n", p1->m_start_1);
               printf("\t\t[strand]:%i\n", p1->m_strand);

@@ -560,7 +560,8 @@ int do_simulate_read(int argc, char *argv[])
   ("gff3,3",     "Output Applied GFF3 File. (Flag)", TAKES_NO_ARGUMENT)
   ("verbose,v",  "Verbose Mode (Flag)", TAKES_NO_ARGUMENT)
   ("pair-ended", "Will create two pair ended read files *_1.fastq, *_2.fastq.", TAKES_NO_ARGUMENT)
-  ("gap-size",   "Gap size to use for pair ended reads.", static_cast<uint32_t>(100))
+  ("mean-gap",   "Mean gap size to use for pair ended reads.", static_cast<uint32_t>(100))
+  ("stdev-gap",  "Standard deviation of gap size to use for pair ended reads.", static_cast<uint32_t>(2))
   ;
   options.processCommandArgs(argc, argv);
   
@@ -596,7 +597,8 @@ int do_simulate_read(int argc, char *argv[])
   }
   const bool verbose = options.count("verbose");
   const bool pair_ended = options.count("pair-ended");
-  const uint32_t gap_size = from_string<uint32_t>(options["gap-size"]);
+  const uint32_t mean_gap  = from_string<uint32_t>(options["mean-gap"]);
+  const uint32_t stdev_gap = from_string<uint32_t>(options["stdev-gap"]);
 
 //! Step: Load reference sequence file.
   cReferenceSequences ref_seq_info;
@@ -628,7 +630,8 @@ int do_simulate_read(int argc, char *argv[])
                                                    average_coverage,
                                                    read_length,
                                                    pair_ended,
-                                                   gap_size,
+                                                   mean_gap,
+                                                   stdev_gap,
                                                    verbose);
     cString output(options["output"]);
     const string ext  = output.get_file_extension();

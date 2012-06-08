@@ -64,6 +64,25 @@ class cAnnotatedSequence;
     bool is_random_error_base(char ascii_qscore);
     bool is_random_deletion_base(void);
     bool is_random_insertion_base(void);
+
+    class GaussianRNG {
+      static void box_muller_transform(int* z0, int* z1);  
+      static const double PI;
+
+      public:
+        GaussianRNG(int mean, int stdev);
+        int32_t sample();
+        vector<int32_t> samples(int size);
+
+      private:
+        int m_mean;
+        int m_stdev;
+
+        int m_z0;
+        int m_z1;
+        int m_store;
+
+    };
   }
 
   struct cSimFastqSequence: public cFastqSequence {
@@ -78,7 +97,8 @@ class cAnnotatedSequence;
                                                          const uint32_t &average_coverage,
                                                          const uint32_t &read_size,
                                                          const bool pair_ended = false,
-                                                         const uint32_t gap_size = 0,
+                                                         const uint32_t mean_gap = 0,
+                                                         const uint32_t stdev_gap = 0,
                                                          const bool verbose = false);
 
   };
