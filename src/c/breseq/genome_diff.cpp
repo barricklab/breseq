@@ -2401,26 +2401,14 @@ void GDtoCircos(const vector<string> &gd_file_names,
                 const string &circos_directory,
                 double distance_scale,
                 double feature_scale){
-  //Due to circos' unchangeable method of reversing labels (including glyphs)
-  //after the 6 o'clock position on a graph, I am manually adding which
-  //genomes will be reversed on the MOB graph to compensate for this.
-  
-  //The author emailed me on 30/4/2012 saying that he's working on an
-  //option for enabling/disabling this. Until then, the intelligent method right
-  //now will be kept.
-  
-  //This issue has been fixed as of Circos 0.60 but this method of reversing will
-  //be kept.
-  
-  //Aaron
-  
+    
   cGenomeDiff combined_gd;
   
   int32_t number_of_mutations = 0;
   
   for (size_t i = 0; i < gd_file_names.size(); i++){
     cGenomeDiff single_gd(gd_file_names[i]);
-    combined_gd.merge(single_gd);
+    combined_gd.merge(single_gd, false);
     number_of_mutations += single_gd.mutation_list().size();
   }
   
@@ -2638,14 +2626,8 @@ void GDtoCircos(const vector<string> &gd_file_names,
   make_me = circos_directory + "/data/empty_data.txt";
   empty_file.open(make_me.c_str());
   
-  map <string, pair<int32_t, int32_t> > right_side;
-  map <string, pair<int32_t, int32_t> > left_side;
-  
-  pair<int32_t, int32_t> push_pair;
-  
   //keeps track of current position when examining sequence sizes of genomes
   int32_t current_position = 0;
-  bool push_left = false;
   
   int32_t half_ref_length;
   half_ref_length = int32_t(ref.total_length() / 2) + 1;
@@ -2661,46 +2643,6 @@ void GDtoCircos(const vector<string> &gd_file_names,
     //if seq_size goes past halfway point of total length of genomes,
     //add this sequence and its bounds to the left_side vector.
     current_position += seq_size;
-    
-    
-    if (!push_left){
-      //if current_position equals the cusp, enable left side
-      //and push current sequence to the right.
-      if (current_position == half_ref_length) {
-        push_left = true;
-        
-        push_pair.first = 1;
-        push_pair.second = seq_size;
-        right_side[seq_ids[i]] = push_pair;
-        
-        continue;
-      }
-      //if it's greater, fragment the sequence's bounds.
-      else if (current_position > half_ref_length) {
-        push_left = true;
-        
-        push_pair.first = 1;
-        push_pair.second = half_ref_length - (current_position - seq_size);
-        right_side[seq_ids[i]] = push_pair;
-        
-        push_pair.first = half_ref_length - (current_position - seq_size) + 1;
-        push_pair.second = seq_size;
-        left_side[seq_ids[i]] = push_pair;
-        
-        continue;
-      }
-    }
-    
-    push_pair.first = 1;
-    push_pair.second = seq_size;
-    
-    if (push_left){
-      left_side[seq_ids[i]] = push_pair;
-    }
-    else{
-      right_side[seq_ids[i]] = push_pair;
-    }
-    
   }
   
   karyotype_file.close();
@@ -2740,9 +2682,50 @@ void GDtoCircos(const vector<string> &gd_file_names,
                             "vlred", "vlgreen", "vlblue", "vlorange", "vlpurple",
                             "vvlred", "vvlgreen", "vvlblue",  "vvlorange", "vvlpurple"};
   
+  map<string,bool> pre_assigned_mob_colors = make_map<string,bool>
+    ("IS1"  , true )("IS186", true )("IS3"  , true  ) 
+    ("IS150", true )("IS911", true )("IS4"  , true  )
+    ("IS2"  , true )("IS30" , true )("IS600", true  )
+  ;
+  
   vector<string> colors(c_colors, c_colors + 35);
   string color;
   int32_t next_color = 0;
+  
+  //reference sequence MOBs
+  for(size_t i = 0; i < ref.size(); i++){
+    cAnnotatedSequence& ref_seq = ref[i];
+    
+    for(cSequenceFeatureList::iterator it = ref_seq.m_repeats.begin(); it != ref_seq.m_repeats.end(); it++){
+      cSequenceFeature& seq_feature = **it;
+      int32_t middle = int32_t(seq_feature.m_location.get_start_1() + seq_feature.m_location.get_end_1()) / 2;
+      
+      string color;
+      
+      // Color assignment -- prefer preassigned, then grab next from list
+      // and assign that color permanently to copies of this repeat
+      if (pre_assigned_mob_colors.count(seq_feature["name"])){
+        color = seq_feature["name"];
+        mob_colors[seq_feature["name"]] = color;
+      }
+      else if (mob_colors.count(seq_feature["name"]) == 0){
+        color = colors[next_color];
+        mob_colors[seq_feature["name"]] = color;
+        next_color++;
+      }
+      else{
+        color = mob_colors[seq_feature["name"]];
+      }
+      
+      mob_file << ref_seq.m_seq_id << " " <<
+      middle << " " <<
+      middle << " " <<
+      "i" << ((seq_feature.m_location.m_strand == 1)? "right" : "left" ) << " " <<
+      "color=" << color << endl;
+    }
+  }
+
+  
   
   diff_entry_list_t gd_data = combined_gd.mutation_list();
   
@@ -2794,6 +2777,50 @@ void GDtoCircos(const vector<string> &gd_file_names,
                     diff["position"] << " " <<
                     from_string<int32_t>(diff["position"]) + width << " " <<
                     "color=red" << endl;
+      
+      // Show new IS for IS mediated deletions
+      if (diff.count("mediated")) {
+        
+        if (mob_colors.count(diff["mediated"])) { 
+          // either the end or the beginning is in an IS element
+          
+          cSequenceFeaturePtr feat1 = cReferenceSequences::find_closest_repeat_region_boundary(n(diff["position"]) - 1, ref[diff["seq_id"]].m_repeats, 0,-1);
+          cSequenceFeaturePtr feat2 = cReferenceSequences::find_closest_repeat_region_boundary(n(diff["position"]) + n(diff["size"]) + 1 - 1, ref[diff["seq_id"]].m_repeats, 0,1);
+
+          if (!feat1.get() && !feat2.get()) {
+            cerr << diff << endl;
+            ASSERT(false,"Could not find mediating repeat.");
+          }  
+          
+          cSequenceFeature& seq_feature = feat1.get() ? *(feat1.get()) : *(feat2.get());
+          
+          cAnnotatedSequence ref_seq = ref[diff["seq_id"]];
+          
+          int32_t middle = feat1.get() ? n(diff["position"]) + n(diff["size"]) - 1 : n(diff["position"]);
+          
+          string color;
+          
+          // Color assignment -- prefer preassigned, then grab next from list
+          // and assign that color permanently to copies of this repeat
+          if (pre_assigned_mob_colors.count(seq_feature["name"])){
+            color = seq_feature["name"];
+          }
+          else if (mob_colors.count(seq_feature["name"]) == 0){
+            color = colors[next_color];
+            mob_colors[seq_feature["name"]] = color;
+            next_color++;
+          }
+          else{
+            color = mob_colors[seq_feature["name"]];
+          }
+          
+          mob_file << ref_seq.m_seq_id << " " <<
+          middle << " " <<
+          middle << " " <<
+          "o" << ((seq_feature.m_location.m_strand == 1)? "right" : "left" ) << " " <<
+          "color=" << color << endl;
+        }
+      }
     }
     else if(diff._type == SNP || diff._type == SUB){
       if (diff["snp_type"] == "synonymous"){
@@ -2815,36 +2842,12 @@ void GDtoCircos(const vector<string> &gd_file_names,
     }
     else if(diff._type == MOB){
       
-      //if mob is on left side of graph...reverse direction
-      if (left_side.count(diff["seq_id"]) > 0){
-        if (left_side[diff["seq_id"]].first <= from_string<int32_t>(diff["position"]) &&
-            from_string<int32_t>(diff["position"]) <= left_side[diff["seq_id"]].second){
-          if( diff["strand"] == "1"){
-            direction = "left";
-          }
-          else{
-            direction = "right";
-          }
-        }
-        else{
-          if ( diff["strand"] == "1"){
-            direction = "right";
-          }
-          else{
-            direction = "left";
-          }
-        }
+      // Color assignment -- prefer preassigned, then grab next from list
+      // and assign that color permanently to copies of this repeat
+      if (pre_assigned_mob_colors.count(diff["repeat_name"])){
+        color = diff["repeat_name"];
       }
-      else{
-        if( diff["strand"] == "1"){
-          direction = "right";
-        }
-        else{
-          direction = "left";
-        }
-      }
-      
-      if (mob_colors.count(diff["repeat_name"]) == 0){
+      else if (mob_colors.count(diff["repeat_name"]) == 0){
         color = colors[next_color];
         mob_colors[diff["repeat_name"]] = color;
         next_color++;
@@ -2856,66 +2859,11 @@ void GDtoCircos(const vector<string> &gd_file_names,
       mob_file << diff["seq_id"] << " " <<
                   diff["position"] << " " <<
                   diff["position"] << " " <<
-                  "o" << direction << " " <<
+                  "o" << ((n(diff["strand"]) == 1)? "right" : "left" ) << " " <<
                   "color=" << color << endl;
     }
   }
   
-  //reference sequence MOBs
-  for(size_t i = 0; i < ref.size(); i++){
-    cAnnotatedSequence ref_seq = ref[i];
-    
-    for(cSequenceFeatureList::iterator it = ref_seq.m_repeats.begin(); it != ref_seq.m_repeats.end(); it++){
-      cSequenceFeature seq_feature = **it;
-      int32_t middle = int32_t(seq_feature.m_location.get_start_1() + seq_feature.m_location.get_end_1()) / 2;
-      
-      string direction;
-      string color;
-      
-      if (left_side.count(ref_seq.m_seq_id) > 0){
-        if (left_side[ref_seq.m_seq_id].first <= middle &&
-            middle <= left_side[ref_seq.m_seq_id].second){
-          if (seq_feature.m_location.get_strand() == 1){
-            direction = "left";
-          }
-          else{
-            direction = "right";
-          }
-        }
-        else{
-          if (seq_feature.m_location.get_strand() == 1){
-            direction = "right";
-          } 
-          else{
-            direction = "left";
-          }
-        }
-      }
-      else{
-        if (seq_feature.m_location.get_strand() == 1){
-          direction = "right";
-        } 
-        else{
-          direction = "left";
-        }
-      }
-      
-      if (mob_colors.count(seq_feature["name"]) == 0){
-        color = colors[next_color];
-        mob_colors[seq_feature["name"]] = color;
-        next_color++;
-      }
-      else{
-        color = mob_colors[seq_feature["name"]];
-      }
-      
-      mob_file << ref_seq.m_seq_id << " " <<
-                  seq_feature.m_location.get_start_1() << " " <<
-                  seq_feature.m_location.get_end_1() << " " <<
-                  "i" << direction << " " <<
-                  "color=" << color << endl;
-    }
-  }
   
   indel_file.close();
   mob_file.close();

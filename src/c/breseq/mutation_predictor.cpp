@@ -237,7 +237,7 @@ namespace breseq {
     mc.remove_if(cDiffEntry::field_exists("reject"));
 
 		// DEL prediction:
-		// (1) there is a junction that exactly crosses the deletion boundary deletion
+		// (1) there is a junction that exactly crosses the deletion boundary
 		// (2) there is is no junction, but both ends of the deletion are in repeat sequences
 		// (3) there is a junction between unique sequence and a repeat element
 
@@ -289,7 +289,8 @@ namespace breseq {
 				if (jc_item["side_1_seq_id"] != mut["seq_id"] || jc_item["side_2_seq_id"] != mut["seq_id"])  {
           // Iterate it ONLY if we haven't erased something
           if(jc_it_iterator)jc_it++;  
-          continue;  }
+          continue;  
+        }
 					
         
 				// We always know that the lower coordinate part of the junction is first, hence these
@@ -338,6 +339,7 @@ namespace breseq {
         if(jc_it_iterator)jc_it++;
 			}
 
+//      -> //need to have within repeat also return the distance to the end flushness
       cSequenceFeature* r1_pointer = within_repeat(mut["seq_id"], n(mut["position"]));
       cSequenceFeature* r2_pointer = within_repeat(mut["seq_id"], n(mut["position"]) + n(mut["size"]));
       
@@ -453,9 +455,13 @@ namespace breseq {
 				if (verbose)
 					cout << "Pass 5" << endl;
 
+        
 				// need to adjust the non-unique coords
 				if (redundant_deletion_side == -1)
 				{
+//         -> // Need to get actual copy that it is within here, instead of other copies.
+          int32_t discrepancy_dist = r.get_end_1() - n(j[j["_is_interval"] + "_position"]);
+          
 					uint32_t move_dist = r.get_end_1() + 1 - n(mut["position"]);
 					mut["position"] = s(n(mut["position"]) + move_dist);
 					mut["size"] = s(n(mut["size"]) - move_dist);
