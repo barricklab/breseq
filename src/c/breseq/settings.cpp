@@ -261,7 +261,7 @@ namespace breseq
   
   void Settings::command_line_run_header()
   {
-    cout << output_divider << endl;
+    cerr << output_divider << endl;
     fprintf(stderr, "%s  %s   %s\n", PACKAGE_STRING, HG_REVISION, PACKAGE_URL);
     fprintf(stderr, "\n");
     fprintf(stderr, "Authors: Barrick JE, Borges JJ, Colburn GR, Knoester DB, Meyer AG, Reba A, Strand MD\n");
@@ -273,7 +273,7 @@ namespace breseq
     fprintf(stderr, "\n");
     fprintf(stderr, "Copyright (c) 2008-2010 Michigan State University\n");
     fprintf(stderr, "Copyright (c) 2011      The University of Texas at Austin\n");
-    cout << output_divider << endl;
+    cerr << output_divider << endl;
   }
 
 	void Settings::pre_option_initialize(int argc, char* argv[])
