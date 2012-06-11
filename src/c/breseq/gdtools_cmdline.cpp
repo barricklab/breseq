@@ -169,13 +169,11 @@ int do_apply(int argc, char *argv[])
   UserOutput uout("APPLY");
 
   cReferenceSequences ref_seq_info;
-  cReferenceSequences new_ref_seq_info;
 
   const vector<string>& ref_paths = from_string<vector<string> >(options["reference"]);
   uout("Reading input reference files", ref_paths);
   ref_seq_info.LoadFiles(ref_paths);
-  new_ref_seq_info.LoadFiles(ref_paths);
-
+  cReferenceSequences new_ref_seq_info = cReferenceSequences::deep_copy(ref_seq_info);
 
   uout("Reading input GD file", options.getArgv(0));
   cGenomeDiff gd(options.getArgv(0));
