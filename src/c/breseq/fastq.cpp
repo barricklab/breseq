@@ -558,7 +558,8 @@ namespace breseq {
     ('A', "TCG")
     ('T', "ACG")
     ('C', "ATG")
-    ('G', "ATC");
+    ('G', "ATC")
+    ('N', "ACTG");
 
   char FastqSimulationUtilities::random_insertion_base_options[] =
   {'A', 'C', 'T', 'G'};
@@ -588,8 +589,8 @@ namespace breseq {
   {
     ASSERT(random_snp_base_options.count(not_this_base), "Error!");
 
-    //Roll from 0 to 2.
-    return random_snp_base_options[not_this_base][rand() % 3];
+    uint32_t size = random_snp_base_options[not_this_base].size();
+    return random_snp_base_options[not_this_base][rand() % size];
   }
 
   char FastqSimulationUtilities::get_random_insertion_base(void)

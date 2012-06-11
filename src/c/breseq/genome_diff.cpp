@@ -3269,7 +3269,6 @@ void cGenomeDiff::add_reject_reasons(cDiffEntry item, const string& reject)
 // When calling this function make SURE that you load ref_seq_info and
 // new_ref_seq_info seperately.
 //
-//  TODO: Write a deep copy constructor for cReferenceSequences 
 void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose)
 {    
   uint32_t count_SNP = 0, count_SUB = 0, count_INS = 0, count_DEL = 0, count_AMP = 0, count_INV = 0, count_MOB = 0, count_CON = 0;

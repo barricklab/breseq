@@ -596,7 +596,7 @@ int do_simulate_read(int argc, char *argv[])
     return -1;
   }
   const bool verbose = options.count("verbose");
-  const bool pair_ended = options.count("pair-ended");
+  const bool pair_ended = options.count("pair-ended") ? true : false;
   const uint32_t mean_gap  = from_string<uint32_t>(options["mean-gap"]);
   const uint32_t stdev_gap = from_string<uint32_t>(options["stdev-gap"]);
 
