@@ -1119,7 +1119,7 @@ int do_download(int argc, char *argv[])
             cString("wget --spider \"%s\"", url.c_str()) :
             cString("wget -O %s \"%s\"",file_path.c_str(), url.c_str());
 
-      const bool is_url_error = SYSTEM(wget_cmd, false, true) != 0;
+      const bool is_url_error = SYSTEM(wget_cmd, false, false, false) != 0;
       if (is_url_error) {
         error_report[file_name]["INVALID_URL"]  = url;
         continue;
@@ -1131,7 +1131,7 @@ int do_download(int argc, char *argv[])
         if (options.count("test")) {
           cout << gunzip_cmd << endl;
         } else {
-          const bool is_gunzip_error = SYSTEM(gunzip_cmd, false, true) != 0;
+          const bool is_gunzip_error = SYSTEM(gunzip_cmd, false, false, false) != 0;
           if (is_gunzip_error) {
             error_report[file_name]["CORRUPT_GZIP_FILE"] = file_path;
           } else {
