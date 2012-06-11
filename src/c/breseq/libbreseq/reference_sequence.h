@@ -134,7 +134,6 @@ namespace breseq {
       // Could add accessors that convert strings to numbers...
       cLocation m_location;
       bool m_pseudo;
-
       map<string, vector<string> > m_gff_attributes;
     
       cSequenceFeature() : m_pseudo(0) {}
@@ -142,7 +141,8 @@ namespace breseq {
       cSequenceFeature(const cSequenceFeature& copy) 
         : sequence_feature_map_t(copy)
         , m_location(copy.m_location)
-        , m_pseudo(copy.m_pseudo) { }
+        , m_pseudo(copy.m_pseudo)
+        , m_gff_attributes(copy.m_gff_attributes) { }
 
       bool operator<(const cSequenceFeature& _in) const
       {
@@ -367,10 +367,12 @@ namespace breseq {
       static cAnnotatedSequence deep_copy(cAnnotatedSequence in) {
         cAnnotatedSequence copy;
 
+
         copy.m_length = in.m_length;
         copy.m_is_circular = in.m_is_circular;
         copy.m_description = in.m_description;
         copy.m_seq_id = in.m_seq_id;
+        copy.m_fasta_sequence = in.m_fasta_sequence;
 
         cSequenceFeatureList::iterator it;
         //Features.
@@ -615,6 +617,11 @@ namespace breseq {
 
     static cReferenceSequences deep_copy(const cReferenceSequences& in) {
       cReferenceSequences copy;
+
+      copy.m_seq_id_to_index =  in.m_seq_id_to_index;
+      copy.m_seq_id_loaded   =  in.m_seq_id_loaded; 
+      copy.m_index_id        =  in.m_index_id;
+      copy.m_initialized     =  in.m_initialized;
 
       copy.resize(in.size());
       for (uint32_t i = 0; i < in.size(); ++i) {
