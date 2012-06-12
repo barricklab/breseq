@@ -267,30 +267,46 @@ namespace breseq {
         return m_fasta_sequence.m_sequence.substr(pos_1-1, 1)[0];
       }
 
-      string get_circular_sequence_1(const size_t start_1, const size_t size) const
+      string get_circular_sequence_1(uint32_t start_1, uint32_t size) const
       {
-        const string &sequence = m_fasta_sequence.m_sequence;
-        const size_t seq_size = sequence.size();
-        
-        uint32_t uRealStart_1 = start_1;
-        if(start_1 > seq_size)  {
-          uRealStart_1 = start_1 - seq_size;  }
-        
-        const size_t start_0 = uRealStart_1 - 1;
-        const size_t max_pos = start_0 + size;
-        
-        const int32_t size_diff = seq_size - max_pos;
+        const string &seq = m_fasta_sequence.m_sequence;
 
-        string ret_val("");
-        ret_val.reserve(size);
-        if (size_diff >= 0) {
-          ret_val = sequence.substr(start_0, size);
-        } else {
-          ret_val.append(sequence.substr(start_0, seq_size + size_diff));
-          ret_val.append(sequence.substr(0, abs(size_diff)));
+        if (start_1 > seq.size()) {
+          start_1 = start_1 % seq.size();
         }
 
-        return ret_val;
+        try {
+          string ret_val = seq.substr(start_1, size);
+
+          if (size > ret_val.size()) {
+            ret_val.append(seq.substr(0, size - ret_val.size()));
+          }
+
+          return ret_val;
+        } catch(...) {
+          ERROR("[start_1]: " + to_string(start_1) +
+                "[size]:    " + to_string(size));
+        }
+
+        
+       // uint32_t uRealStart_1 = start_1;
+       // if(start_1 > seq_size)  {
+       //   uRealStart_1 = start_1 - seq_size;  }
+       // 
+       // const size_t start_0 = uRealStart_1 - 1;
+       // const size_t max_pos = start_0 + size;
+       // 
+       // const int32_t size_diff = seq_size - max_pos;
+
+       // string ret_val("");
+       // ret_val.reserve(size);
+       // if (size_diff >= 0) {
+       //   ret_val = sequence.substr(start_0, size);
+       // } else {
+       //   ret_val.append(sequence.substr(start_0, seq_size + size_diff));
+       //   ret_val.append(sequence.substr(0, abs(size_diff)));
+       // }
+
       }
 
       size_t get_sequence_size(void) const
