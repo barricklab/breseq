@@ -2207,19 +2207,13 @@ int breseq_default_action(int argc, char* argv[])
 		// merge all of the evidence GenomeDiff files into one...
 		create_path(settings.evidence_path);
     
-    cGenomeDiff jc_gd;
-    if ( file_exists(settings.jc_genome_diff_file_name.c_str()) ) {
-      jc_gd.read(settings.jc_genome_diff_file_name);
-      
-      // Add read count information to the JC entries -- call fails if no BAM file exists
-      if (file_exists(settings.junction_bam_file_name.c_str()) ) {
-        assign_junction_read_counts(settings, jc_gd);
-      }
-    }
+    cGenomeDiff jc_gd(settings.jc_genome_diff_file_name);
+         
+    // Add read count information to the JC entries -- call fails if no predictions, because BAM does not exist
+    if ( jc_gd.list().size() )
+      assign_junction_read_counts(settings, jc_gd);
     
-    cGenomeDiff ra_mc_gd;
-    if ( file_exists(settings.ra_mc_genome_diff_file_name.c_str()) ) 
-      ra_mc_gd.read(settings.ra_mc_genome_diff_file_name); 
+    cGenomeDiff ra_mc_gd(settings.ra_mc_genome_diff_file_name);
     
     cGenomeDiff evidence_gd;
     evidence_gd.fast_merge(jc_gd);
