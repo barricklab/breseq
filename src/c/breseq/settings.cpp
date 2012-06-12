@@ -543,7 +543,8 @@ namespace breseq
 		this->evidence_path = this->output_path + "/" + this->local_evidence_path;
 		this->evidence_genome_diff_file_name = this->evidence_path + "/evidence.gd";
 		this->final_genome_diff_file_name = this->output_path + "/output.gd";
-
+		this->annotated_genome_diff_file_name = this->evidence_path + "/annotated.gd";
+    
 		this->local_coverage_plot_path = "evidence";
 		this->coverage_plot_path = this->output_path + "/" + this->local_coverage_plot_path;
     this->coverage_plot_r_script_file_name = this->program_data_path + "/plot_coverage.r";    

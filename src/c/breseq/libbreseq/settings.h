@@ -388,6 +388,7 @@ namespace breseq
 		string evidence_path;
     string evidence_genome_diff_file_name;
     string final_genome_diff_file_name;
+    string annotated_genome_diff_file_name;
 
 		string local_coverage_plot_path;
 		string coverage_plot_path;

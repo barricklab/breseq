@@ -11,6 +11,9 @@
 COMMONDIR=`dirname ${BASH_SOURCE}`
 source ${COMMONDIR}/test.config
 
+OUTPUT_GD="output/evidence/annotated.gd"
+EXPECTED_GD="expected.gd"
+
 # path to breseq:
 if [ "$TESTBINPREFIX" == "" ]
 then
@@ -41,7 +44,7 @@ do_build() {
 #    for i in `find . ${FILE_PATTERN}`; do
 #       ${HASH} $i
 #    done > ${EXPECTED}
-    cp output/output.gd expected.gd
+    cp ${OUTPUT_GD} ${EXPECTED_GD}
     popd > /dev/null
 }
 
@@ -81,14 +84,14 @@ do_check() {
     pushd $1 > /dev/null
     
 #   CHK=`${HASH} -s --check ${EXPECTED} 2>&1`
-	CHK=`${DIFF_BIN} output/output.gd expected.gd`
+	CHK=`${DIFF_BIN} ${OUTPUT_GD} ${EXPECTED_GD}`
  	if [[ "$?" -ne 0 || $CHK ]]; then
         echo ""
         echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         echo "Failed check"
     	#${HASH} --check ${EXPECTED}
-    	echo "${DIFF_BIN} output/output.gd expected.gd"
-    	${DIFF_BIN} output/output.gd expected.gd
+    	echo "${DIFF_BIN} ${OUTPUT_GD} ${EXPECTED_GD}"
+    	${DIFF_BIN} ${OUTPUT_GD} ${EXPECTED_GD}
         echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 
         echo ""
         popd > /dev/null        

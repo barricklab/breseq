@@ -237,7 +237,7 @@ namespace breseq {
   
   // Repeat Feature at Position
   // Look through ref_seq_info for repeat_name.
-  // Using the strand, insert the repeat feaure at supplied position.
+  // Using the strand, insert the repeat feature at supplied position.
   // Also repeat any features inside the repeat.
   // verbose outputs messages to console.
   void cAnnotatedSequence::repeat_feature_1(int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& ref_seq_info, const string &repeat_name, int8_t strand, int32_t region_pos, bool verbose)
@@ -697,11 +697,11 @@ namespace breseq {
       getline(ss, feature["score"], '\t');
       // Column 7: "strand"
       getline(ss, strand, '\t');
-      feature.m_location.set_strand( 0);
+      feature.m_location.set_strand(0);
       if (strand == "+")
-        feature.m_location.set_strand( 1);
+        feature.m_location.set_strand(1);
       else if (strand == "-")
-        feature.m_location.set_strand( -1);        
+        feature.m_location.set_strand(-1);        
       // Column 8: "phase"
       getline(ss, feature["phase"], '\t');
       // Column 9: "attributes"
@@ -848,7 +848,7 @@ void cReferenceSequences::WriteGFF( const string &file_name, bool verbose ){
       if (feat.count("type"))   columns[TYPE] = feat["type"];
       //Note: Will add start_1 and end_1 below.
       if (feat.count("score"))  columns[SCORE] = feat["score"];
-      columns[STRAND] = feat.get_strand() > 0 ? "+" : "-";
+      columns[STRAND] = feat.is_top_strand() ? "+" : "-";
       if (feat.count("phase"))  columns[PHASE] = feat["phase"];
 
       //Attributes
@@ -1253,8 +1253,11 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
     if (feature.get_end_1() < feature.get_start_1()) {
       cSequenceFeaturePtr bonus_circular_feature(new cSequenceFeature);
       *bonus_circular_feature = feature;
-      bonus_circular_feature->m_location.set_start_1( bonus_circular_feature->get_start_1() - s.m_length + 1);
-      feature.m_location.set_end_1( feature.m_location.get_end_1() + s.m_length);
+      bonus_circular_feature->m_location = cLocation(
+                                                     bonus_circular_feature->get_start_1() - s.m_length + 1, 
+                                                     feature.m_location.get_end_1() + s.m_length,
+                                                     bonus_circular_feature->m_location.get_strand()
+                                                     );
       s.feature_push_front( bonus_circular_feature );
     }
     
@@ -1693,7 +1696,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     if (prev_gene.name.size() > 0)
     {
       mut["gene_position"] += "intergenic (";
-      mut["gene_position"] += (prev_gene.m_location.get_strand()) ? "+" : "-"; //hyphen
+      mut["gene_position"] += prev_gene.is_top_strand() ? "+" : "-"; //hyphen
       mut["gene_position"] += to_string(start - prev_gene.get_end_1());
     }
     else
@@ -1703,7 +1706,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     mut["gene_position"] += intergenic_seperator;
     if (next_gene.name.size() > 0)
     {
-      mut["gene_position"] += (next_gene.get_strand()) ? "-" : "+"; //hyphen
+      mut["gene_position"] += next_gene.is_top_strand() ? "-" : "+"; //hyphen
       mut["gene_position"] += to_string(next_gene.get_start_1() - end);
     }
     else
@@ -1731,7 +1734,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     //#added for gene table
     mut["gene_list"] = gene.name;
 
-    int32_t within_gene_start = (gene.get_strand()) ? gene.get_start_1() : gene.get_end_1();
+    int32_t within_gene_start = gene.is_top_strand() ? gene.get_start_1() : gene.get_end_1();
 
     if (start == end)
     {
@@ -1747,7 +1750,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     }
 
     string gene_nt_size = to_string(gene.get_end_1() - gene.get_start_1() + 1);
-    string gene_strand_char = (gene.get_strand() == +1) ? ">" : "<"; 
+    string gene_strand_char = gene.is_top_strand() ? ">" : "<"; 
     mut["gene_strand"] = gene_strand_char;
     
     // ...but the gene is a pseudogene or not a protein coding gene
@@ -1781,7 +1784,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     mut["codon_position"] = to_string<int32_t>(codon_pos_1); // 1 indexed
     
     string& ref_string = (*this)[seq_id].m_fasta_sequence.m_sequence;
-    string codon_seq = (gene.get_strand())
+    string codon_seq = gene.is_top_strand()
       ? ref_string.substr(gene.get_start_1() + 3 * (from_string<uint32_t>(mut["aa_position"]) - 1) - 1, 3)
       : reverse_complement(ref_string.substr(gene.get_end_1() - 3 * from_string<uint32_t>(mut["aa_position"]), 3));
 
@@ -1790,8 +1793,8 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
 
     mut["codon_new_seq"] = codon_seq;
     //#remember to revcom the change if gene is on opposite strand
-    mut["codon_new_seq"][from_string<uint32_t>(mut["codon_position"]) - 1] = gene.get_strand() ?
-      mut["new_seq"][0]
+    mut["codon_new_seq"][from_string<uint32_t>(mut["codon_position"]) - 1] = gene.is_top_strand() 
+      ? mut["new_seq"][0]
       : reverse_complement(mut["new_seq"])[0];
     mut["aa_new_seq"] =  translate_codon(mut["codon_new_seq"], gene.translation_table, codon_pos_1);
 

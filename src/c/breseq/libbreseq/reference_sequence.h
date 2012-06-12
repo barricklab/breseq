@@ -41,7 +41,8 @@ namespace breseq {
      
     cLocation() : m_start(0), m_end(0), m_strand(0) {};
     cLocation(int32_t start, int32_t end, int8_t strand) 
-      : m_start(start), m_end(end), m_strand(strand) { }
+      : m_start(start), m_end(end), m_strand(strand) { 
+    }
 
     cLocation(const cLocation& copy)
       : m_start(copy.m_start)
@@ -55,7 +56,6 @@ namespace breseq {
       m_end           = assign.m_end;
       m_strand        = assign.m_strand;
       m_sub_locations = assign.m_sub_locations; 
-
       return *this;
     }
 
@@ -160,11 +160,13 @@ namespace breseq {
       }
     
       //<! accessors
-      int32_t get_start_1()  const { return m_location.get_start_1();  }
-      int32_t get_end_1()    const { return m_location.get_end_1();    }
-      int32_t get_strand() const { return m_location.get_strand(); }
+      int32_t get_start_1()     const { return m_location.get_start_1();  }
+      int32_t get_end_1()       const { return m_location.get_end_1();    }
+      int32_t get_strand()      const { return m_location.get_strand();   }
+      bool is_top_strand()      const { return get_strand() == +1;        }
+      bool is_bottom_strand()   const { return get_strand() == -1;        }
 
-      //Mark it as pseudo
+    //Mark it as pseudo
       void flag_pseudo(bool verbose=false)
       {
         //If this feature is already pseudo or a region, do nothing.

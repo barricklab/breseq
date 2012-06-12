@@ -1518,7 +1518,7 @@ namespace breseq {
             }
             // Don't count if we have genes on both strands overlapping same nucleotide
             else if (seq_bcs[pos_0] != no_CDS) {
-              if ((loc.get_strand() == 1) && (seq_bcs[pos_0] == reverse) )
+              if ((loc.get_strand() == +1) && (seq_bcs[pos_0] == reverse) )
                 seq_bcs[pos_0] = conflict;
               if ((loc.get_strand() == -1) && (seq_bcs[pos_0] == forward) )
                 seq_bcs[pos_0] = conflict;
