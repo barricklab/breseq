@@ -626,15 +626,15 @@ namespace breseq {
     return (1 == (rand() % insertion_probability));
   }
 
-  void FastqSimulationUtilities::GaussianRNG::box_muller_transform(int* z0, int* z1) {
+  void FastqSimulationUtilities::GaussianRNG::box_muller_transform(float* z0, float* z1) {
   static const float PI =
   3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706f;
     //Two random variables in the interval (0, 1] with a precision of .001
     float u1 = static_cast<float>((rand() % 1000 + 1) / 1000.f);
     float u2 = static_cast<float>((rand() % 1000 + 1) / 1000.f);
 
-    *z0 = round(sqrtf(-2.f * log(u1)) * std::cos(2.f * PI * u2)); 
-    *z1 = round(sqrtf(-2.f * log(u1)) * std::sin(2.f * PI * u2)); 
+    *z0 = sqrtf(-2.f * log(u1)) * std::cos(2.f * PI * u2); 
+    *z1 = sqrtf(-2.f * log(u1)) * std::sin(2.f * PI * u2); 
 
     return;
   }
@@ -652,7 +652,7 @@ namespace breseq {
   }
 
   int32_t FastqSimulationUtilities::GaussianRNG::sample() {
-    int32_t ret_val = m_z0;
+    int32_t ret_val = round(m_z0);
     m_store = m_z1;
 
     GaussianRNG::box_muller_transform(&m_z0, &m_z1);
@@ -684,9 +684,6 @@ namespace breseq {
     //! Step: Initialize return value.
     const size_t ref_sequence_size = ref_sequence.get_sequence_size();
     size_t num_reads = ceil(ref_sequence_size / read_size) * average_coverage;
-    if (pair_ended) {
-      num_reads = ceil(num_reads / 2);
-    }
 
     cFastqSequenceVector ret_val;
     ret_val.resize(num_reads);
@@ -758,6 +755,8 @@ namespace breseq {
         fs->m_strand = -1;
         ref_segment = reverse_complement(ref_segment);
       }
+
+      sprintf(fs->m_name_plus, "[strand]:%i\t[start_1]:%u", fs->m_strand, fs->m_start_1);
 
       //! Algorithm Step 2:
       //Initializations for iterating through bases.
@@ -884,6 +883,8 @@ namespace breseq {
 
     if (pair_ended) {
       printf("***Creating paired reads.\n");
+      printf("mean  gap size: %u\n", mean_gap);
+      printf("stdev gap size: %u\n", stdev_gap);
       /*!
         Simulate pair-ended reads:
           Assume the reads created above are the first half, pair_1, we now loop
@@ -946,26 +947,29 @@ namespace breseq {
 
         //! Step: Assign values from pair 1 to pair 2.
         p2->m_name = p1->m_name;
-        p2->m_name_plus = p1->m_name_plus;
 
         p1->m_name += "/1";
         p2->m_name += "/2";
-
-        p2->m_start_1 = p1->m_start_1; //Will shift position later.
 
         p2->m_sequence.resize(read_size);
         p2->m_qualities.resize(read_size);
 
         //! Step: Determine the shifted start position and sequence.
-        int random_gap_size = gap_size.sample();
-        uint32_t shift_distance = read_size + random_gap_size;
+        int sampled_gap_size = gap_size.sample();
+
         if (p1->m_strand == 1) {
           p2->m_strand = -1;
 
-          p2->m_start_1 += shift_distance;
+          p2->m_start_1 = p1->m_start_1 + (sampled_gap_size + read_size);
+
+          /* Adjust start_1 values that are larger than the reference size 
+           * to now start toward the beginning. */
+          if (p2->m_start_1 > ref_sequence_size) {
+            p2->m_start_1 = p2->m_start_1 % ref_sequence_size;
+          }
 
           p2->m_sequence =
-              ref_sequence.get_circular_sequence_1(p2->m_start_1, read_size);
+                ref_sequence.get_circular_sequence_1(p2->m_start_1, read_size);
 
           p2->m_sequence = reverse_complement(p2->m_sequence);
         }
@@ -973,16 +977,21 @@ namespace breseq {
         if (p1->m_strand == -1) {
           p2->m_strand = 1;
 
-          /* Edge cases where start_1 is too close to the beginning of the
-            sequence and we must start from the end of the sequence. */
-          if (shift_distance > p2->m_start_1) {
+          /* Adjust start_1 values that would of become negative after
+           * shift it's position */
+          if (p1->m_start_1 < sampled_gap_size + read_size) {
             p2->m_start_1 += ref_sequence_size;
           }
-          p2->m_start_1 -= shift_distance;
+          p2->m_start_1 = p1->m_start_1 - (sampled_gap_size + read_size);
 
           p2->m_sequence =
               ref_sequence.get_circular_sequence_1(p2->m_start_1, read_size);
         }
+
+        sprintf(p2->m_name_plus, "[strand]:%i\t[start_1]:%u\t[gap]:%u", 
+            p2->m_strand, p2->m_start_1, sampled_gap_size);
+        sprintf(p1->m_name_plus, "[strand]:%i\t[start_1]:%u\t[gap]:%u", 
+            p1->m_strand, p1->m_start_1, sampled_gap_size);
 
         //! Step: Assign random quality scores to pair 2.
         for (uint32_t k = 0; k < read_size; ++k) {
@@ -997,7 +1006,7 @@ namespace breseq {
 
             if (is_first || is_last || is_other) {
               printf("READ-%i\n", i);
-              printf("\tGap Size: %i\n", random_gap_size);
+              printf("\tGap Size: %i\n", sampled_gap_size);
               printf("\n");
 
               printf("\tPAIR 1:\n");

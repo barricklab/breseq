@@ -66,7 +66,7 @@ class cAnnotatedSequence;
     bool is_random_insertion_base(void);
 
     class GaussianRNG {
-      static void box_muller_transform(int* z0, int* z1);  
+      static void box_muller_transform(float* z0, float* z1);  
       static const double PI;
 
       public:
@@ -75,12 +75,12 @@ class cAnnotatedSequence;
         vector<int32_t> samples(int size);
 
       private:
-        int m_mean;
-        int m_stdev;
+        float m_mean;
+        float m_stdev;
 
-        int m_z0;
-        int m_z1;
-        int m_store;
+        float m_z0;
+        float m_z1;
+        float m_store;
 
     };
   }
