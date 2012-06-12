@@ -554,14 +554,14 @@ int do_simulate_read(int argc, char *argv[])
   options
   ("genome_diff,g", "Genome diff file.")
   ("reference,r", "Reference file for input.")
-  ("coverage,c", "Average coverage value to simulate.", static_cast<uint32_t>(10))
-  ("length,l",   "Read length to simulate.", static_cast<uint32_t>(36))
+  ("coverage,c", "Average coverage value to simulate.", static_cast<uint32_t>(80))
+  ("length,l",   "Read length to simulate.", static_cast<uint32_t>(100))
   ("output,o",   "Output fastq file name.")
   ("gff3,3",     "Output Applied GFF3 File. (Flag)", TAKES_NO_ARGUMENT)
   ("verbose,v",  "Verbose Mode (Flag)", TAKES_NO_ARGUMENT)
   ("pair-ended", "Will create two pair ended read files *_1.fastq, *_2.fastq.", TAKES_NO_ARGUMENT)
   ("mean-gap",   "Mean gap size to use for pair ended reads.", static_cast<uint32_t>(100))
-  ("stdev-gap",  "Standard deviation of gap size to use for pair ended reads.", static_cast<uint32_t>(2))
+  ("stdev-gap",  "Standard deviation of gap size to use for pair ended reads.", static_cast<uint32_t>(10))
   ;
   options.processCommandArgs(argc, argv);
   
