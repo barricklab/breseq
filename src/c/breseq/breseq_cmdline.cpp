@@ -1528,9 +1528,49 @@ int breseq_default_action(int argc, char* argv[])
 	{
 		create_path(settings.reference_alignment_path);
 
+    if (settings.bwa) {
+      string command = "bwa index " + settings.reference_fasta_file_name;
+      SYSTEM(command.c_str());
+
+      settings.matched_sam_file_names.resize(settings.read_files.size());
+      settings.unmatched_sam_file_names.resize(settings.read_files.size());
+
+		  for (uint32_t i = 0; i < settings.read_files.size(); i++)
+		  {
+		  	cReadFile read_file = settings.read_files[i];
+        string command = "";
+
+				string base_read_file_name  = read_file.base_name();
+				string read_file_name = settings.base_name_to_read_file_name(base_read_file_name);
+        string read_hash_file_name  = settings.file_name(settings.bwa_read_hash_file_name, "#", base_read_file_name);
+
+        //Index reads.
+        command = "bwa aln -o 0 -n 1 -f " + read_hash_file_name + " " + settings.reference_fasta_file_name + " " + read_file_name; 
+        SYSTEM(command);
+
+        //Alignment.
+        string reference_sam_file_name = settings.file_name(settings.bwa_reference_sam_file_name, "#", base_read_file_name);
+        command = "bwa samse -f " + reference_sam_file_name + " " + settings.reference_fasta_file_name + " " + 
+                  read_hash_file_name + " " + read_file_name;
+        SYSTEM(command);
+
+        //Split alignment into unmatched and matched files.
+        string matched_sam_file_name = settings.file_name(settings.matched_sam_file_name, "#", base_read_file_name);
+        string unmatched_sam_file_name = settings.file_name(settings.unmatched_sam_file_name, "#", base_read_file_name);
+        PreprocessAlignments::split_matched_and_unmatched_alignments(reference_sam_file_name,
+                                                                     matched_sam_file_name,
+                                                                     unmatched_sam_file_name);
+        settings.matched_sam_file_names[i] = matched_sam_file_name;
+        settings.unmatched_sam_file_names[i] = unmatched_sam_file_name;
+
+      }
+
+    }
+
 		/// create ssaha2 hash
 		string reference_hash_file_name = settings.reference_hash_file_name;
 		string reference_fasta_file_name = settings.reference_fasta_file_name;
+
 
 		if (!settings.smalt)
 		{
@@ -1572,6 +1612,7 @@ int breseq_default_action(int argc, char* argv[])
 				string base_read_file_name = read_file.base_name();
 				string read_fastq_file = settings.base_name_to_read_file_name(base_read_file_name);
 				string reference_sam_file_name = settings.file_name(settings.reference_sam_file_name, "#", base_read_file_name);
+
 
 				if (!settings.smalt)
 				{

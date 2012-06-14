@@ -133,6 +133,8 @@ namespace breseq
     ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias", 0.05, ADVANCED_OPTION)
     ("polymorphism-frequency-cutoff", "Only predict polymorphisms where both allele frequencies are > than this value", 0.0, ADVANCED_OPTION)
     ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms where this many reads on each strand support alternative alleles", 0.0, ADVANCED_OPTION)
+    ("bwa", "Preprocess the alignments with BWA.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+
     
     // Periodicity block
     ("periodicity", "Finding sum of differences squared of a coverage file", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
@@ -140,6 +142,9 @@ namespace breseq
     ("periodicity-start", "Start of offsets", 1, ADVANCED_OPTION)
     ("periodicity-end", "End of offsets", 2, ADVANCED_OPTION)
     ("periodicity-step", "Increment of offsets", 1, ADVANCED_OPTION)
+
+
+    
     
     ("verbose,v","Produce verbose output",TAKES_NO_ARGUMENT)
 
@@ -201,6 +206,7 @@ namespace breseq
     this->do_copy_number_variation = options.count("cnv");
     this->copy_number_variation_tile_size = from_string<uint32_t>(options["cnv-tile-size"]);
     this->ignore_redundant_coverage = options.count("cnv-ignore-redundant");
+    this->bwa = options.count("bwa");
     
     
     this->do_periodicity = options.count("periodicity");
@@ -430,6 +436,12 @@ namespace breseq
 
 		this->reference_hash_file_name = this->reference_alignment_path + "/reference";
 		this->reference_sam_file_name = this->reference_alignment_path + "/#.reference.sam";
+
+    this->bwa_read_hash_file_name = this->reference_alignment_path + "/#.bwa.sai";
+    this->bwa_reference_sam_file_name = this->reference_alignment_path + "/#.bwa.sam";
+
+    this->matched_sam_file_name = this->reference_alignment_path + "/#.bwa.matched.sam";
+    this->unmatched_sam_file_name = this->reference_alignment_path + "/#.bwa.unmatched.sam";
 
     //! Paths: Junction Prediction
 		this->candidate_junction_path = "03_candidate_junctions";
