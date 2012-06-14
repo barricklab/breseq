@@ -2872,7 +2872,7 @@ void GDtoCircos(const vector<string> &gd_file_names,
   npi_mutation_file.close();
   
   char current_dir[1024];
-  getcwd(current_dir, sizeof(current_dir));
+  ASSERT(getcwd(current_dir, sizeof(current_dir)), "Linux function call getcwd() has failed");
   command.str("");
   command << "cd " << circos_directory << "; bash run_circos.sh; cd " << current_dir;
   SYSTEM(command.str());

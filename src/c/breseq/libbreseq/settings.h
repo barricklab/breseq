@@ -182,6 +182,7 @@ namespace breseq
     //! Settings: Read Alignment and Candidate Junction Read Alignment
     uint32_t ssaha2_seed_length;  // Default = 13
     uint32_t ssaha2_skip_length;  // Default = 1 (i.e. no skipping)
+    bool bwa;                     // Default = false COMMAND-LINE OPTION
     
     //! reads are never included in the BAM alignment file if they fail these guards
 		uint32_t require_match_length;    // Default = 0 (OFF) COMMAND-LINE OPTION
@@ -283,6 +284,15 @@ namespace breseq
     
 		string reference_hash_file_name;
 		string reference_sam_file_name;
+
+    string bwa_read_hash_file_name;
+		string bwa_reference_sam_file_name;
+
+    string matched_sam_file_name;
+    string unmatched_sam_file_name;
+
+    vector<string> matched_sam_file_names;
+    vector<string> unmatched_sam_file_names;
     
     //! Paths: Junction Prediction
     string candidate_junction_path;

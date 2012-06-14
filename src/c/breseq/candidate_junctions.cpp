@@ -153,6 +153,32 @@ namespace breseq {
     return true;
   }
 
+  void PreprocessAlignments::split_matched_and_unmatched_alignments(string input_file_name,
+                                                                    string matched_file_name,
+                                                                    string unmatched_file_name) 
+  {
+
+    ofstream matched(matched_file_name.c_str());
+    ofstream unmatched(unmatched_file_name.c_str());
+    
+    ifstream in(input_file_name.c_str());
+    ASSERT(in, "Could not open file: " + input_file_name);
+
+    string line = "";
+    while (getline(in, line)) {
+      const vector<string>& tokens = split_on_whitespace(line);
+
+      if (tokens[2] == "*") {
+        unmatched << line << endl;
+      } else {
+        matched << line << endl;
+      }
+
+    }
+
+
+    return;
+  }
   
   
   /*! Preprocess read alignments for predicting junctions
