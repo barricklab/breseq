@@ -54,54 +54,70 @@ class cAnnotatedSequence;
    };
 
 
-  namespace FastqSimulationUtilities {
-    extern map<uint32_t, uint32_t> qscore_cumulative_probability_table;
-    extern map<char, string> random_snp_base_options;
-    extern char random_insertion_base_options[];
-    char get_random_quality_score(void);
-    char get_random_error_base(const char not_this_base);
-    char get_random_insertion_base(void);
-    bool is_random_error_base(char ascii_qscore);
-    bool is_random_deletion_base(void);
-    bool is_random_insertion_base(void);
 
-    class GaussianRNG {
-      static void box_muller_transform(float* z0, float* z1);  
-      static const double PI;
 
-      public:
-        GaussianRNG(int mean, int stdev);
-        int32_t sample();
-        vector<int32_t> samples(int size);
 
-      private:
-        float m_mean;
-        float m_stdev;
-
-        float m_z0;
-        float m_z1;
-        float m_store;
-
-    };
-  }
-
-  struct cSimFastqSequence: public cFastqSequence {
-      int8_t   m_strand;
-      uint32_t m_start_1;
-  };
-
-  class cFastqSequenceVector : public vector<cSimFastqSequence>
-  {
+  class cSimFastqSequence {
     public:
-      static cFastqSequenceVector simulate_from_sequence(const cAnnotatedSequence &ref_sequence,
-                                                         const uint32_t &average_coverage,
-                                                         const uint32_t &read_size,
-                                                         const bool pair_ended = false,
-                                                         const uint32_t mean_gap = 0,
-                                                         const uint32_t stdev_gap = 0,
-                                                         const bool verbose = false);
+      static int32_t SEED_VALUE;
+
+      class GaussianRNG {
+        static void box_muller_transform(float* z0, float* z1);  
+        static const double PI;
+
+        public:
+          GaussianRNG(int mean, int stdev);
+          int32_t sample();
+          vector<int32_t> samples(int size);
+
+        private:
+          float m_mean;
+          float m_stdev;
+
+          float m_z0;
+          float m_z1;
+          float m_store;
+
+      };
+
+      static map<uint32_t, uint32_t> qscore_cumulative_probability_table;
+      static map<char, string> random_snp_base_options;
+
+      static char random_insertion_base_options[];
+
+      static char get_random_quality_score(void);
+      static char get_random_error_base(const char not_this_base);
+      static char get_random_insertion_base(void);
+
+      static bool is_random_error_base(char ascii_qscore);
+      static bool is_random_deletion_base(void);
+      static bool is_random_insertion_base(void);
+
+      static cFastqSequence simulate(const cAnnotatedSequence& ref_sequence,
+                                     uint32_t start_1,
+                                     uint32_t read_size,
+                                     int8_t strand,
+                                     uint32_t id = 0,
+                                     bool verbose = false);
+
+      static void simulate_single_ends(const cAnnotatedSequence& sequence,
+                                       uint32_t n_reads,
+                                       uint32_t read_size, 
+                                       string file_name,
+                                       bool verbose = false);
+
+      static void simulate_paired_ends(const cAnnotatedSequence& sequence,
+                                       uint32_t n_reads,
+                                       uint32_t read_size, 
+                                       uint32_t mean,
+                                       uint32_t stdev,
+                                       string pair_1_file_name,
+                                       string pair_2_file_name,
+                                       bool verbose = false);
+
 
   };
+
   
   /*! Quality score conversion class.
    */

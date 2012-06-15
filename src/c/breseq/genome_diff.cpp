@@ -1676,7 +1676,7 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
         new_item._type = mut_type;
         new_item["seq_id"] = ref_seq_info.m_seq_id;
         new_item["position"] = to_string(rand_pos);
-        new_item["new_seq"] = FastqSimulationUtilities::get_random_error_base(ref_seq_info.m_fasta_sequence.m_sequence.at(rand_pos - 1));        
+        new_item["new_seq"] = cSimFastqSequence::get_random_error_base(ref_seq_info.m_fasta_sequence.m_sequence.at(rand_pos - 1));        
         
         uAttempts = 0;
         
@@ -1846,7 +1846,7 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
         
         string ins_seq = "";        
         for(uint32_t ij = 0; ij < ins_size; ij++)  {
-          ins_seq += FastqSimulationUtilities::get_random_insertion_base();  }
+          ins_seq += cSimFastqSequence::get_random_insertion_base();  }
         
         new_item["new_seq"] = ins_seq;
         
