@@ -2883,6 +2883,10 @@ void GD2Phylip( const vector<string>& gd_file_names,
                 const vector<string>& reference_file_names,
                 const string& output_phylip_file_name)
 {
+  
+  (void) gd_file_names;
+  (void) reference_file_names;
+  (void) output_phylip_file_name;
 /*
 
 		my @mutations = $composite_gd->mutation_list;

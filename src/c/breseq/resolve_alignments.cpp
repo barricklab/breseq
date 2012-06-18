@@ -342,20 +342,33 @@ void resolve_alignments(
   // stores all junction ids that we have encountered
   map<string,uint32_t> all_junction_ids;
   
-  load_junction_alignments(
-                          settings, 
-                          summary, 
-                          read_files, 
-                          ref_seq_info,
-                          junction_ref_seq_info,
-                          trims_list,
-                          all_junction_ids,
-                          junction_prediction,
-                          junction_info_list,
-                          unique_junction_match_map,
-                          repeat_junction_match_map,
-                          resolved_reference_tam
-                          );
+  if (!settings.aligned_sam_mode) {
+  
+    load_junction_alignments(
+                            settings, 
+                            summary, 
+                            read_files, 
+                            ref_seq_info,
+                            junction_ref_seq_info,
+                            trims_list,
+                            all_junction_ids,
+                            junction_prediction,
+                            junction_info_list,
+                            unique_junction_match_map,
+                            repeat_junction_match_map,
+                            resolved_reference_tam
+                            );
+  } else {
+    
+    load_sam_only_alignments(
+                             settings, 
+                             summary, 
+                             read_files, 
+                             ref_seq_info,
+                             trims_list,
+                             resolved_reference_tam
+                             );
+  }
   
   if (verbose)
   {
@@ -857,10 +870,83 @@ void load_junction_alignments(
     if (reference_tam != NULL) delete reference_tam;
     
   } // End of Read File loop
-  
-  // for jump to end of alignments
 }
   
+  
+void load_sam_only_alignments(
+                              const Settings& settings, 
+                              Summary& summary, 
+                              cReadFiles& read_files, 
+                              cReferenceSequences& ref_seq_info,
+                              SequenceTrimsList& trims_list,
+                              tam_file& resolved_reference_tam
+                              )
+{
+  
+  uint32_t reads_processed = 0;
+  summary.alignment_resolution.max_sam_base_quality_score = 0;
+
+  tam_file* reference_tam = NULL;
+  
+  for (uint32_t sam_file_index = 0; sam_file_index < read_files.size(); sam_file_index++)
+  {    
+    const cReadFile& rf = read_files[sam_file_index];
+    string reference_sam_file_name = read_files.base_name_to_read_file_name(rf.m_base_name);
+    
+    cerr << "  READ FILE:" << rf.m_base_name << endl;
+    
+    Summary::AlignmentResolution::ReadFile summary_info;
+    
+    string this_unmatched_file_name = settings.data_path + "/unmatched." + rf.m_base_name + ".fastq";
+    cFastqFile out_unmatched_fastq(this_unmatched_file_name, ios::out);
+    assert(!out_unmatched_fastq.fail());
+    
+    reference_tam = new tam_file(reference_sam_file_name, settings.reference_fasta_file_name, ios::in); 
+    
+    
+    ///
+    //  Test each read for its matches to the reference and candidate junctions
+    ///
+        
+    alignment_list this_reference_alignments;
+    while (reference_tam->read_alignments(this_reference_alignments, false)) {
+      
+      
+      if ((settings.resolve_alignment_read_limit) && (reads_processed >= settings.resolve_alignment_read_limit))
+        break; // to next file
+      
+      reads_processed++;
+      if (reads_processed % 10000 == 0)
+        cerr << "    READS:" << reads_processed << endl;
+            
+      summary.alignment_resolution.max_sam_base_quality_score = 0;
+      
+      // Does this read have eligible reference sequence matches?
+      uint32_t best_reference_score = eligible_read_alignments(settings, ref_seq_info, this_reference_alignments);
+      
+      // if < 0, then the best match is to the reference
+      
+      if ( (!this_reference_alignments.size()) || (best_reference_score == 0) )
+        continue;
+      
+      uint8_t* base_qualities = this_reference_alignments.front()->read_base_quality_bam_sequence();
+      for(uint32_t base_index=0; base_index<this_reference_alignments.front()->read_length(); base_index++) {
+        summary.alignment_resolution.max_sam_base_quality_score = max(summary.alignment_resolution.max_sam_base_quality_score, static_cast<int32_t>(base_qualities[base_index]));
+      }
+      
+      // best match is to the reference, record in that SAM file.
+      _write_reference_matches(settings, ref_seq_info, trims_list, this_reference_alignments, resolved_reference_tam, sam_file_index);
+            
+    } // End loop through every read in file
+    
+    // save statistics
+    summary.alignment_resolution.read_file[read_files[sam_file_index].m_base_name] = summary_info;
+    
+    // safe only because we know they are always or never used
+    if (reference_tam != NULL) delete reference_tam;
+    
+  } // End of Read File loop
+}
 
 /*! Tests whether a read alignment to a candidate junction extends across
  *  the entire junction (past overlapping or unique sequence) and thus
