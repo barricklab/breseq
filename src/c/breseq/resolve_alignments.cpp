@@ -918,9 +918,7 @@ void load_sam_only_alignments(
       reads_processed++;
       if (reads_processed % 10000 == 0)
         cerr << "    READS:" << reads_processed << endl;
-            
-      summary.alignment_resolution.max_sam_base_quality_score = 0;
-      
+                  
       // Does this read have eligible reference sequence matches?
       uint32_t best_reference_score = eligible_read_alignments(settings, ref_seq_info, this_reference_alignments);
       
