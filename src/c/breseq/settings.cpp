@@ -55,16 +55,15 @@ namespace breseq
 			size_t pos = rf.m_base_name.rfind("/");
 			if (pos != string::npos) rf.m_base_name.erase(0, pos + 1);
 			// - trailing .fastq, must be at the end of the sequence
-      if (sam_files) {
+      if (!sam_files) {
         pos = rf.m_base_name.rfind(".fastq");
+        if ((pos != string::npos) && (pos = rf.m_base_name.size() - 6))
+          rf.m_base_name.erase(pos);
       } else {
         pos = rf.m_base_name.rfind(".sam");
+        if ((pos != string::npos) && (pos = rf.m_base_name.size() - 4))
+          rf.m_base_name.erase(pos);
       }
-        
-			if ((pos != string::npos) && (pos = rf.m_base_name.size() - 6))
-			{
-				rf.m_base_name.erase(pos);
-			}
 			
       // set up the map for converting base names to fastq file names to be used
       // check to see whether this is a duplicate

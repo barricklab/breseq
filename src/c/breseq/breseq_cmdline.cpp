@@ -2038,8 +2038,7 @@ int breseq_default_action(int argc, char* argv[])
     if (!settings.aligned_sam_mode) {
       num_qual = summary.sequence_conversion.max_qual + 1; // only filled in when using FASTQ input
     } else {
-      //@JEB It's not clear to me why this has to be +2 instead of +1. The offset must be different in SAM/BAM reading?
-      num_qual = summary.alignment_resolution.max_sam_base_quality_score + 2; // only filled in when using aligned_sam_mode
+      num_qual = summary.alignment_resolution.max_sam_base_quality_score + 1; // only filled in when using aligned_sam_mode
     }
 
 		error_count(
