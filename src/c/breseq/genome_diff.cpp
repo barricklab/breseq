@@ -2649,7 +2649,7 @@ void GDtoCircos(const vector<string> &gd_file_names,
   empty_file.close();
   
   //minimum tile size width for indel graph
-  const int32_t MIN_WIDTH = ref.total_length() * 0.000;
+  const int32_t MIN_WIDTH = static_cast<double>(ref.total_length()) * 0.000;
   const int32_t MIN_DISPLAY_LENGTH = 51; //inclusive
   
   ofstream indel_file;

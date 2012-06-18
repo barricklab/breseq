@@ -626,11 +626,11 @@ namespace breseq {
       }
       else{
         mean_left = Si / double(best_i);
-        copy_left = floor((mean_left / summary_average) + .5);
+        copy_left = static_cast<int32_t>(floor((mean_left / summary_average) + .5));
       }
       
       mean_inside = (Sj - Si) / double(best_j - best_i);
-      copy_inside = floor((mean_inside / summary_average) + .5);
+      copy_inside = static_cast<int32_t>(floor((mean_inside / summary_average) + .5));
       
       if ( best_j == current_search.second ){
         mean_right = -1;
@@ -638,7 +638,7 @@ namespace breseq {
       }
       else{
         mean_right = (Sm - Sj) / double(current_search.second - best_j);
-        copy_right = floor((mean_right / summary_average) + .5);
+        copy_right = static_cast<int32_t>(floor((mean_right / summary_average) + .5));
       }
       
       //cout << "population" << Sm << " " << m << endl;

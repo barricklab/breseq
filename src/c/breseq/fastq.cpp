@@ -608,9 +608,9 @@ namespace breseq {
     double p_value = pow(10, -qscore/10.0);
 
     //We want precision to the 100,000th decimal place.
-    uint32_t p_value_max = p_value * 100000;
+    double p_value_max = p_value * 100000;
 
-    return ((uint32_t)(rand() % 100000) <= p_value_max);
+    return ((rand() % 100000) <= p_value_max);
   }
 
   const uint32_t deletion_probability = 100000;//10E-5
@@ -653,7 +653,7 @@ namespace breseq {
   }
 
   int32_t cSimFastqSequence::GaussianRNG::sample() {
-    int32_t ret_val = round(m_z0);
+    int32_t ret_val = static_cast<int32_t>(round(m_z0));
     m_store = m_z1;
 
     GaussianRNG::box_muller_transform(&m_z0, &m_z1);
