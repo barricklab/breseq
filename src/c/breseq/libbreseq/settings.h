@@ -108,10 +108,10 @@ namespace breseq
 
     
 		cReadFiles() { };
-		cReadFiles(const vector<string>& read_file_names) { Init(read_file_names); };
+		cReadFiles(const vector<string>& read_file_names, bool sam_files) { Init(read_file_names, sam_files); };
 		~cReadFiles() { };
 
-		void Init(const vector<string>& read_file_names);
+		void Init(const vector<string>& read_file_names, bool sam_files);
     string base_name_to_read_file_name(const string& base_name);
     vector<string> base_names()
     {
@@ -183,6 +183,7 @@ namespace breseq
     uint32_t ssaha2_seed_length;  // Default = 13
     uint32_t ssaha2_skip_length;  // Default = 1 (i.e. no skipping)
     bool bwa;                     // Default = false COMMAND-LINE OPTION
+    bool aligned_sam_mode;        // Default = false COMMAND-LINE OPTION
     
     //! reads are never included in the BAM alignment file if they fail these guards
 		uint32_t require_match_length;    // Default = 0 (OFF) COMMAND-LINE OPTION
@@ -285,14 +286,12 @@ namespace breseq
 		string reference_hash_file_name;
 		string reference_sam_file_name;
 
+    // Staged alignment with BWA
     string bwa_read_hash_file_name;
 		string bwa_reference_sam_file_name;
-
-    string matched_sam_file_name;
-    string unmatched_sam_file_name;
-
-    vector<string> matched_sam_file_names;
-    vector<string> unmatched_sam_file_names;
+    string bwa_matched_sam_file_name;
+    string bwa_unmatched_fastq_file_name;
+    string ssaha2_reference_sam_file_name;
     
     //! Paths: Junction Prediction
     string candidate_junction_path;

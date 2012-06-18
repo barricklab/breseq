@@ -308,7 +308,7 @@ namespace breseq {
        //   ret_val.append(sequence.substr(start_0, seq_size + size_diff));
        //   ret_val.append(sequence.substr(0, abs(size_diff)));
        // }
-
+        return cString();
       }
 
       size_t get_sequence_size(void) const

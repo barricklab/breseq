@@ -65,6 +65,7 @@ namespace breseq{
       uint32_t total_unmatched_reads;
       uint32_t total_unique_reads;
       uint32_t total_repeat_reads;
+      int32_t max_sam_base_quality_score; // @JEB only filled in for aligned_sam_mode
       
       // these statistics are implemented
       
@@ -84,6 +85,7 @@ namespace breseq{
 				pos_hash_cutoffs.serialize(f);
 				write_to_file(f, observed_pos_hash_score_distribution);
 				write_to_file(f, accepted_pos_hash_score_distribution);
+        write_to_file(f, max_sam_base_quality_score);
 			}
 			void deserialize(ifstream& f)
 			{
@@ -92,6 +94,7 @@ namespace breseq{
         pos_hash_cutoffs.deserialize(f);
 				read_from_file(f, observed_pos_hash_score_distribution);
 				read_from_file(f, accepted_pos_hash_score_distribution);
+        read_from_file(f, max_sam_base_quality_score);
 			}
 
 		} alignment_resolution;
