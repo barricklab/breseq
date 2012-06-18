@@ -207,6 +207,15 @@ namespace breseq {
                                 tam_file& resolved_reference_tam
                                 );
   
+  void load_sam_only_alignments(
+                           const Settings& settings, 
+                           Summary& summary, 
+                           cReadFiles& read_files, 
+                           cReferenceSequences& ref_seq_info,
+                           SequenceTrimsList& trims_list,
+                           tam_file& resolved_reference_tam
+                                );
+  
   bool alignment_overlaps_junction(const vector<ResolveJunctionInfo>& junction_info_list, const alignment_wrapper& in_a);
 
   

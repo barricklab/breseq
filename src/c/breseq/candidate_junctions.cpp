@@ -153,33 +153,92 @@ namespace breseq {
     return true;
   }
 
-  void PreprocessAlignments::split_matched_and_unmatched_alignments(string input_file_name,
-                                                                    string matched_file_name,
-                                                                    string unmatched_file_name) 
+  // Splits unaligned reads out of a SAM file
+  void PreprocessAlignments::split_matched_and_unmatched_alignments(
+                                                                    string input_sam_file_name, 
+                                                                    string matched_sam_file_name, 
+                                                                    string unmatched_fastq_file_name
+                                                                    ) 
   {
 
-    ofstream matched(matched_file_name.c_str());
-    ofstream unmatched(unmatched_file_name.c_str());
+    ofstream matched(matched_sam_file_name.c_str());
+    ofstream unmatched(unmatched_fastq_file_name.c_str());
     
-    ifstream in(input_file_name.c_str());
-    ASSERT(in, "Could not open file: " + input_file_name);
+    ifstream in(input_sam_file_name.c_str());
+    ASSERT(in, "Could not open file: " + input_sam_file_name);
 
     string line = "";
     while (getline(in, line)) {
       const vector<string>& tokens = split_on_whitespace(line);
 
       if (tokens[2] == "*") {
-        unmatched << line << endl;
+        // write in fastq format
+        unmatched << ">" << tokens[0] << endl << tokens[9] << endl;
       } else {
         matched << line << endl;
       }
-
     }
-
-
-    return;
   }
   
+  // Takes two SAM files and re-sorts read order so that it matches the original FASTQ file.
+  // Requires reads to be renamed as we expect from 01_sequence_onversion: file_num/read_num.
+  void PreprocessAlignments::merge_sort_sam_files(
+                                                  string input_sam_file_name_1,
+                                                  string input_sam_file_name_2,
+                                                  string output_sam_file_name
+                                                 )
+  {
+    
+    ifstream input_sam_file_1(input_sam_file_name_1.c_str());
+    ifstream input_sam_file_2(input_sam_file_name_2.c_str());
+    
+    ofstream out(output_sam_file_name.c_str());
+    ASSERT(out.good(), "Could not open file: " + output_sam_file_name);
+    
+    string line_1 = "";
+    string line_2 = "";
+    bool not_done_1 = getline(input_sam_file_1, line_1);
+    bool not_done_2 = getline(input_sam_file_2, line_2);    
+    vector<string> tokens_1;
+    vector<string> tokens_2;
+    int32_t index_1 = -1;
+    int32_t index_2 = -1;
+    
+    if (not_done_1) {
+      tokens_1 = split_on_whitespace(line_1);
+      index_1 = n(split(tokens_1[0],"/")[1]);
+    }
+    if (not_done_2) {
+      tokens_2 = split_on_whitespace(line_2);
+      index_2 = n(split(tokens_2[0],"/")[1]);
+    }
+    
+    while (not_done_1 || not_done_2) {
+      
+      if (not_done_1 && (index_1 > index_2)) {
+        
+        cout << line_1 << endl;
+        
+        // read next line
+        not_done_1 = getline(input_sam_file_1, line_1);
+        if (not_done_1) {
+          tokens_1 = split_on_whitespace(line_1);
+          index_1 = n(split(tokens_1[0],"/")[1]);
+        }
+      }
+      else if (not_done_2) {
+        
+        cout << line_2 << endl;
+        
+        // read next line
+        bool not_done_2 = getline(input_sam_file_2, line_2);    
+        if (not_done_2) {
+          tokens_2 = split_on_whitespace(line_2);
+          index_2 = n(split(tokens_2[0],"/")[1]);
+        }
+      }
+    }
+  }
   
   /*! Preprocess read alignments for predicting junctions
    *

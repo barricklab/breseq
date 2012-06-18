@@ -536,10 +536,7 @@ void tam_file::open_read(const string& tam_file_name, const string& fasta_file_n
          + "\nTry running the command:\nsamtools faidx " + fasta_file_name);
   
   input_tam = sam_open(tam_file_name.c_str());
-  if (!input_tam) {
-    cerr << "Could not open tam file: " << tam_file_name << endl;
-    assert(input_tam);
-  }
+  ASSERT(input_tam, "Could not open tam file: " + tam_file_name);
   
   // Read header from SAM file and discard (really should use it)
   bam_header_t* bam_header_no_care = sam_header_read(input_tam);

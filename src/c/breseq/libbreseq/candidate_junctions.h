@@ -276,7 +276,16 @@ namespace breseq {
 		static void preprocess_alignments(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info);
     static void split_alignments_on_indels(const Settings& settings, Summary& summary, tam_file& PSAM, int32_t min_indel_split_len, const alignment_list& alignments);
 
-    static void split_matched_and_unmatched_alignments(string input_file_name, string matched_file_name, string unmatched_file_name);
+    static void split_matched_and_unmatched_alignments(
+                                                       string input_sam_file_name, 
+                                                       string matched_sam_file_name, 
+                                                       string unmatched_fastq_file_name);
+    
+    static void merge_sort_sam_files(
+                                     string input_sam_file_name_1,
+                                     string input_sam_file_name_2,
+                                     string output_sam_file_name
+                                     );
   };
   
   /*! Structure for storing and testing whether alignment pairs support new junctions

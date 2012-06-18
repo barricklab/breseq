@@ -31,7 +31,7 @@ namespace breseq
 
   string Settings::output_divider("====================================================================================");
   
-	void cReadFiles::Init(const vector<string>& read_file_names)
+	void cReadFiles::Init(const vector<string>& read_file_names, bool sam_files)
 	{
 		//clear any existing info
 		this->clear();
@@ -55,7 +55,12 @@ namespace breseq
 			size_t pos = rf.m_base_name.rfind("/");
 			if (pos != string::npos) rf.m_base_name.erase(0, pos + 1);
 			// - trailing .fastq, must be at the end of the sequence
-			pos = rf.m_base_name.rfind(".fastq");
+      if (sam_files) {
+        pos = rf.m_base_name.rfind(".fastq");
+      } else {
+        pos = rf.m_base_name.rfind(".sam");
+      }
+        
 			if ((pos != string::npos) && (pos = rf.m_base_name.size() - 6))
 			{
 				rf.m_base_name.erase(pos);
@@ -134,7 +139,7 @@ namespace breseq
     ("polymorphism-frequency-cutoff", "Only predict polymorphisms where both allele frequencies are > than this value", 0.0, ADVANCED_OPTION)
     ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms where this many reads on each strand support alternative alleles", 0.0, ADVANCED_OPTION)
     ("bwa", "Preprocess the alignments with BWA.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-
+    ("sam", "Input files are aligned and SAM files, rather than FASTQ files. Junction prediction steps will be skipped.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     
     // Periodicity block
     ("periodicity", "Finding sum of differences squared of a coverage file", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
@@ -188,7 +193,13 @@ namespace breseq
       string read_file_name = options.getArgv(i);
       this->read_file_names.push_back(read_file_name);
     }
-    this->read_files.Init(read_file_names);
+    this->aligned_sam_mode = options.count("sam");
+    if (aligned_sam_mode) {
+      cerr << "Input files are aligned SAM instead of FASTQ (--sam option)." << endl;
+      cerr << "No junction prediction will take place." << endl;
+      cerr << output_divider << endl;
+    }
+    this->read_files.Init(read_file_names, this->aligned_sam_mode);
     
     // Reference sequence provided?
 		if (options.count("reference") == 0)
@@ -439,9 +450,9 @@ namespace breseq
 
     this->bwa_read_hash_file_name = this->reference_alignment_path + "/#.bwa.sai";
     this->bwa_reference_sam_file_name = this->reference_alignment_path + "/#.bwa.sam";
-
-    this->matched_sam_file_name = this->reference_alignment_path + "/#.bwa.matched.sam";
-    this->unmatched_sam_file_name = this->reference_alignment_path + "/#.bwa.unmatched.sam";
+    this->bwa_matched_sam_file_name = this->reference_alignment_path + "/#.bwa.matched.sam";
+    this->bwa_unmatched_fastq_file_name = this->reference_alignment_path + "/#.bwa.unmatched.fastq";
+    this->ssaha2_reference_sam_file_name = this->reference_alignment_path + "/#.ssaha2.matched.sam";
 
     //! Paths: Junction Prediction
 		this->candidate_junction_path = "03_candidate_junctions";

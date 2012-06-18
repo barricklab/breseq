@@ -507,7 +507,7 @@ int do_identify_candidate_junctions(int argc, char* argv[]) {
     Settings settings;
       
     // File settings
-    settings.read_files.Init(from_string<vector<string> >(options["read-file"]));
+    settings.read_files.Init(from_string<vector<string> >(options["read-file"]), false);
     settings.preprocess_junction_split_sam_file_name = options["candidate-junction-path"] + "/#.split.sam";
     settings.reference_fasta_file_name = options["data-path"] + "/reference.fasta";     
     settings.candidate_junction_fasta_file_name = options["candidate-junction-path"] + "/candidate_junction.fasta";
@@ -1443,42 +1443,46 @@ int breseq_default_action(int argc, char* argv[])
     conv_ref_seq_info.WriteFASTA(settings.reference_fasta_file_name);
     conv_ref_seq_info.WriteGFF(settings.reference_gff3_file_name);
 
-    //Check the FASTQ format and collect some information about the input read files at the same time
-		cerr << "  Analyzing FASTQ read files..." << endl;
-		uint32_t overall_max_read_length = UNDEFINED_UINT32;
-		uint32_t overall_max_qual = 0;
-
-		s.num_reads = 0;
-    s.num_bases = 0;
-		for (uint32_t i = 0; i < settings.read_files.size(); i++)
-		{
-			string base_name = settings.read_files[i].m_base_name;
-			cerr << "    READ FILE::" << base_name << endl;
-			string fastq_file_name = settings.base_name_to_read_file_name(base_name);
-			string convert_file_name =  settings.file_name(settings.converted_fastq_file_name, "#", base_name);
-
-			// Parse output
-      Summary::AnalyzeFastq s_rf = normalize_fastq(fastq_file_name, convert_file_name, i+1);
+    // No conversion if already is sam mode
+    if (!settings.aligned_sam_mode) {
       
-			// Save the converted file name -- have to save it in summary because only that
-			// is reloaded if we skip this step.
-			s.converted_fastq_name[base_name] = s_rf.converted_fastq_name;
+      //Check the FASTQ format and collect some information about the input read files at the same time
+      cerr << "  Analyzing FASTQ read files..." << endl;
+      uint32_t overall_max_read_length = UNDEFINED_UINT32;
+      uint32_t overall_max_qual = 0;
 
-			// Record statistics
-			if ((overall_max_read_length == UNDEFINED_UINT32) || (s_rf.max_read_length > overall_max_read_length))
-				overall_max_read_length = s_rf.max_read_length;
-			if ((overall_max_qual == UNDEFINED_UINT32) || (s_rf.max_quality_score > overall_max_qual))
-				overall_max_qual = s_rf.max_quality_score;
-			s.num_reads += s_rf.num_reads;
-			s.num_bases += s_rf.num_bases;
+      s.num_reads = 0;
+      s.num_bases = 0;
+      for (uint32_t i = 0; i < settings.read_files.size(); i++)
+      {
+        string base_name = settings.read_files[i].m_base_name;
+        cerr << "    READ FILE::" << base_name << endl;
+        string fastq_file_name = settings.base_name_to_read_file_name(base_name);
+        string convert_file_name =  settings.file_name(settings.converted_fastq_file_name, "#", base_name);
 
-			s.reads[base_name] = s_rf;
-		}
-		s.avg_read_length = s.num_bases / s.num_reads;
-		s.max_read_length = overall_max_read_length;
-		s.max_qual = overall_max_qual;
-		summary.sequence_conversion = s;
+        // Parse output
+        Summary::AnalyzeFastq s_rf = normalize_fastq(fastq_file_name, convert_file_name, i+1);
+        
+        // Save the converted file name -- have to save it in summary because only that
+        // is reloaded if we skip this step.
+        s.converted_fastq_name[base_name] = s_rf.converted_fastq_name;
 
+        // Record statistics
+        if ((overall_max_read_length == UNDEFINED_UINT32) || (s_rf.max_read_length > overall_max_read_length))
+          overall_max_read_length = s_rf.max_read_length;
+        if ((overall_max_qual == UNDEFINED_UINT32) || (s_rf.max_quality_score > overall_max_qual))
+          overall_max_qual = s_rf.max_quality_score;
+        s.num_reads += s_rf.num_reads;
+        s.num_bases += s_rf.num_bases;
+
+        s.reads[base_name] = s_rf;
+      }
+      s.avg_read_length = s.num_bases / s.num_reads;
+      s.max_read_length = overall_max_read_length;
+      s.max_qual = overall_max_qual;
+      summary.sequence_conversion = s;
+    }
+      
 		// create SAM faidx
 		string samtools = settings.ctool("samtools");
 		string command = samtools + " faidx " + settings.reference_fasta_file_name;
@@ -1515,16 +1519,19 @@ int breseq_default_action(int argc, char* argv[])
 	// * Match all reads against the reference genome
 	//
 
-	if (settings.do_step(settings.reference_alignment_done_file_name, "Read alignment to reference genome"))
+	if (
+      settings.do_step(settings.reference_alignment_done_file_name, "Read alignment to reference genome")
+      && !settings.aligned_sam_mode
+      )
 	{
 		create_path(settings.reference_alignment_path);
 
+    //
+    // Staged alignment with BWA
+    //
     if (settings.bwa) {
       string command = "bwa index " + settings.reference_fasta_file_name;
       SYSTEM(command.c_str());
-
-      settings.matched_sam_file_names.resize(settings.read_files.size());
-      settings.unmatched_sam_file_names.resize(settings.read_files.size());
 
 		  for (uint32_t i = 0; i < settings.read_files.size(); i++)
 		  {
@@ -1546,14 +1553,11 @@ int breseq_default_action(int argc, char* argv[])
         SYSTEM(command);
 
         //Split alignment into unmatched and matched files.
-        string matched_sam_file_name = settings.file_name(settings.matched_sam_file_name, "#", base_read_file_name);
-        string unmatched_sam_file_name = settings.file_name(settings.unmatched_sam_file_name, "#", base_read_file_name);
+        string bwa_matched_sam_file_name = settings.file_name(settings.bwa_matched_sam_file_name, "#", base_read_file_name);
+        string bwa_unmatched_fastq_file_name = settings.file_name(settings.bwa_unmatched_fastq_file_name, "#", base_read_file_name);
         PreprocessAlignments::split_matched_and_unmatched_alignments(reference_sam_file_name,
-                                                                     matched_sam_file_name,
-                                                                     unmatched_sam_file_name);
-        settings.matched_sam_file_names[i] = matched_sam_file_name;
-        settings.unmatched_sam_file_names[i] = unmatched_sam_file_name;
-
+                                                                     bwa_matched_sam_file_name,
+                                                                     bwa_unmatched_fastq_file_name);
       }
 
     }
@@ -1604,6 +1608,11 @@ int breseq_default_action(int argc, char* argv[])
 				string read_fastq_file = settings.base_name_to_read_file_name(base_read_file_name);
 				string reference_sam_file_name = settings.file_name(settings.reference_sam_file_name, "#", base_read_file_name);
 
+        // If we are doing staged alignment -- only align the unmatched reads with SSAHA2 and save to different name initially
+        if (settings.bwa) {
+          read_fastq_file = settings.file_name(settings.bwa_unmatched_fastq_file_name, "#", base_read_file_name);
+          reference_sam_file_name = settings.file_name(settings.ssaha2_reference_sam_file_name, "#", base_read_file_name);
+        }
 
 				if (!settings.smalt)
 				{
@@ -1620,6 +1629,18 @@ int breseq_default_action(int argc, char* argv[])
         //Check for SSAHA2 32-bit File Memory Error.
         uint32_t bytes = ifstream(reference_sam_file_name.c_str()).rdbuf()->in_avail();
         CHECK(bytes != 2147483647, "Encountered SSAHA2 32 bit version file memory limit.");
+        
+        
+        if (settings.bwa) {
+          string ssaha2_reference_sam_file_name = settings.file_name(settings.ssaha2_reference_sam_file_name, "#", base_read_file_name);
+          string bwa_reference_sam_file_name = settings.file_name(settings.bwa_reference_sam_file_name, "#", base_read_file_name);
+          string reference_sam_file_name = settings.file_name(settings.reference_sam_file_name, "#", base_read_file_name);
+
+          PreprocessAlignments::merge_sort_sam_files(ssaha2_reference_sam_file_name,
+                                                     bwa_reference_sam_file_name,
+                                                     reference_sam_file_name);
+        }
+        
 			}
 		}
 
@@ -1640,7 +1661,10 @@ int breseq_default_action(int argc, char* argv[])
 	// 03_candidate_junctions
 	// * Identify candidate junctions from split read alignments
 	//
-	if (!settings.no_junction_prediction)
+	if (
+      !settings.no_junction_prediction
+      && !settings.aligned_sam_mode
+      )
 	{
 		create_path(settings.candidate_junction_path);
 
@@ -1724,7 +1748,10 @@ int breseq_default_action(int argc, char* argv[])
     // 04 candidate_junction_alignment
     // * Align reads to new junction candidates
     //
-		if (settings.do_step(settings.candidate_junction_alignment_done_file_name, "Candidate junction alignment"))
+		if (
+        settings.do_step(settings.candidate_junction_alignment_done_file_name, "Candidate junction alignment")
+        && !settings.aligned_sam_mode
+        )
 		{
 			create_path(settings.candidate_junction_alignment_path);
 
@@ -1795,15 +1822,6 @@ int breseq_default_action(int argc, char* argv[])
 	if (settings.do_step(settings.alignment_correction_done_file_name, "Resolving alignments with candidate junctions"))
 	{
 		create_path(settings.alignment_resolution_path);
-    
-		// should be one coverage cutoff value for each reference sequence
-		//vector<double> coverage_cutoffs;
-		//for (uint32_t i = 0; i < ref_seq_info.size(); i++)
-    //{
-    //  Coverage f = summary.preprocess_coverage[ref_seq_info[i].m_seq_id];
-	//		coverage_cutoffs.push_back(summary.preprocess_coverage[ref_seq_info[i].m_seq_id].junction_accept_score_cutoff);
-		//}
-    //assert(coverage_cutoffs.size() == ref_seq_info.size());
 
     bool junction_prediction = !settings.no_junction_prediction;
     if (junction_prediction && file_empty(settings.candidate_junction_fasta_file_name.c_str())) junction_prediction = false;
@@ -2013,8 +2031,14 @@ int breseq_default_action(int argc, char* argv[])
 		string coverage_fn = settings.file_name(settings.unique_only_coverage_distribution_file_name, "@", "");
 		string outputdir = dirname(coverage_fn) + "/";
 
-		uint32_t num_read_files = summary.sequence_conversion.reads.size();
-		uint32_t num_qual = summary.sequence_conversion.max_qual + 1;
+		uint32_t num_read_files = settings.read_files.size();
+    uint32_t num_qual;
+    if (!settings.aligned_sam_mode) {
+      num_qual = summary.sequence_conversion.max_qual + 1; // only filled in when using FASTQ input
+    } else {
+      //@JEB It's not clear to me why this has to be +2 instead of +1. The offset must be different in SAM/BAM reading?
+      num_qual = summary.alignment_resolution.max_sam_base_quality_score + 2; // only filled in when using aligned_sam_mode
+    }
 
 		error_count(
       summary,
