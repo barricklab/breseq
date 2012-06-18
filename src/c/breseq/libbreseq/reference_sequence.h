@@ -273,7 +273,7 @@ namespace breseq {
       {
         const string &seq = m_fasta_sequence.m_sequence;
 
-        if (start_1 > seq.size()) {
+        if (start_1 > static_cast<int32_t>(seq.size())) {
           //If start_1 is too large, set to the beginning of the sequence.
           start_1 = start_1 % seq.size();
         } 

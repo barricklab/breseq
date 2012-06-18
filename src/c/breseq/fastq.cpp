@@ -664,9 +664,9 @@ namespace breseq {
   }
 
 
-  vector<int32_t> cSimFastqSequence::GaussianRNG::samples(int size) {
+  vector<int32_t> cSimFastqSequence::GaussianRNG::samples(int32_t size) {
     vector<int32_t> ret_val(size, 0);
-    for (uint32_t i = 0; i < size; ++i) {
+    for (int32_t i = 0; i < size; ++i) {
       ret_val[i] = this->sample();
     }
     return ret_val;
