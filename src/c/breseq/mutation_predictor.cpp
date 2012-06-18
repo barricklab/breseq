@@ -108,7 +108,7 @@ namespace breseq {
 		(void)settings; //TODO; unused?
     bool verbose = false; // for debugging
 
-    int32_t avg_read_length = summary.sequence_conversion.avg_read_length;
+    int32_t avg_read_length = static_cast<int32_t>(summary.sequence_conversion.avg_read_length);
     int32_t max_read_length = summary.sequence_conversion.max_read_length;
     
 		///

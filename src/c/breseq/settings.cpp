@@ -139,7 +139,7 @@ namespace breseq
     ("polymorphism-frequency-cutoff", "Only predict polymorphisms where both allele frequencies are > than this value", 0.0, ADVANCED_OPTION)
     ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms where this many reads on each strand support alternative alleles", 0.0, ADVANCED_OPTION)
     ("bwa", "Preprocess the alignments with BWA.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("sam", "Input files are aligned and SAM files, rather than FASTQ files. Junction prediction steps will be skipped.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("aligned-sam", "Input files are aligned and SAM files, rather than FASTQ files. Junction prediction steps will be skipped.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     
     // Periodicity block
     ("periodicity", "Finding sum of differences squared of a coverage file", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
@@ -193,9 +193,9 @@ namespace breseq
       string read_file_name = options.getArgv(i);
       this->read_file_names.push_back(read_file_name);
     }
-    this->aligned_sam_mode = options.count("sam");
+    this->aligned_sam_mode = options.count("aligned-sam");
     if (aligned_sam_mode) {
-      cerr << "Input files are aligned SAM instead of FASTQ (--sam option)." << endl;
+      cerr << "Input files are aligned SAM instead of FASTQ (--aligned-sam option)." << endl;
       cerr << "No junction prediction will take place." << endl;
       cerr << output_divider << endl;
     }

@@ -184,7 +184,7 @@ uint32_t qmissing (double tail_value, double pr_missing)
   
 PosHashProbabilityTable::PosHashProbabilityTable(Summary& summary)
 {
-  average_read_length = round(summary.sequence_conversion.avg_read_length);
+  average_read_length = static_cast<int32_t>(round(summary.sequence_conversion.avg_read_length));
   for (map<string,Summary::Coverage>::iterator it=summary.preprocess_coverage.begin();
        it != summary.preprocess_coverage.end(); it++) {
     
@@ -221,7 +221,7 @@ double PosHashProbabilityTable::probability(string& seq_id, uint32_t pos_hash_sc
   
   
   // Calculate this entry in the table -- 
-  uint32_t max_coverage = round(10*p.average_coverage);
+  uint32_t max_coverage = static_cast<uint32_t>(round(10*p.average_coverage));
         
   double pr = 0;
   
@@ -274,7 +274,7 @@ void resolve_alignments(
   // local variables for convenience
   map<string,int32_t>& distance_cutoffs = summary.alignment_resolution.distance_cutoffs;
   storable_map<string, storable_vector<int32_t> >& pos_hash_cutoffs = summary.alignment_resolution.pos_hash_cutoffs;
-  int32_t avg_read_length = round(summary.sequence_conversion.avg_read_length);
+  int32_t avg_read_length = static_cast<int32_t>(round(summary.sequence_conversion.avg_read_length));
 
   // Load the reference sequence trims, for writing resolved alignments
   SequenceTrimsList trims_list;
@@ -1245,7 +1245,7 @@ void score_junction(
   uint32_t continuation_left, continuation_right;
   calculate_continuation(scj, ref_seq_info, junction_ref_seq_info, continuation_left, continuation_right);
   
-  uint32_t avg_read_length = round(summary.sequence_conversion.avg_read_length);
+  uint32_t avg_read_length = static_cast<uint32_t>(round(summary.sequence_conversion.avg_read_length));
   
   // For  junctions the number of start sites where reads crossing the
   // new junction sequence could occur is reduced by overlap (positive or negative):
