@@ -155,27 +155,25 @@ namespace breseq {
 
   // Splits unaligned reads out of a SAM file
   void PreprocessAlignments::split_matched_and_unmatched_alignments(
+                                                                    uint32_t fastq_file_index,
+                                                                    string fasta_file_name, 
                                                                     string input_sam_file_name, 
                                                                     string matched_sam_file_name, 
                                                                     string unmatched_fastq_file_name
                                                                     ) 
   {
 
-    ofstream matched(matched_sam_file_name.c_str());
+    tam_file matched(matched_sam_file_name, fasta_file_name, ios::out);
     ofstream unmatched(unmatched_fastq_file_name.c_str());
     
-    ifstream in(input_sam_file_name.c_str());
-    ASSERT(in, "Could not open file: " + input_sam_file_name);
+    tam_file in(input_sam_file_name, fasta_file_name, ios::in);
 
-    string line = "";
-    while (getline(in, line)) {
-      const vector<string>& tokens = split_on_whitespace(line);
-
-      if (tokens[2] == "*") {
-        // write in fastq format
-        unmatched << ">" << tokens[0] << endl << tokens[9] << endl;
+    alignment_list al;
+    while (in.read_alignments(al, false)) {
+      if (al.front()->unmapped()) {
+        unmatched << "@" << al.front()->read_name() << endl << al.front()->read_char_sequence() << endl << "+" << endl << al.front()->read_base_quality_char_string() << endl;
       } else {
-        matched << line << endl;
+        matched.write_alignments(fastq_file_index, al);
       }
     }
   }
@@ -183,58 +181,63 @@ namespace breseq {
   // Takes two SAM files and re-sorts read order so that it matches the original FASTQ file.
   // Requires reads to be renamed as we expect from 01_sequence_onversion: file_num/read_num.
   void PreprocessAlignments::merge_sort_sam_files(
+                                                  uint32_t fastq_file_index,
+                                                  string fasta_file_name,
                                                   string input_sam_file_name_1,
                                                   string input_sam_file_name_2,
                                                   string output_sam_file_name
                                                  )
   {
     
-    ifstream input_sam_file_1(input_sam_file_name_1.c_str());
-    ifstream input_sam_file_2(input_sam_file_name_2.c_str());
+    tam_file input_sam_file_1(input_sam_file_name_1, fasta_file_name, ios::in);
+    tam_file input_sam_file_2(input_sam_file_name_2, fasta_file_name, ios::in);
     
-    ofstream out(output_sam_file_name.c_str());
-    ASSERT(out.good(), "Could not open file: " + output_sam_file_name);
+    tam_file out_sam_file(output_sam_file_name, fasta_file_name, ios::out);
+
+    alignment_list alignment_list_1;
+    alignment_list alignment_list_2;
     
-    string line_1 = "";
-    string line_2 = "";
-    bool not_done_1 = getline(input_sam_file_1, line_1);
-    bool not_done_2 = getline(input_sam_file_2, line_2);    
-    vector<string> tokens_1;
-    vector<string> tokens_2;
+    bool not_done_1 = input_sam_file_1.read_alignments(alignment_list_1, false);
+    bool not_done_2 = input_sam_file_2.read_alignments(alignment_list_2, false);
+    
     int32_t index_1 = -1;
     int32_t index_2 = -1;
     
+    cout << alignment_list_1.front()->read_name() << endl;
+    cout << alignment_list_2.front()->read_name() << endl;
+    
     if (not_done_1) {
-      tokens_1 = split_on_whitespace(line_1);
-      index_1 = n(split(tokens_1[0],"/")[1]);
+      index_1 = n(split(alignment_list_1.front()->read_name(),":")[1]);
     }
     if (not_done_2) {
-      tokens_2 = split_on_whitespace(line_2);
-      index_2 = n(split(tokens_2[0],"/")[1]);
+      index_2 = n(split(alignment_list_2.front()->read_name(),":")[1]);
+
     }
     
     while (not_done_1 || not_done_2) {
       
-      if (not_done_1 && (index_1 > index_2)) {
+      if (not_done_1 && (index_1 < index_2)) {
         
-        cout << line_1 << endl;
-        
+        out_sam_file.write_alignments(fastq_file_index, alignment_list_1);
+
         // read next line
-        not_done_1 = getline(input_sam_file_1, line_1);
+        not_done_1 = input_sam_file_1.read_alignments(alignment_list_1, false);
         if (not_done_1) {
-          tokens_1 = split_on_whitespace(line_1);
-          index_1 = n(split(tokens_1[0],"/")[1]);
+          index_1 = n(split(alignment_list_1.front()->read_name(),":")[1]);
+        } else {
+          index_1 = numeric_limits<int32_t>::max();
         }
       }
       else if (not_done_2) {
         
-        cout << line_2 << endl;
-        
+        out_sam_file.write_alignments(fastq_file_index, alignment_list_2);
+
         // read next line
-        bool not_done_2 = getline(input_sam_file_2, line_2);    
+        not_done_2 = input_sam_file_2.read_alignments(alignment_list_2, false);   
         if (not_done_2) {
-          tokens_2 = split_on_whitespace(line_2);
-          index_2 = n(split(tokens_2[0],"/")[1]);
+          index_2 = n(split(alignment_list_2.front()->read_name(),":")[1]);
+        } else {
+          index_2 = numeric_limits<int32_t>::max();
         }
       }
     }

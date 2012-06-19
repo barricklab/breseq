@@ -1557,9 +1557,15 @@ int breseq_default_action(int argc, char* argv[])
         //Split alignment into unmatched and matched files.
         string bwa_matched_sam_file_name = settings.file_name(settings.bwa_matched_sam_file_name, "#", base_read_file_name);
         string bwa_unmatched_fastq_file_name = settings.file_name(settings.bwa_unmatched_fastq_file_name, "#", base_read_file_name);
-        PreprocessAlignments::split_matched_and_unmatched_alignments(reference_sam_file_name,
+        string reference_fasta_file_name = settings.file_name(settings.reference_fasta_file_name, "#", base_read_file_name);
+
+        PreprocessAlignments::split_matched_and_unmatched_alignments(
+                                                                     i,
+                                                                     reference_fasta_file_name,
+                                                                     reference_sam_file_name,
                                                                      bwa_matched_sam_file_name,
-                                                                     bwa_unmatched_fastq_file_name);
+                                                                     bwa_unmatched_fastq_file_name
+                                                                     );
       }
 
     }
@@ -1635,12 +1641,17 @@ int breseq_default_action(int argc, char* argv[])
         
         if (settings.bwa) {
           string ssaha2_reference_sam_file_name = settings.file_name(settings.ssaha2_reference_sam_file_name, "#", base_read_file_name);
-          string bwa_reference_sam_file_name = settings.file_name(settings.bwa_reference_sam_file_name, "#", base_read_file_name);
+          string bwa_matched_sam_file_name = settings.file_name(settings.bwa_matched_sam_file_name, "#", base_read_file_name);
           string reference_sam_file_name = settings.file_name(settings.reference_sam_file_name, "#", base_read_file_name);
+          string reference_fasta_file_name = settings.file_name(settings.reference_fasta_file_name, "#", base_read_file_name);
 
-          PreprocessAlignments::merge_sort_sam_files(ssaha2_reference_sam_file_name,
-                                                     bwa_reference_sam_file_name,
-                                                     reference_sam_file_name);
+          PreprocessAlignments::merge_sort_sam_files(
+                                                     read_file.m_id,
+                                                     settings.reference_fasta_file_name,
+                                                     ssaha2_reference_sam_file_name,
+                                                     bwa_matched_sam_file_name,
+                                                     reference_sam_file_name
+                                                     );
         }
         
 			}
