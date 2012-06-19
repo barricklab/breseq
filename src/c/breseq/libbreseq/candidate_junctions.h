@@ -277,11 +277,16 @@ namespace breseq {
     static void split_alignments_on_indels(const Settings& settings, Summary& summary, tam_file& PSAM, int32_t min_indel_split_len, const alignment_list& alignments);
 
     static void split_matched_and_unmatched_alignments(
+                                                       uint32_t fastq_file_index,
+                                                       string fasta_file_name, 
                                                        string input_sam_file_name, 
                                                        string matched_sam_file_name, 
-                                                       string unmatched_fastq_file_name);
+                                                       string unmatched_fastq_file_name
+                                                       );
     
     static void merge_sort_sam_files(
+                                     uint32_t fastq_file_index,
+                                     string fasta_file_name,
                                      string input_sam_file_name_1,
                                      string input_sam_file_name_2,
                                      string output_sam_file_name
