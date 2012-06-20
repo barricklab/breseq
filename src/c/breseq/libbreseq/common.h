@@ -246,6 +246,107 @@ namespace breseq {
     ASSERT(!ofile.fail(), "Could not open file for output: " + out_fn);
     ofile << ifile.rdbuf();
   }
+  
+  inline void replace_file_contents_using_map(
+    const string & in_file_name, 
+    const string & out_file_name,
+    map<string, string> & replacement_map)
+  {
+    //written by: Aaron Reba
+    
+    //given a map with keys as strings to look for in a file,
+    //replace those strings found with the corresponding values in the map
+    
+    //this will only replace the first key found!!!
+    
+    //method for doing this:
+    //1: find the largest string to look for. this will be the largest key in
+    //the map.
+    //2: read the file 1 character at a time, keep track of all characters in
+    //a string the size of the largest key in the map.
+    //3: if a key is encountered, write the replacement to the output,
+    //      write all characters that won't be replaced that have already been read,
+    //      and clear all characters in the string
+    //4: if the last_read string was full for this iteration, write the
+    //      character that was kicked out to make room for the next character
+    
+    ifstream in_file(in_file_name.c_str());
+    ASSERT(!in_file.fail(), "Could not open file for input: " + in_file_name);
+    ofstream out_file(out_file_name.c_str());
+    ASSERT(!out_file.fail(), "Could not open file for output: " + out_file_name);
+    
+    int32_t largest_key_size = 0;
+    
+    map<string, string>::iterator it;
+    
+    //1: find the largest string to look for. this will be the largest key in
+    //the map.
+    for (it = replacement_map.begin(); it != replacement_map.end(); it++){
+      int32_t key_size = (*it).first.size();
+      if (key_size > largest_key_size){
+        largest_key_size = key_size;
+      }
+    }
+    
+    string last_read = "";
+    char single;
+    bool do_write_single;
+    bool do_write_last_read;
+    
+    //2: read the file 1 character at a time, keep track of all characters in
+    //a string the size of the largest key in the map.
+    while (in_file.good()){
+      string not_comparison_string;
+      string comparison_string;
+      
+      single = in_file.get();
+      last_read += single;
+      single = last_read[0];
+      
+      do_write_single = false;
+      if (last_read.size() == largest_key_size + 1){
+        last_read.erase(0, 1);
+        do_write_single = true;
+      }
+      
+      do_write_last_read = false;
+      for (it = replacement_map.begin(); it != replacement_map.end(); it++){
+        int32_t key_size = (*it).first.size();
+        if (key_size > last_read.size()){
+          continue;
+        }
+        not_comparison_string = last_read.substr(0, last_read.size() - key_size);
+        comparison_string = last_read.substr(last_read.size() - key_size, key_size);
+        //3: if a key is encountered, write the replacement to the output,
+        //      write all characters that won't be replaced that have already been read,
+        //      and clear all characters in the string
+        if ((*it).first == comparison_string){
+          do_write_last_read = true;
+          last_read = "";
+          break;
+        }
+      }
+      //4: if the last_read string was full for this iteration, write the
+      //      character that was kicked out to make room for the next character
+      if (do_write_single){
+        out_file << single;
+      }
+      if (do_write_last_read){
+        out_file << not_comparison_string;
+        out_file << (*it).second;
+      }
+    }
+    
+    
+    last_read.erase(last_read.size() - 1, 1);
+    //On my system, there seems to be an end of file character.
+    //This removes it.
+    
+    out_file << last_read;
+    
+    in_file.close();
+    out_file.close();
+  }
 
   inline bool file_empty(const char *filename)
   {
