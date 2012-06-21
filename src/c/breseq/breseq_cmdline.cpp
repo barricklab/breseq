@@ -1658,6 +1658,11 @@ int breseq_default_action(int argc, char* argv[])
           reference_sam_file_name = settings.file_name(settings.ssaha2_reference_sam_file_name, "#", base_read_file_name);
         }
 
+        if (settings.bowtie) {
+          read_fastq_file = settings.file_name(settings.bowtie_unmatched_fastq_file_name, "#", base_read_file_name);
+          reference_sam_file_name = settings.file_name(settings.ssaha2_reference_sam_file_name, "#", base_read_file_name);
+        }
+
 				if (!settings.smalt)
 				{
 					string command = "ssaha2 -disk 2 -save " + reference_hash_file_name + " -kmer " + to_string(settings.ssaha2_seed_length) + " -skip " + to_string(settings.ssaha2_skip_length) + " -seeds 1 -score 12 -cmatch 9 -ckmer 1 -output sam_soft -outfile " + reference_sam_file_name + " " + read_fastq_file;
@@ -1686,6 +1691,21 @@ int breseq_default_action(int argc, char* argv[])
                                                      settings.reference_fasta_file_name,
                                                      ssaha2_reference_sam_file_name,
                                                      bwa_matched_sam_file_name,
+                                                     reference_sam_file_name
+                                                     );
+        }
+
+        if (settings.bowtie) {
+          string ssaha2_reference_sam_file_name = settings.file_name(settings.ssaha2_reference_sam_file_name, "#", base_read_file_name);
+          string bowtie_matched_sam_file_name = settings.file_name(settings.bowtie_matched_sam_file_name, "#", base_read_file_name);
+          string reference_sam_file_name = settings.file_name(settings.reference_sam_file_name, "#", base_read_file_name);
+          string reference_fasta_file_name = settings.file_name(settings.reference_fasta_file_name, "#", base_read_file_name);
+
+          PreprocessAlignments::merge_sort_sam_files(
+                                                     read_file.m_id,
+                                                     settings.reference_fasta_file_name,
+                                                     ssaha2_reference_sam_file_name,
+                                                     bowtie_matched_sam_file_name,
                                                      reference_sam_file_name
                                                      );
         }
