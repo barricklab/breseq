@@ -1570,6 +1570,42 @@ int breseq_default_action(int argc, char* argv[])
 
     }
 
+    //
+    // Staged alignment with Bowtie
+    //
+
+    if (settings.bowtie) {
+      string reference_prefix = substitute(settings.reference_fasta_file_name, ".fasta","");
+      string command = "bowtie-build -f " + settings.reference_fasta_file_name + " " + reference_prefix;
+      SYSTEM(command.c_str());
+
+		  for (uint32_t i = 0; i < settings.read_files.size(); i++)
+		  {
+		  	cReadFile read_file = settings.read_files[i];
+        string command = "";
+
+				string base_read_file_name  = read_file.base_name();
+				string read_file_name = settings.base_name_to_read_file_name(base_read_file_name);
+
+        //Paths
+        string bowtie_matched_sam_file_name = settings.file_name(settings.bowtie_matched_sam_file_name, "#", base_read_file_name);
+        string bowtie_unmatched_fastq_file_name = settings.file_name(settings.bowtie_unmatched_fastq_file_name, "#", base_read_file_name);
+        string reference_sam_file_name = settings.file_name(settings.bowtie_reference_sam_file_name, "#", base_read_file_name);
+
+        //Split alignment into unmatched and matched files.
+        command = "bowtie -S --un " + bowtie_unmatched_fastq_file_name + " " + reference_prefix +
+          " " + read_file_name + " " +  reference_sam_file_name;
+        SYSTEM(command.c_str());
+
+        string reference_fasta_file_name = settings.file_name(settings.reference_fasta_file_name, "#", base_read_file_name);
+
+        PreprocessAlignments::split_matched_alignments(i, reference_fasta_file_name, reference_sam_file_name, bowtie_matched_sam_file_name);
+
+      }
+
+
+    }
+
 		/// create ssaha2 hash
 		string reference_hash_file_name = settings.reference_hash_file_name;
 		string reference_fasta_file_name = settings.reference_fasta_file_name;

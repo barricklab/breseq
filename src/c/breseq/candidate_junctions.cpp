@@ -177,6 +177,23 @@ namespace breseq {
       }
     }
   }
+  void PreprocessAlignments::split_matched_alignments(uint32_t fastq_file_index,
+                                                      string fasta_file_name, 
+                                                      string input_sam_file_name,
+                                                      string matched_sam_file_name) 
+  {
+    tam_file in(input_sam_file_name, fasta_file_name, ios::in);
+    tam_file matched(matched_sam_file_name, fasta_file_name, ios::out);
+
+    alignment_list al;
+    while (in.read_alignments(al, false)) {
+      if (!al.front()->unmapped()) {
+        matched.write_alignments(fastq_file_index, al);
+      }
+    }
+
+    return;
+  }
   
   // Takes two SAM files and re-sorts read order so that it matches the original FASTQ file.
   // Requires reads to be renamed as we expect from 01_sequence_onversion: file_num/read_num.

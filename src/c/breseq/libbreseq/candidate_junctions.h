@@ -283,6 +283,10 @@ namespace breseq {
                                                        string matched_sam_file_name, 
                                                        string unmatched_fastq_file_name
                                                        );
+    static void split_matched_alignments(uint32_t fastq_file_index, 
+                                         string fasta_file_name, 
+                                         string input_sam_file_name,
+                                         string matched_sam_file_name);
     
     static void merge_sort_sam_files(
                                      uint32_t fastq_file_index,
