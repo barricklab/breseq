@@ -183,6 +183,7 @@ namespace breseq
     uint32_t ssaha2_seed_length;  // Default = 13
     uint32_t ssaha2_skip_length;  // Default = 1 (i.e. no skipping)
     bool bwa;                     // Default = false COMMAND-LINE OPTION
+    bool bowtie;                     // Default = false COMMAND-LINE OPTION
     bool aligned_sam_mode;        // Default = false COMMAND-LINE OPTION
     
     //! reads are never included in the BAM alignment file if they fail these guards
@@ -291,6 +292,12 @@ namespace breseq
 		string bwa_reference_sam_file_name;
     string bwa_matched_sam_file_name;
     string bwa_unmatched_fastq_file_name;
+
+    // Staged alignment with 
+		string bowtie_reference_sam_file_name;
+    string bowtie_matched_sam_file_name;
+    string bowtie_unmatched_fastq_file_name;
+
     string ssaha2_reference_sam_file_name;
     
     //! Paths: Junction Prediction
