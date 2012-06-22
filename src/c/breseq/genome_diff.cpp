@@ -2468,7 +2468,8 @@ void GDtoCircos(const vector<string> &gd_file_names,
       (" = outer_axis_value_2", " = " + to_string(distance_value + (7 * space_value) + .01, 10) + "r")
       (" = outer_ticks", " = " + to_string(distance_value + (7 * space_value), 10) + "r")
       (" = indel_distance", " = " + to_string(distance_value + (7 * space_value) + .01, 10) + "r")
-      (" = mob_distance", " = " + to_string(distance_value + (5 * space_value), 10) + "r + " + to_string((400 * .7 * space_value * .5) - (feature_value * 2.5), 10) + "p")
+      (" = mob_distance", " = " + to_string(distance_value + (5.5 * space_value), 10) + "r - " + to_string(feature_value * 2.5) + "p")
+      //(" = mob_distance", " = " + to_string(distance_value + (5 * space_value), 10) + "r + " + to_string((400 * .7 * space_value * .5) - (feature_value * 2.5), 10) + "p")
       (" = syn_distance", " = " + to_string(distance_value + (2 * space_value), 10) + "r - " + to_string(feature_value * 1.5, 10) + "p")
       (" = nonsyn_distance", " = " + to_string(distance_value + (3 * space_value), 10) + "r - " + to_string(feature_value * 1.5, 10) + "p")
       (" = npi_distance", " = " + to_string(distance_value + (4 * space_value), 10) + "r - " + to_string(feature_value * 1.5, 10) + "p")
@@ -2486,6 +2487,8 @@ void GDtoCircos(const vector<string> &gd_file_names,
       (" = ind_npi_distance", " = " + to_string(1 + (3 * space_value), 10) + "r - " + to_string(feature_value * 1.5, 10) + "p")
       (" = space_value_in_pixels", " = " + to_string((300 * space_value), 10) + "p")
       (" = ind_scale", " = " + to_string((.7 * distance_scale), 10) + "r")
+      (" = label_size_value", " = " + to_string((16 * distance_scale), 10) + "p")
+      (" = label_offset_value", " = " + to_string((-7.5 * distance_scale), 10) + "r")
   ;
   
   for (size_t i = 0; i < conf_names.size(); i++){
