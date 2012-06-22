@@ -158,11 +158,11 @@ namespace breseq {
 			for (uint32_t side = 1; side <= 2; side++)
 			{
 				string side_key = "side_" + s(side);
-
+        int32_t this_max_distance_to_repeat = max_distance_to_repeat;
 				cSequenceFeaturePtr is = ref_seq_info.find_closest_repeat_region_boundary(
 					n(j[side_key + "_position"]),
 					ref_seq_info[j[side_key + "_seq_id"]].m_repeats,
-					max_distance_to_repeat,
+					this_max_distance_to_repeat,
 					n(j[side_key + "_strand"])
 				);
 				if (is.get() != NULL)
@@ -172,6 +172,7 @@ namespace breseq {
 					j["_" + side_key + "_is_end"] = s(is->m_location.get_end_1());
           j["_" + side_key + "_is_name"] = (*is)["name"];
           j["_" + side_key + "_is_strand"] = s(is->m_location.get_strand());
+          j["_" + side_key + "_is_distance"] = s(this_max_distance_to_repeat);
 				}
 				
         uint32_t test_val = n(j[side_key + "_redundant"]);
@@ -339,7 +340,6 @@ namespace breseq {
         if(jc_it_iterator)jc_it++;
 			}
 
-//      -> //need to have within repeat also return the distance to the end flushness
       cSequenceFeature* r1_pointer = within_repeat(mut["seq_id"], n(mut["position"]));
       cSequenceFeature* r2_pointer = within_repeat(mut["seq_id"], n(mut["position"]) + n(mut["size"]));
       
@@ -456,19 +456,16 @@ namespace breseq {
 					cout << "Pass 5" << endl;
 
         
-				// need to adjust the non-unique coords
+				// need to adjust the non-unique coords // mut has the MC coordinates at this point
 				if (redundant_deletion_side == -1)
-				{
-//         -> // Need to get actual copy that it is within here, instead of other copies.
-          int32_t discrepancy_dist = r.get_end_1() - n(j[j["_is_interval"] + "_position"]);
-          
-					uint32_t move_dist = r.get_end_1() + 1 - n(mut["position"]);
+				{          
+					uint32_t move_dist = r.get_end_1() + 1 - n(mut["position"]) + n(j["_" + j["_is_interval"] + "_is_distance"]);
 					mut["position"] = s(n(mut["position"]) + move_dist);
 					mut["size"] = s(n(mut["size"]) - move_dist);
 				}
 				else
 				{
-					int32_t move_dist = (n(mut["position"]) + n(mut["size"]) - 1) - (r.get_start_1() - 1);
+					int32_t move_dist = (n(mut["position"]) + n(mut["size"]) - 1) - (r.get_start_1() - 1) + n(j["_" + j["_is_interval"] + "_is_distance"]);
 					mut["size"] = s(n(mut["size"]) - move_dist);
 				}
         

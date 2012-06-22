@@ -579,7 +579,7 @@ namespace breseq {
     static vector<string> initiation_codon_translation_tables;
     static map<string,uint16_t> codon_to_aa_index;
 
-    static cSequenceFeaturePtr find_closest_repeat_region_boundary(int32_t position, cSequenceFeatureList& repeat_list, int32_t max_distance, int32_t direction);
+    static cSequenceFeaturePtr find_closest_repeat_region_boundary(int32_t position, cSequenceFeatureList& repeat_list, int32_t& max_distance, int32_t direction);
     static cSequenceFeaturePtr get_overlapping_feature(cSequenceFeatureList& feature_list, int32_t pos);
     static char translate_codon(string seq, uint32_t translation_table, uint32_t codon_pos_1);
     static void find_nearby_genes(

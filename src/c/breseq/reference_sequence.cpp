@@ -1466,10 +1466,9 @@ string cReferenceSequences::repeat_family_sequence(const string &repeat_name, in
 
 /*! Find the closest edge of a repeat in the specified direction within the specified distance
  */
-cSequenceFeaturePtr cReferenceSequences::find_closest_repeat_region_boundary(int32_t position, cSequenceFeatureList& repeat_list, int32_t max_distance, int32_t direction)
+cSequenceFeaturePtr cReferenceSequences::find_closest_repeat_region_boundary(int32_t position, cSequenceFeatureList& repeat_list, int32_t& max_distance, int32_t direction)
 {
   cSequenceFeaturePtr repeat_ptr(NULL);
-  int32_t best_distance = max_distance + 1; // this enforces the max distance
 
   for (cSequenceFeatureList::iterator it = repeat_list.begin(); it != repeat_list.end(); ++it) {
     cSequenceFeaturePtr test_repeat_ptr = *it;
@@ -1478,9 +1477,9 @@ cSequenceFeaturePtr cReferenceSequences::find_closest_repeat_region_boundary(int
     int32_t test_distance = abs(static_cast<int32_t>(((direction == -1) ? position - test_repeat_ptr->get_end_1() : test_repeat_ptr->get_start_1() - position)));
     
     // We want the closest one without going over that is within max_distance
-    if ( (test_distance >= 0) && (test_distance < best_distance) ) {
+    if ( (test_distance >= 0) && (test_distance <= max_distance) ) {
       repeat_ptr = test_repeat_ptr;
-      best_distance = test_distance;
+      max_distance = test_distance;
     }
   }
   return repeat_ptr;
