@@ -70,8 +70,6 @@ namespace breseq {
     // @JEB: We would ideally sort by alignment/mapping score here
     // the number of mismatches is our current proxy for this.
     
-    //@JEB This method of sorting may be slower than alternatives
-    //     Ideally, the scores should be hashes and only references should be sorted.
     mismatch_map.clear();
     for (alignment_list::iterator it = alignments.begin(); it != alignments.end(); it++)
     {  

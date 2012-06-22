@@ -1466,10 +1466,9 @@ string cReferenceSequences::repeat_family_sequence(const string &repeat_name, in
 
 /*! Find the closest edge of a repeat in the specified direction within the specified distance
  */
-cSequenceFeaturePtr cReferenceSequences::find_closest_repeat_region_boundary(int32_t position, cSequenceFeatureList& repeat_list, int32_t max_distance, int32_t direction)
+cSequenceFeaturePtr cReferenceSequences::find_closest_repeat_region_boundary(int32_t position, cSequenceFeatureList& repeat_list, int32_t& max_distance, int32_t direction)
 {
   cSequenceFeaturePtr repeat_ptr(NULL);
-  int32_t best_distance = max_distance + 1; // this enforces the max distance
 
   for (cSequenceFeatureList::iterator it = repeat_list.begin(); it != repeat_list.end(); ++it) {
     cSequenceFeaturePtr test_repeat_ptr = *it;
@@ -1478,9 +1477,9 @@ cSequenceFeaturePtr cReferenceSequences::find_closest_repeat_region_boundary(int
     int32_t test_distance = abs(static_cast<int32_t>(((direction == -1) ? position - test_repeat_ptr->get_end_1() : test_repeat_ptr->get_start_1() - position)));
     
     // We want the closest one without going over that is within max_distance
-    if ( (test_distance >= 0) && (test_distance < best_distance) ) {
+    if ( (test_distance >= 0) && (test_distance <= max_distance) ) {
       repeat_ptr = test_repeat_ptr;
-      best_distance = test_distance;
+      max_distance = test_distance;
     }
   }
   return repeat_ptr;
@@ -1869,6 +1868,8 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
   // and have the annotation point to them (and back at them)
   // so that the codon will be correctly updated with all changes and we can notify the
   // changes that their SNP_type is not really SNP, but multiple hit SNP.
+  
+  vector<cDiffEntry*> snp_muts;
 
   diff_entry_list_t muts = gd.show_list();
   for (diff_entry_list_t::iterator it=muts.begin(); it!=muts.end(); it++)
@@ -1882,6 +1883,7 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
       case SNP:{
         mut["_ref_seq"] = get_sequence_1(mut["seq_id"], from_string<uint32_t>(mut["position"]), from_string<int32_t>(mut["position"]));
         annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]), false, ignore_pseudogenes);
+        snp_muts.push_back(&mut);
       } break;
         
       case SUB:{
@@ -1955,6 +1957,43 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
       } break;
     }
   }
+  
+  //scan snps to see if they affect the same codon
+    for (int32_t i = 0; i < snp_muts.size(); i++){
+      for (int32_t j = i + 1; j < snp_muts.size(); j++){
+        if ((*snp_muts[i])["codon_position"] == "" ||
+            (*snp_muts[j])["codon_position"] == ""
+            ){
+          continue;
+        }
+        
+        int32_t i_position = from_string<int32_t>((*snp_muts[i])["position"]);
+        int32_t j_position = from_string<int32_t>((*snp_muts[j])["position"]);
+        int32_t snp_distance = i_position - j_position;
+        
+        int32_t i_codon_position = from_string<int32_t>((*snp_muts[i])["codon_position"]);
+        int32_t j_codon_position = from_string<int32_t>((*snp_muts[j])["codon_position"]);
+        
+        if (i_position > j_position){
+          if (snp_distance <= 2 && j_codon_position < i_codon_position){
+            string new_codon = (*snp_muts[i])["codon_new_seq"];
+            const char new_char = (*snp_muts[j])["new_seq"][0];
+            new_codon[j_codon_position - 1] = new_char;
+            (*snp_muts[i])["codon_new_seq"] = new_codon;
+            (*snp_muts[j])["codon_new_seq"] = new_codon;
+          }
+        }
+        else{
+          if (snp_distance >= -2 && j_codon_position > i_codon_position){
+            string new_codon = (*snp_muts[i])["codon_new_seq"];
+            const char new_char = (*snp_muts[j])["new_seq"][0];
+            new_codon[j_codon_position - 1] = new_char;
+            (*snp_muts[i])["codon_new_seq"] = new_codon;
+            (*snp_muts[j])["codon_new_seq"] = new_codon;
+          }
+        }
+      }
+    }//for
 }
 
 void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& summary)
