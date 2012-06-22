@@ -1011,23 +1011,23 @@ int do_download(int argc, char *argv[])
   //! Step: Create lookup table to store c_style format strings for urls and file paths.
   map<string, map<string, string> > lookup_table;
   //Url formats.
-    lookup_table["Genbank"]
+    lookup_table["GENBANK"]
         ["url_format"] = "http://www.ncbi.nlm.nih.gov/sviewer/?db=nuccore&val=%s&report=gbwithparts&retmode=text";
     lookup_table["SRA"]
         ["url_format"] = "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/%s/%s/%s.fastq.gz";
-    lookup_table["BarrickLab-Public"]
+    lookup_table["BARRICKLAB-PUBLIC"]
         ["url_format"] = "http://barricklab.org/%s";
-    lookup_table["BarrickLab-Private"]
+    lookup_table["BARRICKLAB-PRIVATE"]
         ["url_format"] = options.count("login") ? "ftp://" + options["login"] + "@backup.barricklab.org/%s" : "";
 
   //File path formats.
-    lookup_table["Genbank"]
+    lookup_table["GENBANK"]
         ["file_path_format"] = download_dir + "/%s.gbk";
     lookup_table["SRA"]
         ["file_path_format"] = download_dir + "/%s.fastq.gz";
-    lookup_table["BarrickLab-Public"]
+    lookup_table["BARRICKLAB-PUBLIC"]
         ["file_path_format"] = download_dir + "/%s";
-    lookup_table["BarrickLab-Private"]
+    lookup_table["BARRICKLAB-PRIVATE"]
         ["file_path_format"] = download_dir + "/%s";
 
   /*! Wrather than crash; gather [gd_file_name][reason] = error_value.
@@ -1054,7 +1054,7 @@ int do_download(int argc, char *argv[])
         continue;
       }
 
-      const string &key = seq_kvp.get_key();
+      const string &key = to_upper(seq_kvp.get_key());
       const string &value = cString(seq_kvp.get_value()).trim_ends_of('/');
 
       if (!lookup_table.count(key)) {
