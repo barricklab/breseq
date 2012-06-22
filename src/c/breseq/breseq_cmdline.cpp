@@ -1544,8 +1544,11 @@ int breseq_default_action(int argc, char* argv[])
 				string read_file_name = settings.base_name_to_read_file_name(base_read_file_name);
         string read_hash_file_name  = settings.file_name(settings.bwa_read_hash_file_name, "#", base_read_file_name);
 
+        float avg_read_length = summary.sequence_conversion.avg_read_length;
+        uint32_t max_diff = static_cast<uint32_t>(floor(avg_read_length / 35)) + 1;
+
         //Index reads.
-        command = "bwa aln -o 0 -n 1 -f " + read_hash_file_name + " " + settings.reference_fasta_file_name + " " + read_file_name; 
+        command = "bwa aln -o 0 -n " + s(max_diff) + " -f " + read_hash_file_name + " " + settings.reference_fasta_file_name + " " + read_file_name; 
         SYSTEM(command);
 
         //Alignment.
@@ -1592,8 +1595,11 @@ int breseq_default_action(int argc, char* argv[])
         string bowtie_unmatched_fastq_file_name = settings.file_name(settings.bowtie_unmatched_fastq_file_name, "#", base_read_file_name);
         string reference_sam_file_name = settings.file_name(settings.bowtie_reference_sam_file_name, "#", base_read_file_name);
 
+        float avg_read_length = summary.sequence_conversion.avg_read_length;
+        uint32_t max_diff = (static_cast<uint32_t>(floor(avg_read_length / 35)) + 1) * 40;
+
         //Split alignment into unmatched and matched files.
-        command = "bowtie -S --un " + bowtie_unmatched_fastq_file_name + " " + reference_prefix +
+        command = "bowtie -S -a -v " + s(max_diff) + " --un " + bowtie_unmatched_fastq_file_name + " " + reference_prefix +
           " " + read_file_name + " " +  reference_sam_file_name;
         SYSTEM(command.c_str());
 
