@@ -275,14 +275,14 @@ namespace breseq {
     ofstream out_file(out_file_name.c_str());
     ASSERT(!out_file.fail(), "Could not open file for output: " + out_file_name);
     
-    int32_t largest_key_size = 0;
+    size_t largest_key_size = 0;
     
     map<string, string>::iterator it;
     
     //1: find the largest string to look for. this will be the largest key in
     //the map.
     for (it = replacement_map.begin(); it != replacement_map.end(); it++){
-      int32_t key_size = (*it).first.size();
+      size_t key_size = (*it).first.size();
       if (key_size > largest_key_size){
         largest_key_size = key_size;
       }
@@ -311,7 +311,7 @@ namespace breseq {
       
       do_write_last_read = false;
       for (it = replacement_map.begin(); it != replacement_map.end(); it++){
-        int32_t key_size = (*it).first.size();
+        size_t key_size = (*it).first.size();
         if (key_size > last_read.size()){
           continue;
         }

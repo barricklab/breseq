@@ -1498,7 +1498,8 @@ cDiffEntry junction_to_diff_entry(
 	{
 		// Determine IS elements
 		// Is it within an IS or near the boundary of an IS in the direction leading up to the junction?
-		repeat_ptr = cReferenceSequences::find_closest_repeat_region_boundary(jc.sides[i].position, ref_seq_info[jc.sides[i].seq_id].m_repeats, 20, jc.sides[i].strand);
+    int32_t max_distance_to_repeat = 20;
+		repeat_ptr = cReferenceSequences::find_closest_repeat_region_boundary(jc.sides[i].position, ref_seq_info[jc.sides[i].seq_id].m_repeats, max_distance_to_repeat, jc.sides[i].strand);
 		if (repeat_ptr.get() != NULL)
 		{
 			jc.sides[i].is = repeat_ptr;
