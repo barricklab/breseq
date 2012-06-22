@@ -1093,17 +1093,17 @@ int do_download(int argc, char *argv[])
       //! Step: Get url and download, gunzip if necessary.
       string url = "";
       const char *url_format = lookup_table[key]["url_format"].c_str();
-      if (key == "Genbank") {
+      if (key == "GENBANK") {
         sprintf(url, url_format, value.c_str());
       }
       else if (key == "SRA") {
         const string &first  = value.substr(0,6), second = value.substr(0,9), third  = value;
         sprintf(url, url_format, first.c_str(), second.c_str(), third.c_str());
       }
-      else if (key == "BarrickLab-Public") {
+      else if (key == "BARRICKLAB-PUBLIC") {
         sprintf(url, url_format, value.c_str());
       }
-      else if (key == "BarrickLab-Private") {
+      else if (key == "BARRICKLAB-PRIVATE") {
         ASSERT(options.count("login"), "Provide the login option (-l user:password) to access private files.");
         sprintf(url, url_format, value.c_str());
       }
