@@ -220,9 +220,6 @@ namespace breseq {
     int32_t index_1 = -1;
     int32_t index_2 = -1;
     
-    cout << alignment_list_1.front()->read_name() << endl;
-    cout << alignment_list_2.front()->read_name() << endl;
-    
     if (not_done_1) {
       index_1 = n(split(alignment_list_1.front()->read_name(),":")[1]);
     }

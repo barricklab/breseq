@@ -69,6 +69,7 @@ SequenceTrims::SequenceTrims(const string& _in_seq)
   // use one structure to avoid byte alignment issues when writing
   trim_data = new unsigned char[2*_in_seq.length()];
   m_length = _in_seq.length();
+
   assert(trim_data != NULL);
   memset( trim_data, 0, 2*m_length );
   

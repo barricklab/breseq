@@ -66,13 +66,13 @@ namespace breseq {
     ~SequenceTrims() { if (trim_data) delete[] trim_data; };
     
     inline void ReadFile(const string& trim_file_name, uint32_t in_seq_length) 
-    { 
+    {       
       // delete any old content
       if (trim_data) delete[] trim_data;
       
       m_length = in_seq_length;
       trim_data = new uint8_t[2*in_seq_length];
-      ifstream in_trim_file(trim_file_name.c_str(), ios::out | ios::binary);
+      ifstream in_trim_file(trim_file_name.c_str(), ios::in | ios::binary);
       in_trim_file.read(reinterpret_cast<char *>(trim_data), 2*in_seq_length);
       assert(!in_trim_file.fail());
       assert(static_cast<uint32_t>(in_trim_file.gcount()) == 2*in_seq_length); //TODO @JEB, int vs uint compare.
