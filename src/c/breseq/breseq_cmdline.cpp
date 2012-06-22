@@ -718,13 +718,13 @@ int do_runfile(int argc, char *argv[])
 
   map<string, map<string, string> > lookup_table;
   //Paths where .gbk and .fastq files are located.
-  lookup_table["Genbank"]
+  lookup_table["GENBANK"]
       ["download_path_format"] = downloads_dir + "/%s.gbk";
   lookup_table["SRA"]
       ["download_path_format"] = downloads_dir + "/%s.fastq";
-  lookup_table["BarrickLab-Public"]
+  lookup_table["BARRICKLAB-PUBLIC"]
       ["download_path_format"] = downloads_dir + "/%s";
-  lookup_table["BarrickLab-Private"]
+  lookup_table["BARRICKLAB-PRIVATE"]
       ["download_path_format"] = downloads_dir + "/%s";
 
   const string &exe = options["executable"];
@@ -779,7 +779,7 @@ int do_runfile(int argc, char *argv[])
         continue;
       }
 
-      const string &key = seq_kvp.get_key();
+      const string &key = to_upper(seq_kvp.get_key());
       const string &value = cString(seq_kvp.get_value()).trim_ends_of('/');
       const string &base_name = cString(value).get_base_name();
 
