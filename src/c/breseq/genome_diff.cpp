@@ -2665,8 +2665,10 @@ void GDtoCircos(const vector<string> &gd_file_names,
         if (mob_colors.count(diff["mediated"])) { 
           // either the end or the beginning is in an IS element
           
-          cSequenceFeaturePtr feat1 = cReferenceSequences::find_closest_repeat_region_boundary(n(diff["position"]) - 1, ref[diff["seq_id"]].m_repeats, 0,-1);
-          cSequenceFeaturePtr feat2 = cReferenceSequences::find_closest_repeat_region_boundary(n(diff["position"]) + n(diff["size"]) + 1 - 1, ref[diff["seq_id"]].m_repeats, 0,1);
+          int32_t max_distance_to_repeat_1 = 0;
+          int32_t max_distance_to_repeat_2 = 0;
+          cSequenceFeaturePtr feat1 = cReferenceSequences::find_closest_repeat_region_boundary(n(diff["position"]) - 1, ref[diff["seq_id"]].m_repeats, max_distance_to_repeat_1,-1);
+          cSequenceFeaturePtr feat2 = cReferenceSequences::find_closest_repeat_region_boundary(n(diff["position"]) + n(diff["size"]) + 1 - 1, ref[diff["seq_id"]].m_repeats, max_distance_to_repeat_2,1);
 
           if (!feat1.get() && !feat2.get()) {
             cerr << diff << endl;
