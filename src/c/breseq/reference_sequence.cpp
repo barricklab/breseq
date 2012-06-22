@@ -1869,6 +1869,8 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
   // and have the annotation point to them (and back at them)
   // so that the codon will be correctly updated with all changes and we can notify the
   // changes that their SNP_type is not really SNP, but multiple hit SNP.
+  
+  vector<cDiffEntry*> snp_muts;
 
   diff_entry_list_t muts = gd.show_list();
   for (diff_entry_list_t::iterator it=muts.begin(); it!=muts.end(); it++)
@@ -1882,6 +1884,7 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
       case SNP:{
         mut["_ref_seq"] = get_sequence_1(mut["seq_id"], from_string<uint32_t>(mut["position"]), from_string<int32_t>(mut["position"]));
         annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]), false, ignore_pseudogenes);
+        snp_muts.push_back(&mut);
       } break;
         
       case SUB:{
@@ -1955,6 +1958,43 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
       } break;
     }
   }
+  
+  //scan snps to see if they affect the same codon
+    for (int32_t i = 0; i < snp_muts.size(); i++){
+      for (int32_t j = i + 1; j < snp_muts.size(); j++){
+        if ((*snp_muts[i])["codon_position"] == "" ||
+            (*snp_muts[j])["codon_position"] == ""
+            ){
+          continue;
+        }
+        
+        int32_t i_position = from_string<int32_t>((*snp_muts[i])["position"]);
+        int32_t j_position = from_string<int32_t>((*snp_muts[j])["position"]);
+        int32_t snp_distance = i_position - j_position;
+        
+        int32_t i_codon_position = from_string<int32_t>((*snp_muts[i])["codon_position"]);
+        int32_t j_codon_position = from_string<int32_t>((*snp_muts[j])["codon_position"]);
+        
+        if (i_position > j_position){
+          if (snp_distance <= 2 && j_codon_position < i_codon_position){
+            string new_codon = (*snp_muts[i])["codon_new_seq"];
+            const char new_char = (*snp_muts[j])["new_seq"][0];
+            new_codon[j_codon_position - 1] = new_char;
+            (*snp_muts[i])["codon_new_seq"] = new_codon;
+            (*snp_muts[j])["codon_new_seq"] = new_codon;
+          }
+        }
+        else{
+          if (snp_distance >= -2 && j_codon_position > i_codon_position){
+            string new_codon = (*snp_muts[i])["codon_new_seq"];
+            const char new_char = (*snp_muts[j])["new_seq"][0];
+            new_codon[j_codon_position - 1] = new_char;
+            (*snp_muts[i])["codon_new_seq"] = new_codon;
+            (*snp_muts[j])["codon_new_seq"] = new_codon;
+          }
+        }
+      }
+    }//for
 }
 
 void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& summary)
