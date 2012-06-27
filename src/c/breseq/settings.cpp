@@ -119,6 +119,7 @@ namespace breseq
     ("name,n", "Human-readable name of sample/run for output [empty]", "")
     ("no-junction-prediction,j", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
     ("base-quality-cutoff,b", "Ignore bases with quality scores lower than this value", 3)
+    ("quality-score-trim", "Trim the ends of reads past any base with a quality score below --base-quality-score-cutoff.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("require-match-length", "Only consider alignments that cover this many bases of a read", 0)
     ("require-match-fraction", "Only consider alignments that cover this fraction of a read", 0.9)
     ("deletion-coverage-propagation-cutoff,u","Value for coverage above which deletions are cutoff. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
@@ -139,6 +140,8 @@ namespace breseq
     ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms where this many reads on each strand support alternative alleles", 0.0, ADVANCED_OPTION)
     ("bwa", "Preprocess the alignments with BWA.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("bowtie", "Preprocess the alignments with Bowtie.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("bowtie2", "Preprocess the alignments with Bowtie2.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("bowtie2-align", "Map reads with Bowtie2 instead of SSAHA2.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("aligned-sam", "Input files are aligned and SAM files, rather than FASTQ files. Junction prediction steps will be skipped.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     
     // Periodicity block
@@ -211,9 +214,9 @@ namespace breseq
 		}
     this->reference_file_names = from_string<vector<string> >(options["reference"]);
 
-    if (options.count("bwa") && options.count("bowtie")) {
+    if (options.count("bwa") + options.count("bowtie") + options.count("bowtie2") > 1) {
       options.addUsage("");
-      options.addUsage("Please select only --bwa OR --bowtie for preprocessing alignments.");
+      options.addUsage("Please select only --bwa OR --bowtie OR --bowtie2 for preprocessing alignments.");
       options.printUsage();
       exit(-1);
     }
@@ -226,7 +229,8 @@ namespace breseq
     this->ignore_redundant_coverage = options.count("cnv-ignore-redundant");
     this->bwa = options.count("bwa");
     this->bowtie = options.count("bowtie");
-    
+    this->bowtie2 = options.count("bowtie2");
+    this->bowtie2_align = options.count("bowtie2-align");
     
     this->do_periodicity = options.count("periodicity");
     this->periodicity_method = from_string<uint32_t>(options["periodicity-method"]);
@@ -243,6 +247,7 @@ namespace breseq
 
     //! Settings: Mutation Identification
     this->base_quality_cutoff = from_string<uint32_t>(options["base-quality-cutoff"]);
+    if (options.count("quality-score-trim")) this->quality_score_trim = this->base_quality_cutoff;
 
     this->deletion_coverage_propagation_cutoff = from_string<double>(options["deletion-coverage-propagation-cutoff"]);
     ASSERT(this->deletion_coverage_propagation_cutoff >= 0, "Argument --deletion-coverage-propagation-cutoff must be > 0")
@@ -356,14 +361,23 @@ namespace breseq
     this->maximum_read_mismatches = -1;
 
     this->smalt = false;
+    this->bwa = false;
+    this->bowtie = false;
+    this->bowtie2 = false;
+    this->bowtie2_align = false;
     this->max_smalt_diff = 0;
 
     //! Settings: Candidate Junction Prediction
 		this->preprocess_junction_min_indel_split_length = 3;
-		this->required_both_unique_length_per_side = 5;
-		this->required_one_unique_length_per_side = this->ssaha2_seed_length;  
+		this->required_both_unique_length_per_side = 0;
+    this->required_both_unique_length_per_side_fraction = 0.2;
+		this->required_one_unique_length_per_side = this->ssaha2_seed_length; 
+    this->unmatched_end_length_factor = 0.1;
+    this->unmatched_end_minimum_read_length = 50;
+    
     this->minimum_candidate_junction_pos_hash_score = 2;
     this->maximum_junction_sequence_insertion_length = 20;
+    this->maximum_junction_sequence_insertion_overlap_length_fraction = 0.4;
     this->maximum_junction_sequence_overlap_length = 20;
     this->minimum_candidate_junctions = 10;
 		this->maximum_candidate_junctions = 5000;
@@ -376,6 +390,7 @@ namespace breseq
 
     //! Settings: Mutation Identification
     this->base_quality_cutoff = 3;
+    this->quality_score_trim = 0;
     this->deletion_coverage_propagation_cutoff = 0;
     this->deletion_coverage_seed_cutoff = 0;
     this->polymorphism_prediction = false;

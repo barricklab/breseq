@@ -561,7 +561,6 @@ bool tam_file::read_alignments(alignment_list& alignments, bool paired)
   (void)paired;
   alignments.clear();
 
-	//uint32_t num_to_slurp = (paired) ? 2 : 1; //TODO:unused?
 	string last_read_name = "";
 	if (last_alignment.get() != NULL)
 	{
@@ -570,7 +569,6 @@ bool tam_file::read_alignments(alignment_list& alignments, bool paired)
     last_alignment = counted_ptr<bam_alignment>(NULL);
 	}
 
-	//int num_slurped = 0;//TODO:unused?
 	while (true)
 	{
     bam_alignment* this_alignment_bam = new bam_alignment(); 
@@ -626,6 +624,13 @@ void tam_file::write_alignments(
 		string aux_tags = aux_tags_ss.str();
 
 		string quality_score_string = a.read_base_quality_char_string();
+    if (quality_score_string[0] == ' ') {
+      quality_score_string = alignments.read_base_quality_char_string;
+      if (alignments.read_base_quality_char_string_reversed ^ a.reversed())
+        quality_score_string = reverse_string(quality_score_string);
+    }
+    ASSERT(quality_score_string.size() > 0, "Attempt to write read with no quality scores: " + a.read_name());
+    
 		string cigar_string;
     
     // @JEB experimental!!
@@ -673,7 +678,7 @@ void tam_file::write_alignments(
 	}
 }
 
-void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignment_wrapper& a)
+void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignment_wrapper& a, const alignment_list& alignments)
 {
   // Debug
   //if (a.read_name() == "3:234041") {
@@ -681,10 +686,17 @@ void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
   //}
   
 	uint32_t q_length = a.read_length();
-
-  string qual_string = a.read_base_quality_char_string();
 	string qseq_string = a.read_char_sequence();
 
+  string quality_score_string = a.read_base_quality_char_string();
+  if (quality_score_string[0] == ' ') {
+    quality_score_string = alignments.read_base_quality_char_string;
+    if (alignments.read_base_quality_char_string_reversed ^ a.reversed())
+      quality_score_string = reverse_string(quality_score_string);
+  }
+  ASSERT(quality_score_string.size() > 0, "Attempt to write read with no quality scores: " + a.read_name());
+
+  
 	uint32_t rpos = a.reference_start_1();
 	uint32_t qpos = a.query_start_1();
 
@@ -749,7 +761,7 @@ void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
 				(cigar_string)
 				("*")("0")("0") //mate info
 				(qseq_string)
-				(qual_string)
+				(quality_score_string)
 				//#$aux_tags
 			;
 			output_tam << join(ll, "\t") << endl;
@@ -784,11 +796,6 @@ void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
 			{
 				rpos += len;
 			}
-			//else if (op == 'S')
-			//{
-			//	qpos += len;
-			//	i++;
-			//}
 			else if (op == 'M')
 			{
 				break;
@@ -826,6 +833,7 @@ void tam_file::write_moved_alignment(
                                      uint32_t junction_side, 
                                      int32_t junction_flanking, 
                                      int32_t junction_overlap, 
+                                     const alignment_list& alignments,
                                      const Trims* trim
                                      )
 {
@@ -860,16 +868,24 @@ void tam_file::write_moved_alignment(
 
 
 	// Setup all of the original read information
-	uint8_t* qscore = a.read_base_quality_bam_sequence(); // quality score array
 	uint32_t q_length = a.read_length();
 
-	vector<uint8_t> qual_scores;
-	stringstream qseq_ss;
-	for (uint32_t i = 0; i < q_length; i++)
-	{
-		qual_scores.push_back(*qscore);
-		qscore++;
-	}
+  vector<char> qual_scores;
+  {
+    string quality_score_string = a.read_base_quality_char_string();
+    if (quality_score_string[0] == ' ') {
+      quality_score_string = alignments.read_base_quality_char_string;
+      if (alignments.read_base_quality_char_string_reversed ^ a.reversed())
+        quality_score_string = reverse_string(quality_score_string);
+    }
+    ASSERT(quality_score_string.size() > 0, "Attempt to write read with no quality scores: " + a.read_name());
+
+    for (uint32_t i = 0; i < q_length; i++)
+    {
+      qual_scores.push_back(quality_score_string[i]);
+    }
+  }
+    
 	string seq = a.read_char_sequence();
 
 	vector<pair<char,uint16_t> > cigar_list = a.cigar_pair_array();
@@ -1089,7 +1105,7 @@ void tam_file::write_moved_alignment(
 	//// Convert the CIGAR list back to a CIGAR string
 	////
 	//// at the same time check to make sure the length
-	//// is corect and that there are no negative nums
+	//// is correct and that there are no negative nums
 	stringstream cigar_string_ss;
 	uint32_t cigar_length = 0;
 	for (uint32_t i = 0; i < cigar_list.size(); i++) //CIGAR
@@ -1108,8 +1124,8 @@ void tam_file::write_moved_alignment(
 	////
 	stringstream quality_score_ss;
 	for (uint32_t i = 0; i < qual_scores.size(); i++)
-    {
-		quality_score_ss << static_cast<char>(qual_scores[i] + 33);
+  {
+		quality_score_ss << static_cast<char>(qual_scores[i]);
 	}
 	string quality_score_string = quality_score_ss.str();
 

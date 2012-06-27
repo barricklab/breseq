@@ -721,7 +721,7 @@ void cErrorTable::write_count_table_content(ofstream& out, const uint32_t positi
     in the count table. This function is called by the pileup_callback.
 */
 void cErrorTable::count_alignment_position(const pileup_wrapper& i, const pileup& p) {
-    
+      
     uint32_t ref_pos = p.position_0();
     const char* ref_seq = p.reference_sequence();
     
