@@ -183,7 +183,9 @@ namespace breseq
     uint32_t ssaha2_seed_length;  // Default = 13
     uint32_t ssaha2_skip_length;  // Default = 1 (i.e. no skipping)
     bool bwa;                     // Default = false COMMAND-LINE OPTION
-    bool bowtie;                     // Default = false COMMAND-LINE OPTION
+    bool bowtie;                  // Default = false COMMAND-LINE OPTION
+    bool bowtie2;                 // Default = false COMMAND-LINE OPTION
+    bool bowtie2_align;           // Default = false COMMAND-LINE OPTION
     bool aligned_sam_mode;        // Default = false COMMAND-LINE OPTION
     
     //! reads are never included in the BAM alignment file if they fail these guards
@@ -196,19 +198,40 @@ namespace breseq
 		uint32_t max_smalt_diff;          // Unused
     
     //! Settings: Candidate Junction Prediction
-    uint32_t preprocess_junction_min_indel_split_length;  // Default = 3
-		uint32_t required_both_unique_length_per_side;        // Default = 5
-		uint32_t required_one_unique_length_per_side;         // Default = ssaha2_seed_length = 13
+    uint32_t preprocess_junction_min_indel_split_length;    // Default = 3
+		uint32_t required_both_unique_length_per_side;          // Default = 0 (OFF)
+    uint32_t required_both_unique_length_per_side_fraction; // Default = 0.2 
+		uint32_t required_one_unique_length_per_side;           // Default = ssaha2_seed_length = 13
+    uint32_t unmatched_end_minimum_read_length;             // Default = 50
+    double   unmatched_end_length_factor;                   // Default = 0.1
+    
+    // The number of mismatches allowed at the end of a read is:
+    //   (read_length - unmatched_end_minimum_read_length) * unmatched_end_length_factor 
+    
+    uint32_t required_junction_read_end_min_coordinate(uint32_t read_length) const {
+      int32_t unmatched_end_max_length = static_cast<int32_t>(floor(
+        static_cast<double>(static_cast<int32_t>(read_length) - static_cast<int32_t>(unmatched_end_minimum_read_length)) 
+        * unmatched_end_length_factor
+      ));
+      if (unmatched_end_max_length <= 0) 
+        return read_length;
+      else
+        return read_length - unmatched_end_max_length;
+    }
+    
+    uint32_t maximum_junction_sequence_insertion_length;  // Default = 20
+    uint32_t maximum_junction_sequence_overlap_length;    // Default = 20
+    double maximum_junction_sequence_insertion_overlap_length_fraction; // Default = 0.4
+    
     
     // Which candidate junctions do we test?
 		uint32_t minimum_candidate_junction_pos_hash_score;   // Default = 2
-		uint32_t maximum_junction_sequence_insertion_length;  // Default = 20
-    uint32_t maximum_junction_sequence_overlap_length;    // Default = 20
 		uint32_t minimum_candidate_junctions;                 // Default = 10
 		uint32_t maximum_candidate_junctions;                 // Default = 5000
     double maximum_candidate_junction_length_factor;      // Default = 0.1
-    bool penalize_negative_junction_overlap;              // Manually set. True for experimental treatment.
     
+    bool penalize_negative_junction_overlap;              // Manually set. True for experimental treatment.
+      
     //! Settings: Alignment Resolution
 		bool add_split_junction_sides;                        // Default = true (possibly remove this option)  
     double junction_pos_hash_neg_log10_p_value_cutoff;    // Default = 3
@@ -216,8 +239,10 @@ namespace breseq
     //! Settings: Mutation Identification
     
     //! ignore bases below this cutoff for RA evidence (still counted for deletions?)
-    uint32_t base_quality_cutoff;                         // Default 3 COMMAND-LINE OPTION
-        
+    uint32_t base_quality_cutoff;                         // Default 3    COMMAND-LINE OPTION
+    uint32_t quality_score_trim;                          // Default OFF  COMMAND-LINE OPTION
+    
+    
     //! treated as read numbers if integers >= 1.0 and percentages of average coverage if > 0.0 and < 1.0
     double deletion_coverage_propagation_cutoff;          // Default = calculated COMMAND-LINE OPTION
     double deletion_coverage_seed_cutoff;                 // Default = 0;         COMMAND-LINE OPTION

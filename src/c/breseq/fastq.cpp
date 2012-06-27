@@ -29,7 +29,7 @@ namespace breseq {
 
    */
 
-  Summary::AnalyzeFastq normalize_fastq(const string &file_name, const string &convert_file_name, const uint32_t file_index) {
+  Summary::AnalyzeFastq normalize_fastq(const string &file_name, const string &convert_file_name, const uint32_t file_index, const int32_t trim_end_on_base_quality) {
     
     // Set up maps between formats
     map<string,uint8_t> format_to_chr_offset;
@@ -130,13 +130,21 @@ namespace breseq {
       // fastq quality convert
       fqc.convert_sequence(on_sequence);
       
+      // trim bad quality scores from the end and ignore if we have cut to less than half the length
+      if (trim_end_on_base_quality) {
+        size_t original_size = on_sequence.m_sequence.size();
+        fastq_sequence_trim_end_on_base_quality(on_sequence, trim_end_on_base_quality);
+        if ( on_sequence.m_sequence.size() < static_cast<size_t>(floor(0.5 * original_size)) )
+          continue;
+      }
+      
       // uniformly name, to prevent problems drawing alignments
+      // and allows us to know the input order
       //char string_buffer[256];
       //sprintf(string_buffer, "%03u:%010u", file_index, on_read++);
       //on_sequence.m_name = string_buffer;
       
       on_sequence.m_name = to_string(file_index) + ":" + to_string(on_read++);
-      
       
       // convert base qualities
       output_fastq_file.write_sequence(on_sequence);
@@ -176,6 +184,17 @@ namespace breseq {
     
     input_fastq_file.close();
     output_fastq_file.close();
+  }
+  
+  void fastq_sequence_trim_end_on_base_quality(cFastqSequence& seq, const uint32_t base_quality)
+  {
+    for (uint32_t i=0; i<seq.m_qualities.size(); i++) {
+      if (static_cast<uint8_t>(seq.m_qualities[i]-33) < base_quality) {
+        seq.m_sequence.resize(i);
+        seq.m_qualities.resize(i);
+        break; 
+      }
+    }
   }
 
   // constructor

@@ -198,6 +198,46 @@ namespace breseq{
 		storable_map<string, Coverage> preprocess_coverage;
 		storable_map<string, Coverage> unique_coverage;
 
+    class PreprocessAlignments : public Storable
+    {
+    public:
+      int32_t aligned_reads;
+			int32_t alignments;
+      int32_t alignments_split_on_indels;
+      int32_t reads_with_alignments_split_on_indels;
+      int32_t split_alignments;
+      int32_t reads_with_split_alignments;
+      
+      PreprocessAlignments()
+      : aligned_reads(0)
+      , alignments(0)
+      , alignments_split_on_indels(0)
+      , reads_with_alignments_split_on_indels(0)
+      , split_alignments(0)
+      , reads_with_split_alignments(0)
+      {}
+      
+      void serialize(ofstream& f)
+      {
+        write_to_file(f, aligned_reads);
+        write_to_file(f, alignments);
+				write_to_file(f, alignments_split_on_indels);
+        write_to_file(f, reads_with_alignments_split_on_indels);
+        write_to_file(f, split_alignments);
+				write_to_file(f, reads_with_split_alignments);
+      }
+      
+      void deserialize(ifstream& f)
+      {
+        read_from_file(f, aligned_reads);
+        read_from_file(f, alignments);
+				read_from_file(f, alignments_split_on_indels);
+        read_from_file(f, reads_with_alignments_split_on_indels);
+        read_from_file(f, split_alignments);
+				read_from_file(f, reads_with_split_alignments);
+      }
+		} preprocess_alignments;
+    
 		class CandidateJunctionSummaryData : public Storable
     {
     public:
@@ -215,6 +255,9 @@ namespace breseq{
 			} accepted;
 
 			map<int32_t, int32_t> pos_hash_score_distribution;
+      
+      CandidateJunctionSummaryData()
+      {}
 
       void serialize(ofstream& f)
       {
@@ -297,6 +340,7 @@ namespace breseq{
       preprocess_coverage.serialize(f);
       unique_coverage.serialize(f);
       preprocess_error_count.serialize(f);
+      preprocess_alignments.serialize(f);
     }
     
 		void deserialize(ifstream& f)
@@ -307,6 +351,7 @@ namespace breseq{
       preprocess_coverage.deserialize(f);
       unique_coverage.deserialize(f);
       preprocess_error_count.deserialize(f);
+      preprocess_alignments.deserialize(f);
 		}
 	};
   
