@@ -138,8 +138,6 @@ namespace breseq
     ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias", 0.05, ADVANCED_OPTION)
     ("polymorphism-frequency-cutoff", "Only predict polymorphisms where both allele frequencies are > than this value", 0.0, ADVANCED_OPTION)
     ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms where this many reads on each strand support alternative alleles", 0.0, ADVANCED_OPTION)
-    ("bwa", "Preprocess the alignments with BWA.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("bowtie", "Preprocess the alignments with Bowtie.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("bowtie2", "Preprocess the alignments with Bowtie2.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("bowtie2-align", "Map reads with Bowtie2 instead of SSAHA2.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("aligned-sam", "Input files are aligned and SAM files, rather than FASTQ files. Junction prediction steps will be skipped.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
@@ -214,21 +212,12 @@ namespace breseq
 		}
     this->reference_file_names = from_string<vector<string> >(options["reference"]);
 
-    if (options.count("bwa") + options.count("bowtie") + options.count("bowtie2") > 1) {
-      options.addUsage("");
-      options.addUsage("Please select only --bwa OR --bowtie OR --bowtie2 for preprocessing alignments.");
-      options.printUsage();
-      exit(-1);
-    }
-    
     this->run_name = options["name"];
     
     this->no_junction_prediction = options.count("no-junction-prediction");
     this->do_copy_number_variation = options.count("cnv");
     this->copy_number_variation_tile_size = from_string<uint32_t>(options["cnv-tile-size"]);
     this->ignore_redundant_coverage = options.count("cnv-ignore-redundant");
-    this->bwa = options.count("bwa");
-    this->bowtie = options.count("bowtie");
     this->bowtie2 = options.count("bowtie2");
     this->bowtie2_align = options.count("bowtie2-align");
     
@@ -360,12 +349,8 @@ namespace breseq
     this->require_match_fraction = 0.9;
     this->maximum_read_mismatches = -1;
 
-    this->smalt = false;
-    this->bwa = false;
-    this->bowtie = false;
     this->bowtie2 = false;
     this->bowtie2_align = false;
-    this->max_smalt_diff = 0;
 
     //! Settings: Candidate Junction Prediction
 		this->preprocess_junction_min_indel_split_length = 3;
@@ -471,14 +456,9 @@ namespace breseq
 		this->reference_hash_file_name = this->reference_alignment_path + "/reference";
 		this->reference_sam_file_name = this->reference_alignment_path + "/#.reference.sam";
 
-    this->bwa_read_hash_file_name = this->reference_alignment_path + "/#.bwa.sai";
-    this->bwa_reference_sam_file_name = this->reference_alignment_path + "/#.bwa.sam";
-    this->bwa_matched_sam_file_name = this->reference_alignment_path + "/#.bwa.matched.sam";
-    this->bwa_unmatched_fastq_file_name = this->reference_alignment_path + "/#.bwa.unmatched.fastq";
-
-    this->bowtie_reference_sam_file_name = this->reference_alignment_path + "/#.bowtie.sam";
-    this->bowtie_matched_sam_file_name = this->reference_alignment_path + "/#.bowtie.matched.sam";
-    this->bowtie_unmatched_fastq_file_name = this->reference_alignment_path + "/#.bowtie.unmatched.fastq";
+    this->bowtie2_reference_sam_file_name = this->reference_alignment_path + "/#.bowtie2.sam";
+    this->bowtie2_matched_sam_file_name = this->reference_alignment_path + "/#.bowtie2.matched.sam";
+    this->bowtie2_unmatched_fastq_file_name = this->reference_alignment_path + "/#.bowtie2.unmatched.fastq";
 
     this->ssaha2_reference_sam_file_name = this->reference_alignment_path + "/#.ssaha2.matched.sam";
 
@@ -659,36 +639,11 @@ namespace breseq
     if (this->installed["SSAHA2"].size() == 0)
       this->installed["SSAHA2"] = SYSTEM_CAPTURE("which ssaha2", true);
 
-    if (this->bwa) {
-      this->installed["bwa"] = SYSTEM_CAPTURE("which bwa", true);
+    if (this->bowtie2) {
+      this->installed["bowtie2-build"] = SYSTEM_CAPTURE("which bowtie2-build", true);
+      this->installed["bowtie2"] = SYSTEM_CAPTURE("which bowtie2", true);
     }
 
-    if (this->bowtie) {
-      this->installed["bowtie-build"] = SYSTEM_CAPTURE("which bowtie-build", true);
-      this->installed["bowtie"] = SYSTEM_CAPTURE("which bowtie", true);
-    }
-
-    /*
-		// check for default names
-		this->installed["smalt"] = system("which smalt &>/dev/null") ? "smalt" : "";
-		if (this->installed["smalt"].size() == 0)
-		{
-			this->installed["smalt"] = system("which smalt_i386 &>/dev/null") ? "smalt_i386" : "";
-		}
-		if (this->installed["smalt"].size() == 0)
-		{
-			this->installed["smalt"] = system("which smalt_ia64 &>/dev/null") ? "smalt_ia64" : "";
-		}
-		if (this->installed["smalt"].size() == 0)
-		{
-			this->installed["smalt"] = system("which smalt_x86_64 &>/dev/null") ? "smalt_x86_64" : "";
-		}
-		if (this->installed["smalt"].size() == 0)
-		{
-			this->installed["smalt"] = system("which smalt_MacOSX_i386 &>/dev/null") ? "smalt_MacOSX_i386" : "";
-		}
-    */
-    
 		this->installed["R"] = SYSTEM_CAPTURE("which R", true).size() ? "R" : "";
 		if (this->installed["R"].size() > 0)
 		{
@@ -729,33 +684,19 @@ namespace breseq
     
 		bool good_to_go = true;
 
-		if (!this->smalt && this->installed["SSAHA2"].size() == 0)
+		if (!this->bowtie2 && this->installed["SSAHA2"].size() == 0)
 		{
 			good_to_go = false;
 			cerr << "---> ERROR Required executable \"ssaha2\" not found." << endl;
 			cerr << "---> See http://www.sanger.ac.uk/resources/software/ssaha2" << endl;
 		}
 
-		if (this->smalt && this->installed["smalt"].size() == 0)
+		if (this->bowtie2 && 
+        (this->installed["bowtie2-build"].size() == 0 ||
+         this->installed["bowtie2"].size() == 0))
 		{
 			good_to_go = false;
-			cerr << "---> ERROR Required executable \"smalt\" not found." << endl;
-			cerr << "---> See http://www.sanger.ac.uk/resources/software/smalt/" << endl;
-		}
-
-		if (this->bwa && this->installed["bwa"].size() == 0)
-		{
-			good_to_go = false;
-			cerr << "---> ERROR Required executable \"bwa\" not found." << endl;
-			cerr << "---> See http://bio-bwa.sourceforge.net/" << endl;
-		}
-
-		if (this->bowtie && 
-        (this->installed["bowtie-build"].size() == 0 ||
-         this->installed["bowtie"].size() == 0))
-		{
-			good_to_go = false;
-			cerr << "---> ERROR Required executable \"bowtie\" not found." << endl;
+			cerr << "---> ERROR Required executable \"bowtie2\" not found." << endl;
 			cerr << "---> See http://bowtie-bio.sourceforge.net/" << endl;
 		}
 
