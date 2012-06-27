@@ -182,8 +182,6 @@ namespace breseq
     //! Settings: Read Alignment and Candidate Junction Read Alignment
     uint32_t ssaha2_seed_length;  // Default = 13
     uint32_t ssaha2_skip_length;  // Default = 1 (i.e. no skipping)
-    bool bwa;                     // Default = false COMMAND-LINE OPTION
-    bool bowtie;                  // Default = false COMMAND-LINE OPTION
     bool bowtie2;                 // Default = false COMMAND-LINE OPTION
     bool bowtie2_align;           // Default = false COMMAND-LINE OPTION
     bool aligned_sam_mode;        // Default = false COMMAND-LINE OPTION
@@ -194,8 +192,6 @@ namespace breseq
     //! ignore reads with this many or more mismatches (I+D+MM)
     int32_t  maximum_read_mismatches;     // Default = -1 (OFF)
 
-    bool smalt;                       // Unused
-		uint32_t max_smalt_diff;          // Unused
     
     //! Settings: Candidate Junction Prediction
     uint32_t preprocess_junction_min_indel_split_length;    // Default = 3
@@ -312,16 +308,10 @@ namespace breseq
 		string reference_hash_file_name;
 		string reference_sam_file_name;
 
-    // Staged alignment with BWA
-    string bwa_read_hash_file_name;
-		string bwa_reference_sam_file_name;
-    string bwa_matched_sam_file_name;
-    string bwa_unmatched_fastq_file_name;
-
     // Staged alignment with 
-		string bowtie_reference_sam_file_name;
-    string bowtie_matched_sam_file_name;
-    string bowtie_unmatched_fastq_file_name;
+		string bowtie2_reference_sam_file_name;
+    string bowtie2_matched_sam_file_name;
+    string bowtie2_unmatched_fastq_file_name;
 
     string ssaha2_reference_sam_file_name;
     
