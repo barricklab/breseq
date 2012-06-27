@@ -230,7 +230,8 @@ namespace breseq {
       
       if (not_done_1 && (index_1 < index_2)) {
         
-        out_sam_file.write_alignments(fastq_file_index, alignment_list_1);
+        if (!alignment_list_1.front()->unmapped())
+          out_sam_file.write_alignments(fastq_file_index, alignment_list_1);
 
         // read next line
         not_done_1 = input_sam_file_1.read_alignments(alignment_list_1, false);
@@ -242,7 +243,8 @@ namespace breseq {
       }
       else if (not_done_2) {
         
-        out_sam_file.write_alignments(fastq_file_index, alignment_list_2);
+        if (!alignment_list_2.front()->unmapped())
+          out_sam_file.write_alignments(fastq_file_index, alignment_list_2);
 
         // read next line
         not_done_2 = input_sam_file_2.read_alignments(alignment_list_2, false);   
@@ -255,7 +257,7 @@ namespace breseq {
     }
   }
   
-  /*! Preprocess read alignments for predicting junctions
+  /*! PreprocessAlignments::preprocess_alignments
    *
    *  Writes one SAM file of partial read alignments that could support junctions
    *  and another SAM file of the best read matches to the reference genome for
@@ -268,13 +270,12 @@ namespace breseq {
 		// get the cutoff for splitting alignments with indels
 		int32_t min_indel_split_len = settings.preprocess_junction_min_indel_split_length;
     
-		// includes best matches as they are
+		// BSAM includes best matches as they are merged from all alignment files
 		string preprocess_junction_best_sam_file_name = settings.preprocess_junction_best_sam_file_name;
     string reference_fasta_file_name = settings.reference_fasta_file_name;
-    
     tam_file BSAM(preprocess_junction_best_sam_file_name, reference_fasta_file_name, ios_base::out);
+    
     uint32_t i = 0;
-
 		for (uint32_t index = 0; index < settings.read_files.size(); index++)
 		{
 			cReadFile read_file = settings.read_files[index];
@@ -283,18 +284,23 @@ namespace breseq {
 			string reference_sam_file_name = Settings::file_name(settings.reference_sam_file_name, "#", read_file.m_base_name);
       tam_file tam(reference_sam_file_name, reference_fasta_file_name, ios_base::in);
       
-			// includes all matches, and splits long indels
+			// includes all matches, and splits long indels for this one read file
       string preprocess_junction_split_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", read_file.m_base_name);
       tam_file PSAM(preprocess_junction_split_sam_file_name, reference_fasta_file_name, ios_base::out);
       
 			alignment_list alignments;
 			while (tam.read_alignments(alignments, false))
 			{
-				if (++i % 10000 == 0)
+				if (++i % 100000 == 0)
 					cerr << "    ALIGNED READ:" << i << endl;
+        
+        summary.preprocess_alignments.aligned_reads++;
+        summary.preprocess_alignments.alignments += alignments.size();
         
 				// for testing...
 				if (settings.candidate_junction_read_limit != 0 && i > settings.candidate_junction_read_limit) break;
+        
+        if (alignments.front()->unmapped()) continue;
         
 				// write split alignments
 				if (min_indel_split_len != -1)
@@ -307,6 +313,15 @@ namespace breseq {
         BSAM.write_alignments(0, alignments, NULL);
       }
     }
+    
+    cout << "  Summary... " << setw (12) << right << endl;
+    cout << "  Aligned reads:                         " << summary.preprocess_alignments.aligned_reads << endl;
+    cout << "  Read alignments:                       " << summary.preprocess_alignments.alignments << endl;
+    cout << "  Alignments split on indels:            " << summary.preprocess_alignments.alignments_split_on_indels << endl;
+    cout << "  Reads with alignments split on indels: " << summary.preprocess_alignments.reads_with_alignments_split_on_indels << endl;
+    cout << "  Split alignments:                      " << summary.preprocess_alignments.split_alignments << endl;
+    cout << "  Reads with split alignments:           " << summary.preprocess_alignments.reads_with_split_alignments << endl;
+  
   }
 
   
@@ -323,56 +338,61 @@ namespace breseq {
     //## So only USE the split alignment file for creating a list of candidate junctions.
     //##
     
-    (void)settings; //TODO? unused?
-    (void)summary; //TODO: track statistics?
-    
     assert(min_indel_split_len >= 0);
     
+    // Keeps track of which to split
     alignment_list untouched_alignments;
+    alignment_list split_alignments;
+    
+    untouched_alignments.read_base_quality_char_string = alignments.read_base_quality_char_string;
+    untouched_alignments.read_base_quality_char_string_reversed = alignments.read_base_quality_char_string_reversed;
     uint32_t alignments_written = 0;      
     
-    for(alignment_list::const_iterator it = alignments.begin(); it != alignments.end(); it++) 
-    {
+    for(alignment_list::const_iterator it = alignments.begin(); it != alignments.end(); it++) {
+      
       uint32_t* cigar_list = (*it)->cigar_array();
       bool do_split = false;
-      for(uint32_t i=0; i<(*it)->cigar_array_length(); i++)
-      {
+      
+      for(uint32_t i=0; i<(*it)->cigar_array_length(); i++) {
         uint32_t op = cigar_list[i] & BAM_CIGAR_MASK;
         uint32_t len = cigar_list[i] >> BAM_CIGAR_SHIFT;
-        if (((op == BAM_CINS) || (op == BAM_CDEL)) && (len >= static_cast<uint32_t>(min_indel_split_len)))
-        {
+        if (((op == BAM_CINS) || (op == BAM_CDEL)) && (len >= static_cast<uint32_t>(min_indel_split_len))) {
           do_split = true;
         }
       }
       
-      if (do_split)
-      {
-        PSAM.write_split_alignment(min_indel_split_len, **it);
-        alignments_written += 2;
+      if (do_split) {
+        split_alignments.push_back( *it );
+        
       }
-      else
-      {
-        untouched_alignments.push_back(*it);
+      else {
+        // Check guard showing that the main alignment is good and thus we don't look at other alignments
+        if ( (*it)->query_match_length() >= alignments.front()->read_length() - settings.required_both_unique_length_per_side)
+          return;
+        
+        untouched_alignments.push_back( *it );
       }      
-    }
-
-    // Don't write in possible junction file when it covers the entire read! 
-    // -- or so much that it couldn't possibly be used in a junction.
-    for(alignment_list::iterator it = untouched_alignments.begin(); it != untouched_alignments.end();) 
-    {
-//    if ((*it)->beginning_to_end_match()) @JEB this is a backup version, sure not to throw anything out
-      if ((*it)->query_match_length() > (*it)->read_length() - settings.required_both_unique_length_per_side)
-        it = untouched_alignments.erase(it);
-      else
-        it++;
     }
         
     // Don't write if there is only one alignment to be written,
     // it takes at least two to make a candidate junction.
-    if (alignments_written + untouched_alignments.size() > 1)
-    {
-      PSAM.write_alignments(0, untouched_alignments);
+
+    for(alignment_list::iterator it = split_alignments.begin(); it != split_alignments.end(); ++it) {
+      PSAM.write_split_alignment(min_indel_split_len, **it, alignments);
+      alignments_written += 2;
     }
+    
+    if (untouched_alignments.size() + alignments_written > 1) {
+      PSAM.write_alignments(0, untouched_alignments);
+      alignments_written += untouched_alignments.size();
+    }
+
+    // record statistics
+    if (split_alignments.size()>0) summary.preprocess_alignments.reads_with_alignments_split_on_indels++; 
+    summary.preprocess_alignments.alignments_split_on_indels +=split_alignments.size() ;
+    
+    if (alignments_written > 0) summary.preprocess_alignments.reads_with_split_alignments++;
+    summary.preprocess_alignments.split_alignments += alignments_written;
   }
     
 	/*! Predicts candidate junctions
@@ -385,9 +405,8 @@ namespace breseq {
 		// hash by junction sequence
 		SequenceToKeyToJunctionCandidateMap candidate_junctions;
     
-        
-		// summary data for this step
-		Summary::CandidateJunctionSummaryData hcs;
+		// shortcut to summary data for this step
+		Summary::CandidateJunctionSummaryData& hcs(summary.candidate_junction);
     
 		uint32_t i = 0;
     
@@ -1184,8 +1203,14 @@ namespace breseq {
 		else //reversed
 			r2_start += overlap_offset;
 
+    ///
+    // Important: Here is where we choose the strand of the junction sequence
+    // We always favor coordinates going from lower to higher on a side of the strand,
+    // So if the reads are <-<- wrt the junction, then we flip them around
+    // if the reads are <--> or -><- wrt the junction, then we flip so the lowest coordinate
+    ///
 		// want to be sure that lowest ref coord is always first for consistency
-		if ( hash_seq_id_1.compare(hash_seq_id_2) > 0 || (hash_seq_id_1.compare(hash_seq_id_2) == 0 && hash_coord_2 < hash_coord_1) )
+		if ( hash_seq_id_1.compare(hash_seq_id_2) > 0 || ((hash_seq_id_1.compare(hash_seq_id_2) == 0) && (hash_coord_2 < hash_coord_1)) )
 		{
 			swap(hash_coord_1, hash_coord_2);
 			swap(hash_strand_1, hash_strand_2);
@@ -1266,6 +1291,8 @@ namespace breseq {
 			cout << "Total matches: " << alignments.size() << endl;
 		}
 
+    const uint32_t unmatched_end_min_coord = settings.required_junction_read_end_min_coordinate(alignments.front()->read_length());
+    
     for (alignment_list::iterator it=alignments.begin(); it != alignments.end(); it++)
 		{
 			bam_alignment_ptr a = *it;
@@ -1275,11 +1302,9 @@ namespace breseq {
 
 			if (verbose) cout << "(" << a_start << ", " << a_end << ")" << endl;
 
-			int32_t length = a_end - a_start + 1;
-
 			if (a_start == 1)
 				list1.push_back(a);
-			else
+			else if (a_end >= unmatched_end_min_coord)
 				list2.push_back(a);
 		}
     
@@ -1404,7 +1429,6 @@ namespace breseq {
     a1.reference_stranded_bounds_1(a1_reference_start, a1_reference_end);
     hash_coord = a1_reference_start;
     ASSERT(a1_start == 1, "Read does not match from beginning.");
-
     
 		int32_t intersection_start = a2_start;
 		int32_t intersection_end = a1_end;
@@ -1443,20 +1467,40 @@ namespace breseq {
     int32_t intersection_length_negative = -min(0, intersection_length);
     int32_t intersection_length_positive = max(0, intersection_length);
     
+    int32_t  scaled_maximum_junction_sequence_insertion_overlap_length_fraction
+      = static_cast<int32_t>(floor(static_cast<double>(a1.read_length()) * settings.maximum_junction_sequence_insertion_overlap_length_fraction));
+    
 		//// Require negative overlap (inserted unique sequence length) to be less than some value
+		if (intersection_length_negative > scaled_maximum_junction_sequence_insertion_overlap_length_fraction)
+			return false;
+    
 		if (intersection_length_negative > static_cast<int32_t>(settings.maximum_junction_sequence_insertion_length))
 			return false;
     
     //// Require positive overlap (shared by both ends) to be less than some value
+    if (intersection_length_positive > scaled_maximum_junction_sequence_insertion_overlap_length_fraction)
+			return false;
+    
     if (intersection_length_positive > static_cast<int32_t>(settings.maximum_junction_sequence_overlap_length))
 			return false;
     
 		//// Require both ends to extend a certain minimum length outside of the overlap
+
+    // This can be an absolute number or a fraction of the read length
+    int32_t scaled_required_both_unique_length_per_side 
+      = static_cast<int32_t>(ceil(static_cast<double>(a1.read_length()) * settings.required_both_unique_length_per_side_fraction));
+
 		if (a1_unique_length < static_cast<int32_t>(settings.required_both_unique_length_per_side))
 			return false;
+        
+    if (a1_unique_length < scaled_required_both_unique_length_per_side)
+      return false;
     
 		if (a2_unique_length < static_cast<int32_t>(settings.required_both_unique_length_per_side))
 			return false;
+    
+    if (a2_unique_length < scaled_required_both_unique_length_per_side)
+      return false;
 
 		//// Require one end to extend a higher minimum length outside of the overlap
 		if ((a1_unique_length <  static_cast<int32_t>(settings.required_one_unique_length_per_side))
