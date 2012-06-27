@@ -73,6 +73,7 @@ class alignment_wrapper {
     //! Is the read aligned to the reverse strand?
     //  Returns 1 if read aligned to bottom strand, 0 if aligned to top strand
     inline bool reversed() const { return bam1_strand(_a); }
+  
 		
     //! Which strand is the read aligned to?
     //  Returns -1 if read aligned to bottom strand, +1 if aligned to top strand
@@ -103,6 +104,8 @@ class alignment_wrapper {
     
     //! Calculate the total length of the read.
     inline uint32_t read_length() const { return _a->core.l_qseq; }
+  
+    inline bool is_primary() const {return !(_a->core.flag & 0x100); }
   
     //! Retrieve the base at a specified position in the read (was 0-indexed)
     //  Methods available for 0-indexed and 1-indexed coordinates.
@@ -241,6 +244,7 @@ class alignment_wrapper {
     inline vector<pair<char,uint16_t> > cigar_pair_array() const
     {
       vector<pair<char,uint16_t> > cigar_pair_list;
+      cigar_pair_list.reserve(cigar_array_length()); // pre-allocate memory to save a little time
       uint32_t* cigar_list = cigar_array();
       for (uint32_t i=0; i<cigar_array_length(); i++)
       {
@@ -400,14 +404,14 @@ public:
     bam_copy1(this, &_in);
   }
     
-    bam_alignment(const alignment_wrapper& _in)  : alignment_wrapper(this)
-    {
-        l_aux = 0;
-        data_len = 0;
-        m_data = 0;
-        data = NULL;
-        bam_copy1(this, _in._a);
-    }
+  bam_alignment(const alignment_wrapper& _in)  : alignment_wrapper(this)
+  {
+      l_aux = 0;
+      data_len = 0;
+      m_data = 0;
+      data = NULL;
+      bam_copy1(this, _in._a);
+  }
   
   bam_alignment(const bam_alignment& _in) : alignment_wrapper(_in._a)
   {
@@ -426,7 +430,27 @@ public:
 };
 
 typedef counted_ptr<bam_alignment> bam_alignment_ptr;
-typedef list<bam_alignment_ptr> alignment_list;  
+  
+class alignment_list : public list<bam_alignment_ptr>
+{
+public:
+  
+  string read_base_quality_char_string;
+  bool read_base_quality_char_string_reversed;
+  
+  alignment_list() {}
+  
+  void push_back(const bam_alignment_ptr& item)
+  {
+    if (item->is_primary()) {
+      read_base_quality_char_string = item->read_base_quality_char_string();
+      read_base_quality_char_string_reversed = item->reversed();
+    }
+      
+    list<bam_alignment_ptr>::push_back(item);
+  }
+};
+
   
 // for debugging
 inline void print_alignment_list(const alignment_list& alignments)  
@@ -459,8 +483,26 @@ public:
                         bool shift_gaps = false
                         );
   
-  void write_moved_alignment(const alignment_wrapper& a, const string& rname, uint32_t fastq_file_index, const string& seq_id, int32_t reference_pos, int32_t reference_strand, int32_t reference_overlap, const uint32_t junction_side, int32_t junction_flanking, int32_t junction_overlap, const Trims* trim = NULL);
-  void write_split_alignment(uint32_t min_indel_split_len, const alignment_wrapper& a);
+  void write_moved_alignment(
+                             const alignment_wrapper& a, 
+                             const string& rname, 
+                             uint32_t fastq_file_index, 
+                             const string& seq_id, 
+                             int32_t reference_pos, 
+                             int32_t reference_strand, 
+                             int32_t reference_overlap, 
+                             const uint32_t junction_side, 
+                             int32_t junction_flanking, 
+                             int32_t junction_overlap, 
+                             const alignment_list& alignments,
+                             const Trims* trim = NULL
+                             );
+  
+  void write_split_alignment(
+                             uint32_t min_indel_split_len, 
+                             const alignment_wrapper& a, 
+                             const alignment_list& alignments
+                             );
 
   inline const char* target_name(const alignment_wrapper& a)
   {

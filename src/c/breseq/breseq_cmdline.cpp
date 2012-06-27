@@ -1463,7 +1463,7 @@ int breseq_default_action(int argc, char* argv[])
         string convert_file_name =  settings.file_name(settings.converted_fastq_file_name, "#", base_name);
 
         // Parse output
-        Summary::AnalyzeFastq s_rf = normalize_fastq(fastq_file_name, convert_file_name, i+1);
+        Summary::AnalyzeFastq s_rf = normalize_fastq(fastq_file_name, convert_file_name, i+1, settings.quality_score_trim);
         
         // Save the converted file name -- have to save it in summary because only that
         // is reloaded if we skip this step.
@@ -1577,7 +1577,7 @@ int breseq_default_action(int argc, char* argv[])
     // Staged alignment with Bowtie
     //
 
-    if (settings.bowtie) {
+    else if (settings.bowtie) {
       string reference_prefix = substitute(settings.reference_fasta_file_name, ".fasta","");
       string command = "bowtie-build -f " + settings.reference_fasta_file_name + " " + reference_prefix;
       SYSTEM(command.c_str());
@@ -1608,18 +1608,46 @@ int breseq_default_action(int argc, char* argv[])
         PreprocessAlignments::split_matched_alignments(i, reference_fasta_file_name, reference_sam_file_name, bowtie_matched_sam_file_name);
 
       }
-
-
+    }
+    
+    else if (settings.bowtie2) {
+      string reference_hash_file_name = settings.reference_hash_file_name;
+      string reference_fasta_file_name = settings.reference_fasta_file_name;
+      string command = "bowtie2-build -q " + settings.reference_fasta_file_name + " " + reference_hash_file_name;
+      SYSTEM(command.c_str());
+      
+		  for (uint32_t i = 0; i < settings.read_files.size(); i++)
+		  {
+		  	cReadFile read_file = settings.read_files[i];
+        string base_read_file_name = read_file.base_name();
+				string read_fastq_file = settings.base_name_to_read_file_name(base_read_file_name);
+                
+        //Paths
+        string bowtie_matched_sam_file_name = settings.file_name(settings.bowtie_matched_sam_file_name, "#", base_read_file_name);
+        string bowtie_unmatched_fastq_file_name = settings.file_name(settings.bowtie_unmatched_fastq_file_name, "#", base_read_file_name);
+        
+        //Split alignment into unmatched and matched files.
+        string command = "bowtie2 --gbar 100000 -p 2 -L 22 -i S,1,1.25 --reorder -a --mp 2 --score-min L,-4,2 --local -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + bowtie_matched_sam_file_name + " --un " + bowtie_unmatched_fastq_file_name;
+        SYSTEM(command.c_str());
+        
+        string reference_fasta_file_name = settings.file_name(settings.reference_fasta_file_name, "#", base_read_file_name);
+        
+        //PreprocessAlignments::split_matched_alignments(i, reference_fasta_file_name, reference_sam_file_name, bowtie_matched_sam_file_name);
+        
+      }
     }
 
 		/// create ssaha2 hash
 		string reference_hash_file_name = settings.reference_hash_file_name;
 		string reference_fasta_file_name = settings.reference_fasta_file_name;
 
-
-		if (!settings.smalt)
+    if (settings.bowtie2_align) {
+      string command = "bowtie2-build -q " + reference_fasta_file_name + " " + reference_hash_file_name;
+			SYSTEM(command.c_str());
+    }
+    else if (!settings.smalt)
 		{
-			string command = "ssaha2Build -rtype solexa -skip " + to_string(settings.ssaha2_skip_length) + " -save " + reference_hash_file_name + " " + reference_fasta_file_name;
+			string command = "ssaha2Build -kmer " + to_string(settings.ssaha2_seed_length) +  " -skip " + to_string(settings.ssaha2_skip_length) + " -save " + reference_hash_file_name + " " + reference_fasta_file_name;
 			SYSTEM(command.c_str());
 		}
 		else
@@ -1628,10 +1656,13 @@ int breseq_default_action(int argc, char* argv[])
 			string command = smalt + " index -k " + to_string(settings.ssaha2_seed_length) + " -s " + to_string(settings.ssaha2_skip_length) + " " + reference_hash_file_name + " " + reference_fasta_file_name;
       SYSTEM(command.c_str());
 		}
+  
+ 
 		/// ssaha2 align reads to reference sequences
 		for (uint32_t i = 0; i < settings.read_files.size(); i++)
 		{
 			cReadFile read_file = settings.read_files[i];
+
 
 			//reads are paired -- Needs to be re-implemented with major changes elsewhere. @JEB
 			//if (is_defined(read_struct.min_pair_dist) && is_defined(read_struct.max_pair_dist))
@@ -1653,25 +1684,40 @@ int breseq_default_action(int argc, char* argv[])
 				*/
 			//}
 			//else //reads are not paired
+    
 			{
 				string base_read_file_name = read_file.base_name();
 				string read_fastq_file = settings.base_name_to_read_file_name(base_read_file_name);
 				string reference_sam_file_name = settings.file_name(settings.reference_sam_file_name, "#", base_read_file_name);
 
+        
         // If we are doing staged alignment -- only align the unmatched reads with SSAHA2 and save to different name initially
         if (settings.bwa) {
           read_fastq_file = settings.file_name(settings.bwa_unmatched_fastq_file_name, "#", base_read_file_name);
           reference_sam_file_name = settings.file_name(settings.ssaha2_reference_sam_file_name, "#", base_read_file_name);
         }
 
-        if (settings.bowtie) {
+        else if (settings.bowtie) {
+          read_fastq_file = settings.file_name(settings.bowtie_unmatched_fastq_file_name, "#", base_read_file_name);
+          reference_sam_file_name = settings.file_name(settings.ssaha2_reference_sam_file_name, "#", base_read_file_name);
+        }
+        
+        else if (settings.bowtie2) {
           read_fastq_file = settings.file_name(settings.bowtie_unmatched_fastq_file_name, "#", base_read_file_name);
           reference_sam_file_name = settings.file_name(settings.ssaha2_reference_sam_file_name, "#", base_read_file_name);
         }
 
-				if (!settings.smalt)
+        if (settings.bowtie2_align) {
+					//string command = "bowtie2 --no-unal -p 2 -L 13 -i C,1,0 --reorder -a --score-min C,26,0 --local -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + reference_sam_file_name; 
+          // This setting prevents indels > 1 bp from being predicted entirely.
+          //string command = "bowtie2 --no-unal --ma 1 --mp 3 --np 0 --rdg 3,1000 --rfg 3,1000 -p 2 -L 13 -i C,1,0 --reorder -a --score-min L,4,0.25 --local -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + reference_sam_file_name; 
+          string command = "bowtie2 --no-unal --ma 1 --mp 3 --np 0 --rdg 3,3 --rfg 3,3 -p 2 -L 13 -i C,1,0 --reorder -a --score-min L,4,0.25 --local -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + reference_sam_file_name; 
+         
+          SYSTEM(command.c_str());
+        }
+				else if (!settings.smalt)
 				{
-					string command = "ssaha2 -disk 2 -save " + reference_hash_file_name + " -kmer " + to_string(settings.ssaha2_seed_length) + " -skip " + to_string(settings.ssaha2_skip_length) + " -seeds 1 -score 12 -cmatch 9 -ckmer 1 -output sam_soft -outfile " + reference_sam_file_name + " " + read_fastq_file;
+					string command = "ssaha2 -disk 2 -save " + reference_hash_file_name + " -kmer " + to_string(settings.ssaha2_seed_length) + " -skip " + to_string(settings.ssaha2_skip_length) + " -seeds 1 -score 12 -cmatch " + to_string(settings.ssaha2_seed_length) + " -ckmer 1 -output sam_soft -outfile " + reference_sam_file_name + " " + read_fastq_file;
 					SYSTEM(command.c_str());
 				}
 				else
@@ -1680,7 +1726,8 @@ int breseq_default_action(int argc, char* argv[])
 					string command = smalt + " map -n 2 -d " + to_string(settings.max_smalt_diff) + " -f samsoft -o " + reference_sam_file_name + " " + reference_hash_file_name + " " + read_fastq_file; // -m 12
 					SYSTEM(command.c_str());
 				}
-
+        
+      
         //Check for SSAHA2 32-bit File Memory Error.
         uint32_t bytes = ifstream(reference_sam_file_name.c_str()).rdbuf()->in_avail();
         CHECK(bytes != 2147483647, "Encountered SSAHA2 32 bit version file memory limit.");
@@ -1701,7 +1748,7 @@ int breseq_default_action(int argc, char* argv[])
                                                      );
         }
 
-        if (settings.bowtie) {
+        else if (settings.bowtie) {
           string ssaha2_reference_sam_file_name = settings.file_name(settings.ssaha2_reference_sam_file_name, "#", base_read_file_name);
           string bowtie_matched_sam_file_name = settings.file_name(settings.bowtie_matched_sam_file_name, "#", base_read_file_name);
           string reference_sam_file_name = settings.file_name(settings.reference_sam_file_name, "#", base_read_file_name);
@@ -1715,10 +1762,30 @@ int breseq_default_action(int argc, char* argv[])
                                                      reference_sam_file_name
                                                      );
         }
+        else if (settings.bowtie2) {
+          
+          string base_read_file_name = read_file.base_name();
+          string read_fastq_file = settings.base_name_to_read_file_name(base_read_file_name);
+
+          
+          string ssaha2_reference_sam_file_name = settings.file_name(settings.ssaha2_reference_sam_file_name, "#", base_read_file_name);
+          string bowtie_matched_sam_file_name = settings.file_name(settings.bowtie_matched_sam_file_name, "#", base_read_file_name);
+          string reference_sam_file_name = settings.file_name(settings.reference_sam_file_name, "#", base_read_file_name);
+          string reference_fasta_file_name = settings.file_name(settings.reference_fasta_file_name, "#", base_read_file_name);
+          
+          PreprocessAlignments::merge_sort_sam_files(
+                                                     read_file.m_id,
+                                                     settings.reference_fasta_file_name,
+                                                     ssaha2_reference_sam_file_name,
+                                                     bowtie_matched_sam_file_name,
+                                                     reference_sam_file_name
+                                                     );
+        }
         
 			}
 		}
 
+    
 		/// Delete the hash files immediately
 		if (!settings.keep_all_intermediates)
 		{
@@ -1836,9 +1903,13 @@ int breseq_default_action(int argc, char* argv[])
 
 			if (!file_empty(candidate_junction_fasta_file_name.c_str()))
 			{
-				if (!settings.smalt)
+        if (settings.bowtie2_align) {
+          string command = "bowtie2-build -q " + candidate_junction_fasta_file_name + " " + candidate_junction_hash_file_name;
+          SYSTEM(command.c_str());
+        }
+				else if (!settings.smalt)
 				{
-					string command = "ssaha2Build -rtype solexa -skip " + to_string(settings.ssaha2_skip_length) + " -save " + candidate_junction_hash_file_name + " " + candidate_junction_fasta_file_name;
+					string command = "ssaha2Build -kmer " + to_string(settings.ssaha2_seed_length) + " -skip " + to_string(settings.ssaha2_skip_length) + " -save " + candidate_junction_hash_file_name + " " + candidate_junction_fasta_file_name;
 					SYSTEM(command.c_str());
 				}
 				else
@@ -1856,23 +1927,35 @@ int breseq_default_action(int argc, char* argv[])
 				string candidate_junction_sam_file_name = settings.file_name(settings.candidate_junction_sam_file_name, "#", base_read_file_name);
 
 				string read_fastq_file = settings.base_name_to_read_file_name(base_read_file_name);
-				string filename = candidate_junction_hash_file_name + ".base";
-				if (!settings.smalt && file_exists(filename.c_str()))
-				{
-					string command = "ssaha2 -disk 2 -save " + candidate_junction_hash_file_name + " -best 1 -rtype solexa -kmer " + to_string(settings.ssaha2_seed_length) + " -skip " + to_string(settings.ssaha2_skip_length) + " -seeds 1 -output sam_soft -outfile " + candidate_junction_sam_file_name + " " + read_fastq_file;
-					SYSTEM(command.c_str());
-					// Note: Added -best parameter to try to avoid too many matches to redundant junctions!
-				}
-				else
-				{
-					filename = candidate_junction_hash_file_name + ".sma";
-					if (file_exists(filename.c_str()))
-					{
-						string smalt = settings.ctool("smalt");
-						string command = smalt + " map -c 0.8 -x -n 2 -d 1 -f samsoft -o " + candidate_junction_sam_file_name + " " + candidate_junction_hash_file_name + " " + read_fastq_file;
-						SYSTEM(command.c_str());
-					}
-				}
+        if (settings.bowtie2_align) 
+        {
+          string filename = candidate_junction_hash_file_name + ".1.bt2";
+          if (file_exists(filename.c_str())) 
+          {
+            string command = "bowtie2 --no-unal -p 2 --reorder --local -k 1000000 -x " + candidate_junction_hash_file_name + " -S " + candidate_junction_sam_file_name + " -U " + read_fastq_file; 
+            SYSTEM(command.c_str());
+          }
+        }
+        else if (!settings.smalt)
+        {
+          string filename = candidate_junction_hash_file_name + ".base";
+          if (file_exists(filename.c_str())) 
+          {
+            string command = "ssaha2 -disk 2 -save " + candidate_junction_hash_file_name + " -best 1 -kmer " + to_string(settings.ssaha2_seed_length) + " -skip " + to_string(settings.ssaha2_skip_length) + " -seeds 1 -score 12 -cmatch " + to_string(settings.ssaha2_seed_length) + " -ckmer 1 -output sam_soft -outfile " + candidate_junction_sam_file_name + " " + read_fastq_file;
+            SYSTEM(command.c_str());
+            // Note: Added -best parameter to try to avoid too many matches to redundant junctions!
+          }
+        }
+        else
+        {
+          string filename = candidate_junction_hash_file_name + ".sma";
+          if (file_exists(filename.c_str()))
+          {
+            string smalt = settings.ctool("smalt");
+            string command = smalt + " map -c 0.8 -x -n 2 -d 1 -f samsoft -o " + candidate_junction_sam_file_name + " " + candidate_junction_hash_file_name + " " + read_fastq_file;
+            SYSTEM(command.c_str());
+          }
+        }
 			}
 
 			/// Delete the hash files immediately

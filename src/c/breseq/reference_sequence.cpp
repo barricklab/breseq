@@ -1959,8 +1959,8 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
   }
   
   //scan snps to see if they affect the same codon
-    for (int32_t i = 0; i < snp_muts.size(); i++){
-      for (int32_t j = i + 1; j < snp_muts.size(); j++){
+    for (size_t i = 0; i < snp_muts.size(); i++){
+      for (size_t j = i + 1; j < snp_muts.size(); j++){
         if ((*snp_muts[i])["codon_position"] == "" ||
             (*snp_muts[j])["codon_position"] == ""
             ){

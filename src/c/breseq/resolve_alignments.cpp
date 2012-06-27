@@ -589,6 +589,7 @@ void resolve_alignments(
 					side,
 					from_string<int32_t>(item["flanking_left"]),
 					from_string<int32_t>(item["alignment_overlap"]),
+          match.junction_alignments,
 					&trims
 				);
 			}
@@ -790,7 +791,7 @@ void load_junction_alignments(
       {
         cerr << " Best junction score: " << best_junction_score << endl;
         cerr << " Best reference score: " << best_reference_score << endl;
-        cerr << " Mapping quality difference: " << best_reference_score << endl;
+        cerr << " Mapping quality difference: " << mapping_quality_difference << endl;
         cerr << " Final Reference alignments = " << this_reference_alignments.size() << endl;
         cerr << " Final Candidate junction alignments = " << this_junction_alignments.size() << endl;
       }
@@ -1126,13 +1127,17 @@ void score_junction(
     
     ////
     // CHECK that alignment starts at the first base of the query
-    // alternately, we could offset the reference position by as many bases as are 
-    // unaligned, but this would be a bit error-prone and not as simple.
+    // and covers a certain amount of the read
     ////
 
     if (a->query_stranded_start_1() != 1) {
       if (verbose) cout << "    X First read base does not match" << endl;
      continue; 
+    }
+    
+    if (a->query_stranded_end_1() < settings.required_junction_read_end_min_coordinate(a->read_length())) {
+      if (verbose) cout << "    X End base does not match" << endl;
+      continue;
     }
     
     ////
@@ -1424,6 +1429,9 @@ void resolve_junction(
         assert(matched_alignment.get() != NULL);
         if (has_non_overlap_alignment) {
           alignment_list alignments;
+          alignments.read_base_quality_char_string = repeat_match.junction_alignments.read_base_quality_char_string;
+          alignments.read_base_quality_char_string_reversed = repeat_match.junction_alignments.read_base_quality_char_string_reversed;
+
           alignments.push_back(matched_alignment);
           resolved_junction_tam.write_alignments(fastq_file_index, alignments, NULL, &ref_seq_info, true);
         }

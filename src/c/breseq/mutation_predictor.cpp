@@ -294,26 +294,37 @@ namespace breseq {
         }
 					
         
-				// We always know that the lower coordinate part of the junction is first, hence these
-				// assumptions about the strands hold.
+        // Due to overlap resolution, this can change from the time when we sorted this way... *Ugh* .. 
+        // so we fix it here so that the lower coordinate part of the junction is first.
+        
+        int32_t side_1_position = n(jc_item["side_1_position"]);
+        int32_t side_2_position = n(jc_item["side_2_position"]);
+        int32_t side_1_strand = n(jc_item["side_1_strand"]);
+        int32_t side_2_strand = n(jc_item["side_2_strand"]);
+        
+        if (side_2_position < side_1_position) {
+          swap(side_1_position, side_2_position);
+          swap(side_1_strand, side_2_strand);
+        }
+        
 				if (
-					   (n(jc_item["side_1_position"]) == n(mut["position"])-1)
-					&& (n(jc_item["side_1_strand"]) == -1)
-					&& (n(jc_item["side_2_position"]) == n(mut["position"])+n(mut["size"]))
-					&& (n(jc_item["side_2_strand"]) == +1)
+					   (side_1_position == n(mut["position"])-1)
+					&& (side_1_strand == -1)
+					&& (side_2_position == n(mut["position"])+n(mut["size"]))
+					&& (side_2_strand == +1)
            )
 				{
           
           //it's possible that one or both sides are in repeat elements
-          cSequenceFeature* r1_pointer = within_repeat(jc_item["side_1_seq_id"], n(jc_item["side_1_position"]));
-          cSequenceFeature* r2_pointer = within_repeat(jc_item["side_2_seq_id"], n(jc_item["side_2_position"]));
+          cSequenceFeature* r1_pointer = within_repeat(jc_item["side_1_seq_id"], side_1_position);
+          cSequenceFeature* r2_pointer = within_repeat(jc_item["side_2_seq_id"], side_2_position);
           
           // one repeat cases where the end matches up exactly
           if (r1_pointer) 
           {
             // must match up to an end of the repeat
-            if ((n(jc_item["side_1_position"]) == static_cast<int32_t>(r1_pointer->m_location.get_start_1()))
-             || (n(jc_item["side_1_position"]) == static_cast<int32_t>(r1_pointer->m_location.get_end_1())))
+            if (side_1_position == static_cast<int32_t>(r1_pointer->m_location.get_start_1())
+             || (side_1_position == static_cast<int32_t>(r1_pointer->m_location.get_end_1())))
             {
               mut["mediated"] = (*r1_pointer)["name"];
             }
@@ -321,8 +332,8 @@ namespace breseq {
           else if (r2_pointer) 
           {
             // must match up to an end of the repeat
-            if ((n(jc_item["side_2_position"]) == static_cast<int32_t>(r2_pointer->m_location.get_start_1()))
-                || (n(jc_item["side_2_position"]) == static_cast<int32_t>(r2_pointer->m_location.get_end_1())))
+            if ((side_2_position == static_cast<int32_t>(r2_pointer->m_location.get_start_1())
+                || (side_2_position) == static_cast<int32_t>(r2_pointer->m_location.get_end_1())))
             {
               mut["mediated"] = (*r2_pointer)["name"];
             }
@@ -989,14 +1000,17 @@ namespace breseq {
       //cout << j["side_1_seq_id"] << " " << j["side_2_seq_id"] << endl;
       //cout << j["side_1_strand"] << " " << j["side_2_strand"] << endl;
       
-			if (
-				// must be on same sequence
-				   (j["side_1_seq_id"] != j["side_2_seq_id"])
-				// must be in same orientation (implies strands are opposite)
-				|| (n(j["side_1_strand"]) == n(j["side_2_strand"]))
-			)
-				continue;
+      // must be on same sequence
+      if ((j["side_1_seq_id"] != j["side_2_seq_id"]))
+        continue;
+      
+      // must be in same orientation (implies strands are opposite)
+      int32_t side_1_strand = n(j["side_1_strand"]);
+      int32_t side_2_strand = n(j["side_2_strand"]);
 
+      if (side_1_strand == side_2_strand)
+				continue;
+          
 			string seq_id = j["side_1_seq_id"];
       int32_t side_1_position = n(j["side_1_position"]);
       int32_t side_2_position = n(j["side_2_position"]);
@@ -1004,7 +1018,7 @@ namespace breseq {
 			// We can assume that the lower coordinate will be first since this is NOT a deletion
 			// (which would be handled above)
       // By this point any positive overlap should have been resolved.
-			assert(n(j["overlap"]) <= 0);
+			ASSERT(n(j["overlap"]) <= 0, "Non-zero overlap in junction when predicting INS/SUB/AMP.");
       
 			// mutation will always be after this position
 			// Special case of circular chromosome
@@ -1017,13 +1031,19 @@ namespace breseq {
       // If we are predicting a very big insertion (longer than read length), 
       // it is likely spurious. Require other evidence to convert to a mutation.
       
-      // side_2_position will always be greater than or equal to size_i_position
-      ASSERT(side_2_position >= side_1_position, "Unexpected positions");
+      // side_2_position must always be greater than or equal to side_1_position
+      //ASSERT(side_2_position >= side_1_position, "Unexpected positions");
+      
+      // Due to overlap resolution, this can change from the time when we sorted this way... *Ugh* .. so we fix it here.
+      if (side_2_position < side_1_position) {
+        swap(side_1_position, side_2_position);
+        swap(side_1_strand, side_2_strand);
+      }
       int32_t size = side_2_position - side_1_position + 1;
       
       // This implies a deletion, and not counting the endpoint nucleotides (hence -1 instead of +1)
       // Note that this is a negative number!
-      if (n(j["side_1_strand"]) == -1 )
+      if (side_1_strand == -1 )
         size = side_1_position - side_2_position + 1;
       
       // Insertion or deletion must be smaller than read length to be predicted

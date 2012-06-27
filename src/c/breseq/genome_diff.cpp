@@ -3234,7 +3234,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         string dup;
         for (uint32_t i = 1; i < from_string<uint32_t>(mut["new_copy_number"]); i++)
           dup.append(new_ref_seq_info.get_sequence_1(mut[SEQ_ID], position, position+size-1));
-        ASSERT(!dup.empty(), "Duplicate sequence is empy.");
+        ASSERT(!dup.empty(), "Duplicate sequence is empty. You may have specified an AMP with a new copy number of 1.");
           
         new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position-1, dup, (to_string(mut._type) + " " + mut._id), verbose);
         
