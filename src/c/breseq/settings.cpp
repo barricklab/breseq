@@ -354,16 +354,18 @@ namespace breseq
 
     //! Settings: Candidate Junction Prediction
 		this->preprocess_junction_min_indel_split_length = 3;
-		this->required_both_unique_length_per_side = 0;
-    this->required_both_unique_length_per_side_fraction = 0.2;
-		this->required_one_unique_length_per_side = this->ssaha2_seed_length; 
+    this->required_both_unique_length_per_side_fraction = 0.2; 
     this->unmatched_end_length_factor = 0.1;
     this->unmatched_end_minimum_read_length = 50;
+    this->maximum_junction_sequence_insertion_overlap_length_fraction = 0.4;
+    
+    // Extra options that are mostly being phased out
+    this->maximum_junction_sequence_insertion_length = 0;
+    this->maximum_junction_sequence_overlap_length = 0;
+    this->required_both_unique_length_per_side = 0;
+    this->required_one_unique_length_per_side = 0;
     
     this->minimum_candidate_junction_pos_hash_score = 2;
-    this->maximum_junction_sequence_insertion_length = 20;
-    this->maximum_junction_sequence_insertion_overlap_length_fraction = 0.4;
-    this->maximum_junction_sequence_overlap_length = 20;
     this->minimum_candidate_junctions = 10;
 		this->maximum_candidate_junctions = 5000;
 		this->maximum_candidate_junction_length_factor = 0.1;

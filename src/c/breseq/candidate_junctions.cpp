@@ -441,9 +441,11 @@ namespace breseq {
     }
 
     ////
-		// Merge all junctions with the same exact sequence (that are hashed together)
+		// Merge all junctions with the same exact sequence 
+    //   * They are hashed together for speed in this comparison
 		////
     
+    // New list consisting of merged junction candidates
     list<JunctionCandidatePtr> junction_candidate_list;
     
 		for (SequenceToKeyToJunctionCandidateMap::iterator same_seq_it = candidate_junctions.begin(); same_seq_it != candidate_junctions.end(); same_seq_it++)
@@ -468,9 +470,10 @@ namespace breseq {
     }
     
     ////
-		// Merge each item in the list
+		// Second round of merging, attempt to merge each item in the list with _every_ other one
+    //   * This takes care of cases where one is a subsequence of another - we keep the shortest one
 		////
-    uint32_t count=0;
+    
     for (list<JunctionCandidatePtr>::iterator it1 = junction_candidate_list.begin(); it1 != junction_candidate_list.end();)
     {
       list<JunctionCandidatePtr>::iterator it2 = it1;
@@ -481,7 +484,6 @@ namespace breseq {
         bool deleted_it2 = false;
         JunctionCandidatePtr *jcp1 = &(*it1);
         JunctionCandidatePtr *jcp2 = &(*it2);
-        
         
         if (verbose)
         {
@@ -514,15 +516,11 @@ namespace breseq {
         if (!deleted_it2) it2++;
       }
       if (!deleted_it1) it1++;
-      
-      if (!deleted_it1) count++;
-      
-      //cout << count << "/" << junction_candidate_list.size() << endl;
     }
 
 		////
 		//  Combine hash into a list, retaining only one item (the best pos_hash score) for each unique sequence 
-    //  (and also its reverse complement)
+    //    (and also its reverse complement)
 		////
     
 		map<int32_t, int32_t> observed_pos_hash_score_distribution;
@@ -545,12 +543,9 @@ namespace breseq {
       
 			// These shouldn't be necessary checks, but keeping to detect unintended errors
       
-      // @JEB: TODO need to merge later to properly account for these
-      // by merging sequences only at a later step... (can ignore pos_hash=1 anyways)
+      // We already handled the sequence or its reverse complement, skip.
       if (handled_seq.count(junction_seq)) continue;
       if (handled_seq.count(rc_junction_seq)) continue;
-			//ASSERT(!handled_seq.count(junction_seq) > 0, "Duplicate junction sequence encountered.\n" + junction_seq);
-      //ASSERT(!handled_seq.count(rc_junction_seq) > 0, "Duplicate reverse complement junction sequence encountered.\n" + rc_junction_seq);
 
       string junction_id = best_candidate_junction.junction_key();
             
@@ -567,12 +562,12 @@ namespace breseq {
       if (verbose) cout << "  best candidate junction:" << endl << best_candidate_junction.junction_key() << endl;
       
 			// Make sure it isn't a duplicate junction id -- this should NEVER happen and causes downstream problem.
-			// <--- Begin sanity check
-			if (ids_to_print.count(best_candidate_junction.junction_key()))
+			// ---> Begin sanity check
+			if (ids_to_print.count(junction_id))
 			{
-        JunctionCandidate& ccj = ids_to_print[best_candidate_junction.junction_key()];
+        JunctionCandidate& ccj = ids_to_print[junction_id];
         
-				cout << "Attempt to create junction candidate with duplicate id: " << best_candidate_junction.junction_key() << endl;
+				cout << "Attempt to create junction candidate with duplicate id: " << junction_id << endl;
         
 				cout << "==Existing junction==" << endl;      
         cout << "  id: " << ccj.junction_key() << endl;
@@ -588,11 +583,12 @@ namespace breseq {
         cout << "  seq: " << best_candidate_junction.sequence << endl;
         cout << "  rc_seq: " << best_candidate_junction.reverse_complement_sequence << endl;  
         
-				assert (best_candidate_junction.sequence == ids_to_print[best_candidate_junction.junction_key()].sequence);
+				assert (best_candidate_junction.sequence == ids_to_print[junction_id].sequence);
 				exit(-1);
 			}
+      // <--- End sanity check
+
 			ids_to_print[best_candidate_junction.junction_key()] = best_candidate_junction;
-			// <--- End sanity check
       
 			combined_candidate_junctions.push_back(best_candidate_junction);
 		}
@@ -614,6 +610,7 @@ namespace breseq {
 		// Limit the number of candidate junctions that we print by:
 		//   (1) A maximum number of candidate junctions
 		//   (2) A maximum length of the sequences in candidate junctions
+    //   (3) But take at least some minimum despite these
 		///
     
 		cerr << "  Taking top candidate junctions..." << endl;
@@ -627,7 +624,7 @@ namespace breseq {
 		uint32_t cumulative_cj_length = 0;
 		int32_t lowest_accepted_pos_hash_score = 0;
     
-		// Right now we limit the candidate junctions to have a length no longer than the reference sequence.
+		// Right now we limit the candidate junctions to have a length no longer than the reference sequence times some factor.
 		uint32_t cj_length_limit = static_cast<uint32_t>(summary.sequence_conversion.total_reference_sequence_length * settings.maximum_candidate_junction_length_factor);
 		uint32_t maximum_candidate_junctions = settings.maximum_candidate_junctions;
 		uint32_t minimum_candidate_junctions = settings.minimum_candidate_junctions;
@@ -638,7 +635,7 @@ namespace breseq {
     
 		cerr << "    Initial: Number = " << total_candidate_junction_number << ", Cumulative Length = " << total_cumulative_cj_length << " bases" << endl;
     
-		if ((settings.maximum_candidate_junctions > 0) && (combined_candidate_junctions.size() > 0))
+		if (combined_candidate_junctions.size() > 0)
 		{
 			vector<JunctionCandidate> remaining_ids;
 			vector<JunctionCandidate> list_in_waiting;
@@ -668,6 +665,7 @@ namespace breseq {
 				// Check to make sure we haven't exhausted the list
 				if (i >= combined_candidate_junctions.size()) break;
         
+        // Grab the next chunk with the same score
 				current_pos_hash_score = combined_candidate_junctions[i].pos_hash_score();
 				while (
                (i < combined_candidate_junctions.size())
@@ -731,6 +729,7 @@ namespace breseq {
     JunctionCandidate& jc1 = **jcp1;
     JunctionCandidate& jc2 = **jcp2;
     
+    // Determine whether one is a subsequence of the other (including on the opposite strand)
     if (jc1.sequence.size() > jc2.sequence.size())
     {
       if (jc1.sequence.find(jc2.sequence) != string::npos)
@@ -754,6 +753,12 @@ namespace breseq {
     JunctionCandidatePtr* merge_from_p = NULL;
     
     // this is a rather complicated compare function to favor longer sequences and those with close coords
+  
+    // This comparison of junctions favors...
+    //   1) the longer sequence 
+    //   2) both sides on the same reference sequence 
+    //   3) the smallest coordinate on side 1
+    
     if ( jc2 < jc1 )
     {
       merge_into_p = jcp1;
@@ -774,6 +779,7 @@ namespace breseq {
     if (verbose) cout << "Merging from:" << merge_from.junction_key() << endl;
     if (verbose) cout << merge_from.sequence << endl;
     
+    // Carry over redundancy that was already assigned (based on different coord matching, but sequence being the same)
     if (merged == 2)
     {
       merge_into.sides[0].redundant = merge_from.sides[1].redundant || merge_into.sides[0].redundant;
@@ -785,9 +791,8 @@ namespace breseq {
       merge_into.sides[1].redundant = merge_from.sides[1].redundant || merge_into.sides[1].redundant;
     }
     
+    // If one of the sides is identical (in terms of reference coordinate and strand), then mark it as redundant
     if (verbose) cout << "Merging into carryover:" << merge_into.junction_key() << endl;
-    
-    
     for (uint32_t into_side = 0; into_side < 2; into_side++) 
     {
       bool found = false;
@@ -925,11 +930,6 @@ namespace breseq {
 		}
 
 		// Adjust the overlap in cases where there is a mismatch within the overlap region
-    
-    // @JEB 2012-01-31 If the same reference bases are matched, this is also overlap for correction 
-    //                 purposes (the next code block), but we need to switch it back after that.
-    
-    
     int32_t overlap_in_reference = 0;
     
     if (q1.strand() == q2.strand()) {
@@ -1012,9 +1012,14 @@ namespace breseq {
 		int32_t hash_coord_1 = (hash_strand_1) ? r1_start : r1_end;
 		int32_t hash_coord_2 = (hash_strand_2) ? r2_start : r2_end;
 
-    // if there are multiple ways the two sides could have been aligned...shift them
+    // Further correction for zero overlap.
+    //
+    // If there are multiple ways the two sides could have been aligned...shift them
     // over so as much is included in the lower reference coordinate side as possible
-      
+    // 
+    // This case can arise for reads matching the same reference bases in SSAHA2
+    // or after correcting for mismatches in the overlap (?)
+    
     if (overlap == 0)
     {
       
@@ -1204,11 +1209,11 @@ namespace breseq {
 			r2_start += overlap_offset;
 
     ///
-    // Important: Here is where we choose the strand of the junction sequence
-    // We always favor coordinates going from lower to higher on a side of the strand,
-    // So if the reads are <-<- wrt the junction, then we flip them around
-    // if the reads are <--> or -><- wrt the junction, then we flip so the lowest coordinate
+    //  Important: Here is where we choose the strand of the junction sequence
+    //   
+    //  Right now it is by the sequence name. 
     ///
+    
 		// want to be sure that lowest ref coord is always first for consistency
 		if ( hash_seq_id_1.compare(hash_seq_id_2) > 0 || ((hash_seq_id_1.compare(hash_seq_id_2) == 0) && (hash_coord_2 < hash_coord_1)) )
 		{
@@ -1363,8 +1368,6 @@ namespace breseq {
       
       JunctionCandidate& new_junction = *new_junction_ptr;
       if (verbose) cout << "Testing junction: " << new_junction_ptr->junction_key() << endl << new_junction_ptr->sequence << endl;
-
-      bool merged = false;
       
 			string junction_id = new_junction.junction_key();
       if (verbose) cout << junction_id << endl;
@@ -1474,14 +1477,16 @@ namespace breseq {
 		if (intersection_length_negative > scaled_maximum_junction_sequence_insertion_overlap_length_fraction)
 			return false;
     
-		if (intersection_length_negative > static_cast<int32_t>(settings.maximum_junction_sequence_insertion_length))
+		if (settings.maximum_junction_sequence_insertion_length &&
+        (intersection_length_negative > static_cast<int32_t>(settings.maximum_junction_sequence_insertion_length)))
 			return false;
     
     //// Require positive overlap (shared by both ends) to be less than some value
     if (intersection_length_positive > scaled_maximum_junction_sequence_insertion_overlap_length_fraction)
 			return false;
     
-    if (intersection_length_positive > static_cast<int32_t>(settings.maximum_junction_sequence_overlap_length))
+    if (settings.maximum_junction_sequence_overlap_length && 
+        (intersection_length_positive > static_cast<int32_t>(settings.maximum_junction_sequence_overlap_length)))
 			return false;
     
 		//// Require both ends to extend a certain minimum length outside of the overlap

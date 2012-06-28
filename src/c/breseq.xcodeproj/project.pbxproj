@@ -170,7 +170,7 @@
 		70CB7210140FEB6400D578EB /* alignment_output.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = alignment_output.h; sourceTree = "<group>"; };
 		70CB7212140FEB6400D578EB /* anyoption.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = anyoption.h; sourceTree = "<group>"; };
 		70CB7213140FEB6400D578EB /* calculate_trims.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = calculate_trims.h; sourceTree = "<group>"; };
-		70CB7214140FEB6400D578EB /* candidate_junctions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = candidate_junctions.h; sourceTree = "<group>"; };
+		70CB7214140FEB6400D578EB /* candidate_junctions.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = candidate_junctions.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		70CB7215140FEB6400D578EB /* chisquare.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = chisquare.h; sourceTree = "<group>"; };
 		70CB7216140FEB6400D578EB /* common.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = common.h; sourceTree = "<group>"; };
 		70CB7217140FEB6400D578EB /* contingency_loci.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = contingency_loci.h; sourceTree = "<group>"; };

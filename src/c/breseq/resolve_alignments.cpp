@@ -31,6 +31,8 @@ using namespace std;
 namespace breseq {
 
 // Continuation is how much matches the exact same past where the junction is
+// We need to count this for cases of short duplications and deletions (?)
+  
 void calculate_continuation(
                             ResolveJunctionInfo& rji, 
                             cReferenceSequences& ref_seq_info, 
