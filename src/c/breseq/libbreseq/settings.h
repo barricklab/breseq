@@ -191,7 +191,6 @@ namespace breseq
 		double   require_match_fraction;  // Default = 0.9     COMMAND-LINE OPTION
     //! ignore reads with this many or more mismatches (I+D+MM)
     int32_t  maximum_read_mismatches;     // Default = -1 (OFF)
-
     
     //! Settings: Candidate Junction Prediction
     uint32_t preprocess_junction_min_indel_split_length;    // Default = 3

@@ -226,19 +226,21 @@ namespace breseq {
       return (a.sides[0].position < b.sides[0].position);
     }
     
-    //! if returns true then we merge into cj
+    //! if returns true then we merge into cj, otherwise we merge into this
     bool operator <(const JunctionCandidate& cj) const
     {
-      // we actually want longest sequence to return true
+      // we want to merge into the longest sequence (which means less overlap)
       if ( this->sequence.size() < cj.sequence.size() ) return true;  // merge into longer cj
       if ( this->sequence.size() > cj.sequence.size() ) return false;
       
+      // we want to merge into the one that is within the same reference sequence fragment
       int32_t equal_seq_1 = (this->sides[0].seq_id == this->sides[1].seq_id) ? 1 : 0;
       int32_t equal_seq_2 = (cj.sides[0].seq_id == cj.sides[1].seq_id) ? 1 : 0;
       if (equal_seq_1 < equal_seq_2) return true; // merge into cj if only it is on the same fragment
       if (equal_seq_1 > equal_seq_2) return false;
       
       // sequence lengths are equal
+      // we want to merge into the one with the closest coordinates?
       //int32_t distance_1 = abs( this->junction_info.sides[0].position - this->junction_info.sides[1].position );
       //int32_t distance_2 = abs( cj.junction_info.sides[0].position - cj.junction_info.sides[1].position );
       //if (distance_1 > distance_2) return true; // merge into cj if it is separated by a smaller distance
