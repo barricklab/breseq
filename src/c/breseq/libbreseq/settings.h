@@ -214,6 +214,10 @@ namespace breseq
         return read_length - unmatched_end_max_length;
     }
     
+    bool valid_junction_read_bounds(pair<uint32_t,uint32_t> _read_bounds, uint32_t _read_length) const {      
+      return (_read_bounds.first == 1) && (_read_bounds.second >= required_junction_read_end_min_coordinate(_read_length) );
+    }
+    
     uint32_t maximum_junction_sequence_insertion_length;  // Default = 20
     uint32_t maximum_junction_sequence_overlap_length;    // Default = 20
     double maximum_junction_sequence_insertion_overlap_length_fraction; // Default = 0.4

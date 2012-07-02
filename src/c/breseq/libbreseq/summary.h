@@ -104,7 +104,6 @@ namespace breseq{
     public:
       double deletion_coverage_propagation_cutoff;
       double deletion_coverage_seed_cutoff;
-      double junction_coverage_cutoff;
       double nbinom_size_parameter;
       double nbinom_mean_parameter;
       double nbinom_prob_parameter;
@@ -116,7 +115,6 @@ namespace breseq{
       {
         write_to_file(f, deletion_coverage_propagation_cutoff);
         write_to_file(f, deletion_coverage_seed_cutoff);
-        write_to_file(f, junction_coverage_cutoff);
         write_to_file(f, nbinom_size_parameter);
         write_to_file(f, nbinom_mean_parameter);
         write_to_file(f, nbinom_prob_parameter);
@@ -128,7 +126,6 @@ namespace breseq{
       {
         read_from_file(f, deletion_coverage_propagation_cutoff);
         read_from_file(f, deletion_coverage_seed_cutoff);
-        read_from_file(f, junction_coverage_cutoff);
         read_from_file(f, nbinom_size_parameter);
         read_from_file(f, nbinom_mean_parameter);
         read_from_file(f, nbinom_prob_parameter);

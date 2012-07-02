@@ -1317,10 +1317,12 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_det
     
   ss << "</tr>\n" << endl;
 
+  /* Extra debug output
   if (show_details) {
     ss << tr(   td("colspan=\"" + to_string(total_cols) + "\"",
                 "Continuation Left: " + c["continuation_left"] + "&nbsp;&nbsp;Continuation Right: " + c["continuation_right"] )) << endl;
   }
+  */
     
   if (show_details && c.entry_exists("reject")) {
     cGenomeDiff gd;

@@ -46,6 +46,7 @@ const char cErrorTable::m_sep = '\t';
   @param covariates
  */
 void error_count(
+                 const Settings& settings,
                  Summary& summary,
                  const string& bam,
                  const string& fasta,
@@ -53,11 +54,12 @@ void error_count(
 								 const vector<string>& readfiles,
                  bool do_coverage,
                  bool do_errors,
+                 bool preprocess_stage,
                  uint8_t min_qual_score,
                  const string& covariates
                  ) 
 {
-	error_count_pileup ecp(summary, bam, fasta, output_dir, do_coverage, do_errors, min_qual_score, covariates);
+	error_count_pileup ecp(settings, summary, bam, fasta, output_dir, do_coverage, do_errors, preprocess_stage, min_qual_score, covariates);
 	ecp.do_pileup();
 	if (do_coverage) ecp.print_coverage();
 	if (do_errors) ecp.print_error(readfiles);
@@ -67,25 +69,29 @@ void error_count(
 /*! Constructor.
  */
 error_count_pileup::error_count_pileup(
+                                       const Settings& _settings,
                                        Summary& _summary,
                                        const string& bam, 
                                        const string& fasta, 
                                        const string& output_dir,
                                        bool do_coverage, 
                                        bool do_errors, 
+                                       bool preprocess_stage,
                                        uint8_t min_qual_score, 
                                        const string& covariates
                                        )
 : pileup_base(bam, fasta)
-, summary(_summary)
+, m_settings(_settings)
+, m_summary(_summary)
 , m_output_dir(output_dir)
 , m_do_coverage(do_coverage)
 , m_do_errors(do_errors)
+, m_preprocess_stage(preprocess_stage)
 , m_min_qual_score(min_qual_score)
 , m_error_table(covariates)
 {
 	// reserve enough space for the sequence info:
-	_seq_info.resize(num_targets());
+	m_seq_info.resize(num_targets());
   set_print_progress(true);
   
   // Set up to print out file during pileup
@@ -98,9 +104,6 @@ error_count_pileup::error_count_pileup(
     assert(!m_per_position_file.fail());
     m_error_table.write_count_table_header(m_per_position_file);
   }
-  
-  m_read_found_starting_at_pos[0] = 0;
-  m_read_found_starting_at_pos[1] = 0;
 
 }
 
@@ -115,8 +118,8 @@ error_count_pileup::~error_count_pileup() {
  */
 void error_count_pileup::pileup_callback(const pileup& p) {
   
-	assert(p.target() < _seq_info.size());
-	sequence_info& info=_seq_info[p.target()];
+	assert(p.target() < m_seq_info.size());
+	sequence_info& info= m_seq_info[p.target()];
 
   //cerr << p.target() << " " << p.position_1() << endl;
   
@@ -142,10 +145,18 @@ void error_count_pileup::pileup_callback(const pileup& p) {
 		
 		// track the number of non-deletion, non-redundant alignments:
 		++unique_coverage;
-        
-    if (i->query_position_1() == i->query_stranded_bounds_1().first)
-    {
-      has_query_start[i->reversed() ? 1 : 0] = 1;
+    
+    
+    // If we are in preprocess coverage mode, enforce the same bounds on the part of the read that
+    // is matched that we do for scoring junctions, to make this equivalent.
+    // ... And also count only when we are the first base of the read, to add to hash score. 
+    if (m_preprocess_stage) {
+      
+      if ((i->query_position_1() == 1) && m_settings.valid_junction_read_bounds(i->query_stranded_bounds_1(), i->read_length()))
+      {
+        has_query_start[i->reversed() ? 1 : 0] = 1;
+      }
+      
     }
     
 		// if we are only tracking coverage, go to the next alignment
@@ -167,8 +178,10 @@ void error_count_pileup::pileup_callback(const pileup& p) {
 		}
 		++info.unique_only_coverage[unique_coverage];
 
-    m_read_found_starting_at_pos[has_query_start[0]]++;
-    m_read_found_starting_at_pos[has_query_start[1]]++;
+    if (m_preprocess_stage) {
+      m_read_found_starting_at_pos[has_query_start[0]]++;
+      m_read_found_starting_at_pos[has_query_start[1]]++;
+    }
 	}
   
   // per-position prints each line separately
@@ -179,16 +192,29 @@ void error_count_pileup::pileup_callback(const pileup& p) {
   }
 }
   
+void error_count_pileup::at_target_start(const uint32_t tid)
+{
+  (void) tid;
+  // Reset statistics for next target.
+  if (m_preprocess_stage) {
+    m_read_found_starting_at_pos[0] = 0;
+    m_read_found_starting_at_pos[1] = 0;
+  }
+}
+
+  
 void error_count_pileup::at_target_end(const uint32_t tid)
 {
-  double total = static_cast<double>(m_read_found_starting_at_pos[0] + m_read_found_starting_at_pos[1]);
-  summary.preprocess_error_count[target_name(tid)].no_pos_hash_per_position_pr = 1.0;
-  if (total != 0) {
-    summary.preprocess_error_count[target_name(tid)].no_pos_hash_per_position_pr = static_cast<double>(m_read_found_starting_at_pos[0]) / total;
+  // This calculates the chance of not finding a read that starts at a given position-strand combination.
+  // index 0: number of position-strand combinations that didn't have a read start
+  // index 1: number that did
+  if (m_preprocess_stage) {
+    double total = static_cast<double>(m_read_found_starting_at_pos[0] + m_read_found_starting_at_pos[1]);
+    m_summary.preprocess_error_count[target_name(tid)].no_pos_hash_per_position_pr = 1.0;
+    if (total != 0) {
+      m_summary.preprocess_error_count[target_name(tid)].no_pos_hash_per_position_pr = static_cast<double>(m_read_found_starting_at_pos[0]) / total;
+    }
   }
-
-  m_read_found_starting_at_pos[0] = 0;
-  m_read_found_starting_at_pos[1] = 0;
 }
 
 
@@ -202,13 +228,13 @@ void error_count_pileup::at_target_end(const uint32_t tid)
  */
 void error_count_pileup::print_coverage() {
 	using namespace std;
-	for(size_t i=0; i<_seq_info.size(); ++i) {
+	for(size_t i=0; i<m_seq_info.size(); ++i) {
 		string filename(m_output_dir + "/" + m_bam->header->target_name[i] + ".unique_only_coverage_distribution.tab");
 		ofstream out(filename.c_str());					
 		
 		out << "coverage\tn" << endl;
-		for(size_t j=1; j<_seq_info[i].unique_only_coverage.size(); ++j) {
-			out << j << "\t" << _seq_info[i].unique_only_coverage[j] << endl;
+		for(size_t j=1; j<m_seq_info[i].unique_only_coverage.size(); ++j) {
+			out << j << "\t" << m_seq_info[i].unique_only_coverage[j] << endl;
 		}	
 		out.close();
 	}

@@ -39,11 +39,7 @@ namespace breseq {
                               Settings& settings, 
                               string distribution_file_name, 
                               string plot_file, 
-                              double deletion_propagation_pr_cutoff, 
-                              double junction_coverage_pr_cutoff, 
-                              double junction_accept_pr_cutoff, 
-                              double junction_keep_pr_cutoff, 
-                              double junction_max_score
+                              double deletion_propagation_pr_cutoff
                               );
     
 		static void analyze_unique_coverage_distribution(

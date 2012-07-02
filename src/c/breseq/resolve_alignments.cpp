@@ -30,8 +30,9 @@ using namespace std;
 
 namespace breseq {
 
-// Continuation is how much matches the exact same past where the junction is
-// We need to count this for cases of short duplications and deletions (?)
+// Continuation is how many bases match the exact same past where the junction is in the reference
+// We need to count this for cases of short duplications and deletions in tandem repeats to not
+// penalize them when we count the "evenness" score.
   
 void calculate_continuation(
                             ResolveJunctionInfo& rji, 
@@ -1082,12 +1083,23 @@ void score_junction(
 		JunctionMatchPtr& item = items[i];
     
     if (verbose) cout << "  " << item->junction_alignments.front()->read_name() << endl;
-    
+
+    // JEB testing removal    
 		//! Do not count reads that map the reference equally well toward the score.
 		if (item->mapping_quality_difference < floor(static_cast<double>((summary.sequence_conversion.avg_read_length) / 30.0))) {
       if (verbose) cout << "    X Degenerate" << endl;
       continue; 
     }
+    
+
+ 
+    /*
+    //! Do not count reads that map the reference equally well toward the score.
+		if (item->mapping_quality_difference == 0) {
+      if (verbose) cout << "    X Degenerate" << endl;
+      continue; 
+    }
+     */
     
     // Determine which alignment we are working with.
     
