@@ -384,17 +384,20 @@ int do_error_count(int argc, char* argv[]) {
 	// attempt to calculate error calibrations:
 	try {
     Summary summary;
-		breseq::error_count(
-                        summary,
-                        options["bam"],
-												options["fasta"],
-												options["output"],
-												split(options["readfile"], "\n"),
-												options.count("coverage"),
-                        options.count("errors"),
-                        from_string<uint32_t>(options["minimum-quality-score"]),
-                        options["covariates"]
-                        );
+    Settings settings;
+		error_count(
+                settings,
+                summary,
+                options["bam"],
+                options["fasta"],
+                options["output"],
+                split(options["readfile"], "\n"),
+                options.count("coverage"),
+                options.count("errors"),
+                false,
+                from_string<uint32_t>(options["minimum-quality-score"]),
+                options["covariates"]
+                );
 	} catch(...) {
 		// failed; 
     std::cout << "<<<Failed>>>" << std::endl;
@@ -1171,13 +1174,13 @@ int do_download(int argc, char *argv[])
 }
 
 
-int do_subsequence(int argc, char *argv[])
+int do_get_sequence(int argc, char *argv[])
 {
-  AnyOption options("Usage: breseq SUBSEQUENCE -r <reference> -o <output.fasta> -p <REL606:50-100>");
+  AnyOption options("Usage: breseq GET-SEQUENCE -r <reference> -o <output.fasta> -p <REL606:50-100>");
   options("reference,r",".gbk/.gff3/.fasta reference sequence file", "data/reference.fasta");
   options("output,o","output FASTA file");  
   options("position,p","Sequence ID:Start-End");
-  options("complement,c","Reverse Complement (Flag)", TAKES_NO_ARGUMENT);
+  options("reverse-complement,c","Reverse Complement (Flag)", TAKES_NO_ARGUMENT);
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
@@ -1201,7 +1204,7 @@ int do_subsequence(int argc, char *argv[])
    
   vector<string> region_list;  
   
-  bool reverse = options.count("complement");
+  bool reverse = options.count("reverse-complement");
   bool verbose = options.count("verbose") || !options.count("output");
   
   if (options.count("position"))  {
@@ -1236,10 +1239,10 @@ int do_subsequence(int argc, char *argv[])
     
     if(verbose)
     {
-      cout << "SEQ_ID:\t\t" << ref_seq_info[replace_target_id].m_seq_id << endl;
-      cout << "SEQ_INDEX:\t" << replace_target_id << endl;
-      cout << "START:\t\t" << replace_start << endl;
-      cout << "END:\t\t" << replace_end << endl;
+      cout << "Sequence ID:      " << ref_seq_info[replace_target_id].m_seq_id << endl;
+      cout << "Start Position:   " << replace_start << endl;
+      cout << "End Position:     " << replace_end << endl;
+      cout << "Genome Strand:    " << (reverse ? "Bottom" : "Top") << endl;
     }
     
     CHECK(replace_start <= replace_end,
@@ -1251,7 +1254,7 @@ int do_subsequence(int argc, char *argv[])
            "START:\t" + to_string(replace_start) + "\n" +
            "END:\t" + to_string(replace_end) + "\n" +
            "SIZE:\t" + to_string(ref_seq_info[replace_target_id].m_length) + "\n" +
-           "Neither Start or End can be greater than the size of " + ref_seq_info[replace_target_id].m_seq_id + ".");
+           "Neither START or ENDA can be greater than the SIZE of " + ref_seq_info[replace_target_id].m_seq_id + ".");
     
     seq_name = ref_seq_info[replace_target_id].m_seq_id + ":" + to_string(replace_start) + "-" + to_string(replace_end);
     
@@ -1259,7 +1262,7 @@ int do_subsequence(int argc, char *argv[])
     cAnnotatedSequence& new_seq = new_seq_info[seq_name];
     new_seq.m_fasta_sequence = ref_seq_info[replace_target_id].m_fasta_sequence;    
     new_seq.m_fasta_sequence.m_name = seq_name;
-    new_seq.m_fasta_sequence.m_sequence = ref_seq_info[replace_target_id].m_fasta_sequence.m_sequence.substr(replace_start -1, (replace_end - replace_start) + 1);
+    new_seq.m_fasta_sequence.m_sequence = to_upper(ref_seq_info[replace_target_id].m_fasta_sequence.m_sequence.substr(replace_start -1, (replace_end - replace_start) + 1));
     if(reverse)new_seq.m_fasta_sequence.m_sequence = reverse_complement(new_seq.m_fasta_sequence.m_sequence);
     new_seq.m_seq_id = seq_name;
     new_seq.m_length = new_seq.m_fasta_sequence.m_sequence.size();
@@ -1706,6 +1709,7 @@ int breseq_default_action(int argc, char* argv[])
       string reference_bam_file_name = settings.coverage_junction_best_bam_file_name;
 
       error_count(
+        settings,
         summary,
         reference_bam_file_name,
         reference_fasta_file_name,
@@ -1713,6 +1717,7 @@ int breseq_default_action(int argc, char* argv[])
         settings.read_file_names,
         true, // coverage
         false, // errors
+        true, //preprocess
         settings.base_quality_cutoff,
         "" //covariates
       );
@@ -1733,9 +1738,8 @@ int breseq_default_action(int argc, char* argv[])
     summary.preprocess_error_count.retrieve(settings.coverage_junction_error_count_summary_file_name);
     
 		string candidate_junction_summary_file_name = settings.candidate_junction_summary_file_name;
-		if (settings.do_step(settings.candidate_junction_done_file_name, "Identifying candidate junctions"))
+		if (settings.do_step(settings.candidate_junction_done_file_name, "Identifying junction candidates"))
 		{
-			cerr << "Identifying candidate junctions..." << endl;
       CandidateJunctions::identify_candidate_junctions(settings, summary, ref_seq_info);
 
 			string samtools = settings.ctool("samtools");
@@ -1754,7 +1758,7 @@ int breseq_default_action(int argc, char* argv[])
     // * Align reads to new junction candidates
     //
 		if (
-        settings.do_step(settings.candidate_junction_alignment_done_file_name, "Candidate junction alignment")
+        settings.do_step(settings.candidate_junction_alignment_done_file_name, "Re-alignment to junction candidates")
         && !settings.aligned_sam_mode
         )
 		{
@@ -1825,7 +1829,7 @@ int breseq_default_action(int argc, char* argv[])
   // 05 alignment_correction
 	// * Resolve matches to new junction candidates
 	//
-	if (settings.do_step(settings.alignment_correction_done_file_name, "Resolving alignments with candidate junctions"))
+	if (settings.do_step(settings.alignment_correction_done_file_name, "Resolving alignments with junction candidates"))
 	{
 		create_path(settings.alignment_resolution_path);
 
@@ -2046,6 +2050,7 @@ int breseq_default_action(int argc, char* argv[])
     }
 
 		error_count(
+      settings,
       summary,
 			reference_bam_file_name, // bam
 			reference_fasta_file_name, // fasta
@@ -2053,6 +2058,7 @@ int breseq_default_action(int argc, char* argv[])
 			settings.read_files.base_names(), // readfile
 			true, // coverage
 			true, // errors
+      false, //preprocess
 			settings.base_quality_cutoff, // minimum quality score
 			"read_set=" + to_string(num_read_files) + ",obs_base,ref_base,quality=" + to_string(num_qual) // covariates
 		);
@@ -2146,7 +2152,7 @@ int breseq_default_action(int argc, char* argv[])
 	{
 		create_path(settings.mutation_identification_path);
 
-		if (settings.do_step(settings.mutation_identification_done_file_name, "Read alignment mutations"))
+		if (settings.do_step(settings.mutation_identification_done_file_name, "Examining read alignment evidence"))
 		{
 			string reference_fasta_file_name = settings.reference_fasta_file_name;
 			string reference_bam_file_name = settings.reference_bam_file_name;
@@ -2402,8 +2408,8 @@ int main(int argc, char* argv[]) {
 		return do_convert_fastq(argc_new, argv_new);
 	} else if (command == "CONVERT-REFERENCE") {
 		return do_convert_genbank(argc_new, argv_new);
-  } else if ((command == "SUBSEQUENCE") || (command == "GET-SEQUENCE")) {
-    return do_subsequence(argc_new, argv_new);
+  } else if ((command == "GET-SEQUENCE") || (command == "SUBSEQUENCE")) {
+    return do_get_sequence(argc_new, argv_new);
     
   // Breseq Post-Run Commands:
   } else if (command == "BAM2ALN") {

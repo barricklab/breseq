@@ -165,7 +165,7 @@ class alignment_wrapper {
 
     //! Reverse start and end coords if on opposite strand
     //! This means End can be < Start.
-    std::pair<uint32_t,uint32_t> query_stranded_bounds_1() const;
+    pair<uint32_t,uint32_t> query_stranded_bounds_1() const;
     void query_stranded_bounds_1(uint32_t& start, uint32_t& end) const;
   
     uint32_t query_stranded_start_1()

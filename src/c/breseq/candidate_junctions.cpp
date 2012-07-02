@@ -1306,7 +1306,7 @@ namespace breseq {
       a->query_stranded_bounds_1(a_start, a_end);
 
 			if (verbose) cout << "(" << a_start << ", " << a_end << ")" << endl;
-
+          
 			if (a_start == 1)
 				list1.push_back(a);
 			else if (a_end >= unmatched_end_min_coord)

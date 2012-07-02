@@ -36,11 +36,7 @@ namespace breseq {
                                            Settings& settings, 
                                            string distribution_file_name, 
                                            string plot_file, 
-                                           double deletion_propagation_pr_cutoff, 
-                                           double junction_coverage_pr_cutoff, 
-                                           double junction_accept_pr_cutoff, 
-                                           double junction_keep_pr_cutoff, 
-                                           double junction_max_score
+                                           double deletion_propagation_pr_cutoff
                                            )
   {
     pid_t pid = getpid();
@@ -50,10 +46,6 @@ namespace breseq {
     command += " distribution_file=" + cString(distribution_file_name).escape_shell_chars();
     command += " plot_file=" + cString(plot_file).escape_shell_chars();
     command += " deletion_propagation_pr_cutoff=" + to_string<double>(deletion_propagation_pr_cutoff);
-    command += " junction_coverage_pr_cutoff=" + to_string<double>(junction_coverage_pr_cutoff);
-    command += " junction_accept_pr_cutoff=" + to_string<double>(junction_accept_pr_cutoff);
-    command += " junction_keep_pr_cutoff=" + to_string<double>(junction_keep_pr_cutoff);
-    command += " junction_max_score=" + to_string<double>(junction_max_score);
     
     SYSTEM(command, false, false, false); //NOTE: Not escaping shell characters here.
 
@@ -133,11 +125,7 @@ namespace breseq {
     vector<string> lines = dist.fit(settings, 
                                     unique_only_coverage_distribution_file_name, 
                                     unique_only_coverage_plot_file_name,
-                                    deletion_propagation_pr_cutoff, 
-                                    junction_coverage_pr_cutoff, 
-                                    junction_accept_pr_cutoff, 
-                                    junction_keep_pr_cutoff, 
-                                    junction_max_score
+                                    deletion_propagation_pr_cutoff
                                     );
 
     // First two lines are negative binomial parameters.
@@ -153,11 +141,6 @@ namespace breseq {
     summary.unique_coverage[seq_id].dispersion = from_string<double>(lines[4]);
 
     summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff = from_string<double>(lines[5]);
-    summary.unique_coverage[seq_id].junction_coverage_cutoff = from_string<double>(lines[6]);
-    
-    // deprecated statistics
-    //summary.unique_coverage[seq_id].junction_accept_score_cutoff = from_string<double>(lines[7]);
-    //summary.unique_coverage[seq_id].junction_keep_score_cutoff = from_string<double>(lines[8]);
         
     bool verbose = false;
     if (verbose)
@@ -170,11 +153,6 @@ namespace breseq {
       cout << "variance " << summary.unique_coverage[seq_id].variance << endl;
       cout << "dispersion " << summary.unique_coverage[seq_id].dispersion << endl;
       cout << "deletion_coverage_propagation_cutoff " << summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff << endl;
-      cout << "junction_coverage_cutoff " << summary.unique_coverage[seq_id].junction_coverage_cutoff << endl;
-      //cout << "junction_accept_score_cutoff " << summary.unique_coverage[seq_id].junction_accept_score_cutoff << endl;
-      //cout << "junction_keep_score_cutoff " << summary.unique_coverage[seq_id].junction_keep_score_cutoff << endl;
-      //cout << "pr_no_coverage_position_strand " << summary.unique_coverage[seq_id].pr_no_coverage_position_strand << endl;
-
     }
   }
 
