@@ -29,19 +29,25 @@ namespace breseq {
   /*! Utility for sorting alignments by the number of mismatches
    */
   
-  class mismatch_map_class : public map<bam_alignment*,double> {
+  class alignment_score_map_class : public map<bam_alignment*,uint32_t> {
   public:
-    inline bool operator() (alignment_list::iterator a1, alignment_list::iterator a2) { return (*this)[a1->get()] < (*this)[a2->get()]; } 
-  } mismatch_map;
+    inline bool operator() (alignment_list::iterator a1, alignment_list::iterator a2) { return (*this)[a1->get()] > (*this)[a2->get()]; } 
+  } alignment_score_map;
   
   
-  bool sort_by_mismatches (counted_ptr<bam_alignment>& a1, counted_ptr<bam_alignment>& a2) { return mismatch_map[a1.get()] < mismatch_map[a2.get()]; }  
+  bool sort_by_alignment_score (counted_ptr<bam_alignment>& a1, counted_ptr<bam_alignment>& a2) { return alignment_score_map[a1.get()] > alignment_score_map[a2.get()]; }  
   
   
   /*! Filter a list of alignments to only those that are eligible for mapping
+   *  and return the BEST SCORE, which is currently the length of the aligned region of the read
+   *  minus the number of base mismatches and minus the number of indels.
+   *
+   *  In junction_mode, negaive overlap of the junction sequence is also subtracted from the score.
+   *    and returns all alignments above the minimum.
+   *  Otherwise, returns only alignments tied for best.
    */
   
- uint32_t eligible_read_alignments(const Settings& settings, const cReferenceSequences& ref_seq_info, alignment_list& alignments, bool junction_mode)
+ uint32_t eligible_read_alignments(const Settings& settings, const cReferenceSequences& ref_seq_info, alignment_list& alignments, bool junction_mode, uint32_t min_match_score)
   {
     bool verbose = false;
     
@@ -70,23 +76,45 @@ namespace breseq {
     // @JEB: We would ideally sort by alignment/mapping score here
     // the number of mismatches is our current proxy for this.
     
-    mismatch_map.clear();
-    for (alignment_list::iterator it = alignments.begin(); it != alignments.end(); it++)
+    uint32_t read_length = alignments.front()->read_length();
+    alignment_score_map.clear();
+    for (alignment_list::iterator it = alignments.begin(); it != alignments.end();)
     {  
+      
+
       bam_alignment* ap = it->get(); // we are saving the pointer value as the map key
+      
       uint32_t i = alignment_mismatches(*ap, ref_seq_info);
       
+      // @JEB may want to revisit this.
       // add in read only bases (negative overlap) as mismatches
+      /*
       if (junction_mode) {
         JunctionInfo junction_info( ref_seq_info[ap->reference_target_id()].m_seq_id );
         if (junction_info.alignment_overlap < 0)
+          // NOTE: subtraction here is adding b/c alignment_overlap < 0
           i -= junction_info.alignment_overlap;
       }
+      */
+      ASSERT(read_length >= i, "More mismatches than matches for read alignment. ");
+      //ASSERT(read_length >= i, "More mismatches than matches for read alignment. " + ap->read_name());
+       
+       
+      i = read_length - i;
       
-      mismatch_map[ap] = static_cast<double>(i);
+      // Only keep ones with a minimum score
+      if (i < min_match_score) {
+        it = alignments.erase(it);
+      }
+      else {
+        ap->aux_set(kBreseqAlignmentScoreBAMTag, 'I', sizeof(uint32_t), (uint8_t*)&i);
+        alignment_score_map[ap] = i;
+        it++;
+      }
+      
     }
     
-    alignments.sort(sort_by_mismatches);
+    alignments.sort(sort_by_alignment_score);
     
     if (verbose)
     {
@@ -94,22 +122,32 @@ namespace breseq {
       {
         bam_alignment& a = *(it->get());
         cerr << a.query_start_1() << "-" << a.query_end_1() << " ";
-        cerr << a.query_match_length()-mismatch_map[it->get()] << "\n";
+        cerr << alignment_score_map[it->get()] << "\n";
       }
     }
-    
-    
+        
     // how many reads share the best score?
     uint32_t last_best(0);
-    uint32_t best_score = static_cast<uint32_t>(mismatch_map[(alignments.front().get())]);
+    uint32_t best_score = alignment_score_map[alignments.front().get()];
+    
+    // In non-junction mode we only return the best
+    // In junction mode we return all above or equal to the minimum score (which is for the alignment to the reference genome).
     
     // no scores meet minimum
     for (alignment_list::iterator it = alignments.begin()++; it != alignments.end(); it++)
     {
-      if (mismatch_map[it->get()] != best_score) break;
-      last_best++;
+      bam_alignment* ap = it->get();
+      uint8_t is_best_score = (alignment_score_map[ap] == best_score) ? 1 : 0;
+      
+      ap->aux_set(kBreseqBestAlignmentScoreBAMTag, 'C', sizeof(uint8_t), (uint8_t*)&is_best_score);
+      
+      if (is_best_score)
+        last_best++;
     }
-    alignments.resize(last_best);
+    
+    // Truncate only to ties for best if we are not in junction mode
+    if (!junction_mode)
+      alignments.resize(last_best);
     
     if (verbose)
     {
@@ -121,8 +159,8 @@ namespace breseq {
       }
     }
     
-    // Note that the score we return is higher for better matches so we negative this value...
-    return alignments.front()->read_length() - best_score;
+    // Note that the score we return is higher for better matches...
+    return best_score;
   }
   
   /*! Test the requirements for an alignment to be counted.
@@ -193,9 +231,90 @@ namespace breseq {
     return;
   }
   
+  void line_to_read_index(string s, int32_t& index, bool& mapped) {
+    size_t start = s.find_first_of(":");
+    size_t end = s.find_first_of(" \t", start);
+    index = n(s.substr(start+1, end-(start+1)));
+    
+    size_t next = s.find_first_not_of(" \t", end);
+    next = s.find_first_of(" \t", next);
+    next = s.find_first_not_of(" \t", next);
+
+    mapped = (s[next] != '*');
+    
+  }
+  
   // Takes two SAM files and re-sorts read order so that it matches the original FASTQ file.
   // Requires reads to be renamed as we expect from 01_sequence_onversion: file_num/read_num.
   void PreprocessAlignments::merge_sort_sam_files(
+                                                  string input_sam_file_name_1,
+                                                  string input_sam_file_name_2,
+                                                  string output_sam_file_name
+                                                  )
+  {
+    
+    ifstream input_sam_file_1(input_sam_file_name_1.c_str());
+    ifstream input_sam_file_2(input_sam_file_name_2.c_str());
+    
+    ofstream out_sam_file(output_sam_file_name.c_str());
+    
+    string line_1, line_2;
+    bool not_done_1 = getline(input_sam_file_1, line_1);
+    while (not_done_1 && (line_1[0] == '@')) {
+      not_done_1 = getline(input_sam_file_1, line_1);
+    }
+    
+    bool not_done_2 = getline(input_sam_file_2, line_2);
+    while (not_done_2 && (line_2[0] == '@')) {
+      not_done_2 = getline(input_sam_file_2, line_2);
+    }
+         
+    int32_t index_1 = -1; 
+    int32_t index_2 = -1; 
+    bool mapped_1 = false;
+    bool mapped_2 = false;
+    
+    if (not_done_1) {
+      line_to_read_index(line_1, index_1, mapped_1);
+    }
+    if (not_done_2) {
+      line_to_read_index(line_2, index_2, mapped_2);
+    }
+    
+    while (not_done_1 || not_done_2) {
+      
+      if (not_done_1 && (index_1 < index_2)) {
+        
+        if (mapped_1)
+          out_sam_file << line_1 << endl;
+        
+        // read next line
+        not_done_1 = getline(input_sam_file_1, line_1);
+        if (not_done_1) {
+          line_to_read_index(line_1, index_1, mapped_1);
+        } else {
+          index_1 = numeric_limits<int32_t>::max();
+        }
+      }
+      else if (not_done_2) {
+        if (mapped_2)
+          out_sam_file << line_2 << endl;
+        
+        // read next line
+        not_done_2 = getline(input_sam_file_2, line_2);
+        if (not_done_2) {
+          line_to_read_index(line_2, index_2, mapped_2);
+        } else {
+          index_2 = numeric_limits<int32_t>::max();
+        }
+      }
+    }
+  }
+  
+  /*
+  // Takes two SAM files and re-sorts read order so that it matches the original FASTQ file.
+  // Requires reads to be renamed as we expect from 01_sequence_onversion: file_num/read_num.
+  void PreprocessAlignments::slow_merge_sort_sam_files(
                                                   uint32_t fastq_file_index,
                                                   string fasta_file_name,
                                                   string input_sam_file_name_1,
@@ -256,6 +375,7 @@ namespace breseq {
       }
     }
   }
+  */
   
   /*! PreprocessAlignments::preprocess_alignments
    *
@@ -314,14 +434,14 @@ namespace breseq {
       }
     }
     
-    cout << "  Summary... " << setw (12) << right << endl;
-    cout << "  Aligned reads:                         " << summary.preprocess_alignments.aligned_reads << endl;
-    cout << "  Read alignments:                       " << summary.preprocess_alignments.alignments << endl;
-    cout << "  Alignments split on indels:            " << summary.preprocess_alignments.alignments_split_on_indels << endl;
-    cout << "  Reads with alignments split on indels: " << summary.preprocess_alignments.reads_with_alignments_split_on_indels << endl;
-    cout << "  Split alignments:                      " << summary.preprocess_alignments.split_alignments << endl;
-    cout << "  Reads with split alignments:           " << summary.preprocess_alignments.reads_with_split_alignments << endl;
-  
+    cout << "  Summary... " << setw (12) << right << endl
+         << "  Aligned reads:                         " << summary.preprocess_alignments.aligned_reads << endl
+         << "  Read alignments:                       " << summary.preprocess_alignments.alignments << endl
+         << "  Alignments split on indels:            " << summary.preprocess_alignments.alignments_split_on_indels << endl
+         << "  Reads with alignments split on indels: " << summary.preprocess_alignments.reads_with_alignments_split_on_indels << endl
+         << "  Split alignments:                      " << summary.preprocess_alignments.split_alignments << endl
+         << "  Reads with split alignments:           " << summary.preprocess_alignments.reads_with_split_alignments << endl
+    ;
   }
 
   
@@ -1210,8 +1330,6 @@ namespace breseq {
 
     ///
     //  Important: Here is where we choose the strand of the junction sequence
-    //   
-    //  Right now it is by the sequence name. 
     ///
     
 		// want to be sure that lowest ref coord is always first for consistency
@@ -1225,7 +1343,6 @@ namespace breseq {
 			junction_seq_string = reverse_complement(junction_seq_string);
 			unique_read_seq_string = reverse_complement(unique_read_seq_string);
 		}
-
     
     // create junction candidate pointer
 		JunctionCandidate* candidate_junction_ptr = new JunctionCandidate(
@@ -1244,6 +1361,33 @@ namespace breseq {
     // set the return value (which takes control of the allocated pointer)
     returned_junction_candidate = JunctionCandidatePtr(candidate_junction_ptr);
 
+    
+    // Bowtie2 specific code: (Not needed for SSAHA2) -->
+    // need to rule out short indels that we want to fit by RA methods.
+    // would be better to get rid of these at an earlier stage.
+    // This code may not get rid of all possible SUB conditions.
+
+    if ( hash_seq_id_1.compare(hash_seq_id_2) == 0 ) {
+      
+      // Insertion of the same base
+      //    ------>
+      // ----> 
+      if ((overlap > 0) && (hash_strand_1 ==1) && (hash_strand_2 != 1) && (hash_coord_2 - hash_coord_1 <= overlap) && ( hash_coord_1 + overlap - hash_coord_2 + 1  < settings.preprocess_junction_min_indel_split_length)) {
+        //cerr << "Rejected/Insertion of same base(s):" << candidate_junction_ptr->junction_key() << endl;
+        return false;
+      }
+      
+      // Insertion of unique bases at an existing junction
+      if ((overlap < 0) && (hash_strand_1 !=1) && (hash_strand_2 == 1) && ( hash_coord_1 + 1 == hash_coord_2) && (-overlap < settings.preprocess_junction_min_indel_split_length)) {
+        //cerr << "Rejected/Insertion of unique base(s):" << candidate_junction_ptr->junction_key() << endl;
+        return false;
+      }
+    }
+    
+    //
+    // <-- End Bowtie2 specific code
+    //
+    
 		if (verbose)
 		{
       string junction_id = candidate_junction_ptr->junction_key();

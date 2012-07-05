@@ -781,6 +781,7 @@ string html_genome_diff_item_table_string(const Settings& settings, cGenomeDiff&
   if(first_item.is_mutation())
   {
     MutationTableOptions mt_options;
+    mt_options.detailed=true;
     return Html_Mutation_Table_String(settings, gd, list_ref, mt_options); 
   }
   //evidence
@@ -2255,7 +2256,11 @@ void Html_Mutation_Table_String::Item_Lines()
       } break;
         
       case SUB:{
-        cell_mutation = nonbreaking(mut["size"] + " bp&rarr;" + mut["new_seq"]);
+        if (options.detailed || (mut["new_seq"].size() <= 4)) {
+          cell_mutation = nonbreaking(mut["size"] + " bp&rarr;" + mut["new_seq"]);
+        } else {
+          cell_mutation = nonbreaking(mut["size"] + " bp&rarr;" + s(mut["new_seq"].size()) + " bp");
+        }
       } break;
         
       case CON:{

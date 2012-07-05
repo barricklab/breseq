@@ -84,6 +84,7 @@ namespace breseq {
     }
   };
   
+    
   typedef map<string, JunctionTestInfo> JunctionTestInfoMap;
   
 	class JunctionMatch
@@ -124,8 +125,8 @@ namespace breseq {
 	};
   
   typedef counted_ptr<JunctionMatch> JunctionMatchPtr;
-  typedef map<string, vector<JunctionMatchPtr> > UniqueJunctionMatchMap;
-  typedef map<string, map<string, JunctionMatchPtr> > RepeatJunctionMatchMap;
+  typedef map<string, vector<JunctionMatchPtr> > UniqueJunctionMatchMap;      // Map of junction_id to list of MatchedJunctions
+  typedef map<string, map<string, JunctionMatchPtr> > RepeatJunctionMatchMap; // Map of junction_id to read_name to MatchedJunction
   
   
   class PosHashProbabilityTable {
