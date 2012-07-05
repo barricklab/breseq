@@ -698,6 +698,20 @@ void load_junction_alignments(
       uint32_t best_junction_score = 0;
       uint32_t best_reference_score = 0;
       
+      // Does this read have eligible reference sequence matches?
+      alignment_list this_reference_alignments;
+      if ((reference_alignments.size() > 0) && (seq.m_name == reference_alignments.front()->read_name()))
+      {
+        
+        this_reference_alignments = reference_alignments;
+        reference_tam->read_alignments(reference_alignments, false);
+        
+        best_reference_score = eligible_read_alignments(settings, ref_seq_info, this_reference_alignments);
+        
+        if (verbose)
+          cerr << " Best reference score: " << best_reference_score << endl;
+      }
+      
       // Does this read have eligible candidate junction matches?
       alignment_list this_junction_alignments;
       
@@ -736,8 +750,10 @@ void load_junction_alignments(
             it++; 
         }
         
+        // @JEB Testing
         // this score is the number of matches
-        best_junction_score = eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments, settings.penalize_negative_junction_overlap);
+        best_junction_score = eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments, true, best_reference_score);
+        //best_junction_score = eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments, settings.penalize_negative_junction_overlap);
         
         
         if (verbose)
@@ -747,20 +763,6 @@ void load_junction_alignments(
       if (verbose && (reference_alignments.size() > 0))
       {
         cerr << " Reference SAM read name: " << reference_alignments.front()->read_name() <<endl;
-      }
-      
-      // Does this read have eligible reference sequence matches?
-      alignment_list this_reference_alignments;
-      if ((reference_alignments.size() > 0) && (seq.m_name == reference_alignments.front()->read_name()))
-      {
-        
-        this_reference_alignments = reference_alignments;
-        reference_tam->read_alignments(reference_alignments, false);
-        
-        best_reference_score = eligible_read_alignments(settings, ref_seq_info, this_reference_alignments);
-        
-        if (verbose)
-          cerr << " Best reference score: " << best_reference_score << endl;
       }
       
       // Nothing to be done if there were no eligible matches to either
@@ -1084,22 +1086,11 @@ void score_junction(
     
     if (verbose) cout << "  " << item->junction_alignments.front()->read_name() << endl;
 
-    // JEB testing removal    
-		//! Do not count reads that map the reference equally well toward the score.
-		if (item->mapping_quality_difference < floor(static_cast<double>((summary.sequence_conversion.avg_read_length) / 30.0))) {
-      if (verbose) cout << "    X Degenerate" << endl;
-      continue; 
-    }
-    
-
- 
-    /*
     //! Do not count reads that map the reference equally well toward the score.
 		if (item->mapping_quality_difference == 0) {
       if (verbose) cout << "    X Degenerate" << endl;
       continue; 
     }
-     */
     
     // Determine which alignment we are working with.
     
@@ -1116,7 +1107,11 @@ void score_junction(
 			}
 		}
 		assert(a != NULL);
-    
+
+    // Only count alignments tied for best
+    int32_t is_best = a->aux_get_i(kBreseqBestAlignmentScoreBAMTag);
+    if (!is_best) 
+      continue;
     
     ///
     // CHECK to be sure that this read overlaps the junction.
@@ -1269,7 +1264,7 @@ void score_junction(
   int32_t overlap_positions_max_pos_hash_score_reduction = abs(scj.alignment_overlap);
   uint32_t max_pos_hash_score = 2 * (avg_read_length - 1 - overlap_positions_max_pos_hash_score_reduction - continuation_left - continuation_right);
   
-  //@JEB Actually, this can happen if the read lengths vary, so we better not rule it out as an error.
+  //@JEB Actually, this can happen if the read lengths vary, so we better not rule it out as an error!
   /*
   ASSERT(pos_hash_count <= max_pos_hash_score, 
          "Pos hash score (" + to_string(pos_hash_count) + ") is greater than calculated maximum (" + to_string(max_pos_hash_score) 

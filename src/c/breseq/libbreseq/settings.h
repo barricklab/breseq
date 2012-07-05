@@ -26,6 +26,8 @@ LICENSE AND COPYRIGHT
 
 namespace breseq
 {
+  extern const char* kBreseqAlignmentScoreBAMTag;
+  extern const char* kBreseqBestAlignmentScoreBAMTag;
 
 	class ExecutionTime : public Storable {
   public:
@@ -184,6 +186,11 @@ namespace breseq
     uint32_t ssaha2_skip_length;  // Default = 1 (i.e. no skipping)
     bool bowtie2;                 // Default = false COMMAND-LINE OPTION
     bool bowtie2_align;           // Default = false COMMAND-LINE OPTION
+    string bowtie2_score_parameters;
+    string bowtie2_min_score_stringent;
+    string bowtie2_min_score_relaxed;
+    int32_t num_processors;       // Defaults = 2
+
     bool aligned_sam_mode;        // Default = false COMMAND-LINE OPTION
     
     //! reads are never included in the BAM alignment file if they fail these guards
@@ -193,7 +200,7 @@ namespace breseq
     int32_t  maximum_read_mismatches;     // Default = -1 (OFF)
     
     //! Settings: Candidate Junction Prediction
-    uint32_t preprocess_junction_min_indel_split_length;    // Default = 3
+    int32_t  preprocess_junction_min_indel_split_length;    // Default = 3
 		uint32_t required_both_unique_length_per_side;          // Default = 0 (OFF)
     uint32_t required_both_unique_length_per_side_fraction; // Default = 0.2 
 		uint32_t required_one_unique_length_per_side;           // Default = ssaha2_seed_length = 13

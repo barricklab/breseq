@@ -258,15 +258,18 @@ class alignment_wrapper {
     inline int32_t isize() const { return _a->core.isize; }
     inline uint32_t quality() const { return _a->core.qual; }
     inline uint16_t flag() const { return _a->core.flag; }
-    inline uint8_t* aux_get(const char tag[2]) const { return bam_aux_get(_a, tag); }
-    
+  
     //! Is this read unmapped?
     inline bool unmapped() const { return flag() & BAM_FUNMAP; }
     
-    inline uint32_t aux_get_i(const char tag[2]) const 
+    // Don't call this directly - it has to be passed through a formatting function
+    //inline uint8_t* aux_get(const char tag[2]) const { return bam_aux_get(_a, tag); }
+  
+    inline int32_t aux_get_i(const char tag[2]) const 
     { 
-      uint8_t *auxl = aux_get(tag); 
-      return (uint32_t)bam_aux2i(auxl); 
+      uint8_t *auxl = bam_aux_get(_a, tag);
+      ASSERT(auxl, "BAM alignment aux tag not found: " + string(tag));
+      return bam_aux2i(auxl); 
     }
 
 	inline bool proper_pair() const
@@ -426,6 +429,17 @@ public:
   {
     free(data);
   }
+  
+  void aux_set(const char tag[2], char type, int len, void* data) 
+  { 
+    uint8_t* get = bam_aux_get(this, tag);
+    if (get) {
+      bam_aux_del(this, get);
+    }
+    bam_aux_append(this, tag, type, len, (uint8_t*)data); 
+  }
+  
+  
   
 };
 

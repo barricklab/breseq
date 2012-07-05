@@ -132,12 +132,14 @@ struct MutationTableOptions {
   , legend_row(false)
   , one_ref_seq(false)
   , shade_frequencies(false)
+  , detailed(false)
   {}
   
   uint32_t repeat_header;
   bool legend_row; 
   bool one_ref_seq;
   bool shade_frequencies;
+  bool detailed;
   vector<string> gd_name_list_ref;
   string relative_link;
   

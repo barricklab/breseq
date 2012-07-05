@@ -28,6 +28,9 @@ using namespace std;
 
 namespace breseq
 {
+  
+  const char* kBreseqAlignmentScoreBAMTag = "X5";
+  const char* kBreseqBestAlignmentScoreBAMTag = "X6";
 
   string Settings::output_divider("====================================================================================");
   
@@ -219,7 +222,9 @@ namespace breseq
     this->copy_number_variation_tile_size = from_string<uint32_t>(options["cnv-tile-size"]);
     this->ignore_redundant_coverage = options.count("cnv-ignore-redundant");
     this->bowtie2 = options.count("bowtie2");
+    //this->bowtie2 = true; // testing
     this->bowtie2_align = options.count("bowtie2-align");
+    //this->bowtie2_align = true; // testing
     
     this->do_periodicity = options.count("periodicity");
     this->periodicity_method = from_string<uint32_t>(options["periodicity-method"]);
@@ -351,7 +356,12 @@ namespace breseq
 
     this->bowtie2 = false;
     this->bowtie2_align = false;
+    this->bowtie2_score_parameters = "--ma 1 --mp 3 --np 0 --rdg 3,3 --rfg 3,3";
+    this->bowtie2_min_score_stringent = "-L 22 -i S,1,0.25 --score-min L,4,0.8 ";
+    this->bowtie2_min_score_relaxed  = "-L 13 -i C,1,0 --score-min L,4,0.1";
+    this->num_processors = 2;
 
+    
     //! Settings: Candidate Junction Prediction
 		this->preprocess_junction_min_indel_split_length = 3;
     this->required_both_unique_length_per_side_fraction = 0.2; 

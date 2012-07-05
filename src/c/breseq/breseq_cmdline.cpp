@@ -1550,11 +1550,8 @@ int breseq_default_action(int argc, char* argv[])
         string bowtie2_unmatched_fastq_file_name = settings.file_name(settings.bowtie2_unmatched_fastq_file_name, "#", base_read_file_name);
         
         //Split alignment into unmatched and matched files.
-        string command = "bowtie2 --gbar 100000 -p 2 -L 22 -i S,1,1.25 --reorder -a --mp 2 --score-min L,-4,2 --local -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + bowtie2_matched_sam_file_name + " --un " + bowtie2_unmatched_fastq_file_name;
+        string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local -a " + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_stringent + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + bowtie2_matched_sam_file_name + " --un " + bowtie2_unmatched_fastq_file_name; 
         SYSTEM(command);
-        
-        string reference_fasta_file_name = settings.file_name(settings.reference_fasta_file_name, "#", base_read_file_name);
-        
       }
     }
 
@@ -1611,10 +1608,9 @@ int breseq_default_action(int argc, char* argv[])
         }
 
         if (settings.bowtie2_align) {
-					//string command = "bowtie2 --no-unal -p 2 -L 13 -i C,1,0 --reorder -a --score-min C,26,0 --local -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + reference_sam_file_name; 
+          
           // This setting prevents indels > 1 bp from being predicted entirely.
-          //string command = "bowtie2 --no-unal --ma 1 --mp 3 --np 0 --rdg 3,1000 --rfg 3,1000 -p 2 -L 13 -i C,1,0 --reorder -a --score-min L,4,0.25 --local -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + reference_sam_file_name; 
-          string command = "bowtie2 --no-unal --ma 1 --mp 3 --np 0 --rdg 3,3 --rfg 3,3 -p 2 -L 13 -i C,1,0 --reorder -a --score-min L,4,0.25 --local -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + reference_sam_file_name; 
+          string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local -a " + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_relaxed + " --no-unal --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + reference_sam_file_name; 
          
           SYSTEM(command);
         } else {
@@ -1640,8 +1636,6 @@ int breseq_default_action(int argc, char* argv[])
           string reference_fasta_file_name = settings.file_name(settings.reference_fasta_file_name, "#", base_read_file_name);
           
           PreprocessAlignments::merge_sort_sam_files(
-                                                     read_file.m_id,
-                                                     settings.reference_fasta_file_name,
                                                      ssaha2_reference_sam_file_name,
                                                      bowtie2_matched_sam_file_name,
                                                      reference_sam_file_name
@@ -1793,7 +1787,7 @@ int breseq_default_action(int argc, char* argv[])
           string filename = candidate_junction_hash_file_name + ".1.bt2";
           if (file_exists(filename.c_str())) 
           {
-            string command = "bowtie2 --no-unal -p 2 --reorder --local -k 1000000 -x " + candidate_junction_hash_file_name + " -S " + candidate_junction_sam_file_name + " -U " + read_fastq_file; 
+            string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local -k 1000000 " + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_stringent + " --no-unal --reorder -x " + candidate_junction_hash_file_name + " -U " + read_fastq_file + " -S " + candidate_junction_sam_file_name; 
             SYSTEM(command);
           }
         }
@@ -1803,7 +1797,7 @@ int breseq_default_action(int argc, char* argv[])
           if (file_exists(filename.c_str())) 
           {
             //string command = "ssaha2 -disk 2 -save " + candidate_junction_hash_file_name + " -best 1 -kmer " + to_string(settings.ssaha2_seed_length) + " -skip " + to_string(settings.ssaha2_skip_length) + " -seeds 1 -score 12 -cmatch " + to_string(settings.ssaha2_seed_length) + " -ckmer 1 -output sam_soft -outfile " + candidate_junction_sam_file_name + " " + read_fastq_file;
-            string command = "ssaha2 -disk 2 -save " + candidate_junction_hash_file_name + " -best 1 -kmer " + to_string(settings.ssaha2_seed_length) + " -skip " + to_string(settings.ssaha2_skip_length) + " -seeds 1 -score 12 -cmatch 6 -depth 10000 -ckmer 1 -output sam_soft -outfile " + candidate_junction_sam_file_name + " " + read_fastq_file;
+            string command = "ssaha2 -disk 2 -save " + candidate_junction_hash_file_name + " -kmer " + to_string(settings.ssaha2_seed_length) + " -skip " + to_string(settings.ssaha2_skip_length) + " -seeds 1 -score 12 -cmatch " + to_string(settings.ssaha2_seed_length) + " -ckmer 1 -output sam_soft -outfile " + candidate_junction_sam_file_name + " " + read_fastq_file;
             SYSTEM(command);
             // Note: Added -best parameter to try to avoid too many matches to redundant junctions!
           }

@@ -260,7 +260,8 @@ namespace breseq {
                                     const Settings& settings, 
                                     const cReferenceSequences& ref_seq_info, 
                                     alignment_list& alignments, 
-                                    bool junction_mode = false
+                                    bool junction_mode = false,
+                                    uint32_t min_match_score = 0
                                     );
   
 	bool test_read_alignment_requirements(
@@ -291,8 +292,6 @@ namespace breseq {
                                          string matched_sam_file_name);
     
     static void merge_sort_sam_files(
-                                     uint32_t fastq_file_index,
-                                     string fasta_file_name,
                                      string input_sam_file_name_1,
                                      string input_sam_file_name_2,
                                      string output_sam_file_name

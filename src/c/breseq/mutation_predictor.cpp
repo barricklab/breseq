@@ -340,8 +340,17 @@ namespace breseq {
           }    
                       
 					mut._evidence.push_back(jc_item._id);
-					jc_it = jc.erase(jc_it); // iterator is now past the erased element
+          
+          // If there is unique sequence in the junction, then it is actually a SUB
+          JunctionInfo ji(jc_item["key"]);
+          if (ji.unique_read_sequence.size() > 0) {
+            mut._type = SUB;
+            mut[NEW_SEQ] = ji.unique_read_sequence;
+          }
+          
+          jc_it = jc.erase(jc_it); // iterator is now past the erased element
           jc_it_iterator = false; //We just removed the current jc, do not iterate.
+          
 					gd.add(mut);
           if (verbose)
             cout << "**** Junction precisely matching deletion boundary found ****\n";
