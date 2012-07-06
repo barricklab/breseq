@@ -356,7 +356,7 @@ namespace breseq
 
     this->bowtie2 = false;
     this->bowtie2_align = false;
-    this->bowtie2_score_parameters = "--ma 1 --mp 3 --np 0 --rdg 3,3 --rfg 3,3";
+    this->bowtie2_score_parameters = "--ma 1 --mp 3 --np 0 --rdg 2,3 --rfg 2,3";
     this->bowtie2_min_score_stringent = "-L 22 -i S,1,0.25 --score-min L,4,0.8 ";
     this->bowtie2_min_score_relaxed  = "-L 13 -i C,1,0 --score-min L,4,0.1";
     this->num_processors = 1;
