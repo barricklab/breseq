@@ -1837,7 +1837,6 @@ void junction_read_counter::fetch_callback ( const alignment_wrapper& a )
   // Store the scores in a hash that can be resolved to see whether the read would have gone to the junction
   // or the reference . We can count. 
   // For certain kinds of junctions, we need to know how far they are identical on the end to properly normalize the others for that overlap.
-  //_read_score_hash[a.read_name()] = alignment_mismatches(a, _ref_seq_info);
 
   
   // read is to be ignored
