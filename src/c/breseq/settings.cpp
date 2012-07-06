@@ -120,6 +120,7 @@ namespace breseq
 		("output,o", "Path to breseq output", ".")
 		("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files. (REQUIRED)")
     ("name,n", "Human-readable name of sample/run for output [empty]", "")
+    ("num-processors,j", "Number of processors to use in multithreaded steps", 1)
     ("no-junction-prediction,j", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
     ("base-quality-cutoff,b", "Ignore bases with quality scores lower than this value", 3)
     ("quality-score-trim", "Trim the ends of reads past any base with a quality score below --base-quality-score-cutoff.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
@@ -151,9 +152,6 @@ namespace breseq
     ("periodicity-start", "Start of offsets", 1, ADVANCED_OPTION)
     ("periodicity-end", "End of offsets", 2, ADVANCED_OPTION)
     ("periodicity-step", "Increment of offsets", 1, ADVANCED_OPTION)
-
-
-    
     
     ("verbose,v","Produce verbose output",TAKES_NO_ARGUMENT)
 
@@ -217,14 +215,16 @@ namespace breseq
 
     this->run_name = options["name"];
     
+    this->num_processors = from_string<int32_t>(options["num-processors"]);
+    
     this->no_junction_prediction = options.count("no-junction-prediction");
     this->do_copy_number_variation = options.count("cnv");
     this->copy_number_variation_tile_size = from_string<uint32_t>(options["cnv-tile-size"]);
     this->ignore_redundant_coverage = options.count("cnv-ignore-redundant");
     this->bowtie2 = options.count("bowtie2");
-    //this->bowtie2 = true; // testing
+    this->bowtie2 = true; // testing
     this->bowtie2_align = options.count("bowtie2-align");
-    //this->bowtie2_align = true; // testing
+    this->bowtie2_align = true; // testing
     
     this->do_periodicity = options.count("periodicity");
     this->periodicity_method = from_string<uint32_t>(options["periodicity-method"]);
@@ -359,7 +359,7 @@ namespace breseq
     this->bowtie2_score_parameters = "--ma 1 --mp 3 --np 0 --rdg 3,3 --rfg 3,3";
     this->bowtie2_min_score_stringent = "-L 22 -i S,1,0.25 --score-min L,4,0.8 ";
     this->bowtie2_min_score_relaxed  = "-L 13 -i C,1,0 --score-min L,4,0.1";
-    this->num_processors = 2;
+    this->num_processors = 1;
 
     
     //! Settings: Candidate Junction Prediction

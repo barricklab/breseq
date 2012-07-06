@@ -84,23 +84,29 @@ namespace breseq {
 
       bam_alignment* ap = it->get(); // we are saving the pointer value as the map key
       
-      uint32_t i = alignment_mismatches(*ap, ref_seq_info);
       
-      // @JEB may want to revisit this.
-      // add in read only bases (negative overlap) as mismatches
-      /*
-      if (junction_mode) {
-        JunctionInfo junction_info( ref_seq_info[ap->reference_target_id()].m_seq_id );
-        if (junction_info.alignment_overlap < 0)
-          // NOTE: subtraction here is adding b/c alignment_overlap < 0
-          i -= junction_info.alignment_overlap;
+      uint32_t i;
+      if (settings.bowtie2_align && settings.bowtie2) {
+        i = ap->aux_get_i("AS"); // test using alignment score instead of mismatches.
+      } else {
+        i = alignment_mismatches(*ap, ref_seq_info);
+      
+        // @JEB may want to revisit this.
+        // add in read only bases (negative overlap) as mismatches
+        /*
+        if (junction_mode) {
+          JunctionInfo junction_info( ref_seq_info[ap->reference_target_id()].m_seq_id );
+          if (junction_info.alignment_overlap < 0)
+            // NOTE: subtraction here is adding b/c alignment_overlap < 0
+            i -= junction_info.alignment_overlap;
+        }
+        */
+        ASSERT(read_length >= i, "More mismatches than matches for read alignment. ");
+        //ASSERT(read_length >= i, "More mismatches than matches for read alignment. " + ap->read_name());
+         
+         
+        i = read_length - i;
       }
-      */
-      ASSERT(read_length >= i, "More mismatches than matches for read alignment. ");
-      //ASSERT(read_length >= i, "More mismatches than matches for read alignment. " + ap->read_name());
-       
-       
-      i = read_length - i;
       
       // Only keep ones with a minimum score
       if (i < min_match_score) {
