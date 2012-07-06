@@ -20,7 +20,7 @@ then
 	echo "Environmental variable \$TESTBINPREFIX not defined."
 	exit
 fi
-BRESEQ="${TESTBINPREFIX}/breseq"
+BRESEQ="${TESTBINPREFIX}/breseq -j 2"
 
 # path to test data:
 DATADIR=${COMMONDIR}/data
