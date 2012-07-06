@@ -383,7 +383,7 @@ namespace breseq
 
     //! Settings: Alignment Resolution
     this->add_split_junction_sides = true;
-    this->junction_pos_hash_neg_log10_p_value_cutoff = 3;
+    this->junction_pos_hash_neg_log10_p_value_cutoff = 2;
 
     //! Settings: Mutation Identification
     this->base_quality_cutoff = 3;
