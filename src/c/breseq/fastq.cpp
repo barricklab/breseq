@@ -29,7 +29,15 @@ namespace breseq {
 
    */
 
-  Summary::AnalyzeFastq normalize_fastq(const string &file_name, const string &convert_file_name, const uint32_t file_index, const int32_t trim_end_on_base_quality) {
+  Summary::AnalyzeFastq normalize_fastq(
+                                        const string &file_name, 
+                                        const string &convert_file_name, 
+                                        const uint32_t file_index, 
+                                        const int32_t trim_end_on_base_quality, 
+                                        const bool filter_reads
+                                        ) 
+  {
+    cerr << "    Converting/filtering FASTQ file..." << endl;
     
     // Set up maps between formats
     map<string,uint8_t> format_to_chr_offset;
@@ -41,8 +49,12 @@ namespace breseq {
     uint32_t max_read_length = 0;
     int min_quality_score = 255;
     int max_quality_score = 0;
-    uint32_t num_bases = 0; 
+    uint32_t original_num_bases = 0;
+    uint32_t num_bases = 0;
+    uint32_t original_num_reads = 0;
     uint32_t num_reads = 0;
+    uint32_t homopolymer_filtered_reads = 0;
+    uint32_t N_filtered_reads = 0;
     
     // Process the input file, one sequence at a time
     cFastqFile input_fastq_file(file_name.c_str(), fstream::in);
@@ -53,13 +65,13 @@ namespace breseq {
     while (input_fastq_file.read_sequence(on_sequence)) {
       
       //increment read number
-      num_reads++;
+      original_num_reads++;
       
       //check sequence length
       if( on_sequence.m_sequence.size() > max_read_length ) max_read_length = on_sequence.m_sequence.size();
 
       //add current sequence length to number of bases
-      num_bases += on_sequence.m_sequence.size();
+      original_num_bases += on_sequence.m_sequence.size();
             
       //iterate through sequence grabbing the associated scores
       for (uint32_t i=0; i<on_sequence.m_qualities.size(); i++) {
@@ -92,8 +104,8 @@ namespace breseq {
     
     //std::cout << m_quality_format << std::endl;
 
-    cerr << "  Converting/repairing FASTQ file..." << endl;
-    cerr << "  Original format: " << quality_format << " New format: SANGER"<< endl;
+    cerr << "    Original format: " << quality_format << " New format: SANGER"<< endl;
+    cerr << "    Original reads: " << original_num_reads << " bases: "<< original_num_bases << endl;
 
     cFastqQualityConverter fqc(quality_format, "SANGER");
     
@@ -116,35 +128,57 @@ namespace breseq {
     uint32_t on_read = 1;
     while (input_fastq_file.read_sequence(on_sequence)) {
       
-      // Don't keep heavily N sequences. They are very slow in SSAHA2 alignment.
-      // This discards sequences that are more than 50% N.
-      if ( 0.5 < static_cast<double>(on_sequence.m_num_N_bases) / static_cast<double>(on_sequence.m_sequence.size())) 
-      {
-        //cout << "Discarding..." << endl;
-        //cout << on_sequence.m_sequence << endl;
-        continue;
-      }
-      // truncate second name name
+      if ( filter_reads ) {
+
+        // Discard sequences that are 50% or more N.
+        if ( 0.5 * static_cast<double>(on_sequence.length()) <= static_cast<double>(on_sequence.m_base_counts[basechar2index('N')])) {
+          N_filtered_reads++;
+          continue;
+        }
+        
+        // Ignore heavily homopolymer reads, as these are a common type of machine error
+        // Discard sequences that are 90% or more of a single base.
+        bool homopolymer_filtered = false;
+        for (uint8_t i=0; i<base_list_including_n_size; i++) {
+          if ( 0.9 * static_cast<double>(on_sequence.length() <= static_cast<double>(on_sequence.m_base_counts[i]) )) {
+            homopolymer_filtered = true;
+            break;
+          }
+        }
+        
+        if (homopolymer_filtered)  {
+          homopolymer_filtered_reads++;
+          continue;
+        }
+        
+      } // end filter read block
+    
+      // truncate second name
       on_sequence.m_name_plus = "";
       
       // fastq quality convert
       fqc.convert_sequence(on_sequence);
       
-      // trim bad quality scores from the end and ignore if we have cut to less than half the length
+      // trim bad quality scores from the end and ignore if we have cut to half or less of the original length
       if (trim_end_on_base_quality) {
-        size_t original_size = on_sequence.m_sequence.size();
+        double original_size = static_cast<double>(on_sequence.length());
         fastq_sequence_trim_end_on_base_quality(on_sequence, trim_end_on_base_quality);
-        if ( on_sequence.m_sequence.size() < static_cast<size_t>(floor(0.5 * original_size)) )
+        if ( 0.5 * original_size <= static_cast<double>(on_sequence.length()) )
           continue;
       }
       
       // uniformly name, to prevent problems drawing alignments
       // and allows us to know the input order
+      
+      on_sequence.m_name = to_string(file_index) + ":" + to_string(on_read++);
+      
+      // Alternative method that keeps number of digits connstant
       //char string_buffer[256];
       //sprintf(string_buffer, "%03u:%010u", file_index, on_read++);
       //on_sequence.m_name = string_buffer;
       
-      on_sequence.m_name = to_string(file_index) + ":" + to_string(on_read++);
+      num_reads++;
+      num_bases+= on_sequence.m_sequence.length();
       
       // convert base qualities
       output_fastq_file.write_sequence(on_sequence);
@@ -158,11 +192,30 @@ namespace breseq {
     // quality scores are in SANGER at this point
     min_quality_score = min_quality_score - format_to_chr_offset["SANGER"];
     max_quality_score = max_quality_score - format_to_chr_offset["SANGER"];
-        
+
     //cerr << "min_quality_score "     << (int)min_quality_score  << endl;
     //cerr << "max_quality_score "     << (int)max_quality_score  << endl;
+
+    if (filter_reads) {
+      cerr << "    Filtered reads (≥50% N): " << N_filtered_reads << " (≥90% one base): " << homopolymer_filtered_reads << endl;
+    }
+    cerr << "    Remaining reads: " << num_reads << " bases: "<< num_bases << endl;
+
     
-    Summary::AnalyzeFastq retval(max_read_length, num_reads, min_quality_score, max_quality_score, num_bases, quality_format, "SANGER", converted_fastq_name);
+    Summary::AnalyzeFastq retval(
+                                 max_read_length, 
+                                 original_num_reads,
+                                 homopolymer_filtered_reads,
+                                 N_filtered_reads,
+                                 num_reads, 
+                                 min_quality_score, 
+                                 max_quality_score, 
+                                 original_num_bases,
+                                 num_bases, 
+                                 quality_format, 
+                                 "SANGER", 
+                                 converted_fastq_name
+                                 );
     return retval;
   }
   
@@ -301,8 +354,8 @@ namespace breseq {
     
     uint32_t count = 0;
     string line;
-    
-    sequence.m_num_N_bases = 0;
+        
+    memset(sequence.m_base_counts, 0, sizeof(sequence.m_base_counts));
     
     // get the next four lines
     while (count < 4) {
@@ -388,7 +441,6 @@ namespace breseq {
                 break;
                 
               case 'N':
-                sequence.m_num_N_bases++;
                 m_needs_conversion = true;
                 break;
                 
@@ -420,11 +472,12 @@ namespace breseq {
               // all other characters converted to 'N'
               default :
                 sequence.m_sequence.replace(i,1,1,'N');
-                sequence.m_num_N_bases++;
                 m_needs_conversion = true;
 
             }
 
+            // keep a count of the number of each base for detecting homopolymeric reads
+            sequence.m_base_counts[basechar2index(sequence.m_sequence[i])]++;
             
             if(sequence.m_sequence[i] != 'A' && 
                sequence.m_sequence[i] != 'T' && 

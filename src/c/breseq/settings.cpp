@@ -332,6 +332,7 @@ namespace breseq
     //! Settings: Global Workflow and Output
     
     //! Options that control which parts of the pipeline to execute
+    this->no_read_filtering = false;
     this->no_junction_prediction = false;
 		this->no_mutation_prediction = false;
 		this->no_deletion_prediction = false;
@@ -369,7 +370,7 @@ namespace breseq
     this->unmatched_end_minimum_read_length = 50;
     this->maximum_junction_sequence_insertion_overlap_length_fraction = 0.4;
     
-    // Extra options that are mostly being phased out
+    // Extra options that are mostly phased out because they are hard nucleotide cutoffs
     this->maximum_junction_sequence_insertion_length = 0;
     this->maximum_junction_sequence_overlap_length = 0;
     this->required_both_unique_length_per_side = 0;
@@ -468,11 +469,9 @@ namespace breseq
 		this->reference_hash_file_name = this->reference_alignment_path + "/reference";
 		this->reference_sam_file_name = this->reference_alignment_path + "/#.reference.sam";
 
-    this->bowtie2_reference_sam_file_name = this->reference_alignment_path + "/#.bowtie2.sam";
-    this->bowtie2_matched_sam_file_name = this->reference_alignment_path + "/#.bowtie2.matched.sam";
-    this->bowtie2_unmatched_fastq_file_name = this->reference_alignment_path + "/#.bowtie2.unmatched.fastq";
-
-    this->ssaha2_reference_sam_file_name = this->reference_alignment_path + "/#.ssaha2.matched.sam";
+    this->stage1_reference_sam_file_name = this->reference_alignment_path + "/#.stage1.sam";
+    this->stage1_unmatched_fastq_file_name = this->reference_alignment_path + "/#.stage1.unmatched.fastq";
+    this->stage2_reference_sam_file_name = this->reference_alignment_path + "/#.stage2.matched.sam";
 
     //! Paths: Junction Prediction
 		this->candidate_junction_path = "03_candidate_junctions";
