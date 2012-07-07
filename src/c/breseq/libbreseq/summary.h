@@ -138,9 +138,13 @@ namespace breseq{
     class AnalyzeFastq : public Storable {
     public:
       uint32_t max_read_length;
-      uint32_t num_reads;
+      uint32_t original_reads;
+      uint32_t homopolymer_filtered_reads;
+      uint32_t N_filtered_reads;
+      uint32_t num_reads;         // original_reads = homopolymer_filtered_reads + N_filtered_reads + num_reads
       uint32_t min_quality_score;
       uint32_t max_quality_score;
+      uint32_t original_num_bases;
       uint32_t num_bases;
       string original_qual_format;
       string quality_format;
@@ -150,41 +154,59 @@ namespace breseq{
       
       AnalyzeFastq(
                    uint32_t _max_read_length, 
+                   uint32_t _original_reads,
+                   uint32_t _homopolymer_filtered_reads,
+                   uint32_t _N_filtered_reads,
                    uint32_t _num_reads, 
                    uint32_t _min_quality_score, 
                    uint32_t _max_quality_score, 
+                   uint32_t _original_num_bases, 
                    uint32_t _num_bases, 
                    const string& _original_qual_format, 
                    const string& _quality_format,
                    const string& _converted_fastq_name
                    )
       : max_read_length(_max_read_length)
+      , original_reads(_original_reads)
+      , homopolymer_filtered_reads(_homopolymer_filtered_reads)
+      , N_filtered_reads(_N_filtered_reads)
       , num_reads(_num_reads)
       , min_quality_score(_min_quality_score)
       , max_quality_score(_max_quality_score)
+      , original_num_bases(_original_num_bases)
       , num_bases(_num_bases)
       , original_qual_format(_original_qual_format)
       , quality_format(_quality_format)
       , converted_fastq_name(_converted_fastq_name)
+
       { }
       
       void serialize(ofstream& f)
       {
         write_to_file(f, max_read_length);
+        write_to_file(f, original_reads);
+        write_to_file(f, homopolymer_filtered_reads);
+        write_to_file(f, N_filtered_reads);
         write_to_file(f, num_reads);
         write_to_file(f, min_quality_score);
         write_to_file(f, max_quality_score);
+        write_to_file(f, original_num_bases);
         write_to_file(f, num_bases);
         write_to_file(f, original_qual_format);
         write_to_file(f, quality_format);
         write_to_file(f, converted_fastq_name);
+
       }
       void deserialize(ifstream& f)
       {
         read_from_file(f, max_read_length);
+        read_from_file(f, original_reads);
+        read_from_file(f, homopolymer_filtered_reads);
+        read_from_file(f, N_filtered_reads);
         read_from_file(f, num_reads);
         read_from_file(f, min_quality_score);
         read_from_file(f, max_quality_score);
+        read_from_file(f, original_num_bases);
         read_from_file(f, num_bases);
         read_from_file(f, original_qual_format);
         read_from_file(f, quality_format);

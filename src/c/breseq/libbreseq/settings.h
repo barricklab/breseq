@@ -162,6 +162,7 @@ namespace breseq
     string print_run_name;    // run_name with '_' replaced by ' '
     
     //! Options that control which parts of the pipeline to execute
+    bool no_read_filtering;           // Default = false
     bool no_junction_prediction;      // Default = false COMMAND-LINE OPTION
 		bool no_mutation_prediction;      // Default = false
 		bool no_deletion_prediction;      // Default = false
@@ -316,14 +317,12 @@ namespace breseq
     string reference_alignment_done_file_name;
     
 		string reference_hash_file_name;
-		string reference_sam_file_name;
 
-    // Staged alignment with 
-		string bowtie2_reference_sam_file_name;
-    string bowtie2_matched_sam_file_name;
-    string bowtie2_unmatched_fastq_file_name;
-
-    string ssaha2_reference_sam_file_name;
+    // Staged alignment to final reference SAM file
+    string stage1_reference_sam_file_name;
+    string stage1_unmatched_fastq_file_name;
+    string stage2_reference_sam_file_name;
+    string reference_sam_file_name;
     
     //! Paths: Junction Prediction
     string candidate_junction_path;

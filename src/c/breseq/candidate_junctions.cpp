@@ -440,13 +440,13 @@ namespace breseq {
       }
     }
     
-    cout << "  Summary... " << setw (12) << right << endl
-         << "  Aligned reads:                         " << summary.preprocess_alignments.aligned_reads << endl
-         << "  Read alignments:                       " << summary.preprocess_alignments.alignments << endl
-         << "  Alignments split on indels:            " << summary.preprocess_alignments.alignments_split_on_indels << endl
-         << "  Reads with alignments split on indels: " << summary.preprocess_alignments.reads_with_alignments_split_on_indels << endl
-         << "  Split alignments:                      " << summary.preprocess_alignments.split_alignments << endl
-         << "  Reads with split alignments:           " << summary.preprocess_alignments.reads_with_split_alignments << endl
+    cout << "  Summary... " << endl
+         << "  Aligned reads:                         " << setw(12) << right << summary.preprocess_alignments.aligned_reads << endl
+         << "  Read alignments:                       " << setw(12) << right << summary.preprocess_alignments.alignments << endl
+         << "  Alignments split on indels:            " << setw(12) << right << summary.preprocess_alignments.alignments_split_on_indels << endl
+         << "  Reads with alignments split on indels: " << setw(12) << right << summary.preprocess_alignments.reads_with_alignments_split_on_indels << endl
+         << "  Split alignments:                      " << setw(12) << right << summary.preprocess_alignments.split_alignments << endl
+         << "  Reads with split alignments:           " << setw(12) << right << summary.preprocess_alignments.reads_with_split_alignments << endl
     ;
   }
 

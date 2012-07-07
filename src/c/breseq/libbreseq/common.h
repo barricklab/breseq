@@ -129,6 +129,7 @@ namespace breseq {
   /*! Definition of all single-base states that are considered */
   static base_char base_char_list[] = {'A', 'C', 'G', 'T', '.'};
   static const uint8_t base_list_size = 5;
+  static const uint8_t base_list_including_n_size = 6;
 
 	/*! Reverse a base.
 	 */
@@ -217,7 +218,7 @@ namespace breseq {
     return 0;
 	}
   
-  inline char basechar2index(base_char base) {
+  inline uint8_t basechar2index(base_char base) {
     switch(base) {
       case 'A': return 0;
       case 'C': return 1;

@@ -646,7 +646,7 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
   // HTML << "<!-- Write Times -->" << endl;
   HTML << "<p>"  << endl;
   HTML << h2("Execution Times") << endl;
-  HTML << start_table("width=\"100%\" border=\"1\" cellspacing=\"0\" cellpadding=\"3\"") << endl;
+  HTML << start_table("<table border=\"0\" cellspacing=\"1\" cellpadding=\"5\">") << endl;
   HTML << "<tr>" << th("step") << th("start") << th("end") << th("elapsed") << "</tr>" << endl; 
   double total_time_elapsed = 0; 
 

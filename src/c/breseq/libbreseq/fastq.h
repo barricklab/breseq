@@ -35,7 +35,13 @@ class cAnnotatedSequence;
       Main function for this analysis. Prints summary information
       about fastq and converts file to SANGER format if necessary.
    */  
-  Summary::AnalyzeFastq normalize_fastq(const string &file_name, const string &convert_file_name, const uint32_t fastq_index, const int32_t trim_end_on_base_quality = 0);
+  Summary::AnalyzeFastq normalize_fastq(
+                                        const string &file_name, 
+                                        const string &convert_file_name, 
+                                        const uint32_t file_index, 
+                                        const int32_t trim_end_on_base_quality, 
+                                        const bool filter_reads
+                                        );
   
   // Utility function for converting FASTQ files between formats
   void convert_fastq(const string &from_file_name, const string &to_file_name, const string &from_format, const string &to_format);
@@ -49,7 +55,9 @@ class cAnnotatedSequence;
       string   m_sequence;    //sequence
       string   m_name_plus;   //+NAME
       string   m_qualities;   //quality score characters
-      uint32_t m_num_N_bases; // number of N bases, used for filtering
+      uint32_t m_base_counts[base_list_including_n_size]; // number of each base, including N. Used for filtering.
+    
+      size_t length() { return m_sequence.length(); }
    };
 
   void fastq_sequence_trim_end_on_base_quality(cFastqSequence& seq, const uint32_t base_quality);

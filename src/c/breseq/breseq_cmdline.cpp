@@ -1452,7 +1452,6 @@ int breseq_default_action(int argc, char* argv[])
     if (!settings.aligned_sam_mode) {
       
       //Check the FASTQ format and collect some information about the input read files at the same time
-      cerr << "  Analyzing FASTQ read files..." << endl;
       uint32_t overall_max_read_length = UNDEFINED_UINT32;
       uint32_t overall_max_qual = 0;
 
@@ -1461,12 +1460,12 @@ int breseq_default_action(int argc, char* argv[])
       for (uint32_t i = 0; i < settings.read_files.size(); i++)
       {
         string base_name = settings.read_files[i].m_base_name;
-        cerr << "    READ FILE::" << base_name << endl;
+        cerr << "  READ FILE::" << base_name << endl;
         string fastq_file_name = settings.base_name_to_read_file_name(base_name);
         string convert_file_name =  settings.file_name(settings.converted_fastq_file_name, "#", base_name);
 
         // Parse output
-        Summary::AnalyzeFastq s_rf = normalize_fastq(fastq_file_name, convert_file_name, i+1, settings.quality_score_trim);
+        Summary::AnalyzeFastq s_rf = normalize_fastq(fastq_file_name, convert_file_name, i+1, settings.quality_score_trim, !settings.no_read_filtering);
         
         // Save the converted file name -- have to save it in summary because only that
         // is reloaded if we skip this step.
@@ -1546,11 +1545,11 @@ int breseq_default_action(int argc, char* argv[])
 				string read_fastq_file = settings.base_name_to_read_file_name(base_read_file_name);
                 
         //Paths
-        string bowtie2_matched_sam_file_name = settings.file_name(settings.bowtie2_matched_sam_file_name, "#", base_read_file_name);
-        string bowtie2_unmatched_fastq_file_name = settings.file_name(settings.bowtie2_unmatched_fastq_file_name, "#", base_read_file_name);
+        string stage1_reference_sam_file_name = settings.file_name(settings.stage1_reference_sam_file_name, "#", base_read_file_name);
+        string stage1_unmatched_fastq_file_name = settings.file_name(settings.stage1_unmatched_fastq_file_name, "#", base_read_file_name);
         
         //Split alignment into unmatched and matched files.
-        string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local -a " + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_stringent + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + bowtie2_matched_sam_file_name + " --un " + bowtie2_unmatched_fastq_file_name; 
+        string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local -a " + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_stringent + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + stage1_reference_sam_file_name + " --un " + stage1_unmatched_fastq_file_name; 
         SYSTEM(command);
       }
     }
@@ -1603,8 +1602,8 @@ int breseq_default_action(int argc, char* argv[])
         
         // If we are doing staged alignment -- only align the unmatched reads with SSAHA2 and save to different name initially
         if (settings.bowtie2) {
-          read_fastq_file = settings.file_name(settings.bowtie2_unmatched_fastq_file_name, "#", base_read_file_name);
-          reference_sam_file_name = settings.file_name(settings.ssaha2_reference_sam_file_name, "#", base_read_file_name);
+          read_fastq_file = settings.file_name(settings.stage1_unmatched_fastq_file_name, "#", base_read_file_name);
+          reference_sam_file_name = settings.file_name(settings.stage2_reference_sam_file_name, "#", base_read_file_name);
         }
 
         if (settings.bowtie2_align) {
@@ -1629,15 +1628,14 @@ int breseq_default_action(int argc, char* argv[])
           string base_read_file_name = read_file.base_name();
           string read_fastq_file = settings.base_name_to_read_file_name(base_read_file_name);
 
-          
-          string ssaha2_reference_sam_file_name = settings.file_name(settings.ssaha2_reference_sam_file_name, "#", base_read_file_name);
-          string bowtie2_matched_sam_file_name = settings.file_name(settings.bowtie2_matched_sam_file_name, "#", base_read_file_name);
+          string stage1_reference_sam_file_name = settings.file_name(settings.stage1_reference_sam_file_name, "#", base_read_file_name);
+          string stage2_reference_sam_file_name = settings.file_name(settings.stage2_reference_sam_file_name, "#", base_read_file_name);
           string reference_sam_file_name = settings.file_name(settings.reference_sam_file_name, "#", base_read_file_name);
           string reference_fasta_file_name = settings.file_name(settings.reference_fasta_file_name, "#", base_read_file_name);
           
           PreprocessAlignments::merge_sort_sam_files(
-                                                     ssaha2_reference_sam_file_name,
-                                                     bowtie2_matched_sam_file_name,
+                                                     stage1_reference_sam_file_name,
+                                                     stage2_reference_sam_file_name,
                                                      reference_sam_file_name
                                                      );
         }
