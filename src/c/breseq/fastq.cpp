@@ -131,16 +131,17 @@ namespace breseq {
       if ( filter_reads ) {
 
         // Discard sequences that are 50% or more N.
-        if ( 0.5 * static_cast<double>(on_sequence.length()) <= static_cast<double>(on_sequence.m_base_counts[basechar2index('N')])) {
+        if ( 0.5 * static_cast<double>(on_sequence.length()) <= static_cast<double>(on_sequence.m_base_counts[base_list_N_index]) ) {
           N_filtered_reads++;
           continue;
         }
         
         // Ignore heavily homopolymer reads, as these are a common type of machine error
-        // Discard sequences that are 90% or more of a single base.
+        // Discard sequences that are 90% or more of a single base or N.
         bool homopolymer_filtered = false;
-        for (uint8_t i=0; i<base_list_including_n_size; i++) {
-          if ( 0.9 * static_cast<double>(on_sequence.length() <= static_cast<double>(on_sequence.m_base_counts[i]) )) {
+        for (uint8_t i=0; i<base_list_including_N_size; i++) {
+          if ( 0.9 * static_cast<double>(on_sequence.length()) <= 
+              static_cast<double>(on_sequence.m_base_counts[i] + on_sequence.m_base_counts[base_list_N_index]) ) {
             homopolymer_filtered = true;
             break;
           }
