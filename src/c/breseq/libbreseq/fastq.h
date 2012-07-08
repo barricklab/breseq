@@ -55,7 +55,7 @@ class cAnnotatedSequence;
       string   m_sequence;    //sequence
       string   m_name_plus;   //+NAME
       string   m_qualities;   //quality score characters
-      uint32_t m_base_counts[base_list_including_n_size]; // number of each base, including N. Used for filtering.
+      uint32_t m_base_counts[base_list_including_N_size]; // number of each base, including N. Used for filtering.
     
       size_t length() { return m_sequence.length(); }
    };
