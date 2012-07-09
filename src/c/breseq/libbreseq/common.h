@@ -8,7 +8,7 @@ AUTHORS
 LICENSE AND COPYRIGHT
 
   Copyright (c) 2008-2010 Michigan State University
-  Copyright (c) 2011 The University of Texas at Austin
+  Copyright (c) 2011-2012 The University of Texas at Austin
 
   breseq is free software; you can redistribute it and/or modify it under the  
   terms the GNU General Public License as published by the Free Software 
@@ -585,6 +585,12 @@ namespace breseq {
 		} else {
 			ostringstream interpreter;
 			interpreter << fixed << setprecision(precision) << t;
+      
+      // Not a fan of negative zeros...
+      if (interpreter.str().substr(0,3) == "-0.")
+      {
+        interpreter.str().replace(0,3, "0.");
+      }
 			return interpreter.str();
 		}
 	}

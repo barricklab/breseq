@@ -7,7 +7,7 @@
  
  LICENSE AND COPYRIGHT
  
- Copyright (c) 2010 Michigan State University
+ Copyright (c) 2011-20122010 Michigan State University
  
  breseq is free software; you can redistribute it and/or modify it under the  
  terms the GNU General Public License as published by the Free Software 
@@ -2143,17 +2143,19 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
     passed = passed && (top >= polymorphism_coverage_limit_both_bases);
     passed = passed && (bot >= polymorphism_coverage_limit_both_bases);
 
+    // Test strand criterion
     top_bot = split(mut["new_cov"], "/");
     top = from_string<double>(top_bot[0]);
     bot = from_string<double>(top_bot[1]);
     passed = passed && (top >= polymorphism_coverage_limit_both_bases);
     passed = passed && (bot >= polymorphism_coverage_limit_both_bases);
-
     if (!passed)
       add_reject_reason(mut, "POLYMORPHISM_STRAND");
-    if (from_string<double>(mut["ks_quality_p_value"]) < settings.polymorphism_bias_p_value_cutoff)
+    
+    // Test bias criteria
+    if (settings.polymorphism_bias_p_value_cutoff && (from_string<double>(mut["ks_quality_p_value"]) < settings.polymorphism_bias_p_value_cutoff))
       add_reject_reason(mut, "KS_QUALITY_P_VALUE");
-    if (from_string<double>(mut["fisher_strand_p_value"]) < settings.polymorphism_bias_p_value_cutoff)
+    if (settings.polymorphism_bias_p_value_cutoff && (from_string<double>(mut["fisher_strand_p_value"]) < settings.polymorphism_bias_p_value_cutoff))
       add_reject_reason(mut, "FISHER_STRAND_P_VALUE");
 
     ////// Optionally, ignore if in a homopolymer stretch longer than this

@@ -7,7 +7,7 @@
  
  LICENSE AND COPYRIGHT
  
- Copyright (c) 2010 Michigan State University
+ Copyright (c) 2011-20122010 Michigan State University
  
  breseq is free software; you can redistribute it and/or modify it under the  
  terms the GNU General Public License as published by the Free Software 

@@ -8,7 +8,7 @@ AUTHORS
 LICENSE AND COPYRIGHT
 
   Copyright (c) 2008-2010 Michigan State University
-  Copyright (c) 2011 The University of Texas at Austin
+  Copyright (c) 2011-2012 The University of Texas at Austin
 
   breseq is free software; you can redistribute it and/or modify it under the  
   terms the GNU General Public License as published by the Free Software 
@@ -139,7 +139,7 @@ namespace breseq
     ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("polymorphism-reject-homopolymer-length", "Reject polymorphisms predicted in homopolymer repeats with this length or greater", 0, ADVANCED_OPTION)
     ("polymorphism-score-cutoff", "Log10 E-value cutoff for test of polymorphism vs no polymorphism", 10, ADVANCED_OPTION)
-    ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias", 0.05, ADVANCED_OPTION)
+    ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias (0 = OFF)", 0.0, ADVANCED_OPTION)
     ("polymorphism-frequency-cutoff", "Only predict polymorphisms where both allele frequencies are > than this value", 0.0, ADVANCED_OPTION)
     ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms where this many reads on each strand support alternative alleles", 0.0, ADVANCED_OPTION)
     ("bowtie2", "Preprocess the alignments with Bowtie2.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
@@ -296,7 +296,7 @@ namespace breseq
     fprintf(stderr, "Foundation; either version 1, or (at your option) any later version.\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "Copyright (c) 2008-2010 Michigan State University\n");
-    fprintf(stderr, "Copyright (c) 2011      The University of Texas at Austin\n");
+    fprintf(stderr, "Copyright (c) 2011-2012 The University of Texas at Austin\n");
     cerr << output_divider << endl;
   }
 
@@ -395,7 +395,7 @@ namespace breseq
     this->mixed_base_prediction = false;
     
     this->polymorphism_log10_e_value_cutoff = this->mutation_log10_e_value_cutoff;
-		this->polymorphism_bias_p_value_cutoff = 0.05;
+		this->polymorphism_bias_p_value_cutoff = 0;
 		this->polymorphism_frequency_cutoff = 0.1;
 		this->polymorphism_minimum_new_coverage_each_strand = 0;
     this->polymorphism_reject_homopolymer_length = 0;
