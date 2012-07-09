@@ -279,10 +279,11 @@ namespace breseq
     uint32_t periodicity_step;
     
     //! Settings: Output
-    uint32_t maximum_reads_to_align;                      // Default = 100
-    uint32_t max_rejected_polymorphisms_to_show;          // Default = 20
-		uint32_t max_rejected_junctions_to_show;              // Default = 10
-		bool hide_circular_genome_junctions;                  // Default = true (remove as option?)
+    uint32_t maximum_reads_to_align;                        // Default = 100
+    uint32_t max_rejected_read_alignment_evidence_to_show;  // Defaule = 20
+    uint32_t max_rejected_polymorphisms_to_show;            // Default = 20
+		uint32_t max_rejected_junction_evidence_to_show;        // Default = 10
+		bool hide_circular_genome_junctions;                    // Default = true
     //! special output for Blount paper - not implemented in C++!
 		bool lenski_format;                                   // Default = false (not implemented!)
     //! don't create any HTML evidence files

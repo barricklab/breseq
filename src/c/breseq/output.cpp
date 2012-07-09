@@ -279,7 +279,7 @@ void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd)
   
   // Filtering for polymorphism predictions
 
-  /* @JEB expeirmenting with removal
+  /* @JEB experimenting with removal
   // Require a certain amount of coverage for the variant
   diff_entry_list_t new_ra = gd.filter_used_as_evidence(gd.list(ra_types));
   for (diff_entry_list_t::iterator item = new_ra.begin(); item != new_ra.end(); item++)
@@ -295,13 +295,17 @@ void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd)
   // We mark polymorphism entries above some limit as no_show 
   // to prevent creating too many alignments.
   uint32_t i=0;
+  uint32_t j=0;
   for(diff_entry_list_t::iterator item = ra.begin(); item != ra.end(); item++)
   {
     cDiffEntry& ra_item = **item;
-    if (!ra_item.entry_exists(FREQUENCY)) continue;
-    if ( from_string<double>(ra_item[FREQUENCY]) == 1.0 ) continue;
-    
-    if (i++ > settings.max_rejected_polymorphisms_to_show)
+    // This is a consensus prediction
+    if ( (!ra_item.entry_exists(FREQUENCY)) || (from_string<double>(ra_item[FREQUENCY]) == 1.0 ) ) {
+      if (j++ > settings.max_rejected_read_alignment_evidence_to_show)
+        ra_item[NO_SHOW] = "1";
+    }
+    // This is a polymorphism prediction
+    else if (i++ > settings.max_rejected_polymorphisms_to_show)
       ra_item[NO_SHOW] = "1";
   }
   
@@ -328,7 +332,7 @@ void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd)
   i = 0;
   for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++ )
   {
-    if (i++ >= settings.max_rejected_junctions_to_show)
+    if (i++ >= settings.max_rejected_junction_evidence_to_show)
       (**it)["no_show"] = "1";
   }
 
@@ -605,7 +609,7 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
     HTML << "<table border=\"0\" cellspacing=\"1\" cellpadding=\"5\" >" << endl;
     HTML << "<tr>" <<
     th("reference sequence") << 
-    th("read start probability") <<
+    th("probability of no read starting at a position a certain strand") <<
 //    th("pos hash score cutoff") <<
 //    th("distance score cutoff") <<
     "</tr>" << endl;
@@ -646,7 +650,7 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
   // HTML << "<!-- Write Times -->" << endl;
   HTML << "<p>"  << endl;
   HTML << h2("Execution Times") << endl;
-  HTML << start_table("<table border=\"0\" cellspacing=\"1\" cellpadding=\"5\">") << endl;
+  HTML << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"5\"") << endl;
   HTML << "<tr>" << th("step") << th("start") << th("end") << th("elapsed") << "</tr>" << endl; 
   double total_time_elapsed = 0; 
 

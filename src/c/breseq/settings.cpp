@@ -403,8 +403,9 @@ namespace breseq
     
     //! Settings: Output
     this->maximum_reads_to_align = 100;
+    this->max_rejected_read_alignment_evidence_to_show = 20;
 		this->max_rejected_polymorphisms_to_show = 20;
-		this->max_rejected_junctions_to_show = 10;
+		this->max_rejected_junction_evidence_to_show = 10;
 		this->hide_circular_genome_junctions = true;
     
 		this->lenski_format = false;
