@@ -315,6 +315,7 @@ public:
   void unique();
 
   static cGenomeDiff compare(cGenomeDiff& ctrl, cGenomeDiff& test, bool verbose = false);
+  static void write_jc_score_table(cGenomeDiff& compare, string table_file_path, bool verbose = false); 
 
   void assign_unique_ids(void);
 

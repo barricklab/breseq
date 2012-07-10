@@ -1102,6 +1102,7 @@ class cString : public string
     cString get_base_name() const;
     cString get_base_name_no_extension() const;
     cString get_file_extension() const;
+    cString get_directory_path() const;
 
 };
 
@@ -1196,6 +1197,16 @@ inline bool cString::contains(const char chr) const
   return this->find(chr) != string::npos;
 }
 
+inline cString cString::get_directory_path() const
+{
+  size_t pos = this->rfind('/');
+  if (pos == string::npos) {
+    return "./";
+  } else {
+    return this->substr(0, pos);;
+  }
+}
+
 inline cString& cString::escape_shell_chars(void) {
   cString& value = *this;
   char escapees[] = {'<', '>', '|', '&', '\0'};
@@ -1239,6 +1250,11 @@ inline cString& cString::escape_shell_chars(void) {
     }
     return return_value;
   }
+
+  template<uint32_t nth_place> double roundp(double value) {
+    return floor(value * nth_place + 0.5f) / nth_place;
+  }
+
 } // breseq
 
 #endif

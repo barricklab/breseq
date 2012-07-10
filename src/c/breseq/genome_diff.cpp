@@ -3661,6 +3661,59 @@ cGenomeDiff cGenomeDiff::compare(cGenomeDiff& ctrl, cGenomeDiff& test, bool verb
   return ret_val;
 }
 
+void cGenomeDiff::write_jc_score_table(cGenomeDiff& compare, string table_file_path, bool verbose) {
+  assert(compare.metadata.breseq_data.count("TP|FN|FP"));
+
+  typedef map<float, map<string, uint32_t> > table_t;
+  table_t table;
+
+  diff_entry_list_t jc = compare.list(make_vector<gd_entry_type>(JC));
+  double max_score = 0;
+  for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); ++it) {
+    if (!(*it)->count("neg_log10_pos_hash_p_value")) {
+      cerr << "No score value for: " + (*it)->to_string() << endl;
+      continue;
+    }
+    double score = from_string<double>((**it)["neg_log10_pos_hash_p_value"]);
+    score = roundp<10>(score);
+    max_score = max(max_score, score);
+
+    assert((*it)->count("compare"));
+    string compare = (**it)["compare"];
+
+    if (!table.count(score)) {
+      table[score]["TP"] = 0;
+      table[score]["FN"] = 0;
+      table[score]["FP"] = 0;
+    }
+  
+    table[score][compare]++;
+  }
+
+
+  ofstream out(table_file_path.c_str());
+  ASSERT(out, "Could not write to file: " + table_file_path);
+
+
+  out << "score" << '\t' << "TP" << '\t' << "FN" << '\t' << "FP" << endl;
+  for (double i = 0; i <= max_score; i += .1f) {
+    if (table.count(i)) {
+
+      out << i << '\t' << table[i]["TP"] << '\t' << table[i]["FN"] << '\t' << table[i]["FP"] << endl;
+      if (verbose) {
+        cerr << i << '\t' << table[i]["TP"] << '\t' << table[i]["FN"] << '\t' << table[i]["FP"] << endl;
+      }
+
+    }
+
+  }
+  out.close();
+
+    
+
+  return;
+}
+
 
 }//namespace bresesq
 
