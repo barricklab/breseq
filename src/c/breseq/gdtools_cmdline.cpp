@@ -392,19 +392,19 @@ int do_compare(int argc, char *argv[])
 
   uout("Reading input GD files");
   uout << "Control: " << options.getArgv(0) << endl;
-  cGenomeDiff gd1(options.getArgv(0));
+  cGenomeDiff ctrl(options.getArgv(0));
   uout << "Test:    " << options.getArgv(1) << endl;
-  cGenomeDiff gd2(options.getArgv(1));
+  cGenomeDiff test(options.getArgv(1));
 
 
   uout("Comparing control vs test GD file");
-  gd1.compare(gd2, options.count("verbose"));
+  cGenomeDiff comp = cGenomeDiff::compare(ctrl, test, options.count("verbose"));
 
   uout("Assigning unique IDs");
-  gd1.assign_unique_ids();
+  comp.assign_unique_ids();
 
   uout("Writing output GD file", options["output"]);
-  gd1.write(options["output"]);
+  comp.write(options["output"]);
 
   return 0;
 }
