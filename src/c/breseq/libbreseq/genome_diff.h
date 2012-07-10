@@ -295,7 +295,7 @@ public:
   uint32_t new_unique_id();
   
   //! Add evidence to this genome diff, return assigned ID.
-  uint32_t add(const cDiffEntry& item, bool lowest_unique=false);
+  diff_entry_ptr_t add(const cDiffEntry& item, bool lowest_unique=false);
   
   //! Subtract mutations using gd_ref as reference.
   void set_subtract(cGenomeDiff& gd_ref, bool verbose=false);
@@ -314,7 +314,7 @@ public:
   void sort() { _entry_list.sort(diff_entry_ptr_sort); }
   void unique();
 
-  void compare(cGenomeDiff& gd, bool verbose);
+  static cGenomeDiff compare(cGenomeDiff& ctrl, cGenomeDiff& test, bool verbose = false);
 
   void assign_unique_ids(void);
 
