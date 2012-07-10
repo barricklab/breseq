@@ -436,7 +436,7 @@ uint32_t cGenomeDiff::new_unique_id()
 
 /*! Add evidence to this genome diff.
  */
-uint32_t cGenomeDiff::add(const cDiffEntry& item, bool lowest_unique) {
+diff_entry_ptr_t cGenomeDiff::add(const cDiffEntry& item, bool lowest_unique) {
 
   // allocating counted_ptr takes care of disposal
   cDiffEntry* diff_entry_copy = new cDiffEntry(item);
@@ -455,7 +455,7 @@ uint32_t cGenomeDiff::add(const cDiffEntry& item, bool lowest_unique) {
 
   unique_id_used[new_id] = true;
 
-  return new_id;
+  return added_item;
 }
 
 //! Subtract mutations using gd_ref as reference.
@@ -3555,18 +3555,19 @@ void cGenomeDiff::set_union(cGenomeDiff& gd, bool verbose)
   this->unique(); 
 }
 
-void cGenomeDiff::compare(cGenomeDiff& gd, bool verbose)
+cGenomeDiff cGenomeDiff::compare(cGenomeDiff& ctrl, cGenomeDiff& test, bool verbose)
 {
   (void)verbose; //unused
 
   bool (*comp_fn) (const diff_entry_ptr_t&, const diff_entry_ptr_t&) = diff_entry_ptr_sort;
   typedef set<diff_entry_ptr_t, bool(*)(const diff_entry_ptr_t&, const diff_entry_ptr_t&)> diff_entry_set_t;
 
-  diff_entry_list_t muts = this->mutation_list();
+  //Isolate control and test mutations into sets for quick lookup.
+  diff_entry_list_t muts = ctrl.mutation_list();
   diff_entry_set_t ctrl_muts(comp_fn);
   copy(muts.begin(), muts.end(), inserter(ctrl_muts, ctrl_muts.begin()));
 
-  muts = gd.mutation_list();
+  muts = test.mutation_list();
   diff_entry_set_t test_muts(comp_fn);
   copy(muts.begin(), muts.end(), inserter(test_muts, test_muts.begin()));
 
@@ -3575,37 +3576,50 @@ void cGenomeDiff::compare(cGenomeDiff& gd, bool verbose)
          static_cast<unsigned int>(ctrl_muts.size()), static_cast<unsigned int>(test_muts.size()));
   }
 
-  this->set_union(gd, verbose);
+  /* Combine alike mutations, however we may lose information like supporting evidence IDs
+   * which we will search ctrl_muts and test_muts for.
+   */
+  diff_entry_set_t uniq_muts(comp_fn);
+  std::set_union(
+      ctrl_muts.begin(),
+      ctrl_muts.end(),
+      test_muts.begin(),
+      test_muts.end(),
+      inserter(uniq_muts, uniq_muts.begin())
+      );
 
   uint32_t n_tp = 0, n_fn = 0, n_fp = 0;
 
-  //Handle mutations and gather evidence ids.
-  //Evidence id to TP, FN, FP value.
-  map<string, string> id_table; 
-  diff_entry_list_t::iterator it = _entry_list.begin();
-  while (it != _entry_list.end()) {
-    if (!(**it).is_mutation()) break;
+  cGenomeDiff ret_val;
+  ret_val.metadata = test.metadata;
 
+  for (diff_entry_set_t::iterator it = uniq_muts.begin(); it != uniq_muts.end(); ++it) {
     assert(ctrl_muts.count(*it) || test_muts.count(*it));
 
     string key = "";
-    if (ctrl_muts.count(*it) && test_muts.count(*it)) {
+    diff_entry_list_t evidence;
+    diff_entry_set_t::iterator it_ctrl = ctrl_muts.find(*it);
+    diff_entry_set_t::iterator it_test = test_muts.find(*it);
+    bool in_ctrl = (it_ctrl != ctrl_muts.end());
+    bool in_test = (it_test != test_muts.end());
+    if (in_ctrl && in_test) {
       key = "TP";
       ++n_tp;
+      evidence = test.mutation_evidence_list(**it_test);
+      if (evidence.empty()) {
+        evidence = ctrl.mutation_evidence_list(**it_ctrl);
+      }
     }
-    else if (ctrl_muts.count(*it) && !test_muts.count(*it)) {
+    else if (in_ctrl && !in_test) {
       key = "FN";
       ++n_fn;
+      evidence = ctrl.mutation_evidence_list(**it_ctrl);
     }
-    else if (!ctrl_muts.count(*it) && test_muts.count(*it)) {
+    else if (!in_ctrl && in_test) {
       key = "FP";
       ++n_fp;
+      evidence = test.mutation_evidence_list(**it_test);
     } 
-
-    vector<string>* evidence = &(**it)._evidence;
-    for (uint32_t i = 0; i < evidence->size(); ++i) {
-      id_table[(*evidence)[i]] = key;
-    }
 
     if (verbose) {
       string temp = "";
@@ -3617,31 +3631,36 @@ void cGenomeDiff::compare(cGenomeDiff& gd, bool verbose)
     }
 
     (**it)["compare"] = key;
-    ++it;
+    (**it)._evidence.clear();
+
+    //Add supporting evidence and assign new IDs to the mutation.
+    diff_entry_ptr_t mut = ret_val.add(**it);
+    if (evidence.size()) {
+      for (diff_entry_list_t::iterator jt = evidence.begin(); jt != evidence.end(); ++jt) {
+        (**jt)["compare"] = key;
+        mut->_evidence.push_back(ret_val.add(**jt)->_id);
+      }
+    } else {
+      mut->_evidence.push_back(".");
+    }
+
   }
 
   if (verbose) {
     printf("\tUpdating mutation's evidence.\n"); 
   }
 
-  //Handle the rest.
-  while (it != _entry_list.end()) {
-    (**it)["compare"] = id_table[(**it)._id];
-    ++it;
-  }
-
-
   //Add TP|FN|FP header info.
   string value = "";
   sprintf(value, "%u|%u|%u", n_tp, n_fn, n_fp);
-  this->add_breseq_data("TP|FN|FP", value);
+  ret_val.add_breseq_data("TP|FN|FP", value);
 
   printf("\t\t#=TP|FN|FP	%s \t for %s versus %s \n",
          value.c_str(),
-         this->_default_filename.c_str(),
-         gd._default_filename.c_str());
+         ctrl._default_filename.c_str(),
+         test._default_filename.c_str());
 
-  return;
+  return ret_val;
 }
 
 
