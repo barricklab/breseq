@@ -3843,7 +3843,96 @@ cGenomeDiff cGenomeDiff::compare(cGenomeDiff& ctrl, cGenomeDiff& test, bool verb
   sprintf(value, "%u|%u|%u", n_tp, n_fn, n_fp);
   ret_val.add_breseq_data("TP|FN|FP", value);
 
-  printf("\t\t#=TP|FN|FP	%s \t for %s versus %s \n",
+  printf("\t#=TP|FN|FP	%s \t for %s versus %s \n",
+         value.c_str(),
+         ctrl._default_filename.c_str(),
+         test._default_filename.c_str());
+
+  return ret_val;
+}
+cGenomeDiff cGenomeDiff::compare_evidence(cReferenceSequences& sequence, 
+                                          uint32_t buffer,
+                                          cGenomeDiff& ctrl,
+                                          cGenomeDiff& test,
+                                          bool verbose) {
+  //TODO currently only compares JC evidence.
+  cGenomeDiff ret_val;
+  ret_val.metadata = test.metadata;
+
+  diff_entry_list_t temp_list;
+
+  //START JC
+  set<string> jc_segments;
+  temp_list = ctrl.list(make_vector<gd_entry_type>(JC));
+  typedef map<string, diff_entry_list_t> jc_data_t;
+  jc_data_t ctrl_jc;
+  for (diff_entry_list_t::iterator it = temp_list.begin(); it != temp_list.end(); ++it) {
+    string jc_segment = find_junction_sequence(sequence, **it, buffer);//, verbose);
+    ASSERT(jc_segment.size(), "Could not locate JC sequence for: " + (*it)->to_string());
+    ctrl_jc[jc_segment].push_back(*it);
+    jc_segments.insert(jc_segment);
+  }
+
+  temp_list = test.list(make_vector<gd_entry_type>(JC));
+  jc_data_t test_jc;
+  for (diff_entry_list_t::iterator it = temp_list.begin(); it != temp_list.end(); ++it) {
+    string jc_segment = find_junction_sequence(sequence, **it, buffer);//, verbose);
+    ASSERT(jc_segment.size(), "Could not locate JC sequence for: " + (*it)->to_string());
+    test_jc[jc_segment].push_back(*it);
+    jc_segments.insert(jc_segment);
+  }
+
+
+  uint32_t n_tp = 0, n_fn = 0, n_fp = 0;
+  for (set<string>::iterator it = jc_segments.begin(); it != jc_segments.end(); ++it) {
+    bool in_ctrl = ctrl_jc.count(*it);
+    bool in_test = test_jc.count(*it);
+    assert(in_ctrl || in_test);
+
+    string key = "";
+    diff_entry_list_t* evidence;
+    if (in_ctrl && in_test) {
+      key = "TP";
+      ++n_tp;
+      evidence = &test_jc[*it];
+    }
+    else if (in_ctrl && !in_test) {
+      key = "FN";
+      ++n_fn;
+      evidence = &ctrl_jc[*it];
+    }
+    else if (!in_ctrl && in_test) {
+      key = "FP";
+      ++n_fp;
+      evidence = &test_jc[*it];
+    } 
+    for (diff_entry_list_t::iterator jt = evidence->begin(); jt != evidence->end(); ++jt) {
+      cDiffEntry new_item = (*jt)->to_spec();
+      new_item["compare"] = key;
+      new_item["segment"] = *it;
+      new_item["score"]   = (*jt)->count("neg_log10_pos_hash_p_value") ? (**jt)["neg_log10_pos_hash_p_value"] : "0";
+      ret_val.add(new_item);
+
+      if (verbose) {
+        string temp = "";
+        if (key == "TP") temp = "[True  Positive]:\t";
+        if (key == "FN") temp = "[False Negative]:\t";
+        if (key == "FP") temp = "[False Positive]:\t";
+        if (key == "")   temp = "[ERROR]         :\t";
+        cout << "\t"<< temp << (*jt)->to_spec().to_string() << "\t" << new_item << endl;
+      }
+
+    }
+
+  }
+  //END JC
+
+  //Add TP|FN|FP header info.
+  string value = "";
+  sprintf(value, "%u|%u|%u", n_tp, n_fn, n_fp);
+  ret_val.add_breseq_data("TP|FN|FP", value);
+
+  printf("\t#=TP|FN|FP	%s \t for %s versus %s \n",
          value.c_str(),
          ctrl._default_filename.c_str(),
          test._default_filename.c_str());
@@ -3860,11 +3949,11 @@ void cGenomeDiff::write_jc_score_table(cGenomeDiff& compare, string table_file_p
   diff_entry_list_t jc = compare.list(make_vector<gd_entry_type>(JC));
   double max_score = 0;
   for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); ++it) {
-    if (!(*it)->count("neg_log10_pos_hash_p_value")) {
+    if (!(*it)->count("score")) {
       cerr << "No score value for: " + (*it)->to_string() << endl;
       continue;
     }
-    double score = from_string<double>((**it)["neg_log10_pos_hash_p_value"]);
+    double score = from_string<double>((**it)["score"]);
     score = roundp<10>(score);
     max_score = max(max_score, score);
 
@@ -3886,12 +3975,19 @@ void cGenomeDiff::write_jc_score_table(cGenomeDiff& compare, string table_file_p
 
 
   out << "score" << '\t' << "TP" << '\t' << "FN" << '\t' << "FP" << endl;
+  if (verbose) {
+    cerr << "\t\tscore" << '\t' << "TP" << '\t' << "FN" << '\t' << "FP" << endl;
+  }
+  uint32_t n_tp = 0, n_fn = 0, n_fp = 0;
   for (double i = 0; i <= max_score; i += .1f) {
     if (table.count(i)) {
+      n_tp += table[i]["TP"];
+      n_fn += table[i]["FN"];
+      n_fp += table[i]["FP"];
 
-      out << i << '\t' << table[i]["TP"] << '\t' << table[i]["FN"] << '\t' << table[i]["FP"] << endl;
+      out << i << '\t' << n_tp << '\t' << n_fn << '\t' << n_fp << endl;
       if (verbose) {
-        cerr << i << '\t' << table[i]["TP"] << '\t' << table[i]["FN"] << '\t' << table[i]["FP"] << endl;
+        cerr << "\t\t" << i << '\t' << n_tp << '\t' << n_fn << '\t' << n_fp << endl;
       }
 
     }

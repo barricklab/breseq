@@ -366,7 +366,10 @@ int do_compare(int argc, char *argv[])
 {
   AnyOption options("gdtools COMPARE [-o output.gd] control.gd test.gd");
   options("output,o",  "output GD file", "output.gd");
-  options("jc-score",  "create a graph of Junction Candidate Scores versus Accuracy", TAKES_NO_ARGUMENT);
+  options("reference,r",  "reference sequence file");
+  options("evidence",  "compare evidence", TAKES_NO_ARGUMENT);
+  options("jc-buffer",  "length of sequence segment to compare for JC evidence", 50);
+  options("graph-jc",   "graph jc score's Accuracy and Sensitivity.", TAKES_NO_ARGUMENT);
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 
@@ -389,6 +392,14 @@ int do_compare(int argc, char *argv[])
     return -1;
   }
 
+  if (options.count("evidence") && !options.count("reference")) {
+    options.addUsage("");
+    options.addUsage("Reference file is needed to compare evidence.");
+    options.printUsage();
+    return -1;
+  }
+
+
   UserOutput uout("COMPARE");
 
   uout("Reading input GD files");
@@ -399,16 +410,28 @@ int do_compare(int argc, char *argv[])
 
 
   uout("Comparing control vs test GD file");
-  cGenomeDiff comp = cGenomeDiff::compare(ctrl, test, options.count("verbose"));
+  cGenomeDiff comp;
+  if (options.count("evidence")) {
+    uout("Comparing evidence");
+
+    cReferenceSequences ref;
+    ref.LoadFiles(from_string<vector<string> >(options["reference"]));
+
+    comp = cGenomeDiff::compare_evidence(ref, un(options["jc-buffer"]), ctrl, test, options.count("verbose"));
+  } else {
+    uout("Comparing mutations");
+    comp = cGenomeDiff::compare(ctrl, test, options.count("verbose"));
+  }
+
+  if (options.count("graph-jc")) {
+    uout("Creating graph_jc.table.txt");
+    cGenomeDiff::write_jc_score_table(comp, "graph_jc.table.txt", options.count("verbose"));
+  }
 
   uout("Assigning unique IDs");
   comp.assign_unique_ids();
 
-  if (options.count("jc-score")) {
-    string jc_table_path = cString(options["output"]).get_directory_path() + "jc_score.table.txt";
-    uout("Creating JC Scores vs Accracy graph: " + jc_table_path);
-    cGenomeDiff::write_jc_score_table(comp, jc_table_path, options.count("verbose"));
-  }
+
 
   uout("Writing output GD file", options["output"]);
   comp.write(options["output"]);
