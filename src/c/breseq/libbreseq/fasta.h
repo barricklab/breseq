@@ -41,6 +41,13 @@ namespace breseq {
       string m_sequence;      //sequence ...
    }; 
   
+  inline ostream& operator<<(ostream& out, const cFastaSequence& fasta_sequence)
+  {
+    out << ">" <<fasta_sequence.m_name << endl;
+    out << fasta_sequence.m_sequence << endl;
+    return out;
+  }
+  
 
 	/*! File class.
 	 */ 
