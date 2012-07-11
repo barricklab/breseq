@@ -989,7 +989,7 @@ int do_filter_gd(int argc, char* argv[]) {
 
 int do_rand_muts(int argc, char *argv[])
 {
-  AnyOption options("Usage: breseq RANDOM_MUTATIONS -r <reference> -o <output.gd> -t <type>");  
+  AnyOption options("Usage: breseq RANDOM-MUTATIONS -r <reference> -o <output.gd> -t <type>");  
   options("reference,r","Reference file");  
   options("output,o","Output file");
   options("type,t","Type of mutation to generate");
@@ -1011,7 +1011,7 @@ int do_rand_muts(int argc, char *argv[])
   options.addUsage("INS:1-10 will generate insertions of size 1 to 10.");
   options.addUsage("DEL:1-10 will generate deletions of size 1 to 10.");
   
-  if(argc == 1)  {
+  if(argc <= 1)  {
     options.printUsage();
     return -1;  }
   
@@ -1119,7 +1119,7 @@ int main(int argc, char* argv[]) {
     return do_gd2circos(argc_new, argv_new);
   } else if(command == "MIRA2GD"){
     return do_mira2gd(argc_new, argv_new);
-  } else if ((command == "RANDOM_MUTATIONS") || (command == "RAND_MUTS")) {
+  } else if ((command == "RANDOM-MUTATIONS") || (command == "RAND-MUTS")) {
     return do_rand_muts(argc_new, argv_new);
   }
   
