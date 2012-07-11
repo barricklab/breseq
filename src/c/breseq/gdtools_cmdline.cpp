@@ -366,6 +366,7 @@ int do_compare(int argc, char *argv[])
 {
   AnyOption options("gdtools COMPARE [-o output.gd] control.gd test.gd");
   options("output,o",  "output GD file", "output.gd");
+  options("jc-score",  "create a graph of Junction Candidate Scores versus Accuracy", TAKES_NO_ARGUMENT);
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 
@@ -392,19 +393,25 @@ int do_compare(int argc, char *argv[])
 
   uout("Reading input GD files");
   uout << "Control: " << options.getArgv(0) << endl;
-  cGenomeDiff gd1(options.getArgv(0));
+  cGenomeDiff ctrl(options.getArgv(0));
   uout << "Test:    " << options.getArgv(1) << endl;
-  cGenomeDiff gd2(options.getArgv(1));
+  cGenomeDiff test(options.getArgv(1));
 
 
   uout("Comparing control vs test GD file");
-  gd1.compare(gd2, options.count("verbose"));
+  cGenomeDiff comp = cGenomeDiff::compare(ctrl, test, options.count("verbose"));
 
   uout("Assigning unique IDs");
-  gd1.assign_unique_ids();
+  comp.assign_unique_ids();
+
+  if (options.count("jc-score")) {
+    string jc_table_path = cString(options["output"]).get_directory_path() + "jc_score.table.txt";
+    uout("Creating JC Scores vs Accracy graph: " + jc_table_path);
+    cGenomeDiff::write_jc_score_table(comp, jc_table_path, options.count("verbose"));
+  }
 
   uout("Writing output GD file", options["output"]);
-  gd1.write(options["output"]);
+  comp.write(options["output"]);
 
   return 0;
 }
@@ -843,17 +850,6 @@ int do_normalize_gd(int argc, char* argv[])
 
   cGenomeDiff gd(input);
   
-  /* @JEB used??
-  uout("Merging input GD files") <<  options.getArgv(0) << endl;
-  cGenomeDiff gd(options.getArgv(0));
-
-  for (int32_t i = 1; i < options.getArgc(); ++i) {
-    uout << options.getArgv(i) << endl;
-    cGenomeDiff temp_gd(options.getArgv(i));
-    gd.merge(temp_gd, false, false, options.count("verbose"));
-  }
-  */
-
   uout("Normalizing mutations");
   gd.normalize_to_sequence(rs);
   diff_entry_list_t muts = gd.mutation_list();
