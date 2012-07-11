@@ -1085,8 +1085,67 @@ void cGenomeDiff::normalize_to_sequence(cReferenceSequences &ref)
     cDiffEntry &mut = **it;
     mut.normalize_to_sequence(ref[mut["seq_id"]]);
   }
-
 }
+  
+  
+void cGenomeDiff::mutations_to_evidence(cReferenceSequences &ref_seq)
+{
+  diff_entry_list_t muts = mutation_list();
+  this->remove(EVIDENCE);
+  this->remove(VALIDATION);
+  for(diff_entry_list_t::iterator it=muts.begin(); it!=muts.end(); ++it) {
+    cDiffEntry& de = **it;
+    if (de._type == MOB) {
+      //(MOB,make_vector<string> ("seq_id")("position")("repeat_name")("strand")("duplication_size"))
+      //(JC,make_vector<string> ("side_1_seq_id")("side_1_position")("side_1_strand")("side_2_seq_id")("side_2_position")("side_2_strand")("overlap"))
+      
+      // Return the actual copy of the sequence feature found...
+      cSequenceFeature repeat_feature;
+      string repeat_seq_id;
+      int32_t repeat_position = -1;
+      ref_seq.repeat_family_sequence(de["repeat_name"], +1, repeat_position, &repeat_seq_id, &repeat_feature);
+      
+      cDiffEntry de1;
+      de1._type = JC;
+      de1["side_1_seq_id"] = de["seq_id"];
+      de1["side_1_position"] = s(n(de["position"]) + n(de["duplication_size"]) - 1);
+      de1["side_1_strand"] = "-1";
+      de1["side_2_seq_id"] = repeat_seq_id;
+      int32_t strand = repeat_feature.m_location.m_strand * n(de["strand"]);
+      de1["side_2_position"] = (strand > 0) ? s(repeat_feature.m_location.m_start) : s(repeat_feature.m_location.m_end);
+      de1["side_2_strand"] = s(strand);
+      de1["overlap"] = "0";
+      this->add(de1);
+      
+      cDiffEntry de2;
+      de2._type = JC;
+      de2["overlap"] = "0";
+      de2["side_1_seq_id"] = de["seq_id"];
+      de2["side_1_position"] = s(n(de["position"]));
+      de2["side_1_strand"] = "1";
+      de2["side_2_seq_id"] = repeat_seq_id;
+      de2["side_2_position"] = (strand > 0) ? s(repeat_feature.m_location.m_end) : s(repeat_feature.m_location.m_start);
+      de2["side_2_strand"] = s(-strand);
+      this->add(de2);
+      
+    } else if (de._type == DEL) {
+
+      cDiffEntry de1;
+      de1._type = JC;
+      de1["overlap"] = "0";
+      de1["side_1_seq_id"] = de["seq_id"];
+      de1["side_1_position"] = s(n(de["position"])-1);
+      de1["side_1_strand"] = "-1";
+      de1["side_2_seq_id"] = de["seq_id"];
+      de1["side_2_position"] = s(n(de["position"])+n(de["size"]));
+      de1["side_2_strand"] = "1";
+      this->add(de1);
+
+    }
+  }
+  this->remove(MUTATIONS);
+}
+
 
   
 // All fields must be assigned in this table and be required fields of the gd entries.

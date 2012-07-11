@@ -534,24 +534,23 @@ namespace breseq {
         ss << "No sequence loaded for: " << as.m_seq_id << endl;
         Error = true;
       }
-      if ((uint32_t)as.m_length != as.get_sequence_length())  {
+      else if ((uint32_t)as.m_length != as.get_sequence_length())  {
         ss << "FEATURES AND SEQUENCE DON'T MATCH: " << as.m_seq_id << endl;
-        ss << "LENGTH:\t" << (uint32_t)as.m_length << endl;
-        ss << "\tVS:\t" << as.get_sequence_length() << " (Sequence Length)" << endl;
+        ss << "LENGTH:\t" << (uint32_t)as.m_length << "\tVS:\t" << as.get_sequence_length() << " (Sequence Length)" << endl;
         Error = true;
       }
-      if(!as.get_sequence_length())  {
+      else if(!as.get_sequence_length())  {
         ss << "LIKELY CAUSE:" << endl;
         ss << "No nucleotide sequence loaded for " << as.m_seq_id <<  endl;
         ss << "\nMake sure that the reference you are loading contains a sequence." << endl;
         ss << "If loading a Genbank file, make sure it has the associated sequence" << endl;
-        ss << "or load the sequence as a seperate FASTA file.";
+        ss << "or load the sequence as a seperate FASTA file." << endl;
       }
       else  {        
         ss << "LIKELY CAUSE:" << endl;
         ss << "Multiple files loaded referring to the same sequence. Make" << endl;
         ss << "sure that any features loaded describe the sequence you" << endl;
-        ss << "actually loaded.";
+        ss << "actually loaded." << endl;
       }
     }
     if (Error) ERROR(ss.str());
@@ -1362,7 +1361,13 @@ void cReferenceSequences::ReadBull(const string& file_name) {
 /*! Returns the nucleotide sequence of a typical copy of a repeat.
  *
  */  
-string cReferenceSequences::repeat_family_sequence(const string &repeat_name, int8_t strand, int32_t &region_pos)
+string cReferenceSequences::repeat_family_sequence(
+                                                   const string &repeat_name, 
+                                                   int8_t strand, 
+                                                   int32_t &region_pos, 
+                                                   string* seq_id,
+                                                   cSequenceFeature* repeat_feature_picked
+                                                   )
 {  
   counted_ptr<cSequenceFeature> picked_rep(NULL);
   cAnnotatedSequence* picked_seq(NULL);
@@ -1461,6 +1466,10 @@ string cReferenceSequences::repeat_family_sequence(const string &repeat_name, in
   if (strand != picked_rep->get_strand())
     repeat_seq = reverse_complement(repeat_seq);
   
+  if (seq_id)
+    *seq_id = picked_seq->m_seq_id;
+  if (repeat_feature_picked)
+    *repeat_feature_picked = *picked_rep;
   return repeat_seq;  
 }
 

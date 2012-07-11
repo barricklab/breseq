@@ -234,7 +234,7 @@ void GDtoCircos(const vector<string> &gd_file_names,
 
 //! Convert MIRA feature analysis file to GD
 void MIRAtoGD(const string &mira_file_name, const string &gd_file_name);
-
+  
 //! Output operator for a diff entry.
 ostream& operator<<(ostream& out, const cDiffEntry& de);
 
@@ -359,6 +359,7 @@ public:
   diff_entry_ptr_t parent(const cDiffEntry& evidence);
 
   void normalize_to_sequence(cReferenceSequences &ref_seq);
+  void mutations_to_evidence(cReferenceSequences &ref_seq);
     
   //Additional functions that need? adding from GenomeDiff.gm
   void add_reject_reasons(cDiffEntry item, const string& reason);
