@@ -18,6 +18,7 @@ LICENSE AND COPYRIGHT
 
 #include "libbreseq/genome_diff.h"
 #include "libbreseq/reference_sequence.h"
+#include "libbreseq/candidate_junctions.h"
 #include "libbreseq/output.h"
 
 namespace breseq {
@@ -2911,6 +2912,7 @@ void GDtoCircos(const vector<string> &gd_file_names,
       }
       
     }
+    
     else if(diff._type == MOB){
       
       // Color assignment -- prefer preassigned, then grab next from list
@@ -3778,7 +3780,7 @@ cGenomeDiff cGenomeDiff::compare(cGenomeDiff& ctrl, cGenomeDiff& test, bool verb
 
   cGenomeDiff ret_val;
   ret_val.metadata = test.metadata;
-
+    
   for (diff_entry_set_t::iterator it = uniq_muts.begin(); it != uniq_muts.end(); ++it) {
     assert(ctrl_muts.count(*it) || test_muts.count(*it));
 

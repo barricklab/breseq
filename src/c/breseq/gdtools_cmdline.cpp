@@ -522,16 +522,11 @@ int do_gd2circos(int argc, char *argv[]){
     return -1;
   }
   
-  try{
-    GDtoCircos(gd_names, 
-               from_string<vector<string> >(options["reference"]),
-               options["output"],
-               distance_scale,
-               feature_scale);
-  } 
-  catch(...){ 
-      return -1; // failed 
-  }
+  GDtoCircos(gd_names, 
+             from_string<vector<string> >(options["reference"]),
+             options["output"],
+             distance_scale,
+             feature_scale);
   
   return 0;
 }
