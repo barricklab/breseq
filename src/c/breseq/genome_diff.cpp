@@ -195,7 +195,7 @@ cDiffEntry::cDiffEntry(const string &line)
   //Fields.
   while(COLUMN < tokens.size() && tokens[tokens.size() - 1].size()) {
     cKeyValuePair kvp(tokens[COLUMN], '=');
-    if (kvp.check()) {
+    if (kvp.valid()) {
       string key   = kvp.get_key();
       string value = kvp.get_value();
       RemoveLeadingTrailingWhitespace(key);
