@@ -41,6 +41,7 @@ int gdtools_usage()
   uout << "normalize              normalize mutations to a sequence" << endl;
   uout << "filter                 remove mutations given filtering expressions" << endl;
   uout << "merge                  combine multiple GD files" << endl;
+  uout << "header                 create or add header entries" << endl;
 
   uout("Format Conversions:");
   uout << "gd2gvf                 GD to Genome Variant Format(GVF)" << endl;
@@ -365,12 +366,12 @@ int do_weights(int argc, char* argv[])
 int do_compare(int argc, char *argv[])
 {
   AnyOption options("gdtools COMPARE [-o output.gd] control.gd test.gd");
-  options("output,o",  "output GD file", "output.gd");
+  options("output,o",     "output GD file", "comp.gd");
   options("reference,r",  "reference sequence file");
-  options("evidence",  "compare evidence", TAKES_NO_ARGUMENT);
-  options("jc-buffer",  "length of sequence segment to compare for JC evidence", 50);
-  options("graph-jc",   "graph jc score's Accuracy and Sensitivity.", TAKES_NO_ARGUMENT);
-  options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
+  options("evidence",     "compare evidence", TAKES_NO_ARGUMENT);
+  options("jc-buffer",    "length of sequence segment to compare for JC evidence", 50);
+  options("plot-jc",      "plot JC Precision versus Score, argument is a prefix for the file paths");
+  options("verbose,v",    "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 
   options.addUsage("");
@@ -411,27 +412,46 @@ int do_compare(int argc, char *argv[])
 
   uout("Comparing control vs test GD file");
   cGenomeDiff comp;
-  if (options.count("evidence")) {
-    uout("Comparing evidence");
+  if (options.count("evidence") || options.count("plot-jc")) {
+    //TODO If mutations are present but no evidence is, use JEB's mut->evidence
+    //function to convert the genome diffs.
 
     cReferenceSequences ref;
     ref.LoadFiles(from_string<vector<string> >(options["reference"]));
 
+    uout("Comparing evidence");
     comp = cGenomeDiff::compare_evidence(ref, un(options["jc-buffer"]), ctrl, test, options.count("verbose"));
+
+    if (options.count("plot-jc")) {
+      uout("Plotting JC Precision vs Score");
+      string prefix = options["plot-jc"];
+      if (prefix.rfind('/') != string::npos) {
+        size_t pos = prefix.rfind('/');
+        string dir_path = prefix.substr(0, pos);
+        uout << "Creating directory: " + dir_path << endl;
+        create_path(dir_path);
+      }
+
+      string table_path = prefix + ".table.txt";
+      uout << "Creating table: " + table_path << endl;
+      cGenomeDiff::write_jc_score_table(comp, table_path, options.count("verbose"));
+
+      string plot_path   = prefix + ".png";
+      string plot_jc_score_script_name = "/plot_jc_scores.r";
+      string plot_jc_score_script_path = DATADIR + plot_jc_score_script_name;
+
+      uout << "Creating plot: " + plot_path << endl;
+      string cmd = plot_jc_score_script_path + " " + table_path + " " + plot_path;
+      SYSTEM(cmd, true, false, true);
+    }
+
   } else {
     uout("Comparing mutations");
     comp = cGenomeDiff::compare(ctrl, test, options.count("verbose"));
   }
 
-  if (options.count("graph-jc")) {
-    uout("Creating graph_jc.table.txt");
-    cGenomeDiff::write_jc_score_table(comp, "graph_jc.table.txt", options.count("verbose"));
-  }
-
-  uout("Assigning unique IDs");
+  uout("Assigning unique IDs to Genome Diff entries");
   comp.assign_unique_ids();
-
-
 
   uout("Writing output GD file", options["output"]);
   comp.write(options["output"]);
@@ -1007,7 +1027,7 @@ int do_filter_gd(int argc, char* argv[]) {
 
 int do_rand_muts(int argc, char *argv[])
 {
-  AnyOption options("Usage: breseq RANDOM-MUTATIONS -r <reference> -o <output.gd> -t <type>");  
+  AnyOption options("Usage: gdtools RANDOM-MUTATIONS -r <reference> -o <output.gd> -t <type>");  
   options("reference,r","Reference file");  
   options("output,o","Output file");
   options("type,t","Type of mutation to generate");
@@ -1025,7 +1045,7 @@ int do_rand_muts(int argc, char *argv[])
   options.addUsage("Not supplying --seq will use the first sequence in the reference.");
   options.addUsage("");
   options.addUsage("Required fields are -r, -o, and -t.");
-  options.addUsage("Valid types: SNP, INS, DEL, MOB, AMP");
+  options.addUsage("Valid types: SNP, INS, DEL, MOB, AMP, RMD");
   options.addUsage("INS:1-10 will generate insertions of size 1 to 10.");
   options.addUsage("DEL:1-10 will generate deletions of size 1 to 10.");
   
@@ -1079,7 +1099,6 @@ int do_rand_muts(int argc, char *argv[])
   return 0;
 }
 
-
 int do_mutations_to_evidence(int argc, char *argv[])
 {
   AnyOption options("Usage: breseq MUTATIONS_TO_EVIDENCE -r <reference> -o <output.gd> input.gd");  
@@ -1123,6 +1142,70 @@ int do_mutations_to_evidence(int argc, char *argv[])
   gd.mutations_to_evidence(ref_seq_info);
   gd.write(options["output"]);
   
+  return 0;
+}
+
+
+
+int do_header(int argc, char* argv[]) {
+  AnyOption options("gdtools HEADER [-o output.gd] [-r reference] file1.fastq file2.fastq ...");
+  options("output,o",      "output GD file", "output.gd");
+  options("reference,r",   "reference file");
+  options("tag,t",         "header tag to add to Genome Diff file, input as <key>=<value> will produce #=<key> <value>");
+  options("input,i",       "add entries from input Genome Diff file");
+  options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
+  options.processCommandArgs(argc, argv);
+  
+  options.addUsage("");
+  options.addUsage("Create or add '#=<TAG>' entries to the header of a GenomeDiff file,");
+  options.addUsage("the -r argument will be added as #=REFSEQ and the *.fastq arguments");
+  options.addUsage("will be added as #=READSEQ");
+
+  if (!options.count("reference") && !options.count("tag") && !options.getArgc()) {
+    options.printUsage();
+    return -1;
+  }
+
+  UserOutput uout("HEADER");
+
+  cGenomeDiff gd;
+  if (options.count("input")) {
+    uout("Reading in " + options["input"] + " to combine with output Genome Diff file");
+    gd.read(options["input"]);
+  }
+  
+  if (options.count("reference")) {
+    gd.metadata.ref_seqs.clear();
+    uout("Adding #=REFSEQ header info for");
+    vector<string> refs = from_string<vector<string> >(options["reference"]);
+    for (uint32_t i = 0; i < refs.size(); ++i) {
+      uout << refs[i] << endl;
+      gd.metadata.ref_seqs.push_back(refs[i]);
+    }
+  }
+
+  if (options.getArgc()) {
+    gd.metadata.read_seqs.clear();
+    uout("Adding #=READSEQ header info for");
+    for (int32_t i = 0; i < options.getArgc(); ++i) {
+      uout << options.getArgv(i) << endl;
+      gd.metadata.read_seqs.push_back(options.getArgv(i));
+    }
+  }
+
+  if (options.count("tag")) {
+    uout("Adding user defined tags");
+    vector<string> tags = from_string<vector<string> >(options["tag"]);
+    for (uint32_t i = 0; i < tags.size(); ++i) {
+      cKeyValuePair kvp(tags[i], '=');
+      uout << "#=" << to_upper(kvp.get_key()) << '\t' << kvp.get_value() << endl;
+      gd.add_breseq_data(to_upper(kvp.get_key()), kvp.get_value());
+    }
+  }
+
+  uout("Writing output GD file", options["output"]);
+  gd.write(options["output"]);
+
   return 0;
 }
 
@@ -1184,6 +1267,8 @@ int main(int argc, char* argv[]) {
     return do_gd2circos(argc_new, argv_new);
   } else if(command == "MIRA2GD"){
     return do_mira2gd(argc_new, argv_new);
+  } else if(command == "HEADER"){
+    return do_header(argc_new, argv_new);
   } else if ((command == "RANDOM-MUTATIONS") || (command == "RAND-MUTS")) {
     return do_rand_muts(argc_new, argv_new);
   } else if (command == "MUTATIONS_TO_EVIDENCE") {

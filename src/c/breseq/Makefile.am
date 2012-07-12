@@ -86,6 +86,7 @@ EXTRA_DIST = \
 	coverage_distribution.r \
 	plot_coverage.r \
 	plot_error_rate.r \
+	plot_jc_scores.r \
 	polymorphism_statistics.r \
 	run_circos.sh \
 	ideogram.conf \
@@ -105,6 +106,7 @@ install-data-local :
 	cp coverage_distribution.r $(BRESEQDATADIR)
 	cp plot_coverage.r $(BRESEQDATADIR)
 	cp plot_error_rate.r $(BRESEQDATADIR)
+	cp plot_jc_scores.r $(BRESEQDATADIR)
 	cp polymorphism_statistics.r $(BRESEQDATADIR)
 	cp run_circos.sh $(BRESEQDATADIR)
 	cp indels.conf $(BRESEQDATADIR)
