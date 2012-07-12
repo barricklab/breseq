@@ -1058,7 +1058,7 @@ class cKeyValuePair : public string
   public:
     cKeyValuePair(const string &line, const char split_chr);
 
-    bool   check(void)     const;
+    bool   valid(void)  const;
     string get_key(void)   const;
     string get_value(void) const;
 
@@ -1075,7 +1075,7 @@ inline cKeyValuePair::cKeyValuePair(const string &line, const char split_chr)
   , _value(line.substr(line.find(split_chr) + 1))
 {}
 
-inline bool cKeyValuePair::check(void) const
+inline bool cKeyValuePair::valid(void) const
 { return count(this->begin(), this->end(), _split_chr) == 1 && _key.size() && _value.size(); }
 
 inline string cKeyValuePair::get_key() const
