@@ -729,6 +729,8 @@ int do_runfile(int argc, char *argv[])
       ["download_path_format"] = downloads_dir + "/%s";
   lookup_table["BARRICKLAB-PRIVATE"]
       ["download_path_format"] = downloads_dir + "/%s";
+  lookup_table["LOCAL"]
+      ["download_path_format"] = downloads_dir + "/%s";
 
   const string &exe = options["executable"];
 
@@ -777,21 +779,22 @@ int do_runfile(int argc, char *argv[])
     size_t n_refs = refs.size();
     for (;seq_kv_pairs.size(); seq_kv_pairs.pop_front()) {
       const cKeyValuePair seq_kvp(seq_kv_pairs.front(), ':');
-      if (!seq_kvp.check()) {
-        WARN("File: " + file_name + " has invalid key-value-pair: " + seq_kvp);
-        continue;
-      }
 
-      const string &key = to_upper(seq_kvp.get_key());
-      const string &value = cString(seq_kvp.get_value()).trim_ends_of('/');
-      const string &base_name = cString(value).get_base_name();
+      cString download_path = "";
+        if (seq_kvp.valid()) {
 
-      if (!lookup_table.count(key)) {
-        WARN("File: " + file_name + " has invalid key: " + key);
-        continue;
+        const string &key = to_upper(seq_kvp.get_key());
+        const string &value = cString(seq_kvp.get_value()).trim_ends_of('/');
+        const string &base_name = cString(value).get_base_name();
+
+        if (!lookup_table.count(key)) {
+          WARN("File: " + file_name + " has invalid key: " + key);
+          continue;
+        }
+        download_path = cString(lookup_table[key]["download_path_format"].c_str(), base_name.c_str());
+      } else {
+        download_path = seq_kvp;
       }
-      cString download_path(lookup_table[key]["download_path_format"].c_str(),
-                            base_name.c_str());
 
       //! Part 3: Reference argument path(s).
       if (n_refs) {
@@ -1052,7 +1055,7 @@ int do_download(int argc, char *argv[])
 
     for (;seqs_kv_pairs.size(); seqs_kv_pairs.pop_front()) {
       const cKeyValuePair seq_kvp(seqs_kv_pairs.front(), ':');
-      if (!seq_kvp.check()) {
+      if (!seq_kvp.valid()) {
         error_report[file_name]["NOT_KEY_VALUE_PAIR"] = seq_kvp;
         continue;
       }
