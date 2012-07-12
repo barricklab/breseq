@@ -42,11 +42,7 @@ void calculate_continuation(
                             uint32_t& continuation_right
                             )
 {
-  bool verbose = true;
-  
-  if (rji.junction_key() == "REL606__2103888__1__REL606__2103918__-1__23____72__72__0__0") {
-    cout << "debug" << endl;
-  }
+  bool verbose = false;
   
   // At this point we are an object that has been initialized with junction information
   ASSERT(rji.sides[0].seq_id != "", "Uninitialized variable");

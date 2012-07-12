@@ -627,6 +627,7 @@ namespace breseq {
   
   //! Short aliases to conversions
   inline int32_t n(string input) { return from_string<int32_t>(input); }
+  inline uint32_t un(string input) { return from_string<uint32_t>(input); }
 	inline bool b(string input) { return from_string(input); }
 	inline string s(int32_t input) { return to_string(input); }
   

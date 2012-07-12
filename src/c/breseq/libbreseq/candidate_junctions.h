@@ -269,7 +269,11 @@ namespace breseq {
                                         const cReferenceSequences& ref_seq_info, 
                                         const alignment_wrapper& a
                                         );
-
+  string find_junction_sequence( 
+                                        cReferenceSequences& ref_seq_info,
+                                        cDiffEntry& jc,
+                                        int32_t distance_from_jc
+                                        );
   
   class PreprocessAlignments
   {
@@ -344,7 +348,6 @@ namespace breseq {
 		/*! Predicts candidate junctions
 		 */
 		static void identify_candidate_junctions(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info);
-
 	private:
 
     

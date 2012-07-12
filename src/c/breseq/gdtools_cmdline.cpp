@@ -366,7 +366,10 @@ int do_compare(int argc, char *argv[])
 {
   AnyOption options("gdtools COMPARE [-o output.gd] control.gd test.gd");
   options("output,o",  "output GD file", "output.gd");
-  options("jc-score",  "create a graph of Junction Candidate Scores versus Accuracy", TAKES_NO_ARGUMENT);
+  options("reference,r",  "reference sequence file");
+  options("evidence",  "compare evidence", TAKES_NO_ARGUMENT);
+  options("jc-buffer",  "length of sequence segment to compare for JC evidence", 50);
+  options("graph-jc",   "graph jc score's Accuracy and Sensitivity.", TAKES_NO_ARGUMENT);
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 
@@ -389,6 +392,14 @@ int do_compare(int argc, char *argv[])
     return -1;
   }
 
+  if (options.count("evidence") && !options.count("reference")) {
+    options.addUsage("");
+    options.addUsage("Reference file is needed to compare evidence.");
+    options.printUsage();
+    return -1;
+  }
+
+
   UserOutput uout("COMPARE");
 
   uout("Reading input GD files");
@@ -399,16 +410,28 @@ int do_compare(int argc, char *argv[])
 
 
   uout("Comparing control vs test GD file");
-  cGenomeDiff comp = cGenomeDiff::compare(ctrl, test, options.count("verbose"));
+  cGenomeDiff comp;
+  if (options.count("evidence")) {
+    uout("Comparing evidence");
+
+    cReferenceSequences ref;
+    ref.LoadFiles(from_string<vector<string> >(options["reference"]));
+
+    comp = cGenomeDiff::compare_evidence(ref, un(options["jc-buffer"]), ctrl, test, options.count("verbose"));
+  } else {
+    uout("Comparing mutations");
+    comp = cGenomeDiff::compare(ctrl, test, options.count("verbose"));
+  }
+
+  if (options.count("graph-jc")) {
+    uout("Creating graph_jc.table.txt");
+    cGenomeDiff::write_jc_score_table(comp, "graph_jc.table.txt", options.count("verbose"));
+  }
 
   uout("Assigning unique IDs");
   comp.assign_unique_ids();
 
-  if (options.count("jc-score")) {
-    string jc_table_path = cString(options["output"]).get_directory_path() + "jc_score.table.txt";
-    uout("Creating JC Scores vs Accracy graph: " + jc_table_path);
-    cGenomeDiff::write_jc_score_table(comp, jc_table_path, options.count("verbose"));
-  }
+
 
   uout("Writing output GD file", options["output"]);
   comp.write(options["output"]);
@@ -522,16 +545,11 @@ int do_gd2circos(int argc, char *argv[]){
     return -1;
   }
   
-  try{
-    GDtoCircos(gd_names, 
-               from_string<vector<string> >(options["reference"]),
-               options["output"],
-               distance_scale,
-               feature_scale);
-  } 
-  catch(...){ 
-      return -1; // failed 
-  }
+  GDtoCircos(gd_names, 
+             from_string<vector<string> >(options["reference"]),
+             options["output"],
+             distance_scale,
+             feature_scale);
   
   return 0;
 }
@@ -989,7 +1007,7 @@ int do_filter_gd(int argc, char* argv[]) {
 
 int do_rand_muts(int argc, char *argv[])
 {
-  AnyOption options("Usage: breseq RANDOM_MUTATIONS -r <reference> -o <output.gd> -t <type>");  
+  AnyOption options("Usage: breseq RANDOM-MUTATIONS -r <reference> -o <output.gd> -t <type>");  
   options("reference,r","Reference file");  
   options("output,o","Output file");
   options("type,t","Type of mutation to generate");
@@ -1011,7 +1029,7 @@ int do_rand_muts(int argc, char *argv[])
   options.addUsage("INS:1-10 will generate insertions of size 1 to 10.");
   options.addUsage("DEL:1-10 will generate deletions of size 1 to 10.");
   
-  if(argc == 1)  {
+  if(argc <= 1)  {
     options.printUsage();
     return -1;  }
   
@@ -1166,7 +1184,7 @@ int main(int argc, char* argv[]) {
     return do_gd2circos(argc_new, argv_new);
   } else if(command == "MIRA2GD"){
     return do_mira2gd(argc_new, argv_new);
-  } else if ((command == "RANDOM_MUTATIONS") || (command == "RAND_MUTS")) {
+  } else if ((command == "RANDOM-MUTATIONS") || (command == "RAND-MUTS")) {
     return do_rand_muts(argc_new, argv_new);
   } else if (command == "MUTATIONS_TO_EVIDENCE") {
     return do_mutations_to_evidence(argc_new, argv_new);
