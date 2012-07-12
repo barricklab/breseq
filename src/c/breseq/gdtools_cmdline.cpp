@@ -365,12 +365,12 @@ int do_weights(int argc, char* argv[])
 int do_compare(int argc, char *argv[])
 {
   AnyOption options("gdtools COMPARE [-o output.gd] control.gd test.gd");
-  options("output,o",  "output GD file", "output.gd");
+  options("output,o",     "output GD file", "comp.gd");
   options("reference,r",  "reference sequence file");
-  options("evidence",  "compare evidence", TAKES_NO_ARGUMENT);
-  options("jc-buffer",  "length of sequence segment to compare for JC evidence", 50);
-  options("graph-jc",   "graph jc score's Accuracy and Sensitivity.", TAKES_NO_ARGUMENT);
-  options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
+  options("evidence",     "compare evidence", TAKES_NO_ARGUMENT);
+  options("jc-buffer",    "length of sequence segment to compare for JC evidence", 50);
+  options("plot-jc",      "plot JC Precision versus Score, argument is a prefix for the file paths");
+  options("verbose,v",    "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 
   options.addUsage("");
@@ -411,27 +411,46 @@ int do_compare(int argc, char *argv[])
 
   uout("Comparing control vs test GD file");
   cGenomeDiff comp;
-  if (options.count("evidence")) {
-    uout("Comparing evidence");
+  if (options.count("evidence") || options.count("plot-jc")) {
+    //TODO If mutations are present but no evidence is, use JEB's mut->evidence
+    //function to convert the genome diffs.
 
     cReferenceSequences ref;
     ref.LoadFiles(from_string<vector<string> >(options["reference"]));
 
+    uout("Comparing evidence");
     comp = cGenomeDiff::compare_evidence(ref, un(options["jc-buffer"]), ctrl, test, options.count("verbose"));
+
+    if (options.count("plot-jc")) {
+      uout("Plotting JC Precision vs Score");
+      string prefix = options["plot-jc"];
+      if (prefix.rfind('/') != string::npos) {
+        size_t pos = prefix.rfind('/');
+        string dir_path = prefix.substr(0, pos);
+        uout << "Creating directory: " + dir_path << endl;
+        create_path(dir_path);
+      }
+
+      string table_path = prefix + ".table.txt";
+      uout << "Creating table: " + table_path << endl;
+      cGenomeDiff::write_jc_score_table(comp, table_path, options.count("verbose"));
+
+      string plot_path   = prefix + ".png";
+      string plot_jc_score_script_name = "/plot_jc_scores.r";
+      string plot_jc_score_script_path = DATADIR + plot_jc_score_script_name;
+
+      uout << "Creating plot: " + plot_path << endl;
+      string cmd = plot_jc_score_script_path + " " + table_path + " " + plot_path;
+      SYSTEM(cmd, true, false, true);
+    }
+
   } else {
     uout("Comparing mutations");
     comp = cGenomeDiff::compare(ctrl, test, options.count("verbose"));
   }
 
-  if (options.count("graph-jc")) {
-    uout("Creating graph_jc.table.txt");
-    cGenomeDiff::write_jc_score_table(comp, "graph_jc.table.txt", options.count("verbose"));
-  }
-
-  uout("Assigning unique IDs");
+  uout("Assigning unique IDs to Genome Diff entries");
   comp.assign_unique_ids();
-
-
 
   uout("Writing output GD file", options["output"]);
   comp.write(options["output"]);
@@ -1025,7 +1044,7 @@ int do_rand_muts(int argc, char *argv[])
   options.addUsage("Not supplying --seq will use the first sequence in the reference.");
   options.addUsage("");
   options.addUsage("Required fields are -r, -o, and -t.");
-  options.addUsage("Valid types: SNP, INS, DEL, MOB, AMP");
+  options.addUsage("Valid types: SNP, INS, DEL, MOB, AMP, RMD");
   options.addUsage("INS:1-10 will generate insertions of size 1 to 10.");
   options.addUsage("DEL:1-10 will generate deletions of size 1 to 10.");
   
