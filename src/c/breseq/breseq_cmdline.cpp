@@ -1207,7 +1207,7 @@ int do_get_sequence(int argc, char *argv[])
    
   vector<string> region_list;  
   
-  bool reverse = options.count("reverse-complement");
+  bool do_reverse_complement = options.count("reverse-complement");
   bool verbose = options.count("verbose") || !options.count("output");
   
   if (options.count("position"))  {
@@ -1238,26 +1238,28 @@ int do_get_sequence(int argc, char *argv[])
     ref_seq_info.parse_region(region_list[j], replace_target_id, replace_start, replace_end);
     
     if(!replace_end)  {
-      replace_end = ref_seq_info[replace_target_id].m_length;  }
+      replace_end = ref_seq_info[replace_target_id].m_length;  
+    }
+    
+    if (replace_start > replace_end) {
+      cout << "START greater than END." << " Creating reverse complement" << endl;
+      swap(replace_start, replace_end);
+      do_reverse_complement = true;
+    }
     
     if(verbose)
     {
       cout << "Sequence ID:      " << ref_seq_info[replace_target_id].m_seq_id << endl;
       cout << "Start Position:   " << replace_start << endl;
       cout << "End Position:     " << replace_end << endl;
-      cout << "Genome Strand:    " << (reverse ? "Bottom" : "Top") << endl;
+      cout << "Genome Strand:    " << (do_reverse_complement ? "Bottom" : "Top") << endl;
     }
-    
-    CHECK(replace_start <= replace_end,
-          "START:\t" + to_string(replace_start) + "\n" +
-          "END:\t" + to_string(replace_end) + "\n" +
-          "START greater than END.");
     
     ASSERT((uint32_t)ref_seq_info[replace_target_id].m_length >= replace_start && (uint32_t)ref_seq_info[replace_target_id].m_length >= replace_end,
            "START:\t" + to_string(replace_start) + "\n" +
            "END:\t" + to_string(replace_end) + "\n" +
            "SIZE:\t" + to_string(ref_seq_info[replace_target_id].m_length) + "\n" +
-           "Neither START or ENDA can be greater than the SIZE of " + ref_seq_info[replace_target_id].m_seq_id + ".");
+           "Neither START or END can be greater than the SIZE of " + ref_seq_info[replace_target_id].m_seq_id + ".");
     
     seq_name = ref_seq_info[replace_target_id].m_seq_id + ":" + to_string(replace_start) + "-" + to_string(replace_end);
     
@@ -1266,16 +1268,18 @@ int do_get_sequence(int argc, char *argv[])
     new_seq.m_fasta_sequence = ref_seq_info[replace_target_id].m_fasta_sequence;    
     new_seq.m_fasta_sequence.m_name = seq_name;
     new_seq.m_fasta_sequence.m_sequence = to_upper(ref_seq_info[replace_target_id].m_fasta_sequence.m_sequence.substr(replace_start -1, (replace_end - replace_start) + 1));
-    if(reverse)new_seq.m_fasta_sequence.m_sequence = reverse_complement(new_seq.m_fasta_sequence.m_sequence);
+    if(do_reverse_complement) new_seq.m_fasta_sequence.m_sequence = reverse_complement(new_seq.m_fasta_sequence.m_sequence);
     new_seq.m_seq_id = seq_name;
     new_seq.m_length = new_seq.m_fasta_sequence.m_sequence.size();
     
     if(verbose)  {
-      cout << new_seq.m_fasta_sequence.m_sequence << endl;  }
+      cout << new_seq.m_fasta_sequence << endl;  
+    }
   }
   
   if(options.count("output"))  {
-    new_seq_info.WriteFASTA(options["output"], verbose);  }  
+    new_seq_info.WriteFASTA(options["output"], verbose);  
+  }  
   
   return 0;
 }
