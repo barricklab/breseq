@@ -1800,90 +1800,74 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
   }
   else 
   if (mut_type == "DEL") {
-    uint32_t opt_1 = 1;
-    uint32_t opt_2 = 1;      
-    map<uint32_t, uint32_t> used_positions;
-    
+    uint32_t min_size = 1;
+    uint32_t max_size = 1;
     switch(type_options.size())
     {
       case 1:  {
       }  break;
         
       case 2:  {
-        opt_1 = from_string<uint32_t>(type_options[1]);
-        opt_2 = from_string<uint32_t>(type_options[1]);
+        min_size = un(type_options[1]);
+        max_size = un(type_options[1]);
       }  break;
         
       case 3:  {
-        opt_1 = from_string<uint32_t>(type_options[1]);
-        opt_2 = from_string<uint32_t>(type_options[2]);
+        min_size = un(type_options[1]);
+        max_size = un(type_options[2]);
       }  break;
         
       default:      
         ERROR("CANNOT PARSE: " + type);
     }
-    
-    if(verbose)  {
-      cout << "SIZE RANGE: " << opt_1 <<  " - " << opt_2 << endl;  }
-    
-    for(uint32_t i = 0; i < number && uAttempts < max_attempts; i++)
-    {
-      uAttempts++;
-      
-      uint32_t del_size = (i % (opt_2 - (opt_1-1))) + opt_1;
-      if(opt_2 - opt_1 >= number)  {
-        del_size = (rand() % number) + opt_1;  }
-      uint32_t rand_pos = (rand() % (ref_seq_info.get_sequence_size() - del_size)) + 1;
-      bool bRedo = false;
-      
-      for(map<uint32_t, uint32_t>::iterator j = match_list.begin(); j != match_list.end(); j++)
-      {
-        if((rand_pos >= (*j).first && rand_pos < ((*j).first + (*j).second)) ||
-           (rand_pos+del_size-1 >= (*j).first && rand_pos+del_size-1 < ((*j).first + (*j).second)) ||
-           (rand_pos <= (*j).first && rand_pos+del_size-1 >= ((*j).first + (*j).second)))  {
-          bRedo = true;
-          break;  }
+
+    cExcludeRegions excluded;
+
+    if (exclusion_file.size()) {
+      excluded.read(exclusion_file);
+    }
+
+    uint32_t n_dels = number;
+    while (n_dels--) {
+      uint32_t del_size = rand() % (max_size - min_size + 1) + min_size;
+
+      //Attempt to find a valid position
+      uint32_t n_attempts = max_attempts, pos_1 = 0;
+      while (pos_1 == 0 && n_attempts) {
+        pos_1 = rand() % ref_seq_info.get_sequence_size() - del_size + 1;
+
+        if (excluded.is_excluded(pos_1, pos_1 + del_size)) {
+          pos_1 = 0, --n_attempts;
+          continue;
+        }
+
       }
       
-      if(bRedo)  {
-        i--;
-        continue;  }
-      
-      for(map<uint32_t, uint32_t>::iterator k = used_positions.begin(); k != used_positions.end(); k++)
-      {
-        if((rand_pos >= (*k).first && rand_pos < ((*k).first + (*k).second)) ||
-           (rand_pos+del_size-1 >= (*k).first && rand_pos+del_size-1 < ((*k).first + (*k).second)) ||
-           (rand_pos <= (*k).first && rand_pos+del_size-1 >= ((*k).first + (*k).second)))  {
-          bRedo = true;
-          break;  }
-        
-        if((abs(static_cast<int32_t>((*k).first - rand_pos)) < uBuffer) ||
-           (abs(static_cast<int32_t>((*k).first+(*k).second-1 - rand_pos)) < uBuffer))  {
-          bRedo = true;
-          break;  }
-      }
-      
-      if(bRedo)  {
-        i--;
-        continue;  }
-      
+      if (pos_1 == 0 || n_attempts == 0) {
+        uAttempts = max_attempts;
+        break;
+      } 
+
+      //Create mutation.
       cDiffEntry new_item;        
       new_item._type = DEL;
       new_item["seq_id"] = ref_seq_info.m_seq_id;
-      new_item["position"] = to_string(rand_pos);        
+      new_item["position"] = to_string(pos_1);        
       new_item["size"] = to_string(del_size);        
-      
-      uAttempts = 0;
-      
       new_item.normalize_to_sequence(ref_seq_info);
-      if(from_string<uint32_t>(new_item["position"]) != rand_pos)  {
-        i--;
-        continue;  }
-      
-      used_positions[rand_pos] = del_size;
-      
-      add(new_item);
+
+      this->add(new_item);
+
+      pos_1    = un((new_item)["position"]);
+      del_size = un((new_item)["size"]);
+      excluded.add_exclude_region(pos_1 - read_length, pos_1 + del_size + read_length);
+
+      if (verbose) {
+        cerr << "\t[DEL]: " << new_item << endl;
+      }
+
     }
+
   }
   else if (mut_type == "RMD") {
     uint32_t min_size = 1;
@@ -1914,22 +1898,24 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
     }
 
     uint32_t n_dels = number;
-    cSequenceFeatureList repeats = ref_seq_info.m_repeats;
+
     // Get ISX elements.
+    cSequenceFeatureList repeats = ref_seq_info.m_repeats;
     ASSERT(repeats.size(), "No repeat_regions / ISX elements in reference sequence.");
     CHECK(n_dels < repeats.size(), "Too many deletions requested, creating a potential maximum of " + s(repeats.size()));
     cSequenceFeatureList::iterator it; 
-    while (n_dels-- && repeats.size()) {
+
+    uint32_t n_attempts = max_attempts;
+    while (n_dels-- && repeats.size() && n_attempts) {
       it = repeats.begin();
       uint32_t del_size = rand() % (max_size - min_size + 1) + min_size;
 
       //Pick a random repeat_region.
       advance(it, rand() % repeats.size());
-
-      //Pick what side to apply deletion.
       uint32_t start_1 = (*it)->get_start_1();
       uint32_t end_1   = (*it)->get_end_1();
 
+      //Collect valid left_side, right_side positions.
       vector<int32_t> valid_pos_1;
       if (!excluded.is_excluded(start_1 - del_size, start_1)) {
        valid_pos_1.push_back(start_1 - del_size);
@@ -1940,10 +1926,10 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
 
       int32_t pos_1 = 0;
       if (valid_pos_1.size()) {
+        //Pick what side to apply deletion.
         pos_1 = valid_pos_1[rand() % valid_pos_1.size()];
-      }
+        n_attempts = max_attempts;
 
-      if (pos_1 > 1 && pos_1 < ref_seq_info.get_sequence_size()) {
         cDiffEntry new_item;        
         new_item._type = DEL;
         new_item["seq_id"] = ref_seq_info.m_seq_id;
@@ -1953,22 +1939,25 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
 
         this->add(new_item);
 
-        pos_1    = n((new_item)["position"]);
-        del_size = n((new_item)["size"]);
+        pos_1    = un((new_item)["position"]);
+        del_size = un((new_item)["size"]);
+        excluded.add_exclude_region(pos_1 - read_length, pos_1 + del_size + read_length);
 
         if (verbose) {
           cerr << "[ISX]: " + (**it)["name"] << "\t[start_1]: " + s(start_1) << "\t[end_1]: " + s(end_1) << endl;
           cerr << "\t[DEL]: " << new_item << endl;
           cerr << endl;
         }
-        excluded.add_exclude_region(pos_1 - read_length, pos_1 + del_size + read_length);
-      } else {
-        ++n_dels;
-      }
 
+      } else {
+        ++n_dels, --n_attempts;
+      }
       repeats.erase(it);
     }
 
+    if (n_attempts == 0) {
+      uAttempts = max_attempts;
+    }
   }
   else
   if (mut_type == "INS") {

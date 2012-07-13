@@ -1035,7 +1035,7 @@ int do_rand_muts(int argc, char *argv[])
   options("number,n","Number of mutations to generate", static_cast<uint32_t>(1000));
   options("length,l","Length of reads (used to space mutations)", static_cast<uint32_t>(50));
   options("seq,s","Sequence to use from reference");  
-  options("rand,a","Seed for the random number generator");
+  options("seed","Seed for the random number generator");
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
@@ -1087,12 +1087,21 @@ int do_rand_muts(int argc, char *argv[])
   if(options.count("seq"))  {
     ref_seq_id = ref_seq_info.seq_id_to_index(options["seq"]);  }
   
-  uint32_t seed = time(NULL);
-  if(options.count("rand"))  {
-    seed = from_string<uint32_t>(options["rand"]);  }
+  if (options.count("seed")) {
+    cSimFastqSequence::SEED_VALUE = un(options["seed"]);
+  }
+
   
   cGenomeDiff gd1;
-  gd1.random_mutations(options["exclude"], options["type"], from_string<uint32_t>(options["number"]), from_string<uint32_t>(options["length"]), ref_seq_info[ref_seq_id], seed, options.count("verbose"));
+  gd1.random_mutations(
+      options["exclude"],
+      options["type"],
+      un(options["number"]),
+      un(options["length"]),
+      ref_seq_info[ref_seq_id],
+      cSimFastqSequence::SEED_VALUE,
+      options.count("verbose")
+      );
   
   gd1.write(options["output"]);
   
