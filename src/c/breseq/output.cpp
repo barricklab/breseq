@@ -609,10 +609,11 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
     HTML << "<table border=\"0\" cellspacing=\"1\" cellpadding=\"5\" >" << endl;
     HTML << "<tr>" <<
     th("reference sequence") << 
-    th("probability of no read starting at a position a certain strand") <<
+    th("pr(no read start)") <<
 //    th("pos hash score cutoff") <<
 //    th("distance score cutoff") <<
     "</tr>" << endl;
+    HTML << "pr(read start) is the probability that there will not be an aligned read whose first base matches a given position on a given strand." << endl;
     
     size_t total_length = 0;
     for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++)
@@ -623,7 +624,7 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
       bool fragment_with_fit_coverage = (summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter != 0);
 
       if (!fragment_with_fit_coverage) {
-        HTML << td("NA"); 
+        HTML << td(ALIGN_CENTER, "NA"); 
       } else {
         HTML << td(ALIGN_CENTER, to_string(summary.preprocess_error_count[it->m_seq_id].no_pos_hash_per_position_pr, 5));
 //        HTML << td(ALIGN_CENTER, to_string(summary.alignment_resolution.pos_hash_cutoffs[it->m_seq_id].back()

@@ -1086,8 +1086,67 @@ void cGenomeDiff::normalize_to_sequence(cReferenceSequences &ref)
     cDiffEntry &mut = **it;
     mut.normalize_to_sequence(ref[mut["seq_id"]]);
   }
-
 }
+  
+  
+void cGenomeDiff::mutations_to_evidence(cReferenceSequences &ref_seq)
+{
+  diff_entry_list_t muts = mutation_list();
+  this->remove(EVIDENCE);
+  this->remove(VALIDATION);
+  for(diff_entry_list_t::iterator it=muts.begin(); it!=muts.end(); ++it) {
+    cDiffEntry& de = **it;
+    if (de._type == MOB) {
+      //(MOB,make_vector<string> ("seq_id")("position")("repeat_name")("strand")("duplication_size"))
+      //(JC,make_vector<string> ("side_1_seq_id")("side_1_position")("side_1_strand")("side_2_seq_id")("side_2_position")("side_2_strand")("overlap"))
+      
+      // Return the actual copy of the sequence feature found...
+      cSequenceFeature repeat_feature;
+      string repeat_seq_id;
+      int32_t repeat_position = -1;
+      ref_seq.repeat_family_sequence(de["repeat_name"], +1, repeat_position, &repeat_seq_id, &repeat_feature);
+      
+      cDiffEntry de1;
+      de1._type = JC;
+      de1["side_1_seq_id"] = de["seq_id"];
+      de1["side_1_position"] = s(n(de["position"]) + n(de["duplication_size"]) - 1);
+      de1["side_1_strand"] = "-1";
+      de1["side_2_seq_id"] = repeat_seq_id;
+      int32_t strand = repeat_feature.m_location.m_strand * n(de["strand"]);
+      de1["side_2_position"] = (strand > 0) ? s(repeat_feature.m_location.m_start) : s(repeat_feature.m_location.m_end);
+      de1["side_2_strand"] = s(strand);
+      de1["overlap"] = "0";
+      this->add(de1);
+      
+      cDiffEntry de2;
+      de2._type = JC;
+      de2["overlap"] = "0";
+      de2["side_1_seq_id"] = de["seq_id"];
+      de2["side_1_position"] = s(n(de["position"]));
+      de2["side_1_strand"] = "1";
+      de2["side_2_seq_id"] = repeat_seq_id;
+      de2["side_2_position"] = (strand > 0) ? s(repeat_feature.m_location.m_end) : s(repeat_feature.m_location.m_start);
+      de2["side_2_strand"] = s(-strand);
+      this->add(de2);
+      
+    } else if (de._type == DEL) {
+
+      cDiffEntry de1;
+      de1._type = JC;
+      de1["overlap"] = "0";
+      de1["side_1_seq_id"] = de["seq_id"];
+      de1["side_1_position"] = s(n(de["position"])-1);
+      de1["side_1_strand"] = "-1";
+      de1["side_2_seq_id"] = de["seq_id"];
+      de1["side_2_position"] = s(n(de["position"])+n(de["size"]));
+      de1["side_2_strand"] = "1";
+      this->add(de1);
+
+    }
+  }
+  this->remove(MUTATIONS);
+}
+
 
   
 // All fields must be assigned in this table and be required fields of the gd entries.
@@ -3848,70 +3907,168 @@ cGenomeDiff cGenomeDiff::compare_evidence(cReferenceSequences& sequence,
   cGenomeDiff ret_val;
   ret_val.metadata = test.metadata;
 
-  diff_entry_list_t temp_list;
 
   //START JC
+  
+  // This keeps track of all unique sequences.
+  // We assume that each sequence will only occur ONCE in each genome diff file.
+  // Otherwise you can have more True Positives than the total that should be possible if you
+  // predict junctions twice...
   set<string> jc_segments;
-  temp_list = ctrl.list(make_vector<gd_entry_type>(JC));
-  typedef map<string, diff_entry_list_t> jc_data_t;
+  
+  // For tracking uniqueness of sequences in a given file
+  typedef map<string, diff_entry_ptr_t> jc_data_t;
+  
   jc_data_t ctrl_jc;
-  for (diff_entry_list_t::iterator it = temp_list.begin(); it != temp_list.end(); ++it) {
-    string jc_segment = find_junction_sequence(sequence, **it, buffer);//, verbose);
+  diff_entry_list_t ctrl_list = ctrl.list(make_vector<gd_entry_type>(JC));
+  ctrl_list.remove_if(cDiffEntry::field_exists("circular_chromosome")); 
+
+  for (diff_entry_list_t::iterator it = ctrl_list.begin(); it != ctrl_list.end(); ++it) {
+    cDiffEntry& jc = **it;
+    string jc_segment = find_junction_sequence(sequence, jc, buffer);//, verbose);
     ASSERT(jc_segment.size(), "Could not locate JC sequence for: " + (*it)->to_string());
-    ctrl_jc[jc_segment].push_back(*it);
+    if (ctrl_jc.count(jc_segment)) {
+      ERROR("Duplicate junction sequence for entry:\n" + jc.to_string() + "\n" + ctrl_jc[jc_segment]->to_string());
+    }
+    ctrl_jc[jc_segment] = *it;
     jc_segments.insert(jc_segment);
   }
-
-  temp_list = test.list(make_vector<gd_entry_type>(JC));
+  
+  
   jc_data_t test_jc;
-  for (diff_entry_list_t::iterator it = temp_list.begin(); it != temp_list.end(); ++it) {
-    string jc_segment = find_junction_sequence(sequence, **it, buffer);//, verbose);
+  diff_entry_list_t test_list = test.list(make_vector<gd_entry_type>(JC));
+  test_list.remove_if(cDiffEntry::field_exists("circular_chromosome")); 
+
+  for (diff_entry_list_t::iterator it = test_list.begin(); it != test_list.end(); ++it) {
+    cDiffEntry& jc = **it;
+    string jc_segment = find_junction_sequence(sequence, jc, buffer);//, verbose);
     ASSERT(jc_segment.size(), "Could not locate JC sequence for: " + (*it)->to_string());
-    test_jc[jc_segment].push_back(*it);
+    if (test_jc.count(jc_segment)) {
+      ERROR("Duplicate junction sequence for entries:\n" + jc.to_string() + "\n" + test_jc[jc_segment]->to_string());
+    }
+    test_jc[jc_segment] = *it;
     jc_segments.insert(jc_segment);
   }
 
-
+  set<string> handled_jc_segments;
   uint32_t n_tp = 0, n_fn = 0, n_fp = 0;
-  for (set<string>::iterator it = jc_segments.begin(); it != jc_segments.end(); ++it) {
-    bool in_ctrl = ctrl_jc.count(*it);
-    bool in_test = test_jc.count(*it);
-    assert(in_ctrl || in_test);
-
+  for (set<string>::iterator it = jc_segments.begin(); it != jc_segments.end(); it++) {
+    
+    const string& test_junction_seq = *it;
+    
+    if (handled_jc_segments.count(test_junction_seq)) {
+      if (verbose) cout << "Skipping: " << test_junction_seq << endl;
+      continue; 
+    }
+    handled_jc_segments.insert(test_junction_seq);
+    
+    // These are NULL if not found
+    diff_entry_ptr_t found_test_jc(NULL);
+    if (test_jc.count(test_junction_seq)) found_test_jc = test_jc[test_junction_seq];
+    diff_entry_ptr_t found_ctrl_jc(NULL);
+    if (ctrl_jc.count(test_junction_seq)) found_ctrl_jc = ctrl_jc[test_junction_seq];
+    
+    assert(found_test_jc.get() || found_ctrl_jc.get());
+    
+    // @JEB We have to test reverse complements and subsequences if there are no exact matches
+    if (!found_ctrl_jc.get()) {
+      for(jc_data_t::iterator it2 = ctrl_jc.begin(); it2 != ctrl_jc.end(); it2++) {
+        const string& this_junction_seq = it2->first;
+        
+        if (this_junction_seq.size() < test_junction_seq.size()) {
+          
+          if (test_junction_seq.find(this_junction_seq) != string::npos ) {
+            found_ctrl_jc = it2->second;
+            handled_jc_segments.insert(this_junction_seq);            
+            break; 
+          }
+          if (test_junction_seq.find(reverse_complement(this_junction_seq)) != string::npos) {
+            found_ctrl_jc = it2->second;
+            handled_jc_segments.insert(this_junction_seq);            
+            break; 
+          }
+        }
+        else {
+          if (this_junction_seq.find(test_junction_seq) != string::npos ) {
+            found_ctrl_jc = it2->second;
+            handled_jc_segments.insert(this_junction_seq);            
+            break; 
+          }
+          if (this_junction_seq.find(reverse_complement(test_junction_seq)) != string::npos) {
+            found_ctrl_jc = it2->second;
+            handled_jc_segments.insert(this_junction_seq);            
+            break; 
+          }
+        }
+      }
+    }
+    
+    if (!found_test_jc.get()) {
+      for(jc_data_t::iterator it2 = test_jc.begin(); it2 != test_jc.end(); it2++) {
+        const string& this_junction_seq = it2->first;
+        
+        if (this_junction_seq.size() < test_junction_seq.size()) {
+          
+          if (test_junction_seq.find(this_junction_seq) != string::npos ) {
+            found_test_jc = it2->second;
+            handled_jc_segments.insert(this_junction_seq);            
+            break; 
+          }
+          if (test_junction_seq.find(reverse_complement(this_junction_seq)) != string::npos) {
+            found_test_jc = it2->second;
+            handled_jc_segments.insert(this_junction_seq);            
+            break; 
+          }
+        }
+        else {
+          if (this_junction_seq.find(test_junction_seq) != string::npos ) {
+            found_test_jc = it2->second;
+            handled_jc_segments.insert(this_junction_seq);            
+            break; 
+          }
+          if (this_junction_seq.find(reverse_complement(test_junction_seq)) != string::npos) {
+            found_test_jc = it2->second;
+            handled_jc_segments.insert(this_junction_seq);            
+            break; 
+          }
+        }
+      }
+    }
+    
     string key = "";
-    diff_entry_list_t* evidence;
-    if (in_ctrl && in_test) {
+    diff_entry_ptr_t evidence;
+    if (found_ctrl_jc.get() && found_test_jc.get()) {
       key = "TP";
       ++n_tp;
-      evidence = &test_jc[*it];
+      evidence = found_test_jc;
     }
-    else if (in_ctrl && !in_test) {
+    else if (found_ctrl_jc.get() && !found_test_jc.get()) {
       key = "FN";
       ++n_fn;
-      evidence = &ctrl_jc[*it];
+      evidence = found_ctrl_jc;
     }
-    else if (!in_ctrl && in_test) {
+    else if (!found_ctrl_jc.get() && found_test_jc.get()) {
       key = "FP";
       ++n_fp;
-      evidence = &test_jc[*it];
+      evidence = found_test_jc;
     } 
-    for (diff_entry_list_t::iterator jt = evidence->begin(); jt != evidence->end(); ++jt) {
-      cDiffEntry new_item = (*jt)->to_spec();
-      new_item["compare"] = key;
-      new_item["segment"] = *it;
-      new_item["score"]   = (*jt)->count("neg_log10_pos_hash_p_value") ? (**jt)["neg_log10_pos_hash_p_value"] : "0";
-      ret_val.add(new_item);
+    
+    
+    cDiffEntry new_item = evidence->to_spec();
+    new_item["compare"] = key;
+    new_item["segment"] = *it;
+    new_item["score"]   = evidence->count("neg_log10_pos_hash_p_value") ? (*evidence)["neg_log10_pos_hash_p_value"] : "0";
+    ret_val.add(new_item);
 
-      if (verbose) {
-        string temp = "";
-        if (key == "TP") temp = "[True  Positive]:\t";
-        if (key == "FN") temp = "[False Negative]:\t";
-        if (key == "FP") temp = "[False Positive]:\t";
-        if (key == "")   temp = "[ERROR]         :\t";
-        cout << "\t"<< temp << (*jt)->to_spec().to_string() << "\t" << new_item << endl;
-      }
-
+    if (verbose) {
+      string temp = "";
+      if (key == "TP") temp = "[True  Positive]:\t";
+      if (key == "FN") temp = "[False Negative]:\t";
+      if (key == "FP") temp = "[False Positive]:\t";
+      if (key == "")   temp = "[ERROR]         :\t";
+      cout << "\t"<< temp << evidence->to_spec().to_string() << "\t" << new_item << endl;
     }
+    
 
   }
   //END JC
@@ -3934,21 +4091,27 @@ void cGenomeDiff::write_jc_score_table(cGenomeDiff& compare, string table_file_p
 
   typedef map<float, map<string, uint32_t> > table_t;
   table_t table;
-
+  
   diff_entry_list_t jc = compare.list(make_vector<gd_entry_type>(JC));
   double max_score = 0;
+  uint32_t total_gold_standard_predictions = 0;
   for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); ++it) {
     if (!(*it)->count("score")) {
       cerr << "No score value for: " + (*it)->to_string() << endl;
       continue;
     }
     double score = from_string<double>((**it)["score"]);
-    score = roundp<10>(score);
+    //score = roundp<10>(score);
     max_score = max(max_score, score);
 
     assert((*it)->count("compare"));
     string compare = (**it)["compare"];
 
+    if ( (compare == "TP") || (compare == "FN") ) {
+      total_gold_standard_predictions++; 
+    }
+    if (compare == "FN") continue;
+    
     if (!table.count(score)) {
       table[score]["TP"] = 0;
       table[score]["FN"] = 0;
@@ -3961,17 +4124,21 @@ void cGenomeDiff::write_jc_score_table(cGenomeDiff& compare, string table_file_p
 
   ofstream out(table_file_path.c_str());
   ASSERT(out, "Could not write to file: " + table_file_path);
-
-
+  
   out << "score" << '\t' << "TP" << '\t' << "FN" << '\t' << "FP" << endl;
   if (verbose) {
     cerr << "\t\tscore" << '\t' << "TP" << '\t' << "FN" << '\t' << "FP" << endl;
   }
   uint32_t n_tp = 0, n_fn = 0, n_fp = 0;
-  for (double i = 0; i <= max_score; i += .1f) {
+  
+  for (table_t::iterator it= table.begin(); it != table.end(); it++) {
+    double i = it->first;
+    //double i = 0; i <= max_score; i += .1f) {
+    
     if (table.count(i)) {
       n_tp += table[i]["TP"];
-      n_fn += table[i]["FN"];
+        // The total number of TP and FN at a given score is equal to the total minus the number of TP up to that point.
+      n_fn =  total_gold_standard_predictions - n_tp;
       n_fp += table[i]["FP"];
 
       out << i << '\t' << n_tp << '\t' << n_fn << '\t' << n_fp << endl;

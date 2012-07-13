@@ -1108,6 +1108,54 @@ int do_rand_muts(int argc, char *argv[])
   return 0;
 }
 
+int do_mutations_to_evidence(int argc, char *argv[])
+{
+  AnyOption options("Usage: breseq MUTATIONS-TO-EVIDENCE -r <reference> -o <output.gd> input.gd");  
+  options("reference,r","Reference file");  
+  options("output,o","Output file");
+  options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
+  options.processCommandArgs(argc, argv);
+  
+  if(argc == 1)  {
+    options.printUsage();
+    return -1;  }
+  
+  if (!options.count("reference")) {
+    options.addUsage("");
+    options.addUsage("You must supply the --reference option.");
+    options.printUsage();
+    return -1;
+  }
+  
+  if (!options.count("output")) {
+    options.addUsage("");
+    options.addUsage("You must supply the --output option.");
+    options.printUsage();
+    return -1;
+  }
+  
+  vector<string> gd_path_names;
+  for (int32_t i = 0; i < options.getArgc(); ++i) {
+    gd_path_names.push_back(options.getArgv(i));
+  }
+  if (gd_path_names.size() != 1) {
+    options.addUsage("");
+    options.addUsage("You must supply exactly one input genome diff.");
+    options.printUsage();
+  }
+  
+  cReferenceSequences ref_seq_info;
+  ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
+  
+  cGenomeDiff gd(gd_path_names[0]);
+  gd.mutations_to_evidence(ref_seq_info);
+  gd.write(options["output"]);
+  
+  return 0;
+}
+
+
+
 int do_header(int argc, char* argv[]) {
   AnyOption options("gdtools HEADER [-o output.gd] [-r reference] file1.fastq file2.fastq ...");
   options("output,o",      "output GD file", "output.gd");
@@ -1124,7 +1172,6 @@ int do_header(int argc, char* argv[]) {
 
   if (!options.count("reference") && !options.count("tag") && !options.getArgc()) {
     options.printUsage();
-
     return -1;
   }
 
@@ -1135,7 +1182,7 @@ int do_header(int argc, char* argv[]) {
     uout("Reading in " + options["input"] + " to combine with output Genome Diff file");
     gd.read(options["input"]);
   }
-
+  
   if (options.count("reference")) {
     gd.metadata.ref_seqs.clear();
     uout("Adding #=REFSEQ header info for");
@@ -1149,7 +1196,7 @@ int do_header(int argc, char* argv[]) {
   if (options.getArgc()) {
     gd.metadata.read_seqs.clear();
     uout("Adding #=READSEQ header info for");
-    for (uint32_t i = 0; i < options.getArgc(); ++i) {
+    for (int32_t i = 0; i < options.getArgc(); ++i) {
       uout << options.getArgv(i) << endl;
       gd.metadata.read_seqs.push_back(options.getArgv(i));
     }
@@ -1233,8 +1280,12 @@ int main(int argc, char* argv[]) {
     return do_header(argc_new, argv_new);
   } else if ((command == "RANDOM-MUTATIONS") || (command == "RAND-MUTS")) {
     return do_rand_muts(argc_new, argv_new);
+  } else if (command == "MUTATIONS-TO-EVIDENCE") {
+    return do_mutations_to_evidence(argc_new, argv_new);
+  } else {
+    cout << "Unrecognized command: " << command << endl;
+    gdtools_usage();
   }
-  
   return 0;
 
 }
