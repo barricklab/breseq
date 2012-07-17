@@ -1718,7 +1718,7 @@ int breseq_default_action(int argc, char* argv[])
           string filename = candidate_junction_hash_file_name + ".1.bt2";
           if (file_exists(filename.c_str())) 
           {
-            string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local -k 1000000 " + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_stringent + " --no-unal --reorder -x " + candidate_junction_hash_file_name + " -U " + read_fastq_file + " -S " + candidate_junction_sam_file_name; 
+            string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local -a " + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_stringent + " --no-unal --reorder -x " + candidate_junction_hash_file_name + " -U " + read_fastq_file + " -S " + candidate_junction_sam_file_name; 
             SYSTEM(command);
           }
         }
