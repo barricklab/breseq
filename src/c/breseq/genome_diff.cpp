@@ -1915,11 +1915,17 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
       new_item["size"] = to_string(del_size);        
       new_item.normalize_to_sequence(ref_seq_info);
 
-      this->add(new_item);
-
       pos_1    = un((new_item)["position"]);
       del_size = un((new_item)["size"]);
-      excluded.add_exclude_region(pos_1 - read_length, pos_1 + del_size + read_length);
+
+      if (excluded.is_excluded(pos_1, pos_1 + del_size)) {
+        ++n_dels;
+        continue;
+      } else {
+        excluded.add_exclude_region(pos_1 - read_length, pos_1 + del_size + read_length);
+        this->add(new_item);
+      }
+
 
       if (verbose) {
         cerr << "\t[DEL]: " << new_item << endl;
@@ -1982,6 +1988,29 @@ void cGenomeDiff::random_mutations(const string& exclusion_file, const string& t
       if (!excluded.is_excluded(end_1, end_1 + del_size)) {
         valid_pos_1.push_back(end_1);
       }
+
+      for (vector<int32_t>::iterator jt = valid_pos_1.begin(); jt != valid_pos_1.end(); ++jt) {
+        uint32_t temp_pos_1    = *jt ; 
+        uint32_t temp_del_size = del_size;
+
+        cDiffEntry temp_item;        
+        temp_item._type = DEL;
+        temp_item["seq_id"] = ref_seq_info.m_seq_id;
+        temp_item["position"] = to_string(temp_pos_1);        
+        temp_item["size"] = to_string(temp_del_size);        
+        temp_item.normalize_to_sequence(ref_seq_info);
+
+        temp_pos_1    = un((temp_item)["position"]);
+        temp_del_size = un((temp_item)["size"]);
+
+        if (excluded.is_excluded(temp_pos_1, temp_pos_1 + temp_del_size) ||
+            temp_pos_1 + temp_del_size > ref_seq_info.get_sequence_size() - read_length) {
+          valid_pos_1.erase(jt);
+        }
+
+      }
+
+
 
       int32_t pos_1 = 0;
       if (valid_pos_1.size()) {

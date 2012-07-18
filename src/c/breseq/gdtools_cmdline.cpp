@@ -413,11 +413,19 @@ int do_compare(int argc, char *argv[])
   uout("Comparing control vs test GD file");
   cGenomeDiff comp;
   if (options.count("evidence") || options.count("plot-jc")) {
-    //TODO If mutations are present but no evidence is, use JEB's mut->evidence
-    //function to convert the genome diffs.
 
     cReferenceSequences ref;
     ref.LoadFiles(from_string<vector<string> >(options["reference"]));
+    cGenomeDiff* gds[2] = {&ctrl, &test};
+    for (uint32_t i = 0; i < 2; ++i) {
+      diff_entry_list_t muts = gds[i]->mutation_list();
+      diff_entry_list_t evid = gds[i]->evidence_list();
+
+      if (muts.size() && evid.empty()) {
+        gds[i]->mutations_to_evidence(ref);
+      }
+
+    }
 
     uout("Comparing evidence");
     comp = cGenomeDiff::compare_evidence(ref, un(options["jc-buffer"]), ctrl, test, options.count("verbose"));
@@ -1161,7 +1169,7 @@ int do_header(int argc, char* argv[]) {
   options("output,o",      "output GD file", "output.gd");
   options("reference,r",   "reference file");
   options("tag,t",         "header tag to add to Genome Diff file, input as <key>=<value> will produce #=<key> <value>");
-  options("input,i",       "add entries from input Genome Diff file");
+  options("input,i",       "modify input Genome Diff file inplace");
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
@@ -1179,7 +1187,7 @@ int do_header(int argc, char* argv[]) {
 
   cGenomeDiff gd;
   if (options.count("input")) {
-    uout("Reading in " + options["input"] + " to combine with output Genome Diff file");
+    uout("Reading in " + options["input"]);
     gd.read(options["input"]);
   }
   
@@ -1212,8 +1220,10 @@ int do_header(int argc, char* argv[]) {
     }
   }
 
-  uout("Writing output GD file", options["output"]);
-  gd.write(options["output"]);
+  string output_path = options.count("input") ? options["input"] : options["output"];
+  uout("Writing output GD file", output_path );
+  gd.write(output_path);
+
 
   return 0;
 }
