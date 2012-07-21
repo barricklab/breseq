@@ -14,10 +14,10 @@ The most recent |breseq| source code packages are available for download from `G
 Several external packages and software programs need to be installed to compile and use |breseq|:
 
 * `GCC <http://gcc.gnu.org>`_ (or other C++ compiler) already installed on many systems
-* `SSAHA2 <http://www.sanger.ac.uk/resources/software/ssaha2/>`_ read mapping program
+* `Bowtie2 <http://bowtie-bio.sourceforge.net/bowtie2>`_ read mapping program
 * `R <http://www.r-project.org>`_ (version 2.1.0 or higher) statistical programming language 
 
-To install each missing dependency, use your system's package manager or visit the respective web pages linked above and follow the instructions for your platform. More specific directions are available below for some platforms. You must make sure that the executables for |SSAHA2| and :program:`R` are in your environment's $PATH for |breseq| to function.
+To install each  dependency, use your system's package manager or visit the respective web pages linked above and follow the instructions for your platform. More specific directions are available below for some platforms. You must make sure that the executables for |Bowtie2| and :program:`R` are in your environment's $PATH for |breseq| to function.
 
 MacOSX Instructions
 ********************
@@ -25,14 +25,25 @@ MacOSX Instructions
 You will need administrator privileges to install |breseq| dependencies using these instructions. We recommend that you install and use the package manager `MacPorts <http://www.macports.org/>`_ to simplify these installation steps. Using  :program:`MacPorts` will generally take longer than downloading and installing the packages in other ways, but it greatly simplifies the searching you might otherwise have to do to track down all the prerequisites.
 
 * :program:`GCC`: Download and install `Apple Developer tools <http://developer.apple.com/tools/>`_ (available from the App store).
-* :program:`SSAHA2`: download and install the MacOSX package from the `Sanger Center <http://www.sanger.ac.uk/resources/software/ssaha2/>`_. You will need to move the executables to where your system can use them. If you change into the ssaha2_v2.5.1_MacOS directory, you can use this command:
+* :program:`Bowtie2`: Download and install the executable for your systems's architecture from the `Bowtie2 SourceForge site <http://bowtie-bio.sourceforge.net/bowtie2>`_.
 
->>> sudo cp ssaha2* /usr/local/bin
+You can find out your system's architecture using this command::
 
-You should now get a message like this, telling you that the system can find your :program:`SSAHA2`: executable, if you type this command in the terminal:
+  arch
 
->>> which ssaha2
-/usr/local/bin/ssaha2
+It will return something like ``i386`` or ``x86_64``.
+
+You will need to move the executables to where your system can use them. If you change into the downloaded |Bowtie2| directory, you can use this command, for example::
+
+  sudo cp bowtie2* /usr/local/bin
+
+If you type this command in the terminal::
+
+  which bowtie2
+
+You should now get a message like this, telling you that the system can find your |Bowtie2| executable:: 
+
+  /usr/local/bin/bowtie2
 
 * :program:`R`: Download the installer package from http://www.r-project.org/.
 
@@ -120,7 +131,7 @@ Dependencies installed in custom locations
 In general, you will need to be sure that your environment is set up correctly to find and use each dependency. This will likely be taken care of for you if you use an installer package. If you install some dependencies from source or in custom locations, and run into problems with |breseq| installation, be sure to check that:
 
 #. :program:`R` is in your $PATH.
-#. :program:`SSAHA2` is in your $PATH.
+#. :program:`Bowtie2` is in your $PATH.
 
 .. note::
    You may need to use absolute paths (i.e. ``/absolute/path``) rather than paths relative to your home directory (i.e ``~/path/relative/to/home``) for these settings.
