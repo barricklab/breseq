@@ -55,6 +55,7 @@ release = os.environ.get("BRESEQ_VERSION")
 rst_prolog = """
 .. |breseq| replace:: :program:`breseq`
 .. |SSAHA2| replace:: :program:`SSAHA2`
+.. |Bowtie2| replace:: :program:`Bowtie2`
 .. |SAMtools| replace:: :program:`SAMtools`
 .. |Genome Diff| replace:: :program:`GenomeDiff`
 .. |GD| replace:: :program:`GenomeDiff`
