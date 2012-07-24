@@ -287,7 +287,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       cout << position << ": " << " genotype: " << snp_call.genotype << endl;
     } 
     else {
-      best_base_char = snp_call.genotype[0];
+      best_base_char = snp_call.genotype[0];  
       e_value_call = snp_call.score;
     }
     
@@ -416,8 +416,9 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         
         // have higher cutoff if we are in consensus mode
         else if (_settings.mixed_base_prediction) {
-          if (ppred.log10_e_value >= _settings.polymorphism_log10_e_value_cutoff)
+          if (ppred.log10_e_value >= _settings.polymorphism_log10_e_value_cutoff) {
             polymorphism_predicted = 1;
+          }
         }
         
         //cerr << ppred.frequency << " " << ppred.log10_base_likelihood << " " << ppred.p_value << endl;
@@ -461,8 +462,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		mut[SEQ_ID] = p.target_name();
 		mut[POSITION] = to_string<uint32_t>(position);
 		mut[INSERT_POSITION] = to_string<uint32_t>(insert_count);
-		mut[QUALITY] = formatted_double(e_value_call, 1).to_string();
-      
+    
     // both should never be true!
     assert( !(mutation_predicted && polymorphism_predicted) );
     
@@ -471,6 +471,9 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 			mut[REF_BASE] = ref_base_char;
 			mut[NEW_BASE] = best_base_char;
 			mut[FREQUENCY] = "1";
+      mut[GENOTYPE_QUALITY] = formatted_double(e_value_call, 1).to_string();
+      mut[QUALITY] = mut[GENOTYPE_QUALITY];
+      
 			if(e_value_call < _mutation_cutoff) {
         add_reject_reason(mut, "EVALUE");
 			}
@@ -496,8 +499,11 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         mut[ERROR] = "polymorphic_without_reference_base";
       }
       
+      // Genotype quality is for the top called genotype
+      mut[GENOTYPE_QUALITY] = formatted_double(e_value_call, 1).to_string();
 			mut[POLYMORPHISM_QUALITY] = formatted_double(ppred.log10_e_value, kMutationQualityPrecision).to_string();
-      
+      mut[QUALITY] = mut[POLYMORPHISM_QUALITY];
+
 			if (ppred.log10_e_value < _polymorphism_cutoff ) {
         add_reject_reason(mut, "EVALUE");
       } 
