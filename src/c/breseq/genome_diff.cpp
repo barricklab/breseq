@@ -1594,6 +1594,7 @@ class cExcludeRegions  {
 
     //! Read from file.
     cExcludeRegions& read(string file_path);
+    void write(string file_path);
 
     //! Tests if two regions overlap.
     bool overlaps(pair_t pair_1, pair_t pair_2);
@@ -1609,7 +1610,8 @@ class cExcludeRegions  {
   protected:
     pair_set_t m_regions;
 };
- cExcludeRegions& cExcludeRegions::read(string file_path) {
+
+cExcludeRegions& cExcludeRegions::read(string file_path) {
 /*
  * Input file format:
    Long Exact Matches
@@ -1634,7 +1636,7 @@ class cExcludeRegions  {
     uint32_t size   = from_string<uint32_t>(tokens[2]);
 
     if (tokens[1].rfind('r') != string::npos) {
-      second -= size;
+      second -= size - 1;
     }
 
     this->add_exclude_region(first,  first  + size);
@@ -1643,6 +1645,20 @@ class cExcludeRegions  {
 
   return *this;
 
+}
+
+void cExcludeRegions::write(string file_path) {
+  ofstream out(file_path.c_str());
+  assert(out);
+ 
+  out << "Start1" << '\t' << "End1" << endl;
+
+  for (pair_set_t::iterator it = m_regions.begin(); it != m_regions.end(); ++it) {
+    out << it->first << '\t' << it->second << endl;
+  }
+  out.close();
+
+  return;
 }
 
 bool cExcludeRegions::overlaps(pair_t pair_1, pair_t pair_2) {
