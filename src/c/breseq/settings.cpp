@@ -117,45 +117,49 @@ namespace breseq
     
     options
 		("help,h", "Produce help message showing advanced options", TAKES_NO_ARGUMENT)
+    ("verbose,v","Produce verbose output",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
 		("output,o", "Path to breseq output", ".")
 		("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files. (REQUIRED)")
     ("name,n", "Human-readable name of sample/run for output [empty]", "")
     ("num-processors,j", "Number of processors to use in multithreaded steps", 1)
+    ("aligned-sam", "Input files are aligned and SAM files, rather than FASTQ files. Junction prediction steps will be skipped.", TAKES_NO_ARGUMENT)
     ("no-junction-prediction,j", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
-    ("base-quality-cutoff,b", "Ignore bases with quality scores lower than this value", 3)
+    ("base-quality-cutoff,b", "Ignore bases with quality scores lower than this value", 3, ADVANCED_OPTION)
     ("quality-score-trim", "Trim the ends of reads past any base with a quality score below --base-quality-score-cutoff.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("require-match-length", "Only consider alignments that cover this many bases of a read", 0)
+    ("require-match-length", "Only consider alignments that cover this many bases of a read", 0, ADVANCED_OPTION)
     ("require-match-fraction", "Only consider alignments that cover this fraction of a read", 0.9)
     ("deletion-coverage-propagation-cutoff,u","Value for coverage above which deletions are cutoff. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
     ("deletion-coverage-seed-cutoff,s","Value for coverage below which deletions are seeded", 0, ADVANCED_OPTION)
-    ("values-to-gd","",TAKES_NO_ARGUMENT, ADVANCED_OPTION) // @JEB @GRC added in for gathering/analyzing breseq values
-    ("cnv","Do experimental copy number variation prediction",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("cnv-tile-size", "Tile size for copy number variation prediction", 500, ADVANCED_OPTION)
-    ("cnv-ignore-redundant", "Only consider non-redundant coverage when using cnv", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("per-position-file", "Create additional file of per-position aligned bases", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("mutation-score-cutoff", "Log10 E-value cutoff for base-substitution and micro-indel predictions", 10, ADVANCED_OPTION)
     // Polymorphism block
     ("polymorphism-prediction,p", "Predict polymorphic (mixed) mutations", TAKES_NO_ARGUMENT)
     ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("polymorphism-reject-homopolymer-length", "Reject polymorphisms predicted in homopolymer repeats with this length or greater", 0, ADVANCED_OPTION)
-    ("polymorphism-score-cutoff", "Log10 E-value cutoff for test of polymorphism vs no polymorphism", 10, ADVANCED_OPTION)
-    ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias (0 = OFF)", 0.0, ADVANCED_OPTION)
-    ("polymorphism-frequency-cutoff", "Only predict polymorphisms where both allele frequencies are > than this value", 0.0, ADVANCED_OPTION)
-    ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms where this many reads on each strand support alternative alleles", 0.0, ADVANCED_OPTION)
-    ("bowtie2", "Preprocess the alignments with Bowtie2.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("bowtie2-align", "Map reads with Bowtie2 instead of SSAHA2.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("aligned-sam", "Input files are aligned and SAM files, rather than FASTQ files. Junction prediction steps will be skipped.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("polymorphism-reject-homopolymer-length", "Reject polymorphisms predicted in homopolymer repeats with this length or greater (DEFAULT= consensus mode, 3; polymorphism mode, 0) ", "", ADVANCED_OPTION)
+    ("polymorphism-score-cutoff", "Log10 E-value cutoff for test of polymorphism vs no polymorphism (DEFAULT= consensus mode, 10; polymorphism mode, 2)", "", ADVANCED_OPTION)
+    ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias (DEFAULT = OFF)", "", ADVANCED_OPTION)
+    ("polymorphism-frequency-cutoff", "Only predict polymorphisms where both allele frequencies are > than this value (DEFAULT= consensus mode, 0.1; polymorphism mode, 0.0)", "", ADVANCED_OPTION)
+    ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms where this many reads on each strand support alternative alleles (DEFAULT= consensus mode, 2; polymorphism mode, 0", "", ADVANCED_OPTION)
+    ;
+    
+    // Remove these once bowtie2 use has been proven...
+    //("bowtie2", "Preprocess the alignments with Bowtie2.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    //("bowtie2-align", "Map reads with Bowtie2 instead of SSAHA2.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     
     // Periodicity block
+    options.addUsage("Experimental Options", true);
+    options
+    ("cnv","Do experimental copy number variation prediction",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("cnv-tile-size", "Tile size for copy number variation prediction", 500, ADVANCED_OPTION)
+    ("cnv-ignore-redundant", "Only consider non-redundant coverage when using cnv", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("per-position-file", "Create additional file of per-position aligned bases", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("periodicity", "Finding sum of differences squared of a coverage file", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("periodicity-method", "Which method to use for periodicity", 1, ADVANCED_OPTION)
     ("periodicity-start", "Start of offsets", 1, ADVANCED_OPTION)
     ("periodicity-end", "End of offsets", 2, ADVANCED_OPTION)
     ("periodicity-step", "Increment of offsets", 1, ADVANCED_OPTION)
+    ;
     
-    ("verbose,v","Produce verbose output",TAKES_NO_ARGUMENT)
-
-    .processCommandArgs(argc, argv);
+    options.processCommandArgs(argc, argv);
     
     options.addUsage("");
 		options.addUsage("Utility Command Usage: breseq [command] options ...");
@@ -249,31 +253,56 @@ namespace breseq
     ASSERT(this->deletion_coverage_propagation_cutoff >= 0, "Argument --deletion-coverage-seed-cutoff must be > 0")
 		this->mutation_log10_e_value_cutoff = from_string<double>(options["mutation-score-cutoff"]);
     
+    //
+    // Set the read alignment evidence model
+    // Different defaults for the three modes:
+    //   Consensus - only consensus base calls (old default mode)
+    //   Mixed base - consensus and strong polymorphism calls (new default mode)
+    //   Polymorphism prediction - consensus and any mixed calls (--p options)
+    //
+    
     this->polymorphism_prediction = options.count("polymorphism-prediction");
     if (this->polymorphism_prediction) {
       
       // different default value
       this->polymorphism_frequency_cutoff = 0; // cut off if < X or > 1-X
       this->mixed_base_prediction = false;
+      this->polymorphism_reject_homopolymer_length = 0;
+      this->polymorphism_log10_e_value_cutoff = 2;
+      this->polymorphism_bias_p_value_cutoff = 0.0;
+      this->polymorphism_minimum_new_coverage_each_strand = 0;
+      this->no_indel_polymorphisms = false;
+    }
+    if (this->mixed_base_prediction) {
+      // Not calculated for mixed base mode
+      ASSERT(!options.count("polymorphism-bias-cutoff"), "Option --polymorphism-bias-cutoff requires --polymorphism-prediction.")
 
-      // override with settings 
+      this->polymorphism_frequency_cutoff = 0.1;
+      this->no_indel_polymorphisms = false;
+      this->polymorphism_reject_homopolymer_length = 3;
+      this->polymorphism_log10_e_value_cutoff = 10;
+      this->polymorphism_bias_p_value_cutoff = 0;
+      this->polymorphism_minimum_new_coverage_each_strand = 2;
+      this->no_indel_polymorphisms = false;
+
+    }
+    
+    // override the default settings 
+    if (options.count("polymorphism-frequency-cutoff"))
       this->polymorphism_frequency_cutoff = from_string<double>(options["polymorphism-frequency-cutoff"]);
+    if (options.count("polymorphism-no-indels"))
       this->no_indel_polymorphisms = options.count("polymorphism-no-indels");
+    if (options.count("polymorphism-reject-homopolymer-length"))
       this->polymorphism_reject_homopolymer_length = from_string<int32_t>(options["polymorphism-reject-homopolymer-length"]);
+    if (options.count("polymorphism-score-cutoff"))
       this->polymorphism_log10_e_value_cutoff = from_string<double>(options["polymorphism-score-cutoff"]);
+    if (options.count("polymorphism-bias-cutoff"))
       this->polymorphism_bias_p_value_cutoff = from_string<double>(options["polymorphism-bias-cutoff"]);
+    if (options.count("polymorphism-minimum-coverage-each-strand"))
       this->polymorphism_minimum_new_coverage_each_strand = from_string<double>(options["polymorphism-minimum-coverage-each-strand"]);
-    } 
     
 
-
     this->mutation_identification_per_position_file = options.count("per-position-file");
-
- 
-    //! Settings: Experimental
-
-    this->add_metadata_to_gd = options.count("values-to-gd");
-
     
 		this->post_option_initialize();
     
@@ -392,7 +421,7 @@ namespace breseq
     this->deletion_coverage_propagation_cutoff = 0;
     this->deletion_coverage_seed_cutoff = 0;
     this->polymorphism_prediction = false;
-    this->mixed_base_prediction = false;
+    this->mixed_base_prediction = true;
     
     this->polymorphism_log10_e_value_cutoff = this->mutation_log10_e_value_cutoff;
 		this->polymorphism_bias_p_value_cutoff = 0;
@@ -410,7 +439,7 @@ namespace breseq
     
 		this->lenski_format = false;
 		this->no_evidence = false;
-    this->add_metadata_to_gd = false;
+    this->add_metadata_to_gd = true;
     
     ////////////////////
     //! File Paths
@@ -651,11 +680,48 @@ namespace breseq
     if (this->installed["SSAHA2"].size() == 0)
       this->installed["SSAHA2"] = SYSTEM_CAPTURE("which ssaha2", true);
 
-    if (this->bowtie2) {
-      this->installed["bowtie2-build"] = SYSTEM_CAPTURE("which bowtie2-build", true);
+    // search for bowtie2 and bowtie2-build executables   
+    test_command = "which " + this->bin_path + "/bowtie2";
+		this->installed["bowtie2"] = SYSTEM_CAPTURE(test_command, true);
+    if (this->installed["bowtie2"].size() == 0) {
       this->installed["bowtie2"] = SYSTEM_CAPTURE("which bowtie2", true);
     }
+    
+    test_command = "which " + this->bin_path + "/bowtie2-build";
+		this->installed["bowtie2-build"] = SYSTEM_CAPTURE(test_command, true);
+    if (this->installed["bowtie2-build"].size() == 0) {
+      this->installed["bowtie2-build"] = SYSTEM_CAPTURE("which bowtie2-build", true);
+    }
+    
+    if (this->installed["bowtie2"].size() != 0) {
+      this->installed["bowtie2_version"] = "0";
+      string version_string = SYSTEM_CAPTURE(this->installed["bowtie2"] + " --version", true);
+      size_t start_version_pos = version_string.find("version");
+      if (start_version_pos != string::npos) {
+        start_version_pos = version_string.find_first_not_of(" \t\r\n", start_version_pos+7);
+        size_t end_version_pos = version_string.find_first_not_of("0123456789", start_version_pos+1);
+        string new_version_string = version_string.substr(start_version_pos, end_version_pos - start_version_pos);
+        
+        start_version_pos = version_string.find_first_not_of(".", end_version_pos+1);
+        end_version_pos = version_string.find_first_of(" \t\r\n", start_version_pos+1);
+        
+        new_version_string += "." + version_string.substr(start_version_pos, end_version_pos - start_version_pos);
+        this->installed["bowtie2_version_string"] = new_version_string;
+        new_version_string = substitute(new_version_string, "-", ".");
+        new_version_string = substitute(new_version_string, "beta", "");
+        
+        vector<string> split_version = split(new_version_string, ".");
+        uint32_t numerical_version = 0;
+        for (vector<string>::iterator it=split_version.begin(); it != split_version.end(); it++) {
+          numerical_version *= 1000;
+          numerical_version += n(*it);
+        }
+        this->installed["bowtie2_version"] = s(numerical_version);
 
+        //"version 2.0.0-beta7"
+      }
+    }
+    
 		this->installed["R"] = SYSTEM_CAPTURE("which R", true).size() ? "R" : "";
 		if (this->installed["R"].size() > 0)
 		{
@@ -703,15 +769,22 @@ namespace breseq
 			cerr << "---> See http://www.sanger.ac.uk/resources/software/ssaha2" << endl;
 		}
 
-		if (this->bowtie2 && 
-        (this->installed["bowtie2-build"].size() == 0 ||
-         this->installed["bowtie2"].size() == 0))
-		{
-			good_to_go = false;
-			cerr << "---> ERROR Required executable \"bowtie2\" not found." << endl;
-			cerr << "---> See http://bowtie-bio.sourceforge.net/" << endl;
-		}
-
+		if (this->bowtie2) 
+    {
+      if (this->installed["bowtie2-build"].size() == 0 ||
+         this->installed["bowtie2"].size() == 0)
+      {
+        good_to_go = false;
+        cerr << "---> ERROR Required executable \"bowtie2\" or \"bowtie2-build\" not found." << endl;
+        cerr << "---> See http://bowtie-bio.sourceforge.net/" << endl;
+      }
+      // version encoded in triplets of numbers
+      else if (from_string<uint32_t>(this->installed["bowtie2_version"]) < 2000000007) {
+        cerr << "---> ERROR Required executable \"bowtie2 version 2.0.0-beta7 or later\" not found." << endl;
+        cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
+        cerr << "---> See http://www.r-project.org" << endl;
+      }
+    }
 		// R version 2.1 required
 		if (this->installed["R"].size() == 0)
 		{
@@ -728,7 +801,7 @@ namespace breseq
         + "." + to_string<uint32_t>(static_cast<uint32_t>(floor(R_numerical_version%1000)));
 
       cerr << "---> ERROR Required executable \"R version 2.1.0 or later\" not found." << endl;
-      cerr << "---> Your version is " << R_version << endl;
+      cerr << "---> Your version is " << R_version << "." << endl;
       cerr << "---> See http://www.r-project.org" << endl;
     }
 

@@ -1,2 +1,81 @@
- Version 0.11
-    * Removed BOOST dependency
+Version 0.19
+    * bowtie2 instead of ssaha2 now used for mapping reads.
+    * Various improvements to junction prediction.
+    * Added option to run pipeline on SAM file of aligned reads (--aligned-sam) 
+      instead of unaligned FASTQ to enable users to map reads with their favorite 
+      program. In this mode only missing coverage and read alignment evidence are 
+      compiled and used to predict mutations. (There is no new junction evidence).
+    * Mixed positions with predicted frequencies ≥10% are output by default
+      using a conservative version of --polymorphism-prediction in order to display
+      variants in genes which have duplicated or other errors caused by unknown
+      divergence from the reference sequence.
+
+2012-06-12 Version 0.18
+   * Fixed misnumbering and mistranslation of amino acid changes in genes on the 
+     reverse genomic strand: a huge bug introduced in breseq-0.17e. (Thanks to Tim 
+     Cooper for reporting this problem.)
+   * Improved use of different genetic codes and translation of split protein reading 
+     frames. All NCBI translation table codes should be recognized correctly now in 
+     GenBank input files. Alternative initiation codons should be correctly interpreted. 
+     Internal frameshifts in genes should be correctly translated.
+   * Fixed crash using output step when no junctions were predicted. (Thanks Charles 
+     Traverse for reporting.)
+
+2012-05-19 Version 0.17e
+    * Updated documentation to change genomediff to gdtools.
+    * Standardized some arguments to gdtools (still experimental).
+    * Reference sequences now show strands in HTML alignments.
+
+2012-05-03 Version 0.17d
+    * Added back access to polymorphism-* options at command line. (Use breseq -h to 
+      see a list of all options, instead of just commonly used options.)
+
+2012-04-22 Version 0.17c
+    * Support for nonbacterial genetic codes.
+    * Fixed possible fatal bugs with MC evidence when using multiple reference sequences.
+
+2012-04-13 Version 0.17b
+    * Updates to gdtools utility and documentation.
+    * Fixed some spurious predictions of very large insertions from only JC evidence.
+    * Other various changes.
+
+2012-03-16 Version 0.17
+    * Changed how junctions output to html.
+    * Added various sub-commands.
+    * Fixed bugs in HTML output.
+    * Fixed bugs in mutation predictions.
+    * Other numerous changes.
+    * Portions of the HTML documentation are out of date, especially those describing the 
+      junction prediction scoring scheme and the genomediff utilities.
+
+2011-10-19 Version 0.16
+    * Fixed fatal errors when predicting junction candidates.
+    * Changed how new candidate junctions are scored and accepted in preparation for 
+      calculating E-values.
+    * Other bug fixes.
+
+
+2011-10-04 Version 0.15
+    * Better prediction of amplification mutations from junction evidence.
+    * Fix for predictions involving junctions to nested repeat_regions.
+    * All reads required to match by 90% of their length by default, greatly reducing 
+      spurious junction predictions in data sets with adaptor contamination and when 
+      using a diverged reference genome.
+
+2011-09-10 Version 0.14
+    * This update primarily addresses several bugs reported by users, including:
+        * Errors using some NCBI/SRA datasets.
+        * Errors when using simulated read data.
+        * Errors when some reference contigs have very little or no coverage.
+    * In addition, Perl is no longer required for installation. breseq has been 
+      completely ported to C++ with this version. If you encounter any issues we 
+      might have introduced during this transition, please let us know.
+
+2011-08-15 Version 0.13
+    * Fixed error using input FASTQ with names containing spaces, such as those from the SRA.
+
+2011-07-31 Version 0.12
+    * Miscellaneous updates.
+    
+2011-07-14 Version 0.11
+    * Removed BOOST dependency.
