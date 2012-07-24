@@ -82,6 +82,8 @@ extern const char* ALIGN_LEFT;
   //! Wraps input in <td></td> tags	which defines a standar cell
   inline string start_td(const string& attributes)
     {return "<td " + attributes + ">";}  
+  inline string end_td() 
+    {return "</td>";}
   inline string td(const string& attributes, const string& input)
     {return "<td " + attributes + ">" + input + "</td>";}
   inline string td(const string& input ="")
@@ -89,6 +91,8 @@ extern const char* ALIGN_LEFT;
   //! Wraps input in <tr></tr> tags which define a row in an HTML table	
   inline string start_tr(const string& attributes = "") 
     {return "<tr " + attributes + ">";}
+  inline string end_tr() 
+    {return "</tr>";}
   inline string tr(const string& input) {return "<tr>" + input + "</tr>";}
   inline string tr(const string& attributes, const string& input)
     {return start_tr(attributes) + input + "</tr>";}

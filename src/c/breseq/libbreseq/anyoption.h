@@ -217,17 +217,22 @@ namespace breseq {
 
 			if (has_argument) usage += " <arg>";
 
+      // Pad with spaces to reach right side
 			if (usage.size() < USAGE_LEFT_COLUMN_WIDTH)
 				usage += string(abs(static_cast<int32_t>(USAGE_LEFT_COLUMN_WIDTH - usage.size())), ' ');
-
+      // option and argument part bleeds over into right column, pad to make it take up a whole terminal line by itself.
+      else if (usage.size()+1 >= USAGE_LEFT_COLUMN_WIDTH)
+        usage += string(abs(static_cast<int32_t>(terminal_width - usage.size())), ' ')
+          + '\n' + string(abs(static_cast<int32_t>(USAGE_LEFT_COLUMN_WIDTH)), ' ');
+        
       // Add the default option information
       string default_value_description;
       if (has_default_value)
 			{
 				if (default_value_string.size() > 0)
 					default_value_description = " (DEFAULT=" + default_value_string + ")";
-				else
-					default_value_description = " (OPTIONAL)";
+//				else
+//					default_value_description = " (OPTIONAL)";
 			}
       
 			string wrapped_description = word_wrap(option_description + default_value_description, terminal_width - USAGE_LEFT_COLUMN_WIDTH);

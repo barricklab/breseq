@@ -275,7 +275,7 @@ void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd)
   vector<gd_entry_type> ra_types = make_vector<gd_entry_type>(RA);
   list<counted_ptr<cDiffEntry> > ra = gd.filter_used_as_evidence(gd.list(ra_types));
   ra.remove_if(not1(cDiffEntry::field_exists("reject")));
-  ra.sort(cDiffEntry::by_scores(make_vector<string>("quality")));
+  ra.sort(cDiffEntry::by_scores(make_vector<string>("genotype_quality")));
   
   // Filtering for polymorphism predictions
 
@@ -594,31 +594,30 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
   HTML << "</table>" << endl;
 
   ////
-  // Junction prediction information
+  // Junction evidence
   ////
   
   if (!settings.no_junction_prediction)
   {
-    HTML << h2("Junction Prediction Information") << endl;
+    HTML << h2("Junction Evidence") << endl;
     HTML << "<p>" << endl;
     
     //stringstream num;
     //num << scientific << setprecision(2) << settings.junction_accept_pr;
     //HTML << "E-value cutoff: " <<  num.str() << endl;
     //HTML << "<p>" << endl;
-    HTML << "<table border=\"0\" cellspacing=\"1\" cellpadding=\"5\" >" << endl;
-    HTML << "<tr>" <<
+    HTML << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"5\"") << endl;
+    HTML << start_tr() <<
     th("reference sequence") << 
     th("pr(no read start)") <<
 //    th("pos hash score cutoff") <<
 //    th("distance score cutoff") <<
-    "</tr>" << endl;
-    HTML << "pr(read start) is the probability that there will not be an aligned read whose first base matches a given position on a given strand." << endl;
+    end_tr() << endl;
     
     size_t total_length = 0;
     for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++)
     {
-      HTML << "<tr>" << endl;
+      HTML << start_tr() << endl;
       HTML << td(it->m_seq_id);
       // this score is always an integer for now, even though it is typed as a double
       bool fragment_with_fit_coverage = (summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter != 0);
@@ -630,9 +629,60 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
 //        HTML << td(ALIGN_CENTER, to_string(summary.alignment_resolution.pos_hash_cutoffs[it->m_seq_id].back()
 //        HTML << td(ALIGN_CENTER, to_string(summary.alignment_resolution.distance_cutoffs[it->m_seq_id]));
       }
-      HTML << "</tr>";
+      HTML << end_tr();
     }  
-    HTML << "</table>";
+    HTML << end_table();
+    
+    HTML << "<p>" << "pr(no read start) is the probability that there will not be an aligned read whose first base matches a given position on a given strand." << endl;
+  }
+  
+  //
+  // Read alignment evidence options
+  //
+  double polymorphism_log10_e_value_cutoff;               // Default = mutation_log10_e_value_cutoff = 10
+  double polymorphism_bias_p_value_cutoff;                // Default = 0.05
+  double polymorphism_frequency_cutoff;                   // Default = 0.1 for mixed base | 0.0 for polymorphism
+  int32_t polymorphism_minimum_new_coverage_each_strand; // Default = 1
+  uint32_t polymorphism_reject_homopolymer_length;        // Default = 0 (OFF)
+  bool no_indel_polymorphisms;                            // Default = false
+  
+  
+  {
+    HTML << h2("Read Alignment Evidence") << endl;
+    HTML << "<p>" << endl;
+    HTML << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"5\"") << endl;
+    HTML << tr(th("option") + th("value"));
+
+    string mode = "Consensus";
+    if (settings.polymorphism_prediction) {
+      mode = "Full Polymorphism";
+    } else {
+      mode = "Consensus/Mixed Base";
+    }
+    HTML << tr(td("Mode") + td(mode));
+    HTML << tr(td("Ploidy") + td("1 (haploid)"));
+    
+    HTML << tr(td("Consensus mutation E-value cutoff") + td(s(settings.mutation_log10_e_value_cutoff)));
+
+
+    HTML << tr(td("Polymorphism E-value cutoff") + td(s(settings.polymorphism_log10_e_value_cutoff)));
+    HTML << tr(td("Polymorphism frequency cutoff")
+               + td((settings.polymorphism_frequency_cutoff == 0) ? "OFF" : s(settings.polymorphism_frequency_cutoff))
+               );
+    HTML << tr(td("Polymorphism minimum coverage each strand") 
+               + td((settings.polymorphism_minimum_new_coverage_each_strand == 0) ? "OFF" : s(settings.polymorphism_minimum_new_coverage_each_strand))
+               );
+    HTML << tr(td("Polymorphism homopolymer length cutoff") 
+               + td((settings.polymorphism_reject_homopolymer_length == 0) ? "OFF" : s(settings.polymorphism_reject_homopolymer_length))
+               );
+    HTML << tr(td("Polymorphism bias cutoff") 
+               + td((settings.polymorphism_bias_p_value_cutoff == 0) ? "OFF" : s(settings.polymorphism_bias_p_value_cutoff))
+               );
+    HTML << tr(td("Polymorphism predict indel polymorphisms") 
+               + td((settings.polymorphism_reject_homopolymer_length == 0) ? "OFF" : s(settings.polymorphism_reject_homopolymer_length))
+               );
+
+    HTML << end_table();    
   }
   
   ////
@@ -966,14 +1016,14 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
         log_ks = to_string(log(from_string<double>(c[KS_QUALITY_P_VALUE]))/log(10));
 
       ssf << fixed << setprecision(1);
-      ssf << from_string<double>(c["polymorphism_quality"]);
+      ssf << from_string<double>(c["quality"]);
       if (log_fisher != "") ssf << " " << log_fisher;
       if (log_ks != "") ssf << " " << log_ks;
       ss << td(ALIGN_RIGHT, nonbreaking(ssf.str()));
       //Clear formated string stream
       ssf.str("");
       ssf.clear();
-    }
+    } 
 
     else {
       ssf.precision(1);
@@ -1282,7 +1332,7 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_det
       ss << td("class=\"" + annotate_key + "\"",
               htmlize(c["_" + key + GENE_PRODUCT])) << endl;  
     } // End hiding data for side 1
-    ss << "</tr>" << endl;
+    ss << end_tr() << endl;
 
 
 // #     ##############
@@ -1321,7 +1371,7 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_det
               htmlize(c["_" + key + GENE_PRODUCT])) << endl;
     } //end hiding data for side 2
     
-  ss << "</tr>\n" << endl;
+  ss << end_tr() << endl;
 
   /* Extra debug output
   if (show_details) {
@@ -1425,6 +1475,7 @@ string html_copy_number_table_string(diff_entry_list_t& list_ref, bool show_deta
                     "Rejected: " + decode_reject_reason(reject))) << endl;
       }
     }
+    ss << end_tr();
   }// End list_ref Loop
   
   ss << end_table() << endl;
@@ -2372,8 +2423,8 @@ void Html_Mutation_Table_String::Item_Lines()
       ss << td(ALIGN_CENTER, cell_gene_name) << endl;
       ss << td(ALIGN_LEFT, cell_gene_product) << endl;
     }
-    ss << "</tr>" << endl;
-    
+    ss << end_tr() << endl;
+
     ss << "<!-- End Table Row -->" << endl;
     
     (*this) += ss.str();

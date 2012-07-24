@@ -40,6 +40,7 @@ const char* POSITION="position";
 const char* INSERT_POSITION="insert_position";
 const char* QUALITY="quality";
 const char* POLYMORPHISM_QUALITY="polymorphism_quality";
+const char* GENOTYPE_QUALITY="genotype_quality";
 const char* REF_BASE="ref_base";
 const char* NEW_BASE="new_base";
 const char* FREQUENCY="frequency";

@@ -6,11 +6,7 @@ This section describes the algorithms used by |breseq|.
 Read Mapping
 ----------------
 
-|breseq| uses `SSAHA2 <http://www.sanger.ac.uk/resources/software/ssaha2/>`_ to map reads to the reference genome sequence with the following alignment options:: 
-
-   ssaha2 -kmer 13 -skip 1 -seeds 1 -score 12 -cmatch 9 -ckmer 1 ...
-
-These parameters mean that only alignments to the reference genome with exact matches of at least 13 bp will be reported, and that attempts to extend these seed alignments that allow gaps and mismatches will use the cross_match algorithm with a word size of one base. 
+|breseq| uses `Bowtie2 <http://bowtie-bio.sourceforge.net/bowtie2>`_ to map reads to the reference genome sequence:: 
 
 Currently, |breseq| does not use the distance contraints available in paired-end or mate-paired libraries during read alignment or as a source of evidence supporting mutations. These data sets are treated as single-end reads.
 
@@ -24,7 +20,7 @@ Currently, |breseq| does not use the distance contraints available in paired-end
 For some calculations, |breseq| is concerned with:
 
 `unique-only reference positions` 
-	Position in the reference sequence that do not overlap any *repeat read matches*. 
+    Position in the reference sequence that do not overlap any *repeat read matches*. 
 
 .. _new-junction-evidence:   
     
@@ -59,7 +55,7 @@ After processing every read in this manner, |breseq| combines all candidate junc
 Scoring and accepting junctions
 *******************************
 
-New junctions may also be supported by reads that do not overlap both sides sufficiently to seed alignments during mapping. To include these, |breseq| performs a second :program:`SSAHA2` alignment step where it maps all reads to the new candidate junction sequences. Then, for each read, it determines whether its best alignment is to a junction candidate or to the reference sequence. For this purpose, alignments are assigned a score that is the number of matched reference bases minus the number of indel positions. Alignments that do not cover at least 28 bases of the read are discarded. Ties are resolved later.
+New junctions may also be supported by reads that do not overlap both sides sufficiently to seed alignments during mapping. To include these, |breseq| performs a second alignment step where it maps all reads to the new candidate junction sequences. Then, for each read, it determines whether its best alignment is to a junction candidate or to the reference sequence. For this purpose, alignments are assigned a score that is the number of matched reference bases minus the number of indel positions. Alignments that do not cover at least 28 bases of the read are discarded. Ties are resolved later.
 
 A position-hash score is calculated again for each candidate junction by counting the number of different start positions that are observed among the reads that map best to that candidate junction. Junctions are tested in order from those with the most best alignments to those with the least or none. Reads that map equally well to the reference and to one or several junctions are included when calculating these position-hash scores. 
 
