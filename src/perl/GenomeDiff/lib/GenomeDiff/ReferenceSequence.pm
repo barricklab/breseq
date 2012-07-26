@@ -242,6 +242,7 @@ sub annotate_1_mutation
 	$mut->{codon_ref_seq} = "";
 	$mut->{codon_new_seq} = "";		
 	$mut->{gene_name} = "";
+	$mut->{locus_tag} = "";
 	$mut->{gene_position} = "";
 	$mut->{gene_product} = "";
 	undef $mut->{gene_list};
@@ -285,6 +286,7 @@ sub annotate_1_mutation
 
 
 	## Mutation is intergenic
+	##NOTE: locus_tag is the empty string for intergenic genes.
 	if (scalar(@within_genes) + scalar(@between_genes) + scalar(@inside_left_genes) + scalar (@inside_right_genes)== 0)
 	{			
 		$mut->{snp_type} = "intergenic";
@@ -329,6 +331,7 @@ sub annotate_1_mutation
 ### FOR NOW: just take the first of the within genes...				
 		my $gene = $within_genes[0];
 		$mut->{gene_name} = $gene->{name};
+		$mut->{locus_tag} = $gene->{locus_tag};
 		$mut->{gene_product} = $gene->{product};
 		
 		#added for gene table
