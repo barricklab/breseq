@@ -834,22 +834,31 @@ void cDiffEntry::normalize_to_sequence(const cAnnotatedSequence &sequence)
       +++EXAMPLE DEL: pos_1 = 1, size = 3
 
       START:
+
+              v pos_2
       Ref: ACTACTATCACACTAATACAATA
            ^ pos_1
+
       seq_1 = ACT
       seq_2 = ACT
       NOT VALID, ACT == ACT
 
       NEXT(pos_1++):
+
+               v pos_2
       Ref: ACTACTATCACACTAATACAATA
             ^ pos_1
+
       seq_1 = CTA
       seq_2 = CTA
       NOT VALID, CTA == CTA
 
       NEXT(pos_1++):
+
+                v pos_2
       Ref: ACTACTATCACACTAATACAATA
              ^ pos_1
+
       seq_1 = TAC
       seq_2 = TAT
                 ^ first mismatch, normalize pos_1 to here.
@@ -905,8 +914,11 @@ void cDiffEntry::normalize_to_sequence(const cAnnotatedSequence &sequence)
       +++EXAMPLE INS: pos_1 = 1, new_seq = CAA
 
       START:
+
+            v pos_2
       Ref: ACTACTATCACACTAATACAATA
            ^ pos_1
+
       seq_1 = CAA
       seq_2 = CTA
               ^ match, could be predicted as a SNP, NOT VALID

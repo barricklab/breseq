@@ -397,7 +397,7 @@ int do_compare(int argc, char *argv[])
     return -1;
   }
 
-  if (options.count("evidence") && !options.count("reference")) {
+  if ((options.count("evidence") || options.count("plot-jc")) && !options.count("reference")) {
     options.addUsage("");
     options.addUsage("Reference file is needed to compare evidence.");
     options.printUsage();
@@ -426,6 +426,7 @@ int do_compare(int argc, char *argv[])
       diff_entry_list_t evid = gds[i]->evidence_list();
 
       if (muts.size() && evid.empty()) {
+        uout("Converting mutations to evidence for file: " + gds[i]->file_name());
         gds[i]->mutations_to_evidence(ref);
       }
 

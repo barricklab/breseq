@@ -383,6 +383,8 @@ public:
 
   void add_breseq_data(const key_t& key, const string& value);
 
+  string file_name() const {return _default_filename;}
+
   //! Metadata kept in .gd files
   struct Metadata
   {
