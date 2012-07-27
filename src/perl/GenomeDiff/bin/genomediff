@@ -119,6 +119,8 @@ if ($command eq 'FILTER') {
 	do_yaml();
 } elsif ("\U$command" eq 'BASE_SUBSTITUTION_FILE') {
 	do_base_substitution_file();
+} elsif ("\U$command" eq 'COMPARE_SUBS') {
+        do_compare_subs();
 } else {
 	if (!defined $command) {	
 		pod2usage(-message => "No COMMAND provided." -exitstatus => 1, -verbose => 1);
@@ -245,6 +247,7 @@ sub load_ref_seq_info
 					my $gene;
 					$gene->{name} = get_tag($Feature, "gene");
 					$gene->{name} = get_tag($Feature, "locus_tag") if (!$gene->{name});
+					$gene->{locus_tag} = get_tag($Feature, "locus_tag");
 					$gene->{start} = $Feature->start;
 					$gene->{end} = $Feature->end;
 					$gene->{strand} = $Feature->strand;
@@ -2057,5 +2060,73 @@ sub do_base_substitution_file
 			$bs_file->write("$output_path/" . $seq->id . ".bsf");
 		}
 	}
+}
+
+sub do_compare_subs
+{
+        use GenomeDiff::ReferenceSequence;
+        use GenomeDiff::Output;
+
+	my ($help, $man);
+	my $output = "genehits.tab";
+	my $base_substitution_file;
+	my @reference_genbank_file_names;
+	GetOptions(
+		'help|?' => \$help, 'man' => \$man,
+	## Options for input and output files
+		'output|o=s' => \$output,	
+		'reference-sequence|r=s' => \@reference_genbank_file_names,
+		'base-substitution-file|s=s' => \$base_substitution_file,
+	) or pod2usage(2);
+
+	pod2usage(1) if $help;
+	pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+	pod2usage(1) if (scalar @reference_genbank_file_names == 0);
+	pod2usage(1) if (scalar @ARGV == 0);
+	
+	my @gd_file_name_list = @ARGV;	
+				
+	## load information about reference sequences from GenBank files
+	my $ref_seq_info = load_ref_seq_info(\@reference_genbank_file_names);
+##	print Dumper($ref_seq_info);
+
+	## data structure to contain mutations keyed by locus tag.
+	my %locustagged_mutations;
+
+	foreach my $gd_file_name (@gd_file_name_list)
+	{
+		print "$gd_file_name\n";
+		
+		my $gd_name = $gd_file_name;
+		$gd_name =~ s/^.+\///;		
+		$gd_name =~ s/\.[^.]+$//;		
+		my $gd = GenomeDiff->new({FILE_NAME => $gd_file_name});
+		GenomeDiff::ReferenceSequence::annotate_mutations($ref_seq_info, $gd, 1);
+		my @mutations = $gd->mutation_list;
+		foreach my $mut (@mutations)
+		{
+			my $tag = $mut->{locus_tag};
+			push @{$locustagged_mutations{$tag}}, $mut if scalar($tag);
+		}
+	}
+#	print Dumper(%locustagged_mutations);
+	##Now, produce the output file, sort of following the format that COUNT uses.
+	open OUT, ">$output" or die "Count not open file: $output";
+	my @column_headers = ('locus_tag', 'nonsynonymous', 'synonymous');
+	print OUT join ("\t", @column_headers) . "\n";
+	foreach my $locus (keys(%locustagged_mutations))
+	{
+	        my $nonsynonymous_count = 0;
+		my $synonymous_count = 0;
+	        foreach my $mut (@{$locustagged_mutations{$locus}})
+		{
+		    my $type = $mut->{snp_type};
+		    $nonsynonymous_count += 1 if ($type eq 'nonsynonymous');
+		    $synonymous_count += 1 if ($type eq 'synonymous');
+		}
+		my @output_row = ($locus, $nonsynonymous_count, $synonymous_count);
+	        print OUT join ("\t", @output_row) .  "\n";
+	}
+	close OUT;
 }
 
