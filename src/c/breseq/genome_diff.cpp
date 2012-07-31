@@ -136,6 +136,15 @@ cDiffEntry::cDiffEntry()
 {
 }
 
+gd_entry_type cDiffEntry::type_to_enum(string type) {
+  for (size_t i = 0; i < gd_entry_type_lookup_table.size(); i++) {
+    if (type == gd_entry_type_lookup_table[i]) {
+      return (gd_entry_type) i;
+    }
+  }
+  return UNKNOWN;
+}
+
 cDiffEntry::cDiffEntry(const string &line)
   : _type(UNKNOWN)
   ,_id("")
@@ -153,12 +162,7 @@ cDiffEntry::cDiffEntry(const string &line)
   //Type.
   string type = tokens[COLUMN];
   RemoveLeadingTrailingWhitespace(type);
-  for (size_t i = 0; i < gd_entry_type_lookup_table.size(); i++) {
-    if (type == gd_entry_type_lookup_table[i]) {
-      de._type = (gd_entry_type) i;
-      break;
-    }
-  }
+  de._type = cDiffEntry::type_to_enum(type);
 
   if (de._type == UNKNOWN) {
     WARN("cDiffEntry::cDiffEntry(" + line + "): Could not determine type.");
@@ -742,7 +746,7 @@ void cGenomeDiff::read(const string& filename) {
     if (split_line[0] == "#=GENOME_DIFF" && split_line.size() > 1) {
       metadata.version = second_half;
     }
-    else if (split_line[0] == "#=AUTHOR" && split_line.size() > 1) {
+    else if (split_line[0] == "#=AUTHOR") { 
       metadata.author = second_half;
     }
     else if (split_line[0] == "#=REFSEQ" && split_line.size() > 1) {
@@ -757,8 +761,11 @@ void cGenomeDiff::read(const string& filename) {
       metadata.run_name = second_half;
       replace(metadata.run_name.begin(), metadata.run_name.end(), ' ', '_');
     }
-    else if (split_line[0].substr(0, 2) == "#=") {continue;}
-    else {
+    else if (split_line[0].substr(0, 2) == "#=" && split_line.size() > 1) {
+      string key = split_line[0].substr(2, split_line[0].size());
+      this->add_breseq_data(key, second_half);
+      continue;
+    } else {
       //Warn if unkown header lines are encountered.
       printf("cGenomeDiff:read(%s): Header line: %s is not recognized.",
              filename.c_str(), whole_line.c_str()
@@ -1102,7 +1109,7 @@ void cGenomeDiff::normalize_to_sequence(cReferenceSequences &ref)
 }
   
   
-void cGenomeDiff::mutations_to_evidence(cReferenceSequences &ref_seq)
+void cGenomeDiff::mutations_to_evidence(cReferenceSequences &ref_seq, bool remove_mutations)
 {
   diff_entry_list_t muts = mutation_list();
   this->remove(EVIDENCE);
@@ -1110,9 +1117,6 @@ void cGenomeDiff::mutations_to_evidence(cReferenceSequences &ref_seq)
   for(diff_entry_list_t::iterator it=muts.begin(); it!=muts.end(); ++it) {
     cDiffEntry& de = **it;
     if (de._type == MOB) {
-      //(MOB,make_vector<string> ("seq_id")("position")("repeat_name")("strand")("duplication_size"))
-      //(JC,make_vector<string> ("side_1_seq_id")("side_1_position")("side_1_strand")("side_2_seq_id")("side_2_position")("side_2_strand")("overlap"))
-      
       // Return the actual copy of the sequence feature found...
       cSequenceFeature repeat_feature;
       string repeat_seq_id;
@@ -1129,7 +1133,7 @@ void cGenomeDiff::mutations_to_evidence(cReferenceSequences &ref_seq)
       de1["side_2_position"] = (strand > 0) ? s(repeat_feature.m_location.m_start) : s(repeat_feature.m_location.m_end);
       de1["side_2_strand"] = s(strand);
       de1["overlap"] = "0";
-      this->add(de1);
+      (*it)->_evidence.push_back(this->add(de1)->_id);
       
       cDiffEntry de2;
       de2._type = JC;
@@ -1140,7 +1144,7 @@ void cGenomeDiff::mutations_to_evidence(cReferenceSequences &ref_seq)
       de2["side_2_seq_id"] = repeat_seq_id;
       de2["side_2_position"] = (strand > 0) ? s(repeat_feature.m_location.m_end) : s(repeat_feature.m_location.m_start);
       de2["side_2_strand"] = s(-strand);
-      this->add(de2);
+      (*it)->_evidence.push_back(this->add(de2)->_id);
       
     } else if (de._type == DEL) {
 
@@ -1153,11 +1157,14 @@ void cGenomeDiff::mutations_to_evidence(cReferenceSequences &ref_seq)
       de1["side_2_seq_id"] = de["seq_id"];
       de1["side_2_position"] = s(n(de["position"])+n(de["size"]));
       de1["side_2_strand"] = "1";
+      (*it)->_evidence.push_back(this->add(de1)->_id);
       this->add(de1);
 
     }
   }
-  this->remove(MUTATIONS);
+  if (remove_mutations) {
+    this->remove(MUTATIONS);
+  }
 }
 
 
@@ -1613,7 +1620,7 @@ class cExcludeRegions  {
     bool overlaps(pair_t pair_1, pair_t pair_2);
 
     //! Add region to be excluded.
-    cExcludeRegions& add_exclude_region(uint32_t start_1, uint32_t end_1);
+    cExcludeRegions& add_exclude_region(uint32_t start_1, uint32_t end_1 = 0);
 
     //! Tests if start_1 to end_1 spans over an excluded region.
     bool is_excluded(uint32_t start_1, uint32_t end_1 = 0);
@@ -1682,7 +1689,7 @@ bool cExcludeRegions::overlaps(pair_t pair_1, pair_t pair_2) {
 }
 
 cExcludeRegions& cExcludeRegions::add_exclude_region(uint32_t start_1, uint32_t end_1) {
-  assert(start_1 && end_1);
+  end_1 = end_1 == 0 ? start_1 : end_1;
 
   pair_t temp = make_pair(start_1, end_1);
   pair_set_t::iterator it = m_regions.lower_bound(temp);
@@ -1713,7 +1720,6 @@ cExcludeRegions& cExcludeRegions::add_exclude_region(uint32_t start_1, uint32_t 
 
 bool cExcludeRegions::is_excluded(uint32_t start_1, uint32_t end_1) {
   end_1 = end_1 == 0 ? start_1 : end_1;
-  assert(start_1 && end_1);
 
   pair_t temp = make_pair(start_1, end_1);
 
@@ -1723,628 +1729,339 @@ bool cExcludeRegions::is_excluded(uint32_t start_1, uint32_t end_1) {
 }
  
 //! Call to generate random mutations.
-void cGenomeDiff::random_mutations(const string& exclusion_file, const string& type, uint32_t number, uint32_t read_length, cAnnotatedSequence& ref_seq_info, uint32_t rand_seed, bool verbose)
+void cGenomeDiff::random_mutations(string exclusion_file,
+                                   string type,
+                                   uint32_t n_muts,
+                                   uint32_t buffer,
+                                   cAnnotatedSequence& ref,
+                                   bool verbose)
 {
-  // If we have an exclusion_file to load, we will save
-  // the info in this map.
-  map<uint32_t, uint32_t> match_list;
-  
-  // Don't try and load the exlusion file if they didn't provide one.
-  if(exclusion_file.size())
-  {
-    ifstream in(exclusion_file.c_str());
-    ASSERT(in.good(), "Could not open exclusion file: " + exclusion_file);
-    
-    string line;
-    
-    // Grab 2 lines.  The file we'll be dealing with has a single header line
-    // followed by the column names.  This will drop that info.
-    getline(in, line);
-    getline(in, line);
-    
-    while (!in.eof() && getline(in,line))
-    {
-      RemoveLeadingTrailingWhitespace(line);
-      vector<string> cols = split_on_whitespace(line);
-      
-      // If we find the letter 'r' in the second colummn
-      // we know that it's a reverse complement match.
-      bool complement = (cols[1].find("r") != string::npos);
-      if(complement)  {
-        cols[1].resize(cols[1].size() - 1);  }
-      
-      ASSERT(cols.size() == 3, "Column size is incorrect");
-      
-      uint32_t start1 = from_string<uint32_t>(cols[0]);
-      uint32_t start2 = from_string<uint32_t>(cols[1]);
-      uint32_t match_size = from_string<uint32_t>(cols[2]);
-      
-      if(complement)
-      {
-        start2 = start2 - (match_size - 1);
-      }
-      
-      if(match_list.count(start1))
-      {
-        if(match_list[start1] < match_size)  {
-          match_list[start1] = match_size;  }
-      }
-      else
-      {
-        match_list[start1] = match_size;
-      }
-      
-      if(match_list.count(start2))
-      {
-        if(match_list[start2] < match_size)  {
-          match_list[start2] = match_size;  }
-      }
-      else
-      {
-        match_list[start2] = match_size;
-      }
-    }
-    
-    in.close();
-    
-    // Go through everything in the list and combine entries
-    // that overlap the same area.
-    for(map<uint32_t, uint32_t>::iterator i = match_list.begin(); i != match_list.end();)
-    {
-      bool no_loop = true;
-      uint32_t end_pos = (*i).first + (*i).second;
-      uint32_t& uSize = (*i).second;
-      
-      for(map<uint32_t, uint32_t>::iterator j = ++i; j != match_list.end() && ((*j).first - 1) <= end_pos;)
-      {
-        uint32_t pot_end_pos = (*j).first + (*j).second;
-        if(pot_end_pos > end_pos)
-        {
-          uSize += pot_end_pos - end_pos;
-          end_pos = pot_end_pos;
-        }
-        
-        map<uint32_t, uint32_t>::iterator j_temp = j;
-        j_temp++;
-        match_list.erase(j);      
-        j = j_temp;
-        i = j;
-        no_loop = false;
-      }
-      
-      if(no_loop)  {
-        i++;  }
-    }
-  } // Done loading exclusion file.
-  
+  //Parse input option into mutation type.
+  //Also determine miniumum size and maximum size if provided by user. 
   vector<string> type_options = split_on_any(type, ":-");
   string mut_type = type_options[0];
-  if (!count(gd_entry_type_lookup_table.begin(), gd_entry_type_lookup_table.end(), mut_type) &&
-      mut_type != "RMD") {
-    ERROR("Could not determine mutation type: " + mut_type);
+  uint32_t min_size = 1, max_size = 1;
+  switch(type_options.size())
+  {
+    case 1:  {
+    }  break;
+      
+    case 2:  {
+      min_size = un(type_options[1]);
+      max_size = un(type_options[1]);
+    }  break;
+      
+    case 3:  {
+      min_size = un(type_options[1]);
+      max_size = un(type_options[2]);
+    }  break;
+      
+    default:      
+      ERROR("CANNOT PARSE: " + type);
   }
 
-  int32_t uBuffer = (read_length * 2) + 1;
-  uint32_t max_attempts = (ref_seq_info.get_sequence_size() / read_length) * 2;
-  uint32_t uAttempts = 0;
-  
-  const uint32_t seed_value = rand_seed;
-  srand(seed_value);
-  metadata.author = "RANDOM GENERATOR SEED - " + to_string(seed_value);
-  
-  if(verbose)  {
-    CHECK(number < 30000, "Number of requested mutations is large.\nAttempting this many mutations could take awhile.");
-    cout << "Generating " << number << " " << type_options[0] << " mutations." << endl;
+  //TODO explanation of repeat-match.out file.
+  cExcludeRegions repeat_match_regions;
+
+  if (exclusion_file.size()) {
+    repeat_match_regions.read(exclusion_file);
   }
-  
-  if (mut_type == "SNP") {      
-    set<uint32_t> used_positions;
+
+
+  //Container for checking that future simulated mutations are a buffered distance apart.
+  cExcludeRegions used_mutation_regions;
+
+  const uint32_t max_attempts = 10000;
+  uint32_t n_attempts = max_attempts;
+
+  srand(cSimFastqSequence::SEED_VALUE);
+  buffer +=1;
+
+  /* TYPICAL WORKFLOW:
+   *    1) Chose a random mutation size.
+   *
+   *    2) Chose a random position.
+   *        a) Create and normalize a mutation at that position.
+   *        b) Check that the normalized position and size will not overlap an excluded region plus buffer.
+   *        c) Check that the normalized position and size not be within buffer distance of 
+   *          another mutation.
+   *        d) If necessary, check for any mutation specific changes after normalization.
+   *
+   *    3) Repeat #2 until a valid position is found or the max number of attempts for that 
+   *      mutation size is reached.
+   *        a) If the max number of attempts is reached go back to #1.
+   *        b) If valid, add mutation to GD and to used_mutation_regions.
+   *
+   *    4) Repeat #1 until N valid mutations are found or the max number of attempts for simulating
+   *      N mutations is reached.
+   *        a) If the max number of attempts is reached then no more mutations can be simulated.
+   *
+   */
+
+  if (mut_type == "SNP" || mut_type == "INS" || mut_type == "DEL") {      
     
-    for(uint32_t i = 0; i < number && uAttempts < max_attempts; i++)
-    {
-      uAttempts++;
-      uint32_t rand_pos = (rand() % ref_seq_info.get_sequence_size()) + 1;
-      bool bRedo = false;
-      
-      for(map<uint32_t, uint32_t>::iterator j = match_list.begin(); j != match_list.end(); j++)
-      {
-        if(rand_pos >= (*j).first && rand_pos < ((*j).first + (*j).second))  {
-          bRedo = true;
-          break;  }
-      }
-      
-      if(bRedo)  {
-        i--;
-        continue;  }
-      
-      for(set<uint32_t>::iterator k = used_positions.begin(); k != used_positions.end(); k++)
-      {
-        if(abs(static_cast<int32_t>((*k) - rand_pos)) < uBuffer)  {
-          bRedo = true;
-          break;  }
-      }
-      
-      if(bRedo)  {
-        i--;
-        continue;  }
-      
-      cDiffEntry new_item;        
-      new_item._type = SNP;
-      new_item["seq_id"] = ref_seq_info.m_seq_id;
-      new_item["position"] = to_string(rand_pos);
-      new_item["new_seq"] = cSimFastqSequence::get_random_error_base(ref_seq_info.m_fasta_sequence.m_sequence.at(rand_pos - 1));        
-      
-      uAttempts = 0;
-      
-      new_item.normalize_to_sequence(ref_seq_info);
-      if(from_string<uint32_t>(new_item["position"]) != rand_pos)  {
-        i--;
-        continue;  }
-      
-      used_positions.insert(rand_pos);
-      
-      add(new_item);
-    }      
-  }
-  else 
-  if (mut_type == "DEL") {
-    uint32_t min_size = 1;
-    uint32_t max_size = 1;
-    switch(type_options.size())
-    {
-      case 1:  {
-      }  break;
-        
-      case 2:  {
-        min_size = un(type_options[1]);
-        max_size = un(type_options[1]);
-      }  break;
-        
-      case 3:  {
-        min_size = un(type_options[1]);
-        max_size = un(type_options[2]);
-      }  break;
-        
-      default:      
-        ERROR("CANNOT PARSE: " + type);
-    }
+    while (n_muts && n_attempts) {
 
-    cExcludeRegions excluded;
+      cDiffEntry new_item;
+      new_item._type = cDiffEntry::type_to_enum(mut_type);
+      new_item["seq_id"] = ref.m_seq_id;
 
-    if (exclusion_file.size()) {
-      excluded.read(exclusion_file);
-    }
+      uint32_t pos_1 = 0;
+      uint32_t size = mut_type == "SNP" ? 0 : rand() % (max_size - min_size + 1) + min_size;
+      uint32_t n_size_attempts = max_attempts;
 
-    uint32_t n_dels = number;
-    while (n_dels--) {
-      uint32_t del_size = rand() % (max_size - min_size + 1) + min_size;
+      while (n_size_attempts) {
+        pos_1 = (rand() % (ref.get_sequence_size() - buffer)) + buffer;
+        new_item["position"] = to_string(pos_1);
 
-      //Attempt to find a valid position
-      uint32_t n_attempts = max_attempts, pos_1 = 0;
-      while (pos_1 == 0 && n_attempts) {
-        pos_1 = rand() % ref_seq_info.get_sequence_size() - del_size + 1;
-
-        if (excluded.is_excluded(pos_1, pos_1 + del_size)) {
-          pos_1 = 0, --n_attempts;
-          continue;
+        if (mut_type == "SNP") {
+          new_item["new_seq"] = cSimFastqSequence::get_random_error_base(ref.get_sequence_1(pos_1));        
+        } 
+        else 
+        if (mut_type == "INS") {
+          string* new_seq = &new_item["new_seq"];
+          new_seq->resize(size);
+          generate(new_seq->begin(), new_seq->end(), cSimFastqSequence::get_random_insertion_base);
+        }
+        else
+        if (mut_type == "DEL") {
+          new_item["size"] = s(size);
         }
 
+        new_item.normalize_to_sequence(ref);
+        new_item.erase("norm_pos");
+
+        pos_1 = un(new_item["position"]);
+
+        bool is_excluded = repeat_match_regions.is_excluded(pos_1 - buffer, size + buffer);
+        bool is_near_mutation = used_mutation_regions.is_excluded(pos_1 - buffer, pos_1 + size + buffer); 
+
+        if (is_excluded || is_near_mutation) {
+          --n_size_attempts;
+        } else {
+          break;
+        }
       }
-      
-      if (pos_1 == 0 || n_attempts == 0) {
-        uAttempts = max_attempts;
-        break;
-      } 
 
-      //Create mutation.
-      cDiffEntry new_item;        
-      new_item._type = DEL;
-      new_item["seq_id"] = ref_seq_info.m_seq_id;
-      new_item["position"] = to_string(pos_1);        
-      new_item["size"] = to_string(del_size);        
-      new_item.normalize_to_sequence(ref_seq_info);
-
-      pos_1    = un((new_item)["position"]);
-      del_size = un((new_item)["size"]);
-
-      if (excluded.is_excluded(pos_1, pos_1 + del_size)) {
-        ++n_dels;
-        continue;
+      if (n_size_attempts == 0) {
+        --n_attempts;
       } else {
-        excluded.add_exclude_region(pos_1 - read_length, pos_1 + del_size + read_length);
+        --n_muts, n_attempts = max_attempts;
         this->add(new_item);
-      }
-
-
-      if (verbose) {
-        cerr << "\t[DEL]: " << new_item << endl;
-      }
-
-    }
-
-  }
-  else if (mut_type == "RMD") {
-    uint32_t min_size = 1;
-    uint32_t max_size = 1;
-    switch(type_options.size())
-    {
-      case 1:  {
-      }  break;
-        
-      case 2:  {
-        min_size = un(type_options[1]);
-        max_size = un(type_options[1]);
-      }  break;
-        
-      case 3:  {
-        min_size = un(type_options[1]);
-        max_size = un(type_options[2]);
-      }  break;
-        
-      default:      
-        ERROR("CANNOT PARSE: " + type);
-    }
-
-    cExcludeRegions excluded;
-
-    if (exclusion_file.size()) {
-      excluded.read(exclusion_file);
-    }
-
-    uint32_t n_dels = number;
-
-    // Get ISX elements.
-    cSequenceFeatureList repeats = ref_seq_info.m_repeats;
-    ASSERT(repeats.size(), "No repeat_regions / ISX elements in reference sequence.");
-    CHECK(n_dels < repeats.size(), "Too many deletions requested, creating a potential maximum of " + s(repeats.size()));
-    cSequenceFeatureList::iterator it; 
-
-    uint32_t n_attempts = max_attempts;
-    while (n_dels-- && repeats.size() && n_attempts) {
-      it = repeats.begin();
-      uint32_t del_size = rand() % (max_size - min_size + 1) + min_size;
-
-      //Pick a random repeat_region.
-      advance(it, rand() % repeats.size());
-      uint32_t start_1 = (*it)->get_start_1();
-      uint32_t end_1   = (*it)->get_end_1();
-
-      //Collect valid left_side, right_side positions.
-      vector<int32_t> valid_pos_1;
-      if (!excluded.is_excluded(start_1 - del_size, start_1)) {
-       valid_pos_1.push_back(start_1 - del_size);
-      }
-      if (!excluded.is_excluded(end_1, end_1 + del_size)) {
-        valid_pos_1.push_back(end_1);
-      }
-
-      for (vector<int32_t>::iterator jt = valid_pos_1.begin(); jt != valid_pos_1.end(); ++jt) {
-        uint32_t temp_pos_1    = *jt ; 
-        uint32_t temp_del_size = del_size;
-
-        cDiffEntry temp_item;        
-        temp_item._type = DEL;
-        temp_item["seq_id"] = ref_seq_info.m_seq_id;
-        temp_item["position"] = to_string(temp_pos_1);        
-        temp_item["size"] = to_string(temp_del_size);        
-        temp_item.normalize_to_sequence(ref_seq_info);
-
-        temp_pos_1    = un((temp_item)["position"]);
-        temp_del_size = un((temp_item)["size"]);
-
-        if (excluded.is_excluded(temp_pos_1, temp_pos_1 + temp_del_size) ||
-            temp_pos_1 + temp_del_size > ref_seq_info.get_sequence_size() - read_length) {
-          valid_pos_1.erase(jt);
-        }
-
-      }
-
-
-
-      int32_t pos_1 = 0;
-      if (valid_pos_1.size()) {
-        //Pick what side to apply deletion.
-        pos_1 = valid_pos_1[rand() % valid_pos_1.size()];
-        n_attempts = max_attempts;
-
-        cDiffEntry new_item;        
-        new_item._type = DEL;
-        new_item["seq_id"] = ref_seq_info.m_seq_id;
-        new_item["position"] = to_string(pos_1);        
-        new_item["size"] = to_string(del_size);        
-        new_item.normalize_to_sequence(ref_seq_info);
-
-        this->add(new_item);
-
-        pos_1    = un((new_item)["position"]);
-        del_size = un((new_item)["size"]);
-        excluded.add_exclude_region(pos_1 - read_length, pos_1 + del_size + read_length);
+        used_mutation_regions.add_exclude_region(pos_1, size);
 
         if (verbose) {
-          cerr << "[ISX]: " + (**it)["name"] << "\t[start_1]: " + s(start_1) << "\t[end_1]: " + s(end_1) << endl;
+          cerr << "\t" << new_item << endl;
+        }
+
+      }
+
+    }
+  }
+  else if (mut_type == "RMD") {
+    //Get all available IS elements.
+    cSequenceFeatureList repeats = ref.m_repeats;
+    ASSERT(repeats.size(), "No repeat_regions / ISX elements in reference sequence.");
+    CHECK(n_muts <= repeats.size(), "Too many deletions requested, creating a potential maximum of " + s(repeats.size()));
+
+    while (n_muts && repeats.size() && n_attempts) {
+      vector<cDiffEntry> valid_items;
+      cSequenceFeatureList::iterator it;
+
+      //Randomly choose deletion size.
+      uint32_t pos_1 = 0;
+      uint32_t size = rand() % (max_size - min_size + 1) + min_size;
+      uint32_t n_size_attempts = max_attempts;
+      while (n_size_attempts) {
+        //Randomly choose a repeat_region.
+        it = repeats.begin();
+        advance(it, rand() % repeats.size());
+
+        //Collect potentially valid left_side and right_side positions.
+        uint32_t start_1 = (*it)->get_start_1(), end_1   = (*it)->get_end_1();
+        vector<int32_t> valid_pos_1;
+        valid_pos_1.push_back(start_1 - size);
+        valid_pos_1.push_back(end_1);
+
+        //Evaluate that once normalized as DELs, the potentially valid mutations are not within an excluded region.
+        for (vector<int32_t>::iterator jt = valid_pos_1.begin(); jt != valid_pos_1.end(); ++jt) {
+          uint32_t temp_pos_1 = *jt ; 
+          uint32_t temp_size  = size;
+
+          cDiffEntry temp_item;        
+          temp_item._type = DEL;
+          temp_item["seq_id"]   = ref.m_seq_id;
+          temp_item["position"] = s(temp_pos_1);        
+          temp_item["size"]     = s(temp_size);        
+
+          temp_item.normalize_to_sequence(ref);
+          temp_item.erase("norm_pos");
+
+          temp_pos_1 = un(temp_item["position"]);
+          temp_size  = un(temp_item["size"]);
+
+          bool not_excluded = !repeat_match_regions.is_excluded(temp_pos_1 - buffer, size + buffer);
+          bool not_within_buffer = !used_mutation_regions.is_excluded(temp_pos_1 - buffer, temp_pos_1 + temp_size + buffer); 
+
+          if (not_excluded && not_within_buffer) {
+            valid_items.push_back(temp_item);
+          }
+        }
+
+        if (valid_items.empty()) {
+          --n_size_attempts;
+        } else { 
+          break;
+        }
+      }
+
+      if (n_size_attempts == 0) {
+        --n_attempts;
+      } else {
+        --n_muts, n_attempts = max_attempts;
+        cDiffEntry new_item = valid_items[rand() % valid_items.size()];
+        uint32_t pos_1 = un(new_item["position"]);
+        size = un(new_item["size"]);
+        this->add(new_item);
+        used_mutation_regions.add_exclude_region(pos_1, size);
+        repeats.erase(it);
+
+        if (verbose) {
+          cerr << "[ISX]: " + (**it)["name"] << "\t[start_1]: " + (*it)->get_start_1() << "\t[end_1]: " + (*it)->get_end_1() << endl;
           cerr << "\t[DEL]: " << new_item << endl;
           cerr << endl;
         }
 
-      } else {
-        ++n_dels, --n_attempts;
       }
-      repeats.erase(it);
+
     }
 
-    if (n_attempts == 0) {
-      uAttempts = max_attempts;
-    }
-  }
-  else
-  if (mut_type == "INS") {
-    uint32_t opt_1 = 1;
-    uint32_t opt_2 = 1;      
-    set<uint32_t> used_positions;
-    
-    switch(type_options.size())
-    {
-      case 1:  {
-      }  break;
-        
-      case 2:  {
-        opt_1 = from_string<uint32_t>(type_options[1]);
-        opt_2 = from_string<uint32_t>(type_options[1]);
-      }  break;
-        
-      case 3:  {
-        opt_1 = from_string<uint32_t>(type_options[1]);
-        opt_2 = from_string<uint32_t>(type_options[2]);
-      }  break;
-        
-      default:      
-        ERROR("CANNOT PARSE: " + type);
-    }
-    
-    if(verbose)  {
-      cout << "SIZE RANGE: " << opt_1 <<  " - " << opt_2 << endl;  }
-    
-    for(uint32_t i = 0; i < number && uAttempts < max_attempts; i++)
-    {
-      uAttempts++;
-      
-      uint32_t ins_size = (i % (opt_2 - (opt_1-1))) + opt_1;
-      if(opt_2 - opt_1 >= number)  {
-        ins_size = (rand() % number) + opt_1;  }
-      uint32_t rand_pos = (rand() % (ref_seq_info.get_sequence_size())) + 1;
-      bool bRedo = false;
-      
-      for(map<uint32_t, uint32_t>::iterator j = match_list.begin(); j != match_list.end(); j++)
-      {
-        if(rand_pos >= (*j).first && rand_pos < ((*j).first + (*j).second))  {
-          bRedo = true;
-          break;  }
-      }
-      
-      if(bRedo)  {
-        i--;
-        continue;  }
-      
-      for(set<uint32_t>::iterator k = used_positions.begin(); k != used_positions.end(); k++)
-      {
-        if(abs(static_cast<int32_t>((*k) - rand_pos)) < uBuffer)  {
-          bRedo = true;
-          break;  }
-      }
-      
-      if(bRedo)  {
-        i--;
-        continue;  }
-      
-      cDiffEntry new_item;        
-      new_item._type = INS;
-      new_item["seq_id"] = ref_seq_info.m_seq_id;
-      new_item["position"] = to_string(rand_pos);      
-      
-      string ins_seq = "";        
-      for(uint32_t ij = 0; ij < ins_size; ij++)  {
-        ins_seq += cSimFastqSequence::get_random_insertion_base();  }
-      
-      new_item["new_seq"] = ins_seq;
-      
-      uAttempts = 0;
-      
-      new_item.normalize_to_sequence(ref_seq_info);
-      if( (un(new_item["position"])   != rand_pos) ||
-          (new_item["new_seq"]        != ins_seq)  ||
-          (to_string(new_item._type)  != mut_type))  {
-        i--;
-        continue;  }
-      
-      used_positions.insert(rand_pos);
-      
-      add(new_item);
-    }
   }
   else
   if (mut_type == "AMP") {
-    uint32_t opt_1 = 1;
-    uint32_t opt_2 = 1;      
-    set<uint32_t> used_positions;
-    
-    switch(type_options.size())
-    {
-      case 1:  {
-      }  break;
-        
-      case 2:  {
-        opt_1 = from_string<uint32_t>(type_options[1]);
-        opt_2 = from_string<uint32_t>(type_options[1]);
-      }  break;
-        
-      case 3:  {
-        opt_1 = from_string<uint32_t>(type_options[1]);
-        opt_2 = from_string<uint32_t>(type_options[2]);
-      }  break;
-        
-      default:      
-        ERROR("CANNOT PARSE: " + type);
-    }
-    
-    if(verbose)  {
-      cout << "SIZE RANGE: " << opt_1 <<  " - " << opt_2 << endl;  }
-    
-    for(uint32_t i = 0; i < number && uAttempts < max_attempts; i++)
-    {
-      uAttempts++;
-      
-      uint32_t amp_size = (rand() % (opt_2 - opt_1 - 1)) + opt_1;
-      uint32_t rand_pos = (rand() % (ref_seq_info.get_sequence_size())) + 1;
-      
-      bool bRedo = false;
-      
-      for(map<uint32_t, uint32_t>::iterator j = match_list.begin(); j != match_list.end(); j++)
-      {
-        if(rand_pos >= (*j).first && rand_pos < ((*j).first + (*j).second))  {
-          bRedo = true;
-          break;  }
-      }
-      
-      if(bRedo)  {
-        i--;
-        continue;  }
-      
-      for(set<uint32_t>::iterator k = used_positions.begin(); k != used_positions.end(); k++)
-      {
-        if(abs(static_cast<int32_t>((*k) - rand_pos)) < uBuffer)  {
-          bRedo = true;
-          break;  }
-      }
-      
-      if(bRedo)  {
-        i--;
-        continue;  }
+    while (n_muts && n_attempts) {
+      uint32_t pos_1 = 0;
+      uint32_t size = rand() % (max_size - min_size + 1) + min_size;
       
       cDiffEntry new_item;        
       new_item._type = AMP;
-      new_item["seq_id"] = ref_seq_info.m_seq_id;
-      new_item["position"] = to_string(rand_pos);      
-      new_item["size"] = to_string(amp_size);
-      new_item["new_copy_number"] = to_string((rand() % 2) + 2);
-      
-      uAttempts = 0;
-      
-      new_item.normalize_to_sequence(ref_seq_info);
-      if((from_string<uint32_t>(new_item["position"]) != rand_pos) || (to_string(new_item._type) != mut_type))  {
-        i--;
-        continue;  }
-      
-      used_positions.insert(rand_pos);
-      
-      add(new_item);
+      new_item["seq_id"] = ref.m_seq_id;
+
+      uint32_t n_size_attempts = max_attempts;
+
+      while (n_size_attempts) {
+        uint32_t pos_1 = (rand() % (ref.get_sequence_size() - buffer)) + buffer;
+
+        new_item["position"] = to_string(pos_1);
+        new_item["size"] = s(size);
+        new_item["new_copy_number"] = s((rand() % 2) + 2);
+
+        new_item.normalize_to_sequence(ref);
+        new_item.erase("norm_pos");
+        uint32_t norm_pos_1 = un(new_item["position"]);
+
+        bool is_excluded      = repeat_match_regions.is_excluded(norm_pos_1 - buffer, size + buffer);
+        bool is_near_mutation = used_mutation_regions.is_excluded(norm_pos_1 - buffer, norm_pos_1 + size + buffer); 
+        bool is_new_pos_1     = pos_1 != norm_pos_1;
+        bool is_new_type      = to_string(new_item._type) != mut_type;
+
+        if (is_excluded  || is_near_mutation || is_new_pos_1 || is_new_type) {
+          --n_size_attempts;
+        } else {
+          break;
+        }
+
+      }
+
+      if (n_size_attempts == 0) {
+        --n_attempts;
+      } else {
+        --n_muts, n_attempts = max_attempts;
+        new_item.erase("norm");
+        this->add(new_item);
+        used_mutation_regions.add_exclude_region(pos_1, size);
+        if (verbose) {
+          cerr << "\t" << new_item << endl;
+        }
+
+      }
+
     }
+
   }
   else 
   if (mut_type == "MOB") {
     //ERROR("THE BRESEQENSTEIN MUTATION GENERATOR DOES NOT YET HANDLE MOBS\nESPECIALLY IF THEY HAVE TORCHES AND PITCHFORKS");
-    
-    uint32_t opt_1 = 0;
-    uint32_t opt_2 = 0;
-    uint32_t repeats = 0;
-    set<uint32_t> used_positions;
-    map<uint32_t,string> ins_elements;
-    
-    for (cSequenceFeatureList::iterator it_rep = ref_seq_info.m_repeats.begin(); it_rep != ref_seq_info.m_repeats.end(); it_rep++)
-    {
-      ins_elements[repeats] = (*it_rep)->SafeGet("name");
-      repeats++;
-    }
-    
-    switch(type_options.size())
-    {
-      case 1:  {
-      }  break;
+
+    cSequenceFeatureList repeats = ref.m_repeats;
+    ASSERT(repeats.size(), "No repeat_regions / ISX elements in reference sequence.");
+
+    while (n_muts && n_attempts) {
+      uint32_t pos_1 = 0;
+      uint32_t size = rand() % (max_size - min_size + 1) + min_size;
+      int8_t strand = rand() % 2 ? 1 : -1;
+      cSequenceFeatureList:: iterator it = repeats.begin();
+      advance(it, rand() % repeats.size());
+
+      uint32_t n_size_attempts = max_attempts;
+      while (n_size_attempts) {
+        pos_1 = (rand() % (ref.get_sequence_size() - buffer)) + buffer;
+        string temp_seq = ref.get_sequence_1(pos_1, pos_1 + size - 1);
+        cDiffEntry temp_item;        
+        temp_item._type = INS;
+        temp_item["seq_id"] = ref.m_seq_id;
+        temp_item["position"] = s(pos_1);
+        temp_item["new_seq"] = temp_seq;
         
-      case 2:  {
-        opt_1 = from_string<uint32_t>(type_options[1]);
-        opt_2 = from_string<uint32_t>(type_options[1]);
-      }  break;
-        
-      case 3:  {
-        opt_1 = from_string<uint32_t>(type_options[1]);
-        opt_2 = from_string<uint32_t>(type_options[2]);
-      }  break;
-        
-      default:      
-        ERROR("CANNOT PARSE: " + type);
-    }
-    
-    if(verbose)  {
-      cout << "REPEAT SIZE RANGE: " << opt_1 <<  " - " << opt_2 << endl;  }
-    
-    for(uint32_t i = 0; i < number && uAttempts < max_attempts; i++)
-    {
-      uAttempts++;
-      
-      uint32_t rep_size = (i % (opt_2 - (opt_1-1))) + opt_1;
-      if(opt_2 - opt_1 >= number)  {
-        rep_size = (rand() % number) + opt_1;  }
-      uint32_t ins_fam = rand() % (ins_elements.size());
-      uint32_t rand_pos = (rand() % (ref_seq_info.get_sequence_size())) + 1;
-      int32_t new_strand = ((rand() % 2) > 0) ? 1 : -1;
-      bool bRedo = false;
-      
-      for(map<uint32_t, uint32_t>::iterator j = match_list.begin(); j != match_list.end(); j++)
-      {
-        if(rand_pos >= (*j).first && rand_pos < ((*j).first + (*j).second))  {
-          bRedo = true;
-          break;  }
+        temp_item.normalize_to_sequence(ref);
+        uint32_t norm_pos_1   = un(temp_item["position"]);
+
+        bool is_excluded      = repeat_match_regions.is_excluded(norm_pos_1 - buffer, size + buffer);
+        bool is_near_mutation = used_mutation_regions.is_excluded(norm_pos_1 - buffer, norm_pos_1 + size + buffer); 
+        bool is_new_pos_1     = pos_1 != norm_pos_1; 
+        bool is_new_seq       = temp_seq != temp_item["new_seq"];
+        bool is_not_INS       = temp_item._type != INS;
+
+        if (is_excluded || is_near_mutation || is_new_pos_1 || is_new_seq || is_not_INS) {
+          --n_size_attempts;
+        } else {
+          break;
+        }
+
       }
-      
-      if(bRedo)  {
-        i--;
-        continue;  }
-      
-      for(set<uint32_t>::iterator k = used_positions.begin(); k != used_positions.end(); k++)
-      {
-        if(abs(static_cast<int32_t>((*k) - rand_pos)) < uBuffer)  {
-          bRedo = true;
-          break;  }
+
+      if (n_size_attempts == 0) {
+        --n_attempts;
+      } else {
+        --n_muts, n_attempts = max_attempts;
+        cDiffEntry new_item;        
+        new_item._type = MOB;
+        new_item["seq_id"] = ref.m_seq_id;
+        new_item["position"] = s(pos_1);
+        new_item["repeat_name"] = (*it)->SafeGet("name");
+        new_item["strand"] = s(strand);        
+        new_item["duplication_size"] = s(size);
+
+        new_item.normalize_to_sequence(ref);
+        new_item.erase("norm_pos");
+
+        this->add(new_item);
+        used_mutation_regions.add_exclude_region(pos_1, size);
+
+        if (verbose) {
+          cerr << "\t" << new_item << endl;
+        }
+
       }
-      
-      if(bRedo)  {
-        i--;
-        continue;  }
-      
-      cDiffEntry new_item;        
-      new_item._type = MOB;
-      new_item["seq_id"] = ref_seq_info.m_seq_id;
-      new_item["position"] = to_string(rand_pos);
-      new_item["repeat_name"] = ins_elements[ins_fam];        
-      new_item["strand"] = to_string(new_strand);        
-      new_item["duplication_size"] = to_string(rep_size);
-      
-      cDiffEntry fake_item_ins;        
-      fake_item_ins._type = INS;
-      fake_item_ins["seq_id"] = ref_seq_info.m_seq_id;
-      fake_item_ins["position"] = to_string(rand_pos);
-      fake_item_ins["new_seq"] = ref_seq_info.get_sequence_1(rand_pos, rand_pos+rep_size-1);
-      
-      uAttempts = 0;
-      
-      fake_item_ins.normalize_to_sequence(ref_seq_info);
-      if((from_string<uint32_t>(fake_item_ins["position"]) != rand_pos) || (fake_item_ins["new_seq"] != ref_seq_info.get_sequence_1(rand_pos, rand_pos+rep_size-1)) || (fake_item_ins._type != INS))  {
-        i--;
-        continue;  }
-      
-      new_item.normalize_to_sequence(ref_seq_info);
-      
-      used_positions.insert(rand_pos);
-      
-      add(new_item);
+
     }
   }
   else { 
-    ERROR("MUTATION TYPE NOT HANDLED: " + type_options[0]);
+    ERROR("MUTATION TYPE NOT HANDLED: " + mut_type);
   }
   
-  CHECK(max_attempts != uAttempts, "Forced to halt mutation generation.\nAttempted " +
-        to_string(uAttempts) + " times to generate another mutation.\n" + 
+  CHECK(max_attempts == n_attempts, "Forced to halt mutation generation.\nAttempted " +
+        s(max_attempts - n_attempts) + " times to generate another mutation.\n" + 
         "It's likely that it's no longer possible to add new mutations.");
   
 }
@@ -3822,6 +3539,7 @@ void cGenomeDiff::assign_unique_ids()
     for (uint32_t i = 0; i < (**it)._evidence.size(); ++i) {
       id_table[(**it)._evidence[i]].push_back(*it);
     }
+    (**it)._evidence.clear();
 
     ++it;
   }
@@ -3832,8 +3550,7 @@ void cGenomeDiff::assign_unique_ids()
 
     if (id_table.count((**it)._id)) {
       for (uint32_t i = 0; i < id_table[(**it)._id].size(); ++i) {
-        vector<string>* evidence = &id_table[(**it)._id][i]->_evidence;
-        replace(evidence->begin(), evidence->end(), (**it)._id, new_id);
+        id_table[(**it)._id][i]->_evidence.push_back(new_id);
       }
     }
 
