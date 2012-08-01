@@ -1770,7 +1770,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
   //Container for checking that future simulated mutations are a buffered distance apart.
   cExcludeRegions used_mutation_regions;
 
-  const uint32_t max_attempts = 10000;
+  const uint32_t max_attempts = 1000;
   uint32_t n_attempts = max_attempts;
 
   srand(cSimFastqSequence::SEED_VALUE);
@@ -1810,7 +1810,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
       uint32_t n_size_attempts = max_attempts;
 
       while (n_size_attempts) {
-        pos_1 = (rand() % (ref.get_sequence_size() - buffer)) + buffer;
+        pos_1 = (rand() % (ref.get_sequence_size() - buffer - size)) + buffer;
         new_item["position"] = to_string(pos_1);
 
         if (mut_type == "SNP") {
@@ -1832,7 +1832,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
 
         pos_1 = un(new_item["position"]);
 
-        bool is_excluded = repeat_match_regions.is_excluded(pos_1 - buffer, size + buffer);
+        bool is_excluded = repeat_match_regions.is_excluded(pos_1 - buffer, pos_1 + size + buffer);
         bool is_near_mutation = used_mutation_regions.is_excluded(pos_1 - buffer, pos_1 + size + buffer); 
 
         if (is_excluded || is_near_mutation) {
@@ -1847,7 +1847,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
       } else {
         --n_muts, n_attempts = max_attempts;
         this->add(new_item);
-        used_mutation_regions.add_exclude_region(pos_1, size);
+        used_mutation_regions.add_exclude_region(pos_1, pos_1 + size);
 
         if (verbose) {
           cerr << "\t" << new_item << endl;
@@ -1884,23 +1884,22 @@ void cGenomeDiff::random_mutations(string exclusion_file,
 
         //Evaluate that once normalized as DELs, the potentially valid mutations are not within an excluded region.
         for (vector<int32_t>::iterator jt = valid_pos_1.begin(); jt != valid_pos_1.end(); ++jt) {
-          uint32_t temp_pos_1 = *jt ; 
-          uint32_t temp_size  = size;
+          uint32_t pos_1 = *jt ; 
 
           cDiffEntry temp_item;        
           temp_item._type = DEL;
           temp_item["seq_id"]   = ref.m_seq_id;
-          temp_item["position"] = s(temp_pos_1);        
-          temp_item["size"]     = s(temp_size);        
+          temp_item["position"] = s(pos_1);        
+          temp_item["size"]     = s(size);        
 
           temp_item.normalize_to_sequence(ref);
           temp_item.erase("norm_pos");
 
-          temp_pos_1 = un(temp_item["position"]);
-          temp_size  = un(temp_item["size"]);
+          pos_1 = un(temp_item["position"]);
+          size  = un(temp_item["size"]);
 
-          bool not_excluded = !repeat_match_regions.is_excluded(temp_pos_1 - buffer, size + buffer);
-          bool not_within_buffer = !used_mutation_regions.is_excluded(temp_pos_1 - buffer, temp_pos_1 + temp_size + buffer); 
+          bool not_excluded = !repeat_match_regions.is_excluded(pos_1 - buffer, pos_1 + size + buffer);
+          bool not_within_buffer = !used_mutation_regions.is_excluded(pos_1 - buffer, pos_1 + size + buffer); 
 
           if (not_excluded && not_within_buffer) {
             valid_items.push_back(temp_item);
@@ -1919,17 +1918,18 @@ void cGenomeDiff::random_mutations(string exclusion_file,
       } else {
         --n_muts, n_attempts = max_attempts;
         cDiffEntry new_item = valid_items[rand() % valid_items.size()];
-        uint32_t pos_1 = un(new_item["position"]);
-        size = un(new_item["size"]);
+        new_item["mediated"] = (**it)["name"];
         this->add(new_item);
-        used_mutation_regions.add_exclude_region(pos_1, size);
-        repeats.erase(it);
+        pos_1 = un(new_item["position"]);
+        size = un(new_item["size"]);
+        used_mutation_regions.add_exclude_region(pos_1, pos_1 + size);
 
         if (verbose) {
           cerr << "[ISX]: " + (**it)["name"] << "\t[start_1]: " + (*it)->get_start_1() << "\t[end_1]: " + (*it)->get_end_1() << endl;
           cerr << "\t[DEL]: " << new_item << endl;
           cerr << endl;
         }
+        repeats.erase(it);
 
       }
 
@@ -1949,7 +1949,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
       uint32_t n_size_attempts = max_attempts;
 
       while (n_size_attempts) {
-        uint32_t pos_1 = (rand() % (ref.get_sequence_size() - buffer)) + buffer;
+        uint32_t pos_1 = (rand() % (ref.get_sequence_size() - buffer - size)) + buffer;
 
         new_item["position"] = to_string(pos_1);
         new_item["size"] = s(size);
@@ -1978,7 +1978,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
         --n_muts, n_attempts = max_attempts;
         new_item.erase("norm");
         this->add(new_item);
-        used_mutation_regions.add_exclude_region(pos_1, size);
+        used_mutation_regions.add_exclude_region(pos_1, pos_1 + size);
         if (verbose) {
           cerr << "\t" << new_item << endl;
         }
@@ -2015,7 +2015,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
         temp_item.normalize_to_sequence(ref);
         uint32_t norm_pos_1   = un(temp_item["position"]);
 
-        bool is_excluded      = repeat_match_regions.is_excluded(norm_pos_1 - buffer, size + buffer);
+        bool is_excluded      = repeat_match_regions.is_excluded(norm_pos_1 - buffer, norm_pos_1 + size + buffer);
         bool is_near_mutation = used_mutation_regions.is_excluded(norm_pos_1 - buffer, norm_pos_1 + size + buffer); 
         bool is_new_pos_1     = pos_1 != norm_pos_1; 
         bool is_new_seq       = temp_seq != temp_item["new_seq"];
@@ -2045,7 +2045,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
         new_item.erase("norm_pos");
 
         this->add(new_item);
-        used_mutation_regions.add_exclude_region(pos_1, size);
+        used_mutation_regions.add_exclude_region(pos_1, pos_1 + size);
 
         if (verbose) {
           cerr << "\t" << new_item << endl;
