@@ -207,8 +207,8 @@ public:
 
   bool operator== (const cDiffEntry& de);
 
-  //! Clone this entry.
-  //virtual cDiffEntry* clone() const = 0;
+  static gd_entry_type type_to_enum(string type);
+
   
   //! Parameters most cDiffEntrys have in common
   gd_entry_type _type;
@@ -295,7 +295,7 @@ public:
   //! Retrieve a new diff entry id for this genome diff.
   uint32_t new_unique_id();
   
-  //! Add evidence to this genome diff, return assigned ID.
+  //! Add evidence to this genome diff.
   diff_entry_ptr_t add(const cDiffEntry& item, bool lowest_unique=false);
   
   //! Subtract mutations using gd_ref as reference.
@@ -347,7 +347,13 @@ public:
   bool is_valid(cReferenceSequences& ref_seq_info, bool verbose=false);
   
   //! Call to generate random mutations.
-  void random_mutations(const string& exclusion_file, const string& type, uint32_t number, uint32_t read_length, cAnnotatedSequence& ref_seq_info, uint32_t rand_seed, bool verbose=false);
+
+  void random_mutations(string exclusion_file,
+                        string type,
+                        uint32_t n_muts,
+                        uint32_t buffer,
+                        cAnnotatedSequence& ref,
+                        bool verbose = false);
   
   //! Retrieve cDiffEntrys that match given type(s) 
   const diff_entry_list_t list() const { return _entry_list; }
@@ -366,7 +372,7 @@ public:
   diff_entry_ptr_t parent(const cDiffEntry& evidence);
 
   void normalize_to_sequence(cReferenceSequences &ref_seq);
-  void mutations_to_evidence(cReferenceSequences &ref_seq);
+  void mutations_to_evidence(cReferenceSequences &ref_seq, bool remove_mutations = true);
     
   //Additional functions that need? adding from GenomeDiff.gm
   void add_reject_reasons(cDiffEntry item, const string& reason);
@@ -382,6 +388,8 @@ public:
   void strcopy(char* arg1, const char* arg2);
 
   void add_breseq_data(const key_t& key, const string& value);
+
+  string file_name() const {return _default_filename;}
 
   //! Metadata kept in .gd files
   struct Metadata

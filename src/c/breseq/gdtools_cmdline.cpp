@@ -397,7 +397,7 @@ int do_compare(int argc, char *argv[])
     return -1;
   }
 
-  if (options.count("evidence") && !options.count("reference")) {
+  if ((options.count("evidence") || options.count("plot-jc")) && !options.count("reference")) {
     options.addUsage("");
     options.addUsage("Reference file is needed to compare evidence.");
     options.printUsage();
@@ -426,6 +426,7 @@ int do_compare(int argc, char *argv[])
       diff_entry_list_t evid = gds[i]->evidence_list();
 
       if (muts.size() && evid.empty()) {
+        uout("Converting mutations to evidence for file: " + gds[i]->file_name());
         gds[i]->mutations_to_evidence(ref);
       }
 
@@ -1045,7 +1046,7 @@ int do_rand_muts(int argc, char *argv[])
   options("type,t","Type of mutation to generate");
   options("exclude,e","Exclusion file");
   options("number,n","Number of mutations to generate", static_cast<uint32_t>(1000));
-  options("length,l","Length of reads (used to space mutations)", static_cast<uint32_t>(50));
+  options("buffer,b","Buffer distance between mutations", static_cast<uint32_t>(50));
   options("seq,s","Sequence to use from reference");  
   options("seed","Seed for the random number generator");
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
@@ -1103,19 +1104,22 @@ int do_rand_muts(int argc, char *argv[])
     cSimFastqSequence::SEED_VALUE = un(options["seed"]);
   }
 
-  
-  cGenomeDiff gd1;
-  gd1.random_mutations(
+  cGenomeDiff gd;
+  gd.add_breseq_data("COMMAND", join(vector<string>(argv, argv + argc), " "));
+  gd.random_mutations(
       options["exclude"],
       options["type"],
       un(options["number"]),
-      un(options["length"]),
+      un(options["buffer"]),
       ref_seq_info[ref_seq_id],
-      cSimFastqSequence::SEED_VALUE,
       options.count("verbose")
       );
+
+  gd.mutations_to_evidence(ref_seq_info, false);
+
+  gd.assign_unique_ids();
   
-  gd1.write(options["output"]);
+  gd.write(options["output"]);
   
   return 0;
 }
@@ -1170,7 +1174,7 @@ int do_mutations_to_evidence(int argc, char *argv[])
 
 int do_header(int argc, char* argv[]) {
   AnyOption options("gdtools HEADER [-o output.gd] [-r reference] file1.fastq file2.fastq ...");
-  options("output,o",      "output GD file", "output.gd");
+  options("output,o",      "output GD file");
   options("reference,r",   "reference file");
   options("tag,t",         "header tag to add to Genome Diff file, input as <key>=<value> will produce #=<key> <value>");
   options("input,i",       "modify input Genome Diff file inplace");
@@ -1187,6 +1191,13 @@ int do_header(int argc, char* argv[]) {
     return -1;
   }
 
+  if (!options.count("input") && !options.count("output")) {
+    options.addUsage("");
+    options.addUsage("No input or output Genome Diff file provided.");
+    options.printUsage();
+    return -1;
+  }
+
   UserOutput uout("HEADER");
 
   cGenomeDiff gd;
@@ -1194,7 +1205,7 @@ int do_header(int argc, char* argv[]) {
     uout("Reading in " + options["input"]);
     gd.read(options["input"]);
   }
-  
+
   if (options.count("reference")) {
     gd.metadata.ref_seqs.clear();
     uout("Adding #=REFSEQ header info for");
@@ -1224,7 +1235,19 @@ int do_header(int argc, char* argv[]) {
     }
   }
 
-  string output_path = options.count("input") ? options["input"] : options["output"];
+  string output_path = "";
+  if (options.count("input") && options.count("output")) {
+    output_path = options["output"];
+  } 
+  else 
+  if (options.count("output")) {
+    output_path = options["output"];
+  }
+  else
+  if (options.count("input")) {
+    output_path = options["input"];
+  }
+
   uout("Writing output GD file", output_path );
   gd.write(output_path);
 
