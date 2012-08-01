@@ -1693,22 +1693,24 @@ cExcludeRegions& cExcludeRegions::add_exclude_region(uint32_t start_1, uint32_t 
   pair_t temp = make_pair(start_1, end_1);
   pair_set_t::iterator it = m_regions.lower_bound(temp);
 
-  if (it == m_regions.end()) { 
+  if (m_regions.empty()) { 
     m_regions.insert(temp);
     return *this;
   }
 
-  if (this->overlaps(temp, *it)) {
+  while (it != m_regions.end() && this->overlaps(temp, *it)) {
     temp.first  = min(temp.first, it->first);
     temp.second = max(temp.second, it->second);
     m_regions.erase(it);
+    ++it;
   } 
 
   --it;
-  if (it != m_regions.end() && this->overlaps(temp, *it)) {
-    temp.first  = max(temp.first, it->first);
-    temp.second = min(temp.second, it->second);
+  while (m_regions.size() && this->overlaps(temp, *it)) {
+    temp.first  = min(temp.first, it->first);
+    temp.second = max(temp.second, it->second);
     m_regions.erase(it);
+    --it;
   }
 
   m_regions.insert(temp);
@@ -1718,15 +1720,18 @@ cExcludeRegions& cExcludeRegions::add_exclude_region(uint32_t start_1, uint32_t 
 
 
 bool cExcludeRegions::is_excluded(uint32_t start_1, uint32_t end_1) {
+  if (m_regions.empty()) {
+    return false;
+  }
+
   end_1 = end_1 == 0 ? start_1 : end_1;
 
   pair_t temp = make_pair(start_1, end_1);
 
   pair_set_t::iterator it = m_regions.lower_bound(temp);
   
-  return it != m_regions.end() && (this->overlaps(temp, *it) || this->overlaps(temp, *--it));
+  return (this->overlaps(temp, *it) || this->overlaps(temp, *--it));
 }
- 
 //! Call to generate random mutations.
 void cGenomeDiff::random_mutations(string exclusion_file,
                                    string type,
