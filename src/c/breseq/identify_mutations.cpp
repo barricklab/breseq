@@ -264,7 +264,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         
         //cerr << " " << cv.obs_base() << " " << (char)ref_base << endl;
 
-        _snp_caller.update(cv, strand == 1, _error_table);
+        _snp_caller.update(cv, strand == 1, i->mapping_quality(), _error_table);
       }
 		} // end for-each read
 		
@@ -1173,6 +1173,7 @@ void cDiscreteSNPCaller::add_genotype(const string& genotype, double probability
 void cDiscreteSNPCaller::reset(uint8_t ref_base_index) {
   _best_genotype_index = 0;
   _observations = 0;
+  _normalized_observations = 0;
   _genotype_probability = _genotype_prior;
   
   (void) ref_base_index;
@@ -1181,7 +1182,7 @@ void cDiscreteSNPCaller::reset(uint8_t ref_base_index) {
   //swap(_genotype_probability[0], _genotype_probability[ref_base_index]);
 }
   
-void cDiscreteSNPCaller::update(const covariate_values_t& cv, bool obs_top_strand, cErrorTable& et) {
+void cDiscreteSNPCaller::update(const covariate_values_t& cv, bool obs_top_strand, int32_t mapping_quality, cErrorTable& et) {
 
   covariate_values_t this_cv = cv;
   //update probabilities give observation using Bayes rule
@@ -1190,10 +1191,14 @@ void cDiscreteSNPCaller::update(const covariate_values_t& cv, bool obs_top_stran
     this_cv.obs_base() = complement_base_index(this_cv.obs_base()); 
   }
   
+  double incorrect_mapping_prob = pow(10, -static_cast<double>(mapping_quality) / 10);
+  double correct_mapping_prob = 1 - incorrect_mapping_prob;
+  this->_normalized_observations += correct_mapping_prob;
+  
   double total_prob = 0.0;
   for (uint32_t i=0; i<_genotype_vector.size(); i++) {
   
-    vector<base_index>& gv = _genotype_vector[i];
+    vector<base_index>& gv = this->_genotype_vector[i];
     double this_pr = 0.0;
     
     for (uint32_t j=0; j < gv.size(); j++) {
@@ -1203,16 +1208,16 @@ void cDiscreteSNPCaller::update(const covariate_values_t& cv, bool obs_top_stran
       if (!obs_top_strand) {
         this_cv.ref_base() = complement_base_index(this_cv.ref_base()); 
       }
-      this_pr += et.get_prob(this_cv) * pow(10, _genotype_probability[i]) / gv.size();
+      this_pr += (correct_mapping_prob * et.get_prob(this_cv) + incorrect_mapping_prob * 1 / _genotype_vector.size()) * pow(10, this->_genotype_probability[i]) / gv.size();
     }
     
     total_prob += this_pr;
   }
 
   double highest_pr = -numeric_limits<double>::max();
-  for (uint32_t i=0; i<_genotype_vector.size(); i++) {
+  for (uint32_t i=0; i<this->_genotype_vector.size(); i++) {
     
-    vector<base_index>& gv = _genotype_vector[i];
+    vector<base_index>& gv = this->_genotype_vector[i];
     double this_pr = 0.0;
     
     for (uint32_t j=0; j < gv.size(); j++) {
@@ -1222,14 +1227,14 @@ void cDiscreteSNPCaller::update(const covariate_values_t& cv, bool obs_top_stran
       if (!obs_top_strand) {
         this_cv.ref_base() = complement_base_index(this_cv.ref_base()); 
       }
-      this_pr += et.get_prob(this_cv) / gv.size();
+      this_pr += (correct_mapping_prob * et.get_prob(this_cv) + incorrect_mapping_prob * 1 / _genotype_vector.size()) / gv.size();
     }
     
-    _genotype_probability[i] += log10(this_pr) - log10(total_prob);
+    this->_genotype_probability[i] += log10(this_pr) - log10(total_prob);
     
-    if (_genotype_probability[i] > highest_pr) {
-      _best_genotype_index = i;
-      highest_pr = _genotype_probability[i];
+    if (this->_genotype_probability[i] > highest_pr) {
+      this->_best_genotype_index = i;
+      highest_pr = this->_genotype_probability[i];
     }
   }
   

@@ -47,6 +47,7 @@ namespace breseq
         , strand(0)
         , is_redundant(false)
         , show_strand(true)
+        , mapping_quality(-1)
         {}
       
       string seq_id;
@@ -57,6 +58,7 @@ namespace breseq
       int8_t strand;
       bool is_redundant;
       bool show_strand;
+      int32_t mapping_quality;
       
     };
     //! returns more information about aligned reads given a sequence id string.

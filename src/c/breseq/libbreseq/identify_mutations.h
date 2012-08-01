@@ -179,7 +179,12 @@ namespace breseq {
 
     void add_genotype(const string& genotype, double probability);
     void reset(uint8_t ref_base_index);
-    void update(const covariate_values_t& cv, bool obs_top_strand, cErrorTable& et);
+    void update(
+                const covariate_values_t& cv, 
+                bool obs_top_strand, 
+                int32_t mapping_quality,
+                cErrorTable& et
+                );
     void print();
     
     cSNPCall get_prediction();
@@ -187,7 +192,8 @@ namespace breseq {
     vector<double> get_genotype_log10_probabilities() { return _genotype_probability; }
     
   protected:
-    uint32_t _observations;      
+    uint32_t _observations;                        // number of read bases recorded
+    double _normalized_observations;               // observations, taking into account mapping quality probability
     string _type;
     vector<double> _genotype_prior;
     vector<double> _genotype_probability;

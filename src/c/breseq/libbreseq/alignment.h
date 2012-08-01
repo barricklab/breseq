@@ -255,8 +255,9 @@ class alignment_wrapper {
       return cigar_pair_list;
     }
   
-    inline int32_t isize() const { return _a->core.isize; }
-    inline uint32_t quality() const { return _a->core.qual; }
+    
+    inline int32_t insert_size() const { return _a->core.isize; }
+    inline uint32_t mapping_quality() const { return _a->core.qual; }
     inline uint16_t flag() const { return _a->core.flag; }
   
     //! Is this read unmapped?
