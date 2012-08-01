@@ -1868,6 +1868,22 @@ void cGenomeDiff::random_mutations(string exclusion_file,
     ASSERT(repeats.size(), "No repeat_regions / ISX elements in reference sequence.");
     CHECK(n_muts <= repeats.size(), "Too many deletions requested, creating a potential maximum of " + s(repeats.size()));
 
+
+    //Output about available IS elements.
+    uint32_t invalid_IS_count = 0;
+    for (cSequenceFeatureList::iterator it = repeats.begin(); it != repeats.end(); ++it) {
+        uint32_t start_1 = (*it)->get_start_1(), end_1   = (*it)->get_end_1();
+
+        if (repeat_match_regions.is_excluded(start_1) &&
+            repeat_match_regions.is_excluded(end_1)) {
+          ++invalid_IS_count;
+        }
+
+    }
+    CHECK(invalid_IS_count == 0, s(invalid_IS_count) + " of " + s(repeats.size()) + 
+        " IS elements are in repeat-match regions and will likely not be used.");
+
+
     while (n_muts && repeats.size() && n_attempts) {
       vector<cDiffEntry> valid_items;
       cSequenceFeatureList::iterator it;
