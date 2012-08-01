@@ -1115,6 +1115,8 @@ int do_rand_muts(int argc, char *argv[])
       options.count("verbose")
       );
 
+  gd.mutations_to_evidence(ref_seq_info, false);
+
   gd.assign_unique_ids();
   
   gd.write(options["output"]);
