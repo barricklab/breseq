@@ -1158,7 +1158,6 @@ void cGenomeDiff::mutations_to_evidence(cReferenceSequences &ref_seq, bool remov
       de1["side_2_position"] = s(n(de["position"])+n(de["size"]));
       de1["side_2_strand"] = "1";
       (*it)->_evidence.push_back(this->add(de1)->_id);
-      this->add(de1);
 
     }
   }
