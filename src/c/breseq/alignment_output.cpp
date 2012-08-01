@@ -697,6 +697,7 @@ void alignment_output::Alignment_Output_Pileup::fetch_callback ( const alignment
   aligned_read.read_sequence = a.read_char_sequence();
   aligned_read.qual_sequence = a.read_base_quality_bam_string();
   aligned_read.is_redundant = a.is_redundant();
+  aligned_read.mapping_quality = a.mapping_quality();
   
   aligned_reads[aligned_read.seq_id] = aligned_read;
   
@@ -985,8 +986,14 @@ string alignment_output::html_alignment_line(const alignment_output::Alignment_B
     
     if ( a.is_redundant )
       output += "</font>"; 
-
   }   
+  
+  // write the mapping quality - it would be nice to justify this
+  if (a.mapping_quality != -1) {
+    output += "&nbsp;(MQ=" + to_string<>(a.mapping_quality) + ")";
+  }
+  
+  
   output += "\n</CODE>\n";
   
   return output;

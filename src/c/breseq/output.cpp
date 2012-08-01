@@ -275,6 +275,7 @@ void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd)
   vector<gd_entry_type> ra_types = make_vector<gd_entry_type>(RA);
   list<counted_ptr<cDiffEntry> > ra = gd.filter_used_as_evidence(gd.list(ra_types));
   ra.remove_if(not1(cDiffEntry::field_exists("reject")));
+  ra.remove_if(cDiffEntry::field_exists("deleted"));
   ra.sort(cDiffEntry::by_scores(make_vector<string>("genotype_quality")));
   
   // Filtering for polymorphism predictions

@@ -466,10 +466,10 @@ struct cDiffEntry::by_scores : public binary_function
     for (vector<diff_entry_key_t>::const_iterator itr = m_field_keys.begin(); itr != m_field_keys.end(); itr++) {
       string key(*itr);
 
-      if (from_string<uint32_t>((*a)[key]) == from_string<uint32_t>((*b)[key]))
+      if (from_string<double>((*a)[key]) == from_string<double>((*b)[key]))
         continue;
       else 
-        return from_string<uint32_t>((*a)[key]) > from_string<uint32_t>((*b)[key]);
+        return from_string<double>((*a)[key]) > from_string<double>((*b)[key]);
     }
     return false;
   }

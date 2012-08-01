@@ -652,7 +652,7 @@ void tam_file::write_alignments(
 		ll.push_back(to_string(fix_flags(a.flag())));
 		ll.push_back(bam_header->target_name[a.reference_target_id()]);
 		ll.push_back(to_string(a.reference_start_1()));
-		ll.push_back(to_string<uint32_t>(a.quality()));
+		ll.push_back(to_string<uint32_t>(a.mapping_quality()));
 		ll.push_back(cigar_string);
 
 		//part of a pair?
@@ -666,7 +666,7 @@ void tam_file::write_alignments(
 		{
 			ll.push_back("=");
 			ll.push_back(to_string<int32_t>(a.mate_start_1()));
-			ll.push_back(to_string<int32_t>(a.isize()));
+			ll.push_back(to_string<int32_t>(a.insert_size()));
 		}
 
     
@@ -757,7 +757,7 @@ void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
 				(to_string(a.flag()))
 				(to_string(this->bam_header->target_name[a.reference_target_id()]))
 				(to_string(rstart))
-				(to_string(a.quality()))
+				(to_string(a.mapping_quality()))
 				(cigar_string)
 				("*")("0")("0") //mate info
 				(qseq_string)
@@ -1161,11 +1161,12 @@ void tam_file::write_moved_alignment(
 		(to_string(fix_flags(a.flag())))
 		(seq_id)
 		(to_string(reference_match_start))
-		(to_string(a.quality()))
+    ("255")   // arbitrarily set mapping quality to perfect match here, could calculate versus reference TODO:
+		//(to_string(a.mapping_quality()))
 		(cigar_string)
 		(a.proper_pair() ? "=" : "*")
 		(to_string(a.mate_start_1()))
-		(to_string(a.isize()))
+		(to_string(a.insert_size()))
 		(seq)
 		(quality_score_string)
 		(aux_tags)
