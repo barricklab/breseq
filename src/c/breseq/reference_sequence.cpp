@@ -1650,6 +1650,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
   string intergenic_seperator = "/";
 
   // initialize everything, even though we don"t always use it
+  mut["locus_tag"] = "";
   mut["aa_position"] = "";
   mut["aa_ref_seq"] = "";
   mut["aa_new_seq"] = "";
@@ -1701,6 +1702,10 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     mut["gene_name"] += intergenic_seperator;
     mut["gene_name"] += (next_gene.name.size() > 0) ? next_gene.name : "–"; //en-dash
 
+    mut["locus_tag"] += (prev_gene.get_locus_tag().size() > 0) ? prev_gene.get_locus_tag() : "–"; //en-dash
+    mut["locus_tag"] += intergenic_seperator;
+    mut["locus_tag"] += (next_gene.get_locus_tag().size() > 0) ? next_gene.get_locus_tag() : "–"; //en-dash
+
     if (prev_gene.name.size() > 0)
     {
       mut["gene_position"] += "intergenic (";
@@ -1738,6 +1743,9 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     Gene gene = within_genes[0];
     mut["gene_name"] = gene.name;
     mut["gene_product"] = gene.product;
+    if (gene.get_locus_tag().size()) {
+      mut["locus_tag"] = gene.get_locus_tag();
+    }
 
     //#added for gene table
     mut["gene_list"] = gene.name;
@@ -1818,17 +1826,33 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     gene_list.insert( gene_list.end(), inside_right_genes.begin(), inside_right_genes.end() );
 
     vector<string> gene_name_list;
+    vector<string> locus_tag_list;
     for (vector<Gene>::iterator it=inside_left_genes.begin(); it != inside_left_genes.end(); it++)
     {
       gene_name_list.push_back("[" + it->name + "]");
+
+      if (it->get_locus_tag().size()) {
+        locus_tag_list.push_back("[" + it->get_locus_tag() + "]");
+      }
+
     }
     for (vector<Gene>::iterator it=between_genes.begin(); it != between_genes.end(); it++)
     {
       gene_name_list.push_back(it->name);
+
+      if (it->get_locus_tag().size()) {
+        locus_tag_list.push_back("[" + it->get_locus_tag() + "]");
+      }
+
     }
     for (vector<Gene>::iterator it=inside_right_genes.begin(); it != inside_right_genes.end(); it++)
     {
       gene_name_list.push_back("[" + it->name + "]");
+
+      if (it->get_locus_tag().size()) {
+        locus_tag_list.push_back("[" + it->get_locus_tag() + "]");
+      }
+
     }
     
     // We ended up calling this function a lot.
@@ -1860,10 +1884,19 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
       mut["gene_product"] += "</i>";
     }
 
-    if (gene_name_list.size() == 1)
+    if (gene_name_list.size() == 1) {
       mut["gene_name"] = gene_name_list[0];
-    else
+    } else {
       mut["gene_name"] = gene_name_list.front() + "–" + gene_name_list.back();  //en-dash
+    }
+
+    if (locus_tag_list.size() == 1) {
+      mut["locus_tag"] = locus_tag_list[0];
+    }
+    else if (locus_tag_list.size() > 1) {
+      mut["locus_tag"] = locus_tag_list.front() + "–" + locus_tag_list.back();  //en-dash
+    }
+
   }
 }
 
