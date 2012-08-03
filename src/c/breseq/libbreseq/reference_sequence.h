@@ -165,6 +165,16 @@ namespace breseq {
       int32_t get_strand()      const { return m_location.get_strand();   }
       bool is_top_strand()      const { return get_strand() == +1;        }
       bool is_bottom_strand()   const { return get_strand() == -1;        }
+      string get_locus_tag() {
+        if (m_gff_attributes.count("Alias")) {
+          return m_gff_attributes["Alias"][0];
+        }
+        else if (this->count("locus_tag")) {
+          return (*this)["locus_tag"];
+        }
+        return "";
+
+      }
 
     //Mark it as pseudo
       void flag_pseudo(bool verbose=false)
