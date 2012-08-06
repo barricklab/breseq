@@ -519,9 +519,10 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
                     th() << 
                     th("seq id") << 
                     th("length") <<
-                    th(ALIGN_CENTER, "coverage") <<
-                    th(ALIGN_CENTER, "nbinom mean") <<
-                    th(ALIGN_CENTER, "nbinom size") <<
+                    th(ALIGN_CENTER, "fit mean") <<
+                    th(ALIGN_CENTER, "fit dispersion") <<
+ //                   th(ALIGN_CENTER, "nbinom mean") <<
+ //                   th(ALIGN_CENTER, "nbinom size") <<
                     th(ALIGN_LEFT, "description") <<
           "</tr>" << endl;
              
@@ -560,8 +561,9 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
     HTML << td(ALIGN_RIGHT, commify(to_string(it->m_length)));
     
     HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].average, 1));
-    HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter, 1));
-    HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_size_parameter, 1));
+    HTML << td(ALIGN_CENTER, to_string( static_cast<double>( 1.0 / (1.0-summary.unique_coverage[it->m_seq_id].nbinom_prob_parameter) ), 1));
+    //HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter, 1));
+    //HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_size_parameter, 1));
 
     HTML << td(it->m_description);
     HTML << "</tr>";
@@ -590,10 +592,11 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
   HTML << td();
   HTML << td();
   HTML << td();
-  HTML << td();
   HTML << "</tr>" << endl;
   HTML << "</table>" << endl;
 
+  HTML << "<p>" << "<b>fit dispersion</b> is the ratio of the variance to the mean for the negative binomial fit. It is =1 for Poisson and >1 for over-dispersed data." << endl;
+  
   ////
   // Junction evidence
   ////
