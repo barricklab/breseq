@@ -1601,36 +1601,49 @@ bool cGenomeDiff::is_valid(cReferenceSequences& ref_seq_info, bool verbose)
 /* Helper class for cGenomeDiff::random_mutations, handles sorting of start_1,
  * end_1 positions and merges the positions if they overlap.
  */
-class cExcludeRegions  {
-  typedef pair<uint32_t, uint32_t>       pair_t;
-  typedef set<pair<uint32_t, uint32_t> > pair_set_t;
+class cFlaggedRegions  {
   public:
+  typedef pair<uint32_t, uint32_t>       region_t;
+  typedef set<pair<uint32_t, uint32_t> > regions_t;
 
-    cExcludeRegions()
+    cFlaggedRegions()
       :m_regions() {
       return;
     }
 
-    //! Read from file.
-    cExcludeRegions& read(string file_path);
+    //! I/O.
+    cFlaggedRegions& read(string file_path);
     void write(string file_path);
+    void print(void);
 
-    //! Tests if two regions overlap.
-    bool overlaps(pair_t pair_1, pair_t pair_2);
 
-    //! Add region to be excluded.
-    cExcludeRegions& add_exclude_region(uint32_t start_1, uint32_t end_1 = 0);
+    //! Add region to be marked.
+    cFlaggedRegions& flag_region(uint32_t start_1, uint32_t end_1 = 0);
 
-    //! Tests if start_1 to end_1 spans over an excluded region.
-    bool is_excluded(uint32_t start_1, uint32_t end_1 = 0);
+    //! Remove overlapping regions, adds segments if partial overlapping occurs.
+    cFlaggedRegions& unflag_region(uint32_t start_1, uint32_t end_1 = 0);
 
-    pair_set_t regions(void) const { return m_regions; }
+    //! Tests if start_1 to end_1 spans over a marked region.
+    bool is_flagged(uint32_t start_1, uint32_t end_1 = 0);
+
+    //! Test if two regions overlap each other.
+    bool overlaps(region_t region_1, region_t region_2);
+
+    //! Test if a position is within a region.
+    bool overlaps(uint32_t pos_1, region_t region);
+
+    //! Return overlapping regions, defaults to all regions.
+    regions_t regions(uint32_t start_1 = 0, uint32_t end_1 = 0);
+
+    //! Remove regions.
+    cFlaggedRegions& remove(regions_t regions);
 
   protected:
-    pair_set_t m_regions;
+    regions_t m_regions;
 };
 
-cExcludeRegions& cExcludeRegions::read(string file_path) {
+
+cFlaggedRegions& cFlaggedRegions::read(string file_path) {
 /*
  * Input file format:
    Long Exact Matches
@@ -1658,21 +1671,21 @@ cExcludeRegions& cExcludeRegions::read(string file_path) {
       second -= size - 1;
     }
 
-    this->add_exclude_region(first,  first  + size);
-    this->add_exclude_region(second, second + size);
+    this->flag_region(first,  first  + size);
+    this->flag_region(second, second + size);
   }
 
   return *this;
 
 }
 
-void cExcludeRegions::write(string file_path) {
+void cFlaggedRegions::write(string file_path) {
   ofstream out(file_path.c_str());
   assert(out);
  
   out << "Start1" << '\t' << "End1" << endl;
 
-  for (pair_set_t::iterator it = m_regions.begin(); it != m_regions.end(); ++it) {
+  for (regions_t::iterator it = m_regions.begin(); it != m_regions.end(); ++it) {
     out << it->first << '\t' << it->second << endl;
   }
   out.close();
@@ -1680,58 +1693,101 @@ void cExcludeRegions::write(string file_path) {
   return;
 }
 
-bool cExcludeRegions::overlaps(pair_t pair_1, pair_t pair_2) {
-  pair_t min = pair_1 < pair_2 ? pair_1 : pair_2;
-  pair_t max = pair_1 > pair_2 ? pair_1 : pair_2;
-
-  return min.second >= max.first && max.second >= min.first;
+void cFlaggedRegions::print() {
+  for (regions_t::iterator it = m_regions.begin(); it != m_regions.end(); ++it) {
+    cout << it->first << '\t' << it->second << endl;
+  }
+  return;
 }
 
-cExcludeRegions& cExcludeRegions::add_exclude_region(uint32_t start_1, uint32_t end_1) {
+bool cFlaggedRegions::overlaps(uint32_t pos_1, region_t region) {
+  return (region.first <= pos_1 && pos_1 <= region.second); 
+}
+
+bool cFlaggedRegions::overlaps(region_t region_1, region_t region_2) {
+  region_t min = region_1 < region_2 ? region_1 : region_2;
+  region_t max = region_1 > region_2 ? region_1 : region_2;
+
+  return (min.second >= max.first && max.second >= min.first); 
+}
+
+cFlaggedRegions& cFlaggedRegions::flag_region(uint32_t start_1, uint32_t end_1) {
   end_1 = end_1 == 0 ? start_1 : end_1;
 
-  pair_t temp = make_pair(start_1, end_1);
-  pair_set_t::iterator it = m_regions.lower_bound(temp);
+  regions_t regions = this->regions(start_1, end_1);
 
-  if (m_regions.empty()) { 
-    m_regions.insert(temp);
-    return *this;
+  //Remove and merge overlapping regions if needed.
+  if (regions.size()) { 
+    this->remove(regions);
+
+    region_t front = *regions.begin();
+    start_1 = min(start_1, front.first);
+
+    region_t back = *regions.end();
+    end_1 = max(end_1, back.second);
+
   }
 
-  while (it != m_regions.end() && this->overlaps(temp, *it)) {
-    temp.first  = min(temp.first, it->first);
-    temp.second = max(temp.second, it->second);
-    m_regions.erase(it);
-    ++it;
-  } 
+  m_regions.insert(make_pair(start_1, end_1 + 1));
 
-  --it;
-  while (m_regions.size() && this->overlaps(temp, *it)) {
-    temp.first  = min(temp.first, it->first);
-    temp.second = max(temp.second, it->second);
-    m_regions.erase(it);
-    --it;
+  return *this;
+}
+
+cFlaggedRegions& cFlaggedRegions::unflag_region(uint32_t start_1, uint32_t end_1) {
+  end_1 = end_1 == 0 ? start_1 : end_1;
+
+  regions_t regions = this->regions(start_1, end_1);
+
+  this->remove(regions);
+
+  //Add front segment if a region was partially overlapping.
+  region_t front = *regions.begin();
+  if (front.first < start_1) {
+    this->flag_region(front.first, start_1 - 1);
   }
 
-  m_regions.insert(temp);
+  //Add back segment if a region was partially overlapping.
+  region_t back = *regions.rbegin();
+  if (end_1 < back.second) {
+    this->flag_region(end_1 + 1, back.second );
+  }
 
   return *this;
 }
 
 
-bool cExcludeRegions::is_excluded(uint32_t start_1, uint32_t end_1) {
-  if (m_regions.empty()) {
-    return false;
-  }
-
+bool cFlaggedRegions::is_flagged(uint32_t start_1, uint32_t end_1) {
   end_1 = end_1 == 0 ? start_1 : end_1;
 
-  pair_t temp = make_pair(start_1, end_1);
-
-  pair_set_t::iterator it = m_regions.lower_bound(temp);
-  
-  return (this->overlaps(temp, *it) || this->overlaps(temp, *--it));
+  return this->regions(start_1, end_1).size();
 }
+
+cFlaggedRegions& cFlaggedRegions::remove(regions_t regions) {
+  for (regions_t::iterator it = regions.begin(); it != regions.end(); ++it) {
+    m_regions.erase(*it);
+  }
+
+  return *this;
+}
+
+cFlaggedRegions::regions_t cFlaggedRegions::regions(uint32_t start_1, uint32_t end_1) {
+  end_1 = end_1 == 0 ? start_1 : end_1;
+
+  if (start_1 == 0 && end_1 == 0) {
+    return m_regions;
+  }
+
+  //Check that the lower bounds does no overlap the lower region.
+  regions_t::iterator it_lower = m_regions.upper_bound(make_pair(start_1, 0));
+  if (it_lower != m_regions.begin() && !this->overlaps(start_1, *--it_lower)) {
+    ++it_lower;
+  }
+
+  regions_t::iterator it_upper = m_regions.upper_bound(make_pair(end_1 + 1, 0));
+
+  return regions_t(it_lower, it_upper);
+}
+
 //! Call to generate random mutations.
 void cGenomeDiff::random_mutations(string exclusion_file,
                                    string type,
@@ -1765,7 +1821,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
   }
 
   //TODO explanation of repeat-match.out file.
-  cExcludeRegions repeat_match_regions;
+  cFlaggedRegions repeat_match_regions;
 
   if (exclusion_file.size()) {
     repeat_match_regions.read(exclusion_file);
@@ -1773,7 +1829,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
 
 
   //Container for checking that future simulated mutations are a buffered distance apart.
-  cExcludeRegions used_mutation_regions;
+  cFlaggedRegions used_mutation_regions;
 
   const uint32_t max_attempts = 1000;
   uint32_t n_attempts = max_attempts;
@@ -1837,8 +1893,8 @@ void cGenomeDiff::random_mutations(string exclusion_file,
 
         pos_1 = un(new_item["position"]);
 
-        bool is_excluded = repeat_match_regions.is_excluded(pos_1 - buffer, pos_1 + size + buffer);
-        bool is_near_mutation = used_mutation_regions.is_excluded(pos_1 - buffer, pos_1 + size + buffer); 
+        bool is_excluded = repeat_match_regions.is_flagged(pos_1 - buffer, pos_1 + size + buffer);
+        bool is_near_mutation = used_mutation_regions.is_flagged(pos_1 - buffer, pos_1 + size + buffer);
 
         if (is_excluded || is_near_mutation) {
           --n_size_attempts;
@@ -1852,7 +1908,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
       } else {
         --n_muts, n_attempts = max_attempts;
         this->add(new_item);
-        used_mutation_regions.add_exclude_region(pos_1, pos_1 + size);
+        used_mutation_regions.flag_region(pos_1, pos_1 + size);
 
         if (verbose) {
           cerr << "\t" << new_item << endl;
@@ -1868,20 +1924,24 @@ void cGenomeDiff::random_mutations(string exclusion_file,
     ASSERT(repeats.size(), "No repeat_regions / ISX elements in reference sequence.");
     CHECK(n_muts <= repeats.size(), "Too many deletions requested, creating a potential maximum of " + s(repeats.size()));
 
-
-    //Output about available IS elements.
-    uint32_t invalid_IS_count = 0;
+    //Unflag repeat-match regions which affect an IS element.
     for (cSequenceFeatureList::iterator it = repeats.begin(); it != repeats.end(); ++it) {
         uint32_t start_1 = (*it)->get_start_1(), end_1   = (*it)->get_end_1();
 
-        if (repeat_match_regions.is_excluded(start_1) &&
-            repeat_match_regions.is_excluded(end_1)) {
-          ++invalid_IS_count;
-        }
+        cFlaggedRegions::regions_t regions = repeat_match_regions.regions(start_1, end_1);
 
+        if (regions.size()) {
+            uint32_t lower = regions.begin()->first; 
+            uint32_t upper = regions.rbegin()->second;
+            
+            cerr << "\tRemoving repeat-match excluded region: " << lower << "-" << upper << endl;
+            cerr << "\t\tFor IS element: " << (**it)["name"] << "\t" << (*it)->get_start_1() << "-" << (*it)->get_end_1() << endl;
+            cerr << endl;
+
+            repeat_match_regions.remove(regions);
+
+          }
     }
-    CHECK(invalid_IS_count == 0, s(invalid_IS_count) + " of " + s(repeats.size()) + 
-        " IS elements are in repeat-match regions and will likely not be used.");
 
 
     while (n_muts && repeats.size() && n_attempts) {
@@ -1919,8 +1979,8 @@ void cGenomeDiff::random_mutations(string exclusion_file,
           pos_1 = un(temp_item["position"]);
           size  = un(temp_item["size"]);
 
-          bool not_excluded = !repeat_match_regions.is_excluded(pos_1 - buffer, pos_1 + size + buffer);
-          bool not_within_buffer = !used_mutation_regions.is_excluded(pos_1 - buffer, pos_1 + size + buffer); 
+          bool not_excluded = !repeat_match_regions.is_flagged(pos_1 - buffer, pos_1 + size + buffer);
+          bool not_within_buffer = !used_mutation_regions.is_flagged(pos_1 - buffer, pos_1 + size + buffer);
 
           if (not_excluded && not_within_buffer) {
             valid_items.push_back(temp_item);
@@ -1943,7 +2003,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
         this->add(new_item);
         pos_1 = un(new_item["position"]);
         size = un(new_item["size"]);
-        used_mutation_regions.add_exclude_region(pos_1, pos_1 + size);
+        used_mutation_regions.flag_region(pos_1, pos_1 + size);
 
         if (verbose) {
           cerr << "[ISX]: " + (**it)["name"] << "\t[start_1]: " + (*it)->get_start_1() << "\t[end_1]: " + (*it)->get_end_1() << endl;
@@ -1980,8 +2040,8 @@ void cGenomeDiff::random_mutations(string exclusion_file,
         new_item.erase("norm_pos");
         uint32_t norm_pos_1 = un(new_item["position"]);
 
-        bool is_excluded      = repeat_match_regions.is_excluded(norm_pos_1 - buffer, size + buffer);
-        bool is_near_mutation = used_mutation_regions.is_excluded(norm_pos_1 - buffer, norm_pos_1 + size + buffer); 
+        bool is_excluded      = repeat_match_regions.is_flagged(norm_pos_1 - buffer, size + buffer);
+        bool is_near_mutation = used_mutation_regions.is_flagged(norm_pos_1 - buffer, norm_pos_1 + size + buffer);
         bool is_new_pos_1     = pos_1 != norm_pos_1;
         bool is_new_type      = to_string(new_item._type) != mut_type;
 
@@ -1999,7 +2059,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
         --n_muts, n_attempts = max_attempts;
         new_item.erase("norm");
         this->add(new_item);
-        used_mutation_regions.add_exclude_region(pos_1, pos_1 + size);
+        used_mutation_regions.flag_region(pos_1, pos_1 + size);
         if (verbose) {
           cerr << "\t" << new_item << endl;
         }
@@ -2036,8 +2096,8 @@ void cGenomeDiff::random_mutations(string exclusion_file,
         temp_item.normalize_to_sequence(ref);
         uint32_t norm_pos_1   = un(temp_item["position"]);
 
-        bool is_excluded      = repeat_match_regions.is_excluded(norm_pos_1 - buffer, norm_pos_1 + size + buffer);
-        bool is_near_mutation = used_mutation_regions.is_excluded(norm_pos_1 - buffer, norm_pos_1 + size + buffer); 
+        bool is_excluded      = repeat_match_regions.is_flagged(norm_pos_1 - buffer, norm_pos_1 + size + buffer);
+        bool is_near_mutation = used_mutation_regions.is_flagged(norm_pos_1 - buffer, norm_pos_1 + size + buffer);
         bool is_new_pos_1     = pos_1 != norm_pos_1; 
         bool is_new_seq       = temp_seq != temp_item["new_seq"];
         bool is_not_INS       = temp_item._type != INS;
@@ -2066,7 +2126,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
         new_item.erase("norm_pos");
 
         this->add(new_item);
-        used_mutation_regions.add_exclude_region(pos_1, pos_1 + size);
+        used_mutation_regions.flag_region(pos_1, pos_1 + size);
 
         if (verbose) {
           cerr << "\t" << new_item << endl;
