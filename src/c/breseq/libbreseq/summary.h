@@ -34,37 +34,41 @@ namespace breseq{
 		{
     public:
       
-      // @JEB TODO: these statistics are not implemented
       class ReadFile {
       public:
         uint32_t num_unmatched_reads;
-        uint32_t num_unique_reads;
-        uint32_t num_repeat_reads;
-        
+//        uint32_t num_unique_reads;
+//        uint32_t num_repeat_reads;
+        uint32_t num_total_reads;
+
         ReadFile()
         : num_unmatched_reads(0)
-        , num_unique_reads(0)
-        , num_repeat_reads(0)
+//        , num_unique_reads(0)
+//        , num_repeat_reads(0)
+        , num_total_reads(0)
         {}
         
         void serialize(ofstream& f)
         {
           write_to_file(f, num_unmatched_reads);
-          write_to_file(f, num_unique_reads);
-          write_to_file(f, num_repeat_reads);
+//          write_to_file(f, num_unique_reads);
+//          write_to_file(f, num_repeat_reads);
+          write_to_file(f, num_total_reads);
         }
         void deserialize(ifstream& f)
         {
           read_from_file(f, num_unmatched_reads);
-          read_from_file(f, num_unique_reads);
-          read_from_file(f, num_repeat_reads);
+//          read_from_file(f, num_unique_reads);
+//          read_from_file(f, num_repeat_reads);
+          read_from_file(f, num_total_reads);
         }
         
       };
       storable_map<string,ReadFile> read_file;
       uint32_t total_unmatched_reads;
-      uint32_t total_unique_reads;
-      uint32_t total_repeat_reads;
+//      uint32_t total_unique_reads;
+//      uint32_t total_repeat_reads;
+      uint32_t total_reads;
       int32_t max_sam_base_quality_score; // @JEB only filled in for aligned_sam_mode
       
       // these statistics are implemented
@@ -78,6 +82,11 @@ namespace breseq{
       map<int32_t, int32_t> observed_pos_hash_score_distribution;
       map<int32_t, int32_t> accepted_pos_hash_score_distribution;
 
+      AlignmentResolution()
+      : total_unmatched_reads(0)
+      , total_reads(0)
+      {}
+      
 			void serialize(ofstream& f)
 			{
         read_file.serialize(f);

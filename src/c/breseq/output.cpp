@@ -462,11 +462,7 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
 {  
   // Create stream and confirm it's open
   ofstream HTML(file_name.c_str());
-  
-  if(!HTML.good()) {
-    cerr << "Could not open file: " <<  file_name << endl;
-    assert(HTML.good());
-  }
+  ASSERT(HTML.good(), "Could not open file: " + file_name);
 
   //Build html head
   HTML << html_header("BRESEQ :: Summary Statistics", settings);
@@ -478,14 +474,14 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
   ////
   
   HTML << h2("Read File Information") << endl;
-  HTML << "<table border=\"0\" cellspace=\"1\" cellpadding=\"5\">" << endl;
-  HTML << "<tr>" << th() << th("read file") << th("reads") << 
-                    th("bases") << th("longest") << "</tr>" << endl;
+  HTML << start_table("border=\"0\" cellspace=\"1\" cellpadding=\"5\"") << endl;
+  HTML << start_tr() << th() << th("read file") << th("reads") << 
+                    th("bases") << th("longest") << th("mapped") << "</tr>" << endl;
   for(cReadFiles::const_iterator it=settings.read_files.begin(); it!=settings.read_files.end(); it++)
   {
     const Summary::AnalyzeFastq& s = summary.sequence_conversion.reads[it->m_base_name];
-    
-    HTML << "<tr>";
+    const Summary::AlignmentResolution::ReadFile& rf = summary.alignment_resolution.read_file[it->m_base_name];
+    HTML << start_tr();
     HTML << td( a(Settings::relative_path( 
                       settings.file_name(settings.error_rates_plot_file_name, "#", it->m_base_name), settings.output_path
                                           ), 
@@ -496,17 +492,21 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
     HTML << td(ALIGN_RIGHT, commify(to_string(s.num_reads)));
     HTML << td(ALIGN_RIGHT, commify(to_string(s.num_bases)));
     HTML << td(ALIGN_RIGHT, to_string(s.max_read_length) + "&nbsp;bases");
-
-    HTML << "</tr>";
+    double percent_mapped = 100 * (1.0 - static_cast<double>(rf.num_unmatched_reads) / rf.num_total_reads);
+    HTML << td(ALIGN_RIGHT, to_string(percent_mapped, 1) + "%");
+    HTML << end_tr();
   }
   
-  HTML << "<tr class=\"highlight_table_row\">";
+  HTML << start_tr("class=\"highlight_table_row\"");
   HTML << td();
   HTML << td(b("total"));
   HTML << td(ALIGN_RIGHT , b(commify(to_string(summary.sequence_conversion.num_reads))) );
   HTML << td(ALIGN_RIGHT , b(commify(to_string(summary.sequence_conversion.num_bases))) );
   HTML << td(b(commify(to_string(summary.sequence_conversion.max_read_length))) + "&nbsp;bases");
-  HTML << "</tr></table>";
+  double total_percent_mapped = 100 * (1.0 - static_cast<double>(summary.alignment_resolution.total_unmatched_reads) / summary.alignment_resolution.total_reads);
+  HTML << td(ALIGN_RIGHT, to_string(total_percent_mapped, 1) + "%");
+  HTML << end_tr();
+  HTML << end_table();
   
   ////
   // Write reference sequence information

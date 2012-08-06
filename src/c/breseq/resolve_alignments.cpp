@@ -644,7 +644,7 @@ void load_junction_alignments(
     
     cerr << "  READ FILE:" << rf.m_base_name << endl;
     
-    Summary::AlignmentResolution::ReadFile summary_info;
+    Summary::AlignmentResolution::ReadFile read_file_summary_info;
     
     // Traverse the original fastq files to keep track of order
     // b/c some matches may exist in only one or the other file
@@ -687,7 +687,7 @@ void load_junction_alignments(
         break; // to next file
       
       reads_processed++;
-
+      read_file_summary_info.num_total_reads++;
       
       if (reads_processed % 10000 == 0)
         cerr << "    READS:" << reads_processed << endl;
@@ -769,7 +769,7 @@ void load_junction_alignments(
       // Record in the unmatched FASTQ data file
       if ((this_junction_alignments.size() == 0) && (this_reference_alignments.size() == 0))
       {
-        summary_info.num_unmatched_reads++;
+        read_file_summary_info.num_unmatched_reads++;
         out_unmatched_fastq.write_sequence(seq);
       }
       
@@ -865,11 +865,12 @@ void load_junction_alignments(
           }
         }
       } // READ
-      
     } // End loop through every $read_struct
         
     // save statistics
-    summary.alignment_resolution.read_file[read_files[fastq_file_index].m_base_name] = summary_info;
+    summary.alignment_resolution.read_file[read_files[fastq_file_index].m_base_name] = read_file_summary_info;
+    summary.alignment_resolution.total_unmatched_reads += read_file_summary_info.num_unmatched_reads;
+    summary.alignment_resolution.total_reads += read_file_summary_info.num_total_reads;
     
     // safe only because we know they are always or never used
     if (junction_tam != NULL) delete junction_tam;
