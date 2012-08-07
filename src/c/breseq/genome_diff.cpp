@@ -1889,7 +1889,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
         }
 
         new_item.normalize_to_sequence(ref);
-        new_item.erase("norm_pos");
+        //new_item.erase("norm_pos");
 
         pos_1 = un(new_item["position"]);
 
@@ -1961,11 +1961,11 @@ void cGenomeDiff::random_mutations(string exclusion_file,
         uint32_t start_1 = (*it)->get_start_1(), end_1   = (*it)->get_end_1();
         vector<int32_t> valid_pos_1;
         valid_pos_1.push_back(start_1 - size);
-        valid_pos_1.push_back(end_1);
+        valid_pos_1.push_back(end_1 + 1);
 
         //Evaluate that once normalized as DELs, the potentially valid mutations are not within an excluded region.
         for (vector<int32_t>::iterator jt = valid_pos_1.begin(); jt != valid_pos_1.end(); ++jt) {
-          uint32_t pos_1 = *jt ; 
+          pos_1 = *jt ; 
 
           cDiffEntry temp_item;        
           temp_item._type = DEL;
@@ -1973,16 +1973,10 @@ void cGenomeDiff::random_mutations(string exclusion_file,
           temp_item["position"] = s(pos_1);        
           temp_item["size"]     = s(size);        
 
-          temp_item.normalize_to_sequence(ref);
-          temp_item.erase("norm_pos");
-
-          pos_1 = un(temp_item["position"]);
-          size  = un(temp_item["size"]);
-
-          bool not_excluded = !repeat_match_regions.is_flagged(pos_1 - buffer, pos_1 + size + buffer);
+          //bool not_excluded = !repeat_match_regions.is_flagged(norm_pos_1 - buffer, norm_pos_1 + norm_size + buffer);
           bool not_within_buffer = !used_mutation_regions.is_flagged(pos_1 - buffer, pos_1 + size + buffer);
 
-          if (not_excluded && not_within_buffer) {
+          if (not_within_buffer) {
             valid_items.push_back(temp_item);
           }
         }
@@ -3362,6 +3356,8 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         int32_t iDupLen = 0;
         int32_t uRPos = -1;
         
+
+        //Size to deleat from start of repeat string.
         if(mut.entry_exists("del_start")) iDelStart = from_string<uint32_t>(mut["del_start"]);
         if(mut.entry_exists("del_end"))   iDelEnd = from_string<uint32_t>(mut["del_end"]);
         ASSERT((iDelStart >= 0) && (iDelEnd >= 0), (to_string(mut._type) + " " + mut._id) + " - NEGATIVE DELETION");
