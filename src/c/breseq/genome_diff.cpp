@@ -1943,7 +1943,6 @@ void cGenomeDiff::random_mutations(string exclusion_file,
           }
     }
 
-
     while (n_muts && repeats.size() && n_attempts) {
       vector<cDiffEntry> valid_items;
       cSequenceFeatureList::iterator it;
@@ -1958,8 +1957,8 @@ void cGenomeDiff::random_mutations(string exclusion_file,
         advance(it, rand() % repeats.size());
 
         //Collect potentially valid left_side and right_side positions.
-        uint32_t start_1 = (*it)->get_start_1(), end_1   = (*it)->get_end_1();
         vector<int32_t> valid_pos_1;
+        uint32_t start_1 = (*it)->get_start_1(), end_1   = (*it)->get_end_1();
         valid_pos_1.push_back(start_1 - size);
         valid_pos_1.push_back(end_1 + 1);
 
@@ -1973,10 +1972,10 @@ void cGenomeDiff::random_mutations(string exclusion_file,
           temp_item["position"] = s(pos_1);        
           temp_item["size"]     = s(size);        
 
-          //bool not_excluded = !repeat_match_regions.is_flagged(norm_pos_1 - buffer, norm_pos_1 + norm_size + buffer);
+          bool not_excluded = !repeat_match_regions.is_flagged(pos_1 - buffer, pos_1 + size + buffer);
           bool not_within_buffer = !used_mutation_regions.is_flagged(pos_1 - buffer, pos_1 + size + buffer);
 
-          if (not_within_buffer) {
+          if (not_excluded && not_within_buffer) {
             valid_items.push_back(temp_item);
           }
         }
@@ -1998,9 +1997,10 @@ void cGenomeDiff::random_mutations(string exclusion_file,
         pos_1 = un(new_item["position"]);
         size = un(new_item["size"]);
         used_mutation_regions.flag_region(pos_1, pos_1 + size);
+        repeat_match_regions.flag_region((*it)->get_start_1(), (*it)->get_end_1());
 
         if (verbose) {
-          cerr << "[ISX]: " + (**it)["name"] << "\t[start_1]: " + (*it)->get_start_1() << "\t[end_1]: " + (*it)->get_end_1() << endl;
+          cerr << "[ISX]: " + (**it)["name"] << "\t[start_1]: " << (*it)->get_start_1() << "\t[end_1]: " << (*it)->get_end_1() << endl;
           cerr << "\t[DEL]: " << new_item << endl;
           cerr << endl;
         }
