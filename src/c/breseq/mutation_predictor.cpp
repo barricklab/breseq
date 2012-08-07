@@ -302,6 +302,14 @@ namespace breseq {
         int32_t side_1_strand = n(jc_item["side_1_strand"]);
         int32_t side_2_strand = n(jc_item["side_2_strand"]);
         
+        /*
+        if ( ((side_1_position == 4493779) || (side_2_position == 4493779))
+          && ((side_1_position == 4493990) || (side_2_position == 4493990))) 
+        {
+          cout << "test" << endl;
+        }
+        */
+        
         if (side_2_position < side_1_position) {
           swap(side_1_position, side_2_position);
           swap(side_1_strand, side_2_strand);
@@ -329,7 +337,8 @@ namespace breseq {
               mut["mediated"] = (*r1_pointer)["name"];
             }
           }
-          else if (r2_pointer) 
+          // if it didn't match, then check possibility of a second repeat
+          if (!mut.count("mediated") && r2_pointer) 
           {
             // must match up to an end of the repeat
             if ((side_2_position == static_cast<int32_t>(r2_pointer->m_location.get_start_1())
