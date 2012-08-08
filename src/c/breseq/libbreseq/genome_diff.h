@@ -187,7 +187,7 @@ public:
   cDiffEntry to_spec(void) const;
 
 
-  void normalize_to_sequence(const cAnnotatedSequence &seq);
+  void normalize_to_sequence(const cAnnotatedSequence &seq, bool verbose = false);
 
   size_t number_reject_reasons();
   int32_t mutation_size_change(cReferenceSequences& ref_seq_info);

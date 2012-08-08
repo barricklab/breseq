@@ -815,7 +815,7 @@ void cGenomeDiff::read(const string& filename) {
   return;
 }
 
-void cDiffEntry::normalize_to_sequence(const cAnnotatedSequence &sequence)
+void cDiffEntry::normalize_to_sequence(const cAnnotatedSequence &sequence, bool verbose)
 {
   //! Step: Initialize parameters.
   //Only diff entries applicable to de sequence can be considered.
@@ -823,8 +823,7 @@ void cDiffEntry::normalize_to_sequence(const cAnnotatedSequence &sequence)
   assert(this->entry_exists("position"));
 
   //Sequences should be viewed as having index + one offset.
-  typedef size_t pos_1_t;
-  const pos_1_t pos_1 = strtoul((*this)["position"].c_str(), NULL, 0);
+  const uint32_t pos_1 = strtoul((*this)["position"].c_str(), NULL, 0);
   if (!pos_1) {
     this->insert(pair<string, string>("comment_out", "True"));
     return;
@@ -876,8 +875,7 @@ void cDiffEntry::normalize_to_sequence(const cAnnotatedSequence &sequence)
     assert(this->entry_exists("size"));
 
     //! Step: Initialize parameters.
-    typedef string sequence_t;
-    typedef sequence_t::const_iterator base_itr_t;
+    typedef string::const_iterator base_itr_t;
     typedef pair<base_itr_t, base_itr_t> base_pair_t;
     const size_t n = strtoul((*this)["size"].c_str(), NULL, 0);
 
@@ -888,31 +886,72 @@ void cDiffEntry::normalize_to_sequence(const cAnnotatedSequence &sequence)
 
     /*! Step: Attempt to normalize the start position by iterating through new
     start positions. */
-    pos_1_t i = pos_1;
-    for(;;++i) {
-      const sequence_t &first =
-          sequence.get_circular_sequence_1(i, n);
-      assert(first.size());
+    uint32_t norm_pos_1 = pos_1;
+    for(int i = 0;;++i) {
 
-      const sequence_t &second =
-          sequence.get_circular_sequence_1(i + n, n);
-      assert(second.size());
+      uint32_t seq1_pos_1 = pos_1 + i;
+      uint32_t seq1_end_1 = seq1_pos_1 + n - 1;
+
+      uint32_t seq2_pos_1 = seq1_end_1 + 1;
+      uint32_t seq2_end_1 = seq2_pos_1 + n - 1;
+
+      const string &seq1 =
+          sequence.get_circular_sequence_1(seq1_pos_1, n);
+      assert(seq1.size() == n);
+
+      const string &seq2 =
+          sequence.get_circular_sequence_1(seq2_pos_1, n);
+      assert(seq2.size() == n);
+
 
       const base_pair_t &base_pair =
-          mismatch(first.begin(), first.end(), second.begin());
+          mismatch(seq1.begin(), seq1.end(), seq2.begin());
 
-      if (base_pair.first != first.end()) {
-        i += (base_pair.first - first.begin());
+      bool valid = base_pair.first != seq1.end();
+
+
+      if (valid) {
+        norm_pos_1 += i + (base_pair.first - seq1.begin());
+        sprintf((*this)["position"], "%u", norm_pos_1);
+        if (verbose) {
+          sprintf((*this)["norm_pos"], "%u_to_%u", pos_1, norm_pos_1);
+        }
+      }
+
+      if (verbose) {
+        if (valid && norm_pos_1 == pos_1) {
+          cerr << "VALID POSITION: " << pos_1 << endl;
+        }
+        else if (valid && norm_pos_1 != pos_1) {
+          cerr << "NORMALIZED POSITON: " << pos_1 << " to " << norm_pos_1 << ' ' << endl;
+        } else {
+          cerr << "INVALID POSITION: " << pos_1 << endl;
+        }
+
+        cerr << "[Mutation]: " << this->to_spec().to_string() << endl;
+        cerr << "Sequence 1 [" << seq1_pos_1 << '-' << seq1_end_1 << "]: " << seq1 << endl;
+
+        cerr << "Sequence 2 [" << seq2_pos_1 << '-' << seq2_end_1 << "]: " << seq2 << endl;
+
+        cerr << "Deleted Sequence [" << norm_pos_1 << '-' << norm_pos_1 + n - 1 << "]: "; 
+        cerr << sequence.get_circular_sequence_1(norm_pos_1, n) << endl;
+
+        string prev_seq = sequence.get_circular_sequence_1(norm_pos_1 - 10, 20);
+        string left_seq = sequence.get_circular_sequence_1(norm_pos_1 - 10, 10);
+        string right_seq = sequence.get_circular_sequence_1(norm_pos_1 + n , 10);
+
+        cerr << "Previous Sequence:  " << prev_seq << endl;
+        cerr << "Resulting Junction: " << left_seq << '\t' << right_seq << endl;
+
+        cerr << endl;
+      }
+
+      if (valid) {
         break;
       }
+
     }
 
-    //! Step: Determine if the start pos needed to be normilized.
-    bool is_new_position = pos_1 != i;
-    if (is_new_position) {
-      sprintf((*this)["position"], "%u", i);
-      sprintf((*this)["norm_pos"], "%u_to_%u", pos_1, i);
-    }
   } break;
 
   case INS:
@@ -969,14 +1008,13 @@ void cDiffEntry::normalize_to_sequence(const cAnnotatedSequence &sequence)
     assert(this->entry_exists("new_seq"));
 
     //! Step: Initialize parameters.
-    typedef string sequence_t;
     const string first = (*this)["new_seq"];
     const size_t n = first.size();
     assert(n);
 
     /*! Step: Attempt to normalize the start position by iterating through new
     start positions. */
-    pos_1_t i = pos_1;
+    uint32_t i = pos_1;
     
     bool bAmp, bSnp;
     bAmp = true;
@@ -1736,7 +1774,7 @@ cFlaggedRegions& cFlaggedRegions::flag_region(uint32_t start_1, uint32_t end_1) 
 
 cFlaggedRegions& cFlaggedRegions::unflag_region(uint32_t start_1, uint32_t end_1) {
   end_1 = end_1 == 0 ? start_1 : end_1;
-  assert(start_1 <= end_1);
+  ASSERT(start_1 <= end_1, "[start_1]: " + s(start_1) + " is greater than [end_1]: " +s(end_1));
 
   regions_t regions = this->regions(start_1, end_1);
 
@@ -1760,7 +1798,7 @@ cFlaggedRegions& cFlaggedRegions::unflag_region(uint32_t start_1, uint32_t end_1
 
 bool cFlaggedRegions::is_flagged(uint32_t start_1, uint32_t end_1) {
   end_1 = end_1 == 0 ? start_1 : end_1;
-  assert(start_1 <= end_1);
+  ASSERT(start_1 <= end_1, "[start_1]: " + s(start_1) + " is greater than [end_1]: " +s(end_1));
 
   return this->regions(start_1, end_1).size();
 }
@@ -1775,7 +1813,7 @@ cFlaggedRegions& cFlaggedRegions::remove(regions_t regions) {
 
 cFlaggedRegions::regions_t cFlaggedRegions::regions(uint32_t start_1, uint32_t end_1) {
   end_1 = end_1 == 0 ? start_1 : end_1;
-  assert(start_1 <= end_1);
+  ASSERT(start_1 <= end_1, "[start_1]: " + s(start_1) + " is greater than [end_1]: " +s(end_1));
 
   if (start_1 == 0 && end_1 == 0) {
     return m_regions;
@@ -1892,8 +1930,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
           new_item["size"] = s(size);
         }
 
-        new_item.normalize_to_sequence(ref);
-        //new_item.erase("norm_pos");
+        new_item.normalize_to_sequence(ref, verbose);
 
         pos_1 = un(new_item["position"]);
 
@@ -1913,11 +1950,6 @@ void cGenomeDiff::random_mutations(string exclusion_file,
         --n_muts, n_attempts = max_attempts;
         this->add(new_item);
         used_mutation_regions.flag_region(pos_1, pos_1 + size);
-
-        if (verbose) {
-          cerr << "\t" << new_item << endl;
-        }
-
       }
 
     }
