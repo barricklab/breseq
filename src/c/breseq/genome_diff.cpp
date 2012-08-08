@@ -1713,6 +1713,7 @@ bool cFlaggedRegions::overlaps(region_t region_1, region_t region_2) {
 
 cFlaggedRegions& cFlaggedRegions::flag_region(uint32_t start_1, uint32_t end_1) {
   end_1 = end_1 == 0 ? start_1 : end_1;
+  assert(start_1 <= end_1);
 
   regions_t regions = this->regions(start_1, end_1);
 
@@ -1735,6 +1736,7 @@ cFlaggedRegions& cFlaggedRegions::flag_region(uint32_t start_1, uint32_t end_1) 
 
 cFlaggedRegions& cFlaggedRegions::unflag_region(uint32_t start_1, uint32_t end_1) {
   end_1 = end_1 == 0 ? start_1 : end_1;
+  assert(start_1 <= end_1);
 
   regions_t regions = this->regions(start_1, end_1);
 
@@ -1758,6 +1760,7 @@ cFlaggedRegions& cFlaggedRegions::unflag_region(uint32_t start_1, uint32_t end_1
 
 bool cFlaggedRegions::is_flagged(uint32_t start_1, uint32_t end_1) {
   end_1 = end_1 == 0 ? start_1 : end_1;
+  assert(start_1 <= end_1);
 
   return this->regions(start_1, end_1).size();
 }
@@ -1772,6 +1775,7 @@ cFlaggedRegions& cFlaggedRegions::remove(regions_t regions) {
 
 cFlaggedRegions::regions_t cFlaggedRegions::regions(uint32_t start_1, uint32_t end_1) {
   end_1 = end_1 == 0 ? start_1 : end_1;
+  assert(start_1 <= end_1);
 
   if (start_1 == 0 && end_1 == 0) {
     return m_regions;
@@ -1924,9 +1928,14 @@ void cGenomeDiff::random_mutations(string exclusion_file,
     ASSERT(repeats.size(), "No repeat_regions / ISX elements in reference sequence.");
     CHECK(n_muts <= repeats.size(), "Too many deletions requested, creating a potential maximum of " + s(repeats.size()));
 
-    //Unflag repeat-match regions which affect an IS element.
+
+    //Unflag repeat-match regions which affect an IS element and then store them.
+    cFlaggedRegions IS_element_regions;
     for (cSequenceFeatureList::iterator it = repeats.begin(); it != repeats.end(); ++it) {
         uint32_t start_1 = (*it)->get_start_1(), end_1   = (*it)->get_end_1();
+        IS_element_regions.flag_region(start_1, end_1 + 1); //Want end_1 + 1 because a deletion will occur there.
+
+
 
         cFlaggedRegions::regions_t regions = repeat_match_regions.regions(start_1, end_1);
 
@@ -1972,10 +1981,11 @@ void cGenomeDiff::random_mutations(string exclusion_file,
           temp_item["position"] = s(pos_1);        
           temp_item["size"]     = s(size);        
 
-          bool not_excluded = !repeat_match_regions.is_flagged(pos_1 - buffer, pos_1 + size + buffer);
-          bool not_within_buffer = !used_mutation_regions.is_flagged(pos_1 - buffer, pos_1 + size + buffer);
+          bool overlaps_multiple_IS = IS_element_regions.regions(pos_1, pos_1 + size).size() > 1;
+          bool is_excluded = repeat_match_regions.is_flagged(pos_1 - buffer, pos_1 + size + buffer);
+          bool is_within_buffer = used_mutation_regions.is_flagged(pos_1 - buffer, pos_1 + size + buffer);
 
-          if (not_excluded && not_within_buffer) {
+          if (!is_excluded && !is_within_buffer && !overlaps_multiple_IS) {
             valid_items.push_back(temp_item);
           }
         }
@@ -2009,6 +2019,44 @@ void cGenomeDiff::random_mutations(string exclusion_file,
       }
 
     }
+    //Validate mutations.
+
+    //Check that neighboring mutations are a buffered distance from each other.
+    diff_entry_list_t muts = this->mutation_list();
+    diff_entry_list_t::iterator it = muts.begin();
+    diff_entry_list_t::iterator jt = it;
+    for (++jt; jt != muts.end(); ++it, ++jt) {
+      //Left mutation.
+      uint32_t lpos_1 = un((**it)["position"]);
+      uint32_t lsize = un((**it)["size"]);
+
+      //Right mutation.
+      uint32_t rpos_1 = un((**jt)["position"]);
+
+      ASSERT(abs((lpos_1 + lsize) - rpos_1) >=  buffer,
+          "Mutation: " + (*it)->to_spec().to_string() + "\n" +
+          "\tand\n" +
+          "Mutation: " + (*it)->to_spec().to_string() +"\n" +
+          "are less then the buffered distance away from each other.");
+    }
+
+    //Check that each mutation only effects one IS element.
+    for (it = muts.begin(); it != muts.end(); ++it) {
+      uint32_t pos_1 = un((**it)["position"]);
+      uint32_t size = un((**it)["size"]);
+      uint32_t n_IS_elements = IS_element_regions.regions(pos_1, pos_1 + size).size();
+      ASSERT(n_IS_elements == 1,
+          "Mutation overlaps more then one IS element: " + (*it)->to_spec().to_string());
+    }
+
+    //Display IS elements that could not be used.
+    for (cSequenceFeatureList::iterator it = repeats.begin(); it != repeats.end(); ++it) {
+      WARN("Un-used IS element: " + (**it)["name"]+ '\t' + s((*it)->get_start_1()) + '-' + s((*it)->get_end_1()));
+    }
+
+
+
+
 
   }
   else
