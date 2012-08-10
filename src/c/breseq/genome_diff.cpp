@@ -3988,7 +3988,17 @@ cGenomeDiff cGenomeDiff::compare_evidence(cReferenceSequences& sequence,
     cDiffEntry new_item = evidence->to_spec();
     new_item["compare"] = key;
     new_item["segment"] = *it;
-    new_item["score"]   = evidence->count("neg_log10_pos_hash_p_value") ? (*evidence)["neg_log10_pos_hash_p_value"] : "0";
+
+    if (evidence->count("score")) {
+      new_item["score"] = (*evidence)["score"];   
+    }
+    else if (evidence->count("neg_log10_pos_hash_p_value")) {
+      new_item["score"] = (*evidence)["neg_log10_pos_hash_p_value"];
+    }
+    else {
+      new_item["score"] = "0";
+    }
+
     ret_val.add(new_item);
 
     if (verbose) {
