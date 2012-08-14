@@ -2065,7 +2065,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
       //Right mutation.
       uint32_t rpos_1 = un((**jt)["position"]);
 
-      ASSERT(abs((lpos_1 + lsize) - rpos_1) >=  buffer,
+      ASSERT(abs(static_cast<int32_t>(lpos_1 + lsize - rpos_1))) >=  buffer,
           "Mutation: " + (*it)->to_spec().to_string() + "\n" +
           "\tand\n" +
           "Mutation: " + (*it)->to_spec().to_string() +"\n" +
