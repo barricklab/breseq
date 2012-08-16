@@ -4008,6 +4008,11 @@ cGenomeDiff cGenomeDiff::compare_evidence(cReferenceSequences& sequence,
       new_item["score"] = "0";
     }
 
+    //TODO @GRC for testing tophat scoring parameters, remove if/when needed.
+    if (evidence->count("verbose_score")) {
+      new_item["verbose_score"] = (*evidence)["verbose_score"];
+    }
+
     ret_val.add(new_item);
 
     /*
