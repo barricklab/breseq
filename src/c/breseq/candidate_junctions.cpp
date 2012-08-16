@@ -1555,41 +1555,86 @@ namespace breseq {
     
     const vector<string> seq_ids(ref_seq_info.seq_ids());
     
-    bool hash_strand_1;
-    if (jc["side_1_strand"] == "-1"){
-      hash_strand_1 = false;
-    }
-    else{
-      hash_strand_1 = true;
-    }
-    
-    bool hash_strand_2;
-    if (jc["side_2_strand"] == "-1"){
-      hash_strand_2 = false;
-    }
-    else{
-      hash_strand_2 = true;
-    }
+    int32_t hash_strand_1 = from_string<int32_t>(jc["side_1_strand"]);
+    int32_t hash_strand_2 = from_string<int32_t>(jc["side_2_strand"]);
     
     int32_t hash_coord_1 = from_string<int32_t>(jc["side_1_position"]);
     int32_t hash_coord_2 = from_string<int32_t>(jc["side_2_position"]);
     
+    
+    if (verbose) cout << jc << endl;
+    
     int32_t overlap_offset = from_string<int32_t>(jc["overlap"]);
     if (overlap_offset < 0){
       overlap_offset = 0;
-    }
+    } 
     
+    else { // if overlap >= 0
+      
+     // overlap may have been resolved and we need to shift coords and correct for that...
+      
+     // First shift things as far to the left as possible,
+     // then shift to the right to count up the overlap
+      
+      // reverse direction
+      int32_t reverse_overlap = 0;
+      {
+        
+        int32_t test_pos_1 = hash_coord_1;
+        int32_t test_pos_2 = hash_coord_2 - hash_strand_2;
+        while (ref_seq_info[jc["side_1_seq_id"]].get_sequence_1(test_pos_1) == ref_seq_info[jc["side_2_seq_id"]].get_sequence_1(test_pos_2)) {
+          test_pos_1 += hash_strand_1;
+          test_pos_2 -= hash_strand_2;
+          reverse_overlap++;
+          if (test_pos_1 < 0) break;
+          if (test_pos_2 < 0) break;
+          if (static_cast<uint32_t>(test_pos_1) > ref_seq_info[jc["side_1_seq_id"]].get_sequence_length()) break;
+          if (static_cast<uint32_t>(test_pos_1) > ref_seq_info[jc["side_1_seq_id"]].get_sequence_length()) break;
+        }
+      }
+            
+      // forward direction
+      int32_t forward_overlap = 0;
+      {
+        int32_t test_pos_1 = hash_coord_1 - hash_strand_1;
+        int32_t test_pos_2 = hash_coord_2;
+        while (ref_seq_info[jc["side_1_seq_id"]].get_sequence_1(test_pos_1) == ref_seq_info[jc["side_2_seq_id"]].get_sequence_1(test_pos_2)) {
+          test_pos_1 -= hash_strand_1;
+          test_pos_2 += hash_strand_2;
+          forward_overlap++;
+          if (test_pos_1 < 0) break;
+          if (test_pos_2 < 0) break;
+          if (static_cast<uint32_t>(test_pos_1) > ref_seq_info[jc["side_1_seq_id"]].get_sequence_length()) break;
+          if (static_cast<uint32_t>(test_pos_1) > ref_seq_info[jc["side_1_seq_id"]].get_sequence_length()) break;
+        }
+      }
+      
+      hash_coord_2 -= hash_strand_2 * reverse_overlap;
+      hash_coord_1 -= hash_strand_1 * forward_overlap;
+
+      overlap_offset = forward_overlap + reverse_overlap;
+      if (verbose) {
+        cout << "Adjusted for overlap:" << endl;
+        cout << " Hash coord 1:" << hash_coord_1 << endl;
+        cout << " Hash coord 2:" << hash_coord_2 << endl;
+        cout << " Reverse overlap:" << reverse_overlap << endl;
+        cout << " Forward overlap:" << forward_overlap << endl;
+        cout << " Overlap offset:" << overlap_offset << endl;
+
+      }
+    }
+        
     ////
     // Create the sequence of the candidate junction
     ////
     string junction_seq_string = "";
     
-    // first end - contains the overlap for >0 overlap
+    // first end - includes all >0 overlap
     int32_t flanking_left = flanking_length;
-    if (hash_strand_1 != true) // alignment is not reversed
+    if (hash_strand_1 == -1) // alignment is not reversed
     {
       // start_pos is in 1-based coordinates
-      int32_t start_pos = hash_coord_1 - (flanking_left) - overlap_offset;
+      int32_t start_pos = hash_coord_1 - flanking_left;
       if (start_pos < 1)
       {
         if (verbose)
@@ -1600,7 +1645,7 @@ namespace breseq {
       //string add_seq = ref_seq_1.substr(start_pos - 1, flanking_left + overlap_offset);
       //cout << "number 1:" << endl;
       //cout << start_pos + 1 << " " << start_pos + flanking_left + overlap_offset << endl;
-      string add_seq = ref_seq_info.get_sequence_1(jc["side_1_seq_id"], start_pos + 1, start_pos + flanking_left + overlap_offset);
+      string add_seq = ref_seq_info.get_sequence_1(jc["side_1_seq_id"], start_pos + 1, start_pos + flanking_left);
       
       if (verbose) cout << "1F: " << add_seq << endl;
       junction_seq_string += add_seq;
@@ -1608,7 +1653,7 @@ namespace breseq {
     else
     {
       // end_pos is in 1-based coordinates
-      int32_t end_pos = hash_coord_1 + (flanking_left - 1) + overlap_offset;
+      int32_t end_pos = hash_coord_1 + (flanking_left - 1);
       
       if (end_pos > ref_seq_info[jc["side_1_seq_id"]].m_length)
       {
@@ -1617,10 +1662,9 @@ namespace breseq {
         end_pos = ref_seq_info[jc["side_1_seq_id"]].m_length;
       }
       
-      //string add_seq = ref_seq_1.substr(end_pos - (flanking_left + overlap_offset), flanking_left + overlap_offset);
       //cout << "number 1:" << endl;
       //cout << end_pos - (flanking_left + overlap_offset) + 1 << " " << end_pos << endl;
-      string add_seq = ref_seq_info[jc["side_1_seq_id"]].get_sequence_1(end_pos - (flanking_left + overlap_offset) + 1, end_pos);
+      string add_seq = ref_seq_info[jc["side_1_seq_id"]].get_sequence_1(end_pos - (flanking_left) + 1, end_pos);
       
       add_seq = reverse_complement(add_seq);
       if (verbose) cout << "1R: " << add_seq << endl;
@@ -1632,16 +1676,12 @@ namespace breseq {
     if (jc.count("unique_read_sequence") > 0){
       junction_seq_string += jc["unique_read_sequence"];
     }
-    //if (overlap < 0)
-    //  unique_read_seq_string = q1.read_char_sequence().substr(q1_end, -1 * overlap);
+    if (verbose) cout << "Unique junction sequence: " << jc["unique_read_sequence"] << endl;
     
-  
-    //if (verbose) cout << "+U: " << unique_read_seq_string << endl;
-  
     // second end - added without overlapping sequence
-    int32_t flanking_right = flanking_length;
+    int32_t flanking_right = flanking_length - overlap_offset;
     
-    if (hash_strand_2 == true) //alignment is not reversed
+    if (hash_strand_2 == 1) //alignment is not reversed
     {
       // end_pos is in 1-based coordinates
       int32_t end_pos = hash_coord_2 + (flanking_right) + overlap_offset;
@@ -1682,13 +1722,12 @@ namespace breseq {
     //cout << junction_seq_string << endl;
     return junction_seq_string;
     
-  } ////////////////////////////////////////////////end find_junction_sequence
+  }
+  
   
   /*!
    * Calculates statistics and tests whether it passes required conditions in settings
    */
-  
-  
   
   AlignmentPair::AlignmentPair(bam_alignment& _a1, bam_alignment& _a2, const Settings &settings)
   : a1(_a1), a2(_a2), hash_coord(0)

@@ -2065,7 +2065,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
       //Right mutation.
       uint32_t rpos_1 = un((**jt)["position"]);
 
-      ASSERT(abs(static_cast<int32_t>(lpos_1 + lsize - rpos_1)) >=  buffer,
+      ASSERT(static_cast<uint32_t>(abs(static_cast<int32_t>(lpos_1 + lsize - rpos_1))) >=  buffer,
           "Mutation: " + (*it)->to_spec().to_string() + "\n" +
           "\tand\n" +
           "Mutation: " + (*it)->to_spec().to_string() +"\n" +
@@ -3829,11 +3829,36 @@ cGenomeDiff cGenomeDiff::compare(cGenomeDiff& ctrl, cGenomeDiff& test, bool verb
 
   return ret_val;
 }
+  
+  
+bool equivalent_junction_sequences(const string& s1, const string& s2) {
+  if (s1.size() < s2.size()) {
+    
+    if (s2.find(s1) != string::npos ) {
+      return true;
+    }
+    if (s2.find(reverse_complement(s1)) != string::npos) {
+      return true;
+    }
+  }
+  else {
+    if (s1.find(s2) != string::npos ) {
+      return true;
+    }
+    if (s1.find(reverse_complement(s2)) != string::npos) {
+      return true; 
+    }
+  }
+  return false;
+}
+  
 cGenomeDiff cGenomeDiff::compare_evidence(cReferenceSequences& sequence, 
                                           uint32_t buffer,
                                           cGenomeDiff& ctrl,
                                           cGenomeDiff& test,
                                           bool verbose) {
+  (void)verbose;
+  
   //TODO currently only compares JC evidence.
   cGenomeDiff ret_val;
   ret_val.metadata = test.metadata;
@@ -3858,8 +3883,9 @@ cGenomeDiff cGenomeDiff::compare_evidence(cReferenceSequences& sequence,
     cDiffEntry& jc = **it;
     string jc_segment = find_junction_sequence(sequence, jc, buffer);//, verbose);
     ASSERT(jc_segment.size(), "Could not locate JC sequence for: " + (*it)->to_string());
-    if (ctrl_jc.count(jc_segment)) {
-      ERROR("Duplicate junction sequence for entry:\n" + jc.to_string() + "\n" + ctrl_jc[jc_segment]->to_string());
+      
+    if (ctrl_jc.count(jc_segment) || ctrl_jc.count(reverse_complement(jc_segment))) {
+      ERROR("Duplicate junction sequence in control data set for entry:\n" + jc.to_string() + "\n" + ctrl_jc[jc_segment]->to_string());
     }
     ctrl_jc[jc_segment] = *it;
     jc_segments.insert(jc_segment);
@@ -3870,28 +3896,48 @@ cGenomeDiff cGenomeDiff::compare_evidence(cReferenceSequences& sequence,
   diff_entry_list_t test_list = test.list(make_vector<gd_entry_type>(JC));
   test_list.remove_if(cDiffEntry::field_exists("circular_chromosome")); 
 
+  int32_t i = 0;
   for (diff_entry_list_t::iterator it = test_list.begin(); it != test_list.end(); ++it) {
+    
     cDiffEntry& jc = **it;
     string jc_segment = find_junction_sequence(sequence, jc, buffer);//, verbose);
+    jc["segment"] = jc_segment;
+    
     ASSERT(jc_segment.size(), "Could not locate JC sequence for: " + (*it)->to_string());
-    if (test_jc.count(jc_segment)) {
-      ERROR("Duplicate junction sequence for entries:\n" + jc.to_string() + "\n" + test_jc[jc_segment]->to_string());
+    
+    // We need to merge all equivalent junctions
+    // ... keeping the highest scoring one of the group
+    diff_entry_ptr_t best_jc = *it;
+    set<string> delete_jc_segments;
+    for(jc_data_t::iterator it2 = test_jc.begin(); it2 != test_jc.end(); it2++) {
+      string test_jc_segment = it2->first;
+      
+      // if this has a better score, then delete the old entry
+      if (equivalent_junction_sequences(jc_segment, test_jc_segment)) {
+        
+        if (n((*test_jc[test_jc_segment])["score"]) > n((*best_jc)["score"])) {
+          best_jc = test_jc[test_jc_segment];
+        }
+        delete_jc_segments.insert(test_jc_segment);
+      }
     }
-    test_jc[jc_segment] = *it;
-    jc_segments.insert(jc_segment);
+    
+    for(set<string>::iterator it2=delete_jc_segments.begin(); it2!=delete_jc_segments.end(); ++it2) {
+      test_jc.erase(*it2);
+      jc_segments.erase(*it2);
+    }
+      
+    test_jc[(*best_jc)["segment"]] = best_jc;
+    jc_segments.insert((*best_jc)["segment"]);
+    
+    //cout << ++i << endl;
   }
 
-  set<string> handled_jc_segments;
+  set<string> matched_ctrl_segments;
   uint32_t n_tp = 0, n_fn = 0, n_fp = 0;
   for (set<string>::iterator it = jc_segments.begin(); it != jc_segments.end(); it++) {
     
     const string& test_junction_seq = *it;
-    
-    if (handled_jc_segments.count(test_junction_seq)) {
-      if (verbose) cout << "Skipping: " << test_junction_seq << endl;
-      continue; 
-    }
-    handled_jc_segments.insert(test_junction_seq);
     
     // These are NULL if not found
     diff_entry_ptr_t found_test_jc(NULL);
@@ -3906,62 +3952,19 @@ cGenomeDiff cGenomeDiff::compare_evidence(cReferenceSequences& sequence,
       for(jc_data_t::iterator it2 = ctrl_jc.begin(); it2 != ctrl_jc.end(); it2++) {
         const string& this_junction_seq = it2->first;
         
-        if (this_junction_seq.size() < test_junction_seq.size()) {
-          
-          if (test_junction_seq.find(this_junction_seq) != string::npos ) {
-            found_ctrl_jc = it2->second;
-            handled_jc_segments.insert(this_junction_seq);            
-            break; 
-          }
-          if (test_junction_seq.find(reverse_complement(this_junction_seq)) != string::npos) {
-            found_ctrl_jc = it2->second;
-            handled_jc_segments.insert(this_junction_seq);            
-            break; 
-          }
+        if (equivalent_junction_sequences(this_junction_seq, test_junction_seq)) {
+          found_ctrl_jc = it2->second;
         }
-        else {
-          if (this_junction_seq.find(test_junction_seq) != string::npos ) {
-            found_ctrl_jc = it2->second;
-            handled_jc_segments.insert(this_junction_seq);            
-            break; 
-          }
-          if (this_junction_seq.find(reverse_complement(test_junction_seq)) != string::npos) {
-            found_ctrl_jc = it2->second;
-            handled_jc_segments.insert(this_junction_seq);            
-            break; 
-          }
-        }
+        
       }
     }
     
     if (!found_test_jc.get()) {
       for(jc_data_t::iterator it2 = test_jc.begin(); it2 != test_jc.end(); it2++) {
         const string& this_junction_seq = it2->first;
-        
-        if (this_junction_seq.size() < test_junction_seq.size()) {
-          
-          if (test_junction_seq.find(this_junction_seq) != string::npos ) {
-            found_test_jc = it2->second;
-            handled_jc_segments.insert(this_junction_seq);            
-            break; 
-          }
-          if (test_junction_seq.find(reverse_complement(this_junction_seq)) != string::npos) {
-            found_test_jc = it2->second;
-            handled_jc_segments.insert(this_junction_seq);            
-            break; 
-          }
-        }
-        else {
-          if (this_junction_seq.find(test_junction_seq) != string::npos ) {
-            found_test_jc = it2->second;
-            handled_jc_segments.insert(this_junction_seq);            
-            break; 
-          }
-          if (this_junction_seq.find(reverse_complement(test_junction_seq)) != string::npos) {
-            found_test_jc = it2->second;
-            handled_jc_segments.insert(this_junction_seq);            
-            break; 
-          }
+                
+        if (equivalent_junction_sequences(this_junction_seq, test_junction_seq)) {
+          found_test_jc = it2->second;
         }
       }
     }
@@ -3972,6 +3975,12 @@ cGenomeDiff cGenomeDiff::compare_evidence(cReferenceSequences& sequence,
       key = "TP";
       ++n_tp;
       evidence = found_test_jc;
+      
+      if (matched_ctrl_segments.count((*found_ctrl_jc)["segment"])) {
+        cout << "Duplicate match to: " << *found_ctrl_jc << endl << *found_test_jc << endl;
+      }
+      matched_ctrl_segments.insert((*found_ctrl_jc)["segment"]);
+
     }
     else if (found_ctrl_jc.get() && !found_test_jc.get()) {
       key = "FN";
@@ -4001,6 +4010,7 @@ cGenomeDiff cGenomeDiff::compare_evidence(cReferenceSequences& sequence,
 
     ret_val.add(new_item);
 
+    /*
     if (verbose) {
       string temp = "";
       if (key == "TP") temp = "[True  Positive]:\t";
@@ -4009,7 +4019,7 @@ cGenomeDiff cGenomeDiff::compare_evidence(cReferenceSequences& sequence,
       if (key == "")   temp = "[ERROR]         :\t";
       cout << "\t"<< temp << evidence->to_spec().to_string() << "\t" << new_item << endl;
     }
-    
+    */
 
   }
   //END JC
