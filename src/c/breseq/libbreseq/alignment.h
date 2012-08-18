@@ -345,7 +345,7 @@ public:
   }
   
   //! Has this alignment been trimmed?
-  inline bool is_trimmed() const {
+  inline bool is_trimmed(bool on_insert_position_past_base) const {
     // is our query position in the left-side trimmed region?
     uint8_t *auxl = bam_aux_get(_a,"XL");
     if(auxl) {
@@ -358,6 +358,10 @@ public:
     if(auxr) {
       if(read_length()-query_position_1()+1 <= static_cast<uint32_t>(bam_aux2i(auxr))) {
         return true;
+      }
+      // if we are at an inserted base past the advertised positon
+      if((on_insert_position_past_base) && (read_length()-query_position_1() == static_cast<uint32_t>(bam_aux2i(auxr)))) {
+          return true;
       }
     }
     

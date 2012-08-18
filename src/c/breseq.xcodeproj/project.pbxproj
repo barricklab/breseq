@@ -152,6 +152,7 @@
 		708D62431390B1D5007FF13C /* resolve_alignments.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = resolve_alignments.cpp; path = breseq/resolve_alignments.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		708FA5D6132578BE00864C40 /* breseq */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = breseq; sourceTree = BUILT_PRODUCTS_DIR; };
 		708FA5DA132578BE00864C40 /* libbreseq.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libbreseq.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		7090A56715DDD997000010EE /* plot_jc_scores.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = plot_jc_scores.r; path = breseq/plot_jc_scores.r; sourceTree = "<group>"; };
 		7092FAF1140AC70200DDECA2 /* coverage_output.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = coverage_output.cpp; path = breseq/coverage_output.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		70990AE514D5A4FA005255D4 /* rna_seq.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = rna_seq.cpp; path = breseq/rna_seq.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		70990AE814D5A520005255D4 /* rna_seq.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = rna_seq.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
@@ -300,6 +301,7 @@
 				7024BBE0155DEC31007CCA5B /* mutations.conf */,
 				70616DCF1400A0C0006E7800 /* plot_coverage.r */,
 				70616DD01400A0C0006E7800 /* plot_error_rate.r */,
+				7090A56715DDD997000010EE /* plot_jc_scores.r */,
 				70616DD11400A0C0006E7800 /* polymorphism_statistics.r */,
 				70436D5713FF6D7D006448FB /* coverage_distribution.r */,
 				70616DD21400A0CE006E7800 /* breseq_small.png */,

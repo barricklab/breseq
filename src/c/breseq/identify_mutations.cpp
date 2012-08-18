@@ -155,7 +155,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
   
   uint32_t position = p.position_1();
   
-	int insert_count=-1;
+	int32_t insert_count=-1;
 	bool next_insert_count_exists=true;
 	
 	while(next_insert_count_exists) {
@@ -197,8 +197,10 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       }
       
       base_bam read_base_bam='.';
+      bool on_insert_position_past_base = true; 
       if(indel >= insert_count) {
         read_base_bam = i->read_base_bam_0(i->query_position_0() + insert_count);
+        on_insert_position_past_base = false; 
       }
             
       //## don't use bases without qualities!!
@@ -208,7 +210,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       int32_t redundancy = i->redundancy();
       int32_t fastq_file_index = i->fastq_file_index();
       int strand = i->strand();
-      bool trimmed = i->is_trimmed();
+      bool trimmed = i->is_trimmed(on_insert_position_past_base);
       
       //##### update coverage if this is not a deletion in read relative to reference
       //### note that we count trimmed reads here, but not when looking for short indel mutations...	
