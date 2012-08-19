@@ -463,19 +463,12 @@ int do_analyze_significance( int argc, char* argv[]){
     ("loci,l", "Contingency loci files", "")
 	.processCommandArgs(argc, argv);
     
-    try {
-        
-    analyze_significance(
-                                 options["output"],
-                                 options["loci"]
-                                 );
-	} catch(...) {
-		// failed; 
-		return -1;
-	}
-
-    
-    return 0;
+  vector<string> strain_files = from_string<vector<string> >(options["loci"]);
+  analyze_significance(
+                       options["output"],
+                       strain_files
+                       );
+  return 0;
 }
 
 int do_identify_candidate_junctions(int argc, char* argv[]) {

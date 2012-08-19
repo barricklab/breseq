@@ -5,10 +5,13 @@ Version 0.19
       instead of unaligned FASTQ to enable users to map reads with their favorite 
       program. In this mode only missing coverage and read alignment evidence are 
       compiled and used to predict mutations. (There is no new junction evidence).
-    * Mixed positions with predicted frequencies ≥10% are output by default
-      using a conservative version of --polymorphism-prediction in order to display
-      variants in genes which have duplicated or other errors caused by unknown
-      divergence from the reference sequence.
+    * Read alignment evidence now uses mapping scores in its probability model, greatly
+      reducing some kinds of false positives.
+    * Mixed positions with predicted frequencies ≥10% are output by default as
+      marginal evidence even when running in normal (consensus_ mode using a 
+      conservative version of --polymorphism-prediction in order to display variants 
+      in genes which have duplicated or other errors caused by unknown divergence from 
+      the reference sequence.
 
 2012-06-12 Version 0.18
    * Fixed misnumbering and mistranslation of amino acid changes in genes on the 
