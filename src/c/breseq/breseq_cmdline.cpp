@@ -454,7 +454,7 @@ int do_tabulate_contingency_loci(int argc, char* argv[]) {
 	return 0;
 }
 
-int do_analyze_significance( int argc, char* argv[]){
+int do_analyze_contingency_loci_significance( int argc, char* argv[]){
     // setup and parse configuration options:
 	AnyOption options("Usage: breseq CL_SIGNIFICANCE --output <path> --loci <loci.txt> ");
 	options
@@ -464,10 +464,10 @@ int do_analyze_significance( int argc, char* argv[]){
 	.processCommandArgs(argc, argv);
     
   vector<string> strain_files = from_string<vector<string> >(options["loci"]);
-  analyze_significance(
-                       options["output"],
-                       strain_files
-                       );
+  analyze_contingency_loci_significance(
+                                       options["output"],
+                                       strain_files
+                                       );
   return 0;
 }
 
@@ -1948,17 +1948,16 @@ int main(int argc, char* argv[]) {
     return do_copy_number_variation(argc_new, argv_new);
   } else if (command == "PERIODICITY"){
     return do_periodicity(argc_new, argv_new);
-  } else if (command == "TABULATE_CL") {
-    return do_tabulate_contingency_loci(argc_new, argv_new);
   } else if (command == "ERROR_COUNT") {
     return do_error_count(argc_new, argv_new);
   } else if (command == "IDENTIFY_CANDIDATE_JUNCTIONS") {
     return do_identify_candidate_junctions(argc_new, argv_new);
   } else if (command == "JUNCTION-POLYMORPHISM") {
     return do_junction_polymorphism(argc_new, argv_new);
-  }
-  else if (command == "CL_SIGNIFICANCE") {
-    return do_analyze_significance( argc_new, argv_new);
+  } else if (command == "CL_TABULATE") {
+    return do_tabulate_contingency_loci(argc_new, argv_new);
+  } else if (command == "CL_SIGNIFICANCE") {
+    return do_analyze_contingency_loci_significance( argc_new, argv_new);
   }
   else {
     // Not a sub-command. Use original argument list.

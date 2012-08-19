@@ -67,7 +67,7 @@ void analyze_contingency_loci(
     
         
     
-void analyze_significance(const string& output, const vector<string>& strainfiles){
+void analyze_contingency_loci_significance(const string& output, const vector<string>& strainfiles){
     
     vector<string> locifiles;
     
@@ -114,6 +114,9 @@ void analyze_significance(const string& output, const vector<string>& strainfile
         
         SYSTEM( "cp " + cString(locifiles[i]) + " example_data.txt" );
         SYSTEM( "Rscript R_fitting_commands.txt" );
+      
+        //@JEB this is not the right script -- some more integration needs to be done
+      
         ifstream ROUT( "results.txt");
         string line;
         getline(ROUT,line);
