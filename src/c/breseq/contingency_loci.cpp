@@ -64,6 +64,68 @@ void analyze_contingency_loci(
   clp.printStats( output, ref_seq_info );
   
 }
+    
+        
+    
+void analyze_significance(const string& output, const vector<string>& strainfiles){
+    
+    vector<string> locifiles;
+    
+    for( unsigned int i=0; i<strainfiles.size(); i++ ){
+        
+        ifstream in( strainfiles[i].c_str() );
+        string line;
+        getline(in,line);
+        vector<string> tokens = split( line, "\t");
+        
+        int seqid_index = 0;
+        while ( strcmp(tokens[seqid_index].c_str(),"seq_id") != 0 ) {
+            seqid_index += 1;
+        }
+        //
+        while( !in.eof() ){
+            FILE* locus = fopen( (tokens[seqid_index] + tokens[seqid_index+1]).c_str(), "ap" );
+            
+            // If the locus file has not yet already been accounted for, this will add it to the locifiles list
+            bool included = false;
+            for(unsigned long j=0; j<locifiles.size(); j++ ){
+                if( strcmp( locifiles[j].c_str(), (tokens[seqid_index] + tokens[seqid_index+1]).c_str() ) == 0 ){
+                    included = true;
+                }
+            }
+            if(included == false){
+                locifiles.push_back( (tokens[seqid_index] + tokens[seqid_index+1]).c_str() );
+                fprintf(locus,"sample\tlength\tcount");
+            }
+            
+            // Add the information from strain strainfiles[i] to the locus file
+            getline(in,line);
+            tokens = split( line, "\t");
+            for(int j=0; j<seqid_index; j++ ){
+                fprintf( locus, "%u\t%i\t%s", i, j+1, tokens[j].c_str() );
+            }
+            fclose(locus);
+        }    
+    }
+    
+    // Run the R script to calculate the p-value for each locus, then print them
+    FILE* out = fopen( output.c_str(), "w");
+    for( unsigned int i=0; i<locifiles.size(); i++ ){
+        
+        SYSTEM( "cp " + cString(locifiles[i]) + " example_data.txt" );
+        SYSTEM( "Rscript R_fitting_commands.txt" );
+        ifstream ROUT( "results.txt");
+        string line;
+        getline(ROUT,line);
+        float p_value = atof(line.c_str());
+        if( p_value < 0.5/locifiles.size() ){
+            fprintf( out, "%s %f", locifiles[i].c_str(), p_value );
+        }
+    }
+    
+
+    
+}
 
 
 

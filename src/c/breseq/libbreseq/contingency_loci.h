@@ -40,6 +40,7 @@ namespace breseq {
                                 int strict
                                 );
 	
+    void analyze_significance(const string& output, const vector<string>& strainfiles);
 
 	
   // Structure to hold information about repeats

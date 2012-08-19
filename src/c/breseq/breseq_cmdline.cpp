@@ -454,6 +454,29 @@ int do_tabulate_contingency_loci(int argc, char* argv[]) {
 	return 0;
 }
 
+int do_analyze_significance( int argc, char* argv[]){
+    // setup and parse configuration options:
+	AnyOption options("Usage: breseq CL_SIGNIFICANCE --output <path> --loci <loci.txt> ");
+	options
+    ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
+    ("output,o", "output file", "contingency_loci.tab")
+    ("loci,l", "Contingency loci files", "")
+	.processCommandArgs(argc, argv);
+    
+    try {
+        
+    analyze_significance(
+                                 options["output"],
+                                 options["loci"]
+                                 );
+	} catch(...) {
+		// failed; 
+		return -1;
+	}
+
+    
+    return 0;
+}
 
 int do_identify_candidate_junctions(int argc, char* argv[]) {
 
@@ -1940,6 +1963,9 @@ int main(int argc, char* argv[]) {
     return do_identify_candidate_junctions(argc_new, argv_new);
   } else if (command == "JUNCTION-POLYMORPHISM") {
     return do_junction_polymorphism(argc_new, argv_new);
+  }
+  else if (command == "CL_SIGNIFICANCE") {
+    return do_analyze_significance( argc_new, argv_new);
   }
   else {
     // Not a sub-command. Use original argument list.
