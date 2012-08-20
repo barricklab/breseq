@@ -434,9 +434,10 @@ int do_compare(int argc, char *argv[])
 
     uout("Comparing evidence");
     comp = cGenomeDiff::compare_evidence(ref, un(options["jc-buffer"]), ctrl, test, options.count("verbose"));
+    uint32_t cutoff = comp.metadata.author == "tophat" ? 0 : 3;
 
     if (options.count("plot-jc")) {
-      uout("Plotting JC Precision vs Score");
+      uout("Evaluating results to plot data.");
       string prefix = options["plot-jc"];
       if (prefix.rfind('/') != string::npos) {
         size_t pos = prefix.rfind('/');
@@ -449,12 +450,11 @@ int do_compare(int argc, char *argv[])
       uout << "Creating table: " + table_path << endl;
       cGenomeDiff::write_jc_score_table(comp, table_path, options.count("verbose"));
 
-      string plot_path   = prefix + ".png";
       string plot_jc_score_script_name = "/plot_jc_scores.r";
       string plot_jc_score_script_path = DATADIR + plot_jc_score_script_name;
 
-      uout << "Creating plot: " + plot_path << endl;
-      string cmd = plot_jc_score_script_path + " " + table_path + " " + plot_path;
+      uout << "Creating plots: " + prefix + ".preciscion.png and " << prefix + ".sensitivity.png" << endl;;
+      string cmd = plot_jc_score_script_path + " " + table_path + " " + prefix + " " + s(cutoff);
       SYSTEM(cmd, true, false, true);
     }
 
