@@ -235,7 +235,7 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   
   diff_entry_list_t ra = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(RA)));
   ra.remove_if(cDiffEntry::rejected()); 
-  
+  ra.remove_if(cDiffEntry::field_exists("mixed"));
   if (ra.size() > 0) {
     HTML << "<p>" << html_read_alignment_table_string(ra, false, "Unassigned read alignment evidence", relative_path);
   }
@@ -375,12 +375,17 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   // ###
   
   // RA evidence
-  
   vector<gd_entry_type> ra_types = make_vector<gd_entry_type>(RA);
+  list<counted_ptr<cDiffEntry> > mixed_ra = gd.filter_used_as_evidence(gd.show_list(ra_types));
+  mixed_ra.remove_if(not1(cDiffEntry::field_exists("mixed")));
+  if (mixed_ra.size() > 0) {
+    HTML << "<p>" << endl;
+    HTML << html_read_alignment_table_string(mixed_ra, false, "Possible mixed read alignment sites...", relative_path) << endl;
+  }
+  
   list<counted_ptr<cDiffEntry> > ra = gd.filter_used_as_evidence(gd.show_list(ra_types));
   ra.remove_if(not1(cDiffEntry::field_exists("reject")));
   ra.sort(cDiffEntry::by_scores(make_vector<string>("quality")));
-    
   if (ra.size() > 0) {
     HTML << "<p>" << endl;
     HTML << html_read_alignment_table_string(ra, false, "Marginal read alignment evidence...", relative_path) << endl;

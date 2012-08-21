@@ -1,5 +1,7 @@
 Version 0.19
-    * bowtie2 instead of ssaha2 now used for mapping reads.
+    * bowtie2 instead of ssaha2 now used for mapping reads. All reads are mapped as if
+      they are single-ended. Use the -j option to control how many processors bowtie2
+      alignment uses.
     * Various improvements to junction prediction.
     * Added option to run pipeline on SAM file of aligned reads (--aligned-sam) 
       instead of unaligned FASTQ to enable users to map reads with their favorite 
@@ -12,7 +14,7 @@ Version 0.19
       conservative version of --polymorphism-prediction in order to display variants 
       in genes which have duplicated or other errors caused by unknown divergence from 
       the reference sequence.
-
+    
 2012-06-12 Version 0.18
    * Fixed misnumbering and mistranslation of amino acid changes in genes on the 
      reverse genomic strand: a huge bug introduced in breseq-0.17e. (Thanks to Tim 
