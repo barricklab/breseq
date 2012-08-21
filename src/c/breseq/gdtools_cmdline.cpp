@@ -434,7 +434,6 @@ int do_compare(int argc, char *argv[])
 
     uout("Comparing evidence");
     comp = cGenomeDiff::compare_evidence(ref, un(options["jc-buffer"]), ctrl, test, options.count("verbose"));
-    uint32_t cutoff = comp.metadata.author == "tophat" ? 0 : 3;
 
     if (options.count("plot-jc")) {
       uout("Evaluating results to plot data.");
@@ -449,12 +448,14 @@ int do_compare(int argc, char *argv[])
       string table_path = prefix + ".table.txt";
       uout << "Creating table: " + table_path << endl;
       cGenomeDiff::write_jc_score_table(comp, table_path, options.count("verbose"));
+      string cv_exe = comp.metadata.author == "tophat" ? "tophat" : "breseq";
+      uint32_t cutoff = cv_exe == "tophat" ? 0 : 3;
 
       string plot_jc_score_script_name = "/plot_jc_scores.r";
       string plot_jc_score_script_path = DATADIR + plot_jc_score_script_name;
 
       uout << "Creating plots: " + prefix + ".preciscion.png and " << prefix + ".sensitivity.png" << endl;;
-      string cmd = plot_jc_score_script_path + " " + table_path + " " + prefix + " " + s(cutoff);
+      string cmd = plot_jc_score_script_path + " " + table_path + " " + prefix + " " + s(cutoff) + " " + cv_exe;
       SYSTEM(cmd, true, false, true);
     }
 
