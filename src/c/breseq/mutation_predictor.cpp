@@ -1258,8 +1258,11 @@ namespace breseq {
 
       // If we are predicting mixed bases and not polymorphisms, then don't create
       // mutations for mixed frequency predictions (leave them as unassigned RA evidence)
-      if (settings.mixed_base_prediction && (item["frequency"] != "1"))
+      // But do mark them as "mixed"
+      if (settings.mixed_base_prediction && (item["frequency"] != "1")) {
+        item["mixed"] = "1";
         continue;
+      }
       
 			bool same = false;
 			if (!first_time)

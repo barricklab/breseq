@@ -126,8 +126,6 @@ void analyze_contingency_loci_significance(const string& output, const vector<st
         }
     }
     
-
-    
 }
 
 
