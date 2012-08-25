@@ -310,7 +310,6 @@ void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd)
       ra_item[NO_SHOW] = "1";
   }
   
-  
   /////
   // JC evidence
   //////

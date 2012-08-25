@@ -346,7 +346,7 @@ namespace breseq {
         return false;
       }
         
-      uint32_t get_sequence_length()
+      uint32_t get_sequence_length() const
       {
         return m_fasta_sequence.m_sequence.length();
       }
@@ -517,6 +517,9 @@ namespace breseq {
     cAnnotatedSequence& operator[](const string& seq_id)
       { ASSERT(m_seq_id_to_index.count(seq_id), "SEQ_ID not found: " + seq_id); return this->at(m_seq_id_to_index[seq_id]); }
 
+    const cAnnotatedSequence& operator[](const string& seq_id) const
+    { ASSERT(m_seq_id_to_index.count(seq_id), "SEQ_ID not found: " + seq_id); return this->at(m_seq_id_to_index.find(seq_id)->second); }
+
     
     //!< Utility to get sequences by seq_id
     string get_sequence_1(const string& seq_id, int32_t start_1, int32_t end_1)
@@ -555,15 +558,15 @@ namespace breseq {
       (*this)[seq_id].repeat_feature_1(pos, start_del, end_del, ref_seq_info, repeat_name, strand, region_pos, verbose);
     }
 
-    uint32_t get_sequence_length(const string& seq_id)
+    uint32_t get_sequence_length(const string& seq_id) const
     {
       return (*this)[seq_id].get_sequence_length();
     }
 
-    vector<string> seq_ids()
+    vector<string> seq_ids() const
     {
       vector<string> return_value;
-      for(vector<cAnnotatedSequence>::iterator it=this->begin(); it != this->end(); it++)
+      for(vector<cAnnotatedSequence>::const_iterator it=this->begin(); it != this->end(); it++)
         return_value.push_back(it->m_seq_id);
       return return_value;
     }

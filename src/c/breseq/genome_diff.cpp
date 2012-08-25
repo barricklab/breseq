@@ -3881,7 +3881,8 @@ cGenomeDiff cGenomeDiff::compare_evidence(cReferenceSequences& sequence,
 
   for (diff_entry_list_t::iterator it = ctrl_list.begin(); it != ctrl_list.end(); ++it) {
     cDiffEntry& jc = **it;
-    string jc_segment = find_junction_sequence(sequence, jc, buffer);//, verbose);
+    CandidateJunctions::normalize_junction_overlap(sequence, jc);
+    string jc_segment = CandidateJunctions::construct_junction_sequence(sequence, jc, buffer, true);
     ASSERT(jc_segment.size(), "Could not locate JC sequence for: " + (*it)->to_string());
       
     if (ctrl_jc.count(jc_segment) || ctrl_jc.count(reverse_complement(jc_segment))) {
@@ -3900,7 +3901,8 @@ cGenomeDiff cGenomeDiff::compare_evidence(cReferenceSequences& sequence,
   for (diff_entry_list_t::iterator it = test_list.begin(); it != test_list.end(); ++it) {
     
     cDiffEntry& jc = **it;
-    string jc_segment = find_junction_sequence(sequence, jc, buffer);//, verbose);
+    CandidateJunctions::normalize_junction_overlap(sequence, jc);
+    string jc_segment = CandidateJunctions::construct_junction_sequence(sequence, jc, buffer, true);
     jc["segment"] = jc_segment;
     
     ASSERT(jc_segment.size(), "Could not locate JC sequence for: " + (*it)->to_string());

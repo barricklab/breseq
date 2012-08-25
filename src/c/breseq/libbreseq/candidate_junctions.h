@@ -269,11 +269,6 @@ namespace breseq {
                                         const cReferenceSequences& ref_seq_info, 
                                         const alignment_wrapper& a
                                         );
-  string find_junction_sequence( 
-                                        cReferenceSequences& ref_seq_info,
-                                        cDiffEntry& jc,
-                                        int32_t distance_from_jc
-                                        );
   
   class PreprocessAlignments
   {
@@ -347,8 +342,26 @@ namespace breseq {
 
 		/*! Predicts candidate junctions
 		 */
-		static void identify_candidate_junctions(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info);
-	private:
+		static void identify_candidate_junctions(
+                                             const Settings& settings, 
+                                             Summary& summary, 
+                                             const cReferenceSequences& ref_seq_info
+                                             );
+
+    static void normalize_junction_overlap (
+                                            const cReferenceSequences& ref_seq_info,
+                                            cDiffEntry& jc
+                                            );
+  
+    
+    static string construct_junction_sequence( 
+                                              const cReferenceSequences& ref_seq_info,
+                                              cDiffEntry& jc,
+                                              int32_t flanking_length,
+                                              bool inclusive_overlap = false
+                                              );
+  
+  private:
 
     
     /*! Sorting functions
@@ -375,7 +388,9 @@ namespace breseq {
                                                   Summary& summary,  
                                                   const cReferenceSequences& ref_seq_info, 
                                                   SequenceToKeyToJunctionCandidateMap& candidate_junctions, 
-                                                  alignment_list& alignments);
+                                                  alignment_list& alignments
+                                                  );
+    
     
 	}; // class CandidateJunction
 
