@@ -4089,23 +4089,46 @@ void cGenomeDiff::write_jc_score_table(cGenomeDiff& compare, string table_file_p
   }
   uint32_t n_tp = 0, n_fn = 0, n_fp = 0;
   
-  for (table_t::iterator it = table.begin(); it != table.end(); it++) {
-    double i = it->first;
-    //double i = 0; i <= max_score; i += .1f) {
-    
-    if (table.count(i)) {
-      n_tp += table[i]["TP"];
+  //TODO @GRC for sorting tophat scoring parameters, remove if/when needed.
+  bool is_tophat_scoring = compare.metadata.author == "tophat" ? true : false;
+  if (is_tophat_scoring) {
+    for (table_t::reverse_iterator it = table.rbegin(); it != table.rend(); it++) {
+      double i = it->first;
+      //double i = 0; i <= max_score; i += .1f) {
+      
+      if (table.count(i)) {
+        n_tp += table[i]["TP"];
         // The total number of TP and FN at a given score is equal to the total minus the number of TP up to that point.
-      n_fn =  total_gold_standard_predictions - n_tp;
-      n_fp += table[i]["FP"];
+        n_fn =  total_gold_standard_predictions - n_tp;
+        n_fp += table[i]["FP"];
 
-      out << i << '\t' << n_tp << '\t' << n_fn << '\t' << n_fp << endl;
-      if (verbose) {
-        cerr << "\t\t" << i << '\t' << n_tp << '\t' << n_fn << '\t' << n_fp << endl;
+        out << i << '\t' << n_tp << '\t' << n_fn << '\t' << n_fp << endl;
+        if (verbose) {
+          cerr << "\t\t" << i << '\t' << n_tp << '\t' << n_fn << '\t' << n_fp << endl;
+        }
+
       }
 
     }
+  } else {
+    for (table_t::iterator it = table.begin(); it != table.end(); it++) {
+      double i = it->first;
+      //double i = 0; i <= max_score; i += .1f) {
+      
+      if (table.count(i)) {
+        n_tp += table[i]["TP"];
+        // The total number of TP and FN at a given score is equal to the total minus the number of TP up to that point.
+        n_fn =  total_gold_standard_predictions - n_tp;
+        n_fp += table[i]["FP"];
 
+        out << i << '\t' << n_tp << '\t' << n_fn << '\t' << n_fp << endl;
+        if (verbose) {
+          cerr << "\t\t" << i << '\t' << n_tp << '\t' << n_fn << '\t' << n_fp << endl;
+        }
+
+      }
+
+    }
   }
   out.close();
 
