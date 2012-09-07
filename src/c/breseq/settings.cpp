@@ -800,7 +800,10 @@ namespace breseq
         + "." + to_string<uint32_t>(static_cast<uint32_t>(floor(R_numerical_version%1000)));
 
       cerr << "---> ERROR Required executable \"R version 2.1.0 or later\" not found." << endl;
-      cerr << "---> Your version is " << R_version << "." << endl;
+      
+      // Did not have R at all, don't want to show empty version string.
+      if (R_numerical_version != 0) 
+        cerr << "---> Your version is " << R_version << "." << endl;
       cerr << "---> See http://www.r-project.org" << endl;
     }
 

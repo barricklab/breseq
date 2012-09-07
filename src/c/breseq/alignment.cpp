@@ -579,7 +579,7 @@ bool tam_file::read_alignments(alignment_list& alignments, bool paired)
     if (bytes < 0) break;
     
     last_alignment = this_alignment;
-
+    
 		string read_name = this_alignment->read_name();
       
 		if (last_read_name.size() == 0)

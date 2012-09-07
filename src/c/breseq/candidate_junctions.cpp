@@ -237,7 +237,7 @@ namespace breseq {
     return;
   }
   
-  void line_to_read_index(string s, int32_t& index, bool& mapped) {
+  void line_to_read_index(string s, int64_t& index, bool& mapped) {
     size_t start = s.find_first_of(":");
     size_t end = s.find_first_of(" \t", start);
     index = n(s.substr(start+1, end-(start+1)));
@@ -275,8 +275,8 @@ namespace breseq {
       not_done_2 = getline(input_sam_file_2, line_2);
     }
          
-    int32_t index_1 = -1; 
-    int32_t index_2 = -1; 
+    int64_t index_1 = -1; 
+    int64_t index_2 = -1; 
     bool mapped_1 = false;
     bool mapped_2 = false;
     
@@ -299,7 +299,7 @@ namespace breseq {
         if (not_done_1) {
           line_to_read_index(line_1, index_1, mapped_1);
         } else {
-          index_1 = numeric_limits<int32_t>::max();
+          index_1 = numeric_limits<int64_t>::max();
         }
       }
       else if (not_done_2) {
@@ -311,7 +311,7 @@ namespace breseq {
         if (not_done_2) {
           line_to_read_index(line_2, index_2, mapped_2);
         } else {
-          index_2 = numeric_limits<int32_t>::max();
+          index_2 = numeric_limits<int64_t>::max();
         }
       }
     }
@@ -1240,92 +1240,10 @@ namespace breseq {
 		if (verbose)
 			cout << "Overlap offset: " << overlap_offset << endl;
      
-    /*
     ////
 		// Create the sequence of the candidate junction
     ////
-		string junction_seq_string = "";
-
-		// first end - contains the overlap for >0 overlap
-		int32_t flanking_left = flanking_length;
-		if (hash_strand_1 != 1) // alignment is not reversed
-		{
-			// start_pos is in 1-based coordinates
-			int32_t start_pos = hash_coord_1 - (flanking_left - 1) - overlap_offset;
-			if (start_pos < 1)
-			{
-				if (verbose)
-					cout << "START POS 1: " << start_pos << " < 0" << endl;
-				flanking_left += start_pos - 1;
-				start_pos = 1;
-			}
-			string add_seq = ref_seq_1.substr(start_pos - 1, flanking_left + overlap_offset);
-			if (verbose) cout << "1F: " << add_seq << endl;
-			junction_seq_string += add_seq;
-		}
-		else
-		{
-			// end_pos is in 1-based coordinates
-			uint32_t end_pos = hash_coord_1 + (flanking_left - 1) + overlap_offset;
-			if (end_pos > ref_seq_1.size())
-			{
-				if (verbose) cout << "END POS 1: (" << end_pos << " < length" << endl;
-				flanking_left -= end_pos - ref_seq_1.size();
-				end_pos = ref_seq_1.size();
-			}
-
-			string add_seq = ref_seq_1.substr(end_pos - (flanking_left + overlap_offset), flanking_left + overlap_offset);
-			add_seq = reverse_complement(add_seq);
-			if (verbose) cout << "1R: " << add_seq << endl;
-			junction_seq_string += add_seq;
-    }
-
-		// Add any unique junction sequence that was only in the read
-		// and NOT present in the reference genome (overlap < 0)
-		string unique_read_seq_string = "";
-		if (overlap < 0)
-			unique_read_seq_string = q1.read_char_sequence().substr(q1_end, -1 * overlap);
-		junction_seq_string += unique_read_seq_string;
-
-		if (verbose) cout << "+U: " << unique_read_seq_string << endl;
-
-		// second end - added without overlapping sequence
-		int32_t flanking_right = flanking_length;
-    
-		if (hash_strand_2 == 1) //alignment is not reversed
-		{
-			// end_pos is in 1-based coordinates
-			uint32_t end_pos = hash_coord_2 + (flanking_right - 1) + overlap_offset;
-			if (end_pos > ref_seq_2.size())
-			{
-				if (verbose)
-					cout << "END POS 2: (" << end_pos << " < length" << endl;
-				flanking_right -= (end_pos - ref_seq_2.size());
-				end_pos = ref_seq_2.size();
-			}
-			string add_seq = ref_seq_2.substr(end_pos - flanking_right, flanking_right);
-			if (verbose) cout << "2F: " << add_seq << endl;
-			junction_seq_string += add_seq;
-		}
-		else // alignment is reversed
-		{
-			// start_pos is in 1-based coordinates
-			int32_t start_pos = hash_coord_2 - (flanking_right - 1) - overlap_offset;
-			if (start_pos < 1)
-			{
-				if (verbose) cout << "START POS 2: " << start_pos << " < 0" << endl;
-				flanking_right += start_pos - 1;
-				start_pos = 1;
-			}
-			string add_seq = ref_seq_2.substr(start_pos - 1, flanking_right);			
-      add_seq = reverse_complement(add_seq);
-			if (verbose) cout << "2R: " << add_seq << endl;
-			junction_seq_string += add_seq;
-		}
-
-		if (verbose) cout << "3: " << junction_seq_string << endl;
-    */
-    
+		    
     // Get the unique read sequence... (only code remaining from above)
     
     string unique_read_seq_string = "";
@@ -1347,8 +1265,6 @@ namespace breseq {
     // Save these return values - we do not allow coords to be adjusted within construct_junction_sequence
     int32_t flanking_left = from_string<int32_t>(jc["flanking_left"]);
     int32_t flanking_right = from_string<int32_t>(jc["flanking_right"]);
-
-    //ASSERT(test_junction_seq == junction_seq_string, "Mismatch junction test:" + test_junction_seq + "\n" + junction_seq_string);
     
 		// create hash coords after adjustment for overlap
 		if (!hash_strand_1)
