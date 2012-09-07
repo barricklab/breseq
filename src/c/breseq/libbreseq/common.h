@@ -359,6 +359,10 @@ namespace breseq {
     // error getting stat, file must not exist
     return true;
   }
+  inline bool file_empty(const string& filename) 
+  {
+    return file_empty(filename.c_str());
+  }
 
 	inline uint32_t fix_flags(uint32_t flags)
 	{
