@@ -656,41 +656,28 @@ namespace breseq
       this->installed["path"] = pPath;
     }
     
-    string test_command;
-    
     // SAMtools executables - look in the local bin path only
-    test_command = "which " + this->bin_path + "/samtools";
-		this->installed["samtools"] = SYSTEM_CAPTURE(test_command, true);
+    string samtools_path = this->bin_path + "/samtools";
+    if (!file_empty(samtools_path)) {
+		  this->installed["samtools"] = samtools_path;
+    }
     
     // Unless we are in "make test" mode where this environental variable is defined.
-    char * breseq_samtools_path;
-    breseq_samtools_path = getenv ("BRESEQ_SAMTOOLS_PATH");
-    if (breseq_samtools_path!=NULL) {
-      test_command = "which " + cString(breseq_samtools_path) + "/samtools";
-      this->installed["samtools"] = SYSTEM_CAPTURE(test_command, true);
+    char* breseq_samtools_path = getenv("BRESEQ_SAMTOOLS_PATH");
+    if (breseq_samtools_path !=NULL) {
+      if (!file_empty(string(breseq_samtools_path) + "/samtools")) {
+        this->installed["samtools"] = string(breseq_samtools_path) + "/samtools";
+      }
       cerr << "In test mode. Samtools path: " << breseq_samtools_path << endl;
     }
     
-		// search first for ssaha2 in the same location as breseq    
-    test_command = "which " + this->bin_path + "/ssaha2";
-		this->installed["SSAHA2"] = SYSTEM_CAPTURE(test_command, true);
     
-    // attempt to fall back on system-wide install
-    if (this->installed["SSAHA2"].size() == 0)
-      this->installed["SSAHA2"] = SYSTEM_CAPTURE("which ssaha2", true);
+    // detect SSAHA2 system-wide install
+    this->installed["SSAHA2"] = SYSTEM_CAPTURE("which ssaha2", true);
 
-    // search for bowtie2 and bowtie2-build executables   
-    test_command = "which " + this->bin_path + "/bowtie2";
-		this->installed["bowtie2"] = SYSTEM_CAPTURE(test_command, true);
-    if (this->installed["bowtie2"].size() == 0) {
-      this->installed["bowtie2"] = SYSTEM_CAPTURE("which bowtie2", true);
-    }
-    
-    test_command = "which " + this->bin_path + "/bowtie2-build";
-		this->installed["bowtie2-build"] = SYSTEM_CAPTURE(test_command, true);
-    if (this->installed["bowtie2-build"].size() == 0) {
-      this->installed["bowtie2-build"] = SYSTEM_CAPTURE("which bowtie2-build", true);
-    }
+    // detect bowtie2 and bowtie2-build system-wide install
+    this->installed["bowtie2"] = SYSTEM_CAPTURE("which bowtie2", true);
+    this->installed["bowtie2-build"] = SYSTEM_CAPTURE("which bowtie2-build", true);
     
     if (this->installed["bowtie2"].size() != 0) {
       this->installed["bowtie2_version"] = "0";
