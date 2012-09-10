@@ -952,9 +952,8 @@ namespace breseq {
         if (--itsCounter->count == 0) {
           delete itsCounter->ptr;
           delete itsCounter;
-          itsCounter = 0; //@JEB edit
+          itsCounter = 0;
         }
-//@JEB -- this is an error?        itsCounter = 0;
       }
     }
   };
