@@ -1638,14 +1638,17 @@ namespace breseq {
         if (verbose)
           cout << "START POS 1: " << start_pos << " < 0" << endl;
         flanking_left += start_pos - 1;
+        flanking_left = max(0, flanking_left);
         start_pos = 1;
       }
       //cout << "number 1:" << endl;
       //cout << start_pos + 1 << " " << start_pos + flanking_left + overlap_offset << endl;
-      string add_seq = ref_seq_1.get_sequence_1(start_pos, start_pos + flanking_left + overlap_offset - 1);
       
-      if (verbose) cout << "1F: " << add_seq << endl;
-      junction_seq_string += add_seq;
+      if (flanking_left > 0) {
+        string add_seq = ref_seq_1.get_sequence_1(start_pos, start_pos + flanking_left + overlap_offset - 1);        
+        if (verbose) cout << "1F: " << add_seq << endl;
+        junction_seq_string += add_seq;
+      }
    
     } else { // alignment is reversed
       
@@ -1654,16 +1657,18 @@ namespace breseq {
       if (end_pos > ref_seq_1.m_length) {
         if (verbose) cout << "END POS 1: (" << end_pos << " < length" << endl;
         flanking_left -= end_pos - ref_seq_1.m_length;
+        flanking_left = max(0, flanking_left);
         end_pos = ref_seq_1.m_length;
       }
       
       //cout << "number 1:" << endl;
       //cout << end_pos - (flanking_left + overlap_offset) + 1 << " " << end_pos << endl;
-      string add_seq = ref_seq_1.get_sequence_1(end_pos - (flanking_left + overlap_offset) + 1, end_pos);
-      
-      add_seq = reverse_complement(add_seq);
-      if (verbose) cout << "1R: " << add_seq << endl;
-      junction_seq_string += add_seq;
+      if (flanking_left > 0) {
+        string add_seq = ref_seq_1.get_sequence_1(end_pos - (flanking_left + overlap_offset) + 1, end_pos);
+        add_seq = reverse_complement(add_seq);
+        if (verbose) cout << "1R: " << add_seq << endl;
+        junction_seq_string += add_seq;
+      }
     }
     
     // Add any unique junction sequence that was only in the read
@@ -1680,19 +1685,21 @@ namespace breseq {
     {
       // end_pos is in 1-based coordinates
       int32_t end_pos = hash_coord_2 + (flanking_right - 1) + overlap_offset;
-      if (end_pos > ref_seq_2.m_length)
-      {
+      if (end_pos > ref_seq_2.m_length) {
         if (verbose)
           cout << "END POS 2: (" << end_pos << " < length" << endl;
         flanking_right -= (end_pos - ref_seq_2.m_length);
+        flanking_right = max(0, flanking_right);
         end_pos = ref_seq_2.m_length;
       }
       //string add_seq = ref_seq_2.substr(end_pos - flanking_right, flanking_right);
       //cout << "number 2:" << endl;
       //cout << end_pos - flanking_right << " " << end_pos - 1 << endl;
-      string add_seq = ref_seq_2.get_sequence_1(end_pos - flanking_right + 1, end_pos);
-      if (verbose) cout << "2F: " << add_seq << endl;
-      junction_seq_string += add_seq;
+      if (flanking_right > 0) {
+        string add_seq = ref_seq_2.get_sequence_1(end_pos - flanking_right + 1, end_pos);
+        if (verbose) cout << "2F: " << add_seq << endl;
+        junction_seq_string += add_seq;
+      }
     }
     else // alignment is reversed
     {
@@ -1702,12 +1709,16 @@ namespace breseq {
       {
         if (verbose) cout << "START POS 2: " << start_pos << " < 0" << endl;
         flanking_right += start_pos - 1;
+        flanking_right = max(0, flanking_right);
         start_pos = 1;
       }
-      string add_seq = ref_seq_2.get_sequence_1(start_pos, start_pos + flanking_right - 1);
-      add_seq = reverse_complement(add_seq);
-      if (verbose) cout << "2R: " << add_seq << endl;
-      junction_seq_string += add_seq;
+      
+      if (flanking_right > 0) {
+        string add_seq = ref_seq_2.get_sequence_1(start_pos, start_pos + flanking_right - 1);
+        add_seq = reverse_complement(add_seq);
+        if (verbose) cout << "2R: " << add_seq << endl;
+        junction_seq_string += add_seq;
+      }
     }
   
     //cout << hash_coord_1 << " " << hash_strand_1 << " " << hash_coord_2 << " " << hash_strand_2 << endl;

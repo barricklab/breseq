@@ -656,6 +656,9 @@ namespace breseq
       this->installed["path"] = pPath;
     }
     
+    // For checking path in XCode etc...
+    //cerr << this->installed["path"] << endl;
+    
     // SAMtools executables - look in the local bin path only
     string samtools_path = this->bin_path + "/samtools";
     if (!file_empty(samtools_path)) {
@@ -671,16 +674,34 @@ namespace breseq
       cerr << "In test mode. Samtools path: " << breseq_samtools_path << endl;
     }
     
+    // which can return an error message
     
     // detect SSAHA2 system-wide install
     this->installed["SSAHA2"] = SYSTEM_CAPTURE("which ssaha2", true);
-
+    this->installed["SSAHA2_version_string"] = "";
+    
+    if (this->installed["SSAHA2"].size() != 0) {
+      string version_string = SYSTEM_CAPTURE(this->installed["SSAHA2"] + " --version", true);
+      size_t start_version_pos = version_string.find("version");
+      if (start_version_pos != string::npos) {
+        start_version_pos = version_string.find_first_not_of(" \t\r\n", start_version_pos+7);
+        size_t end_version_pos = version_string.find_first_not_of("0123456789.", start_version_pos+1);
+        this->installed["SSAHA2_version_string"] = version_string.substr(start_version_pos, end_version_pos - start_version_pos);
+      }
+      else {
+        this->installed["SSAHA2"] = "";
+      }
+    }
+    
+    //cerr << "SSAHA2: " << this->installed["SSAHA2"] << " SSAHA2 version: " << this->installed["SSAHA2_version_string"] << endl;
+    
     // detect bowtie2 and bowtie2-build system-wide install
     this->installed["bowtie2"] = SYSTEM_CAPTURE("which bowtie2", true);
     this->installed["bowtie2-build"] = SYSTEM_CAPTURE("which bowtie2-build", true);
+    this->installed["bowtie2_version"] = "";
+    this->installed["bowtie2_version_string"] = "";
     
     if (this->installed["bowtie2"].size() != 0) {
-      this->installed["bowtie2_version"] = "0";
       string version_string = SYSTEM_CAPTURE(this->installed["bowtie2"] + " --version", true);
       size_t start_version_pos = version_string.find("version");
       if (start_version_pos != string::npos) {
@@ -703,12 +724,20 @@ namespace breseq
           numerical_version += n(*it);
         }
         this->installed["bowtie2_version"] = s(numerical_version);
-
-        //"version 2.0.0-beta7"
+      }
+      else {
+        this->installed["bowtie2"] = "";
+        this->installed["bowtie2-build"] = "";
       }
     }
     
-		this->installed["R"] = SYSTEM_CAPTURE("which R", true).size() ? "R" : "";
+    //cerr << "Bowtie2: " << this->installed["bowtie2"] << " Bowtie2 version: " << this->installed["bowtie2_version_string"] << endl;
+
+    
+		this->installed["R"] = SYSTEM_CAPTURE("which R", true);
+    this->installed["R_version_string"] = "";
+    this->installed["R_version"] = "";
+    
 		if (this->installed["R"].size() > 0)
 		{
 			string R_version = SYSTEM_CAPTURE("R --version", true);
@@ -727,6 +756,7 @@ namespace breseq
         end_version_pos--;
         
         string version_string = R_version.substr(start_version_pos, end_version_pos - start_version_pos + 1);
+        this->installed["R_version_string"] = version_string;
         vector<string> split_version_string = split(version_string, ".");
         if (split_version_string.size() == 3)
         {
@@ -734,8 +764,12 @@ namespace breseq
           this->installed["R_version"] = to_string(R_numerical_version);
         }
       }
+      else {
+        this->installed["R"] = "";
+      }
 		}
 
+    //cerr << "R: " << this->installed["R"] << " R version: " << this->installed["R_version_string"] << endl;
     
 	}
 
@@ -744,7 +778,7 @@ namespace breseq
     // Developer's Note
     //
     // If you are running things through a debugger (like in XCode), your $PATH may need to be
-    // set to include the paths where you have SSAHA2 and R installed within your IDE.
+    // set to include the paths where you have SSAHA2, Bowtie2, and R installed within your IDE.
     
 		bool good_to_go = true;
 
@@ -757,18 +791,17 @@ namespace breseq
 
 		if (this->bowtie2) 
     {
-      if (this->installed["bowtie2-build"].size() == 0 ||
-         this->installed["bowtie2"].size() == 0)
+      if (this->installed["bowtie2"].size() == 0)
       {
         good_to_go = false;
         cerr << "---> ERROR Required executable \"bowtie2\" or \"bowtie2-build\" not found." << endl;
-        cerr << "---> See http://bowtie-bio.sourceforge.net/" << endl;
+        cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
       }
       // version encoded in triplets of numbers
       else if (from_string<uint32_t>(this->installed["bowtie2_version"]) < 2000000007) {
         cerr << "---> ERROR Required executable \"bowtie2 version 2.0.0-beta7 or later\" not found." << endl;
         cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
-        cerr << "---> See http://www.r-project.org" << endl;
+        cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
       }
     }
 		// R version 2.1 required
@@ -781,16 +814,8 @@ namespace breseq
     else if (from_string<uint32_t>(this->installed["R_version"]) < 2001000)
 		{
       good_to_go = false;
-      uint32_t R_numerical_version = from_string<uint32_t>(this->installed["R_version"]);
-      string R_version = to_string<uint32_t>(static_cast<uint32_t>(floor(R_numerical_version/1000000))) 
-        + "." + to_string<uint32_t>(static_cast<uint32_t>(floor(R_numerical_version%1000000/1000)))
-        + "." + to_string<uint32_t>(static_cast<uint32_t>(floor(R_numerical_version%1000)));
-
       cerr << "---> ERROR Required executable \"R version 2.1.0 or later\" not found." << endl;
-      
-      // Did not have R at all, don't want to show empty version string.
-      if (R_numerical_version != 0) 
-        cerr << "---> Your version is " << R_version << "." << endl;
+      cerr << "---> Your version is " << this->installed["R_version_string"] << "." << endl;
       cerr << "---> See http://www.r-project.org" << endl;
     }
 
