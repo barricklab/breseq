@@ -1819,6 +1819,7 @@ int breseq_default_action(int argc, char* argv[])
 		MutationPredictor mp(ref_seq_info);
     cGenomeDiff mpgd(settings.evidence_genome_diff_file_name);
     mp.predict(settings, summary, mpgd);
+    mpgd.assign_unique_ids();
 
     //#=REFSEQ header lines.
     mpgd.metadata.ref_seqs.resize(settings.reference_file_names.size());
