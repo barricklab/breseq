@@ -203,7 +203,7 @@ namespace breseq
     //! Settings: Candidate Junction Prediction
     int32_t  preprocess_junction_min_indel_split_length;    // Default = 3
 		uint32_t required_both_unique_length_per_side;          // Default = 0 (OFF)
-    uint32_t required_both_unique_length_per_side_fraction; // Default = 0.2 
+    double   required_both_unique_length_per_side_fraction; // Default = 0.2 
 		uint32_t required_one_unique_length_per_side;           // Default = ssaha2_seed_length = 13
     uint32_t unmatched_end_minimum_read_length;             // Default = 50
     double   unmatched_end_length_factor;                   // Default = 0.1

@@ -298,7 +298,7 @@ namespace breseq
     if (options.count("polymorphism-bias-cutoff"))
       this->polymorphism_bias_p_value_cutoff = from_string<double>(options["polymorphism-bias-cutoff"]);
     if (options.count("polymorphism-minimum-coverage-each-strand"))
-      this->polymorphism_minimum_new_coverage_each_strand = from_string<double>(options["polymorphism-minimum-coverage-each-strand"]);
+      this->polymorphism_minimum_new_coverage_each_strand = from_string<int32_t>(options["polymorphism-minimum-coverage-each-strand"]);
     
 
     this->mutation_identification_per_position_file = options.count("per-position-file");
