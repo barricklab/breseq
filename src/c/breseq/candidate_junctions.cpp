@@ -1581,7 +1581,7 @@ namespace breseq {
   // In the input cDiffEntry of 'JC' type, these fields must be provided:
   //  'side_1_seq_id', 'side_1_position', 'side_1_strand',
   //  'side_2_seq_id', 'side_2_position', 'side_2_strand',
-  //  'overlap' must be defined, but can be corrected from zero to the tru value
+  //  'overlap' must be defined, but can be corrected from zero to the true value
   //  'unique_junction_sequence' may be optionally provided...
   //  If it is provided, then overlap will be set to be negative its length.
   //
@@ -1721,6 +1721,18 @@ namespace breseq {
       }
     }
   
+    // Check the length - debug code
+    if (inclusive_overlap && ( static_cast<int32_t>(junction_seq_string.size()) != flanking_left + flanking_right - abs(overlap))) {
+      stringstream s;
+      s << jc << endl;
+      ERROR( s.str() + "Incorrect junction sequence length: "  +  to_string(junction_seq_string.size()));
+    }
+    else if (static_cast<int32_t>(junction_seq_string.size()) != flanking_left + flanking_right + abs(overlap)) {
+      stringstream s;
+      s << jc << endl;
+      ERROR( s.str() + "Incorrect junction sequence length: "  +  to_string(junction_seq_string.size()));
+    }
+    
     //cout << hash_coord_1 << " " << hash_strand_1 << " " << hash_coord_2 << " " << hash_strand_2 << endl;
     //cout << junction_seq_string << endl;
         

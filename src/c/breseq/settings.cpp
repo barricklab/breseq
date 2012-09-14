@@ -799,6 +799,7 @@ namespace breseq
       }
       // version encoded in triplets of numbers
       else if (from_string<uint32_t>(this->installed["bowtie2_version"]) < 2000000007) {
+        good_to_go = false;
         cerr << "---> ERROR Required executable \"bowtie2 version 2.0.0-beta7 or later\" not found." << endl;
         cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
         cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;

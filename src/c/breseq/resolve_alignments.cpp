@@ -1607,7 +1607,7 @@ cDiffEntry junction_to_diff_entry(
 		}
 		else  // side_1 was redundant, give overlap to side_2
 		{
-			int32_t strand_direction = (jc.sides[0].strand > 0 ? -1 : 1);
+			int32_t strand_direction = (jc.sides[0].strand > 0 ? 1 : -1);
 			jc.sides[0].position += jc.overlap * strand_direction;
 			jc.sides[0].overlap = 0;
 			jc.overlap = 0;
