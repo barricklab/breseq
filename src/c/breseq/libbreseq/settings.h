@@ -240,8 +240,9 @@ namespace breseq
     bool penalize_negative_junction_overlap;              // Manually set. True for experimental treatment.
       
     //! Settings: Alignment Resolution
-		bool add_split_junction_sides;                        // Default = true (possibly remove this option)  
-    double junction_pos_hash_neg_log10_p_value_cutoff;    // Default = 3
+		bool add_split_junction_sides;                        // Default = true (possibly remove this option) 
+    uint32_t minimum_alignment_resolution_pos_hash_score; // Default = 2
+    double junction_pos_hash_neg_log10_p_value_cutoff;    // Default = 2.0
     
     //! Settings: Mutation Identification
     

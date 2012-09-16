@@ -228,18 +228,19 @@ double PosHashProbabilityTable::probability(string& seq_id, uint32_t pos_hash_sc
         
   double pr = 0;
   
-  if (verbose)
+  if (verbose) {
     cout << "Calculating: seq_id " << seq_id << " pos_hash_score " << pos_hash_score << " max_pos_hash_score " << max_pos_hash_score << endl;
-      
+    cout << "Coverage from 1 to " << max_coverage << endl;
+    cout << "Negative Binomial Fit: Size = " << p.negative_binomial_size << " Prob = " << p.negative_binomial_prob << endl;
+  }
+  
   for (uint32_t this_coverage=1; this_coverage<= max_coverage; this_coverage++) {
     
     double this_cov_pr =  nbdtr(this_coverage, p.negative_binomial_size, p.negative_binomial_prob)
                         - nbdtr(this_coverage-1, p.negative_binomial_size, p.negative_binomial_prob); 
-    
-    if (verbose)
-      cout << "NB: " << this_coverage << " " << p.negative_binomial_size << " " << p.negative_binomial_prob << endl;
 
-    double this_chance_per_pos_strand_read_start = 1 - pow(p.chance_per_pos_strand_no_read_start, (this_coverage / static_cast<double>(p.average_coverage)));
+    double this_ratio_of_coverage_to_average = static_cast<double>(this_coverage) / static_cast<double>(p.average_coverage);
+    double this_chance_per_pos_strand_read_start = 1 - pow(p.chance_per_pos_strand_no_read_start, this_ratio_of_coverage_to_average);
 
     double this_pos_hash_pr = 0;
     for (uint32_t i=0; i <= pos_hash_score; i++) {
@@ -247,18 +248,22 @@ double PosHashProbabilityTable::probability(string& seq_id, uint32_t pos_hash_sc
       //chance of getting pos_hash_score or lower
       this_pos_hash_pr += binomial(this_chance_per_pos_strand_read_start, max_pos_hash_score, i);
     }
-    
-    if (verbose)
-      cout << this_coverage << " " << this_cov_pr << " " << this_pos_hash_pr << " " << this_chance_per_pos_strand_read_start << endl;
-    
+        
     double this_pr = this_cov_pr*this_pos_hash_pr;
     pr += this_pr;
     
-    if (verbose)
-      cout << "  " << pr << endl;      
+    if (verbose) {
+      cout << "  Cov: " << this_coverage << " Cov Pr: " << this_cov_pr << " Pos Hash Pr: " << this_pos_hash_pr << " Read Start Pr: " << this_chance_per_pos_strand_read_start << endl;
+      cout << "  This Pr: " << this_pr << " Cumulative Pr: " << pr << endl;
+    }    
   }
   double log_pr = -log(pr)/log(10);
   probability_table[seq_id][pos_hash_score][max_pos_hash_score] = log_pr;
+  
+  if (verbose) {
+    cout << "  -Log10 Cumulative Pr: " << log_pr << endl;
+  }
+  
   return log_pr;
 }
 
@@ -482,9 +487,9 @@ void resolve_alignments(
     failed = failed || (junction_test_info.pos_hash_score == 0);
     
     // Check that it met the minimum pos hash score criterion
-    failed = failed || (junction_test_info.pos_hash_score < settings.minimum_candidate_junction_pos_hash_score);
+    failed = failed || (junction_test_info.pos_hash_score < settings.minimum_alignment_resolution_pos_hash_score);
 
-    // We don't even record junctions in the genome diff if they don't meet the minimum_candidate_junction_pos_hash_score 
+    // We don't even record junctions in the genome diff if they don't meet the minimum_alignment_resolution_pos_hash_score 
     // criterion, or if they just have no matches
     record = !failed;
     
@@ -681,7 +686,8 @@ void load_junction_alignments(
     ///
     
     cFastqSequence seq;
-    while (in_fastq.read_sequence(seq)) // READ
+    cFastqQualityConverter fqc("SANGER", "SANGER");
+    while (in_fastq.read_sequence(seq, fqc)) // READ
     {
       if ((settings.resolve_alignment_read_limit) && (reads_processed >= settings.resolve_alignment_read_limit))
         break; // to next file
