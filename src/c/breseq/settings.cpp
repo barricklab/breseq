@@ -163,7 +163,7 @@ namespace breseq
     
     options.addUsage("");
 		options.addUsage("Utility Command Usage: breseq [command] options ...");
-    options.addUsage("  Sequence Utility Commands: CONVERT-READ, CONVERT-REFERENCE, GET-SEQUENCE");
+    options.addUsage("  Sequence Utility Commands: CONVERT-FASTQ, CONVERT-REFERENCE, GET-SEQUENCE");
     options.addUsage("  Breseq Post-Run Commands: BAM2ALN, BAM2COV");
     options.addUsage("");
     options.addUsage("For help using a utility command, type: breseq [command] ");
@@ -413,6 +413,7 @@ namespace breseq
     //! Settings: Alignment Resolution
     this->add_split_junction_sides = true;
     this->junction_pos_hash_neg_log10_p_value_cutoff = 2;
+    this->minimum_alignment_resolution_pos_hash_score = 2;
 
     //! Settings: Mutation Identification
     this->base_quality_cutoff = 3;

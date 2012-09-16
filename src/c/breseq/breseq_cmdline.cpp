@@ -293,21 +293,14 @@ int do_convert_fastq(int argc, char* argv[])
      || !options.count("in-format")
      || !options.count("out-format")
 		 ) {
+    options.addUsage("Valid formats are 'SANGER', 'SOLEXA', 'ILLUMINA_1.3+'");
 		options.printUsage();
 		return -1;
 	}                       
-  
-	try {
     
-    convert_fastq(options["input"], options["output"], options["in-format"], options["out-format"]);
-    
-    } catch(...) {
-      // failed; 
-      return -1;
-    }
-    
-    return 0;
-  
+  convert_fastq(options["input"], options["output"], options["in-format"], options["out-format"]);
+
+  return 0;
 }
 
 int do_convert_genbank(int argc, char* argv[]) {

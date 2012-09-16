@@ -564,8 +564,8 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
     HTML << td(it->m_seq_id);
     HTML << td(ALIGN_RIGHT, commify(to_string(it->m_length)));
     
-    HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].average, 1));
-    HTML << td(ALIGN_CENTER, to_string( static_cast<double>( 1.0 / (1.0-summary.unique_coverage[it->m_seq_id].nbinom_prob_parameter) ), 1));
+    HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter, 1));
+    HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_dispersion));
     //HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter, 1));
     //HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_size_parameter, 1));
 

@@ -55,9 +55,15 @@ class cAnnotatedSequence;
       string   m_sequence;    //sequence
       string   m_name_plus;   //+NAME
       string   m_qualities;   //quality score characters
+      bool     m_numerical_qualities; // quality scores read were read from numerical format
       uint32_t m_base_counts[base_list_including_N_size]; // number of each base, including N. Used for filtering.
     
-      size_t length() { return m_sequence.length(); }
+    
+    cFastqSequence() 
+    : m_numerical_qualities(false)
+    {}
+    
+    size_t length() { return m_sequence.length(); }
    };
 
   void fastq_sequence_trim_end_on_base_quality(cFastqSequence& seq, const uint32_t base_quality);
@@ -129,9 +135,16 @@ class cAnnotatedSequence;
    */
   
   struct cFastqQualityConverter : public vector<uint8_t> {
-  public:
-    cFastqQualityConverter(const string &from_quality_format, const string &to_quality_format);
+  public:    
+    cFastqQualityConverter(const string &_from_quality_format, const string &_to_quality_format);
     ~cFastqQualityConverter() {};
+    
+    string from_quality_format;
+    string to_quality_format;
+    string from_quality_type;
+    string to_quality_type;
+    int32_t from_chr_offset;
+    int32_t to_chr_offset;
     
     void convert_sequence(cFastqSequence &seq);
   };
@@ -158,7 +171,7 @@ class cAnnotatedSequence;
     cFastqFile(const string &file_name, ios_base::openmode mode); 
     ~cFastqFile() {};
       
-    bool read_sequence(cFastqSequence &sequence);
+    bool read_sequence(cFastqSequence &sequence, cFastqQualityConverter& fqc);
     void write_sequence(const cFastqSequence &sequence);
   
     bool needs_conversion() { return m_needs_conversion; }

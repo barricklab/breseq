@@ -135,7 +135,14 @@ namespace breseq {
     summary.unique_coverage[seq_id].nbinom_size_parameter = from_string<double>(lines[0]);
     summary.unique_coverage[seq_id].nbinom_mean_parameter = from_string<double>(lines[1]);
     // Calculated by formula, prob = size/(size + mu)
-    summary.unique_coverage[seq_id].nbinom_prob_parameter = summary.unique_coverage[seq_id].nbinom_size_parameter / (summary.unique_coverage[seq_id].nbinom_mean_parameter + summary.unique_coverage[seq_id].nbinom_size_parameter);
+    summary.unique_coverage[seq_id].nbinom_prob_parameter = summary.unique_coverage[seq_id].nbinom_size_parameter 
+      / (summary.unique_coverage[seq_id].nbinom_mean_parameter + summary.unique_coverage[seq_id].nbinom_size_parameter);
+    // Calculated by formula variance = mu + mu ^ 2 / size
+    summary.unique_coverage[seq_id].nbinom_variance = summary.unique_coverage[seq_id].nbinom_mean_parameter 
+      + pow(summary.unique_coverage[seq_id].nbinom_mean_parameter, 2) / summary.unique_coverage[seq_id].nbinom_size_parameter;
+    // Calculated by formula dispersion = variance / mu
+    summary.unique_coverage[seq_id].nbinom_dispersion = summary.unique_coverage[seq_id].nbinom_variance / summary.unique_coverage[seq_id].nbinom_mean_parameter; 
+    
     summary.unique_coverage[seq_id].average = from_string<double>(lines[2]);
     summary.unique_coverage[seq_id].variance = from_string<double>(lines[3]);
     summary.unique_coverage[seq_id].dispersion = from_string<double>(lines[4]);

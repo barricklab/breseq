@@ -62,7 +62,9 @@ namespace breseq {
     assert(input_fastq_file.is_open());
 
     cFastqSequence on_sequence;
-    while (input_fastq_file.read_sequence(on_sequence)) {
+    cFastqQualityConverter prelim_fqc("ILLUMINA_1.3+", "SANGER");
+
+    while (input_fastq_file.read_sequence(on_sequence, prelim_fqc)) {
       
       //increment read number
       original_num_reads++;
@@ -78,8 +80,6 @@ namespace breseq {
         int this_score(uint8_t(on_sequence.m_qualities[i]));
         if( this_score > max_quality_score ) max_quality_score = this_score;
         if( this_score < min_quality_score ) min_quality_score = this_score;
-
-      format_to_chr_offset["SANGER"];
       }
     }
     input_fastq_file.close();
@@ -126,7 +126,7 @@ namespace breseq {
     // (much faster than looking through all qualities again)
     
     uint32_t on_read = 1;
-    while (input_fastq_file.read_sequence(on_sequence)) {
+    while (input_fastq_file.read_sequence(on_sequence, fqc)) {
       
       if ( filter_reads ) {
 
@@ -230,7 +230,7 @@ namespace breseq {
     cFastqQualityConverter fqc(from_format, to_format);
 
     cFastqSequence on_sequence;
-    while (input_fastq_file.read_sequence(on_sequence)) 
+    while (input_fastq_file.read_sequence(on_sequence, fqc)) 
     {
       fqc.convert_sequence(on_sequence);
       output_fastq_file.write_sequence(on_sequence);
@@ -252,7 +252,7 @@ namespace breseq {
   }
 
   // constructor
-  cFastqQualityConverter::cFastqQualityConverter(const string &from_quality_format, const string &to_quality_format)
+  cFastqQualityConverter::cFastqQualityConverter(const string &_from_quality_format, const string &_to_quality_format)
   {
     // Set up maps between formats
     map<string,uint8_t> format_to_chr_offset;
@@ -265,17 +265,21 @@ namespace breseq {
     format_to_quality_type["SOLEXA"] = "SOLEXA";
     format_to_quality_type["ILLUMINA_1.3+"] = "PHRED";
     
+    from_quality_format = _from_quality_format;
+    to_quality_format = _to_quality_format;
+    
     // check what we asked for is valid...
     ASSERT(format_to_chr_offset.count(from_quality_format), 
-           "Unknown FASTQ quality score format: " + from_quality_format + "\nValid choices are 'SANGER', 'SOLEXA', 'ILLUMINA_1.3+'");
+           "Unknown FASTQ quality score format: " + from_quality_format + "\nValid choices are 'SANGER', 'SOLEXA', 'ILLUMINA_1.3+', 'NUMERICAL'");
     ASSERT(format_to_chr_offset.count(to_quality_format), 
-           "Unknown FASTQ quality score format: " + to_quality_format + "\nValid choices are 'SANGER', 'SOLEXA', 'ILLUMINA_1.3+'");
+           "Unknown FASTQ quality score format: " + to_quality_format + "\nValid choices are 'SANGER', 'SOLEXA', 'ILLUMINA_1.3+', 'NUMERICAL'");
 
-    string from_quality_type = format_to_quality_type[from_quality_format];
-    string to_quality_type = format_to_quality_type[to_quality_format];
+    
+    from_quality_type = format_to_quality_type[from_quality_format];
+    to_quality_type = format_to_quality_type[to_quality_format];
 
-    int32_t from_chr_offset = format_to_chr_offset[from_quality_format];
-    int32_t to_chr_offset = format_to_chr_offset[to_quality_format];
+    from_chr_offset = format_to_chr_offset[from_quality_format];
+    to_chr_offset = format_to_chr_offset[to_quality_format];
 
     
     this->resize(256);
@@ -348,7 +352,7 @@ namespace breseq {
   }
 
   // read one sequence record from the file
-  bool cFastqFile::read_sequence(cFastqSequence &sequence) {
+  bool cFastqFile::read_sequence(cFastqSequence &sequence, cFastqQualityConverter& fqc) {
     
     // We're done, no error
     if (this->eof()) return false;
@@ -508,9 +512,9 @@ namespace breseq {
           
           if (sequence.m_sequence.size() == line.size()) {
             sequence.m_qualities = line;
-          } else if (line.find_first_not_of(" 0123456789\t") != string::npos) { 
-            ERROR("FASTQ QUALITY line length does not match SEQUENCE length.\nFile: " + m_file_name + " Line: " + to_string(m_current_line));
-          } else {
+          } else if ((line.find_first_of(" ") != string::npos) && (line.find_first_not_of(" -0123456789\t") == string::npos)) {
+            
+            sequence.m_numerical_qualities = true;
             m_needs_conversion = true;
             vector<string> numerical_qualities(split(line, " "));
             if( sequence.m_sequence.size() != numerical_qualities.size() ) {
@@ -523,10 +527,10 @@ namespace breseq {
             for(vector<string>::iterator it = numerical_qualities.begin(); it != numerical_qualities.end(); it++)
             {
               // use of uint16_t is on purpose to force proper conversion @JEB
-              sequence.m_qualities += static_cast<char>(from_string<int16_t>(*it) + 64); // Hard-coded format_to_chr_offset["SOLEXA"]
+              sequence.m_qualities += static_cast<char>(from_string<int16_t>(*it)) + fqc.from_chr_offset;
             }
-              
-            
+          } else {
+            ERROR("FASTQ QUALITY line length does not match SEQUENCE length.\nFile: " + m_file_name + " Line: " + to_string(m_current_line) + "\nSequence:     " + sequence.m_sequence + "\nQuality Line: " + line);
           }
 
           break;

@@ -116,6 +116,8 @@ namespace breseq{
       double nbinom_size_parameter;
       double nbinom_mean_parameter;
       double nbinom_prob_parameter;
+      double nbinom_variance;
+      double nbinom_dispersion;
       double average;
       double variance;
       double dispersion;
@@ -127,6 +129,8 @@ namespace breseq{
         write_to_file(f, nbinom_size_parameter);
         write_to_file(f, nbinom_mean_parameter);
         write_to_file(f, nbinom_prob_parameter);
+        write_to_file(f, nbinom_variance);
+        write_to_file(f, nbinom_dispersion);
         write_to_file(f, average);
         write_to_file(f, variance);
         write_to_file(f, dispersion);
@@ -138,6 +142,8 @@ namespace breseq{
         read_from_file(f, nbinom_size_parameter);
         read_from_file(f, nbinom_mean_parameter);
         read_from_file(f, nbinom_prob_parameter);
+        read_from_file(f, nbinom_variance);
+        read_from_file(f, nbinom_dispersion);
         read_from_file(f, average);
         read_from_file(f, variance);
         read_from_file(f, dispersion);
