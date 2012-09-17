@@ -1619,7 +1619,6 @@ cDiffEntry junction_to_diff_entry(
 			jc.overlap = 0;
 		}
 
-		// If both sides were redundant, no adjustment because we are not going to count coverage
 	}
   
 	// Flatten things to only what we want to keep
