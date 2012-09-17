@@ -480,7 +480,7 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
   HTML << h2("Read File Information") << endl;
   HTML << start_table("border=\"0\" cellspace=\"1\" cellpadding=\"5\"") << endl;
   HTML << start_tr() << th() << th("read file") << th("reads") << 
-                    th("bases") << th("longest") << th("mapped") << "</tr>" << endl;
+                    th("bases") << th("average") << th("longest") << th("mapped") << "</tr>" << endl;
   for(cReadFiles::const_iterator it=settings.read_files.begin(); it!=settings.read_files.end(); it++)
   {
     const Summary::AnalyzeFastq& s = summary.sequence_conversion.reads[it->m_base_name];
@@ -493,19 +493,22 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
                 )
               );
     HTML << td(it->m_base_name);
+    double avg_read_length = static_cast<double>(s.num_bases) / static_cast<double>(s.num_reads);
     HTML << td(ALIGN_RIGHT, commify(to_string(s.num_reads)));
     HTML << td(ALIGN_RIGHT, commify(to_string(s.num_bases)));
+    HTML << td(ALIGN_RIGHT, to_string(avg_read_length, 1) + "&nbsp;bases");
     HTML << td(ALIGN_RIGHT, to_string(s.max_read_length) + "&nbsp;bases");
-    double percent_mapped = 100 * (1.0 - static_cast<double>(rf.num_unmatched_reads) / rf.num_total_reads);
+    double percent_mapped = 100 * (1.0 - static_cast<double>(rf.num_unmatched_reads) / static_cast<double>(rf.num_total_reads));
     HTML << td(ALIGN_RIGHT, to_string(percent_mapped, 1) + "%");
     HTML << end_tr();
   }
   
   HTML << start_tr("class=\"highlight_table_row\"");
   HTML << td();
-  HTML << td(b("total"));
+  HTML << td(b("total"));  
   HTML << td(ALIGN_RIGHT , b(commify(to_string(summary.sequence_conversion.num_reads))) );
   HTML << td(ALIGN_RIGHT , b(commify(to_string(summary.sequence_conversion.num_bases))) );
+  HTML << td(ALIGN_RIGHT, to_string(summary.sequence_conversion.avg_read_length, 1) + "&nbsp;bases");
   HTML << td(b(commify(to_string(summary.sequence_conversion.max_read_length))) + "&nbsp;bases");
   double total_percent_mapped = 100 * (1.0 - static_cast<double>(summary.alignment_resolution.total_unmatched_reads) / summary.alignment_resolution.total_reads);
   HTML << td(ALIGN_RIGHT, to_string(total_percent_mapped, 1) + "%");
@@ -641,7 +644,7 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
     }  
     HTML << end_table();
     
-    HTML << "<p>" << "pr(no read start) is the probability that there will not be an aligned read whose first base matches a given position on a given strand." << endl;
+    HTML << "<p>" << b("pr(no read start)") + " is the probability that there will not be an aligned read whose first base matches a given position on a given strand." << endl;
   }
   
   //
