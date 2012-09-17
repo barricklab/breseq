@@ -1722,12 +1722,15 @@ namespace breseq {
     }
   
     // Check the length - debug code
+    /* @JEB This check assumes that we did not subtract off flanking earlier!!
     if (inclusive_overlap && ( static_cast<int32_t>(junction_seq_string.size()) != flanking_left + flanking_right - abs(overlap))) {
       stringstream s;
       s << jc << endl;
       ERROR( s.str() + "Incorrect junction sequence length: "  +  to_string(junction_seq_string.size()));
     }
-    else if (static_cast<int32_t>(junction_seq_string.size()) != flanking_left + flanking_right + abs(overlap)) {
+    else 
+    */
+    if (static_cast<int32_t>(junction_seq_string.size()) != flanking_left + flanking_right + abs(overlap)) {
       stringstream s;
       s << jc << endl;
       ERROR( s.str() + "Incorrect junction sequence length: "  +  to_string(junction_seq_string.size()));
