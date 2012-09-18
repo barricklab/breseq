@@ -1,3 +1,12 @@
+Version 0.20
+    * Fixed merging results of first and second alignment stages when read numbers 
+      overflowed a counter used to rename reads.
+    * Fixed negative junction skew predictions when the number of bases in a dataset 
+      overflowed uint32_t size.
+    * Fixed the display of some statistics on the Summary output page.
+    * Fixes to detecting required bowtie2 and R versions.
+    * Fixed improper predictions of deletion size from junctions in rare cases.
+
 Version 0.19
     * bowtie2 instead of ssaha2 now used for mapping reads. All reads are mapped as if
       they are single-ended. Use the -j option to control how many processors bowtie2
