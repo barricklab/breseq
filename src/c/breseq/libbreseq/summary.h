@@ -156,11 +156,11 @@ namespace breseq{
       uint32_t original_reads;
       uint32_t homopolymer_filtered_reads;
       uint32_t N_filtered_reads;
-      uint32_t num_reads;         // original_reads = homopolymer_filtered_reads + N_filtered_reads + num_reads
+      uint64_t num_reads;         // original_reads = homopolymer_filtered_reads + N_filtered_reads + num_reads
       uint32_t min_quality_score;
       uint32_t max_quality_score;
       uint32_t original_num_bases;
-      uint32_t num_bases;
+      uint64_t num_bases;
       string original_qual_format;
       string quality_format;
       string converted_fastq_name;
@@ -172,11 +172,11 @@ namespace breseq{
                    uint32_t _original_reads,
                    uint32_t _homopolymer_filtered_reads,
                    uint32_t _N_filtered_reads,
-                   uint32_t _num_reads, 
+                   uint64_t _num_reads, 
                    uint32_t _min_quality_score, 
                    uint32_t _max_quality_score, 
                    uint32_t _original_num_bases, 
-                   uint32_t _num_bases, 
+                   uint64_t _num_bases, 
                    const string& _original_qual_format, 
                    const string& _quality_format,
                    const string& _converted_fastq_name

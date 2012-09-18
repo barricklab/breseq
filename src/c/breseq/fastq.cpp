@@ -47,14 +47,14 @@ namespace breseq {
     
     // Summary information that will be printed at the end
     uint32_t max_read_length = 0;
-    int min_quality_score = 255;
-    int max_quality_score = 0;
-    uint32_t original_num_bases = 0;
-    uint32_t num_bases = 0;
-    uint32_t original_num_reads = 0;
-    uint32_t num_reads = 0;
-    uint32_t homopolymer_filtered_reads = 0;
-    uint32_t N_filtered_reads = 0;
+    uint8_t min_quality_score = 255;
+    uint8_t max_quality_score = 0;
+    uint64_t original_num_bases = 0;
+    uint64_t num_bases = 0;
+    uint64_t original_num_reads = 0;
+    uint64_t num_reads = 0;
+    uint64_t homopolymer_filtered_reads = 0;
+    uint64_t N_filtered_reads = 0;
     
     // Process the input file, one sequence at a time
     cFastqFile input_fastq_file(file_name.c_str(), fstream::in);

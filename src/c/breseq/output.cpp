@@ -476,6 +476,7 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
   ////
   // Write read file information
   ////
+  double overall_percent_reads_mapped = 0;
   
   HTML << h2("Read File Information") << endl;
   HTML << start_table("border=\"0\" cellspace=\"1\" cellpadding=\"5\"") << endl;
@@ -510,7 +511,7 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
   HTML << td(ALIGN_RIGHT , b(commify(to_string(summary.sequence_conversion.num_bases))) );
   HTML << td(ALIGN_RIGHT, to_string(summary.sequence_conversion.avg_read_length, 1) + "&nbsp;bases");
   HTML << td(b(commify(to_string(summary.sequence_conversion.max_read_length))) + "&nbsp;bases");
-  double total_percent_mapped = 100 * (1.0 - static_cast<double>(summary.alignment_resolution.total_unmatched_reads) / summary.alignment_resolution.total_reads);
+  double total_percent_mapped = 100 * (1.0 - static_cast<double>(summary.alignment_resolution.total_unmatched_reads) / static_cast<double>(summary.alignment_resolution.total_reads));
   HTML << td(ALIGN_RIGHT, to_string(total_percent_mapped, 1) + "%");
   HTML << end_tr();
   HTML << end_table();
