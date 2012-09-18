@@ -36,10 +36,10 @@ namespace breseq{
       
       class ReadFile {
       public:
-        uint32_t num_unmatched_reads;
+        uint64_t num_unmatched_reads;
 //        uint32_t num_unique_reads;
 //        uint32_t num_repeat_reads;
-        uint32_t num_total_reads;
+        uint64_t num_total_reads;
 
         ReadFile()
         : num_unmatched_reads(0)
@@ -65,10 +65,10 @@ namespace breseq{
         
       };
       storable_map<string,ReadFile> read_file;
-      uint32_t total_unmatched_reads;
+      uint64_t total_unmatched_reads;
 //      uint32_t total_unique_reads;
 //      uint32_t total_repeat_reads;
-      uint32_t total_reads;
+      uint64_t total_reads;
       int32_t max_sam_base_quality_score; // @JEB only filled in for aligned_sam_mode
       
       // these statistics are implemented
@@ -153,13 +153,13 @@ namespace breseq{
     class AnalyzeFastq : public Storable {
     public:
       uint32_t max_read_length;
-      uint32_t original_reads;
-      uint32_t homopolymer_filtered_reads;
-      uint32_t N_filtered_reads;
+      uint64_t original_reads;
+      uint64_t homopolymer_filtered_reads;
+      uint64_t N_filtered_reads;
       uint64_t num_reads;         // original_reads = homopolymer_filtered_reads + N_filtered_reads + num_reads
       uint32_t min_quality_score;
       uint32_t max_quality_score;
-      uint32_t original_num_bases;
+      uint64_t original_num_bases;
       uint64_t num_bases;
       string original_qual_format;
       string quality_format;
@@ -169,13 +169,13 @@ namespace breseq{
       
       AnalyzeFastq(
                    uint32_t _max_read_length, 
-                   uint32_t _original_reads,
-                   uint32_t _homopolymer_filtered_reads,
-                   uint32_t _N_filtered_reads,
+                   uint64_t _original_reads,
+                   uint64_t _homopolymer_filtered_reads,
+                   uint64_t _N_filtered_reads,
                    uint64_t _num_reads, 
                    uint32_t _min_quality_score, 
                    uint32_t _max_quality_score, 
-                   uint32_t _original_num_bases, 
+                   uint64_t _original_num_bases, 
                    uint64_t _num_bases, 
                    const string& _original_qual_format, 
                    const string& _quality_format,
@@ -235,12 +235,12 @@ namespace breseq{
     class PreprocessAlignments : public Storable
     {
     public:
-      int32_t aligned_reads;
-			int32_t alignments;
-      int32_t alignments_split_on_indels;
-      int32_t reads_with_alignments_split_on_indels;
-      int32_t split_alignments;
-      int32_t reads_with_split_alignments;
+      int64_t aligned_reads;
+			int64_t alignments;
+      int64_t alignments_split_on_indels;
+      int64_t reads_with_alignments_split_on_indels;
+      int64_t split_alignments;
+      int64_t reads_with_split_alignments;
       
       PreprocessAlignments()
       : aligned_reads(0)
@@ -277,14 +277,14 @@ namespace breseq{
     public:
 			struct Total
 			{
-				int32_t number;
-				int32_t length;
+				int64_t number;
+				int64_t length;
 			} total;
 
 			struct Accepted
 			{
-				int32_t number;
-				int32_t length;
+				int64_t number;
+				int64_t length;
 				int32_t pos_hash_score_cutoff;
 			} accepted;
 
@@ -314,11 +314,11 @@ namespace breseq{
     public:
 			float avg_read_length;
 			uint32_t max_qual;
-			uint32_t num_reads;
-			uint32_t num_bases;
+			uint64_t num_reads;
+			uint64_t num_bases;
 			map<string, string> converted_fastq_name;
 			storable_map<string, AnalyzeFastq> reads;
-			uint32_t total_reference_sequence_length;
+			uint64_t total_reference_sequence_length;
 			uint32_t max_read_length;
 
 			void serialize(ofstream& f)
