@@ -998,7 +998,7 @@ int breseq_default_action(int argc, char* argv[])
 
         s.reads[base_name] = s_rf;
       }
-      s.avg_read_length = s.num_bases / s.num_reads;
+      s.avg_read_length = static_cast<double>(s.num_bases) / static_cast<double>(s.num_reads);
       s.max_read_length = overall_max_read_length;
       s.max_qual = overall_max_qual;
       summary.sequence_conversion = s;
