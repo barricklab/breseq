@@ -200,7 +200,7 @@ namespace breseq {
     if (filter_reads) {
       cerr << "    Filtered reads: " << N_filtered_reads << " (≥50% N) " << homopolymer_filtered_reads << " (≥90% one base)" << endl;
     }
-    cerr << "    Remaining reads: " << num_reads << " bases: "<< num_bases << endl;
+    cerr << "    Analyzed reads: " << num_reads << " bases: "<< num_bases << endl;
 
     
     Summary::AnalyzeFastq retval(
