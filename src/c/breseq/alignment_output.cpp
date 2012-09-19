@@ -159,7 +159,7 @@ void alignment_output::create_alignment ( const string& region, const string& co
 
   if ( ( m_alignment_output_pileup.unique_start == 0 ) || ( m_alignment_output_pileup.unique_end == 0 ) )
   {
-    m_error_message = "No reads aligned to region.";
+    m_error_message = "No reads uniquely aligned to region.";
     return;
   }
   

@@ -994,7 +994,9 @@ int breseq_default_action(int argc, char* argv[])
         if ((overall_max_qual == UNDEFINED_UINT32) || (s_rf.max_quality_score > overall_max_qual))
           overall_max_qual = s_rf.max_quality_score;
         s.num_reads += s_rf.num_reads;
+        s.original_num_reads += s_rf.original_reads;
         s.num_bases += s_rf.num_bases;
+        s.original_num_bases += s_rf.original_num_bases;        
 
         s.reads[base_name] = s_rf;
       }
@@ -1002,7 +1004,15 @@ int breseq_default_action(int argc, char* argv[])
       s.max_read_length = overall_max_read_length;
       s.max_qual = overall_max_qual;
       summary.sequence_conversion = s;
+      
+      // Print totals
+      cerr << "  ::TOTAL::" << endl;
+      cerr << "    Original reads: " << s.original_num_reads << " bases: " << s.original_num_bases << endl;
+      cerr << "    Analyzed reads: " << s.num_reads << " bases: " << s.num_bases << endl;
+
     }
+    
+
       
 		// create SAM faidx
 		string samtools = settings.ctool("samtools");
@@ -1875,7 +1885,7 @@ int breseq_default_action(int argc, char* argv[])
 		// record the final time and print summary table
 		settings.record_end_time("Output");
 
-		output::html_statistics(settings.summary_html_file_name, settings, summary, ref_seq_info);
+		output::html_summary(settings.summary_html_file_name, settings, summary, ref_seq_info);
 
 		settings.done_step(settings.output_done_file_name);
 	}

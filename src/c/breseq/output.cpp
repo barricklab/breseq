@@ -462,7 +462,7 @@ void html_compare(
 }
   
 
-void html_statistics(const string &file_name, const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info)
+void html_summary(const string &file_name, const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info)
 {  
   // Create stream and confirm it's open
   ofstream HTML(file_name.c_str());
@@ -481,7 +481,7 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
   HTML << h2("Read File Information") << endl;
   HTML << start_table("border=\"0\" cellspace=\"1\" cellpadding=\"5\"") << endl;
   HTML << start_tr() << th() << th("read file") << th("reads") << 
-                    th("bases") << th("average") << th("longest") << th("mapped") << "</tr>" << endl;
+                    th("bases") <<  th("passed&nbsp;filters") << th("average") << th("longest") << th("mapped") << "</tr>" << endl;
   for(cReadFiles::const_iterator it=settings.read_files.begin(); it!=settings.read_files.end(); it++)
   {
     const Summary::AnalyzeFastq& s = summary.sequence_conversion.reads[it->m_base_name];
@@ -494,9 +494,12 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
                 )
               );
     HTML << td(it->m_base_name);
+    
     double avg_read_length = static_cast<double>(s.num_bases) / static_cast<double>(s.num_reads);
     HTML << td(ALIGN_RIGHT, commify(to_string(s.num_reads)));
     HTML << td(ALIGN_RIGHT, commify(to_string(s.num_bases)));
+    double percent_pass_filters = 100 * (static_cast<double>(s.num_reads) / static_cast<double>(s.original_reads));
+    HTML << td(ALIGN_RIGHT, to_string(percent_pass_filters, 1) + "%");
     HTML << td(ALIGN_RIGHT, to_string(avg_read_length, 1) + "&nbsp;bases");
     HTML << td(ALIGN_RIGHT, to_string(s.max_read_length) + "&nbsp;bases");
     double percent_mapped = 100 * (1.0 - static_cast<double>(rf.num_unmatched_reads) / static_cast<double>(rf.num_total_reads));
@@ -509,6 +512,8 @@ void html_statistics(const string &file_name, const Settings& settings, Summary&
   HTML << td(b("total"));  
   HTML << td(ALIGN_RIGHT , b(commify(to_string(summary.sequence_conversion.num_reads))) );
   HTML << td(ALIGN_RIGHT , b(commify(to_string(summary.sequence_conversion.num_bases))) );
+  double total_percent_pass_filters = 100 * (static_cast<double>(summary.sequence_conversion.num_reads) / static_cast<double>(summary.sequence_conversion.original_num_reads));
+  HTML << td(ALIGN_RIGHT, to_string(total_percent_pass_filters, 1) + "%");
   HTML << td(ALIGN_RIGHT, to_string(summary.sequence_conversion.avg_read_length, 1) + "&nbsp;bases");
   HTML << td(b(commify(to_string(summary.sequence_conversion.max_read_length))) + "&nbsp;bases");
   double total_percent_mapped = 100 * (1.0 - static_cast<double>(summary.alignment_resolution.total_unmatched_reads) / static_cast<double>(summary.alignment_resolution.total_reads));

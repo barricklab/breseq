@@ -315,18 +315,31 @@ namespace breseq{
 			float avg_read_length;
 			uint32_t max_qual;
 			uint64_t num_reads;
+      uint64_t original_num_reads;
 			uint64_t num_bases;
+      uint64_t original_num_bases;
 			map<string, string> converted_fastq_name;
 			storable_map<string, AnalyzeFastq> reads;
 			uint64_t total_reference_sequence_length;
 			uint32_t max_read_length;
 
+      SequenceConversion()
+      : avg_read_length(0.0)
+      , max_qual(255)
+      , num_reads(0)
+      , original_num_reads(0)
+      , num_bases(0)
+      , original_num_bases(0)
+      { }
+      
 			void serialize(ofstream& f)
 			{
 				write_to_file(f, avg_read_length);
         write_to_file(f, max_qual);
 				write_to_file(f, num_reads);
+        write_to_file(f, original_num_reads);
 				write_to_file(f, num_bases);
+        write_to_file(f, original_num_bases);
 				write_to_file(f, converted_fastq_name);
         reads.serialize(f);
         write_to_file(f, total_reference_sequence_length);
@@ -337,7 +350,9 @@ namespace breseq{
         read_from_file(f, avg_read_length);
         read_from_file(f, max_qual);
 				read_from_file(f, num_reads);
+        read_from_file(f, original_num_reads);
 				read_from_file(f, num_bases);
+        read_from_file(f, original_num_bases);
 				read_from_file(f, converted_fastq_name);
         reads.deserialize(f);
         read_from_file(f, total_reference_sequence_length);
