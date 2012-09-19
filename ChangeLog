@@ -6,6 +6,8 @@ Version 0.20
     * Fixed the display of some statistics on the Summary output page.
     * Fixes to detecting required bowtie2 and R versions.
     * Fixed improper predictions of deletion size from junctions in rare cases.
+	* Fixed possible overflow in base numbers that could cause incorrect calculations of
+	  average coverage that led to spurious junction predictions.
 
 Version 0.19
     * bowtie2 instead of ssaha2 now used for mapping reads. All reads are mapped as if
