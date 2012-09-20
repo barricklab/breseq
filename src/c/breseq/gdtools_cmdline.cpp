@@ -479,7 +479,6 @@ int do_gd2gvf( int argc, char* argv[]){
   options
     ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
     ("output,o","name of output file", "output.gvf")
-    ("input,i","gd file to convert") 
     ("snv-only", "only output SNV entries", TAKES_NO_ARGUMENT)
     ;
   options.processCommandArgs( argc,argv);
@@ -595,7 +594,6 @@ int do_mira2gd(int argc, char* argv[]){
   options
     ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
     ("output,o", "name of gd file to save", "output.gd")
-    ("input,i", "mira feature analysis file to convert") 
     ;
   options.processCommandArgs(argc, argv);
   
@@ -1106,7 +1104,9 @@ int do_rand_muts(int argc, char *argv[])
   }
 
   cGenomeDiff gd;
-  gd.add_breseq_data("COMMAND", join(vector<string>(argv, argv + argc), " "));
+  vector<string> cmd_args(argv, argv + argc);
+  cmd_args.insert(cmd_args.begin() + 1, "random-mutations");
+  gd.add_breseq_data("COMMAND", join(cmd_args, " "));
   gd.random_mutations(
       options["exclude"],
       options["type"],
@@ -1643,8 +1643,6 @@ int do_runfile(int argc, char *argv[])
   }
   assert(tasks || nodes);
 
-  const string &pwd = SYSTEM_CAPTURE("pwd", true);
-
   job = job.size() ? job : "breseq";
 
   ofstream launcher(launcher_path.c_str());
@@ -1670,7 +1668,7 @@ int do_runfile(int argc, char *argv[])
   fprintf(launcher, "module load launcher\n");
   fprintf(launcher, "setenv EXECUTABLE     $TACC_LAUNCHER_DIR/init_launcher\n");
   fprintf(launcher, "setenv CONTROL_FILE   %s\n", runfile_path.c_str());
-  fprintf(launcher, "setenv WORKDIR        %s\n", pwd.c_str());
+  fprintf(launcher, "setenv WORKDIR        .\n");
   fprintf(launcher, "\n");
 
   // Job submission.
