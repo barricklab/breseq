@@ -2104,7 +2104,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
       uint32_t n_size_attempts = max_attempts;
 
       while (n_size_attempts) {
-        uint32_t pos_1 = (rand() % (ref.get_sequence_size() - buffer - size)) + buffer;
+        pos_1 = (rand() % (ref.get_sequence_size() - buffer - size)) + buffer;
 
         new_item["position"] = to_string(pos_1);
         new_item["size"] = s(size);
@@ -2114,8 +2114,8 @@ void cGenomeDiff::random_mutations(string exclusion_file,
         new_item.erase("norm_pos");
         uint32_t norm_pos_1 = un(new_item["position"]);
 
-        bool is_excluded      = repeat_match_regions.is_flagged(norm_pos_1 - buffer, size + buffer);
-        bool is_near_mutation = used_mutation_regions.is_flagged(norm_pos_1 - buffer, norm_pos_1 + size + buffer);
+        bool is_excluded      = repeat_match_regions.is_flagged(pos_1 - buffer, pos_1 + size + buffer);
+        bool is_near_mutation = used_mutation_regions.is_flagged(pos_1 - buffer, pos_1 + size + buffer);
         bool is_new_pos_1     = pos_1 != norm_pos_1;
         bool is_new_type      = to_string(new_item._type) != mut_type;
 
