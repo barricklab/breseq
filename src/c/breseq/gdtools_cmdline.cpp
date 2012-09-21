@@ -1477,11 +1477,13 @@ int do_runfile(int argc, char *argv[])
   options("downloads_dir,d",  "Downloads directory where read and reference files are located.", "02_Downloads");
   options("output_dir,o",     "Output directory for commands within the runfile.", "03_Output");
   options("log_dir,l",        "Directory for error log file that captures the executable's stdout and sterr.", "04_Logs");
+
   options("runfile,r",        "Name of the run file to be output.", "commands");
   options("launcher",         "Name of the launcher script run on TACC", "launcher");
 
-  options("job",              "Job name. Alters add suffix to runfile and launcher script.");
+  options("name",             "Name for job.", "breseq");
   options("email",            "Email address to be added to launcher script. Informs you when a job starts and finishes.");
+  options("time",             "Alloted time for job.", "14:00:00");
 
   options("aln",              "Pass alignment files from breseq's pipeline as an argument.", TAKES_NO_ARGUMENT);
 
@@ -1535,17 +1537,12 @@ int do_runfile(int argc, char *argv[])
 
   const string &exe = options["executable"];
 
-  string job           = "";
+  string name          = options["name"];
   string log_dir       = cString(options["log_dir"]).trim_ends_of('/');
   string output_dir    = cString(options["output_dir"]).trim_ends_of('/');
   string runfile_path  = cString(options["runfile"]).trim_ends_of('/');
   string launcher_path = cString(options["launcher"]).trim_ends_of('/');
 
-  if (options.count("job")) {
-    job = options["job"];
-    runfile_path  += "_" + job;
-    launcher_path += "_" + job;
-  }
   create_path(log_dir.c_str());
 
   const string &log_path_format = log_dir + "/%s.log.txt";
@@ -1643,16 +1640,14 @@ int do_runfile(int argc, char *argv[])
   }
   assert(tasks || nodes);
 
-  job = job.size() ? job : "breseq";
-
   ofstream launcher(launcher_path.c_str());
   // #$ Parameters.
   fprintf(launcher, "#!/bin/csh\n");
-  fprintf(launcher, "#$ -N %s\n", job.c_str());
+  fprintf(launcher, "#$ -N %s\n", name.c_str());
   fprintf(launcher, "#$ -pe %uway %u\n", tasks, nodes);
   fprintf(launcher, "#$ -q normal\n");
-  fprintf(launcher, "#$ -o %s.o$JOB_ID\n", job.c_str());
-  fprintf(launcher, "#$ -l h_rt=14:00:00\n");
+  fprintf(launcher, "#$ -o %s.o$JOB_ID\n", name.c_str());
+  fprintf(launcher, "#$ -l h_rt=%s\n", options["time"].c_str());
   fprintf(launcher, "#$ -V\n");
   fprintf(launcher, "#$ -cwd\n");
 
