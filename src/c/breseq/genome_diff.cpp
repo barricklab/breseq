@@ -2133,7 +2133,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
         --n_muts, n_attempts = max_attempts;
         new_item.erase("norm");
         this->add(new_item);
-        used_mutation_regions.flag_region(pos_1, pos_1 + size);
+        used_mutation_regions.flag_region(pos_1, pos_1 + (size * un(new_item["new_copy_number"])));
         if (verbose) {
           cerr << "\t" << new_item << endl;
         }
