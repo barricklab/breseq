@@ -2372,7 +2372,7 @@ void Html_Mutation_Table_String::Item_Lines()
         if (from_string<int32_t>(mut["duplication_size"]) > 0) {
           s << " +" << mut["duplication_size"] << " bp";
         } else if (from_string<int32_t>(mut["duplication_size"]) < 0) {
-          s << " &Delta;" << abs(from_string(mut["duplication_size"])) << " bp";
+          s << " &Delta;" << abs(from_string<int32_t>(mut["duplication_size"])) << " bp";
         }
         
         stringstream s_end;

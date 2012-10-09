@@ -3437,13 +3437,13 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         int32_t uRPos = -1;
         
 
-        //Size to deleat from start of repeat string.
-        if(mut.entry_exists("del_start")) iDelStart = from_string<uint32_t>(mut["del_start"]);
-        if(mut.entry_exists("del_end"))   iDelEnd = from_string<uint32_t>(mut["del_end"]);
+        //Size to delete from start of repeat string.
+        if(mut.entry_exists("del_start")) iDelStart = from_string<int32_t>(mut["del_start"]);
+        if(mut.entry_exists("del_end"))   iDelEnd = from_string<int32_t>(mut["del_end"]);
         ASSERT((iDelStart >= 0) && (iDelEnd >= 0), (to_string(mut._type) + " " + mut._id) + " - NEGATIVE DELETION");
         
-        if(mut.entry_exists("repeat_pos"))uRPos = from_string<uint32_t>(mut["repeat_pos"]);        
-        if(mut.entry_exists("duplication_size"))iDupLen = from_string<uint32_t>(mut["duplication_size"]);
+        if(mut.entry_exists("repeat_pos"))uRPos = from_string<int32_t>(mut["repeat_pos"]);        
+        if(mut.entry_exists("duplication_size"))iDupLen = from_string<int32_t>(mut["duplication_size"]);
 
         // @JEB: correct here to look for where the repeat is in the original ref_seq_info.
         // This saves us from possibly looking at a shifted location...
@@ -3462,7 +3462,13 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         // The position of a MOB is the first position that is duplicated
         // Inserting at the position means we have to copy the duplication
         // in FRONT OF the repeat sequence
-        if(iDupLen)duplicate_sequence = new_ref_seq_info.get_sequence_1(mut[SEQ_ID], position, position + (from_string<uint32_t>(mut["duplication_size"]) - 1));
+        if(iDupLen > 0) {
+          duplicate_sequence = new_ref_seq_info.get_sequence_1(mut[SEQ_ID], position, position + (from_string<uint32_t>(mut["duplication_size"]) - 1));
+        }
+        else if (iDupLen < 0) {
+          // A negative duplication length indicates that this many bases were deleted from the original genome starting at the specified base
+          new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + abs(iDupLen)-1, "");
+        }
         
         // If there are any inserts, put them in front of or behind the
         // repeat sequence.
@@ -3482,7 +3488,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
           
         if (verbose)
         {
-          cout << "MOB: 0" << " => " << new_seq_string << endl;
+          cout << "MOB: " << ( (iDupLen > 0 ) ? "0" : to_string(abs(iDupLen)) ) << " => " << new_seq_string << endl;
           cout << "   shift +" << new_seq_string.length() - iDelStart - iDelEnd << " bp at position " << position << endl;
         }          
       } break;
