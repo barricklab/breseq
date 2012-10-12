@@ -261,7 +261,7 @@ namespace breseq
     bool mixed_base_prediction;                           // Default = true
     
     //! Verbose output of bases encountered at each position
-    bool mutation_identification_per_position_file;
+    bool print_mutation_identification_per_position_file;
 
     double mutation_log10_e_value_cutoff;                   // Default = 10
     double polymorphism_log10_e_value_cutoff;               // Default = mutation_log10_e_value_cutoff = 10
@@ -391,7 +391,7 @@ namespace breseq
 		string mutation_identification_path;
     
 		string mutation_identification_done_file_name;    
-		string complete_mutations_text_file_name;
+		string mutation_identification_per_position_file_name;
 		string complete_coverage_text_file_name;
 		string genome_error_counts_file_name;
     string ra_mc_genome_diff_file_name;

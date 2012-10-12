@@ -1699,7 +1699,7 @@ int breseq_default_action(int argc, char* argv[])
 				settings.mutation_log10_e_value_cutoff, // mutation_cutoff
 				settings.polymorphism_log10_e_value_cutoff, // polymorphism_cutoff
 				settings.polymorphism_frequency_cutoff, //polymorphism_frequency_cutoff
-				settings.mutation_identification_per_position_file //per_position_file
+				settings.print_mutation_identification_per_position_file //per_position_file
 			);
 
 			settings.done_step(settings.mutation_identification_done_file_name);

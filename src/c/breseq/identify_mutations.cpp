@@ -124,9 +124,7 @@ identify_mutations_pileup::identify_mutations_pileup(
   _error_table.log10_prob_to_prob();
   
   if (_print_per_position_file) {
-    string filename(settings.mutation_identification_path);
-		filename += "/full_identify_mutation.out";
-    _per_position_file.open(filename.c_str());
+    _per_position_file.open(settings.mutation_identification_per_position_file_name.c_str());
   }
   
 }
@@ -614,7 +612,7 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
     
   // Open per-reference coverage file:
 	if(_print_coverage_data) {
-		string filename = _settings.file_name(_settings.complete_mutations_text_file_name, "@", target_name(tid));
+		string filename = _settings.file_name(_settings.complete_coverage_text_file_name, "@", target_name(tid));
 		_coverage_data.open(filename.c_str());
     ASSERT(!_coverage_data.fail(), "Could not open output file:" + filename);
 		_coverage_data << "unique_top_cov" << "\t" << "unique_bot_cov" << "\t" << "redundant_top_cov" << "\t" << "redundant_bot_cov" << "\t" << "raw_redundant_top_cov" << "\t" << "raw_redundant_bot_cov" << "\t" << "e_value" << "\t" << "position" << endl;
