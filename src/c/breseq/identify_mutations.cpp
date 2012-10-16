@@ -356,6 +356,8 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
     polymorphism_prediction ppred;
     base_char second_best_base_char;
 
+    cDiffEntry mut(RA);
+    
 		if(_settings.polymorphism_prediction || _settings.mixed_base_prediction) {
         
       // Find the bases with the highest and second highest coverage
@@ -424,6 +426,23 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         //cerr << ppred.frequency << " " << ppred.log10_base_likelihood << " " << ppred.p_value << endl;
       }		
       
+      // Evaluate rejection criteria
+      if (polymorphism_predicted) {
+        if (ppred.log10_e_value < _polymorphism_cutoff ) {
+          add_reject_reason(mut, "EVALUE");
+        } 
+        
+        if ( (ppred.frequency < _polymorphism_frequency_cutoff) || (ppred.frequency > 1 -_polymorphism_frequency_cutoff) ) {
+          add_reject_reason(mut, "POLYMORPHISM_FREQUENCY_CUTOFF");
+        }
+        
+        // move from mixed polymorphism to real mutation prediction if in mixed mode!!
+        if (_settings.mixed_base_prediction && (mut.count(REJECT))) {
+          polymorphism_predicted = 0;
+          mut.erase(REJECT);
+        }
+      }
+      
 		}				
 		
 		//###
@@ -455,8 +474,6 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
     //###
 		//## Create new RA evidence mutation for genome diff
 		//###		
-    
-    cDiffEntry mut(RA);
     
 		//## Fields common to consensus mutations and polymorphisms
 		mut[SEQ_ID] = p.target_name();
@@ -503,14 +520,6 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       mut[GENOTYPE_QUALITY] = formatted_double(e_value_call, 1).to_string();
 			mut[POLYMORPHISM_QUALITY] = formatted_double(ppred.log10_e_value, kMutationQualityPrecision).to_string();
       mut[QUALITY] = mut[POLYMORPHISM_QUALITY];
-
-			if (ppred.log10_e_value < _polymorphism_cutoff ) {
-        add_reject_reason(mut, "EVALUE");
-      } 
-      
-      if ( (ppred.frequency < _polymorphism_frequency_cutoff) || (ppred.frequency > 1 -_polymorphism_frequency_cutoff) ) {
-        add_reject_reason(mut, "POLYMORPHISM_FREQUENCY_CUTOFF");
-      }
       
       /* Need to have a way to evaluate both polymorphism call and consensus and switch frequency back
          if polymorphism falls down...
