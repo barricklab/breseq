@@ -244,7 +244,7 @@ These attributes control how mutations are applied when building a new reference
    
 * **before**\ =\ *<mutation_id>* or **after**\ =\ *<mutation_id>*
 
-   Apply this mutation before or after another mutation. For example, did a base substitution occur before a region was duplicated, thus it is only in one copy or did it occur before the duplication, thus altering both copies? Did a base substitution happen before a deletion, hiding a mutation that should be included in any phylogenetic inference? The **before**. When neither of these attributes is present, mutations will be applied in the order in which they appear in the file.
+   Apply this mutation before or after another mutation. For example, did a base substitution occur after a region was duplicated, thus it is only in one copy or did it occur before the duplication, thus altering both copies? Did a base substitution happen before a deletion, hiding a mutation that should be included in any phylogenetic inference? The **before**. When neither of these attributes is present, mutations will be applied in the order in which they appear in the file.
    
 * **within**\ =\ *<mutation_id>*\ , **within_position**\ =\ *<mutation_id>*\ ,  **within_copy**\ =\ *<mutation_id>*
 
