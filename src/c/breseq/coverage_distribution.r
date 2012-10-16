@@ -116,8 +116,8 @@ for (i in min_i:length(X$ma))
 # Censor data on the right and left of the maximum
 ##
 
-start_i = max(floor(max_i/2), 1);
-end_i = min(ceiling(max_i*10), length(X$ma));
+start_i = max(floor(max_i*0.5), 1);
+end_i = min(ceiling(max_i*1.5), length(X$ma));
 
 if (start_i == end_i)
 {
@@ -177,6 +177,7 @@ f_nb <- function(par) {
     return(0);
   }
   
+  cat(start_i, " ", end_i, "\n");
   cat(mu, " ", size, "\n");
   
 	dist<-c()
@@ -196,10 +197,22 @@ f_nb <- function(par) {
 	return(l);
 }
 
+
+
 ## Fit negative binomial 
 ## - allow fit to fail and set all params to zero/empty if that is the case
 nb_fit = NULL
-nb_fit<-nlm(f_nb, c(m,1) )
+uncensored_data <- subset(X, (coverage>=start_i) & (coverage<=end_i) );
+
+##stats restricted to uncensored_data
+Y<-rep(uncensored_data$coverage, uncensored_data$n)
+uncensored_m<-mean(Y)
+uncensored_v<-var(Y)
+uncensored_D<-uncensored_v/uncensored_m
+
+size_estimate = uncensored_m ^ 2 / (uncensored_v - uncensored_m)
+mean_estimate = uncensored_m
+nb_fit<-nlm(f_nb, c(mean_estimate, size_estimate) )
 
 if (!is.null(nb_fit) && (nb_fit$estimate[1] > 0) && (nb_fit$estimate[2] > 0))
 {
@@ -328,7 +341,6 @@ points(fit_data$coverage, fit_data$n, pch=my_pch, col=my_col, bg="white", cex=1.
 cat(start_i, " ", end_i, "\n", sep="")
 
 censored_data <- subset(X, (coverage<start_i) | (coverage>end_i) );
-
 points(censored_data$coverage, censored_data$n, pch=my_pch, col=my_col_censored, bg="white", cex=1.2)
 
 #graph the poisson fit IF REQUESTED

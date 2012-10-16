@@ -162,10 +162,16 @@ int do_bam2cov(int argc, char* argv[]) {
   options.addUsage("");
   options.addUsage("Create a coverage plot or table for the specified region or regions.");
 
+  // Print advanced help
+  if (options.count("help"))
+  {
+    options.printAdvanced();
+    exit(-1);
+  }
+  
   // make sure that the required config options are good:
-	if(options.count("help")
-     || !file_exists(options["fasta"].c_str())
-     || !file_exists(options["bam"].c_str()) )
+	if(   !file_exists(options["fasta"].c_str() )
+     || !file_exists(options["bam"].c_str()   ) )
   {
 		options.printUsage();
 		return -1;
@@ -684,9 +690,7 @@ int do_copy_number_variation(int argc, char *argv[])
   
   Summary summary;
   summary.unique_coverage.retrieve(settings.error_rates_summary_file_name);
-  
-  CandidateJunctions::identify_candidate_junctions(settings, summary, ref_seq_info);
-  
+    
   //create directory
   create_path( settings.copy_number_variation_path );
   
@@ -864,41 +868,6 @@ int do_get_sequence(int argc, char *argv[])
   if(options.count("output"))  {
     new_seq_info.WriteFASTA(options["output"], verbose);  
   }  
-  
-  return 0;
-}
-
-int do_rna_seq(int argc, char *argv[])
-{
-  
-  AnyOption options("Usage: breseq RNASEQ -r <reference.gbk> -f <reference.fna> -o <output.tab>  [<input.sam.n> ...]");  
-  options.addUsage("Counts the number of reads in a text SAM file matching each gene in a reference genomes.");
-  options("reference,r","Genbank or GFF3 reference file");  
-  options("fasta,f","FASTA reference file");  
-  options("output,o","Output tab-delimited file");
-  options("verbose,v","Verbose output", TAKES_NO_ARGUMENT);
-  options.processCommandArgs(argc, argv);
-  
-  // Also take regions off the command line
-  vector<string> sam_file_names;
-  for (int32_t i = 0; i < options.getArgc(); i++)
-  {
-    string sam_file_name = options.getArgv(i);
-    sam_file_names.push_back(sam_file_name);
-  }  
-  
-  // Check options
-  if ((sam_file_names.size() == 0) || !options.count("output") || !options.count("fasta") || !options.count("reference")) {
-    options.printUsage();
-    return -1;
-  }
-  
-  // Load the reference sequences
-  cReferenceSequences ref_seq_info;
-  ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
-
-  //Do counting
-  RNASeq::tam_to_gene_counts(ref_seq_info, options["fasta"], sam_file_names, options["output"], options.count("verbose"));
   
   return 0;
 }
@@ -1094,7 +1063,7 @@ int breseq_default_action(int argc, char* argv[])
 		}
   
  
-		/// ssaha2 align reads to reference sequences
+		/// align reads to reference sequences
 		for (uint32_t i = 0; i < settings.read_files.size(); i++)
 		{
 			cReadFile read_file = settings.read_files[i];
@@ -1142,14 +1111,12 @@ int breseq_default_action(int argc, char* argv[])
         } else {
 					string command = "ssaha2 -disk 2 -save " + reference_hash_file_name + " -kmer " + to_string(settings.ssaha2_seed_length) + " -skip " + to_string(settings.ssaha2_skip_length) + " -seeds 1 -score 12 -cmatch " + to_string(settings.ssaha2_seed_length) + " -ckmer 1 -output sam_soft -outfile " + reference_sam_file_name + " " + read_fastq_file;
 					SYSTEM(command);
+          
+          //Check for SSAHA2 32-bit File Memory Error.
+          uint32_t bytes = ifstream(reference_sam_file_name.c_str()).rdbuf()->in_avail();
+          CHECK(bytes != 2147483647, "Encountered SSAHA2 32 bit version file memory limit.");
 				}
-      
-        //Check for SSAHA2 32-bit File Memory Error.
-        uint32_t bytes = ifstream(reference_sam_file_name.c_str()).rdbuf()->in_avail();
-        CHECK(bytes != 2147483647, "Encountered SSAHA2 32 bit version file memory limit.");
         
-        
-
         if (settings.bowtie2) {
           
           string base_read_file_name = read_file.base_name();
@@ -1166,7 +1133,6 @@ int breseq_default_action(int argc, char* argv[])
                                                      reference_sam_file_name
                                                      );
         }
-        
 			}
 		}
 
@@ -1724,15 +1690,18 @@ int breseq_default_action(int argc, char* argv[])
   if (settings.do_copy_number_variation) {
     create_path( settings.copy_number_variation_path );
 
-    if (settings.do_step(settings.copy_number_variation_done_file_name, "Copy number variation")) { 
+    if (settings.do_step(settings.copy_number_variation_done_file_name, "Predicting copy number variation")) { 
       for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it) {
         cAnnotatedSequence& seq = *it;
         string this_complete_coverage_text_file_name = settings.file_name(settings.complete_coverage_text_file_name, "@", seq.m_seq_id);
         string this_tiled_complete_coverage_text_file_name = settings.file_name(settings.tiled_complete_coverage_text_file_name, "@", seq.m_seq_id);
+
+        cerr << "Tiling coverage" << endl;
         CoverageDistribution::tile(settings.ignore_redundant_coverage, this_complete_coverage_text_file_name, this_tiled_complete_coverage_text_file_name, settings.copy_number_variation_tile_size);
        
         string this_ranges_text_file_name = settings.file_name(settings.ranges_text_file_name, "@", seq.m_seq_id);
         string this_cnv_history_text_file_name = settings.file_name(settings.cnv_history_text_file_name, "@", seq.m_seq_id);
+        cerr << "Predicting changed segments" << endl;
         CoverageDistribution::find_segments(settings,
                                             summary.unique_coverage[seq.m_seq_id].average,
                                             this_tiled_complete_coverage_text_file_name,
@@ -1744,6 +1713,7 @@ int breseq_default_action(int argc, char* argv[])
         string this_final_cnv_file_name = settings.file_name(settings.final_cnv_text_file_name, "@", seq.m_seq_id);
         string this_copy_number_variation_cn_genome_diff_file_name = settings.file_name(settings.copy_number_variation_cn_genome_diff_file_name, "@", seq.m_seq_id);
 
+        cerr << "Smoothing changed segments" << endl;
         CoverageDistribution::smooth_segments(settings,
                                               seq.m_seq_id,
                                               summary.unique_coverage[seq.m_seq_id].average, 
@@ -1942,10 +1912,8 @@ int main(int argc, char* argv[]) {
   //
   // None of these commands are documented for use by others. 
   // They may change without warning.
-  } else if (command == "SIMULATE-READ") {
-    return do_simulate_read(argc_new, argv_new);
-  } else if (command == "RNASEQ") {
-    return do_rna_seq(argc_new, argv_new);  
+  } else if ((command == "SIMULATE-READ") ||  (command == "SIMULATE-READS")) {
+    return do_simulate_read(argc_new, argv_new); 
   } else if (command == "REFALN") {
     return do_ref_aln();  
   } else if (command == "CNV") {
