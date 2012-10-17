@@ -212,7 +212,10 @@ uncensored_D<-uncensored_v/uncensored_m
 
 size_estimate = uncensored_m ^ 2 / (uncensored_v - uncensored_m)
 mean_estimate = uncensored_m
-nb_fit<-nlm(f_nb, c(mean_estimate, size_estimate) )
+cat("Mean: ", mean_estimate, " Size: ", size_estimate, "\n")
+
+## SIZE ESTIMATE from the censored data can be negative, so use 1 instead
+nb_fit<-nlm(f_nb, c(mean_estimate, 1) )
 
 if (!is.null(nb_fit) && (nb_fit$estimate[1] > 0) && (nb_fit$estimate[2] > 0))
 {
