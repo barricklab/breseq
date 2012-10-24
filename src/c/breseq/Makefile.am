@@ -16,7 +16,7 @@
 ###
 
 ##is there a variable for this?
-BRESEQDATADIR=$(datadir)/$(PACKAGE_NAME)
+BRESEQDATADIR= $(DESTDIR)$(datadir)/$(PACKAGE_NAME)
 AM_CPPFLAGS = -I$(top_srcdir)/$(LIBBAM) -I$(top_srcdir)/aux_build  -DDATADIR=\"$(BRESEQDATADIR)\"
 AM_LDFLAGS = -static
 LDADD =   $(top_srcdir)/$(LIBBAM)/libbam.la \
@@ -100,18 +100,18 @@ EXTRA_DIST = \
 install-data-local :
 
 	##copy our data files
-	mkdir -p $(BRESEQDATADIR)
-	cp breseq.png $(BRESEQDATADIR)
-	cp breseq_small.png $(BRESEQDATADIR)
-	cp coverage_distribution.r $(BRESEQDATADIR)
-	cp plot_coverage.r $(BRESEQDATADIR)
-	cp plot_error_rate.r $(BRESEQDATADIR)
-	cp plot_jc_scores.r $(BRESEQDATADIR)
-	cp polymorphism_statistics.r $(BRESEQDATADIR)
-	cp run_circos.sh $(BRESEQDATADIR)
-	cp indels.conf $(BRESEQDATADIR)
-	cp mutations.conf $(BRESEQDATADIR)
-	cp karyotype.and.layout.conf $(BRESEQDATADIR)
-	cp mobs.conf $(BRESEQDATADIR)
-	cp ideogram.conf $(BRESEQDATADIR)
-	cp combined_circos.conf $(BRESEQDATADIR)
+	mkdir -p $(DESTDIR)$(BRESEQDATADIR)
+	cp breseq.png $(DESTDIR)$(BRESEQDATADIR)
+	cp breseq_small.png $(DESTDIR)$(BRESEQDATADIR)
+	cp coverage_distribution.r $(DESTDIR)$(BRESEQDATADIR)
+	cp plot_coverage.r $(DESTDIR)$(BRESEQDATADIR)
+	cp plot_error_rate.r $(DESTDIR)$(BRESEQDATADIR)
+	cp plot_jc_scores.r $(DESTDIR)$(BRESEQDATADIR)
+	cp polymorphism_statistics.r $(DESTDIR)$(BRESEQDATADIR)
+	cp run_circos.sh $(DESTDIR)$(BRESEQDATADIR)
+	cp indels.conf $(DESTDIR)$(BRESEQDATADIR)
+	cp mutations.conf $(DESTDIR)$(BRESEQDATADIR)
+	cp karyotype.and.layout.conf $(DESTDIR)$(BRESEQDATADIR)
+	cp mobs.conf $(DESTDIR)$(BRESEQDATADIR)
+	cp ideogram.conf $(DESTDIR)$(BRESEQDATADIR)
+	cp combined_circos.conf $(DESTDIR)$(BRESEQDATADIR)
