@@ -16,7 +16,7 @@
 ###
 
 ##is there a variable for this?
-BRESEQDATADIR= $(DESTDIR)$(datadir)/$(PACKAGE_NAME)
+BRESEQDATADIR= $(datadir)/$(PACKAGE_NAME)
 AM_CPPFLAGS = -I$(top_srcdir)/$(LIBBAM) -I$(top_srcdir)/aux_build  -DDATADIR=\"$(BRESEQDATADIR)\"
 AM_LDFLAGS = -static
 LDADD =   $(top_srcdir)/$(LIBBAM)/libbam.la \
