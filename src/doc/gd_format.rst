@@ -505,3 +505,21 @@ Line specification:
 4. **note** *<string>*
 
    Free text note.
+   
+MASK: Repeat mask a section
+""""""""""""""""""""""""""""""""""""""
+
+Artificially mask a section of DNA as "N"s. This is useful for creating fake reference sequences. Particularly for targeted sequencing approaches.
+Line specification:
+
+4. **seq_id** *<string>*
+
+   id of reference sequence fragment containing mutation, evidence, or validation.
+
+5. **position** *<uint32>*
+
+   position in reference sequence fragment.
+
+6. **size** *<uint32>*
+
+   number of bases masked to "N" in reference, including reference position.
