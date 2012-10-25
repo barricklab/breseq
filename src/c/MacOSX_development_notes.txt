@@ -1,0 +1,20 @@
+breseq development on MacOSX
+
+Install dependencies for development via MacPorts:
+
+sudo port install autoconf
+sudo port install automake
+sudo port install zlib
+
+To compile in XCode:
+
+The XCode project should now be functional, with libraries in the expected locations.
+On some systems you may need to change the compiler to GCC from the Apple Default Compiler.
+
+To compile at the command line, run:
+
+./bootstrap
+./configure
+make
+make test
+make install

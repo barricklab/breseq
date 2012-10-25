@@ -1,0 +1,3 @@
+#include "Shared.xcconfig"
+
+COPY_PHASE_STRIP = YES
