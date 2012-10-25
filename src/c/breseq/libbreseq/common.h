@@ -1104,7 +1104,7 @@ class cString : public string
     cString& escape_shell_chars(void);
 
     cString get_base_name() const;
-    cString get_base_name_no_extension() const;
+    cString get_base_name_no_extension(bool remove_all_extensions = false) const;
     cString get_file_extension() const;
     cString get_directory_path() const;
 
@@ -1176,10 +1176,19 @@ inline cString cString::get_base_name() const
 }
 
 //! Returns file name with no extension, removes any directory path beforehand.
-inline cString cString::get_base_name_no_extension() const
+//  input.1.gd
+//  remove_all_extensions = TRUE removes only the last period and beyond   => input.1
+//  remove_all_extensions = FALSE removes everything past the first period  => input
+inline cString cString::get_base_name_no_extension(bool remove_all_extensions) const
 {
   cString this_return = this->get_base_name();
-  const size_t pos = this->find('.');
+  size_t pos;
+  
+  if (remove_all_extensions) 
+    pos = this->find('.');
+  else
+    pos = this->rfind('.');
+  
   if (pos == string::npos)
     return this_return;
   else

@@ -124,9 +124,7 @@ identify_mutations_pileup::identify_mutations_pileup(
   _error_table.log10_prob_to_prob();
   
   if (_print_per_position_file) {
-    string filename(settings.mutation_identification_path);
-		filename += "/full_identify_mutation.out";
-    _per_position_file.open(filename.c_str());
+    _per_position_file.open(settings.mutation_identification_per_position_file_name.c_str());
   }
   
 }
@@ -358,6 +356,8 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
     polymorphism_prediction ppred;
     base_char second_best_base_char;
 
+    cDiffEntry mut(RA);
+    
 		if(_settings.polymorphism_prediction || _settings.mixed_base_prediction) {
         
       // Find the bases with the highest and second highest coverage
@@ -426,6 +426,23 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         //cerr << ppred.frequency << " " << ppred.log10_base_likelihood << " " << ppred.p_value << endl;
       }		
       
+      // Evaluate rejection criteria
+      if (polymorphism_predicted) {
+        if (ppred.log10_e_value < _polymorphism_cutoff ) {
+          add_reject_reason(mut, "EVALUE");
+        } 
+        
+        if ( (ppred.frequency < _polymorphism_frequency_cutoff) || (ppred.frequency > 1 -_polymorphism_frequency_cutoff) ) {
+          add_reject_reason(mut, "POLYMORPHISM_FREQUENCY_CUTOFF");
+        }
+        
+        // move from mixed polymorphism to real mutation prediction if in mixed mode!!
+        if (_settings.mixed_base_prediction && (mut.count(REJECT))) {
+          polymorphism_predicted = 0;
+          mut.erase(REJECT);
+        }
+      }
+      
 		}				
 		
 		//###
@@ -457,8 +474,6 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
     //###
 		//## Create new RA evidence mutation for genome diff
 		//###		
-    
-    cDiffEntry mut(RA);
     
 		//## Fields common to consensus mutations and polymorphisms
 		mut[SEQ_ID] = p.target_name();
@@ -505,14 +520,6 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       mut[GENOTYPE_QUALITY] = formatted_double(e_value_call, 1).to_string();
 			mut[POLYMORPHISM_QUALITY] = formatted_double(ppred.log10_e_value, kMutationQualityPrecision).to_string();
       mut[QUALITY] = mut[POLYMORPHISM_QUALITY];
-
-			if (ppred.log10_e_value < _polymorphism_cutoff ) {
-        add_reject_reason(mut, "EVALUE");
-      } 
-      
-      if ( (ppred.frequency < _polymorphism_frequency_cutoff) || (ppred.frequency > 1 -_polymorphism_frequency_cutoff) ) {
-        add_reject_reason(mut, "POLYMORPHISM_FREQUENCY_CUTOFF");
-      }
       
       /* Need to have a way to evaluate both polymorphism call and consensus and switch frequency back
          if polymorphism falls down...
@@ -614,7 +621,7 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
     
   // Open per-reference coverage file:
 	if(_print_coverage_data) {
-		string filename = _settings.file_name(_settings.complete_mutations_text_file_name, "@", target_name(tid));
+		string filename = _settings.file_name(_settings.complete_coverage_text_file_name, "@", target_name(tid));
 		_coverage_data.open(filename.c_str());
     ASSERT(!_coverage_data.fail(), "Could not open output file:" + filename);
 		_coverage_data << "unique_top_cov" << "\t" << "unique_bot_cov" << "\t" << "redundant_top_cov" << "\t" << "redundant_bot_cov" << "\t" << "raw_redundant_top_cov" << "\t" << "raw_redundant_bot_cov" << "\t" << "e_value" << "\t" << "position" << endl;

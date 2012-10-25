@@ -300,8 +300,8 @@ namespace breseq
     if (options.count("polymorphism-minimum-coverage-each-strand"))
       this->polymorphism_minimum_new_coverage_each_strand = from_string<int32_t>(options["polymorphism-minimum-coverage-each-strand"]);
     
-
-    this->mutation_identification_per_position_file = options.count("per-position-file");
+    //@JEB restore option after CNV does not require this file to be printed
+    this->print_mutation_identification_per_position_file = options.count("per-position-file");
     
 		this->post_option_initialize();
     
@@ -574,7 +574,7 @@ namespace breseq
 		if (this->base_output_path.size() > 0) this->mutation_identification_path = this->base_output_path + "/" + this->mutation_identification_path;
 
     this->mutation_identification_done_file_name = this->mutation_identification_path + "/mutation_identification.done";
-		this->complete_mutations_text_file_name = this->mutation_identification_path + "/@.mutations.tab";
+		this->mutation_identification_per_position_file_name = this->mutation_identification_path + "/per_position_file.tab";
 		this->complete_coverage_text_file_name = this->mutation_identification_path + "/@.coverage.tab";
 		this->genome_error_counts_file_name = this->mutation_identification_path + "/error_counts.tab";
 		this->ra_mc_genome_diff_file_name = this->mutation_identification_path + "/ra_mc_evidence.gd";
