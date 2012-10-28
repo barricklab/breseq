@@ -187,6 +187,7 @@ namespace breseq
     uint32_t ssaha2_skip_length;  // Default = 1 (i.e. no skipping)
     bool bowtie2;                 // Default = false COMMAND-LINE OPTION
     bool bowtie2_align;           // Default = false COMMAND-LINE OPTION
+    uint64_t bowtie2_maximum_alignments_to_consider_per_read;       // Default = 2000
     string bowtie2_score_parameters;
     string bowtie2_min_score_stringent;
     string bowtie2_min_score_relaxed;
@@ -206,7 +207,7 @@ namespace breseq
     double   required_both_unique_length_per_side_fraction; // Default = 0.2 
 		uint32_t required_one_unique_length_per_side;           // Default = ssaha2_seed_length = 13
     uint32_t unmatched_end_minimum_read_length;             // Default = 50
-    double   unmatched_end_length_factor;                   // Default = 0.1
+    double   unmatched_end_length_factor;                   // Default = 0.0
     
     // The number of mismatches allowed at the end of a read is:
     //   (read_length - unmatched_end_minimum_read_length) * unmatched_end_length_factor 
@@ -228,8 +229,17 @@ namespace breseq
     
     uint32_t maximum_junction_sequence_insertion_length;  // Default = 20
     uint32_t maximum_junction_sequence_overlap_length;    // Default = 20
-    double maximum_junction_sequence_insertion_overlap_length_fraction; // Default = 0.4
     
+    // The maximum overlap (negative or positive) is 
+    //   (read_length - unmatched_end_minimum_read_length) * unmatched_end_length_factor 
+    double maximum_junction_sequence_negative_overlap_length_fraction;    // Default = 0.1
+    uint32_t maximum_junction_sequence_negative_overlap_length_minimum;   // Default = 12
+
+    double maximum_junction_sequence_positive_overlap_length_fraction;    // Default = 0.4
+    uint32_t maximum_junction_sequence_positive_overlap_length_minimum;   // Default = 0
+    
+    uint32_t highly_redundant_junction_ignore_passed_pair_limit;          // Default = 200
+    uint64_t maximum_junction_sequence_passed_alignment_pairs_to_consider;// Default = 200,000,000
     
     // Which candidate junctions do we test?
 		uint32_t minimum_candidate_junction_pos_hash_score;   // Default = 2

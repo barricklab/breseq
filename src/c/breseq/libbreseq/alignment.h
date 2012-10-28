@@ -156,22 +156,12 @@ class alignment_wrapper {
     uint32_t trim_right() const;
 
     //! Start and end coordinates of the aligned part of the read.
-    //! Start < End always. reversed() tells you which strand the match was on.
+    //! Start may be > End. reversed() tells you which strand the match was on.
     //  Methods available for 0-indexed and 1-indexed coordinates.
     std::pair<uint32_t,uint32_t> query_bounds_0(uint32_t min_qual = 0) const;
     void query_bounds_0(uint32_t& start, uint32_t& end, uint32_t min_qual = 0) const;
     std::pair<uint32_t,uint32_t> query_bounds_1(uint32_t min_qual = 0) const;
     void query_bounds_1(uint32_t& start, uint32_t& end, uint32_t min_qual = 0) const;
-
-    //! Reverse start and end coords if on opposite strand
-    //! This means End can be < Start.
-    pair<uint32_t,uint32_t> query_stranded_bounds_1() const;
-    void query_stranded_bounds_1(uint32_t& start, uint32_t& end) const;
-  
-    uint32_t query_stranded_start_1()
-      { return query_stranded_bounds_1().first; }
-    uint32_t query_stranded_end_1()
-      { return query_stranded_bounds_1().second; }  
   
     //! Starting coordinates of the aligned part of the read.
     //  Methods available for 0-indexed and 1-indexed coordinates.
@@ -185,6 +175,16 @@ class alignment_wrapper {
   
     uint32_t query_match_length() const { return query_end_1() - query_start_1() + 1; };
 
+    //! "stranded" means to reverse start and end coords if alignment is on the
+    //! opposite reference strand. This makes Start < End.
+    pair<uint32_t,uint32_t> query_stranded_bounds_1() const;
+    void query_stranded_bounds_1(uint32_t& start, uint32_t& end) const;
+    
+    uint32_t query_stranded_start_1() const
+    { return query_stranded_bounds_1().first; }
+    uint32_t query_stranded_end_1() const
+    { return query_stranded_bounds_1().second; }  
+  
     //! Starting and ending coordinates of the alignment part of the read
     //  on the reference sequence. Start is always < End unless using 'stranded' version
     uint32_t reference_start_0(uint32_t min_qual = 0) const;

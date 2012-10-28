@@ -535,7 +535,7 @@ namespace breseq {
 		Summary::CandidateJunctionSummaryData& hcs(summary.candidate_junction);
     
 		uint32_t i = 0;
-    
+    uint64_t passed_alignment_pairs_considered = 0;
 		for (uint32_t j = 0; j < settings.read_files.size(); j++)
 		{
 			cReadFile read_file = settings.read_files[j];
@@ -562,10 +562,23 @@ namespace breseq {
 				if (settings.candidate_junction_read_limit != 0 && i > settings.candidate_junction_read_limit)
 					break;
         
-				alignments_to_candidate_junctions(settings, summary, ref_seq_info, candidate_junctions, alignments);
+        // pass back how many were considered
+				passed_alignment_pairs_considered += alignments_to_candidate_junctions(settings, summary, ref_seq_info, candidate_junctions, alignments);
+        
+        if (passed_alignment_pairs_considered > settings.maximum_junction_sequence_passed_alignment_pairs_to_consider)
+          break;
 			}
+      
+      if (passed_alignment_pairs_considered > settings.maximum_junction_sequence_passed_alignment_pairs_to_consider)
+        break;
     }
 
+    cerr << "  Passed alignment pairs examined: " << passed_alignment_pairs_considered << endl;
+    if (passed_alignment_pairs_considered > settings.maximum_junction_sequence_passed_alignment_pairs_to_consider ) {
+      cerr << "  WARNING: Reached limit of " << settings.maximum_junction_sequence_passed_alignment_pairs_to_consider << " passed alignment pairs." << endl;
+      cerr << "  Specify a greater value for --junction-alignment-pair-limit for more thorough junction prediction." << endl;
+    }
+    
     ////
 		// Merge all junctions with the same exact sequence 
     //   * They are hashed together for speed in this comparison
@@ -1351,7 +1364,7 @@ namespace breseq {
 		return true;
 	}
 
-	void CandidateJunctions::alignments_to_candidate_junctions(
+	uint64_t CandidateJunctions::alignments_to_candidate_junctions(
                                                              const Settings& settings, 
                                                              Summary& summary, const 
                                                              cReferenceSequences& ref_seq_info, 
@@ -1371,7 +1384,7 @@ namespace breseq {
 
 		// Must  have multiple matches to support a new junction.
 		if (alignments.size() <= 1)
-			return;
+			return 0;
 
     ////
     // Split the read alignments into two lists
@@ -1400,11 +1413,20 @@ namespace breseq {
 
 			if (verbose) cout << "(" << a_start << ", " << a_end << ")" << endl;
           
-			if (a_start == 1)
+      // In order to pass later guards have to match at least a minimum amount of the read
+      uint32_t min_match_length = static_cast<uint32_t>(ceil(a->read_length() * settings.required_both_unique_length_per_side_fraction));
+      if (a_end - a_start + 1 < min_match_length)
+        continue;
+      
+			if (a_start == 1) {
 				list1.push_back(a);
-			else if (a_end >= unmatched_end_min_coord)
+        if (verbose) cout << "  List 1" << endl;
+      }
+			else if (a_end >= unmatched_end_min_coord) {
 				list2.push_back(a);
-		}
+        if (verbose) cout << "  List 2" << endl;
+      }
+    }
     
 		// The first match in this category is the longest
 		if (verbose)
@@ -1450,6 +1472,10 @@ namespace breseq {
       }
 		}
     
+    // Ignore matches that predict many highly redundant junctions!!
+    if (passed_pair_list.size() > settings.highly_redundant_junction_ignore_passed_pair_limit)
+      return 0;
+    
     // see if the junction sequence is unique (not contained in or containing any other sequences)    
 		for (uint32_t i = 0; i < passed_pair_list.size(); i++)
 		{
@@ -1480,6 +1506,8 @@ namespace breseq {
       }
 
     } // end passed pair list
+    
+    return passed_pair_list.size();
 	}
 
   
@@ -1829,11 +1857,15 @@ namespace breseq {
     int32_t intersection_length_negative = -min(0, intersection_length);
     int32_t intersection_length_positive = max(0, intersection_length);
     
-    int32_t  scaled_maximum_junction_sequence_insertion_overlap_length_fraction
-      = static_cast<int32_t>(floor(static_cast<double>(a1.read_length()) * settings.maximum_junction_sequence_insertion_overlap_length_fraction));
+    int32_t  scaled_maximum_junction_sequence_negative_overlap_length_fraction = settings.maximum_junction_sequence_negative_overlap_length_minimum +
+      static_cast<int32_t>(floor(static_cast<double>(a1.read_length() - settings.maximum_junction_sequence_negative_overlap_length_minimum) * settings.maximum_junction_sequence_negative_overlap_length_fraction));
+
+    int32_t  scaled_maximum_junction_sequence_positive_overlap_length_fraction = settings.maximum_junction_sequence_positive_overlap_length_minimum +
+    static_cast<int32_t>(floor(static_cast<double>(a1.read_length() - settings.maximum_junction_sequence_positive_overlap_length_minimum) * settings.maximum_junction_sequence_positive_overlap_length_fraction));
+
     
 		//// Require negative overlap (inserted unique sequence length) to be less than some value
-		if (intersection_length_negative > scaled_maximum_junction_sequence_insertion_overlap_length_fraction)
+		if (intersection_length_negative > scaled_maximum_junction_sequence_negative_overlap_length_fraction)
 			return false;
     
 		if (settings.maximum_junction_sequence_insertion_length &&
@@ -1841,7 +1873,7 @@ namespace breseq {
 			return false;
     
     //// Require positive overlap (shared by both ends) to be less than some value
-    if (intersection_length_positive > scaled_maximum_junction_sequence_insertion_overlap_length_fraction)
+    if (intersection_length_positive > scaled_maximum_junction_sequence_positive_overlap_length_fraction)
 			return false;
     
     if (settings.maximum_junction_sequence_overlap_length && 

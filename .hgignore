@@ -51,6 +51,7 @@ user-config.jam
 syntax: regexp
 
 Makefile$
+INSTALL$
 
 ^breseq
 

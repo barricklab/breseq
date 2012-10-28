@@ -73,9 +73,13 @@ namespace breseq {
       m_length = in_seq_length;
       trim_data = new uint8_t[2*in_seq_length];
       ifstream in_trim_file(trim_file_name.c_str(), ios::in | ios::binary);
+      ASSERT(in_trim_file.good(), "Failed to open trim file: " + trim_file_name);
       in_trim_file.read(reinterpret_cast<char *>(trim_data), 2*in_seq_length);
-      assert(!in_trim_file.fail());
-      assert(static_cast<uint32_t>(in_trim_file.gcount()) == 2*in_seq_length); //TODO @JEB, int vs uint compare.
+      
+      ASSERT(static_cast<uint32_t>(in_trim_file.gcount()) == 2*in_seq_length, 
+             "Incorrect number of characters read from trim file: " + trim_file_name
+             + "\nExpected: " + to_string(2*in_seq_length) + " Found: " + to_string(in_trim_file.gcount()));
+      ASSERT(!in_trim_file.fail(), "Error reading from trim file: " + trim_file_name + "\n");
       in_trim_file.close();
     }
 

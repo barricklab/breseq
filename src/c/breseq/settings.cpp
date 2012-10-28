@@ -128,6 +128,8 @@ namespace breseq
     ("quality-score-trim", "Trim the ends of reads past any base with a quality score below --base-quality-score-cutoff.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("require-match-length", "Only consider alignments that cover this many bases of a read", 0, ADVANCED_OPTION)
     ("require-match-fraction", "Only consider alignments that cover this fraction of a read", 0.9)
+    ("junction-alignment-pair-limit", "Only consider this many passed alignment pairs when creating candidate junction sequences", 100000)
+
     ("deletion-coverage-propagation-cutoff,u","Value for coverage above which deletions are cutoff. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
     ("deletion-coverage-seed-cutoff,s","Value for coverage below which deletions are seeded", 0, ADVANCED_OPTION)
     ("mutation-score-cutoff", "Log10 E-value cutoff for base-substitution and micro-indel predictions", 10, ADVANCED_OPTION)
@@ -228,6 +230,8 @@ namespace breseq
     this->bowtie2 = true; // testing
     this->bowtie2_align = options.count("bowtie2-align");
     this->bowtie2_align = true; // testing
+    
+    this->maximum_junction_sequence_passed_alignment_pairs_to_consider = from_string<uint64_t>(options["junction-alignment-pair-limit"]);
     
     this->do_periodicity = options.count("periodicity");
     this->periodicity_method = from_string<uint32_t>(options["periodicity-method"]);
@@ -380,24 +384,34 @@ namespace breseq
     this->ssaha2_seed_length = 13;
     this->ssaha2_skip_length = 1;
     this->require_match_length = 0;         
-    this->require_match_fraction = 0.9;
+    this->require_match_fraction = 1.0;
     this->maximum_read_mismatches = -1;
 
     this->bowtie2 = false;
     this->bowtie2_align = false;
+    this->bowtie2_maximum_alignments_to_consider_per_read = 2000;
+    
     this->bowtie2_score_parameters = "--ma 1 --mp 3 --np 0 --rdg 2,3 --rfg 2,3";
-    this->bowtie2_min_score_stringent = "-L 22 -i S,1,0.25 --score-min L,4,0.8 ";
-    this->bowtie2_min_score_relaxed  = "-L 13 -i C,1,0 --score-min L,4,0.1";
-    this->num_processors = 1;
+    this->bowtie2_score_parameters += (bowtie2_maximum_alignments_to_consider_per_read > 0) 
+    ? " -k " + to_string(this->bowtie2_maximum_alignments_to_consider_per_read) : " -a";
+    
+    this->bowtie2_min_score_stringent = "-L 22 -i S,1,0.25 --score-min L,0,0.9 ";
+    this->bowtie2_min_score_relaxed  = "-L 9 -i C,1,0 --score-min L,6,0.2 ";
 
+    this->num_processors = 1;
     
     //! Settings: Candidate Junction Prediction
 		this->preprocess_junction_min_indel_split_length = 3;
     this->required_both_unique_length_per_side_fraction = 0.2; 
-    this->unmatched_end_length_factor = 0.1;
+    this->unmatched_end_length_factor = 0.0;
     this->unmatched_end_minimum_read_length = 50;
-    this->maximum_junction_sequence_insertion_overlap_length_fraction = 0.4;
-    
+    this->maximum_junction_sequence_negative_overlap_length_fraction = 0.4;
+    this->maximum_junction_sequence_negative_overlap_length_minimum = 12;
+    this->maximum_junction_sequence_positive_overlap_length_fraction = 0.4;
+    this->maximum_junction_sequence_positive_overlap_length_minimum = 12;
+    this->highly_redundant_junction_ignore_passed_pair_limit = 200;
+    this->maximum_junction_sequence_passed_alignment_pairs_to_consider = 1000000;
+
     // Extra options that are mostly phased out because they are hard nucleotide cutoffs
     this->maximum_junction_sequence_insertion_length = 0;
     this->maximum_junction_sequence_overlap_length = 0;
@@ -405,7 +419,7 @@ namespace breseq
     this->required_one_unique_length_per_side = 0;
     
     this->minimum_candidate_junction_pos_hash_score = 2;
-    this->minimum_candidate_junctions = 10;
+    this->minimum_candidate_junctions = 100;
 		this->maximum_candidate_junctions = 5000;
 		this->maximum_candidate_junction_length_factor = 0.1;
     this->penalize_negative_junction_overlap = true;

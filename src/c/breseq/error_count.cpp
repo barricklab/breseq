@@ -152,7 +152,7 @@ void error_count_pileup::pileup_callback(const pileup& p) {
     // ... And also count only when we are the first base of the read, to add to hash score. 
     if (m_preprocess_stage) {
       
-      if ((i->query_position_1() == 1) && m_settings.valid_junction_read_bounds(i->query_stranded_bounds_1(), i->read_length()))
+      if ((i->query_position_1() == 1) && (i->query_stranded_end_1() >= m_settings.required_junction_read_end_min_coordinate(i->read_length())))
       {
         has_query_start[i->reversed() ? 1 : 0] = 1;
       }

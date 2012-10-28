@@ -1143,21 +1143,21 @@ void score_junction(
     
     ////
     // CHECK that alignment starts at the first base of the query
-    // and covers a certain amount of the read
+    // and covers a certain amount of the read before counting toward the pos_hash score
     ////
-
+    
     if (a->query_stranded_start_1() != 1) {
       if (verbose) cout << "    X First read base does not match" << endl;
-     continue; 
+      continue; 
     }
     
     if (a->query_stranded_end_1() < settings.required_junction_read_end_min_coordinate(a->read_length())) {
-      if (verbose) cout << "    X End base does not match" << endl;
+      if (verbose) cout << "    X End of read does not match as far as required" << endl;
       continue;
     }
     
     ////
-    // COUNT reads that overlap both sides toward the pos hash score and other statistics
+    // COUNT reads that overlap both sides toward statistics other than pos_hash
     ////
     
     total_non_overlap_reads++;
@@ -1165,12 +1165,17 @@ void score_junction(
 		bool rev_key = a->reversed();
 		count_per_strand[rev_key]++;
     
+    ////
+    // COUNT reads that overlap both sides toward the pos_hash_score
+    ////
+    
     // Note that reference here is the junction's sequence, not the reference genome sequence!
     uint32_t stranded_reference_start, stranded_reference_end;
     a->reference_stranded_bounds_1(stranded_reference_start, stranded_reference_end);
     
     if (verbose)
 			cout << "  " << item->junction_alignments.front()->read_name() << ' ' << static_cast<int32_t>(rev_key) << ' ' << stranded_reference_start << endl;
+    
     
     if (!pos_hash.count(stranded_reference_start))
     {

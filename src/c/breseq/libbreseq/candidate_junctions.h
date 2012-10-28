@@ -383,7 +383,7 @@ namespace breseq {
                                                   JunctionCandidatePtr& returned_junction_candidate
                                                   );
     
-		static void alignments_to_candidate_junctions(
+		static uint64_t alignments_to_candidate_junctions(
                                                   const Settings& settings, 
                                                   Summary& summary,  
                                                   const cReferenceSequences& ref_seq_info, 

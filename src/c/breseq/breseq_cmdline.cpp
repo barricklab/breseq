@@ -1045,7 +1045,7 @@ int breseq_default_action(int argc, char* argv[])
         string stage1_unmatched_fastq_file_name = settings.file_name(settings.stage1_unmatched_fastq_file_name, "#", base_read_file_name);
         
         //Split alignment into unmatched and matched files.
-        string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local -a " + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_stringent + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + stage1_reference_sam_file_name + " --un " + stage1_unmatched_fastq_file_name; 
+        string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local " + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_stringent + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + stage1_reference_sam_file_name + " --un " + stage1_unmatched_fastq_file_name; 
         SYSTEM(command);
       }
     }
@@ -1105,7 +1105,7 @@ int breseq_default_action(int argc, char* argv[])
         if (settings.bowtie2_align) {
           
           // This setting prevents indels > 1 bp from being predicted entirely.
-          string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local -a " + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_relaxed + " --no-unal --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + reference_sam_file_name; 
+          string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local " + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_relaxed + " --no-unal --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + reference_sam_file_name; 
          
           SYSTEM(command);
         } else {
@@ -1278,7 +1278,7 @@ int breseq_default_action(int argc, char* argv[])
           string filename = candidate_junction_hash_file_name + ".1.bt2";
           if (file_exists(filename.c_str())) 
           {
-            string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local -a " + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_stringent + " --no-unal --reorder -x " + candidate_junction_hash_file_name + " -U " + read_fastq_file + " -S " + candidate_junction_sam_file_name; 
+            string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local " + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_stringent + " --no-unal --reorder -x " + candidate_junction_hash_file_name + " -U " + read_fastq_file + " -S " + candidate_junction_sam_file_name; 
             SYSTEM(command);
           }
         }
