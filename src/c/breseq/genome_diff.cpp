@@ -97,13 +97,14 @@ map<gd_entry_type, vector<string> > line_specification = make_map<gd_entry_type,
 (RFLP,make_vector<string> ("seq_id")("primer_1_start")("primer_1_end")("primer_2_start")("primer_2_end"))
 (PFGE,make_vector<string> ("seq_id")("enzyme"))
 (NOTE,make_vector<string> ("note"))
+(MASK,make_vector<string> ("seq_id")("position")("size")) 
 
   
 ; // end line specifications
 
 
 const vector<string>gd_entry_type_lookup_table =
-  make_vector<string>("UNKNOWN")("SNP")("SUB")("DEL")("INS")("MOB")("AMP")("INV")("CON")("RA")("MC")("JC")("CN")("UN")("CURA")("FPOS")("PHYL")("TSEQ")("PFLP")("RFLP")("PFGE")("NOTE");
+  make_vector<string>("UNKNOWN")("SNP")("SUB")("DEL")("INS")("MOB")("AMP")("INV")("CON")("RA")("MC")("JC")("CN")("UN")("CURA")("FPOS")("PHYL")("TSEQ")("PFLP")("RFLP")("PFGE")("NOTE")("MASK");
 
 
 // Field order.
@@ -244,6 +245,7 @@ uint32_t cDiffEntry::get_start()
       return from_string<uint32_t>((*this)[POSITION]);
     case UN:
       return from_string<uint32_t>((*this)[START]);
+    case MASK:
     default:
       ERROR("cDiffEntry::get_start not implemented for type: " + gd_entry_type_lookup_table[this->_type]);
   }
@@ -267,6 +269,7 @@ uint32_t cDiffEntry::get_end()
       return from_string<uint32_t>((*this)[POSITION]) + from_string<uint32_t>((*this)["duplication_size"]);
     case UN:
       return from_string<uint32_t>((*this)[END]);
+    case MASK:
     default:
       ERROR("cDiffEntry::get_end not implemented for type: " + gd_entry_type_lookup_table[this->_type]);
   }
@@ -1125,6 +1128,7 @@ void cDiffEntry::normalize_to_sequence(const cAnnotatedSequence &sequence, bool 
     assert(this->entry_exists("size"));
     assert(this->entry_exists("region"));
   } break;
+          
 
   default:
     break;
@@ -1229,6 +1233,7 @@ map<gd_entry_type, sort_fields_item> diff_entry_sort_fields = make_map<gd_entry_
   (RFLP, sort_fields_item(7, "seq_id", "primer_1_start"))
   (PFGE, sort_fields_item(7, "seq_id", "enzyme"))
   (NOTE, sort_fields_item(7, "note", "note"))
+  (MASK, sort_fields_item(7, SEQ_ID, POSITION))
 ;
 
 map<gd_entry_type, uint8_t> sort_order = make_map<gd_entry_type, uint8_t>
@@ -1253,6 +1258,7 @@ map<gd_entry_type, uint8_t> sort_order = make_map<gd_entry_type, uint8_t>
   (RFLP, 19)
   (PFGE, 20)
   (NOTE, 20)
+  (MASK, 20)
 ;
 
 
@@ -3325,9 +3331,9 @@ void cGenomeDiff::add_reject_reasons(cDiffEntry item, const string& reject)
 //
 void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose)
 {    
-  uint32_t count_SNP = 0, count_SUB = 0, count_INS = 0, count_DEL = 0, count_AMP = 0, count_INV = 0, count_MOB = 0, count_CON = 0;
+  uint32_t count_SNP = 0, count_SUB = 0, count_INS = 0, count_DEL = 0, count_AMP = 0, count_INV = 0, count_MOB = 0, count_CON = 0, count_MASK = 0;
 
-  diff_entry_list_t mutation_list = this->mutation_list();
+  diff_entry_list_t mutation_list = this->list();//changed from mutation_list to list with addition of mask (ie non-mutation code for editing a reference file. Not expected to be a problem)
   for (diff_entry_list_t::iterator itr_mut = mutation_list.begin(); itr_mut != mutation_list.end(); itr_mut++)
   {
     cDiffEntry& mut(**itr_mut);
@@ -3391,6 +3397,20 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         }
       } break;
 
+      case MASK:
+      {
+        count_MASK++;
+        const uint32_t& size = from_string<uint32_t>(mut[SIZE]);
+        string mask_string(size, 'N');
+        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, mask_string, (to_string(mut._type) + " " + mut._id), verbose);
+        if (verbose)
+        {
+          cout << "MASK: " << size << " => N" << endl;
+            cout << "   shift: none" << endl;
+        }
+      
+      } break;
+            
       case AMP:
       {
         count_AMP++;
@@ -3547,6 +3567,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
     cout << "\tINV: " << count_INV << endl;
     cout << "\tMOB: " << count_MOB << endl;
     cout << "\tCON: " << count_CON << endl;
+    cout << "\tMASK: " << count_MASK << endl;
   }
   
   //Cleanup.  If any of the sequences are of zero length, remove them.
@@ -3611,6 +3632,7 @@ int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info)
     case INS: return (*this)[NEW_SEQ].length(); break;
     case DEL: return -(from_string<uint32_t>((*this)[SIZE])); break;
     case AMP: return from_string<uint32_t>((*this)[SIZE]) * (from_string<uint32_t>((*this)["new_copy_number"]) - 1); break;
+    case MASK: return 0; break;
 
     case MOB:
     {

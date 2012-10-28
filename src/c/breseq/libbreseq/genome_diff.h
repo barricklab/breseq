@@ -76,7 +76,7 @@ extern const char* NEW_JUNCTION_COVERAGE;
 
 // Types of diff entries:
 enum gd_entry_type {UNKNOWN = 0, SNP, SUB, DEL, INS, MOB, AMP, INV, CON, RA,
-                    MC, JC, CN, UN, CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE, NOTE};
+                    MC, JC, CN, UN, CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE, NOTE, MASK};
 
 extern const vector<string> gd_entry_type_lookup_table;
   
