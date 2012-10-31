@@ -688,34 +688,64 @@ int do_copy_number_variation(int argc, char *argv[])
   cReferenceSequences ref_seq_info;
   ref_seq_info.ReadGFF(settings.reference_gff3_file_name);
   
+  // Where error rate summary data will be output
   Summary summary;
   summary.unique_coverage.retrieve(settings.error_rates_summary_file_name);
     
-  //create directory
+  // Create copy_number_variation directory
   create_path( settings.copy_number_variation_path );
   
   for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it)
   {
+    // Sequence iterator, one sequence at a time from .fastq file
     cAnnotatedSequence& seq = *it;
+    
+    // Create filename: [genome].coverage.txt, this is LONG file where the coverage data is coming from
     string this_complete_coverage_text_file_name = settings.file_name(settings.complete_coverage_text_file_name, "@", seq.m_seq_id);
+
+    // Create filename: [genome].tiled.tab, this is LONG file where the tiled coverage data will be output
     string this_tiled_complete_coverage_text_file_name = settings.file_name(settings.tiled_complete_coverage_text_file_name, "@", seq.m_seq_id);
+    
+    // Generates [genome].tiled.tab, one line at a time with each for-loop,
+    // where the avg coverage of each [500bp] tile is calculated.
+    /**** @DTF: Step thru this ****/
     CoverageDistribution::tile(settings.ignore_redundant_coverage, this_complete_coverage_text_file_name, this_tiled_complete_coverage_text_file_name, settings.copy_number_variation_tile_size);
     
+    // Create filename: [genome].ranges.tab, this is SHORT file used for ???
+    // (contains: Start_Position, End_Position, T_Score, P_Value)
     string this_ranges_text_file_name = settings.file_name(settings.ranges_text_file_name, "@", seq.m_seq_id);
+    
+    // Get filename: [genome].history.tab, this is SHORT file used for ???
+    // (contains: Start_Search, End_Search, Start_Position, End_Position, Start_Segment, End_Segment... 16 values total)
     string this_cnv_history_text_file_name = settings.file_name(settings.cnv_history_text_file_name, "@", seq.m_seq_id);
+    
+    // Generates [genome].ranges.tab & [genome].history.tab, one line at a time with each for-loop,
+    /**** @DTF: Step thru this ****/
     CoverageDistribution::find_segments(settings,
-                                        summary.unique_coverage[seq.m_seq_id].average,
+                                        summary.unique_coverage[seq.m_seq_id].nbinom_mean_parameter,
                                         this_tiled_complete_coverage_text_file_name,
                                         this_ranges_text_file_name,
                                         this_cnv_history_text_file_name
                                         );
     
+    // Create filename: [genome].smoothed_ranges.tab, this is LONG file used for ???
+    // (contains: Position, Smooth_Coverage)
     string this_smoothed_ranges_text_file_name = settings.file_name(settings.smoothed_ranges_text_file_name, "@", seq.m_seq_id);
+    
+    // Create filename: [genome].cnv_final.tab, this is SHORT file used for ???
+    // (contains: Start_Position, End_Position, Z_Score, Greater_Than, Copy_Number)
     string this_final_cnv_file_name = settings.file_name(settings.final_cnv_text_file_name, "@", seq.m_seq_id);
+    
+    // Create filename: [genome].cn_evidence.gd, this is SHORT file used for ???
+    // (contains no labels)
     string this_copy_number_variation_cn_genome_diff_file_name = settings.file_name(settings.copy_number_variation_cn_genome_diff_file_name, "@", seq.m_seq_id);
+    
+    // Generates [genome].smoothed_ranges.tab & [genome].cnv_final.tab & [genome].cn_evidence.gd,
+    // one line at a time with each for-loop,
+    /**** @DTF: Step thru this ****/
     CoverageDistribution::smooth_segments(settings,
                                           seq.m_seq_id,
-                                          summary.unique_coverage[seq.m_seq_id].average, 
+                                          summary.unique_coverage[seq.m_seq_id].nbinom_mean_parameter, 
                                           this_tiled_complete_coverage_text_file_name, 
                                           this_ranges_text_file_name, 
                                           this_smoothed_ranges_text_file_name,
@@ -1695,28 +1725,40 @@ int breseq_default_action(int argc, char* argv[])
         cAnnotatedSequence& seq = *it;
         string this_complete_coverage_text_file_name = settings.file_name(settings.complete_coverage_text_file_name, "@", seq.m_seq_id);
         string this_tiled_complete_coverage_text_file_name = settings.file_name(settings.tiled_complete_coverage_text_file_name, "@", seq.m_seq_id);
-
+        
+        // Generates [genome].tiled.tab, one line at a time with each for-loop,
+        // where the avg coverage of each [500bp] tile is calculated.
+        /**** @DTF: Step thru this ****/
         cerr << "Tiling coverage" << endl;
-        CoverageDistribution::tile(settings.ignore_redundant_coverage, this_complete_coverage_text_file_name, this_tiled_complete_coverage_text_file_name, settings.copy_number_variation_tile_size);
+        CoverageDistribution::tile(settings.ignore_redundant_coverage,          
+                                   this_complete_coverage_text_file_name,           // @DTF: in_file_name
+                                   this_tiled_complete_coverage_text_file_name,     // @DTF: out_file_name
+                                   settings.copy_number_variation_tile_size);
        
         string this_ranges_text_file_name = settings.file_name(settings.ranges_text_file_name, "@", seq.m_seq_id);
         string this_cnv_history_text_file_name = settings.file_name(settings.cnv_history_text_file_name, "@", seq.m_seq_id);
+        
+        // Generates [genome].ranges.tab & [genome].history.tab, one line at a time with each for-loop,
+        /**** @DTF: Step thru this ****/
         cerr << "Predicting changed segments" << endl;
         CoverageDistribution::find_segments(settings,
-                                            summary.unique_coverage[seq.m_seq_id].average,
-                                            this_tiled_complete_coverage_text_file_name,
-                                            this_ranges_text_file_name, 
-                                            this_cnv_history_text_file_name
+                                            summary.unique_coverage[seq.m_seq_id].nbinom_mean_parameter,  // @DTF: summary_average (double)
+                                            this_tiled_complete_coverage_text_file_name,    // @DTF: in_file_name (tiled.tab)
+                                            this_ranges_text_file_name,                     // @DTF: out_file_name (ranges.tab)
+                                            this_cnv_history_text_file_name                 // @DTF: history_file_name (history.tab)
                                             );
        
         string this_smoothed_ranges_text_file_name = settings.file_name(settings.smoothed_ranges_text_file_name, "@", seq.m_seq_id);
         string this_final_cnv_file_name = settings.file_name(settings.final_cnv_text_file_name, "@", seq.m_seq_id);
         string this_copy_number_variation_cn_genome_diff_file_name = settings.file_name(settings.copy_number_variation_cn_genome_diff_file_name, "@", seq.m_seq_id);
 
+        // Generates [genome].smoothed_ranges.tab & [genome].cnv_final.tab & [genome].cn_evidence.gd,
+        // one line at a time with each for-loop,
+        /**** @DTF: Step thru this ****/
         cerr << "Smoothing changed segments" << endl;
         CoverageDistribution::smooth_segments(settings,
                                               seq.m_seq_id,
-                                              summary.unique_coverage[seq.m_seq_id].average, 
+                                              summary.unique_coverage[seq.m_seq_id].nbinom_mean_parameter, 
                                               this_tiled_complete_coverage_text_file_name, 
                                               this_ranges_text_file_name, 
                                               this_smoothed_ranges_text_file_name,
