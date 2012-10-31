@@ -251,7 +251,7 @@ namespace breseq {
       //the next value in the line isn't used.
       in_file >> skip;
       
-      //last is position
+      //last is position (@DTF: begins at 1, not 0)
       in_file >> position;
       
       coverage = sum_coverage;
@@ -297,6 +297,9 @@ namespace breseq {
       
     }
     
+    // @DTF: If the last position in the file also happens to be the last
+    // position in the current tile (i.e. a multiple of tile size), and
+    // if this is the last tile in the file
     if ( position % tile_size == 0 && position != last_position )
     {
       average = tile_sum / tile_size;
@@ -310,9 +313,9 @@ namespace breseq {
   
   void CoverageDistribution::find_segments(const Settings& settings,
                                            double summary_average,
-                                          string in_file_name,
-                                          string out_file_name,
-                                          string history_file_name
+                                          string in_file_name,          // @DTF: tiled.tab
+                                          string out_file_name,         // @DTF: ranges.tab
+                                          string history_file_name      // @DTF: history.tab
                                           )
   {
     (void)settings;
@@ -433,6 +436,7 @@ namespace breseq {
     in_file >> skip >> skip >> tile_size;
     
     out_file << "Start_Position\tEnd_Position\tT_Score\tP_Value\n";
+    
     history_file << "Start_Search\tEnd_Search\tStart_Position\tEnd_Position\t"
                  << "Start_Segment\tEnd_Segment\t"
                  << "T_Score\tMean_Coverage_Inside\tMean_Coverage_Left\tMean_Coverage_Right\t"
@@ -472,10 +476,12 @@ namespace breseq {
       if (current_search.first == current_search.second ||
           current_search.first + 1 == current_search.second)
       {
+        
         out_file << ordered_sums[current_search.first] - tile_size + 1 << "\t"
                  << ordered_sums[current_search.second] << "\t"
                  << 0.0 << "\t"
                  << 1.0 << endl;
+        
         history_file << ordered_sums[current_search.first] - tile_size + 1 << "\t"
                      << ordered_sums[current_search.second] << "\t"
                      << ordered_sums[current_search.first] - tile_size + 1 << "\t"
