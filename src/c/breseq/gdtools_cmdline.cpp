@@ -814,6 +814,7 @@ int do_count(int argc, char* argv[])
   options.addUsage("Counts the numbers of mutations and other statistics for each input GenomeDiff file.");
   options
   ("help,h", "produce advanced help message", TAKES_NO_ARGUMENT)
+  ("verbose,v", "produce output for each mutation counted.", TAKES_NO_ARGUMENT)
   ("output,o", "path to output file with added mutation data.", "count.csv")
   ("reference,r", "reference sequence in GenBank flatfile format (REQUIRED)")
   ("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT)
@@ -848,7 +849,7 @@ int do_count(int argc, char* argv[])
   for (uint32_t i=0; i<gd_path_names.size(); i++) {
     cGenomeDiff gd(gd_path_names[i]);
     uout("Annotating mutations " + gd_path_names[i]);
-    ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"));
+    ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"), options.count("verbose"));
     genome_diffs.push_back(gd);
   }
   
@@ -856,7 +857,8 @@ int do_count(int argc, char* argv[])
                     ref_seq_info, 
                     genome_diffs, 
                     output_file_name, 
-                    options.count("base-substitution-statistics") 
+                    options.count("base-substitution-statistics"),
+                    options.count("verbose")
                     );
   
   return 0;

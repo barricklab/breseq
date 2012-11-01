@@ -203,8 +203,11 @@ namespace breseq {
     cerr << "    Analyzed reads: " << num_reads << " bases: "<< num_bases << endl;
 
     
+    double avg_read_length = static_cast<double>(num_bases) / static_cast<double>(num_reads);
+    
     Summary::AnalyzeFastq retval(
                                  max_read_length, 
+                                 avg_read_length,
                                  original_num_reads,
                                  homopolymer_filtered_reads,
                                  N_filtered_reads,
