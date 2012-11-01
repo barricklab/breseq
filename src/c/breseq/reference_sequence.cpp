@@ -1900,7 +1900,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
   }
 }
 
-void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bool ignore_pseudogenes)
+void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bool ignore_pseudogenes, bool verbose)
 {
   //keep track of other mutations that affect SNPs
   //because we may double-hit a codon
@@ -1917,6 +1917,7 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
   for (diff_entry_list_t::iterator it=muts.begin(); it!=muts.end(); it++)
   {
     cDiffEntry& mut= **it;
+    if (verbose) cerr << "Annotating: " << mut << endl;
 
     if (only_muts && !(mut.is_mutation())) continue;
 

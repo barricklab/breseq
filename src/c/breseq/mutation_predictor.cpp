@@ -1781,7 +1781,8 @@ namespace breseq {
                          cReferenceSequences& ref_seq_info, 
                          vector<cGenomeDiff>& genome_diffs, 
                          string& output_file_name, 
-                         bool base_substitution_statistics
+                         bool base_substitution_statistics,
+                         bool verbose
                          )
   {
     // Could be a parameter > this is a "large" mutation, <= this is an "small" mutation
@@ -1882,7 +1883,7 @@ namespace breseq {
     for (vector<cGenomeDiff>::iterator it=genome_diffs.begin(); it != genome_diffs.end(); ++it) {
       cGenomeDiff &gd = *it;
       //uout("Counting mutations " + gd.metadata.run_name);
-      
+            
       BaseSubstitutionEffectCounts this_bsec;
       // deep copy totals of entire sequence
       if (base_substitution_statistics)
@@ -1921,7 +1922,13 @@ namespace breseq {
         cDiffEntry& mut = **it;
         
         // Don't count mutations that were hidden by later deletions, but kept for phylogenetic inference.
-        if (mut.is_marked_deleted()) continue;
+        if (mut.is_marked_deleted()) {
+          if (verbose) cerr << "Skipping deleted: " << mut << endl;
+          continue; 
+        }
+        
+        if (verbose) cerr << "Counting: " << mut << endl;
+
         
         if (mut._type == SNP) {
           count["base_substitution"][""]++;

@@ -395,8 +395,10 @@ namespace breseq
     this->bowtie2_score_parameters += (bowtie2_maximum_alignments_to_consider_per_read > 0) 
     ? " -k " + to_string(this->bowtie2_maximum_alignments_to_consider_per_read) : " -a";
     
-    this->bowtie2_min_score_stringent = "-L 22 -i S,1,0.25 --score-min L,0,0.9 ";
-    this->bowtie2_min_score_relaxed  = "-L 9 -i C,1,0 --score-min L,6,0.2 ";
+    this->bowtie2_min_score_stringent = "-i S,1,0.25 --score-min L,0,0.9 "; // "-L 22 -i S,1,0.25 --score-min L,0,0.9 ";
+    
+    // Note: this leaves off -L, since it is set based on read length
+    this->bowtie2_min_score_relaxed  = "-i S,1,0.25 --score-min L,6,0.2 "; // "-L 9 -i C,1,0 --score-min L,6,0.2 ";
 
     this->num_processors = 1;
     
@@ -730,7 +732,13 @@ namespace breseq
         new_version_string += "." + version_string.substr(start_version_pos, end_version_pos - start_version_pos);
         this->installed["bowtie2_version_string"] = new_version_string;
         new_version_string = substitute(new_version_string, "-", ".");
-        new_version_string = substitute(new_version_string, "beta", "");
+        
+        // beta counts as another sub version
+        if (new_version_string.find("beta") != string::npos) {
+          new_version_string = substitute(new_version_string, "beta", "");
+        } else {
+          new_version_string += ".0";
+        }
         
         vector<string> split_version = split(new_version_string, ".");
         uint32_t numerical_version = 0;
@@ -739,6 +747,7 @@ namespace breseq
           numerical_version += n(*it);
         }
         this->installed["bowtie2_version"] = s(numerical_version);
+        //cout << this->installed["bowtie2_version"] << endl;
       }
       else {
         this->installed["bowtie2"] = "";

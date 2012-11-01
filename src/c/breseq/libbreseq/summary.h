@@ -153,6 +153,7 @@ namespace breseq{
     class AnalyzeFastq : public Storable {
     public:
       uint32_t max_read_length;
+      double avg_read_length;
       uint64_t original_reads;
       uint64_t homopolymer_filtered_reads;
       uint64_t N_filtered_reads;
@@ -169,6 +170,7 @@ namespace breseq{
       
       AnalyzeFastq(
                    uint32_t _max_read_length, 
+                   double _avg_read_length,
                    uint64_t _original_reads,
                    uint64_t _homopolymer_filtered_reads,
                    uint64_t _N_filtered_reads,
@@ -182,6 +184,7 @@ namespace breseq{
                    const string& _converted_fastq_name
                    )
       : max_read_length(_max_read_length)
+      , avg_read_length(_avg_read_length)
       , original_reads(_original_reads)
       , homopolymer_filtered_reads(_homopolymer_filtered_reads)
       , N_filtered_reads(_N_filtered_reads)
@@ -199,6 +202,7 @@ namespace breseq{
       void serialize(ofstream& f)
       {
         write_to_file(f, max_read_length);
+        write_to_file(f, avg_read_length);
         write_to_file(f, original_reads);
         write_to_file(f, homopolymer_filtered_reads);
         write_to_file(f, N_filtered_reads);
@@ -215,6 +219,7 @@ namespace breseq{
       void deserialize(ifstream& f)
       {
         read_from_file(f, max_read_length);
+        read_from_file(f, avg_read_length);
         read_from_file(f, original_reads);
         read_from_file(f, homopolymer_filtered_reads);
         read_from_file(f, N_filtered_reads);

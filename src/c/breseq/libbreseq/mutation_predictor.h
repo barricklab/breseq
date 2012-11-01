@@ -161,7 +161,8 @@ namespace breseq {
                          cReferenceSequences& ref_seq_info, 
                          vector<cGenomeDiff>& genome_diffs, 
                          string& output_file_name, 
-                         bool base_substitution_statistics
+                         bool base_substitution_statistics,
+                         bool verbose
                          );
   
   
