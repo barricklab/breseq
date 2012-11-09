@@ -384,7 +384,7 @@ namespace breseq
     this->ssaha2_seed_length = 13;
     this->ssaha2_skip_length = 1;
     this->require_match_length = 0;         
-    this->require_match_fraction = 1.0;
+    this->require_match_fraction = 0.9; // CL value overrides
     this->maximum_read_mismatches = -1;
 
     this->bowtie2 = false;
@@ -405,7 +405,7 @@ namespace breseq
     //! Settings: Candidate Junction Prediction
 		this->preprocess_junction_min_indel_split_length = 3;
     this->required_both_unique_length_per_side_fraction = 0.2; 
-    this->unmatched_end_length_factor = 0.0;
+    this->unmatched_end_length_factor =  1 - this->require_match_fraction;
     this->unmatched_end_minimum_read_length = 50;
     this->maximum_junction_sequence_negative_overlap_length_fraction = 0.4;
     this->maximum_junction_sequence_negative_overlap_length_minimum = 12;
@@ -429,7 +429,7 @@ namespace breseq
     //! Settings: Alignment Resolution
     this->add_split_junction_sides = true;
     this->junction_pos_hash_neg_log10_p_value_cutoff = 2;
-    this->minimum_alignment_resolution_pos_hash_score = 2;
+    this->minimum_alignment_resolution_pos_hash_score = 3;
 
     //! Settings: Mutation Identification
     this->base_quality_cutoff = 3;
