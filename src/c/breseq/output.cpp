@@ -1248,6 +1248,7 @@ string string_to_fixed_digit_string(string s, uint32_t precision = 2)
 }
   
 string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_details, const string& title, const string& relative_link)
+
 {
   stringstream ss; //!<< Main Build Object for Function
   cDiffEntry& test_item = *list_ref.front();
@@ -1257,7 +1258,7 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_det
                test_item.entry_exists(_NEW_JUNCTION_EVIDENCE_FILE_NAME));
 
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
-  size_t total_cols = link ? 11 : 9;
+  size_t total_cols = link ? 12 : 10; //@ded 12/10 instead of 11/9 for frequency addition. SNPS set up to only do so if frequency is != 1 should this be done here as well?
   
   if (title != "") {
     ss << tr(th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"new_junction_header_row\"", title)) << endl;
@@ -1272,12 +1273,14 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_det
   if (link) {
     ss << th("colspan=\"2\"", "&nbsp;") << endl;
   }
+  
   ss << th("seq&nbsp;id") << endl <<
         th("position")    << endl <<
         th("reads&nbsp;(cov)") << endl <<
         th("reads&nbsp;(cov)") << endl <<
         th("score")       << endl <<
         th("skew")        << endl <<
+        th("freq")        << endl <<//@ded frequency added as 9th column.
         th("annotation")  << endl <<
         th("gene")        << endl;
   
@@ -1339,8 +1342,10 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_det
                c["pos_hash_score"] + "/" +  c["max_pos_hash_score"]) << endl;
       ss << td("rowspan=\"2\" align=\"center\"", 
                c["neg_log10_pos_hash_p_value"]) << endl;
-                
-                
+
+//@ded frequency info goes here. If changing to only display if frequency != 1, this needs to be conditional.
+      ss << td("rowspan=\"2\" align=\"center\"", c["new_junction_frequency"]) << endl;   
+              
                //" (" + c["max_left"] + "/" + c["max_right"] + ")") << endl;
       ss << td("align=\"center\" class=\"" + annotate_key + "\"", 
               nonbreaking(c["_" + key + GENE_POSITION])) << endl;
@@ -1517,7 +1522,7 @@ string decode_reject_reason(const string& reject)
   }
   else if (reject == "FREQ")
   {
-    return "Prediction has fr==uency below cutoff threshold.";
+    return "Prediction has frequency below cutoff threshold.";
   }  
   else if (reject == "COV")
   {
@@ -2190,7 +2195,7 @@ void Html_Mutation_Table_String::Header_Line(bool print_main_header)
       for (vector<string>::iterator itr = freq_header_list.begin() ;
           itr != freq_header_list.end() ; itr++) {
         string& freq_header_item = *itr;
-        ss << th(freq_header_item) << endl;  
+        ss << th(freq_header_item) << endl;  //@ded how does this lead to "freq" appearing on the table ...
       }
     }
  
@@ -2277,6 +2282,7 @@ void Html_Mutation_Table_String::Item_Lines()
     if (settings.polymorphism_prediction) {
       // polymorphisms get highlighted
       if(mut.entry_exists(FREQUENCY) && (from_string<double>(FREQUENCY) != 1)) {
+//@ded placeholder in calculation for new junction frequencies ... not yet implemented: combining multiple new_junction_frequency values to output a single frequency for the mutation. This is important for MOBs, 2sided DELs, and AMPs.
         row_class = "polymorphism_table_row";
         freq_list.push_back(mut[FREQUENCY]);
       }

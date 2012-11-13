@@ -119,7 +119,7 @@ void calculate_continuation(
   continuation_left = 0;
   for (uint32_t i = 0; i < left_reference_seq.size() ; i++) {
     if (left_reference_seq[left_reference_seq.size() - i - 1] != left_junction_seq[left_junction_seq.size() - i - 1] )
-      break;
+        break;
     continuation_left++;
   }
   
@@ -127,7 +127,7 @@ void calculate_continuation(
   continuation_right = 0;
   for (uint32_t i = 0; i < right_reference_seq.size() ; i++) {
     if (right_reference_seq[i] != right_junction_seq[i] )
-      break;
+        break;
     continuation_right++;
   }
   
@@ -1741,6 +1741,7 @@ void  assign_junction_read_counts(
   junction_read_counter reference_jrc(settings.reference_bam_file_name, settings.reference_fasta_file_name, settings.verbose);
   junction_read_counter junction_jrc(settings.junction_bam_file_name, settings.candidate_junction_fasta_file_name, settings.verbose);
 
+
   map<string,bool> empty_read_names;
   map<string,bool> junction_read_names;
 
@@ -1756,7 +1757,7 @@ void  assign_junction_read_counts(
     
     uint32_t continuation_right = from_string<uint32_t>(de["continuation_right"]);
     uint32_t continuation_left = from_string<uint32_t>(de["continuation_left"]);
-    
+
     // New Junction
     start = from_string<uint32_t>(de["flanking_left"]) - continuation_left;
     end = start + abs(from_string<int32_t>(de[ALIGNMENT_OVERLAP])) + 1 + continuation_right;
@@ -1768,10 +1769,10 @@ void  assign_junction_read_counts(
       start = from_string<uint32_t>(de[SIDE_1_POSITION]);
       if (side_1_strand == +1) {
         start--;
-        end = start + 1;
+        end = start + 1 + abs(from_string<int32_t>(de[ALIGNMENT_OVERLAP])); //@ded added overlap. what does neg overlap mean/do?
         end += continuation_right;
       } else {
-        end = start + 1;
+        end = start + 1 + abs(from_string<int32_t>(de[ALIGNMENT_OVERLAP])); //@ded added overlap
         start -= continuation_left;
       }
       
@@ -1789,18 +1790,33 @@ void  assign_junction_read_counts(
       start = from_string<uint32_t>(de[SIDE_2_POSITION]);
       if (side_2_strand == +1) {
         start--;
-        end = start + 1;
+        end = start + 1 + abs(from_string<int32_t>(de[ALIGNMENT_OVERLAP])); //@ded added overlap
         end += continuation_right;
       } else {
-        end = start + 1;
+        end = start + 1 + abs(from_string<int32_t>(de[ALIGNMENT_OVERLAP])); //@ded added overlap
         start -= continuation_left;
       }
       empty_read_names.clear();
       de[SIDE_2_READ_COUNT] = to_string(reference_jrc.count(de[SIDE_2_SEQ_ID], start, end, junction_read_names, empty_read_names));
+
     } else {
       de[SIDE_2_READ_COUNT] = "NA";
     }
-  }
+      
+  //@ded calculate frequency of each junction. //
+  double a = from_string<uint32_t>(de[SIDE_1_READ_COUNT]);
+  double b = from_string<uint32_t>(de[SIDE_2_READ_COUNT]);
+  double c = from_string<uint32_t>(de[NEW_JUNCTION_READ_COUNT]);
+      
+  ASSERT(c > 0,"New junction predicted, but 0 reads support it. This should never happen");
+  if (de[SIDE_1_READ_COUNT] == "NA") a =0; //"NA" in read count sets value to 1 not 0
+  if (de[SIDE_2_READ_COUNT] == "NA") b =0;
+
+  double new_junction_frequency_value = c /(c + ((a+b)/2) ); // dividing by 2 because 1 read can support both sides?
+  de[NEW_JUNCTION_FREQUENCY] = to_string(new_junction_frequency_value, 2);
+  de[FREQUENCY] = de[NEW_JUNCTION_FREQUENCY];//@ded FREQUENCY is being used in other places for outputting main page. somewhere frequency needs to be updated to include both jcs when a 2jc issue.
+            
+    }
 
 }
 
@@ -1812,6 +1828,7 @@ uint32_t junction_read_counter::count(
                                       map<string,bool>& counted_read_names
                                       )
 {
+  _verbose = false; //for checking
   _ignore_read_names = ignore_read_names;
   _counted_read_names.clear();
   
@@ -1819,9 +1836,9 @@ uint32_t junction_read_counter::count(
   _count = 0;
   _start = start;
   _end = end;
-  
-  string region = seq_id + ":" + to_string(start) + "-" + to_string(start);
-  if (_verbose) cout << seq_id << ":" << start << "-" << end << endl;
+    
+  string region = seq_id + ":" + to_string(start) + "-" + to_string(start);//@ded is start - start intended/best? 
+  if (_verbose) cout << seq_id << ":" << start << "-" << end << endl; //@ded verbouse output is outputing start-end
   
   do_fetch(region);
   
@@ -1847,9 +1864,14 @@ void junction_read_counter::fetch_callback ( const alignment_wrapper& a )
   
   // read is to be ignored
   if (_ignore_read_names.count(a.read_name())
+      /* @ded not working as intended. Reads that end with -M1/2 are still being counted. unsure why
       || _ignore_read_names.count(a.read_name() + "-M1")
       || _ignore_read_names.count(a.read_name() + "-M2")
-      ) {
+      )*/
+      ||a.read_name().find("-M1") != string::npos
+      ||a.read_name().find("-M2") != string::npos
+      )   
+  {
     if (_verbose) cout << "  IGNORED" << endl;
     
     //ERROR("Read being counted twice for junction.");
