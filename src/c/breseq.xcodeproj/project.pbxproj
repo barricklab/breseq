@@ -149,7 +149,7 @@
 		7087728B12BC169C000F9B57 /* identify_mutations.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = identify_mutations.cpp; path = breseq/identify_mutations.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		7087728C12BC169C000F9B57 /* pileup_base.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = pileup_base.cpp; path = breseq/pileup_base.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		7087728D12BC169C000F9B57 /* pileup.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = pileup.cpp; path = breseq/pileup.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
-		708D62431390B1D5007FF13C /* resolve_alignments.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = resolve_alignments.cpp; path = breseq/resolve_alignments.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		708D62431390B1D5007FF13C /* resolve_alignments.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = resolve_alignments.cpp; path = breseq/resolve_alignments.cpp; sourceTree = SOURCE_ROOT; tabWidth = 2; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		708FA5D6132578BE00864C40 /* breseq */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = breseq; sourceTree = BUILT_PRODUCTS_DIR; };
 		708FA5DA132578BE00864C40 /* libbreseq.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libbreseq.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		7090A56715DDD997000010EE /* plot_jc_scores.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = plot_jc_scores.r; path = breseq/plot_jc_scores.r; sourceTree = "<group>"; };
@@ -191,7 +191,7 @@
 		70CB7225140FEB6400D578EB /* storable.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = storable.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		70D789D313C3CEB70036BEAB /* output.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = output.cpp; path = breseq/output.cpp; sourceTree = SOURCE_ROOT; };
 		70E92F1B151AB74200F86F2D /* gdtools */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = gdtools; sourceTree = BUILT_PRODUCTS_DIR; };
-		70E92F21151AB8AF00F86F2D /* gdtools_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = gdtools_cmdline.cpp; path = breseq/gdtools_cmdline.cpp; sourceTree = SOURCE_ROOT; };
+		70E92F21151AB8AF00F86F2D /* gdtools_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = gdtools_cmdline.cpp; path = breseq/gdtools_cmdline.cpp; sourceTree = SOURCE_ROOT; tabWidth = 4; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */

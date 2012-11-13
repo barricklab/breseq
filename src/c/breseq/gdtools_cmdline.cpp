@@ -42,6 +42,7 @@ int gdtools_usage()
   uout << "filter                 remove mutations given filtering expressions" << endl;
   uout << "merge                  combine multiple GD files" << endl;
   uout << "header                 create or add header entries" << endl;
+  uout << "mRNA-Stability         determine thermodynamic differences of mutations" << endl;
 
   uout("Format Conversions:");
   uout << "gd2gvf                 GD to Genome Variant Format(GVF)" << endl;
@@ -366,7 +367,6 @@ int do_weights(int argc, char* argv[])
   return 0;
 }
 
-
 int do_compare(int argc, char *argv[])
 {
   AnyOption options("gdtools COMPARE [-o output.gd] control.gd test.gd");
@@ -473,7 +473,8 @@ int do_compare(int argc, char *argv[])
   return 0;
 }
 
-int do_gd2gvf( int argc, char* argv[]){
+int do_gd2gvf( int argc, char* argv[])
+{
   AnyOption options("gdtools GD2GVF [-o output.gvf] input.gd"); 
 
   options
@@ -531,7 +532,8 @@ int do_vcf2gd( int argc, char* argv[])
   return 0;
 }
 
-int do_gd2circos(int argc, char *argv[]){
+int do_gd2circos(int argc, char *argv[])
+{
   
   AnyOption options("gdtools GD2CIRCOS -r <reference> [-r <reference2> ...] -o <output_dir> input1.gd [input2.gd ...]");
   
@@ -587,7 +589,8 @@ int do_gd2circos(int argc, char *argv[]){
   return 0;
 }
 
-int do_mira2gd(int argc, char* argv[]){
+int do_mira2gd(int argc, char* argv[])
+{
   //unsupported before it ever saw the light of day.
   AnyOption options("gdtools MIRA2GD [-o output.gd] input.mira");
   
@@ -773,7 +776,7 @@ int do_annotate(int argc, char* argv[])
     }
   }
   
-
+//@ded this is the start of what i need for mrna stability
   vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
   uout("Reading input reference sequence files") << reference_file_names << endl;
   cReferenceSequences ref_seq_info;
@@ -781,6 +784,7 @@ int do_annotate(int argc, char* argv[])
     
   uout("Annotating mutations");
   ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"));
+//@ded this ends the core of what needs to be done     
     
   if (html_output_mode) {
     
@@ -921,7 +925,8 @@ int do_normalize_gd(int argc, char* argv[])
   return 0;
 }
 
-int do_filter_gd(int argc, char* argv[]) {
+int do_filter_gd(int argc, char* argv[]) 
+{
   AnyOption options("gdtools FILTER  [-o output.gd] -f filter1 [-f filter2] [-m SNP] input.gd");
   options("output,o", "Output Genome Diff file.", "output.gd");
   options("mut_type,m", "Only consider this mutation type for filtering.");
@@ -1173,9 +1178,8 @@ int do_mutations_to_evidence(int argc, char *argv[])
   return 0;
 }
 
-
-
-int do_header(int argc, char* argv[]) {
+int do_header(int argc, char* argv[]) 
+{
   AnyOption options("gdtools HEADER [-o output.gd] [-r reference] file1.fastq file2.fastq ...");
   options("output,o",      "output GD file");
   options("reference,r",   "reference file");
@@ -1678,6 +1682,166 @@ int do_runfile(int argc, char *argv[])
   return 0;
 }
 
+int do_mrna_stability(int argc, char *argv[])
+{
+  AnyOption options("gdtools mrna_stability [-o output.gd] [-r reference.gbk] input1.gd");
+  options("output,o",  "Output csv file for vienna RNA fold", "output.csv");
+  options("reference,r", "Genbank, GFF3, or FASTA reference sequence file");
+  options("verbose,v", "Verbose mode", TAKES_NO_ARGUMENT);
+  options.processCommandArgs(argc, argv);
+
+  options.addUsage("");
+  options.addUsage("Creates a csv file with type of SYNONOMOUS mutation,"); 
+  options.addUsage("posistion of mutation, original 31bp, mutated 31 bp.");
+  options.addUsage("To be used in vienna RNA fold");
+                                            
+  if (options.getArgc() != 1) {//@ded any interest in allowing multiple inserts and merge with frequencies before calcuation?
+    options.addUsage("");
+    options.addUsage("Must provide exactly 1 input.gd.");
+    options.printUsage();
+    return -1;
+  }
+cout << "successfully starting mrna_stability"<< endl;
+
+    UserOutput uout("ANNOTATE");
+    
+//@ded html not an option    bool html_output_mode = options.count("html");
+    string output_file_name;
+    if (options.count("output")) 
+        output_file_name = options["output"];
+    else
+        output_file_name = /*(html_output_mode) ? "annotated.html" :@ded no html*/ "annotated.gd";
+    
+    vector<string> gd_path_names;
+    for (int32_t i = 0; i < options.getArgc(); ++i) {
+        gd_path_names.push_back(options.getArgv(i));
+    }
+
+// checks that more than 1 input and at least 1 reference is given    
+/*    if ( (gd_path_names.size() == 0) 
+        || !options.count("reference")){
+        options.printUsage();
+        return -1;
+    }
+*/    
+/*    // more than one file was provided as input
+    bool compare_mode = (gd_path_names.size() > 1);
+@ded not allowing multiple inserts */    
+/*    vector<string> gd_base_names;
+    for (uint32_t i = 0; i < gd_path_names.size(); i++){    
+        cString s(gd_path_names[i]);
+        s = s.get_base_name_no_extension();
+        gd_base_names.push_back(s);
+    }
+@ded no need for base names*/     
+    // First use merge to produce a file with a line for each mutation
+    cGenomeDiff gd;
+    vector<diff_entry_list_t> mut_lists;
+    vector<cGenomeDiff> gd_list;
+    
+    for (uint32_t i = 0; i < gd_path_names.size(); i++){
+        uout("Reading input GD file",gd_path_names[i]);
+        cGenomeDiff single_gd(gd_path_names[i]);
+        //remove the evidence to speed up the merge
+        //single_gd.remove(cGenomeDiff::EVIDENCE);
+        //No, can't remove UN evidence!
+        gd_list.push_back(single_gd);
+        mut_lists.push_back(single_gd.mutation_list());
+        gd.merge(single_gd);
+    }
+    gd.sort();
+    
+    // Then add frequency columns for all genome diffs
+/*    if (compare_mode) {
+        
+        diff_entry_list_t de_list = gd.mutation_list();
+        bool found = false;
+        
+        for (diff_entry_list_t::iterator it = de_list.begin(); it != de_list.end(); it++) { 
+            
+            diff_entry_ptr_t& this_mut = *it;
+            
+            // for each genome diff compared
+            for (uint32_t i=0; i<mut_lists.size(); i++) { 
+                
+                string freq_key = "frequency_" + gd_base_names[i];
+                (*this_mut)[freq_key] = "0";
+                
+                diff_entry_list_t& mut_list = mut_lists[i];
+                if (mut_list.size() == 0) 
+                    continue; 
+                
+                bool found = false;
+                
+                // for top mutation in this genomedff (they are sorted by position)
+                diff_entry_ptr_t check_mut;
+                check_mut = mut_list.front();        
+                
+                // we found the exact same mutation
+                if ( (check_mut.get() != NULL) && (*check_mut == *this_mut) ) {
+                    
+                    if (check_mut->count(FREQUENCY))
+                        (*this_mut)[freq_key] = (*check_mut)[FREQUENCY];
+                    else
+                        (*this_mut)[freq_key] = "1";
+                    
+                    // remove the item
+                    mut_list.pop_front();
+                    continue;
+                }
+                
+                if (gd_list[i].mutation_deleted(*this_mut)) {
+                    (*this_mut)[freq_key] = "D";
+                    continue;
+                }
+                
+                if (gd_list[i].mutation_unknown(*this_mut)) {
+                    (*this_mut)[freq_key] = "?";
+                    continue;
+                }
+            }
+        }
+    }
+@ded not allowing for multiple inputs*/     
+    vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
+    uout("Reading input reference sequence files") << reference_file_names << endl;
+    cReferenceSequences ref_seq_info;
+    ref_seq_info.LoadFiles(reference_file_names);
+    
+    uout("Annotating mutations");
+    ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"));
+    
+/*    if (html_output_mode) {
+        
+        uout("Writing output HTML file", output_file_name);
+        
+        Settings settings;
+        // No evidence needs to be transferred to options and initialized correctly within breseq
+        settings.no_evidence = true;
+        
+        MutationTableOptions mt_options;
+        if (compare_mode)
+            mt_options.repeat_header = true;
+        mt_options.one_ref_seq = ref_seq_info.size() == 1;
+        mt_options.gd_name_list_ref = gd_base_names;
+        mt_options.repeat_header = 10;
+        
+        html_compare(settings, output_file_name, "Mutation Comparison", gd, mt_options);
+        
+    } else {*/
+        uout("Writing output Genome Diff file", options["output"]);
+        gd.write(output_file_name);
+    //}    
+    
+    
+    
+    
+    
+    
+return 0;                                            
+}
+                                            
+                                            
 int main(int argc, char* argv[]) {
 	//Extract the sub-command argument.
 	string command;
@@ -1746,6 +1910,8 @@ int main(int argc, char* argv[]) {
     return do_download(argc_new, argv_new);
   } else if (command == "RUNFILE") {
     return do_runfile(argc_new, argv_new);
+  } else if (command == "MRNA-STABILITY") {
+    return do_mrna_stability(argc_new, argv_new);
   } else {
     cout << "Unrecognized command: " << command << endl;
     gdtools_usage();
