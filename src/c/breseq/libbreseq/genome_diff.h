@@ -69,6 +69,7 @@ extern const char* SIDE_2_REDUNDANT;
 extern const char* SIDE_1_READ_COUNT;
 extern const char* SIDE_2_READ_COUNT;
 extern const char* NEW_JUNCTION_READ_COUNT;
+extern const char* NEW_JUNCTION_FREQUENCY;
   
 extern const char* SIDE_1_COVERAGE;
 extern const char* SIDE_2_COVERAGE;
