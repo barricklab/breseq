@@ -150,6 +150,7 @@ namespace breseq
     // Periodicity block
     options.addUsage("Experimental Options", true);
     options
+    ("user-junction-gd","User supplied genome diff file of JC evidence to use as candidate junctions and report support for.", "", ADVANCED_OPTION) 
     ("cnv","Do experimental copy number variation prediction",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("cnv-tile-size", "Tile size for copy number variation prediction", 500, ADVANCED_OPTION)
     ("cnv-ignore-redundant", "Only consider non-redundant coverage when using cnv", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
@@ -218,6 +219,8 @@ namespace breseq
 		}
     this->reference_file_names = from_string<vector<string> >(options["reference"]);
 
+    this->user_junction_genome_diff_file_name = options["user-junction-gd"];
+    
     this->run_name = options["name"];
     
     this->num_processors = from_string<int32_t>(options["num-processors"]);

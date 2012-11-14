@@ -1647,8 +1647,10 @@ char cReferenceSequences::translate_codon(string seq, uint32_t translation_table
 void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, uint32_t end, bool repeat_override, bool ignore_pseudogenes)
 {
   // this could be moved to the object
-  string intergenic_seperator = "/";
-
+  const string intergenic_separator = "/";
+  const string html_intergenic_separator = "/";
+  const string no_gene_name = "–"; //en-dash
+  
   // initialize everything, even though we don"t always use it
   mut["locus_tag"] = "";
   mut["aa_position"] = "";
@@ -1698,13 +1700,21 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
   {
     mut["snp_type"] = "intergenic";
 
-    mut["gene_name"] += (prev_gene.name.size() > 0) ? prev_gene.name : "–"; //en-dash
-    mut["gene_name"] += intergenic_seperator;
-    mut["gene_name"] += (next_gene.name.size() > 0) ? next_gene.name : "–"; //en-dash
+    mut["gene_name"] += (prev_gene.name.size() > 0) ? prev_gene.name : no_gene_name;
+    mut["gene_name"] += intergenic_separator;
+    mut["gene_name"] += (next_gene.name.size() > 0) ? next_gene.name : no_gene_name;
 
-    mut["locus_tag"] += (prev_gene.get_locus_tag().size() > 0) ? prev_gene.get_locus_tag() : "–"; //en-dash
-    mut["locus_tag"] += intergenic_seperator;
-    mut["locus_tag"] += (next_gene.get_locus_tag().size() > 0) ? next_gene.get_locus_tag() : "–"; //en-dash
+    mut["html_gene_name"] += (prev_gene.name.size() > 0) ? "<i>" + prev_gene.name + "</i>" : no_gene_name;
+    if (prev_gene.name.size() > 0) mut["html_gene_name"] += (prev_gene.get_strand() == -1) ? "&nbsp;&larr;" : "&nbsp;&rarr;";
+    mut["html_gene_name"] += "&nbsp;";
+    mut["html_gene_name"] += html_intergenic_separator;
+    if (next_gene.name.size() > 0) mut["html_gene_name"] += (next_gene.get_strand() == -1) ? "&nbsp;&larr;" : "&nbsp;&rarr;";
+    mut["html_gene_name"] += "&nbsp;";
+    mut["html_gene_name"] += (next_gene.name.size() > 0) ? "<i>" + next_gene.name + "</i>": no_gene_name;
+    
+    mut["locus_tag"] += (prev_gene.get_locus_tag().size() > 0) ? prev_gene.get_locus_tag() : no_gene_name;
+    mut["locus_tag"] += intergenic_separator;
+    mut["locus_tag"] += (next_gene.get_locus_tag().size() > 0) ? next_gene.get_locus_tag() : no_gene_name;
 
     if (prev_gene.name.size() > 0)
     {
@@ -1716,7 +1726,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     {
       mut["gene_position"] += "intergenic (–";
     }
-    mut["gene_position"] += intergenic_seperator;
+    mut["gene_position"] += intergenic_separator;
     if (next_gene.name.size() > 0)
     {
       mut["gene_position"] += next_gene.is_top_strand() ? "-" : "+"; //hyphen
@@ -1729,7 +1739,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     mut["gene_position"] += ")";
 
     mut["gene_product"] += (prev_gene.name.size() > 0) ? prev_gene.product : "–"; //en-dash
-    mut["gene_product"] += intergenic_seperator;
+    mut["gene_product"] += intergenic_separator;
     mut["gene_product"] += (next_gene.name.size() > 0) ? next_gene.product : "–"; //en-dash
 
     return;
@@ -1742,6 +1752,8 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     /// FOR NOW: just take the first of the within genes...
     Gene gene = within_genes[0];
     mut["gene_name"] = gene.name;
+    mut["html_gene_name"] = "<i>" + gene.name + "</i>";
+    mut["html_gene_name"] += (gene.get_strand() == -1) ? "&nbsp;&larr;" : "&nbsp;&rarr;";
     mut["gene_product"] = gene.product;
     if (gene.get_locus_tag().size()) {
       mut["locus_tag"] = gene.get_locus_tag();
@@ -1886,8 +1898,10 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
 
     if (gene_name_list.size() == 1) {
       mut["gene_name"] = gene_name_list[0];
+      mut["html_gene_name"] = "<i>" + gene_name_list[0] + "</i>";
     } else {
-      mut["gene_name"] = gene_name_list.front() + "–" + gene_name_list.back();  //en-dash
+      mut["gene_name"] = gene_name_list.front() + "–" + gene_name_list.back();  //en-dash  
+      mut["html_gene_name"] = "<i>" + gene_name_list.front() + "</i>–<i>" + gene_name_list.back() + "</i>";  //en-dash      
     }
 
     if (locus_tag_list.size() == 1) {
@@ -1896,7 +1910,6 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     else if (locus_tag_list.size() > 1) {
       mut["locus_tag"] = locus_tag_list.front() + "–" + locus_tag_list.back();  //en-dash
     }
-
   }
 }
 

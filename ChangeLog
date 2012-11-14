@@ -1,11 +1,11 @@
 Version 0.21
-	* Fixed improperly failure of check for bowtie2 versions 2.0.0+.
-	* Adjusted bowtie2 seed parameters to regain some degradation in sensitivity in
-	  short read data sets caused by previous choices.
-	* Added limits to numbers of alignments to record per read (2000) and the total
-	  number of pairs to consider when creating junction candidates to prevent excessive
-	  memory usage in genomes (like yeast) with many repeats (telomeric regions).
-	* Fixed DESTDIR usage in automake files.
+    * Fixed improperly failure of check for bowtie2 versions 2.0.0+.
+    * Adjusted bowtie2 seed parameters to regain some degradation in sensitivity in
+      short read data sets caused by previous choices.
+    * Added limits to numbers of alignments to record per read (2000) and the total
+      number of pairs to consider when creating junction candidates to prevent excessive
+      memory usage in genomes (like yeast) with many repeats (telomeric regions).
+    * Fixed DESTDIR usage in automake files.
 
 Version 0.20
     * Fixed merging results of first and second alignment stages when read numbers 

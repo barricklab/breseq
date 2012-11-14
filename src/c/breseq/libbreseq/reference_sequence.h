@@ -67,6 +67,7 @@ namespace breseq {
     int32_t get_end_1() const {
       return m_end;
     }
+    //>! Strand is -1 or +1
     int8_t get_strand() const {
       return m_strand;
     }

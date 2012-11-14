@@ -378,6 +378,15 @@ void resolve_alignments(
                              );
   }
   
+  // Be sure to add user defined junctions
+  if (settings.user_junction_genome_diff_file_name != "") {
+    cFastaFile ff(settings.candidate_junction_fasta_file_name, ios::in);
+    cFastaSequence sequence;
+    while( ff.read_sequence(sequence) ) {
+      all_junction_ids[sequence.m_name]++;
+    }
+  }
+  
   if (verbose)
   {
     cout << "Total junction ids: " << all_junction_ids.size() << endl;
@@ -490,8 +499,8 @@ void resolve_alignments(
     failed = failed || (junction_test_info.pos_hash_score < settings.minimum_alignment_resolution_pos_hash_score);
 
     // We don't even record junctions in the genome diff if they don't meet the minimum_alignment_resolution_pos_hash_score 
-    // criterion, or if they just have no matches
-    record = !failed;
+    // criterion, or if they just have no matches, unless they are user-defined junctions
+    record = !failed || junction_info.user_defined;
     
     // table is by overlap, then pos hash score
     
@@ -1650,6 +1659,8 @@ cDiffEntry junction_to_diff_entry(
     ("unique_read_sequence", to_string(jc.unique_read_sequence))
 	;
   
+  if (jc.user_defined) item["user_defined"] = "1";
+  
   //	## may want to take only selected of these fields in the future.
   
   item
@@ -1813,7 +1824,9 @@ void  assign_junction_read_counts(
   double b = from_string<uint32_t>(de[SIDE_2_READ_COUNT]);
   double c = from_string<uint32_t>(de[NEW_JUNCTION_READ_COUNT]);
       
-  ASSERT(c > 0,"New junction predicted, but 0 reads support it. This should never happen");
+  //ASSERT(c > 0,"New junction predicted, but 0 reads support it. This should never happen");
+  //Well, it CAN happen with user-defined junctions!!! @JEB
+    
   if (de[SIDE_1_READ_COUNT] == "NA") a =0; //"NA" in read count sets value to 1 not 0
   if (de[SIDE_2_READ_COUNT] == "NA") b =0;
 
