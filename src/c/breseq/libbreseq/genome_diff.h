@@ -200,6 +200,7 @@ public:
   struct fields_exist;
   struct no_show;
   struct rejected;
+  struct rejected_and_not_user_defined;
 
   cDiffEntry& operator()(const diff_entry_key_t& key, const diff_entry_value_t& value) {
     (*this)[key] = value;
@@ -534,6 +535,15 @@ struct cDiffEntry::rejected:public unary_function<diff_entry_ptr_t,bool>
     return cDiffEntry->entry_exists(REJECT);
   }
 
+};
+  
+struct cDiffEntry::rejected_and_not_user_defined:public unary_function<diff_entry_ptr_t,bool>
+{
+  virtual bool operator() (diff_entry_ptr_t cDiffEntry)
+  {
+    return cDiffEntry->entry_exists(REJECT) && !cDiffEntry->entry_exists("user_defined");
+  }
+  
 };
 
 

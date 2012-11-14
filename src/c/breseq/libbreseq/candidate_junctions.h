@@ -29,6 +29,7 @@ using namespace std;
 namespace breseq {
 
   const string junction_name_separator = "__";
+  const string junction_user_defined_tag = "UD";
   
   /*! information about one side of a new junction 
    */
@@ -82,6 +83,7 @@ namespace breseq {
 		string unique_read_sequence;
 		int32_t flanking_left;
 		int32_t flanking_right;
+    bool user_defined;
     
     //! Create empty JunctionInfo
     JunctionInfo()
@@ -89,10 +91,11 @@ namespace breseq {
       alignment_overlap = 0;
       flanking_left = 0;
       flanking_right = 0;
+      user_defined = false;
     }
     
     //! Create a JunctionInfo from supplied parameters
-    JunctionInfo(const JunctionSide& _side_1, const JunctionSide& _side_2, int32_t _alignment_overlap, const string& _unique_read_sequence, int32_t _flanking_left=0, int32_t _flanking_right=0)
+    JunctionInfo(const JunctionSide& _side_1, const JunctionSide& _side_2, int32_t _alignment_overlap, const string& _unique_read_sequence, int32_t _flanking_left=0, int32_t _flanking_right=0, bool _user_defined = false)
     {       
       sides[0] = _side_1;
       sides[1] = _side_2;
@@ -101,8 +104,29 @@ namespace breseq {
       unique_read_sequence = _unique_read_sequence;
       flanking_left = _flanking_left;
       flanking_right = _flanking_right;
+      user_defined = _user_defined;
     }
     
+    //! Create JunctionInfo from genome diff entry
+    JunctionInfo(cDiffEntry & de)
+    {
+      alignment_overlap = from_string<int32_t>(de["overlap"]);
+      unique_read_sequence = "";
+      if (de.count("unique_read_sequence")) 
+        unique_read_sequence = de["unique_read_sequence"];
+      flanking_left = from_string<int32_t>(de["flanking_left"]);
+      flanking_right = from_string<int32_t>(de["flanking_right"]);
+      
+      sides[0].seq_id = de["side_1_seq_id"];
+      sides[0].position = from_string<int32_t>(de["side_1_position"]);
+      sides[0].strand = from_string<int32_t>(de["side_1_strand"]);
+
+      sides[1].seq_id = de["side_2_seq_id"];
+      sides[1].position = from_string<int32_t>(de["side_2_position"]);
+      sides[1].strand = from_string<int32_t>(de["side_2_strand"]);
+      
+      user_defined = false;
+    }
     //! Deserializes JunctionInfo from a key string
     JunctionInfo(const string& junction_name)
     {
@@ -114,14 +138,20 @@ namespace breseq {
       JunctionSide side_2(s[3], from_string<int32_t>(s[4]), from_string<int32_t>(s[5]), from_string<int32_t>(s[11]));
       if (side_2.strand == 0) side_2.strand = -1;
       
+      bool user_defined = false;
+      if (s.size() == 13) user_defined = true;
+      
+      // last portion only there if user defined
       JunctionInfo retval(
                           side_1, 
                           side_2,
                           from_string<int32_t>(s[6]),
                           s[7],
                           from_string<int32_t>(s[8]),
-                          from_string<int32_t>(s[9])
+                          from_string<int32_t>(s[9]),
+                          user_defined
                           );
+            
       *this = retval;
     }
     
@@ -131,11 +161,9 @@ namespace breseq {
     {
       ASSERT( (sides[0].strand == +1) || (sides[0].strand == -1), "side 1 strand uninitialized or wrong: must be -1/+1");
       ASSERT( (sides[1].strand == +1) || (sides[1].strand == -1), "side 2 strand uninitialized or wrong: must be -1/+1");
-
-      bool has_redundant = (sides[0].redundant >= 0 && sides[1].redundant >= 0);
       
       // allocate vector of correct size
-      vector<string> values(has_redundant ? 12 : 10); 
+      vector<string> values(12); 
       
       // place values in vector
       values[0] = sides[0].seq_id;
@@ -151,11 +179,10 @@ namespace breseq {
       values[8] = to_string(flanking_left);
       values[9] = to_string(flanking_right);
       
-      if (has_redundant)
-      {
-        values[10] = to_string(sides[0].redundant);
-        values[11] = to_string(sides[1].redundant);
-      }
+      values[10] = to_string(sides[0].redundant);
+      values[11] = to_string(sides[1].redundant);
+      
+      if (user_defined) values.push_back(junction_user_defined_tag);
       
       return join(values, junction_name_separator);
     }
@@ -348,6 +375,13 @@ namespace breseq {
                                              const cReferenceSequences& ref_seq_info
                                              );
 
+    static void add_user_junctions (
+                                     const Settings& settings,
+                                     const Summary& summary,
+                                     cReferenceSequences& ref_seq_info,
+                                     cGenomeDiff& gd
+                                     );
+    
     static void normalize_junction_overlap (
                                             const cReferenceSequences& ref_seq_info,
                                             cDiffEntry& jc

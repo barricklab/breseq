@@ -959,6 +959,11 @@ int breseq_default_action(int argc, char* argv[])
 		Summary::SequenceConversion s;
     cReferenceSequences conv_ref_seq_info;
     
+    // Do a quick load of the file to detect formatting errors.
+    if (settings.user_junction_genome_diff_file_name != "") {
+      cGenomeDiff gd(settings.user_junction_genome_diff_file_name); 
+    }
+    
     // Load all of the reference sequences and convert to FASTA and GFF3
     conv_ref_seq_info.LoadFiles(settings.reference_file_names);
     conv_ref_seq_info.WriteFASTA(settings.reference_fasta_file_name);
@@ -1266,7 +1271,7 @@ int breseq_default_action(int argc, char* argv[])
 		if (settings.do_step(settings.candidate_junction_done_file_name, "Identifying junction candidates"))
 		{
       CandidateJunctions::identify_candidate_junctions(settings, summary, ref_seq_info);
-
+      
 			string samtools = settings.ctool("samtools");
 			string faidx_command = samtools + " faidx " + settings.candidate_junction_fasta_file_name;
 			if (!file_empty(settings.candidate_junction_fasta_file_name.c_str()))

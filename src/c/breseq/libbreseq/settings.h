@@ -158,6 +158,7 @@ namespace breseq
     string base_output_path;              // Default = cwd COMMAND-LINE OPTION
     vector<string> read_file_names;       // REQUIRED COMMAND-LINE OPTION
     vector<string> reference_file_names;  // REQUIRED COMMAND-LINE OPTION
+    string user_junction_genome_diff_file_name; // Default = none COMMAND-LINE OPTION
     string run_name;          // Default = <none> COMMAND-LINE OPTION
     string print_run_name;    // run_name with '_' replaced by ' '
     

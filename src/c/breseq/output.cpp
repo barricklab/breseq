@@ -20,6 +20,7 @@ const char* FISHER_STRAND_P_VALUE="fisher_strand_p_value";
 const char* FLANKING_LEFT="flanking_left";
 const char* GENES="genes";
 const char* GENE_NAME="gene_name";
+const char* HTML_GENE_NAME="html_gene_name";
 const char* GENE_POSITION="gene_position";
 const char* GENE_PRODUCT="gene_product";
 const char* GENE_PRODUCT_HIDE="_gene_product_hide";
@@ -248,7 +249,7 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   }
 
   diff_entry_list_t jc = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(JC)));
-  jc.remove_if(cDiffEntry::rejected()); 
+  jc.remove_if(cDiffEntry::rejected_and_not_user_defined()); 
 
   //Don't show junctions for circular chromosomes
   if (settings.hide_circular_genome_junctions) {
@@ -2292,12 +2293,12 @@ void Html_Mutation_Table_String::Item_Lines()
       }
     }
       
-    // ### marshal cells defined depending on mutation type
+    // ### marshal cells defined depending on mutation type/Users/jbarrick/src/breseq/src/c/breseq/alignment_output.cpp
     string cell_seq_id = nonbreaking(mut[SEQ_ID]);
     string cell_position = commify(mut[POSITION]);
     string cell_mutation;
     string cell_mutation_annotation = formatted_mutation_annotation(mut); // Do NOT make nonbreaking
-    string cell_gene_name = i(nonbreaking(mut[GENE_NAME]));
+    string cell_gene_name = nonbreaking(mut[HTML_GENE_NAME]);
     string cell_gene_product = htmlize(mut[GENE_PRODUCT]);
     
     // @MDS0004 - If the product contains more than a set number of genes

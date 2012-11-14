@@ -527,6 +527,36 @@ namespace breseq {
 	{
 		(void)summary; // TODO: save statistics
     bool verbose = false;
+    int32_t max_read_length = summary.sequence_conversion.max_read_length;
+    
+    /// Load off of the user-defined junctions
+    
+    map<string,cDiffEntry> user_defined_junctions;
+    if (settings.user_junction_genome_diff_file_name != "") {  
+      cGenomeDiff user_junction_gd(settings.user_junction_genome_diff_file_name);
+
+      diff_entry_list_t _entry_list = user_junction_gd.list(make_vector<gd_entry_type>(JC));
+      for (diff_entry_list_t::iterator it = _entry_list.begin(); it != _entry_list.end(); it++)
+      {
+        cDiffEntry& user_junction = **it;
+        
+        ///
+        ///
+        /// ADD Check to be sure the reference sequence exists in this data set!
+        /// OR be sure that there is better error checkin gin construct_junction_sequence
+        ///
+        
+    
+        // set initial flanking lengths, these may be reduced by construct_junction_sequence
+        user_junction["flanking_left"] = to_string<int32_t>(max_read_length);
+        user_junction["flanking_right"] = to_string<int32_t>(max_read_length);
+        
+        normalize_junction_overlap(ref_seq_info, user_junction);
+        // Create key after normalizing!
+        JunctionInfo junction_info(user_junction);
+        user_defined_junctions[junction_info.junction_key()] = user_junction;
+      }
+    }
     
 		// hash by junction sequence
 		SequenceToKeyToJunctionCandidateMap candidate_junctions;
@@ -837,6 +867,27 @@ namespace breseq {
 		hcs.accepted.pos_hash_score_cutoff = lowest_accepted_pos_hash_score;
 		hcs.pos_hash_score_distribution = observed_pos_hash_score_distribution;
     
+    ///
+    // Mark junctions as user defined and append ones that are only user-defined
+    ///
+    for (uint32_t j = 0; j < combined_candidate_junctions.size(); j++)
+		{
+			JunctionCandidate& junction = combined_candidate_junctions[j];
+      string junction_key = junction.junction_key();
+      if (user_defined_junctions.count(junction_key)) {
+        junction.user_defined = true;
+        user_defined_junctions.erase(junction_key);
+      }
+		}
+    for (map<string,cDiffEntry>::iterator it = user_defined_junctions.begin(); it != user_defined_junctions.end(); it++) {
+      cDiffEntry& user_junction = it->second;
+      JunctionInfo user_junction_info(it->first);
+      user_junction_info.user_defined = true;
+      string junction_sequence = construct_junction_sequence(ref_seq_info, user_junction, max_read_length, false);
+      JunctionCandidate new_jc(user_junction_info, junction_sequence);
+      combined_candidate_junctions.push_back(new_jc);
+    }
+    
 		///
 		// Print out the candidate junctions, sorted by the lower coordinate, higher coord, then number
 		///
@@ -847,7 +898,7 @@ namespace breseq {
     
 		for (uint32_t j = 0; j < combined_candidate_junctions.size(); j++)
 		{
-			JunctionCandidate junction = combined_candidate_junctions[j];
+			JunctionCandidate& junction = combined_candidate_junctions[j];
       cFastaSequence seq; //= { junction.junction_key(), "", junction.sequence };
       seq.m_name = junction.junction_key();
       seq.m_description = "";
@@ -858,6 +909,51 @@ namespace breseq {
     
 		summary.candidate_junction = hcs;
 	}
+  
+  void CandidateJunctions::add_user_junctions(
+                                              const Settings& settings,
+                                              const Summary& summary,
+                                              cReferenceSequences& ref_seq_info,
+                                              cGenomeDiff& gd
+                                              )
+  {
+    cFastaFile jc_out(settings.candidate_junction_fasta_file_name, ios::out | ios_base::app);
+    ASSERT(jc_out.good(), "Could not open file: " + settings.candidate_junction_fasta_file_name);
+
+    int32_t max_read_length = summary.sequence_conversion.max_read_length;
+    
+    diff_entry_list_t _entry_list = gd.list(make_vector<gd_entry_type>(JC));
+    for (diff_entry_list_t::iterator it = _entry_list.begin(); it != _entry_list.end(); it++)
+    {
+      cDiffEntry& user_junction = **it;
+      
+      ///
+      ///
+      /// ADD Check to be sure the reference sequence exists in this data set!
+      /// OR be sure that there is better error checkin gin construct_junction_sequence
+      ///
+      
+      
+      // set initial flanking lengths, these may be reduced by construct_junction_sequence
+      user_junction["flanking_left"] = to_string<int32_t>(max_read_length);
+      user_junction["flanking_right"] = to_string<int32_t>(max_read_length);
+      
+      JunctionInfo junction_info(user_junction);
+      junction_info.user_defined = true;
+      normalize_junction_overlap(ref_seq_info, user_junction);
+      
+      
+      string junction_sequence = construct_junction_sequence(ref_seq_info, user_junction, max_read_length, false);
+      
+      cFastaSequence jc;
+      jc.m_name = junction_info.junction_key();
+      jc.m_sequence = junction_sequence;
+      jc_out.write_sequence(jc);
+      
+    }
+    jc_out.close(); 
+  }
+
   
   
   bool CandidateJunctions::merge_candidate_junctions(JunctionCandidatePtr*& jcp1, JunctionCandidatePtr*& jcp2)
@@ -1622,6 +1718,8 @@ namespace breseq {
   //
   // Inclusive means that if there are 3 bases of overlap and the flanking length is 50, 
   // (with no unique junction sequence) then the output sequence has a length of 97.
+  //
+  // The diff entry is returned with a corrected flanking length if we ran into the edge of a sequence
   
   string CandidateJunctions::construct_junction_sequence( 
     const cReferenceSequences& ref_seq_info,

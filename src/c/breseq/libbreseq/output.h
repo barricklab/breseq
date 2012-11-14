@@ -22,6 +22,7 @@ extern const char* FISHER_STRAND_P_VALUE;
 extern const char* FLANKING_LEFT;
 extern const char* GENES;
 extern const char* GENE_NAME;
+extern const char* HTML_GENE_NAME;
 extern const char* GENE_POSITION;
 extern const char* GENE_PRODUCT;
 extern const char* GHOST_END;
