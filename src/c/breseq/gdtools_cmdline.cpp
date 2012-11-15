@@ -1685,12 +1685,13 @@ int do_mrna_stability(int argc, char *argv[])
   AnyOption options("gdtools mrna_stability [-o output.gd] [-r reference.gbk] input1.gd");
   options("output,o",  "Output fasta file for vienna RNA fold", "output.fa");
   options("reference,r", "Genbank, GFF3, or FASTA reference sequence file");
+  options("flanking_sequence,f", "Number of bases on either side of synonymous SNP to consider for mRNA folding", "15");
   options("verbose,v", "Verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 
   options.addUsage("");
-  options.addUsage("Creates a fasta file with type of SYNONOMOUS mutation,"); 
-  options.addUsage("posistion of mutation, original 31bp, mutated 31 bp.");
+  options.addUsage("Creates a fasta file with posistion of Synonymous SNP,"); 
+  options.addUsage("base change, and mRNA sequence of location plus/minus given flanking sequence");
   options.addUsage("To be used in vienna RNA fold");
                                             
   if (options.getArgc() != 1) {//@ded any interest in allowing multiple inserts and merge with frequencies before calcuation?
@@ -1699,23 +1700,24 @@ int do_mrna_stability(int argc, char *argv[])
     options.printUsage();
     return -1;
   }
-cout << "successfully starting mrna_stability"<< endl;
 
     UserOutput uout("ANNOTATE");
+//@ded html not an option, and annotated GD file is not a desired output.
 /*    
-//@ded html not an option    bool html_output_mode = options.count("html");
+    bool html_output_mode = options.count("html");
     string output_file_name;
     if (options.count("output")) 
         output_file_name = options["output"];
     else
         output_file_name = /#(html_output_mode) ? "annotated.html" :@ded no html#/ "annotated.gd";
-This block can be removed since we never output the annotated gd file, its only an intermediate for creating the fasta*/    
+*/    
     vector<string> gd_path_names;
     for (int32_t i = 0; i < options.getArgc(); ++i) {
         gd_path_names.push_back(options.getArgv(i));
     }
 
-// checks that more than 1 input and at least 1 reference is given    
+//@ded uneeded for stability as only allowing 1 input file
+// checks that more than 1 input and at least 1 reference is given
 /*    if ( (gd_path_names.size() == 0) 
         || !options.count("reference")){
         options.printUsage();
@@ -1724,14 +1726,13 @@ This block can be removed since we never output the annotated gd file, its only 
     
     // more than one file was provided as input
     bool compare_mode = (gd_path_names.size() > 1);
-@ded not allowing multiple inserts     
     vector<string> gd_base_names;
     for (uint32_t i = 0; i < gd_path_names.size(); i++){    
         cString s(gd_path_names[i]);
         s = s.get_base_name_no_extension();
         gd_base_names.push_back(s);
     }
-@ded no need for base names*/     
+*/     
     // First use merge to produce a file with a line for each mutation
     cGenomeDiff gd;
     vector<diff_entry_list_t> mut_lists;
@@ -1748,9 +1749,9 @@ This block can be removed since we never output the annotated gd file, its only 
         gd.merge(single_gd);
     }
     gd.sort();
-    
+/*    
     // Then add frequency columns for all genome diffs
-/*    if (compare_mode) {
+    if (compare_mode) {
         
         diff_entry_list_t de_list = gd.mutation_list();
         bool found = false;
@@ -1808,6 +1809,8 @@ This block can be removed since we never output the annotated gd file, its only 
     
     uout("Annotating mutations");
     ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"));
+//@ded end of used annotation commands
+    uout("Annotation complete. Writing synonymous SNP mRNA sequences.");
     
 /*    if (html_output_mode) {
         
@@ -1826,46 +1829,44 @@ This block can be removed since we never output the annotated gd file, its only 
         
         html_compare(settings, output_file_name, "Mutation Comparison", gd, mt_options);
         
-    } else {*/
+    } else {
         uout("Writing output Genome Diff file", options["output"]);//not needed either
 //        gd.write(output_file_name);
-    //}    
-  cAnnotatedSequence mut_seq_info;
+    //}*/    
   diff_entry_list_t muts = gd.show_list();
-  stringstream ss; //build file   
+  stringstream ss; //fasta build file 
+  uint32_t flanking_sequence = from_string<uint32_t>(options["flanking_sequence"]);
+    
   for (diff_entry_list_t::iterator it=muts.begin(); it!=muts.end(); it++)
   { 
     cDiffEntry& mut= **it;  
     if (mut._type == SNP && mut["snp_type"] == "synonymous") {
-    string syn_ref_seq, mut_ref_seq;
-    const uint32_t mutation_stability_start = from_string<uint32_t>(mut["position"])-15;
-    const uint32_t mutation_stability_end = from_string<uint32_t>(mut["position"])+15;
-    
-    syn_ref_seq = mut["gene_strand"] == ">" 
-        ? ref_seq_info.get_sequence_1(mut["seq_id"], mutation_stability_start, mutation_stability_end)
-        : reverse_complement(ref_seq_info.get_sequence_1(mut["seq_id"], mutation_stability_start, mutation_stability_end));
-    mut_ref_seq = syn_ref_seq;
-    mut_ref_seq.replace (15,1,mut["gene_strand"] == ">" 
-                         ? mut["new_seq"]
-                         : reverse_complement(mut["new_seq"]));         
+    // determine region to get sequence of
+      const uint32_t mutation_stability_start = from_string<uint32_t>(mut["position"]) - flanking_sequence;
+      const uint32_t mutation_stability_end = from_string<uint32_t>(mut["position"]) + flanking_sequence;
+      
+    // determine reference and mutation sequence
+      string syn_ref_seq, mut_ref_seq;
+      syn_ref_seq = mut["gene_strand"] == ">" 
+          ? ref_seq_info.get_sequence_1(mut["seq_id"], mutation_stability_start, mutation_stability_end)
+          : reverse_complement(ref_seq_info.get_sequence_1(mut["seq_id"], mutation_stability_start, mutation_stability_end));
+      mut_ref_seq = syn_ref_seq;
+      mut_ref_seq.replace (flanking_sequence,1,mut["gene_strand"] == ">" 
+          ? mut["new_seq"]
+          : reverse_complement(mut["new_seq"]));         
 
-        
-        //        cout << mut << endl;//@ded for testing
-    ss << ">" << mut["position"] << "_" << mut["codon_ref_seq"] << "-R" << endl;
-    ss << syn_ref_seq << endl;
-    ss << ">" << mut["position"] << "_" << mut["codon_new_seq"] << "-M" << endl;
-    ss << mut_ref_seq << endl; //how to pull mutation sequence?
-
-   
-//    cout << mut << endl <</*mut["codon_new_seq"]*/from_string<uint32_t>(mut["codon_position"]) - 1<< " new mut is " << mut["new_seq"] << endl;
-//        cout << syn_ref_seq << endl << mut_ref_seq << endl;
+    //construct fasta file
+      ss << ">" << mut["position"] << "_" << mut["codon_ref_seq"] << "-R" << endl;
+      ss << syn_ref_seq << endl;
+      ss << ">" << mut["position"] << "_" << mut["codon_new_seq"] << "-M" << endl;
+      ss << mut_ref_seq << endl;
     }
   }  
-//    string output_file_name = options["output"];
-    ofstream myfile ("output.fa");
     
-    myfile << ss.str();
-return 0;                                            
+//write fasta file
+  ofstream myfile(options["output"].c_str());
+  myfile << ss.str();
+  return 0;                                            
 }
                                             
                                             
