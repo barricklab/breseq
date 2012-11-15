@@ -42,7 +42,7 @@ int gdtools_usage()
   uout << "filter                 remove mutations given filtering expressions" << endl;
   uout << "merge                  combine multiple GD files" << endl;
   uout << "header                 create or add header entries" << endl;
-  uout << "mRNA-Stability         determine thermodynamic differences of mutations" << endl;
+  uout << "mRNA-Stability         determine mRNA free energy difference of mutations" << endl;
 
   uout("Format Conversions:");
   uout << "gd2gvf                 GD to Genome Variant Format(GVF)" << endl;
@@ -776,7 +776,6 @@ int do_annotate(int argc, char* argv[])
     }
   }
   
-//@ded this is the start of what i need for mrna stability
   vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
   uout("Reading input reference sequence files") << reference_file_names << endl;
   cReferenceSequences ref_seq_info;
@@ -784,7 +783,6 @@ int do_annotate(int argc, char* argv[])
     
   uout("Annotating mutations");
   ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"));
-//@ded this ends the core of what needs to be done     
     
   if (html_output_mode) {
     
@@ -1685,13 +1683,13 @@ int do_runfile(int argc, char *argv[])
 int do_mrna_stability(int argc, char *argv[])
 {
   AnyOption options("gdtools mrna_stability [-o output.gd] [-r reference.gbk] input1.gd");
-  options("output,o",  "Output csv file for vienna RNA fold", "output.csv");
+  options("output,o",  "Output fasta file for vienna RNA fold", "output.fa");
   options("reference,r", "Genbank, GFF3, or FASTA reference sequence file");
   options("verbose,v", "Verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 
   options.addUsage("");
-  options.addUsage("Creates a csv file with type of SYNONOMOUS mutation,"); 
+  options.addUsage("Creates a fasta file with type of SYNONOMOUS mutation,"); 
   options.addUsage("posistion of mutation, original 31bp, mutated 31 bp.");
   options.addUsage("To be used in vienna RNA fold");
                                             
@@ -1704,14 +1702,14 @@ int do_mrna_stability(int argc, char *argv[])
 cout << "successfully starting mrna_stability"<< endl;
 
     UserOutput uout("ANNOTATE");
-    
+/*    
 //@ded html not an option    bool html_output_mode = options.count("html");
     string output_file_name;
     if (options.count("output")) 
         output_file_name = options["output"];
     else
-        output_file_name = /*(html_output_mode) ? "annotated.html" :@ded no html*/ "annotated.gd";
-    
+        output_file_name = /#(html_output_mode) ? "annotated.html" :@ded no html#/ "annotated.gd";
+This block can be removed since we never output the annotated gd file, its only an intermediate for creating the fasta*/    
     vector<string> gd_path_names;
     for (int32_t i = 0; i < options.getArgc(); ++i) {
         gd_path_names.push_back(options.getArgv(i));
@@ -1723,11 +1721,11 @@ cout << "successfully starting mrna_stability"<< endl;
         options.printUsage();
         return -1;
     }
-*/    
-/*    // more than one file was provided as input
+    
+    // more than one file was provided as input
     bool compare_mode = (gd_path_names.size() > 1);
-@ded not allowing multiple inserts */    
-/*    vector<string> gd_base_names;
+@ded not allowing multiple inserts     
+    vector<string> gd_base_names;
     for (uint32_t i = 0; i < gd_path_names.size(); i++){    
         cString s(gd_path_names[i]);
         s = s.get_base_name_no_extension();
@@ -1829,15 +1827,44 @@ cout << "successfully starting mrna_stability"<< endl;
         html_compare(settings, output_file_name, "Mutation Comparison", gd, mt_options);
         
     } else {*/
-        uout("Writing output Genome Diff file", options["output"]);
-        gd.write(output_file_name);
+        uout("Writing output Genome Diff file", options["output"]);//not needed either
+//        gd.write(output_file_name);
     //}    
+  cAnnotatedSequence mut_seq_info;
+  diff_entry_list_t muts = gd.show_list();
+  stringstream ss; //build file   
+  for (diff_entry_list_t::iterator it=muts.begin(); it!=muts.end(); it++)
+  { 
+    cDiffEntry& mut= **it;  
+    if (mut._type == SNP && mut["snp_type"] == "synonymous") {
+    string syn_ref_seq, mut_ref_seq;
+    const uint32_t mutation_stability_start = from_string<uint32_t>(mut["position"])-15;
+    const uint32_t mutation_stability_end = from_string<uint32_t>(mut["position"])+15;
     
+    syn_ref_seq = mut["gene_strand"] == ">" 
+        ? ref_seq_info.get_sequence_1(mut["seq_id"], mutation_stability_start, mutation_stability_end)
+        : reverse_complement(ref_seq_info.get_sequence_1(mut["seq_id"], mutation_stability_start, mutation_stability_end));
+    mut_ref_seq = syn_ref_seq;
+    mut_ref_seq.replace (15,1,mut["gene_strand"] == ">" 
+                         ? mut["new_seq"]
+                         : reverse_complement(mut["new_seq"]));         
+
+        
+        //        cout << mut << endl;//@ded for testing
+    ss << ">" << mut["position"] << "_" << mut["codon_ref_seq"] << "-R" << endl;
+    ss << syn_ref_seq << endl;
+    ss << ">" << mut["position"] << "_" << mut["codon_new_seq"] << "-M" << endl;
+    ss << mut_ref_seq << endl; //how to pull mutation sequence?
+
+   
+//    cout << mut << endl <</*mut["codon_new_seq"]*/from_string<uint32_t>(mut["codon_position"]) - 1<< " new mut is " << mut["new_seq"] << endl;
+//        cout << syn_ref_seq << endl << mut_ref_seq << endl;
+    }
+  }  
+//    string output_file_name = options["output"];
+    ofstream myfile ("output.fa");
     
-    
-    
-    
-    
+    myfile << ss.str();
 return 0;                                            
 }
                                             
