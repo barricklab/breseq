@@ -275,7 +275,7 @@ namespace breseq
       this->mixed_base_prediction = false;
       this->polymorphism_reject_homopolymer_length = 0;
       this->polymorphism_log10_e_value_cutoff = 2;
-      this->polymorphism_bias_p_value_cutoff = 0.0;
+      this->polymorphism_bias_p_value_cutoff = 0.01;
       this->polymorphism_minimum_new_coverage_each_strand = 0;
       this->no_indel_polymorphisms = false;
     }
