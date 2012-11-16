@@ -333,8 +333,14 @@ void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd)
   i = 0;
   for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++ )
   {
-    if (i++ >= settings.max_rejected_junction_evidence_to_show)
+    // always include these irrespective of the count
+    if ((*it)->entry_exists("user_defined"))
+      continue;
+    
+    if (i > settings.max_rejected_junction_evidence_to_show) {
       (**it)["no_show"] = "1";
+      i++;
+    }
   }
 
 
