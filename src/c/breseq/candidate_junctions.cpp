@@ -529,7 +529,7 @@ namespace breseq {
     bool verbose = false;
     int32_t max_read_length = summary.sequence_conversion.max_read_length;
     
-    /// Load off of the user-defined junctions
+    /// Load all of the user-defined junctions
     
     map<string,cDiffEntry> user_defined_junctions;
     if (settings.user_junction_genome_diff_file_name != "") {  
