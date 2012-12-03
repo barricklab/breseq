@@ -27,6 +27,16 @@ namespace breseq {
 
 const char alignment_wrapper::op_to_char[10] = "MIDNSHP=X";
 
+string alignment_wrapper::read_char_stranded_sequence_1(uint32_t start_1, uint32_t end_1) const { 
+  ASSERT(start_1 <= end_1, "Start (" + to_string(start_1) + ") must be less than end (" + to_string(end_1) + ").");
+  
+  string s = read_char_sequence();
+  if (reversed()) s = reverse_complement(s);
+  s = s.substr(start_1-1, end_1-start_1+1);
+  return s;
+}
+
+  
 /*! Does this alignment have any redundancies?
  */
 bool alignment_wrapper::is_redundant() const {

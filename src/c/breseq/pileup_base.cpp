@@ -78,12 +78,6 @@ pileup_base::pileup_base(const string& bam, const string& fasta)
   assert(m_faidx);
   
   for(int i=0; i<m_bam->header->n_targets; ++i) {
-    
-    // @JEB TODO: move printing to at_start
-    if (m_print_progress) {
-      cerr << "  REFERENCE: " << m_bam->header->target_name[i] << endl;
-      cerr << "  LENGTH: " << m_bam->header->target_len[i] << endl;
-    }
 		reference_sequence* refseq = new reference_sequence(m_faidx, fasta, m_bam->header->target_name[i]);
 		assert(static_cast<unsigned int>(refseq->m_len) == m_bam->header->target_len[i]);
 		m_refs.push_back(refseq);
@@ -149,11 +143,7 @@ int first_level_pileup_callback(uint32_t tid, uint32_t pos, int32_t n, const bam
   // handle special case at the beginning
   if (pb->m_last_tid == UNDEFINED_UINT32) {
     pb->m_last_tid = 0;
-    pb->at_target_start(pb->m_last_tid); 
-    
-    if(pb->m_print_progress) {
-      cerr << "  REFERENCE:" << pb->target_name(pb->m_last_tid) << endl;
-    }
+    pb->at_target_start_first_level_callback(pb->m_last_tid); 
   }
 
   
@@ -172,7 +162,7 @@ int first_level_pileup_callback(uint32_t tid, uint32_t pos, int32_t n, const bam
     }
     
     // 2) Finish the last target
-    if (tid > 0) pb->at_target_end(pb->m_last_tid);
+    if (tid > 0) pb->at_target_end_first_level_callback(pb->m_last_tid);
     
     // 3) Move to next target and reset position to zero
     pb->m_last_tid++;
@@ -180,10 +170,7 @@ int first_level_pileup_callback(uint32_t tid, uint32_t pos, int32_t n, const bam
     
     // Start a new target if necessary
     if (pb->m_last_position_1 == 0) {
-      pb->at_target_start(pb->m_last_tid); 
-      if(pb->m_print_progress) {
-        cerr << "  REFERENCE:" << pb->target_name(pb->m_last_tid) << endl;
-      }
+      pb->at_target_start_first_level_callback(pb->m_last_tid); 
     }
   }
   
@@ -246,12 +233,11 @@ void pileup_base::do_pileup() {
   //Handle positions after the last one handled by the pileup.
   // => This includes target id's that might not have been handled at all...
 
-  
   for (uint32_t tid = m_last_tid; tid < num_targets(); tid++) {
     
     // We need to start this target
     if (m_last_position_1 == 0) {
-      at_target_start(m_last_tid);
+      at_target_start_first_level_callback(m_last_tid);
     }
     
     for (uint32_t on_pos_1 = m_last_position_1+1; on_pos_1 <= m_bam->header->target_len[tid]; on_pos_1++) {
@@ -263,11 +249,10 @@ void pileup_base::do_pileup() {
     }
     
     // We finished this target
-    at_target_end(m_last_tid);
+    at_target_end_first_level_callback(m_last_tid);
     m_last_tid++;
     m_last_position_1 = 0;
   }
-  // @JEB strictly speaking, should also handle any remaining fragments in list that pileup never encountered....
 }
 
 
@@ -278,8 +263,8 @@ int add_pileup_line (const bam1_t *b, void *data) {
   bam_plbuf_t *pileup = (bam_plbuf_t*) data;
   bam_plbuf_push(b,pileup);
   return 0;
-}
-
+}  
+  
 /*! Run the pileup.
 
     !clip means that we handle all alignment positions that reads overlapping this position overlap
@@ -288,10 +273,7 @@ int add_pileup_line (const bam1_t *b, void *data) {
 void pileup_base::do_pileup(const string& region, bool clip, uint32_t downsample) {
   
   uint32_t target_id, start_pos_1, end_pos_1, insert_start, insert_end;
-  parse_region(region.c_str(), target_id, start_pos_1, end_pos_1, insert_start, insert_end); 
-  // start_pos is one less than input??
-  
-  // should throw if target not found!
+  parse_region(region.c_str(), target_id, start_pos_1, end_pos_1, insert_start, insert_end);   
 
   m_downsample = downsample; // init
   m_start_position_1 = start_pos_1;
@@ -304,25 +286,21 @@ void pileup_base::do_pileup(const string& region, bool clip, uint32_t downsample
   m_clip_start_position_1 = 0; // reset
   m_clip_end_position_1 = 0; // reset
 
-  at_target_start(target_id);
+  at_target_start_first_level_callback(target_id);
   
   if (clip) {
     m_clip_start_position_1 = start_pos_1;
     m_clip_end_position_1 = end_pos_1;
     assert(m_clip_start_position_1 > 0); // prevent underflow of unsigned
-
-    //@JEB test removal
-    //m_last_position_1 = m_clip_start_position_1-1; // So that nothing is done at start leading up to requested position
   }
-    
+  
   bam_plbuf_t        *pileup_buff;
   pileup_buff = bam_plbuf_init(first_level_pileup_callback,this);
   bam_fetch(m_bam_file,m_bam_index,target_id,start_pos_1-1,end_pos_1,(void*)pileup_buff,add_pileup_line);
   // bam_fetch expected 0 indexed start_pos and 1 indexed end_pos
-
+  
   bam_plbuf_push(NULL,pileup_buff); // This clears out the clipped right regions... call before at_end!
   bam_plbuf_destroy(pileup_buff);
-
   
   // handle positions after the last one handled by the pileup
   // unlike the case above, we only need to finish this target
@@ -334,7 +312,33 @@ void pileup_base::do_pileup(const string& region, bool clip, uint32_t downsample
       m_last_position_1 = on_pos_1;
     }
   }
-  at_target_end(target_id);
+  at_target_end_first_level_callback(target_id);
+}
+  
+/*! Version of pileup that only processes certain seq_ids
+ */   
+  
+void pileup_base::do_pileup(const set<string>& seq_ids) {
+  
+  for(set<string>::iterator it=seq_ids.begin(); it!=seq_ids.end(); it++) {
+    
+    // We need to find the target id from the name, this is a rather inefficient way to do it.
+    const string& this_seq_id = *it;
+    uint32_t this_tid=0;
+    bool found = false;
+    while( !found && (this_tid < num_targets()) ) {
+      if (target_name(this_tid) == this_seq_id) {
+        found = true;
+      }
+      else {
+        this_tid++;
+      }
+    }
+    ASSERT(found, "Could not find seq_id: " + this_seq_id); 
+    string region_str = this_seq_id + ":1-" + to_string(target_length(this_tid)); 
+                                                        
+    this->do_pileup(region_str);
+  }
 }
 
   

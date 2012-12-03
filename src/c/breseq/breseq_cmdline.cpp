@@ -881,7 +881,7 @@ int do_get_sequence(int argc, char *argv[])
     
     seq_name = ref_seq_info[replace_target_id].m_seq_id + ":" + to_string(replace_start) + "-" + to_string(replace_end);
     
-    new_seq_info.add_new_seq(seq_name);
+    new_seq_info.add_new_seq(seq_name, "");
     cAnnotatedSequence& new_seq = new_seq_info[seq_name];
     new_seq.m_fasta_sequence = ref_seq_info[replace_target_id].m_fasta_sequence;    
     new_seq.m_fasta_sequence.m_name = seq_name;
@@ -1036,6 +1036,9 @@ int breseq_default_action(int argc, char* argv[])
 
   //(re)load the reference sequences from our converted files
   ref_seq_info.ReadGFF(settings.reference_gff3_file_name);
+  
+  // update the normal versus junction-only lists
+  settings.init_reference_sets(ref_seq_info);
   
   // Calculate the total reference sequence length
   summary.sequence_conversion.total_reference_sequence_length = ref_seq_info.total_length();

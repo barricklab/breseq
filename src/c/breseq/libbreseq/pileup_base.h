@@ -104,6 +104,9 @@ class pileup_base {
     //! Do the pileup, but only on specified region.
     void do_pileup(const string& region, bool clip = false, uint32_t downsample = 0);
 
+    //! Do the pileup, but only on specified seq_ids.
+    void do_pileup(const set<string>& seq_ids);
+  
     //! Do the fetch, (Callback for each read alignment to region.)
     void do_fetch(const string& region);
 
@@ -122,9 +125,21 @@ class pileup_base {
   
     //! Called before pileup starts a target.
     virtual void at_target_start(const uint32_t tid) { (void)tid; }
+
+    virtual void at_target_start_first_level_callback(const uint32_t tid) { 
+      if (m_print_progress) {
+        cerr << "  REFERENCE: " << m_bam->header->target_name[tid] << endl;
+        cerr << "  LENGTH: " << m_bam->header->target_len[tid] << endl;
+      }
+      at_target_start(tid);
+    }
   
     //! Called after the pileup completed a target.
     virtual void at_target_end(const uint32_t tid) { (void)tid; }
+  
+    virtual void at_target_end_first_level_callback(const uint32_t tid) { 
+      at_target_end(tid);
+    }
   
     //! Pass through to BAM.
     void parse_region(const string& region, uint32_t& target_id, uint32_t& start_pos_1, uint32_t& end_pos_1)

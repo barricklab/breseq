@@ -120,6 +120,7 @@ namespace breseq
     ("verbose,v","Produce verbose output",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
 		("output,o", "Path to breseq output", ".")
 		("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files. (REQUIRED)")
+		("junction-only-reference,s", "File containing reference sequences in GenBank, GFF3, or FASTA format. These references are only used for calling junctions with other reference sequences. Option may be provided multiple times for multiple files. (REQUIRED)", NULL, ADVANCED_OPTION)
     ("name,n", "Human-readable name of sample/run for output [empty]", "")
     ("num-processors,j", "Number of processors to use in multithreaded steps", 1)
     ("aligned-sam", "Input files are aligned and SAM files, rather than FASTQ files. Junction prediction steps will be skipped.", TAKES_NO_ARGUMENT)
@@ -130,8 +131,8 @@ namespace breseq
     ("require-match-fraction", "Only consider alignments that cover this fraction of a read", 0.9)
     ("junction-alignment-pair-limit", "Only consider this many passed alignment pairs when creating candidate junction sequences", 100000)
 
-    ("deletion-coverage-propagation-cutoff,u","Value for coverage above which deletions are cutoff. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
-    ("deletion-coverage-seed-cutoff,s","Value for coverage below which deletions are seeded", 0, ADVANCED_OPTION)
+    ("deletion-coverage-propagation-cutoff","Value for coverage above which deletions are cutoff. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
+    ("deletion-coverage-seed-cutoff","Value for coverage below which deletions are seeded", 0, ADVANCED_OPTION)
     ("mutation-score-cutoff", "Log10 E-value cutoff for base-substitution and micro-indel predictions", 10, ADVANCED_OPTION)
     // Polymorphism block
     ("polymorphism-prediction,p", "Predict polymorphic (mixed) mutations", TAKES_NO_ARGUMENT)
@@ -218,7 +219,17 @@ namespace breseq
       exit(-1);
 		}
     this->reference_file_names = from_string<vector<string> >(options["reference"]);
-
+    
+    // Important to check for NULL before converting
+    if (options.count("junction-only-reference")) {
+      this->junction_only_file_names = from_string<vector<string> >(options["junction-only-reference"]);
+    }
+    
+    this->reference_file_names.insert(  this->reference_file_names.end(), 
+                                        this->junction_only_file_names.begin(), 
+                                        this->junction_only_file_names.end() 
+                                      );    
+    
     this->user_junction_genome_diff_file_name = options["user-junction-gd"];
     
     this->run_name = options["name"];
@@ -663,6 +674,24 @@ namespace breseq
     this->long_pairs_file_name = this->output_path + "/long_pairs.tab";
 
   }
+  
+  void Settings::init_reference_sets(cReferenceSequences& ref_seq_info)
+  {
+    set<string> junction_only_file_name_set(junction_only_file_names.begin(), junction_only_file_names.end());
+
+    for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++) {
+      //cout << it->get_file_name() << endl;
+      if (junction_only_file_name_set.count(it->get_file_name())) {
+        this->junction_only_seq_id_set.insert(it->m_seq_id);
+        //cout << "Junction only: " << it->m_seq_id << endl;
+      }
+      else {
+        this->reference_seq_id_set.insert(it->m_seq_id);
+        //cout << "Normal: " << it->m_seq_id << endl;
+      }
+    }
+  }
+
 
 	void Settings::init_installed()
 	{

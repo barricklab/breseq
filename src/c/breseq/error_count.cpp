@@ -60,7 +60,7 @@ void error_count(
                  ) 
 {
 	error_count_pileup ecp(settings, summary, bam, fasta, output_dir, do_coverage, do_errors, preprocess_stage, min_qual_score, covariates);
-	ecp.do_pileup();
+	ecp.do_pileup(settings.reference_seq_id_set);
 	if (do_coverage) ecp.print_coverage();
 	if (do_errors) ecp.print_error(readfiles);
 }

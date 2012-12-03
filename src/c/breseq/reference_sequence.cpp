@@ -445,6 +445,8 @@ namespace breseq {
       
     // To upper the most recently loaded sequence.
     to_upper((this->back()).m_fasta_sequence.m_sequence);
+    (this->back()).m_file_name = file_name;
+    
     
     //Here we check to see we haven't loaded some of the same information again.
     for(str_uint::iterator i = old_load.begin(); i != old_load.end(); i++)
@@ -578,7 +580,7 @@ namespace breseq {
         m_seq_id_to_index[(*this)[seq_index].m_seq_id] = seq_index;       
       }
       else {
-        this->add_new_seq(on_seq.m_name);
+        this->add_new_seq(on_seq.m_name, file_name);
       }
       
       // copy the info over (could define an assignment operator...)
@@ -595,7 +597,7 @@ namespace breseq {
     cFastaSequence on_seq;
 
     while ( ff.read_sequence(on_seq) ) {
-      this->add_new_seq(on_seq.m_name);
+      this->add_new_seq(on_seq.m_name, "");
       cAnnotatedSequence& new_seq = (*this)[on_seq.m_name];
       new_seq.m_fasta_sequence = on_seq;
       new_seq.m_seq_id = on_seq.m_name;
@@ -654,8 +656,17 @@ namespace breseq {
           stringstream ls(line);
           string x, seq_id, start, end;
           ls >> x >> seq_id >> start >> end;
-          this->add_new_seq(seq_id);
+          this->add_new_seq(seq_id, file_name);
           (*this)[seq_id].m_length = from_string<uint32_t>(end);
+          continue;
+        }
+        else if (line.find("##original-file-name") != string::npos) {
+          // Line of form ##orignal-file-name seq_id file_name
+          stringstream ls(line);
+          string x, seq_id, file_name;
+          ls >> x >> seq_id >> file_name;
+          this->add_new_seq(seq_id, file_name);
+          (*this)[seq_id].m_file_name = file_name;
           continue;
         }
         // Find embedded fasta file
@@ -743,7 +754,7 @@ namespace breseq {
 
     
       //! Step 4: Determine if sequence already exists (find or create if not found)
-      this->add_new_seq(seq_id);
+      this->add_new_seq(seq_id, file_name);
       
       // Handle features that cross the origin by adding them twice (only one will be written)
       // @GRC Should this be handled with cLocation rather then a 'bonus feature'
@@ -826,6 +837,10 @@ void cReferenceSequences::WriteGFF( const string &file_name, bool verbose ){
     if(it_as->m_length)out << "##sequence-region" << "\t" << it_as->m_seq_id << "\t" << "1" << "\t" << it_as->m_length << endl;
   }
   
+  for (vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
+    if(it_as->m_length)out << "##original-file-name" << "\t" << it_as->m_seq_id << "\t" << it_as->m_file_name << endl;
+  }
+  
   //! Step 2: Features
   for (vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
     
@@ -896,7 +911,7 @@ void cReferenceSequences::ReadGenBank(const string& in_file_name) {
   ifstream in(in_file_name.c_str(), ios_base::in);
   ASSERT(!in.fail(), "Could not open GenBank file: " + in_file_name);
 
-  while (ReadGenBankFileHeader(in)) {
+  while (ReadGenBankFileHeader(in, in_file_name)) {
     
     cAnnotatedSequence& s = this->back();
     
@@ -920,7 +935,7 @@ void cReferenceSequences::ReadGenBank(const string& in_file_name) {
   }
 }
 
-bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in) {
+bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file_name) {
 
   //std::cout << "header" << std::endl;
   string line;
@@ -941,7 +956,7 @@ bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in) {
       w = GetWord(line);
       string seq_id = w;
       
-      this->add_new_seq(seq_id);
+      this->add_new_seq(seq_id, file_name);
       s = &((*this)[seq_id]);
       
       w = GetWord(line);
@@ -1310,7 +1325,7 @@ void cReferenceSequences::ReadBull(const string& file_name) {
     // if one already exists, throw an error
     ASSERT(!this->m_seq_id_to_index.count(BULL_DUMMY_SEQ_ID), 
            "Two BULL formatted feature files loaded in a row. Ambiguous assignment to FASTA files.");
-    this->add_new_seq(BULL_DUMMY_SEQ_ID);
+    this->add_new_seq(BULL_DUMMY_SEQ_ID, file_name);
   }
     
   ifstream in(file_name.c_str());
