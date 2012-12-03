@@ -549,38 +549,52 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   size_t total_length = 0;
   for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++)
   {
-    total_length += it->m_length;
     
-    bool fragment_with_fit_coverage = (summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter != 0);
-    bool fragment_with_no_coverage = (summary.unique_coverage[it->m_seq_id].average == 0);
+    // Normal reference sequence
+    if (settings.reference_seq_id_set.count(it->m_seq_id)) {
+    
+      total_length += it->m_length;
+      
+      bool fragment_with_fit_coverage = (summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter != 0);
+      bool fragment_with_no_coverage = (summary.unique_coverage[it->m_seq_id].average == 0);
 
-    HTML << (fragment_with_fit_coverage ? "<tr>" : "<tr class=\"gray_table_row\">");
-    HTML << td( a(Settings::relative_path( 
-                                          settings.file_name(settings.overview_coverage_plot_file_name, "@", it->m_seq_id), settings.output_path
-                                          ), 
-                  "coverage" 
-                  )
-               );
-    
-    // There may be absolutely no coverage and no graph will exist...
-    if (!fragment_with_no_coverage)
-    {
+      HTML << (fragment_with_fit_coverage ? "<tr>" : "<tr class=\"gray_table_row\">");
       HTML << td( a(Settings::relative_path( 
-                                          settings.file_name(settings.unique_only_coverage_plot_file_name, "@", it->m_seq_id), settings.output_path
-                                          ), 
-                  "distribution" 
-                  )
-               ); 
+                                            settings.file_name(settings.overview_coverage_plot_file_name, "@", it->m_seq_id), settings.output_path
+                                            ), 
+                    "coverage" 
+                    )
+                 );
+      
+      // There may be absolutely no coverage and no graph will exist...
+      if (!fragment_with_no_coverage)
+      {
+        HTML << td( a(Settings::relative_path( 
+                                            settings.file_name(settings.unique_only_coverage_plot_file_name, "@", it->m_seq_id), settings.output_path
+                                            ), 
+                    "distribution" 
+                    )
+                 ); 
+      }
+      else
+      {
+        HTML << td(nonbreaking("none aligned"));
+      }
     }
-    else
-    {
-      HTML << td(nonbreaking("none aligned"));
+    // Junction-Only reference sequence
+    else {
+      HTML << td("colspan=\"2\" align=\"center\"", nonbreaking("junction-only"));
     }
-    
+        
     HTML << td(it->m_seq_id);
     HTML << td(ALIGN_RIGHT, commify(to_string(it->m_length)));
     
-    HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter, 1));
+    if (summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter == 0) {
+      HTML << td(ALIGN_CENTER, "NA"); 
+    }
+    else {
+     HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter, 1)); 
+    }
     HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_dispersion));
     //HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter, 1));
     //HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_size_parameter, 1));

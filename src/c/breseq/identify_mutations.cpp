@@ -55,7 +55,7 @@ void identify_mutations(
 								polymorphism_frequency_cutoff,
 								print_per_position_file
 							);
-	imp.do_pileup();
+	imp.do_pileup(settings.reference_seq_id_set);
   imp.write_gd(gd_file);
 }
 
@@ -141,8 +141,8 @@ identify_mutations_pileup::~identify_mutations_pileup()
  */
 void identify_mutations_pileup::pileup_callback(const pileup& p) {
   
-  bool verbose = false;
-	ASSERT(p.target() < _seq_info.size(), "Unknown target id: " + p.target());
+  bool verbose = false;  
+  ASSERT(p.target() < _seq_info.size(), "Unknown target id: " + p.target());
   if (verbose) cout << "Target id: " << p.target() << " position: " << p.position_1() << endl;
 
   _this_deletion_propagation_cutoff = _deletion_propagation_cutoffs[p.target()];

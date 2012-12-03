@@ -26,11 +26,13 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/fastq.h"
 #include "libbreseq/alignment.h"
 #include "libbreseq/anyoption.h"
-#include "libbreseq/settings.h"
 #include "libbreseq/summary.h"
 
 namespace breseq {
-	
+
+  // Pre-declaration
+	class Settings;
+  
 	/*! Interface for loading sequences and sequence features from GenBank files.
   */
   class cLocation {
@@ -252,6 +254,7 @@ namespace breseq {
       bool m_is_circular;
       string m_description; // GenBank (DEFINITION) | GFF (description), from main feature line
       string m_seq_id;      // GenBank (LOCUS)      | GFF (seqid), from ##sequence-region line
+      string m_file_name;   // Name of file this sequence was loaded from
     
       cFastaSequence m_fasta_sequence;            //!< Nucleotide sequence
     
@@ -367,6 +370,11 @@ namespace breseq {
         }
       }
     
+      string get_file_name()
+      {
+        return m_file_name;
+      }
+    
       //! Correctly adds features across different lists
       void feature_push_front(cSequenceFeaturePtr& fp)
       {
@@ -435,7 +443,6 @@ namespace breseq {
     //!< Currently supported file types.
     enum FileType {UNKNOWN, GENBANK, FASTA, GFF3, BULL};
 
-
   public:
     
     cReferenceSequences()
@@ -466,7 +473,7 @@ namespace breseq {
 
     //!< Read GenBank file
     void ReadGenBank(const string& in_file_names);
-    bool ReadGenBankFileHeader(std::ifstream& in);
+    bool ReadGenBankFileHeader(std::ifstream& in, const string& file_name);
     void ReadGenBankCoords(string& s, ifstream& in);
     //void ReadGenBankTag(std::string& tag, std::string& s, std::ifstream& in);
     void ReadGenBankFileSequenceFeatures(std::ifstream& in, cAnnotatedSequence& s);
@@ -486,7 +493,7 @@ namespace breseq {
       return ret_val;
     }
 
-    void add_new_seq(const string& seq_id)
+    void add_new_seq(const string& seq_id, const string& file_name)
     {
       m_seq_id_loaded[seq_id]++;
       if (m_seq_id_to_index.count(seq_id)) {
@@ -494,6 +501,7 @@ namespace breseq {
       } else {
         cAnnotatedSequence as;
         as.m_seq_id = seq_id;
+        as.m_file_name = file_name;
         this->push_back(as);
         m_seq_id_to_index[seq_id] = m_index_id;
         m_index_id++;

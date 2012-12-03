@@ -22,7 +22,7 @@ LICENSE AND COPYRIGHT
 
 #include "common.h"
 #include "storable.h"
-
+#include "reference_sequence.h"
 
 namespace breseq
 {
@@ -70,8 +70,6 @@ namespace breseq
     }
 	};
 	
-	class cReferenceSequences;
-
 	// We need to be able to group read files for two reasons
 	// 1) They may be paired-end, so we want to map them together
 	// 2) They may have the same error rates, so we want to treat them together for error analysis
@@ -127,7 +125,7 @@ namespace breseq
     
 	};
 
-	struct Settings
+	class Settings
 	{
     
     static string output_divider;
@@ -158,6 +156,9 @@ namespace breseq
     string base_output_path;              // Default = cwd COMMAND-LINE OPTION
     vector<string> read_file_names;       // REQUIRED COMMAND-LINE OPTION
     vector<string> reference_file_names;  // REQUIRED COMMAND-LINE OPTION
+    vector<string> junction_only_file_names;  // Default = NULL COMMAND-LINE OPTION
+    set<string> junction_only_seq_id_set;   // Filled from above for lookup
+    set<string> reference_seq_id_set; // Filled from above for lookup
     string user_junction_genome_diff_file_name; // Default = none COMMAND-LINE OPTION
     string run_name;          // Default = <none> COMMAND-LINE OPTION
     string print_run_name;    // run_name with '_' replaced by ' '
@@ -616,6 +617,12 @@ namespace breseq
 			}
 		}
     
+    bool is_junction_only_reference(string& seq_id)
+    {
+      return junction_only_seq_id_set.count(seq_id);
+    }
+    
+    void init_reference_sets(cReferenceSequences& ref_seq_info);
  
 		string base_name_to_read_file_name(string base_name)
 		{
