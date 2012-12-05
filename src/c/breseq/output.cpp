@@ -142,8 +142,8 @@ string header_style_string()
   ss << ".alternate_table_row_0 {background-color: rgb(255,255,255);}"     << endl;
   ss << ".alternate_table_row_1 {background-color: rgb(235,235,235);}"     << endl;
   ss << ".gray_table_row {background-color: rgb(230,230,245);}"            << endl;
-  ss << ".polymorphism_table_row {background-color: rgb(160,255,160);}"    << endl;
-  ss << ".highlight_table_row {background-color: rgb(192,255,255);}"       << endl;
+  ss << ".polymorphism_table_row {background-color: rgb(160,255,160);}"    << endl;   // light green
+  ss << ".highlight_table_row {background-color: rgb(192,255,255);}"       << endl;   // light cyan
   ss << ".reject_table_row {background-color: rgb(255,200,165);}"          << endl;
   ss << ".information_table_row {background-color: rgb(200,255,255);}"     << endl;
   ss << ".junction_repeat {background-color: rgb(255,165,0)}"              << endl;
@@ -547,18 +547,16 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
           "</tr>" << endl;
              
   size_t total_length = 0;
-  for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++)
-  {
+  for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++) {
     
+    bool fragment_with_fit_coverage = (summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter != 0);
+    bool fragment_with_no_coverage = (summary.unique_coverage[it->m_seq_id].average == 0);
+    HTML << (fragment_with_fit_coverage ? "<tr>" : "<tr class=\"gray_table_row\">");
+
     // Normal reference sequence
     if (settings.reference_seq_id_set.count(it->m_seq_id)) {
     
       total_length += it->m_length;
-      
-      bool fragment_with_fit_coverage = (summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter != 0);
-      bool fragment_with_no_coverage = (summary.unique_coverage[it->m_seq_id].average == 0);
-
-      HTML << (fragment_with_fit_coverage ? "<tr>" : "<tr class=\"gray_table_row\">");
       HTML << td( a(Settings::relative_path( 
                                             settings.file_name(settings.overview_coverage_plot_file_name, "@", it->m_seq_id), settings.output_path
                                             ), 
@@ -567,8 +565,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
                  );
       
       // There may be absolutely no coverage and no graph will exist...
-      if (!fragment_with_no_coverage)
-      {
+      if (!fragment_with_no_coverage) {
         HTML << td( a(Settings::relative_path( 
                                             settings.file_name(settings.unique_only_coverage_plot_file_name, "@", it->m_seq_id), settings.output_path
                                             ), 
@@ -576,8 +573,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
                     )
                  ); 
       }
-      else
-      {
+      else {
         HTML << td(nonbreaking("none aligned"));
       }
     }
@@ -603,21 +599,6 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     HTML << "</tr>";
   }  
   
-  // # //TODO @JEB Summary
-  // #   ## junction only reference sequences
-  // #   foreach my $seq_id (@{$ref_seq_info->{junction_only_seq_ids}})
-  // #   {
-  // #     my $c = $summary->{sequence_conversion}->{reference_sequences}->{$seq_id};
-  // #     print HTML Tr(
-  // #       td({-colspan=>"2", -align=>"center"}, "junction&nbsp;only"), 
-  // #       td($seq_id), 
-  // #       td({-align=>"right"},commify($c->{length})), 
-  // #       td($c->{definition})
-  // #     );
-  // #     $total_length+= $c->{length};
-  // #   }
-  // #   
-  
   HTML << "<tr class=\"highlight_table_row\">";
   HTML << td();
   HTML << td();
@@ -635,8 +616,8 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   // Junction evidence
   ////
   
-  if (!settings.no_junction_prediction)
-  {
+  if (!settings.no_junction_prediction) {
+    
     HTML << h2("Junction Evidence") << endl;
     HTML << "<p>" << endl;
     
@@ -653,8 +634,8 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     end_tr() << endl;
     
     size_t total_length = 0;
-    for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++)
-    {
+    for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++) {
+      
       HTML << start_tr() << endl;
       HTML << td(it->m_seq_id);
       // this score is always an integer for now, even though it is typed as a double
