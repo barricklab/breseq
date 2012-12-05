@@ -184,871 +184,1061 @@ namespace breseq {
     }
   }
   
-  void CoverageDistribution::tile(
-                                  bool ignore_redundant_coverage,
-                                  string in_file_name,
-                                  string out_file_name,
-                                  uint32_t tile_size
-                                  )
-  {
+    
+/*
+ * Function: tile
+ * --------------------------------
+ * Reads in [genome].coverage.tab and generates [genome].tiled.tab.
+ 
+ * Summary: Breaks the [genome].coverage.tab file into sections
+ * of equal length (ex: 500 bp) called tiles, calculates the
+ * average coverage within each tile, and then writes this data
+ * to [genome].tiled.tab
+ *
+ * THE DOCUMENTATION FOR THIS FUNCTION IS A WORK IN PROGESS
+ */
+
+/* Notes & Explanations (below, collapse until needed) */
+/* --------------------------------
+ * Conceptual Overview: The functions within the CoverageDistribution class keep track of location within a genome or segment of a genome (hereby referred to as just "segment") in two ways: by "position" and by "tile". POSITION is referring to base pairs, if every base pair within a segment were numbered sequentially from beginning to end, starting at 1 (why 1? because that's where biologists like to start their lists). Each position has a corresponding coverage value. You can see this by looking at the coverage.tab file (in the 08_mutation_identification directory). However, for our purposes, analyzing every single position in an entire segment would take too long. So for efficiency we use this function to break the the segment into sections of equal length (e.g. 500 base pairs long) called TILES. We then calculate the average coverage within within each tile and write this data to a new file called tiled.tab (in the 09_copy_number_variation directory). This file will then be analyzed by the CoverageDistribution::find_segments function to find "outliers" (see find_segments for more about outliers).
+ */
+void CoverageDistribution::tile(
+                              bool ignore_redundant_coverage,
+                              string in_file_name,
+                              string out_file_name,
+                              uint32_t tile_size
+                              )
+{
     //The index is the marker of the current tile.
     //It is always a multiple of tile_size
     uint32_t tile_index;
-    
+
     //these are for taking running sums and averaging.
     double tile_sum;
     double average;
-    
+
     //position and coverage are taken from the file.
     uint32_t position;
     double coverage;
     double sum_coverage;
-    
+
     //used for checking if there is any redundant coverage
     double redundant1;
     double redundant2;
     double redundant3;
     double redundant4;
-    
+
     //if ignoring redundant coverage is enabled, this will disable writing the
     //tile
     bool do_write;
-    
+
     //used to make sure the very last position is not written twice.
     uint32_t last_position;
 
     //used to ignore values in the input file.
     string skip;
-    
+
     ifstream in_file;
     ofstream out_file;
-    
+
     in_file.open ( in_file_name.c_str() );
     out_file.open ( out_file_name.c_str() );
-    
+
     //skipping the first line in the input file.
     getline(in_file, skip);
-    
+
     out_file << "position\tcoverage\t" << tile_size << "\n";
-    
+
     out_file << "0\t0\n";
-    
+
     tile_index = 0;
     tile_sum = 0;
-    
+
     do_write = true;
-    
+
     while ( in_file >> coverage )
     {
-      sum_coverage = coverage;
-      
-      in_file >> coverage;
-      sum_coverage += coverage;
-      
-      //next 4 are redundant values;
-      in_file >> redundant1 >> redundant2 >> redundant3 >> redundant4;
-      
-      //the next value in the line isn't used.
-      in_file >> skip;
-      
-      //last is position (@DTF: begins at 1, not 0)
-      in_file >> position;
-      
-      coverage = sum_coverage;
-      
-      //Check if the current position is in the current tile.
-      //If it is, add the coverage to the sum and increment the count.
-      //If it isn't, write the last tile and set up the variables for the new 
-      //tile
-      if ( position <= tile_index + tile_size )
-      {
-        tile_sum += coverage;
-      }
-      else
-      {
-        if ( do_write )
-        {
-          average = tile_sum / tile_size;
-          
-          out_file << tile_index + tile_size << "\t" << average << "\n";
+        sum_coverage = coverage;
+
+        in_file >> coverage;
+        sum_coverage += coverage;
+
+        //next 4 are redundant values;
+        in_file >> redundant1 >> redundant2 >> redundant3 >> redundant4;
+
+        //the next value in the line isn't used.
+        in_file >> skip;
+
+        //last is position (@DTF: begins at 1, not 0)
+        in_file >> position;
+
+        coverage = sum_coverage;
+
+        //Check if the current position is in the current tile.
+        //If it is, add the coverage to the sum and increment the count.
+        //If it isn't, write the last tile and set up the variables for the new 
+        //tile
+        if ( position <= tile_index + tile_size ) {
+            tile_sum += coverage;
         }
-        //Set tile_index to position rounded down to the nearest multiple
-        //of tile_size
-        tile_index = position / tile_size * tile_size;
         
-        tile_sum = coverage;
-        
-        last_position = position;
-        
-        do_write = true;
-      }
-      
-      if ( ignore_redundant_coverage )
-      {
-        if ( redundant1 != 0 || 
-             redundant2 != 0 ||
-             redundant3 != 0 ||
-             redundant4 != 0 )
-        {
-          //skip this tile.
-          do_write = false;
+        else {
+            
+            if ( do_write )
+            {
+                average = tile_sum / tile_size;
+              
+                out_file << tile_index + tile_size << "\t" << average << "\n";
+            }
+            
+            //Set tile_index to position rounded down to the nearest multiple
+            //of tile_size
+            tile_index = position / tile_size * tile_size;
+
+            tile_sum = coverage;
+
+            last_position = position;
+
+            do_write = true;
         }
-      }
+
+        if ( ignore_redundant_coverage ) {
+            
+            if ( redundant1 != 0 ||
+                 redundant2 != 0 ||
+                 redundant3 != 0 ||
+                 redundant4 != 0 )
+            {
+                //skip this tile.
+                do_write = false;
+            }
+        }
       
     }
-    
+
     // @DTF: If the last position in the file also happens to be the last
     // position in the current tile (i.e. a multiple of tile size), and
     // if this is the last tile in the file
     if ( position % tile_size == 0 && position != last_position )
     {
-      average = tile_sum / tile_size;
+        average = tile_sum / tile_size;
       
-      out_file << position << "\t" << average << "\n";
+        out_file << position << "\t" << average << "\n";
     }
-    
+
     in_file.close();
     out_file.close();
-  }
+}
   
-  void CoverageDistribution::find_segments(const Settings& settings,
-                                           double summary_average,
-                                          string in_file_name,          // @DTF: tiled.tab
-                                          string out_file_name,         // @DTF: ranges.tab
-                                          string history_file_name      // @DTF: history.tab
-                                          )
-  {
+  
+/*
+ * Function: find_segments
+ * --------------------------------
+ * Reads in [genome].tiled.tab and generates [genome].ranges.tab and 
+ * [genome].history.tab.
+ *
+ * Summary: Applies the "circular binary segmentation" algorithm (or CBS) to 
+ * the coverage data within [genome].tiled.tab in order to find "outliers",
+ * or regions where the read coverage depth is significantly greater or 
+ * lesser than what is typical across the entire genome. Outputs the outliers 
+ * it finds to [genome].ranges.tab, and logs the progression of the algorithm 
+ * to [genome].history.tab for debugging purposes.
+ */
+
+/* Notes & Explanations (below, collapse until needed) */
+/* --------------------------------
+ * Overview, Circular Binary Segmentation: Although the theory behind the "circular binary segmentation" algorithm (or CBS) is backed by some serious math, in practice this algorithm is simple to follow and understand. Imagine the following oversimplification: a white picket fence that extends as far as you can see. Each white picket (vertical board/panel) represents one tile of the genome (see "Tiles vs Position" below). You notice the pickets are wildly uneven in height, ranging a few feet off the ground to tens of feet tall. This represents coverage depth. Although the arrangement of the pickets seems mostly random, occasionally there are contiguous regions where all the pickets are at least a certain height. When these regions are large enough compared to the rest of the fence (as measured by something called the "test statistic" or "t_score"), they're considered outliers. The CBS algorithm searches for these outliers, and when it finds one it searches through it again, treating it as its own separate genome, looking for outliers within the outlier. It continues this process, finding bumps within bumps within bumps, until no more are found.
+ 
+                    @ @   @ @
+              @ @   @ @ @ @ @               @ @
+              @ @   @ @ @ @ @   @ @     @ @ @ @ @ @
+            @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @
+        ... @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ @ ...
+ 
+ * Details, Circular Binary Segmentation: The algorithm is a loop that consists of two main steps: First, find the region in the current search segment with the largest "test statistic", or "t_score". (For now, all you need to know about the t_score is that it is a single number that takes into account all the different ways you can measure the size of a potential outlier; the larger the potential outlier, the larger the t_score.) The second step is to determine if the aforementioned largest region is statisticially significant, and thus a true outlier. The first time the loop runs, the "search segment" is the entire genome, and if no outlier is found, the loop stops, having only run one time. However, if an outlier IS FOUND, the loop runs again to try to find other outliers that may have been overshadowed before. The loop keeps running until no more outliers are found. We'll now explore these steps in greater detail:
+   
+    1) Find the region in the current search segment with the largest t_score: To do this, we must calculate the t_score for every possible region within the search segment. Every possible region can be represented by "i" and "j", where i is the start of the region, and j is the end of the region. We use a double for-loop to iterate through every possible combination of i and j, calculating the t_score each time. NOTE: There is not just one pair of i and j variables in the code. Location comes in the form of both tile and position (see "Tiles vs Position" below), and so there are pairs of i and j variables to keep track of both.
+ 
+    2) Determine if that largest region is statisticially significant, and thus a true outlier. This is important because random "noise" naturally occurs in the data we are processing, like static on a phone call, and we don't want to mistake static for an outlier. So step 2 asks, "Is this potential outlier significantly larger than the random static around it?" To do this, we run the following test 100 times: We clone the search segment and then randomly shuffle the tiles around, creating a new random segment. Then, just as in step 1, we find the largest t_score within this random segment. We then compare this largest random t_score to the original largest t_score, and keep track of the results. If the original largest t_score was greater 95 times out of 100, we accept it (i.e. the region it represents) as an outlier. Otherwise, we reject it.
+   
+        If the answer to step 2 is YES/ACCEPT, you break the search segment in to three new subsegments or ranges: the middle subsegment (which is the newly found outlier), the left subsegment (everything to the left of the middle), and the right subsegment (everything to the right of the middle). You then repeat steps 1 and 2 for each of these new subsegments, treating each as its own entity with its own potential outliers to be found. We're looking for "bumbs within bumps".
+ 
+        If the answer to step 2 is NO/REJECT, you output the search segment to the ranges.tab file. If no outliers were found within the entire genome (i.e. after the first run of the loop), of course the "search segment" outputted will span the entire genome. In every other case, the search segment outputted to ranges.tab is terminal, meaning that it doesn't have any other outliers within it (although it may itself be outlier).
+ 
+ * T_Score Formula: Please read "Details, Circular Binary Segmentation" above before going any further. The formula for calculating the t_score, or "test statistic", comes this academic paper: <Biostat (2004) 5 (4): 557-572. doi: 10.1093/biostatistics/kxh008>. Fully understanding the formula isn't necessary to work on the code. If you wish to do so anyway, you should refer the paper, and we borrow some of the same variable names for ease of identification in that respect (e.g. "y", "z", "d1", "d2"). All you need to know is that the simplest steps of the formula determine the avg coverage of the tiles between i and j, and the avg coverage of the tiles outside of i and j, then subtract one from the other to find the difference. Further steps, for example, factor in the width of the potential outlier (between i and j) compared to the width of the entire search segment. The end result is a single number that takes into account all relevent measures of size. Here is the formula:
+ 
+         y = (sum_of_coverage_to_j_pos - sum_of_coverage_to_i_pos) / (j_position - i_position);
+         z = (sum_of_coverage_in_segment - sum_of_coverage_to_j_pos + sum_of_coverage_to_i_pos) / (num_positions_in_segment - j_position + i_position);
+         d1 = (1.0 / (j_position - i_position));
+         d2 = (1.0 / (num_positions_in_segment - j_position + i_position));
+         t = (y - z) / sqrt( d1 + d2 );
+ 
+ * Tiles vs Position: Please read the top of the CoverageDistribution::tile function before going any further. This function keeps track of location within a segment in two ways: by "position" and by "tile". Each entry in our input file, tiled.tab, represents the average coverage of every 500 positions across the entire genome (or whatever tile_size is). So of course each POSITION within tiled.tab will be a multiple of tile_size (i.e. 0, 500, 1000, 1500, etc). Say we're looking in tiled.tab at position 30500 which shows coverage of 60.2. This means that the avg coverage is 60.2 for the previous 500 positions (inclusive), so from 30001 to 30500. Each of these 500 position sections is considered a TILE, so there are as many tiles as entries in tiled.tab. Although not explicitly labeled in the file, in the code we refer to each tile with a number in sequence, where the first entry in tiled.tab represents tile 0, the next is tile 1, then tile 2, tile 3, and so on. We do this to make it easier to manipulate the entries later on, like loading them into data structures and iterating through them with loops. NOTE: The first entry in every tiled.tab is a pair of zeros, meaning that at position 0, avg coverage is 0. Although there technically is no position 0, because the coverage data in coverage.tab starts at position 1, we make one up because it allows us to eliminate special cases during for-loops throughout the code. (Coverage.tab is the file from which tiled.tab is generated.)
+ 
+ * Single-Tile Outliers: The algorithm will have trouble finding outliers that are only one tile wide if they are isolated and not connected to other outlying segments. It is much better at finding these single-tile outliers if they border the edge of another larger outlier that is two or more tiles wide (for an example, look at the HTML output for genome REL10951). This trade-off is intentional because there isn't a good way to find a single-tile outlier: the noise we are trying to screen-out often occurs in spikes that are only one tile wide. The chances of finding something meaningful increase significantly when you require the outlier to be at least two tiles wide because, statistically, it's a much rarer occurrence.
+ 
+ * Floating Point Comparisons (and the inherent problems within): Using comparison operators (i.e. "<", ">", "==", "!=", etc) with floating point numbers like doubles can cause problems because floating point math is not exact. Here is a good url to read about it: <bit.ly/xIW2Mf>. To quote: "Many values cannot be precisely represented using binary floating point numbers, and the limited precision of floating point numbers means that slight changes in the order of operations or the precision of intermediates can change the result." For example, storing the same number, even an integer, within two different floats and comparing to see if they are equal will often return false. This function uses less-than and greater-than floating point comparisons, but the difference between the compared values is usually large enough that it yields the expected results anyway. However, at some point it might be a good idea to follow some of the suggestions in the referenced url and replace the current method of comparing exact values with one that compares ranges, like ULP or FLT_EPSILON.
+ */
+void CoverageDistribution::find_segments(const Settings& settings,
+                                         double summary_average,       // Avg coverage depth
+                                                                       // across entire genome.
+                                         string in_file_name,          // tiled.tab
+                                         string out_file_name,         // ranges.tab
+                                         string history_file_name)     // history.tab
+                                         
+{
+
     (void)settings;
-    //a search entry represents a segment of positions in the file that will be
-    //examined. start and end are inclusive.
-    //search entries are referencing the index in the file, not position
-    pair<int32_t, int32_t> next_search;
-    pair<int32_t, int32_t> current_search;
+
+    // A search segment is represented by a pair of tiles: the first tile of the
+    // segment and the last tile of the segment (inclusive)
+    pair<int32_t, int32_t> current_search_pair_by_tile;
+    pair<int32_t, int32_t> next_search_pair_by_tile;
     
-    //this holds all search entries
-    vector< pair<uint32_t, uint32_t> > searching;
+    // A vector keeps track of every search segment that will be examined for outliers
+    vector< pair<uint32_t, uint32_t> > all_search_pairs_vector;
     
-    //used to populate saved_sums
-    double running_sum;
-    
-    //a saved_sum entry represents the sum of all coverage up to a position.
-    map<int32_t, double> saved_sums;
-    
-    //ordered_sums holds the order that saved_sums was populated.
-    vector<int32_t> ordered_sums;
-    
-    //position and coverage are taken from the file.
-    int32_t position;
-    double coverage;
-    map<int32_t, double> all_coverage;
-    
-    //p_i and p_j represent the position of the indeces of i and j in the later
-    //nested for-loops
-    int32_t p_i;
-    int32_t p_j;
-    int32_t position_downset;
-    int32_t check_position;
+    // Used to populate data structures needed by the CBS algorithm
+    int32_t current_position;
     int32_t previous_position;
     
-    //best_i and best_j define the segments that scored the best in an iteration
-    //these represent indeces, not positions.
-    int32_t best_i;
-    int32_t best_j;
-    int32_t r_best_i;
-    int32_t r_best_j;
+    // Relative positions of i and j within the search segment
+    int32_t i_position;
+    int32_t j_position;
     
-    //number of entries in the input file
-    uint32_t count;
+    // Used to determine absolute position within the entire genome
+    int32_t position_hash;
     
-    //highest position value in the input file
-    int32_t m;
+    // Defines the beginning and end tiles of a potential outlier
+    int32_t best_i_tile;
+    int32_t best_j_tile;
     
-    double Si;
-    double Sj;
-    double Sm;
+    // Defines the beginning and end tiles of the largest t_score within
+    // a random segment. Used only for stepping thru the code in debug mode.
+    int32_t r_best_i_tile;
+    int32_t r_best_j_tile;
+
+    // Keeps track of the total number of positions in the search segment,
+    // i.e. the width of the search segment in bp.
+    int32_t num_positions_in_segment;
     
-    //the t value as per the CBS algorithm is the score of a given segment.
-    double t;
-    double t_left;
-    double t_right;
-    double best_t;
-    double best_t_left;
-    double best_t_right;
+    // Maps the relative sum of coverage up to every position within the search segment
+    map<int32_t, double> sum_of_coverage_to_position;
+    double running_sum = 0; // Used to populate above
+    
+    // Relative sums of coverage up to i_position and j_position within the search segment
+    double sum_of_coverage_to_i_pos;
+    double sum_of_coverage_to_j_pos;
+    
+    // Relative sum of coverage within the entire search segment
+    double sum_of_coverage_in_segment;
+
+    // For keeping track of the largest t_score within the search segment
+    double best_t_score;
     int32_t t_length;
     int32_t best_t_length;
     
-    //to easily see the t calculation these are used:
-    double y;
-    double z;
-    double d1;
-    double d2;
+    // For use in the t_score formula (see below):
+    double y; // Avg coverage inside of i and j 
+    double z; // Avg coverage outside of i and j
+    double d1; // To factor in the width of i and j
+    double d2; // To factor in the width of i and j
+    double t_score;
     
-    int32_t randomizations;
+    /*
+     t_score formula:
+     
+         y = (sum_of_coverage_to_j_pos - sum_of_coverage_to_i_pos) / (j_position - i_position);
+         z = (sum_of_coverage_in_segment - sum_of_coverage_to_j_pos + sum_of_coverage_to_i_pos) / (num_positions_in_segment - j_position + i_position);
+         d1 = (1.0 / (j_position - i_position));
+         d2 = (1.0 / (num_positions_in_segment - j_position + i_position));
+         t_score = (y - z) / sqrt( d1 + d2 );
+    */
+
+    // For keeping track of the best t_score among the random segments
+    double r_t_score;
+    double r_best_t_score;
     
-    double r_t_left;
-    double r_t_right;
-    double r_t;
-    double r_best_left;
-    double r_best_right;
-    double r_best_t;
-    
-    //extra useful data written
+    // Extra data written to the history.tab file, for debugging purposes
     double mean_inside;
     double mean_left;
     double mean_right;
     int32_t copy_inside;
     int32_t copy_left;
     int32_t copy_right;
-    
-    //used for finding error
+
+    // Legacy code used for finding mean error
     //double inside_mean;
     //double outside_mean;
     //double mean_error;
-    
-    //used for randomizing a segment
-    vector<double> randomized_coverage;
-    list<int32_t>::iterator available_coverage_it;
-    list<int32_t> available_coverage;
-    int32_t random_index;
-    int32_t best_greater_than;
-    uint32_t left_greater_than;
-    uint32_t right_greater_than;
+
+    // Used for randomizing a segment
+    vector<double> vector_of_randomized_coverage;
+    list<int32_t>::iterator list_iter;
+    list<int32_t> list_of_tiles_in_segment;
+    int32_t random_num;
+    int32_t best_t_was_bigger_counter;
     int32_t max_error_threshold;
-    
-    //to skip the header
-    string skip;
-    int32_t tile_size;
-    
-    ifstream in_file;
-    ofstream out_file;
-    ofstream history_file;
-    
-    randomizations = 100;
-    
-    max_error_threshold = int(randomizations * .05) + 1;
-    
+
+    // Used for randomized testing for statistical significance
+    int32_t randomizations = 100; // How many times the random test loop will run
+    max_error_threshold = int(randomizations * .05) + 1; // Ex: 6
     srand(0);
     
-    in_file.open ( in_file_name.c_str() );
-    out_file.open ( out_file_name.c_str() );
+    // Define filestreams
+    ifstream tiles_file;
+    ofstream ranges_file;
+    ofstream history_file;
+    
+    // Open filestreams
+    tiles_file.open ( in_file_name.c_str() );
+    ranges_file.open ( out_file_name.c_str() );
     history_file.open ( history_file_name.c_str() );
-    
-    in_file >> skip >> skip >> tile_size;
-    
-    out_file << "Start_Position\tEnd_Position\tT_Score\tP_Value\n";
-    
+
+    // Print labels for all the columns in the output files
+    ranges_file << "Start_Position\tEnd_Position\tT_Score\tP_Value\n";
+
     history_file << "Start_Search\tEnd_Search\tStart_Position\tEnd_Position\t"
                  << "Start_Segment\tEnd_Segment\t"
                  << "T_Score\tMean_Coverage_Inside\tMean_Coverage_Left\tMean_Coverage_Right\t"
                  << "CN_Inside\tCN_Left\tCN_Right\t"
-                 << "P_Value_Inside\tP_Value_Left\tP_Value_Right\n";
+                 << "P_Value_Inside\n";
+
     
-    //First, populate saved_sums and ordered_positions.
-    //and get length
-    count = 0;
-    running_sum = 0;
     
-    while ( in_file >> position >> coverage )
+
+    
+    /*
+     * Get data from tiled.tab file
+     */
+    
+    // For reading input from tiled.tab
+    uint32_t num_tiles = 0;
+    int32_t position;
+    double coverage;
+    map<int32_t, double> coverage_map;
+    vector<int32_t> ordered_positions_in_segment;
+    
+    // Skip header of tiled.tab and get tile_size
+    string skip;
+    int32_t tile_size;
+    tiles_file >> skip >> skip >> tile_size;
+    
+    // Read each line of data (position & coverage) from tiled.tab file
+    while ( tiles_file >> position >> coverage )
     {
-      all_coverage[position] = coverage;
-      ordered_sums.push_back( position );
-      count++;
+        // Each position and it's corresponding coverage is populated into this map
+        coverage_map[position] = coverage;
+        
+        // Each position that exists within tiled.tab is populated into this vector.
+        // Since the positions are populated in order, each can be accessed by its
+        // corresponding tile index.
+        ordered_positions_in_segment.push_back(position);
+        
+        // Count the total number of tiles (lines of data)
+        num_tiles++;
     }
+
     
-    //the value of position is now the highest position value.
-    m = position;
     
-    //The first search entry goes from 1 to count - 1
-    //0 is only used as a place holder.
-    current_search.first = 1;
-    current_search.second = count - 1;
-    searching.push_back ( current_search );
     
-    //now calculate z for each segment inside of current_search
-    //repeat until there are no more search entries.
-    while ( searching.size() > 0 )
-    {
-      current_search.first = searching.back().first;
-      current_search.second = searching.back().second;
-      
-      searching.pop_back();
-      
-      if (current_search.first == current_search.second ||
-          current_search.first + 1 == current_search.second)
-      {
+    
+    /*
+     * Populate the first search segment
+     */
+    
+    // The first search segment is the entire genome, so the total number of positions
+    // in the first seach segment is highest position value in tiled.tab
+    num_positions_in_segment = position;
+    
+    // Add the first search segment (the entire genome) to the end of all_search_pairs_vector
+    current_search_pair_by_tile.first = 1;
+    current_search_pair_by_tile.second = num_tiles - 1;
+    all_search_pairs_vector.push_back(current_search_pair_by_tile);
+    
+    
+    
+    
+    
+    /*
+     * Beginning of CBT algorithm loop
+     */
+    
+    // Until there are no more search segments in which to look for outliers...
+    while ( all_search_pairs_vector.size() > 0 ) {
         
-        out_file << ordered_sums[current_search.first] - tile_size + 1 << "\t"
-                 << ordered_sums[current_search.second] << "\t"
-                 << 0.0 << "\t"
-                 << 1.0 << endl;
+        /* Set the current search segment: */
         
-        history_file << ordered_sums[current_search.first] - tile_size + 1 << "\t"
-                     << ordered_sums[current_search.second] << "\t"
-                     << ordered_sums[current_search.first] - tile_size + 1 << "\t"
-                     << ordered_sums[current_search.second] << "\t"
+        // Remove the last search pair from the all_search_pairs_vector and
+        // set it as the current search pair. NOTE: using pop_back() is why
+        // results are printed to the ranges and history files in seemingly
+        // reverse order from which they are added to the queue (later down the line).
+        current_search_pair_by_tile.first = all_search_pairs_vector.back().first;
+        current_search_pair_by_tile.second = all_search_pairs_vector.back().second;
+        all_search_pairs_vector.pop_back();
+        
+        // If the current search segment has 0 or 1 tiles, it cannot be examined for
+        // outliers because no outliers can exist within it.
+        if (current_search_pair_by_tile.first == current_search_pair_by_tile.second ||
+            current_search_pair_by_tile.first + 1 == current_search_pair_by_tile.second)
+        {
+            ranges_file << ordered_positions_in_segment[current_search_pair_by_tile.first] - tile_size + 1 << "\t"
+                     << ordered_positions_in_segment[current_search_pair_by_tile.second] << "\t"
                      << 0.0 << "\t"
-                     << -1 << "\t"
-                     << -1 << "\t"
-                     << -1 << "\t"
-                     << -1 << "\t"
-                     << -1 << "\t"
-                     << -1 << "\t"
                      << 1.0 << endl;
+
+            history_file << ordered_positions_in_segment[current_search_pair_by_tile.first] - tile_size + 1 << "\t"
+                         << ordered_positions_in_segment[current_search_pair_by_tile.second] << "\t"
+                         << ordered_positions_in_segment[current_search_pair_by_tile.first] - tile_size + 1 << "\t"
+                         << ordered_positions_in_segment[current_search_pair_by_tile.second] << "\t"
+                         << -1 << "\t"
+                         << -1 << "\t"
+                         << 0.0 << "\t"
+                         << -1 << "\t"
+                         << -1 << "\t"
+                         << -1 << "\t"
+                         << -1 << "\t"
+                         << -1 << "\t"
+                         << -1 << "\t"
+                         << 1.0 << endl;
+            continue;
+        }
+      
         
-        continue;
-      }
-      
-      //cout << "search" << current_search.first << " " << current_search.second << endl;
-      //cin.get();
-      
-      position_downset = ordered_sums[current_search.first - 1];
-      
-      saved_sums.clear();
-      check_position = ordered_sums[current_search.first - 1] - position_downset;
-      saved_sums[check_position] = 0;
-      //cout << "initial";
-      //cout << saved_sums[check_position] << " ";
-      count = 0;
-      
-      for (int32_t i = current_search.first; i <= current_search.second; i ++)
-      {
-        check_position = ordered_sums[i] - position_downset;
-        previous_position = ordered_sums[i - 1] - position_downset;
         
-        saved_sums[check_position] = all_coverage[check_position + position_downset] + saved_sums[previous_position];
-        //cout << saved_sums[check_position] << " ";
-        count ++;
-      }
-      check_position = ordered_sums[current_search.second] - position_downset;
-      Sm = saved_sums[check_position];
-      m = check_position;
-      //cout << endl;
-      
-      
-      //cout << ordered_sums[current_search.first] << " " << ordered_sums[current_search.second] << " " << endl;
-      
-      
-      best_t = -1;
-      best_t_left = -1;
-      best_t_right = -1;
-      best_greater_than = 0;
-      left_greater_than = 0;
-      right_greater_than = 0;
-      best_t_length = 0;
-      
-      
-      //i and j are inclusive boundaries so <= is used in the comparison.
-      
-      //find the best_t
-      for ( int32_t i = current_search.first - 1; i < current_search.second; i++ )
-      {
-        p_i = ordered_sums[i] - position_downset;
-        Si = saved_sums[ p_i ];
-        for ( int32_t j = i + 1; j <= current_search.second; j++ )
+        
+        
+        /*  
+         * Prep work to populate data structures needed by CBS algorithm
+         */
+        
+        // VERBOSE, set to TRUE for debugging output
+        const bool VERBOSE = false;
+        
+        if (VERBOSE) {
+            cout << "\n############## PREP_LOOP_VERBOSE OUTPUT ###############" << endl;
+            cout << "\ncurrent_search_pair_by_tile_index: [" << current_search_pair_by_tile.first
+                 << "," << current_search_pair_by_tile.second << "]" << endl;
+        }
+
+        // Set to determine absolute position within the entire genome.
+        // Ex: Assuming tile_size=500, if the first tile of the search segment is 61,
+        // and the position value of that tile is 30500, then the position_hash is the
+        // position value of the tile whose index is 60, which is 30000. */
+        position_hash = ordered_positions_in_segment[current_search_pair_by_tile.first - 1];
+        
+        if (VERBOSE) {
+            cout << "position_hash: " << position_hash << endl;
+            cout << "Press ENTER to continue..." << endl;
+            cin.get();
+        }
+
+        // Clear map before populating it
+        sum_of_coverage_to_position.clear();
+        
+        // Keep track of our relative position within the search segment. This always sets
+        // current_position to 0.
+        current_position = ordered_positions_in_segment[current_search_pair_by_tile.first - 1] - position_hash;
+        
+        // The sum of coverage at position 0 is always 0
+        sum_of_coverage_to_position[current_position] = 0;
+        num_tiles = 0;
+        
+        // This loop is the prep work. Before you can search for outliers in this
+        // segment, you must figure out how many positions it has (i.e. base pairs),
+        // and you must populate a map with the sum of coverage up to each position.
+        // NOTE: Don't forget we are treating this current search segment as its own
+        // entity. Thus, no matter where this segment is within the actual genome,
+        // we are treating the first position of this segment as zero.
+        for (int32_t tile_index = current_search_pair_by_tile.first;
+             tile_index <= current_search_pair_by_tile.second; tile_index++)
         {
-          //get means of i to j and outside i to j.
-          
-          /*inside_mean = (Sj - Si) / (j - i);
-          outside_mean = (Sm - Sj + Si) / (count - j + i);
-          
-          mean_error = 0;
-          for ( int32_t k = 0; k < ordered_sums.size(); k++ )
-          {
-            if ( i < k && k <= j )
-            {
-              //it's usually faster to use x * x than x ** 2.
-              mean_error += ((all_coverage[ordered_sums[k]] - inside_mean) *
-                             (all_coverage[ordered_sums[k]] - inside_mean));
-            }
-            else
-            {
-              mean_error += ((all_coverage[ordered_sums[k]] - outside_mean) *
-                             (all_coverage[ordered_sums[k]] - outside_mean));
-            }
-          }
-          
-          mean_error = sqrt( mean_error );*/
-          
-          
-          p_j = ordered_sums[j] - position_downset;
-          Sj = saved_sums[ p_j ];
-          
-          y = (Sj - Si) / (p_j - p_i);
-          z = (Sm - Sj + Si) / (m - p_j + p_i);
-          d1 = (1.0 / (p_j - p_i));
-          d2 = (1.0 / (m - p_j + p_i));
-          t = (y - z) / sqrt( d1 + d2 );
-          
-          t_length = j - i;
-          
-          if ( abs(t) > best_t ||
-               abs(t) == best_t && t_length > best_t_length )
-          {
-            best_t = abs(t);
-            best_i = i;
-            best_j = j;
-            best_t_length = t_length;
+            current_position = ordered_positions_in_segment[tile_index] - position_hash;
+            previous_position = ordered_positions_in_segment[tile_index - 1] - position_hash;
+
+            sum_of_coverage_to_position[current_position] = coverage_map[current_position + position_hash] + sum_of_coverage_to_position[previous_position];
+            num_tiles++;
             
-            y = Si / p_i;
-            z = (Sm - Si) / ( m - p_i );
-            d1 = 1.0 / p_i;
-            d2 = 1.0 / (m - p_i);
-            t_left = (y - z) / sqrt ( d1 + d2 );
-            best_t_left = abs(t_left);
-            
-            y = Sj / p_j;
-            z = (Sm - Sj) / ( m - p_j );
-            d1 = 1.0 / p_j;
-            d2 = 1.0 / (m - p_j);
-            t_right = (y - z) / sqrt ( d1 + d2 );
-            best_t_right = abs(t_right);
-          }
+            if (VERBOSE) {
+                cout << "**********INSIDE PREP-LOOP*************" << endl;
+                cout << "current_position:" << current_position << " "
+                     << "= ordered_positions_in_segment[tile_index]:" << ordered_positions_in_segment[tile_index] << " "
+                     << "- position_hash:" << position_hash << endl;
+                cout << "previous_position:" << previous_position << " "
+                     << "= ordered_positions_in_segment[tile_index-1]:" << ordered_positions_in_segment[tile_index - 1] << " "
+                     << "- position_hash:" << position_hash << endl;
+                cout << "sum_of_coverage_to_position[current_position]:" << sum_of_coverage_to_position[current_position] << " "
+                     << "= coverage_map[current_position+position_hash]:"
+                     << coverage_map[current_position + position_hash] << " "
+                     << "+ sum_of_coverage_to_position[previous_position]:"
+                     << sum_of_coverage_to_position[previous_position] << endl;
+                cout << "num_tiles: " << num_tiles << endl;
+            }
         }
-      }
-      p_i = ordered_sums[best_i] - position_downset;
-      Si = saved_sums[ p_i ];
-      p_j = ordered_sums[best_j] - position_downset;
-      Sj = saved_sums[ p_j ];
-      
-      //making useful information that will be written to the history file
-      if (best_i == current_search.first - 1){
-        mean_left = -1;
-        copy_left = -1;
-      }
-      else{
-        mean_left = Si / double(best_i);
-        copy_left = static_cast<int32_t>(floor((mean_left / summary_average) + .5));
-      }
-      
-      mean_inside = (Sj - Si) / double(best_j - best_i);
-      copy_inside = static_cast<int32_t>(floor((mean_inside / summary_average) + .5));
-      
-      if ( best_j == current_search.second ){
-        mean_right = -1;
-        copy_right = -1;
-      }
-      else{
-        mean_right = (Sm - Sj) / double(current_search.second - best_j);
-        copy_right = static_cast<int32_t>(floor((mean_right / summary_average) + .5));
-      }
-      
-      //cout << "population" << Sm << " " << m << endl;
-      //cout << "best_initial " << best_i << " " << best_j << endl;
-      //cout << "searched through " << current_search.first << " " << current_search.second << endl;
-      //cout << "best_pos" << ordered_sums[best_i] << " " << ordered_sums[best_j] << endl;
-      //cout << "best_cov" << saved_sums[ordered_sums[best_i]] << " " << saved_sums[ordered_sums[best_j]] << endl;
-      //cout << "t" << best_t << endl;
-      //cout << "calc  " << best_y << " " << best_z << " " << best_d1 << " " << best_d2 << endl;
-      //cin.get();
-      //examine the segment i + 1 to j further by randomizing its distribution and scoring it.
-      //randomized_segment_scores.empty();
-      
-      
-      
-      for ( int32_t examinations = 0; examinations < randomizations; examinations++ )
-      {
-        available_coverage.clear();
-        randomized_coverage.clear();
         
-        for ( int32_t i = current_search.first; i <= current_search.second; i++ )
+        
+        
+        
+        
+        /*
+         * Step 1 of algorithm: Find the region in the search segment with the largest t_score
+         */
+        
+        // Set the current_position to the last position in this search segment.
+        // NOTE: This may be redundant with the first line in the above prep work loop
+        current_position = ordered_positions_in_segment[current_search_pair_by_tile.second] - position_hash;
+        
+        // Set values for upcoming step 1 of algorithm
+        sum_of_coverage_in_segment = sum_of_coverage_to_position[current_position];
+        num_positions_in_segment = current_position;
+        
+        // Set to -1 so the first t_score found is always greater than the initialized value
+        best_t_score = -1;
+        
+        // Zero out values
+        best_t_was_bigger_counter = 0;
+        best_t_length = 0;
+        
+        
+        
+        // For every possible value of i within the current search segment...
+        for (int32_t i_tile = current_search_pair_by_tile.first - 1;
+             i_tile < current_search_pair_by_tile.second; i_tile++)
         {
-          available_coverage.push_back(i);
+            /* NOTE: Setting i_tile to [current_search_pair.first - 1] works above because 
+             every search segment always starts at zero in both position and coverage. Thus, 
+             say you're analyzing tiles 61 thru 97, you don't have to worry that the 
+             coverage data from tile 60 is being used because that data is at i_position 0 
+             (relative to this segment), which always has a coverage value of 0. */
+            
+            // These always start at zero and increase with each iteration of the for-loop
+            i_position = ordered_positions_in_segment[i_tile] - position_hash;
+            sum_of_coverage_to_i_pos = sum_of_coverage_to_position[ i_position ];
+            
+            
+            
+            // For every possible value of j within the current search segment...
+            for (int32_t j_tile = i_tile + 1;
+                 j_tile <= current_search_pair_by_tile.second; j_tile++)
+            {
+                // These always start at zero and increase with each
+                // iteration of the for-loop
+                j_position = ordered_positions_in_segment[j_tile] - position_hash;
+                sum_of_coverage_to_j_pos = sum_of_coverage_to_position[ j_position ];
+                
+                // Calculate the t_score of the subsegment with the given i and j
+                y = (sum_of_coverage_to_j_pos - sum_of_coverage_to_i_pos) / (j_position - i_position);
+                z = (sum_of_coverage_in_segment - sum_of_coverage_to_j_pos + sum_of_coverage_to_i_pos) / (num_positions_in_segment - j_position + i_position);
+                d1 = (1.0 / (j_position - i_position));
+                d2 = (1.0 / (num_positions_in_segment - j_position + i_position));
+                t_score = (y - z) / sqrt( d1 + d2 );
+
+                // Determine number of tiles between i and j
+                t_length = j_tile - i_tile;
+                
+                // Keep track of subsegment with the largest t_score.
+                // Note: Floats are being compared here, and thus the equality
+                // comparison ("==") will likely never evaluate to true.
+                if ( abs(t_score) > best_t_score ||
+                    ( abs(t_score) == best_t_score && t_length > best_t_length) )
+                {
+                    best_t_score = abs(t_score);
+                    best_i_tile = i_tile;
+                    best_j_tile = j_tile;
+                    best_t_length = t_length;
+                }
+            
+            } // End of j_tile for-loop
+        } // End of i_tile for-loop
+        
+        // Save info about the potential outlier that has just been found
+        i_position = ordered_positions_in_segment[best_i_tile] - position_hash;
+        j_position = ordered_positions_in_segment[best_j_tile] - position_hash;
+        sum_of_coverage_to_i_pos = sum_of_coverage_to_position[ i_position ];
+        sum_of_coverage_to_j_pos = sum_of_coverage_to_position[ j_position ];
+
+        
+
+        
+        
+        /*
+         * Make debugging info for the history file
+         */
+        
+        // Calculate the mean coverage between i and j
+        mean_inside = (sum_of_coverage_to_j_pos - sum_of_coverage_to_i_pos) / double(best_j_tile - best_i_tile);
+        
+        // Calculate the copy number between i and j by dividing mean_inside by the avg
+        // coverage across the entire genome, and then rounding to nearest whole value
+        copy_inside = static_cast<int32_t>(floor((mean_inside / summary_average) + .5));
+        
+        // If the left edge of the potential outlier equals the left edge of the
+        // search segment, there's no left subsegment in which to search for further outlers
+        if (best_i_tile == current_search_pair_by_tile.first - 1) {
+            mean_left = -1;
+            copy_left = -1;
+        }
+        // Otherwise, the subsegment to the left will be added to the queue
+        else {
+            mean_left = sum_of_coverage_to_i_pos / double(best_i_tile);
+            copy_left = static_cast<int32_t>(floor((mean_left / summary_average) + .5));
         }
         
-        for ( int32_t i = current_search.first; i <= current_search.second; i++ )
+        // If the right edge of the potential outlier equals the right edge of the
+        // search segment, there's no right subsegment in which to search for further outlers
+        if ( best_j_tile == current_search_pair_by_tile.second ) {
+            mean_right = -1;
+            copy_right = -1;
+        }
+        // Otherwise, the subsegment to the right will be added to the queue
+        else {
+            mean_right = (sum_of_coverage_in_segment - sum_of_coverage_to_j_pos) / double(current_search_pair_by_tile.second - best_j_tile);
+            copy_right = static_cast<int32_t>(floor((mean_right / summary_average) + .5));
+        }
+
+
+        
+        
+        
+        /* 
+         * Step 2 of algorithm: Randomized testing of potential outlier
+         */
+        
+        /* Conceptually, this for-loop uses a randomized testing procedure to generate
+         data that will later be used to determine if the best t_score from the 
+         search segment is statistically significant (i.e. is an outlier).
+         
+         The loop runs 100 times, each time comparing the best t_score of the search
+         segment to the best t_score of a new segment randomly generated by shuffling the
+         tiles of the search segment. It counts how many times the search segment's best t_score
+         is larger than the random best t_score. 
+         
+         NOTE: The actual check for statistical significance does not happen in this for-loop.
+         Later on it will determine if the current best t_score was larger than the random 
+         best t_score 95 times out of 100; if yes, the current best t_score is "accepted" 
+         as an outlier. */
+        
+        for ( int32_t examinations = 0; examinations < randomizations; examinations++ )
         {
-          random_index = rand() % available_coverage.size();
-          
-          //remove whatever random index was used from the available_coverage vector.
-          for (available_coverage_it = available_coverage.begin(); available_coverage_it != available_coverage.end(); available_coverage_it++)
-          {
-            if ( random_index == 0 )
-            {
-              randomized_coverage.push_back(all_coverage[ordered_sums[*available_coverage_it]]);
-              available_coverage.erase(available_coverage_it);
-              break;
-            }
-            random_index--;
-          }
-          
-        }
-        
-        //create the new saved sums
-        //cout << "rand";
-        check_position = ordered_sums[current_search.first  - 1] - position_downset;
-        //cout << saved_sums[check_position] << " ";
-        for (size_t j = 0; j < randomized_coverage.size(); j++)
-        {
-          check_position = ordered_sums[current_search.first + j] - position_downset;
-          previous_position = ordered_sums[current_search.first + j - 1] - position_downset;
-          saved_sums[check_position] = saved_sums[previous_position] + randomized_coverage[j];
-          //cout << saved_sums[check_position] << " ";
-        }
-        //cout << endl;
-        //randomized_segment now has a random segment of coverage keeping
-        //the positions in place.
-        
-        r_best_t = -1;
-        r_best_left = -1;
-        r_best_right = -1;
-        
-        //find the t score of this new segment of coverage.
-        for ( int32_t i = current_search.first - 1; i < current_search.second; i++ )
-        {
-          p_i = ordered_sums[i] - position_downset;
-          Si = saved_sums[ p_i ];
-          for ( int32_t j = i + 1; j <= current_search.second; j++ )
-          {
-            /*inside_mean = (Sj - Si) / (j - i);
-            outside_mean = (Sm - Sj + Si) / (count - j + i);
             
-            mean_error = 0;
-            for ( int32_t k = 0; k < ordered_sums.size(); k++ )
+            
+            
+            /*
+             * Generate random segment
+             */
+            
+            /* Below is an unsusual yet efficient way to randomly select tiles within the
+             current search segment and then populate them into a new random segment to be
+             used for testing purposes: */
+            
+            list_of_tiles_in_segment.clear();
+            vector_of_randomized_coverage.clear();
+            
+            // First, create a reference list of all the tile indexes in the
+            // current search segment that will need to be shuffled:
+            // For each tile index value in the current segment (ex: 61 thru 97)...
+            for (int32_t tile_index = current_search_pair_by_tile.first;
+                 tile_index <= current_search_pair_by_tile.second; tile_index++)
             {
-              if ( i < k && k <= j )
-              {
-                //it's usually faster to use x * x than x ** 2.
-                mean_error += ((all_coverage[ordered_sums[k]] - inside_mean) *
-                               (all_coverage[ordered_sums[k]] - inside_mean));
-              }
-              else
-              {
-                mean_error += ((all_coverage[ordered_sums[k]] - outside_mean) *
-                               (all_coverage[ordered_sums[k]] - outside_mean));
-              }
+                // Populate the tile index into a linked list
+                list_of_tiles_in_segment.push_back(tile_index);
             }
             
-            mean_error = sqrt( mean_error );*/
-            
-            p_j = ordered_sums[j] - position_downset;
-            Sj = saved_sums[ p_j ];
-            
-            //calculating t score of middle segment.
-            
-            y = (Sj - Si) / (p_j - p_i);
-            z = (Sm - Sj + Si) / (m - p_j + p_i);
-            d1 = 1.0 / (p_j - p_i);
-            d2 = 1.0 / (m - p_j + p_i);
-            r_t = (y - z) / sqrt( d1 + d2 );
-            r_t = abs(r_t);
-            
-            y = Si / p_i;
-            z = (Sm - Si) / ( m - p_i );
-            d1 = 1.0 / p_i;
-            d2 = 1.0 / (m - p_i);
-            t_left = (y - z) / sqrt ( d1 + d2 );
-            r_t_left = abs(t_left);
-            
-            y = Sj / p_j;
-            z = (Sm - Sj) / ( m - p_j );
-            d1 = 1.0 / p_j;
-            d2 = 1.0 / (m - p_j);
-            t_right = (y - z) / sqrt ( d1 + d2 );
-            r_t_right = abs(t_right);
-            
-            if ( r_t > r_best_t )
+            // Next, we need to randomly select a tile in the current search segment and
+            // populate its corresponding coverage value into a vector for later use:
+            // Run the following for-loop the same number of times as the number of
+            // tiles in the current search segment...
+            for (int32_t tile_count = current_search_pair_by_tile.first;
+                 tile_count <= current_search_pair_by_tile.second; tile_count++)
             {
-              r_best_t = abs(r_t);
+                // Generate a random number that is less than the total number of
+                // tiles in the current segment (but greater than or equal to zero)
+                random_num = rand() % list_of_tiles_in_segment.size();
+                
+                /* The next for-loop is how the random tile is actually chosen. It is not 
+                 designed to run from beginning to end. Instead, it is meant to run a random
+                 number of times as specified by the random_num above. It iterates thru the
+                 list of tile indexes, decrementing the random_num by 1 each time, and
+                 whatever tile the iterator is pointing to when random_num = 0 becomes the
+                 next randomly chosen tile. */
+                for (list_iter = list_of_tiles_in_segment.begin();
+                     list_iter != list_of_tiles_in_segment.end(); list_iter++)
+                {
+                    if ( random_num == 0 )
+                    {
+                        /* Note that list_of_tiles_in_segment represents the same tiles of the 
+                         search segment that exist within ordered_positions_in_segment (ex: 61 
+                         thru 97). Thus, the list_iter is just a pointer to a value (a tile 
+                         index, ex: 63), and that value is accessed by *list_iter. Using this 
+                         tile to access a specific element within ordered_positions_in_segment 
+                         returns the corresponding position (ex: 31500), and then this position 
+                         is used to access the corresponding coverage at this position within 
+                         coverage_map. Finally, this average coverage value is pushed onto the 
+                         end of the vector_of_randomized_coverage. */
+                        vector_of_randomized_coverage.push_back(coverage_map[ordered_positions_in_segment[*list_iter]]);
+                        
+                        // To prevent this same coverage value from being used again, its
+                        // corresponding tile is removed from the list_of_tiles_in_segment list.
+                        list_of_tiles_in_segment.erase(list_iter);
+                        break;
+                    }
+                    
+                    // Decrement random_num by 1
+                    random_num--;
+                
+                }
+            } // End of tile_count for-loop
+            
+            
+    
+            
+            
+            /* 
+             * More prep work (still in randomized testing)
+             */
+            
+            // Note: This line may again be redundant
+            current_position = ordered_positions_in_segment
+            [current_search_pair_by_tile.first  - 1] - position_hash;
+            
+            // This loop repopulates the sum_of_coverage_to_position vector with the randomly
+            // chosen values from vector_of_randomized_coverage.
+            // Note: sum_of_coverage_to_position does not need to be zeroed-out before this
+            // loop is run; see "sum_of_coverage_to_position" below...
+            for (size_t iter = 0; iter < vector_of_randomized_coverage.size(); iter++)
+            {
+                // current_position always starts at tile_size and then increases
+                // by tile_size with every loop (ex: 500, 1000, 1500, ...)
+                current_position = ordered_positions_in_segment[current_search_pair_by_tile.first + iter] - position_hash;
+                
+                // ?2? previous_position always starts at zero and then increases
+                // by tile_size with every loop (ex: 0, 500, 1000, ...)
+                previous_position = ordered_positions_in_segment[current_search_pair_by_tile.first + iter - 1] - position_hash;
+                
+                // The first time through this loop (i.e. when iter=0 and previous_position=0),
+                // the sum_of_coverage_to_position[previous_position] will always
+                // equal zero, because sum_of_coverage_to_position[0] will always equal zero.
+                sum_of_coverage_to_position[current_position] = sum_of_coverage_to_position[previous_position] + vector_of_randomized_coverage[iter];
+            }
+
+            
+    
+            
+            
+            /*
+             * Find the best t_score within the random segment
+             */
+            
+            // Set to -1 so the first t_score found is always greater than the initialized value
+            r_best_t_score = -1.0;
+
+            // For every possible value of i within the current search segment...
+            for ( int32_t i_tile = current_search_pair_by_tile.first - 1;
+                 i_tile < current_search_pair_by_tile.second; i_tile++ )
+            {
+                // These always start at zero and increase with each iteration of the for-loop
+                i_position = ordered_positions_in_segment[i_tile] - position_hash;
+                sum_of_coverage_to_i_pos = sum_of_coverage_to_position[ i_position ];
+
+                // For every possible value of j within the current search segment...
+                for ( int32_t j_tile = i_tile + 1;
+                     j_tile <= current_search_pair_by_tile.second; j_tile++ )
+                {
+                    // Legacy code used for finding mean error
+                    /*
+                    inside_mean = (sum_of_coverage_to_j_pos - sum_of_coverage_to_i_pos) / (j_tile - i_tile);
+                    outside_mean = (sum_of_coverage_in_segment - sum_of_coverage_to_j_pos + sum_of_coverage_to_i_pos) / (num_tiles - j_tile + i_tile);
+                    mean_error = 0;
+                    for ( int32_t k = 0; k < ordered_positions_in_segment.size(); k++ )
+                    {
+                        if ( i_tile < k && k <= j_tile )
+                        {
+                            //it's usually faster to use x * x than x ** 2.
+                            mean_error += ((coverage_map[ordered_positions_in_segment[k]] - inside_mean) * (coverage_map[ordered_positions_in_segment[k]] - inside_mean));
+                        }
+                        else
+                        {
+                            mean_error += ((coverage_map[ordered_positions_in_segment[k]] - outside_mean) * (coverage_map[ordered_positions_in_segment[k]] - outside_mean));
+                        }
+                    }
+                    mean_error = sqrt( mean_error );
+                    */
+                    
+                    // These always start at zero and increase with each
+                    // iteration of the for-loop
+                    j_position = ordered_positions_in_segment[j_tile] - position_hash;
+                    sum_of_coverage_to_j_pos = sum_of_coverage_to_position[ j_position ];
+                    
+                    // Calculate the t_score of the subsegment with the given i and j
+                    y = (sum_of_coverage_to_j_pos - sum_of_coverage_to_i_pos) / (j_position - i_position);
+                    z = (sum_of_coverage_in_segment - sum_of_coverage_to_j_pos + sum_of_coverage_to_i_pos) / (num_positions_in_segment - j_position + i_position);
+                    d1 = 1.0 / (j_position - i_position);
+                    d2 = 1.0 / (num_positions_in_segment - j_position + i_position);
+                    r_t_score = (y - z) / sqrt( d1 + d2 );
+                    r_t_score = abs(r_t_score);
+                
+                    
+                    // Keep track of subsegment with the largest t_score
+                    // Note: Floats are being compared here; also, an "equality" comparison
+                    // (that actually compares within a range) might need to be added so that
+                    // it mirrors the methodology of the similar code block near line 740.
+                    if ( r_t_score > r_best_t_score )
+                    {
+                        r_best_t_score = abs(r_t_score);
+                        
+                        // Used for stepping thru the code in debug mode
+                        r_best_i_tile = i_tile;
+                        r_best_j_tile = j_tile;
+                    }
+
+                } // End of for-loop j_tile
+            } // End of for-loop i_tile
+            
+            //  Now we know the best t_score of the random segment
+            if (VERBOSE) {
+                cout << "\n\n#####################################";
+                cout << "\n best_t_score: " << fixed << setprecision(40) << best_t_score;
+                cout << "\r_best_t_score: " << fixed << setprecision(40) << r_best_t_score
+                     << endl;
             }
             
-            if ( r_t_left > r_best_left )
+            
+            
+            
+            
+            /*
+             * Count the times best_t_score is larger than r_best_t_score
+             */
+            
+            if ( best_t_score > r_best_t_score )
             {
-              r_best_left = r_t_left;
-              r_best_i = i;
+                best_t_was_bigger_counter++;
             }
             
-            if ( r_t_right > r_best_right )
-            {
-              r_best_right = r_t_right;
-              r_best_j = j;
+            // This heuristic breaks out of the randomized testing early if it becomes
+            // impossible to reach the number of counts required to be significant. 
+            // Ex: if ([(96 + 1) - 90] > 6) { ...
+            // NOTE: This could probably be simplified to the following:
+            /*  if (examinations - best_t_was_bigger_counter >= max_error_threshold){ ... */
+            if ((examinations + 1) - best_t_was_bigger_counter > max_error_threshold){
+
+                // Break the entire randomized testing loop
+                break;
             }
-            
-          }
-        }
-        //cout << "b " << r_best_t << " " << best_t << " " << best_greater_than << endl;
-        //cout << "rcacout << "lol formatting" << 1 - (double)(best_greater_than) / randomizations << endl;lc " << y << " " << z << " " << d1 << " " << d2 << endl;
-        //cin.get();
-        //r_best_* variables have the best of this random segment.
+       
+        } // End of randomized testing (aka "examinations") for-loop
         
-        if ( best_t > r_best_t )
-        {
-          best_greater_than++;
-        }
         
-        if ( best_t_left > r_best_left ){
-          left_greater_than++;
-        }
-        
-        if ( best_t_right > r_best_right ){
-          right_greater_than++;
-        }
-        
-        if ((examinations + 1) - best_greater_than > max_error_threshold){
-          break;
-        }
-        
-      }
-      //cout << "best" << best_greater_than << endl;
-      //if 95% of the t scores of the randomized coverage are less than
-      //the initial best_t, add a new search for this segment
       
-      //if the range to be added is identical to the current search, don't add it
-      //only write it.
-      //cout << best_greater_than << endl;
-      //cout << best_greater_than / 10.0 << endl;
-      //cout << current_search.first << " " << best_i + 1 << endl;
-      //cout << current_search.second << " " << best_j << endl;
-      //cin.get();
-      if ( (double)(best_greater_than) / randomizations >= .95 &&
-           !((current_search.first == best_i + 1) && (current_search.second == best_j))
+        
+        
+        /*
+         * If answer to step 2 is YES/ACCEPT (the potential outlier is significant)
+         */
+        
+        // If the potential outlier is significant, and if the potential outlier is NOT
+        // just the entire genome...
+        if ( (double)(best_t_was_bigger_counter) / randomizations >= .95 &&
+           !((current_search_pair_by_tile.first == best_i_tile + 1) && (current_search_pair_by_tile.second == best_j_tile))
          )
-      {
-        if ( (double) (left_greater_than) / randomizations >= .95 &&
-             (double) (right_greater_than) / randomizations >= .95){
-          //cout << "add_segment\n";
-          next_search.first = best_i + 1;
-          next_search.second = best_j;
-          searching.push_back( next_search );
-          
-          history_file << ordered_sums[current_search.first] - tile_size + 1 << "\t" <<
-                          ordered_sums[current_search.second] << "\t" <<
-                          ordered_sums[best_i + 1] - tile_size + 1 << "\t" <<
-                          ordered_sums[best_j] << "\t" <<
-                          ordered_sums[next_search.first] - tile_size + 1 << "\t" <<
-                          ordered_sums[next_search.second] << "\t" <<
-                          best_t << "\t" <<
+        {
+            
+            
+            
+            /*
+             * Break search segment into three subsegments and add each to search queue
+             */
+            
+            // Add the middle subsegment (which is the newly found outlier between i and j)
+            // to the search queue (i.e. all_search_pairs_vector)
+            next_search_pair_by_tile.first = best_i_tile + 1;
+            next_search_pair_by_tile.second = best_j_tile;
+            all_search_pairs_vector.push_back( next_search_pair_by_tile );
+
+            // Record this within the history file
+            history_file << ordered_positions_in_segment[current_search_pair_by_tile.first] - tile_size + 1 << "\t" <<
+                          ordered_positions_in_segment[current_search_pair_by_tile.second] << "\t" <<
+                          ordered_positions_in_segment[best_i_tile + 1] - tile_size + 1 << "\t" <<
+                          ordered_positions_in_segment[best_j_tile] << "\t" <<
+                          ordered_positions_in_segment[next_search_pair_by_tile.first] - tile_size + 1 << "\t" <<
+                          ordered_positions_in_segment[next_search_pair_by_tile.second] << "\t" <<
+                          best_t_score << "\t" <<
                           mean_inside << "\t" <<
                           mean_left << "\t" <<
                           mean_right << "\t" <<
                           copy_inside << "\t" <<
                           copy_left << "\t" <<
                           copy_right << "\t" <<
-                          1 - (double)(best_greater_than) / randomizations <<  "\t" <<
-                          1 - (double)(left_greater_than) / randomizations <<  "\t" <<
-                          1 - (double)(right_greater_than) / randomizations << endl;
+                          1 - (double)(best_t_was_bigger_counter) / randomizations << endl;
+
+            //if best_i_tile doesn't include the first element, add the segment before
+            //best_i_tile
+            /* ??? checking to make sure the segment doesn't
+             border the edge. if it borders the edge,
+             there's nothing to add.*/
+            
+            // Add the left subsegment (if there is one, i.e. if the middle subsegment
+            // doesn't border the start of the search segment) to the search queue
+            if ( best_i_tile + 1 > current_search_pair_by_tile.first )
+            {
+                next_search_pair_by_tile.first = current_search_pair_by_tile.first;
+                next_search_pair_by_tile.second = best_i_tile;
+                all_search_pairs_vector.push_back( next_search_pair_by_tile );
+            }
+
+            // Add the right subsegment (if there is one, i.e. if the middle subsegment
+            // doesn't border the end of the search segment) to the search queue
+            if ( best_j_tile < current_search_pair_by_tile.second )
+            {
+                next_search_pair_by_tile.first = best_j_tile + 1;
+                next_search_pair_by_tile.second = current_search_pair_by_tile.second;
+                all_search_pairs_vector.push_back( next_search_pair_by_tile );
+            }
           
-          //if best_i doesn't include the first element, add the segment before
-          //best_i
-          if ( best_i + 1 > current_search.first )
-          {
-            
-            next_search.first = current_search.first;
-            next_search.second = best_i;
-            searching.push_back( next_search );
-            
-          }
-          
-          //if best_j doesn't include the last element, add the segment after
-          //best_j
-          if ( best_j < current_search.second )
-          {
-            
-            next_search.first = best_j + 1;
-            next_search.second = current_search.second;
-            searching.push_back( next_search );
-            
-          }
-        }
+        } // End of if-conditional YES/ACCEPT
         
-        else if ((double) (left_greater_than) / randomizations >= .95){
-          next_search.first = best_i + 1;
-          next_search.second = current_search.second;
-          searching.push_back( next_search );
-          
-          history_file << ordered_sums[current_search.first] - tile_size + 1 << "\t" <<
-                          ordered_sums[current_search.second] << "\t" <<
-                          ordered_sums[best_i + 1] - tile_size + 1 << "\t" <<
-                          ordered_sums[best_j] << "\t" <<
-                          ordered_sums[next_search.first] - tile_size + 1 << "\t" <<
-                          ordered_sums[next_search.second] << "\t" <<
-                          best_t << "\t" <<
-                          mean_inside << "\t" <<
-                          mean_left << "\t" <<
-                          mean_right << "\t" <<
-                          copy_inside << "\t" <<
-                          copy_left << "\t" <<
-                          copy_right << "\t" <<
-                          1 - (double)(best_greater_than) / randomizations <<  "\t" <<
-                          1 - (double)(left_greater_than) / randomizations <<  "\t" <<
-                          1 - (double)(right_greater_than) / randomizations << endl;
-          
-          if ( best_i > current_search.first )
-          {
-            next_search.first = current_search.first;
-            next_search.second = best_i;
-            searching.push_back( next_search );
-          }
-        }
         
-        else if ((double) (right_greater_than) / randomizations >= .95){
-          next_search.first = current_search.first;
-          next_search.second = best_j;
-          searching.push_back( next_search );
-          
-          history_file << ordered_sums[current_search.first] - tile_size + 1 << "\t" <<
-                          ordered_sums[current_search.second] << "\t" <<
-                          ordered_sums[best_i + 1] - tile_size + 1 << "\t" <<
-                          ordered_sums[best_j] << "\t" <<
-                          ordered_sums[next_search.first] - tile_size + 1 << "\t" <<
-                          ordered_sums[next_search.second] << "\t" <<
-                          best_t << "\t" <<
-                          mean_inside << "\t" <<
-                          mean_left << "\t" <<
-                          mean_right << "\t" <<
-                          copy_inside << "\t" <<
-                          copy_left << "\t" <<
-                          copy_right << "\t" <<
-                          1 - (double)(best_greater_than) / randomizations <<  "\t" <<
-                          1 - (double)(left_greater_than) / randomizations <<  "\t" <<
-                          1 - (double)(right_greater_than) / randomizations << endl;
-          
-          if ( best_j + 1 < current_search.second )
-          {
-            next_search.first = best_j + 1;
-            next_search.second = current_search.second;
-            searching.push_back( next_search );
-          }
-        }
         
-        else{
-          out_file << ordered_sums[current_search.first] - tile_size + 1 << "\t"
-                   << ordered_sums[best_i] << "\t"
-                   << best_t << "\t"
-                   << 1 - (double)(best_greater_than) / randomizations << endl;
-          out_file << ordered_sums[best_i + 1] - tile_size + 1 << "\t"
-                   << ordered_sums[best_j] << "\t"
-                   << best_t << "\t"
-                   << 1 - (double)(best_greater_than) / randomizations << endl;
-          out_file << ordered_sums[best_j + 1] - tile_size + 1 << "\t"
-                   << ordered_sums[current_search.second] << "\t"
-                   << best_t << "\t"
-                   << 1 - (double)(best_greater_than) / randomizations << endl;
-                 
-          history_file << ordered_sums[current_search.first] - tile_size + 1 << "\t" <<
-                          ordered_sums[current_search.second] << "\t" <<
-                          ordered_sums[best_i + 1] - tile_size + 1 << "\t" <<
-                          ordered_sums[best_j] << "\t" <<
-                          -1 << "\t" <<
-                          -1 << "\t" <<
-                          best_t << "\t" <<
-                          mean_inside << "\t" <<
-                          mean_left << "\t" <<
-                          mean_right << "\t" <<
-                          copy_inside << "\t" <<
-                          copy_left << "\t" <<
-                          copy_right << "\t" <<
-                          1 - (double)(best_greater_than) / randomizations <<  "\t" <<
-                          1 - (double)(left_greater_than) / randomizations <<  "\t" <<
-                          1 - (double)(right_greater_than) / randomizations << endl;
+        
+        
+        /*
+         * If answer to step 2 is NO/REJECT (the potential outlier is NOT significant)
+         */
+        
+        /* Output the search segment to the ranges.tab file. If no outliers were found 
+         within the entire genome (i.e. after the first run of the loop), of course the 
+         "search segment" outputted will span the entire genome. In every other case, 
+         the search segment outputted to ranges.tab is terminal, meaning that it doesn't 
+         have any other outliers within it (although it may itself be outlier). */
+        else
+        {
+            ranges_file << ordered_positions_in_segment[current_search_pair_by_tile.first] - tile_size + 1 << "\t"
+                     << ordered_positions_in_segment[current_search_pair_by_tile.second] << "\t"
+                     << best_t_score << "\t"
+                     << 1 - (double)(best_t_was_bigger_counter) / randomizations << endl;
+            
+            history_file << ordered_positions_in_segment[current_search_pair_by_tile.first] - tile_size + 1 << "\t" <<
+                            ordered_positions_in_segment[current_search_pair_by_tile.second] << "\t" <<
+                            ordered_positions_in_segment[best_i_tile + 1] - tile_size + 1 << "\t" <<
+                            ordered_positions_in_segment[best_j_tile] << "\t" <<
+                            -1 << "\t" <<
+                            -1 << "\t" <<
+                            best_t_score << "\t" <<
+                            mean_inside << "\t" <<
+                            mean_left << "\t" <<
+                            mean_right << "\t" <<
+                            copy_inside << "\t" <<
+                            copy_left << "\t" <<
+                            copy_right << "\t" <<
+                            1 - (double)(best_t_was_bigger_counter) / randomizations << endl;
         }
-      }
-      //otherwise, just write the segment.
-      else
-      {
-        out_file << ordered_sums[current_search.first] - tile_size + 1 << "\t"
-                 << ordered_sums[current_search.second] << "\t"
-                 << best_t << "\t"
-                 << 1 - (double)(best_greater_than) / randomizations << endl;
-        history_file << ordered_sums[current_search.first] - tile_size + 1 << "\t" <<
-                        ordered_sums[current_search.second] << "\t" <<
-                        ordered_sums[best_i + 1] - tile_size + 1 << "\t" <<
-                        ordered_sums[best_j] << "\t" <<
-                        -1 << "\t" <<
-                        -1 << "\t" <<
-                        best_t << "\t" <<
-                        mean_inside << "\t" <<
-                        mean_left << "\t" <<
-                        mean_right << "\t" <<
-                        copy_inside << "\t" <<
-                        copy_left << "\t" <<
-                        copy_right << "\t" <<
-                        1 - (double)(best_greater_than) / randomizations <<  "\t" <<
-                        1 - (double)(left_greater_than) / randomizations <<  "\t" <<
-                        1 - (double)(right_greater_than) / randomizations << endl;
-      }
       
       
-    }
+    } // End of CBT algorithm while-loop
+
     
-    in_file.close();
-    out_file.close();
-  }
+    // If the search queue is empty, close the filestreams
+    tiles_file.close();
+    ranges_file.close();
+}
   
-  void CoverageDistribution::smooth_segments(
-                                              const Settings& settings,
-                                              const string& seq_id,
-                                              double summary_average,
-                                              string tile_file_name,
-                                              string segment_file_name,
-                                              string out_file_name,
-                                              string final_file_name,
-                                              string gd_file_name
-                                              )
-  {
-    //cout << "sum_avg" << summary_average << endl;
-    cGenomeDiff gd;
     
+    
+/*
+ * Function: smooth_segments
+ * --------------------------------
+ * Reads in [genome].ranges.tab and generates [genome].smoothed_ranges.tab,
+ * [genome].cnv_final.tab, and [genome].cn_evidence.tab.
+ 
+ * Summary: Takes the segments (aka ranges) within ranges.tab and calculates 
+ * the copy number within each, outputting this to smoothed_ranges.tab. This is done 
+ * by taking the avg coverage within each range and dividing it by the avg coverage 
+ * across the entire genome (see note), then rounding to the nearest whole number.
+ * NOTE: This algorithm could be improved by giving a range of possible copy numbers 
+ * when appropriate, i.e. 150/60 = 2.5, so coverage could be either 2 or 3.
+ *
+ * THE DOCUMENTATION FOR THIS FUNCTION IS A WORK IN PROGESS
+ */
+    
+void CoverageDistribution::smooth_segments(
+                                          const Settings& settings,
+                                          const string& seq_id,
+                                          double summary_average,   // @DTF: avg coverage over entire genome
+                                          string tile_file_name,
+                                          string segment_file_name,
+                                          string out_file_name,
+                                          string final_file_name,
+                                          string gd_file_name
+                                          )
+{
+    cGenomeDiff gd; /* ???: cGenomeDiff is a data type defined by breseq. it holds
+                     entries like SNP, INS, DEL, CNV, and has more information about
+                     those types like their sizes. CNV (copy number variation)
+                     is the type that will be added here. CNV is the outliers
+                     you're finding. */
+
     //used for finding the mean of a segment in the tile file.
     double segment_sum;
     double segment_mean;
     uint32_t num_tiles;
-    
+
     //keeps track of a segment's bounds.
     uint32_t position_start;
     uint32_t position_end;
-    
+
     //keeps track of an entry in the tile file.
     uint32_t tile_position;
     double tile_coverage;
-    double z_score;
-    double greater_than;
-    
-    
+    double z_score; /* ???: synonymous with t_score. */
+    double greater_than; /* ???: reads in the fourth value from segment_file.
+                          The p-value of a segment or (1 - greater_than / randomizations). */
+
+
     //holds the value a segment's coverage will be changed to.
     double new_segment_mean;
-    
+
     //used for easily accessing the tile file.
     pair<uint32_t, double> tile_entry;
     vector< pair<uint32_t, double> > tile_data;
-    
+
     //initial parameter.
     uint32_t tile_size;
-    
+
     //used for skipping lines.
     string skip;
-    
+
     bool written_final;
-    
+
     ifstream tile_file;
     ifstream segment_file;
     ofstream out_file;
     ofstream final_file;
-    
+
     tile_file.open ( tile_file_name.c_str() );
     segment_file.open ( segment_file_name.c_str() );
     out_file.open ( out_file_name.c_str() );
     final_file.open( final_file_name.c_str() );
-    
+
     out_file << "Position\tSmooth_Coverage\n";
-    
+
     final_file << "Start_Position" << "\t" <<
                   "End_Position" << "\t" <<
-                  "Z_Score" << "\t" <<
+                  "T_Score" << "\t" <<          // @DTF: possible typo here, was Z_Score
                   "Greater_Than" << "\t" <<
                   "Copy_Number" << endl;
-    
+
     tile_file >> skip >> skip >> tile_size;
-    
+
     //populate the tile_data vector
-    
+
     while ( tile_file >> tile_position >> tile_coverage )
     {
       tile_entry.first = tile_position;
       tile_entry.second = tile_coverage;
       tile_data.push_back( tile_entry );
     }
-    
-    
+
+
     //go through each entry in the segment file.
     getline(segment_file, skip);
     while ( segment_file >> position_start >> position_end >> z_score >> greater_than )
@@ -1062,13 +1252,17 @@ namespace breseq {
       {
         tile_entry = tile_data[i];
         
+        /* ??? What and why: finding a tile that exists between the current
+        segment.*/
         if ( position_start <= tile_entry.first &&
-             position_end >= tile_entry.first )
+            position_end >= tile_entry.first )
         {
-          segment_sum += tile_entry.second;
-          num_tiles++;
+            segment_sum += tile_entry.second;
+            num_tiles++;
         }
-        
+        /* ??? What and why: the for loop starts at the beginning of the genome.
+        If the positions you're now looking at are past the segment you're
+        filling in, you've gone past the segment. break.*/
         else if ( tile_entry.first > position_end )
         {
           break;
@@ -1086,7 +1280,10 @@ namespace breseq {
       //fortunately, there's no such thing as negative coverage
       new_segment_mean = floor(new_segment_mean + .5);
       
-      // @JEB create the genome diff evidence entry if mean is not one
+        // @JEB create the genome diff evidence entry if mean is not one
+        /* ??? What does this block do: JEB are Barrick's initials. He's doing
+         all of the cGenomeDiff coding so if you're really interested, ask him.
+         Otherwise, it's not important to the algorithm.*/
       
       if (new_segment_mean > 1) {
         cDiffEntry item(CN);
@@ -1102,7 +1299,12 @@ namespace breseq {
       }
       
       
-      //set the new value of the coverage for this segment to this value.
+        //the following part of the code could probably be done much more elegantly.
+        //i'm not entirely sure but, what i think it's doing is actually writing
+        //a rounded coverage value for the single tile currently being examined.
+        
+        //set the new value of the coverage for this segment to this value.
+        /* ??? Clarify: new value being the rounded coverage value, as in 2. */
       for ( uint32_t i = 0; i < tile_data.size(); i++ )
       {
         tile_entry = tile_data[i];
@@ -1131,20 +1333,23 @@ namespace breseq {
       
       
     }
-    
+
     //write data to smoothed_ranges file
     for ( uint32_t i = 0; i < tile_data.size(); i++ )
     {
       tile_entry = tile_data[i];
       out_file << tile_entry.first << "\t" << tile_entry.second << endl;
     }
-    
+
     tile_file.close();
     segment_file.close();
     out_file.close();
     final_file.close();
-    
+
     // merge intervals
+    /* ??? Clarify: more cGenomeDiff code. again ask Barrick if you really
+     want to know. but unnecessary for the actual algorithm. */
+    //that applies to everything below this line.
     gd.sort();
     diff_entry_list_t muts = gd.list();
     diff_entry_ptr_t last_de(NULL);
@@ -1181,178 +1386,183 @@ namespace breseq {
         }
       }
     }
-    
+
     if (last_de.get())
       gd_merged.add(*last_de);
-    
-    
+
+
     gd_merged.write(gd_file_name);
-  }
+}
 
 
-  void CoverageDistribution::calculate_periodicity (
-                                    string coverage_file_name,
-                                    string period_file_name,
-                                    uint32_t method,
-                                    uint32_t start_range,
-                                    uint32_t end_range,
-                                    uint32_t step
-                                    ){
-    
-    //used for indexing the coverage_file's values.
-    stringstream line_stream;
-    string line;
-    
-    string column_title;
-    uint8_t current_column;
-    uint8_t column_count;
-    
-    uint8_t unique_top_column;
-    uint8_t unique_bot_column;
-    uint8_t redundant_top_column;
-    uint8_t redundant_bot_column;
-    
-    int32_t unique_top;
-    int32_t unique_bot;
-    int32_t redundant_top;
-    int32_t redundant_bot;
-    
-    //used to ignore values.
-    string skip;
-    
-    ifstream coverage_file;
-    ofstream period_file;
-    
-    //used for holding file data
-    vector<int32_t> unique_top_vector;
-    vector<int32_t> unique_bot_vector;
-    vector<int32_t> redundant_top_vector;
-    vector<int32_t> redundant_bot_vector;
-    
-    //used to hold values for operations
-    vector<int32_t> offset_range;
-    vector<int32_t> top_vector;
-    vector<int32_t> bot_vector;
-    vector<int32_t> offset_bot_vector;
-    int32_t bot_value;
-    int32_t offset_sum;
-    
-    //reserve vector space
-    unique_top_vector.reserve(4700000);
-    unique_bot_vector.reserve(4700000);
-    redundant_top_vector.reserve(4700000);
-    redundant_bot_vector.reserve(4700000);
-    
-    coverage_file.open( coverage_file_name.c_str() );
-    period_file.open( period_file_name.c_str() );
-    
-    //populate offset_range
-    for (uint32_t i = start_range; i <= end_range; i += step){
-      offset_range.push_back(i);
-    }
-    
-    //parse header line so that each line can be correctly indexed.
-    getline(coverage_file, line);
-    line_stream.str(line);
-    
-    column_count = 0;
-    while (getline(line_stream, column_title, '\t')){
-      if (column_title == "unique_top_cov"){
-        unique_top_column = column_count;
-      }
-      else if (column_title == "unique_bot_cov"){
-        unique_bot_column = column_count;
-      }
-      else if (column_title == "redundant_top_cov"){
-        redundant_top_column = column_count;
-      }
-      else if (column_title == "redundant_bot_cov"){
-        redundant_bot_column = column_count;
-      }
-      
-      column_count++;
-    }
-    
-    //read the entire file and store it in the 4 coverage vectors
-    line_stream.clear();
-    while ( getline(coverage_file, line) ){
-      
-      if (line == ""){
-        break;
-      }
-      
-      line_stream.clear();
-      line_stream.str(line);
-      
-      for (current_column = 0; current_column < column_count; current_column++){
-        if (current_column == unique_top_column){
-          line_stream >> unique_top;
-        }
-        else if (current_column == unique_bot_column){
-          line_stream >> unique_bot;
-        }
-        else if (current_column == redundant_top_column){
-          line_stream >> redundant_top;
-        }
-        else if (current_column == redundant_bot_column){
-          line_stream >> redundant_bot;
-        }
-        else {
-          line_stream >> skip;
-        }
-      }
-      
-      unique_top_vector.push_back(unique_top);
-      unique_bot_vector.push_back(unique_bot);
-      redundant_top_vector.push_back(redundant_top);
-      redundant_bot_vector.push_back(redundant_bot);
-      
-    }
-    
-    //set up template top and bot vectors for calculations
-    if ( method == 1 ){
-      top_vector = unique_top_vector;
-      bot_vector = unique_bot_vector;
-    }
-    else if ( method == 2 ){
-      top_vector = unique_top_vector;
-      bot_vector = unique_top_vector;
-      
-      for ( uint32_t i = 0; i < unique_top_vector.size(); i++ ){
-        top_vector[i] += redundant_top_vector[i];
-        bot_vector[i] += redundant_bot_vector[i];
-      }
-    }
-    
-    //go through each offset and find the offset sum
-    for ( uint32_t i = 0; i < offset_range.size(); i++ ){
-      //cout << offset_range[i] << "\r";
-      //cout.flush();
-      
-      //set up bottom vector for this offset
-      offset_bot_vector = bot_vector;
-      
-      for ( int32_t j = 0; j < offset_range[i]; j++ ){
-        bot_value = offset_bot_vector[0];
-        offset_bot_vector.erase(offset_bot_vector.begin());
-        offset_bot_vector.push_back( bot_value );
-      }
-      
-      //finding sum
-      
-      offset_sum = 0;
-      
-      for (uint32_t j = 0; j < top_vector.size(); j++ ){
-        //ignoring spots where there is 0 coverage in either the top or bottom
-        if (top_vector[j] == 0 || offset_bot_vector[j] == 0 ) continue;
-        offset_sum += ((top_vector[j] - offset_bot_vector[j]) * (top_vector[j] - offset_bot_vector[j]));
-      }
-      
-      period_file << offset_range[i] << "\t" << offset_sum << endl;
-    }
-    //cout << endl;
-    coverage_file.close();
-    period_file.close();
+/*
+ * Function: calculate_periodicity
+ * --------------------------------
+ * SUMMARY GOES HERE
+ */
+void CoverageDistribution::calculate_periodicity (
+                                string coverage_file_name,
+                                string period_file_name,
+                                uint32_t method,
+                                uint32_t start_range,
+                                uint32_t end_range,
+                                uint32_t step
+                                ){
+
+//used for indexing the coverage_file's values.
+stringstream line_stream;
+string line;
+
+string column_title;
+uint8_t current_column;
+uint8_t column_count;
+
+uint8_t unique_top_column;
+uint8_t unique_bot_column;
+uint8_t redundant_top_column;
+uint8_t redundant_bot_column;
+
+int32_t unique_top;
+int32_t unique_bot;
+int32_t redundant_top;
+int32_t redundant_bot;
+
+//used to ignore values.
+string skip;
+
+ifstream coverage_file;
+ofstream period_file;
+
+//used for holding file data
+vector<int32_t> unique_top_vector;
+vector<int32_t> unique_bot_vector;
+vector<int32_t> redundant_top_vector;
+vector<int32_t> redundant_bot_vector;
+
+//used to hold values for operations
+vector<int32_t> offset_range;
+vector<int32_t> top_vector;
+vector<int32_t> bot_vector;
+vector<int32_t> offset_bot_vector;
+int32_t bot_value;
+int32_t offset_sum;
+
+//reserve vector space
+unique_top_vector.reserve(4700000);
+unique_bot_vector.reserve(4700000);
+redundant_top_vector.reserve(4700000);
+redundant_bot_vector.reserve(4700000);
+
+coverage_file.open( coverage_file_name.c_str() );
+period_file.open( period_file_name.c_str() );
+
+//populate offset_range
+for (uint32_t i = start_range; i <= end_range; i += step){
+  offset_range.push_back(i);
+}
+
+//parse header line so that each line can be correctly indexed.
+getline(coverage_file, line);
+line_stream.str(line);
+
+column_count = 0;
+while (getline(line_stream, column_title, '\t')){
+  if (column_title == "unique_top_cov"){
+    unique_top_column = column_count;
   }
+  else if (column_title == "unique_bot_cov"){
+    unique_bot_column = column_count;
+  }
+  else if (column_title == "redundant_top_cov"){
+    redundant_top_column = column_count;
+  }
+  else if (column_title == "redundant_bot_cov"){
+    redundant_bot_column = column_count;
+  }
+  
+  column_count++;
+}
+
+//read the entire file and store it in the 4 coverage vectors
+line_stream.clear();
+while ( getline(coverage_file, line) ){
+  
+  if (line == ""){
+    break;
+  }
+  
+  line_stream.clear();
+  line_stream.str(line);
+  
+  for (current_column = 0; current_column < column_count; current_column++){
+    if (current_column == unique_top_column){
+      line_stream >> unique_top;
+    }
+    else if (current_column == unique_bot_column){
+      line_stream >> unique_bot;
+    }
+    else if (current_column == redundant_top_column){
+      line_stream >> redundant_top;
+    }
+    else if (current_column == redundant_bot_column){
+      line_stream >> redundant_bot;
+    }
+    else {
+      line_stream >> skip;
+    }
+  }
+  
+  unique_top_vector.push_back(unique_top);
+  unique_bot_vector.push_back(unique_bot);
+  redundant_top_vector.push_back(redundant_top);
+  redundant_bot_vector.push_back(redundant_bot);
+  
+}
+
+//set up template top and bot vectors for calculations
+if ( method == 1 ){
+  top_vector = unique_top_vector;
+  bot_vector = unique_bot_vector;
+}
+else if ( method == 2 ){
+  top_vector = unique_top_vector;
+  bot_vector = unique_top_vector;
+  
+  for ( uint32_t i = 0; i < unique_top_vector.size(); i++ ){
+    top_vector[i] += redundant_top_vector[i];
+    bot_vector[i] += redundant_bot_vector[i];
+  }
+}
+
+//go through each offset and find the offset sum
+for ( uint32_t i = 0; i < offset_range.size(); i++ ){
+  //cout << offset_range[i] << "\r";
+  //cout.flush();
+  
+  //set up bottom vector for this offset
+  offset_bot_vector = bot_vector;
+  
+  for ( int32_t j = 0; j < offset_range[i]; j++ ){
+    bot_value = offset_bot_vector[0];
+    offset_bot_vector.erase(offset_bot_vector.begin());
+    offset_bot_vector.push_back( bot_value );
+  }
+  
+  //finding sum
+  
+  offset_sum = 0;
+  
+  for (uint32_t j = 0; j < top_vector.size(); j++ ){
+    //ignoring spots where there is 0 coverage in either the top or bottom
+    if (top_vector[j] == 0 || offset_bot_vector[j] == 0 ) continue;
+    offset_sum += ((top_vector[j] - offset_bot_vector[j]) * (top_vector[j] - offset_bot_vector[j]));
+  }
+  
+  period_file << offset_range[i] << "\t" << offset_sum << endl;
+}
+//cout << endl;
+coverage_file.close();
+period_file.close();
+}
   
 } // namespace breseq
