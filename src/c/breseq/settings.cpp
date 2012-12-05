@@ -677,17 +677,19 @@ namespace breseq
   
   void Settings::init_reference_sets(cReferenceSequences& ref_seq_info)
   {
+    bool debug = false;
+    
     set<string> junction_only_file_name_set(junction_only_file_names.begin(), junction_only_file_names.end());
-
+    if (debug) cerr << "Initializing reference sets..." << endl;
     for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++) {
-      //cout << it->get_file_name() << endl;
+      if (debug) cerr << it->get_file_name() << endl;
       if (junction_only_file_name_set.count(it->get_file_name())) {
         this->junction_only_seq_id_set.insert(it->m_seq_id);
-        //cout << "Junction only: " << it->m_seq_id << endl;
+        if (debug) cerr << "Junction only: " << it->m_seq_id << endl;
       }
       else {
         this->reference_seq_id_set.insert(it->m_seq_id);
-        //cout << "Normal: " << it->m_seq_id << endl;
+        if (debug) cerr << "Normal: " << it->m_seq_id << endl;
       }
     }
   }
