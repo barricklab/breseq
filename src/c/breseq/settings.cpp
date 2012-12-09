@@ -120,21 +120,33 @@ namespace breseq
     ("verbose,v","Produce verbose output",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
 		("output,o", "Path to breseq output", ".")
 		("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files. (REQUIRED)")
-		("junction-only-reference,s", "File containing reference sequences in GenBank, GFF3, or FASTA format. These references are only used for calling junctions with other reference sequences. Option may be provided multiple times for multiple files. (REQUIRED)", NULL, ADVANCED_OPTION)
     ("name,n", "Human-readable name of sample/run for output [empty]", "")
     ("num-processors,j", "Number of processors to use in multithreaded steps", 1)
     ("aligned-sam", "Input files are aligned and SAM files, rather than FASTQ files. Junction prediction steps will be skipped.", TAKES_NO_ARGUMENT)
-    ("no-junction-prediction,j", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
+    ;
+    
+    options.addUsage("Junction Options", true);
+    options
     ("base-quality-cutoff,b", "Ignore bases with quality scores lower than this value", 3, ADVANCED_OPTION)
     ("quality-score-trim", "Trim the ends of reads past any base with a quality score below --base-quality-score-cutoff.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("require-match-length", "Only consider alignments that cover this many bases of a read", 0, ADVANCED_OPTION)
     ("require-match-fraction", "Only consider alignments that cover this fraction of a read", 0.9)
-    ("junction-alignment-pair-limit", "Only consider this many passed alignment pairs when creating candidate junction sequences", 100000)
-
     ("deletion-coverage-propagation-cutoff","Value for coverage above which deletions are cutoff. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
     ("deletion-coverage-seed-cutoff","Value for coverage below which deletions are seeded", 0, ADVANCED_OPTION)
     ("mutation-score-cutoff", "Log10 E-value cutoff for base-substitution and micro-indel predictions", 10, ADVANCED_OPTION)
-    // Polymorphism block
+    ;
+    
+    options.addUsage("Junction Options", true);
+    options
+    ("no-junction-prediction,j", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
+    ("junction-only-reference,s", "File containing reference sequences in GenBank, GFF3, or FASTA format. These references are only used for calling junctions with other reference sequences. Option may be provided multiple times for multiple files. (REQUIRED)", NULL, ADVANCED_OPTION)
+    ("junction-alignment-pair-limit", "Only consider this many passed alignment pairs when creating candidate junction sequences", 100000)
+    ("junction-score-cutoff", "Maximum negative log10 probability of uneven coverage across a junction breakpoint to accept (0=OFF)", 3.0, ADVANCED_OPTION)
+    ("junction-minumum-pos-hash-score", "Minimum number of distinct spanning read start positions required to accept a junction", 2, ADVANCED_OPTION)
+    ;
+        
+    options.addUsage("Polymorphism (Mixed Population) Options", true);
+    options
     ("polymorphism-prediction,p", "Predict polymorphic (mixed) mutations", TAKES_NO_ARGUMENT)
     ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("polymorphism-reject-homopolymer-length", "Reject polymorphisms predicted in homopolymer repeats with this length or greater (DEFAULT= consensus mode, 3; polymorphism mode, 0) ", "", ADVANCED_OPTION)
@@ -142,13 +154,10 @@ namespace breseq
     ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias (DEFAULT = OFF)", "", ADVANCED_OPTION)
     ("polymorphism-frequency-cutoff", "Only predict polymorphisms where both allele frequencies are > than this value (DEFAULT= consensus mode, 0.1; polymorphism mode, 0.0)", "", ADVANCED_OPTION)
     ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms where this many reads on each strand support alternative alleles (DEFAULT= consensus mode, 2; polymorphism mode, 0", "", ADVANCED_OPTION)
+    ("targeted-sequencing", "Reference sequences were targeted for ultra-deep sequencing. Do not fit coverage distribution.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
     
-    // Remove these once bowtie2 use has been proven...
-    //("bowtie2", "Preprocess the alignments with Bowtie2.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    //("bowtie2-align", "Map reads with Bowtie2 instead of SSAHA2.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    
-    // Periodicity block
+    // CNV and Periodicity block
     options.addUsage("Experimental Options", true);
     options
     ("user-junction-gd","User supplied genome diff file of JC evidence to use as candidate junctions and report support for.", "", ADVANCED_OPTION) 
@@ -236,7 +245,6 @@ namespace breseq
     
     this->num_processors = from_string<int32_t>(options["num-processors"]);
     
-    this->no_junction_prediction = options.count("no-junction-prediction");
     this->do_copy_number_variation = options.count("cnv");
     this->copy_number_variation_tile_size = from_string<uint32_t>(options["cnv-tile-size"]);
     this->ignore_redundant_coverage = options.count("cnv-ignore-redundant");
@@ -245,7 +253,6 @@ namespace breseq
     this->bowtie2_align = options.count("bowtie2-align");
     this->bowtie2_align = true; // testing
     
-    this->maximum_junction_sequence_passed_alignment_pairs_to_consider = from_string<uint64_t>(options["junction-alignment-pair-limit"]);
     
     this->do_periodicity = options.count("periodicity");
     this->periodicity_method = from_string<uint32_t>(options["periodicity-method"]);
@@ -269,6 +276,12 @@ namespace breseq
     this->deletion_coverage_seed_cutoff = from_string<double>(options["deletion-coverage-seed-cutoff"]);
     ASSERT(this->deletion_coverage_propagation_cutoff >= 0, "Argument --deletion-coverage-seed-cutoff must be > 0")
 		this->mutation_log10_e_value_cutoff = from_string<double>(options["mutation-score-cutoff"]);
+    
+    // Junction Prediction
+    this->no_junction_prediction = options.count("no-junction-prediction");
+    this->maximum_junction_sequence_passed_alignment_pairs_to_consider = from_string<uint64_t>(options["junction-alignment-pair-limit"]);
+    this->junction_pos_hash_neg_log10_p_value_cutoff = from_string<double>(options["junction-score-cutoff"]);
+    this->minimum_alignment_resolution_pos_hash_score = from_string<uint32_t>(options["junction-minumum-pos-hash-score"]);
     
     //
     // Set the read alignment evidence model
@@ -318,7 +331,9 @@ namespace breseq
     if (options.count("polymorphism-minimum-coverage-each-strand"))
       this->polymorphism_minimum_new_coverage_each_strand = from_string<int32_t>(options["polymorphism-minimum-coverage-each-strand"]);
     
-    //@JEB restore option after CNV does not require this file to be printed
+    
+    this->targeted_sequencing = options.count("targeted-sequencing");
+    
     this->print_mutation_identification_per_position_file = options.count("per-position-file");
     
 		this->post_option_initialize();

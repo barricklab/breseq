@@ -95,6 +95,9 @@ namespace breseq {
     summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff = 0.0;
     summary.unique_coverage[seq_id].deletion_coverage_seed_cutoff = 0;
 
+    // Perform no fitting if we are in targeted_sequencing mode.
+    if (settings.targeted_sequencing) return;
+    
     string unique_only_coverage_plot_file_name = settings.file_name(plot_key, "@", seq_id);
     string unique_only_coverage_distribution_file_name = settings.file_name(distribution_file_name, "@", seq_id);
 

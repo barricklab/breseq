@@ -272,6 +272,9 @@ namespace breseq
     //! Predict not only consensus genotype calls, but test mixed states between them.
     bool mixed_base_prediction;                           // Default = true
     
+    //! References are amplicons or ultra-deep sequencing of a small reference
+    bool targeted_sequencing;                             // Default = false COMMAND-LINE OPTION
+    
     //! Verbose output of bases encountered at each position
     bool print_mutation_identification_per_position_file;
 
@@ -279,7 +282,7 @@ namespace breseq
     double polymorphism_log10_e_value_cutoff;               // Default = mutation_log10_e_value_cutoff = 10
 		double polymorphism_bias_p_value_cutoff;                // Default = 0.05
 		double polymorphism_frequency_cutoff;                   // Default = 0.1 for mixed base | 0.0 for polymorphism
-		int32_t polymorphism_minimum_new_coverage_each_strand; // Default = 1
+		int32_t polymorphism_minimum_new_coverage_each_strand;  // Default = 1
 		uint32_t polymorphism_reject_homopolymer_length;        // Default = 0 (OFF)
 		bool no_indel_polymorphisms;                            // Default = false
 		
