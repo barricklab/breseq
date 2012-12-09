@@ -1334,8 +1334,7 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_det
       
       ss << td("align=\"center\" class=\"" + annotate_key +"\"",
                 c[key + "_read_count"] + " (" + string_to_fixed_digit_string(c[key + "_coverage"], 3) + ")" );
-      
-      
+            
       //no longer print overlap
       //ss << td("rowspan=\"2\" align=\"center\"", c["overlap"]) << endl;
       ss << td("rowspan=\"2\" align=\"center\"", 
@@ -1343,7 +1342,7 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_det
       ss << td("rowspan=\"2\" align=\"center\"", 
                c["pos_hash_score"] + "/" +  c["max_pos_hash_score"]) << endl;
       ss << td("rowspan=\"2\" align=\"center\"", 
-               c["neg_log10_pos_hash_p_value"]) << endl;
+              c["neg_log10_pos_hash_p_value"]) << endl;
 
 //@ded frequency info goes here. If changing to only display if frequency != 1, this needs to be conditional.
       ss << td("rowspan=\"2\" align=\"center\"", c["new_junction_frequency"]) << endl;   

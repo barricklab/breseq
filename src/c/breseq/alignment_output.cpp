@@ -122,13 +122,17 @@ void alignment_output::create_alignment ( const string& region, const string& co
     aligned_reference_1.ghost_end = from_string<uint32_t>(split_corrected[1]);
     aligned_reference_2.ghost_start = from_string<uint32_t>(split_corrected[4]);    
     aligned_reference_2.truncate_start = aligned_reference_1.truncate_end + 1 + split_region[7].size();
-    
+        
     aligned_reference_1.ghost_seq_id = split_region[0];    
     aligned_reference_2.ghost_seq_id = split_region[3];
     
     aligned_reference_1.overlap = (overlap_offset > 0) ? (overlap_offset-from_string<int32_t>(split_corrected[10])) : 0;
     aligned_reference_2.overlap = positive_overlap_offset;
  
+    //cout << "Junction reference information" << endl;
+    //cout << aligned_reference_1.truncate_start << "-" << aligned_reference_1.truncate_end << " overlap " << aligned_reference_1.overlap << endl;
+    //cout << aligned_reference_2.truncate_start << "-" << aligned_reference_2.truncate_end << " overlap " << aligned_reference_2.overlap << endl;
+
     // common settings
     aligned_reference_1.target_id = target_id;
     aligned_reference_1.seq_id = m_alignment_output_pileup.target_name(target_id);
@@ -156,13 +160,38 @@ void alignment_output::create_alignment ( const string& region, const string& co
   m_alignment_output_pileup.set_print_progress(false);
   m_alignment_output_pileup.do_fetch ( region );
 
-
   if ( ( m_alignment_output_pileup.unique_start == 0 ) || ( m_alignment_output_pileup.unique_end == 0 ) )
   {
     m_error_message = "No reads uniquely aligned to region.";
     return;
   }
   
+  // For junction alignments -- remove those that don't cross the unique point in the junction
+  if ( bJunctionAlignment )
+  {
+    Aligned_Reads new_aligned_reads;
+    Aligned_Reads& aligned_reads = m_alignment_output_pileup.aligned_reads;
+    
+    uint32_t required_end_1 = m_alignment_output_pileup.aligned_references[0].truncate_end + m_alignment_output_pileup.aligned_references[0].overlap;
+    uint32_t required_start_2 = m_alignment_output_pileup.aligned_references[1].truncate_start - m_alignment_output_pileup.aligned_references[1].overlap;
+    
+    for(Aligned_Reads::iterator ari = aligned_reads.begin(); ari != aligned_reads.end(); ari++)
+    {
+      Aligned_Read& ar = ari->second;
+      
+      //cout << ar.seq_id << endl;
+      //cout << ar.reference_start << " " << ar.reference_end << " " << required_end_1 << " " << required_start_2 << endl;
+      if (ar.reference_end <= required_end_1 )
+        continue;
+      if (ar.reference_start >= required_start_2 )  
+        continue;
+      //cout << "kept" << endl;
+      new_aligned_reads[ari->first] = ari->second;
+    }
+    m_alignment_output_pileup.aligned_reads = new_aligned_reads;
+  }
+
+
   // Reduce the number of reads to the maximum that we want to align
   Aligned_Reads& aligned_reads = m_alignment_output_pileup.aligned_reads;
   if ( (m_maximum_to_align != 0) && (aligned_reads.size() > m_maximum_to_align) )
@@ -179,7 +208,7 @@ void alignment_output::create_alignment ( const string& region, const string& co
     
     double max = static_cast<double>(m_maximum_to_align);
     double num = static_cast<double>(key_list.size());
-    // Pick the desired number of reads evenly across th reads returned
+    // Pick the desired number of reads evenly across the reads returned
     for (size_t i=0; i<m_maximum_to_align; i++)
     {
       size_t keep_index = static_cast<size_t>(floor(static_cast<double>(i) / max * num));
@@ -273,7 +302,8 @@ void alignment_output::create_alignment ( const string& region, const string& co
       {
         
         char base = m_alignment_output_pileup.reference_base_char_1(target_id, pos);
-        if ( ((aligned_reference.truncate_start != 0) && (pos < aligned_reference.truncate_start))            || ((aligned_reference.truncate_end != 0) && (pos > aligned_reference.truncate_end)) )
+        if ( ((aligned_reference.truncate_start != 0) && (pos < aligned_reference.truncate_start))
+            || ((aligned_reference.truncate_end != 0) && (pos > aligned_reference.truncate_end)) )
         {
           base = '.';
         }
@@ -286,7 +316,8 @@ void alignment_output::create_alignment ( const string& region, const string& co
       while ( pos <= aligned_reference.end + ref_extend_right )
       {
         char base = m_alignment_output_pileup.reference_base_char_1(target_id, pos);
-        if ( ((aligned_reference.truncate_start != 0) && (pos < aligned_reference.truncate_start))            || ((aligned_reference.truncate_end != 0) && (pos > aligned_reference.truncate_end) ))
+        if ( ((aligned_reference.truncate_start != 0) && (pos < aligned_reference.truncate_start))
+            || ((aligned_reference.truncate_end != 0) && (pos > aligned_reference.truncate_end) ))
         {
           base = '.';
         }
@@ -699,6 +730,9 @@ void alignment_output::Alignment_Output_Pileup::fetch_callback ( const alignment
   aligned_read.is_redundant = a.is_redundant();
   aligned_read.mapping_quality = a.mapping_quality();
   
+  aligned_read.reference_start = a.reference_start_1();
+  aligned_read.reference_end = a.reference_end_1();
+
   aligned_reads[aligned_read.seq_id] = aligned_read;
   
   if (verbose)

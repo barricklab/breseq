@@ -219,9 +219,10 @@ double PosHashProbabilityTable::probability(string& seq_id, uint32_t pos_hash_sc
   
   Parameters& p = param[seq_id];
 
-  // no coverage was fit for this fragment.
-  if (p.negative_binomial_size == 0) return 999999;
-  
+  // no coverage was fit for this fragment, allow it to pass for this fragment no matter what by passing high value
+  // @JEB we may want to disallow these junctions instead, by passing a negative value here?
+  if (p.negative_binomial_size == 0)
+    return 999999;
   
   // Calculate this entry in the table -- 
   uint32_t max_coverage = static_cast<uint32_t>(round(10*p.average_coverage));
@@ -502,17 +503,24 @@ void resolve_alignments(
     // criterion, or if they just have no matches, unless they are user-defined junctions
     record = !failed || junction_info.user_defined;
     
+    // If both are on a junction-only sequence then don't count it
+    failed = failed || ( settings.junction_only_seq_id_set.count(junction_info.sides[0].seq_id) && settings.junction_only_seq_id_set.count(junction_info.sides[1].seq_id) );
+    
+    junction_test_info.neg_log10_pos_hash_p_value = -1;
+    
     // table is by overlap, then pos hash score
-    
-    double neg_log10_p_value_1 = pos_hash_p_value_calculator.probability(junction_info.sides[0].seq_id, junction_test_info.pos_hash_score, junction_test_info.max_pos_hash_score);
-    double neg_log10_p_value_2 = pos_hash_p_value_calculator.probability(junction_info.sides[1].seq_id, junction_test_info.pos_hash_score, junction_test_info.max_pos_hash_score);
-    
-    // Take the *least* significantly below pos_hash cutoff
-    // Why this way? Consider an element moving from a plasmid to a genome
-    // we don't want to penalize it with requiring coverage typical of the plasmid.
-    junction_test_info.neg_log10_pos_hash_p_value = min(neg_log10_p_value_1, neg_log10_p_value_2);
-    
-    failed = failed || (junction_test_info.neg_log10_pos_hash_p_value > settings.junction_pos_hash_neg_log10_p_value_cutoff);
+    if (settings.junction_pos_hash_neg_log10_p_value_cutoff) {
+      
+      double neg_log10_p_value_1 = pos_hash_p_value_calculator.probability(junction_info.sides[0].seq_id, junction_test_info.pos_hash_score, junction_test_info.max_pos_hash_score);
+      double neg_log10_p_value_2 = pos_hash_p_value_calculator.probability(junction_info.sides[1].seq_id, junction_test_info.pos_hash_score, junction_test_info.max_pos_hash_score);
+      
+      // Take the *least* significantly below pos_hash cutoff
+      // Why this way? Consider an element moving from a plasmid to a genome
+      // we don't want to penalize it with requiring coverage typical of the plasmid.
+      junction_test_info.neg_log10_pos_hash_p_value = min(neg_log10_p_value_1, neg_log10_p_value_2);
+      
+      failed = failed || (junction_test_info.neg_log10_pos_hash_p_value > settings.junction_pos_hash_neg_log10_p_value_cutoff);
+    }
         
     if (verbose) 
     {
@@ -1681,7 +1689,7 @@ cDiffEntry junction_to_diff_entry(
   ("total_non_overlap_reads", to_string(test_info.total_non_overlap_reads))
   ("pos_hash_score", to_string(test_info.pos_hash_score))
   ("max_pos_hash_score", to_string(test_info.max_pos_hash_score))
-  ("neg_log10_pos_hash_p_value", to_string(test_info.neg_log10_pos_hash_p_value))
+  ("neg_log10_pos_hash_p_value", test_info.neg_log10_pos_hash_p_value == -1 ? "NT" : to_string(test_info.neg_log10_pos_hash_p_value))
   ("continuation_left", to_string<uint32_t>(test_info.continuation_left))
   ("continuation_right", to_string<uint32_t>(test_info.continuation_right))
   ;
