@@ -64,7 +64,7 @@ all-local :
 	## NEW method: 'make test' after 'make'
 	echo "export TESTBINPREFIX=$(ROOTDIR)/src/c/breseq" > tests/test.config;
 	echo "export BRESEQ_DATA_PATH=$(ROOTDIR)/src/c/breseq" >> tests/test.config;
-	echo "export BRESEQ_SAMTOOLS_PATH=$(ROOTDIR)/extern/samtools-0.1.15" >> tests/test.config;
+	echo "export BRESEQ_SAMTOOLS_PATH=$(ROOTDIR)/extern/samtools-0.1.18" >> tests/test.config;
 	
 install-exec-local :
 

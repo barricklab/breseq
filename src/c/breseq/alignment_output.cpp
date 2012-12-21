@@ -64,8 +64,8 @@ alignment_output::alignment_output ( string bam,
 void alignment_output::create_alignment ( const string& region, const string& corrected )
 {
   // we need the target_id to properly fill out the reference sequence later
-  uint32_t target_id, start_pos, end_pos;
-  m_alignment_output_pileup.parse_region(region, target_id, start_pos, end_pos);
+  uint32_t target_id, start_pos, end_pos, insert_start, insert_end;
+  m_alignment_output_pileup.parse_region(region, target_id, start_pos, end_pos, insert_start, insert_end);
   
   
   // Check for special reference lines that are junctions...
