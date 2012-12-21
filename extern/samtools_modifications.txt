@@ -3,15 +3,7 @@
 ##
 ## We have increased that limit.
 
-diff -r 08fa84d3f686 extern/samtools-0.1.15/bam_pileup.c
---- a/extern/samtools-0.1.15/bam_pileup.c	Sat Jul 30 20:06:52 2011 -0500
-+++ b/extern/samtools-0.1.15/bam_pileup.c	Sun Jul 31 07:40:58 2011 -0500
-@@ -169,7 +169,7 @@
- 	iter->dummy = mp_alloc(iter->mp);
- 	iter->max_tid = iter->max_pos = -1;
- 	iter->flag_mask = BAM_DEF_MASK;
--	iter->maxcnt = 8000;
-+	iter->maxcnt = 10000000;
- 	if (func) {
- 		iter->func = func;
- 		iter->data = data;
+172c172
+< 	iter->maxcnt = 8000;
+---
+> 	iter->maxcnt = 1000000000;
