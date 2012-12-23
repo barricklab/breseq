@@ -130,7 +130,7 @@
 		702EABF613421A8400103019 /* fastq.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = fastq.cpp; path = breseq/fastq.cpp; sourceTree = SOURCE_ROOT; };
 		70367D2013EB232C000787CC /* coverage_distribution.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = coverage_distribution.cpp; path = breseq/coverage_distribution.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		70436D5713FF6D7D006448FB /* coverage_distribution.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = coverage_distribution.r; path = breseq/coverage_distribution.r; sourceTree = "<group>"; };
-		70436D5A13FF7675006448FB /* samtools */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; name = samtools; path = "../../extern/samtools-0.1.15/samtools"; sourceTree = "<group>"; };
+		70436D5A13FF7675006448FB /* samtools */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; name = samtools; path = "../../extern/samtools-0.1.18/samtools"; sourceTree = SOURCE_ROOT; };
 		70616DCF1400A0C0006E7800 /* plot_coverage.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = plot_coverage.r; path = breseq/plot_coverage.r; sourceTree = "<group>"; };
 		70616DD01400A0C0006E7800 /* plot_error_rate.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = plot_error_rate.r; path = breseq/plot_error_rate.r; sourceTree = "<group>"; };
 		70616DD11400A0C0006E7800 /* polymorphism_statistics.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = polymorphism_statistics.r; path = breseq/polymorphism_statistics.r; sourceTree = "<group>"; };
@@ -162,11 +162,13 @@
 		70B4AEAF1391F72200B9638D /* fasta.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = fasta.cpp; path = breseq/fasta.cpp; sourceTree = SOURCE_ROOT; };
 		70B69DE51369B8700001B750 /* breseq_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = breseq_cmdline.cpp; path = breseq/breseq_cmdline.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		70B69DE91369D3510001B750 /* calculate_trims.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = calculate_trims.cpp; path = breseq/calculate_trims.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
-		70B69E051369E2440001B750 /* libbam.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libbam.a; path = "../../extern/samtools-0.1.15/libbam.a"; sourceTree = "<group>"; };
+		70B69E051369E2440001B750 /* libbam.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libbam.a; path = "../../extern/samtools-0.1.18/libbam.a"; sourceTree = "<group>"; };
 		70B69E091369E51E0001B750 /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		70B69E0A1369E51E0001B750 /* Release.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		70B69E0B1369E51E0001B750 /* Shared.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Shared.xcconfig; sourceTree = "<group>"; };
 		70B9320E1394008200885753 /* settings.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = settings.cpp; path = breseq/settings.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		70B954E91686902E00EF030F /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
+		70B954EB1686902E00EF030F /* libbam.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = libbam.1; sourceTree = "<group>"; };
 		70CB720F140FEB6400D578EB /* alignment.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = alignment.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		70CB7210140FEB6400D578EB /* alignment_output.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = alignment_output.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		70CB7212140FEB6400D578EB /* anyoption.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = anyoption.h; sourceTree = "<group>"; };
@@ -234,6 +236,7 @@
 				4247E77F1268E175006A6D78 /* breseq */,
 				421ACF5F1170E06300C2EB85 /* lib */,
 				70436D5613FF6D5C006448FB /* copied  */,
+				70B954E81686902E00EF030F /* libbam */,
 				421ACF301170DF1800C2EB85 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -321,6 +324,15 @@
 			path = config;
 			sourceTree = "<group>";
 		};
+		70B954E81686902E00EF030F /* libbam */ = {
+			isa = PBXGroup;
+			children = (
+				70B954E91686902E00EF030F /* main.c */,
+				70B954EB1686902E00EF030F /* libbam.1 */,
+			);
+			path = libbam;
+			sourceTree = "<group>";
+		};
 		70CB720E140FEB6400D578EB /* libbreseq */ = {
 			isa = PBXGroup;
 			children = (
@@ -369,12 +381,12 @@
 /* Begin PBXLegacyTarget section */
 		7056AE0014511F5D00890AB0 /* samtools */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-f Makefile.original CFLAGS=\"-arch x86_64\" $(ACTION)";
+			buildArgumentsString = "-f Makefile.xcode CFLAGS=\"-arch $(ARCHS)\" $(ACTION)";
 			buildConfigurationList = 7056AE0114511F5D00890AB0 /* Build configuration list for PBXLegacyTarget "samtools" */;
 			buildPhases = (
 			);
 			buildToolPath = /usr/bin/make;
-			buildWorkingDirectory = "$(PROJECT_DIR)/../../extern/samtools-0.1.15";
+			buildWorkingDirectory = "$(PROJECT_DIR)/../../extern/samtools-0.1.18";
 			dependencies = (
 			);
 			name = samtools;
