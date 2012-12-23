@@ -277,22 +277,14 @@ namespace breseq {
 			///
 			// (1) there is a junction that exactly crosses the deletion boundary 
 			///
-      
-      // We will be erasing inside the jc_it loop.  This is to keep
-      // track of whether or not we should iterate to the next element.
-      bool jc_it_iterator = true;
-
-			for(diff_entry_list_t::iterator jc_it = jc.begin(); jc_it != jc.end(); ) //JC
+      bool done = false;
+			for(diff_entry_list_t::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) //JC
 			{
 				cDiffEntry& jc_item = **jc_it;
-        jc_it_iterator = true;
 
 				if (jc_item["side_1_seq_id"] != mut["seq_id"] || jc_item["side_2_seq_id"] != mut["seq_id"])  {
-          // Iterate it ONLY if we haven't erased something
-          if(jc_it_iterator)jc_it++;  
           continue;  
         }
-					
         
         // Due to overlap resolution, this can change from the time when we sorted this way... *Ugh* .. 
         // so we fix it here so that the lower coordinate part of the junction is first.
@@ -301,14 +293,6 @@ namespace breseq {
         int32_t side_2_position = n(jc_item["side_2_position"]);
         int32_t side_1_strand = n(jc_item["side_1_strand"]);
         int32_t side_2_strand = n(jc_item["side_2_strand"]);
-        
-        /*
-        if ( ((side_1_position == 4493779) || (side_2_position == 4493779))
-          && ((side_1_position == 4493990) || (side_2_position == 4493990))) 
-        {
-          cout << "test" << endl;
-        }
-        */
         
         if (side_2_position < side_1_position) {
           swap(side_1_position, side_2_position);
@@ -357,18 +341,22 @@ namespace breseq {
             mut[NEW_SEQ] = ji.unique_read_sequence;
           }
           
-          jc_it = jc.erase(jc_it); // iterator is now past the erased element
-          jc_it_iterator = false; //We just removed the current jc, do not iterate.
+          jc_it = jc.erase(jc_it);
           
 					gd.add(mut);
+          mc_it = mc.erase(mc_it); // iterator is now past the erased element
+          mc_it--;                //We just removed the current jc, do not iterate.          
+          
           if (verbose)
             cout << "**** Junction precisely matching deletion boundary found ****\n";
+          done = true;
+          
+          break; // out of jc item loop;
 				}
-        
-        // Iterate it ONLY if we haven't erased something
-        if(jc_it_iterator)jc_it++;
 			}
+      if (done) continue; // to next mc item
 
+      
       cSequenceFeature* r1_pointer = within_repeat(mut["seq_id"], n(mut["position"]));
       cSequenceFeature* r2_pointer = within_repeat(mut["seq_id"], n(mut["position"]) + n(mut["size"]));
       
@@ -415,6 +403,9 @@ namespace breseq {
 				// remember the name of the element
 				mut["between"] = r1["name"];
 				gd.add(mut);
+        
+        mc_it = mc.erase(mc_it); // iterator is now past the erased element
+        mc_it--;                //We just removed the current jc, do not iterate.
         
         if (verbose)
           cout << "**** Ends of junction in copies of same repeat element ****\n";
@@ -507,6 +498,9 @@ namespace breseq {
 				mut._evidence.push_back(j._id);
 				jc.erase(jc_it);
 				gd.add(mut);
+        
+        mc_it = mc.erase(mc_it); // iterator is now past the erased element
+        mc_it--;                //We just removed the current jc, do not iterate.
         
         if (verbose)
           cout << "**** Junction with repeat element corresponding to deletion boundaries found ****\n";
@@ -815,58 +809,6 @@ namespace breseq {
 					cout << "J2 IS overlap length: " << j2_is_overlap_length << endl;
 				}
 
-        /*
-        pos_1 = n(j1[j1["_is_interval"] + "_position"]);
-        string j1_is_seq_matched = "";
-				if (n(j1[j1["_is_interval"] + "_strand"]) == -1)
-        {
-          start_1 = pos_1 - j1_is_overlap_length - 1;
-          end_1   = pos_1 - j1_not_flush_length;
-					j1_is_seq_matched = ref_seq_info.get_sequence_1 (
-            j1[j1["_is_interval"] + "_seq_id"],
-            start_1,
-            end_1
-					);
-					j1_is_seq_matched = reverse_complement(j1_is_seq_matched);
-				}
-				else
-				{          
-          start_1 = pos_1 + j1_not_flush_length;
-          end_1   = pos_1 + j1_is_overlap_length - 1;
-          j1_is_seq_matched = ref_seq_info.get_sequence_1 (
-            j1[j1["_is_interval"] + "_seq_id"],
-            start_1,
-            end_1
-					);
-				}
-        */
-        /*
-
-        pos_1 = n(j2[j2["_is_interval"] + "_position"]);
-        string j2_is_seq_matched = "";
-				if (n(j2[j2["_is_interval"] + "_strand"]) == -1)
-				{
-          start_1 = pos_1 - j2_is_overlap_length - 1;
-          end_1   = pos_1 - j2_not_flush_length;
-          j2_is_seq_matched = ref_seq_info.get_sequence_1 (
-            j2[j2["_is_interval"] + "_seq_id"],
-            start_1,
-            end_1
-          );
-					j2_is_seq_matched = reverse_complement(j2_is_seq_matched);
-				}
-				else
-				{
-          start_1 = pos_1 + j2_not_flush_length;
-          end_1   = pos_1 + j2_is_overlap_length - 1;
-          j2_is_seq_matched = ref_seq_info.get_sequence_1 (
-            j2[j2["_is_interval"] + "_seq_id"],
-            start_1,
-            end_1
-					);
-				}
-         */
-
         // what are the actual sequences of this length at the end of the IS elements?
         start_1 = n(j1["_" + j1["_is_interval"] + "_is_start"]);
         end_1   = start_1 + j1_is_overlap_length - 1;
@@ -1001,6 +943,28 @@ namespace breseq {
           {
             cout << it->first << " = " << it->second << endl; 
           }
+        }
+        
+        // @JEB 12-22-12
+        // Add missing coverage evidence that corresponds to the deleted region
+        // Code assumes this will always be in _del_end field.
+          
+        if ( n(mut["duplication_size"]) < 0 ) {
+          
+          for(diff_entry_list_t::iterator mc_it = mc.begin(); mc_it != mc.end(); mc_it++) {
+            cDiffEntry& mc_item = **mc_it;
+            
+            if  (  ( mc_item[SEQ_ID] == mut[SEQ_ID])
+                && ( n(mc_item[START]) == n(mut[POSITION]) ) 
+                && ( -n(mut["duplication_size"]) == n(mc_item[END]) - n(mc_item[START]) + 1)
+              )
+             {
+               mut._evidence.push_back(mc_item._id);
+               mc.erase(mc_it);
+               break;
+             }
+          }
+          
         }
         
 				gd.add(mut);
@@ -1189,9 +1153,7 @@ namespace breseq {
 
 		{
       vector<gd_entry_type> del_types = make_vector<gd_entry_type>(DEL);
-      vector<gd_entry_type> mc_types = make_vector<gd_entry_type>(MC);
 			diff_entry_list_t del = gd.list(del_types);
-      diff_entry_list_t mc = gd.list(mc_types);
 
       for(diff_entry_list_t::iterator ra_it = ra.begin(); ra_it != ra.end(); ra_it++) //RA
       {
