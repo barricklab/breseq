@@ -16,7 +16,6 @@
 #define FILE_FLAG_TYPE 		4
 #define UNKNOWN_TYPE 		5
 
-#define DEFAULT_MAXOPTS 	10
 #define MAX_LONG_PREFIX_LENGTH 	2
 
 #define DEFAULT_MAXHELP         10
@@ -37,8 +36,6 @@ namespace breseq {
 	public: /* the public interface */
 		AnyOption();
 		AnyOption(const string& usage_prefix);
-		AnyOption(int maxoptions );
-		AnyOption(int maxoptions , int maxcharoptions);
 		~AnyOption();
 
 		/*
@@ -289,18 +286,12 @@ namespace breseq {
 
 
 		/* option strings storage + indexing */
-		int max_options; 	/* maximum number of options */
-		vector<string> options; 	/* storage */
-		int *optiontype; 	/* type - common, command, file */
-		int *optionindex;	/* index into value storage */
-		int option_counter; 	/* counter for added options  */
-
-		/* option chars storage + indexing */
-		int max_char_options; 	/* maximum number options */
-		char *optionchars; 	/*  storage */
-		int *optchartype; 	/* type - common, command, file */
-		int *optcharindex; 	/* index into value storage */
-		int optchar_counter; 	/* counter for added options  */
+		vector<string> options; 	/* storage */		
+    vector<char> optionchars; 	/*  storage */
+		vector<int32_t> optiontype; 	/* type - common, command, file */
+		vector<int32_t> optionindex;	/* index into value storage */
+    
+    set<string> assigned_options; /* keep track of previously assigned options */
 
 		/* values */
 		map <int, string> values; 		/* common value storage */
@@ -314,7 +305,6 @@ namespace breseq {
 
 		bool command_set;	/* if argc/argv were provided */
 		bool file_set;		/* if a filename was provided */
-		bool mem_allocated;     /* if memory allocated in init() */
 		bool posix_style; 	/* enables to turn off POSIX style options */
 		bool verbose;		/* silent|verbose */
 		bool print_usage;	/* usage verbose */
@@ -346,25 +336,15 @@ namespace breseq {
 
 	private: /* the hidden utils */
 		void init();
-		void init(int maxopt, int maxcharopt );
-		bool alloc();
-		void cleanup();
 		bool valueStoreOK();
-
-		/* grow storage arrays as required */
-		bool doubleOptStorage();
-		bool doubleCharStorage();
-		bool doubleUsageStorage();
 
 		bool setValue( const string option , string value );
 		bool setFlagOn( const string option );
 		bool setValue( char optchar , string value);
 		bool setFlagOn( char optchar );
 
-		void addOption( const string option , int type );
-		void addOption( char optchar , int type );
-		void addOptionError( const string opt);
-		void addOptionError( char opt);
+		void addOption( const string option , char optchar, int type );
+
 		bool findFlag( int index );
 		void addUsageError( string line );
 		bool CommandSet();

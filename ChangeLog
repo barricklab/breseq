@@ -1,3 +1,8 @@
+Version 0.22
+    * Fixed issue where missing coverage not matched to certain MOBs.
+    * Fixed duplicate -j command line option definition.
+    * Updated bundled SAMtools to version 0.18.
+    
 Version 0.21
     * Fixed improperly failure of check for bowtie2 versions 2.0.0+.
     * Adjusted bowtie2 seed parameters to regain some degradation in sensitivity in
