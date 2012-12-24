@@ -138,7 +138,7 @@ namespace breseq
     
     options.addUsage("Junction Options", true);
     options
-    ("no-junction-prediction,j", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
+    ("no-junction-prediction", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
     ("junction-only-reference,s", "File containing reference sequences in GenBank, GFF3, or FASTA format. These references are only used for calling junctions with other reference sequences. Option may be provided multiple times for multiple files. (REQUIRED)", NULL, ADVANCED_OPTION)
     ("junction-alignment-pair-limit", "Only consider this many passed alignment pairs when creating candidate junction sequences", 100000)
     ("junction-score-cutoff", "Maximum negative log10 probability of uneven coverage across a junction breakpoint to accept (0=OFF)", 3.0, ADVANCED_OPTION)
