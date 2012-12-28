@@ -112,7 +112,6 @@ namespace breseq {
 		endofline     = '\n';
 		whitespace    = ' ' ;
 		nullterminate = '\0';
-		set = false;
 		once = true;
 		hasoptions = false;
 		autousage = false;

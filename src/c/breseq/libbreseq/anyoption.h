@@ -321,7 +321,6 @@ namespace breseq {
 		char whitespace;
 		char nullterminate;
 
-		bool set;   //was static member
 		bool once;  //was static member
 
 		bool hasoptions;
