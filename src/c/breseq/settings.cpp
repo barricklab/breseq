@@ -889,7 +889,7 @@ namespace breseq
         cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
       }
       else {
-        cout << "---> bowtie2 version: " << this->installed["bowtie2_version_string"] << endl;
+        cout << "---> bowtie2  :: version " << this->installed["bowtie2_version_string"] << " [" << this->installed["bowtie2"] << "]" << endl;
       }
     }
 		// R version 2.1 required
@@ -907,7 +907,7 @@ namespace breseq
       cerr << "---> See http://www.r-project.org" << endl;
     }
     else {
-      cout << "---> R version: " << this->installed["R_version_string"] << endl;
+      cout << "---> R        :: version " << this->installed["R_version_string"] << " [" << this->installed["R"] << "]" << endl;
     }
 
     if (this->installed["samtools"].size() == 0)
@@ -917,7 +917,7 @@ namespace breseq
       cerr << "---> This should have been installed by the breseq installer." << endl;
     }
     else {
-      cout << "---> samtools version: " << this->installed["samtools_version_string"] << endl;
+      cout << "---> samtools :: version " << this->installed["samtools_version_string"] << " [" << this->installed["samtools"] << "]" << endl;
     }
 
 		if (!good_to_go) exit(0);
