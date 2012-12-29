@@ -294,8 +294,9 @@ namespace breseq {
         if (mapped_1)
           out_sam_file << line_1 << endl;
         
-        // read next line
+        // read next line not beginning in @
         not_done_1 = getline(input_sam_file_1, line_1);
+        
         if (not_done_1) {
           line_to_read_index(line_1, index_1, mapped_1);
         } else {
@@ -308,6 +309,7 @@ namespace breseq {
         
         // read next line
         not_done_2 = getline(input_sam_file_2, line_2);
+
         if (not_done_2) {
           line_to_read_index(line_2, index_2, mapped_2);
         } else {
