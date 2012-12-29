@@ -1154,7 +1154,7 @@ int breseq_default_action(int argc, char* argv[])
           bowtie2_seed_substring_size_relaxed = min<uint32_t>(31, bowtie2_seed_substring_size_relaxed);
           
           string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local " + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_relaxed) 
-            + " " + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_relaxed + " --no-unal --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + reference_sam_file_name; 
+            + " " + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_relaxed + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + reference_sam_file_name; 
           SYSTEM(command);
         } else {
 					string command = "ssaha2 -disk 2 -save " + reference_hash_file_name + " -kmer " + to_string(settings.ssaha2_seed_length) + " -skip " + to_string(settings.ssaha2_skip_length) + " -seeds 1 -score 12 -cmatch " + to_string(settings.ssaha2_seed_length) + " -ckmer 1 -output sam_soft -outfile " + reference_sam_file_name + " " + read_fastq_file;
@@ -1332,7 +1332,7 @@ int breseq_default_action(int argc, char* argv[])
             bowtie2_seed_substring_size_stringent = min<uint32_t>(31, bowtie2_seed_substring_size_stringent);
             
             string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local " + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_stringent) + " "
-             + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_stringent + " --no-unal --reorder -x " + candidate_junction_hash_file_name + " -U " + read_fastq_file + " -S " + candidate_junction_sam_file_name; 
+             + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_stringent + " --reorder -x " + candidate_junction_hash_file_name + " -U " + read_fastq_file + " -S " + candidate_junction_sam_file_name; 
             SYSTEM(command);
           }
         }

@@ -740,8 +740,19 @@ namespace breseq
       cerr << "In test mode. Samtools path: " << breseq_samtools_path << endl;
     }
     
-    // which can return an error message
+    if (this->installed["samtools"].size() != 0) {
+      string version_string = SYSTEM_CAPTURE(this->installed["samtools"], true);
+      size_t start_version_pos = version_string.find("Version:");
+      if (start_version_pos != string::npos) {
+        start_version_pos = version_string.find_first_not_of(" \t\r\n", start_version_pos+8);
+        size_t end_version_pos = version_string.find_first_of("\r\n", start_version_pos+1);
+        // This would just get the short version number
+        //size_t end_version_pos = version_string.find_first_not_of("0123456789.", start_version_pos+1);
+        this->installed["samtools_version_string"] = version_string.substr(start_version_pos, end_version_pos - start_version_pos);
+      }
+    }
     
+    // which can return an error message    
     // detect SSAHA2 system-wide install
     this->installed["SSAHA2"] = SYSTEM_CAPTURE("which ssaha2", true);
     this->installed["SSAHA2_version_string"] = "";
@@ -877,6 +888,9 @@ namespace breseq
         cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
         cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
       }
+      else {
+        cout << "---> bowtie2 version: " << this->installed["bowtie2_version_string"] << endl;
+      }
     }
 		// R version 2.1 required
 		if (this->installed["R"].size() == 0)
@@ -892,12 +906,18 @@ namespace breseq
       cerr << "---> Your version is " << this->installed["R_version_string"] << "." << endl;
       cerr << "---> See http://www.r-project.org" << endl;
     }
+    else {
+      cout << "---> R version: " << this->installed["R_version_string"] << endl;
+    }
 
     if (this->installed["samtools"].size() == 0)
     {
       good_to_go = false;
       cerr << "---> ERROR Required executable \"samtools\" not found." << endl;
       cerr << "---> This should have been installed by the breseq installer." << endl;
+    }
+    else {
+      cout << "---> samtools version: " << this->installed["samtools_version_string"] << endl;
     }
 
 		if (!good_to_go) exit(0);
