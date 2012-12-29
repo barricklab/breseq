@@ -488,7 +488,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 			mut[REF_BASE] = ref_base_char;
 			mut[NEW_BASE] = best_base_char;
 			mut[FREQUENCY] = "1";
-      mut[GENOTYPE_QUALITY] = formatted_double(e_value_call, 1).to_string();
+      mut[GENOTYPE_QUALITY] = formatted_double(e_value_call, kMutationQualityPrecision).to_string();
       mut[QUALITY] = mut[GENOTYPE_QUALITY];
       
 			if(e_value_call < _mutation_cutoff) {
@@ -517,7 +517,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       }
       
       // Genotype quality is for the top called genotype
-      mut[GENOTYPE_QUALITY] = formatted_double(e_value_call, 1).to_string();
+      mut[GENOTYPE_QUALITY] = formatted_double(e_value_call, kMutationQualityPrecision).to_string();
 			mut[POLYMORPHISM_QUALITY] = formatted_double(ppred.log10_e_value, kMutationQualityPrecision).to_string();
       mut[QUALITY] = mut[POLYMORPHISM_QUALITY];
       
