@@ -1,6 +1,13 @@
 Version 0.22
-    * Fixed issue where missing coverage not matched to certain MOBs.
-    * Fixed duplicate -j command line option definition.
+    * Fixed crash due to change in output format in newer bowtie2 versions (≥2.0.4). 
+      breseq should now produce consistent results for all versions (≥2.0.0-beta7).
+    * Added -s,--junction-only-reference option to include reference sequences
+      that can be part of a new junction, but are not otherwise processed for calling
+      mutations. This option is useful if you want to find mobile elements that are not
+      native to the main genome, e.g. the locations of transposons in a mutant strain, and
+      have another reference sequence that contains those mobile elements.
+    * Improved matching MC evidence to certain MOBs.
+    * Removed duplicate -j command line option definition.
     * Updated bundled SAMtools to version 0.18.
     
 Version 0.21
