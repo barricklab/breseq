@@ -43,7 +43,7 @@ EXTRA_DIST = \
 	examples/00README.txt \
 	examples/bam2bed.c \
 	examples/calDepth.c \
-	examples/ex1.fa \ 
+	examples/ex1.fa \
 	examples/ex1.sam.gz \
 	examples/Makefile \
 	examples/toy.fa \
