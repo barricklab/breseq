@@ -9,6 +9,7 @@ Version 0.22
     * Improved matching MC evidence to certain MOBs.
     * Removed duplicate -j command line option definition.
     * Updated bundled SAMtools to version 0.18.
+    * Command line now prints versions and locations of external programs used by breseq.
     
 Version 0.21
     * Fixed improperly failure of check for bowtie2 versions 2.0.0+.
