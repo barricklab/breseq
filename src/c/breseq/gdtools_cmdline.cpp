@@ -933,7 +933,7 @@ int do_filter_gd(int argc, char* argv[])
 
   options.addUsage("");
   options.addUsage("Creates a GD file of mutations that evaluate as false to the input filtering expressions.");
-
+    
   UserOutput uout("FILTER");
   
   if (options.getArgc() != 1) {
@@ -953,7 +953,8 @@ int do_filter_gd(int argc, char* argv[])
   
   assert(filters.size());
 
-  cGenomeDiff gd(options["input"]);
+  uout("Reading input GD file") << options.getArgv(0) << endl;
+  cGenomeDiff gd(options.getArgv(0));
 
   diff_entry_list_t muts;
   if (!options.count("mut_type")) {

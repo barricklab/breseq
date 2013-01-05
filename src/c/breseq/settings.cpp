@@ -294,7 +294,7 @@ namespace breseq
     this->polymorphism_prediction = options.count("polymorphism-prediction");
     if (this->polymorphism_prediction) {
       
-      // different default value
+      // different default values
       this->polymorphism_frequency_cutoff = 0; // cut off if < X or > 1-X
       this->mixed_base_prediction = false;
       this->polymorphism_reject_homopolymer_length = 0;
@@ -302,6 +302,8 @@ namespace breseq
       this->polymorphism_bias_p_value_cutoff = 0.01;
       this->polymorphism_minimum_new_coverage_each_strand = 0;
       this->no_indel_polymorphisms = false;
+      
+      this->junction_pos_hash_neg_log10_p_value_cutoff = 0; // OFF
     }
     if (this->mixed_base_prediction) {
       // Not calculated for mixed base mode
