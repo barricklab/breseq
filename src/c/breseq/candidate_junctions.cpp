@@ -597,11 +597,11 @@ namespace breseq {
         // pass back how many were considered
 				passed_alignment_pairs_considered += alignments_to_candidate_junctions(settings, summary, ref_seq_info, candidate_junctions, alignments);
         
-        if (passed_alignment_pairs_considered > settings.maximum_junction_sequence_passed_alignment_pairs_to_consider)
+        if (passed_alignment_pairs_considered >= settings.maximum_junction_sequence_passed_alignment_pairs_to_consider)
           break;
 			}
       
-      if (passed_alignment_pairs_considered > settings.maximum_junction_sequence_passed_alignment_pairs_to_consider)
+      if (passed_alignment_pairs_considered >= settings.maximum_junction_sequence_passed_alignment_pairs_to_consider)
         break;
     }
 

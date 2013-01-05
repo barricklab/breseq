@@ -945,6 +945,52 @@ namespace breseq {
           }
         }
         
+        // @JEB 01-04-13
+        // Calculate a frequency for the mobile element insertion from the reads supporting the new and old junctions on each side
+        
+        if (settings.polymorphism_prediction) {
+          
+          double a1 = from_string<uint32_t>(j1[SIDE_1_READ_COUNT]);
+          double b1 = from_string<uint32_t>(j1[SIDE_2_READ_COUNT]);
+          double c1 = from_string<uint32_t>(j1[NEW_JUNCTION_READ_COUNT]);
+          double d1 = 2.0;
+          
+          if (j1[SIDE_1_READ_COUNT] == "NA") {
+            a1 = 0; //"NA" in read count sets value to 1 not 0
+            d1--;
+          }
+          if (j1[SIDE_2_READ_COUNT] == "NA") {
+            b1 = 0; //"NA" in read count sets value to 1 not 0
+            d1--;
+          }
+          
+          double a2 = from_string<uint32_t>(j2[SIDE_1_READ_COUNT]);
+          double b2 = from_string<uint32_t>(j2[SIDE_2_READ_COUNT]);
+          double c2 = from_string<uint32_t>(j2[NEW_JUNCTION_READ_COUNT]);
+          double d2 = 2.0;
+          
+          if (j2[SIDE_1_READ_COUNT] == "NA") {
+            a2 = 0; //"NA" in read count sets value to 1 not 0
+            d2--;
+          }
+          if (j2[SIDE_2_READ_COUNT] == "NA") {
+            b2 = 0; //"NA" in read count sets value to 1 not 0
+            d2--;
+          }
+                  
+          if (d1 && d2) {
+            double frequency = (c1 + c2) / (c1 + (a1 + b1)/d1 + c2 + (a2 + b2)/d2);
+            mut[FREQUENCY] = to_string(frequency, kPolymorphismFrequencyPrecision); 
+          } else if (d1) {
+            double frequency = (c2) / (c2 + (a2 + b2)/d2);
+            mut[FREQUENCY] = to_string(frequency, kPolymorphismFrequencyPrecision);           
+          } else if (d2) {
+            double frequency = (c1) / (c1 + (a1 + b1)/d1);
+            mut[FREQUENCY] = to_string(frequency, kPolymorphismFrequencyPrecision); 
+          } else {
+            ERROR("Denominator in MOB frequency calculation is zero.");
+          }
+        }            
         // @JEB 12-22-12
         // Add missing coverage evidence that corresponds to the deleted region
         // Code assumes this will always be in _del_end field.

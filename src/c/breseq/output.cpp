@@ -1345,7 +1345,7 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_det
               c["neg_log10_pos_hash_p_value"]) << endl;
 
 //@ded frequency info goes here. If changing to only display if frequency != 1, this needs to be conditional.
-      ss << td("rowspan=\"2\" align=\"center\"", c["new_junction_frequency"]) << endl;   
+       ss << td("rowspan=\"2\" align=\"center\"", Html_Mutation_Table_String::freq_to_string(c["new_junction_frequency"])) << endl;   
               
                //" (" + c["max_left"] + "/" + c["max_right"] + ")") << endl;
       ss << td("align=\"center\" class=\"" + annotate_key + "\"", 
@@ -2283,7 +2283,6 @@ void Html_Mutation_Table_String::Item_Lines()
     if (settings.polymorphism_prediction) {
       // polymorphisms get highlighted
       if(mut.entry_exists(FREQUENCY) && (from_string<double>(FREQUENCY) != 1)) {
-//@ded placeholder in calculation for new junction frequencies ... not yet implemented: combining multiple new_junction_frequency values to output a single frequency for the mutation. This is important for MOBs, 2sided DELs, and AMPs.
         row_class = "polymorphism_table_row";
         freq_list.push_back(mut[FREQUENCY]);
       }

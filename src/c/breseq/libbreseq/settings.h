@@ -254,7 +254,7 @@ namespace breseq
     //! Settings: Alignment Resolution
 		bool add_split_junction_sides;                        // Default = true (possibly remove this option) 
     uint32_t minimum_alignment_resolution_pos_hash_score; // Default = 2
-    double junction_pos_hash_neg_log10_p_value_cutoff;    // Default = 2.0
+    double junction_pos_hash_neg_log10_p_value_cutoff;    // Default = 2.0, 0 = means don't calculate (to implement)
     
     //! Settings: Mutation Identification
     

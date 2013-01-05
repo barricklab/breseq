@@ -507,8 +507,8 @@ void resolve_alignments(
     failed = failed || ( settings.junction_only_seq_id_set.count(junction_info.sides[0].seq_id) && settings.junction_only_seq_id_set.count(junction_info.sides[1].seq_id) );
     
     junction_test_info.neg_log10_pos_hash_p_value = -1;
-    
-    // table is by overlap, then pos hash score
+        
+    // Zero means calculating this p-value is off
     if (settings.junction_pos_hash_neg_log10_p_value_cutoff) {
       
       double neg_log10_p_value_1 = pos_hash_p_value_calculator.probability(junction_info.sides[0].seq_id, junction_test_info.pos_hash_score, junction_test_info.max_pos_hash_score);
@@ -1827,23 +1827,35 @@ void  assign_junction_read_counts(
       de[SIDE_2_READ_COUNT] = "NA";
     }
       
-  //@ded calculate frequency of each junction. //
-  double a = from_string<uint32_t>(de[SIDE_1_READ_COUNT]);
-  double b = from_string<uint32_t>(de[SIDE_2_READ_COUNT]);
-  double c = from_string<uint32_t>(de[NEW_JUNCTION_READ_COUNT]);
+    //@ded calculate frequency of each junction. //
+    double a = from_string<uint32_t>(de[SIDE_1_READ_COUNT]);
+    double b = from_string<uint32_t>(de[SIDE_2_READ_COUNT]);
+    double c = from_string<uint32_t>(de[NEW_JUNCTION_READ_COUNT]);
+        
+    //ASSERT(c > 0,"New junction predicted, but 0 reads support it. This should never happen");
+    //Well, it CAN happen with user-defined junctions!!! @JEB
       
-  //ASSERT(c > 0,"New junction predicted, but 0 reads support it. This should never happen");
-  //Well, it CAN happen with user-defined junctions!!! @JEB
-    
-  if (de[SIDE_1_READ_COUNT] == "NA") a =0; //"NA" in read count sets value to 1 not 0
-  if (de[SIDE_2_READ_COUNT] == "NA") b =0;
-
-  double new_junction_frequency_value = c /(c + ((a+b)/2) ); // dividing by 2 because 1 read can support both sides?
-  de[NEW_JUNCTION_FREQUENCY] = to_string(new_junction_frequency_value, 2);
-  de[FREQUENCY] = de[NEW_JUNCTION_FREQUENCY];//@ded FREQUENCY is being used in other places for outputting main page. somewhere frequency needs to be updated to include both jcs when a 2jc issue.
-            
+    // @JEB: divide the side X counts by 2, if both were counted
+    // or because 1 if that side of the alignment was ambiguous (for edges of IS-elements
+    double d = 2;
+    if (de[SIDE_1_READ_COUNT] == "NA") {
+      a = 0; //"NA" in read count sets value to 1 not 0
+      d--;
     }
-
+    if (de[SIDE_2_READ_COUNT] == "NA") {
+      b = 0;
+      d--;
+    }
+    
+    // We cannot assign a frequency if the denominator is zero
+    if (d == 0) {
+      de[NEW_JUNCTION_FREQUENCY] = "NA";  
+    } else {
+      double new_junction_frequency_value = c /(c + ((a+b)/d) ); // dividing by 2 because 1 read can support both sides?
+      de[NEW_JUNCTION_FREQUENCY] = to_string(new_junction_frequency_value, kPolymorphismFrequencyPrecision);
+    }
+    de[FREQUENCY] = de[NEW_JUNCTION_FREQUENCY];
+    }
 }
 
 uint32_t junction_read_counter::count(
