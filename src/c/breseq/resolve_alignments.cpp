@@ -1855,7 +1855,7 @@ void  assign_junction_read_counts(
       de[NEW_JUNCTION_FREQUENCY] = to_string(new_junction_frequency_value, kPolymorphismFrequencyPrecision);
     }
     de[FREQUENCY] = de[NEW_JUNCTION_FREQUENCY];
-    }
+  }
 }
 
 uint32_t junction_read_counter::count(

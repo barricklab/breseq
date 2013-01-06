@@ -2482,6 +2482,9 @@ string Html_Mutation_Table_String::freq_to_string(const string& freq)
   if (freq == "H")
     return "H";
 
+  if (freq == "NA")
+    return "NA";
+  
   if (from_string<double>(freq) == 0.0)
     return "";
 

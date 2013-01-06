@@ -943,14 +943,14 @@ int do_filter_gd(int argc, char* argv[])
     return -1;
   }
 
-  vector<string> filters = from_string<vector<string> >(options["reference"]);
   if (!options.count("filter")) {
     options.addUsage("");
     options.addUsage("You must supply filter arguments.");
     options.printUsage();
     return -1;
   }
-  
+  vector<string> filters = from_string<vector<string> >(options["filter"]);
+
   assert(filters.size());
 
   uout("Reading input GD file") << options.getArgv(0) << endl;
@@ -1011,8 +1011,10 @@ int do_filter_gd(int argc, char* argv[])
       assert(eval != string::npos);
       assert(key.size());
       assert(value.size());
-
+        
       if (mut.count(key)) {
+          
+        // Numeric
         if (value.find_first_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") == string::npos) {
           switch(eval)
           {
@@ -1023,11 +1025,22 @@ int do_filter_gd(int argc, char* argv[])
             case 4: if (from_string<float>(mut[key]) <  from_string<float>(value)) is_filtered = true; break;
             case 5: if (from_string<float>(mut[key]) >  from_string<float>(value)) is_filtered = true; break;
           };
-
-          if (is_filtered) {
-            reasons.resize(reasons.size() + 1);
-            sprintf(reasons.back(), "%s %s %s", key.c_str(), evals[eval].c_str(), value.c_str());
-          }
+        }
+        // String
+        else {
+          switch(eval)
+          {
+            case 0: if (mut[key] == value) is_filtered = true; break;
+            case 1: if (mut[key] != value) is_filtered = true; break;
+            case 2: if (mut[key] <= value) is_filtered = true; break;
+            case 3: if (mut[key] >= value) is_filtered = true; break;
+            case 4: if (mut[key] <  value) is_filtered = true; break;
+            case 5: if (mut[key] >  value) is_filtered = true; break;
+          };
+        }
+        if (is_filtered) {
+          reasons.resize(reasons.size() + 1);
+          sprintf(reasons.back(), "%s %s %s", key.c_str(), evals[eval].c_str(), value.c_str());
         }
       }
     }

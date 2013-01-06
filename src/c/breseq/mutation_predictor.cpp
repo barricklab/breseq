@@ -988,7 +988,8 @@ namespace breseq {
             double frequency = (c1) / (c1 + (a1 + b1)/d1);
             mut[FREQUENCY] = to_string(frequency, kPolymorphismFrequencyPrecision); 
           } else {
-            ERROR("Denominator in MOB frequency calculation is zero.");
+            // Can't calculate a frequency if no sides of the junction fall in unique sequence
+            mut[FREQUENCY] = "NA";          
           }
         }            
         // @JEB 12-22-12
