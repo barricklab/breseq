@@ -96,24 +96,14 @@ namespace breseq {
 		);
 	}
 
-	/*
-	 Title   : predict
-	 Usage   : $mp->predict();
-	 Function: Predicts mutations from evidence in a GenomeDiff and adds them to it
-	 Returns :
-
-	*/
-	void MutationPredictor::predict(Settings& settings, Summary& summary, cGenomeDiff& gd)
-	{
-		(void)settings; //TODO; unused?
-    bool verbose = false; // for debugging
-
-    int32_t avg_read_length = static_cast<int32_t>(summary.sequence_conversion.avg_read_length);
-    int32_t max_read_length = summary.sequence_conversion.max_read_length;
-    
-		///
-		//  Preprocessing of JC evidence
-		///
+  /*
+	 Title   : prepare_junctions
+	 Function: Adds fields to junction items in preparation for mutation prediction
+   */
+  void MutationPredictor::prepare_junctions(Settings& settings, Summary& summary, cGenomeDiff& gd)
+  {
+    (void) settings;
+    (void) summary;
     
     // For all that follows, we need information about repeat_regions overlapping the sides of junctions
     vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
@@ -121,50 +111,25 @@ namespace breseq {
     // Don't count rejected ones at all, this can be relaxed, but it makes MOB 
     // prediction much more complicated and prone to errors.
     
-    // This sections just normalizes read counts to the average coverage of the correct sequence fragment
-    for (diff_entry_list_t::iterator jc_it=jc.begin(); jc_it!=jc.end(); jc_it++) {
-      cDiffEntry& j = **jc_it;
-      
-      double side_1_correction = (summary.sequence_conversion.avg_read_length - 1 - abs(from_string<double>(j["alignment_overlap"])) - from_string<double>(j["continuation_left"])) / (summary.sequence_conversion.avg_read_length - 1);
-      
-      if (j[SIDE_1_READ_COUNT] == "NA")
-        j[SIDE_1_COVERAGE] = "NA";
-      else
-        j[SIDE_1_COVERAGE] = to_string(from_string<double>(j[SIDE_1_READ_COUNT]) / summary.unique_coverage[j[SIDE_1_SEQ_ID]].average / side_1_correction, 2);
-       
-      double side_2_correction = (summary.sequence_conversion.avg_read_length - 1 - abs(from_string<double>(j["alignment_overlap"])) - from_string<double>(j["continuation_right"])) / (summary.sequence_conversion.avg_read_length - 1);
-
-      if (j[SIDE_2_READ_COUNT] == "NA")
-        j[SIDE_2_COVERAGE] = "NA";
-      else
-        j[SIDE_2_COVERAGE] = to_string(from_string<double>(j[SIDE_2_READ_COUNT]) / summary.unique_coverage[j[SIDE_2_SEQ_ID]].average, 2);
-
-      //corrects for overlap making it less likely for a read to span
-      double overlap_correction = (summary.sequence_conversion.avg_read_length - 1 - abs(from_string<double>(j["alignment_overlap"])) - from_string<double>(j["continuation_left"]) - from_string<double>(j["continuation_right"])) / (summary.sequence_conversion.avg_read_length - 1);
-      double new_junction_average_read_count = (summary.unique_coverage[j[SIDE_1_SEQ_ID]].average + summary.unique_coverage[j[SIDE_2_SEQ_ID]].average) / 2;
-      
-      j[NEW_JUNCTION_COVERAGE] = to_string(from_string<double>(j[NEW_JUNCTION_READ_COUNT]) / new_junction_average_read_count / overlap_correction, 2);
-    }
-      
     const int32_t max_distance_to_repeat = 50;
-
+    
 		for (diff_entry_list_t::iterator jc_it=jc.begin(); jc_it!=jc.end(); jc_it++)
 		{
 			cDiffEntry& j = **jc_it;
       
 			j["_side_1_read_side"] = "-1";
 			j["_side_2_read_side"] = "1";
-
+      
 			for (uint32_t side = 1; side <= 2; side++)
 			{
 				string side_key = "side_" + s(side);
         int32_t this_max_distance_to_repeat = max_distance_to_repeat;
 				cSequenceFeaturePtr is = ref_seq_info.find_closest_repeat_region_boundary(
-					n(j[side_key + "_position"]),
-					ref_seq_info[j[side_key + "_seq_id"]].m_repeats,
-					this_max_distance_to_repeat,
-					n(j[side_key + "_strand"])
-				);
+                                                                                  n(j[side_key + "_position"]),
+                                                                                  ref_seq_info[j[side_key + "_seq_id"]].m_repeats,
+                                                                                  this_max_distance_to_repeat,
+                                                                                  n(j[side_key + "_strand"])
+                                                                                  );
 				if (is.get() != NULL)
 				{
 					j["_" + side_key + "_is"] = "1";
@@ -178,10 +143,10 @@ namespace breseq {
         uint32_t test_val = n(j[side_key + "_redundant"]);
 				j[side_key + "_annotate_key"] = (j.entry_exists("_" + side_key + "_is_start") || n(j[side_key + "_redundant"])) ? "repeat" : "gene";
 			}
-
+      
 			// by default, we are sorted by this coord
 			j["_unique_interval"] = "side_1";
-
+      
 			// Determine which side of the junction is the IS and which is unique
 			// these point to the correct initial interval...
 			if (j.entry_exists("_side_1_is"))
@@ -205,7 +170,7 @@ namespace breseq {
       if (j.entry_exists("_side_2_is"))
 			{
         //cout << n(j["_side_2_is_start"]) << " " << n(j["_side_2_is_end"]) << " " << n(j["side_2_position"]) << endl;
-
+        
 				if (abs(n(j["_side_2_is_start"]) - n(j["side_2_position"])) <= max_distance_to_repeat)
 				{
 					j["_is_interval"] = "side_2";
@@ -226,7 +191,34 @@ namespace breseq {
       j["_unique_interval_strand"] = j[j["_unique_interval"] + "_strand"];
     }
     
+  }
+  
+  
+	/*
+	 Title   : predict
+	 Usage   : $mp->predict();
+	 Function: Predicts mutations from evidence in a GenomeDiff and adds them to it
+	 Returns :
+
+	*/
+	void MutationPredictor::predict(Settings& settings, Summary& summary, cGenomeDiff& gd)
+	{
+		(void)settings; //TODO; unused?
+    bool verbose = false; // for debugging
+
+    int32_t avg_read_length = static_cast<int32_t>(summary.sequence_conversion.avg_read_length);
+    int32_t max_read_length = summary.sequence_conversion.max_read_length;
+    
+		///
+		//  Preprocessing of JC evidence
+		///
+    
+    prepare_junctions(settings, summary, gd);
+    // This call is redundant in the normal pipeline, but preserved here so that predict can be a stand-alone call.
+    
     // Now, remove rejected from the list after annotating them.
+    vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
+		diff_entry_list_t jc = gd.list(jc_types);
     jc.remove_if(cDiffEntry::field_exists("reject"));
 
 		///

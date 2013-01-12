@@ -39,6 +39,8 @@ namespace breseq {
 		static cReferenceSequences ref_seq_info;
 
 		MutationPredictor(cReferenceSequences& ref_seq_info);
+    
+    void prepare_junctions(Settings& settings, Summary& summary, cGenomeDiff& gd);
 		void predict(Settings& settings, Summary& summary, cGenomeDiff& gd);
 
 		static bool sort_by_hybrid(const counted_ptr<cDiffEntry>& a, const counted_ptr<cDiffEntry>& b);
