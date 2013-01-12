@@ -272,6 +272,12 @@ namespace breseq {
                                     const Settings& settings,
                                     cGenomeDiff& gd
                                     );
+  
+  void  assign_junction_read_coverage(
+                                      const Settings& settings,
+                                      Summary& summary,
+                                      cGenomeDiff& gd
+                                      );
 
   
   // Pileup class for fetching reads that align across from start to end
