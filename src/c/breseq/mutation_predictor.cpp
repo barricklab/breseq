@@ -108,8 +108,6 @@ namespace breseq {
     // For all that follows, we need information about repeat_regions overlapping the sides of junctions
     vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
 		diff_entry_list_t jc = gd.list(jc_types);
-    // Don't count rejected ones at all, this can be relaxed, but it makes MOB 
-    // prediction much more complicated and prone to errors.
     
     const int32_t max_distance_to_repeat = 50;
     
@@ -216,10 +214,13 @@ namespace breseq {
     prepare_junctions(settings, summary, gd);
     // This call is redundant in the normal pipeline, but preserved here so that predict can be a stand-alone call.
     
+    // Don't count rejected ones at all, this can be relaxed, but it makes MOB 
+    // prediction much more complicated and prone to errors.
+    
     // Now, remove rejected from the list after annotating them.
     vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
 		diff_entry_list_t jc = gd.list(jc_types);
-    jc.remove_if(cDiffEntry::field_exists("reject"));
+    jc.remove_if(cDiffEntry::rejected_and_not_user_defined());
 
 		///
 		// evidence MC + JC => DEL mutation
@@ -783,80 +784,88 @@ namespace breseq {
 				// Use:			{max_left"] {max_right"]
 				// Retrieve sequence on unique side and compare to sequence on the other side of a repeat element
 
-				uint32_t j1_not_flush_length = j1_not_flush_seq.size();
+        uint32_t j1_not_flush_length = j1_not_flush_seq.size();
 				uint32_t j2_not_flush_length = j2_not_flush_seq.size();
 				uint32_t max_not_flush_length = max(j1_not_flush_length, j2_not_flush_length);
-
-				if (verbose) {
+        
+        if (verbose) {
 					cout << "J1 not flush length: " << j1_not_flush_length << endl;
 					cout << "J2 not flush length: " << j2_not_flush_length << endl;
 					cout << "Max not flush length: " << max_not_flush_length << endl;
 				}
-
+        
 				int32_t j1_is_overlap_length = (n(j1["_" + j1["_is_interval"] + "_read_side"]) == -1) ? n(j1["max_left"]) : n(j1["max_right"]);
 				int32_t j2_is_overlap_length = (n(j2["_" + j2["_is_interval"] + "_read_side"]) == -1) ? n(j2["max_left"]) : n(j2["max_right"]);
-
+        
 				if (verbose) {
 					cout << "J1 IS overlap length: " << j1_is_overlap_length << endl;
 					cout << "J2 IS overlap length: " << j2_is_overlap_length << endl;
 				}
 
-        // what are the actual sequences of this length at the end of the IS elements?
-        start_1 = n(j1["_" + j1["_is_interval"] + "_is_start"]);
-        end_1   = start_1 + j1_is_overlap_length - 1;
-				string j1_left_is_sequence = ref_seq_info.get_sequence_1 (
-          j1[j1["_is_interval"] + "_seq_id"],
-          start_1,
-          end_1
-				);
+        
+        bool j1_is_ambiguous = false;
+        if (!j1.entry_exists("user_defined")) {
+          
+          // what are the actual sequences of this length at the end of the IS elements?
+          start_1 = n(j1["_" + j1["_is_interval"] + "_is_start"]);
+          end_1   = start_1 + j1_is_overlap_length - 1;
+          string j1_left_is_sequence = ref_seq_info.get_sequence_1 (
+            j1[j1["_is_interval"] + "_seq_id"],
+            start_1,
+            end_1
+          );
 
 
-        end_1   = n(j1["_" + j1["_is_interval"] + "_is_end"]);
-        start_1 = end_1 - j1_is_overlap_length - 1;
-        string j1_right_is_sequence = ref_seq_info.get_sequence_1 (
-          j1[j1["_is_interval"] + "_seq_id"],
-          start_1,
-          end_1
-				);
-				j1_right_is_sequence = reverse_complement(j1_right_is_sequence);
+          end_1   = n(j1["_" + j1["_is_interval"] + "_is_end"]);
+          start_1 = end_1 - j1_is_overlap_length - 1;
+          string j1_right_is_sequence = ref_seq_info.get_sequence_1 (
+            j1[j1["_is_interval"] + "_seq_id"],
+            start_1,
+            end_1
+          );
+          j1_right_is_sequence = reverse_complement(j1_right_is_sequence);
 
-				if (verbose) {
-					cout << "J1 LEFT : " << j1_left_is_sequence << endl;
-					cout << "J1 RIGHT: " << j1_right_is_sequence << endl;
-				}
+          if (verbose) {
+            cout << "J1 LEFT : " << j1_left_is_sequence << endl;
+            cout << "J1 RIGHT: " << j1_right_is_sequence << endl;
+          }
 
-				// believe the direction if the sequences are different
-				bool j1_is_ambiguous = (j1_left_is_sequence == j1_right_is_sequence);
+          // believe the direction if the sequences are different
+          j1_is_ambiguous = (j1_left_is_sequence == j1_right_is_sequence);
+        }
+        
+        bool j2_is_ambiguous = false;
+        if (!j2.entry_exists("user_defined")) {
+          
+          start_1 = n(j2["_" + j2["_is_interval"] + "_is_start"]);
+          end_1   = start_1 +j2_is_overlap_length - 1;
+          string j2_left_is_sequence = ref_seq_info.get_sequence_1 (
+            j2[j2["_is_interval"] + "_seq_id"],
+            start_1,
+            end_1
+          );
 
-        start_1 = n(j2["_" + j2["_is_interval"] + "_is_start"]);
-        end_1   = start_1 +j2_is_overlap_length - 1;
-        string j2_left_is_sequence = ref_seq_info.get_sequence_1 (
-          j2[j2["_is_interval"] + "_seq_id"],
-          start_1,
-          end_1
-				);
+          end_1   = n(j2["_" + j2["_is_interval"] + "_is_end"]);
+          start_1 = end_1 - j2_is_overlap_length - 1;
+          string j2_right_is_sequence = ref_seq_info.get_sequence_1 (
+            j2[j2["_is_interval"] + "_seq_id"],
+            start_1,
+            end_1
+          );
+          j2_right_is_sequence = reverse_complement(j2_right_is_sequence);
 
-        end_1   = n(j2["_" + j2["_is_interval"] + "_is_end"]);
-        start_1 = end_1 - j2_is_overlap_length - 1;
-        string j2_right_is_sequence = ref_seq_info.get_sequence_1 (
-          j2[j2["_is_interval"] + "_seq_id"],
-          start_1,
-          end_1
-				);
-				j2_right_is_sequence = reverse_complement(j2_right_is_sequence);
-
-				// believe the direction if the sequences are different
-				bool j2_is_ambiguous = (j2_left_is_sequence == j2_right_is_sequence);
-
+          // believe the direction if the sequences are different
+          j2_is_ambiguous = (j2_left_is_sequence == j2_right_is_sequence);
+          
+          if (verbose) {
+            cout << "J2 LEFT : " << j2_left_is_sequence << endl;
+            cout << "J2 RIGHT: " << j2_right_is_sequence << endl;
+            
+            //cout << "J1 IS matched length " << j1_is_overlap_length << ": " << j1_is_seq_matched << endl;
+            //cout << "J2 IS matched length " << j2_is_overlap_length << ": " << j2_is_seq_matched << endl;
+          }
+        }
 				
-				if (verbose) {
-					cout << "J2 LEFT : " << j2_left_is_sequence << endl;
-					cout << "J2 RIGHT: " << j2_right_is_sequence << endl;
-
-					//cout << "J1 IS matched length " << j1_is_overlap_length << ": " << j1_is_seq_matched << endl;
-					//cout << "J2 IS matched length " << j2_is_overlap_length << ": " << j2_is_seq_matched << endl;
-				}
-
 				// if the matched IS element sequences are the same then the direction is AMBIGUOUS
 				int32_t is_strand = 0;
 				if (j1_is_ambiguous && j2_is_ambiguous)
