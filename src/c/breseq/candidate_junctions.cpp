@@ -533,85 +533,59 @@ namespace breseq {
     
     /// Load all of the user-defined junctions
     
-    map<string,cDiffEntry> user_defined_junctions;
-    if (settings.user_junction_genome_diff_file_name != "") {  
-      cGenomeDiff user_junction_gd(settings.user_junction_genome_diff_file_name);
-
-      diff_entry_list_t _entry_list = user_junction_gd.list(make_vector<gd_entry_type>(JC));
-      for (diff_entry_list_t::iterator it = _entry_list.begin(); it != _entry_list.end(); it++)
-      {
-        cDiffEntry& user_junction = **it;
-        
-        ///
-        ///
-        /// ADD Check to be sure the reference sequence exists in this data set!
-        /// OR be sure that there is better error checkin gin construct_junction_sequence
-        ///
-        
+    map<string,cDiffEntry> user_defined_junctions = load_user_junctions(settings, summary, ref_seq_info);
     
-        // set initial flanking lengths, these may be reduced by construct_junction_sequence
-        user_junction["flanking_left"] = to_string<int32_t>(max_read_length);
-        user_junction["flanking_right"] = to_string<int32_t>(max_read_length);
-        
-        normalize_junction_overlap(ref_seq_info, user_junction);
-        // Create key after normalizing!
-        JunctionInfo junction_info(user_junction);
-        user_defined_junctions[junction_info.junction_key()] = user_junction;
-      }
-    }
+    // hash by junction sequence
+    SequenceToKeyToJunctionCandidateMap candidate_junctions;
     
-		// hash by junction sequence
-		SequenceToKeyToJunctionCandidateMap candidate_junctions;
+    // shortcut to summary data for this step
+    Summary::CandidateJunctionSummaryData& hcs(summary.candidate_junction);
     
-		// shortcut to summary data for this step
-		Summary::CandidateJunctionSummaryData& hcs(summary.candidate_junction);
-    
-		uint32_t i = 0;
+    uint32_t i = 0;
     uint64_t passed_alignment_pairs_considered = 0;
-		for (uint32_t j = 0; j < settings.read_files.size(); j++)
-		{
-			cReadFile read_file = settings.read_files[j];
+    for (uint32_t j = 0; j < settings.read_files.size(); j++)
+    {
+      cReadFile read_file = settings.read_files[j];
       
-			string read_file_name = read_file.m_base_name;
-			cerr << "  READ FILE::" << read_file_name << endl;
-
-			// Decide which input SAM file we are using...
+      string read_file_name = read_file.m_base_name;
+      cerr << "  READ FILE::" << read_file_name << endl;
       
-			string reference_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", settings.read_files[j].m_base_name);
+      // Decide which input SAM file we are using...
+      
+      string reference_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", settings.read_files[j].m_base_name);
       
       tam_file tam(reference_sam_file_name, settings.reference_fasta_file_name, ios_base::in);
-			alignment_list alignments;
+      alignment_list alignments;
       
-			while (tam.read_alignments(alignments, false))
-			{
-				if (alignments.size() == 0)
-					break;
+      while (tam.read_alignments(alignments, false))
+      {
+        if (alignments.size() == 0)
+          break;
         
-				if (++i % 10000 == 0)
-					cerr << "    ALIGNED READ:" << i << " CANDIDATE JUNCTIONS:" << candidate_junctions.size() << endl;
+        if (++i % 10000 == 0)
+          cerr << "    ALIGNED READ:" << i << " CANDIDATE JUNCTIONS:" << candidate_junctions.size() << endl;
         
-				// for testing...
-				if (settings.candidate_junction_read_limit != 0 && i > settings.candidate_junction_read_limit)
-					break;
+        // for testing...
+        if (settings.candidate_junction_read_limit != 0 && i > settings.candidate_junction_read_limit)
+          break;
         
         // pass back how many were considered
-				passed_alignment_pairs_considered += alignments_to_candidate_junctions(settings, summary, ref_seq_info, candidate_junctions, alignments);
+        passed_alignment_pairs_considered += alignments_to_candidate_junctions(settings, summary, ref_seq_info, candidate_junctions, alignments);
         
         if (passed_alignment_pairs_considered >= settings.maximum_junction_sequence_passed_alignment_pairs_to_consider)
           break;
-			}
+      }
       
       if (passed_alignment_pairs_considered >= settings.maximum_junction_sequence_passed_alignment_pairs_to_consider)
         break;
     }
-
+    
     cerr << "  Passed alignment pairs examined: " << passed_alignment_pairs_considered << endl;
     if (passed_alignment_pairs_considered > settings.maximum_junction_sequence_passed_alignment_pairs_to_consider ) {
       cerr << "  WARNING: Reached limit of " << settings.maximum_junction_sequence_passed_alignment_pairs_to_consider << " passed alignment pairs." << endl;
       cerr << "  Specify a greater value for --junction-alignment-pair-limit for more thorough junction prediction." << endl;
     }
-    
-    ////
+    ///
 		// Merge all junctions with the same exact sequence 
     //   * They are hashed together for speed in this comparison
 		////
@@ -912,15 +886,20 @@ namespace breseq {
 		summary.candidate_junction = hcs;
 	}
   
-  void CandidateJunctions::add_user_junctions(
+  map<string,cDiffEntry> 
+  CandidateJunctions::load_user_junctions(
                                               const Settings& settings,
                                               const Summary& summary,
-                                              cReferenceSequences& ref_seq_info,
-                                              cGenomeDiff& gd
+                                              const cReferenceSequences& ref_seq_info
                                               )
   {
-    cFastaFile jc_out(settings.candidate_junction_fasta_file_name, ios::out | ios_base::app);
-    ASSERT(jc_out.good(), "Could not open file: " + settings.candidate_junction_fasta_file_name);
+    map<string,cDiffEntry> user_defined_junctions;
+   
+    // File must exist for us to process
+    if (settings.user_junction_genome_diff_file_name == "")
+      return user_defined_junctions;
+    
+    cGenomeDiff gd(settings.user_junction_genome_diff_file_name);
 
     int32_t max_read_length = summary.sequence_conversion.max_read_length;
     
@@ -928,32 +907,18 @@ namespace breseq {
     for (diff_entry_list_t::iterator it = _entry_list.begin(); it != _entry_list.end(); it++)
     {
       cDiffEntry& user_junction = **it;
-      
-      ///
-      ///
-      /// ADD Check to be sure the reference sequence exists in this data set!
-      /// OR be sure that there is better error checkin gin construct_junction_sequence
-      ///
-      
-      
+
       // set initial flanking lengths, these may be reduced by construct_junction_sequence
       user_junction["flanking_left"] = to_string<int32_t>(max_read_length);
       user_junction["flanking_right"] = to_string<int32_t>(max_read_length);
       
-      JunctionInfo junction_info(user_junction);
-      junction_info.user_defined = true;
+      // Fix the overlap...
       normalize_junction_overlap(ref_seq_info, user_junction);
-      
-      
-      string junction_sequence = construct_junction_sequence(ref_seq_info, user_junction, max_read_length, false);
-      
-      cFastaSequence jc;
-      jc.m_name = junction_info.junction_key();
-      jc.m_sequence = junction_sequence;
-      jc_out.write_sequence(jc);
+      JunctionInfo junction_info(user_junction);
+      user_defined_junctions[junction_info.junction_key()] = user_junction;
       
     }
-    jc_out.close(); 
+    return user_defined_junctions; 
   }
 
   
@@ -1744,6 +1709,9 @@ namespace breseq {
     int32_t overlap = from_string<int32_t>(jc["overlap"]);
     int32_t overlap_offset = max(0, overlap);
     
+    ASSERT(ref_seq_info.seq_id_exists(jc["side_1_seq_id"]), "Reference seq ID not found:" + jc["side_1_seq_id"]);
+    ASSERT(ref_seq_info.seq_id_exists(jc["side_2_seq_id"]), "Reference seq ID not found:" + jc["side_2_seq_id"]);
+
     const cAnnotatedSequence& ref_seq_1 = ref_seq_info[jc["side_1_seq_id"]];
     const cAnnotatedSequence& ref_seq_2 = ref_seq_info[jc["side_2_seq_id"]];
     
