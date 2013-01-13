@@ -120,10 +120,20 @@ namespace breseq {
       sides[0].seq_id = de["side_1_seq_id"];
       sides[0].position = from_string<int32_t>(de["side_1_position"]);
       sides[0].strand = from_string<int32_t>(de["side_1_strand"]);
-
+      
+      sides[0].redundant = false;
+      if (de.count("side_1_redundant")) {
+        sides[0].redundant = from_string<int32_t>(de["side_1_redundant"]); 
+      }
+      
       sides[1].seq_id = de["side_2_seq_id"];
       sides[1].position = from_string<int32_t>(de["side_2_position"]);
       sides[1].strand = from_string<int32_t>(de["side_2_strand"]);
+      
+      sides[1].redundant = false;
+      if (de.count("side_2_redundant")) {
+        sides[1].redundant = from_string<int32_t>(de["side_2_redundant"]); 
+      }
       
       user_defined = false;
     }
@@ -375,11 +385,10 @@ namespace breseq {
                                              const cReferenceSequences& ref_seq_info
                                              );
 
-    static void add_user_junctions (
+    static map<string,cDiffEntry> load_user_junctions (
                                      const Settings& settings,
                                      const Summary& summary,
-                                     cReferenceSequences& ref_seq_info,
-                                     cGenomeDiff& gd
+                                     const cReferenceSequences& ref_seq_info
                                      );
     
     static void normalize_junction_overlap (

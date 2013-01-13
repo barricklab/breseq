@@ -273,7 +273,7 @@ namespace breseq {
         m_description("na"), 
         m_seq_id("na"),
         m_features(0) {} ;
-
+    
       // Utility to get top strand sequence
       string get_sequence_1(int32_t start_1, int32_t end_1) const
       {
@@ -529,6 +529,9 @@ namespace breseq {
     const cAnnotatedSequence& operator[](const string& seq_id) const
     { ASSERT(m_seq_id_to_index.count(seq_id), "SEQ_ID not found: " + seq_id); return this->at(m_seq_id_to_index.find(seq_id)->second); }
 
+    bool seq_id_exists(const string& seq_id) const {
+      return m_seq_id_to_index.count(seq_id);
+    }
     
     //!< Utility to get sequences by seq_id
     string get_sequence_1(const string& seq_id, int32_t start_1, int32_t end_1)
