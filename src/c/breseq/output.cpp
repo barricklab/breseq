@@ -2471,7 +2471,7 @@ void Html_Mutation_Table_String::Item_Lines()
 //      METHOD: freq_to_string  
 // DESCRIPTION: Helper function used in Item_Lines
 //===============================================================================
-string Html_Mutation_Table_String::freq_to_string(const string& freq)
+string Html_Mutation_Table_String::freq_to_string(const string& freq, bool multiple_columns)
 {
   if (freq == "?")
     return "?";
@@ -2485,8 +2485,9 @@ string Html_Mutation_Table_String::freq_to_string(const string& freq)
   if (freq == "NA")
     return "NA";
   
-  //if (from_string<double>(freq) == 0.0)
-  //  return "";
+  // Leave blank if there are multiple columns (for gdtools ANNOTATE comparing files)
+  if (multiple_columns && (from_string<double>(freq) == 0.0))
+    return "";
 
   stringstream ss;
   if (from_string<double>(freq) == 1.0 || freq.empty())
@@ -2526,7 +2527,7 @@ string Html_Mutation_Table_String::freq_cols(vector<string> freq_list)
       }
     }
     else {
-      ss << td (ALIGN_RIGHT, freq_to_string(freq));
+      ss << td (ALIGN_RIGHT, freq_to_string(freq, freq_list.size() > 1));
     }
   }
   return ss.str();
