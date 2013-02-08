@@ -3335,7 +3335,12 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
 {    
   uint32_t count_SNP = 0, count_SUB = 0, count_INS = 0, count_DEL = 0, count_AMP = 0, count_INV = 0, count_MOB = 0, count_CON = 0, count_MASK = 0;
 
-  diff_entry_list_t mutation_list = this->list();//changed from mutation_list to list with addition of mask (ie non-mutation code for editing a reference file. Not expected to be a problem)
+  diff_entry_list_t mutation_list = this->mutation_list();
+  diff_entry_list_t mask_list = this->list(make_vector<gd_entry_type>(MASK));
+  
+  mutation_list.insert(mutation_list.end(), mask_list.begin(), mask_list.end());
+  
+  //changed from mutation_list to list with addition of mask (ie non-mutation code for editing a reference file. Not expected to be a problem)
   for (diff_entry_list_t::iterator itr_mut = mutation_list.begin(); itr_mut != mutation_list.end(); itr_mut++)
   {
     cDiffEntry& mut(**itr_mut);
