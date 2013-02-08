@@ -189,7 +189,7 @@ struct Html_Mutation_Table_String : public string
     void Header_Line(bool print_main_header = true);
     void Item_Lines();
     //!Helper Functions
-    static string freq_to_string(const string& freq);//!< Used in Item_Lines()
+    static string freq_to_string(const string& freq, bool multiple_columns = false);//!< Used in Item_Lines()
     string freq_cols(vector<string> freq_list);//!< Used in Item_Lines()
     size_t total_cols; //!< Shared between Factory Methods, set in Header_Line()
 
