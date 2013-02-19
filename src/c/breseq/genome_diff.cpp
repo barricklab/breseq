@@ -148,7 +148,7 @@ gd_entry_type cDiffEntry::type_to_enum(string type) {
   return UNKNOWN;
 }
 
-cDiffEntry::cDiffEntry(const string &line)
+cDiffEntry::cDiffEntry(const string &line, uint32_t line_number, cFileParseErrors* file_parse_errors)
   : _type(UNKNOWN)
   ,_id("")
   ,_evidence()
@@ -157,7 +157,7 @@ cDiffEntry::cDiffEntry(const string &line)
   vector<string> tokens = split(line, "\t");
 
   if (tokens.size() < 3) {
-    WARN("cDiffEntry::cDiffEntry(" + line + "): Is not recognized.");
+    if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Could not determine type, id, or parent_id.", true);
     return;
   }
 
@@ -168,7 +168,7 @@ cDiffEntry::cDiffEntry(const string &line)
   de._type = cDiffEntry::type_to_enum(type);
 
   if (de._type == UNKNOWN) {
-    WARN("cDiffEntry::cDiffEntry(" + line + "): Could not determine type.");
+    if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Unknown type for entry.", true);
     return;
   }
   ++COLUMN;
@@ -189,14 +189,21 @@ cDiffEntry::cDiffEntry(const string &line)
 
   //Specs.
   const vector<string>& specs = line_specification[de._type];
+
+  if (tokens.size() < specs.size() ) {
+    if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Expected " + breseq::to_string(specs.size()) + " tab-delimited fixed columns for entry", true);
+    return;
+  }
+  
   for (uint32_t i = 0; i < specs.size(); ++i) {
     if (COLUMN < tokens.size()) {
       de[specs[i]] = tokens[COLUMN];
       RemoveLeadingTrailingWhitespace(de[specs[i]]);
       ++COLUMN;
     } else {
-      WARN("cDiffEntry::cDiffEntry(" + line + "): Line specification [" + specs[i] + "] has no value.");
-      de[specs[i]] = "?";
+      
+      if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Line specification [" + specs[i] + "] has no value.", true);
+      return;
     }
   }
 
@@ -210,7 +217,7 @@ cDiffEntry::cDiffEntry(const string &line)
       RemoveLeadingTrailingWhitespace(value);
       de[key] = value;
     } else {
-      WARN("cDiffEntry::cDiffEntry(" + line + "): Field " + kvp + " is not a key=value pair.");
+      if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Field " + kvp + " is not a key=value pair. Ignoring this key.", false);
     }
     ++COLUMN;
   }
@@ -708,15 +715,16 @@ void cGenomeDiff::fast_merge(const cGenomeDiff& gd)
     this->add(**it);
   }
 }
-
+  
 /*! Read a genome diff(.gd) from the given file to class member
-  _entry_list
+ _entry_list
  */
-
 void cGenomeDiff::read(const string& filename) {
   ifstream in(filename.c_str());
   ASSERT(in.good(), "Could not open file for reading: " + filename);
-
+  uint32_t line_number = 0;
+  cFileParseErrors parse_errors(filename);
+  
   //! Step: Handle header parameters.
   //Example header:
   //#=GENOME_DIFF 1.0
@@ -727,9 +735,10 @@ void cGenomeDiff::read(const string& filename) {
   /*#=GENOME_DIFF version must be initialized for this file to be recognized
    as a genome diff file. */
   metadata.version = "";
-  while(in.peek() == 35) { //35 is ASCII of '#'.
+  while(in.peek() == '#') {
     in.get();
-    if (in.peek() != 61) { //61 is ASCII of '='.
+    line_number++;
+    if (in.peek() != '=') {
       in.unget();
       break;
     } else {
@@ -766,27 +775,22 @@ void cGenomeDiff::read(const string& filename) {
       metadata.run_name = second_half;
       replace(metadata.run_name.begin(), metadata.run_name.end(), ' ', '_');
     }
-    else if (split_line[0].substr(0, 2) == "#=" && split_line.size() > 1) {
+    else if (split_line[0].substr(0, 2) == "#=" && split_line.size() > 1) {                                                                     
       string key = split_line[0].substr(2, split_line[0].size());
       this->add_breseq_data(key, second_half);
       continue;
     } else {
-      //Warn if unkown header lines are encountered.
-      printf("cGenomeDiff:read(%s): Header line: %s is not recognized.",
-             filename.c_str(), whole_line.c_str()
-             );
+      //Warn if unknown header lines are encountered.
+      parse_errors.add_line_error(line_number, whole_line, "Header line not recognized and will be ignored.", false);
     }
   }
 
   /*Error if #=GENOME_DIFF is not found. Genome diff files are required to have
    this header line. */
   if (metadata.version.empty()) {
-    string message = "";
-    sprintf(message,
-            "cGenomeDiff:read(%s): No #=GENOME_DIFF XX header line in this file.",
-            filename.c_str()
-            );
-    ERROR(message);
+    parse_errors.add_line_error(0,"", "No #=GENOME_DIFF XX header line in this file.", true);
+    parse_errors.print_errors();
+    exit(0);
   }
 
 	/*If the run_name/title is not set by a #=TITLE tag in the header info then
@@ -812,9 +816,16 @@ void cGenomeDiff::read(const string& filename) {
     } else if (line.find_first_not_of(' ') == string::npos) {
       continue;
     }
-    const cDiffEntry de(line);
-    if (de._type != UNKNOWN) add(cDiffEntry(line));
+    const cDiffEntry de(line, line_number, &parse_errors);
+    if (de._type != UNKNOWN) add(de);
 
+  }
+  
+  parse_errors.print_errors();
+  if (parse_errors.fatal() )
+  {
+    cerr << "Not safe to continue." << endl;
+    exit(1);
   }
 
   return;
@@ -3335,12 +3346,12 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
 {    
   uint32_t count_SNP = 0, count_SUB = 0, count_INS = 0, count_DEL = 0, count_AMP = 0, count_INV = 0, count_MOB = 0, count_CON = 0, count_MASK = 0;
 
+  // Handle all mutation types, plus MASK four-letter type.
   diff_entry_list_t mutation_list = this->mutation_list();
   diff_entry_list_t mask_list = this->list(make_vector<gd_entry_type>(MASK));
   
   mutation_list.insert(mutation_list.end(), mask_list.begin(), mask_list.end());
   
-  //changed from mutation_list to list with addition of mask (ie non-mutation code for editing a reference file. Not expected to be a problem)
   for (diff_entry_list_t::iterator itr_mut = mutation_list.begin(); itr_mut != mutation_list.end(); itr_mut++)
   {
     cDiffEntry& mut(**itr_mut);

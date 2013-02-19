@@ -906,6 +906,16 @@ string formatted_mutation_annotation(const cDiffEntry& mut)
   return ss.str(); 
 }
 
+// Puts correct italics in IS150 etc.
+string html_format_repeat_name(const string& in_repeat_name)
+{
+  // This should check if the rest of the string is completely numeric
+  if (in_repeat_name.substr(0,2) == "IS")
+    return "IS" + i(in_repeat_name.substr(2));
+    
+  return in_repeat_name;
+}
+
 /*-----------------------------------------------------------------------------
  *  Helper function for formatted_mutation_annotation
  *-----------------------------------------------------------------------------*/
@@ -2324,9 +2334,9 @@ void Html_Mutation_Table_String::Item_Lines()
         
         // special annotation for mediated- and between repeat elements
         if (mut.entry_exists("mediated")) 
-          annotation_str = mut["mediated"] + "-mediated"; 
+          annotation_str = html_format_repeat_name(mut["mediated"]) + "-mediated"; 
         if (mut.entry_exists("between")) 
-          annotation_str = "between " + mut["between"];
+          annotation_str = "between " + html_format_repeat_name(mut["between"]);
         // default
         if(annotation_str.empty()) {
           annotation_str = nonbreaking(mut["gene_position"]);
@@ -2360,7 +2370,7 @@ void Html_Mutation_Table_String::Item_Lines()
           s << s_start.str() << " :: ";
         }
         
-        s << mut["repeat_name"] << " (";
+        s << html_format_repeat_name(mut["repeat_name"]) << " (";
         switch (from_string<int32_t>(mut["strand"]))
         {
           case -1:

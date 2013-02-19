@@ -113,7 +113,72 @@ struct formatted_double {
   uint8_t _precision; //number of digits past zero to print
 };
 
+  
+/*! Parse errors
+ 
+ 
+ 
+ */
 
+class cFileParseErrors {
+public:
+  
+  struct sFileParseError {
+    uint32_t _line_number;
+    string _line;
+    string _error_message;
+    
+    sFileParseError(uint32_t line_number, const string& line, const string& error_message )
+    :_line_number(line_number), _line(line), _error_message(error_message)
+    {}
+    
+    bool operator <(const sFileParseError& compare)
+    { return this->_line_number < compare._line_number; }
+    
+    void print()
+    {
+      string tab_line = substitute(_line, "\t", "<tab>");
+      
+      cerr << "ERROR: " << _error_message << endl;
+      if ((_line_number != 0) || (_line != "")) {
+        cerr << "LINE: " << setw(5) <<  _line_number << "\n" << tab_line << "\n";
+      }
+    }
+  };
+  
+  // List pairs of line number and error message
+  list<sFileParseError> _errors;
+  string _filename;
+  bool _fatal;
+  
+  cFileParseErrors(const string& filename)
+  : _filename(filename), _fatal(false)
+  { }
+  
+  void add_line_error(const uint32_t line_number, const string& line, const string& message, bool fatal)
+  {
+    _fatal = _fatal || fatal;
+    _errors.push_back( sFileParseError(line_number, line, message) );
+  }
+  
+  void print_errors()
+  {
+    if (_errors.size() == 0) return;
+    
+    cerr << "\n";
+    cerr << ">>> Error(s) in GenomeDiff format. FILE: " << _filename << " <<<" << endl;
+    
+    _errors.sort();
+    
+    for(list<sFileParseError>::iterator it = _errors.begin(); it != _errors.end(); it++) {
+      cerr << "\n";
+      it->print();
+    }
+    cerr << "\n";
+  }
+  
+  bool fatal() {return _fatal;}
+};
 
 /*! Genome diff entry type.
  
@@ -140,7 +205,7 @@ public:
 
   //! Constructor.
   cDiffEntry(const gd_entry_type type);
-  cDiffEntry(const string &line); //For deserialization from gd file.
+  cDiffEntry(const string &line, uint32_t line_number, cFileParseErrors* file_parse_errors = NULL); //For deserialization from gd file.
   cDiffEntry(diff_entry_map_t& de) : diff_entry_map_t(de) {};
   cDiffEntry();
   

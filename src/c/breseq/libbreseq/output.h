@@ -236,6 +236,7 @@ string html_deletion_coverage_values_table_string(const Settings& settings, cRef
  * Helper Functions For Tables 
  *-----------------------------------------------------------------------------*/
 string formatted_mutation_annotation(const cDiffEntry& mut);
+string html_format_repeat_name(const string& in_repeat_name);
 string to_underline_red_codon(const cDiffEntry& mut,const string& codon_key);
 string decode_reject_reason(const string & reject);
 
