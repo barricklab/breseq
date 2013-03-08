@@ -1840,7 +1840,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
       ? mut["new_seq"][0]
       : reverse_complement(mut["new_seq"])[0];
     mut["aa_new_seq"] =  translate_codon(mut["codon_new_seq"], gene.translation_table, codon_pos_1);
-
+    mut["transl_table"] = to_string(gene.translation_table);
     mut["snp_type"] = (mut["aa_ref_seq"] != mut["aa_new_seq"]) ? "nonsynonymous" : "synonymous";
   }
 
@@ -2029,42 +2029,46 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
     }
   }
   
-  //scan snps to see if they affect the same codon
-    for (size_t i = 0; i < snp_muts.size(); i++){
-      for (size_t j = i + 1; j < snp_muts.size(); j++){
-        if ((*snp_muts[i])["codon_position"] == "" ||
-            (*snp_muts[j])["codon_position"] == ""
-            ){
-          continue;
-        }
-        
-        int32_t i_position = from_string<int32_t>((*snp_muts[i])["position"]);
-        int32_t j_position = from_string<int32_t>((*snp_muts[j])["position"]);
-        int32_t snp_distance = i_position - j_position;
-        
-        int32_t i_codon_position = from_string<int32_t>((*snp_muts[i])["codon_position"]);
-        int32_t j_codon_position = from_string<int32_t>((*snp_muts[j])["codon_position"]);
-        
-        if (i_position > j_position){
-          if (snp_distance <= 2 && j_codon_position < i_codon_position){
-            string new_codon = (*snp_muts[i])["codon_new_seq"];
-            const char new_char = (*snp_muts[j])["new_seq"][0];
-            new_codon[j_codon_position - 1] = new_char;
-            (*snp_muts[i])["codon_new_seq"] = new_codon;
-            (*snp_muts[j])["codon_new_seq"] = new_codon;
-          }
-        }
-        else{
-          if (snp_distance >= -2 && j_codon_position > i_codon_position){
-            string new_codon = (*snp_muts[i])["codon_new_seq"];
-            const char new_char = (*snp_muts[j])["new_seq"][0];
-            new_codon[j_codon_position - 1] = new_char;
-            (*snp_muts[i])["codon_new_seq"] = new_codon;
-            (*snp_muts[j])["codon_new_seq"] = new_codon;
-          }
+  //Scan SNPs to see if they affect the same codon, merge changes, and update amino acid changes
+  for (size_t i = 0; i < snp_muts.size(); i++){
+    for (size_t j = i + 1; j < snp_muts.size(); j++){
+      if ((*snp_muts[i])["codon_position"] == "" ||
+          (*snp_muts[j])["codon_position"] == ""
+          ){
+        continue;
+      }
+      
+      int32_t i_position = from_string<int32_t>((*snp_muts[i])["position"]);
+      int32_t j_position = from_string<int32_t>((*snp_muts[j])["position"]);
+      int32_t snp_distance = i_position - j_position;
+      
+      int32_t i_codon_position = from_string<int32_t>((*snp_muts[i])["codon_position"]);
+      int32_t j_codon_position = from_string<int32_t>((*snp_muts[j])["codon_position"]);
+      
+      if (i_position > j_position){
+        if (snp_distance <= 2 && j_codon_position < i_codon_position){
+          string new_codon = (*snp_muts[i])["codon_new_seq"];
+          const char new_char = (*snp_muts[j])["new_seq"][0];
+          new_codon[j_codon_position - 1] = new_char;
+          (*snp_muts[i])["codon_new_seq"] = new_codon;
+          (*snp_muts[j])["codon_new_seq"] = new_codon;
+          (*snp_muts[i])["aa_new_seq"] =  translate_codon(new_codon, from_string((*snp_muts[i])["transl_table"]), from_string((*snp_muts[i])["codon_position"]));
+          (*snp_muts[j])["aa_new_seq"] =  translate_codon(new_codon, from_string((*snp_muts[j])["transl_table"]), from_string((*snp_muts[j])["codon_position"]));
         }
       }
-    }//for
+      else{
+        if (snp_distance >= -2 && j_codon_position > i_codon_position){
+          string new_codon = (*snp_muts[i])["codon_new_seq"];
+          const char new_char = (*snp_muts[j])["new_seq"][0];
+          new_codon[j_codon_position - 1] = new_char;
+          (*snp_muts[i])["codon_new_seq"] = new_codon;
+          (*snp_muts[j])["codon_new_seq"] = new_codon;
+          (*snp_muts[i])["aa_new_seq"] =  translate_codon(new_codon, from_string((*snp_muts[i])["transl_table"]), from_string((*snp_muts[i])["codon_position"]));
+          (*snp_muts[j])["aa_new_seq"] =  translate_codon(new_codon, from_string((*snp_muts[j])["transl_table"]), from_string((*snp_muts[j])["codon_position"]));
+        }
+      }
+    }
+  }//for
 }
 
 void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& summary)
