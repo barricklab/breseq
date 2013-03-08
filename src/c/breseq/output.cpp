@@ -2325,7 +2325,11 @@ void Html_Mutation_Table_String::Item_Lines()
         
       case INS:{
         cell_mutation = "+";
-        cell_mutation += mut[NEW_SEQ];
+        if (options.detailed || (mut["new_seq"].size() <= 8)) {
+          cell_mutation += mut[NEW_SEQ];
+        } else {
+          cell_mutation += s(mut[NEW_SEQ].size()) + " bp";
+        }
       } break;
         
       case DEL:{
