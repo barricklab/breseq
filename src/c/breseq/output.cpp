@@ -658,13 +658,6 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   //
   // Read alignment evidence options
   //
-  double polymorphism_log10_e_value_cutoff;               // Default = mutation_log10_e_value_cutoff = 10
-  double polymorphism_bias_p_value_cutoff;                // Default = 0.05
-  double polymorphism_frequency_cutoff;                   // Default = 0.1 for mixed base | 0.0 for polymorphism
-  int32_t polymorphism_minimum_new_coverage_each_strand; // Default = 1
-  uint32_t polymorphism_reject_homopolymer_length;        // Default = 0 (OFF)
-  bool no_indel_polymorphisms;                            // Default = false
-  
   
   {
     HTML << h2("Read Alignment Evidence") << endl;
@@ -697,8 +690,14 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     HTML << tr(td("Polymorphism bias cutoff") 
                + td((settings.polymorphism_bias_p_value_cutoff == 0) ? "OFF" : s(settings.polymorphism_bias_p_value_cutoff))
                );
-    HTML << tr(td("Polymorphism predict indel polymorphisms") 
-               + td((settings.polymorphism_reject_homopolymer_length == 0) ? "OFF" : s(settings.polymorphism_reject_homopolymer_length))
+    
+    HTML << tr(td("Predict indel polymorphisms") 
+               + td((settings.no_indel_polymorphisms) ? "NO" : "YES")
+               );
+    
+    // Rejects if >= this length
+    HTML << tr(td("Skip indel polymorphisms in homopolymers runs") 
+               + td((settings.polymorphism_reject_homopolymer_length == 0) ? "ALL" : " ≥" + s(settings.polymorphism_reject_homopolymer_length) + " bases")
                );
 
     HTML << end_table();    
