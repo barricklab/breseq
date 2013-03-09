@@ -896,6 +896,9 @@ string formatted_mutation_annotation(const cDiffEntry& mut)
     string codon_ref_seq = to_underline_red_codon(mut, "codon_ref_seq");
     string codon_new_seq = to_underline_red_codon(mut, "codon_new_seq");
     ss << "&nbsp;(" << codon_ref_seq << "&rarr;" << codon_new_seq << ")&nbsp;";  
+    
+    if (mut.entry_exists("multiple_polymorphic_SNPs_in_same_codon"))
+      ss << "&nbsp;&Dagger;";
   }
   else // mut[SNP_TYPE] == "NC"
   {

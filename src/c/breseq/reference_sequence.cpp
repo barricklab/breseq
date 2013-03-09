@@ -2045,8 +2045,18 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
       int32_t i_codon_position = from_string<int32_t>((*snp_muts[i])["codon_position"]);
       int32_t j_codon_position = from_string<int32_t>((*snp_muts[j])["codon_position"]);
       
-      if (i_position > j_position){
-        if (snp_distance <= 2 && j_codon_position < i_codon_position){
+      if ( ((i_position > j_position) && (snp_distance <= 2 && j_codon_position < i_codon_position))
+        || ((i_position < j_position) && (snp_distance >= -2 && j_codon_position > i_codon_position)) ) {
+          
+          // Don't do this for SNPs that are not 100% frequency
+          if (  (*snp_muts[i]).entry_exists(FREQUENCY) && ( from_string<double>((*snp_muts[i])[FREQUENCY]) != 1.0 ) 
+              || (*snp_muts[j]).entry_exists(FREQUENCY) && ( from_string<double>((*snp_muts[j])[FREQUENCY]) != 1.0 ) ) 
+          {
+            (*snp_muts[i])["multiple_polymorphic_SNPs_in_same_codon"] = "1";
+            (*snp_muts[j])["multiple_polymorphic_SNPs_in_same_codon"] = "1";
+            continue;
+          }
+          
           string new_codon = (*snp_muts[i])["codon_new_seq"];
           const char new_char = (*snp_muts[j])["new_seq"][0];
           new_codon[j_codon_position - 1] = new_char;
@@ -2054,18 +2064,6 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
           (*snp_muts[j])["codon_new_seq"] = new_codon;
           (*snp_muts[i])["aa_new_seq"] =  translate_codon(new_codon, from_string((*snp_muts[i])["transl_table"]), from_string((*snp_muts[i])["codon_position"]));
           (*snp_muts[j])["aa_new_seq"] =  translate_codon(new_codon, from_string((*snp_muts[j])["transl_table"]), from_string((*snp_muts[j])["codon_position"]));
-        }
-      }
-      else{
-        if (snp_distance >= -2 && j_codon_position > i_codon_position){
-          string new_codon = (*snp_muts[i])["codon_new_seq"];
-          const char new_char = (*snp_muts[j])["new_seq"][0];
-          new_codon[j_codon_position - 1] = new_char;
-          (*snp_muts[i])["codon_new_seq"] = new_codon;
-          (*snp_muts[j])["codon_new_seq"] = new_codon;
-          (*snp_muts[i])["aa_new_seq"] =  translate_codon(new_codon, from_string((*snp_muts[i])["transl_table"]), from_string((*snp_muts[i])["codon_position"]));
-          (*snp_muts[j])["aa_new_seq"] =  translate_codon(new_codon, from_string((*snp_muts[j])["transl_table"]), from_string((*snp_muts[j])["codon_position"]));
-        }
       }
     }
   }//for
