@@ -452,6 +452,11 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 			update_unknown_intervals(position, p.target(), base_predicted, this_position_unique_only_coverage);
 		}
     
+    if (position == 156)
+    {
+      cout << "DEbug stop" << endl;
+    }
+    
     //###
 		//## Does any RA evidence pass tests?
 		//###	
@@ -470,11 +475,6 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		if(!mutation_predicted && !polymorphism_predicted) {
 			continue; // goes to next insert count...
 		}
-    
-    //## check condition for no indel polymorphisms
-    if (polymorphism_predicted && _settings.no_indel_polymorphisms && ((mut[REF_BASE] == ".") || mut[NEW_BASE] == ".")) {
-      continue;
-    }
     		
     //###
 		//## Create new RA evidence mutation for genome diff

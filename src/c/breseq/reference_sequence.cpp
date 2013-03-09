@@ -2180,7 +2180,7 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
       new_gd.add(mut);
       continue;
     }
-
+    
     // lines only exist for polymorphisms
     if ((mut[FREQUENCY] == "1") || (mut[FREQUENCY] == "0"))
     {
@@ -2255,6 +2255,12 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
         add_reject_reason(mut, "HOMOPOLYMER_STRETCH");
       }
     }
+    
+    
+    if (settings.no_indel_polymorphisms && ((mut[REF_BASE] == ".") || (mut[NEW_BASE] == ".")))
+    {
+      add_reject_reason(mut, "INDEL_POLYMORPHISM");
+    }
 
     if (
         mut.number_reject_reasons() > 0
@@ -2262,6 +2268,7 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
         && (from_string<double>(mut[FREQUENCY]) > 0.5)
         )
     {
+      mut["polymorphism_changed_to_consensus"] = "1";
       mut[FREQUENCY] = "1";
       mut.erase(REJECT);
 
