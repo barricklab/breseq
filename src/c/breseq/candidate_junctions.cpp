@@ -984,13 +984,13 @@ namespace breseq {
     // Carry over redundancy that was already assigned (based on different coord matching, but sequence being the same)
     if (merged == 2)
     {
-      merge_into.sides[0].redundant = merge_from.sides[1].redundant || merge_into.sides[0].redundant;
-      merge_into.sides[1].redundant = merge_from.sides[0].redundant || merge_into.sides[1].redundant;
+      merge_into.sides[0].redundant = merge_from.sides[1].redundant && merge_into.sides[0].redundant;
+      merge_into.sides[1].redundant = merge_from.sides[0].redundant && merge_into.sides[1].redundant;
     }
     else // merged == 1
     {
-      merge_into.sides[0].redundant = merge_from.sides[0].redundant || merge_into.sides[0].redundant;
-      merge_into.sides[1].redundant = merge_from.sides[1].redundant || merge_into.sides[1].redundant;
+      merge_into.sides[0].redundant = merge_from.sides[0].redundant && merge_into.sides[0].redundant;
+      merge_into.sides[1].redundant = merge_from.sides[1].redundant && merge_into.sides[1].redundant;
     }
     
     // If one of the sides is identical (in terms of reference coordinate and strand), then mark it as redundant
