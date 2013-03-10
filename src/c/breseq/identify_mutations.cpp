@@ -452,11 +452,6 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 			update_unknown_intervals(position, p.target(), base_predicted, this_position_unique_only_coverage);
 		}
     
-    if (position == 156)
-    {
-      cout << "DEbug stop" << endl;
-    }
-    
     //###
 		//## Does any RA evidence pass tests?
 		//###	
