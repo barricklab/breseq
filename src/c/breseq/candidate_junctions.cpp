@@ -994,6 +994,8 @@ namespace breseq {
     }
     
     // If one of the sides is identical (in terms of reference coordinate and strand), then mark it as redundant
+    // @JEB 2013-03-09. This should require the whole sequence of the junction side to be the same to be redundant
+    /*
     if (verbose) cout << "Merging into carryover:" << merge_into.junction_key() << endl;
     for (uint32_t into_side = 0; into_side < 2; into_side++) 
     {
@@ -1012,6 +1014,7 @@ namespace breseq {
       }
       
     }
+    */
     
     jcp1 = merge_into_p;
     jcp2 = merge_from_p;
