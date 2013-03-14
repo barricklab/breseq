@@ -928,7 +928,7 @@ int do_filter_gd(int argc, char* argv[])
   AnyOption options("gdtools FILTER  [-o output.gd] -f filter1 [-f filter2] [-m SNP] input.gd");
   options("output,o", "Output Genome Diff file.", "output.gd");
   options("mut_type,m", "Only consider this mutation type for filtering.");
-  options("filter,f", "Filters to apply when selecting Genome Diff entries.");
+  options("filter,f", "Filters to apply when selecting Genome Diff entries. Mutations that match this condition will be removed from the resulting Genome Diff file. Enclose the value of this parameter in quotes, e.g. -f \"frequency<=0.05\".");
   options.processCommandArgs(argc, argv);
 
   options.addUsage("");
@@ -978,7 +978,7 @@ int do_filter_gd(int argc, char* argv[])
     printf("No mutations found.\n");
     return 0;
   }
-
+    
   cGenomeDiff output_gd;
   const vector<string> evals = make_vector<string>("==")("!=")("<=")(">=")("<")(">");
   for (diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); ++it) {
@@ -986,9 +986,12 @@ int do_filter_gd(int argc, char* argv[])
 
     vector<string> reasons;
     for (vector<string>:: const_iterator jt = filters.begin(); jt != filters.end(); ++jt) {
+        
+        
       bool is_filtered = false;
       // Parse filter string.
       string filter = *jt;
+        
       for (size_t i = 0; i < filter.size(); ++i) {
         if (filter[i] == ' ') {
           filter.erase(i,1);
@@ -999,6 +1002,7 @@ int do_filter_gd(int argc, char* argv[])
       string value = "";
       for (size_t i = 0; i < evals.size(); ++i) {
         if (filter.find(evals[i]) != string::npos) {
+            
           size_t pos = filter.find(evals[i]);
           eval = i;
           string segment = filter;
@@ -1008,9 +1012,14 @@ int do_filter_gd(int argc, char* argv[])
           break;
         }
       }
-      assert(eval != string::npos);
-      assert(key.size());
-      assert(value.size());
+    
+      ASSERT(key.size() && value.size(), "Error in format of filter: " + filter);
+        
+      // special case of frequency missing if 100%
+      if ( (key=="frequency") && (mut.count(key)==0) ) {
+          mut[key] = "1";
+      }  
+        
         
       if (mut.count(key)) {
           
