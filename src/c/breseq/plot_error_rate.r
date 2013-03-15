@@ -19,6 +19,7 @@
 ###
 
 ## Args should be in_file=/path/to/input/error_rates.tab out_file=/path/to/output
+par(family="sans")
 
 
 for (e in commandArgs()) {

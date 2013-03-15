@@ -21,6 +21,7 @@
 ## Args should be in_file=/path/to/input out_file=/path/to/output total_length=<total_length_of_sequences>  qual_file=
 
 ##error_count_file=/path/to/error_count
+par(family="sans")
 
 
 for (e in commandArgs()) {
