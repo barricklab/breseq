@@ -27,6 +27,9 @@
 ##   pdf_output=0 or 1
 ##   total_only=0 or 1
 
+par(family="sans")
+
+
 window_start = -1;
 window_end = -1;
 pdf_output = 0;
@@ -96,7 +99,7 @@ if (pdf_output == 0) {
 }
 
 ### We use a blank graph for the legend!!
-par(mar=c(4.1,5.1,1.1,1.1));
+par(mar=c(4.1,5.1,1.1,1.1))
 layout(matrix(c(1,2), 2, 1, byrow = TRUE), heights=c(5,0.65))
 
 plot(0:10, 0:10, type="n", lty="solid", ylim=c(0, maxy), xlim=c(start_pos, end_pos), lwd=2, xaxs="i", yaxs="i", xlab="Coordinate in Reference Genome", ylab="Read Coverage Depth")

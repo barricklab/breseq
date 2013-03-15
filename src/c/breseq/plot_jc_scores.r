@@ -17,6 +17,7 @@
 ##
 ##*****************************************************************************
 options <- commandArgs(trailingOnly = T)
+par(family="sans")
 
 table_path <- options[1]
 prefix <- options[2]

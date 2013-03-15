@@ -26,6 +26,8 @@
 ##   plot_poisson=0 or 1
 ##   pdf_output=0 or 1
 
+par(family="sans")
+
 plot_poisson = 0;
 pdf_output = 1;
 
