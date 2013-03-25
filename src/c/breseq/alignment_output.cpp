@@ -508,6 +508,57 @@ string alignment_output::html_alignment( const string& region, const string& cor
   return output;
 }
 
+  string alignment_output::text_alignment( const string& region, const string& corrected )
+  {
+    
+    // this sets object values (not re-usable currently)
+    create_alignment(region, corrected);
+    
+    string output = "";
+    
+    if (m_error_message.size() > 0)
+    {
+      output += m_error_message;
+      output += "\n";
+    }
+    
+    // We must have aligned reads for the remainder of the code to be safe
+    if (m_aligned_reads.size() == 0)
+      return output;
+    
+    /// all built by create_alignment and stored as member, m_ , variables.
+    set_quality_range(m_quality_score_cutoff);
+    
+    // @JEB sorting is not working yet
+    Sorted_Keys sorted_keys;
+    for (Aligned_Reads::iterator itr_read = m_aligned_reads.begin(); itr_read != m_aligned_reads.end(); itr_read++)
+    {
+      Sorted_Key sorted_key;
+      sorted_key.seq_id = itr_read->first;
+      sorted_key.aligned_bases = itr_read->second.aligned_bases;
+      sorted_keys.push_back(sorted_key);
+    }
+    std::sort(sorted_keys.begin(),sorted_keys.end(),alignment_output::sort_by_aligned_bases_length);
+    
+    
+    for (uint32_t index = 0; index < m_aligned_references.size(); index++)  {
+      output += text_alignment_line( m_aligned_references[index] , true) + "\n";  }
+    
+    output += text_alignment_line( m_aligned_annotation, false ) + "\n";
+    
+    for (Sorted_Keys::iterator itr_key = sorted_keys.begin(); itr_key != sorted_keys.end(); itr_key ++)  {
+      output += text_alignment_line( m_aligned_reads[itr_key->seq_id], true) + "\n";  }
+    
+    output += text_alignment_line( m_aligned_annotation, false)  + "\n"; 
+    
+    for (uint32_t index = 0; index < m_aligned_references.size(); index++)  {
+      output += text_alignment_line( m_aligned_references[index], true) + "\n";  }
+    
+    output += "\n";
+    
+    return output;
+  }  
+  
 /*! Called for each position.*/
 void alignment_output::Alignment_Output_Pileup::pileup_callback( const pileup& p )
 {
@@ -1038,6 +1089,49 @@ string alignment_output::html_alignment_strand(const int8_t &strand)
   if (strand == -1) return "&lt;";
   if (strand == 1) return "&gt;";
     return ".";
+}
+  
+string alignment_output::text_alignment_line(const alignment_output::Alignment_Base& a, const bool coords)
+{
+  string output;
+    
+  for(uint32_t index = 0; index < a.aligned_bases.length(); index++)
+  {
+    string b=to_string(a.aligned_bases[index]);       
+    output += b;
+  }
+  
+  if (a.show_strand) output += "  " + text_alignment_strand(a.strand); 
+  
+  // write the seq_id and coords in non-breaking html
+  if (!a.seq_id.empty())
+  {
+    string seq_id = a.seq_id;
+    // substitute breaking hyphens
+    if(coords)
+    {
+      seq_id += "/" + to_string<uint32_t>(a.start);
+      seq_id += "-";
+      seq_id += to_string<uint32_t>(a.end);   
+    }
+    
+    output += "  ";
+    output += seq_id;
+  }   
+  
+  // write the mapping quality - it would be nice to justify this
+  if (a.mapping_quality != -1) {
+    output += " (MQ=" + to_string<>(a.mapping_quality) + ")";
+  }
+  
+  return output;
+}
+  
+string alignment_output::text_alignment_strand(const int8_t &strand)
+{
+  if (strand == -1) return "<";
+  if (strand == 1) return ">";
+  return ".";
 }
 
 } // namespace breseq

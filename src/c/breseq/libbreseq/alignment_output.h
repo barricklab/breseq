@@ -194,6 +194,7 @@ namespace breseq
                       );
     //! Output an HTML alignment.
     string html_alignment ( const string& region, const string& corrected="" );
+    string text_alignment ( const string& region, const string& corrected="" );
     void create_alignment ( const string& region, const string& corrected="" );
     void set_quality_range(const uint32_t quality_score_cutoff = 0);
   private:
@@ -201,6 +202,8 @@ namespace breseq
     string create_header_string();
     string html_alignment_line(const Alignment_Base& a, const bool coords, const bool use_quality_range);
     string html_alignment_strand(const int8_t &strand);
+    string text_alignment_line(const Alignment_Base& a, const bool coords);
+    string text_alignment_strand(const int8_t &strand);
     
     static bool sort_by_aligned_bases_length ( const Sorted_Key& a, const Sorted_Key& b )
     {

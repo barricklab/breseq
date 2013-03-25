@@ -56,6 +56,7 @@ int do_bam2aln(int argc, char* argv[]) {
   ("bam,b", "bam file containing sequences to be aligned", "data/reference.bam")
 	("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
   ("output,o", "output to file [region.html]", "alignment.html")
+  ("format", "Output format: txt or html" "html")
   ("region,r", "region to print (accession:start-end), may also be provided as unnamed arguments at the end of the command line.")
   ("max-reads,n", "maximum number of reads to show in alignment", 200)
   ("repeat", "show reads with multiple best matches in reference", TAKES_NO_ARGUMENT)
@@ -95,6 +96,8 @@ int do_bam2aln(int argc, char* argv[]) {
     // clean commas
     region_list[j] = substitute(region_list[j], ",", "");
     
+    cerr << "Creating alignment for region: " << region_list[j] << endl;
+    
     // Generate Alignment!
     alignment_output ao(
                         options["bam"],
@@ -104,16 +107,33 @@ int do_bam2aln(int argc, char* argv[]) {
                         options.count("repeat")
                         );
     
-    string html_output = ao.html_alignment(region_list[j]);
+    string default_file_name = region_list[j];
     
+    string output_string;
+    if (options["format"] == "html") {
+      output_string = ao.html_alignment(region_list[j]);
+      default_file_name += ".html";
+    }
+    else if (options["format"] == "txt") {
+      output_string = ao.text_alignment(region_list[j]);
+      default_file_name += ".txt";
+    }
+    else {
+      options.addUsage("");
+      options.addUsage("Unknown format requested: " + options["format"]);
+      options.printUsage();
+      return -1;
+    }
+      
     if (options.count("stdout"))
     {
-      cout << html_output << endl;
+      cout << output_string << endl;
     }
     else
     {
-      ///Write to html file
-      string file_name = region_list[j] + ".html";
+      ///Write to file
+      string file_name = default_file_name;
+            
       if (options.count("output"))
       {
         file_name = options["output"];
@@ -124,7 +144,7 @@ int do_bam2aln(int argc, char* argv[]) {
       ofstream myfile (file_name.c_str());
       if (myfile.is_open())
       {
-        myfile << html_output;
+        myfile << output_string;
         myfile.close();
       }
       else cerr << "Unable to open file";
@@ -139,7 +159,7 @@ int do_bam2aln(int argc, char* argv[]) {
  */
 int do_bam2cov(int argc, char* argv[]) {
   // setup and parse configuration options:
-	AnyOption options("Usage: bam2aln -b reference.bam -f reference.fasta [--plot-format PNG -o output.png] seq_id1:start1-end1 [seq_id2:start2-end2 ...]");
+	AnyOption options("Usage: bam2aln -b reference.bam -f reference.fasta [--format PNG -o output.png] seq_id1:start1-end1 [seq_id2:start2-end2 ...]");
 	options
   ("help,h", "Produce advanced help message", TAKES_NO_ARGUMENT)
   // required options
@@ -150,7 +170,7 @@ int do_bam2cov(int argc, char* argv[]) {
   ("tile-size", "In tiling mode, the size of each tile", 0, ADVANCED_OPTION)
   ("tile-overlap", "In tiling mode, overlap between adjacent tiles (1/2 on each side)", 0, ADVANCED_OPTION)
   // options controlling what files are output
-  ("plot-format", "Format of output plot: PNG or PDF", "PNG")
+  ("format", "Format of output plot: PNG or PDF", "PNG")
   ("table,t", "Create tab delimited file of coverage instead of a plot", TAKES_NO_ARGUMENT)
 //  ("read_start_output,r", "file name for table file binned by read start bases (DEFAULT: OFF)")
 //  ("gc_output,g", "create additional table file binned by GC content of reads (DEFAULT: OFF)")
@@ -216,7 +236,7 @@ int do_bam2cov(int argc, char* argv[]) {
   
   // Set options
   co.total_only(options.count("total-only"));
-  co.output_format( options["plot-format"] );
+  co.output_format( options["format"] );
   
   // create regions that tile the genome
   if (tiling_mode)
@@ -270,7 +290,7 @@ int do_bam2cov(int argc, char* argv[]) {
       co.table(*it, file_name + ".tab", from_string<uint32_t>(options["resolution"]));
     } else {
       cout << "Plotting coverage for region: " << *it << endl;
-      co.plot(*it, file_name + "." + to_lower(options["plot-format"]) , from_string<uint32_t>(options["resolution"]));
+      co.plot(*it, file_name + "." + to_lower(options["format"]) , from_string<uint32_t>(options["resolution"]));
     }
   }
   
