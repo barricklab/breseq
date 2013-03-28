@@ -68,7 +68,6 @@ INSTALL$
 
 ## samtools
 samtools$
-^extern/samtools-.*/misc
 ^extern/samtools-.*/bcftools/bcftools
 ^extern/samtools-.*/razip$
 
