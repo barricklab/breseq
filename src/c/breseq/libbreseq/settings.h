@@ -423,6 +423,7 @@ namespace breseq
     string copy_number_variation_done_file_name;
     
     string tiled_complete_coverage_text_file_name;
+    string tiled_for_edging_text_file_name;
     string ranges_text_file_name;
     string cnv_history_text_file_name;
     string smoothed_ranges_text_file_name;

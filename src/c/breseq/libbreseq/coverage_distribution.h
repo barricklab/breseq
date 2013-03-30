@@ -75,6 +75,7 @@ namespace breseq {
                       bool ignore_redundant_coverage,
                       string in_file_name,
                       string out_file_name,
+                      string tiled_for_edging_file_name,
                       uint32_t tile_size
                       );
 
@@ -90,6 +91,7 @@ namespace breseq {
     static void find_segments (const Settings& settings,
                                double summary_average,
                                string in_file_name,
+                               string tiled_for_edging_file_name,
                                string out_file_name,
                                string history_file_name
                                );
@@ -133,6 +135,26 @@ namespace breseq {
 
 	}; // class CoverageDistribution
 
+    
+    /* 
+     * Data structure to store a range and its associated copy number,
+     * for range merging within ::smooth_segments function.
+     * Written by Tyler Fields.
+     */
+    struct range_t {
+        
+        // A range pair is a terminal "range", that is, a contiguous region in a
+        // genome with the same copy number. Each range is thus either
+        // an outlier, or the remaining area between or beside outliers. So each range
+        // demarcates where an outlier either starts or ends.
+        pair<int32_t, int32_t> range_pair;
+        
+        // Copy number
+        double copy_number;
+        double copy_number_float;
+        
+    };
+    
 } // namespace breseq
 
 #endif
