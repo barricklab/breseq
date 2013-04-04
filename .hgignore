@@ -70,10 +70,10 @@ INSTALL$
 samtools$
 ^extern/samtools-.*/bcftools/bcftools
 ^extern/samtools-.*/razip$
-^extern/samtools-*/misc/md5fa
-^extern/samtools-*/misc/md5sum-lite
-^extern/samtools-*/misc/seqtk
-^extern/samtools-*/misc/wgsim
+^extern/samtools-.*/misc/md5fa$
+^extern/samtools-.*/misc/md5sum-lite$
+^extern/samtools-.*/misc/seqtk$
+^extern/samtools-.*/misc/wgsim$
 
 ## Perl GenomeDiff
 ^src/perl/GenomeDiff/Build$

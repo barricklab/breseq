@@ -1713,8 +1713,10 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
   // Mutation is intergenic
   if (within_genes.size() + between_genes.size() + inside_left_genes.size() + inside_right_genes.size() == 0)
   {
-    mut["snp_type"] = "intergenic";
-
+    if (mut._type == SNP) {
+      mut["snp_type"] = "intergenic";
+    }
+    
     mut["gene_name"] += (prev_gene.name.size() > 0) ? prev_gene.name : no_gene_name;
     mut["gene_name"] += intergenic_separator;
     mut["gene_name"] += (next_gene.name.size() > 0) ? next_gene.name : no_gene_name;
@@ -1799,13 +1801,17 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     // ...but the gene is a pseudogene or not a protein coding gene
     if (!ignore_pseudogenes && gene.pseudogene)
     {
-      mut["snp_type"] = "pseudogene";
+      if (mut._type == SNP) {
+        mut["snp_type"] = "pseudogene";
+      }
       mut["gene_position"] = "pseudogene (" + mut["gene_position"] + "/" + gene_nt_size + " nt)";
       return;
     }
     else if (gene.type != "CDS")
     {
-      mut["snp_type"] = "noncoding";
+      if (mut._type == SNP) {
+        mut["snp_type"] = "noncoding";
+      }
       mut["gene_position"] = "noncoding (" + mut["gene_position"] + "/" + gene_nt_size + " nt)";
       return;
     }
@@ -1841,7 +1847,10 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
       : reverse_complement(mut["new_seq"])[0];
     mut["aa_new_seq"] =  translate_codon(mut["codon_new_seq"], gene.translation_table, codon_pos_1);
     mut["transl_table"] = to_string(gene.translation_table);
-    mut["snp_type"] = (mut["aa_ref_seq"] != mut["aa_new_seq"]) ? "nonsynonymous" : "synonymous";
+    
+    if (mut._type == SNP) {
+      mut["snp_type"] = (mut["aa_ref_seq"] != mut["aa_new_seq"]) ? "nonsynonymous" : "synonymous";
+    }
   }
 
   //The mutation actually contains several genes
