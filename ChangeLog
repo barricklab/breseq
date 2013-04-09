@@ -1,3 +1,6 @@
+Version 0.23
+    * Fix for compilation under Cygwin.
+
 Version 0.22
     * Fixed crash due to change in output format in newer bowtie2 versions (≥2.0.4). 
       breseq should now produce consistent results for all versions (≥2.0.0-beta7).
