@@ -85,6 +85,20 @@ AC_CHECK_FILE([.hg/branchheads.cache],
 AC_DEFINE_UNQUOTED([HG_REVISION], ["${HG_REVISION_PREFIX}${HG_REVISION_STRING}"], [Defining HG repository version])
 
 
+AC_CANONICAL_HOST
+# Check for which host we are on and setup a few things
+# specifically based on the host
+case $host_os in
+  cygwin* )
+  		AC_MSG_NOTICE([Detected host 'cygwin'.])
+  		AC_SUBST(SAMTOOLS_ADDITIONAL_CFLAGS, ["-Dexpl=exp -Dlogl=log"])
+        ;;
+  darwin* )
+    	AC_MSG_NOTICE([Detected host 'darwin'.])
+        ;;
+esac
+
+
 AC_CONFIG_FILES([
     extern/samtools-0.1.18/bcftools/Makefile
     extern/samtools-0.1.18/Makefile
@@ -92,3 +106,5 @@ AC_CONFIG_FILES([
     Makefile
 ])
 AC_OUTPUT
+
+

@@ -225,7 +225,7 @@ EXEEXT =
 FGREP = /usr/bin/grep -F
 GREP = /usr/bin/grep
 HG_REVISION_PREFIX = revision 
-HG_REVISION_STRING = 52579536f499
+HG_REVISION_STRING = ce73b9672618
 INSTALL = /usr/bin/install -c
 INSTALL_DATA = ${INSTALL} -m 644
 INSTALL_PROGRAM = ${INSTALL}
@@ -259,6 +259,7 @@ PACKAGE_URL = http://barricklab.org/breseq
 PACKAGE_VERSION = 0.22
 PATH_SEPARATOR = :
 RANLIB = ranlib
+SAMTOOLS_ADDITIONAL_CFLAGS = 
 SED = /usr/bin/sed
 SET_MAKE = 
 SHELL = /bin/sh
@@ -404,7 +405,7 @@ libbam_la_SOURCES = \
 	sam.h
 
 libbam_la_LDFLAGS = -fPIC
-libbam_la_CFLAGS = -D_CURSES_LIB=1 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -D_USE_KNETFILE
+libbam_la_CFLAGS = -D_CURSES_LIB=1 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -D_USE_KNETFILE $(SAMTOOLS_ADDITIONAL_CFLAGS)
 samtools_SOURCES = \
 	bam_tview.c \
 	bam_plcmd.c \
@@ -425,7 +426,7 @@ samtools_SOURCES = \
 	sample.h \
 	phase.c 
 
-samtools_CFLAGS = -D_CURSES_LIB=1 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -D_USE_KNETFILE
+samtools_CFLAGS = -D_CURSES_LIB=1 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -D_USE_KNETFILE $(SAMTOOLS_ADDITIONAL_CFLAGS)
 samtools_LDADD = libbam.la bcftools/libbcf.la
 include_HEADERS = bam.h
 all: all-recursive

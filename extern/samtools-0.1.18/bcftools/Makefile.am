@@ -49,7 +49,7 @@ libbcf_la_SOURCES = \
 	mut.c \
 	bcf2qcall.c
 libbcf_la_LDFLAGS = -fPIC
-libbcf_la_CFLAGS = -I$(top_srcdir)/$(LIBBAM)
+libbcf_la_CFLAGS = -I$(top_srcdir)/$(LIBBAM) $(SAMTOOLS_ADDITIONAL_CFLAGS)
 
 bin_PROGRAMS = bcftools
 bcftools_SOURCES = \
@@ -59,5 +59,5 @@ bcftools_SOURCES = \
 	../kstring.c \
 	../knetfile.c \
 	../bedidx.c
-bcftools_CFLAGS = -g -Wall -O2 -D_FILE_OFFSET_BITS=64 -D_USE_KNETFILE -I$(top_srcdir)/$(LIBBAM)
+bcftools_CFLAGS = -g -Wall -O2 -D_FILE_OFFSET_BITS=64 -D_USE_KNETFILE -I$(top_srcdir)/$(LIBBAM) $(SAMTOOLS_ADDITIONAL_CFLAGS)
 bcftools_LDADD = libbcf.la
