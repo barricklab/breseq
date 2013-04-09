@@ -141,4 +141,11 @@ Other problems
 
 If you have a problem installing |breseq|, please send a detailed report to jeffrey.e.barrick@gmail.com.
 
+Developers
+---------------------------------
+
+If you are working with a development version of |breseq| downloaded directly from the `Google Code Mercurial repository <http://code.google.com/p/breseq/source/checkout>`_, then you will need to run some additional commands and have additional tools installed in order to get it to compile or work with the XCode project.
+
+These are detailed in the DEVELOPER text file found in the main directory of the source code.
+
 
