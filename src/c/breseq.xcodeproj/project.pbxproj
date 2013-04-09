@@ -381,7 +381,7 @@
 /* Begin PBXLegacyTarget section */
 		7056AE0014511F5D00890AB0 /* samtools */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-f Makefile.xcode CFLAGS=\"-arch $(ARCHS)\" $(ACTION)";
+			buildArgumentsString = "-f Makefile.xcode CFLAGS=\"-arch $(NATIVE_ARCH)\" $(ACTION)";
 			buildConfigurationList = 7056AE0114511F5D00890AB0 /* Build configuration list for PBXLegacyTarget "samtools" */;
 			buildPhases = (
 			);
