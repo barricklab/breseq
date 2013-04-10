@@ -27,6 +27,16 @@ You must do this because breseq uses a build script to make libbam.a and link to
 
 With those two steps taken care of, breseq should compile. Most errors occur when breseq tries to build Samtools with the wrong architecture. You can troubleshoot this by changing $(NATIVE_ARCH) in the arguments for the samtools target.
 
+*** For XCode 4.1+ or on MacOS 10.7+ ***
+
+Under targets >> samtools >> info you may need to change the Arguments line from: 
+
+-f Makefile.xcode CFLAGS="-arch $(NATIVE_ARCH)" $(ACTION)
+
+to
+
+-f Makefile.xcode CFLAGS="-arch $(NATIVE_ARCH_ACTUAL)" $(ACTION)
+
 
 === Debugging in XCode ===
 
