@@ -224,7 +224,7 @@ namespace breseq {
   }
   
   // converts a sequence file
-  void convert_fastq(const string &from_file_name, const string &to_file_name, const string &from_format, const string &to_format)
+  void convert_fastq(const string &from_file_name, const string &to_file_name, const string &from_format, const string &to_format, bool _reverse_complement)
   {
     cFastqFile input_fastq_file, output_fastq_file;
     input_fastq_file.open(from_file_name.c_str(), fstream::in);
@@ -236,6 +236,8 @@ namespace breseq {
     while (input_fastq_file.read_sequence(on_sequence, fqc)) 
     {
       fqc.convert_sequence(on_sequence);
+      if (_reverse_complement) 
+        on_sequence = reverse_complement(on_sequence);
       output_fastq_file.write_sequence(on_sequence);
     }
     
@@ -551,6 +553,7 @@ namespace breseq {
     fprintf(*this, "+%s\n", sequence.m_name_plus.c_str());
     fprintf(*this, "%s\n" , sequence.m_qualities.c_str());
   }
+
 
   int32_t cSimFastqSequence::SEED_VALUE = time(NULL);
   /*!

@@ -222,10 +222,27 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   mt_options.relative_link = relative_path;
   mt_options.one_ref_seq = one_ref_seq;
   HTML << Html_Mutation_Table_String(settings, gd, muts, mt_options) << endl;
-
+  
   //////
   // Unassigned evidence
   //////
+  
+  // Mixed predictions ≥50% RA evidence
+  vector<gd_entry_type> ra_types = make_vector<gd_entry_type>(RA);
+  list<counted_ptr<cDiffEntry> > mixed_ra = gd.filter_used_as_evidence(gd.show_list(ra_types));
+  mixed_ra.remove_if(not1(cDiffEntry::field_exists("mixed")));
+  if (mixed_ra.size() > 0) {
+    
+    list<counted_ptr<cDiffEntry> > mixed_ra_consensus;
+    for(diff_entry_list_t::iterator it=mixed_ra.begin(); it!=mixed_ra.end(); it++ ) {
+      if (from_string<double>((**it)[FREQUENCY]) >= settings.mixed_base_prediction_marginal_frequency_cutoff )
+        mixed_ra_consensus.push_back(*it);
+    }
+    
+    if (mixed_ra_consensus.size() > 0) {
+      HTML << "<p>" << html_read_alignment_table_string(mixed_ra_consensus, false, "Possible mixed read alignment evidence...", relative_path) << endl;
+    }
+  }
 
   diff_entry_list_t cn = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(CN)));
   cn.remove_if(cDiffEntry::rejected()); 
@@ -385,8 +402,15 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   list<counted_ptr<cDiffEntry> > mixed_ra = gd.filter_used_as_evidence(gd.show_list(ra_types));
   mixed_ra.remove_if(not1(cDiffEntry::field_exists("mixed")));
   if (mixed_ra.size() > 0) {
+    
+    list<counted_ptr<cDiffEntry> > mixed_ra_marginal;
+    for(diff_entry_list_t::iterator it=mixed_ra.begin(); it!=mixed_ra.end(); it++ ) {
+      if (from_string<double>((**it)[FREQUENCY]) < settings.mixed_base_prediction_marginal_frequency_cutoff )
+        mixed_ra_marginal.push_back(*it);
+    }
+    
     HTML << "<p>" << endl;
-    HTML << html_read_alignment_table_string(mixed_ra, false, "Possible mixed read alignment sites...", relative_path) << endl;
+    HTML << html_read_alignment_table_string(mixed_ra_marginal, false, "Marginal mixed read alignment evidence...", relative_path) << endl;
   }
   
   list<counted_ptr<cDiffEntry> > ra = gd.filter_used_as_evidence(gd.show_list(ra_types));
@@ -947,7 +971,9 @@ string to_underline_red_codon(const cDiffEntry& mut, const string& codon_key)
 }
 
 string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_details, const string& title, const string& relative_link)
-{
+{  
+  if (list_ref.size()==0) return "";
+  
   stringstream ss; //!< Main build object for function
   stringstream ssf; //!< Used for formatting strings
   
@@ -1137,8 +1163,8 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
 
 string html_missing_coverage_table_string(diff_entry_list_t& list_ref, bool show_details, const string& title, const string& relative_link)
 {
-  ASSERT(list_ref.front().get(), "No items in table");
-  
+  if (list_ref.size()==0) return "";
+
   stringstream ss; //!< Main Build Object in Function
   
   ss << endl;
@@ -1262,8 +1288,10 @@ string string_to_fixed_digit_string(string s, uint32_t precision = 2)
 }
   
 string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_details, const string& title, const string& relative_link)
-
 {
+  if (list_ref.size()==0) return "";
+
+  
   stringstream ss; //!<< Main Build Object for Function
   cDiffEntry& test_item = *list_ref.front();
 
@@ -1439,6 +1467,8 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_det
   
 string html_copy_number_table_string(diff_entry_list_t& list_ref, bool show_details, const string& title, const string& relative_link)
 {
+  if (list_ref.size()==0) return "";
+  
   stringstream ss; //!<< Main Build Object for Function
   cDiffEntry& test_item = *list_ref.front();
   

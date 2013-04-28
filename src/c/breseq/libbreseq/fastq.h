@@ -44,7 +44,7 @@ class cAnnotatedSequence;
                                         );
   
   // Utility function for converting FASTQ files between formats
-  void convert_fastq(const string &from_file_name, const string &to_file_name, const string &from_format, const string &to_format);
+  void convert_fastq(const string &from_file_name, const string &to_file_name, const string &from_format, const string &to_format, bool reverse_complement = false);
   
   /*! Sequence class.
    */
@@ -189,6 +189,14 @@ class cAnnotatedSequence;
       retval[i] = reverse_complement_lookup_table[static_cast<uint8_t>(seq[seq.size() - 1 - i])];
     return retval;
 	}
+  
+  inline cFastqSequence reverse_complement(cFastqSequence _seq) {
+    cFastqSequence seq = _seq;
+    seq.m_sequence = reverse_complement(seq.m_sequence);
+    seq.m_qualities = reverse_string(seq.m_qualities);
+    seq.m_name += "_RC";
+    return seq;
+  }
 	
 } // breseq namespace
 

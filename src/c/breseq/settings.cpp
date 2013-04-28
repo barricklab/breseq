@@ -310,6 +310,7 @@ namespace breseq
       ASSERT(!options.count("polymorphism-bias-cutoff"), "Option --polymorphism-bias-cutoff requires --polymorphism-prediction.")
 
       this->polymorphism_frequency_cutoff = 0.1;
+      this->mixed_base_prediction_marginal_frequency_cutoff = 0.5;
       this->no_indel_polymorphisms = false;
       this->polymorphism_reject_homopolymer_length = 3;
       this->polymorphism_log10_e_value_cutoff = 10;
@@ -469,6 +470,7 @@ namespace breseq
     this->deletion_coverage_seed_cutoff = 0;
     this->polymorphism_prediction = false;
     this->mixed_base_prediction = true;
+    this->mixed_base_prediction_marginal_frequency_cutoff = 0.5;
     
     this->polymorphism_log10_e_value_cutoff = this->mutation_log10_e_value_cutoff;
 		this->polymorphism_bias_p_value_cutoff = 0;
