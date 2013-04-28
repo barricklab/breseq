@@ -611,6 +611,7 @@ struct cDiffEntry::rejected_and_not_user_defined:public unary_function<diff_entr
   }
   
 };
+  
 
 
 

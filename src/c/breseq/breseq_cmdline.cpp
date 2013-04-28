@@ -308,9 +308,8 @@ int do_convert_fastq(int argc, char* argv[])
   ("output,o", "output FASTQ file")
   ("in-format,1", "format to convert from")
   ("out-format,2", "format to convert to")
-  
-  //("output,o", "out to files") // outputs to STDOUT for now
-	.processCommandArgs(argc, argv);
+  ("reverse-complement,r", "reverse complement all reads and add _RC to their names", TAKES_NO_ARGUMENT)
+   .processCommandArgs(argc, argv);
 	
 	// make sure that the config options are good:
 	if(options.count("help")
@@ -324,7 +323,7 @@ int do_convert_fastq(int argc, char* argv[])
 		return -1;
 	}                       
     
-  convert_fastq(options["input"], options["output"], options["in-format"], options["out-format"]);
+  convert_fastq(options["input"], options["output"], options["in-format"], options["out-format"], options.count("reverse-complement"));
 
   return 0;
 }
