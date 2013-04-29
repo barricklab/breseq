@@ -1,5 +1,7 @@
 Version 0.23
     * Fix for compilation under Cygwin.
+    * Fix for crash on single files containing multiple references when one that was not
+      the last had a lowercase nucleotide in it.
 
 Version 0.22
     * Fixed crash due to change in output format in newer bowtie2 versions (≥2.0.4). 
