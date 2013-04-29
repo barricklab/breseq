@@ -1,7 +1,6 @@
 #=GENOME_DIFF	1.0
 #=AUTHOR	
-#=REFSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.1.gbk
-#=REFSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.2.gbk
+#=REFSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.1-2.gbk
 #=REFSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.3.gbk
 #=REFSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.4.gbk
 #=REFSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.5.gbk

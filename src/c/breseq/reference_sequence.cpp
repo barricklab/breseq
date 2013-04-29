@@ -406,6 +406,9 @@ namespace breseq {
       ERROR("Could not determine format of reference file: " + file_name);
     }
     //! Step 2: Load appropriate file
+    
+    size_t last_uppercased = this->size();
+    // Remember last sequence before loading for uppercasing
     switch (file_type) {
       case GENBANK:
       {
@@ -442,11 +445,12 @@ namespace breseq {
       default:
         WARN("Could not load the reference file: " +file_name);
     }
-      
-    // To upper the most recently loaded sequence.
-    to_upper((this->back()).m_fasta_sequence.m_sequence);
-    (this->back()).m_file_name = file_name;
     
+    // To uppercase and fix names for the most recently loaded sequences.
+    for (size_t i=last_uppercased; i<this->size(); i++) {
+      to_upper((*this)[i].m_fasta_sequence.m_sequence);
+      (*this)[i].m_file_name = file_name;
+    }
     
     //Here we check to see we haven't loaded some of the same information again.
     for(str_uint::iterator i = old_load.begin(); i != old_load.end(); i++)
