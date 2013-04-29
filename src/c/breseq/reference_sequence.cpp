@@ -448,7 +448,7 @@ namespace breseq {
     
     // To uppercase and fix names for the most recently loaded sequences.
     for (size_t i=last_uppercased; i<this->size(); i++) {
-      to_upper((*this)[i].m_fasta_sequence.m_sequence);
+      (*this)[i].m_fasta_sequence.m_sequence = to_upper((*this)[i].m_fasta_sequence.m_sequence);
       (*this)[i].m_file_name = file_name;
     }
     

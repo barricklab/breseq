@@ -774,7 +774,7 @@ ORIGIN
      8101 ttggtacggc gctgtactgg atagccgcca gtatcaatat caaaccgggc catgattatt
      8161 acttttatat ccgcagtgtg aacaccgttg gcaaatcggc attcgtggag gccgtcggtc
      8221 gggcgagcga tgatgcggaa ggttacctgg attttttcaa aggcaagata accgaatccc
-     8281 atctcggcaa ggagctgctg gaaaaagtcg agctgacgga ggataacgcc agcagactgg
+     8281 atctcggcaa ggagctgctg GAAAAAGTCG agctgacgga ggataacgcc agcagactgg
      8341 aggagttttc gaaagagtgg aaggatgcca gtgataagtg gaatgccatg tgggctgtca
      8401 aaattgagca gaccaaagac ggcaaacatt atgtcgcggg tattggcctc agcatggagg
      8461 acacggagga aggcaaactg agccagtttc tggttgccgc caatcgtatc gcatttattg
