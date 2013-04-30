@@ -442,7 +442,7 @@ namespace breseq {
       }
     }
     
-    cout << "  Summary... " << endl
+    cerr << "  Summary... " << endl
          << "  Aligned reads:                         " << setw(12) << right << summary.preprocess_alignments.aligned_reads << endl
          << "  Read alignments:                       " << setw(12) << right << summary.preprocess_alignments.alignments << endl
          << "  Alignments split on indels:            " << setw(12) << right << summary.preprocess_alignments.alignments_split_on_indels << endl

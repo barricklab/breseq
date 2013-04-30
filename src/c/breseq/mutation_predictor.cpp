@@ -1532,7 +1532,7 @@ namespace breseq {
         
         string this_codon = "   ";
         vector<cLocation> sub_locations = g.m_location.get_all_sub_locations();
-        size_t on_codon_index = 0;
+        size_t on_codon_pos_0 = 0; // The position within a codon... indexed to start at 0.
         vector<uint32_t> this_codon_locations_0(0, 3); // 0-indexed
         
         uint32_t total_nucleotide_length = 0; 
@@ -1543,14 +1543,9 @@ namespace breseq {
           total_nucleotide_length += loc.m_end - loc.m_start + 1;
         }
         uint32_t total_amino_acid_length = total_nucleotide_length / 3;
-        uint32_t on_codon_pos_1 = 1;
-        if (strand == -1) on_codon_pos_1 = total_amino_acid_length;
+        uint32_t on_codon_number_1 = 1; // The number of the amino acid / codon indexed to start at 1
+        if (strand == -1) on_codon_number_1 = total_amino_acid_length;
 
-        /// code to debug consistency with Perl
-        /*
-        string amino_acid_sequence;
-        string codon_sequence;
-        */
         
         for(vector<cLocation>::iterator it3=sub_locations.begin(); it3!=sub_locations.end(); ++it3) {
           
@@ -1577,32 +1572,21 @@ namespace breseq {
             }
             
             //// Handle codon synonymous/nonsynonymous changes
-            this_codon_locations_0[on_codon_index] = pos_0;
-            this_codon[on_codon_index] = seq.get_sequence_1(pos_1);
+            this_codon_locations_0[on_codon_pos_0] = pos_0;
+            this_codon[on_codon_pos_0] = seq.get_sequence_1(pos_1);
             
-            on_codon_index++;
+            on_codon_pos_0++;
             
             // The codon is filled, now make all mutations and assign to proper nucleotides
-            if (on_codon_index == 3) {
+            if (on_codon_pos_0 == 3) {
               
               // change the codon to the right strand
               string original_codon = this_codon;
               if (strand == -1)
                 original_codon = reverse_complement(original_codon);
               
-              char original_amino_acid = cReferenceSequences::translate_codon(original_codon, g.translation_table, on_codon_pos_1);
+              char original_amino_acid = cReferenceSequences::translate_codon(original_codon, g.translation_table, on_codon_number_1);
               
-              /*
-              /// code to debug consistency with Perl
-              if (strand == -1) {
-                codon_sequence = original_codon + codon_sequence;
-                amino_acid_sequence = original_amino_acid + amino_acid_sequence;
-              } else {
-                codon_sequence = codon_sequence + original_codon;
-                amino_acid_sequence = amino_acid_sequence + original_amino_acid;
-              }
-              /// end debug code
-              */
                
               for (int32_t test_codon_index=0; test_codon_index<3; test_codon_index++) {
                 
@@ -1616,7 +1600,7 @@ namespace breseq {
                   if (strand == -1)
                     test_codon = reverse_complement(test_codon);
                   
-                  char mut_amino_acid = cReferenceSequences::translate_codon(test_codon, g.translation_table, on_codon_pos_1);
+                  char mut_amino_acid = cReferenceSequences::translate_codon(test_codon, g.translation_table, on_codon_number_1);
                   
                   if (mut_amino_acid == original_amino_acid)
                     seq_bse[this_codon_locations_0[test_codon_index]*4+b] = max(seq_bse[this_codon_locations_0[test_codon_index]*4+b], synonymous_base_substitution);
@@ -1627,12 +1611,12 @@ namespace breseq {
                 
               }
               
-              on_codon_pos_1 += strand;
-              on_codon_index = 0;
+              on_codon_number_1 += strand;
+              on_codon_pos_0 = 0;
             }
           }
         } // end sublocation loop
-        ASSERT(on_codon_index == 0, "Number of base pairs in CDS not a multiple of 3: " + g["name"]);
+        ASSERT(on_codon_pos_0 == 0, "Number of base pairs in CDS not a multiple of 3: " + g["name"]);
         
         /// code to debug consistency with Perl
         /*
