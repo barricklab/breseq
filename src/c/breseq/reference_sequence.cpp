@@ -1648,11 +1648,11 @@ map<string,uint16_t> cReferenceSequences::codon_to_aa_index = make_map<string,ui
   ("GGT", 60)("GGC", 61)("GGA", 62)("GGG", 63)
 ;
 
-char cReferenceSequences::translate_codon(string seq, uint32_t translation_table, uint32_t codon_pos_1)
+char cReferenceSequences::translate_codon(string seq, uint32_t translation_table, uint32_t codon_number_1)
 {  
   ASSERT(seq.size()==3, "Attempt to translate codon without three bases.");
   ASSERT(translation_table <= cReferenceSequences::translation_tables.size(), "Unknown translation table requested.");
-  string& tt = (codon_pos_1 == 1) 
+  const string& tt = (codon_number_1 == 1) 
     ? cReferenceSequences::initiation_codon_translation_tables[translation_table]
     : cReferenceSequences::translation_tables[translation_table]
   ;
@@ -1832,7 +1832,8 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     if (!mut.entry_exists("new_seq")) mut["new_seq"] = mut["new_base"];
 
     // determine the old and new translation of this codon
-    mut["aa_position"] = to_string((from_string<uint32_t>(mut["gene_position"]) - 1) / 3 + 1); // 1 indexed
+    int32_t codon_number_1 = (from_string<int32_t>(mut["gene_position"]) - 1) / 3 + 1;
+    mut["aa_position"] = to_string<int32_t>(codon_number_1); // 1 indexed
     uint32_t codon_pos_1 = int(abs(static_cast<int32_t>(start) - within_gene_start)) % 3 + 1;
     mut["codon_position"] = to_string<int32_t>(codon_pos_1); // 1 indexed
     
@@ -1842,14 +1843,14 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
       : reverse_complement(ref_string.substr(gene.get_end_1() - 3 * from_string<uint32_t>(mut["aa_position"]), 3));
 
     mut["codon_ref_seq"] = codon_seq;
-    mut["aa_ref_seq"] = translate_codon(mut["codon_ref_seq"], gene.translation_table, codon_pos_1);
+    mut["aa_ref_seq"] = translate_codon(mut["codon_ref_seq"], gene.translation_table, codon_number_1);
 
     mut["codon_new_seq"] = codon_seq;
     //#remember to revcom the change if gene is on opposite strand
     mut["codon_new_seq"][from_string<uint32_t>(mut["codon_position"]) - 1] = gene.is_top_strand() 
       ? mut["new_seq"][0]
       : reverse_complement(mut["new_seq"])[0];
-    mut["aa_new_seq"] =  translate_codon(mut["codon_new_seq"], gene.translation_table, codon_pos_1);
+    mut["aa_new_seq"] =  translate_codon(mut["codon_new_seq"], gene.translation_table, codon_number_1);
     mut["transl_table"] = to_string(gene.translation_table);
     
     if (mut._type == SNP) {
@@ -2075,8 +2076,8 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
           new_codon[j_codon_position - 1] = new_char;
           (*snp_muts[i])["codon_new_seq"] = new_codon;
           (*snp_muts[j])["codon_new_seq"] = new_codon;
-          (*snp_muts[i])["aa_new_seq"] =  translate_codon(new_codon, from_string((*snp_muts[i])["transl_table"]), from_string((*snp_muts[i])["codon_position"]));
-          (*snp_muts[j])["aa_new_seq"] =  translate_codon(new_codon, from_string((*snp_muts[j])["transl_table"]), from_string((*snp_muts[j])["codon_position"]));
+          (*snp_muts[i])["aa_new_seq"] =  translate_codon(new_codon, from_string((*snp_muts[i])["transl_table"]), from_string((*snp_muts[i])["aa_position"]));
+          (*snp_muts[j])["aa_new_seq"] =  translate_codon(new_codon, from_string((*snp_muts[j])["transl_table"]), from_string((*snp_muts[j])["aa_position"]));
       }
     }
   }//for
