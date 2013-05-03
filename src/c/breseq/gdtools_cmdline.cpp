@@ -733,6 +733,7 @@ int do_annotate(int argc, char* argv[])
     for (diff_entry_list_t::iterator it = de_list.begin(); it != de_list.end(); it++) { 
 
       diff_entry_ptr_t& this_mut = *it;
+      uint32_t this_mut_position = from_string<uint32_t>((*this_mut)[POSITION]);
     
       // for each genome diff compared
       for (uint32_t i=0; i<mut_lists.size(); i++) { 
@@ -746,10 +747,24 @@ int do_annotate(int argc, char* argv[])
         
         bool found = false;
         
+
+          
+        // We have some problems when there are multiple INS after the same position in a genomediff...
+        // they get merged to one, e.g.
+        // INS	177	1750	T7_WT_Genome	24198	T	frequency=0.1310
+        // INS	178	1751	T7_WT_Genome	24198	T	frequency=0.0250
+        while (mut_list.size() && (from_string<uint32_t>((*mut_list.front())[POSITION]) < this_mut_position)) {
+          cout << (*mut_list.front())[POSITION] << " < " << this_mut_position << endl;
+          mut_list.pop_front();
+        }
+        if (mut_list.size() == 0) 
+          continue; 
+        // End code for multiple INS problem.  
+          
         // for top mutation in this genomedff (they are sorted by position)
-        diff_entry_ptr_t check_mut;
-        check_mut = mut_list.front();        
-        
+        diff_entry_ptr_t check_mut; 
+        check_mut = mut_list.front();
+            
         // we found the exact same mutation
         if ( (check_mut.get() != NULL) && (*check_mut == *this_mut) ) {
           

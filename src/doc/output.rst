@@ -239,6 +239,8 @@ Example:
    :width: 750px
    
 Read coverage depth around the missing coverage. The white area shows the maximal boundaries of the predicted range.
+
+The graphed lines are labeled "unique" for reads with only one best match to the reference genome and "repeat" for multiple equally good matches to repeat sequences (which are down-weighted by how many matches they have, i.e. a read matching three places contributes 1/3 to the coverage depth at each matched site). Within each type coverage is graphed separately for reads mapping to the "top" and "bottom" strands of the reference sequence (i.e., forward and reverse complement matches) to aid in detecting artifacts, and these sum to the "total" coverage value.
    
 Processed Data
 **************
