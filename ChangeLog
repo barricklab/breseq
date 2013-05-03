@@ -1,5 +1,5 @@
 Version 0.23
-    * Fix for compilation under Cygwin.
+    * Compiling in Cygwin is now possible.
     * Fix for crash on single files containing multiple references when one that was not
       the last had a lowercase nucleotide in it.
     * Fix for incorrect amino acid annotations for some codon changes related to the use of

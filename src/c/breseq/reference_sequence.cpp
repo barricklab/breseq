@@ -1833,9 +1833,10 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
 
     // determine the old and new translation of this codon
     int32_t codon_number_1 = (from_string<int32_t>(mut["gene_position"]) - 1) / 3 + 1;
-    mut["aa_position"] = to_string<int32_t>(codon_number_1); // 1 indexed
+    mut["aa_position"] = to_string<int32_t>(codon_number_1); // 1-indexed
     uint32_t codon_pos_1 = int(abs(static_cast<int32_t>(start) - within_gene_start)) % 3 + 1;
-    mut["codon_position"] = to_string<int32_t>(codon_pos_1); // 1 indexed
+    mut["codon_position"] = to_string<int32_t>(codon_pos_1); // 1-indexed
+    mut["codon_number"] = to_string<int32_t>(codon_number_1); // 1-indexed
     
     string& ref_string = (*this)[seq_id].m_fasta_sequence.m_sequence;
     string codon_seq = gene.is_top_strand()
