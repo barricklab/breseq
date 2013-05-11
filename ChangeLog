@@ -1,9 +1,10 @@
 Version 0.23
-    * Compiling in Cygwin is now possible.
+    * Compiling in Cygwin should now be possible.
     * Fix for crash on single files containing multiple references when one that was not
       the last had a lowercase nucleotide in it.
     * Fix for incorrect amino acid annotations for some codon changes related to the use of
-      alternative start codons.
+      alternative start codons and when there are multiple base substitutions in one codon.
+    * Added DEVELOPER instruction file for compiling the repository version of code.
 
 Version 0.22
     * Fixed crash due to change in output format in newer bowtie2 versions (≥2.0.4). 
