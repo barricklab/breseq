@@ -34,8 +34,7 @@ EXTRA_DIST = \
 	tests/data/lambda/lambda_mixed_population.3.fastq \
 	tests/data/lambda/lambda_mixed_population.4.fastq \
 	tests/data/lambda/lambda_mixed_population.5.fastq \
-	tests/data/lambda/lambda.1.gbk \
-	tests/data/lambda/lambda.2.gbk \
+	tests/data/lambda/lambda.1-2.gbk \
 	tests/data/lambda/lambda.3.gbk \
 	tests/data/lambda/lambda.4.gbk \
 	tests/data/lambda/lambda.5.gbk
