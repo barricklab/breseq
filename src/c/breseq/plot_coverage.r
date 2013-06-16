@@ -102,7 +102,11 @@ if (pdf_output == 0) {
 par(mar=c(4.1,5.1,1.1,1.1))
 layout(matrix(c(1,2), 2, 1, byrow = TRUE), heights=c(5,0.65))
 
-plot(0:10, 0:10, type="n", lty="solid", ylim=c(0, maxy), xlim=c(start_pos, end_pos), lwd=2, xaxs="i", yaxs="i", xlab="Coordinate in Reference Genome", ylab="Read Coverage Depth")
+plot(0:10, 0:10, type="n", lty="solid", ylim=c(0, maxy), xlim=c(start_pos, end_pos), lwd=2, xaxt="n" , xaxs="i", yaxs="i", xlab="Coordinate in Reference Genome", ylab="Read Coverage Depth")
+
+atx <- seq(par("xaxp")[1], par("xaxp")[2], (par("xaxp")[2] - par("xaxp")[1])/par("xaxp")[3])
+axis(1, at=atx, las=0, labels=format(atx, scientific=FALSE))
+
 
 rect(start_pos, 0, window_start, maxy, col="grey85", lty=0)
 rect(window_end+1, 0, end_pos, maxy, col="grey85", lty=0)
