@@ -207,20 +207,12 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   
   if(!relative_path.empty())
     relative_path += "/";
-  
-  //Determine if more than one reference sequence is used
-  bool one_ref_seq;
-
-  if (ref_seq_info.size() == 1)
-    one_ref_seq = true;
-  else
-    one_ref_seq = false;
 
   //Build Mutation Predictions table
   HTML << "<p>" << endl;
   MutationTableOptions mt_options;
   mt_options.relative_link = relative_path;
-  mt_options.one_ref_seq = one_ref_seq;
+  mt_options.one_ref_seq = (ref_seq_info.size() == 1);
   HTML << Html_Mutation_Table_String(settings, gd, muts, mt_options) << endl;
   
   //////
@@ -277,6 +269,11 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   if (jcu.size() > 0) {
     HTML << "<p>" << endl;
     HTML << html_new_junction_table_string(jcu, false, "Unassigned new junction evidence...", relative_path);
+  }
+  
+  // This code prints out a message if there was nothing in the previous tables
+  if (muts.size() + mixed_ra.size() + cn.size() + mc.size() + jc.size() + jcu.size() == 0) {
+    HTML << "<p>No mutations predicted." << endl;
   }
   
   HTML << html_footer();
@@ -503,7 +500,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << html_header("BRESEQ :: Summary Statistics", settings);
   HTML << breseq_header_string(settings) << endl;
   HTML << "<p>" << endl;
-
+  
   ////
   // Write read file information
   ////
@@ -736,12 +733,20 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   
   
   ////
+  // Write command line
+  ////
+  
+  //HTML << "<p>"<< endl;
+  //HTML << h2("Command Line") << endl;
+  //HTML << "<code>" << settings.full_command_line << "</code>" << endl;
+  
+  ////
   // Write Execution Times
   ////
   
   const vector<ExecutionTime>& times = settings.execution_times;
   // HTML << "<!-- Write Times -->" << endl;
-  HTML << "<p>"  << endl;
+  HTML << "<p>"<< endl;
   HTML << h2("Execution Times") << endl;
   HTML << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"5\"") << endl;
   HTML << "<tr>" << th("step") << th("start") << th("end") << th("elapsed") << "</tr>" << endl; 

@@ -454,7 +454,7 @@ int do_compare(int argc, char *argv[])
       string plot_jc_score_script_name = "/plot_jc_scores.r";
       string plot_jc_score_script_path = DATADIR + plot_jc_score_script_name;
 
-      uout << "Creating plots: " + prefix + ".preciscion.png and " << prefix + ".sensitivity.png" << endl;;
+      uout << "Creating plots: " + prefix + ".precision.png and " << prefix + ".sensitivity.png" << endl;;
       string cmd = plot_jc_score_script_path + " " + table_path + " " + prefix + " " + s(cutoff) + " " + cv_exe;
       SYSTEM(cmd, true, false, true);
     }

@@ -122,7 +122,13 @@ namespace breseq
 		("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files. (REQUIRED)")
     ("name,n", "Human-readable name of sample/run for output [empty]", "")
     ("num-processors,j", "Number of processors to use in multithreaded steps", 1)
-    ("aligned-sam", "Input files are aligned and SAM files, rather than FASTQ files. Junction prediction steps will be skipped.", TAKES_NO_ARGUMENT)
+    ("aligned-sam", "Input files are aligned SAM files, rather than FASTQ files. Junction prediction steps will be skipped.", TAKES_NO_ARGUMENT)
+    ;
+    
+    options.addUsage("Special Reference Sequences", true);
+    options
+    ("junction-only-reference,s", "File containing reference sequences in GenBank, GFF3, or FASTA format. These references are only used for calling junctions with other reference sequences. An example of appropriate usage is including a transposon sequence not present in a reference genome. Option may be provided multiple times for multiple files.", NULL, ADVANCED_OPTION)
+    ("targeted-sequencing,t", "Reference sequences were targeted for ultra-deep sequencing (using pull-downs or amplicons). Do not fit coverage distribution.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
     
     options.addUsage("Junction Options", true);
@@ -139,7 +145,6 @@ namespace breseq
     options.addUsage("Junction Options", true);
     options
     ("no-junction-prediction", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
-    ("junction-only-reference,s", "File containing reference sequences in GenBank, GFF3, or FASTA format. These references are only used for calling junctions with other reference sequences. Option may be provided multiple times for multiple files. (REQUIRED)", NULL, ADVANCED_OPTION)
     ("junction-alignment-pair-limit", "Only consider this many passed alignment pairs when creating candidate junction sequences", 100000, ADVANCED_OPTION)
     ("junction-score-cutoff", "Maximum negative log10 probability of uneven coverage across a junction breakpoint to accept (0=OFF)", 3.0, ADVANCED_OPTION)
     ("junction-minumum-pos-hash-score", "Minimum number of distinct spanning read start positions required to accept a junction", 3, ADVANCED_OPTION)
@@ -154,11 +159,10 @@ namespace breseq
     ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias (DEFAULT = OFF)", "", ADVANCED_OPTION)
     ("polymorphism-frequency-cutoff", "Only predict polymorphisms where both allele frequencies are > than this value (DEFAULT= consensus mode, 0.1; polymorphism mode, 0.0)", "", ADVANCED_OPTION)
     ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms where this many reads on each strand support alternative alleles (DEFAULT= consensus mode, 2; polymorphism mode, 0", "", ADVANCED_OPTION)
-    ("targeted-sequencing", "Reference sequences were targeted for ultra-deep sequencing. Do not fit coverage distribution.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
     
     // CNV and Periodicity block
-    options.addUsage("Experimental Options", true);
+    options.addUsage("Experimental Options (Use at your own risk)", true);
     options
     ("user-junction-gd","User supplied genome diff file of JC evidence to use as candidate junctions and report support for.", "", ADVANCED_OPTION) 
     ("cnv","Do experimental copy number variation prediction",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
@@ -755,6 +759,9 @@ namespace breseq
         //size_t end_version_pos = version_string.find_first_not_of("0123456789.", start_version_pos+1);
         this->installed["samtools_version_string"] = version_string.substr(start_version_pos, end_version_pos - start_version_pos);
       }
+      else {
+        this->installed["samtools_version_error_message"] = version_string;
+      }
     }
     
     // which can return an error message    
@@ -771,7 +778,7 @@ namespace breseq
         this->installed["SSAHA2_version_string"] = version_string.substr(start_version_pos, end_version_pos - start_version_pos);
       }
       else {
-        this->installed["SSAHA2"] = "";
+        this->installed["SSAHA2_version_error_message"] = version_string;
       }
     }
     
@@ -815,8 +822,7 @@ namespace breseq
         //cout << this->installed["bowtie2_version"] << endl;
       }
       else {
-        this->installed["bowtie2"] = "";
-        this->installed["bowtie2-build"] = "";
+        this->installed["bowtie2_version_error_message"] = version_string;
       }
     }
     
@@ -854,7 +860,8 @@ namespace breseq
         }
       }
       else {
-        this->installed["R"] = "";
+        this->installed["R_version_error_message"] = R_version;
+        
       }
 		}
 
@@ -871,13 +878,22 @@ namespace breseq
     
 		bool good_to_go = true;
 
-		if (!this->bowtie2 && this->installed["SSAHA2"].size() == 0)
-		{
-			good_to_go = false;
-			cerr << "---> ERROR Required executable \"ssaha2\" not found." << endl;
-			cerr << "---> See http://www.sanger.ac.uk/resources/software/ssaha2" << endl;
-		}
-
+		if (!this->bowtie2) {
+      if (this->installed["SSAHA2"].size() == 0)
+      {
+        good_to_go = false;
+        cerr << "---> ERROR Required executable \"ssaha2\" not found." << endl;
+        cerr << "---> See http://www.sanger.ac.uk/resources/software/ssaha2" << endl;
+      }
+      else if (this->installed.count("SSAHA2_version_error_message")) {
+        good_to_go = false;
+        cerr << "---> ERROR Could not determine version of installed executable \"SSAHA2\"." << endl;
+        cerr << "---> For found executable installed at [" << this->installed["SSAHA2"] << "]" << endl;
+        cerr << "---> Commands \"SSAHA2 --version\" returned:" << endl;
+        cerr << this->installed["SSAHA2_version_error_message"] << endl;
+      }
+    }
+    
 		if (this->bowtie2) 
     {
       if (this->installed["bowtie2"].size() == 0)
@@ -885,6 +901,13 @@ namespace breseq
         good_to_go = false;
         cerr << "---> ERROR Required executable \"bowtie2\" or \"bowtie2-build\" not found." << endl;
         cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
+      }
+      else if (this->installed.count("bowtie2_version_error_message")) {
+        good_to_go = false;
+        cerr << "---> ERROR Could not determine version of installed executable \"bowtie2\" or \"bowtie2-build\"." << endl;
+        cerr << "---> For found executable installed at [" << this->installed["bowtie2"] << "]" << endl;
+        cerr << "---> Commands \"bowtie2 --version\" or \"bowtie2-build --version\" returned:" << endl;
+        cerr << this->installed["bowtie2_version_error_message"] << endl;
       }
       // version encoded in triplets of numbers
       else if (from_string<uint32_t>(this->installed["bowtie2_version"]) < 2000000007) {
@@ -912,6 +935,13 @@ namespace breseq
 			cerr << "---> ERROR Required executable \"R\" not found." << endl;
 			cerr << "---> See http://www.r-project.org" << endl;
 		}
+    else if (this->installed.count("R_version_error_message")) {
+      good_to_go = false;
+      cerr << "---> ERROR Could not determine version of installed executable \"R\"." << endl;
+      cerr << "---> For found executable installed at [" << this->installed["R"] << "]" << endl;
+      cerr << "---> Command \"R --version\" returned:" << endl;
+      cerr << this->installed["R_version_error_message"] << endl;
+    }
     else if (from_string<uint32_t>(this->installed["R_version"]) < 2001000)
 		{
       good_to_go = false;
@@ -928,6 +958,13 @@ namespace breseq
       good_to_go = false;
       cerr << "---> ERROR Required executable \"samtools\" not found." << endl;
       cerr << "---> This should have been installed by the breseq installer." << endl;
+    }
+    else if (this->installed.count("samtools_version_error_message")) {
+      good_to_go = false;
+      cerr << "---> ERROR Could not determine version of installed executable \"samtools\"." << endl;
+      cerr << "---> For found executable installed at [" << this->installed["samtools"] << "]" << endl;
+      cerr << "---> Command \"samtools\" returned:" << endl;
+      cerr << this->installed["samtools_version_error_message"] << endl;
     }
     else {
       cout << "---> samtools :: version " << this->installed["samtools_version_string"] << " [" << this->installed["samtools"] << "]" << endl;
