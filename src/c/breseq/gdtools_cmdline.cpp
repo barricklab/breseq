@@ -1906,6 +1906,98 @@ int do_mrna_stability(int argc, char *argv[])
   myfile << ss.str();
   return 0;                                            
 }
+
+int do_translate_proteome(int argc, char *argv[])
+{
+    AnyOption options("gdtools PROTEOME [-o output.fna] -r reference.gbk");
+    options("output,o",  "Base name for FASTA file output", "output");
+    options("reference,r", "Genbank, GFF3, or FASTA reference sequence file");
+    options("verbose,v", "Verbose mode", TAKES_NO_ARGUMENT);
+    options.processCommandArgs(argc, argv);
+    
+    options.addUsage("");
+    options.addUsage("Creates two FASTA files, one normal and one with protein translating amber stops as X,"); 
+    
+    cString output_base_name = options["output"];
+    
+    if (!options.count("reference")) {
+        options.printUsage();
+        return -1;
+    }
+    
+    cReferenceSequences ref_seqs;
+    ref_seqs.LoadFiles(from_string<vector<string> >(options["reference"]));
+    
+    cString nfile_name(output_base_name + ".normal.fna");
+    ofstream nfile(nfile_name.c_str());
+    cString afile_name(output_base_name + ".amber.fna");
+    ofstream afile(afile_name.c_str());
+    cString ufile_name(output_base_name + ".unique.fna");
+    ofstream ufile(ufile_name.c_str());
+    cString bfile_name(output_base_name + ".amber.tab");
+    ofstream bfile(bfile_name.c_str());
+    
+    string n_translation_table = cReferenceSequences::translation_tables[11];    
+    string n_translation_table_1 = cReferenceSequences::initiation_codon_translation_tables[11];
+    
+    string a_translation_table = n_translation_table;
+    string a_translation_table_1 = n_translation_table_1;
+    a_translation_table[cReferenceSequences::codon_to_aa_index["TAG"]] = 'X';
+    a_translation_table_1[cReferenceSequences::codon_to_aa_index["TAG"]] = 'X';
+
+    
+    cSequenceFeaturePtr feature_ptr(NULL);
+    
+    uint32_t total_protein_count = 0;
+    uint32_t skipped_protein_count = 0;
+    uint32_t amber_terminated_protein_count = 0;
+    //list< pair<string,uint32_t> > protein_backup_codon_length_list;    
+    
+    for(vector<cAnnotatedSequence>::iterator its = ref_seqs.begin(); its !=ref_seqs.end(); its++) {
+    
+        cAnnotatedSequence& on_seq = *its;
+        cSequenceFeatureList& feature_list = on_seq.m_features;
+
+        for (cSequenceFeatureList::iterator it = feature_list.begin(); it != feature_list.end(); ++it) {
+            cSequenceFeature& on_feature = **it;
+            
+            if (on_feature["type"] == "CDS") {
+                
+                total_protein_count++;
+                
+                if (on_feature.get_strand() != 0) {                
+                    string n_protein = cReferenceSequences::translate_protein(on_seq, on_feature.m_location, n_translation_table, n_translation_table_1);
+                    string a_protein = cReferenceSequences::translate_protein(on_seq, on_feature.m_location, a_translation_table, a_translation_table_1);
+                    
+                    int32_t length_diff = a_protein.size() - n_protein.size();
+                    
+                    nfile << ">" << on_feature["name"] << endl << n_protein << endl;
+                    afile << ">" << on_feature["name"] << "_amber_" << length_diff << "_bp_to_new_stop" << endl << a_protein << endl;
+                    
+                    ufile << ">" << on_feature["name"] << endl << n_protein << endl;
+                    if (length_diff) {
+                        amber_terminated_protein_count++;
+                        ufile << ">" << on_feature["name"] << "_amber_" << length_diff << "_bp_to_new_stop" << endl << a_protein << endl;
+ 
+                        bfile << on_feature["name"] << "\t" << length_diff << "\t" << on_feature["locus_tag"] <<  "\t" << on_feature["product"] << endl;
+                        //protein_backup_codon_length_list.push_back(make_pair(on_feature["name"],length_diff));
+                    }
+                }
+                else
+                {
+                    skipped_protein_count++;
+                }
+                
+            }
+        }
+    }
+    
+    cout << "Amber terminated proteins: " << amber_terminated_protein_count << endl;
+    cout << "Skipped proteins: " << skipped_protein_count << endl;
+    cout << "Total proteins: " << total_protein_count << endl;
+    
+    return 0;
+}
                                             
                                             
 int main(int argc, char* argv[]) {
@@ -1978,6 +2070,8 @@ int main(int argc, char* argv[]) {
     return do_runfile(argc_new, argv_new);
   } else if (command == "MRNA-STABILITY") {
     return do_mrna_stability(argc_new, argv_new);
+  } else if (command == "PROTEOME") {
+      return do_translate_proteome(argc_new, argv_new);
   } else {
     cout << "Unrecognized command: " << command << endl;
     gdtools_usage();

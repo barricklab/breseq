@@ -271,8 +271,6 @@ namespace breseq
     bool polymorphism_prediction;                         // Default = false COMMAND-LINE OPTION
     //! Predict not only consensus genotype calls, but test mixed states between them.
     bool mixed_base_prediction;                           // Default = true
-    //! If frequency is this or equal and it's predicted a mixed, move it to the front page.
-    double mixed_base_prediction_marginal_frequency_cutoff;  // Default = 0.5
     
     //! References are amplicons or ultra-deep sequencing of a small reference
     bool targeted_sequencing;                             // Default = false COMMAND-LINE OPTION
@@ -361,6 +359,7 @@ namespace breseq
 
     string coverage_junction_done_file_name;
     string candidate_junction_fasta_file_name;
+    string candidate_junction_detailed_file_name;
     string candidate_junction_faidx_file_name;
 		string candidate_junction_summary_file_name;
     

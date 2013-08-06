@@ -2158,7 +2158,7 @@ void CoverageDistribution::smooth_segments(
     uint32_t tile_position;
     double tile_coverage; 
     double t_score; /* ???: synonymous with t_score. */
-    double greater_than; /* ???: reads in the fourth value from segment_file.
+    double p_value; /* ???: reads in the fourth value from segment_file.
                           The p-value of a segment or (1 - greater_than / randomizations). */
 
 
@@ -2228,7 +2228,7 @@ void CoverageDistribution::smooth_segments(
      * copy number for each range along the way
      */
     getline(segment_file, skip);
-    while (segment_file >> position_start >> position_end >> t_score >> greater_than)
+    while (segment_file >> position_start >> position_end >> t_score >> p_value)
     {
         segment_sum = 0;
         num_tiles = 0;
@@ -2270,6 +2270,8 @@ void CoverageDistribution::smooth_segments(
         range.range_pair.second = position_end;
         range.copy_number_float = copy_number_float;
         range.copy_number = copy_number;
+        range.t_scores.push_back(t_score);
+        range.p_values.push_back(p_value);
         
         // Add range to end of vector
         range_t_vector.push_back(range); 
@@ -2338,7 +2340,13 @@ void CoverageDistribution::smooth_segments(
                 newRange.copy_number_float =
                     (currentRange.copy_number_float + candidateRange.copy_number_float) / 2.0;
                 
-                // ...add that range back to the range_t_vector,
+                newRange.t_scores.insert(newRange.t_scores.end(), currentRange.t_scores.begin(), currentRange.t_scores.end());
+                newRange.t_scores.insert(newRange.t_scores.end(), candidateRange.t_scores.begin(), candidateRange.t_scores.end());
+              
+                newRange.p_values.insert(newRange.p_values.end(), currentRange.p_values.begin(), currentRange.p_values.end());
+                newRange.p_values.insert(newRange.p_values.end(), candidateRange.p_values.begin(), candidateRange.p_values.end());
+
+              // ...add that range back to the range_t_vector,
                 range_t_vector.push_back(newRange);
                 
                 // ...then break out of the for-loop, but don't add current range to the
@@ -2348,6 +2356,8 @@ void CoverageDistribution::smooth_segments(
                 break;
             }
         
+            // @JEB since the ranges should be sorted, Im pretty sure one of these cases is unnecessary.
+          
             // Else, if the candidate range's start minus one is equal to the current
             // range's end, and if both ranges have the same copy number
             else if (candidateRange.range_pair.first - 1 == currentRange.range_pair.second &&
@@ -2366,7 +2376,14 @@ void CoverageDistribution::smooth_segments(
                 newRange.copy_number = currentRange.copy_number;
                 newRange.copy_number_float =
                     (currentRange.copy_number_float + candidateRange.copy_number_float) / 2.0;
-                
+
+              
+                newRange.t_scores.insert(newRange.t_scores.end(), candidateRange.t_scores.begin(), candidateRange.t_scores.end());
+                newRange.t_scores.insert(newRange.t_scores.end(), currentRange.t_scores.begin(), currentRange.t_scores.end());
+              
+                newRange.p_values.insert(newRange.p_values.end(), candidateRange.p_values.begin(), candidateRange.p_values.end());
+                newRange.p_values.insert(newRange.p_values.end(), currentRange.p_values.begin(), currentRange.p_values.end());
+              
                 // ...add that range back to the range_t_vector,
                 range_t_vector.push_back(newRange);
                 
@@ -2438,6 +2455,18 @@ void CoverageDistribution::smooth_segments(
         copy_number = range_t_vector_merged[i].copy_number;
         copy_number_float = range_t_vector_merged[i].copy_number_float;
 
+        string t_score_string;
+        for (vector<double>::iterator it=range_t_vector_merged[i].t_scores.begin(); it != range_t_vector_merged[i].t_scores.end(); it++) {
+          if (it!=range_t_vector_merged[i].t_scores.begin()) t_score_string += ",";
+          t_score_string += to_string<double>(*it);
+        }
+      
+        string p_value_string;
+        for (vector<double>::iterator it=range_t_vector_merged[i].p_values.begin(); it != range_t_vector_merged[i].p_values.end(); it++) {
+          if (it!=range_t_vector_merged[i].p_values.begin()) p_value_string += ",";
+          p_value_string += to_string<double>(*it);
+        }
+        
         // @JEB create the genome diff evidence entry if copy_number is not one
         /* ??? What does this block do: JEB are Barrick's initials. He's doing
          all of the cGenomeDiff coding so if you're really interested, ask him.
@@ -2453,6 +2482,9 @@ void CoverageDistribution::smooth_segments(
             stringstream num;
             num << fixed << setprecision(2) << copy_number_float;
             item["relative_coverage"] = num.str();
+            item["t_score"] = t_score_string;
+            item["p_value"] = p_value_string;
+          
             gd.add(item);
         }
       
