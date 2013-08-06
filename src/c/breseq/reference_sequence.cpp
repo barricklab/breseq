@@ -349,6 +349,16 @@ namespace breseq {
     ASSERT(false, "Unknown Repeat\n\tType:\t" + repeat_name + "\n\tPos:\t" + to_string(region_pos));
   }
   
+  char cLocationTraverser::on_base_stranded_1() {
+    string on_char = my_seq->get_sequence_1(on_pos, on_pos);
+    if (my_loc[on_loc_index].get_strand() == -1) {
+      on_char = reverse_complement(on_char); 
+    }
+    //cout << on_pos << " " << on_char << endl;
+    
+    return on_char[0];
+  }
+  
   // Load a complete collection of files and verify that sufficient information was loaded
   void cReferenceSequences::LoadFiles(const vector<string>& file_names)
   {
@@ -1064,12 +1074,20 @@ cLocation cSequenceFeature::ParseGenBankCoords(string& s, int8_t in_strand)
     uint32_t n = string("join(").size();
     vector<string> tokens = split(s.substr(n, s.size() - n - 1), ",");
     
+    int8_t consensus_strand = 0;
     for (uint32_t i = 0; i < tokens.size(); ++i) {
       cLocation sub_loc = ParseGenBankCoords(tokens[i], in_strand);
       loc.m_sub_locations.push_back( sub_loc);
+      
+      // Strand is set to 0 if disagreement
+      if (i==0) 
+        consensus_strand = sub_loc.get_strand();
+      else if (consensus_strand != sub_loc.get_strand())
+        consensus_strand = 0;
     }
     
     //Get cLocation::start,end from outer sub_locations.
+    loc.set_strand(consensus_strand);
     loc.set_start_1(loc.m_sub_locations.front().get_start_1());
     loc.set_end_1(loc.m_sub_locations.back().get_end_1());
   }
@@ -1662,6 +1680,46 @@ char cReferenceSequences::translate_codon(string seq, uint32_t translation_table
     ? '?' 
     : tt[cReferenceSequences::codon_to_aa_index[seq]];
 }
+  
+char cReferenceSequences::translate_codon(string seq, string translation_table, string translation_table_1, uint32_t codon_number_1)
+{  
+  ASSERT(seq.size()==3, "Attempt to translate codon without three bases.");
+  ASSERT(translation_table.size()==64, "Provided genetic code does not have 64 codons.");
+  const string& tt = (codon_number_1 == 1) ? translation_table_1 : translation_table;
+  
+  return (cReferenceSequences::codon_to_aa_index.count(seq) == 0) 
+  ? '?' 
+  : tt[cReferenceSequences::codon_to_aa_index[seq]];
+}
+  
+string cReferenceSequences::translate_protein(cAnnotatedSequence& seq, cLocation& loc, string translation_table, string translation_table_1)
+{  
+  cLocationTraverser pos_trav(&seq, &loc);
+  
+  // Go one codon at a time...    
+  string on_codon;
+  uint32_t on_codon_number_1 = 0;
+  char on_aa = ' ';
+  string protein_sequence;
+  
+  while (on_aa != '*') {
+    
+    on_codon = "";
+    on_codon_number_1++;
+    
+    while (on_codon.size() < 3) {
+      
+      on_codon += pos_trav.on_base_stranded_1();      
+      pos_trav.offset_to_next_position(true);
+    }
+    on_aa = translate_codon(on_codon, translation_table, translation_table_1, on_codon_number_1);
+    
+    if (on_aa != '*')
+      protein_sequence += on_aa;
+    
+  }
+  return protein_sequence;
+}
 
 void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, uint32_t end, bool repeat_override, bool ignore_pseudogenes)
 {
@@ -1832,6 +1890,8 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     if (!mut.entry_exists("new_seq")) mut["new_seq"] = mut["new_base"];
 
     // determine the old and new translation of this codon
+// @JEB this should be fixed for split genes!!! -- use cLocationTraverser
+// Issue 
     int32_t codon_number_1 = (from_string<int32_t>(mut["gene_position"]) - 1) / 3 + 1;
     mut["aa_position"] = to_string<int32_t>(codon_number_1); // 1-indexed
     uint32_t codon_pos_1 = int(abs(static_cast<int32_t>(start) - within_gene_start)) % 3 + 1;

@@ -152,6 +152,8 @@ namespace breseq {
         // Copy number
         double copy_number;
         double copy_number_float;
+        vector<double> t_scores;
+        vector<double> p_values;
         
     };
     

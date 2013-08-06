@@ -113,16 +113,16 @@ namespace breseq
 
     
     // setup and parse configuration options:
-    AnyOption options("Usage: breseq -r reference.gbk [-r reference2.gbk ...] reads1.fastq [reads2.fastq reads3.fastq ...]");
+    AnyOption options("Usage: breseq -r reference.gbk [-r reference2.gbk ...] reads1.fastq [reads2.fastq ...]");
     
     options
 		("help,h", "Produce help message showing advanced options", TAKES_NO_ARGUMENT)
     ("verbose,v","Produce verbose output",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
 		("output,o", "Path to breseq output", ".")
 		("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files. (REQUIRED)")
-    ("name,n", "Human-readable name of sample/run for output [empty]", "")
+    ("name,n", "Human-readable name of sample for output [DEFAULT=<none>]", "")
     ("num-processors,j", "Number of processors to use in multithreaded steps", 1)
-    ("aligned-sam", "Input files are aligned SAM files, rather than FASTQ files. Junction prediction steps will be skipped.", TAKES_NO_ARGUMENT)
+    ("aligned-sam", "Input files are aligned SAM files, rather than FASTQ files. Junction prediction steps will be skipped.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
     
     options.addUsage("Special Reference Sequences", true);
@@ -136,7 +136,7 @@ namespace breseq
     ("base-quality-cutoff,b", "Ignore bases with quality scores lower than this value", 3, ADVANCED_OPTION)
     ("quality-score-trim", "Trim the ends of reads past any base with a quality score below --base-quality-score-cutoff.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("require-match-length", "Only consider alignments that cover this many bases of a read", 0, ADVANCED_OPTION)
-    ("require-match-fraction", "Only consider alignments that cover this fraction of a read", 0.9)
+    ("require-match-fraction", "Only consider alignments that cover this fraction of a read", 0.9, ADVANCED_OPTION)
     ("deletion-coverage-propagation-cutoff","Value for coverage above which deletions are cutoff. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
     ("deletion-coverage-seed-cutoff","Value for coverage below which deletions are seeded", 0, ADVANCED_OPTION)
     ("mutation-score-cutoff", "Log10 E-value cutoff for base-substitution and micro-indel predictions", 10, ADVANCED_OPTION)
@@ -146,7 +146,7 @@ namespace breseq
     options
     ("no-junction-prediction", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
     ("junction-alignment-pair-limit", "Only consider this many passed alignment pairs when creating candidate junction sequences", 100000, ADVANCED_OPTION)
-    ("junction-score-cutoff", "Maximum negative log10 probability of uneven coverage across a junction breakpoint to accept (0=OFF)", 3.0, ADVANCED_OPTION)
+    ("junction-score-cutoff", "Maximum negative log10 probability of uneven coverage across a junction breakpoint to accept (0 = OFF)", 3.0, ADVANCED_OPTION)
     ("junction-minumum-pos-hash-score", "Minimum number of distinct spanning read start positions required to accept a junction", 3, ADVANCED_OPTION)
     ;
         
@@ -154,11 +154,11 @@ namespace breseq
     options
     ("polymorphism-prediction,p", "Predict polymorphic (mixed) mutations", TAKES_NO_ARGUMENT)
     ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("polymorphism-reject-homopolymer-length", "Reject polymorphisms predicted in homopolymer repeats with this length or greater (DEFAULT= consensus mode, 3; polymorphism mode, 0) ", "", ADVANCED_OPTION)
-    ("polymorphism-score-cutoff", "Log10 E-value cutoff for test of polymorphism vs no polymorphism (DEFAULT= consensus mode, 10; polymorphism mode, 2)", "", ADVANCED_OPTION)
-    ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias (DEFAULT = OFF)", "", ADVANCED_OPTION)
-    ("polymorphism-frequency-cutoff", "Only predict polymorphisms where both allele frequencies are > than this value (DEFAULT= consensus mode, 0.1; polymorphism mode, 0.0)", "", ADVANCED_OPTION)
-    ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms where this many reads on each strand support alternative alleles (DEFAULT= consensus mode, 2; polymorphism mode, 0", "", ADVANCED_OPTION)
+    ("polymorphism-reject-homopolymer-length", "Reject polymorphisms predicted in homopolymer repeats with this length or greater (DEFAULT = consensus mode, 3; polymorphism mode, 0) ", "", ADVANCED_OPTION)
+    ("polymorphism-score-cutoff", "Log10 E-value cutoff for test of polymorphism vs no polymorphism (DEFAULT = consensus mode, 10; polymorphism mode, 2)", "", ADVANCED_OPTION)
+    ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias (0 = OFF) (DEFAULT = consensus mode, 0.05; polymorphism mode, 0.001)", "", ADVANCED_OPTION)
+    ("polymorphism-frequency-cutoff", "Only predict polymorphisms where both allele frequencies are > than this value (DEFAULT = consensus mode, 0.1; polymorphism mode, 0.0)", "", ADVANCED_OPTION)
+    ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms where this many reads on each strand support alternative alleles (DEFAULT = consensus mode, 2; polymorphism mode, 2", "", ADVANCED_OPTION)
     ;
     
     // CNV and Periodicity block
@@ -303,8 +303,8 @@ namespace breseq
       this->mixed_base_prediction = false;
       this->polymorphism_reject_homopolymer_length = 0;
       this->polymorphism_log10_e_value_cutoff = 2;
-      this->polymorphism_bias_p_value_cutoff = 0.01;
-      this->polymorphism_minimum_new_coverage_each_strand = 0;
+      this->polymorphism_bias_p_value_cutoff = 0.001;
+      this->polymorphism_minimum_new_coverage_each_strand = 2;
       this->no_indel_polymorphisms = false;
       
       this->junction_pos_hash_neg_log10_p_value_cutoff = 0; // OFF
@@ -314,14 +314,11 @@ namespace breseq
       ASSERT(!options.count("polymorphism-bias-cutoff"), "Option --polymorphism-bias-cutoff requires --polymorphism-prediction.")
 
       this->polymorphism_frequency_cutoff = 0.1;
-      this->mixed_base_prediction_marginal_frequency_cutoff = 0.5;
-      this->no_indel_polymorphisms = false;
       this->polymorphism_reject_homopolymer_length = 3;
       this->polymorphism_log10_e_value_cutoff = 10;
-      this->polymorphism_bias_p_value_cutoff = 0;
+      this->polymorphism_bias_p_value_cutoff = 0.05;
       this->polymorphism_minimum_new_coverage_each_strand = 2;
       this->no_indel_polymorphisms = false;
-
     }
     
     // override the default settings 
@@ -364,7 +361,7 @@ namespace breseq
     fprintf(stderr, "Foundation; either version 1, or (at your option) any later version.\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "Copyright (c) 2008-2010 Michigan State University\n");
-    fprintf(stderr, "Copyright (c) 2011-2012 The University of Texas at Austin\n");
+    fprintf(stderr, "Copyright (c) 2011-2013 The University of Texas at Austin\n");
     cerr << output_divider << endl;
   }
 
@@ -474,7 +471,6 @@ namespace breseq
     this->deletion_coverage_seed_cutoff = 0;
     this->polymorphism_prediction = false;
     this->mixed_base_prediction = true;
-    this->mixed_base_prediction_marginal_frequency_cutoff = 0.5;
     
     this->polymorphism_log10_e_value_cutoff = this->mutation_log10_e_value_cutoff;
 		this->polymorphism_bias_p_value_cutoff = 0;
@@ -576,6 +572,7 @@ namespace breseq
     this->candidate_junction_done_file_name = this->candidate_junction_path + "/candidate_junction.done";
 		this->candidate_junction_summary_file_name = this->candidate_junction_path + "/candidate_junction_summary.bin";
 		this->candidate_junction_fasta_file_name = this->candidate_junction_path + "/candidate_junction.fasta";
+    this->candidate_junction_detailed_file_name = this->candidate_junction_path + "/candidate_junction.detailed.txt";
 		this->candidate_junction_faidx_file_name = this->candidate_junction_path + "/candidate_junction.fasta.fai";
 
     //! Paths: Junction Alignment

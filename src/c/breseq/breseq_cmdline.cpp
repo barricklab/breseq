@@ -176,7 +176,7 @@ int do_bam2cov(int argc, char* argv[]) {
 //  ("gc_output,g", "create additional table file binned by GC content of reads (DEFAULT: OFF)")
   // options controlling information that is output
   ("total-only,1", "Only plot/tabulate total coverage, not per strand coverage", TAKES_NO_ARGUMENT)
-  ("resolution", "Number of positions to output coverage information for in interval (0=ALL)", 600)
+  ("resolution,p", "Number of positions to output coverage information for in interval (0=ALL)", 600)
   .processCommandArgs(argc, argv);
   
   options.addUsage("");

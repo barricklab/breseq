@@ -1761,6 +1761,11 @@ void  assign_junction_read_counts(
                                   cGenomeDiff& gd
                                   )
 {
+  bool verbose = false;
+  
+  // Could be added as a parameter to reduce problems due to one-base mismatches
+  static int32_t require_overlap = 0;
+  
   diff_entry_list_t jc = gd.list(make_vector<gd_entry_type>(JC));
 
   if (jc.size() == 0) return;
@@ -1784,9 +1789,26 @@ void  assign_junction_read_counts(
     uint32_t continuation_right = from_string<uint32_t>(j["continuation_right"]);
     uint32_t continuation_left = from_string<uint32_t>(j["continuation_left"]);
 
+    // Print out the junction we are processing
+    if (verbose) cerr << endl << "ASSIGNING READ COUNTS TO JUNCTION" << endl << j << endl << endl; 
+    
     // New Junction
     start = from_string<uint32_t>(j["flanking_left"]) - continuation_left;
     end = start + abs(from_string<int32_t>(j[ALIGNMENT_OVERLAP])) + 1 + continuation_right;
+    
+    if (verbose) {
+      cerr << "==SIDE 1==" << endl;
+      cerr << "position:" << j[SIDE_1_POSITION] << endl;
+      cerr << "strand:" << j[SIDE_1_STRAND] << endl;
+      cerr << "flanking:" << j["flanking_left"] << endl;
+      cerr << "continuation:" << j["continuation_left"] << endl;
+      cerr << "==OVERLAP== " << j[ALIGNMENT_OVERLAP] << endl;
+      cerr << "position:" << j[SIDE_2_POSITION] << endl;
+      cerr << "strand:" << j[SIDE_2_STRAND] << endl;
+      cerr << "flanking:" << j["flanking_right"] << endl;
+      cerr << "continuation:" << j["continuation_right"] << endl;
+    }
+    
     j[NEW_JUNCTION_READ_COUNT] = to_string(junction_jrc.count(j["key"], start, end, empty_read_names, junction_read_names));
     
     // New side 1
@@ -1795,10 +1817,10 @@ void  assign_junction_read_counts(
       start = from_string<uint32_t>(j[SIDE_1_POSITION]);
       if (side_1_strand == +1) {
         start--;
-        end = start + 1 + abs(from_string<int32_t>(j[ALIGNMENT_OVERLAP])); //@ded added overlap. what does neg overlap mean/do?
+        end = start + 1 + abs(from_string<int32_t>(j[ALIGNMENT_OVERLAP]));
         end += continuation_right;
       } else {
-        end = start + 1 + abs(from_string<int32_t>(j[ALIGNMENT_OVERLAP])); //@ded added overlap
+        end = start + 1 + abs(from_string<int32_t>(j[ALIGNMENT_OVERLAP]));
         start -= continuation_left;
       }
       
@@ -1816,10 +1838,10 @@ void  assign_junction_read_counts(
       start = from_string<uint32_t>(j[SIDE_2_POSITION]);
       if (side_2_strand == +1) {
         start--;
-        end = start + 1 + abs(from_string<int32_t>(j[ALIGNMENT_OVERLAP])); //@ded added overlap
+        end = start + 1 + abs(from_string<int32_t>(j[ALIGNMENT_OVERLAP]));
         end += continuation_right;
       } else {
-        end = start + 1 + abs(from_string<int32_t>(j[ALIGNMENT_OVERLAP])); //@ded added overlap
+        end = start + 1 + abs(from_string<int32_t>(j[ALIGNMENT_OVERLAP]));
         start -= continuation_left;
       }
       empty_read_names.clear();
@@ -1922,12 +1944,16 @@ uint32_t junction_read_counter::count(
   _start = start;
   _end = end;
     
-  string region = seq_id + ":" + to_string(start) + "-" + to_string(start);//@ded is start - start intended/best? 
-  if (_verbose) cout << seq_id << ":" << start << "-" << end << endl; //@ded verbouse output is outputing start-end
+  // The reads we overlap need to overlap both the start and the end to count.
+  // We can retrieve them all by extracting things that overlap the start 
+  // (and then checking if they also overlap the end).
+  string region = seq_id + ":" + to_string(start) + "-" + to_string(start);
+  
+  if (_verbose) cerr << "junction_read_counter::count " << seq_id << ":" << start << "-" << end << endl;
   
   do_fetch(region);
   
-  if (_verbose) cout << "COUNT: " << _count << endl;
+  if (_verbose) cerr << "COUNT: " << _count << endl;
 
   
   counted_read_names = _counted_read_names;
@@ -1940,7 +1966,6 @@ void junction_read_counter::fetch_callback ( const alignment_wrapper& a )
   // Just check to be sure the start and end of the alignment go across the desired start and end.
   
   if (_verbose) cout << "  " << a.read_name();
-  
   
   // Store the scores in a hash that can be resolved to see whether the read would have gone to the junction
   // or the reference . We can count. 
@@ -1960,7 +1985,6 @@ void junction_read_counter::fetch_callback ( const alignment_wrapper& a )
     if (_verbose) cout << "  IGNORED" << endl;
     
     //ERROR("Read being counted twice for junction.");
-    //This sometimes happens despite 
     return;
   }
   

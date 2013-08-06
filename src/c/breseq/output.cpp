@@ -218,23 +218,6 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   //////
   // Unassigned evidence
   //////
-  
-  // Mixed predictions ≥50% RA evidence
-  vector<gd_entry_type> ra_types = make_vector<gd_entry_type>(RA);
-  list<counted_ptr<cDiffEntry> > mixed_ra = gd.filter_used_as_evidence(gd.show_list(ra_types));
-  mixed_ra.remove_if(not1(cDiffEntry::field_exists("mixed")));
-  if (mixed_ra.size() > 0) {
-    
-    list<counted_ptr<cDiffEntry> > mixed_ra_consensus;
-    for(diff_entry_list_t::iterator it=mixed_ra.begin(); it!=mixed_ra.end(); it++ ) {
-      if (from_string<double>((**it)[FREQUENCY]) >= settings.mixed_base_prediction_marginal_frequency_cutoff )
-        mixed_ra_consensus.push_back(*it);
-    }
-    
-    if (mixed_ra_consensus.size() > 0) {
-      HTML << "<p>" << html_read_alignment_table_string(mixed_ra_consensus, false, "Possible mixed read alignment evidence...", relative_path) << endl;
-    }
-  }
 
   diff_entry_list_t cn = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(CN)));
   cn.remove_if(cDiffEntry::rejected()); 
@@ -272,7 +255,7 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   }
   
   // This code prints out a message if there was nothing in the previous tables
-  if (muts.size() + mixed_ra.size() + cn.size() + mc.size() + jc.size() + jcu.size() == 0) {
+  if (muts.size() + cn.size() + mc.size() + jc.size() + jcu.size() == 0) {
     HTML << "<p>No mutations predicted." << endl;
   }
   
@@ -394,22 +377,9 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   // ## Marginal evidence
   // ###
   
-  // RA evidence
   vector<gd_entry_type> ra_types = make_vector<gd_entry_type>(RA);
-  list<counted_ptr<cDiffEntry> > mixed_ra = gd.filter_used_as_evidence(gd.show_list(ra_types));
-  mixed_ra.remove_if(not1(cDiffEntry::field_exists("mixed")));
-  if (mixed_ra.size() > 0) {
-    
-    list<counted_ptr<cDiffEntry> > mixed_ra_marginal;
-    for(diff_entry_list_t::iterator it=mixed_ra.begin(); it!=mixed_ra.end(); it++ ) {
-      if (from_string<double>((**it)[FREQUENCY]) < settings.mixed_base_prediction_marginal_frequency_cutoff )
-        mixed_ra_marginal.push_back(*it);
-    }
-    
-    HTML << "<p>" << endl;
-    HTML << html_read_alignment_table_string(mixed_ra_marginal, false, "Marginal mixed read alignment evidence...", relative_path) << endl;
-  }
-  
+
+  // RA evidence
   list<counted_ptr<cDiffEntry> > ra = gd.filter_used_as_evidence(gd.show_list(ra_types));
   ra.remove_if(not1(cDiffEntry::field_exists("reject")));
   ra.sort(cDiffEntry::by_scores(make_vector<string>("quality")));
@@ -417,6 +387,15 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
     HTML << "<p>" << endl;
     HTML << html_read_alignment_table_string(ra, false, "Marginal read alignment evidence...", relative_path) << endl;
   }
+  
+  // Mixed predictions ≥50% RA evidence
+  list<counted_ptr<cDiffEntry> > mixed_ra = gd.filter_used_as_evidence(gd.show_list(ra_types));
+  mixed_ra.remove_if(not1(cDiffEntry::field_exists("mixed")));
+  HTML << "<p>" << endl;
+  if (mixed_ra.size() > 0) {
+    HTML << html_read_alignment_table_string(mixed_ra, false, "Marginal mixed read alignment evidence...", relative_path) << endl;
+  }
+  
   
   vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
   diff_entry_list_t jc = gd.filter_used_as_evidence(gd.show_list(jc_types));
@@ -1503,6 +1482,7 @@ string html_copy_number_table_string(diff_entry_list_t& list_ref, bool show_deta
   ss << th("end") << endl;
   ss << th("tile&nbsp;size") << endl;
   ss << th("copy&nbsp;number") << endl;
+  ss << th("p-value") << endl;
   ss << th("rel&nbsp;coverage") << endl;
   ss << th("gene") << endl;
   ss << th("width=\"100%\"","product") << endl;
@@ -1527,6 +1507,8 @@ string html_copy_number_table_string(diff_entry_list_t& list_ref, bool show_deta
 
     ss << td(ALIGN_CENTER, nonbreaking(c["tile_size"])) << endl;
     ss << td(ALIGN_CENTER, nonbreaking(c["copy_number"])) << endl;
+    
+    ss << td(ALIGN_CENTER, nonbreaking(c["p_value"])) << endl;
     
     stringstream num; 
     num << fixed << setprecision(2) << from_string<double>(c["relative_coverage"]);
@@ -1841,7 +1823,6 @@ Evidence_Files::Evidence_Files(const Settings& settings, cGenomeDiff& gd)
     
     // this is the flagship file that we show first when clicking on evidence from a mutation...
     (*item)[_EVIDENCE_FILE_NAME] = (*item)[_NEW_JUNCTION_EVIDENCE_FILE_NAME];
-    string side_1_key_str = "JC_SIDE_1_" + (*item)[SIDE_2_SEQ_ID] + "_" + (*item)[SIDE_2_POSITION] + "_" + (*item)[SIDE_2_POSITION];
     add_evidence(_SIDE_1_EVIDENCE_FILE_NAME,
                  item,
                  parent_item,
@@ -1851,10 +1832,9 @@ Evidence_Files::Evidence_Files(const Settings& settings, cGenomeDiff& gd)
                  (SEQ_ID, (*item)[SIDE_1_SEQ_ID])            
                  (START, (*item)[SIDE_1_POSITION])
                  (END, (*item)[SIDE_1_POSITION])
-                 (PREFIX, side_1_key_str)
+                 (PREFIX, "JC_SIDE_1")
                  ); 
 
-    string side_2_key_str = "JC_SIDE_2_" + (*item)[SIDE_1_SEQ_ID] + "_" + (*item)[SIDE_1_POSITION] + "_" + (*item)[SIDE_1_POSITION];
     add_evidence(_SIDE_2_EVIDENCE_FILE_NAME,
                  item,
                  parent_item,
@@ -1864,7 +1844,7 @@ Evidence_Files::Evidence_Files(const Settings& settings, cGenomeDiff& gd)
                  (SEQ_ID, (*item)[SIDE_2_SEQ_ID])            
                  (START, (*item)[SIDE_2_POSITION])
                  (END, (*item)[SIDE_2_POSITION])
-                 (PREFIX, side_2_key_str)
+                 (PREFIX, "JC_SIDE_2")
                  );
   }
   
@@ -1901,71 +1881,21 @@ Evidence_Files::Evidence_Files(const Settings& settings, cGenomeDiff& gd)
     html_evidence_file(settings, gd, e);
   }
 }
-
-/*-----------------------------------------------------------------------------
- *  Helper Function For Create_Evidence_Files()
- *-----------------------------------------------------------------------------*/
-
-string Evidence_Files::html_evidence_file_name(Evidence_Item& evidence_item)
-{
-  
-  //set up the file name
-  string s = evidence_item[PREFIX];  
-  s += "_";
-  s += evidence_item[SEQ_ID];  
-  s += "_";
-  s += evidence_item[START];
-  
-  if (evidence_item.entry_exists(INSERT_START))
-  {
-    s += ".";
-    s += evidence_item[INSERT_START];
-  }
-  
-  s += "_";
-  s += evidence_item[END];
-  
-  if (evidence_item.entry_exists(INSERT_END))
-  {
-    s += ".";
-    s += evidence_item[INSERT_END];
-  }
-  
-  s += "_alignment.html";  
-
-  return s;
-}
   
   
 void Evidence_Files::add_evidence(const string& evidence_file_name_key, diff_entry_ptr_t item,
                                   diff_entry_ptr_t parent_item, diff_entry_map_t& fields)
 {
   Evidence_Item evidence_item(fields, item, parent_item);
-  evidence_item[FILE_NAME] = html_evidence_file_name(evidence_item);
+  
+  evidence_item[FILE_NAME] = evidence_item[PREFIX] + "_" + evidence_item.item->_id + ".html";
+    
+  ASSERT(!evidence_item[FILE_NAME].empty(), "Empty file name for evidence.");
   
   // this is added to the actual genome diff entry so that we know where to link
   (*item)[evidence_file_name_key] = evidence_item[FILE_NAME];
   
   evidence_list.push_back(evidence_item);
-}
-/*-----------------------------------------------------------------------------
- *  Helper Function For Create_Evidence_Files()
- *-----------------------------------------------------------------------------*/
-string Evidence_Files::file_name(Evidence_Item& evidence_item)
-{
-  stringstream ss(ios_base::out | ios_base::app);
-
-  ss << evidence_item[PREFIX];
-  ss << "_" << evidence_item[SEQ_ID];
-  ss << "_" << evidence_item[START];
-  if(evidence_item.entry_exists(INSERT_START))
-    ss << "." + evidence_item[INSERT_START];
-  ss << "_" << evidence_item[END];
-  if(evidence_item.entry_exists(INSERT_END))
-    ss << "." + evidence_item[INSERT_END];
-  ss << "_alignment.html";
-  
-  return ss.str();
 }
 
 
@@ -1985,7 +1915,7 @@ Evidence_Files::html_evidence_file (
 
   // Create Stream and Confirm It's Open
   ofstream HTML(output_path.c_str());
-  
+    
   if (!HTML.good()) {
     cerr << "Could not open file: " << item["output_path"] << endl;
     assert(HTML.good());

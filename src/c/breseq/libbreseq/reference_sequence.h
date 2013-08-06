@@ -102,6 +102,7 @@ namespace breseq {
     }
   };
   
+  
   extern const vector<string> snp_types;
     
 	/*! Sequence Feature class.
@@ -423,6 +424,92 @@ namespace breseq {
       }
   };
 
+  /*! Reference Sequences
+   
+   For properly stepping through a feature (including join operations)
+	 */   
+  class cLocationTraverser {
+    
+    cAnnotatedSequence *my_seq;
+    cLocation* my_loc;
+    int32_t on_pos;
+    vector<cLocation> sub_locs;
+    int32_t on_loc_index;
+    
+  public:
+    cLocationTraverser(cAnnotatedSequence* sequence, cLocation* location) {
+      my_loc = location;
+      my_seq = sequence;
+      sub_locs = my_loc->get_all_sub_locations();
+      
+      assert(sub_locs.size() > 0);
+      
+      if (my_loc->get_strand() == 1) {
+        on_loc_index = 0;
+        on_pos = sub_locs[on_loc_index].get_start_1();
+      } else {
+        on_loc_index = sub_locs.size() - 1;
+        on_pos = sub_locs[on_loc_index].get_end_1();
+      }
+    }
+    
+    ~cLocationTraverser() {};
+    
+    // returns whether moved out of location
+    bool offset_to_next_position(bool allow_past_end) 
+    {      
+      if (sub_locs[on_loc_index].get_strand() == 1) {
+        
+        // jump to the next location
+        if ((on_loc_index<static_cast<int32_t>(sub_locs.size())) && (on_pos == sub_locs[on_loc_index].get_end_1())) {
+          on_loc_index++;
+          if (on_loc_index>=static_cast<int32_t>(sub_locs.size())) {
+            if (!allow_past_end) {
+             return false; 
+            }
+            on_loc_index = static_cast<int32_t>(sub_locs.size()) - 1;
+            // execution continues to move position
+          }
+          else {
+            on_pos = sub_locs[on_loc_index].get_start_1();
+            return true;
+          }
+        }
+        
+        on_pos++;
+        if (on_pos > my_seq->m_length)
+          on_pos = 1;
+      }
+      
+      else {
+        // jump to the next location
+        if ((on_loc_index>=0) && (on_pos == sub_locs[on_loc_index].get_start_1())) {
+          on_loc_index--;
+          if (on_loc_index<0) {
+            if (!allow_past_end) {
+              return false;
+            }
+            on_loc_index = 0;
+            // execution continues to move position
+          }
+          else {
+            on_pos = sub_locs[on_loc_index].get_end_1();
+            return true;
+          }
+        }
+        
+        on_pos--;
+        if (on_pos < 1)
+          on_pos = my_seq->m_length;
+      }
+    
+      return true;
+    }
+    
+    uint32_t on_position_1() { return static_cast<uint32_t>(on_pos); }
+    
+    char on_base_stranded_1();
+  };
   
   /*! Reference Sequences
    
@@ -610,6 +697,8 @@ namespace breseq {
     static cSequenceFeaturePtr find_closest_repeat_region_boundary(int32_t position, cSequenceFeatureList& repeat_list, int32_t& max_distance, int32_t direction);
     static cSequenceFeaturePtr get_overlapping_feature(cSequenceFeatureList& feature_list, int32_t pos);
     static char translate_codon(string seq, uint32_t translation_table, uint32_t codon_number_1);
+    static char translate_codon(string seq, string translation_table, string translation_table_1, uint32_t codon_number_1);
+    static string translate_protein(cAnnotatedSequence& seq, cLocation& loc, string translation_table, string translation_table_1);
     static void find_nearby_genes(
                                   cSequenceFeatureList& gene_list, 
                                   int32_t pos_1, 
