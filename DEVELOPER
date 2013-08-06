@@ -1,0 +1,53 @@
+=== Command-Line Instructions ===
+
+To compile the repository version of the breseq source code, you must have autotools, autoconf, m4, and several other GNU tools installed on your system. (You can use MacPorts to do this on Mac OS X, just keep installing whatever it tells you that you are missing). Building requires running the ./bootstrap script when you have a fresh version from the repository or whenever the autoconf configuration files have changed, for example when a new source file has been added to the project.
+
+$ ./bootstrap
+$ ./configure
+$ make
+$ make test
+
+=== Mac XCode Compilation Instructions ===
+
+These instructions should work for XCode 3 or XCode 4.
+
+To work with the XCode project located in src/c, you must first use MacPorts to install libraries that breseq/Samtools need to function in the expected locations on your system.
+
+$ sudo port install ncurses
+$ port install zlib
+
+NOTE: You may need to add the +universal flag to each of these commands if you run into link errors when compiling breseq that mention improper architectures for libraries.
+
+Next, you need to run the first few commands of the command-line instructions:
+
+$ ./bootstrap
+$ ./configure
+
+You must do this because breseq uses a build script to make libbam.a and link to it.
+
+With those two steps taken care of, breseq should compile. Most errors occur when breseq tries to build Samtools with the wrong architecture. You can troubleshoot this by changing $(NATIVE_ARCH) in the arguments for the samtools target.
+
+*** For XCode 4.1+ or on MacOS 10.7+ ***
+
+Under targets >> samtools >> info you may need to change the Arguments line from: 
+
+-f Makefile.xcode CFLAGS="-arch $(NATIVE_ARCH)" $(ACTION)
+
+to
+
+-f Makefile.xcode CFLAGS="-arch $(NATIVE_ARCH_ACTUAL)" $(ACTION)
+
+
+=== Debugging in XCode ===
+
+To run breseq with the XCode debugger, you must set the environmental variable PATH, within the "executable" or "scheme" options, include the locations where you have R and bowtie2 installed.  You can find these with the 'which' shell command. Then set up a new Environment Variable within XCode like this:
+
+PATH     /Users/myusername/local/bin:$PATH 
+
+You may also want to set the working directory, and will definitely want to set the command line options (which are the same as the command you would type in the shell, but omitting the initial "breseq")
+
+breseq -r reference.gbk reads.fastq
+becomes
+Arguments: -r reference.gbk reads.fastq
+
+These options are found in slightly different places depending on your version of XCode. At this point, build and debug will hopefully work. IN our hands, sometimes XCode is a bit buggy, and it might not find the executables when starting some runs, so try starting to debug a few times before troubleshooting this problem.

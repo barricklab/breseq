@@ -1,0 +1,4 @@
+#include "Shared.xcconfig"
+
+WARNING_CFLAGS=-Wall -Wextra -Wno-unused-variable
+GCC_OPTIMIZATION_LEVEL=0

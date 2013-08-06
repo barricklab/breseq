@@ -1,0 +1,9 @@
+## Samtools has a hard coded maximum number of 
+## alignments that pileup will return.
+##
+## We have increased that limit.
+
+172c172
+< 	iter->maxcnt = 8000;
+---
+> 	iter->maxcnt = 1000000000;
