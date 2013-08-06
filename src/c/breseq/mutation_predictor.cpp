@@ -1080,13 +1080,14 @@ namespace breseq {
       // by this evidence alone.
       if (abs(size) > avg_read_length) 
         continue;
-
+      
+      // At this point, we have committed to adding a mutation...
+      cDiffEntry mut;
 			// 'DEL' or 'AMP'
 			if (!j.entry_exists("unique_read_sequence"))
 			{        
 				if (size < 0) // this is a deletion!
         {
-          cDiffEntry mut;
           mut._type = DEL;
           mut
           ("seq_id", seq_id)
@@ -1094,11 +1095,9 @@ namespace breseq {
           ("size", s(-size))         // note adjustment due to +1 above
           ;
           mut._evidence = make_vector<string>(j._id);
-          gd.add(mut);
         } 
         else // this is an amplification.		
         {		
-          cDiffEntry mut;		
           mut._type = AMP;		
           mut		
           ("seq_id", seq_id)		
@@ -1107,7 +1106,6 @@ namespace breseq {
           ("new_copy_number", "2")		
           ;		
           mut._evidence = make_vector<string>(j._id);
-          gd.add(mut);		
         }
       }
 			// 'INS'
@@ -1118,7 +1116,6 @@ namespace breseq {
 				string new_seq = j["unique_read_sequence"];        
         string ref_seq = ref_seq_info.get_sequence_1(seq_id, n(j["side_2_position"]), n(j["side_1_position"]));
 
-				cDiffEntry mut;
         mut._type = INS;
 				mut
 					("seq_id", seq_id)
@@ -1127,7 +1124,6 @@ namespace breseq {
 				;
         mut._evidence = make_vector<string>(j._id);
 
-				gd.add(mut);
 			}
       // 'INS'
       //  INS predicted here are aligned with missing unique_read_sequence info.
@@ -1137,7 +1133,6 @@ namespace breseq {
 			{
 				string new_seq = reverse_complement(j["unique_read_sequence"]);
         string ref_seq = ref_seq_info.get_sequence_1(seq_id, n(j["side_1_position"]), n(j["side_2_position"]));
-				cDiffEntry mut;
         mut._type = INS;
 				mut
         ("seq_id", seq_id)
@@ -1146,7 +1141,6 @@ namespace breseq {
 				;
         mut._evidence = make_vector<string>(j._id);
         
-				gd.add(mut);
 			}
 			// "INS" || "AMP"
       // @JEB Note: this kind of AMP only happens due to the way that reads are currently split.
@@ -1160,7 +1154,6 @@ namespace breseq {
         
         if (j["unique_read_sequence"] == dup_check_seq)
         {
-          cDiffEntry mut;
           mut._type = AMP;
           mut
           ("seq_id", seq_id)
@@ -1169,11 +1162,9 @@ namespace breseq {
           ("new_copy_number", "2")
           ;
           mut._evidence = make_vector<string>(j._id);
-          gd.add(mut);
         }
         else
         {
-          cDiffEntry mut;
           mut._type = INS;
           mut
             ("seq_id", seq_id)
@@ -1181,9 +1172,16 @@ namespace breseq {
             ("new_seq", j["unique_read_sequence"])
           ;
           mut._evidence = make_vector<string>(j._id);
-          gd.add(mut);
+
         }
 			}
+      
+      // If we are in polymorphism mode, propagate the frequency from JC evidence to mutation
+      if (settings.polymorphism_prediction) 
+        mut[FREQUENCY] = j[FREQUENCY];
+      
+      // Finally, add it
+      gd.add(mut);
 		}
 
 
