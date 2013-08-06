@@ -1,3 +1,6 @@
+Version 0.24
+    * Fix for crash when some junction alignment files had long names.
+
 Version 0.23
     * Compiling in Cygwin should now be possible.
     * Fix for crash on single files containing multiple references when one that was not

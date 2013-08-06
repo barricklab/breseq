@@ -261,10 +261,8 @@ struct Evidence_Files
   
   private:
   
-    string html_evidence_file_name(Evidence_Item& evidence_item);
     void add_evidence(const string& file_name, diff_entry_ptr_t item,
                       diff_entry_ptr_t parent_item, map<string,string>& fields);
-    string file_name(Evidence_Item& evidence_item);
     void html_evidence_file(const Settings& settings, cGenomeDiff& gd, Evidence_Item& item);
 
 };

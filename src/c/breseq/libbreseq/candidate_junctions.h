@@ -203,13 +203,19 @@ namespace breseq {
     }
 	};
 
+  // Predefinitition
+  class JunctionCandidate;
+  typedef counted_ptr<JunctionCandidate> JunctionCandidatePtr;
+  typedef map<string, JunctionCandidatePtr> KeyToJunctionCandidateMap;
+  typedef map<string, KeyToJunctionCandidateMap > SequenceToKeyToJunctionCandidateMap;
   
   class JunctionCandidate : public JunctionInfo {
   public:
     string sequence;
     string reverse_complement_sequence;
 		map<uint32_t, uint32_t> read_begin_hash;
-
+    vector<JunctionCandidatePtr> merged_from;    // Keeps track of all junctions that were merged to create this (including itself)
+    
     JunctionCandidate() {}
     
     JunctionCandidate(
@@ -263,33 +269,31 @@ namespace breseq {
       return (a.sides[0].position < b.sides[0].position);
     }
     
-    //! if returns true then we merge into cj, otherwise we merge into this
+    //! Returns true then we merge into cj, otherwise we merge into this
     bool operator <(const JunctionCandidate& cj) const
     {
-      // we want to merge into the longest sequence (which means less overlap)
-      if ( this->sequence.size() < cj.sequence.size() ) return true;  // merge into longer cj
-      if ( this->sequence.size() > cj.sequence.size() ) return false;
+      // we want to merge into the shorter sequence (which means less overlap)
+      if ( this->sequence.size() > cj.sequence.size() ) return true;  // merge into shorter cj
+      if ( this->sequence.size() < cj.sequence.size() ) return false;
       
+      // sequence lengths are equal
       // we want to merge into the one that is within the same reference sequence fragment
       int32_t equal_seq_1 = (this->sides[0].seq_id == this->sides[1].seq_id) ? 1 : 0;
       int32_t equal_seq_2 = (cj.sides[0].seq_id == cj.sides[1].seq_id) ? 1 : 0;
       if (equal_seq_1 < equal_seq_2) return true; // merge into cj if only it is on the same fragment
       if (equal_seq_1 > equal_seq_2) return false;
       
-      // sequence lengths are equal
       // we want to merge into the one with the closest coordinates?
-      //int32_t distance_1 = abs( this->junction_info.sides[0].position - this->junction_info.sides[1].position );
-      //int32_t distance_2 = abs( cj.junction_info.sides[0].position - cj.junction_info.sides[1].position );
-      //if (distance_1 > distance_2) return true; // merge into cj if it is separated by a smaller distance
-      //if (distance_1 < distance_2) return false;
+      int32_t distance_1 = abs( this->sides[0].position - this->sides[1].position );
+      int32_t distance_2 = abs( cj.sides[0].position - cj.sides[1].position );
+      if (distance_1 > distance_2) return true; // merge into cj if it is separated by a smaller distance
+      if (distance_1 < distance_2) return false;
       
       return (this->sides[0].position > cj.sides[0].position); // merge into cj if it has a smaller coord
     }
   };
   
-  typedef counted_ptr<JunctionCandidate> JunctionCandidatePtr;
-  typedef map<string, JunctionCandidatePtr> KeyToJunctionCandidateMap;
-  typedef map<string, KeyToJunctionCandidateMap > SequenceToKeyToJunctionCandidateMap;
+
 
   
   

@@ -361,6 +361,7 @@ namespace breseq
 
     string coverage_junction_done_file_name;
     string candidate_junction_fasta_file_name;
+    string candidate_junction_detailed_file_name;
     string candidate_junction_faidx_file_name;
 		string candidate_junction_summary_file_name;
     

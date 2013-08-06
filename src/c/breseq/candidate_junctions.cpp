@@ -871,15 +871,25 @@ namespace breseq {
 		sort(combined_candidate_junctions.begin(), combined_candidate_junctions.end(), JunctionCandidate::sort_by_ref_seq_coord);
     
     cFastaFile out(settings.candidate_junction_fasta_file_name, ios_base::out);
-    
-		for (uint32_t j = 0; j < combined_candidate_junctions.size(); j++)
-		{
+    ofstream detailed(settings.candidate_junction_detailed_file_name.c_str());
+
+		for (uint32_t j = 0; j < combined_candidate_junctions.size(); j++) {
+      
 			JunctionCandidate& junction = combined_candidate_junctions[j];
       cFastaSequence seq; //= { junction.junction_key(), "", junction.sequence };
       seq.m_name = junction.junction_key();
       seq.m_description = "";
       seq.m_sequence = junction.sequence;
 			out.write_sequence(seq);
+      
+      // write to detailed file
+      detailed << seq;
+      for (vector<JunctionCandidatePtr>::iterator it = junction.merged_from.begin(); it != junction.merged_from.end(); it++) {
+        JunctionCandidate& merged_junction = **it;
+        detailed << merged_junction.junction_key() << "\t" << merged_junction.sequence << "\n";
+      }
+      detailed << "======" << endl;
+
 		}
 		out.close();
     
@@ -922,11 +932,18 @@ namespace breseq {
   }
 
   
+// CandidateJunctions::merge_candidate_junctions
+//
+//   Determined whether two junctions are equivalent (i.e., one is a subsequence of the other)
+//   If do, it merges using these criteria in order: 
+//      * Shorter one if they differ in length (this implies less overlap)
+//      * Favoring one with the two sides on the same reference sequence
+//      * Favoring the one with the closest reference coordinates
   
   bool CandidateJunctions::merge_candidate_junctions(JunctionCandidatePtr*& jcp1, JunctionCandidatePtr*& jcp2)
   {
     bool verbose = false;
-    uint32_t merged = 0; // 0 for not merged, 1 for sequence, 2 for reverse complement of sequence
+    uint32_t merged_strand = 0; // 0 for not merged, 1 for sequence, 2 for reverse complement of sequence
     
     JunctionCandidate& jc1 = **jcp1;
     JunctionCandidate& jc2 = **jcp2;
@@ -935,29 +952,29 @@ namespace breseq {
     if (jc1.sequence.size() > jc2.sequence.size())
     {
       if (jc1.sequence.find(jc2.sequence) != string::npos)
-        merged = 1;
+        merged_strand = 1;
       else if (jc1.reverse_complement_sequence.find(jc2.sequence) != string::npos )
-        merged = 2;
+        merged_strand = 2;
     }
     else
     {
       if (jc2.sequence.find(jc1.sequence) != string::npos)
-        merged = 1;
+        merged_strand = 1;
       else if (jc2.sequence.find(jc1.reverse_complement_sequence) != string::npos)
-        merged = 2;
+        merged_strand = 2;
     }
     
-    if (!merged) return (merged != 0);
+    if (!merged_strand) return false;
     
-    if (verbose) cout << ((merged == 1) ? "Merged same strand" : "Merged reverse complement") << endl;
+    if (verbose) cout << ((merged_strand == 1) ? "Merged same strand" : "Merged reverse complement") << endl;
     
     JunctionCandidatePtr* merge_into_p = NULL;
     JunctionCandidatePtr* merge_from_p = NULL;
     
-    // this is a rather complicated compare function to favor longer sequences and those with close coords
+    // this is a rather complicated compare function to favor shorter sequences and those with close coords
   
-    // This comparison of junctions favors...
-    //   1) the longer sequence 
+    // This < comparison of junctions favors...
+    //   1) the shorter sequence 
     //   2) both sides on the same reference sequence 
     //   3) the smallest coordinate on side 1
     
@@ -975,6 +992,9 @@ namespace breseq {
     JunctionCandidate& merge_into = **merge_into_p;
     JunctionCandidate& merge_from = **merge_from_p;
     
+    // Add the merged junctions to our list
+    if (merge_into.merged_from.size() == 0) merge_into.merged_from.push_back(*merge_into_p);
+    merge_into.merged_from.push_back(*merge_from_p);
     
     if (verbose) cout << "Merging into:" << merge_into.junction_key() << endl;
     if (verbose) cout << merge_into.sequence << endl;
@@ -982,7 +1002,7 @@ namespace breseq {
     if (verbose) cout << merge_from.sequence << endl;
     
     // Carry over redundancy that was already assigned (based on different coord matching, but sequence being the same)
-    if (merged == 2)
+    if (merged_strand == 2)
     {
       merge_into.sides[0].redundant = merge_from.sides[1].redundant && merge_into.sides[0].redundant;
       merge_into.sides[1].redundant = merge_from.sides[0].redundant && merge_into.sides[1].redundant;
@@ -993,13 +1013,13 @@ namespace breseq {
       merge_into.sides[1].redundant = merge_from.sides[1].redundant && merge_into.sides[1].redundant;
     }
     
-    // If one of the sides is identical (in terms of reference coordinate and strand), then mark it as redundant
-    // @JEB 2013-03-09. This should require the whole sequence of the junction side to be the same to be redundant
-    /*
+    // If one of the sides is not equivalent (in terms of reference coordinate and strand), 
+    // then mark that side as redundant
+    
     if (verbose) cout << "Merging into carryover:" << merge_into.junction_key() << endl;
     for (uint32_t into_side = 0; into_side < 2; into_side++) 
     {
-      bool found = false;
+      bool found = false; // whether we found an identical coordinate
       
       for (uint32_t from_side = 0; from_side < 2; from_side++) 
       {
@@ -1007,19 +1027,18 @@ namespace breseq {
           found = true;
       }
       
+      // we did not find an equivalent side, meaning this side must have multiple descriptions == redundant
       if (!found)
       {
         merge_into.sides[into_side].redundant = true;
         if (verbose) cout << "Marking side " << into_side << " as redundant." << endl;
       }
-      
     }
-    */
     
     jcp1 = merge_into_p;
     jcp2 = merge_from_p;
 
-    return (merged != 0);
+    return true;
   }
 
 
