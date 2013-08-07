@@ -20,7 +20,7 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/mutation_predictor.h"
 
 #include "libbreseq/output.h"
-
+#include "libbreseq/resolve_alignments.h"
 
 using namespace std;
 
@@ -946,10 +946,27 @@ namespace breseq {
           }
         }
         
+        // @JEB 08-06-13 
+        // Reassign read counts with required overlap to avoid counting reads that go into the
+        // target site duplication from counting against the IS element (giving a non-100% value).
+        int32_t require_overlap = n(mut["duplication_size"]);
+        
+        verbose = false;
+        if (verbose) cerr << "Before 1:" << endl << j1 << endl;
+        assign_one_junction_read_counts(settings, j1, require_overlap);
+        j1["read_count_offset"] = mut["duplication_size"];
+        if (verbose) cerr << "After 1:" << endl << j1 << endl;
+        
+        if (verbose) cerr << "Before 2:" << endl << j2 << endl;
+        assign_one_junction_read_counts(settings, j2, require_overlap);
+        j2["read_count_offset"] = mut["duplication_size"];
+        if (verbose) cerr << "After 2:" << endl << j2 << endl;
+        
         // @JEB 01-04-13
         // Calculate a frequency for the mobile element insertion from the reads supporting the new and old junctions on each side
         
         if (settings.polymorphism_prediction) {
+          
           
           double a1 = from_string<uint32_t>(j1[SIDE_1_READ_COUNT]);
           double b1 = from_string<uint32_t>(j1[SIDE_2_READ_COUNT]);
