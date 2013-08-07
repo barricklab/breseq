@@ -268,6 +268,12 @@ namespace breseq {
                                     JunctionTestInfo& test_info
                                     );
 
+  void  assign_one_junction_read_counts(
+                                        const Settings& settings,
+                                        cDiffEntry& j,
+                                        int32_t require_overlap = -1
+                                        );
+  
   void  assign_junction_read_counts(
                                     const Settings& settings,
                                     cGenomeDiff& gd

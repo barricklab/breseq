@@ -1755,6 +1755,125 @@ vector<string> get_sorted_junction_ids(
   }
   return sorted_junction_ids;
 }
+
+void  assign_one_junction_read_counts(
+                                  const Settings& settings,
+                                  cDiffEntry& j,
+                                  int32_t require_overlap
+                                  )
+{
+  bool verbose = false;
+ 
+  map<string,bool> empty_read_names;
+  map<string,bool> junction_read_names;
+  
+  junction_read_counter reference_jrc(settings.reference_bam_file_name, settings.reference_fasta_file_name, settings.verbose);
+  junction_read_counter junction_jrc(settings.junction_bam_file_name, settings.candidate_junction_fasta_file_name, settings.verbose);
+  
+  int32_t start, end;
+  
+  uint32_t continuation_right = from_string<uint32_t>(j["continuation_right"]);
+  uint32_t continuation_left = from_string<uint32_t>(j["continuation_left"]);
+  
+  // Print out the junction we are processing
+  if (verbose) cerr << endl << "ASSIGNING READ COUNTS TO JUNCTION" << endl << j << endl << endl; 
+  
+  // New Junction
+  start = from_string<uint32_t>(j["flanking_left"]) - continuation_left;
+  end = start + abs(from_string<int32_t>(j[ALIGNMENT_OVERLAP])) + 1 + continuation_right;
+  
+  if (verbose) {
+    cerr << "==SIDE 1==" << endl;
+    cerr << "position:" << j[SIDE_1_POSITION] << endl;
+    cerr << "strand:" << j[SIDE_1_STRAND] << endl;
+    cerr << "flanking:" << j["flanking_left"] << endl;
+    cerr << "continuation:" << j["continuation_left"] << endl;
+    cerr << "==OVERLAP== " << j[ALIGNMENT_OVERLAP] << endl;
+    cerr << "position:" << j[SIDE_2_POSITION] << endl;
+    cerr << "strand:" << j[SIDE_2_STRAND] << endl;
+    cerr << "flanking:" << j["flanking_right"] << endl;
+    cerr << "continuation:" << j["continuation_right"] << endl;
+  }
+  
+  //int32_t amount_to_add = (require_overlap != -1) ? require_overlap : abs(from_string<int32_t>(j[ALIGNMENT_OVERLAP]));
+  int32_t amount_to_add = (require_overlap != -1) ? require_overlap : 0;
+  
+  j[NEW_JUNCTION_READ_COUNT] = to_string(junction_jrc.count(j["key"], start, end, empty_read_names, junction_read_names));
+  
+  // New side 1
+  if ( (j[SIDE_1_REDUNDANT] != "1") && (j["side_1_annotate_key"] != "repeat") ) {
+    int32_t side_1_strand = from_string<int32_t>(j[SIDE_1_STRAND]);
+    start = from_string<uint32_t>(j[SIDE_1_POSITION]);
+    if (side_1_strand == +1) {
+      end = start + 1 + amount_to_add;
+      start = start - 1;
+      end += continuation_right;
+    } else {
+      end = start + 1;
+      start = start - 1 - amount_to_add;
+      start -= continuation_left;
+    }
+    
+    empty_read_names.clear();
+    j[SIDE_1_READ_COUNT] = to_string(reference_jrc.count(j[SIDE_1_SEQ_ID], start, end, junction_read_names, empty_read_names));
+  } else {
+    j[SIDE_1_READ_COUNT] = "NA";
+  }
+  
+  // New side 2
+  if ( (j[SIDE_2_REDUNDANT] != "1") && (j["side_2_annotate_key"] != "repeat") ) {
+    
+    int32_t side_2_strand = from_string<int32_t>(j[SIDE_2_STRAND]);
+    
+    start = from_string<uint32_t>(j[SIDE_2_POSITION]);
+    if (side_2_strand == +1) {
+      end = start + 1 + amount_to_add;
+      start = start - 1;
+      end += continuation_right;
+    } else {
+      end = start + 1;
+      start = start - 1 - amount_to_add;
+      start -= continuation_left;
+    }
+    empty_read_names.clear();
+    j[SIDE_2_READ_COUNT] = to_string(reference_jrc.count(j[SIDE_2_SEQ_ID], start, end, junction_read_names, empty_read_names));
+    
+  } else {
+    j[SIDE_2_READ_COUNT] = "NA";
+  }
+  
+  //@ded calculate frequency of each junction. //
+  double a = from_string<uint32_t>(j[SIDE_1_READ_COUNT]);
+  double b = from_string<uint32_t>(j[SIDE_2_READ_COUNT]);
+  double c = from_string<uint32_t>(j[NEW_JUNCTION_READ_COUNT]);
+  
+  //ASSERT(c > 0,"New junction predicted, but 0 reads support it. This should never happen");
+  //Well, it CAN happen with user-defined junctions!!! @JEB
+  
+  // @JEB: divide the side X counts by 2, if both were counted
+  // or because 1 if that side of the alignment was ambiguous (for edges of IS-elements
+  double d = 2;
+  if (j[SIDE_1_READ_COUNT] == "NA") {
+    a = 0; //"NA" in read count sets value to 1 not 0
+    d--;
+  }
+  if (j[SIDE_2_READ_COUNT] == "NA") {
+    b = 0;
+    d--;
+  }
+  
+  // We cannot assign a frequency if the denominator is zero
+  if (d == 0) {
+    j[NEW_JUNCTION_FREQUENCY] = "NA";  
+  } else {
+    double new_junction_frequency_value = c /(c + ((a+b)/d) ); // dividing by 2 because 1 read can support both sides?
+    j[NEW_JUNCTION_FREQUENCY] = to_string(new_junction_frequency_value, kPolymorphismFrequencyPrecision);
+  }
+  j[FREQUENCY] = j[NEW_JUNCTION_FREQUENCY];
+
+}
+  
+  
   
 void  assign_junction_read_counts(
                                   const Settings& settings,
@@ -1771,160 +1890,59 @@ void  assign_junction_read_counts(
   if (jc.size() == 0) return;
   // Next calls can fail if there are no junctions (and therefore no FASTA file of junctions).
   
-  junction_read_counter reference_jrc(settings.reference_bam_file_name, settings.reference_fasta_file_name, settings.verbose);
-  junction_read_counter junction_jrc(settings.junction_bam_file_name, settings.candidate_junction_fasta_file_name, settings.verbose);
-
-  map<string,bool> empty_read_names;
-  map<string,bool> junction_read_names;
 
   // Fetch all the junction reads supporting
   // Keep track of how well they match the reference versus the putative new junctions.
   // right now this is in terms of mismatches (adding unmatched read bases as mismatches)
   
-  for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++)
-  {
+  for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++) {
     cDiffEntry& j = **it;
-    int32_t start, end;
-    
-    uint32_t continuation_right = from_string<uint32_t>(j["continuation_right"]);
-    uint32_t continuation_left = from_string<uint32_t>(j["continuation_left"]);
-
-    // Print out the junction we are processing
-    if (verbose) cerr << endl << "ASSIGNING READ COUNTS TO JUNCTION" << endl << j << endl << endl; 
-    
-    // New Junction
-    start = from_string<uint32_t>(j["flanking_left"]) - continuation_left;
-    end = start + abs(from_string<int32_t>(j[ALIGNMENT_OVERLAP])) + 1 + continuation_right;
-    
-    if (verbose) {
-      cerr << "==SIDE 1==" << endl;
-      cerr << "position:" << j[SIDE_1_POSITION] << endl;
-      cerr << "strand:" << j[SIDE_1_STRAND] << endl;
-      cerr << "flanking:" << j["flanking_left"] << endl;
-      cerr << "continuation:" << j["continuation_left"] << endl;
-      cerr << "==OVERLAP== " << j[ALIGNMENT_OVERLAP] << endl;
-      cerr << "position:" << j[SIDE_2_POSITION] << endl;
-      cerr << "strand:" << j[SIDE_2_STRAND] << endl;
-      cerr << "flanking:" << j["flanking_right"] << endl;
-      cerr << "continuation:" << j["continuation_right"] << endl;
-    }
-    
-    j[NEW_JUNCTION_READ_COUNT] = to_string(junction_jrc.count(j["key"], start, end, empty_read_names, junction_read_names));
-    
-    // New side 1
-    if ( (j[SIDE_1_REDUNDANT] != "1") && (j["side_1_annotate_key"] != "repeat") ) {
-      int32_t side_1_strand = from_string<int32_t>(j[SIDE_1_STRAND]);
-      start = from_string<uint32_t>(j[SIDE_1_POSITION]);
-      if (side_1_strand == +1) {
-        start--;
-        end = start + 1 + abs(from_string<int32_t>(j[ALIGNMENT_OVERLAP]));
-        end += continuation_right;
-      } else {
-        end = start + 1 + abs(from_string<int32_t>(j[ALIGNMENT_OVERLAP]));
-        start -= continuation_left;
-      }
-      
-      empty_read_names.clear();
-      j[SIDE_1_READ_COUNT] = to_string(reference_jrc.count(j[SIDE_1_SEQ_ID], start, end, junction_read_names, empty_read_names));
-    } else {
-      j[SIDE_1_READ_COUNT] = "NA";
-    }
-      
-    // New side 2
-    if ( (j[SIDE_2_REDUNDANT] != "1") && (j["side_2_annotate_key"] != "repeat") ) {
-
-      int32_t side_2_strand = from_string<int32_t>(j[SIDE_2_STRAND]);
-
-      start = from_string<uint32_t>(j[SIDE_2_POSITION]);
-      if (side_2_strand == +1) {
-        start--;
-        end = start + 1 + abs(from_string<int32_t>(j[ALIGNMENT_OVERLAP]));
-        end += continuation_right;
-      } else {
-        end = start + 1 + abs(from_string<int32_t>(j[ALIGNMENT_OVERLAP]));
-        start -= continuation_left;
-      }
-      empty_read_names.clear();
-      j[SIDE_2_READ_COUNT] = to_string(reference_jrc.count(j[SIDE_2_SEQ_ID], start, end, junction_read_names, empty_read_names));
-
-    } else {
-      j[SIDE_2_READ_COUNT] = "NA";
-    }
-      
-    //@ded calculate frequency of each junction. //
-    double a = from_string<uint32_t>(j[SIDE_1_READ_COUNT]);
-    double b = from_string<uint32_t>(j[SIDE_2_READ_COUNT]);
-    double c = from_string<uint32_t>(j[NEW_JUNCTION_READ_COUNT]);
-        
-    //ASSERT(c > 0,"New junction predicted, but 0 reads support it. This should never happen");
-    //Well, it CAN happen with user-defined junctions!!! @JEB
-      
-    // @JEB: divide the side X counts by 2, if both were counted
-    // or because 1 if that side of the alignment was ambiguous (for edges of IS-elements
-    double d = 2;
-    if (j[SIDE_1_READ_COUNT] == "NA") {
-      a = 0; //"NA" in read count sets value to 1 not 0
-      d--;
-    }
-    if (j[SIDE_2_READ_COUNT] == "NA") {
-      b = 0;
-      d--;
-    }
-    
-    // We cannot assign a frequency if the denominator is zero
-    if (d == 0) {
-      j[NEW_JUNCTION_FREQUENCY] = "NA";  
-    } else {
-      double new_junction_frequency_value = c /(c + ((a+b)/d) ); // dividing by 2 because 1 read can support both sides?
-      j[NEW_JUNCTION_FREQUENCY] = to_string(new_junction_frequency_value, kPolymorphismFrequencyPrecision);
-    }
-    j[FREQUENCY] = j[NEW_JUNCTION_FREQUENCY];
- 
+    assign_one_junction_read_counts(settings, j);
   }
 }
 
   
-  void  assign_junction_read_coverage(
-                                    const Settings& settings,
-                                    Summary& summary,
-                                    cGenomeDiff& gd
-                                    )
+void  assign_junction_read_coverage(
+                                  const Settings& settings,
+                                  Summary& summary,
+                                  cGenomeDiff& gd
+                                  )
+{
+  (void) settings;
+  diff_entry_list_t jc = gd.list(make_vector<gd_entry_type>(JC));
+  
+  if (jc.size() == 0) return;
+  // Next calls can fail if there are no junctions (and therefore no FASTA file of junctions).
+  
+    
+  for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++)
   {
-    (void) settings;
-    diff_entry_list_t jc = gd.list(make_vector<gd_entry_type>(JC));
+    cDiffEntry& j = **it;
+      
+    // This sections just normalizes read counts to the average coverage of the correct sequence fragment
     
-    if (jc.size() == 0) return;
-    // Next calls can fail if there are no junctions (and therefore no FASTA file of junctions).
+    double side_1_correction = (summary.sequence_conversion.avg_read_length - 1 - abs(from_string<double>(j["alignment_overlap"])) - from_string<double>(j["continuation_left"])) / (summary.sequence_conversion.avg_read_length - 1);
     
-      
-    for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++)
-    {
-      cDiffEntry& j = **it;
-        
-      // This sections just normalizes read counts to the average coverage of the correct sequence fragment
-      
-      double side_1_correction = (summary.sequence_conversion.avg_read_length - 1 - abs(from_string<double>(j["alignment_overlap"])) - from_string<double>(j["continuation_left"])) / (summary.sequence_conversion.avg_read_length - 1);
-      
-      if (j[SIDE_1_READ_COUNT] == "NA")
-        j[SIDE_1_COVERAGE] = "NA";
-      else
-        j[SIDE_1_COVERAGE] = to_string(from_string<double>(j[SIDE_1_READ_COUNT]) / summary.unique_coverage[j[SIDE_1_SEQ_ID]].average / side_1_correction, 2);
-      
-      double side_2_correction = (summary.sequence_conversion.avg_read_length - 1 - abs(from_string<double>(j["alignment_overlap"])) - from_string<double>(j["continuation_right"])) / (summary.sequence_conversion.avg_read_length - 1);
-      
-      if (j[SIDE_2_READ_COUNT] == "NA")
-        j[SIDE_2_COVERAGE] = "NA";
-      else
-        j[SIDE_2_COVERAGE] = to_string(from_string<double>(j[SIDE_2_READ_COUNT]) / summary.unique_coverage[j[SIDE_2_SEQ_ID]].average, 2);
-      
-      //corrects for overlap making it less likely for a read to span
-      double overlap_correction = (summary.sequence_conversion.avg_read_length - 1 - abs(from_string<double>(j["alignment_overlap"])) - from_string<double>(j["continuation_left"]) - from_string<double>(j["continuation_right"])) / (summary.sequence_conversion.avg_read_length - 1);
-      double new_junction_average_read_count = (summary.unique_coverage[j[SIDE_1_SEQ_ID]].average + summary.unique_coverage[j[SIDE_2_SEQ_ID]].average) / 2;
-      
-      j[NEW_JUNCTION_COVERAGE] = to_string(from_string<double>(j[NEW_JUNCTION_READ_COUNT]) / new_junction_average_read_count / overlap_correction, 2);
-      
-    }
+    if (j[SIDE_1_READ_COUNT] == "NA")
+      j[SIDE_1_COVERAGE] = "NA";
+    else
+      j[SIDE_1_COVERAGE] = to_string(from_string<double>(j[SIDE_1_READ_COUNT]) / summary.unique_coverage[j[SIDE_1_SEQ_ID]].average / side_1_correction, 2);
+    
+    double side_2_correction = (summary.sequence_conversion.avg_read_length - 1 - abs(from_string<double>(j["alignment_overlap"])) - from_string<double>(j["continuation_right"])) / (summary.sequence_conversion.avg_read_length - 1);
+    
+    if (j[SIDE_2_READ_COUNT] == "NA")
+      j[SIDE_2_COVERAGE] = "NA";
+    else
+      j[SIDE_2_COVERAGE] = to_string(from_string<double>(j[SIDE_2_READ_COUNT]) / summary.unique_coverage[j[SIDE_2_SEQ_ID]].average, 2);
+    
+    //corrects for overlap making it less likely for a read to span
+    double overlap_correction = (summary.sequence_conversion.avg_read_length - 1 - abs(from_string<double>(j["alignment_overlap"])) - from_string<double>(j["continuation_left"]) - from_string<double>(j["continuation_right"])) / (summary.sequence_conversion.avg_read_length - 1);
+    double new_junction_average_read_count = (summary.unique_coverage[j[SIDE_1_SEQ_ID]].average + summary.unique_coverage[j[SIDE_2_SEQ_ID]].average) / 2;
+    
+    j[NEW_JUNCTION_COVERAGE] = to_string(from_string<double>(j[NEW_JUNCTION_READ_COUNT]) / new_junction_average_read_count / overlap_correction, 2);
+    
   }
+}
   
   
 uint32_t junction_read_counter::count(
