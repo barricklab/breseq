@@ -35,24 +35,27 @@ int gdtools_usage()
 
   uout("General:");
   uout << "apply                  apply mutations to a sequence" << endl;
-  uout << "compare                compare control versus test mutations" << endl;
+  uout << "annotate               annotate the effects of mutations on genes" << endl;
+  uout << "compare                compare mutations across multiple samples" << endl;
   uout << "not-evidence           remove evidence not used by any mutations" << endl;
-  uout << "annotate               get additional mutation information from sequence" << endl;
+
   uout << "normalize              normalize mutations to a sequence" << endl;
+  uout << "validate               compare control versus test mutations" << endl;
+
   uout << "filter                 remove mutations given filtering expressions" << endl;
-  uout << "merge                  combine multiple GD files" << endl;
   uout << "header                 create or add header entries" << endl;
   uout << "mRNA-Stability         determine mRNA free energy difference of mutations" << endl;
-
-  uout("Format Conversions:");
-  uout << "gd2gvf                 GD to Genome Variant Format(GVF)" << endl;
-  uout << "vcf2gd                 Variant Call Format(VCF) to GD" << endl;
-  uout << "gd2circos              GD to Circos Data" << endl;
 
   uout("Set Operations:");
   uout << "subtract               remove mutations" << endl;
   uout << "intersect              locate equal mutations" << endl;
   uout << "union                  combine mutations, removing duplicates" << endl;
+  uout << "merge                  combine multiple GD files" << endl;
+    
+  uout("Format Conversions:");
+  uout << "gd2gvf                 GD to Genome Variant Format(GVF)" << endl;
+  uout << "vcf2gd                 Variant Call Format(VCF) to GD" << endl;
+  uout << "gd2circos              GD to Circos Data" << endl;
 
   uout("TACC:");
   uout << "download               download reference and read files given appropriate GD header info" << endl;
@@ -367,9 +370,9 @@ int do_weights(int argc, char* argv[])
   return 0;
 }
 
-int do_compare(int argc, char *argv[])
+int do_validate(int argc, char *argv[])
 {
-  AnyOption options("gdtools COMPARE [-o output.gd] control.gd test.gd");
+  AnyOption options("gdtools VALIDATE [-o output.gd] control.gd test.gd");
   options("output,o",     "output GD file", "comp.gd");
   options("reference,r",  "reference sequence file");
   options("evidence",     "compare evidence", TAKES_NO_ARGUMENT);
@@ -662,24 +665,24 @@ int do_not_evidence(int argc, char *argv[])
 
 int do_annotate(int argc, char* argv[])
 {
-  AnyOption options("gdtools ANNOTATE [-o annotated.* --html] -r reference.gbk input.1.gd [input.2.gd ... ]");
+  AnyOption options("gdtools ANNOTATE/COMPARE [-o annotated.html] -r reference.gbk input.1.gd [input.2.gd ... ]");
   
   options
   ("help,h", "produce advanced help message", TAKES_NO_ARGUMENT)
-  ("output,o", "path to output file with added mutation data. (DEFAULT: annotated.gd OR annotated.html")
+  ("output,o", "path to output file with added mutation data. (DEFAULT: annotated.html OR annotated.gd")
   ("reference,r", "reference sequence in GenBank flatfile format (REQUIRED)")
   ("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT)
-  ("html", "generate HTML output instead of GenomeDiff (REQUIRED)", TAKES_NO_ARGUMENT)
+  ("gd", "generate GenomeDiff output instead of HTML", TAKES_NO_ARGUMENT)
   ;
   options.addUsage("");
   options.addUsage("If multiple GenomeDiff input files are provided, then they are");
-  options.addUsage("merged and the frequencies from each file shown for each mutation.");
+  options.addUsage("merged and the frequencies from each file are shown for each mutation.");
 
   options.processCommandArgs(argc, argv);
   
   UserOutput uout("ANNOTATE");
   
-  bool html_output_mode = options.count("html");
+  bool html_output_mode = !options.count("gd");
   string output_file_name;
   if (options.count("output")) 
     output_file_name = options["output"];
@@ -2028,7 +2031,9 @@ int main(int argc, char* argv[]) {
   if (command == "APPLY") {
     return do_apply(argc_new, argv_new);    
   } else if (command == "COMPARE") {
-    return do_compare(argc_new, argv_new);
+    return do_annotate(argc_new, argv_new);
+  } else if (command == "VALIDATE") {
+      return do_validate(argc_new, argv_new);    
   } else if (command == "NOT-EVIDENCE") {        //TODO merge with FILTER
     return do_not_evidence(argc_new, argv_new);
   } else if (command == "ANNOTATE") {

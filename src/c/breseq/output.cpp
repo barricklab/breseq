@@ -697,7 +697,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     
     // Rejects if >= this length
     HTML << tr(td("Skip indel polymorphisms in homopolymers runs") 
-               + td((settings.polymorphism_reject_homopolymer_length == 0) ? "ALL" : " ≥" + s(settings.polymorphism_reject_homopolymer_length) + " bases")
+               + td((settings.polymorphism_reject_homopolymer_length == 0) ? "ALL" : " &ge;" + s(settings.polymorphism_reject_homopolymer_length) + " bases")
                );
 
     HTML << end_table();    
