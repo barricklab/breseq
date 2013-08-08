@@ -898,20 +898,8 @@ namespace breseq {
 				{
 					if (verbose) cout << "reverse right and left" << endl;
 
-          // @JEB can't seem to get swap() to work here.          
           swap(mut["_ins_start"], mut["_ins_end"]);
           swap(mut["_del_start"], mut["_del_end"]);          
-          /*
-          diff_entry_value_t temp;
-          
-          temp = mut["_ins_start"];
-          mut["_ins_start"] = mut["_ins_end"];
-          mut["_ins_end"] = temp;
-          
-          temp = mut["_del_start"];
-          mut["_del_start"] = mut["_del_end"];
-          mut["_del_end"] = temp;
-           */
 				}
 
 				// only transfer the hidden _keys to normal keys that will be printed if they are different from 0
@@ -995,19 +983,33 @@ namespace breseq {
             b2 = 0; //"NA" in read count sets value to 1 not 0
             d2--;
           }
-                  
+          
+          double frequency;
           if (d1 && d2) {
-            double frequency = (c1 + c2) / (c1 + (a1 + b1)/d1 + c2 + (a2 + b2)/d2);
+            frequency = (c1 + c2) / (c1 + (a1 + b1)/d1 + c2 + (a2 + b2)/d2);
             mut[FREQUENCY] = to_string(frequency, kPolymorphismFrequencyPrecision); 
           } else if (d1) {
-            double frequency = (c2) / (c2 + (a2 + b2)/d2);
+            frequency = (c2) / (c2 + (a2 + b2)/d2);
             mut[FREQUENCY] = to_string(frequency, kPolymorphismFrequencyPrecision);           
           } else if (d2) {
-            double frequency = (c1) / (c1 + (a1 + b1)/d1);
+            frequency = (c1) / (c1 + (a1 + b1)/d1);
             mut[FREQUENCY] = to_string(frequency, kPolymorphismFrequencyPrecision); 
           } else {
             // Can't calculate a frequency if no sides of the junction fall in unique sequence
             mut[FREQUENCY] = "NA";          
+          }
+          
+          // don't record mutations below the cutoff frequency
+          if (mut[FREQUENCY] != "NA") {
+            if (frequency < settings.polymorphism_frequency_cutoff) {
+              add_reject_reason(mut, "POLYMORPHISM_FREQUENCY_CUTOFF");
+              // @JEB 08-08-13 we might want to keep the mutation as rejected. This discards completely.
+              break;
+            }
+            if (1-frequency < settings.polymorphism_frequency_cutoff) {
+              add_reject_reason(mut, "POLYMORPHISM_FREQUENCY_CUTOFF");
+              mut.erase(FREQUENCY);
+            }
           }
         }            
         // @JEB 12-22-12
@@ -1026,7 +1028,6 @@ namespace breseq {
              {
                mut._evidence.push_back(mc_item._id);
                mc.erase(mc_it);
-               break;
              }
           }
           

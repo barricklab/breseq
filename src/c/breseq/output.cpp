@@ -679,16 +679,16 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
 
     HTML << tr(td("Polymorphism E-value cutoff") + td(s(settings.polymorphism_log10_e_value_cutoff)));
     HTML << tr(td("Polymorphism frequency cutoff")
-               + td((settings.polymorphism_frequency_cutoff == 0) ? "OFF" : s(settings.polymorphism_frequency_cutoff))
+               + td((settings.polymorphism_frequency_cutoff == 0) ? "OFF" : to_string<double>(settings.polymorphism_frequency_cutoff))
                );
     HTML << tr(td("Polymorphism minimum coverage each strand") 
-               + td((settings.polymorphism_minimum_new_coverage_each_strand == 0) ? "OFF" : s(settings.polymorphism_minimum_new_coverage_each_strand))
+               + td((settings.polymorphism_minimum_new_coverage_each_strand == 0) ? "OFF" : to_string<int32_t>(settings.polymorphism_minimum_new_coverage_each_strand))
                );
     HTML << tr(td("Polymorphism homopolymer length cutoff") 
-               + td((settings.polymorphism_reject_homopolymer_length == 0) ? "OFF" : s(settings.polymorphism_reject_homopolymer_length))
+               + td((settings.polymorphism_reject_homopolymer_length == 0) ? "OFF" : to_string<int32_t>(settings.polymorphism_reject_homopolymer_length))
                );
     HTML << tr(td("Polymorphism bias cutoff") 
-               + td((settings.polymorphism_bias_p_value_cutoff == 0) ? "OFF" : s(settings.polymorphism_bias_p_value_cutoff))
+               + td((settings.polymorphism_bias_p_value_cutoff == 0) ? "OFF" : to_string<double>(settings.polymorphism_bias_p_value_cutoff))
                );
     
     HTML << tr(td("Predict indel polymorphisms") 
