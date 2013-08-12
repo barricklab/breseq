@@ -289,20 +289,21 @@ typedef list<diff_entry_ptr_t> diff_entry_list_t; //!< Type for a list of diff e
 void add_reject_reason(cDiffEntry& de, const string &reason);
 
 //! Convert genome diff to GVF
-void GDtoGVF( const string& gdfile, const string& gvffile, bool snv_only = false );
-
+void GD2GVF( const string& gdfile, const string& gvffile, bool snv_only = false );
+  
 //! Convert VCF to genome diff
-void VCFtoGD( const string& vcffile, const string& gfffile );
+void GD2VCF( const string &gdfile, const string &gvffile, bool snv_only);
+void VCF2GD( const string& vcffile, const string& gfffile );
 
 //! Convert GD to Circos files
-void GDtoCircos(const vector<string> &gd_file_names,
+void GD2Circos(const vector<string> &gd_file_names,
                 const vector<string> &reference_file_names,
                 const string &circos_directory,
                 double distance_scale,
                 double feature_scale);
 
 //! Convert MIRA feature analysis file to GD
-void MIRAtoGD(const string &mira_file_name, const string &gd_file_name);
+void MIRA2GD(const string &mira_file_name, const string &gd_file_name);
   
 //! Output operator for a diff entry.
 ostream& operator<<(ostream& out, const cDiffEntry& de);

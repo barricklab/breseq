@@ -1605,6 +1605,8 @@ namespace breseq {
          cDiffEntry& jc
          )
   {
+    
+    ASSERT(false, "CandidateJunctions::normalize_junction_overlap not fully tested");
     bool verbose = false;
     // Do nothing if there is positive overlap (unique junction sequence).
     int32_t overlap = from_string<int32_t>(jc["overlap"]);

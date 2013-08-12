@@ -34,28 +34,26 @@ int gdtools_usage()
   uout("Manipulate Genome Diff (*.gd) files using the following commands.");
 
   uout("General:");
-  uout << "apply                  apply mutations to a sequence" << endl;
-  uout << "annotate               annotate the effects of mutations on genes" << endl;
-  uout << "compare                compare mutations across multiple samples" << endl;
-  uout << "not-evidence           remove evidence not used by any mutations" << endl;
-
-  uout << "normalize              normalize mutations to a sequence" << endl;
-  uout << "validate               compare control versus test mutations" << endl;
-
-  uout << "filter                 remove mutations given filtering expressions" << endl;
-  uout << "header                 create or add header entries" << endl;
-  uout << "mRNA-Stability         determine mRNA free energy difference of mutations" << endl;
+  uout << "APPLY                  apply mutations to a sequence" << endl;
+  uout << "ANNOTATE               annotate the effects of mutations on genes" << endl;
+  uout << "COMPARE                compare mutations across multiple samples" << endl;
+  uout << "NOT-EVIDENCE           remove evidence not used by any mutations" << endl;
+  uout << "VALIDATE               compare control versus test mutations" << endl;
+  uout << "FILTER                 remove mutations given filtering expressions" << endl;
+  //uout << "normalize              normalize mutations to a sequence" << endl;
+  //uout << "header                 create or add header entries" << endl;
+  //uout << "mRNA-Stability         determine mRNA free energy difference of mutations" << endl;
 
   uout("Set Operations:");
-  uout << "subtract               remove mutations" << endl;
-  uout << "intersect              locate equal mutations" << endl;
-  uout << "union                  combine mutations, removing duplicates" << endl;
-  uout << "merge                  combine multiple GD files" << endl;
+  uout << "SUBTRACT               remove mutations" << endl;
+  uout << "INTERSECT              locate equal mutations" << endl;
+  uout << "UNION                  combine mutations, removing duplicates" << endl;
+  uout << "MERGE                  combine mutations, preserving duplicates" << endl;
     
   uout("Format Conversions:");
-  uout << "gd2gvf                 GD to Genome Variant Format(GVF)" << endl;
-  uout << "vcf2gd                 Variant Call Format(VCF) to GD" << endl;
-  uout << "gd2circos              GD to Circos Data" << endl;
+  uout << "GD2VCF                 GD to Variant Call Format (VCF)" << endl;
+  //uout << "vcf2gd                 Variant Call Format(VCF) to GD" << endl;
+  uout << "GD2CIRCOS              GD to Circos Data" << endl;
 
   uout("TACC:");
   uout << "download               download reference and read files given appropriate GD header info" << endl;
@@ -382,17 +380,16 @@ int do_validate(int argc, char *argv[])
   options.processCommandArgs(argc, argv);
 
   options.addUsage("");
-  options.addUsage("   Given a control input GD file with valid mutations, compare each additional");
-  options.addUsage("test GD file's mutations and determine if the mutations are true-postivie,");
-  options.addUsage("false-negative or false-positive, where:");
+  options.addUsage("Compare a control input GD file with known valid mutations and a test GD file");
+  options.addUsage("");
+  options.addUsage("The control and test GD files are merged into the given output GD file. For each");
+  options.addUsage("mutation a 'compare' field will be added with a TP, FN, FP value where: ");
   options.addUsage("");
   options.addUsage("       TP, true-positive  : mutation exists in both control and test GD files.");
   options.addUsage("       FN, false-negative : mutation exists in the control GD file but not in the test GD files.");
   options.addUsage("       FP, false-positive : mutation exists in one of the test GD files but not in the control GD file.");
   options.addUsage("");
-  options.addUsage("The control and test GD files are merged into the given output GD file, for each");
-  options.addUsage("mutation a 'compare' field will be added with a TP, FN, FP value. ");
-
+    
   if (options.getArgc() != 2) {
     options.addUsage("");
     options.addUsage("Exactly two input Genome Diff files must be provided.");
@@ -423,6 +420,8 @@ int do_validate(int argc, char *argv[])
 
     cReferenceSequences ref;
     ref.LoadFiles(from_string<vector<string> >(options["reference"]));
+       
+    /* @JEB: Removed for maintainability. This should not be necessary
     cGenomeDiff* gds[2] = {&ctrl, &test};
     for (uint32_t i = 0; i < 2; ++i) {
       diff_entry_list_t muts = gds[i]->mutation_list();
@@ -432,8 +431,8 @@ int do_validate(int argc, char *argv[])
         uout("Converting mutations to evidence for file: " + gds[i]->file_name());
         gds[i]->mutations_to_evidence(ref);
       }
-
     }
+     */
 
     uout("Comparing evidence");
     comp = cGenomeDiff::compare_evidence(ref, un(options["jc-buffer"]), ctrl, test, options.count("verbose"));
@@ -476,6 +475,39 @@ int do_validate(int argc, char *argv[])
   return 0;
 }
 
+int do_gd2vcf( int argc, char* argv[])
+{
+    AnyOption options("gdtools GD2GVF [-o output.gvf] input.gd"); 
+    
+    options
+    ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
+    ("output,o","name of output file", "output.gvf")
+    ("snv-only", "only output SNV entries", TAKES_NO_ARGUMENT)
+    ;
+    options.processCommandArgs( argc,argv);
+    
+    options.addUsage("");
+    options.addUsage("Creates a Variant Call Format (VCF) file of mutations present in an input Genome Diff file.");
+    options.addUsage("VCF Files can be loaded into NGS viewers.");
+    
+    if( options.getArgc() != 1 ){
+        options.addUsage("");
+        options.addUsage("Provide a single input Genome Diff file.");
+        options.printUsage();
+        return -1;
+    }
+    
+    try{
+        GD2VCF( options.getArgv(0), options["output"], options.count("snv-only") );
+    } 
+    catch(...){ 
+        return -1; // failed 
+    }
+    
+    return 0;
+}
+
+
 int do_gd2gvf( int argc, char* argv[])
 {
   AnyOption options("gdtools GD2GVF [-o output.gvf] input.gd"); 
@@ -488,8 +520,7 @@ int do_gd2gvf( int argc, char* argv[])
   options.processCommandArgs( argc,argv);
 
   options.addUsage("");
-  options.addUsage("Creates a Genome Variant Format (GVF) file of mutations present in a input GD file.");
-  options.addUsage("GVF files are a type of GFF3 file for describing genomic changes.");
+  options.addUsage("Creates a Genome Variation Format (GVF) file of mutations present in an input Genome Diff file.");
   
   if( options.getArgc() != 1 ){
     options.addUsage("");
@@ -499,7 +530,7 @@ int do_gd2gvf( int argc, char* argv[])
   }
   
   try{
-      GDtoGVF( options.getArgv(0), options["output"], options.count("snv-only") );
+      GD2GVF( options.getArgv(0), options["output"], options.count("snv-only") );
   } 
   catch(...){ 
       return -1; // failed 
@@ -515,7 +546,7 @@ int do_vcf2gd( int argc, char* argv[])
   options.processCommandArgs( argc,argv);
 
   options.addUsage("");
-  options.addUsage("Creates a GD file of mutations present in a input Variant Call Format (VCF) file.");
+  options.addUsage("Creates a GD file of mutations present in an input Variant Call Format (VCF) file.");
   
   if( options.getArgc() != 1 ){
     options.addUsage("");
@@ -583,7 +614,7 @@ int do_gd2circos(int argc, char *argv[])
     return -1;
   }
   
-  GDtoCircos(gd_names, 
+  GD2Circos(gd_names, 
              from_string<vector<string> >(options["reference"]),
              options["output"],
              distance_scale,
@@ -615,7 +646,7 @@ int do_mira2gd(int argc, char* argv[])
   string input = options.getArgv(0);
   
   try{
-      MIRAtoGD( input, options["output"]);
+      MIRA2GD( input, options["output"]);
   } 
   catch(...){ 
       return -1; // failed 
@@ -1083,15 +1114,15 @@ int do_filter_gd(int argc, char* argv[])
   return 0;
 }
 
-int do_rand_muts(int argc, char *argv[])
+int do_simulate_mutations(int argc, char *argv[])
 {
-  AnyOption options("Usage: gdtools RANDOM-MUTATIONS -r <reference> -o <output.gd> -t <type>");  
+  AnyOption options("Usage: gdtools SIMULATE-MUTATIONS -r <reference> -o <output.gd> -t <type>");  
   options("reference,r","Reference file");  
   options("output,o","Output file");
   options("type,t","Type of mutation to generate");
-  options("exclude,e","Exclusion file");
+  options("exclude,e","Exclusion file.");
   options("number,n","Number of mutations to generate", static_cast<uint32_t>(1000));
-  options("buffer,b","Buffer distance between mutations", static_cast<uint32_t>(50));
+  options("buffer,b","Buffer distance between mutations and excluded intervals", static_cast<uint32_t>(50));
   options("seq,s","Sequence to use from reference");  
   options("seed","Seed for the random number generator");
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
@@ -1099,14 +1130,24 @@ int do_rand_muts(int argc, char *argv[])
   
   options.addUsage("");
   options.addUsage("Using -reference, this command will generate a --number of");
-  options.addUsage("mutations, and space them based on the supplied --length.");  
+  options.addUsage("mutations, and space them based on the supplied --buffer.");  
   options.addUsage("Not supplying --seq will use the first sequence in the reference.");
   options.addUsage("");
   options.addUsage("Required fields are -r, -o, and -t.");
   options.addUsage("Valid types: SNP, INS, DEL, MOB, AMP, RMD");
-  options.addUsage("INS:1-10 will generate insertions of size 1 to 10.");
-  options.addUsage("DEL:1-10 will generate deletions of size 1 to 10.");
-  
+  options.addUsage(" INS:1-10 will generate insertions of size 1 to 10.");
+  options.addUsage(" DEL:1-10 will generate deletions of size 1 to 10.");
+  options.addUsage(" MOB:1-10 will generate insertions of random repeat regions with");
+  options.addUsage("          target site duplications of 1 to 10 bases.");
+
+  options.addUsage("");
+
+  options.addUsage("An exclusion file should be generated using these MUMmer commands:");
+  options.addUsage("  nucmer --maxmatch -p reference reference.fasta reference.fasta");
+  options.addUsage("  delta-filter -i 100 -l 50 reference.delta > reference.filtered.delta");
+  options.addUsage("  show-coords -T reference.filtered.delta > reference.exclude.coords");
+  options.addUsage("The resulting reference.exclude.coords file can be used with the --exclude option.");
+
   if(argc <= 1)  {
     options.printUsage();
     return -1;  }
@@ -2055,8 +2096,8 @@ int main(int argc, char* argv[]) {
     return do_merge(argc_new, argv_new);    
   } else if (command == "WEIGHTS") {
     return do_weights(argc_new, argv_new);
-  } else if (command == "GD2GVF") {             
-    return do_gd2gvf(argc_new, argv_new);
+  } else if (command == "GD2VCF") {             
+    return do_gd2vcf(argc_new, argv_new);
   } else if (command == "VCF2GD") {             
     return do_vcf2gd( argc_new, argv_new);
   } else if (command == "GD2CIRCOS"){
@@ -2065,8 +2106,8 @@ int main(int argc, char* argv[]) {
     return do_mira2gd(argc_new, argv_new);
   } else if(command == "HEADER"){
     return do_header(argc_new, argv_new);
-  } else if ((command == "RANDOM-MUTATIONS") || (command == "RAND-MUTS")) {
-    return do_rand_muts(argc_new, argv_new);
+  } else if ((command == "RANDOM-MUTATIONS") || (command == "SIMULATE-MUTATIONS")) {
+    return do_simulate_mutations(argc_new, argv_new);
   } else if (command == "MUTATIONS-TO-EVIDENCE") {
     return do_mutations_to_evidence(argc_new, argv_new);
   } else if (command == "DOWNLOAD") {
