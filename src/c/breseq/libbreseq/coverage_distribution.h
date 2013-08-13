@@ -16,6 +16,8 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
+// @DTF: VERSION: BINARY EDGE SEARCH 2
+
 #ifndef _BRESEQ_COVERAGE_DISTRIBUTION_H_
 #define _BRESEQ_COVERAGE_DISTRIBUTION_H_
 
@@ -147,13 +149,23 @@ namespace breseq {
         // genome with the same copy number. Each range is thus either
         // an outlier, or the remaining area between or beside outliers. So each range
         // demarcates where an outlier either starts or ends.
+        // The unit is position (in base pairs), not tile
         pair<int32_t, int32_t> range_pair;
         
         // Copy number
         double copy_number;
         double copy_number_float;
-        vector<double> t_scores;
-        vector<double> p_values;
+        //vector<double> t_scores;
+        //vector<double> p_values;
+        
+        double t_score;
+        double p_value;
+        
+        // Overloading "<" operator so the c++ standard sort() fn will work properly  
+        bool operator < (const range_t& r) const
+        {
+            return range_pair.first < r.range_pair.first;
+        }
         
     };
     
