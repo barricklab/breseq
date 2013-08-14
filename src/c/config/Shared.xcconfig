@@ -1,5 +1,5 @@
 HEADER_SEARCH_PATHS = $(SRCROOT)/breseq $(SRCROOT)/../../extern/samtools-0.1.18 $(SRCROOT)/../../aux_build /opt/local/include
-LIBRARY_SEARCH_PATHS = $(SRCROOT)/../../extern/samtools-0.1.18 /opt/local/lib
+LIBRARY_SEARCH_PATHS = $(SRCROOT)/../../extern/samtools-0.1.18/.libs /opt/local/lib
 OTHER_CFLAGS = -DDATADIR=\"$(SRCROOT)/breseq\"
 
 
