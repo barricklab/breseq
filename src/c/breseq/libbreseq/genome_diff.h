@@ -387,6 +387,7 @@ public:
   static cGenomeDiff compare(cGenomeDiff& ctrl, cGenomeDiff& test, bool verbose = false);
   static cGenomeDiff compare_evidence(cReferenceSequences& sequence,
                                       uint32_t buffer,
+                                      uint32_t shorten_length,
                                       cGenomeDiff& ctrl,
                                       cGenomeDiff& test,
                                       bool verbose = false);

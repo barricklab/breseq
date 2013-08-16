@@ -135,8 +135,7 @@ if (start_i == end_i)
   q()
 }
 
-cat(start_i, " ", end_i, "\n", sep="")
-
+cat("Fitting from coverage of ", start_i, " to ", end_i, ".\n", sep="")
 
 ##
 # Commented code does this by establishing a coverage cutoff instead.
@@ -214,20 +213,46 @@ uncensored_D<-uncensored_v/uncensored_m
 
 size_estimate = uncensored_m ^ 2 / (uncensored_v - uncensored_m)
 mean_estimate = uncensored_m
-cat("Mean: ", mean_estimate, " Size: ", size_estimate, "\n")
+cat("Estimated Mean: ", mean_estimate, " Size: ", size_estimate, "\n")
 
-## SIZE ESTIMATE from the censored data can be negative, so use 0.01 instead
-nb_fit<-nlm(f_nb, c(mean_estimate, 0.01) )
+nb_fit_mu = -1
+nb_fit_size = -1
+try_size = 100000
+nb_fit = c()
 
-if (!is.null(nb_fit) && (nb_fit$estimate[1] > 0) && (nb_fit$estimate[2] > 0))
+while ( ((nb_fit_mu < 0) || (nb_fit_size < 0) || (nb_fit$code != 1)) && (try_size > 0.001))
 {
+  try_size = try_size / 10
+
+  ## SIZE ESTIMATE from the censored data can be negative, so try various values instead
+  cat("Try Mean: ", mean_estimate, " Size: ", try_size, "\n")
+
+  nb_fit<-nlm(f_nb, c(mean_estimate, try_size), iterlim=1000 )
+
   nb_fit_mu = nb_fit$estimate[1];
   nb_fit_size = nb_fit$estimate[2];
+
+  cat("Fit Mean: ", nb_fit_mu, " Size: ", nb_fit_size, " Code: ", nb_fit$code, "\n")
 }
 
-summary(nb_fit)
+cat("Final Fit Mean: ", nb_fit_mu, " Size: ", nb_fit_size, " Code: ", nb_fit$code, " Try Size: ", try_size, "\n")
 
-## things can go wrong with fitting and we can end up with invalid values
+if ((nb_fit_mu < 0) || (nb_fit_size < 0) || (nb_fit$code != 1))
+{
+  print(0);
+  print(0);
+
+  print(m)
+  print(v)
+  print(D)
+
+  print(deletion_propagation_coverage)
+
+  q()
+}
+
+
+## things can go wrong with fitting and we can still end up with invalid values
 
 fit_nb = c()
 if (nb_fit_mu > 0)

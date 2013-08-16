@@ -375,6 +375,7 @@ int do_validate(int argc, char *argv[])
   options("reference,r",  "reference sequence file");
   options("evidence",     "compare evidence", TAKES_NO_ARGUMENT);
   options("jc-buffer",    "length of sequence segment to compare for JC evidence", 50);
+  options("jc-shorten",    "length to shorten control degments by when comparing JC evidence for overlap", 5);
   options("plot-jc",      "plot JC Precision versus Score, argument is a prefix for the file paths");
   options("verbose,v",    "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
@@ -421,7 +422,7 @@ int do_validate(int argc, char *argv[])
     cReferenceSequences ref;
     ref.LoadFiles(from_string<vector<string> >(options["reference"]));
        
-    /* @JEB: Removed for maintainability. This should not be necessary
+    /* @JEB: Removed for maintainability. This should not be necessary. Instead, add these when generating mutations.
     cGenomeDiff* gds[2] = {&ctrl, &test};
     for (uint32_t i = 0; i < 2; ++i) {
       diff_entry_list_t muts = gds[i]->mutation_list();
@@ -435,7 +436,7 @@ int do_validate(int argc, char *argv[])
      */
 
     uout("Comparing evidence");
-    comp = cGenomeDiff::compare_evidence(ref, un(options["jc-buffer"]), ctrl, test, options.count("verbose"));
+    comp = cGenomeDiff::compare_evidence(ref, un(options["jc-buffer"]), un(options["jc-shorten"]), ctrl, test, options.count("verbose"));
 
     if (options.count("plot-jc")) {
       uout("Evaluating results to plot data.");
@@ -456,7 +457,7 @@ int do_validate(int argc, char *argv[])
       string plot_jc_score_script_name = "/plot_jc_scores.r";
       string plot_jc_score_script_path = DATADIR + plot_jc_score_script_name;
 
-      uout << "Creating plots: " + prefix + ".precision.png and " << prefix + ".sensitivity.png" << endl;;
+      uout << "Creating plots: " + prefix + ".precision.png and " << prefix + ".sensitivity.png" << endl;
       string cmd = plot_jc_score_script_path + " " + table_path + " " + prefix + " " + s(cutoff) + " " + cv_exe;
       SYSTEM(cmd, true, false, true);
     }
@@ -1142,10 +1143,8 @@ int do_simulate_mutations(int argc, char *argv[])
 
   options.addUsage("");
 
-  options.addUsage("An exclusion file should be generated using these MUMmer commands:");
-  options.addUsage("  nucmer --maxmatch -p reference reference.fasta reference.fasta");
-  options.addUsage("  delta-filter -i 100 -l 50 reference.delta > reference.filtered.delta");
-  options.addUsage("  show-coords -T reference.filtered.delta > reference.exclude.coords");
+  options.addUsage("An exclusion file should be generated using a MUMmer command like this:");
+  options.addUsage("  mummer -maxmatch -b -c -l 36 REL606.fna REL606.fna > reference.exclude.coords");
   options.addUsage("The resulting reference.exclude.coords file can be used with the --exclude option.");
 
   if(argc <= 1)  {
