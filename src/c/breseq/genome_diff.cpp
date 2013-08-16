@@ -1661,8 +1661,8 @@ bool cGenomeDiff::is_valid(cReferenceSequences& ref_seq_info, bool verbose)
  */
 class cFlaggedRegions  {
   public:
-  typedef pair<uint32_t, uint32_t>       region_t;
-  typedef set<pair<uint32_t, uint32_t> > regions_t;
+  typedef pair<uint32_t, uint32_t>  region_t;
+  typedef set<region_t>             regions_t;
 
     cFlaggedRegions()
       :m_regions() {
@@ -1670,8 +1670,8 @@ class cFlaggedRegions  {
     }
 
     //! I/O.
-    cFlaggedRegions& read(string file_path);
-  cFlaggedRegions& read_mummer_tab_coords(string file_path);
+    cFlaggedRegions& read_mummer(string file_path, cAnnotatedSequence& ref_seq);
+    cFlaggedRegions& read_nucmer_tab_coords(string file_path);
     void write(string file_path);
     void print(void);
 
@@ -1680,7 +1680,7 @@ class cFlaggedRegions  {
     cFlaggedRegions& flag_region(uint32_t start_1, uint32_t end_1 = 0);
 
     //! Remove overlapping regions, adds segments if partial overlapping occurs.
-    cFlaggedRegions& unflag_region(uint32_t start_1, uint32_t end_1 = 0);
+    //cFlaggedRegions& unflag_region(uint32_t start_1, uint32_t end_1 = 0);
 
     //! Tests if start_1 to end_1 spans over a marked region.
     bool is_flagged(uint32_t start_1, uint32_t end_1 = 0);
@@ -1702,15 +1702,25 @@ class cFlaggedRegions  {
 };
 
 
-cFlaggedRegions& cFlaggedRegions::read(string file_path) {
+  cFlaggedRegions& cFlaggedRegions::read_mummer(string file_path, cAnnotatedSequence& ref_seq) {
 /*
+ * mummer -maxmatch -b -c -l 36 REL606.fna REL606.fna > exclude
+ * 
  * Input file format:
-   Long Exact Matches
+   > SeqID
+   1544819    3595894       266
+   3398753    4156036      200
+   2712737    2713011        38
+   ......
+   > SeqID Reverse
    Start1     Start2    Length
    1544819    3595894       266
-   3398753    4156036r      200
+   3398753    4156036       200
    2712737    2713011        38
  *
+ * Columns are: Start1     Start2    Length
+ * In the first block, the match goes forward from both coords
+ * In the second block, the match goes up forward the first coord and downward from the second coord
  */
 
   ifstream in(file_path.c_str());
@@ -1718,8 +1728,9 @@ cFlaggedRegions& cFlaggedRegions::read(string file_path) {
 
   //Remove header.
   in.ignore(1000, '\n');
-  in.ignore(1000, '\n');
 
+  bool on_reverse_block = false;
+  
   string line = "";
   while (getline(in, line)) {
     const vector<string>& tokens = split_on_whitespace(line);
@@ -1727,19 +1738,45 @@ cFlaggedRegions& cFlaggedRegions::read(string file_path) {
     uint32_t second = from_string<uint32_t>(tokens[1]);
     uint32_t size   = from_string<uint32_t>(tokens[2]);
 
-    if (tokens[1].rfind('r') != string::npos) {
-      second -= size - 1;
+    if ((tokens[0] == ">") && (tokens[2] == "Reverse")) {
+      on_reverse_block = true;
+      //cerr << "Found reverse block" << endl;
+      continue;
+    }
+    
+    if (!on_reverse_block) {
+      this->flag_region(first,  first  + size - 1);
+      this->flag_region(second, second + size - 1);
+      string seq1 = ref_seq.get_sequence_1(first,  first  + size - 1);
+      string seq2 = ref_seq.get_sequence_1(second, second + size - 1);
+      ASSERT(seq1 == seq2, "Problem with line in MUMmer output file. Not repeat:\n" + line);
+    } else {
+      this->flag_region(first,  first  + size - 1);
+      this->flag_region(second - size + 1, second);
+      string seq1 = ref_seq.get_sequence_1(first,  first + size - 1);
+      string seq2 = ref_seq.get_sequence_1(second - size + 1, second);
+      seq2 = reverse_complement(seq2);
+      ASSERT(seq1 == seq2, "Problem with line in MUMmer output file. Not repeat:\n" + line);
     }
 
-    this->flag_region(first,  first  + size);
-    this->flag_region(second, second + size);
   }
+    
+  //this->print();
 
   return *this;
 }
   
-cFlaggedRegions& cFlaggedRegions::read_mummer_tab_coords(string file_path) {
+cFlaggedRegions& cFlaggedRegions::read_nucmer_tab_coords(string file_path) {
   /*
+   
+   @JEB 08-12-2013 this method does not find all exact matches.... DO NOT USE!!
+   
+   options.addUsage("An exclusion file should be generated using these MUMmer commands:");
+   options.addUsage("  nucmer --maxmatch -p reference reference.fasta reference.fasta");
+   options.addUsage("  delta-filter -i 100 -l 50 reference.delta > reference.filtered.delta");
+   options.addUsage("  show-coords -T reference.filtered.delta > reference.exclude.coords");
+   options.addUsage("The resulting reference.exclude.coords file can be used with the --exclude option.");
+   
    * Input file format:
    /Users/jbarrick/tmp/sv/REL606.fna /Users/jbarrick/tmp/sv/REL606.fna
    NUCMER
@@ -1811,7 +1848,7 @@ bool cFlaggedRegions::overlaps(region_t region_1, region_t region_2) {
   region_t min = region_1 < region_2 ? region_1 : region_2;
   region_t max = region_1 > region_2 ? region_1 : region_2;
 
-  return (min.second >= max.first && max.second >= min.first); 
+  return ((min.second >= max.first) && (max.second >= min.first)); 
 }
 
 cFlaggedRegions& cFlaggedRegions::flag_region(uint32_t start_1, uint32_t end_1) {
@@ -1837,6 +1874,7 @@ cFlaggedRegions& cFlaggedRegions::flag_region(uint32_t start_1, uint32_t end_1) 
   return *this;
 }
 
+  /* @JEB: Not tested
 cFlaggedRegions& cFlaggedRegions::unflag_region(uint32_t start_1, uint32_t end_1) {
   end_1 = end_1 == 0 ? start_1 : end_1;
   ASSERT(start_1 <= end_1, "[start_1]: " + s(start_1) + " is greater than [end_1]: " +s(end_1));
@@ -1859,6 +1897,7 @@ cFlaggedRegions& cFlaggedRegions::unflag_region(uint32_t start_1, uint32_t end_1
 
   return *this;
 }
+   */
 
 
 bool cFlaggedRegions::is_flagged(uint32_t start_1, uint32_t end_1) {
@@ -1877,10 +1916,10 @@ cFlaggedRegions& cFlaggedRegions::remove(regions_t regions) {
 }
 
 cFlaggedRegions::regions_t cFlaggedRegions::regions(uint32_t start_1, uint32_t end_1) {
-  end_1 = end_1 == 0 ? start_1 : end_1;
+  end_1 = (end_1 == 0) ? start_1 : end_1;
   ASSERT(start_1 <= end_1, "[start_1]: " + s(start_1) + " is greater than [end_1]: " +s(end_1));
 
-  if (start_1 == 0 && end_1 == 0) {
+  if ((start_1 == 0) && (end_1 == 0)) {
     return m_regions;
   }
 
@@ -1904,7 +1943,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
                                    bool verbose)
 {
   //Parse input option into mutation type.
-  //Also determine miniumum size and maximum size if provided by user. 
+  //Also determine minimum size and maximum size if provided by user. 
   vector<string> type_options = split_on_any(type, ":-");
   string mut_type = type_options[0];
   uint32_t min_size = 1, max_size = 1;
@@ -1931,7 +1970,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
   cFlaggedRegions repeat_match_regions;
 
   if (exclusion_file.size()) {
-    repeat_match_regions.read_mummer_tab_coords(exclusion_file);
+    repeat_match_regions.read_mummer(exclusion_file, ref);
   }
 
 
@@ -3937,8 +3976,10 @@ cGenomeDiff cGenomeDiff::compare(cGenomeDiff& ctrl, cGenomeDiff& test, bool verb
   return ret_val;
 }
   
-  
-bool equivalent_junction_sequences(const string& s1, const string& s2) {
+ 
+// Returns true if two junction sequences are considered equivalent
+//  -- subsequence or subsequence of reverse complement
+bool equivalent_junction_sequences(string s1, string s2) {
   if (s1.size() < s2.size()) {
     
     if (s2.find(s1) != string::npos ) {
@@ -3959,8 +4000,26 @@ bool equivalent_junction_sequences(const string& s1, const string& s2) {
   return false;
 }
   
+  
+typedef map<string, diff_entry_ptr_t> jc_data_t;
+
+// Returns keys of all equivalent junctions
+vector<string> equivalent_junction_keys(jc_data_t& jcs, string& key)
+{
+  vector<string> matching_keys;
+  
+  for (jc_data_t::iterator it = jcs.begin(); it != jcs.end(); it++) {
+  
+    if (equivalent_junction_sequences(key, it->first))
+      matching_keys.push_back(it->first);
+  }
+  
+  return matching_keys;
+}
+  
 cGenomeDiff cGenomeDiff::compare_evidence(cReferenceSequences& sequence, 
                                           uint32_t buffer,
+                                          uint32_t shorten_length,
                                           cGenomeDiff& ctrl,
                                           cGenomeDiff& test,
                                           bool verbose) {
@@ -3970,171 +4029,160 @@ cGenomeDiff cGenomeDiff::compare_evidence(cReferenceSequences& sequence,
   ret_val.metadata = test.metadata;
 
 
-  //START JC
+  // START JC Evidence Block
+  //
+  // Conceptually we build up two sets containing equivalent junction sequences.
+  // One is from the control set and one is from the test set.
+  // 
+  // * The control set must have no equivalent junctions in it.
+  //
+  // * The test set isn't penalized for predicting an equivalent junction many times
+  //   Subsequent appearances of the same junction are not forwarded.
   
   // This keeps track of all unique sequences.
   // We assume that each sequence will only occur ONCE in each genome diff file.
   // Otherwise you can have more True Positives than the total that should be possible if you
-  // predict junctions twice...
-  set<string> jc_segments;
-  
-  // For tracking uniqueness of sequences in a given file
-  typedef map<string, diff_entry_ptr_t> jc_data_t;
-  
+  // predict the same junction twice...
+
   jc_data_t ctrl_jc;
+  
   diff_entry_list_t ctrl_list = ctrl.list(make_vector<gd_entry_type>(JC));
   ctrl_list.remove_if(cDiffEntry::field_exists("circular_chromosome")); 
 
+  ////////////////////////////
+  //      CONTROL list      //
+  ////////////////////////////
+  
   for (diff_entry_list_t::iterator it = ctrl_list.begin(); it != ctrl_list.end(); ++it) {
     cDiffEntry& jc = **it;
-//    CandidateJunctions::normalize_junction_overlap(sequence, jc);
+    
     string jc_segment = CandidateJunctions::construct_junction_sequence(sequence, jc, buffer, true);
+    jc["segment"] = jc_segment;
     ASSERT(jc_segment.size(), "Could not locate JC sequence for: " + (*it)->to_string());
-      
-    if (ctrl_jc.count(jc_segment) || ctrl_jc.count(reverse_complement(jc_segment))) {
+    
+    // This properly deals with reverse-complements and subsequences
+    vector<string> equivalent_segments = equivalent_junction_keys(ctrl_jc, jc_segment);
+    if ( equivalent_segments.size() > 0 ) {
       ERROR("Duplicate junction sequence in control data set for entry:\n" + jc.to_string() + "\n" + ctrl_jc[jc_segment]->to_string());
     }
+    
+    // We have to shorten the control segments to allow for this situation to be equivalent...
+    // GATCTAGTCATGCTAC
+    //  ATCTAGTCATGCTACG
+    
+    jc_segment = jc_segment.substr(shorten_length, jc_segment.size()-2*shorten_length);
+    
     ctrl_jc[jc_segment] = *it;
-    jc_segments.insert(jc_segment);
   }
   
   
+  /////////////////////////
+  //      TEST list      //
+  /////////////////////////
+  
+  // For recovering full information about a junction from the set
   jc_data_t test_jc;
+  
   diff_entry_list_t test_list = test.list(make_vector<gd_entry_type>(JC));
   test_list.remove_if(cDiffEntry::field_exists("circular_chromosome")); 
-
+  
   int32_t i = 0;
   for (diff_entry_list_t::iterator it = test_list.begin(); it != test_list.end(); ++it) {
     
     cDiffEntry& jc = **it;
-//    CandidateJunctions::normalize_junction_overlap(sequence, jc);
+
     string jc_segment = CandidateJunctions::construct_junction_sequence(sequence, jc, buffer, true);
     jc["segment"] = jc_segment;
-    
     ASSERT(jc_segment.size(), "Could not locate JC sequence for: " + (*it)->to_string());
     
-    // We need to merge all equivalent junctions
-    // ... keeping the highest scoring one of the group
-    diff_entry_ptr_t best_jc = *it;
-    set<string> delete_jc_segments;
-    for(jc_data_t::iterator it2 = test_jc.begin(); it2 != test_jc.end(); it2++) {
-      string test_jc_segment = it2->first;
+    vector<string> equivalent_segments = equivalent_junction_keys(test_jc, jc_segment);
       
-      // if this has a better score, then delete the old entry
-      if (equivalent_junction_sequences(jc_segment, test_jc_segment)) {
-        
-        if (n((*test_jc[test_jc_segment])["score"]) > n((*best_jc)["score"])) {
-          best_jc = test_jc[test_jc_segment];
-        }
-        delete_jc_segments.insert(test_jc_segment);
+    for (vector<string>::iterator its=equivalent_segments.begin(); its != equivalent_segments.end(); its++) {
+      
+      diff_entry_ptr_t prev_jc = test_jc[*its];
+      
+      WARN("Duplicate junction sequence in test data set for entry:\n" + jc.to_string() + "\n" + ctrl_jc[jc_segment]->to_string());
+      
+      if (verbose) {
+        cerr << "*** Merged two junctions:" << endl;
+        cerr << jc << endl;
+        cerr << "AND:" << endl;
+        cerr << *(prev_jc) << endl;
       }
-    }
-    
-    for(set<string>::iterator it2=delete_jc_segments.begin(); it2!=delete_jc_segments.end(); ++it2) {
-      test_jc.erase(*it2);
-      jc_segments.erase(*it2);
-    }
       
-    test_jc[(*best_jc)["segment"]] = best_jc;
-    jc_segments.insert((*best_jc)["segment"]);
+      // Save the max score with the new item
+      if (n(jc["score"]) < n((*prev_jc)["score"])) {
+        jc["score"] = (*prev_jc)["score"];
+      }
+      
+      if (verbose) {
+        cerr << "Result:" << endl;
+        cerr << jc << endl;
+      }
+      
+      test_jc.erase(*its);
+    }
     
-    if (verbose) cout << ++i << endl;
+    test_jc[jc_segment] = *it;
   }
-
-  set<string> matched_ctrl_segments;
+  
+  //////////////////////////////////////
+  //     Assignment of TP, FP, FN     //
+  //////////////////////////////////////
+  
   uint32_t n_tp = 0, n_fn = 0, n_fp = 0;
-  for (set<string>::iterator it = jc_segments.begin(); it != jc_segments.end(); it++) {
+  
+  // Create the new item, which must either be a true-positive or a false-positive!
+
+  for (jc_data_t::iterator it = test_jc.begin(); it != test_jc.end(); it++) {
     
-    const string& test_junction_seq = *it;
+    string test_junction_seq = it->first;
+    cDiffEntry& jc = *(it->second);
     
-    // These are NULL if not found
-    diff_entry_ptr_t found_test_jc(NULL);
-    if (test_jc.count(test_junction_seq)) found_test_jc = test_jc[test_junction_seq];
-    diff_entry_ptr_t found_ctrl_jc(NULL);
-    if (ctrl_jc.count(test_junction_seq)) found_ctrl_jc = ctrl_jc[test_junction_seq];
+    cDiffEntry new_item = jc.to_spec();
+    new_item["segment"] = test_junction_seq;
     
-    assert(found_test_jc.get() || found_ctrl_jc.get());
-    
-    // @JEB We have to test reverse complements and subsequences if there are no exact matches
-    if (!found_ctrl_jc.get()) {
-      for(jc_data_t::iterator it2 = ctrl_jc.begin(); it2 != ctrl_jc.end(); it2++) {
-        const string& this_junction_seq = it2->first;
-        
-        if (equivalent_junction_sequences(this_junction_seq, test_junction_seq)) {
-          found_ctrl_jc = it2->second;
-        }
-        
-      }
+    if (jc.count("score")) {
+      new_item["score"] = jc["score"];
+    } else if (jc.count("neg_log10_pos_hash_p_value")) {
+      new_item["score"] = jc["neg_log10_pos_hash_p_value"];
+    } else {
+      new_item["score"] = "9999999";
     }
     
-    if (!found_test_jc.get()) {
-      for(jc_data_t::iterator it2 = test_jc.begin(); it2 != test_jc.end(); it2++) {
-        const string& this_junction_seq = it2->first;
-                
-        if (equivalent_junction_sequences(this_junction_seq, test_junction_seq)) {
-          found_test_jc = it2->second;
-        }
-      }
-    }
+    vector<string> equivalent_segments = equivalent_junction_keys(ctrl_jc, test_junction_seq);
     
-    string key = "";
-    diff_entry_ptr_t evidence;
-    if (found_ctrl_jc.get() && found_test_jc.get()) {
-      key = "TP";
+    // One item found = TP
+    if (equivalent_segments.size() == 1) {    
+      new_item["compare"] = "TP";
       ++n_tp;
-      evidence = found_test_jc;
-      
-      if (matched_ctrl_segments.count((*found_ctrl_jc)["segment"])) {
-        if (verbose) cerr << "Duplicate match to: " << *found_ctrl_jc << endl << *found_test_jc << endl;
-      }
-      matched_ctrl_segments.insert((*found_ctrl_jc)["segment"]);
-
-    }
-    else if (found_ctrl_jc.get() && !found_test_jc.get()) {
-      key = "FN";
-      ++n_fn;
-      evidence = found_ctrl_jc;
-    }
-    else if (!found_ctrl_jc.get() && found_test_jc.get()) {
-      key = "FP";
+      // delete from control set
+      ctrl_jc.erase(equivalent_segments[0]);
+    // Zero items found = FP
+    } else if (equivalent_segments.size() == 0) {
+      new_item["compare"] = "FP";
       ++n_fp;
-      evidence = found_test_jc;
-    } 
-    
-    
-    cDiffEntry new_item = evidence->to_spec();
-    new_item["compare"] = key;
-    new_item["segment"] = *it;
-
-    if (evidence->count("score")) {
-      new_item["score"] = (*evidence)["score"];   
     }
-    else if (evidence->count("neg_log10_pos_hash_p_value")) {
-      new_item["score"] = (*evidence)["neg_log10_pos_hash_p_value"];
-    }
+    // More than one item found = ERROR! (Should be ruled out above.)
     else {
-      new_item["score"] = "0";
+      ERROR("More than one match in control found for junction:\n" + jc.to_string());
     }
-
-    //TODO @GRC for testing tophat scoring parameters, remove if/when needed.
-    if (evidence->count("verbose_score")) {
-      new_item["verbose_score"] = (*evidence)["verbose_score"];
-    }
-
-    ret_val.add(new_item);
-
     
-    if (verbose) {
-      string temp = "";
-      if (key == "TP") temp = "[True  Positive]:\t";
-      if (key == "FN") temp = "[False Negative]:\t";
-      if (key == "FP") temp = "[False Positive]:\t";
-      if (key == "")   temp = "[ERROR]         :\t";
-      cerr << "\t"<< temp << evidence->to_spec().to_string() << "\t" << new_item << endl;
-    }
-
+    ret_val.add(new_item);
   }
-  //END JC
+   
+  // Now iterate through remaining control items, which are false-negatives
+  for (jc_data_t::iterator it = ctrl_jc.begin(); it != ctrl_jc.end(); it++) {
+    string test_junction_seq = it->first;
+    cDiffEntry& jc = *(it->second);
+
+    cDiffEntry new_item = jc.to_spec();
+    new_item["segment"] = test_junction_seq;
+    new_item["compare"] = "FN";
+    new_item["score"] = "0"; // Control items don't have a score...
+    ++n_fn;
+    ret_val.add(new_item);
+  }
 
   //Add TP|FN|FP header info.
   string value = "";

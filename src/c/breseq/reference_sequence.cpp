@@ -547,26 +547,17 @@ namespace breseq {
     for (vector<cAnnotatedSequence>::iterator itr= this->begin(); itr != this->end(); itr++) {
       cAnnotatedSequence& as = *itr;
       if (!as.get_sequence_length()) {
-        ss << "No sequence loaded for: " << as.m_seq_id << endl;
+        ss << "No sequence found for reference: " << as.m_seq_id << endl;
+        ss << endl;
+        ss << "Make sure that there is a sequence present in each file you are loading" << endl;
+        ss << "or load the sequence for this reference from a separate FASTA file." << endl;
+        ss << "This error is commonly caused by using a GenBank file which only has features." << endl;
         Error = true;
       }
       else if ((uint32_t)as.m_length != as.get_sequence_length())  {
-        ss << "FEATURES AND SEQUENCE DON'T MATCH: " << as.m_seq_id << endl;
-        ss << "LENGTH:\t" << (uint32_t)as.m_length << "\tVS:\t" << as.get_sequence_length() << " (Sequence Length)" << endl;
+        ss << "Contradictory lengths given in feature file and sequence file for reference: " << as.m_seq_id << endl;
+        ss << (uint32_t)as.m_length << "\tVS:\t" << as.get_sequence_length() << " (Sequence Length)" << endl;
         Error = true;
-      }
-      else if(!as.get_sequence_length())  {
-        ss << "LIKELY CAUSE:" << endl;
-        ss << "No nucleotide sequence loaded for " << as.m_seq_id <<  endl;
-        ss << "\nMake sure that the reference you are loading contains a sequence." << endl;
-        ss << "If loading a Genbank file, make sure it has the associated sequence" << endl;
-        ss << "or load the sequence as a seperate FASTA file." << endl;
-      }
-      else  {        
-        ss << "LIKELY CAUSE:" << endl;
-        ss << "Multiple files loaded referring to the same sequence. Make" << endl;
-        ss << "sure that any features loaded describe the sequence you" << endl;
-        ss << "actually loaded." << endl;
       }
     }
     if (Error) ERROR(ss.str());
