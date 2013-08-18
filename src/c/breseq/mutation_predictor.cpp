@@ -20,6 +20,7 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/mutation_predictor.h"
 
 #include "libbreseq/output.h"
+#include "libbreseq/identify_mutations.h"
 #include "libbreseq/resolve_alignments.h"
 
 using namespace std;
@@ -1002,12 +1003,12 @@ namespace breseq {
           // don't record mutations below the cutoff frequency
           if (mut[FREQUENCY] != "NA") {
             if (frequency < settings.polymorphism_frequency_cutoff) {
-              add_reject_reason(mut, "POLYMORPHISM_FREQUENCY_CUTOFF");
+              mut.add_reject_reason("POLYMORPHISM_FREQUENCY_CUTOFF");
               // @JEB 08-08-13 we might want to keep the mutation as rejected. This discards completely.
               break;
             }
             if (1-frequency < settings.polymorphism_frequency_cutoff) {
-              add_reject_reason(mut, "POLYMORPHISM_FREQUENCY_CUTOFF");
+              mut.add_reject_reason("POLYMORPHISM_FREQUENCY_CUTOFF");
               mut.erase(FREQUENCY);
             }
           }

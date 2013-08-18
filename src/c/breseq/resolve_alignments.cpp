@@ -22,6 +22,7 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/fastq.h"
 #include "libbreseq/fasta.h"
 #include "libbreseq/alignment.h"
+#include "libbreseq/identify_mutations.h"
 #include "libbreseq/reference_sequence.h"
 #include "libbreseq/chisquare.h"
 #include "libbreseq/output.h"
@@ -626,7 +627,7 @@ void resolve_alignments(
     JunctionTestInfo& junction_test_info = *it;
 		string key = junction_test_info.junction_id;
 		cDiffEntry item = junction_to_diff_entry(key, ref_seq_info, junction_test_info);
-		add_reject_reason(item, "NJ");
+		item.add_reject_reason("NJ");
 		gd.add(item);
 	}
 

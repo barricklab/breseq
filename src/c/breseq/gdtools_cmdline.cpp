@@ -125,7 +125,7 @@ int do_union(int argc, char *argv[])
   }
 
   uout("Assigning unique IDs");
-  gd1.assign_unique_ids();
+  gd1.reassign_unique_ids();
 
   uout("Writing output GD file", options["output"]); 
   gd1.write(options["output"]);
@@ -328,7 +328,7 @@ int do_weights(int argc, char* argv[])
   //Store entries as keys and pointers to matching entries.
   diff_entry_list_t muts = gd1.mutation_list();
 
-  bool (*comp_fn) (const diff_entry_ptr_t&, const diff_entry_ptr_t&) = diff_entry_ptr_sort;
+  bool (*comp_fn) (const diff_entry_ptr_t&, const diff_entry_ptr_t&) = cGenomeDiff::diff_entry_ptr_sort;
   typedef map<diff_entry_ptr_t, vector<diff_entry_ptr_t>, bool(*)(const diff_entry_ptr_t&, const diff_entry_ptr_t&)> diff_entry_map_t;
 
   diff_entry_map_t weights_table(comp_fn);
@@ -360,7 +360,7 @@ int do_weights(int argc, char* argv[])
 
   }
   uout("Assigning unique IDs");
-  gd1.assign_unique_ids();
+  gd1.reassign_unique_ids();
   
   uout("Writing output GD file", options["output"]);
   gd1.write(options["output"]);
@@ -436,7 +436,7 @@ int do_validate(int argc, char *argv[])
      */
 
     uout("Comparing evidence");
-    comp = cGenomeDiff::compare_evidence(ref, un(options["jc-buffer"]), un(options["jc-shorten"]), ctrl, test, options.count("verbose"));
+    comp = cGenomeDiff::validate_evidence(ref, un(options["jc-buffer"]), un(options["jc-shorten"]), ctrl, test, options.count("verbose"));
 
     if (options.count("plot-jc")) {
       uout("Evaluating results to plot data.");
@@ -464,11 +464,11 @@ int do_validate(int argc, char *argv[])
 
   } else {
     uout("Comparing mutations");
-    comp = cGenomeDiff::compare(ctrl, test, options.count("verbose"));
+    comp = cGenomeDiff::validate(ctrl, test, options.count("verbose"));
   }
 
   uout("Assigning unique IDs to Genome Diff entries");
-  comp.assign_unique_ids();
+  comp.reassign_unique_ids();
 
   uout("Writing output GD file", options["output"]);
   comp.write(options["output"]);
@@ -478,32 +478,37 @@ int do_validate(int argc, char *argv[])
 
 int do_gd2vcf( int argc, char* argv[])
 {
-    AnyOption options("gdtools GD2GVF [-o output.gvf] input.gd"); 
+    AnyOption options("gdtools GD2VCF [-o output.vcf] input.gd"); 
     
     options
     ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-    ("output,o","name of output file", "output.gvf")
-    ("snv-only", "only output SNV entries", TAKES_NO_ARGUMENT)
+    ("reference,r",  "reference sequence file (REQUIRED)")
+    ("output,o","name of output file", "output.vcf")
     ;
     options.processCommandArgs( argc,argv);
     
     options.addUsage("");
     options.addUsage("Creates a Variant Call Format (VCF) file of mutations present in an input Genome Diff file.");
-    options.addUsage("VCF Files can be loaded into NGS viewers.");
+    options.addUsage("VCF is a community format that can be loaded into viewers and used as input to other programs.");
     
     if( options.getArgc() != 1 ){
         options.addUsage("");
-        options.addUsage("Provide a single input Genome Diff file.");
+        options.addUsage("You must provide exactly one input Genome Diff file.");
         options.printUsage();
         return -1;
     }
     
-    try{
-        GD2VCF( options.getArgv(0), options["output"], options.count("snv-only") );
-    } 
-    catch(...){ 
-        return -1; // failed 
+    if (!options.count("reference")) {
+        options.addUsage("");
+        options.addUsage("You must provide a reference sequence file (-r).");
+        options.printUsage();
+        return -1;
     }
+        
+    cReferenceSequences ref_seq_info;
+    ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
+    
+    cGenomeDiff::GD2VCF( options.getArgv(0), options["output"], ref_seq_info );
     
     return 0;
 }
@@ -516,7 +521,6 @@ int do_gd2gvf( int argc, char* argv[])
   options
     ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
     ("output,o","name of output file", "output.gvf")
-    ("snv-only", "only output SNV entries", TAKES_NO_ARGUMENT)
     ;
   options.processCommandArgs( argc,argv);
 
@@ -530,19 +534,14 @@ int do_gd2gvf( int argc, char* argv[])
     return -1;
   }
   
-  try{
-      GD2GVF( options.getArgv(0), options["output"], options.count("snv-only") );
-  } 
-  catch(...){ 
-      return -1; // failed 
-  }
+  cGenomeDiff::GD2GVF( options.getArgv(0), options["output"] );
   
   return 0;
 }
 
 int do_vcf2gd( int argc, char* argv[])
 {
-  AnyOption options("VCF2GD [-o output.gd] intput.vcf");
+  AnyOption options("VCF2GD [-o output.gd] input.vcf");
   options("output,o","name of output Genome Diff file", "output.gd");
   options.processCommandArgs( argc,argv);
 
@@ -555,15 +554,9 @@ int do_vcf2gd( int argc, char* argv[])
     options.printUsage();
     return -1;
   }
-  string input = options.getArgv(0);
   
-  cGenomeDiff gd = cGenomeDiff::from_vcf(input);
-  const string &file_name = options.count("output") ?
-        options["output"] :
-        cString(input).remove_ending("vcf") + "gd";
-
-  gd.write(file_name);
-
+  cGenomeDiff::VCF2GD(options.getArgv(0), options["output"]);
+  
   return 0;
 }
 
@@ -615,7 +608,7 @@ int do_gd2circos(int argc, char *argv[])
     return -1;
   }
   
-  GD2Circos(gd_names, 
+  cGenomeDiff::GD2Circos(gd_names, 
              from_string<vector<string> >(options["reference"]),
              options["output"],
              distance_scale,
@@ -634,7 +627,7 @@ int do_mira2gd(int argc, char* argv[])
     ("output,o", "name of gd file to save", "output.gd")
     ;
   options.processCommandArgs(argc, argv);
-  
+    
   options.addUsage("");
   options.addUsage("Creates a GD file from a MIRA feature analysis file. Be sure to normalize the GD created afterward.");
   
@@ -646,12 +639,8 @@ int do_mira2gd(int argc, char* argv[])
   }
   string input = options.getArgv(0);
   
-  try{
-      MIRA2GD( input, options["output"]);
-  } 
-  catch(...){ 
-      return -1; // failed 
-  }
+  ERROR("Not implemented.");
+  //cGenomeDiff::MIRA2GD( input, options["output"]);
   
   return 0;
 }
@@ -1204,7 +1193,7 @@ int do_simulate_mutations(int argc, char *argv[])
 
   gd.mutations_to_evidence(ref_seq_info, false);
 
-  gd.assign_unique_ids();
+  gd.reassign_unique_ids();
   
   gd.write(options["output"]);
   

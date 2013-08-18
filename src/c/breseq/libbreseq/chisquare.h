@@ -1,3 +1,6 @@
+#ifndef _CHISQUARE_H_
+#define _CHISQUARE_H_
+
 #include "common.h"
 
 namespace breseq {
@@ -26,3 +29,5 @@ namespace breseq {
   double bdtri(double k, double n, double y);
 
 } // namespace breseq
+
+#endif
