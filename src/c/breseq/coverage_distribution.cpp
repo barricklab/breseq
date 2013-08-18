@@ -624,8 +624,8 @@ namespace breseq {
          */
         
         // For reading input from tiled.tab
-        uint32_t num_tiles = 0;
-        uint32_t num_tiles_in_genome = 0;
+        int32_t num_tiles = 0;
+        int32_t num_tiles_in_genome = 0;
         int32_t position;
         double coverage;
         map<int32_t, double> coverage_map;
@@ -1425,7 +1425,7 @@ namespace breseq {
         string high_side = "";
         
         // For each edge of a range in range_t_vector (except the first, bc it is just the left side of the genome, so we start "i" at 1 instead of 0)
-        for (int32_t i = 1; i < range_t_vector.size(); i++)
+        for (uint32_t i = 1; i < range_t_vector.size(); i++)
         {
             
             // Store the position of this edge using the range_t_vector[i].range_pair.first
@@ -1634,7 +1634,7 @@ namespace breseq {
         
         
         // Now write the newly shifted original outliers to the ranges file
-        for (int32_t i = 0; i < range_t_vector.size(); i++)
+        for (uint32_t i = 0; i < range_t_vector.size(); i++)
         {
             
             ranges_file << range_t_vector[i].range_pair.first << "\t"

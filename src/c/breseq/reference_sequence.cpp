@@ -2266,12 +2266,12 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
 
     // Evalue cutoff again (in case we are only running this part)
     if (double_from_string(mut[POLYMORPHISM_QUALITY]) < settings.polymorphism_log10_e_value_cutoff)
-      add_reject_reason(mut, "EVALUE");
+      mut.add_reject_reason("EVALUE");
 
     // Frequency cutoff
     if ( (from_string<double>(mut["frequency"]) < settings.polymorphism_frequency_cutoff)
       || (from_string<double>(mut["frequency"]) > 1-settings.polymorphism_frequency_cutoff) )
-      add_reject_reason(mut, "POLYMORPHISM_FREQUENCY_CUTOFF");
+      mut.add_reject_reason("POLYMORPHISM_FREQUENCY_CUTOFF");
 
     // Minimum coverage on both strands
     double polymorphism_coverage_limit_both_bases = settings.polymorphism_minimum_new_coverage_each_strand;
@@ -2289,13 +2289,13 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
     passed = passed && (top >= polymorphism_coverage_limit_both_bases);
     passed = passed && (bot >= polymorphism_coverage_limit_both_bases);
     if (!passed)
-      add_reject_reason(mut, "POLYMORPHISM_STRAND");
+      mut.add_reject_reason("POLYMORPHISM_STRAND");
     
     // Test bias criteria
     if (settings.polymorphism_bias_p_value_cutoff && (from_string<double>(mut["ks_quality_p_value"]) < settings.polymorphism_bias_p_value_cutoff))
-      add_reject_reason(mut, "KS_QUALITY_P_VALUE");
+      mut.add_reject_reason("KS_QUALITY_P_VALUE");
     if (settings.polymorphism_bias_p_value_cutoff && (from_string<double>(mut["fisher_strand_p_value"]) < settings.polymorphism_bias_p_value_cutoff))
-      add_reject_reason(mut, "FISHER_STRAND_P_VALUE");
+      mut.add_reject_reason("FISHER_STRAND_P_VALUE");
 
     ////// Optionally, ignore if in a homopolymer stretch longer than this
     if (settings.polymorphism_reject_homopolymer_length)
@@ -2318,14 +2318,14 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
 
       if (same_base_length >= settings.polymorphism_reject_homopolymer_length)
       {
-        add_reject_reason(mut, "HOMOPOLYMER_STRETCH");
+        mut.add_reject_reason("HOMOPOLYMER_STRETCH");
       }
     }
     
     
     if (settings.no_indel_polymorphisms && ((mut[REF_BASE] == ".") || (mut[NEW_BASE] == ".")))
     {
-      add_reject_reason(mut, "INDEL_POLYMORPHISM");
+      mut.add_reject_reason("INDEL_POLYMORPHISM");
     }
 
     if (
@@ -2341,7 +2341,7 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
       // FIX -- need to re-evaluate whether it would have been accepted as a normal mutation
       // This is NOT the right quality being used here. Need a separate quality for consensus call and polymorphism call!
       if (double_from_string(mut[POLYMORPHISM_QUALITY]) < settings.mutation_log10_e_value_cutoff)
-        add_reject_reason(mut, "EVALUE");
+        mut.add_reject_reason("EVALUE");
     }
 
     new_gd.add(mut);

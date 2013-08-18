@@ -1244,29 +1244,54 @@ inline cString& cString::escape_shell_chars(void) {
 
   return *this;
 }
-  inline int SYSTEM(string command, bool silent = false, bool ignore_errors = false, bool escape_shell_chars = true)
-  {
-    if (escape_shell_chars) {
-      command = cString(command).escape_shell_chars();
-    }
-    if (!silent) cerr << "[system] " << command << endl;
-    int return_value = system(command.c_str());
-    
-    string error_message = "Error running command:\n[system] " + command + "\nResult code: " + to_string(return_value);
-    if (ignore_errors)
-    {
-      if (return_value != 0) cerr << error_message;
-    }
-    else
-    {
-      ASSERT(return_value == 0, error_message);
-    }
-    return return_value;
-  }
 
-  template<uint32_t nth_place> double roundp(double value) {
-    return floor(value * nth_place + 0.5f) / nth_place;
+//! Used to add types that will print with a specified precision
+struct formatted_double {
+  
+  double  _value;     //actual value
+  uint8_t _precision; //number of digits past zero to print
+  
+  //! Constructor.
+  formatted_double(const double v, const uint8_t p=1)
+  : _value(v), _precision(p) {}
+  
+  virtual ~formatted_double() { }
+  
+  string to_string() const {
+    return breseq::to_string(_value, _precision);
   }
+  
+};
+
+// For writing formatted_doubles
+inline ostream &operator<<( ostream &out, const formatted_double &fd ) {
+  out << fd.to_string();
+  return out;
+}
+  
+inline int SYSTEM(string command, bool silent = false, bool ignore_errors = false, bool escape_shell_chars = true)
+{
+  if (escape_shell_chars) {
+    command = cString(command).escape_shell_chars();
+  }
+  if (!silent) cerr << "[system] " << command << endl;
+  int return_value = system(command.c_str());
+  
+  string error_message = "Error running command:\n[system] " + command + "\nResult code: " + to_string(return_value);
+  if (ignore_errors)
+  {
+    if (return_value != 0) cerr << error_message;
+  }
+  else
+  {
+    ASSERT(return_value == 0, error_message);
+  }
+  return return_value;
+}
+
+template<uint32_t nth_place> double roundp(double value) {
+  return floor(value * nth_place + 0.5f) / nth_place;
+}
 
 } // breseq
 

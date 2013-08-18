@@ -82,41 +82,12 @@ enum gd_entry_type {UNKNOWN = 0, SNP, SUB, DEL, INS, MOB, AMP, INV, CON, RA,
 extern const vector<string> gd_entry_type_lookup_table;
   
 inline string to_string(const gd_entry_type type)
-{
-  return gd_entry_type_lookup_table[type];
-}
-
-enum Strand {POS_STRAND = 1, NEG_STRAND = -1};
-  
-//!  
-static uint8_t kPolymorphismFrequencyPrecision = 4; 
-static uint8_t kMutationQualityPrecision = 1; 
-  
-
-//! Convenience typedef, used during diff entry marshalling.
-typedef vector<string> field_list_t;
-
-//! Used to add types that will print with a specified precision
-struct formatted_double {
-
-  //! Constructor.
-  formatted_double(const double v, const uint8_t p=1)
-    : _value(v), _precision(p) {}
-
-  virtual ~formatted_double() { }
-
-  string to_string() {
-    return breseq::to_string(_value, _precision);
-  }
-
-  double  _value;     //actual value
-  uint8_t _precision; //number of digits past zero to print
-};
+{ return gd_entry_type_lookup_table[type]; }
 
   
 /*! Parse errors
  
- 
+ Helper class for aggregating all of the errors encountered when reading a Genome Diff file
  
  */
 
@@ -199,31 +170,54 @@ typedef string diff_entry_value_t; //!< Diff entry values.
 typedef map<diff_entry_key_t, diff_entry_value_t> diff_entry_map_t; //!< Diff entry key-value map.
 
 typedef counted_ptr<cDiffEntry> diff_entry_ptr_t;
+typedef list<diff_entry_ptr_t> diff_entry_list_t; //!< Type for a list of diff entries.
 
 class cDiffEntry : public diff_entry_map_t {
 public: 
 
+  //!---- Variables ---- !//
+  // @JEB: these should be made protected and given accessors
+  gd_entry_type _type;
+  string _id;
+  vector<string> _evidence; 
+  
+  //!---- Constructor / Destructor ---- !//
+
   //! Constructor.
+  cDiffEntry();
   cDiffEntry(const gd_entry_type type);
   cDiffEntry(const string &line, uint32_t line_number, cFileParseErrors* file_parse_errors = NULL); //For deserialization from gd file.
   cDiffEntry(diff_entry_map_t& de) : diff_entry_map_t(de) {};
-  cDiffEntry();
   
+  // Helper function
+  static gd_entry_type type_to_enum(string type);
+
   //! Copy constructor
   //cDiffEntry(const cDiffEntry& rhs) : _fields(rhs._fields), _type(rhs._type), _id(rhs._id), _parents(rhs._parents) {}
 
   //! Destructor.
   virtual ~cDiffEntry() { }
 
+  
+  //!---- Accessors to generic properties ---- !//
+
+  //! Accessor convenience function
+  cDiffEntry& operator()(const diff_entry_key_t& key, const diff_entry_value_t& value) {
+    (*this)[key] = value;
+    return *this;
+  }
+  
+  //! Const accessor
+  diff_entry_value_t get(const diff_entry_key_t key) const { return this->find(key)->second; }
+  
+  //!---- Accessors to generic properties ---- !//
+  
+  //! Comparison operator
+  bool operator== (const cDiffEntry& de);
+  
   //! Return if a given key value exists in _fields
   bool entry_exists(const diff_entry_key_t& k) const { return (count(k) > 0); }
   
-  //! Const accessor
-  diff_entry_value_t get(const diff_entry_key_t key) const
-  {
-    return this->find(key)->second;
-  }
-    
   //! Return if this diff entry is a mutation
   bool is_mutation() const;
 
@@ -236,104 +230,187 @@ public:
   bool is_marked_deleted()
   { return (this->entry_exists("deleted") && ((from_string<int32_t>((*this)["deleted"]) != 0))); }
   
+  //!---- Accessors to calculated properties ---- !//
+  
   //! Common function for getting start or end of mutation or evidence
   uint32_t get_start();
   uint32_t get_end();
 
+  //! Common function giving change in size of genome at site of applying entry
+  int32_t mutation_size_change(cReferenceSequences& ref_seq_info);
+  
+  //!---- Output ---- !//
+  
   //! Marshal this diff entry into an ordered list of fields.
-  virtual void marshal(field_list_t& s) const;
-
+  virtual void marshal(vector<string>& s) const;
+  
   //! Serialize this diff entry into a string for output.
   virtual string to_string(void) const;
-
+  
+  //!---- Reject Reasons Field ---- !//
+  
+  size_t number_reject_reasons();
+  
   //! Returns values for cDiffEntry["reject"]
   vector<string> get_reject_reasons();
-
-  //const cDiffEntry& operator= (diff_entry_ptr_t ptr) const { return *ptr; }
   
-  cDiffEntry to_spec(void) const;
+  //! Adds a reject reason to cDiffEntry["reject"] as a list
+  void add_reject_reason(const string &reason);
 
+  //!---- Simplifying entries ---- !//
+  
+  //! Remove all information except required fields
+  cDiffEntry to_spec(void) const;
 
   void normalize_to_sequence(const cAnnotatedSequence &seq, bool verbose = false);
 
-  size_t number_reject_reasons();
-  int32_t mutation_size_change(cReferenceSequences& ref_seq_info);
-
-  struct by_scores;
-  struct is_type;
-  struct is_not_type;
-  struct field_exists;
-  struct fields_exist;
-  struct no_show;
-  struct rejected;
-  struct rejected_and_not_user_defined;
-
-  cDiffEntry& operator()(const diff_entry_key_t& key, const diff_entry_value_t& value) {
-    (*this)[key] = value;
-    return *this;
-  }
-
-  bool operator== (const cDiffEntry& de);
-
-  static gd_entry_type type_to_enum(string type);
+  //!---- Sorting ---- !//
+  
+  //! Various functors for testing many entries at once for a property
 
   
-  //! Parameters most cDiffEntrys have in common
-  gd_entry_type _type;
-  string _id;
-  vector<string> _evidence; 
+  //! Functor. Sorts cDiffEntrys in decending order depending on given fields that
+  //can be evaluated as an unsigned integer.
+  struct by_scores : public binary_function
+  <diff_entry_ptr_t, diff_entry_ptr_t, bool>
+  {
+    
+    //! Constructor
+    explicit by_scores (const vector<diff_entry_key_t>& field_keys)
+    : m_field_keys(field_keys) {}
+    
+    //! Predicate
+    virtual bool operator() (const diff_entry_ptr_t& a, const diff_entry_ptr_t& b) const
+    {
+      for (vector<diff_entry_key_t>::const_iterator itr = m_field_keys.begin(); itr != m_field_keys.end(); itr++) {
+        string key(*itr);
+        
+        if (from_string<double>((*a)[key]) == from_string<double>((*b)[key]))
+          continue;
+        else 
+          return from_string<double>((*a)[key]) > from_string<double>((*b)[key]);
+      }
+      return false;
+    }
+    
+  protected:
+    vector<diff_entry_key_t> m_field_keys;
+  };
   
+  
+  struct is_type: unary_function <diff_entry_ptr_t, bool>
+  {
+    //! Constructor
+    explicit is_type(const gd_entry_type type)
+    : m_type(type) {}
+    
+    //! Predicate 
+    virtual bool operator() (const diff_entry_ptr_t& cDiffEntry)
+    const {return (*cDiffEntry)._type == m_type;}
+    
+    
+  protected:
+    gd_entry_type m_type;
+  };
+  
+  struct is_not_type: unary_function <diff_entry_ptr_t, bool>
+  {
+    //! Constructor
+    explicit is_not_type(const gd_entry_type type)
+    : m_type(type) {}
+    
+    //! Predicate 
+    virtual bool operator() (const diff_entry_ptr_t& cDiffEntry)
+    const {return (*cDiffEntry)._type != m_type;}
+    
+    
+  protected:
+    gd_entry_type m_type;
+  };
+  
+  struct no_show:public unary_function<diff_entry_ptr_t, bool>
+  {
+    virtual bool operator() (const diff_entry_ptr_t& cDiffEntry) const
+    {
+      return cDiffEntry->entry_exists("no_show");
+    }
+  };
+  
+  
+  struct rejected:public unary_function<diff_entry_ptr_t,bool>
+  {
+    virtual bool operator() (diff_entry_ptr_t cDiffEntry)
+    {
+      return cDiffEntry->entry_exists(REJECT);
+    }
+    
+  };
+  
+  struct rejected_and_not_user_defined:public unary_function<diff_entry_ptr_t,bool> {
+    virtual bool operator() (diff_entry_ptr_t cDiffEntry)
+    {
+      return cDiffEntry->entry_exists(REJECT) && !cDiffEntry->entry_exists("user_defined");
+    }
+    
+  };
+  
+  //! Functor. Wraps cDiffEntry.entry_exists() for use in STL algorithms.
+  //Returns true if a cDiffEntry contains the given field_key.
+  struct field_exists : public unary_function <diff_entry_ptr_t, bool>
+  {
+    //! Constructor
+    explicit field_exists (const diff_entry_key_t& field_key)
+    : m_field_key(field_key) {}
+    
+    //! Predicate
+    virtual bool operator() (const diff_entry_ptr_t& p_diff_entry)
+    const {return (p_diff_entry->entry_exists(m_field_key));}
+    
+  protected:
+    diff_entry_key_t m_field_key;
+  };
+  
+  //! Functor. Wraps cDiffEntry.entry_exists() for use in STL algorithms.
+  //Returns true if a cDiffEntry contains all of the given field_keys.
+  //ie:  cDiffEntry[field_key_1] && cDiffEntry[field_key_2]
+  struct fields_exist : public unary_function <diff_entry_ptr_t, bool>
+  {
+    //! Constructor
+    explicit fields_exist (const vector<diff_entry_key_t>& field_keys)
+    : m_field_keys(field_keys) {}
+    
+    //! Predicate
+    virtual bool operator() (const diff_entry_ptr_t& p_diff_entry) const
+    {
+      for (vector<diff_entry_key_t>::const_iterator itr = m_field_keys.begin();
+           itr != m_field_keys.end(); itr++) {
+        diff_entry_key_t field_key(*itr);
+        if (p_diff_entry->entry_exists(field_key)) {
+          continue;
+        }
+        else { 
+          return false;
+        }
+      }
+      
+      // cDiffEntry contains all field_keys
+      return true;
+    }
+  protected:
+    vector<diff_entry_key_t> m_field_keys;
+  };
+  
+
 };
-typedef list<diff_entry_ptr_t> diff_entry_list_t; //!< Type for a list of diff entries.
 
-void add_reject_reason(cDiffEntry& de, const string &reason);
-
-//! Convert genome diff to GVF
-void GD2GVF( const string& gdfile, const string& gvffile, bool snv_only = false );
-  
-//! Convert VCF to genome diff
-void GD2VCF( const string &gdfile, const string &gvffile, bool snv_only);
-void VCF2GD( const string& vcffile, const string& gfffile );
-
-//! Convert GD to Circos files
-void GD2Circos(const vector<string> &gd_file_names,
-                const vector<string> &reference_file_names,
-                const string &circos_directory,
-                double distance_scale,
-                double feature_scale);
-
-//! Convert MIRA feature analysis file to GD
-void MIRA2GD(const string &mira_file_name, const string &gd_file_name);
-  
-//! Output operator for a diff entry.
-ostream& operator<<(ostream& out, const cDiffEntry& de);
-
-//! Genome Diff Sorting
-//! For sorting by a number, then by fields to break ties
-struct sort_fields_item {
-
-  //! Constructor.
-  sort_fields_item() {_f1=0; _f2=""; _f3=""; };
-
-  sort_fields_item(uint8_t f1, string f2, string f3) :
-    _f1(f1), _f2(f2), _f3(f3) {};
-  
-  //! Destructor.
-  virtual ~sort_fields_item() {};
-
-  uint8_t _f1;
-  string _f2;
-  string _f3;
-};
+// Overload to output Genome DIff entries
+inline ostream &operator<<( ostream &out, const cDiffEntry &de ) {
+  out << de.to_string();
+  return out;
+}
   
 
-
-
-//! Sort routines
-bool diff_entry_ptr_sort(const diff_entry_ptr_t& a, const diff_entry_ptr_t& b);
-bool diff_entry_sort(const cDiffEntry &a, const cDiffEntry &b);
-
-/*! Genome diff class.
+/*! Genome Diff class.
  
  //  		Genome Diff files are tab delimitted. The first column defines the type of entry on a given line.
  //  		The second and third columns are type-nonspecific (id, parents), followed by type-specific
@@ -343,12 +420,37 @@ bool diff_entry_sort(const cDiffEntry &a, const cDiffEntry &b);
 class cGenomeDiff
 {
 public:
-
+  
   enum group { MUTATIONS = 0, EVIDENCE, VALIDATION }; 
 
   typedef string key_t; 
   typedef vector<string> list_t;
+
+  //!---- Variables ---- !//
+protected:  	
+  string _default_filename;           //!< Default filename for this diff.
+  diff_entry_list_t _entry_list;      //!< All diff entries.
+  uint32_t _unique_id_counter;        //!< Smallest available id.
+  map<uint32_t,bool> unique_id_used;
+
+public:
+  // @JEB should make this protected and add an accessor
+  //! Metadata kept in .gd files
+  struct Metadata
+  {
+    Metadata() : version("1.0") {}
+    
+    string run_name;
+    string version; 
+    string author;
+    vector<string> ref_seqs;
+    vector<string> read_seqs;
+    map<string,string> breseq_data; // Use this to write values from pipeline to gd
+  } metadata;
   
+  
+  //! ---- Constructor / Destructor ---- !//
+
   //! Constructor.
   cGenomeDiff() : _unique_id_counter(0) { }
 
@@ -360,70 +462,41 @@ public:
 
   //! Destructor.
   ~cGenomeDiff() { }
-
-  //! Retrieve a new diff entry id for this genome diff.
-  uint32_t new_unique_id();
   
-  //! Add evidence to this genome diff.
-  diff_entry_ptr_t add(const cDiffEntry& item, bool lowest_unique=false);
   
-  //! Subtract mutations using gd_ref as reference.
-  void set_subtract(cGenomeDiff& gd_ref, bool verbose=false);
+  //!---- Accessors ---- !//
 
-  void set_intersect(cGenomeDiff& gd_ref, bool verbose=false);
+  string file_name() const {return _default_filename;}
+
+  void add_breseq_data(const key_t &key, const string& value)
+    { this->metadata.breseq_data.insert(pair<string,string>(key, value)); }
+
+  //! Gets parent of entry, if there is one
+  diff_entry_ptr_t parent(const cDiffEntry& evidence);
   
-  void set_union(cGenomeDiff& gd_ref, bool verbose=false);
+  //!---- Input and Output ---- !//
   
-  //! Merge GenomeDiff information using gd_new as potential new info.
-  void merge(cGenomeDiff& gd_new, bool unique=true, bool new_id=false, bool verbose=false);
-
-  //! fast merge, doesn't compare entries, but does renumber
-  void fast_merge(const cGenomeDiff& gd);
-  
-  //! sort
-  void sort() { _entry_list.sort(diff_entry_ptr_sort); }
-  void unique();
-
-  static cGenomeDiff compare(cGenomeDiff& ctrl, cGenomeDiff& test, bool verbose = false);
-  static cGenomeDiff compare_evidence(cReferenceSequences& sequence,
-                                      uint32_t buffer,
-                                      uint32_t shorten_length,
-                                      cGenomeDiff& ctrl,
-                                      cGenomeDiff& test,
-                                      bool verbose = false);
-  static void write_jc_score_table(cGenomeDiff& compare, string table_file_path, bool verbose = false); 
-
-  void assign_unique_ids(void);
-
-
-  static cGenomeDiff from_vcf(const string &file_name);
-
   //! Read a genome diff from a file.
   void read(const string& filename);
   
   //! Write the genome diff to a file.
   void write(const string& filename);
-
-  //! Remove mutations, evidence, validation.
-  void remove(cGenomeDiff::group group);
-
-  //! Removes all GD entries that aren't used as evidence.
-  void filter_not_used_as_evidence(bool verbose=false);
-
-  //! Remove items used as evidence by any mutations out of input list
-  diff_entry_list_t filter_used_as_evidence(const diff_entry_list_t& list);
   
-  //! Call to check if loaded info seq_ids match supplied reference.
+  //! Helper function to check if loaded info seq_ids match supplied reference.
   bool is_valid(cReferenceSequences& ref_seq_info, bool verbose=false);
   
-  //! Call to generate random mutations.
-
-  void random_mutations(string exclusion_file,
-                        string type,
-                        uint32_t n_muts,
-                        uint32_t buffer,
-                        cAnnotatedSequence& ref,
-                        bool verbose = false);
+  //!---- Adding and Removing Entries ---- !//
+  
+  //! Helper function to find next unused id
+  uint32_t new_unique_id();
+  
+  //! Add an item to this genome diff.
+  diff_entry_ptr_t add(const cDiffEntry& item, bool lowest_unique=false);
+  
+  //! Remove mutations, evidence, or validation.
+  void remove(cGenomeDiff::group group);
+  
+  //!---- Accessing Entries ---- !//
   
   //! Retrieve cDiffEntrys that match given type(s) 
   const diff_entry_list_t list() const { return _entry_list; }
@@ -434,188 +507,182 @@ public:
   
   //! Returns _entry_list with matching item._evidence
   diff_entry_list_t mutation_evidence_list(const cDiffEntry& item);
-
+  
   diff_entry_list_t mutation_list();
   diff_entry_list_t evidence_list();
   diff_entry_list_t validation_list();
-
-  diff_entry_ptr_t parent(const cDiffEntry& evidence);
-
-  void normalize_to_sequence(cReferenceSequences &ref_seq);
-  void mutations_to_evidence(cReferenceSequences &ref_seq, bool remove_mutations = true);
-    
-  //Additional functions that need? adding from GenomeDiff.gm
-  void add_reject_reasons(cDiffEntry item, const string& reason);
-  size_t number_reject_reasons(cDiffEntry item);
   
+  //! Removes all GD entries that aren't used as evidence.
+  void filter_not_used_as_evidence(bool verbose=false);
+  
+  //! Remove items used as evidence by any mutations out of input list
+  diff_entry_list_t filter_used_as_evidence(const diff_entry_list_t& list);
+  
+  //! Helper function for returning subsets below
   bool mutation_in_entry_of_type(cDiffEntry mut, const gd_entry_type type);
   bool mutation_unknown(cDiffEntry mut) { return mutation_in_entry_of_type(mut, UN); }
   bool mutation_deleted(cDiffEntry mut) { return mutation_in_entry_of_type(mut, DEL); }
+  
+  //!---- Set Operations ---- !//
+  
+  //! Subtract mutations using gd_ref as reference.
+  void set_subtract(cGenomeDiff& gd_ref, bool verbose=false);
 
-  void apply_to_sequences(cReferenceSequences &ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose=false);
+  void set_intersect(cGenomeDiff& gd_ref, bool verbose=false);
+  
+  void set_union(cGenomeDiff& gd_ref, bool verbose=false);
+  
+  //! Helper function for union
+  void unique();
+  
+  //! Merge GenomeDiff information using gd_new as potential new info.
+  void merge(cGenomeDiff& gd_new, bool unique=true, bool new_id=false, bool verbose=false);
+  
+  //! fast merge, doesn't compare entries, but does renumber
+  void fast_merge(const cGenomeDiff& gd);
+  
+  //! Helper function for fixing IDs after a set operation
+  void reassign_unique_ids();
+  
+  //!---- Sorting Items in Genome Diff ---- !//
+  
+  //! Genome Diff Sorting
+  //! For sorting by a number, then by fields to break ties
+  struct sort_fields_item {
+    
+    //! Constructor.
+    sort_fields_item() {_f1=0; _f2=""; _f3=""; };
+    
+    sort_fields_item(uint8_t f1, string f2, string f3) :
+    _f1(f1), _f2(f2), _f3(f3) {};
+    
+    //! Destructor.
+    virtual ~sort_fields_item() {};
+    
+    uint8_t _f1;
+    string _f2;
+    string _f3;
+  };
+  
+  static bool diff_entry_ptr_sort(const diff_entry_ptr_t& a, const diff_entry_ptr_t& b);
+  void sort() { _entry_list.sort(diff_entry_ptr_sort); }
+  
+  
+  //!---- Simulating and Applying Mutations ---- !//
+  
+  //! Call to generate random mutations.
+  void random_mutations(string exclusion_file,
+                        string type,
+                        uint32_t n_muts,
+                        uint32_t buffer,
+                        cAnnotatedSequence& ref,
+                        bool verbose = false);
+
+  void mutations_to_evidence(cReferenceSequences &ref_seq, bool remove_mutations = true);
+  
+  // Helper function for apply_to_sequences
   void shift_positions(cDiffEntry& item, cReferenceSequences& ref_seq_info, bool verbose=false);
 
-  void strcopy(char* arg1, const char* arg2);
-
-  void add_breseq_data(const key_t& key, const string& value);
-
-  string file_name() const {return _default_filename;}
-
-  //! Metadata kept in .gd files
-  struct Metadata
-  {
-    Metadata() : version("1.0") {}
-
-    string run_name;
-    string version; 
-    string author;
-    vector<string> ref_seqs;
-    vector<string> read_seqs;
-    map<string,string> breseq_data; // Use this to write values from pipeline to gd
-  } metadata;
-
-
-protected:  	
-  string _default_filename; //!< Default filename for this diff.
-  diff_entry_list_t _entry_list; //!< All diff entries.
-  uint32_t _unique_id_counter; //!< Smallest available id.
-  map<uint32_t,bool> unique_id_used;
-};
-
-//! Functor. Wraps cDiffEntry.entry_exists() for use in STL algorithms.
-//Returns true if a cDiffEntry contains the given field_key.
-struct cDiffEntry::field_exists : public unary_function <diff_entry_ptr_t, bool>
-{
-  //! Constructor
-  explicit field_exists (const diff_entry_key_t& field_key)
-    : m_field_key(field_key) {}
+  // For constructing the sequence a MOB replaces things with
+  string mob_replace_sequence(cReferenceSequences& ref_seq_info, cDiffEntry& mut);
   
-  //! Predicate
-  virtual bool operator() (const diff_entry_ptr_t& p_diff_entry)
-    const {return (p_diff_entry->entry_exists(m_field_key));}
-
-  protected:
-    diff_entry_key_t m_field_key;
-};
-
-//! Functor. Wraps cDiffEntry.entry_exists() for use in STL algorithms.
-//Returns true if a cDiffEntry contains all of the given field_keys.
-//ie:  cDiffEntry[field_key_1] && cDiffEntry[field_key_2]
-struct cDiffEntry::fields_exist : public unary_function <diff_entry_ptr_t, bool>
-{
-  //! Constructor
-  explicit fields_exist (const vector<diff_entry_key_t>& field_keys)
-    : m_field_keys(field_keys) {}
+  //! Call to apply Genome Diff to sequences
+  void apply_to_sequences(cReferenceSequences &ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose=false);
   
-  //! Predicate
-  virtual bool operator() (const diff_entry_ptr_t& p_diff_entry) const
-  {
-    for (vector<diff_entry_key_t>::const_iterator itr = m_field_keys.begin();
-         itr != m_field_keys.end(); itr++) {
-      diff_entry_key_t field_key(*itr);
-      if (p_diff_entry->entry_exists(field_key)) {
-        continue;
-      }
-      else { 
-        return false;
-      }
-    }
-    
-    // cDiffEntry contains all field_keys
-    return true;
-  }
-  protected:
-    vector<diff_entry_key_t> m_field_keys;
-};
-
-//! Functor. Sorts cDiffEntrys in decending order depending on given fields that
-//can be evaluated as an unsigned integer.
-struct cDiffEntry::by_scores : public binary_function
-  <diff_entry_ptr_t, diff_entry_ptr_t, bool>
-{
-
-  //! Constructor
-  explicit by_scores (const vector<diff_entry_key_t>& field_keys)
-    : m_field_keys(field_keys) {}
+  //! Shift mutations to preferred descriptions
+  void normalize_to_sequence(cReferenceSequences &ref_seq);
+   
+  //!---- Comparing known lists of mutations/evidence to test files ---- !//
   
-  //! Predicate
-  virtual bool operator() (const diff_entry_ptr_t& a, const diff_entry_ptr_t& b) const
-  {
-    for (vector<diff_entry_key_t>::const_iterator itr = m_field_keys.begin(); itr != m_field_keys.end(); itr++) {
-      string key(*itr);
+  static cGenomeDiff validate(cGenomeDiff& ctrl, cGenomeDiff& test, bool verbose = false);
+  static cGenomeDiff validate_evidence(cReferenceSequences& sequence,
+                                       uint32_t buffer,
+                                       uint32_t shorten_length,
+                                       cGenomeDiff& ctrl,
+                                       cGenomeDiff& test,
+                                       bool verbose = false);
+  static void write_jc_score_table(cGenomeDiff& compare, string table_file_path, bool verbose = false); 
 
-      if (from_string<double>((*a)[key]) == from_string<double>((*b)[key]))
-        continue;
-      else 
-        return from_string<double>((*a)[key]) > from_string<double>((*b)[key]);
-    }
-    return false;
+  //!---- Format Conversion Functions: Member ---- !//
+
+  // ! VCF files
+  void read_vcf(const string& filename);
+  void write_vcf(const string& filename, cReferenceSequences& ref_seq_info);
+
+
+  //! GVF files
+  void write_gvf(const string& filename);
+  
+  //!---- Format Conversion Functions: Static Convenience ---- !//
+
+  //! Convert genome diff to GVF
+  static void GD2GVF( const string& gdfile, const string& gvffile )
+    { cGenomeDiff gd(gdfile); gd.write_gvf(gvffile); }
+  
+  //! Convert VCF to genome diff
+  static void GD2VCF( const string &gdfile, const string & vcffile, cReferenceSequences& ref_seq_info)
+    { cGenomeDiff gd(gdfile); gd.write_vcf(vcffile, ref_seq_info); }
+
+  static void VCF2GD( const string& vcffile, const string& gdfile )
+  { cGenomeDiff gd; gd.read_vcf(vcffile); gd.write(gdfile); }
+  
+  //! Convert GD to Circos files
+  static void GD2Circos(const vector<string> &gd_file_names,
+                 const vector<string> &reference_file_names,
+                 const string &circos_directory,
+                 double distance_scale,
+                 double feature_scale);
+  
+  //! Convert MIRA feature analysis file to GD @JEB deprecated 08-16-2013
+  //static void MIRA2GD(const string &mira_file_name, const string &gd_file_name);
+
+};
+  
+  
+/* Helper class for cGenomeDiff::random_mutations, handles sorting of start_1,
+ * end_1 positions and merges the positions if they overlap.
+ */
+class cFlaggedRegions  {
+public:
+  typedef pair<uint32_t, uint32_t>  region_t;
+  typedef set<region_t>             regions_t;
+  
+  cFlaggedRegions()
+  :m_regions() {
+    return;
   }
   
-  protected:
-    vector<diff_entry_key_t> m_field_keys;
-};
-
-
-struct cDiffEntry::is_type: unary_function <diff_entry_ptr_t, bool>
-{
-  //! Constructor
-  explicit is_type(const gd_entry_type type)
-    : m_type(type) {}
-
-  //! Predicate 
-  virtual bool operator() (const diff_entry_ptr_t& cDiffEntry)
-    const {return (*cDiffEntry)._type == m_type;}
-
-
-  protected:
-    gd_entry_type m_type;
-};
+  //! I/O.
+  cFlaggedRegions& read_mummer(string file_path, cAnnotatedSequence& ref_seq);
+  cFlaggedRegions& read_nucmer_tab_coords(string file_path);
+  void write(string file_path);
+  void print(void);
   
-struct cDiffEntry::is_not_type: unary_function <diff_entry_ptr_t, bool>
-{
-  //! Constructor
-  explicit is_not_type(const gd_entry_type type)
-  : m_type(type) {}
   
-  //! Predicate 
-  virtual bool operator() (const diff_entry_ptr_t& cDiffEntry)
-  const {return (*cDiffEntry)._type != m_type;}
+  //! Add region to be marked.
+  cFlaggedRegions& flag_region(uint32_t start_1, uint32_t end_1 = 0);
   
+  //! Remove overlapping regions, adds segments if partial overlapping occurs.
+  //cFlaggedRegions& unflag_region(uint32_t start_1, uint32_t end_1 = 0);
+  
+  //! Tests if start_1 to end_1 spans over a marked region.
+  bool is_flagged(uint32_t start_1, uint32_t end_1 = 0);
+  
+  //! Test if two regions overlap each other.
+  bool overlaps(region_t region_1, region_t region_2);
+  
+  //! Test if a position is within a region.
+  bool overlaps(uint32_t pos_1, region_t region);
+  
+  //! Return overlapping regions, defaults to all regions.
+  regions_t regions(uint32_t start_1 = 0, uint32_t end_1 = 0);
+  
+  //! Remove regions.
+  cFlaggedRegions& remove(regions_t regions);
   
 protected:
-  gd_entry_type m_type;
+  regions_t m_regions;
 };
-
-struct cDiffEntry::no_show:public unary_function<diff_entry_ptr_t, bool>
-{
-  virtual bool operator() (const diff_entry_ptr_t& cDiffEntry) const
-  {
-    return cDiffEntry->entry_exists("no_show");
-  }
-};
-
-
-struct cDiffEntry::rejected:public unary_function<diff_entry_ptr_t,bool>
-{
-  virtual bool operator() (diff_entry_ptr_t cDiffEntry)
-  {
-    return cDiffEntry->entry_exists(REJECT);
-  }
-
-};
-  
-struct cDiffEntry::rejected_and_not_user_defined:public unary_function<diff_entry_ptr_t,bool>
-{
-  virtual bool operator() (diff_entry_ptr_t cDiffEntry)
-  {
-    return cDiffEntry->entry_exists(REJECT) && !cDiffEntry->entry_exists("user_defined");
-  }
-  
-};
-  
-
-
 
 }
 #endif

@@ -690,6 +690,7 @@ namespace breseq
 		this->reference_faidx_file_name = this->data_path + "/reference.fasta.fai";
 		this->reference_gff3_file_name = this->data_path + "/reference.gff3";
 		this->unmatched_read_file_name = this->data_path + "/#.unmatched.fastq";
+    this->output_vcf_file_name = this->data_path + "/output.vcf";
 
     //! Paths: Experimental
     this->long_pairs_file_name = this->output_path + "/long_pairs.tab";

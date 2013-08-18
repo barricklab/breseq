@@ -429,11 +429,11 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       // Evaluate rejection criteria
       if (polymorphism_predicted) {
         if (ppred.log10_e_value < _polymorphism_cutoff ) {
-          add_reject_reason(mut, "EVALUE");
+          mut.add_reject_reason("EVALUE");
         } 
         
         if ( (ppred.frequency < _polymorphism_frequency_cutoff) || (ppred.frequency > 1 -_polymorphism_frequency_cutoff) ) {
-          add_reject_reason(mut, "POLYMORPHISM_FREQUENCY_CUTOFF");
+          mut.add_reject_reason("POLYMORPHISM_FREQUENCY_CUTOFF");
         }
         
         // move from mixed polymorphism to real mutation prediction if in mixed mode!!
@@ -492,7 +492,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       mut[QUALITY] = mut[GENOTYPE_QUALITY];
       
 			if(e_value_call < _mutation_cutoff) {
-        add_reject_reason(mut, "EVALUE");
+        mut.add_reject_reason("EVALUE");
 			}
     }
     //## Specific initializations for polymorphisms
