@@ -3253,7 +3253,10 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
         
         string duplicate_sequence;
         int32_t iDupLen = from_string<int32_t>(mut["duplication_size"]);
-        ASSERT((iDupLen >= 0), "There should never be a negative target site duplication size!");
+        if (iDupLen < 0) {
+          cerr << "Warning: MOB with negative target site insertion not handled. Ignoring:" << endl << mut << endl;
+          break;
+        }
         duplicate_sequence = ref_seq_info.get_sequence_1(mut[SEQ_ID], pos, pos + iDupLen - 1);
         
         // Add on the duplicated sequence.  This happens AFTER
