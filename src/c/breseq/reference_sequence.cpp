@@ -1150,10 +1150,13 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
   string line;
   while (!in.eof()) {
     getline(in, line);
-
+    
     //cout << line << endl;
     string first_word = GetWord(line);
-
+    
+    // Line was all whitespace. Code below requires skipping now.
+    if (first_word.size() == 0) continue;
+    
     //std::cout << first_word << "::" << line << std::endl;
 
     // Done with this section...
