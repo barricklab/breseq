@@ -368,6 +368,65 @@ int do_weights(int argc, char* argv[])
   return 0;
 }
 
+int do_validate_plot(int argc, char *argv[])
+{
+    AnyOption options("gdtools VALIDATE-PLOT [-o output] test1.gd [test2.gd ...]");
+    options("output,o",     "Prefix for output files prefix_ ", "output");
+    options("verbose,v",    "verbose mode", TAKES_NO_ARGUMENT);
+    options.processCommandArgs(argc, argv);
+    
+    options.addUsage("");
+    options.addUsage("Creates sensitivity and precision plots for Genome Diff files output by VALIDATE, ");
+    options.addUsage("which contain TP|FP|FN information and a score value for mutations or evidence.");
+
+    if (options.getArgc() < 1) {
+        options.addUsage("");
+        options.addUsage("At least one input Genome Diff files must be provided.");
+        options.printUsage();
+        return -1;
+    }
+    
+    UserOutput uout("VALIDATE-PLOT");
+    
+    string gd_file_name = options.getArgv(0);
+    uout("Loading Genome Diff file:" + gd_file_name);
+    cGenomeDiff merged_gd(gd_file_name);
+    merged_gd.metadata.breseq_data.erase("TP|FN|FP");
+    
+    // Load and quick merge genome diff files (not removing duplicates)
+    for (int32_t i=1; i<options.getArgc(); i++) {
+        string gd_file_name = options.getArgv(i);
+        uout("Loading Genome Diff file:" + gd_file_name);
+        cGenomeDiff gd(gd_file_name);
+        
+        // Merge in a way that preserves duplicates
+        merged_gd.fast_merge(gd);
+    }
+    
+    
+    string prefix = options["output"];
+
+    // Write out the merged file
+    string merged_gd_path = prefix + ".gd";
+    uout << "Creating merged Genome Diff: " + merged_gd_path << endl;
+    merged_gd.write(merged_gd_path);
+    
+    string table_path = prefix + ".table.txt";
+    uout << "Creating table: " + table_path << endl;
+    cGenomeDiff::write_jc_score_table(merged_gd, table_path, options.count("verbose"));
+    string cv_exe = merged_gd.metadata.author == "tophat" ? "tophat" : "breseq";
+    uint32_t cutoff = cv_exe == "tophat" ? 0 : 3;
+    
+    string plot_jc_score_script_name = "/plot_jc_scores.r";
+    string plot_jc_score_script_path = DATADIR + plot_jc_score_script_name;
+    
+    uout << "Creating plots: " + prefix + ".precision.png and " << prefix + ".sensitivity.png" << endl;
+    string cmd = plot_jc_score_script_path + " " + table_path + " " + prefix + " " + s(cutoff) + " " + cv_exe;
+    SYSTEM(cmd, true, false, true);
+    
+    return 0;
+}
+
 int do_validate(int argc, char *argv[])
 {
   AnyOption options("gdtools VALIDATE [-o output.gd] control.gd test.gd");
@@ -421,19 +480,6 @@ int do_validate(int argc, char *argv[])
 
     cReferenceSequences ref;
     ref.LoadFiles(from_string<vector<string> >(options["reference"]));
-       
-    /* @JEB: Removed for maintainability. This should not be necessary. Instead, add these when generating mutations.
-    cGenomeDiff* gds[2] = {&ctrl, &test};
-    for (uint32_t i = 0; i < 2; ++i) {
-      diff_entry_list_t muts = gds[i]->mutation_list();
-      diff_entry_list_t evid = gds[i]->evidence_list();
-
-      if (muts.size() && evid.empty()) {
-        uout("Converting mutations to evidence for file: " + gds[i]->file_name());
-        gds[i]->mutations_to_evidence(ref);
-      }
-    }
-     */
 
     uout("Comparing evidence");
     comp = cGenomeDiff::validate_evidence(ref, un(options["jc-buffer"]), un(options["jc-shorten"]), ctrl, test, options.count("verbose"));
@@ -2062,7 +2108,9 @@ int main(int argc, char* argv[]) {
   } else if (command == "COMPARE") {
     return do_annotate(argc_new, argv_new);
   } else if (command == "VALIDATE") {
-      return do_validate(argc_new, argv_new);    
+      return do_validate(argc_new, argv_new);  
+  } else if (command == "VALIDATE-PLOT") {
+      return do_validate_plot(argc_new, argv_new);
   } else if (command == "NOT-EVIDENCE") {        //TODO merge with FILTER
     return do_not_evidence(argc_new, argv_new);
   } else if (command == "ANNOTATE") {

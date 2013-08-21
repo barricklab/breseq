@@ -36,9 +36,9 @@ y <- c(data$TP / (data$TP + data$FP))
 png(precision_path, height = 600, width = 800, bg = "white")
 
 if (cv_exe == "tophat") {
-	plot(x, y, col = "blue", ann = F, xlim = rev(range(x)))
+	plot(x, y, col = "blue", ann = F, xlim = rev(range(x)), ylim = c(0,1))
 } else {
-	plot(x, y, col = "blue", ann = F)
+	plot(x, y, col = "blue", ann = F, ylim = c(0,1))
 }
 lines(x, y)
 title(main = "JC Precision versus Score")
@@ -57,9 +57,9 @@ y <- c(data$TP / (data$TP + data$FN))
 png(sensitivity_path, height = 600, width = 800, bg = "white")
 
 if (cv_exe == "tophat") {
-	plot(x, y, col = "blue", ann = F, xlim = rev(range(x)))
+	plot(x, y, col = "blue", ann = F, xlim = rev(range(x)), ylim = c(0,1))
 } else {
-	plot(x, y, col = "blue", ann = F)
+	plot(x, y, col = "blue", ann = F, ylim = c(0,1))
 }
 lines(x, y)
 title(main = "JC Sensitivity versus Score")
@@ -70,7 +70,7 @@ if (cutoff != 0) {
 	abline(v = cutoff, col = "red", lty = 22)
 }
 
-
-
-
-
+x = data$FP / (data$TP + data$FP)
+x = c(0, x, 1)
+y = data$TP / (data$TP + data$FN)
+y = c(0, y, 1)

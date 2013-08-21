@@ -2970,7 +2970,7 @@ void cGenomeDiff::mutations_to_evidence(cReferenceSequences &ref_seq, bool remov
   
 
 void cGenomeDiff::write_jc_score_table(cGenomeDiff& compare, string table_file_path, bool verbose) {
-  assert(compare.metadata.breseq_data.count("TP|FN|FP"));
+  //assert(compare.metadata.breseq_data.count("TP|FN|FP"));
 
   typedef map<float, map<string, uint32_t> > table_t;
   table_t table;
