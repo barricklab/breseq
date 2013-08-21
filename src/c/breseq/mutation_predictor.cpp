@@ -1029,7 +1029,7 @@ namespace breseq {
              {
                mut._evidence.push_back(mc_item._id);
                mc.erase(mc_it);
-               break; // If you don't break here, youy may be past the end of the array
+               break; // If you don't break here, you may be past the end of the array
              }
           }
           
