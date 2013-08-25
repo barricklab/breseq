@@ -51,7 +51,16 @@ X<-X[apply(X,1,function(x)!all(is.na(x[2:length(x)]))),]
 
 ## calculate min probability after removing quality column
 Y<-X[-1]
+
+## Possible everything is NA, causing next to crash
+if ( (dim(Y)[1]==0) || (dim(Y)[2]==0) ) {
+  q()
+}
+
+
 log10_min_error_rate = floor(log10(min(Y,na.rm=T)));
+
+
 min_error_rate = 10**log10_min_error_rate;
 
 

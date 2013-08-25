@@ -70,7 +70,3 @@ if (cutoff != 0) {
 	abline(v = cutoff, col = "red", lty = 22)
 }
 
-x = data$FP / (data$TP + data$FP)
-x = c(0, x, 1)
-y = data$TP / (data$TP + data$FN)
-y = c(0, y, 1)
