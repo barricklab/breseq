@@ -943,11 +943,13 @@ namespace breseq {
   bool CandidateJunctions::merge_candidate_junctions(JunctionCandidatePtr*& jcp1, JunctionCandidatePtr*& jcp2)
   {
     bool verbose = false;
+    
+    
     uint32_t merged_strand = 0; // 0 for not merged, 1 for sequence, 2 for reverse complement of sequence
     
     JunctionCandidate& jc1 = **jcp1;
     JunctionCandidate& jc2 = **jcp2;
-    
+
     // Determine whether one is a subsequence of the other (including on the opposite strand)
     if (jc1.sequence.size() > jc2.sequence.size())
     {
@@ -1460,6 +1462,9 @@ namespace breseq {
     (void)summary;
 		bool verbose = false;
 
+    //if (alignments.front()->read_name() == "1:186766")
+    //  verbose = true;
+    
 		if (verbose)
 		{
 			cout << endl << "###########################" << endl;

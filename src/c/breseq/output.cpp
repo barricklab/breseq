@@ -684,9 +684,6 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     HTML << tr(td("Polymorphism minimum coverage each strand") 
                + td((settings.polymorphism_minimum_new_coverage_each_strand == 0) ? "OFF" : to_string<int32_t>(settings.polymorphism_minimum_new_coverage_each_strand))
                );
-    HTML << tr(td("Polymorphism homopolymer length cutoff") 
-               + td((settings.polymorphism_reject_homopolymer_length == 0) ? "OFF" : to_string<int32_t>(settings.polymorphism_reject_homopolymer_length))
-               );
     HTML << tr(td("Polymorphism bias cutoff") 
                + td((settings.polymorphism_bias_p_value_cutoff == 0) ? "OFF" : to_string<double>(settings.polymorphism_bias_p_value_cutoff))
                );
@@ -694,10 +691,9 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     HTML << tr(td("Predict indel polymorphisms") 
                + td((settings.no_indel_polymorphisms) ? "NO" : "YES")
                );
-    
     // Rejects if >= this length
     HTML << tr(td("Skip indel polymorphisms in homopolymers runs") 
-               + td((settings.polymorphism_reject_homopolymer_length == 0) ? "ALL" : " &ge;" + s(settings.polymorphism_reject_homopolymer_length) + " bases")
+               + td((settings.polymorphism_reject_homopolymer_length == 0) ? "OFF" : " &ge;" + s(settings.polymorphism_reject_homopolymer_length) + " bases")
                );
 
     HTML << end_table();    

@@ -3257,7 +3257,9 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
           cerr << "Warning: MOB with negative target site insertion not handled. Ignoring:" << endl << mut << endl;
           break;
         }
-        duplicate_sequence = ref_seq_info.get_sequence_1(mut[SEQ_ID], pos, pos + iDupLen - 1);
+        if (iDupLen > 0) {
+          duplicate_sequence = ref_seq_info.get_sequence_1(mut[SEQ_ID], pos, pos + iDupLen - 1);
+        }
         
         // Add on the duplicated sequence.  This happens AFTER
         // we have inserted any insertions.
