@@ -433,6 +433,10 @@ int do_validate(int argc, char *argv[])
     (void) argc;
     (void) argv;
     
+    
+    //should globally check nesting as part of validate
+    //nested_within = find_by_id(item["nested"]);
+    
     return 0;
 }
 
