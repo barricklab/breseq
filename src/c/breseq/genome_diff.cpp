@@ -810,7 +810,7 @@ diff_entry_ptr_t cGenomeDiff::parent(const cDiffEntry& evidence)
 void cGenomeDiff::read(const string& filename) {
   ifstream in(filename.c_str());
   ASSERT(in.good(), "Could not open file for reading: " + filename);
-  uint32_t line_number = 0;
+  uint32_t line_number = 1;
   cFileParseErrors parse_errors(filename);
   
   //! Step: Handle header parameters.
@@ -825,7 +825,6 @@ void cGenomeDiff::read(const string& filename) {
   metadata.version = "";
   while(in.peek() == '#') {
     in.get();
-    line_number++;
     if (in.peek() != '=') {
       in.unget();
       break;
@@ -837,6 +836,7 @@ void cGenomeDiff::read(const string& filename) {
     string second_half = "";
     
     getline(in, whole_line);
+    line_number++;
     
     vector<string> split_line = split_on_whitespace(whole_line);
     
@@ -895,6 +895,7 @@ void cGenomeDiff::read(const string& filename) {
   while (in.good()) {
     string line = "";
     std::getline(in, line);
+    line_number++;
     //Warn if commented out or a possibly blank line is encountered.
     if (line.empty()) {
       continue;
@@ -1176,6 +1177,21 @@ void cGenomeDiff::remove(cGenomeDiff::group group)
   
   return;
 }
+
+/*! Given an id return the entry if it exists. NULL otherwise.
+ */ 
+
+diff_entry_ptr_t cGenomeDiff::find_by_id(string _id)
+{
+  for (diff_entry_list_t::iterator itr_diff_entry = _entry_list.begin();
+       itr_diff_entry != _entry_list.end(); itr_diff_entry++)
+  {
+    if ( (*itr_diff_entry)->_id == _id)
+      return *itr_diff_entry;
+  }
+  return NULL;
+}
+
 
   
   
@@ -2223,16 +2239,30 @@ void cGenomeDiff::shift_positions(cDiffEntry &item, cReferenceSequences& ref_seq
   
   // This could get tricky for mutations that overlap boundaries of other mutations
   // we should check for this and throw an error if it occurs.
-  
-  if (item.entry_exists("in_mutation")) {
+-d-d-f
+  /* Should be within loop and only kick in if the nested matches the current item
+   
+  // Don't shift if we say the mutation is within
+  diff_entry_ptr_t nested_within(NULL);
+  if (item.entry_exists("nested")) {
     
-    ERROR("'in_mut' key not implemented");
+    nested_within = find_by_id(item["nested"]);
     
-  } else if (item.entry_exists("in_copy")) {
-    
-    ERROR("Expected 'in_mut' key since 'in_copy' key exists for item" + item.to_string());
+    ASSERT(nested_within, "Could not find \"nested\" id labeled " + item["nested"]);
+    ASSERT(nested_within, "Attempt to use \"nested\" to put mutation in non AMP mutation.\n" + nested_within->to_string() + "references from\n" + item.to_string());
+    // Should check to be sure this is an amplification
   }
   
+  int32_t nested_copy = 0;
+  if (item.entry_exists("copy")) {
+    ASSERT(nested_within, "Field \"copy\" found for entry without \"nested\".\n" + to_string(item) );
+    nested_copy = from_string<int32_t>(item["copy"]);
+    
+    int32_t new_copy_number = from_string<int32_t>((*nested_within)["new_copy_number"]);
+    ASSERT((nested_copy > 0) && (nested_copy <= new_copy_number), "Copy number of mutation nested within is not in a valid range for the number of copies that exist. Requested copy: " + to_string(nested_copy) + " Total copies: " + to_string(new_copy_number));
+  }
+  */
+    
   
   diff_entry_list_t muts = this->mutation_list();
   for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr++) {

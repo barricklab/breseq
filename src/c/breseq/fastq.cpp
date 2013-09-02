@@ -56,45 +56,9 @@ namespace breseq {
     uint64_t homopolymer_filtered_reads = 0;
     uint64_t N_filtered_reads = 0;
     
-    // Process the input file, one sequence at a time
-    cFastqFile input_fastq_file(file_name.c_str(), fstream::in);
-    input_fastq_file.m_check_for_repeated_read_names = true;
-    assert(input_fastq_file.is_open());
-
-    cFastqSequence on_sequence;
-    cFastqQualityConverter prelim_fqc("ILLUMINA_1.3+", "SANGER");
-
-    while (input_fastq_file.read_sequence(on_sequence, prelim_fqc)) {
-      
-      //increment read number
-      original_num_reads++;
-      
-      //check sequence length
-      if( on_sequence.m_sequence.size() > max_read_length ) max_read_length = on_sequence.m_sequence.size();
-
-      //add current sequence length to number of bases
-      original_num_bases += on_sequence.m_sequence.size();
-            
-      //iterate through sequence grabbing the associated scores
-      for (uint32_t i=0; i<on_sequence.m_qualities.size(); i++) {
-        int this_score(uint8_t(on_sequence.m_qualities[i]));
-        if( this_score > max_quality_score ) max_quality_score = this_score;
-        if( this_score < min_quality_score ) min_quality_score = this_score;
-      }
-    }
-    input_fastq_file.close();
+    // Predict the format (and count original stats)
+    string quality_format = cFastqQualityConverter::predict_fastq_file_format(file_name, original_num_reads, original_num_bases, max_read_length, min_quality_score, max_quality_score);
     
-    // Default is SANGER
-    string quality_format = "SANGER";
-    
-    // Typical range: (-5, 40) + 64
-    if (min_quality_score >= format_to_chr_offset["SOLEXA"] - 5) {
-      quality_format = "SOLEXA";
-    } 
-    // Typical range:  (0, 40) + 64
-    if (min_quality_score >= format_to_chr_offset["ILLUMINA_1.3+"]) {
-      quality_format = "ILLUMINA_1.3+";
-    }
     
     //debug
     //cerr << "min_quality_score "     << (int)min_quality_score  << endl;
@@ -108,9 +72,10 @@ namespace breseq {
     cerr << "    Original reads: " << original_num_reads << " bases: "<< original_num_bases << endl;
 
     cFastqQualityConverter fqc(quality_format, "SANGER");
+    cFastqSequence on_sequence;
     
     // re-open input for another pass
-    input_fastq_file.open(file_name.c_str(), fstream::in);
+    cFastqFile input_fastq_file(file_name.c_str(), fstream::in);
     
     //open output converted file
     cFastqFile output_fastq_file(convert_file_name.c_str(), fstream::out);
@@ -255,6 +220,12 @@ namespace breseq {
       }
     }
   }
+  
+  bool cFastqSequence::identical(cFastqSequence& seq)
+  {
+    return ( (this->m_sequence == seq.m_sequence) && (this->m_qualities == seq.m_qualities) );
+  }
+
 
   // constructor
   cFastqQualityConverter::cFastqQualityConverter(const string &_from_quality_format, const string &_to_quality_format)
@@ -341,6 +312,57 @@ namespace breseq {
     }
   }
   
+  string cFastqQualityConverter::predict_fastq_file_format(const string& file_name, uint64_t& original_num_reads, uint64_t& original_num_bases, uint32_t& max_read_length, uint8_t& min_quality_score, uint8_t& max_quality_score) 
+  {
+    
+  // Set up maps between formats
+  map<string,uint8_t> format_to_chr_offset;
+  format_to_chr_offset["SANGER"] = 33;
+  format_to_chr_offset["SOLEXA"] = 64;
+  format_to_chr_offset["ILLUMINA_1.3+"] = 64;
+    
+  cFastqFile input_fastq_file(file_name.c_str(), fstream::in);
+  input_fastq_file.m_check_for_repeated_read_names = true;
+  assert(input_fastq_file.is_open());
+  
+  cFastqSequence on_sequence;
+  cFastqQualityConverter prelim_fqc("ILLUMINA_1.3+", "SANGER");
+  
+  while (input_fastq_file.read_sequence(on_sequence, prelim_fqc)) {
+    
+    //increment read number
+    original_num_reads++;
+    
+    //check sequence length
+    if( on_sequence.m_sequence.size() > max_read_length ) max_read_length = on_sequence.m_sequence.size();
+      
+      //add current sequence length to number of bases
+      original_num_bases += on_sequence.m_sequence.size();
+      
+      //iterate through sequence grabbing the associated scores
+    for (uint32_t i=0; i<on_sequence.m_qualities.size(); i++) {
+      int this_score(uint8_t(on_sequence.m_qualities[i]));
+      if( this_score > max_quality_score ) max_quality_score = this_score;
+        if( this_score < min_quality_score ) min_quality_score = this_score;
+    }
+  }
+  input_fastq_file.close();
+  
+  // Default is SANGER
+  string quality_format = "SANGER";
+  
+  // Typical range: (-5, 40) + 64
+  if (min_quality_score >= format_to_chr_offset["SOLEXA"] - 5) {
+    quality_format = "SOLEXA";
+  } 
+  // Typical range:  (0, 40) + 64
+  if (min_quality_score >= format_to_chr_offset["ILLUMINA_1.3+"]) {
+    quality_format = "ILLUMINA_1.3+";
+  }
+    
+    return quality_format;
+  }
+  
   //constructor
   cFastqFile::cFastqFile() :
     fstream(), m_current_line(0), m_file_name(""), m_needs_conversion(false),
@@ -360,7 +382,9 @@ namespace breseq {
   bool cFastqFile::read_sequence(cFastqSequence &sequence, cFastqQualityConverter& fqc) {
     
     // We're done, no error
-    if (this->eof()) return false;
+    if (this->eof())
+     return false; 
+
     
     uint32_t count = 0;
     string line;

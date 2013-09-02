@@ -131,7 +131,7 @@ namespace breseq
     ("targeted-sequencing,t", "Reference sequences were targeted for ultra-deep sequencing (using pull-downs or amplicons). Do not fit coverage distribution.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
     
-    options.addUsage("Junction Options", true);
+    options.addUsage("Read Alignment and Mutation Calling Options", true);
     options
     ("base-quality-cutoff,b", "Ignore bases with quality scores lower than this value", 3, ADVANCED_OPTION)
     ("quality-score-trim", "Trim the ends of reads past any base with a quality score below --base-quality-score-cutoff.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)

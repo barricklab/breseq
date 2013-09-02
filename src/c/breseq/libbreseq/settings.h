@@ -481,7 +481,7 @@ namespace breseq
     ////////////////////
     
     // Set up defaults here
-		Settings(const string& _base_output_path = "");
+		Settings(const string& _base_output_path = ".");
     
     // Constructor for default action
     Settings(int argc, char* argv[]);

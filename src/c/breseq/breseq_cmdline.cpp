@@ -970,6 +970,116 @@ int do_ref_aln()
   return 0;
 }
 
+int do_assemble_unmatched(int argc, char* argv[])
+{
+  AnyOption options("Usage: breseq ASSEMBLE-UNMATCHED-PAIRS [-o unmatched_assembly] reads1.fastq [reads2.fastq ...]");  
+  options.addUsage("Assembles the unmatched reads from a breseq run given paired-end or mate-paired data.");
+  options.addUsage("This command must be run from the main results directory of a breseq run (i.e., it must contain a data directory),");
+  options.addUsage("You must provide the original fastq read files used in the breseq run. It is assumed that each set of two read files, in order, contain the first and second reads from pairs.");
+  options.addUsage("Output is in directory: unmatched_assembly");
+  options("output,o","Directory for output assembly files", ".");
+  options("verbose,v","Verbose output", TAKES_NO_ARGUMENT);
+  options.processCommandArgs(argc, argv);
+  
+  // Need empty setting object for trimming files.
+  Summary summary;
+  Settings settings(options["output"]);
+  
+  // Read the corresponding unmatched file and extract each pair from the original fastq files
+  
+  create_path(options["output"] + "/assemble_unmatched");
+  string unmatched_paired_read_file_name_1 = options["output"] + "/assemble_unmatched/1.fastq";
+  string unmatched_paired_read_file_name_2 = options["output"] + "/assemble_unmatched/2.fastq";
+  
+  cFastqFile unmatched_paired_read_file_1(unmatched_paired_read_file_name_1, fstream::out);
+  cFastqFile unmatched_paired_read_file_2(unmatched_paired_read_file_name_2, fstream::out);
+  
+  cReadFiles read_files;
+  vector<string> read_file_names;
+  for (int32_t i = 0; i < options.getArgc(); i++)
+  {
+    string read_file_name = options.getArgv(i);
+    read_file_names.push_back(read_file_name);
+  }
+  read_files.Init(read_file_names, false);
+  
+  ASSERT(read_file_names.size() % 2 == 0, "Number of read files provided is not even.");
+  
+  vector<string> read_file_base_names = read_files.base_names();
+  for(vector<string>::iterator it=read_file_base_names.begin(); it!=read_file_base_names.end(); it++)
+  {
+    string read_file_base_name_1 = *it;
+    it++;
+    string read_file_base_name_2 = *it;
+
+    string read_file_name_1 = read_files.base_name_to_read_file_name(read_file_base_name_1);
+    string read_file_name_2 = read_files.base_name_to_read_file_name(read_file_base_name_2);
+    
+    string unmatched_read_file_name_1 = settings.file_name(settings.unmatched_read_file_name, "#", read_file_base_name_1);
+    string unmatched_read_file_name_2 = settings.file_name(settings.unmatched_read_file_name, "#", read_file_base_name_2);
+
+    
+    cFastqFile read_file_1(read_file_name_1, fstream::in);
+    cFastqFile read_file_2(read_file_name_2, fstream::in);
+
+    cFastqFile unmatched_read_file_1(unmatched_read_file_name_1, fstream::in);
+    cFastqFile unmatched_read_file_2(unmatched_read_file_name_2, fstream::in);
+    
+    cFastqSequence on_seq_1, on_seq_2, um_on_seq_1, um_on_seq_2;
+    
+    // Figure out format (but just check one of the files to do this)
+    uint64_t original_num_reads;
+    uint64_t original_num_bases;
+    uint32_t max_read_length;
+    uint8_t min_quality_score;
+    uint8_t max_quality_score;
+    string quality_format = cFastqQualityConverter::predict_fastq_file_format(read_file_name_1, original_num_reads, original_num_bases, max_read_length, min_quality_score, max_quality_score);
+    
+    cFastqQualityConverter fqc(quality_format, "SANGER");
+    cFastqQualityConverter unmatched_fqc("SANGER", "SANGER");
+
+    bool rf_1_ok = read_file_1.read_sequence(on_seq_1, fqc);
+    bool rf_2_ok = read_file_2.read_sequence(on_seq_2, fqc);
+    bool um_rf_1_ok = unmatched_read_file_1.read_sequence(um_on_seq_1, unmatched_fqc);
+    bool um_rf_2_ok = unmatched_read_file_2.read_sequence(um_on_seq_2, unmatched_fqc);
+
+    while (um_rf_1_ok || um_rf_2_ok) {
+      
+      // if we found the sequence in the original read file
+      if (um_rf_1_ok && rf_1_ok && on_seq_1.identical(um_on_seq_1) ) {
+        
+        // write out both current normal seqs
+        unmatched_paired_read_file_1.write_sequence(on_seq_1);
+        unmatched_paired_read_file_2.write_sequence(on_seq_2);
+        
+        // advance 
+        um_rf_1_ok = unmatched_read_file_1.read_sequence(um_on_seq_1, unmatched_fqc);
+        if (um_rf_2_ok && rf_2_ok && on_seq_2.identical(um_on_seq_2))
+          um_rf_2_ok = unmatched_read_file_2.read_sequence(um_on_seq_2, unmatched_fqc);
+        rf_1_ok = read_file_1.read_sequence(on_seq_1, fqc);
+        rf_2_ok = read_file_2.read_sequence(on_seq_2, fqc);
+      }
+      else if (um_rf_2_ok && rf_2_ok && on_seq_2.identical(um_on_seq_2) ) {
+        // write out both current normal seqs
+        unmatched_paired_read_file_1.write_sequence(on_seq_1);
+        unmatched_paired_read_file_2.write_sequence(on_seq_2);
+        
+        // advance (we know 1 didn't match)
+        um_rf_2_ok = unmatched_read_file_2.read_sequence(um_on_seq_2, unmatched_fqc);
+        rf_1_ok = read_file_1.read_sequence(on_seq_1, fqc);
+        rf_2_ok = read_file_2.read_sequence(on_seq_2, fqc);
+      }
+      else {
+        // advance the matched reads
+        rf_1_ok = read_file_1.read_sequence(on_seq_1, fqc);
+        rf_2_ok = read_file_2.read_sequence(on_seq_2, fqc);
+      }
+    }
+  }
+  
+  return 0;
+}
+  
 int breseq_default_action(int argc, char* argv[])
 {  
   
@@ -2062,6 +2172,8 @@ int main(int argc, char* argv[]) {
     return do_tabulate_contingency_loci(argc_new, argv_new);
   } else if (command == "CL_SIGNIFICANCE") {
     return do_analyze_contingency_loci_significance( argc_new, argv_new);
+  } else if (command == "ASSEMBLE-UNMATCHED") {
+    return do_assemble_unmatched( argc_new, argv_new);
   }
   else {
     // Not a sub-command. Use original argument list.
