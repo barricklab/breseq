@@ -498,6 +498,8 @@ public:
   
   //!---- Accessing Entries ---- !//
   
+  diff_entry_ptr_t find_by_id(string _id);
+  
   //! Retrieve cDiffEntrys that match given type(s) 
   const diff_entry_list_t list() const { return _entry_list; }
   diff_entry_list_t list(const vector<gd_entry_type>& types = vector<gd_entry_type>());

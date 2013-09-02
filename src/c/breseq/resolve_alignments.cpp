@@ -674,8 +674,7 @@ void load_junction_alignments(
     
     cFastqFile in_fastq(fastq_file_name, ios::in);
     
-    string this_unmatched_file_name = settings.data_path + "/unmatched."
-    + rf.m_base_name + ".fastq";
+    string this_unmatched_file_name = settings.file_name(settings.unmatched_read_file_name, "#", rf.m_base_name);
     cFastqFile out_unmatched_fastq(this_unmatched_file_name, ios::out);
     assert(!out_unmatched_fastq.fail());
     

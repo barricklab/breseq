@@ -368,15 +368,15 @@ int do_weights(int argc, char* argv[])
   return 0;
 }
 
-int do_validate_plot(int argc, char *argv[])
+int do_check_plot(int argc, char *argv[])
 {
-    AnyOption options("gdtools VALIDATE-PLOT [-o output] test1.gd [test2.gd ...]");
+    AnyOption options("gdtools CHECK-PLOT [-o output] test1.gd [test2.gd ...]");
     options("output,o",     "Prefix for output files prefix_ ", "output");
     options("verbose,v",    "verbose mode", TAKES_NO_ARGUMENT);
     options.processCommandArgs(argc, argv);
     
     options.addUsage("");
-    options.addUsage("Creates sensitivity and precision plots for Genome Diff files output by VALIDATE, ");
+    options.addUsage("Creates sensitivity and precision plots for Genome Diff files output by CHECK, ");
     options.addUsage("which contain TP|FP|FN information and a score value for mutations or evidence.");
 
     if (options.getArgc() < 1) {
@@ -386,7 +386,7 @@ int do_validate_plot(int argc, char *argv[])
         return -1;
     }
     
-    UserOutput uout("VALIDATE-PLOT");
+    UserOutput uout("CHECK-PLOT");
     
     string gd_file_name = options.getArgv(0);
     uout("Loading Genome Diff file:" + gd_file_name);
@@ -427,9 +427,18 @@ int do_validate_plot(int argc, char *argv[])
     return 0;
 }
 
+// Check format of Genome Diff and report all format errors
 int do_validate(int argc, char *argv[])
 {
-  AnyOption options("gdtools VALIDATE [-o output.gd] control.gd test.gd");
+    (void) argc;
+    (void) argv;
+    
+    return 0;
+}
+
+int do_check(int argc, char *argv[])
+{
+  AnyOption options("gdtools CHECK [-o output.gd] control.gd test.gd");
   options("output,o",     "output GD file", "comp.gd");
   options("reference,r",  "reference sequence file");
   options("evidence",     "compare evidence", TAKES_NO_ARGUMENT);
@@ -465,7 +474,7 @@ int do_validate(int argc, char *argv[])
   }
 
 
-  UserOutput uout("COMPARE");
+  UserOutput uout("CHECK");
 
   uout("Reading input GD files");
   uout << "Control: " << options.getArgv(0) << endl;
@@ -2103,14 +2112,16 @@ int main(int argc, char* argv[]) {
 	command = to_upper(command);
 
   // Genome Diff Commands:
-  if (command == "APPLY") {
+  if (command == "VALIDATE") {
+    return do_validate(argc_new, argv_new);
+  } else if (command == "APPLY") {
     return do_apply(argc_new, argv_new);    
   } else if (command == "COMPARE") {
     return do_annotate(argc_new, argv_new);
-  } else if (command == "VALIDATE") {
-      return do_validate(argc_new, argv_new);  
-  } else if (command == "VALIDATE-PLOT") {
-      return do_validate_plot(argc_new, argv_new);
+  } else if (command == "CHECK") {
+      return do_check(argc_new, argv_new);  
+  } else if (command == "CHECK-PLOT") {
+      return do_check_plot(argc_new, argv_new);
   } else if (command == "NOT-EVIDENCE") {        //TODO merge with FILTER
     return do_not_evidence(argc_new, argv_new);
   } else if (command == "ANNOTATE") {
@@ -2119,6 +2130,7 @@ int main(int argc, char* argv[]) {
     return do_count(argc_new, argv_new);
   } else if (command == "NORMALIZE") {
     return do_normalize_gd(argc_new, argv_new);
+
   } else if (command == "FILTER") {
     return do_filter_gd(argc_new, argv_new);
 

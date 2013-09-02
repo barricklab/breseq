@@ -63,6 +63,8 @@ class cAnnotatedSequence;
     : m_numerical_qualities(false)
     {}
     
+    bool identical(cFastqSequence& seq);
+    
     size_t length() { return m_sequence.length(); }
    };
 
@@ -147,6 +149,9 @@ class cAnnotatedSequence;
     int32_t to_chr_offset;
     
     void convert_sequence(cFastqSequence &seq);
+    
+    static string predict_fastq_file_format(const string& file_name, uint64_t& original_num_reads, uint64_t& original_num_bases, uint32_t& max_read_length, uint8_t& min_quality_score, uint8_t& max_quality_score);
+
   };
    
 
