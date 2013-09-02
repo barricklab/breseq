@@ -1189,7 +1189,7 @@ diff_entry_ptr_t cGenomeDiff::find_by_id(string _id)
     if ( (*itr_diff_entry)->_id == _id)
       return *itr_diff_entry;
   }
-  return NULL;
+  return diff_entry_ptr_t(NULL);
 }
 
 
@@ -2220,61 +2220,65 @@ void cGenomeDiff::random_mutations(string exclusion_file,
   
 }
   
-void cGenomeDiff::shift_positions(cDiffEntry &item, cReferenceSequences& ref_seq_info, bool verbose)
+void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& ref_seq_info, bool verbose)
 {  
-  int32_t delta = item.mutation_size_change(ref_seq_info);
+  int32_t delta = current_mut.mutation_size_change(ref_seq_info);
   if (verbose)
     cout << "Shift size: " << delta << endl;
   if (delta == UNDEFINED_INT32)
     WARN("Size change not defined for mutation.");
   
-  uint32_t offset = from_string<uint32_t>(item[POSITION]);
+  uint32_t offset = from_string<uint32_t>(current_mut[POSITION]);
   
   // Only offset if past the duplicated part of a MOB (allows putting a mutation in the first copy)
-  if (item._type == MOB) {
-    offset += from_string<uint32_t>(item["duplication_size"]);
+  if (current_mut._type == MOB) {
+    offset += from_string<uint32_t>(current_mut["duplication_size"]);
   }
-  
-  // @JEB TODO: Need manual support for putting mutations within a newly inserted mutation (nesting)
-  
-  // This could get tricky for mutations that overlap boundaries of other mutations
-  // we should check for this and throw an error if it occurs.
--d-d-f
-  /* Should be within loop and only kick in if the nested matches the current item
-   
-  // Don't shift if we say the mutation is within
-  diff_entry_ptr_t nested_within(NULL);
-  if (item.entry_exists("nested")) {
-    
-    nested_within = find_by_id(item["nested"]);
-    
-    ASSERT(nested_within, "Could not find \"nested\" id labeled " + item["nested"]);
-    ASSERT(nested_within, "Attempt to use \"nested\" to put mutation in non AMP mutation.\n" + nested_within->to_string() + "references from\n" + item.to_string());
-    // Should check to be sure this is an amplification
-  }
-  
-  int32_t nested_copy = 0;
-  if (item.entry_exists("copy")) {
-    ASSERT(nested_within, "Field \"copy\" found for entry without \"nested\".\n" + to_string(item) );
-    nested_copy = from_string<int32_t>(item["copy"]);
-    
-    int32_t new_copy_number = from_string<int32_t>((*nested_within)["new_copy_number"]);
-    ASSERT((nested_copy > 0) && (nested_copy <= new_copy_number), "Copy number of mutation nested within is not in a valid range for the number of copies that exist. Requested copy: " + to_string(nested_copy) + " Total copies: " + to_string(new_copy_number));
-  }
-  */
-    
   
   diff_entry_list_t muts = this->mutation_list();
   for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr++) {
     cDiffEntry& mut = **itr;
     
-    if (mut._type == INV) {
-      ERROR("shift_positions cannot handle inversions yet!");
+    if (mut._type == INV)
+      ERROR("shift_positions() cannot handle inversions yet!");
+  
+
+    // Check to see whether this is listed as being nested within the current item
+    cDiffEntry* nested_within(NULL);
+    int32_t nested_copy = -1;
+    if (mut.entry_exists("nested_id")) {
+      
+      if (current_mut._id == mut["nested_id"]) {
+        
+        nested_within = &current_mut;
+        
+        ASSERT(current_mut._type == AMP, "Attempt to use \"nested\" to put mutation in non-AMP mutation.\n" + current_mut.to_string() + "\nreferenced from\n" + mut.to_string());
+        ASSERT(current_mut[SEQ_ID] == mut[SEQ_ID], "Nested mutation not in same reference sequence?");
+        
+        if (mut.entry_exists("nested_copy")) {
+          nested_copy = from_string<int32_t>(mut["nested_copy"]);
+          int32_t new_copy_number = from_string<int32_t>(current_mut["new_copy_number"]);
+          ASSERT((nested_copy > 0) && (nested_copy <= new_copy_number), "Copy number of mutation nested within is not in a valid range for the number of copies that exist. Requested copy: " + to_string(nested_copy) + " Total copies: " + to_string(new_copy_number));
+        } else {
+          ERROR("Expected \"nested_copy=\" additional field to be present in item with \"nexted_id\":\n" + mut.to_string())
+        }
+      }
+    }
+    
+    
+    // Special case, we are nested within current_mut
+    uint32_t position = from_string<uint32_t>(mut[POSITION]);
+    if (nested_within) {
+      
+      uint64_t special_delta = from_string<uint64_t>(current_mut[SIZE]) * (nested_copy-1);
+      mut[POSITION] = to_string(position + special_delta);
+      
+    // Normal behavior -- offset mutations later in same reference sequence
     } else {
-      uint32_t position = from_string<uint32_t>(mut[POSITION]);
-      if (item[SEQ_ID] == mut[SEQ_ID] && position > offset)
+      if (current_mut[SEQ_ID] == mut[SEQ_ID] && position > offset)
         mut[POSITION] = to_string(position + delta);
     }
+
     
   }
 }

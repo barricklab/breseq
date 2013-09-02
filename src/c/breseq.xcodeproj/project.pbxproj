@@ -298,8 +298,8 @@
 			children = (
 				7024BBDB155DEC31007CCA5B /* combined_circos.conf */,
 				7024BBDC155DEC31007CCA5B /* ideogram.conf */,
-				7024BBDD155DEC31007CCA5B /* indels.conf */,
 				7024BBDE155DEC31007CCA5B /* karyotype.and.layout.conf */,
+				7024BBDD155DEC31007CCA5B /* indels.conf */,
 				7024BBDF155DEC31007CCA5B /* mobs.conf */,
 				7024BBE0155DEC31007CCA5B /* mutations.conf */,
 				70616DCF1400A0C0006E7800 /* plot_coverage.r */,
