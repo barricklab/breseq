@@ -56,7 +56,7 @@ int do_bam2aln(int argc, char* argv[]) {
   ("bam,b", "bam file containing sequences to be aligned", "data/reference.bam")
 	("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
   ("output,o", "output to file [region.html]", "alignment.html")
-  ("format", "Output format: txt or html" "html")
+  ("format", "Output format: txt or html", "html")
   ("region,r", "region to print (accession:start-end), may also be provided as unnamed arguments at the end of the command line.")
   ("max-reads,n", "maximum number of reads to show in alignment", 200)
   ("repeat", "show reads with multiple best matches in reference", TAKES_NO_ARGUMENT)
@@ -975,9 +975,9 @@ int do_assemble_unmatched(int argc, char* argv[])
   AnyOption options("Usage: breseq ASSEMBLE-UNMATCHED-PAIRS [-o unmatched_assembly] reads1.fastq [reads2.fastq ...]");  
   options.addUsage("Assembles the unmatched reads from a breseq run given paired-end or mate-paired data.");
   options.addUsage("This command must be run from the main results directory of a breseq run (i.e., it must contain a data directory),");
-  options.addUsage("You must provide the original fastq read files used in the breseq run. It is assumed that each set of two read files, in order, contain the first and second reads from pairs.");
+  options.addUsage("You must provide the exact set of original fastq read files used in the breseq run. It is assumed that each set of two read files, in order, contain the first and second reads from pairs.");
   options.addUsage("Output is in directory: unmatched_assembly");
-  options("output,o","Directory for output assembly files", ".");
+  options("output,o","Main directory containing output from the breseq run. A directory within this called unmatched_assembly will be created for the output of this command.", ".");
   options("verbose,v","Verbose output", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   

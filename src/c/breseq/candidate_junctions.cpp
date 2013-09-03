@@ -1027,6 +1027,26 @@ namespace breseq {
       {
         if (merge_into.sides[into_side] == merge_from.sides[from_side])
           found = true;
+        
+        // There may sometimes be equivalent sides due to overlap with different descriptions
+        // NC_005966__3079290__-1__NC_005966__3079300__1__0____101__101
+        // NC_005966__3079295__-1__NC_005966__3079300__1__5____101__101
+        
+        // it would really be better to normalize both junctions here if that code were reliable
+        
+        if ((merge_into.alignment_overlap >= 0) && (merge_from.alignment_overlap >= 0)) {
+          
+          JunctionSide shifted_merge_into(merge_into.sides[into_side]);
+          JunctionSide shifted_merge_from(merge_from.sides[from_side]);
+          
+          shifted_merge_into.position += merge_into.alignment_overlap * shifted_merge_into.strand;
+          shifted_merge_from.position += merge_from.alignment_overlap * shifted_merge_from.strand;
+
+          
+          if (merge_into.sides[into_side] == merge_from.sides[from_side])
+            found = true;
+        }
+        
       }
       
       // we did not find an equivalent side, meaning this side must have multiple descriptions == redundant
