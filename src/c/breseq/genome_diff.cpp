@@ -2344,7 +2344,7 @@ string cGenomeDiff::mob_replace_sequence(cReferenceSequences& ref_seq_info, cDif
   
 // This function will use the current GD and apply it to the new_ref_seq_info.
 // When calling this function make SURE that you load ref_seq_info and
-// new_ref_seq_info seperately.
+// new_ref_seq_info separately.
 //
 void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose)
 {    
