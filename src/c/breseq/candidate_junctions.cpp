@@ -1043,7 +1043,7 @@ namespace breseq {
           shifted_merge_from.position += merge_from.alignment_overlap * shifted_merge_from.strand;
 
           
-          if (merge_into.sides[into_side] == merge_from.sides[from_side])
+          if (shifted_merge_into == shifted_merge_from)
             found = true;
         }
         
