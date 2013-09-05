@@ -34,28 +34,28 @@ int gdtools_usage()
   uout("Manipulate Genome Diff (*.gd) files using the following commands.");
 
   uout("General:");
+  uout << "VALIDATE               check formating of input files" << endl;
   uout << "APPLY                  apply mutations to a sequence" << endl;
-  uout << "ANNOTATE               annotate the effects of mutations on genes" << endl;
-  uout << "COMPARE                compare mutations across multiple samples" << endl;
-  uout << "NOT-EVIDENCE           remove evidence not used by any mutations" << endl;
-  uout << "VALIDATE               compare control versus test mutations" << endl;
-  uout << "FILTER                 remove mutations given filtering expressions" << endl;
+  uout << "ANNOTATE (or COMPARE)  annotate the effects of mutations and compare multiple samples" << endl;
+  uout << "CHECK                  compare control versus test mutations" << endl;
   //uout << "normalize              normalize mutations to a sequence" << endl;
   //uout << "header                 create or add header entries" << endl;
   //uout << "mRNA-Stability         determine mRNA free energy difference of mutations" << endl;
 
-  uout("Set Operations:");
-  uout << "SUBTRACT               remove mutations" << endl;
-  uout << "INTERSECT              locate equal mutations" << endl;
+  uout("Set and Filtering Operations:");
+  uout << "SUBTRACT               remove mutations in one file from another" << endl;
+  uout << "INTERSECT              keep shared mutations in two files" << endl;
   uout << "UNION                  combine mutations, removing duplicates" << endl;
   uout << "MERGE                  combine mutations, preserving duplicates" << endl;
+  uout << "FILTER                 remove mutations given filtering expressions" << endl;
+  uout << "NOT-EVIDENCE           remove evidence not used by any mutations" << endl;
     
   uout("Format Conversions:");
   uout << "GD2VCF                 GD to Variant Call Format (VCF)" << endl;
   //uout << "vcf2gd                 Variant Call Format(VCF) to GD" << endl;
   uout << "GD2CIRCOS              GD to Circos Data" << endl;
 
-  uout("TACC:");
+  uout("TACC Utilities:");
   uout << "download               download reference and read files given appropriate GD header info" << endl;
   uout << "runfile                create a commands file and launcher script for use on TACC" << endl;
   
@@ -430,13 +430,22 @@ int do_check_plot(int argc, char *argv[])
 // Check format of Genome Diff and report all format errors
 int do_validate(int argc, char *argv[])
 {
-    (void) argc;
-    (void) argv;
-    
-    
-    //should globally check nesting as part of validate
-    //nested_within = find_by_id(item["nested"]);
-    
+    AnyOption options("gdtools VALIDATE input1.gd [input2.gd]");
+    options("reference,r",  "reference sequence file");
+    options.processCommandArgs(argc, argv);
+
+    // Simply read files. Really need some way to change deadly errors to warnings in read function.
+    for (int32_t i=0; i<options.getArgc(); i++) {
+        string gd_file_name = options.getArgv(i);
+        cerr <<  "Validating Genome Diff format for file: " << gd_file_name << endl;
+        cGenomeDiff gd;
+        cFileParseErrors pe = gd.read(gd_file_name, true);
+        if (pe._errors.size() == 0) {
+            cerr << "  FORMAT OK" << endl;
+        } else {
+            pe.print_errors(false);
+        }
+    }    
     return 0;
 }
 

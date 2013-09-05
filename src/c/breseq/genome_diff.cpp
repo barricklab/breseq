@@ -807,7 +807,7 @@ diff_entry_ptr_t cGenomeDiff::parent(const cDiffEntry& evidence)
 /*! Read a genome diff(.gd) from the given file to class member
  _entry_list
  */
-void cGenomeDiff::read(const string& filename) {
+cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors) {
   ifstream in(filename.c_str());
   ASSERT(in.good(), "Could not open file for reading: " + filename);
   uint32_t line_number = 1;
@@ -875,10 +875,16 @@ void cGenomeDiff::read(const string& filename) {
   
   /*Error if #=GENOME_DIFF is not found. Genome diff files are required to have
    this header line. */
+  
   if (metadata.version.empty()) {
+    
     parse_errors.add_line_error(0,"", "No #=GENOME_DIFF XX header line in this file.", true);
-    parse_errors.print_errors();
-    exit(0);
+    if (!suppress_errors) {
+      parse_errors.print_errors();
+      exit(0);
+    } else { 
+      return parse_errors;
+    }
   }
   
   /*If the run_name/title is not set by a #=TITLE tag in the header info then
@@ -910,14 +916,16 @@ void cGenomeDiff::read(const string& filename) {
     
   }
   
-  parse_errors.print_errors();
-  if (parse_errors.fatal() )
-  {
-    cerr << "Not safe to continue." << endl;
-    exit(1);
+  if (!suppress_errors) {
+    parse_errors.print_errors();
+    if (parse_errors.fatal() )
+    {
+      ERROR("Parse errors in loading GenomeDiff File. Not safe to continue");
+      exit(1);
+    }
   }
   
-  return;
+  return parse_errors;
 }
 
 /*! Write this genome diff to a file.

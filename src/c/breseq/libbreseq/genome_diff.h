@@ -110,9 +110,9 @@ public:
     {
       string tab_line = substitute(_line, "\t", "<tab>");
       
-      cerr << "ERROR: " << _error_message << endl;
+      cerr << ">>ERROR: " << _error_message << endl;
       if ((_line_number != 0) || (_line != "")) {
-        cerr << "LINE: " << setw(5) <<  _line_number << "\n" << tab_line << "\n";
+        cerr << ">>LINE: " << setw(5) <<  _line_number << endl << tab_line << endl;
       }
     }
   };
@@ -132,20 +132,21 @@ public:
     _errors.push_back( sFileParseError(line_number, line, message) );
   }
   
-  void print_errors()
+  void print_errors(bool print_file = true)
   {
     if (_errors.size() == 0) return;
     
-    cerr << "\n";
-    cerr << ">>> Error(s) in GenomeDiff format. FILE: " << _filename << " <<<" << endl;
+    if (print_file) {
+      cerr << endl;
+      cerr << ">>> Error(s) in GenomeDiff format. FILE: " << _filename << " <<<" << endl;
+    }
     
     _errors.sort();
     
     for(list<sFileParseError>::iterator it = _errors.begin(); it != _errors.end(); it++) {
-      cerr << "\n";
       it->print();
     }
-    cerr << "\n";
+    cerr << endl;
   }
   
   bool fatal() {return _fatal;}
@@ -477,7 +478,7 @@ public:
   //!---- Input and Output ---- !//
   
   //! Read a genome diff from a file.
-  void read(const string& filename);
+  cFileParseErrors read(const string& filename, bool suppress_errors = false);
   
   //! Write the genome diff to a file.
   void write(const string& filename);
