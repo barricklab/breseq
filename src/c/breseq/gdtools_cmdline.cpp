@@ -1197,6 +1197,8 @@ int do_simulate_mutations(int argc, char *argv[])
   options.addUsage(" DEL:1-10 will generate deletions of size 1 to 10.");
   options.addUsage(" MOB:1-10 will generate insertions of random repeat regions with");
   options.addUsage("          target site duplications of 1 to 10 bases.");
+  options.addUsage(" AMP:100-1000,2-5 will generate tandem amplifications with sizes of");
+  options.addUsage("          100-1000 bases and final copy numbers of 2-5.");
 
   options.addUsage("");
 
@@ -1212,7 +1214,7 @@ int do_simulate_mutations(int argc, char *argv[])
     options.addUsage("");
     options.addUsage("You must supply the --reference option for input.");
     options.addUsage("If you feel you've received this message in error, please");
-    options.addUsage("check to see that the file exists.");
+    options.addUsage("check to see that the reference file you supplied exists.");
     options.printUsage();
     return -1;
   }
