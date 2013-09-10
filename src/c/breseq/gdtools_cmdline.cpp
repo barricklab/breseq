@@ -1698,6 +1698,16 @@ int do_runfile(int argc, char *argv[])
     const vector<string> &refs  = gd.metadata.ref_seqs;
     const vector<string> &reads = gd.metadata.read_seqs;
 
+    if (refs.size() == 0) {
+      cerr << ">> Skipping file because no #REFSEQ= header lines found." << endl ;
+      continue;  
+    }
+    
+    if (reads.size() == 0) {
+      cerr << ">> Skipping file because no #READSEQ= header lines found." << endl ;
+      continue;  
+    }
+        
     list<string> seq_kv_pairs;
     copy(refs.begin(), refs.end(), back_inserter(seq_kv_pairs));
     copy(reads.begin(), reads.end(), back_inserter(seq_kv_pairs));
