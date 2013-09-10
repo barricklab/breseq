@@ -1852,9 +1852,10 @@ void cGenomeDiff::random_mutations(string exclusion_file,
 {
   //Parse input option into mutation type.
   //Also determine minimum size and maximum size if provided by user. 
-  vector<string> type_options = split_on_any(type, ":-");
+  vector<string> type_options = split_on_any(type, ":-,");
   string mut_type = type_options[0];
   uint32_t min_size = 1, max_size = 1;
+  uint32_t min_copy_number = 2, max_copy_number = 2;
   switch(type_options.size())
   {
     case 1:  {
@@ -1869,14 +1870,27 @@ void cGenomeDiff::random_mutations(string exclusion_file,
       min_size = un(type_options[1]);
       max_size = un(type_options[2]);
     }  break;
+    
+    case 4:  {
+      min_size = un(type_options[1]);
+      max_size = un(type_options[2]);
+      min_copy_number = un(type_options[3]);
+      max_copy_number = un(type_options[3]);
+    }  break;
+    
+    case 5:  {
+      min_size = un(type_options[1]);
+      max_size = un(type_options[2]);
+      min_copy_number = un(type_options[3]);
+      max_copy_number = un(type_options[4]);
+    }  break;
       
     default:      
       ERROR("CANNOT PARSE: " + type);
   }
 
-  //TODO explanation of repeat-match.out file.
+  // These are repeat regions that we want to avoid when placing mutations
   cFlaggedRegions repeat_match_regions;
-
   if (exclusion_file.size()) {
     repeat_match_regions.read_mummer(exclusion_file, ref);
   }
@@ -2116,7 +2130,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
 
         new_item["position"] = to_string(pos_1);
         new_item["size"] = s(size);
-        new_item["new_copy_number"] = s((rand() % 2) + 2);
+        new_item["new_copy_number"] = s((rand() % (max_copy_number - min_copy_number + 1)) + min_copy_number);
 
         new_item.normalize_to_sequence(ref);
         new_item.erase("norm_pos");
@@ -2153,6 +2167,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
   }
   else 
   if (mut_type == "MOB") {
+    //@JEB: Update.. it does. But this comment from Matt is too fun to remove.
     //ERROR("THE BRESEQENSTEIN MUTATION GENERATOR DOES NOT YET HANDLE MOBS\nESPECIALLY IF THEY HAVE TORCHES AND PITCHFORKS");
 
     cSequenceFeatureList repeats = ref.m_repeats;
