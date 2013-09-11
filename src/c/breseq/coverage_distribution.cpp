@@ -1847,10 +1847,11 @@ namespace breseq {
         // For each range within range_t_vector
         for (uint32_t i = 0; i < range_t_vector.size(); i++)
         {
-            position_start = range_t_vector[i].range_pair.first;
-            position_end = range_t_vector[i].range_pair.second;
-            copy_number = range_t_vector[i].copy_number;
-            copy_number_float = range_t_vector[i].copy_number_float;
+            uint32_t position_start = range_t_vector[i].range_pair.first;
+            uint32_t position_end = range_t_vector[i].range_pair.second;
+            uint32_t copy_number = range_t_vector[i].copy_number;
+            formatted_double copy_number_float(range_t_vector[i].copy_number_float, 2);
+            double p_value = range_t_vector[i].p_value;
             
             // @JEB create the genome diff evidence entry if copy_number is not one
             /* ??? What does this block do: JEB are Barrick's initials. He's doing
@@ -1864,9 +1865,8 @@ namespace breseq {
                 item[END] = to_string<uint32_t>(position_end);
                 item["tile_size"] = to_string<double>(settings.copy_number_variation_tile_size);
                 item["copy_number"] = to_string<double>(copy_number);
-                stringstream num;
-                num << fixed << setprecision(2) << copy_number_float;
-                item["relative_coverage"] = num.str();
+                item["relative_coverage"] = copy_number_float.to_string();
+                item["p-value"] = to_string<double>(p_value);
                 gd.add(item);
             }
             
@@ -1918,11 +1918,14 @@ namespace breseq {
         segment_file.close();
         out_file.close();
         final_file.close();
+        gd.write(gd_file_name); // JEB added in lieu of below
         
         // merge intervals
         /* ??? Clarify: more cGenomeDiff code. again ask Barrick if you really
          want to know. but unnecessary for the actual algorithm. */
         //that applies to everything below this line.
+        
+        /* JEB: Merging now occurrs before output???
         gd.sort();
         diff_entry_list_t muts = gd.list();
         diff_entry_ptr_t last_de(NULL);
@@ -1959,12 +1962,14 @@ namespace breseq {
                 }
             }
         }
+       
         
         if (last_de.get())
             gd_merged.add(*last_de);
         
         
         gd_merged.write(gd_file_name);
+        */
     }
     
     

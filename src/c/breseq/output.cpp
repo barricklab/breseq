@@ -1460,7 +1460,7 @@ string html_copy_number_table_string(diff_entry_list_t& list_ref, bool show_deta
   bool link = test_item.entry_exists(_EVIDENCE_FILE_NAME);
   
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
-  size_t total_cols = link ? 9 : 8;
+  size_t total_cols = link ? 10 : 9;
   
   if (title != "") {
     ss << tr(th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"copy_number_header_row\"", title)) << endl;
