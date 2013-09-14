@@ -505,7 +505,7 @@ void resolve_alignments(
     record = !failed || junction_info.user_defined;
     
     // If both are on a junction-only sequence then don't count it
-    failed = failed || ( settings.junction_only_seq_id_set.count(junction_info.sides[0].seq_id) && settings.junction_only_seq_id_set.count(junction_info.sides[1].seq_id) );
+    failed = failed || ( settings.junction_only_seq_id_set().count(junction_info.sides[0].seq_id) && settings.junction_only_seq_id_set().count(junction_info.sides[1].seq_id) );
     
     junction_test_info.neg_log10_pos_hash_p_value = -1;
         

@@ -1111,7 +1111,7 @@ int breseq_default_action(int argc, char* argv[])
     }
     
     // Load all of the reference sequences and convert to FASTA and GFF3
-    conv_ref_seq_info.LoadFiles(settings.reference_file_names);
+    conv_ref_seq_info.LoadFiles(settings.all_reference_file_names);
     conv_ref_seq_info.WriteFASTA(settings.reference_fasta_file_name);
     conv_ref_seq_info.WriteGFF(settings.reference_gff3_file_name);
 
@@ -1720,11 +1720,7 @@ int breseq_default_action(int argc, char* argv[])
 		string reference_fasta_file_name = settings.reference_fasta_file_name;
 		string reference_bam_file_name = settings.reference_bam_file_name;
 
-		//my $cbreseq = settings.ctool("cbreseq");
-
 		// deal with distribution or error count keys being undefined...
-		string coverage_fn = settings.file_name(settings.unique_only_coverage_distribution_file_name, "@", "");
-		string outputdir = dirname(coverage_fn) + "/";
 
 		uint32_t num_read_files = settings.read_files.size();
     uint32_t num_qual;
@@ -2042,9 +2038,9 @@ int breseq_default_action(int argc, char* argv[])
     mpgd.reassign_unique_ids();
 
     //#=REFSEQ header lines.
-    mpgd.metadata.ref_seqs.resize(settings.reference_file_names.size());
-    for (size_t i = 0; i < settings.reference_file_names.size(); i++) {
-      mpgd.metadata.ref_seqs[i] = settings.reference_file_names[i];
+    mpgd.metadata.ref_seqs.resize(settings.all_reference_file_names.size());
+    for (size_t i = 0; i < settings.all_reference_file_names.size(); i++) {
+      mpgd.metadata.ref_seqs[i] = settings.all_reference_file_names[i];
     }
 
     //#=READSEQ header lines.

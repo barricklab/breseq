@@ -554,7 +554,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     HTML << (fragment_with_fit_coverage ? "<tr>" : "<tr class=\"gray_table_row\">");
 
     // Normal reference sequence
-    if (settings.reference_seq_id_set.count(it->m_seq_id)) {
+    if (settings.call_mutations_seq_id_set().count(it->m_seq_id)) {
     
       total_length += it->m_length;
       HTML << td( a(Settings::relative_path( 
@@ -567,7 +567,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
       // There may be absolutely no coverage and no graph will exist...
       if (!fragment_with_no_coverage) {
         HTML << td( a(Settings::relative_path( 
-                                            settings.file_name(settings.unique_only_coverage_plot_file_name, "@", it->m_seq_id), settings.output_path
+                                            settings.file_name(settings.unique_only_coverage_plot_file_name, "@", to_string<uint32_t>(settings.seq_id_to_coverage_group(it->m_seq_id))), settings.output_path
                                             ), 
                     "distribution" 
                     )

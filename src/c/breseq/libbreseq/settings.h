@@ -125,6 +125,47 @@ namespace breseq
     
 	};
 
+  //
+  // cReferenceSequenceSettings
+  //
+  // For grouping reference sequences and
+  // flagging some for different treatment
+  
+  class cReferenceSequenceSettings
+  {    
+  public:
+  
+    // Saved directly from command line
+    vector<string> m_reference_file_names;         
+    vector<string> m_contig_reference_file_names;
+    vector<string> m_junction_only_reference_file_names;
+        
+    // For lookup and iterating certain sets
+    set<string> m_junction_only_seq_id_set;     // All seq_ids in junction_only reference files
+    set<string> m_call_mutations_seq_id_set;    // Has all NOT in junction_only, mutations called
+  
+    // For traversing groups that should have their coverage assigned together
+    vector< vector<string> > m_seq_ids_by_coverage_group;
+    // For looking up the coverage group id of a reference sequence
+    map<string, uint32_t> m_seq_id_to_coverage_group_map;
+  
+    cReferenceSequenceSettings() {};
+  
+    cReferenceSequenceSettings(
+                            cReferenceSequences& ref_seq_info,
+                            vector<string>& reference_file_names,
+                            vector<string>& contig_reference_file_names,
+                            vector<string>& junction_only_reference_file_names  
+                            );
+  
+  };
+
+
+  //
+  // Settings
+  //
+  // Main global command-line settings object
+
 	class Settings
 	{
     
@@ -155,10 +196,15 @@ namespace breseq
     //! Settings: Global Workflow and Output
     string base_output_path;              // Default = cwd COMMAND-LINE OPTION
     vector<string> read_file_names;       // REQUIRED COMMAND-LINE OPTION
-    vector<string> reference_file_names;  // REQUIRED COMMAND-LINE OPTION
-    vector<string> junction_only_file_names;  // Default = NULL COMMAND-LINE OPTION
-    set<string> junction_only_seq_id_set;   // Filled from above for lookup
-    set<string> reference_seq_id_set; // Filled from above for lookup
+    
+    // Reference sequences
+    vector<string> all_reference_file_names;  // REQUIRED COMMAND-LINE OPTION (filled by below)    
+    vector<string> normal_reference_file_names; // Default = EMPTY COMMAND-LINE OPTION
+    vector<string> contig_reference_file_names; // Default = EMPTY COMMAND-LINE OPTION
+    vector<string> junction_only_file_names;    // Default = EMPTY COMMAND-LINE OPTION
+    cReferenceSequenceSettings refseq_settings; // This is extra settings data initialized from
+                                                // refseqs and how they are provided to the CLI
+    
     string user_junction_genome_diff_file_name; // Default = none COMMAND-LINE OPTION
     string run_name;          // Default = <none> COMMAND-LINE OPTION
     string print_run_name;    // run_name with '_' replaced by ' '
@@ -498,6 +544,21 @@ namespace breseq
 			return s;
 		}
     
+    static string path_file_name(const string& _path, const string& _file_name_key, const string& _substitute, const string& _with)
+		{
+			string s(path_to_filename(_file_name_key));
+      if (_substitute.size())
+        s = substitute(s, _substitute, _with);
+
+			return ((_path.size() > 0) ? _path + "/" + s : s);
+		}
+    
+    static string path_file_name(const string& _path, const string& _file_name_key)
+		{
+			string s(path_to_filename(_file_name_key));
+			return ((_path.size() > 0) ? _path + "/" + s : s);
+		}
+    
 		//! Utility function to get relative path from two file locations for making HTML files
     static string relative_path(const string& full_path, const string& base_path) 
     {
@@ -623,13 +684,20 @@ namespace breseq
 			}
 		}
     
-    bool is_junction_only_reference(string& seq_id)
-    {
-      return junction_only_seq_id_set.count(seq_id);
+    // Convenience accessors for reference file settings.
+
+    void init_reference_sets(cReferenceSequences& ref_seq_info) {
+      refseq_settings = cReferenceSequenceSettings(ref_seq_info, normal_reference_file_names, contig_reference_file_names, junction_only_file_names);
     }
     
-    void init_reference_sets(cReferenceSequences& ref_seq_info);
- 
+    bool is_junction_only_reference(string& seq_id) { return refseq_settings.m_junction_only_seq_id_set.count(seq_id); }
+    set<string> call_mutations_seq_id_set() const { return refseq_settings.m_call_mutations_seq_id_set; }
+    set<string> junction_only_seq_id_set() const { return refseq_settings.m_junction_only_seq_id_set; }
+    vector< vector<string> > seq_ids_by_coverage_group() const { return refseq_settings.m_seq_ids_by_coverage_group; }
+    uint32_t seq_id_to_coverage_group(const string& _seq_id) const { return refseq_settings.m_seq_id_to_coverage_group_map.find(_seq_id)->second; }
+
+    // Convenience accessors for read file settings.
+     
 		string base_name_to_read_file_name(string base_name)
 		{
       return this->read_files.base_name_to_read_file_name(base_name);

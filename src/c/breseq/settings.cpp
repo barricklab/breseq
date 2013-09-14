@@ -90,6 +90,59 @@ namespace breseq
     return read_file_to_fastq_file_name_map[base_name];
   }
   
+  cReferenceSequenceSettings::cReferenceSequenceSettings(
+                            cReferenceSequences& ref_seq_info,
+                            vector<string>& reference_file_names,
+                            vector<string>& contig_reference_file_names,
+                            vector<string>& junction_only_reference_file_names  
+                            )
+  {    
+    m_reference_file_names = reference_file_names;
+    m_contig_reference_file_names = contig_reference_file_names;
+    m_junction_only_reference_file_names = junction_only_reference_file_names;
+    
+    // Initialize the junction_only and other sets
+    set<string> junction_only_file_name_set(m_junction_only_reference_file_names.begin(), m_junction_only_reference_file_names.end());
+    for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++) {
+      if ( junction_only_file_name_set.count(it->get_file_name()) ) {
+        m_junction_only_seq_id_set.insert(it->m_seq_id);
+      } else {
+        m_call_mutations_seq_id_set.insert(it->m_seq_id);
+      }
+    }
+    
+    // Map by filename (only for contig_reference_file_names to id)
+    map<string,uint32_t> contig_to_id_map;
+    uint32_t on_coverage_group_index = 0; 
+    set<string> contig_file_name_set(m_contig_reference_file_names.begin(), m_contig_reference_file_names.end());
+
+    for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++) {
+    
+      // contig_reference sequence file -> lump with previous or start new
+      if ( contig_file_name_set.count(it->get_file_name()) ) {
+        uint32_t this_coverage_group_index;
+        if (contig_to_id_map.count(it->get_file_name())) {
+          this_coverage_group_index = contig_to_id_map[it->get_file_name()];
+        } else {
+          this_coverage_group_index = m_seq_ids_by_coverage_group.size();
+          contig_to_id_map[it->get_file_name()] = this_coverage_group_index;
+          m_seq_ids_by_coverage_group.push_back(vector<string>());
+        }
+        m_seq_ids_by_coverage_group[this_coverage_group_index].push_back(it->m_seq_id);
+      } 
+      // otherwise add new entry to list
+      else {
+        vector<string> v;
+        v.push_back(it->m_seq_id);
+        m_seq_ids_by_coverage_group.push_back(v);
+      }
+      
+      // Add an entry to lookup the coverage group id frome the seq_id
+      m_seq_id_to_coverage_group_map[it->m_seq_id] = m_seq_ids_by_coverage_group.size()-1;
+    }
+  }
+
+  
   // Set up defaults and build paths without command-line arguments
   Settings::Settings(const string& _base_output_path)
   {
@@ -127,6 +180,7 @@ namespace breseq
     
     options.addUsage("Special Reference Sequences", true);
     options
+    ("contig-reference,c", "File containing reference sequences in GenBank, GFF3, or FASTA format. The same coverage distribution will be fit to all of the reference sequences in this file simultaneously. This is appropriate when they are all contigs from a genome that should be present with the same copy number. Use of this option will improve performance when there are many contigs and especially when some are very short (≤1,000 bases).", NULL, ADVANCED_OPTION)
     ("junction-only-reference,s", "File containing reference sequences in GenBank, GFF3, or FASTA format. These references are only used for calling junctions with other reference sequences. An example of appropriate usage is including a transposon sequence not present in a reference genome. Option may be provided multiple times for multiple files.", NULL, ADVANCED_OPTION)
     ("targeted-sequencing,t", "Reference sequences were targeted for ultra-deep sequencing (using pull-downs or amplicons). Do not fit coverage distribution.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
@@ -224,24 +278,45 @@ namespace breseq
     this->read_files.Init(read_file_names, this->aligned_sam_mode);
     
     // Reference sequence provided?
-		if (options.count("reference") == 0)
+		if (options.count("reference") + options.count("contig-reference") + options.count("junction-only-reference") == 0)
 		{
       options.addUsage("");
-      options.addUsage("No reference sequences provided (-r).");
+      options.addUsage("No reference sequences provided (-r|-c|-s).");
       options.printUsage();
       exit(-1);
 		}
-    this->reference_file_names = from_string<vector<string> >(options["reference"]);
+    
+    if (options.count("reference")) {
+      this->normal_reference_file_names = from_string<vector<string> >(options["reference"]);
+    }
+    this->all_reference_file_names.insert(  this->all_reference_file_names.end(), 
+                                            this->normal_reference_file_names.begin(), 
+                                            this->normal_reference_file_names.end() 
+                                         ); 
+                                        
+    // Important to check for NULL before converting
+    if (options.count("contig-reference")) {
+      this->contig_reference_file_names = from_string<vector<string> >(options["contig-reference"]);
+    }
+    
+    this->all_reference_file_names.insert(  this->all_reference_file_names.end(), 
+                                            this->contig_reference_file_names.begin(), 
+                                            this->contig_reference_file_names.end() 
+                                         ); 
     
     // Important to check for NULL before converting
     if (options.count("junction-only-reference")) {
       this->junction_only_file_names = from_string<vector<string> >(options["junction-only-reference"]);
     }
     
-    this->reference_file_names.insert(  this->reference_file_names.end(), 
-                                        this->junction_only_file_names.begin(), 
-                                        this->junction_only_file_names.end() 
-                                      );    
+    this->all_reference_file_names.insert(  this->all_reference_file_names.end(), 
+                                            this->junction_only_file_names.begin(), 
+                                            this->junction_only_file_names.end() 
+                                         );    
+    
+    // Note that for full setup of the cReferenceSequenceSettings object,
+    // we require a cReferenceSequences object to be instantiated outside of the cSettings object
+    // and a subsequent call to init_reference_sequences()
     
     this->user_junction_genome_diff_file_name = options["user-junction-gd"];
     
@@ -695,25 +770,6 @@ namespace breseq
     //! Paths: Experimental
     this->long_pairs_file_name = this->output_path + "/long_pairs.tab";
 
-  }
-  
-  void Settings::init_reference_sets(cReferenceSequences& ref_seq_info)
-  {
-    bool debug = false;
-    
-    set<string> junction_only_file_name_set(junction_only_file_names.begin(), junction_only_file_names.end());
-    if (debug) cerr << "Initializing reference sets..." << endl;
-    for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++) {
-      if (debug) cerr << it->get_file_name() << endl;
-      if (junction_only_file_name_set.count(it->get_file_name())) {
-        this->junction_only_seq_id_set.insert(it->m_seq_id);
-        if (debug) cerr << "Junction only: " << it->m_seq_id << endl;
-      }
-      else {
-        this->reference_seq_id_set.insert(it->m_seq_id);
-        if (debug) cerr << "Normal: " << it->m_seq_id << endl;
-      }
-    }
   }
 
 

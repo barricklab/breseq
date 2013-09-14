@@ -2151,9 +2151,7 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
   //
   // ToDo: This should really make a different column for each input read set.
   //
-  string coverage_fn = settings.file_name(settings.unique_only_coverage_distribution_file_name, "@", "");
-  string outputdir = dirname(coverage_fn) + "/";
-  string count_file_name = outputdir + "error_counts.tab";
+  string count_file_name = settings.genome_error_counts_file_name;
 
   ifstream COUNT(count_file_name.c_str());
   assert(COUNT.is_open());

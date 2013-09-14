@@ -48,7 +48,7 @@ namespace breseq {
                                                      Settings& settings, 
                                                      Summary& summary, 
                                                      cReferenceSequences& ref_seq_info, 
-                                                     string seq_id, 
+                                                     uint32_t coverage_group_id, 
                                                      string plot_file_name, 
                                                      string distribution_file_name
                                                      );

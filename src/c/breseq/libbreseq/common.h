@@ -708,10 +708,17 @@ namespace breseq {
 	}
   
   // Return the path of the file without the trailing forward-slash
-  inline string dirname(string file_name)
+  inline string path_to_dirname(string file_name)
   {
     size_t found = file_name.rfind("/");
     return ((found != string::npos) ? file_name.substr(0, found) : "");
+  }
+  
+  inline string path_to_filename(string file_name)
+  {
+    size_t found = file_name.rfind("/");
+    if (found == file_name.length()) return "";
+    return ((found != string::npos) ? file_name.substr(found+1, string::npos) : file_name);
   }
   
   // Returns the number of bases overlapping 
