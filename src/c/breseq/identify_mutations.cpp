@@ -55,7 +55,7 @@ void identify_mutations(
 								polymorphism_frequency_cutoff,
 								print_per_position_file
 							);
-	imp.do_pileup(settings.reference_seq_id_set);
+	imp.do_pileup(settings.call_mutations_seq_id_set());
   imp.write_gd(gd_file);
 }
 

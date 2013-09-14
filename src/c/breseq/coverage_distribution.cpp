@@ -82,29 +82,38 @@ namespace breseq {
                                                                     Settings& settings,
                                                                     Summary& summary,
                                                                     cReferenceSequences& ref_seq_info,
-                                                                    string seq_id,
+                                                                    uint32_t coverage_group_id,
                                                                     string plot_key,
                                                                     string distribution_file_name
                                                                     )
     {
+    
+        vector<string> seq_ids = settings.refseq_settings.m_seq_ids_by_coverage_group[coverage_group_id];
+    
         //initialize summary information
-        summary.unique_coverage[seq_id].nbinom_size_parameter = NAN;
-        summary.unique_coverage[seq_id].nbinom_mean_parameter = NAN;
-        summary.unique_coverage[seq_id].nbinom_prob_parameter = NAN;
-        summary.unique_coverage[seq_id].average = 1.0;
-        summary.unique_coverage[seq_id].variance = NAN;
-        summary.unique_coverage[seq_id].dispersion = NAN;
-        summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff = 0.0;
-        summary.unique_coverage[seq_id].deletion_coverage_seed_cutoff = 0;
+        uint32_t sequence_length = 0;
+        for (vector<string>::iterator it=seq_ids.begin(); it!=seq_ids.end(); it++) {
+          string seq_id = *it;
+          summary.unique_coverage[seq_id].nbinom_size_parameter = NAN;
+          summary.unique_coverage[seq_id].nbinom_mean_parameter = NAN;
+          summary.unique_coverage[seq_id].nbinom_prob_parameter = NAN;
+          summary.unique_coverage[seq_id].average = 1.0;
+          summary.unique_coverage[seq_id].variance = NAN;
+          summary.unique_coverage[seq_id].dispersion = NAN;
+          summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff = 0.0;
+          summary.unique_coverage[seq_id].deletion_coverage_seed_cutoff = 0;
+          
+          // Keep running total of sequence length
+          sequence_length += ref_seq_info[ref_seq_info.seq_id_to_index(seq_id)].m_length;
+        }
         
         // Perform no fitting if we are in targeted_sequencing mode.
         if (settings.targeted_sequencing) return;
         
-        string unique_only_coverage_plot_file_name = settings.file_name(plot_key, "@", seq_id);
-        string unique_only_coverage_distribution_file_name = settings.file_name(distribution_file_name, "@", seq_id);
+        string unique_only_coverage_plot_file_name = settings.file_name(plot_key, "@", to_string<uint32_t>(coverage_group_id));
+        string unique_only_coverage_distribution_file_name = settings.file_name(distribution_file_name, "@", to_string<uint32_t>(coverage_group_id));
         
         // Define various coverage thresholds...
-        uint32_t sequence_length = ref_seq_info[ref_seq_info.seq_id_to_index(seq_id)].m_length;
         
         /// DELETION PROPAGATION CUTOFF
         // One-tailed test p=0.05, Bonferroni correction
@@ -137,34 +146,38 @@ namespace breseq {
         // Next three lines are average, standard deviation, and index of overdispersion
         
         // Put these into summary
-        summary.unique_coverage[seq_id].nbinom_size_parameter = from_string<double>(lines[0]);
-        summary.unique_coverage[seq_id].nbinom_mean_parameter = from_string<double>(lines[1]);
-        // Calculated by formula, prob = size/(size + mu)
-        summary.unique_coverage[seq_id].nbinom_prob_parameter = summary.unique_coverage[seq_id].nbinom_size_parameter
-        / (summary.unique_coverage[seq_id].nbinom_mean_parameter + summary.unique_coverage[seq_id].nbinom_size_parameter);
-        // Calculated by formula variance = mu + mu ^ 2 / size
-        summary.unique_coverage[seq_id].nbinom_variance = summary.unique_coverage[seq_id].nbinom_mean_parameter
-        + pow(summary.unique_coverage[seq_id].nbinom_mean_parameter, 2) / summary.unique_coverage[seq_id].nbinom_size_parameter;
-        // Calculated by formula dispersion = variance / mu
-        summary.unique_coverage[seq_id].nbinom_dispersion = summary.unique_coverage[seq_id].nbinom_variance / summary.unique_coverage[seq_id].nbinom_mean_parameter;
         
-        summary.unique_coverage[seq_id].average = from_string<double>(lines[2]);
-        summary.unique_coverage[seq_id].variance = from_string<double>(lines[3]);
-        summary.unique_coverage[seq_id].dispersion = from_string<double>(lines[4]);
+        for (vector<string>::iterator it=seq_ids.begin(); it!=seq_ids.end(); it++) {
+          string seq_id = *it;
+          summary.unique_coverage[seq_id].nbinom_size_parameter = from_string<double>(lines[0]);
+          summary.unique_coverage[seq_id].nbinom_mean_parameter = from_string<double>(lines[1]);
+          // Calculated by formula, prob = size/(size + mu)
+          summary.unique_coverage[seq_id].nbinom_prob_parameter = summary.unique_coverage[seq_id].nbinom_size_parameter
+          / (summary.unique_coverage[seq_id].nbinom_mean_parameter + summary.unique_coverage[seq_id].nbinom_size_parameter);
+          // Calculated by formula variance = mu + mu ^ 2 / size
+          summary.unique_coverage[seq_id].nbinom_variance = summary.unique_coverage[seq_id].nbinom_mean_parameter
+          + pow(summary.unique_coverage[seq_id].nbinom_mean_parameter, 2) / summary.unique_coverage[seq_id].nbinom_size_parameter;
+          // Calculated by formula dispersion = variance / mu
+          summary.unique_coverage[seq_id].nbinom_dispersion = summary.unique_coverage[seq_id].nbinom_variance / summary.unique_coverage[seq_id].nbinom_mean_parameter;
+          
+          summary.unique_coverage[seq_id].average = from_string<double>(lines[2]);
+          summary.unique_coverage[seq_id].variance = from_string<double>(lines[3]);
+          summary.unique_coverage[seq_id].dispersion = from_string<double>(lines[4]);
+          
+          summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff = from_string<double>(lines[5]);
         
-        summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff = from_string<double>(lines[5]);
-        
-        bool verbose = false;
-        if (verbose)
-        {
-            cout << seq_id << endl;
-            cout << "nbinom_size_parameter " << summary.unique_coverage[seq_id].nbinom_size_parameter << endl;
-            cout << "nbinom_mean_parameter " << summary.unique_coverage[seq_id].nbinom_mean_parameter << endl;
-            cout << "nbinom_prob_parameter " << summary.unique_coverage[seq_id].nbinom_prob_parameter << endl;
-            cout << "average " << summary.unique_coverage[seq_id].average << endl;
-            cout << "variance " << summary.unique_coverage[seq_id].variance << endl;
-            cout << "dispersion " << summary.unique_coverage[seq_id].dispersion << endl;
-            cout << "deletion_coverage_propagation_cutoff " << summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff << endl;
+          bool verbose = false;
+          if (verbose)
+          {
+              cout << seq_id << endl;
+              cout << "nbinom_size_parameter " << summary.unique_coverage[seq_id].nbinom_size_parameter << endl;
+              cout << "nbinom_mean_parameter " << summary.unique_coverage[seq_id].nbinom_mean_parameter << endl;
+              cout << "nbinom_prob_parameter " << summary.unique_coverage[seq_id].nbinom_prob_parameter << endl;
+              cout << "average " << summary.unique_coverage[seq_id].average << endl;
+              cout << "variance " << summary.unique_coverage[seq_id].variance << endl;
+              cout << "dispersion " << summary.unique_coverage[seq_id].dispersion << endl;
+              cout << "deletion_coverage_propagation_cutoff " << summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff << endl;
+          }
         }
     }
     
@@ -176,13 +189,16 @@ namespace breseq {
                                                                      string distribution_file_name
                                                                      )
     {
-        for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+      vector<vector<string> > seq_ids_by_coverage_group = settings.seq_ids_by_coverage_group();
+
+      for (uint32_t i=0; i< settings.seq_ids_by_coverage_group().size(); i++) {
+      
             
             analyze_unique_coverage_distribution(
                                                  settings,
                                                  summary,
                                                  ref_seq_info,
-                                                 ref_seq_info[i].m_seq_id,
+                                                 i,
                                                  plot_file_name,
                                                  distribution_file_name
                                                  );

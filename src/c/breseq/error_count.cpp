@@ -50,7 +50,7 @@ void error_count(
                  Summary& summary,
                  const string& bam,
                  const string& fasta,
-								 const string& output_dir,
+                 const string& outputdir,
 								 const vector<string>& readfiles,
                  bool do_coverage,
                  bool do_errors,
@@ -59,8 +59,8 @@ void error_count(
                  const string& covariates
                  ) 
 {
-	error_count_pileup ecp(settings, summary, bam, fasta, output_dir, do_coverage, do_errors, preprocess_stage, min_qual_score, covariates);
-	ecp.do_pileup(settings.reference_seq_id_set);
+	error_count_pileup ecp(settings, summary, bam, fasta, outputdir, do_coverage, do_errors, preprocess_stage, min_qual_score, covariates);
+	ecp.do_pileup(settings.call_mutations_seq_id_set());
 	if (do_coverage) ecp.print_coverage();
 	if (do_errors) ecp.print_error(readfiles);
 }
@@ -73,7 +73,7 @@ error_count_pileup::error_count_pileup(
                                        Summary& _summary,
                                        const string& bam, 
                                        const string& fasta, 
-                                       const string& output_dir,
+                                       const string& outputdir,
                                        bool do_coverage, 
                                        bool do_errors, 
                                        bool preprocess_stage,
@@ -83,7 +83,7 @@ error_count_pileup::error_count_pileup(
 : pileup_base(bam, fasta)
 , m_settings(_settings)
 , m_summary(_summary)
-, m_output_dir(output_dir)
+, m_output_dir(outputdir)
 , m_do_coverage(do_coverage)
 , m_do_errors(do_errors)
 , m_preprocess_stage(preprocess_stage)
@@ -91,18 +91,18 @@ error_count_pileup::error_count_pileup(
 , m_error_table(covariates)
 {
 	// reserve enough space for the sequence info:
-	m_seq_info.resize(num_targets());
+  vector< vector<string> > seq_ids_by_coverage_group = m_settings.seq_ids_by_coverage_group();
+	m_coverage_group_info.resize(seq_ids_by_coverage_group.size());
+  
   set_print_progress(true);
   
   // Set up to print out file during pileup
   if (m_error_table.m_per_position)
   {
-    string output_file;
-
-    output_file = output_dir + "error_counts.tab";     
-    m_per_position_file.open(output_file.c_str());
-    assert(!m_per_position_file.fail());
-    m_error_table.write_count_table_header(m_per_position_file);
+    string error_counts_file_name = Settings::path_file_name(m_output_dir, m_settings.error_counts_file_name);
+    m_error_count_file.open( error_counts_file_name.c_str());
+    assert(!m_error_count_file.fail());
+    m_error_table.write_count_table_header(m_error_count_file);
   }
 
 }
@@ -113,13 +113,12 @@ error_count_pileup::error_count_pileup(
 error_count_pileup::~error_count_pileup() {
 }
 
-
 /*! Called for each alignment.
  */
 void error_count_pileup::pileup_callback(const pileup& p) {
   
-	assert(p.target() < m_seq_info.size());
-	sequence_info& info= m_seq_info[p.target()];
+	assert(m_on_target_coverage_group < m_coverage_group_info.size());
+	coverage_info& info= m_coverage_group_info[m_on_target_coverage_group];
 
   //cerr << p.target() << " " << p.position_1() << endl;
   
@@ -187,14 +186,18 @@ void error_count_pileup::pileup_callback(const pileup& p) {
   // per-position prints each line separately
   if (m_error_table.m_per_position) 
   {
-    m_error_table.write_count_table_content(m_per_position_file, p.position_1());
+    m_error_table.write_count_table_content(m_error_count_file, p.position_1());
     m_error_table.clear();  
   }
 }
   
 void error_count_pileup::at_target_start(const uint32_t tid)
 {
-  (void) tid;
+  // we need to change our current coverage group id this once
+  // (so we don't look it up for every position in the pileup)
+  string seq_id = target_name(tid);
+  m_on_target_coverage_group = m_settings.seq_id_to_coverage_group(seq_id);
+
   // Reset statistics for next target.
   if (m_preprocess_stage) {
     m_read_found_starting_at_pos[0] = 0;
@@ -227,14 +230,18 @@ void error_count_pileup::at_target_end(const uint32_t tid)
 
  */
 void error_count_pileup::print_coverage() {
-	using namespace std;
-	for(size_t i=0; i<m_seq_info.size(); ++i) {
-		string filename(m_output_dir + "/" + m_bam->header->target_name[i] + ".unique_only_coverage_distribution.tab");
-		ofstream out(filename.c_str());					
+  
+  
+	for(size_t i=0; i<m_coverage_group_info.size(); ++i) {
+  
+		string filename = Settings::path_file_name(m_output_dir, m_settings.unique_only_coverage_distribution_file_name, "@", to_string<uint32_t>(i));
+    
+    (m_output_dir + "/" + m_bam->header->target_name[i] + ".unique_only_coverage_distribution.tab");
+		ofstream out(filename.c_str());
 		
 		out << "coverage\tn" << endl;
-		for(size_t j=1; j<m_seq_info[i].unique_only_coverage.size(); ++j) {
-			out << j << "\t" << m_seq_info[i].unique_only_coverage[j] << endl;
+		for(size_t j=1; j<m_coverage_group_info[i].unique_only_coverage.size(); ++j) {
+			out << j << "\t" << m_coverage_group_info[i].unique_only_coverage[j] << endl;
 		}	
 		out.close();
 	}
@@ -245,22 +252,17 @@ void error_count_pileup::print_coverage() {
  */
 void error_count_pileup::print_error(const vector<string>& readfiles) {
 
-    string output_file;
-  
     // It will be printed during pileup if !m_per_position
     // and we don't want the additional processing.
+    
     if (!m_error_table.m_per_position) 
     {
-      output_file = m_output_dir + "/error_counts.tab"; 
-      m_error_table.write_count_table(output_file);
-      
-      output_file = m_output_dir + "/error_rates.tab"; 
+      m_error_table.write_count_table( Settings::path_file_name(m_output_dir, m_settings.error_counts_file_name));
+            
       m_error_table.counts_to_log10_prob();
-      m_error_table.write_log10_prob_table(output_file);
+      m_error_table.write_log10_prob_table(m_settings.error_rates_file_name);
   
-      output_file = m_output_dir + "/base_qual_error_prob.#.tab"; 
-      m_error_table.write_base_qual_only_prob_table(output_file, readfiles);
-      return;
+      m_error_table.write_base_qual_only_prob_table( Settings::path_file_name(m_output_dir, m_settings.error_rates_base_qual_error_prob_file_name), readfiles);
     }
 }
 
@@ -641,11 +643,7 @@ void cErrorTable::write_log10_prob_table(const string& filename) {
       }
       
       // create the proper filename
-      string this_file_name = filename;
-      size_t pos = this_file_name.find("#");
-      assert(pos);
-      this_file_name.replace(pos, 1, readfiles[r]);
-      
+      string this_file_name = Settings::file_name(filename, "#", readfiles[r]);      
       std::ofstream out(this_file_name.c_str());
       
       // First line contains the headers: quality and then all possible base changes

@@ -40,7 +40,7 @@ namespace breseq {
                    Summary& summary,
                    const string& bam, 
 									 const string& fasta,
-									 const string& output_dir,
+                   const string& outputdir,
 									 const vector<string>& readfiles,
                    bool do_coverage,
                    bool do_errors,
@@ -208,7 +208,7 @@ namespace breseq {
 	public:
 		
 		//! Information that is tracked per-sequence.
-		struct sequence_info {
+		struct coverage_info {
 			/*! Coverage count table.
 			 
 			 This is a table of non-deletion reads per position to non-redundancy counts.
@@ -216,7 +216,7 @@ namespace breseq {
 			 i is the number of reads that do not indicate a deletion at p
 			 x is the number of positions that have no redundancies
 			 */
-			vector<int> unique_only_coverage;
+			vector<uint32_t> unique_only_coverage;
 		};
 		
 		
@@ -225,7 +225,7 @@ namespace breseq {
                        Summary& _summary,
                        const string& bam, 
                        const string& fasta,
-                       const string& output_dir,
+                       const string& outputdir,
                        bool do_coverage, 
                        bool do_errors, 
                        bool preprocess_stage,
@@ -239,8 +239,8 @@ namespace breseq {
 		//! Called for each reference position.
 		virtual void pileup_callback(const pileup& p);
     
-    virtual void at_target_end(const uint32_t tid);
     virtual void at_target_start(const uint32_t tid);
+    virtual void at_target_end(const uint32_t tid);
 		
 		//! Print coverage distribution.
 		void print_coverage();
@@ -251,15 +251,16 @@ namespace breseq {
 	protected:		
     const Settings& m_settings;
     Summary& m_summary;
-    const string& m_output_dir;
+    string m_output_dir;
     bool m_do_coverage;
     bool m_do_errors;
     bool m_preprocess_stage;
-		vector<sequence_info> m_seq_info; //!< information about each sequence.
+    uint32_t m_on_target_coverage_group;  // coverage group of current target
+		vector<coverage_info> m_coverage_group_info; //!< information about each sequence.
     uint8_t m_min_qual_score; //! @JEB THIS IS CURRENTLY NOT USED (BUT WOULD BE IF WE CALCULATED RATES)
     int32_t m_read_found_starting_at_pos[2]; // 0 none found, 1 found
     cErrorTable m_error_table;
-    ofstream m_per_position_file;
+    ofstream m_error_count_file;
 	};
   
 	
