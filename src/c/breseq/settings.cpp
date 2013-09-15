@@ -174,11 +174,15 @@ namespace breseq
 		("output,o", "Path to breseq output", ".")
 		("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files. (REQUIRED)")
     ("name,n", "Human-readable name of sample for output [DEFAULT=<none>]", "")
-    ("num-processors,j", "Number of processors to use in multithreaded steps", 1)
+    ("num-processors,j", "Number of processors to use in multithreaded steps", 1);
+    
+    options.addUsage("Read File Options", true);
+    options
+    ("limit-fold-coverage,l", "Analyze a subset of the input FASTQ sequencing reads with enough bases to provide this theoretical coverage of the reference sequences. A value between 60 and 120 will usually speed up the analysis with no loss in sensitivity for clonal samples. The actual coverage achieved will be somewhat less because not all reads will map (DEFAULT=OFF)", NULL, ADVANCED_OPTION)
     ("aligned-sam", "Input files are aligned SAM files, rather than FASTQ files. Junction prediction steps will be skipped.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
     
-    options.addUsage("Special Reference Sequences", true);
+    options.addUsage("Reference File Options", true);
     options
     ("contig-reference,c", "File containing reference sequences in GenBank, GFF3, or FASTA format. The same coverage distribution will be fit to all of the reference sequences in this file simultaneously. This is appropriate when they are all contigs from a genome that should be present with the same copy number. Use of this option will improve performance when there are many contigs and especially when some are very short (≤1,000 bases).", NULL, ADVANCED_OPTION)
     ("junction-only-reference,s", "File containing reference sequences in GenBank, GFF3, or FASTA format. These references are only used for calling junctions with other reference sequences. An example of appropriate usage is including a transposon sequence not present in a reference genome. Option may be provided multiple times for multiple files.", NULL, ADVANCED_OPTION)
@@ -276,6 +280,10 @@ namespace breseq
       cerr << output_divider << endl;
     }
     this->read_files.Init(read_file_names, this->aligned_sam_mode);
+    
+    if (options.count("limit-fold-coverage")) {
+      this->read_file_coverage_fold_limit = from_string<double>(options["limit-fold-coverage"]);
+    }
     
     // Reference sequence provided?
 		if (options.count("reference") + options.count("contig-reference") + options.count("junction-only-reference") == 0)
@@ -470,6 +478,10 @@ namespace breseq
     ////////////////////
     
     //! Settings: Global Workflow and Output
+    
+    //! Read file options
+    this->aligned_sam_mode  = false;
+    this->read_file_coverage_fold_limit = 0.0;
     
     //! Options that control which parts of the pipeline to execute
     this->no_read_filtering = false;
@@ -681,7 +693,7 @@ namespace breseq
 		//! Paths: Error Calibration
 		this->error_calibration_path = "07_error_calibration";
 		if (this->base_output_path.size() > 0) this->error_calibration_path = this->base_output_path + "/" + this->error_calibration_path;
-		this->error_counts_file_name = this->error_calibration_path + "/#.error_counts.tab";
+		this->error_counts_file_name = this->error_calibration_path + "/error_counts.tab";
 		this->error_rates_done_file_name = this->error_calibration_path + "/error_rates.done";
 
 		this->error_rates_file_name = this->error_calibration_path + "/error_rates.tab";

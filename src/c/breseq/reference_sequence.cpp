@@ -2146,12 +2146,7 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
   // some local variable lookups for convenience
   double log10_ref_length = log(this->total_length()) / log(10);
 
-  //
-  // Replacement for below
-  //
-  // ToDo: This should really make a different column for each input read set.
-  //
-  string count_file_name = settings.genome_error_counts_file_name;
+  string count_file_name = settings.error_counts_file_name;
 
   ifstream COUNT(count_file_name.c_str());
   assert(COUNT.is_open());

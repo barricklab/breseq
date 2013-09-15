@@ -1124,15 +1124,30 @@ int breseq_default_action(int argc, char* argv[])
 
       s.num_reads = 0;
       s.num_bases = 0;
+      
+      // If limiting reads results in skipping later file, the index of the first one to delete
+      uint32_t read_file_start_delete_index = 0; 
+      
+      uint64_t read_file_base_limit = floor(settings.read_file_coverage_fold_limit * static_cast<double>(conv_ref_seq_info.total_length())); 
+      
       for (uint32_t i = 0; i < settings.read_files.size(); i++)
       {
         string base_name = settings.read_files[i].m_base_name;
         cerr << "  READ FILE::" << base_name << endl;
+        
+        // If we have reached the read limit or within some number of it -- delete further read files 
+        // The 1000, is so that we have enough bases counted in a read file to fit the error rates.
+        if ((settings.read_file_coverage_fold_limit) && (i!= 0) && (s.num_bases + 1000 >= read_file_base_limit)) {
+          cerr << "  ::SKIPPED DUE TO REACHING COVERAGE LIMIT::" << endl;
+          if (!read_file_start_delete_index) read_file_start_delete_index = i;
+          continue;
+        }
+        
         string fastq_file_name = settings.base_name_to_read_file_name(base_name);
         string convert_file_name =  settings.file_name(settings.converted_fastq_file_name, "#", base_name);
 
         // Parse output
-        Summary::AnalyzeFastq s_rf = normalize_fastq(fastq_file_name, convert_file_name, i+1, settings.quality_score_trim, !settings.no_read_filtering);
+        Summary::AnalyzeFastq s_rf = normalize_fastq(fastq_file_name, convert_file_name, i+1, settings.quality_score_trim, !settings.no_read_filtering, s.num_bases, read_file_base_limit);
         
         // Save the converted file name -- have to save it in summary because only that
         // is reloaded if we skip this step.
@@ -1150,6 +1165,8 @@ int breseq_default_action(int argc, char* argv[])
 
         s.reads[base_name] = s_rf;
       }
+      if (read_file_start_delete_index) settings.read_files.resize(read_file_start_delete_index);
+      
       s.avg_read_length = static_cast<double>(s.num_bases) / static_cast<double>(s.num_reads);
       s.max_read_length = overall_max_read_length;
       s.max_qual = overall_max_qual;
@@ -1162,7 +1179,6 @@ int breseq_default_action(int argc, char* argv[])
 
     }
     
-
       
 		// create SAM faidx
 		string samtools = settings.ctool("samtools");

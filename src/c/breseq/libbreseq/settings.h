@@ -195,7 +195,11 @@ namespace breseq
     
     //! Settings: Global Workflow and Output
     string base_output_path;              // Default = cwd COMMAND-LINE OPTION
-    vector<string> read_file_names;       // REQUIRED COMMAND-LINE OPTION
+    
+    //! Settings: Read File Options
+    vector<string> read_file_names;         // REQUIRED COMMAND-LINE OPTION
+    double  read_file_coverage_fold_limit;  // Default = 0 (OFF) COMMAND-LINE OPTION
+    bool aligned_sam_mode;                  // Default = false COMMAND-LINE OPTION
     
     // Reference sequences
     vector<string> all_reference_file_names;  // REQUIRED COMMAND-LINE OPTION (filled by below)    
@@ -240,8 +244,6 @@ namespace breseq
     string bowtie2_min_score_stringent;
     string bowtie2_min_score_relaxed;
     int32_t num_processors;       // Defaults = 2
-
-    bool aligned_sam_mode;        // Default = false COMMAND-LINE OPTION
     
     //! reads are never included in the BAM alignment file if they fail these guards
 		uint32_t require_match_length;    // Default = 0 (OFF) COMMAND-LINE OPTION

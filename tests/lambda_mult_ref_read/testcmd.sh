@@ -10,6 +10,7 @@ TESTCMD="\
         -r ${DATADIR}/lambda/lambda.3.gbk \
         -r ${DATADIR}/lambda/lambda.4.gbk \
         -r ${DATADIR}/lambda/lambda.5.gbk \
+        -l 50 \
         ${DATADIR}/lambda/lambda_mixed_population.1.fastq \
         ${DATADIR}/lambda/lambda_mixed_population.2.fastq \
         ${DATADIR}/lambda/lambda_mixed_population.3.fastq \
