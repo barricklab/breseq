@@ -34,7 +34,9 @@ namespace breseq {
                                         const string &convert_file_name, 
                                         const uint32_t file_index, 
                                         const int32_t trim_end_on_base_quality, 
-                                        const bool filter_reads
+                                        const bool filter_reads,
+                                        uint64_t current_read_file_bases,
+                                        const uint64_t read_file_base_limit
                                         ) 
   {
     cerr << "    Converting/filtering FASTQ file..." << endl;
@@ -148,6 +150,13 @@ namespace breseq {
       
       // convert base qualities
       output_fastq_file.write_sequence(on_sequence);
+      
+      // check to see if we've reached the limit
+      if (read_file_base_limit) {
+        current_read_file_bases += on_sequence.m_sequence.length();
+        if (current_read_file_bases > read_file_base_limit)
+          break;
+      }
       
     }
     input_fastq_file.close();

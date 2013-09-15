@@ -40,7 +40,9 @@ class cAnnotatedSequence;
                                         const string &convert_file_name, 
                                         const uint32_t file_index, 
                                         const int32_t trim_end_on_base_quality, 
-                                        const bool filter_reads
+                                        const bool filter_reads,
+                                        uint64_t current_read_file_bases,
+                                        const uint64_t read_file_base_limit
                                         );
   
   // Utility function for converting FASTQ files between formats
