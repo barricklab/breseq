@@ -816,7 +816,7 @@ namespace breseq
     }
     
     // use 'which' as a fallback - bin_path does not work on all systems
-    if (this->installed["samtools"].size() != 0) {
+    if (this->installed["samtools"].size() == 0) {
       this->installed["samtools"] = SYSTEM_CAPTURE("which samtools", true);
     }
     
