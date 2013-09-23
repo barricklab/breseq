@@ -815,6 +815,11 @@ namespace breseq
       cerr << "In test mode. Samtools path: " << breseq_samtools_path << endl;
     }
     
+    // use 'which' as a fallback - bin_path does not work on all systems
+    if (this->installed["samtools"].size() != 0) {
+      this->installed["samtools"] = SYSTEM_CAPTURE("which samtools", true);
+    }
+    
     if (this->installed["samtools"].size() != 0) {
       string version_string = SYSTEM_CAPTURE(this->installed["samtools"], true);
       size_t start_version_pos = version_string.find("Version:");
