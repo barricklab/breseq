@@ -1978,7 +1978,7 @@ Evidence_Files::html_evidence_file (
     if (settings.base_quality_cutoff != 0)
       item["base_quality_cutoff"] = to_string(settings.base_quality_cutoff);
     
-    alignment_output ao(item[BAM_PATH], item[FASTA_PATH], settings.maximum_reads_to_align, settings.base_quality_cutoff);
+    alignment_output ao(item[BAM_PATH], item[FASTA_PATH], settings.max_displayed_reads, settings.base_quality_cutoff);
 
     HTML << ao.html_alignment(ss.str(), sc.str());
 

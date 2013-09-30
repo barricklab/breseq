@@ -219,6 +219,13 @@ namespace breseq
     ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms where this many reads on each strand support alternative alleles (DEFAULT = consensus mode, 2; polymorphism mode, 2", "", ADVANCED_OPTION)
     ;
     
+    options.addUsage("Output Options", true);
+
+    options
+    ("max-displayed-reads", "Maximum number of reads to display in the HTML output for an evidence item", 100, ADVANCED_OPTION)
+    ;
+    
+    
     // CNV and Periodicity block
     options.addUsage("Experimental Options (Use at your own risk)", true);
     options
@@ -423,6 +430,9 @@ namespace breseq
     
     this->print_mutation_identification_per_position_file = options.count("per-position-file");
     
+    
+    this->max_displayed_reads = from_string<int32_t>(options["max-displayed-reads"]);
+    
 		this->post_option_initialize();
     
     // Log the command line
@@ -567,7 +577,7 @@ namespace breseq
 		this->no_indel_polymorphisms = false;
     
     //! Settings: Output
-    this->maximum_reads_to_align = 100;
+    this->max_displayed_reads = 100;
     this->max_rejected_read_alignment_evidence_to_show = 20;
 		this->max_rejected_polymorphisms_to_show = 20;
 		this->max_rejected_junction_evidence_to_show = 10;

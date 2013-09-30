@@ -343,7 +343,7 @@ namespace breseq
     uint32_t periodicity_step;
     
     //! Settings: Output
-    uint32_t maximum_reads_to_align;                        // Default = 100
+    uint32_t max_displayed_reads;                           // Default = 100  COMMAND-LINE OPTION
     uint32_t max_rejected_read_alignment_evidence_to_show;  // Defaule = 20
     uint32_t max_rejected_polymorphisms_to_show;            // Default = 20
 		uint32_t max_rejected_junction_evidence_to_show;        // Default = 10
