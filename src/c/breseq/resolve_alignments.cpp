@@ -1851,7 +1851,7 @@ void  assign_one_junction_read_counts(
   //Well, it CAN happen with user-defined junctions!!! @JEB
   
   // @JEB: divide the side X counts by 2, if both were counted
-  // or because 1 if that side of the alignment was ambiguous (for edges of IS-elements
+  // or by 1 if that side of the alignment was ambiguous (for edges of IS-elements)
   double d = 2;
   if (j[SIDE_1_READ_COUNT] == "NA") {
     a = 0; //"NA" in read count sets value to 1 not 0
@@ -1866,7 +1866,7 @@ void  assign_one_junction_read_counts(
   if (d == 0) {
     j[NEW_JUNCTION_FREQUENCY] = "NA";  
   } else {
-    double new_junction_frequency_value = c /(c + ((a+b)/d) ); // dividing by 2 because 1 read can support both sides?
+    double new_junction_frequency_value = c /(c + ((a+b)/d) );
     j[NEW_JUNCTION_FREQUENCY] = to_string(new_junction_frequency_value, kPolymorphismFrequencyPrecision);
   }
   j[FREQUENCY] = j[NEW_JUNCTION_FREQUENCY];
