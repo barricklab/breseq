@@ -1758,11 +1758,21 @@ vector<string> get_sorted_junction_ids(
 
 void  assign_one_junction_read_counts(
                                   const Settings& settings,
+                                  Summary& summary,
                                   cDiffEntry& j,
                                   int32_t require_overlap
                                   )
 {
   bool verbose = false;
+  
+  uint32_t avg_read_length = summary.sequence_conversion.avg_read_length;
+ 
+  fstream ofile;
+  if (settings.junction_debug) {
+    ofile.open(settings.junction_debug_file_name.c_str(), ios_base::out | ios_base::app);
+    ASSERT(ofile.good(), "Could not open file " + settings.junction_debug_file_name);
+    ofile << j << endl;
+  }
  
   map<string,bool> empty_read_names;
   map<string,bool> junction_read_names;
@@ -1778,9 +1788,6 @@ void  assign_one_junction_read_counts(
   // Print out the junction we are processing
   if (verbose) cerr << endl << "ASSIGNING READ COUNTS TO JUNCTION" << endl << j << endl << endl; 
   
-  // New Junction
-  start = from_string<uint32_t>(j["flanking_left"]) - continuation_left;
-  end = start + abs(from_string<int32_t>(j[ALIGNMENT_OVERLAP])) + 1 + continuation_right;
   
   if (verbose) {
     cerr << "==SIDE 1==" << endl;
@@ -1788,67 +1795,152 @@ void  assign_one_junction_read_counts(
     cerr << "strand:" << j[SIDE_1_STRAND] << endl;
     cerr << "flanking:" << j["flanking_left"] << endl;
     cerr << "continuation:" << j["continuation_left"] << endl;
+    cerr << "overlap:" << j[SIDE_1_OVERLAP] << endl;
+
     cerr << "==OVERLAP== " << j[ALIGNMENT_OVERLAP] << endl;
+    
+    cerr << "==SIDE 2==" << endl;
     cerr << "position:" << j[SIDE_2_POSITION] << endl;
     cerr << "strand:" << j[SIDE_2_STRAND] << endl;
     cerr << "flanking:" << j["flanking_right"] << endl;
     cerr << "continuation:" << j["continuation_right"] << endl;
+    cerr << "overlap:" << j[SIDE_2_OVERLAP] << endl;
   }
+  
+  if (settings.junction_debug) {
+    ofile << "==SIDE 1==" << endl;
+    ofile << "position:" << j[SIDE_1_POSITION] << endl;
+    ofile << "strand:" << j[SIDE_1_STRAND] << endl;
+    ofile << "flanking:" << j["flanking_left"] << endl;
+    ofile << "continuation:" << j["continuation_left"] << endl;
+    ofile << "overlap:" << j[SIDE_1_OVERLAP] << endl;
+
+    ofile << "==OVERLAP== " << j[ALIGNMENT_OVERLAP] << endl;
+    
+    ofile << "==SIDE 2==" << endl;
+    ofile << "position:" << j[SIDE_2_POSITION] << endl;
+    ofile << "strand:" << j[SIDE_2_STRAND] << endl;
+    ofile << "flanking:" << j["flanking_right"] << endl;
+    ofile << "continuation:" << j["continuation_right"] << endl;
+    ofile << "overlap:" << j[SIDE_2_OVERLAP] << endl;
+  }
+  
+  // New Junction
+  start = from_string<uint32_t>(j["flanking_left"]) - continuation_left;
+  end = start + abs(from_string<int32_t>(j[ALIGNMENT_OVERLAP])) + 1 + continuation_right;
   
   //int32_t amount_to_add = (require_overlap != -1) ? require_overlap : abs(from_string<int32_t>(j[ALIGNMENT_OVERLAP]));
   int32_t amount_to_add = (require_overlap != -1) ? require_overlap : 0;
   
+  int32_t alignment_overlap = from_string<int32_t>(j[ALIGNMENT_OVERLAP]);
+  int32_t abs_alignment_overlap = abs(alignment_overlap);
+  int32_t non_negative_alignment_overlap = alignment_overlap;
+  non_negative_alignment_overlap = max(0, non_negative_alignment_overlap);
+  
+  j["junction_possible_overlap_registers"] = to_string(avg_read_length - abs_alignment_overlap - 1);
+
+  if (settings.junction_debug) ofile << "JUNCTION: start " << start << " end " << end << endl;
+  if (verbose) cerr << "JUNCTION: start " << start << " end " << end << endl;
+
   j[NEW_JUNCTION_READ_COUNT] = to_string(junction_jrc.count(j["key"], start, end, empty_read_names, junction_read_names));
+  
+  if (settings.junction_debug) {
+    ofile << "JUNCTION" << endl;
+    for (map<string,bool>::iterator it = junction_read_names.begin(); it != junction_read_names.end(); it++) {
+      ofile << it->first << endl;
+    }
+  }
   
   // New side 1
   if ( (j[SIDE_1_REDUNDANT] != "1") && (j["side_1_annotate_key"] != "repeat") ) {
     int32_t side_1_strand = from_string<int32_t>(j[SIDE_1_STRAND]);
     start = from_string<uint32_t>(j[SIDE_1_POSITION]);
+    int32_t overlap_correction = non_negative_alignment_overlap - from_string<int32_t>(j[SIDE_1_OVERLAP]);
+        
     if (side_1_strand == +1) {
-      end = start + 1 + amount_to_add;
-      start = start - 1;
+      end = start + amount_to_add;
+      start = start - 1 - overlap_correction;
       end += continuation_right;
     } else {
-      end = start + 1;
-      start = start - 1 - amount_to_add;
+      end = start + 1 + overlap_correction;
+      start = start - amount_to_add;
       start -= continuation_left;
     }
+     
+    if (settings.junction_debug) ofile << "SIDE 1: start " << start << " end " << end << endl;       
+    if (verbose) cerr << "SIDE 1: start " << start << " end " << end << endl;
+
+    j["side_1_possible_overlap_registers"] = to_string(avg_read_length - abs(end - start));
     
-    empty_read_names.clear();
     j[SIDE_1_READ_COUNT] = to_string(reference_jrc.count(j[SIDE_1_SEQ_ID], start, end, junction_read_names, empty_read_names));
+    
+    if (settings.junction_debug) {
+      ofile << "SIDE_1" << endl;
+      for (map<string,bool>::iterator it = empty_read_names.begin(); it != empty_read_names.end(); it++) {
+        ofile << it->first << endl;
+      }
+    }
+  
   } else {
     j[SIDE_1_READ_COUNT] = "NA";
   }
   
   // New side 2
+  int32_t side_2_possibilities = 0;
+
   if ( (j[SIDE_2_REDUNDANT] != "1") && (j["side_2_annotate_key"] != "repeat") ) {
     
     int32_t side_2_strand = from_string<int32_t>(j[SIDE_2_STRAND]);
-    
     start = from_string<uint32_t>(j[SIDE_2_POSITION]);
+    int32_t overlap_correction = non_negative_alignment_overlap - from_string<int32_t>(j[SIDE_2_OVERLAP]);
+
     if (side_2_strand == +1) {
-      end = start + 1 + amount_to_add;
-      start = start - 1;
+      end = start + amount_to_add;
+      start = start - 1 - overlap_correction;
       end += continuation_right;
     } else {
-      end = start + 1;
-      start = start - 1 - amount_to_add;
+      end = start + 1 + overlap_correction;
+      start = start - amount_to_add;
       start -= continuation_left;
     }
-    empty_read_names.clear();
+    
+    if (settings.junction_debug) ofile << "SIDE 2: start " << start << " end " << end << endl;
+    if (verbose) cerr << "SIDE 2: start " << start << " end " << end << endl;
+    
+    j["side_2_possible_overlap_registers"] = to_string(avg_read_length - abs(end - start));
+
     j[SIDE_2_READ_COUNT] = to_string(reference_jrc.count(j[SIDE_2_SEQ_ID], start, end, junction_read_names, empty_read_names));
+    
+    if (settings.junction_debug) {
+      ofile << "SIDE_2" << endl;
+      for (map<string,bool>::iterator it = empty_read_names.begin(); it != empty_read_names.end(); it++) {
+        ofile << it->first << endl;
+      }
+    }
     
   } else {
     j[SIDE_2_READ_COUNT] = "NA";
+    j["side_2_possible_overlap_registers"] = "NA";
+  }
+  
+  if (verbose) {
+    cerr << "==Possibilities for overlapped reads==" << endl;
+    cerr << "Side 1  : " << j["side_1_possible_overlap_registers"] << endl;
+    cerr << "Junction: " << j["junction_possible_overlap_registers"] << endl;
+    cerr << "Side 2  : " << j["side_2_possible_overlap_registers"] << endl;
+  }
+  if (settings.junction_debug) {
+    ofile << "==Possibilities for overlapped reads==" << endl;
+    ofile << "Side 1  : " << j["side_1_possible_overlap_registers"] << endl;
+    ofile << "Junction: " << j["junction_possible_overlap_registers"] << endl;
+    ofile << "Side 2  : " << j["side_2_possible_overlap_registers"] << endl;
   }
   
   //@ded calculate frequency of each junction. //
-  double a = from_string<uint32_t>(j[SIDE_1_READ_COUNT]);
-  double b = from_string<uint32_t>(j[SIDE_2_READ_COUNT]);
+  double a, b;
+
   double c = from_string<uint32_t>(j[NEW_JUNCTION_READ_COUNT]);
-  
-  //ASSERT(c > 0,"New junction predicted, but 0 reads support it. This should never happen");
-  //Well, it CAN happen with user-defined junctions!!! @JEB
+  c /= static_cast<double>(from_string<uint32_t>(j["junction_possible_overlap_registers"]));
   
   // @JEB: divide the side X counts by 2, if both were counted
   // or by 1 if that side of the alignment was ambiguous (for edges of IS-elements)
@@ -1856,10 +1948,17 @@ void  assign_one_junction_read_counts(
   if (j[SIDE_1_READ_COUNT] == "NA") {
     a = 0; //"NA" in read count sets value to 1 not 0
     d--;
+  } else {
+    a = from_string<uint32_t>(j[SIDE_1_READ_COUNT]);
+    a /= static_cast<double>(from_string<uint32_t>(j["side_1_possible_overlap_registers"]));
   }
+  
   if (j[SIDE_2_READ_COUNT] == "NA") {
     b = 0;
     d--;
+  } else {
+    b = from_string<uint32_t>(j[SIDE_2_READ_COUNT]);
+    b /= static_cast<double>(from_string<uint32_t>(j["side_2_possible_overlap_registers"]));
   }
   
   // We cannot assign a frequency if the denominator is zero
@@ -1870,6 +1969,30 @@ void  assign_one_junction_read_counts(
     j[NEW_JUNCTION_FREQUENCY] = to_string(new_junction_frequency_value, kPolymorphismFrequencyPrecision);
   }
   j[FREQUENCY] = j[NEW_JUNCTION_FREQUENCY];
+  
+  
+  // Finally assign average coverages based on fragments
+  
+  if (j[SIDE_1_READ_COUNT] == "NA") {
+      j[SIDE_1_COVERAGE] = "NA";
+  }
+  else {
+    double side_1_correction = static_cast<double>(from_string<uint32_t>(j["side_1_possible_overlap_registers"])) / avg_read_length;
+    j[SIDE_1_COVERAGE] = to_string(from_string<double>(j[SIDE_1_READ_COUNT]) / summary.unique_coverage[j[SIDE_1_SEQ_ID]].average / side_1_correction, 2);
+  }
+  
+  if (j[SIDE_2_READ_COUNT] == "NA") {
+    j[SIDE_2_COVERAGE] = "NA";
+  }
+  else {
+    double side_2_correction = static_cast<double>(from_string<uint32_t>(j["side_2_possible_overlap_registers"])) / avg_read_length;
+    j[SIDE_2_COVERAGE] = to_string(from_string<double>(j[SIDE_2_READ_COUNT]) / summary.unique_coverage[j[SIDE_2_SEQ_ID]].average / side_2_correction, 2);
+  }
+  
+  //corrects for overlap making it less likely for a read to span
+  double overlap_correction = static_cast<double>(from_string<uint32_t>(j["junction_possible_overlap_registers"])) / avg_read_length;
+  double new_junction_average_read_count = (summary.unique_coverage[j[SIDE_1_SEQ_ID]].average + summary.unique_coverage[j[SIDE_2_SEQ_ID]].average) / 2;
+  j[NEW_JUNCTION_COVERAGE] = to_string(from_string<double>(j[NEW_JUNCTION_READ_COUNT]) / new_junction_average_read_count / overlap_correction, 2);
 
 }
   
@@ -1877,6 +2000,7 @@ void  assign_one_junction_read_counts(
   
 void  assign_junction_read_counts(
                                   const Settings& settings,
+                                  Summary& summary,
                                   cGenomeDiff& gd
                                   )
 {
@@ -1890,14 +2014,20 @@ void  assign_junction_read_counts(
   if (jc.size() == 0) return;
   // Next calls can fail if there are no junctions (and therefore no FASTA file of junctions).
   
-
+  // Create the file (to overwrite previous versions since we use append later)
+  if (settings.junction_debug) {
+    fstream ofile(settings.junction_debug_file_name.c_str(), ios_base::out);
+    ASSERT(ofile.good(), "Could not open file " + settings.junction_debug_file_name);
+  }
+  
+  
   // Fetch all the junction reads supporting
   // Keep track of how well they match the reference versus the putative new junctions.
   // right now this is in terms of mismatches (adding unmatched read bases as mismatches)
   
   for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++) {
     cDiffEntry& j = **it;
-    assign_one_junction_read_counts(settings, j);
+    assign_one_junction_read_counts(settings, summary, j);
   }
 }
 

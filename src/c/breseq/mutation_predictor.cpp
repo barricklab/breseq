@@ -942,12 +942,12 @@ namespace breseq {
         
         verbose = false;
         if (verbose) cerr << "Before 1:" << endl << j1 << endl;
-        assign_one_junction_read_counts(settings, j1, require_overlap);
+        assign_one_junction_read_counts(settings, summary, j1, require_overlap);
         j1["read_count_offset"] = mut["duplication_size"];
         if (verbose) cerr << "After 1:" << endl << j1 << endl;
         
         if (verbose) cerr << "Before 2:" << endl << j2 << endl;
-        assign_one_junction_read_counts(settings, j2, require_overlap);
+        assign_one_junction_read_counts(settings, summary, j2, require_overlap);
         j2["read_count_offset"] = mut["duplication_size"];
         if (verbose) cerr << "After 2:" << endl << j2 << endl;
         

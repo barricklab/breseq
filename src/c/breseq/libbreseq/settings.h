@@ -357,6 +357,7 @@ namespace breseq
     
     //! @GRC added in for gathering/analyzing breseq values
     bool add_metadata_to_gd;                              // Default = false COMMAND-LINE OPTION
+    bool junction_debug;                                  // Default = false COMMAND-LINE OPTION
 
 
     ////////////////////
@@ -426,6 +427,8 @@ namespace breseq
 		string resolved_junction_sam_file_name;
 		string alignment_resolution_summary_file_name;
     string jc_genome_diff_file_name;
+    
+    string junction_debug_file_name;
     
     //! Paths: BAM conversion
 		string bam_path;

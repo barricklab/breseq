@@ -270,12 +270,14 @@ namespace breseq {
 
   void  assign_one_junction_read_counts(
                                         const Settings& settings,
+                                        Summary& summary,
                                         cDiffEntry& j,
                                         int32_t require_overlap = -1
                                         );
   
   void  assign_junction_read_counts(
                                     const Settings& settings,
+                                    Summary& summary,
                                     cGenomeDiff& gd
                                     );
   
