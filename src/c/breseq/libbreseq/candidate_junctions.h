@@ -46,7 +46,8 @@ namespace breseq {
     string is_interval;
 		string is_side_key;
     
-    int32_t overlap;
+    int32_t overlap;    // This is the amount of junction overlap that was given
+                        // to this side when assigning it to each side. Must be >0.
     
     JunctionSide()
     : is(NULL)

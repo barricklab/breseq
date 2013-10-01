@@ -49,6 +49,7 @@ const char* _NEW_JUNCTION_EVIDENCE_FILE_NAME="_new_junction_evidence_file_name";
 const char* _SIDE_1_EVIDENCE_FILE_NAME="_side_1_evidence_file_name";
 const char* _SIDE_2_EVIDENCE_FILE_NAME="_side_2_evidence_file_name";
 const char* SIDE_1_OVERLAP="side_1_overlap";
+const char* SIDE_2_OVERLAP="side_2_overlap";
 const char* CORRECTED_KEY="corrected_key";
   
 namespace output
@@ -1799,7 +1800,7 @@ Evidence_Files::Evidence_Files(const Settings& settings, cGenomeDiff& gd)
     // will be operating with the correct positions for each side.  Search @MDS0001
     // to find out where we finally access this modified information.
     JunctionInfo juncInfo((*item)["key"]);
-    juncInfo.sides[0].redundant = from_string<int32_t>((*item)[SIDE_1_OVERLAP]);
+    juncInfo.sides[0].redundant = from_string<int32_t>((*item)[SIDE_1_REDUNDANT]);
     juncInfo.sides[0].position = from_string<int32_t>((*item)[SIDE_1_POSITION]);
     juncInfo.sides[1].position = from_string<int32_t>((*item)[SIDE_2_POSITION]); 
     

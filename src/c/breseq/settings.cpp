@@ -230,6 +230,7 @@ namespace breseq
     options.addUsage("Experimental Options (Use at your own risk)", true);
     options
     ("user-junction-gd","User supplied genome diff file of JC evidence to use as candidate junctions and report support for.", "", ADVANCED_OPTION) 
+    ("junction-debug", "Output additional junction debugging files", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("cnv","Do experimental copy number variation prediction",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("cnv-tile-size", "Tile size for copy number variation prediction", 500, ADVANCED_OPTION)
     ("cnv-ignore-redundant", "Only consider non-redundant coverage when using cnv", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
@@ -430,6 +431,7 @@ namespace breseq
     
     this->print_mutation_identification_per_position_file = options.count("per-position-file");
     
+    this->junction_debug = options.count("junction-debug");
     
     this->max_displayed_reads = from_string<int32_t>(options["max-displayed-reads"]);
     
@@ -689,6 +691,8 @@ namespace breseq
 		this->resolved_junction_sam_file_name = this->alignment_resolution_path + "/junction.sam";
 		this->alignment_resolution_summary_file_name = this->alignment_resolution_path + "/summary.bin";
 		this->jc_genome_diff_file_name = this->alignment_resolution_path + "/jc_evidence.gd";
+
+    this->junction_debug_file_name = this->alignment_resolution_path + "/junction_debug.txt";
 
     //! Paths: BAM conversion
 		this->bam_path = "06_bam";
