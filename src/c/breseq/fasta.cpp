@@ -63,10 +63,14 @@ namespace breseq {
     
     while ((m_current_line[0] != '>') && !this->eof()) {
       
-      // should really clean the sequence of spaces and extra line returns
-      // and possibly also check for valid characters
-      sequence.m_sequence += m_current_line;
+      // Clean the sequence of spaces and extra line returns ('\r' is particularly dangerous).
+      // We could also check for valid characters
       
+      m_current_line = substitute(m_current_line, "\r", "");
+      m_current_line = substitute(m_current_line, "\n", "");
+      
+      sequence.m_sequence += m_current_line;
+
       std::getline(*this, m_current_line);
       m_current_line_num++;
     }
