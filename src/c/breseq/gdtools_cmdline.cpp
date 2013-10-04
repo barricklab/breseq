@@ -50,14 +50,17 @@ int gdtools_usage()
   uout << "FILTER                 remove mutations given filtering expressions" << endl;
   uout << "NOT-EVIDENCE           remove evidence not used by any mutations" << endl;
     
+  uout("Creating test data:");
+  uout << "SIMULATE-MUTATIONS       create a file containing random mutations" << endl;
+    
   uout("Format Conversions:");
   uout << "GD2VCF                 GD to Variant Call Format (VCF)" << endl;
   //uout << "vcf2gd                 Variant Call Format(VCF) to GD" << endl;
   uout << "GD2CIRCOS              GD to Circos Data" << endl;
 
   uout("TACC Utilities:");
-  uout << "download               download reference and read files given appropriate GD header info" << endl;
-  uout << "runfile                create a commands file and launcher script for use on TACC" << endl;
+  uout << "DOWNLOAD               download reference and read files given appropriate GD header info" << endl;
+  uout << "RUNFILE                create a commands file and launcher script for use on TACC" << endl;
   
   return 0;
 }
@@ -1174,16 +1177,16 @@ int do_filter_gd(int argc, char* argv[])
 
 int do_simulate_mutations(int argc, char *argv[])
 {
-  AnyOption options("Usage: gdtools SIMULATE-MUTATIONS -r <reference> -o <output.gd> -t <type>");  
+  AnyOption options("Usage: gdtools SIMULATE-MUTATIONS [-n 100] -r <reference> -o <output.gd> -t <type>");  
   options("reference,r","Reference file");  
   options("output,o","Output file");
   options("type,t","Type of mutation to generate");
-  options("exclude,e","Exclusion file.");
   options("number,n","Number of mutations to generate", static_cast<uint32_t>(1000));
+  options("exclude,e","Exclusion file containing regions no mutations will overlap, usually repeats");
   options("buffer,b","Buffer distance between mutations and excluded intervals", static_cast<uint32_t>(50));
-  options("seq,s","Sequence to use from reference");  
+  options("seq,s","Reference sequence id to use from reference file");  
   options("seed","Seed for the random number generator");
-  options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
+  options("verbose,v","Verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
@@ -1202,7 +1205,7 @@ int do_simulate_mutations(int argc, char *argv[])
 
   options.addUsage("");
 
-  options.addUsage("An exclusion file should be generated using a MUMmer command like this:");
+  options.addUsage("An exclusion file of repeats should be generated using a MUMmer command like this:");
   options.addUsage("  mummer -maxmatch -b -c -l 36 REL606.fna REL606.fna > reference.exclude.coords");
   options.addUsage("The resulting reference.exclude.coords file can be used with the --exclude option.");
 
