@@ -543,7 +543,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       // Fisher's exact test in C++ and the KS
       // test is probably not necessary
       
-      if (_settings.polymorphism_prediction) {
+      if (_settings.polymorphism_prediction || _settings.mixed_base_prediction) {
         
         _polymorphism_r_input_file 
           << p.target_name() << "\t"
@@ -629,7 +629,7 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
   
   // Polymorphism file used as input to R
   // Only one file for all reference sequences
-  if(_settings.polymorphism_prediction && !_polymorphism_r_input_file.is_open()) {
+  if((_settings.polymorphism_prediction || _settings.mixed_base_prediction) && !_polymorphism_r_input_file.is_open()) {
 		string filename = _settings.polymorphism_statistics_input_file_name;
 		_polymorphism_r_input_file.open(filename.c_str());
     ASSERT(!_polymorphism_r_input_file.fail(), "Could not open output file:" + filename);
