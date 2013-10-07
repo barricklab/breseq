@@ -382,7 +382,8 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
 
   // RA evidence
   list<counted_ptr<cDiffEntry> > ra = gd.filter_used_as_evidence(gd.show_list(ra_types));
-  ra.remove_if(not1(cDiffEntry::field_exists("reject")));
+  ra.remove_if(not1(cDiffEntry::field_exists("reject")));  
+  ra.remove_if(cDiffEntry::field_exists("mixed"));
   ra.sort(cDiffEntry::by_scores(make_vector<string>("quality")));
   if (ra.size() > 0) {
     HTML << "<p>" << endl;
