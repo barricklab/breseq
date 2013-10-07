@@ -1769,7 +1769,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
   // Mutation is intergenic
   if (within_genes.size() + between_genes.size() + inside_left_genes.size() + inside_right_genes.size() == 0)
   {
-    if (mut._type == SNP) {
+    if ((mut._type == SNP) || (mut._type == RA)) {
       mut["snp_type"] = "intergenic";
     }
     
@@ -1857,7 +1857,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     // ...but the gene is a pseudogene or not a protein coding gene
     if (!ignore_pseudogenes && gene.pseudogene)
     {
-      if (mut._type == SNP) {
+      if ((mut._type == SNP) || (mut._type == RA)) {
         mut["snp_type"] = "pseudogene";
       }
       mut["gene_position"] = "pseudogene (" + mut["gene_position"] + "/" + gene_nt_size + " nt)";
@@ -1865,7 +1865,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     }
     else if (gene.type != "CDS")
     {
-      if (mut._type == SNP) {
+      if ((mut._type == SNP) || (mut._type == RA)) {
         mut["snp_type"] = "noncoding";
       }
       mut["gene_position"] = "noncoding (" + mut["gene_position"] + "/" + gene_nt_size + " nt)";
@@ -1908,7 +1908,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     mut["aa_new_seq"] =  translate_codon(mut["codon_new_seq"], gene.translation_table, codon_number_1);
     mut["transl_table"] = to_string(gene.translation_table);
     
-    if (mut._type == SNP) {
+    if ((mut._type == SNP) || (mut._type == RA)) {
       mut["snp_type"] = (mut["aa_ref_seq"] != mut["aa_new_seq"]) ? "nonsynonymous" : "synonymous";
     }
   }

@@ -1036,10 +1036,10 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
     ss << td(ALIGN_CENTER, nonbreaking(c[SEQ_ID]));
     ss << td(ALIGN_RIGHT, commify(c["position"]));
     ss << td(ALIGN_RIGHT, c["insert_position"]);
-    ss << td(ALIGN_CENTER, c["ref_base"] + "&rarr;" + c["new_base"]); // "Change" Column
+    ss << td(ALIGN_CENTER, c["ref_base"] + "&rarr;" + c["new_base"]); // "change Column
     ssf.width(4);
     ssf.precision(1);
-    ssf << fixed << from_string<double>(c["frequency"]) * 100 << "%" << endl;
+    ssf << fixed << from_string<double>(c["frequency"]) * 100 << "%" << endl; // "frequency" column
     ss << td(ALIGN_RIGHT, ssf.str());
     //Clear formated string stream
     ssf.str("");
