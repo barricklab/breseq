@@ -1195,6 +1195,11 @@ namespace breseq {
 
         }
 			}
+      // Something not handled by the other cases occurred, we must skip the end of the loop
+      // So we don't add an empty mut to the Genome Diff
+      else {
+        continue;
+      }
       
       // If we are in polymorphism mode, propagate the frequency from JC evidence to mutation
       if (settings.polymorphism_prediction) 

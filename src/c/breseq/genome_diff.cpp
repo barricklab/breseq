@@ -1125,6 +1125,8 @@ uint32_t cGenomeDiff::new_unique_id()
  */
 diff_entry_ptr_t cGenomeDiff::add(const cDiffEntry& item, bool lowest_unique) {
   
+  ASSERT(item._type != UNKNOWN, "Tried to add item of type UNKNOWN to Genome Diff file.");
+  
   // allocating counted_ptr takes care of disposal
   cDiffEntry* diff_entry_copy = new cDiffEntry(item);
   diff_entry_ptr_t added_item(diff_entry_copy);
