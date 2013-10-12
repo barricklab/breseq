@@ -449,19 +449,25 @@ void alignment_wrapper::num_matches_from_end(const cReferenceSequences& ref_seq_
     r_str = reverse_string(r_str);
   }
   
-  vector<pair<char,uint16_t> > cigar_pair_array = this->cigar_pair_array();
-  
+  // Get the cigar array (reverse if direction is reversed)
+  vector<pair<char,uint16_t> > cigar_pair_array = this->cigar_pair_char_op_array();
+  if (!dir) reverse(cigar_pair_array.begin(), cigar_pair_array.end());
+
   char op_0 = cigar_pair_array.front().first;
   char op_last = cigar_pair_array.back().first;
   
   //remove soft padding
-  if (op_0 == BAM_CSOFT_CLIP) cigar_pair_array.erase(cigar_pair_array.begin());
-  if (op_last == BAM_CSOFT_CLIP) cigar_pair_array.erase(cigar_pair_array.end()-1);
-  if (!dir) reverse(cigar_pair_array.begin(), cigar_pair_array.end());
+  if (op_0 == 'S') {
+    cigar_pair_array.erase(cigar_pair_array.begin());
+  }
+  if (op_last == 'S') {
+    cigar_pair_array.erase(cigar_pair_array.end()-1);
+  }
   
   qry_mismatch_pos = -1;
   ref_mismatch_pos = -1;
   
+  bool last_encountered_indel = false;
   uint32_t positive_overlap = (overlap > 0) ? static_cast<uint32_t>(overlap) : 0;
   uint32_t r_pos = 0;
   uint32_t q_pos = 0;
@@ -478,41 +484,73 @@ void alignment_wrapper::num_matches_from_end(const cReferenceSequences& ref_seq_
     
     // handle indels
     op_0 = cigar_pair_array.front().first;
-    if (op_0 == BAM_CINS)
+    if (op_0 == 'I')
     {
+      last_encountered_indel = true;
       q_pos++;
       ref_mismatch_pos = r_pos;
       qry_mismatch_pos = q_pos;
     }
-    else if (op_0 == BAM_CDEL)
+    else if (op_0 == 'D')
     {
+      last_encountered_indel = true;
       r_pos++;
       ref_mismatch_pos = r_pos;
       qry_mismatch_pos = q_pos;
     }
     else
     {
-      if (q_str[q_pos] != r_str[r_pos])
+      r_pos++;
+      q_pos++;
+      if (q_str[q_pos-1] != r_str[r_pos-1])
       {
+        last_encountered_indel = false;
         ref_mismatch_pos = r_pos;
         qry_mismatch_pos = q_pos;
       }
-      r_pos++;
-      q_pos++;
+
     }
     
     if (verbose)
-      cout << r_pos << " " << q_pos << endl;
+      cout << r_pos << " " << r_str[r_pos] << " " << q_pos << " " << q_str[q_pos] << endl;
   }
-  
-  // make 1 indexed...
-  if (qry_mismatch_pos >= 0) qry_mismatch_pos++;
-  if (ref_mismatch_pos >= 0) ref_mismatch_pos++;
   
   if (verbose)
   {
     if (qry_mismatch_pos >= 0)
-      cout << "Query Mismatch At = " << qry_mismatch_pos << "Reference Mismatch At = " << ref_mismatch_pos << " | Overlap = " << overlap << endl;
+      cout << "Query Mismatch At = " << qry_mismatch_pos << " Reference Mismatch At = " << ref_mismatch_pos << endl;
+  }
+  
+  // Go back and add exact matches, which may extend after correcting for an indel!
+  // @JEB - 2013-10-12 - this code is not perfect: 
+  //  (1) It will not let the new match give any more than the current overlap
+  //  (2) It will not correct for indels that are outside of the current overlap
+  if (last_encountered_indel) {
+    if (verbose)
+      cout << "Indel re-correction of overlap" << endl;
+    
+    r_pos = qry_mismatch_pos;
+    q_pos = ref_mismatch_pos;  
+      
+    while ((r_pos != 0) && (q_pos != 0))
+    {
+      r_pos--;
+      q_pos--;
+      
+      if (verbose)
+        cout << r_pos << " " << r_str[r_pos] << " " << q_pos << " " << q_str[q_pos] << endl;
+
+      if ( r_str[r_pos] != q_str[q_pos] ) break;
+       
+      qry_mismatch_pos--;
+      ref_mismatch_pos--;    
+    }
+  }
+  
+  if (verbose)
+  {
+    if (qry_mismatch_pos >= 0)
+      cout << "Query Mismatch At = " << qry_mismatch_pos << " Reference Mismatch At = " << ref_mismatch_pos << " | Overlap = " << overlap << endl;
     cout << "<====" << endl;
   }
 }
@@ -710,7 +748,7 @@ void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
 	uint32_t rpos = a.reference_start_1();
 	uint32_t qpos = a.query_start_1();
 
-	vector<pair<char,uint16_t> > cigar_list = a.cigar_pair_array();
+	vector<pair<char,uint16_t> > cigar_list = a.cigar_pair_char_op_array();
 	char op;
 	uint32_t len;
 	uint32_t i = 0;
@@ -898,7 +936,7 @@ void tam_file::write_moved_alignment(
     
 	string seq = a.read_char_sequence();
 
-	vector<pair<char,uint16_t> > cigar_list = a.cigar_pair_array();
+	vector<pair<char,uint16_t> > cigar_list = a.cigar_pair_char_op_array();
 	uint16_t flags = a.flag();
 
 	// Remove soft padding from CIGAR (since it does not correspond to the
