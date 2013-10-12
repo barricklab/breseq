@@ -2448,7 +2448,7 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
   uint32_t ref_seq_index = 0;
   string read_seq = a.read_char_sequence();
   uint32_t read_seq_index = 0;
-  vector<pair<char,uint16_t> > cigar_pair_array = a.cigar_pair_array();
+  vector<pair<char,uint16_t> > cigar_pair_array = a.cigar_pair_char_op_array();
 
   if (verbose)
   {

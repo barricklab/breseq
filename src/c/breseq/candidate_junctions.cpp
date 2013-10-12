@@ -1074,7 +1074,7 @@ namespace breseq {
 	{    
 		bool verbose = false;
     
-    //if ( (ap.a1.read_name() == "1:907874") || (ap.a1.read_name() == "1:15230"))
+    //if ( (ap.a1.read_name() == "1:796441") || (ap.a1.read_name() == "1:118380"))
     //   verbose = true;
     
     
@@ -1225,17 +1225,21 @@ namespace breseq {
 				else
 					r2_end -= r2_move;
 			}
-
-			// We need to re-check that they have the required amount of unique length if they moved
+      
+      
+			// We should re-check that they have the required amount of unique length if they moved
+      
+      // JEB 2013-10-12
+      // Since we don't change q1 and q2, this test does nothing!
+      /*
 			if (q1_move >= 0 || q2_move >= 0)
 			{
 				if (verbose)
-					cout << "Rejecting alignment because there is not enough overlap" << endl;
-				int32_t dont_care;
-        
+					cout << "Re-checking overlap and uniqueness" << endl;        
         AlignmentPair ap(q1, q2, settings);
 				if (!ap.pass) return false;
 			}
+      */
 
 			//re-calculate the overlap
 			overlap = -1 * (q2_start - q1_end - 1);
@@ -1631,7 +1635,7 @@ namespace breseq {
          )
   {
     
-    ASSERT(false, "CandidateJunctions::normalize_junction_overlap not fully tested");
+    //ASSERT(false, "CandidateJunctions::normalize_junction_overlap not fully tested");
     bool verbose = false;
     // Do nothing if there is positive overlap (unique junction sequence).
     int32_t overlap = from_string<int32_t>(jc["overlap"]);

@@ -250,7 +250,7 @@ void contingency_loci_pileup::analyze_contingency_locus(const string& region) {
 void contingency_loci_pileup::fetch_callback(const alignment_wrapper& a) {
   
   bool verbose = false;
-  vector<pair<char,uint16_t> > cigar_pair = a.cigar_pair_array();
+  vector<pair<char,uint16_t> > cigar_pair = a.cigar_pair_char_op_array();
   int dist_to_first_match = 0;
   
   // optional guards

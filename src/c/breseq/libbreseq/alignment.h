@@ -233,7 +233,7 @@ class alignment_wrapper {
   
     //! Returns a vector of pairs where internal bam format has been changed to chars and ints
     //  first item in pair is operation, second is length
-    inline vector<pair<char,uint16_t> > cigar_pair_array() const
+    inline vector<pair<char,uint16_t> > cigar_pair_char_op_array() const
     {
       vector<pair<char,uint16_t> > cigar_pair_list;
       cigar_pair_list.reserve(cigar_array_length()); // pre-allocate memory to save a little time

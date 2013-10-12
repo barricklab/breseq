@@ -1058,6 +1058,10 @@ namespace breseq {
       int32_t side_1_strand = n(j["side_1_strand"]);
       int32_t side_2_strand = n(j["side_2_strand"]);
 
+      // to be safe about making predictions, neither can be ambiguous 
+      if ( (n(j["side_1_redundant"]) == 1) || (n(j["side_2_redundant"]) == 1) )
+        continue;
+        
       if (side_1_strand == side_2_strand)
 				continue;
           
