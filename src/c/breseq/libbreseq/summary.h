@@ -82,9 +82,13 @@ namespace breseq{
       map<int32_t, int32_t> observed_pos_hash_score_distribution;
       map<int32_t, int32_t> accepted_pos_hash_score_distribution;
 
+      double num_total_reads_mapped_references;
+      storable_vector<double> reads_mapped_to_references;
+
       AlignmentResolution()
       : total_unmatched_reads(0)
       , total_reads(0)
+      , num_total_reads_mapped_references(0)
       {}
       
 			void serialize(ofstream& f)
@@ -95,6 +99,8 @@ namespace breseq{
 				write_to_file(f, observed_pos_hash_score_distribution);
 				write_to_file(f, accepted_pos_hash_score_distribution);
         write_to_file(f, max_sam_base_quality_score);
+        write_to_file(f, num_total_reads_mapped_references);
+        reads_mapped_to_references.serialize(f);
 			}
 			void deserialize(ifstream& f)
 			{
@@ -104,6 +110,8 @@ namespace breseq{
 				read_from_file(f, observed_pos_hash_score_distribution);
 				read_from_file(f, accepted_pos_hash_score_distribution);
         read_from_file(f, max_sam_base_quality_score);
+        read_from_file(f, num_total_reads_mapped_references);
+        reads_mapped_to_references.deserialize(f);        
 			}
 
 		} alignment_resolution;

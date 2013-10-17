@@ -614,13 +614,13 @@ public:
 
 
   //! GVF files
-  void write_gvf(const string& filename);
+  void write_gvf(const string& filename, cReferenceSequences& ref_seq_info, bool snv_only = false);
   
   //!---- Format Conversion Functions: Static Convenience ---- !//
 
   //! Convert genome diff to GVF
-  static void GD2GVF( const string& gdfile, const string& gvffile )
-    { cGenomeDiff gd(gdfile); gd.write_gvf(gvffile); }
+  static void GD2GVF( const string& gdfile, const string& gvffile, cReferenceSequences& ref_seq_info, bool snv_only = false )
+    { cGenomeDiff gd(gdfile); gd.write_gvf(gvffile, ref_seq_info, snv_only); }
   
   //! Convert VCF to genome diff
   static void GD2VCF( const string &gdfile, const string & vcffile, cReferenceSequences& ref_seq_info)

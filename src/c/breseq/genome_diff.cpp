@@ -3371,54 +3371,18 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
 }
   
 // Convert GD file to GVF file
-void cGenomeDiff::write_gvf(const string &gvffile)
-{
-  (void) gvffile;
-  ERROR("Not implemented");
-/*  
+void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_info, bool snv_only)
+{  
+
   diff_entry_list_t diff_entry_list = this->list();
   diff_entry_list_t::iterator it = diff_entry_list.begin();
   
   // Stores the features
   vector< vector<string> > features;
   vector< vector<string> > featuresGVF;
-  // Keeps track of the index of the entry associated with a particular evidence number
-  map< string, int > eDict;
   
-  //Read input into array
-  ifstream gd( gdfile.c_str() );
-  string line;
-  getline( gd, line);
-  
-  while( !gd.eof() )
-  {
-    // split line on tabs
-    char * cstr = new char [line.size()+1];
-    strcpy (cstr, line.c_str());
-    
-    if( cstr[0] == '#' ){ getline(gd,line); continue; }
-    vector<string> feature;
-    char * pch;
-    pch = strtok(cstr,"\t");
-    
-    while (pch != NULL)
-    {
-      feature.push_back(pch);
-      pch = strtok (NULL, "\t");
-      
-    }  
-    features.push_back(feature);
-    
-    // If it is evidence, note its index
-    if( feature[0].size() == 2 ){
-      eDict[ feature[1]] = (int)features.size()-1;
-    }
-    
-    delete[] cstr;
-    getline(gd,line);
-    
-  }
-  gd.close();
+  // We only write entries for mutations
+  diff_entry_list_t mut_list = this->mutation_list();
   
   // Processes the features
   // gvf[0]: ID of reference
@@ -3431,11 +3395,9 @@ void cGenomeDiff::write_gvf(const string &gvffile)
   // gvf[7]: Phase
   // gvf[8]: Attributes    
   
-  for( size_t i=0; i<features.size() ; i++ )
+  for (diff_entry_list_t::iterator it=mut_list.begin(); it != mut_list.end(); it++)
   {
-    if (it == diff_entry_list.end()) break;
     cDiffEntry& de = **it;
-    it++;
     
     vector<string> gvf(9,"");
     
@@ -3443,61 +3405,48 @@ void cGenomeDiff::write_gvf(const string &gvffile)
       gvf[j] = ".";
     }
     
-    if( features[i].size() <= 4 || features[i][0].size() == 2 ){
-      continue;
-    }
-    
+    // Common to all entries
     // SeqID
-    gvf[0] = features[i][3];
+    gvf[0] = de[SEQ_ID];
     // Source
     gvf[1] = "breseq";
-    // Type
-    gvf[3] = features[i][4];
+    // Position
+    gvf[3] = de[POSITION];
     
-    if( features[i][0].compare( "SNP") == 0 )
+    if( de._type == SNP )
     {
+      // Type
       gvf[2] = "SNV";
-      stringstream ss;
-      ss << atoi( gvf[3].c_str() );
-      ss >> gvf[4];
-      gvf[8].append("Variant_seq=").append( features[i][5] );
-      
-      //Look for evidence information
-      vector<string> evidenceNums = split( features[i][2], "," );
-      vector<string> evidence = features[ eDict[ evidenceNums[0] ] ];
-      
+      // End
+      gvf[4] = de[POSITION];
+      // Strand
       gvf[6] = "+";
+      // Attributes - Reference base
+      gvf[8].append(";Reference_seq=").append( ref_seq_info.get_sequence_1(de[SEQ_ID], from_string(de[POSITION]),  from_string(de[POSITION])) );
+      // Attributes - New base
+      gvf[8].append("Variant_seq=").append( de[NEW_BASE] );
       
-      if (evidence.size() > 0) {
-        gvf[8].append(";Reference_seq=").append( evidence[5] );
-      }
+      diff_entry_list_t ev_list = mutation_evidence_list(de);
+      ASSERT(ev_list.size() == 1, "Did not find RA evidence supporting SNP\n" + to_string(de))
+      cDiffEntry& ev = *(ev_list.front());
       
-      for( size_t j=0; j<evidence.size(); j++ ){
-        string s = evidence[j];
-        if( s.size()>8 && s.substr(0,8).compare("quality=") == 0){
-          gvf[5] = s.substr(8,s.size()-8);
-        }
-        if( s.size()>8 && s.substr(0,8).compare("new_cov=") == 0){
-          s = s.substr(8,s.size()-8);
-          vector<string> covs = split( s, "/" );
-          uint32_t cov = from_string<uint32_t>(covs[0]) + from_string<uint32_t>(covs[1]);
-          gvf[8] = gvf[8].append(";Variant_reads=").append(to_string(cov));
-        }
+      // Score
+      gvf[5] = ev[QUALITY];
         
-        if( s.size()>8 && s.substr(0,8).compare("tot_cov=") == 0){
-          s = s.substr(8,s.size()-8);
-          vector<string> covs = split( s, "/" );
-          uint32_t cov = from_string<uint32_t>(covs[0]) + from_string<uint32_t>(covs[1]);
-          gvf[8] = gvf[8].append(";Total_reads=").append(to_string(cov));
-        }
-      }
+      // Attributes - Total Reads 
+      vector<string> covs = split( ev[TOT_COV], "/" );
+      uint32_t cov = from_string<uint32_t>(covs[0]) + from_string<uint32_t>(covs[1]);
+      gvf[8] = gvf[8].append(";Total_reads=").append(to_string(cov));
       
-      for( size_t j=0; j<features[i].size(); j++ ){
-        if( features[i][j].size()>10 && features[i][j].substr(0,10).compare("frequency=") == 0){
-          gvf[8].append(";Variant_freq=").append( features[i][j].substr(10,features[i][j].size()-10 ) );
-        }
-      }
+      // Attributes - Variant Reads 
+      vector<string> variant_covs = split( ev[NEW_COV], "/" );
+      uint32_t variant_cov = from_string<uint32_t>(variant_covs[0]) + from_string<uint32_t>(variant_covs[1]);
+      gvf[8] = gvf[8].append(";Variant_reads=").append(to_string(variant_cov));
+        
+      // Attributes - Frequency 
+      gvf[8].append(";Variant_freq=").append( ev[FREQUENCY] );
       
+
       if (de.entry_exists("snp_type")) {
         if (de["snp_type"] == "nonsynonymous") {
           gvf[8].append(";Variant_effect=non_synonymous_codon");
@@ -3512,81 +3461,66 @@ void cGenomeDiff::write_gvf(const string &gvffile)
           gvf[8].append(";Variant_effect=nc_transcript_variant");
         }
         else if (de["snp_type"] == "pseudogene") {
-          ERROR("Mutation annotated as pseudogene encountered. Not clear how to annotate.");
+          gvf[8].append(";Variant_effect=nc_transcript_variant");
         }
       }
+    } // END of SNP
+    
+    else if( de._type == SUB ){
+      gvf[2] = "indel";
+      // End
+      gvf[4] = to_string(from_string(de[POSITION]) + from_string(de[SIZE])); 
+      gvf[8].append("Reference_seq=").append( ref_seq_info.get_sequence_1(de[SEQ_ID], from_string(de[POSITION]), from_string(de[POSITION]) + from_string(de[SIZE]) - 1));
+      gvf[8].append(";Variant_seq=").append( de[NEW_SEQ] );
     }
     
-    else if( features[i][0].compare("SUB") == 0 ){
-      //Look for evidence information
-      vector<string> evidenceNums = split( features[i][2], "," );
-      string s = "";
-      for( size_t j=0; j<evidenceNums.size(); j++ ){
-        vector<string> e = features[ eDict[ evidenceNums[j] ] ];
-        s.append( e[5] );
-      }
-      gvf[8].append("Reference_seq=").append(s);
-      gvf[2] = "substitution";
-      stringstream ss;
-      ss << atoi( features[i][4].c_str() ) + atoi( features[i][5].c_str() );
-      ss >> gvf[4]; 
-      gvf[8].append(";Variant_seq=").append( features[i][6] );
-    }
-    
-    else if( features[i][0].compare("DEL") == 0){
+    else if( de._type == DEL ){
       gvf[2] = "deletion";
-      stringstream ss; int length = atoi(features[i][4].c_str()) + atoi(features[i][5].c_str());
-      ss << length;
-      ss >> gvf[4];
+      gvf[4] = gvf[3];
+      gvf[8].append("Reference_seq=").append( ref_seq_info.get_sequence_1(de[SEQ_ID], from_string(de[POSITION]), from_string(de[POSITION]) + from_string(de[SIZE]) - 1) );
+      gvf[8].append(";Variant_seq=").append( "." );
     }
     
-    else if( features[i][0].compare("INS") == 0 ){
+    else if( de._type == INS ){
       gvf[2] = "insertion";
       gvf[4] = gvf[3];
-      gvf[8] = gvf[8].append("Variant_seq=").append( features[i][5] );
+      gvf[8].append("Reference_seq=").append( "." );
+      gvf[8].append(";Variant_seq=").append( de[NEW_SEQ] );
     }
     
-    else if( features[i][0].compare("MOB") == 0 ){
-      gvf[2] = "transposable_element";
+    else if( de._type == MOB ){
+      gvf[2] = "mobile_element_insertion";
       gvf[4] = gvf[3];
-      gvf[8] = string("ID=").append( features[i][5] );
       //Strand
-      if( atoi( features[i][6].c_str() ) > 0 ){
+      if( from_string(de["strand"]) > 0 )
         gvf[6] = "+";
-      }
-      else{ gvf[6] = "-"; }
+      else
+        gvf[6] = "-";
+      gvf[8].append("Reference_seq=").append( "." );
+      gvf[8].append(";Variant_seq=").append( mob_replace_sequence(ref_seq_info, de) );
     }
     
-    else if( features[i][0].compare("AMP") == 0 )
+    else if( de._type == AMP )
     {
-      WARN("Input file contains AMP features that are currently not converted to GVF");
-      // @JEB TODO This code seg faults. Broken 2011-11-17.
-       int x, y; 
-       gvf[2] = "insertion";
+       gvf[2] = "copy_number_gain";
        stringstream ss;
-       ss << gvf[3] << gvf[5]; ss >> x; ss >> y; x += y; ss << x;
-       ss >> gvf[4];
-       gvf[3] = gvf[4];
-       gvf[8].append( "Variant_seq=" );
-       for( int i=0; i < (atoi(features[i][6].c_str())-1)*atoi(features[i][5].c_str()); i++ ){
-       gvf[8].append("N");
-       }
-       
+       gvf[4] = gvf[3];
+       gvf[8].append("Reference_seq=").append( "." );
+       gvf[8].append(";Variant_seq=").append( ref_seq_info.get_sequence_1(de[SEQ_ID], from_string(de[POSITION]), from_string(de[POSITION]) + from_string(de[SIZE]) - 1) );
     }
-    else if( features[i][0].compare("INV") == 0 ){
+    else if( de._type == INV ){
       gvf[2] = "inversion";
-      gvf[3] = features[i][4];
-      stringstream ss;
-      ss << atoi( features[i][4].c_str() ) + atoi( features[i][5].c_str() );
-      ss >> gvf[4]; 
+      gvf[4] = to_string(from_string(de[POSITION]) + from_string(de[SIZE]) - 1);
     }
-    else if( features[i][0].compare("CON") == 0 ){
+    else if( de._type == CON ){
       gvf[2] = "substitution";
       gvf[4] = gvf[3];
-      stringstream ss;
-      ss << atoi( features[i][4].c_str() ) + atoi( features[i][5].c_str() );
-      ss >> gvf[4];
-      gvf[8].append(";Variant_seq=").append( features[i][6] );
+      
+      uint32_t tid, start_pos, end_pos;
+      ref_seq_info.parse_region(de["region"], tid, start_pos, end_pos);
+      
+      gvf[8].append("Reference_seq=").append( ref_seq_info.get_sequence_1(de[SEQ_ID], from_string(de[POSITION]), from_string(de[POSITION]) + from_string(de[SIZE]) - 1) );
+      gvf[8].append(";Variant_seq=").append( ref_seq_info.get_sequence_1(tid, start_pos, end_pos ));
     }
     
     // ID attribute
@@ -3598,7 +3532,7 @@ void cGenomeDiff::write_gvf(const string &gvffile)
       gvf[8] = s;
     }
     
-    if (!snv_only || (gvf[2] == "SNV"))
+    if (!snv_only || (de._type == SNP))
       featuresGVF.push_back(gvf);
   }
   
@@ -3616,7 +3550,7 @@ void cGenomeDiff::write_gvf(const string &gvffile)
     output << "\n";
   }
   output.close();
-*/  
+  
 }
 
   

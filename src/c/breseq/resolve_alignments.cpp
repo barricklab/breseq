@@ -285,6 +285,7 @@ void resolve_alignments(
   map<string,int32_t>& distance_cutoffs = summary.alignment_resolution.distance_cutoffs;
   storable_map<string, storable_vector<int32_t> >& pos_hash_cutoffs = summary.alignment_resolution.pos_hash_cutoffs;
   int32_t avg_read_length = static_cast<int32_t>(round(summary.sequence_conversion.avg_read_length));
+  summary.alignment_resolution.reads_mapped_to_references.resize(ref_seq_info.size(),0);
 
   // Load the reference sequence trims, for writing resolved alignments
   SequenceTrimsList trims_list;
@@ -842,7 +843,7 @@ void load_junction_alignments(
         if (verbose)
           cout << "Best alignment to reference. MQD: " << mapping_quality_difference << endl;
         
-        _write_reference_matches(settings, ref_seq_info, trims_list, this_reference_alignments, resolved_reference_tam, fastq_file_index);
+        _write_reference_matches(settings, summary, ref_seq_info, trims_list, this_reference_alignments, resolved_reference_tam, fastq_file_index);
       }
       else
       {
@@ -963,7 +964,7 @@ void load_sam_only_alignments(
       }
       
       // best match is to the reference, record in that SAM file.
-      _write_reference_matches(settings, ref_seq_info, trims_list, this_reference_alignments, resolved_reference_tam, sam_file_index);
+      _write_reference_matches(settings, summary, ref_seq_info, trims_list, this_reference_alignments, resolved_reference_tam, sam_file_index);
             
     } // End loop through every read in file
     
@@ -1011,7 +1012,7 @@ bool alignment_overlaps_junction(const vector<ResolveJunctionInfo>& junction_inf
 }
 
 
-void _write_reference_matches(const Settings& settings, cReferenceSequences& ref_seq_info, const SequenceTrimsList& trims_list, alignment_list& reference_alignments, tam_file& reference_tam, uint32_t fastq_file_index)
+void _write_reference_matches(const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info, const SequenceTrimsList& trims_list, alignment_list& reference_alignments, tam_file& reference_tam, uint32_t fastq_file_index)
 {
   (void)settings; //TODO: unused?
 	// Nice try, no alignments
@@ -1019,11 +1020,15 @@ void _write_reference_matches(const Settings& settings, cReferenceSequences& ref
 
 	vector<Trims> trims;
 
+  double redundancy_corrected_count = 1.0 / reference_alignments.size();
   for(alignment_list::iterator it=reference_alignments.begin(); it!=reference_alignments.end(); it++)
   {
     Trims t = get_alignment_trims(**it, trims_list);
 		trims.push_back(t);
+    summary.alignment_resolution.reads_mapped_to_references[(*it)->reference_target_id()]+=redundancy_corrected_count;
   }
+  summary.alignment_resolution.num_total_reads_mapped_references+=1.0;
+
   
 	reference_tam.write_alignments((int32_t)fastq_file_index, reference_alignments, &trims, &ref_seq_info, true);
 }
@@ -1448,7 +1453,7 @@ void resolve_junction(
 				if (repeat_match.degenerate_count == 0)
 				{
 					alignment_list& this_reference_al = repeat_match.reference_alignments;
-					_write_reference_matches(settings, ref_seq_info, trims_list, this_reference_al, resolved_reference_tam, fastq_file_index);
+					_write_reference_matches(settings, summary, ref_seq_info, trims_list, this_reference_al, resolved_reference_tam, fastq_file_index);
 				}
         
         counted_ptr<bam_alignment> matched_alignment(NULL);
@@ -1501,7 +1506,7 @@ void resolve_junction(
       if (failed)
       {
         alignment_list this_reference_al = item.reference_alignments;
-        _write_reference_matches(settings, ref_seq_info, trims_list, this_reference_al, resolved_reference_tam, fastq_file_index);
+        _write_reference_matches(settings, summary, ref_seq_info, trims_list, this_reference_al, resolved_reference_tam, fastq_file_index);
       }
       
       // REGARDLESS of success: write matches to the candidate junction SAM file
