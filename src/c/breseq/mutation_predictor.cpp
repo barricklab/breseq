@@ -1408,7 +1408,7 @@ namespace breseq {
 			}
 
 			// we don't need these fields
-			if (mut["frequency"] == "1") mut.erase("frequency");
+			//if (mut["frequency"] == "1") mut.erase("frequency");
 			mut.erase("start");
 			mut.erase("end");
 			mut.erase("insert_start");

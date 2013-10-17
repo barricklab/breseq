@@ -249,11 +249,14 @@ namespace breseq {
 
 	void _write_reference_matches(
                                 const Settings& settings, 
+                                Summary& summary,
                                 cReferenceSequences& ref_seq_info, 
                                 const SequenceTrimsList& trim_list, 
                                 alignment_list& reference_alignments, 
                                 tam_file& reference_tam, 
-                                uint32_t fastq_file_index);
+                                uint32_t fastq_file_index
+                                );
+                                
 
 	vector<string> get_sorted_junction_ids(
                                          UniqueJunctionMatchMap& unique_map, 

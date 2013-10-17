@@ -55,6 +55,7 @@ int gdtools_usage()
     
   uout("Format Conversions:");
   uout << "GD2VCF                 GD to Variant Call Format (VCF)" << endl;
+  uout << "GD2GVF                 GD to Genome Variation Format (GVF)" << endl;
   //uout << "vcf2gd                 Variant Call Format(VCF) to GD" << endl;
   uout << "GD2CIRCOS              GD to Circos Data" << endl;
 
@@ -434,7 +435,10 @@ int do_check_plot(int argc, char *argv[])
 int do_validate(int argc, char *argv[])
 {
     AnyOption options("gdtools VALIDATE input1.gd [input2.gd]");
-    options("reference,r",  "reference sequence file");
+    //options("reference,r",  "reference sequence file");
+    options.addUsage("");
+    options.addUsage("Validates whether the format of the input Genome Diff files is correct.");
+
     options.processCommandArgs(argc, argv);
 
     // Simply read files. Really need some way to change deadly errors to warnings in read function.
@@ -459,7 +463,7 @@ int do_check(int argc, char *argv[])
   options("reference,r",  "reference sequence file");
   options("evidence",     "compare evidence", TAKES_NO_ARGUMENT);
   options("jc-buffer",    "length of sequence segment to compare for JC evidence", 50);
-  options("jc-shorten",    "length to shorten control degments by when comparing JC evidence for overlap", 5);
+  options("jc-shorten",   "length to shorten control segments by when comparing JC evidence for overlap", 5);
   options("plot-jc",      "plot JC Precision versus Score, argument is a prefix for the file paths");
   options("verbose,v",    "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
@@ -592,6 +596,7 @@ int do_gd2gvf( int argc, char* argv[])
   options
     ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
     ("output,o","name of output file", "output.gvf")
+    ("snv-only","only include SNP/SNV entries in output", TAKES_NO_ARGUMENT)
     ;
   options.processCommandArgs( argc,argv);
 
@@ -604,8 +609,8 @@ int do_gd2gvf( int argc, char* argv[])
     options.printUsage();
     return -1;
   }
-  
-  cGenomeDiff::GD2GVF( options.getArgv(0), options["output"] );
+    
+  cGenomeDiff::GD2GVF( options.getArgv(0), options["output"], options.count("snv-only") );
   
   return 0;
 }
@@ -2176,6 +2181,8 @@ int main(int argc, char* argv[]) {
     return do_gd2vcf(argc_new, argv_new);
   } else if (command == "VCF2GD") {             
     return do_vcf2gd( argc_new, argv_new);
+  } else if (command == "GD2GVF") {             
+    return do_gd2gvf( argc_new, argv_new);
   } else if (command == "GD2CIRCOS"){
     return do_gd2circos(argc_new, argv_new);
   } else if(command == "MIRA2GD"){

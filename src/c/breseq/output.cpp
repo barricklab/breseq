@@ -533,7 +533,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   ////
   // Write reference sequence information
   ////
-  
+    
   HTML << h2("Reference Sequence Information") << endl;
   HTML << "<p>" << endl;
   HTML << "<table border=\"0\" cellspacing=\"1\" cellpadding=\"5\" >" << endl;
@@ -543,14 +543,21 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
                     th("length") <<
                     th(ALIGN_CENTER, "fit mean") <<
                     th(ALIGN_CENTER, "fit dispersion") <<
+                    th(ALIGN_CENTER, "% mapped reads") <<
  //                   th(ALIGN_CENTER, "nbinom mean") <<
  //                   th(ALIGN_CENTER, "nbinom size") <<
                     th(ALIGN_LEFT, "description") <<
           "</tr>" << endl;
              
   size_t total_length = 0;
+
   for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++) {
     
+    uint32_t tid = ref_seq_info.seq_id_to_index(it->m_seq_id);
+    double this_reference_mapped_reads = summary.alignment_resolution.reads_mapped_to_references[tid];  
+    double total_mapped_reads = summary.alignment_resolution.num_total_reads_mapped_references;
+    double this_reference_fraction_mapped_reads = 100 * this_reference_mapped_reads / total_mapped_reads; 
+      
     bool fragment_with_fit_coverage = (summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter != 0);
     bool fragment_with_no_coverage = (summary.unique_coverage[it->m_seq_id].average == 0);
     HTML << (fragment_with_fit_coverage ? "<tr>" : "<tr class=\"gray_table_row\">");
@@ -594,6 +601,9 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
      HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter, 1)); 
     }
     HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_dispersion));
+    
+    HTML << td(ALIGN_CENTER, to_string(this_reference_fraction_mapped_reads) + "%");
+    
     //HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter, 1));
     //HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_size_parameter, 1));
 
@@ -608,6 +618,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << td(ALIGN_RIGHT, b(commify(to_string(total_length))) );
   HTML << td();
   HTML << td();
+  HTML << td(ALIGN_CENTER, to_string(100.0) + "%");
   HTML << td();
   HTML << "</tr>" << endl;
   HTML << "</table>" << endl;
