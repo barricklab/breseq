@@ -595,6 +595,7 @@ int do_gd2gvf( int argc, char* argv[])
 
   options
     ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
+    ("reference,r","Reference file")
     ("output,o","name of output file", "output.gvf")
     ("snv-only","only include SNP/SNV entries in output", TAKES_NO_ARGUMENT)
     ;
@@ -610,7 +611,11 @@ int do_gd2gvf( int argc, char* argv[])
     return -1;
   }
     
-  cGenomeDiff::GD2GVF( options.getArgv(0), options["output"], options.count("snv-only") );
+  vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
+  cReferenceSequences ref_seq_info;
+  ref_seq_info.LoadFiles(reference_file_names);
+    
+  cGenomeDiff::GD2GVF( options.getArgv(0), options["output"], ref_seq_info, options.count("snv-only") );
   
   return 0;
 }

@@ -1769,6 +1769,7 @@ void  assign_one_junction_read_counts(
                                   )
 {
   bool verbose = false;
+  bool debug_output = true;
   
   uint32_t avg_read_length = summary.sequence_conversion.avg_read_length;
  
@@ -1842,6 +1843,10 @@ void  assign_one_junction_read_counts(
   int32_t non_negative_alignment_overlap = alignment_overlap;
   non_negative_alignment_overlap = max(0, non_negative_alignment_overlap);
   
+  if (debug_output) {
+    j["junction_start_pos_for_counting"] = to_string(start);
+    j["junction_end_pos_for_counting"] = to_string(end);
+  }
   j["junction_possible_overlap_registers"] = to_string(avg_read_length - abs_alignment_overlap - 1);
 
   if (settings.junction_debug) ofile << "JUNCTION: start " << start << " end " << end << endl;
@@ -1863,18 +1868,22 @@ void  assign_one_junction_read_counts(
     int32_t overlap_correction = non_negative_alignment_overlap - from_string<int32_t>(j[SIDE_1_OVERLAP]);
         
     if (side_1_strand == +1) {
-      end = start + amount_to_add;
-      start = start - 1 - overlap_correction;
+      start = start - overlap_correction;
+      end = start + 1 + amount_to_add + non_negative_alignment_overlap;
       end += continuation_right;
     } else {
-      end = start + 1 + overlap_correction;
       start = start - amount_to_add;
+      end = start + 1 + overlap_correction + non_negative_alignment_overlap;
       start -= continuation_left;
     }
-     
+    
     if (settings.junction_debug) ofile << "SIDE 1: start " << start << " end " << end << endl;       
     if (verbose) cerr << "SIDE 1: start " << start << " end " << end << endl;
-
+    if (debug_output) {
+      j["side_1_start_pos_for_counting"] = to_string(start);
+      j["side_1_end_pos_for_counting"] = to_string(end);
+    }
+    
     j["side_1_possible_overlap_registers"] = to_string(avg_read_length - abs(end - start));
     
     j[SIDE_1_READ_COUNT] = to_string(reference_jrc.count(j[SIDE_1_SEQ_ID], start, end, junction_read_names, empty_read_names));
@@ -1899,18 +1908,23 @@ void  assign_one_junction_read_counts(
     start = from_string<uint32_t>(j[SIDE_2_POSITION]);
     int32_t overlap_correction = non_negative_alignment_overlap - from_string<int32_t>(j[SIDE_2_OVERLAP]);
 
+    
     if (side_2_strand == +1) {
-      end = start + amount_to_add;
-      start = start - 1 - overlap_correction;
+      start = start - overlap_correction;
+      end = start + 1 + amount_to_add + non_negative_alignment_overlap;
       end += continuation_right;
     } else {
-      end = start + 1 + overlap_correction;
       start = start - amount_to_add;
+      end = start + 1 + overlap_correction + non_negative_alignment_overlap;
       start -= continuation_left;
     }
     
     if (settings.junction_debug) ofile << "SIDE 2: start " << start << " end " << end << endl;
     if (verbose) cerr << "SIDE 2: start " << start << " end " << end << endl;
+    if (debug_output) {
+      j["side_2_start_pos_for_counting"] = to_string(start);
+      j["side_2_end_pos_for_counting"] = to_string(end);
+    }
     
     j["side_2_possible_overlap_registers"] = to_string(avg_read_length - abs(end - start));
 
