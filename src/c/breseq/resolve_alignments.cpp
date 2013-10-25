@@ -39,8 +39,8 @@ void calculate_continuation(
                             ResolveJunctionInfo& rji, 
                             cReferenceSequences& ref_seq_info, 
                             cReferenceSequences& junction_ref_seq_info, 
-                            uint32_t& continuation_left,
-                            uint32_t& continuation_right
+                            uint32_t& side_1_continuation,
+                            uint32_t& side_2_continuation
                             )
 {
   bool verbose = false;
@@ -117,24 +117,24 @@ void calculate_continuation(
   }
   
   // Compare left side going backwards
-  continuation_left = 0;
+  side_2_continuation = 0;
   for (uint32_t i = 0; i < left_reference_seq.size() ; i++) {
     if (left_reference_seq[left_reference_seq.size() - i - 1] != left_junction_seq[left_junction_seq.size() - i - 1] )
         break;
-    continuation_left++;
+    side_2_continuation++;
   }
   
   // Compare right side going forwards
-  continuation_right = 0;
+  side_1_continuation = 0;
   for (uint32_t i = 0; i < right_reference_seq.size() ; i++) {
     if (right_reference_seq[i] != right_junction_seq[i] )
         break;
-    continuation_right++;
+    side_1_continuation++;
   }
   
   if (verbose) {
-    cout << "CONTINUATION LEFT  :: " << continuation_left << endl;
-    cout << "CONTINUATION RIGHT :: " << continuation_right << endl;
+    cout << "SIDE 1 CONTINUATION (LEFT-TO-RIGHT) :: " << side_1_continuation << endl;
+    cout << "SIDE 2 CONTINUATION (RIGHT-TO-LEFT) :: " << side_2_continuation << endl;
   }
   
 }
@@ -1288,15 +1288,15 @@ void score_junction(
   // Calculate the maximum possible pos_hash_score
   ////
   
-  uint32_t continuation_left, continuation_right;
-  calculate_continuation(scj, ref_seq_info, junction_ref_seq_info, continuation_left, continuation_right);
+  uint32_t side_1_continuation, side_2_continuation;
+  calculate_continuation(scj, ref_seq_info, junction_ref_seq_info, side_1_continuation, side_2_continuation);
   
   uint32_t avg_read_length = static_cast<uint32_t>(round(summary.sequence_conversion.avg_read_length));
   
   // For  junctions the number of start sites where reads crossing the
   // new junction sequence could occur is reduced by overlap (positive or negative):
   int32_t overlap_positions_max_pos_hash_score_reduction = abs(scj.alignment_overlap);
-  uint32_t max_pos_hash_score = 2 * (avg_read_length - 1 - overlap_positions_max_pos_hash_score_reduction - continuation_left - continuation_right);
+  uint32_t max_pos_hash_score = 2 * (avg_read_length - 1 - overlap_positions_max_pos_hash_score_reduction - side_1_continuation - side_2_continuation);
   
   //@JEB Actually, this can happen if the read lengths vary, so we better not rule it out as an error!
   /*
@@ -1328,8 +1328,8 @@ void score_junction(
     redundant[1],
     junction_id,
     999999999.99,
-    continuation_left,
-    continuation_right
+    side_1_continuation,
+    side_2_continuation
 	};
   
   junction_test_info = this_junction_test_info;
@@ -1695,8 +1695,8 @@ cDiffEntry junction_to_diff_entry(
   ("pos_hash_score", to_string(test_info.pos_hash_score))
   ("max_pos_hash_score", to_string(test_info.max_pos_hash_score))
   ("neg_log10_pos_hash_p_value", test_info.neg_log10_pos_hash_p_value == -1 ? "NT" : to_string(test_info.neg_log10_pos_hash_p_value))
-  ("continuation_left", to_string<uint32_t>(test_info.continuation_left))
-  ("continuation_right", to_string<uint32_t>(test_info.continuation_right))
+  ("side_1_continuation", to_string<uint32_t>(test_info.side_1_continuation))
+  ("side_2_continuation", to_string<uint32_t>(test_info.side_2_continuation))
   ;
 
 	/// Note: Other adjustments to overlap can happen at the later annotation stage
@@ -1769,7 +1769,7 @@ void  assign_one_junction_read_counts(
                                   )
 {
   bool verbose = false;
-  bool debug_output = true;
+  bool debug_output = false;
   
   uint32_t avg_read_length = summary.sequence_conversion.avg_read_length;
  
@@ -1788,8 +1788,8 @@ void  assign_one_junction_read_counts(
   
   int32_t start, end;
   
-  uint32_t continuation_right = from_string<uint32_t>(j["continuation_right"]);
-  uint32_t continuation_left = from_string<uint32_t>(j["continuation_left"]);
+  uint32_t side_1_continuation = from_string<uint32_t>(j["side_1_continuation"]);
+  uint32_t side_2_continuation = from_string<uint32_t>(j["side_2_continuation"]);
   
   // Print out the junction we are processing
   if (verbose) cerr << endl << "ASSIGNING READ COUNTS TO JUNCTION" << endl << j << endl << endl; 
@@ -1800,7 +1800,7 @@ void  assign_one_junction_read_counts(
     cerr << "position:" << j[SIDE_1_POSITION] << endl;
     cerr << "strand:" << j[SIDE_1_STRAND] << endl;
     cerr << "flanking:" << j["flanking_left"] << endl;
-    cerr << "continuation:" << j["continuation_left"] << endl;
+    cerr << "continuation:" << j["side_1_continuation"] << endl;
     cerr << "overlap:" << j[SIDE_1_OVERLAP] << endl;
 
     cerr << "==OVERLAP== " << j[ALIGNMENT_OVERLAP] << endl;
@@ -1809,7 +1809,7 @@ void  assign_one_junction_read_counts(
     cerr << "position:" << j[SIDE_2_POSITION] << endl;
     cerr << "strand:" << j[SIDE_2_STRAND] << endl;
     cerr << "flanking:" << j["flanking_right"] << endl;
-    cerr << "continuation:" << j["continuation_right"] << endl;
+    cerr << "continuation:" << j["side_2_continuation"] << endl;
     cerr << "overlap:" << j[SIDE_2_OVERLAP] << endl;
   }
   
@@ -1818,7 +1818,7 @@ void  assign_one_junction_read_counts(
     ofile << "position:" << j[SIDE_1_POSITION] << endl;
     ofile << "strand:" << j[SIDE_1_STRAND] << endl;
     ofile << "flanking:" << j["flanking_left"] << endl;
-    ofile << "continuation:" << j["continuation_left"] << endl;
+    ofile << "continuation:" << j["side_1_continuation"] << endl;
     ofile << "overlap:" << j[SIDE_1_OVERLAP] << endl;
 
     ofile << "==OVERLAP== " << j[ALIGNMENT_OVERLAP] << endl;
@@ -1827,13 +1827,13 @@ void  assign_one_junction_read_counts(
     ofile << "position:" << j[SIDE_2_POSITION] << endl;
     ofile << "strand:" << j[SIDE_2_STRAND] << endl;
     ofile << "flanking:" << j["flanking_right"] << endl;
-    ofile << "continuation:" << j["continuation_right"] << endl;
+    ofile << "continuation:" << j["side_2_continuation"] << endl;
     ofile << "overlap:" << j[SIDE_2_OVERLAP] << endl;
   }
   
   // New Junction
-  start = from_string<uint32_t>(j["flanking_left"]) - continuation_left;
-  end = start + abs(from_string<int32_t>(j[ALIGNMENT_OVERLAP])) + 1 + continuation_right;
+  start = from_string<uint32_t>(j["flanking_left"]) - side_1_continuation;
+  end = start + abs(from_string<int32_t>(j[ALIGNMENT_OVERLAP])) + 1 + side_2_continuation;
   
   //int32_t amount_to_add = (require_overlap != -1) ? require_overlap : abs(from_string<int32_t>(j[ALIGNMENT_OVERLAP]));
   int32_t amount_to_add = (require_overlap != -1) ? require_overlap : 0;
@@ -1870,11 +1870,11 @@ void  assign_one_junction_read_counts(
     if (side_1_strand == +1) {
       start = start - overlap_correction;
       end = start + 1 + amount_to_add + non_negative_alignment_overlap;
-      end += continuation_right;
+      end += side_1_continuation;
     } else {
       start = start - amount_to_add;
       end = start + 1 + overlap_correction + non_negative_alignment_overlap;
-      start -= continuation_left;
+      start -= side_1_continuation;
     }
     
     if (settings.junction_debug) ofile << "SIDE 1: start " << start << " end " << end << endl;       
@@ -1912,11 +1912,11 @@ void  assign_one_junction_read_counts(
     if (side_2_strand == +1) {
       start = start - overlap_correction;
       end = start + 1 + amount_to_add + non_negative_alignment_overlap;
-      end += continuation_right;
+      end += side_2_continuation;
     } else {
       start = start - amount_to_add;
       end = start + 1 + overlap_correction + non_negative_alignment_overlap;
-      start -= continuation_left;
+      start -= side_2_continuation;
     }
     
     if (settings.junction_debug) ofile << "SIDE 2: start " << start << " end " << end << endl;
