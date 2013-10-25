@@ -75,8 +75,8 @@ namespace breseq {
     bool redundant_2;
     string junction_id;
     double neg_log10_pos_hash_p_value;
-    uint32_t continuation_left;
-    uint32_t continuation_right;
+    uint32_t side_1_continuation;
+    uint32_t side_2_continuation;
     
     bool operator <(const JunctionTestInfo& _in)
     {
@@ -181,8 +181,8 @@ namespace breseq {
                               ResolveJunctionInfo& rji, 
                               cReferenceSequences& ref_seq_info, 
                               cReferenceSequences& junction_ref_seq_info, 
-                              uint32_t& continuation_left,
-                              uint32_t& continuation_right
+                              uint32_t& side_1_continuation,
+                              uint32_t& side_2_continuation
                               );
   
   void resolve_alignments(

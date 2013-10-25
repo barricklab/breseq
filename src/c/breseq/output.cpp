@@ -1437,7 +1437,7 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_det
   /* Extra debug output
   if (show_details) {
     ss << tr(   td("colspan=\"" + to_string(total_cols) + "\"",
-                "Continuation Left: " + c["continuation_left"] + "&nbsp;&nbsp;Continuation Right: " + c["continuation_right"] )) << endl;
+                "Side 1 Continuation (from left to right): " + c["side_1_continuation"] + "&nbsp;&nbsp;Side 2 Continuation (from right to left): " + c["side_2_continuation"] )) << endl;
   }
   */
     
