@@ -86,7 +86,7 @@ namespace breseq {
       
       
       uint32_t i;
-      if (settings.bowtie2_align && settings.bowtie2) {
+      if (true) {
         i = ap->aux_get_i("AS"); // test using alignment score instead of mismatches.
       } else {
         i = alignment_mismatches(*ap, ref_seq_info);
@@ -259,9 +259,11 @@ namespace breseq {
                                                   )
   {
     
+    // Beware of potential crash here on simulated data if 2nd stage alignment file is empty 
+    // (because all reads mapped in the first stage)
     ifstream input_sam_file_1(input_sam_file_name_1.c_str());
     ifstream input_sam_file_2(input_sam_file_name_2.c_str());
-    
+
     ofstream out_sam_file(output_sam_file_name.c_str());
     
     string line_1, line_2;
@@ -289,7 +291,9 @@ namespace breseq {
     
     while (not_done_1 || not_done_2) {
       
-      if (not_done_1 && (index_1 < index_2)) {
+      // If file 1 is not done AND
+      //   the read index is smaller in file 1 than in file 2 OR file 2 is already done
+      if (not_done_1 && ((index_1 < index_2) || !not_done_2)) {
         
         if (mapped_1)
           out_sam_file << line_1 << endl;
@@ -935,10 +939,10 @@ namespace breseq {
 // CandidateJunctions::merge_candidate_junctions
 //
 //   Determined whether two junctions are equivalent (i.e., one is a subsequence of the other)
-//   If do, it merges using these criteria in order: 
-//      * Shorter one if they differ in length (this implies less overlap)
-//      * Favoring one with the two sides on the same reference sequence
-//      * Favoring the one with the closest reference coordinates
+//   If they are, it merges theminto one, according to these criteria: 
+//      1) Shorter one if they differ in length (this implies more overlap)
+//      2) Favoring one with the two sides on the same reference sequence
+//      3) Favoring the one with the closest reference coordinates
   
   bool CandidateJunctions::merge_candidate_junctions(JunctionCandidatePtr*& jcp1, JunctionCandidatePtr*& jcp2)
   {
@@ -1226,20 +1230,9 @@ namespace breseq {
 					r2_end -= r2_move;
 			}
       
-      
-			// We should re-check that they have the required amount of unique length if they moved
-      
-      // JEB 2013-10-12
-      // Since we don't change q1 and q2, this test does nothing!
-      /*
-			if (q1_move >= 0 || q2_move >= 0)
-			{
-				if (verbose)
-					cout << "Re-checking overlap and uniqueness" << endl;        
-        AlignmentPair ap(q1, q2, settings);
-				if (!ap.pass) return false;
-			}
-      */
+      // JEB 2013-10-12      
+			// We might re-check that they still have the required amount of unique length if they moved.
+      // For now this is checked only on the original alignments that have not had their overlap corrected.
 
 			//re-calculate the overlap
 			overlap = -1 * (q2_start - q1_end - 1);

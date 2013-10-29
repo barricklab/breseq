@@ -235,10 +235,6 @@ namespace breseq
     bool keep_all_intermediates;              // Default = false
 
     //! Settings: Read Alignment and Candidate Junction Read Alignment
-    uint32_t ssaha2_seed_length;  // Default = 13
-    uint32_t ssaha2_skip_length;  // Default = 1 (i.e. no skipping)
-    bool bowtie2;                 // Default = false COMMAND-LINE OPTION
-    bool bowtie2_align;           // Default = false COMMAND-LINE OPTION
     uint64_t bowtie2_maximum_alignments_to_consider_per_read;       // Default = 2000
     string bowtie2_score_parameters;
     string bowtie2_min_score_stringent;
