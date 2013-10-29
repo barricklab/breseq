@@ -343,11 +343,6 @@ namespace breseq
     this->do_copy_number_variation = options.count("cnv");
     this->copy_number_variation_tile_size = from_string<uint32_t>(options["cnv-tile-size"]);
     this->ignore_redundant_coverage = options.count("cnv-ignore-redundant");
-    this->bowtie2 = options.count("bowtie2");
-    this->bowtie2 = true; // testing
-    this->bowtie2_align = options.count("bowtie2-align");
-    this->bowtie2_align = true; // testing
-    
     
     this->do_periodicity = options.count("periodicity");
     this->periodicity_method = from_string<uint32_t>(options["periodicity-method"]);
@@ -513,16 +508,11 @@ namespace breseq
     this->keep_all_intermediates = false;
 
     //! Settings: Read Alignment and Candidate Junction Read Alignment
-    this->ssaha2_seed_length = 13;
-    this->ssaha2_skip_length = 1;
     this->require_match_length = 0;         
     this->require_match_fraction = 0.9; // CL value overrides
     this->maximum_read_mismatches = -1;
 
-    this->bowtie2 = false;
-    this->bowtie2_align = false;
     this->bowtie2_maximum_alignments_to_consider_per_read = 2000;
-    
     this->bowtie2_score_parameters = "--ma 1 --mp 3 --np 0 --rdg 2,3 --rfg 2,3";
     this->bowtie2_score_parameters += (bowtie2_maximum_alignments_to_consider_per_read > 0) 
     ? " -k " + to_string(this->bowtie2_maximum_alignments_to_consider_per_read) : " -a";
@@ -959,60 +949,43 @@ namespace breseq
     // Developer's Note
     //
     // If you are running things through a debugger (like in XCode), your $PATH may need to be
-    // set to include the paths where you have SSAHA2, Bowtie2, and R installed within your IDE.
+    // set to include the paths where you have Bowtie2 and R installed within your IDE.
     
 		bool good_to_go = true;
 
-		if (!this->bowtie2) {
-      if (this->installed["SSAHA2"].size() == 0)
-      {
-        good_to_go = false;
-        cerr << "---> ERROR Required executable \"ssaha2\" not found." << endl;
-        cerr << "---> See http://www.sanger.ac.uk/resources/software/ssaha2" << endl;
-      }
-      else if (this->installed.count("SSAHA2_version_error_message")) {
-        good_to_go = false;
-        cerr << "---> ERROR Could not determine version of installed executable \"SSAHA2\"." << endl;
-        cerr << "---> For found executable installed at [" << this->installed["SSAHA2"] << "]" << endl;
-        cerr << "---> Commands \"SSAHA2 --version\" returned:" << endl;
-        cerr << this->installed["SSAHA2_version_error_message"] << endl;
-      }
+    
+    if (this->installed["bowtie2"].size() == 0)
+    {
+      good_to_go = false;
+      cerr << "---> ERROR Required executable \"bowtie2\" or \"bowtie2-build\" not found." << endl;
+      cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
+    }
+    else if (this->installed.count("bowtie2_version_error_message")) {
+      good_to_go = false;
+      cerr << "---> ERROR Could not determine version of installed executable \"bowtie2\" or \"bowtie2-build\"." << endl;
+      cerr << "---> For found executable installed at [" << this->installed["bowtie2"] << "]" << endl;
+      cerr << "---> Commands \"bowtie2 --version\" or \"bowtie2-build --version\" returned:" << endl;
+      cerr << this->installed["bowtie2_version_error_message"] << endl;
+    }
+    // version encoded in triplets of numbers
+    else if (from_string<uint32_t>(this->installed["bowtie2_version"]) < 2000000007) {
+      good_to_go = false;
+      cerr << "---> ERROR Required executable \"bowtie2 version 2.0.0-beta7 or later\" not found." << endl;
+      cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
+      cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
+    }
+    else if ((from_string<uint32_t>(this->installed["bowtie2_version"]) == 2000003000)
+         ||  (from_string<uint32_t>(this->installed["bowtie2_version"]) == 2000004000)) {
+      good_to_go = false;
+      cerr << "---> ERROR \"bowtie2 versions 2.0.3 and 2.0.4 are known to have bugs in" << endl;
+      cerr << "---> ERROR \"SAM output that can cause breseq to crash. Please upgrade." << endl;
+      cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
+      cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
+    }
+    else {
+      cout << "---> bowtie2  :: version " << this->installed["bowtie2_version_string"] << " [" << this->installed["bowtie2"] << "]" << endl;
     }
     
-		if (this->bowtie2) 
-    {
-      if (this->installed["bowtie2"].size() == 0)
-      {
-        good_to_go = false;
-        cerr << "---> ERROR Required executable \"bowtie2\" or \"bowtie2-build\" not found." << endl;
-        cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
-      }
-      else if (this->installed.count("bowtie2_version_error_message")) {
-        good_to_go = false;
-        cerr << "---> ERROR Could not determine version of installed executable \"bowtie2\" or \"bowtie2-build\"." << endl;
-        cerr << "---> For found executable installed at [" << this->installed["bowtie2"] << "]" << endl;
-        cerr << "---> Commands \"bowtie2 --version\" or \"bowtie2-build --version\" returned:" << endl;
-        cerr << this->installed["bowtie2_version_error_message"] << endl;
-      }
-      // version encoded in triplets of numbers
-      else if (from_string<uint32_t>(this->installed["bowtie2_version"]) < 2000000007) {
-        good_to_go = false;
-        cerr << "---> ERROR Required executable \"bowtie2 version 2.0.0-beta7 or later\" not found." << endl;
-        cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
-        cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
-      }
-      else if ((from_string<uint32_t>(this->installed["bowtie2_version"]) == 2000003000)
-           ||  (from_string<uint32_t>(this->installed["bowtie2_version"]) == 2000004000)) {
-        good_to_go = false;
-        cerr << "---> ERROR \"bowtie2 versions 2.0.3 and 2.0.4 are known to have bugs in" << endl;
-        cerr << "---> ERROR \"SAM output that can cause breseq to crash. Please upgrade." << endl;
-        cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
-        cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
-      }
-      else {
-        cout << "---> bowtie2  :: version " << this->installed["bowtie2_version_string"] << " [" << this->installed["bowtie2"] << "]" << endl;
-      }
-    }
 		// R version 2.1 required
 		if (this->installed["R"].size() == 0)
 		{

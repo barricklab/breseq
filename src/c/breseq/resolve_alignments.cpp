@@ -153,16 +153,19 @@ double combination (int32_t num, int32_t choose)
  
   return exp(log_result);
 }
-  
+
+// probability of exactly this any successes  
 double binomial (double pr_success, int32_t num_trials, int32_t num_successes)
 {
   double ret_val = combination(num_trials, num_successes) * pow(pr_success, num_successes) * pow(1-pr_success, num_trials-num_successes);
   return ret_val;
 }
   
+  
+// probability of this or fewer successes
 uint32_t qbinomial (double tail_value, int32_t num_trials, double pr_success)
 {
-  ASSERT((tail_value >= 0) && (tail_value < 1), "probability out of range");
+  ASSERT((tail_value >= 0) && (tail_value <= 1), "probability out of range");
   double cumulative_pr = 0.0;
 
   int32_t num_successes;

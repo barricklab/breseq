@@ -2096,16 +2096,14 @@ int do_translate_proteome(int argc, char *argv[])
                     
                     int32_t length_diff = a_protein.size() - n_protein.size();
                     
-                    nfile << ">" << on_feature["name"] << endl << n_protein << endl;
-                    afile << ">" << on_feature["name"] << "_amber_" << length_diff << "_bp_to_new_stop" << endl << a_protein << endl;
+                    nfile << ">" << on_feature["locus_tag"] << "|" << on_feature["name"] << endl << n_protein << endl;
+                    afile << ">" << on_feature["locus_tag"] << "|" << on_feature["name"] << "|amber" << endl << a_protein << endl; //_" << length_diff << "_bp_to_new_stop" ;
                     
-                    ufile << ">" << on_feature["name"] << endl << n_protein << endl;
+                    ufile << ">" << on_feature["locus_tag"] << "|" << on_feature["name"] << endl << n_protein << endl;
                     if (length_diff) {
                         amber_terminated_protein_count++;
-                        ufile << ">" << on_feature["name"] << "_amber_" << length_diff << "_bp_to_new_stop" << endl << a_protein << endl;
- 
+                        ufile << ">" << on_feature["locus_tag"] << "|" << on_feature["name"] << "|amber" << endl << a_protein << endl; // _" << length_diff << "_bp_to_new_stop" 
                         bfile << on_feature["name"] << "\t" << length_diff << "\t" << on_feature["locus_tag"] <<  "\t" << on_feature["product"] << endl;
-                        //protein_backup_codon_length_list.push_back(make_pair(on_feature["name"],length_diff));
                     }
                 }
                 else
