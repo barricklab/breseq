@@ -887,6 +887,9 @@ void tam_file::write_moved_alignment(
 {
 	bool verbose = false;
 
+  //if (a.read_name() == "1:1980")
+  //  verbose = true;
+  
 	if (verbose)
 	{
 		cerr << "qname                 = " << a.read_name() << endl;
@@ -1042,14 +1045,12 @@ void tam_file::write_moved_alignment(
 
 			pair<char,uint16_t> new_element = make_pair<char,uint16_t>(c.first, n);
 			side_1_cigar_list.push_back(new_element);
-			if (test_junction_pos >= junction_pos) break;
+			if (test_junction_pos > junction_pos) break;
 		}
 	}
-
-  side_2_cigar_list = cigar_list;
+  
 	// Use the remaining CIGAR operations to construct side 2
-  // @JEB below causes memory error
-  //	copy(cigar_list.begin(), cigar_list.end(), side_2_cigar_list.begin());
+  side_2_cigar_list = cigar_list;
 
 	if (verbose) cout << "test_read_pos = " << test_read_pos << endl;
 	if (verbose) cout << "test_junction_pos = " << test_junction_pos << endl;
@@ -1121,11 +1122,40 @@ void tam_file::write_moved_alignment(
 	if (verbose)
 		cerr << "Adjusted Left Padding = " << left_padding << ", Adjusted Right Padding = " << right_padding << endl;
 
+  // It's possible that we will be putting soft padding up to an inserted or deleted base
+  // in the cigar string on the end that we are padding from splitting the read - correct here
+  // Example without correction: 438S1I43M1S (side 2 of match)
+  
+  if (cigar_list.size() >= 1) {
+    
+    if (junction_side == 2)
+    {      
+      pair<char,uint16_t> c = cigar_list.front();
+      char op = c.first;
+      uint16_t n = c.second;
+      if (op == 'I') {
+        left_padding += n;
+        cigar_list.erase(cigar_list.begin());
+      }
+    }
+    else //if (junction_side == 1)
+    {
+      pair<char,uint16_t> c = cigar_list.back();
+      char op = c.first;
+      uint16_t n = c.second;
+      if (op == 'I') {
+        right_padding += n;
+        cigar_list.pop_back();
+      }
+    }
+  }
+
+  // Add the padding to the cigar list
 	if (left_padding > 0)
 	{
 		pair<char,uint16_t> new_element = make_pair<char,uint16_t>('S', left_padding);
 		cigar_list.insert(cigar_list.begin(), new_element);
-	}
+  }
 	if (right_padding > 0)
 	{
 		pair<char,uint16_t> new_element = make_pair<char,uint16_t>('S', right_padding);
@@ -1136,12 +1166,6 @@ void tam_file::write_moved_alignment(
 		reverse(cigar_list.begin(), cigar_list.end());
 
 	//if (verbose) cerr << "Final CIGAR:" << endl << Dumper($cigar_list);
-
-	/// It's possible there may not actually be any match on this side
-	///  in cases of overlap. We must bail or get negative values
-	///  in the resulting CIGAR string.
-	//#	return if (($junction_side == 1) && ($side_1_ref_match_length < 0));
-	//#	return if (($junction_side == 2) && ($side_2_ref_match_length < 0));
 
 	// Determine the reference coordinate we will write out for this junction side match.
 	// Recall:

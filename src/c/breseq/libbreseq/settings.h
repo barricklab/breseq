@@ -249,9 +249,9 @@ namespace breseq
     
     //! Settings: Candidate Junction Prediction
     int32_t  preprocess_junction_min_indel_split_length;    // Default = 3
-		uint32_t required_both_unique_length_per_side;          // Default = 0 (OFF)
+		int32_t required_both_unique_length_per_side;           // Set = junction_minimum_side_match
     double   required_both_unique_length_per_side_fraction; // Default = 0.2 
-		uint32_t required_one_unique_length_per_side;           // Default = ssaha2_seed_length = 13
+		int32_t required_one_unique_length_per_side;            // Default = 0 (OFF)
     uint32_t unmatched_end_minimum_read_length;             // Default = 50
     double   unmatched_end_length_factor;                   // Default = 0.0
     
@@ -298,6 +298,7 @@ namespace breseq
     //! Settings: Alignment Resolution
 		bool add_split_junction_sides;                        // Default = true (possibly remove this option) 
     uint32_t minimum_alignment_resolution_pos_hash_score; // Default = 2
+    int32_t junction_minimum_side_match;                 // Default = 1 or 6;
     double junction_pos_hash_neg_log10_p_value_cutoff;    // Default = 2.0, 0 = means don't calculate (to implement)
     
     //! Settings: Mutation Identification

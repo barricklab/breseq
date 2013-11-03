@@ -1160,8 +1160,8 @@ void score_junction(
     if (reference_end_1 == UNDEFINED_UINT32) continue;
 		int32_t this_right = reference_end_1 - flanking_left - abs(alignment_overlap);
     
-    // doesn't span 
-    if ((this_right <= 0) || (this_left <= 0)) {
+    // doesn't span. The default for required_both_unique_length_per_side is 1, implying any overlap here is fine.
+    if ((this_right < settings.required_both_unique_length_per_side) || (this_left < settings.required_both_unique_length_per_side)) {
       if (verbose) cout << "    X Does not span junction" << endl;
      continue; 
     }
@@ -1299,7 +1299,7 @@ void score_junction(
   // For  junctions the number of start sites where reads crossing the
   // new junction sequence could occur is reduced by overlap (positive or negative):
   int32_t overlap_positions_max_pos_hash_score_reduction = abs(scj.alignment_overlap);
-  uint32_t max_pos_hash_score = 2 * (avg_read_length - 1 - overlap_positions_max_pos_hash_score_reduction - side_1_continuation - side_2_continuation);
+  int32_t max_pos_hash_score = 2 * (avg_read_length - 1 - 2 * (settings.required_both_unique_length_per_side - 1) - overlap_positions_max_pos_hash_score_reduction - side_1_continuation - side_2_continuation);
   
   //@JEB Actually, this can happen if the read lengths vary, so we better not rule it out as an error!
   /*
@@ -1326,7 +1326,7 @@ void score_junction(
 		count_per_strand[true],             //coverage_plus
 		total_non_overlap_reads,            //total_non_overlap_reads
     pos_hash_count,                     //pos_hash_score
-    max_pos_hash_score,                 //max_pos_hash_score
+    max(0,max_pos_hash_score),          //max_pos_hash_score
     redundant[0],
     redundant[1],
     junction_id,
@@ -1768,11 +1768,12 @@ void  assign_one_junction_read_counts(
                                   const Settings& settings,
                                   Summary& summary,
                                   cDiffEntry& j,
-                                  int32_t require_overlap
+                                  int32_t extra_stranded_require_overlap
                                   )
 {
+  
   bool verbose = false;
-  bool debug_output = false;
+  bool debug_output = true;
   
   uint32_t avg_read_length = summary.sequence_conversion.avg_read_length;
  
@@ -1793,6 +1794,11 @@ void  assign_one_junction_read_counts(
   
   uint32_t side_1_continuation = from_string<uint32_t>(j["side_1_continuation"]);
   uint32_t side_2_continuation = from_string<uint32_t>(j["side_2_continuation"]);
+  
+  // This is for requiring a certain number of bases (at least one) to match past the normal point
+  // where a read could be uniquely assigned to the junction (or a side)
+  int32_t minimum_side_match_correction = settings.junction_minimum_side_match - 1;
+
   
   // Print out the junction we are processing
   if (verbose) cerr << endl << "ASSIGNING READ COUNTS TO JUNCTION" << endl << j << endl << endl; 
@@ -1837,12 +1843,10 @@ void  assign_one_junction_read_counts(
   // New Junction
   start = from_string<uint32_t>(j["flanking_left"]) - side_1_continuation;
   end = start + abs(from_string<int32_t>(j[ALIGNMENT_OVERLAP])) + 1 + side_2_continuation;
-  
-  //int32_t amount_to_add = (require_overlap != -1) ? require_overlap : abs(from_string<int32_t>(j[ALIGNMENT_OVERLAP]));
-  int32_t amount_to_add = (require_overlap != -1) ? require_overlap : 0;
+  start -= minimum_side_match_correction;
+  end += minimum_side_match_correction;
   
   int32_t alignment_overlap = from_string<int32_t>(j[ALIGNMENT_OVERLAP]);
-  int32_t abs_alignment_overlap = abs(alignment_overlap);
   int32_t non_negative_alignment_overlap = alignment_overlap;
   non_negative_alignment_overlap = max(0, non_negative_alignment_overlap);
   
@@ -1850,7 +1854,7 @@ void  assign_one_junction_read_counts(
     j["junction_start_pos_for_counting"] = to_string(start);
     j["junction_end_pos_for_counting"] = to_string(end);
   }
-  j["junction_possible_overlap_registers"] = to_string(avg_read_length - abs_alignment_overlap - 1);
+  j["junction_possible_overlap_registers"] = to_string(avg_read_length - abs(end - start));
 
   if (settings.junction_debug) ofile << "JUNCTION: start " << start << " end " << end << endl;
   if (verbose) cerr << "JUNCTION: start " << start << " end " << end << endl;
@@ -1863,7 +1867,7 @@ void  assign_one_junction_read_counts(
       ofile << it->first << endl;
     }
   }
-  
+    
   // New side 1
   if ( (j[SIDE_1_REDUNDANT] != "1") && (j["side_1_annotate_key"] != "repeat") ) {
     int32_t side_1_strand = from_string<int32_t>(j[SIDE_1_STRAND]);
@@ -1871,14 +1875,24 @@ void  assign_one_junction_read_counts(
     int32_t overlap_correction = non_negative_alignment_overlap - from_string<int32_t>(j[SIDE_1_OVERLAP]);
         
     if (side_1_strand == +1) {
-      start = start - overlap_correction;
-      end = start + 1 + amount_to_add + non_negative_alignment_overlap;
+      start = start; 
+      end = start + 1; 
+      start -= overlap_correction;
+      end += extra_stranded_require_overlap;
+      start -= minimum_side_match_correction;
+      end += minimum_side_match_correction;
       end += side_1_continuation;
     } else {
-      start = start - amount_to_add;
-      end = start + 1 + overlap_correction + non_negative_alignment_overlap;
+      start = start;
+      end = start + 1;
+      start -= extra_stranded_require_overlap;
+      end += overlap_correction;
+      start -= minimum_side_match_correction;
+      end += minimum_side_match_correction;
       start -= side_1_continuation;
     }
+    
+    
     
     if (settings.junction_debug) ofile << "SIDE 1: start " << start << " end " << end << endl;       
     if (verbose) cerr << "SIDE 1: start " << start << " end " << end << endl;
@@ -1910,15 +1924,22 @@ void  assign_one_junction_read_counts(
     int32_t side_2_strand = from_string<int32_t>(j[SIDE_2_STRAND]);
     start = from_string<uint32_t>(j[SIDE_2_POSITION]);
     int32_t overlap_correction = non_negative_alignment_overlap - from_string<int32_t>(j[SIDE_2_OVERLAP]);
-
     
     if (side_2_strand == +1) {
-      start = start - overlap_correction;
-      end = start + 1 + amount_to_add + non_negative_alignment_overlap;
+      start = start; 
+      end = start + 1; 
+      start -= overlap_correction;
+      end += extra_stranded_require_overlap;
+      start -= minimum_side_match_correction;
+      end += minimum_side_match_correction;
       end += side_2_continuation;
     } else {
-      start = start - amount_to_add;
-      end = start + 1 + overlap_correction + non_negative_alignment_overlap;
+      start = start;
+      end = start + 1;
+      start -= extra_stranded_require_overlap;
+      end += overlap_correction;
+      start -= minimum_side_match_correction;
+      end += minimum_side_match_correction;
       start -= side_2_continuation;
     }
     
