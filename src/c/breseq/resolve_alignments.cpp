@@ -1773,7 +1773,7 @@ void  assign_one_junction_read_counts(
 {
   
   bool verbose = false;
-  bool debug_output = true;
+  bool debug_output = settings.junction_debug;
   
   uint32_t avg_read_length = summary.sequence_conversion.avg_read_length;
  
@@ -1806,38 +1806,38 @@ void  assign_one_junction_read_counts(
   
   if (verbose) {
     cerr << "==SIDE 1==" << endl;
-    cerr << "position:" << j[SIDE_1_POSITION] << endl;
-    cerr << "strand:" << j[SIDE_1_STRAND] << endl;
-    cerr << "flanking:" << j["flanking_left"] << endl;
-    cerr << "continuation:" << j["side_1_continuation"] << endl;
-    cerr << "overlap:" << j[SIDE_1_OVERLAP] << endl;
+    cerr << "  position:" << j[SIDE_1_POSITION] << endl;
+    cerr << "  strand:" << j[SIDE_1_STRAND] << endl;
+    cerr << "  flanking:" << j["flanking_left"] << endl;
+    cerr << "  continuation:" << j["side_1_continuation"] << endl;
+    cerr << "  overlap:" << j[SIDE_1_OVERLAP] << endl;
 
     cerr << "==OVERLAP== " << j[ALIGNMENT_OVERLAP] << endl;
     
     cerr << "==SIDE 2==" << endl;
-    cerr << "position:" << j[SIDE_2_POSITION] << endl;
-    cerr << "strand:" << j[SIDE_2_STRAND] << endl;
-    cerr << "flanking:" << j["flanking_right"] << endl;
-    cerr << "continuation:" << j["side_2_continuation"] << endl;
-    cerr << "overlap:" << j[SIDE_2_OVERLAP] << endl;
+    cerr << "  position:" << j[SIDE_2_POSITION] << endl;
+    cerr << "  strand:" << j[SIDE_2_STRAND] << endl;
+    cerr << "  flanking:" << j["flanking_right"] << endl;
+    cerr << "  continuation:" << j["side_2_continuation"] << endl;
+    cerr << "  overlap:" << j[SIDE_2_OVERLAP] << endl;
   }
   
   if (settings.junction_debug) {
     ofile << "==SIDE 1==" << endl;
-    ofile << "position:" << j[SIDE_1_POSITION] << endl;
-    ofile << "strand:" << j[SIDE_1_STRAND] << endl;
-    ofile << "flanking:" << j["flanking_left"] << endl;
-    ofile << "continuation:" << j["side_1_continuation"] << endl;
-    ofile << "overlap:" << j[SIDE_1_OVERLAP] << endl;
+    ofile << "  position:" << j[SIDE_1_POSITION] << endl;
+    ofile << "  strand:" << j[SIDE_1_STRAND] << endl;
+    ofile << "  flanking:" << j["flanking_left"] << endl;
+    ofile << "  continuation:" << j["side_1_continuation"] << endl;
+    ofile << "  overlap:" << j[SIDE_1_OVERLAP] << endl;
 
     ofile << "==OVERLAP== " << j[ALIGNMENT_OVERLAP] << endl;
     
     ofile << "==SIDE 2==" << endl;
-    ofile << "position:" << j[SIDE_2_POSITION] << endl;
-    ofile << "strand:" << j[SIDE_2_STRAND] << endl;
-    ofile << "flanking:" << j["flanking_right"] << endl;
-    ofile << "continuation:" << j["side_2_continuation"] << endl;
-    ofile << "overlap:" << j[SIDE_2_OVERLAP] << endl;
+    ofile << "  position:" << j[SIDE_2_POSITION] << endl;
+    ofile << "  strand:" << j[SIDE_2_STRAND] << endl;
+    ofile << "  flanking:" << j["flanking_right"] << endl;
+    ofile << "  continuation:" << j["side_2_continuation"] << endl;
+    ofile << "  overlap:" << j[SIDE_2_OVERLAP] << endl;
   }
   
   // New Junction
@@ -1873,9 +1873,10 @@ void  assign_one_junction_read_counts(
     int32_t side_1_strand = from_string<int32_t>(j[SIDE_1_STRAND]);
     start = from_string<uint32_t>(j[SIDE_1_POSITION]);
     int32_t overlap_correction = non_negative_alignment_overlap - from_string<int32_t>(j[SIDE_1_OVERLAP]);
-        
+      
+
     if (side_1_strand == +1) {
-      start = start; 
+      start = start - 1;       
       end = start + 1; 
       start -= overlap_correction;
       end += extra_stranded_require_overlap;
@@ -1883,7 +1884,7 @@ void  assign_one_junction_read_counts(
       end += minimum_side_match_correction;
       end += side_1_continuation;
     } else {
-      start = start;
+      start = start;   
       end = start + 1;
       start -= extra_stranded_require_overlap;
       end += overlap_correction;
@@ -1926,7 +1927,7 @@ void  assign_one_junction_read_counts(
     int32_t overlap_correction = non_negative_alignment_overlap - from_string<int32_t>(j[SIDE_2_OVERLAP]);
     
     if (side_2_strand == +1) {
-      start = start; 
+      start = start - 1;
       end = start + 1; 
       start -= overlap_correction;
       end += extra_stranded_require_overlap;
