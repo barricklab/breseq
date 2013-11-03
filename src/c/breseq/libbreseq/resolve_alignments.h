@@ -275,7 +275,7 @@ namespace breseq {
                                         const Settings& settings,
                                         Summary& summary,
                                         cDiffEntry& j,
-                                        int32_t require_overlap = -1
+                                        int32_t require_overlap = 0
                                         );
   
   void  assign_junction_read_counts(
