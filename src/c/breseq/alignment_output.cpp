@@ -61,7 +61,7 @@ alignment_output::alignment_output ( string bam,
   // the default for m_quality_score_cutoff is zero, which makes sense
 }
 
-void alignment_output::create_alignment ( const string& region, const string& corrected )
+void alignment_output::create_alignment ( const string& region, cDiffEntry* jc_item )
 {
   // we need the target_id to properly fill out the reference sequence later
   uint32_t target_id, start_pos, end_pos, insert_start, insert_end;
@@ -72,62 +72,47 @@ void alignment_output::create_alignment ( const string& region, const string& co
   bool bJunctionAlignment = false;    // is this a junction alignment
   bool bDrawAnnotationLine = true;    // draw the | annotation line pointing to region?
   
-  size_t end_match = region.find_first_of(':');
-  vector<string> split_region = split(region.substr(0,end_match), junction_name_separator);
-  if (split_region.size() == 12)
-  {
+  if (jc_item) {
+  
     bJunctionAlignment = true;
-    
-    vector<string> split_corrected = split(corrected.substr(0,end_match), junction_name_separator);
-    
-    // This how the region name was constructed:
-    
-    //values[0] = item.sides[0].seq_id;
-		//values[1] = to_string(item.sides[0].position);
-		//values[2] = to_string(item.sides[0].strand);
-    
-		//values[3] = item.sides[1].seq_id;
-		//values[4] = to_string(item.sides[1].position);
-		//values[5] = to_string(item.sides[1].strand);
-    
-		//values[6] = to_string(item.alignment_overlap);
-		//values[7] = to_string(item.unique_read_sequence);
-		//values[8] = to_string(item.flanking_left);
-		//values[9] = to_string(item.flanking_right);
-    
-    //values[10] = to_string(item.sides[0].redundant);
-    //values[11] = to_string(item.sides[1].redundant);
-    
-    //Example:
-    //NC_001416__5491__1__NC_001416__30251__1__4____35__35__0__0:36-39
-    // Notice that strands are 0/1 and we need them as -1/+1 in the code
 
-    int32_t overlap_offset = from_string<int32_t>(split_corrected[6]);
-    int32_t positive_overlap_offset = (overlap_offset > 0) ? from_string<int32_t>(split_corrected[10]) : 0;
+    int32_t overlap = from_string<int32_t>((*jc_item)["overlap"]);
+    int32_t alignment_overlap = from_string<int32_t>((*jc_item)["alignment_overlap"]);
+    int32_t positive_alignment_overlap = max(alignment_overlap, 0);
+    int32_t abs_overlap = abs(overlap);
     
     // No need to draw annotation in this case.
-    if(overlap_offset >= 0)
+    if(overlap >= 0)
       bDrawAnnotationLine = false;
     
+    
+    // ghost_* are the coordinates (and strands) to assign to the innermost highlighted base in each case 
+    // (in reference coords)
+    // truncate_* says to stop showing the reference after or before this position (in junction coords)
+    // overlap basses extend past these coords, are not highlighted, and not numbered
+    //
+    // Translating from the coordinates of the junction candidate to how the overlap was resolved creates some difficulties here
+    
     Aligned_Reference aligned_reference_1, aligned_reference_2;
-    aligned_reference_1.ghost_strand = from_string<int16_t>(split_corrected[2]) == 1 ? +1 : -1; // don't do int8_t here, returns wrong value
-    aligned_reference_2.ghost_strand = from_string<int16_t>(split_corrected[5]) == 1 ? +1 : -1; // don't do int8_t here, returns wrong value    
+ 
+    // This is the amount of a positive overlap assigned to each side
+    aligned_reference_1.overlap_assigned = from_string<int32_t>((*jc_item)["side_1_overlap"]);
+    aligned_reference_2.overlap_assigned = from_string<int32_t>((*jc_item)["side_2_overlap"]);
     
-    // We are currently using the data structure for junction
-    // key information to generate the alignments.  The corrected
-    // key that we pass in has SIDE_1_OVERLAP information in
-    // the value[10] position.  Search @MDS0001 to find where
-    // this is happening.
-    aligned_reference_1.truncate_end = from_string<uint32_t>(split_corrected[8]) + positive_overlap_offset;    
-    aligned_reference_1.ghost_end = from_string<uint32_t>(split_corrected[1]);
-    aligned_reference_2.ghost_start = from_string<uint32_t>(split_corrected[4]);    
-    aligned_reference_2.truncate_start = aligned_reference_1.truncate_end + 1 + split_region[7].size();
-        
-    aligned_reference_1.ghost_seq_id = split_region[0];    
-    aligned_reference_2.ghost_seq_id = split_region[3];
+    aligned_reference_1.overlap_not_assigned = positive_alignment_overlap - aligned_reference_1.overlap_assigned;
+    aligned_reference_2.overlap_not_assigned = positive_alignment_overlap - aligned_reference_2.overlap_assigned;
     
-    aligned_reference_1.overlap = (overlap_offset > 0) ? (overlap_offset-from_string<int32_t>(split_corrected[10])) : 0;
-    aligned_reference_2.overlap = positive_overlap_offset;
+    aligned_reference_1.truncate_end = from_string<int32_t>((*jc_item)["flanking_left"]) + aligned_reference_1.overlap_assigned; 
+    aligned_reference_2.truncate_start = from_string<int32_t>((*jc_item)["flanking_left"]) + 1 + abs_overlap - aligned_reference_2.overlap_assigned;
+    
+    aligned_reference_1.ghost_seq_id = (*jc_item)[SIDE_1_SEQ_ID];    
+    aligned_reference_2.ghost_seq_id = (*jc_item)[SIDE_2_SEQ_ID]; 
+    
+    aligned_reference_1.ghost_strand = from_string<int16_t>((*jc_item)[SIDE_1_STRAND]);
+    aligned_reference_2.ghost_strand = from_string<int16_t>((*jc_item)[SIDE_2_STRAND]);
+    
+    aligned_reference_1.ghost_end = from_string<int32_t>((*jc_item)[SIDE_1_POSITION]); 
+    aligned_reference_2.ghost_start = from_string<int32_t>((*jc_item)[SIDE_2_POSITION]);     
  
     //cout << "Junction reference information" << endl;
     //cout << aligned_reference_1.truncate_start << "-" << aligned_reference_1.truncate_end << " overlap " << aligned_reference_1.overlap << endl;
@@ -172,8 +157,8 @@ void alignment_output::create_alignment ( const string& region, const string& co
     Aligned_Reads new_aligned_reads;
     Aligned_Reads& aligned_reads = m_alignment_output_pileup.aligned_reads;
     
-    uint32_t required_end_1 = m_alignment_output_pileup.aligned_references[0].truncate_end + m_alignment_output_pileup.aligned_references[0].overlap;
-    uint32_t required_start_2 = m_alignment_output_pileup.aligned_references[1].truncate_start - m_alignment_output_pileup.aligned_references[1].overlap;
+    uint32_t required_end_1 = m_alignment_output_pileup.aligned_references[0].truncate_end + m_alignment_output_pileup.aligned_references[0].overlap_assigned;
+    uint32_t required_start_2 = m_alignment_output_pileup.aligned_references[1].truncate_start - m_alignment_output_pileup.aligned_references[1].overlap_assigned;
     
     for(Aligned_Reads::iterator ari = aligned_reads.begin(); ari != aligned_reads.end(); ari++)
     {
@@ -420,11 +405,11 @@ void alignment_output::create_alignment ( const string& region, const string& co
   }
 } //End create alignment
 
-string alignment_output::html_alignment( const string& region, const string& corrected )
+string alignment_output::html_alignment( const string& region, cDiffEntry* jc_item )
 {
 
   // this sets object values (not re-usable currently)
-  create_alignment(region, corrected);
+  create_alignment(region, jc_item);
   
   string output = "";
   
@@ -508,11 +493,11 @@ string alignment_output::html_alignment( const string& region, const string& cor
   return output;
 }
 
-  string alignment_output::text_alignment( const string& region, const string& corrected )
+  string alignment_output::text_alignment( const string& region, cDiffEntry* jc_item )
   {
     
     // this sets object values (not re-usable currently)
-    create_alignment(region, corrected);
+    create_alignment(region, jc_item);
     
     string output = "";
     
@@ -720,23 +705,35 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback( const pileup& p
   {    
     Aligned_Reference& aligned_reference ( aligned_references[index] );    
     
+    // Default is to show reference 
     char my_ref_base = ref_base;
-    char my_ref_qual = char(255);
+    char my_ref_qual = char(255); // highlighted as max quality
     
-    if ( ( (aligned_reference.truncate_start != 0) && (reference_pos_1 < aligned_reference.truncate_start) )
-      || ( (aligned_reference.truncate_end != 0)  && (reference_pos_1 > aligned_reference.truncate_end) ) )
-    {
-      my_ref_base = '.';
-      
-      if((aligned_reference.truncate_start != 0) && !(reference_pos_1+aligned_reference.overlap < aligned_reference.truncate_start))  {
-        my_ref_base = ref_base;
-        my_ref_qual = char(253);  
-      } // Quality score '253' handled @MDS0002
-      if((aligned_reference.truncate_end != 0)  && !(reference_pos_1-aligned_reference.overlap > aligned_reference.truncate_end))  {
-        my_ref_base = ref_base;
-        my_ref_qual = char(253);  
-      } // Quality score '253' handled @MDS0002
-    }    
+    // handle truncated starts
+    if (aligned_reference.truncate_start) {
+      // past part we want to show
+      if (reference_pos_1 < aligned_reference.truncate_start - aligned_reference.overlap_not_assigned) {
+        my_ref_base = '.'; 
+        my_ref_qual = char(253); // not highlighted
+      }
+      // in overlap where we don't want to highlight
+      else if (reference_pos_1 < aligned_reference.truncate_start) {
+        my_ref_qual = char(253); // not highlighted
+      }
+    }
+
+    // handle truncated ends
+    if (aligned_reference.truncate_end) {
+      // past part we want to show
+      if (reference_pos_1 > aligned_reference.truncate_end + aligned_reference.overlap_not_assigned) {
+        my_ref_base = '.'; 
+        my_ref_qual = char(253); // not highlighted
+      }
+      // in overlap where we don't want to highlight
+      else if (reference_pos_1 > aligned_reference.truncate_end) {
+        my_ref_qual = char(253); // not highlighted
+      }
+    }
     
     aligned_reference.aligned_bases += my_ref_base;
     aligned_reference.aligned_quals += my_ref_qual;
