@@ -1827,11 +1827,10 @@ Evidence_Files::Evidence_Files(const Settings& settings, cGenomeDiff& gd)
                  (END, to_string(end))
                  (PREFIX, "JC")
                  (ALIGNMENT_EMPTY_CHANGE_LINE, "1")
-                 (CORRECTED_KEY, juncInfo.junction_key())
                  );
-    
-    // this is the flagship file that we show first when clicking on evidence from a mutation...
+    // set as the flagship file that we show first when clicking on evidence from a mutation...
     (*item)[_EVIDENCE_FILE_NAME] = (*item)[_NEW_JUNCTION_EVIDENCE_FILE_NAME];
+    
     add_evidence(_SIDE_1_EVIDENCE_FILE_NAME,
                  item,
                  parent_item,
@@ -1962,29 +1961,20 @@ Evidence_Files::html_evidence_file (
     HTML << div(ALIGN_CENTER, img(item[PLOT]));
   else
   {
-    bool bCorrectExist = false;
-    if(item.entry_exists(CORRECTED_KEY))
-      bCorrectExist = true;
-        
     stringstream ss;
-    stringstream sc;
     
     ss << item[SEQ_ID] << ":" << item[START];
-    if(bCorrectExist)sc << item[CORRECTED_KEY] << ":" << item[START];
     
     if (item[INSERT_START].size() > 0)
     {
       ss << "." << item[INSERT_START];
-      if(bCorrectExist)sc << "." << item[INSERT_START];
     }
     
     ss << "-" << item[END];
-    if(bCorrectExist)sc << "-" << item[END];
     
     if (item[INSERT_END].size())
     {
       ss << "." << item[INSERT_END];
-      if(bCorrectExist)sc << "." << item[INSERT_END];
     }
     cerr << "Creating read alignment for region: " << ss.str() << endl;
 
@@ -1993,7 +1983,7 @@ Evidence_Files::html_evidence_file (
     
     alignment_output ao(item[BAM_PATH], item[FASTA_PATH], settings.max_displayed_reads, settings.base_quality_cutoff);
 
-    HTML << ao.html_alignment(ss.str(), sc.str());
+    HTML << ao.html_alignment(ss.str(), (item[PREFIX] == "JC") ? item.item.get() : NULL);
 
   }
   HTML << html_footer();

@@ -93,7 +93,8 @@ namespace breseq
         , ghost_start(0)
         , ghost_end(0)
         , ghost_seq_id("")
-        , overlap(0)
+        , overlap_assigned(0)
+        , overlap_not_assigned(0)
          {}
          
       uint32_t reference_length;
@@ -103,7 +104,7 @@ namespace breseq
       int8_t ghost_strand;
       uint32_t ghost_start, ghost_end;
       string ghost_seq_id;
-      uint32_t overlap;
+      uint32_t overlap_assigned, overlap_not_assigned;
     };
     
     struct Aligned_Annotation: Alignment_Base
@@ -193,9 +194,9 @@ namespace breseq
                       const bool show_ambiguously_mapped = false
                       );
     //! Output an HTML alignment.
-    string html_alignment ( const string& region, const string& corrected="" );
-    string text_alignment ( const string& region, const string& corrected="" );
-    void create_alignment ( const string& region, const string& corrected="" );
+    string html_alignment ( const string& region, cDiffEntry * jc_item = NULL );
+    string text_alignment ( const string& region, cDiffEntry * jc_item = NULL );
+    void create_alignment ( const string& region, cDiffEntry * jc_item = NULL );
     void set_quality_range(const uint32_t quality_score_cutoff = 0);
   private:
     uint32_t no_color_index;
