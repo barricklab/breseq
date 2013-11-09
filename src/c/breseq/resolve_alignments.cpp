@@ -780,7 +780,6 @@ void load_junction_alignments(
         // @JEB Testing
         // this score is the number of matches
         best_junction_score = eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments, true, best_reference_score);
-        //best_junction_score = eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments, settings.penalize_negative_junction_overlap);
         
         
         if (verbose)
@@ -1051,10 +1050,6 @@ void score_junction(
                     cReferenceSequences& junction_ref_seq_info
                   )
 {
-  // may not need these
-  (void) settings;
-  (void) summary;
-  
   bool verbose = false;
   
 	if (verbose) cout << "Testing " << junction_id << endl;
