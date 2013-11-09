@@ -79,12 +79,11 @@ void alignment_output::create_alignment ( const string& region, cDiffEntry* jc_i
     int32_t overlap = from_string<int32_t>((*jc_item)["overlap"]);
     int32_t alignment_overlap = from_string<int32_t>((*jc_item)["alignment_overlap"]);
     int32_t positive_alignment_overlap = max(alignment_overlap, 0);
-    int32_t abs_overlap = abs(overlap);
+    int32_t abs_overlap = max(abs(alignment_overlap), abs(overlap));
     
     // No need to draw annotation in this case.
     if(overlap >= 0)
       bDrawAnnotationLine = false;
-    
     
     // ghost_* are the coordinates (and strands) to assign to the innermost highlighted base in each case 
     // (in reference coords)

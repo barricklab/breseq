@@ -205,9 +205,10 @@ namespace breseq
     ("no-junction-prediction", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
     ("junction-alignment-pair-limit", "Only consider this many passed alignment pairs when creating candidate junction sequences", 100000, ADVANCED_OPTION)
     ("junction-score-cutoff", "Maximum negative log10 probability of uneven coverage across a junction breakpoint to accept (0 = OFF)", 3.0, ADVANCED_OPTION)
-    ("junction-minumum-pos-hash-score", "Minimum number of distinct spanning read start positions required to accept a junction", 3, ADVANCED_OPTION)
-    ("junction-minumum-side-match", "Minimum number of bases a read must extend past any overlap or read-only sequence at the breakpoint of a junction on each side to count as support for the junction (DEFAULT = consensus mode, 1; polymorphism mode, 6)", "", ADVANCED_OPTION)
+    ("junction-minimum-pos-hash-score", "Minimum number of distinct spanning read start positions required to accept a junction", 3, ADVANCED_OPTION)
+    ("junction-minimum-side-match", "Minimum number of bases a read must extend past any overlap or read-only sequence at the breakpoint of a junction on each side to count as support for the junction (DEFAULT = consensus mode, 1; polymorphism mode, 6)", "", ADVANCED_OPTION)
     ;
+
         
     options.addUsage("Polymorphism (Mixed Population) Options", true);
     options
@@ -372,7 +373,7 @@ namespace breseq
     this->no_junction_prediction = options.count("no-junction-prediction");
     this->maximum_junction_sequence_passed_alignment_pairs_to_consider = from_string<uint64_t>(options["junction-alignment-pair-limit"]);
     this->junction_pos_hash_neg_log10_p_value_cutoff = from_string<double>(options["junction-score-cutoff"]);
-    this->minimum_alignment_resolution_pos_hash_score = from_string<uint32_t>(options["junction-minumum-pos-hash-score"]);
+    this->minimum_alignment_resolution_pos_hash_score = from_string<uint32_t>(options["junction-minimum-pos-hash-score"]);
         
     //
     // Set the read alignment evidence model
@@ -425,8 +426,8 @@ namespace breseq
       this->polymorphism_bias_p_value_cutoff = from_string<double>(options["polymorphism-bias-cutoff"]);
     if (options.count("polymorphism-minimum-coverage-each-strand"))
       this->polymorphism_minimum_new_coverage_each_strand = from_string<int32_t>(options["polymorphism-minimum-coverage-each-strand"]);
-    if (options.count("junction-minumum-side-match"))
-      this->junction_minimum_side_match = from_string<int32_t>(options["junction-minumum-side-match"]);
+    if (options.count("junction-minimum-side-match"))
+      this->junction_minimum_side_match = from_string<int32_t>(options["junction-minimum-side-match"]);
 
     // Not a command line option... redundant with new setting but also separate.
     this->required_both_unique_length_per_side = this->junction_minimum_side_match;
