@@ -511,6 +511,9 @@ void resolve_alignments(
     // If both are on a junction-only sequence then don't count it
     failed = failed || ( settings.junction_only_seq_id_set().count(junction_info.sides[0].seq_id) && settings.junction_only_seq_id_set().count(junction_info.sides[1].seq_id) );
     
+    // If no two reads have different start and end values from each other, regardless of strand, then fail (Chuck it!)
+    failed = failed || (!junction_test_info.has_reads_with_both_different_start_and_end);
+    
     junction_test_info.neg_log10_pos_hash_p_value = -1;
         
     // Zero means calculating this p-value is off
@@ -1091,6 +1094,8 @@ void score_junction(
 	map<bool,int32_t> count_per_strand = make_map<bool,int32_t>(true,0)(false,0);
 	uint32_t total_non_overlap_reads = 0;
 	map<int32_t,bool> pos_hash;
+  vector<pair<uint32_t,uint32_t> > start_end_check_list;
+  bool has_reads_with_both_different_start_and_end(false);
   uint32_t pos_hash_count(0);
   
 	// basic information about the junction
@@ -1098,7 +1103,7 @@ void score_junction(
 	int32_t alignment_overlap = scj.alignment_overlap;
 	int32_t flanking_left = scj.flanking_left;
     
-	// We also need to count degenerate matches b/c sometimes ambiguity unfairly penalizes real reads...
+	// We also need to count degenerate matches b/c sometimes ambiguity unfairly penalizes real junctions...
 	vector<JunctionMatchPtr> items;
   if (unique_matches)
     for (vector<JunctionMatchPtr>::iterator it = unique_matches->begin(); it != unique_matches->end(); it++)
@@ -1204,6 +1209,19 @@ void score_junction(
     }
     if (verbose) cout << "    Y pos_hash: " << stranded_reference_start << endl;
     
+    if (!has_reads_with_both_different_start_and_end) {
+      for(vector<pair<uint32_t,uint32_t> >::iterator it=start_end_check_list.begin(); it != start_end_check_list.end();it++) {
+        if ( (it->first != reference_start_1) && (it->second != reference_end_1) ) {
+          has_reads_with_both_different_start_and_end = true;
+          break;
+        }
+      }
+      
+      if (!has_reads_with_both_different_start_and_end) {
+        start_end_check_list.push_back(make_pair<uint32_t,uint32_t>(reference_start_1,reference_end_1));
+      }
+    }
+      
     // Update:
     // Max_Min = the maximum of the minimum length match sides
     // Max = the maximum match on a side
@@ -1322,6 +1340,7 @@ void score_junction(
 		total_non_overlap_reads,            //total_non_overlap_reads
     pos_hash_count,                     //pos_hash_score
     max(0,max_pos_hash_score),          //max_pos_hash_score
+    has_reads_with_both_different_start_and_end, //2 diff reads have both different start and different end
     redundant[0],
     redundant[1],
     junction_id,

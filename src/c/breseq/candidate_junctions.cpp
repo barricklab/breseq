@@ -1338,7 +1338,7 @@ namespace breseq {
 			string ref_seq_matched_1 = ref_seq_1.substr(r1_start - 1, r1_end - r1_start + 1);
 			string ref_seq_matched_2 = ref_seq_2.substr(r2_start - 1, r2_end - r2_start + 1);
 
-			cout << "==============> Initial Matches" << endl;
+			cout << "==============> Final Matches" << endl;
 			cout << "Alignment #1" << endl;
 			cout << "qpos: " << q1_start << "-" << q1_end << " rpos: " << r1_start << "-" << r1_end << " reversed: " << q1.reversed() << endl;
 			cout << q1.read_char_sequence() << endl << ref_seq_matched_1 << endl;

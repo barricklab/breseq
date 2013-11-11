@@ -71,6 +71,7 @@ namespace breseq {
     uint32_t total_non_overlap_reads;
     uint32_t pos_hash_score;
     uint32_t max_pos_hash_score;
+    bool has_reads_with_both_different_start_and_end;
     bool redundant_1;
     bool redundant_2;
     string junction_id;

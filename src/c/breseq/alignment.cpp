@@ -464,13 +464,13 @@ void alignment_wrapper::num_matches_from_end(const cReferenceSequences& ref_seq_
     cigar_pair_array.erase(cigar_pair_array.end()-1);
   }
   
-  qry_mismatch_pos = -1;
-  ref_mismatch_pos = -1;
+  qry_mismatch_pos = -1;  // 1-indexed
+  ref_mismatch_pos = -1;  // 1-indexed
   
   bool last_encountered_indel = false;
   uint32_t positive_overlap = (overlap > 0) ? static_cast<uint32_t>(overlap) : 0;
-  uint32_t r_pos = 0;
-  uint32_t q_pos = 0;
+  uint32_t r_pos = 0; // 1-indexed
+  uint32_t q_pos = 0; // 1-indexed
   uint32_t len_0 = cigar_pair_array.front().second;
   while ((q_pos < positive_overlap) && (r_pos < r_length) && (q_pos < q_length))
   {
@@ -512,7 +512,7 @@ void alignment_wrapper::num_matches_from_end(const cReferenceSequences& ref_seq_
     }
     
     if (verbose)
-      cout << r_pos << " " << r_str[r_pos] << " " << q_pos << " " << q_str[q_pos] << endl;
+      cout << r_pos << " " << r_str[r_pos-1] << " " << q_pos << " " << q_str[q_pos-1] << endl;
   }
   
   if (verbose)
@@ -529,21 +529,21 @@ void alignment_wrapper::num_matches_from_end(const cReferenceSequences& ref_seq_
     if (verbose)
       cout << "Indel re-correction of overlap" << endl;
     
-    r_pos = qry_mismatch_pos;
-    q_pos = ref_mismatch_pos;  
+    r_pos = ref_mismatch_pos;
+    q_pos = qry_mismatch_pos;  
       
     while ((r_pos != 0) && (q_pos != 0))
     {
-      r_pos--;
-      q_pos--;
-      
       if (verbose)
-        cout << r_pos << " " << r_str[r_pos] << " " << q_pos << " " << q_str[q_pos] << endl;
+        cout << r_pos << " " << r_str[r_pos-1] << " " << q_pos << " " << q_str[q_pos-1] << endl;
 
-      if ( r_str[r_pos] != q_str[q_pos] ) break;
+      if ( r_str[r_pos-1] != q_str[q_pos-1] ) break;
        
       qry_mismatch_pos--;
-      ref_mismatch_pos--;    
+      ref_mismatch_pos--;   
+      
+      r_pos--;
+      q_pos--;
     }
   }
   
