@@ -2514,10 +2514,9 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         
         // @JEB: correct here to look for where the repeat is in the original ref_seq_info???
         // This saves us from possibly looking at a shifted location...
-        cSequenceFeature* chosen_feature = NULL; // return value
-        string* seq_id;                          // return value
-        rep_string = ref_seq_info.repeat_family_sequence(mut["repeat_name"], from_string<int16_t>(mut["strand"]), uRPos, seq_id,chosen_feature);
-        ASSERT(chosen_feature, "Did not find MOB repeat family in reference sequence" + mut.to_string());
+        cSequenceFeature chosen_feature; // return value
+        string seq_id;                   // return value
+        rep_string = ref_seq_info.repeat_family_sequence(mut["repeat_name"], from_string<int16_t>(mut["strand"]), uRPos, &seq_id, &chosen_feature);
         
         if (verbose) cout << ">Sequence of repeat chosen for " << mut["repeat_name"] << endl;
         if (verbose) cout << rep_string << endl;
@@ -2563,7 +2562,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         
         // We've repeated the sequence, now it's time to repeat all the features
         // inside of and including the repeat region.
-        new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+iInsStart+duplicate_sequence.size(), iDelStart, iDelEnd, ref_seq_info, mut["repeat_name"], from_string<int16_t>(mut["strand"]) * chosen_feature->get_strand(), uRPos, verbose);
+        new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+iInsStart+duplicate_sequence.size(), iDelStart, iDelEnd, ref_seq_info, mut["repeat_name"], from_string<int16_t>(mut["strand"]) * chosen_feature.get_strand(), uRPos, verbose);
         
         if (verbose)
         {
