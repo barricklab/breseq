@@ -79,7 +79,7 @@ namespace breseq {
     uint32_t side_1_continuation;
     uint32_t side_2_continuation;
     
-    bool operator <(const JunctionTestInfo& _in)
+    bool operator <(const JunctionTestInfo& _in) const
     {
       return (this->pos_hash_score < _in.pos_hash_score);
     }

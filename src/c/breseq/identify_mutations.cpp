@@ -142,7 +142,7 @@ identify_mutations_pileup::~identify_mutations_pileup()
 void identify_mutations_pileup::pileup_callback(const pileup& p) {
   
   bool verbose = false;  
-  ASSERT(p.target() < _seq_info.size(), "Unknown target id: " + p.target());
+  ASSERT(p.target() < _seq_info.size(), "Unknown target id: " + to_string<uint32_t>(p.target()));
   if (verbose) cout << "Target id: " << p.target() << " position: " << p.position_1() << endl;
 
   _this_deletion_propagation_cutoff = _deletion_propagation_cutoffs[p.target()];
@@ -280,7 +280,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
     cSNPCall snp_call = _snp_caller.get_prediction();
     
     base_char best_base_char;
-    double e_value_call;
+    double e_value_call(0.0);
     
     if (snp_call.genotype.size() > 1) {
       snp_call.score = numeric_limits<double>::quiet_NaN();

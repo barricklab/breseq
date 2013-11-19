@@ -395,7 +395,7 @@ namespace breseq {
 	template <class T, class U> inline vector<T> get_keys(const map<T,U>& input)
 	{
 		vector<T> retval;
-		for (class map<T,U>::const_iterator it = input.begin(); it != input.end(); it++)
+		for (typename map<T,U>::const_iterator it = input.begin(); it != input.end(); it++)
 			retval.push_back(it->first);
 		return retval;
 	}
@@ -511,12 +511,12 @@ namespace breseq {
 
 		return retval;
 	}
-
-	inline string join(string values[], const string& separator)
+/* REMOVE THIS
+	inline string join(vector<string>& values, const string& separator)
 	{
 		return join(vector<string> (values, values + sizeof(values) / sizeof(*values)), separator);
 	}
-
+*/
 	inline string chomp(const string& str)
 	{
 		return str.substr(0, str.find_last_not_of("\n \t")-1);
@@ -853,7 +853,7 @@ namespace breseq {
   template <typename T, typename U> vector<T> map_keys_to_list (map<T,U>& the_map)
   {
     vector<T> return_list;
-    for (class map<T,U>::const_iterator it = the_map.begin(); it != the_map.end(); it++ )
+    for (typename map<T,U>::const_iterator it = the_map.begin(); it != the_map.end(); it++ )
     {
       return_list.push_back(it->first);
     }
@@ -864,7 +864,7 @@ namespace breseq {
   template <typename T, typename U> vector<U> map_key_list_to_values (map<T,U>& the_map,vector<T> the_keys)
   {
     vector<U> return_list;
-    for (class vector<T>::iterator it = the_keys.begin(); it != the_keys.end(); it++ ) {
+    for (typename vector<T>::iterator it = the_keys.begin(); it != the_keys.end(); it++ ) {
       return_list.push_back(the_map[*it]);
     }
     return return_list;
@@ -873,7 +873,7 @@ namespace breseq {
   template <typename T, typename U> vector<string> map_key_list_to_values_as_strings(map<T,U>& the_map,vector<T> the_keys, string prefix = "")
   {
     vector<string> return_list;
-    for (class vector<T>::iterator it = the_keys.begin(); it != the_keys.end(); it++ ) {
+    for (typename vector<T>::iterator it = the_keys.begin(); it != the_keys.end(); it++ ) {
       return_list.push_back(prefix + to_string(the_map[*it]));
     }
     return return_list;

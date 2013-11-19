@@ -94,7 +94,8 @@ inline string to_string(const gd_entry_type type)
 class cFileParseErrors {
 public:
   
-  struct sFileParseError {
+  class sFileParseError {
+  public:
     uint32_t _line_number;
     string _line;
     string _error_message;
@@ -103,7 +104,7 @@ public:
     :_line_number(line_number), _line(line), _error_message(error_message)
     {}
     
-    bool operator <(const sFileParseError& compare)
+    bool operator <(const sFileParseError& compare) const
     { return this->_line_number < compare._line_number; }
     
     void print()
