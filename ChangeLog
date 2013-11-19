@@ -2,6 +2,7 @@ Version 0.24
     * Fix for crash when some junction alignment files had long names.
     * Added Variant Call Format (VCF) output and associated gdtools command GD2VCF.
     * Improved robustness of fitting coverage distribution for low coverage reference sequences.
+    * Fixed compilation on Mac OS 10.9 / Clang
     * Other bug fixes.
 
 Version 0.23
