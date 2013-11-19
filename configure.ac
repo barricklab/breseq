@@ -26,7 +26,7 @@ AC_CONFIG_HEADERS([aux_build/config.h])
 AC_CONFIG_SRCDIR([])
 
 LT_INIT
-AM_INIT_AUTOMAKE([subdir-objects])
+AM_INIT_AUTOMAKE
 
 AM_PROG_CC_C_O
 AC_PROG_CXX
