@@ -150,11 +150,12 @@ namespace breseq {
 
       bool operator<(const cSequenceFeature& _in) const
       {
-        if (this->m_location.get_start_1() == _in.m_location.get_start_1())
+        if (this->m_location.get_start_1() == _in.m_location.get_start_1()) {
           if (this->m_location.get_end_1() == _in.m_location.get_end_1())
             return (this->SafeGet("type") == "gene" && _in.SafeGet("type") == "CDS");
           else
             return (this->m_location.get_end_1() > _in.m_location.get_end_1());
+        }
         return (this->m_location.get_start_1() < _in.m_location.get_start_1());
       }
     

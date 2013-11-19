@@ -2118,8 +2118,8 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
         || ((i_position < j_position) && (snp_distance >= -2 && j_codon_position > i_codon_position)) ) {
           
           // Don't do this for SNPs that are not 100% frequency
-          if (  (*snp_muts[i]).entry_exists(FREQUENCY) && ( from_string<double>((*snp_muts[i])[FREQUENCY]) != 1.0 ) 
-              || (*snp_muts[j]).entry_exists(FREQUENCY) && ( from_string<double>((*snp_muts[j])[FREQUENCY]) != 1.0 ) ) 
+          if (   ((*snp_muts[i]).entry_exists(FREQUENCY) && ( from_string<double>((*snp_muts[i])[FREQUENCY]) != 1.0 ))
+              || ((*snp_muts[j]).entry_exists(FREQUENCY) && ( from_string<double>((*snp_muts[j])[FREQUENCY]) != 1.0 )) )
           {
             (*snp_muts[i])["multiple_polymorphic_SNPs_in_same_codon"] = "1";
             (*snp_muts[j])["multiple_polymorphic_SNPs_in_same_codon"] = "1";

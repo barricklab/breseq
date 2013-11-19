@@ -1898,7 +1898,7 @@ void  assign_one_junction_read_counts(
       end += minimum_side_match_correction;
       end += side_1_continuation;
     } else {
-      start = start;   
+      //start = start;
       end = start + 1;
       start -= extra_stranded_require_overlap;
       end += overlap_correction;
@@ -1949,7 +1949,7 @@ void  assign_one_junction_read_counts(
       end += minimum_side_match_correction;
       end += side_2_continuation;
     } else {
-      start = start;
+      //start = start;
       end = start + 1;
       start -= extra_stranded_require_overlap;
       end += overlap_correction;
