@@ -22,6 +22,7 @@
 ##
 ###
 
+AUTOMAKE_OPTIONS = subdir-objects
 SUBDIRS = bcftools
 
 AM_LDFLAGS = -static 

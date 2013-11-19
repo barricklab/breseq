@@ -15,6 +15,8 @@
 ##
 ###
 
+AUTOMAKE_OPTIONS = subdir-objects
+
 ACLOCAL_AMFLAGS = -I aux_build/m4
 
 PACKAGEDIR = $(ROOTDIR)/package
