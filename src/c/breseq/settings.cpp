@@ -166,7 +166,7 @@ namespace breseq
 
     
     // setup and parse configuration options:
-    AnyOption options("Usage: breseq -r reference.gbk [-r reference2.gbk ...] reads1.fastq [reads2.fastq ...]");
+    AnyOption options("Usage: breseq -r reference.gbk [-r reference2.gbk ...] reads1.fastq [reads2.fastq ...]\n");
     
     options
 		("help,h", "Produce help message showing advanced options", TAKES_NO_ARGUMENT)
@@ -176,12 +176,14 @@ namespace breseq
     ("name,n", "Human-readable name of sample for output [DEFAULT=<none>]", "")
     ("num-processors,j", "Number of processors to use in multithreaded steps", 1);
     
+    options.addUsage("", true);
     options.addUsage("Read File Options", true);
     options
     ("limit-fold-coverage,l", "Analyze a subset of the input FASTQ sequencing reads with enough bases to provide this theoretical coverage of the reference sequences. A value between 60 and 120 will usually speed up the analysis with no loss in sensitivity for clonal samples. The actual coverage achieved will be somewhat less because not all reads will map (DEFAULT=OFF)", NULL, ADVANCED_OPTION)
     ("aligned-sam", "Input files are aligned SAM files, rather than FASTQ files. Junction prediction steps will be skipped.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
     
+    options.addUsage("", true);
     options.addUsage("Reference File Options", true);
     options
     ("contig-reference,c", "File containing reference sequences in GenBank, GFF3, or FASTA format. The same coverage distribution will be fit to all of the reference sequences in this file simultaneously. This is appropriate when they are all contigs from a genome that should be present with the same copy number. Use of this option will improve performance when there are many contigs and especially when some are very short (≤1,000 bases).", NULL, ADVANCED_OPTION)
@@ -189,6 +191,7 @@ namespace breseq
     ("targeted-sequencing,t", "Reference sequences were targeted for ultra-deep sequencing (using pull-downs or amplicons). Do not fit coverage distribution.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
     
+    options.addUsage("", true);
     options.addUsage("Read Alignment and Mutation Calling Options", true);
     options
     ("base-quality-cutoff,b", "Ignore bases with quality scores lower than this value", 3, ADVANCED_OPTION)
@@ -200,16 +203,17 @@ namespace breseq
     ("mutation-score-cutoff", "Log10 E-value cutoff for base-substitution and micro-indel predictions", 10, ADVANCED_OPTION)
     ;
     
+    options.addUsage("", true);
     options.addUsage("Junction Options", true);
     options
     ("no-junction-prediction", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
-    ("junction-alignment-pair-limit", "Only consider this many passed alignment pairs when creating candidate junction sequences", 100000, ADVANCED_OPTION)
+    ("junction-alignment-pair-limit", "Only consider this many passed alignment pairs when creating candidate junction sequences (0 = ALL)", 100000, ADVANCED_OPTION)
     ("junction-score-cutoff", "Maximum negative log10 probability of uneven coverage across a junction breakpoint to accept (0 = OFF)", 3.0, ADVANCED_OPTION)
-    ("junction-minimum-pos-hash-score", "Minimum number of distinct spanning read start positions required to accept a junction", 3, ADVANCED_OPTION)
+    ("junction-minimum-pos-hash-score", "Minimum number of distinct spanning read start positions required to accept a junction (DEFAULT = consensus mode, 3; polymorphism mode, 2)", "", ADVANCED_OPTION)
     ("junction-minimum-side-match", "Minimum number of bases a read must extend past any overlap or read-only sequence at the breakpoint of a junction on each side to count as support for the junction (DEFAULT = consensus mode, 1; polymorphism mode, 6)", "", ADVANCED_OPTION)
     ;
 
-        
+    options.addUsage("", true);    
     options.addUsage("Polymorphism (Mixed Population) Options", true);
     options
     ("polymorphism-prediction,p", "Predict polymorphic (mixed) mutations", TAKES_NO_ARGUMENT)
@@ -221,14 +225,16 @@ namespace breseq
     ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms where this many reads on each strand support alternative alleles (DEFAULT = consensus mode, 2; polymorphism mode, 2", "", ADVANCED_OPTION)
     ;
     
+    options.addUsage("", true);
     options.addUsage("Output Options", true);
-
     options
     ("max-displayed-reads", "Maximum number of reads to display in the HTML output for an evidence item", 100, ADVANCED_OPTION)
+    ("brief-html-output", "Don't create detailed output files for evidence (no read alignments or coverage plots)", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
     
     
     // CNV and Periodicity block
+    options.addUsage("", true);
     options.addUsage("Experimental Options (Use at your own risk)", true);
     options
     ("user-junction-gd","User supplied genome diff file of JC evidence to use as candidate junctions and report support for.", "", ADVANCED_OPTION) 
@@ -373,7 +379,6 @@ namespace breseq
     this->no_junction_prediction = options.count("no-junction-prediction");
     this->maximum_junction_sequence_passed_alignment_pairs_to_consider = from_string<uint64_t>(options["junction-alignment-pair-limit"]);
     this->junction_pos_hash_neg_log10_p_value_cutoff = from_string<double>(options["junction-score-cutoff"]);
-    this->minimum_alignment_resolution_pos_hash_score = from_string<uint32_t>(options["junction-minimum-pos-hash-score"]);
         
     //
     // Set the read alignment evidence model
@@ -394,6 +399,8 @@ namespace breseq
       this->polymorphism_bias_p_value_cutoff = 0.001;
       this->polymorphism_minimum_new_coverage_each_strand = 2;
       this->no_indel_polymorphisms = false;
+      
+      this->minimum_alignment_resolution_pos_hash_score = 3;
       this->junction_minimum_side_match = 6;
       
       this->junction_pos_hash_neg_log10_p_value_cutoff = 0; // OFF
@@ -410,8 +417,11 @@ namespace breseq
       this->polymorphism_minimum_new_coverage_each_strand = 2;
       this->no_indel_polymorphisms = false;
       
+      this->minimum_alignment_resolution_pos_hash_score = 2;
       this->junction_minimum_side_match = 1;
     }
+    
+
     
     // override the default settings 
     if (options.count("polymorphism-frequency-cutoff"))
@@ -426,6 +436,8 @@ namespace breseq
       this->polymorphism_bias_p_value_cutoff = from_string<double>(options["polymorphism-bias-cutoff"]);
     if (options.count("polymorphism-minimum-coverage-each-strand"))
       this->polymorphism_minimum_new_coverage_each_strand = from_string<int32_t>(options["polymorphism-minimum-coverage-each-strand"]);
+    if (options.count("junction-minimum-pos-hash-score"))
+      this->minimum_alignment_resolution_pos_hash_score = from_string<uint32_t>(options["junction-minimum-pos-hash-score"]);
     if (options.count("junction-minimum-side-match"))
       this->junction_minimum_side_match = from_string<int32_t>(options["junction-minimum-side-match"]);
 
@@ -440,6 +452,7 @@ namespace breseq
     this->junction_debug = options.count("junction-debug");
     
     this->max_displayed_reads = from_string<int32_t>(options["max-displayed-reads"]);
+    this->no_alignment_or_plot_generation = options.count("brief-html-output");
     
 		this->post_option_initialize();
     
@@ -506,7 +519,7 @@ namespace breseq
     this->no_junction_prediction = false;
 		this->no_mutation_prediction = false;
 		this->no_deletion_prediction = false;
-    this->no_alignment_generation = false;
+    this->no_alignment_or_plot_generation = false;
 		this->do_copy_number_variation = false;
 		this->do_periodicity = false;
     
