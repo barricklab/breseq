@@ -214,13 +214,13 @@ namespace breseq
     string print_run_name;    // run_name with '_' replaced by ' '
     
     //! Options that control which parts of the pipeline to execute
-    bool no_read_filtering;           // Default = false
-    bool no_junction_prediction;      // Default = false COMMAND-LINE OPTION
-		bool no_mutation_prediction;      // Default = false
-		bool no_deletion_prediction;      // Default = false
-		bool no_alignment_generation;     // Default = false
-		bool do_copy_number_variation;    // Default = false COMMAND-LINE OPTION
-		bool do_periodicity;							// Default = false COMMAND-LINE OPTION
+    bool no_read_filtering;               // Default = false
+    bool no_junction_prediction;          // Default = false COMMAND-LINE OPTION
+		bool no_mutation_prediction;          // Default = false
+		bool no_deletion_prediction;          // Default = false
+		bool no_alignment_or_plot_generation; // Default = false  COMMAND-LINE OPTION
+		bool do_copy_number_variation;        // Default = false COMMAND-LINE OPTION
+		bool do_periodicity;							    // Default = false COMMAND-LINE OPTION
 
     //! DEBUG options
     
@@ -340,7 +340,7 @@ namespace breseq
     uint32_t periodicity_step;
     
     //! Settings: Output
-    uint32_t max_displayed_reads;                           // Default = 100  COMMAND-LINE OPTION
+    uint32_t max_displayed_reads;                           // Default = 100   COMMAND-LINE OPTION
     uint32_t max_rejected_read_alignment_evidence_to_show;  // Defaule = 20
     uint32_t max_rejected_polymorphisms_to_show;            // Default = 20
 		uint32_t max_rejected_junction_evidence_to_show;        // Default = 10

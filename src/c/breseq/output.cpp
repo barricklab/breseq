@@ -2237,7 +2237,13 @@ void Html_Mutation_Table_String::Item_Lines()
         }
         
         if (!evidence_string.empty()) evidence_string += "&nbsp;";
-        evidence_string += a(options.relative_link + evidence_item[_EVIDENCE_FILE_NAME], to_string(evidence_item._type));
+        
+        // This will be empty if we are in the mode where we don't create evidence files.
+        if (evidence_item[_EVIDENCE_FILE_NAME].size()) {
+          evidence_string += a(options.relative_link + evidence_item[_EVIDENCE_FILE_NAME], to_string(evidence_item._type));
+        } else {
+          evidence_string += to_string(evidence_item._type);
+        }
       }
     }
   
