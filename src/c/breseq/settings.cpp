@@ -400,7 +400,7 @@ namespace breseq
       this->polymorphism_minimum_new_coverage_each_strand = 2;
       this->no_indel_polymorphisms = false;
       
-      this->minimum_alignment_resolution_pos_hash_score = 3;
+      this->minimum_alignment_resolution_pos_hash_score = 2;
       this->junction_minimum_side_match = 6;
       
       this->junction_pos_hash_neg_log10_p_value_cutoff = 0; // OFF
@@ -417,7 +417,7 @@ namespace breseq
       this->polymorphism_minimum_new_coverage_each_strand = 2;
       this->no_indel_polymorphisms = false;
       
-      this->minimum_alignment_resolution_pos_hash_score = 2;
+      this->minimum_alignment_resolution_pos_hash_score = 3;
       this->junction_minimum_side_match = 1;
     }
     
@@ -467,7 +467,8 @@ namespace breseq
     cerr << output_divider << endl;
     fprintf(stderr, "%s  %s   %s\n", PACKAGE_STRING, HG_REVISION, PACKAGE_URL);
     fprintf(stderr, "\n");
-    fprintf(stderr, "Authors: Barrick JE, Borges JJ, Colburn GR, Knoester DB, Meyer AG, Reba A, Strand MD\n");
+    fprintf(stderr, "Developers: Barrick JE, Borges JJ, Colburn GR, Deatherage DE, Fields DT,\n");
+    fprintf(stderr, "            Knoester DB, Meyer AG, Reba A, Strand MD\n");
     fprintf(stderr, "Contact: %s\n", PACKAGE_BUGREPORT);
     fprintf(stderr, "\n");
     fprintf(stderr, "%s is free software; you can redistribute it and/or modify it under the\n", PACKAGE_NAME);

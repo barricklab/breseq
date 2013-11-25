@@ -3,6 +3,10 @@ Installation
 
 |breseq| is a command line tool implemented in C++ and R. It will compile and function on a variety of UNIX platforms, including MacOSX. |breseq| installation from the source code requires some basic familiarity with UNIX commands and environments.
 
+.. NOTE::
+   If you are unfamiliar with installing programs by compiling them from source code and you are working on MacOSX, then you should consider using the `Fink package manager <http://pdb.finkproject.org>`_ to automate installing breseq and the programs that it requires. More information about the Fink package for |breseq| is `available here <http://pdb.finkproject.org/pdb/package.php/breseq>`_.
+
+
 1. Download source code
 ---------------------------------
 
