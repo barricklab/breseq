@@ -1078,7 +1078,7 @@ namespace breseq {
 	{    
 		bool verbose = false;
     
-    //if ( (ap.a1.read_name() == "1:796441") || (ap.a1.read_name() == "1:118380"))
+    //if (ap.a1.read_name() == "1:505093")
     //   verbose = true;
     
     
@@ -1479,7 +1479,7 @@ namespace breseq {
     (void)summary;
 		bool verbose = false;
 
-    //if (alignments.front()->read_name() == "1:186766")
+    //if (alignments.front()->read_name() == "1:1610874")
     //  verbose = true;
     
 		if (verbose)
@@ -1548,7 +1548,7 @@ namespace breseq {
     //   Only keep pairs that cover the maximum number of query bases encountered
     ////
     
-    int32_t max_union_length = 0;
+    int32_t max_end_to_end_length = 0;
 		vector<AlignmentPair> passed_pair_list;
 
     for (alignment_list::iterator it1 = list1.begin(); it1 != list1.end(); it1++)
@@ -1566,11 +1566,11 @@ namespace breseq {
 
 				if (ap.pass)
         {
-          // right now we use the union length as a kind of score
-          // matches with greater union length trump those with smaller
-          if (ap.union_length > max_union_length)
+          // Use the end_to_end_length as a kind of score
+          // matches with greater end_to_end_length trump those with smaller
+          if (ap.end_to_end_length > max_end_to_end_length)
           {
-            max_union_length = ap.union_length;
+            max_end_to_end_length = ap.end_to_end_length;
             passed_pair_list.clear();
           }
 
@@ -1942,7 +1942,7 @@ namespace breseq {
 		int32_t union_end = a2_end;
     this->end_to_end_length = union_end - union_start + 1;
     // Note: last term subtracts missing bases when the two alignments don't overlap in the middle
-		this->union_length = end_to_end_length- max(0, -intersection_length);
+		this->union_length = end_to_end_length - max(0, -intersection_length);
     
     a1_unique_start = a1_start;
     a1_unique_end = min(a2_start - 1, a1_end);
