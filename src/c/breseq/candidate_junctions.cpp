@@ -1078,7 +1078,7 @@ namespace breseq {
 	{    
 		bool verbose = false;
     
-    //if (ap.a1.read_name() == "1:505093")
+    //if (ap.a1.read_name() == "4:318906")
     //   verbose = true;
     
     
@@ -1361,11 +1361,15 @@ namespace breseq {
 		// Create the sequence of the candidate junction
     ////
 		    
-    // Get the unique read sequence... (only code remaining from above)
+    // Get the unique read sequence... (coords need to be on correct strand)
     
     string unique_read_seq_string = "";
-    if (overlap < 0)
-			unique_read_seq_string = q1.read_char_sequence().substr(q1_end, -1 * overlap);
+    if (overlap < 0) {
+			unique_read_seq_string = q1.read_char_stranded_sequence_1(q1_end + 1, q1_end - overlap);
+      if (verbose) {
+        cout << "Unique read sequence: " << unique_read_seq_string << endl;
+      }
+    }
     
     // Construct a sequence from a temporary DiffEntry
     cDiffEntry jc(JC);
