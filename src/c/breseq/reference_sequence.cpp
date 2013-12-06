@@ -1093,8 +1093,17 @@ cLocation cSequenceFeature::ParseGenBankCoords(string& s, int8_t in_strand)
   return loc;
 }
 
-void cSequenceFeature::ReadGenBankTag(std::string& tag, std::string& s, std::ifstream& in) {
-
+// Examples of lines
+//
+// One-liner
+//  /inference="ab initio prediction:tRNAscaN-SE:1.21"
+//
+// Example of nested parenthesis  
+//  /anticodon=(pos:complement(1144371..1144373),aa:Arg,
+//            seq:cct)
+  
+void cSequenceFeature::ReadGenBankTag(std::string& tag, std::string& s, std::ifstream& in) 
+{
   // delete leading slash
   tag.erase(0,1);
 
@@ -1103,44 +1112,67 @@ void cSequenceFeature::ReadGenBankTag(std::string& tag, std::string& s, std::ifs
   s.erase(0,pos+1);
 
   // If there is a quote then we need to continue to the last quote
-  size_t first_quote_pos = s.find("\"");
-
-  if (first_quote_pos == string::npos) {
-    (*this)[tag] = s;
-    return;
-  }
-
-  s.erase(0,first_quote_pos+1);
-
-  size_t second_quote_pos = s.find("\"");
-
-  // One liner
-  if (second_quote_pos != string::npos) {
-    s.erase(second_quote_pos,s.length());
-    (*this)[tag] = s;
-    return;
-  }
-
-  // If the value is quoted, we have to read additional lines until end quote
-  string value = s;
-
-  bool found_last_quote = false;
-  while (!found_last_quote && !in.eof()) {
-    std::getline(in, s);
-    RemoveLeadingTrailingWhitespace(s);
-
-    second_quote_pos = s.find("\"");
+  
+  // Two cases, we encounter a quote or open parenthesis first (there should be no space before either).
+  if (s[0] == '"') {
+    s.erase(0,1);
+    
+    size_t second_quote_pos = s.find("\"");
+    
+    // One liner
     if (second_quote_pos != string::npos) {
       s.erase(second_quote_pos,s.length());
-      found_last_quote = true;
+      (*this)[tag] = s;
+      return;
     }
-
-    if (tag != "translation") value += " ";
-    value += s;
+    
+    // If the value is quoted, we have to read additional lines until end quote
+    string value = s;
+    
+    bool found_last_quote = false;
+    while (!found_last_quote && !in.eof()) {
+      std::getline(in, s);
+      RemoveLeadingTrailingWhitespace(s);
+      
+      second_quote_pos = s.find("\"");
+      if (second_quote_pos != string::npos) {
+        s.erase(second_quote_pos,s.length());
+        found_last_quote = true;
+      }
+      
+      if (tag != "translation") value += " ";
+      value += s;
+    }
+    assert(found_last_quote);
+    
+    (*this)[tag] = value;
   }
-  assert(found_last_quote);
-
-  (*this)[tag] = value;
+  
+  else if (s[0] == '(') {
+    s.erase(0,1);
+    uint32_t parenthesis_level = 1;
+    parenthesis_level += std::count(s.begin(), s.end(), '('); 
+    parenthesis_level -= std::count(s.begin(), s.end(), ')');
+    string value = s;
+    
+    while (parenthesis_level && !in.eof()) {
+      std::getline(in, s);
+      RemoveLeadingTrailingWhitespace(s);
+      parenthesis_level += std::count(s.begin(), s.end(), '('); 
+      parenthesis_level -= std::count(s.begin(), s.end(), ')');
+      value += s;
+    }
+    assert(parenthesis_level==0);
+        
+    // erase last closing parenthesis
+    value.erase(value.length()-1,value.length());    
+    (*this)[tag] = value;    
+  } else {
+    // No quotes, assume one liner
+    (*this)[tag] = s;
+    return;
+  }
+  
 }
 
 void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAnnotatedSequence& s) {
