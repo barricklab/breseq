@@ -3,6 +3,7 @@ Version 0.24
     * Added Variant Call Format (VCF) output and associated gdtools command GD2VCF.
     * Improved robustness of fitting coverage distribution for low coverage reference sequences.
     * Fixed compilation on Mac OS 10.9 / Clang
+    * Fixed errors in parsing some GenBank files.
     * Other bug fixes.
 
 Version 0.23

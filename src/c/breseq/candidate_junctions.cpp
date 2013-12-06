@@ -1342,17 +1342,15 @@ namespace breseq {
 			cout << "Alignment #1" << endl;
 			cout << "qpos: " << q1_start << "-" << q1_end << " rpos: " << r1_start << "-" << r1_end << " reversed: " << q1.reversed() << endl;
 			cout << q1.read_char_sequence() << endl << ref_seq_matched_1 << endl;
-//			print Dumper($q1->cigar_array);
 
 			cout << "Alignment #2" << endl;
 			cout << "qpos: " << q2_start << "-" << q2_end << " rpos: " << r2_start << "-" << r2_end << " reversed: " << q2.reversed() << endl;
 			cout << q2.read_char_sequence() << endl << ref_seq_matched_2 << endl;
-//			print Dumper($q2->cigar_array);
 			cout << "<==============" << endl;
 		}
 
     
-		// Calculate an offset that only applies if the overlap is positive (sequence is shared between the two ends)
+		// Calculate an offset that only applies if the overlap is positive/Users/jbarrick/src/breseq/src/c/breseq.xcodeproj (sequence is shared between the two ends)
 		int32_t overlap_offset = (overlap > 0) ? overlap : 0;
 		if (verbose)
 			cout << "Overlap offset: " << overlap_offset << endl;
