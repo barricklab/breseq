@@ -276,6 +276,11 @@ namespace breseq {
         m_seq_id("na"),
         m_features(0) {} ;
     
+      bool is_circular() const
+      {
+        return m_is_circular;
+      }
+    
       // Utility to get top strand sequence
       string get_sequence_1(int32_t start_1, int32_t end_1) const
       {
@@ -288,34 +293,8 @@ namespace breseq {
         return m_fasta_sequence.m_sequence.substr(pos_1-1, 1)[0];
       }
 
-      string get_circular_sequence_1(int32_t start_1, uint32_t size) const
-      {
-        
-        if (start_1 > static_cast<int32_t>(this->get_sequence_size())) {
-          //If start_1 is too large, set to the beginning of the sequence.
-          start_1 = start_1 % this->get_sequence_size();
-        } 
-        else if (start_1 < 0) {
-          //If start_1 is negative, set to the end of the sequence.
-          start_1 = this->get_sequence_size() + start_1; 
-        }
-
-        string ret_val = "";
-        try {
-          ret_val = this->get_sequence_1(start_1, (start_1 + size) - 1);
-
-          if (size > ret_val.size()) {
-            ret_val.append(this->get_sequence_1(1, 1 + size - ret_val.size()));
-          }
-
-        } catch(...) {
-          ERROR("[start_1]: " + to_string(start_1) +
-                "[size]:    " + to_string(size));
-        }
-
-        return ret_val;
-      }
-
+      string get_circular_sequence_1(int32_t start_1, uint32_t size) const;
+      
       size_t get_sequence_size(void) const
       {
         return m_fasta_sequence.m_sequence.size();
@@ -619,6 +598,11 @@ namespace breseq {
 
     bool seq_id_exists(const string& seq_id) const {
       return m_seq_id_to_index.count(seq_id);
+    }
+    
+    bool is_circular(const string& seq_id) const
+    {
+      return (*this)[seq_id].is_circular();
     }
     
     //!< Utility to get sequences by seq_id

@@ -27,6 +27,42 @@ namespace breseq {
   
   const string BULL_DUMMY_SEQ_ID = "__BULL_DUMMY_SEQ_ID__";
   
+  string cAnnotatedSequence::get_circular_sequence_1(int32_t start_1, uint32_t size) const
+  {
+    // This is meant to be robust to
+    // (1) Choosing negative start_1 or values 
+    //     greater than the sequence length
+    // (2) Sizes that are bigger than the genome
+    
+    //-- First, put the start position in bounds.
+
+    // If start_1 is negative, move forward by genome-sized
+    // chunks until it is within bounds
+    while (start_1 < 1) {
+      start_1 = this->get_sequence_size() + start_1; 
+    }
+    
+    //If start_1 is too large, set to where it lines up if you go round and round the genome.
+    start_1 = start_1 % this->get_sequence_size();
+    if (start_1 == 0) start_1 = this->get_sequence_size();
+    //-- After all that, start1 should be in the range [1,sequence_size]
+    
+    // Build the return sequence, which may wrap around from the end to beginning of genome
+    string ret_val = "";
+    
+    while (size > ret_val.size()) {
+      
+      uint32_t leftover_genome_size = this->get_sequence_size() - (start_1 - 1);
+      int32_t chunk_size = leftover_genome_size < size ? leftover_genome_size : size;
+      
+      ret_val += this->get_sequence_1(start_1, start_1 + chunk_size - 1);
+      size -= chunk_size;
+      start_1 = 1;
+    }
+    
+    return ret_val;
+  }
+  
   // Replace Sequence with Input
   // Every position between and including start_1 and end_1 will be replaced with replacement_seq.
   // This function will shift everything else.
@@ -1754,7 +1790,9 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
   const string html_intergenic_separator = "/";
   const string no_gene_name = "–"; //en-dash
   
-  // initialize everything, even though we don"t always use it
+  // Initialize everything, even though we don't always use it.
+  // This is important if our input is a GenomeDiff that already
+  // has some of this information in it.
   mut["locus_tag"] = "";
   mut["aa_position"] = "";
   mut["aa_ref_seq"] = "";
@@ -1763,6 +1801,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
   mut["codon_ref_seq"] = "";
   mut["codon_new_seq"] = "";
   mut["gene_name"] = "";
+  mut["html_gene_name"] = "";
   mut["gene_position"] = "";
   mut["gene_product"] = "";
   mut["_gene_product_hide"] = "";
@@ -2328,16 +2367,25 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
     ////// Optionally, ignore if in a homopolymer stretch longer than this
     if (settings.polymorphism_reject_homopolymer_length)
     {
-      uint32_t test_length = 20;
       string seq_id = mut["seq_id"];
-      uint32_t end_pos = from_string<uint32_t>(mut["position"]);
-      uint32_t start_pos = end_pos - test_length + 1;
-      if (start_pos < 1) start_pos = 1;
-      string bases = this->get_sequence_1(seq_id, start_pos, end_pos);
-
+      int32_t end_pos = from_string<uint32_t>(mut["position"]);
+      int32_t test_length = 20; // don't wrap around chromosome
+      
+      //wraps around chromosome start if circular
+      string bases;
+      int32_t start_pos = end_pos - test_length + 1;
+      if (this->is_circular(seq_id)) {
+        bases = this->get_circular_sequence_1(seq_id, start_pos, test_length);  
+      }
+      else {
+        // if we are not circular, be careful about putting start_pos out of bounds
+        if (start_pos < 1) start_pos = 1;
+        bases = this->get_sequence_1(seq_id, start_pos, end_pos);  
+      }
+      
       uint32_t same_base_length = 0;
-      string first_base = bases.substr(end_pos - start_pos, 1);
-      for (uint32_t j = end_pos; j >= start_pos; j--)
+      string first_base = bases.substr(bases.length()-1, 1);
+      for (int32_t j = end_pos; j >= start_pos; j--)
       {
         string this_base = bases.substr(j - start_pos, 1);
         if (first_base != this_base) break;

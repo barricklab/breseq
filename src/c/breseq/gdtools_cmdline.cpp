@@ -817,12 +817,24 @@ int do_annotate(int argc, char* argv[])
   vector<diff_entry_list_t> mut_lists;
   vector<cGenomeDiff> gd_list;
 
+  bool polymorphisms_found = false; // handled putting in the polymorphism column if only one file provided
   for (uint32_t i = 0; i < gd_path_names.size(); i++){
     uout("Reading input GD file",gd_path_names[i]);
     cGenomeDiff single_gd(gd_path_names[i]);
     //remove the evidence to speed up the merge
     //single_gd.remove(cGenomeDiff::EVIDENCE);
     //No, can't remove UN evidence!
+    if (!compare_mode && (i==0)) {
+      diff_entry_list_t muts = single_gd.mutation_list();
+      for(diff_entry_list_t::iterator it=muts.begin(); it != muts.end(); it++) {
+        cDiffEntry de = **it;  
+        if (de.count(FREQUENCY) && from_string<double>(de[FREQUENCY]) != 1.0) {
+          polymorphisms_found = true;
+          break;
+        }
+      }
+    }
+      
     gd_list.push_back(single_gd);
     mut_lists.push_back(single_gd.mutation_list());
     gd.merge(single_gd);
@@ -830,7 +842,7 @@ int do_annotate(int argc, char* argv[])
   gd.sort();
   
   // Then add frequency columns for all genome diffs
-  if (compare_mode) {
+  if (compare_mode || polymorphisms_found) {
     
     diff_entry_list_t de_list = gd.mutation_list();
     bool found = false;
@@ -915,6 +927,8 @@ int do_annotate(int argc, char* argv[])
     MutationTableOptions mt_options;
     if (compare_mode)
       mt_options.repeat_header = true;
+    if (polymorphisms_found)
+      mt_options.force_frequencies_for_one_reference = true;
     mt_options.one_ref_seq = ref_seq_info.size() == 1;
     mt_options.gd_name_list_ref = gd_base_names;
     mt_options.repeat_header = 10;

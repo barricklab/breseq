@@ -2095,7 +2095,7 @@ void Html_Mutation_Table_String::Header_Line(bool print_main_header)
   if (options.gd_name_list_ref.size() > 1) {
     freq_header_list = options.gd_name_list_ref;
   } 
-  else if(settings.polymorphism_prediction) {
+  else if(settings.polymorphism_prediction || options.force_frequencies_for_one_reference) {
     freq_header_list = make_vector<string>("freq");
   }
 
@@ -2267,7 +2267,7 @@ void Html_Mutation_Table_String::Item_Lines()
     }
     
     // (3) We want a single column (polymorphism prediction)
-    if (settings.polymorphism_prediction) {
+    if (settings.polymorphism_prediction || options.force_frequencies_for_one_reference) {
       // polymorphisms get highlighted
       if(mut.entry_exists(FREQUENCY) && (from_string<double>(FREQUENCY) != 1)) {
         row_class = "polymorphism_table_row";
