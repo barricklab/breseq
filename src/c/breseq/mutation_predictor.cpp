@@ -538,6 +538,7 @@ namespace breseq {
 			j["overlap"] = "0";
 		}
 
+    // This sorts by seq_id matched then by position of unique coordinate side
 		jc.sort(MutationPredictor::sort_by_hybrid);
 
     for(diff_entry_list_t::iterator jc1_it = jc.begin(); jc1_it != jc.end(); jc1_it++) //JC1
@@ -612,6 +613,11 @@ namespace breseq {
 				jc.erase(it_delete_list_2[i]);
 
 				// Create the mutation, with evidence
+        
+        if (verbose) {
+          cout << "Predicting mutation from junctions:" << endl << j1 << endl << j2 << endl;
+        }
+        
 				cDiffEntry mut;
         mut._type = MOB;
 				mut._evidence.push_back(j1._id);
@@ -649,7 +655,13 @@ namespace breseq {
 
         uint32_t start_1 = 0, end_1 = 0, pos_1 = 0;
 
-        // sometimes the ends of the IS are not quite flush
+        
+        ///////////////////////////////////////////////////////
+        // Figuring out bases *inserted* next to the IS element
+        ///////////////////////////////////////////////////////
+        
+        // j1_not_flush_seq is for an insertion
+        
 				string j1_not_flush_seq = "";
 				if (n(j1[j1["_is_interval"] + "_strand"]) == -1)
 				{
@@ -680,30 +692,29 @@ namespace breseq {
 					}
 				}
 
-				if (n(mut["_gap_left"]) >= 0)
-				{
-					if (verbose)
-						cout << "J1 NF:" << j1_not_flush_seq << " U:" << j1_unique_read_sequence << endl;
-
-					if (n(j1["_" + j1["_is_interval"] + "_read_side"]) != n(j1[j1["_is_interval"] + "_strand"]))
-					{
-						j1_not_flush_seq = reverse_complement(j1_not_flush_seq);
-					}
-
-					if (n(j1["_" + j1["_is_interval"] + "_read_side"]) == -1)
-					{
-						mut["_gap_left"] = j1_not_flush_seq + j1_unique_read_sequence;
-					}
-					else
-					{
-						mut["_gap_left"] = j1_unique_read_sequence + j1_not_flush_seq;
-					}
-					mut["_ins_start"] = mut["_gap_left"];
-				}
-				else if (n(mut["_gap_left"]) < 0)
+        if (n(mut["_gap_left"]) < 0)
 				{
 					mut["_del_start"] = s(abs(n(mut["_gap_left"])));
 				}
+
+        
+        if (verbose)
+          cout << "J1 NF:" << j1_not_flush_seq << " U:" << j1_unique_read_sequence << endl;
+
+        if (n(j1["_" + j1["_is_interval"] + "_read_side"]) != n(j1[j1["_is_interval"] + "_strand"]))
+        {
+          j1_not_flush_seq = reverse_complement(j1_not_flush_seq);
+        }
+
+        if (n(j1["_" + j1["_is_interval"] + "_read_side"]) == -1)
+        {
+          mut["_ins_start"] = j1_not_flush_seq + j1_unique_read_sequence;
+        }
+        else
+        {
+          mut["_ins_start"] = j1_unique_read_sequence + j1_not_flush_seq;
+        }
+
 
 				string j2_not_flush_seq = "";
 				if (n(j2[j2["_is_interval"] + "_strand"]) == -1)
@@ -735,34 +746,32 @@ namespace breseq {
 					}
 				}
 
-
-				if (n(mut["_gap_right"]) >= 0)
-				{
-					if (verbose)
-						cout << "J2 NF:" << j2_not_flush_seq << " U:" << j2_unique_read_sequence << endl;
-
-					if ( n(j2["_" + j2["_is_interval"] + "_read_side"]) * n(j2[j2["_is_interval"] + "_strand"]) == -1)
-					{
-						j2_not_flush_seq = reverse_complement(j2_not_flush_seq);
-					}
-
-					if (n(j2["_" + j2["_is_interval"] + "_read_side"]) == -1)
-					{
-						mut["_gap_right"] = j2_not_flush_seq + j2_unique_read_sequence;
-					}
-					else
-					{
-						mut["_gap_right"] = j2_unique_read_sequence + j2_not_flush_seq;
-					}
-					mut["_ins_end"] = mut["_gap_right"];
-				}
-				else if (n(mut["_gap_right"]) < 0)
+        if (n(mut["_gap_right"]) < 0)
 				{
 					mut["_del_end"] = s(abs(n(mut["_gap_right"])));
 				}
+	
+        if (verbose)
+          cout << "J2 NF:" << j2_not_flush_seq << " U:" << j2_unique_read_sequence << endl;
+
+        if ( n(j2["_" + j2["_is_interval"] + "_read_side"]) * n(j2[j2["_is_interval"] + "_strand"]) == -1)
+        {
+          j2_not_flush_seq = reverse_complement(j2_not_flush_seq);
+        }
+
+        if (n(j2["_" + j2["_is_interval"] + "_read_side"]) == -1)
+        {
+          mut["_ins_end"] = j2_not_flush_seq + j2_unique_read_sequence;
+        }
+        else
+        {
+          mut["_ins_end"] = j2_unique_read_sequence + j2_not_flush_seq;
+        }
+
 
 				// At this point any added junction sequences are on the strand as you would see them in the alignment.
-				// we may need to reverse complement and change sides.
+				// we may need to reverse complement. Note that we never swap sides because these changes are with respect to
+        // the reference and do not change if the mobile element is inserted in the reverse orientation.
 
 				if (verbose)
 					cout << mut["_gap_left"] << " :: " << mut["_gap_right"] << endl;
@@ -892,16 +901,18 @@ namespace breseq {
 				//// We are still not checking for a case where one junction side extends far enough to uniquely define the
 				//// side of the IS, but the other side does not (giving it the wrong strand).
 				////
-
+         
 				// Finally, do this AFTER checking for the IS-matched sequences...
-				// $j1 may be the left side, rather than the right side of the insertion, if so...
-				if (uc1_strand)
+				// side_1 of the junction may be the left side, rather than the right side of the insertion, if so we need
+        // to swap coords (but not reverse complement anything
+				if (uc1_strand == +1)
 				{
 					if (verbose) cout << "reverse right and left" << endl;
 
           swap(mut["_ins_start"], mut["_ins_end"]);
           swap(mut["_del_start"], mut["_del_end"]);          
 				}
+        
 
 				// only transfer the hidden _keys to normal keys that will be printed if they are different from 0
         if (mut.entry_exists("_del_start") && (mut["_del_start"] != "0")) mut["del_start"] = mut["_del_start"];
@@ -940,7 +951,6 @@ namespace breseq {
         // target site duplication from counting against the IS element (giving a non-100% value).
         int32_t require_overlap = n(mut["duplication_size"]);
         
-        verbose = false;
         if (verbose) cerr << "Before 1:" << endl << j1 << endl;
         assign_one_junction_read_counts(settings, summary, j1, require_overlap);
         j1["read_count_offset"] = mut["duplication_size"];

@@ -2342,13 +2342,13 @@ void Html_Mutation_Table_String::Item_Lines()
         
         stringstream s_start;
         if (mut.entry_exists("ins_start")) {
-          s_start << "+" << mut["ins_start"];
+          s_start << "+" << mut["ins_start"] << " ";
         }
         if (mut.entry_exists("del_start")) {
-          s_start << "&Delta;" << mut["del_start"];
+          s_start << "&Delta;" << mut["del_start"] << " ";
         }
         if (!(s_start.str()).empty()) {
-          s << s_start.str() << " :: ";
+          s << s_start.str() << ":: ";
         }
         
         s << html_format_repeat_name(mut["repeat_name"]) << " (";
