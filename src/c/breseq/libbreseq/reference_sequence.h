@@ -192,7 +192,7 @@ namespace breseq {
           return;
         
         //Notify the user of the action
-        if(verbose) cout << "PSEUDO\t" << (*this)["type"] << "\t" << m_gff_attributes["ID"];
+        //if(verbose) cout << "PSEUDO\t" << (*this)["type"] << "\t" << m_gff_attributes["ID"];
         
         m_pseudo = true;
         m_gff_attributes["Pseudo"].push_back("true");

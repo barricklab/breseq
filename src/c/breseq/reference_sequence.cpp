@@ -215,6 +215,8 @@ namespace breseq {
   // Successfully checks all three feature lists.  m_features, m_genes, and m_repeats.
   void cAnnotatedSequence::insert_sequence_1(int32_t pos_1, const string &insertion_seq, string mut_type, bool verbose)
   {
+    (void) verbose;
+    (void) mut_type;
     m_fasta_sequence.m_sequence.insert(pos_1, insertion_seq);
     
     //Variable for insertion length, only want to call the
@@ -225,7 +227,7 @@ namespace breseq {
     m_length += insert_length;
     
     //Notify what mutation is being worked on
-    if(verbose)cout << "** " << mut_type << " **" << endl;
+    //if(verbose)cout << "** " << mut_type << " **" << endl;
     
     //Iterate through all the features
     for (list<cSequenceFeaturePtr>::iterator it = m_features.begin(); it != m_features.end(); it++)
@@ -244,7 +246,7 @@ namespace breseq {
         if(feat.m_location.get_start_1() > pos_1)
         {                
           //Notify the user of the upcomming action
-          if(verbose){cout << "SHIFT\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
+          //if(verbose){cout << "SHIFT\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
           
           //Shift the entire feature down the line
           feat.m_location.set_start_1(feat.m_location.get_start_1() + insert_length);
@@ -256,7 +258,7 @@ namespace breseq {
           uint32_t end_temp = feat.m_location.get_end_1() + insert_length;
           
           //Notify the user of the action
-          if(verbose){cout << "MODIFY\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
+          //if(verbose){cout << "MODIFY\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
           
           //Modify the end position
           feat.m_location.set_end_1(feat.m_location.get_end_1() + insert_length);
@@ -275,9 +277,9 @@ namespace breseq {
   // Look through ref_seq_info for repeat_name.
   // Using the strand, insert the repeat feature at supplied position.
   // Also repeat any features inside the repeat.
-  // verbose outputs messages to console.
   void cAnnotatedSequence::repeat_feature_1(int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& ref_seq_info, const string &repeat_name, int8_t strand, int32_t region_pos, bool verbose)
   {
+    (void) verbose;
     // Go through all the reference sequences in ref_seq_info
     for (vector<cAnnotatedSequence>::iterator itr_seq = ref_seq_info.begin(); itr_seq != ref_seq_info.end(); itr_seq++)
     {
@@ -296,10 +298,8 @@ namespace breseq {
       {
         cSequenceFeature& rep = **itr_rep;
         
-        string rep_fam_seq = ref_seq_info.repeat_family_sequence(repeat_name, strand, region_pos);
-        
         // Is this the repeat we're looking for?
-        if (rep.SafeGet("name") == repeat_name && region_pos == rep.m_location.get_start_1())
+        if (rep.SafeGet("name") == repeat_name) //  && region_pos == rep.m_location.get_start_1())
         {      
           cSequenceFeatureList& features = this_seq.m_features;
           cSequenceFeatureList feat_list_new;        
@@ -318,9 +318,9 @@ namespace breseq {
               cSequenceFeature& feat_new = *fp;              
               feat_new.m_gff_attributes = feat.m_gff_attributes;              
               
-              // Depending on the strand of the mutation,
-              // we juggle the starts and ends here.
-              if(strand < 0)
+              // Depending on the strand of the mutation, relative to the
+              // copy that we pulled, juggle the starts and ends here.
+              if(strand * feat.get_strand() < 0)
               {                
                 feat_new.m_location.set_start_1( pos + (rep.get_end_1() - feat.get_end_1()) - start_del);  //Set start to position plus the difference betwen the repeat's end, and this feature's end
                 if(start_del && feat_new.get_start_1() < pos)  {  //If the feature start got shifted below the repeat start, set the start to the pos and flag it as pseudo
@@ -347,7 +347,7 @@ namespace breseq {
               }
               
               // This is where we let the user know that "very imporant" things are going on
-              if(verbose){cout << "REPEAT\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
+              //if(verbose){cout << "REPEAT\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
             }
           }
           
