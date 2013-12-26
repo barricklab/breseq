@@ -1785,25 +1785,8 @@ Evidence_Files::Evidence_Files(const Settings& settings, cGenomeDiff& gd)
     if (parent_item.get() == NULL)
       parent_item = *itr;
 
-    uint32_t start = 0;
-    uint32_t end = 0;
-
-    if (from_string<int32_t>((*item)[ALIGNMENT_OVERLAP]) == 0) 
-    {
-      start = from_string<uint32_t>((*item)[FLANKING_LEFT]);
-      end = from_string<uint32_t>((*item)[FLANKING_LEFT]) + 1;
-    }
-    else if (from_string <int32_t>((*item)[ALIGNMENT_OVERLAP]) > 0) 
-    {
-      start = from_string<uint32_t>((*item)[FLANKING_LEFT]) + 1;
-      end = from_string<uint32_t>((*item)[FLANKING_LEFT]) + 
-            from_string<int32_t>((*item)[ALIGNMENT_OVERLAP]);
-    }
-    else //if (from_string <uint32_t>((*item)[ALIGNMENT_OVERLAP]) > 0) 
-    {
-      start = from_string<uint32_t>((*item)[FLANKING_LEFT]) + 1;
-      end = from_string<uint32_t>((*item)[FLANKING_LEFT]) - from_string<int32_t>((*item)[ALIGNMENT_OVERLAP]);
-    }
+    uint32_t start = from_string<uint32_t>((*item)[FLANKING_LEFT]);
+    uint32_t end = from_string<uint32_t>((*item)[FLANKING_LEFT]) + 1 + abs(from_string<int32_t>((*item)[ALIGNMENT_OVERLAP]));
     
     // The "key"/ID is set early in breseq.  It must remain unique and unchanging
     // through the run so we know what we're referencing.  Because we derive values
@@ -1981,7 +1964,7 @@ Evidence_Files::html_evidence_file (
     if (settings.base_quality_cutoff != 0)
       item["base_quality_cutoff"] = to_string(settings.base_quality_cutoff);
     
-    alignment_output ao(item[BAM_PATH], item[FASTA_PATH], settings.max_displayed_reads, settings.base_quality_cutoff);
+    alignment_output ao(item[BAM_PATH], item[FASTA_PATH], settings.max_displayed_reads, settings.base_quality_cutoff, settings.junction_minimum_side_match);
 
     HTML << ao.html_alignment(ss.str(), (item[PREFIX] == "JC") ? item.item.get() : NULL);
 

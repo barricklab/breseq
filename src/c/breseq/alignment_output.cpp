@@ -35,23 +35,279 @@ alignment_output::Alignment_Output_Pileup::Alignment_Output_Pileup (
         , _show_ambiguously_mapped(show_ambiguously_mapped)
         , unique_start ( 0 )
         , unique_end ( 0 )
-        , total_reads ( 0 )
-        , processed_reads ( 0 )
 {
 }
 
 alignment_output::Alignment_Output_Pileup::~Alignment_Output_Pileup() {}
 
+/*! Called for each position.*/
+void alignment_output::Alignment_Output_Pileup::pileup_callback( const pileup& p )
+{
+  uint32_t& start_1( m_start_position_1 );
+  uint32_t& end_1( m_end_position_1 );
+  uint32_t reference_pos_1 = p.position_1();
+  
+  if ( verbose )
+  {
+    cout << "POSITION: " << reference_pos_1 << endl;
+    cout << "ALIGNED:  " << p.size() << endl;
+  }
+  
+  // Don't pay attention if no reads uniquely aligned here
+  if ( ( reference_pos_1 < unique_start ) || ( reference_pos_1 > unique_end ) )
+    return;
+  
+  // update beginning and end of each reference
+  for (vector<Aligned_Reference>::iterator it=aligned_references.begin(); it!=aligned_references.end(); it++)
+  {
+    Aligned_Reference& aligned_reference = *it;
+    if(aligned_reference.start == 0) aligned_reference.start = reference_pos_1;
+    aligned_reference.end = reference_pos_1;
+  }
+  
+  //## Cull the list to those we want to align
+  //## Other alignments may overlap this position that DO NOT
+  //## overlap the positions of interest. This removes them.
+  
+  vector<const pileup_wrapper*> alignments;
+  for ( pileup::const_iterator itr_pileup = p.begin(); itr_pileup != p.end() ; itr_pileup++ )
+  {
+    const pileup_wrapper& a = *itr_pileup;
+    if (aligned_reads.count(a.read_name())) 
+    {
+      alignments.push_back(&(*itr_pileup));
+    }
+  }
+  
+  int32_t temp_max_indel = 0;
+  for ( vector<const pileup_wrapper*>::const_iterator itr_pileup = alignments.begin(); itr_pileup != alignments.end() ; itr_pileup ++ )
+  {
+    const pileup_wrapper& a = **itr_pileup;
+    
+    if (a.on_base_indel() > temp_max_indel )
+    {
+      temp_max_indel = a.on_base_indel();
+    }
+  }
+  assert(temp_max_indel >= 0);
+  int32_t max_indel = static_cast<uint32_t>(temp_max_indel);
+  
+  if ( verbose ) cout << "MAX INDEL: " << max_indel << endl;
+  
+  // ## Now add this position to the alignments
+  
+  /// This flag is set if the read was among those returned by the pileup
+  /// if it is not set, we insert padding after the loop through the alignments!
+  for (Aligned_Reads::iterator itr_read = aligned_reads.begin(); itr_read != aligned_reads.end(); itr_read++ )
+  {
+    Aligned_Read& aligned_read ( itr_read->second );
+    aligned_read.updated = false;
+  }
+  
+  // MAIN ALIGNMENT LOOP
+  for ( vector<const pileup_wrapper*>::const_iterator itr_pileup = alignments.begin(); itr_pileup != alignments.end() ; itr_pileup ++ )
+  {
+    const pileup_wrapper& a = **itr_pileup;
+    
+    Aligned_Read& aligned_read = aligned_reads[a.read_name()];
+    aligned_read.updated = true;
+    
+    // -1 for gap in this read, >0 for this many bases inserted in read
+    int32_t indel = a.on_base_indel();      
+    
+    // Update the beginning and the end coords of what we are showing
+    if (aligned_read.reference_start == 0) aligned_read.reference_start = reference_pos_1;
+    aligned_read.reference_end = reference_pos_1;
+    
+    if ( aligned_read.start == 0 ) aligned_read.start = a.query_position_1();
+    aligned_read.end = a.query_position_1();
+    
+    // ## READS: add aligned positions
+    // FOR EACH INSERT COUNT
+    for ( int32_t index = 0; index <= max_indel; index ++ )
+    {
+      // add gap or space
+      if ( index > indel )
+      {
+        if ( verbose )
+        {
+          cout << "Adding gap: " << indel << endl;
+        }
+        
+        // If this is a gap at the last position, then add space
+        if (reference_pos_1 == a.reference_end_1())
+        {
+          aligned_read.aligned_bases += ' ';
+          aligned_read.aligned_quals += char ( 254 );
+        }
+        else
+        {
+          aligned_read.aligned_bases += '.';
+          aligned_read.aligned_quals += char ( 255 );
+        }
+      }
+      // add the aligned base
+      else
+      {
+        uint8_t quality = a.read_base_quality_0( a.query_position_0() + index );
+        char base = a.read_base_char_0( a.query_position_0() + index );
+        
+        if ( !text )
+        {
+          uint8_t trim_left = a.trim_left();
+          if ( ( trim_left != 0 ) && ( a.query_position_1() <= trim_left ) )
+          {
+            base = tolower ( base );           
+          }
+          
+          uint8_t trim_right = a.trim_right();
+          if ( ( trim_right != 0 ) && ( ( a.read_length() - a.query_position_0() ) <= trim_right ) )
+          {
+            base = tolower ( base );
+          }
+        }
+        
+        aligned_read.aligned_bases += base;
+        aligned_read.aligned_quals += char ( quality );
+      }
+      
+      if ( verbose )
+      {
+        //        cout << aligned_read.aligned_bases << " ";
+        //        cout << aligned_read.seq_id << " ";
+        //        cout << a.on_base_indel() << endl;
+      }
+    } // END FOR EACH INSERT COUNT
+  }
+  //END MAIN ALIGNMENT LOOP
+  
+  // ## READS: handle those with no base aligned to this position
+  for ( Aligned_Reads::iterator itr_read = aligned_reads.begin();  itr_read != aligned_reads.end(); itr_read++ )
+  {    
+    Aligned_Read& aligned_read (itr_read->second );
+    
+    if ( aligned_read.updated ) continue;
+    
+    aligned_read.aligned_bases += repeat_char(' ', max_indel+1);
+    aligned_read.aligned_quals += repeat_char(char(254), max_indel+1);
+    if ( verbose ) cout << aligned_read.aligned_bases << " NOALIGN " << itr_read->first << endl;
+  }
+  
+  
+  // ##now handle the reference sequences
+  char ref_base = p.reference_base_char_1(reference_pos_1);
+  
+  for ( uint32_t index = 0; index < aligned_references.size(); index ++ )
+  {    
+    Aligned_Reference& aligned_reference ( aligned_references[index] );    
+    
+    // Default is to show reference 
+    char my_ref_base = ref_base;
+    char my_ref_qual = char(255); // highlighted as max quality
+    
+    // handle truncated starts
+    if (aligned_reference.truncate_start) {
+      // past part we want to show
+      if (reference_pos_1 < aligned_reference.truncate_start - aligned_reference.overlap_not_assigned) {
+        my_ref_base = '.'; 
+        my_ref_qual = char(253); // not highlighted
+      }
+      // in overlap where we don't want to highlight
+      else if (reference_pos_1 < aligned_reference.truncate_start) {
+        my_ref_qual = char(253); // not highlighted
+      }
+    }
+    
+    // handle truncated ends
+    if (aligned_reference.truncate_end) {
+      // past part we want to show
+      if (reference_pos_1 > aligned_reference.truncate_end + aligned_reference.overlap_not_assigned) {
+        my_ref_base = '.'; 
+        my_ref_qual = char(253); // not highlighted
+      }
+      // in overlap where we don't want to highlight
+      else if (reference_pos_1 > aligned_reference.truncate_end) {
+        my_ref_qual = char(253); // not highlighted
+      }
+    }
+    
+    aligned_reference.aligned_bases += my_ref_base;
+    aligned_reference.aligned_quals += my_ref_qual;
+    
+    aligned_reference.aligned_bases += repeat_char('.', max_indel);
+    aligned_reference.aligned_quals += repeat_char(char(255), max_indel);
+  }
+  
+  // ##also update any positions of interest for gaps
+  for ( uint32_t insert_count = 0; insert_count <= static_cast<uint32_t>(max_indel); insert_count++ )
+  {
+    if (   ((m_insert_start <= insert_count) && (insert_count <= m_insert_end) && (reference_pos_1 == start_1) && (reference_pos_1 == end_1))
+        || ((m_insert_start <= insert_count) && (reference_pos_1 == start_1) && (reference_pos_1 != end_1)) 
+        || ((m_insert_end >= insert_count) && (reference_pos_1 == end_1) && (reference_pos_1 != start_1))
+        || ((reference_pos_1 < end_1) && (reference_pos_1 > start_1)) )
+    {
+      aligned_annotation.aligned_bases += '|';
+    }
+    else
+    {		
+      aligned_annotation.aligned_bases += ' ';
+    }
+  }
+}
+//END create_alignment()
+
+/*! Called for each read alignment.*/
+void alignment_output::Alignment_Output_Pileup::fetch_callback ( const alignment_wrapper& a )
+{
+  // we only keep track of unique alignments 
+  if ( !_show_ambiguously_mapped && a.is_redundant() ) return;
+  
+  // create a new empty structure and fill it  
+  Aligned_Read aligned_read;
+  aligned_read.seq_id = a.read_name();
+  aligned_read.strand = a.strand();
+  aligned_read.length = a.read_length();
+  aligned_read.read_sequence = a.read_char_sequence();
+  aligned_read.qual_sequence = a.read_base_quality_bam_string();
+  aligned_read.is_redundant = a.is_redundant();
+  aligned_read.read_name_style =  aligned_read.is_redundant ? "AM" : "NC";
+  
+  aligned_read.mapping_quality = a.mapping_quality();
+  
+  aligned_read.reference_start = a.reference_start_1();
+  aligned_read.reference_end = a.reference_end_1();
+  
+  aligned_reads[aligned_read.seq_id] = aligned_read;
+  
+  if (verbose)
+  {
+    cout << a.read_name() << endl;
+    cout << a.reference_start_1() << " " << a.reference_end_1() << endl;
+  }
+  
+  if ( ( unique_start == 0 ) || ( unique_start > a.reference_start_1() ) )
+  {
+    unique_start = a.reference_start_1();
+  }
+  if ( ( unique_end == 0 ) || ( unique_end < a.reference_end_1() ) )
+  {
+    unique_end = a.reference_end_1();
+  }
+}
+
+  
 alignment_output::alignment_output ( string bam, 
                                     string fasta, 
                                     uint32_t maximum_to_align, 
                                     const uint32_t quality_score_cutoff,
+                                    const int32_t junction_minimum_size_match,
                                     const bool show_ambiguously_mapped
                                     )
         : m_alignment_output_pileup ( bam, fasta, show_ambiguously_mapped )
         , m_aligned_reads ( m_alignment_output_pileup.aligned_reads )
         , m_quality_score_cutoff ( quality_score_cutoff )
         , m_maximum_to_align ( maximum_to_align )
+        , m_junction_minimum_size_match ( junction_minimum_size_match )
         , m_show_ambiguously_mapped ( show_ambiguously_mapped )
 {
   // zero is the default if no arg provided, make a reasonable value
@@ -67,14 +323,11 @@ void alignment_output::create_alignment ( const string& region, cDiffEntry* jc_i
   uint32_t target_id, start_pos, end_pos, insert_start, insert_end;
   m_alignment_output_pileup.parse_region(region, target_id, start_pos, end_pos, insert_start, insert_end);
   
-  
   // Check for special reference lines that are junctions...
-  bool bJunctionAlignment = false;    // is this a junction alignment
   bool bDrawAnnotationLine = true;    // draw the | annotation line pointing to region?
+  m_is_junction = jc_item != NULL;
   
-  if (jc_item) {
-  
-    bJunctionAlignment = true;
+  if (m_is_junction) {
 
     int32_t overlap = from_string<int32_t>((*jc_item)["overlap"]);
     int32_t alignment_overlap = from_string<int32_t>((*jc_item)["alignment_overlap"]);
@@ -91,7 +344,7 @@ void alignment_output::create_alignment ( const string& region, cDiffEntry* jc_i
     // overlap basses extend past these coords, are not highlighted, and not numbered
     //
     // Translating from the coordinates of the junction candidate to how the overlap was resolved creates some difficulties here
-    
+        
     Aligned_Reference aligned_reference_1, aligned_reference_2;
  
     // This is the amount of a positive overlap assigned to each side
@@ -112,7 +365,7 @@ void alignment_output::create_alignment ( const string& region, cDiffEntry* jc_i
     
     aligned_reference_1.ghost_end = from_string<int32_t>((*jc_item)[SIDE_1_POSITION]); 
     aligned_reference_2.ghost_start = from_string<int32_t>((*jc_item)[SIDE_2_POSITION]);     
- 
+    
     //cout << "Junction reference information" << endl;
     //cout << aligned_reference_1.truncate_start << "-" << aligned_reference_1.truncate_end << " overlap " << aligned_reference_1.overlap << endl;
     //cout << aligned_reference_2.truncate_start << "-" << aligned_reference_2.truncate_end << " overlap " << aligned_reference_2.overlap << endl;
@@ -127,7 +380,6 @@ void alignment_output::create_alignment ( const string& region, cDiffEntry* jc_i
     
     m_alignment_output_pileup.aligned_references.push_back(aligned_reference_1);
     m_alignment_output_pileup.aligned_references.push_back(aligned_reference_2);
-
   }
   else
   {
@@ -149,52 +401,23 @@ void alignment_output::create_alignment ( const string& region, cDiffEntry* jc_i
     m_error_message = "No reads uniquely aligned to region.";
     return;
   }
-  
-  // For junction alignments -- remove those that don't cross the unique point in the junction
-  if ( bJunctionAlignment )
-  {
-    Aligned_Reads new_aligned_reads;
-    Aligned_Reads& aligned_reads = m_alignment_output_pileup.aligned_reads;
-    
-    uint32_t required_end_1 = m_alignment_output_pileup.aligned_references[0].truncate_end + m_alignment_output_pileup.aligned_references[0].overlap_assigned;
-    uint32_t required_start_2 = m_alignment_output_pileup.aligned_references[1].truncate_start - m_alignment_output_pileup.aligned_references[1].overlap_assigned;
-    
-    for(Aligned_Reads::iterator ari = aligned_reads.begin(); ari != aligned_reads.end(); ari++)
-    {
-      Aligned_Read& ar = ari->second;
-      
-      //cout << ar.seq_id << endl;
-      //cout << ar.reference_start << " " << ar.reference_end << " " << required_end_1 << " " << required_start_2 << endl;
-      if (ar.reference_end <= required_end_1 )
-        continue;
-      if (ar.reference_start >= required_start_2 )  
-        continue;
-      //cout << "kept" << endl;
-      new_aligned_reads[ari->first] = ari->second;
-    }
-    m_alignment_output_pileup.aligned_reads = new_aligned_reads;
-  }
-
 
   // Reduce the number of reads to the maximum that we want to align
   Aligned_Reads& aligned_reads = m_alignment_output_pileup.aligned_reads;
-  if ( (m_maximum_to_align != 0) && (aligned_reads.size() > m_maximum_to_align) )
-  {
+  if ( (m_maximum_to_align != 0) && (aligned_reads.size() > m_maximum_to_align) ) {
     Aligned_Reads new_aligned_reads;
     m_error_message = "Only " + to_string(m_maximum_to_align) + " of " + to_string(aligned_reads.size()) + " total aligned reads displayed.";
     
     // create a list of the keys
     vector<string> key_list;
-    for(Aligned_Reads::iterator ar = aligned_reads.begin(); ar != aligned_reads.end(); ar++)
-    {
+    for(Aligned_Reads::iterator ar = aligned_reads.begin(); ar != aligned_reads.end(); ar++) {
       key_list.push_back(ar->first);
     }
     
     double max = static_cast<double>(m_maximum_to_align);
     double num = static_cast<double>(key_list.size());
     // Pick the desired number of reads evenly across the reads returned
-    for (size_t i=0; i<m_maximum_to_align; i++)
-    {
+    for (size_t i=0; i<m_maximum_to_align; i++) {
       size_t keep_index = static_cast<size_t>(floor(static_cast<double>(i) / max * num));
       new_aligned_reads[key_list[keep_index]] = aligned_reads[key_list[keep_index]];
     }
@@ -209,6 +432,21 @@ void alignment_output::create_alignment ( const string& region, cDiffEntry* jc_i
   m_aligned_reads = m_alignment_output_pileup.aligned_reads;
   m_aligned_references = m_alignment_output_pileup.aligned_references;
   m_aligned_annotation = m_alignment_output_pileup.aligned_annotation;
+  
+  // This section updates the style of the name of the reads that don't cross
+  // the ambiguous part of the junction (and therefore are not counted).
+  if (m_is_junction) {
+    for(Aligned_Reads::iterator ar = m_aligned_reads.begin(); ar != m_aligned_reads.end(); ar++) {
+      
+      Aligned_Read& a = ar->second;
+      uint32_t require_reference_start = m_alignment_output_pileup.aligned_references[0].truncate_end - m_alignment_output_pileup.aligned_references[0].overlap_assigned - m_junction_minimum_size_match + 1;
+      uint32_t require_reference_end = m_alignment_output_pileup.aligned_references[1].truncate_start + m_alignment_output_pileup.aligned_references[1].overlap_assigned + m_junction_minimum_size_match - 1;
+      
+      if ((a.reference_start > require_reference_start) ||  (a.reference_end < require_reference_end)) {
+        a.read_name_style = "AO";
+      }
+    }
+  }
   
   if(!bDrawAnnotationLine)
     m_aligned_annotation.aligned_bases = substitute(m_alignment_output_pileup.aligned_annotation.aligned_bases, "|" ," ");
@@ -246,7 +484,7 @@ void alignment_output::create_alignment ( const string& region, cDiffEntry* jc_i
     aligned_read.aligned_bases = repeat_char(' ', max_extend_left) + aligned_read.aligned_bases + repeat_char(' ', max_extend_right);
     aligned_read.aligned_quals = repeat_char(char(255), max_extend_left) + aligned_read.aligned_quals + repeat_char(char(255), max_extend_right);
   }
- 
+   
   if ( verbose )
   {
       cout << "Extend: " << max_extend_left;
@@ -410,7 +648,7 @@ string alignment_output::html_alignment( const string& region, cDiffEntry* jc_it
   // this sets object values (not re-usable currently)
   create_alignment(region, jc_item);
   
-  string output = "";
+  string output;
   
   if (m_error_message.size() > 0)
   {
@@ -425,7 +663,6 @@ string alignment_output::html_alignment( const string& region, cDiffEntry* jc_it
   /// all built by create_alignment and stored as member, m_ , variables.
   set_quality_range(m_quality_score_cutoff);
 
-  // @JEB sorting is not working yet
   Sorted_Keys sorted_keys;
   for (Aligned_Reads::iterator itr_read = m_aligned_reads.begin(); itr_read != m_aligned_reads.end(); itr_read++)
   {
@@ -436,9 +673,8 @@ string alignment_output::html_alignment( const string& region, cDiffEntry* jc_it
   }
   std::sort(sorted_keys.begin(),sorted_keys.end(),alignment_output::sort_by_aligned_bases_length);
   
-  
   output += "\n<style>\n";
-  output += create_header_string();
+  output += html_header_string();
   output += "</style>\n";
   output += "<table style=\"background-color: rgb(255,255,255)\">\n";
   output += "<tr>\n<td style=\"font-size:10pt\">";    
@@ -462,32 +698,10 @@ string alignment_output::html_alignment( const string& region, cDiffEntry* jc_it
     output += html_alignment_line( m_aligned_references[index], true, false) + "<BR>";  }
   output += "\n<!-- Reference End -->\n\n";
   
-  output += "<BR>";
+  output += "\n\n<!-- Legend Begin -->";
+  output += html_legend();
+  output += "\n<!-- Legend End -->\n\n";
 
-  // create legend information
-  output += "\n<CODE>Base quality scores:&nbsp</CODE>";
-  Alignment_Base temp_a;
-  temp_a.aligned_bases = "ATCG";
-  temp_a.aligned_quals = repeat_char('\0', 4);
-  temp_a.show_strand = false;
-
-  output += html_alignment_line(temp_a, false, true);
-  for (uint8_t index = 1; index < m_quality_range.qual_cutoffs.size(); index++)
-  {
-    char c = m_quality_range.qual_cutoffs[index];   
-    output += "<CODE>&nbsp;&lt;&nbsp;" + to_string<uint32_t>(c) + "&nbsp;&le;&nbsp;</CODE>";
-
-    temp_a.aligned_bases = "ATCG";
-    temp_a.aligned_quals = repeat_char(static_cast<char>(c), 4);
-    temp_a.show_strand = false;
-
-    output += html_alignment_line(temp_a, false, true);
-  }
-  
-  if (m_show_ambiguously_mapped) {
-    output += "<br><br><code><font class=\"AM\">Reads mapping to repeats with multiple best matches in reference.</font></code>";
-  }
-  
   output += "</td>\n</tr>\n</table>\n";
   return output;
 }
@@ -543,260 +757,6 @@ string alignment_output::html_alignment( const string& region, cDiffEntry* jc_it
     return output;
   }  
   
-/*! Called for each position.*/
-void alignment_output::Alignment_Output_Pileup::pileup_callback( const pileup& p )
-{
-  uint32_t& start_1( m_start_position_1 );
-  uint32_t& end_1( m_end_position_1 );
-  uint32_t reference_pos_1 = p.position_1();
-
-  if ( verbose )
-  {
-    cout << "POSITION: " << reference_pos_1 << endl;
-    cout << "ALIGNED:  " << p.size() << endl;
-  }
-  
-  // Don't pay attention if no reads uniquely aligned here
-  if ( ( reference_pos_1 < unique_start ) || ( reference_pos_1 > unique_end ) )
-    return;
-  
-  // update beginning and end of each reference
-  for (vector<Aligned_Reference>::iterator it=aligned_references.begin(); it!=aligned_references.end(); it++)
-  {
-    Aligned_Reference& aligned_reference = *it;
-    if(aligned_reference.start == 0) aligned_reference.start = reference_pos_1;
-    aligned_reference.end = reference_pos_1;
-  }
-
-  //## Cull the list to those we want to align
-  //## Other alignments may overlap this position that DO NOT
-  //## overlap the positions of interest. This removes them.
-
-  vector<const pileup_wrapper*> alignments;
-  for ( pileup::const_iterator itr_pileup = p.begin(); itr_pileup != p.end() ; itr_pileup++ )
-  {
-    const pileup_wrapper& a = *itr_pileup;
-    if (aligned_reads.count(a.read_name())) 
-    {
-      alignments.push_back(&(*itr_pileup));
-    }
-  }
-  
-  int32_t temp_max_indel = 0;
-  for ( vector<const pileup_wrapper*>::const_iterator itr_pileup = alignments.begin(); itr_pileup != alignments.end() ; itr_pileup ++ )
-  {
-    const pileup_wrapper& a = **itr_pileup;
-      
-    if (a.on_base_indel() > temp_max_indel )
-    {
-      temp_max_indel = a.on_base_indel();
-    }
-  }
-  assert(temp_max_indel >= 0);
-  int32_t max_indel = static_cast<uint32_t>(temp_max_indel);
-
-  if ( verbose ) cout << "MAX INDEL: " << max_indel << endl;
-
-  // ## Now add this position to the alignments
-
-  /// This flag is set if the read was among those returned by the pileup
-  /// if it is not set, we insert padding after the loop through the alignments!
-  for (Aligned_Reads::iterator itr_read = aligned_reads.begin(); itr_read != aligned_reads.end(); itr_read++ )
-  {
-      Aligned_Read& aligned_read ( itr_read->second );
-      aligned_read.updated = false;
-  }
-
-  // MAIN ALIGNMENT LOOP
-  for ( vector<const pileup_wrapper*>::const_iterator itr_pileup = alignments.begin(); itr_pileup != alignments.end() ; itr_pileup ++ )
-  {
-    const pileup_wrapper& a = **itr_pileup;
-    
-    Aligned_Read& aligned_read = aligned_reads[a.read_name()];
-    aligned_read.updated = true;
-
-    // -1 for gap in this read, >0 for this many bases inserted in read
-    int32_t indel = a.on_base_indel();      
-    
-    // Update the beginning and the end coords of what we are showing
-    if (aligned_read.reference_start == 0) aligned_read.reference_start = reference_pos_1;
-    aligned_read.reference_end = reference_pos_1;
-    
-    if ( aligned_read.start == 0 ) aligned_read.start = a.query_position_1();
-    aligned_read.end = a.query_position_1();
-
-    // ## READS: add aligned positions
-    // FOR EACH INSERT COUNT
-    for ( int32_t index = 0; index <= max_indel; index ++ )
-    {
-      // add gap or space
-      if ( index > indel )
-      {
-        if ( verbose )
-        {
-          cout << "Adding gap: " << indel << endl;
-        }
-        
-        // If this is a gap at the last position, then add space
-        if (reference_pos_1 == a.reference_end_1())
-        {
-          aligned_read.aligned_bases += ' ';
-          aligned_read.aligned_quals += char ( 254 );
-        }
-        else
-        {
-          aligned_read.aligned_bases += '.';
-          aligned_read.aligned_quals += char ( 255 );
-        }
-      }
-      // add the aligned base
-      else
-      {
-        uint8_t quality = a.read_base_quality_0( a.query_position_0() + index );
-        char base = a.read_base_char_0( a.query_position_0() + index );
-
-        if ( !text )
-        {
-          uint8_t trim_left = a.trim_left();
-          if ( ( trim_left != 0 ) && ( a.query_position_1() <= trim_left ) )
-          {
-            base = tolower ( base );           
-          }
-          
-          uint8_t trim_right = a.trim_right();
-          if ( ( trim_right != 0 ) && ( ( a.read_length() - a.query_position_0() ) <= trim_right ) )
-          {
-            base = tolower ( base );
-          }
-        }
-      
-        aligned_read.aligned_bases += base;
-        aligned_read.aligned_quals += char ( quality );
-      }
-
-      if ( verbose )
-      {
-//        cout << aligned_read.aligned_bases << " ";
-//        cout << aligned_read.seq_id << " ";
-//        cout << a.on_base_indel() << endl;
-      }
-    } // END FOR EACH INSERT COUNT
-  }
-  //END MAIN ALIGNMENT LOOP
-   
-  // ## READS: handle those with no base aligned to this position
-  for ( Aligned_Reads::iterator itr_read = aligned_reads.begin();  itr_read != aligned_reads.end(); itr_read++ )
-  {    
-    Aligned_Read& aligned_read (itr_read->second );
-    
-    if ( aligned_read.updated ) continue;
-          
-    aligned_read.aligned_bases += repeat_char(' ', max_indel+1);
-    aligned_read.aligned_quals += repeat_char(char(254), max_indel+1);
-    if ( verbose ) cout << aligned_read.aligned_bases << " NOALIGN " << itr_read->first << endl;
-  }
-  
-  
-  // ##now handle the reference sequences
-  char ref_base = p.reference_base_char_1(reference_pos_1);
-
-  for ( uint32_t index = 0; index < aligned_references.size(); index ++ )
-  {    
-    Aligned_Reference& aligned_reference ( aligned_references[index] );    
-    
-    // Default is to show reference 
-    char my_ref_base = ref_base;
-    char my_ref_qual = char(255); // highlighted as max quality
-    
-    // handle truncated starts
-    if (aligned_reference.truncate_start) {
-      // past part we want to show
-      if (reference_pos_1 < aligned_reference.truncate_start - aligned_reference.overlap_not_assigned) {
-        my_ref_base = '.'; 
-        my_ref_qual = char(253); // not highlighted
-      }
-      // in overlap where we don't want to highlight
-      else if (reference_pos_1 < aligned_reference.truncate_start) {
-        my_ref_qual = char(253); // not highlighted
-      }
-    }
-
-    // handle truncated ends
-    if (aligned_reference.truncate_end) {
-      // past part we want to show
-      if (reference_pos_1 > aligned_reference.truncate_end + aligned_reference.overlap_not_assigned) {
-        my_ref_base = '.'; 
-        my_ref_qual = char(253); // not highlighted
-      }
-      // in overlap where we don't want to highlight
-      else if (reference_pos_1 > aligned_reference.truncate_end) {
-        my_ref_qual = char(253); // not highlighted
-      }
-    }
-    
-    aligned_reference.aligned_bases += my_ref_base;
-    aligned_reference.aligned_quals += my_ref_qual;
-
-    aligned_reference.aligned_bases += repeat_char('.', max_indel);
-    aligned_reference.aligned_quals += repeat_char(char(255), max_indel);
-  }
-    
-  // ##also update any positions of interest for gaps
-  for ( uint32_t insert_count = 0; insert_count <= static_cast<uint32_t>(max_indel); insert_count++ )
-  {
-    if (   ((m_insert_start <= insert_count) && (insert_count <= m_insert_end) && (reference_pos_1 == start_1) && (reference_pos_1 == end_1))
-				|| ((m_insert_start <= insert_count) && (reference_pos_1 == start_1) && (reference_pos_1 != end_1)) 
-        || ((m_insert_end >= insert_count) && (reference_pos_1 == end_1) && (reference_pos_1 != start_1))
-        || ((reference_pos_1 < end_1) && (reference_pos_1 > start_1)) )
-    {
-      aligned_annotation.aligned_bases += '|';
-    }
-    else
-    {		
-      aligned_annotation.aligned_bases += ' ';
-    }
-  }
-}
-//END create_alignment()
-
-/*! Called for each read alignment.*/
-void alignment_output::Alignment_Output_Pileup::fetch_callback ( const alignment_wrapper& a )
-{
-  // we only keep track of unique alignments 
-  if ( !_show_ambiguously_mapped && a.is_redundant() ) return;
-  
-  total_reads++;
-  
-  // create a new empty structure and fill it  
-  Aligned_Read aligned_read;
-  aligned_read.seq_id = a.read_name();
-  aligned_read.strand = a.strand();
-  aligned_read.length = a.read_length();
-  aligned_read.read_sequence = a.read_char_sequence();
-  aligned_read.qual_sequence = a.read_base_quality_bam_string();
-  aligned_read.is_redundant = a.is_redundant();
-  aligned_read.mapping_quality = a.mapping_quality();
-  
-  aligned_read.reference_start = a.reference_start_1();
-  aligned_read.reference_end = a.reference_end_1();
-
-  aligned_reads[aligned_read.seq_id] = aligned_read;
-  
-  if (verbose)
-  {
-    cout << a.read_name() << endl;
-    cout << a.reference_start_1() << " " << a.reference_end_1() << endl;
-  }
-  
-  if ( ( unique_start == 0 ) || ( unique_start > a.reference_start_1() ) )
-  {
-      unique_start = a.reference_start_1();
-  }
-  if ( ( unique_end == 0 ) || ( unique_end < a.reference_end_1() ) )
-  {
-      unique_end = a.reference_end_1();
-  }
-}
 
 // 'quality_score_cutoff' = below this value you get a special color -- for bad Illumina bases
 void alignment_output::set_quality_range(const uint32_t quality_score_cutoff)
@@ -907,73 +867,78 @@ void alignment_output::set_quality_range(const uint32_t quality_score_cutoff)
 }
 
 
-string alignment_output::create_header_string()
+string alignment_output::html_header_string()
 {
-    map<char, vector<string> > base_color_hash;
-    // Black
-    base_color_hash['G'].push_back ( "rgb(255,255,0)" );
-    base_color_hash['G'].push_back ( "rgb(230,230,230)" );
-    base_color_hash['G'].push_back ( "rgb(210,210,210)" );
-    base_color_hash['G'].push_back ( "rgb(140,140,140)" );
-    base_color_hash['G'].push_back ( "rgb(70,70,70)" );
-    base_color_hash['G'].push_back ( "rgb(0,0,0)" );
+  map<char, vector<string> > base_color_hash;
+  // Black
+  base_color_hash['G'].push_back ( "rgb(255,255,0)" );
+  base_color_hash['G'].push_back ( "rgb(230,230,230)" );
+  base_color_hash['G'].push_back ( "rgb(210,210,210)" );
+  base_color_hash['G'].push_back ( "rgb(140,140,140)" );
+  base_color_hash['G'].push_back ( "rgb(70,70,70)" );
+  base_color_hash['G'].push_back ( "rgb(0,0,0)" );
 
-    // Blue
-    base_color_hash['C'].push_back ( "rgb(255,255,0)" );
-    base_color_hash['C'].push_back ( "rgb(160,160,255)" );
-    base_color_hash['C'].push_back ( "rgb(120,120,255)" );
-    base_color_hash['C'].push_back ( "rgb(60,60,255)" );
-    base_color_hash['C'].push_back ( "rgb(20,20,255)" );
-    base_color_hash['C'].push_back ( "rgb(0,0,150)" );
+  // Blue
+  base_color_hash['C'].push_back ( "rgb(255,255,0)" );
+  base_color_hash['C'].push_back ( "rgb(160,160,255)" );
+  base_color_hash['C'].push_back ( "rgb(120,120,255)" );
+  base_color_hash['C'].push_back ( "rgb(60,60,255)" );
+  base_color_hash['C'].push_back ( "rgb(20,20,255)" );
+  base_color_hash['C'].push_back ( "rgb(0,0,150)" );
 
-    // Red
-    base_color_hash['A'].push_back ( "rgb(255,255,0)" );
-    base_color_hash['A'].push_back ( "rgb(255,210,210)" );
-    base_color_hash['A'].push_back ( "rgb(255,180,180)" );
-    base_color_hash['A'].push_back ( "rgb(255,100,100)" );
-    base_color_hash['A'].push_back ( "rgb(255,20,20)" );
-    base_color_hash['A'].push_back ( "rgb(200,0,0)" );
+  // Red
+  base_color_hash['A'].push_back ( "rgb(255,255,0)" );
+  base_color_hash['A'].push_back ( "rgb(255,210,210)" );
+  base_color_hash['A'].push_back ( "rgb(255,180,180)" );
+  base_color_hash['A'].push_back ( "rgb(255,100,100)" );
+  base_color_hash['A'].push_back ( "rgb(255,20,20)" );
+  base_color_hash['A'].push_back ( "rgb(200,0,0)" );
 
-    // Green
-    base_color_hash['T'].push_back ( "rgb(255,255,0)" );
-    base_color_hash['T'].push_back ( "rgb(210,255,210)" );
-    base_color_hash['T'].push_back ( "rgb(180,255,180)" );
-    base_color_hash['T'].push_back ( "rgb(100,255,100)" );
-    base_color_hash['T'].push_back ( "rgb(20,255,20)" );
-    base_color_hash['T'].push_back ( "rgb(0,200,0)" );
+  // Green
+  base_color_hash['T'].push_back ( "rgb(255,255,0)" );
+  base_color_hash['T'].push_back ( "rgb(210,255,210)" );
+  base_color_hash['T'].push_back ( "rgb(180,255,180)" );
+  base_color_hash['T'].push_back ( "rgb(100,255,100)" );
+  base_color_hash['T'].push_back ( "rgb(20,255,20)" );
+  base_color_hash['T'].push_back ( "rgb(0,200,0)" );
 
-    base_color_hash['N'].push_back ( "rgb(128,0,128)" );
-    base_color_hash['N'].push_back ( "rgb(128,0,128)" );
-    base_color_hash['N'].push_back ( "rgb(128,0,128)" );
-    base_color_hash['N'].push_back ( "rgb(128,0,128)" );
-    base_color_hash['N'].push_back ( "rgb(128,0,128)" );
-    base_color_hash['N'].push_back ( "rgb(128,0,128)" );
+  base_color_hash['N'].push_back ( "rgb(128,0,128)" );
+  base_color_hash['N'].push_back ( "rgb(128,0,128)" );
+  base_color_hash['N'].push_back ( "rgb(128,0,128)" );
+  base_color_hash['N'].push_back ( "rgb(128,0,128)" );
+  base_color_hash['N'].push_back ( "rgb(128,0,128)" );
+  base_color_hash['N'].push_back ( "rgb(128,0,128)" );
 
-    string header_style_string;
-    header_style_string += ".NC {color: rgb(0,0,0); background-color: rgb(255,255,255)}\n";
-    header_style_string += ".UN {color: rgb(120,120,120); background-color: rgb(255,255,255)}\n";
-    header_style_string += ".AM {color: rgb(0,0,0); background-color: rgb(210,210,210)}\n"; // ambiguously mapped
+  string header_style_string;
+  
+  // General colors -- used to read names, etc.
+  header_style_string += ".NC {color: rgb(0,0,0); background-color: rgb(255,255,255)}\n";         // normal color
+  header_style_string += ".AM {color: rgb(0,0,0); background-color: rgb(210,210,210)}\n";         // ambiguously mapped
+  header_style_string += ".AO {color: rgb(0,0,0); background-color: rgb(153,255,255)}\n";         // ambiguous overlap (junctions)
 
   
-    for ( map<char, vector<string> >::iterator itr = base_color_hash.begin(); itr != base_color_hash.end(); itr++ )
+  // Colors used by characters in alignments
+  header_style_string += ".UN {color: rgb(120,120,120); background-color: rgb(255,255,255)}\n";   // unknown color/unaligned base?
+  
+  for ( map<char, vector<string> >::iterator itr = base_color_hash.begin(); itr != base_color_hash.end(); itr++ )
+  {
+    for ( uint32_t index = 0; index < base_color_hash[ ( *itr ).first].size(); index ++ )
     {
-        for ( uint32_t index = 0; index < base_color_hash[ ( *itr ).first].size(); index ++ )
-        {
-            if ( index > 0 )
-            {
-                header_style_string += "." + to_string ( ( *itr ).first) + to_string(index) + "{color: rgb(255,255,255); background-color:"
-                                       + ( *itr ).second[index] + "}\n";
-            }
-            else
-            {
-                header_style_string += "." + to_string ( ( *itr ).first) + to_string(index) + "{color: rgb(120,120,120); background-color:"
-                                       + ( *itr ).second[index] + "}\n";
-            }
-        }
+      if ( index > 0 )
+      {
+          header_style_string += "." + to_string ( ( *itr ).first) + to_string(index) + "{color: rgb(255,255,255); background-color:"
+                                 + ( *itr ).second[index] + "}\n";
+      }
+      else
+      {
+          header_style_string += "." + to_string ( ( *itr ).first) + to_string(index) + "{color: rgb(120,120,120); background-color:"
+                                 + ( *itr ).second[index] + "}\n";
+      }
     }
-  
-    no_color_index = base_color_hash['G'].size()-1;
-    return header_style_string;
+  }
+
+  no_color_index = base_color_hash['G'].size()-1;
+  return header_style_string;
 }
 
 
@@ -1060,13 +1025,9 @@ string alignment_output::html_alignment_line(const alignment_output::Alignment_B
     
     output += "&nbsp;&nbsp;";
     
-    if ( a.is_redundant )
-      output += "<font class=\"AM\">";
-    
+    output += "<font class=\"" + a.read_name_style + "\">";
     output += seq_id;
-    
-    if ( a.is_redundant )
-      output += "</font>"; 
+    output += "</font>"; 
   }   
   
   // write the mapping quality - it would be nice to justify this
@@ -1085,6 +1046,47 @@ string alignment_output::html_alignment_strand(const int8_t &strand)
   if (strand == -1) return "&lt;";
   if (strand == 1) return "&gt;";
     return ".";
+}
+  
+string alignment_output::html_legend()
+{
+  string output;  
+  output += "<BR>";
+  // create legend information
+  output += "\n<CODE>Base quality scores:&nbsp</CODE>";
+  Alignment_Base temp_a;
+  temp_a.aligned_bases = "ATCG";
+  temp_a.aligned_quals = repeat_char('\0', 4);
+  temp_a.show_strand = false;
+  
+  output += html_alignment_line(temp_a, false, true);
+  for (uint8_t index = 1; index < m_quality_range.qual_cutoffs.size(); index++)
+  {
+    char c = m_quality_range.qual_cutoffs[index];   
+    output += "<CODE>&nbsp;&lt;&nbsp;" + to_string<uint32_t>(c) + "&nbsp;&le;&nbsp;</CODE>";
+    
+    temp_a.aligned_bases = "ATCG";
+    temp_a.aligned_quals = repeat_char(static_cast<char>(c), 4);
+    temp_a.show_strand = false;
+    
+    output += html_alignment_line(temp_a, false, true);
+  }
+  
+  if (m_show_ambiguously_mapped || m_is_junction) {
+    output += "<br>";
+    
+    if (m_is_junction) {
+      output += "<br><code><font class=\"NC\">Bases in the reference sequences that are not highlighted represent overlap between the two sides of the junction. They are not included in the positions shown.</font></code>";
+      output += "<br><code><font class=\"AO\">Reads that do not map across the ambiguous part of a junction (and therefore are not counted).</font></code>";
+    }
+    
+    if (m_show_ambiguously_mapped) {
+      output += "<br><code><font class=\"AM\">Reads mapping to repeats  multiple best matches in reference.</font></code>";
+    }
+
+  }
+  
+  return output;
 }
   
 string alignment_output::text_alignment_line(const alignment_output::Alignment_Base& a, const bool coords)

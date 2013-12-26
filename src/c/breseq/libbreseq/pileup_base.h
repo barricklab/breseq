@@ -141,6 +141,15 @@ class pileup_base {
       at_target_end(tid);
     }
   
+    vector<string> valid_seq_ids() const
+    {
+      vector<string> ret_val;
+      for(uint32_t i=0; i< num_targets(); i++) {
+        ret_val.push_back(target_name(i));
+      }
+      return ret_val;
+    }
+  
     //! Pass through to BAM.
     void parse_region(const string& region, uint32_t& target_id, uint32_t& start_pos_1, uint32_t& end_pos_1)
     {
@@ -148,7 +157,7 @@ class pileup_base {
       bam_parse_region(m_bam_header, region.c_str(), &temp_target_id, &temp_start_pos, &temp_end_pos); 
       
       // Target was not found.
-      ASSERT(temp_target_id != -1, "Target sequence was not found for region [" + region + "] using FASTA file [" + m_fasta_file_name + "]." );
+      ASSERT(temp_target_id != -1, "Target seq id was not found for region [" + region + "] using FASTA file [" + m_fasta_file_name + "].\n" + "Valid seq ids: " + join(this->valid_seq_ids(), ", ") );
       
       target_id = static_cast<uint32_t>(temp_target_id);
       start_pos_1 = static_cast<uint32_t>(temp_start_pos)+1; // bam_parse_region returns zero indexed start

@@ -576,13 +576,25 @@ namespace breseq {
       return;
     }
     
+    vector<string> seq_ids() const
+    {
+      vector<string> ret_val;
+      for(map<string,int>::const_iterator it=m_seq_id_to_index.begin(); it!= m_seq_id_to_index.end(); it++) {
+        ret_val.push_back(it->first);
+      }
+      return ret_val;
+    }
+    
     //!< These gymnastics allow us to use [] to get a sequence by target_id (uint_32t) or by seq_id (string)
     
     void set_seq_id_to_index(const string& seq_id, int id)
       { m_seq_id_to_index[seq_id] = id; }
     
     uint32_t seq_id_to_index(const string& seq_id)
-      { ASSERT(m_seq_id_to_index.count(seq_id), "SEQ_ID not found: " + seq_id); return m_seq_id_to_index[seq_id]; };
+    { 
+        ASSERT(m_seq_id_to_index.count(seq_id), "Reference seq id not found: " + seq_id + "\nValid seq ids: " + join(seq_ids(), ", ")); 
+        return m_seq_id_to_index[seq_id]; 
+    };
 
     cAnnotatedSequence& operator[](const size_t target_id)
       { return this->at(target_id); }
@@ -647,10 +659,10 @@ namespace breseq {
       return (*this)[seq_id].get_sequence_length();
     }
 
-    vector<string> seq_ids() const
+    vector<string> seq_ids()
     {
       vector<string> return_value;
-      for(vector<cAnnotatedSequence>::const_iterator it=this->begin(); it != this->end(); it++)
+      for(vector<cAnnotatedSequence>::iterator it=this->begin(); it != this->end(); it++)
         return_value.push_back(it->m_seq_id);
       return return_value;
     }
