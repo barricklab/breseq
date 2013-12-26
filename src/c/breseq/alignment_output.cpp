@@ -214,6 +214,7 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback( const pileup& p
       }
       // in overlap where we don't want to highlight
       else if (reference_pos_1 < aligned_reference.truncate_start) {
+        my_ref_base = tolower(my_ref_base);
         my_ref_qual = char(253); // not highlighted
       }
     }
@@ -227,6 +228,7 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback( const pileup& p
       }
       // in overlap where we don't want to highlight
       else if (reference_pos_1 > aligned_reference.truncate_end) {
+        my_ref_base = tolower(my_ref_base);
         my_ref_qual = char(253); // not highlighted
       }
     }
@@ -1031,7 +1033,7 @@ string alignment_output::html_alignment_line(const alignment_output::Alignment_B
   }   
   
   // write the mapping quality - it would be nice to justify this
-  if (a.mapping_quality != -1) {
+  if (!m_is_junction && (a.mapping_quality != -1)) {
     output += "&nbsp;(MQ=" + to_string<>(a.mapping_quality) + ")";
   }
   
@@ -1053,13 +1055,13 @@ string alignment_output::html_legend()
   string output;  
   output += "<BR>";
   // create legend information
-  output += "\n<CODE>Base quality scores:&nbsp</CODE>";
+  output += "\nBase quality scores:&nbsp";
   Alignment_Base temp_a;
   temp_a.aligned_bases = "ATCG";
   temp_a.aligned_quals = repeat_char('\0', 4);
   temp_a.show_strand = false;
-  
   output += html_alignment_line(temp_a, false, true);
+  
   for (uint8_t index = 1; index < m_quality_range.qual_cutoffs.size(); index++)
   {
     char c = m_quality_range.qual_cutoffs[index];   
@@ -1072,20 +1074,22 @@ string alignment_output::html_legend()
     output += html_alignment_line(temp_a, false, true);
   }
   
-  if (m_show_ambiguously_mapped || m_is_junction) {
-    output += "<br>";
-    
-    if (m_is_junction) {
-      output += "<br><code><font class=\"NC\">Bases in the reference sequences that are not highlighted represent overlap between the two sides of the junction. They are not included in the positions shown.</font></code>";
-      output += "<br><code><font class=\"AO\">Reads that do not map across the ambiguous part of a junction (and therefore are not counted).</font></code>";
-    }
-    
-    if (m_show_ambiguously_mapped) {
-      output += "<br><code><font class=\"AM\">Reads mapping to repeats  multiple best matches in reference.</font></code>";
-    }
-
+  output += "<br>Unaligned read bases:&nbsp;<code>&nbsp;atcg</code>";
+  
+  temp_a.aligned_bases = "atcg";
+  temp_a.aligned_quals = repeat_char(char(255), 4);
+  temp_a.show_strand = false;
+  output += "&nbsp;&nbsp;&nbsp;&nbsp;Trimmed read bases:&nbsp;<code>" + html_alignment_line(temp_a, false, true) + "</code>";
+      
+  if (m_is_junction) {
+    output += "<br>In reference, overlap bases assigned to other side of junction:&nbsp;<code>&nbsp;atcg</code>";
+    output += "&nbsp;&nbsp;&nbsp;&nbsp;Reads not counted for new junction:&nbsp;<code>&nbsp;<font class=\"AO\">read_name</font></code>";
   }
   
+  if (m_show_ambiguously_mapped) {
+    output += "<br>Reads with multiple best matches in reference:&nbsp;<code><font class=\"AM\">&nbsp;read_name</font></code>";
+  }
+
   return output;
 }
   
