@@ -104,6 +104,7 @@ int do_bam2aln(int argc, char* argv[]) {
                         options["fasta"],
                         from_string<uint32_t>(options["max-reads"]),
                         from_string<uint32_t>(options["quality-score-cutoff"]),
+                        1,
                         options.count("repeat")
                         );
     
@@ -921,8 +922,9 @@ int do_get_sequence(int argc, char *argv[])
     cAnnotatedSequence& new_seq = new_seq_info[seq_name];
     new_seq.m_fasta_sequence = ref_seq_info[replace_target_id].m_fasta_sequence;    
     new_seq.m_fasta_sequence.m_name = seq_name;
-    new_seq.m_fasta_sequence.m_sequence = to_upper(ref_seq_info[replace_target_id].m_fasta_sequence.m_sequence.substr(replace_start -1, (replace_end - replace_start) + 1));
-    if(do_reverse_complement) new_seq.m_fasta_sequence.m_sequence = reverse_complement(new_seq.m_fasta_sequence.m_sequence);
+    new_seq.m_fasta_sequence.m_sequence = to_upper(ref_seq_info.get_sequence_1(replace_target_id, replace_start, replace_end));
+    if(do_reverse_complement) 
+      new_seq.m_fasta_sequence.m_sequence = reverse_complement(new_seq.m_fasta_sequence.m_sequence);
     new_seq.m_seq_id = region_list[j];
     new_seq.m_length = new_seq.m_fasta_sequence.m_sequence.size();
     

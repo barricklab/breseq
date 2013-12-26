@@ -1907,8 +1907,6 @@ void  assign_one_junction_read_counts(
       start -= side_1_continuation;
     }
     
-    
-    
     if (settings.junction_debug) ofile << "SIDE 1: start " << start << " end " << end << endl;       
     if (verbose) cerr << "SIDE 1: start " << start << " end " << end << endl;
     if (debug_output) {

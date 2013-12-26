@@ -48,6 +48,7 @@ namespace breseq
         , is_redundant(false)
         , show_strand(true)
         , mapping_quality(-1)
+        , read_name_style("NC")
         {}
       
       string seq_id;
@@ -59,6 +60,7 @@ namespace breseq
       bool is_redundant;
       bool show_strand;
       int32_t mapping_quality;
+      string read_name_style;
       
     };
     //! returns more information about aligned reads given a sequence id string.
@@ -79,6 +81,7 @@ namespace breseq
       uint32_t reference_start;
       uint32_t reference_end;
       bool updated; //whether the read was updated at this pileup iteration already
+
     };
     //! returns more information about an aligned references
     struct Aligned_Reference : Alignment_Base
@@ -165,9 +168,7 @@ namespace breseq
       Aligned_References aligned_references;
       Aligned_Annotation aligned_annotation;
       uint32_t unique_start; //used in create alignment and passed to fetch
-      uint32_t unique_end; //used in create alignment and passed to fetch
-      uint32_t total_reads;
-      uint32_t processed_reads;
+      uint32_t unique_end;   //used in create alignment and passed to fetch
       
       uint32_t max_indel;
       char base;
@@ -181,8 +182,9 @@ namespace breseq
     uint32_t m_quality_score_cutoff;
     string m_error_message;
     uint32_t m_maximum_to_align;
+    int32_t m_junction_minimum_size_match;
     bool m_show_ambiguously_mapped;
-
+    bool m_is_junction;
     
   public:
     //! Constructor.
@@ -191,18 +193,20 @@ namespace breseq
                       string fasta, 
                       uint32_t in_maximum_to_align = 0, 
                       const uint32_t quality_score_cutoff = 0,
+                      const int32_t junction_minimum_size_match = 1,
                       const bool show_ambiguously_mapped = false
                       );
     //! Output an HTML alignment.
+    void create_alignment ( const string& region, cDiffEntry * jc_item = NULL );
     string html_alignment ( const string& region, cDiffEntry * jc_item = NULL );
     string text_alignment ( const string& region, cDiffEntry * jc_item = NULL );
-    void create_alignment ( const string& region, cDiffEntry * jc_item = NULL );
     void set_quality_range(const uint32_t quality_score_cutoff = 0);
   private:
     uint32_t no_color_index;
-    string create_header_string();
+    string html_header_string();
     string html_alignment_line(const Alignment_Base& a, const bool coords, const bool use_quality_range);
     string html_alignment_strand(const int8_t &strand);
+    string html_legend();
     string text_alignment_line(const Alignment_Base& a, const bool coords);
     string text_alignment_strand(const int8_t &strand);
     
