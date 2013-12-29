@@ -30,8 +30,6 @@ FILE_PATTERN='-name output.gd'
 HASH=`which sha1sum`
 # executable used to diff files
 DIFF_BIN=`which diff`
-# name of file containing expected hash values:
-EXPECTED=expected.gd
 # name of testexec file
 TESTEXEC=testcmd.sh
 
@@ -43,10 +41,9 @@ do_build() {
 #    for i in `find . ${FILE_PATTERN}`; do
 #       ${HASH} $i
 #    done > ${EXPECTED}
-    for OUTPUT_CHECK in "${OUTPUT_CHECKS[@]}"
-	do
-		echo "cp ${OUTPUT_CHECK}"
-    	cp ${OUTPUT_CHECK}
+	for (( i=0; i<${#EXPECTED_OUTPUTS[@]}; i++ )); do
+		echo "cp ${CURRENT_OUTPUTS[$i]} ${EXPECTED_OUTPUTS[$i]}"
+    	cp ${CURRENT_OUTPUTS[$i]} ${EXPECTED_OUTPUTS[$i]}
 	done
     popd > /dev/null
 }
@@ -66,11 +63,20 @@ do_show() {
 # $1 == testdir
 #
 do_check() {
-    if [[ ! -e $1/${EXPECTED} ]]; then
-        echo "Building expected values for test $1..."
-        do_build $1
-    fi
+	NEEDS_UPDATING=0
+    for EXPECTED_OUTPUT in "${EXPECTED_OUTPUTS[@]}"; do  
+		if [[ ! -e ${1}/${EXPECTED_OUTPUT} ]]; then
+			NEEDS_UPDATING=1
+		fi
+	done
 
+	if [ ${NEEDS_UPDATING} == 1 ]; then
+		echo ""
+		do_build $1
+		echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+		echo "Built expected output"
+		echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+	fi
 #We need to check to see if all the output files even exist 
 #    for i in `find . ${FILE_PATTERN}`; do
 #   	echo "$i"
@@ -85,18 +91,16 @@ do_check() {
 #       fi
 #    done
     pushd $1 > /dev/null
-    
+    echo ""
 #   CHK=`${HASH} -s --check ${EXPECTED} 2>&1`
-    for OUTPUT_CHECK in "${OUTPUT_CHECKS[@]}"
-    do  
-		echo ""
-		echo "Comparing files: ${OUTPUT_CHECK}"  
-		CHK=`${DIFF_BIN} ${OUTPUT_CHECK}`
+	for (( i=0; i<${#EXPECTED_OUTPUTS[@]}; i++ )); do
+		echo "Comparing files: ${CURRENT_OUTPUTS[$i]} ${EXPECTED_OUTPUTS[$i]}"  
+		CHK=`${DIFF_BIN} ${CURRENT_OUTPUTS[$i]} ${EXPECTED_OUTPUTS[$i]}`
 		if [[ "$?" -ne 0 || $CHK ]]; then
 			echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 			echo "Failed check"
 			#${HASH} --check ${EXPECTED}
-			${DIFF_BIN} ${OUTPUT_CHECK}
+			${DIFF_BIN} ${CURRENT_OUTPUTS[$i]} ${EXPECTED_OUTPUTS[$i]}
 			echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 
 			echo ""
 			popd > /dev/null        
@@ -147,7 +151,11 @@ do_vcheck() {
 # $1 == testdir
 #
 do_clean() {
+    for CURRENT_OUTPUT in "${CURRENT_OUTPUTS[@]}"; do
+		rm -f ${1}/${CURRENT_OUTPUT}
+	done
 	rm -Rf $1/0* $1/output $1/data $1/output.gff3
+
 }
 
 

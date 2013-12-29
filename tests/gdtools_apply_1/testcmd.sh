@@ -3,7 +3,10 @@
 SELF=`dirname ${BASH_SOURCE}`
 . ${SELF}/../common.sh
 
-OUTPUT_CHECKS[0]="output.gff3 expected.gff3"
+
+CURRENT_OUTPUTS[0]="output.gff3"
+EXPECTED_OUTPUTS[0]="expected.gff3"
+
 
 TESTCMD="\
     ${GDTOOLS} \
