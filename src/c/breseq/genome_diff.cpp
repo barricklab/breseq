@@ -2310,18 +2310,20 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
   }
 }
 
-// The return sequence replaces the target site duplication
-string cGenomeDiff::mob_replace_sequence(cReferenceSequences& ref_seq_info, cDiffEntry& mut)
+// The return sequence includes just the MOB part to be inserted
+// It DOES include any deleted/inserted bases at the end of the MOB.
+// It DOES NOT include any target site duplication. 
+string cGenomeDiff::mob_replace_sequence(cReferenceSequences& ref_seq_info, 
+                                         cDiffEntry& mut, 
+                                         string* picked_seq_id, 
+                                         cSequenceFeature* picked_sequence_feature)
 {
   bool verbose = false;
-  int32_t uRPos = -1; // Replace when we make it a parameter that can be passed...
 
   ASSERT(mut._type == MOB, "Attempt to get mob_replace_sequence for non-MOB diff entry.");
 
   if (verbose) cout << "Building MOB replace sequence..." << endl << mut << endl;
-  
-  //@JEB - these checks are really unnecessary, since these values always exist for a MOB
-  
+    
   //Size to delete from start of repeat string.
   int32_t iDelStart = 0;
   int32_t iDelEnd = 0;
@@ -2330,13 +2332,12 @@ string cGenomeDiff::mob_replace_sequence(cReferenceSequences& ref_seq_info, cDif
   if(mut.entry_exists("del_end"))   
     iDelEnd = from_string<int32_t>(mut["del_end"]);
   ASSERT((iDelStart >= 0) && (iDelEnd >= 0), (to_string(mut._type) + " " + mut._id) + " - NEGATIVE DELETION");
-  
-  if(mut.entry_exists("repeat_pos"))
-    uRPos = from_string<int32_t>(mut["repeat_pos"]);        
-  
+    
   // @JEB: correct here to look for where the repeat is in the original ref_seq_info???
   // This saves us from possibly looking at a shifted location...
-  string rep_string = ref_seq_info.repeat_family_sequence(mut["repeat_name"], from_string<int16_t>(mut["strand"]), uRPos);
+  string this_picked_seq_id;
+  cSequenceFeature this_picked_sequence_feature;
+  string rep_string = ref_seq_info.repeat_family_sequence(mut["repeat_name"], from_string<int16_t>(mut["strand"]), mut.entry_exists("mob_region") ? &mut["mob_region"] : NULL, &this_picked_seq_id, &this_picked_sequence_feature);
   mut["repeat_size"] = to_string(rep_string.length()); // saving this for shifting
   
   // This is the string we're going to pass to be inserted.
@@ -2361,6 +2362,9 @@ string cGenomeDiff::mob_replace_sequence(cReferenceSequences& ref_seq_info, cDif
   }
   
   if (verbose) cout << "  Final sequence:" << endl << new_seq_string << endl;
+  
+  if (picked_seq_id) *picked_seq_id = this_picked_seq_id;
+  if (picked_sequence_feature) *picked_sequence_feature = this_picked_sequence_feature;
   
   return new_seq_string;
 }
@@ -2551,7 +2555,6 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         int32_t iInsEnd = 0;        
         int32_t iDupLen = 0;
         int32_t iDupSeqLen = 0; // Size of any sequence inserted
-        int32_t uRPos = -1;
         
         //Size to delete from start of repeat string.
         if(mut.entry_exists("del_start")) 
@@ -2562,9 +2565,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
              
         if(mut.entry_exists("duplication_size"))
           iDupLen = from_string<int32_t>(mut["duplication_size"]);
-        
-        if(mut.entry_exists("repeat_pos"))
-          uRPos = from_string<int32_t>(mut["repeat_pos"]);   
+          
         
         // Set up attributes
         replace_seq_id = mut[SEQ_ID];
@@ -2582,7 +2583,6 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
           replace_seq.insert(4 + abs(iDupLen), ">");
         }
           
-
         applied_seq_id = mut[SEQ_ID];
         applied_start = position - 1;
         applied_end = position - 1;
@@ -2612,10 +2612,12 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         string new_seq_string;
         if (iDupLen > 0) new_seq_string = new_ref_seq_info.get_sequence_1(replace_seq_id, position, position + iDupLen - 1);
         
-        // This includes all but the duplication size --
+        // This includes all but the duplicated target site bases --
         // notice we pass the original reference sequence in case
-        // a relevant feature has been deleted
-        new_seq_string += mob_replace_sequence(ref_seq_info, mut);
+        // a relevant feature has been deleted in the new reference
+        cSequenceFeature repeat_feature_picked;
+        string seq_id_picked;
+        new_seq_string += mob_replace_sequence(ref_seq_info, mut, &seq_id_picked, &repeat_feature_picked);
 
         //if (verbose) cout << new_seq_string << endl;
         
@@ -2633,7 +2635,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         
         // We've repeated the sequence, now it's time to repeat all the features
         // inside of and including the repeat region.
-        new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+iInsStart+iDupSeqLen, iDelStart, iDelEnd, ref_seq_info, mut["repeat_name"], from_string<int16_t>(mut["strand"]), uRPos, verbose);
+        new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+iInsStart+iDupSeqLen, iDelStart, iDelEnd, from_string<int16_t>(mut["strand"]), repeat_feature_picked, verbose);
                
       } break;
         
@@ -3051,7 +3053,7 @@ cGenomeDiff cGenomeDiff::validate_evidence(cReferenceSequences& sequence,
   return ret_val;
 }
 
-// @JEB: This is only partially implemented -- it adds JC for mutations involving these
+// @JEB: This is only partially implemented -- it adds JC items for mutations involving these
 void cGenomeDiff::mutations_to_evidence(cReferenceSequences &ref_seq, bool remove_mutations)
 {
   diff_entry_list_t muts = mutation_list();
@@ -3063,8 +3065,8 @@ void cGenomeDiff::mutations_to_evidence(cReferenceSequences &ref_seq, bool remov
       // Return the actual copy of the sequence feature found...
       cSequenceFeature repeat_feature;
       string repeat_seq_id;
-      int32_t repeat_position = -1;
-      ref_seq.repeat_family_sequence(de["repeat_name"], +1, repeat_position, &repeat_seq_id, &repeat_feature);
+      string requested_repeat_region;
+      ref_seq.repeat_family_sequence(de["repeat_name"], +1, de.entry_exists("mob_region") ? &de["mob_region"] : NULL, &repeat_seq_id, &repeat_feature);
       
       cDiffEntry de1;
       de1._type = JC;

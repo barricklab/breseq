@@ -2023,9 +2023,13 @@ namespace breseq {
         
         if (mut._type == MOB) {
           int32_t rpos = -1;
-          string repeat_seq = ref_seq_info.repeat_family_sequence(mut["repeat_name"], 1, rpos);
+          // This includes the MOB and any ins/del start/end adjustments, NOT duplication size
+          string mob_region;
+          string repeat_seq = ref_seq_info.repeat_family_sequence(mut["repeat_name"], 1, mut.entry_exists("mob_region") ? &mut["mob_region"] : NULL);
           
           int32_t this_length = repeat_seq.size();
+          this_length += from_string<int32_t>(mut["duplication_size"]);
+          
           total_inserted += this_length;
           total_repeat_inserted += this_length;
           //print "Repeat $mut->{repeat_name} $this_length bp\n";

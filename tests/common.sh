@@ -11,16 +11,15 @@
 COMMONDIR=`dirname ${BASH_SOURCE}`
 source ${COMMONDIR}/test.config
 
-OUTPUT_GD="output/evidence/annotated.gd"
-EXPECTED_GD="expected.gd"
-
 # path to breseq:
 if [ "$TESTBINPREFIX" == "" ]
 then
 	echo "Environmental variable \$TESTBINPREFIX not defined."
 	exit
 fi
+
 BRESEQ="${TESTBINPREFIX}/breseq -j 2"
+GDTOOLS="${TESTBINPREFIX}/gdtools"
 
 # path to test data:
 DATADIR=${COMMONDIR}/data
@@ -44,7 +43,11 @@ do_build() {
 #    for i in `find . ${FILE_PATTERN}`; do
 #       ${HASH} $i
 #    done > ${EXPECTED}
-    cp ${OUTPUT_GD} ${EXPECTED_GD}
+    for OUTPUT_CHECK in "${OUTPUT_CHECKS[@]}"
+	do
+		echo "cp ${OUTPUT_CHECK}"
+    	cp ${OUTPUT_CHECK}
+	done
     popd > /dev/null
 }
 
@@ -84,28 +87,27 @@ do_check() {
     pushd $1 > /dev/null
     
 #   CHK=`${HASH} -s --check ${EXPECTED} 2>&1`
-	CHK=`${DIFF_BIN} ${OUTPUT_GD} ${EXPECTED_GD}`
- 	if [[ "$?" -ne 0 || $CHK ]]; then
-        echo ""
-        echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        echo "Failed check"
-    	#${HASH} --check ${EXPECTED}
-    	echo "${DIFF_BIN} ${OUTPUT_GD} ${EXPECTED_GD}"
-    	${DIFF_BIN} ${OUTPUT_GD} ${EXPECTED_GD}
-        echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 
-        echo ""
-        popd > /dev/null        
-        exit -1
-    fi
-    
-    echo ""
-    echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
-    echo "Passed check"
-    #${HASH} --check ${EXPECTED}
-    echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
-    echo ""
-    popd > /dev/null    
-    exit 0
+    for OUTPUT_CHECK in "${OUTPUT_CHECKS[@]}"
+    do  
+		echo ""
+		echo "Comparing files: ${OUTPUT_CHECK}"  
+		CHK=`${DIFF_BIN} ${OUTPUT_CHECK}`
+		if [[ "$?" -ne 0 || $CHK ]]; then
+			echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+			echo "Failed check"
+			#${HASH} --check ${EXPECTED}
+			${DIFF_BIN} ${OUTPUT_CHECK}
+			echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 
+			echo ""
+			popd > /dev/null        
+		else
+			echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
+			echo "Passed check"
+			echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
+			echo ""
+			popd > /dev/null    
+		fi
+	done
 }
 
 do_breseq() {
@@ -145,7 +147,7 @@ do_vcheck() {
 # $1 == testdir
 #
 do_clean() {
-	rm -Rf $1/0* $1/output $1/data
+	rm -Rf $1/0* $1/output $1/data $1/output.gff3
 }
 
 

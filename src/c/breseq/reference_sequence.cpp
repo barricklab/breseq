@@ -277,112 +277,95 @@ namespace breseq {
   // Look through ref_seq_info for repeat_name.
   // Using the strand, insert the repeat feature at supplied position.
   // Also repeat any features inside the repeat.
-  void cAnnotatedSequence::repeat_feature_1(int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& ref_seq_info, const string &repeat_name, int8_t strand, int32_t region_pos, bool verbose)
+  void cAnnotatedSequence::repeat_feature_1(int32_t pos, int32_t start_del, int32_t end_del, int8_t strand, cSequenceFeature &repeat_feature_picked, bool verbose)
   {
     (void) verbose;
-    // Go through all the reference sequences in ref_seq_info
-    for (vector<cAnnotatedSequence>::iterator itr_seq = ref_seq_info.begin(); itr_seq != ref_seq_info.end(); itr_seq++)
+
+    // This sorting should be completely unnecessary. To be
+    // safe, we sort here only because the following code
+    // assumes that these lists are in order from least to greatest.
+    this->m_features.sort();
+    this->m_genes.sort();
+    this->m_repeats.sort();
+    
+    cSequenceFeature& rep = repeat_feature_picked;
+    cSequenceFeatureList& features = this->m_features;
+    cSequenceFeatureList feat_list_new;        
+           
+    // Go through ALL the features of the (this_seq) sequence
+    for (cSequenceFeatureList::iterator itr_feat = features.begin(); itr_feat != features.end(); itr_feat++)
     {
-      cAnnotatedSequence& this_seq = *itr_seq;
-      cSequenceFeatureList& repeats = this_seq.m_repeats;
+      cSequenceFeature& feat = **itr_feat;
       
-      // This sorting should be completely unnecessary. To be
-      // safe, we sort here only because the following code
-      // assumes that these lists are in order from least to greatest.
-      this_seq.m_features.sort();
-      this_seq.m_genes.sort();
-      this_seq.m_repeats.sort();
-      
-      // Go through the repeats of the sequence
-      for (cSequenceFeatureList::iterator itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++)
+      // Does this feature start and end inside of the repeat?
+      if(feat.get_start_1() >= rep.get_start_1() && feat.get_end_1() <= rep.get_end_1() && feat["type"] != "region" && feat["type"] != "source")
       {
-        cSequenceFeature& rep = **itr_rep;
+        // Create a brand new feature, that we can love and cuddle.
+        // This is where we copy the feature and all the attributes.
+        cSequenceFeaturePtr fp(new cSequenceFeature(feat));              
+        cSequenceFeature& feat_new = *fp;              
+        feat_new.m_gff_attributes = feat.m_gff_attributes;              
         
-        // Is this the repeat we're looking for?
-        if (rep.SafeGet("name") == repeat_name) //  && region_pos == rep.m_location.get_start_1())
-        {      
-          cSequenceFeatureList& features = this_seq.m_features;
-          cSequenceFeatureList feat_list_new;        
-                 
-          // Go through ALL the features of the (this_seq) sequence
-          for (cSequenceFeatureList::iterator itr_feat = features.begin(); itr_feat != features.end(); itr_feat++)
-          {
-            cSequenceFeature& feat = **itr_feat;
-            
-            // Does this feature start and end inside of the repeat?
-            if(feat.get_start_1() >= rep.get_start_1() && feat.get_end_1() <= rep.get_end_1() && feat["type"] != "region" && feat["type"] != "source")
-            {
-              // Create a brand new feature, that we can love and cuddle.
-              // This is where we copy the feature and all the attributes.
-              cSequenceFeaturePtr fp(new cSequenceFeature(feat));              
-              cSequenceFeature& feat_new = *fp;              
-              feat_new.m_gff_attributes = feat.m_gff_attributes;              
-              
-              // Depending on the strand of the mutation, relative to the
-              // copy that we pulled, juggle the starts and ends here.
-              if(strand * feat.get_strand() < 0)
-              {                
-                feat_new.m_location.set_start_1( pos + (rep.get_end_1() - feat.get_end_1()) - start_del);  //Set start to position plus the difference betwen the repeat's end, and this feature's end
-                if(start_del && feat_new.get_start_1() < pos)  {  //If the feature start got shifted below the repeat start, set the start to the pos and flag it as pseudo
-                  feat_new.m_location.set_start_1( pos);
-                  feat_new.flag_pseudo();  }
-                feat_new.m_location.set_end_1( feat_new.get_start_1() + (feat.get_end_1() - feat.get_start_1()));  //Set end to start plus feature length
-                if(end_del && (pos + (rep.get_end_1() - rep.get_start_1())) < (feat_new.get_end_1() + end_del))  {  //Do we have an end_del? Does this feature end in an area that got deleted?
-                  feat_new.m_location.set_end_1( (pos + (rep.get_end_1() - rep.get_start_1())));
-                  feat_new.flag_pseudo();  }
-                feat_new.m_location.set_strand( -feat.get_strand());
-                feat_list_new.push_front(fp);
-              }
-              else
-              {
-                feat_new.m_location.set_start_1( pos + (feat.get_start_1() - rep.get_start_1()) - start_del);  //Set start to position plus the difference between the repeat feature's start, and this feature's start
-                if(start_del && feat_new.get_start_1() < pos)  {  //If the feature start got shifted below the repeat start, set the start to the pos and flag it as pseudo
-                  feat_new.m_location.set_start_1( pos);
-                  feat_new.flag_pseudo();  }
-                feat_new.m_location.set_end_1( feat_new.get_start_1() + (feat.get_end_1() - feat.get_start_1()));  //Set end to start plus feature length
-                if(end_del && (pos + (rep.get_end_1() - rep.get_start_1())) < (feat_new.get_end_1() + end_del))  {  //Do we have an end_del? Does this feature end in an area that got deleted?
-                  feat_new.m_location.set_end_1( (pos + (rep.get_end_1() - rep.get_start_1())));
-                  feat_new.flag_pseudo();  }
-                feat_list_new.push_back(fp);
-              }
-              
-              // This is where we let the user know that "very imporant" things are going on
-              //if(verbose){cout << "REPEAT\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
-            }
-          }
-          
-          // Add these to all the correct feature lists, and in the right order.
-          for (cSequenceFeatureList::reverse_iterator itr_feat = feat_list_new.rbegin(); itr_feat != feat_list_new.rend(); itr_feat++)
-          {
-            cSequenceFeature& feat = **itr_feat;
-            
-            // Load certain information into the main hash, so breseq knows to use it.
-            // It's unlikely this will be necessary, but you can never be too cautious
-            if (feat.m_gff_attributes.count("Note"))
-              feat["product"] = join(feat.m_gff_attributes["Note"], ",");
-            
-            if (feat.m_gff_attributes.count("Alias"))
-              feat["accession"] = join(feat.m_gff_attributes["Alias"], ",");
-            
-            if (feat.m_gff_attributes.count("Name"))
-              feat["name"] = join(feat.m_gff_attributes["Name"], ",");
-            
-            this->feature_push_back(*itr_feat);
-          }
-          
-          // Sort, because while I did manage to implement a way to insert
-          // all of these new features at the correct positions and in the
-          // right order without these functions, it was a stupid function
-          m_features.sort();
-          m_genes.sort();
-          m_repeats.sort();
-          
-          return;
+        // Depending on the strand of the mutation, relative to the
+        // copy that we pulled, juggle the starts and ends here.
+        if(strand * feat.get_strand() < 0)
+        {                
+          feat_new.m_location.set_start_1( pos + (rep.get_end_1() - feat.get_end_1()) - start_del);  //Set start to position plus the difference betwen the repeat's end, and this feature's end
+          if(start_del && feat_new.get_start_1() < pos)  {  //If the feature start got shifted below the repeat start, set the start to the pos and flag it as pseudo
+            feat_new.m_location.set_start_1( pos);
+            feat_new.flag_pseudo();  }
+          feat_new.m_location.set_end_1( feat_new.get_start_1() + (feat.get_end_1() - feat.get_start_1()));  //Set end to start plus feature length
+          if(end_del && (pos + (rep.get_end_1() - rep.get_start_1())) < (feat_new.get_end_1() + end_del))  {  //Do we have an end_del? Does this feature end in an area that got deleted?
+            feat_new.m_location.set_end_1( (pos + (rep.get_end_1() - rep.get_start_1())));
+            feat_new.flag_pseudo();  }
+          feat_new.m_location.set_strand( -feat.get_strand());
+          feat_list_new.push_front(fp);
         }
+        else
+        {
+          feat_new.m_location.set_start_1( pos + (feat.get_start_1() - rep.get_start_1()) - start_del);  //Set start to position plus the difference between the repeat feature's start, and this feature's start
+          if(start_del && feat_new.get_start_1() < pos)  {  //If the feature start got shifted below the repeat start, set the start to the pos and flag it as pseudo
+            feat_new.m_location.set_start_1( pos);
+            feat_new.flag_pseudo();  }
+          feat_new.m_location.set_end_1( feat_new.get_start_1() + (feat.get_end_1() - feat.get_start_1()));  //Set end to start plus feature length
+          if(end_del && (pos + (rep.get_end_1() - rep.get_start_1())) < (feat_new.get_end_1() + end_del))  {  //Do we have an end_del? Does this feature end in an area that got deleted?
+            feat_new.m_location.set_end_1( (pos + (rep.get_end_1() - rep.get_start_1())));
+            feat_new.flag_pseudo();  }
+          feat_list_new.push_back(fp);
+        }
+        
+        // This is where we let the user know that "very imporant" things are going on
+        //if(verbose){cout << "REPEAT\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
       }
     }
     
-    ASSERT(false, "Unknown Repeat\n\tType:\t" + repeat_name + "\n\tPos:\t" + to_string(region_pos));
+    // Add these to all the correct feature lists, and in the right order.
+    for (cSequenceFeatureList::reverse_iterator itr_feat = feat_list_new.rbegin(); itr_feat != feat_list_new.rend(); itr_feat++)
+    {
+      cSequenceFeature& feat = **itr_feat;
+      
+      // Load certain information into the main hash, so breseq knows to use it.
+      // It's unlikely this will be necessary, but you can never be too cautious
+      if (feat.m_gff_attributes.count("Note"))
+        feat["product"] = join(feat.m_gff_attributes["Note"], ",");
+      
+      if (feat.m_gff_attributes.count("Alias"))
+        feat["accession"] = join(feat.m_gff_attributes["Alias"], ",");
+      
+      if (feat.m_gff_attributes.count("Name"))
+        feat["name"] = join(feat.m_gff_attributes["Name"], ",");
+      
+      this->feature_push_back(*itr_feat);
+    }
+    
+    // Sort, because while I did manage to implement a way to insert
+    // all of these new features at the correct positions and in the
+    // right order without these functions, it was a stupid function
+    m_features.sort();
+    m_genes.sort();
+    m_repeats.sort();
+    
+    return;
   }
   
   char cLocationTraverser::on_base_stranded_1() {
@@ -1457,15 +1440,16 @@ void cReferenceSequences::ReadBull(const string& file_name) {
   }
 }
 
-/*! Returns the nucleotide sequence of a typical copy of a repeat.
- *
+/*! 
+ *  If repeat_region is provided, return a specific copy of the repeat.
+ *  Otherwise, return a "typical" copy (the most common sequence and/or size for the element)
  */  
 string cReferenceSequences::repeat_family_sequence(
                                                    const string &repeat_name, 
                                                    int8_t strand, 
-                                                   int32_t &region_pos, 
-                                                   string* seq_id,
-                                                   cSequenceFeature* repeat_feature_picked
+                                                   string* repeat_region, 
+                                                   string* picked_seq_id, 
+                                                   cSequenceFeature* picked_sequence_feature
                                                    )
 {  
   counted_ptr<cSequenceFeature> picked_rep(NULL);
@@ -1475,30 +1459,54 @@ string cReferenceSequences::repeat_family_sequence(
   map<string, uint32_t> repeat_sequence_pos;  
   map<uint32_t, uint32_t> repeat_size_count;  
   map<uint32_t, uint32_t> repeat_size_pos;
-  map<uint32_t, string> loaded_elements_positions;
-  set<string> loaded_elements;
-  uint32_t largest_name = 0;
   
-  // Loop through all reference sequences
-  for (vector<cAnnotatedSequence>::iterator itr_seq = this->begin(); itr_seq != this->end(); itr_seq++) {
-    cAnnotatedSequence& this_seq = *itr_seq;
+  // OPTION 1: REQUESTED REPEAT
+  if (repeat_region) {
+    
+    uint32_t target_id;
+    uint32_t start_pos_1, end_pos_1;
+    parse_region(*repeat_region, target_id, start_pos_1, end_pos_1);
+        
+    cAnnotatedSequence& this_seq = (*this)[target_id];
     cSequenceFeatureList& repeats = this_seq.m_repeats;
     
     for (cSequenceFeatureList::iterator itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++) {
       cSequenceFeature& rep = **itr_rep;
       
-      // This section is for error information later
-      loaded_elements.insert(rep.SafeGet("name"));
-      loaded_elements_positions[rep.get_start_1()] = rep.SafeGet("name");
-      if(largest_name < rep.SafeGet("name").size())largest_name = rep.SafeGet("name").size();
-      // End error info
-      
+      // Not the right family...
       if(rep.SafeGet("name") != repeat_name)
         continue;
       
-      // Stores all the sequences that match so we can compare them.
-      if (region_pos < 0)
-      {
+      // We accept either seq_id:start-end or seq_id:end_start (for complement features),
+      // but ignore which strand was provided and use the correct strand.
+      if ((rep.get_start_1() == static_cast<int32_t>(start_pos_1)) && (rep.get_end_1() == static_cast<int32_t>(end_pos_1))) {
+        picked_seq = &this_seq;
+        picked_rep = *itr_rep;
+      }
+      else if ((rep.get_end_1() == static_cast<int32_t>(start_pos_1)) && (rep.get_start_1() == static_cast<int32_t>(end_pos_1))) {
+        picked_seq = &this_seq;
+        picked_rep = *itr_rep;
+      }
+    }
+    
+    ASSERT(picked_rep.get(), "Could not find repeat of type [" + repeat_name + "] matching requested reference sequence region: " + *repeat_region);
+  }
+  
+  // OPTION 2: TYPICAL REPEAT
+  else {  
+    // Loop through all reference sequences
+    for (vector<cAnnotatedSequence>::iterator itr_seq = this->begin(); itr_seq != this->end(); itr_seq++) {
+      cAnnotatedSequence& this_seq = *itr_seq;
+      cSequenceFeatureList& repeats = this_seq.m_repeats;
+      
+      for (cSequenceFeatureList::iterator itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++) {
+        cSequenceFeature& rep = **itr_rep;
+        
+        // Not the right family...
+        if(rep.SafeGet("name") != repeat_name)
+          continue;
+        
+        // Stores all the sequences of this family so we can compare them and pick the most "typical".
         string adjSeq = this_seq.get_sequence_1(rep.get_start_1(), rep.get_end_1());
         if (strand != rep.get_strand())
           adjSeq = reverse_complement(adjSeq);
@@ -1509,66 +1517,51 @@ string cReferenceSequences::repeat_family_sequence(
         repeat_sequence_pos[adjSeq] = rep.get_start_1();
       }
     }
-  }
-  
-  // This will set the region_pos to whichever sequence has the most number of copies.
-  // If number of copies is not greater than 1, we will use the most common size instead.
-  if((region_pos < 0) && (repeat_sequence_count.size()))
-  {    
-    if (max_element(repeat_sequence_count.begin(), repeat_sequence_count.end(), map_comp_second<string, uint32_t>)->second > 1) {
-      region_pos = repeat_sequence_pos[max_element(repeat_sequence_count.begin(), repeat_sequence_count.end(), map_comp_second<string, uint32_t>)->first];  }
-    else  {
-      region_pos = repeat_size_pos[max_element(repeat_size_count.begin(), repeat_size_count.end(), map_comp_second<uint32_t, uint32_t>)->first];  }
-  }
-  
-  // Loop through all reference sequences
-  for (vector<cAnnotatedSequence>::iterator itr_seq = this->begin(); itr_seq != this->end(); itr_seq++) {
-    cAnnotatedSequence& this_seq = *itr_seq;
-    cSequenceFeatureList& repeats = this_seq.m_repeats;
     
-    for (cSequenceFeatureList::iterator itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++) {
-      cSequenceFeature& rep = **itr_rep;
+    // This will set the region_pos to whichever sequence has the most copies.
+    // If number of copies is not greater than 1, we will use the most common size instead.
+    int32_t region_pos;
+    if((!repeat_region) && (repeat_sequence_count.size()))
+    {    
+      if (max_element(repeat_sequence_count.begin(), repeat_sequence_count.end(), map_comp_second<string, uint32_t>)->second > 1) {
+        region_pos = repeat_sequence_pos[max_element(repeat_sequence_count.begin(), repeat_sequence_count.end(), map_comp_second<string, uint32_t>)->first];  }
+      else  {
+        region_pos = repeat_size_pos[max_element(repeat_size_count.begin(), repeat_size_count.end(), map_comp_second<uint32_t, uint32_t>)->first];  }
+    }
+    
+    // Loop through all reference sequences
+    for (vector<cAnnotatedSequence>::iterator itr_seq = this->begin(); itr_seq != this->end(); itr_seq++) {
+      cAnnotatedSequence& this_seq = *itr_seq;
+      cSequenceFeatureList& repeats = this_seq.m_repeats;
       
-      if(rep.SafeGet("name") != repeat_name)
-        continue;
-      
-      if (region_pos == rep.get_start_1()) {
-        picked_seq = &this_seq;
-        picked_rep = *itr_rep;
-        break;
+      for (cSequenceFeatureList::iterator itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++) {
+        cSequenceFeature& rep = **itr_rep;
+        
+        if(rep.SafeGet("name") != repeat_name)
+          continue;
+        
+        if (region_pos == rep.get_start_1()) {
+          picked_seq = &this_seq;
+          picked_rep = *itr_rep;
+          break;
+        }
       }
     }
-  }
-  
-  stringstream ssRepList;
-  ssRepList << "LOADED REPEAT ELEMENTS:";  
-  stringstream ssRepPos;
-  ssRepPos << "LOADED REPEAT ELEMENTS POSITIONS:";
-  
-  for(set<string>::iterator k = loaded_elements.begin(); k != loaded_elements.end(); k++)  {
-    ssRepList << "\n\t" << *k;  }
-  
-  for(map<uint32_t, string>::iterator jk = loaded_elements_positions.begin(); jk != loaded_elements_positions.end(); jk++) 
-  {
-    ssRepPos << "\n\t" << (*jk).second;
-    for(uint32_t ik = (*jk).second.size(); ik < largest_name; ik++)  {
-      ssRepPos << " ";  }    
-    ssRepPos << "\t" << to_string((*jk).first); 
-  }
-    
-  if (region_pos != -1)
-    ASSERT(picked_rep.get() != NULL, "No valid " + repeat_name + " repeat element found for position " + to_string(region_pos) + "\n" + ssRepPos.str());
 
-  ASSERT(picked_rep.get() != NULL, "No valid " + repeat_name + " found.\n" + ssRepList.str());
-    
+    ASSERT(picked_rep.get(), "Could not find repeat of type [" + repeat_name + "] in reference sequences.\n");
+  }
+  
+  
   string repeat_seq = picked_seq->get_sequence_1(picked_rep->get_start_1(), picked_rep->get_end_1());
   if (strand != picked_rep->get_strand())
     repeat_seq = reverse_complement(repeat_seq);
   
-  if (seq_id)
-    *seq_id = picked_seq->m_seq_id;
-  if (repeat_feature_picked)
-    *repeat_feature_picked = *picked_rep;
+  // return values
+  if (picked_seq_id)
+    *picked_seq_id = picked_seq->m_seq_id;
+  if (picked_sequence_feature)
+    *picked_sequence_feature = *picked_rep;
+  
   return repeat_seq;  
 }
 
