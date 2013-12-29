@@ -27,7 +27,8 @@ class cAnnotatedSequence;
 class cDiffEntry;
 class cGenomeDiff;
 class cReferenceSequences;
-
+class cSequenceFeature;
+  
 // Common keywords used for diff entries:
 extern const char* TYPE;
 extern const char* ID;
@@ -588,7 +589,11 @@ public:
   void shift_positions(cDiffEntry& item, cReferenceSequences& ref_seq_info, bool verbose=false);
 
   // For constructing the sequence a MOB replaces things with
-  string mob_replace_sequence(cReferenceSequences& ref_seq_info, cDiffEntry& mut);
+  string mob_replace_sequence(cReferenceSequences& ref_seq_info, 
+                              cDiffEntry& mut, 
+                              string* picked_seq_id = NULL, 
+                              cSequenceFeature* picked_sequence_feature = NULL
+                              );
   
   //! Call to apply Genome Diff to sequences
   void apply_to_sequences(cReferenceSequences &ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose=false);
