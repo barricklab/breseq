@@ -274,10 +274,9 @@ namespace breseq {
   }
   
   // Repeat Feature at Position
-  // Look through ref_seq_info for repeat_name.
   // Using the strand, insert the repeat feature at supplied position.
   // Also repeat any features inside the repeat.
-  void cAnnotatedSequence::repeat_feature_1(int32_t pos, int32_t start_del, int32_t end_del, int8_t strand, cSequenceFeature &repeat_feature_picked, bool verbose)
+  void cAnnotatedSequence::repeat_feature_1(int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& orig_ref_seq_info, string& orig_seq_id, int8_t strand, cSequenceFeature &repeat_feature_picked, bool verbose)
   {
     (void) verbose;
 
@@ -289,10 +288,10 @@ namespace breseq {
     this->m_repeats.sort();
     
     cSequenceFeature& rep = repeat_feature_picked;
-    cSequenceFeatureList& features = this->m_features;
+    cSequenceFeatureList& features = orig_ref_seq_info[orig_seq_id].m_features;
     cSequenceFeatureList feat_list_new;        
            
-    // Go through ALL the features of the (this_seq) sequence
+    // Go through ALL the features of the original sequence
     for (cSequenceFeatureList::iterator itr_feat = features.begin(); itr_feat != features.end(); itr_feat++)
     {
       cSequenceFeature& feat = **itr_feat;
@@ -339,6 +338,8 @@ namespace breseq {
       }
     }
     
+    //cout << "Number of features before: " << m_features.size() << " " << m_genes.size() << " " << m_repeats.size() << endl;
+    
     // Add these to all the correct feature lists, and in the right order.
     for (cSequenceFeatureList::reverse_iterator itr_feat = feat_list_new.rbegin(); itr_feat != feat_list_new.rend(); itr_feat++)
     {
@@ -357,6 +358,9 @@ namespace breseq {
       
       this->feature_push_back(*itr_feat);
     }
+    
+    //cout << "Number of features after: " << m_features.size() << " " << m_genes.size() << " " << m_repeats.size() << endl;
+
     
     // Sort, because while I did manage to implement a way to insert
     // all of these new features at the correct positions and in the

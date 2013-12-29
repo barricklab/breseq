@@ -3,7 +3,8 @@
 SELF=`dirname ${BASH_SOURCE}`
 . ${SELF}/../common.sh
 
-OUTPUT_CHECKS[0]="output/evidence/annotated.gd expected.gd"
+CURRENT_OUTPUTS[0]="output/evidence/annotated.gd"
+EXPECTED_OUTPUTS[0]="expected.gd"
 
 TESTCMD="\
     ${BRESEQ} \

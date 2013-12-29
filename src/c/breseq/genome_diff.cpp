@@ -2635,7 +2635,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         
         // We've repeated the sequence, now it's time to repeat all the features
         // inside of and including the repeat region.
-        new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+iInsStart+iDupSeqLen, iDelStart, iDelEnd, from_string<int16_t>(mut["strand"]), repeat_feature_picked, verbose);
+        new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+iInsStart+iDupSeqLen, iDelStart, iDelEnd, ref_seq_info, seq_id_picked, from_string<int16_t>(mut["strand"]), repeat_feature_picked, verbose);
                
       } break;
         
