@@ -575,7 +575,7 @@ namespace breseq
 
     //! Settings: Alignment Resolution
     this->add_split_junction_sides = true;
-    this->junction_pos_hash_neg_log10_p_value_cutoff = 2;
+    this->junction_pos_hash_neg_log10_p_value_cutoff = 3;
     this->minimum_alignment_resolution_pos_hash_score = 3;
 
     //! Settings: Mutation Identification

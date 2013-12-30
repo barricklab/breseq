@@ -273,22 +273,33 @@ namespace breseq {
     }
   }
   
-  // Repeat Feature at Position
-  // Using the strand, insert the repeat feature at supplied position.
-  // Also repeat any features inside the repeat.
-  void cAnnotatedSequence::repeat_feature_1(int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& orig_ref_seq_info, string& orig_seq_id, int8_t strand, cSequenceFeature &repeat_feature_picked, bool verbose)
+  // Repeat features within the given interval, on the given strand,
+  // starting at the specified position (not after it). The sequence 
+  // for these features must already have been inserted.
+  
+  void cAnnotatedSequence::repeat_feature_1(int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& repeated_ref_seq_info, string& repeated_seq_id, int8_t strand, cLocation &repeated_region, bool verbose)
   {
     (void) verbose;
+    //verbose = true;
 
     // This sorting should be completely unnecessary. To be
     // safe, we sort here only because the following code
     // assumes that these lists are in order from least to greatest.
-    this->m_features.sort();
-    this->m_genes.sort();
-    this->m_repeats.sort();
+    this->sort_features();
     
-    cSequenceFeature& rep = repeat_feature_picked;
-    cSequenceFeatureList& features = orig_ref_seq_info[orig_seq_id].m_features;
+    int32_t new_start = pos;
+    int32_t new_end = pos + repeated_region.get_end_1() - repeated_region.get_start_1();
+    int32_t adjusted_for_del_start = new_start;
+    int32_t adjusted_for_del_end   = new_end - end_del - start_del;
+
+    if (verbose) {
+      cout << endl << ">> repeat_feature_1" << endl;  
+      cout << "Moving interval: start " << repeated_region.get_start_1() << "-" << repeated_region.get_end_1() << endl; 
+      cout << "To     interval: start " << new_start << "-" << new_end << endl;
+      cout << "To     adjusted: start " << adjusted_for_del_start << "-" << adjusted_for_del_end << endl;
+    }
+        
+    cSequenceFeatureList& features = repeated_ref_seq_info[repeated_seq_id].m_features;
     cSequenceFeatureList feat_list_new;        
            
     // Go through ALL the features of the original sequence
@@ -297,44 +308,52 @@ namespace breseq {
       cSequenceFeature& feat = **itr_feat;
       
       // Does this feature start and end inside of the repeat?
-      if(feat.get_start_1() >= rep.get_start_1() && feat.get_end_1() <= rep.get_end_1() && feat["type"] != "region" && feat["type"] != "source")
+      if(feat.get_start_1() >= repeated_region.get_start_1() && feat.get_end_1() <= repeated_region.get_end_1() && feat["type"] != "region" && feat["type"] != "source")
       {
         // Create a brand new feature, that we can love and cuddle.
         // This is where we copy the feature and all the attributes.
         cSequenceFeaturePtr fp(new cSequenceFeature(feat));              
         cSequenceFeature& feat_new = *fp;              
-        feat_new.m_gff_attributes = feat.m_gff_attributes;              
         
         // Depending on the strand of the mutation, relative to the
         // copy that we pulled, juggle the starts and ends here.
-        if(strand * feat.get_strand() < 0)
-        {                
-          feat_new.m_location.set_start_1( pos + (rep.get_end_1() - feat.get_end_1()) - start_del);  //Set start to position plus the difference betwen the repeat's end, and this feature's end
-          if(start_del && feat_new.get_start_1() < pos)  {  //If the feature start got shifted below the repeat start, set the start to the pos and flag it as pseudo
-            feat_new.m_location.set_start_1( pos);
-            feat_new.flag_pseudo();  }
-          feat_new.m_location.set_end_1( feat_new.get_start_1() + (feat.get_end_1() - feat.get_start_1()));  //Set end to start plus feature length
-          if(end_del && (pos + (rep.get_end_1() - rep.get_start_1())) < (feat_new.get_end_1() + end_del))  {  //Do we have an end_del? Does this feature end in an area that got deleted?
-            feat_new.m_location.set_end_1( (pos + (rep.get_end_1() - rep.get_start_1())));
-            feat_new.flag_pseudo();  }
+        // Note: start_del and end_del do not depend on the strand!! 
+        //   (they are always in lowest coords, the highest coords)
+        
+         
+        if (verbose) cout << "Adjusting feature:" << endl;
+        if (verbose) cout << "  Original   : " << feat["type"] << " " << feat.get_start_1() << "-" << feat.get_end_1() << " strand " << feat.get_strand() << (feat.m_pseudo ? " pseudo" : "") << endl; 
+        
+        if(strand * feat.get_strand() < 0) { 
+          //Set start to position plus the difference betwen the repeat's end, and this feature's end
+          feat_new.m_location.set_start_1( pos + (repeated_region.get_end_1() - feat.get_end_1()) - start_del);  
+          //Set end to start plus feature length
+          feat_new.m_location.set_end_1( feat_new.get_start_1() + (feat.get_end_1() - feat.get_start_1()));  
+          // We are on the opposite strand
           feat_new.m_location.set_strand( -feat.get_strand());
-          feat_list_new.push_front(fp);
-        }
-        else
-        {
-          feat_new.m_location.set_start_1( pos + (feat.get_start_1() - rep.get_start_1()) - start_del);  //Set start to position plus the difference between the repeat feature's start, and this feature's start
-          if(start_del && feat_new.get_start_1() < pos)  {  //If the feature start got shifted below the repeat start, set the start to the pos and flag it as pseudo
-            feat_new.m_location.set_start_1( pos);
-            feat_new.flag_pseudo();  }
-          feat_new.m_location.set_end_1( feat_new.get_start_1() + (feat.get_end_1() - feat.get_start_1()));  //Set end to start plus feature length
-          if(end_del && (pos + (rep.get_end_1() - rep.get_start_1())) < (feat_new.get_end_1() + end_del))  {  //Do we have an end_del? Does this feature end in an area that got deleted?
-            feat_new.m_location.set_end_1( (pos + (rep.get_end_1() - rep.get_start_1())));
-            feat_new.flag_pseudo();  }
-          feat_list_new.push_back(fp);
+        } else {
+          //Set start to position plus the difference between the repeat feature's start, and this feature's start
+          feat_new.m_location.set_start_1( pos + (feat.get_start_1() - repeated_region.get_start_1()) - start_del);
+          //Set end to start plus feature length
+          feat_new.m_location.set_end_1( feat_new.get_start_1() + (feat.get_end_1() - feat.get_start_1()) );  
+          //This is actaully already true from the clone, but put here to make it obvious
+          feat_new.m_location.set_strand( feat.get_strand() );
         }
         
-        // This is where we let the user know that "very imporant" things are going on
-        //if(verbose){cout << "REPEAT\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
+        //If the feature start got shifted below the repeat start, set the start to the pos and flag it as pseudo
+        if( feat_new.m_location.get_start_1() < adjusted_for_del_start)  {  
+          feat_new.m_location.set_start_1( adjusted_for_del_start );
+          feat_new.flag_pseudo();
+        }
+        //Do we have an end_del? Does this feature end in an area that got deleted?
+        if( feat_new.m_location.get_end_1() > adjusted_for_del_end)  {  
+          feat_new.m_location.set_end_1( adjusted_for_del_end );
+          feat_new.flag_pseudo();
+        }
+                
+        if (verbose) cout << "  New Feature: " << feat_new["type"] << " " << feat_new.get_start_1() << "-" << feat_new.get_end_1() << " strand " << feat_new.get_strand() << (feat_new.m_pseudo ? " pseudo" : "") << endl; 
+        
+        feat_list_new.push_back(fp);
       }
     }
     
@@ -361,15 +380,8 @@ namespace breseq {
     
     //cout << "Number of features after: " << m_features.size() << " " << m_genes.size() << " " << m_repeats.size() << endl;
 
-    
-    // Sort, because while I did manage to implement a way to insert
-    // all of these new features at the correct positions and in the
-    // right order without these functions, it was a stupid function
-    m_features.sort();
-    m_genes.sort();
-    m_repeats.sort();
-    
-    return;
+    // Sort, because we may have put the new features in backwards    
+    this->sort_features();
   }
   
   char cLocationTraverser::on_base_stranded_1() {
@@ -1456,6 +1468,13 @@ string cReferenceSequences::repeat_family_sequence(
                                                    cSequenceFeature* picked_sequence_feature
                                                    )
 {  
+  bool verbose = false;
+  
+  if (verbose) {
+    cout << "Finding repeat family sequence for: " << repeat_name << " on strand " << static_cast<int32_t>(strand) << endl;
+    if (repeat_region) cout << "Specific repeat region requested: " << *repeat_region << endl;
+  }
+  
   counted_ptr<cSequenceFeature> picked_rep(NULL);
   cAnnotatedSequence* picked_seq(NULL);
   
@@ -1515,17 +1534,23 @@ string cReferenceSequences::repeat_family_sequence(
         if (strand != rep.get_strand())
           adjSeq = reverse_complement(adjSeq);
         
-        repeat_size_count[rep.get_end_1() - rep.get_start_1() + 1]++;        
-        repeat_size_pos[rep.get_end_1() - rep.get_start_1() + 1] = rep.get_start_1();
+        int32_t this_size = rep.get_end_1() - rep.get_start_1() + 1;
+        repeat_size_count[this_size]++;   
+        if (repeat_size_pos.count(this_size) == 0) {
+          repeat_size_pos[this_size] = rep.get_start_1();
+        }
         repeat_sequence_count[adjSeq]++;
-        repeat_sequence_pos[adjSeq] = rep.get_start_1();
+        // We want to use the first one we encountered
+        if (repeat_sequence_pos.count(adjSeq) == 0) {
+          repeat_sequence_pos[adjSeq] = rep.get_start_1();
+        }
       }
     }
     
     // This will set the region_pos to whichever sequence has the most copies.
     // If number of copies is not greater than 1, we will use the most common size instead.
     int32_t region_pos;
-    if((!repeat_region) && (repeat_sequence_count.size()))
+    if(repeat_sequence_count.size())
     {    
       if (max_element(repeat_sequence_count.begin(), repeat_sequence_count.end(), map_comp_second<string, uint32_t>)->second > 1) {
         region_pos = repeat_sequence_pos[max_element(repeat_sequence_count.begin(), repeat_sequence_count.end(), map_comp_second<string, uint32_t>)->first];  }
@@ -1551,7 +1576,7 @@ string cReferenceSequences::repeat_family_sequence(
         }
       }
     }
-
+    
     ASSERT(picked_rep.get(), "Could not find repeat of type [" + repeat_name + "] in reference sequences.\n");
   }
   
@@ -1565,6 +1590,11 @@ string cReferenceSequences::repeat_family_sequence(
     *picked_seq_id = picked_seq->m_seq_id;
   if (picked_sequence_feature)
     *picked_sequence_feature = *picked_rep;
+  
+  if (verbose) {
+    cout << "Picked repeat region: " << *picked_seq_id << ":" << picked_sequence_feature->get_start_1() << "-" << picked_sequence_feature->get_end_1() << endl;
+    cout << "Sequence: " << repeat_seq << endl;
+  }
   
   return repeat_seq;  
 }

@@ -192,7 +192,7 @@ namespace breseq {
           return;
         
         //Notify the user of the action
-        //if(verbose) cout << "PSEUDO\t" << (*this)["type"] << "\t" << m_gff_attributes["ID"];
+        if(verbose) cout << "PSEUDO\t" << (*this)["type"] << "\t" << m_gff_attributes["ID"];
         
         m_pseudo = true;
         m_gff_attributes["Pseudo"].push_back("true");
@@ -275,6 +275,13 @@ namespace breseq {
         m_description("na"), 
         m_seq_id("na"),
         m_features(0) {} ;
+      
+      void sort_features()
+      {
+        m_features.sort();
+        m_genes.sort();
+        m_repeats.sort();
+      }
     
       bool is_circular() const
       {
@@ -307,7 +314,7 @@ namespace breseq {
       void insert_sequence_1(int32_t pos_1, const string &insertion_seq, string mut_type="", bool verbose=false);
     
       // Repeat Feature at Position
-      void repeat_feature_1(int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& orig_ref_seq_info, string& orig_seq_id, int8_t strand, cSequenceFeature &repeat_feature_picked, bool verbose = false);
+      void repeat_feature_1(int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& orig_ref_seq_info, string& orig_seq_id, int8_t strand, cLocation &repeated_region, bool verbose = false);
       
       // Find Specific Feature
       // Given a cSequenceFeatureList feat_list, iterate through it until
@@ -649,9 +656,9 @@ namespace breseq {
       (*this)[seq_id].insert_sequence_1(pos, insertion_seq, mut_type, verbose);
     }
     
-    void repeat_feature_1(const string& seq_id, int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& orig_ref_seq_info, string& orig_seq_id, int8_t strand, cSequenceFeature &repeat_feature_picked, bool verbose = false)
+    void repeat_feature_1(const string& seq_id, int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& orig_ref_seq_info, string& orig_seq_id, int8_t strand, cLocation &repeated_region, bool verbose = false)
     {
-      (*this)[seq_id].repeat_feature_1(pos, start_del, end_del, orig_ref_seq_info, orig_seq_id, strand, repeat_feature_picked, verbose);
+      (*this)[seq_id].repeat_feature_1(pos, start_del, end_del, orig_ref_seq_info, orig_seq_id, strand, repeated_region, verbose);
     }
 
     uint32_t get_sequence_length(const string& seq_id) const
