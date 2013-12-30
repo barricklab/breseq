@@ -1,16 +1,16 @@
 #=GENOME_DIFF 1.0
-MOB	.	.	REL606-5	1000	IS1	-1	3
-MOB	.	.	REL606-5	2000	IS1	1	7
-MOB	.	.	REL606-5	3000	IS1	-1	-3
-MOB	.	.	REL606-5	4000	IS1	1	-7
-MOB	.	.	REL606-5	5000	IS1	-1	6	del_start=3
-MOB	.	.	REL606-5	6000	IS1	1	4	ins_end=TG
-MOB	.	.	REL606-5	7000	IS1	-1	3	del_end=3	ins_end=CTT
-MOB	.	.	REL606-5	8000	IS1	1	3	ins_start=ATGGC
-MOB	.	.	REL606-5	15000	IS1	-1	-3	del_start=1	del_end=3	ins_start=T	ins_end=TA
-MOB	.	.	REL606-5	16000	IS1	1	-7	del_start=2	del_end=2	ins_start=ATGGC	ins_end=GC
-MOB	.	.	REL606-5	17000	IS1	-1	-3	del_start=3	del_end=1	ins_start=TGTA	ins_end=GGC
-MOB	.	.	REL606-5	18000	IS1	1	-7	del_start=5	del_end=10	ins_start=G	ins_end=CA
+MOB	.	.	REL606-5	1000	IS1	-1	3	mob_region=REL606.fragment.2:3265-4032
+MOB	.	.	REL606-5	2000	IS1	1	7	mob_region=REL606.fragment.2:27517-26750
+MOB	.	.	REL606-5	3000	IS1	-1	-3	mob_region=REL606.fragment.2:3265-4032
+MOB	.	.	REL606-5	4000	IS1	1	-7	mob_region=REL606.fragment.2:27517-26750
+MOB	.	.	REL606-5	5000	IS1	-1	6	del_start=3	mob_region=REL606.fragment.2:3265-4032
+MOB	.	.	REL606-5	6000	IS1	1	4	ins_end=TG	mob_region=REL606.fragment.2:27517-26750
+MOB	.	.	REL606-5	7000	IS1	-1	3	del_end=3	ins_end=CTT	mob_region=REL606.fragment.2:3265-4032
+MOB	.	.	REL606-5	8000	IS1	1	3	ins_start=ATGGC	mob_region=REL606.fragment.2:27517-26750
+MOB	.	.	REL606-5	15000	IS1	-1	-3	del_start=1	del_end=3	ins_start=T	ins_end=TA	mob_region=REL606.fragment.2:3265-4032
+MOB	.	.	REL606-5	16000	IS1	1	-7	del_start=2	del_end=2	ins_start=ATGGC	ins_end=GC	mob_region=REL606.fragment.2:27517-26750
+MOB	.	.	REL606-5	17000	IS1	-1	-3	del_start=3	del_end=1	ins_start=TGTA	ins_end=GGC	mob_region=REL606.fragment.2:3265-4032
+MOB	.	.	REL606-5	18000	IS1	1	-7	del_start=5	del_end=10	ins_start=G	ins_end=CA	mob_region=REL606.fragment.2:27517-26750
 MOB	.	.	REL606-5	21000	IS1	-1	0
 MOB	.	.	REL606-5	22000	IS1	1	1
 MOB	.	.	REL606-5	23000	IS1	-1	-1

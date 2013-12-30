@@ -230,11 +230,11 @@ These attributes control how molecular events in a a :program:`GenomeDiff` are c
    
 * **adjacent**\ =\ *<element_name>*
 
-   This mutation
+   This mutation is adjacent to the specified element. For example, it may be an insertion of a base next to a mobile element. We may want to ignore mutations in this category because they represent a hotspot with an atypical mutation rate.
    
-* **with**\ =\ *<mutatiion_id>*
+* **with**\ =\ *<mutation_id>*
 
-   This mutation should be counted as a **single** molecular event with the other specified mutation. For example, active mobile elements may lose and gain a few bases at their margins, and when this occurs the most parsimonious explanation is one round of recombination or excision and re-insertion.
+   This mutation should not be counted separately. It should be counted as a **single** molecular event with the other specified mutation (which does not need a with tag)
    
 
 Applying Mutations
@@ -250,6 +250,9 @@ These attributes control how mutations are applied when building a new reference
 
    This mutation happens inside of a different mutation. These options can specify, for example, that a base substitution happens in the second copy of a duplicated region. **within** and **within_position** must both be provided if one is supplied. If **within_copy** is not provided (because it is unknown), the mutation will be placed arbitrarily in the first copy. Note that the actual position of this mutation is still used for annotating its effects.
 
+* **mob_region**\ =\ *<seq_id:start-end >*
+
+   Use the existing copy of the mobile element specified as a seq_id:start-end region to apply this mutation. Useful when different members of a mobile element family have slightly different sequences. **Valid only for MOB mutations.**
 
 Evidence Types
 ++++++++++++++++++++++
@@ -509,7 +512,7 @@ Line specification:
 MASK: Repeat mask a section
 """"""""""""""""""""""""""""""""""""""
 
-Artificially mask a section of DNA as "N"s. This is useful for creating fake reference sequences. Particularly for targeted sequencing approaches.
+Artificially mask a section of DNA as "N"s. This is useful for creating modified reference sequences, particularly for targeted sequencing approaches.
 Line specification:
 
 4. **seq_id** *<string>*
