@@ -19,7 +19,7 @@ MOB	.	.	REL606-5	25000	IS1	1	5	del_start=3
 MOB	.	.	REL606-5	26000	IS1	-1	2	ins_end=AC
 MOB	.	.	REL606-5	27000	IS1	1	-3	del_end=6
 MOB	.	.	REL606-5	28000	IS1	-1	-1	ins_start=AGGC
-MOB	.	.	REL606-5	35000	IS1	-1	3	del_start=1	del_end=3	ins_start=T	ins_end=TA
+MOB	.	.	REL606-5	35000	IS1	-1	0	del_start=1	del_end=3	ins_start=T	ins_end=TA
 MOB	.	.	REL606-5	36000	IS1	1	7	del_start=2	del_end=2	ins_start=ATGGC	ins_end=GC
 MOB	.	.	REL606-5	37000	IS1	-1	1	del_start=3	del_end=1	ins_start=AGTC	ins_end=AGC
 MOB	.	.	REL606-5	38000	IS1	1	2	del_start=5	del_end=10	ins_start=CG	ins_end=CA

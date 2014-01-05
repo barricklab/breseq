@@ -78,11 +78,11 @@ SNP: Base substitution mutation
 
 5. **position** *<uint32>*
 
-   position in reference sequence fragment.
+   position in reference sequence fragment of base to replace.
 
 6. **new_seq** *<char>*
 
-   new base at position
+   new base at position.
 
 SUB: Multiple base substitution mutation
 """"""""""""""""""""""""""""""""""""""""
@@ -93,15 +93,15 @@ SUB: Multiple base substitution mutation
 
 5. **position** *<uint32>*
 
-   position of the first replaced nucleotide in reference sequence fragment.
+   position in the reference sequence of the first base that will be replaced.
 
 6. **size** *<uint32>*
 
-   number of bases *after* the specified reference position to replace with **new_seq**
+   number of bases *after* the specified reference position to replace with **new_seq**.
 
 7. **new_seq** *<string>*
 
-   new bases at position
+   new bases to substitute.
 
 
 DEL: Deletion mutation
@@ -113,11 +113,11 @@ DEL: Deletion mutation
 
 5. **position** *<uint32>*
 
-   position in reference sequence fragment.
+   position in reference sequence fragment of first deleted base.
 
 6. **size** *<uint32>*
 
-   number of bases deleted in reference, including reference position.
+   number of bases deleted in reference.
 
 
 INS: Insertion mutation
@@ -129,11 +129,11 @@ INS: Insertion mutation
 
 5. **position** *<uint32>*
 
-   position in reference sequence fragment, after which the INS is placed.
+   position in reference sequence fragment. New bases are inserted *after* this position.
 
 6. **new_seq** *<string>*
 
-   new base inserted *after* the specified reference position
+   new bases to be inserted in the reference.
 
 MOB: Mobile element insertion mutation
 """"""""""""""""""""""""""""""""""""""
@@ -144,11 +144,11 @@ MOB: Mobile element insertion mutation
 
 5. **position** *<uint32>*
 
-   position in reference sequence fragment.
+   position in reference sequence fragment of the first duplicated base at the target site.
 
 6. **repeat_name** *<string>*
 
-   name of the mobile element. Should correspond to an annotated **repeat_region** in the reference.
+   name of the mobile element. Should correspond to an annotated **repeat_region** or **mobile_element** feature in the reference sequence.
 
 7. **strand** *<1/-1>*
 
@@ -156,8 +156,14 @@ MOB: Mobile element insertion mutation
 
 8. **duplication_size** *<uint32>*
 
-   number of bases duplicated during insertion, beginning with the specified reference position.
-   
+   number of target site bases duplicated during insertion of the mobile element, beginning with the specified reference position. If the value of this field is negative, then it indicates that the absolute value of this number of bases were deleted at the target site beginning with the specified position. If the value of this field is zero, then the there were no duplicated bases, and the mobile element was inserted after the specified base position.
+
+Additional MOB named fields
+'''''''''''''''''''''''''''
+* **del_start=**\ *<uint32>*, **del_end=**\ *<uint32>*
+   Delete this many bases from the start or end of the inserted mobile element. This deletion occurs with respect to the top strand of the genome after the element is flipped to the orientation with which it will be inserted.
+* **ins_start=**\ *<string>*, **ins_end=**\ *<string>*
+   Append the specified bases to the start or end of the inserted mobile element. These insertions occur after any deletions and will be inside of any duplicated target site bases.
 
 AMP: Amplification mutation
 """""""""""""""""""""""""""

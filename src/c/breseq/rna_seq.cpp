@@ -44,7 +44,7 @@ void RNASeq::tam_to_gene_counts(cReferenceSequences& ref_seq_info, const string&
   
   for(vector<cAnnotatedSequence>::iterator it_as = ref_seq_info.begin(); it_as < ref_seq_info.end(); it_as++) {
     for (cSequenceFeatureList::iterator itr_feat=it_as->m_genes.begin(); itr_feat!=it_as->m_genes.end(); ++itr_feat) {
-      Gene g(**itr_feat);
+      cGeneFeature g(**itr_feat);
       string ggn = good_gene_name(g.name, g.product);
       gene_counts[ggn] = vector<int32_t>(num_datasets, 0);
     }
@@ -121,7 +121,7 @@ void RNASeq::tam_to_gene_counts(cReferenceSequences& ref_seq_info, const string&
       }
       
       if (best_gene.get()) {
-        Gene g(*best_gene);
+        cGeneFeature g(*best_gene);
         
         if (verbose)
           cout << "  Best gene: " << g.name << " " << g.product << " " << best_gene->m_location.get_start_1() << "-" << best_gene->m_location.get_end_1() 
