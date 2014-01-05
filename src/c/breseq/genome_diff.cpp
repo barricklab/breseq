@@ -2428,7 +2428,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         
         const uint32_t& size = from_string<uint32_t>(mut[SIZE]);
 
-        // Set up attributes
+        // Set up attributes (includes base before for cases of no replaced bases)
         replace_seq_id = mut[SEQ_ID];
         replace_start = position - 1;
         replace_end = position - 1 + size;
@@ -2628,6 +2628,15 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
           applied_seq.insert(4 + iDupLen, "]");
           applied_seq += "[" + new_ref_seq_info.get_sequence_1(replace_seq_id, position, position + iDupLen - 1) + "]";
         }
+        
+        // @JEB 2014-01-05
+        // Special case for target site duplication of size zero so that
+        // we always insert AFTER the specified position. Without this correction
+        // we insert before the specified base when target site duplication is zero.
+        if (iDupLen == 0) {
+          position = position + 1;
+        }
+        
         // The position of a MOB is the first position that is duplicated
         // Inserting at the position means we have to copy the duplication
         // in FRONT OF the repeat sequence

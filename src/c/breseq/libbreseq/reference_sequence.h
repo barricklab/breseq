@@ -210,7 +210,7 @@ namespace breseq {
   };
   
   //!< Subclass of reference features with more information
-  class Gene : public cSequenceFeature {
+  class cGeneFeature : public cSequenceFeature {
   public:
     string name;
     string product;
@@ -218,8 +218,8 @@ namespace breseq {
     bool pseudogene; 
     uint32_t translation_table;
     
-    Gene() {};
-    Gene(cSequenceFeature& src) : cSequenceFeature(src)
+    cGeneFeature() {};
+    cGeneFeature(cSequenceFeature& src) : cSequenceFeature(src)
     {
       name = src["name"];
       product = src["product"];
@@ -230,7 +230,7 @@ namespace breseq {
         translation_table = from_string<uint32_t>(src["transl_table"]);
     }
 
-    Gene(const Gene& copy) : cSequenceFeature(copy)
+    cGeneFeature(const cGeneFeature& copy) : cSequenceFeature(copy)
     {
       name = copy.name;
       product = copy.product;
@@ -242,7 +242,7 @@ namespace breseq {
 
   };
 
-  typedef counted_ptr<Gene> cGenePtr;
+  typedef counted_ptr<cGeneFeature> cGeneFeaturePtr;
   typedef counted_ptr<cSequenceFeature> cSequenceFeaturePtr;
   typedef list<cSequenceFeaturePtr> cSequenceFeatureList;
   
@@ -707,12 +707,12 @@ namespace breseq {
                                   cSequenceFeatureList& gene_list, 
                                   int32_t pos_1, 
                                   int32_t pos_2, 
-                                  vector<Gene>& within_genes, 
-                                  vector<Gene>& between_genes, 
-                                  vector<Gene>& inside_left_genes, 
-                                  vector<Gene>& inside_right_genes,
-                                  Gene& prev_gene, 
-                                  Gene& next_gene);
+                                  vector<cGeneFeature>& within_genes, 
+                                  vector<cGeneFeature>& between_genes, 
+                                  vector<cGeneFeature>& inside_left_genes, 
+                                  vector<cGeneFeature>& inside_right_genes,
+                                  cGeneFeature& prev_gene, 
+                                  cGeneFeature& next_gene);
     void annotate_1_mutation(cDiffEntry& mut, uint32_t start, uint32_t end, bool repeat_override = false, bool ignore_pseudogenes = false);
     void annotate_mutations(cGenomeDiff& gd, bool only_muts = false, bool ignore_pseudogenes = false, bool verbose = false);
     void polymorphism_statistics(Settings& settings, Summary& summary);

@@ -637,7 +637,14 @@ namespace breseq {
 				{
 					mut["position"] = s(n(mut["position"]) + n(mut["duplication_size"]));
 				}
-
+        // @JEB 2014-01-05
+        // Special case of no duplicated bases, we shift the position by one backward
+        // so that the MOB is inserted AFTER this position (rather than BEFORE).
+        else if (n(mut["duplication_size"]) == 0)
+        {
+          mut["position"] = s(n(mut["_start"])-1);
+        }
+        
 				// get any unique junction sequence
 				JunctionInfo j1i(j1["key"]);
 				string j1_unique_read_sequence = j1i.unique_read_sequence;
@@ -1024,9 +1031,7 @@ namespace breseq {
           }
         }            
         // @JEB 12-22-12
-        // Add missing coverage evidence that corresponds to the deleted region
-        // Code assumes this will always be in _del_end field.
-          
+        // Add missing coverage evidence that corresponds to the deleted region for negative overlap          
         if ( n(mut["duplication_size"]) < 0 ) {
           
           for(diff_entry_list_t::iterator mc_it = mc.begin(); mc_it != mc.end(); mc_it++) {
@@ -1561,7 +1566,7 @@ namespace breseq {
           continue;
         
         // initialize gene structure
-        Gene g(f);
+        cGeneFeature g(f);
         
         total_orfs++;
         

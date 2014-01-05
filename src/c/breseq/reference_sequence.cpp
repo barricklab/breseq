@@ -1637,18 +1637,18 @@ void cReferenceSequences::find_nearby_genes(
                                             cSequenceFeatureList& gene_list,
                                             int32_t pos_1,
                                             int32_t pos_2,
-                                            vector<Gene>& within_genes,
-                                            vector<Gene>& between_genes,
-                                            vector<Gene>& inside_left_genes,
-                                            vector<Gene>& inside_right_genes,
-                                            Gene& prev_gene,
-                                            Gene& next_gene
+                                            vector<cGeneFeature>& within_genes,
+                                            vector<cGeneFeature>& between_genes,
+                                            vector<cGeneFeature>& inside_left_genes,
+                                            vector<cGeneFeature>& inside_right_genes,
+                                            cGeneFeature& prev_gene,
+                                            cGeneFeature& next_gene
                                             )
 {
   for (cSequenceFeatureList::iterator it = gene_list.begin(); it != gene_list.end(); ++it)
   {
     cSequenceFeature& test_gene_feat = **it;
-    Gene test_gene = Gene(test_gene_feat); // up-cast, should be a better way to do this @JEB
+    cGeneFeature test_gene = cGeneFeature(test_gene_feat); // up-cast, should be a better way to do this @JEB
 
     if (test_gene.get_end_1() < pos_1)
       prev_gene = test_gene;
@@ -1843,11 +1843,11 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
 
   int32_t size = end - start + 1;
 
-  Gene prev_gene, next_gene;
-  vector<Gene> within_genes;
-  vector<Gene> between_genes;
-  vector<Gene> inside_left_genes;
-  vector<Gene> inside_right_genes;
+  cGeneFeature prev_gene, next_gene;
+  vector<cGeneFeature> within_genes;
+  vector<cGeneFeature> between_genes;
+  vector<cGeneFeature> inside_left_genes;
+  vector<cGeneFeature> inside_right_genes;
 
   cSequenceFeaturePtr repeat_ptr(NULL);
   if (repeat_override)
@@ -1856,7 +1856,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     repeat_ptr = get_overlapping_feature(repeat_list_ref, start);
     if (repeat_ptr.get() != NULL)
     {
-      Gene within_gene(*repeat_ptr);
+      cGeneFeature within_gene(*repeat_ptr);
       within_genes.push_back(within_gene);
     }
   }
@@ -1921,7 +1921,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     /// TODO: It can be within multiple genes, in which case we need to annotate
     /// the change it causes in each reading frame UGH! YUCKY!
     /// FOR NOW: just take the first of the within genes...
-    Gene gene = within_genes[0];
+    cGeneFeature gene = within_genes[0];
     mut["gene_name"] = gene.name;
     mut["html_gene_name"] = "<i>" + gene.name + "</i>";
     mut["html_gene_name"] += (gene.get_strand() == -1) ? "&nbsp;&larr;" : "&nbsp;&rarr;";
@@ -2014,14 +2014,14 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
   //The mutation actually contains several genes
   else if (between_genes.size() + inside_left_genes.size() + inside_right_genes.size() > 0)
   {
-    vector<Gene> gene_list;
+    vector<cGeneFeature> gene_list;
     gene_list.insert( gene_list.end(), inside_left_genes.begin(), inside_left_genes.end() );
     gene_list.insert( gene_list.end(), between_genes.begin(), between_genes.end() );
     gene_list.insert( gene_list.end(), inside_right_genes.begin(), inside_right_genes.end() );
 
     vector<string> gene_name_list;
     vector<string> locus_tag_list;
-    for (vector<Gene>::iterator it=inside_left_genes.begin(); it != inside_left_genes.end(); it++)
+    for (vector<cGeneFeature>::iterator it=inside_left_genes.begin(); it != inside_left_genes.end(); it++)
     {
       gene_name_list.push_back("[" + it->name + "]");
 
@@ -2030,7 +2030,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
       }
 
     }
-    for (vector<Gene>::iterator it=between_genes.begin(); it != between_genes.end(); it++)
+    for (vector<cGeneFeature>::iterator it=between_genes.begin(); it != between_genes.end(); it++)
     {
       gene_name_list.push_back(it->name);
 
@@ -2039,7 +2039,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
       }
 
     }
-    for (vector<Gene>::iterator it=inside_right_genes.begin(); it != inside_right_genes.end(); it++)
+    for (vector<cGeneFeature>::iterator it=inside_right_genes.begin(); it != inside_right_genes.end(); it++)
     {
       gene_name_list.push_back("[" + it->name + "]");
 
