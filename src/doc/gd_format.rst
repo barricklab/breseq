@@ -164,6 +164,8 @@ Additional MOB named fields
    Delete this many bases from the start or end of the inserted mobile element. This deletion occurs with respect to the top strand of the genome after the element is flipped to the orientation with which it will be inserted.
 * **ins_start=**\ *<string>*, **ins_end=**\ *<string>*
    Append the specified bases to the start or end of the inserted mobile element. These insertions occur after any deletions and will be inside of any duplicated target site bases.
+* **mob_region**\ =\ *<seq_id:start-end >*
+   Use the existing copy of the mobile element specified as a seq_id:start-end region to apply this mutation. Useful when different annotated members of a mobile element family have slightly different sequences.
 
 AMP: Amplification mutation
 """""""""""""""""""""""""""
@@ -255,10 +257,6 @@ These attributes control how mutations are applied when building a new reference
 * **within**\ =\ *<mutation_id>*\ , **within_position**\ =\ *<mutation_id>*\ ,  **within_copy**\ =\ *<mutation_id>*
 
    This mutation happens inside of a different mutation. These options can specify, for example, that a base substitution happens in the second copy of a duplicated region. **within** and **within_position** must both be provided if one is supplied. If **within_copy** is not provided (because it is unknown), the mutation will be placed arbitrarily in the first copy. Note that the actual position of this mutation is still used for annotating its effects.
-
-* **mob_region**\ =\ *<seq_id:start-end >*
-
-   Use the existing copy of the mobile element specified as a seq_id:start-end region to apply this mutation. Useful when different members of a mobile element family have slightly different sequences. **Valid only for MOB mutations.**
 
 Evidence Types
 ++++++++++++++++++++++
