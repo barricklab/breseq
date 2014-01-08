@@ -6,6 +6,8 @@ Version 0.24
     * Fixed errors in parsing some GenBank files.
     * Fixed error causing crash when a polymorphism was very close to the beginning of a sequence.
     * Fixed errors with assigning added or deleted sequence at ends of complex mobile element insertions.
+    * Fixed error predicting zero length deletions causing crash with certain reference sequences.
+    * Improvements and updates to gdtools commands.
     * Other bug fixes.
 
 Version 0.23

@@ -393,17 +393,22 @@ namespace breseq {
 					mut["position"] = s(r1.get_start_1());
 					mut["size"] = s(r2.get_start_1() - r1.get_start_1());
 				}
-
-				// remember the name of the element
-				mut["between"] = r1["name"];
-				gd.add(mut);
         
-        mc_it = mc.erase(mc_it); // iterator is now past the erased element
-        mc_it--;                //We just removed the current jc, do not iterate.
-        
-        if (verbose)
-          cout << "**** Ends of junction in copies of same repeat element ****\n";
-				continue; // to next mc_item
+        // @JEB 2014-01-07
+        // It's possible for this to be in the SAME copy of the element,
+        // in which case the deletion size here is zero bases
+        if (n(mut["size"]) != 0) {
+          // remember the name of the element
+          mut["between"] = r1["name"];
+          gd.add(mut);
+          
+          mc_it = mc.erase(mc_it); // iterator is now past the erased element
+          mc_it--;                //We just removed the current jc, do not iterate.
+          
+          if (verbose)
+            cout << "**** Ends of junction in copies of same repeat element ****\n";
+          continue; // to next mc_item
+        }
 			}
 
 			// Both sides were unique or redundant, nothing more we can do...
@@ -1056,7 +1061,7 @@ namespace breseq {
 		}
 
 		///
-		// evidence JC => INS, SUB, AMP mutations
+		// evidence JC => INS, SUB, AMP, DEL mutations
 		///
     for(diff_entry_list_t::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) //JC
 		{
