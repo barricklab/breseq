@@ -275,7 +275,7 @@ double PosHashProbabilityTable::probability(string& seq_id, uint32_t pos_hash_sc
   
 // Compares matches to candidate junctions with matches to original genome
 void resolve_alignments(
-                        const Settings& settings,
+                        Settings& settings,
                         Summary& summary,
                         cReferenceSequences& ref_seq_info,
                         bool junction_prediction,
@@ -349,7 +349,10 @@ void resolve_alignments(
     
   tam_file resolved_reference_tam(settings.resolved_reference_sam_file_name, settings.reference_fasta_file_name, ios::out);
   tam_file resolved_junction_tam(settings.resolved_junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::out);
-    
+  
+  settings.track_intermediate_file(settings.bam_done_file_name, settings.resolved_reference_sam_file_name);
+  settings.track_intermediate_file(settings.bam_done_file_name, settings.resolved_junction_sam_file_name);
+  
   UniqueJunctionMatchMap unique_junction_match_map;    // Map of junction_id to MatchedJunction
 	RepeatJunctionMatchMap repeat_junction_match_map;  // Map of junction_id to read_name to MatchedJunction
 
@@ -644,6 +647,8 @@ void resolve_alignments(
   
   // Write the genome diff file
 	gd.write(settings.jc_genome_diff_file_name);
+  settings.track_intermediate_file(settings.output_done_file_name, settings.jc_genome_diff_file_name);
+
 }
     
 void load_junction_alignments(

@@ -173,7 +173,7 @@ namespace breseq
     ("verbose,v","Produce verbose output",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
 		("output,o", "Path to breseq output", ".")
 		("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files. (REQUIRED)")
-    ("name,n", "Human-readable name of sample for output [DEFAULT=<none>]", "")
+    ("name,n", "Human-readable name of sample for output (DEFAULT=<none>)", "")
     ("num-processors,j", "Number of processors to use in multithreaded steps", 1);
     
     options.addUsage("", true);
@@ -641,6 +641,9 @@ namespace breseq
 		//// '#' replaced with read file name
 		//// '@' replaced by seq_id of reference sequence
 
+    // Do not allow the output path to have spaces. This will cause many invocations
+    ASSERT(this->base_output_path.find(" ") == string::npos, "Output path cannot contain spaces: \"" + this->base_output_path + "\".");
+    
     //! Paths: Sequence conversion
 		this->sequence_conversion_path = "01_sequence_conversion";
 		if (this->base_output_path.size() > 0) this->sequence_conversion_path = this->base_output_path + "/" + this->sequence_conversion_path;
@@ -1053,11 +1056,11 @@ namespace breseq
 		if (!good_to_go) exit(0);
 	}
 
-	bool Settings::do_step(string done_key, string message)
+	bool Settings::do_step(const string& done_key, const string& message)
 	{
 		string done_file_name = done_key;
 		this->done_key_messages[done_key] = message;
-    
+    this->set_current_step_done_key(done_key);
 		if (!file_exists(done_file_name.c_str()))
 		{
       cerr << "+++   NOW PROCESSING " << message << endl;
@@ -1068,7 +1071,8 @@ namespace breseq
 		cerr << "--- ALREADY COMPLETE " << message << endl;
 
 		ExecutionTime et;
-    et.retrieve(done_file_name);    
+    et.retrieve(done_file_name);
+    done_key_intermediate_files = et._done_key_intermediate_files;
     // @JEB Should check for errors, such as incomplete reads...
 
     this->execution_times.push_back(et);
@@ -1076,13 +1080,21 @@ namespace breseq
 		return false;
 	}
 
-	void Settings::done_step(string done_key)
+	void Settings::done_step(const string& done_key)
 	{
+    // Delete intermediate files
+    if (!this->keep_all_intermediates) {
+      for (vector<string>::iterator it= done_key_intermediate_files[done_key].begin(); it != done_key_intermediate_files[done_key].end(); it++) {
+        remove_file(*it);
+      }
+    }
+    
+		// Create the done file with timing information
 		string done_file_name = done_key;
 		string message = this->done_key_messages[done_key];
+    execution_times.back()._done_key_intermediate_files = done_key_intermediate_files;
 		this->record_end_time(message);
 
-		// create the done file with timing information
 		this->execution_times.back().store(done_file_name);
 	}
   
@@ -1095,8 +1107,14 @@ namespace breseq
     LOG << message << endl;
     LOG.close();
   }
-
-
-
+  
+  // Records an intermediate file that will be cleaned up
+  // when a step is done if the user has not specified to 
+  // keep intermediate files. Added to current step.
+  void Settings::track_intermediate_file(const string& done_key, const string& file_path)
+  {
+    done_key_intermediate_files[done_key].push_back(file_path);
+  }
+  
 } // breseq namespace
 

@@ -992,14 +992,6 @@ namespace breseq {
       s.erase(line_break_pos);
 		return s;
 	}
-  
-
-  
-  inline string remove_file(string path)
-  {
-    remove(path.c_str()); // @JEB this will probably not work.
-    return path;
-  }
 
 inline int32_t fprintf(ostream &os, const char *format,...) {
   int32_t ret_val;
@@ -1294,6 +1286,13 @@ inline int SYSTEM(string command, bool silent = false, bool ignore_errors = fals
     ASSERT(return_value == 0, error_message);
   }
   return return_value;
+}
+  
+inline string remove_file(string path, bool silent = false)
+{
+  //remove(path.c_str()); // @JEB this does not work with wildcards
+  SYSTEM("rm -f " + path, silent);
+  return path;
 }
 
 template<uint32_t nth_place> double roundp(double value) {

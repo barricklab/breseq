@@ -1153,6 +1153,7 @@ int breseq_default_action(int argc, char* argv[])
 
         // Parse output
         Summary::AnalyzeFastq s_rf = normalize_fastq(fastq_file_name, convert_file_name, i+1, settings.quality_score_trim, !settings.no_read_filtering, s.num_bases, read_file_base_limit);
+        settings.track_intermediate_file(settings.alignment_correction_done_file_name, convert_file_name);
         
         // Save the converted file name -- have to save it in summary because only that
         // is reloaded if we skip this step.
@@ -1192,6 +1193,7 @@ int breseq_default_action(int argc, char* argv[])
     
 		// calculate trim files
 		calculate_trims(settings.reference_fasta_file_name, settings.sequence_conversion_path);
+    settings.track_intermediate_file(settings.output_done_file_name, settings.sequence_conversion_path + "/*.trims");
 
 		// store summary information
 		summary.sequence_conversion.store(settings.sequence_conversion_summary_file_name);
@@ -1240,6 +1242,7 @@ int breseq_default_action(int argc, char* argv[])
     string reference_fasta_file_name = settings.reference_fasta_file_name;
     string command = "bowtie2-build -q " + settings.reference_fasta_file_name + " " + reference_hash_file_name;
     SYSTEM(command);
+    settings.track_intermediate_file(settings.reference_alignment_done_file_name, settings.reference_hash_file_name + "*");
     
     ///////////////////////
     // STAGE 1 ALIGNMENT //
@@ -1264,6 +1267,9 @@ int breseq_default_action(int argc, char* argv[])
       string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local " + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_stringent) + " "
       + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_stringent + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + stage1_reference_sam_file_name + " --un " + stage1_unmatched_fastq_file_name; 
       SYSTEM(command);
+      
+      settings.track_intermediate_file(settings.reference_alignment_done_file_name, stage1_unmatched_fastq_file_name);
+      settings.track_intermediate_file(settings.reference_alignment_done_file_name, stage1_reference_sam_file_name);
     }
 
  
@@ -1300,12 +1306,10 @@ int breseq_default_action(int argc, char* argv[])
     
 			{
 				string base_read_file_name = read_file.base_name();
-				string read_fastq_file = settings.base_name_to_read_file_name(base_read_file_name);
-				string reference_sam_file_name = settings.file_name(settings.reference_sam_file_name, "#", base_read_file_name);
         
         // If we are doing staged alignment -- only align the unmatched reads with SSAHA2 and save to different name initially
-        read_fastq_file = settings.file_name(settings.stage1_unmatched_fastq_file_name, "#", base_read_file_name);
-        reference_sam_file_name = settings.file_name(settings.stage2_reference_sam_file_name, "#", base_read_file_name);
+        string read_fastq_file = settings.file_name(settings.stage1_unmatched_fastq_file_name, "#", base_read_file_name);
+        string reference_sam_file_name = settings.file_name(settings.stage2_reference_sam_file_name, "#", base_read_file_name);
           
         uint32_t bowtie2_seed_substring_size_relaxed = 5 + trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].avg_read_length * 0.1);
         // Check bounds
@@ -1315,6 +1319,8 @@ int breseq_default_action(int argc, char* argv[])
         string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local " + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_relaxed) 
           + " " + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_relaxed + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + reference_sam_file_name; 
         SYSTEM(command);
+        
+        settings.track_intermediate_file(settings.reference_alignment_done_file_name, reference_sam_file_name);
         
         /////////////////////
         // MERGE SAM FILES //
@@ -1335,16 +1341,12 @@ int breseq_default_action(int argc, char* argv[])
                                                      stage2_reference_sam_file_name,
                                                      reference_sam_file_name
                                                      );
+          
+          // Not deleted until after resolving alignments
+          settings.track_intermediate_file(settings.alignment_correction_done_file_name, reference_sam_file_name);
         }
       }
     }
-
-    
-		/// Delete the hash files immediately
-		if (!settings.keep_all_intermediates)
-		{
-			// @JEB ...delete files here...
-		}
 
 		settings.done_step(settings.reference_alignment_done_file_name);
 	}
@@ -1383,10 +1385,11 @@ int breseq_default_action(int argc, char* argv[])
       SYSTEM(command);
       command = samtools + " sort " + coverage_junction_best_bam_unsorted_file_name + " " + coverage_junction_best_bam_prefix;
       SYSTEM(command);
-      if (!settings.keep_all_intermediates)
-        remove(coverage_junction_best_bam_unsorted_file_name.c_str());
       command = samtools + " index " + coverage_junction_best_bam_file_name;
       SYSTEM(command);
+      
+      settings.track_intermediate_file(settings.coverage_junction_done_file_name, coverage_junction_best_bam_unsorted_file_name);
+      settings.track_intermediate_file(settings.coverage_junction_done_file_name, preprocess_junction_best_sam_file_name);
 
       // Count errors
       string reference_fasta_file_name = settings.reference_fasta_file_name;
@@ -1405,12 +1408,17 @@ int breseq_default_action(int argc, char* argv[])
         settings.base_quality_cutoff,
         "" //covariates
       );
+      settings.track_intermediate_file(settings.coverage_junction_done_file_name, reference_bam_file_name);
+      settings.track_intermediate_file(settings.coverage_junction_done_file_name, reference_bam_file_name + ".bai");
+
+
 
       CoverageDistribution::analyze_unique_coverage_distributions(settings, 
                                                                   summary, 
                                                                   ref_seq_info,
                                                                   settings.coverage_junction_plot_file_name, 
-                                                                  settings.coverage_junction_distribution_file_name
+                                                                  settings.coverage_junction_distribution_file_name,
+                                                                  settings.coverage_junction_done_file_name
                                                                   );
 
       // Note that storing from unique_coverage and reloading in preprocess_coverage is by design
@@ -1430,6 +1438,11 @@ int breseq_default_action(int argc, char* argv[])
 			string faidx_command = samtools + " faidx " + settings.candidate_junction_fasta_file_name;
 			if (!file_empty(settings.candidate_junction_fasta_file_name.c_str()))
 				SYSTEM(faidx_command);
+      
+      settings.track_intermediate_file(settings.output_done_file_name, settings.candidate_junction_fasta_file_name);
+      settings.track_intermediate_file(settings.output_done_file_name, settings.candidate_junction_fasta_file_name + ".fai");
+
+
 
 			summary.candidate_junction.store(candidate_junction_summary_file_name);
 			settings.done_step(settings.candidate_junction_done_file_name);
@@ -1456,6 +1469,7 @@ int breseq_default_action(int argc, char* argv[])
 			{
         string command = "bowtie2-build -q " + candidate_junction_fasta_file_name + " " + candidate_junction_hash_file_name;
         SYSTEM(command);
+        settings.track_intermediate_file(settings.candidate_junction_alignment_done_file_name, candidate_junction_hash_file_name + "*");
 			}
 
 			/// ssaha2 align reads to candidate junction sequences
@@ -1478,13 +1492,9 @@ int breseq_default_action(int argc, char* argv[])
         string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local " + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_stringent) + " "
          + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_stringent + " --reorder -x " + candidate_junction_hash_file_name + " -U " + read_fastq_file + " -S " + candidate_junction_sam_file_name; 
         SYSTEM(command);
+        
+        settings.track_intermediate_file(settings.output_done_file_name, candidate_junction_sam_file_name + "*");
       }
-
-			/// Delete the hash files immediately
-			if (!settings.keep_all_intermediates)
-			{
-				// ...delete files...
-			}
 
 			settings.done_step(settings.candidate_junction_alignment_done_file_name);
 		}
@@ -1546,7 +1556,7 @@ int breseq_default_action(int argc, char* argv[])
 			command = samtools + " sort " + junction_bam_unsorted_file_name + " " + junction_bam_prefix;
       SYSTEM(command);
 			if (!settings.keep_all_intermediates)
-				remove(junction_bam_unsorted_file_name.c_str());
+				remove_file(junction_bam_unsorted_file_name.c_str());
 			command = samtools + " index " + junction_bam_file_name;
 			SYSTEM(command);
 		}
@@ -1561,9 +1571,12 @@ int breseq_default_action(int argc, char* argv[])
 		command = samtools + " sort " + reference_bam_unsorted_file_name + " " + reference_bam_prefix;
     SYSTEM(command);
 		if (!settings.keep_all_intermediates)
-			remove(reference_bam_unsorted_file_name.c_str());
+			remove_file(reference_bam_unsorted_file_name.c_str());
 		command = samtools + " index " + reference_bam_file_name;
     SYSTEM(command);
+
+    settings.track_intermediate_file(settings.output_done_file_name, settings.junction_bam_file_name);
+    settings.track_intermediate_file(settings.output_done_file_name, settings.junction_bam_file_name + ".bai");
 
 		settings.done_step(settings.bam_done_file_name);
 	}
@@ -1744,7 +1757,8 @@ int breseq_default_action(int argc, char* argv[])
                                                                   summary, 
                                                                   ref_seq_info,
                                                                   settings.unique_only_coverage_plot_file_name, 
-                                                                  settings.unique_only_coverage_distribution_file_name
+                                                                  settings.unique_only_coverage_distribution_file_name,
+                                                                  "NULL" // means to never delete intermediates
                                                                   );
 
     //Coverage distribution user option --deletion-coverage-propagation-cutoff

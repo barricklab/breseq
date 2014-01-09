@@ -41,6 +41,8 @@ namespace breseq
 		string _formatted_time_start;
 		time_t _time_end;
 		string _formatted_time_end;
+    // stores a list of files that need to be cleaned up after later steps
+    storable_map<string,storable_vector<string> > _done_key_intermediate_files;
     
     void serialize(ofstream& f)
     {
@@ -54,6 +56,7 @@ namespace breseq
       write_to_file(f, _formatted_time_start);
       write_to_file(f, _time_end);
       write_to_file(f, _formatted_time_end);
+      _done_key_intermediate_files.serialize(f);
     }
     void deserialize(ifstream& f)
     {
@@ -67,6 +70,7 @@ namespace breseq
       read_from_file(f, _formatted_time_start);
       read_from_file(f, _time_end);
       read_from_file(f, _formatted_time_end);
+      _done_key_intermediate_files.deserialize(f);
     }
 	};
 	
@@ -183,8 +187,10 @@ namespace breseq
 		string arguments;
     
     //! Done file tracking
+    string current_step_done_key;
     map<string,string> done_key_messages;
 		vector<ExecutionTime> execution_times;
+    storable_map<string,storable_vector<string> > done_key_intermediate_files;
     
     //! Read files
     cReadFiles read_files;
@@ -705,9 +711,14 @@ namespace breseq
       return this->read_files.base_name_to_read_file_name(base_name);
 		}
 
-		bool do_step(string done_key, string message);
-		void done_step(string done_key);
 		void check_installed();
+    
+    bool do_step(const string& done_key, const string& message);
+    void set_current_step_done_key(const string& done_key) { current_step_done_key = done_key; }
+    string get_current_step_done_key() {return current_step_done_key; };
+		void done_step(const string& done_key);
+    void track_intermediate_file(const string& done_key, const string& file_path);
+    
     void log(const string& message);
   private:
 

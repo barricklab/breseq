@@ -773,6 +773,7 @@ int do_annotate(int argc, char* argv[])
   ("help,h", "produce advanced help message", TAKES_NO_ARGUMENT)
   ("output,o", "path to output file with added mutation data. (DEFAULT: annotated.html OR annotated.gd")
   ("reference,r", "reference sequence in GenBank flatfile format (REQUIRED)")
+  ("repeat-header", "repeat the header line every this many rows (0=OFF)", "10")
   ("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT)
   ("gd", "generate GenomeDiff output instead of HTML", TAKES_NO_ARGUMENT)
   ;
@@ -931,7 +932,7 @@ int do_annotate(int argc, char* argv[])
       mt_options.force_frequencies_for_one_reference = true;
     mt_options.one_ref_seq = ref_seq_info.size() == 1;
     mt_options.gd_name_list_ref = gd_base_names;
-    mt_options.repeat_header = 10;
+    mt_options.repeat_header = from_string<int32_t>(options["repeat-header"]);
     
     html_compare(settings, output_file_name, "Mutation Comparison", gd, mt_options);
         

@@ -395,7 +395,7 @@ namespace breseq {
    *  and another SAM file of the best read matches to the reference genome for
    *  a preliminary analysis of coverage that is necessary for junction prediction.
 	 */
-	void PreprocessAlignments::preprocess_alignments(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info)
+	void PreprocessAlignments::preprocess_alignments(Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info)
 	{
 		cout << "Preprocessing alignments." << endl;
     
@@ -419,7 +419,8 @@ namespace breseq {
 			// includes all matches, and splits long indels for this one read file
       string preprocess_junction_split_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", read_file.m_base_name);
       tam_file PSAM(preprocess_junction_split_sam_file_name, reference_fasta_file_name, ios_base::out);
-      
+      settings.track_intermediate_file(settings.candidate_junction_done_file_name, preprocess_junction_split_sam_file_name);
+
 			alignment_list alignments;
 			while (tam.read_alignments(alignments, false))
 			{
@@ -875,8 +876,11 @@ namespace breseq {
 		sort(combined_candidate_junctions.begin(), combined_candidate_junctions.end(), JunctionCandidate::sort_by_ref_seq_coord);
     
     cFastaFile out(settings.candidate_junction_fasta_file_name, ios_base::out);
-    ofstream detailed(settings.candidate_junction_detailed_file_name.c_str());
-
+    ofstream detailed;
+    if (settings.junction_debug) {
+      detailed.open(settings.candidate_junction_detailed_file_name.c_str());
+    }
+    
 		for (uint32_t j = 0; j < combined_candidate_junctions.size(); j++) {
       
 			JunctionCandidate& junction = combined_candidate_junctions[j];
@@ -887,13 +891,14 @@ namespace breseq {
 			out.write_sequence(seq);
       
       // write to detailed file
+      if (settings.junction_debug) {
       detailed << seq;
-      for (vector<JunctionCandidatePtr>::iterator it = junction.merged_from.begin(); it != junction.merged_from.end(); it++) {
-        JunctionCandidate& merged_junction = **it;
-        detailed << merged_junction.junction_key() << "\t" << merged_junction.sequence << "\n";
+        for (vector<JunctionCandidatePtr>::iterator it = junction.merged_from.begin(); it != junction.merged_from.end(); it++) {
+          JunctionCandidate& merged_junction = **it;
+          detailed << merged_junction.junction_key() << "\t" << merged_junction.sequence << "\n";
+        }
+        detailed << "======" << endl;
       }
-      detailed << "======" << endl;
-
 		}
 		out.close();
     

@@ -50,7 +50,8 @@ namespace breseq {
                                                      cReferenceSequences& ref_seq_info, 
                                                      uint32_t coverage_group_id, 
                                                      string plot_file_name, 
-                                                     string distribution_file_name
+                                                     string distribution_file_name,
+                                                     string step_key
                                                      );
     
 		static void analyze_unique_coverage_distributions(
@@ -58,7 +59,8 @@ namespace breseq {
                                                       Summary& summary, 
                                                       cReferenceSequences& ref_seq_info, 
                                                       string plot_key, 
-                                                      string distribution_file_name
+                                                      string distribution_file_name,
+                                                      string step_key
                                                       );
     
     //Tiling is taking a coverage file and grouping entries
