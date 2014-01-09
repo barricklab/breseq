@@ -317,7 +317,7 @@ namespace breseq {
   public:
     /*! Preprocesses alignments
 		 */
-		static void preprocess_alignments(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info);
+		static void preprocess_alignments(Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info);
     static void split_alignments_on_indels(const Settings& settings, Summary& summary, tam_file& PSAM, int32_t min_indel_split_len, const alignment_list& alignments);
 
     static void split_matched_and_unmatched_alignments(

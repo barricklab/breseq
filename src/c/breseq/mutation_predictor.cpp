@@ -355,7 +355,7 @@ namespace breseq {
       cSequenceFeature* r2_pointer = within_repeat(mut["seq_id"], n(mut["position"]) + n(mut["size"]));
       
 			///
-			// (2) there is is no junction, but both ends of the deletion are in different copies of the same repeat sequence
+			// (2) there is no junction, but both ends of the deletion are in different copies of the same repeat sequence
 			///
 
 			// Then we will adjust the coordinates to remove...

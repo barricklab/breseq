@@ -187,7 +187,7 @@ namespace breseq {
                               );
   
   void resolve_alignments(
-                          const Settings& settings,
+                          Settings& settings,
                           Summary& summary,
                           cReferenceSequences& ref_seq_info,
                           const bool junction_prediction,

@@ -43,6 +43,7 @@ namespace breseq {
     {
         pid_t pid = getpid();
         string log_file_name = distribution_file_name + ".r.log";
+
         string command = "R --vanilla < " + cString(settings.program_data_path).escape_shell_chars() +
         "/coverage_distribution.r" + " > " + cString(log_file_name).escape_shell_chars();
         command += " distribution_file=" + cString(distribution_file_name).escape_shell_chars();
@@ -84,7 +85,8 @@ namespace breseq {
                                                                     cReferenceSequences& ref_seq_info,
                                                                     uint32_t coverage_group_id,
                                                                     string plot_key,
-                                                                    string distribution_file_name
+                                                                    string distribution_file_name,
+                                                                    string step_key
                                                                     )
     {
     
@@ -141,7 +143,10 @@ namespace breseq {
                                         unique_only_coverage_plot_file_name,
                                         deletion_propagation_pr_cutoff
                                         );
-        
+        settings.track_intermediate_file(step_key, unique_only_coverage_plot_file_name);
+        settings.track_intermediate_file(step_key, unique_only_coverage_distribution_file_name);
+        settings.track_intermediate_file(step_key, unique_only_coverage_distribution_file_name + ".r.log");
+
         // First two lines are negative binomial parameters.
         // Next three lines are average, standard deviation, and index of overdispersion
         
@@ -186,7 +191,8 @@ namespace breseq {
                                                                      Summary& summary,
                                                                      cReferenceSequences& ref_seq_info,
                                                                      string plot_file_name,
-                                                                     string distribution_file_name
+                                                                     string distribution_file_name,
+                                                                     string step_key
                                                                      )
     {
       vector<vector<string> > seq_ids_by_coverage_group = settings.seq_ids_by_coverage_group();
@@ -200,7 +206,8 @@ namespace breseq {
                                                  ref_seq_info,
                                                  i,
                                                  plot_file_name,
-                                                 distribution_file_name
+                                                 distribution_file_name,
+                                                 step_key
                                                  );
         }
     }
