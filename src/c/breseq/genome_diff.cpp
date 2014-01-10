@@ -2887,6 +2887,7 @@ cGenomeDiff cGenomeDiff::validate_evidence(cReferenceSequences& sequence,
                                            uint32_t shorten_length,
                                            cGenomeDiff& ctrl,
                                            cGenomeDiff& test,
+                                           bool jc_only_accepted,
                                            bool verbose) {
   
   //TODO currently only compares JC evidence.
@@ -2950,6 +2951,7 @@ cGenomeDiff cGenomeDiff::validate_evidence(cReferenceSequences& sequence,
   
   diff_entry_list_t test_list = test.list(make_vector<gd_entry_type>(JC));
   test_list.remove_if(cDiffEntry::field_exists("circular_chromosome")); 
+  if (jc_only_accepted) test_list.remove_if(cDiffEntry::field_exists("reject")); 
   
   int32_t i = 0;
   for (diff_entry_list_t::iterator it = test_list.begin(); it != test_list.end(); ++it) {
