@@ -459,13 +459,14 @@ int do_validate(int argc, char *argv[])
 int do_check(int argc, char *argv[])
 {
   AnyOption options("gdtools CHECK [-o output.gd] control.gd test.gd");
-  options("output,o",     "output GD file", "comp.gd");
-  options("reference,r",  "reference sequence file");
-  options("evidence",     "compare evidence", TAKES_NO_ARGUMENT);
-  options("jc-buffer",    "length of sequence segment to compare for JC evidence", 50);
-  options("jc-shorten",   "length to shorten control segments by when comparing JC evidence for overlap", 5);
-  options("plot-jc",      "plot JC Precision versus Score, argument is a prefix for the file paths");
-  options("verbose,v",    "verbose mode", TAKES_NO_ARGUMENT);
+  options("output,o",         "output GD file", "comp.gd");
+  options("reference,r",      "reference sequence file");
+  options("evidence",         "compare evidence", TAKES_NO_ARGUMENT);
+  options("jc-buffer",        "when comparing JC evidence, length of sequence segment to compare for JC evidence", 50);
+  options("jc-shorten",       "when comparing JC evidence, length to shorten control segments by when comparing JC evidence for overlap", 5);
+  options("jc-only-accepted", "when comparing JC evidence, do not score/count rejected items", TAKES_NO_ARGUMENT);
+  options("plot-jc",          "plot JC Precision versus Score, argument is a prefix for the file paths");
+  options("verbose,v",        "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 
   options.addUsage("");
@@ -511,7 +512,7 @@ int do_check(int argc, char *argv[])
     ref.LoadFiles(from_string<vector<string> >(options["reference"]));
 
     uout("Comparing evidence");
-    comp = cGenomeDiff::validate_evidence(ref, un(options["jc-buffer"]), un(options["jc-shorten"]), ctrl, test, options.count("verbose"));
+    comp = cGenomeDiff::validate_evidence(ref, un(options["jc-buffer"]), un(options["jc-shorten"]), ctrl, test, options.count("jc-only-accepted"), options.count("verbose"));
 
     if (options.count("plot-jc")) {
       uout("Evaluating results to plot data.");
