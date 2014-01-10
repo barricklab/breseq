@@ -570,7 +570,7 @@ namespace breseq
     this->minimum_candidate_junction_pos_hash_score = 2;
     this->minimum_candidate_junctions = 250;
 		this->maximum_candidate_junctions = 5000;
-		this->maximum_candidate_junction_length_factor = 0.1;
+		this->maximum_candidate_junction_length_factor = 0.25;
     this->penalize_negative_junction_overlap = true;
 
     //! Settings: Alignment Resolution
