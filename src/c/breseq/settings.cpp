@@ -207,7 +207,9 @@ namespace breseq
     options.addUsage("Junction Options", true);
     options
     ("no-junction-prediction", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
-    ("junction-alignment-pair-limit", "Only consider this many passed alignment pairs when creating candidate junction sequences (0 = ALL)", 100000, ADVANCED_OPTION)
+    ("junction-alignment-pair-limit", "Only consider this many passed alignment pairs when creating candidate junction sequences (0 = ALL)", 100000, ADVANCED_OPTION)    
+    ("junction-minimum-candidates", "Test at least this many of the top-scoring junction candidates, regardless of their length ", 100, ADVANCED_OPTION)
+    ("junction-candidate-length-factor", "Accept top-scoring junction candidates to test until their cumulative length is this factor times the total reference sequence length", 0.1, ADVANCED_OPTION)
     ("junction-score-cutoff", "Maximum negative log10 probability of uneven coverage across a junction breakpoint to accept (0 = OFF)", 3.0, ADVANCED_OPTION)
     ("junction-minimum-pos-hash-score", "Minimum number of distinct spanning read start positions required to accept a junction (DEFAULT = consensus mode, 3; polymorphism mode, 2)", "", ADVANCED_OPTION)
     ("junction-minimum-side-match", "Minimum number of bases a read must extend past any overlap or read-only sequence at the breakpoint of a junction on each side to count as support for the junction (DEFAULT = consensus mode, 1; polymorphism mode, 6)", "", ADVANCED_OPTION)
@@ -377,6 +379,8 @@ namespace breseq
     
     // Junction Prediction
     this->no_junction_prediction = options.count("no-junction-prediction");
+    this->minimum_candidate_junctions = from_string<int32_t>(options["junction-minimum-candidates"]);
+    this->maximum_candidate_junction_length_factor = from_string<double>(options["junction-candidate-length-factor"]);    
     this->maximum_junction_sequence_passed_alignment_pairs_to_consider = from_string<uint64_t>(options["junction-alignment-pair-limit"]);
     this->junction_pos_hash_neg_log10_p_value_cutoff = from_string<double>(options["junction-score-cutoff"]);
         
@@ -568,9 +572,7 @@ namespace breseq
     this->required_one_unique_length_per_side = 0;
     
     this->minimum_candidate_junction_pos_hash_score = 2;
-    this->minimum_candidate_junctions = 250;
 		this->maximum_candidate_junctions = 5000;
-		this->maximum_candidate_junction_length_factor = 0.25;
     this->penalize_negative_junction_overlap = true;
 
     //! Settings: Alignment Resolution

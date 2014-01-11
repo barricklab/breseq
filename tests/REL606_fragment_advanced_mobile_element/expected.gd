@@ -1,7 +1,7 @@
 #=GENOME_DIFF	1.0
 #=AUTHOR	
-#=REFSEQ	./../data/REL606/REL606.fragment.gbk
-#=READSEQ	./../data/REL606/REL606.advanced_mobile_element.fastq
+#=REFSEQ	tests/REL606_fragment_advanced_mobile_element/../data/REL606/REL606.fragment.gbk
+#=READSEQ	tests/REL606_fragment_advanced_mobile_element/../data/REL606/REL606.advanced_mobile_element.fastq
 MOB	1	35,36	REL606-5	1000	IS1	-1	3	gene_list=dkgB	gene_name=dkgB	gene_position=coding (400-402/804 nt)	gene_product=2,5-diketo-D-gluconate reductase B	gene_strand=>	html_gene_name=<i>dkgB</i>&nbsp;&rarr;	locus_tag=ECB_00200
 MOB	2	37,38	REL606-5	2000	IS1	1	7	gene_list=yafC	gene_name=yafC	gene_position=coding (310-316/915 nt)	gene_product=predicted DNA-binding transcriptional regulator	gene_strand=<	html_gene_name=<i>yafC</i>&nbsp;&larr;	locus_tag=ECB_00201
 MOB	3	25,39,40	REL606-5	3000	IS1	-1	-3	gene_list=yafD	gene_name=yafD	gene_position=coding (441-445/801 nt)	gene_product=hypothetical protein	gene_strand=>	html_gene_name=<i>yafD</i>&nbsp;&rarr;	locus_tag=ECB_00202
