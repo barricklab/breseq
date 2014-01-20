@@ -1301,7 +1301,7 @@ int do_simulate_mutations(int argc, char *argv[])
 
 int do_mutations_to_evidence(int argc, char *argv[])
 {
-  AnyOption options("Usage: breseq MUTATIONS-TO-EVIDENCE -r <reference> -o <output.gd> input.gd");  
+  AnyOption options("Usage: gdtools MUTATIONS-TO-EVIDENCE -r <reference> -o <output.gd> input.gd");  
   options("reference,r","Reference file");  
   options("output,o","Output file");
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
@@ -1432,8 +1432,8 @@ int do_header(int argc, char* argv[])
 int do_download(int argc, char *argv[])
 {
   stringstream ss;
-  ss << "Usage: breseq DOWNLOAD -l <user:password> -d <download_dir> -g <genome_diff_dir>\n";
-  ss << "Usage: breseq DOWNLOAD -l <user:password> -d <download_dir> <file1.gd file2.gd file3.gd ...>\n";
+  ss << "Usage: gdtools DOWNLOAD -l <user:password> -d <download_dir> -g <genome_diff_dir>\n";
+  ss << "Usage: gdtools DOWNLOAD -l <user:password> -d <download_dir> <file1.gd file2.gd file3.gd ...>\n";
 
   AnyOption options(ss.str());
   options("login,l",           "Login user:password information for private server access.");
@@ -1445,8 +1445,8 @@ int do_download(int argc, char *argv[])
   options.processCommandArgs(argc, argv);
 
   options.addUsage("\nExamples:");
-  options.addUsage("  breseq DOWNLOAD -l john:1234 -d downloads -g data");
-  options.addUsage("  breseq DOWNLOAD -l john:1234 -d downloads 1B4.gd GRC2000.gd");
+  options.addUsage("  gdtools DOWNLOAD -l john:1234 -d downloads -g data");
+  options.addUsage("  gdtools DOWNLOAD -l john:1234 -d downloads 1B4.gd GRC2000.gd");
 
   //! Step: Confirm genome diff files have been input.
   list<string> file_names;
@@ -1640,8 +1640,8 @@ int do_download(int argc, char *argv[])
 int do_runfile(int argc, char *argv[])
 {
   stringstream ss;
-  ss << "Usage: breseq RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> -g <genome diff data dir>\n";
-  ss << "Usage: breseq RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> <file1.gd file2.gd file3.gd ...>";
+  ss << "Usage: gdtools RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> -g <genome diff data dir>\n";
+  ss << "Usage: gdtools RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> <file1.gd file2.gd file3.gd ...>";
   AnyOption options(ss.str());
   options("executable,e",     "Executable program to run, add extra options here.", "breseq");
   options("options",          "Options to be passed to the executable.");
@@ -1664,10 +1664,10 @@ int do_runfile(int argc, char *argv[])
   options.addUsage("***Reminder: Create the error log directory before running TACC job.");
   options.addUsage("\n");
   options.addUsage("Examples:");
-  options.addUsage("\tCommand: breseq runfile -o 1B4_Mutated -l 1B4_Mutated_Errors 1B4.gd");
+  options.addUsage("\tCommand: gdtools runfile -o 1B4_Mutated -l 1B4_Mutated_Errors 1B4.gd");
   options.addUsage("\t  Output: breseq -o 1B4_Mutated -r NC_012660.1.gbk SRR172993.fastq >& 1B4_Mutated_Errors/1B4.errors.txt");
   options.addUsage("\n");
-  options.addUsage("\tCommand: breseq runfile -d 02_Downloads -l 04_Errors -g 01_Data");
+  options.addUsage("\tCommand: gdtools runfile -d 02_Downloads -l 04_Errors -g 01_Data");
   options.addUsage("\t  Output: breseq -o 1B4 -r 02_Downloads/NC_012660.1.gbk 02_Downloads/SRR172993.fastq >& 04_Errors/1B4.errors.txt");
   options.addUsage("\t  Output: breseq -o ZDB111 -r 02_Downloads/REL606.5.gbk 02_Downloads/SRR098039.fastq >& 04_Errors/ZDB111.errors.txt");
   options.processCommandArgs(argc, argv);
