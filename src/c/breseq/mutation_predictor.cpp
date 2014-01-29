@@ -1663,7 +1663,15 @@ namespace breseq {
             }
           }
         } // end sublocation loop
-        ASSERT(on_codon_pos_0 == 0, "Number of base pairs in CDS not a multiple of 3: " + g["name"]);
+        
+        // @JEB 01-24-2014 - will there be crashes with this? 
+        // BUG REPORT: It fails when a gene is truncated at the end of a contig
+        // TEST CASE: 
+        if (on_codon_pos_0 != 0) {
+          WARN("Number of base pairs in CDS not a multiple of 3: " + g["name"]);
+        }
+        // Currently these changes are not counted as anything when the codon overlaps the end of the sequence
+        // that seems fine!
         
         /// code to debug consistency with Perl
         /*

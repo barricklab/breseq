@@ -197,6 +197,13 @@ class cAnnotatedSequence;
     return retval;
 	}
   
+  inline char reverse_complement(char seq)
+	{
+		char retval(' ');
+    retval = reverse_complement_lookup_table[static_cast<uint8_t>(seq)];
+    return retval;
+	}
+  
   inline cFastqSequence reverse_complement(cFastqSequence _seq) {
     cFastqSequence seq = _seq;
     seq.m_sequence = reverse_complement(seq.m_sequence);

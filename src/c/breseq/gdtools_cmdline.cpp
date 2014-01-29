@@ -191,7 +191,7 @@ int do_apply(int argc, char *argv[])
 
 
   //Check to see if every item in the loaded .gd is applicable to the reference file.
-  ASSERT(gd.is_valid(ref_seq_info, options.count("verbose")), "Reference file and GenomeDiff file don't match.");
+  gd.valid_with_reference_sequences(ref_seq_info);
   gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, options.count("verbose"));
 
   uout("Writing output file in " + format + " format");
@@ -434,25 +434,46 @@ int do_check_plot(int argc, char *argv[])
 // Check format of Genome Diff and report all format errors
 int do_validate(int argc, char *argv[])
 {
-    AnyOption options("gdtools VALIDATE input1.gd [input2.gd]");
-    //options("reference,r",  "reference sequence file");
+    AnyOption options("gdtools VALIDATE [] input1.gd [input2.gd]");
+    options("reference,r",  "reference sequence file. If provided, will validate seq_ids and positions in the GD file using thes.  Option may be provided multiple times for multiple files. (OPTIONAL)");
     options.addUsage("");
     options.addUsage("Validates whether the format of the input Genome Diff files is correct.");
 
     options.processCommandArgs(argc, argv);
 
+    if (options.getArgc() == 0) {
+        options.printUsage();
+        return -1;
+    }
+    
+    // Further read in reference sequences and check IDs of mutations if user provided
+    cReferenceSequences ref;
+    if (options.count("reference")) {
+        ref.LoadFiles(from_string<vector<string> >(options["reference"]));
+    }
+    
+    
     // Simply read files. Really need some way to change deadly errors to warnings in read function.
     for (int32_t i=0; i<options.getArgc(); i++) {
         string gd_file_name = options.getArgv(i);
         cerr <<  "Validating Genome Diff format for file: " << gd_file_name << endl;
         cGenomeDiff gd;
         cFileParseErrors pe = gd.read(gd_file_name, true);
-        if (pe._errors.size() == 0) {
+
+        cFileParseErrors pe2;
+        if (options.count("reference")) {
+            pe2 = gd.valid_with_reference_sequences(ref, true);
+        }
+        
+        if (pe._errors.size() + pe2._errors.size() == 0) {
             cerr << "  FORMAT OK" << endl;
         } else {
             pe.print_errors(false);
+            pe2.print_errors(false);
         }
-    }    
+    }
+    
+    
     return 0;
 }
 
@@ -512,7 +533,7 @@ int do_check(int argc, char *argv[])
     ref.LoadFiles(from_string<vector<string> >(options["reference"]));
 
     uout("Comparing evidence");
-    comp = cGenomeDiff::validate_evidence(ref, un(options["jc-buffer"]), un(options["jc-shorten"]), ctrl, test, options.count("jc-only-accepted"), options.count("verbose"));
+    comp = cGenomeDiff::check_evidence(ref, un(options["jc-buffer"]), un(options["jc-shorten"]), ctrl, test, options.count("jc-only-accepted"), options.count("verbose"));
 
     if (options.count("plot-jc")) {
       uout("Evaluating results to plot data.");
@@ -540,7 +561,7 @@ int do_check(int argc, char *argv[])
 
   } else {
     uout("Comparing mutations");
-    comp = cGenomeDiff::validate(ctrl, test, options.count("verbose"));
+    comp = cGenomeDiff::check(ctrl, test, options.count("verbose"));
   }
 
   uout("Assigning unique IDs to Genome Diff entries");
@@ -957,8 +978,11 @@ int do_count(int argc, char* argv[])
   ("reference,r", "reference sequence in GenBank flatfile format (REQUIRED)")
   ("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT)
   ("base-substitution-statistics,b", "calculate detailed base substitution statistics", TAKES_NO_ARGUMENT)
-  
   ;
+  options.addUsage("");
+  options.addUsage("\"small\" mutations are ≤ 50 bp. \"large\" mutations are >50 bp");
+  
+    
   options.processCommandArgs(argc, argv);
   
   UserOutput uout("COUNT");
@@ -1190,7 +1214,7 @@ int do_filter_gd(int argc, char* argv[])
       }
     }
     if (reasons.size()) {
-      printf("Filtered[%s]: %s\n", join(reasons, ", ").c_str(), mut.to_string().c_str());
+      printf("Filtered[%s]: %s\n", join(reasons, ", ").c_str(), mut.as_string().c_str());
       mut["filtered"] = join(reasons, ", ");
       mut["comment_out"] = "true";
     }

@@ -124,7 +124,7 @@ public:
   string _filename;
   bool _fatal;
   
-  cFileParseErrors(const string& filename)
+  cFileParseErrors(const string& filename = "")
   : _filename(filename), _fatal(false)
   { }
   
@@ -192,8 +192,11 @@ public:
   cDiffEntry(const string &line, uint32_t line_number, cFileParseErrors* file_parse_errors = NULL); //For deserialization from gd file.
   cDiffEntry(diff_entry_map_t& de) : diff_entry_map_t(de) {};
   
-  // Helper function
+  //! Helper function
   static gd_entry_type type_to_enum(string type);
+  
+  //! Checks fields for expected types (such as integers)
+  void valid_field_variable_types(cFileParseErrors& parse_errors);
 
   //! Copy constructor
   //cDiffEntry(const cDiffEntry& rhs) : _fields(rhs._fields), _type(rhs._type), _id(rhs._id), _parents(rhs._parents) {}
@@ -212,9 +215,7 @@ public:
   
   //! Const accessor
   diff_entry_value_t get(const diff_entry_key_t key) const { return this->find(key)->second; }
-  
-  //!---- Accessors to generic properties ---- !//
-  
+    
   //! Comparison operator
   bool operator== (const cDiffEntry& de);
   
@@ -248,7 +249,7 @@ public:
   virtual void marshal(vector<string>& s) const;
   
   //! Serialize this diff entry into a string for output.
-  virtual string to_string(void) const;
+  virtual string as_string(void) const;
   
   //!---- Reject Reasons Field ---- !//
   
@@ -408,7 +409,7 @@ public:
 
 // Overload to output Genome DIff entries
 inline ostream &operator<<( ostream &out, const cDiffEntry &de ) {
-  out << de.to_string();
+  out << de.as_string();
   return out;
 }
   
@@ -431,7 +432,7 @@ public:
 
   //!---- Variables ---- !//
 protected:  	
-  string _default_filename;           //!< Default filename for this diff.
+  string _filename;                   //!< File name associated with this diff.
   diff_entry_list_t _entry_list;      //!< All diff entries.
   uint32_t _unique_id_counter;        //!< Smallest available id.
   map<uint32_t,bool> unique_id_used;
@@ -469,7 +470,7 @@ public:
   
   //!---- Accessors ---- !//
 
-  string file_name() const {return _default_filename;}
+  string file_name() const {return _filename;}
 
   void add_breseq_data(const key_t &key, const string& value)
     { this->metadata.breseq_data.insert(pair<string,string>(key, value)); }
@@ -482,11 +483,11 @@ public:
   //! Read a genome diff from a file.
   cFileParseErrors read(const string& filename, bool suppress_errors = false);
   
+  //! Check to see if genome diff is valid with reference sequences
+  cFileParseErrors valid_with_reference_sequences(cReferenceSequences& ref_seq, bool suppress_errors = false);
+    
   //! Write the genome diff to a file.
   void write(const string& filename);
-  
-  //! Helper function to check if loaded info seq_ids match supplied reference.
-  bool is_valid(cReferenceSequences& ref_seq_info, bool verbose=false);
   
   //!---- Adding and Removing Entries ---- !//
   
@@ -603,8 +604,9 @@ public:
    
   //!---- Comparing known lists of mutations/evidence to test files ---- !//
   
-  static cGenomeDiff validate(cGenomeDiff& ctrl, cGenomeDiff& test, bool verbose = false);
-  static cGenomeDiff validate_evidence(cReferenceSequences& sequence,
+  static cGenomeDiff check(cGenomeDiff& ctrl, cGenomeDiff& test, bool verbose = false);
+  
+  static cGenomeDiff check_evidence(cReferenceSequences& sequence,
                                        uint32_t buffer,
                                        uint32_t shorten_length,
                                        cGenomeDiff& ctrl,
