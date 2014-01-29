@@ -104,6 +104,21 @@ map<gd_entry_type, vector<string> > line_specification = make_map<gd_entry_type,
   
 ; // end line specifications
 
+  enum diff_entry_field_variable_t {
+    kDiffEntryFieldVariableType_PositiveInteger,
+    kDiffEntryFieldVariableType_Integer,
+    kDiffEntryFieldVariableType_Strand // must be -1 or +1
+  };
+  
+map<string, diff_entry_field_variable_t > diff_entry_field_variable_types = make_map<string, diff_entry_field_variable_t>
+("position", kDiffEntryFieldVariableType_PositiveInteger)
+("start", kDiffEntryFieldVariableType_PositiveInteger)
+("end", kDiffEntryFieldVariableType_PositiveInteger)
+("size", kDiffEntryFieldVariableType_PositiveInteger)
+("strand", kDiffEntryFieldVariableType_Strand)
+("duplication_size", kDiffEntryFieldVariableType_Integer)
+("new_copy_number", kDiffEntryFieldVariableType_PositiveInteger)
+;
 
 const vector<string>gd_entry_type_lookup_table =
   make_vector<string>("UNKNOWN")("SNP")("SUB")("DEL")("INS")("MOB")("AMP")("INV")("CON")("RA")("MC")("JC")("CN")("UN")("CURA")("FPOS")("PHYL")("TSEQ")("PFLP")("RFLP")("PFGE")("NOTE")("MASK");
@@ -146,6 +161,8 @@ cDiffEntry::cDiffEntry(const string &line, uint32_t line_number, cFileParseError
   ,_evidence()
 {
   cDiffEntry& de = *this;
+  // this is a hidden field
+  de["_line_number"] = to_string<uint32_t>(line_number);
   vector<string> tokens = split(line, "\t");
 
   if (tokens.size() < 3) {
@@ -183,7 +200,7 @@ cDiffEntry::cDiffEntry(const string &line, uint32_t line_number, cFileParseError
   const vector<string>& specs = line_specification[de._type];
 
   if (tokens.size() < specs.size() ) {
-    if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Expected " + breseq::to_string(specs.size()) + " tab-delimited fixed columns for entry", true);
+    if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Expected " + to_string(specs.size()) + " tab-delimited fixed columns for entry", true);
     return;
   }
   
@@ -225,6 +242,51 @@ gd_entry_type cDiffEntry::type_to_enum(string type) {
   }
   return UNKNOWN;
 }
+
+// Checks all specification fields for expected types and adds errors to parse_errors
+void cDiffEntry::valid_field_variable_types(cFileParseErrors& parse_errors) {
+  
+  vector<string> spec = line_specification[this->_type];
+  
+  uint32_t field_count = 2; // skipping fixed fields
+  for(vector<string>::iterator it=spec.begin(); it!=spec.end(); ++it) {
+    field_count++;
+    if (diff_entry_field_variable_types.count(*it) == 0) continue;
+    
+    diff_entry_field_variable_t variable_type = diff_entry_field_variable_types[*it];
+    string value = (*this)[*it];
+    int32_t ret_val;
+    bool integral = is_integer(value, ret_val);
+    
+    if (!integral) {
+      parse_errors.add_line_error(from_string<uint32_t>((*this)["_line_number"]), this->as_string(), "Expected integral value for field " + to_string<uint32_t>(field_count) + ": [" + *it + "] instead of [" + value + "]." , false);
+      continue;
+    }
+    
+    
+    switch(variable_type)
+    {
+      case kDiffEntryFieldVariableType_PositiveInteger:
+        
+        if (ret_val <= 0) { 
+          parse_errors.add_line_error(from_string<uint32_t>((*this)["_line_number"]), this->as_string(), "Expected positive integral value for field " + to_string<uint32_t>(field_count) + ": [" + *it + "] instead of [" + value + "]."  , false);
+        }
+        break;
+        
+      case kDiffEntryFieldVariableType_Integer:
+        // already tested
+        break;  
+        
+      case kDiffEntryFieldVariableType_Strand:
+        if ((ret_val != -1) && (ret_val != 1)) { 
+          parse_errors.add_line_error(from_string<uint32_t>((*this)["_line_number"]), this->as_string(), "Expected strand value (-1/1) for field " + to_string<uint32_t>(field_count) + ": [" + *it + "] instead of [" + value + "]." , false);
+        }
+        
+        break;
+    }
+  }
+}
+
   
 //Comparing IDs here will currently break cGenomeDiff::merge and cGenomeDiff::subtract
 bool cDiffEntry::operator==(const cDiffEntry& de)
@@ -320,7 +382,7 @@ int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info)
     case MOB:
     {
       // @JEB: Important: repeat_size is not a normal attribute and must be set before calling this function
-      ASSERT(this->entry_exists("repeat_size"), "Repeat size field does not exist for entry:\n" + this->to_string());
+      ASSERT(this->entry_exists("repeat_size"), "Repeat size field does not exist for entry:\n" + this->as_string());
       int32_t size = from_string<int32_t>((*this)["repeat_size"]) + from_string<int32_t>((*this)["duplication_size"]);
       if (this->entry_exists("del_start"))
         size -= from_string<uint32_t>((*this)["del_start"]);
@@ -391,7 +453,7 @@ void cDiffEntry::marshal(vector<string>& s) const {
 }
 
 // Created the line to be printed
-string cDiffEntry::to_string(void) const
+string cDiffEntry::as_string(void) const
 {
   vector<string> fields;
   marshal(fields);
@@ -560,7 +622,7 @@ void cDiffEntry::normalize_to_sequence(const cAnnotatedSequence &sequence, bool 
             cerr << "INVALID POSITION: " << pos_1 << endl;
           }
           
-          cerr << "[Mutation]: " << this->to_spec().to_string() << endl;
+          cerr << "[Mutation]: " << this->to_spec().as_string() << endl;
           cerr << "Sequence 1 [" << seq1_pos_1 << '-' << seq1_end_1 << "]: " << seq1 << endl;
           
           cerr << "Sequence 2 [" << seq2_pos_1 << '-' << seq2_end_1 << "]: " << seq2 << endl;
@@ -773,8 +835,7 @@ void cDiffEntry::normalize_to_sequence(const cAnnotatedSequence &sequence, bool 
 /*! Constructor.
  */
 cGenomeDiff::cGenomeDiff(const string& filename)
- : _default_filename(filename)
- , _unique_id_counter(0) 
+  : _unique_id_counter(0) 
 {
  read(filename);  
 }
@@ -810,10 +871,12 @@ diff_entry_ptr_t cGenomeDiff::parent(const cDiffEntry& evidence)
  _entry_list
  */
 cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors) {
-  ifstream in(filename.c_str());
+  _filename = filename;
+  ifstream in(this->file_name().c_str());
+
   ASSERT(in.good(), "Could not open file for reading: " + filename);
   uint32_t line_number = 1;
-  cFileParseErrors parse_errors(filename);
+  cFileParseErrors parse_errors(file_name());
   
   //! Step: Handle header parameters.
   //Example header:
@@ -880,10 +943,10 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
   
   if (metadata.version.empty()) {
     
-    parse_errors.add_line_error(0,"", "No #=GENOME_DIFF XX header line in this file.", true);
+    parse_errors.add_line_error(1,"", "No #=GENOME_DIFF XX header line in this file.", true);
     if (!suppress_errors) {
       parse_errors.print_errors();
-      exit(0);
+      exit(1);
     } else { 
       return parse_errors;
     }
@@ -913,7 +976,8 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
     } else if (line.find_first_not_of(' ') == string::npos) {
       continue;
     }
-    const cDiffEntry de(line, line_number, &parse_errors);
+    cDiffEntry de(line, line_number, &parse_errors);
+    de.valid_field_variable_types(parse_errors);
     if (de._type != UNKNOWN) add(de);
     
   }
@@ -929,6 +993,57 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
   
   return parse_errors;
 }
+  
+  
+cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences& ref_seq, bool suppress_errors)
+{
+  // For now we do rather generic checking... nothing specific to certain kind of entries
+  cFileParseErrors parse_errors(file_name());
+
+  for(diff_entry_list_t::iterator it=_entry_list.begin(); it!=_entry_list.end(); ++it) {
+    diff_entry_ptr_t& de = *it;
+    
+    if (de->entry_exists("seq_id")) {
+      string seq_id = (*de)["seq_id"];
+      if (!ref_seq.seq_id_exists(seq_id)) {
+        parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]),de->as_string(), "Seq ID [" + seq_id + "] not found in reference sequence files provided for entry.", true);
+        
+      } else {
+        int32_t valid_start = 1;
+        int32_t valid_end = ref_seq[seq_id].get_sequence_length();
+      
+        // You only have a position if you have a seq_id
+        if (de->entry_exists("position")) {
+          int32_t position = from_string<int32_t>((*de)["position"]);
+          if ((position < valid_start) || (position > valid_end)) {
+            parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]),de->as_string(), "Position [" + (*de)["position"] + "] is out of valid range for seq_id [" + to_string<int32_t>(valid_start) + "," + to_string<int32_t>(valid_end) + "] for entry.", true);
+          }
+          
+          // You only have a size if you have a position
+          if (de->entry_exists("size")) {
+            int32_t test_position = position + from_string<int32_t>((*de)["size"]);
+            if ((test_position < valid_start) || (test_position > valid_end)) {  
+              parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Position + Size  [" + to_string<uint32_t>(test_position) + "] is out of valid range for seq_id [" + to_string<int32_t>(valid_start) + "," + to_string<int32_t>(valid_end) + "] for entry.", true);
+            
+            }
+          } // end of size
+        } // end of position
+      }
+    } // end of seq_id
+  } // end of de loop
+    
+  if (!suppress_errors) {
+    parse_errors.print_errors();
+    if (parse_errors.fatal() )
+    {
+      ERROR("Errors in GenomeDiff File. Not safe to continue");
+      exit(1);
+    }
+  }
+  
+  return parse_errors;
+}
+
 
 /*! Write this genome diff to a file.
  NOTES:
@@ -970,145 +1085,15 @@ void cGenomeDiff::write(const string& filename) {
   
   for(diff_entry_list_t::iterator it=_entry_list.begin(); it!=_entry_list.end(); ++it) {
     if (!(*it)->entry_exists("comment_out")) {
-      fprintf(os, "%s\n", (**it).to_string().c_str());
+      fprintf(os, "%s\n", (**it).as_string().c_str());
     } else {
       (*it)->erase("comment_out");
-      fprintf(os, "#%s\n", (**it).to_string().c_str());
+      fprintf(os, "#%s\n", (**it).as_string().c_str());
     }
   }
   os.close();
 }
   
-//! Call to assure that every entry in a cGenomeDiff
-//  has the same SEQ_ID as the ref_seq_info.
-//  This will also try and check entry positions and
-//  sizes against the length of the ref_seq_info.
-bool cGenomeDiff::is_valid(cReferenceSequences& ref_seq_info, bool verbose)
-{  
-  //Go through every cDiffEntry for this cGenomeDiff
-  for (diff_entry_list_t::iterator entry = _entry_list.begin(); entry != _entry_list.end(); entry++)
-  {    
-    //Grab the information based on type for this entry
-    const list_t spec = line_specification[(**(entry))._type];
-    
-    //For every entry of this type go through each of their fields
-    for(size_t i = 0; i < spec.size(); i++)
-    {
-      //Does the current field contain a SEQ_ID?
-      if(spec[i].find(SEQ_ID) != string::npos)
-      {
-        bool no_match = true;
-        vector<string> failure;
-        
-        for (vector<cAnnotatedSequence>::iterator it_as = ref_seq_info.begin(); it_as < ref_seq_info.end(); it_as++)
-        {
-          //If the current entry has any SEQ_ID fields, does that SEQ_ID
-          // field match any from ref_seq_info?
-          if((**(entry))[spec[i]] == it_as->m_seq_id)
-            no_match = false;
-          
-          failure.push_back(it_as->m_seq_id);
-        }
-        
-        //If we couldn't find any matching SEQ_IDs, perform notification and failure.
-        if(no_match)
-        {
-          cout << "LOADED REFERENCE\t" << *failure.begin() << endl;
-          for(vector<string>::iterator it_fail = ++failure.begin(); it_fail < failure.end(); it_fail++)cout << "\t\t\t\t\t" << *it_fail << endl;
-          cout << "LOADED GENOMEDIFF\t" << (**(entry))[spec[i]] << " ID=" << (**(entry))._id << endl;
-          return false;
-        }
-      }
-      
-      string temp_seq_id = "";
-      
-      //Find the previous SEQ_ID; the one associated with this position
-      // To do this, we iterate backwards from the current field.
-      for(int32_t x = 0 + i; x >= 0; --x)
-      {
-        //Does the current entry have a SEQ_ID field?
-        if(spec[x].find(SEQ_ID) != string::npos)
-        {
-          temp_seq_id = (**(entry))[spec[x]];
-          break;
-        }
-      }
-      
-      //Does the current entry have any POSITION fields?
-      // WARNING!
-      // Position check might fail if the entry has multiple
-      // position fields as well as a size field.
-      if(spec[i].find(POSITION) != string::npos)
-      {        
-        int32_t temp_pos = from_string<int32_t>((**(entry))[spec[i]]);
-        
-        //Grab the information based on type for this entry
-        const list_t temp_spec = line_specification[(**(entry))._type];
-        
-        //For every entry of this type go through each of their fields
-        for(size_t u = 0 + i; u < temp_spec.size(); u++)
-        {
-          //Does the current entry have a SIZE field?
-          if(spec[u] == SIZE)
-          {
-            //Add the size field to the position, size should include the current
-            // position, so subtract 1.
-            temp_pos += from_string<int32_t>((**(entry))[temp_spec[u]]) - 1;
-          }
-        }        
-        
-        for(vector<cAnnotatedSequence>::iterator it_as = ref_seq_info.begin(); it_as < ref_seq_info.end(); it_as++)
-        {
-          //Does the position in this field, plus any field that might indicate
-          //size, exceed the length of the relevant sequence in ref_seq_info?
-          if(it_as->m_seq_id == temp_seq_id && temp_pos > it_as->m_length)
-          {
-            cout << "LOADED REFERENCE\t" << it_as->m_seq_id << "\tLENGTH:\t" << it_as->m_length << endl;
-            cout << "LOADED GENOMEDIFF\t" << temp_seq_id << "\tID=" << (**(entry))._id << "\t" << temp_pos << " POTENTIAL POSITION" << endl;
-            return false;
-          }
-        }
-      }
-      
-      //Does the current entry have a START field?
-      if(spec[i] == START)
-      {        
-        for(vector<cAnnotatedSequence>::iterator it_as = ref_seq_info.begin(); it_as < ref_seq_info.end(); it_as++)
-        {
-          //Does this entry have a START larger than ref_seq_info length?
-          if(it_as->m_seq_id == temp_seq_id && from_string<int32_t>((**(entry))[spec[i]]) > it_as->m_length)
-          {
-            cout << "LOADED REFERENCE\t" << it_as->m_seq_id << "\tLENGTH:\t" << it_as->m_length << endl;
-            cout << "LOADED GENOMEDIFF\t" << temp_seq_id << "\tID=" << (**(entry))._id << "\t" << (**(entry))[spec[i]] << " START" << endl;
-            return false;
-          }
-        }
-      }
-      
-      //Does the current entry have a END field?
-      if(spec[i] == END)
-      {        
-        for(vector<cAnnotatedSequence>::iterator it_as = ref_seq_info.begin(); it_as < ref_seq_info.end(); it_as++)
-        {
-          //Does this entry have a END larger than ref_seq_info length?
-          if(it_as->m_seq_id == temp_seq_id && from_string<int32_t>((**(entry))[spec[i]]) > it_as->m_length)
-          {
-            cout << "LOADED REFERENCE\t" << it_as->m_seq_id << "\tLENGTH:\t" << it_as->m_length << endl;
-            cout << "LOADED GENOMEDIFF\t" << temp_seq_id << "\tID=" << (**(entry))._id << "\t" << (**(entry))[spec[i]] << " END" << endl;
-            return false;
-          }
-        }        
-      }
-    }
-  }
-  
-  //Notify the user that the files match.
-  if(verbose)
-    cout << "** LOADED FILES MATCH **" << endl;
-  
-  return true;
-}
-
 /*! Find the next unused unique id.
  */
 uint32_t cGenomeDiff::new_unique_id()
@@ -1567,7 +1552,7 @@ void cGenomeDiff::unique()
     else if (!keep_ids.count((**it)._id) && !erase_ids.count((**it)._id)) {
       stringstream ss;
       ss << "\tRemoving [entry]:\t" << **it << endl;
-      ss << "\tfrom [file]:\t" << this->_default_filename << endl;
+      ss << "\tfrom [file]:\t" << this->file_name() << endl;
       ss << "\tbecause no mutation referenced it's ID." << endl; 
       WARN(ss.str());
       it = _entry_list.erase(it);
@@ -1626,7 +1611,7 @@ void cGenomeDiff::merge(cGenomeDiff& gd_new, bool unique, bool new_id, bool verb
       add(entry_new, new_id);
       
       //Notify user of new entry
-      if(verbose)cout << "\tNEW ENTRY\t" << entry_new._id << " >> " << _entry_list.back()->_id << "\t" << gd_new._default_filename << endl;
+      if(verbose)cout << "\tNEW ENTRY\t" << entry_new._id << " >> " << _entry_list.back()->_id << "\t" << gd_new.file_name() << endl;
     }
   }
   
@@ -1683,7 +1668,7 @@ void cGenomeDiff::merge(cGenomeDiff& gd_new, bool unique, bool new_id, bool verb
   }
   
   //Notify user of the update
-  if(verbose)cout << "\tMERGE DONE - " << gd_new._default_filename << endl;
+  if(verbose)cout << "\tMERGE DONE - " << gd_new.file_name() << endl;
   
 }
 
@@ -2096,9 +2081,9 @@ void cGenomeDiff::random_mutations(string exclusion_file,
       uint32_t rpos_1 = un((**jt)["position"]);
 
       ASSERT(static_cast<uint32_t>(abs(static_cast<int32_t>(lpos_1 + lsize - rpos_1))) >=  buffer,
-          "Mutation: " + (*it)->to_spec().to_string() + "\n" +
+          "Mutation: " + (*it)->to_spec().as_string() + "\n" +
           "\tand\n" +
-          "Mutation: " + (*it)->to_spec().to_string() +"\n" +
+          "Mutation: " + (*it)->to_spec().as_string() +"\n" +
           "are less then the buffered distance away from each other.");
     }
 
@@ -2108,7 +2093,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
       uint32_t size = un((**it)["size"]);
       uint32_t n_IS_elements = IS_element_regions.regions(pos_1, pos_1 + size).size();
       ASSERT(n_IS_elements == 1,
-          "Mutation overlaps more then one IS element: " + (*it)->to_spec().to_string());
+          "Mutation overlaps more then one IS element: " + (*it)->to_spec().as_string());
     }
 
     //Display IS elements that could not be used.
@@ -2279,7 +2264,7 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
         
         nested_within = &current_mut;
         
-        ASSERT(current_mut._type == AMP, "Attempt to use \"nested\" to put mutation in non-AMP mutation.\n" + current_mut.to_string() + "\nreferenced from\n" + mut.to_string());
+        ASSERT(current_mut._type == AMP, "Attempt to use \"nested\" to put mutation in non-AMP mutation.\n" + current_mut.as_string() + "\nreferenced from\n" + mut.as_string());
         ASSERT(current_mut[SEQ_ID] == mut[SEQ_ID], "Nested mutation not in same reference sequence?");
         
         if (mut.entry_exists("nested_copy")) {
@@ -2287,7 +2272,7 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
           int32_t new_copy_number = from_string<int32_t>(current_mut["new_copy_number"]);
           ASSERT((nested_copy > 0) && (nested_copy <= new_copy_number), "Copy number of mutation nested within is not in a valid range for the number of copies that exist. Requested copy: " + to_string(nested_copy) + " Total copies: " + to_string(new_copy_number));
         } else {
-          ERROR("Expected \"nested_copy=\" additional field to be present in item with \"nexted_id\":\n" + mut.to_string())
+          ERROR("Expected \"nested_copy=\" additional field to be present in item with \"nexted_id\":\n" + mut.as_string())
         }
       }
     }
@@ -2546,7 +2531,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         
       case MOB:
       {
-        ASSERT(mut["strand"] != "?", "Unknown MOB strand (?)\n" + mut.to_string());
+        ASSERT(mut["strand"] != "?", "Unknown MOB strand (?)\n" + mut.as_string());
         
         count_MOB++;
         int32_t iDelStart = 0;
@@ -2736,7 +2721,7 @@ void cGenomeDiff::normalize_to_sequence(cReferenceSequences &ref)
   }
 }
 
-cGenomeDiff cGenomeDiff::validate(cGenomeDiff& ctrl, cGenomeDiff& test, bool verbose)
+cGenomeDiff cGenomeDiff::check(cGenomeDiff& ctrl, cGenomeDiff& test, bool verbose)
 {
   bool (*comp_fn) (const diff_entry_ptr_t&, const diff_entry_ptr_t&) = diff_entry_ptr_sort;
   typedef set<diff_entry_ptr_t, bool(*)(const diff_entry_ptr_t&, const diff_entry_ptr_t&)> diff_entry_set_t;
@@ -2836,8 +2821,8 @@ cGenomeDiff cGenomeDiff::validate(cGenomeDiff& ctrl, cGenomeDiff& test, bool ver
   
   printf("\t#=TP|FN|FP	%s \t for %s versus %s \n",
          value.c_str(),
-         ctrl._default_filename.c_str(),
-         test._default_filename.c_str());
+         ctrl.file_name().c_str(),
+         test.file_name().c_str());
   
   return ret_val;
 }
@@ -2882,7 +2867,7 @@ vector<string> equivalent_junction_keys(jc_data_t& jcs, string& key)
   return matching_keys;
 }
 
-cGenomeDiff cGenomeDiff::validate_evidence(cReferenceSequences& sequence, 
+cGenomeDiff cGenomeDiff::check_evidence(cReferenceSequences& sequence, 
                                            uint32_t buffer,
                                            uint32_t shorten_length,
                                            cGenomeDiff& ctrl,
@@ -2924,12 +2909,12 @@ cGenomeDiff cGenomeDiff::validate_evidence(cReferenceSequences& sequence,
     
     string jc_segment = CandidateJunctions::construct_junction_sequence(sequence, jc, buffer, true);
     jc["segment"] = jc_segment;
-    ASSERT(jc_segment.size(), "Could not locate JC sequence for: " + (*it)->to_string());
+    ASSERT(jc_segment.size(), "Could not locate JC sequence for: " + (*it)->as_string());
     
     // This properly deals with reverse-complements and subsequences
     vector<string> equivalent_segments = equivalent_junction_keys(ctrl_jc, jc_segment);
     if ( equivalent_segments.size() > 0 ) {
-      ERROR("Duplicate junction sequence in control data set for entry:\n" + jc.to_string() + "\n" + ctrl_jc[jc_segment]->to_string());
+      ERROR("Duplicate junction sequence in control data set for entry:\n" + jc.as_string() + "\n" + ctrl_jc[jc_segment]->as_string());
     }
     
     // We have to shorten the control segments to allow for this situation to be equivalent...
@@ -2960,7 +2945,7 @@ cGenomeDiff cGenomeDiff::validate_evidence(cReferenceSequences& sequence,
     
     string jc_segment = CandidateJunctions::construct_junction_sequence(sequence, jc, buffer, true);
     jc["segment"] = jc_segment;
-    ASSERT(jc_segment.size(), "Could not locate JC sequence for: " + (*it)->to_string());
+    ASSERT(jc_segment.size(), "Could not locate JC sequence for: " + (*it)->as_string());
     
     vector<string> equivalent_segments = equivalent_junction_keys(test_jc, jc_segment);
     
@@ -2968,7 +2953,7 @@ cGenomeDiff cGenomeDiff::validate_evidence(cReferenceSequences& sequence,
       
       diff_entry_ptr_t prev_jc = test_jc[*its];
       
-      WARN("Duplicate junction sequence in test data set for entry:\n" + jc.to_string() + "\n" + ctrl_jc[jc_segment]->to_string());
+      WARN("Duplicate junction sequence in test data set for entry:\n" + jc.as_string() + "\n" + ctrl_jc[jc_segment]->as_string());
       
       if (verbose) {
         cerr << "*** Merged two junctions:" << endl;
@@ -3032,7 +3017,7 @@ cGenomeDiff cGenomeDiff::validate_evidence(cReferenceSequences& sequence,
     }
     // More than one item found = ERROR! (Should be ruled out above.)
     else {
-      ERROR("More than one match in control found for junction:\n" + jc.to_string());
+      ERROR("More than one match in control found for junction:\n" + jc.as_string());
     }
     
     ret_val.add(new_item);
@@ -3058,8 +3043,8 @@ cGenomeDiff cGenomeDiff::validate_evidence(cReferenceSequences& sequence,
   
   printf("\t#=TP|FN|FP	%s \t for %s versus %s \n",
          value.c_str(),
-         ctrl._default_filename.c_str(),
-         test._default_filename.c_str());
+         ctrl.file_name().c_str(),
+         test.file_name().c_str());
   
   return ret_val;
 }
@@ -3134,7 +3119,7 @@ void cGenomeDiff::write_jc_score_table(cGenomeDiff& compare, string table_file_p
   uint32_t total_gold_standard_predictions = 0;
   for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); ++it) {
     if (!(*it)->count("score")) {
-      cerr << "No score value for: " + (*it)->to_string() << endl;
+      cerr << "No score value for: " + (*it)->as_string() << endl;
       continue;
     }
     double score = from_string<double>((**it)["score"]);

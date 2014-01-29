@@ -1991,10 +1991,29 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     mut["codon_number"] = to_string<int32_t>(codon_number_1); // 1-indexed
     
     string& ref_string = (*this)[seq_id].m_fasta_sequence.m_sequence;
-    string codon_seq = gene.is_top_strand()
-      ? ref_string.substr(gene.get_start_1() + 3 * (from_string<uint32_t>(mut["aa_position"]) - 1) - 1, 3)
-      : reverse_complement(ref_string.substr(gene.get_end_1() - 3 * from_string<uint32_t>(mut["aa_position"]), 3));
+    
+    // @JEB 01-24-2014 Updated code to not crash on genes that end prematurely
+    //                 and out-of-frame at the end of a contig
+    string codon_seq("NNN");
+    uint32_t aa_position = from_string<uint32_t>(mut["aa_position"]);
+    uint32_t on_codon_pos_1 = 0;
+    uint32_t on_codon_start_pos_1;
 
+    if (gene.is_top_strand()) {
+      on_codon_start_pos_1 = gene.get_start_1() + 3 * (aa_position - 1) + on_codon_pos_1;
+      while ((on_codon_start_pos_1 + on_codon_pos_1 <= ref_string.length()) && (on_codon_pos_1 < 3)) {
+        codon_seq[on_codon_pos_1] = (*this)[seq_id].get_sequence_1(on_codon_start_pos_1 + on_codon_pos_1);
+        on_codon_pos_1++;
+      }
+    }
+    else {
+      on_codon_start_pos_1 = gene.get_end_1() - 3 * (aa_position - 1);
+      while ((on_codon_start_pos_1 - on_codon_pos_1 >= 1) && (on_codon_pos_1 < 3)) {
+        codon_seq[on_codon_pos_1] = reverse_complement((*this)[seq_id].get_sequence_1(on_codon_start_pos_1 - on_codon_pos_1));
+        on_codon_pos_1++;
+      }
+    }
+    
     mut["codon_ref_seq"] = codon_seq;
     mut["aa_ref_seq"] = translate_codon(mut["codon_ref_seq"], gene.translation_table, codon_number_1);
 

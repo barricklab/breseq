@@ -629,6 +629,14 @@ namespace breseq {
 		return t;
 	}
   
+  inline bool is_integer(string& s, int32_t& ret_value)
+  {
+    char* p;
+    ret_value = strtol(s.c_str(), &p, 10);
+    return !(*p);
+  }
+  
+  
   //! Short aliases to conversions
   inline int32_t n(string input) { return from_string<int32_t>(input); }
   inline uint32_t un(string input) { return from_string<uint32_t>(input); }
