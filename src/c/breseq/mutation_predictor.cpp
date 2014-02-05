@@ -1491,8 +1491,9 @@ namespace breseq {
   (intergenic_base_substitution,intergenic_base)
   (pseudogene_base_substitution,pseudogene_base)
   (noncoding_base_substitution,noncoding_base)
-  (synonymous_base_substitution,protein_base)
-  (nonsynonymous_base_substitution,protein_base)
+  (synonymous_coding_base_substitution,protein_base)
+  (nonsynonymous_coding_base_substitution,protein_base)
+  (unknown_coding_base_substitution,protein_base)
   ;  
   
   
@@ -1577,7 +1578,7 @@ namespace breseq {
         
         // Piece together the gene - at each nucleotide make all three possible changes
         
-        string this_codon = "   ";
+        string this_codon = "NNN";
         vector<cLocation> sub_locations = g.m_location.get_all_sub_locations();
         size_t on_codon_pos_0 = 0; // The position within a codon... indexed to start at 0.
         vector<uint32_t> this_codon_locations_0(0, 3); // 0-indexed
@@ -1589,6 +1590,14 @@ namespace breseq {
           cLocation& loc = *it3;
           total_nucleotide_length += loc.m_end - loc.m_start + 1;
         }
+        
+        // >>CODE_INDETERMINATE
+        // If we have an indeterminate start or end, we may need to start out-of-frame
+        // @JEB: this happens at the ends of sequences (usually contigs from a de novo assembly,
+        //       when a gene runs into the end of a contig
+        // We also need to adjust things so that codon #1 is either missing (indeterminate gene start)
+        // or happens at the last codon present (indeterminate gene end)
+        
         uint32_t total_amino_acid_length = total_nucleotide_length / 3;
         uint32_t on_codon_number_1 = 1; // The number of the amino acid / codon indexed to start at 1
         if (strand == -1) on_codon_number_1 = total_amino_acid_length;
@@ -1649,10 +1658,12 @@ namespace breseq {
                   
                   char mut_amino_acid = cReferenceSequences::translate_codon(test_codon, g.translation_table, on_codon_number_1);
                   
-                  if (mut_amino_acid == original_amino_acid)
-                    seq_bse[this_codon_locations_0[test_codon_index]*4+b] = max(seq_bse[this_codon_locations_0[test_codon_index]*4+b], synonymous_base_substitution);
+                  if ((mut_amino_acid = '?') || (original_amino_acid = '?'))
+                    seq_bse[this_codon_locations_0[test_codon_index]*4+b] = max(seq_bse[this_codon_locations_0[test_codon_index]*4+b], unknown_coding_base_substitution);
+                  else if (mut_amino_acid == original_amino_acid)
+                    seq_bse[this_codon_locations_0[test_codon_index]*4+b] = max(seq_bse[this_codon_locations_0[test_codon_index]*4+b], synonymous_coding_base_substitution);
                   else
-                    seq_bse[this_codon_locations_0[test_codon_index]*4+b] = max(seq_bse[this_codon_locations_0[test_codon_index]*4+b], nonsynonymous_base_substitution);
+                    seq_bse[this_codon_locations_0[test_codon_index]*4+b] = max(seq_bse[this_codon_locations_0[test_codon_index]*4+b], nonsynonymous_coding_base_substitution);
                   
                 }
                 

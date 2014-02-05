@@ -62,8 +62,9 @@ namespace breseq {
     intergenic_base_substitution,
     noncoding_base_substitution,
     pseudogene_base_substitution,
-    synonymous_base_substitution,
-    nonsynonymous_base_substitution,
+    synonymous_coding_base_substitution,
+    nonsynonymous_coding_base_substitution,
+    unknown_coding_base_substitution,  // for dealing with degenerate bases
     no_change_base_substitution
   };
   typedef vector<BaseSubstitutionEffect> SequenceBaseSubstitutionEffects;
