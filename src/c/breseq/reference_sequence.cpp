@@ -792,7 +792,19 @@ namespace breseq {
       if (feature.m_gff_attributes.count("transl_table"))
         feature["transl_table"] = feature.m_gff_attributes["transl_table"][0];
 
-    
+      // Load indeterminate start/end coordinates according to out custom fields.
+      if (feature.m_gff_attributes.count("indeterminate_coordinate")) {
+        for (vector<string>::iterator it=feature.m_gff_attributes["indeterminate_coordinate"].begin(); it!=feature.m_gff_attributes["indeterminate_coordinate"].end(); it++) {
+          if (*it == "start")
+            feature.m_location.set_indeterminate_start(true);
+          else if (*it == "end")
+            feature.m_location.set_indeterminate_end(true);
+        }
+        // Erase this property because it will be added back
+        feature.m_gff_attributes.erase("indeterminate_coordinate");
+      }
+
+      
       //! Step 4: Determine if sequence already exists (find or create if not found)
       this->add_new_seq(seq_id, file_name);
       
@@ -919,13 +931,24 @@ void cReferenceSequences::WriteGFF( const string &file_name, bool verbose ){
         
         if(s.size())attributes.push_back(key + "=" + join(s, ","));
       }
-      columns[ATTRIBUTES] = join(attributes, ";");
+      string attributes_column = join(attributes, ";");
 
       const vector<cLocation> locations = feat.m_location.get_all_sub_locations();
       for (uint32_t i = 0; i < locations.size(); ++i) {
         columns[START_1] = to_string(locations[i].get_start_1());
         columns[END_1]   = to_string(locations[i].get_end_1());
-
+        
+        // Overly complicated way of writing out indeterminacy
+        columns[ATTRIBUTES] = attributes_column;
+        if (locations[i].is_indeterminate_start() || locations[i].is_indeterminate_end())
+          columns[ATTRIBUTES] += ";indeterminate_coordinate=";
+        if (locations[i].is_indeterminate_start())
+          columns[ATTRIBUTES] += "start";  
+        if (locations[i].is_indeterminate_start() && locations[i].is_indeterminate_end())
+          columns[ATTRIBUTES] += ","; 
+        if (locations[i].is_indeterminate_end())
+          columns[ATTRIBUTES] += "end";        
+        
         out << join(columns, "\t") << endl;
 
       }
@@ -1072,9 +1095,7 @@ void cSequenceFeature::ReadGenBankCoords(string& s, ifstream& in) {
   }
   ASSERT(parentheses_level == 0, "Unmatched parenthesis in feature location.");
   
-  // Clean <> and space characters.
-  s = substitute(s, "<", "");
-  s = substitute(s, ">", "");
+  // Clean tab and space characters.
   s = substitute(s, " ", "");
   s = substitute(s, "\t", "");
   
@@ -1121,6 +1142,18 @@ cLocation cSequenceFeature::ParseGenBankCoords(string& s, int8_t in_strand)
     //Split on .. (usually 2)
     vector<string> tokens = split(s, "..");
     loc.set_strand(in_strand);
+    
+    // Handle < and > for indeterminate coords (and remove so atoi works)
+    if (tokens.front()[0] == '<') {
+      cout << tokens.front() << endl;
+      loc.set_indeterminate_start(true);
+      tokens.front().replace(0,1,"");
+      cout << tokens.front() << endl;
+    }
+    if (tokens.back()[0] == '>') {
+      loc.set_indeterminate_end(true);
+      tokens.back().replace(0,1,"");
+    }
     loc.set_start_1(atoi(tokens.front().c_str()));
     loc.set_end_1(atoi(tokens.back().c_str()));
   }
@@ -1353,7 +1386,9 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
       bonus_circular_feature->m_location = cLocation(
                                                      bonus_circular_feature->get_start_1() - s.m_length + 1, 
                                                      feature.m_location.get_end_1() + s.m_length,
-                                                     bonus_circular_feature->m_location.get_strand()
+                                                     bonus_circular_feature->m_location.get_strand(),
+                                                     bonus_circular_feature->m_location.is_indeterminate_start(),
+                                                     bonus_circular_feature->m_location.is_indeterminate_end()
                                                      );
       s.feature_push_front( bonus_circular_feature );
     }
@@ -1981,6 +2016,8 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     if (!mut.entry_exists("ref_seq")) mut["ref_seq"] = mut["ref_base"];
     if (!mut.entry_exists("new_seq")) mut["new_seq"] = mut["new_base"];
 
+    // >> CODE_INDETERMINATE
+    // Needs to 
     // determine the old and new translation of this codon
 // @JEB this should be fixed for split genes!!! -- use cLocationTraverser
 // Issue 

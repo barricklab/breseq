@@ -39,25 +39,47 @@ namespace breseq {
   public:
     int32_t m_start, m_end; // 1-indexed
     int8_t m_strand;
+    bool m_indeterminate_start, m_indeterminate_end; 
+      // for when coords are marked as extending last here (<1..514)
     vector<cLocation> m_sub_locations;
      
-    cLocation() : m_start(0), m_end(0), m_strand(0) {};
-    cLocation(int32_t start, int32_t end, int8_t strand) 
-      : m_start(start), m_end(end), m_strand(strand) { 
-    }
+    cLocation() 
+      : m_start(0)
+      , m_end(0)
+      , m_strand(0)
+      , m_indeterminate_start(false)
+      , m_indeterminate_end(false)
+      {};
+    cLocation(
+              int32_t start, 
+              int32_t end, 
+              int8_t strand, 
+              bool indeterminate_start = false, 
+              bool indeterminate_end = false
+              ) 
+      : m_start(start)
+      , m_end(end)
+      , m_strand(strand)
+      , m_indeterminate_start(indeterminate_start)
+      , m_indeterminate_end(indeterminate_end) 
+    { }
 
     cLocation(const cLocation& copy)
       : m_start(copy.m_start)
       , m_end(copy.m_end)
       , m_strand(copy.m_strand)
+      , m_indeterminate_start(copy.m_indeterminate_start)
+      , m_indeterminate_end(copy.m_indeterminate_end)  
       , m_sub_locations(copy.m_sub_locations) { }
 
 
     cLocation& operator=(const cLocation& assign) {
-      m_start         = assign.m_start;
-      m_end           = assign.m_end;
-      m_strand        = assign.m_strand;
-      m_sub_locations = assign.m_sub_locations; 
+      m_start               = assign.m_start;
+      m_end                 = assign.m_end;
+      m_strand              = assign.m_strand;
+      m_indeterminate_start = assign.m_indeterminate_start;
+      m_indeterminate_end   = assign.m_indeterminate_end;
+      m_sub_locations       = assign.m_sub_locations; 
       return *this;
     }
 
@@ -69,6 +91,16 @@ namespace breseq {
     int32_t get_end_1() const {
       return m_end;
     }
+    
+    //>! Get whether start position is indeterminate
+    bool is_indeterminate_start() const {
+      return m_indeterminate_start;
+    }
+    //>! Get whether end position is indeterminate
+    bool is_indeterminate_end() const {
+      return m_indeterminate_end;
+    }
+    
     //>! Strand is -1 or +1
     int8_t get_strand() const {
       return m_strand;
@@ -93,6 +125,14 @@ namespace breseq {
     void set_end_1(int32_t _end) {
       m_end = _end;
     }
+    
+    void set_indeterminate_start(bool _indeterminate_start) {
+      m_indeterminate_start = _indeterminate_start;
+    }
+    void set_indeterminate_end(bool _indeterminate_end) {
+      m_indeterminate_end = _indeterminate_end;
+    }
+    
     void set_strand(int8_t _strand) {
       m_strand = _strand;
     }

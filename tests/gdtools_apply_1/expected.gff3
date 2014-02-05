@@ -237,9 +237,9 @@ REL606-5	.	CDS	62293	63936	.	-	0	Alias=ECB_00249;ID=ECB_00249;Name=yagW;Note=pre
 REL606-5	.	gene	63926	64725	.	-	0	Alias=ECB_00250;ID=ECB_00250;Name=yagX
 REL606-5	.	CDS	63926	64725	.	-	0	Alias=ECB_00250;ID=ECB_00250;Name=yagX;Note=predicted aromatic compound dioxygenase;transl_table=11
 REL606.fragment.2	.	region	1	30001	.	+	.	Is_circular=false;Note=Escherichia coli strain REL606.
-REL606.fragment.2	.	source	1	30001	.	+	0	
-REL606.fragment.2	.	gene	1	727	.	-	0	Alias=ECB_00309;ID=ECB_00309;Name=frmB
-REL606.fragment.2	.	CDS	1	727	.	-	0	Alias=ECB_00309;ID=ECB_00309;Name=frmB;Note=predicted esterase;transl_table=11
+REL606.fragment.2	.	source	1	30001	.	+	0	;indeterminate_coordinate=start,end
+REL606.fragment.2	.	gene	1	727	.	-	0	Alias=ECB_00309;ID=ECB_00309;Name=frmB;indeterminate_coordinate=start
+REL606.fragment.2	.	CDS	1	727	.	-	0	Alias=ECB_00309;ID=ECB_00309;Name=frmB;Note=predicted esterase;transl_table=11;indeterminate_coordinate=start
 REL606.fragment.2	.	gene	820	1929	.	-	0	Alias=ECB_00310;ID=ECB_00310;Name=frmA
 REL606.fragment.2	.	CDS	820	1929	.	-	0	Alias=ECB_00310;ID=ECB_00310;Name=frmA;Note=alcohol dehydrogenase class III/glutathione-dependent formaldehyde dehydrogenase;transl_table=11
 REL606.fragment.2	.	gene	1964	2239	.	-	0	Alias=ECB_00311;ID=ECB_00311;Name=frmR
@@ -310,8 +310,8 @@ REL606.fragment.2	.	gene	27532	28443	.	-	0	Alias=ECB_00342;ID=ECB_00342;Name=rdg
 REL606.fragment.2	.	CDS	27532	28443	.	-	0	Alias=ECB_00342;ID=ECB_00342;Name=rdgC;Note=recombination associated protein;transl_table=11
 REL606.fragment.2	.	gene	28568	29476	.	+	0	Alias=ECB_00343;ID=ECB_00343;Name=yajF
 REL606.fragment.2	.	CDS	28568	29476	.	+	0	Alias=ECB_00343;ID=ECB_00343;Name=yajF;Note=fructokinase;transl_table=11
-REL606.fragment.2	.	gene	29721	30001	.	-	0	Alias=ECB_00344;ID=ECB_00344;Name=araJ
-REL606.fragment.2	.	CDS	29721	30001	.	-	0	Alias=ECB_00344;ID=ECB_00344;Name=araJ;Note=predicted transporter;transl_table=11
+REL606.fragment.2	.	gene	29721	30001	.	-	0	Alias=ECB_00344;ID=ECB_00344;Name=araJ;indeterminate_coordinate=end
+REL606.fragment.2	.	CDS	29721	30001	.	-	0	Alias=ECB_00344;ID=ECB_00344;Name=araJ;Note=predicted transporter;transl_table=11;indeterminate_coordinate=end
 ##FASTA
 >REL606-5
 CTTACAACGCCGAAGATGTTTTGGCGGATTGAGAGAATTTCAGCTTTGATTCAGAGTCCG
