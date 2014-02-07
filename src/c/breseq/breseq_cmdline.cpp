@@ -2098,6 +2098,8 @@ int breseq_default_action(int argc, char* argv[])
 
 		settings.done_step(settings.output_done_file_name);
 	}
+  cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
+
   
   return 0;
 }
