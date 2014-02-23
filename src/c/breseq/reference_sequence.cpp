@@ -1145,10 +1145,8 @@ cLocation cSequenceFeature::ParseGenBankCoords(string& s, int8_t in_strand)
     
     // Handle < and > for indeterminate coords (and remove so atoi works)
     if (tokens.front()[0] == '<') {
-      cout << tokens.front() << endl;
       loc.set_indeterminate_start(true);
       tokens.front().replace(0,1,"");
-      cout << tokens.front() << endl;
     }
     if (tokens.back()[0] == '>') {
       loc.set_indeterminate_end(true);
