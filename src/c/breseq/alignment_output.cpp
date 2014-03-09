@@ -16,12 +16,15 @@
  *
  *****************************************************************************/
 
+#include "libbreseq/output.h"
+
 #include "libbreseq/alignment_output.h"
 
 using namespace std;
 
 namespace breseq
 {
+  using namespace breseq::output;
 
 bool verbose = false; //TODO Options
 bool text = false; //TODO Options
@@ -319,7 +322,7 @@ alignment_output::alignment_output ( string bam,
   // the default for m_quality_score_cutoff is zero, which makes sense
 }
 
-void alignment_output::create_alignment ( const string& region, cDiffEntry* jc_item )
+void alignment_output::create_alignment ( const string& region, cOutputEvidenceItem* output_evidence_item_ptr )
 {
   // we need the target_id to properly fill out the reference sequence later
   uint32_t target_id, start_pos, end_pos, insert_start, insert_end;
@@ -327,12 +330,16 @@ void alignment_output::create_alignment ( const string& region, cDiffEntry* jc_i
   
   // Check for special reference lines that are junctions...
   bool bDrawAnnotationLine = true;    // draw the | annotation line pointing to region?
-  m_is_junction = jc_item != NULL;
   
-  if (m_is_junction) {
-
-    int32_t overlap = from_string<int32_t>((*jc_item)["overlap"]);
-    int32_t alignment_overlap = from_string<int32_t>((*jc_item)["alignment_overlap"]);
+  m_is_junction = (output_evidence_item_ptr != NULL);
+  
+  // For junctions JC evidence to set up split reference
+  if (m_is_junction && ((*output_evidence_item_ptr)[PREFIX] == "JC")) {
+    m_is_junction_junction = true;
+    cDiffEntry& jc_item = *(output_evidence_item_ptr->item);
+    
+    int32_t overlap = from_string<int32_t>(jc_item["overlap"]);
+    int32_t alignment_overlap = from_string<int32_t>(jc_item["alignment_overlap"]);
     int32_t positive_alignment_overlap = max(alignment_overlap, 0);
     int32_t abs_overlap = max(abs(alignment_overlap), abs(overlap));
     
@@ -350,23 +357,23 @@ void alignment_output::create_alignment ( const string& region, cDiffEntry* jc_i
     Aligned_Reference aligned_reference_1, aligned_reference_2;
  
     // This is the amount of a positive overlap assigned to each side
-    aligned_reference_1.overlap_assigned = from_string<int32_t>((*jc_item)["side_1_overlap"]);
-    aligned_reference_2.overlap_assigned = from_string<int32_t>((*jc_item)["side_2_overlap"]);
+    aligned_reference_1.overlap_assigned = from_string<int32_t>(jc_item["side_1_overlap"]);
+    aligned_reference_2.overlap_assigned = from_string<int32_t>(jc_item["side_2_overlap"]);
     
     aligned_reference_1.overlap_not_assigned = positive_alignment_overlap - aligned_reference_1.overlap_assigned;
     aligned_reference_2.overlap_not_assigned = positive_alignment_overlap - aligned_reference_2.overlap_assigned;
     
-    aligned_reference_1.truncate_end = from_string<int32_t>((*jc_item)["flanking_left"]) + aligned_reference_1.overlap_assigned; 
-    aligned_reference_2.truncate_start = from_string<int32_t>((*jc_item)["flanking_left"]) + 1 + abs_overlap - aligned_reference_2.overlap_assigned;
+    aligned_reference_1.truncate_end = from_string<int32_t>(jc_item["flanking_left"]) + aligned_reference_1.overlap_assigned; 
+    aligned_reference_2.truncate_start = from_string<int32_t>(jc_item["flanking_left"]) + 1 + abs_overlap - aligned_reference_2.overlap_assigned;
     
-    aligned_reference_1.ghost_seq_id = (*jc_item)[SIDE_1_SEQ_ID];    
-    aligned_reference_2.ghost_seq_id = (*jc_item)[SIDE_2_SEQ_ID]; 
+    aligned_reference_1.ghost_seq_id = jc_item[SIDE_1_SEQ_ID];    
+    aligned_reference_2.ghost_seq_id = jc_item[SIDE_2_SEQ_ID]; 
     
-    aligned_reference_1.ghost_strand = from_string<int16_t>((*jc_item)[SIDE_1_STRAND]);
-    aligned_reference_2.ghost_strand = from_string<int16_t>((*jc_item)[SIDE_2_STRAND]);
+    aligned_reference_1.ghost_strand = from_string<int16_t>(jc_item[SIDE_1_STRAND]);
+    aligned_reference_2.ghost_strand = from_string<int16_t>(jc_item[SIDE_2_STRAND]);
     
-    aligned_reference_1.ghost_end = from_string<int32_t>((*jc_item)[SIDE_1_POSITION]); 
-    aligned_reference_2.ghost_start = from_string<int32_t>((*jc_item)[SIDE_2_POSITION]);     
+    aligned_reference_1.ghost_end = from_string<int32_t>(jc_item[SIDE_1_POSITION]); 
+    aligned_reference_2.ghost_start = from_string<int32_t>(jc_item[SIDE_2_POSITION]);     
     
     //cout << "Junction reference information" << endl;
     //cout << aligned_reference_1.truncate_start << "-" << aligned_reference_1.truncate_end << " overlap " << aligned_reference_1.overlap << endl;
@@ -435,19 +442,143 @@ void alignment_output::create_alignment ( const string& region, cDiffEntry* jc_i
   m_aligned_references = m_alignment_output_pileup.aligned_references;
   m_aligned_annotation = m_alignment_output_pileup.aligned_annotation;
   
+  
+  // @JEB - HERE
   // This section updates the style of the name of the reads that don't cross
   // the ambiguous part of the junction (and therefore are not counted).
-  if (m_is_junction) {
-    for(Aligned_Reads::iterator ar = m_aligned_reads.begin(); ar != m_aligned_reads.end(); ar++) {
-      
-      Aligned_Read& a = ar->second;
+  // This applies to junction reads.
+  
+  
+  // For junctions JC evidence to set up split reference
+  if (output_evidence_item_ptr != NULL) {
+    
+    if ((*output_evidence_item_ptr)[PREFIX] == "JC") {
+        
       uint32_t require_reference_start = m_alignment_output_pileup.aligned_references[0].truncate_end - m_alignment_output_pileup.aligned_references[0].overlap_assigned - m_junction_minimum_size_match + 1;
       uint32_t require_reference_end = m_alignment_output_pileup.aligned_references[1].truncate_start + m_alignment_output_pileup.aligned_references[1].overlap_assigned + m_junction_minimum_size_match - 1;
       
-      if ((a.reference_start > require_reference_start) ||  (a.reference_end < require_reference_end)) {
-        a.read_name_style = "AO";
+      for(Aligned_Reads::iterator ar = m_aligned_reads.begin(); ar != m_aligned_reads.end(); ar++) {
+        
+        Aligned_Read& a = ar->second;
+        if ((a.reference_start > require_reference_start) ||  (a.reference_end < require_reference_end)) {
+          a.read_name_style = "AO";
+        }
       }
     }
+    
+    else if (   ((*output_evidence_item_ptr)[PREFIX] == "JC_SIDE_1")
+             || ((*output_evidence_item_ptr)[PREFIX] == "JC_SIDE_2") ) {   
+      cDiffEntry& jc_item = *(output_evidence_item_ptr->item);
+
+      // This stuff is all copied from the code for counting reads...
+      int32_t start, end, non_dup_start, non_dup_end;
+      
+      uint32_t side_1_continuation = from_string<uint32_t>(jc_item["side_1_continuation"]);
+      uint32_t side_2_continuation = from_string<uint32_t>(jc_item["side_2_continuation"]);
+      
+      
+      int32_t extra_stranded_require_overlap = 0; 
+      if (jc_item.entry_exists("read_count_offset"))
+          extra_stranded_require_overlap = from_string<int32_t>(jc_item["read_count_offset"]);
+      
+      //if (output_evidence_item_ptr->parent_item->_type == MOB) {
+      //extra_stranded_require_overlap = from_string<int32_t>((*(output_evidence_item_ptr->parent_item))["duplication_size"]);
+      // }
+
+      // This is for requiring a certain number of bases (at least one) to match past the normal point
+      // where a read could be uniquely assigned to the junction (or a side)
+      int32_t minimum_side_match_correction = m_junction_minimum_size_match - 1;
+      
+      int32_t alignment_overlap = from_string<int32_t>(jc_item[ALIGNMENT_OVERLAP]);
+      int32_t non_negative_alignment_overlap = alignment_overlap;
+      non_negative_alignment_overlap = max(0, non_negative_alignment_overlap);
+      
+      // New side 1
+      if ( ((*output_evidence_item_ptr)[PREFIX] == "JC_SIDE_1") ) {
+        int32_t side_1_strand = from_string<int32_t>(jc_item[SIDE_1_STRAND]);
+        start = from_string<uint32_t>(jc_item[SIDE_1_POSITION]);
+        int32_t overlap_correction = non_negative_alignment_overlap - from_string<int32_t>(jc_item[SIDE_1_OVERLAP]);
+        
+        
+        if (side_1_strand == +1) {
+          start = start - 1;       
+          end = start + 1; 
+          start -= overlap_correction;
+          end += extra_stranded_require_overlap;
+          start -= minimum_side_match_correction;
+          end += minimum_side_match_correction;
+          end += side_1_continuation;
+          
+          non_dup_start = start;
+          non_dup_end = end - extra_stranded_require_overlap;
+        } else {
+          //start = start;
+          end = start + 1;
+          start -= extra_stranded_require_overlap;
+          end += overlap_correction;
+          start -= minimum_side_match_correction;
+          end += minimum_side_match_correction;
+          start -= side_1_continuation;
+          
+          non_dup_start = start + extra_stranded_require_overlap;
+          non_dup_end = end;
+        }
+      }
+      
+      
+      if ( ((*output_evidence_item_ptr)[PREFIX] == "JC_SIDE_2") ) {
+        int32_t side_2_strand = from_string<int32_t>(jc_item[SIDE_2_STRAND]);
+        start = from_string<uint32_t>(jc_item[SIDE_2_POSITION]);
+        int32_t overlap_correction = non_negative_alignment_overlap - from_string<int32_t>(jc_item[SIDE_2_OVERLAP]);
+        
+        if (side_2_strand == +1) {
+          start = start - 1;
+          end = start + 1; 
+          start -= overlap_correction;
+          end += extra_stranded_require_overlap;
+          start -= minimum_side_match_correction;
+          end += minimum_side_match_correction;
+          end += side_2_continuation;
+          
+          non_dup_start = start;
+          non_dup_end = end - extra_stranded_require_overlap;
+        } else {
+          //start = start;
+          end = start + 1;
+          start -= extra_stranded_require_overlap;
+          end += overlap_correction;
+          start -= minimum_side_match_correction;
+          end += minimum_side_match_correction;
+          start -= side_2_continuation;
+          
+          non_dup_start = start + extra_stranded_require_overlap;
+          non_dup_end = end;
+        }
+      }
+      
+      
+      for(Aligned_Reads::iterator ar = m_aligned_reads.begin(); ar != m_aligned_reads.end(); ar++) {
+        
+        Aligned_Read& a = ar->second;
+        
+        if ((a.reference_start > static_cast<uint32_t>(start)) ||  (a.reference_end < static_cast<uint32_t>(end))) {
+          a.read_name_style = "AO";
+        }
+        
+        else if ((a.reference_start > static_cast<uint32_t>(non_dup_start)) ||  (a.reference_end < static_cast<uint32_t>(non_dup_end))) {
+          a.read_name_style = "AP";
+        }
+          
+        if (a.seq_id.length() >= 3) {
+          if ( a.seq_id.substr(a.seq_id.length()-3, 3) == "-M1")
+            a.read_name_style = "AO";
+          if ( a.seq_id.substr(a.seq_id.length()-3, 3) == "-M2")
+            a.read_name_style = "AO";
+        }
+        
+      }      
+    }
+    
   }
   
   if(!bDrawAnnotationLine)
@@ -644,11 +775,11 @@ void alignment_output::create_alignment ( const string& region, cDiffEntry* jc_i
   }
 } //End create alignment
 
-string alignment_output::html_alignment( const string& region, cDiffEntry* jc_item )
+string alignment_output::html_alignment( const string& region, output::cOutputEvidenceItem* output_evidence_item_ptr )
 {
 
   // this sets object values (not re-usable currently)
-  create_alignment(region, jc_item);
+  create_alignment(region, output_evidence_item_ptr);
   
   string output;
   
@@ -708,56 +839,56 @@ string alignment_output::html_alignment( const string& region, cDiffEntry* jc_it
   return output;
 }
 
-  string alignment_output::text_alignment( const string& region, cDiffEntry* jc_item )
+string alignment_output::text_alignment( const string& region, cOutputEvidenceItem* output_evidence_item_ptr )
+{
+  
+  // this sets object values (not re-usable currently)
+  create_alignment(region, output_evidence_item_ptr);
+  
+  string output = "";
+  
+  if (m_error_message.size() > 0)
   {
-    
-    // this sets object values (not re-usable currently)
-    create_alignment(region, jc_item);
-    
-    string output = "";
-    
-    if (m_error_message.size() > 0)
-    {
-      output += m_error_message;
-      output += "\n";
-    }
-    
-    // We must have aligned reads for the remainder of the code to be safe
-    if (m_aligned_reads.size() == 0)
-      return output;
-    
-    /// all built by create_alignment and stored as member, m_ , variables.
-    set_quality_range(m_quality_score_cutoff);
-    
-    // @JEB sorting is not working yet
-    Sorted_Keys sorted_keys;
-    for (Aligned_Reads::iterator itr_read = m_aligned_reads.begin(); itr_read != m_aligned_reads.end(); itr_read++)
-    {
-      Sorted_Key sorted_key;
-      sorted_key.seq_id = itr_read->first;
-      sorted_key.aligned_bases = itr_read->second.aligned_bases;
-      sorted_keys.push_back(sorted_key);
-    }
-    std::sort(sorted_keys.begin(),sorted_keys.end(),alignment_output::sort_by_aligned_bases_length);
-    
-    
-    for (uint32_t index = 0; index < m_aligned_references.size(); index++)  {
-      output += text_alignment_line( m_aligned_references[index] , true) + "\n";  }
-    
-    output += text_alignment_line( m_aligned_annotation, false ) + "\n";
-    
-    for (Sorted_Keys::iterator itr_key = sorted_keys.begin(); itr_key != sorted_keys.end(); itr_key ++)  {
-      output += text_alignment_line( m_aligned_reads[itr_key->seq_id], true) + "\n";  }
-    
-    output += text_alignment_line( m_aligned_annotation, false)  + "\n"; 
-    
-    for (uint32_t index = 0; index < m_aligned_references.size(); index++)  {
-      output += text_alignment_line( m_aligned_references[index], true) + "\n";  }
-    
+    output += m_error_message;
     output += "\n";
-    
+  }
+  
+  // We must have aligned reads for the remainder of the code to be safe
+  if (m_aligned_reads.size() == 0)
     return output;
-  }  
+  
+  /// all built by create_alignment and stored as member, m_ , variables.
+  set_quality_range(m_quality_score_cutoff);
+  
+  // @JEB sorting is not working yet
+  Sorted_Keys sorted_keys;
+  for (Aligned_Reads::iterator itr_read = m_aligned_reads.begin(); itr_read != m_aligned_reads.end(); itr_read++)
+  {
+    Sorted_Key sorted_key;
+    sorted_key.seq_id = itr_read->first;
+    sorted_key.aligned_bases = itr_read->second.aligned_bases;
+    sorted_keys.push_back(sorted_key);
+  }
+  std::sort(sorted_keys.begin(),sorted_keys.end(),alignment_output::sort_by_aligned_bases_length);
+  
+  
+  for (uint32_t index = 0; index < m_aligned_references.size(); index++)  {
+    output += text_alignment_line( m_aligned_references[index] , true) + "\n";  }
+  
+  output += text_alignment_line( m_aligned_annotation, false ) + "\n";
+  
+  for (Sorted_Keys::iterator itr_key = sorted_keys.begin(); itr_key != sorted_keys.end(); itr_key ++)  {
+    output += text_alignment_line( m_aligned_reads[itr_key->seq_id], true) + "\n";  }
+  
+  output += text_alignment_line( m_aligned_annotation, false)  + "\n"; 
+  
+  for (uint32_t index = 0; index < m_aligned_references.size(); index++)  {
+    output += text_alignment_line( m_aligned_references[index], true) + "\n";  }
+  
+  output += "\n";
+  
+  return output;
+}  
   
 
 // 'quality_score_cutoff' = below this value you get a special color -- for bad Illumina bases
@@ -916,7 +1047,8 @@ string alignment_output::html_header_string()
   // General colors -- used to read names, etc.
   header_style_string += ".NC {color: rgb(0,0,0); background-color: rgb(255,255,255)}\n";         // normal color
   header_style_string += ".AM {color: rgb(0,0,0); background-color: rgb(210,210,210)}\n";         // ambiguously mapped
-  header_style_string += ".AO {color: rgb(0,0,0); background-color: rgb(153,255,255)}\n";         // ambiguous overlap (junctions)
+  header_style_string += ".AO {color: rgb(0,0,0); background-color: rgb(255,205,204)}\n";         // ambiguous overlap (junctions)
+  header_style_string += ".AP {color: rgb(0,0,0); background-color: rgb(255,229,204)}\n";         // ambiguous overlap (junctions) - but only due to target site duplication
 
   
   // Colors used by characters in alignments
@@ -1033,7 +1165,7 @@ string alignment_output::html_alignment_line(const alignment_output::Alignment_B
   }   
   
   // write the mapping quality - it would be nice to justify this
-  if (!m_is_junction && (a.mapping_quality != -1)) {
+  if (!m_is_junction_junction && (a.mapping_quality != -1)) {
     output += "&nbsp;(MQ=" + to_string<>(a.mapping_quality) + ")";
   }
   
@@ -1082,8 +1214,11 @@ string alignment_output::html_legend()
   output += "&nbsp;&nbsp;&nbsp;&nbsp;Trimmed read bases:&nbsp;<code>" + html_alignment_line(temp_a, false, true) + "</code>";
       
   if (m_is_junction) {
-    output += "<br>In reference, overlap bases assigned to other side of junction:&nbsp;<code>&nbsp;atcg</code>";
-    output += "&nbsp;&nbsp;&nbsp;&nbsp;Reads not counted for new junction:&nbsp;<code>&nbsp;<font class=\"AO\">read_name</font></code>";
+    output += "<br>In reference, overlap bases assigned to other side of junction:&nbsp;<code>&nbsp;atcg</code><br>";
+    output += "&nbsp;&nbsp;&nbsp;&nbsp;Reads not counted as support for junction:<br>";
+    output += "&nbsp;&nbsp;<code>&nbsp;<font class=\"AO\">read_name</font></code> insufficient overlap past the breakpoint.";
+    output += "&nbsp;&nbsp;<code>&nbsp;<font class=\"AP\">read_name</font></code> due to MOB target site duplication.";
+
   }
   
   if (m_show_ambiguously_mapped) {
