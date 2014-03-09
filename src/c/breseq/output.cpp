@@ -1617,361 +1617,6 @@ string decode_reject_reason(const string& reject)
 }
 // # 
 
-/*
- * =====================================================================================
- *        Class:  Evidence_Files
- *  Description:  
- * =====================================================================================
- */
-Evidence_Files::Evidence_Files(const Settings& settings, cGenomeDiff& gd)
-{  
-  // Fasta and BAM files for making alignments.
-  string reference_bam_file_name = settings.reference_bam_file_name;
-  string reference_fasta_file_name = settings.reference_fasta_file_name;
-
-  // hybrids use different BAM files for making the alignments!!!
-  string junction_bam_file_name = settings.junction_bam_file_name;
-  string junction_fasta_file_name = settings.candidate_junction_fasta_file_name;
-
-  
-  // We make alignments of two regions for deletions: upstream and downstream edges.
-  diff_entry_list_t items_MC = gd.show_list(make_vector<gd_entry_type>(MC));
-  //cerr << "Number of MC evidence items: " << items_MC.size() << endl;
-
-  
-  for (diff_entry_list_t::iterator itr = items_MC.begin(); itr != items_MC.end(); itr ++) 
-  {  
-    diff_entry_ptr_t item(*itr);
-     
-    diff_entry_ptr_t parent_item(gd.parent(*item));
-    if (parent_item.get() == NULL)
-      parent_item = *itr;
-
-   add_evidence(_SIDE_1_EVIDENCE_FILE_NAME,
-                item,
-                parent_item,
-                make_map<string,string>
-                (BAM_PATH, reference_bam_file_name)
-                (FASTA_PATH, reference_fasta_file_name)
-                (PREFIX, "MC_SIDE_1")
-                (SEQ_ID, (*item)[SEQ_ID])            
-                (START, to_string(from_string<uint32_t>((*item)[START]) - 1))
-                (END,  to_string(from_string<uint32_t>((*item)[START]) - 1)));
-
-    add_evidence(_SIDE_2_EVIDENCE_FILE_NAME,
-                item,
-                parent_item,
-                make_map<string,string>
-                (BAM_PATH, reference_bam_file_name)
-                (FASTA_PATH, reference_fasta_file_name)
-                (PREFIX, "MC_SIDE_2")
-                (SEQ_ID, (*item)[SEQ_ID])            
-                (START, to_string(from_string<uint32_t>((*item)[END]) + 1))
-                (END,  to_string(from_string<uint32_t>((*item)[END]) + 1)));
-    
-    add_evidence(_EVIDENCE_FILE_NAME,
-                item,
-                parent_item,
-                make_map<string,string>
-                (BAM_PATH, reference_bam_file_name)
-                (FASTA_PATH, reference_fasta_file_name)
-                (PREFIX, "MC_PLOT")
-                (SEQ_ID, (*item)[SEQ_ID])            
-                (START, (*item)[START])
-                (END,  (*item)[END])
-                (PLOT, (*item)[_COVERAGE_PLOT_FILE_NAME])); // filled by draw_coverage
-    
-  } // mc_item list
-  
-  
-  
-  diff_entry_list_t items_SNP_INS_DEL_SUB = gd.show_list(make_vector<gd_entry_type>(SNP)(INS)(DEL)(SUB));
-  //cerr << "Number of SNP_INS_DEL_SUB evidence items: " << items_SNP_INS_DEL_SUB.size() << endl;
-
-  for (diff_entry_list_t::iterator itr = items_SNP_INS_DEL_SUB.begin(); itr != items_SNP_INS_DEL_SUB.end(); itr ++) 
-  {  
-    diff_entry_ptr_t item = *itr;
-    diff_entry_list_t mutation_evidence_list = gd.mutation_evidence_list(*item);
-
-    // #this reconstructs the proper columns to draw
-    uint32_t start = from_string<uint32_t>((*item)[POSITION]);
-    uint32_t end = start;
-    uint32_t insert_start = 0;
-    uint32_t insert_end = 0;
-
-    if (item->_type == INS) 
-    {
-      insert_start = 1;
-      insert_end = (*item)[NEW_SEQ].size();
-    }
-    else if (item->_type == DEL) 
-    {
-      bool has_ra_evidence = false;
-      for (diff_entry_list_t::iterator itr = mutation_evidence_list.begin(); itr != mutation_evidence_list.end(); itr ++) 
-      {  
-        cDiffEntry& evidence_item = **itr;
-        if (evidence_item._type == RA) has_ra_evidence = true;
-      }
-      if(!has_ra_evidence) continue;  
-
-      end = start + from_string<uint32_t>((*item)[SIZE]) - 1;
-    }
-
-    else if (item->_type == SUB ) 
-    {
-      end = start + (*item)[NEW_SEQ].size() - 1;
-    }
-
-    add_evidence(_EVIDENCE_FILE_NAME,
-                 item,
-                 item,
-                 make_map<string,string>
-                 (BAM_PATH, reference_bam_file_name)
-                 (FASTA_PATH, reference_fasta_file_name)
-                 (SEQ_ID, (*item)[SEQ_ID])            
-                 (START, to_string(start))
-                 (END,  to_string(end))
-                 (INSERT_START, to_string(insert_start))
-                 (INSERT_END, to_string(insert_end))
-                 (PREFIX, to_string((*item)._type)));
-
-
-    // Add evidence to RA items as well
-    for (diff_entry_list_t::iterator itr = mutation_evidence_list.begin(); itr != mutation_evidence_list.end(); itr ++) 
-    {  
-      cDiffEntry& evidence_item = **itr;
-      if (evidence_item._type != RA) continue;
-      evidence_item[_EVIDENCE_FILE_NAME] = (*item)[_EVIDENCE_FILE_NAME];  
-    }
-  }
-  
-  
-  
-  
-  // Still create files for RA evidence that was not good enough to predict a mutation from
-  diff_entry_list_t items_RA = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(RA)));
-  //cerr << "Number of RA evidence items: " << items_RA.size() << endl;
-
-  for (diff_entry_list_t::iterator itr = items_RA.begin(); itr != items_RA.end(); itr ++) 
-  {  
-    diff_entry_ptr_t item = *itr;
-
-    add_evidence(_EVIDENCE_FILE_NAME,
-                 item,
-                 item,
-                 make_map<string,string>
-                 (BAM_PATH, reference_bam_file_name)
-                 (FASTA_PATH, reference_fasta_file_name)
-                 (SEQ_ID, (*item)[SEQ_ID])            
-                 (START, (*item)[POSITION])
-                 (END, (*item)[POSITION])
-                 (INSERT_START, (*item)[INSERT_POSITION])
-                 (INSERT_END, (*item)[INSERT_POSITION])
-                 (PREFIX, to_string(item->_type)));
-  }
-  // This additional information is used for the complex reference line.
-  // Note that it is completely determined by the original candidate junction sequence 
-  // positions and overlap: alignment_pos and alignment_overlap.
-  
-  
-  diff_entry_list_t items_JC = gd.show_list(make_vector<gd_entry_type>(JC));
-  //cerr << "Number of JC evidence items: " << items_JC.size() << endl;
-
-  for (diff_entry_list_t::iterator itr = items_JC.begin(); itr != items_JC.end(); itr ++) 
-  {  
-    diff_entry_ptr_t item = *itr;
-
-    diff_entry_ptr_t parent_item(gd.parent(*item));
-    if (parent_item.get() == NULL)
-      parent_item = *itr;
-
-    uint32_t start = from_string<uint32_t>((*item)[FLANKING_LEFT]);
-    uint32_t end = from_string<uint32_t>((*item)[FLANKING_LEFT]) + 1 + abs(from_string<int32_t>((*item)[ALIGNMENT_OVERLAP]));
-    
-    // The "key"/ID is set early in breseq.  It must remain unique and unchanging
-    // through the run so we know what we're referencing.  Because we derive values
-    // from the name (like here), sometimes those values won't match the new resolved
-    // values for each side.  This is a dirty fix so that the evidence files
-    // will be operating with the correct positions for each side.  Search @MDS0001
-    // to find out where we finally access this modified information.
-    JunctionInfo juncInfo((*item)["key"]);
-    juncInfo.sides[0].redundant = from_string<int32_t>((*item)[SIDE_1_REDUNDANT]);
-    juncInfo.sides[0].position = from_string<int32_t>((*item)[SIDE_1_POSITION]);
-    juncInfo.sides[1].position = from_string<int32_t>((*item)[SIDE_2_POSITION]); 
-    
-    add_evidence(_NEW_JUNCTION_EVIDENCE_FILE_NAME,
-                  item,
-                  parent_item,
-                  make_map<diff_entry_key_t,diff_entry_value_t>
-                 (BAM_PATH, junction_bam_file_name)
-                 (FASTA_PATH, junction_fasta_file_name)
-                 (SEQ_ID, (*item)["key"])
-                 (START, to_string(start))
-                 (END, to_string(end))
-                 (PREFIX, "JC")
-                 (ALIGNMENT_EMPTY_CHANGE_LINE, "1")
-                 );
-    // set as the flagship file that we show first when clicking on evidence from a mutation...
-    (*item)[_EVIDENCE_FILE_NAME] = (*item)[_NEW_JUNCTION_EVIDENCE_FILE_NAME];
-    
-    add_evidence(_SIDE_1_EVIDENCE_FILE_NAME,
-                 item,
-                 parent_item,
-                 make_map<string,string>
-                 (BAM_PATH, reference_bam_file_name)
-                 (FASTA_PATH, reference_fasta_file_name)
-                 (SEQ_ID, (*item)[SIDE_1_SEQ_ID])            
-                 (START, (*item)[SIDE_1_POSITION])
-                 (END, (*item)[SIDE_1_POSITION])
-                 (PREFIX, "JC_SIDE_1")
-                 ); 
-
-    add_evidence(_SIDE_2_EVIDENCE_FILE_NAME,
-                 item,
-                 parent_item,
-                 make_map<string,string>
-                 (BAM_PATH, reference_bam_file_name)
-                 (FASTA_PATH, reference_fasta_file_name)
-                 (SEQ_ID, (*item)[SIDE_2_SEQ_ID])            
-                 (START, (*item)[SIDE_2_POSITION])
-                 (END, (*item)[SIDE_2_POSITION])
-                 (PREFIX, "JC_SIDE_2")
-                 );
-  }
-  
-  // Copy number evidence
-  diff_entry_list_t items_CN = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(CN)));
-  
-  for (diff_entry_list_t::iterator itr = items_CN.begin(); itr != items_CN.end(); itr ++) 
-  {  
-    diff_entry_ptr_t item = *itr;
-    
-    add_evidence(_EVIDENCE_FILE_NAME,
-                 item,
-                 item,
-                 make_map<string,string>
-                 (BAM_PATH, reference_bam_file_name)
-                 (FASTA_PATH, reference_fasta_file_name)
-                 (PREFIX, "CN_PLOT")
-                 (SEQ_ID, (*item)[SEQ_ID])            
-                 (START, (*item)[START])
-                 (END,  (*item)[END])
-                 (PLOT, (*item)[_COVERAGE_PLOT_FILE_NAME])); // filled by draw_coverage
-
-  }
-
-  
-  // now create evidence files
-  create_path(settings.evidence_path);
-  //cerr << "Total number of evidence items: " << evidence_list.size() << endl;
-  
-  for (vector<Evidence_Item>::iterator itr = evidence_list.begin(); itr != evidence_list.end(); itr ++) 
-  {  
-    Evidence_Item& e = (*itr);
-    //cerr << "Creating evidence file: " + e[FILE_NAME] << endl;   
-    html_evidence_file(settings, gd, e);
-  }
-}
-  
-  
-void Evidence_Files::add_evidence(const string& evidence_file_name_key, diff_entry_ptr_t item,
-                                  diff_entry_ptr_t parent_item, diff_entry_map_t& fields)
-{
-  Evidence_Item evidence_item(fields, item, parent_item);
-  
-  evidence_item[FILE_NAME] = evidence_item[PREFIX] + "_" + evidence_item.item->_id + ".html";
-    
-  ASSERT(!evidence_item[FILE_NAME].empty(), "Empty file name for evidence.");
-  
-  // this is added to the actual genome diff entry so that we know where to link
-  (*item)[evidence_file_name_key] = evidence_item[FILE_NAME];
-  
-  evidence_list.push_back(evidence_item);
-}
-
-
-/*-----------------------------------------------------------------------------
- *  Create the HTML Evidence File
- *-----------------------------------------------------------------------------*/
-// # 
-// # 
-void 
-Evidence_Files::html_evidence_file (
-                    const Settings& settings, 
-                    cGenomeDiff& gd, 
-                    Evidence_Item& item
-                   )
-{  
-  string output_path = settings.evidence_path + "/" + item[FILE_NAME];
-
-  // Create Stream and Confirm It's Open
-  ofstream HTML(output_path.c_str());
-    
-  if (!HTML.good()) {
-    cerr << "Could not open file: " << item["output_path"] << endl;
-    assert(HTML.good());
-  }
-  
-  // Build HTML Head
-  HTML << html_header("BRESEQ :: Evidence", settings);
-  
-  // print a table for the main item
-  // followed by auxiliary tables for each piece of evidence
-
-  diff_entry_ptr_t parent_item = item.parent_item;
-  diff_entry_list_t parent_list;
-  parent_list.push_back(parent_item);
-  HTML << html_genome_diff_item_table_string(settings, gd, parent_list);
-  HTML << "<p>";
-  
-  diff_entry_list_t evidence_list = gd.mutation_evidence_list(*parent_item);
-
-  vector<gd_entry_type> types = make_vector<gd_entry_type>(RA)(MC)(JC);
-  
-  for (vector<gd_entry_type>::iterator itr = types.begin(); itr != types.end(); itr ++)
-  {  
-    const gd_entry_type type = *itr;
-    diff_entry_list_t this_evidence_list = evidence_list;
-    this_evidence_list.remove_if(cDiffEntry::is_not_type(type));   
-    
-    if(this_evidence_list.empty()) continue;
-
-    HTML << html_genome_diff_item_table_string(settings, gd, this_evidence_list);
-    HTML << "<p>"; 
-  }
-  
-  if (item.entry_exists(PLOT) && !item[PLOT].empty())
-    HTML << div(ALIGN_CENTER, img(item[PLOT]));
-  else
-  {
-    stringstream ss;
-    
-    ss << item[SEQ_ID] << ":" << item[START];
-    
-    if (item[INSERT_START].size() > 0)
-    {
-      ss << "." << item[INSERT_START];
-    }
-    
-    ss << "-" << item[END];
-    
-    if (item[INSERT_END].size())
-    {
-      ss << "." << item[INSERT_END];
-    }
-    cerr << "Creating read alignment for region: " << ss.str() << endl;
-
-    if (settings.base_quality_cutoff != 0)
-      item["base_quality_cutoff"] = to_string(settings.base_quality_cutoff);
-    
-    alignment_output ao(item[BAM_PATH], item[FASTA_PATH], settings.max_displayed_reads, settings.base_quality_cutoff, settings.junction_minimum_side_match);
-
-    HTML << ao.html_alignment(ss.str(), (item[PREFIX] == "JC") ? item.item.get() : NULL);
-
-  }
-  HTML << html_footer();
-  HTML.close();
-}
 
 
 /*-----------------------------------------------------------------------------
@@ -2505,9 +2150,365 @@ string Html_Mutation_Table_String::freq_cols(vector<string> freq_list)
     }
   }
   return ss.str();
+}  
+  
+/*
+ * =====================================================================================
+ *        Class:  Evidence_Files
+ *  Description:  
+ * =====================================================================================
+ */
+cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff& gd)
+{  
+  // Fasta and BAM files for making alignments.
+  string reference_bam_file_name = settings.reference_bam_file_name;
+  string reference_fasta_file_name = settings.reference_fasta_file_name;
+  
+  // hybrids use different BAM files for making the alignments!!!
+  string junction_bam_file_name = settings.junction_bam_file_name;
+  string junction_fasta_file_name = settings.candidate_junction_fasta_file_name;
+  
+  
+  // We make alignments of two regions for deletions: upstream and downstream edges.
+  diff_entry_list_t items_MC = gd.show_list(make_vector<gd_entry_type>(MC));
+  //cerr << "Number of MC evidence items: " << items_MC.size() << endl;
+  
+  
+  for (diff_entry_list_t::iterator itr = items_MC.begin(); itr != items_MC.end(); itr ++) 
+  {  
+    diff_entry_ptr_t item(*itr);
+    
+    diff_entry_ptr_t parent_item(gd.parent(*item));
+    if (parent_item.get() == NULL)
+      parent_item = *itr;
+    
+    add_evidence(_SIDE_1_EVIDENCE_FILE_NAME,
+                 item,
+                 parent_item,
+                 make_map<string,string>
+                 (BAM_PATH, reference_bam_file_name)
+                 (FASTA_PATH, reference_fasta_file_name)
+                 (PREFIX, "MC_SIDE_1")
+                 (SEQ_ID, (*item)[SEQ_ID])            
+                 (START, to_string(from_string<uint32_t>((*item)[START]) - 1))
+                 (END,  to_string(from_string<uint32_t>((*item)[START]) - 1)));
+    
+    add_evidence(_SIDE_2_EVIDENCE_FILE_NAME,
+                 item,
+                 parent_item,
+                 make_map<string,string>
+                 (BAM_PATH, reference_bam_file_name)
+                 (FASTA_PATH, reference_fasta_file_name)
+                 (PREFIX, "MC_SIDE_2")
+                 (SEQ_ID, (*item)[SEQ_ID])            
+                 (START, to_string(from_string<uint32_t>((*item)[END]) + 1))
+                 (END,  to_string(from_string<uint32_t>((*item)[END]) + 1)));
+    
+    add_evidence(_EVIDENCE_FILE_NAME,
+                 item,
+                 parent_item,
+                 make_map<string,string>
+                 (BAM_PATH, reference_bam_file_name)
+                 (FASTA_PATH, reference_fasta_file_name)
+                 (PREFIX, "MC_PLOT")
+                 (SEQ_ID, (*item)[SEQ_ID])            
+                 (START, (*item)[START])
+                 (END,  (*item)[END])
+                 (PLOT, (*item)[_COVERAGE_PLOT_FILE_NAME])); // filled by draw_coverage
+    
+  } // mc_item list
+  
+  
+  
+  diff_entry_list_t items_SNP_INS_DEL_SUB = gd.show_list(make_vector<gd_entry_type>(SNP)(INS)(DEL)(SUB));
+  //cerr << "Number of SNP_INS_DEL_SUB evidence items: " << items_SNP_INS_DEL_SUB.size() << endl;
+  
+  for (diff_entry_list_t::iterator itr = items_SNP_INS_DEL_SUB.begin(); itr != items_SNP_INS_DEL_SUB.end(); itr ++) 
+  {  
+    diff_entry_ptr_t item = *itr;
+    diff_entry_list_t mutation_evidence_list = gd.mutation_evidence_list(*item);
+    
+    // #this reconstructs the proper columns to draw
+    uint32_t start = from_string<uint32_t>((*item)[POSITION]);
+    uint32_t end = start;
+    uint32_t insert_start = 0;
+    uint32_t insert_end = 0;
+    
+    if (item->_type == INS) 
+    {
+      insert_start = 1;
+      insert_end = (*item)[NEW_SEQ].size();
+    }
+    else if (item->_type == DEL) 
+    {
+      bool has_ra_evidence = false;
+      for (diff_entry_list_t::iterator itr = mutation_evidence_list.begin(); itr != mutation_evidence_list.end(); itr ++) 
+      {  
+        cDiffEntry& evidence_item = **itr;
+        if (evidence_item._type == RA) has_ra_evidence = true;
+      }
+      if(!has_ra_evidence) continue;  
+      
+      end = start + from_string<uint32_t>((*item)[SIZE]) - 1;
+    }
+    
+    else if (item->_type == SUB ) 
+    {
+      end = start + (*item)[NEW_SEQ].size() - 1;
+    }
+    
+    add_evidence(_EVIDENCE_FILE_NAME,
+                 item,
+                 item,
+                 make_map<string,string>
+                 (BAM_PATH, reference_bam_file_name)
+                 (FASTA_PATH, reference_fasta_file_name)
+                 (SEQ_ID, (*item)[SEQ_ID])            
+                 (START, to_string(start))
+                 (END,  to_string(end))
+                 (INSERT_START, to_string(insert_start))
+                 (INSERT_END, to_string(insert_end))
+                 (PREFIX, to_string((*item)._type)));
+    
+    
+    // Add evidence to RA items as well
+    for (diff_entry_list_t::iterator itr = mutation_evidence_list.begin(); itr != mutation_evidence_list.end(); itr ++) 
+    {  
+      cDiffEntry& evidence_item = **itr;
+      if (evidence_item._type != RA) continue;
+      evidence_item[_EVIDENCE_FILE_NAME] = (*item)[_EVIDENCE_FILE_NAME];  
+    }
+  }
+  
+  
+  
+  
+  // Still create files for RA evidence that was not good enough to predict a mutation from
+  diff_entry_list_t items_RA = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(RA)));
+  //cerr << "Number of RA evidence items: " << items_RA.size() << endl;
+  
+  for (diff_entry_list_t::iterator itr = items_RA.begin(); itr != items_RA.end(); itr ++) 
+  {  
+    diff_entry_ptr_t item = *itr;
+    
+    add_evidence(_EVIDENCE_FILE_NAME,
+                 item,
+                 item,
+                 make_map<string,string>
+                 (BAM_PATH, reference_bam_file_name)
+                 (FASTA_PATH, reference_fasta_file_name)
+                 (SEQ_ID, (*item)[SEQ_ID])            
+                 (START, (*item)[POSITION])
+                 (END, (*item)[POSITION])
+                 (INSERT_START, (*item)[INSERT_POSITION])
+                 (INSERT_END, (*item)[INSERT_POSITION])
+                 (PREFIX, to_string(item->_type)));
+  }
+  // This additional information is used for the complex reference line.
+  // Note that it is completely determined by the original candidate junction sequence 
+  // positions and overlap: alignment_pos and alignment_overlap.
+  
+  
+  diff_entry_list_t items_JC = gd.show_list(make_vector<gd_entry_type>(JC));
+  //cerr << "Number of JC evidence items: " << items_JC.size() << endl;
+  
+  for (diff_entry_list_t::iterator itr = items_JC.begin(); itr != items_JC.end(); itr ++) 
+  {  
+    diff_entry_ptr_t item = *itr;
+    
+    diff_entry_ptr_t parent_item(gd.parent(*item));
+    if (parent_item.get() == NULL)
+      parent_item = *itr;
+    
+    uint32_t start = from_string<uint32_t>((*item)[FLANKING_LEFT]);
+    uint32_t end = from_string<uint32_t>((*item)[FLANKING_LEFT]) + 1 + abs(from_string<int32_t>((*item)[ALIGNMENT_OVERLAP]));
+    
+    // The "key"/ID is set early in breseq.  It must remain unique and unchanging
+    // through the run so we know what we're referencing.  Because we derive values
+    // from the name (like here), sometimes those values won't match the new resolved
+    // values for each side.  This is a dirty fix so that the evidence files
+    // will be operating with the correct positions for each side.  Search @MDS0001
+    // to find out where we finally access this modified information.
+    JunctionInfo juncInfo((*item)["key"]);
+    juncInfo.sides[0].redundant = from_string<int32_t>((*item)[SIDE_1_REDUNDANT]);
+    juncInfo.sides[0].position = from_string<int32_t>((*item)[SIDE_1_POSITION]);
+    juncInfo.sides[1].position = from_string<int32_t>((*item)[SIDE_2_POSITION]); 
+    
+    add_evidence(_NEW_JUNCTION_EVIDENCE_FILE_NAME,
+                 item,
+                 parent_item,
+                 make_map<diff_entry_key_t,diff_entry_value_t>
+                 (BAM_PATH, junction_bam_file_name)
+                 (FASTA_PATH, junction_fasta_file_name)
+                 (SEQ_ID, (*item)["key"])
+                 (START, to_string(start))
+                 (END, to_string(end))
+                 (PREFIX, "JC")
+                 (ALIGNMENT_EMPTY_CHANGE_LINE, "1")
+                 );
+    // set as the flagship file that we show first when clicking on evidence from a mutation...
+    (*item)[_EVIDENCE_FILE_NAME] = (*item)[_NEW_JUNCTION_EVIDENCE_FILE_NAME];
+    
+    add_evidence(_SIDE_1_EVIDENCE_FILE_NAME,
+                 item,
+                 parent_item,
+                 make_map<string,string>
+                 (BAM_PATH, reference_bam_file_name)
+                 (FASTA_PATH, reference_fasta_file_name)
+                 (SEQ_ID, (*item)[SIDE_1_SEQ_ID])            
+                 (START, (*item)[SIDE_1_POSITION])
+                 (END, (*item)[SIDE_1_POSITION])
+                 (PREFIX, "JC_SIDE_1")
+                 ); 
+    
+    add_evidence(_SIDE_2_EVIDENCE_FILE_NAME,
+                 item,
+                 parent_item,
+                 make_map<string,string>
+                 (BAM_PATH, reference_bam_file_name)
+                 (FASTA_PATH, reference_fasta_file_name)
+                 (SEQ_ID, (*item)[SIDE_2_SEQ_ID])            
+                 (START, (*item)[SIDE_2_POSITION])
+                 (END, (*item)[SIDE_2_POSITION])
+                 (PREFIX, "JC_SIDE_2")
+                 );
+  }
+  
+  // Copy number evidence
+  diff_entry_list_t items_CN = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(CN)));
+  
+  for (diff_entry_list_t::iterator itr = items_CN.begin(); itr != items_CN.end(); itr ++) 
+  {  
+    diff_entry_ptr_t item = *itr;
+    
+    add_evidence(_EVIDENCE_FILE_NAME,
+                 item,
+                 item,
+                 make_map<string,string>
+                 (BAM_PATH, reference_bam_file_name)
+                 (FASTA_PATH, reference_fasta_file_name)
+                 (PREFIX, "CN_PLOT")
+                 (SEQ_ID, (*item)[SEQ_ID])            
+                 (START, (*item)[START])
+                 (END,  (*item)[END])
+                 (PLOT, (*item)[_COVERAGE_PLOT_FILE_NAME])); // filled by draw_coverage
+    
+  }
+  
+  
+  // now create evidence files
+  create_path(settings.evidence_path);
+  //cerr << "Total number of evidence items: " << evidence_list.size() << endl;
+  
+  for (vector<cOutputEvidenceItem>::iterator itr = evidence_list.begin(); itr != evidence_list.end(); itr ++) 
+  {  
+    cOutputEvidenceItem& e = (*itr);
+    //cerr << "Creating evidence file: " + e[FILE_NAME] << endl;   
+    html_evidence_file(settings, gd, e);
+  }
 }
 
 
+void cOutputEvidenceFiles::add_evidence(const string& evidence_file_name_key, diff_entry_ptr_t item,
+                                  diff_entry_ptr_t parent_item, diff_entry_map_t& fields)
+{
+  cOutputEvidenceItem evidence_item(fields, item, parent_item);
+  
+  evidence_item[FILE_NAME] = evidence_item[PREFIX] + "_" + evidence_item.item->_id + ".html";
+  
+  ASSERT(!evidence_item[FILE_NAME].empty(), "Empty file name for evidence.");
+  
+  // this is added to the actual genome diff entry so that we know where to link
+  (*item)[evidence_file_name_key] = evidence_item[FILE_NAME];
+  
+  evidence_list.push_back(evidence_item);
+}
+
+
+/*-----------------------------------------------------------------------------
+ *  Create the HTML Evidence File
+ *-----------------------------------------------------------------------------*/
+// # 
+// # 
+void 
+cOutputEvidenceFiles::html_evidence_file (
+                                    const Settings& settings, 
+                                    cGenomeDiff& gd, 
+                                    cOutputEvidenceItem& item
+                                    )
+{  
+  string output_path = settings.evidence_path + "/" + item[FILE_NAME];
+  
+  // Create Stream and Confirm It's Open
+  ofstream HTML(output_path.c_str());
+  
+  if (!HTML.good()) {
+    cerr << "Could not open file: " << item["output_path"] << endl;
+    assert(HTML.good());
+  }
+  
+  // Build HTML Head
+  HTML << html_header("BRESEQ :: Evidence", settings);
+  
+  // print a table for the main item
+  // followed by auxiliary tables for each piece of evidence
+  
+  diff_entry_ptr_t parent_item = item.parent_item;
+  diff_entry_list_t parent_list;
+  parent_list.push_back(parent_item);
+  HTML << html_genome_diff_item_table_string(settings, gd, parent_list);
+  HTML << "<p>";
+  
+  diff_entry_list_t evidence_list = gd.mutation_evidence_list(*parent_item);
+  
+  vector<gd_entry_type> types = make_vector<gd_entry_type>(RA)(MC)(JC);
+  
+  for (vector<gd_entry_type>::iterator itr = types.begin(); itr != types.end(); itr ++)
+  {  
+    const gd_entry_type type = *itr;
+    diff_entry_list_t this_evidence_list = evidence_list;
+    this_evidence_list.remove_if(cDiffEntry::is_not_type(type));   
+    
+    if(this_evidence_list.empty()) continue;
+    
+    HTML << html_genome_diff_item_table_string(settings, gd, this_evidence_list);
+    HTML << "<p>"; 
+  }
+  
+  if (item.entry_exists(PLOT) && !item[PLOT].empty())
+    HTML << div(ALIGN_CENTER, img(item[PLOT]));
+  else
+  {
+    stringstream ss;
+    
+    ss << item[SEQ_ID] << ":" << item[START];
+    
+    if (item[INSERT_START].size() > 0)
+    {
+      ss << "." << item[INSERT_START];
+    }
+    
+    ss << "-" << item[END];
+    
+    if (item[INSERT_END].size())
+    {
+      ss << "." << item[INSERT_END];
+    }
+    cerr << "Creating read alignment for region: " << ss.str() << endl;
+    
+    if (settings.base_quality_cutoff != 0)
+      item["base_quality_cutoff"] = to_string(settings.base_quality_cutoff);
+    
+    alignment_output ao(item[BAM_PATH], item[FASTA_PATH], settings.max_displayed_reads, settings.base_quality_cutoff, settings.junction_minimum_side_match);
+    
+    HTML << ao.html_alignment(ss.str(), &item);
+    
+  }
+  HTML << html_footer();
+  HTML.close();
+}
+  
+  
 }//end namespace output
 }//end namespace breseq
 

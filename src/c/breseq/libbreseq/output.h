@@ -54,9 +54,8 @@ extern const char* SIDE_2_OVERLAP;
 extern const char* SIDE_1_JC;
 extern const char* SIDE_2_JC;
 
-namespace output
+namespace output 
 {
-
 
 /*-----------------------------------------------------------------------------
  *  HTML Attribute Keywords
@@ -123,10 +122,12 @@ extern const char* ALIGN_LEFT;
   //! Adds commas to large numbers (ex 1000 to 1,000)
   string commify(const string& input);
 
+  
   //Specific to Breseq HTML Files
   string html_header(const string& title, const Settings& settings);
   string breseq_header_string(const Settings& settings);
 
+  
 /*-----------------------------------------------------------------------------
  * HTML FILES 
  *-----------------------------------------------------------------------------*/
@@ -244,40 +245,39 @@ string to_underline_red_codon(const cDiffEntry& mut,const string& codon_key);
 string decode_reject_reason(const string & reject);
 
 /*-----------------------------------------------------------------------------
- *  Create_Evidence_Files
- *-----------------------------------------------------------------------------*/
-struct Evidence_Files
-{
-  class Evidence_Item : public cDiffEntry
-  {
-  public:
-    Evidence_Item(diff_entry_map_t& _fields, diff_entry_ptr_t _item, diff_entry_ptr_t _parent_item)
-    : cDiffEntry(_fields), item(_item), parent_item(_parent_item) {};
-    
-    diff_entry_ptr_t item;
-    diff_entry_ptr_t parent_item;
-  };
-
-  Evidence_Files(const Settings& settings, cGenomeDiff& gd);
-  
-  vector<Evidence_Item> evidence_list;
-  
-  private:
-  
-    void add_evidence(const string& file_name, diff_entry_ptr_t item,
-                      diff_entry_ptr_t parent_item, map<string,string>& fields);
-    void html_evidence_file(const Settings& settings, cGenomeDiff& gd, Evidence_Item& item);
-
-};
-
-/*-----------------------------------------------------------------------------
  *  Output Utilities
  *-----------------------------------------------------------------------------*/
 
 // sub draw_coverage
 void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenomeDiff& gd);
-
-
-}// end output namespace 
+  
+/*-----------------------------------------------------------------------------
+ *  Create_Evidence_Files
+ *-----------------------------------------------------------------------------*/  
+  
+class cOutputEvidenceItem : public cDiffEntry
+{
+public:
+  cOutputEvidenceItem(diff_entry_map_t& _fields, diff_entry_ptr_t _item, diff_entry_ptr_t _parent_item)
+  : cDiffEntry(_fields), item(_item), parent_item(_parent_item) {};
+  
+  diff_entry_ptr_t item;
+  diff_entry_ptr_t parent_item;
+};  
+  
+struct cOutputEvidenceFiles
+{
+  cOutputEvidenceFiles(const Settings& settings, cGenomeDiff& gd);
+  
+  vector<cOutputEvidenceItem> evidence_list;
+  
+  private:
+  
+    void add_evidence(const string& file_name, diff_entry_ptr_t item,
+                      diff_entry_ptr_t parent_item, map<string,string>& fields);
+    void html_evidence_file(const Settings& settings, cGenomeDiff& gd, cOutputEvidenceItem& item);
+};
+  
+}// end output namespace
 }// end breseq namespace
 #endif

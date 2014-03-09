@@ -20,15 +20,18 @@
 #define _BRESEQ_ALIGNMENT_OUTPUT_H_
 
 #include "common.h"
-#include "pileup_base.h"
 #include "pileup.h"
-#include "alignment.h"
 #include "candidate_junctions.h"
 
-using namespace std;
 
 namespace breseq
 {
+  
+  // Pre-declaration
+  namespace output {
+    class cOutputEvidenceItem;  
+  }
+  using namespace output;
   
   /*! This class is a FACTORY for generating HTML alignments
    */
@@ -184,7 +187,7 @@ namespace breseq
     uint32_t m_maximum_to_align;
     int32_t m_junction_minimum_size_match;
     bool m_show_ambiguously_mapped;
-    bool m_is_junction;
+    bool m_is_junction, m_is_junction_junction; // Former for JC, latter for JC+junction part of it
     
   public:
     //! Constructor.
@@ -197,9 +200,9 @@ namespace breseq
                       const bool show_ambiguously_mapped = false
                       );
     //! Output an HTML alignment.
-    void create_alignment ( const string& region, cDiffEntry * jc_item = NULL );
-    string html_alignment ( const string& region, cDiffEntry * jc_item = NULL );
-    string text_alignment ( const string& region, cDiffEntry * jc_item = NULL );
+    void create_alignment ( const string& region, cOutputEvidenceItem * output_evidence_item = NULL );
+    string html_alignment ( const string& region, cOutputEvidenceItem * output_evidence_item = NULL );
+    string text_alignment ( const string& region, cOutputEvidenceItem * output_evidence_item = NULL );
     void set_quality_range(const uint32_t quality_score_cutoff = 0);
   private:
     uint32_t no_color_index;
@@ -215,7 +218,6 @@ namespace breseq
       return ( a.aligned_bases.compare(b.aligned_bases) > 0 );
     }
   };
-  
   
 }//end namespace breseq
 #endif

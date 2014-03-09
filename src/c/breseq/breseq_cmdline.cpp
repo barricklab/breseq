@@ -2080,7 +2080,7 @@ int breseq_default_action(int argc, char* argv[])
 		// Create evidence files containing alignments and coverage plots
 		//
 		if (!settings.no_alignment_or_plot_generation)
-			output::Evidence_Files(settings, gd);
+			output::cOutputEvidenceFiles(settings, gd);
 
 		///
 		// HTML output
