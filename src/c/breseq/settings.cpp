@@ -595,6 +595,9 @@ namespace breseq
     this->polymorphism_reject_homopolymer_length = 0;
 		this->no_indel_polymorphisms = false;
     
+    //! Settings: Mutation Prediction
+    this->size_cutoff_AMP_becomes_INS_DEL_mutation = 0;
+    
     //! Settings: Output
     this->max_displayed_reads = 100;
     this->max_rejected_read_alignment_evidence_to_show = 20;

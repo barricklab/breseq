@@ -345,6 +345,9 @@ namespace breseq
     uint32_t periodicity_end;
     uint32_t periodicity_step;
     
+    //! Settings: Mutation Prediction
+    int32_t size_cutoff_AMP_becomes_INS_DEL_mutation;      // Default = 20
+          
     //! Settings: Output
     uint32_t max_displayed_reads;                           // Default = 100   COMMAND-LINE OPTION
     uint32_t max_rejected_read_alignment_evidence_to_show;  // Defaule = 20

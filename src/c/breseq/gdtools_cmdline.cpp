@@ -435,16 +435,21 @@ int do_check_plot(int argc, char *argv[])
 int do_validate(int argc, char *argv[])
 {
     AnyOption options("gdtools VALIDATE [] input1.gd [input2.gd]");
-    options("reference,r",  "reference sequence file. If provided, will validate seq_ids and positions in the GD file using thes.  Option may be provided multiple times for multiple files. (OPTIONAL)");
+    options("reference,r",  "Reference sequence file. If provided, will validate seq_ids and positions in the GD file using these.  Option may be provided multiple times for multiple files. (OPTIONAL)");
+    options("verbose,v",  "Verbose mode. Outputs additional information about progress. (OPTIONAL)");
     options.addUsage("");
     options.addUsage("Validates whether the format of the input Genome Diff files is correct.");
 
     options.processCommandArgs(argc, argv);
 
+    bool verbose = options.count("verbose");
+    
     if (options.getArgc() == 0) {
         options.printUsage();
         return -1;
     }
+    
+    cerr << "Running gdtools VALIDATE on " << options.getArgc() << " files..." << endl;
     
     // Further read in reference sequences and check IDs of mutations if user provided
     cReferenceSequences ref;
@@ -453,10 +458,13 @@ int do_validate(int argc, char *argv[])
     }
     
     
+    uint32_t num_files_processed = 0;
+    uint32_t num_files_with_errors = 0;
+    
     // Simply read files. Really need some way to change deadly errors to warnings in read function.
     for (int32_t i=0; i<options.getArgc(); i++) {
         string gd_file_name = options.getArgv(i);
-        cerr <<  "Validating Genome Diff format for file: " << gd_file_name << endl;
+        num_files_processed++;
         cGenomeDiff gd;
         cFileParseErrors pe = gd.read(gd_file_name, true);
 
@@ -466,13 +474,27 @@ int do_validate(int argc, char *argv[])
         }
         
         if (pe._errors.size() + pe2._errors.size() == 0) {
-            cerr << "  FORMAT OK" << endl;
+            if (verbose) {
+                cerr << endl << "File: " << gd_file_name << endl;
+                cerr << "  FORMAT OK" << endl;
+            }
         } else {
+            cerr << endl << "File: " << gd_file_name << endl;
             pe.print_errors(false);
             pe2.print_errors(false);
+            num_files_with_errors++;
         }
     }
     
+    cerr << endl;
+    cerr << "::: Summary :::" << endl;
+    cerr << setw(6);
+    cerr << "  Total files processed:             " << num_files_processed << endl;
+    if (num_files_with_errors == 0) {
+        cerr << "* No formatting errors found!" << endl;
+    } else {
+        cerr << "  Files with formatting errors:  " << num_files_with_errors << endl;
+    }
     
     return 0;
 }

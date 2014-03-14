@@ -1062,7 +1062,10 @@ namespace breseq {
 
 		///
 		// evidence JC => INS, SUB, AMP, DEL mutations
+    // @JEB 03-09-2014 Changed this section to produce INS and DEL instead of AMP,
+    //                 when the mutation size is less than or equal to threshold in settings. 
 		///
+    int32_t AMP_size_cutoff = settings.size_cutoff_AMP_becomes_INS_DEL_mutation;
     for(diff_entry_list_t::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) //JC
 		{
 			cDiffEntry& j = **jc_it;
@@ -1140,16 +1143,26 @@ namespace breseq {
           ;
           mut._evidence = make_vector<string>(j._id);
         } 
-        else // this is an amplification.		
+        else // this is an amplification (which may be annotated as an insertion if short).	
         {		
-          mut._type = AMP;		
-          mut		
-          ("seq_id", seq_id)		
-          ("position", s(side_1_position))		
-          ("size", s(size))		
-          ("new_copy_number", "2")		
-          ;		
           mut._evidence = make_vector<string>(j._id);
+
+          if (size > AMP_size_cutoff) {
+            mut._type = AMP;		
+            mut		
+            ("seq_id", seq_id)		
+            ("position", s(side_1_position))		
+            ("size", s(size))		
+            ("new_copy_number", "2")		
+            ;		
+          } else {
+            mut._type = INS;		
+            mut		
+            ("seq_id", seq_id)		
+            ("position", s(side_1_position))		
+            ("new_seq", ref_seq_info.get_sequence_1(seq_id, side_1_position, side_1_position + size - 1 ))		
+            ;		
+          }
         }
       }
 			// 'INS'
@@ -1191,12 +1204,13 @@ namespace breseq {
       //            If that is resolved, then only the version above will be needed for AMP.
 			else if (n(j["side_1_position"]) + 1 == n(j["side_2_position"]))
 			{
-        // Check to see if unique sequence matches sequence directly before
-        size_t size = j["unique_read_sequence"].size();
+        // Check to see if unique sequence matches sequence directly before, and
+        // Length is not above the cutoff for calling it an INS 
+        int32_t size = j["unique_read_sequence"].size();
         size_t prev_position = n(j["side_2_position"]) - size;
         string dup_check_seq = ref_seq_info.get_sequence_1(j["side_1_seq_id"], prev_position, prev_position + size - 1);
         
-        if (j["unique_read_sequence"] == dup_check_seq)
+        if ( (size > AMP_size_cutoff) && (j["unique_read_sequence"] == dup_check_seq) )
         {
           mut._type = AMP;
           mut
@@ -1379,10 +1393,11 @@ namespace breseq {
 				// unused fields
 				mut.erase("ref_seq");
         
-        // Check to see if unique sequence matches sequence directly before
+        // Check to see if unique sequence matches sequence directly before, and we should convert to AMP
         string dup_check_seq = ref_seq_info.get_circular_sequence_1(mut["seq_id"], n(mut["position"]) - (mut["new_seq"].size() - 1), mut["new_seq"].size());
+        int32_t size = mut["new_seq"].size();
         
-        if((mut["new_seq"] == dup_check_seq) && (mut["new_seq"].size() > 1))
+        if((size > AMP_size_cutoff) && (mut["new_seq"] == dup_check_seq) && (size > 1))
         {
           mut._type = AMP;
           mut["size"] = s(mut["new_seq"].size());          
@@ -1437,8 +1452,88 @@ namespace breseq {
 			gd.add(mut);
 		}
 		
+    diff_entry_list_t test_muts = gd.mutation_list();
+    
+    // Add additional fields for INS or DEL mutations that are in tandem repeats
+    for(diff_entry_list_t::iterator it = test_muts.begin(); it != test_muts.end(); it++) {
+      cDiffEntry& mut = **it;
+      if (mut._type == INS) {
+        int32_t size = mut["new_seq"].size();
+        if (size > AMP_size_cutoff) continue;
+
+        uint32_t position = from_string<int32_t>(mut["position"]);
+        string mutation_sequence = mut["new_seq"];
+
+        uint32_t repeat_unit_size = find_repeat_unit_size(mutation_sequence);
+        uint32_t num_repeat_units = size / repeat_unit_size;
+        uint32_t original_num_repeat_units = find_original_num_repeat_units(ref_seq_info[mut["ref_seq"]], position, mutation_sequence);
+        
+        if (original_num_repeat_units > 0) {
+          mut["repeat_length"] = s(repeat_unit_size);
+          mut["repeat_ref_copies"] = s(original_num_repeat_units);
+          mut["repeat_new_copies"] = s(original_num_repeat_units - num_repeat_units);
+        }
+      }
+      
+      if (mut._type == DEL) {
+        int32_t size = from_string<int32_t>(mut["size"]);
+        if (size > AMP_size_cutoff) continue;
+        
+        uint32_t position = from_string<int32_t>(mut["position"]);
+        string mutation_sequence = ref_seq_info.get_sequence_1(mut["ref_seq"], position, position + size - 1);
+        
+        uint32_t repeat_unit_size = find_repeat_unit_size(mutation_sequence);
+        uint32_t num_repeat_units = size / repeat_unit_size;
+        uint32_t original_num_repeat_units = find_original_num_repeat_units(ref_seq_info[mut["ref_seq"]], position, mutation_sequence);
+        
+        if (original_num_repeat_units > 0) {
+          mut["repeat_length"] = s(repeat_unit_size);
+          mut["repeat_ref_copies"] = s(original_num_repeat_units);
+          mut["repeat_new_copies"] = s(original_num_repeat_units - num_repeat_units);
+        }
+      }
+      
+    }
+    
 	}
   
+  // Returns the size of the minimum repeated subseqence
+  uint32_t MutationPredictor::find_repeat_unit_size(string& mutation_sequence)
+  {
+    // This code ensure that the whole length is given if there are no sub_repeats.
+    uint32_t repeat_size;
+    for (uint32_t i=0; i<mutation_sequence.size(); i++) {
+      string unit = mutation_sequence.substr(0, i);
+      bool is_repeat = true;
+      uint32_t test_pos = 0;
+      while(test_pos + i < mutation_sequence.size()) {
+        test_pos += i;
+        if (unit != mutation_sequence.substr(test_pos, test_pos + i - 1)) 
+          is_repeat = false;
+      }
+      
+      if (is_repeat) repeat_size = i;
+    }
+    
+    return repeat_size;
+  }
+  
+  uint32_t MutationPredictor::find_original_num_repeat_units(cAnnotatedSequence& ref_seq, int32_t test_position, string& repeat_sequence)
+  {
+    uint32_t num_repeat_units = 0;
+    
+    while ( test_position - repeat_sequence.size() > 0) {
+      
+      test_position -= repeat_sequence.size();
+      string test_sequence = ref_seq.get_sequence_1(test_position, test_position + repeat_sequence.size() - 1);
+      
+      if (test_sequence != repeat_sequence) break;
+      
+      num_repeat_units += test_position;
+    }
+    
+    return num_repeat_units;
+  }
 
   
   string BaseSubstitutionEffects::separator = ".";
@@ -1837,6 +1932,22 @@ namespace breseq {
     return pos_info;
   }
   
+  
+  bool sort_gd_by_treatment_population_time(const cGenomeDiff& a, const cGenomeDiff &b)
+  {
+    // Treatment
+    if (a.metadata.treatment != b.metadata.treatment)
+      return (a.metadata.treatment < b.metadata.treatment);
+    // Population
+    if (a.metadata.population != b.metadata.population)
+      return (a.metadata.population < b.metadata.population); 
+    // Time
+    if (a.metadata.time != b.metadata.time)
+      return (a.metadata.time < b.metadata.time); 
+    // Clone
+    return ( a.metadata.clone < b.metadata.clone);
+  }
+  
   void MutationCountFile(
                          cReferenceSequences& ref_seq_info, 
                          vector<cGenomeDiff>& genome_diffs, 
@@ -1852,7 +1963,11 @@ namespace breseq {
     map<string,bool> mob_name_hash;
     map<string,bool> con_name_hash;
     
-    for (vector<cGenomeDiff>::iterator it=genome_diffs.begin(); it != genome_diffs.end(); ++it) {
+    // create a copy so we don't alter the original list
+    vector<cGenomeDiff> sorted_genome_diffs(genome_diffs);
+    sort(sorted_genome_diffs.begin(), sorted_genome_diffs.end(), sort_gd_by_treatment_population_time);
+    
+    for (vector<cGenomeDiff>::iterator it=sorted_genome_diffs.begin(); it != sorted_genome_diffs.end(); ++it) {
       cGenomeDiff &gd = *it;
       
       diff_entry_list_t muts = gd.mutation_list();
@@ -1878,6 +1993,10 @@ namespace breseq {
     
     vector<string> column_headers;
     column_headers.push_back("sample");
+    column_headers.push_back("treatment");
+    column_headers.push_back("population");
+    column_headers.push_back("time");
+    column_headers.push_back("clone");
     column_headers.push_back("total");
     column_headers.push_back("base_substitution");
     column_headers.push_back("small_indel");
@@ -1940,7 +2059,7 @@ namespace breseq {
     
     output_file << join(column_headers, ",") << endl;
     
-    for (vector<cGenomeDiff>::iterator it=genome_diffs.begin(); it != genome_diffs.end(); ++it) {
+    for (vector<cGenomeDiff>::iterator it=sorted_genome_diffs.begin(); it != sorted_genome_diffs.end(); ++it) {
       cGenomeDiff &gd = *it;
       //uout("Counting mutations " + gd.metadata.run_name);
             
@@ -2100,7 +2219,11 @@ namespace breseq {
       
       vector<string> this_columns;
       
-      this_columns.push_back(gd.metadata.run_name);
+      this_columns.push_back( (gd.metadata.run_name != "") ? gd.metadata.run_name : "undef" );
+      this_columns.push_back( (gd.metadata.treatment != "") ? gd.metadata.treatment : "undef" );
+      this_columns.push_back( (gd.metadata.population != "") ? gd.metadata.population : "undef" );
+      this_columns.push_back( (gd.metadata.time != -1) ? to_string<double>(gd.metadata.time) : "undef");
+      this_columns.push_back( (gd.metadata.clone != "") ? gd.metadata.clone : "undef" );      
       this_columns.push_back(to_string(mut_list.size()));
       this_columns.push_back(to_string(count["base_substitution"][""]));
       this_columns.push_back(to_string(count["small_indel"][""]));
