@@ -248,7 +248,7 @@ void cDiffEntry::valid_field_variable_types(cFileParseErrors& parse_errors) {
   
   vector<string> spec = line_specification[this->_type];
   
-  uint32_t field_count = 2; // skipping fixed fields
+  uint32_t field_count = 3; // skipping fixed fields
   for(vector<string>::iterator it=spec.begin(); it!=spec.end(); ++it) {
     field_count++;
     if (diff_entry_field_variable_types.count(*it) == 0) continue;
@@ -267,7 +267,6 @@ void cDiffEntry::valid_field_variable_types(cFileParseErrors& parse_errors) {
     switch(variable_type)
     {
       case kDiffEntryFieldVariableType_PositiveInteger:
-        
         if (ret_val <= 0) { 
           parse_errors.add_line_error(from_string<uint32_t>((*this)["_line_number"]), this->as_string(), "Expected positive integral value for field " + to_string<uint32_t>(field_count) + ": [" + *it + "] instead of [" + value + "]."  , false);
         }
@@ -875,7 +874,7 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
   ifstream in(this->file_name().c_str());
 
   ASSERT(in.good(), "Could not open file for reading: " + filename);
-  uint32_t line_number = 1;
+  uint32_t line_number = 0;
   cFileParseErrors parse_errors(file_name());
   
   //! Step: Handle header parameters.
@@ -928,13 +927,28 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
       metadata.run_name = second_half;
       replace(metadata.run_name.begin(), metadata.run_name.end(), ' ', '_');
     }
+    else if (split_line[0] == "#=TIME" && split_line.size() > 1) {
+      metadata.time = from_string<double>(second_half);
+    }
+    else if (split_line[0] == "#=POPULATION" && split_line.size() > 1) {
+      metadata.population = second_half;
+      replace(metadata.population.begin(), metadata.population.end(), ' ', '_');
+    }
+    else if (split_line[0] == "#=TREATMENT" && split_line.size() > 1) {
+      metadata.treatment = second_half;
+      replace(metadata.treatment.begin(), metadata.treatment.end(), ' ', '_');
+    }
+    else if (split_line[0] == "#=CLONE" && split_line.size() > 1) {
+      metadata.clone = second_half;
+      replace(metadata.clone.begin(), metadata.clone.end(), ' ', '_');
+    }
     else if (split_line[0].substr(0, 2) == "#=" && split_line.size() > 1) {                                                                     
       string key = split_line[0].substr(2, split_line[0].size());
       this->add_breseq_data(key, second_half);
       continue;
     } else {
       //Warn if unknown header lines are encountered.
-      parse_errors.add_line_error(line_number, whole_line, "Header line not recognized and will be ignored.", false);
+      parse_errors.add_line_error(line_number, whole_line, "Metadata header line not recognized and will be ignored.", false);
     }
   }
   

@@ -442,7 +442,7 @@ public:
   //! Metadata kept in .gd files
   struct Metadata
   {
-    Metadata() : version("1.0") {}
+    Metadata() : version("1.0"), time(0.0) {}
     
     string run_name;
     string version; 
@@ -450,6 +450,10 @@ public:
     vector<string> ref_seqs;
     vector<string> read_seqs;
     map<string,string> breseq_data; // Use this to write values from pipeline to gd
+    string treatment;
+    string population;
+    double time;
+    string clone;
   } metadata;
   
   

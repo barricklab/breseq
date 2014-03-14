@@ -119,6 +119,16 @@ DEL: Deletion mutation
 
    number of bases deleted in reference.
 
+Additional DEL named fields
+'''''''''''''''''''''''''''
+* **mediated=**\ *<mobile_element_family>*
+   This deletion appears to be mediated by a molecular event involving a mobile element such as a transposon. A copy of the mobile element is found on the boundary of the deleted region and a new junction at the opposite end of the deletion matches the end of the mobile element.
+
+* **between=**\ *<repeat_family>*
+   This deletion appears to result from homologous recombination or polymerase slipping between two existing copies of the same genomic repeat (e.g. tRNA, IS element) in the genome. One copy of the repeat is deleted by this event. 
+
+* **repeat_length=**\ *<uint32>*, **repeat_ref_num=**\ *<uint32>*, **repeat_new_copies=**\ *<uint32>* 
+   This deletion results from polymerase slippage on a short sequence repeat consisting of tandem copies of "length" bases repeated "num" times in the ancestor and after a mutation.  To be annotated in this way the copy of the repeat in the reference genome must consisting of at least six total bases (**repeat_length**\ × **repeat_ref_num**\ ≥ 6).
 
 INS: Insertion mutation
 """""""""""""""""""""""
@@ -134,6 +144,11 @@ INS: Insertion mutation
 6. **new_seq** *<string>*
 
    new bases to be inserted in the reference.
+
+Additional INS named fields
+'''''''''''''''''''''''''''
+* **repeat_length=**\ *<uint32>*, **repeat_ref_num=**\ *<uint32>*, **repeat_new_copies=**\ *<uint32>* 
+   This insertion results from polymerase slippage on a short sequence repeat consisting of tandem copies of "length" bases repeated "num" times in the ancestor and after a mutation.  To be annotated in this way the copy of the repeat in the reference genome must consisting of at least six total bases (**repeat_length**\ × **repeat_ref_num**\ ≥ 6).
 
 MOB: Mobile element insertion mutation
 """"""""""""""""""""""""""""""""""""""
@@ -185,6 +200,11 @@ AMP: Amplification mutation
 7. **new_copy_number** *<uint32>*
 
    new number of copies of specified bases. 
+
+Additional AMP named fields
+'''''''''''''''''''''''''''
+* **mediated=**\ *<mobile_element_family>* **mediated_strand=**\ *<1/-1>*
+   This amplification appears to be mediated by a mobile element insertion. New copies of the mobile element are inserted in the specified orientation before each new copy of the amplified region.
 
 CON: Gene conversion mutation
 """""""""""""""""""""""""""""
@@ -248,15 +268,15 @@ These attributes control how molecular events in a a :program:`GenomeDiff` are c
 Applying Mutations
 """"""""""""""""""
 
-These attributes control how mutations are applied when building a new reference genome from the original reference genome and a :program:`GenomeDiff` and when building phylogenetic trees between multiple samples. They are not generated automatically by |breseq|.
+These attributes control how mutations are applied when using :program:`gdtools APPLY` to build a new reference genome from the original reference genome and a :program:`GenomeDiff` and when building phylogenetic trees from multiple samples. They are not generated automatically by |breseq|.
    
 * **before**\ =\ *<mutation_id>* or **after**\ =\ *<mutation_id>*
 
    Apply this mutation before or after another mutation. For example, did a base substitution occur after a region was duplicated, thus it is only in one copy or did it occur before the duplication, thus altering both copies? Did a base substitution happen before a deletion, hiding a mutation that should be included in any phylogenetic inference? The **before**. When neither of these attributes is present, mutations will be applied in the order in which they appear in the file.
    
-* **within**\ =\ *<mutation_id>*\ , **within_position**\ =\ *<mutation_id>*\ ,  **within_copy**\ =\ *<mutation_id>*
+* **nested_within**\ =\ *<mutation_id>*\ , **nested_copy**\ =\ *<mutation_id>*
 
-   This mutation happens inside of a different mutation. These options can specify, for example, that a base substitution happens in the second copy of a duplicated region. **within** and **within_position** must both be provided if one is supplied. If **within_copy** is not provided (because it is unknown), the mutation will be placed arbitrarily in the first copy. Note that the actual position of this mutation is still used for annotating its effects.
+   This mutation happens inside of a different mutation. These options can specify, for example, that a base substitution happens in the second copy of a duplicated region. If **nested_copy** is not provided (because it is unknown), the mutation will be placed arbitrarily in the first copy. Currently, **nested_within** must refer to an AMP mutation.
 
 Evidence Types
 ++++++++++++++++++++++

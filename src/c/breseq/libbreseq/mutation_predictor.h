@@ -51,6 +51,12 @@ namespace breseq {
 
 		cSequenceFeature* within_repeat(string seq_id, int32_t position);
 
+      uint32_t find_repeat_unit_size(string& mutation_sequence);
+    
+    uint32_t find_original_num_repeat_units(cAnnotatedSequence& ref_seq, int32_t test_position, string& repeat_sequence);
+    
+
+
 	}; // class MutationPredictor
   
   
