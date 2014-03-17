@@ -20,6 +20,8 @@ LICENSE AND COPYRIGHT
 #include <string>
 #include <vector>
 
+#include "config.h"
+
 #include "libbreseq/anyoption.h"
 #include "libbreseq/alignment_output.h"
 #include "libbreseq/reference_sequence.h"
@@ -2031,17 +2033,19 @@ int breseq_default_action(int argc, char* argv[])
     mpgd.reassign_unique_ids();
 
     //#=REFSEQ header lines.
-    mpgd.metadata.ref_seqs.resize(settings.all_reference_file_names.size());
-    for (size_t i = 0; i < settings.all_reference_file_names.size(); i++) {
-      mpgd.metadata.ref_seqs[i] = settings.all_reference_file_names[i];
-    }
-
+    mpgd.metadata.ref_seqs = settings.all_reference_file_names;
+    
     //#=READSEQ header lines.
     mpgd.metadata.read_seqs.resize(settings.read_files.size());
     for (size_t i = 0; i < settings.read_files.size(); i++) {
       mpgd.metadata.read_seqs[i] = settings.read_files[i].file_name();
     }
+    
+    mpgd.metadata.author = string(PACKAGE_STRING) + " " + string(HG_REVISION);
+    mpgd.metadata.breseq_data["CREATED"] = Settings::time2string(time(NULL));
 
+    /* @JEB: Could add information such as average coverage, etc. as metadate here for
+       generating more detailed summary files at later steps.
     // Add additional header lines if needed.
     if (settings.add_metadata_to_gd){
       for (storable_map<string, Summary::Coverage>::iterator it = summary.unique_coverage.begin();
@@ -2049,11 +2053,15 @@ int breseq_default_action(int argc, char* argv[])
          //Usually needed for gathering breseq data.
        }
     }
+    */
 
     // Write and reload 
     mpgd.write(settings.final_genome_diff_file_name);
     cGenomeDiff gd(settings.final_genome_diff_file_name);
-
+    // Empty metadata... necessary to keep consistency tests
+    // when things like time are being added to output.gd
+    gd.metadata = cGenomeDiff::Metadata();
+    
     // Write VCF conversion
     mpgd.write_vcf(settings.output_vcf_file_name, ref_seq_info);
     

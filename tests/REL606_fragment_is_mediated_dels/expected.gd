@@ -1,7 +1,4 @@
 #=GENOME_DIFF	1.0
-#=AUTHOR	
-#=REFSEQ	tests/REL606_fragment_is_mediated_dels/../data/REL606/REL606.fragment.gbk
-#=READSEQ	tests/REL606_fragment_is_mediated_dels/../data/REL606/REL606.fragment.3.fastq
 DEL	1	3,6	REL606-5	10535	15342	gene_name=[ECB_00212]–[yafP]	gene_product=<i><b>18 genes</b><BR>[ECB_00212], yhhI, yafV, ykfE, fadE, lpcA, yafJ, yafK, yafQ, dinJ, yafL, yafM, fhiA, mbhA, dinB, yafN, yafO, [yafP]</i>	html_gene_name=<i>[ECB_00212]</i>–<i>[yafP]</i>	locus_tag=[ECB_00212]–[ECB_00229]	mediated=IS1
 DEL	2	4,7	REL606-5	28183	3119	gene_name=[pepD]–crl	gene_product=[pepD], gpt, yafA, crl	html_gene_name=<i>[pepD]</i>–<i>crl</i>	locus_tag=[ECB_00232]–[ECB_00235]	mediated=IS1
 MC	3		REL606-5	10226	25876	308	0	gene_name=[insB-2]–[yafP]	gene_product=<i><b>19 genes</b><BR>[insB-2], ECB_00212, yhhI, yafV, ykfE, fadE, lpcA, yafJ, yafK, yafQ, dinJ, yafL, yafM, fhiA, mbhA, dinB, yafN, yafO, [yafP]</i>	html_gene_name=<i>[insB-2]</i>–<i>[yafP]</i>	left_inside_cov=16	left_outside_cov=18	locus_tag=[ECB_00211]–[ECB_00229]	right_inside_cov=0	right_outside_cov=52

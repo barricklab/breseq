@@ -488,12 +488,11 @@ int do_validate(int argc, char *argv[])
     
     cerr << endl;
     cerr << "::: Summary :::" << endl;
-    cerr << setw(6);
-    cerr << "  Total files processed:             " << num_files_processed << endl;
+    cerr << "  Total files processed:             " << setw(6) << num_files_processed << endl;
     if (num_files_with_errors == 0) {
         cerr << "* No formatting errors found!" << endl;
     } else {
-        cerr << "  Files with formatting errors:  " << num_files_with_errors << endl;
+        cerr << "  Files with formatting errors:  " << setw(6) << num_files_with_errors << endl;
     }
     
     return 0;
