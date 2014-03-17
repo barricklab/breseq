@@ -255,6 +255,10 @@ namespace breseq {
 				("position", mc_item["start"])
 				("size", s(n(mc_item["end"]) - n(mc_item["start"]) + 1));
 			;
+      
+      if (settings.polymorphism_prediction) {
+        mut[FREQUENCY] = "1";
+      }
 
 			///
 			// (0) this is a deletion of an entire fragment
@@ -1341,9 +1345,13 @@ namespace breseq {
 				if ( ((mut["end"] == item["position"]) && (n(mut["insert_end"]) + 1 == n(item["insert_position"])))
 						|| ((n(mut["end"]) + 1 == n(item["position"])) && (item["insert_position"] == "0")) )
 					same = true;
-				if ( (item["frequency"] != "1") || (mut["frequency"] != "1") //don't join polymorphisms
-						|| (mut["seq_id"] != item["seq_id"]) )
-					same = false;
+
+        // This code is only safe if every mutation has a frequency
+        if (settings.polymorphism_prediction) {
+          if ( (item["frequency"] != "1") || (mut["frequency"] != "1") //don't join polymorphisms
+              || (mut["seq_id"] != item["seq_id"]) )
+            same = false;
+        }
 			}
 
 			if (!same)
@@ -1361,8 +1369,11 @@ namespace breseq {
 					("insert_end", item["insert_position"])
 					("ref_seq", (item["ref_base"] != ".") ? item["ref_base"] : "")
 					("new_seq", (item["new_base"] != ".") ? item["new_base"] : "")
-					("frequency", item["frequency"])
 				;
+        
+        if (settings.polymorphism_prediction) {
+          new_mut[FREQUENCY] = item.entry_exists(FREQUENCY) ? item["frequency"] : "1";
+        }
 				mut = new_mut;
 			}
 			else
@@ -1386,7 +1397,7 @@ namespace breseq {
 		for (uint32_t i = 0; i < muts.size(); i++)
 		{
 			mut = muts[i];
-			// insertion and amplifiction
+			// insertion and amplification
 			if (mut["ref_seq"].size() == 0)
 			{
         mut._type = INS;
@@ -1442,8 +1453,6 @@ namespace breseq {
         mut._type = SNP;
 			}
 
-			// we don't need these fields
-			//if (mut["frequency"] == "1") mut.erase("frequency");
 			mut.erase("start");
 			mut.erase("end");
 			mut.erase("insert_start");
@@ -1493,6 +1502,21 @@ namespace breseq {
         }
       }
       
+    }
+    
+    ///////////////////////////////////////////////////////
+    // Check to be sure the "frequency" field is present //
+    // as appropriate in consensus/polymorphism mode.    //
+    ///////////////////////////////////////////////////////
+    
+    diff_entry_list_t check_mut_list = gd.mutation_list();
+    for (diff_entry_list_t::iterator it=check_mut_list.begin(); it != check_mut_list.end(); it++) {
+      cDiffEntry& de = **it;
+      if (settings.polymorphism_prediction) {
+        ASSERT(de.entry_exists(FREQUENCY) && !de[FREQUENCY].empty(), "Expected polymorphism field [frequency] not found for mutation.\n" + de.as_string() );
+      } else {
+        ASSERT(!de.entry_exists(FREQUENCY) || !de[FREQUENCY].empty(), "Field [frequency] not expected in consensus mode for mutation.\n" + de.as_string() );
+      }
     }
     
 	}
@@ -2219,11 +2243,11 @@ namespace breseq {
       
       vector<string> this_columns;
       
-      this_columns.push_back( (gd.metadata.run_name != "") ? gd.metadata.run_name : "undef" );
-      this_columns.push_back( (gd.metadata.treatment != "") ? gd.metadata.treatment : "undef" );
-      this_columns.push_back( (gd.metadata.population != "") ? gd.metadata.population : "undef" );
-      this_columns.push_back( (gd.metadata.time != -1) ? to_string<double>(gd.metadata.time) : "undef");
-      this_columns.push_back( (gd.metadata.clone != "") ? gd.metadata.clone : "undef" );      
+      this_columns.push_back( (gd.metadata.run_name != "") ? gd.metadata.run_name : "" );
+      this_columns.push_back( (gd.metadata.treatment != "") ? gd.metadata.treatment : "" );
+      this_columns.push_back( (gd.metadata.population != "") ? gd.metadata.population : "" );
+      this_columns.push_back( (gd.metadata.time != -1) ? to_string<double>(gd.metadata.time) : "");
+      this_columns.push_back( (gd.metadata.clone != "") ? gd.metadata.clone : "" );      
       this_columns.push_back(to_string(mut_list.size()));
       this_columns.push_back(to_string(count["base_substitution"][""]));
       this_columns.push_back(to_string(count["small_indel"][""]));

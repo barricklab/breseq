@@ -305,7 +305,7 @@ void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd)
         ra_item[NO_SHOW] = "1";
     }
     // This is a polymorphism prediction
-    else if (i++ > settings.max_rejected_polymorphisms_to_show)
+    else if (++i > settings.max_rejected_polymorphisms_to_show)
       ra_item[NO_SHOW] = "1";
   }
   

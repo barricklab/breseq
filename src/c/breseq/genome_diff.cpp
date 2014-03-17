@@ -438,16 +438,19 @@ void cDiffEntry::marshal(vector<string>& s) const {
     
   }
   
-  // marshal whatever's left, unless it's an empty field or _begins with an underscore
+  // marshal whatever's left, unless it _begins with an underscore or is empty (a placeholder)
   for(diff_entry_map_t::iterator i=cp.begin(); i!=cp.end(); ++i) {
     
     assert(i->first.size());
     if (i->first.substr(0,1) == "_") continue;
+    if (i->second.empty()) continue;
     
-    if (i->second.size() > 0) 
-    {
-      s.push_back(i->first + "=" + i->second);
-    }
+    // Be sure the entry is non-empty! Would rather have this as a check.
+    /*
+    ASSERT(i->second.size(), "Attempt to write genome diff entry with blank value in key=value pair where [key]=" + i->first + "\n" + join(s,"\t"));
+    */
+    
+    s.push_back(i->first + "=" + i->second);
   }
 }
 
@@ -942,13 +945,17 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
       metadata.clone = second_half;
       replace(metadata.clone.begin(), metadata.clone.end(), ' ', '_');
     }
-    else if (split_line[0].substr(0, 2) == "#=" && split_line.size() > 1) {                                                                     
-      string key = split_line[0].substr(2, split_line[0].size());
-      this->add_breseq_data(key, second_half);
-      continue;
-    } else {
-      //Warn if unknown header lines are encountered.
-      parse_errors.add_line_error(line_number, whole_line, "Metadata header line not recognized and will be ignored.", false);
+    
+    // Add every header line to be output
+    else {
+      if (split_line[0].substr(0, 2) == "#=" && split_line.size() > 1) {                                                                     
+        string key = split_line[0].substr(2, split_line[0].size());
+        this->add_breseq_data(key, second_half);
+        continue;
+      } else {
+        //Warn if unknown header lines are encountered.
+        parse_errors.add_line_error(line_number, whole_line, "Metadata header line not recognized and will be ignored.", false);
+      }
     }
   }
   
@@ -966,8 +973,10 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
     }
   }
   
+
   /*If the run_name/title is not set by a #=TITLE tag in the header info then
    default to the name of the file. */
+  /*
   if (metadata.run_name.empty()) {
     string *run_name = &metadata.run_name;
     *run_name = filename.substr(0, filename.find(".gd"));
@@ -975,6 +984,7 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
       run_name->erase(0, run_name->find_last_of('/') + 1);
     }
   }
+  */
   
   //! Step: Handle the diff entries.
   while (in.good()) {
@@ -1078,14 +1088,29 @@ void cGenomeDiff::write(const string& filename) {
    in cGenomeDiff::read(). */
   fprintf(os, "#=GENOME_DIFF\t%s\n", metadata.version.c_str());
   
-  fprintf(os, "#=AUTHOR\t%s\n", metadata.author.c_str());
-  
-  for (size_t i = 0; i < metadata.ref_seqs.size(); i++) {
-    fprintf(os, "#=REFSEQ\t%s\n", metadata.ref_seqs[i].c_str());
+  if (metadata.author != "") {
+    fprintf(os, "#=AUTHOR\t%s\n", metadata.author.c_str());
   }
-  
-  for (size_t i = 0; i < metadata.read_seqs.size(); i++) {
-    fprintf(os, "#=READSEQ\t%s\n", metadata.read_seqs[i].c_str());
+  for (vector<string>::iterator it=metadata.ref_seqs.begin(); it !=metadata.ref_seqs.end(); it++) {
+    fprintf(os, "#=REFSEQ\t%s\n", it->c_str());
+  }
+  for (vector<string>::iterator it=metadata.read_seqs.begin(); it !=metadata.read_seqs.end(); it++) {
+    fprintf(os, "#=READSEQ\t%s\n", it->c_str());
+  }
+  if (metadata.run_name != "") {
+    fprintf(os, "#=TITLE\t%s\n", metadata.run_name.c_str());
+  }
+  if (metadata.time != -1.0) {
+    fprintf(os, "#=TIME\t%s\n", to_string<double>(metadata.time).c_str());
+  }
+  if (metadata.population != "") {
+    fprintf(os, "#=POPULATION\t%s\n", metadata.population.c_str());
+  }
+  if (metadata.treatment != "") {
+    fprintf(os, "#=TREATMENT\t%s\n", metadata.treatment.c_str());
+  }
+  if (metadata.clone != "") {
+    fprintf(os, "#=CLONE\t%s\n", metadata.clone.c_str());
   }
   if (!metadata.breseq_data.empty()) {
     for (map<key_t,string>::iterator it = metadata.breseq_data.begin();
@@ -1096,6 +1121,9 @@ void cGenomeDiff::write(const string& filename) {
   
   // sort
   this->sort();
+  
+  // @JEB: "comment_out" tag is legacy used internally for filtering where
+  // deletion from the list should really be used.
   
   for(diff_entry_list_t::iterator it=_entry_list.begin(); it!=_entry_list.end(); ++it) {
     if (!(*it)->entry_exists("comment_out")) {
@@ -3286,7 +3314,10 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
     
     // For now, only allele frequency info field
     double freq = 1.0;
-    if (mut.count(FREQUENCY))freq = from_string<double>(mut[FREQUENCY]);
+    
+    if (mut.entry_exists(FREQUENCY)) {
+        freq = from_string<double>(mut[FREQUENCY]);
+    }
     string AF = formatted_double(freq, 4).to_string(); // allele frequency
     info = "AF=" + AF;
     

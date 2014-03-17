@@ -442,7 +442,7 @@ public:
   //! Metadata kept in .gd files
   struct Metadata
   {
-    Metadata() : version("1.0"), time(0.0) {}
+    Metadata() : version("1.0"), time(-1.0) {}
     
     string run_name;
     string version; 
