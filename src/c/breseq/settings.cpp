@@ -252,6 +252,12 @@ namespace breseq
     ("periodicity-step", "Increment of offsets", 1, ADVANCED_OPTION)
     ;
     
+    options.addUsage("", true);
+    options.addUsage("Debugging Options", true);
+    options
+    ("keep-intermediates","Do not delete intermediate files.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ;
+    
     options.processCommandArgs(argc, argv);
     
     options.addUsage("");
@@ -377,13 +383,17 @@ namespace breseq
     ASSERT(this->deletion_coverage_propagation_cutoff >= 0, "Argument --deletion-coverage-seed-cutoff must be > 0")
 		this->mutation_log10_e_value_cutoff = from_string<double>(options["mutation-score-cutoff"]);
     
-    // Junction Prediction
+    //! Settings: Junction Prediction
     this->no_junction_prediction = options.count("no-junction-prediction");
     this->minimum_candidate_junctions = from_string<int32_t>(options["junction-minimum-candidates"]);
     this->maximum_candidate_junction_length_factor = from_string<double>(options["junction-candidate-length-factor"]);    
     this->maximum_junction_sequence_passed_alignment_pairs_to_consider = from_string<uint64_t>(options["junction-alignment-pair-limit"]);
     this->junction_pos_hash_neg_log10_p_value_cutoff = from_string<double>(options["junction-score-cutoff"]);
         
+    //! Settings: Debugging
+    this->keep_all_intermediates = options.count("keep-intermediates");
+
+    
     //
     // Set the read alignment evidence model
     // Different defaults for the three modes:
@@ -596,7 +606,7 @@ namespace breseq
 		this->no_indel_polymorphisms = false;
     
     //! Settings: Mutation Prediction
-    this->size_cutoff_AMP_becomes_INS_DEL_mutation = 0;
+    this->size_cutoff_AMP_becomes_INS_DEL_mutation = 50;
     
     //! Settings: Output
     this->max_displayed_reads = 100;

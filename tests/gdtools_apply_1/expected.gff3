@@ -237,7 +237,7 @@ REL606-5	.	CDS	62293	63936	.	-	0	Alias=ECB_00249;ID=ECB_00249;Name=yagW;Note=pre
 REL606-5	.	gene	63926	64725	.	-	0	Alias=ECB_00250;ID=ECB_00250;Name=yagX
 REL606-5	.	CDS	63926	64725	.	-	0	Alias=ECB_00250;ID=ECB_00250;Name=yagX;Note=predicted aromatic compound dioxygenase;transl_table=11
 REL606.fragment.2	.	region	1	30001	.	+	.	Is_circular=false;Note=Escherichia coli strain REL606.
-REL606.fragment.2	.	source	1	30001	.	+	0	;indeterminate_coordinate=start,end
+REL606.fragment.2	.	source	1	30001	.	+	0	indeterminate_coordinate=start,end
 REL606.fragment.2	.	gene	1	727	.	-	0	Alias=ECB_00309;ID=ECB_00309;Name=frmB;indeterminate_coordinate=start
 REL606.fragment.2	.	CDS	1	727	.	-	0	Alias=ECB_00309;ID=ECB_00309;Name=frmB;Note=predicted esterase;transl_table=11;indeterminate_coordinate=start
 REL606.fragment.2	.	gene	820	1929	.	-	0	Alias=ECB_00310;ID=ECB_00310;Name=frmA

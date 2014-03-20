@@ -39,24 +39,38 @@ namespace breseq {
 		static cReferenceSequences ref_seq_info;
 
 		MutationPredictor(cReferenceSequences& ref_seq_info);
-    
+
+
     void prepare_junctions(Settings& settings, Summary& summary, cGenomeDiff& gd);
+
+    // Functions that handle specific predictions
+    void predictMCplusJCtoDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc);
+    void predictJCplusJCtoMOB(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc);
+    void predictJCtoINSorSUBorAMPorDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc);
+    void predictRAtoSNPorDELorINSorSUBorAMP(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc );
+    
+    // Cle
+    void annotate_tandem_repeat_mutations(Settings& settings, Summary& summary, cGenomeDiff& gd);
+    
+    // Master function
 		void predict(Settings& settings, Summary& summary, cGenomeDiff& gd);
 
+    // Helper functions
 		static bool sort_by_hybrid(const counted_ptr<cDiffEntry>& a, const counted_ptr<cDiffEntry>& b);
 		static bool sort_by_reject_score(const counted_ptr<cDiffEntry>& a, const counted_ptr<cDiffEntry>& b);
 		static bool sort_by_pos(const counted_ptr<cDiffEntry>& a, const counted_ptr<cDiffEntry>& b);
 
 	private:
 
+    // Helper functions for tandem repeats
 		cSequenceFeature* within_repeat(string seq_id, int32_t position);
-
-      uint32_t find_repeat_unit_size(string& mutation_sequence);
+    void find_repeat_unit(string& mutation_sequence, uint32_t& repeat_size, string& repeat_sequence);
     
-    uint32_t find_original_num_repeat_units(cAnnotatedSequence& ref_seq, int32_t test_position, string& repeat_sequence);
+    void normalizeINSposition(cAnnotatedSequence& ref_seq, cDiffEntry& de, string& repeat_sequence);
+    void normalizeDELposition(cAnnotatedSequence& ref_seq, cDiffEntry& de, string& repeat_sequence);
+
+    uint32_t find_original_num_repeat_units(cAnnotatedSequence& ref_seq, int32_t position, string& repeat_sequence);
     
-
-
 	}; // class MutationPredictor
   
   

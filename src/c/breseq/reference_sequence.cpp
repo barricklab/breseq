@@ -940,8 +940,10 @@ void cReferenceSequences::WriteGFF( const string &file_name, bool verbose ){
         
         // Overly complicated way of writing out indeterminacy
         columns[ATTRIBUTES] = attributes_column;
-        if (locations[i].is_indeterminate_start() || locations[i].is_indeterminate_end())
-          columns[ATTRIBUTES] += ";indeterminate_coordinate=";
+        if (locations[i].is_indeterminate_start() || locations[i].is_indeterminate_end()) {
+          columns[ATTRIBUTES] += (!attributes_column.empty() ? ";" : "");
+          columns[ATTRIBUTES] += "indeterminate_coordinate=";
+        }                          
         if (locations[i].is_indeterminate_start())
           columns[ATTRIBUTES] += "start";  
         if (locations[i].is_indeterminate_start() && locations[i].is_indeterminate_end())

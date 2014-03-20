@@ -192,50 +192,18 @@ namespace breseq {
     
   }
   
-  
-	/*
-	 Title   : predict
-	 Usage   : $mp->predict();
-	 Function: Predicts mutations from evidence in a GenomeDiff and adds them to it
-	 Returns :
-
-	*/
-	void MutationPredictor::predict(Settings& settings, Summary& summary, cGenomeDiff& gd)
-	{
-		(void)settings; //TODO; unused?
+  void MutationPredictor::predictMCplusJCtoDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc)
+  {
+    (void) summary;
     bool verbose = false; // for debugging
-
-    int32_t avg_read_length = static_cast<int32_t>(summary.sequence_conversion.avg_read_length);
+    
     int32_t max_read_length = summary.sequence_conversion.max_read_length;
     
-		///
-		//  Preprocessing of JC evidence
-		///
-    
-    prepare_junctions(settings, summary, gd);
-    // This call is redundant in the normal pipeline, but preserved here so that predict can be a stand-alone call.
-    
-    // Don't count rejected ones at all, this can be relaxed, but it makes MOB 
-    // prediction much more complicated and prone to errors.
-    
-    // Now, remove rejected from the list after annotating them.
-    vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
-		diff_entry_list_t jc = gd.list(jc_types);
-    jc.remove_if(cDiffEntry::rejected_and_not_user_defined());
-
-		///
-		// evidence MC + JC => DEL mutation
-		///
-    
-    vector<gd_entry_type> mc_types = make_vector<gd_entry_type>(MC);
-		diff_entry_list_t mc = gd.list(mc_types);
-    mc.remove_if(cDiffEntry::field_exists("reject"));
-
 		// DEL prediction:
 		// (1) there is a junction that exactly crosses the deletion boundary
 		// (2) there is is no junction, but both ends of the deletion are in repeat sequences
 		// (3) there is a junction between unique sequence and a repeat element
-
+    
     for(diff_entry_list_t::iterator mc_it = mc.begin(); mc_it != mc.end(); mc_it++)
     {
       cDiffEntry& mc_item = **mc_it;
@@ -245,21 +213,21 @@ namespace breseq {
       
 			if (mc_item.entry_exists("reject"))
 			  continue;
-
+      
 			// set up generic deletion item
 			cDiffEntry mut;
       mut._type = DEL;
       mut._evidence = make_vector<string>(mc_item._id);
 			mut
-				("seq_id", mc_item["seq_id"])
-				("position", mc_item["start"])
-				("size", s(n(mc_item["end"]) - n(mc_item["start"]) + 1));
+      ("seq_id", mc_item["seq_id"])
+      ("position", mc_item["start"])
+      ("size", s(n(mc_item["end"]) - n(mc_item["start"]) + 1));
 			;
       
       if (settings.polymorphism_prediction) {
         mut[FREQUENCY] = "1";
       }
-
+      
 			///
 			// (0) this is a deletion of an entire fragment
 			///     
@@ -279,7 +247,7 @@ namespace breseq {
 			for(diff_entry_list_t::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) //JC
 			{
 				cDiffEntry& jc_item = **jc_it;
-
+        
 				if (jc_item["side_1_seq_id"] != mut["seq_id"] || jc_item["side_2_seq_id"] != mut["seq_id"])  {
           continue;  
         }
@@ -298,11 +266,11 @@ namespace breseq {
         }
         
 				if (
-					   (side_1_position == n(mut["position"])-1)
-					&& (side_1_strand == -1)
-					&& (side_2_position == n(mut["position"])+n(mut["size"]))
-					&& (side_2_strand == +1)
-           )
+            (side_1_position == n(mut["position"])-1)
+            && (side_1_strand == -1)
+            && (side_2_position == n(mut["position"])+n(mut["size"]))
+            && (side_2_strand == +1)
+            )
 				{
           
           //it's possible that one or both sides are in repeat elements
@@ -314,7 +282,7 @@ namespace breseq {
           {
             // must match up to an end of the repeat
             if (side_1_position == static_cast<int32_t>(r1_pointer->m_location.get_start_1())
-             || (side_1_position == static_cast<int32_t>(r1_pointer->m_location.get_end_1())))
+                || (side_1_position == static_cast<int32_t>(r1_pointer->m_location.get_end_1())))
             {
               mut["mediated"] = (*r1_pointer)["name"];
             }
@@ -324,12 +292,12 @@ namespace breseq {
           {
             // must match up to an end of the repeat
             if ((side_2_position == static_cast<int32_t>(r2_pointer->m_location.get_start_1())
-                || (side_2_position) == static_cast<int32_t>(r2_pointer->m_location.get_end_1())))
+                 || (side_2_position) == static_cast<int32_t>(r2_pointer->m_location.get_end_1())))
             {
               mut["mediated"] = (*r2_pointer)["name"];
             }
           }    
-                      
+          
 					mut._evidence.push_back(jc_item._id);
           
           // If there is unique sequence in the junction, then it is actually a SUB
@@ -353,7 +321,7 @@ namespace breseq {
 				}
 			}
       if (done) continue; // to next mc item
-
+      
       
       cSequenceFeature* r1_pointer = within_repeat(mut["seq_id"], n(mut["position"]));
       cSequenceFeature* r2_pointer = within_repeat(mut["seq_id"], n(mut["position"]) + n(mut["size"]));
@@ -361,31 +329,31 @@ namespace breseq {
 			///
 			// (2) there is no junction, but both ends of the deletion are in different copies of the same repeat sequence
 			///
-
+      
 			// Then we will adjust the coordinates to remove...
 			if  (
            (r1_pointer != r2_pointer) 
            && (r1_pointer != NULL) 
            && (r2_pointer != NULL) 
            && ((*r1_pointer)["name"] == (*r2_pointer)["name"])
-          )
+           )
 			{
 				cSequenceFeature& r1 = *r1_pointer, r2 = *r2_pointer;
-
+        
 				// there may be more evidence that one or the other is deleted...
 				int32_t r1_overlap_end = n(mc_item["start"]) + n(mc_item["start_range"]);
 				if (r1_overlap_end > r1.get_end_1())
 					r1_overlap_end = r1.get_end_1();
 				int32_t r1_overlap = r1_overlap_end - n(mc_item["start"]) + 1;
-
+        
 				int32_t r2_overlap_start = n(mc_item["end"]) - n(mc_item["end_range"]);
 				if (r2_overlap_start < r1.get_start_1())
 					r2_overlap_start = r2.get_start_1();
 				int32_t r2_overlap = n(mc_item["end"]) - r2_overlap_start + 1;
-
+        
 				// it may be really close...defined by read length of genome in which case
 				uint32_t slop_distance = max_read_length;
-
+        
 				// prefer to delete the second copy
 				if ( (static_cast<uint32_t>(abs(r1_overlap - r2_overlap)) <= slop_distance) || (r2_overlap > r1_overlap ))
 				{
@@ -414,11 +382,11 @@ namespace breseq {
           continue; // to next mc_item
         }
 			}
-
+      
 			// Both sides were unique or redundant, nothing more we can do...
 			if ( (r1_pointer == NULL && r2_pointer == NULL) || (r1_pointer != NULL && r2_pointer != NULL) )
 				continue; // to next mc_item
-
+      
 			///
 			// (3) there is a junction between unique sequence and a repeat element
 			///
@@ -426,9 +394,9 @@ namespace breseq {
 			int32_t redundant_deletion_side = (r1_pointer != NULL) ? -1 : +1;
 			int32_t unique_deletion_strand = -redundant_deletion_side;
 			int32_t needed_coord = (r1_pointer != NULL)
-			  ? n(mut["position"]) + n(mut["size"])
-			  : n(mut["position"]) - 1;
-
+      ? n(mut["position"]) + n(mut["size"])
+      : n(mut["position"]) - 1;
+      
 			for(diff_entry_list_t::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) //JUNCTION
 			{
 				cDiffEntry& j = **jc_it;
@@ -437,22 +405,22 @@ namespace breseq {
           cout << j << endl;
         
 				if (!j.entry_exists("_is_interval")) continue;
-
+        
 				if (verbose)
 					cout << "Check 1: " << j[j["_unique_interval"] + "_seq_id"] << " ne " << mut["seq_id"] << endl;
 				if (j[j["_unique_interval"] + "_seq_id"] != mut["seq_id"])
 					continue;
 				if (verbose)
 					cout << "Pass 1" << endl;
-
+        
 				// check type of IS
 				if (verbose)
 					cout << "Check 2: " << r["name"] << " ne " << j["_" + j["_is_interval"] + "_is_name"] << endl;
 				if (r["name"] != j["_" + j["_is_interval"] + "_is_name"])
 					continue;
-
+        
 				if (verbose) cout << "Pass 2" << endl;
-
+        
 				// check that the unique side matches coordinate
 				if (verbose)
 					cout << "Check 3: " << j[j["_unique_interval"] + "_position"] << " != " << needed_coord << endl;
@@ -460,8 +428,8 @@ namespace breseq {
 					continue;
 				if (verbose)
 					cout << "Pass 3" << endl;
-
-
+        
+        
 				// check that IS is on the right strand
 				if (verbose)
 					cout << "Check 4: " << redundant_deletion_side << " * " << to_string(r.get_strand()) << " != " << j[j["_is_interval"] + "_strand"] << " * " << j["_" + j["_is_interval"] + "_is_strand"] << endl;
@@ -469,7 +437,7 @@ namespace breseq {
 					continue;
 				if (verbose)
 					cout << "Pass 4" << endl;
-
+        
 				// check that the unique side is on the right strand
 				if (verbose)
 					cout << "Check 5: " << unique_deletion_strand << " != " << j[j["_unique_interval"] + "_strand"] << endl;
@@ -477,7 +445,7 @@ namespace breseq {
 					continue;
 				if (verbose)
 					cout << "Pass 5" << endl;
-
+        
         
 				// need to adjust the non-unique coords // mut has the MC coordinates at this point
 				if (redundant_deletion_side == -1)
@@ -492,10 +460,10 @@ namespace breseq {
 					mut["size"] = s(n(mut["size"]) - move_dist);
 				}
         
-      // Don't predict zero length deletions!
+        // Don't predict zero length deletions!
         if (n(mut["size"]) == 0)
           continue;
-
+        
 				// OK, we're good!
 				mut["mediated"] = r["name"];
 				mut._evidence.push_back(j._id);
@@ -507,49 +475,51 @@ namespace breseq {
         
         if (verbose)
           cout << "**** Junction with repeat element corresponding to deletion boundaries found ****\n";
-
+        
         break; // done looking at jc_items
 			}
 		}
 
-
-		///
-		// evidence JC + JC = MOB mutation
-		///
-
-		for(diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++) //JC
+  }
+  
+  void MutationPredictor::predictJCplusJCtoMOB(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc)
+  {
+    (void)summary;
+    bool verbose = false;
+    
+    for(diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++) //JC
 		{
 			cDiffEntry& j = **it;
-		
+      
 			// Junction isn't near an IS. Move on.
 			if (!j.entry_exists("_is_interval")) continue;
-
+      
 			// There is no overlap to correct. Move on.
 			if (n(j["overlap"]) <= 0) continue;
-
+      
 			// The following code implies n(j["overlap"]) > 0
-
+      
 			/// first, adjust the repetitive sequence boundary to get as close to the IS as possible
 			int32_t is_interval_position = n(j[j["_is_interval"] + "_position"]);
 			uint32_t move_dist = abs(is_interval_position - n(j[j["_is_interval"] + "_is_" + j["_is_interval_closest_side_key"]])); //  + "_position" ?
 			uint32_t overlap = n(j["overlap"]);
 			if (move_dist > overlap) move_dist = overlap;
-
+      
 			is_interval_position += n(j[j["_is_interval"] + "_strand"]) * move_dist;
 			j[j["_is_interval"] + "_position"] = s(is_interval_position);
 			overlap -= move_dist;
-
+      
 			/// second, adjust the unique sequence side with any remaining overlap
 			int32_t unique_interval_position = n(j[j["_unique_interval"] + "_position"]);
 			unique_interval_position += n(j[j["_unique_interval"] + "_strand"]) * overlap;
 			j[j["_unique_interval"] + "_position"] = s(unique_interval_position);
-
+      
 			j["overlap"] = "0";
 		}
-
+    
     // This sorts by seq_id matched then by position of unique coordinate side
 		jc.sort(MutationPredictor::sort_by_hybrid);
-
+    
     for(diff_entry_list_t::iterator jc1_it = jc.begin(); jc1_it != jc.end(); jc1_it++) //JC1
 		{
 			cDiffEntry& j1 = **jc1_it;
@@ -566,11 +536,11 @@ namespace breseq {
         
 				// must be close together in real coords
 				if ( (j1[j1["_unique_interval"] + "_seq_id"] != j2[j2["_unique_interval"] + "_seq_id"])
-					|| (abs(n(j1[j1["_unique_interval"] + "_position"]) - n(j2[j2["_unique_interval"] + "_position"])) > 20 ) )
+            || (abs(n(j1[j1["_unique_interval"] + "_position"]) - n(j2[j2["_unique_interval"] + "_position"])) > 20 ) )
 					break;
-
+        
 				if ( (!j1.entry_exists("_is_interval") || !j2.entry_exists("_is_interval"))
-					|| (j1["_" + j1["_is_interval"] + "_is_name"] != j2["_" + j2["_is_interval"] + "_is_name"]) )
+            || (j1["_" + j1["_is_interval"] + "_is_name"] != j2["_" + j2["_is_interval"] + "_is_name"]) )
 					continue;
         
         it_delete_list_2.push_back(jc2_it);        
@@ -578,17 +548,17 @@ namespace breseq {
 			}
       if (verbose)
         cout << "Size of J2 list: " << j2_list.size() << endl;
-
+      
 			//sort the $j2_list by reject reason and score
-
+      
 			sort(j2_list.begin(), j2_list.end(), sort_by_reject_score);
-
+      
 			// We need to go through all with the same coordinate (or within a certain coordinate stretch?)
 			// because sometimes a failed junction will be in between the successful junctions
       for(size_t i=0; i<j2_list.size(); i++)
 			{
 				cDiffEntry& j2 = *(j2_list[i]);
-
+        
         if (verbose) 
         {
           cout << "Sorted: == J1 ==" << endl;
@@ -606,21 +576,21 @@ namespace breseq {
 				// positive overlap should be resolved by now
 				assert(n(j1["overlap"]) <= 0);
 				assert(n(j2["overlap"]) <= 0);
-
+        
 				// the first unique coords are going into the IS element
 				int32_t uc1_strand = n(j1[j1["_unique_interval"] + "_strand"]);
 				int32_t uc2_strand = n(j2[j2["_unique_interval"] + "_strand"]);
 				if (uc1_strand != -uc2_strand) continue;
-
+        
 				// What strand is the IS on relative to the top strand of the genome
 				int32_t is1_strand = - (n(j1[j1["_is_interval"] + "_strand"]) * n(j1["_" + j1["_is_interval"] + "_is_strand"]) * n(j1[j1["_unique_interval"] + "_strand"]));
 				int32_t is2_strand = - (n(j2[j2["_is_interval"] + "_strand"]) * n(j2["_" + j2["_is_interval"] + "_is_strand"]) * n(j2[j2["_unique_interval"] + "_strand"]));
-
+        
 				// Remove these predictions from the list
 				jc1_it = jc.erase(jc1_it); // iterator is now past element erased
         jc1_it--;                  // and must be moved back because loop will move forward
 				jc.erase(it_delete_list_2[i]);
-
+        
 				// Create the mutation, with evidence
         
         if (verbose) {
@@ -632,15 +602,15 @@ namespace breseq {
 				mut._evidence.push_back(j1._id);
 				mut._evidence.push_back(j2._id);
 				mut
-					("seq_id", j1[j1["_unique_interval"] + "_seq_id"])
+        ("seq_id", j1[j1["_unique_interval"] + "_seq_id"])
 				;
 				mut["_start"] = (uc1_strand == -1) ? j2[j2["_unique_interval"] + "_position"] : j1[j1["_unique_interval"] + "_position"];
 				mut["_end"] = (uc1_strand == -1) ? j1[j1["_unique_interval"] + "_position"] : j2[j2["_unique_interval"] + "_position"];
 				mut["repeat_name"] = j1["_" + j1["_is_interval"] + "_is_name"];
-
+        
 				mut["position"] = mut["_start"]; // - 1; //position is the first duplicated base...
 				mut["duplication_size"] = s(n(mut["_end"]) - n(mut["_start"]) + 1);
-
+        
 				// ok, we're actually missing a base of the reference...
 				if (n(mut["duplication_size"]) < 0)
 				{
@@ -657,20 +627,20 @@ namespace breseq {
 				// get any unique junction sequence
 				JunctionInfo j1i(j1["key"]);
 				string j1_unique_read_sequence = j1i.unique_read_sequence;
-
+        
 				JunctionInfo j2i(j2["key"]);
 				string j2_unique_read_sequence = j2i.unique_read_sequence;
-
+        
 				// _gap_left and _gap_right also refer to the top strand of the genome
-
+        
 				mut["_ins_start"] = "";
 				mut["_ins_end"] = "";
-
+        
 				mut["_del_start"] = "0";
 				mut["_del_end"] = "0";
-
+        
         uint32_t start_1 = 0, end_1 = 0, pos_1 = 0;
-
+        
         
         ///////////////////////////////////////////////////////
         // Figuring out bases *inserted* next to the IS element
@@ -687,10 +657,10 @@ namespace breseq {
             start_1 = n(j1["_" + j1["_is_interval"] + "_is_end"]) + 1;
             end_1   = n(j1[j1["_is_interval"] + "_position"]);
 						j1_not_flush_seq = ref_seq_info.get_sequence_1 (
-              j1[j1["_is_interval"] + "_seq_id"],
-              start_1,
-              end_1
-						);
+                                                            j1[j1["_is_interval"] + "_seq_id"],
+                                                            start_1,
+                                                            end_1
+                                                            );
 					}
 				}
 				else
@@ -701,27 +671,27 @@ namespace breseq {
             start_1 = n(j1[j1["_is_interval"] + "_position"]);
             end_1   = n(j1["_" + j1["_is_interval"] + "_is_start"]) - 1;
             j1_not_flush_seq = ref_seq_info.get_sequence_1 (
-              j1[j1["_is_interval"] + "_seq_id"],
-              start_1,
-              end_1
-						);
+                                                            j1[j1["_is_interval"] + "_seq_id"],
+                                                            start_1,
+                                                            end_1
+                                                            );
 					}
 				}
-
+        
         if (n(mut["_gap_left"]) < 0)
 				{
 					mut["_del_start"] = s(abs(n(mut["_gap_left"])));
 				}
-
+        
         
         if (verbose)
           cout << "J1 NF:" << j1_not_flush_seq << " U:" << j1_unique_read_sequence << endl;
-
+        
         if (n(j1["_" + j1["_is_interval"] + "_read_side"]) != n(j1[j1["_is_interval"] + "_strand"]))
         {
           j1_not_flush_seq = reverse_complement(j1_not_flush_seq);
         }
-
+        
         if (n(j1["_" + j1["_is_interval"] + "_read_side"]) == -1)
         {
           mut["_ins_start"] = j1_not_flush_seq + j1_unique_read_sequence;
@@ -730,8 +700,8 @@ namespace breseq {
         {
           mut["_ins_start"] = j1_unique_read_sequence + j1_not_flush_seq;
         }
-
-
+        
+        
 				string j2_not_flush_seq = "";
 				if (n(j2[j2["_is_interval"] + "_strand"]) == -1)
 				{
@@ -741,10 +711,10 @@ namespace breseq {
             start_1 = n(j2["_" + j2["_is_interval"] + "_is_end"]) + 1;
             end_1   = n(j2[j2["_is_interval"] + "_position"]);
             j2_not_flush_seq = ref_seq_info.get_sequence_1 (
-              j1[j2["_is_interval"] + "_seq_id"],
-              start_1,
-              end_1
-						);
+                                                            j1[j2["_is_interval"] + "_seq_id"],
+                                                            start_1,
+                                                            end_1
+                                                            );
 					}
 				}
 				else
@@ -755,26 +725,26 @@ namespace breseq {
             start_1 = n(j2[j2["_is_interval"] + "_position"]);
             end_1   = n(j2["_" + j2["_is_interval"] + "_is_start"]) - 1;
             j2_not_flush_seq = ref_seq_info.get_sequence_1 (
-              j1[j2["_is_interval"] + "_seq_id"],
-              start_1,
-              end_1
-						);
+                                                            j1[j2["_is_interval"] + "_seq_id"],
+                                                            start_1,
+                                                            end_1
+                                                            );
 					}
 				}
-
+        
         if (n(mut["_gap_right"]) < 0)
 				{
 					mut["_del_end"] = s(abs(n(mut["_gap_right"])));
 				}
-	
+        
         if (verbose)
           cout << "J2 NF:" << j2_not_flush_seq << " U:" << j2_unique_read_sequence << endl;
-
+        
         if ( n(j2["_" + j2["_is_interval"] + "_read_side"]) * n(j2[j2["_is_interval"] + "_strand"]) == -1)
         {
           j2_not_flush_seq = reverse_complement(j2_not_flush_seq);
         }
-
+        
         if (n(j2["_" + j2["_is_interval"] + "_read_side"]) == -1)
         {
           mut["_ins_end"] = j2_not_flush_seq + j2_unique_read_sequence;
@@ -783,33 +753,33 @@ namespace breseq {
         {
           mut["_ins_end"] = j2_unique_read_sequence + j2_not_flush_seq;
         }
-
-
+        
+        
 				// At this point any added junction sequences are on the strand as you would see them in the alignment.
 				// we may need to reverse complement. Note that we never swap sides because these changes are with respect to
         // the reference and do not change if the mobile element is inserted in the reverse orientation.
-
+        
 				if (verbose)
 					cout << mut["_gap_left"] << " :: " << mut["_gap_right"] << endl;
-
+        
 				if ( n(j1[j1["_unique_interval"] + "_strand"]) != n(j1["_" + j1["_unique_interval"] + "_read_side"]))
 				{
 					if (verbose) cout << "RC left" << endl;
 					mut["_ins_start"] = reverse_complement(mut["_ins_start"]);
 				}
-
+        
 				if ( n(j2[j2["_unique_interval"] + "_strand"]) != n(j2["_" + j2["_unique_interval"] + "_read_side"]))
 				{
 					if (verbose) cout << "RC right" << endl;
 					mut["_ins_end"] = reverse_complement(mut["_ins_end"]);
 				}
-
+        
 				//// Check for ambiguous insertion direction!
 				// Sometimes a strand will be assigned just because there is a 50-50 chance of getting the correct sides of the IS.
 				// We need to actually check the sequence on each side of the repeat element on the end as far in as the maximum overlap on that side.
 				// Use:			{max_left"] {max_right"]
 				// Retrieve sequence on unique side and compare to sequence on the other side of a repeat element
-
+        
         uint32_t j1_not_flush_length = j1_not_flush_seq.size();
 				uint32_t j2_not_flush_length = j2_not_flush_seq.size();
 				uint32_t max_not_flush_length = max(j1_not_flush_length, j2_not_flush_length);
@@ -827,7 +797,7 @@ namespace breseq {
 					cout << "J1 IS overlap length: " << j1_is_overlap_length << endl;
 					cout << "J2 IS overlap length: " << j2_is_overlap_length << endl;
 				}
-
+        
         
         bool j1_is_ambiguous = false;
         if (!j1.entry_exists("user_defined")) {
@@ -836,26 +806,26 @@ namespace breseq {
           start_1 = n(j1["_" + j1["_is_interval"] + "_is_start"]);
           end_1   = start_1 + j1_is_overlap_length - 1;
           string j1_left_is_sequence = ref_seq_info.get_sequence_1 (
-            j1[j1["_is_interval"] + "_seq_id"],
-            start_1,
-            end_1
-          );
-
-
+                                                                    j1[j1["_is_interval"] + "_seq_id"],
+                                                                    start_1,
+                                                                    end_1
+                                                                    );
+          
+          
           end_1   = n(j1["_" + j1["_is_interval"] + "_is_end"]);
           start_1 = end_1 - j1_is_overlap_length - 1;
           string j1_right_is_sequence = ref_seq_info.get_sequence_1 (
-            j1[j1["_is_interval"] + "_seq_id"],
-            start_1,
-            end_1
-          );
+                                                                     j1[j1["_is_interval"] + "_seq_id"],
+                                                                     start_1,
+                                                                     end_1
+                                                                     );
           j1_right_is_sequence = reverse_complement(j1_right_is_sequence);
-
+          
           if (verbose) {
             cout << "J1 LEFT : " << j1_left_is_sequence << endl;
             cout << "J1 RIGHT: " << j1_right_is_sequence << endl;
           }
-
+          
           // believe the direction if the sequences are different
           j1_is_ambiguous = (j1_left_is_sequence == j1_right_is_sequence);
         }
@@ -866,20 +836,20 @@ namespace breseq {
           start_1 = n(j2["_" + j2["_is_interval"] + "_is_start"]);
           end_1   = start_1 +j2_is_overlap_length - 1;
           string j2_left_is_sequence = ref_seq_info.get_sequence_1 (
-            j2[j2["_is_interval"] + "_seq_id"],
-            start_1,
-            end_1
-          );
-
+                                                                    j2[j2["_is_interval"] + "_seq_id"],
+                                                                    start_1,
+                                                                    end_1
+                                                                    );
+          
           end_1   = n(j2["_" + j2["_is_interval"] + "_is_end"]);
           start_1 = end_1 - j2_is_overlap_length - 1;
           string j2_right_is_sequence = ref_seq_info.get_sequence_1 (
-            j2[j2["_is_interval"] + "_seq_id"],
-            start_1,
-            end_1
-          );
+                                                                     j2[j2["_is_interval"] + "_seq_id"],
+                                                                     start_1,
+                                                                     end_1
+                                                                     );
           j2_right_is_sequence = reverse_complement(j2_right_is_sequence);
-
+          
           // believe the direction if the sequences are different
           j2_is_ambiguous = (j2_left_is_sequence == j2_right_is_sequence);
           
@@ -912,34 +882,34 @@ namespace breseq {
           is_strand = is1_strand;
 				}
 				mut["strand"] = s(is_strand);
-
+        
 				////
 				//// We are still not checking for a case where one junction side extends far enough to uniquely define the
 				//// side of the IS, but the other side does not (giving it the wrong strand).
 				////
-         
+        
 				// Finally, do this AFTER checking for the IS-matched sequences...
 				// side_1 of the junction may be the left side, rather than the right side of the insertion, if so we need
         // to swap coords (but not reverse complement anything
 				if (uc1_strand == +1)
 				{
 					if (verbose) cout << "reverse right and left" << endl;
-
+          
           swap(mut["_ins_start"], mut["_ins_end"]);
           swap(mut["_del_start"], mut["_del_end"]);          
 				}
         
-
+        
 				// only transfer the hidden _keys to normal keys that will be printed if they are different from 0
         if (mut.entry_exists("_del_start") && (mut["_del_start"] != "0")) mut["del_start"] = mut["_del_start"];
         if (mut.entry_exists("_del_end")   && (mut["_del_end"] != "0"))   mut["del_end"] = mut["_del_end"];
-
+        
         if (mut.entry_exists("_ins_start") && (mut["_ins_start"].length() != 0)) mut["ins_start"] = mut["_ins_start"];
         if (mut.entry_exists("_ins_end")   && (mut["_ins_end"].length() != 0))   mut["ins_end"] = mut["_ins_end"];
-
+        
 				if (verbose)
 					cout << mut["_gap_left"] << " :: " << mut["_gap_right"] << endl;
-
+        
         // print out everything
         if (verbose)
         {
@@ -1040,21 +1010,21 @@ namespace breseq {
           }
         }            
         // @JEB 12-22-12
-        // Add missing coverage evidence that corresponds to the deleted region for negative overlap          
+        // Add link to missing coverage evidence that corresponds to the deleted region for negative overlap          
         if ( n(mut["duplication_size"]) < 0 ) {
           
           for(diff_entry_list_t::iterator mc_it = mc.begin(); mc_it != mc.end(); mc_it++) {
             cDiffEntry& mc_item = **mc_it;
             
             if  (  ( mc_item[SEQ_ID] == mut[SEQ_ID])
-                && ( n(mc_item[START]) == n(mut[POSITION]) ) 
-                && ( -n(mut["duplication_size"]) == n(mc_item[END]) - n(mc_item[START]) + 1)
-              )
-             {
-               mut._evidence.push_back(mc_item._id);
-               mc.erase(mc_it);
-               break; // If you don't break here, you may be past the end of the array
-             }
+                 && ( n(mc_item[START]) == n(mut[POSITION]) ) 
+                 && ( -n(mut["duplication_size"]) == n(mc_item[END]) - n(mc_item[START]) + 1)
+                 )
+            {
+              mut._evidence.push_back(mc_item._id);
+              mc.erase(mc_it);
+              break; // If you don't break here, you may be past the end of the array
+            }
           }
           
         }
@@ -1064,16 +1034,25 @@ namespace breseq {
 			}
 		}
 
-		///
-		// evidence JC => INS, SUB, AMP, DEL mutations
+  }
+  
+  void MutationPredictor::predictJCtoINSorSUBorAMPorDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc)
+  {
+    (void)summary;
+    (void)mc;
+    bool verbose = false;
+    
+    // variables pulled from the settings
+    int32_t avg_read_length = static_cast<int32_t>(summary.sequence_conversion.avg_read_length);
+    int32_t AMP_size_cutoff = settings.size_cutoff_AMP_becomes_INS_DEL_mutation;
+    
     // @JEB 03-09-2014 Changed this section to produce INS and DEL instead of AMP,
     //                 when the mutation size is less than or equal to threshold in settings. 
 		///
-    int32_t AMP_size_cutoff = settings.size_cutoff_AMP_becomes_INS_DEL_mutation;
     for(diff_entry_list_t::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) //JC
 		{
 			cDiffEntry& j = **jc_it;
-
+      
       //cout << j["side_1_seq_id"] << " " << j["side_2_seq_id"] << endl;
       //cout << j["side_1_strand"] << " " << j["side_2_strand"] << endl;
       
@@ -1084,14 +1063,14 @@ namespace breseq {
       // must be in same orientation (implies strands are opposite)
       int32_t side_1_strand = n(j["side_1_strand"]);
       int32_t side_2_strand = n(j["side_2_strand"]);
-
+      
       // to be safe about making predictions, neither can be ambiguous 
       if ( (n(j["side_1_redundant"]) == 1) || (n(j["side_2_redundant"]) == 1) )
         continue;
-        
+      
       if (side_1_strand == side_2_strand)
 				continue;
-          
+      
 			string seq_id = j["side_1_seq_id"];
       int32_t side_1_position = n(j["side_1_position"]);
       int32_t side_2_position = n(j["side_2_position"]);
@@ -1150,7 +1129,7 @@ namespace breseq {
         else // this is an amplification (which may be annotated as an insertion if short).	
         {		
           mut._evidence = make_vector<string>(j._id);
-
+          
           if (size > AMP_size_cutoff) {
             mut._type = AMP;		
             mut		
@@ -1176,15 +1155,15 @@ namespace breseq {
 			{
 				string new_seq = j["unique_read_sequence"];        
         string ref_seq = ref_seq_info.get_sequence_1(seq_id, n(j["side_2_position"]), n(j["side_1_position"]));
-
+        
         mut._type = INS;
 				mut
-					("seq_id", seq_id)
-					("position", s(side_1_position))
-					("new_seq", new_seq + ref_seq)
+        ("seq_id", seq_id)
+        ("position", s(side_1_position))
+        ("new_seq", new_seq + ref_seq)
 				;
         mut._evidence = make_vector<string>(j._id);
-
+        
 			}
       // 'INS'
       //  INS predicted here are aligned with missing unique_read_sequence info.
@@ -1229,12 +1208,12 @@ namespace breseq {
         {
           mut._type = INS;
           mut
-            ("seq_id", seq_id)
-            ("position", s(side_1_position))
-            ("new_seq", j["unique_read_sequence"])
+          ("seq_id", seq_id)
+          ("position", s(side_1_position))
+          ("new_seq", j["unique_read_sequence"])
           ;
           mut._evidence = make_vector<string>(j._id);
-
+          
         }
 			}
       // Something not handled by the other cases occurred, we must skip the end of the loop
@@ -1251,86 +1230,90 @@ namespace breseq {
       gd.add(mut);
 		}
 
-
-		///
-		// Read Alignments => SNP, DEL, INS, SUB
-		///
+  }
+  
+  void MutationPredictor::predictRAtoSNPorDELorINSorSUBorAMP(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc)
+  {
+    (void)summary;
+    (void)mc;
+    (void)jc;
+    bool verbose = false;
+    
+    // Pull settings variables
+    int32_t AMP_size_cutoff = settings.size_cutoff_AMP_becomes_INS_DEL_mutation;
     
     vector<gd_entry_type> ra_types = make_vector<gd_entry_type>(RA);
     diff_entry_list_t ra = gd.list(ra_types);
-
+    
 		///
 		// Ignore RA that overlap DEL or MC
 		// They are due to low spurious coverage in deleted regions!
 		///
-
-		{
-      vector<gd_entry_type> del_types = make_vector<gd_entry_type>(DEL);
-			diff_entry_list_t del = gd.list(del_types);
-
-      for(diff_entry_list_t::iterator ra_it = ra.begin(); ra_it != ra.end(); ra_it++) //RA
+    
+    vector<gd_entry_type> del_types = make_vector<gd_entry_type>(DEL);
+    diff_entry_list_t del = gd.list(del_types);
+    
+    for(diff_entry_list_t::iterator ra_it = ra.begin(); ra_it != ra.end(); ra_it++) //RA
+    {
+      cDiffEntry& ra_item = **ra_it;
+      
+      bool next_ra = false;
+      
+      for(diff_entry_list_t::iterator del_it = del.begin(); del_it != del.end(); del_it++) //DEL
       {
-        cDiffEntry& ra_item = **ra_it;
-
-				bool next_ra = false;
+        cDiffEntry& del_item = **del_it;
         
-        for(diff_entry_list_t::iterator del_it = del.begin(); del_it != del.end(); del_it++) //DEL
+        if (ra_item["seq_id"] != del_item["seq_id"])
+          continue;
+        
+        // there might be a problem here with insert_position > 0
+        if ( (n(ra_item["position"]) >= n(del_item["position"])) && (n(ra_item["position"]) <= n(del_item["position"]) + n(del_item["size"]) - 1) )
         {
-          cDiffEntry& del_item = **del_it;
-
-					if (ra_item["seq_id"] != del_item["seq_id"])
-						continue;
-
-					// there might be a problem here with insert_position > 0
-					if ( (n(ra_item["position"]) >= n(del_item["position"])) && (n(ra_item["position"]) <= n(del_item["position"]) + n(del_item["size"]) - 1) )
-					{
-						ra_item["deleted"] = "1";
-						next_ra = true;
-						break;
-					}
-				}
-				if (next_ra) continue;
-
-        for(diff_entry_list_t::iterator mc_it = mc.begin(); mc_it != mc.end(); mc_it++) //MC
+          ra_item["deleted"] = "1";
+          next_ra = true;
+          break;
+        }
+      }
+      if (next_ra) continue;
+      
+      for(diff_entry_list_t::iterator mc_it = mc.begin(); mc_it != mc.end(); mc_it++) //MC
+      {
+        cDiffEntry& mc_item = **mc_it;
+        
+        if (ra_item["seq_id"] != mc_item["seq_id"]) continue;
+        
+        if ( (n(ra_item["position"]) >= n(mc_item["start"])) && (n(ra_item["position"]) <= n(mc_item["end"])) )
         {
-          cDiffEntry& mc_item = **mc_it;
-
-					if (ra_item["seq_id"] != mc_item["seq_id"]) continue;
-
-					if ( (n(ra_item["position"]) >= n(mc_item["start"])) && (n(ra_item["position"]) <= n(mc_item["end"])) )
-					{
-						ra_item["deleted"] = "1";
-						break;
-					}
-				}
-
-			}
-		}
+          ra_item["deleted"] = "1";
+          break;
+        }
+      }
+    }
     
     // Don't use rejected evidence
     ra.remove_if(cDiffEntry::field_exists("reject"));
-
+    
 		ra.sort(MutationPredictor::sort_by_pos);
-
+    
 		///
 		// Gather together read alignment mutations that occur next to each other
 		// ...unless they are polymorphisms
 		///
-
+    
 		bool first_time = true;
 		cDiffEntry mut;
 		vector<cDiffEntry> muts;
-
+    
     
     for(diff_entry_list_t::iterator ra_it = ra.begin(); ra_it != ra.end(); ra_it++) //RA
     {
       cDiffEntry& item = **ra_it;
-
+      
       // Sometimes a SNP might be called in a deleted area because the end was wrong,
 			// but it was corrected using a junction. (This catches this case.)
 			if ( item.entry_exists("reject") || item.entry_exists("deleted"))
 			  continue;
-
+      
       // If we are predicting mixed bases and not polymorphisms, then don't create
       // mutations for mixed frequency predictions (leave them as unassigned RA evidence)
       // But do mark them as "mixed"
@@ -1345,7 +1328,7 @@ namespace breseq {
 				if ( ((mut["end"] == item["position"]) && (n(mut["insert_end"]) + 1 == n(item["insert_position"])))
 						|| ((n(mut["end"]) + 1 == n(item["position"])) && (item["insert_position"] == "0")) )
 					same = true;
-
+        
         // This code is only safe if every mutation has a frequency
         if (settings.polymorphism_prediction) {
           if ( (item["frequency"] != "1") || (mut["frequency"] != "1") //don't join polymorphisms
@@ -1353,7 +1336,7 @@ namespace breseq {
             same = false;
         }
 			}
-
+      
 			if (!same)
 			{
 				if (!first_time) muts.push_back(mut);
@@ -1361,14 +1344,14 @@ namespace breseq {
 				cDiffEntry new_mut;
         new_mut._evidence = make_vector<string>(item._id);
 				new_mut
-					("seq_id", item["seq_id"])
-					("position", item["position"])
-					("start", item["position"])
-					("end", item["position"])
-					("insert_start", item["insert_position"])
-					("insert_end", item["insert_position"])
-					("ref_seq", (item["ref_base"] != ".") ? item["ref_base"] : "")
-					("new_seq", (item["new_base"] != ".") ? item["new_base"] : "")
+        ("seq_id", item["seq_id"])
+        ("position", item["position"])
+        ("start", item["position"])
+        ("end", item["position"])
+        ("insert_start", item["insert_position"])
+        ("insert_end", item["insert_position"])
+        ("ref_seq", (item["ref_base"] != ".") ? item["ref_base"] : "")
+        ("new_seq", (item["new_base"] != ".") ? item["new_base"] : "")
 				;
         
         if (settings.polymorphism_prediction) {
@@ -1379,8 +1362,8 @@ namespace breseq {
 			else
 			{
 				mut
-					("insert_end", item["insert_position"])
-					("end", item["position"])
+        ("insert_end", item["insert_position"])
+        ("end", item["position"])
 				;
 				if (item["ref_base"] != ".") mut["ref_seq"] += item["ref_base"];
 				if (item["new_base"] != ".") mut["new_seq"] += item["new_base"];
@@ -1389,11 +1372,11 @@ namespace breseq {
 		}
 		//don't forget the last one
 		if (!first_time) muts.push_back(mut);
-
+    
 		///
 		// Finally, convert these items into the fields needed for the various types of mutations
 		///
-
+    
 		for (uint32_t i = 0; i < muts.size(); i++)
 		{
 			mut = muts[i];
@@ -1421,7 +1404,7 @@ namespace breseq {
 			{
         mut._type = DEL;
 				mut["size"] = s(n(mut["end"]) - n(mut["start"]) + 1);
-
+        
 				// unused fields
 				mut.erase("new_seq");
 				mut.erase("ref_seq");
@@ -1452,15 +1435,32 @@ namespace breseq {
 				mut.erase("ref_seq");
         mut._type = SNP;
 			}
-
+      
 			mut.erase("start");
 			mut.erase("end");
 			mut.erase("insert_start");
 			mut.erase("insert_end");
-
+      
 			gd.add(mut);
 		}
-		
+
+  }
+  
+  // Normalizes INS/DEL mutations by shifting them to the highest coordinates possible
+  // by repeat units.
+  
+  // Adds additional fields "repeat_length", "repeat_ref_copies", and "repeat_new_copies"
+  // to any repeat that is above a certain threshold length in the original sequence (by default 6 bp).
+  
+  void MutationPredictor::annotate_tandem_repeat_mutations(Settings& settings, Summary& summary, cGenomeDiff& gd)
+  {    
+    (void) summary;
+    uint32_t minimum_tandem_repeat_length = 5;
+    uint32_t minimum_repeat_ref_copies = 2;
+    
+    // Pull settings variables
+    int32_t AMP_size_cutoff = settings.size_cutoff_AMP_becomes_INS_DEL_mutation;
+
     diff_entry_list_t test_muts = gd.mutation_list();
     
     // Add additional fields for INS or DEL mutations that are in tandem repeats
@@ -1469,40 +1469,140 @@ namespace breseq {
       if (mut._type == INS) {
         int32_t size = mut["new_seq"].size();
         if (size > AMP_size_cutoff) continue;
-
-        uint32_t position = from_string<int32_t>(mut["position"]);
-        string mutation_sequence = mut["new_seq"];
-
-        uint32_t repeat_unit_size = find_repeat_unit_size(mutation_sequence);
-        uint32_t num_repeat_units = size / repeat_unit_size;
-        uint32_t original_num_repeat_units = find_original_num_repeat_units(ref_seq_info[mut["ref_seq"]], position, mutation_sequence);
         
-        if (original_num_repeat_units > 0) {
-          mut["repeat_length"] = s(repeat_unit_size);
-          mut["repeat_ref_copies"] = s(original_num_repeat_units);
-          mut["repeat_new_copies"] = s(original_num_repeat_units - num_repeat_units);
-        }
+        int32_t position = from_string<int32_t>(mut["position"]);
+        string mutation_sequence = mut["new_seq"];
+        
+        uint32_t repeat_unit_size;
+        string repeat_unit_sequence;
+        find_repeat_unit(mutation_sequence, repeat_unit_size, repeat_unit_sequence);
+        uint32_t num_repeat_units = size / repeat_unit_size;
+                
+        normalizeINSposition(ref_seq_info[mut["seq_id"]], mut, repeat_unit_sequence);
+        position = from_string<int32_t>(mut["position"]);
+
+        // Note shift to +1 to get to where the first unit of a repeat would be for INS
+        uint32_t original_num_repeat_units = find_original_num_repeat_units(ref_seq_info[mut["seq_id"]], position+1, repeat_unit_sequence);
+        
+        // save normalized position even if we aren't a repeat
+        mut["position"] = to_string<int32_t>(position);
+        
+        if (original_num_repeat_units * repeat_unit_size < minimum_tandem_repeat_length)
+          continue;
+        
+        if (original_num_repeat_units < minimum_repeat_ref_copies)
+          continue;
+        
+        mut["repeat_seq"] = repeat_unit_sequence;
+        mut["repeat_length"] = s(repeat_unit_size);
+        mut["repeat_ref_copies"] = s(original_num_repeat_units);
+        mut["repeat_new_copies"] = s(original_num_repeat_units + num_repeat_units);
       }
       
-      if (mut._type == DEL) {
+      else if (mut._type == DEL) {
         int32_t size = from_string<int32_t>(mut["size"]);
         if (size > AMP_size_cutoff) continue;
         
-        uint32_t position = from_string<int32_t>(mut["position"]);
-        string mutation_sequence = ref_seq_info.get_sequence_1(mut["ref_seq"], position, position + size - 1);
+        int32_t position = from_string<int32_t>(mut["position"]);
+        string mutation_sequence = ref_seq_info.get_sequence_1(mut["seq_id"], position, position + size - 1);
         
-        uint32_t repeat_unit_size = find_repeat_unit_size(mutation_sequence);
+        uint32_t repeat_unit_size;
+        string repeat_unit_sequence;
+        find_repeat_unit(mutation_sequence, repeat_unit_size, repeat_unit_sequence);
         uint32_t num_repeat_units = size / repeat_unit_size;
-        uint32_t original_num_repeat_units = find_original_num_repeat_units(ref_seq_info[mut["ref_seq"]], position, mutation_sequence);
         
-        if (original_num_repeat_units > 0) {
-          mut["repeat_length"] = s(repeat_unit_size);
-          mut["repeat_ref_copies"] = s(original_num_repeat_units);
-          mut["repeat_new_copies"] = s(original_num_repeat_units - num_repeat_units);
-        }
+        normalizeDELposition(ref_seq_info[mut["seq_id"]], mut, repeat_unit_sequence);
+        position = from_string<int32_t>(mut["position"]);
+
+        // Note that we add the number of repeats that were deleted
+        uint32_t original_num_repeat_units = find_original_num_repeat_units(ref_seq_info[mut["seq_id"]], position, repeat_unit_sequence) + num_repeat_units;
+        
+        if (original_num_repeat_units * repeat_unit_size < minimum_tandem_repeat_length)
+          continue;
+        
+        if (original_num_repeat_units < minimum_repeat_ref_copies)
+          continue;
+        
+        // We only count if there is at least one unit remaining...
+        if (original_num_repeat_units - num_repeat_units == 0)
+          continue;
+        
+        mut["repeat_seq"] = repeat_unit_sequence;
+        mut["repeat_length"] = s(repeat_unit_size);
+        mut["repeat_ref_copies"] = s(original_num_repeat_units);
+        mut["repeat_new_copies"] = s(original_num_repeat_units - num_repeat_units);
       }
       
     }
+  }
+  
+	/*
+	 Title   : predict
+	 Usage   : $mp->predict();
+	 Function: Predicts mutations from evidence in a GenomeDiff and adds them to it
+	 Returns :
+
+	*/
+	void MutationPredictor::predict(Settings& settings, Summary& summary, cGenomeDiff& gd)
+	{
+		(void)settings; //TODO; unused?
+    bool verbose = false; // for debugging
+
+		///
+		//  Preprocessing of JC evidence
+    //  NB: This call is likely redundant in the normal pipeline, but preserved here so that 
+    //  predict can be a stand-alone call that is not dependent on other processing.
+		///
+    
+    prepare_junctions(settings, summary, gd);
+
+    ///
+    // Create master lists of evidence that will be culled as they are used
+    // by functions below.
+    ///
+    
+    // Do not use rejected junctions unless they are user-defined
+    vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
+		diff_entry_list_t jc = gd.list(jc_types);
+    jc.remove_if(cDiffEntry::rejected_and_not_user_defined());
+    
+    // Do not use rejected missing coverage evidence
+    vector<gd_entry_type> mc_types = make_vector<gd_entry_type>(MC);
+		diff_entry_list_t mc = gd.list(mc_types);
+    mc.remove_if(cDiffEntry::field_exists("reject"));
+    
+		///
+		// evidence MC + JC => DEL mutation
+		///
+    predictMCplusJCtoDEL(settings, summary, gd, jc, mc);
+    
+		///
+		// evidence JC + JC = MOB mutation
+		///
+    
+    predictJCplusJCtoMOB(settings, summary, gd, jc, mc);
+		
+		///
+		// evidence JC => INS, SUB, AMP, DEL mutations
+    ///
+    
+    predictJCtoINSorSUBorAMPorDEL(settings, summary, gd, jc, mc);
+    
+		///
+		// Read Alignments => SNP, DEL, INS, SUB AMP
+		///
+    
+    predictRAtoSNPorDELorINSorSUBorAMP(settings, summary, gd, jc, mc);
+    
+		
+    ///
+		// Read Alignments => SNP, DEL, INS, SUB AMP
+		///
+    
+    annotate_tandem_repeat_mutations(settings, summary, gd);
+
+    
+
     
     ///////////////////////////////////////////////////////
     // Check to be sure the "frequency" field is present //
@@ -1522,38 +1622,105 @@ namespace breseq {
 	}
   
   // Returns the size of the minimum repeated subseqence
-  uint32_t MutationPredictor::find_repeat_unit_size(string& mutation_sequence)
+  void MutationPredictor::find_repeat_unit(string& mutation_sequence, uint32_t& repeat_size, string& repeat_sequence)
   {
-    // This code ensure that the whole length is given if there are no sub_repeats.
-    uint32_t repeat_size;
-    for (uint32_t i=0; i<mutation_sequence.size(); i++) {
+    // Find the shortest sub-repeat.
+    repeat_size = mutation_sequence.size();
+    
+    // there's no need to test any size where two copies of the sub-repeat are longer than the sequence
+    for (uint32_t i= trunc(mutation_sequence.size() / 2); i>0; i--) {
+      
+      // Must evenly divide the sequence
+      if (repeat_size % i != 0) continue;
+      
       string unit = mutation_sequence.substr(0, i);
       bool is_repeat = true;
-      uint32_t test_pos = 0;
-      while(test_pos + i < mutation_sequence.size()) {
-        test_pos += i;
-        if (unit != mutation_sequence.substr(test_pos, test_pos + i - 1)) 
+      uint32_t test_pos = i; // change to zero offset right past first repeat unit
+      
+      while(test_pos + i <= mutation_sequence.size()) {
+        // compare new unit to original unit
+        string test = mutation_sequence.substr(test_pos, i);
+        if (unit != test) {
           is_repeat = false;
+          break;
+        }
+        test_pos += i;
       }
       
       if (is_repeat) repeat_size = i;
     }
     
-    return repeat_size;
+    repeat_sequence = mutation_sequence.substr(0, repeat_size);
   }
   
-  uint32_t MutationPredictor::find_original_num_repeat_units(cAnnotatedSequence& ref_seq, int32_t test_position, string& repeat_sequence)
+  void MutationPredictor::normalizeINSposition(cAnnotatedSequence& ref_seq, cDiffEntry& de, string& repeat_sequence)
+  {
+    
+    uint32_t num_repeat_units = 0;
+    
+    int32_t test_position = 1 + from_string<int32_t>(de[POSITION]);   
+    // The offset of 1 ensures we are on the first base of a possible repeat unit (relative to the reference).
+
+    // attempt to move forward by repeat units at a time from the current position
+    while ( test_position + repeat_sequence.size() - 1 <= ref_seq.get_sequence_length()) {
+      
+      string test_sequence = ref_seq.get_sequence_1(test_position, test_position + repeat_sequence.size() - 1);
+      
+      if (test_sequence != repeat_sequence) break;
+      test_position += repeat_sequence.size();
+    }
+    
+    de[POSITION] = to_string<int32_t>(test_position - 1);
+  }
+  
+  void MutationPredictor::normalizeDELposition(cAnnotatedSequence& ref_seq, cDiffEntry& de, string& repeat_sequence)
+  {
+    
+    uint32_t num_repeat_units = 0;
+    
+    int32_t test_position = from_string<int32_t>(de[POSITION]) + from_string<int32_t>(de[SIZE]);   
+    // The offset of 1 ensures we are on the first base of a possible repeat unit (relative to the reference).
+    
+    // attempt to move forward by repeat units at a time from the current position
+    while ( test_position + repeat_sequence.size() - 1 <= ref_seq.get_sequence_length()) {
+      
+      string test_sequence = ref_seq.get_sequence_1(test_position, test_position + repeat_sequence.size() - 1);
+      
+      if (test_sequence != repeat_sequence) break;
+      test_position += repeat_sequence.size();
+    }
+    
+    de[POSITION] = to_string<int32_t>(test_position - from_string<int32_t>(de[SIZE]));
+    
+  }
+  
+  
+  
+  ///
+  // Expects position to be the first position of the repeat we are looking for
+  // due to earlier normalization (shifting) of these mutations.
+  //          *
+  // ABCABCABCABC
+  //
+  // For INS this is the position of the base before the insertion (same as the mutation position).
+  // For DEL it is one position before the first deleted base (one before the mutation position).
+  /// 
+  
+  uint32_t MutationPredictor::find_original_num_repeat_units(cAnnotatedSequence& ref_seq, int32_t position, string& repeat_sequence)
   {
     uint32_t num_repeat_units = 0;
     
-    while ( test_position - repeat_sequence.size() > 0) {
+    int32_t test_position = position;
+    
+    // count repeats backwards
+    while ( test_position - repeat_sequence.size() > 1) {
       
       test_position -= repeat_sequence.size();
       string test_sequence = ref_seq.get_sequence_1(test_position, test_position + repeat_sequence.size() - 1);
       
       if (test_sequence != repeat_sequence) break;
       
-      num_repeat_units += test_position;
+      num_repeat_units++;
     }
     
     return num_repeat_units;
