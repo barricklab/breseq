@@ -127,8 +127,8 @@ Additional DEL named fields
 * **between=**\ *<repeat_family>*
    This deletion appears to result from homologous recombination or polymerase slipping between two existing copies of the same genomic repeat (e.g. tRNA, IS element) in the genome. One copy of the repeat is deleted by this event. 
 
-* **repeat_length=**\ *<uint32>*, **repeat_ref_num=**\ *<uint32>*, **repeat_new_copies=**\ *<uint32>* 
-   This deletion results from polymerase slippage on a short sequence repeat consisting of tandem copies of "length" bases repeated "num" times in the ancestor and after a mutation.  To be annotated in this way the copy of the repeat in the reference genome must consisting of at least six total bases (**repeat_length**\ × **repeat_ref_num**\ ≥ 6).
+* **repeat_seq=**\ *<string>*, **repeat_length=**\ *<uint32>*, **repeat_ref_num=**\ *<uint32>*, **repeat_new_copies=**\ *<uint32>* 
+   This deletion is in a short sequence repeat consisting of tandem copies of **repeat_seq** repeated **repeat_ref_num** times in the ancestor and **repeat_new_copies** after a mutation.  To be annotated in this way the copy of the repeat in the reference genome must consist of at least two repeat copies and have a length of five of more total bases (**repeat_length** × **repeat_ref_num** ≥ 5).
 
 INS: Insertion mutation
 """""""""""""""""""""""
@@ -147,8 +147,8 @@ INS: Insertion mutation
 
 Additional INS named fields
 '''''''''''''''''''''''''''
-* **repeat_length=**\ *<uint32>*, **repeat_ref_num=**\ *<uint32>*, **repeat_new_copies=**\ *<uint32>* 
-   This insertion results from polymerase slippage on a short sequence repeat consisting of tandem copies of "length" bases repeated "num" times in the ancestor and after a mutation.  To be annotated in this way the copy of the repeat in the reference genome must consisting of at least six total bases (**repeat_length**\ × **repeat_ref_num**\ ≥ 6).
+* **repeat_seq=**\ *<string>*, **repeat_length=**\ *<uint32>*, **repeat_ref_num=**\ *<uint32>*, **repeat_new_copies=**\ *<uint32>* 
+   This insertion is in a short sequence repeat consisting of tandem copies of **repeat_seq** repeated **repeat_ref_num** times in the ancestor and **repeat_new_copies** after a mutation.  To be annotated in this way the copy of the repeat in the reference genome must consist of at least two repeat copies and have a length of five of more total bases (**repeat_length** × **repeat_ref_num** ≥ 5).
 
 MOB: Mobile element insertion mutation
 """"""""""""""""""""""""""""""""""""""

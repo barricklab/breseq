@@ -1929,28 +1929,41 @@ void Html_Mutation_Table_String::Item_Lines()
       } break;
         
       case INS:{
-        cell_mutation = "+";
-        if (options.detailed || (mut["new_seq"].size() <= 8)) {
-          cell_mutation += mut[NEW_SEQ];
+        if (mut.entry_exists("repeat_seq")) {
+          // alternative way of depicting
+          cell_mutation = "(" + mut["repeat_seq"] + ")" + "<sub>" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"] + "</sub>";
+          //cell_mutation = mut["repeat_seq"] + "&times;" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"];
+        }
+        else if (options.detailed || (mut["new_seq"].size() <= 8)) {
+          cell_mutation = "+" + mut[NEW_SEQ];
         } else {
-          cell_mutation += s(mut[NEW_SEQ].size()) + " bp";
+          cell_mutation = "+" + s(mut[NEW_SEQ].size()) + " bp";
         }
       } break;
         
       case DEL:{
-        cell_mutation = nonbreaking("&Delta;" + commify(mut["size"]) + " bp");
-        string annotation_str;
         
-        // special annotation for mediated- and between repeat elements
-        if (mut.entry_exists("mediated")) 
-          annotation_str = html_format_repeat_name(mut["mediated"]) + "-mediated"; 
-        if (mut.entry_exists("between")) 
-          annotation_str = "between " + html_format_repeat_name(mut["between"]);
-        // default
-        if(annotation_str.empty()) {
-          annotation_str = nonbreaking(mut["gene_position"]);
-        } 
-        cell_mutation_annotation =  nonbreaking(annotation_str);
+        if (mut.entry_exists("repeat_seq")) {
+          // alternative way of depicting
+          cell_mutation = "(" + mut["repeat_seq"] + ")" + "<sub>" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"] + "</sub>";
+          //cell_mutation = mut["repeat_seq"] + "&times;" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"];
+        }
+        else {
+          cell_mutation = nonbreaking("&Delta;" + commify(mut["size"]) + " bp");
+              
+          string annotation_str;
+          
+          // special annotation for mediated- and between repeat elements
+          if (mut.entry_exists("mediated")) 
+            annotation_str = html_format_repeat_name(mut["mediated"]) + "-mediated"; 
+          if (mut.entry_exists("between")) 
+            annotation_str = "between " + html_format_repeat_name(mut["between"]);
+          // default
+          if(annotation_str.empty()) {
+            annotation_str = nonbreaking(mut["gene_position"]);
+          } 
+          cell_mutation_annotation =  nonbreaking(annotation_str);
+        }
       } break;
         
       case SUB:{

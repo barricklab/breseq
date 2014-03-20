@@ -1,8 +1,4 @@
 #=GENOME_DIFF	1.0
-#=AUTHOR	
-#=REFSEQ	tests/REL606_fragment_is_junction_only/../data/REL606/REL606.fragment.gbk
-#=REFSEQ	tests/REL606_fragment_is_junction_only/../data/REL606/REL606.is.gbk
-#=READSEQ	tests/REL606_fragment_is_junction_only/../data/REL606/REL606.junction_only.fastq
 MOB	1	8,9	REL606-5	2345	IS150	1	3	gene_name=yafC/yafD	gene_position=intergenic (-30/-209)	gene_product=predicted DNA-binding transcriptional regulator/hypothetical protein	html_gene_name=<i>yafC</i>&nbsp;&larr;&nbsp;/&nbsp;&rarr;&nbsp;<i>yafD</i>	locus_tag=ECB_00201/ECB_00202
 MOB	2	10,11	REL606-5	4000	IS150	-1	3	gene_name=yafE/mltD	gene_position=intergenic (+17/+29)	gene_product=predicted S-adenosyl-L-methionine-dependent methyltransferase/predicted membrane-bound lytic murein transglycosylase D	html_gene_name=<i>yafE</i>&nbsp;&rarr;&nbsp;/&nbsp;&larr;&nbsp;<i>mltD</i>	locus_tag=ECB_00203/ECB_00204
 MOB	3	12,13	REL606-5	4400	IS150	1	3	gene_list=mltD	gene_name=mltD	gene_position=coding (988-990/1359 nt)	gene_product=predicted membrane-bound lytic murein transglycosylase D	gene_strand=<	html_gene_name=<i>mltD</i>&nbsp;&larr;	locus_tag=ECB_00204
