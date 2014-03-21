@@ -57,6 +57,8 @@ for (e in commandArgs()) {
 window_start = as.numeric(window_start);
 window_end = as.numeric(window_end);
 avg_coverage = as.numeric(avg_coverage);
+avg_coverage_scale = as.numeric(avg_coverage);
+fixed_coverage_scale = as.numeric(fixed_coverage_scale);
 
 
 X<-read.table(in_file, sep="\t", header=T)
@@ -71,7 +73,12 @@ if (total_only ==1)
 }
 
 ## Be sure to draw at least up to the average
-maxy = max(maxy, avg_coverage * 1.1);
+
+if (fixed_coverage_scale != 0) {
+  maxy = fixed_coverage_scale;
+} else {
+  maxy = max(maxy, avg_coverage * 1.1);
+}
 
 start_pos = X$position[1];
 end_pos = X$position[length(X$position)];

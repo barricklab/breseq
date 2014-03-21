@@ -174,6 +174,7 @@ int do_bam2cov(int argc, char* argv[]) {
   ("table,t", "Create tab delimited file of coverage instead of a plot", TAKES_NO_ARGUMENT)
   ("total-only,1", "Only plot/tabulate total coverage, not per strand coverage", TAKES_NO_ARGUMENT)
   ("show-average,a", "Show the average coverage across the reference sequence as a horizontal line. Only possible if used in the main output directory of breseq output.", TAKES_NO_ARGUMENT)
+  ("fixed-coverage-scale,s", "Fix the maximum on the coverage scale in plots. If the show-average option is provided, then this is a factor that will be multiplied times the average coverage (e.g., 1.5 x avg). Otherwise, this is a coverage value (e.g., 100-fold coverage).")  
   ("resolution,p", "Number of positions to output coverage information for in interval (0=ALL)", 600)
   // which regions to create files for
   ("tile-size", "In tiling mode, the size of each tile", 0)
@@ -243,6 +244,9 @@ int do_bam2cov(int argc, char* argv[]) {
   co.output_format( options["format"] );
   if (options.count("show-average")) {
     co.show_average( options.count("show-average"), settings.error_rates_summary_file_name );
+  }
+  if (options.count("fixed-coverage-scale")) {
+    co.fixed_coverage_scale(from_string<double>(options["fixed-coverage-scale"]));
   }
   
   // create regions that tile the genome
