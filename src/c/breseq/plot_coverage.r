@@ -56,6 +56,8 @@ for (e in commandArgs()) {
 
 window_start = as.numeric(window_start);
 window_end = as.numeric(window_end);
+avg_coverage = as.numeric(avg_coverage);
+
 
 X<-read.table(in_file, sep="\t", header=T)
 X$unique_tot_cov = X$unique_bot_cov + X$unique_top_cov;
@@ -67,6 +69,9 @@ if (total_only ==1)
 {
   maxy = max(X$unique_tot_cov + X$redundant_tot_cov) + 5;
 }
+
+## Be sure to draw at least up to the average
+maxy = max(maxy, avg_coverage * 1.1);
 
 start_pos = X$position[1];
 end_pos = X$position[length(X$position)];
@@ -111,6 +116,12 @@ axis(1, at=atx, las=0, labels=format(atx, scientific=FALSE))
 rect(start_pos, 0, window_start, maxy, col="grey85", lty=0)
 rect(window_end+1, 0, end_pos, maxy, col="grey85", lty=0)
 
+## optional average line
+if (avg_coverage != 0)
+{ 
+  lines(c(start_pos, end_pos), c(avg_coverage, avg_coverage), type="s", col="darkgrey", lty="solid", lwd=4.0)
+}
+
 ##grand total
 if (total_only ==1)
 {
@@ -131,18 +142,24 @@ if (total_only == 0)
 	lines(X$position, X$unique_bot_cov, type="s", col="purple", lty="solid", lwd=0.7)
 }
 
-
-
 ## draw a legend
 par(mar=c(0.5,3,0.1,0.5));
 barplot(0,0, axes=FALSE)
 
-if (total_only == 0) {
-	legend( "bottom" , cex=0.75, c("unique total", "unique top", "unique bottom ", "repeat total", "repeat top","repeat bottom"), pch=-1, horiz=T, col="black", fill=c("blue", "cyan", "purple", "red", "yellow", "orange"), bty="n")
-} else {
-	legend( "bottom" , cex=0.85, c("total", "unique total", "repeat total"), pch=-1, horiz=T, col="black", fill=c("green", "blue", "red"), bty="n")
-}
+if (avg_coverage == 0) {
 
+  if (total_only == 0) {
+    legend( "bottom" , cex=0.75, c("unique total", "unique top", "unique bottom ", "repeat total", "repeat top","repeat bottom"), pch=-1, horiz=T, col="black", fill=c("blue", "cyan", "purple", "red", "yellow", "orange"), bty="n")
+  } else {
+    legend( "bottom" , cex=0.85, c("total", "unique total", "repeat total"), pch=-1, horiz=T, col="black", fill=c("green", "blue", "red"), bty="n")
+  }
+} else {
+  if (total_only == 0) {
+  legend( "bottom" , cex=0.70, c("average", "unique total", "unique top", "unique bottom ", "repeat total", "repeat top","repeat bottom"), pch=-1, horiz=T, col="black", fill=c("darkgrey", "blue", "cyan", "purple", "red", "yellow", "orange"), bty="n")
+  } else {
+  legend( "bottom" , cex=0.85, c("average", "total", "unique total", "repeat total"), pch=-1, horiz=T, col="black", fill=c("darkgrey", "green", "blue", "red"), bty="n")
+  }
+}
 
 
 dev.off()

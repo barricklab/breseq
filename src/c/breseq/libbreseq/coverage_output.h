@@ -38,6 +38,10 @@ namespace breseq
     bool      m_total_only;
     uint32_t  m_shaded_flanking;
     
+    bool      m_show_average;
+    string    m_average_file_name;
+    Summary   m_summary;
+    
     string    m_r_script_file_name;
     string    m_intermediate_path;
     string    m_read_begin_output_file_name; // extra output file set as option
@@ -68,7 +72,8 @@ namespace breseq
     
     coverage_output( const string& bam, const string& fasta, const string& r_script_file_name, const string& intermediate_path = "/tmp" )
       : pileup_base(bam, fasta), m_output_format("png"), m_downsample(0), m_total_only(false)
-      , m_shaded_flanking(0), m_r_script_file_name(r_script_file_name), m_intermediate_path(intermediate_path) {};
+      , m_shaded_flanking(0), m_show_average(false), m_r_script_file_name(r_script_file_name)
+      , m_intermediate_path(intermediate_path) {};
     
     // Get/Set Options
 
@@ -94,6 +99,9 @@ namespace breseq
     
     bool total_only(bool _total_only)
       { m_total_only = _total_only; return m_total_only; }
+ 
+    void show_average(const bool show_average, const string& average_file_name)
+    { m_show_average = show_average; m_average_file_name = average_file_name; }
     
     void plot(const string& region, const string& output_file_name, uint32_t resolution = 600);
     void table(const string& region, const string& output_file_name, uint32_t resolution = 0);
