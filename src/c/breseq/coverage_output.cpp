@@ -32,6 +32,12 @@ void coverage_output::plot(const string& region, const string& output_file_name,
   
   ASSERT( (seq_id.length() > 0) || !start_pos || !end_pos, "Invalid region: \"" + region + "\"");
 
+  // Load summary file of fitting coverage from breseq output
+  if (m_show_average) {
+    ASSERT(file_exists(m_average_file_name.c_str()), "Could not open file with fit coverage: " + m_average_file_name + "\n");
+    m_summary.unique_coverage.retrieve(m_average_file_name);
+  }
+  
   // extend the region and re-check endpoints
   int32_t extended_start = start_pos - m_shaded_flanking;
   if (extended_start < 0) extended_start = 0;
@@ -56,6 +62,9 @@ void coverage_output::plot(const string& region, const string& output_file_name,
 	string tmp_coverage = m_intermediate_path + "/" + to_string(pid) + ".coverage.tab";
 	
   this->table(extended_region, tmp_coverage, resolution);
+  
+  // default is zero
+  double average_coverage = m_show_average ? m_summary.unique_coverage[seq_id].average : 0;
 	
   string log_file_name = m_intermediate_path + "/" + to_string(pid) + ".r.log";
   string command = "R --vanilla";
@@ -67,6 +76,7 @@ void coverage_output::plot(const string& region, const string& output_file_name,
   command += ((m_total_only) ? "1" : "0");
   command += " window_start=" + to_string(start_pos);
   command += " window_end=" + to_string(end_pos);
+  command += " avg_coverage=" + to_string(average_coverage);
   command += " < " + cString(m_r_script_file_name).escape_shell_chars();
   command += " > " + cString(log_file_name).escape_shell_chars();
   
@@ -74,6 +84,7 @@ void coverage_output::plot(const string& region, const string& output_file_name,
 	
 	remove(tmp_coverage.c_str());
 	remove(log_file_name.c_str());
+  remove("Rplots.pdf");
 }
 
 void coverage_output::table(const string& region, const string& output_file_name, uint32_t resolution)

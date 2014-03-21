@@ -169,10 +169,11 @@ int do_bam2cov(int argc, char* argv[]) {
   ("bam,b", "BAM file containing sequences to be aligned", "data/reference.bam")
 	("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
   // options controlling what files are output
-  ("output,o", "Base name of output files. Region specification (seq_id:start-end) appended if there are multiple output files. Defaults to seq_id:start-end for single regions.")
+  ("output,o", "If there is only one output file, then this option specifies the name of the output file. Otherwise, the name of a path that will contain all output files. By default, the base name of the output file for a region is seq_id:start-end.")
   ("format", "Format of output plot(s): PNG or PDF", "PNG")
   ("table,t", "Create tab delimited file of coverage instead of a plot", TAKES_NO_ARGUMENT)
   ("total-only,1", "Only plot/tabulate total coverage, not per strand coverage", TAKES_NO_ARGUMENT)
+  ("show-average,a", "Show the average coverage across the reference sequence as a horizontal line. Only possible if used in the main output directory of breseq output.", TAKES_NO_ARGUMENT)
   ("resolution,p", "Number of positions to output coverage information for in interval (0=ALL)", 600)
   // which regions to create files for
   ("tile-size", "In tiling mode, the size of each tile", 0)
@@ -240,6 +241,9 @@ int do_bam2cov(int argc, char* argv[]) {
   // Set options
   co.total_only(options.count("total-only"));
   co.output_format( options["format"] );
+  if (options.count("show-average")) {
+    co.show_average( options.count("show-average"), settings.error_rates_summary_file_name );
+  }
   
   // create regions that tile the genome
   if (tiling_mode)
@@ -274,6 +278,11 @@ int do_bam2cov(int argc, char* argv[]) {
     }
   }
   
+  // Create output path if necessary
+  if ((region_list.size() > 1) && (!options["output"].empty())) {
+    create_path(options["output"]);
+  }
+  
   for(vector<string>::iterator it = region_list.begin(); it!= region_list.end(); it++)
   {
 // these are experimental... additional table files
@@ -285,11 +294,19 @@ int do_bam2cov(int argc, char* argv[]) {
     // clean commas
     *it = substitute(*it, ",", "");
     
-    string file_name = options["output"];
-    if (region_list.size() > 0)  {
-     file_name += "/" + *it; 
-    } else if (file_name == "") {
-      file_name += *it;
+    string file_name;
+    if (region_list.size() == 1) {
+      if (options["output"].empty()) {
+        file_name = *it;
+      } else {
+        file_name = options["output"];
+      }
+    } else {
+      if (options["output"].empty()) {
+        file_name = *it;
+      } else {
+        file_name = options["output"] + "/" + *it;
+      }
     }
     
     if (options.count("table")) {
