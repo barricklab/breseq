@@ -39,6 +39,7 @@ namespace breseq
     uint32_t  m_shaded_flanking;
     
     bool      m_show_average;
+    double    m_fixed_coverage_scale; // either coverage number if m_show_average or factor times average coverage
     string    m_average_file_name;
     Summary   m_summary;
     
@@ -72,7 +73,7 @@ namespace breseq
     
     coverage_output( const string& bam, const string& fasta, const string& r_script_file_name, const string& intermediate_path = "/tmp" )
       : pileup_base(bam, fasta), m_output_format("png"), m_downsample(0), m_total_only(false)
-      , m_shaded_flanking(0), m_show_average(false), m_r_script_file_name(r_script_file_name)
+      , m_shaded_flanking(0), m_show_average(false), m_fixed_coverage_scale(0.0), m_r_script_file_name(r_script_file_name)
       , m_intermediate_path(intermediate_path) {};
     
     // Get/Set Options
@@ -103,6 +104,9 @@ namespace breseq
     void show_average(const bool show_average, const string& average_file_name)
     { m_show_average = show_average; m_average_file_name = average_file_name; }
     
+    void fixed_coverage_scale(const double fixed_coverage_scale)
+    { m_fixed_coverage_scale = fixed_coverage_scale; }
+     
     void plot(const string& region, const string& output_file_name, uint32_t resolution = 600);
     void table(const string& region, const string& output_file_name, uint32_t resolution = 0);
   };

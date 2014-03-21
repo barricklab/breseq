@@ -77,6 +77,8 @@ void coverage_output::plot(const string& region, const string& output_file_name,
   command += " window_start=" + to_string(start_pos);
   command += " window_end=" + to_string(end_pos);
   command += " avg_coverage=" + to_string(average_coverage);
+  command += " fixed_coverage_scale=" + ( average_coverage ? to_string<double>(average_coverage * m_fixed_coverage_scale) : to_string<double>(m_fixed_coverage_scale) );
+
   command += " < " + cString(m_r_script_file_name).escape_shell_chars();
   command += " > " + cString(log_file_name).escape_shell_chars();
   
