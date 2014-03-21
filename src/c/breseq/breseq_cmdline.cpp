@@ -168,18 +168,18 @@ int do_bam2cov(int argc, char* argv[]) {
   // required options
   ("bam,b", "BAM file containing sequences to be aligned", "data/reference.bam")
 	("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
-  ("output,o", "Base name of output files. Region specification (seq_id:start-end) appended if there are multiple output files. Defaults to seq_id:start-end for single regions.")
-  // which regions to create files for
-  ("tile-size", "In tiling mode, the size of each tile", 0, ADVANCED_OPTION)
-  ("tile-overlap", "In tiling mode, overlap between adjacent tiles (1/2 on each side)", 0, ADVANCED_OPTION)
   // options controlling what files are output
-  ("format", "Format of output plot: PNG or PDF", "PNG")
+  ("output,o", "Base name of output files. Region specification (seq_id:start-end) appended if there are multiple output files. Defaults to seq_id:start-end for single regions.")
+  ("format", "Format of output plot(s): PNG or PDF", "PNG")
   ("table,t", "Create tab delimited file of coverage instead of a plot", TAKES_NO_ARGUMENT)
+  ("total-only,1", "Only plot/tabulate total coverage, not per strand coverage", TAKES_NO_ARGUMENT)
+  ("resolution,p", "Number of positions to output coverage information for in interval (0=ALL)", 600)
+  // which regions to create files for
+  ("tile-size", "In tiling mode, the size of each tile", 0)
+  ("tile-overlap", "In tiling mode, overlap between adjacent tiles (1/2 of this is added to each side of every tile)", 0)
 //  ("read_start_output,r", "file name for table file binned by read start bases (DEFAULT: OFF)")
 //  ("gc_output,g", "create additional table file binned by GC content of reads (DEFAULT: OFF)")
   // options controlling information that is output
-  ("total-only,1", "Only plot/tabulate total coverage, not per strand coverage", TAKES_NO_ARGUMENT)
-  ("resolution,p", "Number of positions to output coverage information for in interval (0=ALL)", 600)
   .processCommandArgs(argc, argv);
   
   options.addUsage("");
@@ -286,7 +286,11 @@ int do_bam2cov(int argc, char* argv[]) {
     *it = substitute(*it, ",", "");
     
     string file_name = options["output"];
-    if ((region_list.size() > 0) || (file_name == ""))  file_name += *it;
+    if (region_list.size() > 0)  {
+     file_name += "/" + *it; 
+    } else if (file_name == "") {
+      file_name += *it;
+    }
     
     if (options.count("table")) {
       cout << "Tabulating coverage for region: " << *it << endl;
