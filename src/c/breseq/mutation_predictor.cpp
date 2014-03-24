@@ -1669,8 +1669,13 @@ namespace breseq {
       if (test_sequence != repeat_sequence) break;
       test_position += repeat_sequence.size();
     }
+        
+    string new_position = to_string<int32_t>(test_position - 1);
     
-    de[POSITION] = to_string<int32_t>(test_position - 1);
+    if (new_position != de[POSITION]) {
+      de["_original_aligned_position"] = de[POSITION]; // Save the original position for marking in alignments
+      de[POSITION] = new_position;
+    }
   }
   
   void MutationPredictor::normalizeDELposition(cAnnotatedSequence& ref_seq, cDiffEntry& de, string& repeat_sequence)
@@ -1690,7 +1695,12 @@ namespace breseq {
       test_position += repeat_sequence.size();
     }
     
-    de[POSITION] = to_string<int32_t>(test_position - from_string<int32_t>(de[SIZE]));
+    string new_position = to_string<int32_t>(test_position - from_string<int32_t>(de[SIZE]));
+    
+    if (new_position != de[POSITION]) {
+      de["_original_aligned_position"] = de[POSITION]; // Save the original position for marking in alignments
+      de[POSITION] = new_position;
+    }
     
   }
   
@@ -2124,20 +2134,7 @@ namespace breseq {
   }
   
   
-  bool sort_gd_by_treatment_population_time(const cGenomeDiff& a, const cGenomeDiff &b)
-  {
-    // Treatment
-    if (a.metadata.treatment != b.metadata.treatment)
-      return (a.metadata.treatment < b.metadata.treatment);
-    // Population
-    if (a.metadata.population != b.metadata.population)
-      return (a.metadata.population < b.metadata.population); 
-    // Time
-    if (a.metadata.time != b.metadata.time)
-      return (a.metadata.time < b.metadata.time); 
-    // Clone
-    return ( a.metadata.clone < b.metadata.clone);
-  }
+
   
   void MutationCountFile(
                          cReferenceSequences& ref_seq_info, 
@@ -2156,8 +2153,8 @@ namespace breseq {
     
     // create a copy so we don't alter the original list
     vector<cGenomeDiff> sorted_genome_diffs(genome_diffs);
-    sort(sorted_genome_diffs.begin(), sorted_genome_diffs.end(), sort_gd_by_treatment_population_time);
-    
+    cGenomeDiff::sort_gd_list_by_treatment_population_time(sorted_genome_diffs);
+        
     for (vector<cGenomeDiff>::iterator it=sorted_genome_diffs.begin(); it != sorted_genome_diffs.end(); ++it) {
       cGenomeDiff &gd = *it;
       
@@ -2183,6 +2180,7 @@ namespace breseq {
     sort(con_name_list.begin(), con_name_list.end());
     
     vector<string> column_headers;
+    column_headers.push_back("file");
     column_headers.push_back("sample");
     column_headers.push_back("treatment");
     column_headers.push_back("population");
@@ -2410,6 +2408,7 @@ namespace breseq {
       
       vector<string> this_columns;
       
+      this_columns.push_back( gd.get_base_file_name() );
       this_columns.push_back( (gd.metadata.run_name != "") ? gd.metadata.run_name : "" );
       this_columns.push_back( (gd.metadata.treatment != "") ? gd.metadata.treatment : "" );
       this_columns.push_back( (gd.metadata.population != "") ? gd.metadata.population : "" );

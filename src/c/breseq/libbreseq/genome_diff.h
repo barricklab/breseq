@@ -433,6 +433,7 @@ public:
   //!---- Variables ---- !//
 protected:  	
   string _filename;                   //!< File name associated with this diff.
+  string _base_file_name;             //!< File name stripped of path and extension
   diff_entry_list_t _entry_list;      //!< All diff entries.
   uint32_t _unique_id_counter;        //!< Smallest available id.
   map<uint32_t,bool> unique_id_used;
@@ -474,7 +475,9 @@ public:
   
   //!---- Accessors ---- !//
 
-  string file_name() const {return _filename;}
+  string get_file_name() const {return _filename;}
+  
+  string get_base_file_name() const {return _base_file_name;}
 
   void add_breseq_data(const key_t &key, const string& value)
     { this->metadata.breseq_data.insert(pair<string,string>(key, value)); }
@@ -619,6 +622,9 @@ public:
                                        bool verbose = false);
   static void write_jc_score_table(cGenomeDiff& compare, string table_file_path, bool verbose = false); 
 
+  static void tabulate_frequencies_from_multiple_gds(cGenomeDiff& master_gd, vector<cGenomeDiff>& gd_list, bool verbose = false);
+
+  
   //!---- Format Conversion Functions: Member ---- !//
 
   // ! VCF files
@@ -647,11 +653,16 @@ public:
                  const vector<string> &reference_file_names,
                  const string &circos_directory,
                  double distance_scale,
-                 double feature_scale);
-  
-  //! Convert MIRA feature analysis file to GD @JEB deprecated 08-16-2013
-  //static void MIRA2GD(const string &mira_file_name, const string &gd_file_name);
+                        double feature_scale);
 
+  //! Convert genome diff to OLI format
+  static void GD2OLI( const vector<string> &gd_file_names, 
+                      const vector<string> &reference_file_names, 
+                      const string& output_file_name );
+
+  //! Functions for dealing with lists of Genome Diffs
+  static void sort_gd_list_by_treatment_population_time(vector<cGenomeDiff>& genome_diffs);
+  
 };
   
   

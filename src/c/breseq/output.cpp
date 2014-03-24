@@ -2243,6 +2243,9 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
     
     // #this reconstructs the proper columns to draw
     uint32_t start = from_string<uint32_t>((*item)[POSITION]);
+    // This handled coordinates that were shifted in INS/DEL mutations
+    if (item->entry_exists("_original_aligned_position")) 
+      start = from_string<uint32_t>((*item)["_original_aligned_position"]);
     uint32_t end = start;
     uint32_t insert_start = 0;
     uint32_t insert_end = 0;
