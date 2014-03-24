@@ -1906,6 +1906,8 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
       mut["snp_type"] = "intergenic";
     }
     
+    mut["gene_list"] = prev_gene.name + "," + next_gene.name;
+    
     mut["gene_name"] += (prev_gene.name.size() > 0) ? prev_gene.name : no_gene_name;
     mut["gene_name"] += intergenic_separator;
     mut["gene_name"] += (next_gene.name.size() > 0) ? next_gene.name : no_gene_name;
@@ -2105,6 +2107,8 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
 
     }
     
+    mut["gene_list"] = join(gene_name_list, ",");
+    
     // We ended up calling this function a lot.
     string sJoinedGeneList = join(gene_name_list, ", ");
     
@@ -2161,6 +2165,9 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
   // and have the annotation point to them (and back at them)
   // so that the codon will be correctly updated with all changes and we can notify the
   // changes that their SNP_type is not really SNP, but multiple hit SNP.
+  
+  // Be sure that we are sorted.
+  gd.sort();
   
   vector<cDiffEntry*> snp_muts;
 
@@ -2252,18 +2259,25 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
     }
   }
   
-  //Scan SNPs to see if they affect the same codon, merge changes, and update amino acid changes
+  // Hugely inefficient step --!!
+  
+  // Scan SNPs to see if they affect the same codon, merge changes, and 
+  // update amino acid changes assumes the list of snps is sorted.
   for (size_t i = 0; i < snp_muts.size(); i++){
+    
+    if ((*snp_muts[i])["codon_position"] == "")
+      continue;
+    int32_t i_position = from_string<int32_t>((*snp_muts[i])["position"]);
+    
     for (size_t j = i + 1; j < snp_muts.size(); j++){
-      if ((*snp_muts[i])["codon_position"] == "" ||
-          (*snp_muts[j])["codon_position"] == ""
-          ){
-        continue;
-      }
       
-      int32_t i_position = from_string<int32_t>((*snp_muts[i])["position"]);
+      if ((*snp_muts[j])["codon_position"] == "")
+        continue;
       int32_t j_position = from_string<int32_t>((*snp_muts[j])["position"]);
       int32_t snp_distance = i_position - j_position;
+      
+      if (snp_distance < -2)
+        break;
       
       int32_t i_codon_position = from_string<int32_t>((*snp_muts[i])["codon_position"]);
       int32_t j_codon_position = from_string<int32_t>((*snp_muts[j])["codon_position"]);

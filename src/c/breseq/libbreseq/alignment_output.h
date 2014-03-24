@@ -176,11 +176,14 @@ namespace breseq
       uint32_t max_indel;
       char base;
     };
-    
+
+    // Internal data and classes
     Alignment_Output_Pileup m_alignment_output_pileup;
     Aligned_Reads m_aligned_reads;
     Aligned_References m_aligned_references;
     Aligned_Annotation m_aligned_annotation;
+    
+    // Display options
     Quality_Range m_quality_range;
     uint32_t m_quality_score_cutoff;
     string m_error_message;
@@ -188,6 +191,16 @@ namespace breseq
     int32_t m_junction_minimum_size_match;
     bool m_show_ambiguously_mapped;
     bool m_is_junction, m_is_junction_junction; // Former for JC, latter for JC+junction part of it
+    
+    // Characters substituted for gaps and reference matches
+    static char s_internal_gap_character;             // Default = "-"
+    static char s_end_gap_character;                  // Default = "-"
+    static char s_reference_match_character;          // Default = "."
+    static char s_reference_match_masked_character;  // Default = ","
+    
+    static uint8_t k_reserved_quality_junction_overlap;
+    static uint8_t k_reserved_quality_dont_highlight;
+    static uint8_t k_reserved_quality_max;
     
   public:
     //! Constructor.
@@ -207,7 +220,7 @@ namespace breseq
   private:
     uint32_t no_color_index;
     string html_header_string();
-    string html_alignment_line(const Alignment_Base& a, const bool coords, const bool use_quality_range);
+    string html_alignment_line(const Alignment_Base& a, Aligned_References* r, const bool coords, const bool use_quality_range);
     string html_alignment_strand(const int8_t &strand);
     string html_legend();
     string text_alignment_line(const Alignment_Base& a, const bool coords);

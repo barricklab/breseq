@@ -124,20 +124,6 @@ const vector<string>gd_entry_type_lookup_table =
   make_vector<string>("UNKNOWN")("SNP")("SUB")("DEL")("INS")("MOB")("AMP")("INV")("CON")("RA")("MC")("JC")("CN")("UN")("CURA")("FPOS")("PHYL")("TSEQ")("PFLP")("RFLP")("PFGE")("NOTE")("MASK");
 
 
-// Field order.
-static const char* s_field_order[] = { 
-  SEQ_ID,
-  POSITION,
-  INSERT_POSITION,
-  REF_BASE,
-  NEW_BASE,
-  START,
-  END,
-  START_RANGE,
-  END_RANGE,
-0}; // required trailing null.
-
-
 /*! Constructor.
  */
   
@@ -874,11 +860,13 @@ diff_entry_ptr_t cGenomeDiff::parent(const cDiffEntry& evidence)
  */
 cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors) {
   _filename = filename;
-  ifstream in(this->file_name().c_str());
+  _base_file_name = cString(filename).get_base_name_no_extension();
+  
+  ifstream in(get_file_name().c_str());
 
   ASSERT(in.good(), "Could not open file for reading: " + filename);
   uint32_t line_number = 0;
-  cFileParseErrors parse_errors(file_name());
+  cFileParseErrors parse_errors(get_file_name());
   
   //! Step: Handle header parameters.
   //Example header:
@@ -1022,7 +1010,7 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
 cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences& ref_seq, bool suppress_errors)
 {
   // For now we do rather generic checking... nothing specific to certain kind of entries
-  cFileParseErrors parse_errors(file_name());
+  cFileParseErrors parse_errors(get_file_name());
 
   for(diff_entry_list_t::iterator it=_entry_list.begin(); it!=_entry_list.end(); ++it) {
     diff_entry_ptr_t& de = *it;
@@ -1594,7 +1582,7 @@ void cGenomeDiff::unique()
     else if (!keep_ids.count((**it)._id) && !erase_ids.count((**it)._id)) {
       stringstream ss;
       ss << "\tRemoving [entry]:\t" << **it << endl;
-      ss << "\tfrom [file]:\t" << this->file_name() << endl;
+      ss << "\tfrom [file]:\t" << this->get_file_name() << endl;
       ss << "\tbecause no mutation referenced it's ID." << endl; 
       WARN(ss.str());
       it = _entry_list.erase(it);
@@ -1653,7 +1641,7 @@ void cGenomeDiff::merge(cGenomeDiff& gd_new, bool unique, bool new_id, bool verb
       add(entry_new, new_id);
       
       //Notify user of new entry
-      if(verbose)cout << "\tNEW ENTRY\t" << entry_new._id << " >> " << _entry_list.back()->_id << "\t" << gd_new.file_name() << endl;
+      if(verbose)cout << "\tNEW ENTRY\t" << entry_new._id << " >> " << _entry_list.back()->_id << "\t" << gd_new.get_file_name() << endl;
     }
   }
   
@@ -1710,7 +1698,7 @@ void cGenomeDiff::merge(cGenomeDiff& gd_new, bool unique, bool new_id, bool verb
   }
   
   //Notify user of the update
-  if(verbose)cout << "\tMERGE DONE - " << gd_new.file_name() << endl;
+  if(verbose)cout << "\tMERGE DONE - " << gd_new.get_file_name() << endl;
   
 }
 
@@ -2863,8 +2851,8 @@ cGenomeDiff cGenomeDiff::check(cGenomeDiff& ctrl, cGenomeDiff& test, bool verbos
   
   printf("\t#=TP|FN|FP	%s \t for %s versus %s \n",
          value.c_str(),
-         ctrl.file_name().c_str(),
-         test.file_name().c_str());
+         ctrl.get_file_name().c_str(),
+         test.get_file_name().c_str());
   
   return ret_val;
 }
@@ -3085,8 +3073,8 @@ cGenomeDiff cGenomeDiff::check_evidence(cReferenceSequences& sequence,
   
   printf("\t#=TP|FN|FP	%s \t for %s versus %s \n",
          value.c_str(),
-         ctrl.file_name().c_str(),
-         test.file_name().c_str());
+         ctrl.get_file_name().c_str(),
+         test.get_file_name().c_str());
   
   return ret_val;
 }
@@ -3237,6 +3225,85 @@ void cGenomeDiff::write_jc_score_table(cGenomeDiff& compare, string table_file_p
     }
   }
   out.close();
+}
+
+
+// Used to add frequency_base-name columns to the master gd by
+// finding equivalent mutations in 
+void cGenomeDiff::tabulate_frequencies_from_multiple_gds(cGenomeDiff& master_gd, vector<cGenomeDiff>& gd_list, bool verbose)
+{
+  vector<diff_entry_list_t> mut_lists;
+  
+  for (vector<cGenomeDiff>::iterator it = gd_list.begin(); it != gd_list.end(); it++) {
+    mut_lists.push_back(it->mutation_list());
+  }
+  
+  diff_entry_list_t de_list = master_gd.mutation_list();
+
+  if (verbose) cout << "Tabulating frequencies for mutation..." << endl;
+  
+  for (diff_entry_list_t::iterator it = de_list.begin(); it != de_list.end(); it++) { 
+    
+    diff_entry_ptr_t& this_mut = *it;
+    uint32_t this_mut_position = from_string<uint32_t>((*this_mut)[POSITION]);
+    
+    if (verbose) cout << this_mut->as_string() << endl;
+    
+    // for each genome diff compared
+    for (uint32_t i=0; i<mut_lists.size(); i++) { 
+      
+      string freq_key = "frequency_" + gd_list[i].get_base_file_name();
+      (*this_mut)[freq_key] = "0";
+      
+      diff_entry_list_t& mut_list = mut_lists[i];
+      if (mut_list.size() == 0) 
+        continue; 
+      
+      bool found = false;
+      
+      
+      
+      // We have some problems when there are multiple INS after the same position in a genomediff...
+      // they get merged to one, e.g.
+      // INS	177	1750	T7_WT_Genome	24198	T	frequency=0.1310
+      // INS	178	1751	T7_WT_Genome	24198	T	frequency=0.0250
+      while (mut_list.size() && (from_string<uint32_t>((*mut_list.front())[POSITION]) < this_mut_position)) {
+        cout << (*mut_list.front())[POSITION] << " < " << this_mut_position << endl;
+        mut_list.pop_front();
+      }
+      if (mut_list.size() == 0) 
+        continue; 
+      // End code for multiple INS problem.  
+      
+      // for top mutation in this genomedff (they are sorted by position)
+      diff_entry_ptr_t check_mut; 
+      check_mut = mut_list.front();
+      
+      // we found the exact same mutation
+      if ( (check_mut.get() != NULL) && (*check_mut == *this_mut) ) {
+        
+        if (check_mut->count(FREQUENCY))
+          (*this_mut)[freq_key] = (*check_mut)[FREQUENCY];
+        else
+          (*this_mut)[freq_key] = "1";
+        
+        // remove the item
+        mut_list.pop_front();
+        continue;
+      }
+      
+      if (gd_list[i].mutation_deleted(*this_mut)) {
+        (*this_mut)[freq_key] = "D";
+        continue;
+      }
+      
+      if (gd_list[i].mutation_unknown(*this_mut)) {
+        (*this_mut)[freq_key] = "?";
+        continue;
+      }
+    }
+  }
+
 }
 
   
@@ -4204,61 +4271,286 @@ void cGenomeDiff::GD2Circos(const vector<string> &gd_file_names,
   command << "cd " << circos_directory << "; bash run_circos.sh;";// cd " << current_dir;
   SYSTEM(command.str());
   
-}  
+} 
   
-//@JEB deprecated 08-16-2013
 /*
- void MIRA2GD(const string &mira_file_name, const string &gd_file_name){
- //this was made on accident :(
- ifstream mira_file;
+Temporary format for exchange with Olivier Tenaillon to analyze parallelism
  
- mira_file.open(mira_file_name.c_str());
+ Example lines
  
- if (!mira_file){
- cerr << "Could not open " << mira_file_name << endl;
- return;
- }
+ Ancestor	0	B_REL606	3040	880528	Duplication_2_fold	24169_bp	Multigenic	888	ECB_00814	Multigenic	926	ECB_misc_RNA_22	12	Ara+6_500_B_Ara+6_773A	Ara+5_1500_B_Ara+5_1066B	Ara+5_1000_B_Ara+5_962A	Ara+2_500_B_Ara+2_769B	Ara+2_500_B_Ara+2_769A	Ara+1_2000_B_Ara+1_1158A	Ara+1_1000_B_Ara+1_958A	Ara-2_2000_B_Ara-2_1165A	Ara-1_2000_B_Ara-1_1164C	Ara-1_2000_B_Ara-1_1164B	Ara-1_2000_B_Ara-1_1164B	Ancestor_0_B_REL606	
+ Ara-1	2000	B_Ara-1_1164B	3040	880528	Duplication_2_fold	24169_bp	Multigenic	888	ECB_00814	Multigenic	926	ECB_misc_RNA_22	12	Ara+6_500_B_Ara+6_773A	Ara+5_1500_B_Ara+5_1066B	Ara+5_1000_B_Ara+5_962A	Ara+2_500_B_Ara+2_769B	Ara+2_500_B_Ara+2_769A	Ara+1_2000_B_Ara+1_1158A	Ara+1_1000_B_Ara+1_958A	Ara-2_2000_B_Ara-2_1165A	Ara-1_2000_B_Ara-1_1164C	Ara-1_2000_B_Ara-1_1164B	Ara-1_2000_B_Ara-1_1164B	Ancestor_0_B_REL606	
+ Ara-1	2000	B_Ara-1_1164B	4572	1329516	Mutation	C->T	Gene	1356	topA	NonSynonymous H33Y	33	865	23	Ara-1_50000_Ara-1_11330A	DVS3S5_0_DVS3S5	Ara-1_50000_11331	Ara-1_1500_1068C	Ara-1_1500_1068B	Ara-1_1000_964B	Ara-1_40000_B_Ara-1_10938	Ara-1_35000_B_Ara-1_10707	Ara-1_27000_B_Ara-1_10273	Ara-1_5000_B_Ara-1_2179B	Ara-1_15000_B_Ara-1_7177C	Ara-1_30000_B_Ara-1_10392	Ara-1_30000_B_Ara-1_10391	Ara-1_40000_B_Ara-1_10940	Ara-1_40000_B_Ara-1_10939	Ara-1_15000_B_Ara-1_7177B	Ara-1_10000_B_Ara-1_4536C	Ara-1_10000_B_Ara-1_4536B	Ara-1_5000_B_Ara-1_2179C	Ara-1_20000_B_Ara-1_8593C	Ara-1_20000_B_Ara-1_8593B	Ara-1_2000_B_Ara-1_1164C	Ara-1_2000_B_Ara-1_1164B	
+ Ara-1	2000	B_Ara-1_1164B	4970	1435468	Mutation	C->T	Gene	1470	ydbH	NonSynonymous A271V	271	879	1	Ara-1_2000_B_Ara-1_1164B	
+ Ara-1	2000	B_Ara-1_1164B	5978	1733582	Insertion	7_bp	Gene	1777	pykF	Frameshift	206	470	1	Ara-1_2000_B_Ara-1_1164B	
+ Ara-1	2000	B_Ara-1_1164B	12964	3762741	Mutation	A->T	Gene	3824	spoT	NonSynonymous K662I	662	702	23	Ara-1_50000_Ara-1_11330A	DVS3S5_0_DVS3S5	Ara-1_50000_11331	Ara-1_1500_1068C	Ara-1_1500_1068B	Ara-1_1000_964B	Ara-1_40000_B_Ara-1_10938	Ara-1_35000_B_Ara-1_10707	Ara-1_27000_B_Ara-1_10273	Ara-1_5000_B_Ara-1_2179B	Ara-1_15000_B_Ara-1_7177C	Ara-1_30000_B_Ara-1_10392	Ara-1_30000_B_Ara-1_10391	Ara-1_40000_B_Ara-1_10940	Ara-1_40000_B_Ara-1_10939	Ara-1_15000_B_Ara-1_7177B	Ara-1_10000_B_Ara-1_4536C	Ara-1_10000_B_Ara-1_4536B	Ara-1_5000_B_Ara-1_2179C	Ara-1_20000_B_Ara-1_8593C	Ara-1_20000_B_Ara-1_8593B	Ara-1_2000_B_Ara-1_1164C	Ara-1_2000_B_Ara-1_1164B	
+ Ara-1	2000	B_Ara-1_1164B	13303	3875627	Insertion	1_bp	Intergenic	3941	glmU(61)	Intergenic	atpC(292)	Intergenic_1_bp_Insertion	23	Ara-1_1000_964B	Ara-1_50000_11331	Ara-1_1500_1068C	Ara-1_1500_1068B	DVS3S5_0_DVS3S5	Ara-1_50000_Ara-1_11330A	Ara-1_40000_B_Ara-1_10938	Ara-1_35000_B_Ara-1_10707	Ara-1_27000_B_Ara-1_10273	Ara-1_5000_B_Ara-1_2179B	Ara-1_15000_B_Ara-1_7177C	Ara-1_30000_B_Ara-1_10392	Ara-1_30000_B_Ara-1_10391	Ara-1_40000_B_Ara-1_10940	Ara-1_40000_B_Ara-1_10939	Ara-1_15000_B_Ara-1_7177B	Ara-1_10000_B_Ara-1_4536C	Ara-1_10000_B_Ara-1_4536B	Ara-1_5000_B_Ara-1_2179C	Ara-1_20000_B_Ara-1_8593C	Ara-1_20000_B_Ara-1_8593B	Ara-1_2000_B_Ara-1_1164C	Ara-1_2000_B_Ara-1_1164B	
+ Ara-1	2000	B_Ara-1_1164B	13398	3895000	LargeDeletion	6923_bp	Multigenic	3963	rbsD	Multigenic	3969	hsrA	6	Ara-1_50000_11331	Ara-1_2000_B_Ara-1_1164C	Ara-1_2000_B_Ara-1_1164B	Ara-1_1500_1068C	Ara-1_1500_1068B	Ara-1_1000_964B	
+ Ara-1	2000	B_Ara-1_1164B	13443	3901929	IS_Insertion	IS150	Gene	3969	hsrA	IS_insertion	-164	475	23	DVS3S5_0_DVS3S5	Ara-1_20000_B_Ara-1_8593C	Ara-1_20000_B_Ara-1_8593B	Ara-1_15000_B_Ara-1_7177C	Ara-1_15000_B_Ara-1_7177B	Ara-1_10000_B_Ara-1_4536C	Ara-1_10000_B_Ara-1_4536B	Ara-1_5000_B_Ara-1_2179C	Ara-1_5000_B_Ara-1_2179B	Ara-1_2000_B_Ara-1_1164C	Ara-1_2000_B_Ara-1_1164B	Ara-1_40000_B_Ara-1_10940	Ara-1_40000_B_Ara-1_10939	Ara-1_40000_B_Ara-1_10938	Ara-1_35000_B_Ara-1_10707	Ara-1_30000_B_Ara-1_10392	Ara-1_30000_B_Ara-1_10391	Ara-1_27000_B_Ara-1_10273	Ara-1_50000_Ara-1_11330A	Ara-1_1000_964B	Ara-1_1500_1068C	Ara-1_1500_1068B	Ara-1_50000_11331	
+ Ara-1	2000	B_Ara-1_1164C	3040	880528	Duplication_2_fold	24169_bp	Multigenic	888	ECB_00814	Multigenic	926	ECB_misc_RNA_22	12	Ara+6_500_B_Ara+6_773A	Ara+5_1500_B_Ara+5_1066B	Ara+5_1000_B_Ara+5_962A	Ara+2_500_B_Ara+2_769B	Ara+2_500_B_Ara+2_769A	Ara+1_2000_B_Ara+1_1158A	Ara+1_1000_B_Ara+1_958A	Ara-2_2000_B_Ara-2_1165A	Ara-1_2000_B_Ara-1_1164C	Ara-1_2000_B_Ara-1_1164B	Ara-1_2000_B_Ara-1_1164B	Ancestor_0_B_REL606	
+ Ara-1	2000	B_Ara-1_1164C	4572	1329516	Mutation	C->T	Gene	1356	topA	NonSynonymous H33Y	33	865	23	Ara-1_50000_Ara-1_11330A	DVS3S5_0_DVS3S5	Ara-1_50000_11331	Ara-1_1500_1068C	Ara-1_1500_1068B	Ara-1_1000_964B	Ara-1_40000_B_Ara-1_10938	Ara-1_35000_B_Ara-1_10707	Ara-1_27000_B_Ara-1_10273	Ara-1_5000_B_Ara-1_2179B	Ara-1_15000_B_Ara-1_7177C	Ara-1_30000_B_Ara-1_10392	Ara-1_30000_B_Ara-1_10391	Ara-1_40000_B_Ara-1_10940	Ara-1_40000_B_Ara-1_10939	Ara-1_15000_B_Ara-1_7177B	Ara-1_10000_B_Ara-1_4536C	Ara-1_10000_B_Ara-1_4536B	Ara-1_5000_B_Ara-1_2179C	Ara-1_20000_B_Ara-1_8593C	Ara-1_20000_B_Ara-1_8593B	Ara-1_2000_B_Ara-1_1164C	Ara-1_2000_B_Ara-1_1164B	
+ Ara-1	2000	B_Ara-1_1164C	5965	1733101	Mutation	G->C	Gene	1777	pykF	NonSynonymous R46P	46	470	1	Ara-1_2000_B_Ara-1_1164C	
+ Ara-1	2000	B_Ara-1_1164C	6098	1757661	IS_Insertion	IS150	Intergenic	1801	ydiQ(12)	Intergenic	ydiR(8)	Intergenic_IS_insertion	1	Ara-1_2000_B_Ara-1_1164C	
+ Ara-1	2000	B_Ara-1_1164C	12964	3762741	Mutation	A->T	Gene	3824	spoT	NonSynonymous K662I	662	702	23	Ara-1_50000_Ara-1_11330A	DVS3S5_0_DVS3S5	Ara-1_50000_11331	Ara-1_1500_1068C	Ara-1_1500_1068B	Ara-1_1000_964B	Ara-1_40000_B_Ara-1_10938	Ara-1_35000_B_Ara-1_10707	Ara-1_27000_B_Ara-1_10273	Ara-1_5000_B_Ara-1_2179B	Ara-1_15000_B_Ara-1_7177C	Ara-1_30000_B_Ara-1_10392	Ara-1_30000_B_Ara-1_10391	Ara-1_40000_B_Ara-1_10940	Ara-1_40000_B_Ara-1_10939	Ara-1_15000_B_Ara-1_7177B	Ara-1_10000_B_Ara-1_4536C	Ara-1_10000_B_Ara-1_4536B	Ara-1_5000_B_Ara-1_2179C	Ara-1_20000_B_Ara-1_8593C	Ara-1_20000_B_Ara-1_8593B	Ara-1_2000_B_Ara-1_1164C	Ara-1_2000_B_Ara-1_1164B	
+ Ara-1	2000	B_Ara-1_1164C	13303	3875627	Insertion	1_bp	Intergenic	3941	glmU(61)	Intergenic	atpC(292)	Intergenic_1_bp_Insertion	23	Ara-1_1000_964B	Ara-1_50000_11331	Ara-1_1500_1068C	Ara-1_1500_1068B	DVS3S5_0_DVS3S5	Ara-1_50000_Ara-1_11330A	Ara-1_40000_B_Ara-1_10938	Ara-1_35000_B_Ara-1_10707	Ara-1_27000_B_Ara-1_10273	Ara-1_5000_B_Ara-1_2179B	Ara-1_15000_B_Ara-1_7177C	Ara-1_30000_B_Ara-1_10392	Ara-1_30000_B_Ara-1_10391	Ara-1_40000_B_Ara-1_10940	Ara-1_40000_B_Ara-1_10939	Ara-1_15000_B_Ara-1_7177B	Ara-1_10000_B_Ara-1_4536C	Ara-1_10000_B_Ara-1_4536B	Ara-1_5000_B_Ara-1_2179C	Ara-1_20000_B_Ara-1_8593C	Ara-1_20000_B_Ara-1_8593B	Ara-1_2000_B_Ara-1_1164C	Ara-1_2000_B_Ara-1_1164B	
+ Ara-1	2000	B_Ara-1_1164C	13398	3895000	LargeDeletion	6923_bp	Multigenic	3963	rbsD	Multigenic	3969	hsrA	6	Ara-1_50000_11331	Ara-1_2000_B_Ara-1_1164C	Ara-1_2000_B_Ara-1_1164B	Ara-1_1500_1068C	Ara-1_1500_1068B	Ara-1_1000_964B	
+ Ara-1	2000	B_Ara-1_1164C	13443	3901929	IS_Insertion	IS150	Gene	3969	hsrA	IS_insertion	-164	475	23	DVS3S5_0_DVS3S5	Ara-1_20000_B_Ara-1_8593C	Ara-1_20000_B_Ara-1_8593B	Ara-1_15000_B_Ara-1_7177C	Ara-1_15000_B_Ara-1_7177B	Ara-1_10000_B_Ara-1_4536C	Ara-1_10000_B_Ara-1_4536B	Ara-1_5000_B_Ara-1_2179C	Ara-1_5000_B_Ara-1_2179B	Ara-1_2000_B_Ara-1_1164C	Ara-1_2000_B_Ara-1_1164B	Ara-1_40000_B_Ara-1_10940	Ara-1_40000_B_Ara-1_10939	Ara-1_40000_B_Ara-1_10938	Ara-1_35000_B_Ara-1_10707	Ara-1_30000_B_Ara-1_10392	Ara-1_30000_B_Ara-1_10391	Ara-1_27000_B_Ara-1_10273	Ara-1_50000_Ara-1_11330A	Ara-1_1000_964B	Ara-1_1500_1068C	Ara-1_1500_1068B	Ara-1_50000_11331	
+*/
+  
+  
+void cGenomeDiff::GD2OLI(const vector<string> &gd_file_names, 
+                         const vector<string> &reference_file_names, 
+                         const string& output_file_name )
+{
+  // Hard coded settings
+  uint32_t large_size_cutoff = 20;
+  
+  
+  
+  cReferenceSequences ref_seq_info;
+  ref_seq_info.LoadFiles(reference_file_names);
+  
+  ofstream out(output_file_name.c_str(), ios::out);
+  
+  // Create merged master list of mutations to annotate.
+  cout << "Loading/Merging Genome Diff files..." << endl;
+
+  cGenomeDiff master_gd;
+  vector<cGenomeDiff> gd_list;
+  for(vector<string>::const_iterator it=gd_file_names.begin(); it != gd_file_names.end(); it++) {
+    cout << "   " << *it << endl;
+    cGenomeDiff this_gd(*it);
+    gd_list.push_back(this_gd);
+    master_gd.merge(this_gd);
+  }
+  cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
+  
+  
+  // Annotate all the mutations once
+  cout << "Annotating mutations in merged file..." << endl;
+  ref_seq_info.annotate_mutations(master_gd, true, false);
+  
+  // Add frequency columns
+  cGenomeDiff::tabulate_frequencies_from_multiple_gds(master_gd, gd_list, true);
+
+  
+  vector<string> header_list(14, "");
+  header_list[0] = "pop";
+  header_list[1] = "age";
+  header_list[2] = "run";
+  header_list[3] = "event_number";
+  header_list[4] = "position";
+  header_list[5] = "Type";
+  header_list[6] = "Change";
+  header_list[13] = "nbtrains_affected";
+
+  header_list[7] = "Intergenic";
+  header_list[8] = "Previous_Gene_nb";
+  header_list[9] = "Previous_Gene_Name(distance_bp)";
+  header_list[10] = "Effect";
+  header_list[11] = "Next_Gene_Name(distance_bp)";
+  header_list[12] = "Intergenic_type";
+  out << join(header_list, "\t") << endl;
  
- string line;
- 
- cGenomeDiff gd;
- 
- while (getline(mira_file, line)){
- vector <string> items = split_on_whitespace(line);
- 
- if (items[0] == "#"){
- continue;
- }
- 
- 
- cDiffEntry mut(UNKNOWN);
- 
- if (items[9] == "basechange"){
- mut._type = SNP;
- mut["seq_id"] = items[0].substr(0, items[0].length() - 3);
- mut["position"] = items[4];
- mut["new_seq"] = items[10].substr(items[10].length() - 1);
- }
- else if (items[9] == "insertion"){
- mut._type = INS;
- mut["seq_id"] = items[0].substr(0, items[0].length() - 3);
- mut["position"] = items[4].substr(items[4].find(":") + 1);
- mut["new_seq"] = items[10].substr(items[10].length() - 1);
- }
- else if (items[9] == "deletion"){
- mut._type = DEL;
- mut["seq_id"] = items[0].substr(0, items[0].length() - 3);
- mut["position"] = items[4];
- mut["size"] = "1";
- }
- if (mut._type != UNKNOWN) {
- gd.add(mut);
- }
- }
- gd.write(gd_file_name);
- mira_file.close();
- }
- */
+  header_list[7] = "Multigenic";
+  header_list[8] = "First_Gene_nb";
+  header_list[9] = "First_Gene_Name";
+  header_list[10] = "Effect";
+  header_list[11] = "Last_Gene_nb";
+  header_list[12] = "Last_Gene_Name";
+  out << join(header_list, "\t") << endl;
+  
+  header_list[7] = "Gene";
+  header_list[8] = "Gene_nb";
+  header_list[9] = "Gene_Name";
+  header_list[10] = "Large_Deletion";
+  header_list[11] = "bp_deleted_in_Gene";
+  header_list[12] = "gene_length_bp";
+  out << join(header_list, "\t") << endl;
+  
+  // For each gd file, march through the master list and output anything with
+  // a frequency of "1".
+  diff_entry_list_t mut_list = master_gd.mutation_list();
+  
+  string pop;
+  string age;
+  string run;
+
+  
+  for(vector<cGenomeDiff>::iterator it = gd_list.begin(); it != gd_list.end(); it++) {
+    uint32_t event_num = 0;
+    
+    pop = it->metadata.population;
+    age = to_string<double>(it->metadata.time);
+    run = it->get_base_file_name();
+    
+    for(diff_entry_list_t::iterator mut_it = mut_list.begin(); mut_it != mut_list.end(); mut_it++) {
+      event_num++;
+      string key( "frequency_" + it->get_base_file_name() );
+      
+      cDiffEntry  mut = **mut_it;
+      if (!mut.entry_exists(key)) continue;
+      if (mut[key] != "1") continue;
+      
+      
+      ///////// VARIABLES to FILL IN //////////
+      string position;
+      string type;
+      string change;
+      string genic;         // Gene, Intergenic, Multigenic
+      
+      vector<string> gene_columns;
+      // Three different situations for these columns
+      // Intergenic
+      // --> Previous_Gene_nb, Previous_Gene_Name(distance_bp), Effect, Next_Gene_Name(distance_bp, Intergenic_type
+      // Multigenic
+      // --> First_Gene_nb	First_Gene_Name	Effect	Last_Gene_nb	Last_Gene_Name
+      // Gene	
+      // -->Gene_nb	Gene_Name	Large_Deletion	bp_deleted_in_Gene	gene_length_bp	
+      
+      // common attributes for any mutation
+      position = mut[POSITION];
+      
+      if (mut._type == SNP) {
+        type = "Mutation"; 
+        
+        uint32_t position_1 = from_string<uint32_t>(mut[POSITION]);
+        change = ref_seq_info.get_sequence_1(mut[SEQ_ID], position_1, position_1) + "->" + mut[NEW_SEQ];
+      }
+      
+      if (mut._type == DEL) {
+        uint32_t size = from_string<uint32_t>(mut[SIZE]);
+        if (size > large_size_cutoff)
+          type = "LargeDeletion";
+        else
+          type = "Deletion";
+        change = mut[SIZE] + "_bp";
+      }
+      
+      if (mut._type == INS) {
+        type = "Insertion";
+        change = mut[NEW_SEQ].size() + "_bp";
+      }
+      
+      if (mut._type == SUB) {
+        int32_t old_size = from_string<int32_t>(mut[SIZE]);
+        int32_t new_size = mut[NEW_SEQ].size();
+        
+        // This is more of a big deletion. Erg.
+        if (old_size - new_size > static_cast<int32_t>(large_size_cutoff)) {
+          type="Large_deletion";
+          change = to_string<int32_t>(old_size - new_size) + "_bp";
+        }
+        else {
+          type="Substitution";
+          change = to_string<int32_t>(old_size) + "->" + to_string<int32_t>(new_size) + "_bp";
+        }
+      }
+      
+      if (mut._type == CON) {
+      }
+      
+      if (mut._type == MOB) {
+        type = "IS_Insertion";
+        change = mut["repeat_name"];        
+      } 
+      
+      if (mut._type == AMP) {
+        type = "Duplication_" + mut["new_copy_number"] + "_fold";
+        change = mut[NEW_SEQ].size() + "_bp";
+      }
+      
+      // Fill in gene information
+      
+      vector<string> genic_columns;
+      genic_columns.push_back(".");
+      genic_columns.push_back(".");
+      genic_columns.push_back(".");
+      genic_columns.push_back(".");
+      genic_columns.push_back(".");
+
+      
+      if (mut["gene_name"].find("/") != string::npos) {
+        genic = "Intergenic";
+        
+        /*
+        genic_columns.push_back("0"); //Previous_Gene_nb ?????
+        // gene_position looks like this "intergenic (+180/–)"
+        size_t pos = 0;
+        string s = mut["gene_position"];
+        pos_start = s.find_first_of("0123456789", pos);
+        pos_end = s.find_first_not_of("0123456789", pos);
+        genic_columns.push_back("0");
+        
+        genic_columns.push_back("0");
+        
+        vector<string> split_line = find( "/");
+                                      //Previous_Gene_Name(distance_bp)
+        
+        (-201/+89)
+        */
+      } else if (mut["gene_name"].find(",") != string::npos) {
+        genic = "Multigene";
+      } else {
+        genic = "Gene";
+      }
+      
+      // Intergenic
+      // --> Previous_Gene_nb, Previous_Gene_Name(distance_bp), Effect, Next_Gene_Name(distance_bp, Intergenic_type
+      // Multigenic
+      // --> First_Gene_nb	First_Gene_Name	Effect	Last_Gene_nb	Last_Gene_Name
+      // Gene	
+      // -->Gene_nb	Gene_Name	Large_Deletion	bp_deleted_in_Gene	gene_length_bp	
+    
+       
+      
+      // Output the finished line
+      vector<string> line_list;
+      line_list.push_back(pop);
+      line_list.push_back(age);
+      line_list.push_back(run);
+      line_list.push_back(to_string(event_num));
+      line_list.push_back(position);
+      line_list.push_back(type);
+      line_list.push_back(change);
+      line_list.push_back(genic);
+      line_list.insert(line_list.end(), genic_columns.begin(), genic_columns.end());
+
+      // Add all of the other samples with this
+      for(vector<cGenomeDiff>::iterator it3 = gd_list.begin(); it3 != gd_list.end(); it3++) {
+        string key( "frequency_" + it3->get_base_file_name() );
+        if (!mut.entry_exists(key) || (mut[key] != "1")) continue;
+        line_list.push_back(it3->get_base_file_name());
+        //line_list.push_back(it3->metadata.population + "_" + formatted_double(it3->metadata.time,0) .to_string() + "_" + it3->metadata.clone);
+      }
+      
+      out << join(line_list, "\t") << endl;
+      
+    }
+  }
+  
+}
+  
+  
+bool sort_gd_by_treatment_population_time(const cGenomeDiff& a, const cGenomeDiff &b)
+{
+  // Treatment
+  if (a.metadata.treatment != b.metadata.treatment)
+    return (a.metadata.treatment < b.metadata.treatment);
+  // Population
+  if (a.metadata.population != b.metadata.population)
+    return (a.metadata.population < b.metadata.population); 
+  // Time
+  if (a.metadata.time != b.metadata.time)
+    return (a.metadata.time < b.metadata.time); 
+  // Clone
+  return ( a.metadata.clone < b.metadata.clone);
+}
+
+void cGenomeDiff::sort_gd_list_by_treatment_population_time(vector<cGenomeDiff>& genome_diffs)
+{
+  std::sort(genome_diffs.begin(), genome_diffs.end(), sort_gd_by_treatment_population_time);
+}
   
 cFlaggedRegions& cFlaggedRegions::read_mummer(string file_path, cAnnotatedSequence& ref_seq) {
   /*

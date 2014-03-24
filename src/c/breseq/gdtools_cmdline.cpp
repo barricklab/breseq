@@ -849,16 +849,9 @@ int do_annotate(int argc, char* argv[])
   // more than one file was provided as input
   bool compare_mode = (gd_path_names.size() > 1);
   
-  vector<string> gd_base_names;
-  for (uint32_t i = 0; i < gd_path_names.size(); i++){    
-    cString s(gd_path_names[i]);
-    s = s.get_base_name_no_extension();
-    gd_base_names.push_back(s);
-  }
-  
   // First use merge to produce a file with a line for each mutation
   cGenomeDiff gd;
-  vector<diff_entry_list_t> mut_lists;
+  vector<string> gd_base_names;
   vector<cGenomeDiff> gd_list;
 
   bool polymorphisms_found = false; // handled putting in the polymorphism column if only one file provided
@@ -878,78 +871,15 @@ int do_annotate(int argc, char* argv[])
         }
       }
     }
-      
+    gd_base_names.push_back(single_gd.get_base_file_name());
     gd_list.push_back(single_gd);
-    mut_lists.push_back(single_gd.mutation_list());
     gd.merge(single_gd);
   }
   gd.sort();
   
   // Then add frequency columns for all genome diffs
   if (compare_mode || polymorphisms_found) {
-    
-    diff_entry_list_t de_list = gd.mutation_list();
-    bool found = false;
-    
-    for (diff_entry_list_t::iterator it = de_list.begin(); it != de_list.end(); it++) { 
-
-      diff_entry_ptr_t& this_mut = *it;
-      uint32_t this_mut_position = from_string<uint32_t>((*this_mut)[POSITION]);
-    
-      // for each genome diff compared
-      for (uint32_t i=0; i<mut_lists.size(); i++) { 
-		
-        string freq_key = "frequency_" + gd_base_names[i];
-        (*this_mut)[freq_key] = "0";
-
-        diff_entry_list_t& mut_list = mut_lists[i];
-        if (mut_list.size() == 0) 
-          continue; 
-        
-        bool found = false;
-        
-
-          
-        // We have some problems when there are multiple INS after the same position in a genomediff...
-        // they get merged to one, e.g.
-        // INS	177	1750	T7_WT_Genome	24198	T	frequency=0.1310
-        // INS	178	1751	T7_WT_Genome	24198	T	frequency=0.0250
-        while (mut_list.size() && (from_string<uint32_t>((*mut_list.front())[POSITION]) < this_mut_position)) {
-          cout << (*mut_list.front())[POSITION] << " < " << this_mut_position << endl;
-          mut_list.pop_front();
-        }
-        if (mut_list.size() == 0) 
-          continue; 
-        // End code for multiple INS problem.  
-          
-        // for top mutation in this genomedff (they are sorted by position)
-        diff_entry_ptr_t check_mut; 
-        check_mut = mut_list.front();
-            
-        // we found the exact same mutation
-        if ( (check_mut.get() != NULL) && (*check_mut == *this_mut) ) {
-          
-          if (check_mut->count(FREQUENCY))
-            (*this_mut)[freq_key] = (*check_mut)[FREQUENCY];
-          else
-            (*this_mut)[freq_key] = "1";
-          
-          // remove the item
-          mut_list.pop_front();
-          continue;
-        }
-          
-        if (gd_list[i].mutation_deleted(*this_mut)) {
-          (*this_mut)[freq_key] = "D";
-          continue;
-        }
-        
-        if (gd_list[i].mutation_unknown(*this_mut)) {
-          (*this_mut)[freq_key] = "?";
-          continue;
-        }
-      }
-    }
+    cGenomeDiff::tabulate_frequencies_from_multiple_gds(gd, gd_list);
   }
   
   vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
@@ -2182,6 +2112,46 @@ int do_translate_proteome(int argc, char *argv[])
     
     return 0;
 }
+
+int do_gd2oli( int argc, char* argv[])
+{
+    AnyOption options("gdtools GD2OLI [-o output.vcf] input.gd"); 
+    
+    options
+    ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
+    ("reference,r",  "reference sequence file (REQUIRED)")
+    ("output,o","name of output file", "output.tab")
+    ;
+    options.processCommandArgs( argc,argv);
+    
+    options.addUsage("");
+    options.addUsage("Creates an Oli file of mutations present in all the input Genome Diff files.");
+    
+    if( options.getArgc() == 0 ){
+        options.addUsage("");
+        options.addUsage("You must provide at least one input Genome Diff file.");
+        options.printUsage();
+        return -1;
+    }
+    
+    if (!options.count("reference")) {
+        options.addUsage("");
+        options.addUsage("You must provide a reference sequence file (-r).");
+        options.printUsage();
+        return -1;
+    }
+    
+    vector<string> gd_file_names;
+    for (int32_t i = 0; i < options.getArgc(); i++)
+    {
+        string file_name = options.getArgv(i);
+        gd_file_names.push_back(file_name);
+    }
+    cGenomeDiff::GD2OLI( gd_file_names, from_string<vector<string> >(options["reference"]), options["output"] );
+    
+    return 0;
+}
+
                                             
                                             
 int main(int argc, char* argv[]) {
@@ -2265,6 +2235,8 @@ int main(int argc, char* argv[]) {
     return do_mrna_stability(argc_new, argv_new);
   } else if (command == "PROTEOME") {
       return do_translate_proteome(argc_new, argv_new);
+  } else if (command == "GD2OLI") {
+      return do_gd2oli(argc_new, argv_new);
   } else {
     cout << "Unrecognized command: " << command << endl;
     gdtools_usage();

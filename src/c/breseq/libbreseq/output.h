@@ -4,7 +4,6 @@
 #include "libbreseq/settings.h"
 #include "libbreseq/reference_sequence.h"
 #include "libbreseq/genome_diff.h"
-//#include "cgicc/Cgicc.h"
 namespace breseq
 {
 
@@ -81,7 +80,7 @@ extern const char* ALIGN_LEFT;
   inline string th(const string& attributes, const string& input) 
     {return "<th " + attributes + ">" + input + "</th>";}
   //! Wraps input in <td></td> tags	which defines a standar cell
-  inline string start_td(const string& attributes)
+  inline string start_td(const string& attributes = "")
     {return "<td " + attributes + ">";}  
   inline string end_td() 
     {return "</td>";}
