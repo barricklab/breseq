@@ -28,6 +28,7 @@ class cDiffEntry;
 class cGenomeDiff;
 class cReferenceSequences;
 class cSequenceFeature;
+class Settings;
   
 // Common keywords used for diff entries:
 extern const char* TYPE;
@@ -195,6 +196,9 @@ public:
   //! Helper function
   static gd_entry_type type_to_enum(string type);
   
+  //! Returns whether an id string is valid (>1 and an int)
+  static bool valid_id(string& test_id);
+    
   //! Checks fields for expected types (such as integers)
   void valid_field_variable_types(cFileParseErrors& parse_errors);
 
@@ -266,6 +270,8 @@ public:
   //! Remove all information except required fields
   cDiffEntry to_spec(void) const;
 
+  //! @JEB 03-16-2014 should deprecate. Only used in random mutation generator, which should be handled by MutationPredictor
+  //  functionality is replaced by cGenomeDiff::normalize_mutations.
   void normalize_to_sequence(const cAnnotatedSequence &seq, bool verbose = false);
 
   //!---- Sorting ---- !//
@@ -500,9 +506,12 @@ public:
   
   //! Helper function to find next unused id
   uint32_t new_unique_id();
+
+  //! Add a new unique id to this entry
+  void assign_unique_id_to_entry(cDiffEntry &de);
   
   //! Add an item to this genome diff.
-  diff_entry_ptr_t add(const cDiffEntry& item, bool lowest_unique=false);
+  diff_entry_ptr_t add(const cDiffEntry& item, bool reassign_id=true);
   
   //! Remove mutations, evidence, or validation.
   void remove(cGenomeDiff::group group);
@@ -607,7 +616,7 @@ public:
   void apply_to_sequences(cReferenceSequences &ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose=false);
   
   //! Shift mutations to preferred descriptions
-  void normalize_to_sequence(cReferenceSequences &ref_seq);
+  void normalize_mutations(cReferenceSequences &ref_seq, Settings& settings, bool verbose = false);
    
   //!---- Comparing known lists of mutations/evidence to test files ---- !//
   

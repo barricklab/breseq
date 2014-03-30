@@ -19,6 +19,7 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/genome_diff.h"
 #include "libbreseq/reference_sequence.h"
 #include "libbreseq/candidate_junctions.h"
+#include "libbreseq/mutation_predictor.h"
 #include "libbreseq/output.h"
 
 namespace breseq {
@@ -174,11 +175,9 @@ cDiffEntry::cDiffEntry(const string &line, uint32_t line_number, cFileParseError
   ++COLUMN;
 
   //Evidence.
-  if (de.is_mutation()) {
-    de._evidence = split(tokens[COLUMN], ",");
-    for (uint32_t i = 0; i < de._evidence.size(); ++i) {
-      RemoveLeadingTrailingWhitespace(de._evidence[i]);
-    }
+  de._evidence = split(tokens[COLUMN], ",");
+  for (uint32_t i = 0; i < de._evidence.size(); ++i) {
+    RemoveLeadingTrailingWhitespace(de._evidence[i]);
   }
   ++COLUMN;
 
@@ -218,6 +217,14 @@ cDiffEntry::cDiffEntry(const string &line, uint32_t line_number, cFileParseError
   }
 
   return;
+}
+  
+bool cDiffEntry::valid_id(string& test_id)  {
+
+  // Record that we used this id, if it is currently valid
+  int32_t test_id_int;
+  bool is_int = is_integer(test_id, test_id_int);
+  return (is_int && (test_id_int >= 1));
 }
   
 gd_entry_type cDiffEntry::type_to_enum(string type) {
@@ -990,8 +997,7 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
     }
     cDiffEntry de(line, line_number, &parse_errors);
     de.valid_field_variable_types(parse_errors);
-    if (de._type != UNKNOWN) add(de);
-    
+    if (de._type != UNKNOWN) add(de, false); // Don't reassign ids yet    
   }
   
   if (!suppress_errors) {
@@ -1002,6 +1008,15 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
       exit(1);
     }
   }
+  
+  // Assign ids to any entries that don't have them (e.g., '.' or '' put in by user)
+  diff_entry_list_t the_list = this->list();
+  for(diff_entry_list_t::iterator it = the_list.begin(); it != the_list.end(); it++ ) {
+    if (!cDiffEntry::valid_id((*it)->_id))
+        this->assign_unique_id_to_entry(**it);
+    //cout << (*it)->as_string() << endl;
+  }
+  
   
   return parse_errors;
 }
@@ -1137,10 +1152,24 @@ uint32_t cGenomeDiff::new_unique_id()
   return assigned_id;
 }
 
+/*! Be sure we have a valid unique id
+ */
+void cGenomeDiff::assign_unique_id_to_entry(cDiffEntry &de) {
+  
+  int32_t current_id;
+  bool is_int = is_integer(de._id, current_id);
+  
+  //Get a new valid id if needed
+  de._id = to_string<int32_t>(new_unique_id());
+  
+  // Record that we used this
+  uint32_t new_id = from_string<uint32_t>(de._id);
+  unique_id_used[new_id] = true;
+}
   
 /*! Add evidence to this genome diff.
  */
-diff_entry_ptr_t cGenomeDiff::add(const cDiffEntry& item, bool lowest_unique) {
+diff_entry_ptr_t cGenomeDiff::add(const cDiffEntry& item, bool reassign_id) {
   
   ASSERT(item._type != UNKNOWN, "Tried to add item of type UNKNOWN to Genome Diff file.");
   
@@ -1149,18 +1178,18 @@ diff_entry_ptr_t cGenomeDiff::add(const cDiffEntry& item, bool lowest_unique) {
   diff_entry_ptr_t added_item(diff_entry_copy);
   _entry_list.push_back(added_item);
   
-  uint32_t new_id = 0;    
-  
-  if ((added_item->_id.size() == 0) || lowest_unique || unique_id_used.count(from_string<uint32_t>(added_item->_id)))  {
-    new_id = new_unique_id();
-    added_item->_id = to_string(new_id);
+
+  // Record that we have used this id
+  if (reassign_id) {
+    assign_unique_id_to_entry(*added_item);
   }
-  else  {
-    new_id = from_string<uint32_t>(added_item->_id);
-  }  
   
-  unique_id_used[new_id] = true;
-  
+  if (cDiffEntry::valid_id(added_item->_id)) {
+    uint32_t new_id = from_string<uint32_t>(added_item->_id);
+    unique_id_used[new_id] = true;
+  }
+
+  //cout << added_item->as_string() << endl;  
   return added_item;
 }
   
@@ -1566,7 +1595,7 @@ void cGenomeDiff::unique()
       //Case: false.
       else {
         it = _entry_list.erase(it);
-        //Update mutations that may of been using this id.
+        //Update mutations that may have been using this id.
         for (uint32_t i = 0; i < keep_ids[(**it)._id].size(); ++it) {
           vector<string>* evidence = &(*keep_ids[(**it)._id][i])._evidence;
           vector<string>::iterator jt = std::remove(evidence->begin(), evidence->end(), (**it)._id);
@@ -1751,28 +1780,28 @@ void cGenomeDiff::reassign_unique_ids()
   
 // All fields must be assigned in this table and be required fields of the gd entries.
 map<gd_entry_type, cGenomeDiff::sort_fields_item> diff_entry_sort_fields = make_map<gd_entry_type, cGenomeDiff::sort_fields_item>
-  (SNP, cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
-  (SUB, cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
-  (DEL, cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
-  (INS, cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
-  (MOB, cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
-  (AMP, cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
-  (INV, cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
-  (CON, cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
-  (RA,  cGenomeDiff::sort_fields_item(2, SEQ_ID, POSITION))
-  (MC,  cGenomeDiff::sort_fields_item(3, SEQ_ID, START))
-  (JC,  cGenomeDiff::sort_fields_item(4, "side_1_seq_id", "side_1_position"))
-  (CN,  cGenomeDiff::sort_fields_item(5, SEQ_ID, START))
-  (UN,  cGenomeDiff::sort_fields_item(6, SEQ_ID, START))
-  (CURA, cGenomeDiff::sort_fields_item(7, "expert", "expert"))
-  (FPOS, cGenomeDiff::sort_fields_item(7, "expert", "expert"))
-  (PHYL, cGenomeDiff::sort_fields_item(7, "gd", "gd"))
-  (TSEQ, cGenomeDiff::sort_fields_item(7, "seq_id", "primer_1_start"))
-  (PFLP, cGenomeDiff::sort_fields_item(7, "seq_id", "primer_1_start"))
-  (RFLP, cGenomeDiff::sort_fields_item(7, "seq_id", "primer_1_start"))
-  (PFGE, cGenomeDiff::sort_fields_item(7, "seq_id", "enzyme"))
-  (NOTE, cGenomeDiff::sort_fields_item(7, "note", "note"))
-  (MASK, cGenomeDiff::sort_fields_item(7, SEQ_ID, POSITION))
+  (SNP,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
+  (SUB,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
+  (DEL,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
+  (INS,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
+  (MOB,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
+  (AMP,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
+  (INV,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
+  (CON,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
+  (NOTE, cGenomeDiff::sort_fields_item(2, "note", "note"))
+  (RA,   cGenomeDiff::sort_fields_item(3, SEQ_ID, POSITION))
+  (MC,   cGenomeDiff::sort_fields_item(4, SEQ_ID, START))
+  (JC,   cGenomeDiff::sort_fields_item(5, "side_1_seq_id", "side_1_position"))
+  (CN,   cGenomeDiff::sort_fields_item(6, SEQ_ID, START))
+  (UN,   cGenomeDiff::sort_fields_item(7, SEQ_ID, START))
+  (CURA, cGenomeDiff::sort_fields_item(8, "expert", "expert"))
+  (FPOS, cGenomeDiff::sort_fields_item(8, "expert", "expert"))
+  (PHYL, cGenomeDiff::sort_fields_item(8, "gd", "gd"))
+  (TSEQ, cGenomeDiff::sort_fields_item(8, "seq_id", "primer_1_start"))
+  (PFLP, cGenomeDiff::sort_fields_item(8, "seq_id", "primer_1_start"))
+  (RFLP, cGenomeDiff::sort_fields_item(8, "seq_id", "primer_1_start"))
+  (PFGE, cGenomeDiff::sort_fields_item(8, "seq_id", "enzyme"))
+  (MASK, cGenomeDiff::sort_fields_item(8, SEQ_ID, POSITION))
 ;
 
 map<gd_entry_type, uint8_t> sort_order = make_map<gd_entry_type, uint8_t>
@@ -2671,7 +2700,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         
         uint32_t replace_target_id, replace_start, replace_end;
         new_ref_seq_info.parse_region(mut["region"], replace_target_id, replace_start, replace_end);
-        ASSERT(replace_start != replace_end, "Cannot process CON mutation with end == start. ID:" + to_string(mut._id));
+        ASSERT(replace_start != replace_end, "Cannot process CON mutation with end == start. ID:" + mut._id);
         
         int8_t strand = (replace_start < replace_end) ?  +1 : -1;
         
@@ -2741,14 +2770,43 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
   }
 }
   
-void cGenomeDiff::normalize_to_sequence(cReferenceSequences &ref)
+void cGenomeDiff::normalize_mutations(cReferenceSequences& ref_seq_info, Settings& settings, bool verbose)
 {
-  diff_entry_list_t muts = this->mutation_list();
-  for (diff_entry_list_t::iterator it = muts.begin();
-       it != muts.end(); it++) {
-    cDiffEntry &mut = **it;
-    mut.normalize_to_sequence(ref[mut["seq_id"]]);
+  (void) verbose;
+  
+  // Pull settings variables
+  int32_t AMP_size_cutoff = settings.size_cutoff_AMP_becomes_INS_DEL_mutation;
+
+  diff_entry_list_t mut_list = this->mutation_list();
+  for(diff_entry_list_t::iterator it=mut_list.begin(); it!=mut_list.end(); it++) {
+    cDiffEntry& mut = **it;
+    if (mut._type == AMP) {
+      
+      int32_t new_copy_number = from_string<uint32_t>(mut["new_copy_number"]);
+      int32_t unit_size = from_string<int32_t>(mut[SIZE]);
+
+      int32_t size = unit_size * (new_copy_number - 1);
+      if (size <= AMP_size_cutoff) {
+        mut._type = INS;
+        int32_t pos = from_string<uint32_t>(mut[POSITION]);
+
+        string amped_seq = ref_seq_info.get_sequence_1(mut[SEQ_ID], pos, pos + unit_size - 1);
+        mut[NEW_SEQ] = "";
+        for(int32_t i=1; i< new_copy_number; i++){
+          mut[NEW_SEQ] =  mut[NEW_SEQ] + amped_seq;
+        }
+                                        
+        mut["position"] = to_string<int32_t>(pos - 1);                                
+        mut.erase("new_copy_number");
+        mut.erase("size");
+      }
+    }
+    
   }
+  
+  MutationPredictor mp(ref_seq_info);
+  Summary summary; // don't pass these through currently
+  mp.normalize_and_annotate_tandem_repeat_mutations(settings, summary, *this);
 }
 
 cGenomeDiff cGenomeDiff::check(cGenomeDiff& ctrl, cGenomeDiff& test, bool verbose)
@@ -3532,7 +3590,7 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
         
         uint32_t replace_target_id, replace_start, replace_end;
         ref_seq_info.parse_region(mut["region"], replace_target_id, replace_start, replace_end);
-        ASSERT(replace_start != replace_end, "Cannot process CON mutation with end == start. ID:" + to_string(mut._id));
+        ASSERT(replace_start != replace_end, "Cannot process CON mutation with end == start. ID:" + mut._id);
         
         int8_t strand = (replace_start < replace_end) ?  +1 : -1;
         
@@ -4418,7 +4476,7 @@ void cGenomeDiff::GD2OLI(const vector<string> &gd_file_names,
         change = ref_seq_info.get_sequence_1(mut[SEQ_ID], position_1, position_1) + "->" + mut[NEW_SEQ];
       }
       
-      if (mut._type == DEL) {
+      else if (mut._type == DEL) {
         uint32_t size = from_string<uint32_t>(mut[SIZE]);
         if (size > large_size_cutoff)
           type = "LargeDeletion";
@@ -4427,12 +4485,12 @@ void cGenomeDiff::GD2OLI(const vector<string> &gd_file_names,
         change = mut[SIZE] + "_bp";
       }
       
-      if (mut._type == INS) {
+      else if (mut._type == INS) {
         type = "Insertion";
-        change = mut[NEW_SEQ].size() + "_bp";
+        change = to_string<uint32_t>(mut[NEW_SEQ].size()) + "_bp";
       }
       
-      if (mut._type == SUB) {
+      else if (mut._type == SUB) {
         int32_t old_size = from_string<int32_t>(mut[SIZE]);
         int32_t new_size = mut[NEW_SEQ].size();
         
@@ -4447,17 +4505,36 @@ void cGenomeDiff::GD2OLI(const vector<string> &gd_file_names,
         }
       }
       
-      if (mut._type == CON) {
+      // skip gene conversion
+      else if (mut._type == CON) {
+        continue;
       }
       
-      if (mut._type == MOB) {
+      // skip inversion
+      else if (mut._type == INV) {
+        continue;
+      }
+      
+      else if (mut._type == MOB) {
         type = "IS_Insertion";
         change = mut["repeat_name"];        
       } 
       
-      if (mut._type == AMP) {
-        type = "Duplication_" + mut["new_copy_number"] + "_fold";
-        change = mut[NEW_SEQ].size() + "_bp";
+      else if (mut._type == AMP) {
+        
+        uint32_t size = from_string<uint32_t>(mut[SIZE]) * (from_string<uint32_t>(mut["new_copy_number"]) - 1);
+        if (size > large_size_cutoff) {
+          type = "Duplication_" + mut["new_copy_number"] + "_fold";
+          change = mut[SIZE] + "_bp";
+        }
+        else {
+          type = "Insertion";
+          change = to_string(size) + "_bp";
+        }
+      }
+      
+      else {
+        ERROR("Mutation type \"" + to_string(mut._type) + "\" is not handled!");
       }
       
       // Fill in gene information

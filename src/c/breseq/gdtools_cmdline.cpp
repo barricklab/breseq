@@ -987,7 +987,13 @@ int do_normalize_gd(int argc, char* argv[])
 
   options.processCommandArgs(argc, argv);
   options.addUsage("");
-  options.addUsage("Creates a GD file of mutations that have been normalized to the input reference files.");
+  options.addUsage("Creates a GD file of mutations that have been normalized to the input reference files. ");
+  options.addUsage("This process involves (1) converting AMP mutations of ≤50 bp to indels, ");
+  options.addUsage("(2) shifting INS and DEL mutations to the highest coordinates possible, (3) ");
+  options.addUsage("adding repeat_seq, repeat_length, repeat_ref_copies, and repeat_new_copies fields "); 
+  options.addUsage("for INS and DEL mutations that are in tandem sequence repeats of ≥5 bases in the reference sequence, ");
+  options.addUsage("and (4) flagging SNP, INS, or DEL mutations with sizes ≤50 bp that are within 20 bp of the ends of ");
+  options.addUsage("annotated mobile_element copies in the reference genome with the field mobile_element_adjacent=1");
 
   if (!options.count("reference")) {
     options.addUsage("");
@@ -1008,27 +1014,19 @@ int do_normalize_gd(int argc, char* argv[])
 
   UserOutput uout("NORMALIZE");
 
-  vector<string> rfns = from_string<vector<string> >(options["reference"]);
-  uout("Reading in reference sequence files") << rfns << endl;
-  cReferenceSequences rs;
-  rs.LoadFiles(rfns);
+    
+  vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
+  uout("Reading input reference sequence files") << reference_file_names << endl;
+  cReferenceSequences ref_seq_info;
+  ref_seq_info.LoadFiles(reference_file_names);
 
   cGenomeDiff gd(input);
   
   uout("Normalizing mutations");
-  gd.normalize_to_sequence(rs);
-  diff_entry_list_t muts = gd.mutation_list();
+  Settings settings;
+  gd.normalize_mutations(ref_seq_info, settings);
 
-  for (diff_entry_list_t::iterator it = muts.begin();
-       it != muts.end(); it++) {
-    diff_entry_ptr_t mut = *it;
-    if (mut->entry_exists("norm") && (*mut)["norm"] == "is_not_valid"){
-      uout << "INVALID_MUTATION\t" << **it << endl; 
-      (*mut)["comment_out"] = "True";
-    } 
-  }
-
-  uout("Writing output GD file", options["output"]);
+  uout("Writing output Genome Diff file", options["output"]);
   gd.write(options["output"]);
 
   return 0;
