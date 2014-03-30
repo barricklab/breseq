@@ -49,8 +49,8 @@ namespace breseq {
     void predictJCtoINSorSUBorAMPorDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc);
     void predictRAtoSNPorDELorINSorSUBorAMP(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc );
     
-    // Cle
-    void annotate_tandem_repeat_mutations(Settings& settings, Summary& summary, cGenomeDiff& gd);
+    // Cleans up indel positions by shifting them and adds addition fiels for simple sequence repeats 
+    void normalize_and_annotate_tandem_repeat_mutations(Settings& settings, Summary& summary, cGenomeDiff& gd);
     
     // Master function
 		void predict(Settings& settings, Summary& summary, cGenomeDiff& gd);

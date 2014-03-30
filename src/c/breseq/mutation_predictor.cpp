@@ -1452,7 +1452,7 @@ namespace breseq {
   // Adds additional fields "repeat_length", "repeat_ref_copies", and "repeat_new_copies"
   // to any repeat that is above a certain threshold length in the original sequence (by default 6 bp).
   
-  void MutationPredictor::annotate_tandem_repeat_mutations(Settings& settings, Summary& summary, cGenomeDiff& gd)
+  void MutationPredictor::normalize_and_annotate_tandem_repeat_mutations(Settings& settings, Summary& summary, cGenomeDiff& gd)
   {    
     (void) summary;
     uint32_t minimum_tandem_repeat_length = 5;
@@ -1599,10 +1599,7 @@ namespace breseq {
 		// Read Alignments => SNP, DEL, INS, SUB AMP
 		///
     
-    annotate_tandem_repeat_mutations(settings, summary, gd);
-
-    
-
+    normalize_and_annotate_tandem_repeat_mutations(settings, summary, gd);
     
     ///////////////////////////////////////////////////////
     // Check to be sure the "frequency" field is present //
