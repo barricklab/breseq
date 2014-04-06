@@ -453,7 +453,6 @@ void alignment_output::create_alignment ( const string& region, cOutputEvidenceI
   m_aligned_annotation = m_alignment_output_pileup.aligned_annotation;
   
   
-  // @JEB - HERE
   // This section updates the style of the name of the reads that don't cross
   // the ambiguous part of the junction (and therefore are not counted).
   // This applies to junction reads.
