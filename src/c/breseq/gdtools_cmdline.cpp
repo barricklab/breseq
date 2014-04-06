@@ -452,16 +452,19 @@ int do_validate(int argc, char *argv[])
     cerr << "Running gdtools VALIDATE on " << options.getArgc() << " files..." << endl;
     
     // Further read in reference sequences and check IDs of mutations if user provided
+    // Give a warning if they weren't provided to remind the user this is possible.
     cReferenceSequences ref;
     if (options.count("reference")) {
         ref.LoadFiles(from_string<vector<string> >(options["reference"]));
+    } else {
+        cerr << "  WARNING: No reference sequence(s) provided (-r option). Genomic coordinates will not be checked." << endl;
     }
     
     
     uint32_t num_files_processed = 0;
     uint32_t num_files_with_errors = 0;
     
-    // Simply read files. Really need some way to change deadly errors to warnings in read function.
+    // Simply read files.
     for (int32_t i=0; i<options.getArgc(); i++) {
         string gd_file_name = options.getArgv(i);
         num_files_processed++;
@@ -814,27 +817,41 @@ int do_annotate(int argc, char* argv[])
   
   options
   ("help,h", "produce advanced help message", TAKES_NO_ARGUMENT)
-  ("output,o", "path to output file with added mutation data. (DEFAULT: annotated.html OR annotated.gd")
+  ("output,o", "path to output file with added mutation data. (DEFAULT: output.*")
   ("reference,r", "reference sequence in GenBank flatfile format (REQUIRED)")
-  ("repeat-header", "repeat the header line every this many rows (0=OFF)", "10")
+  ("format,f", "type of output to generate.", "HTML")
   ("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT)
-  ("gd", "generate GenomeDiff output instead of HTML", TAKES_NO_ARGUMENT)
+  ("repeat-header", "in HTML mode, repeat the header line every this many rows (0=OFF)", "10")
   ;
   options.addUsage("");
-  options.addUsage("If multiple GenomeDiff input files are provided, then they are");
-  options.addUsage("merged and the frequencies from each file are shown for each mutation.");
+  options.addUsage("If multiple GenomeDiff input files are provided, then they are merged and the frequencies from each file are shown for each mutation.");
+  options.addUsage("");
+  options.addUsage("Valid output formats:");
+  options.addUsage("  HTML    descriptive table viewable in a web browser"); 
+  options.addUsage("  GD      GenomeDiff with added annotation of mutations");
+  options.addUsage("  PHYLIP  alignment file suitable for input into PHYLIP");
 
   options.processCommandArgs(argc, argv);
   
   UserOutput uout("ANNOTATE");
   
-  bool html_output_mode = !options.count("gd");
+  string output_format = to_upper(options["format"]);
   string output_file_name;
+    
+  if (output_format == "HTML") {
+    output_file_name = "output.html";
+  } else if (output_format == "GD") {
+    output_file_name = "output.gd";
+  } else if (output_format == "PHYLIP") {
+    output_file_name = "output.phylip";
+  } else {
+    ERROR("Unknown output format (--format|-f) of " + output_format + " requested. Valid choices are HTML, GD, PHYLIP");
+  }
+
+  // User setting overrules default names
   if (options.count("output")) 
     output_file_name = options["output"];
-  else
-    output_file_name = (html_output_mode) ? "annotated.html" : "annotated.gd";
-  
+    
   vector<string> gd_path_names;
   for (int32_t i = 0; i < options.getArgc(); ++i) {
     gd_path_names.push_back(options.getArgv(i));
@@ -890,7 +907,7 @@ int do_annotate(int argc, char* argv[])
   uout("Annotating mutations");
   ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"));
     
-  if (html_output_mode) {
+  if (output_format == "HTML") {
     
     uout("Writing output HTML file", output_file_name);
     
@@ -909,9 +926,12 @@ int do_annotate(int argc, char* argv[])
     
     html_compare(settings, output_file_name, "Mutation Comparison", gd, mt_options);
         
-  } else {
+  } else if (output_format == "GD") {
     uout("Writing output Genome Diff file", options["output"]);
     gd.write(output_file_name);
+  } else if (output_format == "PHYLIP") {
+      uout("Writing output PHYLIP alignment file", options["output"]);
+      gd.write_phylip(output_file_name, gd, gd_list, ref_seq_info);
   }
   
   return 0;

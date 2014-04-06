@@ -1021,7 +1021,8 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
   return parse_errors;
 }
   
-  
+
+// Checks to see whether seq_ids and coordinates make sense
 cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences& ref_seq, bool suppress_errors)
 {
   // For now we do rather generic checking... nothing specific to certain kind of entries
@@ -1048,7 +1049,11 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
           
           // You only have a size if you have a position
           if (de->entry_exists("size")) {
-            int32_t test_position = position + from_string<int32_t>((*de)["size"]);
+            
+            // All entries with a size (SUB, DEL, INV, AMP, CON) include first base as part of size.
+            //    which is why we subtract 1 here
+            int32_t test_position = position + from_string<int32_t>((*de)["size"]) - 1;
+            
             if ((test_position < valid_start) || (test_position > valid_end)) {  
               parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Position + Size  [" + to_string<uint32_t>(test_position) + "] is out of valid range for seq_id [" + to_string<int32_t>(valid_start) + "," + to_string<int32_t>(valid_end) + "] for entry.", true);
             
@@ -2514,20 +2519,33 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         
         const uint32_t& size = from_string<uint32_t>(mut[SIZE]);
         
-        // Set up attributes
+        // Set up attributes -- we normally show the base before (if there is one)
         replace_seq_id = mut[SEQ_ID];
         replace_start = position - 1;
         replace_end = position - 1 + size;
+        
+        if (replace_start == 0) {
+          replace_start++;
+          replace_end++;
+        }
         replace_seq = new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end);
         replace_seq.insert(0,"(");
-        replace_seq.insert(2,")");
+        replace_seq.append(")");
+
         
         applied_seq_id = mut[SEQ_ID];
         applied_start = position - 1;
         applied_end = position - 1;
-        applied_seq = new_ref_seq_info.get_sequence_1(applied_seq_id, applied_start, applied_end);
+        
+        if (applied_start == 0) {
+          applied_seq = "";
+        } else {
+          applied_seq = new_ref_seq_info.get_sequence_1(applied_seq_id, applied_start, applied_end);
+        }
+          
         applied_seq.insert(0,"(");
-        applied_seq.insert(2,")");
+        applied_seq.append(")");
+
         
         new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size -1, "", (to_string(mut._type) + " " + mut._id), verbose);
         
@@ -3290,6 +3308,7 @@ void cGenomeDiff::write_jc_score_table(cGenomeDiff& compare, string table_file_p
 // finding equivalent mutations in 
 void cGenomeDiff::tabulate_frequencies_from_multiple_gds(cGenomeDiff& master_gd, vector<cGenomeDiff>& gd_list, bool verbose)
 {
+  
   vector<diff_entry_list_t> mut_lists;
   
   for (vector<cGenomeDiff>::iterator it = gd_list.begin(); it != gd_list.end(); it++) {
@@ -3865,103 +3884,56 @@ void cGenomeDiff::read_vcf(const string &file_name)
   }
   
 }
-  
-    
-void write_phylip( const vector<string>& gd_file_names, 
-               const vector<string>& reference_file_names,
-               const string& output_phylip_file_name)
+ 
+// Creates a PHYLIP input file from a master list of mutations (from merged file), a list of genome diffs, and reference sequences. 
+void cGenomeDiff::write_phylip(string& output_phylip_file_name, cGenomeDiff& master_gd, vector<cGenomeDiff>& gd_list, cReferenceSequences& ref_seq_info, bool verbose)
 {
+  (void) verbose;
   
-  (void) gd_file_names;
-  (void) reference_file_names;
-  (void) output_phylip_file_name;
+  diff_entry_list_t mut_list = master_gd.mutation_list();
   
-  ERROR("Not implemented");
-  /*
-   
-   my @mutations = $composite_gd->mutation_list;
-   
-   if ($ignore_ambiguous)
-   {
-   MUT: for (my $i=0; $i<scalar @mutations; $i++)
-   {
-   my $mut = $mutations[$i];
-   foreach my $gd_name (@$gd_name_list_ref)
-   {
-   my $f = $mut->{"frequency_$gd_name"};
-   if ($f eq '?')
-   {
-   $mut->{"frequency_$gd_name"} = ($mut->{type} eq 'SNP') ? $mut->{_ref_seq} : 'A';
-   }
-   }
-   } 
-   }
-   
-   open KEYFILE, ">$phylip_input_file.key" or die "Could not open file: $phylip_input_file.key";
-   MUT: for (my $i=0; $i<scalar @mutations; $i++)
-   {
-   my $mut = $mutations[$i];
-   print KEYFILE +join("\t", $i, $mut->{type}, $mut->{position}) . "\n"; 
-   }
-   close KEYFILE;
-   
-   open PHYLIP, ">$phylip_input_file" or die "Could not open file: $phylip_input_file";
-   #first line is number of species, then number of sites
-   print PHYLIP +(scalar @$gd_name_list_ref) . " " . +(scalar @mutations) . "\n";
-   
-   foreach my $gd_name (@$gd_name_list_ref)
-   {			
-   my $mut_str;
-   foreach my $mut (@mutations)
-   {
-   my $f = $mut->{"frequency_$gd_name"};
-   my $b = '?';
-   if ($f eq '?')
-   {
-   if ($phylip_for_mix)
-   {
-   $b = '?'; #ancestor
-   }
-   else
-   {
-   $b = 'N';
-   }
-   }
-   elsif (($f == 1) || ($f eq 'H'))
-   {
-   if ($phylip_for_mix)
-   {
-   $b = '1';
-   }
-   else
-   {
-   $b = ($mut->{type} eq 'SNP') ? $mut->{new_seq} : 'T';
-   }
-   }
-   elsif ($f == 0)
-   {
-   if ($phylip_for_mix)
-   {
-   $b = '0';
-   }
-   else
-   {
-   $b = ($mut->{type} eq 'SNP') ? $mut->{_ref_seq} : 'A';
-   }
-   }
-   else
-   {
-   die "Unknown frequency: $f\n";
-   }
-   $mut_str .= $b;				
-   }
-   
-   printf PHYLIP "%-10.10s%s\n", $gd_name, $mut_str;
-   }
-   
-   close PHYLIP;
-   */
+  ofstream out(output_phylip_file_name.c_str());
+  out << gd_list.size() << " " << mut_list.size() << endl;
+  
+  for (vector<cGenomeDiff>::iterator gd_it = gd_list.begin(); gd_it != gd_list.end(); gd_it++) {
+    
+    string base_name = gd_it->get_base_file_name();
+    out << setw(10) << base_name << " "; 
+    
+    for (diff_entry_list_t::iterator it=mut_list.begin(); it != mut_list.end(); it++) {
+      cDiffEntry& mut = **it;
+      string key = "frequency_" + base_name;
+      ASSERT(mut.count(key), "Did not find expected key: " + key + "\nIn item:\n" + mut.as_string());
+      string val = mut[key];
+      
+      if (mut._type == SNP) {
+        if (val == "?") out << "N";
+        else {
+          //ASSERT(is_double(val), )
+          double freq = from_string<double>(val);
+          if (freq == 0.0) {        
+            uint32_t position_1 = from_string<uint32_t>(mut[POSITION]);
+            out << ref_seq_info.get_sequence_1(mut[SEQ_ID], position_1, position_1);
+          }
+          else if (freq == 1.0) out << mut[NEW_SEQ];
+          else out << "N";
+        }        
+      } else {
+        if (val == "?") out << "N";
+        else {
+          //ASSERT(is_double(val), )
+          double freq = from_string<double>(val);
+          if (freq == 0.0) out << "A";
+          else if (freq == 1.0) out << "T";
+          else out << "N";
+        }
+      }
+    }
+    
+    out << endl;
+  }
 }
+    
  
 // Unlike other conversion functions, takes a list of gd files
 void cGenomeDiff::GD2Circos(const vector<string> &gd_file_names, 

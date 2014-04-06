@@ -644,8 +644,11 @@ public:
   //! GVF files
   void write_gvf(const string& filename, cReferenceSequences& ref_seq_info, bool snv_only = false);
   
+  
   //!---- Format Conversion Functions: Static Convenience ---- !//
 
+
+  
   //! Convert genome diff to GVF
   static void GD2GVF( const string& gdfile, const string& gvffile, cReferenceSequences& ref_seq_info, bool snv_only = false )
     { cGenomeDiff gd(gdfile); gd.write_gvf(gvffile, ref_seq_info, snv_only); }
@@ -657,11 +660,19 @@ public:
   static void VCF2GD( const string& vcffile, const string& gdfile )
   { cGenomeDiff gd; gd.read_vcf(vcffile); gd.write(gdfile); }
   
+  //! Convert GD to PHYLIP input file
+  //! 
+  static void write_phylip(string& output_phylip_file_name, 
+                           cGenomeDiff& master_gd, 
+                           vector<cGenomeDiff>& gd_list, 
+                           cReferenceSequences& ref_seq_info, 
+                           bool verbose = false);
+  
   //! Convert GD to Circos files
   static void GD2Circos(const vector<string> &gd_file_names,
-                 const vector<string> &reference_file_names,
-                 const string &circos_directory,
-                 double distance_scale,
+                        const vector<string> &reference_file_names,
+                        const string &circos_directory,
+                        double distance_scale,
                         double feature_scale);
 
   //! Convert genome diff to OLI format
