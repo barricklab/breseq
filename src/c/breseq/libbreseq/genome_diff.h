@@ -439,7 +439,7 @@ public:
   //!---- Variables ---- !//
 protected:  	
   string _filename;                   //!< File name associated with this diff.
-  string _base_file_name;             //!< File name stripped of path and extension
+  string _base_file_name;             //!< File name stripped of path and extension, acts as short name
   diff_entry_list_t _entry_list;      //!< All diff entries.
   uint32_t _unique_id_counter;        //!< Smallest available id.
   map<uint32_t,bool> unique_id_used;
@@ -485,6 +485,8 @@ public:
   
   string get_base_file_name() const {return _base_file_name;}
 
+  void set_base_file_name(const string& in_base_file_name) { _base_file_name = in_base_file_name;}
+  
   void add_breseq_data(const key_t &key, const string& value)
     { this->metadata.breseq_data.insert(pair<string,string>(key, value)); }
 

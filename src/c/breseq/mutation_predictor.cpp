@@ -1512,7 +1512,12 @@ namespace breseq {
         uint32_t num_repeat_units = size / repeat_unit_size;
         
         normalizeDELposition(ref_seq_info[mut["seq_id"]], mut, repeat_unit_sequence);
+        
+        // Normalize may actually change the sequence used for the repeat... so call again here.
         position = from_string<int32_t>(mut["position"]);
+        mutation_sequence = ref_seq_info.get_sequence_1(mut["seq_id"], position, position + size - 1);
+        find_repeat_unit(mutation_sequence, repeat_unit_size, repeat_unit_sequence);
+        num_repeat_units = size / repeat_unit_size;
 
         // Note that we add the number of repeats that were deleted
         uint32_t original_num_repeat_units = find_original_num_repeat_units(ref_seq_info[mut["seq_id"]], position, repeat_unit_sequence) + num_repeat_units;
@@ -1677,9 +1682,7 @@ namespace breseq {
   
   void MutationPredictor::normalizeDELposition(cAnnotatedSequence& ref_seq, cDiffEntry& de, string& repeat_sequence)
   {
-    
-    uint32_t num_repeat_units = 0;
-    
+        
     int32_t test_position = from_string<int32_t>(de[POSITION]) + from_string<int32_t>(de[SIZE]);   
     // The offset of 1 ensures we are on the first base of a possible repeat unit (relative to the reference).
     
@@ -1699,6 +1702,46 @@ namespace breseq {
       de[POSITION] = new_position;
     }
     
+    // This section checks for rare cases where a DEL can be written in two ways 
+    // because there is a repeat separated by unique bases that are also deleted
+    //                     * test_position
+    // REF : ATAA TCGCCAGC G TCGCCAGC ACTG
+    // DEL1:      DDDDDDDD D
+    // DEL2:               D DDDDDDDD
+    //
+    // REF : ATAA TCGCCAGC AGC TCGCCAGC ACTG
+    // DEL1:      DDDDDDDD DDD 
+    // DEL2:               DDD DDDDDDDD   
+    //
+    // REF : ATAA C CGCCAGCAGCTCGCCAGC C ACTG
+    // DEL1:      D DDDDDDDDDDDDDDDDDD
+    // DEL2:        DDDDDDDDDDDDDDDDDD D
+    
+    int32_t size = from_string<int32_t>(de[SIZE]);
+    if (size > 1) {
+      int32_t test_size = size;
+      int32_t test_pos_1 = from_string<int32_t>(de[POSITION]);
+      int32_t test_pos_2 = test_pos_1 + test_size;      
+      test_size--;
+      
+      while (test_size > 0) {
+        
+        if (test_pos_2 + test_size - 1 > static_cast<int32_t>(ref_seq.get_sequence_length()))
+          break;
+        
+        string test_seq_1 = ref_seq.get_sequence_1(test_pos_1, test_pos_1+test_size-1);
+        string test_seq_2 = ref_seq.get_sequence_1(test_pos_2, test_pos_2+test_size-1);
+
+        if (test_seq_1 == test_seq_2) {
+          // If not already shifted
+          if (!de.entry_exists("_original_aligned_position"))
+              de["_original_aligned_position"] = de[POSITION];           
+          de[POSITION] = to_string<int32_t>(test_pos_1+test_size);
+          break;
+        }
+        test_size--;
+      }
+    }
   }
   
   
