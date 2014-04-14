@@ -1472,15 +1472,17 @@ namespace breseq {
         
         int32_t position = from_string<int32_t>(mut["position"]);
         string mutation_sequence = mut["new_seq"];
-        
         uint32_t repeat_unit_size;
         string repeat_unit_sequence;
         find_repeat_unit(mutation_sequence, repeat_unit_size, repeat_unit_sequence);
-        uint32_t num_repeat_units = size / repeat_unit_size;
                 
         normalizeINSposition(ref_seq_info[mut["seq_id"]], mut, repeat_unit_sequence);
+        // repeat info may have changed, so reload
         position = from_string<int32_t>(mut["position"]);
-
+        mutation_sequence = mut["new_seq"];
+        find_repeat_unit(mutation_sequence, repeat_unit_size, repeat_unit_sequence);
+        uint32_t num_repeat_units = size / repeat_unit_size;
+        
         // Note shift to +1 to get to where the first unit of a repeat would be for INS
         uint32_t original_num_repeat_units = find_original_num_repeat_units(ref_seq_info[mut["seq_id"]], position+1, repeat_unit_sequence);
         
@@ -1509,7 +1511,6 @@ namespace breseq {
         uint32_t repeat_unit_size;
         string repeat_unit_sequence;
         find_repeat_unit(mutation_sequence, repeat_unit_size, repeat_unit_sequence);
-        uint32_t num_repeat_units = size / repeat_unit_size;
         
         normalizeDELposition(ref_seq_info[mut["seq_id"]], mut, repeat_unit_sequence);
         
@@ -1517,7 +1518,7 @@ namespace breseq {
         position = from_string<int32_t>(mut["position"]);
         mutation_sequence = ref_seq_info.get_sequence_1(mut["seq_id"], position, position + size - 1);
         find_repeat_unit(mutation_sequence, repeat_unit_size, repeat_unit_sequence);
-        num_repeat_units = size / repeat_unit_size;
+        uint32_t num_repeat_units = size / repeat_unit_size;
 
         // Note that we add the number of repeats that were deleted
         uint32_t original_num_repeat_units = find_original_num_repeat_units(ref_seq_info[mut["seq_id"]], position, repeat_unit_sequence) + num_repeat_units;
@@ -1678,6 +1679,41 @@ namespace breseq {
       de["_original_aligned_position"] = de[POSITION]; // Save the original position for marking in alignments
       de[POSITION] = new_position;
     }
+    
+    // We still may need to move a fraction of the repeat to deal with 
+    // equivalent cases being initially described in different ways:
+    //
+    // ATCG ATCG ATCG ATCG +(ATCG) AT  - INITIAL
+    // ATCG ATCG ATCG ATCG  AT +(CGAT) - PREFERRED 
+    
+    // Recall that position is where it is inserted after
+    int32_t size = repeat_sequence.size();
+    if (size > 1) {
+      int32_t test_size = size - 1;
+      int32_t test_pos_ref = from_string<int32_t>(de[POSITION]) + 1;
+      int32_t test_pos_ins = 0; // 0-indexed
+
+      while (test_size > 0) {
+        
+        string test_seq_1 = ref_seq.get_sequence_1(test_pos_ref, test_pos_ref+test_size-1);
+        string test_seq_2 = repeat_sequence.substr(0, test_size);
+        
+        if (test_seq_1 == test_seq_2) {
+          // If not already shifted
+          if (!de.entry_exists("_original_aligned_position"))
+            de["_original_aligned_position"] = de[POSITION];           
+          de[POSITION] = to_string<int32_t>(test_pos_ref+test_size-1);
+          string new_seq = de[NEW_SEQ];
+          new_seq=  new_seq.substr(test_size) + new_seq.substr(0, test_size);
+          de[NEW_SEQ] = new_seq;
+          
+          break;
+        }
+        
+        test_size--;
+      }
+    }
+
   }
   
   void MutationPredictor::normalizeDELposition(cAnnotatedSequence& ref_seq, cDiffEntry& de, string& repeat_sequence)
