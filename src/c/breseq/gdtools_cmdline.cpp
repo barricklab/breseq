@@ -1029,7 +1029,7 @@ int do_phylogeny(int argc, char* argv[])
     SYSTEM("dnapars < " + phylip_script_file_name, false, false, false);
     
     string phylip_original_tree_file_name = "outtree";
-    string phylip_renamed_tree_file_name = output_base_name + ".tree";
+    string phylip_renamed_tree_file_name = output_base_name + ".tre";
     ofstream renamed_tree(phylip_renamed_tree_file_name.c_str());
     string slurped_file;
     ifstream original_tree(phylip_original_tree_file_name.c_str());
@@ -1048,7 +1048,7 @@ int do_phylogeny(int argc, char* argv[])
     }
     renamed_tree << slurped_file;
     
-    string phylip_original_tree_save_file_name = output_base_name + ".original.phylip.tree";
+    string phylip_original_tree_save_file_name = output_base_name + ".original.phylip.tre";
     string phylip_output_file_name = output_base_name + ".phylip.output";
     SYSTEM("mv outtree " + phylip_original_tree_save_file_name);
     SYSTEM("mv outfile " + phylip_output_file_name);
