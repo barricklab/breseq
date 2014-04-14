@@ -971,7 +971,7 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
 
   /*If the run_name/title is not set by a #=TITLE tag in the header info then
    default to the name of the file. */
-  /*
+  
   if (metadata.run_name.empty()) {
     string *run_name = &metadata.run_name;
     *run_name = filename.substr(0, filename.find(".gd"));
@@ -979,7 +979,7 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
       run_name->erase(0, run_name->find_last_of('/') + 1);
     }
   }
-  */
+  
   
   //! Step: Handle the diff entries.
   while (in.good()) {
