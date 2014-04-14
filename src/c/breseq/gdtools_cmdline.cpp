@@ -937,6 +937,141 @@ int do_annotate(int argc, char* argv[])
   return 0;
 }
 
+int do_phylogeny(int argc, char* argv[])
+{
+    AnyOption options("gdtools PHYLOGENY [-o phylogeny] -r reference.gbk input.1.gd [input.2.gd ... ]");
+    options.addUsage("");
+    options.addUsage("Uses PHYLIP to construct a phylogentic tree.");
+    options
+    ("help,h", "produce advanced help message", TAKES_NO_ARGUMENT)
+    ("verbose,v", "produce output for each mutation counted.", TAKES_NO_ARGUMENT)
+    ("output,o", "path to output file with added mutation data.", "count.csv")
+    ("reference,r", "reference sequence in GenBank flatfile format (REQUIRED)")
+    ("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT)
+    ;
+    
+    options.processCommandArgs(argc, argv);
+    
+    UserOutput uout("PHYLOGENY");
+    
+    // User setting overrules default names
+    string output_base_name = "phylogeny";
+    if (options.count("output")) 
+        output_base_name = options["output"];
+    
+    vector<string> gd_path_names;
+    for (int32_t i = 0; i < options.getArgc(); ++i) {
+        gd_path_names.push_back(options.getArgv(i));
+    }
+    
+    if ( (gd_path_names.size() == 0) 
+        || !options.count("reference")){
+        options.printUsage();
+        return -1;
+    }
+    
+    // more than one file was provided as input
+    bool compare_mode = (gd_path_names.size() > 1);
+    
+    // First use merge to produce a file with a line for each mutation
+    cGenomeDiff gd;
+    vector<string> gd_base_names;
+    vector<cGenomeDiff> gd_list;
+    
+    bool polymorphisms_found = false; // handled putting in the polymorphism column if only one file provided
+    uint32_t file_num = 1;
+    for (uint32_t i = 0; i < gd_path_names.size(); i++){
+        uout("Reading input GD file",gd_path_names[i]);
+        cGenomeDiff single_gd(gd_path_names[i]);
+        gd_list.push_back(single_gd);
+    }
+    
+    cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
+
+    for (vector<cGenomeDiff>::iterator it=gd_list.begin(); it!= gd_list.end(); it++) {
+        cGenomeDiff& single_gd = *it;
+        gd.merge(single_gd);
+        gd_base_names.push_back(single_gd.get_base_file_name());
+        single_gd.set_base_file_name("_" + to_string<uint32_t>(file_num++) + "_");
+    }
+
+    gd.sort();
+    
+    uout("Tabulating mutation frequencies across samples");
+
+    // Then add frequency columns for all genome diffs
+    cGenomeDiff::tabulate_frequencies_from_multiple_gds(gd, gd_list);
+    
+    vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
+    uout("Reading input reference sequence files") << reference_file_names << endl;
+    cReferenceSequences ref_seq_info;
+    ref_seq_info.LoadFiles(reference_file_names);
+    
+    uout("Annotating mutations");
+    ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"));
+    
+    string phylip_input_file_name = output_base_name + ".phylip";
+    uout("Writing output PHYLIP alignment file", phylip_input_file_name);
+    gd.write_phylip(phylip_input_file_name, gd, gd_list, ref_seq_info);
+    
+    string phylip_script_file_name = output_base_name + ".phylip.commands";
+    ofstream phylip_script(phylip_script_file_name.c_str());
+    phylip_script << phylip_input_file_name << endl;
+    phylip_script << "V" << endl; // print only one tree!
+    phylip_script << "1" << endl;
+    phylip_script << "4" << endl; // print steps
+    phylip_script << "Y" << endl;
+    
+    if (file_exists("outtree")) remove_file("outtree");
+    if (file_exists("outfile")) remove_file("outfile");
+    
+    uout("Running DNAPARS from", phylip_input_file_name);
+    SYSTEM("dnapars < " + phylip_script_file_name, false, false, false);
+    
+    string phylip_original_tree_file_name = "outtree";
+    string phylip_renamed_tree_file_name = output_base_name + ".tree";
+    ofstream renamed_tree(phylip_renamed_tree_file_name.c_str());
+    string slurped_file;
+    ifstream original_tree(phylip_original_tree_file_name.c_str());
+    
+    // Read the entire file
+    string line;
+    while(original_tree){
+        getline(original_tree, line);
+        slurped_file += line;
+    }
+    
+    // Replace all file names 
+    file_num = 1;
+    for (vector<string>::iterator it = gd_base_names.begin(); it != gd_base_names.end(); it++) {
+        slurped_file = substitute(slurped_file, "_" + to_string<uint32_t>(file_num++) + "_", *it);
+    }
+    renamed_tree << slurped_file;
+    
+    string phylip_original_tree_save_file_name = output_base_name + ".original.phylip.tree";
+    string phylip_output_file_name = output_base_name + ".phylip.output";
+    SYSTEM("mv outtree " + phylip_original_tree_save_file_name);
+    SYSTEM("mv outfile " + phylip_output_file_name);
+    
+    // Create mutation key file
+    uout("Creating mutation key file");
+
+    string mutation_key_file_name = phylip_input_file_name + ".key";
+    ofstream mutation_key(mutation_key_file_name.c_str());
+    diff_entry_list_t mut_list = gd.mutation_list();
+    uint32_t i=0;
+    for(diff_entry_list_t::iterator it = mut_list.begin(); it != mut_list.end(); it++) {
+        cDiffEntry& mut = **it;
+        mutation_key << to_string(i++) << "\t" << to_string(mut._type) + "-" + mut[POSITION] << endl;
+    }
+    
+    string merged_gd_file_name =  output_base_name + ".merged.gd";
+    gd.write(merged_gd_file_name);
+    
+    return 0;
+}
+
+
 int do_count(int argc, char* argv[])
 {
   AnyOption options("gdtools COUNT [-o count.csv] -r reference.gbk input.1.gd [input.2.gd ... ]");
@@ -2204,13 +2339,15 @@ int main(int argc, char* argv[]) {
   } else if (command == "COMPARE") {
     return do_annotate(argc_new, argv_new);
   } else if (command == "CHECK") {
-      return do_check(argc_new, argv_new);  
+    return do_check(argc_new, argv_new);  
   } else if (command == "CHECK-PLOT") {
-      return do_check_plot(argc_new, argv_new);
+    return do_check_plot(argc_new, argv_new);
   } else if (command == "NOT-EVIDENCE") {        //TODO merge with FILTER
     return do_not_evidence(argc_new, argv_new);
   } else if (command == "ANNOTATE") {
     return do_annotate(argc_new, argv_new);
+  } else if (command == "PHYLOGENY"){
+    return do_phylogeny(argc_new, argv_new);
   } else if (command == "COUNT") {
     return do_count(argc_new, argv_new);
   } else if (command == "NORMALIZE") {

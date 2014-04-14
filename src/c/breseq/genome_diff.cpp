@@ -3345,7 +3345,7 @@ void cGenomeDiff::tabulate_frequencies_from_multiple_gds(cGenomeDiff& master_gd,
       // INS	177	1750	T7_WT_Genome	24198	T	frequency=0.1310
       // INS	178	1751	T7_WT_Genome	24198	T	frequency=0.0250
       while (mut_list.size() && (from_string<uint32_t>((*mut_list.front())[POSITION]) < this_mut_position)) {
-        cout << (*mut_list.front())[POSITION] << " < " << this_mut_position << endl;
+        //cout << (*mut_list.front())[POSITION] << " < " << this_mut_position << endl;
         mut_list.pop_front();
       }
       if (mut_list.size() == 0) 
@@ -3898,7 +3898,14 @@ void cGenomeDiff::write_phylip(string& output_phylip_file_name, cGenomeDiff& mas
   for (vector<cGenomeDiff>::iterator gd_it = gd_list.begin(); gd_it != gd_list.end(); gd_it++) {
     
     string base_name = gd_it->get_base_file_name();
-    out << setw(10) << base_name << " "; 
+    const uint32_t phylip_name_max_length = 10;
+    string base_name_truncated;
+    if (base_name.size() > phylip_name_max_length)
+      base_name_truncated = base_name.substr(0,phylip_name_max_length);
+    else
+      base_name_truncated = base_name + repeat_char(' ', phylip_name_max_length - base_name.size());
+      
+    out << base_name_truncated; 
     
     for (diff_entry_list_t::iterator it=mut_list.begin(); it != mut_list.end(); it++) {
       cDiffEntry& mut = **it;
@@ -3907,7 +3914,7 @@ void cGenomeDiff::write_phylip(string& output_phylip_file_name, cGenomeDiff& mas
       string val = mut[key];
       
       if (mut._type == SNP) {
-        if (val == "?") out << "N";
+        if ((val == "?") || (val == "D")) out << "N";
         else {
           //ASSERT(is_double(val), )
           double freq = from_string<double>(val);
@@ -3919,7 +3926,7 @@ void cGenomeDiff::write_phylip(string& output_phylip_file_name, cGenomeDiff& mas
           else out << "N";
         }        
       } else {
-        if (val == "?") out << "N";
+        if ((val == "?") || (val == "D")) out << "N";
         else {
           //ASSERT(is_double(val), )
           double freq = from_string<double>(val);
