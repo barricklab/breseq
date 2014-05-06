@@ -978,15 +978,15 @@ int do_phylogeny(int argc, char* argv[])
     vector<string> gd_base_names;
     vector<cGenomeDiff> gd_list;
     
+    cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
+
     bool polymorphisms_found = false; // handled putting in the polymorphism column if only one file provided
     uint32_t file_num = 1;
     for (uint32_t i = 0; i < gd_path_names.size(); i++){
         uout("Reading input GD file",gd_path_names[i]);
         cGenomeDiff single_gd(gd_path_names[i]);
         gd_list.push_back(single_gd);
-    }
-    
-    cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
+    }    
 
     for (vector<cGenomeDiff>::iterator it=gd_list.begin(); it!= gd_list.end(); it++) {
         cGenomeDiff& single_gd = *it;
