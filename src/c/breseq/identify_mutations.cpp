@@ -667,13 +667,15 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
 void identify_mutations_pileup::at_target_end(const uint32_t tid) {
 
   // end "open" Missing Coverahge and Unknown intervals
-	check_deletion_completion(target_length(tid)+1, tid, position_coverage(numeric_limits<double>::quiet_NaN()), numeric_limits<double>::quiet_NaN());
+  if (!_settings.no_deletion_prediction) {
+    check_deletion_completion(target_length(tid)+1, tid, position_coverage(numeric_limits<double>::quiet_NaN()), numeric_limits<double>::quiet_NaN());
+  }
   update_unknown_intervals(target_length(tid)+1, tid, true, false);
 
   // if this target failed to have its coverage fit, mark the entire thing as a deletion
   double _this_deletion_propagation_cutoff = _deletion_propagation_cutoffs[tid];
   // if the propagation cutoff is zero then the coverage distribution failed
-  if (_this_deletion_propagation_cutoff < 0.0)
+  if (!_settings.no_deletion_prediction && (_this_deletion_propagation_cutoff < 0.0))
   {
     cDiffEntry del(MC);
     del[SEQ_ID] = target_name(tid);

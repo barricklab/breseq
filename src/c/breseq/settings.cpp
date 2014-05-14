@@ -460,6 +460,8 @@ namespace breseq
     
     
     this->targeted_sequencing = options.count("targeted-sequencing");
+    if (this->targeted_sequencing)
+      this->no_deletion_prediction = true;
     
     this->print_mutation_identification_per_position_file = options.count("per-position-file");
     
