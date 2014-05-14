@@ -1056,13 +1056,21 @@ int do_phylogeny(int argc, char* argv[])
     // Create mutation key file
     uout("Creating mutation key file");
 
-    string mutation_key_file_name = phylip_input_file_name + ".key";
+    string mutation_key_file_name = phylip_input_file_name + ".mutation.key";
     ofstream mutation_key(mutation_key_file_name.c_str());
     diff_entry_list_t mut_list = gd.mutation_list();
     uint32_t i=0;
     for(diff_entry_list_t::iterator it = mut_list.begin(); it != mut_list.end(); it++) {
         cDiffEntry& mut = **it;
-        mutation_key << to_string(i++) << "\t" << to_string(mut._type) + "-" + mut[POSITION] << endl;
+        mutation_key << to_string(mut._type) + "-" + mut[POSITION] + "-" + mut[GENE_NAME] << endl;
+    }
+    
+    // Create sample key file
+    string sample_key_file_name = phylip_input_file_name + ".sample.key";
+    ofstream sample_key(sample_key_file_name.c_str());
+    i=1;
+    for(vector<string>::iterator it = gd_base_names.begin(); it != gd_base_names.end(); it++) {
+        sample_key << "_" + to_string<uint32_t>(i++) + "_" << "\t" << *it << endl;
     }
     
     string merged_gd_file_name =  output_base_name + ".merged.gd";

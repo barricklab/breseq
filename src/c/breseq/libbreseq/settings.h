@@ -223,7 +223,7 @@ namespace breseq
     bool no_read_filtering;               // Default = false
     bool no_junction_prediction;          // Default = false COMMAND-LINE OPTION
 		bool no_mutation_prediction;          // Default = false
-		bool no_deletion_prediction;          // Default = false
+		bool no_deletion_prediction;          // Default = false set to true if targeted_sequencing
 		bool no_alignment_or_plot_generation; // Default = false  COMMAND-LINE OPTION
 		bool do_copy_number_variation;        // Default = false COMMAND-LINE OPTION
 		bool do_periodicity;							    // Default = false COMMAND-LINE OPTION
