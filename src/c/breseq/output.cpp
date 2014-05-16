@@ -384,6 +384,8 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   list<counted_ptr<cDiffEntry> > ra = gd.filter_used_as_evidence(gd.show_list(ra_types));
   ra.remove_if(not1(cDiffEntry::field_exists("reject")));  
   ra.remove_if(cDiffEntry::field_exists("mixed"));
+  ra.remove_if(cDiffEntry::field_exists(NO_SHOW));  
+
   ra.sort(cDiffEntry::by_scores(make_vector<string>("quality")));
   if (ra.size() > 0) {
     HTML << "<p>" << endl;
@@ -393,6 +395,7 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   // Mixed predictions ≥50% RA evidence
   list<counted_ptr<cDiffEntry> > mixed_ra = gd.filter_used_as_evidence(gd.show_list(ra_types));
   mixed_ra.remove_if(not1(cDiffEntry::field_exists("mixed")));
+  ra.remove_if(cDiffEntry::field_exists(NO_SHOW));  
   HTML << "<p>" << endl;
   if (mixed_ra.size() > 0) {
     HTML << html_read_alignment_table_string(mixed_ra, false, "Marginal mixed read alignment evidence...", relative_path) << endl;
@@ -402,6 +405,8 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
   diff_entry_list_t jc = gd.filter_used_as_evidence(gd.show_list(jc_types));
   jc.remove_if(not1(cDiffEntry::field_exists("reject")));
+  jc.remove_if(cDiffEntry::field_exists(NO_SHOW));  
+
   if (jc.size()) {
     //Sort by score, not by position (the default order)...
     jc.sort(cDiffEntry::by_scores(

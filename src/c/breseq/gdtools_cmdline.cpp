@@ -875,9 +875,7 @@ int do_annotate(int argc, char* argv[])
   for (uint32_t i = 0; i < gd_path_names.size(); i++){
     uout("Reading input GD file",gd_path_names[i]);
     cGenomeDiff single_gd(gd_path_names[i]);
-    //remove the evidence to speed up the merge
-    //single_gd.remove(cGenomeDiff::EVIDENCE);
-    //No, can't remove UN evidence!
+      
     if (!compare_mode && (i==0)) {
       diff_entry_list_t muts = single_gd.mutation_list();
       for(diff_entry_list_t::iterator it=muts.begin(); it != muts.end(); it++) {
@@ -890,10 +888,17 @@ int do_annotate(int argc, char* argv[])
     }
     gd_base_names.push_back(single_gd.get_base_file_name());
     gd_list.push_back(single_gd);
-    gd.merge(single_gd);
+    
+    // Remove the evidence to speed up the merge  
+    // ** Don't do this before saving, because we need to preserve UN evidence
+    cGenomeDiff cleaned_single_gd(single_gd);  
+    cleaned_single_gd.remove(cGenomeDiff::EVIDENCE);
+    gd.merge(cleaned_single_gd);
   }
   gd.sort();
   
+  uout("Tabulating frequencies of mutations across all files");
+
   // Then add frequency columns for all genome diffs
   if (compare_mode || polymorphisms_found) {
     cGenomeDiff::tabulate_frequencies_from_multiple_gds(gd, gd_list);
