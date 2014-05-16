@@ -864,7 +864,14 @@ namespace breseq
     // use 'which' as a fallback - bin_path does not work on all systems
     if (this->installed["samtools"].size() == 0) {
       this->installed["samtools"] = SYSTEM_CAPTURE("which samtools", true);
+      
+      // which may return nothing if it is not in the path or a message,
+      // make the output nothing in either case
+      if (this->installed["samtools"].find("no samtools in") == string::npos) {
+        this->installed["samtools"] = "";
+      }
     }
+
     
     if (this->installed["samtools"].size() != 0) {
       string version_string = SYSTEM_CAPTURE(this->installed["samtools"], true);
@@ -885,6 +892,12 @@ namespace breseq
     // detect SSAHA2 system-wide install
     this->installed["SSAHA2"] = SYSTEM_CAPTURE("which ssaha2", true);
     this->installed["SSAHA2_version_string"] = "";
+    
+    // which may return nothing if it is not in the path or a message,
+    // make the output nothing in either case
+    if (this->installed["SSAHA2"].find("no ssaha2 in") == string::npos) {
+      this->installed["SSAHA2"] = "";
+    }
     
     if (this->installed["SSAHA2"].size() != 0) {
       string version_string = SYSTEM_CAPTURE(this->installed["SSAHA2"] + " --version", true);
