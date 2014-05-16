@@ -867,7 +867,7 @@ namespace breseq
       
       // which may return nothing if it is not in the path or a message,
       // make the output nothing in either case
-      if (this->installed["samtools"].find("no samtools in") == string::npos) {
+      if (this->installed["samtools"].find("no samtools in") != string::npos) {
         this->installed["samtools"] = "";
       }
     }
@@ -892,12 +892,10 @@ namespace breseq
     // detect SSAHA2 system-wide install
     this->installed["SSAHA2"] = SYSTEM_CAPTURE("which ssaha2", true);
     this->installed["SSAHA2_version_string"] = "";
-    
-    cout << this->installed["SSAHA2"] << endl;
-    
+        
     // which may return nothing if it is not in the path or a message,
     // make the output nothing in either case
-    if (this->installed["SSAHA2"].find("no ssaha2 in") == string::npos) {
+    if (this->installed["SSAHA2"].find("no ssaha2 in") != string::npos) {
       this->installed["SSAHA2"] = "";
     }
     
