@@ -1437,6 +1437,7 @@ diff_entry_list_t cGenomeDiff::filter_used_as_evidence(const diff_entry_list_t& 
 }
 
 // Helper function for mutation_unknown and mutation_deleted
+// --> should optimize for nonoverlapping intervals
 bool cGenomeDiff::mutation_in_entry_of_type(cDiffEntry mut, const gd_entry_type type)
 {
   uint32_t start = mut.get_start();
