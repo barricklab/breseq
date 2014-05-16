@@ -893,6 +893,8 @@ namespace breseq
     this->installed["SSAHA2"] = SYSTEM_CAPTURE("which ssaha2", true);
     this->installed["SSAHA2_version_string"] = "";
     
+    cout << this->installed["SSAHA2"] << endl;
+    
     // which may return nothing if it is not in the path or a message,
     // make the output nothing in either case
     if (this->installed["SSAHA2"].find("no ssaha2 in") == string::npos) {
