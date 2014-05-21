@@ -1648,11 +1648,13 @@ int do_download(int argc, char *argv[])
     cGenomeDiff gd(file_name);
     const vector<string> &refs  = gd.metadata.ref_seqs;
     const vector<string> &reads = gd.metadata.read_seqs;
-
+    const vector<string> &adapters = gd.metadata.adapter_seqs;
+      
     list<string> seqs_kv_pairs;
     copy(refs.begin(), refs.end(), back_inserter(seqs_kv_pairs));
     if (!options.count("reference-only")) {
       copy(reads.begin(), reads.end(), back_inserter(seqs_kv_pairs));
+      copy(adapters.begin(), adapters.end(), back_inserter(seqs_kv_pairs));
     }
 
     for (;seqs_kv_pairs.size(); seqs_kv_pairs.pop_front()) {
@@ -1784,22 +1786,14 @@ int do_runfile(int argc, char *argv[])
   ss << "Usage: gdtools RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> -g <genome diff data dir>\n";
   ss << "Usage: gdtools RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> <file1.gd file2.gd file3.gd ...>";
   AnyOption options(ss.str());
-  options("executable,e",     "Executable program to run, add extra options here.", "breseq");
-  options("options",          "Options to be passed to the executable.");
-
+  options("mode,m",             "Type of command file to generate. Valid options are: breseq, flexbar, flexbar-paired.", "breseq");
+  options("executable,e",     "Alternative executable program to run.");
+  options("options",          "Options to be passed to the executable. These will appear first in the command line.");
+	options("runfile,r",        "Name of the run file to be output.", "commands");
   options("data_dir,g",       "Directory to searched for genome diff files.", "01_Data");
-  options("downloads_dir,d",  "Downloads directory where read and reference files are located.", "02_Downloads");
-  options("output_dir,o",     "Output directory for commands within the runfile.", "03_Output");
+  options("downloads_dir,d",  "Downloads directory where read and reference files are located. Defaults to 02_Trimmed for read files if #=ADAPTSEQ tags are present.", "02_Downloads");
+  options("output_dir,o",     "Output directory for commands within the runfile. (Default = 03_Output for breseq; = 02_Trimmed for flexbar commands.");
   options("log_dir,l",        "Directory for error log file that captures the executable's stdout and sterr.", "04_Logs");
-
-  options("runfile,r",        "Name of the run file to be output.", "commands");
-  options("launcher",         "Name of the launcher script run on TACC", "launcher");
-
-  options("name",             "Name for job.", "breseq");
-  options("email",            "Email address to be added to launcher script. Informs you when a job starts and finishes.");
-  options("time",             "Alloted time for job.", "14:00:00");
-
-  options("aln",              "Pass alignment files from breseq's pipeline as an argument.", TAKES_NO_ARGUMENT);
 
   options.addUsage("\n");
   options.addUsage("***Reminder: Create the error log directory before running TACC job.");
@@ -1833,30 +1827,45 @@ int do_runfile(int argc, char *argv[])
     return -1;
   }
 
-  const string &downloads_dir =
-      cString(options["downloads_dir"]).trim_ends_of('/');
+	
+	
+  //! Check mode and alter defaults if needed
+  string exe;
+	string runfile_path;
+	string output_dir;
+	if (options["mode"] == "breseq") {
+    exe = "breseq";
+		runfile_path = "commands";
+		output_dir = "03_Output";
+  } else if (options["mode"] == "flexbar") {
+    exe = "flexbar";
+		runfile_path = "flexbar_commands";
+    output_dir = "02_Trimmed";
+  } else if (options["mode"] == "flexbar-paired") {
+    exe = "flexbar";
+		runfile_path = "flexbar_commands";
+    output_dir = "02_Trimmed";
+  } else {
+    options.addUsage("\nERROR: Unrecognized mode (-m) specified.");
+    options.printUsage();
+    return -1;
+  }
 
-  map<string, map<string, string> > lookup_table;
-  //Paths where .gbk and .fastq files are located.
-  lookup_table["GENBANK"]
-      ["download_path_format"] = downloads_dir + "/%s.gbk";
-  lookup_table["SRA"]
-      ["download_path_format"] = downloads_dir + "/%s.fastq";
-  lookup_table["BARRICKLAB-PUBLIC"]
-      ["download_path_format"] = downloads_dir + "/%s";
-  lookup_table["BARRICKLAB-PRIVATE"]
-      ["download_path_format"] = downloads_dir + "/%s";
-  lookup_table["LOCAL"]
-      ["download_path_format"] = downloads_dir + "/%s";
+  string download_dir = cString(options["downloads_dir"]).trim_ends_of('/');
 
-  const string &exe = options["executable"];
+  if (options.count("executable"))
+    exe = options["executable"];
+	
+	if (options.count("runfile"))
+    runfile_path = options["runfile"];
+	
+	if (options.count("output_dir"))
+    output_dir = options["output_dir"];
 
   string name          = options["name"];
   string log_dir       = cString(options["log_dir"]).trim_ends_of('/');
-  string output_dir    = cString(options["output_dir"]).trim_ends_of('/');
-  string runfile_path  = cString(options["runfile"]).trim_ends_of('/');
-  string launcher_path = cString(options["launcher"]).trim_ends_of('/');
 
+	create_path(output_dir.c_str());
   create_path(log_dir.c_str());
 
   const string &log_path_format = log_dir + "/%s.log.txt";
@@ -1867,9 +1876,13 @@ int do_runfile(int argc, char *argv[])
     const string &file_name = file_names.front();
     cout << endl << "Parsing file: " << file_name << endl;
     cGenomeDiff gd(file_name);
-    const vector<string> &refs  = gd.metadata.ref_seqs;
-    const vector<string> &reads = gd.metadata.read_seqs;
-
+    vector<string> &refs  = gd.metadata.ref_seqs;
+    vector<string> &reads = gd.metadata.read_seqs;
+    vector<string> &adapters = gd.metadata.adapter_seqs;
+    map<string,string> &adapters_for_reads  = gd.metadata.adapters_for_reads;
+		vector<vector<string> > &reads_by_pair  = gd.metadata.reads_by_pair;
+  
+		
     if (refs.size() == 0) {
       cerr << ">> Skipping file because no #REFSEQ= header lines found." << endl ;
       continue;  
@@ -1879,124 +1892,110 @@ int do_runfile(int argc, char *argv[])
       cerr << ">> Skipping file because no #READSEQ= header lines found." << endl ;
       continue;  
     }
+  
+
+    if (options["mode"] == "breseq") {  
+			
+      //! Step: Begin building command line.
+      stringstream ss;
+    
+      //! Part 1: Executable and options to pass to it if given by user.
+      ss << exe;
+    
+      if (options.count("options")) {
+        ss << " " << options["options"];
+      }
+      //! Part 2: Pipeline's output path.
+      ss << " -o " << output_dir + "/" + gd.metadata.run_name;  
+				
+			//! Part 3: Reference argument path(s).
+			for (vector<string>::const_iterator ref_file_it=refs.begin(); ref_file_it != refs.end(); ref_file_it++) {  
+				ss << " -r " << download_dir << "/" << cString(*ref_file_it).get_base_name();
+			}
+			
+			//! Part 4: Read argument path(s).
+			for (vector<string>::const_iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {  
+				 ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
+			}
         
-    list<string> seq_kv_pairs;
-    copy(refs.begin(), refs.end(), back_inserter(seq_kv_pairs));
-    copy(reads.begin(), reads.end(), back_inserter(seq_kv_pairs));
-    assert(seq_kv_pairs.size());
+      //! Part 5: Error log path.
+      ss << " >& " << cString(log_path_format.c_str(), gd.metadata.run_name.c_str());
+        
+      //! Step: Output to file.
+      cout << ss.str() << endl;
+      runfile << ss.str() << endl;
+      ++n_cmds;
+        
+    } else if (options["mode"] == "flexbar") {  
+      
+			// For each read file trim with requested adaptor...
+			for (vector<string>::const_iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {  
+				//! Step: Begin building command line.
+				stringstream ss;
+				
+				//! Part 1: Executable and options to pass to it if given by user.
+				ss << exe;
+				if (options.count("options")) {
+						ss << " " << options["options"];
+				}
+				ss << " -f fastq";
+				
+				//! Part 2: Output read base name.
+				ss << " -t " << output_dir + "/" + cString(*read_file_it).get_base_name_no_extension();
 
-    //! Step: Begin building command line.
-    stringstream ss;
+				//! Part 3: Read file name			
+				ss << " -r " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
+				
+				//! Part 4: Adaptor file name			
+				ASSERT(adapters_for_reads.count(*read_file_it), "No #=ADAPTSEQ information in GenomeDiff file.");
+				ss << " -a " << download_dir << "/" << cString(adapters_for_reads[*read_file_it]).get_base_name();
+				
+				//! Step: Output to file.
+				cout << ss.str() << endl;
+				runfile << ss.str() << endl;
+				++n_cmds;
+			}
+        
+    } else if (options["mode"] == "flexbar-paired") { 
+			for (vector<vector<string> >::const_iterator read_pair_it=reads_by_pair.begin(); read_pair_it != reads_by_pair.end(); read_pair_it++) {  
 
-    //! Part 1: Executable and options to pass to it if given by user.
-    ss << exe;
-
-    if (options.count("options")) {
-      ss << " " << options["options"];
+				ASSERT(read_pair_it->size() <= 2, "More than two read files paired: " + join(*read_pair_it, ", "));
+				
+				//! Step: Begin building command line.
+				stringstream ss;
+				
+				//! Part 1: Executable and options to pass to it if given by user.
+				ss << exe;
+				if (options.count("options")) {
+					ss << " " << options["options"];
+				}
+				ss << " -f fastq";
+				
+				//! Part 2: Output read base name.
+				ss << " -t " << output_dir + "/" + substitute(cString((*read_pair_it)[0]).get_base_name_no_extension(), "_R1", "");
+				
+				//! Part 3: Read 1 file name			
+				ss << " -r " << download_dir << "/" << cString((*read_pair_it)[0]).get_base_name_unzipped();
+				
+				//! Part 4: Read 2 file name			
+				if (read_pair_it->size() == 2) {
+					ss << " -p " << download_dir << "/" << cString((*read_pair_it)[1]).get_base_name_unzipped();
+				}
+				
+				//! Part 5: Adaptor file name			
+				ASSERT(adapters_for_reads.count((*read_pair_it)[0]), "No #=ADAPTSEQ information in GenomeDiff file.");
+				ss << " -a " << download_dir << "/" << cString(adapters_for_reads[(*read_pair_it)[0]]).get_base_name();
+				
+				//! Step: Output to file.
+				cout << ss.str() << endl;
+				runfile << ss.str() << endl;
+				++n_cmds;
+			}
     }
-
-    //! Part 2: Pipeline's output path.
-    ss << " -o " << output_dir + "/" + gd.metadata.run_name;
-
-    size_t n_refs = refs.size();
-    for (;seq_kv_pairs.size(); seq_kv_pairs.pop_front()) {
-      const cKeyValuePair seq_kvp(seq_kv_pairs.front(), ':');
-
-      cString download_path = "";
-        if (seq_kvp.valid()) {
-
-        const string &key = to_upper(seq_kvp.get_key());
-        const string &value = cString(seq_kvp.get_value()).trim_ends_of('/');
-        const string &base_name = cString(value).get_base_name();
-
-        if (!lookup_table.count(key)) {
-          WARN("File: " + file_name + " has invalid key: " + key);
-          continue;
-        }
-        download_path = cString(lookup_table[key]["download_path_format"].c_str(), base_name.c_str());
-      } else {
-        download_path = seq_kvp;
-      }
-
-      //! Part 3: Reference argument path(s).
-      if (n_refs) {
-        ss << " -r " << download_path;
-        n_refs--;
-      } else {
-      //! Part 4: Read arguement path(s).
-        if (!options.count("aln")) {
-          if (download_path.ends_with(".gz")) download_path.remove_ending(".gz");
-          ss << " " << download_path;
-        }
-      }
-    }
-    if (options.count("aln")) {
-      ss << " -a " << options["output_dir"] << "/breseq/" << gd.metadata.run_name << "/03_candidate_junctions/best.sam";
-    }
-    //! Part 5: Error log path.
-    ss << " >& " << cString(log_path_format.c_str(), gd.metadata.run_name.c_str());
-
-    //! Step: Output to file.
-    cout << ss.str() << endl;
-    runfile << ss.str() << endl;
-    ++n_cmds;
   }
 
-  //! Step: Create launcher script.
-  /*Note: For lonestar we are under the current assumption that a 4way 12 will
-    run 3 breseq jobs. On Ranger a 16way 16 will run 16 breseq jobs.*/
-  //Ranger:   '/share/home/$NUM/$USER'
-  //Lonestar: '/home1/$NUM/$USER'
-  size_t tasks = 0, nodes = 0;
-  const cString &home_path = SYSTEM_CAPTURE("echo $HOME", true);
-  // RANGER
-  if (home_path.starts_with("/share")) {
-    tasks = 16;
-    nodes = static_cast<size_t>(ceilf(static_cast<float>(n_cmds) / 16.f) * 16);
-  }
-  // Default to LONESTAR
-  else {
-    if (!home_path.starts_with("/home1/")) {
-      WARN("TACC system not determined, defaulting to Lonestar.");
-    }
-    tasks = 4;
-    nodes = static_cast<size_t>(ceilf(static_cast<float>(n_cmds) / 3.f) * 12);
-  }
-  assert(tasks || nodes);
-
-  ofstream launcher(launcher_path.c_str());
-  // #$ Parameters.
-  fprintf(launcher, "#!/bin/csh\n");
-  fprintf(launcher, "#$ -N %s\n", name.c_str());
-  fprintf(launcher, "#$ -pe %uway %u\n", tasks, nodes);
-  fprintf(launcher, "#$ -q normal\n");
-  fprintf(launcher, "#$ -o %s.o$JOB_ID\n", name.c_str());
-  fprintf(launcher, "#$ -l h_rt=%s\n", options["time"].c_str());
-  fprintf(launcher, "#$ -V\n");
-  fprintf(launcher, "#$ -cwd\n");
-
-  if (options.count("email")) {
-    fprintf(launcher, "#$ -M %s\n", options["email"].c_str());
-  }
-
-  fprintf(launcher, "#$ -m be\n");
-  fprintf(launcher, "#$ -A breseq\n");
-  fprintf(launcher, "\n");
-
-  // Set environmental variables.
-  fprintf(launcher, "module load launcher\n");
-  fprintf(launcher, "setenv EXECUTABLE     $TACC_LAUNCHER_DIR/init_launcher\n");
-  fprintf(launcher, "setenv CONTROL_FILE   %s\n", runfile_path.c_str());
-  fprintf(launcher, "setenv WORKDIR        .\n");
-  fprintf(launcher, "\n");
-
-  // Job submission.
-  fprintf(launcher, "cd $WORKDIR/\n");
-  fprintf(launcher, "$TACC_LAUNCHER_DIR/paramrun $EXECUTABLE $CONTROL_FILE\n");
-
-  launcher.close();
-  SYSTEM("chmod +x " + launcher_path, true);
-
+  cerr << "Total commands: " << n_cmds << endl;
+	
   return 0;
 }
 

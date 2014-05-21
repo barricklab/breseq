@@ -456,6 +456,9 @@ public:
     string author;
     vector<string> ref_seqs;
     vector<string> read_seqs;
+    vector<string> adapter_seqs;
+    map<string,string> adapters_for_reads; // Keeps track of what adaptors belong to what read files
+    vector<vector<string> > reads_by_pair; // Keeps track of pairs R1 and R2.
     map<string,string> breseq_data; // Use this to write values from pipeline to gd
     string treatment;
     string population;

@@ -914,13 +914,50 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
       metadata.author = second_half;
     }
     else if (split_line[0] == "#=REFSEQ" && split_line.size() > 1) {
-      metadata.ref_seqs.resize(metadata.ref_seqs.size() + 1);
-      metadata.ref_seqs.back() = second_half;
+      metadata.ref_seqs.push_back(second_half);
     }
     else if (split_line[0] == "#=READSEQ" && split_line.size() > 1) {
-      metadata.read_seqs.resize(metadata.read_seqs.size() + 1);
-      metadata.read_seqs.back() = second_half;
+      
+      string read_name = second_half;
+      metadata.read_seqs.push_back(read_name);
+      if (metadata.adapter_seqs.size() > 0) {
+        metadata.adapters_for_reads[read_name] = metadata.adapter_seqs.back();
+      }
+      
+      // Search for corresponding pair
+      string pair_name = read_name;
+      size_t pos = pair_name.find("_R1");
+      if (pos != string::npos) {
+        pair_name = pair_name.replace(pos+2, 1, "2");
+      }
+      else {
+        pos = pair_name.find("_R2");
+        if (pos != string::npos) {
+          pair_name = pair_name.replace(pos+2, 1, "1");
+        }
+      }
+      
+      bool found = false;
+      for (vector<vector<string> >::iterator it=metadata.reads_by_pair.begin(); it != metadata.reads_by_pair.end(); it++) {
+        for (vector<string>::iterator it2=it->begin(); it2 != it->end(); it2++) {
+          if (*it2 == pair_name) {
+            it->push_back(read_name);
+            found = true;
+            break;
+          }
+        }
+        if (found) break;
+      }
+      
+      if (!found) {
+        metadata.reads_by_pair.push_back(make_vector<string>(read_name));
+      }
+      
     }
+    else if (split_line[0] == "#=ADAPTSEQ" && split_line.size() > 1) {
+      metadata.adapter_seqs.push_back(second_half);
+    }
+    
     else if (split_line[0] == "#=TITLE" && split_line.size() > 1) {
       metadata.run_name = second_half;
       replace(metadata.run_name.begin(), metadata.run_name.end(), ' ', '_');
