@@ -1112,6 +1112,7 @@ class cString : public string
 
     cString get_base_name() const;
     cString get_base_name_no_extension(bool remove_all_extensions = false) const;
+    cString get_base_name_unzipped() const;
     cString get_file_extension() const;
     cString get_directory_path() const;
 
@@ -1201,6 +1202,15 @@ inline cString cString::get_base_name_no_extension(bool remove_all_extensions) c
   else
     return this_return.substr(0, pos);
 }
+  
+inline cString cString::get_base_name_unzipped() const
+{
+  cString this_return = this->get_base_name();
+  this_return.remove_ending(".gz");
+  this_return.remove_ending(".zip");
+  return this_return;
+}
+
 
 inline cString cString::get_file_extension() const
 {
