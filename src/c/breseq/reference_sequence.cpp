@@ -1178,24 +1178,33 @@ void cSequenceFeature::ReadGenBankTag(std::string& tag, std::string& s, std::ifs
   // erase through the equals on this line
   int pos = s.find("=");
   s.erase(0,pos+1);
-
-  // If there is a quote then we need to continue to the last quote
+  
   
   // Two cases, we encounter a quote or open parenthesis first (there should be no space before either).
   if (s[0] == '"') {
+    string value;
     s.erase(0,1);
     
     size_t second_quote_pos = s.find("\"");
     
+    // Skip cases of two quotes in a row, replacing with a single quote
+    while ((second_quote_pos != string::npos) && (second_quote_pos+1 < s.length())) {
+      if (s[second_quote_pos+1] != '"') break;
+      value += s.substr(0, second_quote_pos+1);
+      s.erase(0, second_quote_pos+2); // this erases second quote copy
+      second_quote_pos = s.find("\"");
+    }
+    
     // One liner
     if (second_quote_pos != string::npos) {
       s.erase(second_quote_pos,s.length());
-      (*this)[tag] = s;
+      value += s;
+      (*this)[tag] = value;
       return;
     }
     
-    // If the value is quoted, we have to read additional lines until end quote
-    string value = s;
+    // If the value is still quoted, we have to read additional lines until end quote
+    value += s;
     
     bool found_last_quote = false;
     while (!found_last_quote && !in.eof()) {
@@ -1272,14 +1281,16 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
         (*current_feature)["type"] = first_word;
         // parse the rest of the line
         std::string coord_s = GetWord(line);
+        if (coord_s.size() == 0) {
+          WARN("Error reading GenBank entry: coordinates expected at end of line. This line will be skipped:\n" + first_word + " " + coord_s);
+          continue;
+        }
         current_feature->ReadGenBankCoords(coord_s, in);
       }
     }
     // Minor tag = information about current feature
     else {
       ASSERT(current_feature, "No current feature.");
-
-      // Remove leading slash
       current_feature->ReadGenBankTag(first_word, line, in); // reads multi-line entries
     }
   }

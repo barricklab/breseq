@@ -868,7 +868,7 @@ int do_annotate(int argc, char* argv[])
   
   // First use merge to produce a file with a line for each mutation
   cGenomeDiff gd;
-  vector<string> gd_base_names;
+  vector<string> gd_titles;
   vector<cGenomeDiff> gd_list;
 
   bool polymorphisms_found = false; // handled putting in the polymorphism column if only one file provided
@@ -886,7 +886,6 @@ int do_annotate(int argc, char* argv[])
         }
       }
     }
-    gd_base_names.push_back(single_gd.get_base_file_name());
     gd_list.push_back(single_gd);
     
     // Remove the evidence to speed up the merge  
@@ -901,7 +900,7 @@ int do_annotate(int argc, char* argv[])
 
   // Then add frequency columns for all genome diffs
   if (compare_mode || polymorphisms_found) {
-    cGenomeDiff::tabulate_frequencies_from_multiple_gds(gd, gd_list);
+    cGenomeDiff::tabulate_frequencies_from_multiple_gds(gd, gd_list, gd_titles);
   }
   
   vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
@@ -926,7 +925,7 @@ int do_annotate(int argc, char* argv[])
     if (polymorphisms_found)
       mt_options.force_frequencies_for_one_reference = true;
     mt_options.one_ref_seq = ref_seq_info.size() == 1;
-    mt_options.gd_name_list_ref = gd_base_names;
+    mt_options.gd_name_list_ref = gd_titles;
     mt_options.repeat_header = from_string<int32_t>(options["repeat-header"]);
     
     html_compare(settings, output_file_name, "Mutation Comparison", gd, mt_options);
@@ -980,7 +979,6 @@ int do_phylogeny(int argc, char* argv[])
     
     // First use merge to produce a file with a line for each mutation
     cGenomeDiff gd;
-    vector<string> gd_base_names;
     vector<cGenomeDiff> gd_list;
     
     cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
@@ -996,8 +994,7 @@ int do_phylogeny(int argc, char* argv[])
     for (vector<cGenomeDiff>::iterator it=gd_list.begin(); it!= gd_list.end(); it++) {
         cGenomeDiff& single_gd = *it;
         gd.merge(single_gd);
-        gd_base_names.push_back(single_gd.get_base_file_name());
-        single_gd.set_base_file_name("_" + to_string<uint32_t>(file_num++) + "_");
+        single_gd.set_title("_" + to_string<uint32_t>(file_num++) + "_");
     }
 
     gd.sort();
@@ -1005,7 +1002,8 @@ int do_phylogeny(int argc, char* argv[])
     uout("Tabulating mutation frequencies across samples");
 
     // Then add frequency columns for all genome diffs
-    cGenomeDiff::tabulate_frequencies_from_multiple_gds(gd, gd_list);
+		vector<string> title_list;
+    cGenomeDiff::tabulate_frequencies_from_multiple_gds(gd, gd_list, title_list);
     
     vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
     uout("Reading input reference sequence files") << reference_file_names << endl;
@@ -1048,7 +1046,7 @@ int do_phylogeny(int argc, char* argv[])
     
     // Replace all file names 
     file_num = 1;
-    for (vector<string>::iterator it = gd_base_names.begin(); it != gd_base_names.end(); it++) {
+    for (vector<string>::iterator it = title_list.begin(); it != title_list.end(); it++) {
         slurped_file = substitute(slurped_file, "_" + to_string<uint32_t>(file_num++) + "_", *it);
     }
     renamed_tree << slurped_file;
@@ -1074,7 +1072,7 @@ int do_phylogeny(int argc, char* argv[])
     string sample_key_file_name = phylip_input_file_name + ".sample.key";
     ofstream sample_key(sample_key_file_name.c_str());
     i=1;
-    for(vector<string>::iterator it = gd_base_names.begin(); it != gd_base_names.end(); it++) {
+    for(vector<string>::iterator it = title_list.begin(); it != title_list.end(); it++) {
         sample_key << "_" + to_string<uint32_t>(i++) + "_" << "\t" << *it << endl;
     }
     
@@ -1792,8 +1790,8 @@ int do_runfile(int argc, char *argv[])
 	options("runfile,r",        "Name of the run file to be output.", "commands");
   options("data_dir,g",       "Directory to searched for genome diff files.", "01_Data");
   options("downloads_dir,d",  "Downloads directory where read and reference files are located. Defaults to 02_Trimmed for read files if #=ADAPTSEQ tags are present.", "02_Downloads");
-  options("output_dir,o",     "Output directory for commands within the runfile. (Default = 03_Output for breseq; = 02_Trimmed for flexbar commands.");
-  options("log_dir,l",        "Directory for error log file that captures the executable's stdout and sterr.", "04_Logs");
+  options("output_dir,o",     "Output directory for commands within the runfile. (Default = 03_Output for breseq; = 02_Trimmed for flexbar commands.)");
+  options("log_dir,l",        "Directory for error log file that captures the executable's stdout and sterr. (Default = 04_Logs for breseq; 04_Trim_Logs for flexbar");
 
   options.addUsage("\n");
   options.addUsage("***Reminder: Create the error log directory before running TACC job.");
@@ -1833,18 +1831,22 @@ int do_runfile(int argc, char *argv[])
   string exe;
 	string runfile_path;
 	string output_dir;
+	string log_dir;
 	if (options["mode"] == "breseq") {
     exe = "breseq";
 		runfile_path = "commands";
 		output_dir = "03_Output";
+		log_dir = "04_Logs";
   } else if (options["mode"] == "flexbar") {
     exe = "flexbar";
 		runfile_path = "flexbar_commands";
     output_dir = "02_Trimmed";
+		log_dir = "04_Trim_Logs";
   } else if (options["mode"] == "flexbar-paired") {
     exe = "flexbar";
 		runfile_path = "flexbar_commands";
     output_dir = "02_Trimmed";
+		log_dir = "04_Trim_Logs";
   } else {
     options.addUsage("\nERROR: Unrecognized mode (-m) specified.");
     options.printUsage();
@@ -1861,14 +1863,14 @@ int do_runfile(int argc, char *argv[])
 	
 	if (options.count("output_dir"))
     output_dir = options["output_dir"];
+	
+	if (options.count("log_dir"))
+    log_dir = options["log_dir"];
 
   string name          = options["name"];
-  string log_dir       = cString(options["log_dir"]).trim_ends_of('/');
 
 	create_path(output_dir.c_str());
   create_path(log_dir.c_str());
-
-  const string &log_path_format = log_dir + "/%s.log.txt";
 
   ofstream runfile(runfile_path.c_str());
   size_t n_cmds = 0;
@@ -1906,7 +1908,7 @@ int do_runfile(int argc, char *argv[])
         ss << " " << options["options"];
       }
       //! Part 2: Pipeline's output path.
-      ss << " -o " << output_dir + "/" + gd.metadata.run_name;  
+      ss << " -o " << output_dir + "/" + gd.get_title();  
 				
 			//! Part 3: Reference argument path(s).
 			for (vector<string>::const_iterator ref_file_it=refs.begin(); ref_file_it != refs.end(); ref_file_it++) {  
@@ -1919,7 +1921,7 @@ int do_runfile(int argc, char *argv[])
 			}
         
       //! Part 5: Error log path.
-      ss << " >& " << cString(log_path_format.c_str(), gd.metadata.run_name.c_str());
+      ss << " >& " << log_dir << "/" << gd.get_title() << ".log" << endl;
         
       //! Step: Output to file.
       cout << ss.str() << endl;
@@ -1941,7 +1943,7 @@ int do_runfile(int argc, char *argv[])
 				ss << " -f fastq";
 				
 				//! Part 2: Output read base name.
-				ss << " -t " << output_dir + "/" + cString(*read_file_it).get_base_name_no_extension();
+				ss << " -t " << output_dir + "/" + cString(*read_file_it).get_base_name_no_extension(true);
 
 				//! Part 3: Read file name			
 				ss << " -r " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
@@ -1949,6 +1951,9 @@ int do_runfile(int argc, char *argv[])
 				//! Part 4: Adaptor file name			
 				ASSERT(adapters_for_reads.count(*read_file_it), "No #=ADAPTSEQ information in GenomeDiff file.");
 				ss << " -a " << download_dir << "/" << cString(adapters_for_reads[*read_file_it]).get_base_name();
+
+				//! Part 5: Error log path.
+				ss << " >& " << log_dir << "/" << gd.get_title() << ".log" << endl;
 				
 				//! Step: Output to file.
 				cout << ss.str() << endl;
@@ -1972,7 +1977,7 @@ int do_runfile(int argc, char *argv[])
 				ss << " -f fastq";
 				
 				//! Part 2: Output read base name.
-				ss << " -t " << output_dir + "/" + substitute(cString((*read_pair_it)[0]).get_base_name_no_extension(), "_R1", "");
+				ss << " -t " << output_dir + "/" + substitute(cString((*read_pair_it)[0]).get_base_name_no_extension(true), "_R1", "");
 				
 				//! Part 3: Read 1 file name			
 				ss << " -r " << download_dir << "/" << cString((*read_pair_it)[0]).get_base_name_unzipped();
@@ -1985,6 +1990,9 @@ int do_runfile(int argc, char *argv[])
 				//! Part 5: Adaptor file name			
 				ASSERT(adapters_for_reads.count((*read_pair_it)[0]), "No #=ADAPTSEQ information in GenomeDiff file.");
 				ss << " -a " << download_dir << "/" << cString(adapters_for_reads[(*read_pair_it)[0]]).get_base_name();
+				
+				//! Part 5: Error log path.
+				ss << " >& " << log_dir << "/" << gd.get_title() << ".log" << endl;
 				
 				//! Step: Output to file.
 				cout << ss.str() << endl;
