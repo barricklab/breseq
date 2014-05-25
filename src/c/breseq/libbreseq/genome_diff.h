@@ -439,7 +439,6 @@ public:
   //!---- Variables ---- !//
 protected:  	
   string _filename;                   //!< File name associated with this diff.
-  string _base_file_name;             //!< File name stripped of path and extension, acts as short name
   diff_entry_list_t _entry_list;      //!< All diff entries.
   uint32_t _unique_id_counter;        //!< Smallest available id.
   map<uint32_t,bool> unique_id_used;
@@ -450,10 +449,11 @@ public:
   struct Metadata
   {
     Metadata() : version("1.0"), time(-1.0) {}
-    
-    string run_name;
-    string version; 
+
+    string version;
+    string title;
     string author;
+    string created;
     vector<string> ref_seqs;
     vector<string> read_seqs;
     vector<string> adapter_seqs;
@@ -486,9 +486,10 @@ public:
 
   string get_file_name() const {return _filename;}
   
-  string get_base_file_name() const {return _base_file_name;}
+  string get_title() const {return metadata.title;}
 
-  void set_base_file_name(const string& in_base_file_name) { _base_file_name = in_base_file_name;}
+  void set_title(const string& in_title) 
+  { metadata.title = in_title; replace(metadata.title.begin(), metadata.title.end(), ' ', '_'); }
   
   void add_breseq_data(const key_t &key, const string& value)
     { this->metadata.breseq_data.insert(pair<string,string>(key, value)); }
@@ -578,10 +579,10 @@ public:
   struct sort_fields_item {
     
     //! Constructor.
-    sort_fields_item() {_f1=0; _f2=""; _f3=""; };
+    sort_fields_item() {_f1=0; _f2=""; _f3=""; _f4="";};
     
-    sort_fields_item(uint8_t f1, string f2, string f3) :
-    _f1(f1), _f2(f2), _f3(f3) {};
+    sort_fields_item(uint8_t f1, string f2, string f3, string f4 = "") :
+    _f1(f1), _f2(f2), _f3(f3), _f4(f4) {};
     
     //! Destructor.
     virtual ~sort_fields_item() {};
@@ -589,6 +590,7 @@ public:
     uint8_t _f1;
     string _f2;
     string _f3;
+    string _f4;
   };
   
   static bool diff_entry_ptr_sort(const diff_entry_ptr_t& a, const diff_entry_ptr_t& b);
@@ -636,7 +638,10 @@ public:
                                        bool verbose = false);
   static void write_jc_score_table(cGenomeDiff& compare, string table_file_path, bool verbose = false); 
 
-  static void tabulate_frequencies_from_multiple_gds(cGenomeDiff& master_gd, vector<cGenomeDiff>& gd_list, bool verbose = false);
+  static void tabulate_frequencies_from_multiple_gds(cGenomeDiff& master_gd, 
+                                                     vector<cGenomeDiff>& gd_list,
+                                                     vector<string> &title_list,
+                                                     bool verbose = false);
 
   
   //!---- Format Conversion Functions: Member ---- !//

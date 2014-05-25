@@ -2069,8 +2069,10 @@ int breseq_default_action(int argc, char* argv[])
       mpgd.metadata.read_seqs[i] = settings.read_files[i].file_name();
     }
     
+    // Add metadata that will only be in the output.gd file 
     mpgd.metadata.author = string(PACKAGE_STRING) + " " + string(HG_REVISION);
-    mpgd.metadata.breseq_data["CREATED"] = Settings::time2string(time(NULL));
+    mpgd.metadata.created = Settings::time2string(time(NULL));
+    mpgd.metadata.title = settings.run_name;
 
     /* @JEB: Could add information such as average coverage, etc. as metadate here for
        generating more detailed summary files at later steps.
@@ -2083,7 +2085,7 @@ int breseq_default_action(int argc, char* argv[])
     }
     */
 
-    // Write and reload 
+    // Write the output.gd file
     mpgd.write(settings.final_genome_diff_file_name);
     
     //Don't reload -- we lose invisible fields that we need

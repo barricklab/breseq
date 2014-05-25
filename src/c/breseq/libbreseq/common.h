@@ -88,7 +88,7 @@ namespace breseq {
       cerr << "!!!!!!!!!!!!!!!!!!!!!!!> FATAL ERROR <!!!!!!!!!!!!!!!!!!!!!!!" << endl;
       if (message.length() > 0) cerr << message << endl;
       cerr << "FILE: " << file << "   LINE: " << line << endl;
-      cerr << "!!!!!!!!!!!!!!!!!!!!!!!> FATAL ERROR <!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+      cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
       assert(false);
     }
   }
@@ -100,14 +100,17 @@ namespace breseq {
     {
       cerr << "-----------------------> WARNING <-----------------------" << endl;
       if (message.length() > 0) cerr << message << endl;
-      cerr << "FILE: " << file << "   LINE: " << line << endl;
-      cerr << "-----------------------> WARNING <-----------------------" << endl;
+      if (file && base_file && line) {
+        cerr << "FILE: " << file << "   LINE: " << line << endl;
+      }
+      cerr << "---------------------------------------------------------" << endl;
     }
   }
   
 #define ASSERT(condition, message) { my_assertion_handler( condition,  __FILE__, __BASE_FILE__, __LINE__, message); }
 #define ERROR(message) { my_assertion_handler( false,  __FILE__, __BASE_FILE__, __LINE__, message); }
-#define WARN(message) { my_warning_handler( false,  __FILE__, __BASE_FILE__, __LINE__, message); }
+//#define WARN(message) { my_warning_handler( false,  __FILE__, __BASE_FILE__, __LINE__, message); }
+#define WARN(message) { my_warning_handler( false,  NULL, NULL, 0, message); }
 #define CHECK(condition, message) { my_warning_handler( condition,  __FILE__, __BASE_FILE__, __LINE__, message); }
   
   // There are three ways to represent a base.

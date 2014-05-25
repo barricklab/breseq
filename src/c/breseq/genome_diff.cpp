@@ -296,6 +296,18 @@ bool cDiffEntry::operator==(const cDiffEntry& de)
       if ((*this)[spec] != de.find(spec)->second)
         return false;
     }
+    
+    // Special case of insert_position for polymorphism mode
+    if (this->_type == INS) {
+      // If only one had this field then they don't match
+      if ((this->entry_exists(INSERT_POSITION)) !=  (de.entry_exists(INSERT_POSITION))  )
+        return false;
+      if ((this->entry_exists(INSERT_POSITION)) &&  (de.entry_exists(INSERT_POSITION))  ) {
+        if ((*this)[INSERT_POSITION] != de.find(INSERT_POSITION)->second)
+          return false;
+      }
+    }
+    
     return true;
   }
 }
@@ -867,7 +879,9 @@ diff_entry_ptr_t cGenomeDiff::parent(const cDiffEntry& evidence)
  */
 cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors) {
   _filename = filename;
-  _base_file_name = cString(filename).get_base_name_no_extension();
+  
+  // title (old base_name) defaults to file name with no extension
+  this->set_title(cString(filename).get_base_name_no_extension(true));
   
   ifstream in(get_file_name().c_str());
 
@@ -959,8 +973,7 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
     }
     
     else if (split_line[0] == "#=TITLE" && split_line.size() > 1) {
-      metadata.run_name = second_half;
-      replace(metadata.run_name.begin(), metadata.run_name.end(), ' ', '_');
+      this->set_title(second_half);
     }
     else if (split_line[0] == "#=TIME" && split_line.size() > 1) {
       metadata.time = from_string<double>(second_half);
@@ -1005,19 +1018,6 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
     }
   }
   
-
-  /*If the run_name/title is not set by a #=TITLE tag in the header info then
-   default to the name of the file. */
-  
-  if (metadata.run_name.empty()) {
-    string *run_name = &metadata.run_name;
-    *run_name = filename.substr(0, filename.find(".gd"));
-    if (run_name->find('/') !=  string::npos) {
-      run_name->erase(0, run_name->find_last_of('/') + 1);
-    }
-  }
-  
-  
   //! Step: Handle the diff entries.
   while (in.good()) {
     string line = "";
@@ -1054,6 +1054,7 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
     //cout << (*it)->as_string() << endl;
   }
   
+  this->sort();
   
   return parse_errors;
 }
@@ -1133,17 +1134,14 @@ void cGenomeDiff::write(const string& filename) {
    in cGenomeDiff::read(). */
   fprintf(os, "#=GENOME_DIFF\t%s\n", metadata.version.c_str());
   
+  if (metadata.title != "") {
+    fprintf(os, "#=TITLE\t%s\n", this->get_title().c_str());
+  }
   if (metadata.author != "") {
     fprintf(os, "#=AUTHOR\t%s\n", metadata.author.c_str());
   }
-  for (vector<string>::iterator it=metadata.ref_seqs.begin(); it !=metadata.ref_seqs.end(); it++) {
-    fprintf(os, "#=REFSEQ\t%s\n", it->c_str());
-  }
-  for (vector<string>::iterator it=metadata.read_seqs.begin(); it !=metadata.read_seqs.end(); it++) {
-    fprintf(os, "#=READSEQ\t%s\n", it->c_str());
-  }
-  if (metadata.run_name != "") {
-    fprintf(os, "#=TITLE\t%s\n", metadata.run_name.c_str());
+  if (metadata.created != "") {
+    fprintf(os, "#=CREATED\t%s\n", metadata.created.c_str());
   }
   if (metadata.time != -1.0) {
     fprintf(os, "#=TIME\t%s\n", to_string<double>(metadata.time).c_str());
@@ -1157,6 +1155,13 @@ void cGenomeDiff::write(const string& filename) {
   if (metadata.clone != "") {
     fprintf(os, "#=CLONE\t%s\n", metadata.clone.c_str());
   }
+  for (vector<string>::iterator it=metadata.ref_seqs.begin(); it !=metadata.ref_seqs.end(); it++) {
+    fprintf(os, "#=REFSEQ\t%s\n", it->c_str());
+  }
+  for (vector<string>::iterator it=metadata.read_seqs.begin(); it !=metadata.read_seqs.end(); it++) {
+    fprintf(os, "#=READSEQ\t%s\n", it->c_str());
+  }
+
   if (!metadata.breseq_data.empty()) {
     for (map<key_t,string>::iterator it = metadata.breseq_data.begin();
          it != metadata.breseq_data.end(); it ++) {
@@ -1485,6 +1490,8 @@ bool cGenomeDiff::mutation_in_entry_of_type(cDiffEntry mut, const gd_entry_type 
   for (diff_entry_list_t::iterator itr = check_list.begin(); itr != check_list.end(); itr++) {
     
     cDiffEntry de(**itr);
+    if (mut[SEQ_ID] != de[SEQ_ID])
+      continue;
     if ( (start >= de.get_start()) && (end <= de.get_end()) ) {
       return true;
     }
@@ -1826,7 +1833,7 @@ map<gd_entry_type, cGenomeDiff::sort_fields_item> diff_entry_sort_fields = make_
   (SNP,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
   (SUB,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
   (DEL,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
-  (INS,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
+  (INS,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION, INSERT_POSITION))
   (MOB,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
   (AMP,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
   (INV,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
@@ -1907,6 +1914,21 @@ bool cGenomeDiff::diff_entry_ptr_sort(const diff_entry_ptr_t& a, const diff_entr
   } else if (a_sort_field_3 > b_sort_field_3) {
     return false;
   }  
+  
+  // Fourth entry doesn't always exist
+  if (a_sort_fields._f4.size() && b_sort_fields._f4.size()) {
+    
+    if (a->entry_exists(a_sort_fields._f4) && b->entry_exists(b_sort_fields._f4)) {
+      uint32_t a_sort_field_4 = from_string<uint32_t>((*a)[a_sort_fields._f4]);
+      uint32_t b_sort_field_4 = from_string<uint32_t>((*b)[b_sort_fields._f4]);
+      
+      if (a_sort_field_4 < b_sort_field_4) {
+        return true;
+      } else if (a_sort_field_4 > b_sort_field_4) {
+        return false;
+      } 
+    }
+  }
   
   uint8_t a_sort_order = sort_order[a_type];
   uint8_t b_sort_order = sort_order[b_type];
@@ -2387,9 +2409,9 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
       uint64_t special_delta = from_string<uint64_t>(current_mut[SIZE]) * (nested_copy-1);
       mut[POSITION] = to_string(position + special_delta);
       
-    // Normal behavior -- offset mutations later in same reference sequence
+    // Normal behavior -- offset mutations later or at same mutation in same reference sequence
     } else {
-      if (current_mut[SEQ_ID] == mut[SEQ_ID] && position > offset)
+      if ((current_mut[SEQ_ID] == mut[SEQ_ID]) && (position > offset))
         mut[POSITION] = to_string(position + delta);
     }
 
@@ -2475,6 +2497,10 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
     cDiffEntry& mut(**itr_mut);
     uint32_t position = from_string<uint32_t>(mut[POSITION]);
     
+    // Look out! -- you should not apply things that don't have frequency=1 or other markers of polymorphism mode
+    ASSERT(!((mut._type == INS) && (mut.count("insert_position"))), "Attempt to apply insertion with \"insert_position\" field set, which indicates your Genome Diff represents polymorphic mutations.\n" + mut.as_string());
+    ASSERT( ((!mut.count(FREQUENCY)) || (from_string<double>(mut[FREQUENCY]) != 1)), "Attempt to apply mutation with frequency not equal to 1, which indicates your Genome Diff represents polymorphic mutations.\n" + mut.as_string());
+                      
     // Attributes used for output of debug info
     string replace_seq_id;
     uint32_t replace_start;
@@ -3344,15 +3370,41 @@ void cGenomeDiff::write_jc_score_table(cGenomeDiff& compare, string table_file_p
 
 // Used to add frequency_base-name columns to the master gd by
 // finding equivalent mutations in 
-void cGenomeDiff::tabulate_frequencies_from_multiple_gds(cGenomeDiff& master_gd, vector<cGenomeDiff>& gd_list, bool verbose)
-{
+void cGenomeDiff::tabulate_frequencies_from_multiple_gds(
+                                                         cGenomeDiff& master_gd, 
+                                                         vector<cGenomeDiff>& gd_list, 
+                                                         vector<string> &title_list, 
+                                                         bool verbose
+                                                         )
+{  
+  // Create a list of unique titles, which may require some renaming
+  // so that every one has a unique key in the resulting Genome Diff entries
+  set<string> used_titles; // for reassigning duplicate names
+  title_list.resize(0);
+  
+  for (vector<cGenomeDiff>::iterator it = gd_list.begin(); it != gd_list.end(); it++) {
+    
+    // Assign unique names to every file and warn if names were changed.
+    string this_title = it->get_title();
+    uint32_t counter=0;
+    while (used_titles.find(this_title) != used_titles.end() ) {
+      this_title = it->get_title() + "_" + to_string(++counter);
+    }
+    
+    if (this_title != it->get_title()) {
+      WARN("Duplicate title changed from '" + it->get_title() + "' to '" + this_title + "'\nFor genome diff file with path: " + it->get_file_name());
+    }
+    
+    title_list.push_back(this_title);
+    used_titles.insert(this_title);
+  }
+  
   
   vector<diff_entry_list_t> mut_lists;
-  
   for (vector<cGenomeDiff>::iterator it = gd_list.begin(); it != gd_list.end(); it++) {
     mut_lists.push_back(it->mutation_list());
   }
-  
+
   diff_entry_list_t de_list = master_gd.mutation_list();
 
   if (verbose) cout << "Tabulating frequencies for mutation..." << endl;
@@ -3362,26 +3414,21 @@ void cGenomeDiff::tabulate_frequencies_from_multiple_gds(cGenomeDiff& master_gd,
     diff_entry_ptr_t& this_mut = *it;
     uint32_t this_mut_position = from_string<uint32_t>((*this_mut)[POSITION]);
     
-    if (verbose) cout << this_mut->as_string() << endl;
+    if (verbose) cout << ">> Master Mutation" << endl<< this_mut->as_string() << endl;
     
     // for each genome diff compared
     for (uint32_t i=0; i<mut_lists.size(); i++) { 
       
-      string freq_key = "frequency_" + gd_list[i].get_base_file_name();
+      string freq_key = "frequency_" + title_list[i];
       (*this_mut)[freq_key] = "0";
       
       diff_entry_list_t& mut_list = mut_lists[i];
-      if (mut_list.size() == 0) 
-        continue; 
-      
-      bool found = false;
-      
-      
-      
+            
       // We have some problems when there are multiple INS after the same position in a genomediff...
       // they get merged to one, e.g.
       // INS	177	1750	T7_WT_Genome	24198	T	frequency=0.1310
       // INS	178	1751	T7_WT_Genome	24198	T	frequency=0.0250
+      /*
       while (mut_list.size() && (from_string<uint32_t>((*mut_list.front())[POSITION]) < this_mut_position)) {
         //cout << (*mut_list.front())[POSITION] << " < " << this_mut_position << endl;
         mut_list.pop_front();
@@ -3389,10 +3436,14 @@ void cGenomeDiff::tabulate_frequencies_from_multiple_gds(cGenomeDiff& master_gd,
       if (mut_list.size() == 0) 
         continue; 
       // End code for multiple INS problem.  
+      */
       
       // for top mutation in this genomedff (they are sorted by position)
       diff_entry_ptr_t check_mut; 
       check_mut = mut_list.front();
+      
+      if (verbose)
+        cout << ">" << title_list[i] << endl << check_mut->as_string() << endl;
       
       // we found the exact same mutation
       if ( (check_mut.get() != NULL) && (*check_mut == *this_mut) ) {
@@ -3935,7 +3986,7 @@ void cGenomeDiff::write_phylip(string& output_phylip_file_name, cGenomeDiff& mas
   
   for (vector<cGenomeDiff>::iterator gd_it = gd_list.begin(); gd_it != gd_list.end(); gd_it++) {
     
-    string base_name = gd_it->get_base_file_name();
+    string base_name = gd_it->get_title();
     const uint32_t phylip_name_max_length = 10;
     string base_name_truncated;
     if (base_name.size() > phylip_name_max_length)
@@ -4406,9 +4457,9 @@ void cGenomeDiff::GD2OLI(const vector<string> &gd_file_names,
   ref_seq_info.annotate_mutations(master_gd, true, false);
   
   // Add frequency columns
-  cGenomeDiff::tabulate_frequencies_from_multiple_gds(master_gd, gd_list, true);
+  vector<string> title_list;
+  cGenomeDiff::tabulate_frequencies_from_multiple_gds(master_gd, gd_list, title_list, true);
 
-  
   vector<string> header_list(14, "");
   header_list[0] = "pop";
   header_list[1] = "age";
@@ -4451,17 +4502,17 @@ void cGenomeDiff::GD2OLI(const vector<string> &gd_file_names,
   string age;
   string run;
 
-  
+  size_t title_counter = 0;
   for(vector<cGenomeDiff>::iterator it = gd_list.begin(); it != gd_list.end(); it++) {
     uint32_t event_num = 0;
     
     pop = it->metadata.population;
     age = to_string<double>(it->metadata.time);
-    run = it->get_base_file_name();
+    run = title_list[title_counter++];
     
     for(diff_entry_list_t::iterator mut_it = mut_list.begin(); mut_it != mut_list.end(); mut_it++) {
       event_num++;
-      string key( "frequency_" + it->get_base_file_name() );
+      string key( "frequency_" + it->get_title() );
       
       cDiffEntry  mut = **mut_it;
       if (!mut.entry_exists(key)) continue;
@@ -4612,9 +4663,9 @@ void cGenomeDiff::GD2OLI(const vector<string> &gd_file_names,
 
       // Add all of the other samples with this
       for(vector<cGenomeDiff>::iterator it3 = gd_list.begin(); it3 != gd_list.end(); it3++) {
-        string key( "frequency_" + it3->get_base_file_name() );
+        string key( "frequency_" + it3->get_title() );
         if (!mut.entry_exists(key) || (mut[key] != "1")) continue;
-        line_list.push_back(it3->get_base_file_name());
+        line_list.push_back(it3->get_title());
         //line_list.push_back(it3->metadata.population + "_" + formatted_double(it3->metadata.time,0) .to_string() + "_" + it3->metadata.clone);
       }
       

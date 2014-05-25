@@ -173,7 +173,7 @@ namespace breseq
     ("verbose,v","Produce verbose output",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
 		("output,o", "Path to breseq output", ".")
 		("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files. (REQUIRED)")
-    ("name,n", "Human-readable name of sample for output (DEFAULT=<none>)", "")
+    ("name,n", "Human-readable name of the analysis run for output (DEFAULT=<none>)", "")
     ("num-processors,j", "Number of processors to use in multithreaded steps", 1);
     
     options.addUsage("", true);

@@ -1397,7 +1397,13 @@ namespace breseq {
           mut["size"] = s(mut["new_seq"].size());          
           mut["new_copy_number"] = "2";
           mut.erase("new_seq");
-        }        
+        } else if (settings.polymorphism_prediction) {
+          // This is a special case to keep ordering of multiple inserted bases after 
+          // the same base (without it the order is unknown in poly mode
+          
+          ASSERT(mut["insert_start"] == mut["insert_end"], "Polymorphism had joined insert.");
+          mut["insert_position"] = mut["insert_start"];
+        }
 			}
 			// deletion
 			else if (mut["new_seq"].size() == 0)
@@ -2484,12 +2490,12 @@ namespace breseq {
       
       vector<string> this_columns;
       
-      this_columns.push_back( gd.get_base_file_name() );
-      this_columns.push_back( (gd.metadata.run_name != "") ? gd.metadata.run_name : "" );
-      this_columns.push_back( (gd.metadata.treatment != "") ? gd.metadata.treatment : "" );
-      this_columns.push_back( (gd.metadata.population != "") ? gd.metadata.population : "" );
-      this_columns.push_back( (gd.metadata.time != -1) ? to_string<double>(gd.metadata.time) : "");
-      this_columns.push_back( (gd.metadata.clone != "") ? gd.metadata.clone : "" );      
+      this_columns.push_back( gd.get_file_name() );
+      this_columns.push_back( gd.metadata.title );
+      this_columns.push_back( gd.metadata.treatment );
+      this_columns.push_back( gd.metadata.population );
+      this_columns.push_back( (gd.metadata.time != -1.0) ? to_string<double>(gd.metadata.time) : "");
+      this_columns.push_back( gd.metadata.clone );      
       this_columns.push_back(to_string(mut_list.size()));
       this_columns.push_back(to_string(count["base_substitution"][""]));
       this_columns.push_back(to_string(count["small_indel"][""]));
