@@ -3433,10 +3433,11 @@ void cGenomeDiff::tabulate_frequencies_from_multiple_gds(
         //cout << (*mut_list.front())[POSITION] << " < " << this_mut_position << endl;
         mut_list.pop_front();
       }
+      */ 
       if (mut_list.size() == 0) 
         continue; 
       // End code for multiple INS problem.  
-      */
+    
       
       // for top mutation in this genomedff (they are sorted by position)
       diff_entry_ptr_t check_mut; 
