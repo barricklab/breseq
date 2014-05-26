@@ -1606,6 +1606,11 @@ int do_download(int argc, char *argv[])
     options.printUsage();
     return -1;
   }
+	
+	string hostname = SYSTEM_CAPTURE("hostname", true);
+  cout << endl << "Hostname:" << hostname << endl;
+	bool onTACC = (hostname.find("tacc.utexas.edu") != string::npos);
+	if (onTACC) cout << "TACC mode: creates symbolic links instead of copying when possible." << endl;
 
   printf("\n++Starting download.\n");
 
@@ -1623,8 +1628,20 @@ int do_download(int argc, char *argv[])
         ["url_format"] = "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/%s/%s/%s.fastq.gz";
     lookup_table["BARRICKLAB-PUBLIC"]
         ["url_format"] = "http://barricklab.org/%s";
-    lookup_table["BARRICKLAB-PRIVATE"]
-        ["url_format"] = options.count("login") ? "ftp://" + options["login"] + "@backup.barricklab.org/%s" : "";
+	
+	if (!onTACC) {
+		lookup_table["BARRICKLAB-PRIVATE"]
+			["url_format"] = "scp stampede.tacc.utexas.edu:/corral-repl/utexas/breseq/%s";
+	} else {
+		lookup_table["BARRICKLAB-PRIVATE"]
+			["url_format"] = "cp /corral-repl/utexas/breseq/%s";
+	}
+		
+	options.count("login") ? "ftp://" + options["login"] + "@backup.barricklab.org/%s" : "";
+	
+	// Old usage
+	//    lookup_table["BARRICKLAB-PRIVATE"]
+  //      ["url_format"] = options.count("login") ? "ftp://" + options["login"] + "@backup.barricklab.org/%s" : "";
 
   //File path formats.
     lookup_table["GENBANK"]
@@ -1712,21 +1729,28 @@ int do_download(int argc, char *argv[])
         sprintf(url, url_format, value.c_str());
       }
       else if (key == "BARRICKLAB-PRIVATE") {
-        ASSERT(options.count("login"), "Provide the login option (-l user:password) to access private files.");
+        //ASSERT(options.count("login"), "Provide the login option (-l user:password) to access private files.");
         sprintf(url, url_format, value.c_str());
       }
 
-      string wget_cmd = options.count("test") ?
-            cString("wget --spider \"%s\"", url.c_str()) :
-            cString("wget -O %s \"%s\"",file_path.c_str(), url.c_str());
-
+			string wget_cmd;
+			if (key == "BARRICKLAB-PRIVATE") {
+				wget_cmd = url + " " + file_path;
+				cout << wget_cmd << endl;
+			} else {
+				wget_cmd = options.count("test") ?
+							cString("wget --spider \"%s\"", url.c_str()) :
+							cString("wget -O %s \"%s\"",file_path.c_str(), url.c_str());
+			}
+			
+				
       const bool is_url_error = SYSTEM(wget_cmd, false, false, false) != 0;
       if (is_url_error) {
         error_report[file_name]["INVALID_URL"]  = url;
         continue;
       }
 
-      if (is_gzip && !is_url_error) {
+      if (is_gzip) {
         string gunzip_cmd = "";
         sprintf(gunzip_cmd, "gunzip %s", file_path.c_str());
         if (options.count("test")) {
