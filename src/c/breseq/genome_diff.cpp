@@ -25,31 +25,55 @@ LICENSE AND COPYRIGHT
 namespace breseq {
 
 // Common keywords used for diff entries:
-const char* TYPE="type";
-const char* ID="id";
-const char* PID="parent";
+
+// Shared   
 const char* SEQ_ID="seq_id";
 const char* START="start";
 const char* END="end";
-const char* START_RANGE="start_range";
-const char* END_RANGE="end_range";
-const char* LEFT_OUTSIDE_COV="left_outside_cov";
-const char* LEFT_INSIDE_COV="left_inside_cov";
-const char* RIGHT_INSIDE_COV="right_inside_cov";
-const char* RIGHT_OUTSIDE_COV="right_outside_cov";
+const char* STRAND="strand";
 const char* POSITION="position";
 const char* INSERT_POSITION="insert_position";
+const char* FREQUENCY="frequency";
+const char* REJECT="reject";
+const char* ERROR="error";
+  
+// For MOB
+const char* REPEAT_NAME = "repeat_name";
+const char* DUPLICATION_SIZE = "duplication_size";
+const char* INS_START = "ins_start";
+const char* INS_END = "ins_end";
+const char* DEL_START = "del_start";
+const char* DEL_END = "del_end";
+  
+// For INS/DEL
+const char* REPEAT_SEQ = "repeat_seq";
+const char* REPEAT_LENGTH = "repeat_length";
+const char* REPEAT_REF_COPIES = "repeat_ref_copies";
+const char* REPEAT_NEW_COPIES = "repeat_new_copies";
+  
+// For AMP
+const char* NEW_COPY_NUMBER = "new_copy_number";
+  
+// For CON
+const char* REGION = "region";  
+  
+//For RA
 const char* QUALITY="quality";
+const char* REF_COV="ref_cov";
+const char* NEW_COV="new_cov";
+const char* TOT_COV="tot_cov";
 const char* POLYMORPHISM_QUALITY="polymorphism_quality";
 const char* GENOTYPE_QUALITY="genotype_quality";
 const char* REF_BASE="ref_base";
 const char* NEW_BASE="new_base";
-const char* FREQUENCY="frequency";
-const char* REJECT="reject";
-const char* REF_COV="ref_cov";
-const char* NEW_COV="new_cov";
-const char* TOT_COV="tot_cov";
-const char* ERROR="error";
+  
+//For MC  
+const char* START_RANGE="start_range";
+const char* END_RANGE="end_range";
+const char* LEFT_OUTSIDE_COV = "left_outside_cov";
+const char* LEFT_INSIDE_COV = "left_inside_cov";
+const char* RIGHT_INSIDE_COV = "right_inside_cov";
+const char* RIGHT_OUTSIDE_COV = "right_outside_cov";
   
 //For JC
 const char* SIDE_1_SEQ_ID = "side_1_seq_id";
@@ -75,14 +99,14 @@ const char* NEW_JUNCTION_COVERAGE = "new_junction_coverage";
 map<gd_entry_type, vector<string> > line_specification = make_map<gd_entry_type, vector<string> >
 //! seq_id and positions are already parameters in cDiffEntry
 //## mutations
-(SNP,make_vector<string> ("seq_id")("position")("new_seq"))
-(SUB,make_vector<string> ("seq_id")("position")("size")("new_seq"))
-(DEL,make_vector<string> ("seq_id")("position")("size"))
-(INS,make_vector<string> ("seq_id")("position")("new_seq"))
-(MOB,make_vector<string> ("seq_id")("position")("repeat_name")("strand")("duplication_size"))
-(INV,make_vector<string> ("seq_id")("position")("size"))
-(AMP,make_vector<string> ("seq_id")("position")("size")("new_copy_number"))
-(CON,make_vector<string> ("seq_id")("position")("size")("region"))
+(SNP,make_vector<string> (SEQ_ID)(POSITION)(NEW_SEQ))
+(SUB,make_vector<string> (SEQ_ID)(POSITION)(SIZE)(NEW_SEQ))
+(DEL,make_vector<string> (SEQ_ID)(POSITION)(SIZE))
+(INS,make_vector<string> (SEQ_ID)(POSITION)(NEW_SEQ))
+(MOB,make_vector<string> (SEQ_ID)(POSITION)(REPEAT_NAME)(STRAND)(DUPLICATION_SIZE))
+(INV,make_vector<string> (SEQ_ID)(POSITION)(SIZE))
+(AMP,make_vector<string> (SEQ_ID)(POSITION)(SIZE)(NEW_COPY_NUMBER))
+(CON,make_vector<string> (SEQ_ID)(POSITION)(SIZE)(REGION))
 
 //## evidence
 (RA,make_vector<string> ("seq_id")("position")("insert_position")("ref_base")("new_base"))
@@ -102,23 +126,31 @@ map<gd_entry_type, vector<string> > line_specification = make_map<gd_entry_type,
 (NOTE,make_vector<string> ("note"))
 (MASK,make_vector<string> ("seq_id")("position")("size")) 
 
-  
 ; // end line specifications
 
-  enum diff_entry_field_variable_t {
-    kDiffEntryFieldVariableType_PositiveInteger,
-    kDiffEntryFieldVariableType_Integer,
-    kDiffEntryFieldVariableType_Strand // must be -1 or +1
-  };
+// These specs include addition fields used when determined equal mutations and sorting!
+// IMPORTANT: They include fields that may not always be defined.
+map<gd_entry_type, vector<string> > extended_line_specification = make_map<gd_entry_type, vector<string> >
+(INS,make_vector<string> (SEQ_ID)(POSITION)(INSERT_POSITION)(NEW_SEQ))
+(MOB,make_vector<string> (SEQ_ID)(POSITION)(REPEAT_NAME)(STRAND)(DUPLICATION_SIZE)(INS_START)(INS_END)(DEL_START)(DEL_END))
+;  
+  
+enum diff_entry_field_variable_t {
+  kDiffEntryFieldVariableType_PositiveInteger,
+  kDiffEntryFieldVariableType_Integer,
+  kDiffEntryFieldVariableType_Strand, // must be -1 or +1
+};
   
 map<string, diff_entry_field_variable_t > diff_entry_field_variable_types = make_map<string, diff_entry_field_variable_t>
-("position", kDiffEntryFieldVariableType_PositiveInteger)
-("start", kDiffEntryFieldVariableType_PositiveInteger)
-("end", kDiffEntryFieldVariableType_PositiveInteger)
-("size", kDiffEntryFieldVariableType_PositiveInteger)
-("strand", kDiffEntryFieldVariableType_Strand)
-("duplication_size", kDiffEntryFieldVariableType_Integer)
-("new_copy_number", kDiffEntryFieldVariableType_PositiveInteger)
+(POSITION, kDiffEntryFieldVariableType_PositiveInteger)
+(START, kDiffEntryFieldVariableType_PositiveInteger)
+(END, kDiffEntryFieldVariableType_PositiveInteger)
+(SIZE, kDiffEntryFieldVariableType_PositiveInteger)
+(STRAND, kDiffEntryFieldVariableType_Strand)
+(DUPLICATION_SIZE, kDiffEntryFieldVariableType_Integer)
+(NEW_COPY_NUMBER, kDiffEntryFieldVariableType_PositiveInteger)
+(DEL_START, kDiffEntryFieldVariableType_PositiveInteger)
+(DEL_END, kDiffEntryFieldVariableType_PositiveInteger)
 ;
 
 const vector<string>gd_entry_type_lookup_table =
@@ -289,12 +321,70 @@ bool cDiffEntry::operator==(const cDiffEntry& de)
   }
   //! Case: Same type, but are fields that are common equal?
   else {
-    // Get common keys
-    const vector<diff_entry_key_t>& specs = line_specification[this->_type];
+    
+    // Get full line spec
+    const vector<diff_entry_key_t>& specs = extended_line_specification.count(this->_type) 
+      ? extended_line_specification[this->_type] :line_specification[this->_type];
+    
     for(vector<diff_entry_key_t>::const_iterator it = specs.begin(); it != specs.end(); it++) {
       const diff_entry_key_t& spec(*it);
-      if ((*this)[spec] != de.find(spec)->second)
+
+      bool a_exists = this->entry_exists(spec);
+      bool b_exists = de.entry_exists(spec);
+      if (!a_exists && !b_exists) continue;
+      if (a_exists != b_exists) return false;
+      
+      // Perform the proper type of comparison
+      // Default is a string if not provided...
+      if (!diff_entry_field_variable_types.count(spec)) {
+      
+        if ((*this)[spec] != de.find(spec)->second)
+          return false;
+      
+      } else if (diff_entry_field_variable_types[spec] == kDiffEntryFieldVariableType_PositiveInteger) {
+
+        if (from_string<uint32_t>((*this)[spec]) != from_string<uint32_t>(de.find(spec)->second))
+          return false;
+
+      } else if (  (diff_entry_field_variable_types[spec] == kDiffEntryFieldVariableType_Integer)
+                || (diff_entry_field_variable_types[spec] == kDiffEntryFieldVariableType_Strand)  ) {
+       
+        if (from_string<int32_t>((*this)[spec]) != from_string<int32_t>(de.find(spec)->second))
+          return false;
+      
+      }
+    }
+    
+    // Special case of ins_start, ins_end, del_start, del_end
+    if (this->_type == MOB) {
+      
+      string this_ins_start = this->entry_exists("ins_start") ? 
+        this->find("ins_start")->second : "";
+      string de_ins_start = de.entry_exists("ins_start") ? 
+        de.find("ins_start")->second : "";
+      if (this_ins_start != de_ins_start)
         return false;
+      
+      string this_ins_end = this->entry_exists("ins_end") ? 
+        this->find("ins_end")->second : "";
+      string de_ins_end = de.entry_exists("ins_end") ? 
+        de.find("ins_end")->second : "";
+      if (this_ins_end != de_ins_end)
+        return false;
+      
+      uint32_t this_del_start = this->entry_exists("del_start") ? 
+      from_string<uint32_t>(this->find("del_start")->second) : UINT32_MAX;
+      uint32_t de_del_start = de.entry_exists("del_start") ? 
+      from_string<uint32_t>(de.find("del_start")->second) : UINT32_MAX;
+      if (this_del_start != de_del_start)
+        return false;      
+      
+      uint32_t this_del_end = this->entry_exists("del_end") ? 
+      from_string<uint32_t>(this->find("del_end")->second) : UINT32_MAX;
+      uint32_t de_del_end = de.entry_exists("del_end") ? 
+      from_string<uint32_t>(de.find("del_end")->second) : UINT32_MAX;
+      if (this_del_end != de_del_end)
+        return false;       
     }
     
     // Special case of insert_position for polymorphism mode
@@ -1833,7 +1923,7 @@ map<gd_entry_type, cGenomeDiff::sort_fields_item> diff_entry_sort_fields = make_
   (SNP,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
   (SUB,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
   (DEL,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
-  (INS,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION, INSERT_POSITION))
+  (INS,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
   (MOB,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
   (AMP,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
   (INV,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
@@ -1915,21 +2005,7 @@ bool cGenomeDiff::diff_entry_ptr_sort(const diff_entry_ptr_t& a, const diff_entr
     return false;
   }  
   
-  // Fourth entry doesn't always exist
-  if (a_sort_fields._f4.size() && b_sort_fields._f4.size()) {
-    
-    if (a->entry_exists(a_sort_fields._f4) && b->entry_exists(b_sort_fields._f4)) {
-      uint32_t a_sort_field_4 = from_string<uint32_t>((*a)[a_sort_fields._f4]);
-      uint32_t b_sort_field_4 = from_string<uint32_t>((*b)[b_sort_fields._f4]);
-      
-      if (a_sort_field_4 < b_sort_field_4) {
-        return true;
-      } else if (a_sort_field_4 > b_sort_field_4) {
-        return false;
-      } 
-    }
-  }
-  
+  // Prefer certain mutation types before others
   uint8_t a_sort_order = sort_order[a_type];
   uint8_t b_sort_order = sort_order[b_type];
 
@@ -1939,16 +2015,85 @@ bool cGenomeDiff::diff_entry_ptr_sort(const diff_entry_ptr_t& a, const diff_entr
     return false;
   } 
   
-  // last sort by id
-  uint32_t a_sort_id = from_string(a->_id);
-  uint32_t b_sort_id = from_string(b->_id);
-
+  // Wow, they're still the same,  we need to break ties by comparing their entire extended specs
+  ASSERT(a_type == b_type, "Type didn't match.");
+  
+  // Get full line spec
+  const vector<diff_entry_key_t>& specs = extended_line_specification.count(a_type) 
+  ? extended_line_specification[a_type] : line_specification[a_type];
+  
+  for(vector<diff_entry_key_t>::const_iterator it = specs.begin(); it != specs.end(); it++) {
+    const diff_entry_key_t& spec(*it);
+    
+    bool a_exists = a->entry_exists(spec);
+    bool b_exists = b->entry_exists(spec);
+    
+    if (!a_exists && !b_exists) 
+      continue;
+    
+    if (!a_exists && b_exists) 
+      return true;
+    
+    if (a_exists && !b_exists) 
+      return false;
+    
+    // Perform the proper type of comparison
+    // Default is a string if not provided...
+    if (!diff_entry_field_variable_types.count(spec)) {
+      
+      string& a_sort_value = (*a)[spec];
+      string& b_sort_value = (*b)[spec];
+      if (a_sort_value < b_sort_value) {
+        return true;
+      } else if (a_sort_value > b_sort_value) {
+        return false;
+      }
+      
+    } else if (diff_entry_field_variable_types[spec] == kDiffEntryFieldVariableType_PositiveInteger) {
+      
+      uint32_t a_sort_value = from_string<uint32_t>((*a)[spec]);
+      uint32_t b_sort_value = from_string<uint32_t>((*b)[spec]);
+      if (a_sort_value < b_sort_value) {
+        return true;
+      } else if (a_sort_value > b_sort_value) {
+        return false;
+      }
+      
+    } else if (  (diff_entry_field_variable_types[spec] == kDiffEntryFieldVariableType_Integer)
+               || (diff_entry_field_variable_types[spec] == kDiffEntryFieldVariableType_Strand)  ) {
+      
+      int32_t a_sort_value = from_string<int32_t>((*a)[spec]);
+      int32_t b_sort_value = from_string<int32_t>((*b)[spec]);
+      if (a_sort_value < b_sort_value) {
+        return true;
+      } else if (a_sort_value > b_sort_value) {
+        return false;
+      }
+      
+    }
+  }
+  
+  
+  // ** last sort by id
+  
+  // First as numbers
+  uint32_t a_sort_id = from_string<uint32_t>(a->_id);
+  uint32_t b_sort_id = from_string<uint32_t>(b->_id);
+  
   if (a_sort_id < b_sort_id) {
     return true;
   } else if (a_sort_id > b_sort_id) {
     return false;
   } 
   
+  // Then try as string 
+  if (a->_id < b->_id) {
+    return true;
+  } else if (a->_id < b->_id) {
+    return false;
+  } 
+  
+  ERROR("Identical diff entry items found in sort:\n1>>\n" + a->as_string() + "\n2>>\n" + b->as_string() + "\n" );
   return false;
 }
 
@@ -3438,10 +3583,23 @@ void cGenomeDiff::tabulate_frequencies_from_multiple_gds(
         continue; 
       // End code for multiple INS problem.  
     
-      
       // for top mutation in this genomedff (they are sorted by position)
-      diff_entry_ptr_t check_mut; 
-      check_mut = mut_list.front();
+      diff_entry_ptr_t check_mut = mut_list.front();
+      
+      // There should never be two of the same mutation in a file or it screws things up
+      diff_entry_list_t::iterator mut_list_it = mut_list.begin();
+            
+      if (mut_list_it != mut_list.end()) {
+        mut_list_it++;
+        if (mut_list_it != mut_list.end()) {
+          diff_entry_ptr_t next_mut = *mut_list_it;
+          
+          //cout << endl << "Check mut:" << check_mut->as_string() << endl << "Next mut:" << next_mut->as_string() << endl;
+
+          ASSERT( !(*next_mut == *check_mut), "Identical diff entry items found in file:\n" + gd_list[i]._filename + "\n1>>\n" + check_mut->as_string() + "\n2>>\n" + next_mut->as_string() + "\n");
+        }
+      }
+      
       
       if (verbose)
         cout << ">" << title_list[i] << endl << check_mut->as_string() << endl;
