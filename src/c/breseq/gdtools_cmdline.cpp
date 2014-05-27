@@ -945,7 +945,8 @@ int do_phylogeny(int argc, char* argv[])
 {
     AnyOption options("gdtools PHYLOGENY [-o phylogeny] -r reference.gbk input.1.gd [input.2.gd ... ]");
     options.addUsage("");
-    options.addUsage("Uses PHYLIP to construct a phylogentic tree.");
+    options.addUsage("Uses PHYLIP to construct a phylogentic tree. If you are including and ancestor, ");
+		options.addUsage("you should include it as the first Genome Diff file.");
     options
     ("help,h", "produce advanced help message", TAKES_NO_ARGUMENT)
     ("verbose,v", "produce output for each mutation counted.", TAKES_NO_ARGUMENT)
@@ -984,17 +985,19 @@ int do_phylogeny(int argc, char* argv[])
     cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
 
     bool polymorphisms_found = false; // handled putting in the polymorphism column if only one file provided
-    uint32_t file_num = 1;
     for (uint32_t i = 0; i < gd_path_names.size(); i++){
         uout("Reading input GD file",gd_path_names[i]);
         cGenomeDiff single_gd(gd_path_names[i]);
         gd_list.push_back(single_gd);
     }    
 
+		uint32_t file_num = 1;
+		vector<string> title_list;
     for (vector<cGenomeDiff>::iterator it=gd_list.begin(); it!= gd_list.end(); it++) {
         cGenomeDiff& single_gd = *it;
         gd.merge(single_gd);
-        single_gd.set_title("_" + to_string<uint32_t>(file_num++) + "_");
+				title_list.push_back(single_gd.get_title());
+				single_gd.set_title("_" + to_string<uint32_t>(file_num++) + "_");
     }
 
     gd.sort();
@@ -1002,9 +1005,9 @@ int do_phylogeny(int argc, char* argv[])
     uout("Tabulating mutation frequencies across samples");
 
     // Then add frequency columns for all genome diffs
-		vector<string> title_list;
-    cGenomeDiff::tabulate_frequencies_from_multiple_gds(gd, gd_list, title_list);
-    
+		vector<string> dummy_title_list;
+    cGenomeDiff::tabulate_frequencies_from_multiple_gds(gd, gd_list, dummy_title_list);
+	
     vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
     uout("Reading input reference sequence files") << reference_file_names << endl;
     cReferenceSequences ref_seq_info;
@@ -1610,7 +1613,7 @@ int do_download(int argc, char *argv[])
 	string hostname = SYSTEM_CAPTURE("hostname", true);
   cout << endl << "Hostname:" << hostname << endl;
 	bool onTACC = (hostname.find("tacc.utexas.edu") != string::npos);
-	if (onTACC) cout << "TACC mode: creates symbolic links instead of copying when possible." << endl;
+	if (onTACC) cout << "Detected TACC system..." << endl;
 
   printf("\n++Starting download.\n");
 

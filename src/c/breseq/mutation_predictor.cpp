@@ -1933,7 +1933,7 @@ namespace breseq {
         // instead of an alternative strategy which might be to give them their own category or call them intergenic.
         
         // Catches tRNA/rRNA/pseudogenes...
-        if (f[TYPE] == "gene") {
+        if (f["type"] == "gene") {
           vector<cLocation> sub_locations = f.m_location.get_all_sub_locations();
           for(vector<cLocation>::iterator it3=sub_locations.begin(); it3!=sub_locations.end(); ++it3) {
             cLocation& loc = *it3;
@@ -1946,7 +1946,7 @@ namespace breseq {
         }
         
         // Remainder is only for coding sequences (and not pseudogenes)
-        if ((f[TYPE] != "CDS") || f.m_pseudo)
+        if ((f["type"] != "CDS") || f.m_pseudo)
           continue;
         
         // initialize gene structure
