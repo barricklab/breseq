@@ -373,16 +373,16 @@ bool cDiffEntry::operator==(const cDiffEntry& de)
         return false;
       
       uint32_t this_del_start = this->entry_exists("del_start") ? 
-      from_string<uint32_t>(this->find("del_start")->second) : UINT32_MAX;
+      from_string<uint32_t>(this->find("del_start")->second) : numeric_limits<uint32_t>::max();
       uint32_t de_del_start = de.entry_exists("del_start") ? 
-      from_string<uint32_t>(de.find("del_start")->second) : UINT32_MAX;
+      from_string<uint32_t>(de.find("del_start")->second) : numeric_limits<uint32_t>::max();
       if (this_del_start != de_del_start)
         return false;      
       
       uint32_t this_del_end = this->entry_exists("del_end") ? 
-      from_string<uint32_t>(this->find("del_end")->second) : UINT32_MAX;
+      from_string<uint32_t>(this->find("del_end")->second) : numeric_limits<uint32_t>::max();
       uint32_t de_del_end = de.entry_exists("del_end") ? 
-      from_string<uint32_t>(de.find("del_end")->second) : UINT32_MAX;
+      from_string<uint32_t>(de.find("del_end")->second) : numeric_limits<uint32_t>::max();
       if (this_del_end != de_del_end)
         return false;       
     }
