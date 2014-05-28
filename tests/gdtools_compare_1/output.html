@@ -1,0 +1,905 @@
+<!DOCTYPE html
+PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en-US" xml:lang="en-US">
+<html>
+<head>
+<title>Mutation Comparison</title>
+<style type = "text/css">
+body {font-family: sans-serif; font-size: 11pt;}
+th {background-color: rgb(0,0,0); color: rgb(255,255,255);}
+table {background-color: rgb(1,0,0); color: rgb(0,0,0);}
+tr {background-color: rgb(255,255,255);}
+.mutation_in_codon {color:red; text-decoration : underline;}
+.mutation_header_row {background-color: rgb(0,130,0);}
+.read_alignment_header_row {background-color: rgb(255,0,0);}
+.missing_coverage_header_row {background-color: rgb(0,100,100);}
+.new_junction_header_row {background-color: rgb(0,0,155);}
+.copy_number_header_row {background-color: rgb(153,102,0);}
+.alternate_table_row_0 {background-color: rgb(255,255,255);}
+.alternate_table_row_1 {background-color: rgb(235,235,235);}
+.gray_table_row {background-color: rgb(230,230,245);}
+.polymorphism_table_row {background-color: rgb(160,255,160);}
+.highlight_table_row {background-color: rgb(192,255,255);}
+.reject_table_row {background-color: rgb(255,200,165);}
+.information_table_row {background-color: rgb(200,255,255);}
+.junction_repeat {background-color: rgb(255,165,0)}
+.junction_gene {}
+.hidden { display: none; }
+.unhidden { display: block; }
+
+</style>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+<script type="text/javascript">
+  function hideTog(divID) {
+    var item = document.getElementById(divID);
+    if (item) {
+      item.className=(item.className=='hidden')?'unhidden':'hidden';
+    }
+  }
+  function showTog(butID) {
+    var button = document.getElementById(butID);
+    if (button) {
+      button.value=(button.value=='Show')?'Hide':'Show';
+    }
+  }
+</script>
+
+</head>
+<body>
+<!--Output Html_Mutation_Table_String-->
+<table border="0" cellspacing="1" cellpadding="3">
+<tr><th colspan="9" align="left" class="mutation_header_row">Predicted mutations</th></tr><tr>
+<th>seq&nbsp;id</th>
+<th>position</th>
+<th>mutation</th>
+<th>gd</th>
+<th>gd_1</th>
+<th>gd_2</th>
+<th>annotation</th>
+<th>gene</th>
+<th width="100%">description</th>
+</tr>
+
+<!-- Item Lines -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;0</td><!-- Seq_Id -->
+<td align="right">139</td><!-- Position -->
+<td align="center">&Delta;1&nbsp;bp</td><!-- Cell Mutation -->
+<td align="right">?</td><td align="right">100%</td><td align="right">100%</td>
+<td align="center">intergenic&nbsp;(&#8211;/&#8209;52)</td>
+<td align="center">&#8211;&nbsp;/&nbsp;&rarr;&nbsp;<i>nu1</i></td>
+<td align="left">&#8211;/DNA packaging protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;1</td><!-- Seq_Id -->
+<td align="right">4,566</td><!-- Position -->
+<td align="center">+G</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right">100%</td><td align="right">100%</td>
+<td align="center">intergenic&nbsp;(+139/&#8209;10)</td>
+<td align="center"><i>L</i>&nbsp;&rarr;&nbsp;/&nbsp;&rarr;&nbsp;<i>K</i></td>
+<td align="left">tail component/tail component</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;2</td><!-- Seq_Id -->
+<td align="right">1,261</td><!-- Position -->
+<td align="center">A&rarr;G</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right">100%</td><td align="right">100%</td>
+<td align="center">K338E&nbsp;(<font class="mutation_in_codon">A</font>AA&rarr;<font class="mutation_in_codon">G</font>AA)&nbsp;</td>
+<td align="center"><i>orf&#8209;401</i>&nbsp;&rarr;</td>
+<td align="left">Tail fiber protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;2</td><!-- Seq_Id -->
+<td align="right">1,435</td><!-- Position -->
+<td align="center">+C</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right">100%</td><td align="right">100%</td>
+<td align="center">coding&nbsp;(1186/1206&nbsp;nt)</td>
+<td align="center"><i>orf&#8209;401</i>&nbsp;&rarr;</td>
+<td align="left">Tail fiber protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;2</td><!-- Seq_Id -->
+<td align="right">2,314</td><!-- Position -->
+<td align="center">G&rarr;A</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right">100%</td><td align="right">100%</td>
+<td align="center">S229N&nbsp;(A<font class="mutation_in_codon">G</font>C&rarr;A<font class="mutation_in_codon">A</font>C)&nbsp;</td>
+<td align="center"><i>orf&#8209;314</i>&nbsp;&rarr;</td>
+<td align="left">Tail fiber</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;2</td><!-- Seq_Id -->
+<td align="right">2,338</td><!-- Position -->
+<td align="center">&Delta;5,996&nbsp;bp</td><!-- Cell Mutation -->
+<td align="right"></td><td align="right">100%</td><td align="right">100%</td>
+<td align="center"></td>
+<td align="center"><i>[orf&#8209;314]</i>&#8211;<i>ea59</i></td>
+<td align="left"><i>[orf&#8209;314], orf&#8209;194, ea47, ea31, ea59</i></td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;2</td><!-- Seq_Id -->
+<td align="right">2,789</td><!-- Position -->
+<td align="center">G&rarr;C</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right">&Delta;</td><td align="right">&Delta;</td>
+<td align="center">G73R&nbsp;(<font class="mutation_in_codon">G</font>GT&rarr;<font class="mutation_in_codon">C</font>GT)&nbsp;</td>
+<td align="center"><i>orf&#8209;194</i>&nbsp;&rarr;</td>
+<td align="left">Putative fiber assembly protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;3</td><!-- Seq_Id -->
+<td align="right">1,915</td><!-- Position -->
+<td align="center">T&rarr;C</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right"></td><td align="right"></td>
+<td align="center">E3E&nbsp;(GA<font class="mutation_in_codon">A</font>&rarr;GA<font class="mutation_in_codon">G</font>)&nbsp;</td>
+<td align="center"><i>orf61</i>&nbsp;&larr;</td>
+<td align="left">hypothetical protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;3</td><!-- Seq_Id -->
+<td align="right">5,833</td><!-- Position -->
+<td align="center">A&rarr;G</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right"></td><td align="right"></td>
+<td align="center">G151G&nbsp;(GG<font class="mutation_in_codon">A</font>&rarr;GG<font class="mutation_in_codon">G</font>)&nbsp;</td>
+<td align="center"><i>lambdap48</i>&nbsp;&rarr;</td>
+<td align="left">Superinfection exclusion protein B</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;3</td><!-- Seq_Id -->
+<td align="right">8,717</td><!-- Position -->
+<td align="center">&Delta;1&nbsp;bp</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right"></td><td align="right"></td>
+<td align="center">coding&nbsp;(123/714&nbsp;nt)</td>
+<td align="center"><i>cI</i>&nbsp;&larr;</td>
+<td align="left">repressor</td>
+</tr>
+<!-- End Table Row -->
+<tr>
+<th>seq&nbsp;id</th>
+<th>position</th>
+<th>mutation</th>
+<th>gd</th>
+<th>gd_1</th>
+<th>gd_2</th>
+<th>annotation</th>
+<th>gene</th>
+<th width="100%">description</th>
+</tr>
+
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">6,817</td><!-- Position -->
+<td align="center">T&rarr;C</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right">100%</td><td align="right">100%</td>
+<td align="center">F42F&nbsp;(TT<font class="mutation_in_codon">T</font>&rarr;TT<font class="mutation_in_codon">C</font>)&nbsp;</td>
+<td align="center"><i>R</i>&nbsp;&rarr;</td>
+<td align="left">endolysin</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">7,335</td><!-- Position -->
+<td align="center">T&rarr;C</td><!-- Cell Mutation -->
+<td align="right"> 7.9%</td><td align="right"> 7.9%</td><td align="right"> 7.9%</td>
+<td align="center">R57R&nbsp;(CG<font class="mutation_in_codon">T</font>&rarr;CG<font class="mutation_in_codon">C</font>)&nbsp;</td>
+<td align="center"><i>Rz</i>&nbsp;&rarr;</td>
+<td align="left">cell lysis protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">7,353</td><!-- Position -->
+<td align="center">G&rarr;A</td><!-- Cell Mutation -->
+<td align="right"> 8.4%</td><td align="right"> 8.4%</td><td align="right"> 8.4%</td>
+<td align="center">A63A&nbsp;(GC<font class="mutation_in_codon">G</font>&rarr;GC<font class="mutation_in_codon">A</font>)&nbsp;</td>
+<td align="center"><i>Rz</i>&nbsp;&rarr;</td>
+<td align="left">cell lysis protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">7,356</td><!-- Position -->
+<td align="center">C&rarr;G</td><!-- Cell Mutation -->
+<td align="right"> 6.6%</td><td align="right"> 6.6%</td><td align="right"> 6.6%</td>
+<td align="center">L64L&nbsp;(CT<font class="mutation_in_codon">C</font>&rarr;CT<font class="mutation_in_codon">G</font>)&nbsp;</td>
+<td align="center"><i>Rz</i>&nbsp;&rarr;</td>
+<td align="left">cell lysis protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">7,361</td><!-- Position -->
+<td align="center">C&rarr;A</td><!-- Cell Mutation -->
+<td align="right"> 5.5%</td><td align="right"> 5.5%</td><td align="right"> 5.5%</td>
+<td align="center">A66E&nbsp;(G<font class="mutation_in_codon">C</font>A&rarr;G<font class="mutation_in_codon">A</font>A)&nbsp;</td>
+<td align="center"><i>Rz</i>&nbsp;&rarr;</td>
+<td align="left">cell lysis protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">7,384</td><!-- Position -->
+<td align="center">G&rarr;A</td><!-- Cell Mutation -->
+<td align="right"> 8.7%</td><td align="right"> 8.7%</td><td align="right"> 8.7%</td>
+<td align="center">D74N&nbsp;(<font class="mutation_in_codon">G</font>AT&rarr;<font class="mutation_in_codon">A</font>AT)&nbsp;</td>
+<td align="center"><i>Rz</i>&nbsp;&rarr;</td>
+<td align="left">cell lysis protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">7,389</td><!-- Position -->
+<td align="center">T&rarr;G</td><!-- Cell Mutation -->
+<td align="right">11.0%</td><td align="right">11.0%</td><td align="right">11.0%</td>
+<td align="center">A75A&nbsp;(GC<font class="mutation_in_codon">T</font>&rarr;GC<font class="mutation_in_codon">G</font>)&nbsp;</td>
+<td align="center"><i>Rz</i>&nbsp;&rarr;</td>
+<td align="left">cell lysis protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">7,629</td><!-- Position -->
+<td align="center">T&rarr;C</td><!-- Cell Mutation -->
+<td align="right">23.9%</td><td align="right">23.9%</td><td align="right"></td>
+<td align="center">intergenic&nbsp;(+62/+29)</td>
+<td align="center"><i>Rz1</i>&nbsp;&rarr;&nbsp;/&nbsp;&larr;&nbsp;<i>bor</i></td>
+<td align="left">Rz1 protein/Bor protein precursor</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">7,796</td><!-- Position -->
+<td align="center">G&rarr;A</td><!-- Cell Mutation -->
+<td align="right">26.3%</td><td align="right">26.3%</td><td align="right"></td>
+<td align="center">V52V&nbsp;(GT<font class="mutation_in_codon">C</font>&rarr;GT<font class="mutation_in_codon">T</font>)&nbsp;</td>
+<td align="center"><i>bor</i>&nbsp;&larr;</td>
+<td align="left">Bor protein precursor</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">7,807</td><!-- Position -->
+<td align="center">T&rarr;C</td><!-- Cell Mutation -->
+<td align="right">21.0%</td><td align="right">21.0%</td><td align="right"></td>
+<td align="center">K49E&nbsp;(<font class="mutation_in_codon">A</font>AG&rarr;<font class="mutation_in_codon">G</font>AG)&nbsp;</td>
+<td align="center"><i>bor</i>&nbsp;&larr;</td>
+<td align="left">Bor protein precursor</td>
+</tr>
+<!-- End Table Row -->
+<tr>
+<th>seq&nbsp;id</th>
+<th>position</th>
+<th>mutation</th>
+<th>gd</th>
+<th>gd_1</th>
+<th>gd_2</th>
+<th>annotation</th>
+<th>gene</th>
+<th width="100%">description</th>
+</tr>
+
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">7,811</td><!-- Position -->
+<td align="center">C&rarr;T</td><!-- Cell Mutation -->
+<td align="right">20.9%</td><td align="right">20.9%</td><td align="right"></td>
+<td align="center">G47G&nbsp;(GG<font class="mutation_in_codon">G</font>&rarr;GG<font class="mutation_in_codon">A</font>)&nbsp;</td>
+<td align="center"><i>bor</i>&nbsp;&larr;</td>
+<td align="left">Bor protein precursor</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">7,820</td><!-- Position -->
+<td align="center">A&rarr;C</td><!-- Cell Mutation -->
+<td align="right">17.3%</td><td align="right"></td><td align="right"></td>
+<td align="center">S44S&nbsp;(TC<font class="mutation_in_codon">T</font>&rarr;TC<font class="mutation_in_codon">G</font>)&nbsp;</td>
+<td align="center"><i>bor</i>&nbsp;&larr;</td>
+<td align="left">Bor protein precursor</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">7,832</td><!-- Position -->
+<td align="center">A&rarr;G</td><!-- Cell Mutation -->
+<td align="right">17.1%</td><td align="right"></td><td align="right"></td>
+<td align="center">H40H&nbsp;(CA<font class="mutation_in_codon">T</font>&rarr;CA<font class="mutation_in_codon">C</font>)&nbsp;</td>
+<td align="center"><i>bor</i>&nbsp;&larr;</td>
+<td align="left">Bor protein precursor</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">7,858</td><!-- Position -->
+<td align="center">C&rarr;T</td><!-- Cell Mutation -->
+<td align="right">13.8%</td><td align="right">13.8%</td><td align="right"></td>
+<td align="center">A32T&nbsp;(<font class="mutation_in_codon">G</font>CA&rarr;<font class="mutation_in_codon">A</font>CA)&nbsp;</td>
+<td align="center"><i>bor</i>&nbsp;&larr;</td>
+<td align="left">Bor protein precursor</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">7,867</td><!-- Position -->
+<td align="center">C&rarr;T</td><!-- Cell Mutation -->
+<td align="right">11.1%</td><td align="right">11.1%</td><td align="right"></td>
+<td align="center">A29T&nbsp;(<font class="mutation_in_codon">G</font>CA&rarr;<font class="mutation_in_codon">A</font>CA)&nbsp;</td>
+<td align="center"><i>bor</i>&nbsp;&larr;</td>
+<td align="left">Bor protein precursor</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">7,878</td><!-- Position -->
+<td align="center">T&rarr;C</td><!-- Cell Mutation -->
+<td align="right">10.9%</td><td align="right">20.9%</td><td align="right"></td>
+<td align="center">Q25R&nbsp;(C<font class="mutation_in_codon">A</font>A&rarr;C<font class="mutation_in_codon">G</font>A)&nbsp;</td>
+<td align="center"><i>bor</i>&nbsp;&larr;</td>
+<td align="left">Bor protein precursor</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">7,879</td><!-- Position -->
+<td align="center">G&rarr;C</td><!-- Cell Mutation -->
+<td align="right">11.5%</td><td align="right">11.5%</td><td align="right"></td>
+<td align="center">Q25E&nbsp;(<font class="mutation_in_codon">C</font>AA&rarr;<font class="mutation_in_codon">G</font>AA)&nbsp;</td>
+<td align="center"><i>bor</i>&nbsp;&larr;</td>
+<td align="left">Bor protein precursor</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">7,918</td><!-- Position -->
+<td align="center">G&rarr;T</td><!-- Cell Mutation -->
+<td align="right"> 6.8%</td><td align="right"> 6.8%</td><td align="right"> 6.8%</td>
+<td align="center">L12M&nbsp;(<font class="mutation_in_codon">C</font>TG&rarr;<font class="mutation_in_codon">A</font>TG)&nbsp;&nbsp;&Dagger;</td>
+<td align="center"><i>bor</i>&nbsp;&larr;</td>
+<td align="left">Bor protein precursor</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">7,919</td><!-- Position -->
+<td align="center">G&rarr;T</td><!-- Cell Mutation -->
+<td align="right"> 6.6%</td><td align="right"> 6.6%</td><td align="right"> 6.6%</td>
+<td align="center">A11A&nbsp;(GC<font class="mutation_in_codon">C</font>&rarr;GC<font class="mutation_in_codon">A</font>)&nbsp;&nbsp;&Dagger;</td>
+<td align="center"><i>bor</i>&nbsp;&larr;</td>
+<td align="left">Bor protein precursor</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">8,134</td><!-- Position -->
+<td align="center">G&rarr;T</td><!-- Cell Mutation -->
+<td align="right"> 7.0%</td><td align="right"> 7.0%</td><td align="right"> 7.0%</td>
+<td align="center">intergenic&nbsp;(&#8209;183/+107)</td>
+<td align="center"><i>bor</i>&nbsp;&larr;&nbsp;/&nbsp;&larr;&nbsp;<i>lambdap78</i></td>
+<td align="left">Bor protein precursor/putative envelope protein</td>
+</tr>
+<!-- End Table Row -->
+<tr>
+<th>seq&nbsp;id</th>
+<th>position</th>
+<th>mutation</th>
+<th>gd</th>
+<th>gd_1</th>
+<th>gd_2</th>
+<th>annotation</th>
+<th>gene</th>
+<th width="100%">description</th>
+</tr>
+
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">8,141</td><!-- Position -->
+<td align="center">C&rarr;G</td><!-- Cell Mutation -->
+<td align="right">14.4%</td><td align="right">15.4%</td><td align="right">15.4%</td>
+<td align="center">intergenic&nbsp;(&#8209;190/+100)</td>
+<td align="center"><i>bor</i>&nbsp;&larr;&nbsp;/&nbsp;&larr;&nbsp;<i>lambdap78</i></td>
+<td align="left">Bor protein precursor/putative envelope protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">8,151</td><!-- Position -->
+<td align="center">+C</td><!-- Cell Mutation -->
+<td align="right">15.0%</td><td align="right">15.0%</td><td align="right">15.0%</td>
+<td align="center">intergenic&nbsp;(&#8209;200/+90)</td>
+<td align="center"><i>bor</i>&nbsp;&larr;&nbsp;/&nbsp;&larr;&nbsp;<i>lambdap78</i></td>
+<td align="left">Bor protein precursor/putative envelope protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">8,152</td><!-- Position -->
+<td align="center">T&rarr;A</td><!-- Cell Mutation -->
+<td align="right">16.4%</td><td align="right">26.4%</td><td align="right">26.4%</td>
+<td align="center">intergenic&nbsp;(&#8209;201/+89)</td>
+<td align="center"><i>bor</i>&nbsp;&larr;&nbsp;/&nbsp;&larr;&nbsp;<i>lambdap78</i></td>
+<td align="left">Bor protein precursor/putative envelope protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">8,156</td><!-- Position -->
+<td align="center">+A</td><!-- Cell Mutation -->
+<td align="right">79.3%</td><td align="right">50.0%</td><td align="right">50.0%</td>
+<td align="center">intergenic&nbsp;(&#8209;205/+85)</td>
+<td align="center"><i>bor</i>&nbsp;&larr;&nbsp;/&nbsp;&larr;&nbsp;<i>lambdap78</i></td>
+<td align="left">Bor protein precursor/putative envelope protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">8,156</td><!-- Position -->
+<td align="center">+G</td><!-- Cell Mutation -->
+<td align="right"></td><td align="right">20.0%</td><td align="right"></td>
+<td align="center">intergenic&nbsp;(&#8209;205/+85)</td>
+<td align="center"><i>bor</i>&nbsp;&larr;&nbsp;/&nbsp;&larr;&nbsp;<i>lambdap78</i></td>
+<td align="left">Bor protein precursor/putative envelope protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">8,156</td><!-- Position -->
+<td align="center">+A</td><!-- Cell Mutation -->
+<td align="right"></td><td align="right"></td><td align="right">30.0%</td>
+<td align="center">intergenic&nbsp;(&#8209;205/+85)</td>
+<td align="center"><i>bor</i>&nbsp;&larr;&nbsp;/&nbsp;&larr;&nbsp;<i>lambdap78</i></td>
+<td align="left">Bor protein precursor/putative envelope protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">8,184</td><!-- Position -->
+<td align="center">C&rarr;T</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right">100%</td><td align="right">100%</td>
+<td align="center">intergenic&nbsp;(&#8209;233/+57)</td>
+<td align="center"><i>bor</i>&nbsp;&larr;&nbsp;/&nbsp;&larr;&nbsp;<i>lambdap78</i></td>
+<td align="left">Bor protein precursor/putative envelope protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">8,191</td><!-- Position -->
+<td align="center">C&rarr;T</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right">100%</td><td align="right">100%</td>
+<td align="center">intergenic&nbsp;(&#8209;240/+50)</td>
+<td align="center"><i>bor</i>&nbsp;&larr;&nbsp;/&nbsp;&larr;&nbsp;<i>lambdap78</i></td>
+<td align="left">Bor protein precursor/putative envelope protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">8,203</td><!-- Position -->
+<td align="center">G&rarr;A</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right"></td><td align="right">?</td>
+<td align="center">intergenic&nbsp;(&#8209;252/+38)</td>
+<td align="center"><i>bor</i>&nbsp;&larr;&nbsp;/&nbsp;&larr;&nbsp;<i>lambdap78</i></td>
+<td align="left">Bor protein precursor/putative envelope protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">8,328</td><!-- Position -->
+<td align="center">A&rarr;G</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right"></td><td align="right">?</td>
+<td align="center">H149H&nbsp;(CA<font class="mutation_in_codon">T</font>&rarr;CA<font class="mutation_in_codon">C</font>)&nbsp;</td>
+<td align="center"><i>lambdap78</i>&nbsp;&larr;</td>
+<td align="left">putative envelope protein</td>
+</tr>
+<!-- End Table Row -->
+<tr>
+<th>seq&nbsp;id</th>
+<th>position</th>
+<th>mutation</th>
+<th>gd</th>
+<th>gd_1</th>
+<th>gd_2</th>
+<th>annotation</th>
+<th>gene</th>
+<th width="100%">description</th>
+</tr>
+
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">8,342</td><!-- Position -->
+<td align="center">C&rarr;T</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right"></td><td align="right">?</td>
+<td align="center">V145I&nbsp;(<font class="mutation_in_codon">G</font>TT&rarr;<font class="mutation_in_codon">A</font>TT)&nbsp;</td>
+<td align="center"><i>lambdap78</i>&nbsp;&larr;</td>
+<td align="left">putative envelope protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">8,442</td><!-- Position -->
+<td align="center">G&rarr;A</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right"></td><td align="right">?</td>
+<td align="center">N111N&nbsp;(AA<font class="mutation_in_codon">C</font>&rarr;AA<font class="mutation_in_codon">T</font>)&nbsp;</td>
+<td align="center"><i>lambdap78</i>&nbsp;&larr;</td>
+<td align="left">putative envelope protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">8,514</td><!-- Position -->
+<td align="center">G&rarr;A</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right"></td><td align="right">?</td>
+<td align="center">I87I&nbsp;(AT<font class="mutation_in_codon">C</font>&rarr;AT<font class="mutation_in_codon">T</font>)&nbsp;</td>
+<td align="center"><i>lambdap78</i>&nbsp;&larr;</td>
+<td align="left">putative envelope protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">8,559</td><!-- Position -->
+<td align="center">G&rarr;A</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right"></td><td align="right">?</td>
+<td align="center">N72N&nbsp;(AA<font class="mutation_in_codon">C</font>&rarr;AA<font class="mutation_in_codon">T</font>)&nbsp;</td>
+<td align="center"><i>lambdap78</i>&nbsp;&larr;</td>
+<td align="left">putative envelope protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">8,597</td><!-- Position -->
+<td align="center">C&rarr;T</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right"></td><td align="right">?</td>
+<td align="center">D60N&nbsp;(<font class="mutation_in_codon">G</font>AC&rarr;<font class="mutation_in_codon">A</font>AC)&nbsp;</td>
+<td align="center"><i>lambdap78</i>&nbsp;&larr;</td>
+<td align="left">putative envelope protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">8,708</td><!-- Position -->
+<td align="center">T&rarr;C</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right"></td><td align="right"></td>
+<td align="center">T23A&nbsp;(<font class="mutation_in_codon">A</font>CG&rarr;<font class="mutation_in_codon">G</font>CG)&nbsp;</td>
+<td align="center"><i>lambdap78</i>&nbsp;&larr;</td>
+<td align="left">putative envelope protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">8,728</td><!-- Position -->
+<td align="center">C&rarr;T</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right"></td><td align="right"></td>
+<td align="center">R16K&nbsp;(A<font class="mutation_in_codon">G</font>G&rarr;A<font class="mutation_in_codon">A</font>G)&nbsp;</td>
+<td align="center"><i>lambdap78</i>&nbsp;&larr;</td>
+<td align="left">putative envelope protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">8,774</td><!-- Position -->
+<td align="center">C&rarr;A</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right">100%</td><td align="right">100%</td>
+<td align="center">M1M&nbsp;(<font class="mutation_in_codon">G</font>TG&rarr;<font class="mutation_in_codon">T</font>TG)&nbsp;&nbsp;&dagger;</td>
+<td align="center"><i>lambdap78</i>&nbsp;&larr;</td>
+<td align="left">putative envelope protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">8,868</td><!-- Position -->
+<td align="center">T&rarr;C</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right">100%</td><td align="right">100%</td>
+<td align="center">intergenic&nbsp;(&#8209;94/&#8209;69)</td>
+<td align="center"><i>lambdap78</i>&nbsp;&larr;&nbsp;/&nbsp;&rarr;&nbsp;<i>lambdap79</i></td>
+<td align="left">putative envelope protein/hypothetical protein</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">9,077</td><!-- Position -->
+<td align="center">A&rarr;G</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right">100%</td><td align="right">100%</td>
+<td align="center">R47R&nbsp;(AG<font class="mutation_in_codon">A</font>&rarr;AG<font class="mutation_in_codon">G</font>)&nbsp;</td>
+<td align="center"><i>lambdap79</i>&nbsp;&rarr;</td>
+<td align="left">hypothetical protein</td>
+</tr>
+<!-- End Table Row -->
+<tr>
+<th>seq&nbsp;id</th>
+<th>position</th>
+<th>mutation</th>
+<th>gd</th>
+<th>gd_1</th>
+<th>gd_2</th>
+<th>annotation</th>
+<th>gene</th>
+<th width="100%">description</th>
+</tr>
+
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">9,172</td><!-- Position -->
+<td align="center">T&rarr;C</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right">100%</td><td align="right">100%</td>
+<td align="center">intergenic&nbsp;(+29/&#8211;)</td>
+<td align="center"><i>lambdap79</i>&nbsp;&rarr;&nbsp;/&nbsp;&#8211;</td>
+<td align="left">hypothetical protein/&#8211;</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">9,176</td><!-- Position -->
+<td align="center">+AC</td><!-- Cell Mutation -->
+<td align="right"></td><td align="right">100%</td><td align="right">100%</td>
+<td align="center">intergenic&nbsp;(+33/&#8211;)</td>
+<td align="center"><i>lambdap79</i>&nbsp;&rarr;&nbsp;/&nbsp;&#8211;</td>
+<td align="left">hypothetical protein/&#8211;</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">9,176</td><!-- Position -->
+<td align="center">2&nbsp;bp&rarr;AC</td><!-- Cell Mutation -->
+<td align="right">100%</td><td align="right"></td><td align="right"></td>
+<td align="center">intergenic&nbsp;(+33/&#8211;)</td>
+<td align="center"><i>lambdap79</i>&nbsp;&rarr;&nbsp;/&nbsp;&#8211;</td>
+<td align="left">hypothetical protein/&#8211;</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">9,314</td><!-- Position -->
+<td align="center">T&rarr;A</td><!-- Cell Mutation -->
+<td align="right"> 5.7%</td><td align="right"> 5.7%</td><td align="right"> 5.7%</td>
+<td align="center">intergenic&nbsp;(+171/&#8211;)</td>
+<td align="center"><i>lambdap79</i>&nbsp;&rarr;&nbsp;/&nbsp;&#8211;</td>
+<td align="left">hypothetical protein/&#8211;</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">9,323</td><!-- Position -->
+<td align="center">T&rarr;C</td><!-- Cell Mutation -->
+<td align="right"> 6.1%</td><td align="right"> 6.1%</td><td align="right"> 6.1%</td>
+<td align="center">intergenic&nbsp;(+180/&#8211;)</td>
+<td align="center"><i>lambdap79</i>&nbsp;&rarr;&nbsp;/&nbsp;&#8211;</td>
+<td align="left">hypothetical protein/&#8211;</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">9,325</td><!-- Position -->
+<td align="center">T&rarr;G</td><!-- Cell Mutation -->
+<td align="right"> 7.2%</td><td align="right"> 7.2%</td><td align="right"> 7.2%</td>
+<td align="center">intergenic&nbsp;(+182/&#8211;)</td>
+<td align="center"><i>lambdap79</i>&nbsp;&rarr;&nbsp;/&nbsp;&#8211;</td>
+<td align="left">hypothetical protein/&#8211;</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">9,326</td><!-- Position -->
+<td align="center">A&rarr;G</td><!-- Cell Mutation -->
+<td align="right"> 6.1%</td><td align="right"> 6.1%</td><td align="right"> 6.1%</td>
+<td align="center">intergenic&nbsp;(+183/&#8211;)</td>
+<td align="center"><i>lambdap79</i>&nbsp;&rarr;&nbsp;/&nbsp;&#8211;</td>
+<td align="left">hypothetical protein/&#8211;</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">9,359</td><!-- Position -->
+<td align="center">T&rarr;C</td><!-- Cell Mutation -->
+<td align="right">82.1%</td><td align="right">82.1%</td><td align="right">82.1%</td>
+<td align="center">intergenic&nbsp;(+216/&#8211;)</td>
+<td align="center"><i>lambdap79</i>&nbsp;&rarr;&nbsp;/&nbsp;&#8211;</td>
+<td align="left">hypothetical protein/&#8211;</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">9,401</td><!-- Position -->
+<td align="center">G&rarr;A</td><!-- Cell Mutation -->
+<td align="right">15.1%</td><td align="right">15.1%</td><td align="right">15.1%</td>
+<td align="center">intergenic&nbsp;(+258/&#8211;)</td>
+<td align="center"><i>lambdap79</i>&nbsp;&rarr;&nbsp;/&nbsp;&#8211;</td>
+<td align="left">hypothetical protein/&#8211;</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">9,494</td><!-- Position -->
+<td align="center">C&rarr;A</td><!-- Cell Mutation -->
+<td align="right">15.2%</td><td align="right">15.2%</td><td align="right">15.2%</td>
+<td align="center">intergenic&nbsp;(+351/&#8211;)</td>
+<td align="center"><i>lambdap79</i>&nbsp;&rarr;&nbsp;/&nbsp;&#8211;</td>
+<td align="left">hypothetical protein/&#8211;</td>
+</tr>
+<!-- End Table Row -->
+<tr>
+<th>seq&nbsp;id</th>
+<th>position</th>
+<th>mutation</th>
+<th>gd</th>
+<th>gd_1</th>
+<th>gd_2</th>
+<th>annotation</th>
+<th>gene</th>
+<th width="100%">description</th>
+</tr>
+
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">9,626</td><!-- Position -->
+<td align="center">C&rarr;G</td><!-- Cell Mutation -->
+<td align="right"> 8.8%</td><td align="right"> 8.8%</td><td align="right"> 8.8%</td>
+<td align="center">intergenic&nbsp;(+483/&#8211;)</td>
+<td align="center"><i>lambdap79</i>&nbsp;&rarr;&nbsp;/&nbsp;&#8211;</td>
+<td align="left">hypothetical protein/&#8211;</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">9,628</td><!-- Position -->
+<td align="center">C&rarr;A</td><!-- Cell Mutation -->
+<td align="right"> 8.8%</td><td align="right"> 8.8%</td><td align="right"> 8.8%</td>
+<td align="center">intergenic&nbsp;(+485/&#8211;)</td>
+<td align="center"><i>lambdap79</i>&nbsp;&rarr;&nbsp;/&nbsp;&#8211;</td>
+<td align="left">hypothetical protein/&#8211;</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_1">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">9,629</td><!-- Position -->
+<td align="center">C&rarr;G</td><!-- Cell Mutation -->
+<td align="right">11.2%</td><td align="right">11.2%</td><td align="right">11.2%</td>
+<td align="center">intergenic&nbsp;(+486/&#8211;)</td>
+<td align="center"><i>lambdap79</i>&nbsp;&rarr;&nbsp;/&nbsp;&#8211;</td>
+<td align="left">hypothetical protein/&#8211;</td>
+</tr>
+<!-- End Table Row -->
+
+<!-- Print The Table Row -->
+<tr class="alternate_table_row_0">
+<td align="center">NC_001416&#8209;4</td><!-- Seq_Id -->
+<td align="right">9,631</td><!-- Position -->
+<td align="center">C&rarr;T</td><!-- Cell Mutation -->
+<td align="right">11.2%</td><td align="right">11.2%</td><td align="right">11.2%</td>
+<td align="center">intergenic&nbsp;(+488/&#8211;)</td>
+<td align="center"><i>lambdap79</i>&nbsp;&rarr;&nbsp;/&nbsp;&#8211;</td>
+<td align="left">hypothetical protein/&#8211;</td>
+</tr>
+<!-- End Table Row -->
+</table></body></html>
