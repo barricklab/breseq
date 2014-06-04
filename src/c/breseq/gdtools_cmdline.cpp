@@ -1911,6 +1911,14 @@ int do_runfile(int argc, char *argv[])
     map<string,string> &adapters_for_reads  = gd.metadata.adapters_for_reads;
 		vector<vector<string> > &reads_by_pair  = gd.metadata.reads_by_pair;
   
+		// Fix the read file names for certain keywords
+		for (vector<string>::iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {  
+			if (read_file_it->find("SRA:") == 0) {
+				*read_file_it = read_file_it->substr(4); // remove first four characters
+				*read_file_it += ".fastq";								 // add .fastq
+			}
+		}
+		
 		
     if (refs.size() == 0) {
       cerr << ">> Skipping file because no #REFSEQ= header lines found." << endl ;
