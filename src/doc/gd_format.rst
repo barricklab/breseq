@@ -203,7 +203,7 @@ AMP: Amplification mutation
 
 Additional AMP named fields
 '''''''''''''''''''''''''''
-* **mediated=**\ *<mobile_element_family>* **mediated_strand=**\ *<1/-1>*
+* **mediated=**\ *<mobile_element_family>*, **mediated_strand=**\ *<1/-1>*
    This amplification appears to be mediated by a mobile element insertion. New copies of the mobile element are inserted in the specified orientation before each new copy of the amplified region.
 
 CON: Gene conversion mutation
@@ -272,11 +272,11 @@ These attributes control how mutations are applied when using :program:`gdtools 
    
 * **before**\ =\ *<mutation_id>* or **after**\ =\ *<mutation_id>*
 
-   Apply this mutation before or after another mutation. For example, did a base substitution occur after a region was duplicated, thus it is only in one copy or did it occur before the duplication, thus altering both copies? Did a base substitution happen before a deletion, hiding a mutation that should be included in any phylogenetic inference? The **before**. When neither of these attributes is present, mutations will be applied in the order in which they appear in the file.
+   Apply this mutation before or after another mutation. For example, did a base substitution occur after a region was duplicated, thus it is only in one copy or did it occur before the duplication, thus altering both copies? Did a base substitution happen before a deletion, hiding a mutation that should be included in any phylogenetic inference? When neither of these attributes is present, mutations will be applied in order according to their genomic positions.
    
 * **nested_within**\ =\ *<mutation_id>*\ , **nested_copy**\ =\ *<mutation_id>*
 
-   This mutation happens inside of a different mutation. These options can specify, for example, that a base substitution happens in the second copy of a duplicated region. If **nested_copy** is not provided (because it is unknown), the mutation will be placed arbitrarily in the first copy. Currently, **nested_within** must refer to an AMP mutation.
+   This mutation happens inside of a different mutation. These options can specify, for example, that a base substitution happens in the second copy of a duplicated region. If **nested_copy** is not provided (because it is unknown), the mutation will be placed arbitrarily in the first copy. Currently, **nested_within** must refer to an AMP mutation or a MOB mutation (in which case it refers to the target site duplication).
 
 Evidence Types
 ++++++++++++++++++++++

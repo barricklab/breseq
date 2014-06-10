@@ -492,7 +492,7 @@ namespace breseq
     fprintf(stderr, "Foundation; either version 1, or (at your option) any later version.\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "Copyright (c) 2008-2010 Michigan State University\n");
-    fprintf(stderr, "Copyright (c) 2011-2013 The University of Texas at Austin\n");
+    fprintf(stderr, "Copyright (c) 2011-2014 The University of Texas at Austin\n");
     cerr << output_divider << endl;
   }
 
