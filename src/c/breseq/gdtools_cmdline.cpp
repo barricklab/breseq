@@ -490,8 +490,8 @@ int do_validate(int argc, char *argv[])
     }
     
     cerr << endl;
-    cerr << "::: Summary :::" << endl;
-    cerr << "  Total files processed:             " << setw(6) << num_files_processed << endl;
+    cerr <<     "::: Summary :::" << endl;
+    cerr <<     "  Total files processed:         " << setw(6) << num_files_processed << endl;
     if (num_files_with_errors == 0) {
         cerr << "* No formatting errors found!" << endl;
     } else {
@@ -1150,9 +1150,11 @@ int do_normalize_gd(int argc, char* argv[])
 {
   AnyOption options("gdtools NORMALIZE [-o output.gd] -r reference.gbk input.gd");
   options
-  ("output,o"     , "output Genome Diff file.", "output.gd")
-  ("reference,r"  , "input reference file.")
-  ("verbose,v"    , "Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
+  ("output,o"          , "output Genome Diff file.", "output.gd")
+  ("reference,r"       , "input reference file.")
+	("reassign-ids,s"    , "reassign ids to lowest numbers possible.", TAKES_NO_ARGUMENT)
+	("repeat-adjacent,a" , "mark repeat-adjacent, mediated, and between mutations.", TAKES_NO_ARGUMENT)
+  ("verbose,v"         , "verbose mode (flag)", TAKES_NO_ARGUMENT);
 
   options.processCommandArgs(argc, argv);
   options.addUsage("");
@@ -1195,6 +1197,11 @@ int do_normalize_gd(int argc, char* argv[])
   Settings settings;
   gd.normalize_mutations(ref_seq_info, settings);
 
+	if (options.count("reassign-ids")) {
+		uout("Reassigning mutation and evidence ids.");
+		gd.reassign_unique_ids();
+	}
+	
   uout("Writing output Genome Diff file", options["output"]);
   gd.write(options["output"]);
 

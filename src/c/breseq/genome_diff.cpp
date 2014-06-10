@@ -139,23 +139,29 @@ enum diff_entry_field_variable_t {
   kDiffEntryFieldVariableType_PositiveInteger,
   kDiffEntryFieldVariableType_Integer,
   kDiffEntryFieldVariableType_Strand, // must be -1 or +1
+  kDiffEntryFieldVariableType_PositiveInteger_ReverseSort,
 };
   
 map<string, diff_entry_field_variable_t > diff_entry_field_variable_types = make_map<string, diff_entry_field_variable_t>
 (POSITION, kDiffEntryFieldVariableType_PositiveInteger)
 (START, kDiffEntryFieldVariableType_PositiveInteger)
 (END, kDiffEntryFieldVariableType_PositiveInteger)
-(SIZE, kDiffEntryFieldVariableType_PositiveInteger)
+(SIZE, kDiffEntryFieldVariableType_PositiveInteger_ReverseSort)
 (STRAND, kDiffEntryFieldVariableType_Strand)
 (DUPLICATION_SIZE, kDiffEntryFieldVariableType_Integer)
 (NEW_COPY_NUMBER, kDiffEntryFieldVariableType_PositiveInteger)
 (DEL_START, kDiffEntryFieldVariableType_PositiveInteger)
 (DEL_END, kDiffEntryFieldVariableType_PositiveInteger)
+(INSERT_POSITION, kDiffEntryFieldVariableType_Integer)
 ;
 
 const vector<string>gd_entry_type_lookup_table =
   make_vector<string>("UNKNOWN")("SNP")("SUB")("DEL")("INS")("MOB")("AMP")("INV")("CON")("RA")("MC")("JC")("CN")("UN")("CURA")("FPOS")("PHYL")("TSEQ")("PFLP")("RFLP")("PFGE")("NOTE")("MASK");
 
+// Used when determining what fields need to be updated if ids are renumbered
+const vector<string> gd_keys_with_ids = 
+  make_vector<string>("before")("after")("nested_within");
+  
 
 /*! Constructor.
  */
@@ -292,6 +298,8 @@ void cDiffEntry::valid_field_variable_types(cFileParseErrors& parse_errors) {
     switch(variable_type)
     {
       case kDiffEntryFieldVariableType_PositiveInteger:
+      case kDiffEntryFieldVariableType_PositiveInteger_ReverseSort:
+
         if (ret_val <= 0) { 
           parse_errors.add_line_error(from_string<uint32_t>((*this)["_line_number"]), this->as_string(), "Expected positive integral value for field " + to_string<uint32_t>(field_count) + ": [" + *it + "] instead of [" + value + "]."  , false);
         }
@@ -336,22 +344,30 @@ bool cDiffEntry::operator==(const cDiffEntry& de)
       
       // Perform the proper type of comparison
       // Default is a string if not provided...
+      
+      
       if (!diff_entry_field_variable_types.count(spec)) {
       
         if ((*this)[spec] != de.find(spec)->second)
           return false;
       
-      } else if (diff_entry_field_variable_types[spec] == kDiffEntryFieldVariableType_PositiveInteger) {
-
-        if (from_string<uint32_t>((*this)[spec]) != from_string<uint32_t>(de.find(spec)->second))
-          return false;
-
-      } else if (  (diff_entry_field_variable_types[spec] == kDiffEntryFieldVariableType_Integer)
-                || (diff_entry_field_variable_types[spec] == kDiffEntryFieldVariableType_Strand)  ) {
-       
-        if (from_string<int32_t>((*this)[spec]) != from_string<int32_t>(de.find(spec)->second))
-          return false;
-      
+      } else {
+        
+        switch(diff_entry_field_variable_types[spec]) {
+          case kDiffEntryFieldVariableType_PositiveInteger:
+          case kDiffEntryFieldVariableType_PositiveInteger_ReverseSort:
+            
+            if (from_string<uint32_t>((*this)[spec]) != from_string<uint32_t>(de.find(spec)->second))
+              return false;
+            break;
+            
+          case kDiffEntryFieldVariableType_Integer:
+          case kDiffEntryFieldVariableType_Strand:
+            
+            if (from_string<int32_t>((*this)[spec]) != from_string<int32_t>(de.find(spec)->second))
+              return false;
+            break;
+        }
       }
     }
     
@@ -512,8 +528,10 @@ void cDiffEntry::marshal(vector<string>& s) const {
   s.push_back(gd_entry_type_lookup_table[_type]);
   s.push_back(_id);
   
-  s.push_back(join(_evidence, ","));
-  
+  // Use a dot "." if no evidence is provided
+  string evidence_string = join(_evidence, ",");
+  s.push_back(evidence_string.size() ? evidence_string : ".");
+
   // deep copy all fields:
   cDiffEntry cp= *this;
   
@@ -1888,22 +1906,33 @@ void cGenomeDiff::reassign_unique_ids()
   //Handle mutations.
   _unique_id_counter = 0;
   
+  // Need to map out what we reassigned (as strings!) in order to update
+  // in various other fields that refer to these
+  
+  map<string,string> mutation_id_reassignments;
+  
+  // Need to know what mutation's evidence to update when
+  // the evidence is renumbered
   map<string, vector<diff_entry_ptr_t> > id_table;
-  diff_entry_list_t::iterator it = _entry_list.begin();
-  while (it != _entry_list.end()) {
-    if (!(**it).is_mutation()) break;
-    (**it)._id = to_string(++_unique_id_counter);
+  
+  for (diff_entry_list_t::iterator it=_entry_list.begin(); it!= _entry_list.end(); it++) {
+    if (!(**it).is_mutation()) continue;
     
+    string old_id = (**it)._id;
+    (**it)._id = to_string(++_unique_id_counter);
+    mutation_id_reassignments[old_id] = (**it)._id;
+    
+    // Keep pointers back to this mutation based on evidence ids
     for (uint32_t i = 0; i < (**it)._evidence.size(); ++i) {
       id_table[(**it)._evidence[i]].push_back(*it);
     }
     (**it)._evidence.clear();
-    
-    ++it;
   }
   
-  //Handle the rest.
-  while (it != _entry_list.end()) {
+  //Handle the evidence and validation (any non-mutation)
+  for (diff_entry_list_t::iterator it=_entry_list.begin(); it!= _entry_list.end(); it++) {
+    if ((**it).is_mutation()) continue;
+    
     string new_id = to_string(++_unique_id_counter);
     
     if (id_table.count((**it)._id)) {
@@ -1912,8 +1941,23 @@ void cGenomeDiff::reassign_unique_ids()
       }
     }
     
+    (**it)._evidence.clear(); // These entries should not have any evidence
     (**it)._id = new_id;
-    ++it;
+  }
+  
+  // Handle updating these tags which may refer to evidence
+  // after=, before=, nested_within=, 
+  
+  for (diff_entry_list_t::iterator it=_entry_list.begin(); it!= _entry_list.end(); it++) {
+    if (!(**it).is_mutation()) continue;    
+    
+    cDiffEntry& mut = **it;
+    for (vector<string>::const_iterator key_it=gd_keys_with_ids.begin(); key_it!= gd_keys_with_ids.end(); key_it++) {
+
+      if (mut.entry_exists(*key_it)) {
+        mut[*key_it] = mutation_id_reassignments[mut[*key_it]];
+      }
+    }
   }
 }
 
@@ -2049,27 +2093,46 @@ bool cGenomeDiff::diff_entry_ptr_sort(const diff_entry_ptr_t& a, const diff_entr
         return false;
       }
       
-    } else if (diff_entry_field_variable_types[spec] == kDiffEntryFieldVariableType_PositiveInteger) {
-      
-      uint32_t a_sort_value = from_string<uint32_t>((*a)[spec]);
-      uint32_t b_sort_value = from_string<uint32_t>((*b)[spec]);
-      if (a_sort_value < b_sort_value) {
-        return true;
-      } else if (a_sort_value > b_sort_value) {
-        return false;
+    } else {
+      switch(diff_entry_field_variable_types[spec]) {
+          
+        case kDiffEntryFieldVariableType_PositiveInteger:
+        {
+          uint32_t a_sort_value = from_string<uint32_t>((*a)[spec]);
+          uint32_t b_sort_value = from_string<uint32_t>((*b)[spec]);
+          if (a_sort_value < b_sort_value) {
+            return true;
+          } else if (a_sort_value > b_sort_value) {
+            return false;
+          }
+        }
+        break;
+          
+        case kDiffEntryFieldVariableType_PositiveInteger_ReverseSort:
+        {
+          uint32_t a_sort_value = from_string<uint32_t>((*a)[spec]);
+          uint32_t b_sort_value = from_string<uint32_t>((*b)[spec]);
+          if (a_sort_value > b_sort_value) {
+            return true;
+          } else if (a_sort_value < b_sort_value) {
+            return false;
+          }
+        }
+        break;
+          
+        case kDiffEntryFieldVariableType_Integer:
+        case kDiffEntryFieldVariableType_Strand:
+        {
+          int32_t a_sort_value = from_string<int32_t>((*a)[spec]);
+          int32_t b_sort_value = from_string<int32_t>((*b)[spec]);
+          if (a_sort_value < b_sort_value) {
+            return true;
+          } else if (a_sort_value > b_sort_value) {
+            return false;
+          }
+        }
+        break;
       }
-      
-    } else if (  (diff_entry_field_variable_types[spec] == kDiffEntryFieldVariableType_Integer)
-               || (diff_entry_field_variable_types[spec] == kDiffEntryFieldVariableType_Strand)  ) {
-      
-      int32_t a_sort_value = from_string<int32_t>((*a)[spec]);
-      int32_t b_sort_value = from_string<int32_t>((*b)[spec]);
-      if (a_sort_value < b_sort_value) {
-        return true;
-      } else if (a_sort_value > b_sort_value) {
-        return false;
-      }
-      
     }
   }
   
@@ -2643,7 +2706,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
     uint32_t position = from_string<uint32_t>(mut[POSITION]);
     
     // Look out! -- you should not apply things that don't have frequency=1 or other markers of polymorphism mode
-    ASSERT(!((mut._type == INS) && (mut.count("insert_position"))), "Attempt to apply insertion with \"insert_position\" field set, which indicates your Genome Diff represents polymorphic mutations.\n" + mut.as_string());
+    //ASSERT(!((mut._type == INS) && (mut.count(INSERT_POSITION))), "Attempt to apply insertion with \"insert_position\" field set, which indicates your Genome Diff represents polymorphic mutations.\n" + mut.as_string());
     ASSERT( ((!mut.count(FREQUENCY)) || (from_string<double>(mut[FREQUENCY]) != 1)), "Attempt to apply mutation with frequency not equal to 1, which indicates your Genome Diff represents polymorphic mutations.\n" + mut.as_string());
                       
     // Attributes used for output of debug info

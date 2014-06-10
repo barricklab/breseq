@@ -1458,11 +1458,26 @@ namespace breseq {
   // Adds additional fields "repeat_length", "repeat_ref_copies", and "repeat_new_copies"
   // to any repeat that is above a certain threshold length in the original sequence (by default 6 bp).
   
+  // There are some difficulties dealing with deletions that have been split into two
+  // e.g. deletion of one G and then another G from a lager G repeat, for now we skip those!
+  // Insertions don't have the same problem. We could correct the final repeat number and
+  // so on, but it's not obvious how to do this: set it to the final state for all mutations)
+  // or set it to the state after each mutation and make that the original state for the next one.
+  
   void MutationPredictor::normalize_and_annotate_tandem_repeat_mutations(Settings& settings, Summary& summary, cGenomeDiff& gd)
-  {    
+  { 
+    // Sort for reproducibility -- but note this sort will possibly be changed by the
+    // position shifts that we make within this function!!
+    gd.sort();
+    
     (void) summary;
     uint32_t minimum_tandem_repeat_length = 5;
     uint32_t minimum_repeat_ref_copies = 2;
+    
+    // moving previous mutations back if they are put on top of existing;
+    // Currently only implemented for DEL
+    cDiffEntry* previous_mutation;
+    int32_t previous_position;
     
     // Pull settings variables
     int32_t AMP_size_cutoff = settings.size_cutoff_AMP_becomes_INS_DEL_mutation;
@@ -1482,18 +1497,25 @@ namespace breseq {
         string repeat_unit_sequence;
         find_repeat_unit(mutation_sequence, repeat_unit_size, repeat_unit_sequence);
                 
+        
         normalizeINSposition(ref_seq_info[mut["seq_id"]], mut, repeat_unit_sequence);
+        int32_t new_position = from_string<int32_t>(mut["position"]);
+        string new_mutation_sequence = mut["new_seq"];
+        
+        // ---> stub for future development of checking versus previous mutation
+        
         // repeat info may have changed, so reload
-        position = from_string<int32_t>(mut["position"]);
-        mutation_sequence = mut["new_seq"];
+        position = new_position;
+        mutation_sequence = new_mutation_sequence;
         find_repeat_unit(mutation_sequence, repeat_unit_size, repeat_unit_sequence);
         uint32_t num_repeat_units = size / repeat_unit_size;
         
         // Note shift to +1 to get to where the first unit of a repeat would be for INS
         uint32_t original_num_repeat_units = find_original_num_repeat_units(ref_seq_info[mut["seq_id"]], position+1, repeat_unit_sequence);
-        
+
         // save normalized position even if we aren't a repeat
         mut["position"] = to_string<int32_t>(position);
+        mut["new_seq"] = mutation_sequence;
         
         if (original_num_repeat_units * repeat_unit_size < minimum_tandem_repeat_length)
           continue;
@@ -1521,11 +1543,37 @@ namespace breseq {
         normalizeDELposition(ref_seq_info[mut["seq_id"]], mut, repeat_unit_sequence);
         
         // Normalize may actually change the sequence used for the repeat... so call again here.
-        position = from_string<int32_t>(mut["position"]);
-        mutation_sequence = ref_seq_info.get_sequence_1(mut["seq_id"], position, position + size - 1);
+        int32_t new_position = from_string<int32_t>(mut["position"]);
+        string new_mutation_sequence = ref_seq_info.get_sequence_1(mut["seq_id"], position, position + size - 1);
+        
+        // check against previous mutations to see if we are within the same repeat
+        if (previous_mutation && (previous_mutation->_type == DEL)) {
+
+          // Put things back if we are moving this to the exact same base
+          int32_t updated_prev_position = from_string<int32_t>((*previous_mutation)["position"]);
+          if (new_position == updated_prev_position) {
+            // revert the previous mutation
+            (*previous_mutation)["position"] = to_string<int32_t>(previous_position);
+            previous_position = position;
+            previous_mutation = &mut;
+            continue;
+          }
+        }
+        
+        // must set before jumping out or updating
+        previous_position = position;
+        previous_mutation = &mut;
+        
+        // repeat info may have changed, so reload
+        position = new_position;
+        mutation_sequence = new_mutation_sequence;
+
         find_repeat_unit(mutation_sequence, repeat_unit_size, repeat_unit_sequence);
         uint32_t num_repeat_units = size / repeat_unit_size;
 
+        // must set before jumping out
+        previous_mutation = &mut;
+        
         // Note that we add the number of repeats that were deleted
         uint32_t original_num_repeat_units = find_original_num_repeat_units(ref_seq_info[mut["seq_id"]], position, repeat_unit_sequence) + num_repeat_units;
         
@@ -1544,7 +1592,9 @@ namespace breseq {
         mut["repeat_ref_copies"] = s(original_num_repeat_units);
         mut["repeat_new_copies"] = s(original_num_repeat_units - num_repeat_units);
       }
-      
+      else { // not deletion or insertion
+        previous_mutation = NULL;
+      }
     }
   }
   
