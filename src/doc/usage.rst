@@ -22,7 +22,7 @@ Required options:
 
    The remaining arguments at the command line are the FASTQ input files of reads. FASTQ files with base quality scores that are not in `SANGER format <http://en.wikipedia.org/wiki/FASTQ_format>`_ will be converted. In addition, reads with >50% N bases will be removed from the converted FASTQ file by default. |breseq| re-calibrates the error rates for each FASTQ file separately, so data sets that were generated independently should be stored in different input files.
 
-Expert options:
+Advanced options:
 
 .. option:: --base-quality-cutoff=<int>
 
@@ -45,75 +45,76 @@ Command: bam2aln
 
 Usage::
 
-   breseq bam2aln [-b input.bam] [-f input.fasta] [-o output/path] region1 [region2 region3 ...]
+  breseq BAM2ALN [-b reference.bam -f reference.fasta -o alignment.html -n 200] region1 [region2 region3 ...]
 
 .. program::`breseq bam2aln`
 
-Creates HTML pileup files displaying reads aligned to each specified region.
+Display reads aligned to the specified region or regions.
 
-Options:
+Commonly used options:
 
-.. option:: -b <file_path>, --bam=<file_path> 
+.. option:: -b <file_path>, --bam <file_path> 
 
-   BAM database file of read alignments. Defaults: reference.bam, data/reference.bam.
+   BAM database file of read alignments (DEFAULT=data/reference.bam).
 
-.. option:: -f <file_path>, --fasta=<file_path> 
+.. option:: -f <file_path>, --fasta <file_path> 
 
-   FASTA file of reference sequences. Defaults: reference.fasta, data/reference.fasta.
-   
-.. option:: -o <path>, --output=<path> 
+   FASTA file of reference sequences (DEFAULT=data/reference.fasta).
 
-   Output path. If there are multiple regions, must be a directory path, and all output files will be output here with names region1.html, region2.html, ... If there is just one region, the output file will be given this name if it is not the name of an already existing directory. Default: current path.
-   
-.. option:: -n <int>, --max-reads=<int>
+.. option:: -o <path>, --output <path> 
 
-   Maximum number of reads that will be aligned to a region. If there are more than this many reads, then the reads displayed are randomly chosen and a warning is added to the output. Default: 1000.
+   Output path. If there is just one region, the name of the output file (DEFAULT=region1.*). If there are multiple regions, this argument must be a directory path, and all output files will be output here with names region1.*, region2.*, ... (DEFAULT=.).
 
-.. option:: region1 [region2, region3, ...]
+.. option:: -r <region> , --region <region> , --unnamed-arguments-- <region> [<region2>, <region2>, ...]
 
-   Regions to create output for must be provided in the format **FRAGMENT:START-END**, where **FRAGMENT** is a valid identifier for one of the sequences in the FASTA file, and **START** and **END** are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region.
+   Regions to create alignments for. Must be provided as sequence regions in the format **ACCESSION:START-END**, where **ACCESSION** is a valid identifier for one of the sequences in the FASTA file, and **START** and **END** are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments.
+
+.. option:: -n <int>, --max-reads <int>
+
+   Maximum number of reads that will be aligned to a region. If there are more than this many reads, then the reads displayed are randomly chosen and a warning is added to the output. (DEFAULT=200).
+
 
 Command: bam2cov
 --------------------------
 
 Usage::
 
-  breseq bam2cov [-b input.bam] [-f input.fasta] [-o output/path] region1 [region2 region3 ...]
+  breseq BAM2COV [-b reference.bam -f reference.fasta --format PNG -o output.png] region1 [region2 region3 ...]
 
 .. program::`breseq bam2cov`
 
 Create a coverage plot or table for the specified region or regions.
 
-Options:
+Commonly used options:
 
-.. option:: -b <file_path>, --bam=<file_path> 
+.. option:: -b <file_path>, --bam <file_path> 
 
-   BAM database file of read alignments. Defaults: reference.bam, data/reference.bam.
+   BAM database file of read alignments (DEFAULT=data/reference.bam).
 
-.. option:: -f <file_path>, --fasta=<file_path> 
+.. option:: -f <file_path>, --fasta <file_path> 
 
-   FASTA file of reference sequences. Defaults: reference.fasta, data/reference.fasta.
+   FASTA file of reference sequences (DEFAULT=data/reference.fasta).
    
-.. option:: -o <path>, --output=<path> 
+.. option:: -o <path>, --output <path> 
 
-   Base name of output files. Region specification (seq_id:start-end) appended if there are multiple output files. Default: seq_id:start-end for single regions or the current directory for multiple regions.
+   Output path. If there is just one region, the name of the output file (DEFAULT=region1.*). If there are multiple regions, this argument must be a directory path, and all output files will be output here with names region1.*, region2.*, ... (DEFAULT=.).
 
-.. option:: --plot-format=<plot_format> 
+.. option:: -r <region>, --region <region>, --unnamed-arguments-- <region> [<region2>, <region2>, ...]
 
-   Format of output plot: PNG or PDF. Default: PNG
+   Regions to create alignments for. Must be provided as sequence regions in the format **ACCESSION:START-END**, where **ACCESSION** is a valid identifier for one of the sequences in the FASTA file, and **START** and **END** are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments.
+
+.. option:: --format <PNG/PDF> 
+
+   Format of output plot: PNG or PDF. (DEFAULT=PNG).
    
 .. option:: -t, --table
 
-   Create tab delimited file of coverage instead of a plot.
+   Create tab-delimited file of coverage instead of a plot.
 
 .. option:: -1, --total-only
 
-   Only plot/tabulate total coverage, not per strand coverage.
+   Only plot/tabulate the total coverage at a position. That is, do not not output the coverage on each genomic strand.
    
-.. option:: --resolution=<int>
+.. option:: --resolution <int>
 
-  Number of positions to output coverage information for in interval (0=ALL). Default: 600
-
-.. option:: region1 [region2, region3, ...]
-
-   Regions to create output for must be provided in the format **FRAGMENT:START-END**, where **FRAGMENT** is a valid identifier for one of the sequences in the FASTA file, and **START** and **END** are 1-indexed coordinates of the beginning and end positions. A separate output file is created for each region.
+  Number of positions to output coverage information for in interval (0=ALL) (DEFAULT=600).

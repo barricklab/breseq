@@ -257,9 +257,11 @@ int do_merge(int argc, char *argv[])
   options.addUsage("");
   options.addUsage("Input as many GenomeDiff files as you want, and have them");
   options.addUsage("merged together into a single GenomeDiff file specified.");
-  options.addUsage("Unique IDs will remain unique across files, any IDs that");
-  options.addUsage("aren't unique will get new ones.  Mutations that use those");
-  options.addUsage("IDs will be properly updated to acknowledge the change.");
+  options.addUsage("Unique IDs will remain unique across files. Any IDs that");
+  options.addUsage("aren't unique will be assigned new ones.");
+  options.addUsage("");	
+  options.addUsage("Header information will be inherited from the first input file,");
+	options.addUsage("so this function can also be used to transfer metadata to a new file.");
   
   if (options.getArgc() < 2) {
     options.addUsage("");
@@ -865,14 +867,14 @@ int do_annotate(int argc, char* argv[])
   
   // more than one file was provided as input
   bool compare_mode = (gd_path_names.size() > 1);
-  
+	
   // First use merge to produce a file with a line for each mutation
   cGenomeDiff gd;
   vector<string> gd_titles;
   vector<cGenomeDiff> gd_list;
 
   bool polymorphisms_found = false; // handled putting in the polymorphism column if only one file provided
-  for (uint32_t i = 0; i < gd_path_names.size(); i++){
+  for (uint32_t i = 0; i < gd_path_names.size(); i++) {
     uout("Reading input GD file",gd_path_names[i]);
     cGenomeDiff single_gd(gd_path_names[i]);
       
@@ -887,13 +889,23 @@ int do_annotate(int argc, char* argv[])
       }
     }
     gd_list.push_back(single_gd);
-    
-    // Remove the evidence to speed up the merge  
-    // ** Don't do this before saving, because we need to preserve UN evidence
+
     cGenomeDiff cleaned_single_gd(single_gd);  
     cleaned_single_gd.remove(cGenomeDiff::EVIDENCE);
     gd.merge(cleaned_single_gd);
   }
+	
+	cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
+
+	// Remove the evidence to speed up the merge  
+	// ** Only do this for the merge, not to the true GDs, because we need to preserve UN evidence
+	for (uint32_t i = 0; i < gd_list.size(); i++) {
+		cGenomeDiff cleaned_single_gd(gd_list[i]);  
+    cleaned_single_gd.remove(cGenomeDiff::EVIDENCE);
+    gd.merge(cleaned_single_gd);
+	}
+	
+	// Sort the full merged list
   gd.sort();
   
   uout("Tabulating frequencies of mutations across all files");
@@ -2034,7 +2046,7 @@ int do_runfile(int argc, char *argv[])
 				ss << " -a " << download_dir << "/" << cString(adapters_for_reads[(*read_pair_it)[0]]).get_base_name();
 				
 				//! Part 5: Error log path.
-				ss << " >& " << log_dir << "/" << gd.get_title() << ".log" << endl;
+				ss << " >& " << log_dir << "/" << gd.get_title() << ".log";
 				
 				//! Step: Output to file.
 				cout << ss.str() << endl;

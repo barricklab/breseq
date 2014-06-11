@@ -166,33 +166,37 @@ namespace breseq
 
     
     // setup and parse configuration options:
-    AnyOption options("Usage: breseq -r reference.gbk [-r reference2.gbk ...] reads1.fastq [reads2.fastq ...]\n");
+    AnyOption options("Usage: breseq -r reference.gbk [-r reference2.gbk ...] reads1.fastq [reads2.fastq ...]");
+    options.addUsage("");
+    options.addUsage("Run the breseq pipeline for predicting mutations from haploid microbial re-sequencing data.");
+    options.addUsage("");
+    options.addUsage("Allowed Options");
     
     options
 		("help,h", "Produce help message showing advanced options", TAKES_NO_ARGUMENT)
-    ("verbose,v","Produce verbose output",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    //("verbose,v","Produce verbose output",TAKES_NO_ARGUMENT, ADVANCED_OPTION) @JEB - not consistently implemented
 		("output,o", "Path to breseq output", ".")
-		("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files. (REQUIRED)")
+		("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
     ("name,n", "Human-readable name of the analysis run for output (DEFAULT=<none>)", "")
     ("num-processors,j", "Number of processors to use in multithreaded steps", 1);
     
-    options.addUsage("", true);
-    options.addUsage("Read File Options", true);
+    options.addUsage("", ADVANCED_OPTION);
+    options.addUsage("Read File Options", ADVANCED_OPTION);
     options
     ("limit-fold-coverage,l", "Analyze a subset of the input FASTQ sequencing reads with enough bases to provide this theoretical coverage of the reference sequences. A value between 60 and 120 will usually speed up the analysis with no loss in sensitivity for clonal samples. The actual coverage achieved will be somewhat less because not all reads will map (DEFAULT=OFF)", "", ADVANCED_OPTION)
     ("aligned-sam", "Input files are aligned SAM files, rather than FASTQ files. Junction prediction steps will be skipped.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
     
-    options.addUsage("", true);
-    options.addUsage("Reference File Options", true);
+    options.addUsage("", ADVANCED_OPTION);
+    options.addUsage("Reference File Options", ADVANCED_OPTION);
     options
     ("contig-reference,c", "File containing reference sequences in GenBank, GFF3, or FASTA format. The same coverage distribution will be fit to all of the reference sequences in this file simultaneously. This is appropriate when they are all contigs from a genome that should be present with the same copy number. Use of this option will improve performance when there are many contigs and especially when some are very short (≤1,000 bases).", NULL, ADVANCED_OPTION)
     ("junction-only-reference,s", "File containing reference sequences in GenBank, GFF3, or FASTA format. These references are only used for calling junctions with other reference sequences. An example of appropriate usage is including a transposon sequence not present in a reference genome. Option may be provided multiple times for multiple files.", NULL, ADVANCED_OPTION)
     ("targeted-sequencing,t", "Reference sequences were targeted for ultra-deep sequencing (using pull-downs or amplicons). Do not fit coverage distribution.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
     
-    options.addUsage("", true);
-    options.addUsage("Read Alignment and Mutation Calling Options", true);
+    options.addUsage("", ADVANCED_OPTION);
+    options.addUsage("Read Alignment and Mutation Calling Options", ADVANCED_OPTION);
     options
     ("base-quality-cutoff,b", "Ignore bases with quality scores lower than this value", 3, ADVANCED_OPTION)
     ("quality-score-trim", "Trim the ends of reads past any base with a quality score below --base-quality-score-cutoff.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
@@ -203,8 +207,8 @@ namespace breseq
     ("mutation-score-cutoff", "Log10 E-value cutoff for base-substitution and micro-indel predictions", 10, ADVANCED_OPTION)
     ;
     
-    options.addUsage("", true);
-    options.addUsage("Junction Options", true);
+    options.addUsage("", ADVANCED_OPTION);
+    options.addUsage("Junction Options", ADVANCED_OPTION);
     options
     ("no-junction-prediction", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
     ("junction-alignment-pair-limit", "Only consider this many passed alignment pairs when creating candidate junction sequences (0 = ALL)", 100000, ADVANCED_OPTION)    
@@ -215,8 +219,8 @@ namespace breseq
     ("junction-minimum-side-match", "Minimum number of bases a read must extend past any overlap or read-only sequence at the breakpoint of a junction on each side to count as support for the junction (DEFAULT = consensus mode, 1; polymorphism mode, 6)", "", ADVANCED_OPTION)
     ;
 
-    options.addUsage("", true);    
-    options.addUsage("Polymorphism (Mixed Population) Options", true);
+    options.addUsage("", ADVANCED_OPTION);    
+    options.addUsage("Polymorphism (Mixed Population) Options", ADVANCED_OPTION);
     options
     ("polymorphism-prediction,p", "Predict polymorphic (mixed) mutations", TAKES_NO_ARGUMENT)
     ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
@@ -224,11 +228,11 @@ namespace breseq
     ("polymorphism-score-cutoff", "Log10 E-value cutoff for test of polymorphism vs no polymorphism (DEFAULT = consensus mode, 10; polymorphism mode, 2)", "", ADVANCED_OPTION)
     ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias (0 = OFF) (DEFAULT = consensus mode, 0.05; polymorphism mode, 0.001)", "", ADVANCED_OPTION)
     ("polymorphism-frequency-cutoff", "Only predict polymorphisms where both allele frequencies are > than this value (DEFAULT = consensus mode, 0.1; polymorphism mode, 0.0)", "", ADVANCED_OPTION)
-    ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms where this many reads on each strand support alternative alleles (DEFAULT = consensus mode, 2; polymorphism mode, 2", "", ADVANCED_OPTION)
+    ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms where this many reads on each strand support alternative alleles (DEFAULT = consensus mode, 2; polymorphism mode, 2)", "", ADVANCED_OPTION)
     ;
     
-    options.addUsage("", true);
-    options.addUsage("Output Options", true);
+    options.addUsage("", ADVANCED_OPTION);
+    options.addUsage("Output Options", ADVANCED_OPTION);
     options
     ("max-displayed-reads", "Maximum number of reads to display in the HTML output for an evidence item", 100, ADVANCED_OPTION)
     ("brief-html-output", "Don't create detailed output files for evidence (no read alignments or coverage plots)", TAKES_NO_ARGUMENT, ADVANCED_OPTION)

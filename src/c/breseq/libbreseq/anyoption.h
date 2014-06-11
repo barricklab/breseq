@@ -155,7 +155,6 @@ namespace breseq {
 		void printAutoUsage();
 		void addUsage( string line , bool advanced=false);
 		void printAdvanced();
-    void addAdvanced( string line );
 			/* print auto usage printing for unknown options or flag */
 		void autoUsagePrint(bool flag);
 
@@ -298,10 +297,8 @@ namespace breseq {
 		int g_value_counter; 	/* globally updated value index LAME! */
 
 		/* help and usage */
-		vector<string> usage; 	/* usage */
-		int usage_lines;	/* number of usage lines */
-    vector<string> advanced; 	/* advanced usage */
-		int advanced_lines;	/* number of advanced usage lines */
+		vector<string> usage_lines; 	/* usage */
+    vector<string> advanced_lines; 	/* advanced usage */
 
 		bool command_set;	/* if argc/argv were provided */
 		bool file_set;		/* if a filename was provided */

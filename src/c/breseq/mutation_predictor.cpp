@@ -1377,10 +1377,11 @@ namespace breseq {
 		// Finally, convert these items into the fields needed for the various types of mutations
 		///
     
-		for (uint32_t i = 0; i < muts.size(); i++)
-		{
+		for (uint32_t i = 0; i < muts.size(); i++) {
+      
 			mut = muts[i];
-			// insertion and amplification
+      
+      // insertion and amplification
 			if (mut["ref_seq"].size() == 0)
 			{
         mut._type = INS;
@@ -1401,8 +1402,10 @@ namespace breseq {
           // This is a special case to keep ordering of multiple inserted bases after 
           // the same base (without it the order is unknown in poly mode
           
-          ASSERT(mut["insert_start"] == mut["insert_end"], "Polymorphism had joined insert.");
+          ASSERT( (mut["frequency"]=="1") || (mut["insert_start"] == mut["insert_end"]), "Polymorphism has incorrectly merged INS mutations.");
+          string debug_ins_pos = mut["insert_start"];           
           mut["insert_position"] = mut["insert_start"];
+          
         }
 			}
 			// deletion
@@ -1490,6 +1493,11 @@ namespace breseq {
       if (mut._type == INS) {
         int32_t size = mut["new_seq"].size();
         if (size > AMP_size_cutoff) continue;
+        
+        // This field only exists when manually added to split an insertion into separate events 
+        // or in polymorphism mode when a mutation may be split into each inserted base.
+        // This code may inappropriately shift the position in those cases.
+        if (mut.entry_exists(INSERT_POSITION)) continue;
         
         int32_t position = from_string<int32_t>(mut["position"]);
         string mutation_sequence = mut["new_seq"];
@@ -1661,8 +1669,12 @@ namespace breseq {
 		// Read Alignments => SNP, DEL, INS, SUB AMP
 		///
     
-    normalize_and_annotate_tandem_repeat_mutations(settings, summary, gd);
-    
+    // Normalizing in polymorphism mode causes consistency issues when multiple INS or DEL are next to each other
+    // (which is not possible in consensus mode).
+    if (!settings.polymorphism_prediction) {
+      normalize_and_annotate_tandem_repeat_mutations(settings, summary, gd);
+    }
+      
     ///////////////////////////////////////////////////////
     // Check to be sure the "frequency" field is present //
     // as appropriate in consensus/polymorphism mode.    //
