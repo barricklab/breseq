@@ -123,7 +123,7 @@ int do_union(int argc, char *argv[])
   cGenomeDiff gd1(options.getArgv(0));
 
   for(int32_t i = 1; i < options.getArgc(); ++i) {
-    uout << options.getArgv(0) << endl;
+    uout << options.getArgv(i) << endl;
     cGenomeDiff gd2(options.getArgv(i));
     gd1.set_union(gd2, options.count("verbose"));
   }
