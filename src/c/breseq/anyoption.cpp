@@ -78,7 +78,6 @@ namespace breseq {
 		setVerbose(); /* print warnings about unknown options */
 		autoUsagePrint(true); /* print usage for bad options */
 		addUsage(usage_prefix);
-		addUsage("Allowed Options");
 	}
 
 	AnyOption::~AnyOption()
@@ -88,7 +87,6 @@ namespace breseq {
 	void
 	AnyOption::init()
 	{
-		usage_lines	= 0 ;
 		argc 		= 0;
 		argv 		= NULL;
 		posix_style	= true;
@@ -907,8 +905,8 @@ namespace breseq {
 		if( once ) {
 			once = false ;
 			cout << endl ;
-			for( int i = 0 ; i < usage_lines ; i++ )
-				cout << usage[i] << endl ;
+			for( size_t i = 0 ; i < usage_lines.size() ; i++ )
+				cout << usage_lines[i] << endl ;
 			cout << endl ;
 		}
 	}
@@ -917,10 +915,9 @@ namespace breseq {
 	AnyOption::addUsage( string line , bool advanced)
 	{
     if(!advanced){
-      usage.push_back(line);
-      usage_lines++;
+      usage_lines.push_back(line);
     }
-    addAdvanced(line);
+    advanced_lines.push_back(line);
 	}
   
   void
@@ -929,17 +926,10 @@ namespace breseq {
     if( once ) {
 			once = false ;
       cout << endl ;
-      for( int i = 0 ; i < advanced_lines ; i++ )
-        cout << advanced[i] << endl ;
+      for( size_t i = 0 ; i < advanced_lines.size() ; i++ )
+        cout << advanced_lines[i] << endl ;
       cout << endl ;
     }
-	}
-  
-	void
-	AnyOption::addAdvanced( string line )
-	{
-		advanced.push_back(line);
-		advanced_lines++;
 	}
 
 	void

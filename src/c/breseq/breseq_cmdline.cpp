@@ -52,18 +52,22 @@ using namespace std;
 int do_bam2aln(int argc, char* argv[]) {
   
   // setup and parse configuration options:
-	AnyOption options("Usage: breseq BAM2ALN [--bam=reference.bam --fasta=reference.fasta --region=accession:start-end --output=alignment.html --max-reads=200] accession:start-end");
+	AnyOption options("Usage: breseq BAM2ALN [-b reference.bam -f reference.fasta -o alignment.html -n 200] region1 [region2 region3 ...]");
+  options.addUsage("");
+  options.addUsage("Display reads aligned to the specified region or regions.");
+  options.addUsage("");
+  options.addUsage("Allowed Options");
 	options
-  ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-  ("bam,b", "bam file containing sequences to be aligned", "data/reference.bam")
-	("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
-  ("output,o", "output to file [region.html]", "alignment.html")
-  ("format", "Output format: txt or html", "html")
-  ("region,r", "region to print (accession:start-end), may also be provided as unnamed arguments at the end of the command line.")
-  ("max-reads,n", "maximum number of reads to show in alignment", 200)
-  ("repeat", "show reads with multiple best matches in reference", TAKES_NO_ARGUMENT)
-  ("quality-score-cutoff,c", "quality score cutoff", 0)
-  ("stdout", "write output to stdout", TAKES_NO_ARGUMENT)
+  ("help,h", "Produce help message showing advanced options", TAKES_NO_ARGUMENT)
+  ("bam,b", "BAM database file of read alignments", "data/reference.bam")
+	("fasta,f", "FASTA file of reference sequences", "data/reference.fasta")
+  ("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=region1.*). If there are multiple regions, this argument must be a directory path, and all output files will be output here with names region1.*, region2.*, ... (DEFAULT=.)")
+  ("region,r", "Regions to create alignments for. Must be provided as sequence regions in the format ACCESSION:START-END, where ACCESSION is a valid identifier for one of the sequences in the FASTA file, and START and END are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments")
+  ("format", "Format of output alignment(s): HTML or TXT", "HTML")
+  ("max-reads,n", "Maximum number of reads to show in alignment", 200)
+  ("repeat", "Show reads with multiple best matches in reference", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+  //  ("quality-score-cutoff,c", "Quality score cutoff", 0)
+  ("stdout", "Write output to stdout", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
   .processCommandArgs(argc, argv);  
   
 	// make sure that the config options are good:
@@ -88,7 +92,7 @@ int do_bam2aln(int argc, char* argv[]) {
   
   if (!region_list.size()) {
     options.addUsage("");
-    options.addUsage("You must supply the --region option for input.");
+    options.addUsage("You must supply the --region option or unnamed arguments specifying at least one genomic region.");
     options.printUsage();
     return -1;
   }  
@@ -113,17 +117,17 @@ int do_bam2aln(int argc, char* argv[]) {
     string default_file_name = region_list[j];
     
     string output_string;
-    if (options["format"] == "html") {
+    if (to_upper(options["format"]) == "HTML") {
       output_string = ao.html_alignment(region_list[j]);
       default_file_name += ".html";
     }
-    else if (options["format"] == "txt") {
+    else if (to_upper(options["format"]) == "TXT") {
       output_string = ao.text_alignment(region_list[j]);
       default_file_name += ".txt";
     }
     else {
       options.addUsage("");
-      options.addUsage("Unknown format requested: " + options["format"]);
+      options.addUsage("Unknown format requested: " + to_upper(options["format"]));
       options.printUsage();
       return -1;
     }
@@ -165,32 +169,44 @@ int do_bam2aln(int argc, char* argv[]) {
  */
 int do_bam2cov(int argc, char* argv[]) {
   // setup and parse configuration options:
-	AnyOption options("Usage: bam2aln -b reference.bam -f reference.fasta [--format PNG -o output.png] seq_id1:start1-end1 [seq_id2:start2-end2 ...]");
-	options
-  ("help,h", "Produce advanced help message", TAKES_NO_ARGUMENT)
-  // required options
-  ("bam,b", "BAM file containing sequences to be aligned", "data/reference.bam")
-	("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
-  // options controlling what files are output
-  ("output,o", "If there is only one output file, then this option specifies the name of the output file. Otherwise, the name of a path that will contain all output files. By default, the base name of the output file for a region is seq_id:start-end.")
-  ("format", "Format of output plot(s): PNG or PDF", "PNG")
-  ("table,t", "Create tab delimited file of coverage instead of a plot", TAKES_NO_ARGUMENT)
-  ("total-only,1", "Only plot/tabulate total coverage, not per strand coverage", TAKES_NO_ARGUMENT)
-  ("show-average,a", "Show the average coverage across the reference sequence as a horizontal line. Only possible if used in the main output directory of breseq output.", TAKES_NO_ARGUMENT)
-  ("fixed-coverage-scale,s", "Fix the maximum value on plots the coverage scale in plots. If the show-average option is provided, then this is a factor that will be multiplied times the average coverage (e.g., 1.5 x avg). Otherwise, this is a coverage value (e.g., 100-fold coverage).")  
-  ("resolution,p", "Number of positions to output coverage information for in interval (0=ALL)", 600)
-  // which regions to create files for
-  ("tile-size", "In tiling mode, the size of each tile", 0)
-  ("tile-overlap", "In tiling mode, overlap between adjacent tiles (1/2 of this is added to each side of every tile)", 0)
-//  ("read_start_output,r", "file name for table file binned by read start bases (DEFAULT: OFF)")
-//  ("gc_output,g", "create additional table file binned by GC content of reads (DEFAULT: OFF)")
-  // options controlling information that is output
-  .processCommandArgs(argc, argv);
-  
+	AnyOption options("Usage: breseq BAM2COV [-b reference.bam -f reference.fasta --format PNG -o output.png] region1 [region2 region3 ...]");
   options.addUsage("");
   options.addUsage("Create a coverage plot or table for the specified region or regions.");
+  options.addUsage("");
+  options.addUsage("Allowed Options");
 
-  // Print advanced help
+	options
+  ("help,h", "Produce help message showing advanced options", TAKES_NO_ARGUMENT)
+  // required options
+  ("bam,b", "BAM database file of read alignments", "data/reference.bam")
+	("fasta,f", "FASTA file of reference sequences", "data/reference.fasta")
+  // options controlling what files are output
+  ("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=region1.*). If there are multiple regions, this argument must be a directory path, and all output files will be output here with names region1.*, region2.*, ... (DEFAULT=.)")
+  ("region,r", "Regions to create alignments for. Must be provided as sequence regions in the format ACCESSION:START-END, where ACCESSION is a valid identifier for one of the sequences in the FASTA file, and START and END are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments")
+  ("format", "Format of output plot(s): PNG or PDF", "PNG")
+  ("table,t", "Create tab-delimited file of coverage instead of a plot", TAKES_NO_ARGUMENT)
+  ;
+  options.addUsage("", ADVANCED_OPTION);
+  options.addUsage("Advanced Output Options", ADVANCED_OPTION);
+  options
+  ("total-only,1", "Only plot/tabulate the total coverage at a position. That is, do not not output the coverage on each genomic strand", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+  ("resolution,p", "Number of positions to output coverage information for in interval (0=ALL)", 600, ADVANCED_OPTION)
+  ("show-average,a", "Show the average coverage across the reference sequence as a horizontal line. Only possible if used in the main output directory of breseq output", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+  ("fixed-coverage-scale,s", "Fix the maximum value on plots the coverage scale in plots. If the show-average option is provided, then this is a factor that will be multiplied times the average coverage (e.g., 1.5 x avg). Otherwise, this is a coverage value (e.g., 100-fold coverage)", "", ADVANCED_OPTION)  
+  ;
+  // which regions to create files for
+  
+  options.addUsage("", ADVANCED_OPTION);
+  options.addUsage("Tiling Mode (produce plots that span reference sequences from end to end)", ADVANCED_OPTION);
+  options
+  ("tile-size", "In tiling mode, the size of each tile that will be output as a separate file", "", ADVANCED_OPTION)
+  ("tile-overlap", "In tiling mode, overlap between adjacent tiles (1/2 of this is added to each side of every tile)", "", ADVANCED_OPTION)
+  ;
+//  ("read_start_output,r", "file name for table file binned by read start bases (DEFAULT: OFF)")
+//  ("gc_output,g", "create additional table file binned by GC content of reads (DEFAULT: OFF)")
+
+  options.processCommandArgs(argc, argv);
+
   if (options.count("help"))
   {
     options.printAdvanced();
@@ -206,13 +222,22 @@ int do_bam2cov(int argc, char* argv[]) {
 	}
   
   vector<string> region_list;
+  if (options.count("region"))
+    region_list= from_string<vector<string> >(options["region"]);
   
-  // Take regions off the command line
+  // Also take regions off the command line
   for (int32_t i = 0; i < options.getArgc(); i++)
   {
     string region = options.getArgv(i);
     region_list.push_back(region);
-  }
+  }  
+  
+  if (!region_list.size()) {
+    options.addUsage("");
+    options.addUsage("You must supply the --region option or unnamed arguments specifying at least one genomic region.");
+    options.printUsage();
+    return -1;
+  }  
   
   bool tiling_mode = options.count("tile-size") && options.count("tile-overlap");
   ASSERT(tiling_mode || (!options.count("tile-size") && !options.count("tile-overlap")),
