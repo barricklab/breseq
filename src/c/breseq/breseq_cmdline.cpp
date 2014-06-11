@@ -66,7 +66,7 @@ int do_bam2aln(int argc, char* argv[]) {
   ("format", "Format of output alignment(s): HTML or TXT", "HTML")
   ("max-reads,n", "Maximum number of reads to show in alignment", 200)
   ("repeat", "Show reads with multiple best matches in reference", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-  //  ("quality-score-cutoff,c", "Quality score cutoff", 0)
+  ("quality-score-cutoff,c", "Quality score cutoff below which reads are highlighted as yellow", 0)
   ("stdout", "Write output to stdout", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
   .processCommandArgs(argc, argv);  
   
@@ -152,9 +152,11 @@ int do_bam2aln(int argc, char* argv[]) {
       if (myfile.is_open())
       {
         Settings settings;
-        myfile << html_header("BRESEQ :: bam2aln output", settings);
+        if (to_upper(options["format"]) == "HTML")
+          myfile << html_header("BRESEQ :: bam2aln output", settings);
         myfile << output_string;
-        myfile << html_footer();
+        if (to_upper(options["format"]) == "HTML")
+          myfile << html_footer();
         myfile.close();
       }
       else cerr << "Unable to open file";
