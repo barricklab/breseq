@@ -159,8 +159,9 @@ const vector<string>gd_entry_type_lookup_table =
   make_vector<string>("UNKNOWN")("SNP")("SUB")("DEL")("INS")("MOB")("AMP")("INV")("CON")("RA")("MC")("JC")("CN")("UN")("CURA")("FPOS")("PHYL")("TSEQ")("PFLP")("RFLP")("PFGE")("NOTE")("MASK");
 
 // Used when determining what fields need to be updated if ids are renumbered
+// accounts for key=mutation_id:copy_index notation.
 const vector<string> gd_keys_with_ids = 
-  make_vector<string>("before")("after")("nested_within");
+  make_vector<string>("before")("within");
   
 
 /*! Constructor.
@@ -248,6 +249,18 @@ cDiffEntry::cDiffEntry(const string &line, uint32_t line_number, cFileParseError
       RemoveLeadingTrailingWhitespace(key);
       RemoveLeadingTrailingWhitespace(value);
       de[key] = value;
+      
+      // Deprecated keys
+      if (file_parse_errors) {
+        if (key == "nested_within") {
+          if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'nested_within' is DEPRECATED. Use 'within' INSTEAD.", true);
+        } else if (key == "nested_copy") {
+          if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'nested_copy' IS DEPRECATED. USE 'within' INSTEAD", true);
+        } else if (key == "after") {
+          if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'after' is DEPRECATED. Use 'before' INSTEAD", true);
+        }
+      }
+      
     } else {
       if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Field " + kvp + " is not a key=value pair. Ignoring this key.", false);
     }
@@ -492,6 +505,7 @@ int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info)
     case MOB:
     {
       // @JEB: Important: repeat_size is not a normal attribute and must be set before calling this function
+      //       Also: this size includes the target site duplication
       ASSERT(this->entry_exists("repeat_size"), "Repeat size field does not exist for entry:\n" + this->as_string());
       int32_t size = from_string<int32_t>((*this)["repeat_size"]) + from_string<int32_t>((*this)["duplication_size"]);
       if (this->entry_exists("del_start"))
@@ -1167,13 +1181,21 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
   return parse_errors;
 }
   
-
+// Helper struct for below
+typedef struct  {
+  int32_t start;
+  int32_t end;
+  string mutation_id;
+} dr_item;
+  
 // Checks to see whether seq_ids and coordinates make sense
 cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences& ref_seq, bool suppress_errors)
 {
   // For now we do rather generic checking... nothing specific to certain kind of entries
   cFileParseErrors parse_errors(get_file_name());
 
+
+  // First pass -- check generic things
   for(diff_entry_list_t::iterator it=_entry_list.begin(); it!=_entry_list.end(); ++it) {
     diff_entry_ptr_t& de = *it;
     
@@ -1208,7 +1230,179 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
         } // end of position
       }
     } // end of seq_id
-  } // end of de loop
+  }
+   
+  
+  // Second pass -- build up a list of coordinates where we require the 'before' or 'within' tag to
+  // disambiguate what base has changed. Only applies to MOB and AMP types
+  
+  diff_entry_list_t mut_list = mutation_list();
+  
+
+  map<string, vector<dr_item> > disambiguate_requirements;
+
+  if (!parse_errors.fatal()) {
+    for(diff_entry_list_t::iterator it=mut_list.begin(); it!=mut_list.end(); ++it) {
+      diff_entry_ptr_t& de = *it;
+      
+      if (de->_type == MOB) {
+        
+        dr_item new_dr_item;
+        new_dr_item.mutation_id = de->_id;
+        new_dr_item.start = from_string<uint32_t>((*de)[POSITION]);
+        new_dr_item.end = new_dr_item.start + from_string<int32_t>((*de)[DUPLICATION_SIZE]) - 1;
+        // @JEB: Note this works properly with respect to negative duplication sizes -> they never overlap anything
+        disambiguate_requirements[(*de)[SEQ_ID]].push_back(new_dr_item);
+        
+      } else if (de->_type == AMP) {
+        
+        dr_item new_dr_item;
+        new_dr_item.mutation_id = de->_id;
+        new_dr_item.start = from_string<uint32_t>((*de)[POSITION]);
+        new_dr_item.end = new_dr_item.start + from_string<int32_t>((*de)[SIZE]) - 1;
+        disambiguate_requirements[(*de)[SEQ_ID]].push_back(new_dr_item);
+        
+      }
+    }
+  }
+  
+  if (!parse_errors.fatal()) {
+
+    // Third pass -- check for specific requirements concerning 'before' and 'within' tags.
+    // some code may only be safe if all entries are properly there, which is why this does
+    // not happen in the generic main loop or if fatal errors have been encountered so far.
+    
+    for(diff_entry_list_t::iterator it=mut_list.begin(); it!=mut_list.end(); ++it) {
+      diff_entry_ptr_t& de = *it;      
+
+      if (de->is_mutation()) {
+        if (de->entry_exists("within")) {
+          
+          vector<string> split_within = split((*de)["within"], ":");
+          string &within_mutation_id = split_within[0];
+          
+          // Track down the mutation
+          diff_entry_ptr_t within_de = find_by_id(within_mutation_id);
+          
+          if (within_de.get() == NULL) {
+            parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Attempt to put mutation 'within' a mutation with an id that does not exist in file: " + within_mutation_id, true);
+          } else {
+            
+            uint32_t position = from_string<uint32_t>((*de)[POSITION]);
+            uint32_t within_position = from_string<uint32_t>((*within_de)[POSITION]);
+
+            uint32_t valid_start;
+            uint32_t valid_end;
+            
+            if ((*within_de)[SEQ_ID] != (*de)[SEQ_ID]) {
+              parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Attempt to put mutation 'within' a mutation on a different reference sequence id:\n" + within_de->as_string() , true);
+            }
+            
+            if (within_de->_type == AMP) {
+              if (split_within.size() != 2) {
+                parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Expected AMP field 'within' to be of form 'within=mutation_id:copy_index'. Instead, found: " + (*de)["within"], true);
+              }
+              
+              // check coords to be sure it actually is 'within'
+              valid_start = position;
+              valid_end = position + from_string<uint32_t>((*within_de)[SIZE]) - 1;
+              
+            } else if (within_de->_type == MOB) {
+              
+              // check coords to be sure it actually is 'within'
+              if (split_within.size() == 1) {
+               // it is within the newly inserted sequence, tricky coordinates in play 
+                
+                string* picked_seq_id;
+                cSequenceFeature* picked_sequence_feature;
+                string mob_seq = mob_replace_sequence(ref_seq, *within_de, picked_seq_id, picked_sequence_feature);
+                valid_start = position + from_string<uint32_t>((*within_de)[DUPLICATION_SIZE]) + 1;
+                valid_end = valid_start + mob_seq.size() - 1;
+                
+              }
+              else if (split_within.size() == 2) {
+                valid_start = position;
+                valid_end = position + from_string<uint32_t>((*within_de)[DUPLICATION_SIZE]) - 1;
+              }
+              
+            } else if (within_de->_type == INS) {
+              if (split_within.size() != 1) {
+                parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Expected AMP field 'within' to be of form 'within=mutation_id'. Instead, found: " + (*de)["within"], true);
+              }
+              
+              // check coords to be sure it actually is 'within'
+              valid_start = position + 1; // new bases will start after this position
+              valid_end = position + (*within_de)[NEW_SEQ].size();
+              
+            } else {
+              parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Field 'within' provided for an entry that is not of AMP, MOB, or INS type.", true);
+            }
+            
+            // Last, check the position to be sure that within makes sense
+            // this is not as strict as it could be (requiring whole mutation to be inside copy)
+            // because we need the leeway for mutations that DEL across an AMP boundary, for instance
+            
+            if ((position < valid_start) || (position > valid_end)) {
+              parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Position must be >= " + to_string(valid_start) + " and <= " + to_string(valid_end) + " for mutation that is 'within' this mutation:\n" + within_de->as_string(), true);
+            }
+            
+          } // end has 'within' attribute
+        } if (de->entry_exists("before")) {  
+          
+          uint32_t position = from_string<uint32_t>((*de)[POSITION]);
+
+          string before_mutation_id = (*de)["before"];
+          
+          // Track down the mutation
+          diff_entry_ptr_t before_de = find_by_id(before_mutation_id);
+          
+          // Check to be sure the specified entry exists...
+          if (before_de.get() == NULL) {
+            parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Attempt to put mutation 'within' a mutation with an id that does not exist in file: " + before_mutation_id, true);
+          } else {
+            // And that it is actually necessary for ordering
+            
+            if (before_de->_type == MOB) {
+              
+              uint32_t start = from_string<uint32_t>((*before_de)[POSITION]);
+              uint32_t end = start + from_string<uint32_t>((*before_de)[DUPLICATION_SIZE]) - 1;
+              
+              if ((position < start) || (position > end)) {
+                parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Position must be >= " + to_string(start) + " and <= " + to_string(end) + " for the 'before' field to have an effect when referring to this mutation:\n" + before_de->as_string(), true);
+              }
+              
+              
+            } else if (before_de->_type == AMP) {
+              
+              uint32_t start = from_string<uint32_t>((*before_de)[POSITION]);
+              uint32_t end = start + from_string<uint32_t>((*before_de)[SIZE]) - 1;
+              
+              if ((position < start) || (position > end)) {
+                parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Position must be >= " + to_string(start) + " and <= " + to_string(end) + " for the 'before' field to have an effect when referring to this mutation:\n" + before_de->as_string(), true);
+              }              
+              
+            } else {
+              parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Field 'before' refers to a mutation that is not of type AMP or MOB where it will have no effect:\n" + before_de->as_string(), true);
+            }
+            
+          }
+          
+        } else {
+          // Check to see if we are in a spot that would be ambiguous without a 'within' or 'before' attribute!
+          
+          vector<dr_item> check_ambiguous = disambiguate_requirements[(*de)[SEQ_ID]];
+          int32_t position = from_string<int32_t>((*de)[POSITION]);
+
+          for (vector<dr_item>::iterator ita=check_ambiguous.begin(); ita!=check_ambiguous.end(); ita++) {
+            
+            if ((de->_id != ita->mutation_id) && (position >= ita->start) && (position <= ita->end)) {
+              parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Mutation requires 'before' or 'within' field to disambiguate when and how it occurs because it overlaps AMP or MOB duplicated bases.", true); 
+            } 
+          }
+        }
+      }
+    } // end third pass loop
+  } // end already hit fatal error
     
   if (!suppress_errors) {
     parse_errors.print_errors();
@@ -1795,6 +1989,12 @@ void cGenomeDiff::unique()
 //
 //  bool new_id:  TRUE will give assign all new entries with the lowest available ID.
 //                FALSE will allow all entries to retain their IDs if they are unique.
+//
+// There are some complicated cases that merge just cannot accommodate:
+//
+// 1) The difference between a mutation happening before an AMP (thus in all copies)
+//    and after an AMP (thus in only one copy) at the same position.
+//
 void cGenomeDiff::merge(cGenomeDiff& gd_new, bool unique, bool new_id, bool verbose)
 {
   uint32_t old_unique_ids = unique_id_used.size();
@@ -1821,7 +2021,7 @@ void cGenomeDiff::merge(cGenomeDiff& gd_new, bool unique, bool new_id, bool verb
       }
     }
     
-    //We definately have a new entry
+    //We definitely have a new entry
     if(new_entry)
     {      
       //Add the new entry to the existing list
@@ -1946,7 +2146,7 @@ void cGenomeDiff::reassign_unique_ids()
   }
   
   // Handle updating these tags which may refer to evidence
-  // after=, before=, nested_within=, 
+  // before=, within=, 
   
   for (diff_entry_list_t::iterator it=_entry_list.begin(); it!= _entry_list.end(); it++) {
     if (!(**it).is_mutation()) continue;    
@@ -1955,7 +2155,12 @@ void cGenomeDiff::reassign_unique_ids()
     for (vector<string>::const_iterator key_it=gd_keys_with_ids.begin(); key_it!= gd_keys_with_ids.end(); key_it++) {
 
       if (mut.entry_exists(*key_it)) {
-        mut[*key_it] = mutation_id_reassignments[mut[*key_it]];
+        
+        string value = mut[*key_it];
+        // Replace first value = mutation_id with substituted id
+        vector<string> split_value = split(value, ":");
+        split_value[0] = mutation_id_reassignments[split_value[0]];
+        mut[*key_it] = join(split_value, ":");
       }
     }
   }
@@ -2160,7 +2365,47 @@ bool cGenomeDiff::diff_entry_ptr_sort(const diff_entry_ptr_t& a, const diff_entr
   return false;
 }
 
+void cGenomeDiff::before_within_post_sort(diff_entry_list_t& _list)
+{
+  // Grab all of the entries that are within or before other entries and then place them
+  diff_entry_list_t within_before_list;
+  for(diff_entry_list_t::iterator it=_list.begin(); it!=_list.end();) {
+    cDiffEntry& de = **it;
+    if (de.entry_exists("before") || de.entry_exists("within")) {
+      diff_entry_list_t::iterator temp_it = it;
+      it++;
+      within_before_list.splice(within_before_list.end(), _list, temp_it);
+    } else {
+      it++;
+    }
+  }
   
+  // Now place them appropriately after (for within) or before the entries they refer to
+  for(diff_entry_list_t::iterator it1=within_before_list.begin(); it1!=within_before_list.end();it1++) {
+    
+    cDiffEntry& wb_de = **it1;
+    bool insert_before = wb_de.entry_exists("before");
+    string wb_id;
+    if (insert_before) {
+      wb_id = wb_de["before"];
+    } else /* within */ {
+      vector<string> split_within = split(wb_de["within"], ":");
+      wb_id = split_within[0];
+    }
+    
+    for(diff_entry_list_t::iterator it2=_list.begin(); it2!=_list.end();it2++) {
+      cDiffEntry& test_de = **it2;
+
+      if (test_de._id == wb_id) {
+        
+        // insert inserts before the specified iterator position
+        if (!insert_before) it2++;
+        _list.insert(it2, it1, it1);
+        break;
+      }
+    }
+  }
+}
   
 
 //! Call to generate random mutations.
@@ -2570,14 +2815,9 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
   if (verbose)
     cout << "Shifting remaining entries by: " << delta << " bp." << endl;
   if (delta == UNDEFINED_INT32)
-    WARN("Size change not defined for mutation.");
+    ERROR("Size change not defined for mutation.");
   
   uint32_t offset = from_string<uint32_t>(current_mut[POSITION]);
-  
-  // Only offset if past the duplicated part of a MOB (allows putting a mutation in the first copy)
-  if (current_mut._type == MOB) {
-    offset += from_string<int32_t>(current_mut["duplication_size"]);
-  }
   
   diff_entry_list_t muts = this->mutation_list();
   for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr++) {
@@ -2586,44 +2826,67 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
     if (mut._type == INV)
       ERROR("shift_positions() cannot handle inversions yet!");
   
+    // the position to be updated
+    uint32_t position = from_string<uint32_t>(mut[POSITION]);
 
     // Check to see whether this is listed as being nested within the current item
-    cDiffEntry* nested_within(NULL);
-    int32_t nested_copy = -1;
-    if (mut.entry_exists("nested_id")) {
+    
+    // Special case -- we are nested within current_mut so coord updates are more complicated
+    bool was_nested = false;
+    
+    if (mut.entry_exists("within")) {
       
-      if (current_mut._id == mut["nested_id"]) {
-        
-        nested_within = &current_mut;
-        
-        ASSERT(current_mut._type == AMP, "Attempt to use \"nested\" to put mutation in non-AMP mutation.\n" + current_mut.as_string() + "\nreferenced from\n" + mut.as_string());
-        ASSERT(current_mut[SEQ_ID] == mut[SEQ_ID], "Nested mutation not in same reference sequence?");
-        
-        if (mut.entry_exists("nested_copy")) {
-          nested_copy = from_string<int32_t>(mut["nested_copy"]);
-          int32_t new_copy_number = from_string<int32_t>(current_mut["new_copy_number"]);
-          ASSERT((nested_copy > 0) && (nested_copy <= new_copy_number), "Copy number of mutation nested within is not in a valid range for the number of copies that exist. Requested copy: " + to_string(nested_copy) + " Total copies: " + to_string(new_copy_number));
-        } else {
-          ERROR("Expected \"nested_copy=\" additional field to be present in item with \"nexted_id\":\n" + mut.as_string())
+      //  Form is mutation_id:copy_index
+      //  For MOB/INS, index can be blank, which implies the mutation is within the new sequence
+      //  Note that the following code is not guaranteed safe unless validate_with_reference_sequence has been called
+ 
+      vector<string> split_within = split(mut["within"], ":");
+      string within_mutation_id = split_within[0];
+      
+      if (current_mut._id == within_mutation_id) {
+        was_nested = true; // handle offset here
+        int32_t within_copy_index = -1;     
+
+        if (split_within.size() == 2) {
+          within_copy_index = from_string<int32_t>(split_within[1]);
         }
+
+        uint64_t special_delta;
+        
+        if (current_mut._type == AMP) {
+          // Inside an AMP means we shift to the desired copy
+          special_delta = from_string<uint64_t>(current_mut[SIZE]) * (within_copy_index-1);
+          
+        } else if (current_mut._type == MOB) {
+          // Normal delta is size of mobile element plus the duplication size
+          // this is the default if we are in the second copy
+          if (within_copy_index == 2) {
+            special_delta = delta;
+          } else if (within_copy_index == 1) {
+            // For first copy we don't need to move things
+            special_delta = 0;
+          } else if (within_copy_index == -1) {
+            // For inside the MOB
+            special_delta = 0; 
+          }
+          
+        } else if (current_mut._type == INS) {
+          // Inside an INS means we don't shift (copy_index not provided)
+          special_delta = 0;
+        }
+        
+        // Note that we don't check the offset because
+        // we should have made sure things were ok in validation
+        mut[POSITION] = to_string(position + special_delta);
+      }  
+    }
+    
+    // Normal behavior -- offset mutations later in same reference sequence
+    if (!was_nested) {
+      if ((current_mut[SEQ_ID] == mut[SEQ_ID]) && (position > offset)) {
+        mut[POSITION] = to_string(position + delta);
       }
     }
-    
-    
-    // Special case, we are nested within current_mut
-    uint32_t position = from_string<uint32_t>(mut[POSITION]);
-    if (nested_within) {
-      
-      uint64_t special_delta = from_string<uint64_t>(current_mut[SIZE]) * (nested_copy-1);
-      mut[POSITION] = to_string(position + special_delta);
-      
-    // Normal behavior -- offset mutations later or at same mutation in same reference sequence
-    } else {
-      if ((current_mut[SEQ_ID] == mut[SEQ_ID]) && (position > offset))
-        mut[POSITION] = to_string(position + delta);
-    }
-
-    
   }
 }
 
@@ -2699,6 +2962,9 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
   diff_entry_list_t mask_list = this->list(make_vector<gd_entry_type>(MASK));
   
   mutation_list.insert(mutation_list.end(), mask_list.begin(), mask_list.end());
+
+  // Sort the list into apply order ('within' and 'before' tags)
+  cGenomeDiff::sort_apply_order(mutation_list);
   
   for (diff_entry_list_t::iterator itr_mut = mutation_list.begin(); itr_mut != mutation_list.end(); itr_mut++)
   {

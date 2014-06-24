@@ -189,6 +189,7 @@ namespace breseq
     string m_error_message;
     uint32_t m_maximum_to_align;
     int32_t m_junction_minimum_size_match;
+    bool m_mask_ref_matches;    // Show matches to reference as '.' rather than base.
     bool m_show_ambiguously_mapped;
     bool m_is_junction, m_is_junction_junction; // Former for JC, latter for JC+junction part of it
     
@@ -196,7 +197,7 @@ namespace breseq
     static char s_internal_gap_character;             // Default = "-"
     static char s_end_gap_character;                  // Default = "-"
     static char s_reference_match_character;          // Default = "."
-    static char s_reference_match_masked_character;  // Default = ","
+    static char s_reference_match_masked_character;   // Default = ","
     
     static uint8_t k_reserved_quality_junction_overlap;
     static uint8_t k_reserved_quality_dont_highlight;
@@ -210,6 +211,7 @@ namespace breseq
                       uint32_t in_maximum_to_align = 0, 
                       const uint32_t quality_score_cutoff = 0,
                       const int32_t junction_minimum_size_match = 1,
+                      const bool mask_ref_matches = false,
                       const bool show_ambiguously_mapped = false
                       );
     //! Output an HTML alignment.

@@ -616,6 +616,7 @@ namespace breseq
     
     //! Settings: Output
     this->max_displayed_reads = 100;
+    this->alignment_mask_ref_matches = false;
     this->max_rejected_read_alignment_evidence_to_show = 20;
 		this->max_rejected_polymorphisms_to_show = 20;
 		this->max_rejected_junction_evidence_to_show = 10;
