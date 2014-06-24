@@ -111,6 +111,7 @@ int do_bam2aln(int argc, char* argv[]) {
                         from_string<uint32_t>(options["max-reads"]),
                         from_string<uint32_t>(options["quality-score-cutoff"]),
                         1,
+                        false,
                         options.count("repeat")
                         );
     

@@ -594,7 +594,15 @@ public:
   };
   
   static bool diff_entry_ptr_sort(const diff_entry_ptr_t& a, const diff_entry_ptr_t& b);
+  
+  // Normal sort. Used for printing, merging, and compare.
   void sort() { _entry_list.sort(diff_entry_ptr_sort); }
+  
+  // Helper function for apply order sort
+  static void before_within_post_sort(diff_entry_list_t& _list);
+
+  // Sort normally -- and then take into account 'before' and 'within' tags in sorting
+  static void sort_apply_order(diff_entry_list_t& _list) { _list.sort(diff_entry_ptr_sort); before_within_post_sort(_list); }
   
   
   //!---- Simulating and Applying Mutations ---- !//

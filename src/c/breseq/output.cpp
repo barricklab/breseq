@@ -2520,7 +2520,7 @@ cOutputEvidenceFiles::html_evidence_file (
     if (settings.base_quality_cutoff != 0)
       item["base_quality_cutoff"] = to_string(settings.base_quality_cutoff);
     
-    alignment_output ao(item[BAM_PATH], item[FASTA_PATH], settings.max_displayed_reads, settings.base_quality_cutoff, settings.junction_minimum_side_match);
+    alignment_output ao(item[BAM_PATH], item[FASTA_PATH], settings.max_displayed_reads, settings.base_quality_cutoff, settings.junction_minimum_side_match, settings.alignment_mask_ref_matches );
     
     HTML << ao.html_alignment(ss.str(), &item);
     

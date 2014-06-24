@@ -235,6 +235,7 @@ namespace breseq
 		uint32_t alignment_read_limit;            // Default = 0 (OFF)
 		uint32_t candidate_junction_read_limit;   // Default = 0 (OFF)
     uint32_t resolve_alignment_read_limit;    // Default = 0 (OFF)
+    bool     alignment_mask_ref_matches;      // Default false
     //! Output unmatched read file?
 		bool no_unmatched_reads;                  // Default = false
     //! Don't delete intermediate files

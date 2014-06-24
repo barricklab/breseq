@@ -149,6 +149,8 @@ Additional INS named fields
 '''''''''''''''''''''''''''
 * **repeat_seq=**\ *<string>*, **repeat_length=**\ *<uint32>*, **repeat_ref_num=**\ *<uint32>*, **repeat_new_copies=**\ *<uint32>* 
    This insertion is in a short sequence repeat consisting of tandem copies of **repeat_seq** repeated **repeat_ref_num** times in the ancestor and **repeat_new_copies** after a mutation.  To be annotated in this way the copy of the repeat in the reference genome must consist of at least two repeat copies and have a length of five of more total bases (**repeat_length** × **repeat_ref_num** ≥ 5).
+* **insert_position=**\ *<uint32>*
+   Used when there are multiple insertion events after the same reference base to order the insertions. This typically happens in polymorphism mode and when manually breaking up an insertion of bases into distinct mutational events. Numbering of insertions begins with 1. 
 
 MOB: Mobile element insertion mutation
 """"""""""""""""""""""""""""""""""""""
@@ -176,10 +178,13 @@ MOB: Mobile element insertion mutation
 Additional MOB named fields
 '''''''''''''''''''''''''''
 * **del_start=**\ *<uint32>*, **del_end=**\ *<uint32>*
+
    Delete this many bases from the start or end of the inserted mobile element. This deletion occurs with respect to the top strand of the genome after the element is flipped to the orientation with which it will be inserted.
 * **ins_start=**\ *<string>*, **ins_end=**\ *<string>*
+
    Append the specified bases to the start or end of the inserted mobile element. These insertions occur after any deletions and will be inside of any duplicated target site bases.
 * **mob_region**\ =\ *<seq_id:start-end >*
+
    Use the existing copy of the mobile element specified as a seq_id:start-end region to apply this mutation. Useful when different annotated members of a mobile element family have slightly different sequences.
 
 AMP: Amplification mutation
@@ -246,7 +251,7 @@ Standard name=value pairs
 Counting Mutations
 """"""""""""""""""
 
-These attributes control how molecular events in a a :program:`GenomeDiff` are counted for summary purposes.
+These attributes control how molecular events in a :program:`GenomeDiff` are counted for summary purposes.
 
 * **between**\ =\ *<element_name>*
 
@@ -269,14 +274,18 @@ Applying Mutations
 """"""""""""""""""
 
 These attributes control how mutations are applied when using :program:`gdtools APPLY` to build a new reference genome from the original reference genome and a :program:`GenomeDiff` and when building phylogenetic trees from multiple samples. They are not generated automatically by |breseq|.
-   
+
 * **before**\ =\ *<mutation_id>* or **after**\ =\ *<mutation_id>*
 
    Apply this mutation before or after another mutation. For example, did a base substitution occur after a region was duplicated, thus it is only in one copy or did it occur before the duplication, thus altering both copies? Did a base substitution happen before a deletion, hiding a mutation that should be included in any phylogenetic inference? When neither of these attributes is present, mutations will be applied in order according to their genomic positions.
    
-* **nested_within**\ =\ *<mutation_id>*\ , **nested_copy**\ =\ *<mutation_id>*
+* **nested_id**\ =\ *<mutation_id>*\ , **nested_copy**\ =\ *<mutation_id>*
 
-   This mutation happens inside of a different mutation. These options can specify, for example, that a base substitution happens in the second copy of a duplicated region. If **nested_copy** is not provided (because it is unknown), the mutation will be placed arbitrarily in the first copy. Currently, **nested_within** must refer to an AMP mutation or a MOB mutation (in which case it refers to the target site duplication).
+   This mutation happens inside of a different mutation. These options can specify, for example, that a base substitution happens in the second copy of a duplicated region. If **nested_copy** is not provided (because it is unknown), the mutation will be placed arbitrarily in the first copy. Currently, **nested_id** must refer to the id of an AMP mutation or a MOB mutation (in which case it refers to the target site duplication).
+
+* **deleted**\ =\ *1*
+
+   The sequence change caused by this mutation was made irrelevant by subsequent mutations that deleted or further changed the affected region. Annotation of this mutation in the given genome was inferred based on phylogeny. It will not be applied when generating the mutated genome.
 
 Evidence Types
 ++++++++++++++++++++++
