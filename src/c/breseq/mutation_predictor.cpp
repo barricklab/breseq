@@ -1479,7 +1479,7 @@ namespace breseq {
     
     // moving previous mutations back if they are put on top of existing;
     // Currently only implemented for DEL
-    cDiffEntry* previous_mutation;
+    cDiffEntry* previous_mutation = NULL;
     int32_t previous_position;
     
     // Pull settings variables
