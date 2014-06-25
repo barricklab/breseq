@@ -535,6 +535,67 @@ int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info)
       return UNDEFINED_INT32;
   }
 }
+
+void cDiffEntry::mutation_shift_position(const string& seq_id, int32_t shift_offset, int32_t shift_size)
+{    
+  // negative shift_size means deletion; positive shift_size means insertion
+  if (shift_size == 0) return;
+  if (seq_id != (*this)[SEQ_ID]) return;
+  
+  int32_t position = from_string<int32_t>((*this)[POSITION]);
+  
+  // anything that has a 'size' potentially needs to be adjusted if the shift position and size overlaps        
+  switch (this->_type) {
+    case SUB: 
+    case DEL: 
+    case AMP:
+    {
+      int32_t new_start = position;
+      int32_t new_end = position + from_string<int32_t>((*this)[SIZE]) - 1;
+      
+      // zero for insertions
+      // positive for deletions
+      int32_t abs_shift_size = -shift_size;
+      if (abs_shift_size < 0) abs_shift_size = 0;
+      
+      // Deletion cases
+      if (abs_shift_size > 0) {
+      
+        // change overlaps left side
+        if ((new_start >= shift_offset) && (new_start < shift_offset + abs_shift_size - 1)) {
+          new_start = shift_offset + abs_shift_size - 1;
+        }
+        // change overlaps right side
+        if ((new_end >= shift_offset) && (new_end < shift_offset + abs_shift_size - 1)) {
+          new_end = shift_offset;
+        }
+      }
+      
+      //change is in the middle of the mutation -- does not change start
+      if ((new_start <= shift_offset) && (new_end >= shift_offset + abs_shift_size - 1)) {
+        new_end += shift_size;
+      }
+      
+      // save size because we may need to offset the position
+      (*this)[SIZE] = to_string(new_end - new_start + 1);
+      if (new_start > shift_offset) {
+        new_start += shift_size;
+      }
+      (*this)[POSITION] = to_string(new_start);
+      
+      return;
+    }
+    break;
+      
+    default:
+      break;
+  }
+  
+  if (position > shift_offset) {
+    (*this)[POSITION] = to_string(position + shift_size);
+  }
+}
+
   
 /*! Marshal this diff entry into an ordered list of fields.
  */
@@ -1156,7 +1217,25 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
     }
     cDiffEntry de(line, line_number, &parse_errors);
     de.valid_field_variable_types(parse_errors);
+    
+    // Have to check for unique ids being used at this level
+    if (unique_id_used[de._id]) {
+      parse_errors.add_line_error(line_number,de.as_string(), "ID for this entry is not unique.", true);
+    }
     if (de._type != UNKNOWN) add(de, false); // Don't reassign ids yet    
+  }
+  
+  // Check to be sure all evidence referred to exists
+
+  // Currently don't require this check...
+  if (false) {
+    for (diff_entry_list_t::iterator it=_entry_list.begin(); it != _entry_list.end(); it++) {
+      for (vector<string>::iterator ev_it = (*it)->_evidence.begin(); ev_it != (*it)->_evidence.end(); ev_it++) {
+        if (unique_id_used[*ev_it]) {
+          parse_errors.add_line_error(line_number,(*it)->as_string(), "Attempt to refer to nonexistent evidence ID.", true);
+        }
+      }
+    }
   }
   
   if (!suppress_errors) {
@@ -1276,6 +1355,12 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
       diff_entry_ptr_t& de = *it;      
 
       if (de->is_mutation()) {
+        
+        // Don't try to have both attributes!! 
+        if (de->entry_exists("within") && de->entry_exists("before")) {
+            parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Both 'within' and 'before' attributes found for mutation. Only one of the two is allowed", true);
+        }
+        
         if (de->entry_exists("within")) {
           
           vector<string> split_within = split((*de)["within"], ":");
@@ -1304,8 +1389,8 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
               }
               
               // check coords to be sure it actually is 'within'
-              valid_start = position;
-              valid_end = position + from_string<uint32_t>((*within_de)[SIZE]) - 1;
+              valid_start = within_position;
+              valid_end = valid_start + from_string<uint32_t>((*within_de)[SIZE]) - 1;
               
             } else if (within_de->_type == MOB) {
               
@@ -1313,16 +1398,16 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
               if (split_within.size() == 1) {
                // it is within the newly inserted sequence, tricky coordinates in play 
                 
-                string* picked_seq_id;
-                cSequenceFeature* picked_sequence_feature;
-                string mob_seq = mob_replace_sequence(ref_seq, *within_de, picked_seq_id, picked_sequence_feature);
-                valid_start = position + from_string<uint32_t>((*within_de)[DUPLICATION_SIZE]) + 1;
+                string picked_seq_id;
+                cSequenceFeature picked_sequence_feature;
+                string mob_seq = mob_replace_sequence(ref_seq, *within_de, &picked_seq_id, &picked_sequence_feature);
+                valid_start = within_position + from_string<int32_t>((*within_de)[DUPLICATION_SIZE]) + 1;
                 valid_end = valid_start + mob_seq.size() - 1;
                 
               }
               else if (split_within.size() == 2) {
-                valid_start = position;
-                valid_end = position + from_string<uint32_t>((*within_de)[DUPLICATION_SIZE]) - 1;
+                valid_start = within_position;
+                valid_end = valid_start + from_string<int32_t>((*within_de)[DUPLICATION_SIZE]) - 1;
               }
               
             } else if (within_de->_type == INS) {
@@ -1331,8 +1416,8 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
               }
               
               // check coords to be sure it actually is 'within'
-              valid_start = position + 1; // new bases will start after this position
-              valid_end = position + (*within_de)[NEW_SEQ].size();
+              valid_start = within_position + 1; // new bases will start after this position
+              valid_end = valid_start + (*within_de)[NEW_SEQ].size();
               
             } else {
               parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Field 'within' provided for an entry that is not of AMP, MOB, or INS type.", true);
@@ -1347,7 +1432,7 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
             }
             
           } // end has 'within' attribute
-        } if (de->entry_exists("before")) {  
+        } else if (de->entry_exists("before")) {  
           
           uint32_t position = from_string<uint32_t>((*de)[POSITION]);
 
@@ -1494,7 +1579,7 @@ uint32_t cGenomeDiff::new_unique_id()
 { 
   uint32_t assigned_id = ++_unique_id_counter;
   
-  while (unique_id_used.count(assigned_id))
+  while (unique_id_used.count(to_string<uint32_t>(assigned_id)))
   {
     assigned_id++;
   }
@@ -1512,8 +1597,7 @@ void cGenomeDiff::assign_unique_id_to_entry(cDiffEntry &de) {
   de._id = to_string<int32_t>(new_unique_id());
   
   // Record that we used this
-  uint32_t new_id = from_string<uint32_t>(de._id);
-  unique_id_used[new_id] = true;
+  unique_id_used[de._id] = true;
 }
   
 /*! Add evidence to this genome diff.
@@ -1534,8 +1618,7 @@ diff_entry_ptr_t cGenomeDiff::add(const cDiffEntry& item, bool reassign_id) {
   }
   
   if (cDiffEntry::valid_id(added_item->_id)) {
-    uint32_t new_id = from_string<uint32_t>(added_item->_id);
-    unique_id_used[new_id] = true;
+    unique_id_used[added_item->_id] = true;
   }
 
   //cout << added_item->as_string() << endl;  
@@ -1661,7 +1744,6 @@ diff_entry_list_t cGenomeDiff::mutation_evidence_list(const cDiffEntry& item)
 // return items with types that are 3 characters long
 diff_entry_list_t cGenomeDiff::mutation_list()
 {
-  this->sort();
   diff_entry_list_t::iterator it = _entry_list.begin();
   while (it != _entry_list.end()) {
     if (!(**it).is_mutation()) {
@@ -2365,20 +2447,107 @@ bool cGenomeDiff::diff_entry_ptr_sort(const diff_entry_ptr_t& a, const diff_entr
   return false;
 }
 
-void cGenomeDiff::before_within_post_sort(diff_entry_list_t& _list)
+  /*! Helper fstruct and function for apply sort
+   */
+  
+cGenomeDiff cGenomeDiff::current_sort_gd; 
+ 
+typedef struct {
+  string mutation_id;
+  int32_t sort_copy_index;   // -1 for sorting before, 1 for sorting the same (so it's after), otherwise 1 + copy_index
+} apply_sort_order_item;
+
+apply_sort_order_item create_apply_sort_order_item(string& value, bool sort_before) {
+  apply_sort_order_item item;
+  vector<string> split_value = split(value, ":");
+  item.mutation_id = split_value[0];
+  if (split_value.size() == 1) {
+    item.sort_copy_index = 0;
+  } else {
+    item.sort_copy_index = from_string(split_value[1]) + 1;
+  }
+  
+  // override for sorting before
+  if (sort_before) {
+    item.sort_copy_index = -1;
+  }
+  
+  return item;
+}
+  
+/*! Return TRUE if a < b
+ */
+bool cGenomeDiff::diff_entry_ptr_sort_apply_order(const diff_entry_ptr_t& a, const diff_entry_ptr_t& b) {
+    
+  // Fill lists of what we are sorting before and after
+  vector<string> tag_list = make_vector<string>("before")("within");
+  vector<apply_sort_order_item> a_sort_items, b_sort_items;
+  for(vector<string>::iterator it=tag_list.begin(); it!=tag_list.end(); it++) {
+    string& tag = *it;
+    if (a->entry_exists(tag)) {
+      apply_sort_order_item sort_item = create_apply_sort_order_item((*a)[tag], tag=="before");
+      a_sort_items.push_back(sort_item);
+    }
+  }
+  apply_sort_order_item a_self_sort_item; 
+  a_self_sort_item.mutation_id = a->_id;
+  a_self_sort_item.sort_copy_index = 0;
+  a_sort_items.push_back(a_self_sort_item);
+  
+  for(vector<string>::iterator it=tag_list.begin(); it!=tag_list.end(); it++) {
+    string& tag = *it;
+    if (b->entry_exists(tag)) {
+      apply_sort_order_item sort_item = create_apply_sort_order_item((*b)[tag], tag=="before");
+      b_sort_items.push_back(sort_item);
+    }
+  }
+  apply_sort_order_item b_self_sort_item; 
+  b_self_sort_item.mutation_id = b->_id;
+  b_self_sort_item.sort_copy_index = 0;
+  b_sort_items.push_back(b_self_sort_item);
+  
+  // check all combinations of proxy sorts until the tie is broken or we are done.
+  vector<int32_t> sort_results; //-1, 0, +1 for where to put it
+  for(uint32_t i=0; i<a_sort_items.size(); i++) {
+    for(uint32_t j=0; j<b_sort_items.size(); j++) {
+      
+      diff_entry_ptr_t a_anchor = current_sort_gd.find_by_id(a_sort_items[i].mutation_id);
+      diff_entry_ptr_t b_anchor = current_sort_gd.find_by_id(b_sort_items[j].mutation_id);
+      
+      // If any of the anchors refer to the same mutation or a or b is one of the anchors
+      // then use these proxies for a normal sort
+      
+      if (a_anchor.get() == b_anchor.get()) {
+        if (a_sort_items[i].sort_copy_index < b_sort_items[j].sort_copy_index)
+          return true;
+        else if (a_sort_items[i].sort_copy_index > b_sort_items[j].sort_copy_index) 
+          return false;
+        else 
+          return diff_entry_ptr_sort(a, b);
+      }
+    }
+  }
+  
+  // Normal sort if there was no overlap in what was referred to.
+  return diff_entry_ptr_sort(a, b);
+}
+
+void cGenomeDiff::before_within_post_sort()
 {
   // Grab all of the entries that are within or before other entries and then place them
   diff_entry_list_t within_before_list;
-  for(diff_entry_list_t::iterator it=_list.begin(); it!=_list.end();) {
+  for(diff_entry_list_t::iterator it=_entry_list.begin(); it!=_entry_list.end();) {
     cDiffEntry& de = **it;
     if (de.entry_exists("before") || de.entry_exists("within")) {
       diff_entry_list_t::iterator temp_it = it;
       it++;
-      within_before_list.splice(within_before_list.end(), _list, temp_it);
+      within_before_list.splice(within_before_list.end(), _entry_list, temp_it);
     } else {
       it++;
     }
   }
+  cout << "Size before (entry): " << _entry_list.size() << endl;
+  cout << "Size before (wb_list): " << within_before_list.size() << endl;
   
   // Now place them appropriately after (for within) or before the entries they refer to
   for(diff_entry_list_t::iterator it1=within_before_list.begin(); it1!=within_before_list.end();it1++) {
@@ -2393,18 +2562,27 @@ void cGenomeDiff::before_within_post_sort(diff_entry_list_t& _list)
       wb_id = split_within[0];
     }
     
-    for(diff_entry_list_t::iterator it2=_list.begin(); it2!=_list.end();it2++) {
+    for(diff_entry_list_t::iterator it2=_entry_list.begin(); it2!=_entry_list.end();it2++) {
       cDiffEntry& test_de = **it2;
 
       if (test_de._id == wb_id) {
         
         // insert inserts before the specified iterator position
         if (!insert_before) it2++;
-        _list.insert(it2, it1, it1);
+        diff_entry_list_t::iterator it3 = it1;
+        it3++;
+        _entry_list.insert(it2, it1, it3);
         break;
       }
     }
   }
+  
+  for(diff_entry_list_t::iterator it2=_entry_list.begin(); it2!=_entry_list.end();it2++) {
+    cout << (*it2)->as_string() << endl;
+  }
+  
+  cout << "Size after (entry): " << _entry_list.size() << endl;
+  cout << "Size after (wb_list): " << within_before_list.size() << endl;
 }
   
 
@@ -2875,17 +3053,24 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
           special_delta = 0;
         }
         
+        // -1 used as offset to force update of position
+        mut.mutation_shift_position(current_mut[SEQ_ID], -1, special_delta);
+        
         // Note that we don't check the offset because
         // we should have made sure things were ok in validation
-        mut[POSITION] = to_string(position + special_delta);
+        //mut[POSITION] = to_string(position + special_delta);
       }  
     }
     
     // Normal behavior -- offset mutations later in same reference sequence
     if (!was_nested) {
+      mut.mutation_shift_position(current_mut[SEQ_ID], offset, delta);
+
+      /*
       if ((current_mut[SEQ_ID] == mut[SEQ_ID]) && (position > offset)) {
         mut[POSITION] = to_string(position + delta);
       }
+      */
     }
   }
 }
@@ -2955,16 +3140,17 @@ string cGenomeDiff::mob_replace_sequence(cReferenceSequences& ref_seq_info,
 //
 void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose)
 {    
+  //verbose = true;
   uint32_t count_SNP = 0, count_SUB = 0, count_INS = 0, count_DEL = 0, count_AMP = 0, count_INV = 0, count_MOB = 0, count_CON = 0, count_MASK = 0;
+  
+  // Sort the list into apply order ('within' and 'before' tags)
+  cGenomeDiff::sort_apply_order();
   
   // Handle all mutation types, plus MASK four-letter type.
   diff_entry_list_t mutation_list = this->mutation_list();
   diff_entry_list_t mask_list = this->list(make_vector<gd_entry_type>(MASK));
   
   mutation_list.insert(mutation_list.end(), mask_list.begin(), mask_list.end());
-
-  // Sort the list into apply order ('within' and 'before' tags)
-  cGenomeDiff::sort_apply_order(mutation_list);
   
   for (diff_entry_list_t::iterator itr_mut = mutation_list.begin(); itr_mut != mutation_list.end(); itr_mut++)
   {

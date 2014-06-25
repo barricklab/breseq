@@ -273,15 +273,15 @@ These attributes control how molecular events in a :program:`GenomeDiff` are cou
 Applying Mutations
 """"""""""""""""""
 
-These attributes control how mutations are applied when using :program:`gdtools APPLY` to build a new reference genome from the original reference genome and a :program:`GenomeDiff` and when building phylogenetic trees from multiple samples. They are not generated automatically by |breseq|.
+These advanced attributes control how mutations are applied when using :program:`gdtools APPLY` to build a new reference genome from the original reference genome and a :program:`GenomeDiff` and when building phylogenetic trees from multiple samples. They are not generated automatically by |breseq|.
 
-* **before**\ =\ *<mutation_id>* or **after**\ =\ *<mutation_id>*
+* **before**\ =\ *<mutation_id>*
 
-   Apply this mutation before or after another mutation. For example, did a base substitution occur after a region was duplicated, thus it is only in one copy or did it occur before the duplication, thus altering both copies? Did a base substitution happen before a deletion, hiding a mutation that should be included in any phylogenetic inference? When neither of these attributes is present, mutations will be applied in order according to their genomic positions.
+   Apply this mutation before another mutation. For example, did a base substitution occur after a region was duplicated, thus it is only in one copy or did it occur before the duplication, thus altering both copies? Did a base substitution happen before a deletion, hiding a mutation that should be included in any phylogenetic inference? When this attributes is present, mutations will be applied in order according to their genomic positions.
    
-* **nested_id**\ =\ *<mutation_id>*\ , **nested_copy**\ =\ *<mutation_id>*
+* **within**\ =\ *<mutation_id>*\  or **within**\ =\ *<mutation_id>:<copy_index>*
 
-   This mutation happens inside of a different mutation. These options can specify, for example, that a base substitution happens in the second copy of a duplicated region. If **nested_copy** is not provided (because it is unknown), the mutation will be placed arbitrarily in the first copy. Currently, **nested_id** must refer to the id of an AMP mutation or a MOB mutation (in which case it refers to the target site duplication).
+   This mutation happens within a different mutation. These options can specify, for example, that a base substitution happens in the second copy of a duplicated region. If *<mutation_id>* refers to an AMP, then it must be of the form *<mutation_id>:<copy_index>* and the mutation is placed in the corresponding copy of the specified coordinates. If *<mutation_id>* refers to an INS, then it must be of the form *<mutation_id>* with no *<copy_index>*, and the position of the mutation will be interpreted as happening after the INS bases are inserted, so that it can change those new bases. If *<mutation_id>* refers to a MOB with no *<copy_index>*, then the mutation is placed within the newly inserted sequence of the mobile element with the position of the mutation interpreted as happening after those bases are inserted. If it refers to a MOB and is of the form *<mutation_id>:<copy_index>*, then the mutation is placed within the specified copy of the target site duplication.
 
 * **deleted**\ =\ *1*
 
