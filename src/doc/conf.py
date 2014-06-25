@@ -58,6 +58,7 @@ rst_prolog = """
 .. |Bowtie2| replace:: :program:`Bowtie2`
 .. |SAMtools| replace:: :program:`SAMtools`
 .. |Genome Diff| replace:: :program:`GenomeDiff`
+.. |GenomeDiff| replace:: :program:`GenomeDiff`
 .. |GD| replace:: :program:`GenomeDiff`
 .. |gdtools| replace:: :program:`gdtools`
 
@@ -234,7 +235,7 @@ man_pages = [
 epub_title = u'breseq'
 epub_author = u'Jeffrey E. Barrick'
 epub_publisher = u'Jeffrey E. Barrick'
-epub_copyright = u'2011, Jeffrey E. Barrick'
+epub_copyright = u'2014, Jeffrey E. Barrick'
 
 # The language of the text. It defaults to the language option
 # or en if the language is not set.

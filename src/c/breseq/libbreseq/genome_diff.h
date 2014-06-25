@@ -247,6 +247,9 @@ public:
   //! Common function giving change in size of genome at site of applying entry
   int32_t mutation_size_change(cReferenceSequences& ref_seq_info);
   
+  //! Common functionf or updating mutations based on a mutation occurring at shift_offset and changing size by shift_size;
+  void mutation_shift_position(const string& seq_id, int32_t shift_offset, int32_t shift_size);
+  
   //!---- Output ---- !//
   
   //! Marshal this diff entry into an ordered list of fields.
@@ -441,7 +444,7 @@ protected:
   string _filename;                   //!< File name associated with this diff.
   diff_entry_list_t _entry_list;      //!< All diff entries.
   uint32_t _unique_id_counter;        //!< Smallest available id.
-  map<uint32_t,bool> unique_id_used;
+  map<string,bool> unique_id_used;
 
 public:
   // @JEB should make this protected and add an accessor
@@ -594,15 +597,18 @@ public:
   };
   
   static bool diff_entry_ptr_sort(const diff_entry_ptr_t& a, const diff_entry_ptr_t& b);
+  static cGenomeDiff current_sort_gd; // passthrough for sort to use...
+  static bool diff_entry_ptr_sort_apply_order(const diff_entry_ptr_t& a, const diff_entry_ptr_t& b);
   
   // Normal sort. Used for printing, merging, and compare.
   void sort() { _entry_list.sort(diff_entry_ptr_sort); }
   
   // Helper function for apply order sort
-  static void before_within_post_sort(diff_entry_list_t& _list);
+  // REMOVE THIS!!! @JEB
+  void before_within_post_sort();
 
   // Sort normally -- and then take into account 'before' and 'within' tags in sorting
-  static void sort_apply_order(diff_entry_list_t& _list) { _list.sort(diff_entry_ptr_sort); before_within_post_sort(_list); }
+  void sort_apply_order() { current_sort_gd = *this; _entry_list.sort(diff_entry_ptr_sort_apply_order); }
   
   
   //!---- Simulating and Applying Mutations ---- !//

@@ -499,7 +499,7 @@ int do_tabulate_contingency_loci(int argc, char* argv[]) {
   ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
   ("bam,b", "bam file containing sequences to be aligned", "data/reference.bam")
   ("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
-  ("reference,r","reference sequence file with annotation", "data/reference.gff3")
+  ("reference,r","File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)", "data/reference.gff3")
   ("output,o", "output file", "contingency_loci.tab")
   ("loci,l", "Contingency loci coordinates", "")
   ("strict,s", "exclude non-perfect matches in surrounding 5 bases", TAKES_NO_ARGUMENT)
@@ -649,7 +649,7 @@ int do_simulate_read(int argc, char *argv[])
 
   options
   ("genome_diff,g", "Genome diff file.")
-  ("reference,r",   "Reference file for input.")
+  ("reference,r",   "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
   ("coverage,c",    "Average coverage value to simulate.", static_cast<uint32_t>(80))
   ("length,l",      "Read length to simulate.", static_cast<uint32_t>(50))
   ("output,o",      "Output fastq file name.")

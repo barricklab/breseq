@@ -3,17 +3,17 @@
 |gdtools| Utility Program
 ===========================
 
-Performs various functions on genomediff formatted files. Options depend on the COMMAND supplied. Only a small subset of these commands are described below.
-For a full list of gdtools subcommands run it from the command line with no options::
+Performs various functions on |Genome Diff| formatted files. Options depend on the COMMAND supplied. Only a small subset of these commands are described below.
+For a full list of |gdtools| subcommands run it from the command line with no options::
 
   gdtools
   
-Command: ANNOTATE
+Command: ANNOTATE/COMPARE
 -------------------
 
 Usage::
 
-  gdtools ANNOTATE -r reference.gbk [--html -o output.html] input1.gd input2.gd ...
+  gdtools ANNOTATE/COMPARE [-o annotated.html] -r reference.gbk input.1.gd [input.2.gd ... ]
 
 .. program:: gdtools ANNOTATE
 
@@ -27,7 +27,7 @@ file or to compare the mutations present in several |Genome Diff| files.
 
 .. option:: -o <file_path>, --output=<file_path>
 
-   Output file containing the mutation table. DEFAULT: "annotated.gd" or "annotated.html".
+   File name for the output|Genome Diff| or HTML. DEFAULT: "annotated.gd" or "annotated.html".
 
 .. option:: --html
 
@@ -36,13 +36,15 @@ file or to compare the mutations present in several |Genome Diff| files.
 input1.gd input2.gd ...
    Input |Genome Diff| file(s). This option may be entered multiple times to compare across files. REQUIRED
 
+.. WARNING::
+   Advanced |Genome Diff| attributes such as **within** and **before** for mutations are ignored when generating compare tables.
 
 Command: APPLY
 ----------------
 
 Usage::
 
-  gdtools APPLY -r reference.gbk -f GFF3 [-o output.html] input.gd
+  gdtools APPLY [ -o output.gff3 -f GFF3 ] -r reference.gbk input.gd
 
 .. program:: gdtools APPLY
 
@@ -54,7 +56,7 @@ Apply the mutations described in the input |Genome Diff| to the reference sequen
 
 .. option:: -o <file_path>, --output=<file_path>
 
-   Output file containing the mutation table. DEFAULT: "output.*"
+   Output file containing the muta. DEFAULT: "output.*"
 
 .. option:: -f <output_format>, --format=<output_format>
 

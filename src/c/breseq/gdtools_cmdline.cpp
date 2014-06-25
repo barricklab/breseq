@@ -139,10 +139,10 @@ int do_union(int argc, char *argv[])
 
 int do_apply(int argc, char *argv[])
 {
-  AnyOption options("gdtools APPLY [ -o output.gff3 -f GFF3 ] -r reference.gbk [-r reference2.gbk ] input.gd");
-  options("output,o",    "output file Default (output.*)");
-  options("format,f",    "output file's format (Options: FASTA, GFF3)", "FASTA");
-  options("reference,r", "Genbank, GFF3, or FASTA reference sequence file");
+  AnyOption options("gdtools APPLY [ -o output.gff3 -f GFF3 ] -r reference.gbk input.gd");
+  options("output,o",    "Output file name Default (output.*)");
+  options("format,f",    "Output file format (Options: FASTA, GFF3)", "FASTA");
+  options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
   options("verbose,v",   "Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
@@ -437,7 +437,7 @@ int do_check_plot(int argc, char *argv[])
 int do_validate(int argc, char *argv[])
 {
     AnyOption options("gdtools VALIDATE [] input1.gd [input2.gd]");
-    options("reference,r",  "Reference sequence file. If provided, will validate seq_ids and positions in the GD file using these.  Option may be provided multiple times for multiple files. (OPTIONAL)");
+    options("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. If provided, will validate seq_ids and positions in the GD file using these.  Option may be provided multiple times for multiple files. (OPTIONAL)");
     options("verbose,v",  "Verbose mode. Outputs additional information about progress. (OPTIONAL)");
     options.addUsage("");
     options.addUsage("Validates whether the format of the input Genome Diff files is correct.");
@@ -507,7 +507,7 @@ int do_check(int argc, char *argv[])
 {
   AnyOption options("gdtools CHECK [-o output.gd] control.gd test.gd");
   options("output,o",         "output GD file", "comp.gd");
-  options("reference,r",      "reference sequence file");
+  options("reference,r",      "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
   options("evidence",         "compare evidence", TAKES_NO_ARGUMENT);
   options("jc-buffer",        "when comparing JC evidence, length of sequence segment to compare for JC evidence", 50);
   options("jc-shorten",       "when comparing JC evidence, length to shorten control segments by when comparing JC evidence for overlap", 5);
@@ -605,7 +605,7 @@ int do_gd2vcf( int argc, char* argv[])
     
     options
     ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-    ("reference,r",  "reference sequence file (REQUIRED)")
+    ("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
     ("output,o","name of output file", "output.vcf")
     ;
     options.processCommandArgs( argc,argv);
@@ -643,7 +643,7 @@ int do_gd2gvf( int argc, char* argv[])
 
   options
     ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-    ("reference,r","Reference file")
+    ("reference,r","File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
     ("output,o","name of output file", "output.gvf")
     ("snv-only","only include SNP/SNV entries in output", TAKES_NO_ARGUMENT)
     ;
@@ -696,7 +696,7 @@ int do_gd2circos(int argc, char *argv[])
   
   options
     ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-    ("reference,r", "reference file(s) specified in gd file")
+    ("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
     ("output,o", "name of directory to save Circos files")
     ("distance,d", "the distance from the center the first axis will be in proportion to the default size", "1.0")
     ("feature,f", "the scale of the features in proportion to the default size", "1.0")
@@ -818,20 +818,20 @@ int do_annotate(int argc, char* argv[])
   AnyOption options("gdtools ANNOTATE/COMPARE [-o annotated.html] -r reference.gbk input.1.gd [input.2.gd ... ]");
   
   options
-  ("help,h", "produce advanced help message", TAKES_NO_ARGUMENT)
-  ("output,o", "path to output file with added mutation data. (DEFAULT: output.*")
-  ("reference,r", "reference sequence in GenBank flatfile format (REQUIRED)")
-  ("format,f", "type of output to generate.", "HTML")
-  ("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT)
-  ("repeat-header", "in HTML mode, repeat the header line every this many rows (0=OFF)", "10")
+  ("help,h", "Display advanced help message", TAKES_NO_ARGUMENT)
+  ("output,o", "Path to output file with added mutation data. (DEFAULT: output.*")
+  ("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
+  ("format,f", "Type of output file to generate. See options below", "HTML")
+  ("ignore-pseudogenes", "Treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT)
+  ("repeat-header", "In HTML mode, repeat the header line every this many rows (0=OFF)", "10")
   ;
   options.addUsage("");
   options.addUsage("If multiple GenomeDiff input files are provided, then they are merged and the frequencies from each file are shown for each mutation.");
   options.addUsage("");
   options.addUsage("Valid output formats:");
-  options.addUsage("  HTML    descriptive table viewable in a web browser"); 
+  options.addUsage("  HTML    Descriptive table viewable in a web browser"); 
   options.addUsage("  GD      GenomeDiff with added annotation of mutations");
-  options.addUsage("  PHYLIP  alignment file suitable for input into PHYLIP");
+  options.addUsage("  PHYLIP  Alignment file suitable for input into PHYLIP");
 
   options.processCommandArgs(argc, argv);
   
@@ -963,7 +963,7 @@ int do_phylogeny(int argc, char* argv[])
     ("help,h", "produce advanced help message", TAKES_NO_ARGUMENT)
     ("verbose,v", "produce output for each mutation counted.", TAKES_NO_ARGUMENT)
     ("output,o", "path to output file with added mutation data.", "count.csv")
-    ("reference,r", "reference sequence in GenBank flatfile format (REQUIRED)")
+    ("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
     ("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT)
     ;
     
@@ -1107,7 +1107,7 @@ int do_count(int argc, char* argv[])
   ("help,h", "produce advanced help message", TAKES_NO_ARGUMENT)
   ("verbose,v", "produce output for each mutation counted.", TAKES_NO_ARGUMENT)
   ("output,o", "path to output file with added mutation data.", "count.csv")
-  ("reference,r", "reference sequence in GenBank flatfile format (REQUIRED)")
+  ("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
   ("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT)
   ("base-substitution-statistics,b", "calculate detailed base substitution statistics", TAKES_NO_ARGUMENT)
   ;
@@ -1163,7 +1163,7 @@ int do_normalize_gd(int argc, char* argv[])
   AnyOption options("gdtools NORMALIZE [-o output.gd] -r reference.gbk input.gd");
   options
   ("output,o"          , "output Genome Diff file.", "output.gd")
-  ("reference,r"       , "input reference file.")
+  ("reference,r"       , "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
 	("reassign-ids,s"    , "reassign ids to lowest numbers possible.", TAKES_NO_ARGUMENT)
 	("repeat-adjacent,a" , "mark repeat-adjacent, mediated, and between mutations.", TAKES_NO_ARGUMENT)
   ("verbose,v"         , "verbose mode (flag)", TAKES_NO_ARGUMENT);
@@ -1365,7 +1365,7 @@ int do_filter_gd(int argc, char* argv[])
 int do_simulate_mutations(int argc, char *argv[])
 {
   AnyOption options("Usage: gdtools SIMULATE-MUTATIONS [-n 100] -r <reference> -o <output.gd> -t <type>");  
-  options("reference,r","Reference file");  
+  options("reference,r","File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");  
   options("output,o","Output file");
   options("type,t","Type of mutation to generate");
   options("number,n","Number of mutations to generate", static_cast<uint32_t>(1000));
@@ -1463,7 +1463,7 @@ int do_simulate_mutations(int argc, char *argv[])
 int do_mutations_to_evidence(int argc, char *argv[])
 {
   AnyOption options("Usage: gdtools MUTATIONS-TO-EVIDENCE -r <reference> -o <output.gd> input.gd");  
-  options("reference,r","Reference file");  
+  options("reference,r","File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");  
   options("output,o","Output file");
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
@@ -1510,7 +1510,7 @@ int do_header(int argc, char* argv[])
 {
   AnyOption options("gdtools HEADER [-o output.gd] [-r reference] file1.fastq file2.fastq ...");
   options("output,o",      "output GD file");
-  options("reference,r",   "reference file");
+  options("reference,r",   "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
   options("tag,t",         "header tag to add to Genome Diff file, input as <key>=<value> will produce #=<key> <value>");
   options("input,i",       "modify input Genome Diff file inplace");
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
@@ -2065,7 +2065,7 @@ int do_mrna_stability(int argc, char *argv[])
 {
   AnyOption options("gdtools mrna_stability [-o output.gd] [-r reference.gbk] input1.gd");
   options("output,o",  "Output fasta file for vienna RNA fold", "output.fa");
-  options("reference,r", "Genbank, GFF3, or FASTA reference sequence file");
+  options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
   options("flanking_sequence,f", "Number of bases on either side of synonymous SNP to consider for mRNA folding", "15");
   options("verbose,v", "Verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
@@ -2254,7 +2254,7 @@ int do_translate_proteome(int argc, char *argv[])
 {
     AnyOption options("gdtools PROTEOME [-o output.fna] -r reference.gbk");
     options("output,o",  "Base name for FASTA file output", "output");
-    options("reference,r", "Genbank, GFF3, or FASTA reference sequence file");
+    options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
     options("verbose,v", "Verbose mode", TAKES_NO_ARGUMENT);
     options.processCommandArgs(argc, argv);
     
@@ -2346,7 +2346,7 @@ int do_gd2oli( int argc, char* argv[])
     
     options
     ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-    ("reference,r",  "reference sequence file (REQUIRED)")
+    ("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
     ("output,o","name of output file", "output.tab")
     ;
     options.processCommandArgs( argc,argv);
