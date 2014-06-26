@@ -550,40 +550,56 @@ void cDiffEntry::mutation_shift_position(const string& seq_id, int32_t shift_off
     case DEL: 
     case AMP:
     {
-      int32_t new_start = position;
-      int32_t new_end = position + from_string<int32_t>((*this)[SIZE]) - 1;
-      
-      // zero for insertions
-      // positive for deletions
-      int32_t abs_shift_size = -shift_size;
-      if (abs_shift_size < 0) abs_shift_size = 0;
-      
+      int32_t original_start = position;
+      int32_t original_end = original_start + from_string<int32_t>((*this)[SIZE]) - 1;
+      int32_t final_start = original_start;
+      int32_t final_size = original_end - original_start + 1;
+            
       // Deletion cases
-      if (abs_shift_size > 0) {
+      if (shift_size < 0) {
       
-        // change overlaps left side
-        if ((new_start >= shift_offset) && (new_start < shift_offset + abs_shift_size - 1)) {
-          new_start = shift_offset + abs_shift_size - 1;
+        int32_t change_start = shift_offset;
+        int32_t change_end = change_start - shift_size - 1;
+
+        if ((shift_offset <= original_start) && (change_end >= original_end)) {
+          // change overlaps both sides
+          // ERROR("Deletion completely encompasses other mutation");
+          final_start = change_start;
+          final_size = 0;
+        } else if ((original_start >= shift_offset) && (original_start <= change_end)) {
+          // change overlaps left side
+          final_start = change_start;
+          final_size = original_end - original_start + 1 - (change_end - original_start);
+        } else if ((original_end >= shift_offset) && (original_end <= change_end)) {
+          // change overlaps right side
+          final_start = original_start;
+          final_size = change_start - original_start;
+        } else if ((shift_offset > original_start) && (change_end < original_end)) {
+          // change is contained within 
+          final_start = original_start;
+          final_size = original_end - original_start + 1 + shift_size; // original size minus size of deletion
+        } else if (original_start >= shift_offset) {
+          final_start = original_start + shift_size;
         }
-        // change overlaps right side
-        if ((new_end >= shift_offset) && (new_end < shift_offset + abs_shift_size - 1)) {
-          new_end = shift_offset;
+        
+        (*this)[POSITION] = to_string(final_start);
+        (*this)[SIZE] = to_string(final_size);
+        return;
+        
+        // Insertion case
+      } else {
+      
+        if ((shift_offset >= original_start) && (shift_offset <= original_end)) {
+          final_size = original_end - original_start + 1 + shift_size;
+        } else if (original_start >= shift_offset) {
+          final_start = original_start + shift_size;
         }
       }
       
-      //change is in the middle of the mutation -- does not change start
-      if ((new_start <= shift_offset) && (new_end >= shift_offset + abs_shift_size - 1)) {
-        new_end += shift_size;
-      }
-      
-      // save size because we may need to offset the position
-      (*this)[SIZE] = to_string(new_end - new_start + 1);
-      if (new_start > shift_offset) {
-        new_start += shift_size;
-      }
-      (*this)[POSITION] = to_string(new_start);
-      
+      (*this)[POSITION] = to_string(final_start);
+      (*this)[SIZE] = to_string(final_size);
       return;
+
     }
     break;
       
@@ -591,7 +607,7 @@ void cDiffEntry::mutation_shift_position(const string& seq_id, int32_t shift_off
       break;
   }
   
-  if (position > shift_offset) {
+  if (position >= shift_offset) {
     (*this)[POSITION] = to_string(position + shift_size);
   }
 }
@@ -2530,61 +2546,7 @@ bool cGenomeDiff::diff_entry_ptr_sort_apply_order(const diff_entry_ptr_t& a, con
   
   // Normal sort if there was no overlap in what was referred to.
   return diff_entry_ptr_sort(a, b);
-}
-
-void cGenomeDiff::before_within_post_sort()
-{
-  // Grab all of the entries that are within or before other entries and then place them
-  diff_entry_list_t within_before_list;
-  for(diff_entry_list_t::iterator it=_entry_list.begin(); it!=_entry_list.end();) {
-    cDiffEntry& de = **it;
-    if (de.entry_exists("before") || de.entry_exists("within")) {
-      diff_entry_list_t::iterator temp_it = it;
-      it++;
-      within_before_list.splice(within_before_list.end(), _entry_list, temp_it);
-    } else {
-      it++;
-    }
-  }
-  cout << "Size before (entry): " << _entry_list.size() << endl;
-  cout << "Size before (wb_list): " << within_before_list.size() << endl;
-  
-  // Now place them appropriately after (for within) or before the entries they refer to
-  for(diff_entry_list_t::iterator it1=within_before_list.begin(); it1!=within_before_list.end();it1++) {
-    
-    cDiffEntry& wb_de = **it1;
-    bool insert_before = wb_de.entry_exists("before");
-    string wb_id;
-    if (insert_before) {
-      wb_id = wb_de["before"];
-    } else /* within */ {
-      vector<string> split_within = split(wb_de["within"], ":");
-      wb_id = split_within[0];
-    }
-    
-    for(diff_entry_list_t::iterator it2=_entry_list.begin(); it2!=_entry_list.end();it2++) {
-      cDiffEntry& test_de = **it2;
-
-      if (test_de._id == wb_id) {
-        
-        // insert inserts before the specified iterator position
-        if (!insert_before) it2++;
-        diff_entry_list_t::iterator it3 = it1;
-        it3++;
-        _entry_list.insert(it2, it1, it3);
-        break;
-      }
-    }
-  }
-  
-  for(diff_entry_list_t::iterator it2=_entry_list.begin(); it2!=_entry_list.end();it2++) {
-    cout << (*it2)->as_string() << endl;
-  }
-  
-  cout << "Size after (entry): " << _entry_list.size() << endl;
-  cout << "Size after (wb_list): " << within_before_list.size() << endl;
-}
-  
+}  
 
 //! Call to generate random mutations.
 void cGenomeDiff::random_mutations(string exclusion_file,
@@ -3004,6 +2966,9 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
     if (mut._type == INV)
       ERROR("shift_positions() cannot handle inversions yet!");
   
+    // Mutations don't shift themselves
+    if (mut == current_mut) continue;
+    
     // the position to be updated
     uint32_t position = from_string<uint32_t>(mut[POSITION]);
 
@@ -3140,7 +3105,6 @@ string cGenomeDiff::mob_replace_sequence(cReferenceSequences& ref_seq_info,
 //
 void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose)
 {    
-  //verbose = true;
   uint32_t count_SNP = 0, count_SUB = 0, count_INS = 0, count_DEL = 0, count_AMP = 0, count_INV = 0, count_MOB = 0, count_CON = 0, count_MASK = 0;
   
   // Sort the list into apply order ('within' and 'before' tags)
