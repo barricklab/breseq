@@ -646,28 +646,19 @@ namespace breseq {
 
   }
 
-  void cReferenceSequences::WriteFASTA(const std::string &file_name, bool verbose) {
-    
-    if(verbose)cout << "Writing FASTA" << endl << "\t" << file_name << endl;
-    
+  void cReferenceSequences::WriteFASTA(const std::string &file_name) {
+        
     cFastaFile ff(file_name, ios_base::out);
     for(vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
       if(it_as->m_length)ff.write_sequence(it_as->m_fasta_sequence);
     }
-    
-    if(verbose)cout << "\t**FASTA Complete**" << endl;
   }
 
-  void cReferenceSequences::WriteFASTA(cFastaFile& ff, bool verbose) {
-
-    if(verbose)cout << "Writing FASTA" << endl;
+  void cReferenceSequences::WriteFASTA(cFastaFile& ff) {
     
     for(vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
       if(it_as->m_length)ff.write_sequence(it_as->m_fasta_sequence);
     }
-    
-    if(verbose)cout << "\t**FASTA Complete**" << endl;
-    
   }
 
   /*! ReadGFF abides by the following format:
@@ -1650,13 +1641,13 @@ string cReferenceSequences::repeat_family_sequence(
 cSequenceFeaturePtr cReferenceSequences::find_closest_repeat_region_boundary(int32_t position, cSequenceFeatureList& repeat_list, int32_t& max_distance, int32_t direction)
 {
   cSequenceFeaturePtr repeat_ptr(NULL);
-
+  
   for (cSequenceFeatureList::iterator it = repeat_list.begin(); it != repeat_list.end(); ++it) {
     cSequenceFeaturePtr test_repeat_ptr = *it;
     
     // Distance from the appropriate end of the repeat
     int32_t test_distance = abs(static_cast<int32_t>(((direction == -1) ? position - test_repeat_ptr->get_end_1() : test_repeat_ptr->get_start_1() - position)));
-    
+  
     // We want the closest one without going over that is within max_distance
     if ( (test_distance >= 0) && (test_distance <= max_distance) ) {
       repeat_ptr = test_repeat_ptr;

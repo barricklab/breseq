@@ -360,7 +360,7 @@ int do_convert_fastq(int argc, char* argv[])
 {
   
 	// setup and parse configuration options:
-	AnyOption options("Usage: breseq ANALYZE_FASTQ --input input.fastq --convert converted.fastq");
+	AnyOption options("Usage: breseq ANALYZE_FASTQ --i input.fastq -o output.fastq");
 	options
   ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
   ("input,i", "input FASTQ file")
@@ -369,6 +369,10 @@ int do_convert_fastq(int argc, char* argv[])
   ("out-format,2", "format to convert to")
   ("reverse-complement,r", "reverse complement all reads and add _RC to their names", TAKES_NO_ARGUMENT)
    .processCommandArgs(argc, argv);
+  options.addUsage("");
+  options.addUsage("Valid formats are 'SANGER', 'SOLEXA', 'ILLUMINA_1.3+'.");
+  options.addUsage("");
+  options.addUsage("See http://wikipedia.org/wiki/FASTQ_format for a description of FASTQ formats.");
 	
 	// make sure that the config options are good:
 	if(options.count("help")
@@ -377,7 +381,6 @@ int do_convert_fastq(int argc, char* argv[])
      || !options.count("in-format")
      || !options.count("out-format")
 		 ) {
-    options.addUsage("Valid formats are 'SANGER', 'SOLEXA', 'ILLUMINA_1.3+'");
 		options.printUsage();
 		return -1;
 	}                       
@@ -387,10 +390,10 @@ int do_convert_fastq(int argc, char* argv[])
   return 0;
 }
 
-int do_convert_genbank(int argc, char* argv[]) {
+int do_convert_reference(int argc, char* argv[]) {
 	
 	// setup and parse configuration options:
-	AnyOption options("Usage: breseq CONVERT-REFERENCE --input <reference> [--fasta <output.fasta>] OR [--gff <output.gff>]");
+	AnyOption options("Usage: breseq CONVERT-REFERENCE -i input.gbk [--fasta output.fna] OR [--gff output.gff]");
 	options
 		("input,i", "Input reference file(s). (Format: Fasta, GFF, GenBank)")
 		("fasta",   "FASTA format output path.")
@@ -892,12 +895,11 @@ int do_periodicity(int argc, char *argv[])
 
 int do_get_sequence(int argc, char *argv[])
 {
-  AnyOption options("Usage: breseq GET-SEQUENCE -r <reference> -o <output.fasta> -p <REL606:50-100>");
+  AnyOption options("Usage: breseq GET-SEQUENCE -r input.gbk -o output.fna -p <REL606:50-100>");
   options("reference,r",".gbk/.gff3/.fasta reference sequence file", "data/reference.fasta");
-  options("output,o","output FASTA file");  
-  options("position,p","Sequence ID:Start-End");
-  options("reverse-complement,c","Reverse Complement (Flag)", TAKES_NO_ARGUMENT);
-  options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
+  options("output,o","output FASTA file. Will write to stdout if not provided");  
+  options("position,p","subsequence to extract, in format Sequence_ID:Start-End");
+  options("reverse-complement,c","reverse complement", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
@@ -911,7 +913,7 @@ int do_get_sequence(int argc, char *argv[])
   
   if(!file_exists(options["reference"].c_str()))  {
     options.addUsage("");
-    options.addUsage("You must supply a valid --reference option for input.");
+    options.addUsage("You must supply a valid --reference|-r option for input.");
     options.addUsage("Could not find:");
     options.addUsage(options["reference"].c_str());
     options.printUsage();
@@ -921,7 +923,7 @@ int do_get_sequence(int argc, char *argv[])
   vector<string> region_list;  
   
   bool do_reverse_complement = options.count("reverse-complement");
-  bool verbose = options.count("verbose") || !options.count("output");
+  bool to_stdout = !options.count("output");
   
   if (options.count("position"))  {
     region_list = from_string<vector<string> >(options["position"]);  }
@@ -935,7 +937,7 @@ int do_get_sequence(int argc, char *argv[])
   
   if (!region_list.size()) {
     options.addUsage("");
-    options.addUsage("You must supply the --position option for input.");
+    options.addUsage("You must supply the --position|-p option for input.");
     options.printUsage();
     return -1;
   }
@@ -960,7 +962,7 @@ int do_get_sequence(int argc, char *argv[])
       do_reverse_complement = true;
     }
     
-    if(verbose)
+    if(to_stdout)
     {
       cout << "Sequence ID:      " << ref_seq_info[replace_target_id].m_seq_id << endl;
       cout << "Start Position:   " << replace_start << endl;
@@ -986,13 +988,13 @@ int do_get_sequence(int argc, char *argv[])
     new_seq.m_seq_id = region_list[j];
     new_seq.m_length = new_seq.m_fasta_sequence.m_sequence.size();
     
-    if(verbose)  {
+    if(to_stdout)  {
       cout << new_seq.m_fasta_sequence << endl;  
     }
   }
   
   if(options.count("output"))  {
-    new_seq_info.WriteFASTA(options["output"], verbose);  
+    new_seq_info.WriteFASTA(options["output"]);  
   }  
   
   return 0;
@@ -2208,7 +2210,7 @@ int main(int argc, char* argv[]) {
   if (command == "CONVERT-FASTQ") {
 		return do_convert_fastq(argc_new, argv_new);
 	} else if (command == "CONVERT-REFERENCE") {
-		return do_convert_genbank(argc_new, argv_new);
+		return do_convert_reference(argc_new, argv_new);
   } else if ((command == "GET-SEQUENCE") || (command == "SUBSEQUENCE")) {
     return do_get_sequence(argc_new, argv_new);
     

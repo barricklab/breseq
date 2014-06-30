@@ -257,7 +257,7 @@ cDiffEntry::cDiffEntry(const string &line, uint32_t line_number, cFileParseError
         } else if (key == "nested_copy") {
           if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'nested_copy' IS DEPRECATED. USE 'within' INSTEAD", true);
         } else if (key == "after") {
-          if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'after' is DEPRECATED. Use 'before' INSTEAD", true);
+          if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'after' is DEPRECATED. Use 'within' or 'before' INSTEAD", true);
         }
       }
       
@@ -536,6 +536,8 @@ int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info)
   }
 }
 
+// shift_offset of -1 means we are within the current mutation 
+//   => we don't change its size, but we may shift its position in a special way for AMP/MOB/INS
 void cDiffEntry::mutation_shift_position(const string& seq_id, int32_t shift_offset, int32_t shift_size)
 {    
   // negative shift_size means deletion; positive shift_size means insertion
@@ -586,10 +588,10 @@ void cDiffEntry::mutation_shift_position(const string& seq_id, int32_t shift_off
         (*this)[SIZE] = to_string(final_size);
         return;
         
-        // Insertion case
+        // Insertion case, increase size if it is within the current interval
       } else {
       
-        if ((shift_offset >= original_start) && (shift_offset <= original_end)) {
+        if ((shift_offset >= original_start) && (shift_offset+shift_size-1 <= original_end)) {
           final_size = original_end - original_start + 1 + shift_size;
         } else if (original_start >= shift_offset) {
           final_start = original_start + shift_size;
@@ -599,7 +601,7 @@ void cDiffEntry::mutation_shift_position(const string& seq_id, int32_t shift_off
       (*this)[POSITION] = to_string(final_start);
       (*this)[SIZE] = to_string(final_size);
       return;
-
+      
     }
     break;
       
@@ -1459,7 +1461,7 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
           
           // Check to be sure the specified entry exists...
           if (before_de.get() == NULL) {
-            parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Attempt to put mutation 'within' a mutation with an id that does not exist in file: " + before_mutation_id, true);
+            parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Attempt to put mutation 'before' a mutation with an id that does not exist in file: " + before_mutation_id, true);
           } else {
             // And that it is actually necessary for ordering
             
@@ -1483,7 +1485,9 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
               }              
               
             } else {
+              /*
               parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Field 'before' refers to a mutation that is not of type AMP or MOB where it will have no effect:\n" + before_de->as_string(), true);
+               */
             }
             
           }
@@ -2957,7 +2961,7 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
   if (delta == UNDEFINED_INT32)
     ERROR("Size change not defined for mutation.");
   
-  uint32_t offset = from_string<uint32_t>(current_mut[POSITION]);
+  int32_t offset = from_string<int32_t>(current_mut[POSITION]);
   
   diff_entry_list_t muts = this->mutation_list();
   for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr++) {
@@ -2970,7 +2974,7 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
     if (mut == current_mut) continue;
     
     // the position to be updated
-    uint32_t position = from_string<uint32_t>(mut[POSITION]);
+    int32_t position = from_string<uint32_t>(mut[POSITION]);
 
     // Check to see whether this is listed as being nested within the current item
     
@@ -3018,24 +3022,14 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
           special_delta = 0;
         }
         
-        // -1 used as offset to force update of position
+        // -1 used as offset to force update of position because we are within it...
         mut.mutation_shift_position(current_mut[SEQ_ID], -1, special_delta);
-        
-        // Note that we don't check the offset because
-        // we should have made sure things were ok in validation
-        //mut[POSITION] = to_string(position + special_delta);
       }  
     }
     
     // Normal behavior -- offset mutations later in same reference sequence
     if (!was_nested) {
       mut.mutation_shift_position(current_mut[SEQ_ID], offset, delta);
-
-      /*
-      if ((current_mut[SEQ_ID] == mut[SEQ_ID]) && (position > offset)) {
-        mut[POSITION] = to_string(position + delta);
-      }
-      */
     }
   }
 }
@@ -3103,7 +3097,8 @@ string cGenomeDiff::mob_replace_sequence(cReferenceSequences& ref_seq_info,
 // When calling this function make SURE that you load ref_seq_info and
 // new_ref_seq_info separately.
 //
-void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose)
+void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose, 
+                                     int32_t slop_distance, int32_t size_cutoff_AMP_becomes_INS_DEL_mutation)
 {    
   uint32_t count_SNP = 0, count_SUB = 0, count_INS = 0, count_DEL = 0, count_AMP = 0, count_INV = 0, count_MOB = 0, count_CON = 0, count_MASK = 0;
   
@@ -3123,8 +3118,72 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
     
     // Look out! -- you should not apply things that don't have frequency=1 or other markers of polymorphism mode
     //ASSERT(!((mut._type == INS) && (mut.count(INSERT_POSITION))), "Attempt to apply insertion with \"insert_position\" field set, which indicates your Genome Diff represents polymorphic mutations.\n" + mut.as_string());
-    ASSERT( ((!mut.count(FREQUENCY)) || (from_string<double>(mut[FREQUENCY]) != 1)), "Attempt to apply mutation with frequency not equal to 1, which indicates your Genome Diff represents polymorphic mutations.\n" + mut.as_string());
-                      
+    ASSERT( ((mut.count(FREQUENCY)==0) || (from_string<double>(mut[FREQUENCY]) == 1)), "Attempt to apply mutation with frequency not equal to 1, which indicates your Genome Diff represents polymorphic mutations.\n" + mut.as_string());
+    
+    /////// BEGIN - marking 'between', 'mediated', 'adjacent' to repeat_region mutations
+    //      NOTE: We remove any previous annotation from this GenomeDiff for ALL mutation types
+    mut.erase("between");
+    mut.erase("mediated");
+    mut.erase("adjacent");
+    
+    // Must be done before we apply the current mutation to the sequence
+    // But previous mutations must be applied (because for example it may be mediated by a new IS insertion).
+    {
+      
+      cAnnotatedSequence& this_seq = new_ref_seq_info[mut[SEQ_ID]];
+            
+      int64_t mut_start_1 = position;
+      int64_t mut_end_1 = mut_start_1;
+      
+      string both_close_key = "adjacent";
+      string one_close_key = "adjacent";
+      
+      // Only these types can be 'within' and 'between' and have a SIZE attribute
+      if ((mut._type == DEL) || (mut._type == AMP)) {
+        int64_t size = from_string<int64_t>(mut[SIZE]);
+        mut_end_1 = mut_start_1 + size - 1;
+        
+        // short ones aren't mediated, just adjacent
+        if (size > size_cutoff_AMP_becomes_INS_DEL_mutation) {
+          both_close_key = "between";
+          one_close_key = "mediated";
+        }
+      }
+      
+      // We make no assumptions about the directions of relevant IS elements in between/mediated here.
+      int32_t tmp_slop_distance = slop_distance;
+      cSequenceFeaturePtr start_repeat = cReferenceSequences::find_closest_repeat_region_boundary(mut_start_1, this_seq.m_repeats, tmp_slop_distance, -1); 
+      if (start_repeat.get() == NULL) {       
+        tmp_slop_distance = slop_distance;
+        start_repeat = cReferenceSequences::find_closest_repeat_region_boundary(mut_start_1, this_seq.m_repeats, tmp_slop_distance, 1); 
+      }
+      
+      tmp_slop_distance = slop_distance;
+      cSequenceFeaturePtr end_repeat = cReferenceSequences::find_closest_repeat_region_boundary(mut_end_1, this_seq.m_repeats, tmp_slop_distance, 1); 
+      if (end_repeat.get() == NULL) {
+        tmp_slop_distance = slop_distance;
+        end_repeat = cReferenceSequences::find_closest_repeat_region_boundary(mut_end_1, this_seq.m_repeats, tmp_slop_distance, -1); 
+      }
+
+      if ((start_repeat.get() != NULL) && (end_repeat.get() != NULL)) {
+        // different names is an odd case - WARN and don't assign anything
+        if ( (*start_repeat)["name"] != (*end_repeat)["name"]) {
+          WARN("Mutation unexpectedly has boundaries near two different repeat families, saving first." + mut.as_string());
+          mut[one_close_key] = (*start_repeat)["name"]; 
+        } else {
+          mut[both_close_key] = (*start_repeat)["name"]; 
+        }
+        
+      } else if (start_repeat.get() != NULL) {
+        mut[one_close_key] = (*start_repeat)["name"];      
+      } else if (end_repeat.get() != NULL) {
+        mut[one_close_key] = (*end_repeat)["name"];
+      }
+    }
+    //
+    /////// END 'mediated and 'within' code
+    
+    
     // Attributes used for output of debug info
     string replace_seq_id;
     uint32_t replace_start;
@@ -3473,6 +3532,56 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
   //Cleanup.  If any of the sequences are of zero length, remove them.
   for (vector<cAnnotatedSequence>::iterator it_as = new_ref_seq_info.begin(); it_as < new_ref_seq_info.end(); it_as++) {
     if(!it_as->m_length){new_ref_seq_info.erase(it_as);it_as--;}
+  }
+}
+  
+// Adds 'between' and 'mediated' tags. ONLY for DEL mutations.
+// Should be run after applying to sequence
+// remove_old_tags ... Optionally, removes any existing tags
+// slop_distance   ... Number of nucleotides the end of a repeat_sequence must be within to get called as such
+void cGenomeDiff::annotate_hotspots(cReferenceSequences& new_ref_seq_info, bool remove_old_tags, int32_t slop_distance) {
+ 
+  diff_entry_list_t mutation_list = this->mutation_list();
+    
+  for (diff_entry_list_t::iterator itr_mut = mutation_list.begin(); itr_mut != mutation_list.end(); itr_mut++)
+  {
+    cDiffEntry& mut(**itr_mut);
+    
+    if (remove_old_tags) {
+      mut.erase("between");
+      mut.erase("mediated");
+    }
+    
+    
+    if (mut._type != DEL) continue;
+    
+    cAnnotatedSequence& this_seq = new_ref_seq_info[mut[SEQ_ID]];
+    
+    int64_t mut_start_1 = from_string<int64_t>(mut[POSITION]);
+    int64_t mut_end_1 = mut_start_1;
+    if (mut.entry_exists(SIZE)) {
+      mut_end_1 = mut_start_1 + from_string<int64_t>(mut[SIZE]) - 1;
+    }
+    
+    string start_repeat_mediated;
+    string end_repeat_mediated;
+    
+    cSequenceFeaturePtr start_repeat = cReferenceSequences::find_closest_repeat_region_boundary(mut_start_1, this_seq.m_repeats, slop_distance, -1);    
+    cSequenceFeaturePtr end_repeat = cReferenceSequences::find_closest_repeat_region_boundary(mut_start_1, this_seq.m_repeats, slop_distance, -1);
+ 
+    if ((start_repeat.get() != NULL) && (end_repeat.get() != NULL)) {
+      // different names is an odd case - WARN and don't assign anything
+      if ( (*start_repeat)["name"] != (*end_repeat)["name"]) {
+        WARN("Mutation has boundaries near two different repeat families." + mut.as_string());
+      } else {
+        mut["between"] = (*start_repeat)["name"]; 
+      }
+      
+    } else if (start_repeat.get() != NULL) {
+      mut["mediated"] = (*start_repeat)["name"];      
+    } else if (end_repeat.get() != NULL) {
+      mut["mediated"] = (*end_repeat)["name"];
+    }
   }
 }
   

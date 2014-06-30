@@ -38,7 +38,7 @@ int gdtools_usage()
   uout << "APPLY                  apply mutations to a sequence" << endl;
   uout << "ANNOTATE (or COMPARE)  annotate the effects of mutations and compare multiple samples" << endl;
   uout << "CHECK                  compare control versus test mutations" << endl;
-  //uout << "normalize              normalize mutations to a sequence" << endl;
+  uout << "NORMALIZE              normalize mutation positions and annotations" << endl;
   //uout << "header                 create or add header entries" << endl;
   //uout << "mRNA-Stability         determine mRNA free energy difference of mutations" << endl;
 
@@ -198,7 +198,7 @@ int do_apply(int argc, char *argv[])
 
   if (format == "FASTA") {
     uout << options["fasta"] << endl;
-    new_ref_seq_info.WriteFASTA(output, options.count("verbose"));
+    new_ref_seq_info.WriteFASTA(output);
   }
   else if (format == "GFF3") {
     uout << options["gff3"] << endl;
@@ -1165,19 +1165,30 @@ int do_normalize_gd(int argc, char* argv[])
   ("output,o"          , "output Genome Diff file.", "output.gd")
   ("reference,r"       , "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
 	("reassign-ids,s"    , "reassign ids to lowest numbers possible.", TAKES_NO_ARGUMENT)
-	("repeat-adjacent,a" , "mark repeat-adjacent, mediated, and between mutations.", TAKES_NO_ARGUMENT)
+	("repeat-adjacent,a" , "mark repeat-region adjacent, mediated, and between mutations.", TAKES_NO_ARGUMENT)
   ("verbose,v"         , "verbose mode (flag)", TAKES_NO_ARGUMENT);
 
+	const int32_t kDistanceToRepeat = 20;
+	
   options.processCommandArgs(argc, argv);
   options.addUsage("");
   options.addUsage("Creates a GD file of mutations that have been normalized to the input reference files. ");
+	options.addUsage("");
   options.addUsage("This process involves (1) converting AMP mutations of ≤50 bp to indels, ");
   options.addUsage("(2) shifting INS and DEL mutations to the highest coordinates possible, (3) ");
   options.addUsage("adding repeat_seq, repeat_length, repeat_ref_copies, and repeat_new_copies fields "); 
   options.addUsage("for INS and DEL mutations that are in tandem sequence repeats of ≥5 bases in the reference sequence, ");
   options.addUsage("and (4) flagging SNP, INS, or DEL mutations with sizes ≤50 bp that are within 20 bp of the ends of ");
   options.addUsage("annotated mobile_element copies in the reference genome with the field mobile_element_adjacent=1");
+  options.addUsage("");
+  options.addUsage("Optionally, assigns 'adjacent', 'mediated', or 'between' tags to mutations within " + to_string(kDistanceToRepeat) + " bp of annotated repeat regions ");
+	options.addUsage("to indicate these may be hotspots that experience elevated mutation rates. (They will be counted separately  ");
+	options.addUsage("from other mutations in gdtools COUNT). This process removes any previous version of these tags.");
+	options.addUsage("DEL mutations with a size < " + to_string(kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation) + " bp near ");
+	options.addUsage("repeat_regions are treated as 'adjacent' rather than 'mediated'." );
 
+	
+	
   if (!options.count("reference")) {
     options.addUsage("");
     options.addUsage("No reference provided.");
@@ -1199,7 +1210,7 @@ int do_normalize_gd(int argc, char* argv[])
 
     
   vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
-  uout("Reading input reference sequence files") << reference_file_names << endl;
+  uout("Reading input reference sequence files.") << reference_file_names << endl;
   cReferenceSequences ref_seq_info;
   ref_seq_info.LoadFiles(reference_file_names);
 
@@ -1209,6 +1220,40 @@ int do_normalize_gd(int argc, char* argv[])
   Settings settings;
   gd.normalize_mutations(ref_seq_info, settings);
 
+	// To annotate repeat adjacent mutations... we have to apply
+	if (options.count("repeat-adjacent")) {
+		uout("Annotating repeat_region mediated, between, and adjacent mutations.");
+		
+		// load new copy since apply will change things
+		cGenomeDiff apply_gd(input);
+		
+		cReferenceSequences new_ref_seq_info = cReferenceSequences::deep_copy(ref_seq_info);
+		apply_gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, false, kDistanceToRepeat, settings.size_cutoff_AMP_becomes_INS_DEL_mutation);
+		
+		// Now transfer between and mediated tags to ones with the same IDs
+		apply_gd.sort_apply_order(); // apply sort is different from normal sort ...
+		gd.sort_apply_order(); // apply sort is different from normal sort ...
+
+		diff_entry_list_t apply_mutation_list = apply_gd.mutation_list();
+		diff_entry_list_t gd_mutation_list = gd.mutation_list();
+		diff_entry_list_t::iterator gd_it = gd_mutation_list.begin();
+		vector<string> transfer_list = make_vector<string>("between")("mediated")("adjacent");
+		
+		for(diff_entry_list_t::iterator apply_it = apply_mutation_list.begin(); apply_it != apply_mutation_list.end(); apply_it++) {
+			cDiffEntry& apply_mut = **apply_it;
+			cDiffEntry& gd_mut = **gd_it;
+			ASSERT(apply_mut._id == gd_mut._id, "Mutation lists not identical.");
+			
+			for(vector<string>::iterator key_it=transfer_list.begin(); key_it != transfer_list.end(); key_it++) {
+				gd_mut.erase(*key_it);
+				if (apply_mut.entry_exists(*key_it))
+					gd_mut[*key_it] = apply_mut[*key_it];
+			}
+			
+			gd_it++;
+		}
+	}
+	
 	if (options.count("reassign-ids")) {
 		uout("Reassigning mutation and evidence ids.");
 		gd.reassign_unique_ids();

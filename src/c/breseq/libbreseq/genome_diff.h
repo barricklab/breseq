@@ -630,7 +630,11 @@ public:
                               );
   
   //! Call to apply Genome Diff to sequences
-  void apply_to_sequences(cReferenceSequences &ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose=false);
+  void apply_to_sequences(cReferenceSequences &ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose=false, 
+                          int32_t slop_distance=10, int32_t size_cutoff_AMP_becomes_INS_DEL_mutation = 50);
+  
+  //! Add 'mediated' and 'between' tags - should be called after an apply
+  void annotate_hotspots(cReferenceSequences& new_ref_seq_info, bool remove_old_tags=true, int32_t slop_distance=10);
   
   //! Shift mutations to preferred descriptions
   void normalize_mutations(cReferenceSequences &ref_seq, Settings& settings, bool verbose = false);
