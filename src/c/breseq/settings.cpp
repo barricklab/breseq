@@ -29,6 +29,7 @@ using namespace std;
 namespace breseq
 {
   
+  const int32_t kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation = 50;
   const char* kBreseqAlignmentScoreBAMTag = "X5";
   const char* kBreseqBestAlignmentScoreBAMTag = "X6";
 
@@ -269,7 +270,7 @@ namespace breseq
     options.addUsage("  Sequence Utility Commands: CONVERT-FASTQ, CONVERT-REFERENCE, GET-SEQUENCE");
     options.addUsage("  Breseq Post-Run Commands: BAM2ALN, BAM2COV");
     options.addUsage("");
-    options.addUsage("For help using a utility command, type: breseq [command] ");
+    options.addUsage("For help using a utility command, type: breseq [command] "); 
     options.addUsage("");
     options.addUsage(output_divider);
     
@@ -489,14 +490,20 @@ namespace breseq
     fprintf(stderr, "\n");
     fprintf(stderr, "Developers: Barrick JE, Borges JJ, Colburn GR, Deatherage DE, Fields DT,\n");
     fprintf(stderr, "            Knoester DB, Meyer AG, Reba A, Strand MD\n");
-    fprintf(stderr, "Contact: %s\n", PACKAGE_BUGREPORT);
+    fprintf(stderr, "Contact:    <%s>\n", PACKAGE_BUGREPORT);
     fprintf(stderr, "\n");
     fprintf(stderr, "%s is free software; you can redistribute it and/or modify it under the\n", PACKAGE_NAME);
     fprintf(stderr, "terms the GNU General Public License as published by the Free Software \n");
-    fprintf(stderr, "Foundation; either version 1, or (at your option) any later version.\n");
+    fprintf(stderr, "Foundation; either version 2, or (at your option) any later version.\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "Copyright (c) 2008-2010 Michigan State University\n");
     fprintf(stderr, "Copyright (c) 2011-2014 The University of Texas at Austin\n");
+    fprintf(stderr, "\n");
+    fprintf(stderr, "If you use breseq in your research, please cite:\n");
+    fprintf(stderr, "\n");
+    fprintf(stderr, "  Deatherage, D.E., Barrick, J.E. (2014) Identification of mutations\n"); 
+    fprintf(stderr, "  in laboratory-evolved microbes from next-generation sequencing\n");
+    fprintf(stderr, "  data using breseq. Methods Mol. Biol. 1151: 165–188.\n");
     cerr << output_divider << endl;
   }
 
@@ -612,7 +619,7 @@ namespace breseq
 		this->no_indel_polymorphisms = false;
     
     //! Settings: Mutation Prediction
-    this->size_cutoff_AMP_becomes_INS_DEL_mutation = 50;
+    this->size_cutoff_AMP_becomes_INS_DEL_mutation = kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation;
     
     //! Settings: Output
     this->max_displayed_reads = 100;

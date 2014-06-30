@@ -26,6 +26,8 @@ LICENSE AND COPYRIGHT
 
 namespace breseq
 {
+  // constants used more places than just settings
+  extern const int32_t kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation;
   extern const char* kBreseqAlignmentScoreBAMTag;
   extern const char* kBreseqBestAlignmentScoreBAMTag;
 
@@ -347,7 +349,7 @@ namespace breseq
     uint32_t periodicity_step;
     
     //! Settings: Mutation Prediction
-    int32_t size_cutoff_AMP_becomes_INS_DEL_mutation;      // Default = 20
+    int32_t size_cutoff_AMP_becomes_INS_DEL_mutation;      // Default = kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation
           
     //! Settings: Output
     uint32_t max_displayed_reads;                           // Default = 100   COMMAND-LINE OPTION

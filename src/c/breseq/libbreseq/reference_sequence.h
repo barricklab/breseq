@@ -383,27 +383,30 @@ namespace breseq {
         return m_fasta_sequence.m_sequence.length();
       }
     
+      string get_file_name() const
+      {
+        return m_file_name;
+      }
+    
       //! Correctly adds features across different lists
+      //  so that they all still refer to a copy of the same feature via counted_ptrs
       void feature_push_back(cSequenceFeaturePtr& fp)
       {
         m_features.push_back(fp);
         
         if ( ((*fp)["type"] == "repeat_region") || ((*fp)["type"] == "mobile_element") )
         {
-          m_repeats.push_back(fp);
+          m_repeats.push_back(fp); 
         }
         else if ( ((*fp)["type"] == "CDS") || ((*fp)["type"] == "tRNA") || ((*fp)["type"] == "rRNA") || ((*fp)["type"] == "RNA") )
         { 
           m_genes.push_back(fp);
         }
       }
-    
-      string get_file_name()
-      {
-        return m_file_name;
-      }
+  
     
       //! Correctly adds features across different lists
+      //  so that they all still refer to a copy of the same feature via counted_ptrs
       void feature_push_front(cSequenceFeaturePtr& fp)
       {
         m_features.push_front(fp);
@@ -428,25 +431,11 @@ namespace breseq {
         copy.m_seq_id = in.m_seq_id;
         copy.m_fasta_sequence = in.m_fasta_sequence;
 
-        cSequenceFeatureList::iterator it;
         //Features.
-        for (it = in.m_features.begin(); it != in.m_features.end(); ++it) {
-          cSequenceFeature* temp = new cSequenceFeature(**it);
-          copy.m_features.push_back(cSequenceFeaturePtr(temp));
+        for (cSequenceFeatureList::iterator it = in.m_features.begin(); it != in.m_features.end(); ++it) {
+          cSequenceFeaturePtr new_feature(new cSequenceFeature(**it));
+          copy.feature_push_back(new_feature);
         }
-
-        //Genes.
-        for (it = in.m_genes.begin(); it != in.m_genes.end(); ++it) {
-          cSequenceFeature* temp = new cSequenceFeature(**it);
-          copy.m_genes.push_back(cSequenceFeaturePtr(temp));
-        }
-
-        //Repeats.
-        for (it = in.m_repeats.begin(); it != in.m_repeats.end(); ++it) {
-          cSequenceFeature* temp = new cSequenceFeature(**it);
-          copy.m_repeats.push_back(cSequenceFeaturePtr(temp));
-        }
-
         return copy;
       }
   };
@@ -578,8 +567,8 @@ namespace breseq {
     //!< Read/Write FASTA file     
     void ReadFASTA(const std::string &file_name);
     void ReadFASTA(cFastaFile& ff);
-    void WriteFASTA(const string &file_name, bool verbose=false);
-    void WriteFASTA(cFastaFile& ff, bool verbose=false);
+    void WriteFASTA(const string &file_name);
+    void WriteFASTA(cFastaFile& ff);
         
     //!< Read/Write a tab delimited GFF3 file
     void ReadGFF(const string& file_name);

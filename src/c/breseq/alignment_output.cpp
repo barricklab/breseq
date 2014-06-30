@@ -476,7 +476,7 @@ void alignment_output::create_alignment ( const string& region, cOutputEvidenceI
         }
       }
       
-      // If there was an insertion in the junctio, then the annotation line is too long by one 
+      // If there was an insertion in the junction, then the annotation line is too long by one 
       // character on each side so, let's fix that here.
       int32_t first_match = -1;
       int32_t last_match = -1;
@@ -1038,7 +1038,7 @@ string alignment_output::html_header_string()
   // Colors used when base in read mismatches reference base
   
   // Black
-  base_color_hash['G'].push_back ( "rgb(255,255,0)" );
+  base_color_hash['G'].push_back ( "rgb(255,255,0)" ); // was (255,255,0) = pure yellow
   base_color_hash['G'].push_back ( "rgb(230,230,230)" );
   base_color_hash['G'].push_back ( "rgb(210,210,210)" );
   base_color_hash['G'].push_back ( "rgb(140,140,140)" );
@@ -1093,13 +1093,12 @@ string alignment_output::html_header_string()
   header_style_string += ".GAP {color: rgb(255,255,255); background-color: rgb(128,0,128)}\n";   // unaligned base
   
   // Colors used by same as reference bases
-  header_style_string += ".R0 {color: rgb(200,200,200); background-color: rgb(240,240,240)}\n"; 
+  header_style_string += ".R0 {color: rgb(170,170,170); background-color: rgb(255,255,153)}\n"; // was color: rgb(200,200,200)
   header_style_string += ".R1 {color: rgb(170,170,170); background-color: rgb(240,240,240)}\n";
   header_style_string += ".R2 {color: rgb(135,135,135); background-color: rgb(240,240,240)}\n";
   header_style_string += ".R3 {color: rgb(90,90,90); background-color: rgb(240,240,240)}\n";
   header_style_string += ".R4 {color: rgb(45,45,45); background-color: rgb(240,240,240)}\n";
   header_style_string += ".R5 {color: rgb(0,0,0); background-color: rgb(240,240,240)}\n";
-
   
   for ( map<char, vector<string> >::iterator itr = base_color_hash.begin(); itr != base_color_hash.end(); itr++ )
   {
