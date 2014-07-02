@@ -8,6 +8,7 @@ Version 0.24
     * Fixed errors with assigning added or deleted sequence at ends of complex mobile element insertions.
     * Fixed error predicting zero length deletions causing crash with certain reference sequences.
     * Improvements and updates to gdtools commands.
+    * Changed the HTML display of read alignments to highlight differences from the reference.
     * Other bug fixes.
 
 Version 0.23

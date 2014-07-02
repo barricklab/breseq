@@ -22,23 +22,29 @@ Required options:
 
    The remaining arguments at the command line are the FASTQ input files of reads. FASTQ files with base quality scores that are not in `SANGER format <http://en.wikipedia.org/wiki/FASTQ_format>`_ will be converted. In addition, reads with >50% N bases will be removed from the converted FASTQ file by default. |breseq| re-calibrates the error rates for each FASTQ file separately, so data sets that were generated independently should be stored in different input files.
 
-Advanced options:
+Commonly used options:
 
-.. option:: --base-quality-cutoff=<int>
+   option:: -h, --help
 
-   Ignore bases with a quality score lower than this value when calling mutations. This accommodates Illumina formats that use quality scores of 2 to flag bad data. These bases are still used for aligning to the reference genome and are shown highlighted in yellow when drawing alignments, but they do not contribute to read alignment evidence. Default: 3
+   Produce help message showing advanced options.
 
-.. option:: --require-complete-match
+.. option:: -n <string>, --name <string>
 
-   Require the entire read to match for it to be counted as aligned.
+   Human-readable name of the analysis run for output (DEFAULT=<none>).
 
-.. option:: --required-match-length  
+.. option:: -j <int>, --num-processors <int>
 
-   Require at least this number of nucleotides in the read to match for it to be counted as aligned.
+   Number of processors to use in multithreaded steps (DEFAULT=1).
+
+.. option:: --no-junction-prediction
+
+   Do not predict new sequence junctions.
    
-.. option:: --predict-polymorphisms
+.. option:: -p, --predict-polymorphisms
 
-   Identify and predict the frequencies of SNPs and small indels that are polymorphic (appear in only a subpopulation of reads). See :ref:`polymorphism-prediction` for additional options and note that this option is still experimental.
+   Predict polymorphic (mixed) mutations.
+
+For a complete list of options, please see the command line help.
 
 Command: bam2aln
 --------------------------

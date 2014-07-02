@@ -1462,7 +1462,7 @@ namespace breseq {
   // to any repeat that is above a certain threshold length in the original sequence (by default 6 bp).
   
   // There are some difficulties dealing with deletions that have been split into two
-  // e.g. deletion of one G and then another G from a lager G repeat, for now we skip those!
+  // e.g. deletion of one G and then another G from a larger G repeat, for now we skip those!
   // Insertions don't have the same problem. We could correct the final repeat number and
   // so on, but it's not obvious how to do this: set it to the final state for all mutations)
   // or set it to the state after each mutation and make that the original state for the next one.

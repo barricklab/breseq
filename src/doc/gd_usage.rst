@@ -8,18 +8,19 @@ For a full list of |gdtools| subcommands run it from the command line with no op
 
   gdtools
   
-Command: ANNOTATE/COMPARE
--------------------
+Command: ANNOTATE (or COMPARE)
+-------------------------------
 
 Usage::
 
-  gdtools ANNOTATE/COMPARE [-o annotated.html] -r reference.gbk input.1.gd [input.2.gd ... ]
+  gdtools ANNOTATE [-o annotated.html] -r reference.gbk input.1.gd [input.2.gd ... ]
 
-.. program:: gdtools ANNOTATE
+.. program:: gdtools ANNOTATE (or COMPARE)
 
 Annotate a |Genome Diff| file with information about mutations (what genes they affect, amino acid substitutions, etc.)
 Default output is to another |Genome Diff|, but an HTML table can be produced with a table of mutations in a single |Genome Diff| 
-file or to compare the mutations present in several |Genome Diff| files.
+file or to compare the mutations present in several |Genome Diff| files. This subcommand can be called as ANNOTATE or COMPARE. Both 
+have the same effect.
 
 .. option:: -r <file_path>, --reference=<file_path>
 
@@ -37,10 +38,10 @@ input1.gd input2.gd ...
    Input |Genome Diff| file(s). This option may be entered multiple times to compare across files. REQUIRED
 
 .. WARNING::
-   Advanced |Genome Diff| attributes such as **within** and **before** for mutations are ignored when generating compare tables.
+   Some advanced |Genome Diff| attributes for mutations, such as **within** and **before**, are ignored when generating compare tables.
 
 Command: APPLY
-----------------
+-------------------------------
 
 Usage::
 
@@ -64,45 +65,4 @@ Apply the mutations described in the input |Genome Diff| to the reference sequen
 
 input.gd
    Input |Genome Diff| file. REQUIRED
-   
-Command: SUBTRACT
------------------
 
-Usage::
-
-  gdtools SUBTRACT [-o output.gd] input.gd subtract1.gd [subtract2.gd ...]
-
-.. program:: gdtools SUBTRACT
-
-Creates a new |Genome Diff| file of mutations from the input file that are present after removing mutations present in any of the subtracted |Genome Diff| files.
-
-.. option:: -o <file_path>, --output=<file_path> 
-
-   Output |Genome Diff| file. DEFAULT: "output.gd".
-
-input.gd
-
-   Input |Genome Diff| file.
-
-subtract.gd [subtract2.gd ...]
-
-   |Genome Diff| files to subtract from input file.
-
-Command: INTERSECT
-------------------
-
-Usage::
-
-  gdtools INTERSECT [-o output.gd] input1.gd input2.gd ...
-
-.. program:: gdtools INTERSECT
-
-Creates a new |Genome Diff| file with mutations that are present in ALL input |Genome Diff| files.
-
-.. option:: -o <file_path>, --output=<file_path> 
-
-   Output |Genome Diff| file. DEFAULT: "output.gd".
-
-input1.gd input2.gd ...
-
-   Input |Genome Diff| files.
