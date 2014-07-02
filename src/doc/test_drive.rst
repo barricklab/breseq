@@ -36,11 +36,11 @@ Now, run breseq:
 
 The first named argument (-r) is the reference sequence. If you had multiple reference sequences, you could input multiple ones (e.g., -r NC_012967.gbk -r plasmid.gbk).
 
-The unnamed arguments at the end of the command line are the read files. You can input as many as you need to and mix FASTQ files from different sequencing technologies (Illumina and 454).
+The unnamed arguments at the end of the command line are the read files. You can input as many as you need and mix FASTQ files from different sequencing technologies (e.g., Illumina and 454).
 
 .. warning::
    
-   Running |breseq| on a full data set like this is not fast. Depending on your computer, this could take several hours. If you want to speed things up, you might only include one of the two read files on the command line.
+   Running |breseq| on a full data set like this is not fast. Depending on your computer, this could take several hours. To speed things up, you can set -j option to the number of cores on your machine to enable multithreaded execution of some steps (e.g., -j 4 for a quad-core machine). If you want to speed this example up, you might also include only one of the two input read files on the command line.
 
 
 3. Open |breseq| output

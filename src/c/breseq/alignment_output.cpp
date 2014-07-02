@@ -326,6 +326,8 @@ alignment_output::alignment_output ( string bam,
         , m_junction_minimum_size_match ( junction_minimum_size_match )
         , m_mask_ref_matches (mask_ref_matches) 
         , m_show_ambiguously_mapped ( show_ambiguously_mapped )
+        , m_is_junction(false)
+        , m_is_junction_junction(false)
 {
   // zero is the default if no arg provided, make a reasonable value
   if (m_maximum_to_align == 0)
@@ -1038,7 +1040,7 @@ string alignment_output::html_header_string()
   // Colors used when base in read mismatches reference base
   
   // Black
-  base_color_hash['G'].push_back ( "rgb(255,255,0)" ); // was (255,255,0) = pure yellow
+  base_color_hash['G'].push_back ( "rgb(255,255,0)" );
   base_color_hash['G'].push_back ( "rgb(230,230,230)" );
   base_color_hash['G'].push_back ( "rgb(210,210,210)" );
   base_color_hash['G'].push_back ( "rgb(140,140,140)" );
@@ -1093,7 +1095,7 @@ string alignment_output::html_header_string()
   header_style_string += ".GAP {color: rgb(255,255,255); background-color: rgb(128,0,128)}\n";   // unaligned base
   
   // Colors used by same as reference bases
-  header_style_string += ".R0 {color: rgb(170,170,170); background-color: rgb(255,255,153)}\n"; // was color: rgb(200,200,200)
+  header_style_string += ".R0 {color: rgb(170,170,170); background-color: rgb(255,255,175)}\n";
   header_style_string += ".R1 {color: rgb(170,170,170); background-color: rgb(240,240,240)}\n";
   header_style_string += ".R2 {color: rgb(135,135,135); background-color: rgb(240,240,240)}\n";
   header_style_string += ".R3 {color: rgb(90,90,90); background-color: rgb(240,240,240)}\n";
@@ -1253,7 +1255,7 @@ string alignment_output::html_alignment_line(const Alignment_Base& a, Aligned_Re
   
   // write the mapping quality - it would be nice to justify this
   if (!m_is_junction_junction && (a.mapping_quality != -1)) {
-    output += "&nbsp;(MQ=" + to_string<>(a.mapping_quality) + ")";
+    output += "&nbsp;(MQ=" + to_string(a.mapping_quality) + ")";
   }
   
   

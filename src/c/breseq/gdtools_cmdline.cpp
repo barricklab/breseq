@@ -1186,8 +1186,6 @@ int do_normalize_gd(int argc, char* argv[])
 	options.addUsage("from other mutations in gdtools COUNT). This process removes any previous version of these tags.");
 	options.addUsage("DEL mutations with a size < " + to_string(kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation) + " bp near ");
 	options.addUsage("repeat_regions are treated as 'adjacent' rather than 'mediated'." );
-
-	
 	
   if (!options.count("reference")) {
     options.addUsage("");
@@ -1231,26 +1229,22 @@ int do_normalize_gd(int argc, char* argv[])
 		apply_gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, false, kDistanceToRepeat, settings.size_cutoff_AMP_becomes_INS_DEL_mutation);
 		
 		// Now transfer between and mediated tags to ones with the same IDs
-		apply_gd.sort_apply_order(); // apply sort is different from normal sort ...
-		gd.sort_apply_order(); // apply sort is different from normal sort ...
-
-		diff_entry_list_t apply_mutation_list = apply_gd.mutation_list();
 		diff_entry_list_t gd_mutation_list = gd.mutation_list();
-		diff_entry_list_t::iterator gd_it = gd_mutation_list.begin();
 		vector<string> transfer_list = make_vector<string>("between")("mediated")("adjacent");
 		
-		for(diff_entry_list_t::iterator apply_it = apply_mutation_list.begin(); apply_it != apply_mutation_list.end(); apply_it++) {
-			cDiffEntry& apply_mut = **apply_it;
-			cDiffEntry& gd_mut = **gd_it;
-			ASSERT(apply_mut._id == gd_mut._id, "Mutation lists not identical.");
+		for(diff_entry_list_t::iterator gd_it = gd_mutation_list.begin(); gd_it != gd_mutation_list.end(); gd_it++) {
+			
+			diff_entry_ptr_t gd_mut = *gd_it;
+			diff_entry_ptr_t apply_mut_p = apply_gd.find_by_id(gd_mut->_id);
+			
+			// Leftover debug code
+			ASSERT(apply_mut_p->_id == gd_mut->_id, "Mutation lists not identical.");
 			
 			for(vector<string>::iterator key_it=transfer_list.begin(); key_it != transfer_list.end(); key_it++) {
-				gd_mut.erase(*key_it);
-				if (apply_mut.entry_exists(*key_it))
-					gd_mut[*key_it] = apply_mut[*key_it];
+				gd_mut->erase(*key_it);
+				if (apply_mut_p->entry_exists(*key_it))
+					(*gd_mut)[*key_it] = (*apply_mut_p)[*key_it];
 			}
-			
-			gd_it++;
 		}
 	}
 	

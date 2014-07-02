@@ -253,11 +253,11 @@ cDiffEntry::cDiffEntry(const string &line, uint32_t line_number, cFileParseError
       // Deprecated keys
       if (file_parse_errors) {
         if (key == "nested_within") {
-          if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'nested_within' is DEPRECATED. Use 'within' INSTEAD.", true);
+          if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'nested_within' is DEPRECATED and will be ignored. Use 'within' instead.", false);
         } else if (key == "nested_copy") {
-          if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'nested_copy' IS DEPRECATED. USE 'within' INSTEAD", true);
+          if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'nested_copy' IS DEPRECATED and will be ignored. Use 'within' instead.", false);
         } else if (key == "after") {
-          if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'after' is DEPRECATED. Use 'within' or 'before' INSTEAD", true);
+          if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'after' is DEPRECATED and will be ignored. Use 'within' or 'before' instead.", false);
         }
       }
       
@@ -2467,7 +2467,7 @@ bool cGenomeDiff::diff_entry_ptr_sort(const diff_entry_ptr_t& a, const diff_entr
   return false;
 }
 
-  /*! Helper fstruct and function for apply sort
+  /*! Helper struct and function for apply sort
    */
   
 cGenomeDiff cGenomeDiff::current_sort_gd; 
@@ -2497,8 +2497,9 @@ apply_sort_order_item create_apply_sort_order_item(string& value, bool sort_befo
   
 /*! Return TRUE if a < b
  */
+  
 bool cGenomeDiff::diff_entry_ptr_sort_apply_order(const diff_entry_ptr_t& a, const diff_entry_ptr_t& b) {
-    
+  
   // Fill lists of what we are sorting before and after
   vector<string> tag_list = make_vector<string>("before")("within");
   vector<apply_sort_order_item> a_sort_items, b_sort_items;
@@ -2527,7 +2528,6 @@ bool cGenomeDiff::diff_entry_ptr_sort_apply_order(const diff_entry_ptr_t& a, con
   b_sort_items.push_back(b_self_sort_item);
   
   // check all combinations of proxy sorts until the tie is broken or we are done.
-  vector<int32_t> sort_results; //-1, 0, +1 for where to put it
   for(uint32_t i=0; i<a_sort_items.size(); i++) {
     for(uint32_t j=0; j<b_sort_items.size(); j++) {
       
@@ -2538,18 +2538,25 @@ bool cGenomeDiff::diff_entry_ptr_sort_apply_order(const diff_entry_ptr_t& a, con
       // then use these proxies for a normal sort
       
       if (a_anchor.get() == b_anchor.get()) {
-        if (a_sort_items[i].sort_copy_index < b_sort_items[j].sort_copy_index)
+        if (a_sort_items[i].sort_copy_index < b_sort_items[j].sort_copy_index) {
           return true;
-        else if (a_sort_items[i].sort_copy_index > b_sort_items[j].sort_copy_index) 
+        } else if (a_sort_items[i].sort_copy_index > b_sort_items[j].sort_copy_index) {
           return false;
-        else 
-          return diff_entry_ptr_sort(a, b);
+        } else {
+          // Advance both in this case because otherwise ties get broken
+          // incorrectly when we are comparing (a,b) vs (b,a).
+          i++;
+          if (i>=a_sort_items.size()) continue;
+        }
+      } else {
+        return diff_entry_ptr_sort(a_anchor, b_anchor);
       }
     }
   }
   
   // Normal sort if there was no overlap in what was referred to.
   return diff_entry_ptr_sort(a, b);
+
 }  
 
 //! Call to generate random mutations.
@@ -4381,8 +4388,7 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
         const uint32_t& size = from_string<uint32_t>(mut[SIZE]);
         
         //Build duplicate sequence
-        string alt;
-        for (uint32_t i = 0; i < from_string<uint32_t>(mut["new_copy_number"]); i++)
+        for (uint32_t i = 0; i < from_string<uint32_t>(mut[NEW_COPY_NUMBER]); i++)
           alt.append(ref_seq_info.get_sequence_1(mut[SEQ_ID], pos, pos+size-1));
         ASSERT(!alt.empty(), "Duplicate sequence is empty. You may have specified an AMP with a new copy number of 1.");
         

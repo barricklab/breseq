@@ -13,13 +13,13 @@ Currently, |breseq| does not use the distance contraints available in paired-end
 |breseq| keeps track of two kinds of read alignments:
 
 `unique read matches` 
-	Where a read aligns best to only one location in the reference sequence.
+    Where a read aligns best to only one location in the reference sequence.
 `repeat read matches`
     Where a read aligns equivalently to multiple locations in the reference sequence. Generally, these are long repeat regions.
     
 For some calculations, |breseq| is concerned with:
 
-`unique-only reference positions` 
+`unique-only reference positions`
     Position in the reference sequence that do not overlap any *repeat read matches*. 
 
 .. _new-junction-evidence:   
