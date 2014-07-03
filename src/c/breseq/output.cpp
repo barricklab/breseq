@@ -1939,6 +1939,10 @@ void Html_Mutation_Table_String::Item_Lines()
           cell_mutation = "(" + mut["repeat_seq"] + ")" + "<sub>" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"] + "</sub>";
           //cell_mutation = mut["repeat_seq"] + "&times;" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"];
         }
+        // If repeat seq is very long, it will not be present 
+        else if (mut.entry_exists("repeat_length")) {
+          cell_mutation = "(" + mut["repeat_length"] + " bp)" + "<sub>" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"] + "</sub>";
+        }
         else if (options.detailed || (mut["new_seq"].size() <= 8)) {
           cell_mutation = "+" + mut[NEW_SEQ];
         } else {

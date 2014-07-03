@@ -46,11 +46,14 @@ namespace breseq {
     // Functions that handle specific predictions
     void predictMCplusJCtoDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc);
     void predictJCplusJCtoMOB(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc);
-    void predictJCtoINSorSUBorAMPorDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc);
-    void predictRAtoSNPorDELorINSorSUBorAMP(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc );
+    void predictJCtoINSorSUBorDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc);
+    void predictRAtoSNPorDELorINSorSUB(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc );
     
     // Cleans up indel positions by shifting them and adds addition fiels for simple sequence repeats 
     void normalize_and_annotate_tandem_repeat_mutations(Settings& settings, Summary& summary, cGenomeDiff& gd);
+    
+    // Cleans up predictions of large INS to make them AMP
+    void normalize_INS_to_AMP(Settings& settings, Summary& summary, cGenomeDiff& gd);
     
     // Master function
 		void predict(Settings& settings, Summary& summary, cGenomeDiff& gd);
@@ -69,6 +72,8 @@ namespace breseq {
     void normalizeINSposition(cAnnotatedSequence& ref_seq, cDiffEntry& de, string& repeat_sequence);
     void normalizeDELposition(cAnnotatedSequence& ref_seq, cDiffEntry& de, string& repeat_sequence);
 
+    
+    
     uint32_t find_original_num_repeat_units(cAnnotatedSequence& ref_seq, int32_t position, string& repeat_sequence);
     
 	}; // class MutationPredictor
