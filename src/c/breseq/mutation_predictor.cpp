@@ -1036,7 +1036,7 @@ namespace breseq {
 
   }
   
-  void MutationPredictor::predictJCtoINSorSUBorAMPorDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc)
+  void MutationPredictor::predictJCtoINSorSUBorDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc)
   {
     (void)summary;
     (void)mc;
@@ -1044,7 +1044,6 @@ namespace breseq {
     
     // variables pulled from the settings
     int32_t avg_read_length = static_cast<int32_t>(summary.sequence_conversion.avg_read_length);
-    int32_t AMP_size_cutoff = settings.size_cutoff_AMP_becomes_INS_DEL_mutation;
     
     // @JEB 03-09-2014 Changed this section to produce INS and DEL instead of AMP,
     //                 when the mutation size is less than or equal to threshold in settings. 
@@ -1078,7 +1077,7 @@ namespace breseq {
 			// We can assume that the lower coordinate will be first since this is NOT a deletion
 			// (which would be handled above)
       // By this point any positive overlap should have been resolved.
-			ASSERT(n(j["overlap"]) <= 0, "Non-zero overlap in junction when predicting INS/SUB/AMP.");
+			ASSERT(n(j["overlap"]) <= 0, "Non-zero overlap in junction when predicting INS/SUB.");
       
 			// mutation will always be after this position
 			// Special case of circular chromosome
@@ -1091,9 +1090,11 @@ namespace breseq {
       // If we are predicting a very big insertion (longer than read length), 
       // it is likely spurious. Require other evidence to convert to a mutation.
       
-      // side_2_position must always be greater than or equal to side_1_position
-      //ASSERT(side_2_position >= side_1_position, "Unexpected positions");
+      // Decide whether we are reverse complementing unique sequence
+      // based on the original left side coords!! -- before swap below.
+      bool reverse_complement_unique_sequence = (side_1_strand == 1);
       
+      // * We change everything here so that the side with the lower coordinate is first
       // Due to overlap resolution, this can change from the time when we sorted this way... *Ugh* .. so we fix it here.
       if (side_2_position < side_1_position) {
         swap(side_1_position, side_2_position);
@@ -1113,113 +1114,209 @@ namespace breseq {
       
       // At this point, we have committed to adding a mutation...
       cDiffEntry mut;
-			// 'DEL' or 'AMP'
-			if (!j.entry_exists("unique_read_sequence"))
-			{        
-				if (size < 0) // this is a deletion!
-        {
+      mut._evidence = make_vector<string>(j._id);
+    
+      if (size < 0) // this is a deletion!
+      {
+
+        if (!j.entry_exists("unique_read_sequence"))
+        {    
+          //'DEL' if there is no read-only sequence
+          //
+          // Example (reverse_complement = false)
+          //   REL606 2103888 -1 REL606 2103911 1
+          //    side_1_pos, side_1_strand    side_2_pos, side_2_strand    size = 22
+          //   Output
+          //     DEL . . REL606 2103889 22
+          //
+          // Example (reverse_complement = true)
+          //   REL606 2103911 1 REL606 2103888 -1 
+          //    side_1_pos, side_1_strand    side_2_pos, side_2_strand    size = 22
+          //   Output
+          //     DEL . . REL606 2103889 22
+          
           mut._type = DEL;
+          
           mut
           ("seq_id", seq_id)
           ("position", s(side_1_position+1))
-          ("size", s(-size))         // note adjustment due to +1 above
+          ("size", s(-size))
           ;
-          mut._evidence = make_vector<string>(j._id);
-        } 
-        else // this is an amplification (which may be annotated as an insertion if short).	
-        {		
-          mut._evidence = make_vector<string>(j._id);
-          
-          if (size > AMP_size_cutoff) {
-            mut._type = AMP;		
-            mut		
-            ("seq_id", seq_id)		
-            ("position", s(side_1_position))		
-            ("size", s(size))		
-            ("new_copy_number", "2")		
-            ;		
-          } else {
-            mut._type = INS;		
-            mut		
-            ("seq_id", seq_id)		
-            ("position", s(side_1_position))		
-            ("new_seq", ref_seq_info.get_sequence_1(seq_id, side_1_position, side_1_position + size - 1 ))		
-            ;		
-          }
         }
-      }
-			// 'INS'
-      //  INS predicted here are aligned with missing unique_read_sequence info.
-      //  We need to grab it.
-			else if (n(j["side_1_position"]) >= n(j["side_2_position"]))
-			{
-				string new_seq = j["unique_read_sequence"];        
-        string ref_seq = ref_seq_info.get_sequence_1(seq_id, n(j["side_2_position"]), n(j["side_1_position"]));
+        else {
+          //'SUB' = deletion with some unique sequence inserted in its place
+          //
+          // Example (reverse_complement = false)
+          //   REL606 2103888 -1 REL606 2103911 1 unique_read_sequence=TTTTT
+          //    side_1_pos, side_1_strand    side_2_pos, side_2_strand    size = 22
+          //   Output
+          //     SUB . . REL606 2103889 22 TTTTT
+          //
+          // Example (reverse_complement = true)
+          //   REL606 2103911 1 REL606 2103888 -1 REL606 unique_read_sequence=AAAAA
+          //    side_1_pos, side_1_strand    side_2_pos, side_2_strand    size = 22
+          //   Output
+          //     SUB . . REL606 2103889 22 TTTTT
+          
+          mut._type = SUB;
+          string new_seq = j["unique_read_sequence"];  
+          if (reverse_complement_unique_sequence) new_seq = reverse_complement(new_seq);
+          
+          mut
+          ("seq_id", seq_id)
+          ("position", s(side_1_position+1))
+          ("size", s(-size))
+          ("new_seq", new_seq)
+          ;
+        }
+      } 
+      /*
+      else if (size == 0) {
         
-        mut._type = INS;
-				mut
-        ("seq_id", seq_id)
-        ("position", s(side_1_position))
-        ("new_seq", new_seq + ref_seq)
-				;
-        mut._evidence = make_vector<string>(j._id);
+        // "INS" || "AMP" Special cases
+        // @JEB Note: this kind of AMP only happens due to the way that reads are currently split.
+        //            If that is resolved, then only the version above will be needed for AMP.
+        //
+        // @JEB Note: it would be better to call everything as an INS here and then normalize it to an AMP
+        //            later in the code so that it could be trated consistently with gdtools NORMALIZE
         
-			}
-      // 'INS'
-      //  INS predicted here are aligned with missing unique_read_sequence info.
-      //  Further the unique read sequence is aligned on the reverse strand.
-      //  We need to grab it, proper like.
-			else if ((n(j["side_2_strand"])  < 0) && (n(j["side_1_position"]) <= n(j["side_2_position"])))
-			{
-				string new_seq = reverse_complement(j["unique_read_sequence"]);
-        string ref_seq = ref_seq_info.get_sequence_1(seq_id, n(j["side_1_position"]), n(j["side_2_position"]));
-        mut._type = INS;
-				mut
-        ("seq_id", seq_id)
-        ("position", j["side_2_position"])
-        ("new_seq", new_seq + ref_seq)
-				;
-        mut._evidence = make_vector<string>(j._id);
+        // 'AMP' if the size is greater than the cutoff and the inserted bases exactly match the previous bases
+        //       This case should be normalized to an AMP by later code as well (?)
+        //
+        // Example (reverse_complement = false)
+        //   REL606 2103888 -1 REL606 2103889 1 unique_read_sequence=AGCC
+        //    side_1_pos, side_1_strand    side_2_pos, side_2_strand
+        //   Output
+        //     AMP . . REL606 2103888 4 2
+        //
+        // Example (reverse_complement = true)
+        //   REL606 2103889 1 REL606 2103888 -1 unique_read_sequence=GGCT
+        //    side_1_pos, side_1_strand    side_2_pos, side_2_strand
+        //   Output
+        //     AMP . . REL606 2103888 4 2
+        //
+        // 'INS'
+        //
+        // Example (reverse_complement = false)
+        //   REL606 2103888 -1 REL606 2103889 1 unique_read_sequence=TTTT 
+        //    side_1_pos, side_1_strand    side_2_pos, side_2_strand
+        //   Output
+        //     INS . . REL606 2103888 TTTT
+        //
+        // Example (reverse_complement = true)
+        //   REL606 2103888 -1 REL606 2103889 1 unique_read_sequence=AAAA 
+        //    side_1_pos, side_1_strand    side_2_pos, side_2_strand
+        //   Output
+        //     INS . . REL606 2103888 TTTT
         
-			}
-			// "INS" || "AMP"
-      // @JEB Note: this kind of AMP only happens due to the way that reads are currently split.
-      //            If that is resolved, then only the version above will be needed for AMP.
-			else if (n(j["side_1_position"]) + 1 == n(j["side_2_position"]))
-			{
-        // Check to see if unique sequence matches sequence directly before, and
-        // Length is not above the cutoff for calling it an INS 
+        ASSERT(j.entry_exists("unique_read_sequence"), "Expected unique junctions sequence when predicting AMP/INS:\n" + j.as_string());
         int32_t size = j["unique_read_sequence"].size();
-        size_t prev_position = n(j["side_2_position"]) - size;
-        string dup_check_seq = ref_seq_info.get_sequence_1(j["side_1_seq_id"], prev_position, prev_position + size - 1);
+        string unique_seq = j["unique_read_sequence"];
+        if (reverse_complement_unique_sequence) unique_seq = reverse_complement(unique_seq);
+
+        // This code is implicitly safe to the ends of the sequence because suitable junctions won't be found there
+        string dup_after_check_seq;
+        if (static_cast<uint32_t>(side_2_position + size - 1) < ref_seq_info.get_sequence_length(j["side_1_seq_id"]))
+          dup_after_check_seq = ref_seq_info.get_sequence_1(j["side_1_seq_id"], side_2_position, side_2_position + size - 1);
+        string dup_before_check_seq;
+        if (side_2_position - size >= 1)
+          dup_before_check_seq = ref_seq_info.get_sequence_1(j["side_1_seq_id"], side_2_position - size, side_2_position - 1);
         
-        if ( (size > AMP_size_cutoff) && (j["unique_read_sequence"] == dup_check_seq) )
+        if ( (size > AMP_size_cutoff) && (unique_seq == dup_after_check_seq) )
         {
           mut._type = AMP;
           mut
           ("seq_id", seq_id)
-          ("position", s(n(j["side_2_position"]) - j["unique_read_sequence"].size()))
-          ("size", s(j["unique_read_sequence"].size()))
+          ("position", s(side_2_position))
+          ("size", s(size))
           ("new_copy_number", "2")
           ;
-          mut._evidence = make_vector<string>(j._id);
         }
-        else
+        else if ( (size > AMP_size_cutoff) && (unique_seq == dup_before_check_seq) )
+        {
+          mut._type = AMP;
+          mut
+          ("seq_id", seq_id)
+          ("position", s(side_2_position - size))
+          ("size", s(size))
+          ("new_copy_number", "2")
+          ;
+        }
+        else // this case is really the same as the next section
         {
           mut._type = INS;
           mut
           ("seq_id", seq_id)
           ("position", s(side_1_position))
-          ("new_seq", j["unique_read_sequence"])
+          ("new_seq", unique_seq)
           ;
-          mut._evidence = make_vector<string>(j._id);
-          
         }
-			}
-      // Something not handled by the other cases occurred, we must skip the end of the loop
-      // So we don't add an empty mut to the Genome Diff
-      else {
-        continue;
+
+      }*/
+      else // (size >= 0)
+      {		 
+        /*
+        if ((!j.entry_exists("unique_read_sequence")) && (size > AMP_size_cutoff)) {
+          
+          // 'AMP' if the size is greater than the cutoff and there is no unique sequence
+          //
+          // Example
+          //   REL606 2103888 1 REL606 2103911 -1
+          //    side_1_pos, side_1_strand    side_2_pos, side_2_strand    size = 24
+          //   Output
+          //     AMP . . REL606 2103888 24
+          
+          mut._type = AMP;		
+          mut		
+          ("seq_id", seq_id)		
+          ("position", s(side_1_position))		
+          ("size", s(size))		
+          ("new_copy_number", "2")		
+          ;		
+        } else {*/
+          // 'INS' otherwise
+          //
+          // Example (reverse_complement = false)
+          //   REL606 2103888 1 REL606 2103911 -1
+          //    side_1_pos, side_1_strand    side_2_pos, side_2_strand    size = 24
+          //   Output
+          //     INS . . REL606 2103911 CAGCCAGCCAGCCAGCCAGCCAGC
+          //
+          // Example (reverse_complement_unique_sequence = true)
+          //   REL606 2103888 1 REL606 2103911 -1
+          //    side_1_pos, side_1_strand    side_2_pos, side_2_strand    size = 24
+          //   Output
+          //     INS . . REL606 2103911 CAGCCAGCCAGCCAGCCAGCCAGC
+          //
+          // Example with unique_read_sequence (reverse_complement = false)
+          //   REL606 2103911 -1 REL606 2103888 1 unique_read_sequence=CAA
+          //    side_1_pos, side_1_strand    side_2_pos, side_2_strand    size = 24
+          //   Output
+          //     INS . . REL606 2103911 CAA|CAGCCAGCCAGCCAGCCAGCCAGC 
+          //
+          // Example with unique_read_sequence (reverse_complement = true)
+          //   REL606 2103888 1 REL606 2103911 -1 unique_read_sequence=TTG
+          //    side_1_pos, side_1_strand    side_2_pos, side_2_strand    size = 24
+          //   Output
+          //     INS . . REL606 2103911 CAA|CAGCCAGCCAGCCAGCCAGCCAGC
+          //
+          
+          mut._type = INS;
+          
+          string ins_seq = ref_seq_info.get_sequence_1(seq_id, side_1_position, side_2_position);
+          if (j.entry_exists("unique_read_sequence")) {
+            string unique_seq = j["unique_read_sequence"];  
+            if (reverse_complement_unique_sequence) unique_seq = reverse_complement(unique_seq);
+            ins_seq = unique_seq + ins_seq;
+          }
+          
+          mut		
+          ("seq_id", seq_id)		
+          ("position", s(side_2_position))	
+          // or could also be side_1_position-1, they are equivalent and will later be shifted to the same during normaliztion
+          ("new_seq", ins_seq)		
+          ;		
+        //} @JEB : delete thos
       }
       
       // If we are in polymorphism mode, propagate the frequency from JC evidence to mutation
@@ -1232,16 +1329,14 @@ namespace breseq {
 
   }
   
-  void MutationPredictor::predictRAtoSNPorDELorINSorSUBorAMP(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc)
+  void MutationPredictor::predictRAtoSNPorDELorINSorSUB(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc)
   {
     (void)summary;
     (void)mc;
     (void)jc;
     bool verbose = false;
     
-    // Pull settings variables
-    int32_t AMP_size_cutoff = settings.size_cutoff_AMP_becomes_INS_DEL_mutation;
-    
+    // Pull settings variables    
     vector<gd_entry_type> ra_types = make_vector<gd_entry_type>(RA);
     diff_entry_list_t ra = gd.list(ra_types);
     
@@ -1388,17 +1483,7 @@ namespace breseq {
 				// unused fields
 				mut.erase("ref_seq");
         
-        // Check to see if unique sequence matches sequence directly before, and we should convert to AMP
-        string dup_check_seq = ref_seq_info.get_circular_sequence_1(mut["seq_id"], n(mut["position"]) - (mut["new_seq"].size() - 1), mut["new_seq"].size());
-        int32_t size = mut["new_seq"].size();
-        
-        if((size > AMP_size_cutoff) && (mut["new_seq"] == dup_check_seq) && (size > 1))
-        {
-          mut._type = AMP;
-          mut["size"] = s(mut["new_seq"].size());          
-          mut["new_copy_number"] = "2";
-          mut.erase("new_seq");
-        } else if (settings.polymorphism_prediction) {
+        if (settings.polymorphism_prediction) {
           // This is a special case to keep ordering of multiple inserted bases after 
           // the same base (without it the order is unknown in poly mode
           
@@ -1469,22 +1554,23 @@ namespace breseq {
   
   void MutationPredictor::normalize_and_annotate_tandem_repeat_mutations(Settings& settings, Summary& summary, cGenomeDiff& gd)
   { 
+    (void)settings;
+    (void) summary;
+
     // Sort for reproducibility -- but note this sort will possibly be changed by the
     // position shifts that we make within this function!!
     gd.sort();
     
-    (void) summary;
     uint32_t minimum_tandem_repeat_length = 5;
     uint32_t minimum_repeat_ref_copies = 2;
+    uint32_t maximum_repeat_sequence_length_to_show = 40;
+
     
     // moving previous mutations back if they are put on top of existing;
     // Currently only implemented for DEL
     cDiffEntry* previous_mutation = NULL;
     int32_t previous_position;
     
-    // Pull settings variables
-    int32_t AMP_size_cutoff = settings.size_cutoff_AMP_becomes_INS_DEL_mutation;
-
     diff_entry_list_t test_muts = gd.mutation_list();
     
     // Add additional fields for INS or DEL mutations that are in tandem repeats
@@ -1492,7 +1578,6 @@ namespace breseq {
       cDiffEntry& mut = **it;
       if (mut._type == INS) {
         int32_t size = mut["new_seq"].size();
-        if (size > AMP_size_cutoff) continue;
         
         // This field only exists when manually added to split an insertion into separate events 
         // or in polymorphism mode when a mutation may be split into each inserted base.
@@ -1528,10 +1613,12 @@ namespace breseq {
         if (original_num_repeat_units * repeat_unit_size < minimum_tandem_repeat_length)
           continue;
         
-        if (original_num_repeat_units < minimum_repeat_ref_copies)
+        if (original_num_repeat_units + num_repeat_units < minimum_repeat_ref_copies)
           continue;
         
-        mut["repeat_seq"] = repeat_unit_sequence;
+        mut.erase("repeat_seq");
+        if (repeat_unit_size <= maximum_repeat_sequence_length_to_show)
+          mut["repeat_seq"] = repeat_unit_sequence;
         mut["repeat_length"] = s(repeat_unit_size);
         mut["repeat_ref_copies"] = s(original_num_repeat_units);
         mut["repeat_new_copies"] = s(original_num_repeat_units + num_repeat_units);
@@ -1539,7 +1626,6 @@ namespace breseq {
       
       else if (mut._type == DEL) {
         int32_t size = from_string<int32_t>(mut["size"]);
-        if (size > AMP_size_cutoff) continue;
         
         int32_t position = from_string<int32_t>(mut["position"]);
         string mutation_sequence = ref_seq_info.get_sequence_1(mut["seq_id"], position, position + size - 1);
@@ -1595,7 +1681,9 @@ namespace breseq {
         if (original_num_repeat_units - num_repeat_units == 0)
           continue;
         
-        mut["repeat_seq"] = repeat_unit_sequence;
+        mut.erase("repeat_seq");
+        if (repeat_unit_size <= maximum_repeat_sequence_length_to_show)
+          mut["repeat_seq"] = repeat_unit_sequence;
         mut["repeat_length"] = s(repeat_unit_size);
         mut["repeat_ref_copies"] = s(original_num_repeat_units);
         mut["repeat_new_copies"] = s(original_num_repeat_units - num_repeat_units);
@@ -1605,6 +1693,50 @@ namespace breseq {
       }
     }
   }
+  
+  void MutationPredictor::normalize_INS_to_AMP(Settings& settings, Summary& summary, cGenomeDiff& gd) {
+    (void) summary;
+    
+    int32_t AMP_size_cutoff = settings.size_cutoff_AMP_becomes_INS_DEL_mutation;
+    
+    // Convert all AMP to INS
+    //   so that INS/DEL normalization can take care of them
+    diff_entry_list_t mut_list = gd.mutation_list();
+    
+    // Convert some INS back to AMP
+    //   because they are too big to treat as INS
+    for(diff_entry_list_t::iterator it=mut_list.begin(); it!=mut_list.end(); it++) {
+      cDiffEntry& mut = **it;
+      if (mut._type != INS)
+        continue;
+      
+      if (!mut.entry_exists("repeat_length"))
+        continue;
+      
+      int32_t unit_size = from_string<int32_t>(mut["repeat_length"]);
+      
+      // bail if the repeat length is not long enough
+      // even if it could be if we broke into sub-repeats
+      if (unit_size <= AMP_size_cutoff)
+        continue;
+      
+      int32_t new_copy_number = from_string<uint32_t>(mut["repeat_new_copies"]);
+      
+      mut._type = AMP;
+      int32_t pos = from_string<uint32_t>(mut[POSITION]) - unit_size;
+      mut["position"] = to_string<int32_t>(pos);                                
+      mut["new_copy_number"] = mut["repeat_new_copies"];
+      mut["size"] = mut["repeat_length"];
+      
+      // delete all the repeat information...
+      mut.erase("repeat_length");
+      mut.erase("repeat_sequence");
+      mut.erase("repeat_new_copies");
+      mut.erase("repeat_ref_copies");
+    }
+    
+  }
+
   
 	/*
 	 Title   : predict
@@ -1653,20 +1785,20 @@ namespace breseq {
     predictJCplusJCtoMOB(settings, summary, gd, jc, mc);
 		
 		///
-		// evidence JC => INS, SUB, AMP, DEL mutations
+		// evidence JC => INS, SUB, DEL mutations
     ///
     
-    predictJCtoINSorSUBorAMPorDEL(settings, summary, gd, jc, mc);
+    predictJCtoINSorSUBorDEL(settings, summary, gd, jc, mc);
     
 		///
-		// Read Alignments => SNP, DEL, INS, SUB AMP
+		// evidence RA => SNP, DEL, INS, SUB
 		///
     
-    predictRAtoSNPorDELorINSorSUBorAMP(settings, summary, gd, jc, mc);
+    predictRAtoSNPorDELorINSorSUB(settings, summary, gd, jc, mc);
     
 		
     ///
-		// Read Alignments => SNP, DEL, INS, SUB AMP
+		// Read Alignments => SNP, DEL, INS, SUB
 		///
     
     // Normalizing in polymorphism mode causes consistency issues when multiple INS or DEL are next to each other
@@ -1674,6 +1806,11 @@ namespace breseq {
     if (!settings.polymorphism_prediction) {
       normalize_and_annotate_tandem_repeat_mutations(settings, summary, gd);
     }
+        
+    ///
+		// mutation INS => mutation AMP
+		///
+    normalize_INS_to_AMP(settings, summary, gd);
       
     ///////////////////////////////////////////////////////
     // Check to be sure the "frequency" field is present //
@@ -1870,6 +2007,10 @@ namespace breseq {
     while ( test_position - repeat_sequence.size() > 1) {
       
       test_position -= repeat_sequence.size();
+      
+      // Safety valve for overflowing sequence
+      if (test_position <= 1) break;
+      
       string test_sequence = ref_seq.get_sequence_1(test_position, test_position + repeat_sequence.size() - 1);
       
       if (test_sequence != repeat_sequence) break;

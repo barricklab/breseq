@@ -3599,36 +3599,37 @@ void cGenomeDiff::normalize_mutations(cReferenceSequences& ref_seq_info, Setting
   // Pull settings variables
   int32_t AMP_size_cutoff = settings.size_cutoff_AMP_becomes_INS_DEL_mutation;
 
+  // Convert all AMP to INS
+  //   so that INS/DEL normalization can take care of them
   diff_entry_list_t mut_list = this->mutation_list();
   for(diff_entry_list_t::iterator it=mut_list.begin(); it!=mut_list.end(); it++) {
     cDiffEntry& mut = **it;
-    if (mut._type == AMP) {
+    if (mut._type != AMP)
+      continue;
       
-      int32_t new_copy_number = from_string<uint32_t>(mut["new_copy_number"]);
-      int32_t unit_size = from_string<int32_t>(mut[SIZE]);
+    int32_t new_copy_number = from_string<uint32_t>(mut["new_copy_number"]);
+    int32_t unit_size = from_string<int32_t>(mut[SIZE]);
+    int32_t size = unit_size * (new_copy_number - 1);
+  
+    mut._type = INS;
+    int32_t pos = from_string<uint32_t>(mut[POSITION]);
 
-      int32_t size = unit_size * (new_copy_number - 1);
-      if (size <= AMP_size_cutoff) {
-        mut._type = INS;
-        int32_t pos = from_string<uint32_t>(mut[POSITION]);
-
-        string amped_seq = ref_seq_info.get_sequence_1(mut[SEQ_ID], pos, pos + unit_size - 1);
-        mut[NEW_SEQ] = "";
-        for(int32_t i=1; i< new_copy_number; i++){
-          mut[NEW_SEQ] =  mut[NEW_SEQ] + amped_seq;
-        }
-                                        
-        mut["position"] = to_string<int32_t>(pos - 1);                                
-        mut.erase("new_copy_number");
-        mut.erase("size");
-      }
+    string amped_seq = ref_seq_info.get_sequence_1(mut[SEQ_ID], pos, pos + unit_size - 1);
+    mut[NEW_SEQ] = "";
+    for(int32_t i=1; i< new_copy_number; i++){
+      mut[NEW_SEQ] =  mut[NEW_SEQ] + amped_seq;
     }
-    
+                                    
+    mut["position"] = to_string<int32_t>(pos - 1);                                
+    mut.erase("new_copy_number");
+    mut.erase("size");
   }
   
   MutationPredictor mp(ref_seq_info);
   Summary summary; // don't pass these through currently
   mp.normalize_and_annotate_tandem_repeat_mutations(settings, summary, *this);
+  mp.normalize_INS_to_AMP(settings, summary, *this);
+
 }
 
 cGenomeDiff cGenomeDiff::check(cGenomeDiff& ctrl, cGenomeDiff& test, bool verbose)
