@@ -140,17 +140,17 @@ int do_union(int argc, char *argv[])
 int do_apply(int argc, char *argv[])
 {
   AnyOption options("gdtools APPLY [ -o output.gff3 -f GFF3 ] -r reference.gbk input.gd");
-  options("output,o",    "Output file name Default (output.*)");
+  options("output,o",    "Output file name (DEFAULT=output.*)");
   options("format,f",    "Output file format (Options: FASTA, GFF3)", "FASTA");
   options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
-  options("verbose,v",   "Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
+  //options("verbose,v",   "Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
   options.addUsage("Input a single Genome Diff, and as many reference files");
   options.addUsage("as you like.  Using the Genome Diff, this will apply all");
   options.addUsage("the mutations to the reference sequences, output is to");
-  options.addUsage("a single file that includes all the references in the.");
+  options.addUsage("a single file that includes all the references in the");
   options.addUsage("requested format.");
 
   string format = to_upper(options["format"]);
@@ -172,7 +172,7 @@ int do_apply(int argc, char *argv[])
 
   if (!options.getArgc()) {
     options.addUsage("");
-    options.addUsage("No additional files provided.");
+    options.addUsage("No input files provided.");
     options.printUsage();
     return -1;
   }
@@ -202,7 +202,7 @@ int do_apply(int argc, char *argv[])
   }
   else if (format == "GFF3") {
     uout << options["gff3"] << endl;
-    new_ref_seq_info.WriteGFF(output, options.count("verbose"));
+    new_ref_seq_info.WriteGFF(output);
   }
 
   return 0;
