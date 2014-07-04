@@ -572,7 +572,7 @@ namespace breseq {
         
     //!< Read/Write a tab delimited GFF3 file
     void ReadGFF(const string& file_name);
-    void WriteGFF(const string &file_name, bool verbose=false);
+    void WriteGFF(const string &file_name);
 
     //!< Read GenBank file
     void ReadGenBank(const string& in_file_names);

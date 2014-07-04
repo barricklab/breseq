@@ -860,18 +860,11 @@ namespace breseq {
   
 /*! WriteGFF abides by the following format:
   http://www.sequenceontology.org/gff3.shtml !*/
-void cReferenceSequences::WriteGFF( const string &file_name, bool verbose ){
+void cReferenceSequences::WriteGFF( const string &file_name){
 
   cFastaFile out(file_name.c_str(), ios_base::out);
 
   ASSERT(!out.fail(), "Failed to open file " + file_name);
-    
-  //Notify the user of output
-  if(verbose)
-  {
-    cout << "Writing GFF3" << endl;
-    cout << "\t" << file_name << endl;
-  }
     
   //! Step 1: Header
   out << "##gff-version 3" << endl;
@@ -954,12 +947,6 @@ void cReferenceSequences::WriteGFF( const string &file_name, bool verbose ){
   this->WriteFASTA(out);
   
   out.close();
-    
-  //Notify the user of output
-  if(verbose)
-  {
-    cout << "\t**GFF3 Complete**" << endl;
-  }
 }
 
 void cReferenceSequences::ReadGenBank(const string& in_file_name) {

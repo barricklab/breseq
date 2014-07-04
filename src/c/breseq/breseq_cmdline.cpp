@@ -717,7 +717,7 @@ int do_simulate_read(int argc, char *argv[])
   gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, verbose);
   
   //! Write applied GFF3 file if requested.
-  if(options.count("gff3"))new_ref_seq_info.WriteGFF(options["output"] + ".gff3", options.count("verbose"));
+  if(options.count("gff3"))new_ref_seq_info.WriteGFF(options["output"] + ".gff3");
 
 
   const cAnnotatedSequence &sequence = new_ref_seq_info[0];
