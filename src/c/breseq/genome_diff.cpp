@@ -538,7 +538,16 @@ int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info)
 
 // shift_offset of -1 means we are within the current mutation 
 //   => we don't change its size, but we may shift its position in a special way for AMP/MOB/INS
-void cDiffEntry::mutation_shift_position(const string& seq_id, int32_t shift_offset, int32_t shift_size)
+//   inset_pos is the index after the current position // = 0 for actually at this position
+// 
+//   shift_replace size is the size of the new sequence being inserted
+//   For an INS mutation =>
+//      shift_offset = position
+//      insert_pos = 1 (meaning after the base referred to in shift_offset)
+//      shift_size = number of bases inserted
+//      shift_replace_size = 0 (no bases were replaced -- important for placing mutation within other mutations that have a size
+
+void cDiffEntry::mutation_shift_position(const string& seq_id, int32_t shift_offset, int32_t insert_pos, int32_t shift_size, int32_t shift_replace_size)
 {    
   // negative shift_size means deletion; positive shift_size means insertion
   if (shift_size == 0) return;
@@ -546,72 +555,71 @@ void cDiffEntry::mutation_shift_position(const string& seq_id, int32_t shift_off
   
   int32_t position = from_string<int32_t>((*this)[POSITION]);
   
-  // anything that has a 'size' potentially needs to be adjusted if the shift position and size overlaps        
-  switch (this->_type) {
-    case SUB: 
-    case DEL: 
-    case AMP:
-    {
-      int32_t original_start = position;
-      int32_t original_end = original_start + from_string<int32_t>((*this)[SIZE]) - 1;
-      int32_t final_start = original_start;
-      int32_t final_size = original_end - original_start + 1;
-            
-      // Deletion cases
-      if (shift_size < 0) {
-      
-        int32_t change_start = shift_offset;
-        int32_t change_end = change_start - shift_size - 1;
-
-        if ((shift_offset <= original_start) && (change_end >= original_end)) {
-          // change overlaps both sides
-          // ERROR("Deletion completely encompasses other mutation");
-          final_start = change_start;
-          final_size = 0;
-        } else if ((original_start >= shift_offset) && (original_start <= change_end)) {
-          // change overlaps left side
-          final_start = change_start;
-          final_size = original_end - original_start + 1 - (change_end - original_start);
-        } else if ((original_end >= shift_offset) && (original_end <= change_end)) {
-          // change overlaps right side
-          final_start = original_start;
-          final_size = change_start - original_start;
-        } else if ((shift_offset > original_start) && (change_end < original_end)) {
-          // change is contained within 
-          final_start = original_start;
-          final_size = original_end - original_start + 1 + shift_size; // original size minus size of deletion
-        } else if (original_start >= shift_offset) {
-          final_start = original_start + shift_size;
-        }
-        
-        (*this)[POSITION] = to_string(final_start);
-        (*this)[SIZE] = to_string(final_size);
-        return;
-        
-        // Insertion case, increase size if it is within the current interval
-      } else {
-      
-        if ((shift_offset >= original_start) && (shift_offset+shift_size-1 <= original_end)) {
-          final_size = original_end - original_start + 1 + shift_size;
-        } else if (original_start >= shift_offset) {
-          final_start = original_start + shift_size;
-        }
-      }
-      
-      (*this)[POSITION] = to_string(final_start);
-      (*this)[SIZE] = to_string(final_size);
-      return;
-      
+  // Handle simple case and return
+  if (!entry_exists(SIZE)) {
+    
+    if (position >= shift_offset) {
+      (*this)[POSITION] = to_string(position + shift_size);
     }
-    break;
-      
-    default:
-      break;
+    return;
+    
   }
   
-  if (position >= shift_offset) {
-    (*this)[POSITION] = to_string(position + shift_size);
+  // anything that has a 'size' potentially needs to be adjusted if the shift position and size overlaps        
+  int32_t original_start = position;
+  int32_t original_end = original_start + from_string<int32_t>((*this)[SIZE]) - 1;
+  int32_t final_start = original_start;
+  int32_t final_size = original_end - original_start + 1;
+        
+  // Deletion cases
+  if (shift_offset < 0) {
+  
+    int32_t change_start = shift_offset;
+    int32_t change_end = change_start + shift_size - 1;
+
+    if ((shift_offset <= original_start) && (change_end >= original_end)) {
+      // change overlaps both sides
+      // ERROR("Deletion completely encompasses other mutation");
+      final_start = change_start;
+      final_size = 0;
+    } else if ((original_start >= shift_offset) && (original_start <= change_end)) {
+      // change overlaps left side
+      final_start = change_start;
+      final_size = original_end - original_start + 1 - (change_end - original_start);
+    } else if ((original_end >= shift_offset) && (original_end <= change_end)) {
+      // change overlaps right side
+      final_start = original_start;
+      final_size = change_start - original_start;
+    } else if ((shift_offset > original_start) && (change_end < original_end)) {
+      // change is contained within 
+      final_start = original_start;
+      final_size = original_end - original_start + 1 + shift_size; // original size minus size of deletion
+    } else if (original_start >= shift_offset) {
+      final_start = original_start + shift_size;
+    }
+    
+    // Insertion case, increase size if the entire event (including replace size) is within the current event
+  } else {
+  
+    if (insert_pos == 0) {
+      if ((shift_offset >= original_start) && (shift_offset+shift_replace_size-1 <= original_end)) {
+        final_size = original_end - original_start + 1 + shift_size;
+      } else if (original_start >= shift_offset) {
+        final_start = original_start + shift_size;
+      }
+    } else { 
+      // Same as above except gets rid of the >= for the first position, because we are after this position.
+      // This case is used for INS mutations.
+      if ((shift_offset > original_start) && (shift_offset+shift_replace_size-1 <= original_end)) {
+        final_size = original_end - original_start + 1 + shift_size;
+      } else if (original_start > shift_offset) {
+        final_start = original_start + shift_size;
+      }
+    }
   }
+
+  (*this)[POSITION] = to_string(final_start);
+  (*this)[SIZE] = to_string(final_size);
 }
 
   
@@ -1282,7 +1290,7 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
 typedef struct  {
   int32_t start;
   int32_t end;
-  string mutation_id;
+  string mutation_id; // of the mutation leading to the requirements
 } dr_item;
   
 // Checks to see whether seq_ids and coordinates make sense
@@ -1501,6 +1509,16 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
           for (vector<dr_item>::iterator ita=check_ambiguous.begin(); ita!=check_ambiguous.end(); ita++) {
             
             if ((de->_id != ita->mutation_id) && (position >= ita->start) && (position <= ita->end)) {
+              
+              // It's possible that the mutation creating ambiguity is actually 'within' the current mutation
+              // in which case the position of the current mutation is not ambiguous
+              diff_entry_ptr_t dis_de = find_by_id(ita->mutation_id);
+              if (dis_de->entry_exists("within")) {
+                vector<string> split_within = split((*dis_de)["within"], ":");
+                if (split_within[0] == de->_id)
+                  continue;
+              }
+              
               parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Mutation requires 'before' or 'within' field to disambiguate when and how it occurs because it overlaps AMP or MOB duplicated bases.", true); 
             } 
           }
@@ -2969,6 +2987,11 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
     ERROR("Size change not defined for mutation.");
   
   int32_t offset = from_string<int32_t>(current_mut[POSITION]);
+  int32_t replace_size = (current_mut.entry_exists(SIZE)) ? from_string<int32_t>(current_mut[SIZE]) : 0;
+  
+  // Special case: for INS we only want to shift positions that are past the current one.
+  int32_t insert_pos = 0;
+  if (current_mut._type==INS) insert_pos=1;
   
   diff_entry_list_t muts = this->mutation_list();
   for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr++) {
@@ -2997,6 +3020,7 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
       vector<string> split_within = split(mut["within"], ":");
       string within_mutation_id = split_within[0];
       
+      // Mutation that we are CURRENTLY SHIFTING is within the mutation that we are shifting FOR
       if (current_mut._id == within_mutation_id) {
         was_nested = true; // handle offset here
         int32_t within_copy_index = -1;     
@@ -3030,13 +3054,13 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
         }
         
         // -1 used as offset to force update of position because we are within it...
-        mut.mutation_shift_position(current_mut[SEQ_ID], -1, special_delta);
+        mut.mutation_shift_position(current_mut[SEQ_ID], -1, 0, special_delta, 0);
       }  
     }
     
     // Normal behavior -- offset mutations later in same reference sequence
     if (!was_nested) {
-      mut.mutation_shift_position(current_mut[SEQ_ID], offset, delta);
+      mut.mutation_shift_position(current_mut[SEQ_ID], offset, insert_pos, delta, replace_size);
     }
   }
 }
@@ -3104,8 +3128,7 @@ string cGenomeDiff::mob_replace_sequence(cReferenceSequences& ref_seq_info,
 // When calling this function make SURE that you load ref_seq_info and
 // new_ref_seq_info separately.
 //
-void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose, 
-                                     int32_t slop_distance, int32_t size_cutoff_AMP_becomes_INS_DEL_mutation)
+void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose, int32_t slop_distance, int32_t size_cutoff_AMP_becomes_INS_DEL_mutation)
 {    
   uint32_t count_SNP = 0, count_SUB = 0, count_INS = 0, count_DEL = 0, count_AMP = 0, count_INV = 0, count_MOB = 0, count_CON = 0, count_MASK = 0;
   
@@ -3134,7 +3157,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
     mut.erase("adjacent");
     
     // Must be done before we apply the current mutation to the sequence
-    // But previous mutations must be applied (because for example it may be mediated by a new IS insertion).
+    // But previous mutations must be applied (because for example it may be mediated by a *new* IS copy).
     {
       
       cAnnotatedSequence& this_seq = new_ref_seq_info[mut[SEQ_ID]];
@@ -3221,7 +3244,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         applied_seq = mut[NEW_SEQ];
         
         // Replace sequence
-        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id), verbose);
+        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id));
         
       } break;
         
@@ -3244,7 +3267,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         applied_end = position - 1 + mut[NEW_SEQ].size();
         applied_seq = replace_seq + mut[NEW_SEQ];
         
-        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id), verbose);
+        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id));
         
       } break;
         
@@ -3263,7 +3286,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         applied_end = position + mut[NEW_SEQ].size();
         applied_seq = replace_seq + mut[NEW_SEQ];
         
-        new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id), verbose);
+        new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id));
         
       } break;
         
@@ -3301,7 +3324,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         applied_seq.append(")");
 
         
-        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size -1, "", (to_string(mut._type) + " " + mut._id), verbose);
+        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size -1, "", (to_string(mut._type) + " " + mut._id));
         
       } break;
         
@@ -3322,7 +3345,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         applied_end = position + size - 1;
         applied_seq = mask_string;
         
-        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, mask_string, (to_string(mut._type) + " " + mut._id), verbose);
+        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, mask_string, (to_string(mut._type) + " " + mut._id));
         
       } break;
         
@@ -3349,7 +3372,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         applied_end = position + duplicated_sequence.size() - 1;
         applied_seq = duplicated_sequence;
         
-        new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position-1, duplicated_sequence, (to_string(mut._type) + " " + mut._id), verbose);
+        new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position-1, duplicated_sequence, (to_string(mut._type) + " " + mut._id));
               
       } break;
         
@@ -3456,11 +3479,11 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         // The position of a MOB is the first position that is duplicated
         // Inserting at the position means we have to copy the duplication
         // in FRONT OF the repeat sequence
-        new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position-1, new_seq_string, (to_string(mut._type) + " " + mut._id), verbose);
+        new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position-1, new_seq_string, (to_string(mut._type) + " " + mut._id));
         
         // We've repeated the sequence, now it's time to repeat all the features
         // inside of and including the repeat region.
-        new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+iInsStart+iDupSeqLen, iDelStart, iDelEnd, ref_seq_info, seq_id_picked, from_string<int16_t>(mut["strand"]), repeat_feature_picked.m_location, verbose);
+        new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+iInsStart+iDupSeqLen, iDelStart, iDelEnd, ref_seq_info, seq_id_picked, from_string<int16_t>(mut["strand"]), repeat_feature_picked.m_location);
                
       } break;
         
@@ -3503,7 +3526,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         applied_end = position - 1 + replacing_sequence.size();
         applied_seq = replace_seq + replacing_sequence;
         
-        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, replacing_sequence, (to_string(mut._type) + " " + mut._id), verbose); 
+        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, replacing_sequence, (to_string(mut._type) + " " + mut._id)); 
               
       } break;
         
