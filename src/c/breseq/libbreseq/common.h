@@ -159,7 +159,7 @@ namespace breseq {
       case 'T': return 'A';
       case '.': return '.';
       case 'N': return 'N';
-      default: ASSERT(false, "Unrecognized base char");
+      default: ASSERT(false, "Unrecognized base char" + base);
     }
     return ' ';
   }
@@ -230,7 +230,7 @@ namespace breseq {
       case 'T': return 3;
       case '.': return 4;
       case 'N': return 5;
-      default: ASSERT(false, "Unrecognized base char");
+      default: ASSERT(false, "Unrecognized base char" + base);
     }
     return ' ';
   }
