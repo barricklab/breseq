@@ -143,7 +143,7 @@ int do_apply(int argc, char *argv[])
   options("output,o",    "Output file name (DEFAULT=output.*)");
   options("format,f",    "Output file format (Options: FASTA, GFF3)", "FASTA");
   options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
-  //options("verbose,v",   "Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
+  options("verbose,v",   "Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
@@ -1869,7 +1869,7 @@ int do_runfile(int argc, char *argv[])
   ss << "Usage: gdtools RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> -g <genome diff data dir>\n";
   ss << "Usage: gdtools RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> <file1.gd file2.gd file3.gd ...>";
   AnyOption options(ss.str());
-  options("mode,m",             "Type of command file to generate. Valid options are: breseq, flexbar, flexbar-paired.", "breseq");
+  options("mode,m",             "Type of command file to generate. Valid options are: breseq, flexbar, flexbar-paired.", "breseq", "breseq-apply");
   options("executable,e",     "Alternative executable program to run.");
   options("options",          "Options to be passed to the executable. These will appear first in the command line.");
 	options("runfile,r",        "Name of the run file to be output.", "commands");
@@ -1922,6 +1922,11 @@ int do_runfile(int argc, char *argv[])
 		runfile_path = "commands";
 		output_dir = "03_Output";
 		log_dir = "04_Logs";
+	} else if (options["mode"] == "breseq-apply") {
+    exe = "breseq";
+		runfile_path = "apply_commands";
+    output_dir = "06_Apply_Output";
+		log_dir = "07_Apply_Output";
   } else if (options["mode"] == "flexbar") {
     exe = "flexbar";
 		runfile_path = "flexbar_commands";
@@ -2014,13 +2019,45 @@ int do_runfile(int argc, char *argv[])
 			}
         
       //! Part 5: Error log path.
-      ss << " >& " << log_dir << "/" << gd.get_title() << ".log" << endl;
+      ss << " >& " << log_dir << "/" << gd.get_title() << ".log";
         
       //! Step: Output to file.
       cout << ss.str() << endl;
       runfile << ss.str() << endl;
       ++n_cmds;
-        
+			
+		} else if (options["mode"] == "breseq-apply") {  
+			
+      //! Step: Begin building command line.
+      stringstream ss;
+			
+      //! Part 1: Executable and options to pass to it if given by user.
+      ss << exe;
+			
+      if (options.count("options")) {
+        ss << " " << options["options"];
+      }
+      //! Part 2: Pipeline's output path.
+      ss << " -o " << output_dir + "/" + gd.get_title();  
+			
+			//! Part 3: Reference argument path(s).
+			for (vector<string>::const_iterator ref_file_it=refs.begin(); ref_file_it != refs.end(); ref_file_it++) {  
+				ss << " -r " << download_dir << "/" << gd.get_title() << ".gff";
+			}
+			
+			//! Part 4: Read argument path(s).
+			for (vector<string>::const_iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {  
+				ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
+			}
+			
+      //! Part 5: Error log path.
+      ss << " >& " << log_dir << "/" << gd.get_title() << ".log";
+			
+      //! Step: Output to file.
+      cout << ss.str() << endl;
+      runfile << ss.str() << endl;
+      ++n_cmds;
+			
     } else if (options["mode"] == "flexbar") {  
       
 			// For each read file trim with requested adaptor...

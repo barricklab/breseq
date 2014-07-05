@@ -1400,6 +1400,7 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
           } else {
             
             uint32_t position = from_string<uint32_t>((*de)[POSITION]);
+            uint32_t size = de->entry_exists(SIZE) ? from_string<uint32_t>((*de)[SIZE]) : 0;
             uint32_t within_position = from_string<uint32_t>((*within_de)[POSITION]);
 
             uint32_t valid_start;
@@ -1452,15 +1453,16 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
             // Last, check the position to be sure that within makes sense
             // this is not as strict as it could be (requiring whole mutation to be inside copy)
             // because we need the leeway for mutations that DEL across an AMP boundary, for instance
-            
-            if ((position < valid_start) || (position > valid_end)) {
-              parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Position must be >= " + to_string(valid_start) + " and <= " + to_string(valid_end) + " for mutation that is 'within' this mutation:\n" + within_de->as_string(), true);
+            if (!( ((position >= valid_start) && (position <= valid_end)) 
+                || ((valid_start >= position) && (valid_start <= position + size - 1)) )) {
+              parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Mutation must overlap interval " + to_string(valid_start) + "-" + to_string(valid_end) + " for mutation that is 'within' this mutation:\n" + within_de->as_string(), true);
             }
             
           } // end has 'within' attribute
         } else if (de->entry_exists("before")) {  
           
           uint32_t position = from_string<uint32_t>((*de)[POSITION]);
+          uint32_t size = de->entry_exists(SIZE) ? from_string<uint32_t>((*de)[SIZE]) : 0;
 
           string before_mutation_id = (*de)["before"];
           
