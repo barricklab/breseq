@@ -159,7 +159,7 @@ namespace breseq {
       case 'T': return 'A';
       case '.': return '.';
       case 'N': return 'N';
-      default: ASSERT(false, "Unrecognized base char" + base);
+      default: ASSERT(false, "Unrecognized base char");
     }
     return ' ';
   }
@@ -230,11 +230,19 @@ namespace breseq {
       case 'T': return 3;
       case '.': return 4;
       case 'N': return 5;
-      default: ASSERT(false, "Unrecognized base char" + base);
+      default: ASSERT(false, "Unrecognized base char");
     }
     return ' ';
   }
- 
+  
+  // takes a string that is supposed to be bases
+  inline bool is_base_sequence(const string& base_string) {
+    for(size_t i=0; i<base_string.size(); i++) {
+      if (!strchr( "ATCGN",  toupper(base_string[i])))
+        return false;
+    }
+    return true;
+  }
   
   // Utility functions
   inline bool file_exists(const char *filename)
@@ -659,7 +667,6 @@ namespace breseq {
       transform(str.begin(), str.end(),str.begin(), ::tolower);
       return str;
   }
-  
   
   //! special handling of NA and INF, compatible with C++ limits and R representations
   inline double double_from_string(const string& input)

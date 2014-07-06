@@ -493,8 +493,32 @@ namespace breseq {
     
     // To uppercase and fix names for the most recently loaded sequences.
     for (size_t i=last_uppercased; i<this->size(); i++) {
-      (*this)[i].m_fasta_sequence.m_sequence = to_upper((*this)[i].m_fasta_sequence.m_sequence);
+      string& this_sequence = (*this)[i].m_fasta_sequence.m_sequence;
+      this_sequence = to_upper(this_sequence);
       (*this)[i].m_file_name = file_name;
+      
+      // Remedy nonstandard characters to 'N'
+      map<char,uint32_t> bad_char;
+      for (size_t j=0; j<(*this)[i].m_fasta_sequence.m_sequence.size(); j++) {
+        if ( !strchr( "ATCGN",  this_sequence[j] )) {
+          if (bad_char.count(this_sequence[j])) {
+            bad_char[this_sequence[j]]++;
+          } else {
+            bad_char[this_sequence[j]] = 1;
+          }
+          this_sequence[j] = 'N';
+        }
+      }
+      
+      // Found some bad characters...
+      if (bad_char.size()) {
+        string warning_string("Non-standard base characters found in sequence: " + (*this)[i].m_seq_id + "\n");
+        for(map<char,uint32_t>::iterator it = bad_char.begin(); it != bad_char.end(); it++) {
+          warning_string += "  character: '" + to_string<char>(it->first) + "'  (occurrences: " + to_string(it->second) + ")\n";
+        }
+        warning_string +="Characters that are not in the set 'ATCGN' will be changed to 'N'.";
+        WARN(warning_string);
+      }
     }
     
     //Here we check to see we haven't loaded some of the same information again.

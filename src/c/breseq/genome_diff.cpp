@@ -136,6 +136,7 @@ map<gd_entry_type, vector<string> > extended_line_specification = make_map<gd_en
 ;  
   
 enum diff_entry_field_variable_t {
+  kDiffEntryFieldVariableType_BaseSequence,
   kDiffEntryFieldVariableType_PositiveInteger,
   kDiffEntryFieldVariableType_Integer,
   kDiffEntryFieldVariableType_Strand, // must be -1 or +1
@@ -148,10 +149,13 @@ map<string, diff_entry_field_variable_t > diff_entry_field_variable_types = make
 (END, kDiffEntryFieldVariableType_PositiveInteger)
 (SIZE, kDiffEntryFieldVariableType_PositiveInteger_ReverseSort)
 (STRAND, kDiffEntryFieldVariableType_Strand)
-(DUPLICATION_SIZE, kDiffEntryFieldVariableType_Integer)
+(NEW_SEQ, kDiffEntryFieldVariableType_BaseSequence)
 (NEW_COPY_NUMBER, kDiffEntryFieldVariableType_PositiveInteger)
+(DUPLICATION_SIZE, kDiffEntryFieldVariableType_Integer)
 (DEL_START, kDiffEntryFieldVariableType_PositiveInteger)
 (DEL_END, kDiffEntryFieldVariableType_PositiveInteger)
+(INS_START, kDiffEntryFieldVariableType_BaseSequence)
+(INS_END, kDiffEntryFieldVariableType_BaseSequence)
 (INSERT_POSITION, kDiffEntryFieldVariableType_Integer)
 ;
 
@@ -299,11 +303,19 @@ void cDiffEntry::valid_field_variable_types(cFileParseErrors& parse_errors) {
     
     diff_entry_field_variable_t variable_type = diff_entry_field_variable_types[*it];
     string value = (*this)[*it];
+    
+    if (variable_type == kDiffEntryFieldVariableType_BaseSequence) {
+      if (!is_base_sequence(value))
+        parse_errors.add_line_error(from_string<uint32_t>((*this)["_line_number"]), this->as_string(), "Expected base sequence for field containing only characters 'ATCGN' for field " + to_string<uint32_t>(field_count) + ": [" + *it + "] instead of [" + value + "]." , true);
+      continue;
+    }
+    
+    /// Other types ---> are all numerical
     int32_t ret_val;
     bool integral = is_integer(value, ret_val);
     
     if (!integral) {
-      parse_errors.add_line_error(from_string<uint32_t>((*this)["_line_number"]), this->as_string(), "Expected integral value for field " + to_string<uint32_t>(field_count) + ": [" + *it + "] instead of [" + value + "]." , false);
+      parse_errors.add_line_error(from_string<uint32_t>((*this)["_line_number"]), this->as_string(), "Expected integral value for field " + to_string<uint32_t>(field_count) + ": [" + *it + "] instead of [" + value + "]." , true);
       continue;
     }
     
@@ -314,20 +326,22 @@ void cDiffEntry::valid_field_variable_types(cFileParseErrors& parse_errors) {
       case kDiffEntryFieldVariableType_PositiveInteger_ReverseSort:
 
         if (ret_val <= 0) { 
-          parse_errors.add_line_error(from_string<uint32_t>((*this)["_line_number"]), this->as_string(), "Expected positive integral value for field " + to_string<uint32_t>(field_count) + ": [" + *it + "] instead of [" + value + "]."  , false);
+          parse_errors.add_line_error(from_string<uint32_t>((*this)["_line_number"]), this->as_string(), "Expected positive integral value for field " + to_string<uint32_t>(field_count) + ": [" + *it + "] instead of [" + value + "]."  , true);
         }
         break;
         
-      case kDiffEntryFieldVariableType_Integer:
-        // already tested
-        break;  
+
         
       case kDiffEntryFieldVariableType_Strand:
         if ((ret_val != -1) && (ret_val != 1)) { 
-          parse_errors.add_line_error(from_string<uint32_t>((*this)["_line_number"]), this->as_string(), "Expected strand value (-1/1) for field " + to_string<uint32_t>(field_count) + ": [" + *it + "] instead of [" + value + "]." , false);
+          parse_errors.add_line_error(from_string<uint32_t>((*this)["_line_number"]), this->as_string(), "Expected strand value (-1/1) for field " + to_string<uint32_t>(field_count) + ": [" + *it + "] instead of [" + value + "]." , true);
         }
-        
         break;
+        
+      // already tested
+      case kDiffEntryFieldVariableType_BaseSequence:
+      case kDiffEntryFieldVariableType_Integer:
+        break;  
     }
   }
 }
@@ -358,8 +372,8 @@ bool cDiffEntry::operator==(const cDiffEntry& de)
       // Perform the proper type of comparison
       // Default is a string if not provided...
       
-      
-      if (!diff_entry_field_variable_types.count(spec)) {
+      if (!diff_entry_field_variable_types.count(spec) || 
+          (diff_entry_field_variable_types[spec] == kDiffEntryFieldVariableType_BaseSequence) ) {
       
         if ((*this)[spec] != de.find(spec)->second)
           return false;
@@ -379,6 +393,10 @@ bool cDiffEntry::operator==(const cDiffEntry& de)
             
             if (from_string<int32_t>((*this)[spec]) != from_string<int32_t>(de.find(spec)->second))
               return false;
+            break;
+            
+          // handled above
+          case kDiffEntryFieldVariableType_BaseSequence:
             break;
         }
       }
@@ -2410,7 +2428,8 @@ bool cGenomeDiff::diff_entry_ptr_sort(const diff_entry_ptr_t& a, const diff_entr
     
     // Perform the proper type of comparison
     // Default is a string if not provided...
-    if (!diff_entry_field_variable_types.count(spec)) {
+    if (!diff_entry_field_variable_types.count(spec) 
+        || (diff_entry_field_variable_types[spec] == kDiffEntryFieldVariableType_BaseSequence)) {
       
       string& a_sort_value = (*a)[spec];
       string& b_sort_value = (*b)[spec];
@@ -2459,6 +2478,10 @@ bool cGenomeDiff::diff_entry_ptr_sort(const diff_entry_ptr_t& a, const diff_entr
           }
         }
         break;
+          
+        // handled above
+        case kDiffEntryFieldVariableType_BaseSequence:
+          break;
       }
     }
   }
