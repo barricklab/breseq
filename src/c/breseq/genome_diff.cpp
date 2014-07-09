@@ -2574,6 +2574,8 @@ bool cGenomeDiff::diff_entry_ptr_sort_apply_order(const diff_entry_ptr_t& a, con
   for(uint32_t i=0; i<a_sort_items.size(); i++) {
     for(uint32_t j=0; j<b_sort_items.size(); j++) {
       
+      if (i >= a_sort_items.size()) break;
+      
       diff_entry_ptr_t a_anchor = current_sort_gd.find_by_id(a_sort_items[i].mutation_id);
       diff_entry_ptr_t b_anchor = current_sort_gd.find_by_id(b_sort_items[j].mutation_id);
       
