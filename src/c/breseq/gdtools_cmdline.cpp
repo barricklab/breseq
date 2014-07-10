@@ -1639,8 +1639,10 @@ int do_download(int argc, char *argv[])
   options("login,l",           "Login user:password information for private server access.");
   options("download-dir,d",    "Output directory to download file to.", "02_Downloads");
   options("genome-diff-dir,g", "Directory to searched for genome diff files.", "01_Data");
-  options("test"           ,   "Test urls in genome diff files, doesn't download the file.", TAKES_NO_ARGUMENT);
-  options("reference-only",    "Only downloads the reference sequence files for this file.", TAKES_NO_ARGUMENT);
+  options("test"           ,   "Test urls in genome diff files, doesn't download the file", TAKES_NO_ARGUMENT);
+  options("reference-only",    "Only downloads the reference sequence files for this file", TAKES_NO_ARGUMENT);
+	options("leave-compressed,z","Do not decompress zipped files", TAKES_NO_ARGUMENT);
+
 
   options.processCommandArgs(argc, argv);
 
@@ -1759,7 +1761,8 @@ int do_download(int argc, char *argv[])
 
       bool is_gzip =
           cString(file_path).ends_with(".gz");
-
+			if (options.count("leave-compressed")) is_gzip = false;
+			
       const string &gunzip_path = is_gzip ?
           cString(file_path).remove_ending(".gz") : "";
 
