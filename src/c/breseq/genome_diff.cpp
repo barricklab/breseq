@@ -1457,7 +1457,7 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
               
             } else if (within_de->_type == INS) {
               if (split_within.size() != 1) {
-                parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Expected AMP field 'within' to be of form 'within=mutation_id'. Instead, found: " + (*de)["within"], true);
+                parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Expected INS field 'within' to be of form 'within=mutation_id'. Instead, found: " + (*de)["within"], true);
               }
               
               // check coords to be sure it actually is 'within'
@@ -1471,6 +1471,12 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
             // Last, check the position to be sure that within makes sense
             // this is not as strict as it could be (requiring whole mutation to be inside copy)
             // because we need the leeway for mutations that DEL across an AMP boundary, for instance
+            
+            // Special case to allow INS before given position for IS-adjacent mutations
+            // MOB	27	14,9	REL606	16990	IS150	1	3
+            // INS	2625	.	REL606	16989	C	within=27:2
+            if (de->_type == INS) valid_start -= 1;
+            
             if (!( ((position >= valid_start) && (position <= valid_end)) 
                 || ((valid_start >= position) && (valid_start <= position + size - 1)) )) {
               parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Mutation must overlap interval " + to_string(valid_start) + "-" + to_string(valid_end) + " for mutation that is 'within' this mutation:\n" + within_de->as_string(), true);
