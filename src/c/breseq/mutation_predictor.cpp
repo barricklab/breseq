@@ -1170,153 +1170,60 @@ namespace breseq {
           ;
         }
       } 
-      /*
-      else if (size == 0) {
-        
-        // "INS" || "AMP" Special cases
-        // @JEB Note: this kind of AMP only happens due to the way that reads are currently split.
-        //            If that is resolved, then only the version above will be needed for AMP.
-        //
-        // @JEB Note: it would be better to call everything as an INS here and then normalize it to an AMP
-        //            later in the code so that it could be trated consistently with gdtools NORMALIZE
-        
-        // 'AMP' if the size is greater than the cutoff and the inserted bases exactly match the previous bases
-        //       This case should be normalized to an AMP by later code as well (?)
-        //
-        // Example (reverse_complement = false)
-        //   REL606 2103888 -1 REL606 2103889 1 unique_read_sequence=AGCC
-        //    side_1_pos, side_1_strand    side_2_pos, side_2_strand
-        //   Output
-        //     AMP . . REL606 2103888 4 2
-        //
-        // Example (reverse_complement = true)
-        //   REL606 2103889 1 REL606 2103888 -1 unique_read_sequence=GGCT
-        //    side_1_pos, side_1_strand    side_2_pos, side_2_strand
-        //   Output
-        //     AMP . . REL606 2103888 4 2
-        //
-        // 'INS'
-        //
-        // Example (reverse_complement = false)
-        //   REL606 2103888 -1 REL606 2103889 1 unique_read_sequence=TTTT 
-        //    side_1_pos, side_1_strand    side_2_pos, side_2_strand
-        //   Output
-        //     INS . . REL606 2103888 TTTT
-        //
-        // Example (reverse_complement = true)
-        //   REL606 2103888 -1 REL606 2103889 1 unique_read_sequence=AAAA 
-        //    side_1_pos, side_1_strand    side_2_pos, side_2_strand
-        //   Output
-        //     INS . . REL606 2103888 TTTT
-        
-        ASSERT(j.entry_exists("unique_read_sequence"), "Expected unique junctions sequence when predicting AMP/INS:\n" + j.as_string());
-        int32_t size = j["unique_read_sequence"].size();
-        string unique_seq = j["unique_read_sequence"];
-        if (reverse_complement_unique_sequence) unique_seq = reverse_complement(unique_seq);
 
-        // This code is implicitly safe to the ends of the sequence because suitable junctions won't be found there
-        string dup_after_check_seq;
-        if (static_cast<uint32_t>(side_2_position + size - 1) < ref_seq_info.get_sequence_length(j["side_1_seq_id"]))
-          dup_after_check_seq = ref_seq_info.get_sequence_1(j["side_1_seq_id"], side_2_position, side_2_position + size - 1);
-        string dup_before_check_seq;
-        if (side_2_position - size >= 1)
-          dup_before_check_seq = ref_seq_info.get_sequence_1(j["side_1_seq_id"], side_2_position - size, side_2_position - 1);
-        
-        if ( (size > AMP_size_cutoff) && (unique_seq == dup_after_check_seq) )
-        {
-          mut._type = AMP;
-          mut
-          ("seq_id", seq_id)
-          ("position", s(side_2_position))
-          ("size", s(size))
-          ("new_copy_number", "2")
-          ;
-        }
-        else if ( (size > AMP_size_cutoff) && (unique_seq == dup_before_check_seq) )
-        {
-          mut._type = AMP;
-          mut
-          ("seq_id", seq_id)
-          ("position", s(side_2_position - size))
-          ("size", s(size))
-          ("new_copy_number", "2")
-          ;
-        }
-        else // this case is really the same as the next section
-        {
-          mut._type = INS;
-          mut
-          ("seq_id", seq_id)
-          ("position", s(side_1_position))
-          ("new_seq", unique_seq)
-          ;
-        }
-
-      }*/
       else // (size >= 0)
       {		 
-        /*
-        if ((!j.entry_exists("unique_read_sequence")) && (size > AMP_size_cutoff)) {
-          
-          // 'AMP' if the size is greater than the cutoff and there is no unique sequence
-          //
-          // Example
-          //   REL606 2103888 1 REL606 2103911 -1
-          //    side_1_pos, side_1_strand    side_2_pos, side_2_strand    size = 24
-          //   Output
-          //     AMP . . REL606 2103888 24
-          
-          mut._type = AMP;		
-          mut		
-          ("seq_id", seq_id)		
-          ("position", s(side_1_position))		
-          ("size", s(size))		
-          ("new_copy_number", "2")		
-          ;		
-        } else {*/
-          // 'INS' otherwise
-          //
-          // Example (reverse_complement = false)
-          //   REL606 2103888 1 REL606 2103911 -1
-          //    side_1_pos, side_1_strand    side_2_pos, side_2_strand    size = 24
-          //   Output
-          //     INS . . REL606 2103911 CAGCCAGCCAGCCAGCCAGCCAGC
-          //
-          // Example (reverse_complement_unique_sequence = true)
-          //   REL606 2103888 1 REL606 2103911 -1
-          //    side_1_pos, side_1_strand    side_2_pos, side_2_strand    size = 24
-          //   Output
-          //     INS . . REL606 2103911 CAGCCAGCCAGCCAGCCAGCCAGC
-          //
-          // Example with unique_read_sequence (reverse_complement = false)
-          //   REL606 2103911 -1 REL606 2103888 1 unique_read_sequence=CAA
-          //    side_1_pos, side_1_strand    side_2_pos, side_2_strand    size = 24
-          //   Output
-          //     INS . . REL606 2103911 CAA|CAGCCAGCCAGCCAGCCAGCCAGC 
-          //
-          // Example with unique_read_sequence (reverse_complement = true)
-          //   REL606 2103888 1 REL606 2103911 -1 unique_read_sequence=TTG
-          //    side_1_pos, side_1_strand    side_2_pos, side_2_strand    size = 24
-          //   Output
-          //     INS . . REL606 2103911 CAA|CAGCCAGCCAGCCAGCCAGCCAGC
-          //
-          
-          mut._type = INS;
-          
-          string ins_seq = ref_seq_info.get_sequence_1(seq_id, side_1_position, side_2_position);
-          if (j.entry_exists("unique_read_sequence")) {
-            string unique_seq = j["unique_read_sequence"];  
-            if (reverse_complement_unique_sequence) unique_seq = reverse_complement(unique_seq);
-            ins_seq = unique_seq + ins_seq;
-          }
-          
-          mut		
-          ("seq_id", seq_id)		
-          ("position", s(side_2_position))	
-          // or could also be side_1_position-1, they are equivalent and will later be shifted to the same during normaliztion
-          ("new_seq", ins_seq)		
-          ;		
-        //} @JEB : delete thos
+        // 'INS' otherwise
+        //
+        // Example (reverse_complement = false)
+        //   REL606 2103888 1 REL606 2103911 -1
+        //    side_1_pos, side_1_strand    side_2_pos, side_2_strand    size = 24
+        //   Output
+        //     INS . . REL606 2103911 CAGCCAGCCAGCCAGCCAGCCAGC
+        //
+        // Example (reverse_complement_unique_sequence = true)
+        //   REL606 2103888 1 REL606 2103911 -1
+        //    side_1_pos, side_1_strand    side_2_pos, side_2_strand    size = 24
+        //   Output
+        //     INS . . REL606 2103911 CAGCCAGCCAGCCAGCCAGCCAGC
+        //
+        // Example with unique_read_sequence (reverse_complement = false)
+        //   REL606 2103911 -1 REL606 2103888 1 unique_read_sequence=CAA
+        //    side_1_pos, side_1_strand    side_2_pos, side_2_strand    size = 24
+        //   Output
+        //     INS . . REL606 2103911 CAA|CAGCCAGCCAGCCAGCCAGCCAGC 
+        //
+        // Example with unique_read_sequence (reverse_complement = true)
+        //   REL606 2103888 1 REL606 2103911 -1 unique_read_sequence=TTG
+        //    side_1_pos, side_1_strand    side_2_pos, side_2_strand    size = 24
+        //   Output
+        //     INS . . REL606 2103911 CAA|CAGCCAGCCAGCCAGCCAGCCAGC
+        //
+        // Example with unique_read_sequence 
+        //   2108470	-1	REL606	2108471	1	-8	unique_read_sequence=CAGCCAGC
+        //    side_1_pos, side_1_strand    side_2_pos, side_2_strand    size = 0
+
+        
+        mut._type = INS;
+        
+        string ins_seq;
+      
+        // Special case of size = 0 means that we don't add any reference sequence positions
+        if (size != 0)
+          ins_seq = ref_seq_info.get_sequence_1(seq_id, side_1_position, side_2_position);
+      
+        if (j.entry_exists("unique_read_sequence")) {
+          string unique_seq = j["unique_read_sequence"];  
+          if (reverse_complement_unique_sequence) unique_seq = reverse_complement(unique_seq);
+          ins_seq = unique_seq + ins_seq;
+        }
+        
+        mut		
+        ("seq_id", seq_id)		
+        ("position", s(side_2_position))	
+        // or could also be side_1_position-1, they are equivalent and will later be shifted to the same during normaliztion
+        ("new_seq", ins_seq)		
+        ;		
       }
       
       // If we are in polymorphism mode, propagate the frequency from JC evidence to mutation
