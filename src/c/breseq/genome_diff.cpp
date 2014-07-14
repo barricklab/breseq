@@ -576,7 +576,13 @@ void cDiffEntry::mutation_shift_position(const string& seq_id, int32_t shift_off
   // Handle simple case and return
   if (!entry_exists(SIZE)) {
     
-    if (position >= shift_offset) {
+    // INS only get shifted if they are after the position (and insert_pos),
+    // all others get shifted if they are this position or after
+    int32_t this_insert_pos = 0;
+    if ((_type==INS) && this->entry_exists(INSERT_POSITION))
+        this_insert_pos = from_string<int32_t>((*this)[INSERT_POSITION]);
+    
+    if ((position > shift_offset) || ((position == shift_offset) && (this_insert_pos >= insert_pos)) )  {
       (*this)[POSITION] = to_string(position + shift_size);
     }
     return;
@@ -3024,7 +3030,12 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
   
   // Special case: for INS we only want to shift positions that are past the current one.
   int32_t insert_pos = 0;
-  if (current_mut._type==INS) insert_pos=1;
+  if (current_mut._type==INS) {
+   insert_pos=1;
+    if (current_mut.entry_exists(INSERT_POSITION)) {
+      insert_pos = from_string<int32_t>(current_mut[INSERT_POSITION]);
+    }
+  }
   
   diff_entry_list_t muts = this->mutation_list();
   for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr++) {
