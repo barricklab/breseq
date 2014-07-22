@@ -1878,19 +1878,17 @@ int do_runfile(int argc, char *argv[])
 	options("runfile,r",        "Name of the run file to be output.", "commands");
   options("data-dir,g",       "Directory to searched for genome diff files.", "01_Data");
   options("downloads-dir,d",  "Downloads directory where read and reference files are located. Defaults to 02_Trimmed for read files if #=ADAPTSEQ tags are present. (Default = 02_Downloads; 02_Trimmed for read files if #=ADAPTSEQ tags are present for breseq; 02_Apply for reference files for breseq-apply)");
-  options("output-dir,o",     "Output directory for commands within the runfile. (Default = 03_Output for breseq; = 02_Trimmed for flexbar commands.)");
-  options("log-dir,l",        "Directory for error log file that captures the executable's stdout and sterr. (Default = 04_Logs for breseq; 04_Apply_Logs for breseq-applyj 04_Trim_Logs for flexbar*)");
+  options("output-dir,o",     "Output directory for commands within the runfile. (Default = 03_Output for breseq*; = 02_Trimmed for flexbar*.)");
+  options("log-dir,l",        "Directory for error log file that captures the executable's stdout and sterr. (Default = 04_Logs for breseq; 04_Apply_Logs for breseq-apply; 04_Trim_Logs for flexbar*)");
 
-  options.addUsage("\n");
-  options.addUsage("***Reminder: Create the error log directory before running TACC job.");
   options.addUsage("\n");
   options.addUsage("Examples:");
   options.addUsage("\tCommand: gdtools runfile -o 1B4_Mutated -l 1B4_Mutated_Errors 1B4.gd");
-  options.addUsage("\t  Output: breseq -o 1B4_Mutated -r NC_012660.1.gbk SRR172993.fastq >& 1B4_Mutated_Errors/1B4.errors.txt");
+  options.addUsage("\t Output: breseq -o 1B4_Mutated -r NC_012660.1.gbk SRR172993.fastq >& 1B4_Mutated_Errors/1B4.errors.txt");
   options.addUsage("\n");
   options.addUsage("\tCommand: gdtools runfile -d 02_Downloads -l 04_Errors -g 01_Data");
-  options.addUsage("\t  Output: breseq -o 1B4 -r 02_Downloads/NC_012660.1.gbk 02_Downloads/SRR172993.fastq >& 04_Errors/1B4.errors.txt");
-  options.addUsage("\t  Output: breseq -o ZDB111 -r 02_Downloads/REL606.5.gbk 02_Downloads/SRR098039.fastq >& 04_Errors/ZDB111.errors.txt");
+  options.addUsage("\t Output: breseq -o 1B4 -r 02_Downloads/NC_012660.1.gbk 02_Downloads/SRR172993.fastq >& 04_Errors/1B4.errors.txt");
+  options.addUsage("\t Output: breseq -o ZDB111 -r 02_Downloads/REL606.5.gbk 02_Downloads/SRR098039.fastq >& 04_Errors/ZDB111.errors.txt");
   options.processCommandArgs(argc, argv);
 
   //! Step: Confirm genome diff files have been input.
@@ -1900,7 +1898,7 @@ int do_runfile(int argc, char *argv[])
     for (size_t i = 0; i < n; ++i)
     file_names.push_back(options.getArgv(i));
   } else {
-    const string &data_dir = cString(options["data_dir"]).trim_ends_of('/');
+    const string &data_dir = cString(options["data-dir"]).trim_ends_of('/');
     if (ifstream(data_dir.c_str()).good()) {
       const string &cmd = cString("ls %s/*.gd", data_dir.c_str());
       SYSTEM_CAPTURE(back_inserter(file_names), cmd, true);
