@@ -167,6 +167,7 @@ const vector<string>gd_entry_type_lookup_table =
 const vector<string> gd_keys_with_ids = 
   make_vector<string>("before")("within");
   
+uint32_t cGenomeDiff::s_input_order_counter(0);  
 
 /*! Constructor.
  */
@@ -5510,7 +5511,10 @@ bool sort_gd_by_treatment_population_time(const cGenomeDiff& a, const cGenomeDif
   if (a.metadata.time != b.metadata.time)
     return (a.metadata.time < b.metadata.time); 
   // Clone
-  return ( a.metadata.clone < b.metadata.clone);
+  if (a.metadata.clone != b.metadata.clone)
+    return (a.metadata.clone < b.metadata.clone);
+  
+  return (a.metadata.input_order < b.metadata.input_order);
 }
 
 void cGenomeDiff::sort_gd_list_by_treatment_population_time(vector<cGenomeDiff>& genome_diffs)

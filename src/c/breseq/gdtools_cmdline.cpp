@@ -1872,14 +1872,14 @@ int do_runfile(int argc, char *argv[])
   ss << "Usage: gdtools RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> -g <genome diff data dir>\n";
   ss << "Usage: gdtools RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> <file1.gd file2.gd file3.gd ...>";
   AnyOption options(ss.str());
-  options("mode,m",             "Type of command file to generate. Valid options are: breseq, flexbar, flexbar-paired.", "breseq", "breseq-apply");
+  options("mode,m",           "Type of command file to generate. Valid options are: breseq, breseq-apply, flexbar, flexbar-paired, breseq-apply.", "breseq");
   options("executable,e",     "Alternative executable program to run.");
   options("options",          "Options to be passed to the executable. These will appear first in the command line.");
 	options("runfile,r",        "Name of the run file to be output.", "commands");
-  options("data_dir,g",       "Directory to searched for genome diff files.", "01_Data");
-  options("downloads_dir,d",  "Downloads directory where read and reference files are located. Defaults to 02_Trimmed for read files if #=ADAPTSEQ tags are present.", "02_Downloads");
-  options("output_dir,o",     "Output directory for commands within the runfile. (Default = 03_Output for breseq; = 02_Trimmed for flexbar commands.)");
-  options("log_dir,l",        "Directory for error log file that captures the executable's stdout and sterr. (Default = 04_Logs for breseq; 04_Trim_Logs for flexbar");
+  options("data-dir,g",       "Directory to searched for genome diff files.", "01_Data");
+  options("downloads-dir,d",  "Downloads directory where read and reference files are located. Defaults to 02_Trimmed for read files if #=ADAPTSEQ tags are present. (Default = 02_Downloads; 02_Trimmed for read files if #=ADAPTSEQ tags are present for breseq; 02_Apply for reference files for breseq-apply)");
+  options("output-dir,o",     "Output directory for commands within the runfile. (Default = 03_Output for breseq; = 02_Trimmed for flexbar commands.)");
+  options("log-dir,l",        "Directory for error log file that captures the executable's stdout and sterr. (Default = 04_Logs for breseq; 04_Apply_Logs for breseq-applyj 04_Trim_Logs for flexbar*)");
 
   options.addUsage("\n");
   options.addUsage("***Reminder: Create the error log directory before running TACC job.");
@@ -1920,6 +1920,7 @@ int do_runfile(int argc, char *argv[])
 	string runfile_path;
 	string output_dir;
 	string log_dir;
+	string download_dir;
 	if (options["mode"] == "breseq") {
     exe = "breseq";
 		runfile_path = "commands";
@@ -1928,8 +1929,8 @@ int do_runfile(int argc, char *argv[])
 	} else if (options["mode"] == "breseq-apply") {
     exe = "breseq";
 		runfile_path = "apply_commands";
-    output_dir = "06_Apply_Output";
-		log_dir = "07_Apply_Output";
+    output_dir = "03_Apply_Output";
+		log_dir = "04_Apply_Logs";
   } else if (options["mode"] == "flexbar") {
     exe = "flexbar";
 		runfile_path = "flexbar_commands";
@@ -1946,7 +1947,8 @@ int do_runfile(int argc, char *argv[])
     return -1;
   }
 
-  string download_dir = cString(options["downloads_dir"]).trim_ends_of('/');
+	download_dir = "02_Downloads";
+  download_dir = cString(download_dir).trim_ends_of('/');
 
   if (options.count("executable"))
     exe = options["executable"];
@@ -1954,11 +1956,11 @@ int do_runfile(int argc, char *argv[])
 	if (options.count("runfile"))
     runfile_path = options["runfile"];
 	
-	if (options.count("output_dir"))
-    output_dir = options["output_dir"];
+	if (options.count("output-dir"))
+    output_dir = options["output-dir"];
 	
-	if (options.count("log_dir"))
-    log_dir = options["log_dir"];
+	if (options.count("log-dir"))
+    log_dir = options["log-dir"];
 
   string name          = options["name"];
 
@@ -2045,7 +2047,7 @@ int do_runfile(int argc, char *argv[])
 			
 			//! Part 3: Reference argument path(s).
 			for (vector<string>::const_iterator ref_file_it=refs.begin(); ref_file_it != refs.end(); ref_file_it++) {  
-				ss << " -r " << download_dir << "/" << gd.get_title() << ".gff";
+				ss << " -r " << "02_Apply" << "/" << gd.get_title() << ".gff";
 			}
 			
 			//! Part 4: Read argument path(s).
