@@ -439,6 +439,8 @@ public:
   typedef string key_t; 
   typedef vector<string> list_t;
 
+  static uint32_t s_input_order_counter;
+  
   //!---- Variables ---- !//
 protected:  	
   string _filename;                   //!< File name associated with this diff.
@@ -451,7 +453,7 @@ public:
   //! Metadata kept in .gd files
   struct Metadata
   {
-    Metadata() : version("1.0"), time(-1.0) {}
+    Metadata() : version("1.0"), time(-1.0), input_order(s_input_order_counter++) {}
 
     string version;
     string title;
@@ -467,6 +469,7 @@ public:
     string population;
     double time;
     string clone;
+    uint32_t input_order;
   } metadata;
   
   
