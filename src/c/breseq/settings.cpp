@@ -33,7 +33,7 @@ namespace breseq
   const char* kBreseqAlignmentScoreBAMTag = "X5";
   const char* kBreseqBestAlignmentScoreBAMTag = "X6";
 
-  string Settings::output_divider("====================================================================================");
+  string Settings::output_divider("================================================================================");
   
 	void cReadFiles::Init(const vector<string>& read_file_names, bool sam_files)
 	{
