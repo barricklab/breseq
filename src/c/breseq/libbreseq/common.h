@@ -85,10 +85,10 @@ namespace breseq {
     (void)base_file;
     if (!condition)
     {
-      cerr << "!!!!!!!!!!!!!!!!!!!!!!!> FATAL ERROR <!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+      cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!> FATAL ERROR <!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
       if (message.length() > 0) cerr << message << endl;
       cerr << "FILE: " << file << "   LINE: " << line << endl;
-      cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+      cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
       assert(false);
     }
   }
@@ -98,12 +98,12 @@ namespace breseq {
     (void)base_file;
     if (!condition)
     {
-      cerr << "-----------------------> WARNING <-----------------------" << endl;
+      cerr << "----------------------------------> WARNING <-----------------------------------" << endl;
       if (message.length() > 0) cerr << message << endl;
       if (file && base_file && line) {
         cerr << "FILE: " << file << "   LINE: " << line << endl;
       }
-      cerr << "---------------------------------------------------------" << endl;
+      cerr << "--------------------------------------------------------------------------------" << endl;
     }
   }
   

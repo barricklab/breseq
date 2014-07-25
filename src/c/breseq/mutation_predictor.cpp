@@ -487,6 +487,7 @@ namespace breseq {
     (void)summary;
     bool verbose = false;
     
+    // Prepare the lists
     for(diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++) //JC
 		{
 			cDiffEntry& j = **it;
@@ -520,8 +521,11 @@ namespace breseq {
     // This sorts by seq_id matched then by position of unique coordinate side
 		jc.sort(MutationPredictor::sort_by_hybrid);
     
-    for(diff_entry_list_t::iterator jc1_it = jc.begin(); jc1_it != jc.end(); jc1_it++) //JC1
+    // @JEB: Notice that we don't advance the iterator here. This happens at the end of the JC1 loop 
+    // (which is never skipped) because we sometimes delete entries in ways that are hard for list iterators to deal with
+    for(diff_entry_list_t::iterator jc1_it = jc.begin(); jc1_it != jc.end(); ) //JC1
 		{
+      bool jc1_erased = false;
 			cDiffEntry& j1 = **jc1_it;
       
 			// Compile a list of the next possibilities within a certain length of bases
@@ -557,6 +561,9 @@ namespace breseq {
 			// because sometimes a failed junction will be in between the successful junctions
       for(size_t i=0; i<j2_list.size(); i++)
 			{
+        // we may have already used this j1
+        if (jc1_erased) break;
+        
 				cDiffEntry& j2 = *(j2_list[i]);
         
         if (verbose) 
@@ -587,10 +594,12 @@ namespace breseq {
 				int32_t is2_strand = - (n(j2[j2["_is_interval"] + "_strand"]) * n(j2["_" + j2["_is_interval"] + "_is_strand"]) * n(j2[j2["_unique_interval"] + "_strand"]));
         
 				// Remove these predictions from the list
-				jc1_it = jc.erase(jc1_it); // iterator is now past element erased
-        jc1_it--;                  // and must be moved back because loop will move forward
+        // it's important to remove jc1_it LAST so that we don't accidentally invalidate
+        // this iterator by erasing what it points to again with the it_delete_list_2 call
 				jc.erase(it_delete_list_2[i]);
-        
+        jc1_it = jc.erase(jc1_it); // iterator is now past element erased
+        jc1_erased = true; // this tells us to not increment the list
+
 				// Create the mutation, with evidence
         
         if (verbose) {
@@ -1032,6 +1041,9 @@ namespace breseq {
 				gd.add(mut);
 				break; // next JC1
 			}
+      
+      // because this is a list, we only advance if we didn't delete the current entry
+      if (!jc1_erased) jc1_it++;
 		}
 
   }
@@ -1484,13 +1496,13 @@ namespace breseq {
     for(diff_entry_list_t::iterator it = test_muts.begin(); it != test_muts.end(); it++) {
       cDiffEntry& mut = **it;
       if (mut._type == INS) {
-        int32_t size = mut["new_seq"].size();
         
         // This field only exists when manually added to split an insertion into separate events 
         // or in polymorphism mode when a mutation may be split into each inserted base.
         // This code may inappropriately shift the position in those cases.
-        if (mut.entry_exists(INSERT_POSITION)) continue;
+        if (mut.entry_exists(INSERT_POSITION) || settings.polymorphism_prediction) continue;
         
+        int32_t size = mut["new_seq"].size();
         int32_t position = from_string<int32_t>(mut["position"]);
         string mutation_sequence = mut["new_seq"];
         uint32_t repeat_unit_size;
@@ -1532,6 +1544,12 @@ namespace breseq {
       }
       
       else if (mut._type == DEL) {
+        
+        // If we are in polymorphism mode, don't shift the coordinates
+        // because we can shift two adjacent (but separately) deleted bases
+        // onto the same position!
+        if (settings.polymorphism_prediction) continue;
+        
         int32_t size = from_string<int32_t>(mut["size"]);
         
         int32_t position = from_string<int32_t>(mut["position"]);
@@ -2487,6 +2505,12 @@ namespace breseq {
           continue; 
         }
         
+        // Don't count polymorphisms - could make it an option to partially count them
+        if (mut.entry_exists(FREQUENCY) && from_string<double>(mut[FREQUENCY]) != 1.0) {
+          if (verbose) cerr << "Skipping polymorphic: " << mut << endl;
+          continue;
+        }
+          
         if (verbose) cerr << "Counting: " << mut << endl;
 
         
