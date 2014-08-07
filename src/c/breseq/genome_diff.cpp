@@ -519,6 +519,7 @@ int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info)
     case INS: return (*this)[NEW_SEQ].length(); break;
     case DEL: return -(from_string<uint32_t>((*this)[SIZE])); break;
     case AMP: return from_string<uint32_t>((*this)[SIZE]) * (from_string<uint32_t>((*this)["new_copy_number"]) - 1); break;
+    case INV: return 0; break;
     case MASK: return 0; break;
       
     case MOB:
@@ -549,6 +550,7 @@ int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info)
       return  new_size - size;
       break;
     }
+      
     default:
       ASSERT(false, "Unable to calculate mutation size change.");
       return UNDEFINED_INT32;
@@ -565,14 +567,46 @@ int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info)
 //      insert_pos = 1 (meaning after the base referred to in shift_offset)
 //      shift_size = number of bases inserted
 //      shift_replace_size = 0 (no bases were replaced -- important for placing mutation within other mutations that have a size
+//
+//  inversion is a special case that flips positions, in this case it is an inversion from shift_offset to shift_offset + shift_size - 1
 
-void cDiffEntry::mutation_shift_position(const string& seq_id, int32_t shift_offset, int32_t insert_pos, int32_t shift_size, int32_t shift_replace_size)
+void cDiffEntry::mutation_shift_position(const string& seq_id, int32_t shift_offset, int32_t insert_pos, int32_t shift_size, int32_t shift_replace_size, bool inversion)
 {    
   // negative shift_size means deletion; positive shift_size means insertion
   if (shift_size == 0) return;
   if (seq_id != (*this)[SEQ_ID]) return;
   
   int32_t position = from_string<int32_t>((*this)[POSITION]);
+  
+  // Flip things that are totally contained
+  // Error if something overlaps the edges
+  // shift_replace_size has the size of the inversion (shift_size = 0)
+  if (inversion) {
+    
+    int32_t size = 0;
+    if (entry_exists(SIZE))
+      size = from_string<int32_t>((*this)[SIZE]);
+    
+    // Does not overlap
+    if (position + size < shift_offset)
+      return;
+    else if (position > shift_offset + shift_replace_size - 1)
+      return;
+      
+    // Contained within, invert coordinates
+    else if ((position >= shift_offset) && (position + size - 1 <= shift_offset + shift_replace_size - 1)) {
+      
+      (*this)[POSITION] = to_string<int32_t>(shift_offset + shift_replace_size - 1 - (position + size - 1 - shift_offset));
+      return;
+    }
+      
+    // Overlaps end
+    else {
+      ERROR("Cannot process mutation:\n" + this->as_string() + "\nthat overlaps the boundary of an inversion from " + to_string(shift_offset)  + " to " + to_string(shift_offset + shift_replace_size - 1) + "\n");
+    }
+    
+    return;
+  }
   
   // Handle simple case and return
   if (!entry_exists(SIZE)) {
@@ -623,7 +657,7 @@ void cDiffEntry::mutation_shift_position(const string& seq_id, int32_t shift_off
       final_start = original_start + shift_size;
     }
     
-    // Insertion case, increase size if the entire event (including replace size) is within the current event
+    // Insertion case, increase size of the entire event (including replace size) is within the current event
   } else {
   
     if (insert_pos == 0) {
@@ -1469,7 +1503,7 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
               
               // check coords to be sure it actually is 'within'
               valid_start = within_position + 1; // new bases will start after this position
-              valid_end = valid_start + (*within_de)[NEW_SEQ].size();
+              valid_end = valid_start + (*within_de)[NEW_SEQ].size()-1;
               
             } else {
               parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Field 'within' provided for an entry that is not of AMP, MOB, or INS type.", true);
@@ -3041,9 +3075,6 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
   diff_entry_list_t muts = this->mutation_list();
   for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr++) {
     cDiffEntry& mut = **itr;
-    
-    if (mut._type == INV)
-      ERROR("shift_positions() cannot handle inversions yet!");
   
     // Mutations don't shift themselves
     if (mut == current_mut) continue;
@@ -3093,19 +3124,19 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
             special_delta = 0; 
           }
           
-        } else if (current_mut._type == INS) {
+        } else if ( current_mut._type == INS ) {
           // Inside an INS means we don't shift (copy_index not provided)
           special_delta = 0;
         }
         
         // -1 used as offset to force update of position because we are within it...
-        mut.mutation_shift_position(current_mut[SEQ_ID], -1, 0, special_delta, 0);
+        mut.mutation_shift_position(current_mut[SEQ_ID], -1, 0, special_delta, 0, false);
       }  
     }
     
     // Normal behavior -- offset mutations later in same reference sequence
     if (!was_nested) {
-      mut.mutation_shift_position(current_mut[SEQ_ID], offset, insert_pos, delta, replace_size);
+      mut.mutation_shift_position(current_mut[SEQ_ID], offset, insert_pos, delta, replace_size, current_mut._type == INV);
     }
   }
 }
@@ -3425,9 +3456,23 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         
       case INV:
       {
-        count_INV++;
+        const uint32_t& size = from_string<uint32_t>(mut[SIZE]);
+
+        replace_seq_id = mut[SEQ_ID];
+        replace_start = position;
+        replace_end = position + size - 1;
+        replace_seq = new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end);
         
-        WARN("INV: mutation type not handled yet");
+        string inv_seq = reverse_complement(replace_seq);
+
+        applied_seq_id = mut[SEQ_ID];
+        applied_start = position;
+        applied_end = position + inv_seq.size() - 1;
+        applied_seq = inv_seq;
+        
+        count_INV++;
+        new_ref_seq_info.invert_sequence_1(mut[SEQ_ID], position, position + size - 1, (to_string(mut._type) + " " + mut._id));
+        
       } break;
         
       case MOB:
