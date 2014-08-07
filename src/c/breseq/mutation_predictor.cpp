@@ -1654,6 +1654,7 @@ namespace breseq {
       mut["size"] = mut["repeat_length"];
       
       // delete all the repeat information...
+      mut.erase(NEW_SEQ);
       mut.erase("repeat_length");
       mut.erase("repeat_sequence");
       mut.erase("repeat_new_copies");

@@ -240,6 +240,16 @@ namespace breseq {
         //Notify the user of the action (cont.)
         if(verbose) cout << endl;
       }
+    
+      // Adds append_str to all important IDs and gene names
+      void append_to_names_and_ids(const string& append_str)
+      {
+        (*this)["name"] += append_str;
+        (*this)["accession"] += append_str;
+        m_gff_attributes["Alias"][0] += append_str;
+        m_gff_attributes["ID"][0] += append_str;
+        m_gff_attributes["Name"][0] += append_str;
+      }
       
       // Read GenBank coords
       void ReadGenBankCoords(string& s, ifstream& in);
@@ -352,6 +362,9 @@ namespace breseq {
       
       // Insert Input AFTER Position
       void insert_sequence_1(int32_t pos_1, const string &insertion_seq, string mut_type="", bool verbose=false);
+    
+      // Invert sequence between two positions
+      void invert_sequence_1(int32_t start_1, int32_t end_1, string mut_type="", bool verbose=false);
     
       // Repeat Feature at Position
       void repeat_feature_1(int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& orig_ref_seq_info, string& orig_seq_id, int8_t strand, cLocation &repeated_region, bool verbose = false);
@@ -683,6 +696,11 @@ namespace breseq {
     void insert_sequence_1(const string& seq_id, int32_t pos, const string &insertion_seq, string mut_type="", bool verbose=false)
     {
       (*this)[seq_id].insert_sequence_1(pos, insertion_seq, mut_type, verbose);
+    }
+    
+    void invert_sequence_1(const string& seq_id, int32_t start_1, int32_t end_1, string mut_type="", bool verbose=false)
+    {
+      (*this)[seq_id].invert_sequence_1(start_1, end_1, mut_type, verbose);
     }
     
     void repeat_feature_1(const string& seq_id, int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& orig_ref_seq_info, string& orig_seq_id, int8_t strand, cLocation &repeated_region, bool verbose = false)

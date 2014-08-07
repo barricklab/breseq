@@ -273,6 +273,83 @@ namespace breseq {
     }
   }
   
+  // Inverts the sequence from start_1 to end_1
+  // Any features overlapping the ends are split into two and pseudo'ed
+  // 
+  // Successfully checks all three feature lists.  m_features, m_genes, and m_repeats.
+  void cAnnotatedSequence::invert_sequence_1(int32_t start_1, int32_t end_1, string mut_type, bool verbose)
+  {
+    (void) verbose;
+    (void) mut_type;
+    
+    string inv_seq = reverse_complement(get_sequence_1(start_1, end_1));
+    m_fasta_sequence.m_sequence.replace(start_1-1, end_1-start_1+1, inv_seq);
+
+  
+    
+    //Iterate through all the features
+    for (list<cSequenceFeaturePtr>::iterator it = m_features.begin(); it != m_features.end(); it++)
+    {
+      //The current feature we're looking at
+      cSequenceFeature& feat = **it;
+            
+      // Is the feature contained in the inversion
+      if ((feat.m_location.get_start_1() >= start_1) && (feat.m_location.get_end_1() <= end_1)) {
+        
+        // Flip the feature's coords
+        int32_t original_start_1 = feat.m_location.get_start_1();
+        int32_t original_end_1 = feat.m_location.get_end_1();
+        feat.m_location.set_start_1(start_1 +  (end_1 - original_end_1) );
+        feat.m_location.set_end_1( start_1 + (end_1 - original_start_1) );
+        feat.m_location.set_strand(-feat.m_location.get_strand());
+      }
+      
+      // Only the end of the feature is inside the inversion
+      else if ((feat.m_location.get_end_1() >= start_1) && (feat.m_location.get_end_1() <= end_1))
+      {
+        // Create new feature copy
+        cSequenceFeaturePtr new_feat(new cSequenceFeature(feat));
+        
+        // split feature: modify name, end, and mark as pseudo
+        feat.append_to_names_and_ids("_1");
+        feat.m_location.set_end_1(start_1-1);
+        feat.flag_pseudo(verbose);
+        
+        // Modify new feature
+        new_feat->append_to_names_and_ids("_2");
+        new_feat->m_location.set_start_1( end_1 - (new_feat->m_location.get_end_1() - start_1) );
+        new_feat->m_location.set_end_1(end_1);
+        new_feat->m_location.set_strand(-new_feat->m_location.get_strand());
+        new_feat->flag_pseudo(verbose);
+
+        feature_push_back(new_feat);
+      }
+      // Only the start of the feature is inside the inversion
+      else if ((feat.m_location.get_start_1() >= start_1) && (feat.m_location.get_start_1() <= end_1))
+      {
+        // Create new feature copy
+        cSequenceFeaturePtr new_feat(new cSequenceFeature(feat));
+        
+        // split feature: modify name, end, and mark as pseudo
+        feat.append_to_names_and_ids("_2");
+        feat.m_location.set_start_1(end_1+1);
+        feat.flag_pseudo(verbose);
+        
+        // Modify new feature
+        new_feat->append_to_names_and_ids("_1");
+        new_feat->m_location.set_end_1( start_1 + (end_1 - new_feat->m_location.get_start_1()) );
+        new_feat->m_location.set_start_1( start_1 );
+        new_feat->m_location.set_strand(-new_feat->m_location.get_strand());
+        new_feat->flag_pseudo(verbose);
+
+        feature_push_back(new_feat);
+      }
+    }
+  
+  // Features are all out of order now...
+    this->sort_features();
+  }
+  
   // Repeat features within the given interval, on the given strand,
   // starting at the specified position (not after it). The sequence 
   // for these features must already have been inserted.
