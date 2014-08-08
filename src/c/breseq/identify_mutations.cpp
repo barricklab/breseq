@@ -39,6 +39,8 @@ void identify_mutations(
 								double mutation_cutoff,
 								double polymorphism_cutoff,
 								double polymorphism_frequency_cutoff,
+                double polymorphism_precision_decimal,
+                uint32_t polymorphism_precision_places,
 								bool print_per_position_file
  ) {
                                                                                             
@@ -53,6 +55,8 @@ void identify_mutations(
 								mutation_cutoff,
 								polymorphism_cutoff,
 								polymorphism_frequency_cutoff,
+                polymorphism_precision_decimal,
+                polymorphism_precision_places,
 								print_per_position_file
 							);
 	imp.do_pileup(settings.call_mutations_seq_id_set());
@@ -74,6 +78,8 @@ identify_mutations_pileup::identify_mutations_pileup(
 															double mutation_cutoff,
 															double polymorphism_cutoff,
 															double polymorphism_frequency_cutoff,
+                              double polymorphism_precision_decimal,
+                              uint32_t polymorphism_precision_places,
 															bool print_per_position_file
                                                             )
 : pileup_base(bam, fasta)
@@ -84,6 +90,8 @@ identify_mutations_pileup::identify_mutations_pileup(
 , _mutation_cutoff(mutation_cutoff)
 , _polymorphism_cutoff(polymorphism_cutoff)
 , _polymorphism_frequency_cutoff(polymorphism_frequency_cutoff)
+, _polymorphism_precision_decimal(polymorphism_precision_decimal)
+, _polymorphism_precision_places(polymorphism_precision_places)
 , _log10_ref_length(0)
 , _snp_caller("haploid", summary.sequence_conversion.total_reference_sequence_length)
 , _this_deletion_reaches_seed_value(false)
@@ -503,16 +511,16 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 			if (best_base_char == ref_base_char) {
         mut[REF_BASE] = best_base_char;
         mut[NEW_BASE] = second_best_base_char;
-        mut[FREQUENCY] = formatted_double(1 - ppred.frequency, kPolymorphismFrequencyPrecision).to_string();
+        mut[FREQUENCY] = formatted_double(1 - ppred.frequency, _polymorphism_precision_places, true).to_string();
       } else if (second_best_base_char == ref_base_char) {
         mut[REF_BASE] = second_best_base_char;
         mut[NEW_BASE] = best_base_char;
-        mut[FREQUENCY] = formatted_double(ppred.frequency, kPolymorphismFrequencyPrecision).to_string();
+        mut[FREQUENCY] = formatted_double(ppred.frequency, _polymorphism_precision_places, true).to_string();
       } else {
         cerr << "Warning: polymorphism between two bases not including reference base found at position " << position << endl;
         mut[REF_BASE] = best_base_char;
         mut[NEW_BASE] = second_best_base_char;
-        mut[FREQUENCY] = formatted_double(1 - ppred.frequency, kPolymorphismFrequencyPrecision).to_string();
+        mut[FREQUENCY] = formatted_double(1 - ppred.frequency, _polymorphism_precision_places, true).to_string();
         mut[ERROR] = "polymorphic_without_reference_base";
       }
       
@@ -1006,13 +1014,74 @@ polymorphism_prediction identify_mutations_pileup::predict_mixed_base(base_char 
   
   return p;
 }
+ 
   
+double identify_mutations_pileup::slope_at_percentage_best_base(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata, const double guess, const double precision, double& middle_point_log10_likelihood)  
+{
+    
+  double point_1 = max(guess * (1 - precision), 0.0);  
+  double point_2 = min(guess * (1 + precision), 1.0);
+  
+  double point_1_log10_likelihood = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, point_1);
+  double point_2_log10_likelihood = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, point_2);
+  
+  middle_point_log10_likelihood = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, guess);
 
+  // Check for local minimum!
+  if ( (middle_point_log10_likelihood < point_1_log10_likelihood) && (middle_point_log10_likelihood < point_2_log10_likelihood) ) {
+    return 0;
+  }
+  
+  return (point_2_log10_likelihood - point_1_log10_likelihood) / (point_2 - point_1);
+}
 
 /*! Find the best fraction for the best base at a polymorphic site.
  */
+  
 pair<double,double> identify_mutations_pileup::best_two_base_model_log10_likelihood(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata)
 {	
+  double current_upper_pr_first_base = 1.0;
+  double current_lower_pr_first_base = 0.0;
+  double current_upper_pr_first_base_log10_likelihood = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, current_upper_pr_first_base);
+  double current_lower_pr_first_base_log10_likelihood = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, current_lower_pr_first_base);
+  
+  // precision is a fraction of the value...
+  while (current_upper_pr_first_base - current_lower_pr_first_base > (current_upper_pr_first_base + current_lower_pr_first_base) / 2 * _polymorphism_precision_decimal) {
+    
+    double current_middle_pr_first_base = (current_upper_pr_first_base + current_lower_pr_first_base) / 2;
+    
+    double current_middle_pr_first_base_log10_likelihood;
+    double middle_slope = slope_at_percentage_best_base(best_base_char, second_best_base_char, pdata, current_middle_pr_first_base, _polymorphism_precision_decimal, current_middle_pr_first_base_log10_likelihood);
+    
+    // Slope is set to zero if the tested point is better than the ones 
+    // on either side, when calculating the slope.
+    if ( middle_slope == 0) {
+      return make_pair(current_middle_pr_first_base, current_middle_pr_first_base_log10_likelihood);
+    
+    } else if ( middle_slope < 0) {
+      
+      current_upper_pr_first_base = current_middle_pr_first_base;
+      current_upper_pr_first_base_log10_likelihood = current_middle_pr_first_base_log10_likelihood;
+      
+    } else {
+      
+      current_lower_pr_first_base = current_middle_pr_first_base;
+      current_lower_pr_first_base_log10_likelihood = current_middle_pr_first_base_log10_likelihood;
+    }
+  }  
+  
+  if (current_lower_pr_first_base_log10_likelihood > current_upper_pr_first_base_log10_likelihood) {
+
+    return make_pair(current_lower_pr_first_base, current_lower_pr_first_base_log10_likelihood);
+  }
+  
+  return make_pair(current_upper_pr_first_base, current_upper_pr_first_base_log10_likelihood);
+}
+  
+/*
+pair<double,double> identify_mutations_pileup::best_two_base_model_log10_likelihood(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata)
+{	
+  
 	double cur_pr_first_base = 1;
 	double cur_log_pr = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, cur_pr_first_base);
 
@@ -1033,6 +1102,7 @@ pair<double,double> identify_mutations_pileup::best_two_base_model_log10_likelih
 	
 	return make_pair(last_pr_first_base, last_log_pr);
 }
+ */
 
 /*! Calculate the likelihood of a mixture model of two bases leading to the observed read bases.
  */

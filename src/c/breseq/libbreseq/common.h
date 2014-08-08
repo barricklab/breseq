@@ -593,20 +593,27 @@ namespace breseq {
 	{
 		return to_string(t.first) + '/' + to_string(t.second);
 	}
-	inline string to_string (const double& t, const uint32_t precision=1)
+	inline string to_string (const double& t, const uint32_t precision=1, const bool use_scientific=false)
 	{
 		if(isnan(t)) {
 			return "NA";
 		} else {
 			ostringstream interpreter;
-			interpreter << fixed << setprecision(precision) << t;
+			interpreter << (use_scientific ? scientific : fixed) << setprecision(precision) << t;
       
       // Not a fan of negative zeros...
       if (interpreter.str().substr(0,3) == "-0.")
       {
         interpreter.str().replace(0,3, "0.");
       }
-			return interpreter.str();
+      string return_str = interpreter.str();
+      
+      // Some C++ implementations may use 3 digits for the scientific notation exponent part
+      if (use_scientific && (return_str[return_str.size()-3] == '0' )) {
+        return_str.erase(return_str.size()-3, 1);
+      }
+      
+			return return_str;
 		}
 	}
 	inline string to_string (time_t& t)
@@ -1277,15 +1284,16 @@ struct formatted_double {
   
   double  _value;     //actual value
   uint8_t _precision; //number of digits past zero to print
+  bool _use_scientific;
   
   //! Constructor.
-  formatted_double(const double v, const uint8_t p=1)
-  : _value(v), _precision(p) {}
+  formatted_double(const double v, const uint8_t p=1, const bool use_scientific=false)
+  : _value(v), _precision(p), _use_scientific(use_scientific) {}
   
   virtual ~formatted_double() { }
   
   string to_string() const {
-    return breseq::to_string(_value, _precision);
+    return breseq::to_string(_value, _precision, _use_scientific);
   }
   
 };

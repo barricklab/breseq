@@ -300,8 +300,8 @@ namespace breseq {
     
     uint32_t count(
                    const string& seq_id, 
-                   const uint32_t start, 
-                   const uint32_t end, 
+                   const int32_t start, 
+                   const int32_t end, 
                    const map<string,bool> ignore_read_names, 
                    map<string,bool>& counted_read_names
                    );
@@ -310,8 +310,8 @@ namespace breseq {
     
   protected:
     uint32_t _count;
-    uint32_t _start;
-    uint32_t _end;
+    int32_t _start;
+    int32_t _end;
     map<string,bool> _ignore_read_names, _counted_read_names;
     bool _verbose;
   };

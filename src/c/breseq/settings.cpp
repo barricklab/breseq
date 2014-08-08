@@ -418,6 +418,8 @@ namespace breseq
       this->polymorphism_bias_p_value_cutoff = 0.001;
       this->polymorphism_minimum_new_coverage_each_strand = 2;
       this->no_indel_polymorphisms = false;
+      this->polymorphism_precision_decimal = 0.000001;
+      this->polymorphism_precision_places = 6;
       
       this->minimum_alignment_resolution_pos_hash_score = 2;
       this->junction_minimum_side_match = 6;
@@ -435,6 +437,8 @@ namespace breseq
       this->polymorphism_bias_p_value_cutoff = 0.05;
       this->polymorphism_minimum_new_coverage_each_strand = 2;
       this->no_indel_polymorphisms = false;
+      this->polymorphism_precision_decimal = 0.001;
+      this->polymorphism_precision_places = 3;
       
       this->minimum_alignment_resolution_pos_hash_score = 3;
       this->junction_minimum_side_match = 1;

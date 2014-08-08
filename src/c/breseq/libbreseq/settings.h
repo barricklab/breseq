@@ -339,6 +339,9 @@ namespace breseq
 		int32_t polymorphism_minimum_new_coverage_each_strand;  // Default = 1
 		uint32_t polymorphism_reject_homopolymer_length;        // Default = 0 (OFF)
 		bool no_indel_polymorphisms;                            // Default = false
+    double polymorphism_precision_decimal;                  // Default = 0.001 for mixed base | 0.0000000001 for polymorphism
+    uint32_t polymorphism_precision_places;                   // Default = 3 for mixed base | 10 for polymorphism
+
 		
 		//! Settings: Copy Number Variation
     uint32_t copy_number_variation_tile_size;
