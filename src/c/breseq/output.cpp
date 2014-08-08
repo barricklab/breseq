@@ -2133,13 +2133,17 @@ string Html_Mutation_Table_String::freq_to_string(const string& freq, bool multi
   stringstream ss;
   if (from_string<double>(freq) == 1.0 || freq.empty())
     ss << "100%";
-
-  else {
+  
+  else { // want to show at minimum: one decimal place and two significant figures
     double conv_freq = from_string<double>(freq) * 100;
-    ss.width(4);
+
+    double first_digit_magnitude = ceil(-log(conv_freq) / log(10));
+    
+    //ss.width(4);
     ss.setf(ios_base::fixed);
-    ss.precision(1);
+    ss.precision( max(1, static_cast<int32_t>(first_digit_magnitude)+1));
     ss << conv_freq << "%";
+      
   }
   return ss.str(); 
 }

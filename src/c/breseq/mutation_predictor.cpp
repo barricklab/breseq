@@ -993,13 +993,13 @@ namespace breseq {
           double frequency;
           if (d1 && d2) {
             frequency = (c1 + c2) / (c1 + (a1 + b1)/d1 + c2 + (a2 + b2)/d2);
-            mut[FREQUENCY] = to_string(frequency, kPolymorphismFrequencyPrecision); 
+            mut[FREQUENCY] = to_string(frequency, settings.polymorphism_precision_places); 
           } else if (d1) {
             frequency = (c2) / (c2 + (a2 + b2)/d2);
-            mut[FREQUENCY] = to_string(frequency, kPolymorphismFrequencyPrecision);           
+            mut[FREQUENCY] = to_string(frequency, settings.polymorphism_precision_places);           
           } else if (d2) {
             frequency = (c1) / (c1 + (a1 + b1)/d1);
-            mut[FREQUENCY] = to_string(frequency, kPolymorphismFrequencyPrecision); 
+            mut[FREQUENCY] = to_string(frequency, settings.polymorphism_precision_places); 
           } else {
             // Can't calculate a frequency if no sides of the junction fall in unique sequence
             mut[FREQUENCY] = "NA";          

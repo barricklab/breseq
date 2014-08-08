@@ -1716,7 +1716,7 @@ cDiffEntry junction_to_diff_entry(
   ("total_non_overlap_reads", to_string(test_info.total_non_overlap_reads))
   ("pos_hash_score", to_string(test_info.pos_hash_score))
   ("max_pos_hash_score", to_string(test_info.max_pos_hash_score))
-  ("neg_log10_pos_hash_p_value", test_info.neg_log10_pos_hash_p_value == -1 ? "NT" : to_string(test_info.neg_log10_pos_hash_p_value))
+  ("neg_log10_pos_hash_p_value", test_info.neg_log10_pos_hash_p_value == -1 ? "NT" : to_string(test_info.neg_log10_pos_hash_p_value, 1, false))
   ("side_1_continuation", to_string<uint32_t>(test_info.side_1_continuation))
   ("side_2_continuation", to_string<uint32_t>(test_info.side_2_continuation))
   ;
@@ -2027,7 +2027,7 @@ void  assign_one_junction_read_counts(
     j[NEW_JUNCTION_FREQUENCY] = "NA";  
   } else {
     double new_junction_frequency_value = c /(c + ((a+b)/d) );
-    j[NEW_JUNCTION_FREQUENCY] = to_string(new_junction_frequency_value, kPolymorphismFrequencyPrecision);
+    j[NEW_JUNCTION_FREQUENCY] = to_string(new_junction_frequency_value, settings.polymorphism_precision_places, true);
   }
   j[FREQUENCY] = j[NEW_JUNCTION_FREQUENCY];
   
@@ -2138,8 +2138,8 @@ void  assign_junction_read_coverage(
   
 uint32_t junction_read_counter::count(
                                       const string& seq_id, 
-                                      const uint32_t start, 
-                                      const uint32_t end, 
+                                      const int32_t start, 
+                                      const int32_t end, 
                                       const map<string,bool> ignore_read_names, 
                                       map<string,bool>& counted_read_names
                                       )
@@ -2152,6 +2152,12 @@ uint32_t junction_read_counter::count(
   _count = 0;
   _start = start;
   _end = end;
+  
+  // it's possible that we will be sent negative values (by design)
+  if (_start < 1) {
+    return _count;
+  }
+  
     
   // The reads we overlap need to overlap both the start and the end to count.
   // We can retrieve them all by extracting things that overlap the start 
@@ -2208,7 +2214,7 @@ void junction_read_counter::fetch_callback ( const alignment_wrapper& a )
 
   if (_verbose) cout << "  " << q_start << "-" << q_end << "  " << _start << "-" << _end;
   
-  if ((q_start <= _start) && (q_end >= _end)) {
+  if ((static_cast<int32_t>(q_start) <= _start) && (static_cast<int32_t>(q_end) >= _end)) {
     if (_verbose) cout << "  COUNTED" << endl;
     _count++;
   } else {

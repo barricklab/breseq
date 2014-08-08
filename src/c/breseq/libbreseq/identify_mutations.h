@@ -29,7 +29,6 @@ using namespace std;
 
 namespace breseq {
 
-  static uint8_t kPolymorphismFrequencyPrecision = 4; 
   static uint8_t kMutationQualityPrecision = 1; 
   
 	/*! Calculate errors in the given BAM file based on reference FAI files.
@@ -51,6 +50,8 @@ namespace breseq {
 													double mutation_cutoff,
                           double polymorphism_cutoff,
                           double polymorphism_frequency_cutoff,
+                          double polymorphism_precision_decimal,
+                          uint32_t polymorphism_precision_places,
                           bool print_per_position_file
                           );
 	
@@ -245,6 +246,8 @@ namespace breseq {
 															double mutation_cutoff,
                               double polymorphism_cutoff,
                               double polymorphism_frequency_cutoff,
+                              double polymorphism_precision_decimal,
+                              uint32_t polymorphism_precision_places,                              
                               bool print_per_position_file
                             );
 				
@@ -277,6 +280,9 @@ namespace breseq {
     //! Predict whether there is a mixed base.
     polymorphism_prediction predict_mixed_base(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata );
     
+    //! Helper function
+    double slope_at_percentage_best_base(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata, const double guess, const double precision, double& middle_point_log10_likelihood); 
+    
 		//! Find best mixture of two bases and likelihood of producing observed read bases.
     pair<double,double> best_two_base_model_log10_likelihood(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata);
 
@@ -291,7 +297,10 @@ namespace breseq {
 		double _mutation_cutoff; //!< log10 e-value cutoff value for mutation predictions.
     double _polymorphism_cutoff; //!< log10 e-value cutoff for predicted polymorphisms.
     double _polymorphism_frequency_cutoff; //!< Frequency cutoff for predicted polymorphisms.
+    double _polymorphism_precision_decimal; //!< Precision for estimating polymorphism models
+    uint32_t _polymorphism_precision_places; //!< Precision for writing out polymorphism values
 
+    
     //! Settings calculated during initialization
 		double _log10_ref_length; //!< log10 of the total reference sequence.
     

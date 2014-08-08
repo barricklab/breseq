@@ -4461,14 +4461,14 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
         // In this case, we take the base after.
         
         bool before_base = (pos != 0);
-        ref = before_base ? ref_seq_info.get_sequence_1(mut[SEQ_ID], pos, pos) : ref_seq_info.get_sequence_1(mut[SEQ_ID], pos+1, pos+1);
+        if (!before_base) pos++;
+        ref = ref_seq_info.get_sequence_1(mut[SEQ_ID], pos, pos);
 
         // Correct position of first base shown, if necessary
-        if (before_base) pos--;
         
         alt = before_base ? ref + mut[NEW_SEQ] : mut[NEW_SEQ] + ref;
         
-        // Carry forward qulity from related RA evidence
+        // Carry forward quality from related RA evidence
         // @JEB should do something with multiple evidence
         diff_entry_list_t ev = mutation_evidence_list(mut);
         if (ev.size() == 1) 
