@@ -895,7 +895,6 @@ polymorphism_prediction identify_mutations_pileup::predict_polymorphism(base_cha
     }
   }
   
-  
 	//## Maximum likelihood of observing alignment if sequenced bases were a mixture of the top two bases  
   pair<double,double> best_two_base_model = best_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata);
   double max_likelihood_fr_first_base = best_two_base_model.first;
@@ -979,7 +978,9 @@ polymorphism_prediction identify_mutations_pileup::predict_mixed_base(base_char 
   
   // Unlike full polymorphism prediction, we test just the raw frequency of the two bases
   // and do not check for bias later.
-  pair<double,double> best_two_base_model = best_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata);
+  
+  // This would calculate the true best frequency -- slower, but more accurate
+  // pair<double,double> best_two_base_model = best_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata);
   
   double max_likelihood_fr_first_base = static_cast<double>(best_base_strand_hash[0] + best_base_strand_hash[1]) 
     / static_cast<double>(best_base_strand_hash[0] + best_base_strand_hash[1] + second_best_base_strand_hash[0] + second_best_base_strand_hash[1]);
@@ -1018,7 +1019,7 @@ polymorphism_prediction identify_mutations_pileup::predict_mixed_base(base_char 
   
 double identify_mutations_pileup::slope_at_percentage_best_base(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata, const double guess, const double precision, double& middle_point_log10_likelihood)  
 {
-    
+  // precision is a fraction of the value
   double point_1 = max(guess * (1 - precision), 0.0);  
   double point_2 = min(guess * (1 + precision), 1.0);
   
@@ -1040,13 +1041,18 @@ double identify_mutations_pileup::slope_at_percentage_best_base(base_char best_b
   
 pair<double,double> identify_mutations_pileup::best_two_base_model_log10_likelihood(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata)
 {	
+  uint32_t iterations = 0;
   double current_upper_pr_first_base = 1.0;
   double current_lower_pr_first_base = 0.0;
+  
   double current_upper_pr_first_base_log10_likelihood = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, current_upper_pr_first_base);
   double current_lower_pr_first_base_log10_likelihood = calculate_two_base_model_log10_likelihood(best_base_char, second_best_base_char, pdata, current_lower_pr_first_base);
   
   // precision is a fraction of the value...
   while (current_upper_pr_first_base - current_lower_pr_first_base > (current_upper_pr_first_base + current_lower_pr_first_base) / 2 * _polymorphism_precision_decimal) {
+    
+    iterations++;
+    //cout << iterations << " "  << current_lower_pr_first_base << " " << current_upper_pr_first_base << endl;
     
     double current_middle_pr_first_base = (current_upper_pr_first_base + current_lower_pr_first_base) / 2;
     
@@ -1069,7 +1075,7 @@ pair<double,double> identify_mutations_pileup::best_two_base_model_log10_likelih
       current_lower_pr_first_base_log10_likelihood = current_middle_pr_first_base_log10_likelihood;
     }
   }  
-  
+    
   if (current_lower_pr_first_base_log10_likelihood > current_upper_pr_first_base_log10_likelihood) {
 
     return make_pair(current_lower_pr_first_base, current_lower_pr_first_base_log10_likelihood);
