@@ -9,7 +9,8 @@ Version 0.24
     * Fixed error predicting zero length deletions causing crash with certain reference sequences.
     * Improvements and updates to gdtools commands.
     * Changed the HTML display of read alignments to highlight differences from the reference.
-    * Other bug fixes.
+    * Improved precision of polymorphism predictions for low-frequency mutations.
+    * Other miscellaneous bug fixes.
 
 Version 0.23
     * Compiling in Cygwin should now be possible.

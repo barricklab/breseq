@@ -246,9 +246,9 @@ namespace breseq {
       {
         (*this)["name"] += append_str;
         (*this)["accession"] += append_str;
-        m_gff_attributes["Alias"][0] += append_str;
-        m_gff_attributes["ID"][0] += append_str;
-        m_gff_attributes["Name"][0] += append_str;
+        if (m_gff_attributes.count("Alias")) m_gff_attributes["Alias"][0] += append_str;
+        if (m_gff_attributes.count("IS")) m_gff_attributes["ID"][0] += append_str;
+        if (m_gff_attributes.count("Name")) m_gff_attributes["Name"][0] += append_str;
       }
       
       // Read GenBank coords

@@ -437,7 +437,7 @@ namespace breseq
       this->polymorphism_bias_p_value_cutoff = 0.05;
       this->polymorphism_minimum_new_coverage_each_strand = 2;
       this->no_indel_polymorphisms = false;
-      this->polymorphism_precision_decimal = 0.001;
+      this->polymorphism_precision_decimal = 0.0; // 0.001; not actually used
       this->polymorphism_precision_places = 3;
       
       this->minimum_alignment_resolution_pos_hash_score = 3;

@@ -1762,7 +1762,7 @@ namespace breseq {
     repeat_size = mutation_sequence.size();
     
     // there's no need to test any size where two copies of the sub-repeat are longer than the sequence
-    for (uint32_t i= trunc(mutation_sequence.size() / 2); i>0; i--) {
+    for (uint32_t i= static_cast<uint32_t>(trunc(mutation_sequence.size() / 2)); i>0; i--) {
       
       // Must evenly divide the sequence
       if (repeat_size % i != 0) continue;
