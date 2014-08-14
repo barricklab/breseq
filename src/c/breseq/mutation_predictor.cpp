@@ -1232,8 +1232,25 @@ namespace breseq {
         
         mut		
         ("seq_id", seq_id)		
-        ("position", s(side_2_position))	
-        // or could also be side_1_position-1, they are equivalent and will later be shifted to the same during normaliztion
+        ("position", (size != 0) ? s(side_2_position) : s(side_1_position))	
+        // previously was side_2_position
+        //
+        // If there is a size, then we are really adding some repeated bases
+        //  ===========0123
+        //              123=========
+        //  and we insert after position 3
+        //
+        //  If there was not a size, then we have completely novel sequence in between
+        //
+        //   ==========01
+        //                 23==========
+        //  and we insert after position 1
+        //
+        /// If there was both a size and unique sequence, then we still insert after position 3
+        //   ==========0123
+        //                 AB
+        //                   123==========
+        //
         ("new_seq", ins_seq)		
         ;		
       }
