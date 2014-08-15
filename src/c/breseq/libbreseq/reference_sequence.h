@@ -736,7 +736,20 @@ namespace breseq {
       end_pos_1 = from_string<uint32_t>(split_positions[1]);
     }
 
-
+    // This parses to a string for target
+    static void parse_region(const string& region, string& seq_id, uint32_t& start_pos_1, uint32_t& end_pos_1)
+    {
+      vector<string> split_region = split(region, ":");
+      // Must check first split for second to not potentially crash
+      ASSERT(split_region.size() == 2, "Unrecognized region: " + region + "\nExpected format [seq_id:start-end]");
+      vector<string> split_positions = split(split_region[1], "-");
+      ASSERT(split_positions.size() == 2, "Unrecognized region: " + region + "\nExpected format [seq_id:start-end]");
+      
+      seq_id = split_region[0];
+      start_pos_1 = from_string<uint32_t>(split_positions[0]);
+      end_pos_1 = from_string<uint32_t>(split_positions[1]);
+    }
+    
     map<string,int32_t> seq_order;
     map<string,string> trims;
     

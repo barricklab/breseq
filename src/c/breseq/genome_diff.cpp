@@ -568,45 +568,20 @@ int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info)
 //      shift_size = number of bases inserted
 //      shift_replace_size = 0 (no bases were replaced -- important for placing mutation within other mutations that have a size
 //
-//  inversion is a special case that flips positions, in this case it is an inversion from shift_offset to shift_offset + shift_size - 1
+//   For an INV mutation =>
+//      shift_offset = position
+//      shift_size = 0
+//      shift_replace_size = size of inversion
 
-void cDiffEntry::mutation_shift_position(const string& seq_id, int32_t shift_offset, int32_t insert_pos, int32_t shift_size, int32_t shift_replace_size, bool inversion)
+void cDiffEntry::mutation_shift_position(const string& seq_id, int32_t shift_offset, int32_t insert_pos, int32_t shift_size, int32_t shift_replace_size)
 {    
+  ASSERT(this->is_mutation(), "Attempt to shift position of non-mutation cDiffEntry");
+
   // negative shift_size means deletion; positive shift_size means insertion
-  if (shift_size == 0) return;
+  if ((shift_size == 0) && (shift_replace_size == 0)) return;
   if (seq_id != (*this)[SEQ_ID]) return;
   
   int32_t position = from_string<int32_t>((*this)[POSITION]);
-  
-  // Flip things that are totally contained
-  // Error if something overlaps the edges
-  // shift_replace_size has the size of the inversion (shift_size = 0)
-  if (inversion) {
-    
-    int32_t size = 0;
-    if (entry_exists(SIZE))
-      size = from_string<int32_t>((*this)[SIZE]);
-    
-    // Does not overlap
-    if (position + size < shift_offset)
-      return;
-    else if (position > shift_offset + shift_replace_size - 1)
-      return;
-      
-    // Contained within, invert coordinates
-    else if ((position >= shift_offset) && (position + size - 1 <= shift_offset + shift_replace_size - 1)) {
-      
-      (*this)[POSITION] = to_string<int32_t>(shift_offset + shift_replace_size - 1 - (position + size - 1 - shift_offset));
-      return;
-    }
-      
-    // Overlaps end
-    else {
-      ERROR("Cannot process mutation:\n" + this->as_string() + "\nthat overlaps the boundary of an inversion from " + to_string(shift_offset)  + " to " + to_string(shift_offset + shift_replace_size - 1) + "\n");
-    }
-    
-    return;
-  }
   
   // Handle simple case and return
   if (!entry_exists(SIZE)) {
@@ -681,6 +656,126 @@ void cDiffEntry::mutation_shift_position(const string& seq_id, int32_t shift_off
   (*this)[SIZE] = to_string(final_size);
 }
 
+  
+// Reverse-complements without changing position
+void cDiffEntry::mutation_reverse_complement() {
+  
+  switch (this->_type) {
+      
+    // Nothing special for these cases
+    case DEL:
+    case INV:
+    case AMP:
+      break;
+
+    case SNP:
+    case SUB:
+    case INS:
+      (*this)[NEW_SEQ] = reverse_complement((*this)[NEW_SEQ]);
+      break;
+      
+    case CON:      
+    {
+      // flip coordinates of region
+      string seq_id;
+      uint32_t start_pos_1, end_pos_1;
+      cReferenceSequences::parse_region((*this)[REGION], seq_id, start_pos_1, end_pos_1);
+      (*this)[REGION] = seq_id + ":" + s(end_pos_1) + "-" + s(start_pos_1);      
+      break;
+    } 
+    case MOB:
+    {
+      (*this)[STRAND] = s(-n((*this)[STRAND]));
+      string del_start(this->entry_exists(DEL_START) ? (*this)[DEL_START] : "");
+      string del_end = this->entry_exists(DEL_END) ? (*this)[DEL_END] : "";
+      string ins_start = this->entry_exists(INS_START) ? reverse_complement((*this)[INS_START]) : "";
+      string ins_end = this->entry_exists(INS_END) ? reverse_complement((*this)[INS_END]) : "";
+      this->erase(DEL_START);
+      this->erase(DEL_END);
+      this->erase(INS_START);
+      this->erase(INS_END);
+      
+      // flips start and end
+      if (!del_end.empty()) (*this)[DEL_START] = del_start;
+      if (!del_start.empty()) (*this)[DEL_END] = del_start;
+      if (!del_end.empty()) (*this)[INS_START] = ins_start;
+      if (!del_start.empty()) (*this)[INS_END] = ins_end;
+      break;
+    }
+      
+    default:
+      ERROR("Attempt to reverse complement cDiffEntry of unsupported type:" + this->_type);
+
+  }
+}
+  
+// Updates positions and reverse-complements
+void cDiffEntry::mutation_invert_position(cDiffEntry& inverting_mutation) {
+  ASSERT(this->is_mutation(), "Attempt to invert position of non-mutation cDiffEntry");
+  
+  // are we on the right sequence fragment?
+  if (inverting_mutation[SEQ_ID] != (*this)[SEQ_ID]) return;
+  
+  int32_t start_inversion = from_string<int32_t>(inverting_mutation[POSITION]);
+  int32_t end_inversion = start_inversion + from_string<int32_t>(inverting_mutation[SIZE]) - 1;
+
+  int32_t position = from_string<int32_t>((*this)[POSITION]);
+  
+  // Flip things that are totally contained
+  // Error if something overlaps the edges
+  // shift_replace_size has the size of the inversion (shift_size = 0)
+    
+  int32_t size = 0;
+  if (entry_exists(SIZE))
+    size = from_string<int32_t>((*this)[SIZE]);
+  
+  // Does not overlap
+  if (position + size < start_inversion)
+    return;
+  else if (position > end_inversion)
+    return;
+  
+  // Contained within, invert coordinates
+  else if ((position >= start_inversion) && (position + size - 1 <= end_inversion)) {
+    
+    int32_t insert_pos = 0;
+    if (this->_type==INS) {
+      insert_pos=1;
+      if (this->entry_exists(INSERT_POSITION))
+        insert_pos = from_string<int32_t>((*this)[INSERT_POSITION]);
+    }
+    
+    // case of INS, because it refers to between entries // need to also flip insert_pos order for any
+    // mutations that are strung together with multiple insert counts (do this by negative).
+    // We must re-sort after applying an INV!!
+    if (insert_pos > 0) {
+      
+      (*this)[POSITION] = to_string<int32_t>(end_inversion - (position + size + 1 - start_inversion));
+      if (this->entry_exists(INSERT_POSITION))
+        (*this)[INSERT_POSITION] = to_string<int32_t>(-insert_pos);
+      
+    } else { // other cases
+      (*this)[POSITION] = to_string<int32_t>(end_inversion - (position + size - start_inversion));
+    }
+    return;
+  }
+  
+  // Overlaps end - it must have been processed before
+  else {
+    
+    cDiffEntry* shifting_mutation_copy = new cDiffEntry(inverting_mutation);
+    diff_entry_ptr_t shifting_mutation_dep(shifting_mutation_copy);
+    
+    cDiffEntry* this_mutation_copy = new cDiffEntry(*this);
+    diff_entry_ptr_t this_mutation_dep(this_mutation_copy);
+    
+    // Only allow if the event happens after the inversion
+    if (cGenomeDiff::diff_entry_ptr_sort_apply_order( shifting_mutation_dep, this_mutation_dep) )
+      return;
+    ERROR("Cannot process later mutation:\n" + this->as_string() + "\nthat overlaps the boundary of an inversion from " + s(start_inversion)  + " to " + s(end_inversion) + "\n");
+  }
+  
+}
   
 /*! Marshal this diff entry into an ordered list of fields.
  */
@@ -3055,8 +3150,13 @@ void cGenomeDiff::random_mutations(string exclusion_file,
 void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& ref_seq_info, bool verbose)
 {  
   int32_t delta = current_mut.mutation_size_change(ref_seq_info);
-  if (verbose)
-    cout << "Shifting remaining entries by: " << delta << " bp." << endl;
+  if (verbose) {
+    if (current_mut._type != INV) {
+      cout << "Shifting remaining entries by: " << delta << " bp." << endl;
+    } else {
+      cout << "Inverting region: " << current_mut[POSITION] << "-" << s(n(current_mut[POSITION]) + n(current_mut[SIZE]) - 1) << "." << endl;
+    }
+  }
   if (delta == UNDEFINED_INT32)
     ERROR("Size change not defined for mutation.");
   
@@ -3130,13 +3230,18 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
         }
         
         // -1 used as offset to force update of position because we are within it...
-        mut.mutation_shift_position(current_mut[SEQ_ID], -1, 0, special_delta, 0, false);
+        mut.mutation_shift_position(current_mut[SEQ_ID], -1, 0, special_delta, 0);
       }  
     }
     
     // Normal behavior -- offset mutations later in same reference sequence
     if (!was_nested) {
-      mut.mutation_shift_position(current_mut[SEQ_ID], offset, insert_pos, delta, replace_size, current_mut._type == INV);
+      if (current_mut._type == INV) {
+        mut.mutation_invert_position(current_mut);
+        mut.mutation_reverse_complement();
+      } else {
+        mut.mutation_shift_position(current_mut[SEQ_ID], offset, insert_pos, delta, replace_size);
+      }
     }
   }
 }
@@ -3214,7 +3319,6 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
   // Handle all mutation types, plus MASK four-letter type.
   diff_entry_list_t mutation_list = this->mutation_list();
   diff_entry_list_t mask_list = this->list(make_vector<gd_entry_type>(MASK));
-  
   mutation_list.insert(mutation_list.end(), mask_list.begin(), mask_list.end());
   
   for (diff_entry_list_t::iterator itr_mut = mutation_list.begin(); itr_mut != mutation_list.end(); itr_mut++)
@@ -3358,6 +3462,8 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         replace_start = position;
         replace_end = position;
         replace_seq = new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end);
+        replace_seq.insert(0,"(");
+        replace_seq.insert(2,")");
         
         applied_seq_id = mut[SEQ_ID];
         applied_start = position;
@@ -3448,7 +3554,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         applied_seq_id = mut[SEQ_ID];
         applied_start = position;
         applied_end = position + duplicated_sequence.size() - 1;
-        applied_seq = duplicated_sequence;
+        applied_seq = replace_seq + duplicated_sequence;
         
         new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position-1, duplicated_sequence, (to_string(mut._type) + " " + mut._id));
               
@@ -3466,8 +3572,8 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         string inv_seq = reverse_complement(replace_seq);
 
         applied_seq_id = mut[SEQ_ID];
-        applied_start = position;
-        applied_end = position + inv_seq.size() - 1;
+        applied_start = position + inv_seq.size() - 1;
+        applied_end = position;
         applied_seq = inv_seq;
         
         count_INV++;
@@ -3635,6 +3741,25 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
     }
     
     this->shift_positions(mut, new_ref_seq_info, verbose);
+    
+    // Re-sort ... invalidates the iterator
+    if (mut._type == INV) {
+      
+      // Sort the list into apply order ('within' and 'before' tags)
+      cGenomeDiff::sort_apply_order();
+      
+      // Handle all mutation types, plus MASK four-letter type.
+      mutation_list = this->mutation_list();
+      diff_entry_list_t mask_list = this->list(make_vector<gd_entry_type>(MASK));
+      mutation_list.insert(mutation_list.end(), mask_list.begin(), mask_list.end());
+      
+      for (diff_entry_list_t::iterator itr_mut2 = mutation_list.begin(); itr_mut2 != mutation_list.end(); itr_mut2++) {
+        if (**itr_mut2 == mut) {
+          itr_mut = itr_mut2;
+          break;
+        }
+      }
+    }
   }
   
   if (verbose)
@@ -3655,6 +3780,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
   for (vector<cAnnotatedSequence>::iterator it_as = new_ref_seq_info.begin(); it_as < new_ref_seq_info.end(); it_as++) {
     if(!it_as->m_length){new_ref_seq_info.erase(it_as);it_as--;}
   }
+  
 }
   
 // Adds 'between' and 'mediated' tags. ONLY for DEL mutations.

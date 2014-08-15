@@ -247,8 +247,16 @@ public:
   //! Common function giving change in size of genome at site of applying entry
   int32_t mutation_size_change(cReferenceSequences& ref_seq_info);
   
+  //!---- Functions for updating mutations ---- !//
+  
   //! Common function for updating mutations based on a mutation occurring at shift_offset and changing size by shift_size;
-  void mutation_shift_position(const string& seq_id, int32_t shift_offset, int32_t insert_pos, int32_t shift_size, int32_t shift_replace_size, bool inversion);
+  void mutation_shift_position(const string& seq_id, int32_t shift_offset, int32_t insert_pos, int32_t shift_size, int32_t shift_replace_size);
+  
+  // Reverse-complements without changing position
+  void mutation_reverse_complement();
+  
+  // Updates positions for inversion
+  void mutation_invert_position(cDiffEntry& inverting_mutation);
   
   //!---- Output ---- !//
   
