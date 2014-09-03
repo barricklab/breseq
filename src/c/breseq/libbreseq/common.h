@@ -522,12 +522,7 @@ namespace breseq {
 
 		return retval;
 	}
-/* REMOVE THIS
-	inline string join(vector<string>& values, const string& separator)
-	{
-		return join(vector<string> (values, values + sizeof(values) / sizeof(*values)), separator);
-	}
-*/
+
 	inline string chomp(const string& str)
 	{
 		return str.substr(0, str.find_last_not_of("\n \t")-1);

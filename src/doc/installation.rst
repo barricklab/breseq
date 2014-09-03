@@ -18,8 +18,8 @@ The most recent |breseq| source code packages are available for download from `G
 Several external packages and software programs need to be installed to compile and use |breseq|:
 
 * `GCC <http://gcc.gnu.org>`_ (or other C++ compiler) already installed on many systems
-* `Bowtie2 <http://bowtie-bio.sourceforge.net/bowtie2>`_ (version 2.0.0-beta7 or higher) read mapping program
-* `R <http://www.r-project.org>`_ (version 2.1.0 or higher) statistical programming language 
+* `Bowtie2 <http://bowtie-bio.sourceforge.net/bowtie2>`_ (version 2.1.0 or higher) read mapping program
+* `R <http://www.r-project.org>`_ (version 2.1.4 or higher) statistical programming language 
 
 To install each  dependency, use your system's package manager or visit the respective web pages linked above and follow the instructions for your platform. More specific directions are available below for some platforms. You must make sure that the executables for |Bowtie2| and :program:`R` are in your environment's $PATH for |breseq| to function.
 

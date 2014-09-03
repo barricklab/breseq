@@ -794,6 +794,12 @@ namespace breseq {
     static string GFF3UnescapeString(const string& escaped_s)
     {
       string s(escaped_s);
+      
+      // Additional step for removing unnecessary outer quotes
+      if ( (s[0] == '"') && (s[s.length()-1] == '"') ) {
+        s = s.substr(1, s.length()-2);
+      }
+      
       s = substitute(s, "%2C", ",");
       s = substitute(s, "%26", "&");
       s = substitute(s, "%3D", "=");
