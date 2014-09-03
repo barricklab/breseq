@@ -775,6 +775,8 @@ namespace breseq {
     while (!in.eof() && getline(in,line)) {
       cSequenceFeaturePtr fp(new cSequenceFeature);
       cSequenceFeature& feature = *fp;
+      
+      RemoveLeadingTrailingWhitespace(line);
 
   //! Step 2: Check for GFF Tags, reads FASTA from here.
       // We are concerned about a couple of ## GFF tags
@@ -783,7 +785,7 @@ namespace breseq {
           //TODO @GRC
           continue;
         }
-        else if (line.find("##sequence-region") != string::npos) {
+        else if (line.find("##sequence-region") == 0) {
           // Line of form ##sequence-region seqid start end
           stringstream ls(line);
           string x, seq_id, start, end;
@@ -792,7 +794,7 @@ namespace breseq {
           (*this)[seq_id].m_length = from_string<uint32_t>(end);
           continue;
         }
-        else if (line.find("##original-file-name") != string::npos) {
+        else if (line.find("##original-file-name") == 0) {
           // Line of form ##orignal-file-name seq_id file_name
           stringstream ls(line);
           string x, seq_id, file_name;
@@ -802,7 +804,7 @@ namespace breseq {
           continue;
         }
         // Find embedded fasta file
-        else if (line.find("##FASTA") != string::npos) {
+        else if (line.find("##FASTA") == 0) {
           /* Things admittedly get a bit hairy right here, you have to
             take the next line (The one with ">XXXXXX") and set it as the
             current line for cFastaFile, after you've read the fasta you
@@ -812,6 +814,44 @@ namespace breseq {
           in.set_current_line(line);
           this->ReadFASTA(in);
           continue;
+        } 
+        else if (line.find("##DNA") == 0) {
+          
+          /* Alternative way of specifying DNA sequence
+           used by Geneious exporter, for example
+           
+           ##DNA seq_id
+           ##AGCTTTTCATTCTGACTGCAACGGGCAATATGTCTCTGTG
+           ##TGGATTAAAAAAAGAGTGTCTGATAGCAGCTTCTGAACTG
+           ...
+           ##end-DNA
+           
+           */
+          string seq_id = line.substr(5);
+          RemoveLeadingTrailingWhitespace(seq_id);
+          if (!m_seq_id_to_index.count(seq_id))
+            this->add_new_seq(seq_id, file_name);
+          //ASSERT(this->m_seq_id_to_index[seq_id], "Attempt to load sequence for non-existent seq_id with line:\n" + line);
+                 
+          cAnnotatedSequence& this_seq = (*this)[seq_id];
+          this_seq.m_fasta_sequence.m_sequence = "";
+          this_seq.m_fasta_sequence.m_name=seq_id;
+          
+          getline(in,line);
+          RemoveLeadingTrailingWhitespace(line);
+
+          while (!in.eof() && (line.find("##end-DNA") != 0)) {
+
+            ASSERT(line.find("##") == 0, "Expected beginning ## and sequence line, but found:\n" + line); 
+            string add_seq = line.substr(2);
+            RemoveLeadingWhitespace(add_seq);
+            this_seq.m_fasta_sequence.m_sequence += add_seq;
+            getline(in,line);
+            RemoveLeadingTrailingWhitespace(line);
+          }
+          this_seq.m_length = this_seq.m_fasta_sequence.m_sequence.size();
+          
+          continue;
         } else {
           continue;
         }
@@ -819,54 +859,54 @@ namespace breseq {
   /*! Step 3: Split line on tabs("\t") until last column, grab last column until endl("\n"),
       the default for getline(). !*/
       
-      stringstream ss(line);
-      string seq_id, start, end, strand;
-
+      string seq_id;      
+      vector<string> split_line = split(line, "\t");
+      ASSERT( (split_line.size() == 8) || (split_line.size() == 9), "Expected 8 or 9 tab-delimited columns for line:\n"+line );
+      
       // Handle columns up to the last one, "attributes"
       // Column 1: "seqid"
-      getline(ss, seq_id, '\t');
+      seq_id = split_line[0];
       // Column 2: "source"
-      getline(ss, feature["source"], '\t');
+      feature["source"] = split_line[1];
       // Column 3: "type"
-      getline(ss, feature["type"], '\t');
+      feature["type"] = split_line[2];
       // Column 4: "start"
-      getline(ss, start, '\t');
-      feature.m_location.set_start_1( from_string<uint32_t>(start));
+      feature.m_location.set_start_1( from_string<uint32_t>(split_line[3]));
       // Column 5: "end"
-      getline(ss, end, '\t');
-      feature.m_location.set_end_1( from_string<uint32_t>(end));
+      feature.m_location.set_end_1( from_string<uint32_t>(split_line[4]));
       // Column 6: "score"
-      getline(ss, feature["score"], '\t');
+      feature["score"] = split_line[5];
       // Column 7: "strand"
-      getline(ss, strand, '\t');
+      string strand = split_line[6];
       feature.m_location.set_strand(0);
       if (strand == "+")
         feature.m_location.set_strand(1);
       else if (strand == "-")
         feature.m_location.set_strand(-1);        
       // Column 8: "phase"
-      getline(ss, feature["phase"], '\t');
+      feature["phase"] = split_line[7];
       // Column 9: "attributes"
-      string raw_attributes;
-
       // Handle parsing the attributes
-      getline(ss, raw_attributes);
-      vector<string> attributes = split(raw_attributes, ";");
+      
+      // Be robust to this column not exising
+      if (split_line.size()>=9) {
+        vector<string> attributes = split(split_line[8], ";");
 
-      //Split attribute's key and value by "="
-      for (vector<string>::iterator itr = attributes.begin(); itr != attributes.end(); itr++) {
-        string& attribute = *itr;
-        vector<string> key_value = split(attribute,"=");
-        string& key = key_value.front();
-        string& value = key_value.back();
-      //! Case 2: Multiple values for given key, split by ","
-        feature.m_gff_attributes[key] = split(value, ",");
-        // unescape special characters after splitting
-        for (uint32_t i=0; i<feature.m_gff_attributes[key].size(); i++)  {
-          feature.m_gff_attributes[key][i] = GFF3UnescapeString(feature.m_gff_attributes[key][i]);
+        //Split attribute's key and value by "="
+        for (vector<string>::iterator itr = attributes.begin(); itr != attributes.end(); itr++) {
+          string& attribute = *itr;
+          vector<string> key_value = split(attribute,"=");
+          string& key = key_value.front();
+          string& value = key_value.back();
+        //! Case 2: Multiple values for given key, split by ","
+          feature.m_gff_attributes[key] = split(value, ",");
+          // unescape special characters after splitting
+          for (uint32_t i=0; i<feature.m_gff_attributes[key].size(); i++)  {
+            feature.m_gff_attributes[key][i] = GFF3UnescapeString(feature.m_gff_attributes[key][i]);
+          }
         }
       }
-            
+      
       // Load certain information into the main hash, so breseq knows to use it
       if (feature.m_gff_attributes.count("Note"))
         feature["product"] = join(feature.m_gff_attributes["Note"], ",");

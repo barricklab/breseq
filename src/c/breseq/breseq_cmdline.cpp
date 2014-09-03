@@ -1044,6 +1044,11 @@ int do_assemble_unmatched(int argc, char* argv[])
   options.addUsage("Output is in directory: unmatched_assembly");
   options("output,o","Main directory containing output from the breseq run. A directory within this called unmatched_assembly will be created for the output of this command.", ".");
   options("verbose,v","Verbose output", TAKES_NO_ARGUMENT);
+  options.addUsage("");
+  options.addUsage("Example assembly commands:");
+  options.addUsage("  velveth assemble_unmatched 51 -fastq -shortPaired assemble_unmatched/1.fastq assemble_unmatched/2.fastq");
+  options.addUsage("  velvetg assemble_unmatched -exp_cov auto -cov_cutoff auto");
+
   options.processCommandArgs(argc, argv);
   
   // Need empty setting object for trimming files.
