@@ -2592,37 +2592,65 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
       mut.add_reject_reason("FISHER_STRAND_P_VALUE");
 
     ////// Optionally, ignore if in a homopolymer stretch longer than this
-    if (settings.polymorphism_reject_homopolymer_length)
+    // There are several cases here that may be of interest for removing false-positives
+    // 1) indel in what was originally a homopolymer adding a base that is the same
+    // 2) *A mutation in the middle of a stretch of one base to what is in the rest of that stretch
+    //    TTTTTTATTTTTT
+    //    TTTTTTTTTTTTT
+    //    *NOT DEALT WITH YET
+    //    
+    if (settings.polymorphism_reject_homopolymer_length && ((mut[NEW_BASE] == ".") || (mut[REF_BASE] == ".")))
     {
-      string seq_id = mut["seq_id"];
-      int32_t end_pos = from_string<uint32_t>(mut["position"]);
-      int32_t test_length = 20; // don't wrap around chromosome
-      
-      //wraps around chromosome start if circular
-      string bases;
-      int32_t start_pos = end_pos - test_length + 1;
-      if (this->is_circular(seq_id)) {
-        bases = this->get_circular_sequence_1(seq_id, start_pos, test_length);  
-      }
-      else {
-        // if we are not circular, be careful about putting start_pos out of bounds
-        if (start_pos < 1) start_pos = 1;
-        bases = this->get_sequence_1(seq_id, start_pos, end_pos);  
-      }
-      
-      uint32_t same_base_length = 0;
-      string first_base = bases.substr(bases.length()-1, 1);
-      for (int32_t j = end_pos; j >= start_pos; j--)
-      {
-        string this_base = bases.substr(j - start_pos, 1);
-        if (first_base != this_base) break;
-        same_base_length++;
-      }
+      // Code needs to be robust to the mutation being at the beginning
+      // OR end of the homopolymer tract
 
-      if (same_base_length >= settings.polymorphism_reject_homopolymer_length)
+      string seq_id = mut["seq_id"];
+      int32_t mut_pos = from_string<uint32_t>(mut["position"]);
+      bool is_insertion = (from_string<int32_t>(mut[INSERT_POSITION]) > 0);
+      string mut_base = is_insertion ? mut[NEW_BASE] : mut[REF_BASE];
+      int32_t homopolymer_length = 0;
+      
+      // If we are an insertion, we need to start on the base before or the base after,
+      // depending on which one we match (if we match neither than our length is zero
+      bool no_match = false;
+      if (is_insertion) {
+        
+        // This is the base before
+        if (this->get_sequence_1(seq_id, mut_pos, mut_pos) != mut_base) {
+          
+          // No match? -- Now check the base after
+          mut_pos++;
+          if (mut_pos > static_cast<int32_t>(this->get_sequence_length(seq_id))) {
+            no_match = true;
+          } else if (this->get_sequence_1(seq_id, mut_pos, mut_pos) != mut_base) {
+            no_match = true;
+          }
+        }
+      }
+      
+      // extend match
+      if (!no_match) { 
+      
+        // check before
+        int32_t start_pos = mut_pos - 1;
+        while ( (this->get_sequence_1(seq_id, start_pos, start_pos) == mut_base) && (start_pos > 0) ) {
+          start_pos--;
+        }
+        start_pos++;
+        
+        int32_t end_pos = mut_pos + 1;             
+        while ( (this->get_sequence_1(seq_id, end_pos, end_pos) == mut_base) && (end_pos <= static_cast<int32_t>(this->get_sequence_length(seq_id)) ) ) {
+          end_pos++;
+        }
+        end_pos--;
+        homopolymer_length = end_pos - start_pos + 1;
+      }
+      
+      if (homopolymer_length >= static_cast<int32_t>(settings.polymorphism_reject_homopolymer_length))
       {
         mut.add_reject_reason("HOMOPOLYMER_STRETCH");
       }
+      
     }
     
     

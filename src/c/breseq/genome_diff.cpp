@@ -852,14 +852,20 @@ vector<string> cDiffEntry::get_reject_reasons()
  */
 void cDiffEntry::add_reject_reason(const string &reason) {
 
-  if (this->find(REJECT) == this->end()) {
+  if (!this->entry_exists(REJECT)) {
     (*this)[REJECT] = reason;
   }
   // exists already, make comma separated list
   else {
-    string reject = (*this)[REJECT];
-    reject += ",";
-    reject +=reason; 
+    vector<string> current_reject_reasons = split((*this)[REJECT], ",");
+    bool reject_exists = false;
+    for (vector<string>::iterator it=current_reject_reasons.begin(); it != current_reject_reasons.end(); it++) {
+      if (*it == reason) reject_exists = true;
+    }
+    if (!reject_exists) {
+      current_reject_reasons.push_back(reason);
+      (*this)[REJECT] = join(current_reject_reasons, ",");
+    }
   }
 }
   
