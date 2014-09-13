@@ -216,7 +216,7 @@ namespace breseq
     ("junction-minimum-candidates", "Test at least this many of the top-scoring junction candidates, regardless of their length ", 100, ADVANCED_OPTION)
     ("junction-candidate-length-factor", "Accept top-scoring junction candidates to test until their cumulative length is this factor times the total reference sequence length", 0.1, ADVANCED_OPTION)
     ("junction-score-cutoff", "Maximum negative log10 probability of uneven coverage across a junction breakpoint to accept (0 = OFF)", 3.0, ADVANCED_OPTION)
-    ("junction-minimum-pos-hash-score", "Minimum number of distinct spanning read start positions required to accept a junction (DEFAULT = consensus mode, 3; polymorphism mode, 2)", "", ADVANCED_OPTION)
+    ("junction-minimum-pos-hash-score", "Minimum number of distinct spanning read start positions required to accept a junction (DEFAULT = consensus mode, 3; polymorphism mode, 3)", "", ADVANCED_OPTION)
     ("junction-minimum-side-match", "Minimum number of bases a read must extend past any overlap or read-only sequence at the breakpoint of a junction on each side to count as support for the junction (DEFAULT = consensus mode, 1; polymorphism mode, 6)", "", ADVANCED_OPTION)
     ;
 
@@ -421,7 +421,7 @@ namespace breseq
       this->polymorphism_precision_decimal = 0.000001;
       this->polymorphism_precision_places = 6;
       
-      this->minimum_alignment_resolution_pos_hash_score = 2;
+      this->minimum_alignment_resolution_pos_hash_score = 3;
       this->junction_minimum_side_match = 6;
       
       this->junction_pos_hash_neg_log10_p_value_cutoff = 0; // OFF
