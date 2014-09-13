@@ -2599,7 +2599,7 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
     //    TTTTTTTTTTTTT
     //    *NOT DEALT WITH YET
     //    
-    if (settings.polymorphism_reject_homopolymer_length && ((mut[NEW_BASE] == ".") || (mut[REF_BASE] == ".")))
+    if (settings.polymorphism_reject_indel_homopolymer_length && ((mut[NEW_BASE] == ".") || (mut[REF_BASE] == ".")))
     {
       // Code needs to be robust to the mutation being at the beginning
       // OR end of the homopolymer tract
@@ -2646,19 +2646,49 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
         homopolymer_length = end_pos - start_pos + 1;
       }
       
-      if (homopolymer_length >= static_cast<int32_t>(settings.polymorphism_reject_homopolymer_length))
+      if (homopolymer_length >= static_cast<int32_t>(settings.polymorphism_reject_indel_homopolymer_length))
       {
-        mut.add_reject_reason("HOMOPOLYMER_STRETCH");
+        mut.add_reject_reason("INDEL_HOMOPOLYMER");
       }
-      
     }
     
+    // Second case
+    // 2) *A mutation in the middle of a stretch of one base to what is in the rest of that stretch
+    //    TTTTTTATTTTTT
+    //    TTTTTTTTTTTTT
+    if (settings.polymorphism_reject_surrounding_homopolymer_length && (mut[NEW_BASE] != ".") && (mut[REF_BASE] != "."))    {
+      
+      string seq_id = mut["seq_id"];
+      int32_t mut_pos = from_string<int32_t>(mut["position"]);
+
+      int32_t start_pos = mut_pos - settings.polymorphism_reject_surrounding_homopolymer_length;
+      int32_t end_pos = mut_pos + settings.polymorphism_reject_surrounding_homopolymer_length;
+
+      // check bounds
+      if ( (start_pos >= 1) && (end_pos <= static_cast<int32_t>(this->get_sequence_length(seq_id))) ) {
+        
+        bool reject = true;
+        for (int32_t i=start_pos; i<= end_pos; i++) {
+          if (i==mut_pos) continue;
+          
+          if (this->get_sequence_1(seq_id, i, i) != mut[NEW_BASE]) {
+            reject = false;
+            break;
+          }
+        }
+        
+        if (reject) {
+          mut.add_reject_reason("SURROUNDING_HOMOPOLYMER");
+        }
+      }
+    }
     
     if (settings.no_indel_polymorphisms && ((mut[REF_BASE] == ".") || (mut[NEW_BASE] == ".")))
     {
       mut.add_reject_reason("INDEL_POLYMORPHISM");
     }
 
+    /*
     if (
         mut.number_reject_reasons() > 0
         && (double_from_string(mut[POLYMORPHISM_QUALITY]) > settings.mutation_log10_e_value_cutoff)
@@ -2666,7 +2696,7 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
         )
     {
       mut["polymorphism_changed_to_consensus"] = "1";
-      mut[FREQUENCY] = "1";
+      mut.erase(FREQUENCY);
       mut.erase(REJECT);
 
       // FIX -- need to re-evaluate whether it would have been accepted as a normal mutation
@@ -2674,6 +2704,7 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
       if (double_from_string(mut[POLYMORPHISM_QUALITY]) < settings.mutation_log10_e_value_cutoff)
         mut.add_reject_reason("EVALUE");
     }
+     */
 
     new_gd.add(mut);
 

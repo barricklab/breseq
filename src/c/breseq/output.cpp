@@ -710,9 +710,14 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
                + td((settings.no_indel_polymorphisms) ? "NO" : "YES")
                );
     // Rejects if >= this length
-    HTML << tr(td("Skip indel polymorphisms in homopolymers runs") 
-               + td((settings.polymorphism_reject_homopolymer_length == 0) ? "OFF" : " &ge;" + s(settings.polymorphism_reject_homopolymer_length) + " bases")
+    HTML << tr(td("Skip indel polymorphisms in homopolymers runs of &ge; this many bases") 
+               + td((settings.polymorphism_reject_indel_homopolymer_length == 0) ? "OFF" : " &ge;" + s(settings.polymorphism_reject_indel_homopolymer_length) + " bases")
                );
+    
+    HTML << tr(td("Skip base substitutions when they create a homopolymer flanked on each side by &ge; this many bases") 
+               + td((settings.polymorphism_reject_surrounding_homopolymer_length == 0) ? "OFF" : " &ge;" + s(settings.polymorphism_reject_surrounding_homopolymer_length) + " bases")
+               );
+
 
     HTML << end_table();    
   }
@@ -1613,9 +1618,13 @@ string decode_reject_reason(const string& reject)
   {
     return "Polymorphism does not pass frequency cutoff.";
   }
-  else if (reject == "HOMOPOLYMER_STRETCH")
+  else if (reject == "INDEL_HOMOPOLYMER")
   {
-    return "Polymorphism is in a homopolymer stretch.";
+    return "Polymorphic indel expands or contracts a homopolymer stretch.";
+  }
+  else if (reject == "SURROUNDING_HOMOPOLYMER")
+  {
+    return "Polymorphic base substitution creates a homopolymer stretch.";
   }
   
   return "";
