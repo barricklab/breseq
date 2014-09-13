@@ -218,6 +218,7 @@ namespace breseq
     ("junction-score-cutoff", "Maximum negative log10 probability of uneven coverage across a junction breakpoint to accept (0 = OFF)", 3.0, ADVANCED_OPTION)
     ("junction-minimum-pos-hash-score", "Minimum number of distinct spanning read start positions required to accept a junction (DEFAULT = consensus mode, 3; polymorphism mode, 3)", "", ADVANCED_OPTION)
     ("junction-minimum-side-match", "Minimum number of bases a read must extend past any overlap or read-only sequence at the breakpoint of a junction on each side to count as support for the junction (DEFAULT = consensus mode, 1; polymorphism mode, 6)", "", ADVANCED_OPTION)
+    ("user-junction-gd","User supplied genome diff file of JC evidence to use as candidate junctions and report support for.", "", ADVANCED_OPTION) 
     ;
 
     options.addUsage("", ADVANCED_OPTION);    
@@ -225,7 +226,8 @@ namespace breseq
     options
     ("polymorphism-prediction,p", "Predict polymorphic (mixed) mutations", TAKES_NO_ARGUMENT)
     ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("polymorphism-reject-homopolymer-length", "Reject insertion/deletion polymorphisms which could result from expansion/contraction of homopolymer repeats with this length or greater in the reference genome (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 3) ", "", ADVANCED_OPTION)
+    ("polymorphism-reject-indel-homopolymer-length", "Reject insertion/deletion polymorphisms which could result from expansion/contraction of homopolymer repeats with this length or greater in the reference genome (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 3) ", "", ADVANCED_OPTION)
+    ("polymorphism-reject-surrounding-homopolymer-length", "Do not predict polymorphic base substitutions that create a homopolymer when they have this many adjacent bases of that homopolymer on each side. For example, a mutation TTATT -> TTTTT would be rejected with a setting of 2. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 2)", "", ADVANCED_OPTION)
     ("polymorphism-score-cutoff", "Log10 E-value cutoff for test of polymorphism vs no polymorphism (DEFAULT = consensus mode, 10; polymorphism mode, 2)", "", ADVANCED_OPTION)
     ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias (0 = OFF) (DEFAULT = consensus mode, 0.05; polymorphism mode, 0.001)", "", ADVANCED_OPTION)
     ("polymorphism-frequency-cutoff", "Only predict polymorphisms where both allele frequencies are > than this value (DEFAULT = consensus mode, 0.1; polymorphism mode, 0.0)", "", ADVANCED_OPTION)
@@ -244,7 +246,6 @@ namespace breseq
     options.addUsage("", true);
     options.addUsage("Experimental Options (Use at your own risk)", true);
     options
-    ("user-junction-gd","User supplied genome diff file of JC evidence to use as candidate junctions and report support for.", "", ADVANCED_OPTION) 
     ("junction-debug", "Output additional junction debugging files", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("cnv","Do experimental copy number variation prediction",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("cnv-tile-size", "Tile size for copy number variation prediction", 500, ADVANCED_OPTION)
@@ -413,7 +414,8 @@ namespace breseq
       // different default values
       this->polymorphism_frequency_cutoff = 0; // cut off if < X or > 1-X
       this->mixed_base_prediction = false;
-      this->polymorphism_reject_homopolymer_length = 3; // zero is OFF!
+      this->polymorphism_reject_indel_homopolymer_length = 3; // zero is OFF!
+      this->polymorphism_reject_surrounding_homopolymer_length = 2; // zero is OFF!
       this->polymorphism_log10_e_value_cutoff = 2;
       this->polymorphism_bias_p_value_cutoff = 0.001;
       this->polymorphism_minimum_new_coverage_each_strand = 2;
@@ -432,7 +434,8 @@ namespace breseq
       ASSERT(!options.count("polymorphism-bias-cutoff"), "Option --polymorphism-bias-cutoff requires --polymorphism-prediction.")
 
       this->polymorphism_frequency_cutoff = 0.1;
-      this->polymorphism_reject_homopolymer_length = 0; // zero is OFF!
+      this->polymorphism_reject_indel_homopolymer_length = 0; // zero is OFF!
+      this->polymorphism_reject_surrounding_homopolymer_length = 0; // zero is OFF!
       this->polymorphism_log10_e_value_cutoff = 10;
       this->polymorphism_bias_p_value_cutoff = 0.05;
       this->polymorphism_minimum_new_coverage_each_strand = 2;
@@ -451,8 +454,10 @@ namespace breseq
       this->polymorphism_frequency_cutoff = from_string<double>(options["polymorphism-frequency-cutoff"]);
     if (options.count("polymorphism-no-indels"))
       this->no_indel_polymorphisms = options.count("polymorphism-no-indels");
-    if (options.count("polymorphism-reject-homopolymer-length"))
-      this->polymorphism_reject_homopolymer_length = from_string<int32_t>(options["polymorphism-reject-homopolymer-length"]);
+    if (options.count("polymorphism-reject-indel-homopolymer-length"))
+      this->polymorphism_reject_indel_homopolymer_length = from_string<int32_t>(options["polymorphism-reject-indel-homopolymer-length"]);
+    if (options.count("polymorphism-reject-surrounding-homopolymer-length"))
+      this->polymorphism_reject_surrounding_homopolymer_length = from_string<int32_t>(options["polymorphism-reject-surrounding-homopolymer-length"]);
     if (options.count("polymorphism-score-cutoff"))
       this->polymorphism_log10_e_value_cutoff = from_string<double>(options["polymorphism-score-cutoff"]);
     if (options.count("polymorphism-bias-cutoff"))
@@ -619,7 +624,8 @@ namespace breseq
 		this->polymorphism_bias_p_value_cutoff = 0;
 		this->polymorphism_frequency_cutoff = 0.1;
 		this->polymorphism_minimum_new_coverage_each_strand = 0;
-    this->polymorphism_reject_homopolymer_length = 0;
+    this->polymorphism_reject_indel_homopolymer_length = 0;
+    this->polymorphism_reject_surrounding_homopolymer_length = 0;
 		this->no_indel_polymorphisms = false;
     
     //! Settings: Mutation Prediction
