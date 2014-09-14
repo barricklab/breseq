@@ -1061,7 +1061,7 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
     ss << td(ALIGN_CENTER, c["ref_base"] + "&rarr;" + c["new_base"]); // "change Column
     ssf.width(4);
     ssf.precision(1);
-    ssf << fixed << from_string<double>(c["frequency"]) * 100 << "%" << endl; // "frequency" column
+    ssf << fixed << from_string<double>(c[FREQUENCY]) * 100 << "%" << endl; // "frequency" column
     ss << td(ALIGN_RIGHT, ssf.str());
     //Clear formated string stream
     ssf.str("");
@@ -1911,7 +1911,7 @@ void Html_Mutation_Table_String::Item_Lines()
     // (3) We want a single column (polymorphism prediction)
     if (settings.polymorphism_prediction || options.force_frequencies_for_one_reference) {
       // polymorphisms get highlighted
-      if(mut.entry_exists(FREQUENCY) && (from_string<double>(FREQUENCY) != 1)) {
+      if(mut.entry_exists(FREQUENCY) && (from_string<double>(mut[FREQUENCY]) != 1.0)) {
         row_class = "polymorphism_table_row";
         freq_list.push_back(mut[FREQUENCY]);
       }

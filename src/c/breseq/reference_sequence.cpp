@@ -2563,8 +2563,8 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
       mut.add_reject_reason("EVALUE");
 
     // Frequency cutoff
-    if ( (from_string<double>(mut["frequency"]) < settings.polymorphism_frequency_cutoff)
-      || (from_string<double>(mut["frequency"]) > 1-settings.polymorphism_frequency_cutoff) )
+    if ( (from_string<double>(mut[FREQUENCY]) < settings.polymorphism_frequency_cutoff)
+      || (from_string<double>(mut[FREQUENCY]) > 1-settings.polymorphism_frequency_cutoff) )
       mut.add_reject_reason("POLYMORPHISM_FREQUENCY_CUTOFF");
 
     // Minimum coverage on both strands

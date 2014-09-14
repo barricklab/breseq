@@ -1352,7 +1352,7 @@ int do_filter_gd(int argc, char* argv[])
       ASSERT(key.size() && value.size(), "Error in format of filter: " + filter);
         
       // special case of frequency missing if 100%
-      if ( (key=="frequency") && (mut.count(key)==0) ) {
+      if ( (key==FREQUENCY) && (mut.count(key)==0) ) {
           mut[key] = "1";
       }  
         
