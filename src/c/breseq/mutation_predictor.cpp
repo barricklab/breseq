@@ -993,13 +993,13 @@ namespace breseq {
           double frequency;
           if (d1 && d2) {
             frequency = (c1 + c2) / (c1 + (a1 + b1)/d1 + c2 + (a2 + b2)/d2);
-            mut[FREQUENCY] = to_string(frequency, settings.polymorphism_precision_places); 
+            mut[FREQUENCY] = formatted_double(frequency, settings.polymorphism_precision_places, true).to_string();
           } else if (d1) {
             frequency = (c2) / (c2 + (a2 + b2)/d2);
-            mut[FREQUENCY] = to_string(frequency, settings.polymorphism_precision_places);           
+            formatted_double(frequency, settings.polymorphism_precision_places, true).to_string();          
           } else if (d2) {
             frequency = (c1) / (c1 + (a1 + b1)/d1);
-            mut[FREQUENCY] = to_string(frequency, settings.polymorphism_precision_places); 
+            formatted_double(frequency, settings.polymorphism_precision_places, true).to_string();
           } else {
             // Can't calculate a frequency if no sides of the junction fall in unique sequence
             mut[FREQUENCY] = "NA";          
@@ -1348,7 +1348,7 @@ namespace breseq {
       // If we are predicting mixed bases and not polymorphisms, then don't create
       // mutations for mixed frequency predictions (leave them as unassigned RA evidence)
       // But do mark them as "mixed"
-      if (settings.mixed_base_prediction && (item["frequency"] != "1")) {
+      if (settings.mixed_base_prediction && (item[FREQUENCY] != "1")) {
         item["mixed"] = "1";
         continue;
       }
@@ -1362,8 +1362,8 @@ namespace breseq {
         
         // This code is only safe if every mutation has a frequency
         if (settings.polymorphism_prediction) {
-          if ( (item["frequency"] != "1") || (mut["frequency"] != "1") //don't join polymorphisms
-              || (mut["seq_id"] != item["seq_id"]) )
+          if ( (item[FREQUENCY] != "1") || (mut[FREQUENCY] != "1") //don't join polymorphisms
+              || (mut[SEQ_ID] != item[SEQ_ID]) )
             same = false;
         }
 			}
@@ -1386,7 +1386,7 @@ namespace breseq {
 				;
         
         if (settings.polymorphism_prediction) {
-          new_mut[FREQUENCY] = item.entry_exists(FREQUENCY) ? item["frequency"] : "1";
+          new_mut[FREQUENCY] = item.entry_exists(FREQUENCY) ? item[FREQUENCY] : "1";
         }
 				mut = new_mut;
 			}
@@ -1423,7 +1423,7 @@ namespace breseq {
           // This is a special case to keep ordering of multiple inserted bases after 
           // the same base (without it the order is unknown in poly mode
           
-          ASSERT( (mut["frequency"]=="1") || (mut["insert_start"] == mut["insert_end"]), "Polymorphism has incorrectly merged INS mutations.");
+          ASSERT( (mut[FREQUENCY]=="1") || (mut["insert_start"] == mut["insert_end"]), "Polymorphism has incorrectly merged INS mutations.");
           string debug_ins_pos = mut["insert_start"];           
           mut["insert_position"] = mut["insert_start"];
           
