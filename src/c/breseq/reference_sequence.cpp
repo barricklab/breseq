@@ -2688,23 +2688,24 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
       mut.add_reject_reason("INDEL_POLYMORPHISM");
     }
 
-    /*
+    
+    // If we rejected it as a polymorphism because it has too high a frequency,
+    // (and for no other reasons!) then change it to a consensus mutation, 
+    // but only if it passed genotype quality
     if (
-        mut.number_reject_reasons() > 0
-        && (double_from_string(mut[POLYMORPHISM_QUALITY]) > settings.mutation_log10_e_value_cutoff)
-        && (from_string<double>(mut[FREQUENCY]) > 0.5)
+        (mut[REJECT] == "POLYMORPHISM_FREQUENCY_CUTOFF")
+        && (from_string<double>(mut[FREQUENCY]) >= 0.5)
         )
     {
       mut["polymorphism_changed_to_consensus"] = "1";
-      mut.erase(FREQUENCY);
+      mut[FREQUENCY] = "1";
       mut.erase(REJECT);
 
-      // FIX -- need to re-evaluate whether it would have been accepted as a normal mutation
-      // This is NOT the right quality being used here. Need a separate quality for consensus call and polymorphism call!
-      if (double_from_string(mut[POLYMORPHISM_QUALITY]) < settings.mutation_log10_e_value_cutoff)
+      // Need to re-evaluate whether it would have been accepted as a normal mutation
+      if (double_from_string(mut[GENOTYPE_QUALITY]) < settings.mutation_log10_e_value_cutoff)
         mut.add_reject_reason("EVALUE");
     }
-     */
+    
 
     new_gd.add(mut);
 
