@@ -2692,10 +2692,7 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
     // If we rejected it as a polymorphism because it has too high a frequency,
     // (and for no other reasons!) then change it to a consensus mutation, 
     // but only if it passed genotype quality
-    if (
-        (mut[REJECT] == "POLYMORPHISM_FREQUENCY_CUTOFF")
-        && (from_string<double>(mut[FREQUENCY]) >= 0.5)
-        )
+    if ( (mut.count(REJECT)) && (from_string<double>(mut[FREQUENCY]) >= 0.5) )
     {
       mut["polymorphism_changed_to_consensus"] = "1";
       mut[FREQUENCY] = "1";
