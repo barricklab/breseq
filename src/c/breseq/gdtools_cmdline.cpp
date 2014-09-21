@@ -1413,10 +1413,9 @@ int do_simulate_mutations(int argc, char *argv[])
   options("seq,s","Reference sequence id to use from reference file");  
   options("seed","Seed for the random number generator");
   options("verbose,v","Verbose mode", TAKES_NO_ARGUMENT);
-  options.processCommandArgs(argc, argv);
   
   options.addUsage("");
-  options.addUsage("Using -reference, this command will generate a --number of");
+  options.addUsage("Using --reference, this command will generate a --number of");
   options.addUsage("mutations, and space them based on the supplied --buffer.");  
   options.addUsage("Not supplying --seq will use the first sequence in the reference.");
   options.addUsage("");
@@ -1434,6 +1433,8 @@ int do_simulate_mutations(int argc, char *argv[])
   options.addUsage("An exclusion file of repeats should be generated using a MUMmer command like this:");
   options.addUsage("  mummer -maxmatch -b -c -l 36 REL606.fna REL606.fna > reference.exclude.coords");
   options.addUsage("The resulting reference.exclude.coords file can be used with the --exclude option.");
+
+	options.processCommandArgs(argc, argv);
 
   if(argc <= 1)  {
     options.printUsage();

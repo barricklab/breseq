@@ -1013,8 +1013,7 @@ namespace breseq {
               break;
             }
             if (1-frequency < settings.polymorphism_frequency_cutoff) {
-              mut.add_reject_reason("POLYMORPHISM_FREQUENCY_CUTOFF");
-              mut.erase(FREQUENCY);
+              mut[FREQUENCY] = "1";
             }
           }
         }            

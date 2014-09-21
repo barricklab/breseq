@@ -2661,25 +2661,30 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
       string seq_id = mut["seq_id"];
       int32_t mut_pos = from_string<int32_t>(mut["position"]);
 
-      int32_t start_pos = mut_pos - settings.polymorphism_reject_surrounding_homopolymer_length;
-      int32_t end_pos = mut_pos + settings.polymorphism_reject_surrounding_homopolymer_length;
-
+      // determine the start and end of homopolymer created by substitution
+      int32_t start_pos = mut_pos - 1;
+      while (start_pos >= 1)
+      {
+        if (this->get_sequence_1(seq_id, start_pos, start_pos) != mut[NEW_BASE]) {
+          break;
+        }
+        start_pos--;
+      }
+      start_pos++;
+      
+      int32_t end_pos = mut_pos + 1;
+      while (end_pos <= static_cast<int32_t>(this->get_sequence_length(seq_id)))
+      {
+        if (this->get_sequence_1(seq_id, end_pos, end_pos) != mut[NEW_BASE]) {
+          break;
+        }
+        end_pos++;
+      }
+      end_pos--;
+      
       // check bounds
-      if ( (start_pos >= 1) && (end_pos <= static_cast<int32_t>(this->get_sequence_length(seq_id))) ) {
-        
-        bool reject = true;
-        for (int32_t i=start_pos; i<= end_pos; i++) {
-          if (i==mut_pos) continue;
-          
-          if (this->get_sequence_1(seq_id, i, i) != mut[NEW_BASE]) {
-            reject = false;
-            break;
-          }
-        }
-        
-        if (reject) {
+      if ( (start_pos < mut_pos) && (end_pos > mut_pos) && (end_pos - start_pos + 1 >= static_cast<int32_t>(settings.polymorphism_reject_surrounding_homopolymer_length)) ) {
           mut.add_reject_reason("SURROUNDING_HOMOPOLYMER");
-        }
       }
     }
     
