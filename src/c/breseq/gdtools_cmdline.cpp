@@ -921,7 +921,7 @@ int do_annotate(int argc, char* argv[])
   ref_seq_info.LoadFiles(reference_file_names);
     
   uout("Annotating mutations");
-  ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"));
+  ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"), compare_mode);
     
   if (output_format == "HTML") {
     
