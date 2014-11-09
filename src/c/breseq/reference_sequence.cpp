@@ -2285,10 +2285,11 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
   }
 }
 
-void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bool ignore_pseudogenes, bool verbose)
+void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bool ignore_pseudogenes, bool compare_mode, bool verbose)
 {
   //keep track of other mutations that affect SNPs
   //because we may double-hit a codon
+  //=>must be sure that these are from the same input file...so special flag for compare mode!
 
   //TODO: the proper way to do this is to create list of SNPs that have been hit
   // hashed by gene protein accession ID and AA position within gene
@@ -2299,9 +2300,20 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
   // Be sure that we are sorted.
   gd.sort();
   
-  vector<cDiffEntry*> snp_muts;
-
   diff_entry_list_t muts = gd.show_list();
+  
+  string default_key = "default";
+  vector<string>compare_key_list;
+  if (compare_mode) {
+    diff_entry_ptr_t p = *muts.begin();
+    for(cDiffEntry::iterator it = p->begin(); it != p->end(); ++it) {
+      if (it->first.compare(0, 10, "frequency_") == 0) {
+        compare_key_list.push_back(it->first);
+      }
+    }
+  }
+  map<string, vector<cDiffEntry*> > snp_muts;
+
   for (diff_entry_list_t::iterator it=muts.begin(); it!=muts.end(); it++)
   {
     cDiffEntry& mut= **it;
@@ -2314,7 +2326,15 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
       case SNP:{
         mut["_ref_seq"] = get_sequence_1(mut["seq_id"], from_string<uint32_t>(mut["position"]), from_string<int32_t>(mut["position"]));
         annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]), false, ignore_pseudogenes);
-        snp_muts.push_back(&mut);
+        if (compare_mode) {
+          for(vector<string>::iterator itc = compare_key_list.begin(); itc != compare_key_list.end(); ++itc) {
+            if ( from_string<double>(mut[*itc]) == 1) {
+              snp_muts[*itc].push_back(&mut);
+            }
+          }
+        } else {
+          snp_muts[default_key].push_back(&mut);
+        }
       } break;
         
       case SUB:{
@@ -2388,51 +2408,56 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
       } break;
     }
   }
-  
-  // Hugely inefficient step --!!
-  
-  // Scan SNPs to see if they affect the same codon, merge changes, and 
-  // update amino acid changes assumes the list of snps is sorted.
-  for (size_t i = 0; i < snp_muts.size(); i++){
     
-    if ((*snp_muts[i])["codon_position"] == "")
-      continue;
-    int32_t i_position = from_string<int32_t>((*snp_muts[i])["position"]);
+  if (!compare_mode) {
+  
+    // Hugely inefficient step --!!
+    // Needs to be implemented correctly for compare mode ... will have to split diff entries
     
-    for (size_t j = i + 1; j < snp_muts.size(); j++){
+    // Scan SNPs to see if they affect the same codon, merge changes, and 
+    // update amino acid changes assumes the list of snps is sorted.
+    for (size_t i = 0; i < snp_muts.size(); i++){
       
-      if ((*snp_muts[j])["codon_position"] == "")
+      if ((*snp_muts[default_key][i])["codon_position"] == "")
         continue;
-      int32_t j_position = from_string<int32_t>((*snp_muts[j])["position"]);
-      int32_t snp_distance = i_position - j_position;
+      int32_t i_position = from_string<int32_t>((*snp_muts[default_key][i])["position"]);
       
-      if (snp_distance < -2)
-        break;
-      
-      int32_t i_codon_position = from_string<int32_t>((*snp_muts[i])["codon_position"]);
-      int32_t j_codon_position = from_string<int32_t>((*snp_muts[j])["codon_position"]);
-      
-      if ( ((i_position > j_position) && (snp_distance <= 2 && j_codon_position < i_codon_position))
-        || ((i_position < j_position) && (snp_distance >= -2 && j_codon_position > i_codon_position)) ) {
-          
-          // Don't do this for SNPs that are not 100% frequency
-          if (   ((*snp_muts[i]).entry_exists(FREQUENCY) && ( from_string<double>((*snp_muts[i])[FREQUENCY]) != 1.0 ))
-              || ((*snp_muts[j]).entry_exists(FREQUENCY) && ( from_string<double>((*snp_muts[j])[FREQUENCY]) != 1.0 )) )
-          {
-            (*snp_muts[i])["multiple_polymorphic_SNPs_in_same_codon"] = "1";
-            (*snp_muts[j])["multiple_polymorphic_SNPs_in_same_codon"] = "1";
-            continue;
-          }
-          
-          string new_codon = (*snp_muts[i])["codon_new_seq"];
-          const char new_char = (*snp_muts[j])["new_seq"][0];
-          new_codon[j_codon_position - 1] = new_char;
-          (*snp_muts[i])["codon_new_seq"] = new_codon;
-          (*snp_muts[j])["codon_new_seq"] = new_codon;
-          (*snp_muts[i])["aa_new_seq"] =  translate_codon(new_codon, from_string((*snp_muts[i])["transl_table"]), from_string((*snp_muts[i])["aa_position"]));
-          (*snp_muts[j])["aa_new_seq"] =  translate_codon(new_codon, from_string((*snp_muts[j])["transl_table"]), from_string((*snp_muts[j])["aa_position"]));
+      for (size_t j = i + 1; j < snp_muts.size(); j++){
+        
+        if ((*snp_muts[default_key][j])["codon_position"] == "")
+          continue;
+        int32_t j_position = from_string<int32_t>((*snp_muts[default_key][j])["position"]);
+        int32_t snp_distance = i_position - j_position;
+        
+        if (snp_distance < -2)
+          break;
+        
+        int32_t i_codon_position = from_string<int32_t>((*snp_muts[default_key][i])["codon_position"]);
+        int32_t j_codon_position = from_string<int32_t>((*snp_muts[default_key][j])["codon_position"]);
+        
+        if ( ((i_position > j_position) && (snp_distance <= 2 && j_codon_position < i_codon_position))
+          || ((i_position < j_position) && (snp_distance >= -2 && j_codon_position > i_codon_position)) ) {
+            
+            // Don't do this for SNPs that are not 100% frequency
+            if (   ((*snp_muts[default_key][i]).entry_exists(FREQUENCY) && ( from_string<double>((*snp_muts[default_key][i])[FREQUENCY]) != 1.0 ))
+                || ((*snp_muts[default_key][j]).entry_exists(FREQUENCY) && ( from_string<double>((*snp_muts[default_key][j])[FREQUENCY]) != 1.0 )) )
+            {
+              (*snp_muts[default_key][i])["multiple_polymorphic_SNPs_in_same_codon"] = "1";
+              (*snp_muts[default_key][j])["multiple_polymorphic_SNPs_in_same_codon"] = "1";
+              continue;
+            }
+            
+            string new_codon = (*snp_muts[default_key][i])["codon_new_seq"];
+            const char new_char = (*snp_muts[default_key][j])["new_seq"][0];
+            new_codon[j_codon_position - 1] = new_char;
+            (*snp_muts[default_key][i])["codon_new_seq"] = new_codon;
+            (*snp_muts[default_key][j])["codon_new_seq"] = new_codon;
+            (*snp_muts[default_key][i])["aa_new_seq"] =  translate_codon(new_codon, from_string((*snp_muts[default_key][i])["transl_table"]), from_string((*snp_muts[default_key][i])["aa_position"]));
+            (*snp_muts[default_key][j])["aa_new_seq"] =  translate_codon(new_codon, from_string((*snp_muts[default_key][j])["transl_table"]), from_string((*snp_muts[default_key][j])["aa_position"]));
+        }
       }
-    }
+    } // SNP handling
+    
   }//for
 }
 
