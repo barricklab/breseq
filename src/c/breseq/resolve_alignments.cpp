@@ -313,7 +313,7 @@ void resolve_alignments(
 	// ####
 
 	//## if there were no candidate junctions (file is empty) then we seg fault if we try to use samtools on it...
-  cReferenceSequences junction_ref_seq_info;
+  cReferenceSequences junction_ref_seq_info(false);
 	if (junction_prediction
 			&& !file_exists(settings.candidate_junction_fasta_file_name.c_str())
 			&& !file_empty(settings.candidate_junction_fasta_file_name.c_str())

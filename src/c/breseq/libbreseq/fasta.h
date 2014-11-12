@@ -54,14 +54,15 @@ namespace breseq {
   
   class cFastaFile : public fstream {
     
+  public:
+    string    m_file_name;  
+    
   protected:
-    string    m_file_name;
     string    m_current_line;
     uint32_t  m_current_line_num;
     uint32_t  m_bases_per_line;
     
-  public:
-  
+  public:  
     cFastaFile(const string &file_name, ios_base::openmode mode);
     ~cFastaFile() {};
       

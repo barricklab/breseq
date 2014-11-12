@@ -1251,7 +1251,7 @@ inline cString cString::get_directory_path() const
 
 inline cString& cString::escape_shell_chars(void) {
   cString& value = *this;
-  char escapees[] = {'<', '>', '|', '&', '\0'};
+  char escapees[] = {'<', '>', '|', '&', '\0', ';'};
   char temp[1000];
 
   uint32_t k = 0;
