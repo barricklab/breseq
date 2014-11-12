@@ -598,6 +598,7 @@ namespace breseq {
       }
     }
     
+    /* 2014-11-10 replaced
     //Here we check to see we haven't loaded some of the same information again.
     for(str_uint::iterator i = old_load.begin(); i != old_load.end(); i++)
     {      
@@ -670,10 +671,13 @@ namespace breseq {
               break;
           }
         }
+
       }
+
       
      //ASSERT(m_seq_id_loaded[i->first] == i->second, file_name + "\nANOTHER FILE HAS ALREADY LOADED REFERENCE INFORMATION FOR: " + i->first);
     }
+    */
   }
   
   void cReferenceSequences::Verify()
@@ -682,7 +686,7 @@ namespace breseq {
     stringstream ss;    
     for (vector<cAnnotatedSequence>::iterator itr= this->begin(); itr != this->end(); itr++) {
       cAnnotatedSequence& as = *itr;
-      if (!as.get_sequence_length()) {
+      if (!as.get_sequence_length() || !as.m_sequence_loaded_from_file.size()) {
         ss << "No sequence found for reference: " << as.m_seq_id << endl;
         ss << endl;
         ss << "Make sure that there is a sequence present in each file you are loading" << endl;
@@ -709,6 +713,8 @@ namespace breseq {
 
     while ( ff.read_sequence(on_seq) ) {
       
+      on_seq.m_name = safe_seq_id_name(on_seq.m_name);
+      
       // @JEB sorting the input files by type seems like a better way of doing this,
       //    but we can't do it just by looking at file name endings...
       //
@@ -723,13 +729,14 @@ namespace breseq {
       else {
         this->add_new_seq(on_seq.m_name, file_name);
       }
-      
+            
       // copy the info over (could define an assignment operator...)
-      cAnnotatedSequence& this_seq = (*this)[on_seq.m_name];
+      cAnnotatedSequence& this_seq = (*this)[on_seq.m_name];      
       this_seq.m_fasta_sequence = on_seq;
       this_seq.m_seq_id = on_seq.m_name;
       this_seq.m_description = on_seq.m_description;
       this_seq.m_length = on_seq.m_sequence.size();
+      this_seq.set_sequence_loaded_from_file(file_name);
     }
   }
     
@@ -738,11 +745,14 @@ namespace breseq {
     cFastaSequence on_seq;
 
     while ( ff.read_sequence(on_seq) ) {
-      this->add_new_seq(on_seq.m_name, "");
-      cAnnotatedSequence& new_seq = (*this)[on_seq.m_name];
-      new_seq.m_fasta_sequence = on_seq;
-      new_seq.m_seq_id = on_seq.m_name;
-      new_seq.m_length = on_seq.m_sequence.size();
+      
+      on_seq.m_name = safe_seq_id_name(on_seq.m_name);
+      this->add_new_seq(on_seq.m_name, ff.m_file_name);
+      cAnnotatedSequence& this_seq = (*this)[on_seq.m_name];
+      this_seq.m_fasta_sequence = on_seq;
+      this_seq.m_seq_id = on_seq.m_name;
+      this_seq.m_length = on_seq.m_sequence.size();
+      this_seq.set_sequence_loaded_from_file(ff.m_file_name);
     }
 
   }
@@ -790,6 +800,7 @@ namespace breseq {
           stringstream ls(line);
           string x, seq_id, start, end;
           ls >> x >> seq_id >> start >> end;
+          seq_id = safe_seq_id_name(seq_id);
           this->add_new_seq(seq_id, file_name);
           (*this)[seq_id].m_length = from_string<uint32_t>(end);
           continue;
@@ -850,7 +861,8 @@ namespace breseq {
             RemoveLeadingTrailingWhitespace(line);
           }
           this_seq.m_length = this_seq.m_fasta_sequence.m_sequence.size();
-          
+          this_seq.set_sequence_loaded_from_file(file_name);
+
           continue;
         } else {
           continue;
@@ -986,7 +998,7 @@ namespace breseq {
       }
 
       (*this)[seq_id].feature_push_back(fp);
-
+      (*this)[seq_id].set_features_loaded_from_file(file_name, true); // features may be spread across multiple files
     }
     
     // sort because they may now be out of order
@@ -1097,25 +1109,28 @@ void cReferenceSequences::ReadGenBank(const string& in_file_name) {
 
   while (ReadGenBankFileHeader(in, in_file_name)) {
     
-    cAnnotatedSequence& s = this->back();
+    cAnnotatedSequence& this_seq = this->back();
     
     // add a 'region' feature for GFF3 output
     cSequenceFeaturePtr f(new cSequenceFeature);
     (*f)["type"] = "region";
-    f->m_location.set_strand( 1);
-    f->m_location.set_start_1( 1);
-    f->m_location.set_end_1( s.m_length);
+    f->m_location.set_strand(1);
+    f->m_location.set_start_1(1);
+    f->m_location.set_end_1(this_seq.m_length);
     
-    if (s.m_is_circular)
+    if (this_seq.m_is_circular)
       f->m_gff_attributes["Is_circular"].push_back("true");
     else
       f->m_gff_attributes["Is_circular"].push_back("false");
     
-    f->m_gff_attributes["Note"].push_back(s.m_description);
-    s.feature_push_back(f);
+    f->m_gff_attributes["Note"].push_back(this_seq.m_description);
+    this_seq.feature_push_back(f);
     
-    ReadGenBankFileSequenceFeatures(in, s);
-    ReadGenBankFileSequence(in, s);    
+    ReadGenBankFileSequenceFeatures(in, this_seq);
+    this_seq.set_features_loaded_from_file(in_file_name);
+    
+    ReadGenBankFileSequence(in, this_seq);   
+    this_seq.set_sequence_loaded_from_file(in_file_name);
   }
 }
 
@@ -1139,6 +1154,7 @@ bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file
       string w;
       w = GetWord(line);
       string seq_id = w;
+      seq_id = safe_seq_id_name(seq_id);
       
       this->add_new_seq(seq_id, file_name);
       s = &((*this)[seq_id]);
@@ -1619,6 +1635,7 @@ void cReferenceSequences::ReadBull(const string& file_name) {
     cSequenceFeature& feat = **it;
     s.m_features.push_back(*it);
   }
+  s.set_features_loaded_from_file(file_name, true);
 }
 
 /*! 

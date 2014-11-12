@@ -307,14 +307,17 @@ namespace breseq {
       string m_description; // GenBank (DEFINITION) | GFF (description), from main feature line
       string m_seq_id;      // GenBank (LOCUS)      | GFF (seqid), from ##sequence-region line
       string m_file_name;   // Name of file this sequence was loaded from
-    
-      cFastaSequence m_fasta_sequence;            //!< Nucleotide sequence
+
+    cFastaSequence m_fasta_sequence;            //!< Nucleotide sequence
     
       // Features are stored as counted pointers so that we can have ready-made lists
       // of different types of features. 
       cSequenceFeatureList m_features;    //!< Full list of sequence features
       cSequenceFeatureList m_genes;       //!< Subset of features
       cSequenceFeatureList m_repeats;     //!< Subset of features
+    
+      string m_features_loaded_from_file; //!< File name features were loaded from
+      string m_sequence_loaded_from_file; //!< File name sequence was loaded from
     
     public:
     
@@ -323,9 +326,19 @@ namespace breseq {
         m_length(0),
         m_is_circular(false),
         m_description("na"), 
-        m_seq_id("na"),
-        m_features(0) {} ;
-      
+        m_seq_id("na")
+        {} ;
+    
+      void set_features_loaded_from_file(const string& file_name, bool allow_reload = false) {
+        ASSERT(allow_reload || (m_features_loaded_from_file.size() == 0), "Duplicate seq id found in file '" + file_name + "'! Features for '" + m_seq_id + "' were already loaded from file '" + m_features_loaded_from_file + "'.")
+        m_features_loaded_from_file = file_name;
+      }
+    
+      void set_sequence_loaded_from_file(const string& file_name, bool allow_reload = false) {
+        ASSERT(allow_reload || (m_sequence_loaded_from_file.size() == 0), "Duplicate seq id found in file '" + file_name + "'! DNA sequence for '" + m_seq_id + "' was already loaded from file '" + m_sequence_loaded_from_file + "'.")
+        m_sequence_loaded_from_file = file_name;
+      }
+    
       void sort_features()
       {
         m_features.sort();
@@ -555,15 +568,17 @@ namespace breseq {
     str_uint m_seq_id_loaded; // for recording how many times we tried to load this seq_id
     uint32_t m_index_id;
     bool m_initialized;
+    bool m_use_safe_seq_ids;
 
     //!< Currently supported file types.
     enum FileType {UNKNOWN, GENBANK, FASTA, GFF3, BULL};
 
   public:
     
-    cReferenceSequences()
+    cReferenceSequences(bool _use_safe_seq_ids = true)
       : m_index_id(0)
       , m_initialized(false)
+      , m_use_safe_seq_ids(_use_safe_seq_ids)
     {}
 
     //!< Load all reference files and verify
@@ -777,6 +792,35 @@ namespace breseq {
     void annotate_mutations(cGenomeDiff& gd, bool only_muts = false, bool ignore_pseudogenes = false, bool compare_mode = false, bool verbose = false);
     void polymorphism_statistics(Settings& settings, Summary& summary);
     string repeat_family_sequence(const string& repeat_name, int8_t strand, string* repeat_region = NULL, string* picked_seq_id=NULL, cSequenceFeature* picked_sequence_feature=NULL);
+    
+    string safe_seq_id_name(const string& input)
+    {
+      // return if not using safe seq ids
+      if (!m_use_safe_seq_ids) return input;
+      
+      string s(input);
+      
+      size_t pos = s.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890._-");
+      while(pos != string::npos) {
+        s.replace(pos, 1, ""); // remove
+                               //s[pos] = '.'; pos++;// or replace with "safe" character
+        pos = s.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890._-", pos);
+      }
+      
+      // Remove double underscores which conflict with junction dividers
+      string new_s = substitute(s,"__","_");
+      while (new_s != s) {
+        s = new_s;
+        new_s = substitute(s,"__","_");
+      }
+      s = new_s;
+      
+      if (s != input) {
+        WARN("Reference seq id converted from '" + input + "' to '" + s + "'.\nOnly alphanumeric characters, periods, dashes, and single underscores '_' are allowed in seq ids.");
+      }
+      
+      return s;
+    }
     
     static string GFF3EscapeString(const string& s)
     {
