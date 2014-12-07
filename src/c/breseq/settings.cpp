@@ -218,7 +218,6 @@ namespace breseq
     ("junction-score-cutoff", "Maximum negative log10 probability of uneven coverage across a junction breakpoint to accept (0 = OFF)", 3.0, ADVANCED_OPTION)
     ("junction-minimum-pos-hash-score", "Minimum number of distinct spanning read start positions required to accept a junction (DEFAULT = consensus mode, 3; polymorphism mode, 3)", "", ADVANCED_OPTION)
     ("junction-minimum-side-match", "Minimum number of bases a read must extend past any overlap or read-only sequence at the breakpoint of a junction on each side to count as support for the junction (DEFAULT = consensus mode, 1; polymorphism mode, 6)", "", ADVANCED_OPTION)
-    ("user-junction-gd","User supplied genome diff file of JC evidence to use as candidate junctions and report support for.", "", ADVANCED_OPTION) 
     ;
 
     options.addUsage("", ADVANCED_OPTION);    
@@ -246,6 +245,7 @@ namespace breseq
     options.addUsage("", true);
     options.addUsage("Experimental Options (Use at your own risk)", true);
     options
+    ("user-evidence-gd","User supplied genome diff file of JC or RA evidence to report support for, regardless of whether they would have been predicted as mutations.", "", ADVANCED_OPTION)
     ("junction-debug", "Output additional junction debugging files", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("cnv","Do experimental copy number variation prediction",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("cnv-tile-size", "Tile size for copy number variation prediction", 500, ADVANCED_OPTION)
@@ -356,7 +356,7 @@ namespace breseq
     // we require a cReferenceSequences object to be instantiated outside of the cSettings object
     // and a subsequent call to init_reference_sequences()
     
-    this->user_junction_genome_diff_file_name = options["user-junction-gd"];
+    this->user_evidence_genome_diff_file_name = options["user-evidence-gd"];
     
     this->run_name = options["name"];
     

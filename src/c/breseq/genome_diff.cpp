@@ -704,7 +704,7 @@ void cDiffEntry::mutation_reverse_complement() {
     }
       
     default:
-      ERROR("Attempt to reverse complement cDiffEntry of unsupported type:" + this->_type);
+      ERROR("Attempt to reverse complement cDiffEntry of unsupported type:" + to_string(this->_type));
 
   }
 }
@@ -1563,8 +1563,8 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
             uint32_t size = de->entry_exists(SIZE) ? from_string<uint32_t>((*de)[SIZE]) : 0;
             uint32_t within_position = from_string<uint32_t>((*within_de)[POSITION]);
 
-            uint32_t valid_start;
-            uint32_t valid_end;
+            uint32_t valid_start(0);
+            uint32_t valid_end(0);
             
             if ((*within_de)[SEQ_ID] != (*de)[SEQ_ID]) {
               parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Attempt to put mutation 'within' a mutation on a different reference sequence id:\n" + within_de->as_string() , true);
@@ -3211,7 +3211,7 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
           within_copy_index = from_string<int32_t>(split_within[1]);
         }
 
-        uint64_t special_delta;
+        uint64_t special_delta(0);
         
         if (current_mut._type == AMP) {
           // Inside an AMP means we shift to the desired copy
@@ -4883,7 +4883,7 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
     }
     
     // ID attribute
-    if( gvf[8].compare( "" ) == 0 || ( gvf[8].size()>8 && !gvf[8].substr(0,3).compare("ID=") == 0) ){
+    if( gvf[8].compare( "" ) == 0 || ( gvf[8].size()>8 && (gvf[8].substr(0,3).compare("ID=") == 0)) ){
       string s = "";
       s.append("ID=").append(gvf[0]).append(":").append(gvf[1]).append(":");
       s.append(gvf[2]).append(":").append(gvf[3]).append(";");

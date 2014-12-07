@@ -1176,8 +1176,8 @@ int breseq_default_action(int argc, char* argv[])
     cReferenceSequences conv_ref_seq_info;
     
     // Do a quick load of the file to detect formatting errors.
-    if (settings.user_junction_genome_diff_file_name != "") {
-      cGenomeDiff gd(settings.user_junction_genome_diff_file_name); 
+    if (settings.user_evidence_genome_diff_file_name != "") {
+      cGenomeDiff gd(settings.user_evidence_genome_diff_file_name);
     }
     
     // Load all of the reference sequences and convert to FASTA and GFF3
