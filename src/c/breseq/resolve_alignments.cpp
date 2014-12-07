@@ -388,7 +388,7 @@ void resolve_alignments(
   }
   
   // Be sure to add user defined junctions
-  if (settings.user_junction_genome_diff_file_name != "") {
+  if (settings.user_evidence_genome_diff_file_name != "") {
     cFastaFile ff(settings.candidate_junction_fasta_file_name, ios::in);
     cFastaSequence sequence;
     while( ff.read_sequence(sequence) ) {

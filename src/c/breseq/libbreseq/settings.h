@@ -217,7 +217,7 @@ namespace breseq
     cReferenceSequenceSettings refseq_settings; // This is extra settings data initialized from
                                                 // refseqs and how they are provided to the CLI
     
-    string user_junction_genome_diff_file_name; // Default = none COMMAND-LINE OPTION
+    string user_evidence_genome_diff_file_name; // Default = none COMMAND-LINE OPTION
     string run_name;          // Default = <none> COMMAND-LINE OPTION
     string print_run_name;    // run_name with '_' replaced by ' '
     

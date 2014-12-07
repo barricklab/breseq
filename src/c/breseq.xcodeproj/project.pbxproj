@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 42;
+	objectVersion = 46;
 	objects = {
 
 /* Begin PBXAggregateTarget section */
@@ -22,11 +22,11 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
-		4247E82C1268EC3E006A6D78 /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 421ACFAC1170F05500C2EB85 /* libz.a */; };
 		701EE98313C4BB5200F2EC70 /* contingency_loci.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 701EE98213C4BB5200F2EC70 /* contingency_loci.cpp */; };
 		702EABF713421A8400103019 /* fastq.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702EABF613421A8400103019 /* fastq.cpp */; };
 		70367D2113EB232C000787CC /* coverage_distribution.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70367D2013EB232C000787CC /* coverage_distribution.cpp */; };
 		70436D5B13FF7675006448FB /* samtools in CopyFiles */ = {isa = PBXBuildFile; fileRef = 70436D5A13FF7675006448FB /* samtools */; };
+		704A07D01A340A2600B3ACC7 /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 704A07CF1A3409EA00B3ACC7 /* libz.a */; };
 		707F211613478B7700ED2F3E /* candidate_junctions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 707F211513478B7700ED2F3E /* candidate_junctions.cpp */; };
 		707F349F155D970000F5C89F /* summary.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 707F349E155D970000F5C89F /* summary.cpp */; };
 		707F34A2155D97B900F5C89F /* reference_sequence.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 707F34A1155D97B900F5C89F /* reference_sequence.cpp */; };
@@ -119,7 +119,6 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		421ACFAC1170F05500C2EB85 /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = /Users/tylerfields/development/software/lib/libz.a; sourceTree = "<absolute>"; };
 		701EE98213C4BB5200F2EC70 /* contingency_loci.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = contingency_loci.cpp; path = breseq/contingency_loci.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		7024BBDB155DEC31007CCA5B /* combined_circos.conf */ = {isa = PBXFileReference; lastKnownFileType = text; name = combined_circos.conf; path = breseq/combined_circos.conf; sourceTree = "<group>"; };
 		7024BBDC155DEC31007CCA5B /* ideogram.conf */ = {isa = PBXFileReference; lastKnownFileType = text; name = ideogram.conf; path = breseq/ideogram.conf; sourceTree = "<group>"; };
@@ -131,6 +130,7 @@
 		70367D2013EB232C000787CC /* coverage_distribution.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = coverage_distribution.cpp; path = breseq/coverage_distribution.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		70436D5713FF6D7D006448FB /* coverage_distribution.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = coverage_distribution.r; path = breseq/coverage_distribution.r; sourceTree = "<group>"; };
 		70436D5A13FF7675006448FB /* samtools */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; name = samtools; path = "../../extern/samtools-0.1.18/samtools"; sourceTree = SOURCE_ROOT; };
+		704A07CF1A3409EA00B3ACC7 /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = "/Users/jbarrick/Library/Developer/Xcode/DerivedData/breseq-canagyzpaxpsjgbtjxenmavcspzz/Build/Products/Debug/../../../../../../../../../../opt/local/lib/libz.a"; sourceTree = "<absolute>"; };
 		70616DCF1400A0C0006E7800 /* plot_coverage.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = plot_coverage.r; path = breseq/plot_coverage.r; sourceTree = "<group>"; };
 		70616DD01400A0C0006E7800 /* plot_error_rate.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = plot_error_rate.r; path = breseq/plot_error_rate.r; sourceTree = "<group>"; };
 		70616DD11400A0C0006E7800 /* polymorphism_statistics.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = polymorphism_statistics.r; path = breseq/polymorphism_statistics.r; sourceTree = "<group>"; };
@@ -210,7 +210,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4247E82C1268EC3E006A6D78 /* libz.a in Frameworks */,
+				704A07D01A340A2600B3ACC7 /* libz.a in Frameworks */,
 				70B69E061369E2440001B750 /* libbam.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -255,8 +255,8 @@
 		421ACF5F1170E06300C2EB85 /* lib */ = {
 			isa = PBXGroup;
 			children = (
+				704A07CF1A3409EA00B3ACC7 /* libz.a */,
 				70B69E051369E2440001B750 /* libbam.a */,
-				421ACFAC1170F05500C2EB85 /* libz.a */,
 			);
 			name = lib;
 			sourceTree = "<group>";
@@ -456,8 +456,11 @@
 /* Begin PBXProject section */
 		421ACEB71170DB9600C2EB85 /* Project object */ = {
 			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0610;
+			};
 			buildConfigurationList = 421ACEBA1170DB9600C2EB85 /* Build configuration list for PBXProject "breseq" */;
-			compatibilityVersion = "Xcode 2.4";
+			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -561,31 +564,34 @@
 		421ACEB81170DB9600C2EB85 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COPY_PHASE_STRIP = NO;
 				GCC_VERSION = com.apple.compilers.llvmgcc42;
 				HEADER_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS = "$(value)";
+				ONLY_ACTIVE_ARCH = YES;
 			};
 			name = Debug;
 		};
 		421ACEB91170DB9600C2EB85 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COPY_PHASE_STRIP = YES;
 				GCC_VERSION = com.apple.compilers.llvmgcc42;
 				HEADER_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS = "$(value)";
+				ONLY_ACTIVE_ARCH = NO;
 			};
 			name = Release;
 		};
 		422D46211219DEFF003FD94D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(NATIVE_ARCH)";
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_VERSION = com.apple.compilers.llvmgcc42;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				HEADER_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS = "";
 				PRODUCT_NAME = all;
@@ -595,11 +601,10 @@
 		422D46221219DEFF003FD94D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(NATIVE_ARCH)";
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
-				GCC_VERSION = com.apple.compilers.llvmgcc42;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				HEADER_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS = "";
 				PRODUCT_NAME = all;
@@ -612,12 +617,12 @@
 			baseConfigurationReference = 70B69E091369E51E0001B750 /* Debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COPY_PHASE_STRIP = NO;
 				CPPFLAGS = "$(CPPFLAGS) -DDATADIR=\"../etc\"";
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_VERSION = "";
 				GCC_WARN_ABOUT_POINTER_SIGNEDNESS = YES;
 				HEADER_SEARCH_PATHS = "$(value)";
 				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
@@ -638,12 +643,12 @@
 			baseConfigurationReference = 70B69E0A1369E51E0001B750 /* Release.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COPY_PHASE_STRIP = YES;
 				CPPFLAGS = "$(CPPFLAGS) -DDATADIR=\"../etc\"";
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_MODEL_TUNING = G5;
+				GCC_VERSION = "";
 				HEADER_SEARCH_PATHS = "$(value)";
 				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
 				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
@@ -664,11 +669,13 @@
 			baseConfigurationReference = 70B69E091369E51E0001B750 /* Debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GCC_VERSION = "";
 				HEADER_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS = (
 					"$(value)",
 					/opt/local/lib,
+					"$(PROJECT_DIR)/../../../../../../opt/local/lib",
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = breseq;
@@ -680,16 +687,18 @@
 			baseConfigurationReference = 70B69E0A1369E51E0001B750 /* Release.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_MODEL_TUNING = G5;
+				GCC_VERSION = "";
 				HEADER_SEARCH_PATHS = "$(value)";
 				INSTALL_PATH = /usr/local/lib;
 				LIBRARY_SEARCH_PATHS = (
 					"$(value)",
 					/opt/local/lib,
+					"$(PROJECT_DIR)/../../../../../../opt/local/lib",
 				);
 				PREBINDING = NO;
 				PRODUCT_NAME = breseq;
@@ -701,7 +710,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COPY_PHASE_STRIP = NO;
 				DEBUGGING_SYMBOLS = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
@@ -716,7 +724,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
-				ONLY_ACTIVE_ARCH = YES;
+				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -728,7 +736,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
@@ -738,6 +745,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -750,12 +758,12 @@
 			baseConfigurationReference = 70B69E091369E51E0001B750 /* Debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COPY_PHASE_STRIP = NO;
 				CPPFLAGS = "$(CPPFLAGS) -DDATADIR=\"../etc\"";
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_FIX_AND_CONTINUE = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				GCC_WARN_ABOUT_POINTER_SIGNEDNESS = YES;
 				HEADER_SEARCH_PATHS = "$(value)";
 				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
@@ -776,12 +784,12 @@
 			baseConfigurationReference = 70B69E0A1369E51E0001B750 /* Release.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COPY_PHASE_STRIP = YES;
 				CPPFLAGS = "$(CPPFLAGS) -DDATADIR=\"../etc\"";
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_MODEL_TUNING = G5;
+				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				HEADER_SEARCH_PATHS = "$(value)";
 				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
 				HEADER_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";

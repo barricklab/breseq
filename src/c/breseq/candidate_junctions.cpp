@@ -915,10 +915,10 @@ namespace breseq {
     map<string,cDiffEntry> user_defined_junctions;
    
     // File must exist for us to process
-    if (settings.user_junction_genome_diff_file_name == "")
+    if (settings.user_evidence_genome_diff_file_name == "")
       return user_defined_junctions;
     
-    cGenomeDiff gd(settings.user_junction_genome_diff_file_name);
+    cGenomeDiff gd(settings.user_evidence_genome_diff_file_name);
 
     int32_t max_read_length = summary.sequence_conversion.max_read_length;
     
