@@ -244,6 +244,7 @@ public:
   uint32_t get_start();
   uint32_t get_end();
 
+
   //! Common function giving change in size of genome at site of applying entry
   int32_t mutation_size_change(cReferenceSequences& ref_seq_info);
   

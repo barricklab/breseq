@@ -47,9 +47,10 @@ int gdtools_usage()
   uout << "INTERSECT              keep shared mutations in two files" << endl;
   uout << "UNION                  combine mutations, removing duplicates" << endl;
   uout << "MERGE                  combine mutations, preserving duplicates" << endl;
+	uout << "MASK                   remove mutation predictions in masked regions" << endl;
   uout << "FILTER                 remove mutations given filtering expressions" << endl;
   uout << "NOT-EVIDENCE           remove evidence not used by any mutations" << endl;
-    
+	
   uout("Creating test data:");
   uout << "SIMULATE-MUTATIONS       create a file containing random mutations" << endl;
     
@@ -1263,7 +1264,7 @@ int do_filter_gd(int argc, char* argv[])
 {
   AnyOption options("gdtools FILTER  [-o output.gd] -f filter1 [-f filter2] [-m SNP] input.gd");
   options("output,o", "Output Genome Diff file.", "output.gd");
-  options("mut_type,m", "Only consider this mutation type for filtering.");
+  options("mut_type,m", "Only this mutation type will be filtered (possibly removed).");
   options("filter,f", "Filters to apply when selecting Genome Diff entries. Mutations that match this condition will be removed from the resulting Genome Diff file. Enclose the value of this parameter in quotes, e.g. -f \"frequency<=0.05\".");
   options.processCommandArgs(argc, argv);
 
@@ -1401,10 +1402,92 @@ int do_filter_gd(int argc, char* argv[])
   return 0;
 }
 
+
+int do_mask_gd(int argc, char* argv[])
+{
+	AnyOption options("gdtools MASK  [-o output.gd] input.gd mask.gd");
+	options("output,o", "Output Genome Diff file.", "output.gd");
+	options.processCommandArgs(argc, argv);
+	
+	options.addUsage("");
+	options.addUsage("Creates a GD file where mutations in the input GD that are located within certain regions of the reference genome are removed. These regions are defined as MASK entries in the mask GD file.");
+	
+	UserOutput uout("MASK");
+	
+	if (options.getArgc() != 2) {
+		options.addUsage("");
+		options.addUsage("Provide two Genome Diff input files as input.");
+		options.printUsage();
+		return -1;
+	}
+	
+	uout("Reading input GD file") << options.getArgv(0) << endl;
+	cGenomeDiff gd(options.getArgv(0));
+	
+	uout("Reading mask GD file") << options.getArgv(1) << endl;
+	cGenomeDiff mask_gd(options.getArgv(1));
+	
+	cGenomeDiff new_gd;
+	new_gd.metadata = gd.metadata; // copy all of the important information
+	
+	diff_entry_list_t muts = gd.mutation_list();
+	diff_entry_list_t masks = mask_gd.list(make_vector<gd_entry_type>(MASK));
+	for (diff_entry_list_t::iterator mut = muts.begin(); mut != muts.end(); mut++) {
+		
+		bool eliminated = false;
+		for (diff_entry_list_t::iterator mask = masks.begin(); mask != masks.end(); mask++) {
+			if ( (*mut)->get_start() < (*mask)->get_start() )
+				break;
+			if ( (*mut)->get_end() > (*mask)->get_end() )
+				break;
+			
+			eliminated = true;
+		}
+		
+		if (!eliminated) {
+			new_gd.add(**mut);
+		}
+	}
+	
+	// This is for preserving the UN evidence
+	diff_entry_list_t uns = gd.list(make_vector<gd_entry_type>(UN));
+	for (diff_entry_list_t::iterator mut = uns.begin(); mut != uns.end(); mut++) {
+		
+		bool eliminated = false;
+		for (diff_entry_list_t::iterator mask = masks.begin(); mask != masks.end(); mask++) {
+			if (( (*mut)->get_start() >= (*mask)->get_start() ) && ( (*mut)->get_end() <= (*mask)->get_end() )) {
+				eliminated = true;
+				break;
+			}
+		}
+		
+		if (!eliminated) {
+			new_gd.add(**mut);
+		}
+	}
+	
+	// We also add new UN evidence for the masked ones
+	for (diff_entry_list_t::iterator mask = masks.begin(); mask != masks.end(); mask++) {
+		cDiffEntry new_un(UN);
+		
+		new_un[SEQ_ID] = (**mask)[SEQ_ID];
+		new_un[START] = to_string((*mask)->get_start());
+		new_un[END] = to_string((*mask)->get_end());
+
+		new_gd.add(new_un);
+	}
+	
+	
+	uout("Writing output GD file", options["output"]);
+	new_gd.write(options["output"]);
+	return 0;
+}
+
+
 int do_simulate_mutations(int argc, char *argv[])
 {
-  AnyOption options("Usage: gdtools SIMULATE-MUTATIONS [-n 100] -r <reference> -o <output.gd> -t <type>");  
-  options("reference,r","File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");  
+  AnyOption options("Usage: gdtools SIMULATE-MUTATIONS [-n 100] -r <reference> -o <output.gd> -t <type>");
+  options("reference,r","File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
   options("output,o","Output file");
   options("type,t","Type of mutation to generate");
   options("number,n","Number of mutations to generate", static_cast<uint32_t>(1000));
@@ -2546,6 +2629,8 @@ int main(int argc, char* argv[]) {
       return do_translate_proteome(argc_new, argv_new);
   } else if (command == "GD2OLI") {
       return do_gd2oli(argc_new, argv_new);
+	} else if (command =="MASK") {
+		return do_mask_gd(argc_new, argv_new);
   } else {
     cout << "Unrecognized command: " << command << endl;
     gdtools_usage();
