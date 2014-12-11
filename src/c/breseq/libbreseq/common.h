@@ -618,7 +618,7 @@ namespace breseq {
 
   // handle bool as either TRUE/FALSE or zero/non-zero number
   // Does not handle single-character T/F correctly 
-  // @JEB this is never called
+  // @JEB this is never called??
   inline bool from_string(const string& s)
   {
     bool t = false;

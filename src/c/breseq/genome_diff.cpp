@@ -477,10 +477,10 @@ uint32_t cDiffEntry::get_start()
     case INV:
     case AMP:
     case CON:
+    case MASK:
       return from_string<uint32_t>((*this)[POSITION]);
     case UN:
       return from_string<uint32_t>((*this)[START]);
-    case MASK:
     default:
       ERROR("cDiffEntry::get_start not implemented for type: " + gd_entry_type_lookup_table[this->_type]);
   }
@@ -497,14 +497,15 @@ uint32_t cDiffEntry::get_end()
     case INV:
     case AMP:
     case CON:
-      return from_string<uint32_t>((*this)[POSITION]) + from_string<uint32_t>((*this)[SIZE]);
+    case MASK:
+      return from_string<uint32_t>((*this)[POSITION]) + from_string<uint32_t>((*this)[SIZE]) - 1;
     case INS:
-      return from_string<uint32_t>((*this)[POSITION]) + (*this)[NEW_SEQ].length();
+      return from_string<uint32_t>((*this)[POSITION]) + 1; // make sure we only remove if pos before and after are removed
     case MOB:
-      return from_string<uint32_t>((*this)[POSITION]) + from_string<uint32_t>((*this)["duplication_size"]);
+      return from_string<uint32_t>((*this)[POSITION]) + from_string<uint32_t>((*this)["duplication_size"]) - 1;
     case UN:
       return from_string<uint32_t>((*this)[END]);
-    case MASK:
+    
     default:
       ERROR("cDiffEntry::get_end not implemented for type: " + gd_entry_type_lookup_table[this->_type]);
   }

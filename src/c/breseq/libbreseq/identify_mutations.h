@@ -262,6 +262,8 @@ namespace breseq {
 		//! Called at the end of the pileup.
 		virtual void at_target_end(const uint32_t tid);
 		
+    void load_user_ra_evidence_from_gd();
+    
     //! Write the genome diff
     void write_gd(const string& filename)
       { _gd.write(filename); }
@@ -292,6 +294,7 @@ namespace breseq {
     //! Settings passed at command line
     const Settings& _settings;
 		cGenomeDiff _gd; //!< Genome diff.
+    diff_entry_list_t _user_evidence_ra_list; //!< List of entries containing user-entered RA items.
     vector<double> _deletion_seed_cutoffs; //!< Coverage below which deletions are cutoff.
     vector<double> _deletion_propagation_cutoffs; //!< Coverage above which deletions are cutoff.
 		double _mutation_cutoff; //!< log10 e-value cutoff value for mutation predictions.

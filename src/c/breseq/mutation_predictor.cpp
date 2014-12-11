@@ -2104,7 +2104,7 @@ namespace breseq {
         string this_codon = "NNN";
         vector<cLocation> sub_locations = g.m_location.get_all_sub_locations();
         size_t on_codon_pos_0 = 0; // The position within a codon... indexed to start at 0.
-        vector<uint32_t> this_codon_locations_0(0, 3); // 0-indexed
+        vector<uint32_t> this_codon_locations_0(3, 0); // 0-indexed
         
         uint32_t total_nucleotide_length = 0; 
         int8_t strand = sub_locations.front().m_strand;
