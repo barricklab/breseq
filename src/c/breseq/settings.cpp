@@ -497,9 +497,8 @@ namespace breseq
     cerr << output_divider << endl;
     fprintf(stderr, "%s  %s   %s\n", PACKAGE_STRING, HG_REVISION, PACKAGE_URL);
     fprintf(stderr, "\n");
-    fprintf(stderr, "Developers: Barrick JE, Borges JJ, Colburn GR, Deatherage DE, Fields DT,\n");
-    fprintf(stderr, "            Knoester DB, Meyer AG, Reba A, Strand MD\n");
-    fprintf(stderr, "Contact:    <%s>\n", PACKAGE_BUGREPORT);
+    fprintf(stderr, "Active Developers: Barrick JE, Deatherage DE\n");
+    fprintf(stderr, "Contact:           <%s>\n", PACKAGE_BUGREPORT);
     fprintf(stderr, "\n");
     fprintf(stderr, "%s is free software; you can redistribute it and/or modify it under the\n", PACKAGE_NAME);
     fprintf(stderr, "terms the GNU General Public License as published by the Free Software \n");
@@ -513,6 +512,13 @@ namespace breseq
     fprintf(stderr, "  Deatherage, D.E., Barrick, J.E. (2014) Identification of mutations\n"); 
     fprintf(stderr, "  in laboratory-evolved microbes from next-generation sequencing\n");
     fprintf(stderr, "  data using breseq. Methods Mol. Biol. 1151: 165–188.\n");
+    fprintf(stderr, "\n");
+    fprintf(stderr, "If you use structural variation predictions (JC evidence), please cite:\n");
+    fprintf(stderr, "\n");
+    fprintf(stderr, "  Barrick, J.E., Colburn, G., Deatherage D.E., Traverse, C.C.,\n");
+    fprintf(stderr, "  Strand, M.D., Borges, J.J., Knoester, D.B., Reba, A., Meyer, A.G. \n");
+    fprintf(stderr, "  (2014) Identifying structural variation in haploid microbial genomes \n");
+    fprintf(stderr, "  from short-readresequencing data using breseq. BMC Genomics. 15:1039.\n");
     cerr << output_divider << endl;
   }
 

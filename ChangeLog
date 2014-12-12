@@ -1,3 +1,16 @@
+Version 0.25a
+    * Maintenance release with bug fixes
+    * Fixed floating point error encountered on some compilers/systems
+    * Fixed compilation of samtools/breseq with MacOSX clang compiler
+    * Miscellaneous bug fixes related to gdtools commands
+
+Version 0.25
+    * Release for publication describing consensus SV prediction:
+      Barrick, J.E., Colburn, G., Deatherage D.E., Traverse, C.C., 
+      Strand, M.D., Borges, J.J., Knoester, D.B., Reba, A., Meyer, A.G. (2014) 
+      Identifying structural variation in haploid microbial genomes from short-read 
+      resequencing data using breseq. BMC Genomics. 15:1039.
+
 Version 0.24
     * Fix for crash when some junction alignment files had long names.
     * Added Variant Call Format (VCF) output and associated gdtools command GD2VCF.
