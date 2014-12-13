@@ -16,3 +16,4 @@ bin/genomediff
 bin/tree_utils
 Makefile.PL
 META.yml
+META.json

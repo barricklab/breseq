@@ -267,6 +267,16 @@ public:
   //! Serialize this diff entry into a string for output.
   virtual string as_string(void) const;
   
+  //! Output all keys and values
+  string as_key_values() const {
+    string s;
+    for (diff_entry_map_t::const_iterator it = this->begin(); it != this->end(); it++)
+    {
+      s+= it->first + " = " + it->second + "\n";
+    }
+    return s;
+  }
+  
   //!---- Reject Reasons Field ---- !//
   
   size_t number_reject_reasons();
@@ -291,7 +301,7 @@ public:
   //! Various functors for testing many entries at once for a property
 
   
-  //! Functor. Sorts cDiffEntrys in decending order depending on given fields that
+  //! Functor. Sorts cDiffEntrys in descending order depending on given fields that
   //can be evaluated as an unsigned integer.
   struct by_scores : public binary_function
   <diff_entry_ptr_t, diff_entry_ptr_t, bool>
@@ -307,10 +317,18 @@ public:
       for (vector<diff_entry_key_t>::const_iterator itr = m_field_keys.begin(); itr != m_field_keys.end(); itr++) {
         string key(*itr);
         
-        if (from_string<double>((*a)[key]) == from_string<double>((*b)[key]))
+        double a_val = -9999;
+        double b_val = -9999;
+        
+        if (a->entry_exists(key) && ((*a)[key].size() > 0))
+          a_val = from_string<double>((*a)[key]);
+        if (b->entry_exists(key) && ((*b)[key].size() > 0))
+          b_val = from_string<double>((*b)[key]);
+        
+        if (a_val == b_val)
           continue;
         else 
-          return from_string<double>((*a)[key]) > from_string<double>((*b)[key]);
+          return a_val > b_val;
       }
       return false;
     }

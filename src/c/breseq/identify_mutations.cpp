@@ -174,10 +174,23 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 	int32_t insert_count=-1;
 	bool next_insert_count_exists=true;
 	
+  // User RA evidence
+  // We need to continue looping in some cases where there is user evidence RA
+  // but no reads actually have a base at that insert position. Here's how:
+  int32_t force_insert_count_max = 0;
+  if (_user_evidence_ra_list.size()) {
+    
+    diff_entry_list_t::iterator user_ra = _user_evidence_ra_list.begin();
+    
+    while ( (user_ra != _user_evidence_ra_list.end()) && (from_string<uint32_t>((**user_ra)[POSITION]) == position)) {
+      force_insert_count_max = from_string<int32_t>((**user_ra)[INSERT_POSITION]);
+      user_ra++;
+    }
+  }
   
   // BIG outer loop to traverse this position AND any positons after this one
   // that are inserted relative to the reference genome
-	while(next_insert_count_exists) {
+	while(next_insert_count_exists || (insert_count < force_insert_count_max)) {
 		++insert_count;
     next_insert_count_exists = false;
 		
@@ -647,9 +660,19 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
            && (from_string<int32_t>((*(_user_evidence_ra_list.front()))[INSERT_POSITION]) == insert_count)) {
       
       // Case 1: We already created the RA, but didn't output because it failed tests
-      if (!output_ra_on_merits && (mut == *(_user_evidence_ra_list.front()))) {
-        mut["user_defined"] = "1";
-        _gd.add(mut);
+      if (mut == *(_user_evidence_ra_list.front())) {
+        
+        // Mark as user_defined no matter what
+        if (output_ra_on_merits) {
+          (*(_gd.list().back())).add_reject_reason("generic");
+        }
+        // Additionally, need to output if it failed tests.
+        else { //if (!output_ra_on_merits) {
+          mut["user_defined"] = "1";
+          mut.add_reject_reason("generic");
+          _gd.add(mut);
+        }
+        
       }
       
       // Case 2: We didn't create the RA yet -- for now we do the minimum
@@ -657,6 +680,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         // copy the existing entry and fill in more information
         cDiffEntry user_ra = *(_user_evidence_ra_list.front().get());
         user_ra["user_defined"] = "1";
+        user_ra.add_reject_reason("generic");
         
         vector<uint32_t>& ref_cov = pos_info[from_string<base_char>(user_ra[REF_BASE])];
         user_ra[REF_COV] = to_string(make_pair(static_cast<int>(ref_cov[2]), static_cast<int>(ref_cov[0])));
