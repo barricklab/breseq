@@ -2181,7 +2181,7 @@ namespace breseq {
                   
                   char mut_amino_acid = cReferenceSequences::translate_codon(test_codon, g.translation_table, on_codon_number_1);
                   
-                  if ((mut_amino_acid = '?') || (original_amino_acid = '?'))
+                  if ((mut_amino_acid == '?') || (original_amino_acid == '?'))
                     seq_bse[this_codon_locations_0[test_codon_index]*4+b] = max(seq_bse[this_codon_locations_0[test_codon_index]*4+b], unknown_coding_base_substitution);
                   else if (mut_amino_acid == original_amino_acid)
                     seq_bse[this_codon_locations_0[test_codon_index]*4+b] = max(seq_bse[this_codon_locations_0[test_codon_index]*4+b], synonymous_coding_base_substitution);

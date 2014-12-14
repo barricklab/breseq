@@ -109,8 +109,12 @@ int do_union(int argc, char *argv[])
   options.processCommandArgs(argc, argv);
 
   options.addUsage("");
-  options.addUsage("\tCreates a GD file of mutations and associated evidence that exist in each input GD file.");
-  options.addUsage("Duplicate mutations are merged into a single mutation.");
+  options.addUsage("Creates a GD file with  mutations that exist in any input GD file.");
+  options.addUsage("Duplicate mutations are merged into a single entry. All evidence");
+  options.addUsage("and validation entries are removed from the file.");
+	options.addUsage("");
+	options.addUsage("Header information will be inherited from the first input file,");
+	options.addUsage("so this function can also be used to transfer metadata to a new file.");
 
   if (options.getArgc() < 2) {
     options.addUsage("");
@@ -217,7 +221,10 @@ int do_subtract(int argc, char *argv[])
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
-  options.addUsage("Creates a new Genome Diff file of mutations from the input file that are present after removing mutations present in any of the subtracted Genome Diff files.");
+	options.addUsage("Creates a new Genome Diff file that contains all entries that are still");
+	options.addUsage("present in the input file after removing mutations that are in any of the");
+	options.addUsage("subtracted Genome Diff files. All evidence and validation entries are");
+	options.addUsage("retained in the output file.");
 
   if (options.getArgc() < 2) {
     options.addUsage("");
@@ -246,6 +253,7 @@ int do_subtract(int argc, char *argv[])
   return 0;
 }
 
+/* @JEB: Merge doesn't really make sense when we now require
 int do_merge(int argc, char *argv[])
 {
   AnyOption options("gdtools MERGE [-o output.gd] input1.gd input2.gd ...");
@@ -292,6 +300,7 @@ int do_merge(int argc, char *argv[])
   
   return 0;
 }
+ */
 
 int do_weights(int argc, char* argv[])
 {
@@ -892,7 +901,7 @@ int do_annotate(int argc, char* argv[])
     gd_list.push_back(single_gd);
 
     cGenomeDiff cleaned_single_gd(single_gd);  
-    cleaned_single_gd.remove(cGenomeDiff::EVIDENCE);
+    cleaned_single_gd.remove_group(cGenomeDiff::EVIDENCE);
     gd.merge(cleaned_single_gd);
   }
 	
@@ -902,7 +911,7 @@ int do_annotate(int argc, char* argv[])
 	// ** Only do this for the merge, not to the true GDs, because we need to preserve UN evidence
 	for (uint32_t i = 0; i < gd_list.size(); i++) {
 		cGenomeDiff cleaned_single_gd(gd_list[i]);  
-    cleaned_single_gd.remove(cGenomeDiff::EVIDENCE);
+    cleaned_single_gd.remove_group(cGenomeDiff::EVIDENCE);
     gd.merge(cleaned_single_gd);
 	}
 	
@@ -2600,7 +2609,8 @@ int main(int argc, char* argv[]) {
   } else if (command == "SUBTRACT") {
     return do_subtract(argc_new, argv_new);    
   } else if (command == "MERGE") {
-    return do_merge(argc_new, argv_new);    
+		return do_union(argc_new, argv_new);
+		//return do_merge(argc_new, argv_new);
   } else if (command == "WEIGHTS") {
     return do_weights(argc_new, argv_new);
   } else if (command == "GD2VCF") {             

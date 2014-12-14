@@ -659,14 +659,14 @@ namespace breseq {
 	inline string to_upper(const string& input)
 	{
 		string str = input;
-		transform(str.begin(), str.end(),str.begin(), ::toupper);
+		transform(str.begin(), str.end(),str.begin(), (int (*)(int))std::toupper);
 		return str;
 	}
 	
 	inline string to_lower(const string& input)
   {
       string str = input;
-      transform(str.begin(), str.end(),str.begin(), ::tolower);
+      transform(str.begin(), str.end(),str.begin(), (int (*)(int))std::tolower);
       return str;
   }
   

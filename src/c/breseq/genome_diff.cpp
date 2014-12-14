@@ -169,6 +169,63 @@ const vector<string> gd_keys_with_ids =
   
 uint32_t cGenomeDiff::s_input_order_counter(0);  
 
+////
+// Begin sorting variables
+////
+// All fields must be assigned in this table and be required fields of the gd entries.
+map<gd_entry_type, cGenomeDiff::sort_fields_item> diff_entry_sort_fields = make_map<gd_entry_type, cGenomeDiff::sort_fields_item>
+(SNP,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
+(SUB,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
+(DEL,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
+(INS,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
+(MOB,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
+(AMP,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
+(INV,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
+(CON,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
+(NOTE, cGenomeDiff::sort_fields_item(2, "note", "note"))
+(RA,   cGenomeDiff::sort_fields_item(3, SEQ_ID, POSITION))
+(MC,   cGenomeDiff::sort_fields_item(4, SEQ_ID, START))
+(JC,   cGenomeDiff::sort_fields_item(5, "side_1_seq_id", "side_1_position"))
+(CN,   cGenomeDiff::sort_fields_item(6, SEQ_ID, START))
+(UN,   cGenomeDiff::sort_fields_item(7, SEQ_ID, START))
+(CURA, cGenomeDiff::sort_fields_item(8, "expert", "expert"))
+(FPOS, cGenomeDiff::sort_fields_item(8, "expert", "expert"))
+(PHYL, cGenomeDiff::sort_fields_item(8, "gd", "gd"))
+(TSEQ, cGenomeDiff::sort_fields_item(8, "seq_id", "primer_1_start"))
+(PFLP, cGenomeDiff::sort_fields_item(8, "seq_id", "primer_1_start"))
+(RFLP, cGenomeDiff::sort_fields_item(8, "seq_id", "primer_1_start"))
+(PFGE, cGenomeDiff::sort_fields_item(8, "seq_id", "enzyme"))
+(MASK, cGenomeDiff::sort_fields_item(8, SEQ_ID, POSITION))
+;
+
+map<gd_entry_type, uint8_t> sort_order = make_map<gd_entry_type, uint8_t>
+(SNP, 2)
+(SUB, 4)
+(DEL, 1)
+(INS, 3)
+(MOB, 5)
+(AMP, 6)
+(INV, 7)
+(CON, 8)
+(RA,  9)
+(MC,  10)
+(JC,  11)
+(CN,  12)
+(UN,  13)
+(CURA, 14)
+(FPOS, 15)
+(PHYL, 16)
+(TSEQ, 17)
+(PFLP, 18)
+(RFLP, 19)
+(PFGE, 20)
+(NOTE, 20)
+(MASK, 20)
+;
+////
+// End sorting variables
+////
+  
 /*! Constructor.
  */
   
@@ -347,109 +404,121 @@ void cDiffEntry::valid_field_variable_types(cFileParseErrors& parse_errors) {
   }
 }
 
-  
-//Comparing IDs here will currently break cGenomeDiff::merge and cGenomeDiff::subtract
-bool cDiffEntry::operator==(const cDiffEntry& de)
+//Static comparison function used for comparison operators
+int32_t cDiffEntry::compare(const cDiffEntry& a, const cDiffEntry& b)
 {
-  //! Case: Easy if not same type
-  if (this->_type != de._type) {
-    return false;
+  gd_entry_type a_type = a._type;
+  gd_entry_type b_type = b._type;
+  
+  //////////////////////////////////////////////////////////////////
+  // First we sort according to output order
+  
+  cGenomeDiff::sort_fields_item a_sort_fields = diff_entry_sort_fields[a_type];
+  cGenomeDiff::sort_fields_item b_sort_fields = diff_entry_sort_fields[b_type];
+  
+  if (a_sort_fields._f1 < b_sort_fields._f1) {
+    return -1;
+  } else if (a_sort_fields._f1 > b_sort_fields._f1) {
+    return +1;
   }
-  //! Case: Same type, but are fields that are common equal?
-  else {
+  
+  string a_sort_field_2 = a.find(a_sort_fields._f2)->second;
+  string b_sort_field_2 = b.find(b_sort_fields._f2)->second;
+  
+  if (a_sort_field_2 < b_sort_field_2) {
+    return -1;
+  } else if (a_sort_field_2 > b_sort_field_2) {
+    return +1;
+  }
+  
+  uint32_t a_sort_field_3 = from_string<uint32_t>(a.find(a_sort_fields._f3)->second);
+  uint32_t b_sort_field_3 = from_string<uint32_t>(b.find(b_sort_fields._f3)->second);
+  
+  if (a_sort_field_3 < b_sort_field_3) {
+    return -1;
+  } else if (a_sort_field_3 > b_sort_field_3) {
+    return +1;
+  }
+  
+  // Prefer certain mutation types before others
+  uint8_t a_sort_order = sort_order[a_type];
+  uint8_t b_sort_order = sort_order[b_type];
+  
+  if (a_sort_order < b_sort_order) {
+    return -1;
+  } else if (a_sort_order > b_sort_order) {
+    return +1;
+  }
+  
+  //////////////////////////////////////////////////////////////////
+  // Then we sort for all fields defined in the line specification
+  
+  // Get full line spec
+  const vector<diff_entry_key_t>& specs = extended_line_specification.count(a_type)
+  ? extended_line_specification[a_type] : line_specification[a_type];
+  
+  for(vector<diff_entry_key_t>::const_iterator it = specs.begin(); it != specs.end(); it++) {
+    const diff_entry_key_t& spec(*it);
     
-    // Get full line spec
-    const vector<diff_entry_key_t>& specs = extended_line_specification.count(this->_type) 
-      ? extended_line_specification[this->_type] :line_specification[this->_type];
+    bool a_exists = a.entry_exists(spec);
+    bool b_exists = b.entry_exists(spec);
+    if (a_exists && !b_exists) return -1;
+    if (!a_exists && b_exists) return +1;
     
-    for(vector<diff_entry_key_t>::const_iterator it = specs.begin(); it != specs.end(); it++) {
-      const diff_entry_key_t& spec(*it);
+    // Perform the proper type of comparison
+    // Default is a string if not provided...
+    
+    if (!diff_entry_field_variable_types.count(spec) ||
+        (diff_entry_field_variable_types[spec] == kDiffEntryFieldVariableType_BaseSequence) ) {
+      
+      const string& a_val = a.find(spec)->second;
+      const string& b_val = b.find(spec)->second;
 
-      bool a_exists = this->entry_exists(spec);
-      bool b_exists = de.entry_exists(spec);
-      if (!a_exists && !b_exists) continue;
-      if (a_exists != b_exists) return false;
+      if (a_val < b_val)
+        return -1;
+      else if (a_val > b_val)
+        return +1;
       
-      // Perform the proper type of comparison
-      // Default is a string if not provided...
+    } else {
       
-      if (!diff_entry_field_variable_types.count(spec) || 
-          (diff_entry_field_variable_types[spec] == kDiffEntryFieldVariableType_BaseSequence) ) {
-      
-        if ((*this)[spec] != de.find(spec)->second)
-          return false;
-      
-      } else {
-        
-        switch(diff_entry_field_variable_types[spec]) {
-          case kDiffEntryFieldVariableType_PositiveInteger:
-          case kDiffEntryFieldVariableType_PositiveInteger_ReverseSort:
-            
-            if (from_string<uint32_t>((*this)[spec]) != from_string<uint32_t>(de.find(spec)->second))
-              return false;
-            break;
-            
-          case kDiffEntryFieldVariableType_Integer:
-          case kDiffEntryFieldVariableType_Strand:
-            
-            if (from_string<int32_t>((*this)[spec]) != from_string<int32_t>(de.find(spec)->second))
-              return false;
-            break;
-            
-          // handled above
-          case kDiffEntryFieldVariableType_BaseSequence:
-            break;
+      switch(diff_entry_field_variable_types[spec]) {
+        case kDiffEntryFieldVariableType_PositiveInteger:
+        case kDiffEntryFieldVariableType_PositiveInteger_ReverseSort:
+        {
+          uint32_t a_val = from_string<uint32_t>(a.find(spec)->second);
+          uint32_t b_val = from_string<uint32_t>(b.find(spec)->second);
+
+          if (a_val < b_val)
+            return -1;
+          else if (a_val > b_val)
+            return +1;
+          break;
         }
+          
+        case kDiffEntryFieldVariableType_Integer:
+        case kDiffEntryFieldVariableType_Strand:
+        {
+          int32_t a_val = from_string<int32_t>(a.find(spec)->second);
+          int32_t b_val = from_string<int32_t>(b.find(spec)->second);
+          
+          if (a_val < b_val)
+            return -1;
+          else if (a_val > b_val)
+            return +1;
+          break;
+        }
+          // handled above
+        case kDiffEntryFieldVariableType_BaseSequence:
+          break;
       }
     }
-    
-    // Special case of ins_start, ins_end, del_start, del_end
-    if (this->_type == MOB) {
-      
-      string this_ins_start = this->entry_exists("ins_start") ? 
-        this->find("ins_start")->second : "";
-      string de_ins_start = de.entry_exists("ins_start") ? 
-        de.find("ins_start")->second : "";
-      if (this_ins_start != de_ins_start)
-        return false;
-      
-      string this_ins_end = this->entry_exists("ins_end") ? 
-        this->find("ins_end")->second : "";
-      string de_ins_end = de.entry_exists("ins_end") ? 
-        de.find("ins_end")->second : "";
-      if (this_ins_end != de_ins_end)
-        return false;
-      
-      uint32_t this_del_start = this->entry_exists("del_start") ? 
-      from_string<uint32_t>(this->find("del_start")->second) : numeric_limits<uint32_t>::max();
-      uint32_t de_del_start = de.entry_exists("del_start") ? 
-      from_string<uint32_t>(de.find("del_start")->second) : numeric_limits<uint32_t>::max();
-      if (this_del_start != de_del_start)
-        return false;      
-      
-      uint32_t this_del_end = this->entry_exists("del_end") ? 
-      from_string<uint32_t>(this->find("del_end")->second) : numeric_limits<uint32_t>::max();
-      uint32_t de_del_end = de.entry_exists("del_end") ? 
-      from_string<uint32_t>(de.find("del_end")->second) : numeric_limits<uint32_t>::max();
-      if (this_del_end != de_del_end)
-        return false;       
-    }
-    
-    // Special case of insert_position for polymorphism mode
-    if (this->_type == INS) {
-      // If only one had this field then they don't match
-      if ((this->entry_exists(INSERT_POSITION)) !=  (de.entry_exists(INSERT_POSITION))  )
-        return false;
-      if ((this->entry_exists(INSERT_POSITION)) &&  (de.entry_exists(INSERT_POSITION))  ) {
-        if ((*this)[INSERT_POSITION] != de.find(INSERT_POSITION)->second)
-          return false;
-      }
-    }
-    
-    return true;
   }
-}
 
+  //////////////////////////////////////////////////////////////////
+  // Return zero if the entries are equal (according to major specs)
+  return 0;
+}
+  
 bool cDiffEntry::is_mutation() const
 {
   return gd_entry_type_lookup_table[_type].size() == 3;
@@ -1248,16 +1317,16 @@ diff_entry_ptr_t cGenomeDiff::parent(const cDiffEntry& evidence)
  _entry_list
  */
 cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors) {
-  _filename = filename;
+  _file_path = filename;
   
   // title (old base_name) defaults to file name with no extension
   this->set_title(cString(filename).get_base_name_no_extension(true));
   
-  ifstream in(get_file_name().c_str());
+  ifstream in(get_file_path().c_str());
 
-  ASSERT(in.good(), "Could not open file for reading: " + filename);
+  ASSERT(in.good(), "Could not open file for reading: " + get_file_path());
   uint32_t line_number = 0;
-  cFileParseErrors parse_errors(get_file_name());
+  cFileParseErrors parse_errors(get_file_path());
   
   //! Step: Handle header parameters.
   //Example header:
@@ -1458,7 +1527,7 @@ typedef struct  {
 cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences& ref_seq, bool suppress_errors)
 {
   // For now we do rather generic checking... nothing specific to certain kind of entries
-  cFileParseErrors parse_errors(get_file_name());
+  cFileParseErrors parse_errors(get_file_path());
 
 
   // First pass -- check generic things
@@ -1832,45 +1901,27 @@ diff_entry_ptr_t cGenomeDiff::add(const cDiffEntry& item, bool reassign_id) {
   return added_item;
 }
   
-void cGenomeDiff::remove(cGenomeDiff::group group)
+void cGenomeDiff::remove_group(cGenomeDiff::group group)
 {
-  this->sort();
-  diff_entry_list_t::iterator it1 = _entry_list.begin();
-  diff_entry_list_t::iterator it2 = _entry_list.begin();
+  diff_entry_list_t::iterator it = _entry_list.begin();
   
-  //Mutations.
-  while (it2 != _entry_list.end()) {
-    if (!(**it2).is_mutation()) break;
-    ++it2;
+  bool advance_it(true);
+  while (it != _entry_list.end()) {
+    advance_it = true;
+    
+    if ((group == cGenomeDiff::MUTATIONS) && (*it)->is_mutation() ){
+      it = remove(it);
+      advance_it = false;
+    } else if ((group == cGenomeDiff::EVIDENCE) && (*it)->is_evidence() ){
+      it = remove(it);
+      advance_it = false;
+    } else if ((group == cGenomeDiff::VALIDATION) && (*it)->is_validation() ){
+      it = remove(it);
+      advance_it = false;
+    }
+    
+    if (advance_it) ++it;
   }
-  if (group == cGenomeDiff::MUTATIONS) {
-    _entry_list.erase(it1, it2);
-    return;
-  }
-  
-  //Evidence.
-  it1 = it2; 
-  while (it2 != _entry_list.end()) {
-    if (!(**it2).is_evidence()) break;
-    ++it2;
-  }
-  if (group == cGenomeDiff::EVIDENCE) {
-    _entry_list.erase(it1, it2);
-    return;
-  }
-  
-  //Validation.
-  it1 = it2; 
-  while (it2 != _entry_list.end()) {
-    if (!(**it2).is_validation()) break;
-    ++it2;
-  }
-  if (group == cGenomeDiff::VALIDATION) {
-    _entry_list.erase(it1, it2);
-    return;
-  }
-  
-  return;
 }
 
 /*! Given an id return the entry if it exists. NULL otherwise.
@@ -2090,54 +2141,46 @@ bool cGenomeDiff::mutation_in_entry_of_type(cDiffEntry mut, const gd_entry_type 
   return false;
 }
 
-//! Subtract mutations using gd_ref as reference.
-void cGenomeDiff::set_subtract(cGenomeDiff& gd_ref, bool verbose)
+//! Subtract mutations
+//Note: Preserves evidence in the file being subtracted from
+void cGenomeDiff::set_subtract(cGenomeDiff& gd, bool verbose)
 {
+  (void)verbose; //unused
+
+  set<cDiffEntry> seen;
+  diff_entry_list_t muts = gd.mutation_list();
+  for (diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); ++it) {
+    seen.insert(**it);
+  }
+  
   // We will be erasing inside the it loop.  This is to keep
   // track of whether or not we should iterate to the next element.
-  bool it_iterate = true;
+  bool it_advance = true;
   
   //Iterate through all the entries
   for (diff_entry_list_t::iterator it = _entry_list.begin(); it != _entry_list.end(); )
   {
-    it_iterate = true;
+    it_advance = true;
     //The current entry we're looking at
     cDiffEntry& entry = **it;
     
     //if (verbose) cout << entry << endl;
     
-    //Is the entry a mutation?
-    if(entry.is_mutation())
-    {
-      //Iterate through all the entries we're checking against.
-      for (diff_entry_list_t::iterator it_ref = gd_ref._entry_list.begin(); it_ref != gd_ref._entry_list.end(); it_ref++)
-      {
-        //The current entry we're looking at
-        cDiffEntry& entry_ref = **it_ref;
-        
-        if(!entry_ref.is_mutation())
-          continue;
-        
-        //if (verbose) cout << "  " << entry_ref << endl;
-        
-        //Does the current entry match any of the reference entries?
-        if(entry == entry_ref)
-        {
-          //Notify the user of the action.
-          if(verbose){cout << "REMOVE\t" << to_string(entry._type) << "\t" << entry._id << endl;}
-          it = _entry_list.erase(it);
-          //We just removed the current feauture, do not iterate.
-          it_iterate = false;
-          break; // Done comparing to this mutaion.
-        }
-      }
+    //Subtract mutations that we've seen
+    if(entry.is_mutation() && seen.count(entry)) {
+      it = _entry_list.erase(it);
+      it_advance = false;
     }
     
     // Iterate it ONLY if we haven't erased something.
-    if(it_iterate)it++;
+    if(it_advance)it++;
   }
-}
   
+  reassign_unique_ids();
+}
+ 
+  
+// Strips files of all items that are not in common AND all non-mutation items
 void cGenomeDiff::set_intersect(cGenomeDiff &gd, bool verbose)
 {
   (void)verbose; //unused
@@ -2145,45 +2188,53 @@ void cGenomeDiff::set_intersect(cGenomeDiff &gd, bool verbose)
   set<cDiffEntry> seen;
   diff_entry_list_t muts = gd.mutation_list();
   
-  for (diff_entry_list_t::iterator it = muts.begin();
-       it != muts.end(); ++it) {
+  for (diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); ++it) {
     seen.insert(**it);
   }
+
+  this->remove_group(cGenomeDiff::EVIDENCE);
+  this->remove_group(cGenomeDiff::VALIDATION);
   
-  this->sort();
-  set<string> ids;
   diff_entry_list_t::iterator it = _entry_list.begin();
-  //Handle mutations, store evidence id of deleted mutations
-  //to later delete.
+  
+  //Handle mutations
+  bool it_advance(true);
+  
   while (it != _entry_list.end()) {
-    if (!(**it).is_mutation()) break;
+    it_advance = true;
     
-    if (!seen.count(**it)) {
-      for (uint32_t i = 0; i < (**it)._evidence.size(); ++i) {
-        ids.insert((**it)._evidence[i]); 
-      }
+    if ( !seen.count(**it) ) {
       it = _entry_list.erase(it);
+      it_advance = false;
     } else {
-      ++it;
+      (*it)->_evidence.clear(); // clear the evidence
     }
+    
+    // Iterate it ONLY if we haven't erased something.
+    if(it_advance) it++;
   }
-  //Delete evidence that matches it.
-  while (it != _entry_list.end()) {
-    if (ids.count((**it)._id)) {
-      it = _entry_list.erase(it);
-    } else {
-      ++it;
-    }
-  }
+  
+  // Re-number entries
+  reassign_unique_ids();
 }
   
+// Merged mutations AND all non-mutation items
 void cGenomeDiff::set_union(cGenomeDiff& gd, bool verbose)
 {
   (void)verbose; //unused
-  this->fast_merge(gd);
-  this->remove(cGenomeDiff::EVIDENCE);
-  this->remove(cGenomeDiff::VALIDATION);
-  this->unique(); 
+
+  this->remove_group(cGenomeDiff::EVIDENCE);
+  this->remove_group(cGenomeDiff::VALIDATION);
+  
+  // Merge and clear away all evidence reference
+  merge(gd, true, true);
+  
+  this->remove_group(cGenomeDiff::EVIDENCE);
+  this->remove_group(cGenomeDiff::VALIDATION);
+  
+  // for (diff_entry_list_t::iterator it = _entry_list.begin(); it != _entry_list.end(); it++) {
+  //(*it)->_evidence.clear();
+  //}
 }
 
 // Keeps only one copy when equivalent entries are encountered
@@ -2252,7 +2303,7 @@ void cGenomeDiff::unique()
     else if (!keep_ids.count((**it)._id) && !erase_ids.count((**it)._id)) {
       stringstream ss;
       ss << "\tRemoving [entry]:\t" << **it << endl;
-      ss << "\tfrom [file]:\t" << this->get_file_name() << endl;
+      ss << "\tfrom [file]:\t" << this->get_file_path() << endl;
       ss << "\tbecause no mutation referenced it's ID." << endl; 
       WARN(ss.str());
       it = _entry_list.erase(it);
@@ -2317,7 +2368,7 @@ void cGenomeDiff::merge(cGenomeDiff& gd_new, bool unique, bool new_id, bool verb
       add(entry_new, new_id);
       
       //Notify user of new entry
-      if(verbose)cout << "\tNEW ENTRY\t" << entry_new._id << " >> " << _entry_list.back()->_id << "\t" << gd_new.get_file_name() << endl;
+      if(verbose)cout << "\tNEW ENTRY\t" << entry_new._id << " >> " << _entry_list.back()->_id << "\t" << gd_new.get_file_path() << endl;
     }
   }
   
@@ -2374,7 +2425,7 @@ void cGenomeDiff::merge(cGenomeDiff& gd_new, bool unique, bool new_id, bool verb
   }
   
   //Notify user of the update
-  if(verbose)cout << "\tMERGE DONE - " << gd_new.get_file_name() << endl;
+  if(verbose)cout << "\tMERGE DONE - " << gd_new.get_file_path() << endl;
   
 }
 
@@ -2455,187 +2506,20 @@ void cGenomeDiff::reassign_unique_ids()
   }
 }
 
-  
-// All fields must be assigned in this table and be required fields of the gd entries.
-map<gd_entry_type, cGenomeDiff::sort_fields_item> diff_entry_sort_fields = make_map<gd_entry_type, cGenomeDiff::sort_fields_item>
-  (SNP,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
-  (SUB,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
-  (DEL,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
-  (INS,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
-  (MOB,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
-  (AMP,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
-  (INV,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
-  (CON,  cGenomeDiff::sort_fields_item(1, SEQ_ID, POSITION))
-  (NOTE, cGenomeDiff::sort_fields_item(2, "note", "note"))
-  (RA,   cGenomeDiff::sort_fields_item(3, SEQ_ID, POSITION))
-  (MC,   cGenomeDiff::sort_fields_item(4, SEQ_ID, START))
-  (JC,   cGenomeDiff::sort_fields_item(5, "side_1_seq_id", "side_1_position"))
-  (CN,   cGenomeDiff::sort_fields_item(6, SEQ_ID, START))
-  (UN,   cGenomeDiff::sort_fields_item(7, SEQ_ID, START))
-  (CURA, cGenomeDiff::sort_fields_item(8, "expert", "expert"))
-  (FPOS, cGenomeDiff::sort_fields_item(8, "expert", "expert"))
-  (PHYL, cGenomeDiff::sort_fields_item(8, "gd", "gd"))
-  (TSEQ, cGenomeDiff::sort_fields_item(8, "seq_id", "primer_1_start"))
-  (PFLP, cGenomeDiff::sort_fields_item(8, "seq_id", "primer_1_start"))
-  (RFLP, cGenomeDiff::sort_fields_item(8, "seq_id", "primer_1_start"))
-  (PFGE, cGenomeDiff::sort_fields_item(8, "seq_id", "enzyme"))
-  (MASK, cGenomeDiff::sort_fields_item(8, SEQ_ID, POSITION))
-;
-
-map<gd_entry_type, uint8_t> sort_order = make_map<gd_entry_type, uint8_t>
-  (SNP, 2)
-  (SUB, 4)
-  (DEL, 1)
-  (INS, 3)
-  (MOB, 5)
-  (AMP, 6)
-  (INV, 7)
-  (CON, 8)
-  (RA,  9)
-  (MC,  10)
-  (JC,  11)
-  (CN,  12)  
-  (UN,  13)
-  (CURA, 14)
-  (FPOS, 15)
-  (PHYL, 16)
-  (TSEQ, 17)
-  (PFLP, 18)
-  (RFLP, 19)
-  (PFGE, 20)
-  (NOTE, 20)
-  (MASK, 20)
-;
-
-
 /*! Write this genome diff to a file.
  */
 bool cGenomeDiff::diff_entry_ptr_sort(const diff_entry_ptr_t& a, const diff_entry_ptr_t& b) {
 
-  gd_entry_type a_type = a->_type;
-  gd_entry_type b_type = b->_type;
-
-  sort_fields_item a_sort_fields = diff_entry_sort_fields[a_type];
-  sort_fields_item b_sort_fields = diff_entry_sort_fields[b_type];
+  int32_t compare_result = cDiffEntry::compare(*a,*b);
   
-  
-  if (a_sort_fields._f1 < b_sort_fields._f1) {
+  if (compare_result < 0) {
     return true;
-  } else if (a_sort_fields._f1 > b_sort_fields._f1) {
+  } else if (compare_result > 0) {
     return false;
   }
   
-  string a_sort_field_2 = (*a)[a_sort_fields._f2];
-  string b_sort_field_2 = (*b)[b_sort_fields._f2];
-  
-  if (a_sort_field_2 < b_sort_field_2) {
-    return true;
-  } else if (a_sort_field_2 > b_sort_field_2) {
-    return false;
-  }  
-
-  uint32_t a_sort_field_3 = from_string<uint32_t>((*a)[a_sort_fields._f3]);
-  uint32_t b_sort_field_3 = from_string<uint32_t>((*b)[b_sort_fields._f3]);
-  
-  if (a_sort_field_3 < b_sort_field_3) {
-    return true;
-  } else if (a_sort_field_3 > b_sort_field_3) {
-    return false;
-  }  
-  
-  // Prefer certain mutation types before others
-  uint8_t a_sort_order = sort_order[a_type];
-  uint8_t b_sort_order = sort_order[b_type];
-
-  if (a_sort_order < b_sort_order) {
-    return true;
-  } else if (a_sort_order > b_sort_order) {
-    return false;
-  } 
-  
-  // Wow, they're still the same,  we need to break ties by comparing their entire extended specs
-  ASSERT(a_type == b_type, "Type didn't match.");
-  
-  // Get full line spec
-  const vector<diff_entry_key_t>& specs = extended_line_specification.count(a_type) 
-  ? extended_line_specification[a_type] : line_specification[a_type];
-  
-  for(vector<diff_entry_key_t>::const_iterator it = specs.begin(); it != specs.end(); it++) {
-    const diff_entry_key_t& spec(*it);
-    
-    bool a_exists = a->entry_exists(spec);
-    bool b_exists = b->entry_exists(spec);
-    
-    if (!a_exists && !b_exists) 
-      continue;
-    
-    if (!a_exists && b_exists) 
-      return true;
-    
-    if (a_exists && !b_exists) 
-      return false;
-    
-    // Perform the proper type of comparison
-    // Default is a string if not provided...
-    if (!diff_entry_field_variable_types.count(spec) 
-        || (diff_entry_field_variable_types[spec] == kDiffEntryFieldVariableType_BaseSequence)) {
-      
-      string& a_sort_value = (*a)[spec];
-      string& b_sort_value = (*b)[spec];
-      if (a_sort_value < b_sort_value) {
-        return true;
-      } else if (a_sort_value > b_sort_value) {
-        return false;
-      }
-      
-    } else {
-      switch(diff_entry_field_variable_types[spec]) {
-          
-        case kDiffEntryFieldVariableType_PositiveInteger:
-        {
-          uint32_t a_sort_value = from_string<uint32_t>((*a)[spec]);
-          uint32_t b_sort_value = from_string<uint32_t>((*b)[spec]);
-          if (a_sort_value < b_sort_value) {
-            return true;
-          } else if (a_sort_value > b_sort_value) {
-            return false;
-          }
-        }
-        break;
-          
-        case kDiffEntryFieldVariableType_PositiveInteger_ReverseSort:
-        {
-          uint32_t a_sort_value = from_string<uint32_t>((*a)[spec]);
-          uint32_t b_sort_value = from_string<uint32_t>((*b)[spec]);
-          if (a_sort_value > b_sort_value) {
-            return true;
-          } else if (a_sort_value < b_sort_value) {
-            return false;
-          }
-        }
-        break;
-          
-        case kDiffEntryFieldVariableType_Integer:
-        case kDiffEntryFieldVariableType_Strand:
-        {
-          int32_t a_sort_value = from_string<int32_t>((*a)[spec]);
-          int32_t b_sort_value = from_string<int32_t>((*b)[spec]);
-          if (a_sort_value < b_sort_value) {
-            return true;
-          } else if (a_sort_value > b_sort_value) {
-            return false;
-          }
-        }
-        break;
-          
-        // handled above
-        case kDiffEntryFieldVariableType_BaseSequence:
-          break;
-      }
-    }
-  }
-  
-  
+  // @JEB The sorts below should not be necessary if every item is unique
+  // DEPRECATE THEM WHEN WE MOVE TO STORING AS A SET
   // ** last sort by id
   
   // First as numbers
@@ -2750,7 +2634,6 @@ bool cGenomeDiff::diff_entry_ptr_sort_apply_order(const diff_entry_ptr_t& a, con
   
   // Normal sort if there was no overlap in what was referred to.
   return diff_entry_ptr_sort(a, b);
-
 }  
 
 //! Call to generate random mutations.
@@ -4212,8 +4095,8 @@ cGenomeDiff cGenomeDiff::check_evidence(cReferenceSequences& sequence,
 void cGenomeDiff::mutations_to_evidence(cReferenceSequences &ref_seq, bool remove_mutations)
 {
   diff_entry_list_t muts = mutation_list();
-  this->remove(EVIDENCE);
-  this->remove(VALIDATION);
+  this->remove_group(EVIDENCE);
+  this->remove_group(VALIDATION);
   for(diff_entry_list_t::iterator it=muts.begin(); it!=muts.end(); ++it) {
     cDiffEntry& de = **it;
     if (de._type == MOB) {
@@ -4262,7 +4145,7 @@ void cGenomeDiff::mutations_to_evidence(cReferenceSequences &ref_seq, bool remov
     }
   }
   if (remove_mutations) {
-    this->remove(MUTATIONS);
+    this->remove_group(MUTATIONS);
   }
 }
   
@@ -4381,7 +4264,7 @@ void cGenomeDiff::tabulate_frequencies_from_multiple_gds(
     }
     
     if (this_title != it->get_title()) {
-      WARN("Duplicate title changed from '" + it->get_title() + "' to '" + this_title + "'\nFor genome diff file with path: " + it->get_file_name());
+      WARN("Duplicate title changed from '" + it->get_title() + "' to '" + this_title + "'\nFor genome diff file with path: " + it->get_file_path());
     }
     
     title_list.push_back(this_title);
@@ -4439,8 +4322,8 @@ void cGenomeDiff::tabulate_frequencies_from_multiple_gds(
           diff_entry_ptr_t next_mut = *mut_list_it;
           
           //cout << endl << "Check mut:" << check_mut->as_string() << endl << "Next mut:" << next_mut->as_string() << endl;
-
-          ASSERT( !(*next_mut == *check_mut), "Identical diff entry items found in file:\n" + gd_list[i]._filename + "\n1>>\n" + check_mut->as_string() + "\n2>>\n" + next_mut->as_string() + "\n");
+          
+          ASSERT( !(*next_mut == *check_mut), "Identical diff entry items found in file:\n" + gd_list[i].get_file_path() + "\n1>>\n" + check_mut->as_string() + "\n2>>\n" + next_mut->as_string() + "\n");
         }
       }
       
