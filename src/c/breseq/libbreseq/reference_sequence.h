@@ -107,16 +107,20 @@ namespace breseq {
     }
 
     vector<cLocation> get_all_sub_locations() {
-       
+      
+      vector<cLocation> return_locations;
       if (m_sub_locations.size() > 0) {
-        vector<cLocation> return_locations;
         for (vector<cLocation>::iterator it=m_sub_locations.begin(); it!=m_sub_locations.end(); ++it) {
           vector<cLocation> this_locations = it->get_all_sub_locations();
           return_locations.insert(return_locations.end(), this_locations.begin(), this_locations.end());
         }
-        return return_locations;
       }
-      return make_vector<cLocation>(*this);
+      else {
+        return_locations.push_back(*this);
+      }
+      
+      return return_locations;
+
     }
     
     void set_start_1(int32_t _start) {

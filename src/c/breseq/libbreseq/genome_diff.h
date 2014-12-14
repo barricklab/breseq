@@ -220,8 +220,13 @@ public:
   //! Const accessor
   diff_entry_value_t get(const diff_entry_key_t key) const { return this->find(key)->second; }
     
-  //! Comparison operator
-  bool operator== (const cDiffEntry& de);
+  //! Comparison operators
+  
+  static int32_t compare(const cDiffEntry& a, const cDiffEntry& b);
+    // Returns -1 if a < b, 0 if a == b, and +1 is a > b
+
+  bool operator<(const cDiffEntry& de) const { return (compare(*this, de) < 0); }
+  bool operator==(const cDiffEntry& de) const { return (compare(*this, de) == 0); }
   
   //! Return if a given key value exists in _fields
   bool entry_exists(const diff_entry_key_t& k) const { return (count(k) > 0); }
@@ -470,7 +475,7 @@ public:
   
   //!---- Variables ---- !//
 protected:  	
-  string _filename;                   //!< File name associated with this diff.
+  string _file_path;                   //!< File name associated with this diff.
   diff_entry_list_t _entry_list;      //!< All diff entries.
   uint32_t _unique_id_counter;        //!< Smallest available id.
   map<string,bool> unique_id_used;
@@ -517,7 +522,8 @@ public:
   
   //!---- Accessors ---- !//
 
-  string get_file_name() const {return _filename;}
+  string get_file_path() const {return _file_path;}
+  string get_file_name() const {return path_to_filename(_file_path);}
   
   string get_title() const {return metadata.title;}
 
@@ -552,8 +558,33 @@ public:
   //! Add an item to this genome diff.
   diff_entry_ptr_t add(const cDiffEntry& item, bool reassign_id=true);
   
+  //! Removes a mutation, with properly updating mutations that pointed to it
+  diff_entry_list_t::iterator remove(diff_entry_list_t::iterator it) {
+    
+    /// Begin code for deleting evidence from all lists that refer to it
+    diff_entry_list_t mut_list = mutation_evidence_list(**it);
+    for (diff_entry_list_t::iterator itm=mut_list.begin(); itm!=mut_list.end(); itm++) {
+      diff_entry_ptr_t test_mut = *it;
+      vector<string>::iterator ite = test_mut->_evidence.begin();
+      
+      bool it_advance(true);
+      
+      while (ite != test_mut->_evidence.end()) {
+        it_advance = true;
+        if (*ite == (*it)->_id) {
+          test_mut->_evidence.erase(ite);
+          it_advance = false;
+        }
+        if (it_advance) ++ite;
+      }
+    }
+    // End code for deleting evidence
+    
+    return _entry_list.erase(it);
+  }
+  
   //! Remove mutations, evidence, or validation.
-  void remove(cGenomeDiff::group group);
+  void remove_group(cGenomeDiff::group group);
   
   //!---- Accessing Entries ---- !//
   

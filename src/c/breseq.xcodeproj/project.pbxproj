@@ -566,7 +566,9 @@
 			buildSettings = {
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COPY_PHASE_STRIP = NO;
-				GCC_VERSION = com.apple.compilers.llvmgcc42;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
+				GCC_VERSION = "";
 				HEADER_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS = "$(value)";
 				ONLY_ACTIVE_ARCH = YES;
@@ -578,7 +580,9 @@
 			buildSettings = {
 				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COPY_PHASE_STRIP = YES;
-				GCC_VERSION = com.apple.compilers.llvmgcc42;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
+				GCC_VERSION = "";
 				HEADER_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS = "$(value)";
 				ONLY_ACTIVE_ARCH = NO;
