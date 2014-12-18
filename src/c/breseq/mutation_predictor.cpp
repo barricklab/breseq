@@ -995,17 +995,19 @@ namespace breseq {
             frequency = (c1 + c2) / (c1 + (a1 + b1)/d1 + c2 + (a2 + b2)/d2);
             mut[FREQUENCY] = formatted_double(frequency, settings.polymorphism_precision_places, true).to_string();
           } else if (d1) {
-            frequency = (c2) / (c2 + (a2 + b2)/d2);
-            formatted_double(frequency, settings.polymorphism_precision_places, true).to_string();          
-          } else if (d2) {
             frequency = (c1) / (c1 + (a1 + b1)/d1);
-            formatted_double(frequency, settings.polymorphism_precision_places, true).to_string();
+            mut[FREQUENCY] = formatted_double(frequency, settings.polymorphism_precision_places, true).to_string();
+          } else if (d2) {
+            frequency = (c2) / (c2 + (a2 + b2)/d2);
+            mut[FREQUENCY] = formatted_double(frequency, settings.polymorphism_precision_places, true).to_string();
           } else {
             // Can't calculate a frequency if no sides of the junction fall in unique sequence
             mut[FREQUENCY] = "NA";          
           }
           
           // don't record mutations below the cutoff frequency
+          ASSERT(mut.entry_exists(FREQUENCY), "FREQUENCY field does not exist for mutatation:\n" + mut.as_string());
+          
           if (mut[FREQUENCY] != "NA") {
             if (frequency < settings.polymorphism_frequency_cutoff) {
               mut.add_reject_reason("POLYMORPHISM_FREQUENCY_CUTOFF");
