@@ -1,3 +1,8 @@
+Version 0.25b
+    * Maintenance release with bug fixes
+    * Fixed crash of several gdtools commands
+    * Fixed crash under rare circumstances in polymorphism mode
+
 Version 0.25a
     * Maintenance release with bug fixes
     * Fixed floating point error encountered on some compilers/systems
