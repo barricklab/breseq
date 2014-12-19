@@ -1665,14 +1665,17 @@ namespace breseq {
       
       int32_t test_pos_1 = hash_coord_1;
       int32_t test_pos_2 = hash_coord_2 - hash_strand_2;
-      while (ref_seq_1.get_sequence_1(test_pos_1) == ref_seq_2.get_sequence_1(test_pos_2)) {
+      while ( (test_pos_1 >= 1) && (test_pos_2 >= 1)
+              && (static_cast<uint32_t>(test_pos_1) <= ref_seq_1.get_sequence_length())
+              && (static_cast<uint32_t>(test_pos_2) <= ref_seq_2.get_sequence_length())
+              && (ref_seq_1.get_sequence_1(test_pos_1) == ref_seq_2.get_sequence_1(test_pos_2)) ) {
         test_pos_1 += hash_strand_1;
         test_pos_2 -= hash_strand_2;
         reverse_overlap++;
-        if (test_pos_1 < 0) break;
-        if (test_pos_2 < 0) break;
+        if (test_pos_1 < 1) break;
+        if (test_pos_2 < 1) break;
         if (static_cast<uint32_t>(test_pos_1) > ref_seq_1.get_sequence_length()) break;
-        if (static_cast<uint32_t>(test_pos_1) > ref_seq_1.get_sequence_length()) break;
+        if (static_cast<uint32_t>(test_pos_2) > ref_seq_2.get_sequence_length()) break;
       }
     }
     
@@ -1681,14 +1684,14 @@ namespace breseq {
     {
       int32_t test_pos_1 = hash_coord_1 - hash_strand_1;
       int32_t test_pos_2 = hash_coord_2;
-      while (ref_seq_1.get_sequence_1(test_pos_1) == ref_seq_2.get_sequence_1(test_pos_2)) {
+      // most of these check for remaining in bounds
+      while ( (test_pos_1 >= 1) && (test_pos_2 >= 1)
+              && (static_cast<uint32_t>(test_pos_1) <= ref_seq_1.get_sequence_length())
+              && (static_cast<uint32_t>(test_pos_2) <= ref_seq_2.get_sequence_length())
+              && (ref_seq_1.get_sequence_1(test_pos_1) == ref_seq_2.get_sequence_1(test_pos_2)) ) {
         test_pos_1 -= hash_strand_1;
         test_pos_2 += hash_strand_2;
         forward_overlap++;
-        if (test_pos_1 < 0) break;
-        if (test_pos_2 < 0) break;
-        if (static_cast<uint32_t>(test_pos_1) > ref_seq_1.get_sequence_length()) break;
-        if (static_cast<uint32_t>(test_pos_1) > ref_seq_1.get_sequence_length()) break;
       }
     }
     
