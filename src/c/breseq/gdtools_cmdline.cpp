@@ -105,13 +105,16 @@ int do_union(int argc, char *argv[])
 {
   AnyOption options("gdtools UNION [-o output.gd] input1.gd input2.gd ...");
   options("output,o",  "output GD file name", "output.gd");
+	options("evidence,e",  "operate on evidence rather than mutation entries", TAKES_NO_ARGUMENT);
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 
   options.addUsage("");
-  options.addUsage("Creates a GD file with  mutations that exist in any input GD file.");
-  options.addUsage("Duplicate mutations are merged into a single entry. All evidence");
-  options.addUsage("and validation entries are removed from the file.");
+  options.addUsage("Creates a GD file with entries that exist in any input GD file.");
+	options.addUsage("Duplicate entries are merged into a single entry.");
+	options.addUsage("");
+	options.addUsage("By default, operates on and preserves mutations (unless -e is specified).");
+	options.addUsage("All entries of other types (i.e., mutations, evidence, validation) are removed.");
 	options.addUsage("");
 	options.addUsage("Header information will be inherited from the first input file,");
 	options.addUsage("so this function can also be used to transfer metadata to a new file.");
@@ -123,14 +126,16 @@ int do_union(int argc, char *argv[])
     return -1;
   }
   UserOutput uout("UNION");
+	cout << endl << "    Preserving: " << (!options.count("evidence") ? "Mutations (3-letter codes)" : "Evidence (2-letter codes)") << endl;
 
   uout("Reading input GD files") << options.getArgv(0) << endl;
   cGenomeDiff gd1(options.getArgv(0));
 
+	
   for(int32_t i = 1; i < options.getArgc(); ++i) {
     uout << options.getArgv(i) << endl;
     cGenomeDiff gd2(options.getArgv(i));
-    gd1.set_union(gd2, options.count("verbose"));
+    gd1.set_union(gd2, options.count("evidence"), options.count("verbose"));
   }
 
   uout("Assigning unique IDs");

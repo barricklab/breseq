@@ -622,7 +622,7 @@ public:
 
   void set_intersect(cGenomeDiff& gd_ref, bool verbose=false);
   
-  void set_union(cGenomeDiff& gd_ref, bool verbose=false);
+  void set_union(cGenomeDiff& gd_ref, bool evidence_mode, bool verbose=false);
   
   //! Helper function for union
   void unique();
