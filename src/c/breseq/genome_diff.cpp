@@ -2222,22 +2222,24 @@ void cGenomeDiff::set_intersect(cGenomeDiff &gd, bool verbose)
 }
   
 // Merged mutations AND all non-mutation items
-void cGenomeDiff::set_union(cGenomeDiff& gd, bool verbose)
+void cGenomeDiff::set_union(cGenomeDiff& gd, bool evidence_mode, bool verbose)
 {
   (void)verbose; //unused
 
-  this->remove_group(cGenomeDiff::EVIDENCE);
+  if (!evidence_mode)
+    this->remove_group(cGenomeDiff::EVIDENCE);
+  else
+    this->remove_group(cGenomeDiff::MUTATIONS);
   this->remove_group(cGenomeDiff::VALIDATION);
   
   // Merge and clear away all evidence reference
   merge(gd, true, true);
   
-  this->remove_group(cGenomeDiff::EVIDENCE);
+  if (!evidence_mode)
+    this->remove_group(cGenomeDiff::EVIDENCE);
+  else
+    this->remove_group(cGenomeDiff::MUTATIONS);
   this->remove_group(cGenomeDiff::VALIDATION);
-  
-  // for (diff_entry_list_t::iterator it = _entry_list.begin(); it != _entry_list.end(); it++) {
-  //(*it)->_evidence.clear();
-  //}
 }
 
 // Keeps only one copy when equivalent entries are encountered
