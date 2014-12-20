@@ -659,28 +659,16 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
            && (from_string<uint32_t>((*(_user_evidence_ra_list.front()))[POSITION]) == position)
            && (from_string<int32_t>((*(_user_evidence_ra_list.front()))[INSERT_POSITION]) == insert_count)) {
       
-      // Case 1: We already created the RA, but didn't output because it failed tests
-      if (mut == *(_user_evidence_ra_list.front())) {
-        
-        // Mark as user_defined no matter what
-        if (output_ra_on_merits) {
-          (*(_gd.list().back())).add_reject_reason("generic");
-        }
-        // Additionally, need to output if it failed tests.
-        else { //if (!output_ra_on_merits) {
-          mut["user_defined"] = "1";
-          mut.add_reject_reason("generic");
-          _gd.add(mut);
-        }
-        
-      }
-      
-      // Case 2: We didn't create the RA yet -- for now we do the minimum
-      else {
-        // copy the existing entry and fill in more information
+      // Note! mut only exists as a valid record for comparison
+      // if output_ra_on_merits is true!!
+      if (output_ra_on_merits && (mut == *(_user_evidence_ra_list.front()))) {
+        mut["user_defined"] = "1";
+      } else {
+        // copy the input entry and fill in more information
         cDiffEntry user_ra = *(_user_evidence_ra_list.front().get());
         user_ra["user_defined"] = "1";
-        user_ra.add_reject_reason("generic");
+        // Has to be rejected for now or we would expect polymorphism input/output
+        user_ra.add_reject_reason("USER_DEFINED");
         
         vector<uint32_t>& ref_cov = pos_info[from_string<base_char>(user_ra[REF_BASE])];
         user_ra[REF_COV] = to_string(make_pair(static_cast<int>(ref_cov[2]), static_cast<int>(ref_cov[0])));
