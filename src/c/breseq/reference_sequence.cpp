@@ -2576,7 +2576,7 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
   {
     cDiffEntry& mut= **it;
 
-    // lines do not exist (currently) for user defined junctions
+    // lines do not exist (currently) for user defined RA
     if (mut.entry_exists("user_defined"))
     {
       new_gd.add(mut);

@@ -1634,11 +1634,43 @@ namespace breseq {
          cDiffEntry& jc
          )
   {
-    
     //ASSERT(false, "CandidateJunctions::normalize_junction_overlap not fully tested");
     bool verbose = false;
-    // Do nothing if there is positive overlap (unique junction sequence).
+
+    // We need to back out any alignment_overlap that was resolved to change
+    //   to overlap=0 at the end of a previous breseq run
+    int32_t alignment_overlap = jc.entry_exists("alignment_overlap") ? from_string<int32_t>(jc["alignment_overlap"]) : 0;
     int32_t overlap = from_string<int32_t>(jc["overlap"]);
+
+    // alignment_overlap can be negative, in which case both sides are zero and some checks fail
+    if (alignment_overlap != overlap) {
+    
+      int32_t side_1_overlap = jc.entry_exists("side_1_overlap") ? from_string<int32_t>(jc["side_1_overlap"]) : 0;
+      int32_t side_2_overlap = jc.entry_exists("side_2_overlap") ? from_string<int32_t>(jc["side_2_overlap"]) : 0;
+      ASSERT(alignment_overlap == side_1_overlap + side_2_overlap, "overlap != side_1_overlap + side_2_overlap" + jc.as_string() );
+      
+      // This number means this side was shifted this much in assigning overlap to each side
+      //   if it was all assigned to this side, then we don't need to move it
+      int32_t shift_side_2 = alignment_overlap - side_2_overlap;
+      if (shift_side_2 > 0) {
+        jc["side_2_position"] = to_string<int32_t>( from_string<int32_t>(jc["side_2_position"]) - from_string<int32_t>(jc["side_2_strand"]) * shift_side_2  );
+      }
+      
+      int32_t shift_side_1 = alignment_overlap - side_1_overlap;
+      if (shift_side_1 > 0) {
+        jc["side_1_position"] = to_string<int32_t>( from_string<int32_t>(jc["side_1_position"]) - from_string<int32_t>(jc["side_1_strand"]) * shift_side_1  );
+      }
+    }
+    
+    if (alignment_overlap > 0) {
+      overlap = alignment_overlap;
+    }
+    
+    // This section catches cases where zero overlap was assigned because it
+    // was converted from a prediction by a different program (e.g. TopHat2)
+    // it will also expand overlap if it was too small to begin with...
+    
+    // Do nothing if there is negative overlap (unique junction sequence).
     if (overlap < 0)
       return;
     
@@ -1698,7 +1730,7 @@ namespace breseq {
     hash_coord_2 -= hash_strand_2 * reverse_overlap;
     hash_coord_1 -= hash_strand_1 * forward_overlap;
     
-    overlap_offset = forward_overlap + reverse_overlap;
+    overlap_offset = overlap_offset + forward_overlap + reverse_overlap;
     if (verbose) {
       cout << "Adjusted for overlap:" << endl;
       cout << " Hash coord 1:" << hash_coord_1 << endl;

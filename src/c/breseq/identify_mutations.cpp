@@ -662,13 +662,18 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       // Note! mut only exists as a valid record for comparison
       // if output_ra_on_merits is true!!
       if (output_ra_on_merits && (mut == *(_user_evidence_ra_list.front()))) {
-        mut["user_defined"] = "1";
+        // in this case we have already created a valid junction
+        // do not mark it as user_defined or there will be problems:
+        // (it will not show up in HTML and it will mess up polymorphism stats)
       } else {
         // copy the input entry and fill in more information
         cDiffEntry user_ra = *(_user_evidence_ra_list.front().get());
+        user_ra.to_spec(); //remove additional fields that might be left over!!
+        
         user_ra["user_defined"] = "1";
-        // Has to be rejected for now or we would expect polymorphism input/output
-        user_ra.add_reject_reason("USER_DEFINED");
+        
+        user_ra[FREQUENCY] = "NA";
+        user_ra[QUALITY] = "NA";
         
         vector<uint32_t>& ref_cov = pos_info[from_string<base_char>(user_ra[REF_BASE])];
         user_ra[REF_COV] = to_string(make_pair(static_cast<int>(ref_cov[2]), static_cast<int>(ref_cov[0])));
