@@ -101,13 +101,25 @@ if (length(X$best_quals) > 0)
 		Y$log10_base_likelihood[i] = X$log10_base_likelihood[i]
 	
 		#print (i);
-		best_quals_list <- strsplit(as.vector(X$best_quals[i]), ",");
-		best_quals <- as.numeric( best_quals_list[[1]] )
-		second_best_quals_list <- strsplit(as.vector(X$second_best_quals[i]), ",");
-		second_best_quals <- as.numeric( second_best_quals_list[[1]] )
+    best_quals_list = c()
+    best_quals = c()
+    cat("length: ", length(X$best_quals[i]))
+    if (length(X$best_quals[i]) > 0) {
+      best_quals_list <- strsplit(as.vector(X$best_quals[i]), ",");
+      best_quals <- as.numeric( best_quals_list[[1]] )
+    }
+    
+    second_best_quals_list = c()
+    second_best_quals = c()
+    if (length(X$second_best_quals[i]) > 0) {
+      second_best_quals_list <- strsplit(as.vector(X$second_best_quals[i]), ",");
+      second_best_quals <- as.numeric( second_best_quals_list[[1]] )
+    }
 
-	## This code estimates the actual strand and quality score distribution as the total observed.
-	
+    cat("here", "\n")
+        print(second_best_quals)
+        
+    ## This code estimates the actual strand and quality score distribution as the total observed.
 		max_qual = max(best_quals, second_best_quals)
 		NQ = tabulate(best_quals, nbins=max_qual)
 		RQ = tabulate(second_best_quals, nbins=max_qual)
@@ -193,10 +205,11 @@ if (length(X$best_quals) > 0)
 
 	## Oldest code that calculates bias p-values
 	
-		options(warn=-1);
-		ks_test_p_value <- ks.test(second_best_quals, best_quals, alternative = "less")
-		options(warn=0);
-		ks_test_p_value <- ks_test_p_value$p.value
+    options(warn=-1);
+    ks_test_p_value <- ks.test(second_best_quals, best_quals, alternative = "less")
+    options(warn=0);
+    ks_test_p_value <- ks_test_p_value$p.value
+    
 		Y$ks_quality_p_value[i] <- ks_test_p_value
 
 		contingency_table <- matrix(data=c(X$new_top_strand[i], X$new_bot_strand[i], X$ref_top_strand[i], X$ref_bot_strand[i]), nrow=2, ncol=2)

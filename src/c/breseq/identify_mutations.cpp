@@ -384,7 +384,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		//###
 		
     if(!_settings.no_deletion_prediction && (insert_count == 0))
-				check_deletion_completion(position, p.target(), this_position_coverage, e_value_call);
+      check_deletion_completion(position, p.target(), this_position_coverage, e_value_call);
 		
 		//###
 		//## POLYMORPHISM POLYMORPHISM POLYMORPHISM
@@ -511,6 +511,8 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 			output_ra_on_merits = false; // goes to next insert count...
 		}
     
+    // This is a pointer to the added mutation, so that we can change it later for user-RA
+    diff_entry_ptr_t added_mut_p(NULL);
     if (output_ra_on_merits) {
       
       //###
@@ -539,7 +541,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       }
       //## Specific initializations for polymorphisms
       else if (polymorphism_predicted) {
-                  
+
         //# the frequency returned is the probability of the FIRST base
         //# we want to quote the probability of the second base (the change from the reference).      
         if (best_base_char == ref_base_char) {
@@ -578,66 +580,13 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         }
         */
         
-          
         // Add line to R input file
-        // @JEB TODO: deprecate going to R here
+        // @JEB TO_DO: deprecate going to R here
         // and in the main PIPELINE. We can now do
         // Fisher's exact test in C++ and the KS
         // test is probably not necessary
-        
-        if (_settings.polymorphism_prediction || _settings.mixed_base_prediction) {
-          
-          _polymorphism_r_input_file 
-            << p.target_name() << "\t"
-            << position << "\t"
-            << insert_count << "\t"
-            << ref_base_char << "\t"
-            << best_base_char << "\t"
-            << second_best_base_char << "\t"
-            << ((ref_base_char != second_best_base_char) ? ppred.frequency : (1-ppred.frequency)) << "\t"
-            << ppred.log10_base_likelihood << "\t"
-            << (0.1 * round(ppred.log10_e_value*10)) << "\t"
-            << pos_info[best_base_char][2] << "\t"
-            << pos_info[best_base_char][0] << "\t"
-            << pos_info[second_best_base_char][2] << "\t"
-            << pos_info[second_best_base_char][0] << "\t"
-          ;    
-          
-          
-          string best_base_qualities;
-          string second_best_base_qualities;
-
-          for(vector<polymorphism_data>::iterator it=pdata.begin(); it<pdata.end(); ++it) {
-                    
-            if (it->_base_char == best_base_char) {
-              if (best_base_qualities.length() > 0) {
-                best_base_qualities += ",";
-              }
-              stringstream convert_quality;
-              convert_quality << (unsigned int)it->_quality;
-              best_base_qualities += convert_quality.str();
-            }
-            
-            if (it->_base_char == second_best_base_char) {
-              if (second_best_base_qualities.length() > 0) {
-                second_best_base_qualities += ",";
-              }
-              stringstream convert_quality;
-              convert_quality << (unsigned int)it->_quality;
-              second_best_base_qualities += convert_quality.str();
-            }
-          }
-          
-          if (ref_base_char != second_best_base_char) {
-            _polymorphism_r_input_file << best_base_qualities << "\t";
-            _polymorphism_r_input_file << second_best_base_qualities << "\t";
-          } else {
-            _polymorphism_r_input_file << second_best_base_qualities << "\t";
-            _polymorphism_r_input_file << best_base_qualities << "\t";
-          }
-          
-          _polymorphism_r_input_file << endl;
-        }
+        if (_settings.polymorphism_prediction || _settings.mixed_base_prediction)
+          write_polymorphism_input_file_line(p, insert_count, ref_base_char, best_base_char, second_best_base_char, ppred, pos_info, pdata );
       }
           
       //## More fields common to consensus mutations and polymorphisms
@@ -651,6 +600,10 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       mut[TOT_COV] = to_string(make_pair(total_cov[2], total_cov[0]));
       
       _gd.add(mut);
+      
+      // what's going on here? we may need to change a value latter,
+      // and add added a copy not the current one
+      added_mut_p = _gd.list().back();
     } // END ra_output
     
     // Now we print additional RA items as user= if they have not already been printed.
@@ -661,19 +614,66 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       
       // Note! mut only exists as a valid record for comparison
       // if output_ra_on_merits is true!!
-      if (output_ra_on_merits && (mut == *(_user_evidence_ra_list.front()))) {
+      if (output_ra_on_merits && (*added_mut_p == *(_user_evidence_ra_list.front()))) {
         // in this case we have already created a valid junction
+        (*added_mut_p)["user_defined"] = "1";
+        
         // do not mark it as user_defined or there will be problems:
         // (it will not show up in HTML and it will mess up polymorphism stats)
       } else {
         // copy the input entry and fill in more information
         cDiffEntry user_ra = *(_user_evidence_ra_list.front().get());
         user_ra.to_spec(); //remove additional fields that might be left over!!
-        
         user_ra["user_defined"] = "1";
+        user_ra["user_defined_no_poly"] = "1";
         
-        user_ra[FREQUENCY] = "NA";
-        user_ra[QUALITY] = "NA";
+        // These are already assigned by copy of RA
+        //mut[SEQ_ID] = p.target_name();
+        //mut[POSITION] = to_string<uint32_t>(position);
+        //mut[INSERT_POSITION] = to_string<uint32_t>(insert_count);
+
+        // tries all frequencies of the best two
+        
+        base_char best_base_char = from_string<base_char>(user_ra[REF_BASE]);
+        base_char second_best_base_char = from_string<base_char>(user_ra[NEW_BASE]);
+        if (_settings.polymorphism_prediction) {
+          ppred = predict_polymorphism(best_base_char, second_best_base_char, pdata);
+        }
+        // tries only the raw ML frequency of the best two
+        else if (_settings.mixed_base_prediction) {
+          ppred = predict_mixed_base(best_base_char, second_best_base_char, pdata);
+        }
+        
+        ppred.log10_e_value = -(log(ppred.p_value)/log(10)) - _log10_ref_length;
+        
+        // This are almost certainly rejected according to the normal criteria
+        if (_settings.polymorphism_prediction) {
+          if (ppred.log10_e_value < _polymorphism_cutoff ) {
+            user_ra.add_reject_reason("EVALUE");
+          }
+          
+          if ( (ppred.frequency < _polymorphism_frequency_cutoff) || (ppred.frequency > 1 -_polymorphism_frequency_cutoff) ) {
+            user_ra.add_reject_reason("POLYMORPHISM_FREQUENCY_CUTOFF");
+          }
+        } else {
+          if(ppred.log10_e_value < _mutation_cutoff) {
+            user_ra.add_reject_reason("EVALUE");
+          }
+        }
+        
+        //# the frequency returned is the probability of the FIRST base
+        //# we want to quote the probability of the second base (the change from the reference).
+        user_ra[FREQUENCY] = formatted_double(1 - ppred.frequency, _polymorphism_precision_places, true).to_string();
+        
+        // Genotype quality is for the top called genotype
+        user_ra[GENOTYPE_QUALITY] = formatted_double(e_value_call, kMutationQualityPrecision).to_string();
+        user_ra[POLYMORPHISM_QUALITY] = formatted_double(ppred.log10_e_value, kMutationQualityPrecision).to_string();
+        user_ra[QUALITY] = user_ra[POLYMORPHISM_QUALITY];
+        
+        /* polmorphism code currently chokes when there are zero observations in one direction
+        if (_settings.polymorphism_prediction || _settings.mixed_base_prediction)
+          write_polymorphism_input_file_line(p, insert_count, ref_base_char, best_base_char, second_best_base_char, ppred, pos_info, pdata );
+        */
         
         vector<uint32_t>& ref_cov = pos_info[from_string<base_char>(user_ra[REF_BASE])];
         user_ra[REF_COV] = to_string(make_pair(static_cast<int>(ref_cov[2]), static_cast<int>(ref_cov[0])));
@@ -682,8 +682,8 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         user_ra[NEW_COV] = to_string(make_pair(static_cast<int>(new_cov[2]), static_cast<int>(new_cov[0])));
         
         user_ra[TOT_COV] = to_string(make_pair(total_cov[2], total_cov[0]));
-        _gd.add(user_ra);
         
+        _gd.add(user_ra);
       }
       
       _user_evidence_ra_list.pop_front();
@@ -924,13 +924,68 @@ void identify_mutations_pileup::update_unknown_intervals(uint32_t position, uint
 	}
 }
   
+void identify_mutations_pileup::write_polymorphism_input_file_line(const pileup& p, const uint32_t insert_count, char ref_base_char, char best_base_char, char second_best_base_char, const polymorphism_prediction& ppred, position_base_info& pos_info, const vector<polymorphism_data>& pdata )
+{
   
+  _polymorphism_r_input_file
+  << p.target_name() << "\t"
+  << p.position_1() << "\t"
+  << insert_count << "\t"
+  << ref_base_char << "\t"
+  << best_base_char << "\t"
+  << second_best_base_char << "\t"
+  << ((ref_base_char != second_best_base_char) ? ppred.frequency : (1-ppred.frequency)) << "\t"
+  << ppred.log10_base_likelihood << "\t"
+  << (0.1 * round(ppred.log10_e_value*10)) << "\t"
+  << pos_info[best_base_char][2] << "\t"
+  << pos_info[best_base_char][0] << "\t"
+  << pos_info[second_best_base_char][2] << "\t"
+  << pos_info[second_best_base_char][0] << "\t"
+  ;
+  
+  
+  string best_base_qualities;
+  string second_best_base_qualities;
+  
+  for(vector<polymorphism_data>::const_iterator it=pdata.begin(); it<pdata.end(); ++it) {
+    
+    if (it->_base_char == best_base_char) {
+      if (best_base_qualities.length() > 0) {
+        best_base_qualities += ",";
+      }
+      stringstream convert_quality;
+      convert_quality << (unsigned int)it->_quality;
+      best_base_qualities += convert_quality.str();
+    }
+    
+    if (it->_base_char == second_best_base_char) {
+      if (second_best_base_qualities.length() > 0) {
+        second_best_base_qualities += ",";
+      }
+      stringstream convert_quality;
+      convert_quality << (unsigned int)it->_quality;
+      second_best_base_qualities += convert_quality.str();
+    }
+  }
+  
+  if (ref_base_char != second_best_base_char) {
+    _polymorphism_r_input_file << best_base_qualities << "\t";
+    _polymorphism_r_input_file << second_best_base_qualities << "\t";
+  } else {
+    _polymorphism_r_input_file << second_best_base_qualities << "\t";
+    _polymorphism_r_input_file << best_base_qualities << "\t";
+  }
+  
+  _polymorphism_r_input_file << endl;
+  
+}
+
 
 /*! Predict the significance of putative polymorphisms.
  */
 polymorphism_prediction identify_mutations_pileup::predict_polymorphism(base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata ) {
-    
-  //#calculate the likelihood of observed reads given this position is 100% the best base  
+  
+  //#calculate the likelihood of observed reads given this position is 100% the best base
 	double log10_likelihood_of_one_base_model = 0;
   for(vector<polymorphism_data>::iterator it=pdata.begin(); it<pdata.end(); ++it) {
   

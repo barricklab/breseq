@@ -201,7 +201,7 @@ public:
     
   //! Checks fields for expected types (such as integers)
   void valid_field_variable_types(cFileParseErrors& parse_errors);
-
+  
   //! Copy constructor
   //cDiffEntry(const cDiffEntry& rhs) : _fields(rhs._fields), _type(rhs._type), _id(rhs._id), _parents(rhs._parents) {}
 
@@ -286,11 +286,17 @@ public:
   
   size_t number_reject_reasons();
   
+  bool is_rejected() { return (number_reject_reasons() > 0); }
+  
   //! Returns values for cDiffEntry["reject"]
   vector<string> get_reject_reasons();
   
   //! Adds a reject reason to cDiffEntry["reject"] as a list
   void add_reject_reason(const string &reason);
+  
+  //! Removes all of the reject reasons
+  void clear_reject_reasons()
+    { this->erase(REJECT); }
 
   //!---- Simplifying entries ---- !//
   

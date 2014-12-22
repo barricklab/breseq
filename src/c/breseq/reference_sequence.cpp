@@ -2576,9 +2576,10 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
   {
     cDiffEntry& mut= **it;
 
-    // lines do not exist (currently) for user defined RA
-    if (mut.entry_exists("user_defined"))
+    // No lines exist for user_defined RA evidence = 1 (if =2 then we need to erase any reject reasons)
+    if (mut.entry_exists("user_defined_no_poly"))
     {
+      mut.erase("user_defined_no_poly");
       new_gd.add(mut);
       continue;
     }
