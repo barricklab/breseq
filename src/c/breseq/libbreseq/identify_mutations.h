@@ -276,6 +276,9 @@ namespace breseq {
 		//! Helper method to track unknowns.
 		void update_unknown_intervals(uint32_t position, uint32_t seq_id, bool base_predicted, bool this_position_unique_only_coverage);
 
+    //! Helper function for writing a line to the polymorphism file.
+    void write_polymorphism_input_file_line(const pileup& p, const uint32_t insert_count, char ref_base_char, char best_base_char, char second_best_base_char, const polymorphism_prediction& ppred, position_base_info& pos_info, const vector<polymorphism_data>& pdata );
+    
 		//! Predict whether there is a significant polymorphism.
     polymorphism_prediction predict_polymorphism (base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata );
 

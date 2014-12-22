@@ -1767,7 +1767,45 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
       }
     } // end third pass loop
   } // end already hit fatal error
-    
+  
+  
+  //These are good tests, but they can fail when the mutations are actually 'within' and 'before'
+  // Fourth pass loop -- check for bonehead sequence entries
+  if (!parse_errors.fatal()) {
+    for(diff_entry_list_t::iterator it=_entry_list.begin(); it!=_entry_list.end(); ++it) {
+      cDiffEntry& de = **it;
+      
+      if (de.entry_exists("within"))
+        continue;
+      
+      if (de._type == RA) {
+        uint32_t position = from_string<uint32_t>(de[POSITION]);
+        uint32_t insert_position = from_string<uint32_t>(de[INSERT_POSITION]);
+        string test_ref_base = ((insert_position == 0) ? ref_seq.get_sequence_1(de[SEQ_ID], position, position) : ".");
+        if (de[REF_BASE] != test_ref_base) {
+          parse_errors.add_line_error(from_string<uint32_t>(de["_line_number"]), de.as_string(), "Specified REF_BASE does not match actual reference base (" + test_ref_base + ") at the specified positon.", true);
+        }
+        
+        if (de[REF_BASE] == de[NEW_BASE]) {
+          parse_errors.add_line_error(from_string<uint32_t>(de["_line_number"]), de.as_string(), "Specified REF_BASE and NEW_BASE are the same.", true);
+        }
+      } else if (de._type == SNP) {
+        uint32_t position = from_string<uint32_t>(de[POSITION]);
+        if (de[NEW_SEQ] == ref_seq.get_sequence_1(de[SEQ_ID], position, position)) {
+          parse_errors.add_line_error(from_string<uint32_t>(de["_line_number"]), de.as_string(), "Specified NEW_SEQ is the same as the reference sequence at the specified positon.", true);
+        }
+      } else if (de._type == SUB) {
+        uint32_t position = from_string<uint32_t>(de[POSITION]);
+        uint32_t size = from_string<uint32_t>(de[SIZE]);
+        if (de[NEW_SEQ] == ref_seq.get_sequence_1(de[SEQ_ID], position, position+size-1)) {
+          parse_errors.add_line_error(from_string<uint32_t>(de["_line_number"]), de.as_string(), "Specified NEW_SEQ is the same as the reference sequence at the specified positons.", true);
+        }
+      }
+      
+    } // end fourth pass loop
+  } // end already hit fatal error
+  
+  
   if (!suppress_errors) {
     parse_errors.print_errors();
     if (parse_errors.fatal() )

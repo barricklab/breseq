@@ -1278,7 +1278,7 @@ namespace breseq {
     diff_entry_list_t ra = gd.list(ra_types);
     
 		///
-		// Ignore RA that overlap DEL or MC
+		// Ignore RA that overlap DEL or MC unless they are user
 		// They are due to low spurious coverage in deleted regions!
 		///
     
@@ -1290,6 +1290,10 @@ namespace breseq {
       cDiffEntry& ra_item = **ra_it;
       
       bool next_ra = false;
+      
+      // fon't remove these, no matter what!
+      if (ra_item.entry_exists("user_defined"))
+        continue;
       
       for(diff_entry_list_t::iterator del_it = del.begin(); del_it != del.end(); del_it++) //DEL
       {
@@ -1323,7 +1327,7 @@ namespace breseq {
     }
     
     // Don't use rejected evidence
-    ra.remove_if(cDiffEntry::field_exists("reject"));
+    ra.remove_if(cDiffEntry::rejected_and_not_user_defined());
     
 		ra.sort(MutationPredictor::sort_by_pos);
     
@@ -1343,7 +1347,7 @@ namespace breseq {
       
       // Sometimes a SNP might be called in a deleted area because the end was wrong,
 			// but it was corrected using a junction. (This catches this case.)
-			if ( item.entry_exists("reject") || item.entry_exists("deleted") )
+			if ( (!item.entry_exists("user_defined")) && (item.entry_exists("reject") || item.entry_exists("deleted")) )
 			  continue;
       
       // If we are predicting mixed bases and not polymorphisms, then don't create

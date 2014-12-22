@@ -1175,16 +1175,17 @@ int breseq_default_action(int argc, char* argv[])
 		Summary::SequenceConversion s;
     cReferenceSequences conv_ref_seq_info;
     
-    // Do a quick load of the file to detect formatting errors.
-    if (settings.user_evidence_genome_diff_file_name != "") {
-      cGenomeDiff gd(settings.user_evidence_genome_diff_file_name);
-    }
-    
     // Load all of the reference sequences and convert to FASTA and GFF3
     conv_ref_seq_info.LoadFiles(settings.all_reference_file_names);
     conv_ref_seq_info.WriteFASTA(settings.reference_fasta_file_name);
     conv_ref_seq_info.WriteGFF(settings.reference_gff3_file_name);
 
+    // Do a quick load of the file to detect formatting errors.
+    if (settings.user_evidence_genome_diff_file_name != "") {
+      cGenomeDiff gd(settings.user_evidence_genome_diff_file_name);
+      gd.valid_with_reference_sequences(conv_ref_seq_info, false);
+    }
+    
     // No conversion if already is sam mode
     if (!settings.aligned_sam_mode) {
       
