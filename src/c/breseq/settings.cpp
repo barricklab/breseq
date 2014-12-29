@@ -205,7 +205,8 @@ namespace breseq
     ("require-match-fraction", "Only consider alignments that cover this fraction of a read", 0.9, ADVANCED_OPTION)
     ("deletion-coverage-propagation-cutoff","Value for coverage above which deletions are cutoff. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
     ("deletion-coverage-seed-cutoff","Value for coverage below which deletions are seeded", 0, ADVANCED_OPTION)
-    ("mutation-score-cutoff", "Log10 E-value cutoff for base-substitution and micro-indel predictions", 10, ADVANCED_OPTION)
+    ("mutation-score-cutoff", "Log10 E-value cutoff for consensus base substitutions and small indels", 10, ADVANCED_OPTION)
+    ("minimum-coverage-each-strand", "Only predict base substitutions and small indels when this many reads on each strand support the mutation. (DEFAULT = 0)", 0, ADVANCED_OPTION)
     ;
     
     options.addUsage("", ADVANCED_OPTION);
@@ -230,7 +231,7 @@ namespace breseq
     ("polymorphism-score-cutoff", "Log10 E-value cutoff for test of polymorphism vs no polymorphism (DEFAULT = consensus mode, 10; polymorphism mode, 2)", "", ADVANCED_OPTION)
     ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias (0 = OFF) (DEFAULT = consensus mode, 0.05; polymorphism mode, 0.001)", "", ADVANCED_OPTION)
     ("polymorphism-frequency-cutoff", "Only predict polymorphisms where both allele frequencies are > than this value (DEFAULT = consensus mode, 0.1; polymorphism mode, 0.0)", "", ADVANCED_OPTION)
-    ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms where this many reads on each strand support alternative alleles (DEFAULT = consensus mode, 2; polymorphism mode, 2)", "", ADVANCED_OPTION)
+    ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms where this many reads on each strand support alternative alleles. Set to --minimum-coverage-each-strand if this value is greater than what is set here. (DEFAULT = consensus mode, 2; polymorphism mode, 2)", "", ADVANCED_OPTION)
     ;
     
     options.addUsage("", ADVANCED_OPTION);
@@ -388,6 +389,7 @@ namespace breseq
     this->deletion_coverage_seed_cutoff = from_string<double>(options["deletion-coverage-seed-cutoff"]);
     ASSERT(this->deletion_coverage_propagation_cutoff >= 0, "Argument --deletion-coverage-seed-cutoff must be > 0")
 		this->mutation_log10_e_value_cutoff = from_string<double>(options["mutation-score-cutoff"]);
+    this->minimum_new_coverage_each_strand = from_string<uint32_t>(options["minimum-coverage-each-strand"]);
     
     //! Settings: Junction Prediction
     this->no_junction_prediction = options.count("no-junction-prediction");
@@ -404,8 +406,8 @@ namespace breseq
     // Set the read alignment evidence model
     // Different defaults for the three modes:
     //   Consensus - only consensus base calls (old default mode)
-    //   Mixed base - consensus and strong polymorphism calls (new default mode)
-    //   Polymorphism prediction - consensus and any mixed calls (--p options)
+    //   Mixed base - consensus and strong polymorphism calls as marginal (new default mode)
+    //   Polymorphism prediction - consensus and any mixed calls (--p option)
     //
     
     this->polymorphism_prediction = options.count("polymorphism-prediction");
@@ -463,7 +465,11 @@ namespace breseq
     if (options.count("polymorphism-bias-cutoff"))
       this->polymorphism_bias_p_value_cutoff = from_string<double>(options["polymorphism-bias-cutoff"]);
     if (options.count("polymorphism-minimum-coverage-each-strand"))
-      this->polymorphism_minimum_new_coverage_each_strand = from_string<int32_t>(options["polymorphism-minimum-coverage-each-strand"]);
+      this->polymorphism_minimum_new_coverage_each_strand = from_string<uint32_t>(options["polymorphism-minimum-coverage-each-strand"]);
+    
+    // This value will always be set to at least the consensus minimum
+    this->polymorphism_minimum_new_coverage_each_strand = max(this->polymorphism_minimum_new_coverage_each_strand, this->minimum_new_coverage_each_strand);
+
     if (options.count("junction-minimum-pos-hash-score"))
       this->minimum_alignment_resolution_pos_hash_score = from_string<uint32_t>(options["junction-minimum-pos-hash-score"]);
     if (options.count("junction-minimum-side-match"))
