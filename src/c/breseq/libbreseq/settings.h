@@ -315,8 +315,8 @@ namespace breseq
     //! ignore bases below this cutoff for RA evidence (still counted for deletions?)
     uint32_t base_quality_cutoff;                         // Default 3    COMMAND-LINE OPTION
     uint32_t quality_score_trim;                          // Default OFF  COMMAND-LINE OPTION
-    
-    
+    uint32_t minimum_new_coverage_each_strand;             // Default = 0
+
     //! treated as read numbers if integers >= 1.0 and percentages of average coverage if > 0.0 and < 1.0
     double deletion_coverage_propagation_cutoff;          // Default = calculated COMMAND-LINE OPTION
     double deletion_coverage_seed_cutoff;                 // Default = 0;         COMMAND-LINE OPTION
@@ -336,7 +336,7 @@ namespace breseq
     double polymorphism_log10_e_value_cutoff;                     // Default = mutation_log10_e_value_cutoff = 10
 		double polymorphism_bias_p_value_cutoff;                      // Default = 0.05 for mixed base | 0 (OFF) for polymorphism
 		double polymorphism_frequency_cutoff;                         // Default = 0.1 for mixed base | 0.0 for polymorphism
-		int32_t polymorphism_minimum_new_coverage_each_strand;        // Default = 1
+		uint32_t polymorphism_minimum_new_coverage_each_strand;        // Default = 1
 		uint32_t polymorphism_reject_indel_homopolymer_length;        // Default = 0 (OFF)
     uint32_t polymorphism_reject_surrounding_homopolymer_length;  // Default = 0 (OFF)
 		bool no_indel_polymorphisms;                                  // Default = false

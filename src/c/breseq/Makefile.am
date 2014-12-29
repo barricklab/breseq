@@ -37,6 +37,7 @@ libbreseq_la_SOURCES = \
 	error_count.cpp \
 	fasta.cpp \
 	fastq.cpp \
+	flagged_regions.cpp \
 	genome_diff.cpp \
 	identify_mutations.cpp \
 	mutation_predictor.cpp \
@@ -61,6 +62,7 @@ libbreseq_la_SOURCES = \
 	libbreseq/error_count.h \
 	libbreseq/fasta.h \
 	libbreseq/fastq.h \
+	libbreseq/flagged_regions.h \
 	libbreseq/genome_diff.h \
 	libbreseq/identify_mutations.h \
 	libbreseq/mutation_predictor.h \

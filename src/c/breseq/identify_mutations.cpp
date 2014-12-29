@@ -273,10 +273,8 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         continue;
       }
 
- 			
 			//##### deal with base calls
       //cerr << "POSITION:" << position << endl;
-      
       
       covariate_values_t cv; 
 
@@ -538,6 +536,12 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         if(e_value_call < _mutation_cutoff) {
           mut.add_reject_reason("EVALUE");
         }
+        
+        vector<uint32_t>& new_cov = pos_info[from_string<base_char>(mut[NEW_BASE])];
+        if ( (new_cov[0] < _settings.minimum_new_coverage_each_strand) || (new_cov[2] < _settings.minimum_new_coverage_each_strand) ) {
+          mut.add_reject_reason("STRAND_COVERAGE");
+        }
+
       }
       //## Specific initializations for polymorphisms
       else if (polymorphism_predicted) {
@@ -592,10 +596,10 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       //## More fields common to consensus mutations and polymorphisms
       //## ...now that ref_base and new_base are defined
       vector<uint32_t>& ref_cov = pos_info[from_string<base_char>(mut[REF_BASE])];
-      mut[REF_COV] = to_string(make_pair(static_cast<int>(ref_cov[2]), static_cast<int>(ref_cov[0])));
+      mut[REF_COV] = to_string(make_pair(static_cast<int32_t>(ref_cov[2]), static_cast<int32_t>(ref_cov[0])));
       
       vector<uint32_t>& new_cov = pos_info[from_string<base_char>(mut[NEW_BASE])];
-      mut[NEW_COV] = to_string(make_pair(static_cast<int>(new_cov[2]), static_cast<int>(new_cov[0])));
+      mut[NEW_COV] = to_string(make_pair(static_cast<int32_t>(new_cov[2]), static_cast<int32_t>(new_cov[0])));
       
       mut[TOT_COV] = to_string(make_pair(total_cov[2], total_cov[0]));
       

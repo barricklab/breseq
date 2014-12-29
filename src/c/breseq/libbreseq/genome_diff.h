@@ -29,6 +29,7 @@ class cGenomeDiff;
 class cReferenceSequences;
 class cSequenceFeature;
 class Settings;
+class cReferenceCoordinate;
   
 // Common keywords used for diff entries:
 extern const char* TYPE;
@@ -246,9 +247,8 @@ public:
   //!---- Accessors to calculated properties ---- !//
   
   //! Common function for getting start or end of mutation or evidence
-  uint32_t get_start();
-  uint32_t get_end();
-
+  cReferenceCoordinate get_reference_coordinate_start() const;
+  cReferenceCoordinate get_reference_coordinate_end() const;
 
   //! Common function giving change in size of genome at site of applying entry
   int32_t mutation_size_change(cReferenceSequences& ref_seq_info);
@@ -681,7 +681,7 @@ public:
                         string type,
                         uint32_t n_muts,
                         uint32_t buffer,
-                        cAnnotatedSequence& ref,
+                        cReferenceSequences& ref_seq_info,
                         bool verbose = false);
 
   void mutations_to_evidence(cReferenceSequences &ref_seq, bool remove_mutations = true);
@@ -777,50 +777,6 @@ public:
 };
   
   
-/* Helper class for cGenomeDiff::random_mutations, handles sorting of start_1,
- * end_1 positions and merges the positions if they overlap.
- */
-class cFlaggedRegions  {
-public:
-  typedef pair<uint32_t, uint32_t>  region_t;
-  typedef set<region_t>             regions_t;
-  
-  cFlaggedRegions()
-  :m_regions() {
-    return;
-  }
-  
-  //! I/O.
-  cFlaggedRegions& read_mummer(string file_path, cAnnotatedSequence& ref_seq);
-  cFlaggedRegions& read_nucmer_tab_coords(string file_path);
-  void write(string file_path);
-  void print(void);
-  
-  
-  //! Add region to be marked.
-  cFlaggedRegions& flag_region(uint32_t start_1, uint32_t end_1 = 0);
-  
-  //! Remove overlapping regions, adds segments if partial overlapping occurs.
-  //cFlaggedRegions& unflag_region(uint32_t start_1, uint32_t end_1 = 0);
-  
-  //! Tests if start_1 to end_1 spans over a marked region.
-  bool is_flagged(uint32_t start_1, uint32_t end_1 = 0);
-  
-  //! Test if two regions overlap each other.
-  bool overlaps(region_t region_1, region_t region_2);
-  
-  //! Test if a position is within a region.
-  bool overlaps(uint32_t pos_1, region_t region);
-  
-  //! Return overlapping regions, defaults to all regions.
-  regions_t regions(uint32_t start_1 = 0, uint32_t end_1 = 0);
-  
-  //! Remove regions.
-  cFlaggedRegions& remove(regions_t regions);
-  
-protected:
-  regions_t m_regions;
-};
 
 }
 #endif

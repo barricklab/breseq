@@ -23,6 +23,7 @@
 
 /* Begin PBXBuildFile section */
 		701EE98313C4BB5200F2EC70 /* contingency_loci.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 701EE98213C4BB5200F2EC70 /* contingency_loci.cpp */; };
+		702A20BC1A4F2485006DCA5F /* flagged_regions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702A20BA1A4F2349006DCA5F /* flagged_regions.cpp */; };
 		702EABF713421A8400103019 /* fastq.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702EABF613421A8400103019 /* fastq.cpp */; };
 		70367D2113EB232C000787CC /* coverage_distribution.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70367D2013EB232C000787CC /* coverage_distribution.cpp */; };
 		70436D5B13FF7675006448FB /* samtools in CopyFiles */ = {isa = PBXBuildFile; fileRef = 70436D5A13FF7675006448FB /* samtools */; };
@@ -126,6 +127,8 @@
 		7024BBDE155DEC31007CCA5B /* karyotype.and.layout.conf */ = {isa = PBXFileReference; lastKnownFileType = text; name = karyotype.and.layout.conf; path = breseq/karyotype.and.layout.conf; sourceTree = "<group>"; };
 		7024BBDF155DEC31007CCA5B /* mobs.conf */ = {isa = PBXFileReference; lastKnownFileType = text; name = mobs.conf; path = breseq/mobs.conf; sourceTree = "<group>"; };
 		7024BBE0155DEC31007CCA5B /* mutations.conf */ = {isa = PBXFileReference; lastKnownFileType = text; name = mutations.conf; path = breseq/mutations.conf; sourceTree = "<group>"; };
+		702A20BA1A4F2349006DCA5F /* flagged_regions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = flagged_regions.cpp; path = breseq/flagged_regions.cpp; sourceTree = SOURCE_ROOT; };
+		702A20BB1A4F2399006DCA5F /* flagged_regions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = flagged_regions.h; sourceTree = "<group>"; };
 		702EABF613421A8400103019 /* fastq.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = fastq.cpp; path = breseq/fastq.cpp; sourceTree = SOURCE_ROOT; };
 		70367D2013EB232C000787CC /* coverage_distribution.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = coverage_distribution.cpp; path = breseq/coverage_distribution.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		70436D5713FF6D7D006448FB /* coverage_distribution.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = coverage_distribution.r; path = breseq/coverage_distribution.r; sourceTree = "<group>"; };
@@ -277,6 +280,7 @@
 				7087728912BC169C000F9B57 /* error_count.cpp */,
 				70B4AEAF1391F72200B9638D /* fasta.cpp */,
 				702EABF613421A8400103019 /* fastq.cpp */,
+				702A20BA1A4F2349006DCA5F /* flagged_regions.cpp */,
 				70E92F21151AB8AF00F86F2D /* gdtools_cmdline.cpp */,
 				7087728A12BC169C000F9B57 /* genome_diff.cpp */,
 				7087728B12BC169C000F9B57 /* identify_mutations.cpp */,
@@ -350,6 +354,7 @@
 				70CB721A140FEB6400D578EB /* error_count.h */,
 				70CB721B140FEB6400D578EB /* fasta.h */,
 				70CB721C140FEB6400D578EB /* fastq.h */,
+				702A20BB1A4F2399006DCA5F /* flagged_regions.h */,
 				70CB721D140FEB6400D578EB /* genome_diff.h */,
 				70CB721E140FEB6400D578EB /* identify_mutations.h */,
 				70CB721F140FEB6400D578EB /* mutation_predictor.h */,
@@ -516,6 +521,7 @@
 				7084E56713CFD471005B57D1 /* mutation_predictor.cpp in Sources */,
 				70367D2113EB232C000787CC /* coverage_distribution.cpp in Sources */,
 				7092FAF2140AC70200DDECA2 /* coverage_output.cpp in Sources */,
+				702A20BC1A4F2485006DCA5F /* flagged_regions.cpp in Sources */,
 				70990AE614D5A4FA005255D4 /* rna_seq.cpp in Sources */,
 				707F349F155D970000F5C89F /* summary.cpp in Sources */,
 				707F34A2155D97B900F5C89F /* reference_sequence.cpp in Sources */,
