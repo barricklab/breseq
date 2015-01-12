@@ -927,6 +927,8 @@ namespace breseq {
     {
       cDiffEntry& user_junction = **it;
 
+      //cout << user_junction.as_string() << endl;
+      
       // set initial flanking lengths, these may be reduced by construct_junction_sequence
       user_junction["flanking_left"] = to_string<int32_t>(max_read_length);
       user_junction["flanking_right"] = to_string<int32_t>(max_read_length);
@@ -936,6 +938,7 @@ namespace breseq {
       JunctionInfo junction_info(user_junction);
       user_defined_junctions[junction_info.junction_key()] = user_junction;
       
+      //cout << user_junction.as_string() << endl;
     }
     return user_defined_junctions; 
   }
@@ -1697,10 +1700,13 @@ namespace breseq {
       
       int32_t test_pos_1 = hash_coord_1;
       int32_t test_pos_2 = hash_coord_2 - hash_strand_2;
+      
+      //@JEB: notice the minus sign added to the first strand in get_stranded_sequence_1
+      //      due to how junction directions are labeled
       while ( (test_pos_1 >= 1) && (test_pos_2 >= 1)
               && (static_cast<uint32_t>(test_pos_1) <= ref_seq_1.get_sequence_length())
               && (static_cast<uint32_t>(test_pos_2) <= ref_seq_2.get_sequence_length())
-              && (ref_seq_1.get_sequence_1(test_pos_1) == ref_seq_2.get_sequence_1(test_pos_2)) ) {
+              && (ref_seq_1.get_stranded_sequence_1(-hash_strand_1, test_pos_1) == ref_seq_2.get_stranded_sequence_1(hash_strand_2, test_pos_2)) ) {
         test_pos_1 += hash_strand_1;
         test_pos_2 -= hash_strand_2;
         reverse_overlap++;
@@ -1720,7 +1726,7 @@ namespace breseq {
       while ( (test_pos_1 >= 1) && (test_pos_2 >= 1)
               && (static_cast<uint32_t>(test_pos_1) <= ref_seq_1.get_sequence_length())
               && (static_cast<uint32_t>(test_pos_2) <= ref_seq_2.get_sequence_length())
-              && (ref_seq_1.get_sequence_1(test_pos_1) == ref_seq_2.get_sequence_1(test_pos_2)) ) {
+              && (ref_seq_1.get_stranded_sequence_1(-hash_strand_1, test_pos_1) == ref_seq_2.get_stranded_sequence_1(hash_strand_2, test_pos_2)) ) {
         test_pos_1 -= hash_strand_1;
         test_pos_2 += hash_strand_2;
         forward_overlap++;

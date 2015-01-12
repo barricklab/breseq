@@ -5362,13 +5362,9 @@ Temporary format for exchange with Olivier Tenaillon to analyze parallelism
   
 void cGenomeDiff::GD2OLI(const vector<string> &gd_file_names, 
                          const vector<string> &reference_file_names, 
-                         const string& output_file_name )
+                         const string& output_file_name,
+                         const uint32_t large_size_cutoff)
 {
-  // Hard coded settings
-  uint32_t large_size_cutoff = 20;
-  
-  
-  
   cReferenceSequences ref_seq_info;
   ref_seq_info.LoadFiles(reference_file_names);
   
@@ -5500,7 +5496,7 @@ void cGenomeDiff::GD2OLI(const vector<string> &gd_file_names,
         
         // This is more of a big deletion. Erg.
         if (old_size - new_size > static_cast<int32_t>(large_size_cutoff)) {
-          type="Large_deletion";
+          type="LargeDeletion";
           change = to_string<int32_t>(old_size - new_size) + "_bp";
         }
         else {

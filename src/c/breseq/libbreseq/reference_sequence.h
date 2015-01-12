@@ -421,7 +421,9 @@ namespace breseq {
       {
         return m_fasta_sequence.m_sequence.substr(pos_1-1, 1)[0];
       }
-
+    
+      string get_stranded_sequence_1(int32_t strand, int32_t start_1, int32_t end_1) const;
+      char get_stranded_sequence_1(int32_t strand, int32_t pos_1) const;
       string get_circular_sequence_1(int32_t start_1, uint32_t size) const;
       
       size_t get_sequence_size(void) const
