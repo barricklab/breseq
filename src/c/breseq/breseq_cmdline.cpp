@@ -896,8 +896,8 @@ int do_periodicity(int argc, char *argv[])
 int do_get_sequence(int argc, char *argv[])
 {
   AnyOption options("Usage: breseq GET-SEQUENCE -r input.gbk -o output.fna -p <REL606:50-100>");
-  options("reference,r",".gbk/.gff3/.fasta reference sequence file", "data/reference.fasta");
-  options("output,o","output FASTA file. Will write to stdout if not provided");  
+  options("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED) (Default=data/reference.fasta)");
+  options("output,o","output FASTA file. Will write to stdout if not provided");
   options("position,p","subsequence to extract, in format Sequence_ID:Start-End");
   options("reverse-complement,c","reverse complement", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
@@ -911,13 +911,12 @@ int do_get_sequence(int argc, char *argv[])
     options.printUsage();
     return -1;  }
   
-  if(!file_exists(options["reference"].c_str()))  {
-    options.addUsage("");
-    options.addUsage("You must supply a valid --reference|-r option for input.");
-    options.addUsage("Could not find:");
-    options.addUsage(options["reference"].c_str());
-    options.printUsage();
-    return -1;    
+  // Sets default
+  vector<string> reference_file_names;
+  if (options.count("reference") == 0) {
+    reference_file_names.push_back("data/reference.fasta");
+  } else {
+    reference_file_names = from_string<vector<string> >(options["reference"]);
   }
    
   vector<string> region_list;  
@@ -943,7 +942,7 @@ int do_get_sequence(int argc, char *argv[])
   }
   
   cReferenceSequences ref_seq_info, new_seq_info;
-  ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
+  ref_seq_info.LoadFiles(reference_file_names);
   
   for(uint32_t j = 0; j < region_list.size(); j++)
   {    

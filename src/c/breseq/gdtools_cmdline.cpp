@@ -2581,12 +2581,14 @@ int do_translate_proteome(int argc, char *argv[])
 
 int do_gd2oli( int argc, char* argv[])
 {
-    AnyOption options("gdtools GD2OLI [-o output.vcf] input.gd"); 
+    AnyOption options("gdtools GD2OLI [-o output.vcf -l 30] input.gd");
     
     options
     ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
     ("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
     ("output,o","name of output file", "output.tab")
+	("large-cutoff,l","large size mutation cutoff. Deletions, substitutions, and insertions changing genome size by more than this many bases are treated as 'large' in the output.", 30)
+
     ;
     options.processCommandArgs( argc,argv);
     
@@ -2613,7 +2615,7 @@ int do_gd2oli( int argc, char* argv[])
         string file_name = options.getArgv(i);
         gd_file_names.push_back(file_name);
     }
-    cGenomeDiff::GD2OLI( gd_file_names, from_string<vector<string> >(options["reference"]), options["output"] );
+    cGenomeDiff::GD2OLI( gd_file_names, from_string<vector<string> >(options["reference"]), options["output"], from_string<uint32_t>(options["large-cutoff"]) );
     
     return 0;
 }

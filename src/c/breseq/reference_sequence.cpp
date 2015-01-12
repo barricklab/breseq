@@ -27,6 +27,26 @@ namespace breseq {
   
   const string BULL_DUMMY_SEQ_ID = "__BULL_DUMMY_SEQ_ID__";
   
+  string cAnnotatedSequence::get_stranded_sequence_1(int32_t strand, int32_t start_1, int32_t end_1) const
+  {
+    ASSERT( (strand==-1) || (strand ==+1), "Expected strand +/-1. Provided: " + to_string(strand));
+    
+    return ((strand==1)
+            ? get_sequence_1(start_1, end_1)
+            : reverse_complement(get_sequence_1(start_1, end_1))
+            );
+  }
+  
+  char cAnnotatedSequence::get_stranded_sequence_1(int32_t strand, int32_t pos_1) const
+  {
+    ASSERT( (strand==-1) || (strand ==+1), "Expected strand +/-1. Provided: " + to_string(strand));
+    
+    return ((strand==1)
+            ? get_sequence_1(pos_1)
+            : reverse_complement(get_sequence_1(pos_1))
+            );
+  }
+  
   string cAnnotatedSequence::get_circular_sequence_1(int32_t start_1, uint32_t size) const
   {
     // This is meant to be robust to

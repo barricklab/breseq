@@ -769,7 +769,8 @@ public:
   //! Convert genome diff to OLI format
   static void GD2OLI( const vector<string> &gd_file_names, 
                       const vector<string> &reference_file_names, 
-                      const string& output_file_name );
+                      const string& output_file_name,
+                      const uint32_t large_size_cutoff);
 
   //! Functions for dealing with lists of Genome Diffs
   static void sort_gd_list_by_treatment_population_time(vector<cGenomeDiff>& genome_diffs);
