@@ -927,6 +927,12 @@ namespace breseq {
     {
       cDiffEntry& user_junction = **it;
 
+      // debug
+      /*
+      if (user_junction[SIDE_1_POSITION] == "588495") {
+        cout << "problem" << endl;
+      }
+       */
       //cout << user_junction.as_string() << endl;
       
       // set initial flanking lengths, these may be reduced by construct_junction_sequence
@@ -1698,7 +1704,7 @@ namespace breseq {
     int32_t reverse_overlap = 0;
     {
       
-      int32_t test_pos_1 = hash_coord_1;
+      int32_t test_pos_1 = hash_coord_1 + overlap_offset * hash_strand_1;
       int32_t test_pos_2 = hash_coord_2 - hash_strand_2;
       
       //@JEB: notice the minus sign added to the first strand in get_stranded_sequence_1
@@ -1721,7 +1727,7 @@ namespace breseq {
     int32_t forward_overlap = 0;
     {
       int32_t test_pos_1 = hash_coord_1 - hash_strand_1;
-      int32_t test_pos_2 = hash_coord_2;
+      int32_t test_pos_2 = hash_coord_2 + overlap_offset * hash_strand_2;
       // most of these check for remaining in bounds
       while ( (test_pos_1 >= 1) && (test_pos_2 >= 1)
               && (static_cast<uint32_t>(test_pos_1) <= ref_seq_1.get_sequence_length())
