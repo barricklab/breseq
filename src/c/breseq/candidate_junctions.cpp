@@ -577,16 +577,16 @@ namespace breseq {
         // pass back how many were considered
         passed_alignment_pairs_considered += alignments_to_candidate_junctions(settings, summary, ref_seq_info, candidate_junctions, alignments);
         
-        if (passed_alignment_pairs_considered >= settings.maximum_junction_sequence_passed_alignment_pairs_to_consider)
+        if ((settings.maximum_junction_sequence_passed_alignment_pairs_to_consider != 0) && (passed_alignment_pairs_considered >= settings.maximum_junction_sequence_passed_alignment_pairs_to_consider))
           break;
       }
       
-      if (passed_alignment_pairs_considered >= settings.maximum_junction_sequence_passed_alignment_pairs_to_consider)
+      if ((settings.maximum_junction_sequence_passed_alignment_pairs_to_consider != 0) && (passed_alignment_pairs_considered >= settings.maximum_junction_sequence_passed_alignment_pairs_to_consider))
         break;
     }
     
     cerr << "  Passed alignment pairs examined: " << passed_alignment_pairs_considered << endl;
-    if (passed_alignment_pairs_considered > settings.maximum_junction_sequence_passed_alignment_pairs_to_consider ) {
+    if ( (settings.maximum_junction_sequence_passed_alignment_pairs_to_consider != 0) && (passed_alignment_pairs_considered >= settings.maximum_junction_sequence_passed_alignment_pairs_to_consider) ) {
       cerr << "  WARNING: Reached limit of " << settings.maximum_junction_sequence_passed_alignment_pairs_to_consider << " passed alignment pairs." << endl;
       cerr << "  Specify a greater value for --junction-alignment-pair-limit for more thorough junction prediction." << endl;
     }
