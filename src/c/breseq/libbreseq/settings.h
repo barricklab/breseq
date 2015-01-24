@@ -294,13 +294,13 @@ namespace breseq
     uint32_t maximum_junction_sequence_positive_overlap_length_minimum;   // Default = 0
     
     uint32_t highly_redundant_junction_ignore_passed_pair_limit;          // Default = 200
-    uint64_t maximum_junction_sequence_passed_alignment_pairs_to_consider;// Default = 200,000,000
+    uint64_t maximum_junction_sequence_passed_alignment_pairs_to_consider;// Default = 100000, 0 = DO NOT LIMIT
     
     // Which candidate junctions do we test?
 		uint32_t minimum_candidate_junction_pos_hash_score;   // Default = 2
 		uint32_t minimum_candidate_junctions;                 // Default = 10
-		uint32_t maximum_candidate_junctions;                 // Default = 5000
-    double maximum_candidate_junction_length_factor;      // Default = 0.1
+		uint32_t maximum_candidate_junctions;                 // Default = 5000, 0 = DO NOT LIMIT
+    double maximum_candidate_junction_length_factor;      // Default = 0.1, 0 = DO NOT LIMIT
     
     bool penalize_negative_junction_overlap;              // Manually set. True for experimental treatment.
       

@@ -112,7 +112,9 @@ extern const char* ALIGN_LEFT;
   inline string h1(const string & input)
     {return "<h1>" + input + "</h1>";} 
   inline string h2(const string & input)
-    {return "<h2>" + input + "</h2>";} 
+    {return "<h2>" + input + "</h2>";}
+  inline string h3(const string & input)
+    {return "<h3>" + input + "</h3>";}
   
   //! Encodes dash, en dash and spaces to HTML
   string nonbreaking(const string& input);

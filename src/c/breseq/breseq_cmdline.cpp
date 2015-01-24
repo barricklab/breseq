@@ -551,100 +551,6 @@ int do_analyze_contingency_loci_significance( int argc, char* argv[]){
   return 0;
 }
 
-int do_identify_candidate_junctions(int argc, char* argv[]) {
-
-	// setup and parse configuration options:
-	AnyOption options("Usage: breseq_utils IDENTIFY_CANDIDATE_JUNCTIONS --fasta=reference.fasta --sam=reference.sam --output=output.fasta");
-	options
-		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-    ("candidate-junction-path", "path where candidate junction files will be created")
-    ("data-path", "path of data")
-    ("read-file,r", "FASTQ read files (multiple allowed, comma-separated)")
-
-    ("candidate-junction-read-limit", "limit handled reads to this many", static_cast<unsigned long>(0))
-    ("required-both-unique-length-per-side,1",
-     "Only count reads where both matches extend this many bases outside of the overlap.", static_cast<unsigned long>(5))
-    ("required-one-unique-length-per-side,2",
-     "Only count reads where at least one match extends this many bases outside of the overlap.", static_cast<unsigned long>(10))
-    ("require-match-length,4",
-     "At least this many bases in the read must match the reference genome for it to count.", static_cast<unsigned long>(28))
-    ("required-extra-pair-total-length,5",
-     "Each match pair must have at least this many bases not overlapping for it to count.", static_cast<unsigned long>(2))
-    ("maximum-read-length", "Length of the longest read.")
-
-    // Defaults should be moved to Settings constructor
-    ("maximum-candidate-junctions",
-     "Maximum number of candidate junction to create.", static_cast<uint32_t>(5000))
-    ("minimum-candidate-junctions",
-     "Minimum number of candidate junctions to create.", static_cast<uint32_t>(200))
-    // This should be in the summary...
-    ("reference-sequence-length",
-     "Total length of reference sequences.")  
-    ("maximum-candidate-junction-length-factor",
-     "Total length of candidate junction sequences must be no more than this times reference sequence length.", static_cast<double>(0.1))    
-	.processCommandArgs(argc, argv);
-  
-  //These options are almost always default values
-  //TODO: Supply default values?
-
-	// make sure that the config options are good:
-	if(options.count("help")
-		 || !options.count("data-path")
-     || !options.count("candidate-junction-path")
-     || !options.count("read-file")
-     || !options.count("maximum-read-length")
-     || !options.count("reference-sequence-length")
-		 ) {
-		options.printUsage();
-		return -1;
-	}                       
-  
-	try {
-    
-    // plain function
-
-    Settings settings;
-      
-    // File settings
-    settings.read_files.Init(from_string<vector<string> >(options["read-file"]), false);
-    settings.preprocess_junction_split_sam_file_name = options["candidate-junction-path"] + "/#.split.sam";
-    settings.reference_fasta_file_name = options["data-path"] + "/reference.fasta";     
-    settings.candidate_junction_fasta_file_name = options["candidate-junction-path"] + "/candidate_junction.fasta";
-
-    // Other settings
-    settings.candidate_junction_read_limit = from_string<int32_t>(options["candidate-junction-read-limit"]);
-    settings.require_match_length  = from_string<int32_t>(options["require-match-length"]);
-    settings.required_one_unique_length_per_side = from_string<int32_t>(options["required-one-unique-length-per-side"]);
-    settings.required_both_unique_length_per_side = from_string<int32_t>(options["required-both-unique-length-per-side"]);
-    
-    settings.maximum_candidate_junctions = from_string<int32_t>(options["maximum-candidate-junctions"]);
-    settings.minimum_candidate_junctions = from_string<int32_t>(options["minimum-candidate-junctions"]);
-    settings.maximum_candidate_junction_length_factor = from_string<double>(options["maximum-candidate-junction-length-factor"]);
-
-    // We should inherit the summary object from earlier steps
-    Summary summary;
-    summary.sequence_conversion.total_reference_sequence_length = from_string<uint32_t>(options["reference-sequence-length"]);
-    summary.sequence_conversion.max_read_length = from_string<int32_t>(options["maximum-read-length"]);
-
-    cReferenceSequences ref_seq_info;
-    ref_seq_info.ReadFASTA(options["data-path"] + "/reference.fasta");
-        
-    CandidateJunctions::identify_candidate_junctions(settings, summary, ref_seq_info);
-    
-  } catch(...) {
-		// failed; 
-		return -1;
-	}
-  
-  return 0;
-}
-
-
-
-
-
-
-
 
 int do_simulate_read(int argc, char *argv[])
 {
@@ -2242,8 +2148,6 @@ int main(int argc, char* argv[]) {
     return do_periodicity(argc_new, argv_new);
   } else if (command == "ERROR_COUNT") {
     return do_error_count(argc_new, argv_new);
-  } else if (command == "IDENTIFY_CANDIDATE_JUNCTIONS") {
-    return do_identify_candidate_junctions(argc_new, argv_new);
   } else if (command == "JUNCTION-POLYMORPHISM") {
     return do_junction_polymorphism(argc_new, argv_new);
   } else if (command == "CL_TABULATE") {
