@@ -184,7 +184,7 @@ string javascript_string()
 void html_index(const string& file_name, const Settings& settings, Summary& summary,
                 cReferenceSequences& ref_seq_info, cGenomeDiff& gd)
 {
-  (void)summary; //TODO: unused?
+  (void)summary;
   
   // Create Stream and Confirm It's Open
   ofstream HTML(file_name.c_str());
@@ -347,7 +347,7 @@ void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd)
 void html_marginal_predictions(const string& file_name, const Settings& settings,Summary& summary,
                                cReferenceSequences& ref_seq_info, cGenomeDiff& gd)
 {
-  (void)summary; //TODO: unused?
+  (void)summary;
   
   // Create Stream and Confirm It's Open
   ofstream HTML(file_name.c_str());
@@ -636,7 +636,32 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   
   if (!settings.no_junction_prediction) {
     
-    HTML << h2("Junction Evidence") << endl;
+    HTML << h2("New Junction Evidence") << endl;
+    HTML << "<p>" << endl;
+    HTML << h3("Junction Candidates Tested") << endl;
+    HTML << "<p>" << endl;
+    HTML << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"5\"") << endl;
+    HTML << tr(th(ALIGN_CENTER, "option") + th(ALIGN_CENTER, "limit") + th(ALIGN_CENTER, "actual"));
+    
+    HTML << tr(td("Number of alignment pairs examined for constructing junction candidates")
+               + td(ALIGN_CENTER, (settings.maximum_junction_sequence_passed_alignment_pairs_to_consider == 0) ? "NO&nbsp;LIMIT" : "&le;&nbsp;" + to_string(settings.maximum_junction_sequence_passed_alignment_pairs_to_consider))
+               + td(ALIGN_CENTER, to_string(summary.candidate_junction.passed_alignment_pairs_considered))
+               );
+    HTML << tr(td("Coverage evenness (position-hash) score of junction candidates")
+               + td(ALIGN_CENTER, "&ge;&nbsp;" + to_string(settings.minimum_candidate_junction_pos_hash_score))
+               + td(ALIGN_CENTER, "&ge;&nbsp;" + to_string(summary.candidate_junction.accepted.pos_hash_score_cutoff))
+               );
+    HTML << tr(td("Test this many junction candidates (n). May be smaller if not enough passed the coverage evenness threshold")
+               + td(ALIGN_CENTER, to_string(settings.minimum_candidate_junctions) + "&nbsp;&le;&nbsp;n&nbsp;&le;&nbsp;" + ((settings.maximum_candidate_junctions == 0) ? "NO&nbsp;LIMIT" : to_string(settings.maximum_candidate_junctions)))
+               + td(ALIGN_CENTER, to_string(summary.candidate_junction.accepted.number))
+               );
+    HTML << tr(td("Total length of all junction candidates (factor times the reference genome length)")
+               + td(ALIGN_CENTER, (settings.maximum_candidate_junction_length_factor == 0.0) ? "NO&nbsp;LIMIT" : "&ge;&nbsp;" + to_string(settings.maximum_candidate_junction_length_factor))
+               + td(ALIGN_CENTER, formatted_double(static_cast<double>(summary.candidate_junction.accepted.length)/static_cast<double>(total_length), 3, false).to_string())
+               );
+    HTML << end_table() << endl;
+
+    HTML << h3("Junction Skew Score Calculation") << endl;
     HTML << "<p>" << endl;
     
     //stringstream num;
@@ -645,10 +670,10 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     //HTML << "<p>" << endl;
     HTML << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"5\"") << endl;
     HTML << start_tr() <<
-    th("reference sequence") << 
+    th("reference sequence") <<
     th("pr(no read start)") <<
-//    th("pos hash score cutoff") <<
-//    th("distance score cutoff") <<
+    //    th("pos hash score cutoff") <<
+    //    th("distance score cutoff") <<
     end_tr() << endl;
     
     size_t total_length = 0;
@@ -658,19 +683,38 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
       HTML << td(it->m_seq_id);
       // this score is always an integer for now, even though it is typed as a double
       bool fragment_with_fit_coverage = (summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter != 0);
-
+      
       if (!fragment_with_fit_coverage) {
-        HTML << td(ALIGN_CENTER, "NA"); 
+        HTML << td(ALIGN_CENTER, "NA");
       } else {
         HTML << td(ALIGN_CENTER, to_string(summary.preprocess_error_count[it->m_seq_id].no_pos_hash_per_position_pr, 5));
-//        HTML << td(ALIGN_CENTER, to_string(summary.alignment_resolution.pos_hash_cutoffs[it->m_seq_id].back()
-//        HTML << td(ALIGN_CENTER, to_string(summary.alignment_resolution.distance_cutoffs[it->m_seq_id]));
+        //        HTML << td(ALIGN_CENTER, to_string(summary.alignment_resolution.pos_hash_cutoffs[it->m_seq_id].back()
+        //        HTML << td(ALIGN_CENTER, to_string(summary.alignment_resolution.distance_cutoffs[it->m_seq_id]));
       }
       HTML << end_tr();
-    }  
+    }
     HTML << end_table();
     
     HTML << "<p>" << b("pr(no read start)") + " is the probability that there will not be an aligned read whose first base matches a given position on a given strand." << endl;
+    
+    
+    HTML << h3("Final Junction Predictions") << endl;
+    HTML << "<p>" << endl;
+    
+    HTML << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"5\"") << endl;
+    HTML << tr(th(ALIGN_CENTER, "option") + th(ALIGN_CENTER, "value"));
+    
+    HTML << tr(td("Coverage evenness (position-hash) score of predicted junctions must be")
+               + td(ALIGN_CENTER, (settings.minimum_alignment_resolution_pos_hash_score == 0) ? "NO&nbsp;LIMIT" : "&ge;&nbsp;" + to_string(settings.minimum_alignment_resolution_pos_hash_score))
+               );
+    HTML << tr(td("Skew score of predicted junction (&minus;log10 probability of unusual coverage evenness) must be")
+               + td(ALIGN_CENTER, "&le;&nbsp;" + to_string(settings.junction_pos_hash_neg_log10_p_value_cutoff))
+               );
+    HTML << tr(td("Number of bases that at least one read must overlap each uniquely aligned side of a predicted junction")
+               + td(ALIGN_CENTER, "&ge;&nbsp;" + to_string(settings.junction_minimum_side_match))
+               );
+    HTML << end_table() << endl;
+
   }
   
   //
@@ -710,11 +754,11 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
                + td((settings.no_indel_polymorphisms) ? "NO" : "YES")
                );
     // Rejects if >= this length
-    HTML << tr(td("Skip indel polymorphisms in homopolymers runs of &ge; this many bases") 
+    HTML << tr(td("Skip indel polymorphisms in homopolymers runs of")
                + td((settings.polymorphism_reject_indel_homopolymer_length == 0) ? "OFF" : " &ge;" + s(settings.polymorphism_reject_indel_homopolymer_length) + " bases")
                );
     
-    HTML << tr(td("Skip base substitutions when they create a homopolymer flanked on each side by &ge; this many bases") 
+    HTML << tr(td("Skip base substitutions when they create a homopolymer flanked on each side by")
                + td((settings.polymorphism_reject_surrounding_homopolymer_length == 0) ? "OFF" : " &ge;" + s(settings.polymorphism_reject_surrounding_homopolymer_length) + " bases")
                );
 

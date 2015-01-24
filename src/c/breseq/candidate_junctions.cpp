@@ -585,6 +585,7 @@ namespace breseq {
         break;
     }
     
+    summary.candidate_junction.passed_alignment_pairs_considered = passed_alignment_pairs_considered;
     cerr << "  Passed alignment pairs examined: " << passed_alignment_pairs_considered << endl;
     if ( (settings.maximum_junction_sequence_passed_alignment_pairs_to_consider != 0) && (passed_alignment_pairs_considered >= settings.maximum_junction_sequence_passed_alignment_pairs_to_consider) ) {
       cerr << "  WARNING: Reached limit of " << settings.maximum_junction_sequence_passed_alignment_pairs_to_consider << " passed alignment pairs." << endl;
@@ -780,7 +781,10 @@ namespace breseq {
 		uint32_t minimum_candidate_junctions = settings.minimum_candidate_junctions;
     
 		fprintf(stderr, "  Minimum number to keep: %7d \n", minimum_candidate_junctions);
-		fprintf(stderr, "  Maximum number to keep: %7d \n", maximum_candidate_junctions);
+    if (maximum_candidate_junctions==0)
+      fprintf(stderr, "  Maximum number to keep: %7d \n", maximum_candidate_junctions);
+    else
+      fprintf(stderr, "  Maximum number to keep: no limit \n");
 		fprintf(stderr, "  Maximum length to keep: %7d bases\n", cj_length_limit);
     
 		cerr << "    Initial: Number = " << total_candidate_junction_number << ", Cumulative Length = " << total_cumulative_cj_length << " bases" << endl;
@@ -798,7 +802,7 @@ namespace breseq {
 			// Check to make sure that adding everything from the last iteration doesn't put us over any limits...
 			uint32_t new_number = remaining_ids.size() + list_in_waiting.size();
 			uint32_t new_length = cumulative_cj_length + add_cj_length;
-			while (	( new_number <= minimum_candidate_junctions ) || ((new_length <= cj_length_limit) && (new_number <= maximum_candidate_junctions)) )
+			while (	( new_number <= minimum_candidate_junctions ) || ( ((cj_length_limit == 0) || (new_length <= cj_length_limit)) && ((maximum_candidate_junctions == 0) || (new_number <= maximum_candidate_junctions))) )
 			{
 				// OK, add everything from the last iteration
 				cumulative_cj_length += add_cj_length;

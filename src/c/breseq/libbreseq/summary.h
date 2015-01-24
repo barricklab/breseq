@@ -301,15 +301,17 @@ namespace breseq{
 				int32_t pos_hash_score_cutoff;
 			} accepted;
 
+      uint64_t passed_alignment_pairs_considered;
 			map<int32_t, int32_t> pos_hash_score_distribution;
       
-      CandidateJunctionSummaryData()
+      CandidateJunctionSummaryData() : passed_alignment_pairs_considered(0)
       {}
 
       void serialize(ofstream& f)
       {
         write_to_file(f, total);
         write_to_file(f, accepted);
+        write_to_file(f, passed_alignment_pairs_considered);
 				write_to_file(f, pos_hash_score_distribution);
       }
       
@@ -317,6 +319,7 @@ namespace breseq{
       {
         read_from_file(f, total);
         read_from_file(f, accepted);
+        read_from_file(f, passed_alignment_pairs_considered);
 				read_from_file(f, pos_hash_score_distribution);
       }
 
