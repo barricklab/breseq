@@ -53,12 +53,12 @@ namespace breseq
     ofstream  m_read_begin_output; 
     ofstream  m_gc_output;
     
-    std::map<std::string,uint32_t> m_read_begin_top_bins;
-    std::map<std::string,uint32_t> m_read_begin_bot_bins;
-    std::map<std::string,uint32_t> m_ref_begin_top_bins;
-    std::map<std::string,uint32_t> m_ref_begin_bot_bins;
+    map<string,uint32_t> m_read_begin_top_bins;
+    map<string,uint32_t> m_read_begin_bot_bins;
+    map<string,uint32_t> m_ref_begin_top_bins;
+    map<string,uint32_t> m_ref_begin_bot_bins;
     
-    std::vector<uint32_t> m_gc_content_bins;
+    vector<uint32_t> m_gc_content_bins;
     
     //! Clear saved statistics before beginning a new table
     void clear();

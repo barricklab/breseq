@@ -154,25 +154,29 @@ void coverage_output::pileup_callback(const breseq::pileup& p) {
   }
   
   // catches this position
-  for (uint32_t j=m_last_position_1+1; j<=pos; j++) {
-    if (j>=3) {
-      std::string read_begin_s;
-      {
-        for (int i=1; i<=3; i++) {
-          read_begin_s += complement_base_char(p.reference_base_char_1(j-i+1));
+
+  if (m_read_begin_output.is_open()) {
+
+    for (uint32_t j=m_last_position_1+1; j<=pos; j++) {
+      if (j>=3) {
+        std::string read_begin_s;
+        {
+          for (int i=1; i<=3; i++) {
+            read_begin_s += complement_base_char(p.reference_base_char_1(j-i+1));
+          }
         }
+        m_ref_begin_bot_bins[read_begin_s]++;    
       }
-      m_ref_begin_bot_bins[read_begin_s]++;    
+      if (j<p.target_length()-3) {
+        std::string read_begin_s;
+        for (int i=1; i<=3; i++) {
+          read_begin_s += p.reference_base_char_1(j+i-1);
+        }        
+        m_ref_begin_top_bins[read_begin_s]++;    
+      }
     }
-    if (j<p.target_length()-3) {
-      std::string read_begin_s;
-      for (int i=1; i<=3; i++) {
-        read_begin_s += p.reference_base_char_1(j+i-1);
-      }        
-      m_ref_begin_top_bins[read_begin_s]++;    
-    }
+    
   }
-  
   
   uint8_t ref_base = refseq[pos-1];
   uint32_t unique_cov[2] = {0,0};
@@ -211,11 +215,13 @@ void coverage_output::pileup_callback(const breseq::pileup& p) {
       }
       
       
-      if (this_is_first_base) {
+      if (this_is_first_base && m_read_begin_output.is_open()) {
         
         std::string read_begin_s;
-        if (!reversed) { 
-          for (int i=1; i<=3; i++) {
+        if (!reversed) {
+          
+          for (uint32_t i=1; i<=3; i++) {
+            if (i > a->read_length()) break;
             base_bam bb = a->read_base_bam_1(i);
             if ( !_base_bam_is_N(bb) ) {
               read_begin_s += basebam2char(bb);
@@ -231,14 +237,13 @@ void coverage_output::pileup_callback(const breseq::pileup& p) {
            std::cout << "Pos " << pos << " Top strand " << read_begin_s << "  " << a->query_char_sequence() << std::endl;
            */
         } else {
-          for (int i=1; i<=3; i++) {
-            
+          for (uint32_t i=1; i<=3; i++) {
+            if (a->read_length()-i+1 < 1) break;
             base_bam bb = a->read_base_bam_1(a->read_length()-i+1);
             if ( !_base_bam_is_N(bb) ) {
               read_begin_s += basebam2char(complement_base_bam(bb));
             }
           }
-          
           // all must be not N
           if (read_begin_s.length() == 3) {
             m_read_begin_bot_bins[read_begin_s]++;
