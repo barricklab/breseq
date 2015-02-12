@@ -51,7 +51,7 @@ user-config.jam
 syntax: regexp
 
 Makefile$
-INSTALL$
+^INSTALL$
 
 ^breseq
 
@@ -74,6 +74,7 @@ samtools$
 ^extern/samtools-.*/misc/md5sum-lite$
 ^extern/samtools-.*/misc/seqtk$
 ^extern/samtools-.*/misc/wgsim$
+^extern/samtools-.*/.dirstamp$
 
 ## Perl GenomeDiff
 ^src/perl/GenomeDiff/Build$

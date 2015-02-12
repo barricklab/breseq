@@ -102,6 +102,7 @@ dist-hook:
 
 	## GenomeDiff
 	cd $(PERLGENOMEDIFF) ; \
+	perl Build.PL ; \
 	./Build distdir ; \
 	echo $(distdir)/src/perl/GenomeDiff ;
 	
