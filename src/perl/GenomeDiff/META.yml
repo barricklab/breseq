@@ -5,7 +5,7 @@ author:
 build_requires:
   Test::More: 0
 configure_requires:
-  Module::Build: 0.36
+  Module::Build: 0.42
 dynamic_config: 1
 generated_by: 'Module::Build version 0.3901, CPAN::Meta::Converter version 2.120630'
 license: open_source
