@@ -1096,10 +1096,10 @@ namespace breseq {
 	{    
 		bool verbose = false;
     
-    //if (ap.a1.read_name() == "4:318906")
+    //if (ap.a1.read_name() == "1:379655") {
     //   verbose = true;
-    
-    
+    //}
+  
     // clear the return value
     returned_junction_candidate = JunctionCandidatePtr(NULL);
     
@@ -1368,7 +1368,7 @@ namespace breseq {
 		}
 
     
-		// Calculate an offset that only applies if the overlap is positive/Users/jbarrick/src/breseq/src/c/breseq.xcodeproj (sequence is shared between the two ends)
+		// Calculate an offset that only applies if the overlap is positive (sequence is shared between the two ends)
 		int32_t overlap_offset = (overlap > 0) ? overlap : 0;
 		if (verbose)
 			cout << "Overlap offset: " << overlap_offset << endl;
@@ -1397,6 +1397,25 @@ namespace breseq {
     jc[SIDE_2_STRAND] = hash_strand_2 ? "1" : "-1";
     jc["overlap"] = to_string(overlap);
     jc["unique_read_sequence"] = unique_read_seq_string;
+    
+    // Why do we still need to normalize overlap? It turns out having an N in the read in the overlap region can cause
+    // too much overlap to be removed and a user junction comes out having a diff sequence because of this. So, this
+    // call will add back that overlap by looking only at the reference
+    if (verbose) cout << "Normalizing overlap:\n" << jc.as_string() << endl;
+    normalize_junction_overlap(ref_seq_info,jc);
+    
+    // If we changed, we need to back everything out to continue the code normally
+    if (overlap != from_string<int32_t>(jc["overlap"])) {
+      // Seq_ids won't change...
+      hash_coord_1 = from_string<int32_t>(jc[SIDE_1_POSITION]);
+      hash_coord_2 = from_string<int32_t>(jc[SIDE_2_POSITION]);
+      hash_strand_1 = (jc[SIDE_1_STRAND] == "1");
+      hash_strand_2 = (jc[SIDE_2_STRAND] == "1");
+      overlap = from_string<int32_t>(jc["overlap"]);
+      unique_read_seq_string = jc["unique_read_sequence"];
+    }
+    if (verbose) cout << "Converted to:\n" << jc.as_string() << endl;
+
     string junction_seq_string = construct_junction_sequence(ref_seq_info, jc, flanking_length);
     
     // Save these return values - we do not allow coords to be adjusted within construct_junction_sequence

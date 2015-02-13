@@ -1285,43 +1285,47 @@ namespace breseq {
     vector<gd_entry_type> del_types = make_vector<gd_entry_type>(DEL);
     diff_entry_list_t del = gd.list(del_types);
     
-    for(diff_entry_list_t::iterator ra_it = ra.begin(); ra_it != ra.end(); ra_it++) //RA
-    {
-      cDiffEntry& ra_item = **ra_it;
+    // Don't add deleted flags if we are in targeted sequencing mode
+    if (!settings.targeted_sequencing) {
       
-      bool next_ra = false;
-      
-      // fon't remove these, no matter what!
-      if (ra_item.entry_exists("user_defined"))
-        continue;
-      
-      for(diff_entry_list_t::iterator del_it = del.begin(); del_it != del.end(); del_it++) //DEL
+      for(diff_entry_list_t::iterator ra_it = ra.begin(); ra_it != ra.end(); ra_it++) //RA
       {
-        cDiffEntry& del_item = **del_it;
+        cDiffEntry& ra_item = **ra_it;
         
-        if (ra_item["seq_id"] != del_item["seq_id"])
+        bool next_ra = false;
+        
+        // fon't remove these, no matter what!
+        if (ra_item.entry_exists("user_defined"))
           continue;
         
-        // there might be a problem here with insert_position > 0
-        if ( (n(ra_item["position"]) >= n(del_item["position"])) && (n(ra_item["position"]) <= n(del_item["position"]) + n(del_item["size"]) - 1) )
+        for(diff_entry_list_t::iterator del_it = del.begin(); del_it != del.end(); del_it++) //DEL
         {
-          ra_item["deleted"] = "1";
-          next_ra = true;
-          break;
+          cDiffEntry& del_item = **del_it;
+          
+          if (ra_item["seq_id"] != del_item["seq_id"])
+            continue;
+          
+          // there might be a problem here with insert_position > 0
+          if ( (n(ra_item["position"]) >= n(del_item["position"])) && (n(ra_item["position"]) <= n(del_item["position"]) + n(del_item["size"]) - 1) )
+          {
+            ra_item["deleted"] = "1";
+            next_ra = true;
+            break;
+          }
         }
-      }
-      if (next_ra) continue;
-      
-      for(diff_entry_list_t::iterator mc_it = mc.begin(); mc_it != mc.end(); mc_it++) //MC
-      {
-        cDiffEntry& mc_item = **mc_it;
+        if (next_ra) continue;
         
-        if (ra_item["seq_id"] != mc_item["seq_id"]) continue;
-        
-        if ( (n(ra_item["position"]) >= n(mc_item["start"])) && (n(ra_item["position"]) <= n(mc_item["end"])) )
+        for(diff_entry_list_t::iterator mc_it = mc.begin(); mc_it != mc.end(); mc_it++) //MC
         {
-          ra_item["deleted"] = "1";
-          break;
+          cDiffEntry& mc_item = **mc_it;
+          
+          if (ra_item["seq_id"] != mc_item["seq_id"]) continue;
+          
+          if ( (n(ra_item["position"]) >= n(mc_item["start"])) && (n(ra_item["position"]) <= n(mc_item["end"])) )
+          {
+            ra_item["deleted"] = "1";
+            break;
+          }
         }
       }
     }
