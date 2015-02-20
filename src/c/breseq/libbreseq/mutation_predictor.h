@@ -191,6 +191,7 @@ namespace breseq {
                          vector<cGenomeDiff>& genome_diffs, 
                          string& output_file_name, 
                          bool base_substitution_statistics,
+                         bool count_polymorphisms,
                          bool verbose
                          );
   
