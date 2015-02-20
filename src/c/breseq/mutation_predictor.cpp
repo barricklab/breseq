@@ -2525,6 +2525,7 @@ namespace breseq {
       
       
       // BEGIN for each mutation
+      uint32_t total_mutations(0);
       diff_entry_list_t mut_list = gd.mutation_list();
       for (diff_entry_list_t::iterator it=mut_list.begin(); it != mut_list.end(); ++it) {		
         
@@ -2543,7 +2544,7 @@ namespace breseq {
         }
           
         if (verbose) cerr << "Counting: " << mut << endl;
-
+        total_mutations++;
         
         if (mut._type == SNP) {
           count["base_substitution"][""]++;
@@ -2661,7 +2662,7 @@ namespace breseq {
       this_columns.push_back( gd.metadata.population );
       this_columns.push_back( (gd.metadata.time != -1.0) ? to_string<double>(gd.metadata.time) : "");
       this_columns.push_back( gd.metadata.clone );      
-      this_columns.push_back(to_string(mut_list.size()));
+      this_columns.push_back(to_string(total_mutations));
       this_columns.push_back(to_string(count["base_substitution"][""]));
       this_columns.push_back(to_string(count["small_indel"][""]));
       this_columns.push_back(to_string(count["large_deletion"][""]));
