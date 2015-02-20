@@ -146,6 +146,11 @@ void identify_mutations_pileup::load_user_ra_evidence_from_gd()
 {
   cGenomeDiff gd(_settings.user_evidence_genome_diff_file_name);
   gd.sort(); // very important to be sorted!!
+  
+  // get rid of any previous annotations
+  gd.strip_to_spec();
+  
+  // Return just RA entries
   _user_evidence_ra_list = gd.list(make_vector<gd_entry_type>(RA));
 }
 

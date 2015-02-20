@@ -134,7 +134,13 @@ string header_style_string()
   ss << "th {background-color: rgb(0,0,0); color: rgb(255,255,255);}"      << endl;
   ss << "table {background-color: rgb(1,0,0); color: rgb(0,0,0);}"         << endl;
   ss << "tr {background-color: rgb(255,255,255);}"                         << endl;
+  
   ss << ".mutation_in_codon {color:red; text-decoration : underline;}"     << endl;
+  
+  ss << ".snp_type_synonymous{color:green;}" << endl;
+  ss << ".snp_type_nonsynonymous{color:blue;}" << endl;
+  ss << ".snp_type_nonsense{color:red;}" << endl;
+  
   ss << ".mutation_header_row {background-color: rgb(0,130,0);}"           << endl;
   ss << ".read_alignment_header_row {background-color: rgb(255,0,0);}"     << endl;
   ss << ".missing_coverage_header_row {background-color: rgb(0,100,100);}" << endl;
@@ -956,32 +962,36 @@ string html_genome_diff_item_table_string(const Settings& settings, cGenomeDiff&
  *-----------------------------------------------------------------------------*/
 string formatted_mutation_annotation(const cDiffEntry& mut)
 {
-  stringstream ss;
-  
+  string s;
+    
   // additional formatting for some variables
-  if((mut.entry_exists("snp_type")) && (mut.get("snp_type") != "intergenic") &&
-     (mut.get("snp_type") != "noncoding") && (mut.get("snp_type") != "pseudogene"))
-  {    
-    ss << mut.get("aa_ref_seq") << mut.get("aa_position") << mut.get("aa_new_seq");
+  if((mut.entry_exists("snp_type")) && ((mut.get("snp_type") == "synonymous") ||
+     (mut.get("snp_type") == "nonsynonymous") || (mut.get("snp_type") == "nonsense")))
+  {
+    
+    s += font("class=\"snp_type_" + mut.get("snp_type") + "\"", mut.get("aa_ref_seq") + mut.get("aa_position") + mut.get("aa_new_seq"));
+    
+    
     string codon_ref_seq = to_underline_red_codon(mut, "codon_ref_seq");
     string codon_new_seq = to_underline_red_codon(mut, "codon_new_seq");
-    ss << "&nbsp;(" << codon_ref_seq << "&rarr;" << codon_new_seq << ")&nbsp;";  
+    s+= "&nbsp;(" + codon_ref_seq + "&rarr;" + codon_new_seq + ")&nbsp;";
     
     // Dagger for initiation codons
     if (mut.get("codon_number") == "1")
-      ss << "&nbsp;&dagger;";
+      s+= "&nbsp;&dagger;";
     
     // Dagger for multiple SNPs in same codon
     if (mut.entry_exists("multiple_polymorphic_SNPs_in_same_codon"))
-      ss << "&nbsp;&Dagger;";
+      s+= "&nbsp;&Dagger;";
   }
-  else // mut[SNP_TYPE] == "NC"
+  else // other SNP/mutation types that don't give amino acid change or no snp change
   {
     if(mut.entry_exists(GENE_POSITION)){
-      ss << nonbreaking(mut.get(GENE_POSITION));
+      s+= nonbreaking(mut.get(GENE_POSITION));
     }
   }
-  return ss.str(); 
+  
+  return s;
 }
 
 // Puts correct italics in IS150 etc.
