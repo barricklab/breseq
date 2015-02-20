@@ -1125,13 +1125,14 @@ int do_count(int argc, char* argv[])
   ("verbose,v", "produce output for each mutation counted.", TAKES_NO_ARGUMENT)
   ("output,o", "path to output file with added mutation data.", "count.csv")
   ("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
-  ("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT)
-  ("base-substitution-statistics,b", "calculate detailed base substitution statistics", TAKES_NO_ARGUMENT)
+	("base-substitution-statistics,b", "calculate detailed base substitution statistics", TAKES_NO_ARGUMENT)
+  ("count-polymorphisms,p", "count polymorphic mutations (those with frequencies < 1). (Default = FALSE)", TAKES_NO_ARGUMENT)
+
   ;
   options.addUsage("");
-  options.addUsage("\"small\" mutations are ≤ 50 bp. \"large\" mutations are >50 bp");
-  
-    
+  options.addUsage("In the output \"small\" mutations are ≤ 50 bp. \"large\" mutations are >50 bp");
+
+	
   options.processCommandArgs(argc, argv);
   
   UserOutput uout("COUNT");
@@ -1169,6 +1170,7 @@ int do_count(int argc, char* argv[])
                     genome_diffs, 
                     output_file_name, 
                     options.count("base-substitution-statistics"),
+										options.count("count-polymorphisms"),
                     options.count("verbose")
                     );
   

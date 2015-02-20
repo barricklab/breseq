@@ -2381,6 +2381,7 @@ namespace breseq {
                          vector<cGenomeDiff>& genome_diffs, 
                          string& output_file_name, 
                          bool base_substitution_statistics,
+                         bool count_polymorphisms,
                          bool verbose
                          )
   {
@@ -2538,7 +2539,7 @@ namespace breseq {
         }
         
         // Don't count polymorphisms - could make it an option to partially count them
-        if (mut.entry_exists(FREQUENCY) && from_string<double>(mut[FREQUENCY]) != 1.0) {
+        if (!count_polymorphisms && mut.entry_exists(FREQUENCY) && from_string<double>(mut[FREQUENCY]) != 1.0) {
           if (verbose) cerr << "Skipping polymorphic: " << mut << endl;
           continue;
         }
