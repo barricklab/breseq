@@ -301,7 +301,8 @@ public:
   //!---- Simplifying entries ---- !//
   
   //! Remove all information except required fields
-  cDiffEntry to_spec(void) const;
+  cDiffEntry to_spec(void) const; //void returns stripped, leaving this unchanged
+  void strip_to_spec(); // strips this item
 
   //! @JEB 03-16-2014 should deprecate. Only used in random mutation generator, which should be handled by MutationPredictor
   //  functionality is replaced by cGenomeDiff::normalize_mutations.
@@ -620,6 +621,11 @@ public:
   bool mutation_in_entry_of_type(cDiffEntry mut, const gd_entry_type type);
   bool mutation_unknown(cDiffEntry mut) { return mutation_in_entry_of_type(mut, UN); }
   bool mutation_deleted(cDiffEntry mut) { return mutation_in_entry_of_type(mut, DEL); }
+  
+  void strip_to_spec(); // strips all items
+  
+  //! Removes all annotation and other information, leaving only specs
+  void to_spec();
   
   //!---- Set Operations ---- !//
   

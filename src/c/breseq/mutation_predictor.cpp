@@ -2005,7 +2005,7 @@ namespace breseq {
   ;
   
   vector<string> BaseSubstitutionEffects::base_change_type_list = make_vector<string> 
-  ("INTERGENIC")("NONCODING")("PSEUDOGENE")("SYNONYMOUS")("NONSYNONYMOUS")("NO_CHANGE")("TOTAL")  
+  ("INTERGENIC")("NONCODING")("PSEUDOGENE")("SYNONYMOUS")("NONSYNONYMOUS")("NONSENSE")("NO_CHANGE")("TOTAL")
   ;
  
    vector<string>  BaseSubstitutionEffects::base_type_list = make_vector<string>
@@ -2017,7 +2017,7 @@ namespace breseq {
   ;
   
   vector<string> BaseSubstitutionEffectCounts::base_change_type_count_list = make_vector<string> 
-  ("INTERGENIC")("NONCODING")("PSEUDOGENE")("SYNONYMOUS")("NONSYNONYMOUS")("TOTAL")  
+  ("INTERGENIC")("NONCODING")("PSEUDOGENE")("SYNONYMOUS")("NONSYNONYMOUS")("NONSENSE")("TOTAL")
   ;
   
   map<BaseSubstitutionEffect,BaseType>  BaseSubstitutionEffects::snp_type_to_base_type = make_map<BaseSubstitutionEffect,BaseType>
@@ -2026,6 +2026,7 @@ namespace breseq {
   (noncoding_base_substitution,noncoding_base)
   (synonymous_coding_base_substitution,protein_base)
   (nonsynonymous_coding_base_substitution,protein_base)
+  (nonsense_coding_base_substitution,protein_base)
   (unknown_coding_base_substitution,protein_base)
   ;  
   
@@ -2037,14 +2038,14 @@ namespace breseq {
     
     map<string,string> codon_synonymous_changes;
     map<string,string> codon_nonsynonymous_changes;
-    map<string,string> codon_num_synonymous_changes;
-    map<string,string> codon_position_mutation_synonymous;
+    map<string,string> codon_nonsense_changes;
     
     map<string,string> nonsynonymous_mutations;
     map<string,string> synonymous_mutations;
     
     uint32_t total_num_synonymous_changes = 0;
     uint32_t total_num_nonsynonymous_changes = 0;
+    uint32_t total_num_nonsense_changes = 0;
     uint32_t total_codon_nt_positions = 0;
     uint32_t total_nt_position = 0;
     
@@ -2195,6 +2196,8 @@ namespace breseq {
                     seq_bse[this_codon_locations_0[test_codon_index]*4+b] = max(seq_bse[this_codon_locations_0[test_codon_index]*4+b], unknown_coding_base_substitution);
                   else if (mut_amino_acid == original_amino_acid)
                     seq_bse[this_codon_locations_0[test_codon_index]*4+b] = max(seq_bse[this_codon_locations_0[test_codon_index]*4+b], synonymous_coding_base_substitution);
+                  else if (mut_amino_acid == '*')
+                    seq_bse[this_codon_locations_0[test_codon_index]*4+b] = max(seq_bse[this_codon_locations_0[test_codon_index]*4+b], nonsense_coding_base_substitution);
                   else
                     seq_bse[this_codon_locations_0[test_codon_index]*4+b] = max(seq_bse[this_codon_locations_0[test_codon_index]*4+b], nonsynonymous_coding_base_substitution);
                   
@@ -2498,6 +2501,7 @@ namespace breseq {
       int32_t total_deleted = 0;
       int32_t total_inserted = 0;
       int32_t total_repeat_inserted = 0;
+
       int32_t total_bp = ref_seq_info.total_length();
       
       // Complicated map storing a bunch of counts

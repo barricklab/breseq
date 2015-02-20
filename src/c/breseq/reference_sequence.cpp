@@ -23,7 +23,7 @@ using namespace std;
 
 namespace breseq {
   
-  const vector<string> snp_types = make_vector<string>("nonsynonymous")("synonymous")("noncoding")("pseudogene")("intergenic");
+  const vector<string> snp_types = make_vector<string>("synonymous")("nonsynonymous")("nonsense")("noncoding")("pseudogene")("intergenic");
   
   const string BULL_DUMMY_SEQ_ID = "__BULL_DUMMY_SEQ_ID__";
   
@@ -2232,7 +2232,12 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     mut["transl_table"] = to_string(gene.translation_table);
     
     if ((mut._type == SNP) || (mut._type == RA)) {
-      mut["snp_type"] = (mut["aa_ref_seq"] != mut["aa_new_seq"]) ? "nonsynonymous" : "synonymous";
+      if ((mut["aa_ref_seq"] != "*") && (mut["aa_new_seq"] == "*"))
+        mut["snp_type"] = "nonsense";
+      else if (mut["aa_ref_seq"] != mut["aa_new_seq"])
+        mut["snp_type"] = "nonsynonymous";
+      else
+        mut["snp_type"] = "synonymous";
     }
   }
 

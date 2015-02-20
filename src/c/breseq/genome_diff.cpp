@@ -953,14 +953,25 @@ cDiffEntry cDiffEntry::to_spec() const
 {
   cDiffEntry de(_type);
   
-  const vector<diff_entry_key_t>& specs = line_specification[_type];
+  // Get full line spec
+  const vector<diff_entry_key_t>& specs = extended_line_specification.count(_type)
+  ? extended_line_specification[_type] : line_specification[_type];
   
   for(vector<diff_entry_key_t>::const_iterator it = specs.begin(); it != specs.end(); it++) {
     const diff_entry_key_t& spec(*it);
-    de[spec] = this->get(spec);
+    
+    if (this->count(spec)) {
+      de[spec] = this->get(spec);
+    }
   }
-  
   return de;
+}
+  
+void cDiffEntry::strip_to_spec()
+{
+  cDiffEntry de(_type);
+  de = this->to_spec();
+  *this = de;
 }
   
 void cDiffEntry::normalize_to_sequence(const cAnnotatedSequence &sequence, bool verbose)
@@ -2164,6 +2175,13 @@ diff_entry_list_t cGenomeDiff::filter_used_as_evidence(const diff_entry_list_t& 
   }
   
   return return_list;
+}
+  
+void cGenomeDiff::strip_to_spec()
+{
+  for (diff_entry_list_t::iterator it = _entry_list.begin(); it != _entry_list.end(); it++) {
+    (*it)->strip_to_spec();
+  }
 }
 
 // Helper function for mutation_unknown and mutation_deleted
@@ -4748,6 +4766,9 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
         else if (de["snp_type"] == "synonymous") {
           gvf[8].append(";Variant_effect=synonymous_codon");
         }
+        else if (de["snp_type"] == "nonsense") {
+          gvf[8].append(";Variant_effect=nonsense_codon");
+        }
         else if (de["snp_type"] == "intergenic") {
           gvf[8].append(";Variant_effect=intergenic_variant");
         }
@@ -5283,7 +5304,8 @@ void cGenomeDiff::GD2Circos(const vector<string> &gd_file_names,
         diff["position"] << " " <<
         diff["position"] << endl;
       }
-      else if (diff["snp_type"] == "nonsynonymous"){
+      // Should split out nonsense @JEB
+      else if ((diff["snp_type"] == "nonsynonymous") || (diff["snp_type"] == "nonsense")){
         nonsynonymous_mutation_file << diff["seq_id"] << " " <<
         diff["position"] << " " <<
         diff["position"] << endl;
