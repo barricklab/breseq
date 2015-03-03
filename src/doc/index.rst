@@ -26,6 +26,7 @@ Appendices:
 .. toctree::
    :maxdepth: 1
    
+   Frequently Asked Questions (FAQ) <faq>
    gdtools Utility <gd_usage>
    Genome Diff Format <gd_format>
 
