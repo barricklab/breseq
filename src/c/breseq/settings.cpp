@@ -670,7 +670,7 @@ namespace breseq
     this->init_installed();
     
     // DATADIR is a preprocessor directive set by Automake in config.h
-		this->program_data_path = DATADIR; 
+		this->program_data_path = this->bin_path + "/" + DATADIR;
         
     // Unless we are in "make test" mode where this environental variable is defined.
     char * breseq_data_path;
