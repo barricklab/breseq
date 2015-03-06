@@ -17,7 +17,8 @@
 
 ##This is the most compatible way of passing through the data directory to the C++ code
 BRESEQDATADIR= $(datadir)/$(PACKAGE_NAME)
-AM_CPPFLAGS = -I$(top_srcdir)/$(LIBBAM) -I$(top_srcdir)/aux_build  -DDATADIR=\"$(BRESEQDATADIR)\"
+BRESEQRELATIVEDATADIR= $(BIN_TO_DATA_RELATIVE_PATH)/$(PACKAGE_NAME)
+AM_CPPFLAGS = -I$(top_srcdir)/$(LIBBAM) -I$(top_srcdir)/aux_build  -DDATADIR=\"$(BRESEQRELATIVEDATADIR)/\"
 AM_LDFLAGS = -static
 LDADD =   $(top_srcdir)/$(LIBBAM)/libbam.la \
 					libbreseq.la

@@ -38,6 +38,12 @@ AC_PROG_MAKE_SET
 AC_PROG_MKDIR_P
 AC_PROG_LIBTOOL
 
+AX_COMPUTE_RELATIVE_PATHS([bindir:datadir:bin_to_data])
+AC_MSG_NOTICE([Local path from bin to data...])
+AC_MSG_NOTICE([$bin_to_data])
+AC_SUBST([BIN_TO_DATA_RELATIVE_PATH], [$bin_to_data])
+
+
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h inttypes.h netdb.h stddef.h stdint.h stdlib.h string.h sys/socket.h unistd.h wchar.h])
 AC_HEADER_STDBOOL
 AC_C_INLINE
@@ -61,6 +67,14 @@ AC_SEARCH_LIBS([wclear], [curses ncurses], [],
 
 AC_SEARCH_LIBS([deflateSetHeader], [z], [], [AC_MSG_ERROR(["libz >=1.2.2.1 is required."])])
 AC_SEARCH_LIBS([acosf], [m], [], [AC_MSG_ERROR(["libm is required."])])
+
+# This code could be used to check for an existing samtools/libbam.a
+# But unfortunately we have to compile them ourselves with a patch
+#AC_CHECK_PROG([samtools],[samtools],[yes],[no])
+#AM_CONDITIONAL([FOUND_SAMTOOLS], [test "x$samtools" = xyes])
+#AM_COND_IF([FOUND_SAMTOOLS],,[AC_MSG_ERROR([required program 'samtools' not found.])])
+#AC_SEARCH_LIBS([bam_fetch], [bam], [], [AC_MSG_ERROR(["libbam is required."])])
+
 
 AC_SUBST([LIBBCF], [extern/samtools-0.1.18/bcftools])
 AC_SUBST([LIBBAM], [extern/samtools-0.1.18])
