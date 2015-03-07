@@ -22,14 +22,15 @@
 ##
 ###
 
-AUTOMAKE_OPTIONS = subdir-objects
 
 AM_LDFLAGS = -static 
 
 EXTRA_DIST = \
 	Makefile.original \
 	README \
-	vcfutils.pl
+	vcfutils.pl \
+	call1.c \
+	main.c
 
 noinst_LTLIBRARIES = libbcf.la
 
@@ -53,13 +54,13 @@ libbcf_la_SOURCES = \
 libbcf_la_LDFLAGS = -fPIC
 libbcf_la_CFLAGS = -I$(top_srcdir)/$(LIBBAM) $(SAMTOOLS_ADDITIONAL_CFLAGS)
 
-bin_PROGRAMS = bcftools
-bcftools_SOURCES = \
-	call1.c \
-	main.c \
-	../bgzf.c \
-	../kstring.c \
-	../knetfile.c \
-	../bedidx.c
-bcftools_CFLAGS = -g -Wall -O2 -D_FILE_OFFSET_BITS=64 -D_USE_KNETFILE -I$(top_srcdir)/$(LIBBAM) $(SAMTOOLS_ADDITIONAL_CFLAGS)
-bcftools_LDADD = libbcf.la
+##bin_PROGRAMS = bcftools
+##bcftools_SOURCES = \
+##	call1.c \
+##	main.c \
+##	../bgzf.c \
+##	../kstring.c \
+##	../knetfile.c \
+##	../bedidx.c
+##bcftools_CFLAGS = -g -Wall -O2 -D_FILE_OFFSET_BITS=64 -D_USE_KNETFILE -I$(top_srcdir)/$(LIBBAM) $(SAMTOOLS_ADDITIONAL_CFLAGS)
+##bcftools_LDADD = libbcf.la

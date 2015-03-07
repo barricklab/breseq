@@ -3,35 +3,30 @@ abstract: 'genome diff tools for anaylzing mutations'
 author:
   - 'Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>'
 build_requires:
-  Test::More: 0
+  Test::More: '0'
 configure_requires:
-  Module::Build: 0.42
+  Module::Build: '0.42'
 dynamic_config: 1
-generated_by: 'Module::Build version 0.3901, CPAN::Meta::Converter version 2.120630'
-license: open_source
+generated_by: 'Module::Build version 0.4211, CPAN::Meta::Converter version 2.143240'
+license: gpl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
-  version: 1.4
+  version: '1.4'
 name: GenomeDiff
 provides:
   GenomeDiff:
     file: lib/GenomeDiff.pm
-    version: 1.00
+    version: '1.00'
   GenomeDiff::BaseSubstitutionFile:
     file: lib/GenomeDiff/BaseSubstitutionFile.pm
-    version: 0
   GenomeDiff::Output:
     file: lib/GenomeDiff/Output.pm
-    version: 0
   GenomeDiff::PreterminationTables:
     file: lib/GenomeDiff/PreterminationTables.pm
-    version: 0
   GenomeDiff::ReferenceSequence:
     file: lib/GenomeDiff/ReferenceSequence.pm
-    version: 0
   GenomeDiff::SynonymousNonsynonymous:
     file: lib/GenomeDiff/SynonymousNonsynonymous.pm
-    version: 0
 resources:
   license: http://opensource.org/licenses/gpl-license.php
-version: 1.00
+version: '1.00'

@@ -4,9 +4,9 @@
       "Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "Module::Build version 0.3901, CPAN::Meta::Converter version 2.120630",
+   "generated_by" : "Module::Build version 0.4211",
    "license" : [
-      "open_source"
+      "gpl_1"
    ],
    "meta-spec" : {
       "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
@@ -21,7 +21,7 @@
       },
       "configure" : {
          "requires" : {
-            "Module::Build" : "0.36"
+            "Module::Build" : "0.42"
          }
       }
    },
@@ -31,24 +31,19 @@
          "version" : "1.00"
       },
       "GenomeDiff::BaseSubstitutionFile" : {
-         "file" : "lib/GenomeDiff/BaseSubstitutionFile.pm",
-         "version" : 0
+         "file" : "lib/GenomeDiff/BaseSubstitutionFile.pm"
       },
       "GenomeDiff::Output" : {
-         "file" : "lib/GenomeDiff/Output.pm",
-         "version" : 0
+         "file" : "lib/GenomeDiff/Output.pm"
       },
       "GenomeDiff::PreterminationTables" : {
-         "file" : "lib/GenomeDiff/PreterminationTables.pm",
-         "version" : 0
+         "file" : "lib/GenomeDiff/PreterminationTables.pm"
       },
       "GenomeDiff::ReferenceSequence" : {
-         "file" : "lib/GenomeDiff/ReferenceSequence.pm",
-         "version" : 0
+         "file" : "lib/GenomeDiff/ReferenceSequence.pm"
       },
       "GenomeDiff::SynonymousNonsynonymous" : {
-         "file" : "lib/GenomeDiff/SynonymousNonsynonymous.pm",
-         "version" : 0
+         "file" : "lib/GenomeDiff/SynonymousNonsynonymous.pm"
       }
    },
    "release_status" : "stable",

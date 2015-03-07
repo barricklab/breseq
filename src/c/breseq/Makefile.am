@@ -16,11 +16,11 @@
 ###
 
 ##This is the most compatible way of passing through the data directory to the C++ code
-BRESEQDATADIR= $(datadir)/$(PACKAGE_NAME)
+BRESEQDATADIR= $(DESTDIR)/$(datadir)/$(PACKAGE_NAME)
 BRESEQRELATIVEDATADIR= $(BIN_TO_DATA_RELATIVE_PATH)/$(PACKAGE_NAME)
 AM_CPPFLAGS = -I$(top_srcdir)/$(LIBBAM) -I$(top_srcdir)/aux_build  -DDATADIR=\"$(BRESEQRELATIVEDATADIR)/\"
 AM_LDFLAGS = -static
-LDADD =   $(top_srcdir)/$(LIBBAM)/libbam.la \
+LDADD =   $(top_builddir)/$(LIBBAM)/libbam.la \
 					libbreseq.la
 LIBS = 
 
@@ -77,14 +77,13 @@ libbreseq_la_SOURCES = \
 	libbreseq/storable.h \
 	libbreseq/summary.h 
 	
-libbreseq_la_LIBADD = $(top_srcdir)/$(LIBBAM)/libbam.la
+libbreseq_la_LIBADD = $(top_builddir)/$(LIBBAM)/libbam.la
 
 bin_PROGRAMS = breseq gdtools 
 breseq_SOURCES = breseq_cmdline.cpp
 gdtools_SOURCES = gdtools_cmdline.cpp
 
-EXTRA_DIST = \
-	breseq.png \
+EXTRA_DIST = breseq.png \
 	breseq_small.png \
 	coverage_distribution.r \
 	plot_coverage.r \
@@ -98,23 +97,27 @@ EXTRA_DIST = \
 	mobs.conf \
 	mutations.conf \
 	combined_circos.conf
-	
 
 install-data-local :
 
 	##copy our data files
-	mkdir -p $(DESTDIR)$(BRESEQDATADIR)
-	cp breseq.png $(DESTDIR)$(BRESEQDATADIR)
-	cp breseq_small.png $(DESTDIR)$(BRESEQDATADIR)
-	cp coverage_distribution.r $(DESTDIR)$(BRESEQDATADIR)
-	cp plot_coverage.r $(DESTDIR)$(BRESEQDATADIR)
-	cp plot_error_rate.r $(DESTDIR)$(BRESEQDATADIR)
-	cp plot_jc_scores.r $(DESTDIR)$(BRESEQDATADIR)
-	cp polymorphism_statistics.r $(DESTDIR)$(BRESEQDATADIR)
-	cp run_circos.sh $(DESTDIR)$(BRESEQDATADIR)
-	cp indels.conf $(DESTDIR)$(BRESEQDATADIR)
-	cp mutations.conf $(DESTDIR)$(BRESEQDATADIR)
-	cp karyotype.and.layout.conf $(DESTDIR)$(BRESEQDATADIR)
-	cp mobs.conf $(DESTDIR)$(BRESEQDATADIR)
-	cp ideogram.conf $(DESTDIR)$(BRESEQDATADIR)
-	cp combined_circos.conf $(DESTDIR)$(BRESEQDATADIR)
+	mkdir -p $(BRESEQDATADIR)
+	cp $(srcdir)/breseq.png $(BRESEQDATADIR)
+	cp $(srcdir)/breseq_small.png $(BRESEQDATADIR)
+	cp $(srcdir)/coverage_distribution.r $(BRESEQDATADIR)
+	cp $(srcdir)/plot_coverage.r $(BRESEQDATADIR)
+	cp $(srcdir)/plot_error_rate.r $(BRESEQDATADIR)
+	cp $(srcdir)/plot_jc_scores.r $(BRESEQDATADIR)
+	cp $(srcdir)/polymorphism_statistics.r $(BRESEQDATADIR)
+	cp $(srcdir)/run_circos.sh $(BRESEQDATADIR)
+	cp $(srcdir)/indels.conf $(BRESEQDATADIR)
+	cp $(srcdir)/mutations.conf $(BRESEQDATADIR)
+	cp $(srcdir)/karyotype.and.layout.conf $(BRESEQDATADIR)
+	cp $(srcdir)/mobs.conf $(BRESEQDATADIR)
+	cp $(srcdir)/ideogram.conf $(BRESEQDATADIR)
+	cp $(srcdir)/combined_circos.conf $(BRESEQDATADIR)
+
+uninstall-local :
+
+	##remove our data files
+	rm -rf $(BRESEQDATADIR)

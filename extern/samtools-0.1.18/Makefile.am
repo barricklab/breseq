@@ -22,7 +22,6 @@
 ##
 ###
 
-AUTOMAKE_OPTIONS = subdir-objects
 SUBDIRS = bcftools
 
 AM_LDFLAGS = -static 
@@ -69,9 +68,8 @@ EXTRA_DIST = \
 	misc/wgsim_eval.pl \
 	misc/wgsim.c \
 	misc/zoom2sam.pl
-noinst_LTLIBRARIES = libbam.la
 
-## not includingrazf.h because they break with old zlibs...
+noinst_LTLIBRARIES = libbam.la
 
 libbam_la_SOURCES = \
 	bam_aux.c \
@@ -139,6 +137,6 @@ samtools_SOURCES = \
 samtools_CFLAGS = -std=gnu89 -D_CURSES_LIB=1 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -D_USE_KNETFILE $(SAMTOOLS_ADDITIONAL_CFLAGS)
 samtools_LDADD = libbam.la bcftools/libbcf.la
 
-include_HEADERS = bam.h
+noinst_HEADERS = bam.h
 
 
