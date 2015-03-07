@@ -15,11 +15,9 @@
 ##
 ###
 
-AUTOMAKE_OPTIONS = subdir-objects
-
 ACLOCAL_AMFLAGS = -I aux_build/m4
 
-PACKAGEDIR = $(ROOTDIR)/package
+PACKAGEDIR = $(top_srcdir)/package
 MACPACKAGEDIR = $(PACKAGEDIR)/macosx
 MACPACKAGEBUILDDIR = $(MACPACKAGEDIR)/build
 
@@ -39,16 +37,55 @@ EXTRA_DIST = \
 	tests/data/lambda/lambda.1-2.gbk \
 	tests/data/lambda/lambda.3.gbk \
 	tests/data/lambda/lambda.4.gbk \
-	tests/data/lambda/lambda.5.gbk
+	tests/data/lambda/lambda.5.gbk \
+	src/doc/Makefile \
+	src/doc/conf.py \
+	src/doc/acknowledgments.rst \
+	src/doc/faq.rst \
+	src/doc/gd_format.rst \
+	src/doc/gd_usage.rst \
+	src/doc/index.rst \
+	src/doc/installation.rst \
+	src/doc/introduction.rst \
+	src/doc/methods.rst \
+	src/doc/output.rst \
+	src/doc/references.rst \
+	src/doc/test_drive.rst \
+	src/doc/usage.rst \
+	src/doc/images \
+	src/doc/images/amp_1.png \
+	src/doc/images/breseq.png \
+	src/doc/images/coverage_distribution.png \
+	src/doc/images/del_1.png \
+	src/doc/images/del_2.png \
+	src/doc/images/end_trimming_example.docx \
+	src/doc/images/end_trimming_example.png \
+	src/doc/images/error_rates.png \
+	src/doc/images/ins_1.png \
+	src/doc/images/ins_2.png \
+	src/doc/images/jc_1.png \
+	src/doc/images/jc_2.png \
+	src/doc/images/mc_1.png \
+	src/doc/images/missed_mutation_no_trimming.png \
+	src/doc/images/mob_1.png \
+	src/doc/images/mob_2.png \
+	src/doc/images/mob_3.png \
+	src/doc/images/ra_1.png \
+	src/doc/images/region_coverage_example.png \
+	src/doc/images/snp_1.png \
+	src/doc/images/snp_2.png \
+	src/doc/images/sub_1.png
+
 
 ## tests - does not work yet.
 ##TESTS_ENVIRONMENT = PROGRAMDATAPATH=$(BRESEQ) SAMTOOLSPATH=$(SAMTOOLSDIR)
 ##TESTS = tests/lambda_mult_ref_read/testcmd.sh
 
-ROOTDIR=$(PWD)
-DOCDIR=$(ROOTDIR)/src/doc
-PERLGENOMEDIFF=$(ROOTDIR)/src/perl/GenomeDiff
-SAMTOOLSDIR=$(ROOTDIR)/$(LIBBAM)
+DOCSRCDIR=$(top_srcdir)/src/doc
+DOCBUILDDIR=$(abs_top_builddir)/src/doc/_build
+
+PERLGENOMEDIFF=$(top_srcdir)/src/perl/GenomeDiff
+SAMTOOLSDIR=$(top_srcdir)/$(LIBBAM)
 
 ## Main hooks called after normal make steps
 
@@ -62,10 +99,6 @@ all-local :
 	## This saves the install path for the test script
 	##echo "export TESTBINPREFIX=$(bindir)" > tests/test.config;
 	
-	## NEW method: 'make test' after 'make'
-	echo "export TESTBINPREFIX=$(ROOTDIR)/src/c/breseq" > tests/test.config;
-	echo "export BRESEQ_DATA_PATH=$(ROOTDIR)/src/c/breseq" >> tests/test.config;
-	echo "export BRESEQ_SAMTOOLS_PATH=$(ROOTDIR)/extern/samtools-0.1.18" >> tests/test.config;
 	
 install-exec-local :
 
@@ -74,6 +107,7 @@ clean-local :: clean-tests
 	
 	## This saves the install path for the test script	
 	rm -f tests/test.config
+
 
 ## These two targets are optional for Perl genomediff tools.
 
@@ -95,19 +129,19 @@ dist-hook:
 ## This environmental variable is used by python Sphinx
 	echo $(PACKAGE_VERSION); \
 	export BRESEQ_VERSION=$(PACKAGE_VERSION); \
-	cd $(DOCDIR) ; \
-	make html ;
+	cd $(DOCSRCDIR) ; \
+	make -f Makefile BUILDDIR=$(DOCBUILDDIR) html ;
 	
-	cp -r $(DOCDIR)/_build/html $(distdir)/documentation ;
-
+	cp -r $(DOCBUILDDIR)/html $(distdir)/documentation ;
+	
 	## GenomeDiff
-	cd $(PERLGENOMEDIFF) ; \
+	cd $(abs_top_srcdir)/src/perl/GenomeDiff ; \
+	chmod u+w . ; \
 	perl Build.PL ; \
-	./Build distdir ; \
-	echo $(distdir)/src/perl/GenomeDiff ;
+	./Build distdir ; 
 	
 	mkdir -p $(distdir)/src/perl
-	cp -r $(PERLGENOMEDIFF)/GenomeDiff-* $(distdir)/src/perl/GenomeDiff ; 
+	cp -r $(abs_top_srcdir)/src/perl/GenomeDiff/GenomeDiff-* $(distdir)/src/perl/GenomeDiff ; 
 	
 	## Remove ._ files
 	rm -rf `find $(distdir) -name ".*"`
@@ -139,8 +173,16 @@ clean-pkg :
 
 
 test:
-	tests/test.sh test tests
+	## NEW method: 'make test' after 'make'
+	## This must be located here so that it is run after EXTRA_DIST files are included
+	echo "export TESTBINPREFIX=$(top_srcdir)/src/c/breseq" > $(top_srcdir)/tests/test.config;
+	echo "export BRESEQ_DATA_PATH=$(top_srcdir)/src/c/breseq" >> $(top_srcdir)/tests/test.config;
+	echo "export BRESEQ_SAMTOOLS_PATH=$(top_srcdir)/extern/samtools-0.1.18" >> $(top_srcdir)/tests/test.config;
+	$(top_srcdir)/tests/test.sh test tests
 
 
 clean-tests:
-	tests/test.sh clean tests
+	$(top_srcdir)/tests/test.sh clean tests
+
+distclean-local:
+	rm -rf $(DOCBUILDDIR);
