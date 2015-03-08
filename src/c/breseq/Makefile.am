@@ -121,3 +121,4 @@ uninstall-local :
 
 	##remove our data files
 	rm -rf $(BRESEQDATADIR)
+

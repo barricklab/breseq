@@ -1,4 +1,5 @@
-breseq is Copyright (C) 2010 Michigan State University.
+breseq is Copyright (C) 2008-2010 Michigan State University
+          Copyright (C) 2011-2015 The University of Texas at Austin
 
 SAMtools (extern/samtools-*) and Bio::Samtools (extern/Bio-SamTools-*) are 
 copyright their respective authors and subject to other licenses as detailed in

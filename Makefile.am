@@ -123,14 +123,17 @@ clean-genomediff :
 	## GenomeDiff
 	cd $(PERLGENOMEDIFF) ; \
 	./Build clean;	
-	
-dist-hook:
 
+docs :
 ## This environmental variable is used by python Sphinx
 	echo $(PACKAGE_VERSION); \
 	export BRESEQ_VERSION=$(PACKAGE_VERSION); \
 	cd $(DOCSRCDIR) ; \
 	make -f Makefile BUILDDIR=$(DOCBUILDDIR) html ;
+	
+dist-hook: docs
+
+## This environmental variable is used by python Sphinx
 	
 	cp -r $(DOCBUILDDIR)/html $(distdir)/documentation ;
 	
@@ -186,3 +189,5 @@ clean-tests:
 
 distclean-local:
 	rm -rf $(DOCBUILDDIR);
+
+	
