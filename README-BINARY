@@ -1,0 +1,25 @@
+=== QUICK START ===
+
+You must have bowtie2 and R installed on your 
+system for breseq to function!
+
+Run this command to get breseq help 
+$ bin/breseq
+
+You may run this command to test the breseq install:
+$ ./run_test.sh
+
+If you relocate the files in the 'bin' directory, then you 
+must also relocate the files in 'the' share directory to the
+same location relative to the binaries (../share/breseq).
+
+(Exception: If you already have 'samtools' installed on your
+system, you do not need to copy that file over to use breseq.)
+
+=== FOR MORE INFORMATION ===
+
+Please see the HTML documentation:
+documentation/index.html
+
+And the breseq website:
+http://barricklab.org/breseq
