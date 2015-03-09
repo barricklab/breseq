@@ -708,7 +708,6 @@ int do_vcf2gd( int argc, char* argv[])
 
 int do_gd2circos(int argc, char *argv[])
 {
-  
   AnyOption options("gdtools GD2CIRCOS -r <reference> [-r <reference2> ...] -o <output_dir> input1.gd [input2.gd ...]");
   
   options
@@ -2625,6 +2624,9 @@ int do_gd2oli( int argc, char* argv[])
                                             
                                             
 int main(int argc, char* argv[]) {
+	
+	Settings::set_global_paths(argc, argv);
+	
 	//Extract the sub-command argument.
 	string command;
 	char* argv_new[argc];

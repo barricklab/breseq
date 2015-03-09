@@ -28,11 +28,14 @@ using namespace std;
 
 namespace breseq
 {
-  
   const int32_t kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation = 50;
   const char* kBreseqAlignmentScoreBAMTag = "X5";
   const char* kBreseqBestAlignmentScoreBAMTag = "X6";
 
+  string Settings::global_bin_path;
+  string Settings::global_program_data_path;
+
+  
   string Settings::output_divider("================================================================================");
   
 	void cReadFiles::Init(const vector<string>& read_file_names, bool sam_files)
@@ -151,20 +154,15 @@ namespace breseq
     this->base_output_path = _base_output_path;
     
     this->pre_option_initialize();
+    
     // no command line arguments here
+    
 		this->post_option_initialize();
 	}
   
   Settings::Settings(int argc, char* argv[])
   {
     this->pre_option_initialize(argc, argv);
-    
-    // We need the path to the executable to locate scripts and our own installed versions of binaries
-    // --> get this before parsing the options
-    this->bin_path = getExecPath(argv[0]);
-    size_t slash_pos = this->bin_path.rfind("/");
-    if (slash_pos != string::npos) this->bin_path.erase(slash_pos);
-
     
     // setup and parse configuration options:
     AnyOption options("Usage: breseq -r reference.gbk [-r reference2.gbk ...] reads1.fastq [reads2.fastq ...]");
@@ -534,7 +532,8 @@ namespace breseq
   // Settings in here should be static (not set at the command line).
   // Options that are set are in Settings::Settings(int argc, char* argv[])
 	void Settings::pre_option_initialize(int argc, char* argv[])
-	{    
+	{
+    
     ////////////////////
     //! Data
     ////////////////////
@@ -662,23 +661,15 @@ namespace breseq
     //! File Paths
     ////////////////////
     
-    this->bin_path = ".";
+    this->bin_path = get_bin_path();
+    this->program_data_path = get_program_data_path();
+    ASSERT(this->bin_path.size() > 0, "Uninitialized bin_path");
+    ASSERT(this->program_data_path.size() > 0, "Uninitialized program_data_path");
   }
 
 	void Settings::post_option_initialize()
 	{     
     this->init_installed();
-    
-    // DATADIR is a preprocessor directive set by Automake in config.h
-		this->program_data_path = this->bin_path + "/" + DATADIR;
-        
-    // Unless we are in "make test" mode where this environental variable is defined.
-    char * breseq_data_path;
-    breseq_data_path = getenv ("BRESEQ_DATA_PATH");
-    if (breseq_data_path!=NULL) {
-      this->program_data_path = breseq_data_path;
-      cerr << "In test mode. Program data path: " << breseq_data_path << endl;
-    }
     
     ////////////////////
     //! Settings
