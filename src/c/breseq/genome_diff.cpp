@@ -4997,6 +4997,8 @@ void cGenomeDiff::GD2Circos(const vector<string> &gd_file_names,
   
   cGenomeDiff combined_gd;
   
+  string program_data_path = Settings::get_program_data_path();
+  
   int32_t number_of_mutations = 0;
   
   for (size_t i = 0; i < gd_file_names.size(); i++){
@@ -5012,15 +5014,12 @@ void cGenomeDiff::GD2Circos(const vector<string> &gd_file_names,
   
   string make_me;
   
-  Settings settings("");
-  
-  
   create_path(circos_directory);
   create_path(circos_directory + "/data");
   create_path(circos_directory + "/etc");
   
   //copy run script
-  copy_file(settings.program_data_path + "/run_circos.sh", circos_directory + "/run_circos.sh");
+  copy_file(program_data_path + "/run_circos.sh", circos_directory + "/run_circos.sh");
   
   //filling circos_dir/etc
   
@@ -5034,7 +5033,7 @@ void cGenomeDiff::GD2Circos(const vector<string> &gd_file_names,
   ;
   
   for (size_t i = 0; i < conf_names.size(); i++){
-    copy_file(settings.program_data_path + "/" + conf_names[i], circos_directory + "/etc/" + conf_names[i]);
+    copy_file(program_data_path + "/" + conf_names[i], circos_directory + "/etc/" + conf_names[i]);
   }
   
   //modifying circos_dir/etc with scale values

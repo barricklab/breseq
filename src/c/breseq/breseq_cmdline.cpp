@@ -2096,6 +2096,8 @@ int breseq_default_action(int argc, char* argv[])
  */
 int main(int argc, char* argv[]) {
 
+  Settings::set_global_paths(argc, argv);
+  
 	// Extract the sub-command argument
 	string command;
 	char* argv_new[argc];

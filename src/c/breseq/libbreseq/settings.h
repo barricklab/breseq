@@ -176,8 +176,10 @@ namespace breseq
 	{
     
     static string output_divider;
-    
-	public:
+    static string global_bin_path;
+    static string global_program_data_path;
+
+  public:
     
     ////////////////////
     //! Data
@@ -544,13 +546,44 @@ namespace breseq
     //! Methods
     ////////////////////
     
-    // Set up defaults here
+    // Set up defaults here -- this version does not require command line
 		Settings(const string& _base_output_path = ".");
     
     // Constructor for default action
     Settings(int argc, char* argv[]);
     
     static void command_line_run_header();
+    
+
+    //! Call this at the very beginning of execution to set up program paths
+    void static set_global_paths(int argc, char* argv[])
+    {
+      (void) argc;
+      global_bin_path = getExecPath(argv[0]);
+      size_t slash_pos = global_bin_path.rfind("/");
+      if (slash_pos != string::npos) global_bin_path.erase(slash_pos);
+      
+      global_program_data_path = global_bin_path + "/" + DATADIR;
+      
+      // Unless we are in "make test" mode where this environental variable is defined.
+      char * breseq_data_path;
+      breseq_data_path = getenv ("BRESEQ_DATA_PATH");
+      if (breseq_data_path!=NULL) {
+        global_program_data_path = breseq_data_path;
+        cerr << "In test mode. Program data path: " << breseq_data_path << endl;
+      }
+    }
+    
+    //! Utility functions for getting paths
+    static string get_bin_path()
+    {
+      return global_bin_path;
+    }
+    
+    static string get_program_data_path()
+    {
+      return global_program_data_path;
+    }
     
 		//! Utility function to substitute specific details into a generic file name
 		static string file_name(const string& _file_name_key, const string& _substitute, const string& _with)
