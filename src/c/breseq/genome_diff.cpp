@@ -5037,7 +5037,6 @@ void cGenomeDiff::GD2Circos(const vector<string> &gd_file_names,
   }
   
   //modifying circos_dir/etc with scale values
-  stringstream command;
   double distance_value = 0.4 * distance_scale;
   double space_value = 0.25 * distance_value;
   double feature_value = 5 * feature_scale;
@@ -5182,6 +5181,7 @@ void cGenomeDiff::GD2Circos(const vector<string> &gd_file_names,
         mob_colors[seq_feature["name"]] = color;
       }
       else if (mob_colors.count(seq_feature["name"]) == 0){
+        if (next_color >=25 ) next_color = 0; // this is how many colors are available above!
         color = colors[next_color];
         mob_colors[seq_feature["name"]] = color;
         next_color++;
@@ -5348,11 +5348,8 @@ void cGenomeDiff::GD2Circos(const vector<string> &gd_file_names,
   nonsynonymous_mutation_file.close();
   npi_mutation_file.close();
   
-  char current_dir[1024];
-  ASSERT(getcwd(current_dir, sizeof(current_dir)), "Linux function call getcwd() has failed");
-  command.str("");
-  command << "cd " << circos_directory << "; bash run_circos.sh;";// cd " << current_dir;
-  SYSTEM(command.str());
+
+  SYSTEM("cp " + Settings::get_program_data_path() + "/run_circos.sh " + circos_directory);
   
 } 
   
