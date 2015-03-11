@@ -563,7 +563,13 @@ namespace breseq
       size_t slash_pos = global_bin_path.rfind("/");
       if (slash_pos != string::npos) global_bin_path.erase(slash_pos);
       
-      global_program_data_path = global_bin_path + "/" + DATADIR;
+      //absolute path (used by XCode)
+      if (string(DATADIR).substr(0, 1) == "/") {
+        global_program_data_path = DATADIR;
+      // relative path (used by dists)
+      } else {
+        global_program_data_path = global_bin_path + "/" + DATADIR;
+      }
       
       // Unless we are in "make test" mode where this environental variable is defined.
       char * breseq_data_path;

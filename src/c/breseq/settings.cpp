@@ -1053,15 +1053,23 @@ namespace breseq
     // version encoded in triplets of numbers
     else if (from_string<uint32_t>(this->installed["bowtie2_version"]) < 2000000007) {
       good_to_go = false;
-      cerr << "---> ERROR Required executable \"bowtie2 version 2.0.0-beta7 or later\" not found." << endl;
+      cerr << "---> ERROR Required executable \"bowtie2\" version 2.0.0-beta7 or later not found." << endl;
       cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
       cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
     }
     else if ((from_string<uint32_t>(this->installed["bowtie2_version"]) == 2000003000)
-         ||  (from_string<uint32_t>(this->installed["bowtie2_version"]) == 2000004000)) {
+             ||  (from_string<uint32_t>(this->installed["bowtie2_version"]) == 2000004000)) {
       good_to_go = false;
-      cerr << "---> ERROR \"bowtie2 versions 2.0.3 and 2.0.4 are known to have bugs in" << endl;
-      cerr << "---> ERROR \"SAM output that can cause breseq to crash. Please upgrade." << endl;
+      cerr << "---> ERROR \"bowtie2\" versions 2.0.3 and 2.0.4 are known to have bugs in" << endl;
+      cerr << "---> ERROR SAM output that can cause breseq to crash. Please upgrade." << endl;
+      cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
+      cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
+    }
+    else if (from_string<uint32_t>(this->installed["bowtie2_version"]) < 2001000000) {
+      good_to_go = true;
+      cerr << "---> WARNING \"bowtie2\" versions before 2.1.0 may produce output that varies slightly" << endl;
+      cerr << "---> WARNING from later versions. This may cause consistency tests to fail." << endl;
+      cerr << "---> WARNING We strongly suggest that you update to bowtie2 2.1.0+." << endl;
       cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
       cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
     }

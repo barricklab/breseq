@@ -713,15 +713,17 @@ int do_gd2circos(int argc, char *argv[])
   options
     ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
     ("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
-    ("output,o", "name of directory to save Circos files")
+    ("output,o", "name of directory to save Circos configuration files and scripts", "circos_output")
     ("distance,d", "the distance from the center the first axis will be in proportion to the default size", "1.0")
     ("feature,f", "the scale of the features in proportion to the default size", "1.0")
     ;
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
-  options.addUsage("Creates text files which can be read by Circos to create a visual representation of a GD file. Executes Circos and saves images in the output directory.");
-  
+  options.addUsage("Creates text Circos configuration files and scripts for producing a visual representation of mutations in a Genome Diff file");
+	options.addUsage("You must have Circos installed to produce images from these files. See http://circos.ca");
+
+	
   if (!options.count("output")){
     options.addUsage("");
     options.addUsage("No output provided.");
@@ -758,7 +760,20 @@ int do_gd2circos(int argc, char *argv[])
              options["output"],
              distance_scale,
              feature_scale);
-  
+	
+	cout << "Circos configuration files produced in " << options["output"] << "." << endl;
+	
+	string circos_path = SYSTEM_CAPTURE("which ssaha2", true);
+	if (circos_path.find("no circos in") != string::npos) circos_path = "";
+	
+	if (circos_path.size() > 0) {
+		cout << endl << "Running Circos executable: " << circos_path << endl;
+		SYSTEM("cd " + options["output"] + "; bash run_circos.sh;");
+	} else {
+		cout << endl << "No Circos executable found. Configuration files have been written, but you must run Circos to generate images. ";
+		cout << "The script to execute Circos is: " << options["output"] << "/run_circos.sh" << endl;
+	}
+
   return 0;
 }
 

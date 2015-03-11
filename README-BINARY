@@ -10,7 +10,7 @@ You may run this command to test the breseq install:
 $ ./run_test.sh
 
 If you relocate the files in the 'bin' directory, then you 
-must also relocate the files in 'the' share directory to the
+must also relocate the files in the 'share' directory to the
 same location relative to the binaries (../share/breseq).
 
 (Exception: If you already have 'samtools' installed on your
