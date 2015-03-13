@@ -5024,8 +5024,6 @@ void cGenomeDiff::GD2Circos(const vector<string> &gd_file_names,
   //filling circos_dir/etc
   
   vector<string> conf_names = make_vector<string>
-  ("ideogram.conf")
-  ("karyotype.and.layout.conf")
   ("indels.conf")
   ("mobs.conf")
   ("mutations.conf")
@@ -5093,12 +5091,12 @@ void cGenomeDiff::GD2Circos(const vector<string> &gd_file_names,
   //filling circos_dir/data
   
   ofstream karyotype_file;
-  ofstream empty_file;
+  ofstream empty_plot_file;
   
   make_me = circos_directory + "/data/karyotype.txt";
   karyotype_file.open(make_me.c_str());
   make_me = circos_directory + "/data/empty_data.txt";
-  empty_file.open(make_me.c_str());
+  empty_plot_file.open(make_me.c_str());
   
   //keeps track of current position when examining sequence sizes of genomes
   int32_t current_position = 0;
@@ -5112,7 +5110,7 @@ void cGenomeDiff::GD2Circos(const vector<string> &gd_file_names,
     
     karyotype_file << "chr - " << seq_ids[i] << " 1 1 " <<
     seq_size << " black" << endl;
-    empty_file << seq_ids[i] << " 1 2 1" << endl;
+    empty_plot_file << seq_ids[i] << " 1 2 1" << endl;
     
     //if seq_size goes past halfway point of total length of genomes,
     //add this sequence and its bounds to the left_side vector.
@@ -5120,7 +5118,7 @@ void cGenomeDiff::GD2Circos(const vector<string> &gd_file_names,
   }
   
   karyotype_file.close();
-  empty_file.close();
+  empty_plot_file.close();
   
   //minimum tile size width for indel graph
   const int32_t MIN_WIDTH = static_cast<int32_t>(floor(static_cast<double>(ref.total_length()) * 0.000));
@@ -5155,9 +5153,9 @@ void cGenomeDiff::GD2Circos(const vector<string> &gd_file_names,
     "vvlred", "vvlgreen", "vvlblue",  "vvlorange", "vvlpurple"};
   
   map<string,bool> pre_assigned_mob_colors = make_map<string,bool>
-  ("IS1"  , true )("IS186", true )("IS3"  , true  ) 
-  ("IS150", true )("IS911", true )("IS4"  , true  )
-  ("IS2"  , true )("IS30" , true )("IS600", true  )
+  ("is1"  , true )("is186", true )("is3"  , true  )
+  ("is150", true )("is911", true )("is4"  , true  )
+  ("is2"  , true )("is30" , true )("is600", true  )
   ;
   
   vector<string> colors(c_colors, c_colors + 25);
