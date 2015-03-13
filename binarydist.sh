@@ -13,6 +13,7 @@ BINARYLOCALDIR=${BRESEQVERSIONSTRING}-${BINARYPLATFORM}-${BINARYARCH}
 BINARYDIR=${PWD}/${BINARYLOCALDIR}
 rm -r ${BINARYDIR} ${BINARYDIR}.tgz
 ./configure CFLAGS="${MYCFLAGS}" CXXFLAGS="${MYCFLAGS}" LDFLAGS="${MYCFLAGS}" --prefix="${BINARYDIR}"
+make clean
 make -j 6 install
 
 #Documentation and information
@@ -42,8 +43,9 @@ echo "export TESTBINPREFIX=bin" > ${BINARYDIR}/tests/test.config;
 echo "export BRESEQ_DATA_PATH=share/breseq" >> ${BINARYDIR}/tests/test.config;
 echo "export BRESEQ_SAMTOOLS_PATH=bin" >> ${BINARYDIR}/tests/test.config;
 
-echo "tests/test.sh test tests" > ${BINARYDIR}/run_test.sh
-chmod a+x ${BINARYDIR}/run_test.sh
+echo "tests/test.sh clean tests" > ${BINARYDIR}/run_tests.sh
+echo "tests/test.sh test tests" >> ${BINARYDIR}/run_tests.sh
+chmod a+x ${BINARYDIR}/run_tests.sh
 
 tar -czf ${BINARYLOCALDIR}.tgz ${BINARYLOCALDIR}
 rm -r ${BINARYLOCALDIR}

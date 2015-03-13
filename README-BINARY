@@ -7,7 +7,7 @@ Run this command to get breseq help
 $ bin/breseq
 
 You may run this command to test the breseq install:
-$ ./run_test.sh
+$ ./run_tests.sh
 
 If you relocate the files in the 'bin' directory, then you 
 must also relocate the files in the 'share' directory to the
