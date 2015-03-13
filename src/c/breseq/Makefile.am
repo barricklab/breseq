@@ -112,9 +112,7 @@ install-data-local :
 	cp $(srcdir)/run_circos.sh $(BRESEQDATADIR)
 	cp $(srcdir)/indels.conf $(BRESEQDATADIR)
 	cp $(srcdir)/mutations.conf $(BRESEQDATADIR)
-	cp $(srcdir)/karyotype.and.layout.conf $(BRESEQDATADIR)
 	cp $(srcdir)/mobs.conf $(BRESEQDATADIR)
-	cp $(srcdir)/ideogram.conf $(BRESEQDATADIR)
 	cp $(srcdir)/combined_circos.conf $(BRESEQDATADIR)
 
 uninstall-local :

@@ -122,9 +122,7 @@
 /* Begin PBXFileReference section */
 		701EE98213C4BB5200F2EC70 /* contingency_loci.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = contingency_loci.cpp; path = breseq/contingency_loci.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		7024BBDB155DEC31007CCA5B /* combined_circos.conf */ = {isa = PBXFileReference; lastKnownFileType = text; name = combined_circos.conf; path = breseq/combined_circos.conf; sourceTree = "<group>"; };
-		7024BBDC155DEC31007CCA5B /* ideogram.conf */ = {isa = PBXFileReference; lastKnownFileType = text; name = ideogram.conf; path = breseq/ideogram.conf; sourceTree = "<group>"; };
 		7024BBDD155DEC31007CCA5B /* indels.conf */ = {isa = PBXFileReference; lastKnownFileType = text; name = indels.conf; path = breseq/indels.conf; sourceTree = "<group>"; };
-		7024BBDE155DEC31007CCA5B /* karyotype.and.layout.conf */ = {isa = PBXFileReference; lastKnownFileType = text; name = karyotype.and.layout.conf; path = breseq/karyotype.and.layout.conf; sourceTree = "<group>"; };
 		7024BBDF155DEC31007CCA5B /* mobs.conf */ = {isa = PBXFileReference; lastKnownFileType = text; name = mobs.conf; path = breseq/mobs.conf; sourceTree = "<group>"; };
 		7024BBE0155DEC31007CCA5B /* mutations.conf */ = {isa = PBXFileReference; lastKnownFileType = text; name = mutations.conf; path = breseq/mutations.conf; sourceTree = "<group>"; };
 		702A20BA1A4F2349006DCA5F /* flagged_regions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = flagged_regions.cpp; path = breseq/flagged_regions.cpp; sourceTree = SOURCE_ROOT; };
@@ -302,8 +300,6 @@
 			isa = PBXGroup;
 			children = (
 				7024BBDB155DEC31007CCA5B /* combined_circos.conf */,
-				7024BBDC155DEC31007CCA5B /* ideogram.conf */,
-				7024BBDE155DEC31007CCA5B /* karyotype.and.layout.conf */,
 				7024BBDD155DEC31007CCA5B /* indels.conf */,
 				7024BBDF155DEC31007CCA5B /* mobs.conf */,
 				7024BBE0155DEC31007CCA5B /* mutations.conf */,
