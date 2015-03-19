@@ -91,11 +91,9 @@ EXTRA_DIST = breseq.png \
 	plot_jc_scores.r \
 	polymorphism_statistics.r \
 	run_circos.sh \
-	ideogram.conf \
 	indels.conf \
-	karyotype.and.layout.conf \
-	mobs.conf \
 	mutations.conf \
+	mobs.conf \
 	combined_circos.conf
 
 install-data-local :
