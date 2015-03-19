@@ -1,5 +1,3 @@
-syntax: glob
-
 .DS_Store
 .cproject
 .project
@@ -46,53 +44,50 @@ MANIFEST.SKIP
 
 ## This is user/architecture specific
 tags
-user-config.jam
 
-syntax: regexp
+Makefile
+INSTALL
 
-Makefile$
-^INSTALL$
+breseq
 
-^breseq
+tests/*/output
+tests/*/0
+tests/*/data
+tests/test.config
 
-^tests/.+/output
-^tests/.+/0
-^tests/.+/data
-^tests/test.config
+src/c/breseq/breseq/
+src/c/breseq/breseq$
+src/c/breseq/gdtools$
 
-^src/c/breseq/breseq/
-^src/c/breseq/breseq$
-^src/c/breseq/gdtools$
+Rplots.pdf
 
-^package
+package
 
 ## samtools
-samtools$
-^extern/samtools-.*/bcftools/bcftools
-^extern/samtools-.*/razip$
-^extern/samtools-.*/misc/md5fa$
-^extern/samtools-.*/misc/md5sum-lite$
-^extern/samtools-.*/misc/seqtk$
-^extern/samtools-.*/misc/wgsim$
-^extern/samtools-.*/.dirstamp$
+extern/samtools-*/samtools
+extern/samtools-*/bcftools/bcftools
+extern/samtools-*/razip
+extern/samtools-*/misc/md5fa
+extern/samtools-*/misc/md5sum-lite
+extern/samtools-*/misc/seqtk
+extern/samtools-*/misc/wgsim
+extern/samtools-*/.dirstamp
 
 ## Perl GenomeDiff
-^src/perl/GenomeDiff/Build$
-^src/perl/GenomeDiff/GenomeDiff-
-^src/perl/GenomeDiff/META.yml
+src/perl/GenomeDiff/Build
+src/perl/GenomeDiff/GenomeDiff-
+src/perl/GenomeDiff/META.yml
 
 ## For Xcode
 
-^src/c/build
+src/c/build
 xcworkspace
 xcuserdata
 xcshareddata
 xcscheme
 
-#.breseq.xcodeproj/project.xcworkspace/xcuserdata.+$
-#.xcodeproj/xcuserdata.+$
 
 ## For Various IDEs
-^nbproject/.+$
-^Debug/.+$
-^Release/.+$
+nbproject/*
+Debug/*
+Release/*

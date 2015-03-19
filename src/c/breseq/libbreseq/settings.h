@@ -560,8 +560,8 @@ namespace breseq
     {
       (void) argc;
       global_bin_path = getExecPath(argv[0]);
-      size_t slash_pos = global_bin_path.rfind("/");
-      if (slash_pos != string::npos) global_bin_path.erase(slash_pos);
+      //size_t slash_pos = global_bin_path.rfind("/");
+      //if (slash_pos != string::npos) global_bin_path.erase(slash_pos);
       
       //absolute path (used by XCode)
       if (string(DATADIR).substr(0, 1) == "/") {

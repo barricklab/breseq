@@ -185,6 +185,7 @@ test:
 
 
 clean-tests:
+	echo "export TESTBINPREFIX=$(top_srcdir)/src/c/breseq" > $(top_srcdir)/tests/test.config;
 	$(top_srcdir)/tests/test.sh clean tests
 
 distclean-local:

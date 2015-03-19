@@ -47,5 +47,5 @@ echo "tests/test.sh clean tests" > ${BINARYDIR}/run_tests.sh
 echo "tests/test.sh test tests" >> ${BINARYDIR}/run_tests.sh
 chmod a+x ${BINARYDIR}/run_tests.sh
 
-tar -czf ${BINARYLOCALDIR}.tgz ${BINARYLOCALDIR}
+tar -czf ${BINARYLOCALDIR}.tar.gz ${BINARYLOCALDIR}
 rm -r ${BINARYLOCALDIR}

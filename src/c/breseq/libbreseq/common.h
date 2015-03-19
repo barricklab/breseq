@@ -731,7 +731,7 @@ namespace breseq {
   inline string path_to_dirname(string file_name)
   {
     size_t found = file_name.rfind("/");
-    return ((found != string::npos) ? file_name.substr(0, found) : "");
+    return ((found != string::npos) ? file_name.substr(0, found) : ".");
   }
   
   inline string path_to_filename(string file_name)
@@ -795,8 +795,7 @@ namespace breseq {
     {
       size_t len = readlink ("/proc/self/exe", path, dest_len);
       path[len] = '\0';
-      dirname (path);
-      return path;
+      return path_to_dirname(path);
     }
     
     /* Ups... not in linux, no  guarantee */
@@ -814,8 +813,7 @@ namespace breseq {
     /* if dest_len < PATH_MAX may cause buffer overflow */
     if ((realpath (argv0, path)) && (!access (path, F_OK)))
     {
-      dirname (path);
-      return path;
+      return path_to_dirname(path);
     }
     
     /* Current path */
@@ -827,8 +825,7 @@ namespace breseq {
     strcat (path, baseName);
     if (access (path, F_OK) == 0)
     {
-      dirname (path);
-      return path;
+      return path_to_dirname(path);
     }
     
     /* Try the PATH. */
@@ -846,8 +843,7 @@ namespace breseq {
         if (access(path, F_OK) == 0)
         {
           free (systemPath);
-          dirname (path);
-          return path;
+          return path_to_dirname(path);
         }
       }
       free(systemPath);
