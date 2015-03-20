@@ -10,13 +10,13 @@ Usage::
 
 .. program:: breseq
 
-Run the :program:`breseq` pipeline for mutation prediction from genome re-sequencing data.
+Run the :program:`breseq` mutation prediction pipeline.
 
 Required options:
 
 .. option:: -r <file_path>, --reference <file_path> 
 
-   Input reference genome sequence files in GenBank format. If there are multiple reference sequences stored in separate GenBank files (e.g., a bacterial genome and a plasmid), this option can be supplied multiple times.
+   Input reference genome sequence files in GenBank, GFF3, or FASTA format. If there are multiple reference sequences stored in separate files (e.g., a bacterial genome and a plasmid), this option can be supplied multiple times.
 
 .. option:: reads1.fastq [reads2.fastq, reads3.fastq...]  
 
@@ -24,7 +24,7 @@ Required options:
 
 Commonly used options:
 
-   option:: -h, --help
+.. option:: -h, --help
 
    Produce help message showing advanced options.
 
@@ -44,7 +44,7 @@ Commonly used options:
 
    Predict polymorphic (mixed) mutations.
 
-For a complete list of options, please see the command line help.
+For a complete list of options, please see the command line help (by using the -h option).
 
 Command: bam2aln
 --------------------------
@@ -53,7 +53,7 @@ Usage::
 
   breseq BAM2ALN [-b reference.bam -f reference.fasta -o alignment.html -n 200] region1 [region2 region3 ...]
 
-.. program::`breseq bam2aln`
+.. program:: breseq_bam2aln
 
 Display reads aligned to the specified region or regions.
 
@@ -71,7 +71,7 @@ Commonly used options:
 
    Output path. If there is just one region, the name of the output file (DEFAULT=region1.*). If there are multiple regions, this argument must be a directory path, and all output files will be output here with names region1.*, region2.*, ... (DEFAULT=.).
 
-.. option:: -r <region> , --region <region> , --unnamed-arguments-- <region> [<region2>, <region2>, ...]
+.. option:: -r <region> , --region <region>
 
    Regions to create alignments for. Must be provided as sequence regions in the format **ACCESSION:START-END**, where **ACCESSION** is a valid identifier for one of the sequences in the FASTA file, and **START** and **END** are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments.
 
@@ -87,7 +87,7 @@ Usage::
 
   breseq BAM2COV [-b reference.bam -f reference.fasta --format PNG -o output.png] region1 [region2 region3 ...]
 
-.. program::`breseq bam2cov`
+.. program:: breseq_bam2cov
 
 Create a coverage plot or table for the specified region or regions.
 
@@ -105,7 +105,7 @@ Commonly used options:
 
    Output path. If there is just one region, the name of the output file (DEFAULT=region1.*). If there are multiple regions, this argument must be a directory path, and all output files will be output here with names region1.*, region2.*, ... (DEFAULT=.).
 
-.. option:: -r <region>, --region <region>, --unnamed-arguments-- <region> [<region2>, <region2>, ...]
+.. option:: -r <region>, --region <region>
 
    Regions to create alignments for. Must be provided as sequence regions in the format **ACCESSION:START-END**, where **ACCESSION** is a valid identifier for one of the sequences in the FASTA file, and **START** and **END** are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments.
 

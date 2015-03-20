@@ -17,3 +17,8 @@ Introduction
 #. Checking strains for second-site mutations after genetic manipulations.
 #. Identifying mutations that occur during strain improvement or after long-term culture of engineered strains.
 #. Discovering what mutations arise in pathogens during infection or cause antibiotic resistance.
+
+Citing |breseq|
+---------------
+
+If you use breseq in your research, please cite [Deatherage2014]_\. If you use consensus structural variation (junction) predictions, please cite [Barrick2014]_\. If you use polymorphic structural variant predictions, please cite [Deatherage2015]_\. 

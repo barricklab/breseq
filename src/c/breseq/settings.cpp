@@ -525,7 +525,7 @@ namespace breseq
     fprintf(stderr, "  Barrick, J.E., Colburn, G., Deatherage D.E., Traverse, C.C.,\n");
     fprintf(stderr, "  Strand, M.D., Borges, J.J., Knoester, D.B., Reba, A., Meyer, A.G. \n");
     fprintf(stderr, "  (2014) Identifying structural variation in haploid microbial genomes \n");
-    fprintf(stderr, "  from short-read resequencing data using breseq. BMC Genomics. 15:1039.\n");
+    fprintf(stderr, "  from short-read resequencing data using breseq. BMC Genomics 15:1039.\n");
     cerr << output_divider << endl;
   }
 

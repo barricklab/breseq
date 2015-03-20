@@ -6,12 +6,17 @@ In this test drive, we will first download a bacterial  genome and FASTQ files o
 1. Download data files
 ---------------------------------
 
-First, create a directory called **tutorial**.
+First, create a directory called **tutorial**:
+
+.. code-block:: bash
+
+   $ mkdir tutorial
+   $ cd tutorial
 
 Reference sequence
 ++++++++++++++++++++
 
-|breseq| needs the reference sequence in Genbank format. In this example, the reference sequence is *Escherichia coli* B strain REL606. The Genbank (Refseq) accession number is: **NC_012967** . You can search for this sequence at http://www.ncbi.nlm.nih.gov/ or follow this `direct link <http://www.ncbi.nlm.nih.gov/nuccore/NC_012967>`_.
+|breseq| prefers the reference sequence in Genbank or GFF3 format. In this example, the reference sequence is *Escherichia coli* B strain REL606. The Genbank (Refseq) accession number is: **NC_012967** . You can search for this sequence at http://www.ncbi.nlm.nih.gov/ or follow this `direct link <http://www.ncbi.nlm.nih.gov/nuccore/NC_012967>`_.
 
 Once the sequence is displayed, you will want to select "Show sequence" from the Display options on the right then click update view. Finally, use the send menu to choose "Complete Record" and Destination: "File" and "Genbank (Full)". It should start downloading a file called "sequence.gb". Rename this to **NC_012967.gbk** after it downloads.
 
@@ -25,14 +30,18 @@ Move all three of these files into the **tutorial** directory that you created.
 2. Run |breseq|
 -----------------------
 
-Check to be sure that you have changed into the **tutorial** directoryand that you have all of the input files (and have uncompressed them).
+Check to be sure that you have changed into the **tutorial** directory and that you have all of the input files (and have uncompressed them).
 
->>> ls 
-NC_012967.gbk		SRR030257_1.fastq	SRR030257_2.fastq
+.. code-block:: bash
+
+   $ ls 
+   NC_012967.gbk		SRR030257_1.fastq	SRR030257_2.fastq
 
 Now, run breseq:
 
->>> breseq -r NC_012967.gbk SRR030257_1.fastq SRR030257_2.fastq
+.. code-block:: bash
+
+   $ breseq -r NC_012967.gbk SRR030257_1.fastq SRR030257_2.fastq
 
 The first named argument (-r) is the reference sequence. If you had multiple reference sequences, you could input multiple ones (e.g., -r NC_012967.gbk -r plasmid.gbk).
 
