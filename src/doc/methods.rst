@@ -3,7 +3,21 @@ Methods
 
 This section describes the algorithms used by |breseq|.
 
-Read Mapping
+.. _annotated-bibliography:   
+
+Annotated bibliography
+------------------------------
+
+.. NOTE::
+   Most of the methods used by |breseq| are more fully described in these publications than in this documentation file.
+
+*  Barrick, J.E., Yu, D.S., Yoon, S.H., Jeong, H, Oh, T.K., Schneider, D., Lenski, R.E., and Kim, J.F. (2009) Genome evolution and adaptation in a long-term experiment with *Escherichia coli*. *Nature* **461**:1243-1247. **Methods used by an early version of breseq are described in the supplemental materials.** `Link to Pubmed <http://www.ncbi.nlm.nih.gov/pubmed/19838166>`_
+*  Barrick, J.E., Lenski, R.E. (2009) Genome-wide mutational diversity in an evolving population of *Escherichia coli*. *Cold Spring Harb. Symp. Quant. Biol.* **74**:119-129. **Early description of polymorphism mode for single-nucleotide variants and small indels.** `Link to Full Text <http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2890043>`_
+*  Deatherage, D.E., Barrick, J.E. (2014) Identification of mutations in laboratory-evolved microbes from next-generation sequencing data using *breseq*. *Methods Mol. Biol.* **1151**: 165–188. **Tutorial and practical guide to running breseq and interpreting the output.** `Link to Full Text <http://www.ncbi.nlm.nih.gov/pmc/articles/PMC4239701>`_
+*  Barrick, J.E., Colburn, G., Deatherage D.E., Traverse, C.C., Strand, M.D., Borges, J.J., Knoester, D.B., Reba, A., Meyer, A.G.(2014) Identifying structural variation in haploid microbial genomes from short-read resequencing data using *breseq*. *BMC Genomics* **15**:1039. **Detailed description of methods used to predict structural variation.** `Link to Full Text <http://www.biomedcentral.com/1471-2164/15/1039>`_
+*  Deatherage, D.E., Traverse, C.C., Wolf, L.N., Barrick, J.E. (2015) Detecting rare structural variation in evolving microbial populations from new sequence junctions using *breseq*. *Front. Genet.* **5**:468. **Detailed description of methods used to predict polymorphic structural variation.** `Link to Full Text <http://http://journal.frontiersin.org/article/10.3389/fgene.2014.00468>`_
+
+Read mapping
 ----------------
 
 |breseq| uses `Bowtie2 <http://bowtie-bio.sourceforge.net/bowtie2>`_ to map reads to the reference genome sequence:: 
@@ -15,12 +29,12 @@ Currently, |breseq| does not use the distance contraints available in paired-end
 `unique read matches` 
     Where a read aligns best to only one location in the reference sequence.
 `repeat read matches`
-    Where a read aligns equivalently to multiple locations in the reference sequence. Generally, these are long repeat regions.
+    Where a read aligns equivalently to multiple locations in the reference sequence (because the repeats are longer than the read length).
     
 For some calculations, |breseq| is concerned with:
 
 `unique-only reference positions`
-    Position in the reference sequence that do not overlap any *repeat read matches*. 
+    Position in the reference sequence that do not overlap any *repeat read matches*.
 
 .. _new-junction-evidence:   
     
@@ -165,7 +179,7 @@ The prediction procedure uses the same empirical error model described above in 
 
 Several additional |breseq| command-line options control steps that allow filtering out polymorphism predictions that pass the general statistical test for significance but display red-flag qualities indicative of biases. Top-scoring, but filtered, predictions are still displayed as "marginal predictions" in the |breseq| output, so that they can be manually examined.
 
-The full list of polymorphism prediction options:
+A partial list of polymorphism prediction options:
 
 .. program:: breseq
 

@@ -185,7 +185,8 @@ test:
 
 
 clean-tests:
-	echo "export TESTBINPREFIX=$(top_srcdir)/src/c/breseq" > $(top_srcdir)/tests/test.config;
+	##This is commented out to not break make distcheck, which requires we not modify the source in this way?
+	##echo "export TESTBINPREFIX=$(top_srcdir)/src/c/breseq" > $(top_srcdir)/tests/test.config;
 	$(top_srcdir)/tests/test.sh clean tests
 
 distclean-local:
