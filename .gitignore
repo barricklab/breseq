@@ -49,6 +49,7 @@ Makefile
 INSTALL
 
 breseq
+breseq-*
 
 tests/*/output
 tests/*/0
@@ -74,6 +75,7 @@ extern/samtools-*/misc/wgsim
 extern/samtools-*/.dirstamp
 
 ## Perl GenomeDiff
+src/perl/GenomeDiff/GenomeDiff-*
 src/perl/GenomeDiff/Build
 src/perl/GenomeDiff/GenomeDiff-
 src/perl/GenomeDiff/META.yml
