@@ -413,6 +413,9 @@ namespace breseq {
       // Utility to get top strand sequence
       string get_sequence_1(int32_t start_1, int32_t end_1) const
       {
+        // Allow start and end to both be zero.
+        // @JEB: This can happen for an insert into a fragment that is otherwise deleted in gdtools APPLY
+        if ((start_1==0) && (end_1==0)) return "";
         ASSERT(start_1 <= end_1, "start (" + to_string(start_1) + ") not less than or equal to end (" + to_string(end_1) + ")");
         return m_fasta_sequence.m_sequence.substr(start_1 - 1, (end_1-start_1) + 1);
       }

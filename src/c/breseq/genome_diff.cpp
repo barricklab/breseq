@@ -3422,7 +3422,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         replace_end = position;
         replace_seq = new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end);
         replace_seq.insert(0,"(");
-        replace_seq.insert(2,")");
+        replace_seq.insert(replace_seq.size(),")");
         
         applied_seq_id = mut[SEQ_ID];
         applied_start = position;
