@@ -939,16 +939,35 @@ namespace breseq {
         }
       }
       
-      // Load certain information into the main hash, so breseq knows to use it
-      if (feature.m_gff_attributes.count("Note"))
-        feature["product"] = join(feature.m_gff_attributes["Note"], ",");
       
-      if (feature.m_gff_attributes.count("Alias"))
-        feature["accession"] = join(feature.m_gff_attributes["Alias"], ",");
+      // Load certain information into the main hash, so breseq knows to use it
+      
 
+      // "accession" loaded from fields with preference: (accession > locus_tag > ID > Alias)
+      if (feature.m_gff_attributes.count("accession"))
+        feature["accession"] = join(feature.m_gff_attributes["accession"], ",");
+      else if (feature.m_gff_attributes.count("locus_tag"))
+        feature["accession"] = join(feature.m_gff_attributes["locus_tag"], ",");
+      else if (feature.m_gff_attributes.count("ID"))
+        feature["accession"] = join(feature.m_gff_attributes["ID"], ",");
+      else if (feature.m_gff_attributes.count("Alias"))
+        feature["accession"] = join(feature.m_gff_attributes["Alias"], ",");
+  
+      // "name" loaded from fields with preference Set the name using fields: (Name > gene > feature["accession"])
       if (feature.m_gff_attributes.count("Name"))
         feature["name"] = join(feature.m_gff_attributes["Name"], ",");
+      else if (feature.m_gff_attributes.count("gene"))
+        feature["name"] = join(feature.m_gff_attributes["gene"], ",");
+      else
+        feature["name"] = feature["accession"];
+
       
+      // "product" loaded from fields with preference: (product > Note)
+      if (feature.m_gff_attributes.count("product"))
+        feature["product"] = join(feature.m_gff_attributes["product"], ",");
+      else if (feature.m_gff_attributes.count("Note"))
+        feature["product"] = join(feature.m_gff_attributes["Note"], ",");
+    
       if (feature.m_gff_attributes.count("Pseudo"))
         feature.m_pseudo = from_string<bool>(feature.m_gff_attributes["Pseudo"][0]);
       
