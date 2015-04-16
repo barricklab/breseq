@@ -458,7 +458,7 @@
 		421ACEB71170DB9600C2EB85 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0610;
+				LastUpgradeCheck = 0620;
 			};
 			buildConfigurationList = 421ACEBA1170DB9600C2EB85 /* Build configuration list for PBXProject "breseq" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -566,7 +566,6 @@
 		421ACEB81170DB9600C2EB85 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
@@ -580,7 +579,6 @@
 		421ACEB91170DB9600C2EB85 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				GCC_SYMBOLS_PRIVATE_EXTERN = YES;

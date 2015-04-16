@@ -51,8 +51,8 @@ INSTALL
 breseq
 breseq-*
 
-tests/*/output
-tests/*/0
+tests/*/output*
+tests/*/0*
 tests/*/data
 tests/test.config
 

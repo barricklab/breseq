@@ -1290,6 +1290,12 @@ cLocation cSequenceFeature::ParseGenBankCoords(string& s, int8_t in_strand)
         consensus_strand = 0;
     }
     
+    // Lines like this: join(complement(381815..382096), complement(380068..380483))
+    // ...need the sublocations reversed in order to be coordinate sorted correctly
+    if (loc.m_sub_locations.front().get_start_1() > loc.m_sub_locations.back().get_end_1() ) {
+      reverse(loc.m_sub_locations.begin(),loc.m_sub_locations.end());
+    }
+    
     //Get cLocation::start,end from outer sub_locations.
     loc.set_strand(consensus_strand);
     loc.set_start_1(loc.m_sub_locations.front().get_start_1());
@@ -1312,6 +1318,8 @@ cLocation cSequenceFeature::ParseGenBankCoords(string& s, int8_t in_strand)
     loc.set_start_1(atoi(tokens.front().c_str()));
     loc.set_end_1(atoi(tokens.back().c_str()));
   }
+  
+  ASSERT(loc.get_start_1() <= loc.get_end_1(), "Start coordinate is greater than end coordinate. Error parsing corrdinates:\n" + s);
   
   return loc;
 }
