@@ -2574,6 +2574,19 @@ void cGenomeDiff::reassign_unique_ids()
 
 /*! Write this genome diff to a file.
  */
+ 
+// This version of sort does not discriminate between additional optional fields!!
+bool cGenomeDiff::diff_entry_ptr_compare_sort(const diff_entry_ptr_t& a, const diff_entry_ptr_t& b) {
+  int32_t compare_result = cDiffEntry::compare(*a,*b);
+
+  if (compare_result < 0) {
+    return true;
+  } else if (compare_result > 0) {
+    return false;
+  }
+  return false;
+}
+  
 bool cGenomeDiff::diff_entry_ptr_sort(const diff_entry_ptr_t& a, const diff_entry_ptr_t& b) {
 
   int32_t compare_result = cDiffEntry::compare(*a,*b);
@@ -3834,7 +3847,7 @@ void cGenomeDiff::normalize_mutations(cReferenceSequences& ref_seq_info, Setting
 
 cGenomeDiff cGenomeDiff::check(cGenomeDiff& ctrl, cGenomeDiff& test, bool verbose)
 {
-  bool (*comp_fn) (const diff_entry_ptr_t&, const diff_entry_ptr_t&) = diff_entry_ptr_sort;
+  bool (*comp_fn) (const diff_entry_ptr_t&, const diff_entry_ptr_t&) = diff_entry_ptr_compare_sort;
   typedef set<diff_entry_ptr_t, bool(*)(const diff_entry_ptr_t&, const diff_entry_ptr_t&)> diff_entry_set_t;
   
   //Isolate control and test mutations into sets for quick lookup.

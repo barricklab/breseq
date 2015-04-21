@@ -669,6 +669,7 @@ public:
     string _f4;
   };
   
+  static bool diff_entry_ptr_compare_sort(const diff_entry_ptr_t& a, const diff_entry_ptr_t& b);
   static bool diff_entry_ptr_sort(const diff_entry_ptr_t& a, const diff_entry_ptr_t& b);
   static cGenomeDiff current_sort_gd; // passthrough for sort to use when it needs to look up other entries...
   static bool diff_entry_ptr_sort_apply_order(const diff_entry_ptr_t& a, const diff_entry_ptr_t& b);
