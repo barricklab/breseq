@@ -139,8 +139,7 @@ namespace breseq {
           j["_" + side_key + "_is_distance"] = s(this_max_distance_to_repeat);
 				}
 				
-        uint32_t test_val = n(j[side_key + "_redundant"]);
-				j[side_key + "_annotate_key"] = (j.entry_exists("_" + side_key + "_is_start") || n(j[side_key + "_redundant"])) ? "repeat" : "gene";
+				j[side_key + "_annotate_key"] = (j.entry_exists("_" + side_key + "_is_start") || (j.entry_exists(side_key + "_redundant") && n(j[side_key + "_redundant"]))) ? "repeat" : "gene";
 			}
       
 			// by default, we are sorted by this coord
@@ -634,11 +633,17 @@ namespace breseq {
         }
         
 				// get any unique junction sequence
-				JunctionInfo j1i(j1["key"]);
-				string j1_unique_read_sequence = j1i.unique_read_sequence;
+        string j1_unique_read_sequence;
+        if (j1.entry_exists("key")) {
+          JunctionInfo j1i(j1["key"]);
+           j1_unique_read_sequence = j1i.unique_read_sequence;
+        }
         
-				JunctionInfo j2i(j2["key"]);
-				string j2_unique_read_sequence = j2i.unique_read_sequence;
+        string j2_unique_read_sequence;
+        if (j2.entry_exists("key")) {
+          JunctionInfo j2i(j2["key"]);
+          j2_unique_read_sequence = j2i.unique_read_sequence;
+        }
         
 				// _gap_left and _gap_right also refer to the top strand of the genome
         
@@ -799,9 +804,16 @@ namespace breseq {
 					cout << "Max not flush length: " << max_not_flush_length << endl;
 				}
         
-				int32_t j1_is_overlap_length = (n(j1["_" + j1["_is_interval"] + "_read_side"]) == -1) ? n(j1["max_left"]) : n(j1["max_right"]);
-				int32_t j2_is_overlap_length = (n(j2["_" + j2["_is_interval"] + "_read_side"]) == -1) ? n(j2["max_left"]) : n(j2["max_right"]);
-        
+        int32_t j1_is_overlap_length(0);
+        if (j1.entry_exists("_is_interval") && j1.entry_exists("_" + j1["_is_interval"] + "_read_side") && j1.entry_exists("max_left") && j1.entry_exists("max_right")) {
+          j1_is_overlap_length = (n(j1["_" + j1["_is_interval"] + "_read_side"]) == -1) ? n(j1["max_left"]) : n(j1["max_right"]);
+        }
+
+        int32_t j2_is_overlap_length(0);
+        if (j2.entry_exists("_is_interval") && j2.entry_exists("_" + j2["_is_interval"] + "_read_side") && j2.entry_exists("max_left") && j2.entry_exists("max_right")) {
+          j2_is_overlap_length = (n(j2["_" + j2["_is_interval"] + "_read_side"]) == -1) ? n(j2["max_left"]) : n(j2["max_right"]);
+        }
+      
 				if (verbose) {
 					cout << "J1 IS overlap length: " << j1_is_overlap_length << endl;
 					cout << "J2 IS overlap length: " << j2_is_overlap_length << endl;
@@ -814,20 +826,25 @@ namespace breseq {
           // what are the actual sequences of this length at the end of the IS elements?
           start_1 = n(j1["_" + j1["_is_interval"] + "_is_start"]);
           end_1   = start_1 + j1_is_overlap_length - 1;
-          string j1_left_is_sequence = ref_seq_info.get_sequence_1 (
+          string j1_left_is_sequence;
+          if (end_1 >= start_1) {
+            j1_left_is_sequence = ref_seq_info.get_sequence_1 (
                                                                     j1[j1["_is_interval"] + "_seq_id"],
                                                                     start_1,
                                                                     end_1
                                                                     );
-          
+          }
           
           end_1   = n(j1["_" + j1["_is_interval"] + "_is_end"]);
           start_1 = end_1 - j1_is_overlap_length - 1;
-          string j1_right_is_sequence = ref_seq_info.get_sequence_1 (
+          string j1_right_is_sequence;
+          if (end_1 >= start_1) {
+            j1_right_is_sequence = ref_seq_info.get_sequence_1 (
                                                                      j1[j1["_is_interval"] + "_seq_id"],
                                                                      start_1,
                                                                      end_1
                                                                      );
+          }
           j1_right_is_sequence = reverse_complement(j1_right_is_sequence);
           
           if (verbose) {
@@ -844,19 +861,25 @@ namespace breseq {
           
           start_1 = n(j2["_" + j2["_is_interval"] + "_is_start"]);
           end_1   = start_1 +j2_is_overlap_length - 1;
-          string j2_left_is_sequence = ref_seq_info.get_sequence_1 (
+          string j2_left_is_sequence;
+          if (end_1 >= start_1) {
+            j2_left_is_sequence = ref_seq_info.get_sequence_1 (
                                                                     j2[j2["_is_interval"] + "_seq_id"],
                                                                     start_1,
                                                                     end_1
                                                                     );
+          }
           
           end_1   = n(j2["_" + j2["_is_interval"] + "_is_end"]);
           start_1 = end_1 - j2_is_overlap_length - 1;
-          string j2_right_is_sequence = ref_seq_info.get_sequence_1 (
+          string j2_right_is_sequence;
+          if (end_1 >= start_1) {
+            j2_right_is_sequence = ref_seq_info.get_sequence_1 (
                                                                      j2[j2["_is_interval"] + "_seq_id"],
                                                                      start_1,
                                                                      end_1
                                                                      );
+          }
           j2_right_is_sequence = reverse_complement(j2_right_is_sequence);
           
           // believe the direction if the sequences are different
@@ -944,81 +967,89 @@ namespace breseq {
         // @JEB 08-06-13 
         // Reassign read counts with required overlap to avoid counting reads that go into the
         // target site duplication from counting against the IS element (giving a non-100% value).
-        int32_t require_overlap = n(mut["duplication_size"]);
         
-        if (verbose) cerr << "Before 1:" << endl << j1 << endl;
-        assign_one_junction_read_counts(settings, summary, j1, require_overlap);
-        j1["read_count_offset"] = mut["duplication_size"];
-        if (verbose) cerr << "After 1:" << endl << j1 << endl;
+        if (j1.entry_exists(SIDE_1_READ_COUNT) && j1.entry_exists(SIDE_2_READ_COUNT) & j1.entry_exists(NEW_JUNCTION_READ_COUNT)
+         && j2.entry_exists(SIDE_1_READ_COUNT) && j2.entry_exists(SIDE_2_READ_COUNT) & j2.entry_exists(NEW_JUNCTION_READ_COUNT)) {
+
         
-        if (verbose) cerr << "Before 2:" << endl << j2 << endl;
-        assign_one_junction_read_counts(settings, summary, j2, require_overlap);
-        j2["read_count_offset"] = mut["duplication_size"];
-        if (verbose) cerr << "After 2:" << endl << j2 << endl;
-        
-        // @JEB 01-04-13
-        // Calculate a frequency for the mobile element insertion from the reads supporting the new and old junctions on each side
-        
-        if (settings.polymorphism_prediction) {
+          int32_t require_overlap = n(mut["duplication_size"]);
           
           
-          double a1 = from_string<uint32_t>(j1[SIDE_1_READ_COUNT]);
-          double b1 = from_string<uint32_t>(j1[SIDE_2_READ_COUNT]);
-          double c1 = from_string<uint32_t>(j1[NEW_JUNCTION_READ_COUNT]);
-          double d1 = 2.0;
+          if (verbose) cerr << "Before 1:" << endl << j1 << endl;
+          assign_one_junction_read_counts(settings, summary, j1, require_overlap);
+          j1["read_count_offset"] = mut["duplication_size"];
+          if (verbose) cerr << "After 1:" << endl << j1 << endl;
           
-          if (j1[SIDE_1_READ_COUNT] == "NA") {
-            a1 = 0; //"NA" in read count sets value to 1 not 0
-            d1--;
-          }
-          if (j1[SIDE_2_READ_COUNT] == "NA") {
-            b1 = 0; //"NA" in read count sets value to 1 not 0
-            d1--;
-          }
+          if (verbose) cerr << "Before 2:" << endl << j2 << endl;
+          assign_one_junction_read_counts(settings, summary, j2, require_overlap);
+          j2["read_count_offset"] = mut["duplication_size"];
+          if (verbose) cerr << "After 2:" << endl << j2 << endl;
           
-          double a2 = from_string<uint32_t>(j2[SIDE_1_READ_COUNT]);
-          double b2 = from_string<uint32_t>(j2[SIDE_2_READ_COUNT]);
-          double c2 = from_string<uint32_t>(j2[NEW_JUNCTION_READ_COUNT]);
-          double d2 = 2.0;
+          // @JEB 01-04-13
+          // Calculate a frequency for the mobile element insertion from the reads supporting the new and old junctions on each side
           
-          if (j2[SIDE_1_READ_COUNT] == "NA") {
-            a2 = 0; //"NA" in read count sets value to 1 not 0
-            d2--;
-          }
-          if (j2[SIDE_2_READ_COUNT] == "NA") {
-            b2 = 0; //"NA" in read count sets value to 1 not 0
-            d2--;
-          }
-          
-          double frequency;
-          if (d1 && d2) {
-            frequency = (c1 + c2) / (c1 + (a1 + b1)/d1 + c2 + (a2 + b2)/d2);
-            mut[FREQUENCY] = formatted_double(frequency, settings.polymorphism_precision_places, true).to_string();
-          } else if (d1) {
-            frequency = (c1) / (c1 + (a1 + b1)/d1);
-            mut[FREQUENCY] = formatted_double(frequency, settings.polymorphism_precision_places, true).to_string();
-          } else if (d2) {
-            frequency = (c2) / (c2 + (a2 + b2)/d2);
-            mut[FREQUENCY] = formatted_double(frequency, settings.polymorphism_precision_places, true).to_string();
-          } else {
-            // Can't calculate a frequency if no sides of the junction fall in unique sequence
-            mut[FREQUENCY] = "NA";          
-          }
-          
-          // don't record mutations below the cutoff frequency
-          ASSERT(mut.entry_exists(FREQUENCY), "FREQUENCY field does not exist for mutatation:\n" + mut.as_string());
-          
-          if (mut[FREQUENCY] != "NA") {
-            if (frequency < settings.polymorphism_frequency_cutoff) {
-              mut.add_reject_reason("POLYMORPHISM_FREQUENCY_CUTOFF");
-              // @JEB 08-08-13 we might want to keep the mutation as rejected. This discards completely.
-              break;
+          if (settings.polymorphism_prediction) {
+            
+            
+            double a1 = from_string<uint32_t>(j1[SIDE_1_READ_COUNT]);
+            double b1 = from_string<uint32_t>(j1[SIDE_2_READ_COUNT]);
+            double c1 = from_string<uint32_t>(j1[NEW_JUNCTION_READ_COUNT]);
+            double d1 = 2.0;
+            
+            if (j1[SIDE_1_READ_COUNT] == "NA") {
+              a1 = 0; //"NA" in read count sets value to 1 not 0
+              d1--;
             }
-            if (1-frequency < settings.polymorphism_frequency_cutoff) {
-              mut[FREQUENCY] = "1";
+            if (j1[SIDE_2_READ_COUNT] == "NA") {
+              b1 = 0; //"NA" in read count sets value to 1 not 0
+              d1--;
+            }
+            
+            double a2 = from_string<uint32_t>(j2[SIDE_1_READ_COUNT]);
+            double b2 = from_string<uint32_t>(j2[SIDE_2_READ_COUNT]);
+            double c2 = from_string<uint32_t>(j2[NEW_JUNCTION_READ_COUNT]);
+            double d2 = 2.0;
+            
+            if (j2[SIDE_1_READ_COUNT] == "NA") {
+              a2 = 0; //"NA" in read count sets value to 1 not 0
+              d2--;
+            }
+            if (j2[SIDE_2_READ_COUNT] == "NA") {
+              b2 = 0; //"NA" in read count sets value to 1 not 0
+              d2--;
+            }
+            
+            double frequency;
+            if (d1 && d2) {
+              frequency = (c1 + c2) / (c1 + (a1 + b1)/d1 + c2 + (a2 + b2)/d2);
+              mut[FREQUENCY] = formatted_double(frequency, settings.polymorphism_precision_places, true).to_string();
+            } else if (d1) {
+              frequency = (c1) / (c1 + (a1 + b1)/d1);
+              mut[FREQUENCY] = formatted_double(frequency, settings.polymorphism_precision_places, true).to_string();
+            } else if (d2) {
+              frequency = (c2) / (c2 + (a2 + b2)/d2);
+              mut[FREQUENCY] = formatted_double(frequency, settings.polymorphism_precision_places, true).to_string();
+            } else {
+              // Can't calculate a frequency if no sides of the junction fall in unique sequence
+              mut[FREQUENCY] = "NA";          
+            }
+            
+            // don't record mutations below the cutoff frequency
+            ASSERT(mut.entry_exists(FREQUENCY), "FREQUENCY field does not exist for mutatation:\n" + mut.as_string());
+            
+            if (mut[FREQUENCY] != "NA") {
+              if (frequency < settings.polymorphism_frequency_cutoff) {
+                mut.add_reject_reason("POLYMORPHISM_FREQUENCY_CUTOFF");
+                // @JEB 08-08-13 we might want to keep the mutation as rejected. This discards completely.
+                break;
+              }
+              if (1-frequency < settings.polymorphism_frequency_cutoff) {
+                mut[FREQUENCY] = "1";
+              }
             }
           }
-        }            
+        }
+        
         // @JEB 12-22-12
         // Add link to missing coverage evidence that corresponds to the deleted region for negative overlap          
         if ( n(mut["duplication_size"]) < 0 ) {

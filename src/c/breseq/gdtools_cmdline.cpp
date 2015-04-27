@@ -38,6 +38,7 @@ int gdtools_usage()
   uout << "VALIDATE               check formating of input files" << endl;
   uout << "APPLY                  apply mutations to a sequence" << endl;
   uout << "ANNOTATE (or COMPARE)  annotate the effects of mutations and compare multiple samples" << endl;
+	uout << "MUTATIONS              (re)predict mutations from evidence" << endl;
   uout << "CHECK                  compare control versus test mutations" << endl;
   uout << "NORMALIZE              normalize mutation positions and annotations" << endl;
   //uout << "header                 create or add header entries" << endl;
@@ -924,17 +925,14 @@ int do_annotate(int argc, char* argv[])
     cGenomeDiff cleaned_single_gd(single_gd);  
     cleaned_single_gd.remove_group(cGenomeDiff::EVIDENCE);
     gd.merge(cleaned_single_gd);
+		
+		// Copy over the metadata if there is only one file
+		if (gd_path_names.size() == 1) {
+			gd.metadata = cleaned_single_gd.metadata;
+		}
   }
 	
 	cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
-
-	// Remove the evidence to speed up the merge  
-	// ** Only do this for the merge, not to the true GDs, because we need to preserve UN evidence
-	for (uint32_t i = 0; i < gd_list.size(); i++) {
-		cGenomeDiff cleaned_single_gd(gd_list[i]);  
-    cleaned_single_gd.remove_group(cGenomeDiff::EVIDENCE);
-    gd.merge(cleaned_single_gd);
-	}
 	
 	// Sort the full merged list
   gd.sort();
@@ -983,6 +981,56 @@ int do_annotate(int argc, char* argv[])
   
   return 0;
 }
+
+int do_mutations(int argc, char* argv[])
+{
+	AnyOption options("gdtools MUTATIONS [-o output.gd] -r reference.gbk input.gd");
+	
+	options
+	("help,h", "Display advanced help message", TAKES_NO_ARGUMENT)
+	("output,o", "Path to output GD file with mutations predicted from evidence.", "output.gd")
+	("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
+	;
+	options.addUsage("");
+	options.addUsage("Predicts mutations from the evidence entries in the input GD file. Any mutation entries (three-letter code lines) already present in the input GD file will be removed.");
+	
+	options.processCommandArgs(argc, argv);
+	
+	UserOutput uout("MUTATIONS");
+	
+	// Check the input
+	if (options.getArgc() != 1) {
+		options.addUsage("");
+		options.addUsage("Exactly one input Genome Diff file must be provided.");
+		options.printUsage();
+		return -1;
+	}
+	
+	if (!options.count("reference")){
+		options.printUsage();
+		return -1;
+	}
+	
+	cGenomeDiff gd(options.getArgv(0));
+	gd.remove_group(cGenomeDiff::MUTATIONS);
+	
+	vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
+	uout("Reading input reference sequence files") << reference_file_names << endl;
+	cReferenceSequences ref_seq_info;
+	ref_seq_info.LoadFiles(reference_file_names);
+	
+	uout("Predicting mutations");
+	MutationPredictor mp(ref_seq_info);
+	Settings settings;
+	Summary summary;
+	mp.predict(settings, summary, gd);
+	
+	uout("Writing output Genome Diff file", options["output"]);
+	gd.write(options["output"]);
+	
+	return 0;
+}
+
 
 int do_phylogeny(int argc, char* argv[])
 {
@@ -2680,6 +2728,8 @@ int main(int argc, char* argv[]) {
     return do_not_evidence(argc_new, argv_new);
   } else if (command == "ANNOTATE") {
     return do_annotate(argc_new, argv_new);
+	} else if (command == "MUTATIONS") {
+		return do_mutations(argc_new, argv_new);
   } else if (command == "PHYLOGENY"){
     return do_phylogeny(argc_new, argv_new);
   } else if (command == "COUNT") {
