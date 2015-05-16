@@ -71,7 +71,11 @@ namespace breseq {
     if (a_reject_order != b_reject_order) 
       return (a_reject_order < b_reject_order);
 
-    return (n((*a)["pos_hash_score"]) > n((*b)["pos_hash_score"]));
+    if (a->entry_exists("pos_hash_score") && b->entry_exists("pos_hash_score")) {
+      return (n((*a)["pos_hash_score"]) > n((*b)["pos_hash_score"]));
+    }
+    
+    return false;
   }
 
 	bool MutationPredictor::sort_by_reject_score(const counted_ptr<cDiffEntry>& a, const counted_ptr<cDiffEntry>& b)
@@ -82,8 +86,12 @@ namespace breseq {
 		// sort by seq_id, position, fewer reject reasons, then score (highest to lowest)
     if (a_reject_order != b_reject_order) 
       return (a_reject_order < b_reject_order);
-            
-    return (n((*a)["pos_hash_score"]) > n((*b)["pos_hash_score"]));
+    
+    if (a->entry_exists("pos_hash_score") && b->entry_exists("pos_hash_score")) {
+      return (n((*a)["pos_hash_score"]) > n((*b)["pos_hash_score"]));
+    }
+    
+    return false;
 	}
 
 	// look at SNPs and small indels predicted by read alignments.
