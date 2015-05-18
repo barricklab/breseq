@@ -49,12 +49,12 @@ int gdtools_usage()
   uout << "INTERSECT              keep shared mutations in two files" << endl;
   uout << "UNION                  combine mutations, removing duplicates" << endl;
   uout << "MERGE                  combine mutations, preserving duplicates" << endl;
+	uout << "REMOVE                 remove mutations matching specified conditions" << endl;
 	uout << "MASK                   remove mutation predictions in masked regions" << endl;
-  uout << "FILTER                 remove mutations given filtering expressions" << endl;
   uout << "NOT-EVIDENCE           remove evidence not used by any mutations" << endl;
 	
   uout("Creating test data:");
-  uout << "SIMULATE-MUTATIONS       create a file containing random mutations" << endl;
+  uout << "SIMULATE-MUTATIONS     create a file containing random mutations" << endl;
     
   uout("Format Conversions:");
   uout << "GD2VCF                 GD to Variant Call Format (VCF)" << endl;
@@ -1340,18 +1340,18 @@ int do_normalize_gd(int argc, char* argv[])
   return 0;
 }
 
-int do_filter_gd(int argc, char* argv[]) 
+int do_remove_gd(int argc, char* argv[])
 {
-  AnyOption options("gdtools FILTER  [-o output.gd] -f filter1 [-f filter2] [-m SNP] input.gd");
+  AnyOption options("gdtools REMOVE [-o output.gd] -c condition1 [-c condition2] [-m SNP] input.gd");
   options("output,o", "Output Genome Diff file.", "output.gd");
-  options("mut_type,m", "Only this mutation type will be filtered (possibly removed).");
-  options("filter,f", "Filters to apply when selecting Genome Diff entries. Mutations that match this condition will be removed from the resulting Genome Diff file. Enclose the value of this parameter in quotes, e.g. -f \"frequency<=0.05\".");
+  options("mut_type,m", "Only this mutation type will be removed.");
+	options("condition,c", "Condition for removing mutation entries from the input Genome Diff file. Enclose the value of this parameter in quotes if it includes spaces, e.g. -c \"frequency <= 0.05\". You may include multiple conditions on the same command line. Only entries that satisfy ALL conditions will be removed.");
   options.processCommandArgs(argc, argv);
 
   options.addUsage("");
-  options.addUsage("Creates a GD file of mutations that evaluate as false to the input filtering expressions.");
+  options.addUsage("Removes mutations from a GD file for which ALL of the provided conditions evaluate to true.");
     
-  UserOutput uout("FILTER");
+  UserOutput uout("REMOVE");
   
   if (options.getArgc() != 1) {
     options.addUsage("");
@@ -1360,13 +1360,13 @@ int do_filter_gd(int argc, char* argv[])
     return -1;
   }
 
-  if (!options.count("filter")) {
+  if (!options.count("condition")) {
     options.addUsage("");
-    options.addUsage("You must supply filter arguments.");
+    options.addUsage("You must supply at least one condition argument.");
     options.printUsage();
     return -1;
   }
-  vector<string> filters = from_string<vector<string> >(options["filter"]);
+  vector<string> filters = from_string<vector<string> >(options["condition"]);
 
   assert(filters.size());
 
@@ -1470,8 +1470,8 @@ int do_filter_gd(int argc, char* argv[])
         }
       }
     }
-    if (reasons.size()) {
-      printf("Filtered[%s]: %s\n", join(reasons, ", ").c_str(), mut.as_string().c_str());
+    if (reasons.size() == filters.size()) {
+      printf("Removed [%s]: %s\n", join(reasons, ", ").c_str(), mut.as_string().c_str());
       mut["filtered"] = join(reasons, ", ");
       mut["comment_out"] = "true";
     }
@@ -2736,11 +2736,12 @@ int main(int argc, char* argv[]) {
     return do_count(argc_new, argv_new);
   } else if (command == "NORMALIZE") {
     return do_normalize_gd(argc_new, argv_new);
-
   } else if (command == "FILTER") {
-    return do_filter_gd(argc_new, argv_new);
-
-  } else if (command == "INTERSECT") {
+		ERROR("The FILTER subcommand has been replaced with REMOVE.");
+		return 0;
+	} else if (command == "REMOVE") {
+		return do_remove_gd(argc_new, argv_new);
+	} else if (command == "INTERSECT") {
     return do_intersection(argc_new, argv_new);
   } else if (command == "UNION") {
     return do_union(argc_new, argv_new);
