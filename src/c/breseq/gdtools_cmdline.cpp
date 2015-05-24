@@ -1437,31 +1437,33 @@ int do_remove_gd(int argc, char* argv[])
           mut[key] = "1";
       }  
         
-        
-      if (mut.count(key)) {
-          
+			//Note special case for 'type'
+      if (mut.count(key) || (key=="type")) {
+				
+				string test_string = (key=="type") ? to_string(mut._type) : mut[key];
+				
         // Numeric
         if (value.find_first_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") == string::npos) {
           switch(eval)
           {
-            case 0: if (from_string<float>(mut[key]) == from_string<float>(value)) is_filtered = true; break;
-            case 1: if (from_string<float>(mut[key]) != from_string<float>(value)) is_filtered = true; break;
-            case 2: if (from_string<float>(mut[key]) <= from_string<float>(value)) is_filtered = true; break;
-            case 3: if (from_string<float>(mut[key]) >= from_string<float>(value)) is_filtered = true; break;
-            case 4: if (from_string<float>(mut[key]) <  from_string<float>(value)) is_filtered = true; break;
-            case 5: if (from_string<float>(mut[key]) >  from_string<float>(value)) is_filtered = true; break;
+            case 0: if (from_string<float>(test_string) == from_string<float>(value)) is_filtered = true; break;
+            case 1: if (from_string<float>(test_string) != from_string<float>(value)) is_filtered = true; break;
+            case 2: if (from_string<float>(test_string) <= from_string<float>(value)) is_filtered = true; break;
+            case 3: if (from_string<float>(test_string) >= from_string<float>(value)) is_filtered = true; break;
+            case 4: if (from_string<float>(test_string) <  from_string<float>(value)) is_filtered = true; break;
+            case 5: if (from_string<float>(test_string) >  from_string<float>(value)) is_filtered = true; break;
           };
         }
         // String
         else {
           switch(eval)
           {
-            case 0: if (mut[key] == value) is_filtered = true; break;
-            case 1: if (mut[key] != value) is_filtered = true; break;
-            case 2: if (mut[key] <= value) is_filtered = true; break;
-            case 3: if (mut[key] >= value) is_filtered = true; break;
-            case 4: if (mut[key] <  value) is_filtered = true; break;
-            case 5: if (mut[key] >  value) is_filtered = true; break;
+            case 0: if (test_string == value) is_filtered = true; break;
+            case 1: if (test_string != value) is_filtered = true; break;
+            case 2: if (test_string <= value) is_filtered = true; break;
+            case 3: if (test_string >= value) is_filtered = true; break;
+            case 4: if (test_string <  value) is_filtered = true; break;
+            case 5: if (test_string >  value) is_filtered = true; break;
           };
         }
         if (is_filtered) {
