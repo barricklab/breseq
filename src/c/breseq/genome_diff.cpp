@@ -2489,6 +2489,45 @@ void cGenomeDiff::merge(cGenomeDiff& gd_new, bool unique, bool new_id, bool verb
       }
     }
   }
+
+  
+  // Fix optional fields that refer to mutation IDs
+  for (diff_entry_list_t::iterator it=_entry_list.begin(); it!= _entry_list.end(); it++) {
+    
+    cDiffEntry& mut = **it;
+
+    if(from_string<uint32_t>(mut._id) > old_unique_ids && mut.is_mutation()) {
+    
+      for (vector<string>::const_iterator key_it=gd_keys_with_ids.begin(); key_it!= gd_keys_with_ids.end(); key_it++) {
+        if (mut.entry_exists(*key_it)) {
+          
+          string value = mut[*key_it];
+          // Replace first value = mutation_id with substituted id
+          vector<string> split_value = split(value, ":");
+          
+          // iterate through old items to find the match
+          bool found_match = false;
+          for (diff_entry_list_t::iterator it_new = gd_new._entry_list.begin(); it_new != gd_new._entry_list.end(); it_new++) {
+          
+            if((split_value[0] == (**it_new)._id) && !found_match) {
+              
+              //Iterate through all the current entries to find the match
+              for (diff_entry_list_t::iterator it_cur =_entry_list.begin(); it_cur != _entry_list.end(); it_cur++) {
+                if ((**it_cur) == (**it_new)) {
+                  split_value[0] = to_string((**it_cur)._id);
+                  found_match = true;
+                  break;
+                }
+              }
+            }
+          }
+          mut[*key_it] = join(split_value, ":");
+        }
+      }
+    }
+  }
+  
+  
   
   //Notify user of the update
   if(verbose)cout << "\tMERGE DONE - " << gd_new.get_file_path() << endl;
@@ -2559,7 +2598,6 @@ void cGenomeDiff::reassign_unique_ids()
     
     cDiffEntry& mut = **it;
     for (vector<string>::const_iterator key_it=gd_keys_with_ids.begin(); key_it!= gd_keys_with_ids.end(); key_it++) {
-
       if (mut.entry_exists(*key_it)) {
         
         string value = mut[*key_it];
