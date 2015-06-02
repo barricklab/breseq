@@ -921,6 +921,24 @@ namespace breseq {
 	}
   
   void
+  AnyOption::addUsageSameLine( string line , bool advanced)
+  {
+    assert(usage_lines.size() > 0);
+    assert(advanced_lines.size() > 0);
+
+    if(!advanced){
+      // add space if needed...
+      if ( usage_lines.back()[usage_lines.back().size()-1] != ' ')
+        usage_lines.back() += " ";
+      usage_lines.back() += line;
+    }
+    
+    if ( advanced_lines.back()[advanced_lines.back().size()-1] != ' ')
+      advanced_lines.back() += " ";
+    advanced_lines.back() += line;
+  }
+  
+  void
 	AnyOption::printAdvanced()
 	{
     if( once ) {

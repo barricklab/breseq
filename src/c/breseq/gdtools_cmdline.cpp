@@ -864,6 +864,21 @@ int do_annotate(int argc, char* argv[])
   options.addUsage("  HTML    Descriptive table viewable in a web browser"); 
   options.addUsage("  GD      GenomeDiff with added annotation of mutations");
   options.addUsage("  PHYLIP  Alignment file suitable for input into PHYLIP");
+	options.addUsage("");
+	options.addUsage("In GD output, frequencies of 'D' mean that this mutation occurs within");
+	options.addUsageSameLine("a region that is deleted by a different mutation in the genome in question. Frequencies");
+	options.addUsageSameLine("of '?' indicate that there were not enough aligned reads to call a mutation at this position");
+	options.addUsageSameLine("in the genome in question (either for or against the mutation).");
+	options.addUsage("");
+	options.addUsage("In PHYLIP output, each column in the mutation 'sequence' that is created corresponds to");
+	options.addUsageSameLine("a unique mutational event. For SNPs the base present at that position in each genome is shown.");
+	options.addUsageSameLine("For other types of mutations, 'A' is used for the ancestral allele (e.g., no transposon insertion),");
+	options.addUsageSameLine("and 'T' is used for the derived allele (e.g., new transposon copy inserted).");
+	options.addUsageSameLine("'N' is used when it is ambiguous as to whether the mutation occurred in the lineage");
+	options.addUsageSameLine("leading to this genome, either because the position is deleted or there are not sufficient");
+	options.addUsageSameLine("reads aligned to a position to call a mutation (i.e., is inside an UN region).");
+	options.addUsage("");
+	options.addUsage("PHYLIP output is designed to be input into the 'dnapars' program to create a phylogenetic tree.");
 
   options.processCommandArgs(argc, argv);
   
