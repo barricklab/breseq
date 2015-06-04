@@ -1615,6 +1615,15 @@ namespace breseq {
         // onto the same position!
         if (settings.polymorphism_prediction) continue;
         
+        // If we are annotated as 'within', do not shift the coordinates,
+        // because the reference sequence is actually different by the time we are applied
+        
+        // We are still potentially in danger of doing the wrong thing here,
+        // because a mutation could be applied only after one with the 'before' tag, making the shift
+        // incorrect. So, setting 'no_normalize' is an out that can be used.
+        
+        if (mut.entry_exists("within") || mut.entry_exists("no_normalize") ) continue;
+        
         int32_t size = from_string<int32_t>(mut["size"]);
         
         int32_t position = from_string<int32_t>(mut["position"]);

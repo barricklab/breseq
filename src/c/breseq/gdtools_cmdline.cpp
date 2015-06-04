@@ -73,6 +73,7 @@ int gdtools_usage()
 int do_intersection(int argc, char *argv[])
 {
   AnyOption options("gdtools INTERSECT [-o output.gd] input1.gd input2.gd ...");
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o",  "Output Genome Diff file name", "output.gd");
   options("verbose,v", "Verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
@@ -80,6 +81,11 @@ int do_intersection(int argc, char *argv[])
   options.addUsage("");
   options.addUsage("Creates a new Genome Diff file with mutations that are present in ALL input Genome Diff files.");
 
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
   if (options.getArgc() < 2) {
     options.addUsage("");
     options.addUsage("Must provide at least two input Genome Diff files.");
@@ -107,6 +113,7 @@ int do_intersection(int argc, char *argv[])
 int do_union(int argc, char *argv[])
 {
   AnyOption options("gdtools UNION [-o output.gd] input1.gd input2.gd ...");
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o",  "output GD file name", "output.gd");
 	options("evidence,e",  "operate on evidence rather than mutation entries", TAKES_NO_ARGUMENT);
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
@@ -122,6 +129,11 @@ int do_union(int argc, char *argv[])
 	options.addUsage("Header information will be inherited from the first input file,");
 	options.addUsage("so this function can also be used to transfer metadata to a new file.");
 
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
   if (options.getArgc() < 2) {
     options.addUsage("");
     options.addUsage("Must provide at least two input Genome Diff files.");
@@ -153,6 +165,7 @@ int do_union(int argc, char *argv[])
 int do_apply(int argc, char *argv[])
 {
   AnyOption options("gdtools APPLY [ -o output.gff3 -f GFF3 ] -r reference.gbk input.gd");
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o",    "Output file name (DEFAULT=output.*)");
   options("format,f",    "Output file format (Options: FASTA, GFF3)", "FASTA");
   options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
@@ -166,6 +179,11 @@ int do_apply(int argc, char *argv[])
   options.addUsage("a single file that includes all the references in the");
   options.addUsage("requested format.");
 
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
   string format = to_upper(options["format"]);
 
   if ((format != "FASTA") && (format != "GFF3")) {
@@ -224,6 +242,7 @@ int do_apply(int argc, char *argv[])
 int do_subtract(int argc, char *argv[])
 {
   AnyOption options("gdtools SUBTRACT [-o output.gd] input.gd subtract1.gd [subtract2.gd ...]");
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o",  "output GD file", "output.gd");
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
@@ -240,6 +259,11 @@ int do_subtract(int argc, char *argv[])
     options.printUsage();
     return -1;
   }
+	
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
 
   const bool verbose = options.count("verbose");
 
@@ -313,6 +337,7 @@ int do_merge(int argc, char *argv[])
 int do_weights(int argc, char* argv[])
 {
   AnyOption options("gdtools WEIGHTS [-o output.gd input1.gd input2.gd ...");
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o",    "output GD file", "output.gd");
   options("verbose,v",   "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
@@ -323,13 +348,17 @@ int do_weights(int argc, char* argv[])
   options.addUsage("entry. The 'weight' field is the inverse of the frequency of that mutation occuring accross");
   options.addUsage("all input GD files. Unique mutations will therefor have a 'weight' of 1");
 
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
   if (options.getArgc() < 2) {
     options.addUsage("");
     options.addUsage("At least two input Genome Diff files must be provided.");
     options.printUsage();
     return -1;
   }
-
 
   const bool verbose = options.count("verbose");
 
@@ -394,136 +423,149 @@ int do_weights(int argc, char* argv[])
 
 int do_check_plot(int argc, char *argv[])
 {
-    AnyOption options("gdtools CHECK-PLOT [-o output] test1.gd [test2.gd ...]");
-    options("output,o",     "Prefix for output files prefix_ ", "output");
-    options("verbose,v",    "verbose mode", TAKES_NO_ARGUMENT);
-    options.processCommandArgs(argc, argv);
-    
-    options.addUsage("");
-    options.addUsage("Creates sensitivity and precision plots for Genome Diff files output by CHECK, ");
-    options.addUsage("which contain TP|FP|FN information and a score value for mutations or evidence.");
+	AnyOption options("gdtools CHECK-PLOT [-o output] test1.gd [test2.gd ...]");
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+	options("output,o",     "Prefix for output files prefix_ ", "output");
+	options("verbose,v",    "verbose mode", TAKES_NO_ARGUMENT);
+	options.processCommandArgs(argc, argv);
+	
+	options.addUsage("");
+	options.addUsage("Creates sensitivity and precision plots for Genome Diff files output by CHECK, ");
+	options.addUsage("which contain TP|FP|FN information and a score value for mutations or evidence.");
 
-    if (options.getArgc() < 1) {
-        options.addUsage("");
-        options.addUsage("At least one input Genome Diff files must be provided.");
-        options.printUsage();
-        return -1;
-    }
-    
-    UserOutput uout("CHECK-PLOT");
-    
-    string gd_file_name = options.getArgv(0);
-    uout("Loading Genome Diff file:" + gd_file_name);
-    cGenomeDiff merged_gd(gd_file_name);
-    merged_gd.metadata.breseq_data.erase("TP|FN|FP");
-    
-    // Load and quick merge genome diff files (not removing duplicates)
-    for (int32_t i=1; i<options.getArgc(); i++) {
-        string gd_file_name = options.getArgv(i);
-        uout("Loading Genome Diff file:" + gd_file_name);
-        cGenomeDiff gd(gd_file_name);
-        
-        // Merge in a way that preserves duplicates
-        merged_gd.fast_merge(gd);
-    }
-    
-    
-    string prefix = options["output"];
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
+	if (options.getArgc() < 1) {
+			options.addUsage("");
+			options.addUsage("At least one input Genome Diff files must be provided.");
+			options.printUsage();
+			return -1;
+	}
+	
+	UserOutput uout("CHECK-PLOT");
+	
+	string gd_file_name = options.getArgv(0);
+	uout("Loading Genome Diff file:" + gd_file_name);
+	cGenomeDiff merged_gd(gd_file_name);
+	merged_gd.metadata.breseq_data.erase("TP|FN|FP");
+	
+	// Load and quick merge genome diff files (not removing duplicates)
+	for (int32_t i=1; i<options.getArgc(); i++) {
+			string gd_file_name = options.getArgv(i);
+			uout("Loading Genome Diff file:" + gd_file_name);
+			cGenomeDiff gd(gd_file_name);
+			
+			// Merge in a way that preserves duplicates
+			merged_gd.fast_merge(gd);
+	}
+	
+	
+	string prefix = options["output"];
 
-    // Write out the merged file
-    string merged_gd_path = prefix + ".gd";
-    uout << "Creating merged Genome Diff: " + merged_gd_path << endl;
-    merged_gd.write(merged_gd_path);
-    
-    string table_path = prefix + ".table.txt";
-    uout << "Creating table: " + table_path << endl;
-    cGenomeDiff::write_jc_score_table(merged_gd, table_path, options.count("verbose"));
-    string cv_exe = merged_gd.metadata.author == "tophat" ? "tophat" : "breseq";
-    uint32_t cutoff = cv_exe == "tophat" ? 0 : 3;
-    
-    string plot_jc_score_script_name = "/plot_jc_scores.r";
-    string plot_jc_score_script_path = DATADIR + plot_jc_score_script_name;
-    
-    uout << "Creating plots: " + prefix + ".precision.png and " << prefix + ".sensitivity.png" << endl;
-    string cmd = plot_jc_score_script_path + " " + table_path + " " + prefix + " " + s(cutoff) + " " + cv_exe;
-    SYSTEM(cmd, true, false, true);
-    
-    return 0;
+	// Write out the merged file
+	string merged_gd_path = prefix + ".gd";
+	uout << "Creating merged Genome Diff: " + merged_gd_path << endl;
+	merged_gd.write(merged_gd_path);
+	
+	string table_path = prefix + ".table.txt";
+	uout << "Creating table: " + table_path << endl;
+	cGenomeDiff::write_jc_score_table(merged_gd, table_path, options.count("verbose"));
+	string cv_exe = merged_gd.metadata.author == "tophat" ? "tophat" : "breseq";
+	uint32_t cutoff = cv_exe == "tophat" ? 0 : 3;
+	
+	string plot_jc_score_script_name = "/plot_jc_scores.r";
+	string plot_jc_score_script_path = DATADIR + plot_jc_score_script_name;
+	
+	uout << "Creating plots: " + prefix + ".precision.png and " << prefix + ".sensitivity.png" << endl;
+	string cmd = plot_jc_score_script_path + " " + table_path + " " + prefix + " " + s(cutoff) + " " + cv_exe;
+	SYSTEM(cmd, true, false, true);
+	
+	return 0;
 }
 
 // Check format of Genome Diff and report all format errors
 int do_validate(int argc, char *argv[])
 {
-    AnyOption options("gdtools VALIDATE [] input1.gd [input2.gd]");
-    options("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. If provided, will validate seq_ids and positions in the GD file using these.  Option may be provided multiple times for multiple files. (OPTIONAL)");
-    options("verbose,v",  "Verbose mode. Outputs additional information about progress. (OPTIONAL)");
-    options.addUsage("");
-    options.addUsage("Validates whether the format of the input Genome Diff files is correct.");
+	AnyOption options("gdtools VALIDATE [] input1.gd [input2.gd]");
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+	options("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. If provided, will validate seq_ids and positions in the GD file using these.  Option may be provided multiple times for multiple files. (OPTIONAL)");
+	options("verbose,v",  "Verbose mode. Outputs additional information about progress. (OPTIONAL)");
+	options.addUsage("");
+	options.addUsage("Validates whether the format of the input Genome Diff files is correct.");
 
-    options.processCommandArgs(argc, argv);
+	options.processCommandArgs(argc, argv);
 
-    bool verbose = options.count("verbose");
-    
-    if (options.getArgc() == 0) {
-        options.printUsage();
-        return -1;
-    }
-    
-    cerr << "Running gdtools VALIDATE on " << options.getArgc() << " files..." << endl;
-    
-    // Further read in reference sequences and check IDs of mutations if user provided
-    // Give a warning if they weren't provided to remind the user this is possible.
-    cReferenceSequences ref;
-    if (options.count("reference")) {
-        ref.LoadFiles(from_string<vector<string> >(options["reference"]));
-    } else {
-        cerr << "  WARNING: No reference sequence(s) provided (-r option). Genomic coordinates will not be checked." << endl;
-    }
-    
-    
-    uint32_t num_files_processed = 0;
-    uint32_t num_files_with_errors = 0;
-    
-    // Simply read files.
-    for (int32_t i=0; i<options.getArgc(); i++) {
-        string gd_file_name = options.getArgv(i);
-        num_files_processed++;
-        cGenomeDiff gd;
-        cFileParseErrors pe = gd.read(gd_file_name, true);
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
+	bool verbose = options.count("verbose");
+	
+	if (options.getArgc() == 0) {
+			options.printUsage();
+			return -1;
+	}
+	
+	cerr << "Running gdtools VALIDATE on " << options.getArgc() << " files..." << endl;
+	
+	// Further read in reference sequences and check IDs of mutations if user provided
+	// Give a warning if they weren't provided to remind the user this is possible.
+	cReferenceSequences ref;
+	if (options.count("reference")) {
+			ref.LoadFiles(from_string<vector<string> >(options["reference"]));
+	} else {
+			cerr << "  WARNING: No reference sequence(s) provided (-r option). Genomic coordinates will not be checked." << endl;
+	}
+	
+	
+	uint32_t num_files_processed = 0;
+	uint32_t num_files_with_errors = 0;
+	
+	// Simply read files.
+	for (int32_t i=0; i<options.getArgc(); i++) {
+			string gd_file_name = options.getArgv(i);
+			num_files_processed++;
+			cGenomeDiff gd;
+			cFileParseErrors pe = gd.read(gd_file_name, true);
 
-        cFileParseErrors pe2;
-        if (options.count("reference")) {
-            pe2 = gd.valid_with_reference_sequences(ref, true);
-        }
-        
-        if (pe._errors.size() + pe2._errors.size() == 0) {
-            if (verbose) {
-                cerr << endl << "File: " << gd_file_name << endl;
-                cerr << "  FORMAT OK" << endl;
-            }
-        } else {
-            cerr << endl << "File: " << gd_file_name << endl;
-            pe.print_errors(false);
-            pe2.print_errors(false);
-            num_files_with_errors++;
-        }
-    }
-    
-    cerr << endl;
-    cerr <<     "::: Summary :::" << endl;
-    cerr <<     "  Total files processed:         " << setw(6) << num_files_processed << endl;
-    if (num_files_with_errors == 0) {
-        cerr << "* No formatting errors found!" << endl;
-    } else {
-        cerr << "  Files with formatting errors:  " << setw(6) << num_files_with_errors << endl;
-    }
-    
-    return 0;
+			cFileParseErrors pe2;
+			if (options.count("reference")) {
+					pe2 = gd.valid_with_reference_sequences(ref, true);
+			}
+			
+			if (pe._errors.size() + pe2._errors.size() == 0) {
+					if (verbose) {
+							cerr << endl << "File: " << gd_file_name << endl;
+							cerr << "  FORMAT OK" << endl;
+					}
+			} else {
+					cerr << endl << "File: " << gd_file_name << endl;
+					pe.print_errors(false);
+					pe2.print_errors(false);
+					num_files_with_errors++;
+			}
+	}
+	
+	cerr << endl;
+	cerr <<     "::: Summary :::" << endl;
+	cerr <<     "  Total files processed:         " << setw(6) << num_files_processed << endl;
+	if (num_files_with_errors == 0) {
+			cerr << "* No formatting errors found!" << endl;
+	} else {
+			cerr << "  Files with formatting errors:  " << setw(6) << num_files_with_errors << endl;
+	}
+	
+	return 0;
 }
 
 int do_check(int argc, char *argv[])
 {
   AnyOption options("gdtools CHECK [-o output.gd] control.gd test.gd");
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o",         "output GD file", "comp.gd");
   options("reference,r",      "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
   options("evidence",         "compare evidence", TAKES_NO_ARGUMENT);
@@ -544,7 +586,12 @@ int do_check(int argc, char *argv[])
   options.addUsage("       FN, false-negative : mutation exists in the control GD file but not in the test GD files.");
   options.addUsage("       FP, false-positive : mutation exists in one of the test GD files but not in the control GD file.");
   options.addUsage("");
-    
+	
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
   if (options.getArgc() != 2) {
     options.addUsage("");
     options.addUsage("Exactly two input Genome Diff files must be provided.");
@@ -619,39 +666,42 @@ int do_check(int argc, char *argv[])
 
 int do_gd2vcf( int argc, char* argv[])
 {
-    AnyOption options("gdtools GD2VCF [-o output.vcf] input.gd"); 
-    
-    options
-    ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-    ("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
-    ("output,o","name of output file", "output.vcf")
-    ;
-    options.processCommandArgs( argc,argv);
-    
-    options.addUsage("");
-    options.addUsage("Creates a Variant Call Format (VCF) file of mutations present in an input Genome Diff file.");
-    options.addUsage("VCF is a community format that can be loaded into viewers and used as input to other programs.");
-    
-    if( options.getArgc() != 1 ){
-        options.addUsage("");
-        options.addUsage("You must provide exactly one input Genome Diff file.");
-        options.printUsage();
-        return -1;
-    }
-    
-    if (!options.count("reference")) {
-        options.addUsage("");
-        options.addUsage("You must provide a reference sequence file (-r).");
-        options.printUsage();
-        return -1;
-    }
-        
-    cReferenceSequences ref_seq_info;
-    ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
-    
-    cGenomeDiff::GD2VCF( options.getArgv(0), options["output"], ref_seq_info );
-    
-    return 0;
+	AnyOption options("gdtools GD2VCF [-o output.vcf] input.gd");
+
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+	options("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
+	options("output,o","name of output file", "output.vcf");
+	options.processCommandArgs( argc,argv);
+	
+	options.addUsage("");
+	options.addUsage("Creates a Variant Call Format (VCF) file of mutations present in an input Genome Diff file.");
+	options.addUsage("VCF is a community format that can be loaded into viewers and used as input to other programs.");
+	
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
+	if( options.getArgc() != 1 ){
+			options.addUsage("");
+			options.addUsage("You must provide exactly one input Genome Diff file.");
+			options.printUsage();
+			return -1;
+	}
+	
+	if (!options.count("reference")) {
+			options.addUsage("");
+			options.addUsage("You must provide a reference sequence file (-r).");
+			options.printUsage();
+			return -1;
+	}
+			
+	cReferenceSequences ref_seq_info;
+	ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
+	
+	cGenomeDiff::GD2VCF( options.getArgv(0), options["output"], ref_seq_info );
+	
+	return 0;
 }
 
 
@@ -659,17 +709,22 @@ int do_gd2gvf( int argc, char* argv[])
 {
   AnyOption options("gdtools GD2GVF [-o output.gvf] input.gd"); 
 
-  options
-    ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-    ("reference,r","File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
-    ("output,o","name of output file", "output.gvf")
-    ("snv-only","only include SNP/SNV entries in output", TAKES_NO_ARGUMENT)
-    ;
+	options("help,h", "produce this help message", TAKES_NO_ARGUMENT);
+	options("reference,r","File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
+	options("output,o","name of output file", "output.gvf");
+	options("snv-only","only include SNP/SNV entries in output", TAKES_NO_ARGUMENT);
+	
+	
+	options.addUsage("");
+	options.addUsage("Creates a Genome Variation Format (GVF) file of mutations present in an input Genome Diff file.");
+	
   options.processCommandArgs( argc,argv);
 
-  options.addUsage("");
-  options.addUsage("Creates a Genome Variation Format (GVF) file of mutations present in an input Genome Diff file.");
-  
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
   if( options.getArgc() != 1 ){
     options.addUsage("");
     options.addUsage("Provide a single input Genome Diff file.");
@@ -689,9 +744,15 @@ int do_gd2gvf( int argc, char* argv[])
 int do_vcf2gd( int argc, char* argv[])
 {
   AnyOption options("VCF2GD [-o output.gd] input.vcf");
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o","name of output Genome Diff file", "output.gd");
   options.processCommandArgs( argc,argv);
 
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
   options.addUsage("");
   options.addUsage("Creates a GD file of mutations present in an input Variant Call Format (VCF) file.");
   
@@ -711,19 +772,21 @@ int do_gd2circos(int argc, char *argv[])
 {
   AnyOption options("gdtools GD2CIRCOS -r <reference> [-r <reference2> ...] -o <output_dir> input1.gd [input2.gd ...]");
   
-  options
-    ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-    ("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
-    ("output,o", "name of directory to save Circos configuration files and scripts", "circos_output")
-    ("distance,d", "the distance from the center the first axis will be in proportion to the default size", "1.0")
-    ("feature,f", "the scale of the features in proportion to the default size", "1.0")
-    ;
+  options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
+	options("output,o", "name of directory to save Circos configuration files and scripts", "circos_output");
+	options("distance,d", "the distance from the center the first axis will be in proportion to the default size", "1.0");
+	options("feature,f", "the scale of the features in proportion to the default size", "1.0");
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
   options.addUsage("Creates text Circos configuration files and scripts for producing a visual representation of mutations in a Genome Diff file");
 	options.addUsage("You must have Circos installed to produce images from these files. See http://circos.ca");
 
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
 	
   if (!options.count("output")){
     options.addUsage("");
@@ -782,16 +845,19 @@ int do_mira2gd(int argc, char* argv[])
 {
   //unsupported before it ever saw the light of day.
   AnyOption options("gdtools MIRA2GD [-o output.gd] input.mira");
-  
-  options
-    ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-    ("output,o", "name of gd file to save", "output.gd")
-    ;
-  options.processCommandArgs(argc, argv);
-    
+	
+  options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+	options("output,o", "name of gd file to save", "output.gd");
   options.addUsage("");
   options.addUsage("Creates a GD file from a MIRA feature analysis file. Be sure to normalize the GD created afterward.");
-  
+	
+	options.processCommandArgs(argc, argv);
+	
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
   if( options.getArgc() != 1 ){
     options.addUsage("");
     options.addUsage("Provide a single input MIRA file.");
@@ -809,17 +875,24 @@ int do_mira2gd(int argc, char* argv[])
 int do_not_evidence(int argc, char *argv[])
 {
   AnyOption options("NOT_EVIDENCE [-o output.gd] input.gd");
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o","output GD file", "output.gd");
   options("id,i","Reorder IDs (Flag)", TAKES_NO_ARGUMENT);
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
-  options.processCommandArgs(argc, argv);
-  
+	
   options.addUsage("");
   options.addUsage("Takes a GenomeDiff file and removes all of the entries that");
   options.addUsage("are NOT used as evidence by a mutation.  Outputs to a new");
   options.addUsage("GenomeDiff file if specified.  If no output is specified,");
   options.addUsage("verbose will still inform what evidence isn't being used.");
-  
+	
+	options.processCommandArgs(argc, argv);
+
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
   if( options.getArgc() != 1 ){
     options.addUsage("");
     options.addUsage("Provide a single input Genome Diff file.");
@@ -849,14 +922,13 @@ int do_annotate(int argc, char* argv[])
 {
   AnyOption options("gdtools ANNOTATE/COMPARE [-o annotated.html] -r reference.gbk input.1.gd [input.2.gd ... ]");
   
-  options
-  ("help,h", "Display advanced help message", TAKES_NO_ARGUMENT)
-  ("output,o", "Path to output file with added mutation data. (DEFAULT: output.*")
-  ("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
-  ("format,f", "Type of output file to generate. See options below", "HTML")
-  ("ignore-pseudogenes", "Treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT)
-  ("repeat-header", "In HTML mode, repeat the header line every this many rows (0=OFF)", "10")
-  ;
+	
+  options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+	options("output,o", "Path to output file with added mutation data. (DEFAULT: output.*");
+	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
+	options("format,f", "Type of output file to generate. See options below", "HTML");
+	options("ignore-pseudogenes", "Treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT);
+  options("repeat-header", "In HTML mode, repeat the header line every this many rows (0=OFF)", "10");
   options.addUsage("");
   options.addUsage("If multiple GenomeDiff input files are provided, then they are merged and the frequencies from each file are shown for each mutation.");
   options.addUsage("");
@@ -881,6 +953,11 @@ int do_annotate(int argc, char* argv[])
 	options.addUsage("PHYLIP output is designed to be input into the 'dnapars' program to create a phylogenetic tree.");
 
   options.processCommandArgs(argc, argv);
+	
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
   
   UserOutput uout("ANNOTATE");
   
@@ -1001,15 +1078,19 @@ int do_mutations(int argc, char* argv[])
 {
 	AnyOption options("gdtools MUTATIONS [-o output.gd] -r reference.gbk input.gd");
 	
-	options
-	("help,h", "Display advanced help message", TAKES_NO_ARGUMENT)
-	("output,o", "Path to output GD file with mutations predicted from evidence.", "output.gd")
-	("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
-	;
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+	options("output,o", "Path to output GD file with mutations predicted from evidence.", "output.gd");
+	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
+
 	options.addUsage("");
 	options.addUsage("Predicts mutations from the evidence entries in the input GD file. Any mutation entries (three-letter code lines) already present in the input GD file will be removed.");
 	
 	options.processCommandArgs(argc, argv);
+	
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
 	
 	UserOutput uout("MUTATIONS");
 	
@@ -1049,169 +1130,176 @@ int do_mutations(int argc, char* argv[])
 
 int do_phylogeny(int argc, char* argv[])
 {
-    AnyOption options("gdtools PHYLOGENY [-o phylogeny] -r reference.gbk input.1.gd [input.2.gd ... ]");
-    options.addUsage("");
-    options.addUsage("Uses PHYLIP to construct a phylogentic tree. If you are including and ancestor, ");
-		options.addUsage("you should include it as the first Genome Diff file.");
-    options
-    ("help,h", "produce advanced help message", TAKES_NO_ARGUMENT)
-    ("verbose,v", "produce output for each mutation counted.", TAKES_NO_ARGUMENT)
-    ("output,o", "path to output file with added mutation data.", "count.csv")
-    ("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
-    ("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT)
-    ;
-    
-    options.processCommandArgs(argc, argv);
-    
-    UserOutput uout("PHYLOGENY");
-    
-    // User setting overrules default names
-    string output_base_name = "phylogeny";
-    if (options.count("output")) 
-        output_base_name = options["output"];
-    
-    vector<string> gd_path_names;
-    for (int32_t i = 0; i < options.getArgc(); ++i) {
-        gd_path_names.push_back(options.getArgv(i));
-    }
-    
-    if ( (gd_path_names.size() == 0) 
-        || !options.count("reference")){
-        options.printUsage();
-        return -1;
-    }
-    
-    // more than one file was provided as input
-    bool compare_mode = (gd_path_names.size() > 1);
-    
-    // First use merge to produce a file with a line for each mutation
-    cGenomeDiff gd;
-    vector<cGenomeDiff> gd_list;
-    
-    cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
-
-    bool polymorphisms_found = false; // handled putting in the polymorphism column if only one file provided
-    for (uint32_t i = 0; i < gd_path_names.size(); i++){
-        uout("Reading input GD file",gd_path_names[i]);
-        cGenomeDiff single_gd(gd_path_names[i]);
-        gd_list.push_back(single_gd);
-    }    
-
-		uint32_t file_num = 1;
-		vector<string> title_list;
-    for (vector<cGenomeDiff>::iterator it=gd_list.begin(); it!= gd_list.end(); it++) {
-        cGenomeDiff& single_gd = *it;
-        gd.merge(single_gd);
-				title_list.push_back(single_gd.get_title());
-				single_gd.set_title("_" + to_string<uint32_t>(file_num++) + "_");
-    }
-
-    gd.sort();
-    
-    uout("Tabulating mutation frequencies across samples");
-
-    // Then add frequency columns for all genome diffs
-		vector<string> dummy_title_list;
-    cGenomeDiff::tabulate_frequencies_from_multiple_gds(gd, gd_list, dummy_title_list);
+	AnyOption options("gdtools PHYLOGENY [-o phylogeny] -r reference.gbk input.1.gd [input.2.gd ... ]");
 	
-    vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
-    uout("Reading input reference sequence files") << reference_file_names << endl;
-    cReferenceSequences ref_seq_info;
-    ref_seq_info.LoadFiles(reference_file_names);
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+	options("verbose,v", "produce output for each mutation counted.", TAKES_NO_ARGUMENT);
+	options("output,o", "path to output file with added mutation data.", "count.csv");
+	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
+	options("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT);
+	
+	options.addUsage("");
+	options.addUsage("Uses PHYLIP to construct a phylogentic tree. If you are including and ancestor, ");
+	options.addUsage("you should include it as the first Genome Diff file.");
     
-    uout("Annotating mutations");
-    ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"));
-    
-    string phylip_input_file_name = output_base_name + ".phylip";
-    uout("Writing output PHYLIP alignment file", phylip_input_file_name);
-    gd.write_phylip(phylip_input_file_name, gd, gd_list, ref_seq_info);
-    
-    string phylip_script_file_name = output_base_name + ".phylip.commands";
-    ofstream phylip_script(phylip_script_file_name.c_str());
-    phylip_script << phylip_input_file_name << endl;
-    phylip_script << "V" << endl; // print only one tree!
-    phylip_script << "1" << endl;
-    phylip_script << "4" << endl; // print steps
-    phylip_script << "Y" << endl;
-    
-    if (file_exists("outtree")) remove_file("outtree");
-    if (file_exists("outfile")) remove_file("outfile");
-    
-    uout("Running DNAPARS from", phylip_input_file_name);
-    SYSTEM("dnapars < " + phylip_script_file_name, false, false, false);
-    
-    string phylip_original_tree_file_name = "outtree";
-    string phylip_renamed_tree_file_name = output_base_name + ".tre";
-    ofstream renamed_tree(phylip_renamed_tree_file_name.c_str());
-    string slurped_file;
-    ifstream original_tree(phylip_original_tree_file_name.c_str());
-    
-    // Read the entire file
-    string line;
-    while(original_tree){
-        getline(original_tree, line);
-        slurped_file += line;
-    }
-    
-    // Replace all file names 
-    file_num = 1;
-    for (vector<string>::iterator it = title_list.begin(); it != title_list.end(); it++) {
-        slurped_file = substitute(slurped_file, "_" + to_string<uint32_t>(file_num++) + "_", *it);
-    }
-    renamed_tree << slurped_file;
-    
-    string phylip_original_tree_save_file_name = output_base_name + ".original.phylip.tre";
-    string phylip_output_file_name = output_base_name + ".phylip.output";
-    SYSTEM("mv outtree " + phylip_original_tree_save_file_name);
-    SYSTEM("mv outfile " + phylip_output_file_name);
-    
-    // Create mutation key file
-    uout("Creating mutation key file");
+	options.processCommandArgs(argc, argv);
+	
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
+	UserOutput uout("PHYLOGENY");
+	
+	// User setting overrules default names
+	string output_base_name = "phylogeny";
+	if (options.count("output")) 
+			output_base_name = options["output"];
+	
+	vector<string> gd_path_names;
+	for (int32_t i = 0; i < options.getArgc(); ++i) {
+			gd_path_names.push_back(options.getArgv(i));
+	}
+	
+	if ( (gd_path_names.size() == 0) 
+			|| !options.count("reference")){
+			options.printUsage();
+			return -1;
+	}
+	
+	// more than one file was provided as input
+	bool compare_mode = (gd_path_names.size() > 1);
+	
+	// First use merge to produce a file with a line for each mutation
+	cGenomeDiff gd;
+	vector<cGenomeDiff> gd_list;
+	
+	cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
 
-    string mutation_key_file_name = phylip_input_file_name + ".mutation.key";
-    ofstream mutation_key(mutation_key_file_name.c_str());
-    diff_entry_list_t mut_list = gd.mutation_list();
-    uint32_t i=0;
-    for(diff_entry_list_t::iterator it = mut_list.begin(); it != mut_list.end(); it++) {
-        cDiffEntry& mut = **it;
-        mutation_key << to_string(mut._type) + "-" + mut[POSITION] + "-" + mut[GENE_NAME] << endl;
-    }
-    
-    // Create sample key file
-    string sample_key_file_name = phylip_input_file_name + ".sample.key";
-    ofstream sample_key(sample_key_file_name.c_str());
-    i=1;
-    for(vector<string>::iterator it = title_list.begin(); it != title_list.end(); it++) {
-        sample_key << "_" + to_string<uint32_t>(i++) + "_" << "\t" << *it << endl;
-    }
-    
-    string merged_gd_file_name =  output_base_name + ".merged.gd";
-    gd.write(merged_gd_file_name);
-    
-    return 0;
+	bool polymorphisms_found = false; // handled putting in the polymorphism column if only one file provided
+	for (uint32_t i = 0; i < gd_path_names.size(); i++){
+			uout("Reading input GD file",gd_path_names[i]);
+			cGenomeDiff single_gd(gd_path_names[i]);
+			gd_list.push_back(single_gd);
+	}    
+
+	uint32_t file_num = 1;
+	vector<string> title_list;
+	for (vector<cGenomeDiff>::iterator it=gd_list.begin(); it!= gd_list.end(); it++) {
+			cGenomeDiff& single_gd = *it;
+			gd.merge(single_gd);
+			title_list.push_back(single_gd.get_title());
+			single_gd.set_title("_" + to_string<uint32_t>(file_num++) + "_");
+	}
+
+	gd.sort();
+	
+	uout("Tabulating mutation frequencies across samples");
+
+	// Then add frequency columns for all genome diffs
+	vector<string> dummy_title_list;
+	cGenomeDiff::tabulate_frequencies_from_multiple_gds(gd, gd_list, dummy_title_list);
+
+	vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
+	uout("Reading input reference sequence files") << reference_file_names << endl;
+	cReferenceSequences ref_seq_info;
+	ref_seq_info.LoadFiles(reference_file_names);
+	
+	uout("Annotating mutations");
+	ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"));
+	
+	string phylip_input_file_name = output_base_name + ".phylip";
+	uout("Writing output PHYLIP alignment file", phylip_input_file_name);
+	gd.write_phylip(phylip_input_file_name, gd, gd_list, ref_seq_info);
+	
+	string phylip_script_file_name = output_base_name + ".phylip.commands";
+	ofstream phylip_script(phylip_script_file_name.c_str());
+	phylip_script << phylip_input_file_name << endl;
+	phylip_script << "V" << endl; // print only one tree!
+	phylip_script << "1" << endl;
+	phylip_script << "4" << endl; // print steps
+	phylip_script << "Y" << endl;
+	
+	if (file_exists("outtree")) remove_file("outtree");
+	if (file_exists("outfile")) remove_file("outfile");
+	
+	uout("Running DNAPARS from", phylip_input_file_name);
+	SYSTEM("dnapars < " + phylip_script_file_name, false, false, false);
+	
+	string phylip_original_tree_file_name = "outtree";
+	string phylip_renamed_tree_file_name = output_base_name + ".tre";
+	ofstream renamed_tree(phylip_renamed_tree_file_name.c_str());
+	string slurped_file;
+	ifstream original_tree(phylip_original_tree_file_name.c_str());
+	
+	// Read the entire file
+	string line;
+	while(original_tree){
+			getline(original_tree, line);
+			slurped_file += line;
+	}
+	
+	// Replace all file names 
+	file_num = 1;
+	for (vector<string>::iterator it = title_list.begin(); it != title_list.end(); it++) {
+			slurped_file = substitute(slurped_file, "_" + to_string<uint32_t>(file_num++) + "_", *it);
+	}
+	renamed_tree << slurped_file;
+	
+	string phylip_original_tree_save_file_name = output_base_name + ".original.phylip.tre";
+	string phylip_output_file_name = output_base_name + ".phylip.output";
+	SYSTEM("mv outtree " + phylip_original_tree_save_file_name);
+	SYSTEM("mv outfile " + phylip_output_file_name);
+	
+	// Create mutation key file
+	uout("Creating mutation key file");
+
+	string mutation_key_file_name = phylip_input_file_name + ".mutation.key";
+	ofstream mutation_key(mutation_key_file_name.c_str());
+	diff_entry_list_t mut_list = gd.mutation_list();
+	uint32_t i=0;
+	for(diff_entry_list_t::iterator it = mut_list.begin(); it != mut_list.end(); it++) {
+			cDiffEntry& mut = **it;
+			mutation_key << to_string(mut._type) + "-" + mut[POSITION] + "-" + mut[GENE_NAME] << endl;
+	}
+	
+	// Create sample key file
+	string sample_key_file_name = phylip_input_file_name + ".sample.key";
+	ofstream sample_key(sample_key_file_name.c_str());
+	i=1;
+	for(vector<string>::iterator it = title_list.begin(); it != title_list.end(); it++) {
+			sample_key << "_" + to_string<uint32_t>(i++) + "_" << "\t" << *it << endl;
+	}
+	
+	string merged_gd_file_name =  output_base_name + ".merged.gd";
+	gd.write(merged_gd_file_name);
+	
+	return 0;
 }
 
 
 int do_count(int argc, char* argv[])
 {
   AnyOption options("gdtools COUNT [-o count.csv] -r reference.gbk input.1.gd [input.2.gd ... ]");
-  options.addUsage("");
-  options.addUsage("Counts the numbers of mutations and other statistics for each input GenomeDiff file.");
-  options
-  ("help,h", "produce advanced help message", TAKES_NO_ARGUMENT)
-  ("verbose,v", "produce output for each mutation counted.", TAKES_NO_ARGUMENT)
-  ("output,o", "path to output file with added mutation data.", "count.csv")
-  ("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
-	("base-substitution-statistics,b", "calculate detailed base substitution statistics", TAKES_NO_ARGUMENT)
-  ("count-polymorphisms,p", "count polymorphic mutations (those with frequencies < 1). (Default = FALSE)", TAKES_NO_ARGUMENT)
+  options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+	options("verbose,v", "produce output for each mutation counted.", TAKES_NO_ARGUMENT);
+	options("output,o", "path to output file with added mutation data.", "count.csv");
+	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
+	options("base-substitution-statistics,b", "calculate detailed base substitution statistics", TAKES_NO_ARGUMENT);
+	options("count-polymorphisms,p", "count polymorphic mutations (those with frequencies < 1). (Default = FALSE)", TAKES_NO_ARGUMENT);
 
-  ;
+	options.addUsage("");
+	options.addUsage("Counts the numbers of mutations and other statistics for each input GenomeDiff file.");
   options.addUsage("");
   options.addUsage("In the output \"small\" mutations are ≤ 50 bp. \"large\" mutations are >50 bp");
-
 	
   options.processCommandArgs(argc, argv);
-  
+	
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
   UserOutput uout("COUNT");
   
   string output_file_name = options["output"];
@@ -1257,31 +1345,40 @@ int do_count(int argc, char* argv[])
 int do_normalize_gd(int argc, char* argv[])
 {
   AnyOption options("gdtools NORMALIZE [-o output.gd] -r reference.gbk input.gd");
-  options
-  ("output,o"          , "output Genome Diff file.", "output.gd")
-  ("reference,r"       , "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
-	("reassign-ids,s"    , "reassign ids to lowest numbers possible.", TAKES_NO_ARGUMENT)
-	("repeat-adjacent,a" , "mark repeat-region adjacent, mediated, and between mutations.", TAKES_NO_ARGUMENT)
-  ("verbose,v"         , "verbose mode (flag)", TAKES_NO_ARGUMENT);
-
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+	options("verbose,v"         , "verbose mode (flag)", TAKES_NO_ARGUMENT);
+	options("output,o"          , "output Genome Diff file.", "output.gd");
+	options("reference,r"       , "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
+	options("reassign-ids,s"    , "reassign ids to lowest numbers possible.", TAKES_NO_ARGUMENT);
+	options("repeat-adjacent,a" , "mark repeat-region adjacent, mediated, and between mutations.", TAKES_NO_ARGUMENT);
+	
 	const int32_t kDistanceToRepeat = 20;
 	
-  options.processCommandArgs(argc, argv);
   options.addUsage("");
   options.addUsage("Creates a GD file of mutations that have been normalized to the input reference files. ");
 	options.addUsage("");
   options.addUsage("This process involves (1) converting AMP mutations of ≤50 bp to indels, ");
-  options.addUsage("(2) shifting INS and DEL mutations to the highest coordinates possible, (3) ");
-  options.addUsage("adding repeat_seq, repeat_length, repeat_ref_copies, and repeat_new_copies fields "); 
-  options.addUsage("for INS and DEL mutations that are in tandem sequence repeats of ≥5 bases in the reference sequence, ");
-  options.addUsage("and (4) flagging SNP, INS, or DEL mutations with sizes ≤50 bp that are within 20 bp of the ends of ");
-  options.addUsage("annotated mobile_element copies in the reference genome with the field mobile_element_adjacent=1");
+  options.addUsageSameLine("(2) shifting INS and DEL mutations to the highest coordinates possible, (3)");
+  options.addUsageSameLine("adding repeat_seq, repeat_length, repeat_ref_copies, and repeat_new_copies fields");
+  options.addUsageSameLine("for INS and DEL mutations that are in tandem sequence repeats of ≥5 bases in the reference sequence,");
+  options.addUsageSameLine("and (4) flagging SNP, INS, or DEL mutations with sizes ≤50 bp that are within 20 bp of the ends of");
+  options.addUsageSameLine("annotated mobile_element copies in the reference genome with the field mobile_element_adjacent=1");
   options.addUsage("");
-  options.addUsage("Optionally, assigns 'adjacent', 'mediated', or 'between' tags to mutations within " + to_string(kDistanceToRepeat) + " bp of annotated repeat regions ");
-	options.addUsage("to indicate these may be hotspots that experience elevated mutation rates. (They will be counted separately  ");
-	options.addUsage("from other mutations in gdtools COUNT). This process removes any previous version of these tags.");
-	options.addUsage("DEL mutations with a size < " + to_string(kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation) + " bp near ");
-	options.addUsage("repeat_regions are treated as 'adjacent' rather than 'mediated'." );
+	options.addUsage("Optionally, assigns 'adjacent', 'mediated', or 'between' tags to mutations within");
+	options.addUsageSameLine(to_string(kDistanceToRepeat) + " bp of annotated repeat regions");
+	options.addUsageSameLine("to indicate these may be hotspots that experience elevated mutation rates. (They will be counted separately");
+	options.addUsageSameLine("from other mutations in gdtools COUNT). This process removes any previous version of these tags.");
+	options.addUsageSameLine("DEL mutations with a size < " + to_string(kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation) + " bp near ");
+	options.addUsageSameLine("repeat_regions are treated as 'adjacent' rather than 'mediated'." );
+	options.addUsage("");
+	options.addUsage("Any mutations including 'no_normalize=1' in their definition will not be normalized.");
+
+	options.processCommandArgs(argc, argv);
+
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
 	
   if (!options.count("reference")) {
     options.addUsage("");
@@ -1358,6 +1455,7 @@ int do_normalize_gd(int argc, char* argv[])
 int do_remove_gd(int argc, char* argv[])
 {
   AnyOption options("gdtools REMOVE [-o output.gd] -c condition1 [-c condition2] [-m SNP] input.gd");
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o", "Output Genome Diff file.", "output.gd");
   options("mut_type,m", "Only this mutation type will be removed.");
 	options("condition,c", "Condition for removing mutation entries from the input Genome Diff file. Enclose the value of this parameter in quotes if it includes spaces, e.g. -c \"frequency <= 0.05\". You may include multiple conditions on the same command line. Only entries that satisfy ALL conditions will be removed.");
@@ -1365,7 +1463,12 @@ int do_remove_gd(int argc, char* argv[])
 
   options.addUsage("");
   options.addUsage("Removes mutations from a GD file for which ALL of the provided conditions evaluate to true.");
-    
+	
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
   UserOutput uout("REMOVE");
   
   if (options.getArgc() != 1) {
@@ -1502,6 +1605,7 @@ int do_remove_gd(int argc, char* argv[])
 int do_mummer2mask(int argc, char* argv[])
 {
 	AnyOption options("gdtools MUMMER2MASK [-o output.gd -p 36] -r reference.fna input.coords");
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
 	options("reference,r","File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
 	options("output,o", "Output Genome Diff file.", "output.gd");
 	options("padding,p", "Additional padding to add to each end of every MASK region.", 0);
@@ -1515,6 +1619,11 @@ int do_mummer2mask(int argc, char* argv[])
 
 	options.processCommandArgs(argc, argv);
 
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
 	if (options.getArgc() != 1) {
 		options.addUsage("");
 		options.addUsage("Provide exactly one input.coords file generated by MUMmer.");
@@ -1566,11 +1675,18 @@ int do_mummer2mask(int argc, char* argv[])
 int do_mask_gd(int argc, char* argv[])
 {
 	AnyOption options("gdtools MASK  [-o output.gd] input.gd mask.gd");
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
 	options("output,o", "Output Genome Diff file.", "output.gd");
-	options.processCommandArgs(argc, argv);
 	
 	options.addUsage("");
 	options.addUsage("Creates a GD file where mutations in the input GD that are located within certain regions of the reference genome are removed. These regions are defined as MASK entries in the mask GD file.");
+	
+	options.processCommandArgs(argc, argv);
+	
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
 	
 	UserOutput uout("MASK");
 	
@@ -1646,6 +1762,7 @@ int do_mask_gd(int argc, char* argv[])
 int do_simulate_mutations(int argc, char *argv[])
 {
   AnyOption options("Usage: gdtools SIMULATE-MUTATIONS [-n 100] -r <reference> -o <output.gd> -t <type>");
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("reference,r","File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
   options("output,o","Output file");
   options("type,t","Type of mutation to generate");
@@ -1678,6 +1795,11 @@ int do_simulate_mutations(int argc, char *argv[])
 
 	options.processCommandArgs(argc, argv);
 
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
   if(argc <= 1)  {
     options.printUsage();
     return -1;  }
@@ -1742,12 +1864,18 @@ int do_simulate_mutations(int argc, char *argv[])
 
 int do_mutations_to_evidence(int argc, char *argv[])
 {
-  AnyOption options("Usage: gdtools MUTATIONS-TO-EVIDENCE -r <reference> -o <output.gd> input.gd");  
+  AnyOption options("Usage: gdtools MUTATIONS-TO-EVIDENCE -r <reference> -o <output.gd> input.gd");
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("reference,r","File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");  
   options("output,o","Output file");
   options("verbose,v","Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
-  
+	
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
   if(argc == 1)  {
     options.printUsage();
     return -1;  }
@@ -1789,6 +1917,7 @@ int do_mutations_to_evidence(int argc, char *argv[])
 int do_header(int argc, char* argv[]) 
 {
   AnyOption options("gdtools HEADER [-o output.gd] [-r reference] file1.fastq file2.fastq ...");
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o",      "output GD file");
   options("reference,r",   "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
   options("tag,t",         "header tag to add to Genome Diff file, input as <key>=<value> will produce #=<key> <value>");
@@ -1801,6 +1930,11 @@ int do_header(int argc, char* argv[])
   options.addUsage("the -r argument will be added as #=REFSEQ and the *.fastq arguments");
   options.addUsage("will be added as #=READSEQ");
 
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
   if (!options.count("reference") && !options.count("tag") && !options.getArgc()) {
     options.printUsage();
     return -1;
@@ -1877,6 +2011,7 @@ int do_download(int argc, char *argv[])
   ss << "Usage: gdtools DOWNLOAD -l <user:password> -d <download_dir> <file1.gd file2.gd file3.gd ...>\n";
 
   AnyOption options(ss.str());
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("login,l",           "Login user:password information for private server access.");
   options("download-dir,d",    "Output directory to download file to.", "02_Downloads");
   options("genome-diff-dir,g", "Directory to searched for genome diff files.", "01_Data");
@@ -1884,13 +2019,17 @@ int do_download(int argc, char *argv[])
   options("reference-only",    "Only downloads the reference sequence files for this file", TAKES_NO_ARGUMENT);
 	options("leave-compressed,z","Do not decompress zipped files", TAKES_NO_ARGUMENT);
 
+	options.addUsage("\nExamples:");
+	options.addUsage("  gdtools DOWNLOAD -l john:1234 -d downloads -g data");
+	options.addUsage("  gdtools DOWNLOAD -l john:1234 -d downloads 1B4.gd GRC2000.gd");
 
   options.processCommandArgs(argc, argv);
 
-  options.addUsage("\nExamples:");
-  options.addUsage("  gdtools DOWNLOAD -l john:1234 -d downloads -g data");
-  options.addUsage("  gdtools DOWNLOAD -l john:1234 -d downloads 1B4.gd GRC2000.gd");
-
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
   //! Step: Confirm genome diff files have been input.
   list<string> file_names;
   if (options.getArgc()) {
@@ -2113,6 +2252,7 @@ int do_runfile(int argc, char *argv[])
   ss << "Usage: gdtools RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> -g <genome diff data dir>\n";
   ss << "Usage: gdtools RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> <file1.gd file2.gd file3.gd ...>";
   AnyOption options(ss.str());
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("mode,m",           "Type of command file to generate. Valid options are: breseq, breseq-apply, flexbar, flexbar-paired, breseq-apply.", "breseq");
   options("executable,e",     "Alternative executable program to run.");
   options("options",          "Options to be passed to the executable. These will appear first in the command line.");
@@ -2130,8 +2270,14 @@ int do_runfile(int argc, char *argv[])
   options.addUsage("\tCommand: gdtools runfile -d 02_Downloads -l 04_Errors -g 01_Data");
   options.addUsage("\t Output: breseq -o 1B4 -r 02_Downloads/NC_012660.1.gbk 02_Downloads/SRR172993.fastq >& 04_Errors/1B4.errors.txt");
   options.addUsage("\t Output: breseq -o ZDB111 -r 02_Downloads/REL606.5.gbk 02_Downloads/SRR098039.fastq >& 04_Errors/ZDB111.errors.txt");
+	
   options.processCommandArgs(argc, argv);
 
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
   //! Step: Confirm genome diff files have been input.
   list<string> file_names;
   if (options.getArgc()) {
@@ -2384,17 +2530,24 @@ int do_runfile(int argc, char *argv[])
 int do_mrna_stability(int argc, char *argv[])
 {
   AnyOption options("gdtools mrna_stability [-o output.gd] [-r reference.gbk] input1.gd");
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o",  "Output fasta file for vienna RNA fold", "output.fa");
   options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
   options("flanking_sequence,f", "Number of bases on either side of synonymous SNP to consider for mRNA folding", "15");
   options("verbose,v", "Verbose mode", TAKES_NO_ARGUMENT);
-  options.processCommandArgs(argc, argv);
 
   options.addUsage("");
   options.addUsage("Creates a fasta file with posistion of Synonymous SNP,"); 
   options.addUsage("base change, and mRNA sequence of location plus/minus given flanking sequence");
   options.addUsage("To be used in vienna RNA fold");
-                                            
+	
+	options.processCommandArgs(argc, argv);
+	
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
   if (options.getArgc() != 1) {//@ded any interest in allowing multiple inserts and merge with frequencies before calcuation?
     options.addUsage("");
     options.addUsage("Must provide exactly 1 input.gd.");
@@ -2572,133 +2725,142 @@ int do_mrna_stability(int argc, char *argv[])
 
 int do_translate_proteome(int argc, char *argv[])
 {
-    AnyOption options("gdtools PROTEOME [-o output.fna] -r reference.gbk");
-    options("output,o",  "Base name for FASTA file output", "output");
-    options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
-    options("verbose,v", "Verbose mode", TAKES_NO_ARGUMENT);
-    options.processCommandArgs(argc, argv);
-    
-    options.addUsage("");
-    options.addUsage("Creates two FASTA files, one normal and one with protein translating amber stops as X,"); 
-    
-    cString output_base_name = options["output"];
-    
-    if (!options.count("reference")) {
-        options.printUsage();
-        return -1;
-    }
-    
-    cReferenceSequences ref_seqs;
-    ref_seqs.LoadFiles(from_string<vector<string> >(options["reference"]));
-    
-    cString nfile_name(output_base_name + ".normal.fna");
-    ofstream nfile(nfile_name.c_str());
-    cString afile_name(output_base_name + ".amber.fna");
-    ofstream afile(afile_name.c_str());
-    cString ufile_name(output_base_name + ".unique.fna");
-    ofstream ufile(ufile_name.c_str());
-    cString bfile_name(output_base_name + ".amber.tab");
-    ofstream bfile(bfile_name.c_str());
-    
-    string n_translation_table = cReferenceSequences::translation_tables[11];    
-    string n_translation_table_1 = cReferenceSequences::initiation_codon_translation_tables[11];
-    
-    string a_translation_table = n_translation_table;
-    string a_translation_table_1 = n_translation_table_1;
-    a_translation_table[cReferenceSequences::codon_to_aa_index["TAG"]] = 'X';
-    a_translation_table_1[cReferenceSequences::codon_to_aa_index["TAG"]] = 'X';
+	AnyOption options("gdtools PROTEOME [-o output.fna] -r reference.gbk");
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+	options("output,o",  "Base name for FASTA file output", "output");
+	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
+	options("verbose,v", "Verbose mode", TAKES_NO_ARGUMENT);
+	
+	options.addUsage("");
+	options.addUsage("Creates two FASTA files, one normal and one with protein translating amber stops as X,"); 
 
-    
-    cSequenceFeaturePtr feature_ptr(NULL);
-    
-    uint32_t total_protein_count = 0;
-    uint32_t skipped_protein_count = 0;
-    uint32_t amber_terminated_protein_count = 0;
-    //list< pair<string,uint32_t> > protein_backup_codon_length_list;    
-    
-    for(vector<cAnnotatedSequence>::iterator its = ref_seqs.begin(); its !=ref_seqs.end(); its++) {
-    
-        cAnnotatedSequence& on_seq = *its;
-        cSequenceFeatureList& feature_list = on_seq.m_features;
+	options.processCommandArgs(argc, argv);
 
-        for (cSequenceFeatureList::iterator it = feature_list.begin(); it != feature_list.end(); ++it) {
-            cSequenceFeature& on_feature = **it;
-            
-            if (on_feature["type"] == "CDS") {
-                
-                total_protein_count++;
-                
-                if (on_feature.get_strand() != 0) {                
-                    string n_protein = cReferenceSequences::translate_protein(on_seq, on_feature.m_location, n_translation_table, n_translation_table_1);
-                    string a_protein = cReferenceSequences::translate_protein(on_seq, on_feature.m_location, a_translation_table, a_translation_table_1);
-                    
-                    int32_t length_diff = a_protein.size() - n_protein.size();
-                    
-                    nfile << ">" << on_feature["locus_tag"] << "|" << on_feature["name"] << endl << n_protein << endl;
-                    afile << ">" << on_feature["locus_tag"] << "|" << on_feature["name"] << "|amber" << endl << a_protein << endl; //_" << length_diff << "_bp_to_new_stop" ;
-                    
-                    ufile << ">" << on_feature["locus_tag"] << "|" << on_feature["name"] << endl << n_protein << endl;
-                    if (length_diff) {
-                        amber_terminated_protein_count++;
-                        ufile << ">" << on_feature["locus_tag"] << "|" << on_feature["name"] << "|amber" << endl << a_protein << endl; // _" << length_diff << "_bp_to_new_stop" 
-                        bfile << on_feature["name"] << "\t" << length_diff << "\t" << on_feature["locus_tag"] <<  "\t" << on_feature["product"] << endl;
-                    }
-                }
-                else
-                {
-                    skipped_protein_count++;
-                }
-                
-            }
-        }
-    }
-    
-    cout << "Amber terminated proteins: " << amber_terminated_protein_count << endl;
-    cout << "Skipped proteins: " << skipped_protein_count << endl;
-    cout << "Total proteins: " << total_protein_count << endl;
-    
-    return 0;
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
+	cString output_base_name = options["output"];
+	
+	if (!options.count("reference")) {
+			options.printUsage();
+			return -1;
+	}
+	
+	cReferenceSequences ref_seqs;
+	ref_seqs.LoadFiles(from_string<vector<string> >(options["reference"]));
+	
+	cString nfile_name(output_base_name + ".normal.fna");
+	ofstream nfile(nfile_name.c_str());
+	cString afile_name(output_base_name + ".amber.fna");
+	ofstream afile(afile_name.c_str());
+	cString ufile_name(output_base_name + ".unique.fna");
+	ofstream ufile(ufile_name.c_str());
+	cString bfile_name(output_base_name + ".amber.tab");
+	ofstream bfile(bfile_name.c_str());
+	
+	string n_translation_table = cReferenceSequences::translation_tables[11];    
+	string n_translation_table_1 = cReferenceSequences::initiation_codon_translation_tables[11];
+	
+	string a_translation_table = n_translation_table;
+	string a_translation_table_1 = n_translation_table_1;
+	a_translation_table[cReferenceSequences::codon_to_aa_index["TAG"]] = 'X';
+	a_translation_table_1[cReferenceSequences::codon_to_aa_index["TAG"]] = 'X';
+
+	
+	cSequenceFeaturePtr feature_ptr(NULL);
+	
+	uint32_t total_protein_count = 0;
+	uint32_t skipped_protein_count = 0;
+	uint32_t amber_terminated_protein_count = 0;
+	//list< pair<string,uint32_t> > protein_backup_codon_length_list;    
+	
+	for(vector<cAnnotatedSequence>::iterator its = ref_seqs.begin(); its !=ref_seqs.end(); its++) {
+	
+			cAnnotatedSequence& on_seq = *its;
+			cSequenceFeatureList& feature_list = on_seq.m_features;
+
+			for (cSequenceFeatureList::iterator it = feature_list.begin(); it != feature_list.end(); ++it) {
+					cSequenceFeature& on_feature = **it;
+					
+					if (on_feature["type"] == "CDS") {
+							
+							total_protein_count++;
+							
+							if (on_feature.get_strand() != 0) {                
+									string n_protein = cReferenceSequences::translate_protein(on_seq, on_feature.m_location, n_translation_table, n_translation_table_1);
+									string a_protein = cReferenceSequences::translate_protein(on_seq, on_feature.m_location, a_translation_table, a_translation_table_1);
+									
+									int32_t length_diff = a_protein.size() - n_protein.size();
+									
+									nfile << ">" << on_feature["locus_tag"] << "|" << on_feature["name"] << endl << n_protein << endl;
+									afile << ">" << on_feature["locus_tag"] << "|" << on_feature["name"] << "|amber" << endl << a_protein << endl; //_" << length_diff << "_bp_to_new_stop" ;
+									
+									ufile << ">" << on_feature["locus_tag"] << "|" << on_feature["name"] << endl << n_protein << endl;
+									if (length_diff) {
+											amber_terminated_protein_count++;
+											ufile << ">" << on_feature["locus_tag"] << "|" << on_feature["name"] << "|amber" << endl << a_protein << endl; // _" << length_diff << "_bp_to_new_stop" 
+											bfile << on_feature["name"] << "\t" << length_diff << "\t" << on_feature["locus_tag"] <<  "\t" << on_feature["product"] << endl;
+									}
+							}
+							else
+							{
+									skipped_protein_count++;
+							}
+							
+					}
+			}
+	}
+	
+	cout << "Amber terminated proteins: " << amber_terminated_protein_count << endl;
+	cout << "Skipped proteins: " << skipped_protein_count << endl;
+	cout << "Total proteins: " << total_protein_count << endl;
+	
+	return 0;
 }
 
 int do_gd2oli( int argc, char* argv[])
 {
-    AnyOption options("gdtools GD2OLI [-o output.vcf -l 30] input.gd");
+	AnyOption options("gdtools GD2OLI [-o output.vcf -l 30] input.gd");
     
-    options
-    ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-    ("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
-    ("output,o","name of output file", "output.tab")
-	("large-cutoff,l","large size mutation cutoff. Deletions, substitutions, and insertions changing genome size by more than this many bases are treated as 'large' in the output.", 30)
-
-    ;
-    options.processCommandArgs( argc,argv);
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+	options("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
+	options("output,o","name of output file", "output.tab");
+	options("large-cutoff,l","large size mutation cutoff. Deletions, substitutions, and insertions changing genome size by more than this many bases are treated as 'large' in the output.", 30);
+	options.processCommandArgs( argc,argv);
+	
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
     
-    options.addUsage("");
-    options.addUsage("Creates an Oli file of mutations present in all the input Genome Diff files.");
-    
-    if( options.getArgc() == 0 ){
-        options.addUsage("");
-        options.addUsage("You must provide at least one input Genome Diff file.");
-        options.printUsage();
-        return -1;
-    }
-    
-    if (!options.count("reference")) {
-        options.addUsage("");
-        options.addUsage("You must provide a reference sequence file (-r).");
-        options.printUsage();
-        return -1;
-    }
-    
-    vector<string> gd_file_names;
-    for (int32_t i = 0; i < options.getArgc(); i++)
-    {
-        string file_name = options.getArgv(i);
-        gd_file_names.push_back(file_name);
-    }
-    cGenomeDiff::GD2OLI( gd_file_names, from_string<vector<string> >(options["reference"]), options["output"], from_string<uint32_t>(options["large-cutoff"]) );
-    
-    return 0;
+	options.addUsage("");
+	options.addUsage("Creates an Oli file of mutations present in all the input Genome Diff files.");
+	
+	if( options.getArgc() == 0 ){
+			options.addUsage("");
+			options.addUsage("You must provide at least one input Genome Diff file.");
+			options.printUsage();
+			return -1;
+	}
+	
+	if (!options.count("reference")) {
+			options.addUsage("");
+			options.addUsage("You must provide a reference sequence file (-r).");
+			options.printUsage();
+			return -1;
+	}
+	
+	vector<string> gd_file_names;
+	for (int32_t i = 0; i < options.getArgc(); i++)
+	{
+			string file_name = options.getArgv(i);
+			gd_file_names.push_back(file_name);
+	}
+	cGenomeDiff::GD2OLI( gd_file_names, from_string<vector<string> >(options["reference"]), options["output"], from_string<uint32_t>(options["large-cutoff"]) );
+	
+	return 0;
 }
 
                                             

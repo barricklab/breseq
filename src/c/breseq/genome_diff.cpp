@@ -3230,7 +3230,7 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
             // For first copy we don't need to move things
             special_delta = 0;
           } else if (within_copy_index == -1) {
-            // For inside the MOB
+            // For inside the MOB UNUSED!!!
             special_delta = 0; 
           }
           
@@ -3390,7 +3390,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
       if ((start_repeat.get() != NULL) && (end_repeat.get() != NULL)) {
         // different names is an odd case - WARN and don't assign anything
         if ( (*start_repeat)["name"] != (*end_repeat)["name"]) {
-          WARN("Mutation unexpectedly has boundaries near two different repeat families, saving first." + mut.as_string());
+          WARN("Mutation has boundaries near two different repeat families, saving only the first one." + mut.as_string());
           mut[one_close_key] = (*start_repeat)["name"]; 
         } else {
           mut[both_close_key] = (*start_repeat)["name"]; 
