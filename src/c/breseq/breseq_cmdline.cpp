@@ -233,31 +233,23 @@ int do_bam2cov(int argc, char* argv[]) {
   {
     string region = options.getArgv(i);
     region_list.push_back(region);
-  }  
+  }
   
-  if (!region_list.size()) {
+  bool tiling_mode = options.count("tile-size") || options.count("tile-overlap");
+  ASSERT(tiling_mode || (!options.count("tile-size") && !options.count("tile-overlap")),
+         "--tile-size and --tile-overlap args must both be provided to activate tile mode");
+  
+  if (!tiling_mode && !region_list.size()) {
     options.addUsage("");
     options.addUsage("You must supply the --region option or unnamed arguments specifying at least one genomic region.");
     options.printUsage();
     return -1;
-  }  
-  
-  bool tiling_mode = options.count("tile-size") && options.count("tile-overlap");
-  ASSERT(tiling_mode || (!options.count("tile-size") && !options.count("tile-overlap")),
-          "--tile-size and --tile-overlap args must both be provided to activate tile mode");
+  }
   
   if (tiling_mode && (region_list.size() > 0))
   {
     WARN("Tiling mode activated. Ignoring " + to_string(region_list.size()) + " regions that were specified.");
     region_list.clear();
-  }
-  
-  // Did they specify some regions?
-  if(!tiling_mode && (region_list.size() == 0)) {
-    options.addUsage("");
-    options.addUsage("No regions specified.");
-    options.printUsage();
-    return -1;
   }
   
   // create empty settings object to have R script name
@@ -2014,6 +2006,7 @@ int breseq_default_action(int argc, char* argv[])
     
     // Add metadata that will only be in the output.gd file 
     mpgd.metadata.author = string(PACKAGE_STRING) + " " + string(HG_REVISION);
+    mpgd.metadata.command = settings.full_command_line;
     mpgd.metadata.created = Settings::time2string(time(NULL));
     mpgd.metadata.title = settings.run_name;
 

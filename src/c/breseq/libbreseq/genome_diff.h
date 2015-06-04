@@ -498,6 +498,7 @@ public:
     string title;
     string author;
     string created;
+    string command;
     vector<string> ref_seqs;
     vector<string> read_seqs;
     vector<string> adapter_seqs;

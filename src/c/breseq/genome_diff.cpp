@@ -1385,6 +1385,9 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
     else if (split_line[0] == "#=AUTHOR") { 
       metadata.author = second_half;
     }
+    else if (split_line[0] == "#=COMMAND") {
+      metadata.command = second_half;
+    }
     else if (split_line[0] == "#=REFSEQ" && split_line.size() > 1) {
       metadata.ref_seqs.push_back(second_half);
     }
@@ -1862,6 +1865,9 @@ void cGenomeDiff::write(const string& filename) {
   }
   if (metadata.created != "") {
     fprintf(os, "#=CREATED\t%s\n", metadata.created.c_str());
+  }
+  if (metadata.command != "") {
+    fprintf(os, "#=COMMAND\t%s\n", metadata.command.c_str());
   }
   if (metadata.time != -1.0) {
     fprintf(os, "#=TIME\t%s\n", to_string<double>(metadata.time).c_str());
