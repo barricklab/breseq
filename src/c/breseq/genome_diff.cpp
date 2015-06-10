@@ -554,8 +554,7 @@ cReferenceCoordinate cDiffEntry::get_reference_coordinate_start() const
     case INS:
       return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)), this->entry_exists(INSERT_POSITION) ? from_string<uint32_t>(this->at(INSERT_POSITION)) : 1);
     case MOB:
-      // We insert *after* the duplicated bases
-      return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)) + from_string<uint32_t>(this->at("duplication_size")) - 1, 1);
+      return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)));
     case UN:
       return cReferenceCoordinate(from_string<uint32_t>(this->at(START)));
     default:
@@ -577,9 +576,9 @@ cReferenceCoordinate cDiffEntry::get_reference_coordinate_end() const
     case MASK:
       return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)) + from_string<uint32_t>(this->at(SIZE)) - 1);
     case INS:
-      return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)), this->entry_exists(INSERT_POSITION) ? from_string<uint32_t>(this->at(INSERT_POSITION)) : 0);
+      return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)), this->entry_exists(INSERT_POSITION) ? from_string<uint32_t>(this->at(INSERT_POSITION)) : 1);
     case MOB:
-      return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)) + from_string<uint32_t>(this->at("duplication_size")) - 1, 1);
+      return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)) + from_string<uint32_t>(this->at("duplication_size")) - 1);
     case UN:
       return cReferenceCoordinate(from_string<uint32_t>(this->at(END)));
     
@@ -2915,7 +2914,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
 
 
 
-        cFlaggedRegions::regions_t regions = repeat_match_regions.regions(ref.m_seq_id, start_1, end_1);
+        cFlaggedRegions::regions_t regions = repeat_match_regions.regions_that_overlap(ref.m_seq_id, start_1, end_1);
 
         if (regions.size()) {
             uint32_t lower = regions.begin()->first; 
@@ -2959,7 +2958,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
           temp_item["position"] = s(pos_1);        
           temp_item["size"]     = s(size);        
 
-          bool overlaps_multiple_IS = IS_element_regions.regions(ref.m_seq_id, pos_1, pos_1 + size).size() > 1;
+          bool overlaps_multiple_IS = IS_element_regions.regions_that_overlap(ref.m_seq_id, pos_1, pos_1 + size).size() > 1;
           bool is_excluded = repeat_match_regions.is_flagged(ref.m_seq_id, pos_1 - buffer, pos_1 + size + buffer);
           bool is_within_buffer = used_mutation_regions.is_flagged(ref.m_seq_id, pos_1 - buffer, pos_1 + size + buffer);
 
@@ -3022,14 +3021,14 @@ void cGenomeDiff::random_mutations(string exclusion_file,
     for (it = muts.begin(); it != muts.end(); ++it) {
       uint32_t pos_1 = un((**it)["position"]);
       uint32_t size = un((**it)["size"]);
-      uint32_t n_IS_elements = IS_element_regions.regions(ref.m_seq_id, pos_1, pos_1 + size).size();
+      uint32_t n_IS_elements = IS_element_regions.regions_that_overlap(ref.m_seq_id, pos_1, pos_1 + size).size();
       ASSERT(n_IS_elements == 1,
           "Mutation overlaps more then one IS element: " + (*it)->to_spec().as_string());
     }
 
     //Display IS elements that could not be used.
     for (cSequenceFeatureList::iterator it = repeats.begin(); it != repeats.end(); ++it) {
-      WARN("Un-used IS element: " + (**it)["name"]+ '\t' + s((*it)->get_start_1()) + '-' + s((*it)->get_end_1()));
+      WARN("Unused IS element: " + (**it)["name"]+ '\t' + s((*it)->get_start_1()) + '-' + s((*it)->get_end_1()));
     }
 
   }

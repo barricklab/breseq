@@ -146,9 +146,52 @@ bool cFlaggedRegions::overlaps(const string& seq_id_1, const region_t& region_1,
   return ((min.second >= max.first) && (max.second >= min.first));
 }
 
+  
+void cFlaggedRegions::merge_within_distance(const uint32_t merge_distance)
+{
+  // Before merging!
+  //cout << "Before merging:" << endl;
+  //this->print();
+  
+  // save regions then clear current values
+  for (map<string,regions_t>::const_iterator itm = m_regions.begin(); itm != m_regions.end(); ++itm) {
+    const string& seq_id = itm->first;
+    regions_t regions = this->all_regions(seq_id);
+    this->m_regions[seq_id].clear();
+    
+    uint32_t last_begin = 0;
+    uint32_t last_end = 0;
+
+    for(regions_t::iterator it=regions.begin(); it != regions.end(); it++)
+    {
+      if (last_begin != 0) {
+        if (last_end + merge_distance >= it->first) {
+          last_end = it->second;
+          continue;
+        }
+      
+        flag_region(seq_id, last_begin, last_end);
+      }
+      
+      last_begin = it->first;
+      last_end = it->second;
+    }
+    
+    // add the last one
+    if (last_begin != 0) {
+      flag_region(seq_id, last_begin, last_end);
+    }
+  }
+  
+  // After merging!
+  //cout << endl << "After merging:" << endl;
+  //this->print();
+}
+  
 
 // Adds padding to both ends of every region, merging if necessary
-void cFlaggedRegions::add_padding_to_ends(const uint32_t padding)
+// Padding can be negative!
+void cFlaggedRegions::add_padding_to_ends(const int32_t padding, const int32_t minimum_size)
 {
   // Before padding!
   //cout << "Before padding:" << endl;
@@ -161,9 +204,12 @@ void cFlaggedRegions::add_padding_to_ends(const uint32_t padding)
     this->m_regions[seq_id].clear();
     for(regions_t::iterator it=regions.begin(); it != regions.end(); it++)
     {
-      uint32_t new_start = (it->first > padding) ? it->first - padding : 1;
-      uint32_t new_end = it->second + padding; // we don't know anything about the ends of the sequence
-      flag_region(seq_id, new_start, new_end);
+      uint32_t new_start = (static_cast<int32_t>(it->first) > padding) ? static_cast<uint32_t>(static_cast<int32_t>(it->first) - padding) : 1;
+      uint32_t new_end = static_cast<uint32_t>(static_cast<int32_t>(it->second) + padding); // we don't know anything about the ends of the sequence
+      
+      if (new_end >= new_start + minimum_size - 1) {
+        flag_region(seq_id, new_start, new_end);
+      }
     }
   }
   
@@ -181,7 +227,7 @@ cFlaggedRegions& cFlaggedRegions::flag_region(const string& seq_id, const uint32
   
   //cout << "adding:" << start_1 << " " << end_1 << endl;
   
-  const regions_t& regions = this->regions(seq_id, start_1, end_1);
+  const regions_t& regions = this->regions_that_overlap(seq_id, start_1, end_1);
   
   //Remove and merge overlapping regions if needed.
   if (regions.size()) {
@@ -228,7 +274,7 @@ bool cFlaggedRegions::is_flagged(const string& seq_id, const cReferenceCoordinat
   
   ASSERT(start_1 <= end_1, "[start_1]: " + s(start_1.get_position()) + ":" + s(start_1.get_insert_position()) + " is greater than [end_1]: " + s(end_1.get_position()) + ":" + s(end_1.get_insert_position()) );
   
-  return this->regions(seq_id, start_1, end_1).size();
+  return this->regions_that_overlap(seq_id, start_1, end_1).size();
 }
 
 //<! Returns whether the specified region is flagged (i.e., overlaps any region at all)
@@ -246,7 +292,7 @@ cFlaggedRegions& cFlaggedRegions::remove(const string& seq_id, const regions_t& 
 }
 
 //<! Returns all of the regions that overlap the specified coordinates
-cFlaggedRegions::regions_t cFlaggedRegions::regions(const string& seq_id, const cReferenceCoordinate& start_1, const cReferenceCoordinate& end_1) const {
+cFlaggedRegions::regions_t cFlaggedRegions::regions_that_overlap(const string& seq_id, const cReferenceCoordinate& start_1, const cReferenceCoordinate& end_1) const {
   
   // create empty item and return if seq_id does not exist
   if (!m_regions.count(seq_id))
@@ -259,28 +305,64 @@ cFlaggedRegions::regions_t cFlaggedRegions::regions(const string& seq_id, const 
     return m_regions.at(seq_id);
   }
 
-  // find the first overlapping one
+  // find all overlapping ones
   
   // Should be something clever we can do here to use binary search
   //regions_t::iterator it_lower = m_regions.at(seq_id).lower_bound( make_pair<uint32_t, uint32_t>(start_1, 0) );
   //if (it_lower != m_regions.at(seq_id).begin())
   //  it_lower--;
   
-  regions_t::iterator it_lower = m_regions.at(seq_id).begin();
-  while ( (it_lower != m_regions.at(seq_id).end()) && (cReferenceCoordinate(it_lower->second) < start_1) ) {
-    it_lower++;
-  }
+  regions_t overlapping;
   
-  // Do we actually overlap this one?
-  if ( cReferenceCoordinate(it_lower->first) > start_1 )
-    return regions_t();
+  for (regions_t::iterator it = m_regions.at(seq_id).begin(); it != m_regions.at(seq_id).end(); it++) {
     
-  regions_t::iterator it_upper = it_lower;
-  while ( (it_upper != m_regions.at(seq_id).end()) && (cReferenceCoordinate(it_upper->first) <= start_1) ) {
-    it_upper++;
+    if ((start_1 >= cReferenceCoordinate(it->first)) && (start_1 <= cReferenceCoordinate(it->second))) {
+      overlapping.insert(*it);
+    }
+    else if ((cReferenceCoordinate(it->first) >= start_1) && (cReferenceCoordinate(it->first) <= end_1)) {
+      overlapping.insert(*it);
+
+    }
   }
   
-  return regions_t(it_lower, it_upper);
+  return overlapping;
 }
+  
+  
+//<! Returns whether the specified region is contained within a region (i.e., completely overlaps any region at all)
+bool cFlaggedRegions::is_contained(const string& seq_id, const cReferenceCoordinate& start_1, const cReferenceCoordinate& end_1) const {
+  
+  ASSERT(start_1 <= end_1, "[start_1]: " + s(start_1.get_position()) + ":" + s(start_1.get_insert_position()) + " is greater than [end_1]: " + s(end_1.get_position()) + ":" + s(end_1.get_insert_position()) );
+  
+  return this->regions_that_contain(seq_id, start_1, end_1).size();
+}
+  
+//<! Returns all of the regions that overlap the specified coordinates
+cFlaggedRegions::regions_t cFlaggedRegions::regions_that_contain(const string& seq_id, const cReferenceCoordinate& start_1, const cReferenceCoordinate& end_1) const {
+  
+  // create empty item and return if seq_id does not exist
+  if (!m_regions.count(seq_id))
+    return regions_t();
+  
+  ASSERT(start_1 <= end_1, "[start_1]: " + s(start_1.get_position()) + ":" + s(start_1.get_insert_position()) + " is greater than [end_1]: " + s(end_1.get_position()) + ":" + s(end_1.get_insert_position()) );
+  
+  // Return all regions by default
+  if ((start_1 == cReferenceCoordinate(0,0)) && (end_1 == cReferenceCoordinate(0,0))) {
+    return m_regions.at(seq_id);
+  }
+  
+  // find all containing ones
+  regions_t contained;
+  
+  for (regions_t::iterator it = m_regions.at(seq_id).begin(); it != m_regions.at(seq_id).end(); it++) {
+    
+    if ((start_1 >= cReferenceCoordinate(it->first)) && (end_1 <= cReferenceCoordinate(it->second))) {
+      contained.insert(*it);
+    }
+  }
+  
+  return contained;
+}
+
 
 }//namespace bresesq

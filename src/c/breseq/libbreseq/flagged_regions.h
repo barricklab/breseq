@@ -51,8 +51,11 @@ public:
   //! Add region to be marked.
   cFlaggedRegions& flag_region(const string& seq_id, const uint32_t _start_1, const uint32_t _end_1);
   
+  //! Extend the ends of every region and remove small regions if necessary
+  void add_padding_to_ends(const int32_t padding, const int32_t minimum_size = 0);
+  
   //! Extend the ends of every region and merge if necessary
-  void add_padding_to_ends(const uint32_t padding);
+  void merge_within_distance(const uint32_t merge_distance);
   
   //! Remove overlapping regions, adds segments if partial overlapping occurs.
   //cFlaggedRegions& unflag_region(uint32_t start_1, uint32_t end_1 = 0);
@@ -68,8 +71,12 @@ public:
   bool overlaps(const string& seq_id_1, const uint32_t pos_1, const string& seq_id_2, const region_t& region) const;
   
   //! Return overlapping regions, defaults to all regions.
-  regions_t regions(const string& seq_id, const cReferenceCoordinate& _start_1, const cReferenceCoordinate& _end_1) const;
+  regions_t regions_that_overlap(const string& seq_id, const cReferenceCoordinate& _start_1, const cReferenceCoordinate& _end_1) const;
   
+  //! Return containing regions, must completely lie within the region
+  bool is_contained(const string& seq_id, const cReferenceCoordinate& start_1, const cReferenceCoordinate& end_1) const;
+  regions_t regions_that_contain(const string& seq_id, const cReferenceCoordinate& _start_1, const cReferenceCoordinate& _end_1) const;
+
   //! return all regions for the specified seq_id
   regions_t all_regions(const string& seq_id) {
       return (m_regions.count(seq_id)) ? m_regions.at(seq_id) : regions_t();

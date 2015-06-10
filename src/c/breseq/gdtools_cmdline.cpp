@@ -959,7 +959,7 @@ int do_annotate(int argc, char* argv[])
 		return -1;
 	}
   
-  UserOutput uout("ANNOTATE");
+  UserOutput uout("ANNOTATE/COMPARE");
   
   string output_format = to_upper(options["format"]);
   string output_file_name;
@@ -1139,8 +1139,8 @@ int do_phylogeny(int argc, char* argv[])
 	options("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT);
 	
 	options.addUsage("");
-	options.addUsage("Uses PHYLIP to construct a phylogentic tree. If you are including and ancestor, ");
-	options.addUsage("you should include it as the first Genome Diff file.");
+	options.addUsageSameLine("Uses PHYLIP to construct a phylogentic tree. If you are including an ancestor");
+	options.addUsageSameLine("to root the tree, you should include it as the very first Genome Diff file.");
     
 	options.processCommandArgs(argc, argv);
 	
@@ -1609,6 +1609,8 @@ int do_mummer2mask(int argc, char* argv[])
 	options("reference,r","File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
 	options("output,o", "Output Genome Diff file.", "output.gd");
 	options("padding,p", "Additional padding to add to each end of every MASK region.", 0);
+	options("merge,g", "Merge regions if they are within this distance (before adding padding).", 0);
+	options("minimum,m", "Minimum size of a region after padding and merging to remain in the MASK list.", 0);
 	options.addUsage("");
 	options.addUsage("The input file of repeats should be generated using a MUMmer command like this:");
 	options.addUsage("  mummer -maxmatch -b -c -l 36 reference.fna reference.fna > input.coords");
@@ -1649,8 +1651,11 @@ int do_mummer2mask(int argc, char* argv[])
 	uout << "Reading MUMmer file: " << options.getArgv(0) << endl;
 	flagged_regions.read_mummer(options.getArgv(0), ref_seq_info);
 	
+	uout << "Merging regions" << endl;
+	flagged_regions.merge_within_distance(from_string<uint32_t>(options["merge"]));
+	
 	uout << "Adding padding to ends of regions" << endl;
-	flagged_regions.add_padding_to_ends(from_string<uint32_t>(options["padding"]));
+	flagged_regions.add_padding_to_ends(from_string<int32_t>(options["padding"]), from_string<int32_t>(options["minimum"]));
 	
 	// Flagged regions has to keep track of the seq_id
 	
@@ -1679,7 +1684,7 @@ int do_mask_gd(int argc, char* argv[])
 	options("output,o", "Output Genome Diff file.", "output.gd");
 	
 	options.addUsage("");
-	options.addUsage("Creates a GD file where mutations in the input GD that are located within certain regions of the reference genome are removed. These regions are defined as MASK entries in the mask GD file.");
+	options.addUsage("Creates a GD file where mutations in the input GD that are located within certain regions of the reference genome are removed. These regions are defined as MASK entries in the mask GD file. Mutations that overlap only masked reference bases (and therefore do not overlap any unmasked bases) are removed.");
 	
 	options.processCommandArgs(argc, argv);
 	
@@ -1721,15 +1726,20 @@ int do_mask_gd(int argc, char* argv[])
 		diff_entry_ptr_t& mut = *mut_it;
 		
 		cReferenceCoordinate start_coord = mut->get_reference_coordinate_start();
-		cReferenceCoordinate end_coord = mut->get_reference_coordinate_start();
-
-		// Must delete position before and after if there is an insert position
-		uint32_t start_compare = start_coord.get_position() + ((start_coord.get_insert_position() != 0) ? 1 : 0);
-		uint32_t end_compare = end_coord.get_position() - ((end_coord.get_insert_position() != 0) ? 1 : 0);
-		// For an INS, the end will be one less than the start
+		cReferenceCoordinate end_coord = mut->get_reference_coordinate_end();
 		
-		if (!flagged_regions.is_flagged(mut->at(SEQ_ID), start_coord, end_coord))
+		cFlaggedRegions::regions_t contained_within = flagged_regions.regions_that_contain(mut->at(SEQ_ID), start_coord, end_coord);
+		
+		if (contained_within.size() == 0) {
 			new_gd.add(*mut);
+		} else {
+			cout << endl << "Removing mutation:" << endl << "  " << *mut << endl;
+			cout << "  Contained within MASK region(s):";
+			for (cFlaggedRegions::regions_t::iterator region_it = contained_within.begin(); region_it != contained_within.end(); region_it++) {
+				cout << " " << mut->at(SEQ_ID) << ":" << region_it->first << "-" << region_it->second;
+			}
+			cout << endl;
+		}
 	}
 	
 	
