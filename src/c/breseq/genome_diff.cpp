@@ -554,7 +554,13 @@ cReferenceCoordinate cDiffEntry::get_reference_coordinate_start() const
     case INS:
       return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)), this->entry_exists(INSERT_POSITION) ? from_string<uint32_t>(this->at(INSERT_POSITION)) : 1);
     case MOB:
-      return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)));
+    {
+      if (from_string<uint32_t>(this->at("duplication_size")) == 0) {
+        return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)), 1);
+      } else {
+        return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)));
+      }
+    }
     case UN:
       return cReferenceCoordinate(from_string<uint32_t>(this->at(START)));
     default:
@@ -578,7 +584,13 @@ cReferenceCoordinate cDiffEntry::get_reference_coordinate_end() const
     case INS:
       return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)), this->entry_exists(INSERT_POSITION) ? from_string<uint32_t>(this->at(INSERT_POSITION)) : 1);
     case MOB:
-      return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)) + from_string<uint32_t>(this->at("duplication_size")) - 1);
+    {
+      if (from_string<uint32_t>(this->at("duplication_size")) == 0) {
+        return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)) + from_string<uint32_t>(this->at("duplication_size")), 1);
+      } else {
+        return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)) + from_string<uint32_t>(this->at("duplication_size")) - 1);
+      }
+    }
     case UN:
       return cReferenceCoordinate(from_string<uint32_t>(this->at(END)));
     
@@ -1731,7 +1743,7 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
             parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Attempt to put mutation 'before' a mutation with an id that does not exist in file: " + before_mutation_id, true);
           } else {
             // And that it is actually necessary for ordering
-            
+ /*
             if (before_de->_type == MOB) {
               
               uint32_t start = from_string<uint32_t>((*before_de)[POSITION]);
@@ -1750,13 +1762,20 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
               if ((position < start) || (position > end)) {
                 parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Position must be >= " + to_string(start) + " and <= " + to_string(end) + " for the 'before' field to have an effect when referring to this mutation:\n" + before_de->as_string(), true);
               }              
+            
+            } else if (before_de->_type == INV) {
+              
+              uint32_t start = from_string<uint32_t>((*before_de)[POSITION]);
+              uint32_t end = start + from_string<uint32_t>((*before_de)[SIZE]) - 1;
+              
+              if ((position < start) || (position > end)) {
+                parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Position must be >= " + to_string(start) + " and <= " + to_string(end) + " for the 'before' field to have an effect when referring to this mutation:\n" + before_de->as_string(), true);
+              }
               
             } else {
-              /*
-              parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Field 'before' refers to a mutation that is not of type AMP or MOB where it will have no effect:\n" + before_de->as_string(), true);
-               */
+              parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Field 'before' refers to a mutation that is not of type AMP, MOB, or INV where it will have no effect:\n" + before_de->as_string(), true);
             }
-            
+ */
           }
           
         } else {
@@ -1978,6 +1997,23 @@ void cGenomeDiff::remove_group(cGenomeDiff::group group)
       it = remove(it);
       advance_it = false;
     } else if ((group == cGenomeDiff::VALIDATION) && (*it)->is_validation() ){
+      it = remove(it);
+      advance_it = false;
+    }
+    
+    if (advance_it) ++it;
+  }
+}
+  
+void cGenomeDiff::remove_type(gd_entry_type _type)
+{
+  diff_entry_list_t::iterator it = _entry_list.begin();
+  
+  bool advance_it(true);
+  while (it != _entry_list.end()) {
+    advance_it = true;
+    
+    if ((*it)->_type ==  _type){
       it = remove(it);
       advance_it = false;
     }
@@ -2398,7 +2434,7 @@ void cGenomeDiff::unique()
 //  bool unique:  TRUE will NOT merge entries that match existing entries.
 //                FALSE WILL merge entries that match existing entries.
 //
-//  bool new_id:  TRUE will give assign all new entries with the lowest available ID.
+//  bool new_id:  TRUE will assign all new entries the lowest available ID.
 //                FALSE will allow all entries to retain their IDs if they are unique.
 //
 // There are some complicated cases that merge just cannot accommodate:
@@ -2406,12 +2442,14 @@ void cGenomeDiff::unique()
 // 1) The difference between a mutation happening before an AMP (thus in all copies)
 //    and after an AMP (thus in only one copy) at the same position.
 //
-void cGenomeDiff::merge(cGenomeDiff& gd_new, bool unique, bool new_id, bool verbose)
+void cGenomeDiff::merge(cGenomeDiff& merge_gd, bool unique, bool new_id, bool verbose)
 {
   uint32_t old_unique_ids = unique_id_used.size();
   
+  cGenomeDiff new_gd;
+  
   //Iterate through all the potential new entries
-  for (diff_entry_list_t::iterator it_new = gd_new._entry_list.begin(); it_new != gd_new._entry_list.end(); it_new++)
+  for (diff_entry_list_t::iterator it_new = merge_gd._entry_list.begin(); it_new != merge_gd._entry_list.end(); it_new++)
   {
     //The current potential new entry we're looking at
     cDiffEntry& entry_new = **it_new;
@@ -2436,106 +2474,115 @@ void cGenomeDiff::merge(cGenomeDiff& gd_new, bool unique, bool new_id, bool verb
     if(new_entry)
     {      
       //Add the new entry to the existing list
-      add(entry_new, new_id);
+      new_gd.add(entry_new, new_id);
       
       //Notify user of new entry
-      if(verbose)cout << "\tNEW ENTRY\t" << entry_new._id << " >> " << _entry_list.back()->_id << "\t" << gd_new.get_file_path() << endl;
+      if(verbose)cout << "\tNEW ENTRY\t" << entry_new._id << " >> " << _entry_list.back()->_id << "\t" << merge_gd.get_file_path() << endl;
     }
   }
   
   //Iterate through all the entries in the new list.
   //This is where we update the evidence IDs for mutations.
-  for (diff_entry_list_t::iterator it = _entry_list.begin(); it != _entry_list.end(); it++)
+  for (diff_entry_list_t::iterator it = new_gd._entry_list.begin(); it != new_gd._entry_list.end(); it++)
   {
     // @JEB: optimization: we don't need to do this for evidence items.
-    if ( (*it)->is_evidence() ) continue;
+    if ( !(**it).is_mutation() ) continue;
     
-    //Is this one of the new entries?
-    if(from_string<uint32_t>((**it)._id) > old_unique_ids && (**it).is_mutation())
-    {                
-      //For every piece of evidence this entry has
-      for(int32_t iter = 0; iter < (int32_t)(**it)._evidence.size(); iter++)
-      {
-        bool found_match = false;
-        
-        //Iterate through all the potential new entries
-        for (diff_entry_list_t::iterator it_new = gd_new._entry_list.begin(); it_new != gd_new._entry_list.end(); it_new++)
-        {            
-          //Does this evidence ID match an ID in the old list?
-          if((**it)._evidence[iter] == (**it_new)._id && !found_match)
+    //For every piece of evidence this entry has
+    for(int32_t iter = 0; iter < (int32_t)(**it)._evidence.size(); iter++)
+    {
+      bool found_match = false;
+      
+      //Iterate through all the potential new entries
+      for (diff_entry_list_t::iterator it_new = new_gd._entry_list.begin(); it_new != new_gd._entry_list.end(); it_new++)
+      {            
+        //Does this evidence ID match an ID in the old list?
+        if((**it)._evidence[iter] == (**it_new)._id && !found_match)
+        {
+          //Iterate through all the current entries
+          for (diff_entry_list_t::iterator it_cur =_entry_list.begin(); it_cur != _entry_list.end(); it_cur++)
           {
-            //Iterate through all the current entries
-            for (diff_entry_list_t::iterator it_cur =_entry_list.begin(); it_cur != _entry_list.end(); it_cur++)
+            //Does the new entry match the current entry?
+            if((**it_cur) == (**it_new))
             {
-              //Does the new entry match the current entry?
-              if((**it_cur) == (**it_new))
-              {
-                //Notify user of the update
-                if(verbose)cout << "\tID: " << (**it)._id  << "\tEVIDENCE\t" << (**it)._evidence[iter] << " >> " << (**it_cur)._id << endl;
-                
-                //Change the evidence ID to it's new ID in the new updated list
-                (**it)._evidence[iter] = (**it_cur)._id;
-                found_match = true;  
+              //Notify user of the update
+              if(verbose)cout << "\tID: " << (**it)._id  << "\tEVIDENCE\t" << (**it)._evidence[iter] << " >> " << (**it_cur)._id << endl;
+              
+              //Change the evidence ID to it's new ID in the new updated list
+              (**it)._evidence[iter] = (**it_cur)._id;
+              found_match = true;  
+              break;
+            }
+          }
+        }
+      }
+      
+      // If we've gone through all the lists, and can't find the evidence
+      // then remove the evidence entry completely, as it matches to nothing.
+      if(!found_match)
+      {
+        //Notify user of the update
+        if(verbose)cout << "\tID: " << (**it)._id  << "\tEVIDENCE  \t" << (**it)._evidence[iter] << " >> REMOVED" << endl;
+        (**it)._evidence.erase((**it)._evidence.begin() + iter--);
+      }        
+    }
+  }
+
+  // Add the ones from the new list to the current list
+  for (diff_entry_list_t::iterator it=new_gd._entry_list.begin(); it!= new_gd._entry_list.end(); it++) {
+    add(**it);
+  }
+  
+  // Fix optional fields that refer to mutation IDs
+  // Must be done after adding entries, because a before= or within= could have existed in the original GD (so not in the added list)
+  for (diff_entry_list_t::iterator it=new_gd._entry_list.begin(); it!= new_gd._entry_list.end(); it++) {
+    
+    cDiffEntry& mut = **it;
+
+    if (!mut.is_mutation()) continue;
+    
+    for (vector<string>::const_iterator key_it=gd_keys_with_ids.begin(); key_it!= gd_keys_with_ids.end(); key_it++) {
+      if (mut.entry_exists(*key_it)) {
+        
+        string value = mut[*key_it];
+        // Replace first value = mutation_id with substituted id
+        vector<string> split_value = split(value, ":");
+        
+        // iterate through old items to find the match
+        bool found_match = false;
+        for (diff_entry_list_t::iterator it_new = new_gd._entry_list.begin(); it_new != new_gd._entry_list.end(); it_new++) {
+        
+          if((split_value[0] == (**it_new)._id) && !found_match) {
+            
+            //Iterate through all the current entries to find the match
+            for (diff_entry_list_t::iterator it_cur =_entry_list.begin(); it_cur != _entry_list.end(); it_cur++) {
+              if ((**it_cur) == (**it_new)) {
+                split_value[0] = to_string((**it_cur)._id);
+                found_match = true;
                 break;
               }
             }
           }
         }
         
-        // If we've gone through all the lists, and can't find the evidence
-        // then remove the evidence entry completely, as it matches to nothing.
-        if(!found_match)
-        {
-          //Notify user of the update
-          if(verbose)cout << "\tID: " << (**it)._id  << "\tEVIDENCE  \t" << (**it)._evidence[iter] << " >> REMOVED" << endl;
-          
-          (**it)._evidence.erase((**it)._evidence.begin() + iter--);
-        }        
-      }
-    }
-  }
+        ASSERT(found_match, "Did not find entry referred to by key '" + *key_it + "' for mutation\n" + mut.as_string());
+        
+        if (verbose) {
+          cout << "Mutation:" << endl << mut.as_string() << endl;
+        }
+        mut[*key_it] = join(split_value, ":");
 
-  
-  // Fix optional fields that refer to mutation IDs
-  for (diff_entry_list_t::iterator it=_entry_list.begin(); it!= _entry_list.end(); it++) {
-    
-    cDiffEntry& mut = **it;
-
-    if(from_string<uint32_t>(mut._id) > old_unique_ids && mut.is_mutation()) {
-    
-      for (vector<string>::const_iterator key_it=gd_keys_with_ids.begin(); key_it!= gd_keys_with_ids.end(); key_it++) {
-        if (mut.entry_exists(*key_it)) {
-          
-          string value = mut[*key_it];
-          // Replace first value = mutation_id with substituted id
-          vector<string> split_value = split(value, ":");
-          
-          // iterate through old items to find the match
-          bool found_match = false;
-          for (diff_entry_list_t::iterator it_new = gd_new._entry_list.begin(); it_new != gd_new._entry_list.end(); it_new++) {
-          
-            if((split_value[0] == (**it_new)._id) && !found_match) {
-              
-              //Iterate through all the current entries to find the match
-              for (diff_entry_list_t::iterator it_cur =_entry_list.begin(); it_cur != _entry_list.end(); it_cur++) {
-                if ((**it_cur) == (**it_new)) {
-                  split_value[0] = to_string((**it_cur)._id);
-                  found_match = true;
-                  break;
-                }
-              }
-            }
-          }
-          mut[*key_it] = join(split_value, ":");
+        if (verbose) {
+          cout << "  Reassigned " << *key_it << "=" << value << " to " << mut[*key_it] << endl;
+          cout << "Mutation:" << endl << mut.as_string() << endl;
         }
       }
     }
   }
-  
-  
+
   
   //Notify user of the update
-  if(verbose)cout << "\tMERGE DONE - " << gd_new.get_file_path() << endl;
+  if(verbose)cout << "\tMERGE DONE - " << merge_gd.get_file_path() << endl;
   
 }
 
@@ -2551,6 +2598,7 @@ void cGenomeDiff::fast_merge(const cGenomeDiff& gd)
 // This function is for simplifying the numbering
 void cGenomeDiff::reassign_unique_ids()
 {
+  bool verbose = false;
   this->sort();
   
   //Handle mutations.
@@ -2609,7 +2657,14 @@ void cGenomeDiff::reassign_unique_ids()
         // Replace first value = mutation_id with substituted id
         vector<string> split_value = split(value, ":");
         split_value[0] = mutation_id_reassignments[split_value[0]];
+        if (verbose) {
+          cout << "Mutation:" << endl << mut.as_string() << endl;
+        }
         mut[*key_it] = join(split_value, ":");
+        if (verbose) {
+          cout << "Reassigned " << *key_it << "=" << split_value[0] << " to " << mut[*key_it] << endl;
+          cout << "New Mutation:" << endl << mut.as_string() << endl;
+        }
       }
     }
   }
@@ -3848,6 +3903,84 @@ void cGenomeDiff::annotate_hotspots(cReferenceSequences& new_ref_seq_info, bool 
   }
 }
   
+void cGenomeDiff::mask_mutations(cGenomeDiff& mask_gd, bool verbose)
+{
+  diff_entry_list_t masks = mask_gd.list(make_vector<gd_entry_type>(MASK));
+  
+  // Create all of the flagged regions
+  cFlaggedRegions flagged_regions;
+  for (diff_entry_list_t::iterator mask_it = masks.begin(); mask_it != masks.end(); mask_it++) {
+    diff_entry_ptr_t& mask = *mask_it;
+    flagged_regions.flag_region(mask->at(SEQ_ID), from_string<uint32_t>(mask->at(POSITION)), from_string<uint32_t>(mask->at(POSITION)) + from_string<uint32_t>(mask->at(SIZE)) - 1);
+  }
+  
+  // Mask mutations by removing entries from the current GD file
+  diff_entry_list_t::iterator mut_it = this->_entry_list.begin();
+  
+  bool advance_it(true);
+  while (mut_it != this->_entry_list.end()) {
+    
+    diff_entry_ptr_t& mut = *mut_it;
+    
+    // ONLY mutations
+    if (!mut->is_mutation()) {
+      ++mut_it;
+      continue;
+    }
+    
+    cReferenceCoordinate start_coord = mut->get_reference_coordinate_start();
+    cReferenceCoordinate end_coord = mut->get_reference_coordinate_end();
+    
+    cFlaggedRegions::regions_t contained_within = flagged_regions.regions_that_contain(mut->at(SEQ_ID), start_coord, end_coord);
+    
+    advance_it = true;
+    
+    if (contained_within.size() != 0) {
+      
+      if (verbose) {
+        cout << endl << "Removing mutation:" << endl << "  " << *mut << endl;
+        cout << "  Contained within MASK region(s):";
+        for (cFlaggedRegions::regions_t::iterator region_it = contained_within.begin(); region_it != contained_within.end(); region_it++) {
+          cout << " " << mut->at(SEQ_ID) << ":" << region_it->first << "-" << region_it->second;
+        }
+        cout << endl;
+      }
+      
+      mut_it = this->remove(mut_it);
+      advance_it = false;
+    }
+    
+    if (advance_it) ++mut_it;
+  }
+  
+  
+  // Merge UN evidence into flagged regions
+  diff_entry_list_t uns = list(make_vector<gd_entry_type>(UN));
+  for (diff_entry_list_t::iterator un_it = uns.begin(); un_it != uns.end(); un_it++) {
+    diff_entry_ptr_t& un = *un_it;
+    flagged_regions.flag_region(un->at(SEQ_ID), from_string<uint32_t>(un->at(START)), from_string<uint32_t>(un->at(END)));
+  }
+  
+  // Delete all evidence (including old UN entries)
+  remove_group(EVIDENCE);
+  
+  // Add back UN evidence that includes original UN and MASKS
+  std::list<std::string> seq_ids = flagged_regions.get_seq_ids();
+  for (std::list<std::string>::iterator its=seq_ids.begin(); its != seq_ids.end(); its++) {
+    cFlaggedRegions::regions_t regions = flagged_regions.all_regions(*its);
+    for(cFlaggedRegions::regions_t::iterator it=regions.begin(); it!=regions.end(); it++ ) {
+      cDiffEntry mask_entry(UN);
+      mask_entry[SEQ_ID] = *its;
+      mask_entry[START] = to_string<uint32_t>(it->first);
+      mask_entry[END] = to_string<uint32_t>(it->second);
+      this->add(mask_entry);
+    }
+  }
+  
+  // Let's fix the IDs to be in order
+  this->reassign_unique_ids();
+}
+  
 void cGenomeDiff::normalize_mutations(cReferenceSequences& ref_seq_info, Settings& settings, bool verbose)
 {
   (void) verbose;
@@ -3875,8 +4008,10 @@ void cGenomeDiff::normalize_mutations(cReferenceSequences& ref_seq_info, Setting
     for(int32_t i=1; i< new_copy_number; i++){
       mut[NEW_SEQ] =  mut[NEW_SEQ] + amped_seq;
     }
-                                    
-    mut["position"] = to_string<int32_t>(pos - 1);                                
+    
+    // note shift down by one position is correct
+    // because INS are after this position, but AMP start at this position
+    mut["position"] = to_string<int32_t>(pos - 1);
     mut.erase("new_copy_number");
     mut.erase("size");
   }

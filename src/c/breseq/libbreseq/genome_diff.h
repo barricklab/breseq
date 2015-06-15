@@ -594,6 +594,9 @@ public:
   //! Remove mutations, evidence, or validation.
   void remove_group(cGenomeDiff::group group);
   
+  //! Remove all of a specific type of entry
+  void remove_type(gd_entry_type _type);
+  
   //!---- Accessing Entries ---- !//
   
   diff_entry_ptr_t find_by_id(string _id);
@@ -641,7 +644,7 @@ public:
   void unique();
   
   //! Merge GenomeDiff information using gd_new as potential new info.
-  void merge(cGenomeDiff& gd_new, bool unique=true, bool new_id=false, bool verbose=false);
+  void merge(cGenomeDiff& merge_gd, bool unique=true, bool new_id=false, bool verbose=false);
   
   //! fast merge, doesn't compare entries, but does renumber
   void fast_merge(const cGenomeDiff& gd);
@@ -711,6 +714,9 @@ public:
   //! Add 'mediated' and 'between' tags - should be called after an apply
   void annotate_hotspots(cReferenceSequences& new_ref_seq_info, bool remove_old_tags=true, int32_t slop_distance=10);
   
+  //! Remove mutations that overlap MASK items in another GD
+  void mask_mutations(cGenomeDiff& mask_gd, bool verbose);
+
   //! Shift mutations to preferred descriptions
   void normalize_mutations(cReferenceSequences &ref_seq, Settings& settings, bool verbose = false);
    

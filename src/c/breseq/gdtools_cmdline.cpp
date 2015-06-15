@@ -154,7 +154,7 @@ int do_union(int argc, char *argv[])
   }
 
   uout("Assigning unique IDs");
-  gd1.reassign_unique_ids();
+	gd1.reassign_unique_ids();
 
   uout("Writing output GD file", options["output"]); 
   gd1.write(options["output"]);
@@ -169,7 +169,7 @@ int do_apply(int argc, char *argv[])
   options("output,o",    "Output file name (DEFAULT=output.*)");
   options("format,f",    "Output file format (Options: FASTA, GFF3)", "FASTA");
   options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
-  options("verbose,v",   "Verbose Mode (Flag)", TAKES_NO_ARGUMENT);
+  options("verbose,v",   "Verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
@@ -1682,7 +1682,8 @@ int do_mask_gd(int argc, char* argv[])
 	AnyOption options("gdtools MASK  [-o output.gd] input.gd mask.gd");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
 	options("output,o", "Output Genome Diff file.", "output.gd");
-	
+	options("verbose,v","Verbose mode", TAKES_NO_ARGUMENT);
+
 	options.addUsage("");
 	options.addUsage("Creates a GD file where mutations in the input GD that are located within certain regions of the reference genome are removed. These regions are defined as MASK entries in the mask GD file. Mutations that overlap only masked reference bases (and therefore do not overlap any unmasked bases) are removed.");
 	
@@ -1708,10 +1709,9 @@ int do_mask_gd(int argc, char* argv[])
 	uout("Reading mask GD file") << options.getArgv(1) << endl;
 	cGenomeDiff mask_gd(options.getArgv(1));
 	
-	cGenomeDiff new_gd;
+	cGenomeDiff new_gd(gd);
 	new_gd.metadata = gd.metadata; // copy all of the important information
 	
-	diff_entry_list_t muts = gd.mutation_list();
 	diff_entry_list_t masks = mask_gd.list(make_vector<gd_entry_type>(MASK));
 	
 	// Create all of the flagged regions
@@ -1722,46 +1722,7 @@ int do_mask_gd(int argc, char* argv[])
 	}
 	
 	// Mask mutations
-	for (diff_entry_list_t::iterator mut_it = muts.begin(); mut_it != muts.end(); mut_it++) {
-		diff_entry_ptr_t& mut = *mut_it;
-		
-		cReferenceCoordinate start_coord = mut->get_reference_coordinate_start();
-		cReferenceCoordinate end_coord = mut->get_reference_coordinate_end();
-		
-		cFlaggedRegions::regions_t contained_within = flagged_regions.regions_that_contain(mut->at(SEQ_ID), start_coord, end_coord);
-		
-		if (contained_within.size() == 0) {
-			new_gd.add(*mut);
-		} else {
-			cout << endl << "Removing mutation:" << endl << "  " << *mut << endl;
-			cout << "  Contained within MASK region(s):";
-			for (cFlaggedRegions::regions_t::iterator region_it = contained_within.begin(); region_it != contained_within.end(); region_it++) {
-				cout << " " << mut->at(SEQ_ID) << ":" << region_it->first << "-" << region_it->second;
-			}
-			cout << endl;
-		}
-	}
-	
-	
-	// Merge UN evidence into flagged regions
-	diff_entry_list_t uns = gd.list(make_vector<gd_entry_type>(UN));
-	for (diff_entry_list_t::iterator un_it = uns.begin(); un_it != uns.end(); un_it++) {
-		diff_entry_ptr_t& un = *un_it;
-		flagged_regions.flag_region(un->at(SEQ_ID), from_string<uint32_t>(un->at(START)), from_string<uint32_t>(un->at(END)));
-	}
-	
-	// Add back UN evidence that includes original UN and MASKS
-	list<string> seq_ids = flagged_regions.get_seq_ids();
-	for (list<string>::iterator its=seq_ids.begin(); its != seq_ids.end(); its++) {
-		cFlaggedRegions::regions_t regions = flagged_regions.all_regions(*its);
-		for(cFlaggedRegions::regions_t::iterator it=regions.begin(); it!=regions.end(); it++ ) {
-			cDiffEntry mask_entry(UN);
-			mask_entry[SEQ_ID] = *its;
-			mask_entry[START] = to_string<uint32_t>(it->first);
-			mask_entry[END] = to_string<uint32_t>(it->second);
-			new_gd.add(mask_entry);
-		}
-	}
+	new_gd.mask_mutations(mask_gd, options.count("verbose"));
 	
 	uout("Writing output GD file", options["output"]);
 	new_gd.write(options["output"]);
@@ -2012,6 +1973,40 @@ int do_header(int argc, char* argv[])
 
 
   return 0;
+}
+
+int do_reheader(int argc, char* argv[])
+{
+	AnyOption options("gdtools REHEADER [-o output.gd] header.gd input.gd");
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+	options("output,o", "output GD file", "output.gd");
+	options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
+	options.processCommandArgs(argc, argv);
+	
+	options.addUsage("");
+	options.addUsage("Outputs a new GD file with content from input.gd and header information from header.gd");
+	
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
+	if (options.getArgc() != 2) {
+		cout << "Must supply exactly two GenomeDiff files as input." << endl;
+		return -1;
+	}
+	
+	UserOutput uout("REHEADER");
+	
+	cGenomeDiff header_gd(options.getArgv(0));
+	cGenomeDiff input_gd(options.getArgv(1));
+
+	input_gd.metadata = header_gd.metadata;
+	
+	uout("Writing output GD file", options["output"] );
+	input_gd.write(options["output"]);
+	
+	return 0;
 }
 
 int do_download(int argc, char *argv[])
@@ -2953,6 +2948,8 @@ int main(int argc, char* argv[]) {
     return do_mira2gd(argc_new, argv_new);
   } else if(command == "HEADER"){
     return do_header(argc_new, argv_new);
+	} else if(command == "REHEADER"){
+		return do_reheader(argc_new, argv_new);
   } else if ((command == "RANDOM-MUTATIONS") || (command == "SIMULATE-MUTATIONS")) {
     return do_simulate_mutations(argc_new, argv_new);
   } else if (command == "MUTATIONS-TO-EVIDENCE") {

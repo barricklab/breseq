@@ -662,7 +662,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
                + td(ALIGN_CENTER, to_string<uint32_t>(summary.candidate_junction.accepted.number))
                );
     HTML << tr(td("Total length of all junction candidates (factor times the reference genome length)")
-               + td(ALIGN_CENTER, (settings.maximum_candidate_junction_length_factor == 0.0) ? "NO&nbsp;LIMIT" : "&ge;&nbsp;" + to_string<double>(settings.maximum_candidate_junction_length_factor))
+               + td(ALIGN_CENTER, (settings.maximum_candidate_junction_length_factor == 0.0) ? "NO&nbsp;LIMIT" : "&le;&nbsp;" + to_string<double>(settings.maximum_candidate_junction_length_factor))
                + td(ALIGN_CENTER, formatted_double(static_cast<double>(summary.candidate_junction.accepted.length)/static_cast<double>(total_length), 3, false).to_string())
                );
     HTML << end_table() << endl;

@@ -304,8 +304,6 @@ namespace breseq {
     
     string inv_seq = reverse_complement(get_sequence_1(start_1, end_1));
     m_fasta_sequence.m_sequence.replace(start_1-1, end_1-start_1+1, inv_seq);
-
-  
     
     //Iterate through all the features
     for (list<cSequenceFeaturePtr>::iterator it = m_features.begin(); it != m_features.end(); it++)

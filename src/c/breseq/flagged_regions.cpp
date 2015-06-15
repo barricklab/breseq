@@ -355,7 +355,7 @@ cFlaggedRegions::regions_t cFlaggedRegions::regions_that_contain(const string& s
   regions_t contained;
   
   for (regions_t::iterator it = m_regions.at(seq_id).begin(); it != m_regions.at(seq_id).end(); it++) {
-    
+        
     if ((start_1 >= cReferenceCoordinate(it->first)) && (end_1 <= cReferenceCoordinate(it->second))) {
       contained.insert(*it);
     }
