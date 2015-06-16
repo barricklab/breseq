@@ -849,19 +849,9 @@ void cDiffEntry::mutation_invert_position(cDiffEntry& inverting_mutation) {
     return;
   }
   
-  // Overlaps end - it must have been processed before
+  // Overlaps end
   else {
-    
-    cDiffEntry* shifting_mutation_copy = new cDiffEntry(inverting_mutation);
-    diff_entry_ptr_t shifting_mutation_dep(shifting_mutation_copy);
-    
-    cDiffEntry* this_mutation_copy = new cDiffEntry(*this);
-    diff_entry_ptr_t this_mutation_dep(this_mutation_copy);
-    
-    // Only allow if the event happens after the inversion
-    if (cGenomeDiff::diff_entry_ptr_sort_apply_order( shifting_mutation_dep, this_mutation_dep) )
-      return;
-    ERROR("Cannot process later mutation:\n" + this->as_string() + "\nthat overlaps the boundary of an inversion from " + s(start_inversion)  + " to " + s(end_inversion) + "\n");
+    WARN("Coordinates of this mutation:\n" + this->as_string() + "\nextend across an endpoint of inversion:\n" + inverting_mutation.as_string() + "\nThese coordinated will not be shifted when applying the inversion.");
   }
   
 }
@@ -2722,96 +2712,89 @@ bool cGenomeDiff::diff_entry_ptr_sort(const diff_entry_ptr_t& a, const diff_entr
 
   /*! Helper struct and function for apply sort
    */
-  
-cGenomeDiff cGenomeDiff::current_sort_gd; 
- 
-typedef struct {
-  string mutation_id;
-  int32_t sort_copy_index;   // -1 for sorting before, 1 for sorting the same (so it's after), otherwise 1 + copy_index
-} apply_sort_order_item;
 
-apply_sort_order_item create_apply_sort_order_item(string& value, bool sort_before) {
-  apply_sort_order_item item;
-  vector<string> split_value = split(value, ":");
-  item.mutation_id = split_value[0];
-  if (split_value.size() == 1) {
-    item.sort_copy_index = 0;
-  } else {
-    item.sort_copy_index = from_string(split_value[1]) + 1;
-  }
   
-  // override for sorting before
-  if (sort_before) {
-    item.sort_copy_index = -1;
-  }
+//Correctly accounts for 'before' and 'within' tags
+void cGenomeDiff::sort_apply_order() {
+
+  // Remove all items with tags into these special lists
+  diff_entry_list_t add_back_list;
   
-  return item;
-}
-  
-/*! Return TRUE if a < b
- */
-  
-bool cGenomeDiff::diff_entry_ptr_sort_apply_order(const diff_entry_ptr_t& a, const diff_entry_ptr_t& b) {
-  
-  // Fill lists of what we are sorting before and after
-  vector<string> tag_list = make_vector<string>("before")("within");
-  vector<apply_sort_order_item> a_sort_items, b_sort_items;
-  for(vector<string>::iterator it=tag_list.begin(); it!=tag_list.end(); it++) {
-    string& tag = *it;
-    if (a->entry_exists(tag)) {
-      apply_sort_order_item sort_item = create_apply_sort_order_item((*a)[tag], tag=="before");
-      a_sort_items.push_back(sort_item);
+  diff_entry_list_t::iterator it = _entry_list.begin();
+  while (it != _entry_list.end()) {
+    bool advance_it = true;
+    
+    cDiffEntry& mut = **it;
+    if (mut.entry_exists("before") || mut.entry_exists("within")) {
+      add_back_list.push_back(*it);
+      it = _entry_list.erase(it);
+      advance_it = false;
     }
+    
+    if (advance_it) it++;
   }
-  apply_sort_order_item a_self_sort_item; 
-  a_self_sort_item.mutation_id = a->_id;
-  a_self_sort_item.sort_copy_index = 0;
-  a_sort_items.push_back(a_self_sort_item);
   
-  for(vector<string>::iterator it=tag_list.begin(); it!=tag_list.end(); it++) {
-    string& tag = *it;
-    if (b->entry_exists(tag)) {
-      apply_sort_order_item sort_item = create_apply_sort_order_item((*b)[tag], tag=="before");
-      b_sort_items.push_back(sort_item);
-    }
-  }
-  apply_sort_order_item b_self_sort_item; 
-  b_self_sort_item.mutation_id = b->_id;
-  b_self_sort_item.sort_copy_index = 0;
-  b_sort_items.push_back(b_self_sort_item);
+  // Sort the normal entries
+  this->sort();
   
-  // check all combinations of proxy sorts until the tie is broken or we are done.
-  for(uint32_t i=0; i<a_sort_items.size(); i++) {
-    for(uint32_t j=0; j<b_sort_items.size(); j++) {
+  // Now add back the special ones (this has to be iterative until list is cleared)
+  // because one may before another that is before another, etc.
+  
+  while(add_back_list.size() > 0) {
+    
+    diff_entry_list_t::iterator it = add_back_list.begin();
+
+    size_t old_size = add_back_list.size();
+    
+    while (it != add_back_list.end()) {
       
-      if (i >= a_sort_items.size()) break;
+      bool advance_it = true;
+      cDiffEntry& mut = **it;
       
-      diff_entry_ptr_t a_anchor = current_sort_gd.find_by_id(a_sort_items[i].mutation_id);
-      diff_entry_ptr_t b_anchor = current_sort_gd.find_by_id(b_sort_items[j].mutation_id);
-      
-      // If any of the anchors refer to the same mutation or a or b is one of the anchors
-      // then use these proxies for a normal sort
-      
-      if (a_anchor.get() == b_anchor.get()) {
-        if (a_sort_items[i].sort_copy_index < b_sort_items[j].sort_copy_index) {
-          return true;
-        } else if (a_sort_items[i].sort_copy_index > b_sort_items[j].sort_copy_index) {
-          return false;
-        } else {
-          // Advance both in this case because otherwise ties get broken
-          // incorrectly when we are comparing (a,b) vs (b,a).
-          i++;
-          if (i>=a_sort_items.size()) continue;
+      if (mut.entry_exists("before")) {
+        
+        vector<string> split_value = split(mut["before"], ":");
+        string mutation_id = split_value[0];
+        
+        for(diff_entry_list_t::iterator find_it=_entry_list.begin(); find_it!=_entry_list.end(); find_it++)
+        {
+          cDiffEntry& find_mut = **find_it;
+          if (find_mut._id == mutation_id) {
+            _entry_list.insert(find_it, *it);
+            it = add_back_list.erase(it);
+            advance_it = false;
+            break;
+          }
         }
-      } else {
-        return diff_entry_ptr_sort(a_anchor, b_anchor);
+        
+      } else if (mut.entry_exists("within")) {
+      
+        vector<string> split_value = split(mut["within"], ":");
+        string mutation_id = split_value[0];
+        
+        for(diff_entry_list_t::iterator find_it=_entry_list.begin(); find_it!=_entry_list.end(); find_it++)
+        {
+          cDiffEntry& find_mut = **find_it;
+          if (find_mut._id == mutation_id) {
+            find_it++;  // we are inserting after this item
+            _entry_list.insert(find_it, *it);
+            it = add_back_list.erase(it);
+            advance_it = false;
+            break;
+          }
+        }
+        
       }
+      
+      if (advance_it) it++;
     }
+    
+    // We're in trouble if no entries got added = infinite loop due to circular references
+    ASSERT(add_back_list.size() != old_size, "Attempt to sort GenomeDiff that has incompatible 'before' and 'within' constraints on mutations.");
+    
   }
-  
-  // Normal sort if there was no overlap in what was referred to.
-  return diff_entry_ptr_sort(a, b);
-}  
+}
+
 
 //! Call to generate random mutations.
 void cGenomeDiff::random_mutations(string exclusion_file,

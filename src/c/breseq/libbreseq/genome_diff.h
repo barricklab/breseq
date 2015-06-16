@@ -675,14 +675,13 @@ public:
   
   static bool diff_entry_ptr_compare_sort(const diff_entry_ptr_t& a, const diff_entry_ptr_t& b);
   static bool diff_entry_ptr_sort(const diff_entry_ptr_t& a, const diff_entry_ptr_t& b);
-  static cGenomeDiff current_sort_gd; // passthrough for sort to use when it needs to look up other entries...
   static bool diff_entry_ptr_sort_apply_order(const diff_entry_ptr_t& a, const diff_entry_ptr_t& b);
   
   // Normal sort. Used for printing, merging, and compare.
   void sort() { _entry_list.sort(diff_entry_ptr_sort); }
 
-  // Sort normally -- and then take into account 'before' and 'within' tags in sorting
-  void sort_apply_order() { current_sort_gd = *this; _entry_list.sort(diff_entry_ptr_sort_apply_order); }
+  // Sort -- taking into account 'before' and 'within' tags
+  void sort_apply_order();
   
   
   //!---- Simulating and Applying Mutations ---- !//
