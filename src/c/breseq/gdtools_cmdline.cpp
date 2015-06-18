@@ -1351,7 +1351,8 @@ int do_normalize_gd(int argc, char* argv[])
 	options("reference,r"       , "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
 	options("reassign-ids,s"    , "reassign ids to lowest numbers possible.", TAKES_NO_ARGUMENT);
 	options("repeat-adjacent,a" , "mark repeat-region adjacent, mediated, and between mutations.", TAKES_NO_ARGUMENT);
-	
+	options("check-apply,x" , "check consistency of normalize using APPLY.", TAKES_NO_ARGUMENT);
+
 	const int32_t kDistanceToRepeat = 20;
 	
   options.addUsage("");
@@ -1370,6 +1371,14 @@ int do_normalize_gd(int argc, char* argv[])
 	options.addUsageSameLine("from other mutations in gdtools COUNT). This process removes any previous version of these tags.");
 	options.addUsageSameLine("DEL mutations with a size < " + to_string(kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation) + " bp near ");
 	options.addUsageSameLine("repeat_regions are treated as 'adjacent' rather than 'mediated'." );
+	options.addUsage("");
+	options.addUsage("Important: the 'adjacent', 'mediated', or 'between' tags will be added based on the current genome sequence");
+	options.addUsage("when this mutation is applied. So they will consider new mobile element insertions that are applied before a");
+	options.addUsage("mutation, but not those that are applied after, for example. The 'before' tag can be used to enforce a specific ordering");
+	options.addUsage("of these mutations so that the mobile element insertion occurs first.");
+	options.addUsage("");
+	options.addUsageSameLine("The coordinates of DEL mutations that have 'mediated' or 'between' tags are NOT shifted, so that");
+	options.addUsageSameLine("they will remain adjacent to any relevant mobile elements or repeats.");
 	options.addUsage("");
 	options.addUsage("Any mutations including 'no_normalize=1' in their definition will not be normalized.");
 
@@ -1420,6 +1429,10 @@ int do_normalize_gd(int argc, char* argv[])
 		new_ref_seq_info = cReferenceSequences::deep_copy(ref_seq_info);
 		apply_gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, false, kDistanceToRepeat, settings.size_cutoff_AMP_becomes_INS_DEL_mutation);
 		
+		//
+		//==> FUTURE IMPROVEMENT ... RECHECK POSITIONS TO SEE WHICH ONES ARE NOW NEAR IS ELEMENTS
+		//
+		
 		// Now transfer between and mediated tags to ones with the same IDs
 		diff_entry_list_t gd_mutation_list = gd.mutation_list();
 		vector<string> transfer_list = make_vector<string>("between")("mediated")("adjacent");
@@ -1438,33 +1451,40 @@ int do_normalize_gd(int argc, char* argv[])
 					(*gd_mut)[*key_it] = (*apply_mut_p)[*key_it];
 			}
 		}
-	} else {
+	} else if (options.count("check-apply")) {
+		
 		new_ref_seq_info = cReferenceSequences::deep_copy(ref_seq_info);
+		cGenomeDiff apply_gd(input);
+		apply_gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, false, kDistanceToRepeat, settings.size_cutoff_AMP_becomes_INS_DEL_mutation);
 	}
 	
-	uout("Normalizing mutations");
+	uout("Normalizing mutations.");
 	gd.normalize_mutations(ref_seq_info, settings);
 	
 	if (options.count("reassign-ids")) {
-		uout("Reassigning mutation and evidence ids");
+		uout("Reassigning mutation and evidence ids.");
 		gd.reassign_unique_ids();
 	}
 	
-	uout("Verifying that normalization didn't change sequence");
-	cReferenceSequences verify_ref_seq_info = cReferenceSequences::deep_copy(ref_seq_info);
-	for (vector<string>::const_iterator it = verify_ref_seq_info.seq_ids().begin(); it != verify_ref_seq_info.seq_ids().end(); it++)
-	{
-		ASSERT(new_ref_seq_info[*it].m_fasta_sequence.m_sequence == verify_ref_seq_info[*it].m_fasta_sequence.m_sequence, "Failed APPLY test.");
+	if (options.count("check-apply")) {
+		uout("Using APPLY to check that normalization didn't change the mutated sequence.");
+		cReferenceSequences	verify_ref_seq_info = cReferenceSequences::deep_copy(ref_seq_info);
+		cGenomeDiff verify_gd(input); // must load new copy or positions will be shifted by apply_to_sequences
+		verify_gd.apply_to_sequences(ref_seq_info, verify_ref_seq_info, false, kDistanceToRepeat, settings.size_cutoff_AMP_becomes_INS_DEL_mutation);
+		
+		vector<string> seq_ids = verify_ref_seq_info.seq_ids();
+		vector<string> new_seq_ids = new_ref_seq_info.seq_ids();
+		
+		for (vector<string>::const_iterator it = seq_ids.begin(); it != seq_ids.end(); it++)
+		{
+			if (new_ref_seq_info[*it].m_fasta_sequence.m_sequence != verify_ref_seq_info[*it].m_fasta_sequence.m_sequence) {
+				WARN("Failed APPLY test. Discrepancies beween sequences produced before and after NORMALIZE. Check ordering of mutations.");
+			}
+		}
 	}
 	
-	
-	
-	new_ref_seq_info = cReferenceSequences::deep_copy(ref_seq_info);
-
-	
-	
-  uout("Writing output Genome Diff file", options["output"]);
-  gd.write(options["output"]);
+	uout("Writing output Genome Diff file", options["output"]);
+	gd.write(options["output"]);
 
   return 0;
 }
