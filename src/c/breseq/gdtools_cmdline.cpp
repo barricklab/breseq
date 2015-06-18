@@ -1406,10 +1406,9 @@ int do_normalize_gd(int argc, char* argv[])
   ref_seq_info.LoadFiles(reference_file_names);
 
   cGenomeDiff gd(input);
-  
-  uout("Normalizing mutations");
+	
   Settings settings;
-  gd.normalize_mutations(ref_seq_info, settings);
+	cReferenceSequences new_ref_seq_info;
 
 	// To annotate repeat adjacent mutations... we have to apply
 	if (options.count("repeat-adjacent")) {
@@ -1418,7 +1417,7 @@ int do_normalize_gd(int argc, char* argv[])
 		// load new copy since apply will change things
 		cGenomeDiff apply_gd(input);
 		
-		cReferenceSequences new_ref_seq_info = cReferenceSequences::deep_copy(ref_seq_info);
+		new_ref_seq_info = cReferenceSequences::deep_copy(ref_seq_info);
 		apply_gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, false, kDistanceToRepeat, settings.size_cutoff_AMP_becomes_INS_DEL_mutation);
 		
 		// Now transfer between and mediated tags to ones with the same IDs
@@ -1439,12 +1438,30 @@ int do_normalize_gd(int argc, char* argv[])
 					(*gd_mut)[*key_it] = (*apply_mut_p)[*key_it];
 			}
 		}
+	} else {
+		new_ref_seq_info = cReferenceSequences::deep_copy(ref_seq_info);
 	}
 	
+	uout("Normalizing mutations");
+	gd.normalize_mutations(ref_seq_info, settings);
+	
 	if (options.count("reassign-ids")) {
-		uout("Reassigning mutation and evidence ids.");
+		uout("Reassigning mutation and evidence ids");
 		gd.reassign_unique_ids();
 	}
+	
+	uout("Verifying that normalization didn't change sequence");
+	cReferenceSequences verify_ref_seq_info = cReferenceSequences::deep_copy(ref_seq_info);
+	for (vector<string>::const_iterator it = verify_ref_seq_info.seq_ids().begin(); it != verify_ref_seq_info.seq_ids().end(); it++)
+	{
+		ASSERT(new_ref_seq_info[*it].m_fasta_sequence.m_sequence == verify_ref_seq_info[*it].m_fasta_sequence.m_sequence, "Failed APPLY test.");
+	}
+	
+	
+	
+	new_ref_seq_info = cReferenceSequences::deep_copy(ref_seq_info);
+
+	
 	
   uout("Writing output Genome Diff file", options["output"]);
   gd.write(options["output"]);

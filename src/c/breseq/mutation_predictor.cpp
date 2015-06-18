@@ -1925,7 +1925,9 @@ namespace breseq {
   
   void MutationPredictor::normalizeDELposition(cAnnotatedSequence& ref_seq, cDiffEntry& de, string& repeat_sequence)
   {
-        
+    // Don't shift mediated or between mutations
+    if (de.entry_exists("mediated") || de.entry_exists("between")) return;
+    
     int32_t test_position = from_string<int32_t>(de[POSITION]) + from_string<int32_t>(de[SIZE]);   
     // The offset of 1 ensures we are on the first base of a possible repeat unit (relative to the reference).
     
