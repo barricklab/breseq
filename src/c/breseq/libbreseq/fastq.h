@@ -189,7 +189,7 @@ class cAnnotatedSequence;
   
   extern char reverse_complement_lookup_table[256];
   
-  inline string reverse_complement(string seq)
+  inline string reverse_complement(const string& seq)
 	{
 		string retval(seq.length(), ' ');
 		for (uint32_t i = 0; i < seq.size(); i++)      
@@ -197,14 +197,14 @@ class cAnnotatedSequence;
     return retval;
 	}
   
-  inline char reverse_complement(char seq)
+  inline char reverse_complement(const char& seq)
 	{
 		char retval(' ');
     retval = reverse_complement_lookup_table[static_cast<uint8_t>(seq)];
     return retval;
 	}
   
-  inline cFastqSequence reverse_complement(cFastqSequence _seq) {
+  inline cFastqSequence reverse_complement(const cFastqSequence& _seq) {
     cFastqSequence seq = _seq;
     seq.m_sequence = reverse_complement(seq.m_sequence);
     seq.m_qualities = reverse_string(seq.m_qualities);

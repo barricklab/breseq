@@ -261,8 +261,8 @@ public:
   // Reverse-complements without changing position
   void mutation_reverse_complement();
   
-  // Updates positions for inversion
-  void mutation_invert_position(cDiffEntry& inverting_mutation);
+  // Updates positions for inversion and reverse-complements mutation
+  void mutation_invert_position_sequence(cDiffEntry& inverting_mutation);
   
   //!---- Output ---- !//
   

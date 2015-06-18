@@ -775,7 +775,7 @@ void cDiffEntry::mutation_reverse_complement() {
     case MOB:
     {
       (*this)[STRAND] = s(-n((*this)[STRAND]));
-      string del_start(this->entry_exists(DEL_START) ? (*this)[DEL_START] : "");
+      string del_start = this->entry_exists(DEL_START) ? (*this)[DEL_START] : "";
       string del_end = this->entry_exists(DEL_END) ? (*this)[DEL_END] : "";
       string ins_start = this->entry_exists(INS_START) ? reverse_complement((*this)[INS_START]) : "";
       string ins_end = this->entry_exists(INS_END) ? reverse_complement((*this)[INS_END]) : "";
@@ -785,10 +785,10 @@ void cDiffEntry::mutation_reverse_complement() {
       this->erase(INS_END);
       
       // flips start and end
-      if (!del_end.empty()) (*this)[DEL_START] = del_start;
+      if (!del_end.empty()) (*this)[DEL_START] = del_end;
       if (!del_start.empty()) (*this)[DEL_END] = del_start;
-      if (!del_end.empty()) (*this)[INS_START] = ins_start;
-      if (!del_start.empty()) (*this)[INS_END] = ins_end;
+      if (!ins_end.empty()) (*this)[INS_START] = ins_end;
+      if (!ins_start.empty()) (*this)[INS_END] = ins_start;
       break;
     }
       
@@ -799,7 +799,7 @@ void cDiffEntry::mutation_reverse_complement() {
 }
   
 // Updates positions and reverse-complements
-void cDiffEntry::mutation_invert_position(cDiffEntry& inverting_mutation) {
+void cDiffEntry::mutation_invert_position_sequence(cDiffEntry& inverting_mutation) {
   ASSERT(this->is_mutation(), "Attempt to invert position of non-mutation cDiffEntry");
   
   // are we on the right sequence fragment?
@@ -827,6 +827,9 @@ void cDiffEntry::mutation_invert_position(cDiffEntry& inverting_mutation) {
   // Contained within, invert coordinates
   else if ((position >= start_inversion) && (position + size - 1 <= end_inversion)) {
     
+    //Reverse complement the mutation
+    this->mutation_reverse_complement();
+    
     int32_t insert_pos = 0;
     if (this->_type==INS) {
       insert_pos=1;
@@ -851,7 +854,7 @@ void cDiffEntry::mutation_invert_position(cDiffEntry& inverting_mutation) {
   
   // Overlaps end
   else {
-    WARN("Coordinates of this mutation:\n" + this->as_string() + "\nextend across an endpoint of inversion:\n" + inverting_mutation.as_string() + "\nThese coordinated will not be shifted when applying the inversion.");
+    WARN("This mutation:\n" + this->as_string() + "\nextends across an endpoint of inversion:\n" + inverting_mutation.as_string() + "\nWhen applying the inversion, its sequence will not be reverse complemented, and its coordinates will not be shifted.");
   }
   
 }
@@ -3290,8 +3293,7 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
     // Normal behavior -- offset mutations later in same reference sequence
     if (!was_nested) {
       if (current_mut._type == INV) {
-        mut.mutation_invert_position(current_mut);
-        mut.mutation_reverse_complement();
+          mut.mutation_invert_position_sequence(current_mut);
       } else {
         mut.mutation_shift_position(current_mut[SEQ_ID], offset, insert_pos, delta, replace_size);
       }
