@@ -817,6 +817,9 @@ void cDiffEntry::mutation_invert_position_sequence(cDiffEntry& inverting_mutatio
   int32_t size = 0;
   if (entry_exists(SIZE))
     size = from_string<int32_t>((*this)[SIZE]);
+  // Assigning duplication size from MOB makes sure it is offset correctly when flipped
+  else if (entry_exists(DUPLICATION_SIZE))
+    size = from_string<int32_t>((*this)[DUPLICATION_SIZE]);
   
   // Does not overlap
   if (position + size < start_inversion)
@@ -830,24 +833,24 @@ void cDiffEntry::mutation_invert_position_sequence(cDiffEntry& inverting_mutatio
     //Reverse complement the mutation
     this->mutation_reverse_complement();
     
-    int32_t insert_pos = 0;
     if (this->_type==INS) {
-      insert_pos=1;
+    
+      int32_t insert_pos;
       if (this->entry_exists(INSERT_POSITION))
         insert_pos = from_string<int32_t>((*this)[INSERT_POSITION]);
-    }
     
-    // case of INS, because it refers to between entries // need to also flip insert_pos order for any
-    // mutations that are strung together with multiple insert counts (do this by negative).
-    // We must re-sort after applying an INV!!
-    if (insert_pos > 0) {
+    // case of INS, because it refers to between positions, we need to substract an extra one from the position
+    // We also need to flip insert_pos order for any mutations that are strung together with multiple insert counts
+    // we (do this by taking the negative). We must re-sort after applying an INV for this reason!!
       
-      (*this)[POSITION] = to_string<int32_t>(end_inversion - (position + size + 1 - start_inversion));
+      (*this)[POSITION] = to_string<int32_t>(end_inversion - (position + size - start_inversion) - 1);
       if (this->entry_exists(INSERT_POSITION))
         (*this)[INSERT_POSITION] = to_string<int32_t>(-insert_pos);
       
     } else { // other cases
+      
       (*this)[POSITION] = to_string<int32_t>(end_inversion - (position + size - start_inversion));
+      
     }
     return;
   }

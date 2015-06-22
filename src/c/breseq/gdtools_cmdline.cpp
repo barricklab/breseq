@@ -1373,9 +1373,9 @@ int do_normalize_gd(int argc, char* argv[])
 	options.addUsageSameLine("repeat_regions are treated as 'adjacent' rather than 'mediated'." );
 	options.addUsage("");
 	options.addUsage("Important: the 'adjacent', 'mediated', or 'between' tags will be added based on the current genome sequence");
-	options.addUsage("when this mutation is applied. So they will consider new mobile element insertions that are applied before a");
-	options.addUsage("mutation, but not those that are applied after, for example. The 'before' tag can be used to enforce a specific ordering");
-	options.addUsage("of these mutations so that the mobile element insertion occurs first.");
+	options.addUsageSameLine("when this mutation is applied. So they will consider new mobile element insertions that are applied before a");
+	options.addUsageSameLine("mutation, but not those that are applied after, for example. The 'before' tag can be used to enforce a specific ordering");
+	options.addUsageSameLine("of these mutations so that the mobile element insertion occurs first.");
 	options.addUsage("");
 	options.addUsageSameLine("The coordinates of DEL mutations that have 'mediated' or 'between' tags are NOT shifted, so that");
 	options.addUsageSameLine("they will remain adjacent to any relevant mobile elements or repeats.");
