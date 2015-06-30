@@ -2431,7 +2431,8 @@ namespace breseq {
   void MutationCountFile(
                          cReferenceSequences& ref_seq_info, 
                          vector<cGenomeDiff>& genome_diffs, 
-                         string& output_file_name, 
+                         string& output_file_name,
+                         string& detailed_output_file_name,
                          bool base_substitution_statistics,
                          bool count_polymorphisms,
                          bool verbose
@@ -2539,12 +2540,39 @@ namespace breseq {
     } //if (base_substitution_statistics)
     
     
+    bool detailed_output = detailed_output_file_name.size() != 0;
+    
+    // For detailed output
+    vector<string> base_substitution_lines;
+    vector<string> small_indel_lines;
+    vector<string> large_deletion_lines;
+    vector<string> large_insertion_lines;
+    vector<string> large_amplification_lines;
+    vector<string> large_substitution_lines;
+    vector<string> mobile_element_insertion_lines;
+    vector<string> gene_conversion_lines;
+
+    
     output_file << join(column_headers, ",") << endl;
     
     for (vector<cGenomeDiff>::iterator it=sorted_genome_diffs.begin(); it != sorted_genome_diffs.end(); ++it) {
       cGenomeDiff &gd = *it;
       //uout("Counting mutations " + gd.metadata.run_name);
-            
+      
+      vector<string> line_prefix_items = make_vector<string>(gd.get_file_name())
+          (gd.metadata.title)(gd.metadata.treatment)(gd.metadata.population)
+          ((gd.metadata.time != -1.0) ? to_string<double>(gd.metadata.time) : "")
+          (gd.metadata.clone);
+      
+      string detailed_line_prefix = join(line_prefix_items, "\t");
+      
+      column_headers.push_back("file");
+      column_headers.push_back("sample");
+      column_headers.push_back("treatment");
+      column_headers.push_back("population");
+      column_headers.push_back("time");
+      column_headers.push_back("clone");
+      
       BaseSubstitutionEffectCounts this_bsec;
       // deep copy totals of entire sequence
       if (base_substitution_statistics)
@@ -2585,10 +2613,11 @@ namespace breseq {
         cDiffEntry& mut = **it;
         
         // Don't count mutations that were hidden by later deletions, but kept for phylogenetic inference.
-        if (mut.is_marked_deleted()) {
-          if (verbose) cerr << "Skipping deleted: " << mut << endl;
-          continue; 
-        }
+        // @JEB: actually we do want to count these!
+        //if (mut.is_marked_deleted()) {
+        //  if (verbose) cerr << "Skipping deleted: " << mut << endl;
+        //  continue;
+        //}
         
         // Don't count polymorphisms - could make it an option to partially count them
         if (!count_polymorphisms && mut.entry_exists(FREQUENCY) && from_string<double>(mut[FREQUENCY]) != 1.0) {
@@ -2605,6 +2634,7 @@ namespace breseq {
             this_bsec.change_position_1_observed_totals(ref_seq_info, bse, mut[SEQ_ID], from_string<int32_t>(mut[POSITION]), mut[NEW_SEQ], +1);					
           }
           count["type"][mut["snp_type"]]++;
+          base_substitution_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
         }
         
         if (mut._type == DEL) {
@@ -2613,10 +2643,13 @@ namespace breseq {
           if (mut.entry_exists("mediated"))
             count["mob"][mut["mediated"]]++;
           
-          if (from_string<int32_t>(mut[SIZE]) > large_size_cutoff)
+          if (from_string<int32_t>(mut[SIZE]) > large_size_cutoff) {
             count["large_deletion"][""]++;
-          else
+            large_deletion_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
+          } else {
             count["small_indel"][""]++;
+            small_indel_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
+          }
         }
         
         if (mut._type == INS) {
@@ -2627,10 +2660,13 @@ namespace breseq {
           if (mut.entry_exists("mediated"))
             count["mob"][mut["mediated"]]++;
           
-          if (ins_size > large_size_cutoff)
+          if (ins_size > large_size_cutoff) {
             count["large_insertion"][""]++;
-          else
+            large_insertion_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
+          } else {
             count["small_indel"][""]++;
+            small_indel_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
+          }
         }
         
         if (mut._type == SUB) {
@@ -2645,10 +2681,13 @@ namespace breseq {
           if (mut.entry_exists("mediated"))
             count["mob"][mut["mediated"]]++;
           
-          if (abs(new_size - old_size) > large_size_cutoff)
+          if (abs(new_size - old_size) > large_size_cutoff) {
             count["large_substitution"][""]++;
-          else
+            large_substitution_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
+          } else {
             count["small_indel"][""]++;
+            small_indel_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
+          }
         }
         
         if (mut._type == CON) {
@@ -2657,6 +2696,7 @@ namespace breseq {
           if (mut.entry_exists("mediated"))
             count["con"][mut["mediated"]]++;
           count["gene_conversion"][""]++;
+          gene_conversion_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
         }
         
         if (mut._type == MOB) {
@@ -2674,6 +2714,7 @@ namespace breseq {
           
           count["mob"][mut["repeat_name"]]++;
           count["mobile_element_insertion"][""]++;
+          mobile_element_insertion_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
           
         } 
         
@@ -2681,10 +2722,13 @@ namespace breseq {
           int32_t this_size = mut.mutation_size_change(ref_seq_info);
           total_inserted += this_size;
           
-          if (this_size > large_size_cutoff)
+          if (this_size > large_size_cutoff) {
             count["large_amplification"][""]++;
-          else
+            large_amplification_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
+          } else {
             count["small_indel"][""]++;
+            small_indel_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
+          }
         }
       }
       
@@ -2707,14 +2751,7 @@ namespace breseq {
       
       int32_t called_bp = total_bp - un_bp;
       
-      vector<string> this_columns;
-      
-      this_columns.push_back( gd.get_file_name() );
-      this_columns.push_back( gd.metadata.title );
-      this_columns.push_back( gd.metadata.treatment );
-      this_columns.push_back( gd.metadata.population );
-      this_columns.push_back( (gd.metadata.time != -1.0) ? to_string<double>(gd.metadata.time) : "");
-      this_columns.push_back( gd.metadata.clone );      
+      vector<string> this_columns = line_prefix_items;
       this_columns.push_back(to_string(total_mutations));
       this_columns.push_back(to_string(count["base_substitution"][""]));
       this_columns.push_back(to_string(count["small_indel"][""]));
@@ -2765,7 +2802,38 @@ namespace breseq {
       } // if (base_substitution_statistics)
         
       output_file << join(this_columns, ",") << endl;
-    }	
+    }
+    
+    
+    // Write the detailed output file
+    if (detailed_output) {
+      ofstream detailed_output_file(detailed_output_file_name);
+      
+      detailed_output_file << "BASE SUBSTITUTIONS:" << base_substitution_lines.size() << "\n";
+      detailed_output_file << join(base_substitution_lines, "\n") << "\n\n";
+      
+      detailed_output_file << "SMALL INDELS:" << small_indel_lines.size() << "\n";
+      detailed_output_file << join(small_indel_lines, "\n")<< "\n\n";
+      
+      detailed_output_file << "LARGE DELETIONS:" << large_deletion_lines.size() << "\n";
+      detailed_output_file << join(large_deletion_lines, "\n")<< "\n\n";
+      
+      detailed_output_file << "LARGE INSERTIONS:" << large_insertion_lines.size() << "\n";
+      detailed_output_file << join(large_insertion_lines, "\n")<< "\n\n";
+      
+      detailed_output_file << "LARGE AMPLIFICATIONS:" << large_amplification_lines.size() << "\n";
+      detailed_output_file << join(large_amplification_lines, "\n")<< "\n\n";
+      
+      detailed_output_file << "LARGE SUBSTITUTIONS:" << large_substitution_lines.size() << "\n";
+      detailed_output_file << join(large_substitution_lines, "\n")<< "\n\n";
+      
+      detailed_output_file << "MOBILE ELEMENT INSERTIONS:" << mobile_element_insertion_lines.size() << "\n";
+      detailed_output_file << join(mobile_element_insertion_lines, "\n") << "\n\n";
+      
+      detailed_output_file << "GENE CONVERSIONS:" << gene_conversion_lines.size() << "\n";
+      detailed_output_file << join(gene_conversion_lines, "\n")<< "\n";
+    }
+    
   }
   
 

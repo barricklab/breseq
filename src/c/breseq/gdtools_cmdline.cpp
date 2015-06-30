@@ -992,6 +992,8 @@ int do_annotate(int argc, char* argv[])
   // more than one file was provided as input
   bool compare_mode = (gd_path_names.size() > 1);
 	
+	ASSERT((output_format != "PHYLIP") || (compare_mode), "You must provide more than one input GD file in PHYLIP mode.");
+	
   // First use merge to produce a file with a line for each mutation
   cGenomeDiff gd;
   vector<string> gd_titles;
@@ -1283,7 +1285,8 @@ int do_count(int argc, char* argv[])
   AnyOption options("gdtools COUNT [-o count.csv] -r reference.gbk input.1.gd [input.2.gd ... ]");
   options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
 	options("verbose,v", "produce output for each mutation counted.", TAKES_NO_ARGUMENT);
-	options("output,o", "path to output file with added mutation data.", "count.csv");
+	options("output,o", "path to output CSV file with count data.", "count.csv");
+	options("detailed-output,d", "path to optional output tab-delimited file with detailed information about all mutations (Default = OFF)");
 	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
 	options("base-substitution-statistics,b", "calculate detailed base substitution statistics", TAKES_NO_ARGUMENT);
 	options("count-polymorphisms,p", "count polymorphic mutations (those with frequencies < 1). (Default = FALSE)", TAKES_NO_ARGUMENT);
@@ -1329,11 +1332,14 @@ int do_count(int argc, char* argv[])
     ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"), options.count("verbose"));
     genome_diffs.push_back(gd);
   }
-  
+	
+	
+	string detailed_output_file_name = options.count("detailed-output") ? options["detailed-output"] : "";
   MutationCountFile(
                     ref_seq_info, 
                     genome_diffs, 
-                    output_file_name, 
+                    output_file_name,
+										detailed_output_file_name,
                     options.count("base-substitution-statistics"),
 										options.count("count-polymorphisms"),
                     options.count("verbose")
@@ -1351,7 +1357,7 @@ int do_normalize_gd(int argc, char* argv[])
 	options("reference,r"       , "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
 	options("reassign-ids,s"    , "reassign ids to lowest numbers possible.", TAKES_NO_ARGUMENT);
 	options("repeat-adjacent,a" , "mark repeat-region adjacent, mediated, and between mutations.", TAKES_NO_ARGUMENT);
-	options("check-apply,x" , "check consistency of normalize using APPLY.", TAKES_NO_ARGUMENT);
+	options("dont-check-apply,x" , "skip step that checks consistency of normalize using APPLY.", TAKES_NO_ARGUMENT);
 
 	const int32_t kDistanceToRepeat = 20;
 	
@@ -1368,7 +1374,7 @@ int do_normalize_gd(int argc, char* argv[])
 	options.addUsage("Optionally, assigns 'adjacent', 'mediated', or 'between' tags to mutations within");
 	options.addUsageSameLine(to_string(kDistanceToRepeat) + " bp of annotated repeat regions");
 	options.addUsageSameLine("to indicate these may be hotspots that experience elevated mutation rates. (They will be counted separately");
-	options.addUsageSameLine("from other mutations in gdtools COUNT). This process removes any previous version of these tags.");
+	options.addUsageSameLine("from other mutations in gdtools COUNT). This process preserves any previous versions of these tags.");
 	options.addUsageSameLine("DEL mutations with a size < " + to_string(kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation) + " bp near ");
 	options.addUsageSameLine("repeat_regions are treated as 'adjacent' rather than 'mediated'." );
 	options.addUsage("");
@@ -1377,7 +1383,7 @@ int do_normalize_gd(int argc, char* argv[])
 	options.addUsageSameLine("mutation, but not those that are applied after, for example. The 'before' tag can be used to enforce a specific ordering");
 	options.addUsageSameLine("of these mutations so that the mobile element insertion occurs first.");
 	options.addUsage("");
-	options.addUsageSameLine("The coordinates of DEL mutations that have 'mediated' or 'between' tags are NOT shifted, so that");
+	options.addUsage("The coordinates of DEL mutations that have 'mediated' or 'between' tags are NOT shifted, so that");
 	options.addUsageSameLine("they will remain adjacent to any relevant mobile elements or repeats.");
 	options.addUsage("");
 	options.addUsage("Any mutations including 'no_normalize=1' in their definition will not be normalized.");
@@ -1451,7 +1457,7 @@ int do_normalize_gd(int argc, char* argv[])
 					(*gd_mut)[*key_it] = (*apply_mut_p)[*key_it];
 			}
 		}
-	} else if (options.count("check-apply")) {
+	} else if (!options.count("dont-check-apply")) {
 		
 		new_ref_seq_info = cReferenceSequences::deep_copy(ref_seq_info);
 		cGenomeDiff apply_gd(input);
@@ -1466,7 +1472,7 @@ int do_normalize_gd(int argc, char* argv[])
 		gd.reassign_unique_ids();
 	}
 	
-	if (options.count("check-apply")) {
+	if (!options.count("dont-check-apply")) {
 		uout("Using APPLY to check that normalization didn't change the mutated sequence.");
 		cReferenceSequences	verify_ref_seq_info = cReferenceSequences::deep_copy(ref_seq_info);
 		cGenomeDiff verify_gd(input); // must load new copy or positions will be shifted by apply_to_sequences

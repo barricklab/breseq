@@ -646,6 +646,7 @@ int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info)
   }
 }
 
+// shift_offset normally means the position of the mutation doing the shifting
 // shift_offset of -1 means we are within the current mutation 
 //   => we don't change its size, but we may shift its position in a special way for AMP/MOB/INS
 //   inset_pos is the index after the current position // = 0 for actually at this position
@@ -694,7 +695,7 @@ void cDiffEntry::mutation_shift_position(const string& seq_id, int32_t shift_off
   int32_t final_start = original_start;
   int32_t final_size = original_end - original_start + 1;
         
-  // Deletion cases
+  // Special case where the mutation is 'within' this mutations
   if (shift_offset < 0) {
   
     int32_t change_start = shift_offset;
@@ -721,7 +722,7 @@ void cDiffEntry::mutation_shift_position(const string& seq_id, int32_t shift_off
       final_start = original_start + shift_size;
     }
     
-    // Insertion case, increase size of the entire event (including replace size) is within the current event
+    // Normal case where we shift the mutation
   } else {
   
     if (insert_pos == 0) {
@@ -3390,15 +3391,25 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
       WARN("Attempt to apply polymorphic mutation with frequency != 1. This mutation will be skipped.\n" + mut.as_string());
       continue;
     }
+    
     /////// BEGIN - marking 'between', 'mediated', 'adjacent' to repeat_region mutations
     //      NOTE: We remove any previous annotation from this GenomeDiff for ALL mutation types
+    
+    // @JEB 06-21-15 Could add back as an option to strip previous values, for now, we are preserving
+    /*
     mut.erase("between");
     mut.erase("mediated");
     mut.erase("adjacent");
-    
+    */
+     
     // Must be done before we apply the current mutation to the sequence
     // But previous mutations must be applied (because for example it may be mediated by a *new* IS copy).
     {
+      
+      map<string,string> nearby_tags;
+      if (mut.entry_exists("adjacent")) nearby_tags["adjacent"] = mut["adjacent"];
+      if (mut.entry_exists("between")) nearby_tags["between"] = mut["between"];
+      if (mut.entry_exists("mediated")) nearby_tags["mediated"] = mut["mediated"];
       
       cAnnotatedSequence& this_seq = new_ref_seq_info[mut[SEQ_ID]];
             
@@ -3439,16 +3450,22 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         // different names is an odd case - WARN and don't assign anything
         if ( (*start_repeat)["name"] != (*end_repeat)["name"]) {
           WARN("Mutation has boundaries near two different repeat families, saving only the first one." + mut.as_string());
-          mut[one_close_key] = (*start_repeat)["name"]; 
+          nearby_tags[one_close_key] = (*start_repeat)["name"];
         } else {
-          mut[both_close_key] = (*start_repeat)["name"]; 
+          nearby_tags[both_close_key] = (*start_repeat)["name"];
         }
         
       } else if (start_repeat.get() != NULL) {
-        mut[one_close_key] = (*start_repeat)["name"];      
+        nearby_tags[one_close_key] = (*start_repeat)["name"];
       } else if (end_repeat.get() != NULL) {
-        mut[one_close_key] = (*end_repeat)["name"];
+        nearby_tags[one_close_key] = (*end_repeat)["name"];
       }
+      
+      
+      // Finally reassign (this assumes none are removed)
+      if (nearby_tags.count("adjacent")) mut["adjacent"] = nearby_tags["adjacent"];
+      if (nearby_tags.count("between")) mut["between"] = nearby_tags["between"];
+      if (nearby_tags.count("mediated")) mut["mediated"] = nearby_tags["mediated"];
     }
     //
     /////// END 'mediated and 'within' code
@@ -4592,6 +4609,7 @@ void cGenomeDiff::tabulate_frequencies_from_multiple_gds(
         continue;
       }
       
+      // we didn't find the mutation, so we might need to consider it deleted or unknown...
       if (gd_list[i].mutation_deleted(*this_mut)) {
         (*this_mut)[freq_key] = "D";
         continue;

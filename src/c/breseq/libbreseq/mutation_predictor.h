@@ -189,7 +189,8 @@ namespace breseq {
   void MutationCountFile(
                          cReferenceSequences& ref_seq_info, 
                          vector<cGenomeDiff>& genome_diffs, 
-                         string& output_file_name, 
+                         string& output_file_name,
+                         string& detailed_output_file_name,
                          bool base_substitution_statistics,
                          bool count_polymorphisms,
                          bool verbose
