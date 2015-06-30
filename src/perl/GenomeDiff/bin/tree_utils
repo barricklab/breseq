@@ -303,33 +303,37 @@ sub do_root_ancestor
  	my $root = $tree->get_root_node;
 
 	my @desc = $root->each_Descendent;
-	die "Expected three nodes from root.\n" if (scalar $root->each_Descendent != 3);
 
 	my $found = 0;
-	my ($ancestor, $internal, $other);
+	my ($ancestor, @descendant_nodes);
 	foreach my $node ($root->each_Descendent)
 	{
-		if ($node->id =~ m/\|0K/)
+		print "Found descendant node id: " . $node->id . "\n";
+		if (($node->id =~ m/\|0K/) || ($node->id =~ m/_0gen/))
 		{
 			$ancestor = $node;
 		}
-		elsif ($node->is_Leaf)
-		{
-			$other = $node;
-		}
 		else
 		{
-			$internal = $node;
+			push @descendant_nodes, $node;
 		}
 	}
-	die "Did not find ancestral node and internal node as children of root.\n" if (!$ancestor || !$internal);
+
+
+	die "Did not find ancestral node and at least two other nodes as children of root.\n" if (!$ancestor || (scalar @descendant_nodes < 2));
+
+	print "Rooted to: " . $ancestor->id . "\n";
+
 
 	$root->remove_all_Descendents();
 
 	my $new_node = Bio::Tree::Node->new();
 	$new_node->branch_length($ancestor->branch_length);
-	$new_node->add_Descendent($internal);
-	$new_node->add_Descendent($other);
+	foreach my $descendant_node (@descendant_nodes)
+	{
+		$new_node->add_Descendent($descendant_node);
+	}
+	
 	$ancestor->branch_length(0);
 	
 	$root->add_Descendent($new_node);
@@ -579,23 +583,28 @@ sub do_Camin_Sokal
 sub do_discrepancies
 {
 	my ($help, $man);
-	my ($in_tree_file, $out_tree_file, $phylip_file);
+	my ($in_tree_file, $out_tree_file, $phylip_file, $all_mutations);
 	GetOptions(
 		'help|?' => \$help, 'man' => \$man,
 		'in-tree-file|i=s' =>  \$in_tree_file,
 		'out-tree-file|o=s' =>  \$out_tree_file,
 		'phylip-file|p=s' =>  \$phylip_file,
+		'all-mutations|a' =>  \$all_mutations,
 	) or pod2usage(2);
 	pod2usage(1) if $help;
 	pod2usage(-exitstatus => 0, -verbose => 2) if $man;	
 	pod2usage(1) if (!$phylip_file);
-	my @names = @ARGV;
 
 	## Load phylip file
 	open PHY, "$phylip_file" or die "Could not open file:$phylip_file\n";
 	my @plines = <PHY>;
 	shift @plines; ##header
 	close PHY;
+
+	open SAMPLEKEYFILE, "$phylip_file.sample.key" or die "Could not open file:$phylip_file.sample.key\n";
+	my @names = <SAMPLEKEYFILE>;
+	chomp @names;
+	close SAMPLEKEYFILE;
 
 	my $phylip;
 	foreach my $phylip_name (@plines)
@@ -605,7 +614,7 @@ sub do_discrepancies
 		my $muts = $2;
 		
 		my $name = shift @names;
-		$name =~ s/\.[^.]+$//;
+		$name =~ s/\S+\s+//;
 		
 		$phylip->{name_to_abb}->{$name} = $abb;
 		$phylip->{name_to_muts}->{$name} = $muts;
@@ -616,10 +625,12 @@ sub do_discrepancies
 
 	## Load file naming mutations
 	@{$phylip->{mut_names}} = ();
-	open KEYFILE, "$phylip_file.key" or die "Could not open file:$phylip_file.key\n";
-	@{$phylip->{mut_names}}  = <KEYFILE>;
+	open MUTATIONKEYFILE, "$phylip_file.mutation.key" or die "Could not open file:$phylip_file.mutation.key\n";
+	@{$phylip->{mut_names}}  = <MUTATIONKEYFILE>;
 	chomp @{$phylip->{mut_names}};
-	close KEYFILE;
+	close MUTATIONKEYFILE;
+
+print Dumper($phylip);
 
 	for (my $i=0; $i<scalar @{$phylip->{mut_names}}; $i++)
 	{
@@ -628,7 +639,7 @@ sub do_discrepancies
 		
 		# parse in newick/new hampshire format
 		my $tree_input = new Bio::TreeIO(-file => $in_tree_file, -format=> 'newick');
-		my $tree = $tree_input->next_tree;	
+		my $tree = $tree_input->next_tree;
 		
 		#Look at all pairs of nodes
 		my $discrepant = 0;
@@ -644,7 +655,7 @@ sub do_discrepancies
 			{
 				return substr($phylip->{name_to_muts}->{$node->id}, $i, 1);
 			}
-	
+			
 			my @descendant_states;
 			foreach my $descendant ($node->each_Descendent)
 			{
@@ -655,6 +666,7 @@ sub do_discrepancies
 			
 			#if all descendants share a state then give us that state
 			my $state;
+			my $new_N = 0;
 			foreach my $descendant_state (@descendant_states)
 			{
 				if ($descendant_state ne 'N') 
@@ -665,12 +677,14 @@ sub do_discrepancies
 					}
 					elsif ($state ne $descendant_state)
 					{
+						$new_N = 1;
 						$state = 'N';
 					}
 				}
 			}
 			
-			$diffs++ if ($state eq 'N');
+			$state = 'N' if (!defined $state);
+			$diffs += $new_N;
 			
 			return ($state, $diffs);
 		}
@@ -688,9 +702,10 @@ sub do_discrepancies
 			$node->id($new_id);
 		}
 		
-		if ($discrepant)
+		if ($discrepant || $all_mutations)
 		{
 			print STDERR "Discrepant!\n";
+			$mut_name =~ s/\//-/g;
 			my $tree_output = new Bio::TreeIO(-file => ">$out_tree_file.$i.$mut_name.$i.tre", -format =>'newick');
 			$tree_output->write_tree($tree);
 		}
