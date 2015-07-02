@@ -2262,7 +2262,7 @@ int do_download(int argc, char *argv[])
       if (!options.count("test")) {
         ifstream in(file_path.c_str());
         string first_line = "";
-        std::getline(in, first_line);
+        breseq::getline(in, first_line);
         if (cString(file_path).ends_with(".gbk")) {
           if (first_line.find("LOCUS") != 0) {
             error_report[file_name]["NOT_GBK_FILE"] = file_path;

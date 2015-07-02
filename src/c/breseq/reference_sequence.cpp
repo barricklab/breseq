@@ -1178,7 +1178,7 @@ bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file
   bool found_LOCUS_line = false;
   cAnnotatedSequence* s = NULL;
   while (!in.eof()) {
-    std::getline(in, line);
+    breseq::getline(in, line);
     string first_word = GetWord(line);
     RemoveLeadingTrailingWhitespace(line);
 
@@ -1252,7 +1252,7 @@ void cSequenceFeature::ReadGenBankCoords(string& s, ifstream& in) {
   // Add in remaining lines
   string s2;
   while ((parentheses_level > 0) && !in.eof()) {
-    std::getline(in, s2);
+    breseq::getline(in, s2);
     RemoveLeadingTrailingWhitespace(s2);
   
     size_t on_pos = s2.find_first_of("()");
@@ -1388,7 +1388,7 @@ void cSequenceFeature::ReadGenBankTag(std::string& tag, std::string& s, std::ifs
     
     bool found_last_quote = false;
     while (!found_last_quote && !in.eof()) {
-      std::getline(in, s);
+      breseq::getline(in, s);
       RemoveLeadingTrailingWhitespace(s);
       
       second_quote_pos = s.find("\"");
@@ -1413,7 +1413,7 @@ void cSequenceFeature::ReadGenBankTag(std::string& tag, std::string& s, std::ifs
     string value = s;
     
     while (parenthesis_level && !in.eof()) {
-      std::getline(in, s);
+      breseq::getline(in, s);
       RemoveLeadingTrailingWhitespace(s);
       parenthesis_level += std::count(s.begin(), s.end(), '('); 
       parenthesis_level -= std::count(s.begin(), s.end(), ')');

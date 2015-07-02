@@ -32,7 +32,7 @@ namespace breseq {
     ASSERT(!(*this).fail(), "Failed to open FASTA file: " + m_file_name);
     
     if (mode == ios_base::in) {
-      std::getline(*this, m_current_line);
+      breseq::getline(*this, m_current_line);
     }
   }
 
@@ -58,7 +58,7 @@ namespace breseq {
     pos = m_current_line.find_first_not_of( " \t\r\n", pos);
     if (pos != string::npos) sequence.m_description = m_current_line.substr(pos);
         
-    std::getline(*this, m_current_line);
+    breseq::getline(*this, m_current_line);
     m_current_line_num++;
     
     while ((m_current_line[0] != '>') && !this->eof()) {
@@ -71,7 +71,7 @@ namespace breseq {
       
       sequence.m_sequence += m_current_line;
 
-      std::getline(*this, m_current_line);
+      breseq::getline(*this, m_current_line);
       m_current_line_num++;
     }
       

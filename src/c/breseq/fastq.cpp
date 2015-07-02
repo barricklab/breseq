@@ -373,16 +373,23 @@ namespace breseq {
   }
   
   //constructor
-  cFastqFile::cFastqFile() :
-    fstream(), m_current_line(0), m_file_name(""), m_needs_conversion(false),
-    m_check_for_repeated_read_names(false), m_last_read_name(""), m_repeated_read_name_count(0)
+  cFastqFile::cFastqFile()
+    : fstream()
+    , m_current_line(0)
+    , m_file_name("")
+    , m_check_for_repeated_read_names(false)
+    , m_last_read_name(""), m_repeated_read_name_count(0)
   {
   }
  
   
-  cFastqFile::cFastqFile(const string &file_name, std::ios_base::openmode mode) :
-    fstream(file_name.c_str(), mode), m_current_line(0), m_file_name(file_name), m_needs_conversion(false),
-    m_check_for_repeated_read_names(false), m_last_read_name(""), m_repeated_read_name_count(0)
+  cFastqFile::cFastqFile(const string &file_name, std::ios_base::openmode mode)
+    : fstream(file_name.c_str(), mode)
+    , m_current_line(0)
+    , m_file_name(file_name)
+    , m_check_for_repeated_read_names(false)
+    , m_last_read_name("")
+    , m_repeated_read_name_count(0)
   { 
     ASSERT(!(*this).fail(), "Could not open file: " +  file_name);
   }
@@ -402,7 +409,8 @@ namespace breseq {
     
     // get the next four lines
     while (count < 4) {
-      std::getline(*this, line);
+      breseq::getline(*this, line);
+      
       m_current_line++;
       
       // Didn't get a first line, then we ended correctly
@@ -426,9 +434,6 @@ namespace breseq {
             exit(-1);
           }
           sequence.m_name = line.substr(1,string::npos);
-          if (m_current_line == 1) {
-            if (sequence.m_name.find("/") != string::npos) m_needs_conversion = true;
-          }
           
           // Delete any sequence name information after the first space...
           // Necessary for scrubbing SRA FASTQs, for example.
@@ -437,7 +442,6 @@ namespace breseq {
             if (space_pos != string::npos) 
             {
               sequence.m_name.erase(space_pos);
-              m_needs_conversion = true;
             }
           }
           
@@ -449,7 +453,6 @@ namespace breseq {
             {
               m_repeated_read_name_count++;
               sequence.m_name += "r" + to_string(m_repeated_read_name_count);
-              m_needs_conversion = true;
             }
             else
             {
@@ -462,14 +465,6 @@ namespace breseq {
           
         case 1:
           sequence.m_sequence = line;
-          
-          // check for extraneous DOS ending
-          if (m_current_line == 1) {
-            if( sequence.m_sequence[sequence.m_sequence.size()-1] == '\r') {
-              sequence.m_sequence.resize(sequence.m_sequence.size()-1);
-              m_needs_conversion = true;
-            }
-          }
           
           for (uint32_t i=0; i<sequence.m_sequence.size(); i++) {
             
@@ -484,38 +479,31 @@ namespace breseq {
                 break;
                 
               case 'N':
-                m_needs_conversion = true;
                 break;
                 
               case 'a':
                 sequence.m_sequence.replace(i,1,1,'A');
-                m_needs_conversion = true;
                 break;
                 
               case 't':
                 sequence.m_sequence.replace(i,1,1,'T');
-                m_needs_conversion = true;
                 break;
                 
               case 'c':
                 sequence.m_sequence.replace(i,1,1,'C');
-                m_needs_conversion = true;
                 break;
                 
               case 'g':
                 sequence.m_sequence.replace(i,1,1,'G');
-                m_needs_conversion = true;
                 break;
 
               case 'n':
                 sequence.m_sequence.replace(i,1,1,'N');
-                m_needs_conversion = true;
                 break;
               
               // all other characters converted to 'N'
               default :
                 sequence.m_sequence.replace(i,1,1,'N');
-                m_needs_conversion = true;
 
             }
 
@@ -553,7 +541,6 @@ namespace breseq {
           } else if ((line.find_first_of(" ") != string::npos) && (line.find_first_not_of(" -0123456789\t") == string::npos)) {
             
             sequence.m_numerical_qualities = true;
-            m_needs_conversion = true;
             vector<string> numerical_qualities(split(line, " "));
             if( sequence.m_sequence.size() != numerical_qualities.size() ) {
               fprintf(stderr, "FASTQ sequence record has different SEQUENCE and numerical QUALITY lengths.\nFile %s\nLine: %d\n", m_file_name.c_str(), m_current_line);

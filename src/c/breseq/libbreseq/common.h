@@ -244,6 +244,28 @@ namespace breseq {
     return true;
   }
   
+  // this is our version that scrubs windows line endings by default
+  inline istream& getline(istream& is, string& str) {
+    std::getline(is, str);
+    
+    if( str[str.size()-1] == '\r') {
+      str.resize(str.size()-1);
+    }
+    
+    return is;
+  }
+  
+  // this is our version that scrubs windows line endings by default
+  inline istream& getline(istream& is, string& str, char delim) {
+    std::getline(is, str, delim);
+    
+    if( str[str.size()-1] == '\r') {
+      str.resize(str.size()-1);
+    }
+    
+    return is;
+  }
+  
   // Utility functions
   inline bool file_exists(const char *filename)
   {
@@ -556,7 +578,7 @@ namespace breseq {
     string value = "";
 
     while(!stream.eof()) {
-      std::getline(stream, value, '\n');
+      breseq::getline(stream, value, '\n');
       rhs.push_back(value);
     }
 

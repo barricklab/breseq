@@ -165,7 +165,6 @@ class cAnnotatedSequence;
   protected:
     uint32_t  m_current_line;
     string    m_file_name;
-    bool      m_needs_conversion;
     
   public:
     // keep track of duplicate read names one after another and append r# to later ones
@@ -180,8 +179,6 @@ class cAnnotatedSequence;
       
     bool read_sequence(cFastqSequence &sequence, cFastqQualityConverter& fqc);
     void write_sequence(const cFastqSequence &sequence);
-  
-    bool needs_conversion() { return m_needs_conversion; }
   };
 
   /*! General sequence helper function.

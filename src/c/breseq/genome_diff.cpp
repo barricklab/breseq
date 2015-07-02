@@ -1490,7 +1490,7 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
   //! Step: Handle the diff entries.
   while (in.good()) {
     string line = "";
-    std::getline(in, line);
+    breseq::getline(in, line);
     line_number++;
     //Warn if commented out or a possibly blank line is encountered.
     if (line.empty()) {
