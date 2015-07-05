@@ -1,3 +1,15 @@
+Version 0.26.1
+   * Corrected handling of shifts for some indel mutations.
+   * Updates to several gdtools commands. Usage changed in some cases.
+
+Version 0.26.0
+   * First version with binary distributions for Linux and MacOSX.
+   * Updated HTML documentation (installation instructions, annotated bibliography, FAQ).
+
+Version 0.25d
+   * Fixed problems introduced when program_data_path moved to being relative
+     rather than absolute; affected bam2cov for example
+
 Version 0.25c
     * Maintenance release with bug fix for a rare problem affecting
       de novo assembled reference sequences
