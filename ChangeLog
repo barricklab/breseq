@@ -1,5 +1,6 @@
 Version 0.26.1
-   * Corrected handling of shifts for some indel mutations.
+   * Fixed a crash that sometimes occurred when processing polymorphism statistics.
+   * Corrected handling of shifted positions for some indel mutations.
    * Updates to several gdtools commands. Usage changed in some cases.
 
 Version 0.26.0
@@ -8,22 +9,22 @@ Version 0.26.0
 
 Version 0.25d
    * Fixed problems introduced when program_data_path moved to being relative
-     rather than absolute; affected bam2cov for example
+     rather than absolute; affected bam2cov for example.
 
 Version 0.25c
     * Maintenance release with bug fix for a rare problem affecting
-      de novo assembled reference sequences
+      de novo assembled reference sequences.
 
 Version 0.25b
-    * Maintenance release with bug fixes
-    * Fixed crash of several gdtools commands
-    * Fixed crash under rare circumstances in polymorphism mode
+    * Maintenance release with bug fixes.
+    * Fixed crash of several gdtools commands.
+    * Fixed crash under rare circumstances in polymorphism mode.
 
 Version 0.25a
-    * Maintenance release with bug fixes
-    * Fixed floating point error encountered on some compilers/systems
-    * Fixed compilation of samtools/breseq with MacOSX clang compiler
-    * Miscellaneous bug fixes related to gdtools commands
+    * Maintenance release with bug fixes.
+    * Fixed floating point error encountered on some compilers/systems.
+    * Fixed compilation of samtools/breseq with MacOSX clang compiler.
+    * Miscellaneous bug fixes related to gdtools commands.
 
 Version 0.25
     * Release for publication describing consensus SV prediction:
