@@ -2807,7 +2807,7 @@ namespace breseq {
     
     // Write the detailed output file
     if (detailed_output) {
-      ofstream detailed_output_file(detailed_output_file_name);
+      ofstream detailed_output_file(detailed_output_file_name.c_str());
       
       detailed_output_file << "BASE SUBSTITUTIONS:" << base_substitution_lines.size() << "\n";
       detailed_output_file << join(base_substitution_lines, "\n") << "\n\n";
