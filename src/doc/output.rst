@@ -171,7 +171,7 @@ Examples:
    :width: 750px
 
 This image shows the page from clicking on the * link for this junction. A partial alignment of reads to the new junction is shown. Notice the two joined pieces of the reference sequence at the top that they align to. This sequence is on the bottom strand of the reference if start is greater than end.
-   
+
 .. figure:: images/jc_2.png
    :width: 750px   
 

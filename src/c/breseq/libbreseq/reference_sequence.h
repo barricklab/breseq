@@ -855,7 +855,7 @@ namespace breseq {
     void annotate_1_mutation(cDiffEntry& mut, uint32_t start, uint32_t end, bool repeat_override = false, bool ignore_pseudogenes = false);
     void annotate_mutations(cGenomeDiff& gd, bool only_muts = false, bool ignore_pseudogenes = false, bool compare_mode = false, bool verbose = false);
     void polymorphism_statistics(Settings& settings, Summary& summary);
-    string repeat_family_sequence(const string& repeat_name, int8_t strand, string* repeat_region = NULL, string* picked_seq_id=NULL, cSequenceFeature* picked_sequence_feature=NULL);
+    string repeat_family_sequence(const string& repeat_name, int8_t strand, string* repeat_region = NULL, string* picked_seq_id=NULL, cSequenceFeature* picked_sequence_feature=NULL, bool fatal_error=true);
     
     string safe_seq_id_name(const string& input)
     {

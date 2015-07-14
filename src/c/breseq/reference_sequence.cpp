@@ -1686,13 +1686,17 @@ void cReferenceSequences::ReadBull(const string& file_name) {
 /*! 
  *  If repeat_region is provided, return a specific copy of the repeat.
  *  Otherwise, return a "typical" copy (the most common sequence and/or size for the element)
+ *
+ * If fatal_error is TRUE, then we die if we are unable to find the sequence
+ * If fatal_error is FALSE, we return an empty string if we are unable to find the sequence
  */  
 string cReferenceSequences::repeat_family_sequence(
                                                    const string &repeat_name, 
                                                    int8_t strand, 
                                                    string* repeat_region, 
                                                    string* picked_seq_id, 
-                                                   cSequenceFeature* picked_sequence_feature
+                                                   cSequenceFeature* picked_sequence_feature,
+                                                   bool fatal_error
                                                    )
 {  
   bool verbose = false;
@@ -1804,7 +1808,12 @@ string cReferenceSequences::repeat_family_sequence(
       }
     }
     
-    ASSERT(picked_rep.get(), "Could not find repeat of type [" + repeat_name + "] in reference sequences.\n");
+    if (fatal_error) {
+      ASSERT(picked_rep.get(), "Could not find repeat of type [" + repeat_name + "] in reference sequences.\n");
+    }
+    else if (!picked_rep.get()) {
+      return "";
+    }
   }
   
   

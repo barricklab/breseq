@@ -38,6 +38,8 @@ const char* INSERT_POSITION="insert_position";
 const char* FREQUENCY="frequency";
 const char* REJECT="reject";
 const char* ERROR="error";
+const char* MEDIATED="mediated";
+const char* BETWEEN="between";
   
 // For MOB
 const char* REPEAT_NAME = "repeat_name";
@@ -46,6 +48,7 @@ const char* INS_START = "ins_start";
 const char* INS_END = "ins_end";
 const char* DEL_START = "del_start";
 const char* DEL_END = "del_end";
+const char* MOB_REGION = "mob_region";
   
 // For INS/DEL
 const char* REPEAT_SEQ = "repeat_seq";
@@ -55,6 +58,7 @@ const char* REPEAT_NEW_COPIES = "repeat_new_copies";
   
 // For AMP
 const char* NEW_COPY_NUMBER = "new_copy_number";
+const char* MEDIATED_STRAND = "mediated_strand";
   
 // For CON
 const char* REGION = "region";  
@@ -97,8 +101,9 @@ const char* SIDE_1_COVERAGE = "side_1_coverage";
 const char* SIDE_2_COVERAGE = "side_2_coverage";
 const char* NEW_JUNCTION_COVERAGE = "new_junction_coverage";
 
+const int32_t k_num_line_specification_common_prefix_columns = 3;
   
-map<gd_entry_type, vector<string> > line_specification = make_map<gd_entry_type, vector<string> >
+const map<gd_entry_type, vector<string> > line_specification = make_map<gd_entry_type, vector<string> >
 //! seq_id and positions are already parameters in cDiffEntry
 //## mutations
 (SNP,make_vector<string> (SEQ_ID)(POSITION)(NEW_SEQ))
@@ -132,10 +137,11 @@ map<gd_entry_type, vector<string> > line_specification = make_map<gd_entry_type,
 
 // These specs include addition fields used when determined equal mutations and sorting!
 // IMPORTANT: They include fields that may not always be defined.
-map<gd_entry_type, vector<string> > extended_line_specification = make_map<gd_entry_type, vector<string> >
+const map<gd_entry_type, vector<string> > extended_line_specification = make_map<gd_entry_type, vector<string> >
 (INS,make_vector<string> (SEQ_ID)(POSITION)(INSERT_POSITION)(NEW_SEQ))
-(MOB,make_vector<string> (SEQ_ID)(POSITION)(REPEAT_NAME)(STRAND)(DUPLICATION_SIZE)(INS_START)(INS_END)(DEL_START)(DEL_END))
-;  
+(MOB,make_vector<string> (SEQ_ID)(POSITION)(REPEAT_NAME)(STRAND)(DUPLICATION_SIZE)(INS_START)(INS_END)(DEL_START)(DEL_END)(MOB_REGION))
+(AMP,make_vector<string> (SEQ_ID)(POSITION)(SIZE)(NEW_COPY_NUMBER)(MEDIATED)(MEDIATED_STRAND)(MOB_REGION))
+;
   
 enum diff_entry_field_variable_t {
   kDiffEntryFieldVariableType_BaseSequence,
@@ -159,6 +165,7 @@ map<string, diff_entry_field_variable_t > diff_entry_field_variable_types = make
 (INS_START, kDiffEntryFieldVariableType_BaseSequence)
 (INS_END, kDiffEntryFieldVariableType_BaseSequence)
 (INSERT_POSITION, kDiffEntryFieldVariableType_Integer)
+(MEDIATED_STRAND, kDiffEntryFieldVariableType_Strand)
 ;
 
 const vector<string>gd_entry_type_lookup_table =
@@ -255,7 +262,7 @@ cDiffEntry::cDiffEntry(const string &line, uint32_t line_number, cFileParseError
   de["_line_number"] = to_string<uint32_t>(line_number);
   vector<string> tokens = split(line, "\t");
 
-  if (tokens.size() < 3) {
+  if (tokens.size() < k_num_line_specification_common_prefix_columns) {
     if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Could not determine type, id, or parent_id.", true);
     return;
   }
@@ -285,23 +292,17 @@ cDiffEntry::cDiffEntry(const string &line, uint32_t line_number, cFileParseError
   ++COLUMN;
 
   //Specs.
-  const vector<string>& specs = line_specification[de._type];
+  const vector<string>& specs = line_specification.find(de._type)->second;
 
-  if (tokens.size() < specs.size() ) {
-    if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Expected " + to_string(specs.size()) + " tab-delimited fixed columns for entry", true);
+  if (tokens.size() - COLUMN < specs.size() ) {
+    if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Expected " + to_string(specs.size() + COLUMN) + " tab-delimited columns for entry", true);
     return;
   }
   
   for (uint32_t i = 0; i < specs.size(); ++i) {
-    if (COLUMN < tokens.size()) {
       de[specs[i]] = tokens[COLUMN];
       RemoveLeadingTrailingWhitespace(de[specs[i]]);
       ++COLUMN;
-    } else {
-      
-      if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Line specification [" + specs[i] + "] has no value.", true);
-      return;
-    }
   }
 
   //Fields.
@@ -314,21 +315,47 @@ cDiffEntry::cDiffEntry(const string &line, uint32_t line_number, cFileParseError
       RemoveLeadingTrailingWhitespace(value);
       de[key] = value;
       
-      // Deprecated keys
-      if (file_parse_errors) {
-        if (key == "nested_within") {
-          if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'nested_within' is DEPRECATED and will be ignored. Use 'within' instead.", false);
-        } else if (key == "nested_copy") {
-          if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'nested_copy' IS DEPRECATED and will be ignored. Use 'within' instead.", false);
-        } else if (key == "after") {
-          if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'after' is DEPRECATED and will be ignored. Use 'within' or 'before' instead.", false);
+      
+      // Certain keys are only allowed for specific entries
+      if (key == MEDIATED) {
+        if ( (de._type != MOB) && (de._type != AMP) ) {
+          if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'mediated' is only allowed for entries of type MOB or AMP.", true);
         }
+      }
+      
+      if (key == MEDIATED_STRAND) {
+        if ( (de._type != AMP) ) {
+          if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'mediated_strand' is only allowed for entries of type AMP.", true);
+        }
+      }
+      
+      if (key == BETWEEN) {
+        if ( (de._type != MOB) && (de._type != AMP) ) {
+          if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'between' is only allowed for entries of type MOB or AMP.", true);
+        }
+      }
+      
+      // Deprecated keys
+        
+      if (key == "nested_within") {
+        if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'nested_within' is DEPRECATED and will be ignored. Use 'within' instead.", false);
+      } else if (key == "nested_copy") {
+        if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'nested_copy' IS DEPRECATED and will be ignored. Use 'within' instead.", false);
+      } else if (key == "after") {
+        if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'after' is DEPRECATED and will be ignored. Use 'within' or 'before' instead.", false);
       }
       
     } else {
       if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Field " + kvp + " is not a key=value pair. Ignoring this key.", false);
     }
     ++COLUMN;
+  }
+  
+  // Certain keys must occur together (if one is there, the other had better be there)
+  if (de._type == AMP) {
+    if (de.entry_exists(MEDIATED) != de.entry_exists(MEDIATED_STRAND)) {
+      if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Only one key of 'mediated' and 'mediated_strand' is supplied for this AMP. Both must be present to describe the mutation.", true);
+    }
   }
 
   return;
@@ -354,19 +381,21 @@ gd_entry_type cDiffEntry::type_to_enum(string type) {
 // Checks all specification fields for expected types and adds errors to parse_errors
 void cDiffEntry::valid_field_variable_types(cFileParseErrors& parse_errors) {
   
-  vector<string> spec = line_specification[this->_type];
+  const vector<diff_entry_key_t>& spec = extended_line_specification.count(this->_type)
+  ? extended_line_specification.find(this->_type)->second : line_specification.find(this->_type)->second;
   
-  uint32_t field_count = 3; // skipping fixed fields
-  for(vector<string>::iterator it=spec.begin(); it!=spec.end(); ++it) {
+  uint32_t field_count = k_num_line_specification_common_prefix_columns; // skipping fixed fields
+  for(map<string,string>::iterator it=this->begin(); it!=this->end(); ++it) {
     field_count++;
-    if (diff_entry_field_variable_types.count(*it) == 0) continue;
+    string key = it->first;
+    if (diff_entry_field_variable_types.count(key) == 0) continue;
     
-    diff_entry_field_variable_t variable_type = diff_entry_field_variable_types[*it];
-    string value = (*this)[*it];
+    diff_entry_field_variable_t variable_type = diff_entry_field_variable_types[key];
+    string value = it->second;
     
     if (variable_type == kDiffEntryFieldVariableType_BaseSequence) {
       if (!is_base_sequence(value))
-        parse_errors.add_line_error(from_string<uint32_t>((*this)["_line_number"]), this->as_string(), "Expected base sequence for field containing only characters 'ATCGN' for field " + to_string<uint32_t>(field_count) + ": [" + *it + "] instead of [" + value + "]." , true);
+        parse_errors.add_line_error(from_string<uint32_t>((*this)["_line_number"]), this->as_string(), "Expected base sequence for field containing only characters 'ATCGN' for field " + to_string<uint32_t>(field_count) + ": [" + key + "] instead of [" + value + "]." , true);
       continue;
     }
     
@@ -375,7 +404,7 @@ void cDiffEntry::valid_field_variable_types(cFileParseErrors& parse_errors) {
     bool integral = is_integer(value, ret_val);
     
     if (!integral) {
-      parse_errors.add_line_error(from_string<uint32_t>((*this)["_line_number"]), this->as_string(), "Expected integral value for field " + to_string<uint32_t>(field_count) + ": [" + *it + "] instead of [" + value + "]." , true);
+      parse_errors.add_line_error(from_string<uint32_t>((*this)["_line_number"]), this->as_string(), "Expected integral value for field " + to_string<uint32_t>(field_count) + ": [" + key + "] instead of [" + value + "]." , true);
       continue;
     }
     
@@ -386,7 +415,7 @@ void cDiffEntry::valid_field_variable_types(cFileParseErrors& parse_errors) {
       case kDiffEntryFieldVariableType_PositiveInteger_ReverseSort:
 
         if (ret_val <= 0) { 
-          parse_errors.add_line_error(from_string<uint32_t>((*this)["_line_number"]), this->as_string(), "Expected positive integral value for field " + to_string<uint32_t>(field_count) + ": [" + *it + "] instead of [" + value + "]."  , true);
+          parse_errors.add_line_error(from_string<uint32_t>((*this)["_line_number"]), this->as_string(), "Expected positive integral value for field " + to_string<uint32_t>(field_count) + ": [" + key + "] instead of [" + value + "]."  , true);
         }
         break;
         
@@ -394,7 +423,7 @@ void cDiffEntry::valid_field_variable_types(cFileParseErrors& parse_errors) {
         
       case kDiffEntryFieldVariableType_Strand:
         if ((ret_val != -1) && (ret_val != 1)) { 
-          parse_errors.add_line_error(from_string<uint32_t>((*this)["_line_number"]), this->as_string(), "Expected strand value (-1/1) for field " + to_string<uint32_t>(field_count) + ": [" + *it + "] instead of [" + value + "]." , true);
+          parse_errors.add_line_error(from_string<uint32_t>((*this)["_line_number"]), this->as_string(), "Expected strand value (-1/1) for field " + to_string<uint32_t>(field_count) + ": [" + key + "] instead of [" + value + "]." , true);
         }
         break;
         
@@ -457,7 +486,7 @@ int32_t cDiffEntry::compare(const cDiffEntry& a, const cDiffEntry& b)
   
   // Get full line spec
   const vector<diff_entry_key_t>& specs = extended_line_specification.count(a_type)
-  ? extended_line_specification[a_type] : line_specification[a_type];
+  ? extended_line_specification.find(a_type)->second : line_specification.find(a_type)->second;
   
   for(vector<diff_entry_key_t>::const_iterator it = specs.begin(); it != specs.end(); it++) {
     const diff_entry_key_t& spec(*it);
@@ -879,9 +908,9 @@ void cDiffEntry::marshal(vector<string>& s) const {
   // marshal specified fields in-order, removing them from the copy after they've 
   // been printed:
   
-  vector<string>& f = line_specification[_type];
+  const vector<string>& f = line_specification.find(_type)->second;
   
-  for (vector<string>::iterator it=f.begin(); it != f.end(); it++)
+  for (vector<string>::const_iterator it=f.begin(); it != f.end(); it++)
   {
     diff_entry_map_t::iterator iter=cp.find(*it);
     
@@ -963,7 +992,7 @@ cDiffEntry cDiffEntry::to_spec() const
   
   // Get full line spec
   const vector<diff_entry_key_t>& specs = extended_line_specification.count(_type)
-  ? extended_line_specification[_type] : line_specification[_type];
+  ? extended_line_specification.find(_type)->second : line_specification.find(_type)->second;
   
   for(vector<diff_entry_key_t>::const_iterator it = specs.begin(); it != specs.end(); it++) {
     const diff_entry_key_t& spec(*it);
@@ -972,6 +1001,7 @@ cDiffEntry cDiffEntry::to_spec() const
       de[spec] = this->get(spec);
     }
   }
+  
   return de;
 }
   
@@ -1596,13 +1626,37 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
       }
     } // end of seq_id
   }
-   
   
-  // Second pass -- build up a list of coordinates where we require the 'before' or 'within' tag to
-  // disambiguate what base has changed. Only applies to MOB and AMP types
+  
+  // Test that specified mobile elements exist in reference when we will need their sequences
+  // including (1) for MOBs and (2) for AMPs with 'mediated' specified.
   
   diff_entry_list_t mut_list = mutation_list();
   
+  
+  for(diff_entry_list_t::iterator it=mut_list.begin(); it!=mut_list.end(); ++it) {
+    diff_entry_ptr_t& de = *it;
+    
+    string check_repeat_family_name("");
+    if (de->_type == MOB) {
+      check_repeat_family_name = (*de)[REPEAT_NAME];
+    } else if (de->_type == AMP) {
+      if (de->entry_exists(MEDIATED))
+        check_repeat_family_name = (*de)[MEDIATED];
+    }
+          
+    if (check_repeat_family_name.size() > 0) {
+      string found_seq = ref_seq.repeat_family_sequence(check_repeat_family_name, 1, NULL, NULL, NULL, false);
+      
+      if (found_seq.size() == 0) {
+        parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Repeat family name '" + check_repeat_family_name + "' does not exist in reference sequence.", true);
+      }
+    }
+    
+  }
+  
+  // Second pass -- build up a list of coordinates where we require the 'before' or 'within' tag to
+  // disambiguate what base has changed. Only applies to MOB and AMP types
 
   map<string, vector<dr_item> > disambiguate_requirements;
 
@@ -3614,11 +3668,47 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         
         const uint32_t& size = from_string<uint32_t>(mut[SIZE]);
         
-        //Build duplicate sequence
-        string duplicated_sequence;
-        for (uint32_t i = 1; i < from_string<uint32_t>(mut["new_copy_number"]); i++)
-          duplicated_sequence.append(new_ref_seq_info.get_sequence_1(mut[SEQ_ID], position, position+size-1));
-        ASSERT(!duplicated_sequence.empty(), "Duplicate sequence is empty. You may have specified an AMP with a new copy number of 1.");
+        // Special case of mediated AMP
+        cSequenceFeature repeat_feature_picked;
+        string seq_id_picked;
+        string mediated_string;
+        if (mut.entry_exists(MEDIATED)) {
+          mediated_string = ref_seq_info.repeat_family_sequence(mut[MEDIATED], from_string<int16_t>(mut[MEDIATED_STRAND]), mut.entry_exists("mob_region") ? &mut["mob_region"] : NULL, &seq_id_picked, &repeat_feature_picked);
+        }
+        
+        cLocation duplicated_region(position, position+size-1, 1);
+        
+        // We insert the pieces one at a time, so that we can update annotations
+        
+        //Also build full duplicated sequence (strictly for debugging output)
+        string duplicated_sequence_full_addition;
+        string duplicated_sequence_one_copy = new_ref_seq_info.get_sequence_1(mut[SEQ_ID], position, position+size-1);
+        for (uint32_t i = 1; i < from_string<uint32_t>(mut["new_copy_number"]); i++) {
+          
+          // Everything is inserted at the beginning, pushing the other copies forward!
+          
+          // inserted AFTER specified position
+          new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position+size-1, duplicated_sequence_one_copy, (to_string(mut._type) + " " + mut._id));
+          
+          // Starts at specified position (NOT after it)
+           new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+size, 0, 0, ref_seq_info, mut[SEQ_ID], +1, duplicated_region);
+          
+          // We have to insert a copy of the IS element
+          if (mediated_string.size()) {
+            // Insert
+            new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position+size-1, mediated_string, (to_string(mut._type) + " " + mut._id));
+            
+            // We've repeated the sequence, now it's time to repeat all the features
+            // inside of and including the repeat region.
+            new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+size-1, 0, 0, ref_seq_info, seq_id_picked, from_string<int16_t>(mut[MEDIATED_STRAND]), repeat_feature_picked.m_location);
+          }
+          
+          // This is constructed *only* for debugging output!
+          if (mediated_string.size()) duplicated_sequence_full_addition.append(mediated_string);
+          duplicated_sequence_full_addition.append(duplicated_sequence_one_copy);
+          
+        }
+        ASSERT(!duplicated_sequence_full_addition.empty(), "Duplicate sequence is empty. You may have specified an AMP with a new copy number of 1.");
         
         // Set up attributes
         replace_seq_id = mut[SEQ_ID];
@@ -3628,11 +3718,10 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         
         applied_seq_id = mut[SEQ_ID];
         applied_start = position;
-        applied_end = position + duplicated_sequence.size() - 1;
-        applied_seq = replace_seq + duplicated_sequence;
+        applied_end = position + duplicated_sequence_full_addition.size() - 1;
+        applied_seq = replace_seq + duplicated_sequence_full_addition;
         
-        new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position-1, duplicated_sequence, (to_string(mut._type) + " " + mut._id));
-              
+        
       } break;
         
       case INV:

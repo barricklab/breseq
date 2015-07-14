@@ -1,17 +1,17 @@
 Test Drive
 ==============
 
-In this test drive, we will first download a bacterial  genome and FASTQ files of Illumina reads. Then, we will use |breseq| to predict mutations that are present in the  re-sequencing data relative to this reference genome.
+In this test drive, we will first download a bacterial genome and FASTQ files of Illumina reads. Then, we will use |breseq| to predict mutations that are present in the re-sequencing data relative to this reference genome.
 
 1. Download data files
 ---------------------------------
 
-First, create a directory called **tutorial**:
+First, create a directory called **test_drive**:
 
 .. code-block:: bash
 
-   $ mkdir tutorial
-   $ cd tutorial
+   $ mkdir test_drive
+   $ cd test_drive
 
 Reference sequence
 ++++++++++++++++++++
@@ -25,12 +25,12 @@ Read files
 
 We're going to use Illumina genome re-sequencing data from a strain that evolved for 20,000 generations in a long-term evolution experiment [Barrick2009a]_. This data is available in the European Nucleotide Archive (ENA). Go to http://www.ebi.ac.uk/ and search for the accession number: **SRR030257**. Then click on the accession number to open the record and download the two data files using the links in the 'ftp' column.
 
-Move all three of these files into the **tutorial** directory that you created.
+Move all three of these files into the **test_drive** directory that you created.
 
 2. Run |breseq|
 -----------------------
 
-Check to be sure that you have changed into the **tutorial** directory and that you have all of the input files (and have uncompressed them).
+Check to be sure that you have changed into the **test_drive** directory and that you have all of the input files (and have uncompressed them).
 
 .. code-block:: bash
 

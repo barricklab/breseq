@@ -489,7 +489,7 @@ int do_check_plot(int argc, char *argv[])
 // Check format of Genome Diff and report all format errors
 int do_validate(int argc, char *argv[])
 {
-	AnyOption options("gdtools VALIDATE [] input1.gd [input2.gd]");
+	AnyOption options("gdtools VALIDATE -r reference.gbk input1.gd [input2.gd]");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
 	options("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. If provided, will validate seq_ids and positions in the GD file using these.  Option may be provided multiple times for multiple files. (OPTIONAL)");
 	options("verbose,v",  "Verbose mode. Outputs additional information about progress. (OPTIONAL)");
@@ -510,7 +510,7 @@ int do_validate(int argc, char *argv[])
 			return -1;
 	}
 	
-	cerr << "Running gdtools VALIDATE on " << options.getArgc() << " files..." << endl;
+	cerr << "Running gdtools VALIDATE on " << options.getArgc() << " file(s)..." << endl;
 	
 	// Further read in reference sequences and check IDs of mutations if user provided
 	// Give a warning if they weren't provided to remind the user this is possible.
@@ -532,6 +532,14 @@ int do_validate(int argc, char *argv[])
 			cGenomeDiff gd;
 			cFileParseErrors pe = gd.read(gd_file_name, true);
 
+			// we can't test the next part if there are fatal errors
+			if (pe.fatal()) {
+				cerr << endl << "File: " << gd_file_name << endl;
+				pe.print_errors(false);
+				num_files_with_errors++;
+				continue;
+			}
+		
 			cFileParseErrors pe2;
 			if (options.count("reference")) {
 					pe2 = gd.valid_with_reference_sequences(ref, true);

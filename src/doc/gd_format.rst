@@ -149,8 +149,9 @@ Additional INS named fields
 '''''''''''''''''''''''''''
 * **repeat_seq=**\ *<string>*, **repeat_length=**\ *<uint32>*, **repeat_ref_num=**\ *<uint32>*, **repeat_new_copies=**\ *<uint32>* 
    This insertion is in a short sequence repeat consisting of tandem copies of **repeat_seq** repeated **repeat_ref_num** times in the ancestor and **repeat_new_copies** after a mutation.  To be annotated in this way the copy of the repeat in the reference genome must consist of at least two repeat copies and have a length of five of more total bases (**repeat_length** × **repeat_ref_num** ≥ 5).
+
 * **insert_position=**\ *<uint32>*
-   Used when there are multiple insertion events after the same reference base to order the insertions. This typically happens in polymorphism mode and when manually breaking up an insertion of bases into distinct mutational events. Numbering of insertions begins with 1. 
+   Used when there are multiple insertion events after the same reference base to order the insertions. This typically happens in polymorphism mode and when manually breaking up an insertion of bases into distinct mutational events when this is supported by phylogenetic information. Numbering of insert positions begins with 1. 
 
 MOB: Mobile element insertion mutation
 """"""""""""""""""""""""""""""""""""""
@@ -178,13 +179,12 @@ MOB: Mobile element insertion mutation
 Additional MOB named fields
 '''''''''''''''''''''''''''
 * **del_start=**\ *<uint32>*, **del_end=**\ *<uint32>*
-
    Delete this many bases from the start or end of the inserted mobile element. This deletion occurs with respect to the top strand of the genome after the element is flipped to the orientation with which it will be inserted.
+
 * **ins_start=**\ *<string>*, **ins_end=**\ *<string>*
-
    Append the specified bases to the start or end of the inserted mobile element. These insertions occur after any deletions and will be inside of any duplicated target site bases.
-* **mob_region**\ =\ *<seq_id:start-end >*
 
+* **mob_region**\ =\ *<seq_id:start-end >*
    Use the existing copy of the mobile element specified as a seq_id:start-end region to apply this mutation. Useful when different annotated members of a mobile element family have slightly different sequences.
 
 AMP: Amplification mutation
@@ -208,8 +208,16 @@ AMP: Amplification mutation
 
 Additional AMP named fields
 '''''''''''''''''''''''''''
-* **mediated=**\ *<mobile_element_family>*, **mediated_strand=**\ *<1/-1>*
-   This amplification appears to be mediated by a mobile element insertion. New copies of the mobile element are inserted in the specified orientation before each new copy of the amplified region.
+
+* **between=**\ *<repeat_family>*
+   This deletion appears to result from homologous recombination or polymerase slipping between two existing copies of the same genomic repeat (e.g. tRNA, IS element) in the genome. This repeat appears on the boundary of each copy of the specified region.
+
+* **mediated=**\ *<repeat_family>*, *mediated_strand=**\ *<1/-1>*
+   This amplification is mediated by a simultaneous new insertion of a mobile element (or other  repeat element). New copies of the inserted element are added in the specified strand orientation between each new copy of the amplified region. Both of these attributes must be specified for the mutation.
+
+* **mob_region**\ =\ *<seq_id:start-end >*
+   Only valid for 'mediated' amplifications. Use the existing copy of the mobile element specified as a seq_id:start-end region to apply this mutation. Useful when different annotated members of a mobile element family have slightly different sequences.
+
 
 CON: Gene conversion mutation
 """""""""""""""""""""""""""""
@@ -251,24 +259,16 @@ Standard name=value pairs
 Counting Mutations
 """"""""""""""""""
 
-These attributes control how molecular events in a :program:`GenomeDiff` are counted for summary purposes.
+These attributes affect how molecular events in a :program:`GenomeDiff` are counted for summary purposes. They can be properties of any mutation entry.
 
-* **between**\ =\ *<element_name>*
+* **adjacent**\ =\ *<repeat_family>*
 
-   This mutation occurs between copies of this element. For example, a deletion caused by recombination between two copies of a mobile element.
+   This mutation is adjacent to the specified element. For example, it may be an insertion of a base next to a mobile element. One may want to ignore mutations in this category for certain analyses because they may represent hotspots with atypical mutation rates.
 
-* **mediated**\ =\ *<element_name>*
-
-   This mutation was mediated by insertion of a new copy of this element and recombination with an existing copy, such that the number of this element did not net increase in the resulting genome.
-   
-* **adjacent**\ =\ *<element_name>*
-
-   This mutation is adjacent to the specified element. For example, it may be an insertion of a base next to a mobile element. We may want to ignore mutations in this category because they represent a hotspot with an atypical mutation rate.
-   
 * **with**\ =\ *<mutation_id>*
 
    This mutation should not be counted separately. It should be counted as a **single** molecular event with the other specified mutation (which does not need a with tag)
-   
+
 
 Applying Mutations
 """"""""""""""""""
