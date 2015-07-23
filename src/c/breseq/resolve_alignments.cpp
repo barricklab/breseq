@@ -688,7 +688,7 @@ void load_junction_alignments(
     
     string this_unmatched_file_name = settings.file_name(settings.unmatched_read_file_name, "#", rf.m_base_name);
     cFastqFile out_unmatched_fastq(this_unmatched_file_name, ios::out);
-    assert(!out_unmatched_fastq.fail());
+    //assert(!out_unmatched_fastq.fail());
     
     string reference_sam_file_name = settings.file_name(settings.reference_sam_file_name, "#", rf.m_base_name);
     string reference_fasta = settings.reference_fasta_file_name;
@@ -940,7 +940,7 @@ void load_sam_only_alignments(
     
     string this_unmatched_file_name = settings.data_path + "/unmatched." + rf.m_base_name + ".fastq";
     cFastqFile out_unmatched_fastq(this_unmatched_file_name, ios::out);
-    assert(!out_unmatched_fastq.fail());
+    //assert(!out_unmatched_fastq.fail());
     
     reference_tam = new tam_file(reference_sam_file_name, settings.reference_fasta_file_name, ios::in); 
     

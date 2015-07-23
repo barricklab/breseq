@@ -57,6 +57,8 @@ LICENSE AND COPYRIGHT
 #include <functional>
 #include <iterator>
 
+#include <gzstream.h>
+
 // Begin breseq specific --->
 // Library specific headers
 #include <bam.h>
@@ -272,6 +274,40 @@ namespace breseq {
     ifstream ifile(filename);
     return !ifile.fail();
   }
+  
+  inline bool file_is_gzipped(const char * filename)
+  {
+    ifstream in(filename, ios::binary);
+    ASSERT(in.is_open(), "Could not open file for input: " + string(filename));
+    char magic[4] = {0};
+    in.read(magic, sizeof(magic));
+    uint8_t temp = 0x1f;
+    char compare = static_cast<char>(0x1f);
+    return ( magic[0] == static_cast<char>(0x1f) && magic[1] == static_cast<char>(0x8b));
+  }
+  
+  // handles file that may or may not be
+  class flexgzfstream {
+  protected:
+    std::iostream* m_stream;
+    
+  public:
+    flexgzfstream() : m_stream(NULL) {}
+    
+    flexgzfstream(const char * file_name, std::ios::openmode mode)
+    {
+      if ( (mode & ios::in) && file_is_gzipped(file_name)) {
+        m_stream = new iogzstream(file_name, mode);
+      } else {
+        m_stream = new std::fstream(file_name, mode);
+      }
+      ASSERT(m_stream && !m_stream->fail(), "Could not open file: " +  std::string(file_name));
+    }
+    
+    std::iostream * get_stream() { return m_stream; }
+    
+    ~flexgzfstream() { if (m_stream) delete m_stream; }
+  };
  
   inline void copy_file(const string& in_fn, const string& out_fn)
   {

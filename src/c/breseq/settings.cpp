@@ -63,13 +63,16 @@ namespace breseq
 			if (pos != string::npos) rf.m_base_name.erase(0, pos + 1);
 			// - trailing .fastq, must be at the end of the sequence
       if (!sam_files) {
+        pos = rf.m_base_name.rfind(".gz");
+        if ((pos != string::npos) && (pos == rf.m_base_name.size() - 3))
+          rf.m_base_name.erase(pos, 3);
         pos = rf.m_base_name.rfind(".fastq");
-        if ((pos != string::npos) && (pos = rf.m_base_name.size() - 6))
-          rf.m_base_name.erase(pos);
+        if ((pos != string::npos) && (pos == rf.m_base_name.size() - 6))
+          rf.m_base_name.erase(pos, 6);
       } else {
         pos = rf.m_base_name.rfind(".sam");
-        if ((pos != string::npos) && (pos = rf.m_base_name.size() - 4))
-          rf.m_base_name.erase(pos);
+        if ((pos != string::npos) && (pos == rf.m_base_name.size() - 4))
+          rf.m_base_name.erase(pos, 4);
       }
 			
       // set up the map for converting base names to fastq file names to be used
@@ -165,9 +168,11 @@ namespace breseq
     this->pre_option_initialize(argc, argv);
     
     // setup and parse configuration options:
-    AnyOption options("Usage: breseq -r reference.gbk [-r reference2.gbk ...] reads1.fastq [reads2.fastq ...]");
+    AnyOption options("Usage: breseq -r reference.gbk [-r reference2.gbk ...] reads1.fastq [reads2.fastq.gz ...]");
     options.addUsage("");
     options.addUsage("Run the breseq pipeline for predicting mutations from haploid microbial re-sequencing data.");
+    options.addUsage("");
+    options.addUsage("FASTQ read files (which may be gzipped) are input as the last unamed argument(s).");
     options.addUsage("");
     options.addUsage("Allowed Options");
     

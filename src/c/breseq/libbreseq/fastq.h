@@ -160,7 +160,7 @@ class cAnnotatedSequence;
 	/*! File class.
 	 */ 
   
-  class cFastqFile : public fstream {
+  class cFastqFile : public flexgzfstream {
     
   protected:
     uint32_t  m_current_line;
@@ -174,8 +174,8 @@ class cAnnotatedSequence;
     
   
     cFastqFile();
-    cFastqFile(const string &file_name, ios_base::openmode mode); 
-    ~cFastqFile() {};
+    cFastqFile(const string &file_name, ios_base::openmode mode);
+    ~cFastqFile() { };
       
     bool read_sequence(cFastqSequence &sequence, cFastqQualityConverter& fqc);
     void write_sequence(const cFastqSequence &sequence);

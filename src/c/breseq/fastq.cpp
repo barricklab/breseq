@@ -159,8 +159,6 @@ namespace breseq {
       }
       
     }
-    input_fastq_file.close();
-    output_fastq_file.close();
     
     converted_fastq_name = convert_file_name;
     
@@ -200,9 +198,8 @@ namespace breseq {
   // converts a sequence file
   void convert_fastq(const string &from_file_name, const string &to_file_name, const string &from_format, const string &to_format, bool _reverse_complement)
   {
-    cFastqFile input_fastq_file, output_fastq_file;
-    input_fastq_file.open(from_file_name.c_str(), fstream::in);
-    output_fastq_file.open(to_file_name.c_str(), fstream::out);
+    cFastqFile input_fastq_file(from_file_name.c_str(), ios::in);
+    cFastqFile output_fastq_file(to_file_name.c_str(), ios::out);
 
     cFastqQualityConverter fqc(from_format, to_format);
 
@@ -215,8 +212,6 @@ namespace breseq {
       output_fastq_file.write_sequence(on_sequence);
     }
     
-    input_fastq_file.close();
-    output_fastq_file.close();
   }
   
   void fastq_sequence_trim_end_on_base_quality(cFastqSequence& seq, const uint32_t base_quality)
@@ -332,7 +327,6 @@ namespace breseq {
     
   cFastqFile input_fastq_file(file_name.c_str(), fstream::in);
   input_fastq_file.m_check_for_repeated_read_names = true;
-  assert(input_fastq_file.is_open());
   
   cFastqSequence on_sequence;
   cFastqQualityConverter prelim_fqc("ILLUMINA_1.3+", "SANGER");
@@ -355,7 +349,6 @@ namespace breseq {
         if( this_score < min_quality_score ) min_quality_score = this_score;
     }
   }
-  input_fastq_file.close();
   
   // Default is SANGER
   string quality_format = "SANGER";
@@ -374,7 +367,7 @@ namespace breseq {
   
   //constructor
   cFastqFile::cFastqFile()
-    : fstream()
+    : flexgzfstream()
     , m_current_line(0)
     , m_file_name("")
     , m_check_for_repeated_read_names(false)
@@ -384,21 +377,20 @@ namespace breseq {
  
   
   cFastqFile::cFastqFile(const string &file_name, std::ios_base::openmode mode)
-    : fstream(file_name.c_str(), mode)
+    : flexgzfstream(file_name.c_str(), mode)
     , m_current_line(0)
     , m_file_name(file_name)
     , m_check_for_repeated_read_names(false)
     , m_last_read_name("")
     , m_repeated_read_name_count(0)
-  { 
-    ASSERT(!(*this).fail(), "Could not open file: " +  file_name);
+  {
   }
 
   // read one sequence record from the file
   bool cFastqFile::read_sequence(cFastqSequence &sequence, cFastqQualityConverter& fqc) {
     
     // We're done, no error
-    if (this->eof())
+    if (m_stream->eof())
      return false; 
 
     
@@ -409,12 +401,12 @@ namespace breseq {
     
     // get the next four lines
     while (count < 4) {
-      breseq::getline(*this, line);
+      breseq::getline(*m_stream, line);
       
       m_current_line++;
       
       // Didn't get a first line, then we ended correctly
-      if (this->eof()) {
+      if (m_stream->eof()) {
         if (count == 0) {
           return false;
         } else {
@@ -568,10 +560,10 @@ namespace breseq {
   }
 
   void cFastqFile::write_sequence(const cFastqSequence &sequence) {
-    fprintf(*this, "@%s\n", sequence.m_name.c_str()     );
-    fprintf(*this, "%s\n" , sequence.m_sequence.c_str() );
-    fprintf(*this, "+%s\n", sequence.m_name_plus.c_str());
-    fprintf(*this, "%s\n" , sequence.m_qualities.c_str());
+    fprintf(*m_stream, "@%s\n", sequence.m_name.c_str()     );
+    fprintf(*m_stream, "%s\n" , sequence.m_sequence.c_str() );
+    fprintf(*m_stream, "+%s\n", sequence.m_name_plus.c_str());
+    fprintf(*m_stream, "%s\n" , sequence.m_qualities.c_str());
   }
 
 

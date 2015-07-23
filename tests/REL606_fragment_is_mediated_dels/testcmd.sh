@@ -11,7 +11,7 @@ TESTCMD=" \
 		-b 0 \
         -o ${SELF} \
         -r ${DATADIR}/REL606/REL606.fragment.gbk \
-        ${DATADIR}/REL606/REL606.fragment.3.fastq
+        ${DATADIR}/REL606/REL606.fragment.3.fastq.gz
 	"
 
 do_test $1 ${SELF}

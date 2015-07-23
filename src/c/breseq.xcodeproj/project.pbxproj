@@ -25,6 +25,7 @@
 		701EE98313C4BB5200F2EC70 /* contingency_loci.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 701EE98213C4BB5200F2EC70 /* contingency_loci.cpp */; };
 		702A20BC1A4F2485006DCA5F /* flagged_regions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702A20BA1A4F2349006DCA5F /* flagged_regions.cpp */; };
 		702EABF713421A8400103019 /* fastq.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702EABF613421A8400103019 /* fastq.cpp */; };
+		7035E4051B611EB100F9829E /* gzstream.h in Headers */ = {isa = PBXBuildFile; fileRef = 7035E4041B611EB100F9829E /* gzstream.h */; };
 		70367D2113EB232C000787CC /* coverage_distribution.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70367D2013EB232C000787CC /* coverage_distribution.cpp */; };
 		70436D5B13FF7675006448FB /* samtools in CopyFiles */ = {isa = PBXBuildFile; fileRef = 70436D5A13FF7675006448FB /* samtools */; };
 		704A07D01A340A2600B3ACC7 /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 704A07CF1A3409EA00B3ACC7 /* libz.a */; };
@@ -128,6 +129,7 @@
 		702A20BA1A4F2349006DCA5F /* flagged_regions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = flagged_regions.cpp; path = breseq/flagged_regions.cpp; sourceTree = SOURCE_ROOT; };
 		702A20BB1A4F2399006DCA5F /* flagged_regions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = flagged_regions.h; sourceTree = "<group>"; };
 		702EABF613421A8400103019 /* fastq.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = fastq.cpp; path = breseq/fastq.cpp; sourceTree = SOURCE_ROOT; };
+		7035E4041B611EB100F9829E /* gzstream.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = gzstream.h; path = breseq/gzstream.h; sourceTree = SOURCE_ROOT; };
 		70367D2013EB232C000787CC /* coverage_distribution.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = coverage_distribution.cpp; path = breseq/coverage_distribution.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		70436D5713FF6D7D006448FB /* coverage_distribution.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = coverage_distribution.r; path = breseq/coverage_distribution.r; sourceTree = "<group>"; };
 		70436D5A13FF7675006448FB /* samtools */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; name = samtools; path = "../../extern/samtools-0.1.18/samtools"; sourceTree = SOURCE_ROOT; };
@@ -352,6 +354,7 @@
 				70CB721C140FEB6400D578EB /* fastq.h */,
 				702A20BB1A4F2399006DCA5F /* flagged_regions.h */,
 				70CB721D140FEB6400D578EB /* genome_diff.h */,
+				7035E4041B611EB100F9829E /* gzstream.h */,
 				70CB721E140FEB6400D578EB /* identify_mutations.h */,
 				70CB721F140FEB6400D578EB /* mutation_predictor.h */,
 				70CB7220140FEB6400D578EB /* output.h */,
@@ -375,6 +378,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7035E4051B611EB100F9829E /* gzstream.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

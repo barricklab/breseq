@@ -1101,6 +1101,12 @@ int breseq_default_action(int argc, char* argv[])
       for (uint32_t i = 0; i < settings.read_files.size(); i++)
       {
         string base_name = settings.read_files[i].m_base_name;
+        
+        
+        
+
+        
+        
         cerr << "  READ FILE::" << base_name << endl;
         
         // If we have reached the read limit or within some number of it -- delete further read files 
