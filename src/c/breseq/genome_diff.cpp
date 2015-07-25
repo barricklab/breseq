@@ -2599,20 +2599,18 @@ void cGenomeDiff::merge(cGenomeDiff& merge_gd, bool unique, bool new_id, bool ve
         // Replace first value = mutation_id with substituted id
         vector<string> split_value = split(value, ":");
         
-        // iterate through old items to find the match
-        bool found_match = false;
-        for (diff_entry_list_t::iterator it_new = new_gd._entry_list.begin(); it_new != new_gd._entry_list.end(); it_new++) {
+        // looking
+        diff_entry_ptr_t looking_for = merge_gd.find_by_id(split_value[0]);
         
-          if((split_value[0] == (**it_new)._id) && !found_match) {
-            
-            //Iterate through all the current entries to find the match
-            for (diff_entry_list_t::iterator it_cur =_entry_list.begin(); it_cur != _entry_list.end(); it_cur++) {
-              if ((**it_cur) == (**it_new)) {
-                split_value[0] = to_string((**it_cur)._id);
-                found_match = true;
-                break;
-              }
-            }
+        // iterate through all items to find the match
+        bool found_match = false;
+        
+        //Iterate through all the current entries to find the match
+        for (diff_entry_list_t::iterator it_cur =_entry_list.begin(); it_cur != _entry_list.end(); it_cur++) {
+          if ((**it_cur) == (*looking_for)) {
+            split_value[0] = to_string((**it_cur)._id);
+            found_match = true;
+            break;
           }
         }
         
