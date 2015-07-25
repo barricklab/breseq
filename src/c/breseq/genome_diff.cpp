@@ -318,7 +318,7 @@ cDiffEntry::cDiffEntry(const string &line, uint32_t line_number, cFileParseError
       
       // Certain keys are only allowed for specific entries
       if (key == MEDIATED) {
-        if ( (de._type != MOB) && (de._type != AMP) ) {
+        if ( (de._type != DEL) && (de._type != AMP) ) {
           if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'mediated' is only allowed for entries of type MOB or AMP.", true);
         }
       }
@@ -330,7 +330,7 @@ cDiffEntry::cDiffEntry(const string &line, uint32_t line_number, cFileParseError
       }
       
       if (key == BETWEEN) {
-        if ( (de._type != MOB) && (de._type != AMP) ) {
+        if ( (de._type != DEL) && (de._type != AMP) ) {
           if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'between' is only allowed for entries of type MOB or AMP.", true);
         }
       }
@@ -3482,6 +3482,10 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         if (size > size_cutoff_AMP_becomes_INS_DEL_mutation) {
           both_close_key = "between";
           one_close_key = "mediated";
+          
+          if (mut._type == AMP) {
+            one_close_key = "ignore"; // this ignores it
+          }
         }
       }
       
@@ -3673,6 +3677,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         string seq_id_picked;
         string mediated_string;
         if (mut.entry_exists(MEDIATED)) {
+          cout << mut.as_string() << endl;
           mediated_string = ref_seq_info.repeat_family_sequence(mut[MEDIATED], from_string<int16_t>(mut[MEDIATED_STRAND]), mut.entry_exists("mob_region") ? &mut["mob_region"] : NULL, &seq_id_picked, &repeat_feature_picked);
         }
         
