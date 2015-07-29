@@ -13,6 +13,7 @@
 *.tab
 *.swp
 *.tmproj
+*.pyc
 
 ## These are for autoconf/automake/libtool
 *.deps
