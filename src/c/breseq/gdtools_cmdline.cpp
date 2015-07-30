@@ -58,8 +58,8 @@ int gdtools_usage()
     
   uout("Format Conversions:");
   uout << "GD2VCF                 GD to Variant Call Format (VCF)" << endl;
+	uout << "VCF2GD                 Variant Call Format(VCF) to GD" << endl;
   uout << "GD2GVF                 GD to Genome Variation Format (GVF)" << endl;
-  //uout << "vcf2gd                 Variant Call Format(VCF) to GD" << endl;
   uout << "GD2CIRCOS              GD to Circos Data" << endl;
 	uout << "MUMMER2MASK            Create a mask GD file from MUMmer output" << endl;
 
@@ -1144,7 +1144,7 @@ int do_phylogeny(int argc, char* argv[])
 	
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
 	options("verbose,v", "produce output for each mutation counted.", TAKES_NO_ARGUMENT);
-	options("output,o", "path to output file with added mutation data.", "count.csv");
+	options("output,o", "path to output file with added mutation data.", ".");
 	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
 	options("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT);
 	
