@@ -93,7 +93,7 @@ class alignment_wrapper {
 
     //! Retrieve the query sequence on the query strand of the specified region
     string read_char_stranded_sequence_1(uint32_t start_1, uint32_t end_1) const;
-    
+  
     //! Calculate the total length of the read.
     inline uint32_t read_length() const { return _a->core.l_qseq; }
   
@@ -176,6 +176,15 @@ class alignment_wrapper {
     { return query_stranded_bounds_1().first; }
     uint32_t query_stranded_end_1() const
     { return query_stranded_bounds_1().second; }  
+  
+    //! Retrieve the matched part of the query sequence (always on the top genome strand)
+    string query_char_sequence() const {
+      string s;
+      for (uint32_t p=query_start_0(); p<=query_end_0(); p++) {
+        s += basebam2char(read_base_bam_0(p));
+      }
+      return s;
+    }
   
     //! Starting and ending coordinates of the alignment part of the read
     //  on the reference sequence. Start is always < End unless using 'stranded' version

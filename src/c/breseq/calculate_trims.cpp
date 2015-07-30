@@ -26,6 +26,8 @@ using namespace std;
 
 namespace breseq {
 
+const uint32_t k_max_repeat_length = 18;
+  
 /*
 calc_trims
 
@@ -76,30 +78,25 @@ SequenceTrims::SequenceTrims(const string& _in_seq)
   const uint32_t left_trim_offset = 0;
   const uint32_t right_trim_offset = m_length;
   
-  uint32_t max_repeat_length = 18;
 
-  for (unsigned int pos=0; pos<m_length; pos++)
-  {  
+  for (uint32_t pos_0=0; pos_0<m_length; pos_0++) {
+    
     // always trim at least one bp
     uint32_t max_trim_length = 1;
   
     //compare starting at this nucleotide
-    for (uint32_t repeat_size=1; repeat_size<=max_repeat_length; repeat_size++)
-    {
-    
+    for (uint32_t repeat_size=1; repeat_size<=k_max_repeat_length; repeat_size++) {
+      
       unsigned int repeat_num = 1;
-      while (repeat_match(_in_seq, pos, repeat_size, repeat_num) ) 
-      {
+      while (repeat_match(_in_seq, pos_0, repeat_size, repeat_num) ) {
         repeat_num++;
       }
     
       //cerr << (pos+1) << " " << repeat_size << " " << repeat_num << endl;
       
-      if (repeat_num > 1)
-      {
+      if (repeat_num > 1) {
         uint32_t this_trim = repeat_num * repeat_size;
-        if (this_trim > max_trim_length)
-        {
+        if (this_trim > max_trim_length) {
           max_trim_length = this_trim;
         }
       }
@@ -110,22 +107,20 @@ SequenceTrims::SequenceTrims(const string& _in_seq)
     uint8_t add_max_trim_length = max_trim_length;
   
     // update relevant trims
-    for (int32_t offset=0; offset<add_max_trim_length; offset++)
-    {
-      if (pos + offset >= _in_seq.length()) continue;
+    for (int32_t offset=0; offset<add_max_trim_length; offset++) {
+      if (pos_0 + offset >= _in_seq.length()) continue;
       
       uint8_t this_trim = offset + 1;
       //cerr << (right_trim_offset + pos + offset) << " " << (int)(this_trim) << " " << (int)(trim[right_trim_offset + pos + offset]) << endl;
-      trim_data[right_trim_offset + pos + offset] = max(this_trim, trim_data[right_trim_offset + pos + offset]);
+      trim_data[right_trim_offset + pos_0 + offset] = max(this_trim, trim_data[right_trim_offset + pos_0 + offset]);
     }
  
-    for (int32_t offset=add_max_trim_length; offset>=0; offset--)
-    {
-      if (pos + offset >= _in_seq.length()) continue;
+    for (int32_t offset=add_max_trim_length; offset>=0; offset--) {
+      if (pos_0 + offset >= _in_seq.length()) continue;
 
       uint8_t this_trim = add_max_trim_length - offset;      
       //cerr << (left_trim_offset + pos + offset) << " " << (int)(this_trim) << " " << int(trim[left_trim_offset + pos + offset]) << endl;
-      trim_data[left_trim_offset + pos + offset] = max(this_trim, trim_data[left_trim_offset + pos + offset]);
+      trim_data[left_trim_offset + pos_0 + offset] = max(this_trim, trim_data[left_trim_offset + pos_0 + offset]);
     }
     
     
@@ -157,7 +152,7 @@ void calculate_trims( const string& in_fasta, const string& in_output_path) {
 
 
 	// load all the reference sequences:
-	for(int i=0; i<nseq; ++i) {
+	for(int32_t i=0; i<nseq; ++i) {
 
 		cerr << "  REFERENCE: " << bam_header->target_name[i] << endl;
 		cerr << "  LENGTH: " << bam_header->target_len[i] << endl;
@@ -181,8 +176,61 @@ void calculate_trims( const string& in_fasta, const string& in_output_path) {
   
   bam_header_destroy(bam_header);
 }
+
   
+// Trims are from each end
+Trims edge_trims_for_sequence(const string &_in_seq)
+{
+  Trims this_trims;
+  this_trims.L = 1;
+  this_trims.R = 1;
   
+  // Left edge
+  for (uint32_t repeat_size=1; repeat_size<=k_max_repeat_length; repeat_size++) {
+    
+    uint32_t repeat_num = 1;
+    uint32_t pos_0 = 0;
+    
+    while (repeat_match(_in_seq, pos_0, repeat_size, repeat_num)) {
+      repeat_num++;
+    }
+    
+    //cerr << (pos+1) << " " << repeat_size << " " << repeat_num << endl;
+    
+    if (repeat_num > 1) {
+      this_trims.L = repeat_num * repeat_size;
+    }
+  }
+  
+  string rc_seq = reverse_complement(_in_seq);
+  
+  // Right edge
+  for (uint32_t repeat_size=1; repeat_size<=k_max_repeat_length; repeat_size++) {
+    
+    uint32_t repeat_num = 1;
+    uint32_t pos_0 = 0;
+    
+    while (repeat_match(rc_seq, pos_0, repeat_size, repeat_num)) {
+      repeat_num++;
+    }
+    
+    //cerr << (pos+1) << " " << repeat_size << " " << repeat_num << endl;
+    
+    if (repeat_num > 1) {
+      this_trims.R = repeat_num * repeat_size;
+    }
+  }
+  
+  return this_trims;
+}
+
+  
+// @JEB 2015-07-29 This code also trims based on ends of mapped read sequence
+// Assuming that fixing mismatches near the ends of the reads breaking match
+// This doesn't seem to be necessary
+
+//#define TRIM_READ_ENDS
+
 Trims get_alignment_trims(const alignment_wrapper& a, const SequenceTrimsList& trims)
 {
   bool verbose = false;
@@ -190,16 +238,43 @@ Trims get_alignment_trims(const alignment_wrapper& a, const SequenceTrimsList& t
   // which reference sequence?
   uint32_t tid = a.reference_target_id();
   
+  
+#ifdef TRIM_READ_ENDS
+  
+  // Read-based trims
+  Trims et = edge_trims_for_sequence(a.query_char_sequence());
+  
+  // Genomic-based trims
+  Trims gt;
+  gt.L= trims[tid].left_trim_0(a.reference_start_0());
+  gt.R = trims[tid].right_trim_0(a.reference_end_0());
+  
+  Trims t;
+  t.L = max(gt.L, et.L);
+  t.R = max(gt.R, et.R);
+  
+  // debug output
+  //cerr << a.read_name() << endl;
+  //  cerr << "start: " << a.reference_start_1() << " end: " << a.reference_end_1() << endl;
+  //  cerr << "left read  : " << et.L << " right read  : " << et.R << endl;
+  //  cerr << "left genome: " << gt.L << " right genome: " << gt.R << endl;
+  //  cerr << "left offset: " << a.query_start_0() << " right offset : " << (a.read_length() - a.query_end_1()) << endl;
+  //  cerr << "left final : " << t.L  << " right final : " << t.R << endl;
+  
+#else
+  
+  // Begin alternative block alternative
   Trims t;
   t.L= trims[tid].left_trim_0(a.reference_start_0());
   t.R = trims[tid].right_trim_0(a.reference_end_0());
+  // End alternative code block
+  
+#endif
+  
+  // Offset based on where our match actually was in the read
   
   t.L += a.query_start_0();
   t.R += a.read_length() - a.query_end_1();
-  
-  //  cerr << a.read_name() << endl;
-  //  cerr << "start: " << a.reference_start_1() << " end: " << a.reference_end_1() << endl;
-  //  cerr << "left: " << t.L << " right: " << t.R << endl;
   
   return t;
 }

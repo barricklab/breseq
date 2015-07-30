@@ -70,7 +70,7 @@ namespace breseq {
     
     //std::cout << m_quality_format << std::endl;
 
-    cerr << "    Original format: " << quality_format << " New format: SANGER"<< endl;
+    cerr << "    Original base quality format: " << quality_format << " New format: SANGER"<< endl;
     cerr << "    Original reads: " << original_num_reads << " bases: "<< original_num_bases << endl;
 
     cFastqQualityConverter fqc(quality_format, "SANGER");

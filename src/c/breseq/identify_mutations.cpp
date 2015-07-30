@@ -449,7 +449,11 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         
         // We are requiring the polymorphism model to be a certain amount better
         // than the single base model here.
+        
+        // Calculate E-value for polymorphism score (E theta)
         ppred.log10_e_value = -(log(ppred.p_value)/log(10)) - _log10_ref_length;
+        
+        //@JEBNOW = there should be an additional 0.05 or something here
 
         // in polymorphism mode accept if it is better
         if (_settings.polymorphism_prediction) {
@@ -488,7 +492,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		
 		//###
 		//## UNKNOWN UNKNOWN UNKNOWN
-		//###				
+		//###
 		if(insert_count == 0) {
 			update_unknown_intervals(position, p.target(), base_predicted, this_position_unique_only_coverage);
 		}

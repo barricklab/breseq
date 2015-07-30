@@ -439,7 +439,7 @@ namespace breseq
     // This is strictly true if we are not in polymorphism mode...
     if (this->mixed_base_prediction) {
       // Not calculated for mixed base mode
-      ASSERT(!options.count("polymorphism-bias-cutoff"), "Option --polymorphism-bias-cutoff requires --polymorphism-prediction.")
+      //ASSERT(!options.count("polymorphism-bias-cutoff"), "Option --polymorphism-bias-cutoff requires --polymorphism-prediction.")
 
       this->polymorphism_frequency_cutoff = 0.1;
       this->polymorphism_reject_indel_homopolymer_length = 0; // zero is OFF!
@@ -595,8 +595,10 @@ namespace breseq
     this->maximum_read_mismatches = -1;
 
     this->bowtie2_maximum_alignments_to_consider_per_read = 2000;
+    //this->bowtie2_score_parameters = "--ma 1 --mp 3 --np 0 --rdg 2,3 --rfg 2,3 --ignore-quals";
     this->bowtie2_score_parameters = "--ma 1 --mp 3 --np 0 --rdg 2,3 --rfg 2,3";
-    this->bowtie2_score_parameters += (bowtie2_maximum_alignments_to_consider_per_read > 0) 
+    
+    this->bowtie2_score_parameters += (bowtie2_maximum_alignments_to_consider_per_read > 0)
     ? " -k " + to_string(this->bowtie2_maximum_alignments_to_consider_per_read) : " -a";
     
     this->bowtie2_min_score_stringent = "-i S,1,0.25 --score-min L,0,0.9 "; // "-L 22 -i S,1,0.25 --score-min L,0,0.9 ";
