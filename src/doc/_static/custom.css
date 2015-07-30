@@ -4,9 +4,9 @@
 }
 
 .toggle .header:after {
-    content: " ▼";
+    content: " ►";
 }
 
 .toggle .header.open:after {
-    content: " ►";
+    content: " ▼";
 }

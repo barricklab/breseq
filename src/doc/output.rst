@@ -252,6 +252,7 @@ Processed Data
 `data/<read_file>.unmatched.fastq`
    These files contain reads from each original file that were not mapped to the reference sequences. This file can be used for de novo assembly to predict if there are novel sequences in the sample.
 
+.. _viewing-in-IGV:
 
 Viewing Output / Aligned Reads in the IGV
 *****************************************

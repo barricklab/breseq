@@ -16,6 +16,10 @@ Contents:
    Installation <installation>
    Usage Summary <usage>  
    Test Drive <test_drive>
+   Tutorial 1: clones <tutorial_clones>
+   Tutorial 2: populations <tutorial_populations>
+   Tutorial 3: consensus reads and targeted sequencing <tutorial_barcoded_targeted>
+
    Methods <methods>   
    Output <output>
    References <references>

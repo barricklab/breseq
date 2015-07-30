@@ -22,16 +22,18 @@ It is now developed in the Barrick lab in the Department of Molecular Bioscience
 Testers
 ------------
 
-We thank Zachary Blount, Jim Bull, Tim Cooper, Grace Ellis, Tara Gianoulis, Aleeza Gerstein, Dan Goodman, J.P. Jerome, Megan Larsen, Ranno Nahku, Hanspieter Niederstrasser, Elizabeth Perry, Gerda Saxer, William Trimble, Sébastien Wielgoss, and participants in Titus Brown's 2010 summer course in next-gen sequencing at the Kellogg Biological Station, and many others for providing feedback on |breseq| usage and datasets for testing.
+We thank Zachary Blount, Jim Bull, Tim Cooper, Grace Ellis, Tara Gianoulis, Aleeza Gerstein, Dan Goodman, J.P. Jerome, Megan Larsen, Ranno Nahku, Hanspieter Niederstrasser, Elizabeth Perry, Gerda Saxer, William Trimble, Sébastien Wielgoss, participants in Titus Brown's 2010 summer course in next-gen sequencing at the Kellogg Biological Station, and many others for providing bug reports, feedback on |breseq| usage, and datasets for testing!
 
 Funding
 -----------
 
-The following grants have supported development of |breseq|:
+The following grants have supported development of |breseq| and associated tutorial materials:
 
 #. National Institutes of Health (2009-2010). Pathway to Independence Award [K99/R00GM087550 to J.E.B.]
 #. National Science Foundation (2007-2008). Postdoctoral Fellowship in Biological Informatics [DBI-0630687 to J.E.B.]
 #. National Science Foundation (2010). BEACON Center at Michigan State University [DBI-0939454 subcontract to J.E.B].
 #. Cancer Prevention & Research Institute of Texas (CPRIT) (2014-2015) [RP130124 to J.E.B.]
 #. University of Texas at Austin CPRIT Research Traineeship (2013-2015) [to D.E.D.]
+#. EMBO Practical Course `Measuring intra-species diversity using high-throughput sequencing <http://events.embo.org/15-htp-sequencing/>`_ held 27–31 July 2015 in Oeiras, Portugal
 
+.. figure:: images/oeiras_course.png

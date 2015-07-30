@@ -1,3 +1,5 @@
+.. _test-drive:
+
 Test Drive
 ==============
 
