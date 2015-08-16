@@ -2651,12 +2651,13 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
     }
     
     // lines only exist for polymorphisms
-    if ((mut[FREQUENCY] == "1") || (mut[FREQUENCY] == "0"))
-    {
+    if (!mut.entry_exists(POLYMORPHISM_EXISTS)) {
       new_gd.add(mut);
       continue;
     }
-
+    mut.erase(POLYMORPHISM_EXISTS);
+    
+    // Copy over the values from the R output file back to the RA item
     string line;
     getline(ROUT, line);
     vector<string> line_list = split(line, "\t");
@@ -2667,159 +2668,7 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
       mut[header_list[j]] = line_list[j];
     }
 
-    // Evalue cutoff again (in case we are only running this part)
-    if (double_from_string(mut[POLYMORPHISM_QUALITY]) < settings.polymorphism_log10_e_value_cutoff)
-      mut.add_reject_reason("EVALUE");
-
-    // Frequency cutoff
-    if ( (from_string<double>(mut[FREQUENCY]) < settings.polymorphism_frequency_cutoff)
-      || (from_string<double>(mut[FREQUENCY]) > 1-settings.polymorphism_frequency_cutoff) )
-      mut.add_reject_reason("POLYMORPHISM_FREQUENCY_CUTOFF");
-
-    // Minimum coverage on both strands
-    double polymorphism_coverage_limit_both_bases = settings.polymorphism_minimum_new_coverage_each_strand;
-    bool passed = true;
-    vector<string> top_bot = split(mut["ref_cov"], "/");
-    double top = from_string<double>(top_bot[0]);
-    double bot = from_string<double>(top_bot[1]);
-    passed = passed && (top >= polymorphism_coverage_limit_both_bases);
-    passed = passed && (bot >= polymorphism_coverage_limit_both_bases);
-
-    // Test strand criterion
-    top_bot = split(mut["new_cov"], "/");
-    top = from_string<double>(top_bot[0]);
-    bot = from_string<double>(top_bot[1]);
-    passed = passed && (top >= polymorphism_coverage_limit_both_bases);
-    passed = passed && (bot >= polymorphism_coverage_limit_both_bases);
-    if (!passed)
-      mut.add_reject_reason("POLYMORPHISM_STRAND");
-    
-    // Test bias criteria
-    if (settings.polymorphism_bias_p_value_cutoff && (from_string<double>(mut["ks_quality_p_value"]) < settings.polymorphism_bias_p_value_cutoff))
-      mut.add_reject_reason("KS_QUALITY_P_VALUE");
-    if (settings.polymorphism_bias_p_value_cutoff && (from_string<double>(mut["fisher_strand_p_value"]) < settings.polymorphism_bias_p_value_cutoff))
-      mut.add_reject_reason("FISHER_STRAND_P_VALUE");
-
-    ////// Optionally, ignore if in a homopolymer stretch longer than this
-    // There are several cases here that may be of interest for removing false-positives
-    // 1) indel in what was originally a homopolymer adding a base that is the same
-    // 2) *A mutation in the middle of a stretch of one base to what is in the rest of that stretch
-    //    TTTTTTATTTTTT
-    //    TTTTTTTTTTTTT
-    //    *NOT DEALT WITH YET
-    //    
-    if (settings.polymorphism_reject_indel_homopolymer_length && ((mut[NEW_BASE] == ".") || (mut[REF_BASE] == ".")))
-    {
-      // Code needs to be robust to the mutation being at the beginning
-      // OR end of the homopolymer tract
-
-      string seq_id = mut["seq_id"];
-      int32_t mut_pos = from_string<uint32_t>(mut["position"]);
-      bool is_insertion = (from_string<int32_t>(mut[INSERT_POSITION]) > 0);
-      string mut_base = is_insertion ? mut[NEW_BASE] : mut[REF_BASE];
-      int32_t homopolymer_length = 0;
-      
-      // If we are an insertion, we need to start on the base before or the base after,
-      // depending on which one we match (if we match neither than our length is zero
-      bool no_match = false;
-      if (is_insertion) {
-        
-        // This is the base before
-        if (this->get_sequence_1(seq_id, mut_pos, mut_pos) != mut_base) {
-          
-          // No match? -- Now check the base after
-          mut_pos++;
-          if (mut_pos > static_cast<int32_t>(this->get_sequence_length(seq_id))) {
-            no_match = true;
-          } else if (this->get_sequence_1(seq_id, mut_pos, mut_pos) != mut_base) {
-            no_match = true;
-          }
-        }
-      }
-      
-      // extend match
-      if (!no_match) { 
-      
-        // check before
-        int32_t start_pos = mut_pos - 1;
-        while ( (this->get_sequence_1(seq_id, start_pos, start_pos) == mut_base) && (start_pos > 0) ) {
-          start_pos--;
-        }
-        start_pos++;
-        
-        int32_t end_pos = mut_pos + 1;             
-        while ( (this->get_sequence_1(seq_id, end_pos, end_pos) == mut_base) && (end_pos <= static_cast<int32_t>(this->get_sequence_length(seq_id)) ) ) {
-          end_pos++;
-        }
-        end_pos--;
-        homopolymer_length = end_pos - start_pos + 1;
-      }
-      
-      if (homopolymer_length >= static_cast<int32_t>(settings.polymorphism_reject_indel_homopolymer_length))
-      {
-        mut.add_reject_reason("INDEL_HOMOPOLYMER");
-      }
-    }
-    
-    // Second case
-    // 2) *A mutation in the middle of a stretch of one base to what is in the rest of that stretch
-    //    TTTTTTATTTTTT
-    //    TTTTTTTTTTTTT
-    if (settings.polymorphism_reject_surrounding_homopolymer_length && (mut[NEW_BASE] != ".") && (mut[REF_BASE] != "."))    {
-      
-      string seq_id = mut["seq_id"];
-      int32_t mut_pos = from_string<int32_t>(mut["position"]);
-
-      // determine the start and end of homopolymer created by substitution
-      int32_t start_pos = mut_pos - 1;
-      while (start_pos >= 1)
-      {
-        if (this->get_sequence_1(seq_id, start_pos, start_pos) != mut[NEW_BASE]) {
-          break;
-        }
-        start_pos--;
-      }
-      start_pos++;
-      
-      int32_t end_pos = mut_pos + 1;
-      while (end_pos <= static_cast<int32_t>(this->get_sequence_length(seq_id)))
-      {
-        if (this->get_sequence_1(seq_id, end_pos, end_pos) != mut[NEW_BASE]) {
-          break;
-        }
-        end_pos++;
-      }
-      end_pos--;
-      
-      // check bounds
-      if ( (start_pos < mut_pos) && (end_pos > mut_pos) && (end_pos - start_pos + 1 >= static_cast<int32_t>(settings.polymorphism_reject_surrounding_homopolymer_length)) ) {
-          mut.add_reject_reason("SURROUNDING_HOMOPOLYMER");
-      }
-    }
-    
-    if (settings.no_indel_polymorphisms && ((mut[REF_BASE] == ".") || (mut[NEW_BASE] == ".")))
-    {
-      mut.add_reject_reason("INDEL_POLYMORPHISM");
-    }
-
-    
-    // If we rejected it as a polymorphism because it has too high a frequency,
-    // (and for no other reasons!) then change it to a consensus mutation, 
-    // but only if it passed genotype quality
-    if ( (mut.count(REJECT)) && (from_string<double>(mut[FREQUENCY]) >= 0.5) )
-    {
-      mut["polymorphism_changed_to_consensus"] = "1";
-      mut[FREQUENCY] = "1";
-      mut.erase(REJECT);
-
-      // Need to re-evaluate whether it would have been accepted as a normal mutation
-      if (double_from_string(mut[GENOTYPE_QUALITY]) < settings.mutation_log10_e_value_cutoff)
-        mut.add_reject_reason("EVALUE");
-    }
-    
-
     new_gd.add(mut);
-
   }
 
   ROUT.close();

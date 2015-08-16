@@ -29,7 +29,7 @@ using namespace std;
 
 namespace breseq {
 
-  static uint8_t kMutationQualityPrecision = 1; 
+  static uint8_t kMutationScorePrecision = 1;
   
 	/*! Calculate errors in the given BAM file based on reference FAI files.
 	 
@@ -55,6 +55,12 @@ namespace breseq {
                           bool print_per_position_file
                           );
 	
+  
+  void test_RA_evidence(
+                          cGenomeDiff& gd,
+                          cReferenceSequences& ref_seq_info,
+                          const Settings& settings
+                          );
   
   /*! Position base information struct.
 	 
@@ -145,15 +151,13 @@ namespace breseq {
 	struct polymorphism_prediction {
 		//! Constructor.
 		polymorphism_prediction(double f = 0.0, double l = 0.0, double p = 0.0)
-		: frequency(f), log10_base_likelihood(l), p_value(p) {
-      log10_e_value = NAN;
+		: frequency(f), log10_base_likelihood(l), likelihood_ratio_test_p_value(p) {
 		}
 		
 		double frequency;
 		double log10_base_likelihood;
-		long double p_value;
-    double log10_e_value;
-	};	
+		long double likelihood_ratio_test_p_value;
+	};
 	
   /*! cDiscreteSNPCaller
 	 
@@ -193,14 +197,14 @@ namespace breseq {
     
     cSNPCall get_prediction();
     
-    vector<double> get_genotype_log10_probabilities() { return _genotype_probability; }
+    vector<double> get_genotype_log10_probabilities() { return _log10_genotype_probabilities; }
     
   protected:
     uint32_t _observations;                        // number of read bases recorded
     double _normalized_observations;               // observations, taking into account mapping quality probability
     string _type;
-    vector<double> _genotype_prior;
-    vector<double> _genotype_probability;
+    vector<double> _log10_genotype_prior_probabilities;
+    vector<double> _log10_genotype_probabilities;
     vector<vector<base_index> > _genotype_vector;  // holds all possible genotypes as lists of bases
     uint32_t _best_genotype_index;
   };
@@ -300,8 +304,8 @@ namespace breseq {
     diff_entry_list_t _user_evidence_ra_list; //!< List of entries containing user-entered RA items.
     vector<double> _deletion_seed_cutoffs; //!< Coverage below which deletions are cutoff.
     vector<double> _deletion_propagation_cutoffs; //!< Coverage above which deletions are cutoff.
-		double _mutation_cutoff; //!< log10 e-value cutoff value for mutation predictions.
-    double _polymorphism_cutoff; //!< log10 e-value cutoff for predicted polymorphisms.
+		double _consensus_score_cutoff; //!< phred score cutoff value for mutation predictions.
+    double _polymorphism_score_cutoff; //!< phred score cutoff for predicted polymorphisms.
     double _polymorphism_frequency_cutoff; //!< Frequency cutoff for predicted polymorphisms.
     double _polymorphism_precision_decimal; //!< Precision for estimating polymorphism models
     uint32_t _polymorphism_precision_places; //!< Precision for writing out polymorphism values

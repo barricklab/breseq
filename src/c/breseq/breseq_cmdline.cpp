@@ -1276,7 +1276,7 @@ int breseq_default_action(int argc, char* argv[])
 			{
 				string base_read_file_name = read_file.base_name();
         
-        // If we are doing staged alignment -- only align the unmatched reads with SSAHA2 and save to different name initially
+        // If we are doing staged alignment -- only align the unmatched reads and save to different name initially
         string read_fastq_file = settings.file_name(settings.stage1_unmatched_fastq_file_name, "#", base_read_file_name);
         string reference_sam_file_name = settings.file_name(settings.stage2_reference_sam_file_name, "#", base_read_file_name);
           
@@ -1430,7 +1430,7 @@ int breseq_default_action(int argc, char* argv[])
 		{
 			create_path(settings.candidate_junction_alignment_path);
 
-			/// create ssaha2 hash
+			/// create index
 			string candidate_junction_hash_file_name = settings.candidate_junction_hash_file_name;
 			string candidate_junction_fasta_file_name = settings.candidate_junction_fasta_file_name;
 
@@ -1441,7 +1441,7 @@ int breseq_default_action(int argc, char* argv[])
         settings.track_intermediate_file(settings.candidate_junction_alignment_done_file_name, candidate_junction_hash_file_name + "*");
 			}
 
-			/// ssaha2 align reads to candidate junction sequences
+			/// align reads to candidate junction sequences
 			for (uint32_t i = 0; i < settings.read_files.size(); i++)
 			{
 				string base_read_file_name = settings.read_files[i].m_base_name;
@@ -1453,6 +1453,21 @@ int breseq_default_action(int argc, char* argv[])
         if (!file_exists(filename.c_str())) 
           continue;
     
+        /// NEW CODE mapping to junctins with relaxed parameters
+        
+        uint32_t bowtie2_seed_substring_size_relaxed = 5 + trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].avg_read_length * 0.1);
+        // Check bounds
+        bowtie2_seed_substring_size_relaxed = max<uint32_t>(9, bowtie2_seed_substring_size_relaxed);
+        bowtie2_seed_substring_size_relaxed = min<uint32_t>(31, bowtie2_seed_substring_size_relaxed);
+        
+        string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local " + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_relaxed) + " "
+        + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_relaxed + " --reorder -x " + candidate_junction_hash_file_name + " -U " + read_fastq_file + " -S " + candidate_junction_sam_file_name;
+        
+        SYSTEM(command);
+        
+        
+        /* 
+        /// OLD CODE
         uint32_t bowtie2_seed_substring_size_stringent = trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].avg_read_length * 0.5);
         // Check bounds
         bowtie2_seed_substring_size_stringent = max<uint32_t>(9, bowtie2_seed_substring_size_stringent);
@@ -1461,6 +1476,7 @@ int breseq_default_action(int argc, char* argv[])
         string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local " + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_stringent) + " "
          + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_stringent + " --reorder -x " + candidate_junction_hash_file_name + " -U " + read_fastq_file + " -S " + candidate_junction_sam_file_name; 
         SYSTEM(command);
+        */
         
         settings.track_intermediate_file(settings.output_done_file_name, candidate_junction_sam_file_name + "*");
       }
@@ -1974,9 +1990,9 @@ int breseq_default_action(int argc, char* argv[])
     MutationPredictor mpj(ref_seq_info);
     mpj.prepare_junctions(settings, summary, jc_gd); // this step has to be done twice currently, which is a bit wasteful
     assign_junction_read_counts(settings, summary, jc_gd);
-    //assign_junction_read_coverage(settings, summary, jc_gd);
 
     cGenomeDiff ra_mc_gd(settings.ra_mc_genome_diff_file_name);
+    test_RA_evidence(ra_mc_gd, ref_seq_info, settings);
     
     cGenomeDiff evidence_gd;
     evidence_gd.fast_merge(jc_gd);

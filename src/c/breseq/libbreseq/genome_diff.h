@@ -46,12 +46,15 @@ extern const char* RIGHT_INSIDE_COV;
 extern const char* RIGHT_OUTSIDE_COV;
 extern const char* POSITION;
 extern const char* INSERT_POSITION;
-extern const char* QUALITY;
-extern const char* POLYMORPHISM_QUALITY;
-extern const char* GENOTYPE_QUALITY;
+extern const char* SCORE;
+extern const char* CONSENSUS_SCORE;
+extern const char* POLYMORPHISM_SCORE;
+extern const char* PREDICTION;
 extern const char* REF_BASE;
 extern const char* NEW_BASE;
 extern const char* FREQUENCY;
+extern const char* POLYMORPHISM_FREQUENCY;
+extern const char* POLYMORPHISM_EXISTS;
 extern const char* REJECT;
 extern const char* REF_COV;
 extern const char* NEW_COV;
@@ -315,12 +318,12 @@ public:
   
   //! Functor. Sorts cDiffEntrys in descending order depending on given fields that
   //can be evaluated as an unsigned integer.
-  struct by_scores : public binary_function
+  struct descending_by_scores : public binary_function
   <diff_entry_ptr_t, diff_entry_ptr_t, bool>
   {
     
     //! Constructor
-    explicit by_scores (const vector<diff_entry_key_t>& field_keys)
+    explicit descending_by_scores (const vector<diff_entry_key_t>& field_keys)
     : m_field_keys(field_keys) {}
     
     //! Predicate
@@ -395,7 +398,6 @@ public:
     {
       return cDiffEntry->entry_exists(REJECT);
     }
-    
   };
   
   struct rejected_and_not_user_defined:public unary_function<diff_entry_ptr_t,bool> {
@@ -403,7 +405,13 @@ public:
     {
       return cDiffEntry->entry_exists(REJECT) && !cDiffEntry->entry_exists("user_defined");
     }
-    
+  };
+  
+  struct is_not_consensus:public unary_function<diff_entry_ptr_t,bool> {
+    virtual bool operator() (diff_entry_ptr_t cDiffEntry)
+    {
+      return (*cDiffEntry)[FREQUENCY] != "1";
+    }
   };
   
   //! Functor. Wraps cDiffEntry.entry_exists() for use in STL algorithms.
@@ -420,6 +428,23 @@ public:
     
   protected:
     diff_entry_key_t m_field_key;
+  };
+  
+  //! Functor. Wraps cDiffEntry.entry_exists() for use in STL algorithms.
+  //Returns true if a cDiffEntry contains the given field_key.
+  struct field_equals : public unary_function <diff_entry_ptr_t, bool>
+  {
+    //! Constructor
+    explicit field_equals (const string& field_key, const string& field_value)
+      : m_field_key(field_key), m_field_value(field_value) {}
+    
+    //! Predicate
+    virtual bool operator() (const diff_entry_ptr_t& p_diff_entry)
+    const {return (*p_diff_entry)[m_field_key] == m_field_value;}
+    
+  protected:
+    diff_entry_key_t m_field_key;
+    string m_field_value;
   };
   
   //! Functor. Wraps cDiffEntry.entry_exists() for use in STL algorithms.
@@ -563,7 +588,7 @@ public:
   //! Add a new unique id to this entry
   void assign_unique_id_to_entry(cDiffEntry &de);
   
-  //! Add an item to this genome diff.
+  //! Add an item to this genome diff. Returns new copy of item.
   diff_entry_ptr_t add(const cDiffEntry& item, bool reassign_id=true);
   
   //! Removes a mutation, with properly updating mutations that pointed to it

@@ -35,7 +35,7 @@ const char* END="end";
 const char* STRAND="strand";
 const char* POSITION="position";
 const char* INSERT_POSITION="insert_position";
-const char* FREQUENCY="frequency";
+const char* FREQUENCY="frequency";                            // called frequency
 const char* REJECT="reject";
 const char* ERROR="error";
 const char* MEDIATED="mediated";
@@ -64,14 +64,18 @@ const char* MEDIATED_STRAND = "mediated_strand";
 const char* REGION = "region";  
   
 //For RA
-const char* QUALITY="quality";
+const char* REF_BASE="ref_base";
+ const char* NEW_BASE="new_base";
+  
 const char* REF_COV="ref_cov";
 const char* NEW_COV="new_cov";
 const char* TOT_COV="tot_cov";
-const char* POLYMORPHISM_QUALITY="polymorphism_quality";
-const char* GENOTYPE_QUALITY="genotype_quality";
-const char* REF_BASE="ref_base";
-const char* NEW_BASE="new_base";
+const char* PREDICTION = "prediction";
+const char* SCORE="score";
+const char* CONSENSUS_SCORE="consensus_score";
+const char* POLYMORPHISM_SCORE="polymorphism_score";
+const char* POLYMORPHISM_FREQUENCY="polymorphism_frequency";  // actual frequency - only used in consensus mode
+const char* POLYMORPHISM_EXISTS="polymorphism_exists";        // internal flag for running R script
   
 //For MC  
 const char* START_RANGE="start_range";
@@ -92,6 +96,9 @@ const char* SIDE_2_POSITION = "side_2_position";
 const char* SIDE_2_STRAND = "side_2_strand";
 const char* SIDE_2_REDUNDANT = "side_2_redundant";
 
+const char* OVERLAP = "overlap";
+const char* UNIQUE_READ_SEQUENCE = "unique_read_sequence";
+  
 const char* SIDE_1_READ_COUNT="side_1_read_count";
 const char* SIDE_2_READ_COUNT="side_2_read_count";
 const char* NEW_JUNCTION_READ_COUNT="new_junction_read_count";
@@ -101,6 +108,9 @@ const char* SIDE_1_COVERAGE = "side_1_coverage";
 const char* SIDE_2_COVERAGE = "side_2_coverage";
 const char* NEW_JUNCTION_COVERAGE = "new_junction_coverage";
 
+//For CN
+const char* COPY_NUMBER = "copy_number";
+  
 const int32_t k_num_line_specification_common_prefix_columns = 3;
   
 const map<gd_entry_type, vector<string> > line_specification = make_map<gd_entry_type, vector<string> >
@@ -116,11 +126,11 @@ const map<gd_entry_type, vector<string> > line_specification = make_map<gd_entry
 (CON,make_vector<string> (SEQ_ID)(POSITION)(SIZE)(REGION))
 
 //## evidence
-(RA,make_vector<string> ("seq_id")("position")("insert_position")("ref_base")("new_base"))
-(MC,make_vector<string> ("seq_id")("start")("end")("start_range")("end_range"))
-(JC,make_vector<string> ("side_1_seq_id")("side_1_position")("side_1_strand")("side_2_seq_id")("side_2_position")("side_2_strand")("overlap"))
-(CN,make_vector<string> ("seq_id")("start")("end")("copy_number"))
-(UN,make_vector<string> ("seq_id")("start")("end"))
+(RA,make_vector<string> (SEQ_ID)(POSITION)(INSERT_POSITION)(REF_BASE)(NEW_BASE))
+(MC,make_vector<string> (SEQ_ID)(START)(END)(START_RANGE)(END_RANGE))
+(JC,make_vector<string> (SIDE_1_SEQ_ID)(SIDE_1_POSITION)(SIDE_1_STRAND)(SIDE_2_SEQ_ID)(SIDE_2_POSITION)(SIDE_2_STRAND)(OVERLAP))
+(CN,make_vector<string> (SEQ_ID)(START)(END)(COPY_NUMBER))
+(UN,make_vector<string> (SEQ_ID)(START)(END))
 
 //## validation
 (CURA,make_vector<string> ("expert"))
@@ -141,6 +151,7 @@ const map<gd_entry_type, vector<string> > extended_line_specification = make_map
 (INS,make_vector<string> (SEQ_ID)(POSITION)(INSERT_POSITION)(NEW_SEQ))
 (MOB,make_vector<string> (SEQ_ID)(POSITION)(REPEAT_NAME)(STRAND)(DUPLICATION_SIZE)(INS_START)(INS_END)(DEL_START)(DEL_END)(MOB_REGION))
 (AMP,make_vector<string> (SEQ_ID)(POSITION)(SIZE)(NEW_COPY_NUMBER)(MEDIATED)(MEDIATED_STRAND)(MOB_REGION))
+(JC,make_vector<string>  (SIDE_1_SEQ_ID)(SIDE_1_POSITION)(SIDE_1_STRAND)(SIDE_2_SEQ_ID)(SIDE_2_POSITION)(SIDE_2_STRAND)(OVERLAP)(UNIQUE_READ_SEQUENCE))
 ;
   
 enum diff_entry_field_variable_t {
@@ -166,6 +177,13 @@ map<string, diff_entry_field_variable_t > diff_entry_field_variable_types = make
 (INS_END, kDiffEntryFieldVariableType_BaseSequence)
 (INSERT_POSITION, kDiffEntryFieldVariableType_Integer)
 (MEDIATED_STRAND, kDiffEntryFieldVariableType_Strand)
+//JC item
+(SIDE_1_POSITION, kDiffEntryFieldVariableType_PositiveInteger)
+(SIDE_1_STRAND, kDiffEntryFieldVariableType_Strand)
+(SIDE_2_POSITION, kDiffEntryFieldVariableType_PositiveInteger)
+(SIDE_2_STRAND, kDiffEntryFieldVariableType_Strand)
+(OVERLAP, kDiffEntryFieldVariableType_Integer)
+(UNIQUE_READ_SEQUENCE, kDiffEntryFieldVariableType_BaseSequence)
 ;
 
 const vector<string>gd_entry_type_lookup_table =
@@ -194,7 +212,7 @@ map<gd_entry_type, cGenomeDiff::sort_fields_item> diff_entry_sort_fields = make_
 (NOTE, cGenomeDiff::sort_fields_item(2, "note", "note"))
 (RA,   cGenomeDiff::sort_fields_item(3, SEQ_ID, POSITION))
 (MC,   cGenomeDiff::sort_fields_item(4, SEQ_ID, START))
-(JC,   cGenomeDiff::sort_fields_item(5, "side_1_seq_id", "side_1_position"))
+(JC,   cGenomeDiff::sort_fields_item(5, SIDE_1_SEQ_ID, SIDE_1_POSITION))
 (CN,   cGenomeDiff::sort_fields_item(6, SEQ_ID, START))
 (UN,   cGenomeDiff::sort_fields_item(7, SEQ_ID, START))
 (CURA, cGenomeDiff::sort_fields_item(8, "expert", "expert"))
@@ -354,7 +372,7 @@ cDiffEntry::cDiffEntry(const string &line, uint32_t line_number, cFileParseError
   // Certain keys must occur together (if one is there, the other had better be there)
   if (de._type == AMP) {
     if (de.entry_exists(MEDIATED) != de.entry_exists(MEDIATED_STRAND)) {
-      if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Only one key of 'mediated' and 'mediated_strand' is supplied for this AMP. Both must be present to describe the mutation.", true);
+      if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Only one key of 'mediated' and 'mediated_strand' is supplied for this AMP. Both must be present to describe the mutation. Did you mean to use  'between' instead?", true);
     }
   }
 
@@ -2013,6 +2031,16 @@ void cGenomeDiff::assign_unique_id_to_entry(cDiffEntry &de) {
 diff_entry_ptr_t cGenomeDiff::add(const cDiffEntry& item, bool reassign_id) {
   
   ASSERT(item._type != UNKNOWN, "Tried to add item of type UNKNOWN to Genome Diff file.");
+  
+  // check to see if we are adding a duplicate item
+  // -- we don't allow, give a warning, and return existing item
+  for (diff_entry_list_t::iterator it = _entry_list.begin(); it != _entry_list.end(); it++) {
+    if (**it == item) {
+      WARN("Ignored attempt to add GD item:\n" + item.as_string() + "\nwhich is a duplicate of existing item:\n" + (*it)->as_string());
+      return *it;
+    }
+  }
+  
   
   // allocating counted_ptr takes care of disposal
   cDiffEntry* diff_entry_copy = new cDiffEntry(item);
@@ -4869,7 +4897,7 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
         // @JEB should do something with multiple evidence
         diff_entry_list_t ev = mutation_evidence_list(mut);
         if (ev.size() == 1) 
-          qual = ev.front()->count("genotype_quality") ? (*ev.front())["genotype_quality"] : ".";
+          qual = ev.front()->count(SCORE) ? (*ev.front())[SCORE] : ".";
         
       } break;
         
@@ -5032,7 +5060,7 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
       cDiffEntry& ev = *(ev_list.front());
       
       // Score
-      gvf[5] = ev[QUALITY];
+      gvf[5] = ev[SCORE];
         
       // Attributes - Total Reads 
       vector<string> covs = split( ev[TOT_COV], "/" );

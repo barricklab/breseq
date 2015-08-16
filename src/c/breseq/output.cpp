@@ -204,49 +204,37 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   HTML << html_header("BRESEQ :: Mutation Predictions", settings);
   HTML << breseq_header_string(settings) << endl;
   HTML << "<p>" << endl;
-// #   ###
-// #   ## Mutation predictions
-// #   ###
+  
+  /////////////////////////
+  //Build Mutation Predictions table
+  /////////////////////////
+  
   HTML << "<!--Mutation Predictions -->" << endl;
   diff_entry_list_t muts = gd.show_list(make_vector<gd_entry_type>(SNP)(INS)(DEL)(SUB)(MOB)(AMP));
-  
   string relative_path = settings.local_evidence_path;
   
   if(!relative_path.empty())
     relative_path += "/";
-
-  //Build Mutation Predictions table
   HTML << "<p>" << endl;
   MutationTableOptions mt_options;
   mt_options.relative_link = relative_path;
   mt_options.one_ref_seq = (ref_seq_info.size() == 1);
   HTML << Html_Mutation_Table_String(settings, gd, muts, mt_options) << endl;
   
-  //////
-  // Unassigned evidence
-  //////
-
-  diff_entry_list_t cn = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(CN)));
-  cn.remove_if(cDiffEntry::rejected()); 
-  
-  if (cn.size() > 0) {
-    HTML << "<p>" << html_copy_number_table_string(cn, false, "Unassigned copy number evidence", relative_path);
-  }
-  
-  diff_entry_list_t ra = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(RA)));
-  ra.remove_if(cDiffEntry::rejected()); 
-  ra.remove_if(cDiffEntry::field_exists("mixed"));
-  if (ra.size() > 0) {
-    HTML << "<p>" << html_read_alignment_table_string(ra, false, "Unassigned read alignment evidence", relative_path);
-  }
+  /////////////////////////
+  // Unassigned MC evidence
+  /////////////////////////
   
   diff_entry_list_t mc = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(MC)));
-  mc.remove_if(cDiffEntry::rejected()); 
+  mc.remove_if(cDiffEntry::rejected());
 
   if (mc.size() > 0) {
     HTML << "<p>" << html_missing_coverage_table_string(mc, false, "Unassigned missing coverage evidence", relative_path);
   }
-
+  
+  /////////////////////////
+  // Unassigned JC evidence
+  /////////////////////////
   diff_entry_list_t jc = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(JC)));
   jc.remove_if(cDiffEntry::rejected_and_not_user_defined()); 
 
@@ -255,14 +243,24 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
     jc.remove_if(cDiffEntry::field_exists("circular_chromosome")); 
   }
    
-  diff_entry_list_t jcu = jc;
-  if (jcu.size() > 0) {
+  if (jc.size() > 0) {
     HTML << "<p>" << endl;
-    HTML << html_new_junction_table_string(jcu, false, "Unassigned new junction evidence...", relative_path);
+    HTML << html_new_junction_table_string(jc, false, "Unassigned new junction evidence", relative_path);
+  }
+  
+  /////////////////////////
+  // Unassigned CN evidence
+  /////////////////////////
+  
+  diff_entry_list_t cn = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(CN)));
+  cn.remove_if(cDiffEntry::rejected());
+  
+  if (cn.size() > 0) {
+    HTML << "<p>" << html_copy_number_table_string(cn, false, "Unassigned copy number evidence", relative_path);
   }
   
   // This code prints out a message if there was nothing in the previous tables
-  if (muts.size() + cn.size() + mc.size() + jc.size() + jcu.size() == 0) {
+  if (muts.size() + cn.size() + mc.size() + jc.size() == 0) {
     HTML << "<p>No mutations predicted." << endl;
   }
   
@@ -271,6 +269,22 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
 }
 
 
+  
+// Helper function to mark all but the first _num_to_show entires as NO_SHOW
+void mark_gd_entries_in_list_no_show(diff_entry_list_t& _list, size_t _num_to_show) {
+  
+  size_t i=0;
+  for(diff_entry_list_t::iterator item = _list.begin(); item != _list.end(); item++)
+  {
+    cDiffEntry& _item = **item;
+
+   if (++i > _num_to_show)
+      _item[NO_SHOW] = "1";
+  }
+}
+  
+// Mark all but the top rejected entries with NO_SHOW flag, so that
+// they are not shown in the HTML output
 void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd)
 {
   /////
@@ -278,78 +292,65 @@ void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd)
   //////
   
   vector<gd_entry_type> ra_types = make_vector<gd_entry_type>(RA);
-  list<counted_ptr<cDiffEntry> > ra = gd.filter_used_as_evidence(gd.list(ra_types));
-  ra.remove_if(not1(cDiffEntry::field_exists("reject")));
-  ra.remove_if(cDiffEntry::field_exists("deleted"));
-  ra.sort(cDiffEntry::by_scores(make_vector<string>("genotype_quality")));
+  list<counted_ptr<cDiffEntry> > ra_list = gd.filter_used_as_evidence(gd.list(ra_types));
+  ra_list.remove_if(not1(cDiffEntry::field_exists("reject")));
+  ra_list.remove_if(cDiffEntry::field_exists("deleted"));
   
-  // Filtering for polymorphism predictions
+  // Now, divide these lists into 'consensus' and 'polymorphism' type predictions
+  
+  diff_entry_list_t failed_consensus_ra_list;
+  diff_entry_list_t failed_polymorphism_ra_list;
 
-  /* @JEB experimenting with removal
-  // Require a certain amount of coverage for the variant
-  diff_entry_list_t new_ra = gd.filter_used_as_evidence(gd.list(ra_types));
-  for (diff_entry_list_t::iterator item = new_ra.begin(); item != new_ra.end(); item++)
+  for(diff_entry_list_t::iterator item = ra_list.begin(); item != ra_list.end(); item++)
   {
-    vector<string> top_bot = split((**item)["tot_cov"], "/");
-    uint32_t top = from_string<int32_t>(top_bot[0]);
-    uint32_t bot = from_string<int32_t>(top_bot[1]);
-    if (top + bot <= 2) (**item)["no_show"] = "1";
-  }
-  ra.remove_if(cDiffEntry::no_show());
-  */
-  
-  // We mark polymorphism entries above some limit as no_show 
-  // to prevent creating too many alignments.
-  uint32_t i=0;
-  uint32_t j=0;
-  for(diff_entry_list_t::iterator item = ra.begin(); item != ra.end(); item++)
-  {
-    cDiffEntry& ra_item = **item;
-    // This is a consensus prediction
-    if ( (!ra_item.entry_exists(FREQUENCY)) || (from_string<double>(ra_item[FREQUENCY]) == 1.0 ) ) {
-      if (j++ > settings.max_rejected_read_alignment_evidence_to_show)
-        ra_item[NO_SHOW] = "1";
+    diff_entry_ptr_t ra_item = *item;
+
+    ASSERT(ra_item->entry_exists(PREDICTION), "Expected 'prediction' field for entry:\n" + ra_item->as_string());
+    if ((*ra_item)[PREDICTION] == "consensus") {
+      failed_consensus_ra_list.push_back(ra_item);
+    } else if ((*ra_item)[PREDICTION] == "polymorphism") {
+      failed_polymorphism_ra_list.push_back(ra_item);
+    } else if ((*ra_item)[PREDICTION] == "mixed") {
+      failed_polymorphism_ra_list.push_back(ra_item);
+    } else {
+      ERROR("Unknown 'prediction' type: " + (*ra_item)[PREDICTION] + "\n" + ra_item->as_string() )
     }
-    // This is a polymorphism prediction
-    else if (++i > settings.max_rejected_polymorphisms_to_show)
-      ra_item[NO_SHOW] = "1";
   }
+  
+  if (!settings.polymorphism_prediction) {
+
+    /// CONSENSUS MODE
+
+    failed_consensus_ra_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(SCORE)));
+    mark_gd_entries_in_list_no_show(failed_consensus_ra_list, settings.max_rejected_read_alignment_evidence_to_show);
+    
+    failed_polymorphism_ra_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(FREQUENCY)));
+    mark_gd_entries_in_list_no_show(failed_polymorphism_ra_list, settings.max_rejected_polymorphisms_to_show);
+
+  } else {
+    
+    /// POLYMORPHISM MODE
+    
+    failed_consensus_ra_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(SCORE)));
+    mark_gd_entries_in_list_no_show(failed_consensus_ra_list, settings.max_rejected_read_alignment_evidence_to_show);
+    
+    failed_polymorphism_ra_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(POLYMORPHISM_SCORE)));
+    mark_gd_entries_in_list_no_show(failed_polymorphism_ra_list, settings.max_rejected_polymorphisms_to_show);
+  }
+  
   
   /////
   // JC evidence
   //////
   
   vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
-  
-  diff_entry_list_t jc = gd.filter_used_as_evidence(gd.list(jc_types));
-  
-  // This is the correct way to erase from a list! @MDS
-  for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); )
-  {
-    if (((*it)->number_reject_reasons() == 0))
-      it = jc.erase(it);
-    else
-      it++;
-  }
-  
-  jc.sort(cDiffEntry::by_scores(make_vector<diff_entry_key_t>("pos_hash_score")("total_non_overlap_reads")));
-  
-  i = 0;
-  for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++ )
-  {
-    // always include these irrespective of the count
-    if ((*it)->entry_exists("user_defined"))
-      continue;
-    
-    if (i > settings.max_rejected_junction_evidence_to_show) {
-      (**it)["no_show"] = "1";
-      i++;
-    }
-  }
-
+  diff_entry_list_t jc_list = gd.filter_used_as_evidence(gd.list(jc_types));
+  jc_list.remove_if(not1(cDiffEntry::field_exists("reject")));
+  jc_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>("pos_hash_score")("total_non_overlap_reads")));
+  mark_gd_entries_in_list_no_show(jc_list, settings.max_rejected_polymorphisms_to_show);
 
 }
-  
+
 void html_marginal_predictions(const string& file_name, const Settings& settings,Summary& summary,
                                cReferenceSequences& ref_seq_info, cGenomeDiff& gd)
 {
@@ -384,42 +385,80 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   // ## Marginal evidence
   // ###
   
-  vector<gd_entry_type> ra_types = make_vector<gd_entry_type>(RA);
-
-  // RA evidence
-  list<counted_ptr<cDiffEntry> > ra = gd.filter_used_as_evidence(gd.show_list(ra_types));
-  ra.remove_if(not1(cDiffEntry::field_exists("reject")));  
-  ra.remove_if(cDiffEntry::field_exists("mixed"));
-  ra.remove_if(cDiffEntry::field_exists(NO_SHOW));  
-
-  ra.sort(cDiffEntry::by_scores(make_vector<string>("quality")));
-  if (ra.size() > 0) {
+  /////////////////////////
+  ///Marginal RA evidence
+  /////////////////////////
+  
+  // Marginal RA predictions (shown in both modes)
+  // This list includes both 'consensus' and 'polymorphism' but not 'mixed'
+  list<counted_ptr<cDiffEntry> > ra_list = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(RA)));
+  ra_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
+  ra_list.remove_if(not1(cDiffEntry::field_equals(PREDICTION, "consensus")));
+  size_t full_marginal_ra_list_size = ra_list.size();
+  ra_list.remove_if(cDiffEntry::field_exists(NO_SHOW));
+  
+  if (ra_list.size() > 0) {
+    // sort by score
+    
+    ra_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(CONSENSUS_SCORE)));
+    
+    string marginal_ra_title = "Marginal consensus read alignment evidence";
+    if (full_marginal_ra_list_size > ra_list.size()) {
+      marginal_ra_title += " (best scoring " + to_string(settings.max_rejected_polymorphisms_to_show) + " of " + to_string(full_marginal_ra_list_size) + " shown)";
+    }
+    
     HTML << "<p>" << endl;
-    HTML << html_read_alignment_table_string(ra, false, "Marginal read alignment evidence...", relative_path) << endl;
+    HTML << html_read_alignment_table_string(ra_list, false, marginal_ra_title, relative_path) << endl;
   }
   
-  // Mixed predictions ≥50% RA evidence
-  list<counted_ptr<cDiffEntry> > mixed_ra = gd.filter_used_as_evidence(gd.show_list(ra_types));
-  mixed_ra.remove_if(not1(cDiffEntry::field_exists("mixed")));
-  ra.remove_if(cDiffEntry::field_exists(NO_SHOW));  
-  HTML << "<p>" << endl;
-  if (mixed_ra.size() > 0) {
-    HTML << html_read_alignment_table_string(mixed_ra, false, "Marginal mixed read alignment evidence...", relative_path) << endl;
-  }
+  /////////////////////////
+  // Mixed Base RA evidence
+  /////////////////////////
   
-  
-  vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
-  diff_entry_list_t jc = gd.filter_used_as_evidence(gd.show_list(jc_types));
-  jc.remove_if(not1(cDiffEntry::field_exists("reject")));
-  jc.remove_if(cDiffEntry::field_exists(NO_SHOW));  
+  // Shown only in consensus mode due to using MIXED prediciton type!
+  list<counted_ptr<cDiffEntry> > mixed_ra_list = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(RA)));
+  mixed_ra_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
+  mixed_ra_list.remove_if(cDiffEntry::field_equals(PREDICTION, "consensus"));
+  size_t full_mixed_ra_list_size = mixed_ra_list.size();
+  mixed_ra_list.remove_if(cDiffEntry::field_exists(NO_SHOW));
 
-  if (jc.size()) {
+  if (mixed_ra_list.size() > 0) {
+    // sort by frequency, rather than score
+    mixed_ra_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(FREQUENCY)));
+    
+    string mixed_ra_title = "Marginal polymorphic read alignment evidence";
+    if (full_mixed_ra_list_size > mixed_ra_list.size()) {
+      mixed_ra_title += " (highest frequency " + to_string(settings.max_rejected_read_alignment_evidence_to_show) + " of " + to_string(full_mixed_ra_list_size) + " shown)";
+    }
+    HTML << "<p>" << endl;
+    HTML << html_read_alignment_table_string(mixed_ra_list, false, mixed_ra_title, relative_path) << endl;
+  }
+  
+  /////////////////////////
+  // Marginal JC evidence
+  /////////////////////////
+  
+  diff_entry_list_t jc_list = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(JC)));
+  jc_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
+  size_t full_marginal_jc_list_size = ra_list.size();
+  jc_list.remove_if(cDiffEntry::field_exists(NO_SHOW));
+
+  if (jc_list.size()) {
     //Sort by score, not by position (the default order)...
-    jc.sort(cDiffEntry::by_scores(
-     make_vector<diff_entry_key_t>("pos_hash_score")("total_non_overlap_reads")));
+    jc_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>("pos_hash_score")("total_non_overlap_reads")));
 
+    
+    string marginal_jc_title = "Marginal new junction evidence";
+    if (full_marginal_jc_list_size > ra_list.size()) {
+      marginal_jc_title += " (best scoring " + to_string(settings.max_rejected_junction_evidence_to_show) + " of " + to_string(full_marginal_jc_list_size) + " shown)";
+    }
     HTML << "<p>" << endl;
-    HTML << html_new_junction_table_string(jc, false, "Marginal new junction evidence...", relative_path);
+    HTML << html_new_junction_table_string(jc_list, false, marginal_jc_title, relative_path);
+  }
+  
+  // This code prints out a message if there was nothing in the previous tables
+  if (mixed_ra_list.size() +  ra_list.size() + jc_list.size() == 0) {
+    HTML << "<p>No marginal predictions." << endl;
   }
 
   HTML << html_footer();
@@ -1101,57 +1140,69 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
     if (c.entry_exists("fisher_strand_p_value") &&
        (c["fisher_strand_p_value"] != "ND")) 
     {
-      ssf.precision(1);
-      ssf << scientific << from_string<double>(c["fisher_strand_p_value"]); //TODO Confirm
-      fisher_p_value = nonbreaking("&nbsp;(" + ssf.str() + ")");
-      //Clear Formated String Stream
       ssf.str("");
       ssf.clear();
+      ssf.precision(1);
+      ssf << scientific << from_string<double>(c["fisher_strand_p_value"]);
+      fisher_p_value = nonbreaking("&nbsp;(" + ssf.str() + ")");
+      //Clear Formated String Stream
      }
 
     ss << td(ALIGN_CENTER, nonbreaking(c[SEQ_ID]));
     ss << td(ALIGN_RIGHT, commify(c["position"]));
     ss << td(ALIGN_RIGHT, c["insert_position"]);
     ss << td(ALIGN_CENTER, c["ref_base"] + "&rarr;" + c["new_base"]); // "change Column
+    
+    ssf.str("");
+    ssf.clear();
     ssf.width(4);
     ssf.precision(1);
     if (c.entry_exists(FREQUENCY))
       ssf << fixed << from_string<double>(c[FREQUENCY]) * 100 << "%" << endl; // "frequency" column
     ss << td(ALIGN_RIGHT, ssf.str());
-    //Clear formated string stream
+    
     ssf.str("");
     ssf.clear();
+    ssf.precision(1);
+    
+    if (is_polymorphism) {
+      if (c.entry_exists(POLYMORPHISM_SCORE)) {
+        ssf << fixed << c[POLYMORPHISM_SCORE] << endl;
+      }
+    } else {
+      if (c.entry_exists(CONSENSUS_SCORE)) {
+        ssf << fixed << c[CONSENSUS_SCORE] << endl;
+      }
+    }
+    
+    
+#ifdef SHOW_STRAND_QUALITY_BIAS
 
     if (is_polymorphism) {
       // display extra score data for polymorphisms...
+      
+//#define SHOW_STRAND_QUALITY_BIAS
       string log_fisher = "";
       string log_ks = "";
-         
+      
       if (c.entry_exists(FISHER_STRAND_P_VALUE) &&
           from_string<double>(c[FISHER_STRAND_P_VALUE]) > 0 )
         log_fisher = to_string(log(from_string<double>(c[FISHER_STRAND_P_VALUE])));
-
+      
       if (c.entry_exists(KS_QUALITY_P_VALUE) &&
-          from_string<double>(c[KS_QUALITY_P_VALUE]) > 0 ) 
+          from_string<double>(c[KS_QUALITY_P_VALUE]) > 0 )
         log_ks = to_string(log(from_string<double>(c[KS_QUALITY_P_VALUE]))/log(10));
-
-      ssf << fixed << setprecision(1);
-      ssf << from_string<double>(c["quality"]);
       if (log_fisher != "") ssf << " " << log_fisher;
       if (log_ks != "") ssf << " " << log_ks;
-      ss << td(ALIGN_RIGHT, nonbreaking(ssf.str()));
+      
       //Clear formated string stream
       ssf.str("");
       ssf.clear();
-    } 
+    }
+#endif
+    
+    ss << td(ALIGN_RIGHT, nonbreaking(ssf.str()));
 
-    else {
-      ssf.precision(1);
-      ssf << fixed << c["quality"] << endl;
-      ss << td(ALIGN_RIGHT, nonbreaking(ssf.str()));
-      ssf.str("");
-      ssf.clear();
-    }  
     // Build "cov" column value
     vector<string> temp_cov = split(c[TOT_COV], "/");
     string top_cov = temp_cov[0];
@@ -1166,57 +1217,66 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
 
     if (show_details) 
     {
-      vector<string> reject_reasons = c.get_reject_reasons();
-      for (vector<string>::iterator itr = reject_reasons.begin(); itr != reject_reasons.end(); itr ++) 
-      {  
-        string& reject = (*itr);
-       ss << tr("class=\"reject_table_row\"", 
-                td("colspan=\"" + to_string(total_cols) + "\"",
-                   "Rejected: " + decode_reject_reason(reject)));
+      // Show true frequency if not polymorphism
+      if (!is_polymorphism && c.entry_exists(POLYMORPHISM_FREQUENCY)) {
+        ssf.clear();
+        ssf.str("");
+        ssf.width(4);
+        ssf.precision(1);
+        ssf << fixed << from_string<double>(c[POLYMORPHISM_FREQUENCY]) * 100 << "%" << endl; // "frequency" column
+        ss << tr("class=\"information_table_row\"",
+             td("colspan=\"" + to_string(total_cols) + "\"",
+                  "Raw variant frequency: " + ssf.str()));
       }
       
       // Show information about the strands supporting the change
       ss << tr("class=\"information_table_row\"", 
                td("colspan=\"" + to_string(total_cols) + "\"",
                   "Reads supporting (aligned to +/- strand):&nbsp;&nbsp;" +
-                  b("new") + " base " + "(" + c[NEW_COV] + ")" + ":&nbsp;&nbsp;" +
-                  b("ref") + " base " + "(" + c[REF_COV] + ")" + ":&nbsp;&nbsp;" +
+                  b("new") + " base " + "(" + c[NEW_COV] + ")" + ";&nbsp;&nbsp;" +
+                  b("ref") + " base " + "(" + c[REF_COV] + ")" + ";&nbsp;&nbsp;" +
                   b("total") + " (" + c[TOT_COV] + ")")); 
     
       /* Fisher Strand Test */
       if (c.entry_exists("fisher_strand_p_value")) 
       {
+        ssf.clear();
+        ssf.str("");
         ssf.precision(2);
         ssf << scientific << from_string<float>(c["fisher_strand_p_value"]);
         string fisher_strand_p_value = ssf.str();
-        
-        //Clear formated string stream
-        ssf.str("");
-        ssf.clear();
 
         ss << tr("class=\"information_table_row\"", 
                  td("colspan=\"" + to_string(total_cols) + "\"",
-                    "Fisher's exact test strand distribution " +
+                    "Fisher's exact test for biased strand distribution " +
                     i("p") + "-value = " +fisher_strand_p_value));
       } //end fisher_strand_p_value
 
       /* Kolmogorov-Smirnov Test */
       if (c.entry_exists("ks_quality_p_value")) {
+        ssf.str("");
+        ssf.clear();
         ssf.precision(2);
         ssf << scientific << (c.entry_exists(KS_QUALITY_P_VALUE) ? 
           from_string<float>(c["ks_quality_p_value"]) :
           0);
         string ks_quality_p_value = ssf.str();
-        
-        //Clear formated string stream
-        ssf.str("");
-        ssf.clear();
 
         ss << tr("class=\"information_table_row\"", 
                  td("colspan=\"" + to_string(total_cols) + "\"",
-                    " Kolmogorov-Smirnov test that lower quality scores support polymorphism than reference " +
+                    " Kolmogorov-Smirnov test that lower quality scores support variant " +
                     i("p") + "-value = " +ks_quality_p_value));
       } //end ks_quality_p_value
+      
+      /* Reject Reasons */
+      vector<string> reject_reasons = c.get_reject_reasons();
+      for (vector<string>::iterator itr = reject_reasons.begin(); itr != reject_reasons.end(); itr ++)
+      {
+        string& reject = (*itr);
+        ss << tr("class=\"reject_table_row\"",
+                 td("colspan=\"" + to_string(total_cols) + "\"",
+                    "Rejected: " + decode_reject_reason(reject)));
+      }
     } // end show_details
   } // end list_ref loop
 
@@ -1447,8 +1507,7 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_det
       ss << td("rowspan=\"2\" align=\"center\"", 
               c["neg_log10_pos_hash_p_value"]) << endl;
 
-//@ded frequency info goes here. If changing to only display if frequency != 1, this needs to be conditional.
-       ss << td("rowspan=\"2\" align=\"center\"", Html_Mutation_Table_String::freq_to_string(c["new_junction_frequency"])) << endl;   
+      ss << td("rowspan=\"2\" align=\"center\"", Html_Mutation_Table_String::freq_to_string(c[POLYMORPHISM_FREQUENCY])) << endl;
               
                //" (" + c["max_left"] + "/" + c["max_right"] + ")") << endl;
       ss << td("align=\"center\" class=\"" + annotate_key + "\"", 
@@ -1617,61 +1676,33 @@ string html_copy_number_table_string(diff_entry_list_t& list_ref, bool show_deta
 string decode_reject_reason(const string& reject)
 {
   
-  if (reject == "NJ")
+  if (reject == "COVERAGE_EVENNESS_SKEW")
   {
-    return "Position hash score below cutoff.";
+    return "Coverage evenness skew score above cutoff.";
   }
-  else if (reject == "EVALUE")
+  else if (reject == "SCORE")
   {
-    return "E-value exceeds prediction threshold.";
+    return "Mutation score below prediction threshold.";
   }
-  else if (reject == "STRAND")
+  else if (reject == "FREQUENCY_CUTOFF")
   {
-    return "Prediction not supported by reads on both strands.";
-  }
-  else if (reject == "FREQ")
-  {
-    return "Prediction has frequency below cutoff threshold.";
-  }  
-  else if (reject == "COV")
-  {
-    return "Prediction has coverage below cutoff threshold.";
-  }
-  else if (reject == "BIAS_P_VALUE")
-  {
-    return "Prediction has biased strand and/or quality scores supporting polymorphism.";
+    return "Frequency below cutoff threshold.";
   }
   else if (reject == "KS_QUALITY_P_VALUE")
   {
-    return "Prediction has significantly lower quality scores supporting polymorphism compared to reference.";
-  }
-  else if (reject == "KS_QUALITY_P_VALUE_UNUSUAL_POLY")
-  {
-    return "Prediction has biased quality score distribution for polymorphism bases.";
-  }
-  else if (reject == "KS_QUALITY_P_VALUE_UNUSUAL_REF")
-  {
-    return "Prediction has biased quality score distribution for new bases.";
-  }
-  else if (reject == "KS_QUALITY_P_VALUE_UNUSUAL_NEW")
-  {
-    return "Prediction has biased quality score distribution for ref bases.";
-  }
-  else if (reject == "KS_QUALITY_P_VALUE_UNUSUAL_ALL")
-  {
-    return "Prediction has biased quality score distribution for all bases.";
+    return "Biased base quality scores supporting prediction .";
   }
   else if (reject == "FISHER_STRAND_P_VALUE")
   {
-    return "Prediction has biased read strand distribution supporting polymorphism.";
-  }  
-  else if (reject == "POLYMORPHISM_STRAND")
-  {
-    return "Polymorphism prediction not supported by minimum number of reads on both strands.";
+    return "Biased read strand distribution supporting prediction.";
   }
-  else if (reject == "POLYMORPHISM_FREQUENCY_CUTOFF")
+  else if (reject == "BINOMIAL_STRAND_P_VALUE")
   {
-    return "Polymorphism does not pass frequency cutoff.";
+    return "Variant read strands are highly biased.";
+  }
+  else if (reject == "STRAND_COVERAGE")
+  {
+    return "Not supported by required number of reads on both strands.";
   }
   else if (reject == "INDEL_HOMOPOLYMER")
   {
@@ -1682,7 +1713,7 @@ string decode_reject_reason(const string& reject)
     return "Polymorphic base substitution creates a homopolymer stretch.";
   }
   
-  return "";
+  return "Unknown rejection reason.";
 }
 // # 
 

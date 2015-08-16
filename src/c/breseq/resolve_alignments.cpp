@@ -31,6 +31,18 @@ using namespace std;
 
 namespace breseq {
 
+uint32_t qmissing (double tail_value, double pr_missing)
+{
+  int32_t missing = 0;
+  double test_pr = 1;
+  double pr_no_cov = pow(pr_missing, 2);
+  while (test_pr > tail_value) {
+    missing++;
+    test_pr *= pr_no_cov;
+  }
+  return missing;
+}
+  
 // Continuation is how many bases match the exact same past where the junction is in the reference
 // We need to count this for cases of short duplications and deletions in tandem repeats to not
 // penalize them when we count the "evenness" score.
@@ -137,56 +149,6 @@ void calculate_continuation(
     cout << "SIDE 2 CONTINUATION (RIGHT-TO-LEFT) :: " << side_2_continuation << endl;
   }
   
-}
-  
-double combination (int32_t num, int32_t choose)
-{
-  double log_result = 0.0;
-  for (int32_t i=num; i > choose; i--)
-  {
-    log_result += log(i);
-  }
-  for (int32_t i=2; i <= num - choose; i++)
-  {
-    log_result -= log(i);
-  }
- 
-  return exp(log_result);
-}
-
-// probability of exactly this any successes  
-double binomial (double pr_success, int32_t num_trials, int32_t num_successes)
-{
-  double ret_val = combination(num_trials, num_successes) * pow(pr_success, num_successes) * pow(1-pr_success, num_trials-num_successes);
-  return ret_val;
-}
-  
-  
-// probability of this or fewer successes
-uint32_t qbinomial (double tail_value, int32_t num_trials, double pr_success)
-{
-  ASSERT((tail_value >= 0) && (tail_value <= 1), "probability out of range");
-  double cumulative_pr = 0.0;
-
-  int32_t num_successes;
-  for (num_successes=0; num_successes < num_trials; num_successes++) {
-    cumulative_pr += binomial(pr_success, num_trials, num_successes);
-    if (cumulative_pr > tail_value) break;
-  }
-  
-  return num_successes;
-}
-  
-uint32_t qmissing (double tail_value, double pr_missing)
-{
-  int32_t missing = 0;
-  double test_pr = 1;
-  double pr_no_cov = pow(pr_missing, 2);
-  while (test_pr > tail_value) {
-    missing++;  
-    test_pr *= pr_no_cov;
-  }
-  return missing;
 }
   
 PosHashProbabilityTable::PosHashProbabilityTable(Summary& summary)
@@ -637,7 +599,7 @@ void resolve_alignments(
     JunctionTestInfo& junction_test_info = *it;
 		string key = junction_test_info.junction_id;
 		cDiffEntry item = junction_to_diff_entry(key, ref_seq_info, junction_test_info);
-		item.add_reject_reason("NJ");
+		item.add_reject_reason("COVERAGE_EVENNESS_SKEW");
 		gd.add(item);
 	}
 
@@ -2024,13 +1986,30 @@ void  assign_one_junction_read_counts(
   
   // We cannot assign a frequency if the denominator is zero
   if (d == 0) {
-    j[NEW_JUNCTION_FREQUENCY] = "NA";  
+    j[POLYMORPHISM_FREQUENCY] = "NA";
+    j[FREQUENCY] = j[POLYMORPHISM_FREQUENCY];
+
+    j[PREDICTION] = "unknown";
   } else {
     double new_junction_frequency_value = c /(c + ((a+b)/d) );
-    j[NEW_JUNCTION_FREQUENCY] = to_string(new_junction_frequency_value, settings.polymorphism_precision_places, true);
+    j[POLYMORPHISM_FREQUENCY] = to_string(new_junction_frequency_value, settings.polymorphism_precision_places, true);
+    j[FREQUENCY] = j[POLYMORPHISM_FREQUENCY];
+
+    // Reject any junctions based on frequency criteria if we are in CONSENSUS mode
+    if (!settings.polymorphism_prediction) {
+    
+      if ((new_junction_frequency_value >= settings.polymorphism_frequency_cutoff) && (new_junction_frequency_value <= 1 - settings.polymorphism_frequency_cutoff))
+      {
+        j[PREDICTION] = "mixed";
+      } else {
+        j[PREDICTION] = "consensus";
+        j[FREQUENCY] = "1";
+      }
+    }
+    else {
+      j[PREDICTION] = "polymorphism";
+    }
   }
-  j[FREQUENCY] = j[NEW_JUNCTION_FREQUENCY];
-  
   
   // Finally assign average coverages based on fragments
   
@@ -2090,6 +2069,7 @@ void  assign_junction_read_counts(
     cDiffEntry& j = **it;
     assign_one_junction_read_counts(settings, summary, j);
   }
+  
 }
 
   

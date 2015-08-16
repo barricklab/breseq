@@ -345,11 +345,23 @@ void alignment_output::create_alignment ( const string& region, cOutputEvidenceI
   // Check for special reference lines that are junctions...
   bool bDrawAnnotationLine = true;    // draw the | annotation line pointing to region?
   
-  m_is_junction = (output_evidence_item_ptr != NULL);
+  
+  // Check for special output in reference and legend lines for junctions
+  m_is_junction = false;
+  m_is_junction_junction = false;
+
+  if (output_evidence_item_ptr != NULL) {
+    if ((*output_evidence_item_ptr)[PREFIX] == "JC") {
+      m_is_junction = true;
+      m_is_junction_junction = true;
+    } else if ( ((*output_evidence_item_ptr)[PREFIX] == "JC_SIDE_1")
+             || ((*output_evidence_item_ptr)[PREFIX] == "JC_SIDE_2") ) {
+       m_is_junction = true;
+    }
+  }
   
   // For junctions JC evidence to set up split reference
-  if (m_is_junction && ((*output_evidence_item_ptr)[PREFIX] == "JC")) {
-    m_is_junction_junction = true;
+  if (m_is_junction_junction) {
     cDiffEntry& jc_item = *(output_evidence_item_ptr->item);
     
     int32_t overlap = from_string<int32_t>(jc_item["overlap"]);

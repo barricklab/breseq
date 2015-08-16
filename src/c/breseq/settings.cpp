@@ -202,14 +202,14 @@ namespace breseq
     options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Read Alignment and Mutation Calling Options", ADVANCED_OPTION);
     options
+    ("mutation-score-cutoff", "Log10 E-value cutoff for consensus base substitutions and small indels", 10, ADVANCED_OPTION)
     ("base-quality-cutoff,b", "Ignore bases with quality scores lower than this value", 3, ADVANCED_OPTION)
     ("quality-score-trim", "Trim the ends of reads past any base with a quality score below --base-quality-score-cutoff.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("require-match-length", "Only consider alignments that cover this many bases of a read", 0, ADVANCED_OPTION)
     ("require-match-fraction", "Only consider alignments that cover this fraction of a read", 0.9, ADVANCED_OPTION)
     ("deletion-coverage-propagation-cutoff","Value for coverage above which deletions are cutoff. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
     ("deletion-coverage-seed-cutoff","Value for coverage below which deletions are seeded", 0, ADVANCED_OPTION)
-    ("mutation-score-cutoff", "Log10 E-value cutoff for consensus base substitutions and small indels", 10, ADVANCED_OPTION)
-    ("minimum-coverage-each-strand", "Only predict base substitutions and small indels when this many reads on each strand support the mutation. (DEFAULT = 0)", 0, ADVANCED_OPTION)
+    ("minimum-coverage-each-strand", "Only predict consensus base substitutions and small indels when at least this many reads on each strand support the mutation.", 1, ADVANCED_OPTION)
     ;
     
     options.addUsage("", ADVANCED_OPTION);
@@ -230,13 +230,14 @@ namespace breseq
     options.addUsage("Polymorphism (Mixed Population) Options", ADVANCED_OPTION);
     options
     ("polymorphism-prediction,p", "Predict polymorphic (mixed) mutations", TAKES_NO_ARGUMENT)
+    ("polymorphism-frequency-cutoff", "Only predict polymorphisms where both allele frequencies are greater than this value (DEFAULT = consensus mode, 0.1; polymorphism mode, 0.0)", "", ADVANCED_OPTION)
+    ("polymorphism-score-cutoff", "Log10 E-value cutoff for test of polymorphism vs no polymorphism (DEFAULT = consensus mode, 10; polymorphism mode, 2)", "", ADVANCED_OPTION)
+    ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms for which at least this many reads on each strand support each alternative allele. Set to --minimum-coverage-each-strand if that value is greater than what is set here. (DEFAULT = consensus mode, 2; polymorphism mode, 2)", "", ADVANCED_OPTION)
+    ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias (0 = OFF) (DEFAULT = consensus mode, 0.05; polymorphism mode, 0.001)", "", ADVANCED_OPTION)
     ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("polymorphism-reject-indel-homopolymer-length", "Reject insertion/deletion polymorphisms which could result from expansion/contraction of homopolymer repeats with this length or greater in the reference genome (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 3) ", "", ADVANCED_OPTION)
     ("polymorphism-reject-surrounding-homopolymer-length", "Do not predict polymorphic base substitutions that create a homopolymer when they have this many adjacent bases of that homopolymer on each side. For example, a mutation TTATT -> TTTTT would be rejected with a setting of 2. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 2)", "", ADVANCED_OPTION)
-    ("polymorphism-score-cutoff", "Log10 E-value cutoff for test of polymorphism vs no polymorphism (DEFAULT = consensus mode, 10; polymorphism mode, 2)", "", ADVANCED_OPTION)
-    ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias (0 = OFF) (DEFAULT = consensus mode, 0.05; polymorphism mode, 0.001)", "", ADVANCED_OPTION)
-    ("polymorphism-frequency-cutoff", "Only predict polymorphisms where both allele frequencies are > than this value (DEFAULT = consensus mode, 0.1; polymorphism mode, 0.0)", "", ADVANCED_OPTION)
-    ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms where this many reads on each strand support alternative alleles. Set to --minimum-coverage-each-strand if this value is greater than what is set here. (DEFAULT = consensus mode, 2; polymorphism mode, 2)", "", ADVANCED_OPTION)
+
     ;
     
     options.addUsage("", ADVANCED_OPTION);
@@ -267,7 +268,7 @@ namespace breseq
     options.addUsage("", true);
     options.addUsage("Debugging Options", true);
     options
-    ("keep-intermediates","Do not delete intermediate files.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("keep-intermediates,k","Do not delete intermediate files.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
     
     options.processCommandArgs(argc, argv);
@@ -429,7 +430,7 @@ namespace breseq
       this->polymorphism_minimum_new_coverage_each_strand = 2;
       this->no_indel_polymorphisms = false;
       this->polymorphism_precision_decimal = 0.000001;
-      this->polymorphism_precision_places = 6;
+      this->polymorphism_precision_places = 8;
       
       this->minimum_alignment_resolution_pos_hash_score = 3;
       this->junction_minimum_side_match = 6;

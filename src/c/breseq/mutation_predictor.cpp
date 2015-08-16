@@ -1047,7 +1047,7 @@ namespace breseq {
             
             if (mut[FREQUENCY] != "NA") {
               if (frequency < settings.polymorphism_frequency_cutoff) {
-                mut.add_reject_reason("POLYMORPHISM_FREQUENCY_CUTOFF");
+                mut.add_reject_reason("FREQUENCY_CUTOFF");
                 // @JEB 08-08-13 we might want to keep the mutation as rejected. This discards completely.
                 break;
               }
@@ -1395,9 +1395,7 @@ namespace breseq {
       
       // If we are predicting mixed bases and not polymorphisms, then don't create
       // mutations for mixed frequency predictions (leave them as unassigned RA evidence)
-      // But do mark them as "mixed"
       if (settings.mixed_base_prediction && (item[FREQUENCY] != "1")) {
-        item["mixed"] = "1";
         continue;
       }
       
@@ -1769,6 +1767,10 @@ namespace breseq {
     vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
 		diff_entry_list_t jc = gd.list(jc_types);
     jc.remove_if(cDiffEntry::rejected_and_not_user_defined());
+   
+    // Do not use mixed junctions
+    // -- needs to be relaxed in the future for predicting amplifications!
+    jc.remove_if(cDiffEntry::field_equals(PREDICTION, "mixed"));
     
     // Do not use rejected missing coverage evidence
     vector<gd_entry_type> mc_types = make_vector<gd_entry_type>(MC);

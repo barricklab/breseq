@@ -52,7 +52,7 @@ X<-read.table(in_file, sep="\t", header=T)
 
 ##allocate output data frame
 Y<-data.frame(
-	log10_base_likelihood = 1:length(X$best_quals)
+  major_binomial_strand_lower_bound = 1:length(X$major_frequency)
 );
 
 qual_dist<-read.table(qual_file, sep="\t", header=F)
@@ -94,42 +94,40 @@ qual_pr <- function(qual_cdf = qual_cdf)
 
 #print(Y)
 
-if (length(X$best_quals) > 0)
+if (length(X$major_quals) > 0)
 {
-	for (i in 1:length(X$best_quals))
+	for (i in 1:length(X$major_quals))
 	{
-		Y$log10_base_likelihood[i] = X$log10_base_likelihood[i]
-	
 		#print (i);
-    best_quals_list = c()
-    best_quals = c()
-    cat("length: ", length(X$best_quals[i]))
-    if (length(X$best_quals[i]) > 0) {
-      best_quals_list <- strsplit(as.vector(X$best_quals[i]), ",");
-      best_quals <- as.numeric( best_quals_list[[1]] )
+    major_quals_list = c()
+    major_quals = c()
+    cat("length: ", length(X$major_quals[i]))
+    if (length(X$major_quals[i]) > 0) {
+      major_quals_list <- strsplit(as.vector(X$major_quals[i]), ",");
+      major_quals <- as.numeric( major_quals_list[[1]] )
     }
     
-    second_best_quals_list = c()
-    second_best_quals = c()
-    if (length(X$second_best_quals[i]) > 0) {
-      second_best_quals_list <- strsplit(as.vector(X$second_best_quals[i]), ",");
-      second_best_quals <- as.numeric( second_best_quals_list[[1]] )
+    minor_quals_list = c()
+    minor_quals = c()
+    if (length(X$minor_quals[i]) > 0) {
+      minor_quals_list <- strsplit(as.vector(X$minor_quals[i]), ",");
+      minor_quals <- as.numeric( minor_quals_list[[1]] )
     }
 
-    cat("here", "\n")
-        print(second_best_quals)
+    ##cat("\n")
+    ##print(minor_quals)
         
     ## This code estimates the actual strand and quality score distribution as the total observed.
-		max_qual = max(best_quals, second_best_quals)
-		NQ = tabulate(best_quals, nbins=max_qual)
-		RQ = tabulate(second_best_quals, nbins=max_qual)
+		max_qual = max(major_quals, minor_quals)
+		NQ = tabulate(major_quals, nbins=max_qual)
+		RQ = tabulate(minor_quals, nbins=max_qual)
 		TQ = NQ+RQ
 		
 		log10_qual_likelihood = log10(dmultinom(NQ, prob=TQ)) + log10(dmultinom(RQ, prob=TQ)) - log10(dmultinom(TQ, prob=TQ)) 
 		Y$log10_qual_likelihood_position_model[i] = -log10_qual_likelihood	
 		
-		RS = c(X$ref_top_strand[i], X$ref_bot_strand[i])
-		NS = c(X$new_top_strand[i], X$new_bot_strand[i])
+		RS = c(X$major_top_strand[i], X$major_bot_strand[i])
+		NS = c(X$minor_top_strand[i], X$minor_bot_strand[i])
 		TS = RS+NS
 		
 		log10_strand_likelihood =  log10(dmultinom(RS, prob=TS)) + log10(dmultinom(NS, prob=TS)) - log10(dmultinom(TS, prob=TS))
@@ -140,9 +138,9 @@ if (length(X$best_quals) > 0)
 		#log10_qual_likelihood should be positive
 		#log10_strand_likelihood should be positive
 
-		#convert to natural logarithm and back to 
-		score_combined_log =  -2* ( Y$log10_base_likelihood[i]  + Y$log10_qual_likelihood_position_model[i] + Y$log10_strand_likelihood_position_model[i]) * log(10)
-		Y$quality_position_model[i] = -pchisq(score_combined_log, 1, lower.tail=T, log=T) / log(10)
+		#convert to natural logarithm and back to log10
+    #score_combined_log =  -2* ( Y$log10_base_likelihood[i]  + Y$log10_qual_likelihood_position_model[i] + Y$log10_strand_likelihood_position_model[i]) * log(10)
+    #Y$quality_position_model[i] = -pchisq(score_combined_log, 1, lower.tail=T, log=T) / log(10)
 		
 	## This section estimates the actual strand distribution as the reference observations and the quality score distribution from the
 	## count across the entire genome for all bases added together (doesn't take into account that there may be more low G's than A's, for example)	
@@ -171,17 +169,17 @@ if (length(X$best_quals) > 0)
 		
 
 		## KS test for unusual qualities -- Rewrite to use cumulative distribution! = faster and more accurate
-		all_quals = c(second_best_quals,best_quals);
+		all_quals = c(minor_quals,major_quals);
 
 		options(warn=-1);
 
-		if (X$frequency[i] < 0.5)
+		if (X$major_frequency[i] < 0.5)
 		{
-			poly_quals = best_quals;
+			poly_quals = major_quals;
 		}
 		else
 		{
-			poly_quals = second_best_quals;
+			poly_quals = minor_quals;
 		}
 
 ## This one tests the quality scores predicting a polymorphism agains the overall distribution
@@ -206,13 +204,17 @@ if (length(X$best_quals) > 0)
 	## Oldest code that calculates bias p-values
 	
     options(warn=-1);
-    ks_test_p_value <- ks.test(second_best_quals, best_quals, alternative = "less")
+    
+    ks_test_p_value = 1
+    if ((length(minor_quals) > 0) && (length(major_quals) > 0)) {
+      ks_test_result <- ks.test(minor_quals, major_quals, alternative = "less")
+      ks_test_p_value <- ks_test_result$p.value
+    }
     options(warn=0);
-    ks_test_p_value <- ks_test_p_value$p.value
     
 		Y$ks_quality_p_value[i] <- ks_test_p_value
 
-		contingency_table <- matrix(data=c(X$new_top_strand[i], X$new_bot_strand[i], X$ref_top_strand[i], X$ref_bot_strand[i]), nrow=2, ncol=2)
+		contingency_table <- matrix(data=c(X$minor_top_strand[i], X$minor_bot_strand[i], X$major_top_strand[i], X$major_bot_strand[i]), nrow=2, ncol=2)
 		#print(contingency_table)
 	
 		fisher_test_p_value <- fisher.test( contingency_table, alternative="two.sided")
