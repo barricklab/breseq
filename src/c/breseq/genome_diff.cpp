@@ -147,6 +147,7 @@ const map<gd_entry_type, vector<string> > line_specification = make_map<gd_entry
 
 // These specs include addition fields used when determined equal mutations and sorting!
 // IMPORTANT: They include fields that may not always be defined.
+// NOTE: 'unique' gets added to ALL specs for determining uniqueness
 const map<gd_entry_type, vector<string> > extended_line_specification = make_map<gd_entry_type, vector<string> >
 (INS,make_vector<string> (SEQ_ID)(POSITION)(INSERT_POSITION)(NEW_SEQ))
 (MOB,make_vector<string> (SEQ_ID)(POSITION)(REPEAT_NAME)(STRAND)(DUPLICATION_SIZE)(INS_START)(INS_END)(DEL_START)(DEL_END)(MOB_REGION))
@@ -503,8 +504,11 @@ int32_t cDiffEntry::compare(const cDiffEntry& a, const cDiffEntry& b)
   // Then we sort for all fields defined in the line specification
   
   // Get full line spec
-  const vector<diff_entry_key_t>& specs = extended_line_specification.count(a_type)
+  vector<diff_entry_key_t> specs = extended_line_specification.count(a_type)
   ? extended_line_specification.find(a_type)->second : line_specification.find(a_type)->second;
+  
+  // always add these for uniqueness testing
+  specs.push_back("unique");
   
   for(vector<diff_entry_key_t>::const_iterator it = specs.begin(); it != specs.end(); it++) {
     const diff_entry_key_t& spec(*it);
@@ -861,22 +865,19 @@ void cDiffEntry::mutation_invert_position_sequence(cDiffEntry& inverting_mutatio
   // Flip things that are totally contained
   // Error if something overlaps the edges
   // shift_replace_size has the size of the inversion (shift_size = 0)
-    
-  int32_t size = 0;
-  if (entry_exists(SIZE))
-    size = from_string<int32_t>((*this)[SIZE]);
-  // Assigning duplication size from MOB makes sure it is offset correctly when flipped
-  else if (entry_exists(DUPLICATION_SIZE))
-    size = from_string<int32_t>((*this)[DUPLICATION_SIZE]);
+  
+  // Size should be how many reference bases the mutation affects!
+  // It will be one for a SNP, etc., insertion, but we won't use it.
+  int32_t ref_size = this->get_reference_coordinate_end().get_position() - this->get_reference_coordinate_start().get_position() + 1;
   
   // Does not overlap
-  if (position + size < start_inversion)
+  if (position + ref_size < start_inversion)
     return;
   else if (position > end_inversion)
     return;
   
   // Contained within, invert coordinates
-  else if ((position >= start_inversion) && (position + size - 1 <= end_inversion)) {
+  else if ((position >= start_inversion) && (position + ref_size - 1 <= end_inversion)) {
     
     //Reverse complement the mutation
     this->mutation_reverse_complement();
@@ -889,15 +890,15 @@ void cDiffEntry::mutation_invert_position_sequence(cDiffEntry& inverting_mutatio
     
     // case of INS, because it refers to between positions, we need to substract an extra one from the position
     // We also need to flip insert_pos order for any mutations that are strung together with multiple insert counts
-    // we (do this by taking the negative). We must re-sort after applying an INV for this reason!!
+    // (we do this by taking the negative). We must re-sort after applying an INV for this reason!!
       
-      (*this)[POSITION] = to_string<int32_t>(end_inversion - (position + size - start_inversion) - 1);
+      (*this)[POSITION] = to_string<int32_t>(end_inversion - (position - start_inversion) - 1);
       if (this->entry_exists(INSERT_POSITION))
         (*this)[INSERT_POSITION] = to_string<int32_t>(-insert_pos);
       
     } else { // other cases
       
-      (*this)[POSITION] = to_string<int32_t>(end_inversion - (position + size - start_inversion));
+      (*this)[POSITION] = to_string<int32_t>(end_inversion - (position + (ref_size - 1) - start_inversion));
       
     }
     return;
@@ -1775,7 +1776,7 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
               }
               
               // check coords to be sure it actually is 'within'
-              valid_start = within_position + 1; // new bases will start after this position
+              valid_start = within_position; // new bases will start after this position
               valid_end = valid_start + (*within_de)[NEW_SEQ].size()-1;
               
             } else {
@@ -2035,6 +2036,12 @@ diff_entry_ptr_t cGenomeDiff::add(const cDiffEntry& item, bool reassign_id) {
   // check to see if we are adding a duplicate item
   // -- we don't allow, give a warning, and return existing item
   for (diff_entry_list_t::iterator it = _entry_list.begin(); it != _entry_list.end(); it++) {
+    
+    // don't do this on validation like NOTEs
+    if ((*it)->is_validation()) {
+      continue;
+    }
+    
     if (**it == item) {
       WARN("Ignored attempt to add GD item:\n" + item.as_string() + "\nwhich is a duplicate of existing item:\n" + (*it)->as_string());
       return *it;

@@ -1501,7 +1501,8 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_det
       //no longer print overlap
       //ss << td("rowspan=\"2\" align=\"center\"", c["overlap"]) << endl;
       ss << td("rowspan=\"2\" align=\"center\"", 
-               c["new_junction_read_count"] + " (" + string_to_fixed_digit_string(c["new_junction_coverage"], 3) + ")" ) << endl;
+               c["new_junction_read_count"] + " (" + string_to_fixed_digit_string(c["new_junction_coverage"], 3) + ")" +
+               (c.entry_exists("unique_read_sequence") ? "<br>+" + c["unique_read_sequence"] : "")  ) << endl;
       ss << td("rowspan=\"2\" align=\"center\"", 
                c["pos_hash_score"] + "/" +  c["max_pos_hash_score"]) << endl;
       ss << td("rowspan=\"2\" align=\"center\"", 
@@ -2049,7 +2050,11 @@ void Html_Mutation_Table_String::Item_Lines()
         
         if (mut.entry_exists("repeat_seq")) {
           // alternative way of depicting
-          cell_mutation = "(" + mut["repeat_seq"] + ")" + "<sub>" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"] + "</sub>";
+          if (mut["repeat_seq"].size() > 12) {
+            cell_mutation = "(" + to_string<int32_t>(mut["repeat_seq"].size()) + "-bp)" + "<sub>" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"] + "</sub>";
+          } else {
+            cell_mutation = "(" + mut["repeat_seq"] + ")" + "<sub>" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"] + "</sub>";
+          }
           //cell_mutation = mut["repeat_seq"] + "&times;" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"];
         }
         else {

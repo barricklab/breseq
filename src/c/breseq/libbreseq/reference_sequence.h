@@ -34,7 +34,7 @@ namespace breseq {
 	class Settings;
   
   /* Position for dealing with things that are relative to reference genom
-    and the annoying issues of
+    and the annoying issues of insert counts
   */
   class cReferenceCoordinate {
   private:
