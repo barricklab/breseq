@@ -1453,15 +1453,14 @@ int breseq_default_action(int argc, char* argv[])
         if (!file_exists(filename.c_str())) 
           continue;
     
-        /// NEW CODE mapping to junctins with relaxed parameters
-        
-        uint32_t bowtie2_seed_substring_size_relaxed = 5 + trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].avg_read_length * 0.1);
+        /// NEW CODE mapping to junctions with somewhat relaxed parameters
+        uint32_t bowtie2_seed_substring_size_junction = trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].avg_read_length * 0.3);
         // Check bounds
-        bowtie2_seed_substring_size_relaxed = max<uint32_t>(9, bowtie2_seed_substring_size_relaxed);
-        bowtie2_seed_substring_size_relaxed = min<uint32_t>(31, bowtie2_seed_substring_size_relaxed);
+        bowtie2_seed_substring_size_junction = max<uint32_t>(9, bowtie2_seed_substring_size_junction);
+        bowtie2_seed_substring_size_junction = min<uint32_t>(31, bowtie2_seed_substring_size_junction);
         
-        string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local " + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_relaxed) + " "
-        + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_relaxed + " --reorder -x " + candidate_junction_hash_file_name + " -U " + read_fastq_file + " -S " + candidate_junction_sam_file_name;
+        string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local " + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_junction) + " "
+        + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_junction + " --reorder -x " + candidate_junction_hash_file_name + " -U " + read_fastq_file + " -S " + candidate_junction_sam_file_name;
         
         SYSTEM(command);
         
@@ -2078,7 +2077,7 @@ int breseq_default_action(int argc, char* argv[])
     
 		//
 		// Create evidence files containing alignments and coverage plots
-		//
+		// --- must occur after marking entries no_show
 		if (!settings.no_alignment_or_plot_generation)
 			output::cOutputEvidenceFiles(settings, gd);
 

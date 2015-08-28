@@ -245,7 +245,7 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
    
   if (jc.size() > 0) {
     HTML << "<p>" << endl;
-    HTML << html_new_junction_table_string(jc, false, "Unassigned new junction evidence", relative_path);
+    HTML << html_new_junction_table_string(jc, settings, false, "Unassigned new junction evidence", relative_path);
   }
   
   /////////////////////////
@@ -293,50 +293,16 @@ void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd)
   
   vector<gd_entry_type> ra_types = make_vector<gd_entry_type>(RA);
   list<counted_ptr<cDiffEntry> > ra_list = gd.filter_used_as_evidence(gd.list(ra_types));
-  ra_list.remove_if(not1(cDiffEntry::field_exists("reject")));
   ra_list.remove_if(cDiffEntry::field_exists("deleted"));
   
-  // Now, divide these lists into 'consensus' and 'polymorphism' type predictions
-  
-  diff_entry_list_t failed_consensus_ra_list;
-  diff_entry_list_t failed_polymorphism_ra_list;
-
-  for(diff_entry_list_t::iterator item = ra_list.begin(); item != ra_list.end(); item++)
-  {
-    diff_entry_ptr_t ra_item = *item;
-
-    ASSERT(ra_item->entry_exists(PREDICTION), "Expected 'prediction' field for entry:\n" + ra_item->as_string());
-    if ((*ra_item)[PREDICTION] == "consensus") {
-      failed_consensus_ra_list.push_back(ra_item);
-    } else if ((*ra_item)[PREDICTION] == "polymorphism") {
-      failed_polymorphism_ra_list.push_back(ra_item);
-    } else if ((*ra_item)[PREDICTION] == "mixed") {
-      failed_polymorphism_ra_list.push_back(ra_item);
-    } else {
-      ERROR("Unknown 'prediction' type: " + (*ra_item)[PREDICTION] + "\n" + ra_item->as_string() )
-    }
+  if (settings.polymorphism_prediction) {
+    ra_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
+  } else { // consensus mode
+    ra_list.remove_if(cDiffEntry::field_exists(REJECT));
   }
   
-  if (!settings.polymorphism_prediction) {
-
-    /// CONSENSUS MODE
-
-    failed_consensus_ra_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(SCORE)));
-    mark_gd_entries_in_list_no_show(failed_consensus_ra_list, settings.max_rejected_read_alignment_evidence_to_show);
-    
-    failed_polymorphism_ra_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(FREQUENCY)));
-    mark_gd_entries_in_list_no_show(failed_polymorphism_ra_list, settings.max_rejected_polymorphisms_to_show);
-
-  } else {
-    
-    /// POLYMORPHISM MODE
-    
-    failed_consensus_ra_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(SCORE)));
-    mark_gd_entries_in_list_no_show(failed_consensus_ra_list, settings.max_rejected_read_alignment_evidence_to_show);
-    
-    failed_polymorphism_ra_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(POLYMORPHISM_SCORE)));
-    mark_gd_entries_in_list_no_show(failed_polymorphism_ra_list, settings.max_rejected_polymorphisms_to_show);
-  }
+  ra_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(FREQUENCY)));
+  mark_gd_entries_in_list_no_show(ra_list, settings.max_rejected_read_alignment_evidence_to_show);
   
   
   /////
@@ -346,8 +312,11 @@ void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd)
   vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
   diff_entry_list_t jc_list = gd.filter_used_as_evidence(gd.list(jc_types));
   jc_list.remove_if(not1(cDiffEntry::field_exists("reject")));
-  jc_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>("pos_hash_score")("total_non_overlap_reads")));
-  mark_gd_entries_in_list_no_show(jc_list, settings.max_rejected_polymorphisms_to_show);
+  // Makes more sense to sort by score because some good junctions have frequency = "NA"
+  jc_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>("neg_log10_pos_hash_p_value")));
+  jc_list.reverse();
+  //jc_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(FREQUENCY)));
+  mark_gd_entries_in_list_no_show(jc_list, settings.max_rejected_junction_evidence_to_show);
 
 }
 
@@ -385,79 +354,62 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   // ## Marginal evidence
   // ###
   
-  /////////////////////////
-  ///Marginal RA evidence
-  /////////////////////////
+  ////////////////////////////////////
+  // Marginal  RA evidence
+  ///////////////////////////////////
   
-  // Marginal RA predictions (shown in both modes)
-  // This list includes both 'consensus' and 'polymorphism' but not 'mixed'
-  list<counted_ptr<cDiffEntry> > ra_list = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(RA)));
-  ra_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
-  ra_list.remove_if(not1(cDiffEntry::field_equals(PREDICTION, "consensus")));
+  // CONSENSUS mode: this list includes only 'polymorphism' RA entries that do not have a 'reject' reason
+  // POLYMORPHISM mode: this list includes only 'polymorphism' RA entries with a 'reject' reason
+  list<counted_ptr<cDiffEntry> > ra_list = gd.filter_used_as_evidence(gd.list(make_vector<gd_entry_type>(RA)));
+  ra_list.remove_if(cDiffEntry::field_exists("deleted"));
+  if (settings.polymorphism_prediction) {
+    ra_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
+  } else { // consensus mode
+    ra_list.remove_if(cDiffEntry::field_exists(REJECT));
+  }
   size_t full_marginal_ra_list_size = ra_list.size();
   ra_list.remove_if(cDiffEntry::field_exists(NO_SHOW));
-  
+
   if (ra_list.size() > 0) {
-    // sort by score
     
-    ra_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(CONSENSUS_SCORE)));
-    
-    string marginal_ra_title = "Marginal consensus read alignment evidence";
-    if (full_marginal_ra_list_size > ra_list.size()) {
-      marginal_ra_title += " (best scoring " + to_string(settings.max_rejected_polymorphisms_to_show) + " of " + to_string(full_marginal_ra_list_size) + " shown)";
+    // sort by frequency, rather than position in consensus mode
+    if (!settings.polymorphism_prediction) {
+      ra_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(FREQUENCY)));
     }
     
+    string marginal_ra_title = "Marginal polymorphic read alignment evidence";
+    if (full_marginal_ra_list_size > ra_list.size()) {
+      marginal_ra_title += " (highest frequency " + to_string(settings.max_rejected_read_alignment_evidence_to_show) + " of " + to_string(full_marginal_ra_list_size) + " shown)";
+    }
     HTML << "<p>" << endl;
     HTML << html_read_alignment_table_string(ra_list, false, marginal_ra_title, relative_path) << endl;
-  }
-  
-  /////////////////////////
-  // Mixed Base RA evidence
-  /////////////////////////
-  
-  // Shown only in consensus mode due to using MIXED prediciton type!
-  list<counted_ptr<cDiffEntry> > mixed_ra_list = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(RA)));
-  mixed_ra_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
-  mixed_ra_list.remove_if(cDiffEntry::field_equals(PREDICTION, "consensus"));
-  size_t full_mixed_ra_list_size = mixed_ra_list.size();
-  mixed_ra_list.remove_if(cDiffEntry::field_exists(NO_SHOW));
-
-  if (mixed_ra_list.size() > 0) {
-    // sort by frequency, rather than score
-    mixed_ra_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(FREQUENCY)));
-    
-    string mixed_ra_title = "Marginal polymorphic read alignment evidence";
-    if (full_mixed_ra_list_size > mixed_ra_list.size()) {
-      mixed_ra_title += " (highest frequency " + to_string(settings.max_rejected_read_alignment_evidence_to_show) + " of " + to_string(full_mixed_ra_list_size) + " shown)";
-    }
-    HTML << "<p>" << endl;
-    HTML << html_read_alignment_table_string(mixed_ra_list, false, mixed_ra_title, relative_path) << endl;
   }
   
   /////////////////////////
   // Marginal JC evidence
   /////////////////////////
   
-  diff_entry_list_t jc_list = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(JC)));
+  diff_entry_list_t jc_list = gd.filter_used_as_evidence(gd.list(make_vector<gd_entry_type>(JC)));
   jc_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
-  size_t full_marginal_jc_list_size = ra_list.size();
+  size_t full_marginal_jc_list_size = jc_list.size();
   jc_list.remove_if(cDiffEntry::field_exists(NO_SHOW));
 
   if (jc_list.size()) {
-    //Sort by score, not by position (the default order)...
-    jc_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>("pos_hash_score")("total_non_overlap_reads")));
-
+    //Sort by score, not by position or frequency (the default order)...
+    jc_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>("neg_log10_pos_hash_p_value")));
+    jc_list.reverse();
+    //jc_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(FREQUENCY)));
     
     string marginal_jc_title = "Marginal new junction evidence";
-    if (full_marginal_jc_list_size > ra_list.size()) {
-      marginal_jc_title += " (best scoring " + to_string(settings.max_rejected_junction_evidence_to_show) + " of " + to_string(full_marginal_jc_list_size) + " shown)";
+    if (full_marginal_jc_list_size > jc_list.size()) {
+      marginal_jc_title += " (lowest skew " + to_string(settings.max_rejected_junction_evidence_to_show) + " of " + to_string(full_marginal_jc_list_size) + " shown)";
     }
     HTML << "<p>" << endl;
-    HTML << html_new_junction_table_string(jc_list, false, marginal_jc_title, relative_path);
+    HTML << html_new_junction_table_string(jc_list, settings, false, marginal_jc_title, relative_path);
   }
   
   // This code prints out a message if there was nothing in the previous tables
-  if (mixed_ra_list.size() +  ra_list.size() + jc_list.size() == 0) {
+  if (ra_list.size() + jc_list.size() == 0) {
     HTML << "<p>No marginal predictions." << endl;
   }
 
@@ -783,6 +735,12 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     
     HTML << tr(td("Consensus mutation E-value cutoff") + td(s(settings.mutation_log10_e_value_cutoff)));
 
+    HTML << tr(td("Consensus frequency cutoff")
+               + td((settings.consensus_frequency_cutoff == 0) ? "OFF" : to_string<double>(settings.consensus_frequency_cutoff))
+               );
+    HTML << tr(td("Consensus minimum coverage each strand")
+               + td((settings.consensus_minimum_new_coverage_each_strand == 0) ? "OFF" : to_string<int32_t>(settings.consensus_minimum_new_coverage_each_strand))
+               );
 
     HTML << tr(td("Polymorphism E-value cutoff") + td(s(settings.polymorphism_log10_e_value_cutoff)));
     HTML << tr(td("Polymorphism frequency cutoff")
@@ -986,7 +944,7 @@ string html_genome_diff_item_table_string(const Settings& settings, cGenomeDiff&
     }
     else if(first_item._type == JC)
     {
-      return html_new_junction_table_string(list_ref,true);
+      return html_new_junction_table_string(list_ref,settings,true);
     }
     else if(first_item._type == CN)
     {
@@ -1157,8 +1115,8 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
     ssf.clear();
     ssf.width(4);
     ssf.precision(1);
-    if (c.entry_exists(FREQUENCY))
-      ssf << fixed << from_string<double>(c[FREQUENCY]) * 100 << "%" << endl; // "frequency" column
+    if (c.entry_exists(POLYMORPHISM_FREQUENCY))
+      ssf << fixed << from_string<double>(c[POLYMORPHISM_FREQUENCY]) * 100 << "%" << endl; // "frequency" column
     ss << td(ALIGN_RIGHT, ssf.str());
     
     ssf.str("");
@@ -1217,17 +1175,6 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
 
     if (show_details) 
     {
-      // Show true frequency if not polymorphism
-      if (!is_polymorphism && c.entry_exists(POLYMORPHISM_FREQUENCY)) {
-        ssf.clear();
-        ssf.str("");
-        ssf.width(4);
-        ssf.precision(1);
-        ssf << fixed << from_string<double>(c[POLYMORPHISM_FREQUENCY]) * 100 << "%" << endl; // "frequency" column
-        ss << tr("class=\"information_table_row\"",
-             td("colspan=\"" + to_string(total_cols) + "\"",
-                  "Raw variant frequency: " + ssf.str()));
-      }
       
       // Show information about the strands supporting the change
       ss << tr("class=\"information_table_row\"", 
@@ -1410,7 +1357,7 @@ string string_to_fixed_digit_string(string s, uint32_t precision = 2)
   return ss.str();
 }
   
-string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_details, const string& title, const string& relative_link)
+string html_new_junction_table_string(diff_entry_list_t& list_ref, const Settings& settings, bool show_details, const string& title, const string& relative_link)
 {
   if (list_ref.size()==0) return "";
 
@@ -1500,9 +1447,20 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, bool show_det
             
       //no longer print overlap
       //ss << td("rowspan=\"2\" align=\"center\"", c["overlap"]) << endl;
+       
+       // Show unique read sequence now!
+      string unique_read_sequence_string;
+      if (c.entry_exists("unique_read_sequence")) {
+        unique_read_sequence_string = "<br>";
+        if (show_details || (c["unique_read_sequence"].size() <= settings.output_max_nucleotides_to_show_in_tables)) {
+          unique_read_sequence_string += "+" + c["unique_read_sequence"];
+        } else {
+          unique_read_sequence_string += "+" + to_string<uint32_t>(c["unique_read_sequence"].size()) + " bp";
+        }
+      }
       ss << td("rowspan=\"2\" align=\"center\"", 
                c["new_junction_read_count"] + " (" + string_to_fixed_digit_string(c["new_junction_coverage"], 3) + ")" +
-               (c.entry_exists("unique_read_sequence") ? "<br>+" + c["unique_read_sequence"] : "")  ) << endl;
+               unique_read_sequence_string  ) << endl;
       ss << td("rowspan=\"2\" align=\"center\"", 
                c["pos_hash_score"] + "/" +  c["max_pos_hash_score"]) << endl;
       ss << td("rowspan=\"2\" align=\"center\"", 
@@ -1681,25 +1639,21 @@ string decode_reject_reason(const string& reject)
   {
     return "Coverage evenness skew score above cutoff.";
   }
-  else if (reject == "SCORE")
+  else if (reject == "CONSENSUS_SCORE_CUTOFF")
   {
-    return "Mutation score below prediction threshold.";
+    return "Variant score below prediction cutoff.";
   }
   else if (reject == "FREQUENCY_CUTOFF")
   {
     return "Frequency below cutoff threshold.";
   }
-  else if (reject == "KS_QUALITY_P_VALUE")
+  else if (reject == "KS_BASE_QUALITY")
   {
     return "Biased base quality scores supporting prediction .";
   }
-  else if (reject == "FISHER_STRAND_P_VALUE")
+  else if (reject == "FISHER_STRAND")
   {
     return "Biased read strand distribution supporting prediction.";
-  }
-  else if (reject == "BINOMIAL_STRAND_P_VALUE")
-  {
-    return "Variant read strands are highly biased.";
   }
   else if (reject == "STRAND_COVERAGE")
   {
@@ -2039,7 +1993,7 @@ void Html_Mutation_Table_String::Item_Lines()
         else if (mut.entry_exists("repeat_length")) {
           cell_mutation = "(" + mut["repeat_length"] + " bp)" + "<sub>" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"] + "</sub>";
         }
-        else if (options.detailed || (mut["new_seq"].size() <= 8)) {
+        else if (options.detailed || (mut["new_seq"].size() <= settings.output_max_nucleotides_to_show_in_tables)) {
           cell_mutation = "+" + mut[NEW_SEQ];
         } else {
           cell_mutation = "+" + s(mut[NEW_SEQ].size()) + " bp";

@@ -22,7 +22,9 @@ It is now developed in the Barrick lab in the Department of Molecular Bioscience
 Testers
 ------------
 
-We thank Zachary Blount, Jim Bull, Tim Cooper, Grace Ellis, Tara Gianoulis, Aleeza Gerstein, Dan Goodman, J.P. Jerome, Megan Larsen, Ranno Nahku, Hanspieter Niederstrasser, Elizabeth Perry, Gerda Saxer, William Trimble, Sébastien Wielgoss, participants in Titus Brown's 2010 summer course in next-gen sequencing at the Kellogg Biological Station, and many others for providing bug reports, feedback on |breseq| usage, and datasets for testing!
+We thank Zachary Blount, Jim Bull, Tim Cooper, Grace Ellis, Tara Gianoulis, Adam Feist, Aleeza Gerstein, Dan Goodman, J.P. Jerome, Megan Larsen, Maria Elena Martino, Ranno Nahku, Hanspieter Niederstrasser, Elizabeth Perry, Patrick Phaneuf, Alexandre Santos Almeido, Gerda Saxer, Daniel Sobral, Saad Syed, William Trimble, Sébastien Wielgoss, participants in Titus Brown's 2010 summer course in next-gen sequencing at the Kellogg Biological Station, participants in the EMBO Practical Course on Measuring intra-species diversity using high-throughput sequencing, and many many others for providing bug reports, feedback on |breseq| usage, and datasets for testing!
+
+We thank Brian Wade and Matthew Paff for providing Cygwin installation instructions.
 
 Funding
 -----------

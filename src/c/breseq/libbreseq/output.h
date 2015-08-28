@@ -221,6 +221,7 @@ string html_read_alignment_table_string(
                                         );
 
 string html_new_junction_table_string(diff_entry_list_t& jc,
+                                      const Settings& settings,
                                       bool show_details,
                                       const string& title = "New junction evidence",
                                       const string& relative_link = ""

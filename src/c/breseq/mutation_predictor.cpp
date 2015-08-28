@@ -534,6 +534,10 @@ namespace breseq {
 		{
       bool jc1_erased = false;
 			cDiffEntry& j1 = **jc1_it;
+     
+      if (verbose) {
+        cout << j1.as_string() << endl;
+      }
       
 			// Compile a list of the next possibilities within a certain length of bases
       vector<diff_entry_ptr_t> j2_list;
@@ -975,86 +979,92 @@ namespace breseq {
         // @JEB 08-06-13 
         // Reassign read counts with required overlap to avoid counting reads that go into the
         // target site duplication from counting against the IS element (giving a non-100% value).
-        
-        if (j1.entry_exists(SIDE_1_READ_COUNT) && j1.entry_exists(SIDE_2_READ_COUNT) & j1.entry_exists(NEW_JUNCTION_READ_COUNT)
-         && j2.entry_exists(SIDE_1_READ_COUNT) && j2.entry_exists(SIDE_2_READ_COUNT) & j2.entry_exists(NEW_JUNCTION_READ_COUNT)) {
 
         
-          int32_t require_overlap = n(mut["duplication_size"]);
+        int32_t require_overlap = n(mut["duplication_size"]);
+        
+        if (verbose) cerr << "Before 1:" << endl << j1 << endl;
+        assign_one_junction_read_counts(settings, summary, j1, require_overlap);
+        j1["read_count_offset"] = mut["duplication_size"];
+        if (verbose) cerr << "After 1:" << endl << j1 << endl;
+        
+        if (verbose) cerr << "Before 2:" << endl << j2 << endl;
+        assign_one_junction_read_counts(settings, summary, j2, require_overlap);
+        j2["read_count_offset"] = mut["duplication_size"];
+        if (verbose) cerr << "After 2:" << endl << j2 << endl;
+        
+        if (!settings.polymorphism_prediction) { // consensus mode
+          // at this point the prediction type (CONSENSUS/POLYMORPHISM) should be honored
+          // in determining whether to include this mutation.
+          if ( (j1[PREDICTION]!="consensus") || (j1[PREDICTION]!="consensus") ) {
+            
+            // heartbreakingly, we have to undo the changes that we just did
+            assign_one_junction_read_counts(settings, summary, j1);
+            j1.erase("read_count_offset");
+            assign_one_junction_read_counts(settings, summary, j2);
+            j2.erase("read_count_offset");
+            continue;
+          }
           
-          
-          if (verbose) cerr << "Before 1:" << endl << j1 << endl;
-          assign_one_junction_read_counts(settings, summary, j1, require_overlap);
-          j1["read_count_offset"] = mut["duplication_size"];
-          if (verbose) cerr << "After 1:" << endl << j1 << endl;
-          
-          if (verbose) cerr << "Before 2:" << endl << j2 << endl;
-          assign_one_junction_read_counts(settings, summary, j2, require_overlap);
-          j2["read_count_offset"] = mut["duplication_size"];
-          if (verbose) cerr << "After 2:" << endl << j2 << endl;
-          
+        } else { // polymorphism mode
           // @JEB 01-04-13
           // Calculate a frequency for the mobile element insertion from the reads supporting the new and old junctions on each side
           
-          if (settings.polymorphism_prediction) {
-            
-            
-            double a1 = from_string<uint32_t>(j1[SIDE_1_READ_COUNT]);
-            double b1 = from_string<uint32_t>(j1[SIDE_2_READ_COUNT]);
-            double c1 = from_string<uint32_t>(j1[NEW_JUNCTION_READ_COUNT]);
-            double d1 = 2.0;
-            
-            if (j1[SIDE_1_READ_COUNT] == "NA") {
-              a1 = 0; //"NA" in read count sets value to 1 not 0
-              d1--;
-            }
-            if (j1[SIDE_2_READ_COUNT] == "NA") {
-              b1 = 0; //"NA" in read count sets value to 1 not 0
-              d1--;
-            }
-            
-            double a2 = from_string<uint32_t>(j2[SIDE_1_READ_COUNT]);
-            double b2 = from_string<uint32_t>(j2[SIDE_2_READ_COUNT]);
-            double c2 = from_string<uint32_t>(j2[NEW_JUNCTION_READ_COUNT]);
-            double d2 = 2.0;
-            
-            if (j2[SIDE_1_READ_COUNT] == "NA") {
-              a2 = 0; //"NA" in read count sets value to 1 not 0
-              d2--;
-            }
-            if (j2[SIDE_2_READ_COUNT] == "NA") {
-              b2 = 0; //"NA" in read count sets value to 1 not 0
-              d2--;
-            }
-            
-            double frequency;
-            if (d1 && d2) {
-              frequency = (c1 + c2) / (c1 + (a1 + b1)/d1 + c2 + (a2 + b2)/d2);
-              mut[FREQUENCY] = formatted_double(frequency, settings.polymorphism_precision_places, true).to_string();
-            } else if (d1) {
-              frequency = (c1) / (c1 + (a1 + b1)/d1);
-              mut[FREQUENCY] = formatted_double(frequency, settings.polymorphism_precision_places, true).to_string();
-            } else if (d2) {
-              frequency = (c2) / (c2 + (a2 + b2)/d2);
-              mut[FREQUENCY] = formatted_double(frequency, settings.polymorphism_precision_places, true).to_string();
-            } else {
-              // Can't calculate a frequency if no sides of the junction fall in unique sequence
-              mut[FREQUENCY] = "NA";          
-            }
-            
-            // don't record mutations below the cutoff frequency
-            ASSERT(mut.entry_exists(FREQUENCY), "FREQUENCY field does not exist for mutatation:\n" + mut.as_string());
-            
-            if (mut[FREQUENCY] != "NA") {
-              if (frequency < settings.polymorphism_frequency_cutoff) {
-                mut.add_reject_reason("FREQUENCY_CUTOFF");
-                // @JEB 08-08-13 we might want to keep the mutation as rejected. This discards completely.
-                break;
-              }
-              if (1-frequency < settings.polymorphism_frequency_cutoff) {
-                mut[FREQUENCY] = "1";
-              }
-            }
+          double a1 = from_string<uint32_t>(j1[SIDE_1_READ_COUNT]);
+          double b1 = from_string<uint32_t>(j1[SIDE_2_READ_COUNT]);
+          double c1 = from_string<uint32_t>(j1[NEW_JUNCTION_READ_COUNT]);
+          double d1 = 2.0;
+          
+          if (j1[SIDE_1_READ_COUNT] == "NA") {
+            a1 = 0; //"NA" in read count sets value to 1 not 0
+            d1--;
+          }
+          if (j1[SIDE_2_READ_COUNT] == "NA") {
+            b1 = 0; //"NA" in read count sets value to 1 not 0
+            d1--;
+          }
+          
+          double a2 = from_string<uint32_t>(j2[SIDE_1_READ_COUNT]);
+          double b2 = from_string<uint32_t>(j2[SIDE_2_READ_COUNT]);
+          double c2 = from_string<uint32_t>(j2[NEW_JUNCTION_READ_COUNT]);
+          double d2 = 2.0;
+          
+          if (j2[SIDE_1_READ_COUNT] == "NA") {
+            a2 = 0; //"NA" in read count sets value to 1 not 0
+            d2--;
+          }
+          if (j2[SIDE_2_READ_COUNT] == "NA") {
+            b2 = 0; //"NA" in read count sets value to 1 not 0
+            d2--;
+          }
+          
+          double frequency;
+          if (d1 && d2) {
+            frequency = (c1 + c2) / (c1 + (a1 + b1)/d1 + c2 + (a2 + b2)/d2);
+            mut[FREQUENCY] = formatted_double(frequency, settings.polymorphism_precision_places, true).to_string();
+          } else if (d1) {
+            frequency = (c1) / (c1 + (a1 + b1)/d1);
+            mut[FREQUENCY] = formatted_double(frequency, settings.polymorphism_precision_places, true).to_string();
+          } else if (d2) {
+            frequency = (c2) / (c2 + (a2 + b2)/d2);
+            mut[FREQUENCY] = formatted_double(frequency, settings.polymorphism_precision_places, true).to_string();
+          } else {
+            // Can't calculate a frequency if no sides of the junction fall in unique sequence
+            mut[FREQUENCY] = "NA";          
+          }
+          
+          if (mut[FREQUENCY] == "NA") {
+            //Don't predict mutations that have no frequency
+            continue;
+          }
+          
+          // Determine consensus vs. polymorphism
+          if (frequency < 1.0 - settings.consensus_frequency_cutoff) {
+            mut[FREQUENCY] = "1";
+          } else if ((frequency >= 1.0 - settings.polymorphism_frequency_cutoff) || (frequency < settings.polymorphism_frequency_cutoff)) {
+            mut.add_reject_reason("FREQUENCY_CUTOFF");
+            // @JEB 08-08-13 we might want to keep the mutation as rejected. This discards completely.
+            continue;
           }
         }
         
@@ -1767,10 +1777,6 @@ namespace breseq {
     vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
 		diff_entry_list_t jc = gd.list(jc_types);
     jc.remove_if(cDiffEntry::rejected_and_not_user_defined());
-   
-    // Do not use mixed junctions
-    // -- needs to be relaxed in the future for predicting amplifications!
-    jc.remove_if(cDiffEntry::field_equals(PREDICTION, "mixed"));
     
     // Do not use rejected missing coverage evidence
     vector<gd_entry_type> mc_types = make_vector<gd_entry_type>(MC);
@@ -1792,6 +1798,14 @@ namespace breseq {
 		// evidence JC => INS, SUB, DEL mutations
     ///
     
+    // Do not use polymorphic junctions here in consensus mode
+    // -- needs to be relaxed in the future for predicting amplifications!
+    // IMPORTANT: they are used above because other evidence implies consensus
+    // or predicting the mutation can re-adjust frequencies
+    
+    if (!settings.polymorphism_prediction) {
+      jc.remove_if(cDiffEntry::field_equals(PREDICTION, "polymorphism"));
+    }
     predictJCtoINSorSUBorDEL(settings, summary, gd, jc, mc);
     
 		///

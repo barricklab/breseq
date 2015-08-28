@@ -200,16 +200,15 @@ namespace breseq
     ;
     
     options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("Read Alignment and Mutation Calling Options", ADVANCED_OPTION);
+    options.addUsage("Read Alignment Options", ADVANCED_OPTION);
     options
-    ("mutation-score-cutoff", "Log10 E-value cutoff for consensus base substitutions and small indels", 10, ADVANCED_OPTION)
     ("base-quality-cutoff,b", "Ignore bases with quality scores lower than this value", 3, ADVANCED_OPTION)
     ("quality-score-trim", "Trim the ends of reads past any base with a quality score below --base-quality-score-cutoff.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("require-match-length", "Only consider alignments that cover this many bases of a read", 0, ADVANCED_OPTION)
     ("require-match-fraction", "Only consider alignments that cover this fraction of a read", 0.9, ADVANCED_OPTION)
     ("deletion-coverage-propagation-cutoff","Value for coverage above which deletions are cutoff. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
     ("deletion-coverage-seed-cutoff","Value for coverage below which deletions are seeded", 0, ADVANCED_OPTION)
-    ("minimum-coverage-each-strand", "Only predict consensus base substitutions and small indels when at least this many reads on each strand support the mutation.", 1, ADVANCED_OPTION)
+
     ;
     
     options.addUsage("", ADVANCED_OPTION);
@@ -220,21 +219,28 @@ namespace breseq
     ("junction-minimum-candidates", "Test at least this many of the top-scoring junction candidates, regardless of their length", 100, ADVANCED_OPTION)
     ("junction-maximum-candidates", "Test no more than this many of the top-scoring junction candidates (0 = DO NOT LIMIT)", 5000, ADVANCED_OPTION)
     ("junction-candidate-length-factor", "Accept top-scoring junction candidates to test until their cumulative length is this factor times the total reference sequence length (0 = DO NOT LIMIT)", 0.1, ADVANCED_OPTION)
-
     ("junction-score-cutoff", "Maximum negative log10 probability of uneven coverage across a junction breakpoint to accept (0 = OFF)", 3.0, ADVANCED_OPTION)
     ("junction-minimum-pos-hash-score", "Minimum number of distinct spanning read start positions required to accept a junction (DEFAULT = consensus mode, 3; polymorphism mode, 3)", "", ADVANCED_OPTION)
     ("junction-minimum-side-match", "Minimum number of bases a read must extend past any overlap or read-only sequence at the breakpoint of a junction on each side to count as support for the junction (DEFAULT = consensus mode, 1; polymorphism mode, 6)", "", ADVANCED_OPTION)
     ;
-
-    options.addUsage("", ADVANCED_OPTION);    
-    options.addUsage("Polymorphism (Mixed Population) Options", ADVANCED_OPTION);
+    
+    options.addUsage("", ADVANCED_OPTION);
+    options.addUsage("Consensus Mutation Prediction Options", ADVANCED_OPTION);
     options
-    ("polymorphism-prediction,p", "Predict polymorphic (mixed) mutations", TAKES_NO_ARGUMENT)
-    ("polymorphism-frequency-cutoff", "Only predict polymorphisms where both allele frequencies are greater than this value (DEFAULT = consensus mode, 0.1; polymorphism mode, 0.0)", "", ADVANCED_OPTION)
+    ("consensus-score-cutoff", "Log10 E-value cutoff for consensus base substitutions and small indels", "", ADVANCED_OPTION)
+    ("consensus-frequency-cutoff", "Only predict consensus mutations when the variant allele frequency is above this value. (DEFAULT = consensus mode, 0.8; polymorphism mode, 1-polymorphism-frequency-cutoff)", "", ADVANCED_OPTION)
+    ("consensus-minimum-coverage-each-strand", "Only predict consensus mutations when at least this many reads on each strand support the mutation. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", ADVANCED_OPTION)
+    ;
+
+    options.addUsage("", ADVANCED_OPTION);
+    options.addUsage("Polymorphic (Mixed) Mutation Prediction Options", ADVANCED_OPTION);
+    options
+    ("polymorphism-prediction,p", "The sample is not clonal. Predict polymorphic (mixed) mutations. Setting this flag changes from CONSENSUS MODE to POLYMORPHISM MODE", TAKES_NO_ARGUMENT)
     ("polymorphism-score-cutoff", "Log10 E-value cutoff for test of polymorphism vs no polymorphism (DEFAULT = consensus mode, 10; polymorphism mode, 2)", "", ADVANCED_OPTION)
-    ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms for which at least this many reads on each strand support each alternative allele. Set to --minimum-coverage-each-strand if that value is greater than what is set here. (DEFAULT = consensus mode, 2; polymorphism mode, 2)", "", ADVANCED_OPTION)
-    ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias (0 = OFF) (DEFAULT = consensus mode, 0.05; polymorphism mode, 0.001)", "", ADVANCED_OPTION)
-    ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("polymorphism-frequency-cutoff", "Only predict polymorphisms when both allele frequencies are greater than this value. (DEFAULT = consensus mode, 0.1; polymorphism mode, 0.0)", "", ADVANCED_OPTION)
+    ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms for which at least this many reads on each strand support each alternative allele. (DEFAULT = consensus mode, 0; polymorphism mode, 2)", "", ADVANCED_OPTION)
+    ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 0.001)", "", ADVANCED_OPTION)
+    ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms from read alignment evidence", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("polymorphism-reject-indel-homopolymer-length", "Reject insertion/deletion polymorphisms which could result from expansion/contraction of homopolymer repeats with this length or greater in the reference genome (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 3) ", "", ADVANCED_OPTION)
     ("polymorphism-reject-surrounding-homopolymer-length", "Do not predict polymorphic base substitutions that create a homopolymer when they have this many adjacent bases of that homopolymer on each side. For example, a mutation TTATT -> TTTTT would be rejected with a setting of 2. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 2)", "", ADVANCED_OPTION)
 
@@ -391,11 +397,9 @@ namespace breseq
     if (options.count("quality-score-trim")) this->quality_score_trim = this->base_quality_cutoff;
 
     this->deletion_coverage_propagation_cutoff = from_string<double>(options["deletion-coverage-propagation-cutoff"]);
-    ASSERT(this->deletion_coverage_propagation_cutoff >= 0, "Argument --deletion-coverage-propagation-cutoff must be > 0")
+    ASSERT(this->deletion_coverage_propagation_cutoff >= 0, "Argument --deletion-coverage-propagation-cutoff must be >= 0")
     this->deletion_coverage_seed_cutoff = from_string<double>(options["deletion-coverage-seed-cutoff"]);
-    ASSERT(this->deletion_coverage_propagation_cutoff >= 0, "Argument --deletion-coverage-seed-cutoff must be > 0")
-		this->mutation_log10_e_value_cutoff = from_string<double>(options["mutation-score-cutoff"]);
-    this->minimum_new_coverage_each_strand = from_string<uint32_t>(options["minimum-coverage-each-strand"]);
+    ASSERT(this->deletion_coverage_propagation_cutoff >= 0, "Argument --deletion-coverage-seed-cutoff must be >= 0")
     
     //! Settings: Junction Prediction
     this->no_junction_prediction = options.count("no-junction-prediction");
@@ -420,14 +424,18 @@ namespace breseq
     this->polymorphism_prediction = options.count("polymorphism-prediction");
     if (this->polymorphism_prediction) {
       
-      // different default values
+      this->mutation_log10_e_value_cutoff = 10;
+      this->consensus_frequency_cutoff = 1.0;
+      this->consensus_minimum_new_coverage_each_strand = 0;
+      
+      this->polymorphism_log10_e_value_cutoff = 2;
       this->polymorphism_frequency_cutoff = 0; // cut off if < X or > 1-X
+      this->polymorphism_minimum_new_coverage_each_strand = 2;
+      
       this->mixed_base_prediction = false;
       this->polymorphism_reject_indel_homopolymer_length = 3; // zero is OFF!
       this->polymorphism_reject_surrounding_homopolymer_length = 2; // zero is OFF!
-      this->polymorphism_log10_e_value_cutoff = 2;
       this->polymorphism_bias_p_value_cutoff = 0.001;
-      this->polymorphism_minimum_new_coverage_each_strand = 2;
       this->no_indel_polymorphisms = false;
       this->polymorphism_precision_decimal = 0.000001;
       this->polymorphism_precision_places = 8;
@@ -442,12 +450,18 @@ namespace breseq
       // Not calculated for mixed base mode
       //ASSERT(!options.count("polymorphism-bias-cutoff"), "Option --polymorphism-bias-cutoff requires --polymorphism-prediction.")
 
+      this->mutation_log10_e_value_cutoff = 10;
+      this->consensus_frequency_cutoff = 0.8;
+      this->consensus_minimum_new_coverage_each_strand = 0;
+      
+      this->polymorphism_log10_e_value_cutoff = 10;
       this->polymorphism_frequency_cutoff = 0.1;
+      this->polymorphism_minimum_new_coverage_each_strand = 0;
+
       this->polymorphism_reject_indel_homopolymer_length = 0; // zero is OFF!
       this->polymorphism_reject_surrounding_homopolymer_length = 0; // zero is OFF!
-      this->polymorphism_log10_e_value_cutoff = 10;
-      this->polymorphism_bias_p_value_cutoff = 0.05;
-      this->polymorphism_minimum_new_coverage_each_strand = 2;
+      // this->polymorphism_bias_p_value_cutoff = 0.05; //used pre 08-23-2015
+      this->polymorphism_bias_p_value_cutoff = 0;
       this->no_indel_polymorphisms = false;
       this->polymorphism_precision_decimal = 0.0; // 0.001; not actually used
       this->polymorphism_precision_places = 3;
@@ -456,9 +470,14 @@ namespace breseq
       this->junction_minimum_side_match = 1;
     }
     
-
+    // override the default settings
+    if (options.count("consensus-score-cutoff"))
+      this->mutation_log10_e_value_cutoff = from_string<double>(options["consensus-score-cutoff"]);
+    if (options.count("consensus-frequency-cutoff"))
+      this->consensus_frequency_cutoff = from_string<double>(options["consensus-frequency-cutoff"]);
+    if (options.count("consensus-minimum-coverage-each-strand"))
+      this->consensus_minimum_new_coverage_each_strand = from_string<uint32_t>(options["consensus-minimum-coverage-each-strand"]);
     
-    // override the default settings 
     if (options.count("polymorphism-frequency-cutoff"))
       this->polymorphism_frequency_cutoff = from_string<double>(options["polymorphism-frequency-cutoff"]);
     if (options.count("polymorphism-no-indels"))
@@ -474,9 +493,12 @@ namespace breseq
     if (options.count("polymorphism-minimum-coverage-each-strand"))
       this->polymorphism_minimum_new_coverage_each_strand = from_string<uint32_t>(options["polymorphism-minimum-coverage-each-strand"]);
     
-    // This value will always be set to at least the consensus minimum
-    this->polymorphism_minimum_new_coverage_each_strand = max(this->polymorphism_minimum_new_coverage_each_strand, this->minimum_new_coverage_each_strand);
+    // Do some final checks to enforce dependent defaults
+    if (this->polymorphism_prediction && !options.count("consensus-frequency-cutoff")) {
+      this->consensus_frequency_cutoff = 1.0 - this->polymorphism_frequency_cutoff;
+    }
 
+    // Junction options
     if (options.count("junction-minimum-pos-hash-score"))
       this->minimum_alignment_resolution_pos_hash_score = from_string<uint32_t>(options["junction-minimum-pos-hash-score"]);
     if (options.count("junction-minimum-side-match"))
@@ -596,8 +618,8 @@ namespace breseq
     this->maximum_read_mismatches = -1;
 
     this->bowtie2_maximum_alignments_to_consider_per_read = 2000;
-    //this->bowtie2_score_parameters = "--ma 1 --mp 3 --np 0 --rdg 2,3 --rfg 2,3 --ignore-quals";
-    this->bowtie2_score_parameters = "--ma 1 --mp 3 --np 0 --rdg 2,3 --rfg 2,3";
+    this->bowtie2_score_parameters = "--ma 1 --mp 3 --np 0 --rdg 2,3 --rfg 2,3 --ignore-quals";
+    //this->bowtie2_score_parameters = "--ma 1 --mp 3 --np 0 --rdg 2,3 --rfg 2,3";
     
     this->bowtie2_score_parameters += (bowtie2_maximum_alignments_to_consider_per_read > 0)
     ? " -k " + to_string(this->bowtie2_maximum_alignments_to_consider_per_read) : " -a";
@@ -605,8 +627,11 @@ namespace breseq
     this->bowtie2_min_score_stringent = "-i S,1,0.25 --score-min L,0,0.9 "; // "-L 22 -i S,1,0.25 --score-min L,0,0.9 ";
     
     // Note: this leaves off -L, since it is set based on read length
-    this->bowtie2_min_score_relaxed  = "-i S,1,0.25 --score-min L,6,0.2 "; // "-L 9 -i C,1,0 --score-min L,6,0.2 ";
+    this->bowtie2_min_score_relaxed  = "-i S,1,0.25 --score-min L,6,0.2"; // "-L 9 -i C,1,0 --score-min L,6,0.2 ";
 
+    this->bowtie2_min_score_junction  = "-i S,1,0.25 --score-min L,0,0.65"; // "-L 9 -i C,1,0 --score-min L,6,0.2 ";
+
+    
     this->num_processors = 1;
     
     //! Settings: Candidate Junction Prediction
@@ -656,8 +681,8 @@ namespace breseq
     //! Settings: Output
     this->max_displayed_reads = 100;
     this->alignment_mask_ref_matches = false;
-    this->max_rejected_read_alignment_evidence_to_show = 20;
-		this->max_rejected_polymorphisms_to_show = 20;
+    this->output_max_nucleotides_to_show_in_tables = 20;
+		this->max_rejected_read_alignment_evidence_to_show = 20;
 		this->max_rejected_junction_evidence_to_show = 10;
 		this->hide_circular_genome_junctions = true;
     

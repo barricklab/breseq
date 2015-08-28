@@ -651,11 +651,12 @@ void tam_file::write_alignments(
                                 bool shift_gaps
                                 )
 {
-  (void)shift_gaps;
+  (void) ref_seq_info_ptr;
+  (void) shift_gaps;
   
   uint32_t i=-1;
-  for (alignment_list::const_iterator it=alignments.begin(); it != alignments.end(); it++)
-	{
+  for (alignment_list::const_iterator it=alignments.begin(); it != alignments.end(); it++) {
+    
     i++;
 		bam_alignment& a = *(it->get());
 
@@ -663,8 +664,7 @@ void tam_file::write_alignments(
     
 		aux_tags_ss << "AS:i:" << a.aux_get_i("AS") << "\t" << "X1:i:" << alignments.size() << "\t" << "X2:i:" << fastq_file_index;
 
-		if ((trims != NULL) && (trims->size() > i))
-		{
+		if ((trims != NULL) && (trims->size() > i)) {
 			Trims trim = (*trims)[i];
 			aux_tags_ss << "\t" << "XL:i:" << trim.L << "\t" << "XR:i:" << trim.R;
 		}
@@ -681,17 +681,12 @@ void tam_file::write_alignments(
     
 		string cigar_string;
     
-    // @JEB experimental!!
     // Fix the cigar string by shifting gaps if asked for!
-    if (0)
-    //if (ref_seq_info_ptr && shift_gaps)
-    {
-      cigar_string =  shifted_cigar_string(a, *ref_seq_info_ptr);
-    }
-    else
-    {
-      cigar_string = a.cigar_string();
-    }
+    //if (ref_seq_info_ptr && shift_gaps) {
+    //  cigar_string =  shifted_cigar_string(a, *ref_seq_info_ptr);
+    //} else {
+    cigar_string = a.cigar_string();
+    //}
     
 
 		vector<string> ll;
@@ -704,14 +699,11 @@ void tam_file::write_alignments(
 		ll.push_back(cigar_string);
 
 		//part of a pair?
-		if ((a.flag() & BAM_FPROPER_PAIR) == 0)
-		{
+		if ((a.flag() & BAM_FPROPER_PAIR) == 0) {
 			ll.push_back("*");
 			ll.push_back("0");
 			ll.push_back("0");
-		}
-		else
-		{
+		} else {
 			ll.push_back("=");
 			ll.push_back(to_string<int32_t>(a.mate_start_1()));
 			ll.push_back(to_string<int32_t>(a.insert_size()));

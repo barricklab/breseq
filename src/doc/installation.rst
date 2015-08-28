@@ -37,6 +37,8 @@ You may also run this command to test the |breseq| install:
 .. NOTE::
    If you relocate the executable files in the ``bin`` directory, then you must also relocate the files in the ``share`` directory to the same location relative to the binaries (e.g., ``bin/../share/breseq``).
 
+.. _installing-source-code-package:
+
 Method 2. Source code package
 ++++++++++++++++++++++++++++++
 
@@ -131,6 +133,31 @@ Method 3. Development source code
 If you are working with a development version of |breseq| cloned from the `GitHub code repository <https://github.com/barricklab/breseq>`_, then you will need to run some additional commands and have other tools installed on your system in order to get it to compile or work with the XCode project.
 
 These requirements and commands are detailed in the DEVELOPER text file located in the main directory of the source code.
+
+Installing on Cygwin (Windows)
++++++++++++++++++++++++++++++++++
+
+It is possible to compile and install |breseq| and all of its dependencies in the Cygwin environment on a Windows computer. We do not currently provide a binary installer for Cygwin and are unable to help troubleshoot these installs, but here is what has worked for other users.
+
+Before you start, use the Cygwin package manager to install these packages (which provide libraries needed to compile |breseq| and |Bowtie2|). When prompted whether to install further dependencies of a package, answer yes.
+
+.. code-block:: bash
+
+   R                    libncurses-devel
+   gcc-core             zlib-devel
+   gcc-g++              byacc
+   gcc-objc++           bool
+   python               pkg-config
+   m4                   perl-File-Copy-Recursive
+   make                 perl-Config-AutoConf
+   automake             perl-ExtUtils-PkgConfig
+   autoconf             mingw-pthreads
+   diffutils            mingw64-x86_64-pthreads
+   libiconv             mingw64-x86_64-winpthreads
+
+Now, compile and install |Bowtie2| from source code and use the :ref:`installing-source-code-package` instructions to install |breseq|.
+
+If the configure or make steps in either install fail, try to diagnose what dependencies are missing from the warnings and install further packages as necessary.
 
 Troubleshooting installation
 +++++++++++++++++++++++++++++++++

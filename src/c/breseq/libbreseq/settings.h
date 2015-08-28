@@ -250,6 +250,7 @@ namespace breseq
     string bowtie2_score_parameters;
     string bowtie2_min_score_stringent;
     string bowtie2_min_score_relaxed;
+    string bowtie2_min_score_junction;
     int32_t num_processors;       // Defaults = 2
     
     //! reads are never included in the BAM alignment file if they fail these guards
@@ -317,7 +318,6 @@ namespace breseq
     //! ignore bases below this cutoff for RA evidence (still counted for deletions?)
     uint32_t base_quality_cutoff;                         // Default 3    COMMAND-LINE OPTION
     uint32_t quality_score_trim;                          // Default OFF  COMMAND-LINE OPTION
-    uint32_t minimum_new_coverage_each_strand;             // Default = 0
 
     //! treated as read numbers if integers >= 1.0 and percentages of average coverage if > 0.0 and < 1.0
     double deletion_coverage_propagation_cutoff;          // Default = calculated COMMAND-LINE OPTION
@@ -335,6 +335,9 @@ namespace breseq
     bool print_mutation_identification_per_position_file;
 
     double mutation_log10_e_value_cutoff;                         // Default = 10
+    uint32_t consensus_minimum_new_coverage_each_strand;            // Default = 0
+    double consensus_frequency_cutoff;                            // Default = 0.8
+    
     double polymorphism_log10_e_value_cutoff;                     // Default = mutation_log10_e_value_cutoff = 10
 		double polymorphism_bias_p_value_cutoff;                      // Default = 0.05 for mixed base | 0 (OFF) for polymorphism
 		double polymorphism_frequency_cutoff;                         // Default = 0.1 for mixed base | 0.0 for polymorphism
@@ -359,8 +362,8 @@ namespace breseq
           
     //! Settings: Output
     uint32_t max_displayed_reads;                           // Default = 100   COMMAND-LINE OPTION
+    uint32_t output_max_nucleotides_to_show_in_tables;      // Default = 8
     uint32_t max_rejected_read_alignment_evidence_to_show;  // Defaule = 20
-    uint32_t max_rejected_polymorphisms_to_show;            // Default = 20
 		uint32_t max_rejected_junction_evidence_to_show;        // Default = 10
 		bool hide_circular_genome_junctions;                    // Default = true
     //! special output for Blount paper - not implemented in C++!

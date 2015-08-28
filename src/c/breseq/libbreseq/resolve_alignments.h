@@ -71,6 +71,8 @@ namespace breseq {
     uint32_t total_non_overlap_reads;
     uint32_t pos_hash_score;
     uint32_t max_pos_hash_score;
+    uint32_t unique_matches_size;
+    uint32_t repeat_matches_size;
     bool has_reads_with_both_different_start_and_end;
     bool redundant_1;
     bool redundant_2;
@@ -81,7 +83,17 @@ namespace breseq {
     
     bool operator <(const JunctionTestInfo& _in) const
     {
-      return (this->pos_hash_score < _in.pos_hash_score);
+      // sort by pos_hash_score, unique_matches_size, repeat_matches_size
+      
+      if (this->pos_hash_score != _in.pos_hash_score) {
+        return (this->pos_hash_score < _in.pos_hash_score);
+      }
+      
+      if (this->unique_matches_size != _in.unique_matches_size) {
+        return (this->unique_matches_size < _in.unique_matches_size);
+      }
+      
+      return (this->repeat_matches_size < _in.repeat_matches_size);
     }
   };
   
@@ -238,6 +250,7 @@ namespace breseq {
                         const Settings& settings,
                         Summary& summary,
                         cReferenceSequences& ref_seq_info,
+                        cReferenceSequences& junction_ref_seq_info,
                         const SequenceTrimsList& trims_list,
                         const string& junction_id,
                         UniqueJunctionMatchMap& unique_junction_match_map,

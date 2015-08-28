@@ -57,7 +57,7 @@ LICENSE AND COPYRIGHT
 #include <functional>
 #include <iterator>
 
-#include <gzstream.h>
+#include "gzstream.h"
 
 // Begin breseq specific --->
 // Library specific headers
@@ -91,7 +91,7 @@ namespace breseq {
       if (message.length() > 0) cerr << message << endl;
       cerr << "FILE: " << file << "   LINE: " << line << endl;
       cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
-      assert(false);
+      exit(0);
     }
   }
   

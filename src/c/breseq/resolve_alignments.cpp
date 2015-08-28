@@ -414,6 +414,7 @@ void resolve_alignments(
                        settings,
                        summary,
                        ref_seq_info,
+                       junction_ref_seq_info,
                        trims_list,
                        test_info.junction_id,
                        unique_junction_match_map,
@@ -432,8 +433,34 @@ void resolve_alignments(
 	// Candidate junctions with unique matches
 	///
 
-	//sort junction ids based on size of vector
+  if (verbose) {
+    cout << ">>>>> BEFORE SORT >>>>>" << endl;
+    for(list<JunctionTestInfo>::iterator it = junction_test_info_list.begin(); it != junction_test_info_list.end(); it++) {
+      JunctionTestInfo& junction_test_info = *it;
+      string key = junction_test_info.junction_id;
+      cout << key << endl;
+      cout << "  Pos hash score: " << junction_test_info.pos_hash_score << endl;
+      cout << "  Unique matches: " << junction_test_info.unique_matches_size << endl;
+      cout << "  Repeat matches: " << junction_test_info.repeat_matches_size << endl;
+    }
+  }
+  
+	//sort junction ids from lowest to highest pos_hash score
   junction_test_info_list.sort();
+  //junction_test_info_list.reverse();
+
+  
+  if (verbose) {
+    cout << ">>>>> AFTER SORT >>>>>" << endl;
+    for(list<JunctionTestInfo>::iterator it = junction_test_info_list.begin(); it != junction_test_info_list.end(); it++) {
+      JunctionTestInfo& junction_test_info = *it;
+      string key = junction_test_info.junction_id;
+      cout << endl << key << endl;
+      cout << "  Pos hash score: " << junction_test_info.pos_hash_score << endl;
+      cout << "  Unique matches: " << junction_test_info.unique_matches_size << endl;
+      cout << "  Repeat matches: " << junction_test_info.repeat_matches_size << endl;
+    }
+  }
   
   PosHashProbabilityTable pos_hash_p_value_calculator(summary);
   
@@ -498,7 +525,8 @@ void resolve_alignments(
     if (verbose) 
     {
       cout << "Testing Junction: " << junction_id << endl;
-      cout <<  (failed ? "FAILED" : "SUCCESS") << endl;
+      cout << "  " << (failed ? "FAILED" : "SUCCESS") << endl;
+      cout << "  Pos hash score: " << junction_test_info.pos_hash_score << endl;
       cout << "  Neg log10 pos hash p-value: " << junction_test_info.neg_log10_pos_hash_p_value
            << " [ " << settings.junction_pos_hash_neg_log10_p_value_cutoff << " ]" << endl;
       cout << "  Number of unique matches: " << unique_junction_match_map[junction_id].size() << endl;
@@ -512,6 +540,7 @@ void resolve_alignments(
                      settings,
                      summary,
                      ref_seq_info,
+                     junction_ref_seq_info,
                      trims_list,
                      junction_test_info.junction_id,
                      unique_junction_match_map,
@@ -1046,10 +1075,11 @@ void score_junction(
 		if (resolved_junction_tam.bam_header->target_name[junction_tid] == junction_id) break;
 	ASSERT(junction_tid < static_cast<uint32_t>(resolved_junction_tam.bam_header->n_targets), "Junction target id out of range.");
   
+  size_t unique_matches_size = (unique_matches) ? unique_matches->size() : 0;
+  size_t repeat_matches_size = (repeat_matches) ? repeat_matches->size() : 0;
+  
 	if (verbose) {
 		cout << "Testing Junction Candidate: " << junction_id << endl;
-    size_t unique_matches_size = (unique_matches) ? unique_matches->size() : 0;
-    size_t repeat_matches_size = (repeat_matches) ? repeat_matches->size() : 0;
 		cout << "Unique Matches: " << unique_matches_size << " Degenerate Matches: " << repeat_matches_size << endl;
 	}
   
@@ -1307,6 +1337,8 @@ void score_junction(
 		total_non_overlap_reads,            //total_non_overlap_reads
     pos_hash_count,                     //pos_hash_score
     max(0,max_pos_hash_score),          //max_pos_hash_score
+    unique_matches_size,                //unique_matches_size
+    repeat_matches_size,                //repeat_matches_size
     has_reads_with_both_different_start_and_end, //2 diff reads have both different start and different end
     redundant[0],
     redundant[1],
@@ -1325,6 +1357,7 @@ void resolve_junction(
                       const Settings& settings,
                       Summary& summary,
                       cReferenceSequences& ref_seq_info,
+                      cReferenceSequences& junction_ref_seq_info,
                       const SequenceTrimsList& trims_list,
                       const string& junction_id,
                       UniqueJunctionMatchMap& unique_junction_match_map,
@@ -1379,7 +1412,7 @@ void resolve_junction(
 			// so that they will not be counted for other junctions
 			if (!failed)
 			{
-        if (verbose) cout << "Before size: " << (unique_matches ? unique_matches->size() : 0) << endl;
+        if (verbose) cout << "Unique matches before size: " << (unique_matches ? unique_matches->size() : 0) << endl;
         
 				// Purge all references to this read from the degenerate match hash
         // so that it cannot be counted for any other junction
@@ -1419,7 +1452,7 @@ void resolve_junction(
         }
 				unique_matches->push_back(repeat_match_ptr);
         
-        if (verbose) cout << "After size: " << (unique_matches ? unique_matches->size() : 0) << endl;
+        if (verbose) cout << "Unique matches after size: " << (unique_matches ? unique_matches->size() : 0) << endl;
         
 			}
       
@@ -1494,7 +1527,7 @@ void resolve_junction(
       }
       
       // REGARDLESS of success: write matches to the candidate junction SAM file
-      resolved_junction_tam.write_alignments(fastq_file_index, item.junction_alignments, NULL, &ref_seq_info, true);
+      resolved_junction_tam.write_alignments(fastq_file_index, item.junction_alignments, NULL, &junction_ref_seq_info, true);
     }
   }
 
@@ -1995,19 +2028,16 @@ void  assign_one_junction_read_counts(
     j[POLYMORPHISM_FREQUENCY] = to_string(new_junction_frequency_value, settings.polymorphism_precision_places, true);
     j[FREQUENCY] = j[POLYMORPHISM_FREQUENCY];
 
-    // Reject any junctions based on frequency criteria if we are in CONSENSUS mode
-    if (!settings.polymorphism_prediction) {
-    
-      if ((new_junction_frequency_value >= settings.polymorphism_frequency_cutoff) && (new_junction_frequency_value <= 1 - settings.polymorphism_frequency_cutoff))
-      {
-        j[PREDICTION] = "mixed";
-      } else {
-        j[PREDICTION] = "consensus";
-        j[FREQUENCY] = "1";
-      }
-    }
-    else {
+    // Determine what kind of prediction we are
+    if (new_junction_frequency_value >= settings.consensus_frequency_cutoff) {
+      j[PREDICTION] = "consensus";
+      j[FREQUENCY] = "1";
+    } else if ((new_junction_frequency_value >= settings.polymorphism_frequency_cutoff) && (new_junction_frequency_value <= 1 - settings.consensus_frequency_cutoff))
+    {
       j[PREDICTION] = "polymorphism";
+    } else {
+      j[PREDICTION] = "polymorphism";
+      j.add_reject_reason("FREQUENCY_CUTOFF");
     }
   }
   

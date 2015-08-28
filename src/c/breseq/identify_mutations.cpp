@@ -75,9 +75,10 @@ void test_RA_evidence(
 {
   
   // Assumes these entries are present initially
+  //  * CONSENSUS_SCORE is present for all entries        = maximumum likelihood frequency for 100% mutated model
   //  * POLYMORPHISM_FREQUENCY is present for all entries = maximumum likelihood frequency for mixed model
   //  * QUALITY is present for all entries                = consensus model
-  //  * POLYMORPHISM_QUALITY may or may not be present    = mixed model
+  //  * POLYMORPHISM_SCORE may or may not be present      = mixed model
   //  * NEW_COV, REF_COV present for all entries
   
   diff_entry_list_t ra_list = gd.list(make_vector<gd_entry_type>(RA));
@@ -99,259 +100,194 @@ void test_RA_evidence(
     }
     
     // Decide if we are a polymorphism (or mixed base) prediction or a consensus prediction
-    ePredictionType frequency_prediction(unknown);
-    ePredictionType score_prediction(unknown);
+    ePredictionType prediction(unknown);
     
     double consensus_score = from_string<double>(ra[CONSENSUS_SCORE]);
     double polymorphism_score = (ra[POLYMORPHISM_SCORE]=="NA") ? numeric_limits<double>::quiet_NaN() : from_string<double>(ra[POLYMORPHISM_SCORE]);
     double frequency = from_string<double>(ra[POLYMORPHISM_FREQUENCY]);
 
     if (consensus_score >= settings.mutation_log10_e_value_cutoff) {
-      score_prediction = consensus;
+      prediction = consensus;
     } else if (polymorphism_score >= settings.polymorphism_log10_e_value_cutoff) {
-      score_prediction = polymorphism;
+      prediction = polymorphism;
     }
     
-    // Otherwise, we assign depending on whether we are in consensus or
-    // polymorphism mode into a marginal category
+    // Drop down to a polymorphism if we don't pass consensus frequency criterion
+    if ((prediction == consensus) && (frequency < settings.consensus_frequency_cutoff - settings.polymorphism_precision_decimal)) {
+      prediction = polymorphism;
+    }
     
-    ASSERT(settings.mixed_base_prediction || settings.polymorphism_prediction, "");
-  
-    
-    if (score_prediction == unknown) {
-      ra.add_reject_reason("SCORE");
-
-      if (settings.mixed_base_prediction) {
-        if (consensus_score >= 0) {
-          score_prediction = consensus;
-        } else {
-          score_prediction = polymorphism;
-        }
-      } else {
-        if (polymorphism_score >= 0) {
-          score_prediction = consensus;
-        } else {
-          score_prediction = polymorphism;
-        }
+    // Drop down to a polymorphism if we don't pass the consensus strand criterion
+    if ( (prediction == consensus) && (settings.polymorphism_minimum_new_coverage_each_strand > 0) ) {
+      vector<string> top_bot = split(ra[NEW_COV], "/");
+      if ( (from_string<double>(top_bot[0]) < settings.consensus_minimum_new_coverage_each_strand) ||
+          (from_string<double>(top_bot[1]) < settings.consensus_minimum_new_coverage_each_strand) ) {
+        prediction = polymorphism;
       }
     }
     
-    frequency_prediction = consensus;
-
+    // Bail now if consensus
+    if (prediction == consensus) {
+      ra[PREDICTION] = "consensus";
+      ra[FREQUENCY] = "1";
+      continue;
+    }
+    
+    ra[PREDICTION] = "polymorphism";
+    ra[FREQUENCY] = ra[POLYMORPHISM_FREQUENCY];
+    
+    // Perform further checks for polymorphisms
     if (frequency > 1.0 - settings.polymorphism_frequency_cutoff - settings.polymorphism_precision_decimal) {
-      frequency_prediction = consensus;
-    } else if (frequency >= settings.polymorphism_frequency_cutoff) {
-      frequency_prediction = polymorphism;
-      // if we are in consensus mode, then these are rejected!
-      if (!settings.polymorphism_prediction) {
-        ra.add_reject_reason("FREQUENCY_CUTOFF");
-      }
-    } else {
-      frequency_prediction = polymorphism;
+      ra.add_reject_reason("FREQUENCY_CUTOFF");
+    } else if (frequency < settings.polymorphism_frequency_cutoff) {
       ra.add_reject_reason("FREQUENCY_CUTOFF");
     }
     
-    ePredictionType overall_prediction(unknown);
-    if ( (score_prediction == consensus) && (frequency_prediction == consensus) ) {
-      overall_prediction = consensus;
-    } else {
-      overall_prediction = polymorphism;
-    }
+    ////// Strand and base quality score biases
     
-    // Give a type to this prediction (which makes it easier to output in the right location later!)
-    
-    switch (overall_prediction) {
-      case consensus:
-        ra[PREDICTION] = "consensus";
-        ra[SCORE] = ra[CONSENSUS_SCORE];
-        break;
-      case polymorphism:
-        ra[PREDICTION] = settings.polymorphism_prediction ? "polymorphism" : "mixed";
-        ra[SCORE] = ra[POLYMORPHISM_SCORE];
-        break;
-      case unknown:
-        ERROR("RA prediction type not assigned.");
-        break;
-    }
-    
-    // Tests depending on whether we are consensus versus polymorphism / mixed bases
-    if (overall_prediction == consensus) {
-      
-      // Frequency is updated to exactly 1 = text compare moving forward should work
-      ra[FREQUENCY] = "1";
-      
-      // Minimum coverage on both strands for new allele
-      if (settings.polymorphism_minimum_new_coverage_each_strand > 0) {
-        double polymorphism_coverage_limit_both_bases = settings.polymorphism_minimum_new_coverage_each_strand;
-        bool passed = true;
-        vector<string> top_bot;
-        double top;
-        double bot;
-        
-        top_bot = split(ra[NEW_COV], "/");
-        top = from_string<double>(top_bot[0]);
-        bot = from_string<double>(top_bot[1]);
-        passed = passed && (top >= polymorphism_coverage_limit_both_bases);
-        passed = passed && (bot >= polymorphism_coverage_limit_both_bases);
-        
-        if (!passed) ra.add_reject_reason("STRAND_COVERAGE");
-      }
-      
-    }
-    
-    else { // if ((overall_prediction == polymorphism) || (overall_prediction == mixed)) { // if (polymorphism_prediction)
-      
-      ra[FREQUENCY] = ra[POLYMORPHISM_FREQUENCY];
-      
-      
-      ////// Strand and base quality score biases
-      
-      // Test quality score bias
-      if (settings.polymorphism_bias_p_value_cutoff) {
-        if (ra.entry_exists("ks_quality_p_value")) {
-          if (from_string<double>(ra["ks_quality_p_value"]) < settings.polymorphism_bias_p_value_cutoff) {
-            ra.add_reject_reason("KS_QUALITY_P_VALUE");
-          }
+    // Test quality score bias
+    if (settings.polymorphism_bias_p_value_cutoff) {
+      if (ra.entry_exists("ks_quality_p_value")) {
+        if (from_string<double>(ra["ks_quality_p_value"]) < settings.polymorphism_bias_p_value_cutoff) {
+          ra.add_reject_reason("KS_BASE_QUALITY");
         }
       }
-      
-      if (settings.polymorphism_bias_p_value_cutoff) {
-        if (ra.entry_exists("fisher_strand_p_value")) {
-          if (from_string<double>(ra["fisher_strand_p_value"]) < settings.polymorphism_bias_p_value_cutoff) {
-            ra.add_reject_reason("FISHER_STRAND_P_VALUE");
-          }
+    }
+    
+    if (settings.polymorphism_bias_p_value_cutoff) {
+      if (ra.entry_exists("fisher_strand_p_value")) {
+        if (from_string<double>(ra["fisher_strand_p_value"]) < settings.polymorphism_bias_p_value_cutoff) {
+          ra.add_reject_reason("FISHER_STRAND");
         }
       }
+    }
       
-      // Minimum coverage on both strands for both reference and new allele
-      if (settings.polymorphism_minimum_new_coverage_each_strand > 0) {
-        double polymorphism_coverage_limit_both_bases = settings.polymorphism_minimum_new_coverage_each_strand;
-        bool passed = true;
-        vector<string> top_bot;
-        double top;
-        double bot;
-        
-        top_bot = split(ra[REF_COV], "/");
-        top = from_string<double>(top_bot[0]);
-        bot = from_string<double>(top_bot[1]);
-        passed = passed && (top >= polymorphism_coverage_limit_both_bases);
-        passed = passed && (bot >= polymorphism_coverage_limit_both_bases);
-        
-        top_bot = split(ra[NEW_COV], "/");
-        top = from_string<double>(top_bot[0]);
-        bot = from_string<double>(top_bot[1]);
-        passed = passed && (top >= polymorphism_coverage_limit_both_bases);
-        passed = passed && (bot >= polymorphism_coverage_limit_both_bases);
-        
-        if (!passed) ra.add_reject_reason("STRAND_COVERAGE");
-      }
+    // Minimum coverage on both strands for both reference and new allele
+    if (settings.polymorphism_minimum_new_coverage_each_strand > 0) {
+      double polymorphism_coverage_limit_both_bases = settings.polymorphism_minimum_new_coverage_each_strand;
+      bool passed = true;
+      vector<string> top_bot;
+      double top;
+      double bot;
+      
+      top_bot = split(ra[REF_COV], "/");
+      top = from_string<double>(top_bot[0]);
+      bot = from_string<double>(top_bot[1]);
+      passed = passed && (top >= polymorphism_coverage_limit_both_bases);
+      passed = passed && (bot >= polymorphism_coverage_limit_both_bases);
+      
+      top_bot = split(ra[NEW_COV], "/");
+      top = from_string<double>(top_bot[0]);
+      bot = from_string<double>(top_bot[1]);
+      passed = passed && (top >= polymorphism_coverage_limit_both_bases);
+      passed = passed && (bot >= polymorphism_coverage_limit_both_bases);
+      
+      if (!passed) ra.add_reject_reason("STRAND_COVERAGE");
+    }
 
-      ////// Optionally, ignore if in a homopolymer stretch longer than this
-      // There are several cases here that may be of interest for removing false-positives
-      // 1) indel in what was originally a homopolymer adding a base that is the same
-      // 2) A mutation in the middle of a stretch of one base to what is in the rest of that stretch
-      //    TTTTTTATTTTTT
-      //    TTTTTTTTTTTTT
-      //
-      // First case,
-      // 1) indel in what was originally a homopolymer adding a base that is the same
-      if (settings.polymorphism_reject_indel_homopolymer_length && ((ra[NEW_BASE] == ".") || (ra[REF_BASE] == ".")))
-      {
-        // Code needs to be robust to the mutation being at the beginning
-        // OR end of the homopolymer tract
+    ////// Optionally, ignore if in a homopolymer stretch longer than this
+    // There are several cases here that may be of interest for removing false-positives
+    // 1) indel in what was originally a homopolymer adding a base that is the same
+    // 2) A mutation in the middle of a stretch of one base to what is in the rest of that stretch
+    //    TTTTTTATTTTTT
+    //    TTTTTTTTTTTTT
+    //
+    // First case,
+    // 1) indel in what was originally a homopolymer adding a base that is the same
+    if (settings.polymorphism_reject_indel_homopolymer_length && ((ra[NEW_BASE] == ".") || (ra[REF_BASE] == ".")))
+    {
+      // Code needs to be robust to the mutation being at the beginning
+      // OR end of the homopolymer tract
+      
+      string seq_id = ra["seq_id"];
+      int32_t mut_pos = from_string<uint32_t>(ra["position"]);
+      bool is_insertion = (from_string<int32_t>(ra[INSERT_POSITION]) > 0);
+      string mut_base = is_insertion ? ra[NEW_BASE] : ra[REF_BASE];
+      int32_t homopolymer_length = 0;
+      
+      // If we are an insertion, we need to start on the base before or the base after,
+      // depending on which one we match (if we match neither than our length is zero
+      bool no_match = false;
+      if (is_insertion) {
         
-        string seq_id = ra["seq_id"];
-        int32_t mut_pos = from_string<uint32_t>(ra["position"]);
-        bool is_insertion = (from_string<int32_t>(ra[INSERT_POSITION]) > 0);
-        string mut_base = is_insertion ? ra[NEW_BASE] : ra[REF_BASE];
-        int32_t homopolymer_length = 0;
-        
-        // If we are an insertion, we need to start on the base before or the base after,
-        // depending on which one we match (if we match neither than our length is zero
-        bool no_match = false;
-        if (is_insertion) {
+        // This is the base before
+        if (ref_seq_info.get_sequence_1(seq_id, mut_pos, mut_pos) != mut_base) {
           
-          // This is the base before
-          if (ref_seq_info.get_sequence_1(seq_id, mut_pos, mut_pos) != mut_base) {
-            
-            // No match? -- Now check the base after
-            mut_pos++;
-            if (mut_pos > static_cast<int32_t>(ref_seq_info.get_sequence_length(seq_id))) {
-              no_match = true;
-            } else if (ref_seq_info.get_sequence_1(seq_id, mut_pos, mut_pos) != mut_base) {
-              no_match = true;
-            }
+          // No match? -- Now check the base after
+          mut_pos++;
+          if (mut_pos > static_cast<int32_t>(ref_seq_info.get_sequence_length(seq_id))) {
+            no_match = true;
+          } else if (ref_seq_info.get_sequence_1(seq_id, mut_pos, mut_pos) != mut_base) {
+            no_match = true;
           }
-        }
-        
-        // extend match
-        if (!no_match) {
-          
-          // check before
-          int32_t start_pos = mut_pos - 1;
-          while ( (ref_seq_info.get_sequence_1(seq_id, start_pos, start_pos) == mut_base) && (start_pos > 0) ) {
-            start_pos--;
-          }
-          start_pos++;
-          
-          int32_t end_pos = mut_pos + 1;
-          while ( (ref_seq_info.get_sequence_1(seq_id, end_pos, end_pos) == mut_base) && (end_pos <= static_cast<int32_t>(ref_seq_info.get_sequence_length(seq_id)) ) ) {
-            end_pos++;
-          }
-          end_pos--;
-          homopolymer_length = end_pos - start_pos + 1;
-        }
-        
-        if (homopolymer_length >= static_cast<int32_t>(settings.polymorphism_reject_indel_homopolymer_length))
-        {
-          ra.add_reject_reason("INDEL_HOMOPOLYMER");
         }
       }
       
-      // Second case
-      // 2) A mutation in the middle of a stretch of one base to what is in the rest of that stretch
-      //    TTTTTTATTTTTT
-      //    TTTTTTTTTTTTT
-      if (settings.polymorphism_reject_surrounding_homopolymer_length && (ra[NEW_BASE] != ".") && (ra[REF_BASE] != "."))    {
+      // extend match
+      if (!no_match) {
         
-        string seq_id = ra["seq_id"];
-        int32_t mut_pos = from_string<int32_t>(ra["position"]);
-        
-        // determine the start and end of homopolymer created by substitution
+        // check before
         int32_t start_pos = mut_pos - 1;
-        while (start_pos >= 1)
-        {
-          if (ref_seq_info.get_sequence_1(seq_id, start_pos, start_pos) != ra[NEW_BASE]) {
-            break;
-          }
+        while ( (ref_seq_info.get_sequence_1(seq_id, start_pos, start_pos) == mut_base) && (start_pos > 0) ) {
           start_pos--;
         }
         start_pos++;
         
         int32_t end_pos = mut_pos + 1;
-        while (end_pos <= static_cast<int32_t>(ref_seq_info.get_sequence_length(seq_id)))
-        {
-          if (ref_seq_info.get_sequence_1(seq_id, end_pos, end_pos) != ra[NEW_BASE]) {
-            break;
-          }
+        while ( (ref_seq_info.get_sequence_1(seq_id, end_pos, end_pos) == mut_base) && (end_pos <= static_cast<int32_t>(ref_seq_info.get_sequence_length(seq_id)) ) ) {
           end_pos++;
         }
         end_pos--;
-        
-        // check bounds
-        if ( (start_pos < mut_pos) && (end_pos > mut_pos) && (end_pos - start_pos + 1 >= static_cast<int32_t>(settings.polymorphism_reject_surrounding_homopolymer_length)) ) {
-          ra.add_reject_reason("SURROUNDING_HOMOPOLYMER");
-        }
+        homopolymer_length = end_pos - start_pos + 1;
       }
       
-      if (settings.no_indel_polymorphisms && ((ra[REF_BASE] == ".") || (ra[NEW_BASE] == ".")))
+      if (homopolymer_length >= static_cast<int32_t>(settings.polymorphism_reject_indel_homopolymer_length))
       {
-        ra.add_reject_reason("INDEL_POLYMORPHISM");
+        ra.add_reject_reason("INDEL_HOMOPOLYMER");
       }
-      
-      ////// END checking on homopolymers
     }
     
+    // Second case
+    // 2) A mutation in the middle of a stretch of one base to what is in the rest of that stretch
+    //    TTTTTTATTTTTT
+    //    TTTTTTTTTTTTT
+    if (settings.polymorphism_reject_surrounding_homopolymer_length && (ra[NEW_BASE] != ".") && (ra[REF_BASE] != "."))    {
+      
+      string seq_id = ra["seq_id"];
+      int32_t mut_pos = from_string<int32_t>(ra["position"]);
+      
+      // determine the start and end of homopolymer created by substitution
+      int32_t start_pos = mut_pos - 1;
+      while (start_pos >= 1)
+      {
+        if (ref_seq_info.get_sequence_1(seq_id, start_pos, start_pos) != ra[NEW_BASE]) {
+          break;
+        }
+        start_pos--;
+      }
+      start_pos++;
+      
+      int32_t end_pos = mut_pos + 1;
+      while (end_pos <= static_cast<int32_t>(ref_seq_info.get_sequence_length(seq_id)))
+      {
+        if (ref_seq_info.get_sequence_1(seq_id, end_pos, end_pos) != ra[NEW_BASE]) {
+          break;
+        }
+        end_pos++;
+      }
+      end_pos--;
+      
+      // check bounds
+      if ( (start_pos < mut_pos) && (end_pos > mut_pos) && (end_pos - start_pos + 1 >= static_cast<int32_t>(settings.polymorphism_reject_surrounding_homopolymer_length)) ) {
+        ra.add_reject_reason("SURROUNDING_HOMOPOLYMER");
+      }
+    }
+    ////// END checking on homopolymers
+
+    if (settings.no_indel_polymorphisms && ((ra[REF_BASE] == ".") || (ra[NEW_BASE] == ".")))
+    {
+      ra.add_reject_reason("INDEL_POLYMORPHISM");
+    }
     
   } // end loop over ra evidence items
 }
@@ -749,23 +685,9 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         // Calculate E-value for polymorphism score (E theta)
         polymorphism_bonferroni_score = (-(log(ppred.likelihood_ratio_test_p_value)/log(10)) - _log10_ref_length);
         
-        // In polymorphism mode, accept if it is better.
-        // A higher cutoff applied later
-        // after we calculate statistics
-        if (_settings.polymorphism_prediction) {
-          if (polymorphism_bonferroni_score >= 0.0)
-            passed_as_polymorphism_prediction = true;
-        }
-        
-        // If we are in consensus mode, use the true cutoff initially AND also kick back
-        // to not predicting a polymorphism if we are outside of the frequency bounds
-        else if (_settings.mixed_base_prediction) {
-          if (polymorphism_bonferroni_score >= _settings.polymorphism_log10_e_value_cutoff) {
-            if ( (ppred.frequency >= _polymorphism_frequency_cutoff) && (ppred.frequency <= 1 -_polymorphism_frequency_cutoff) ) {
-              passed_as_polymorphism_prediction = true;
-            }
-          }
-        }
+        // Do we accept this as a polymorphism?
+        if (polymorphism_bonferroni_score >= _polymorphism_score_cutoff)
+          passed_as_polymorphism_prediction = true;
         
         //cerr << ppred.frequency << " " << ppred.log10_base_likelihood << " " << ppred.p_value << endl;
       }

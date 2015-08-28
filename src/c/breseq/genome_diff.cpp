@@ -373,7 +373,7 @@ cDiffEntry::cDiffEntry(const string &line, uint32_t line_number, cFileParseError
   // Certain keys must occur together (if one is there, the other had better be there)
   if (de._type == AMP) {
     if (de.entry_exists(MEDIATED) != de.entry_exists(MEDIATED_STRAND)) {
-      if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Only one key of 'mediated' and 'mediated_strand' is supplied for this AMP. Both must be present to describe the mutation. Did you mean to use  'between' instead?", true);
+      if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Only one key of 'mediated' and 'mediated_strand' is supplied for this AMP. Both must be present to describe the mutation. Did you mean to use 'between' instead?", true);
     }
   }
 
@@ -722,27 +722,9 @@ void cDiffEntry::mutation_shift_position(const string& seq_id, int32_t shift_off
   if ((shift_size == 0) && (shift_replace_size == 0)) return;
   if (seq_id != (*this)[SEQ_ID]) return;
   
-  int32_t position = from_string<int32_t>((*this)[POSITION]);
-  
-  // Handle simple case and return
-  if (!entry_exists(SIZE)) {
-    
-    // INS only get shifted if they are after the position (and insert_pos),
-    // all others get shifted if they are this position or after
-    int32_t this_insert_pos = 0;
-    if ((_type==INS) && this->entry_exists(INSERT_POSITION))
-        this_insert_pos = from_string<int32_t>((*this)[INSERT_POSITION]);
-    
-    if ((position > shift_offset) || ((position == shift_offset) && (this_insert_pos >= insert_pos)) )  {
-      (*this)[POSITION] = to_string(position + shift_size);
-    }
-    return;
-    
-  }
-  
   // anything that has a 'size' potentially needs to be adjusted if the shift position and size overlaps        
-  int32_t original_start = position;
-  int32_t original_end = original_start + from_string<int32_t>((*this)[SIZE]) - 1;
+  int32_t original_start = this->get_reference_coordinate_start().get_position();
+  int32_t original_end = this->get_reference_coordinate_end().get_position();
   int32_t final_start = original_start;
   int32_t final_size = original_end - original_start + 1;
         
@@ -794,7 +776,9 @@ void cDiffEntry::mutation_shift_position(const string& seq_id, int32_t shift_off
   }
 
   (*this)[POSITION] = to_string(final_start);
-  (*this)[SIZE] = to_string(final_size);
+  if (this->entry_exists(SIZE)) {
+    (*this)[SIZE] = to_string(final_size);
+  }
 }
 
   
@@ -1884,7 +1868,8 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
       
       if (de.entry_exists("within"))
         continue;
-      
+
+      /* NOT A VALID TEST - RA evidence can have a non-reference base. In the future ref_base will be set to indicate this and the test can be reinstated.
       if (de._type == RA) {
         uint32_t position = from_string<uint32_t>(de[POSITION]);
         uint32_t insert_position = from_string<uint32_t>(de[INSERT_POSITION]);
@@ -1892,11 +1877,11 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
         if (de[REF_BASE] != test_ref_base) {
           parse_errors.add_line_error(from_string<uint32_t>(de["_line_number"]), de.as_string(), "Specified REF_BASE does not match actual reference base (" + test_ref_base + ") at the specified positon.", true);
         }
-        
+      
         if (de[REF_BASE] == de[NEW_BASE]) {
           parse_errors.add_line_error(from_string<uint32_t>(de["_line_number"]), de.as_string(), "Specified REF_BASE and NEW_BASE are the same.", true);
         }
-      } else if (de._type == SNP) {
+      } else */ if (de._type == SNP) {
         uint32_t position = from_string<uint32_t>(de[POSITION]);
         if (de[NEW_SEQ] == ref_seq.get_sequence_1(de[SEQ_ID], position, position)) {
           parse_errors.add_line_error(from_string<uint32_t>(de["_line_number"]), de.as_string(), "Specified NEW_SEQ is the same as the reference sequence at the specified positon.", true);
@@ -4900,11 +4885,11 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
         // Correct position of first base shown, if necessary
         if (before_base) pos--;
         
-        // Carry forward qulity from related RA evidence
+        // Carry forward quality from related RA evidence
         // @JEB should do something with multiple evidence
         diff_entry_list_t ev = mutation_evidence_list(mut);
         if (ev.size() == 1) 
-          qual = ev.front()->count(SCORE) ? (*ev.front())[SCORE] : ".";
+          qual = ev.front()->count(CONSENSUS_SCORE) ? (*ev.front())[CONSENSUS_SCORE] : ".";
         
       } break;
         
@@ -5067,7 +5052,7 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
       cDiffEntry& ev = *(ev_list.front());
       
       // Score
-      gvf[5] = ev[SCORE];
+      gvf[5] = ev[CONSENSUS_SCORE];
         
       // Attributes - Total Reads 
       vector<string> covs = split( ev[TOT_COV], "/" );
