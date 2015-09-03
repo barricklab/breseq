@@ -225,10 +225,11 @@ namespace breseq {
 			cDiffEntry mut;
       mut._type = DEL;
       mut._evidence = make_vector<string>(mc_item._id);
+      int32_t size = n(mc_item["end"]) - n(mc_item["start"]) + 1;
 			mut
       ("seq_id", mc_item["seq_id"])
       ("position", mc_item["start"])
-      ("size", s(n(mc_item["end"]) - n(mc_item["start"]) + 1));
+      ("size", s(size));
 			;
       
       if (settings.polymorphism_prediction) {
@@ -318,7 +319,7 @@ namespace breseq {
           
 					gd.add(mut);
           mc_it = mc.erase(mc_it); // iterator is now past the erased element
-          mc_it--;                //We just removed the current jc, do not iterate.          
+          mc_it--;                //We just removed the current jc, do not iterate.
           
           if (verbose)
             cout << "**** Junction precisely matching deletion boundary found ****\n";
@@ -370,13 +371,13 @@ namespace breseq {
 				else // delete the first copy
 				{
 					mut["position"] = s(r1.get_start_1());
-					mut["size"] = s(r2.get_start_1() - r1.get_start_1());
+          mut["size"] = s(r2.get_start_1() - r1.get_start_1());
 				}
         
         // @JEB 2014-01-07
         // It's possible for this to be in the SAME copy of the element,
         // in which case the deletion size here is zero bases
-        if (n(mut["size"]) != 0) {
+        if (n(mut["size"]) > 0) {
           // remember the name of the element
           mut["between"] = r1["name"];
           gd.add(mut);
@@ -468,7 +469,7 @@ namespace breseq {
 				}
         
         // Don't predict zero length deletions!
-        if (n(mut["size"]) == 0)
+        if (n(mut["size"]) <= 0)
           continue;
         
 				// OK, we're good!

@@ -569,6 +569,46 @@ int32_t cDiffEntry::compare(const cDiffEntry& a, const cDiffEntry& b)
       }
     }
   }
+  
+  //////////////////////////////////////////////////////////////////
+  // Compare 'within' flags to break ties
+  {
+    bool a_exists = a.entry_exists("within");
+    bool b_exists = b.entry_exists("within");
+    
+    if (a_exists || b_exists) {
+      if (!b_exists) return -1;
+      if (!a_exists) return +1;
+      
+      string a_string = a.find("within")->second;
+      string b_string = b.find("within")->second;;
+      
+      if (a_string < b_string)
+        return -1;
+      else if (a_string > b_string)
+        return +1;
+    }
+  }
+  
+  {
+    bool a_exists = a.entry_exists("before");
+    bool b_exists = b.entry_exists("before");
+    
+    
+    if (a_exists || b_exists) {
+
+      if (!b_exists) return -1;
+      if (!a_exists) return +1;
+      
+      string a_string = a.find("before")->second;
+      string b_string = b.find("before")->second;;
+      
+      if (a_string < b_string)
+        return -1;
+      else if (a_string > b_string)
+        return +1;
+    }
+  }
 
   //////////////////////////////////////////////////////////////////
   // Return zero if the entries are equal (according to major specs)
@@ -658,10 +698,34 @@ int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info)
     case SUB: return (*this)[NEW_SEQ].length() - from_string<uint32_t>((*this)[SIZE]); break;
     case INS: return (*this)[NEW_SEQ].length(); break;
     case DEL: return -(from_string<uint32_t>((*this)[SIZE])); break;
-    case AMP: return from_string<uint32_t>((*this)[SIZE]) * (from_string<uint32_t>((*this)["new_copy_number"]) - 1); break;
     case INV: return 0; break;
     case MASK: return 0; break;
       
+    case AMP:
+    {
+      int32_t size = from_string<uint32_t>((*this)[SIZE]) * (from_string<uint32_t>((*this)["new_copy_number"]) - 1);
+      
+      // Special case of mediated AMP
+      if (this->entry_exists(MEDIATED)) {
+        
+        cSequenceFeature repeat_feature_picked;
+        string seq_id_picked;
+        string mediated_string;
+        string mob_region;
+        
+        if (this->entry_exists(MOB_REGION)) {
+          mob_region = (*this)[MOB_REGION];
+        }
+        
+        mediated_string = ref_seq_info.repeat_family_sequence((*this)[MEDIATED], from_string<int16_t>((*this)[MEDIATED_STRAND]), mob_region.size() ? &mob_region : NULL, &seq_id_picked, &repeat_feature_picked);
+        
+        size += mediated_string.size() * (from_string<uint32_t>((*this)["new_copy_number"]) - 1);
+      }
+      
+      return size;
+      break;
+    }
+
     case MOB:
     {
       // @JEB: Important: repeat_size is not a normal attribute and must be set before calling this function
@@ -714,8 +778,9 @@ int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info)
 //      shift_size = 0
 //      shift_replace_size = size of inversion
 
-void cDiffEntry::mutation_shift_position(const string& seq_id, int32_t shift_offset, int32_t insert_pos, int32_t shift_size, int32_t shift_replace_size)
-{    
+void cDiffEntry::mutation_shift_position(const string& seq_id, const cReferenceCoordinate& shift_start, int32_t shift_size, int32_t shift_replace_size)
+{
+  
   ASSERT(this->is_mutation(), "Attempt to shift position of non-mutation cDiffEntry");
 
   // negative shift_size means deletion; positive shift_size means insertion
@@ -723,61 +788,51 @@ void cDiffEntry::mutation_shift_position(const string& seq_id, int32_t shift_off
   if (seq_id != (*this)[SEQ_ID]) return;
   
   // anything that has a 'size' potentially needs to be adjusted if the shift position and size overlaps        
-  int32_t original_start = this->get_reference_coordinate_start().get_position();
-  int32_t original_end = this->get_reference_coordinate_end().get_position();
-  int32_t final_start = original_start;
-  int32_t final_size = original_end - original_start + 1;
+  cReferenceCoordinate original_start = this->get_reference_coordinate_start();
+  cReferenceCoordinate original_end = this->get_reference_coordinate_end();
+  cReferenceCoordinate final_start = original_start;
+  cReferenceCoordinate final_size = original_end - original_start + cReferenceCoordinate(1);
         
-  // Special case where the mutation is 'within' this mutations
-  if (shift_offset < 0) {
+  // Special case where the mutation is 'within' this mutation
+  if (shift_start.get_position() < 0) {
   
-    int32_t change_start = shift_offset;
-    int32_t change_end = change_start + shift_size - 1;
+    cReferenceCoordinate change_start = shift_start;
+    cReferenceCoordinate change_end = change_start + shift_size - 1;
 
-    if ((shift_offset <= original_start) && (change_end >= original_end)) {
+    if ((shift_start <= original_start) && (change_end >= original_end)) {
       // change overlaps both sides
       // ERROR("Deletion completely encompasses other mutation");
       final_start = change_start;
       final_size = 0;
-    } else if ((original_start >= shift_offset) && (original_start <= change_end)) {
+    } else if ((original_start >= shift_start) && (original_start <= change_end)) {
       // change overlaps left side
       final_start = change_start;
       final_size = original_end - original_start + 1 - (change_end - original_start);
-    } else if ((original_end >= shift_offset) && (original_end <= change_end)) {
+    } else if ((original_end >= shift_start) && (original_end <= change_end)) {
       // change overlaps right side
       final_start = original_start;
       final_size = change_start - original_start;
-    } else if ((shift_offset > original_start) && (change_end < original_end)) {
+    } else if ((shift_start > original_start) && (change_end < original_end)) {
       // change is contained within 
       final_start = original_start;
       final_size = original_end - original_start + 1 + shift_size; // original size minus size of deletion
-    } else if (original_start >= shift_offset) {
+    } else if (original_start >= shift_start) {
       final_start = original_start + shift_size;
     }
     
     // Normal case where we shift the mutation
   } else {
   
-    if (insert_pos == 0) {
-      if ((shift_offset >= original_start) && (shift_offset+shift_replace_size-1 <= original_end)) {
-        final_size = original_end - original_start + 1 + shift_size;
-      } else if (original_start >= shift_offset) {
-        final_start = original_start + shift_size;
-      }
-    } else { 
-      // Same as above except gets rid of the >= for the first position, because we are after this position.
-      // This case is used for INS mutations.
-      if ((shift_offset > original_start) && (shift_offset+shift_replace_size-1 <= original_end)) {
-        final_size = original_end - original_start + 1 + shift_size;
-      } else if (original_start > shift_offset) {
-        final_start = original_start + shift_size;
-      }
+    if ((shift_start >= original_start) && (shift_start + shift_replace_size - 1 <= original_end)) {
+      final_size = original_end - original_start + 1 + shift_size;
+    } else if (original_start >= shift_start) {
+      final_start = original_start + shift_size;
     }
   }
 
-  (*this)[POSITION] = to_string(final_start);
+  (*this)[POSITION] = to_string(final_start.get_position());
   if (this->entry_exists(SIZE)) {
-    (*this)[SIZE] = to_string(final_size);
+    (*this)[SIZE] = to_string(final_size.get_position());
   }
 }
 
@@ -1701,7 +1756,9 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
         
         // Don't try to have both attributes!! 
         if (de->entry_exists("within") && de->entry_exists("before")) {
-            parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Both 'within' and 'before' attributes found for mutation. Only one of the two is allowed", true);
+          
+          // @JEB actually this is OK as long as they are the same within...
+          //parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Both 'within' and 'before' attributes found for mutation. Only one of the two is allowed", true);
         }
         
         if (de->entry_exists("within")) {
@@ -1736,6 +1793,20 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
               valid_start = within_position;
               valid_end = valid_start + from_string<uint32_t>((*within_de)[SIZE]) - 1;
               
+              // special case for amplified with repeats
+              
+              if ( within_de->entry_exists("mediated") && within_de->entry_exists("mediated_strand") ) {
+                string picked_seq_id;
+                cSequenceFeature picked_sequence_feature;
+                string mob_region;
+                if (within_de->entry_exists("mob_region")) {
+                  mob_region = (*within_de)["mob_region"];
+                }
+                string rep_string = ref_seq.repeat_family_sequence((*within_de)["mediated"], from_string<int16_t>((*within_de)["mediated_strand"]), within_de->entry_exists("mob_region") ? &mob_region : NULL, &picked_seq_id, &picked_sequence_feature);
+              
+                valid_end += rep_string.size();
+              }
+              
             } else if (within_de->_type == MOB) {
               
               // check coords to be sure it actually is 'within'
@@ -1750,18 +1821,41 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
                 
               }
               else if (split_within.size() == 2) {
+                  
+                
                 valid_start = within_position;
-                valid_end = valid_start + from_string<int32_t>((*within_de)[DUPLICATION_SIZE]) - 1;
+                valid_end = valid_start + max(from_string<int32_t>((*within_de)[DUPLICATION_SIZE]), 0) - 1;
+                
+                int32_t within_copy = from_string<int32_t>(split_within[1]);
+                
+                if ( (within_copy == 1) && (within_de->entry_exists(INS_START)) ) {
+                  valid_end += (*within_de)[INS_START].size();
+                }
+                if ( (within_copy == 2) && (within_de->entry_exists(INS_END)) ) {
+                  valid_end += (*within_de)[INS_END].size();
+                }
+                
               }
               
             } else if (within_de->_type == INS) {
-              if (split_within.size() != 1) {
-                parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Expected INS field 'within' to be of form 'within=mutation_id'. Instead, found: " + (*de)["within"], true);
+              if (split_within.size() != 2) {
+                parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Expected INS field 'within' to be of form 'within=mutation_id:position'. Instead, found: " + (*de)["within"], true);
               }
               
               // check coords to be sure it actually is 'within'
-              valid_start = within_position; // new bases will start after this position
-              valid_end = valid_start + (*within_de)[NEW_SEQ].size()-1;
+              
+              // test position is in new coordinates that are within this insertion
+              uint32_t within_test_position = from_string<int32_t>(split_within[1]);
+              uint32_t valid_within_start = 1; // new bases will start after this position
+              uint32_t valid_within_end = (*within_de)[NEW_SEQ].size();
+              
+              if (!( (within_test_position >= valid_within_start) && (within_test_position <= valid_within_end) ) ) {
+                parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Position of mutation in 'within=mutation_id:position tag must be within the size of the INS" + to_string(valid_within_start) + "-" + to_string(valid_within_end) + " for mutation that is 'within' this mutation:\n" + within_de->as_string(), true);
+              }
+              
+              // actual position must match base INS occurs after
+              valid_start = within_position;
+              valid_end = within_position;
               
             } else {
               parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Field 'within' provided for an entry that is not of AMP, MOB, or INS type.", true);
@@ -1846,8 +1940,11 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
               // in which case the position of the current mutation is not ambiguous
               diff_entry_ptr_t dis_de = find_by_id(ita->mutation_id);
               if (dis_de->entry_exists("within")) {
-                vector<string> split_within = split((*dis_de)["within"], ":");
-                if (split_within[0] == de->_id)
+                
+                // @JEB 9-2-2015: We have to allow this for complicated cases...
+                
+                //vector<string> split_within = split((*dis_de)["within"], ":");
+                //if (split_within[0] == de->_id)
                   continue;
               }
               
@@ -3355,15 +3452,40 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
             // For inside the MOB UNUSED!!!
             special_delta = 0; 
           }
-          
+         
         } else if ( current_mut._type == INS ) {
-          // Inside an INS means we don't shift (copy_index not provided)
-          special_delta = 0;
+          // Inside an INS means copy_index is actually the nucleotide within the insertion
+          special_delta = within_copy_index;
         }
         
         // -1 used as offset to force update of position because we are within it...
-        mut.mutation_shift_position(current_mut[SEQ_ID], -1, 0, special_delta, 0);
-      }  
+        mut.mutation_shift_position(current_mut[SEQ_ID], cReferenceCoordinate(-1, 0), special_delta, 0);
+      }
+
+      // Mutation is within a mutation that is within the current mutation... do not update size
+      else {
+        diff_entry_ptr_t within_mutation = find_by_id(within_mutation_id);
+        
+        if (within_mutation.get() != NULL) {
+          if (within_mutation->entry_exists("within")) {
+            vector<string> split_within_within = split((*within_mutation)["within"],":");
+            string within_within_mutation_id = split_within_within[0];
+            diff_entry_ptr_t within_within_mutation = find_by_id(within_within_mutation_id);
+
+            if (within_within_mutation.get() != NULL) {
+              ASSERT(!within_within_mutation->entry_exists("within"), "Too many nested withing mutations, starting with:\n" + mut.as_string());
+            }
+            
+            if (current_mut._id == within_within_mutation_id) {
+              was_nested = true; // handle offset here
+              
+              // Same as a normal mutation but we don't change the size
+              mut.mutation_shift_position(current_mut[SEQ_ID], cReferenceCoordinate(-1, 0), delta, 0);
+            }
+          }
+        }
+      }
+      
     }
     
     // Normal behavior -- offset mutations later in same reference sequence
@@ -3371,7 +3493,7 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
       if (current_mut._type == INV) {
           mut.mutation_invert_position_sequence(current_mut);
       } else {
-        mut.mutation_shift_position(current_mut[SEQ_ID], offset, insert_pos, delta, replace_size);
+        mut.mutation_shift_position(current_mut[SEQ_ID], cReferenceCoordinate(offset, insert_pos), delta, replace_size);
       }
     }
   }
@@ -3525,7 +3647,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
       if ((start_repeat.get() != NULL) && (end_repeat.get() != NULL)) {
         // different names is an odd case - WARN and don't assign anything
         if ( (*start_repeat)["name"] != (*end_repeat)["name"]) {
-          WARN("Mutation has boundaries near two different repeat families, saving only the first one." + mut.as_string());
+          WARN("Mutation has boundaries near two different repeat families, saving only the first one:\n" + mut.as_string());
           nearby_tags[one_close_key] = (*start_repeat)["name"];
         } else {
           nearby_tags[both_close_key] = (*start_repeat)["name"];
@@ -3695,7 +3817,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         string seq_id_picked;
         string mediated_string;
         if (mut.entry_exists(MEDIATED)) {
-          cout << mut.as_string() << endl;
+          //cout << mut.as_string() << endl;
           mediated_string = ref_seq_info.repeat_family_sequence(mut[MEDIATED], from_string<int16_t>(mut[MEDIATED_STRAND]), mut.entry_exists("mob_region") ? &mut["mob_region"] : NULL, &seq_id_picked, &repeat_feature_picked);
         }
         
@@ -3710,13 +3832,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
           
           // Everything is inserted at the beginning, pushing the other copies forward!
           
-          // inserted AFTER specified position
-          new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position+size-1, duplicated_sequence_one_copy, (to_string(mut._type) + " " + mut._id));
-          
-          // Starts at specified position (NOT after it)
-           new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+size, 0, 0, ref_seq_info, mut[SEQ_ID], +1, duplicated_region);
-          
-          // We have to insert a copy of the IS element
+          // We have to insert a copy of the IS element first (so all copies end up between repeats)
           if (mediated_string.size()) {
             // Insert
             new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position+size-1, mediated_string, (to_string(mut._type) + " " + mut._id));
@@ -3726,9 +3842,15 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
             new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+size-1, 0, 0, ref_seq_info, seq_id_picked, from_string<int16_t>(mut[MEDIATED_STRAND]), repeat_feature_picked.m_location);
           }
           
+          // inserted AFTER specified position
+          new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position+size-1, duplicated_sequence_one_copy, (to_string(mut._type) + " " + mut._id));
+          
+          // Starts at specified position (NOT after it)
+          new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+size, 0, 0, ref_seq_info, mut[SEQ_ID], +1, duplicated_region);
+          
           // This is constructed *only* for debugging output!
-          if (mediated_string.size()) duplicated_sequence_full_addition.append(mediated_string);
           duplicated_sequence_full_addition.append(duplicated_sequence_one_copy);
+          if (mediated_string.size()) duplicated_sequence_full_addition.append("[" + mediated_string + "]");
           
         }
         ASSERT(!duplicated_sequence_full_addition.empty(), "Duplicate sequence is empty. You may have specified an AMP with a new copy number of 1.");
@@ -3742,7 +3864,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         applied_seq_id = mut[SEQ_ID];
         applied_start = position;
         applied_end = position + duplicated_sequence_full_addition.size() - 1;
-        applied_seq = replace_seq + duplicated_sequence_full_addition;
+        applied_seq = duplicated_sequence_full_addition + replace_seq;
         
         
       } break;

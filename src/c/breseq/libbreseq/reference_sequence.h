@@ -38,16 +38,16 @@ namespace breseq {
   */
   class cReferenceCoordinate {
   private:
-    uint32_t m_position;
-    uint32_t m_insert_position;
+    int32_t m_position;
+    int32_t m_insert_position;
   public:
-    cReferenceCoordinate(const uint32_t position, const uint32_t insert_position = 0)
+    cReferenceCoordinate(const int32_t position, const int32_t insert_position = 0)
     : m_position(position), m_insert_position(insert_position) { }
     
-    uint32_t get_position() const
+    int32_t get_position() const
     { return m_position; }
     
-    uint32_t get_insert_position() const
+    int32_t get_insert_position() const
     { return m_insert_position; }
     
     bool operator<(const cReferenceCoordinate& _in) const
@@ -85,6 +85,38 @@ namespace breseq {
     bool operator==(const cReferenceCoordinate& _in) const
     {
       return (this->m_position == _in.m_position) && (this->m_insert_position >= _in.m_insert_position);
+    }
+    
+    cReferenceCoordinate& operator+=(const cReferenceCoordinate& rhs)
+    {
+      this->m_position += rhs.get_position();
+      this->m_insert_position += rhs.get_insert_position();
+      
+      /* addition of rhs to *this takes place here */
+      return *this; // return the result by reference
+    }
+    
+    friend cReferenceCoordinate operator+(cReferenceCoordinate lhs,
+                                          const cReferenceCoordinate& rhs)
+    {
+      lhs += rhs; // reuse compound assignment
+      return lhs; // return the result by value (uses move constructor)
+    }
+    
+    cReferenceCoordinate& operator-=(const cReferenceCoordinate& rhs)
+    {
+      this->m_position -= rhs.get_position();
+      this->m_insert_position -= rhs.get_insert_position();
+      
+      /* addition of rhs to *this takes place here */
+      return *this; // return the result by reference
+    }
+    
+    friend cReferenceCoordinate operator-(cReferenceCoordinate lhs,
+                                          const cReferenceCoordinate& rhs)
+    {
+      lhs -= rhs; // reuse compound assignment
+      return lhs; // return the result by value (uses move constructor)
     }
   };
   

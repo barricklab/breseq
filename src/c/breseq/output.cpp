@@ -2049,7 +2049,7 @@ void Html_Mutation_Table_String::Item_Lines()
           s_start << "+" << mut["ins_start"] << " ";
         }
         if (mut.entry_exists("del_start")) {
-          s_start << "&Delta;" << mut["del_start"] << " ";
+          s_start << "&Delta;" << mut["del_start"] << " bp ";
         }
         if (!(s_start.str()).empty()) {
           s << s_start.str() << ":: ";
@@ -2078,7 +2078,7 @@ void Html_Mutation_Table_String::Item_Lines()
         
         stringstream s_end;
         if (mut.entry_exists("del_end")) {
-          s_end << " &Delta;" << mut["del_end"];
+          s_end << " &Delta;" << mut["del_end"] << " bp";
         }
         if (mut.entry_exists("ins_end")) {
           s_end << " +" << mut["ins_end"];

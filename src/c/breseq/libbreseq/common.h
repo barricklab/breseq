@@ -91,7 +91,11 @@ namespace breseq {
       if (message.length() > 0) cerr << message << endl;
       cerr << "FILE: " << file << "   LINE: " << line << endl;
       cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+#ifdef DEBUG
+      assert(false);
+#else
       exit(0);
+#endif
     }
   }
   
