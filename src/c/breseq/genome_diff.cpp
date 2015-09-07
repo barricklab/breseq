@@ -570,18 +570,17 @@ int32_t cDiffEntry::compare(const cDiffEntry& a, const cDiffEntry& b)
     }
   }
   
-  //////////////////////////////////////////////////////////////////
-  // Compare 'within' flags to break ties
+/* This code breaks compare
   {
-    bool a_exists = a.entry_exists("within");
-    bool b_exists = b.entry_exists("within");
+    bool a_exists = a.entry_exists("unique");
+    bool b_exists = b.entry_exists("unique");
     
     if (a_exists || b_exists) {
       if (!b_exists) return -1;
       if (!a_exists) return +1;
       
-      string a_string = a.find("within")->second;
-      string b_string = b.find("within")->second;;
+      string a_string = a.find("unique")->second;
+      string b_string = b.find("unique")->second;
       
       if (a_string < b_string)
         return -1;
@@ -601,7 +600,7 @@ int32_t cDiffEntry::compare(const cDiffEntry& a, const cDiffEntry& b)
       if (!a_exists) return +1;
       
       string a_string = a.find("before")->second;
-      string b_string = b.find("before")->second;;
+      string b_string = b.find("before")->second;
       
       if (a_string < b_string)
         return -1;
@@ -609,7 +608,7 @@ int32_t cDiffEntry::compare(const cDiffEntry& a, const cDiffEntry& b)
         return +1;
     }
   }
-
+*/
   //////////////////////////////////////////////////////////////////
   // Return zero if the entries are equal (according to major specs)
   return 0;
@@ -1668,6 +1667,8 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
             parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]),de->as_string(), "Position [" + (*de)["position"] + "] is out of valid range for seq_id [" + to_string<int32_t>(valid_start) + "," + to_string<int32_t>(valid_end) + "] for entry.", true);
           }
           
+          /* @JEB needed for circular genomes...
+          
           // You only have a size if you have a position
           if (de->entry_exists("size")) {
             
@@ -1680,6 +1681,9 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
             
             }
           } // end of size
+          
+          */
+          
         } // end of position
       }
     } // end of seq_id
@@ -1816,7 +1820,7 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
                 string picked_seq_id;
                 cSequenceFeature picked_sequence_feature;
                 string mob_seq = mob_replace_sequence(ref_seq, *within_de, &picked_seq_id, &picked_sequence_feature);
-                valid_start = within_position + from_string<int32_t>((*within_de)[DUPLICATION_SIZE]) + 1;
+                valid_start = within_position + from_string<int32_t>((*within_de)[DUPLICATION_SIZE]);
                 valid_end = valid_start + mob_seq.size() - 1;
                 
               }
@@ -1828,6 +1832,9 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
                 
                 int32_t within_copy = from_string<int32_t>(split_within[1]);
                 
+                if ( (within_copy == 1) && (within_de->entry_exists(INS_START)) ) {
+                  valid_end += (*within_de)[INS_START].size();
+                }
                 if ( (within_copy == 1) && (within_de->entry_exists(INS_START)) ) {
                   valid_end += (*within_de)[INS_START].size();
                 }
@@ -3435,27 +3442,44 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
         }
 
         uint64_t special_delta(0);
-        
+
         if (current_mut._type == AMP) {
+          
           // Inside an AMP means we shift to the desired copy
-          special_delta = from_string<uint64_t>(current_mut[SIZE]) * (within_copy_index-1);
+          uint64_t amp_unit_size = from_string<uint64_t>(current_mut[SIZE]);
+          
+          // Special case of IS mediated AMP, must add in size of IS element to offset
+          if (current_mut.entry_exists(MEDIATED)) {
+            
+            cSequenceFeature repeat_feature_picked;
+            string seq_id_picked;
+            string mediated_string;
+            string mob_region;
+            
+            if (current_mut.entry_exists(MOB_REGION)) {
+              mob_region = current_mut[MOB_REGION];
+            }
+            
+            mediated_string = ref_seq_info.repeat_family_sequence(current_mut[MEDIATED], from_string<int16_t>(current_mut[MEDIATED_STRAND]), mob_region.size() ? &mob_region : NULL, &seq_id_picked, &repeat_feature_picked);
+            
+            amp_unit_size += mediated_string.size();
+          }
+          
+          special_delta = amp_unit_size * (within_copy_index-1);
           
         } else if (current_mut._type == MOB) {
           // Normal delta is size of mobile element plus the duplication size
           // this is the default if we are in the second copy
           if (within_copy_index == 2) {
             special_delta = delta;
-          } else if (within_copy_index == 1) {
-            // For first copy we don't need to move things
+          } else {
+            // For first copy (within_copy_index=1) or inside the IS (within_copy_index not defined) we don't need to move things
             special_delta = 0;
-          } else if (within_copy_index == -1) {
-            // For inside the MOB UNUSED!!!
-            special_delta = 0; 
           }
          
         } else if ( current_mut._type == INS ) {
           // Inside an INS means copy_index is actually the nucleotide within the insertion
-          special_delta = within_copy_index;
+          special_delta = from_string<int32_t>(current_mut[DUPLICATION_SIZE]) + within_copy_index; // past the duplicated nucleotides
         }
         
         // -1 used as offset to force update of position because we are within it...
@@ -3763,7 +3787,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
           replace_end++;
         }
         replace_seq = new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end);
-        replace_seq.insert(0,"(");
+        replace_seq.insert(position - replace_start,"(");
         replace_seq.append(")");
 
         
@@ -3821,37 +3845,65 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
           mediated_string = ref_seq_info.repeat_family_sequence(mut[MEDIATED], from_string<int16_t>(mut[MEDIATED_STRAND]), mut.entry_exists("mob_region") ? &mut["mob_region"] : NULL, &seq_id_picked, &repeat_feature_picked);
         }
         
-        cLocation duplicated_region(position, position+size-1, 1);
         
+
         // We insert the pieces one at a time, so that we can update annotations
+        cLocation duplicated_region;
+        cLocation duplicated_region_wrap;
+
+        bool wraps_around_circular_chromosome = (position+size-1 > new_ref_seq_info.get_sequence_length(mut[SEQ_ID]));
+        
+        string duplicated_sequence_one_copy;
+        if (!wraps_around_circular_chromosome) {
+          duplicated_region = cLocation(position, position+size-1, 1);
+          duplicated_sequence_one_copy = new_ref_seq_info.get_sequence_1(mut[SEQ_ID], position, position+size-1);
+        } else {
+          duplicated_sequence_one_copy = new_ref_seq_info.get_sequence_1(mut[SEQ_ID], position, new_ref_seq_info.get_sequence_length(mut[SEQ_ID]));
+          duplicated_sequence_one_copy += new_ref_seq_info.get_sequence_1(mut[SEQ_ID], 1, position+size-1 - new_ref_seq_info.get_sequence_length(mut[SEQ_ID]));
+          duplicated_region = cLocation(position, new_ref_seq_info.get_sequence_length(mut[SEQ_ID]), 1);
+          duplicated_region_wrap = cLocation(1, position+size-1 - new_ref_seq_info.get_sequence_length(mut[SEQ_ID]), 1);
+        }
         
         //Also build full duplicated sequence (strictly for debugging output)
         string duplicated_sequence_full_addition;
-        string duplicated_sequence_one_copy = new_ref_seq_info.get_sequence_1(mut[SEQ_ID], position, position+size-1);
+
+        // Loop executed new_copy_number - 1 times.
         for (uint32_t i = 1; i < from_string<uint32_t>(mut["new_copy_number"]); i++) {
           
-          // Everything is inserted at the beginning, pushing the other copies forward!
+          // Everything is inserted BEFORE the existing copy, pushing the earlier copies forward!
+          
+          // <---------------- Order of insertion
+          // [++++ => ++++ =>] ++++
           
           // We have to insert a copy of the IS element first (so all copies end up between repeats)
           if (mediated_string.size()) {
-            // Insert
-            new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position+size-1, mediated_string, (to_string(mut._type) + " " + mut._id));
+            
+            // inserted AFTER specified position
+            new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position-1, mediated_string, (to_string(mut._type) + " " + mut._id));
             
             // We've repeated the sequence, now it's time to repeat all the features
             // inside of and including the repeat region.
-            new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+size-1, 0, 0, ref_seq_info, seq_id_picked, from_string<int16_t>(mut[MEDIATED_STRAND]), repeat_feature_picked.m_location);
+            
+            // Starts at specified position (NOT after it)
+            new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position, 0, 0, ref_seq_info, seq_id_picked, from_string<int16_t>(mut[MEDIATED_STRAND]), repeat_feature_picked.m_location);
+            
+            // This is constructed *only* for debugging output!
+            duplicated_sequence_full_addition = "[" + mediated_string + "]" + duplicated_sequence_full_addition;
           }
           
+          
           // inserted AFTER specified position
-          new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position+size-1, duplicated_sequence_one_copy, (to_string(mut._type) + " " + mut._id));
+          new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position-1, duplicated_sequence_one_copy, (to_string(mut._type) + " " + mut._id));
           
           // Starts at specified position (NOT after it)
-          new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+size, 0, 0, ref_seq_info, mut[SEQ_ID], +1, duplicated_region);
+          new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position, 0, 0, ref_seq_info, mut[SEQ_ID], +1, duplicated_region);
+
+          if (wraps_around_circular_chromosome) {
+            new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position + (new_ref_seq_info.get_sequence_length(mut[SEQ_ID]) - position) + 1, 0, 0, ref_seq_info, mut[SEQ_ID], +1, duplicated_region_wrap);
+          }
           
           // This is constructed *only* for debugging output!
-          duplicated_sequence_full_addition.append(duplicated_sequence_one_copy);
-          if (mediated_string.size()) duplicated_sequence_full_addition.append("[" + mediated_string + "]");
-          
+          duplicated_sequence_full_addition = duplicated_sequence_one_copy + duplicated_sequence_full_addition;
         }
         ASSERT(!duplicated_sequence_full_addition.empty(), "Duplicate sequence is empty. You may have specified an AMP with a new copy number of 1.");
         
@@ -3865,7 +3917,6 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         applied_start = position;
         applied_end = position + duplicated_sequence_full_addition.size() - 1;
         applied_seq = duplicated_sequence_full_addition + replace_seq;
-        
         
       } break;
         
@@ -4238,10 +4289,13 @@ void cGenomeDiff::normalize_mutations(cReferenceSequences& ref_seq_info, Setting
     int32_t new_copy_number = from_string<uint32_t>(mut["new_copy_number"]);
     int32_t unit_size = from_string<int32_t>(mut[SIZE]);
     int32_t size = unit_size * (new_copy_number - 1);
-  
-    mut._type = INS;
+    
     int32_t pos = from_string<uint32_t>(mut[POSITION]);
-
+    // SKIP AMPS THAT GO PAST THE END OF THE SEQUENCE
+    if (pos + size - 1 > static_cast<int32_t>(ref_seq_info.get_sequence_length(mut[SEQ_ID])))
+      continue;
+    
+    mut._type = INS;
     string amped_seq = ref_seq_info.get_sequence_1(mut[SEQ_ID], pos, pos + unit_size - 1);
     mut[NEW_SEQ] = "";
     for(int32_t i=1; i< new_copy_number; i++){
