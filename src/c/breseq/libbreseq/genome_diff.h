@@ -60,6 +60,9 @@ extern const char* REF_COV;
 extern const char* NEW_COV;
 extern const char* TOT_COV;
 extern const char* ERROR;
+extern const char* WITHIN;
+extern const char* BEFORE;
+extern const char* APPLY_SIZE_ADJUST;
 
 //For JC
 extern const char* SIDE_1_SEQ_ID;
@@ -258,10 +261,9 @@ public:
   
   //!---- Functions for updating mutations ---- !//
   
-  //! Common function for updating mutations based on a mutation occurring at shift_offset and changing size by shift_size;
-  void mutation_shift_position(const string& seq_id, const cReferenceCoordinate& shift_start, int32_t shift_size, int32_t shift_replace_size);
+  //! Common function for updating mutations based on a mutation occurring in the interval shift_start to shift_end and changing size by shift_size;
+  void mutation_shift_position(const string& seq_id, const cReferenceCoordinate& shift_start, const cReferenceCoordinate& shift_end, int32_t shift_size);
   
-  // Reverse-complements without changing position
   void mutation_reverse_complement();
   
   // Updates positions for inversion and reverse-complements mutation
@@ -739,7 +741,7 @@ public:
   void annotate_hotspots(cReferenceSequences& new_ref_seq_info, bool remove_old_tags=true, int32_t slop_distance=10);
   
   //! Remove mutations that overlap MASK items in another GD
-  void mask_mutations(cGenomeDiff& mask_gd, bool verbose);
+  void mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, bool verbose);
 
   //! Shift mutations to preferred descriptions
   void normalize_mutations(cReferenceSequences &ref_seq, Settings& settings, bool verbose = false);
@@ -794,7 +796,8 @@ public:
   static void write_phylip(string& output_phylip_file_name, 
                            cGenomeDiff& master_gd, 
                            vector<cGenomeDiff>& gd_list, 
-                           cReferenceSequences& ref_seq_info, 
+                           cReferenceSequences& ref_seq_info,
+                           bool missing_as_ancestral = false,
                            bool verbose = false);
   
   //! Convert GD to Circos files

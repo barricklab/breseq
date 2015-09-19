@@ -1146,7 +1146,8 @@ int do_phylogeny(int argc, char* argv[])
 	options("verbose,v", "produce output for each mutation counted.", TAKES_NO_ARGUMENT);
 	options("output,o", "path to output file with added mutation data.", ".");
 	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
-	options("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT);
+	//options("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT);
+	options("missing-as-ancestral,a", "Count missing data (mutations in UN regions) as the ancestral allele rather than as an unknown allele (N).", TAKES_NO_ARGUMENT);
 	
 	options.addUsage("");
 	options.addUsageSameLine("Uses PHYLIP to construct a phylogentic tree. If you are including an ancestor");
@@ -1215,13 +1216,12 @@ int do_phylogeny(int argc, char* argv[])
 	cReferenceSequences ref_seq_info;
 	ref_seq_info.LoadFiles(reference_file_names);
 	
-	uout("Annotating mutations");
-	ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"));
+	//uout("Annotating mutations");
+	//ref_seq_info.annotate_mutations(gd, true);
 	
 	string phylip_input_file_name = output_base_name + ".phylip";
 	uout("Writing output PHYLIP alignment file", phylip_input_file_name);
-	gd.write_phylip(phylip_input_file_name, gd, gd_list, ref_seq_info);
-	
+	gd.write_phylip(phylip_input_file_name, gd, gd_list, ref_seq_info, options.count("missing-as-ancestral"));
 	string phylip_script_file_name = output_base_name + ".phylip.commands";
 	ofstream phylip_script(phylip_script_file_name.c_str());
 	phylip_script << phylip_input_file_name << endl;
@@ -1732,6 +1732,7 @@ int do_mask_gd(int argc, char* argv[])
 {
 	AnyOption options("gdtools MASK  [-o output.gd] input.gd mask.gd");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+	options("small,s", "Mask only 'small' mutations defined as: all SNP mutations; INS, DEL, and SUB mutations with sizes ≤ 20 bp; and all INS and DEL mutations causing expansion or contraction of simple sequence repeats (SSRs) with at least two repeats of the same unit of one to several bp and a total length of 5 bp in the reference genome", TAKES_NO_ARGUMENT);
 	options("output,o", "Output Genome Diff file.", "output.gd");
 	options("verbose,v","Verbose mode", TAKES_NO_ARGUMENT);
 
@@ -1773,7 +1774,7 @@ int do_mask_gd(int argc, char* argv[])
 	}
 	
 	// Mask mutations
-	new_gd.mask_mutations(mask_gd, options.count("verbose"));
+	new_gd.mask_mutations(mask_gd, options.count("small"), options.count("verbose"));
 	
 	uout("Writing output GD file", options["output"]);
 	new_gd.write(options["output"]);

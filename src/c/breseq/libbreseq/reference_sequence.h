@@ -84,7 +84,7 @@ namespace breseq {
     
     bool operator==(const cReferenceCoordinate& _in) const
     {
-      return (this->m_position == _in.m_position) && (this->m_insert_position >= _in.m_insert_position);
+      return (this->m_position == _in.m_position) && (this->m_insert_position == _in.m_insert_position);
     }
     
     cReferenceCoordinate& operator+=(const cReferenceCoordinate& rhs)

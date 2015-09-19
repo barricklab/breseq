@@ -1568,7 +1568,18 @@ namespace breseq {
     
     // Add additional fields for INS or DEL mutations that are in tandem repeats
     for(diff_entry_list_t::iterator it = test_muts.begin(); it != test_muts.end(); it++) {
+      
       cDiffEntry& mut = **it;
+      
+      // If we are annotated as 'within', do not shift the coordinates,
+      // because the reference sequence is actually different by the time we are applied
+      
+      // We are still potentially in danger of doing the wrong thing here,
+      // because a mutation could be applied only after one with the 'before' tag, making the shift
+      // incorrect. So, setting 'no_normalize' is an out that can be used.
+      
+      if (mut.entry_exists("within") || mut.entry_exists("no_normalize") ) continue;
+      
       if (mut._type == INS) {
         
         // This field only exists when manually added to split an insertion into separate events 
@@ -1623,15 +1634,6 @@ namespace breseq {
         // because we can shift two adjacent (but separately) deleted bases
         // onto the same position!
         if (settings.polymorphism_prediction) continue;
-        
-        // If we are annotated as 'within', do not shift the coordinates,
-        // because the reference sequence is actually different by the time we are applied
-        
-        // We are still potentially in danger of doing the wrong thing here,
-        // because a mutation could be applied only after one with the 'before' tag, making the shift
-        // incorrect. So, setting 'no_normalize' is an out that can be used.
-        
-        if (mut.entry_exists("within") || mut.entry_exists("no_normalize") ) continue;
         
         int32_t size = from_string<int32_t>(mut["size"]);
         
@@ -2736,7 +2738,7 @@ namespace breseq {
         } 
         
         if (mut._type == AMP) {
-          int32_t this_size = mut.mutation_size_change(ref_seq_info);
+          int32_t this_size = from_string<uint32_t>(mut[SIZE]) * (from_string<uint32_t>(mut["new_copy_number"]) - 1);
           total_inserted += this_size;
           
           if (this_size > large_size_cutoff) {

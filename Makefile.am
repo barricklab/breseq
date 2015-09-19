@@ -44,6 +44,7 @@ EXTRA_DIST = \
 	src/doc/faq.rst \
 	src/doc/gd_format.rst \
 	src/doc/gd_usage.rst \
+	src/doc/hidden_code_block.py \
 	src/doc/index.rst \
 	src/doc/installation.rst \
 	src/doc/introduction.rst \
@@ -51,8 +52,19 @@ EXTRA_DIST = \
 	src/doc/output.rst \
 	src/doc/references.rst \
 	src/doc/test_drive.rst \
+	src/doc/tutorial_barcoded_targeted.rst \
+	src/doc/tutorial_clones.rst \
+	src/doc/tutorial_populations.rst \
 	src/doc/usage.rst \
 	src/doc/images \
+	src/doc/images/Ara-3.tree.png \
+	src/doc/images/ZDB83.ECB02816-ECB02836.JC.png \
+	src/doc/images/ZDB83.ECB02816-ECB02836.MC.png \
+	src/doc/images/ZDB83.rnk-citG.JC.png \
+	src/doc/images/ZDB83.rnk-citG.JC.schematic.png \
+	src/doc/images/ZDB83.rnk-citG.zoom-in.png \
+	src/doc/images/ZDB83.rrlA.MC.png \
+	src/doc/images/ZDB83.waaT.IS-mediated-deletion.png \
 	src/doc/images/amp_1.png \
 	src/doc/images/breseq.png \
 	src/doc/images/coverage_distribution.png \
