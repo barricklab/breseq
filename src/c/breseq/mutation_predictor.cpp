@@ -2508,9 +2508,9 @@ namespace breseq {
     column_headers.push_back("large_substitution");
     column_headers.push_back("mobile_element_insertion");
     column_headers.push_back("gene_conversion");
+    column_headers.push_back("changed_bp");
     column_headers.push_back("deleted_bp");
     column_headers.push_back("inserted_bp");
-    column_headers.push_back("repeat_inserted_bp");
     column_headers.push_back("called_bp");
     column_headers.push_back("total_bp");
     
@@ -2576,7 +2576,7 @@ namespace breseq {
     
     for (vector<cGenomeDiff>::iterator it=sorted_genome_diffs.begin(); it != sorted_genome_diffs.end(); ++it) {
       cGenomeDiff &gd = *it;
-      //uout("Counting mutations " + gd.metadata.run_name);
+      cout << "    Counting mutations " + gd.get_title() << endl << endl;
       
       vector<string> line_prefix_items = make_vector<string>(gd.get_file_name())
           (gd.metadata.title)(gd.metadata.treatment)(gd.metadata.population)
@@ -2596,11 +2596,6 @@ namespace breseq {
       // deep copy totals of entire sequence
       if (base_substitution_statistics)
         this_bsec = total_bsec;
-      
-      // Zero out counts
-      int32_t total_deleted = 0;
-      int32_t total_inserted = 0;
-      int32_t total_repeat_inserted = 0;
 
       int32_t total_bp = ref_seq_info.total_length();
       
@@ -2631,13 +2626,6 @@ namespace breseq {
         
         cDiffEntry& mut = **it;
         
-        // Don't count mutations that were hidden by later deletions, but kept for phylogenetic inference.
-        // @JEB: actually we do want to count these!
-        //if (mut.is_marked_deleted()) {
-        //  if (verbose) cerr << "Skipping deleted: " << mut << endl;
-        //  continue;
-        //}
-        
         // Don't count polymorphisms - could make it an option to partially count them
         if (!count_polymorphisms && mut.entry_exists(FREQUENCY) && from_string<double>(mut[FREQUENCY]) != 1.0) {
           if (verbose) cerr << "Skipping polymorphic: " << mut << endl;
@@ -2657,7 +2645,6 @@ namespace breseq {
         }
         
         if (mut._type == DEL) {
-          total_deleted += from_string<int32_t>(mut[SIZE]);
           
           if (mut.entry_exists("mediated"))
             count["mob"][mut["mediated"]]++;
@@ -2674,8 +2661,6 @@ namespace breseq {
         if (mut._type == INS) {
           int32_t ins_size = mut[NEW_SEQ].size();
           
-          total_inserted += ins_size;
-          
           if (mut.entry_exists("mediated"))
             count["mob"][mut["mediated"]]++;
           
@@ -2691,11 +2676,6 @@ namespace breseq {
         if (mut._type == SUB) {
           int32_t old_size = from_string<int32_t>(mut[SIZE]);
           int32_t new_size = mut[NEW_SEQ].size();
-          
-          if (new_size - old_size > 0)
-            total_inserted += new_size - old_size;
-          else
-            total_deleted += old_size - new_size;
           
           if (mut.entry_exists("mediated"))
             count["mob"][mut["mediated"]]++;
@@ -2727,10 +2707,6 @@ namespace breseq {
           int32_t this_length = repeat_seq.size();
           this_length += from_string<int32_t>(mut["duplication_size"]);
           
-          total_inserted += this_length;
-          total_repeat_inserted += this_length;
-          //print "Repeat $mut->{repeat_name} $this_length bp\n";
-          
           count["mob"][mut["repeat_name"]]++;
           count["mobile_element_insertion"][""]++;
           mobile_element_insertion_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
@@ -2739,7 +2715,6 @@ namespace breseq {
         
         if (mut._type == AMP) {
           int32_t this_size = from_string<uint32_t>(mut[SIZE]) * (from_string<uint32_t>(mut["new_copy_number"]) - 1);
-          total_inserted += this_size;
           
           if (this_size > large_size_cutoff) {
             count["large_amplification"][""]++;
@@ -2767,6 +2742,10 @@ namespace breseq {
       }
       // END for each mutation
 
+      // USE APPLY TO CALCULATE SIZE CHANGES!!!
+      // MUST BE DONE AFTER OTHER COUNTING BECAUSE IT CHANGES THE GENOME DIFF!!
+      cReferenceSequences new_ref_seq_info = cReferenceSequences::deep_copy(ref_seq_info);
+      gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, false, 20, large_size_cutoff);
       
       int32_t called_bp = total_bp - un_bp;
       
@@ -2780,9 +2759,9 @@ namespace breseq {
       this_columns.push_back(to_string(count["large_substitution"][""]));
       this_columns.push_back(to_string(count["mobile_element_insertion"][""]));
       this_columns.push_back(to_string(count["gene_conversion"][""]));
-      this_columns.push_back(to_string(total_deleted));
-      this_columns.push_back(to_string(total_inserted));
-      this_columns.push_back(to_string(total_repeat_inserted));
+      this_columns.push_back(gd.get_breseq_data("BASES_CHANGED"));
+      this_columns.push_back(gd.get_breseq_data("BASES_DELETED"));
+      this_columns.push_back(gd.get_breseq_data("BASES_INSERTED"));
       this_columns.push_back(to_string(called_bp));
       this_columns.push_back(to_string(total_bp));
       

@@ -234,7 +234,7 @@ public:
 
   bool operator<(const cDiffEntry& de) const { return (compare(*this, de) < 0); }
   bool operator==(const cDiffEntry& de) const { return (compare(*this, de) == 0); }
-  
+    
   //! Return if a given key value exists in _fields
   bool entry_exists(const diff_entry_key_t& k) const { return (count(k) > 0); }
   
@@ -568,6 +568,9 @@ public:
   void add_breseq_data(const key_t &key, const string& value)
     { this->metadata.breseq_data.insert(pair<string,string>(key, value)); }
 
+  string get_breseq_data(const key_t &key)
+  { if ( this->metadata.breseq_data.find(key) != this->metadata.breseq_data.end() ) return this->metadata.breseq_data[key]; return ""; }
+  
   //! Gets parent of entry, if there is one
   diff_entry_ptr_t parent(const cDiffEntry& evidence);
   
@@ -665,13 +668,13 @@ public:
 
   void set_intersect(cGenomeDiff& gd_ref, bool verbose=false);
   
-  void set_union(cGenomeDiff& gd_ref, bool evidence_mode, bool verbose=false);
+  void set_union(cGenomeDiff& gd_ref, bool evidence_mode, bool phylogeny_aware, bool verbose=false);
   
   //! Helper function for union
   void unique();
   
   //! Merge GenomeDiff information using gd_new as potential new info.
-  void merge(cGenomeDiff& merge_gd, bool unique=true, bool new_id=false, bool verbose=false);
+  void merge(cGenomeDiff& merge_gd, bool unique=true, bool new_id=false, bool phylogeny_id_aware = false, bool verbose=false);
   
   //! fast merge, doesn't compare entries, but does renumber
   void fast_merge(const cGenomeDiff& gd);
@@ -811,7 +814,14 @@ public:
   static void GD2OLI( const vector<string> &gd_file_names, 
                       const vector<string> &reference_file_names, 
                       const string& output_file_name,
-                      const uint32_t large_size_cutoff);
+                      const uint32_t large_size_cutoff,
+                      const bool phylogeny_aware);
+  
+  // For creating coverage graphs in R
+  static void GD2COV( const vector<string> &gd_file_names,
+                      const vector<string> &reference_file_names,
+                      const string& output_file_name,
+                      const uint32_t chunk_size = 100);
 
   //! Functions for dealing with lists of Genome Diffs
   static void sort_gd_list_by_treatment_population_time(vector<cGenomeDiff>& genome_diffs);

@@ -116,6 +116,7 @@ int do_union(int argc, char *argv[])
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o",  "output GD file name", "output.gd");
 	options("evidence,e",  "operate on evidence rather than mutation entries", TAKES_NO_ARGUMENT);
+	options("phylogeny-aware,p", "Check the optional 'phylogeny_id' field when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 
@@ -150,7 +151,7 @@ int do_union(int argc, char *argv[])
   for(int32_t i = 1; i < options.getArgc(); ++i) {
     uout << options.getArgv(i) << endl;
     cGenomeDiff gd2(options.getArgv(i));
-    gd1.set_union(gd2, options.count("evidence"), options.count("verbose"));
+    gd1.set_union(gd2, options.count("evidence"), options.count("phylogeny-aware"), options.count("verbose"));
   }
 
   uout("Assigning unique IDs");
@@ -529,12 +530,14 @@ int do_validate(int argc, char *argv[])
 	for (int32_t i=0; i<options.getArgc(); i++) {
 			string gd_file_name = options.getArgv(i);
 			num_files_processed++;
+		
+			cerr << endl << "File: " << gd_file_name << endl;
+
 			cGenomeDiff gd;
 			cFileParseErrors pe = gd.read(gd_file_name, true);
 
 			// we can't test the next part if there are fatal errors
 			if (pe.fatal()) {
-				cerr << endl << "File: " << gd_file_name << endl;
 				pe.print_errors(false);
 				num_files_with_errors++;
 				continue;
@@ -546,15 +549,12 @@ int do_validate(int argc, char *argv[])
 			}
 			
 			if (pe._errors.size() + pe2._errors.size() == 0) {
-					if (verbose) {
-							cerr << endl << "File: " << gd_file_name << endl;
-							cerr << "  FORMAT OK" << endl;
-					}
+				cerr << "  FORMAT OK" << endl;
 			} else {
-					cerr << endl << "File: " << gd_file_name << endl;
-					pe.print_errors(false);
-					pe2.print_errors(false);
-					num_files_with_errors++;
+				cerr << endl << "File: " << gd_file_name << endl;
+				pe.print_errors(false);
+				pe2.print_errors(false);
+				num_files_with_errors++;
 			}
 	}
 	
@@ -935,8 +935,10 @@ int do_annotate(int argc, char* argv[])
 	options("output,o", "Path to output file with added mutation data. (DEFAULT: output.*");
 	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
 	options("format,f", "Type of output file to generate. See options below", "HTML");
-	options("ignore-pseudogenes", "Treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT);
+	options("ignore-pseudogenes", "Treat pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT);
   options("repeat-header", "In HTML mode, repeat the header line every this many rows (0=OFF)", "10");
+	options("phylogeny-aware,p", "Check the optional 'phylogeny_id' field when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
+
   options.addUsage("");
   options.addUsage("If multiple GenomeDiff input files are provided, then they are merged and the frequencies from each file are shown for each mutation.");
   options.addUsage("");
@@ -1026,7 +1028,7 @@ int do_annotate(int argc, char* argv[])
 
     cGenomeDiff cleaned_single_gd(single_gd);  
     cleaned_single_gd.remove_group(cGenomeDiff::EVIDENCE);
-    gd.merge(cleaned_single_gd);
+    gd.merge(cleaned_single_gd, true, false, options.count("phylogeny-aware"));
 		
 		// Copy over the metadata if there is only one file
 		if (gd_path_names.size() == 1) {
@@ -1070,7 +1072,6 @@ int do_annotate(int argc, char* argv[])
     mt_options.one_ref_seq = ref_seq_info.size() == 1;
     mt_options.gd_name_list_ref = gd_titles;
     mt_options.repeat_header = from_string<int32_t>(options["repeat-header"]);
-    
     html_compare(settings, output_file_name, "Mutation Comparison", gd, mt_options);
         
   } else if (output_format == "GD") {
@@ -1148,6 +1149,7 @@ int do_phylogeny(int argc, char* argv[])
 	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
 	//options("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT);
 	options("missing-as-ancestral,a", "Count missing data (mutations in UN regions) as the ancestral allele rather than as an unknown allele (N).", TAKES_NO_ARGUMENT);
+	options("phylogeny-aware,p", "Check the optional 'phylogeny_id' field when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
 	
 	options.addUsage("");
 	options.addUsageSameLine("Uses PHYLIP to construct a phylogentic tree. If you are including an ancestor");
@@ -1164,18 +1166,19 @@ int do_phylogeny(int argc, char* argv[])
 	
 	// User setting overrules default names
 	string output_base_name = "phylogeny";
-	if (options.count("output")) 
-			output_base_name = options["output"];
+	if (options.count("output")) {
+		output_base_name = options["output"];
+	}
 	
 	vector<string> gd_path_names;
 	for (int32_t i = 0; i < options.getArgc(); ++i) {
-			gd_path_names.push_back(options.getArgv(i));
+		gd_path_names.push_back(options.getArgv(i));
 	}
 	
 	if ( (gd_path_names.size() == 0) 
 			|| !options.count("reference")){
-			options.printUsage();
-			return -1;
+		options.printUsage();
+		return -1;
 	}
 	
 	// more than one file was provided as input
@@ -1189,18 +1192,18 @@ int do_phylogeny(int argc, char* argv[])
 
 	bool polymorphisms_found = false; // handled putting in the polymorphism column if only one file provided
 	for (uint32_t i = 0; i < gd_path_names.size(); i++){
-			uout("Reading input GD file",gd_path_names[i]);
-			cGenomeDiff single_gd(gd_path_names[i]);
-			gd_list.push_back(single_gd);
+		uout("Reading input GD file",gd_path_names[i]);
+		cGenomeDiff single_gd(gd_path_names[i]);
+		gd_list.push_back(single_gd);
 	}    
 
 	uint32_t file_num = 1;
 	vector<string> title_list;
 	for (vector<cGenomeDiff>::iterator it=gd_list.begin(); it!= gd_list.end(); it++) {
-			cGenomeDiff& single_gd = *it;
-			gd.merge(single_gd);
-			title_list.push_back(single_gd.get_title());
-			single_gd.set_title("_" + to_string<uint32_t>(file_num++) + "_");
+		cGenomeDiff& single_gd = *it;
+		gd.merge(single_gd, true, false, options.count("phylogeny-aware"));
+		title_list.push_back(single_gd.get_title());
+		single_gd.set_title("_" + to_string<uint32_t>(file_num++) + "_");
 	}
 
 	gd.sort();
@@ -1565,7 +1568,6 @@ int do_remove_gd(int argc, char* argv[])
     return 0;
   }
     
-  cGenomeDiff output_gd;
   const vector<string> evals = make_vector<string>("==")("!=")("<=")(">=")("<")(">");
   for (diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); ++it) {
     cDiffEntry mut = **it;
@@ -1646,10 +1648,9 @@ int do_remove_gd(int argc, char* argv[])
       mut["filtered"] = join(reasons, ", ");
       mut["comment_out"] = "true";
     }
-    output_gd.add(mut);
   }
   uout("Writing output GD file", options["output"]);
-  output_gd.write(options["output"]);
+  gd.write(options["output"]);
   return 0;
 }
 
@@ -2884,7 +2885,9 @@ int do_gd2oli( int argc, char* argv[])
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
 	options("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
 	options("output,o","name of output file", "output.tab");
-	options("large-cutoff,l","large size mutation cutoff. Deletions, substitutions, and insertions changing genome size by more than this many bases are treated as 'large' in the output.", 30);
+	options("large-cutoff,l","large size mutation cutoff. Deletions, substitutions, and insertions changing genome size by more than this many bases are treated as 'large' in the output.", 20);
+	options("phylogeny-aware,p", "Check the 'phylogeny_id' and 'insert_position' fields when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
+
 	options.processCommandArgs( argc,argv);
 	
 	if (options.count("help")) {
@@ -2915,7 +2918,47 @@ int do_gd2oli( int argc, char* argv[])
 			string file_name = options.getArgv(i);
 			gd_file_names.push_back(file_name);
 	}
-	cGenomeDiff::GD2OLI( gd_file_names, from_string<vector<string> >(options["reference"]), options["output"], from_string<uint32_t>(options["large-cutoff"]) );
+	cGenomeDiff::GD2OLI( gd_file_names, from_string<vector<string> >(options["reference"]), options["output"], from_string<uint32_t>(options["large-cutoff"]), options.count("phylogeny-aware") );
+	
+	return 0;
+}
+
+
+int do_gd2coverage(int argc, char* argv[])
+{
+	
+	AnyOption options("gdtools GD2COV [-o output -r reference.gbk] input1.gd input2.gd ... ");
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+	options("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
+	options("output,o","Base name of output files", "output");
+	options("tile-size,t","Size of tiling for coverage graph", 1000);
+
+
+	options.addUsage("");
+	options.addUsage("Creates files for graphing duplicated and deleted regions across many evolved genomes.");
+
+	options.processCommandArgs( argc,argv);
+
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
+	if (!options.count("reference")) {
+		options.addUsage("");
+		options.addUsage("You must provide a reference sequence file (-r).");
+		options.printUsage();
+		return -1;
+	}
+	
+	vector<string> gd_file_names;
+	for (int32_t i = 0; i < options.getArgc(); i++)
+	{
+		string file_name = options.getArgv(i);
+		gd_file_names.push_back(file_name);
+	}
+	
+	cGenomeDiff::GD2COV(gd_file_names, from_string<vector<string> >(options["reference"]), options["output"], from_string<int32_t>(options["tile-size"]));
 	
 	return 0;
 }
@@ -3016,6 +3059,8 @@ int main(int argc, char* argv[]) {
       return do_translate_proteome(argc_new, argv_new);
   } else if (command == "GD2OLI") {
       return do_gd2oli(argc_new, argv_new);
+	} else if (command == "GD2COV") {
+		return do_gd2coverage(argc_new, argv_new);
 	} else if (command =="MUMMER2MASK") {
 		return do_mummer2mask(argc_new, argv_new);
 	} else if (command =="MASK") {

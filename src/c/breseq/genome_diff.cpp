@@ -521,7 +521,9 @@ int32_t cDiffEntry::compare(const cDiffEntry& a, const cDiffEntry& b)
   ? extended_line_specification.find(a_type)->second : line_specification.find(a_type)->second;
   
   // always add these for uniqueness testing
+  specs.push_back("phylogeny_id");
   specs.push_back("unique");
+  specs.push_back("population_id");
   
   for(vector<diff_entry_key_t>::const_iterator it = specs.begin(); it != specs.end(); it++) {
     const diff_entry_key_t& spec(*it);
@@ -626,7 +628,7 @@ int32_t cDiffEntry::compare(const cDiffEntry& a, const cDiffEntry& b)
   // Return zero if the entries are equal (according to major specs)
   return 0;
 }
-  
+
 bool cDiffEntry::is_mutation() const
 {
   return gd_entry_type_lookup_table[_type].size() == 3;
@@ -1866,7 +1868,7 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
                 string picked_seq_id;
                 cSequenceFeature picked_sequence_feature;
                 string mob_seq = mob_replace_sequence(ref_seq, *within_de, &picked_seq_id, &picked_sequence_feature);
-                valid_start = within_position + from_string<int32_t>((*within_de)[DUPLICATION_SIZE]);
+                valid_start = within_position + max(0, from_string<int32_t>((*within_de)[DUPLICATION_SIZE]));
                 valid_end = valid_start + mob_seq.size() - 1;
                 
               }
@@ -2034,13 +2036,13 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
       } else */ if (de._type == SNP) {
         uint32_t position = from_string<uint32_t>(de[POSITION]);
         if (de[NEW_SEQ] == ref_seq.get_sequence_1(de[SEQ_ID], position, position)) {
-          parse_errors.add_line_error(from_string<uint32_t>(de["_line_number"]), de.as_string(), "Specified NEW_SEQ is the same as the reference sequence at the specified positon.", true);
+          parse_errors.add_line_error(from_string<uint32_t>(de["_line_number"]), de.as_string(), "Specified NEW_SEQ is the same as the reference sequence at the specified position.", false);
         }
       } else if (de._type == SUB) {
         uint32_t position = from_string<uint32_t>(de[POSITION]);
         uint32_t size = from_string<uint32_t>(de[SIZE]);
         if (de[NEW_SEQ] == ref_seq.get_sequence_1(de[SEQ_ID], position, position+size-1)) {
-          parse_errors.add_line_error(from_string<uint32_t>(de["_line_number"]), de.as_string(), "Specified NEW_SEQ is the same as the reference sequence at the specified positons.", true);
+          parse_errors.add_line_error(from_string<uint32_t>(de["_line_number"]), de.as_string(), "Specified NEW_SEQ is the same as the reference sequence at the specified positions.", false);
         }
       }
       
@@ -2250,7 +2252,7 @@ diff_entry_ptr_t cGenomeDiff::find_by_id(string _id)
 {
   for (diff_entry_list_t::iterator itr_diff_entry = _entry_list.begin();
        itr_diff_entry != _entry_list.end(); itr_diff_entry++)
-  {
+  {    
     if ( (*itr_diff_entry)->_id == _id)
       return *itr_diff_entry;
   }
@@ -2545,7 +2547,7 @@ void cGenomeDiff::set_intersect(cGenomeDiff &gd, bool verbose)
 }
   
 // Merged mutations AND all non-mutation items
-void cGenomeDiff::set_union(cGenomeDiff& gd, bool evidence_mode, bool verbose)
+void cGenomeDiff::set_union(cGenomeDiff& gd, bool evidence_mode, bool phylogeny_aware, bool verbose)
 {
   (void)verbose; //unused
 
@@ -2556,7 +2558,7 @@ void cGenomeDiff::set_union(cGenomeDiff& gd, bool evidence_mode, bool verbose)
   this->remove_group(cGenomeDiff::VALIDATION);
   
   // Merge and clear away all evidence reference
-  merge(gd, true, true);
+  merge(gd, true, true, phylogeny_aware);
   
   if (!evidence_mode)
     this->remove_group(cGenomeDiff::EVIDENCE);
@@ -2663,11 +2665,21 @@ void cGenomeDiff::unique()
 // 1) The difference between a mutation happening before an AMP (thus in all copies)
 //    and after an AMP (thus in only one copy) at the same position.
 //
-void cGenomeDiff::merge(cGenomeDiff& merge_gd, bool unique, bool new_id, bool verbose)
+void cGenomeDiff::merge(cGenomeDiff& merge_gd, bool unique, bool new_id, bool phylogeny_id_aware, bool verbose)
 {
   uint32_t old_unique_ids = unique_id_used.size();
   
   cGenomeDiff new_gd;
+  
+  // Delete 'phylogeny_id' if we are not phylogeny aware
+  if (!phylogeny_id_aware) {
+    for (diff_entry_list_t::iterator it_new = merge_gd._entry_list.begin(); it_new != merge_gd._entry_list.end(); it_new++) {
+      (*it_new)->erase("phylogeny_id");
+      (*it_new)->erase("insert_position");
+      (*it_new)->erase("population_id");
+    }
+  }
+  
   
   //Iterate through all the potential new entries
   for (diff_entry_list_t::iterator it_new = merge_gd._entry_list.begin(); it_new != merge_gd._entry_list.end(); it_new++)
@@ -2777,7 +2789,7 @@ void cGenomeDiff::merge(cGenomeDiff& merge_gd, bool unique, bool new_id, bool ve
         
         //Iterate through all the current entries to find the match
         for (diff_entry_list_t::iterator it_cur =_entry_list.begin(); it_cur != _entry_list.end(); it_cur++) {
-          if ((**it_cur) == (*looking_for)) {
+          if (**it_cur == *looking_for) {
             split_value[0] = to_string((**it_cur)._id);
             found_match = true;
             break;
@@ -2875,16 +2887,20 @@ void cGenomeDiff::reassign_unique_ids()
         string value = mut[*key_it];
         // Replace first value = mutation_id with substituted id
         vector<string> split_value = split(value, ":");
-        ASSERT(mutation_id_reassignments.count(split_value[0]), "Mutation that this mutation was 'before' or 'within' has been removed.\n" + mut.as_string());
-        split_value[0] = mutation_id_reassignments[split_value[0]];
-        
-        if (verbose) {
-          cout << "Mutation:" << endl << mut.as_string() << endl;
-        }
-        mut[*key_it] = join(split_value, ":");
-        if (verbose) {
-          cout << "Reassigned " << *key_it << "=" << split_value[0] << " to " << mut[*key_it] << endl;
-          cout << "New Mutation:" << endl << mut.as_string() << endl;
+        if(!mutation_id_reassignments.count(split_value[0])) {
+          WARN("Mutation that this mutation was 'before' or 'within' has been removed.\n" + mut.as_string());
+          mut.erase(*key_it);
+        } else {
+          split_value[0] = mutation_id_reassignments[split_value[0]];
+          
+          if (verbose) {
+            cout << "Mutation:" << endl << mut.as_string() << endl;
+          }
+          mut[*key_it] = join(split_value, ":");
+          if (verbose) {
+            cout << "Reassigned " << *key_it << "=" << split_value[0] << " to " << mut[*key_it] << endl;
+            cout << "New Mutation:" << endl << mut.as_string() << endl;
+          }
         }
       }
     }
@@ -3529,7 +3545,7 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
          
         } else if ( current_mut._type == INS ) {
           // Inside an INS means copy_index is actually the nucleotide within the insertion
-          special_delta = from_string<int32_t>(current_mut[SIZE]) + within_copy_index; // past the duplicated nucleotides
+          special_delta = within_copy_index;
         }
         
         // -1 used as offset to force update of position because we are within it...
@@ -3636,9 +3652,14 @@ string cGenomeDiff::mob_replace_sequence(cReferenceSequences& ref_seq_info,
 // When calling this function make SURE that you load ref_seq_info and
 // new_ref_seq_info separately.
 //
+// This function also annotates IS-mediates, adjacent, etc. mutations
+//
+// Finally, it will set bases added, bases changed, bases deleted in the GD header
+//
 void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose, int32_t slop_distance, int32_t size_cutoff_AMP_becomes_INS_DEL_mutation)
 {    
   uint32_t count_SNP = 0, count_SUB = 0, count_INS = 0, count_DEL = 0, count_AMP = 0, count_INV = 0, count_MOB = 0, count_CON = 0, count_MASK = 0;
+  uint32_t bases_inserted(0), bases_deleted(0), bases_changed(0);
   
   // Sort the list into apply order ('within' and 'before' tags)
   cGenomeDiff::sort_apply_order();
@@ -3775,6 +3796,8 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         // Replace sequence
         new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id));
         
+        bases_changed++;
+        
       } break;
         
       case SUB:
@@ -3783,7 +3806,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         
         int32_t size = from_string<int32_t>(mut[SIZE]);
         if (mut.entry_exists(APPLY_SIZE_ADJUST)) {
-          size += from_string<int32_t>(mut["apply_size_adjust"]);
+          size += from_string<int32_t>(mut[APPLY_SIZE_ADJUST]);
           ASSERT(size > 0, "Attempt to apply mutation with non-positive size.");
         }
 
@@ -3798,9 +3821,13 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         applied_seq_id = mut[SEQ_ID];
         applied_start = position - 1;
         applied_end = position - 1 + mut[NEW_SEQ].size();
-        applied_seq = replace_seq + mut[NEW_SEQ];
+        applied_seq = replace_seq.substr(0,3) + mut[NEW_SEQ];
         
         new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id));
+        
+        bases_changed  += min(size, static_cast<int32_t>(mut[NEW_SEQ].size()));
+        bases_deleted  += max(0, size - static_cast<int32_t>(mut[NEW_SEQ].size()));
+        bases_inserted += max(0, static_cast<int32_t>(mut[NEW_SEQ].size()) - size);
         
       } break;
         
@@ -3823,6 +3850,8 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         
         new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id));
         
+        bases_inserted += mut[NEW_SEQ].size();
+        
       } break;
         
       case DEL:
@@ -3830,8 +3859,8 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         count_DEL++;
         
         int32_t size = from_string<int32_t>(mut[SIZE]);
-        if (mut.entry_exists("apply_size_adjust")) {
-          size += from_string<int32_t>(mut["apply_size_adjust"]);
+        if (mut.entry_exists(APPLY_SIZE_ADJUST)) {
+          size += from_string<int32_t>(mut[APPLY_SIZE_ADJUST]);
           ASSERT(size > 0, "Attempt to apply mutation with non-positive size.");
         }
         
@@ -3845,9 +3874,8 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
           replace_end++;
         }
         replace_seq = new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end);
-        replace_seq.insert(position - replace_start,"(");
-        replace_seq.append(")");
-
+        replace_seq.insert(0,"(");
+        replace_seq.insert(2,")");
         
         applied_seq_id = mut[SEQ_ID];
         applied_start = position - 1;
@@ -3860,10 +3888,12 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         }
           
         applied_seq.insert(0,"(");
-        applied_seq.append(")");
+        applied_seq.insert(2,")");
 
-        
+        ASSERT(size >= 1, "Attempt to apply DEL mutation with size ≤ 0:\n" + mut.as_string());
         new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size -1, "", (to_string(mut._type) + " " + mut._id));
+        
+        bases_deleted += size;
         
       } break;
         
@@ -3893,8 +3923,8 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         count_AMP++;
         
         int32_t size = from_string<int32_t>(mut[SIZE]);
-        if (mut.entry_exists("apply_size_adjust")) {
-          size += from_string<int32_t>(mut["apply_size_adjust"]);
+        if (mut.entry_exists(APPLY_SIZE_ADJUST)) {
+          size += from_string<int32_t>(mut[APPLY_SIZE_ADJUST]);
           ASSERT(size > 0, "Attempt to apply mutation with non-positive size.");
         }
         
@@ -3980,13 +4010,15 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         applied_end = position + duplicated_sequence_full_addition.size() - 1;
         applied_seq = duplicated_sequence_full_addition + replace_seq;
         
+        bases_inserted += duplicated_sequence_full_addition.size();
+        
       } break;
         
       case INV:
       {
         int32_t size = from_string<int32_t>(mut[SIZE]);
-        if (mut.entry_exists("apply_size_adjust")) {
-          size += from_string<int32_t>(mut["apply_size_adjust"]);
+        if (mut.entry_exists(APPLY_SIZE_ADJUST)) {
+          size += from_string<int32_t>(mut[APPLY_SIZE_ADJUST]);
           ASSERT(size > 0, "Attempt to apply mutation with non-positive size.");
         }
 
@@ -4108,7 +4140,9 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         // We've repeated the sequence, now it's time to repeat all the features
         // inside of and including the repeat region.
         new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+iInsStart+iDupSeqLen, iDelStart, iDelEnd, ref_seq_info, seq_id_picked, from_string<int16_t>(mut["strand"]), repeat_feature_picked.m_location);
-               
+        
+        bases_inserted += new_seq_string.size();
+        
       } break;
         
       case CON:
@@ -4116,8 +4150,8 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         count_CON++;
         
         int32_t size = from_string<int32_t>(mut[SIZE]);
-        if (mut.entry_exists("apply_size_adjust")) {
-          size += from_string<int32_t>(mut["apply_size_adjust"]);
+        if (mut.entry_exists(APPLY_SIZE_ADJUST)) {
+          size += from_string<int32_t>(mut[APPLY_SIZE_ADJUST]);
           ASSERT(size > 0, "Attempt to apply mutation with non-positive size.");
         }
         
@@ -4174,21 +4208,8 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
     
     // Re-sort ... invalidates the iterator
     if (mut._type == INV) {
-      
       // Sort the list into apply order ('within' and 'before' tags)
       cGenomeDiff::sort_apply_order();
-      
-      // Handle all mutation types, plus MASK four-letter type.
-      mutation_list = this->mutation_list();
-      diff_entry_list_t mask_list = this->list(make_vector<gd_entry_type>(MASK));
-      mutation_list.insert(mutation_list.end(), mask_list.begin(), mask_list.end());
-      
-      for (diff_entry_list_t::iterator itr_mut2 = mutation_list.begin(); itr_mut2 != mutation_list.end(); itr_mut2++) {
-        if (**itr_mut2 == mut) {
-          itr_mut = itr_mut2;
-          break;
-        }
-      }
     }
   }
   
@@ -4205,6 +4226,12 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
     cout << "\tCON: " << count_CON << endl;
     cout << "\tMASK: " << count_MASK << endl;
   }
+  
+  this->add_breseq_data("BASES_CHANGED", to_string<uint32_t>(bases_changed));
+  this->add_breseq_data("BASES_INSERTED", to_string<uint32_t>(bases_inserted));
+  this->add_breseq_data("BASES_DELETED", to_string<uint32_t>(bases_deleted));
+  this->add_breseq_data("GENOME_SIZE_INITIAL", to_string(ref_seq_info.total_length()));
+  this->add_breseq_data("GENOME_SIZE_FINAL", to_string(new_ref_seq_info.total_length()));
   
   //Cleanup.  If any of the sequences are of zero length, remove them.
   for (vector<cAnnotatedSequence>::iterator it_as = new_ref_seq_info.begin(); it_as < new_ref_seq_info.end(); it_as++) {
@@ -4261,6 +4288,7 @@ void cGenomeDiff::annotate_hotspots(cReferenceSequences& new_ref_seq_info, bool 
       mut["mediated"] = (*end_repeat)["name"];
     }
   }
+
 }
   
 void cGenomeDiff::mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, bool verbose)
@@ -5996,7 +6024,8 @@ Temporary format for exchange with Olivier Tenaillon to analyze parallelism
 void cGenomeDiff::GD2OLI(const vector<string> &gd_file_names, 
                          const vector<string> &reference_file_names, 
                          const string& output_file_name,
-                         const uint32_t large_size_cutoff)
+                         const uint32_t large_size_cutoff,
+                         const bool phylogeny_aware)
 {
   cReferenceSequences ref_seq_info;
   ref_seq_info.LoadFiles(reference_file_names);
@@ -6010,10 +6039,22 @@ void cGenomeDiff::GD2OLI(const vector<string> &gd_file_names,
   vector<cGenomeDiff> gd_list;
   for(vector<string>::const_iterator it=gd_file_names.begin(); it != gd_file_names.end(); it++) {
     cout << "   " << *it << endl;
+    
     cGenomeDiff this_gd(*it);
+    
+    if (phylogeny_aware) {
+      
+      diff_entry_list_t mut_list = this_gd.mutation_list();
+      for(diff_entry_list_t::iterator mut_it = mut_list.begin(); mut_it != mut_list.end(); mut_it++) {
+        (**mut_it)["population_id"] = this_gd.metadata.population;
+      }
+    }
+    
     gd_list.push_back(this_gd);
-    master_gd.merge(this_gd);
+    
+    master_gd.merge(this_gd, true, false, phylogeny_aware); // last true is to make phylogeny aware
   }
+  
   cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
   
   
@@ -6241,6 +6282,130 @@ void cGenomeDiff::GD2OLI(const vector<string> &gd_file_names,
   
 }
   
+
+// For creating coverage graphs in R
+void cGenomeDiff::GD2COV(const vector<string> &gd_file_names,
+                         const vector<string> &reference_file_names,
+                         const string& output_file_name,
+                         const uint32_t chunk_size)
+{
+  cReferenceSequences ref_seq_info;
+  ref_seq_info.LoadFiles(reference_file_names);
+  
+  //assumes single reference file for now, could output concatenation
+  uint32_t ref_seq_length = ref_seq_info[0].get_sequence_length();
+  
+  cout << "Loading Genome Diff files..." << endl;
+  
+  vector<cGenomeDiff> gd_list;
+  for(vector<string>::const_iterator it=gd_file_names.begin(); it != gd_file_names.end(); it++) {
+    cout << "   " << *it << endl;
+    cGenomeDiff this_gd(*it);
+    gd_list.push_back(this_gd);
+  }
+  
+  cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
+
+  uint32_t num_chunk = trunc(ref_seq_length / double(chunk_size)) + 1;
+  
+  vector<string> headers;
+  vector< vector<int32_t> > dup_cov;
+  vector< vector<int32_t> > del_cov;
+  
+  for(vector<cGenomeDiff>::iterator it = gd_list.begin(); it != gd_list.end(); it++) {
+    
+    cGenomeDiff& gd = *it;
+    
+    headers.push_back(gd.get_title());
+    vector<int32_t> this_dup_cov(num_chunk, 0);
+    vector<int32_t> this_del_cov(num_chunk, 0);
+    
+    diff_entry_list_t mut_list = gd.list(make_vector<gd_entry_type>(DEL)(AMP));
+
+    for(diff_entry_list_t::iterator mut_it = mut_list.begin(); mut_it != mut_list.end(); mut_it++) {
+      
+      cDiffEntry& mut = **mut_it;
+      
+      if (from_string<int32_t>(mut[SIZE]) < 100) {
+        continue;
+      }
+      
+      if (mut._type == DEL) {
+        
+        int32_t start = trunc( mut.get_reference_coordinate_start().get_position() / double(chunk_size) ) ;
+        int32_t end = trunc( mut.get_reference_coordinate_end().get_position() / double(chunk_size) );
+        
+        for (int32_t i = start; i <= end; i++) {
+          this_del_cov[i] += 1;
+        }
+        
+      } else if (mut._type == AMP) {
+        
+        int32_t start = trunc( mut.get_reference_coordinate_start().get_position() / double(chunk_size) ) ;
+        int32_t end = trunc( mut.get_reference_coordinate_end().get_position() / double(chunk_size) );
+        int32_t add_copy_num = from_string<int32_t>(mut[NEW_COPY_NUMBER]) - 1;
+        
+        for (int32_t i = start; i < end; i++) {
+          this_dup_cov[i] += add_copy_num;
+        }
+      }
+    }
+    
+    dup_cov.push_back(this_dup_cov);
+    del_cov.push_back(this_del_cov);
+
+  }
+  
+  ofstream delout( (output_file_name + ".del.tab").c_str() );
+  ofstream dupout( (output_file_name + ".dup.tab").c_str() );
+  
+  delout << join( make_vector<string>("position")("title")("population")("time")("coverage"), "\t") << endl;
+  dupout << join( make_vector<string>("position")("title")("population")("time")("coverage"), "\t") << endl;
+
+  
+  uint32_t j=0;
+  for(vector<cGenomeDiff>::iterator it = gd_list.begin(); it != gd_list.end(); it++) {
+    
+    for (uint32_t i=0; i<num_chunk; i++) {
+      
+      delout << (i * chunk_size);
+      delout << "\t" << it->get_title();
+      delout << "\t" << it->metadata.population;
+      delout << "\t" << it->metadata.time;
+      delout << "\t" << del_cov[j][i];
+      delout << endl;
+      
+      dupout << (i * chunk_size);
+      dupout << "\t" << it->metadata.population;
+      dupout << "\t" << it->metadata.time;
+      dupout << "\t" << it->get_title();
+      dupout << "\t" << dup_cov[j][i];
+      dupout << endl;
+      
+      /* Alternative method that only plots changes
+      if ((i==0) || (i==num_chunk-1) || (del_cov[j][i] != del_cov[j][i-1]) || (del_cov[j][i] != del_cov[j][i+1]))
+      {
+        delout << (i * chunk_size);
+        delout << "\t" << it->get_title();
+        delout << "\t" << del_cov[j][i];
+        delout << endl;
+      }
+      
+      if ((i==0) || (i==num_chunk-1) || (dup_cov[j][i] != dup_cov[j][i-1]) || (dup_cov[j][i] != dup_cov[j][i+1]))
+      {
+        dupout << (i * chunk_size);
+        dupout << "\t" << it->get_title();
+        dupout << "\t" << dup_cov[j][i];
+        dupout << endl;
+      }
+      */
+    }
+    
+    j++;
+  }
+  
+  
+}
   
 bool sort_gd_by_treatment_population_time(const cGenomeDiff& a, const cGenomeDiff &b)
 {

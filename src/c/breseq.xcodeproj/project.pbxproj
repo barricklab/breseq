@@ -576,6 +576,7 @@
 				GCC_VERSION = "";
 				HEADER_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS = "$(value)";
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				ONLY_ACTIVE_ARCH = YES;
 			};
 			name = Debug;
@@ -589,6 +590,7 @@
 				GCC_VERSION = "";
 				HEADER_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS = "$(value)";
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				ONLY_ACTIVE_ARCH = NO;
 			};
 			name = Release;
