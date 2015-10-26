@@ -269,6 +269,11 @@ public:
   // Updates positions for inversion and reverse-complements mutation
   void mutation_invert_position_sequence(cDiffEntry& inverting_mutation);
   
+  bool is_small_mutation(uint32_t large_size_cutoff=20);
+  
+  // Updates 
+  void annotate_repeat_hotspots(cReferenceSequences& new_ref_seq_info, int32_t slop_distance, int32_t size_cutoff_AMP_becomes_INS_DEL_mutation, bool remove_old_tags, bool warn_mode = false);
+  
   //!---- Output ---- !//
   
   //! Marshal this diff entry into an ordered list of fields.
@@ -739,9 +744,6 @@ public:
   //! Call to apply Genome Diff to sequences
   void apply_to_sequences(cReferenceSequences &ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose=false, 
                           int32_t slop_distance=10, int32_t size_cutoff_AMP_becomes_INS_DEL_mutation = 50);
-  
-  //! Add 'mediated' and 'between' tags - should be called after an apply
-  void annotate_hotspots(cReferenceSequences& new_ref_seq_info, bool remove_old_tags=true, int32_t slop_distance=10);
   
   //! Remove mutations that overlap MASK items in another GD
   void mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, bool verbose);

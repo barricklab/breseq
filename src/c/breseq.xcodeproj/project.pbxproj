@@ -462,7 +462,7 @@
 		421ACEB71170DB9600C2EB85 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0620;
+				LastUpgradeCheck = 0700;
 			};
 			buildConfigurationList = 421ACEBA1170DB9600C2EB85 /* Build configuration list for PBXProject "breseq" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -572,6 +572,7 @@
 			buildSettings = {
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_TESTABILITY = YES;
 				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
 				GCC_VERSION = "";
 				HEADER_SEARCH_PATHS = "$(value)";

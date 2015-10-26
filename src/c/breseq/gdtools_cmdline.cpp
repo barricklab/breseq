@@ -1446,9 +1446,6 @@ int do_normalize_gd(int argc, char* argv[])
 		new_ref_seq_info = cReferenceSequences::deep_copy(ref_seq_info);
 		apply_gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, false, kDistanceToRepeat, settings.size_cutoff_AMP_becomes_INS_DEL_mutation);
 		
-		//
-		//==> FUTURE IMPROVEMENT ... RECHECK POSITIONS TO SEE WHICH ONES ARE NOW NEAR IS ELEMENTS
-		//
 		
 		// Now transfer between and mediated tags to ones with the same IDs
 		diff_entry_list_t gd_mutation_list = gd.mutation_list();
@@ -1512,7 +1509,7 @@ int do_remove_gd(int argc, char* argv[])
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o", "Output Genome Diff file.", "output.gd");
   options("mut_type,m", "Only this mutation type will be removed.");
-	options("condition,c", "Condition for removing mutation entries from the input Genome Diff file. Enclose the value of this parameter in quotes if it includes spaces, e.g. -c \"frequency <= 0.05\". You may include multiple conditions on the same command line. Only entries that satisfy ALL conditions will be removed.");
+	options("condition,c", "Condition for removing mutation entries from the input Genome Diff file. Enclose the value of this parameter in quotes if it includes spaces, e.g. -c \"frequency <= 0.05\". You may include multiple conditions on the same command line. Only entries that satisfy ALL conditions will be removed. Use the special value UNDEFINED to indicate a that this field does not exist for the given entry.");
   options.processCommandArgs(argc, argv);
 
   options.addUsage("");
@@ -1570,7 +1567,7 @@ int do_remove_gd(int argc, char* argv[])
     
   const vector<string> evals = make_vector<string>("==")("!=")("<=")(">=")("<")(">");
   for (diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); ++it) {
-    cDiffEntry mut = **it;
+    cDiffEntry& mut = **it;
 
     vector<string> reasons;
     for (vector<string>:: const_iterator jt = filters.begin(); jt != filters.end(); ++jt) {
@@ -1609,39 +1606,42 @@ int do_remove_gd(int argc, char* argv[])
       }  
         
 			//Note special case for 'type'
-      if (mut.count(key) || (key=="type")) {
+			string test_string = mut.count(key) ? mut[key] : "UNDEFINED";
+			
+			// Special cases for non-map entries
+			if (key=="type") {
+				test_string = to_string(mut._type);
+			}
+			
+			// Numeric
+			if (value.find_first_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") == string::npos) {
+				switch(eval)
+				{
+					case 0: if (from_string<float>(test_string) == from_string<float>(value)) is_filtered = true; break;
+					case 1: if (from_string<float>(test_string) != from_string<float>(value)) is_filtered = true; break;
+					case 2: if (from_string<float>(test_string) <= from_string<float>(value)) is_filtered = true; break;
+					case 3: if (from_string<float>(test_string) >= from_string<float>(value)) is_filtered = true; break;
+					case 4: if (from_string<float>(test_string) <  from_string<float>(value)) is_filtered = true; break;
+					case 5: if (from_string<float>(test_string) >  from_string<float>(value)) is_filtered = true; break;
+				};
+			}
+			// String
+			else {
+				switch(eval)
+				{
+					case 0: if (test_string == value) is_filtered = true; break;
+					case 1: if (test_string != value) is_filtered = true; break;
+					case 2: if (test_string <= value) is_filtered = true; break;
+					case 3: if (test_string >= value) is_filtered = true; break;
+					case 4: if (test_string <  value) is_filtered = true; break;
+					case 5: if (test_string >  value) is_filtered = true; break;
+				};
+			}
+			if (is_filtered) {
+				reasons.resize(reasons.size() + 1);
+				sprintf(reasons.back(), "%s %s %s", key.c_str(), evals[eval].c_str(), value.c_str());
+			}
 				
-				string test_string = (key=="type") ? to_string(mut._type) : mut[key];
-				
-        // Numeric
-        if (value.find_first_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") == string::npos) {
-          switch(eval)
-          {
-            case 0: if (from_string<float>(test_string) == from_string<float>(value)) is_filtered = true; break;
-            case 1: if (from_string<float>(test_string) != from_string<float>(value)) is_filtered = true; break;
-            case 2: if (from_string<float>(test_string) <= from_string<float>(value)) is_filtered = true; break;
-            case 3: if (from_string<float>(test_string) >= from_string<float>(value)) is_filtered = true; break;
-            case 4: if (from_string<float>(test_string) <  from_string<float>(value)) is_filtered = true; break;
-            case 5: if (from_string<float>(test_string) >  from_string<float>(value)) is_filtered = true; break;
-          };
-        }
-        // String
-        else {
-          switch(eval)
-          {
-            case 0: if (test_string == value) is_filtered = true; break;
-            case 1: if (test_string != value) is_filtered = true; break;
-            case 2: if (test_string <= value) is_filtered = true; break;
-            case 3: if (test_string >= value) is_filtered = true; break;
-            case 4: if (test_string <  value) is_filtered = true; break;
-            case 5: if (test_string >  value) is_filtered = true; break;
-          };
-        }
-        if (is_filtered) {
-          reasons.resize(reasons.size() + 1);
-          sprintf(reasons.back(), "%s %s %s", key.c_str(), evals[eval].c_str(), value.c_str());
-        }
-      }
     }
     if (reasons.size() == filters.size()) {
       printf("Removed [%s]: %s\n", join(reasons, ", ").c_str(), mut.as_string().c_str());
@@ -1733,7 +1733,7 @@ int do_mask_gd(int argc, char* argv[])
 {
 	AnyOption options("gdtools MASK  [-o output.gd] input.gd mask.gd");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-	options("small,s", "Mask only 'small' mutations defined as: all SNP mutations; INS, DEL, and SUB mutations with sizes ≤ 20 bp; and all INS and DEL mutations causing expansion or contraction of simple sequence repeats (SSRs) with at least two repeats of the same unit of one to several bp and a total length of 5 bp in the reference genome", TAKES_NO_ARGUMENT);
+	options("small,s", "Mask only 'small' mutations defined as: all SNP mutations; INS, DEL, and SUB mutations with sizes ≤ 20 bp; and all INS and DEL mutations causing expansion or contraction of simple sequence repeats (SSRs) with at least two repeats of the same unit of one to several bp and a total length of 5 bp in the reference genome. If these mutations are marked as 'mediated' or 'between' repeats, then they are NOT removed.", TAKES_NO_ARGUMENT);
 	options("output,o", "Output Genome Diff file.", "output.gd");
 	options("verbose,v","Verbose mode", TAKES_NO_ARGUMENT);
 

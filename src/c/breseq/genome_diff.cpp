@@ -158,6 +158,7 @@ const map<gd_entry_type, vector<string> > extended_line_specification = make_map
 (INS,make_vector<string> (SEQ_ID)(POSITION)(INSERT_POSITION)(NEW_SEQ))
 (MOB,make_vector<string> (SEQ_ID)(POSITION)(REPEAT_NAME)(STRAND)(DUPLICATION_SIZE)(INS_START)(INS_END)(DEL_START)(DEL_END)(MOB_REGION))
 (AMP,make_vector<string> (SEQ_ID)(POSITION)(SIZE)(NEW_COPY_NUMBER)(MEDIATED)(MEDIATED_STRAND)(MOB_REGION))
+(RA,make_vector<string>  (SEQ_ID)(POSITION)(INSERT_POSITION))
 (JC,make_vector<string>  (SIDE_1_SEQ_ID)(SIDE_1_POSITION)(SIDE_1_STRAND)(SIDE_2_SEQ_ID)(SIDE_2_POSITION)(SIDE_2_STRAND)(OVERLAP)(UNIQUE_READ_SEQUENCE))
 ;
   
@@ -389,7 +390,7 @@ cDiffEntry::cDiffEntry(const string &line, uint32_t line_number, cFileParseError
       if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'apply_size_adjust' is only allowed for AMP, CON, DEL, INV, and SUB mutations.", true);
     }
   }
-
+  
   return;
 }
   
@@ -996,6 +997,170 @@ void cDiffEntry::mutation_invert_position_sequence(cDiffEntry& inverting_mutatio
   }
   
 }
+  
+  
+/* Used for marking 'adjacent' mutations in APPLY/NORMALIZE and could be used for COUNT if merged into that code
+*/
+  
+bool cDiffEntry::is_small_mutation(uint32_t large_size_cutoff)
+{
+  cDiffEntry& mut = *this;
+
+  if (mut._type == SNP) {
+    return true;
+  }
+  
+  if (mut._type == DEL) {
+    if (from_string<uint32_t>(mut[SIZE]) <= large_size_cutoff) {
+      return true;
+    }
+    
+    if (mut.entry_exists(REPEAT_NEW_COPIES)) {
+      return true;
+    }
+  }
+  
+  if (mut._type == INS) {
+
+    if (mut[NEW_SEQ].size() <= large_size_cutoff) {
+      return true;
+    }
+    
+    if (mut.entry_exists(REPEAT_NEW_COPIES)) {
+      return true;
+    }
+  }
+  
+  if (mut._type == SUB) {
+    int32_t old_size = from_string<int32_t>(mut[SIZE]);
+    int32_t new_size = mut[NEW_SEQ].size();
+    
+    if (static_cast<uint32_t>(abs(new_size - old_size)) <= large_size_cutoff) {
+      return true;
+    }
+  }
+    
+  return false;
+}
+  
+/*! Add 'mediate', 'adjacent', and between tags to a mutation
+*/
+  
+void cDiffEntry::annotate_repeat_hotspots(cReferenceSequences& new_ref_seq_info, int32_t slop_distance, int32_t size_cutoff_AMP_becomes_INS_DEL_mutation, bool remove_old_tags, bool warn_after_mode)
+{
+  cDiffEntry& mut = *this;
+  
+  if (remove_old_tags) {
+    mut.erase("adjacent");
+    mut.erase("between");
+    mut.erase("mediated");
+  }
+  
+  
+  map<string,string> nearby_tags;
+  if (mut.entry_exists("adjacent")) nearby_tags["adjacent"] = mut["adjacent"];
+  if (mut.entry_exists("between")) nearby_tags["between"] = mut["between"];
+  if (mut.entry_exists("mediated")) nearby_tags["mediated"] = mut["mediated"];
+  
+  cAnnotatedSequence& this_seq = new_ref_seq_info[mut[SEQ_ID]];
+  
+  int64_t mut_start_1 = mut.get_reference_coordinate_start().get_position();
+  int64_t mut_end_1 = mut.get_reference_coordinate_end().get_position();
+  
+  string both_close_key = "ignore";
+  string one_close_key = "ignore";
+  
+  // Only these types can be 'within' and 'between' and have a SIZE attribute
+  if ((mut._type == DEL) || (mut._type == AMP)) {
+    int64_t size = from_string<int64_t>(mut[SIZE]);
+    
+    // short ones aren't mediated, just adjacent
+    if (size > size_cutoff_AMP_becomes_INS_DEL_mutation) {
+      both_close_key = "between";
+      one_close_key = "mediated";
+      
+      if (mut._type == AMP) {
+        one_close_key = "ignore"; // this ignores it
+      }
+    }
+  }
+    
+  if (this->is_small_mutation()) {
+    both_close_key = "adjacent";
+    one_close_key = "adjacent";
+  }
+  
+  if (mut._type == MOB) {
+    one_close_key = "ignore"; // this ignores it
+    both_close_key = "ignore";
+  }
+  
+  // We make no assumptions about the directions of relevant IS elements in between/mediated here.
+  int32_t tmp_slop_distance = slop_distance;
+  cSequenceFeaturePtr start_repeat = cReferenceSequences::find_closest_repeat_region_boundary(mut_start_1, this_seq.m_repeats, tmp_slop_distance, -1, true);
+  if (start_repeat.get() == NULL) {
+    tmp_slop_distance = slop_distance;
+    start_repeat = cReferenceSequences::find_closest_repeat_region_boundary(mut_start_1, this_seq.m_repeats, tmp_slop_distance, 1, true);
+  }
+  
+  tmp_slop_distance = slop_distance;
+  cSequenceFeaturePtr end_repeat = cReferenceSequences::find_closest_repeat_region_boundary(mut_end_1, this_seq.m_repeats, tmp_slop_distance, 1, true);
+  if (end_repeat.get() == NULL) {
+    tmp_slop_distance = slop_distance;
+    end_repeat = cReferenceSequences::find_closest_repeat_region_boundary(mut_end_1, this_seq.m_repeats, tmp_slop_distance, -1, true);
+  }
+  
+  if ((start_repeat.get() != NULL) && (end_repeat.get() != NULL)) {
+    if ( (*start_repeat)["name"] != (*end_repeat)["name"]) {
+      // different names is an odd case - WARN and don't assign anything
+      WARN("Mutation has boundaries near two different repeat families, saving only the first one:\n" + mut.as_string());
+      nearby_tags[one_close_key] = (*start_repeat)["name"];
+    } else {
+      nearby_tags[both_close_key] = (*start_repeat)["name"];
+    }
+    
+  } else if (start_repeat.get() != NULL) {
+    nearby_tags[one_close_key] = (*start_repeat)["name"];
+  } else if (end_repeat.get() != NULL) {
+    nearby_tags[one_close_key] = (*end_repeat)["name"];
+  }
+  
+  if (!warn_after_mode) {
+    // Finally reassign (this assumes none are removed)
+    if (nearby_tags.count("adjacent")) mut["adjacent"] = nearby_tags["adjacent"];
+    if (nearby_tags.count("between")) mut["between"] = nearby_tags["between"];
+    if (nearby_tags.count("mediated")) mut["mediated"] = nearby_tags["mediated"];
+  } else {
+    // In this mode we just show a warning
+    
+    // Be careful to not set these accidentally to NULL by looking them up
+    // when they don't exist
+    bool was_adjacent = mut.entry_exists("adjacent");
+    bool was_between = mut.entry_exists("between");
+    bool was_mediated = mut.entry_exists("mediated");
+
+    if (mut["adjacent"] != nearby_tags["adjacent"]) {
+      WARN("Possible 'adjacent' tag should be added with value (" + nearby_tags["adjacent"] + ") due to later mutation:\n" + mut.as_string());
+    }
+    
+    // Why these checks? Deletion that is between two IS looks like mediated after it occurs...
+    if (!mut.entry_exists("between") && !mut.entry_exists("mediated")) {
+    
+      if ((mut["between"] != nearby_tags["between"])) {
+        WARN("Possible 'between' tag should be added due to later mutation:\n" + mut.as_string());
+      }
+      if (mut["mediated"] != nearby_tags["mediated"]) {
+        WARN("Possible 'mediated' tag should be added due to later mutation:\n" + mut.as_string());
+      }
+
+    }
+    
+    if (!was_adjacent) mut.erase("adjacent");
+    if (!was_between) mut.erase("between");
+    if (!was_mediated) mut.erase("mediated");
+  }
+}
+  
   
 /*! Marshal this diff entry into an ordered list of fields.
  */
@@ -2674,9 +2839,14 @@ void cGenomeDiff::merge(cGenomeDiff& merge_gd, bool unique, bool new_id, bool ph
   // Delete 'phylogeny_id' if we are not phylogeny aware
   if (!phylogeny_id_aware) {
     for (diff_entry_list_t::iterator it_new = merge_gd._entry_list.begin(); it_new != merge_gd._entry_list.end(); it_new++) {
+      
       (*it_new)->erase("phylogeny_id");
-      (*it_new)->erase("insert_position");
+      
+      if ((*it_new)->_type == INS) {
+        (*it_new)->erase("insert_position");
+      }
       (*it_new)->erase("population_id");
+      
     }
   }
   
@@ -2686,6 +2856,7 @@ void cGenomeDiff::merge(cGenomeDiff& merge_gd, bool unique, bool new_id, bool ph
   {
     //The current potential new entry we're looking at
     cDiffEntry& entry_new = **it_new;
+        
     bool new_entry = true;
     
     //Iterate through all the entries in the current list.
@@ -3681,88 +3852,10 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
       continue;
     }
     
-    /////// BEGIN - marking 'between', 'mediated', 'adjacent' to repeat_region mutations
-    //      NOTE: We remove any previous annotation from this GenomeDiff for ALL mutation types
-    
-    // @JEB 06-21-15 Could add back as an option to strip previous values, for now, we are preserving
-    /*
-    mut.erase("between");
-    mut.erase("mediated");
-    mut.erase("adjacent");
-    */
-     
-    // Must be done before we apply the current mutation to the sequence
-    // But previous mutations must be applied (because for example it may be mediated by a *new* IS copy).
-    {
-      
-      map<string,string> nearby_tags;
-      if (mut.entry_exists("adjacent")) nearby_tags["adjacent"] = mut["adjacent"];
-      if (mut.entry_exists("between")) nearby_tags["between"] = mut["between"];
-      if (mut.entry_exists("mediated")) nearby_tags["mediated"] = mut["mediated"];
-      
-      cAnnotatedSequence& this_seq = new_ref_seq_info[mut[SEQ_ID]];
-            
-      int64_t mut_start_1 = position;
-      int64_t mut_end_1 = mut_start_1;
-      
-      string both_close_key = "adjacent";
-      string one_close_key = "adjacent";
-      
-      // Only these types can be 'within' and 'between' and have a SIZE attribute
-      if ((mut._type == DEL) || (mut._type == AMP)) {
-        int64_t size = from_string<int64_t>(mut[SIZE]);
-        mut_end_1 = mut_start_1 + size - 1;
-        
-        // short ones aren't mediated, just adjacent
-        if (size > size_cutoff_AMP_becomes_INS_DEL_mutation) {
-          both_close_key = "between";
-          one_close_key = "mediated";
-          
-          if (mut._type == AMP) {
-            one_close_key = "ignore"; // this ignores it
-          }
-        }
-      }
-      
-      // We make no assumptions about the directions of relevant IS elements in between/mediated here.
-      int32_t tmp_slop_distance = slop_distance;
-      cSequenceFeaturePtr start_repeat = cReferenceSequences::find_closest_repeat_region_boundary(mut_start_1, this_seq.m_repeats, tmp_slop_distance, -1); 
-      if (start_repeat.get() == NULL) {       
-        tmp_slop_distance = slop_distance;
-        start_repeat = cReferenceSequences::find_closest_repeat_region_boundary(mut_start_1, this_seq.m_repeats, tmp_slop_distance, 1); 
-      }
-      
-      tmp_slop_distance = slop_distance;
-      cSequenceFeaturePtr end_repeat = cReferenceSequences::find_closest_repeat_region_boundary(mut_end_1, this_seq.m_repeats, tmp_slop_distance, 1); 
-      if (end_repeat.get() == NULL) {
-        tmp_slop_distance = slop_distance;
-        end_repeat = cReferenceSequences::find_closest_repeat_region_boundary(mut_end_1, this_seq.m_repeats, tmp_slop_distance, -1); 
-      }
-
-      if ((start_repeat.get() != NULL) && (end_repeat.get() != NULL)) {
-        // different names is an odd case - WARN and don't assign anything
-        if ( (*start_repeat)["name"] != (*end_repeat)["name"]) {
-          WARN("Mutation has boundaries near two different repeat families, saving only the first one:\n" + mut.as_string());
-          nearby_tags[one_close_key] = (*start_repeat)["name"];
-        } else {
-          nearby_tags[both_close_key] = (*start_repeat)["name"];
-        }
-        
-      } else if (start_repeat.get() != NULL) {
-        nearby_tags[one_close_key] = (*start_repeat)["name"];
-      } else if (end_repeat.get() != NULL) {
-        nearby_tags[one_close_key] = (*end_repeat)["name"];
-      }
-      
-      
-      // Finally reassign (this assumes none are removed)
-      if (nearby_tags.count("adjacent")) mut["adjacent"] = nearby_tags["adjacent"];
-      if (nearby_tags.count("between")) mut["between"] = nearby_tags["between"];
-      if (nearby_tags.count("mediated")) mut["mediated"] = nearby_tags["mediated"];
-    }
-    //
-    /////// END 'mediated and 'within' code
-    
+    // Mark 'between', 'mediated', 'adjacent' to repeat_region mutations
+    //   Must be done before we apply the current mutation to the sequence
+    //   But previous mutations must be applied (because for example it may be mediated by a *new* IS copy).
+    mut.annotate_repeat_hotspots(new_ref_seq_info, slop_distance, size_cutoff_AMP_becomes_INS_DEL_mutation, false);
     
     // Attributes used for output of debug info
     string replace_seq_id;
@@ -4206,11 +4299,24 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
     
     this->shift_positions(mut, new_ref_seq_info, verbose);
     
+    // TEMPORARY! Check earlier mutations
+    int32_t i=0;
+    diff_entry_list_t::iterator prev_it = itr_mut;
+    if (prev_it != mutation_list.begin()) prev_it--;
+    while ( (prev_it != mutation_list.begin()) && (i < 5) ) {
+      (*prev_it)->annotate_repeat_hotspots(new_ref_seq_info, slop_distance, size_cutoff_AMP_becomes_INS_DEL_mutation, false, true);
+      prev_it--;
+      i++;
+    }
+    
     // Re-sort ... invalidates the iterator
     if (mut._type == INV) {
       // Sort the list into apply order ('within' and 'before' tags)
       cGenomeDiff::sort_apply_order();
     }
+    
+    
+    
   }
   
   if (verbose)
@@ -4238,57 +4344,6 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
     if(!it_as->m_length){new_ref_seq_info.erase(it_as);it_as--;}
   }
   
-}
-  
-// Adds 'between' and 'mediated' tags. ONLY for DEL mutations.
-// Should be run after applying to sequence
-// remove_old_tags ... Optionally, removes any existing tags
-// slop_distance   ... Number of nucleotides the end of a repeat_sequence must be within to get called as such
-void cGenomeDiff::annotate_hotspots(cReferenceSequences& new_ref_seq_info, bool remove_old_tags, int32_t slop_distance) {
- 
-  diff_entry_list_t mutation_list = this->mutation_list();
-    
-  for (diff_entry_list_t::iterator itr_mut = mutation_list.begin(); itr_mut != mutation_list.end(); itr_mut++)
-  {
-    cDiffEntry& mut(**itr_mut);
-    
-    if (remove_old_tags) {
-      mut.erase("between");
-      mut.erase("mediated");
-    }
-    
-    
-    if (mut._type != DEL) continue;
-    
-    cAnnotatedSequence& this_seq = new_ref_seq_info[mut[SEQ_ID]];
-    
-    int64_t mut_start_1 = from_string<int64_t>(mut[POSITION]);
-    int64_t mut_end_1 = mut_start_1;
-    if (mut.entry_exists(SIZE)) {
-      mut_end_1 = mut_start_1 + from_string<int64_t>(mut[SIZE]) - 1;
-    }
-    
-    string start_repeat_mediated;
-    string end_repeat_mediated;
-    
-    cSequenceFeaturePtr start_repeat = cReferenceSequences::find_closest_repeat_region_boundary(mut_start_1, this_seq.m_repeats, slop_distance, -1);    
-    cSequenceFeaturePtr end_repeat = cReferenceSequences::find_closest_repeat_region_boundary(mut_start_1, this_seq.m_repeats, slop_distance, -1);
- 
-    if ((start_repeat.get() != NULL) && (end_repeat.get() != NULL)) {
-      // different names is an odd case - WARN and don't assign anything
-      if ( (*start_repeat)["name"] != (*end_repeat)["name"]) {
-        WARN("Mutation has boundaries near two different repeat families." + mut.as_string());
-      } else {
-        mut["between"] = (*start_repeat)["name"]; 
-      }
-      
-    } else if (start_repeat.get() != NULL) {
-      mut["mediated"] = (*start_repeat)["name"];      
-    } else if (end_repeat.get() != NULL) {
-      mut["mediated"] = (*end_repeat)["name"];
-    }
-  }
-
 }
   
 void cGenomeDiff::mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, bool verbose)
@@ -4321,40 +4376,11 @@ void cGenomeDiff::mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, boo
     // Bail if we are not a small mutation
     bool is_small = false;
     if (mask_only_small) {
-     
-      if (mut->_type == SNP) {
-        is_small = true;
-      }
       
-      if (mut->_type == DEL) {
-        if (from_string<int32_t>((*mut)[SIZE]) <= mask_small_max_size_limit) {
-          is_small = true;
-        }
-        if (mut->entry_exists(REPEAT_NEW_COPIES)) {
-          is_small= true;
-        }
-      }
-      
-      if (mut->_type == INS) {
-        if ( (*mut)[NEW_SEQ].size() <= mask_small_max_size_limit) {
-          is_small = true;
-        }
-        if (mut->entry_exists(REPEAT_NEW_COPIES)) {
-          is_small= true;
-        }
-      }
-      
-      if (mut->_type == SUB) {
-        int32_t old_size = from_string<int32_t>((*mut)[SIZE]);
-        int32_t new_size = (*mut)[NEW_SEQ].size();
-        
-        if ( ( old_size <= mask_small_max_size_limit ) && ( new_size <= mask_small_max_size_limit ) ) {
-          is_small = true;
-        }
-      }
+      is_small = mut->is_small_mutation(mask_small_max_size_limit);
       
       // Don't remove these...
-      if ( mut->entry_exists(MEDIATED) || mut->entry_exists(BETWEEN) || mut->entry_exists("adjacent") ) {
+      if ( mut->entry_exists(MEDIATED) || mut->entry_exists(BETWEEN) ) {
         is_small = false;
       }
       
@@ -5521,7 +5547,7 @@ void cGenomeDiff::read_vcf(const string &file_name)
     cDiffEntry de;
     const cString &rseq = tokens[REF], &aseq = tokens[ALT];
     if (aseq.contains(',')) {
-      //! TODO: Classify these mutations, GATK doesn't predict these(?)
+      //! TO DO: Classify these mutations, GATK doesn't predict these(?)
       //        de._type = SUB;
       //        de[SEQ_ID]   = tokens[CHROM];
       //        de[POSITION] = tokens[POS];
@@ -6064,7 +6090,7 @@ void cGenomeDiff::GD2OLI(const vector<string> &gd_file_names,
   
   // Add frequency columns
   vector<string> title_list;
-  cGenomeDiff::tabulate_frequencies_from_multiple_gds(master_gd, gd_list, title_list, true);
+  cGenomeDiff::tabulate_frequencies_from_multiple_gds(master_gd, gd_list, title_list, false);
 
   vector<string> header_list(14, "");
   header_list[0] = "pop";

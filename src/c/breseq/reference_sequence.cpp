@@ -1836,8 +1836,15 @@ string cReferenceSequences::repeat_family_sequence(
 }
 
 /*! Find the closest edge of a repeat in the specified direction within the specified distance
+    "Edge" is defined as within 'max_distance' of the start or end coordinate,
+    unless include_interior_matches (off by default) is set, in which case matches
+    in the interior count as being zero distance from the boundary
  */
-cSequenceFeaturePtr cReferenceSequences::find_closest_repeat_region_boundary(int32_t position, cSequenceFeatureList& repeat_list, int32_t& max_distance, int32_t direction)
+cSequenceFeaturePtr cReferenceSequences::find_closest_repeat_region_boundary(int32_t position,
+                                                                             cSequenceFeatureList& repeat_list,
+                                                                             int32_t& max_distance,
+                                                                             int32_t direction,
+                                                                             bool include_interior_matches)
 {
   cSequenceFeaturePtr repeat_ptr(NULL);
   
@@ -1845,10 +1852,27 @@ cSequenceFeaturePtr cReferenceSequences::find_closest_repeat_region_boundary(int
     cSequenceFeaturePtr test_repeat_ptr = *it;
     
     // Distance from the appropriate end of the repeat
-    int32_t test_distance = abs(static_cast<int32_t>(((direction == -1) ? position - test_repeat_ptr->get_end_1() : test_repeat_ptr->get_start_1() - position)));
+    int32_t test_distance = ((direction == -1) ? position - static_cast<int32_t>(test_repeat_ptr->get_end_1()) : static_cast<int32_t>(test_repeat_ptr->get_start_1()) - position);
   
+    // Change negative distances less than size to zero distance (they are within)
+    
+    if (include_interior_matches) {
+      if ((test_distance < 0) && (-test_distance <= test_repeat_ptr->get_end_1() - test_repeat_ptr->get_start_1() + 1)) {
+        test_distance = 0;
+      }
+    } else {
+      test_distance = abs(test_distance);
+    }
+    
     // We want the closest one without going over that is within max_distance
     if ( (test_distance >= 0) && (test_distance <= max_distance) ) {
+      
+      // Same distance, then choose the LONGEST repeat region
+      // Important for transposons where each end may be annotated with a contained repeat region
+      if ((repeat_ptr.get() != NULL) && (test_distance == max_distance)) {
+        if (test_repeat_ptr->get_end_1() - test_repeat_ptr->get_start_1() + 1 < repeat_ptr->get_end_1() - repeat_ptr->get_start_1() + 1)
+          continue;
+      }
       repeat_ptr = test_repeat_ptr;
       max_distance = test_distance;
     }
