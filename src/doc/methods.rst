@@ -5,18 +5,6 @@ This section describes the algorithms used by |breseq|.
 
 .. _annotated-bibliography:   
 
-Annotated bibliography
-------------------------------
-
-.. NOTE::
-   Most of the methods used by |breseq| are more fully described in these publications than in this documentation file.
-
-*  Barrick, J.E., Yu, D.S., Yoon, S.H., Jeong, H, Oh, T.K., Schneider, D., Lenski, R.E., and Kim, J.F. (2009) Genome evolution and adaptation in a long-term experiment with *Escherichia coli*. *Nature* **461**:1243-1247. **Methods used by an early version of breseq are described in the supplemental materials.** `Link to Pubmed <http://www.ncbi.nlm.nih.gov/pubmed/19838166>`_
-*  Barrick, J.E., Lenski, R.E. (2009) Genome-wide mutational diversity in an evolving population of *Escherichia coli*. *Cold Spring Harb. Symp. Quant. Biol.* **74**:119-129. **Early description of polymorphism mode for single-nucleotide variants and small indels.** `Link to Full Text <http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2890043>`_
-*  Deatherage, D.E., Barrick, J.E. (2014) Identification of mutations in laboratory-evolved microbes from next-generation sequencing data using *breseq*. *Methods Mol. Biol.* **1151**: 165–188. **Tutorial and practical guide to running breseq and interpreting the output.** `Link to Full Text <http://www.ncbi.nlm.nih.gov/pmc/articles/PMC4239701>`_
-*  Barrick, J.E., Colburn, G., Deatherage D.E., Traverse, C.C., Strand, M.D., Borges, J.J., Knoester, D.B., Reba, A., Meyer, A.G.(2014) Identifying structural variation in haploid microbial genomes from short-read resequencing data using *breseq*. *BMC Genomics* **15**:1039. **Detailed description of methods used to predict structural variation.** `Link to Full Text <http://www.biomedcentral.com/1471-2164/15/1039>`_
-*  Deatherage, D.E., Traverse, C.C., Wolf, L.N., Barrick, J.E. (2015) Detecting rare structural variation in evolving microbial populations from new sequence junctions using *breseq*. *Front. Genet.* **5**:468. **Detailed description of methods used to predict polymorphic structural variation.** `Link to Full Text <http://http://journal.frontiersin.org/article/10.3389/fgene.2014.00468>`_
-
 Read mapping
 ----------------
 
@@ -92,8 +80,14 @@ For junctions that pass this scoring cutoff, the ends of reads aligning to the j
 Read alignment evidence (RA)
 ------------------------------
 
-|breseq| calls base substitution mutations and small indels by examining each position in the pileup of mapped reads to the reference genome. 
+|breseq| calls base substitution mutations and small indels by examining the pileup of reads mapped to each position in the reference genome. There are two fundamentally different methods of doing so:
 
+#. CONSENSUS mode is appropriate when re-sequencing a clonal haploid genome. It expects all variant alleles will be present in 100% of the sample. This mode is the default. 
+#. POLYMORPHISM (METAGENOMIC) mode can be used to analyze a mixed population of genomes evolved from a common ancestor. It will predict variants with frequencies between 0% and 100% if a mixture model is well-supported by the read alignment evidence.
+
+.. warning::
+   
+   Polymorphism prediction is still considered a somewhat experimental feature. It continues to be actively developed.
 
 Read end trimming
 *****************
@@ -131,7 +125,7 @@ Without end trimming, two reads on the top strand that do not cross the new AGC 
 Base quality re-calibration
 ***************************
 
-In the FASTQ input files, each read base has generally been assigned a quality score by the normal pipeline for a given sequencing technology. Base quality re-calibration using covariates such as identity of the reference base, identity of the mismatch base, base position within the read, and neighboring base identities can significantly improve these error rate estimates [McKenna2010]_.
+In the FASTQ input files, each read base has been assigned a quality score by the normal pipeline for a given sequencing technology. Base quality re-calibration using covariates such as identity of the reference base, identity of the mismatch base, base position within the read, and neighboring base identities can significantly improve these error rate estimates [McKenna2010]_.
 
 |breseq| uses an empirical error model that is trained by assuming that nearly all of the disagreements between mapped reads and the reference genome are due to sequencing errors and not bona fide differences between the sample and the reference: it simply counts the number of times that each base or a single-base gap is observed in a read opposite each base or a single-base gap. These counts are further binned by the quality score of the read base. (The quality score of the next aligned base in the read is used for single-base deletions). A pseudocount of one is added to counts in all categories, and these error counts are converted to error rates by dividing the count in each cell by the sum across that base quality score.
 
@@ -148,9 +142,17 @@ Recall that |breseq| requires input in `Sanger FASTQ format <http://en.wikipedia
 
 :math:`E=10^{-\frac{Q}{10}}`
 
+.. _mutation-calling-from-RA-evidence:
 
-Haploid Bayesian SNP caller
-***************************
+Calling mutations from RA evidence
+************************************
+
+Both CONSENSUS and POLYMORPHISM mode operate by calculating a 'consensus score' and a 'polymorphism score' for each alignment column. In describing how mutation predictions are made in each mode from these scores and additional statistical filters, we first introduce several calculations and concepts. Then, we present a full list of |breseq| command-line options and RA evidence attributes. Finally, we show the flowcharts that determine what  pieces of RA evidence make it into the final HTML output files as "predicted mutations" versus being relegated to the "marginal predictions" section or being discarded entirely. 
+
+.. _RA-consensus-score:
+
+Consensus score (Bayesian SNP caller)
+****************************************
 
 At each alignment position, |breseq| calculates the Bayesian posterior probability of possible sample bases given the observed read bases. Specifically, it uses a haploid model with five possible base states (A, T, C, G, and a gap), assumes a uniform prior probability of each state, and uses the empirical error model derived during base quality re-calibration to update the prior with each read base observation. 
 
@@ -160,67 +162,35 @@ Thus, at a given alignment position, the log10 ratio of the posterior probabilit
 
 Where there are n reads aligned to this position, b\ :sub:`i` is the base observed in the ith read, q\ :sub:`i` is the quality of this base, and E is the probability of observing this read base given its quality score at a reference position with base b\ :sub:`x` according to the empirical error model.
 
-|breseq| determines the base with the highest value of L, and records read alignment evidence if this base is different from the reference base. This evidence is assigned log10 L minus the log10 of the cumulative length of all reference sequences as a new quality score for this base prediction.
+|breseq| determines the base with the highest value of L, and records read alignment evidence if this base is different from the reference base. This evidence is assigned log10 L minus the log10 of the cumulative length of all reference sequences as a consensus E-value score for this consensus base prediction.
 
-Recall that |breseq| will only find indels of at most 2 bases as read alignment evidence, because all alignments with longer indels were split in a pre-processing step when predicting :ref:`new-junction-evidence`.
+Recall that |breseq| will typically only find indels of at most 2 bases as read alignment evidence, because all alignments with longer indels were split in a pre-processing step when predicting :ref:`new-junction-evidence`.
 
 .. _polymorphism-prediction:
+.. _RA-polymorphism-score:
 
-Polymorphism Prediction
-***************************
+Polymorphism score (mixed allele model)
+****************************************
 
-When |breseq| is called with the :option:`breseq --polymorphism-prediction` option, it attempts to predict the frequencies of base substitution and short indel mutations that are present in only a fraction of the population (variants present in only a sub-population of individuals). 
+Next, |breseq| tests the hypothesis that reads aligned to each reference position (and base insertions relative to the reference) support a model that is a mixture of a major and minor mutational variant as opposed to a model that all disagreements with the reference sequence (or consensus change predicted as above) are due to sequencing errors. To do this, it calculates the chances of generating the observed alignment given the hypotheses that the sequenced sample consists of 100% of each of the four bases or a gap character and the per-base error model described above. Then it takes the base states giving the top and second highest probabilites and tests a mixture model that allows the major and minor variants to be present at any intermediate fraction in the sequenced population.
 
-.. warning::
-   
-   Polymorphism prediction is an experimental feature. While it has proven useful for some studies [Barrick2009b]_, it has not been thoroughly tested, has some known shortcomings (see below), and continues to be actively developed.
+How this model is specified depends on the mode:
 
-The prediction procedure uses the same empirical error model described above in :ref:`base-quality-re-calibration`. This error model does not capture some second-order sources of variation in error rates that can lead to substantial numbers of false-positive polymorphism predictions. For example: sequencing error hotspots at certain positions, in certain contexts, and on certain strands. |breseq| also does not  take into account read mapping qualities when weighing support for polymorphisms, which can lead to overconfidence in bases that result from misalignments. 
+#. In CONSENSUS mode, only the raw frequency predicted from the read counts of the major and variant allele is tested. So if there are
+#. IN POLYMORPHISM mode, the maximum likelihood allele frequency (taking into account bases observed in the pileup and their quality scores) is found with a precision (at :option:`--polymorphism-precision` resolution, DEFAULT = 0.000001).
 
-Several additional |breseq| command-line options control steps that allow filtering out polymorphism predictions that pass the general statistical test for significance but display red-flag qualities indicative of biases. Top-scoring, but filtered, predictions are still displayed as "marginal predictions" in the |breseq| output, so that they can be manually examined.
+|breseq| then tests the statistical support for the model having only one reference base in the sequenced sample versus the model with one additional free parameter consisting of mixture of two alleles using a likelihood-ratio test. That is, twice the natural logarithm of the probability of the mixture model divided by the probability of the one-base model is compared to a chi-squared distribution with 1 degree of freedom.
 
-A partial list of polymorphism prediction options:
+As for the case of consensus mutation prediction from read alignment evidence, the p-value significance of the likelihood-ratio test is finally converted to a polymorphism E-value score by multiplying by the total number of reference positions.
 
-.. program:: breseq
 
-.. option:: --polymorphism-prediction
+Statistical filters for RA predictions
+****************************************
 
-   Enable polymorphism prediction. Default: OFF.
-
-.. option:: --polymorphism-log10-e-value-cutoff <float>
-
-   Negative log10 of the E-value cutoff for the likelihood ratio test used in polymorphism prediction as described below. Default: 2. (Meaning the E-value must be ≤ 0.01 for a prediction to pass.)
-
-.. option:: --polymorphism-coverage-both-strands <int>
-
-   Minimum coverage (in number of uniquely mapped reads) required on each strand of the reference genome for both the major and the minor mutational variants to predict a polymorphism. Default: 0.
-
-.. option:: --polymorphism-frequency-cutoff <double>
-
-   Minimum frequency for the minor variant to predict a polymorphism. Default: 0.
-
-.. option:: --polymorphism-bias-p-value-cutoff <double>
-
-   P-value cutoff employed for both strand and quality score tests described below. Default: 0.05.
-
-.. option:: --polymorphism-reject-homopolymer-length <int>
-
-  Ignore polymorphisms predicted at reference genome positions in homopolymer repeats of this length or greater. Default: OFF.
-
-.. option:: --max-rejected-polymorphisms-to-show <int>
-
-   Show this many of the top polymorphism predictions that pass the likelihood-ratio test for significance but fail a bias filtering step. Default: 20.
-
-Likelihood-ratio test for polymorphism
-""""""""""""""""""""""""""""""""""""""
-When polymorphism prediction is enabled |breseq| tests the hypothesis that reads aligned to each reference position (and base insertions relative to the reference) support a model that is a mixture of a major and minor mutational variant as opposed to a model that all disagreements with the reference sequence (or consensus change predicted as above) are due to sequencing errors. To do this, it calculates the chances of generating the observed alignment given the hypotheses that the sequenced sample consists of 100% of each of the four bases or a gap character and the per-base error model described above. Then it takes the base states giving the top and second highest probabilites and tests a mixture model that allows the major and minor variants to be present at any intermediate fraction in the sequenced population. |breseq| calculates the maximum likelihood percentage of each base state according to this model (at 0.1% resolution) and the chance of the data given this inferred reference distribution.
-
-|breseq| then tests the statistical support for the model having only one reference base in the sequenced sample versus the model with one additional free parameter consisting of the ML mixture of two reference bases using a likelihood-ratio test. That is, twice the natural logarithm of the probability of the mixture model divided by the probability of the one-base model is compared to a chi-squared distribution with 1 degree of freedom.
-
-As for the case of consensus mutation prediction from read alignment evidence, the p-value significance of the likelihood-ratio test is converted to an E-value by multiplying by the total number of reference positions.
+The empirical error model described above in :ref:`base-quality-re-calibration` does not capture some second-order sources of variation in error rates that can lead to substantial numbers of false-positive predictions. For example: sequencing error hotspots at certain positions, in certain contexts, and on certain strands. Several levels of additional filters can be used to prevent these types of predictions. In general, the default settings used by |breseq| should yield excellent results in CONSENSUS mode. The performance of POLYMORPHISM mode is much more variable with data from different sequencers, with different levels of coverage, etc. In POLYMORPHISM mode, it maybe beneficial to adjust these filtering settings depending on whether one wants to aggressively filter out these false-positives (at the expense of filtering some true-positives) or try to recover all true-positives (at the possible expense of letting more false-positives through into the output).
 
 Strand bias
-"""""""""""""
+^^^^^^^^^^^^^^^^^^^^
 
 This bias test uses Fisher's Exact Test to calculate a two-sided p-value for the hypothesis that the top/bottom strand distribution of reads supporting the major base is not different from the top/bottom strand distribution of reads supporting the minor base. If the hypothesis is rejected when the p-value is compared to :option:`--polymorphism-bias-p-value-cutoff`, then this may indicate that there was a sequencing-error hotspot in reads on one strand that generated a false-positive polymorphism prediction. This type of error happens frequently in data we have examined.
 
@@ -229,21 +199,39 @@ In practice, most problem predictions of this kind have zero or only a handful o
 Conversely, if coverage is high there may be so many observations that a statistically significant bias is detected simply because library prep and sequencing is slightly more efficient on one strand due to the different sequence context, even when there is high coverage of all strand/base combinations. Use this option with caution in cases of very high coverage (>1000 reads).
 
 Quality score bias
-"""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^
 This bias test uses a one-sided Kolmogorov-Smirnov test to test whether base quality scores supporting the minor mutational variants are suspiciously lower than the base quality scores supporting the major variant. The p-value significance of rejecting the null hypothesis by this test is also compared to :option:`--polymorphism-bias-p-value-cutoff`.
 
 Homopolymer stretches
-""""""""""""""""""""""
+^^^^^^^^^^^^^^^^^^^^^^^
 Currently, application of the error model in |breseq| on a per-column basis causes overprediction of indel polymorphisms in homopolymer stretches. Why is this the case? If there are 10 A's in a row in the reference genome, deleting any one A will cause what looks like the same mutation after the gap is aligned to the rightmost reference position possible. Therefore, the actual chance of observing a deleted A is ten times the value expected from the error model. This discrepancy can make a small number of reads aligned to this position with deletions achieve significance by the likelihood-ratio test. Similar logic applies in the case of base insertions.
 
-Currently, |breseq| cannot correct for these types of errors. In the interim, they can be filtered from the output by specifying the :option:`--polymorphism-reject-homopolymer-length` option. A value of 5 gives reasonable results for *E. coli*. Generally, these false predictions also have extremely low frequencies (<2%) for the minor indel variants. 
+If |breseq| cannot adequately correct for these types of errors, they can be filtered from the output by specifying the :option:`--polymorphism-reject-homopolymer-length` option. A value of 5 gives reasonable results for *E. coli*. Generally, these false predictions also have extremely low frequencies (<2%) for the minor indel variants. 
 
+RA prediction options and flowcharts 
+********************************************
+
+.. figure:: images/mutation_calling_settings.png
+   :width: 800px
+   :height: 448px
+   :align: center
+
+.. figure:: images/consensus_mode_RA_flowchart.png
+   :width: 600px
+   :height: 572px
+   :align: center
+
+.. figure:: images/polymorphism_mode_RA_flowchart.png
+   :width: 800px
+   :height: 525px
+   :align: center
+   
 .. _unknown-base-evidence:
 
 Unknown base evidence (UN)
 --------------------------
 
-When there is insufficient evidence to call a base at a reference position, |breseq| reports this base as "unknown". Contiguous stretches of unknown bases are output and shown in the results. Explicitly marking bases as unknown is useful when analyzing many similar genomes; it allows one to ascertain when a mutation found in certain data sets may have been missed in others due to low coverage and/or poor data quality in a particular sample.
+When there is insufficient evidence to call any base at a reference position, |breseq| reports this base as "unknown". Contiguous stretches of unknown bases are output and shown in the results. Explicitly marking bases as unknown can be useful when analyzing many similar genomes; it allows one to ascertain when a mutation found in certain data sets may have been missed in others due to low coverage and/or poor data quality in a particular sample.
 
 .. _missing-coverage-evidence:
 
@@ -306,7 +294,7 @@ Base substitutions
 
 *RA evidence = SNP or SUB mutation*
 
-When the quality score of RA evidence is greater than a specified cutoff (the default is 6), a base substitution mutation is called. When only a single base is affected, |breseq| calls a base substitution (SNP) mutation. When multiple base substitutions occur adjacent to each other or in conjunction with indels (see below), |breseq| calls a substitution (SUB) mutation.
+Base substitution mutations are called from RA evidence. When only a single base is affected, |breseq| calls a base substitution (SNP) mutation. When multiple base substitutions occur adjacent to each other or in conjunction with indels (see below), |breseq| calls a substitution (SUB) mutation.
 
 Short insertions and deletions
 *******************************
@@ -352,3 +340,15 @@ Even given perfect data, |breseq| cannot find some types of mutations:
    In genomic regions where the only mapped reads also match equally well to other locations in the genome, it is not possible to call mutations. This is an inherent limitation of short-read data. These regions are reported as 'UN' evidence, so that the user can distinguish where in the genome there was not sufficient coverage of uniquely mapped reads to call mutations.
 `Chromosomal inversions and rearrangements through repeat sequences`
    These types of mutations cannot be detected when they involve sequence repeats on the order of the read length. Reads that span repeats and uniquely align in the reference sequence on each end are necessary. |breseq| currently does not take advantage of mate-paired or paired-end information.
+   
+Annotated bibliography
+------------------------------
+
+More information about the methods used by |breseq| is available in these publications:
+
+*  Barrick, J.E., Yu, D.S., Yoon, S.H., Jeong, H, Oh, T.K., Schneider, D., Lenski, R.E., and Kim, J.F. (2009) Genome evolution and adaptation in a long-term experiment with *Escherichia coli*. *Nature* **461**:1243-1247. **Methods used by an early version of breseq are described in the supplemental materials.** `Link to Pubmed <http://www.ncbi.nlm.nih.gov/pubmed/19838166>`_
+*  Barrick, J.E., Lenski, R.E. (2009) Genome-wide mutational diversity in an evolving population of *Escherichia coli*. *Cold Spring Harb. Symp. Quant. Biol.* **74**:119-129. **Early description of polymorphism mode for single-nucleotide variants and small indels.** `Link to Full Text <http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2890043>`_
+*  Deatherage, D.E., Barrick, J.E. (2014) Identification of mutations in laboratory-evolved microbes from next-generation sequencing data using *breseq*. *Methods Mol. Biol.* **1151**: 165–188. **Tutorial and practical guide to running breseq and interpreting the output.** `Link to Full Text <http://www.ncbi.nlm.nih.gov/pmc/articles/PMC4239701>`_
+*  Barrick, J.E., Colburn, G., Deatherage D.E., Traverse, C.C., Strand, M.D., Borges, J.J., Knoester, D.B., Reba, A., Meyer, A.G.(2014) Identifying structural variation in haploid microbial genomes from short-read resequencing data using *breseq*. *BMC Genomics* **15**:1039. **Detailed description of methods used to predict structural variation.** `Link to Full Text <http://www.biomedcentral.com/1471-2164/15/1039>`_
+*  Deatherage, D.E., Traverse, C.C., Wolf, L.N., Barrick, J.E. (2015) Detecting rare structural variation in evolving microbial populations from new sequence junctions using *breseq*. *Front. Genet.* **5**:468. **Detailed description of methods used to predict polymorphic structural variation.** `Link to Full Text <http://http://journal.frontiersin.org/article/10.3389/fgene.2014.00468>`_
+   
