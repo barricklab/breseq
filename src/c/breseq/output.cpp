@@ -1047,7 +1047,7 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
   }
 
   //Determine Number of Columns in Table
-  size_t total_cols = link ? 11 : 10;
+  size_t total_cols = link ? 12 : 11;
   
   //Create Column Titles
   //seq_id/position/change/freq/score/cov/annotation/genes/product
@@ -1062,7 +1062,8 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
   }
   ss << th("seq&nbsp;id") << endl;
   ss << th("colspan=\"2\"", "position") << endl;
-  ss << th("change")     << endl <<
+  ss << th("ref")        << endl <<
+        th("alleles")        << endl <<
         th("freq")       << endl <<
         th("score")      << endl <<
         th("reads")      << endl <<
@@ -1107,16 +1108,21 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
      }
 
     ss << td(ALIGN_CENTER, nonbreaking(c[SEQ_ID]));
-    ss << td(ALIGN_RIGHT, commify(c["position"]));
-    ss << td(ALIGN_RIGHT, c["insert_position"]);
-    ss << td(ALIGN_CENTER, c["ref_base"] + "&rarr;" + c["new_base"]); // "change Column
+    ss << td(ALIGN_RIGHT, commify(c[POSITION ]));
+    ss << td(ALIGN_RIGHT, c[INSERT_POSITION]);
+    ss << td(ALIGN_CENTER, c[REF_BASE]);
+    
+    if (c[REF_BASE] == c[MAJOR_BASE])
+      ss << td(ALIGN_CENTER, c[MAJOR_BASE] + "&rarr;" + c[MINOR_BASE]);
+    else // flip this case to get frequency right
+      ss << td(ALIGN_CENTER, c[MINOR_BASE] + "&rarr;" + c[MAJOR_BASE]);
     
     ssf.str("");
     ssf.clear();
     ssf.width(4);
     ssf.precision(1);
-    if (c.entry_exists(POLYMORPHISM_FREQUENCY))
-      ssf << fixed << from_string<double>(c[POLYMORPHISM_FREQUENCY]) * 100 << "%" << endl; // "frequency" column
+    if (c.entry_exists(FREQUENCY))
+      ssf << fixed << from_string<double>(c[FREQUENCY]) * 100 << "%" << endl; // "frequency" column
     ss << td(ALIGN_RIGHT, ssf.str());
     
     ssf.str("");
@@ -1162,7 +1168,7 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
     ss << td(ALIGN_RIGHT, nonbreaking(ssf.str()));
 
     // Build "cov" column value
-    vector<string> temp_cov = split(c[TOT_COV], "/");
+    vector<string> temp_cov = split(c[TOTAL_COV], "/");
     string top_cov = temp_cov[0];
     string bot_cov = temp_cov[1];
     string total_cov = to_string(from_string<uint32_t>(top_cov) + 
@@ -1180,9 +1186,9 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
       ss << tr("class=\"information_table_row\"", 
                td("colspan=\"" + to_string(total_cols) + "\"",
                   "Reads supporting (aligned to +/- strand):&nbsp;&nbsp;" +
-                  b("new") + " base " + "(" + c[NEW_COV] + ")" + ";&nbsp;&nbsp;" +
-                  b("ref") + " base " + "(" + c[REF_COV] + ")" + ";&nbsp;&nbsp;" +
-                  b("total") + " (" + c[TOT_COV] + ")")); 
+                  b("major") + " allele " + "(" + c[MAJOR_COV] + ")" + ";&nbsp;&nbsp;" +
+                  b("minor") + " allele " + "(" + c[MINOR_COV] + ")" + ";&nbsp;&nbsp;" +
+                  b("total") + " (" + c[TOTAL_COV] + ")"));
     
       /* Fisher Strand Test */
       if (c.entry_exists("fisher_strand_p_value")) 

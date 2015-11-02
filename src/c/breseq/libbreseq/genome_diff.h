@@ -51,15 +51,15 @@ extern const char* CONSENSUS_SCORE;
 extern const char* POLYMORPHISM_SCORE;
 extern const char* PREDICTION;
 extern const char* REF_BASE;
-extern const char* NEW_BASE;
+extern const char* MAJOR_BASE;
+extern const char* MINOR_BASE;
 extern const char* FREQUENCY;
 extern const char* POLYMORPHISM_FREQUENCY;
 extern const char* POLYMORPHISM_EXISTS;
 extern const char* REJECT;
-extern const char* REF_COV;
-extern const char* NEW_COV;
-extern const char* TOT_COV;
-extern const char* ERROR;
+extern const char* MAJOR_COV;
+extern const char* MINOR_COV;
+extern const char* TOTAL_COV;
 extern const char* WITHIN;
 extern const char* BEFORE;
 extern const char* APPLY_SIZE_ADJUST;
@@ -639,6 +639,9 @@ public:
   //! Retrieve cDiffEntrys that match given type(s) 
   const diff_entry_list_t list() const { return _entry_list; }
   diff_entry_list_t list(const vector<gd_entry_type>& types = vector<gd_entry_type>());
+  
+  diff_entry_list_t get_list() { return _entry_list; }
+  void set_list(diff_entry_list_t& in_list) {  _entry_list = in_list; }
   
   //! retrieve cDiffEntrys that match given type(s) and do not have 'no_show' set
   diff_entry_list_t show_list(const vector<gd_entry_type>& types = vector<gd_entry_type>());

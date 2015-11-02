@@ -193,6 +193,7 @@ namespace breseq {
                          string& detailed_output_file_name,
                          bool base_substitution_statistics,
                          bool count_polymorphisms,
+                         bool calculate_genome_size,
                          bool verbose
                          );
   

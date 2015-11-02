@@ -1399,6 +1399,17 @@ namespace breseq {
     {
       cDiffEntry& item = **ra_it;
       
+      string ra_seq_id = item[SEQ_ID];
+      int32_t ra_position = from_string<int32_t>(item[POSITION]);
+      string ra_ref_base = ref_seq_info.get_sequence_1(ra_seq_id, ra_position, ra_position);
+      string ra_new_base = (item[MAJOR_BASE] == ra_ref_base) ? item[MINOR_BASE] : item[MAJOR_BASE];
+      
+      // Frequency is for major allele base... so switch if need be given reference
+      double ra_variant_frequency = from_string<double>(item[FREQUENCY]);
+      if (item[MAJOR_BASE] == ra_ref_base) {
+        ra_variant_frequency = 1.0 - ra_variant_frequency;
+      }
+      
       // Sometimes a SNP might be called in a deleted area because the end was wrong,
 			// but it was corrected using a junction. (This catches this case.)
 			if ( (!item.entry_exists("user_defined")) && (item.entry_exists("reject") || item.entry_exists("deleted")) )
@@ -1438,8 +1449,8 @@ namespace breseq {
         ("end", item["position"])
         ("insert_start", item["insert_position"])
         ("insert_end", item["insert_position"])
-        ("ref_seq", (item["ref_base"] != ".") ? item["ref_base"] : "")
-        ("new_seq", (item["new_base"] != ".") ? item["new_base"] : "")
+        ("ref_seq", (ra_ref_base != ".") ? ra_ref_base : "")
+        ("new_seq", (ra_new_base != ".") ? ra_new_base : "")
 				;
         
         if (settings.polymorphism_prediction) {
@@ -1453,8 +1464,8 @@ namespace breseq {
         ("insert_end", item["insert_position"])
         ("end", item["position"])
 				;
-				if (item["ref_base"] != ".") mut["ref_seq"] += item["ref_base"];
-				if (item["new_base"] != ".") mut["new_seq"] += item["new_base"];
+				if (item["ref_base"] != ".") mut["ref_seq"] += ra_ref_base;
+				if (item["new_base"] != ".") mut["new_seq"] += ra_new_base;
 				mut._evidence.push_back(item._id);
 			}
 		}
@@ -2454,6 +2465,7 @@ namespace breseq {
                          string& detailed_output_file_name,
                          bool base_substitution_statistics,
                          bool count_polymorphisms,
+                         bool calculate_genome_size,
                          bool verbose
                          )
   {
@@ -2508,9 +2520,11 @@ namespace breseq {
     column_headers.push_back("large_substitution");
     column_headers.push_back("mobile_element_insertion");
     column_headers.push_back("gene_conversion");
-    column_headers.push_back("changed_bp");
-    column_headers.push_back("deleted_bp");
-    column_headers.push_back("inserted_bp");
+    if (calculate_genome_size) {
+      column_headers.push_back("changed_bp");
+      column_headers.push_back("deleted_bp");
+      column_headers.push_back("inserted_bp");
+    }
     column_headers.push_back("called_bp");
     column_headers.push_back("total_bp");
     
@@ -2744,9 +2758,12 @@ namespace breseq {
 
       // USE APPLY TO CALCULATE SIZE CHANGES!!!
       // MUST BE DONE AFTER OTHER COUNTING BECAUSE IT CHANGES THE GENOME DIFF!!
-      cReferenceSequences new_ref_seq_info = cReferenceSequences::deep_copy(ref_seq_info);
-      gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, false, 20, large_size_cutoff);
       
+      if (calculate_genome_size) {
+        cReferenceSequences new_ref_seq_info = cReferenceSequences::deep_copy(ref_seq_info);
+        gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, false, 20, large_size_cutoff);
+      }
+        
       int32_t called_bp = total_bp - un_bp;
       
       vector<string> this_columns = line_prefix_items;
@@ -2759,9 +2776,11 @@ namespace breseq {
       this_columns.push_back(to_string(count["large_substitution"][""]));
       this_columns.push_back(to_string(count["mobile_element_insertion"][""]));
       this_columns.push_back(to_string(count["gene_conversion"][""]));
-      this_columns.push_back(gd.get_breseq_data("BASES_CHANGED"));
-      this_columns.push_back(gd.get_breseq_data("BASES_DELETED"));
-      this_columns.push_back(gd.get_breseq_data("BASES_INSERTED"));
+      if (calculate_genome_size) {
+        this_columns.push_back(gd.get_breseq_data("BASES_CHANGED"));
+        this_columns.push_back(gd.get_breseq_data("BASES_DELETED"));
+        this_columns.push_back(gd.get_breseq_data("BASES_INSERTED"));
+      }
       this_columns.push_back(to_string(called_bp));
       this_columns.push_back(to_string(total_bp));
       

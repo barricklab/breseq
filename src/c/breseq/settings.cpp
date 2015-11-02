@@ -228,7 +228,7 @@ namespace breseq
     options.addUsage("Consensus Mutation Prediction Options", ADVANCED_OPTION);
     options
     ("consensus-score-cutoff", "Log10 E-value cutoff for consensus base substitutions and small indels", "", ADVANCED_OPTION)
-    ("consensus-frequency-cutoff", "Only predict consensus mutations when the variant allele frequency is above this value. (DEFAULT = consensus mode, 0.8; polymorphism mode, 1-polymorphism-frequency-cutoff)", "", ADVANCED_OPTION)
+    ("consensus-frequency-cutoff", "Only predict consensus mutations when the variant allele frequency is above this value. (DEFAULT = consensus mode, 0.8; polymorphism mode, 0.95", "", ADVANCED_OPTION)
     ("consensus-minimum-coverage-each-strand", "Only predict consensus mutations when at least this many reads on each strand support the mutation. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", ADVANCED_OPTION)
     ;
 
@@ -416,7 +416,6 @@ namespace breseq
     //
     // Set the read alignment evidence model
     // Different defaults for the three modes:
-    //   Consensus - only consensus base calls (old default mode)
     //   Mixed base - consensus and strong polymorphism calls as marginal (new default mode)
     //   Polymorphism prediction - consensus and any mixed calls (--p option)
     //
@@ -425,17 +424,17 @@ namespace breseq
     if (this->polymorphism_prediction) {
       
       this->mutation_log10_e_value_cutoff = 10;
-      this->consensus_frequency_cutoff = 1.0;
+      this->consensus_frequency_cutoff = 0.95;
       this->consensus_minimum_new_coverage_each_strand = 0;
       
       this->polymorphism_log10_e_value_cutoff = 2;
-      this->polymorphism_frequency_cutoff = 0; // cut off if < X or > 1-X
+      this->polymorphism_frequency_cutoff = 0;
       this->polymorphism_minimum_new_coverage_each_strand = 2;
       
       this->mixed_base_prediction = false;
       this->polymorphism_reject_indel_homopolymer_length = 3; // zero is OFF!
       this->polymorphism_reject_surrounding_homopolymer_length = 2; // zero is OFF!
-      this->polymorphism_bias_p_value_cutoff = 0.001;
+      this->polymorphism_bias_p_value_cutoff = 0;
       this->no_indel_polymorphisms = false;
       this->polymorphism_precision_decimal = 0.000001;
       this->polymorphism_precision_places = 8;
@@ -446,9 +445,7 @@ namespace breseq
       this->junction_pos_hash_neg_log10_p_value_cutoff = 0; // OFF
     }
     // This is strictly true if we are not in polymorphism mode...
-    if (this->mixed_base_prediction) {
-      // Not calculated for mixed base mode
-      //ASSERT(!options.count("polymorphism-bias-cutoff"), "Option --polymorphism-bias-cutoff requires --polymorphism-prediction.")
+    else /* if (this->mixed_base_prediction)*/ {
 
       this->mutation_log10_e_value_cutoff = 10;
       this->consensus_frequency_cutoff = 0.8;
@@ -460,10 +457,9 @@ namespace breseq
 
       this->polymorphism_reject_indel_homopolymer_length = 0; // zero is OFF!
       this->polymorphism_reject_surrounding_homopolymer_length = 0; // zero is OFF!
-      // this->polymorphism_bias_p_value_cutoff = 0.05; //used pre 08-23-2015
       this->polymorphism_bias_p_value_cutoff = 0;
       this->no_indel_polymorphisms = false;
-      this->polymorphism_precision_decimal = 0.0; // 0.001; not actually used
+      this->polymorphism_precision_decimal = 0.000001; // Not actually used because only ML frequency is tested
       this->polymorphism_precision_places = 3;
       
       this->minimum_alignment_resolution_pos_hash_score = 3;
@@ -492,11 +488,6 @@ namespace breseq
       this->polymorphism_bias_p_value_cutoff = from_string<double>(options["polymorphism-bias-cutoff"]);
     if (options.count("polymorphism-minimum-coverage-each-strand"))
       this->polymorphism_minimum_new_coverage_each_strand = from_string<uint32_t>(options["polymorphism-minimum-coverage-each-strand"]);
-    
-    // Do some final checks to enforce dependent defaults
-    if (this->polymorphism_prediction && !options.count("consensus-frequency-cutoff")) {
-      this->consensus_frequency_cutoff = 1.0 - this->polymorphism_frequency_cutoff;
-    }
 
     // Junction options
     if (options.count("junction-minimum-pos-hash-score"))
@@ -540,7 +531,7 @@ namespace breseq
     fprintf(stderr, "Foundation; either version 2, or (at your option) any later version.\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "Copyright (c) 2008-2010 Michigan State University\n");
-    fprintf(stderr, "Copyright (c) 2011-2014 The University of Texas at Austin\n");
+    fprintf(stderr, "Copyright (c) 2011-2015 The University of Texas at Austin\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "If you use breseq in your research, please cite:\n");
     fprintf(stderr, "\n");

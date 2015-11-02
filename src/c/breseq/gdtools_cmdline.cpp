@@ -145,10 +145,9 @@ int do_union(int argc, char *argv[])
 	cout << endl << "    Preserving: " << (!options.count("evidence") ? "Mutations (3-letter codes)" : "Evidence (2-letter codes)") << endl;
 
   uout("Reading input GD files") << options.getArgv(0) << endl;
-  cGenomeDiff gd1(options.getArgv(0));
-
 	
-  for(int32_t i = 1; i < options.getArgc(); ++i) {
+	cGenomeDiff gd1;
+  for(int32_t i = 0; i < options.getArgc(); ++i) {
     uout << options.getArgv(i) << endl;
     cGenomeDiff gd2(options.getArgv(i));
     gd1.set_union(gd2, options.count("evidence"), options.count("phylogeny-aware"), options.count("verbose"));
@@ -1296,9 +1295,10 @@ int do_count(int argc, char* argv[])
   AnyOption options("gdtools COUNT [-o count.csv] -r reference.gbk input.1.gd [input.2.gd ... ]");
   options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
 	options("verbose,v", "produce output for each mutation counted.", TAKES_NO_ARGUMENT);
+	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
 	options("output,o", "path to output CSV file with count data.", "count.csv");
 	options("detailed-output,d", "path to optional output tab-delimited file with detailed information about all mutations (Default = OFF)");
-	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
+	options("calculate-genome-size,s", "use APPLY to calculate final genome sizes");
 	options("base-substitution-statistics,b", "calculate detailed base substitution statistics", TAKES_NO_ARGUMENT);
 	options("count-polymorphisms,p", "count polymorphic mutations (those with frequencies < 1). (Default = FALSE)", TAKES_NO_ARGUMENT);
 
@@ -1353,6 +1353,7 @@ int do_count(int argc, char* argv[])
 										detailed_output_file_name,
                     options.count("base-substitution-statistics"),
 										options.count("count-polymorphisms"),
+										options.count("calculate-genome-size"),
                     options.count("verbose")
                     );
   
@@ -1559,10 +1560,6 @@ int do_remove_gd(int argc, char* argv[])
       }
     }
     muts = gd.list(mut_types);
-  }
-  if (!muts.size()) {
-    printf("No mutations found.\n");
-    return 0;
   }
     
   const vector<string> evals = make_vector<string>("==")("!=")("<=")(">=")("<")(">");

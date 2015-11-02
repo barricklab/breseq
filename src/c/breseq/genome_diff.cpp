@@ -37,7 +37,6 @@ const char* POSITION="position";
 const char* INSERT_POSITION="insert_position";
 const char* FREQUENCY="frequency";
 const char* REJECT="reject";
-const char* ERROR="error";
 const char* MEDIATED="mediated";
 const char* BETWEEN="between";
   
@@ -71,11 +70,11 @@ const char* REGION = "region";
   
 //For RA
 const char* REF_BASE="ref_base";
- const char* NEW_BASE="new_base";
-  
-const char* REF_COV="ref_cov";
-const char* NEW_COV="new_cov";
-const char* TOT_COV="tot_cov";
+const char* MAJOR_BASE="major_base";
+const char* MINOR_BASE="minor_base";
+const char* MAJOR_COV="major_cov";
+const char* MINOR_COV="minor_cov";
+const char* TOTAL_COV="total_cov";
 const char* PREDICTION = "prediction";
 const char* SCORE="score";
 const char* CONSENSUS_SCORE="consensus_score";
@@ -132,7 +131,7 @@ const map<gd_entry_type, vector<string> > line_specification = make_map<gd_entry
 (CON,make_vector<string> (SEQ_ID)(POSITION)(SIZE)(REGION))
 
 //## evidence
-(RA,make_vector<string> (SEQ_ID)(POSITION)(INSERT_POSITION)(REF_BASE)(NEW_BASE))
+(RA,make_vector<string> (SEQ_ID)(POSITION)(INSERT_POSITION)(MAJOR_BASE)(MINOR_BASE))
 (MC,make_vector<string> (SEQ_ID)(START)(END)(START_RANGE)(END_RANGE))
 (JC,make_vector<string> (SIDE_1_SEQ_ID)(SIDE_1_POSITION)(SIDE_1_STRAND)(SIDE_2_SEQ_ID)(SIDE_2_POSITION)(SIDE_2_STRAND)(OVERLAP))
 (CN,make_vector<string> (SEQ_ID)(START)(END)(COPY_NUMBER))
@@ -356,8 +355,8 @@ cDiffEntry::cDiffEntry(const string &line, uint32_t line_number, cFileParseError
       }
       
       if (key == BETWEEN) {
-        if ( (de._type != DEL) && (de._type != AMP) ) {
-          if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'between' is only allowed for entries of type MOB or AMP.", true);
+        if ( (de._type != DEL) && (de._type != AMP) && (de._type != CON) ) {
+          if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'between' is only allowed for entries of type MOB, AMP, or CON.", true);
         }
       }
       
@@ -2186,19 +2185,7 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
       if (de.entry_exists("within"))
         continue;
 
-      /* NOT A VALID TEST - RA evidence can have a non-reference base. In the future ref_base will be set to indicate this and the test can be reinstated.
-      if (de._type == RA) {
-        uint32_t position = from_string<uint32_t>(de[POSITION]);
-        uint32_t insert_position = from_string<uint32_t>(de[INSERT_POSITION]);
-        string test_ref_base = ((insert_position == 0) ? ref_seq.get_sequence_1(de[SEQ_ID], position, position) : ".");
-        if (de[REF_BASE] != test_ref_base) {
-          parse_errors.add_line_error(from_string<uint32_t>(de["_line_number"]), de.as_string(), "Specified REF_BASE does not match actual reference base (" + test_ref_base + ") at the specified positon.", true);
-        }
-      
-        if (de[REF_BASE] == de[NEW_BASE]) {
-          parse_errors.add_line_error(from_string<uint32_t>(de["_line_number"]), de.as_string(), "Specified REF_BASE and NEW_BASE are the same.", true);
-        }
-      } else */ if (de._type == SNP) {
+      if (de._type == SNP) {
         uint32_t position = from_string<uint32_t>(de[POSITION]);
         if (de[NEW_SEQ] == ref_seq.get_sequence_1(de[SEQ_ID], position, position)) {
           parse_errors.add_line_error(from_string<uint32_t>(de["_line_number"]), de.as_string(), "Specified NEW_SEQ is the same as the reference sequence at the specified position.", false);
@@ -2849,6 +2836,17 @@ void cGenomeDiff::merge(cGenomeDiff& merge_gd, bool unique, bool new_id, bool ph
       
     }
   }
+  
+  // Add population info if we are phylogeny aware
+
+  if (phylogeny_id_aware) {
+      
+    diff_entry_list_t mut_list = this->mutation_list();
+    for (diff_entry_list_t::iterator it_new = merge_gd._entry_list.begin(); it_new != merge_gd._entry_list.end(); it_new++) {
+      (**it_new)["population_id"] = merge_gd.metadata.population;
+    }
+  }
+  
   
   
   //Iterate through all the potential new entries
@@ -5394,9 +5392,10 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
       // Strand
       gvf[6] = "+";
       // Attributes - Reference base
-      gvf[8].append(";Reference_seq=").append( ref_seq_info.get_sequence_1(de[SEQ_ID], from_string(de[POSITION]),  from_string(de[POSITION])) );
+      string ref_base = ref_seq_info.get_sequence_1(de[SEQ_ID], from_string(de[POSITION]),  from_string(de[POSITION]));
+      gvf[8].append(";Reference_seq=").append( ref_base );
       // Attributes - New base
-      gvf[8].append("Variant_seq=").append( de[NEW_BASE] );
+      gvf[8].append("Variant_seq=").append( de[NEW_SEQ] );
       
       diff_entry_list_t ev_list = mutation_evidence_list(de);
       ASSERT(ev_list.size() == 1, "Did not find RA evidence supporting SNP\n" + to_string(de))
@@ -5406,12 +5405,13 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
       gvf[5] = ev[CONSENSUS_SCORE];
         
       // Attributes - Total Reads 
-      vector<string> covs = split( ev[TOT_COV], "/" );
+      vector<string> covs = split( ev[TOTAL_COV], "/" );
       uint32_t cov = from_string<uint32_t>(covs[0]) + from_string<uint32_t>(covs[1]);
       gvf[8] = gvf[8].append(";Total_reads=").append(to_string(cov));
       
-      // Attributes - Variant Reads 
-      vector<string> variant_covs = split( ev[NEW_COV], "/" );
+      // Attributes - Variant Reads
+      string which_cov = (ref_base == ev[MAJOR_BASE]) ? MINOR_COV : MAJOR_COV;
+      vector<string> variant_covs = split( ev[which_cov], "/" );
       uint32_t variant_cov = from_string<uint32_t>(variant_covs[0]) + from_string<uint32_t>(variant_covs[1]);
       gvf[8] = gvf[8].append(";Variant_reads=").append(to_string(variant_cov));
         
@@ -6067,14 +6067,6 @@ void cGenomeDiff::GD2OLI(const vector<string> &gd_file_names,
     cout << "   " << *it << endl;
     
     cGenomeDiff this_gd(*it);
-    
-    if (phylogeny_aware) {
-      
-      diff_entry_list_t mut_list = this_gd.mutation_list();
-      for(diff_entry_list_t::iterator mut_it = mut_list.begin(); mut_it != mut_list.end(); mut_it++) {
-        (**mut_it)["population_id"] = this_gd.metadata.population;
-      }
-    }
     
     gd_list.push_back(this_gd);
     

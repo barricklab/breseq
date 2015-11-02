@@ -52,7 +52,7 @@ X<-read.table(in_file, sep="\t", header=T)
 
 ##allocate output data frame
 Y<-data.frame(
-  major_binomial_strand_lower_bound = 1:length(X$major_frequency)
+  ks_quality_p_value = 1:length(X$major_frequency)
 );
 
 qual_dist<-read.table(qual_file, sep="\t", header=F)
@@ -118,20 +118,20 @@ if (length(X$major_quals) > 0)
     ##print(minor_quals)
         
     ## This code estimates the actual strand and quality score distribution as the total observed.
-		max_qual = max(major_quals, minor_quals)
-		NQ = tabulate(major_quals, nbins=max_qual)
-		RQ = tabulate(minor_quals, nbins=max_qual)
-		TQ = NQ+RQ
+#		max_qual = max(major_quals, minor_quals)
+#		NQ = tabulate(major_quals, nbins=max_qual)
+#		RQ = tabulate(minor_quals, nbins=max_qual)
+#		TQ = NQ+RQ
+#
+#		log10_qual_likelihood = log10(dmultinom(NQ, prob=TQ)) + log10(dmultinom(RQ, prob=TQ)) - log10(dmultinom(TQ, prob=TQ))
+#		Y$log10_qual_likelihood_position_model[i] = -log10_qual_likelihood
 		
-		log10_qual_likelihood = log10(dmultinom(NQ, prob=TQ)) + log10(dmultinom(RQ, prob=TQ)) - log10(dmultinom(TQ, prob=TQ)) 
-		Y$log10_qual_likelihood_position_model[i] = -log10_qual_likelihood	
+#		RS = c(X$major_top_strand[i], X$major_bot_strand[i])
+#		NS = c(X$minor_top_strand[i], X$minor_bot_strand[i])
+#		TS = RS+NS
 		
-		RS = c(X$major_top_strand[i], X$major_bot_strand[i])
-		NS = c(X$minor_top_strand[i], X$minor_bot_strand[i])
-		TS = RS+NS
-		
-		log10_strand_likelihood =  log10(dmultinom(RS, prob=TS)) + log10(dmultinom(NS, prob=TS)) - log10(dmultinom(TS, prob=TS))
-		Y$log10_strand_likelihood_position_model[i] = -log10_strand_likelihood
+#		log10_strand_likelihood =  log10(dmultinom(RS, prob=TS)) + log10(dmultinom(NS, prob=TS)) - log10(dmultinom(TS, prob=TS))
+#		Y$log10_strand_likelihood_position_model[i] = -log10_strand_likelihood
 
 		#likelihoods are written as NULL model (one base) versus POLYMORPHISM model (mixed bases)
 		#log10_base_likelihood should be negative

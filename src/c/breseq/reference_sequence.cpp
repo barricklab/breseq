@@ -2233,15 +2233,19 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     }
 
     //#only add gene information to SNPs and RA mutations that don"t include indels...
-    if ((mut._type != SNP) && !((mut._type == RA) && (mut["ref_base"] != ".") && (mut["new_base"] != ".")))
+    if ((mut._type != SNP) && !((mut._type == RA) && (mut[MAJOR_BASE] != ".") && (mut[MINOR_BASE] != ".")))
     {
       mut["gene_position"] = "coding (" + mut["gene_position"] + "/" + gene_nt_size + " nt)";
       return;
     }
 
     // this is for RA...
-    if (!mut.entry_exists("ref_seq")) mut["ref_seq"] = mut["ref_base"];
-    if (!mut.entry_exists("new_seq")) mut["new_seq"] = mut["new_base"];
+    if (mut._type == RA)  {
+      string ra_seq_id = mut[SEQ_ID];
+      int32_t ra_position = from_string<int32_t>(mut[POSITION]);
+      mut["ref_seq"] = this->get_sequence_1(ra_seq_id, ra_position, ra_position);
+      mut["new_seq"] = (mut[MAJOR_BASE] == mut["ref_seq"]) ? mut[MINOR_BASE] : mut[MAJOR_BASE];
+    }
 
     // >> CODE_INDETERMINATE
     // Needs to 
