@@ -135,7 +135,7 @@ int do_union(int argc, char *argv[])
 		return -1;
 	}
 	
-  if (options.getArgc() < 2) {
+  if (options.getArgc() < 1) {
     options.addUsage("");
     options.addUsage("Must provide at least two input Genome Diff files.");
     options.printUsage();
@@ -144,7 +144,7 @@ int do_union(int argc, char *argv[])
   UserOutput uout("UNION");
 	cout << endl << "    Preserving: " << (!options.count("evidence") ? "Mutations (3-letter codes)" : "Evidence (2-letter codes)") << endl;
 
-  uout("Reading input GD files") << options.getArgv(0) << endl;
+  uout("Reading input GD files") << endl;
 	
 	cGenomeDiff gd1;
   for(int32_t i = 0; i < options.getArgc(); ++i) {

@@ -375,11 +375,15 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
     // sort by frequency, rather than position in consensus mode
     if (!settings.polymorphism_prediction) {
       ra_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(FREQUENCY)));
+    } else {
+      ra_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(POLYMORPHISM_SCORE)));
     }
     
     string marginal_ra_title = "Marginal polymorphic read alignment evidence";
     if (full_marginal_ra_list_size > ra_list.size()) {
       marginal_ra_title += " (highest frequency " + to_string(settings.max_rejected_read_alignment_evidence_to_show) + " of " + to_string(full_marginal_ra_list_size) + " shown)";
+    } else {
+      marginal_ra_title += " (sorted from high to low polymorphism score)";
     }
     HTML << "<p>" << endl;
     HTML << html_read_alignment_table_string(ra_list, false, marginal_ra_title, relative_path) << endl;
@@ -403,6 +407,8 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
     string marginal_jc_title = "Marginal new junction evidence";
     if (full_marginal_jc_list_size > jc_list.size()) {
       marginal_jc_title += " (lowest skew " + to_string(settings.max_rejected_junction_evidence_to_show) + " of " + to_string(full_marginal_jc_list_size) + " shown)";
+    } else {
+      marginal_jc_title += " (sorted from low to high skew)";
     }
     HTML << "<p>" << endl;
     HTML << html_new_junction_table_string(jc_list, settings, false, marginal_jc_title, relative_path);
@@ -424,7 +430,7 @@ string html_header (const string& title, const Settings& settings)
   ss << "<!DOCTYPE html" << endl;
 	ss << "PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"" << endl;
   ss << "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">" << endl;
-  ss << "<html xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"en-US\" xml:lang=\"en-US\">" << endl;
+  ss << "<html xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"en\" xml:lang=\"en\">" << endl;
   
   ss << "<html>" << endl;  
   ss << "<head>" << endl;
@@ -1047,7 +1053,7 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
   }
 
   //Determine Number of Columns in Table
-  size_t total_cols = link ? 12 : 11;
+  size_t total_cols = link ? 13 : 12;
   
   //Create Column Titles
   //seq_id/position/change/freq/score/cov/annotation/genes/product
@@ -1063,9 +1069,10 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
   ss << th("seq&nbsp;id") << endl;
   ss << th("colspan=\"2\"", "position") << endl;
   ss << th("ref")        << endl <<
-        th("alleles")        << endl <<
-        th("freq")       << endl <<
-        th("score")      << endl <<
+        th("A")          << endl <<
+        th("a")          << endl <<
+        th("var&nbsp;freq")    << endl <<
+        th("score&nbsp;(cons/poly)")      << endl <<
         th("reads")      << endl <<
         th("annotation") << endl <<
         th("genes")      << endl;
@@ -1111,32 +1118,33 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
     ss << td(ALIGN_RIGHT, commify(c[POSITION ]));
     ss << td(ALIGN_RIGHT, c[INSERT_POSITION]);
     ss << td(ALIGN_CENTER, c[REF_BASE]);
-    
-    if (c[REF_BASE] == c[MAJOR_BASE])
-      ss << td(ALIGN_CENTER, c[MAJOR_BASE] + "&rarr;" + c[MINOR_BASE]);
-    else // flip this case to get frequency right
-      ss << td(ALIGN_CENTER, c[MINOR_BASE] + "&rarr;" + c[MAJOR_BASE]);
+    ss << td(ALIGN_CENTER, c[MAJOR_BASE]);
+    ss << td(ALIGN_CENTER, c[MINOR_BASE]);
     
     ssf.str("");
     ssf.clear();
     ssf.width(4);
     ssf.precision(1);
-    if (c.entry_exists(FREQUENCY))
-      ssf << fixed << from_string<double>(c[FREQUENCY]) * 100 << "%" << endl; // "frequency" column
+    if (c.entry_exists(VARIANT_FREQUENCY))
+      ssf << fixed << from_string<double>(c[VARIANT_FREQUENCY]) * 100 << "%" << endl; // "frequency" column
     ss << td(ALIGN_RIGHT, ssf.str());
     
     ssf.str("");
     ssf.clear();
     ssf.precision(1);
     
-    if (is_polymorphism) {
-      if (c.entry_exists(POLYMORPHISM_SCORE)) {
-        ssf << fixed << c[POLYMORPHISM_SCORE] << endl;
-      }
+    if (c.entry_exists(CONSENSUS_SCORE)) {
+      ssf << fixed << c[CONSENSUS_SCORE] << endl;
     } else {
-      if (c.entry_exists(CONSENSUS_SCORE)) {
-        ssf << fixed << c[CONSENSUS_SCORE] << endl;
-      }
+      ssf << "NA";
+    }
+
+    ssf << "/ ";
+
+    if (c.entry_exists(POLYMORPHISM_SCORE)) {
+      ssf << fixed << c[POLYMORPHISM_SCORE] << endl;
+    } else {
+      ssf << "NA";
     }
     
     
@@ -1165,7 +1173,7 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
     }
 #endif
     
-    ss << td(ALIGN_RIGHT, nonbreaking(ssf.str()));
+    ss << td(ALIGN_CENTER, nonbreaking(ssf.str()));
 
     // Build "cov" column value
     vector<string> temp_cov = split(c[TOTAL_COV], "/");
@@ -1186,8 +1194,8 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
       ss << tr("class=\"information_table_row\"", 
                td("colspan=\"" + to_string(total_cols) + "\"",
                   "Reads supporting (aligned to +/- strand):&nbsp;&nbsp;" +
-                  b("major") + " allele " + "(" + c[MAJOR_COV] + ")" + ";&nbsp;&nbsp;" +
-                  b("minor") + " allele " + "(" + c[MINOR_COV] + ")" + ";&nbsp;&nbsp;" +
+                  b("major") + " Allele " + c[MAJOR_BASE] + " (" + c[MAJOR_COV] + ")" + ";&nbsp;&nbsp;" +
+                  b("minor") + " allele " + c[MINOR_BASE] + " (" + c[MINOR_COV] + ")" + ";&nbsp;&nbsp;" +
                   b("total") + " (" + c[TOTAL_COV] + ")"));
     
       /* Fisher Strand Test */
@@ -1472,7 +1480,7 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
       ss << td("rowspan=\"2\" align=\"center\"", 
               c["neg_log10_pos_hash_p_value"]) << endl;
 
-      ss << td("rowspan=\"2\" align=\"center\"", Html_Mutation_Table_String::freq_to_string(c[POLYMORPHISM_FREQUENCY])) << endl;
+      ss << td("rowspan=\"2\" align=\"center\"", Html_Mutation_Table_String::freq_to_string(c[VARIANT_FREQUENCY])) << endl;
               
                //" (" + c["max_left"] + "/" + c["max_right"] + ")") << endl;
       ss << td("align=\"center\" class=\"" + annotate_key + "\"", 

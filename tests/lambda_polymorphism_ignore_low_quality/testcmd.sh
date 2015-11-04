@@ -5,13 +5,15 @@ SELF=`dirname ${BASH_SOURCE}`
 
 CURRENT_OUTPUTS[0]="output/evidence/annotated.gd"
 EXPECTED_OUTPUTS[0]="expected.gd"
+REFERENCE_ARG="-r ${DATADIR}/lambda/lambda.gbk"
 
 TESTCMD="\
     ${BRESEQ} \
     	--polymorphism-prediction \
+    	--polymorphism-frequency-cutoff 0.2 \
     	-b 20 \
         -o ${SELF} \
-        -r ${DATADIR}/lambda/lambda.gbk \
+        ${REFERENCE_ARG} \
         ${DATADIR}/lambda/lambda_mixed_population.fastq \
     "
 

@@ -5,12 +5,13 @@ SELF=`dirname ${BASH_SOURCE}`
 
 CURRENT_OUTPUTS[0]="output/evidence/annotated.gd"
 EXPECTED_OUTPUTS[0]="expected.gd"
+REFERENCE_ARG="-r ${DATADIR}/REL606/REL606.fragment.gbk"
 
 TESTCMD=" \
 		${BRESEQ} \
 		-b 0 \
         -o ${SELF} \
-        -r ${DATADIR}/REL606/REL606.fragment.gbk \
+        ${REFERENCE_ARG} \
         ${DATADIR}/REL606/REL606.fragment.3.fastq.gz
 	"
 

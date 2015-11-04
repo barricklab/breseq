@@ -1131,6 +1131,12 @@ string alignment_output::html_header_string()
     }
   }
 
+  header_style_string += "CODE {font-family:Monaco, monospace;}\n";
+  
+  // Below and default CODE font seem to be broken on Chrome
+  //header_style_string += "CODE {font-family:\"Lucida Console\", Monaco, monospace;}\n";
+  //header_style_string += "CODE {font-family:\"Courier New\", Courier, monospace;}\n";
+  
   no_color_index = base_color_hash['G'].size()-1;
   return header_style_string;
 }

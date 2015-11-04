@@ -5,13 +5,12 @@ SELF=`dirname ${BASH_SOURCE}`
 
 CURRENT_OUTPUTS[0]="output/evidence/annotated.gd"
 EXPECTED_OUTPUTS[0]="expected.gd"
+REFERENCE_ARG="-r ${DATADIR}/lambda/lambda.gbk -r ${DATADIR}/lambda/other.gbk -r ${DATADIR}/REL606/REL606.fragment.gbk"
 
 TESTCMD="\
     ${BRESEQ} \
     -o ${SELF} \
-    -r ${DATADIR}/lambda/lambda.gbk \
-  	-r ${DATADIR}/lambda/other.gbk \
-  	-r ${DATADIR}/REL606/REL606.fragment.gbk \
+    ${REFERENCE_ARG} \
     ${DATADIR}/lambda/lambda_mixed_population.fastq \
     "
 

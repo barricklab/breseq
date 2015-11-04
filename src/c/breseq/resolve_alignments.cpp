@@ -2019,25 +2019,43 @@ void  assign_one_junction_read_counts(
   
   // We cannot assign a frequency if the denominator is zero
   if (d == 0) {
-    j[POLYMORPHISM_FREQUENCY] = "NA";
-    j[FREQUENCY] = j[POLYMORPHISM_FREQUENCY];
+    j[VARIANT_FREQUENCY] = "NA";
+    j[FREQUENCY] = j[VARIANT_FREQUENCY];
 
     j[PREDICTION] = "unknown";
   } else {
     double new_junction_frequency_value = c /(c + ((a+b)/d) );
-    j[POLYMORPHISM_FREQUENCY] = to_string(new_junction_frequency_value, settings.polymorphism_precision_places, true);
-    j[FREQUENCY] = j[POLYMORPHISM_FREQUENCY];
+    j[VARIANT_FREQUENCY] = to_string(new_junction_frequency_value, settings.polymorphism_precision_places, true);
+    j[FREQUENCY] = j[VARIANT_FREQUENCY];
 
     // Determine what kind of prediction we are
-    if (new_junction_frequency_value >= settings.consensus_frequency_cutoff) {
-      j[PREDICTION] = "consensus";
-      j[FREQUENCY] = "1";
-    } else if ((new_junction_frequency_value >= settings.polymorphism_frequency_cutoff) && (new_junction_frequency_value <= 1 - settings.consensus_frequency_cutoff))
-    {
-      j[PREDICTION] = "polymorphism";
+    
+    // We may have added FREQUENCY_CUTOFF previously, so clear it.
+    j.remove_reject_reason("FREQUENCY_CUTOFF");
+    
+    // Order of precedence depends on mode
+    if (settings.polymorphism_prediction) {
+      
+      if ((new_junction_frequency_value >= settings.polymorphism_frequency_cutoff) && (new_junction_frequency_value <= 1 - settings.polymorphism_frequency_cutoff)) {
+        j[PREDICTION] = "polymorphism";
+      } else if (new_junction_frequency_value >= settings.consensus_frequency_cutoff) {
+        j[PREDICTION] = "consensus";
+        j[FREQUENCY] = "1";
+      } else {
+        j[PREDICTION] = "polymorphism";
+        j.add_reject_reason("FREQUENCY_CUTOFF");
+      }
+      
     } else {
-      j[PREDICTION] = "polymorphism";
-      j.add_reject_reason("FREQUENCY_CUTOFF");
+      if (new_junction_frequency_value >=  settings.consensus_frequency_cutoff) {
+        j[PREDICTION] = "consensus";
+        j[FREQUENCY] = "1";
+      } else if ((new_junction_frequency_value >= settings.polymorphism_frequency_cutoff) && (new_junction_frequency_value <= 1 - settings.polymorphism_frequency_cutoff)) {
+        j[PREDICTION] = "polymorphism";
+      } else {
+        j[PREDICTION] = "polymorphism";
+        j.add_reject_reason("FREQUENCY_CUTOFF");
+      }
     }
   }
   

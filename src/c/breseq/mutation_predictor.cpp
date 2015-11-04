@@ -1060,7 +1060,7 @@ namespace breseq {
           }
           
           // Determine consensus vs. polymorphism
-          if (frequency < 1.0 - settings.consensus_frequency_cutoff) {
+          if (frequency >= settings.consensus_frequency_cutoff) {
             mut[FREQUENCY] = "1";
           } else if ((frequency >= 1.0 - settings.polymorphism_frequency_cutoff) || (frequency < settings.polymorphism_frequency_cutoff)) {
             mut.add_reject_reason("FREQUENCY_CUTOFF");
@@ -1401,14 +1401,16 @@ namespace breseq {
       
       string ra_seq_id = item[SEQ_ID];
       int32_t ra_position = from_string<int32_t>(item[POSITION]);
-      string ra_ref_base = ref_seq_info.get_sequence_1(ra_seq_id, ra_position, ra_position);
+      string ra_ref_base;
+      if (item.entry_exists(INSERT_POSITION) && (from_string<int32_t>(item[INSERT_POSITION]) != 0)) {
+        ra_ref_base = ".";
+      } else {
+        ra_ref_base = ref_seq_info.get_sequence_1(ra_seq_id, ra_position, ra_position);
+      }
       string ra_new_base = (item[MAJOR_BASE] == ra_ref_base) ? item[MINOR_BASE] : item[MAJOR_BASE];
       
       // Frequency is for major allele base... so switch if need be given reference
       double ra_variant_frequency = from_string<double>(item[FREQUENCY]);
-      if (item[MAJOR_BASE] == ra_ref_base) {
-        ra_variant_frequency = 1.0 - ra_variant_frequency;
-      }
       
       // Sometimes a SNP might be called in a deleted area because the end was wrong,
 			// but it was corrected using a junction. (This catches this case.)
@@ -1417,7 +1419,7 @@ namespace breseq {
       
       // If we are predicting mixed bases and not polymorphisms, then don't create
       // mutations for mixed frequency predictions (leave them as unassigned RA evidence)
-      if (settings.mixed_base_prediction && (item[FREQUENCY] != "1")) {
+      if (!settings.polymorphism_prediction && (item[FREQUENCY] != "1")) {
         continue;
       }
       
@@ -1771,7 +1773,6 @@ namespace breseq {
 	*/
 	void MutationPredictor::predict(Settings& settings, Summary& summary, cGenomeDiff& gd)
 	{
-		(void)settings; //TODO; unused?
     bool verbose = false; // for debugging
 
 		///
@@ -1790,23 +1791,29 @@ namespace breseq {
     // Do not use rejected junctions unless they are user-defined
     vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
 		diff_entry_list_t jc = gd.list(jc_types);
-    jc.remove_if(cDiffEntry::rejected_and_not_user_defined());
     
     // Do not use rejected missing coverage evidence
     vector<gd_entry_type> mc_types = make_vector<gd_entry_type>(MC);
 		diff_entry_list_t mc = gd.list(mc_types);
     mc.remove_if(cDiffEntry::field_exists("reject"));
     
+    
+    ///
+    // evidence JC + JC = MOB mutation
+    ///
+    
+    predictJCplusJCtoMOB(settings, summary, gd, jc, mc);
+    
+    // Don't use rejected junctions for predicting DEL, INS, SUB, *just* MOB
+    // because frequencies of rejected ones could be increased by recounting
+    // after adjusting for overlap in this case!
+    jc.remove_if(cDiffEntry::rejected_and_not_user_defined());
+    
 		///
 		// evidence MC + JC => DEL mutation
 		///
     predictMCplusJCtoDEL(settings, summary, gd, jc, mc);
-    
-		///
-		// evidence JC + JC = MOB mutation
-		///
-    
-    predictJCplusJCtoMOB(settings, summary, gd, jc, mc);
+
 		
 		///
 		// evidence JC => INS, SUB, DEL mutations

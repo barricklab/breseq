@@ -5,6 +5,7 @@ SELF=`dirname ${BASH_SOURCE}`
 
 CURRENT_OUTPUTS[0]="output/evidence/annotated.gd"
 EXPECTED_OUTPUTS[0]="expected.gd"
+REFERENCE_ARG="-r ${DATADIR}/lambda/lambda-contig.gbk"
 
 TESTCMD="\
     ${BRESEQ} \

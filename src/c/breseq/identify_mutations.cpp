@@ -271,11 +271,7 @@ bool test_RA_evidence_CONSENSUS_mode(
   
   double consensus_score = from_string<double>(ra[CONSENSUS_SCORE]);
   double polymorphism_score = (ra[POLYMORPHISM_SCORE]=="NA") ? numeric_limits<double>::quiet_NaN() : from_string<double>(ra[POLYMORPHISM_SCORE]);
-  double variant_frequency = from_string<double>(ra[POLYMORPHISM_FREQUENCY]);
-  // Is the REF base the major allele, then the variant allele is the minor one
-  if (ra[REF_BASE] == ra[MAJOR_BASE]) {
-    variant_frequency = 1.0 - variant_frequency;
-  }
+  double variant_frequency = from_string<double>(ra[VARIANT_FREQUENCY]);
   
   if (consensus_score >= settings.mutation_log10_e_value_cutoff) {
     prediction = consensus;
@@ -300,7 +296,7 @@ bool test_RA_evidence_CONSENSUS_mode(
   // Bail now if consensus
   if (prediction == consensus) {
     ra[PREDICTION] = "consensus";
-    ra[FREQUENCY] = "1";
+    ra[FREQUENCY] = (ra[REF_BASE] == ra[MAJOR_BASE]) ? "0" : "1";
     
     // and delete if we are just the reference base!
     return (ra[REF_BASE] == ra[MAJOR_BASE]);
@@ -308,7 +304,7 @@ bool test_RA_evidence_CONSENSUS_mode(
   
   // Set us up as a potential polymorphism
   ra[PREDICTION] = "polymorphism";
-  ra[FREQUENCY] = formatted_double(variant_frequency, settings.polymorphism_precision_places, true).to_string();
+  ra[FREQUENCY] = ra[VARIANT_FREQUENCY];
   
   // Perform further checks for polymorphisms
   bool rejected_RA_polymorphism_frequency = false;
@@ -347,26 +343,23 @@ bool test_RA_evidence_POLYMORPHISM_mode(
   
   double consensus_score = from_string<double>(ra[CONSENSUS_SCORE]);
   double polymorphism_score = (ra[POLYMORPHISM_SCORE]=="NA") ? numeric_limits<double>::quiet_NaN() : from_string<double>(ra[POLYMORPHISM_SCORE]);
-  double variant_frequency = from_string<double>(ra[POLYMORPHISM_FREQUENCY]);
-  if (ra[REF_BASE] == ra[MAJOR_BASE]) {
-    variant_frequency = 1.0 - variant_frequency;
-  }
+  double variant_frequency = from_string<double>(ra[VARIANT_FREQUENCY]);
   
   // Set up polymorphism as default
   ra[PREDICTION] = "polymorphism";
-  ra[FREQUENCY] = formatted_double(variant_frequency, settings.polymorphism_precision_places, true).to_string();
+  ra[FREQUENCY] = ra[VARIANT_FREQUENCY];
   
   if (polymorphism_score >= settings.polymorphism_log10_e_value_cutoff) {
     prediction = polymorphism;
   } else if (consensus_score >= settings.mutation_log10_e_value_cutoff) {
     prediction = consensus;
   } else {
-    ERROR("Shouldn't be possible to test this RA item\n" + ra.as_string());
+    ERROR("Sanity check. RA item should have been discarded earlier.\n" + ra.as_string());
     return true;
   }
   
   bool tested_indel_homopolymer = false;
-  
+  string saved_polymorphism_reject;
   if (prediction == polymorphism) {
     
     // Perform further checks for polymorphisms
@@ -394,11 +387,14 @@ bool test_RA_evidence_POLYMORPHISM_mode(
       if (rejected_RA_indel_homopolymer(ra, ref_seq_info, settings))
         prediction = consensus;
     }
-
+    
     // If we're still a good polymorphism -- fill out values and return
     if (prediction == polymorphism) {
       return false;
     }
+    
+    saved_polymorphism_reject = ra[REJECT];
+    ra.clear_reject_reasons();
   }
   
   // If we get here, we are back to testing for a consensus
@@ -427,10 +423,12 @@ bool test_RA_evidence_POLYMORPHISM_mode(
     
   }
   
-  // We are back to a polymorphism,
-  // if tested_indel_homopolymer and we get here, then we already failed this test
+  // if tested_indel_homopolymer and we get here, then we already failed this test - and it is grounds for deletion
   if (tested_indel_homopolymer || rejected_RA_indel_homopolymer(ra, ref_seq_info, settings))
     return true;
+
+  // We are back to a polymorphism, albeit a rejected one
+  ra[REJECT] = saved_polymorphism_reject;
 
   return false;
   
@@ -446,18 +444,19 @@ void test_RA_evidence(
   // Assumes these entries are present initially
   //  * REF_BASE
   //  * CONSENSUS_SCORE is present for all entries        = maximumum likelihood frequency for 100% mutated model
-  //  * POLYMORPHISM_FREQUENCY is present for all entries = maximumum likelihood frequency for mixed model
+  //  * VARIANT_FREQUENCY is present for all entries = maximumum likelihood frequency for mixed model
   //  * QUALITY is present for all entries                = consensus model
   //  * POLYMORPHISM_SCORE may or may not be present      = mixed model
   //  * NEW_COV, REF_COV present for all entries
   
-  diff_entry_list_t list = gd.list(make_vector<gd_entry_type>(RA));
+  diff_entry_list_t list = gd.list();
   // Note nonstandard non-increment, since we remove items
   for (diff_entry_list_t::iterator it = list.begin(); it != list.end(); ) {
     
     cDiffEntry& ra = **it;
     if (ra._type != RA) {
       it++;
+      continue;
     }
     
     // At this point, both consensus and polymorphism quality may be > 0,
@@ -472,8 +471,8 @@ void test_RA_evidence(
     if (!ra.entry_exists(POLYMORPHISM_SCORE)) {
       ERROR("Expected field 'polymorphism_score' in evidence item\n" + ra.as_string());
     }
-    if (!ra.entry_exists(POLYMORPHISM_FREQUENCY)) {
-      ERROR("Expected field 'polymorphism_frequency' in evidence item\n" + ra.as_string());
+    if (!ra.entry_exists(VARIANT_FREQUENCY)) {
+      ERROR("Expected field 'variant_frequency' in evidence item\n" + ra.as_string());
     }
     
     bool delete_entry = false;
@@ -923,8 +922,15 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       mut[REF_BASE] = ref_base_char;
       mut[MAJOR_BASE] = best_base_char;
       mut[MINOR_BASE] = second_best_base_char;
-      mut[POLYMORPHISM_FREQUENCY] = formatted_double(ppred.frequency, _polymorphism_precision_places, true).to_string();
+      mut[MAJOR_FREQUENCY] = formatted_double(ppred.frequency, _polymorphism_precision_places, true).to_string();
+      
+      double variant_frequency = ppred.frequency;
+      if (mut[REF_BASE] == mut[MAJOR_BASE]) {
+        variant_frequency = 1.0 - variant_frequency;
+      }
+      mut[VARIANT_FREQUENCY] = formatted_double(variant_frequency, _polymorphism_precision_places, true).to_string();
 
+      
       // Add line to R input file if we are only a polymorphism
       
       // @JEB TO_DO: deprecate going to R here
@@ -945,6 +951,11 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       
       vector<uint32_t>& new_cov = pos_info[from_string<base_char>(mut[MINOR_BASE])];
       mut[MINOR_COV] = to_string(make_pair(static_cast<int32_t>(new_cov[2]), static_cast<int32_t>(new_cov[0])));
+      
+      // Special case to make minor reference when all are equal
+      if ((new_cov[2] + new_cov[0] == 0) && (mut[MAJOR_BASE] != mut[REF_BASE])) {
+        mut[MINOR_BASE] = mut[REF_BASE];
+      }
       
       mut[TOTAL_COV] = to_string(make_pair(total_cov[2], total_cov[0]));
       
@@ -997,7 +1008,14 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         
         //# the frequency returned is the probability of the FIRST base
         //# we want to quote the probability of the second base (the change from the reference).
-        user_ra[POLYMORPHISM_FREQUENCY] = formatted_double(1 - ppred.frequency, _polymorphism_precision_places, true).to_string();
+        mut[MAJOR_FREQUENCY] = formatted_double(ppred.frequency, _polymorphism_precision_places, true).to_string();
+        
+        double variant_frequency = ppred.frequency;
+        if (mut[REF_BASE] == mut[MAJOR_BASE]) {
+          variant_frequency = 1.0 - variant_frequency;
+        }
+        mut[VARIANT_FREQUENCY] = formatted_double(variant_frequency, _polymorphism_precision_places, true).to_string();
+
         
         // Genotype quality is for the top called genotype
         user_ra[CONSENSUS_SCORE] = formatted_double(consensus_bonferroni_score, kMutationScorePrecision).to_string();

@@ -54,7 +54,8 @@ extern const char* REF_BASE;
 extern const char* MAJOR_BASE;
 extern const char* MINOR_BASE;
 extern const char* FREQUENCY;
-extern const char* POLYMORPHISM_FREQUENCY;
+extern const char* MAJOR_FREQUENCY;
+extern const char* VARIANT_FREQUENCY;
 extern const char* POLYMORPHISM_EXISTS;
 extern const char* REJECT;
 extern const char* MAJOR_COV;
@@ -303,6 +304,9 @@ public:
   
   //! Adds a reject reason to cDiffEntry["reject"] as a list
   void add_reject_reason(const string &reason);
+  
+  //! Removes just this reject reason
+  void remove_reject_reason(const string &reason);
   
   //! Removes all of the reject reasons
   void clear_reject_reasons()

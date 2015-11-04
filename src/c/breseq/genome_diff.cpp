@@ -79,7 +79,8 @@ const char* PREDICTION = "prediction";
 const char* SCORE="score";
 const char* CONSENSUS_SCORE="consensus_score";
 const char* POLYMORPHISM_SCORE="polymorphism_score";
-const char* POLYMORPHISM_FREQUENCY="polymorphism_frequency";  // actual frequency - only used in consensus mode
+const char* VARIANT_FREQUENCY="variant_frequency";  // frequency of top variant allele
+const char* MAJOR_FREQUENCY="major_frequency";      // frequency of major allele
 const char* POLYMORPHISM_EXISTS="polymorphism_exists";        // internal flag for running R script
   
 //For MC  
@@ -1250,6 +1251,26 @@ void cDiffEntry::add_reject_reason(const string &reason) {
       current_reject_reasons.push_back(reason);
       (*this)[REJECT] = join(current_reject_reasons, ",");
     }
+  }
+}
+  
+/*! Add reject reason to diff entry.
+ */
+void cDiffEntry::remove_reject_reason(const string &reason) {
+  
+  if (!this->entry_exists(REJECT)) return;
+  
+  vector<string> current_reject_reasons = split((*this)[REJECT], ",");
+  vector<string> new_reject_reasons;
+  
+  for (vector<string>::iterator it=current_reject_reasons.begin(); it != current_reject_reasons.end(); it++) {
+    if (*it != reason) {
+      new_reject_reasons.push_back(*it);
+    }
+  }
+  
+  if (current_reject_reasons.size() > 0) {
+    (*this)[REJECT] = join(current_reject_reasons, ",");
   }
 }
   
@@ -2828,10 +2849,6 @@ void cGenomeDiff::merge(cGenomeDiff& merge_gd, bool unique, bool new_id, bool ph
     for (diff_entry_list_t::iterator it_new = merge_gd._entry_list.begin(); it_new != merge_gd._entry_list.end(); it_new++) {
       
       (*it_new)->erase("phylogeny_id");
-      
-      if ((*it_new)->_type == INS) {
-        (*it_new)->erase("insert_position");
-      }
       (*it_new)->erase("population_id");
       
     }

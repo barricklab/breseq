@@ -103,13 +103,21 @@ do_check() {
 			${DIFF_BIN} ${CURRENT_OUTPUTS[$i]} ${EXPECTED_OUTPUTS[$i]}
 			echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 
 			echo ""
-			popd > /dev/null        
+			popd > /dev/null
+			if [[ -n "${REFERENCE_ARG+1}" ]]; then
+				echo "HERE"
+				echo ${GDTOOLS} COMPARE ${REFERENCE_ARG} -o ${SELF}/failed_compare.html ${SELF}/${CURRENT_OUTPUTS[$i]} ${SELF}/${EXPECTED_OUTPUTS[$i]}
+				${GDTOOLS} COMPARE ${REFERENCE_ARG} -o ${SELF}/failed_compare.html ${SELF}/${CURRENT_OUTPUTS[$i]} ${SELF}/${EXPECTED_OUTPUTS[$i]}
+			fi
 		else
 			echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
 			echo "Passed check"
 			echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
 			echo ""
-			popd > /dev/null    
+			popd > /dev/null
+			if [[ -n "${REFERENCE_ARG+1}" ]]; then
+				rm -r ${SELF}/failed_compare.html
+			fi
 		fi
 	done
 }
@@ -154,7 +162,7 @@ do_clean() {
     for CURRENT_OUTPUT in "${CURRENT_OUTPUTS[@]}"; do
 		rm -f ${1}/${CURRENT_OUTPUT}
 	done
-	rm -Rf $1/0* $1/output $1/data $1/output.gff3
+	rm -Rf $1/0* $1/output $1/data $1/output.gff3 $1/failed_compare.html
 
 }
 

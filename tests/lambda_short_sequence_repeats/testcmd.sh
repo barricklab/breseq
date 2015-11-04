@@ -5,12 +5,14 @@ SELF=`dirname ${BASH_SOURCE}`
 
 CURRENT_OUTPUTS[0]="output/evidence/annotated.gd"
 EXPECTED_OUTPUTS[0]="expected.gd"
+REFERENCE_ARG="-r ${DATADIR}/lambda/lambda.5.gbk"
+
 
 TESTCMD=" \
 		${BRESEQ} \
 		-b 0 \
         -o ${SELF} \
-        -r ${DATADIR}/lambda/lambda.5.gbk
+        ${REFERENCE_ARG} \
         ${DATADIR}/lambda/lambda.short_sequence_repeats.fastq
 	"
 
