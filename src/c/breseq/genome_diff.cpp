@@ -158,7 +158,7 @@ const map<gd_entry_type, vector<string> > extended_line_specification = make_map
 (INS,make_vector<string> (SEQ_ID)(POSITION)(INSERT_POSITION)(NEW_SEQ))
 (MOB,make_vector<string> (SEQ_ID)(POSITION)(REPEAT_NAME)(STRAND)(DUPLICATION_SIZE)(INS_START)(INS_END)(DEL_START)(DEL_END)(MOB_REGION))
 (AMP,make_vector<string> (SEQ_ID)(POSITION)(SIZE)(NEW_COPY_NUMBER)(MEDIATED)(MEDIATED_STRAND)(MOB_REGION))
-(RA,make_vector<string>  (SEQ_ID)(POSITION)(INSERT_POSITION))
+(RA,make_vector<string>  (SEQ_ID)(POSITION)(MINOR_BASE)(MAJOR_BASE)(INSERT_POSITION))
 (JC,make_vector<string>  (SIDE_1_SEQ_ID)(SIDE_1_POSITION)(SIDE_1_STRAND)(SIDE_2_SEQ_ID)(SIDE_2_POSITION)(SIDE_2_STRAND)(OVERLAP)(UNIQUE_READ_SEQUENCE))
 ;
   
@@ -587,23 +587,6 @@ int32_t cDiffEntry::compare(const cDiffEntry& a, const cDiffEntry& b)
   }
   
 /* This code breaks compare
-  {
-    bool a_exists = a.entry_exists("unique");
-    bool b_exists = b.entry_exists("unique");
-    
-    if (a_exists || b_exists) {
-      if (!b_exists) return -1;
-      if (!a_exists) return +1;
-      
-      string a_string = a.find("unique")->second;
-      string b_string = b.find("unique")->second;
-      
-      if (a_string < b_string)
-        return -1;
-      else if (a_string > b_string)
-        return +1;
-    }
-  }
   
   {
     bool a_exists = a.entry_exists("before");
@@ -4513,10 +4496,22 @@ cGenomeDiff cGenomeDiff::check(cGenomeDiff& ctrl, cGenomeDiff& test, bool verbos
   
   //Isolate control and test mutations into sets for quick lookup.
   diff_entry_list_t muts = ctrl.mutation_list();
+  for(diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); it++) {
+    (**it).erase("phylogeny_id");
+    (**it).erase("population_id");
+    (**it).erase("unique");
+  }
+  
   diff_entry_set_t ctrl_muts(comp_fn);
   copy(muts.begin(), muts.end(), inserter(ctrl_muts, ctrl_muts.begin()));
   
   muts = test.mutation_list();
+  for(diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); it++) {
+    (**it).erase("phylogeny_id");
+    (**it).erase("population_id");
+    (**it).erase("unique");
+  }
+  
   diff_entry_set_t test_muts(comp_fn);
   copy(muts.begin(), muts.end(), inserter(test_muts, test_muts.begin()));
   
@@ -4528,13 +4523,16 @@ cGenomeDiff cGenomeDiff::check(cGenomeDiff& ctrl, cGenomeDiff& test, bool verbos
   /* Combine alike mutations, however we may lose information like supporting evidence IDs
    * which we will search ctrl_muts and test_muts for.
    */
+  
+  
   diff_entry_set_t uniq_muts(comp_fn);
   std::set_union(
                  ctrl_muts.begin(),
                  ctrl_muts.end(),
                  test_muts.begin(),
                  test_muts.end(),
-                 inserter(uniq_muts, uniq_muts.begin())
+                 inserter(uniq_muts, uniq_muts.begin()),
+                 comp_fn
                  );
   
   uint32_t n_tp = 0, n_fn = 0, n_fp = 0;
@@ -4584,6 +4582,9 @@ cGenomeDiff cGenomeDiff::check(cGenomeDiff& ctrl, cGenomeDiff& test, bool verbos
     
     //Add supporting evidence and assign new IDs to the mutation.
     diff_entry_ptr_t mut = ret_val.add(**it);
+    
+    
+    /* Something can go awry here
     if (evidence.size()) {
       for (diff_entry_list_t::iterator jt = evidence.begin(); jt != evidence.end(); ++jt) {
         (**jt)["compare"] = key;
@@ -4592,12 +4593,14 @@ cGenomeDiff cGenomeDiff::check(cGenomeDiff& ctrl, cGenomeDiff& test, bool verbos
     } else {
       mut->_evidence.push_back(".");
     }
-    
+    */
   }
   
+  /*
   if (verbose) {
     printf("\tUpdating mutation's evidence.\n"); 
   }
+  */
   
   //Add TP|FN|FP header info.
   string value = "";

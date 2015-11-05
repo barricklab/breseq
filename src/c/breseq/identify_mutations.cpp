@@ -822,7 +822,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 
 		bool passed_as_polymorphism_prediction(false);
     polymorphism_prediction ppred;
-    base_char second_best_base_char;
+    base_char second_best_base_char('N');
 
     cDiffEntry mut(RA);
     
@@ -833,10 +833,10 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
     
     // Find the bases with the highest and second highest coverage
     // We only predict polymorphisms involving these 'major' and 'minor' alleles
-    base_index best_base_index;
-    int best_base_coverage = 0;
-    base_index second_best_base_index;
-    int second_best_base_coverage = 0;
+    base_index best_base_index(base_list_N_index);
+    int best_base_coverage(0);
+    base_index second_best_base_index(base_list_N_index);
+    int second_best_base_coverage(0);
 
     vector<double> snp_probs = _snp_caller.get_genotype_log10_probabilities();
             
@@ -845,16 +845,18 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       base_index this_base_index = i;
       int this_base_coverage = pos_info[this_base_char][0] + pos_info[this_base_char][2];
       
+      if (this_base_coverage==0) continue;
+      
       // if better coverage or tied in coverage and better probability
       if ((this_base_coverage > best_base_coverage) ||
-        ((this_base_coverage == best_base_coverage) && (snp_probs[this_base_index] > snp_probs[best_base_index]))) {
+        ((this_base_coverage == best_base_coverage) && ((best_base_index==base_list_N_index) || (snp_probs[this_base_index] > snp_probs[best_base_index])))) {
         second_best_base_index = best_base_index;
         second_best_base_coverage = best_base_coverage;
         best_base_index = this_base_index;
         best_base_coverage = this_base_coverage;
       }
       else if ((this_base_coverage > second_best_base_coverage) 
-        || ((this_base_coverage == second_best_base_coverage) && (snp_probs[this_base_index] > snp_probs[second_best_base_index]))) {
+        || ((this_base_coverage == second_best_base_coverage) && (((second_best_base_index==base_list_N_index) ||snp_probs[this_base_index] > snp_probs[second_best_base_index])))) {
         second_best_base_index = this_base_index;
         second_best_base_coverage = this_base_coverage;
       }
@@ -864,7 +866,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
     
     // Only try mixed SNP model if there is coverage for more than one base!
     ppred.frequency = 1;
-    if (second_best_base_coverage) {
+    if (second_best_base_index != base_list_N_index) {
       best_base_char = base_char_list[best_base_index];
       second_best_base_char = base_char_list[second_best_base_index];
 
@@ -952,11 +954,6 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       vector<uint32_t>& new_cov = pos_info[from_string<base_char>(mut[MINOR_BASE])];
       mut[MINOR_COV] = to_string(make_pair(static_cast<int32_t>(new_cov[2]), static_cast<int32_t>(new_cov[0])));
       
-      // Special case to make minor reference when all are equal
-      if ((new_cov[2] + new_cov[0] == 0) && (mut[MAJOR_BASE] != mut[REF_BASE])) {
-        mut[MINOR_BASE] = mut[REF_BASE];
-      }
-      
       mut[TOTAL_COV] = to_string(make_pair(total_cov[2], total_cov[0]));
       
       _gd.add(mut);
@@ -982,32 +979,31 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         // (it will not show up in HTML and it will mess up polymorphism stats)
       } else {
         // copy the input entry and fill in more information
-        cDiffEntry user_ra = *(_user_evidence_ra_list.front().get());
-        user_ra.to_spec(); //remove additional fields that might be left over!!
-        user_ra["user_defined"] = "1";
-        user_ra["user_defined_no_poly"] = "1"; // prevents doing stats on it
+        cDiffEntry mut = *(_user_evidence_ra_list.front().get());
+        mut.to_spec(); //remove additional fields that might be left over!!
+        mut["user_defined"] = "1";
+        mut["user_defined_no_poly"] = "1"; // prevents doing stats on it
         
-        // These are already assigned by copy of RA
+        // These are already assigned correctly by copy of RA
         //mut[SEQ_ID] = p.target_name();
         //mut[POSITION] = to_string<uint32_t>(position);
         //mut[INSERT_POSITION] = to_string<uint32_t>(insert_count);
 
         // tries all frequencies of the best two
         
-        base_char best_base_char = from_string<base_char>(user_ra[MAJOR_BASE]);
-        base_char second_best_base_char = from_string<base_char>(user_ra[MINOR_BASE]);
+        base_char best_base_char = from_string<base_char>(mut[MAJOR_BASE]);
+        base_char second_best_base_char = from_string<base_char>(mut[MINOR_BASE]);
         if (_settings.polymorphism_prediction) {
           ppred = predict_polymorphism(best_base_char, second_best_base_char, pdata);
         }
         // tries only the raw ML frequency of the best two
-        else if (_settings.mixed_base_prediction) {
+        else {
           ppred = predict_mixed_base(best_base_char, second_best_base_char, pdata);
         }
         
         double polymorphism_bonferroni_score = 10 * (-(log(ppred.likelihood_ratio_test_p_value)/log(10)) - _log10_ref_length);
         
-        //# the frequency returned is the probability of the FIRST base
-        //# we want to quote the probability of the second base (the change from the reference).
+        mut[REF_BASE] = ref_base_char;
         mut[MAJOR_FREQUENCY] = formatted_double(ppred.frequency, _polymorphism_precision_places, true).to_string();
         
         double variant_frequency = ppred.frequency;
@@ -1015,26 +1011,20 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
           variant_frequency = 1.0 - variant_frequency;
         }
         mut[VARIANT_FREQUENCY] = formatted_double(variant_frequency, _polymorphism_precision_places, true).to_string();
-
         
         // Genotype quality is for the top called genotype
-        user_ra[CONSENSUS_SCORE] = formatted_double(consensus_bonferroni_score, kMutationScorePrecision).to_string();
-        user_ra[POLYMORPHISM_SCORE] = formatted_double(polymorphism_bonferroni_score, kMutationScorePrecision).to_string();
+        mut[CONSENSUS_SCORE] = formatted_double(consensus_bonferroni_score, kMutationScorePrecision).to_string();
+        mut[POLYMORPHISM_SCORE] = formatted_double(polymorphism_bonferroni_score, kMutationScorePrecision).to_string();
         
-        /* polmorphism code currently chokes when there are zero observations in one direction
-        if (_settings.polymorphism_prediction || _settings.mixed_base_prediction)
-          write_polymorphism_input_file_line(p, insert_count, ref_base_char, best_base_char, second_best_base_char, ppred, pos_info, pdata );
-        */
+        vector<uint32_t>& ref_cov = pos_info[from_string<base_char>(mut[MAJOR_BASE])];
+        mut[MAJOR_COV] = to_string(make_pair(static_cast<int>(ref_cov[2]), static_cast<int>(ref_cov[0])));
         
-        vector<uint32_t>& ref_cov = pos_info[from_string<base_char>(user_ra[MAJOR_BASE])];
-        user_ra[MAJOR_COV] = to_string(make_pair(static_cast<int>(ref_cov[2]), static_cast<int>(ref_cov[0])));
+        vector<uint32_t>& new_cov = pos_info[from_string<base_char>(mut[MINOR_BASE])];
+        mut[MINOR_COV] = to_string(make_pair(static_cast<int>(new_cov[2]), static_cast<int>(new_cov[0])));
         
-        vector<uint32_t>& new_cov = pos_info[from_string<base_char>(user_ra[MINOR_BASE])];
-        user_ra[MINOR_COV] = to_string(make_pair(static_cast<int>(new_cov[2]), static_cast<int>(new_cov[0])));
+        mut[TOTAL_COV] = to_string(make_pair(total_cov[2], total_cov[0]));
         
-        user_ra[TOTAL_COV] = to_string(make_pair(total_cov[2], total_cov[0]));
-        
-        _gd.add(user_ra);
+        _gd.add(mut);
       }
       
       _user_evidence_ra_list.pop_front();

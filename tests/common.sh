@@ -105,7 +105,6 @@ do_check() {
 			echo ""
 			popd > /dev/null
 			if [[ -n "${REFERENCE_ARG+1}" ]]; then
-				echo "HERE"
 				echo ${GDTOOLS} COMPARE ${REFERENCE_ARG} -o ${SELF}/failed_compare.html ${SELF}/${CURRENT_OUTPUTS[$i]} ${SELF}/${EXPECTED_OUTPUTS[$i]}
 				${GDTOOLS} COMPARE ${REFERENCE_ARG} -o ${SELF}/failed_compare.html ${SELF}/${CURRENT_OUTPUTS[$i]} ${SELF}/${EXPECTED_OUTPUTS[$i]}
 			fi

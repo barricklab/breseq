@@ -14,8 +14,8 @@ TESTCMD="\
         -r ${DATADIR}/lambda/lambda.3.gbk \
         -r ${DATADIR}/lambda/lambda.4.gbk \
         -r ${DATADIR}/lambda/lambda.5.gbk \
-        ${SELF}/test.gd \
         ${SELF}/control.gd \
+        ${SELF}/test.gd \
     "
 
 do_test $1 ${SELF}

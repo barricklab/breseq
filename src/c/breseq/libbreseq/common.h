@@ -124,7 +124,7 @@ namespace breseq {
   // 
   // bam: SamTools representation, uses four bit codes 
   //      A(0x1), C(0x2), G(0x4), T(0x8), N(0xf), .('.')
-  //      Note that we add '.' for convenience to this list.
+  // &     Note that we add '.' for convenience to this list.
   typedef uint8_t base_bam;
   
   // char: Normal human-readable representation

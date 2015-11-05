@@ -28,7 +28,7 @@ SNP	30	122	NC_001416-4	8141	G	frequency=0.1540
 INS	31	123	NC_001416-4	8151	C	frequency=0.1500	insert_position=0
 SNP	32	124	NC_001416-4	8152	A	frequency=0.2640
 INS	33	125	NC_001416-4	8156	A	frequency=0.5	insert_position=0
-INS	100	.	NC_001416-4	8156	G	frequency=0.2	insert_position=1
+INS	100	567	NC_001416-4	8156	G	frequency=0.2	insert_position=1
 SNP	34	127	NC_001416-4	8184	T	frequency=1
 SNP	35	128	NC_001416-4	8191	T	frequency=1
 SNP	45	138	NC_001416-4	8774	A	frequency=1

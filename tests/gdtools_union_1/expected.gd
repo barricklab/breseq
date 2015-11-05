@@ -1,5 +1,4 @@
 #=GENOME_DIFF	1.0
-#=TITLE	input_1
 SNP	1	.	ref	830180	G
 INS	2	.	ref	866932	G
 SNP	3	.	ref	1440026	C
