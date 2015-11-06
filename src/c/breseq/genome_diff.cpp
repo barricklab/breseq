@@ -2953,6 +2953,8 @@ void cGenomeDiff::merge(cGenomeDiff& merge_gd, bool unique, bool new_id, bool ph
         // looking
         diff_entry_ptr_t looking_for = merge_gd.find_by_id(split_value[0]);
         
+        if (looking_for.get() == NULL) continue;
+        
         // iterate through all items to find the match
         bool found_match = false;
         
