@@ -237,7 +237,7 @@ namespace breseq
     options
     ("polymorphism-prediction,p", "The sample is not clonal. Predict polymorphic (mixed) mutations. Setting this flag changes from CONSENSUS MODE to POLYMORPHISM MODE", TAKES_NO_ARGUMENT)
     ("polymorphism-score-cutoff", "Log10 E-value cutoff for test of polymorphism vs no polymorphism (DEFAULT = consensus mode, 10; polymorphism mode, 2)", "", ADVANCED_OPTION)
-    ("polymorphism-frequency-cutoff", "Only predict polymorphisms when both allele frequencies are greater than this value. (DEFAULT = consensus mode, 0.1; polymorphism mode, 0.0)", "", ADVANCED_OPTION)
+    ("polymorphism-frequency-cutoff", "Only predict polymorphisms when both allele frequencies are greater than this value. (DEFAULT = consensus mode, 0.2; polymorphism mode, 0.05)", "", ADVANCED_OPTION)
     ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms for which at least this many reads on each strand support each alternative allele. (DEFAULT = consensus mode, 0; polymorphism mode, 2)", "", ADVANCED_OPTION)
     ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 0.001)", "", ADVANCED_OPTION)
     ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms from read alignment evidence", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
@@ -428,7 +428,7 @@ namespace breseq
       this->consensus_minimum_new_coverage_each_strand = 0;
       
       this->polymorphism_log10_e_value_cutoff = 2;
-      this->polymorphism_frequency_cutoff = 0;
+      this->polymorphism_frequency_cutoff = 0.05;
       this->polymorphism_minimum_new_coverage_each_strand = 2;
       
       this->mixed_base_prediction = false;
@@ -452,7 +452,7 @@ namespace breseq
       this->consensus_minimum_new_coverage_each_strand = 0;
       
       this->polymorphism_log10_e_value_cutoff = 10;
-      this->polymorphism_frequency_cutoff = 0.1;
+      this->polymorphism_frequency_cutoff = 0.2;
       this->polymorphism_minimum_new_coverage_each_strand = 0;
 
       this->polymorphism_reject_indel_homopolymer_length = 0; // zero is OFF!
