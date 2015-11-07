@@ -279,9 +279,9 @@ These advanced attributes control how mutations are applied when using :program:
 
    Apply this mutation before another mutation. For example, did a base substitution occur after a region was duplicated, thus it is only in one copy or did it occur before the duplication, thus altering both copies? Did a base substitution happen before a deletion, hiding a mutation that should be included in any phylogenetic inference? When this attributes is present, mutations will be applied in order according to their genomic positions.
    
-* **within**\ =\ *<mutation_id>*\  or **within**\ =\ *<mutation_id>:<copy_index>*
+* **within**\ =\ *<mutation_id>*\ or **within**\ =\ *<mutation_id>:<insert_position>*\  or **within**\ =\ *<mutation_id>:<copy_index>*
 
-   This mutation happens within a different mutation. These options can specify, for example, that a base substitution happens in the second copy of a duplicated region. If *<mutation_id>* refers to an AMP, then it must be of the form *<mutation_id>:<copy_index>* and the mutation is placed in the corresponding copy of the specified coordinates. If *<mutation_id>* refers to an INS, then it must be of the form *<mutation_id>* with no *<copy_index>*, and the position of the mutation will be interpreted as happening after the INS bases are inserted, so that it can change those new bases. If *<mutation_id>* refers to a MOB with no *<copy_index>*, then the mutation is placed within the newly inserted sequence of the mobile element with the position of the mutation interpreted as happening after those bases are inserted. If it refers to a MOB and is of the form *<mutation_id>:<copy_index>*, then the mutation is placed within the specified copy of the target site duplication.
+   This mutation happens within a different mutation. These options can specify, for example, that a base substitution happens in the second copy of a duplicated region. If *<mutation_id>* refers to an AMP, then it must be of the form *<mutation_id>:<copy_index>* and the mutation is placed in the corresponding copy of the specified coordinates. If *<mutation_id>* refers to an INS, then it must be of the form *<mutation_id>:<insert_position>*, and the position of the mutation will be interpreted as happening within the INS bases that are inserted, so that it can change those new bases. In this case the main *<position>* of the mutation that occurs within the ISM must be the same as the *<position> of the INS. If *<mutation_id>* refers to a MOB with no *<copy_index>*, then the mutation is placed within the newly inserted sequence of the mobile element with the position of the mutation interpreted as happening on the new genome after the MOB bases are inserted. If it refers to a MOB and is of the form *<mutation_id>:<copy_index>*, then the mutation is placed within the specified copy of the target site duplication.
 
 * **deleted**\ =\ *1*
 
@@ -307,13 +307,15 @@ Line specification:
 
    number of bases inserted after the reference position to get to this base. An value of zero refers to the base. A value of 5 means that this evidence if for the fifth newly inserted column after the reference position.
 
-7. **ref_base** *<char>*
+7. **major_base** *<char>*
 
    base in the reference genome.
    
-8. **new_base** *<char>*
+8. **minor_base** *<char>*
 
    new base supported by read alignment evidence.
+
+:warning: In |breseq| versions before 0.27, RA evidence was defined slightly differently, as 7. **ref_base** and 8. **minor base**
 
 MC: Missing coverage evidence
 """""""""""""""""""""""""""""

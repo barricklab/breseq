@@ -1344,7 +1344,7 @@ namespace breseq {
         
         bool next_ra = false;
         
-        // fon't remove these, no matter what!
+        // don't remove these, no matter what!
         if (ra_item.entry_exists("user_defined"))
           continue;
         
