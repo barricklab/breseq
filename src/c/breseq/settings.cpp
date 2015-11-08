@@ -469,6 +469,12 @@ namespace breseq
     // override the default settings
     if (options.count("consensus-score-cutoff"))
       this->mutation_log10_e_value_cutoff = from_string<double>(options["consensus-score-cutoff"]);
+    if (this->mutation_log10_e_value_cutoff < 0) {
+      options.addUsage("");
+      options.addUsage("--consensus-score-cutoff must be ≥0");
+      options.printUsage();
+      exit(-1);
+    }
     if (options.count("consensus-frequency-cutoff"))
       this->consensus_frequency_cutoff = from_string<double>(options["consensus-frequency-cutoff"]);
     if (options.count("consensus-minimum-coverage-each-strand"))
@@ -484,6 +490,12 @@ namespace breseq
       this->polymorphism_reject_surrounding_homopolymer_length = from_string<int32_t>(options["polymorphism-reject-surrounding-homopolymer-length"]);
     if (options.count("polymorphism-score-cutoff"))
       this->polymorphism_log10_e_value_cutoff = from_string<double>(options["polymorphism-score-cutoff"]);
+    if (this->polymorphism_log10_e_value_cutoff < 0) {
+      options.addUsage("");
+      options.addUsage("--polymorphism-score-cutoff must be ≥0");
+      options.printUsage();
+      exit(-1);
+    }
     if (options.count("polymorphism-bias-cutoff"))
       this->polymorphism_bias_p_value_cutoff = from_string<double>(options["polymorphism-bias-cutoff"]);
     if (options.count("polymorphism-minimum-coverage-each-strand"))

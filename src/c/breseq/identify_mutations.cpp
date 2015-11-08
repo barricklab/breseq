@@ -273,10 +273,13 @@ bool test_RA_evidence_CONSENSUS_mode(
   double polymorphism_score = (ra[POLYMORPHISM_SCORE]=="NA") ? numeric_limits<double>::quiet_NaN() : from_string<double>(ra[POLYMORPHISM_SCORE]);
   double variant_frequency = from_string<double>(ra[VARIANT_FREQUENCY]);
   
+  // Score must be below one of the thresholds
   if (consensus_score >= settings.mutation_log10_e_value_cutoff) {
     prediction = consensus;
   } else if (polymorphism_score >= settings.polymorphism_log10_e_value_cutoff) {
     prediction = polymorphism;
+  } else {
+    return true;
   }
   
   // Drop down to a polymorphism if we don't pass consensus frequency criterion
@@ -349,12 +352,12 @@ bool test_RA_evidence_POLYMORPHISM_mode(
   ra[PREDICTION] = "polymorphism";
   ra[FREQUENCY] = ra[VARIANT_FREQUENCY];
   
+  // Score must be below one of the thresholds
   if (polymorphism_score >= settings.polymorphism_log10_e_value_cutoff) {
     prediction = polymorphism;
   } else if (consensus_score >= settings.mutation_log10_e_value_cutoff) {
     prediction = consensus;
   } else {
-    ERROR("Sanity check. RA item should have been discarded earlier.\n" + ra.as_string());
     return true;
   }
   
@@ -828,7 +831,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
     
     //## evaluate whether to call an actual mutation!
     // -- note that we accept > 0 and only reject later
-    // so that these canmake it into the marginal data
+    // so that these can potentially make it into the marginal data
     bool passed_as_consensus_prediction = (best_base_char != ref_base_char) && (!isnan(consensus_bonferroni_score) && (consensus_bonferroni_score > 0));
     
     // Find the bases with the highest and second highest coverage
