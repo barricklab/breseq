@@ -1419,7 +1419,7 @@ namespace breseq {
       
       // If we are predicting mixed bases and not polymorphisms, then don't create
       // mutations for mixed frequency predictions (leave them as unassigned RA evidence)
-      if (!settings.polymorphism_prediction && (item[FREQUENCY] != "1")) {
+      if (!settings.polymorphism_prediction && (ra_variant_frequency != 1.0)) {
         continue;
       }
       
@@ -1432,7 +1432,7 @@ namespace breseq {
         
         // This code is only safe if every mutation has a frequency
         if (settings.polymorphism_prediction) {
-          if ( (item[FREQUENCY] != "1") || (mut[FREQUENCY] != "1") //don't join polymorphisms
+          if ( (ra_variant_frequency != 1.0) || (mut[FREQUENCY] != "1") //don't join polymorphisms
               || (mut[SEQ_ID] != item[SEQ_ID]) )
             same = false;
         }
@@ -1466,8 +1466,8 @@ namespace breseq {
         ("insert_end", item["insert_position"])
         ("end", item["position"])
 				;
-				if (item["ref_base"] != ".") mut["ref_seq"] += ra_ref_base;
-				if (item["new_base"] != ".") mut["new_seq"] += ra_new_base;
+        mut["ref_seq"] += (ra_ref_base != ".") ? ra_ref_base : "";
+				mut["new_seq"] += (ra_new_base != ".") ? ra_new_base : "";
 				mut._evidence.push_back(item._id);
 			}
 		}

@@ -421,7 +421,7 @@ public:
   struct is_not_consensus:public unary_function<diff_entry_ptr_t,bool> {
     virtual bool operator() (diff_entry_ptr_t cDiffEntry)
     {
-      return (*cDiffEntry)[FREQUENCY] != "1";
+      return from_string<double>((*cDiffEntry)[FREQUENCY]) != 1.0;
     }
   };
   

@@ -3847,7 +3847,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
     
     // Look out! -- you should not apply things that don't have frequency=1 or other markers of polymorphism mode
     //ASSERT(!((mut._type == INS) && (mut.count(INSERT_POSITION))), "Attempt to apply insertion with \"insert_position\" field set, which indicates your Genome Diff represents polymorphic mutations.\n" + mut.as_string());
-    if ((mut.count(FREQUENCY)!=0) && (from_string<double>(mut[FREQUENCY]) != 1)) {
+    if ((mut.count(FREQUENCY)!=0) && (from_string<double>(mut[FREQUENCY]) != 1.0)) {
       WARN("Attempt to apply polymorphic mutation with frequency != 1. This mutation will be skipped.\n" + mut.as_string());
       continue;
     }
