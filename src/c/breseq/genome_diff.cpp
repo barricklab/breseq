@@ -1827,6 +1827,8 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
     }
   }
   
+  this->sort_and_check_for_duplicates(&parse_errors);
+  
   if (!suppress_errors) {
     parse_errors.print_errors();
     if (parse_errors.fatal() )
@@ -1843,8 +1845,6 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
         this->assign_unique_id_to_entry(**it);
     //cout << (*it)->as_string() << endl;
   }
-  
-  this->sort();
   
   return parse_errors;
 }
@@ -2277,7 +2277,7 @@ void cGenomeDiff::write(const string& filename) {
   }
   
   // sort
-  this->sort();
+  this->sort_and_check_for_duplicates();
   
   // @JEB: "comment_out" tag is legacy used internally for filtering where
   // deletion from the list should really be used.
@@ -2326,6 +2326,7 @@ diff_entry_ptr_t cGenomeDiff::add(const cDiffEntry& item, bool reassign_id) {
   
   ASSERT(item._type != UNKNOWN, "Tried to add item of type UNKNOWN to Genome Diff file.");
   
+ /* This is SLOW, now we only check this when specifically asking about it
   // check to see if we are adding a duplicate item
   // -- we don't allow, give a warning, and return existing item
   for (diff_entry_list_t::iterator it = _entry_list.begin(); it != _entry_list.end(); it++) {
@@ -2340,7 +2341,7 @@ diff_entry_ptr_t cGenomeDiff::add(const cDiffEntry& item, bool reassign_id) {
       return *it;
     }
   }
-  
+*/
   
   // allocating counted_ptr takes care of disposal
   cDiffEntry* diff_entry_copy = new cDiffEntry(item);
@@ -3220,6 +3221,33 @@ void cGenomeDiff::sort_apply_order() {
     }
   }
 }
+  
+  
+void cGenomeDiff::sort_and_check_for_duplicates(cFileParseErrors* file_parse_errors) {
+  
+  this->sort();
+  
+  diff_entry_list_t::iterator it2;
+  for (diff_entry_list_t::iterator it1 = this->_entry_list.begin(); it1 != this->_entry_list.end(); it1++) {
+    
+    //cout << (*it1)->as_string() << endl;
+    
+    it2 = it1;
+    it2++;
+    
+    if ((it2 != this->_entry_list.end()) && (**it1 == **it2)) {
+      
+      if (!file_parse_errors) {
+        ERROR("Duplicate entries in Genome Diff:\n" + (*it1)->as_string() + "\n" + (*it2)->as_string()
+            + "\nAdd a 'unique' tag to one if this is intentional.");
+      } else {
+        file_parse_errors->add_line_error(from_string<uint32_t>((**it2)["_line_number"]), (*it2)->as_string(), "Attempt to add duplicate of this existing entry from line " + (**it1)["_line_number"] + ":\n" + substitute((*it1)->as_string(),"\t", "<tab>"), true);
+      }
+    }
+  }
+  
+}
+
 
 
 //! Call to generate random mutations.

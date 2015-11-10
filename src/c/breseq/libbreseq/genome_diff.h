@@ -725,6 +725,7 @@ public:
   // Sort -- taking into account 'before' and 'within' tags
   void sort_apply_order();
   
+  void sort_and_check_for_duplicates(cFileParseErrors* file_parse_errors = NULL);
   
   //!---- Simulating and Applying Mutations ---- !//
   
