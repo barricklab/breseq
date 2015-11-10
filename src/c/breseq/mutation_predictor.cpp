@@ -1060,12 +1060,22 @@ namespace breseq {
           }
           
           // Determine consensus vs. polymorphism
-          if (frequency >= settings.consensus_frequency_cutoff) {
-            mut[FREQUENCY] = "1";
-          } else if ((frequency >= 1.0 - settings.polymorphism_frequency_cutoff) || (frequency < settings.polymorphism_frequency_cutoff)) {
-            mut.add_reject_reason("FREQUENCY_CUTOFF");
-            // @JEB 08-08-13 we might want to keep the mutation as rejected. This discards completely.
-            continue;
+          if (settings.polymorphism_prediction) {
+            if (frequency >= settings.consensus_frequency_cutoff) {
+              mut[FREQUENCY] = "1";
+            } else if ((frequency >= 1.0 - settings.polymorphism_frequency_cutoff) || (frequency < settings.polymorphism_frequency_cutoff)) {
+              mut.add_reject_reason("FREQUENCY_CUTOFF");
+              // @JEB 08-08-13 we might want to keep the mutation as rejected. This discards completely.
+              continue;
+            }
+          } else { // consensus mode
+            if (frequency >= settings.consensus_frequency_cutoff) {
+              mut[FREQUENCY] = "1";
+            } else {
+              // @JEB 08-08-13 we might want to keep the mutation as rejected. This discards completely.
+              mut.add_reject_reason("FREQUENCY_CUTOFF");
+              continue;
+            }
           }
         }
         
@@ -1825,7 +1835,14 @@ namespace breseq {
     // or predicting the mutation can re-adjust frequencies
     
     if (!settings.polymorphism_prediction) {
-      jc.remove_if(cDiffEntry::field_equals(PREDICTION, "polymorphism"));
+      
+      // We need to now add a reject reason to predictions that are polymorphism
+      for (diff_entry_list_t::iterator it=jc.begin(); it!=jc.end(); it++) {
+        if ((**it)[PREDICTION] == "polymorphism") {
+          (*it)->add_reject_reason("FREQUENCY_CUTOFF");
+        }
+      }
+      jc.remove_if(cDiffEntry::rejected_and_not_user_defined());
     }
     predictJCtoINSorSUBorDEL(settings, summary, gd, jc, mc);
     
