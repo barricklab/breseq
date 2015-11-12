@@ -9,18 +9,14 @@
 TESTDIR=`dirname ${BASH_SOURCE}`
 . ${TESTDIR}/common.sh
 
-# validate input params:
-if [[ ($# -ne 2) || (! -d $2) ]]; then
-    do_usage
-fi
-
 #For measuring elapsed time of 'make test'
 start_timer=$(date '+%s') 
 
-# if $2/${TESTEXEC} exists, then we're running a single test.  otherwise,
+# if ${TESTDIR}/$2/${TESTEXEC} exists, then we're running a single test.  otherwise,
 # we're running a batch of tests.
-if [[ -e $2/${TESTEXEC} ]]; then
-	do_test $1 $2
+
+if [[ -e ${TESTDIR}/$2/${TESTEXEC} ]]; then
+	${TESTDIR}/$2/${TESTEXEC} $1
 else
 	for i in `find $2 -name ${TESTEXEC}`; do
 

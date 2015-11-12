@@ -1833,16 +1833,12 @@ namespace breseq {
     // -- needs to be relaxed in the future for predicting amplifications!
     // IMPORTANT: they are used above because other evidence implies consensus
     // or predicting the mutation can re-adjust frequencies
+    //
+    // @JEB 11-12-2015 We don't add a reject reason to these, as they
+    // still look like valid junctions even if their frequency is different
     
     if (!settings.polymorphism_prediction) {
-      
-      // We need to now add a reject reason to predictions that are polymorphism
-      for (diff_entry_list_t::iterator it=jc.begin(); it!=jc.end(); it++) {
-        if ((**it)[PREDICTION] == "polymorphism") {
-          (*it)->add_reject_reason("FREQUENCY_CUTOFF");
-        }
-      }
-      jc.remove_if(cDiffEntry::rejected_and_not_user_defined());
+      jc.remove_if(cDiffEntry::field_equals(PREDICTION, "polymorphism"));
     }
     predictJCtoINSorSUBorDEL(settings, summary, gd, jc, mc);
     

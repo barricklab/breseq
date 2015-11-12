@@ -227,9 +227,9 @@ Trims edge_trims_for_sequence(const string &_in_seq)
   
 // @JEB 2015-07-29 This code also trims based on ends of mapped read sequence
 // Assuming that fixing mismatches near the ends of the reads breaking match
-// This doesn't seem to be necessary
+// @JEB 2015-11-12 This is necessary for avoiding certain misalignments
 
-//#define TRIM_READ_ENDS
+#define TRIM_READ_ENDS
 
 Trims get_alignment_trims(const alignment_wrapper& a, const SequenceTrimsList& trims)
 {

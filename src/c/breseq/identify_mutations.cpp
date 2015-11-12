@@ -305,6 +305,8 @@ bool test_RA_evidence_CONSENSUS_mode(
     return (ra[REF_BASE] == ra[MAJOR_BASE]);
   }
   
+  // Code only reaaches here for non-consensus predictions
+  
   // Set us up as a potential polymorphism
   ra[PREDICTION] = "polymorphism";
   ra[FREQUENCY] = ra[VARIANT_FREQUENCY];
@@ -362,6 +364,7 @@ bool test_RA_evidence_POLYMORPHISM_mode(
   }
   
   bool tested_indel_homopolymer = false;
+  bool failed_indel_homopolymer_test = false;
   string saved_polymorphism_reject;
   if (prediction == polymorphism) {
     
@@ -387,7 +390,8 @@ bool test_RA_evidence_POLYMORPHISM_mode(
     }
     if (prediction == polymorphism) {
       tested_indel_homopolymer = true;
-      if (rejected_RA_indel_homopolymer(ra, ref_seq_info, settings))
+      failed_indel_homopolymer_test = rejected_RA_indel_homopolymer(ra, ref_seq_info, settings);
+      if (failed_indel_homopolymer_test)
         prediction = consensus;
     }
     
@@ -407,7 +411,7 @@ bool test_RA_evidence_POLYMORPHISM_mode(
     prediction = polymorphism;
   }
   
-  // Drop down to a polymorphism if we don't pass the consensus strand criterion
+  // Drop down to a rejected polymorphism if we don't pass the consensus strand criterion
   if ( (prediction == consensus) && (settings.consensus_minimum_new_coverage_each_strand > 0) ) {
     vector<string> top_bot = split(ra[MAJOR_COV], "/");
     if ( (from_string<double>(top_bot[0]) < settings.consensus_minimum_new_coverage_each_strand) ||
@@ -426,9 +430,12 @@ bool test_RA_evidence_POLYMORPHISM_mode(
     
   }
   
-  // if tested_indel_homopolymer and we get here, then we already failed this test - and it is grounds for deletion
-  if (tested_indel_homopolymer || rejected_RA_indel_homopolymer(ra, ref_seq_info, settings))
+  // Must pass this test in order to be retained as a marginal prediction
+  // Saving previously calculated value prevents doing a computationally intensive test twice.
+  if ( (tested_indel_homopolymer && failed_indel_homopolymer_test)
+      || rejected_RA_indel_homopolymer(ra, ref_seq_info, settings)) {
     return true;
+  }
 
   // We are back to a polymorphism, albeit a rejected one
   ra[REJECT] = saved_polymorphism_reject;

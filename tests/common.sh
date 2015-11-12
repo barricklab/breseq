@@ -2,12 +2,13 @@
 #
 # Common testing functionality for breseq.
 #
-# Testing in breseq is based on matching sha1 hashes of files ('cause
-# the data itself is too big to want to store in hg).  But, some of the output
-# includes dates, so we only hash certain files.
+# Testing in breseq is based on matching Genome Diff files
 
 # common variables:
 # paths must either be relative to the location of this script or absolute.
+
+
+
 COMMONDIR=`dirname ${BASH_SOURCE}`
 source ${COMMONDIR}/test.config
 
@@ -203,7 +204,7 @@ do_test() {
             do_show $TESTDIR
         ;;
         test)
-        	do_breseq
+            do_breseq
             do_check $TESTDIR
         ;;
         vcheck)
