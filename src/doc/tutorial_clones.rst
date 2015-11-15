@@ -8,6 +8,10 @@ This tutorial expands on the :ref:`test-drive`. You will analyze mutations in th
 .. note::
 
    This tutorial was created for the EMBO Practical Course `Measuring intra-species diversity using high-throughput sequencing <http://events.embo.org/15-htp-sequencing/>`_ held 27–31 July 2015 in Oeiras, Portugal.
+   
+.. warning::
+
+   If you encounter any |breseq| or |gdtools| errors or crashes in running this tutorial, please `report issues on GitHub <https://github.com/barricklab/breseq/issues>`_.
 
 1. Download data files
 ---------------------------------

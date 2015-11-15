@@ -7,7 +7,7 @@ MYCFLAGS="$CFLAGS"
 BINARYNAME=${BINARYPLATFORM}-${BINARYARCH}
 if [ "$BINARYPLATFORM" == "Darwin" ]; then
 	BINARYARCH="universal"
-	MYCFLAGS="-arch i386 -arch x86_64"
+	MYCFLAGS="-arch i386 -arch x86_64 -mmacosx-version-min=10.7"
 	BINARYNAME="MacOSX-10.7+"
 fi
 

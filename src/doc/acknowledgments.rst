@@ -15,11 +15,11 @@ Developers
 * `Austin G. Meyer <http://www.meyerresearch.com>`_
 * Alex Hu
 
-|breseq| was initially developed at Michigan State University while Jeff was a postdoc with Richard Lenski and Charles Ofria, and while Dave was a graduate student in the lab of Philip McKinley.
+|breseq| was initially developed at Michigan State University while Jeff was a postdoc with Richard Lenski and Charles Ofria, and while Dave was a graduate student in the lab of Philip McKinley. Dave, Jordan, Geoff, and Aaron were instrumental in the transition from a slow and nonportable Perl pipeline into the current C++ implementation.
 
-It is now developed in the Barrick lab in the Department of Molecular Biosciences at the University of Texas at Austin. `Lab Website <http://barricklab.org>`_ 
+|breseq| is now developed in the Barrick lab in the Department of Molecular Biosciences at the University of Texas at Austin. `Lab Website <http://barricklab.org>`_ 
 
-Testers
+Testing
 ------------
 
 We thank Zachary Blount, Jim Bull, Tim Cooper, Grace Ellis, Tara Gianoulis, Adam Feist, Aleeza Gerstein, Dan Goodman, J.P. Jerome, Megan Larsen, Maria Elena Martino, Ranno Nahku, Hanspieter Niederstrasser, Elizabeth Perry, Patrick Phaneuf, Alexandre Santos Almeido, Gerda Saxer, Daniel Sobral, Saad Syed, William Trimble, Sébastien Wielgoss, participants in Titus Brown's 2010 summer course in next-gen sequencing at the Kellogg Biological Station, participants in the EMBO Practical Course on Measuring intra-species diversity using high-throughput sequencing, and many many others for providing bug reports, feedback on |breseq| usage, and datasets for testing!

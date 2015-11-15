@@ -178,11 +178,12 @@ namespace breseq
     
     options
 		("help,h", "Produce help message showing advanced options", TAKES_NO_ARGUMENT)
+    ("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
+    ("name,n", "Human-readable name of the analysis run for output (DEFAULT=<none>)", "")
+    ("num-processors,j", "Number of processors to use in multithreaded steps", 1)
     //("verbose,v","Produce verbose output",TAKES_NO_ARGUMENT, ADVANCED_OPTION) @JEB - not consistently implemented
 		("output,o", "Path to breseq output", ".")
-		("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
-    ("name,n", "Human-readable name of the analysis run for output (DEFAULT=<none>)", "")
-    ("num-processors,j", "Number of processors to use in multithreaded steps", 1);
+    ("polymorphism-prediction,p", "The sample is not clonal. Predict polymorphic (mixed) mutations. Setting this flag changes from CONSENSUS MODE (the default) to POLYMORPHISM MODE", TAKES_NO_ARGUMENT);
     
     options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Read File Options", ADVANCED_OPTION);
@@ -199,6 +200,7 @@ namespace breseq
     ("targeted-sequencing,t", "Reference sequences were targeted for ultra-deep sequencing (using pull-downs or amplicons). Do not fit coverage distribution.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
     
+    
     options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Read Alignment Options", ADVANCED_OPTION);
     options
@@ -212,7 +214,7 @@ namespace breseq
     ;
     
     options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("Junction Options", ADVANCED_OPTION);
+    options.addUsage("Junction (JC) Evidence Options", ADVANCED_OPTION);
     options
     ("no-junction-prediction", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
     ("junction-alignment-pair-limit", "Only consider this many passed alignment pairs when creating candidate junction sequences (0 = DO NOT LIMIT)", 100000, ADVANCED_OPTION)
@@ -225,7 +227,7 @@ namespace breseq
     ;
     
     options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("Consensus Mutation Prediction Options", ADVANCED_OPTION);
+    options.addUsage("Consensus Read Alignment (RA) Evidence Options", ADVANCED_OPTION);
     options
     ("consensus-score-cutoff", "Log10 E-value cutoff for consensus base substitutions and small indels", "", ADVANCED_OPTION)
     ("consensus-frequency-cutoff", "Only predict consensus mutations when the variant allele frequency is above this value. (DEFAULT = consensus mode, 0.8; polymorphism mode, 0.95", "", ADVANCED_OPTION)
@@ -233,9 +235,9 @@ namespace breseq
     ;
 
     options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("Polymorphic (Mixed) Mutation Prediction Options", ADVANCED_OPTION);
+    options.addUsage("Polymorphic Read Alignment (RA) Evidence Options", ADVANCED_OPTION);
     options
-    ("polymorphism-prediction,p", "The sample is not clonal. Predict polymorphic (mixed) mutations. Setting this flag changes from CONSENSUS MODE to POLYMORPHISM MODE", TAKES_NO_ARGUMENT)
+
     ("polymorphism-score-cutoff", "Log10 E-value cutoff for test of polymorphism vs no polymorphism (DEFAULT = consensus mode, 10; polymorphism mode, 2)", "", ADVANCED_OPTION)
     ("polymorphism-frequency-cutoff", "Only predict polymorphisms when both allele frequencies are greater than this value. (DEFAULT = consensus mode, 0.2; polymorphism mode, 0.05)", "", ADVANCED_OPTION)
     ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms for which at least this many reads on each strand support each alternative allele. (DEFAULT = consensus mode, 0; polymorphism mode, 2)", "", ADVANCED_OPTION)
@@ -243,7 +245,6 @@ namespace breseq
     ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms from read alignment evidence", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("polymorphism-reject-indel-homopolymer-length", "Reject insertion/deletion polymorphisms which could result from expansion/contraction of homopolymer repeats with this length or greater in the reference genome (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 3) ", "", ADVANCED_OPTION)
     ("polymorphism-reject-surrounding-homopolymer-length", "Do not predict polymorphic base substitutions that create a homopolymer when they have this many adjacent bases of that homopolymer on each side. For example, a mutation TTATT -> TTTTT would be rejected with a setting of 2. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 2)", "", ADVANCED_OPTION)
-
     ;
     
     options.addUsage("", ADVANCED_OPTION);
@@ -253,28 +254,26 @@ namespace breseq
     ("brief-html-output", "Don't create detailed output files for evidence (no read alignments or coverage plots)", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
     
+    options.addUsage("", ADVANCED_OPTION);
+    options.addUsage("Debugging Options", ADVANCED_OPTION);
+    options
+    ("keep-intermediates,k","Do not delete intermediate files.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("per-position-file", "Create additional file of per-position aligned bases", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("junction-debug", "Output additional junction debugging files", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ;
     
-    // CNV and Periodicity block
-    options.addUsage("", true);
-    options.addUsage("Experimental Options (Use at your own risk)", true);
+    options.addUsage("", ADVANCED_OPTION);
+    options.addUsage("Experimental Options (Use at your own risk)", ADVANCED_OPTION);
     options
     ("user-evidence-gd","User supplied genome diff file of JC or RA evidence to report support for, regardless of whether they would have been predicted as mutations.", "", ADVANCED_OPTION)
-    ("junction-debug", "Output additional junction debugging files", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("cnv","Do experimental copy number variation prediction",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("cnv-tile-size", "Tile size for copy number variation prediction", 500, ADVANCED_OPTION)
     ("cnv-ignore-redundant", "Only consider non-redundant coverage when using cnv", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("per-position-file", "Create additional file of per-position aligned bases", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("periodicity", "Finding sum of differences squared of a coverage file", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("periodicity-method", "Which method to use for periodicity", 1, ADVANCED_OPTION)
-    ("periodicity-start", "Start of offsets", 1, ADVANCED_OPTION)
-    ("periodicity-end", "End of offsets", 2, ADVANCED_OPTION)
-    ("periodicity-step", "Increment of offsets", 1, ADVANCED_OPTION)
-    ;
-    
-    options.addUsage("", true);
-    options.addUsage("Debugging Options", true);
-    options
-    ("keep-intermediates,k","Do not delete intermediate files.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    //("periodicity", "Finding sum of differences squared of a coverage file", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    //("periodicity-method", "Which method to use for periodicity", 1, ADVANCED_OPTION)
+    //("periodicity-start", "Start of offsets", 1, ADVANCED_OPTION)
+    //("periodicity-end", "End of offsets", 2, ADVANCED_OPTION)
+    //("periodicity-step", "Increment of offsets", 1, ADVANCED_OPTION)
     ;
     
     options.processCommandArgs(argc, argv);

@@ -16,14 +16,19 @@ Contents:
    Installation <installation>
    Usage Summary <usage>  
    Test Drive <test_drive>
-   Tutorial 1: clones <tutorial_clones>
-   Tutorial 2: populations <tutorial_populations>
-   Tutorial 3: consensus reads and targeted sequencing <tutorial_barcoded_targeted>
-
    Methods <methods>   
    Output <output>
    References <references>
    Acknowledgments <acknowledgments>
+
+Tutorials:
+
+.. toctree::
+   :maxdepth: 1
+   
+   Tutorial 1: Clonal Samples <tutorial_clones>
+   Tutorial 2: Mixed Populations <tutorial_populations>
+   Tutorial 3: Consensus Reads and Targeted Sequencing <tutorial_barcoded_targeted>
 
 Appendices:
 

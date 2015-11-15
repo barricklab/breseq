@@ -1,6 +1,9 @@
 Version 0.27.0
    * Now accepts gzipped (*.gz) FASTQ input files.
-   * New tutorials added to the documentation
+   * Logic and options controlling predictions of consensus versus polymorphic
+     mutations improved and now explained via flowcharts in the documentation.
+   * Three new tutorials from EMBO course added to the documentation.
+   * Continued updates and improvements to various gdtools commands.
 
 Version 0.26.1
    * Fixed a crash that sometimes occurred when processing polymorphism statistics.
