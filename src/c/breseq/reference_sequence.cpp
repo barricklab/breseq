@@ -1851,11 +1851,10 @@ cSequenceFeaturePtr cReferenceSequences::find_closest_repeat_region_boundary(int
   for (cSequenceFeatureList::iterator it = repeat_list.begin(); it != repeat_list.end(); ++it) {
     cSequenceFeaturePtr test_repeat_ptr = *it;
     
-    // Distance from the appropriate end of the repeat
+    // Distance from the closest end of the repeat, given the direction we are moving
     int32_t test_distance = ((direction == -1) ? position - static_cast<int32_t>(test_repeat_ptr->get_end_1()) : static_cast<int32_t>(test_repeat_ptr->get_start_1()) - position);
   
-    // Change negative distances less than size to zero distance (they are within)
-    
+    // If include_interior_matches, change negative distances less than size to zero distance
     if (include_interior_matches) {
       if ((test_distance < 0) && (-test_distance <= test_repeat_ptr->get_end_1() - test_repeat_ptr->get_start_1() + 1)) {
         test_distance = 0;
@@ -2180,7 +2179,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
   // Mutation is completely within genes
   else if (within_genes.size() > 0)
   {
-    /// TODO: It can be within multiple genes, in which case we need to annotate
+    /// It can be within multiple genes, in which case we need to annotate
     /// the change it causes in each reading frame UGH! YUCKY!
     /// FOR NOW: just take the first of the within genes...
     cGeneFeature gene = within_genes[0];
@@ -2395,7 +2394,7 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
   //because we may double-hit a codon
   //=>must be sure that these are from the same input file...so special flag for compare mode!
 
-  //TODO: the proper way to do this is to create list of SNPs that have been hit
+  // The proper way to do this is to create list of SNPs that have been hit
   // hashed by gene protein accession ID and AA position within gene
   // and have the annotation point to them (and back at them)
   // so that the codon will be correctly updated with all changes and we can notify the

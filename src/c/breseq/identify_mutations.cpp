@@ -346,6 +346,10 @@ bool test_RA_evidence_POLYMORPHISM_mode(
   // Decide if we are a polymorphism (or mixed base) prediction or a consensus prediction
   ePredictionType prediction(unknown);
   
+  if (ra[POSITION] == "357570") {
+    cout << ra.as_string() << endl;
+  }
+  
   double consensus_score = from_string<double>(ra[CONSENSUS_SCORE]);
   double polymorphism_score = (ra[POLYMORPHISM_SCORE]=="NA") ? numeric_limits<double>::quiet_NaN() : from_string<double>(ra[POLYMORPHISM_SCORE]);
   double variant_frequency = from_string<double>(ra[VARIANT_FREQUENCY]);
@@ -409,6 +413,7 @@ bool test_RA_evidence_POLYMORPHISM_mode(
   // Drop back to a polymorphism if we don't pass consensus frequency criterion
   if ((prediction == consensus) && (variant_frequency < settings.consensus_frequency_cutoff - settings.polymorphism_precision_decimal)) {
     prediction = polymorphism;
+    ra.add_reject_reason("FREQUENCY_CUTOFF");
   }
   
   // Drop down to a rejected polymorphism if we don't pass the consensus strand criterion
@@ -417,11 +422,25 @@ bool test_RA_evidence_POLYMORPHISM_mode(
     if ( (from_string<double>(top_bot[0]) < settings.consensus_minimum_new_coverage_each_strand) ||
         (from_string<double>(top_bot[1]) < settings.consensus_minimum_new_coverage_each_strand) ) {
       prediction = polymorphism;
+      ra.add_reject_reason("STRAND_COVERAGE");
     }
   }
   
   // Bail now if still consensus
   if (prediction == consensus) {
+    
+    ra[PREDICTION] = "consensus";
+    ra[FREQUENCY] = "1";
+    
+    // and delete if we are just the reference base!
+    return (ra[REF_BASE] == ra[MAJOR_BASE]);
+  }
+  
+  // We got kicked out of consensus mode, but we don't pass the polymorphism
+  // score cutoff, so we are now a rejected consensus mutation
+  // This is the only case that inherits the rejections from consensus tests above
+  if (polymorphism_score < settings.polymorphism_log10_e_value_cutoff) {
+    
     ra[PREDICTION] = "consensus";
     ra[FREQUENCY] = "1";
     
@@ -430,15 +449,15 @@ bool test_RA_evidence_POLYMORPHISM_mode(
     
   }
   
+  // We are back to a polymorphism, albeit a rejected one
+  ra[REJECT] = saved_polymorphism_reject;
+  
   // Must pass this test in order to be retained as a marginal prediction
   // Saving previously calculated value prevents doing a computationally intensive test twice.
   if ( (tested_indel_homopolymer && failed_indel_homopolymer_test)
       || rejected_RA_indel_homopolymer(ra, ref_seq_info, settings)) {
     return true;
   }
-
-  // We are back to a polymorphism, albeit a rejected one
-  ra[REJECT] = saved_polymorphism_reject;
 
   return false;
   

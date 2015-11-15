@@ -379,11 +379,13 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
       ra_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(POLYMORPHISM_SCORE)));
     }
     
-    string marginal_ra_title = "Marginal polymorphic read alignment evidence";
+    string marginal_ra_title = "Marginal read alignment evidence";
     if (full_marginal_ra_list_size > ra_list.size()) {
-      marginal_ra_title += " (highest frequency " + to_string(settings.max_rejected_read_alignment_evidence_to_show) + " of " + to_string(full_marginal_ra_list_size) + " shown)";
-    } else {
-      marginal_ra_title += " (sorted from high to low polymorphism score)";
+      if (!settings.polymorphism_prediction) {
+        marginal_ra_title += " (highest frequency " + to_string(settings.max_rejected_read_alignment_evidence_to_show) + " of " + to_string(full_marginal_ra_list_size) + " shown)";
+      } else {
+        marginal_ra_title += " (highest polymorphism score " + to_string(settings.max_rejected_read_alignment_evidence_to_show) + " of " + to_string(full_marginal_ra_list_size) + " shown)";
+      }
     }
     HTML << "<p>" << endl;
     HTML << html_read_alignment_table_string(ra_list, false, marginal_ra_title, relative_path) << endl;
