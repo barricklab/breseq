@@ -676,7 +676,7 @@ public:
   //!---- Set Operations ---- !//
   
   //! Subtract mutations using gd_ref as reference.
-  void set_subtract(cGenomeDiff& gd_ref, bool verbose=false);
+  void set_subtract(cGenomeDiff& gd_ref, bool phylogeny_id_aware, bool verbose=false);
 
   void set_intersect(cGenomeDiff& gd_ref, bool verbose=false);
   

@@ -135,12 +135,15 @@ int do_union(int argc, char *argv[])
 		return -1;
 	}
 	
+	/*
   if (options.getArgc() < 1) {
     options.addUsage("");
     options.addUsage("Must provide at least two input Genome Diff files.");
     options.printUsage();
     return -1;
   }
+	 
+	 */
   UserOutput uout("UNION");
 	cout << endl << "    Preserving: " << (!options.count("evidence") ? "Mutations (3-letter codes)" : "Evidence (2-letter codes)") << endl;
 
@@ -244,6 +247,7 @@ int do_subtract(int argc, char *argv[])
   AnyOption options("gdtools SUBTRACT [-o output.gd] input.gd subtract1.gd [subtract2.gd ...]");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o",  "output GD file", "output.gd");
+	options("phylogeny-aware,p", "Check the optional 'phylogeny_id' field when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
@@ -276,7 +280,7 @@ int do_subtract(int argc, char *argv[])
   for (int32_t i = 1; i < options.getArgc(); ++i) {
     uout << options.getArgv(i) << endl;
     cGenomeDiff gd2(options.getArgv(i));
-    gd1.set_subtract(gd2, verbose);
+    gd1.set_subtract(gd2, options.count("phylogeny-aware"), verbose);
   }
   
   uout("Writing output GD file", options["output"]);
@@ -284,55 +288,6 @@ int do_subtract(int argc, char *argv[])
   
   return 0;
 }
-
-/* @JEB: Merge doesn't really make sense when we now require
-int do_merge(int argc, char *argv[])
-{
-  AnyOption options("gdtools MERGE [-o output.gd] input1.gd input2.gd ...");
-  options("output,o",     "output GD file", "output.gd");
-  options("unique,u",     "unique entries only", TAKES_NO_ARGUMENT);  
-  options("id,i",         "reorder IDs", TAKES_NO_ARGUMENT);
-  options("verbose,v",    "verbose mode", TAKES_NO_ARGUMENT);
-  options.processCommandArgs(argc, argv);
-  
-  options.addUsage("");
-  options.addUsage("Input as many GenomeDiff files as you want, and have them");
-  options.addUsage("merged together into a single GenomeDiff file specified.");
-  options.addUsage("Unique IDs will remain unique across files. Any IDs that");
-  options.addUsage("aren't unique will be assigned new ones.");
-  options.addUsage("");	
-  options.addUsage("Header information will be inherited from the first input file,");
-	options.addUsage("so this function can also be used to transfer metadata to a new file.");
-  
-  if (options.getArgc() < 2) {
-    options.addUsage("");
-    options.addUsage("At least two input Genome Diff files must be provided.");
-    options.printUsage();
-    return -1;
-  }
-
-  const bool verbose = options.count("verbose");
-
-  UserOutput uout("MERGE");
-  
-  uout("Merging input GD files") << options.getArgv(0) << endl;
-  cGenomeDiff gd1(options.getArgv(0));
-
-  //Load all the GD files that were input.
-  for(int32_t i = 1; i < options.getArgc(); i++)
-  {
-    uout << options.getArgv(i) << endl;;
-    cGenomeDiff gd2(options.getArgv(i));
-    gd1.merge(gd2, options.count("unique"), options.count("id"), options.count("verbose"));
-  }
-  
-  uout("Writing output GD file", options["output"]);
-
-  gd1.write(options["output"]);
-  
-  return 0;
-}
- */
 
 int do_weights(int argc, char* argv[])
 {
@@ -1445,7 +1400,7 @@ int do_normalize_gd(int argc, char* argv[])
 		cGenomeDiff apply_gd(input);
 		
 		new_ref_seq_info = cReferenceSequences::deep_copy(ref_seq_info);
-		apply_gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, false, kDistanceToRepeat, settings.size_cutoff_AMP_becomes_INS_DEL_mutation);
+		apply_gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, options.count("verbose"), kDistanceToRepeat, settings.size_cutoff_AMP_becomes_INS_DEL_mutation);
 		
 		
 		// Now transfer between and mediated tags to ones with the same IDs

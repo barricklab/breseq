@@ -378,11 +378,13 @@ namespace breseq
     this->copy_number_variation_tile_size = from_string<uint32_t>(options["cnv-tile-size"]);
     this->ignore_redundant_coverage = options.count("cnv-ignore-redundant");
     
+    /*
     this->do_periodicity = options.count("periodicity");
     this->periodicity_method = from_string<uint32_t>(options["periodicity-method"]);
     this->periodicity_start = from_string<uint32_t>(options["periodicity-start"]);
     this->periodicity_end = from_string<uint32_t>(options["periodicity-end"]);
     this->periodicity_step = from_string<uint32_t>(options["periodicity-step"]);
+    */
     
     this->verbose = options.count("verbose");
     
