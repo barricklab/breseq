@@ -16,6 +16,8 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
+#include "config.h"
+
 #include "libbreseq/common.h"
 #include "libbreseq/settings.h"
 #include "libbreseq/anyoption.h"
@@ -2926,9 +2928,6 @@ int main(int argc, char* argv[]) {
 	char* argv_new[argc];
 	int argc_new = argc - 1;
 
-  //Print out our generic header.
-  Settings::command_line_run_header();
-                                      
 	if (argc > 1) {
 
 		command = argv[1];
@@ -2937,6 +2936,7 @@ int main(int argc, char* argv[]) {
 			argv_new[i] = argv[i + 1];
 
 	} else {
+		Settings::command_line_run_header();
     gdtools_usage();
     return -1; 
 	}
@@ -2944,6 +2944,15 @@ int main(int argc, char* argv[]) {
 	//Pass the command to the proper handler.
 	command = to_upper(command);
 
+	// gnu standard return version string
+	if ( (argc_new == 1) && (command == "--VERSION") ) {
+		cout << "gdtools " << VERSION << endl;
+		return 0;
+	}
+	
+	//Print out our generic header.
+	Settings::command_line_run_header();
+	
   // Genome Diff Commands:
   if (command == "VALIDATE") {
     return do_validate(argc_new, argv_new);
