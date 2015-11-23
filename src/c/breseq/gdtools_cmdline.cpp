@@ -1253,7 +1253,7 @@ int do_count(int argc, char* argv[])
 	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
 	options("output,o", "path to output CSV file with count data.", "count.csv");
 	options("detailed-output,d", "path to optional output tab-delimited file with detailed information about all mutations (Default = OFF)");
-	options("calculate-genome-size,s", "use APPLY to calculate final genome sizes");
+	options("calculate-genome-size,s", "use APPLY to calculate final genome sizes", TAKES_NO_ARGUMENT);
 	options("base-substitution-statistics,b", "calculate detailed base substitution statistics", TAKES_NO_ARGUMENT);
 	options("count-polymorphisms,p", "count polymorphic mutations (those with frequencies < 1). (Default = FALSE)", TAKES_NO_ARGUMENT);
 

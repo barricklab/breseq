@@ -3054,16 +3054,21 @@ void cGenomeDiff::merge(cGenomeDiff& merge_gd, bool unique, bool new_id, bool ph
           }
         }
         
-        ASSERT(found_match, "Did not find entry referred to by key '" + *key_it + "' for mutation\n" + mut.as_string());
+        if (found_match) {
         
-        if (verbose) {
-          cout << "Mutation:" << endl << mut.as_string() << endl;
-        }
-        mut[*key_it] = join(split_value, ":");
+          if (verbose) {
+            cout << "Mutation:" << endl << mut.as_string() << endl;
+          }
+          mut[*key_it] = join(split_value, ":");
 
-        if (verbose) {
-          cout << "  Reassigned " << *key_it << "=" << value << " to " << mut[*key_it] << endl;
-          cout << "Mutation:" << endl << mut.as_string() << endl;
+          if (verbose) {
+            cout << "  Reassigned " << *key_it << "=" << value << " to " << mut[*key_it] << endl;
+            cout << "Mutation:" << endl << mut.as_string() << endl;
+          }
+          
+        } else {
+          WARN("Did not find entry referred to by key '" + *key_it + "' for mutation\n" + mut.as_string() + "\nThis key will be deleted.");
+          mut.erase(*key_it);
         }
       }
     }
@@ -3223,7 +3228,7 @@ bool cGenomeDiff::diff_entry_ptr_sort(const diff_entry_ptr_t& a, const diff_entr
   
 //Correctly accounts for 'before' and 'within' tags
 void cGenomeDiff::sort_apply_order() {
-
+  
   // Remove all items with tags into these special lists
   diff_entry_list_t add_back_list;
   
