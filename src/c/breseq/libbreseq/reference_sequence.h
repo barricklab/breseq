@@ -898,8 +898,8 @@ namespace breseq {
       
       size_t pos = s.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890._-");
       while(pos != string::npos) {
-        s.replace(pos, 1, ""); // remove
-                               //s[pos] = '.'; pos++;// or replace with "safe" character
+        //s.replace(pos, 1, ""); // remove
+        s[pos] = '_'; pos++;// or replace with "safe" character
         pos = s.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890._-", pos);
       }
       

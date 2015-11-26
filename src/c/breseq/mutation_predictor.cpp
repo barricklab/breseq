@@ -1409,6 +1409,9 @@ namespace breseq {
     {
       cDiffEntry& item = **ra_it;
       
+      ///DEBUG
+      //cout << item.as_string() << endl;
+      
       string ra_seq_id = item[SEQ_ID];
       int32_t ra_position = from_string<int32_t>(item[POSITION]);
       string ra_ref_base;
@@ -1436,6 +1439,8 @@ namespace breseq {
 			bool same = false;
 			if (!first_time)
 			{
+        // @JEB: 2015-11-25 comments enable joining discontinguous INS evidence
+        // which can lead to multiple insertions at same position+insert_position
 				if ( ((mut["end"] == item["position"]) && (n(mut["insert_end"]) + 1 == n(item["insert_position"])))
 						|| ((n(mut["end"]) + 1 == n(item["position"])) && (item["insert_position"] == "0")) )
 					same = true;
@@ -1488,8 +1493,10 @@ namespace breseq {
 		// Finally, convert these items into the fields needed for the various types of mutations
 		///
     
+    cDiffEntry last_mut;
 		for (uint32_t i = 0; i < muts.size(); i++) {
       
+      if (i>0) last_mut = mut;
 			mut = muts[i];
       
       // insertion and amplification
@@ -1506,7 +1513,18 @@ namespace breseq {
           ASSERT( (mut[FREQUENCY]=="1") || (mut["insert_start"] == mut["insert_end"]), "Polymorphism has incorrectly merged INS mutations.");
           string debug_ins_pos = mut["insert_start"];           
           mut["insert_position"] = mut["insert_start"];
+        } else { // CONSENSUS mode
           
+          // Number insert_positions for INS mutations continuously
+          // (starting with implicit nothing = 1) for failing the next condition...
+          if ( (last_mut._type == INS) && (last_mut[POSITION] == mut[POSITION]) ) {
+            cout << last_mut.as_string() << endl << mut.as_string() << endl;
+            
+            uint32_t last_insert_position = (last_mut.entry_exists(INSERT_POSITION) ? n(last_mut[INSERT_POSITION]) : 1);
+            last_insert_position++;
+            mut["insert_position"] = s(last_insert_position);
+          }
+
         }
 			}
 			// deletion

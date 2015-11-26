@@ -346,10 +346,6 @@ bool test_RA_evidence_POLYMORPHISM_mode(
   // Decide if we are a polymorphism (or mixed base) prediction or a consensus prediction
   ePredictionType prediction(unknown);
   
-  if (ra[POSITION] == "357570") {
-    cout << ra.as_string() << endl;
-  }
-  
   double consensus_score = from_string<double>(ra[CONSENSUS_SCORE]);
   double polymorphism_score = (ra[POLYMORPHISM_SCORE]=="NA") ? numeric_limits<double>::quiet_NaN() : from_string<double>(ra[POLYMORPHISM_SCORE]);
   double variant_frequency = from_string<double>(ra[VARIANT_FREQUENCY]);
@@ -426,27 +422,31 @@ bool test_RA_evidence_POLYMORPHISM_mode(
     }
   }
   
-  // Bail now if still consensus
-  if (prediction == consensus) {
-    
-    ra[PREDICTION] = "consensus";
-    ra[FREQUENCY] = "1";
-    
-    // and delete if we are just the reference base!
-    return (ra[REF_BASE] == ra[MAJOR_BASE]);
-  }
+  // We can only go back to a consensus prediction if we are not user_evidence
+  if (!ra.entry_exists("user_defined")) {
   
-  // We got kicked out of consensus mode, but we don't pass the polymorphism
-  // score cutoff, so we are now a rejected consensus mutation
-  // This is the only case that inherits the rejections from consensus tests above
-  if (polymorphism_score < settings.polymorphism_log10_e_value_cutoff) {
+    // Bail now if still consensus
+    if (prediction == consensus) {
+      
+      ra[PREDICTION] = "consensus";
+      ra[FREQUENCY] = "1";
+      
+      // and delete if we are just the reference base!
+      return (ra[REF_BASE] == ra[MAJOR_BASE]);
+    }
     
-    ra[PREDICTION] = "consensus";
-    ra[FREQUENCY] = "1";
-    
-    // and delete if we are just the reference base!
-    return (ra[REF_BASE] == ra[MAJOR_BASE]);
-    
+    // We got kicked out of consensus mode, but we don't pass the polymorphism
+    // score cutoff, so we are now a rejected consensus mutation
+    // This is the only case that inherits the rejections from consensus tests above
+    if (polymorphism_score < settings.polymorphism_log10_e_value_cutoff) {
+      
+      ra[PREDICTION] = "consensus";
+      ra[FREQUENCY] = "1";
+      
+      // and delete if we are just the reference base!
+      return (ra[REF_BASE] == ra[MAJOR_BASE]);
+      
+    }
   }
   
   // We are back to a polymorphism, albeit a rejected one
@@ -506,10 +506,17 @@ void test_RA_evidence(
     
     bool delete_entry = false;
     
+
     if (settings.polymorphism_prediction) {
       delete_entry = test_RA_evidence_POLYMORPHISM_mode(ra, ref_seq_info, settings);
     } else {
       delete_entry = test_RA_evidence_CONSENSUS_mode(ra, ref_seq_info, settings);
+    }
+  
+    // User evidence items should be treated normally (to define polymorphism vs. consensus predictions)
+    // but they should not be rejected, and they should not be deleted.
+    if (ra.entry_exists("user_defined")) {
+      delete_entry=false;
     }
 
     if (delete_entry) {

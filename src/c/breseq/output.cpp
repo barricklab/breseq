@@ -152,6 +152,7 @@ string header_style_string()
   ss << ".polymorphism_table_row {background-color: rgb(160,255,160);}"    << endl;   // light green
   ss << ".highlight_table_row {background-color: rgb(192,255,255);}"       << endl;   // light cyan
   ss << ".reject_table_row {background-color: rgb(255,200,165);}"          << endl;
+  ss << ".user_defined_table_row {background-color: rgb(255,255,0);}"      << endl;   // yellow
   ss << ".information_table_row {background-color: rgb(200,255,255);}"     << endl;
   ss << ".junction_repeat {background-color: rgb(255,165,0)}"              << endl;
   ss << ".junction_gene {}"                                                << endl;
@@ -1240,6 +1241,14 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
                  td("colspan=\"" + to_string(total_cols) + "\"",
                     "Rejected: " + decode_reject_reason(reject)));
       }
+      
+      /* User Defined Evidence */
+      if (c.entry_exists("user_defined"))
+      {
+        ss << tr("class=\"user_defined_table_row\"",
+                 td("colspan=\"" + to_string(total_cols) + "\"",
+                    "User defined evidence"));
+      }
     } // end show_details
   } // end list_ref loop
 
@@ -1540,22 +1549,36 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
   }
   */
     
-  if (show_details && c.entry_exists("reject")) {
-    cGenomeDiff gd;
+  if (show_details) {
+    
+    /* Reject Reasons */
+    if (c.entry_exists("reject")) {
+      cGenomeDiff gd;
 
-    vector<string> reject_reasons = c.get_reject_reasons();
-    
-    for (vector<string>::iterator itr = reject_reasons.begin();
-         itr != reject_reasons.end(); itr++) {
-      string& reject(*itr);
-    
-      ss << tr("class=\"reject_table_row\"",
-              td("colspan=\"" + to_string(total_cols) + "\"",
-                "Rejected: " + decode_reject_reason(reject))) << endl;
+      vector<string> reject_reasons = c.get_reject_reasons();
+      
+      for (vector<string>::iterator itr = reject_reasons.begin();
+           itr != reject_reasons.end(); itr++) {
+        string& reject(*itr);
+      
+        ss << tr("class=\"reject_table_row\"",
+                td("colspan=\"" + to_string(total_cols) + "\"",
+                  "Rejected: " + decode_reject_reason(reject))) << endl;
+      }
     }
 
+    /* User Defined Evidence */
+    if (c.entry_exists("user_defined"))
+    {
+      ss << tr("class=\"user_defined_table_row\"",
+               td("colspan=\"" + to_string(total_cols) + "\"",
+                  "User defined evidence"));
+    }
   }
-  row_bg_color_index = (row_bg_color_index+1) % 2;//(row_bg_color_index) % 2; 
+    
+
+    
+  row_bg_color_index = (row_bg_color_index+1) % 2;//(row_bg_color_index) % 2;
 
   }// End list_ref Loop
   ss << "</table>" << endl;
@@ -2335,8 +2358,10 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
     
     if (item->_type == INS) 
     {
-      insert_start = 1;
-      insert_end = (*item)[NEW_SEQ].size();
+      diff_entry_list_t ins_evidence_list = gd.mutation_evidence_list(*item);
+      ASSERT(ins_evidence_list.size() != 0, "Could not find RA evidence for INS entry:\n" + item->as_string());
+      insert_start = n((*(ins_evidence_list.front()))[INSERT_POSITION]);
+      insert_end = insert_start + (*item)[NEW_SEQ].size() - 1;
     }
     else if (item->_type == DEL) 
     {
