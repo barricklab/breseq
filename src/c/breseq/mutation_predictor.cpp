@@ -1518,7 +1518,7 @@ namespace breseq {
           // Number insert_positions for INS mutations continuously
           // (starting with implicit nothing = 1) for failing the next condition...
           if ( (last_mut._type == INS) && (last_mut[POSITION] == mut[POSITION]) ) {
-            cout << last_mut.as_string() << endl << mut.as_string() << endl;
+            //cout << last_mut.as_string() << endl << mut.as_string() << endl;
             
             uint32_t last_insert_position = (last_mut.entry_exists(INSERT_POSITION) ? n(last_mut[INSERT_POSITION]) : 1);
             last_insert_position++;

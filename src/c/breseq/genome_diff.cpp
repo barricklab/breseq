@@ -534,8 +534,8 @@ int32_t cDiffEntry::compare(const cDiffEntry& a, const cDiffEntry& b)
     
     // look for other breaks
     if (!a_exists && !b_exists) continue;
-    if (!b_exists) return -1;
-    if (!a_exists) return +1;
+    if (!b_exists) return +1;
+    if (!a_exists) return -1;
     
     // Perform the proper type of comparison
     // Default is a string if not provided...

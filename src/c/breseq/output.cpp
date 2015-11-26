@@ -2359,9 +2359,17 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
     if (item->_type == INS) 
     {
       diff_entry_list_t ins_evidence_list = gd.mutation_evidence_list(*item);
-      ASSERT(ins_evidence_list.size() != 0, "Could not find RA evidence for INS entry:\n" + item->as_string());
-      insert_start = n((*(ins_evidence_list.front()))[INSERT_POSITION]);
-      insert_end = insert_start + (*item)[NEW_SEQ].size() - 1;
+      ASSERT(ins_evidence_list.size() != 0, "Could not find evidence for INS entry:\n" + item->as_string());
+      
+      if (ins_evidence_list.front()->_type == RA) {
+        insert_start = n((*(ins_evidence_list.front()))[INSERT_POSITION]);
+        insert_end = insert_start + (*item)[NEW_SEQ].size() - 1;
+      } else if (ins_evidence_list.front()->_type == JC) {
+        insert_start = 1;
+        insert_end = insert_start + (*item)[NEW_SEQ].size() - 1;
+      } else {
+        ERROR("Unknown evidence type supporting INS entry:\n" + item->as_string());
+      }
     }
     else if (item->_type == DEL) 
     {
