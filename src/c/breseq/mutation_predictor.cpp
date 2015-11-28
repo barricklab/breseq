@@ -1515,6 +1515,23 @@ namespace breseq {
           mut["insert_position"] = mut["insert_start"];
         } else { // CONSENSUS mode
           
+
+          // We have a problem sometimes with certain non-adjacent columns passing the
+          // score threshold for example, due to differences in error rates
+          // the C columns might pass with insert_positions 3, 6, 9.
+          //
+          //   *  *  *
+          // TTCTTCTTC
+          
+#define NO_DISCONTIGUOUS_INSERTS
+          
+#ifdef NO_DISCONTIGUOUS_INSERTS
+          //
+          // Do not accept predictions that don't start at an insert position of 1
+          if (n(mut["insert_start"]) != 1) {
+            continue;
+          }
+#else
           // Number insert_positions for INS mutations continuously
           // (starting with implicit nothing = 1) for failing the next condition...
           if ( (last_mut._type == INS) && (last_mut[POSITION] == mut[POSITION]) ) {
@@ -1524,7 +1541,7 @@ namespace breseq {
             last_insert_position++;
             mut["insert_position"] = s(last_insert_position);
           }
-
+#endif
         }
 			}
 			// deletion
