@@ -149,14 +149,16 @@ dist-hook: docs
 	
 	cp -r $(DOCBUILDDIR)/html $(distdir)/documentation ;
 	
-	## GenomeDiff
-	cd $(abs_top_srcdir)/src/perl/GenomeDiff ; \
-	chmod u+w . ; \
-	perl Build.PL ; \
-	./Build distdir ; 
+	## Uncomment below to add Perl back to dist
 	
-	mkdir -p $(distdir)/src/perl
-	cp -r $(abs_top_srcdir)/src/perl/GenomeDiff/GenomeDiff-* $(distdir)/src/perl/GenomeDiff ; 
+	## GenomeDiff
+	##cd $(abs_top_srcdir)/src/perl/GenomeDiff ; \
+	##chmod u+w . ; \
+	##perl Build.PL ; \
+	##./Build distdir ; 
+	
+	##mkdir -p $(distdir)/src/perl
+	##cp -r $(abs_top_srcdir)/src/perl/GenomeDiff/GenomeDiff-* $(distdir)/src/perl/GenomeDiff ; 
 	
 	## Remove ._ files
 	rm -rf `find $(distdir) -name ".*"`
