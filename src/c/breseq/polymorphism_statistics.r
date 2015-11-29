@@ -101,16 +101,18 @@ if (length(X$major_quals) > 0)
 		#print (i);
     major_quals_list = c()
     major_quals = c()
-    cat("length: ", length(X$major_quals[i]))
+    #cat(i, " length: ", length(X$major_quals[i]), "\n")
     if (length(X$major_quals[i]) > 0) {
-      major_quals_list <- strsplit(as.vector(X$major_quals[i]), ",");
+      major_quals_list <- strsplit(as.character(X$major_quals[i]), ",");
       major_quals <- as.numeric( major_quals_list[[1]] )
     }
     
     minor_quals_list = c()
     minor_quals = c()
+    
+    #cat(i, " length: ", length(X$minor_quals[i]), "\n")
     if (length(X$minor_quals[i]) > 0) {
-      minor_quals_list <- strsplit(as.vector(X$minor_quals[i]), ",");
+      minor_quals_list <- strsplit(as.character(X$minor_quals[i]), ",");
       minor_quals <- as.numeric( minor_quals_list[[1]] )
     }
 
