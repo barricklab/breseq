@@ -18,6 +18,7 @@
 ##This is the most compatible way of passing through the data directory to the C++ code
 BRESEQDATADIR= $(DESTDIR)$(datadir)/$(PACKAGE_NAME)
 BRESEQRELATIVEDATADIR= $(BIN_TO_DATA_RELATIVE_PATH)/$(PACKAGE_NAME)
+
 AM_CPPFLAGS = -I$(top_srcdir)/$(LIBBAM) -I$(top_srcdir)/aux_build  -DDATADIR=\"$(BRESEQRELATIVEDATADIR)/\"
 AM_LDFLAGS = -static
 LDADD =   $(top_builddir)/$(LIBBAM)/libbam.la \
@@ -26,6 +27,10 @@ LIBS =
 
 noinst_LTLIBRARIES = libbreseq.la
 libbreseq_la_SOURCES = \
+	../../../extern/samtools-0.1.18/bam_index.c \
+	../../../extern/samtools-0.1.18/bam_sort.c \
+	../../../extern/samtools-0.1.18/faidx.c \
+	../../../extern/samtools-0.1.18/sam_view.c \
 	alignment.cpp \
 	alignment_output.cpp \
 	anyoption.cpp \
@@ -48,6 +53,7 @@ libbreseq_la_SOURCES = \
 	reference_sequence.cpp \
 	resolve_alignments.cpp \
 	rna_seq.cpp \
+	samtools_commands.cpp \
 	settings.cpp \
 	summary.cpp \
 	libbreseq/alignment.h \
@@ -74,6 +80,7 @@ libbreseq_la_SOURCES = \
 	libbreseq/reference_sequence.h \
 	libbreseq/resolve_alignments.h \
 	libbreseq/rna_seq.h \
+	libbreseq/samtools_commands.h \
 	libbreseq/settings.h \
 	libbreseq/storable.h \
 	libbreseq/summary.h 

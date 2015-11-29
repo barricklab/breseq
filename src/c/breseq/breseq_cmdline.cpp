@@ -35,12 +35,15 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/genome_diff.h"
 #include "libbreseq/identify_mutations.h"
 #include "libbreseq/resolve_alignments.h"
+#include "libbreseq/samtools_commands.h"
 #include "libbreseq/settings.h"
 #include "libbreseq/summary.h"
 #include "libbreseq/contingency_loci.h"
 #include "libbreseq/mutation_predictor.h"
 #include "libbreseq/rna_seq.h"
 #include "libbreseq/output.h"
+
+
 
 using namespace breseq;
 using namespace std;
@@ -923,15 +926,6 @@ int do_junction_polymorphism(int argc, char *argv[])
   return 0;
 }
 
-int do_ref_aln()
-{
-  SYSTEM("samtools view -bt data/reference.fasta.fai 02_reference_alignment/*.sam > data/ref_aln.bam");
-  SYSTEM("samtools sort data/ref_aln.bam data/ref_aln.sorted");
-  SYSTEM("samtools index data/ref_aln.sorted.bam");
-  
-  return 0;
-}
-
 int do_assemble_unmatched(int argc, char* argv[])
 {
   AnyOption options("Usage: breseq ASSEMBLE-UNMATCHED-PAIRS [-o unmatched_assembly] reads1.fastq [reads2.fastq ...]");  
@@ -1156,9 +1150,12 @@ int breseq_default_action(int argc, char* argv[])
     
       
 		// create SAM faidx
+    /*
 		string samtools = settings.ctool("samtools");
 		string command = samtools + " faidx " + settings.reference_fasta_file_name;
 		SYSTEM(command);
+    */
+    samtools_faidx(settings.reference_fasta_file_name);
     
 		// calculate trim files
 		calculate_trims(settings.reference_fasta_file_name, settings.sequence_conversion_path);
@@ -1348,6 +1345,7 @@ int breseq_default_action(int argc, char* argv[])
       string coverage_junction_best_bam_prefix = settings.coverage_junction_best_bam_prefix;
       string coverage_junction_best_bam_unsorted_file_name = settings.coverage_junction_best_bam_unsorted_file_name;
 
+      /*
       string samtools = settings.ctool("samtools");
 
       string command = samtools + " import " + reference_faidx_file_name + " " + preprocess_junction_best_sam_file_name + " " + coverage_junction_best_bam_unsorted_file_name;
@@ -1356,6 +1354,13 @@ int breseq_default_action(int argc, char* argv[])
       SYSTEM(command);
       command = samtools + " index " + coverage_junction_best_bam_file_name;
       SYSTEM(command);
+      */
+      
+      samtools_import(reference_faidx_file_name, preprocess_junction_best_sam_file_name, coverage_junction_best_bam_unsorted_file_name);
+      
+      samtools_sort(coverage_junction_best_bam_unsorted_file_name, coverage_junction_best_bam_prefix);
+      
+      samtools_index(coverage_junction_best_bam_file_name);
       
       settings.track_intermediate_file(settings.coverage_junction_done_file_name, coverage_junction_best_bam_unsorted_file_name);
       settings.track_intermediate_file(settings.coverage_junction_done_file_name, preprocess_junction_best_sam_file_name);
@@ -1403,10 +1408,14 @@ int breseq_default_action(int argc, char* argv[])
 		{
       CandidateJunctions::identify_candidate_junctions(settings, summary, ref_seq_info);
       
+      /*
 			string samtools = settings.ctool("samtools");
 			string faidx_command = samtools + " faidx " + settings.candidate_junction_fasta_file_name;
 			if (!file_empty(settings.candidate_junction_fasta_file_name.c_str()))
 				SYSTEM(faidx_command);
+      */
+      if (!file_empty(settings.candidate_junction_fasta_file_name.c_str()))
+        samtools_faidx(settings.candidate_junction_fasta_file_name);
       
       settings.track_intermediate_file(settings.output_done_file_name, settings.candidate_junction_fasta_file_name);
       settings.track_intermediate_file(settings.output_done_file_name, settings.candidate_junction_fasta_file_name + ".fai");
@@ -1528,13 +1537,14 @@ int breseq_default_action(int argc, char* argv[])
 		string junction_bam_prefix = settings.junction_bam_prefix;
 		string junction_bam_file_name = settings.junction_bam_file_name;
 
-		string samtools = settings.ctool("samtools");
-		string command;
+    //string samtools = settings.ctool("samtools");
+    //string command;
 
     // only run samtools if we are predicting junctions and there were results in the sam file
     // first part of conditional really not necessary @JEB
 		if (!file_empty(resolved_junction_sam_file_name.c_str()))
 		{
+      /*
 			command = samtools + " import " + candidate_junction_faidx_file_name + " " + resolved_junction_sam_file_name + " " + junction_bam_unsorted_file_name;
 			SYSTEM(command);
 			command = samtools + " sort " + junction_bam_unsorted_file_name + " " + junction_bam_prefix;
@@ -1543,6 +1553,14 @@ int breseq_default_action(int argc, char* argv[])
 				remove_file(junction_bam_unsorted_file_name.c_str());
 			command = samtools + " index " + junction_bam_file_name;
 			SYSTEM(command);
+       */
+      
+      samtools_import(candidate_junction_faidx_file_name, resolved_junction_sam_file_name, junction_bam_unsorted_file_name);
+      samtools_sort(junction_bam_unsorted_file_name, junction_bam_prefix);
+      if (!settings.keep_all_intermediates)
+        remove_file(junction_bam_unsorted_file_name.c_str());
+      samtools_index(junction_bam_file_name);
+      
 		}
 
 		string resolved_reference_sam_file_name = settings.resolved_reference_sam_file_name;
@@ -1550,6 +1568,7 @@ int breseq_default_action(int argc, char* argv[])
 		string reference_bam_prefix = settings.reference_bam_prefix;
 		string reference_bam_file_name = settings.reference_bam_file_name;
 
+    /*
 		command = samtools + " import " + reference_faidx_file_name + " " + resolved_reference_sam_file_name + " " + reference_bam_unsorted_file_name;
     SYSTEM(command);
 		command = samtools + " sort " + reference_bam_unsorted_file_name + " " + reference_bam_prefix;
@@ -1558,7 +1577,14 @@ int breseq_default_action(int argc, char* argv[])
 			remove_file(reference_bam_unsorted_file_name.c_str());
 		command = samtools + " index " + reference_bam_file_name;
     SYSTEM(command);
-
+    */
+    
+    samtools_import(reference_faidx_file_name, resolved_reference_sam_file_name, reference_bam_unsorted_file_name);
+    samtools_sort(reference_bam_unsorted_file_name, reference_bam_prefix);
+    if (!settings.keep_all_intermediates)
+      remove_file(reference_bam_unsorted_file_name.c_str());
+    samtools_index(reference_bam_file_name);
+    
     settings.track_intermediate_file(settings.output_done_file_name, settings.junction_bam_file_name);
     settings.track_intermediate_file(settings.output_done_file_name, settings.junction_bam_file_name + ".bai");
 
@@ -2164,9 +2190,7 @@ int main(int argc, char* argv[]) {
   // None of these commands are documented for use by others. 
   // They may change without warning.
   } else if ((command == "SIMULATE-READ") ||  (command == "SIMULATE-READS")) {
-    return do_simulate_read(argc_new, argv_new); 
-  } else if (command == "REFALN") {
-    return do_ref_aln();  
+    return do_simulate_read(argc_new, argv_new);
   } else if (command == "CNV") {
     return do_copy_number_variation(argc_new, argv_new);
   } else if (command == "PERIODICITY"){

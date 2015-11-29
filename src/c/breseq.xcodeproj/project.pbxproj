@@ -22,6 +22,12 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		700FD0771C0A68D4003D8459 /* samtools_commands.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 700FD0751C0A68D4003D8459 /* samtools_commands.cpp */; };
+		700FD0781C0A68D4003D8459 /* samtools_commands.h in Headers */ = {isa = PBXBuildFile; fileRef = 700FD0761C0A68D4003D8459 /* samtools_commands.h */; };
+		700FD07C1C0A7B96003D8459 /* faidx.c in Sources */ = {isa = PBXBuildFile; fileRef = 700FD0791C0A6E7C003D8459 /* faidx.c */; };
+		700FD07E1C0A7E1B003D8459 /* bam_sort.c in Sources */ = {isa = PBXBuildFile; fileRef = 700FD07D1C0A7E1B003D8459 /* bam_sort.c */; };
+		700FD0801C0A7E42003D8459 /* bam_index.c in Sources */ = {isa = PBXBuildFile; fileRef = 700FD07F1C0A7E42003D8459 /* bam_index.c */; };
+		700FD0821C0ABC0B003D8459 /* sam_view.c in Sources */ = {isa = PBXBuildFile; fileRef = 700FD0811C0ABC0B003D8459 /* sam_view.c */; };
 		701EE98313C4BB5200F2EC70 /* contingency_loci.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 701EE98213C4BB5200F2EC70 /* contingency_loci.cpp */; };
 		702A20BC1A4F2485006DCA5F /* flagged_regions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702A20BA1A4F2349006DCA5F /* flagged_regions.cpp */; };
 		702EABF713421A8400103019 /* fastq.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702EABF613421A8400103019 /* fastq.cpp */; };
@@ -121,6 +127,12 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		700FD0751C0A68D4003D8459 /* samtools_commands.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = samtools_commands.cpp; path = breseq/samtools_commands.cpp; sourceTree = SOURCE_ROOT; };
+		700FD0761C0A68D4003D8459 /* samtools_commands.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = samtools_commands.h; path = breseq/libbreseq/samtools_commands.h; sourceTree = SOURCE_ROOT; };
+		700FD0791C0A6E7C003D8459 /* faidx.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = faidx.c; path = "../../extern/samtools-0.1.18/faidx.c"; sourceTree = SOURCE_ROOT; };
+		700FD07D1C0A7E1B003D8459 /* bam_sort.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_sort.c; path = "../../extern/samtools-0.1.18/bam_sort.c"; sourceTree = SOURCE_ROOT; };
+		700FD07F1C0A7E42003D8459 /* bam_index.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_index.c; path = "../../extern/samtools-0.1.18/bam_index.c"; sourceTree = SOURCE_ROOT; };
+		700FD0811C0ABC0B003D8459 /* sam_view.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sam_view.c; path = "../../extern/samtools-0.1.18/sam_view.c"; sourceTree = SOURCE_ROOT; };
 		701EE98213C4BB5200F2EC70 /* contingency_loci.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = contingency_loci.cpp; path = breseq/contingency_loci.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		7024BBDB155DEC31007CCA5B /* combined_circos.conf */ = {isa = PBXFileReference; lastKnownFileType = text; name = combined_circos.conf; path = breseq/combined_circos.conf; sourceTree = "<group>"; };
 		7024BBDD155DEC31007CCA5B /* indels.conf */ = {isa = PBXFileReference; lastKnownFileType = text; name = indels.conf; path = breseq/indels.conf; sourceTree = "<group>"; };
@@ -169,8 +181,6 @@
 		70B69E0A1369E51E0001B750 /* Release.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		70B69E0B1369E51E0001B750 /* Shared.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Shared.xcconfig; sourceTree = "<group>"; };
 		70B9320E1394008200885753 /* settings.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = settings.cpp; path = breseq/settings.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
-		70B954E91686902E00EF030F /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
-		70B954EB1686902E00EF030F /* libbam.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = libbam.1; sourceTree = "<group>"; };
 		70CB720F140FEB6400D578EB /* alignment.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = alignment.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		70CB7210140FEB6400D578EB /* alignment_output.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = alignment_output.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		70CB7212140FEB6400D578EB /* anyoption.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = anyoption.h; sourceTree = "<group>"; };
@@ -238,8 +248,8 @@
 				70CB720E140FEB6400D578EB /* libbreseq */,
 				4247E77F1268E175006A6D78 /* breseq */,
 				421ACF5F1170E06300C2EB85 /* lib */,
+				70B954E81686902E00EF030F /* samtools */,
 				70436D5613FF6D5C006448FB /* copied  */,
-				70B954E81686902E00EF030F /* libbam */,
 				421ACF301170DF1800C2EB85 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -291,6 +301,7 @@
 				707F34A1155D97B900F5C89F /* reference_sequence.cpp */,
 				708D62431390B1D5007FF13C /* resolve_alignments.cpp */,
 				70990AE514D5A4FA005255D4 /* rna_seq.cpp */,
+				700FD0751C0A68D4003D8459 /* samtools_commands.cpp */,
 				70B9320E1394008200885753 /* settings.cpp */,
 				707F349E155D970000F5C89F /* summary.cpp */,
 			);
@@ -327,12 +338,15 @@
 			path = config;
 			sourceTree = "<group>";
 		};
-		70B954E81686902E00EF030F /* libbam */ = {
+		70B954E81686902E00EF030F /* samtools */ = {
 			isa = PBXGroup;
 			children = (
-				70B954E91686902E00EF030F /* main.c */,
-				70B954EB1686902E00EF030F /* libbam.1 */,
+				700FD07F1C0A7E42003D8459 /* bam_index.c */,
+				700FD07D1C0A7E1B003D8459 /* bam_sort.c */,
+				700FD0791C0A6E7C003D8459 /* faidx.c */,
+				700FD0811C0ABC0B003D8459 /* sam_view.c */,
 			);
+			name = samtools;
 			path = libbam;
 			sourceTree = "<group>";
 		};
@@ -363,6 +377,7 @@
 				707F34A3155D9C9200F5C89F /* reference_sequence.h */,
 				70CB7223140FEB6400D578EB /* resolve_alignments.h */,
 				70990AE814D5A520005255D4 /* rna_seq.h */,
+				700FD0761C0A68D4003D8459 /* samtools_commands.h */,
 				70CB7224140FEB6400D578EB /* settings.h */,
 				70CB7225140FEB6400D578EB /* storable.h */,
 				707F34A4155D9C9200F5C89F /* summary.h */,
@@ -378,6 +393,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				700FD0781C0A68D4003D8459 /* samtools_commands.h in Headers */,
 				70E915D61B8BC2C000D941BF /* gzstream.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -501,12 +517,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				700FD07E1C0A7E1B003D8459 /* bam_sort.c in Sources */,
+				700FD0821C0ABC0B003D8459 /* sam_view.c in Sources */,
 				7087728812BC1660000F9B57 /* alignment.cpp in Sources */,
 				70A8364D13477AAE0037F8DE /* alignment_output.cpp in Sources */,
 				7087728E12BC169C000F9B57 /* error_count.cpp in Sources */,
 				702EABF713421A8400103019 /* fastq.cpp in Sources */,
 				7087728F12BC169C000F9B57 /* genome_diff.cpp in Sources */,
 				7087729012BC169C000F9B57 /* identify_mutations.cpp in Sources */,
+				700FD07C1C0A7B96003D8459 /* faidx.c in Sources */,
 				7087729112BC169C000F9B57 /* pileup_base.cpp in Sources */,
 				7087729212BC169C000F9B57 /* pileup.cpp in Sources */,
 				707F211613478B7700ED2F3E /* candidate_junctions.cpp in Sources */,
@@ -518,10 +537,12 @@
 				70B48C4F13A991BE00BF2BF0 /* chisquare.cpp in Sources */,
 				70D789D413C3CEB70036BEAB /* output.cpp in Sources */,
 				701EE98313C4BB5200F2EC70 /* contingency_loci.cpp in Sources */,
+				700FD0801C0A7E42003D8459 /* bam_index.c in Sources */,
 				7084E56713CFD471005B57D1 /* mutation_predictor.cpp in Sources */,
 				70367D2113EB232C000787CC /* coverage_distribution.cpp in Sources */,
 				7092FAF2140AC70200DDECA2 /* coverage_output.cpp in Sources */,
 				702A20BC1A4F2485006DCA5F /* flagged_regions.cpp in Sources */,
+				700FD0771C0A68D4003D8459 /* samtools_commands.cpp in Sources */,
 				70990AE614D5A4FA005255D4 /* rna_seq.cpp in Sources */,
 				707F349F155D970000F5C89F /* summary.cpp in Sources */,
 				707F34A2155D97B900F5C89F /* reference_sequence.cpp in Sources */,
@@ -577,7 +598,7 @@
 				GCC_VERSION = "";
 				HEADER_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS = "$(value)";
-				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				ONLY_ACTIVE_ARCH = YES;
 			};
 			name = Debug;
@@ -591,7 +612,7 @@
 				GCC_VERSION = "";
 				HEADER_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS = "$(value)";
-				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				ONLY_ACTIVE_ARCH = NO;
 			};
 			name = Release;
@@ -641,6 +662,7 @@
 				LIBRARY_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				ONLY_ACTIVE_ARCH = YES;
 				PREBINDING = NO;
 				PRODUCT_NAME = breseq;
@@ -665,6 +687,7 @@
 				LIBRARY_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				ONLY_ACTIVE_ARCH = NO;
 				PREBINDING = NO;
 				PRODUCT_NAME = breseq;
@@ -686,6 +709,7 @@
 					/opt/local/lib,
 					"$(PROJECT_DIR)/../../../../../../opt/local/lib",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = breseq;
 			};
@@ -709,6 +733,7 @@
 					/opt/local/lib,
 					"$(PROJECT_DIR)/../../../../../../opt/local/lib",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				PREBINDING = NO;
 				PRODUCT_NAME = breseq;
 				ZERO_LINK = NO;
@@ -732,7 +757,7 @@
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
@@ -753,7 +778,7 @@
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.6;
+				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
@@ -781,6 +806,7 @@
 				LIBRARY_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				ONLY_ACTIVE_ARCH = YES;
 				PREBINDING = NO;
 				PRODUCT_NAME = gdtools;
@@ -806,6 +832,7 @@
 				LIBRARY_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
+				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				ONLY_ACTIVE_ARCH = NO;
 				PREBINDING = NO;
 				PRODUCT_NAME = gdtools;

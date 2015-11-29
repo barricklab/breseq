@@ -912,6 +912,7 @@ namespace breseq
     //cerr << this->installed["path"] << endl;
     
     // SAMtools executables - look in the local bin path only
+    /*
     string samtools_path = this->bin_path + "/samtools";
     if (!file_empty(samtools_path)) {
 		  this->installed["samtools"] = samtools_path;
@@ -952,6 +953,7 @@ namespace breseq
         this->installed["samtools_version_error_message"] = version_string;
       }
     }
+
     
     // which can return an error message    
     // detect SSAHA2 system-wide install
@@ -979,6 +981,8 @@ namespace breseq
     
     //cerr << "SSAHA2: " << this->installed["SSAHA2"] << " SSAHA2 version: " << this->installed["SSAHA2_version_string"] << endl;
     
+    */
+     
     // detect bowtie2 and bowtie2-build system-wide install
     this->installed["bowtie2"] = SYSTEM_CAPTURE("which bowtie2", true);
     this->installed["bowtie2-build"] = SYSTEM_CAPTURE("which bowtie2-build", true);
@@ -1138,6 +1142,8 @@ namespace breseq
     else {
       cout << "---> R        :: version " << this->installed["R_version_string"] << " [" << this->installed["R"] << "]" << endl;
     }
+    
+    /*
 
     if (this->installed["samtools"].size() == 0)
     {
@@ -1155,7 +1161,8 @@ namespace breseq
     else {
       cout << "---> samtools :: version " << this->installed["samtools_version_string"] << " [" << this->installed["samtools"] << "]" << endl;
     }
-
+    */
+    
 		if (!good_to_go) exit(0);
 	}
 

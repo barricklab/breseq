@@ -17,10 +17,6 @@
 
 ACLOCAL_AMFLAGS = -I aux_build/m4
 
-PACKAGEDIR = $(top_srcdir)/package
-MACPACKAGEDIR = $(PACKAGEDIR)/macosx
-MACPACKAGEBUILDDIR = $(MACPACKAGEDIR)/build
-
 SUBDIRS = $(LIBBAM) $(BRESEQ)
 
 ### Tests! -- only one test included for now in distribution.
@@ -102,14 +98,6 @@ SAMTOOLSDIR=$(top_srcdir)/$(LIBBAM)
 ## Main hooks called after normal make steps
 
 all-local :
-
-## We should build Perl modules here (and not during install) because
-## otherwise a sudo make install creates superuser owned files in the
-## distribution, that are not removed by make clean.
-	
-	## OLD method: 'make test' after 'make install'
-	## This saves the install path for the test script
-	##echo "export TESTBINPREFIX=$(bindir)" > tests/test.config;
 	
 	
 install-exec-local :
@@ -162,31 +150,6 @@ dist-hook: docs
 	
 	## Remove ._ files
 	rm -rf `find $(distdir) -name ".*"`
-			
-
-macosx-pkg-download : 
-
-	mkdir -p $(PACKAGEDIR)
-	mkdir -p $(MACPACKAGEDIR)
-	
-	cd $(MACPACKAGEDIR) ; \
-	curl -O ftp://ftp.sanger.ac.uk/pub4/resources/software/ssaha2/ssaha2_mac.tgz ; \
-	tar -xvzf ssaha2_mac.tgz;
-
-
-macosx-pkg-compile :
-
-	mkdir -p $(MACPACKAGEBUILDDIR)
-	
-	cp $(MACPACKAGEDIR)/ssaha2*/ssaha2* $(MACPACKAGEBUILDDIR)/bin ;
-	
-	## Install outselves into this dir
-	./configure --prefix=$(MACPACKAGEBUILDDIR) ; \
-	make install ;
-	
-	
-clean-pkg :
-	rm -rf package
 
 
 test:

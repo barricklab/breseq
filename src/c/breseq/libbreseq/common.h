@@ -75,7 +75,6 @@ LICENSE AND COPYRIGHT
 #define UNDEFINED_UINT32 UINT_MAX
 #define UNDEFINED_INT32 INT_MAX
 
-
 using namespace std;
 
 namespace breseq {
