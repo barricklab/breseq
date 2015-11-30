@@ -1,5 +1,5 @@
 Version 0.27.1
-   * Fixed two sources of crashes when processing some data sets.
+   * Improved stability; fixed two sources of rare crashes.
    * The samtools executable is no longer included/installed/required.
 
 Version 0.27.0
