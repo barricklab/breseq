@@ -67,7 +67,24 @@ EXTRA_DIST = \
 	misc/varfilter.py \
 	misc/wgsim_eval.pl \
 	misc/wgsim.c \
-	misc/zoom2sam.pl
+	misc/zoom2sam.pl	\
+	bam_tview.c \
+	bam_plcmd.c \
+	bam_rmdup.c \
+	bam_rmdupse.c \
+	bam_mate.c \
+	bam_stat.c \
+	bam_color.c	\
+	bamtk.c \
+	cut_target.c \
+	kaln.c \
+	bam2bcf.c \
+	bam2bcf_indel.c \
+	errmod.c \
+	errmod.h \
+	sample.c \
+	sample.h \
+	phase.c 
 
 noinst_LTLIBRARIES = libbam.la
 
@@ -110,7 +127,9 @@ libbam_la_SOURCES = \
 	sam_header.c \
 	sam_header.h \
 	sam.c \
-	sam.h
+	sam.h \
+	sam_view.c
+
 libbam_la_LDFLAGS = -fPIC
 libbam_la_CFLAGS = -std=gnu89 -D_CURSES_LIB=1 -D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -D_USE_KNETFILE $(SAMTOOLS_ADDITIONAL_CFLAGS)
 

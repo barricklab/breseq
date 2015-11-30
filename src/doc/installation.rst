@@ -50,6 +50,10 @@ MacOSX does not have a C++ compiler installed by default. You must first downloa
 
 If you have admin privileges and want to install |breseq| in a standard location accessible to all users of a computer, then see :ref:`installing-in-a-system-wide-location`. If you do not have admin privileges on your computer, then see :ref:`installing-in-the-source-directory` or :ref:`installing-in-a-custom-location`. 
 
+The |breseq| source distribution relies on open-source code developed by others. This code is included in the |breseq| distribution under /extern:
+
+* `SAMtools <http://samtools.sourceforge.net>`_ 
+
 .. _installing-in-a-system-wide-location:
 
 Installing in a system-wide location
@@ -68,19 +72,12 @@ Open a terminal window and change directory to the root of the |breseq| source d
 
 ``make test`` is optional, but recommended. It should take less than 5 minutes to run and report success at the end if everything is operating correctly.
 
-These commands compile and install not only |breseq|, but also some open-source code developed by others. These packages are included in the |breseq| source distribution under /extern:
-
-* `SAMtools <http://samtools.sourceforge.net>`_ 
-
-.. WARNING::
-   Installing |breseq| will overwrite any other versions of :program:`SAMtools` that you have in the default ./configure install locations. To avoid this, you can follow the instructions in :ref:`installing-in-the-source-directory` or :ref:`installing-in-a-custom-location` to safely install |breseq| elsewhere.
-
 .. _installing-in-the-source-directory:
 
 Installing in the source directory
 **********************************
 
-This is the most robust way to install |breseq| if you do not have admin privileges on a system. All of the compiled programs and libraries will be self-contained in the original source tree.
+This is the most robust way to compile and install |breseq| if you do not have admin privileges on a system. All of the compiled programs and libraries will be self-contained in the original source tree.
 
 Open a terminal window and change directory to the root of the |breseq| source distribution. Then, run these commands:
 
@@ -157,7 +154,7 @@ Before you start, use the Cygwin package manager to install these packages (whic
 
 Now, compile and install |Bowtie2| from source code and use the :ref:`installing-source-code-package` instructions to install |breseq|.
 
-If the configure or make steps in either install fail, try to diagnose what dependencies are missing from the warnings and install further packages as necessary.
+If the configure or make steps in either install fail, try to diagnose which dependencies are missing from the warnings and install further packages as necessary.
 
 Troubleshooting installation
 +++++++++++++++++++++++++++++++++

@@ -1,3 +1,7 @@
+Version 0.27.1
+   * Fixed two sources of crashes when processing some data sets.
+   * The samtools executable is no longer included/installed/required.
+
 Version 0.27.0
    * Now accepts gzipped (*.gz) FASTQ input files.
    * Logic and options controlling predictions of consensus versus polymorphic

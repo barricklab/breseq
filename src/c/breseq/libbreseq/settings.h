@@ -228,7 +228,7 @@ namespace breseq
     bool no_junction_prediction;          // Default = false COMMAND-LINE OPTION
 		bool no_mutation_prediction;          // Default = false
 		bool no_deletion_prediction;          // Default = false set to true if targeted_sequencing
-		bool no_alignment_or_plot_generation; // Default = false  COMMAND-LINE OPTION
+		bool no_alignment_or_plot_generation; // Default = false COMMAND-LINE OPTION
 		bool do_copy_number_variation;        // Default = false COMMAND-LINE OPTION
 		bool do_periodicity;							    // Default = false COMMAND-LINE OPTION
 
@@ -362,14 +362,17 @@ namespace breseq
           
     //! Settings: Output
     uint32_t max_displayed_reads;                           // Default = 100   COMMAND-LINE OPTION
+    //! don't include javascript in HTML output, for Galaxy integration
+    bool no_javascript;                                     // Default = false COMMAND-LINE OPTION
     uint32_t output_max_nucleotides_to_show_in_tables;      // Default = 8
-    uint32_t max_rejected_read_alignment_evidence_to_show;  // Defaule = 20
+    uint32_t max_rejected_read_alignment_evidence_to_show;  // Default = 20
 		uint32_t max_rejected_junction_evidence_to_show;        // Default = 10
 		bool hide_circular_genome_junctions;                    // Default = true
     //! special output for Blount paper - not implemented in C++!
-		bool lenski_format;                                   // Default = false (not implemented!)
+		bool lenski_format;                                     // Default = false (not a public option!)
     //! don't create any HTML evidence files
-		bool no_evidence;                                     // Default = false (rarely used)
+		bool no_evidence;                                       // Default = false (rarely used)
+
     
     //! Settings: Experimental
     

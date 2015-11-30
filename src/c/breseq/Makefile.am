@@ -27,10 +27,6 @@ LIBS =
 
 noinst_LTLIBRARIES = libbreseq.la
 libbreseq_la_SOURCES = \
-	../../../extern/samtools-0.1.18/bam_index.c \
-	../../../extern/samtools-0.1.18/bam_sort.c \
-	../../../extern/samtools-0.1.18/faidx.c \
-	../../../extern/samtools-0.1.18/sam_view.c \
 	alignment.cpp \
 	alignment_output.cpp \
 	anyoption.cpp \

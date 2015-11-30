@@ -252,6 +252,7 @@ namespace breseq
     options
     ("max-displayed-reads", "Maximum number of reads to display in the HTML output for an evidence item", 100, ADVANCED_OPTION)
     ("brief-html-output", "Don't create detailed output files for evidence (no read alignments or coverage plots)", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("no-javascript", "Don't include javascript in the HTML output", TAKES_NO_ARGUMENT, ADVANCED_OPTION) 
     ;
     
     options.addUsage("", ADVANCED_OPTION);
@@ -522,6 +523,7 @@ namespace breseq
     
     this->max_displayed_reads = from_string<int32_t>(options["max-displayed-reads"]);
     this->no_alignment_or_plot_generation = options.count("brief-html-output");
+    this->no_javascript = options.count("no-javascript");
     
 		this->post_option_initialize();
     
@@ -692,6 +694,7 @@ namespace breseq
     
 		this->lenski_format = false;
 		this->no_evidence = false;
+    this->no_javascript = false;
     this->add_metadata_to_gd = true;
     
     ////////////////////

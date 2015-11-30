@@ -448,7 +448,9 @@ string html_header (const string& title, const Settings& settings)
   ss << header_style_string() << endl;
   ss << "</style>" << endl;
   ss << "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\" />" << endl;
-  ss << javascript_string() << endl;
+  if (!settings.no_javascript) {
+    ss << javascript_string() << endl;
+  }
   ss << "</head>" << endl;
   ss << "<body>" << endl;
   return ss.str();
@@ -2009,12 +2011,14 @@ void Html_Mutation_Table_String::Item_Lines()
     string cell_gene_name = nonbreaking(mut[HTML_GENE_NAME]);
     string cell_gene_product = htmlize(mut[GENE_PRODUCT]);
     
-    // @MDS0004 - If the product contains more than a set number of genes
+    // @MDS - If the product contains more than a set number of genes
     // replace the name with the one that hides it with javascript.
-    if(mut.count(GENE_PRODUCT_HIDE))
-      if(mut[GENE_PRODUCT_HIDE].size() > 0)
-        cell_gene_product = htmlize(mut[GENE_PRODUCT_HIDE]);
-
+    if (!settings.no_javascript) {
+      if(mut.count(GENE_PRODUCT_HIDE) && (mut[GENE_PRODUCT_HIDE].size() > 0)) {
+          cell_gene_product = htmlize(mut[GENE_PRODUCT_HIDE]);
+      }
+    }
+    
     // build 'mutation' column = description of the genetic change    
     switch (mut._type)
     {

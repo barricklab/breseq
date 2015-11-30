@@ -24,10 +24,6 @@
 /* Begin PBXBuildFile section */
 		700FD0771C0A68D4003D8459 /* samtools_commands.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 700FD0751C0A68D4003D8459 /* samtools_commands.cpp */; };
 		700FD0781C0A68D4003D8459 /* samtools_commands.h in Headers */ = {isa = PBXBuildFile; fileRef = 700FD0761C0A68D4003D8459 /* samtools_commands.h */; };
-		700FD07C1C0A7B96003D8459 /* faidx.c in Sources */ = {isa = PBXBuildFile; fileRef = 700FD0791C0A6E7C003D8459 /* faidx.c */; };
-		700FD07E1C0A7E1B003D8459 /* bam_sort.c in Sources */ = {isa = PBXBuildFile; fileRef = 700FD07D1C0A7E1B003D8459 /* bam_sort.c */; };
-		700FD0801C0A7E42003D8459 /* bam_index.c in Sources */ = {isa = PBXBuildFile; fileRef = 700FD07F1C0A7E42003D8459 /* bam_index.c */; };
-		700FD0821C0ABC0B003D8459 /* sam_view.c in Sources */ = {isa = PBXBuildFile; fileRef = 700FD0811C0ABC0B003D8459 /* sam_view.c */; };
 		701EE98313C4BB5200F2EC70 /* contingency_loci.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 701EE98213C4BB5200F2EC70 /* contingency_loci.cpp */; };
 		702A20BC1A4F2485006DCA5F /* flagged_regions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702A20BA1A4F2349006DCA5F /* flagged_regions.cpp */; };
 		702EABF713421A8400103019 /* fastq.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702EABF613421A8400103019 /* fastq.cpp */; };
@@ -129,10 +125,6 @@
 /* Begin PBXFileReference section */
 		700FD0751C0A68D4003D8459 /* samtools_commands.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = samtools_commands.cpp; path = breseq/samtools_commands.cpp; sourceTree = SOURCE_ROOT; };
 		700FD0761C0A68D4003D8459 /* samtools_commands.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = samtools_commands.h; path = breseq/libbreseq/samtools_commands.h; sourceTree = SOURCE_ROOT; };
-		700FD0791C0A6E7C003D8459 /* faidx.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = faidx.c; path = "../../extern/samtools-0.1.18/faidx.c"; sourceTree = SOURCE_ROOT; };
-		700FD07D1C0A7E1B003D8459 /* bam_sort.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_sort.c; path = "../../extern/samtools-0.1.18/bam_sort.c"; sourceTree = SOURCE_ROOT; };
-		700FD07F1C0A7E42003D8459 /* bam_index.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = bam_index.c; path = "../../extern/samtools-0.1.18/bam_index.c"; sourceTree = SOURCE_ROOT; };
-		700FD0811C0ABC0B003D8459 /* sam_view.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sam_view.c; path = "../../extern/samtools-0.1.18/sam_view.c"; sourceTree = SOURCE_ROOT; };
 		701EE98213C4BB5200F2EC70 /* contingency_loci.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = contingency_loci.cpp; path = breseq/contingency_loci.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		7024BBDB155DEC31007CCA5B /* combined_circos.conf */ = {isa = PBXFileReference; lastKnownFileType = text; name = combined_circos.conf; path = breseq/combined_circos.conf; sourceTree = "<group>"; };
 		7024BBDD155DEC31007CCA5B /* indels.conf */ = {isa = PBXFileReference; lastKnownFileType = text; name = indels.conf; path = breseq/indels.conf; sourceTree = "<group>"; };
@@ -248,7 +240,6 @@
 				70CB720E140FEB6400D578EB /* libbreseq */,
 				4247E77F1268E175006A6D78 /* breseq */,
 				421ACF5F1170E06300C2EB85 /* lib */,
-				70B954E81686902E00EF030F /* samtools */,
 				70436D5613FF6D5C006448FB /* copied  */,
 				421ACF301170DF1800C2EB85 /* Products */,
 			);
@@ -336,18 +327,6 @@
 				70B69E0B1369E51E0001B750 /* Shared.xcconfig */,
 			);
 			path = config;
-			sourceTree = "<group>";
-		};
-		70B954E81686902E00EF030F /* samtools */ = {
-			isa = PBXGroup;
-			children = (
-				700FD07F1C0A7E42003D8459 /* bam_index.c */,
-				700FD07D1C0A7E1B003D8459 /* bam_sort.c */,
-				700FD0791C0A6E7C003D8459 /* faidx.c */,
-				700FD0811C0ABC0B003D8459 /* sam_view.c */,
-			);
-			name = samtools;
-			path = libbam;
 			sourceTree = "<group>";
 		};
 		70CB720E140FEB6400D578EB /* libbreseq */ = {
@@ -517,15 +496,12 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				700FD07E1C0A7E1B003D8459 /* bam_sort.c in Sources */,
-				700FD0821C0ABC0B003D8459 /* sam_view.c in Sources */,
 				7087728812BC1660000F9B57 /* alignment.cpp in Sources */,
 				70A8364D13477AAE0037F8DE /* alignment_output.cpp in Sources */,
 				7087728E12BC169C000F9B57 /* error_count.cpp in Sources */,
 				702EABF713421A8400103019 /* fastq.cpp in Sources */,
 				7087728F12BC169C000F9B57 /* genome_diff.cpp in Sources */,
 				7087729012BC169C000F9B57 /* identify_mutations.cpp in Sources */,
-				700FD07C1C0A7B96003D8459 /* faidx.c in Sources */,
 				7087729112BC169C000F9B57 /* pileup_base.cpp in Sources */,
 				7087729212BC169C000F9B57 /* pileup.cpp in Sources */,
 				707F211613478B7700ED2F3E /* candidate_junctions.cpp in Sources */,
@@ -537,7 +513,6 @@
 				70B48C4F13A991BE00BF2BF0 /* chisquare.cpp in Sources */,
 				70D789D413C3CEB70036BEAB /* output.cpp in Sources */,
 				701EE98313C4BB5200F2EC70 /* contingency_loci.cpp in Sources */,
-				700FD0801C0A7E42003D8459 /* bam_index.c in Sources */,
 				7084E56713CFD471005B57D1 /* mutation_predictor.cpp in Sources */,
 				70367D2113EB232C000787CC /* coverage_distribution.cpp in Sources */,
 				7092FAF2140AC70200DDECA2 /* coverage_output.cpp in Sources */,
