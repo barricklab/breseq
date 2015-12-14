@@ -25,4 +25,4 @@ Please cite the main |breseq| publication if you use this software in your resea
 
 * Deatherage, D.E., Barrick, J.E. (2014) Identification of mutations in laboratory-evolved microbes from next-generation sequencing data using *breseq*. *Methods Mol. Biol.* **1151**: 165–188. `Link to Full Text <http://www.ncbi.nlm.nih.gov/pmc/articles/PMC4239701>`_
 
-See the :ref:`annotated-bibliography` for a full list of papers that describe |breseq|. We appreciate you also citing these publications if they are relevant for your application.
+See the :ref:`annotated_bibliography` for a full list of papers that describe |breseq|. We appreciate you also citing these publications if they are relevant for your application.

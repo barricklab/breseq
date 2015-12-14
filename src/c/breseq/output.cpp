@@ -1058,7 +1058,7 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
   }
 
   //Determine Number of Columns in Table
-  size_t total_cols = link ? 13 : 12;
+  size_t total_cols = link ? 12 : 11;
   
   //Create Column Titles
   //seq_id/position/change/freq/score/cov/annotation/genes/product
@@ -1074,9 +1074,8 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
   ss << th("seq&nbsp;id") << endl;
   ss << th("colspan=\"2\"", "position") << endl;
   ss << th("ref")        << endl <<
-        th("A")          << endl <<
-        th("a")          << endl <<
-        th("var&nbsp;freq")    << endl <<
+        th("new")        << endl <<
+        th("freq")       << endl <<
         th("score&nbsp;(cons/poly)")      << endl <<
         th("reads")      << endl <<
         th("annotation") << endl <<
@@ -1123,15 +1122,14 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
     ss << td(ALIGN_RIGHT, commify(c[POSITION ]));
     ss << td(ALIGN_RIGHT, c[INSERT_POSITION]);
     ss << td(ALIGN_CENTER, c[REF_BASE]);
-    ss << td(ALIGN_CENTER, c[MAJOR_BASE]);
-    ss << td(ALIGN_CENTER, c[MINOR_BASE]);
+    ss << td(ALIGN_CENTER, c[NEW_BASE]);
     
     ssf.str("");
     ssf.clear();
     ssf.width(4);
     ssf.precision(1);
-    if (c.entry_exists(VARIANT_FREQUENCY))
-      ssf << fixed << from_string<double>(c[VARIANT_FREQUENCY]) * 100 << "%" << endl; // "frequency" column
+    if (c.entry_exists(POLYMORPHISM_FREQUENCY))
+      ssf << fixed << from_string<double>(c[POLYMORPHISM_FREQUENCY]) * 100 << "%" << endl; // "frequency" column
     ss << td(ALIGN_RIGHT, ssf.str());
     
     ssf.str("");
@@ -1493,7 +1491,7 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
       ss << td("rowspan=\"2\" align=\"center\"", 
               c["neg_log10_pos_hash_p_value"]) << endl;
 
-      ss << td("rowspan=\"2\" align=\"center\"", Html_Mutation_Table_String::freq_to_string(c[VARIANT_FREQUENCY])) << endl;
+      ss << td("rowspan=\"2\" align=\"center\"", Html_Mutation_Table_String::freq_to_string(c[POLYMORPHISM_FREQUENCY])) << endl;
               
                //" (" + c["max_left"] + "/" + c["max_right"] + ")") << endl;
       ss << td("align=\"center\" class=\"" + annotate_key + "\"", 

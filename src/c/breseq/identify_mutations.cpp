@@ -271,7 +271,7 @@ bool test_RA_evidence_CONSENSUS_mode(
   
   double consensus_score = from_string<double>(ra[CONSENSUS_SCORE]);
   double polymorphism_score = (ra[POLYMORPHISM_SCORE]=="NA") ? numeric_limits<double>::quiet_NaN() : from_string<double>(ra[POLYMORPHISM_SCORE]);
-  double variant_frequency = from_string<double>(ra[VARIANT_FREQUENCY]);
+  double variant_frequency = from_string<double>(ra[POLYMORPHISM_FREQUENCY]);
   
   // Score must be below one of the thresholds
   if (consensus_score >= settings.mutation_log10_e_value_cutoff) {
@@ -309,7 +309,7 @@ bool test_RA_evidence_CONSENSUS_mode(
   
   // Set us up as a potential polymorphism
   ra[PREDICTION] = "polymorphism";
-  ra[FREQUENCY] = ra[VARIANT_FREQUENCY];
+  ra[FREQUENCY] = ra[POLYMORPHISM_FREQUENCY];
   
   // Perform further checks for polymorphisms
   bool rejected_RA_polymorphism_frequency = false;
@@ -348,11 +348,11 @@ bool test_RA_evidence_POLYMORPHISM_mode(
   
   double consensus_score = from_string<double>(ra[CONSENSUS_SCORE]);
   double polymorphism_score = (ra[POLYMORPHISM_SCORE]=="NA") ? numeric_limits<double>::quiet_NaN() : from_string<double>(ra[POLYMORPHISM_SCORE]);
-  double variant_frequency = from_string<double>(ra[VARIANT_FREQUENCY]);
+  double variant_frequency = from_string<double>(ra[POLYMORPHISM_FREQUENCY]);
   
   // Set up polymorphism as default
   ra[PREDICTION] = "polymorphism";
-  ra[FREQUENCY] = ra[VARIANT_FREQUENCY];
+  ra[FREQUENCY] = ra[POLYMORPHISM_FREQUENCY];
   
   // Score must be below one of the thresholds
   if (polymorphism_score >= settings.polymorphism_log10_e_value_cutoff) {
@@ -473,7 +473,7 @@ void test_RA_evidence(
   // Assumes these entries are present initially
   //  * REF_BASE
   //  * CONSENSUS_SCORE is present for all entries        = maximumum likelihood frequency for 100% mutated model
-  //  * VARIANT_FREQUENCY is present for all entries = maximumum likelihood frequency for mixed model
+  //  * POLYMORPHISM_FREQUENCY is present for all entries = maximumum likelihood frequency for mixed model
   //  * QUALITY is present for all entries                = consensus model
   //  * POLYMORPHISM_SCORE may or may not be present      = mixed model
   //  * NEW_COV, REF_COV present for all entries
@@ -500,8 +500,8 @@ void test_RA_evidence(
     if (!ra.entry_exists(POLYMORPHISM_SCORE)) {
       ERROR("Expected field 'polymorphism_score' in evidence item\n" + ra.as_string());
     }
-    if (!ra.entry_exists(VARIANT_FREQUENCY)) {
-      ERROR("Expected field 'variant_frequency' in evidence item\n" + ra.as_string());
+    if (!ra.entry_exists(POLYMORPHISM_FREQUENCY)) {
+      ERROR("Expected field '" + cString(POLYMORPHISM_FREQUENCY) + "' in evidence item\n" + ra.as_string());
     }
     
     bool delete_entry = false;
@@ -958,6 +958,8 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       //# the frequency returned is the probability of the FIRST base
       //# we want to quote the probability of the second base (the minor allele from the reference).
       mut[REF_BASE] = ref_base_char;
+      mut[NEW_BASE] = (best_base_char == ref_base_char) ? second_best_base_char : best_base_char;
+      
       mut[MAJOR_BASE] = best_base_char;
       mut[MINOR_BASE] = second_best_base_char;
       mut[MAJOR_FREQUENCY] = formatted_double(ppred.frequency, _polymorphism_precision_places, true).to_string();
@@ -966,7 +968,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       if (mut[REF_BASE] == mut[MAJOR_BASE]) {
         variant_frequency = 1.0 - variant_frequency;
       }
-      mut[VARIANT_FREQUENCY] = formatted_double(variant_frequency, _polymorphism_precision_places, true).to_string();
+      mut[POLYMORPHISM_FREQUENCY] = formatted_double(variant_frequency, _polymorphism_precision_places, true).to_string();
 
       
       // Add line to R input file if we are only a polymorphism
@@ -984,11 +986,17 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       //## More fields common to consensus mutations and polymorphisms
       //## ...now that ref_base and new_base are defined
       
-      vector<uint32_t>& ref_cov = pos_info[from_string<base_char>(mut[MAJOR_BASE])];
-      mut[MAJOR_COV] = to_string(make_pair(static_cast<int32_t>(ref_cov[2]), static_cast<int32_t>(ref_cov[0])));
+      vector<uint32_t>& ref_cov = pos_info[from_string<base_char>(mut[REF_BASE])];
+      mut[REF_COV] = to_string(make_pair(static_cast<int32_t>(ref_cov[2]), static_cast<int32_t>(ref_cov[0])));
       
-      vector<uint32_t>& new_cov = pos_info[from_string<base_char>(mut[MINOR_BASE])];
-      mut[MINOR_COV] = to_string(make_pair(static_cast<int32_t>(new_cov[2]), static_cast<int32_t>(new_cov[0])));
+      vector<uint32_t>& new_cov = pos_info[from_string<base_char>(mut[NEW_BASE])];
+      mut[NEW_COV] = to_string(make_pair(static_cast<int32_t>(new_cov[2]), static_cast<int32_t>(new_cov[0])));
+      
+      vector<uint32_t>& major_cov = pos_info[from_string<base_char>(mut[MAJOR_BASE])];
+      mut[MAJOR_COV] = to_string(make_pair(static_cast<int32_t>(major_cov[2]), static_cast<int32_t>(major_cov[0])));
+      
+      vector<uint32_t>& minor_cov = pos_info[from_string<base_char>(mut[MINOR_BASE])];
+      mut[MINOR_COV] = to_string(make_pair(static_cast<int32_t>(minor_cov[2]), static_cast<int32_t>(minor_cov[0])));
       
       mut[TOTAL_COV] = to_string(make_pair(total_cov[2], total_cov[0]));
       
@@ -1027,8 +1035,9 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 
         // tries all frequencies of the best two
         
-        base_char best_base_char = from_string<base_char>(mut[MAJOR_BASE]);
-        base_char second_best_base_char = from_string<base_char>(mut[MINOR_BASE]);
+        base_char best_base_char = from_string<base_char>(mut[REF_BASE]);
+        base_char second_best_base_char = from_string<base_char>(mut[NEW_BASE]);
+        
         if (_settings.polymorphism_prediction) {
           ppred = predict_polymorphism(best_base_char, second_best_base_char, pdata);
         }
@@ -1039,24 +1048,32 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         
         double polymorphism_bonferroni_score = 10 * (-(log(ppred.likelihood_ratio_test_p_value)/log(10)) - _log10_ref_length);
         
-        mut[REF_BASE] = ref_base_char;
-        mut[MAJOR_FREQUENCY] = formatted_double(ppred.frequency, _polymorphism_precision_places, true).to_string();
+        // These defs of major and minor base are not quite always accurate.
+        // because they only take from ref_base and new_base of the RA line
+        // ---> in the future it may be better to KEEP the major and minor alleles and work with
+        //      these instead, but that leads to its own issues
+        mut[MAJOR_BASE] = (ppred.frequency > 0.5) ? best_base_char : second_best_base_char;
+        mut[MINOR_BASE] = (ppred.frequency > 0.5) ? second_best_base_char : best_base_char;
+        mut[MAJOR_FREQUENCY] = formatted_double( ((ppred.frequency > 0.5) ? ppred.frequency : 1 - ppred.frequency), _polymorphism_precision_places, true).to_string();
         
-        double variant_frequency = ppred.frequency;
-        if (mut[REF_BASE] == mut[MAJOR_BASE]) {
-          variant_frequency = 1.0 - variant_frequency;
-        }
-        mut[VARIANT_FREQUENCY] = formatted_double(variant_frequency, _polymorphism_precision_places, true).to_string();
+        // The frequency of the variant is always this, due to the way the ref_base is set as best_base_char
+        mut[POLYMORPHISM_FREQUENCY] = formatted_double(1 - ppred.frequency, _polymorphism_precision_places, true).to_string();
         
         // Genotype quality is for the top called genotype
         mut[CONSENSUS_SCORE] = formatted_double(consensus_bonferroni_score, kMutationScorePrecision).to_string();
         mut[POLYMORPHISM_SCORE] = formatted_double(polymorphism_bonferroni_score, kMutationScorePrecision).to_string();
         
-        vector<uint32_t>& ref_cov = pos_info[from_string<base_char>(mut[MAJOR_BASE])];
-        mut[MAJOR_COV] = to_string(make_pair(static_cast<int>(ref_cov[2]), static_cast<int>(ref_cov[0])));
+        vector<uint32_t>& ref_cov = pos_info[from_string<base_char>(mut[REF_BASE])];
+        mut[REF_COV] = to_string(make_pair(static_cast<int32_t>(ref_cov[2]), static_cast<int32_t>(ref_cov[0])));
         
-        vector<uint32_t>& new_cov = pos_info[from_string<base_char>(mut[MINOR_BASE])];
-        mut[MINOR_COV] = to_string(make_pair(static_cast<int>(new_cov[2]), static_cast<int>(new_cov[0])));
+        vector<uint32_t>& new_cov = pos_info[from_string<base_char>(mut[NEW_BASE])];
+        mut[NEW_COV] = to_string(make_pair(static_cast<int32_t>(new_cov[2]), static_cast<int32_t>(new_cov[0])));
+        
+        vector<uint32_t>& major_cov = pos_info[from_string<base_char>(mut[MAJOR_BASE])];
+        mut[MAJOR_COV] = to_string(make_pair(static_cast<int>(major_cov[2]), static_cast<int>(major_cov[0])));
+        
+        vector<uint32_t>& minor_cov = pos_info[from_string<base_char>(mut[MINOR_BASE])];
+        mut[MINOR_COV] = to_string(make_pair(static_cast<int>(minor_cov[2]), static_cast<int>(minor_cov[0])));
         
         mut[TOTAL_COV] = to_string(make_pair(total_cov[2], total_cov[0]));
         

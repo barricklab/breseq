@@ -3,7 +3,7 @@ Methods
 
 This section describes the algorithms used by |breseq|.
 
-.. _annotated-bibliography:   
+.. _read_mapping:   
 
 Read mapping
 ----------------
@@ -341,6 +341,9 @@ Even given perfect data, |breseq| cannot find some types of mutations:
 `Chromosomal inversions and rearrangements through repeat sequences`
    These types of mutations cannot be detected when they involve sequence repeats on the order of the read length. Reads that span repeats and uniquely align in the reference sequence on each end are necessary. |breseq| currently does not take advantage of mate-paired or paired-end information.
    
+
+.. _annotated_bibliography:
+
 Annotated bibliography
 ------------------------------
 

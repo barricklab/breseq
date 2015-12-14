@@ -2019,14 +2019,14 @@ void  assign_one_junction_read_counts(
   
   // We cannot assign a frequency if the denominator is zero
   if (d == 0) {
-    j[VARIANT_FREQUENCY] = "NA";
-    j[FREQUENCY] = j[VARIANT_FREQUENCY];
+    j[POLYMORPHISM_FREQUENCY] = "NA";
+    j[FREQUENCY] = j[POLYMORPHISM_FREQUENCY];
 
     j[PREDICTION] = "unknown";
   } else {
     double new_junction_frequency_value = c /(c + ((a+b)/d) );
-    j[VARIANT_FREQUENCY] = to_string(new_junction_frequency_value, settings.polymorphism_precision_places, true);
-    j[FREQUENCY] = j[VARIANT_FREQUENCY];
+    j[POLYMORPHISM_FREQUENCY] = to_string(new_junction_frequency_value, settings.polymorphism_precision_places, true);
+    j[FREQUENCY] = j[POLYMORPHISM_FREQUENCY];
 
     // Determine what kind of prediction we are
     

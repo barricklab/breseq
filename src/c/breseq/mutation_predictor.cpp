@@ -2529,7 +2529,8 @@ namespace breseq {
       
     // Figure out the names of all "repeat" columns
     map<string,bool> mob_name_hash;
-    map<string,bool> con_name_hash;
+    map<string,bool> mob_mediated_name_hash;
+    map<string,bool> con_mediated_name_hash;
     
     // create a copy so we don't alter the original list
     vector<cGenomeDiff> sorted_genome_diffs(genome_diffs);
@@ -2546,19 +2547,21 @@ namespace breseq {
         }
         if (mut._type == CON) {
           if (mut.entry_exists("mediated"))
-            mob_name_hash[mut["mediated"]] = true;
+            con_mediated_name_hash[mut["mediated"]] = true;
         }
-        if (mut._type == DEL) {
+        if ( (mut._type == DEL) || (mut._type == AMP) || (mut._type == SUB) || (mut._type == INS)) {
           if (mut.entry_exists("mediated"))
-            mob_name_hash[mut["mediated"]] = true;
+            mob_mediated_name_hash[mut["mediated"]] = true;
         }
       }
     }
     vector<string> mob_name_list = map_keys_to_list<string,bool>(mob_name_hash);
     sort(mob_name_list.begin(), mob_name_list.end());
-    vector<string> con_name_list = map_keys_to_list<string,bool>(con_name_hash);
-    sort(con_name_list.begin(), con_name_list.end());
-    
+    vector<string> mob_mediated_name_list = map_keys_to_list<string,bool>(mob_mediated_name_hash);
+    sort(mob_mediated_name_list.begin(), mob_mediated_name_list.end());
+    vector<string> con_mediated_name_list = map_keys_to_list<string,bool>(con_mediated_name_hash);
+    sort(con_mediated_name_list.begin(), con_mediated_name_list.end());
+
     vector<string> column_headers;
     column_headers.push_back("file");
     column_headers.push_back("sample");
@@ -2589,8 +2592,11 @@ namespace breseq {
     vector<string> header_mob_name_list = prefix_each_in_vector(mob_name_list, "mobile_element.");
     column_headers.insert(column_headers.end(),header_mob_name_list.begin(), header_mob_name_list.end());
     
-    vector<string> header_con_name_list = prefix_each_in_vector(con_name_list, "gene_conversion.");
-    column_headers.insert(column_headers.end(),header_con_name_list.begin(), header_con_name_list.end());
+    vector<string> header_mob_mediated_name_list = prefix_each_in_vector(mob_mediated_name_list, "mobile_element.mediated.");
+    column_headers.insert(column_headers.end(),header_mob_mediated_name_list.begin(), header_mob_mediated_name_list.end());
+    
+    vector<string> header_con_mediated_name_list = prefix_each_in_vector(con_mediated_name_list, "gene_conversion.mediated.");
+    column_headers.insert(column_headers.end(),header_con_mediated_name_list.begin(), header_con_mediated_name_list.end());
     
     ofstream output_file(output_file_name.c_str());
     ASSERT(output_file.good(), "Error writing to file: " + output_file_name);
@@ -2716,7 +2722,7 @@ namespace breseq {
         if (mut._type == DEL) {
           
           if (mut.entry_exists("mediated"))
-            count["mob"][mut["mediated"]]++;
+            count["mob_mediated"][mut["mediated"]]++;
           
           if (from_string<int32_t>(mut[SIZE]) > large_size_cutoff) {
             count["large_deletion"][""]++;
@@ -2731,7 +2737,7 @@ namespace breseq {
           int32_t ins_size = mut[NEW_SEQ].size();
           
           if (mut.entry_exists("mediated"))
-            count["mob"][mut["mediated"]]++;
+            count["mob_mediated"][mut["mediated"]]++;
           
           if (ins_size > large_size_cutoff) {
             count["large_insertion"][""]++;
@@ -2747,7 +2753,7 @@ namespace breseq {
           int32_t new_size = mut[NEW_SEQ].size();
           
           if (mut.entry_exists("mediated"))
-            count["mob"][mut["mediated"]]++;
+            count["mob_mediated"][mut["mediated"]]++;
           
           if (abs(new_size - old_size) > large_size_cutoff) {
             count["large_substitution"][""]++;
@@ -2762,7 +2768,7 @@ namespace breseq {
           // TODO: Need size change?
           
           if (mut.entry_exists("mediated"))
-            count["con"][mut["mediated"]]++;
+            count["con_mediated"][mut["mediated"]]++;
           count["gene_conversion"][""]++;
           gene_conversion_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
         }
@@ -2784,6 +2790,9 @@ namespace breseq {
         
         if (mut._type == AMP) {
           int32_t this_size = from_string<uint32_t>(mut[SIZE]) * (from_string<uint32_t>(mut["new_copy_number"]) - 1);
+          
+          if (mut.entry_exists("mediated"))
+            count["mob_mediated"][mut["mediated"]]++;
           
           if (this_size > large_size_cutoff) {
             count["large_amplification"][""]++;
@@ -2845,8 +2854,11 @@ namespace breseq {
       vector<string> mob_type_counts = map_key_list_to_values_as_strings(count["mob"], mob_name_list);
       this_columns.insert(this_columns.end(),mob_type_counts.begin(), mob_type_counts.end());
       
-      vector<string> con_type_counts = map_key_list_to_values_as_strings(count["con"], con_name_list);
-      this_columns.insert(this_columns.end(),con_type_counts.begin(), con_type_counts.end());
+      vector<string> mob_mediated_type_counts = map_key_list_to_values_as_strings(count["mob_mediated"], mob_mediated_name_list);
+      this_columns.insert(this_columns.end(),mob_mediated_type_counts.begin(), mob_mediated_type_counts.end());
+      
+      vector<string> con_mediated_type_counts = map_key_list_to_values_as_strings(count["con_mediated"], con_mediated_name_list);
+      this_columns.insert(this_columns.end(),con_mediated_type_counts.begin(), con_mediated_type_counts.end());
       
       
       if (base_substitution_statistics) {	

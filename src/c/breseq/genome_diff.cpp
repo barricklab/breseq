@@ -69,7 +69,13 @@ const char* MEDIATED_STRAND = "mediated_strand";
 const char* REGION = "region";  
   
 //For RA
+// old + new required field
 const char* REF_BASE="ref_base";
+// old fields to maintain RA definition
+const char* NEW_BASE="new_base";
+const char* REF_COV="ref_cov";
+const char* NEW_COV="new_cov";
+// new fields
 const char* MAJOR_BASE="major_base";
 const char* MINOR_BASE="minor_base";
 const char* MAJOR_COV="major_cov";
@@ -79,9 +85,9 @@ const char* PREDICTION = "prediction";
 const char* SCORE="score";
 const char* CONSENSUS_SCORE="consensus_score";
 const char* POLYMORPHISM_SCORE="polymorphism_score";
-const char* VARIANT_FREQUENCY="variant_frequency";  // frequency of top variant allele
-const char* MAJOR_FREQUENCY="major_frequency";      // frequency of major allele
-const char* POLYMORPHISM_EXISTS="polymorphism_exists";        // internal flag for running R script
+const char* POLYMORPHISM_FREQUENCY="polymorphism_frequency";
+const char* MAJOR_FREQUENCY="major_frequency";            // frequency of major allele
+const char* POLYMORPHISM_EXISTS="polymorphism_exists";    // internal flag for running R script
   
 //For MC  
 const char* START_RANGE="start_range";
@@ -132,7 +138,7 @@ const map<gd_entry_type, vector<string> > line_specification = make_map<gd_entry
 (CON,make_vector<string> (SEQ_ID)(POSITION)(SIZE)(REGION))
 
 //## evidence
-(RA,make_vector<string> (SEQ_ID)(POSITION)(INSERT_POSITION)(MAJOR_BASE)(MINOR_BASE))
+(RA,make_vector<string> (SEQ_ID)(POSITION)(INSERT_POSITION)(REF_BASE)(NEW_BASE))
 (MC,make_vector<string> (SEQ_ID)(START)(END)(START_RANGE)(END_RANGE))
 (JC,make_vector<string> (SIDE_1_SEQ_ID)(SIDE_1_POSITION)(SIDE_1_STRAND)(SIDE_2_SEQ_ID)(SIDE_2_POSITION)(SIDE_2_STRAND)(OVERLAP))
 (CN,make_vector<string> (SEQ_ID)(START)(END)(COPY_NUMBER))
@@ -158,7 +164,7 @@ const map<gd_entry_type, vector<string> > extended_line_specification = make_map
 (INS,make_vector<string> (SEQ_ID)(POSITION)(INSERT_POSITION)(NEW_SEQ))
 (MOB,make_vector<string> (SEQ_ID)(POSITION)(REPEAT_NAME)(STRAND)(DUPLICATION_SIZE)(INS_START)(INS_END)(DEL_START)(DEL_END)(MOB_REGION))
 (AMP,make_vector<string> (SEQ_ID)(POSITION)(SIZE)(NEW_COPY_NUMBER)(MEDIATED)(MEDIATED_STRAND)(MOB_REGION))
-(RA,make_vector<string>  (SEQ_ID)(POSITION)(INSERT_POSITION)(MINOR_BASE)(MAJOR_BASE))
+(RA,make_vector<string>  (SEQ_ID)(POSITION)(INSERT_POSITION)(REF_BASE)(NEW_BASE))
 (JC,make_vector<string>  (SIDE_1_SEQ_ID)(SIDE_1_POSITION)(SIDE_1_STRAND)(SIDE_2_SEQ_ID)(SIDE_2_POSITION)(SIDE_2_STRAND)(OVERLAP)(UNIQUE_READ_SEQUENCE))
 ;
   
@@ -345,7 +351,7 @@ cDiffEntry::cDiffEntry(const string &line, uint32_t line_number, cFileParseError
       // Certain keys are only allowed for specific entries
       if (key == MEDIATED) {
         if ( (de._type != DEL) && (de._type != AMP) ) {
-          if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'mediated' is only allowed for entries of type MOB or AMP.", true);
+          if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'mediated' is only allowed for entries of type DEL or AMP.", true);
         }
       }
       
@@ -2189,6 +2195,18 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
       if (de.entry_exists("within"))
         continue;
 
+      if (de._type == RA) {
+        uint32_t position = from_string<uint32_t>(de[POSITION]);
+        uint32_t insert_position = from_string<uint32_t>(de[INSERT_POSITION]);
+        string test_ref_base = ((insert_position == 0) ? ref_seq.get_sequence_1(de[SEQ_ID], position, position) : ".");
+        if (de[REF_BASE] != test_ref_base) {
+          parse_errors.add_line_error(from_string<uint32_t>(de["_line_number"]), de.as_string(), "Specified REF_BASE does not match actual reference base (" + test_ref_base + ") at the specified positon.", true);
+        }
+        
+        if (de[REF_BASE] == de[NEW_BASE]) {
+          parse_errors.add_line_error(from_string<uint32_t>(de["_line_number"]), de.as_string(), "Specified REF_BASE and NEW_BASE are the same.", true);
+        }
+      }
       if (de._type == SNP) {
         uint32_t position = from_string<uint32_t>(de[POSITION]);
         if (de[NEW_SEQ] == ref_seq.get_sequence_1(de[SEQ_ID], position, position)) {
@@ -5555,8 +5573,7 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
       gvf[8] = gvf[8].append(";Total_reads=").append(to_string(cov));
       
       // Attributes - Variant Reads
-      string which_cov = (ref_base == ev[MAJOR_BASE]) ? MINOR_COV : MAJOR_COV;
-      vector<string> variant_covs = split( ev[which_cov], "/" );
+      vector<string> variant_covs = split( ev[NEW_COV], "/" );
       uint32_t variant_cov = from_string<uint32_t>(variant_covs[0]) + from_string<uint32_t>(variant_covs[1]);
       gvf[8] = gvf[8].append(";Variant_reads=").append(to_string(variant_cov));
         

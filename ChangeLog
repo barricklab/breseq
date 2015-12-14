@@ -1,6 +1,7 @@
 Version 0.27.1
    * Improved stability; fixed two sources of rare crashes.
    * The samtools executable is no longer included/installed/required.
+   * Fixed backward compatibility with RA lines that was broken in 0.27.0
 
 Version 0.27.0
    * Now accepts gzipped (*.gz) FASTQ input files.
