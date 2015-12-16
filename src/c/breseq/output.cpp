@@ -1194,13 +1194,28 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
     {
       
       // Show information about the strands supporting the change
+      
+      if ( (c[MAJOR_BASE] == c[REF_BASE]) || (c[MINOR_BASE] == c[REF_BASE]) || (c[MINOR_BASE] == "N") ) {
+      
       ss << tr("class=\"information_table_row\"", 
                td("colspan=\"" + to_string(total_cols) + "\"",
                   "Reads supporting (aligned to +/- strand):&nbsp;&nbsp;" +
-                  b("major") + " Allele " + c[MAJOR_BASE] + " (" + c[MAJOR_COV] + ")" + ";&nbsp;&nbsp;" +
-                  b("minor") + " allele " + c[MINOR_BASE] + " (" + c[MINOR_COV] + ")" + ";&nbsp;&nbsp;" +
+                  b("ref") + " base " + c[REF_BASE] + " (" + c[REF_COV] + ")" + ";&nbsp;&nbsp;" +
+                  b("new") + " base " + c[NEW_BASE] + " (" + c[NEW_COV] + ")" + ";&nbsp;&nbsp;" +
                   b("total") + " (" + c[TOTAL_COV] + ")"));
-    
+        
+      } else {
+        
+        ss << tr("class=\"information_table_row\"",
+                 td("colspan=\"" + to_string(total_cols) + "\"",
+                    "Reads supporting (aligned to +/- strand):&nbsp;&nbsp;" +
+                    b("ref") + " base " + c[REF_BASE] + " (" + c[REF_COV] + ")" + ";&nbsp;&nbsp;" +
+                    b("major") + " base " + c[MAJOR_BASE] + " (" + c[MAJOR_COV] + ")" + ";&nbsp;&nbsp;" +
+                    b("minor") + " base " + c[MINOR_BASE] + " (" + c[MINOR_COV] + ")" + ";&nbsp;&nbsp;" +
+                    b("total") + " (" + c[TOTAL_COV] + ")"));
+        
+      }
+        
       /* Fisher Strand Test */
       if (c.entry_exists("fisher_strand_p_value")) 
       {
