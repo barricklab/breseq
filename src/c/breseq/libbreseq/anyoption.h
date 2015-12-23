@@ -155,7 +155,7 @@ namespace breseq {
 		void printAutoUsage();
 		void addUsage( string line , bool advanced=false);
     void addUsageSameLine( string line , bool advanced=false);
-		void printAdvanced();
+		void printAdvancedUsage();
 			/* print auto usage printing for unknown options or flag */
 		void autoUsagePrint(bool flag);
 

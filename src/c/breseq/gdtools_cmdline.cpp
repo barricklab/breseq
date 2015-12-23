@@ -2083,6 +2083,8 @@ int do_download(int argc, char *argv[])
         ["url_format"] = "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/%s/%s/%s.fastq.gz";
     lookup_table["BARRICKLAB-PUBLIC"]
         ["url_format"] = "http://barricklab.org/%s";
+		lookup_table["DEFAULT"]
+				["url_format"] = "%s";
 	
 	if (!onTACC) {
 		lookup_table["BARRICKLAB-PRIVATE"]
@@ -2107,8 +2109,10 @@ int do_download(int argc, char *argv[])
         ["file_path_format"] = download_dir + "/%s";
     lookup_table["BARRICKLAB-PRIVATE"]
         ["file_path_format"] = download_dir + "/%s";
-
-  /*! Wrather than crash; gather [gd_file_name][reason] = error_value.
+		lookup_table["DEFAULT"]
+				["file_path_format"] = download_dir + "/%s";
+	
+  /*! Rather than crash; gather [gd_file_name][reason] = error_value.
       and output at the end of the function. */
   map<string, map<string, string> > error_report;
 
@@ -2134,13 +2138,14 @@ int do_download(int argc, char *argv[])
         continue;
       }
 
-      const string &key = to_upper(seq_kvp.get_key());
-      const string &value = cString(seq_kvp.get_value()).trim_ends_of('/');
+      string key = to_upper(seq_kvp.get_key());
+			string value = cString(seq_kvp.get_value()).trim_ends_of('/');
 
+			// In this case we have a URL http:// etc
       if (!lookup_table.count(key)) {
-        error_report[file_name]["INVALID_KEY"] = key;
-        continue;
-      }
+				key = "DEFAULT";
+				value = seqs_kv_pairs.front();
+			}
 
       //! Step: Get file path and check if it has already been downloaded or is empty.
       const string &base_name = cString(value).get_base_name();
@@ -2173,7 +2178,7 @@ int do_download(int argc, char *argv[])
 
       //! Step: Get url and download, gunzip if necessary.
       string url = "";
-      const char *url_format = lookup_table[key]["url_format"].c_str();
+			const char *url_format = lookup_table[key]["url_format"].c_str();
       if (key == "GENBANK") {
         sprintf(url, url_format, value.c_str());
       }
@@ -2187,7 +2192,9 @@ int do_download(int argc, char *argv[])
       else if (key == "BARRICKLAB-PRIVATE") {
         //ASSERT(options.count("login"), "Provide the login option (-l user:password) to access private files.");
         sprintf(url, url_format, value.c_str());
-      }
+			} else if (key == "DEFAULT") { //case for normal URLs
+				sprintf(url, url_format, value.c_str());
+			}
 
 			string wget_cmd;
 			if (key == "BARRICKLAB-PRIVATE") {

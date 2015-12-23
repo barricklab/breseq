@@ -503,10 +503,11 @@ namespace breseq {
 			}
 			else
 			{
-				printVerbose("Unknown command argument option: ");
-				printVerbose(arg);
-				printVerbose();
 				printAutoUsage();
+        printVerbose("Unknown command argument option: ");
+        printVerbose(arg);
+        printVerbose();
+        printVerbose();
 				free(tmp);
         exit(-1);
 				//return -1;
@@ -537,10 +538,11 @@ namespace breseq {
 				}
 			}
 		}
+    printAutoUsage();
 		printVerbose( "Unknown command argument option: " );
 		printVerbose( opt  ) ;
-		printVerbose( );
-		printAutoUsage();
+    printVerbose( );
+    printVerbose( );
     exit(-1);
 		//return  -1;
 	}
@@ -560,10 +562,11 @@ namespace breseq {
 				}
 			}
 		}
+    printAutoUsage();
 		printVerbose( "Unknown command argument option: " );
 		printVerbose( c ) ;
-		printVerbose( );
-		printAutoUsage();
+    printVerbose( );
+    printVerbose( );
     exit(-1);
 		//return false;
 	}
@@ -939,7 +942,7 @@ namespace breseq {
   }
   
   void
-	AnyOption::printAdvanced()
+	AnyOption::printAdvancedUsage()
 	{
     if( once ) {
 			once = false ;

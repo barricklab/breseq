@@ -60,52 +60,72 @@ int do_bam2aln(int argc, char* argv[]) {
   options.addUsage("Display reads aligned to the specified region or regions.");
   options.addUsage("");
   options.addUsage("Allowed Options");
-	options
-  ("help,h", "Produce help message showing advanced options", TAKES_NO_ARGUMENT)
-  ("bam,b", "BAM database file of read alignments", "data/reference.bam")
-	("fasta,f", "FASTA file of reference sequences", "data/reference.fasta")
-  ("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=region1.*). If there are multiple regions, this argument must be a directory path, and all output files will be output here with names region1.*, region2.*, ... (DEFAULT=.)")
-  ("region,r", "Regions to create alignments for. Must be provided as sequence regions in the format ACCESSION:START-END, where ACCESSION is a valid identifier for one of the sequences in the FASTA file, and START and END are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments")
-  ("format", "Format of output alignment(s): HTML or TXT", "HTML")
-  ("max-reads,n", "Maximum number of reads to show in alignment", 200)
-  ("repeat", "Show reads with multiple best matches in reference", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-  ("quality-score-cutoff,c", "Quality score cutoff below which reads are highlighted as yellow", 0)
-  ("stdout", "Write output to stdout", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-  .processCommandArgs(argc, argv);  
+  options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+  options("bam,b", "BAM database file of read alignments", "data/reference.bam");
+  options("fasta,f", "FASTA file of reference sequences", "data/reference.fasta");
+  options("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=region1.*). If there are multiple regions, this argument must be a directory path, and all output files will be output here with names region1.*, region2.*, ... (DEFAULT=.)");
+  options("region,r", "Regions to create alignments for. Must be provided as sequence regions in the format ACCESSION:START-END, where ACCESSION is a valid identifier for one of the sequences in the FASTA file, and START and END are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments");
+  options("format", "Format of output alignment(s): HTML or TXT", "HTML");
+  options("max-reads,n", "Maximum number of reads to show in alignment", 200);
+  options("repeat", "Show reads with multiple best matches in reference", TAKES_NO_ARGUMENT, ADVANCED_OPTION);
+  options("quality-score-cutoff,c", "Quality score cutoff below which reads are highlighted as yellow", 0);
+  options("stdout", "Write output to stdout", TAKES_NO_ARGUMENT, ADVANCED_OPTION);
+  options.processCommandArgs(argc, argv);
   
 	// make sure that the config options are good:
-	if(options.count("help")
-     || !file_exists(options["fasta"].c_str())
-     || !file_exists(options["bam"].c_str()) )
-  {
-		options.printUsage();
+  if(options.count("help")) {
+		options.printAdvancedUsage();
 		return -1;
 	}
   
-  vector<string> region_list;
-  if (options.count("region"))
-    region_list= from_string<vector<string> >(options["region"]);
-  
-  // Also take regions off the command line
-  for (int32_t i = 0; i < options.getArgc(); i++)
-  {
-    string region = options.getArgv(i);
-    region_list.push_back(region);
-  }  
-  
-  if (!region_list.size()) {
+  if (!file_exists(options["fasta"].c_str())) {
     options.addUsage("");
-    options.addUsage("You must supply the --region option or unnamed arguments specifying at least one genomic region.");
+    options.addUsage("Could not open input reference FASTA file (-f):\n  " + options["fasta"]);
     options.printUsage();
     return -1;
-  }  
+  }
+                     
+  if (!file_exists(options["bam"].c_str())) {
+    options.addUsage("");
+    options.addUsage("Could not open input BAM file of aligned reads (-b):\n  " + options["bam"]);
+    options.printUsage();
+    return -1;
+  }
   
-  for(uint32_t j = 0; j < region_list.size(); j++)
-  {
-    // clean commas
-    region_list[j] = substitute(region_list[j], ",", "");
+  vector<string> region_list;
+  if (options.count("region")) {
+    region_list= from_string<vector<string> >(options["region"]);
+  }
+  
+  // Also take regions off the command line
+  for (int32_t i = 0; i < options.getArgc(); i++) {
+    string region = options.getArgv(i);
+    region_list.push_back(region);
+  }
+  
+  if (region_list.size() == 0) {
+    options.addUsage("");
+    options.addUsage("No input regions provided (-r or unnamed args).");
+    options.printUsage();
+    return -1;
+  }
+  
+  string format = to_upper(options["format"]);
+  if ((format != "HTML") && (format != "TXT")) {
+    options.addUsage("");
+    options.addUsage("Unknown format requested: " + format);
+    options.printUsage();
+    return -1;
+  }
+  
+  cerr << "COMMAND: BAM2ALN" << endl;
+  cerr << "+++   Creating alignments..." << endl;
+
+  for(uint32_t j = 0; j < region_list.size(); j++) {
     
-    cerr << "Creating alignment for region: " << region_list[j] << endl;
+    cReferenceSequences::normalize_region(region_list[j]);
+    cerr << "  Region : " << region_list[j] << endl;
+    
     
     // Generate Alignment!
     alignment_output ao(
@@ -121,40 +141,31 @@ int do_bam2aln(int argc, char* argv[]) {
     string default_file_name = region_list[j];
     
     string output_string;
-    if (to_upper(options["format"]) == "HTML") {
+    if (format == "HTML") {
       output_string = ao.html_alignment(region_list[j]);
       default_file_name += ".html";
     }
-    else if (to_upper(options["format"]) == "TXT") {
+    else if (format == "TXT") {
       output_string = ao.text_alignment(region_list[j]);
       default_file_name += ".txt";
     }
-    else {
-      options.addUsage("");
-      options.addUsage("Unknown format requested: " + to_upper(options["format"]));
-      options.printUsage();
-      return -1;
-    }
       
-    if (options.count("stdout"))
-    {
+    if (options.count("stdout")) {
       cout << output_string << endl;
-    }
-    else
-    {
+    } else {
       ///Write to file
       string file_name = default_file_name;
             
-      if (options.count("output"))
-      {
+      if (options.count("output")) {
         file_name = options["output"];
         if(region_list.size() > 1)  {
           file_name = (split(options["output"], "."))[0] + "_" + region_list[j] + ".html";  }
       }
       
       ofstream myfile (file_name.c_str());
-      if (myfile.is_open())
-      {
+      cerr << "    File : " << file_name << endl;
+      
+      if (myfile.is_open()) {
         Settings settings;
         if (to_upper(options["format"]) == "HTML")
           myfile << html_header("BRESEQ :: bam2aln output", settings);
@@ -162,11 +173,13 @@ int do_bam2aln(int argc, char* argv[]) {
         if (to_upper(options["format"]) == "HTML")
           myfile << html_footer();
         myfile.close();
+      } else {
+        cerr << "Unable to open file: " << file_name.c_str();
       }
-      else cerr << "Unable to open file";
     }
   }
-    
+  
+  cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
   return 0;
 }
 
@@ -181,26 +194,21 @@ int do_bam2cov(int argc, char* argv[]) {
   options.addUsage("");
   options.addUsage("Allowed Options");
 
-	options
-  ("help,h", "Produce help message showing advanced options", TAKES_NO_ARGUMENT)
+  options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   // required options
-  ("bam,b", "BAM database file of read alignments", "data/reference.bam")
-	("fasta,f", "FASTA file of reference sequences", "data/reference.fasta")
+  options("bam,b", "BAM database file of read alignments", "data/reference.bam");
+  options("fasta,f", "FASTA file of reference sequences", "data/reference.fasta");
   // options controlling what files are output
-  ("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=region1.*). If there are multiple regions, this argument must be a directory path, and all output files will be output here with names region1.*, region2.*, ... (DEFAULT=.)")
-  ("region,r", "Regions to create alignments for. Must be provided as sequence regions in the format ACCESSION:START-END, where ACCESSION is a valid identifier for one of the sequences in the FASTA file, and START and END are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments")
-  ("format", "Format of output plot(s): PNG or PDF", "PNG")
-  ("table,t", "Create tab-delimited file of coverage instead of a plot", TAKES_NO_ARGUMENT)
-  ;
+  options("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=region1.*). If there are multiple regions, this argument must be a directory path, and all output files will be output here with names region1.*, region2.*, ... (DEFAULT=.)");
+  options("region,r", "Regions to create alignments for. Must be provided as sequence regions in the format ACCESSION:START-END, where ACCESSION is a valid identifier for one of the sequences in the FASTA file, and START and END are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments");
+  options("format", "Format of output plot(s): PNG or PDF", "PNG");
+  options("table,t", "Create tab-delimited file of coverage instead of a plot", TAKES_NO_ARGUMENT);
   options.addUsage("", ADVANCED_OPTION);
   options.addUsage("Advanced Output Options", ADVANCED_OPTION);
-  options
-  ("total-only,1", "Only plot/tabulate the total coverage at a position. That is, do not not output the coverage on each genomic strand", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-  ("resolution,p", "Number of positions to output coverage information for in interval (0=ALL)", 600, ADVANCED_OPTION)
-  ("show-average,a", "Show the average coverage across the reference sequence as a horizontal line. Only possible if used in the main output directory of breseq output", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-  ("fixed-coverage-scale,s", "Fix the maximum value on plots the coverage scale in plots. If the show-average option is provided, then this is a factor that will be multiplied times the average coverage (e.g., 1.5 x avg). Otherwise, this is a coverage value (e.g., 100-fold coverage)", "", ADVANCED_OPTION)  
-  ;
-  // which regions to create files for
+  options("total-only,1", "Only plot/tabulate the total coverage at a position. That is, do not not output the coverage on each genomic strand", TAKES_NO_ARGUMENT, ADVANCED_OPTION);
+  options("resolution,p", "Number of positions to output coverage information for in interval (0=ALL)", 600, ADVANCED_OPTION);
+  options("show-average,a", "Show the average coverage across the reference sequence as a horizontal line. Only possible if used in the main output directory of breseq output", TAKES_NO_ARGUMENT, ADVANCED_OPTION);
+  options("fixed-coverage-scale,s", "Fix the maximum value on plots the coverage scale in plots. If the show-average option is provided, then this is a factor that will be multiplied times the average coverage (e.g., 1.5 x avg). Otherwise, this is a coverage value (e.g., 100-fold coverage)", "", ADVANCED_OPTION);
   
   options.addUsage("", ADVANCED_OPTION);
   options.addUsage("Tiling Mode (produce plots that span reference sequences from end to end)", ADVANCED_OPTION);
@@ -215,17 +223,23 @@ int do_bam2cov(int argc, char* argv[]) {
 
   if (options.count("help"))
   {
-    options.printAdvanced();
+    options.printAdvancedUsage();
     exit(-1);
   }
   
-  // make sure that the required config options are good:
-	if(   !file_exists(options["fasta"].c_str() )
-     || !file_exists(options["bam"].c_str()   ) )
-  {
-		options.printUsage();
-		return -1;
-	}
+  if (!file_exists(options["fasta"].c_str())) {
+    options.addUsage("");
+    options.addUsage("Could not open input reference FASTA file (-f):\n  " + options["fasta"]);
+    options.printUsage();
+    return -1;
+  }
+  
+  if (!file_exists(options["bam"].c_str())) {
+    options.addUsage("");
+    options.addUsage("Could not open input BAM file of aligned reads (-b):\n  " + options["bam"]);
+    options.printUsage();
+    return -1;
+  }
   
   vector<string> region_list;
   if (options.count("region"))
@@ -244,15 +258,25 @@ int do_bam2cov(int argc, char* argv[]) {
   
   if (!tiling_mode && !region_list.size()) {
     options.addUsage("");
-    options.addUsage("You must supply the --region option or unnamed arguments specifying at least one genomic region.");
+    options.addUsage("You must supply at least one genomic region (-r).");
     options.printUsage();
     return -1;
   }
   
   if (tiling_mode && (region_list.size() > 0))
   {
-    WARN("Tiling mode activated. Ignoring " + to_string(region_list.size()) + " regions that were specified.");
-    region_list.clear();
+    options.addUsage("");
+    options.addUsage("You cannot both provide specific regions (-r) and use tiling mode.");
+    options.printUsage();
+    return -1;
+  }
+  
+  cerr << "COMMAND: BAM2COV" << endl;
+  
+  if (options.count("table")) {
+    cerr << "+++   Tabulating coverage..." << endl;
+  } else {
+    cerr << "Plotting coverage..." << endl;
   }
   
   // create empty settings object to have R script name
@@ -315,15 +339,16 @@ int do_bam2cov(int argc, char* argv[]) {
   
   for(vector<string>::iterator it = region_list.begin(); it!= region_list.end(); it++)
   {
+    string& region = *it;
 // these are experimental... additional table files
 //    if (options.count("read_start_output"))
 //      co.read_begin_output_file_name(options["read_start_output"]);
 //    if (options.count("gc_output"))
 //      co.gc_output_file_name(options["gc_output"]);
     
-    // clean commas
-    *it = substitute(*it, ",", "");
-    
+    cReferenceSequences::normalize_region(region);
+    cerr << "  Region : " << region << endl;
+
     string file_name;
     if (region_list.size() == 1) {
       if (options["output"].empty()) {
@@ -335,19 +360,22 @@ int do_bam2cov(int argc, char* argv[]) {
       if (options["output"].empty()) {
         file_name = *it;
       } else {
-        file_name = options["output"] + "/" + *it;
+        file_name = options["output"] + "/" + region;
       }
     }
     
     if (options.count("table")) {
-      cout << "Tabulating coverage for region: " << *it << endl;
-      co.table(*it, file_name + ".tab", from_string<uint32_t>(options["resolution"]));
+      file_name += ".tab";
+      cerr << "    File : " << file_name << endl;
+      co.table(region, file_name, from_string<uint32_t>(options["resolution"]));
     } else {
-      cout << "Plotting coverage for region: " << *it << endl;
-      co.plot(*it, file_name + "." + to_lower(options["format"]) , from_string<uint32_t>(options["resolution"]));
+      file_name += "." + to_lower(options["format"]);
+      cerr << "    File : " << file_name << endl;
+      co.plot(region, file_name , from_string<uint32_t>(options["resolution"]));
     }
   }
   
+  cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
   return 0;
 }
 
@@ -355,70 +383,248 @@ int do_convert_fastq(int argc, char* argv[])
 {
   
 	// setup and parse configuration options:
-	AnyOption options("Usage: breseq ANALYZE_FASTQ --i input.fastq -o output.fastq");
-	options
-  ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-  ("input,i", "input FASTQ file")
-  ("output,o", "output FASTQ file")
-  ("in-format,1", "format to convert from")
-  ("out-format,2", "format to convert to")
-  ("reverse-complement,r", "reverse complement all reads and add _RC to their names", TAKES_NO_ARGUMENT)
-   .processCommandArgs(argc, argv);
+	AnyOption options("Usage: breseq CONVERT-FASTQ [-o output.fastq -1 ILLUMINA_1.3+ -2 SANGER -r] input.fastq");
   options.addUsage("");
-  options.addUsage("Valid formats are 'SANGER', 'SOLEXA', 'ILLUMINA_1.3+'.");
+  options.addUsage("Convert between FASTQ formats using different base pair quality encodings.");
   options.addUsage("");
-  options.addUsage("See http://wikipedia.org/wiki/FASTQ_format for a description of FASTQ formats.");
-	
-	// make sure that the config options are good:
-	if(options.count("help")
-		 || !options.count("input")
-     || !options.count("output")
-     || !options.count("in-format")
-     || !options.count("out-format")
-		 ) {
-		options.printUsage();
+  options.addUsage("Valid input/output formats are 'SANGER', 'SOLEXA', 'ILLUMINA_1.3+'. GUESS will attempt to determine the input format by analyzing read quality scores. See http://wikipedia.org/wiki/FASTQ_format for a description of FASTQ formats.");
+  options.addUsage("");
+  options.addUsage("Allowed Options");
+  options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+  options("output,o", "output FASTQ file", "output.fastq");
+  options("input-format,1", "format to convert from", "GUESS");
+  options("output-format,2", "format to convert to", "SANGER");
+  options("reverse-complement,r", "reverse complement all reads and add _RC to their names", TAKES_NO_ARGUMENT);
+  
+  options.processCommandArgs(argc, argv);
+  
+	// handle help
+  if (options.count("help")) {
+		options.printAdvancedUsage();
 		return -1;
-	}                       
-    
-  convert_fastq(options["input"], options["output"], options["in-format"], options["out-format"], options.count("reverse-complement"));
+	}
+     
+  if (options.getArgc() == 0) {
+    options.printUsage();
+    return -1;
+  }
+  
+  // make sure that the config options are good:
+  if (options.getArgc() != 1) {
+    options.addUsage("");
+    options.addUsage("Please provide exactly one input FASTQ file.");
+    options.printUsage();
+    return -1;
+  }
+  
+  string input_file_name = options.getArgv(0);
+  string output_file_name = options["output"];
+  string input_format = options["input-format"];
+  string output_format = options["output-format"];
 
+  cerr << "COMMAND: CONVERT-FASTQ" << endl;
+  cerr << " Input file    : " << input_file_name << endl;
+  cerr << " Input format  : " << input_format << endl;
+  cerr << " Output file   : " << input_file_name << endl;
+  cerr << " Output format : " << input_file_name << endl;
+
+  
+  bool guessed_format = false;
+  if (input_format == "GUESS") {
+    cerr << "+++   Predicting input format..." << endl;
+
+    uint64_t original_num_reads;
+    uint64_t original_num_bases;
+    uint32_t max_read_length;
+    uint8_t min_quality_score;
+    uint8_t max_quality_score;
+    
+    input_format = cFastqQualityConverter::predict_fastq_file_format(input_file_name, original_num_reads, original_num_bases, max_read_length, min_quality_score, max_quality_score);
+    
+    cerr << " Predicted input format : " << input_format << endl;;
+  }
+
+  cerr << "+++   Converting FASTQ..." << endl;
+  convert_fastq(input_file_name, output_file_name, input_format, output_format, options.count("reverse-complement"));
+
+  cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
   return 0;
 }
 
 int do_convert_reference(int argc, char* argv[]) {
 	
 	// setup and parse configuration options:
-	AnyOption options("Usage: breseq CONVERT-REFERENCE -i input.gbk [--fasta output.fna] OR [--gff output.gff]");
-	options
-		("input,i", "Input reference file(s). (Format: Fasta, GFF, GenBank)")
-		("fasta",   "FASTA format output path.")
-    ("gff",     "GFF format output path.")
-	.processCommandArgs(argc, argv);
-	
-	// make sure that the config options are good:
-  if (!options.count("input")) {
-    options.addUsage("No input reference file given.");
-		options.printUsage();
-		return -1;
-	}
+	AnyOption options("Usage: breseq CONVERT-REFERENCE [-f FASTA -o output.fna] input.gbk");
+  options.addUsage("");
+  options.addUsage("Convert a reference genome into another format. If multiple sequences");
+  options.addUsage("are present in the input files, they will be merged into one output file.");
+  options.addUsage("");
+  options.addUsage("Allowed Options");
+  options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+  options("format,f", "Output format. Valid options: FASTA, GFF, CSV (Default = FASTA)", "FASTA");
+  options("output,o", "Output reference file path (Default = output.*)");
 
-  if (!options.count("fasta") && !options.count("gff")) {
-    options.addUsage("No output path and format given.");
-		options.printUsage();
-		return -1;
+	options.processCommandArgs(argc, argv);
+	
+  if (options.count("help")) {
+    options.printUsage();
+    return -1;
   }
+  
+	// make sure that the config options are good:
+  if (options.getArgc() == 0) {
+    options.addUsage("");
+    options.addUsage("No input reference file(s) provided (-r).");
+		options.printUsage();
+    return -1;
+	}
+  
+  cerr << "COMMAND: CONVERT-REFERENCE" << endl;
 
   
+  cerr << "+++   Loading reference files..." << endl;
+  vector<string> reference_file_names;
+  for (int32_t i = 0; i < options.getArgc(); ++i) {
+    cout << "  Input : " << options.getArgv(i) << endl;
+    reference_file_names.push_back(options.getArgv(i));
+  }
+  
   cReferenceSequences refs;
-  refs.LoadFiles(from_string<vector<string> >(options["input"]));
+  refs.LoadFiles(reference_file_names);
 
-  if (options.count("fasta")) refs.WriteFASTA(options["fasta"]);
-
-  if (options.count("gff")) refs.WriteGFF(options["gff"]);
-
+  cerr << "+++   Writing reference file..." << endl;
+  
+  string output_format = to_upper(options["format"]);
+  cerr << "  Output : " << options["output"] << endl;
+  cerr << "  Format : " << output_format << endl;
+  if (output_format == "FASTA") {
+    refs.WriteFASTA(options.count("output") ? options["output"] : "output.fna");
+  } else if (output_format == "GFF") {
+    refs.WriteGFF(options.count("output") ? options["output"] : "output.gff");
+  } else if (output_format == "CSV") {
+    refs.WriteCSV(options.count("output") ? options["output"] : "output.csv");
+  }
 	
+  cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
 	return 0;
 }
+
+int do_get_sequence(int argc, char *argv[])
+{
+  AnyOption options("Usage: breseq GET-SEQUENCE [-o output.fna -c -r input.gbk] REL606:50-100 [REL606:378-403 ...]");
+  options.addUsage("");
+  options.addUsage("Takes a reference sequence and outputs the DNA base sequences of specific regions in FASTA format.");
+  options.addUsage("");
+  options.addUsage("Regions are of the format ACCESSION:START-END. For example, REL606:1234-2345");
+  options.addUsage("");
+  options.addUsage("If START is greater than END, then the reverse complement sequence will be returned.");
+  options("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED) (Default=data/reference.fasta)");
+  options("output,o","output FASTA file. Will write to STDOUT if not provided.");
+  options("reverse-complement,c","reverse complement", TAKES_NO_ARGUMENT);
+  options.processCommandArgs(argc, argv);
+  
+
+  
+  // Handle help
+  if (options.count("help")) {
+    options.printAdvancedUsage();
+    return -1;
+  }
+  
+  if (options.getArgc() == 0) {
+    options.addUsage("");
+    options.addUsage("Must provide at least one region to retrieve sequence for.");
+    options.printUsage();
+    return -1;
+  }
+  
+  cerr << "COMMAND: GET-SEQUENCE" << endl;
+  
+  // Sets default
+  vector<string> reference_file_names;
+  if (options.count("reference") == 0) {
+    reference_file_names.push_back("data/reference.fasta");
+  } else {
+    reference_file_names = from_string<vector<string> >(options["reference"]);
+  }
+  
+  if (reference_file_names.size() == 0) {
+    options.addUsage("");
+    options.addUsage("Must provide reference sequence(s) (-r).");
+    options.printUsage();
+    return -1;
+  }
+  
+  vector<string> region_list;
+  
+  bool do_reverse_complement = options.count("reverse-complement");
+  bool to_stdout = !options.count("output");
+  
+  // Also take positions off the command line
+  for (int32_t i = 0; i < options.getArgc(); i++)
+  {
+    string position = options.getArgv(i);
+    region_list.push_back(position);
+  }
+  
+  cerr << "+++   Loading reference sequence(s)..." << endl;
+
+  cReferenceSequences ref_seq_info, new_seq_info;
+  ref_seq_info.LoadFiles(reference_file_names);
+  
+  for(uint32_t j = 0; j < region_list.size(); j++)
+  {
+    // clean commas
+    region_list[j] = substitute(region_list[j], ",", "");
+    
+    cerr << "+++   Retrieving sequence of region..." << endl;
+    
+    uint32_t replace_target_id, replace_start, replace_end;
+    string seq_name = "";
+    
+    do_reverse_complement = ref_seq_info.normalize_region(region_list[j]);
+    ref_seq_info.parse_region(region_list[j], replace_target_id, replace_start, replace_end);
+    
+    cerr << "  ACCESSION : " << ref_seq_info[replace_target_id].m_seq_id << endl;
+    cerr << "  START     : " << replace_start << endl;
+    cerr << "  END       : " << replace_end << endl;
+    cerr << "  STRAND    : " << (do_reverse_complement ? "Reverse" : "Forward") << endl;
+    cerr << endl;
+    
+    ASSERT((uint32_t)ref_seq_info[replace_target_id].m_length >= replace_start && (uint32_t)ref_seq_info[replace_target_id].m_length >= replace_end,
+           "START:\t" + to_string(replace_start) + "\n" +
+           "END:\t" + to_string(replace_end) + "\n" +
+           "SIZE:\t" + to_string(ref_seq_info[replace_target_id].m_length) + "\n" +
+           "Neither START or END can be greater than the SIZE of " + ref_seq_info[replace_target_id].m_seq_id + ".");
+    
+    seq_name = ref_seq_info[replace_target_id].m_seq_id + ":" + to_string(replace_start) + "-" + to_string(replace_end);
+    
+    new_seq_info.add_new_seq(seq_name, "");
+    cAnnotatedSequence& new_seq = new_seq_info[seq_name];
+    new_seq.m_fasta_sequence = ref_seq_info[replace_target_id].m_fasta_sequence;
+    new_seq.m_fasta_sequence.m_name = seq_name;
+    new_seq.m_fasta_sequence.m_sequence = to_upper(ref_seq_info.get_sequence_1(replace_target_id, replace_start, replace_end));
+    if(do_reverse_complement)
+      new_seq.m_fasta_sequence.m_sequence = reverse_complement(new_seq.m_fasta_sequence.m_sequence);
+    new_seq.m_seq_id = region_list[j];
+    new_seq.m_length = new_seq.m_fasta_sequence.m_sequence.size();
+    
+    if(to_stdout)  {
+      cout << new_seq.m_fasta_sequence << endl;
+    }
+  }
+  
+  if(options.count("output"))  {
+    cerr << "+++   Writing sequence(s) to file..." << endl;
+    cerr << "  Output : " << options["output"] << endl;
+
+    new_seq_info.WriteFASTA(options["output"]);
+  }
+  
+  cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
+  return 0;
+}
+
 
 
 /*! Error Count
@@ -492,7 +698,7 @@ int do_error_count(int argc, char* argv[]) {
 int do_tabulate_contingency_loci(int argc, char* argv[]) {
 	
 	// setup and parse configuration options:
-	AnyOption options("Usage: breseq TABULATE_CL --bam <sequences.bam> --fasta <reference.fasta> --reference <reference.gff> --output <path> [--loci <loci.txt> --strict]");
+	AnyOption options("Usage: breseq CL_TABULATE --bam <sequences.bam> --fasta <reference.fasta> --reference <reference.gff> --output <path> [--loci <loci.txt> --strict]");
 	options
   ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
   ("bam,b", "bam file containing sequences to be aligned", "data/reference.bam")
@@ -792,113 +998,6 @@ int do_periodicity(int argc, char *argv[])
   return 0;
 }
 
-
-
-int do_get_sequence(int argc, char *argv[])
-{
-  AnyOption options("Usage: breseq GET-SEQUENCE -r input.gbk -o output.fna -p <REL606:50-100>");
-  options("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED) (Default=data/reference.fasta)");
-  options("output,o","output FASTA file. Will write to stdout if not provided");
-  options("position,p","subsequence to extract, in format Sequence_ID:Start-End");
-  options("reverse-complement,c","reverse complement", TAKES_NO_ARGUMENT);
-  options.processCommandArgs(argc, argv);
-  
-  options.addUsage("");
-  options.addUsage("Takes a reference sequence and outputs to FASTA a subset");
-  options.addUsage("of the sequence.  Using '0' as the End position will set");  
-  options.addUsage("it to the length of the relevant sequence.");
-  
-  if(argc == 1)  {
-    options.printUsage();
-    return -1;  }
-  
-  // Sets default
-  vector<string> reference_file_names;
-  if (options.count("reference") == 0) {
-    reference_file_names.push_back("data/reference.fasta");
-  } else {
-    reference_file_names = from_string<vector<string> >(options["reference"]);
-  }
-   
-  vector<string> region_list;  
-  
-  bool do_reverse_complement = options.count("reverse-complement");
-  bool to_stdout = !options.count("output");
-  
-  if (options.count("position"))  {
-    region_list = from_string<vector<string> >(options["position"]);  }
-  
-  // Also take positions off the command line
-  for (int32_t i = 0; i < options.getArgc(); i++)
-  {
-    string position = options.getArgv(i);
-    region_list.push_back(position);
-  }
-  
-  if (!region_list.size()) {
-    options.addUsage("");
-    options.addUsage("You must supply the --position|-p option for input.");
-    options.printUsage();
-    return -1;
-  }
-  
-  cReferenceSequences ref_seq_info, new_seq_info;
-  ref_seq_info.LoadFiles(reference_file_names);
-  
-  for(uint32_t j = 0; j < region_list.size(); j++)
-  {    
-    uint32_t replace_target_id, replace_start, replace_end;
-    string seq_name = "";
-    
-    ref_seq_info.parse_region(region_list[j], replace_target_id, replace_start, replace_end);
-    
-    if(!replace_end)  {
-      replace_end = ref_seq_info[replace_target_id].m_length;  
-    }
-    
-    if (replace_start > replace_end) {
-      cout << "START greater than END." << " Creating reverse complement" << endl;
-      swap(replace_start, replace_end);
-      do_reverse_complement = true;
-    }
-    
-    if(to_stdout)
-    {
-      cout << "Sequence ID:      " << ref_seq_info[replace_target_id].m_seq_id << endl;
-      cout << "Start Position:   " << replace_start << endl;
-      cout << "End Position:     " << replace_end << endl;
-      cout << "Genome Strand:    " << (do_reverse_complement ? "Bottom" : "Top") << endl;
-    }
-    
-    ASSERT((uint32_t)ref_seq_info[replace_target_id].m_length >= replace_start && (uint32_t)ref_seq_info[replace_target_id].m_length >= replace_end,
-           "START:\t" + to_string(replace_start) + "\n" +
-           "END:\t" + to_string(replace_end) + "\n" +
-           "SIZE:\t" + to_string(ref_seq_info[replace_target_id].m_length) + "\n" +
-           "Neither START or END can be greater than the SIZE of " + ref_seq_info[replace_target_id].m_seq_id + ".");
-    
-    seq_name = ref_seq_info[replace_target_id].m_seq_id + ":" + to_string(replace_start) + "-" + to_string(replace_end);
-    
-    new_seq_info.add_new_seq(seq_name, "");
-    cAnnotatedSequence& new_seq = new_seq_info[seq_name];
-    new_seq.m_fasta_sequence = ref_seq_info[replace_target_id].m_fasta_sequence;    
-    new_seq.m_fasta_sequence.m_name = seq_name;
-    new_seq.m_fasta_sequence.m_sequence = to_upper(ref_seq_info.get_sequence_1(replace_target_id, replace_start, replace_end));
-    if(do_reverse_complement) 
-      new_seq.m_fasta_sequence.m_sequence = reverse_complement(new_seq.m_fasta_sequence.m_sequence);
-    new_seq.m_seq_id = region_list[j];
-    new_seq.m_length = new_seq.m_fasta_sequence.m_sequence.size();
-    
-    if(to_stdout)  {
-      cout << new_seq.m_fasta_sequence << endl;  
-    }
-  }
-  
-  if(options.count("output"))  {
-    new_seq_info.WriteFASTA(options["output"]);  
-  }  
-  
-  return 0;
-}
 
 int do_junction_polymorphism(int argc, char *argv[])
 {
@@ -2170,7 +2269,7 @@ int main(int argc, char* argv[]) {
   // Print out our generic header
   Settings::command_line_run_header();
   
-  // Sequence Utility Commands:
+  // Sequence COMMANDs:
   if (command == "CONVERT-FASTQ") {
 		return do_convert_fastq(argc_new, argv_new);
 	} else if (command == "CONVERT-REFERENCE") {
@@ -2199,9 +2298,9 @@ int main(int argc, char* argv[]) {
     return do_error_count(argc_new, argv_new);
   } else if (command == "JUNCTION-POLYMORPHISM") {
     return do_junction_polymorphism(argc_new, argv_new);
-  } else if (command == "CL_TABULATE") {
+  } else if (command == "CL-TABULATE") {
     return do_tabulate_contingency_loci(argc_new, argv_new);
-  } else if (command == "CL_SIGNIFICANCE") {
+  } else if (command == "CL-SIGNIFICANCE") {
     return do_analyze_contingency_loci_significance( argc_new, argv_new);
   } else if (command == "ASSEMBLE-UNMATCHED") {
     return do_assemble_unmatched( argc_new, argv_new);

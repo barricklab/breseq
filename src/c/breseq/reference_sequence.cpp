@@ -1139,6 +1139,53 @@ void cReferenceSequences::WriteGFF( const string &file_name){
   out.close();
 }
 
+  
+  
+// This only outputs the features. No sequence!
+void cReferenceSequences::WriteCSV(const string &file_name) {
+  ofstream out(file_name);
+  out << join(make_vector<string>("seq_id")("start")("end")("strand")("feat_id")("feat_type")("gene")("desc"), ",") << endl;
+  enum {SEQ_ID = 0, START_1, END_1, STRAND, FEAT_ID, FEAT_TYPE, GENE, DESCRIPTION, NUM_COLS};
+
+  // iterate through sequences
+  for (vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
+    
+    // sort the list
+    it_as->m_features.sort();
+    
+    // iterate through features
+    for (cSequenceFeatureList::iterator it = it_as->m_features.begin(); it != it_as->m_features.end(); it++) {
+      cSequenceFeature& feat = **it;
+      
+      // skip first example of doubly-loaded feature that overlaps circular genome
+      if (feat.get_start_1() < 1)
+        continue;
+      
+      vector<string> columns(NUM_COLS, "");
+      
+      columns[SEQ_ID] = double_quote(it_as->m_seq_id);
+      columns[STRAND] = feat.is_top_strand() ? "1" : "-1";
+      if (feat.count("accession"))   columns[FEAT_ID] = double_quote(feat["accession"]);
+      if (feat.count("type"))   columns[FEAT_TYPE] = double_quote(feat["type"]);
+      if (feat.count("name"))   columns[GENE] = double_quote(feat["name"]);
+      if (feat.count("product"))   columns[DESCRIPTION] =  double_quote(feat["product"]);
+      
+      //Note: Adds start_1 and end_1 below.
+      
+      //Attributes
+      const vector<cLocation> locations = feat.m_location.get_all_sub_locations();
+      for (uint32_t i = 0; i < locations.size(); ++i) {
+        columns[START_1] = to_string(locations[i].get_start_1());
+        columns[END_1]   = to_string(locations[i].get_end_1());
+        
+        out << join(columns, ",") << endl;
+      }
+    }
+  }
+
+  
+}
+
 void cReferenceSequences::ReadGenBank(const string& in_file_name) {
 
   ifstream in(in_file_name.c_str(), ios_base::in);

@@ -697,6 +697,9 @@ namespace breseq {
     //!< Read/Write a tab delimited GFF3 file
     void ReadGFF(const string& file_name);
     void WriteGFF(const string &file_name);
+    
+    //!< Write CSV file, suitable for input into R
+    void WriteCSV(const string &file_name);
 
     //!< Read GenBank file
     void ReadGenBank(const string& in_file_names);
@@ -859,6 +862,28 @@ namespace breseq {
       seq_id = split_region[0];
       start_pos_1 = from_string<uint32_t>(split_positions[0]);
       end_pos_1 = from_string<uint32_t>(split_positions[1]);
+    }
+    
+    // normalize a region description
+    // * remove commas from numbers
+    // * flip start and end so start is smaller (returning bool whether this was done)
+    static bool normalize_region(string& region) {
+      region = substitute(region, ",", "");
+      
+      string seq_id;
+      uint32_t start_pos_1;
+      uint32_t end_pos_1;
+      
+      parse_region(region, seq_id, start_pos_1, end_pos_1);
+      bool reverse = false;
+      
+      if (start_pos_1>end_pos_1) {
+        reverse = true;
+        std::swap(start_pos_1, end_pos_1);
+      }
+      
+      region = seq_id + ":" + to_string<int32_t>(start_pos_1) + "-" + to_string<int32_t>(end_pos_1);
+      return reverse;
     }
     
     map<string,int32_t> seq_order;

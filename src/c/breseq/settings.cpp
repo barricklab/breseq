@@ -291,7 +291,7 @@ namespace breseq
     // make sure that the other config options are good:
     if (options.count("help"))
     {
-      options.printAdvanced();
+      options.printAdvancedUsage();
       exit(-1);
     }
     

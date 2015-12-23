@@ -114,7 +114,6 @@ namespace breseq {
   
 #define ASSERT(condition, message) { my_assertion_handler( condition,  __FILE__, __BASE_FILE__, __LINE__, message); }
 #define ERROR(message) { my_assertion_handler( false,  __FILE__, __BASE_FILE__, __LINE__, message); }
-//#define WARN(message) { my_warning_handler( false,  __FILE__, __BASE_FILE__, __LINE__, message); }
 #define WARN(message) { my_warning_handler( false,  NULL, NULL, 0, message); }
 #define CHECK(condition, message) { my_warning_handler( condition,  __FILE__, __BASE_FILE__, __LINE__, message); }
   
@@ -729,6 +728,11 @@ namespace breseq {
       string str = input;
       transform(str.begin(), str.end(),str.begin(), (int (*)(int))std::tolower);
       return str;
+  }
+  
+  inline string double_quote(const string& input)
+  {
+    return "\"" + input + "\"";
   }
   
   //! special handling of NA and INF, compatible with C++ limits and R representations

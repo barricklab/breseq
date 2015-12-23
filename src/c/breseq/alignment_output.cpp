@@ -341,7 +341,7 @@ void alignment_output::create_alignment ( const string& region, cOutputEvidenceI
   // we need the target_id to properly fill out the reference sequence later
   uint32_t target_id, start_pos, end_pos, insert_start, insert_end;
   m_alignment_output_pileup.parse_region(region, target_id, start_pos, end_pos, insert_start, insert_end);
-  
+    
   // Check for special reference lines that are junctions...
   bool bDrawAnnotationLine = true;    // draw the | annotation line pointing to region?
   
