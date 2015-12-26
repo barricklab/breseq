@@ -307,15 +307,13 @@ Line specification:
 
    number of bases inserted after the reference position to get to this base. An value of zero refers to the base. A value of 5 means that this evidence if for the fifth newly inserted column after the reference position.
 
-7. **major_base** *<char>*
+7. **ref_base** *<char>*
 
    base in the reference genome.
    
-8. **minor_base** *<char>*
+8. **new_base** *<char>*
 
    new base supported by read alignment evidence.
-
-:warning: In |breseq| versions before 0.27, RA evidence was defined slightly differently, as 7. **ref_base** and 8. **minor base**
 
 MC: Missing coverage evidence
 """""""""""""""""""""""""""""
