@@ -2196,15 +2196,23 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
         continue;
 
       if (de._type == RA) {
+        
+        // Special case for previous way of handling RA bases... we skip these b/c both
+        // of the bases used are not the reference base
+        if (de.count("error") && (de["error"] == "polymorphic_without_reference_base")) {
+          continue;
+        }
+        
         uint32_t position = from_string<uint32_t>(de[POSITION]);
         uint32_t insert_position = from_string<uint32_t>(de[INSERT_POSITION]);
         string test_ref_base = ((insert_position == 0) ? ref_seq.get_sequence_1(de[SEQ_ID], position, position) : ".");
+            
         if (de[REF_BASE] != test_ref_base) {
-          parse_errors.add_line_error(from_string<uint32_t>(de["_line_number"]), de.as_string(), "Specified REF_BASE does not match actual reference base (" + test_ref_base + ") at the specified positon.", true);
+          parse_errors.add_line_error(from_string<uint32_t>(de["_line_number"]), de.as_string(), "Specified REF_BASE does not match actual reference base (" + test_ref_base + ") at the specified positon.", false);
         }
         
         if (de[REF_BASE] == de[NEW_BASE]) {
-          parse_errors.add_line_error(from_string<uint32_t>(de["_line_number"]), de.as_string(), "Specified REF_BASE and NEW_BASE are the same.", true);
+          parse_errors.add_line_error(from_string<uint32_t>(de["_line_number"]), de.as_string(), "Specified REF_BASE and NEW_BASE are the same.", false);
         }
       }
       if (de._type == SNP) {

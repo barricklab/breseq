@@ -37,7 +37,8 @@ namespace breseq {
                                 const vector<string>& ref_seq_file_names,
                                 const string& output,
                                 const string& loci,
-                                int strict
+                                const uint32_t minimum_length,
+                                bool strict
                                 );
 	
   void analyze_contingency_loci_significance(const string& output, const vector<string>& strainfiles);
@@ -65,7 +66,11 @@ namespace breseq {
   typedef vector<homopolymer_repeat> homopolymer_repeat_list;
 
   // Function to identify repeats
-  void identify_homopolymer_repeats(homopolymer_repeat_list& hr, const cReferenceSequences& ref_seqs);
+  void identify_homopolymer_repeats(
+                                    homopolymer_repeat_list& hr,
+                                    const cReferenceSequences& ref_seqs,
+                                    const uint32_t minimum_length
+                                    );
   
 	/*! Error-counting class.
 	 

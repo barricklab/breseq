@@ -33,20 +33,21 @@ void analyze_contingency_loci(
                               const vector<string>& ref_seq_file_names,
                               const string& output,
                               const string& loci,
-                              int strict
+                              const uint32_t minimum_length,
+                              bool strict
                               ) {
   
-  cout << "Loading reference sequences..." << endl;
+  cout << "+++  Loading reference sequences..." << endl;
   
   cReferenceSequences ref_seq_info;
   ref_seq_info.LoadFiles(ref_seq_file_names);
 
-  cout << "Finding repeats..." << endl;
+  cout << "+++  Finding repeats..." << endl;
   homopolymer_repeat_list hr;
-  identify_homopolymer_repeats(hr, ref_seq_info);  
+  identify_homopolymer_repeats(hr, ref_seq_info, minimum_length);
   contingency_loci_pileup clp(bam,fasta, loci, strict);
   
-  cout << "Analyzing alignments..." << endl;
+  cout << "+++ Analyzing alignments..." << endl;
   // For each repeat
   for( size_t i=0; i<hr.size(); i++ ){
     
@@ -130,13 +131,17 @@ void analyze_contingency_loci_significance(const string& output, const vector<st
 
 
 
-void identify_homopolymer_repeats(homopolymer_repeat_list& hr, const cReferenceSequences& ref_seqs)
+void identify_homopolymer_repeats(
+                                  homopolymer_repeat_list& hr,
+                                  const cReferenceSequences& ref_seqs,
+                                  const uint32_t minimum_length
+                                  )
 {
   //For each sequence
   for( size_t i=0; i<ref_seqs.size(); i++ ){
     
     char base = ' ';
-    int rnumber = 0;
+    size_t rnumber = 0;
     
     // For each nucleotide in the sequence
     for( size_t j=0; j<ref_seqs[i].m_fasta_sequence.m_sequence.size(); j++ ){
@@ -144,7 +149,7 @@ void identify_homopolymer_repeats(homopolymer_repeat_list& hr, const cReferenceS
         rnumber++;
       }
       else{
-        if( (base != 'N') && (rnumber >= 8) ){
+        if( (base != 'N') && (rnumber >= minimum_length) ){
           homopolymer_repeat r;
           r.seq_id = ref_seqs[i].m_fasta_sequence.m_name;
           r.start = j+1-rnumber;
@@ -158,7 +163,7 @@ void identify_homopolymer_repeats(homopolymer_repeat_list& hr, const cReferenceS
       }
     }
     // This checks if the last nucleotide was part of a repeat
-    if( rnumber >= 8 ){
+    if( rnumber >= minimum_length ){
       homopolymer_repeat r;
       r.seq_id = ref_seqs[i].m_fasta_sequence.m_name;
       r.start = ref_seqs[i].m_fasta_sequence.m_sequence.size()+1-rnumber;
@@ -466,14 +471,11 @@ void contingency_loci_pileup::printStats(const string& output, cReferenceSequenc
   }
   
   //
-  // Create header
+  // Create header line
   //
   
   vector<string> header_list;
-  for( size_t j=1; j<maxsize; j++ ) {
-    header_list.push_back(to_string(j) + "-bp");
-  }
-  
+
   // if we are in locus mode
   if( indices.size() )
     header_list.push_back("locus");
@@ -486,7 +488,11 @@ void contingency_loci_pileup::printStats(const string& output, cReferenceSequenc
   header_list.push_back("gene");
   header_list.push_back("gene_product");
   
-  out << join(header_list, "\t") << endl;
+  for( size_t j=1; j<maxsize; j++ ) {
+    header_list.push_back(to_string(j) + "-bp");
+  }
+  
+  out << join(header_list, ",") << endl;
      
   //
   // Line for each repeat
@@ -499,10 +505,6 @@ void contingency_loci_pileup::printStats(const string& output, cReferenceSequenc
     vector<string> description_list = split_on_any(repeats[i].region, ":-");
     
     cout << i << " " << repeats[i].region << endl;
-    
-    // all of the base count columns
-    for( size_t j=1; j<maxsize; j++ )
-      line_list.push_back( (j<repeats[i].freqs.size()) ? to_string<int32_t>(static_cast<int32_t>(repeats[i].freqs[j])) : "0");
     
     // Checks if it is a contingency loci. If so, prints out the name of the locus
     for( size_t j=1; j<=indices.size(); j++ ) {
@@ -529,7 +531,12 @@ void contingency_loci_pileup::printStats(const string& output, cReferenceSequenc
     line_list.push_back("\"" + de["gene_name"] + "\"");
     line_list.push_back("\"" + de["gene_product"] + "\"");
 
-    out << join(line_list, "\t") << endl;
+    // all of the base count columns
+    for( size_t j=1; j<maxsize; j++ ) {
+      line_list.push_back( (j<repeats[i].freqs.size()) ? to_string<int32_t>(static_cast<int32_t>(repeats[i].freqs[j])) : "0");
+    }
+    
+    out << join(line_list, ",") << endl;
   }
   out.close();
 }
@@ -538,10 +545,6 @@ void contingency_loci_pileup::readIndices( vector<int>& indices, vector<string>&
 {
   
   if (loci == "") return;
-  
-  if( loci.compare("NA") ){
-    indices = vector<int>();
-  }
   
   ifstream file( loci.c_str() );
   vector<int> ind;

@@ -518,12 +518,13 @@ int do_get_sequence(int argc, char *argv[])
   options.addUsage("Regions are of the format ACCESSION:START-END. For example, REL606:1234-2345");
   options.addUsage("");
   options.addUsage("If START is greater than END, then the reverse complement sequence will be returned.");
-  options("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED) (Default=data/reference.fasta)");
+  options.addUsage("");
+  options.addUsage("Allowed Options");
+  options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+  options("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (Default=data/reference.fasta)");
   options("output,o","output FASTA file. Will write to STDOUT if not provided.");
   options("reverse-complement,c","reverse complement", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
-  
-
   
   // Handle help
   if (options.count("help")) {
@@ -583,12 +584,15 @@ int do_get_sequence(int argc, char *argv[])
     string seq_name = "";
     
     do_reverse_complement = ref_seq_info.normalize_region(region_list[j]);
+    if (options.count("reverse-complement")) {
+      do_reverse_complement = !do_reverse_complement;
+    }
     ref_seq_info.parse_region(region_list[j], replace_target_id, replace_start, replace_end);
     
     cerr << "  ACCESSION : " << ref_seq_info[replace_target_id].m_seq_id << endl;
     cerr << "  START     : " << replace_start << endl;
     cerr << "  END       : " << replace_end << endl;
-    cerr << "  STRAND    : " << (do_reverse_complement ? "Reverse" : "Forward") << endl;
+    cerr << "  STRAND    : " << (do_reverse_complement ? "Reverse (Bottom)" : "Forward (Top)") << endl;
     cerr << endl;
     
     ASSERT((uint32_t)ref_seq_info[replace_target_id].m_length >= replace_start && (uint32_t)ref_seq_info[replace_target_id].m_length >= replace_end,
@@ -698,39 +702,44 @@ int do_error_count(int argc, char* argv[]) {
 int do_tabulate_contingency_loci(int argc, char* argv[]) {
 	
 	// setup and parse configuration options:
-	AnyOption options("Usage: breseq CL_TABULATE --bam <sequences.bam> --fasta <reference.fasta> --reference <reference.gff> --output <path> [--loci <loci.txt> --strict]");
-	options
-  ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-  ("bam,b", "bam file containing sequences to be aligned", "data/reference.bam")
-  ("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
-  ("reference,r","File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)", "data/reference.gff3")
-  ("output,o", "output file", "contingency_loci.tab")
-  ("loci,l", "Contingency loci coordinates", "")
-  ("strict,s", "exclude non-perfect matches in surrounding 5 bases", TAKES_NO_ARGUMENT)
-	.processCommandArgs(argc, argv);
+	AnyOption options("Usage: breseq CL-TABULATE [-s -b data/reference.bam -f data/reference.fasta -r data/reference.gff -o contingency_loci.csv -m 8]");
+  options.addUsage("");
+  options.addUsage("Tabulate the frequencies of length distributions observed for putative contingency loci (homopolymer tracts).");
+  options.addUsage("");
+  options.addUsage("Allowed Options");
+  options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+  options("bam,b", "bam file containing sequences to be aligned", "data/reference.bam");
+  options("fasta,f", "FASTA file of reference sequence", "data/reference.fasta");
+  options("reference,r","File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files", "data/reference.gff3");
+  options("output,o", "Output CSV file", "contingency_loci.csv");
+  options("minimum-length,m", "Minimum length of a homopolymer tract in the reference genome to consider a putative contingency locus", "8");
+  //options("loci,l", "Contingency loci coordinates", "");
+  options("strict,s", "exclude non-perfect matches in surrounding 5 bases", TAKES_NO_ARGUMENT);
+	options.processCommandArgs(argc, argv);
   
-	// make sure that the config options are good:
 	if(options.count("help")
 		 ) {
-		options.printUsage();
-		return -1;
-	}                       
-  
-	// attempt to calculate error calibrations:
-	try {
-    
-    analyze_contingency_loci(
-                             options["bam"],
-                             options["fasta"],
-                             from_string<vector<string> >(options["reference"]),
-                             options["output"],
-                             options["loci"],
-                             options.count("strict")
-                             );
-	} catch(...) {
-		// failed; 
+		options.printAdvancedUsage();
 		return -1;
 	}
+  
+  if ( !file_exists(options["bam"].c_str()) || !file_exists(options["fasta"].c_str()) || !file_exists(options["reference"].c_str()) ) {
+    options.addUsage("");
+    options.addUsage("Provide valid bam, fasta, and reference file paths.");
+    options.printUsage();
+    return -1;
+  }
+  
+	// attempt to calculate error calibrations:
+  analyze_contingency_loci(
+                           options["bam"],
+                           options["fasta"],
+                           from_string<vector<string> >(options["reference"]),
+                           options["output"],
+                           "", //options["loci"], -->leave this blank
+                           from_string<int32_t>(options["minimum-length"]),
+                           options.count("strict")
+                           );
 	
 	return 0;
 }

@@ -2578,6 +2578,7 @@ namespace breseq {
     column_headers.push_back("large_substitution");
     column_headers.push_back("mobile_element_insertion");
     column_headers.push_back("gene_conversion");
+    column_headers.push_back("inversion");
     if (calculate_genome_size) {
       column_headers.push_back("changed_bp");
       column_headers.push_back("deleted_bp");
@@ -2645,7 +2646,7 @@ namespace breseq {
     vector<string> large_substitution_lines;
     vector<string> mobile_element_insertion_lines;
     vector<string> gene_conversion_lines;
-
+    vector<string> inversion_lines;
     
     output_file << join(column_headers, ",") << endl;
     
@@ -2692,7 +2693,7 @@ namespace breseq {
       count["large_substitution"][""] = 0;
       count["gene_conversion"][""] = 0;
       count["mobile_element_insertion"][""] = 0;
-      
+      count["inversion"][""] = 0;
       
       // BEGIN for each mutation
       uint32_t total_mutations(0);
@@ -2717,9 +2718,8 @@ namespace breseq {
           }
           count["type"][mut["snp_type"]]++;
           base_substitution_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
-        }
         
-        if (mut._type == DEL) {
+        } else if (mut._type == DEL) {
           
           if (mut.entry_exists("mediated"))
             count["mob_mediated"][mut["mediated"]]++;
@@ -2731,9 +2731,8 @@ namespace breseq {
             count["small_indel"][""]++;
             small_indel_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
           }
-        }
-        
-        if (mut._type == INS) {
+          
+        } else if (mut._type == INS) {
           int32_t ins_size = mut[NEW_SEQ].size();
           
           if (mut.entry_exists("mediated"))
@@ -2746,9 +2745,8 @@ namespace breseq {
             count["small_indel"][""]++;
             small_indel_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
           }
-        }
-        
-        if (mut._type == SUB) {
+          
+        } else if (mut._type == SUB) {
           int32_t old_size = from_string<int32_t>(mut[SIZE]);
           int32_t new_size = mut[NEW_SEQ].size();
           
@@ -2762,18 +2760,16 @@ namespace breseq {
             count["small_indel"][""]++;
             small_indel_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
           }
-        }
-        
-        if (mut._type == CON) {
+          
+        } else if (mut._type == CON) {
           // TODO: Need size change?
           
           if (mut.entry_exists("mediated"))
             count["con_mediated"][mut["mediated"]]++;
           count["gene_conversion"][""]++;
           gene_conversion_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
-        }
         
-        if (mut._type == MOB) {
+        } else if (mut._type == MOB) {
           int32_t rpos = -1;
           // This includes the MOB and any ins/del start/end adjustments, NOT duplication size
           string mob_region;
@@ -2786,9 +2782,7 @@ namespace breseq {
           count["mobile_element_insertion"][""]++;
           mobile_element_insertion_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
           
-        } 
-        
-        if (mut._type == AMP) {
+        } else if (mut._type == AMP) {
           int32_t this_size = from_string<uint32_t>(mut[SIZE]) * (from_string<uint32_t>(mut["new_copy_number"]) - 1);
           
           if (mut.entry_exists("mediated"))
@@ -2801,6 +2795,14 @@ namespace breseq {
             count["small_indel"][""]++;
             small_indel_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
           }
+        
+        } else if (mut._type == INV) {
+          
+          count["inversion"][""]++;
+          inversion_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
+          
+        } else {
+          ERROR("Could not count mutation:\n" + mut.as_string());
         }
       }
       
@@ -2840,6 +2842,7 @@ namespace breseq {
       this_columns.push_back(to_string(count["large_substitution"][""]));
       this_columns.push_back(to_string(count["mobile_element_insertion"][""]));
       this_columns.push_back(to_string(count["gene_conversion"][""]));
+      this_columns.push_back(to_string(count["inversion"][""]));
       if (calculate_genome_size) {
         this_columns.push_back(gd.get_breseq_data("BASES_CHANGED"));
         this_columns.push_back(gd.get_breseq_data("BASES_DELETED"));
@@ -2893,29 +2896,32 @@ namespace breseq {
     if (detailed_output) {
       ofstream detailed_output_file(detailed_output_file_name.c_str());
       
-      detailed_output_file << "BASE SUBSTITUTIONS:" << base_substitution_lines.size() << "\n";
+      detailed_output_file << "BASE SUBSTITUTIONS: " << base_substitution_lines.size() << "\n";
       detailed_output_file << join(base_substitution_lines, "\n") << "\n\n";
       
-      detailed_output_file << "SMALL INDELS:" << small_indel_lines.size() << "\n";
+      detailed_output_file << "SMALL INDELS: " << small_indel_lines.size() << "\n";
       detailed_output_file << join(small_indel_lines, "\n")<< "\n\n";
       
-      detailed_output_file << "LARGE DELETIONS:" << large_deletion_lines.size() << "\n";
+      detailed_output_file << "LARGE DELETIONS: " << large_deletion_lines.size() << "\n";
       detailed_output_file << join(large_deletion_lines, "\n")<< "\n\n";
       
-      detailed_output_file << "LARGE INSERTIONS:" << large_insertion_lines.size() << "\n";
+      detailed_output_file << "LARGE INSERTIONS: " << large_insertion_lines.size() << "\n";
       detailed_output_file << join(large_insertion_lines, "\n")<< "\n\n";
       
-      detailed_output_file << "LARGE AMPLIFICATIONS:" << large_amplification_lines.size() << "\n";
+      detailed_output_file << "LARGE AMPLIFICATIONS: " << large_amplification_lines.size() << "\n";
       detailed_output_file << join(large_amplification_lines, "\n")<< "\n\n";
       
-      detailed_output_file << "LARGE SUBSTITUTIONS:" << large_substitution_lines.size() << "\n";
+      detailed_output_file << "LARGE SUBSTITUTIONS: " << large_substitution_lines.size() << "\n";
       detailed_output_file << join(large_substitution_lines, "\n")<< "\n\n";
       
-      detailed_output_file << "MOBILE ELEMENT INSERTIONS:" << mobile_element_insertion_lines.size() << "\n";
+      detailed_output_file << "MOBILE ELEMENT INSERTIONS: " << mobile_element_insertion_lines.size() << "\n";
       detailed_output_file << join(mobile_element_insertion_lines, "\n") << "\n\n";
       
-      detailed_output_file << "GENE CONVERSIONS:" << gene_conversion_lines.size() << "\n";
+      detailed_output_file << "GENE CONVERSIONS: " << gene_conversion_lines.size() << "\n";
       detailed_output_file << join(gene_conversion_lines, "\n")<< "\n";
+      
+      detailed_output_file << "INVERSIONS: " << inversion_lines.size() << "\n";
+      detailed_output_file << join(inversion_lines, "\n")<< "\n";
     }
     
   }
