@@ -568,7 +568,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     
     uint32_t tid = ref_seq_info.seq_id_to_index(it->m_seq_id);
     double this_reference_mapped_reads = summary.alignment_resolution.reads_mapped_to_references[tid];  
-    double total_mapped_reads = summary.alignment_resolution.num_total_reads_mapped_references;
+    double total_mapped_reads = summary.alignment_resolution.total_reads_mapped_to_references;
     double this_reference_fraction_mapped_reads = 100 * this_reference_mapped_reads / total_mapped_reads; 
       
     bool fragment_with_fit_coverage = (summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter != 0);

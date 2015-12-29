@@ -37,38 +37,41 @@ namespace breseq{
       class ReadFile {
       public:
         uint64_t num_unmatched_reads;
-//        uint32_t num_unique_reads;
-//        uint32_t num_repeat_reads;
+        uint64_t num_unmatched_bases;
         uint64_t num_total_reads;
+        uint64_t num_total_bases;
+
 
         ReadFile()
         : num_unmatched_reads(0)
-//        , num_unique_reads(0)
-//        , num_repeat_reads(0)
+        , num_unmatched_bases(0)
         , num_total_reads(0)
+        , num_total_bases(0)
         {}
         
         void serialize(ofstream& f)
         {
           write_to_file(f, num_unmatched_reads);
-//          write_to_file(f, num_unique_reads);
-//          write_to_file(f, num_repeat_reads);
+          write_to_file(f, num_unmatched_bases);
           write_to_file(f, num_total_reads);
+          write_to_file(f, num_total_bases);
+
         }
         void deserialize(ifstream& f)
         {
           read_from_file(f, num_unmatched_reads);
-//          read_from_file(f, num_unique_reads);
-//          read_from_file(f, num_repeat_reads);
+          read_from_file(f, num_unmatched_bases);
           read_from_file(f, num_total_reads);
+          read_from_file(f, num_total_bases);
+
         }
         
       };
       storable_map<string,ReadFile> read_file;
       uint64_t total_unmatched_reads;
-//      uint32_t total_unique_reads;
-//      uint32_t total_repeat_reads;
+      uint64_t total_unmatched_bases;
       uint64_t total_reads;
+      uint64_t total_bases;
       int32_t max_sam_base_quality_score; // @JEB only filled in for aligned_sam_mode
       
       // these statistics are implemented
@@ -82,36 +85,52 @@ namespace breseq{
       map<int32_t, int32_t> observed_pos_hash_score_distribution;
       map<int32_t, int32_t> accepted_pos_hash_score_distribution;
 
-      double num_total_reads_mapped_references;
-      storable_vector<double> reads_mapped_to_references;
+      uint64_t total_reads_mapped_to_references;
+      uint64_t total_bases_mapped_to_references;
+      storable_vector<uint64_t> reads_mapped_to_references;
 
       AlignmentResolution()
       : total_unmatched_reads(0)
+      , total_unmatched_bases(0)
       , total_reads(0)
-      , num_total_reads_mapped_references(0)
+      , total_bases(0)
+      , total_reads_mapped_to_references(0)
+      , total_bases_mapped_to_references(0)
       {}
       
 			void serialize(ofstream& f)
 			{
         read_file.serialize(f);
         write_to_file(f, distance_cutoffs);
+        write_to_file(f, total_unmatched_reads);
+        write_to_file(f, total_unmatched_bases);
+        write_to_file(f, total_reads);
+        write_to_file(f, total_bases);
+        write_to_file(f, max_sam_base_quality_score);
 				pos_hash_cutoffs.serialize(f);
 				write_to_file(f, observed_pos_hash_score_distribution);
 				write_to_file(f, accepted_pos_hash_score_distribution);
         write_to_file(f, max_sam_base_quality_score);
-        write_to_file(f, num_total_reads_mapped_references);
+        write_to_file(f, total_reads_mapped_to_references);
+        write_to_file(f, total_bases_mapped_to_references);
         reads_mapped_to_references.serialize(f);
 			}
 			void deserialize(ifstream& f)
 			{
         read_file.deserialize(f);
         read_from_file(f, distance_cutoffs);
+        read_from_file(f, total_unmatched_reads);
+        read_from_file(f, total_unmatched_bases);
+        read_from_file(f, total_reads);
+        read_from_file(f, total_bases);
+        read_from_file(f, max_sam_base_quality_score);
         pos_hash_cutoffs.deserialize(f);
 				read_from_file(f, observed_pos_hash_score_distribution);
 				read_from_file(f, accepted_pos_hash_score_distribution);
         read_from_file(f, max_sam_base_quality_score);
-        read_from_file(f, num_total_reads_mapped_references);
-        reads_mapped_to_references.deserialize(f);        
+        read_from_file(f, total_reads_mapped_to_references);
+        read_from_file(f, total_bases_mapped_to_references);
+        reads_mapped_to_references.deserialize(f);
 			}
 
 		} alignment_resolution;

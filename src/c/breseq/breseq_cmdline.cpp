@@ -1204,11 +1204,6 @@ int breseq_default_action(int argc, char* argv[])
       {
         string base_name = settings.read_files[i].m_base_name;
         
-        
-        
-
-        
-        
         cerr << "  READ FILE::" << base_name << endl;
         
         // If we have reached the read limit or within some number of it -- delete further read files 
@@ -2150,6 +2145,8 @@ int breseq_default_action(int argc, char* argv[])
     mp.predict(settings, summary, mpgd);
     mpgd.reassign_unique_ids();
 
+    // Add metadata that will only be in the output.gd file
+    
     //#=REFSEQ header lines.
     mpgd.metadata.ref_seqs = settings.all_reference_file_names;
     
@@ -2159,14 +2156,32 @@ int breseq_default_action(int argc, char* argv[])
       mpgd.metadata.read_seqs[i] = settings.read_files[i].file_name();
     }
     
-    // Add metadata that will only be in the output.gd file 
-    mpgd.metadata.author = string(PACKAGE_STRING) + " " + string(HG_REVISION);
+    // These fields will be overwritten by any header GenomeDiff provided
+    mpgd.metadata.title = settings.run_name;
+    
+    // Load metadata from existing header GenomeDiff file
+    // This is purposefully done AFTER the previous metadata defs
+    // in order to overwrite those (but not others)
+    if (settings.header_genome_diff_file_name.size() > 0) {
+      cGenomeDiff header_gd(settings.header_genome_diff_file_name);
+      mpgd.metadata = header_gd.metadata;
+    }
+    
+    // Fields here and below will write over any values in the header GenomeDiff file
+    mpgd.metadata.program = string(PACKAGE_STRING) + " " + string(HG_REVISION);
     mpgd.metadata.command = settings.full_command_line;
     mpgd.metadata.created = Settings::time2string(time(NULL));
-    mpgd.metadata.title = settings.run_name;
-
-    /* @JEB: Could add information such as average coverage, etc. as metadate here for
-       generating more detailed summary files at later steps.
+    
+    // Add additional SUMMARY metadata
+    
+    mpgd.add_breseq_data("INPUT-READS", to_string(summary.sequence_conversion.original_num_reads));
+    mpgd.add_breseq_data("INPUT-BASES", to_string(summary.sequence_conversion.original_num_bases));
+    mpgd.add_breseq_data("CONVERTED-READS", to_string(summary.alignment_resolution.total_reads));
+    mpgd.add_breseq_data("CONVERTED-BASES", to_string(summary.alignment_resolution.total_bases));
+    mpgd.add_breseq_data("MAPPED-READS", to_string(summary.alignment_resolution.total_reads_mapped_to_references));
+    mpgd.add_breseq_data("MAPPED-BASES", to_string(summary.alignment_resolution.total_bases_mapped_to_references));
+    
+    /*
     // Add additional header lines if needed.
     if (settings.add_metadata_to_gd){
       for (storable_map<string, Summary::Coverage>::iterator it = summary.unique_coverage.begin();

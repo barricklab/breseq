@@ -1702,6 +1702,12 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
     else if (split_line[0] == "#=AUTHOR") { 
       metadata.author = second_half;
     }
+    else if (split_line[0] == "#=CREATED") {
+      metadata.created = second_half;
+    }
+    else if (split_line[0] == "#=PROGRAM") {
+      metadata.program = second_half;
+    }
     else if (split_line[0] == "#=COMMAND") {
       metadata.command = second_half;
     }
@@ -2272,6 +2278,9 @@ void cGenomeDiff::write(const string& filename) {
   }
   if (metadata.created != "") {
     fprintf(os, "#=CREATED\t%s\n", metadata.created.c_str());
+  }
+  if (metadata.program != "") {
+    fprintf(os, "#=PROGRAM\t%s\n", metadata.program.c_str());
   }
   if (metadata.command != "") {
     fprintf(os, "#=COMMAND\t%s\n", metadata.command.c_str());
@@ -4482,11 +4491,11 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
     cout << "\tMASK: " << count_MASK << endl;
   }
   
-  this->add_breseq_data("BASES_CHANGED", to_string<uint32_t>(bases_changed));
-  this->add_breseq_data("BASES_INSERTED", to_string<uint32_t>(bases_inserted));
-  this->add_breseq_data("BASES_DELETED", to_string<uint32_t>(bases_deleted));
-  this->add_breseq_data("GENOME_SIZE_INITIAL", to_string(ref_seq_info.total_length()));
-  this->add_breseq_data("GENOME_SIZE_FINAL", to_string(new_ref_seq_info.total_length()));
+  this->add_breseq_data("BASES-CHANGED", to_string<uint32_t>(bases_changed));
+  this->add_breseq_data("BASES-INSERTED", to_string<uint32_t>(bases_inserted));
+  this->add_breseq_data("BASES-DELETED", to_string<uint32_t>(bases_deleted));
+  this->add_breseq_data("GENOME-SIZE-INITIAL", to_string(ref_seq_info.total_length()));
+  this->add_breseq_data("GENOME-SIZE-FINAL", to_string(new_ref_seq_info.total_length()));
   
   //Cleanup.  If any of the sequences are of zero length, remove them.
   for (vector<cAnnotatedSequence>::iterator it_as = new_ref_seq_info.begin(); it_as < new_ref_seq_info.end(); it_as++) {

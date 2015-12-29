@@ -2661,13 +2661,6 @@ namespace breseq {
       
       string detailed_line_prefix = join(line_prefix_items, "\t");
       
-      column_headers.push_back("file");
-      column_headers.push_back("sample");
-      column_headers.push_back("treatment");
-      column_headers.push_back("population");
-      column_headers.push_back("time");
-      column_headers.push_back("clone");
-      
       BaseSubstitutionEffectCounts this_bsec;
       // deep copy totals of entire sequence
       if (base_substitution_statistics)
@@ -2762,7 +2755,6 @@ namespace breseq {
           }
           
         } else if (mut._type == CON) {
-          // TODO: Need size change?
           
           if (mut.entry_exists("mediated"))
             count["con_mediated"][mut["mediated"]]++;
@@ -2844,9 +2836,9 @@ namespace breseq {
       this_columns.push_back(to_string(count["gene_conversion"][""]));
       this_columns.push_back(to_string(count["inversion"][""]));
       if (calculate_genome_size) {
-        this_columns.push_back(gd.get_breseq_data("BASES_CHANGED"));
-        this_columns.push_back(gd.get_breseq_data("BASES_DELETED"));
-        this_columns.push_back(gd.get_breseq_data("BASES_INSERTED"));
+        this_columns.push_back(gd.get_breseq_data("BASES-CHANGED"));
+        this_columns.push_back(gd.get_breseq_data("BASES-DELETED"));
+        this_columns.push_back(gd.get_breseq_data("BASES-INSERTED"));
       }
       this_columns.push_back(to_string(called_bp));
       this_columns.push_back(to_string(total_bp));

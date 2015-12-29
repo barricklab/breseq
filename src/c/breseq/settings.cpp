@@ -252,7 +252,8 @@ namespace breseq
     options
     ("max-displayed-reads", "Maximum number of reads to display in the HTML output for an evidence item", 100, ADVANCED_OPTION)
     ("brief-html-output", "Don't create detailed output files for evidence (no read alignments or coverage plots)", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("no-javascript", "Don't include javascript in the HTML output", TAKES_NO_ARGUMENT, ADVANCED_OPTION) 
+    ("header-genome-diff,g", "Include header information from this GenomeDiff file in output.gd", "", ADVANCED_OPTION)
+    ("no-javascript", "Don't include javascript in the HTML output", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
     
     options.addUsage("", ADVANCED_OPTION);
@@ -524,7 +525,9 @@ namespace breseq
     this->max_displayed_reads = from_string<int32_t>(options["max-displayed-reads"]);
     this->no_alignment_or_plot_generation = options.count("brief-html-output");
     this->no_javascript = options.count("no-javascript");
-    
+    if (options.count("header-genome-diff"))
+      this->header_genome_diff_file_name = options["header-genome-diff"];
+  
 		this->post_option_initialize();
     
     // Log the command line

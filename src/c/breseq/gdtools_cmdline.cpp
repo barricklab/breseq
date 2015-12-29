@@ -1736,6 +1736,62 @@ int do_mask_gd(int argc, char* argv[])
 	return 0;
 }
 
+int do_read_count(int argc, char* argv[])
+{
+	
+	AnyOption options("gdtools READ-COUNT [-i input.gd -o output.gd] input1.fastq input2.fastq ... ");
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+	options("input,i", "Input GenomeDiff file", "input.gd");
+	options("output,o", "Output GenomeDiff file containing read counts", "output.gd");
+	options.addUsage("");
+	options.addUsage("Counts the number of reads and bases in the input FASTQ files and adds them as ORIGINAL-READS and ORIGINAL-BASES header information in the output GenomeDiff file.");
+	
+	options.processCommandArgs( argc,argv);
+	
+	if (options.count("help")) {
+		options.printAdvancedUsage();
+		return -1;
+	}
+	
+	if (options.getArgc() == 0) {
+		options.addUsage("");
+		options.addUsage("Must input at least one FASTQ file as an unnamed argument.");
+		options.printUsage();
+		return -1;
+	}
+	
+	UserOutput uout("READ-COUNT");
+
+	
+	cGenomeDiff gd(options["input"]);
+	uout << "Reading input GenomeDiff file: " << options["input"] << endl;
+	uint64_t total_reads(0);
+	uint64_t total_bases(0);
+	
+	vector<string> fastq_file_names;
+	for (int32_t i = 0; i < options.getArgc(); i++)
+	{
+		uout << "Reading input FASTQ file: " << options.getArgv(i) << endl;;
+
+		uint64_t original_num_reads, original_num_bases;
+		uint32_t max_read_length;
+		uint8_t min_quality_score, max_quality_score;
+		string quality_format = cFastqQualityConverter::predict_fastq_file_format(options.getArgv(i), original_num_reads, original_num_bases, max_read_length, min_quality_score, max_quality_score);
+		total_reads += original_num_reads;
+		total_bases += original_num_bases;
+	}
+	
+	gd.add_breseq_data("ORIGINAL-READS", to_string(total_reads));
+	gd.add_breseq_data("ORIGINAL-BASES", to_string(total_bases));
+	
+	uout << "Writing output GenomeDiff file: " << options["output"] << endl;
+	gd.write(options["output"]);
+	
+	uout << "SUCCESSFULLY COMPLETED" << endl;;
+	return 0;
+}
+
+
 
 int do_simulate_mutations(int argc, char *argv[])
 {
@@ -1898,8 +1954,8 @@ int do_header(int argc, char* argv[])
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o",      "output GD file");
   options("reference,r",   "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
-  options("tag,t",         "header tag to add to Genome Diff file, input as <key>=<value> will produce #=<key> <value>");
-  options("input,i",       "modify input Genome Diff file inplace");
+  options("tag,t",         "header tag to add to GenomeDiff file, input as <key>=<value> will produce #=<key> <value>");
+  options("input,i",       "modify input GenomeDiff file inplace");
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
@@ -2272,7 +2328,7 @@ int do_runfile(int argc, char *argv[])
   ss << "Usage: gdtools RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> <file1.gd file2.gd file3.gd ...>";
   AnyOption options(ss.str());
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("mode,m",           "Type of command file to generate. Valid options are: breseq, breseq-apply, flexbar, flexbar-paired, breseq-apply.", "breseq");
+  options("mode,m",           "Type of command file to generate. Valid options are: breseq, breseq-apply, flexbar, flexbar-paired, breseq-apply, read-count.", "breseq");
   options("executable,e",     "Alternative executable program to run.");
   options("options",          "Options to be passed to the executable. These will appear first in the command line.");
 	options("runfile,r",        "Name of the run file to be output.", "commands");
@@ -2298,13 +2354,14 @@ int do_runfile(int argc, char *argv[])
 	}
 	
   //! Step: Confirm genome diff files have been input.
+	// the names of these files include the entire path
+	string data_dir = cString(options["data-dir"]).trim_ends_of('/');
   list<string> file_names;
   if (options.getArgc()) {
     const size_t n = options.getArgc();
     for (size_t i = 0; i < n; ++i)
     file_names.push_back(options.getArgv(i));
   } else {
-    const string &data_dir = cString(options["data-dir"]).trim_ends_of('/');
     if (ifstream(data_dir.c_str()).good()) {
       const string &cmd = cString("ls %s/*.gd", data_dir.c_str());
       SYSTEM_CAPTURE(back_inserter(file_names), cmd, true);
@@ -2345,8 +2402,13 @@ int do_runfile(int argc, char *argv[])
 		runfile_path = "flexbar_commands";
     output_dir = "02_Trimmed";
 		log_dir = "04_Trim_Logs";
-  } else {
-    options.addUsage("\nERROR: Unrecognized mode (-m) specified.");
+	} else if (options["mode"] == "read-count") {
+		exe = "gdtools READ-COUNT";
+		runfile_path = "read_count_commands";
+		output_dir = "03_Read_Count";
+		log_dir = "04_Read_Count_Logs";
+	} else {
+		options.addUsage("\nERROR: Unrecognized mode (-m) specified.");
     options.printUsage();
     return -1;
   }
@@ -2476,10 +2538,16 @@ int do_runfile(int argc, char *argv[])
 				
 				//! Part 1: Executable and options to pass to it if given by user.
 				ss << exe;
-				if (options.count("options")) {
-						ss << " " << options["options"];
+				
+				// default quality score format if no options provided
+				ss << " -f i1.8";
+				
+				if (gd.get_breseq_data("TRIM-START-BASES").size() != 0) {
+					ss << " -x " << gd.get_breseq_data("TRIM-START-BASES");
 				}
-				ss << " -f fastq";
+				if (gd.get_breseq_data("TRIM-END-BASES").size() != 0) {
+					ss << " -y " << gd.get_breseq_data("TRIM-END-BASES");
+				}
 				
 				//! Part 2: Output read base name.
 				ss << " -t " << output_dir + "/" + cString(*read_file_it).get_base_name_no_extension(true);
@@ -2488,11 +2556,16 @@ int do_runfile(int argc, char *argv[])
 				ss << " -r " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
 				
 				//! Part 4: Adaptor file name			
-				ASSERT(adapters_for_reads.count(*read_file_it), "No #=ADAPTSEQ information in GenomeDiff file.");
+				ASSERT(adapters_for_reads.count(*read_file_it), "Required #=ADAPTSEQ line not found in GenomeDiff file. These lines must occur BEFORE the READSEQ lines to which they apply.");
 				ss << " -a " << download_dir << "/" << cString(adapters_for_reads[*read_file_it]).get_base_name();
 
+				//! Add options last as they override earlier values
+				if (options.count("options")) {
+					ss << " " << options["options"];
+				}
+				
 				//! Part 5: Error log path.
-				ss << " >& " << log_dir << "/" << gd.get_title() << ".log" << endl;
+				ss << " >& " << log_dir << "/" << cString(*read_file_it).get_base_name_no_extension(true) << ".log";
 				
 				//! Step: Output to file.
 				cout << ss.str() << endl;
@@ -2510,10 +2583,16 @@ int do_runfile(int argc, char *argv[])
 				
 				//! Part 1: Executable and options to pass to it if given by user.
 				ss << exe;
-				if (options.count("options")) {
-					ss << " " << options["options"];
+				
+				// default quality score format if no options provided
+				ss << " -f i1.8";
+				
+				if (gd.get_breseq_data("TRIM-START-BASES").size() != 0) {
+					ss << " -x " << gd.get_breseq_data("TRIM-START-BASES");
 				}
-				ss << " -f fastq";
+				if (gd.get_breseq_data("TRIM-END-BASES").size() != 0) {
+					ss << " -y " << gd.get_breseq_data("TRIM-END-BASES");
+				}
 				
 				//! Part 2: Output read base name.
 				ss << " -t " << output_dir + "/" + substitute(cString((*read_pair_it)[0]).get_base_name_no_extension(true), "_R1", "");
@@ -2530,18 +2609,53 @@ int do_runfile(int argc, char *argv[])
 				ASSERT(adapters_for_reads.count((*read_pair_it)[0]), "No #=ADAPTSEQ information in GenomeDiff file.");
 				ss << " -a " << download_dir << "/" << cString(adapters_for_reads[(*read_pair_it)[0]]).get_base_name();
 				
-				//! Part 5: Error log path.
-				ss << " >& " << log_dir << "/" << gd.get_title() << ".log";
+				//! Add options last as they override earlier values
+				if (options.count("options")) {
+					ss << " " << options["options"];
+				}
+				
+				//! Part 6: Error log path.
+				ss << " >& " << log_dir << "/" << cString((*read_pair_it)[0]).get_base_name_no_extension(true) << ".log";
 				
 				//! Step: Output to file.
 				cout << ss.str() << endl;
 				runfile << ss.str() << endl;
 				++n_cmds;
 			}
-    }
-  }
+		} else if (options["mode"] == "read-count") {
+			
+			//! Step: Begin building command line.
+			stringstream ss;
+			
+			//! Part 1: Executable and options to pass to it if given by user.
+			ss << exe;
+			if (options.count("options")) {
+				ss << " " << options["options"];
+			}
+			
+			// Part 2: input GD file
+			ss << " -i " << file_name;
+			
+			// Part 3: output GD file
+			ss << " -o " << output_dir << "/" << path_to_filename(file_name);
+			
+			// Part 4: each read file as unnamed arg
+			for (vector<string>::const_iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {
+				
+				ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
+			}
+		
+			//! Part 5: Error log path.
+			ss << " >& " << log_dir << "/" << gd.get_title() << ".log" << endl;
+			
+			//! Step: Output to file.
+			cout << ss.str() << endl;
+			runfile << ss.str() << endl;
+			++n_cmds;
+		}
+	}
 
-  cerr << "Total commands: " << n_cmds << endl;
+  cerr << endl << "Total commands: " << n_cmds << endl;
 	
   return 0;
 }
@@ -2925,7 +3039,6 @@ int do_gd2coverage(int argc, char* argv[])
 }
 
                                             
-                                            
 int main(int argc, char* argv[]) {
 	
 	Settings::set_global_paths(argc, argv);
@@ -3033,6 +3146,8 @@ int main(int argc, char* argv[]) {
 		return do_mummer2mask(argc_new, argv_new);
 	} else if (command =="MASK") {
 		return do_mask_gd(argc_new, argv_new);
+	} else if (command =="READ-COUNT") {
+		return do_read_count(argc_new, argv_new);
   } else {
     cout << "Unrecognized command: " << command << endl;
     gdtools_usage();

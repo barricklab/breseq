@@ -1703,7 +1703,7 @@ namespace breseq {
                                                string gd_file_name
                                                )
     {
-        cGenomeDiff gd; /* ???: cGenomeDiff is a data type defined by breseq. it holds
+        cGenomeDiff gd; /* cGenomeDiff is a data type defined by breseq. it holds
                          entries like SNP, INS, DEL, CNV, and has more information about
                          those types like their sizes. CNV (copy number variation)
                          is the type that will be added here. CNV is the outliers
@@ -1722,7 +1722,7 @@ namespace breseq {
         uint32_t tile_position;
         double tile_coverage;
         double t_score;
-        double greater_than; /* ???: reads in the fourth value from segment_file.
+        double greater_than; /* reads in the fourth value from segment_file.
                               The p-value of a segment or (1 - greater_than / randomizations). */
         
         

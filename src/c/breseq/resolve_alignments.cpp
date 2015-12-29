@@ -714,6 +714,7 @@ void load_junction_alignments(
       
       reads_processed++;
       read_file_summary_info.num_total_reads++;
+      read_file_summary_info.num_total_bases+=seq.length();
       
       if (reads_processed % 10000 == 0)
         cerr << "    READS:" << reads_processed << endl;
@@ -795,6 +796,7 @@ void load_junction_alignments(
       if ((this_junction_alignments.size() == 0) && (this_reference_alignments.size() == 0))
       {
         read_file_summary_info.num_unmatched_reads++;
+        read_file_summary_info.num_unmatched_bases+=seq.length();
         out_unmatched_fastq.write_sequence(seq);
       }
       
@@ -895,7 +897,11 @@ void load_junction_alignments(
     // save statistics
     summary.alignment_resolution.read_file[read_files[fastq_file_index].m_base_name] = read_file_summary_info;
     summary.alignment_resolution.total_unmatched_reads += read_file_summary_info.num_unmatched_reads;
+    summary.alignment_resolution.total_unmatched_bases += read_file_summary_info.num_unmatched_bases;
+    
     summary.alignment_resolution.total_reads += read_file_summary_info.num_total_reads;
+    summary.alignment_resolution.total_bases += read_file_summary_info.num_total_bases;
+
     
     // safe only because we know they are always or never used
     if (junction_tam != NULL) delete junction_tam;
@@ -1028,8 +1034,8 @@ void _write_reference_matches(const Settings& settings, Summary& summary, cRefer
 		trims.push_back(t);
     summary.alignment_resolution.reads_mapped_to_references[(*it)->reference_target_id()]+=redundancy_corrected_count;
   }
-  summary.alignment_resolution.num_total_reads_mapped_references+=1.0;
-
+  summary.alignment_resolution.total_reads_mapped_to_references+=1;
+  summary.alignment_resolution.total_bases_mapped_to_references+=reference_alignments.front()->reference_match_length();
   
 	reference_tam.write_alignments((int32_t)fastq_file_index, reference_alignments, &trims, &ref_seq_info, true);
 }
