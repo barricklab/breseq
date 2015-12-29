@@ -1143,7 +1143,7 @@ void cReferenceSequences::WriteGFF( const string &file_name){
   
 // This only outputs the features. No sequence!
 void cReferenceSequences::WriteCSV(const string &file_name) {
-  ofstream out(file_name);
+  ofstream out(file_name.c_str());
   out << join(make_vector<string>("seq_id")("start")("end")("strand")("feat_id")("feat_type")("gene")("desc"), ",") << endl;
   enum {SEQ_ID = 0, START_1, END_1, STRAND, FEAT_ID, FEAT_TYPE, GENE, DESCRIPTION, NUM_COLS};
 
