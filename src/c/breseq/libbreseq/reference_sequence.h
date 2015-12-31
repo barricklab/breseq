@@ -279,13 +279,20 @@ namespace breseq {
         , m_pseudo(copy.m_pseudo)
         , m_gff_attributes(copy.m_gff_attributes) { }
 
+      // Sort to have genes after CDS, rRNA, etc.
       bool operator<(const cSequenceFeature& _in) const
       {
         if (this->m_location.get_start_1() == _in.m_location.get_start_1()) {
-          if (this->m_location.get_end_1() == _in.m_location.get_end_1())
-            return (this->SafeGet("type") == "gene" && _in.SafeGet("type") == "CDS");
-          else
+          if (this->m_location.get_end_1() == _in.m_location.get_end_1()) {
+            
+            if ( (this->SafeGet("type") == "gene") && (_in.SafeGet("type") != "gene")) {
+              return false;
+            } else {
+              return (this->SafeGet("type") < _in.SafeGet("type"));
+            }
+          } else {
             return (this->m_location.get_end_1() > _in.m_location.get_end_1());
+          }
         }
         return (this->m_location.get_start_1() < _in.m_location.get_start_1());
       }

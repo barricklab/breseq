@@ -966,6 +966,12 @@ namespace breseq {
       else if (feature.m_gff_attributes.count("Note"))
         feature["product"] = join(feature.m_gff_attributes["Note"], ",");
     
+      // fCDS type indicates CDS that is pseudo => internally store as CDS with pseudo flag set
+      if (feature["type"] == "fCDS") {
+        feature.m_pseudo = true;
+        feature.m_gff_attributes["Pseudo"] = make_vector<string>("True");
+        feature["type"] = "CDS";
+      }
       if (feature.m_gff_attributes.count("Pseudo"))
         feature.m_pseudo = from_string<bool>(feature.m_gff_attributes["Pseudo"][0]);
       
@@ -1086,6 +1092,12 @@ void cReferenceSequences::WriteGFF( const string &file_name){
       columns[SEQID] = it_as->m_seq_id;
       if (feat.count("source")) columns[SOURCE] = feat["source"];
       if (feat.count("type"))   columns[TYPE] = feat["type"];
+      
+      //pseudogene written as fCDS = fragment CDS
+      if ((feat["type"] == "CDS") && (feat.m_pseudo)) {
+        columns[TYPE] = "fCDS";
+      }
+      
       //Note: Will add start_1 and end_1 below.
       if (feat.count("score"))  columns[SCORE] = feat["score"];
       columns[STRAND] = feat.is_top_strand() ? "+" : "-";
@@ -1167,6 +1179,9 @@ void cReferenceSequences::WriteCSV(const string &file_name) {
       columns[STRAND] = feat.is_top_strand() ? "1" : "-1";
       if (feat.count("accession"))   columns[FEAT_ID] = double_quote(feat["accession"]);
       if (feat.count("type"))   columns[FEAT_TYPE] = double_quote(feat["type"]);
+      if (feat.m_pseudo && (columns[FEAT_TYPE] == "CDS")) {
+        columns[FEAT_TYPE] = "fCDS";
+      }
       if (feat.count("name"))   columns[GENE] = double_quote(feat["name"]);
       if (feat.count("product"))   columns[DESCRIPTION] =  double_quote(feat["product"]);
       

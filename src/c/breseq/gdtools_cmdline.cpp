@@ -2622,6 +2622,10 @@ int do_runfile(int argc, char *argv[])
 				runfile << ss.str() << endl;
 				++n_cmds;
 			}
+		} else if (options["mode"] == "trimmomatic") {
+			
+			//trim PE -threads 4 02_Downloads/Plate1_A1_JA15841_S289_L002_R1_001.fastq 02_Downloads/Plate1_A1_JA15841_S289_L002_R2_001.fastq -baseout trimmotatic_test/output ILLUMINACLIP:02_Downloads/illumina_truseq_6bp_dual_barcode.fasta:4:30:10 LEADING:15 MINLEN:36
+			
 		} else if (options["mode"] == "read-count") {
 			
 			//! Step: Begin building command line.
