@@ -2085,7 +2085,7 @@ int do_download(int argc, char *argv[])
   options("genome-diff-dir,g", "Directory to searched for genome diff files.", "01_Data");
   options("test"           ,   "Test urls in genome diff files, doesn't download the file", TAKES_NO_ARGUMENT);
   options("reference-only",    "Only downloads the reference sequence files for this file", TAKES_NO_ARGUMENT);
-	options("leave-compressed,z","Do not decompress zipped files", TAKES_NO_ARGUMENT);
+	options("ungzip,z","Decompress gzipped read files", TAKES_NO_ARGUMENT);
 
 	options.addUsage("\nExamples:");
 	options.addUsage("  gdtools DOWNLOAD -l john:1234 -d downloads -g data");
@@ -2214,12 +2214,12 @@ int do_download(int argc, char *argv[])
 
       bool is_gzip =
           cString(file_path).ends_with(".gz");
-			if (options.count("leave-compressed")) is_gzip = false;
+			if (options.count("ungzip")) is_gzip = true;
 			
       const string &gunzip_path = is_gzip ?
           cString(file_path).remove_ending(".gz") : "";
 
-      if (is_gzip) {
+      if (options.count("ungzip")) {
         if (ifstream(gunzip_path.c_str()).good() && !file_empty(gunzip_path.c_str())) {
          is_downloaded = true;
          file_path = gunzip_path;
@@ -2269,7 +2269,7 @@ int do_download(int argc, char *argv[])
         continue;
       }
 
-      if (is_gzip) {
+      if (options.count("ungzip")) {
         string gunzip_cmd = "";
         sprintf(gunzip_cmd, "gunzip %s", file_path.c_str());
         if (options.count("test")) {
@@ -2397,6 +2397,11 @@ int do_runfile(int argc, char *argv[])
 		runfile_path = "flexbar_commands";
     output_dir = "02_Trimmed";
 		log_dir = "04_Trim_Logs";
+	} else if (options["mode"] == "trimmomatic") {
+		exe = "trimmomatic";
+		runfile_path = "trimmomatic_commands";
+		output_dir = "02_Trimmed";
+		log_dir = "04_Trim_Logs";
   } else if (options["mode"] == "flexbar-paired") {
     exe = "flexbar";
 		runfile_path = "flexbar_commands";
@@ -2485,8 +2490,14 @@ int do_runfile(int argc, char *argv[])
 			}
 			
 			//! Part 4: Read argument path(s).
-			for (vector<string>::const_iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {  
-				 ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
+			for (vector<string>::const_iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {
+				
+				// Handles zipped or unzipped
+				if (file_exists( cString(download_dir + "/" + cString(*read_file_it).get_base_name_unzipped()).c_str() )) {
+					ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
+				} else {
+					ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name();
+				}
 			}
         
       //! Part 5: Error log path.
@@ -2576,7 +2587,7 @@ int do_runfile(int argc, char *argv[])
     } else if (options["mode"] == "flexbar-paired") { 
 			for (vector<vector<string> >::const_iterator read_pair_it=reads_by_pair.begin(); read_pair_it != reads_by_pair.end(); read_pair_it++) {  
 
-				ASSERT(read_pair_it->size() <= 2, "More than two read files paired: " + join(*read_pair_it, ", "));
+				ASSERT(read_pair_it->size() <= 2, "Must have exactly two read files for paired mode: " + join(*read_pair_it, ", "));
 				
 				//! Step: Begin building command line.
 				stringstream ss;
@@ -2624,7 +2635,67 @@ int do_runfile(int argc, char *argv[])
 			}
 		} else if (options["mode"] == "trimmomatic") {
 			
+			
 			//trim PE -threads 4 02_Downloads/Plate1_A1_JA15841_S289_L002_R1_001.fastq 02_Downloads/Plate1_A1_JA15841_S289_L002_R2_001.fastq -baseout trimmotatic_test/output ILLUMINACLIP:02_Downloads/illumina_truseq_6bp_dual_barcode.fasta:4:30:10 LEADING:15 MINLEN:36
+			
+			// For each read file trim with requested adaptor...
+			for (vector<string>::const_iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {
+				//! Step: Begin building command line.
+				stringstream ss;
+				
+				//! Part 1: Executable and options to pass to it if given by user.
+				ss << exe;
+				ss << " SE";
+				
+				//! Part 2: Options
+				if (options.count("options")) {
+					ss << " " << options["options"];
+				}
+				
+				//! Part 3: Read file name --- handles zipped or unzipped!
+				//! Part 4: Output read base name
+
+				if (file_exists( cString(download_dir + "/" + cString(*read_file_it).get_base_name_unzipped()).c_str() )) {
+					ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
+					ss << " " << output_dir + "/" + cString(*read_file_it).get_base_name_unzipped();
+				} else {
+					ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name();
+					ss << " " << output_dir + "/" + cString(*read_file_it).get_base_name();
+				}
+				
+				//! Part 5: Trimming commands
+
+				// Start - Adapter clipping command
+				ss << " ILLUMINACLIP:";
+				
+				//! Part 4: Adaptor file name
+				ASSERT(adapters_for_reads.count(*read_file_it), "Required #=ADAPTSEQ line not found in GenomeDiff file. These lines must occur BEFORE the READSEQ lines to which they apply.");
+				
+				ss << download_dir << "/" << cString(adapters_for_reads[*read_file_it]).get_base_name();
+
+				// Remaining match options (close to default values)
+				ss << ":4:30:10";
+				// End - Adapter clipping command
+				
+				// Cropping beginning / end
+				if (gd.get_breseq_data("TRIM-START-BASES").size() != 0) {
+					ss << " HEADCROP:" << gd.get_breseq_data("TRIM-START-BASES");
+				}
+				if (gd.get_breseq_data("TRIM-END-BASES").size() != 0) {
+					ss << " CROP:" << gd.get_breseq_data("TRIM-END-BASES");
+				}
+				
+				ss << " MINLEN:30";
+				
+				//! Part 6: Error log path.
+				ss << " >& " << log_dir << "/" << cString(*read_file_it).get_base_name_no_extension(true) << ".log";
+				
+				//! Step: Output to file.
+				cout << ss.str() << endl;
+				runfile << ss.str() << endl;
+				++n_cmds;
+			}
+
 			
 		} else if (options["mode"] == "read-count") {
 			

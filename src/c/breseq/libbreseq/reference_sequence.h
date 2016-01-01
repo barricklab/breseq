@@ -286,12 +286,12 @@ namespace breseq {
           if (this->m_location.get_end_1() == _in.m_location.get_end_1()) {
             
             if ( (this->SafeGet("type") == "gene") && (_in.SafeGet("type") != "gene")) {
-              return false;
+              return true;
             } else {
               return (this->SafeGet("type") < _in.SafeGet("type"));
             }
           } else {
-            return (this->m_location.get_end_1() > _in.m_location.get_end_1());
+            return (this->m_location.get_end_1() < _in.m_location.get_end_1());
           }
         }
         return (this->m_location.get_start_1() < _in.m_location.get_start_1());

@@ -968,8 +968,8 @@ namespace breseq {
     
       // fCDS type indicates CDS that is pseudo => internally store as CDS with pseudo flag set
       if (feature["type"] == "fCDS") {
-        feature.m_pseudo = true;
-        feature.m_gff_attributes["Pseudo"] = make_vector<string>("True");
+        //feature.m_pseudo = true; set by following code...
+        feature.m_gff_attributes["Pseudo"] = make_vector<string>("true");
         feature["type"] = "CDS";
       }
       if (feature.m_gff_attributes.count("Pseudo"))
