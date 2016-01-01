@@ -6,119 +6,119 @@ REL606-5	.	gene	190	309	.	+	0	Alias=ECB_r00003;ID=ECB_r00003;Name=rrfH
 REL606-5	.	rRNA	190	309	.	+	0	Alias=ECB_r00003;ID=ECB_r00003;Name=rrfH;Note=5S ribosomal RNA
 REL606-5	.	gene	362	438	.	+	0	Alias=ECB_t00003;ID=ECB_t00003;Name=aspU
 REL606-5	.	tRNA	362	438	.	+	0	Alias=ECB_t00003;ID=ECB_t00003;Name=aspU;Note=tRNA-Asp
+REL606-5	.	fCDS	601	2175	.	+	0	Alias=ECB_00200;ID=ECB_00200;Name=dkgB;Note=2%2C5-diketo-D-gluconate reductase B;Pseudo=true;transl_table=11
 REL606-5	.	gene	601	2175	.	+	0	Alias=ECB_00200;ID=ECB_00200;Name=dkgB;Pseudo=true
-REL606-5	.	CDS	601	2175	.	+	0	Alias=ECB_00200;ID=ECB_00200;Name=dkgB;Note=2%2C5-diketo-D-gluconate reductase B;Pseudo=true;transl_table=11
 REL606-5	.	repeat_region	1003	1770	.	-	0	Name=IS1;Note=repeat region
-REL606-5	.	gene	1018	1521	.	-	0	Alias=ECB_00211;ID=ECB_00211;Name=insB-2
 REL606-5	.	CDS	1018	1521	.	-	0	Alias=ECB_00211;ID=ECB_00211;Name=insB-2;Note=IS1 protein InsB;transl_table=11
-REL606-5	.	gene	1440	1715	.	-	0	Alias=ECB_00210;ID=ECB_00210;Name=insA-2
+REL606-5	.	gene	1018	1521	.	-	0	Alias=ECB_00211;ID=ECB_00211;Name=insB-2
 REL606-5	.	CDS	1440	1715	.	-	0	Alias=ECB_00210;ID=ECB_00210;Name=insA-2;Note=IS1 protein InsA;transl_table=11
+REL606-5	.	gene	1440	1715	.	-	0	Alias=ECB_00210;ID=ECB_00210;Name=insA-2
+REL606-5	.	fCDS	2172	3136	.	-	0	Alias=ECB_00201;ID=ECB_00201;Name=yafC;Note=predicted DNA-binding transcriptional regulator;Pseudo=true;transl_table=11
 REL606-5	.	gene	2172	3136	.	-	0	Alias=ECB_00201;ID=ECB_00201;Name=yafC;Pseudo=true
-REL606-5	.	CDS	2172	3136	.	-	0	Alias=ECB_00201;ID=ECB_00201;Name=yafC;Note=predicted DNA-binding transcriptional regulator;Pseudo=true;transl_table=11
+REL606-5	.	fCDS	3377	4189	.	+	0	Alias=ECB_00202;ID=ECB_00202;Name=yafD;Note=hypothetical protein;Pseudo=true;transl_table=11
 REL606-5	.	gene	3377	4189	.	+	0	Alias=ECB_00202;ID=ECB_00202;Name=yafD;Pseudo=true
-REL606-5	.	CDS	3377	4189	.	+	0	Alias=ECB_00202;ID=ECB_00202;Name=yafD;Note=hypothetical protein;Pseudo=true;transl_table=11
-REL606-5	.	gene	4193	4816	.	+	0	Alias=ECB_00203;ID=ECB_00203;Name=yafE
 REL606-5	.	CDS	4193	4816	.	+	0	Alias=ECB_00203;ID=ECB_00203;Name=yafE;Note=predicted S-adenosyl-L-methionine-dependent methyltransferase;transl_table=11
-REL606-5	.	gene	4864	6222	.	-	0	Alias=ECB_00204;ID=ECB_00204;Name=mltD
+REL606-5	.	gene	4193	4816	.	+	0	Alias=ECB_00203;ID=ECB_00203;Name=yafE
 REL606-5	.	CDS	4864	6222	.	-	0	Alias=ECB_00204;ID=ECB_00204;Name=mltD;Note=predicted membrane-bound lytic murein transglycosylase D;transl_table=11
-REL606-5	.	gene	6294	7049	.	-	0	Alias=ECB_00205;ID=ECB_00205;Name=gloB
+REL606-5	.	gene	4864	6222	.	-	0	Alias=ECB_00204;ID=ECB_00204;Name=mltD
 REL606-5	.	CDS	6294	7049	.	-	0	Alias=ECB_00205;ID=ECB_00205;Name=gloB;Note=predicted hydroxyacylglutathione hydrolase;transl_table=11
-REL606-5	.	gene	7083	7805	.	+	0	Alias=ECB_00206;ID=ECB_00206;Name=yafS
+REL606-5	.	gene	6294	7049	.	-	0	Alias=ECB_00205;ID=ECB_00205;Name=gloB
 REL606-5	.	CDS	7083	7805	.	+	0	Alias=ECB_00206;ID=ECB_00206;Name=yafS;Note=predicted S-adenosyl-L-methionine-dependent methyltransferase;transl_table=11
-REL606-5	.	gene	7802	8269	.	-	0	Alias=ECB_00207;ID=ECB_00207;Name=rnhA
+REL606-5	.	gene	7083	7805	.	+	0	Alias=ECB_00206;ID=ECB_00206;Name=yafS
 REL606-5	.	CDS	7802	8269	.	-	0	Alias=ECB_00207;ID=ECB_00207;Name=rnhA;Note=ribonuclease H;transl_table=11
-REL606-5	.	gene	8334	9065	.	+	0	Alias=ECB_00208;ID=ECB_00208;Name=dnaQ
+REL606-5	.	gene	7802	8269	.	-	0	Alias=ECB_00207;ID=ECB_00207;Name=rnhA
 REL606-5	.	CDS	8334	9065	.	+	0	Alias=ECB_00208;ID=ECB_00208;Name=dnaQ;Note=DNA polymerase III subunit epsilon;transl_table=11
+REL606-5	.	gene	8334	9065	.	+	0	Alias=ECB_00208;ID=ECB_00208;Name=dnaQ
 REL606-5	.	gene	9198	9274	.	+	0	Alias=ECB_t00004;ID=ECB_t00004;Name=aspV
 REL606-5	.	tRNA	9198	9274	.	+	0	Alias=ECB_t00004;ID=ECB_t00004;Name=aspV;Note=tRNA-Asp
-REL606-5	.	gene	9604	10389	.	+	0	Alias=ECB_00209;ID=ECB_00209;Name=yafT
 REL606-5	.	CDS	9604	10389	.	+	0	Alias=ECB_00209;ID=ECB_00209;Name=yafT;Note=predicted aminopeptidase;transl_table=11
+REL606-5	.	gene	9604	10389	.	+	0	Alias=ECB_00209;ID=ECB_00209;Name=yafT
 REL606-5	.	repeat_region	10600	11367	.	+	0	Name=IS1;Note=repeat region
-REL606-5	.	gene	10655	10930	.	+	0	Alias=ECB_00210;ID=ECB_00210;Name=insA-2
 REL606-5	.	CDS	10655	10930	.	+	0	Alias=ECB_00210;ID=ECB_00210;Name=insA-2;Note=IS1 protein InsA;transl_table=11
-REL606-5	.	gene	10849	11352	.	+	0	Alias=ECB_00211;ID=ECB_00211;Name=insB-2
+REL606-5	.	gene	10655	10930	.	+	0	Alias=ECB_00210;ID=ECB_00210;Name=insA-2
 REL606-5	.	CDS	10849	11352	.	+	0	Alias=ECB_00211;ID=ECB_00211;Name=insB-2;Note=IS1 protein InsB;transl_table=11
-REL606-5	.	gene	11354	11725	.	+	0	Alias=ECB_00212;ID=ECB_00212;Name=ECB_00212
+REL606-5	.	gene	10849	11352	.	+	0	Alias=ECB_00211;ID=ECB_00211;Name=insB-2
 REL606-5	.	CDS	11354	11725	.	+	0	Alias=ECB_00212;ID=ECB_00212;Name=ECB_00212;Note=hypothetical protein;transl_table=11
-REL606-5	.	gene	12156	13292	.	+	0	Alias=ECB_00213;ID=ECB_00213;Name=yhhI
+REL606-5	.	gene	11354	11725	.	+	0	Alias=ECB_00212;ID=ECB_00212;Name=ECB_00212
 REL606-5	.	CDS	12156	13292	.	+	0	Alias=ECB_00213;ID=ECB_00213;Name=yhhI;Note=predicted transposase;transl_table=11
-REL606-5	.	gene	13333	14103	.	-	0	Alias=ECB_00214;ID=ECB_00214;Name=yafV
+REL606-5	.	gene	12156	13292	.	+	0	Alias=ECB_00213;ID=ECB_00213;Name=yhhI
 REL606-5	.	CDS	13333	14103	.	-	0	Alias=ECB_00214;ID=ECB_00214;Name=yafV;Note=predicted C-N hydrolase family amidase%2C NAD(P)-binding;transl_table=11
-REL606-5	.	gene	14257	14730	.	+	0	Alias=ECB_00215;ID=ECB_00215;Name=ykfE
+REL606-5	.	gene	13333	14103	.	-	0	Alias=ECB_00214;ID=ECB_00214;Name=yafV
 REL606-5	.	CDS	14257	14730	.	+	0	Alias=ECB_00215;ID=ECB_00215;Name=ykfE;Note=inhibitor of vertebrate C-lysozyme;transl_table=11
-REL606-5	.	gene	14773	17217	.	-	0	Alias=ECB_00216;ID=ECB_00216;Name=fadE
+REL606-5	.	gene	14257	14730	.	+	0	Alias=ECB_00215;ID=ECB_00215;Name=ykfE
 REL606-5	.	CDS	14773	17217	.	-	0	Alias=ECB_00216;ID=ECB_00216;Name=fadE;Note=acyl-CoA dehydrogenase;transl_table=11
-REL606-5	.	gene	17457	18035	.	+	0	Alias=ECB_00217;ID=ECB_00217;Name=lpcA
+REL606-5	.	gene	14773	17217	.	-	0	Alias=ECB_00216;ID=ECB_00216;Name=fadE
 REL606-5	.	CDS	17457	18035	.	+	0	Alias=ECB_00217;ID=ECB_00217;Name=lpcA;Note=phosphoheptose isomerase;transl_table=11
-REL606-5	.	gene	18241	19008	.	+	0	Alias=ECB_00218;ID=ECB_00218;Name=yafJ
+REL606-5	.	gene	17457	18035	.	+	0	Alias=ECB_00217;ID=ECB_00217;Name=lpcA
 REL606-5	.	CDS	18241	19008	.	+	0	Alias=ECB_00218;ID=ECB_00218;Name=yafJ;Note=predicted amidotransfease;transl_table=11
-REL606-5	.	gene	18979	19719	.	-	0	Alias=ECB_00219;ID=ECB_00219;Name=yafK
+REL606-5	.	gene	18241	19008	.	+	0	Alias=ECB_00218;ID=ECB_00218;Name=yafJ
 REL606-5	.	CDS	18979	19719	.	-	0	Alias=ECB_00219;ID=ECB_00219;Name=yafK;Note=hypothetical protein;transl_table=11
-REL606-5	.	gene	19875	20153	.	-	0	Alias=ECB_00220;ID=ECB_00220;Name=yafQ
+REL606-5	.	gene	18979	19719	.	-	0	Alias=ECB_00219;ID=ECB_00219;Name=yafK
 REL606-5	.	CDS	19875	20153	.	-	0	Alias=ECB_00220;ID=ECB_00220;Name=yafQ;Note=predicted toxin of the YafQ-DinJ toxin-antitoxin system;transl_table=11
-REL606-5	.	gene	20156	20416	.	-	0	Alias=ECB_00221;ID=ECB_00221;Name=dinJ
+REL606-5	.	gene	19875	20153	.	-	0	Alias=ECB_00220;ID=ECB_00220;Name=yafQ
 REL606-5	.	CDS	20156	20416	.	-	0	Alias=ECB_00221;ID=ECB_00221;Name=dinJ;Note=predicted antitoxin of YafQ-DinJ toxin-antitoxin system;transl_table=11
-REL606-5	.	gene	20626	21375	.	+	0	Alias=ECB_00222;ID=ECB_00222;Name=yafL
+REL606-5	.	gene	20156	20416	.	-	0	Alias=ECB_00221;ID=ECB_00221;Name=dinJ
 REL606-5	.	CDS	20626	21375	.	+	0	Alias=ECB_00222;ID=ECB_00222;Name=yafL;Note=predicted lipoprotein and C40 family peptidase;transl_table=11
-REL606-5	.	gene	21551	22048	.	+	0	Alias=ECB_00223;ID=ECB_00223;Name=yafM
+REL606-5	.	gene	20626	21375	.	+	0	Alias=ECB_00222;ID=ECB_00222;Name=yafL
 REL606-5	.	CDS	21551	22048	.	+	0	Alias=ECB_00223;ID=ECB_00223;Name=yafM;Note=hypothetical protein;transl_table=11
+REL606-5	.	gene	21551	22048	.	+	0	Alias=ECB_00223;ID=ECB_00223;Name=yafM
+REL606-5	.	fCDS	22264	23973	.	-	0	Alias=ECB_00224;ID=ECB_00224;Name=fhiA;Note=b0229%3B flagellar system protein;Pseudo=true;transl_table=11
 REL606-5	.	gene	22264	23973	.	-	0	Alias=ECB_00224;ID=ECB_00224;Name=fhiA;Note=promoterless fragment%3B also pseudo in K-12 MG1655;Pseudo=true
-REL606-5	.	CDS	22264	23973	.	-	0	Alias=ECB_00224;ID=ECB_00224;Name=fhiA;Note=b0229%3B flagellar system protein;Pseudo=true;transl_table=11
+REL606-5	.	fCDS	23963	24733	.	+	0	Alias=ECB_00225;ID=ECB_00225;Name=mbhA;Note=b0230%3B flagellar motor protein;Pseudo=true;transl_table=11
 REL606-5	.	gene	23963	24733	.	+	0	Alias=ECB_00225;ID=ECB_00225;Name=mbhA;Note=promoterless fragment%3B also pseudo in K-12 MG1655;Pseudo=true
-REL606-5	.	CDS	23963	24733	.	+	0	Alias=ECB_00225;ID=ECB_00225;Name=mbhA;Note=b0230%3B flagellar motor protein;Pseudo=true;transl_table=11
-REL606-5	.	gene	24804	25859	.	+	0	Alias=ECB_00226;ID=ECB_00226;Name=dinB
 REL606-5	.	CDS	24804	25859	.	+	0	Alias=ECB_00226;ID=ECB_00226;Name=dinB;Note=DNA polymerase IV;transl_table=11
-REL606-5	.	gene	25911	26204	.	+	0	Alias=ECB_00227;ID=ECB_00227;Name=yafN
+REL606-5	.	gene	24804	25859	.	+	0	Alias=ECB_00226;ID=ECB_00226;Name=dinB
 REL606-5	.	CDS	25911	26204	.	+	0	Alias=ECB_00227;ID=ECB_00227;Name=yafN;Note=predicted antitoxin of the YafO-YafN toxin-antitoxin system;transl_table=11
-REL606-5	.	gene	26207	26605	.	+	0	Alias=ECB_00228;ID=ECB_00228;Name=yafO
+REL606-5	.	gene	25911	26204	.	+	0	Alias=ECB_00227;ID=ECB_00227;Name=yafN
 REL606-5	.	CDS	26207	26605	.	+	0	Alias=ECB_00228;ID=ECB_00228;Name=yafO;Note=predicted toxin of the YafO-YafN toxin-antitoxin system;transl_table=11
-REL606-5	.	gene	26615	27067	.	+	0	Alias=ECB_00229;ID=ECB_00229;Name=yafP
+REL606-5	.	gene	26207	26605	.	+	0	Alias=ECB_00228;ID=ECB_00228;Name=yafO
 REL606-5	.	CDS	26615	27067	.	+	0	Alias=ECB_00229;ID=ECB_00229;Name=yafP;Note=predicted acyltransferase with acyl-CoA N-acyltransferase domain;transl_table=11
-REL606-5	.	gene	27301	27567	.	+	0	Alias=ECB_00230;ID=ECB_00230;Name=ykfJ
+REL606-5	.	gene	26615	27067	.	+	0	Alias=ECB_00229;ID=ECB_00229;Name=yafP
 REL606-5	.	CDS	27301	27567	.	+	0	Alias=ECB_00230;ID=ECB_00230;Name=ykfJ;Note=hypothetical protein;transl_table=11
-REL606-5	.	gene	27536	28036	.	+	0	Alias=ECB_00231;ID=ECB_00231;Name=prfH
+REL606-5	.	gene	27301	27567	.	+	0	Alias=ECB_00230;ID=ECB_00230;Name=ykfJ
 REL606-5	.	CDS	27536	28036	.	+	0	Alias=ECB_00231;ID=ECB_00231;Name=prfH;Note=peptide chain release factor 2;transl_table=11
-REL606-5	.	gene	28093	29550	.	-	0	Alias=ECB_00232;ID=ECB_00232;Name=pepD
+REL606-5	.	gene	27536	28036	.	+	0	Alias=ECB_00231;ID=ECB_00231;Name=prfH
 REL606-5	.	CDS	28093	29550	.	-	0	Alias=ECB_00232;ID=ECB_00232;Name=pepD;Note=aminoacyl-histidine dipeptidase (peptidase D);transl_table=11
-REL606-5	.	gene	29811	30269	.	+	0	Alias=ECB_00233;ID=ECB_00233;Name=gpt
+REL606-5	.	gene	28093	29550	.	-	0	Alias=ECB_00232;ID=ECB_00232;Name=pepD
 REL606-5	.	CDS	29811	30269	.	+	0	Alias=ECB_00233;ID=ECB_00233;Name=gpt;Note=xanthine phosphoribosyltransferase;transl_table=11
-REL606-5	.	gene	30361	31605	.	+	0	Alias=ECB_00234;ID=ECB_00234;Name=yafA
+REL606-5	.	gene	29811	30269	.	+	0	Alias=ECB_00233;ID=ECB_00233;Name=gpt
 REL606-5	.	CDS	30361	31605	.	+	0	Alias=ECB_00234;ID=ECB_00234;Name=yafA;Note=fermentation/respiration switch protein;transl_table=11
-REL606-5	.	gene	31663	32064	.	+	0	Alias=ECB_00235;ID=ECB_00235;Name=crl
+REL606-5	.	gene	30361	31605	.	+	0	Alias=ECB_00234;ID=ECB_00234;Name=yafA
 REL606-5	.	CDS	31663	32064	.	+	0	Alias=ECB_00235;ID=ECB_00235;Name=crl;Note=DNA-binding transcriptional regulator;transl_table=11
+REL606-5	.	gene	31663	32064	.	+	0	Alias=ECB_00235;ID=ECB_00235;Name=crl
 REL606-5	.	repeat_region	32135	32902	.	+	0	Name=IS1;Note=repeat region
-REL606-5	.	gene	32190	32465	.	+	0	Alias=ECB_00236;ID=ECB_00236;Name=insA-3
 REL606-5	.	CDS	32190	32465	.	+	0	Alias=ECB_00236;ID=ECB_00236;Name=insA-3;Note=IS1 protein InsA;transl_table=11
-REL606-5	.	gene	32384	32887	.	+	0	Alias=ECB_00237;ID=ECB_00237;Name=insB-3
+REL606-5	.	gene	32190	32465	.	+	0	Alias=ECB_00236;ID=ECB_00236;Name=insA-3
 REL606-5	.	CDS	32384	32887	.	+	0	Alias=ECB_00237;ID=ECB_00237;Name=insB-3;Note=IS1 protein InsB;transl_table=11
-REL606-5	.	gene	32898	33935	.	-	0	Alias=ECB_00238;ID=ECB_00238;Name=phoE
+REL606-5	.	gene	32384	32887	.	+	0	Alias=ECB_00237;ID=ECB_00237;Name=insB-3
 REL606-5	.	CDS	32898	33935	.	-	0	Alias=ECB_00238;ID=ECB_00238;Name=phoE;Note=outer membrane phosphoporin protein E;transl_table=11
-REL606-5	.	gene	34223	35326	.	+	0	Alias=ECB_00239;ID=ECB_00239;Name=proB
+REL606-5	.	gene	32898	33935	.	-	0	Alias=ECB_00238;ID=ECB_00238;Name=phoE
 REL606-5	.	CDS	34223	35326	.	+	0	Alias=ECB_00239;ID=ECB_00239;Name=proB;Note=gamma-glutamyl kinase;transl_table=11
-REL606-5	.	gene	35338	36591	.	+	0	Alias=ECB_00240;ID=ECB_00240;Name=proA
+REL606-5	.	gene	34223	35326	.	+	0	Alias=ECB_00239;ID=ECB_00239;Name=proB
 REL606-5	.	CDS	35338	36591	.	+	0	Alias=ECB_00240;ID=ECB_00240;Name=proA;Note=gamma-glutamyl phosphate reductase;transl_table=11
+REL606-5	.	gene	35338	36591	.	+	0	Alias=ECB_00240;ID=ECB_00240;Name=proA
 REL606-5	.	gene	36706	36781	.	+	0	Alias=ECB_t00005;ID=ECB_t00005;Name=thrW
 REL606-5	.	tRNA	36706	36781	.	+	0	Alias=ECB_t00005;ID=ECB_t00005;Name=thrW;Note=tRNA-Thr
-REL606-5	.	gene	36908	37318	.	-	0	Alias=ECB_00241;ID=ECB_00241;Name=yagP
 REL606-5	.	CDS	36908	37318	.	-	0	Alias=ECB_00241;ID=ECB_00241;Name=yagP;Note=predicted transcriptional regulator;transl_table=11
-REL606-5	.	gene	37297	38253	.	-	0	Alias=ECB_00242;ID=ECB_00242;Name=yagQ
+REL606-5	.	gene	36908	37318	.	-	0	Alias=ECB_00241;ID=ECB_00241;Name=yagP
 REL606-5	.	CDS	37297	38253	.	-	0	Alias=ECB_00242;ID=ECB_00242;Name=yagQ;Note=hypothetical protein;transl_table=11
-REL606-5	.	gene	38263	40461	.	-	0	Alias=ECB_00243;ID=ECB_00243;Name=yagR
+REL606-5	.	gene	37297	38253	.	-	0	Alias=ECB_00242;ID=ECB_00242;Name=yagQ
 REL606-5	.	CDS	38263	40461	.	-	0	Alias=ECB_00243;ID=ECB_00243;Name=yagR;Note=predicted oxidoreductase with molybdenum-binding domain;transl_table=11
-REL606-5	.	gene	40458	41414	.	-	0	Alias=ECB_00244;ID=ECB_00244;Name=yagS
+REL606-5	.	gene	38263	40461	.	-	0	Alias=ECB_00243;ID=ECB_00243;Name=yagR
 REL606-5	.	CDS	40458	41414	.	-	0	Alias=ECB_00244;ID=ECB_00244;Name=yagS;Note=predicted oxidoreductase with FAD-binding domain;transl_table=11
-REL606-5	.	gene	41411	42100	.	-	0	Alias=ECB_00245;ID=ECB_00245;Name=yagT
+REL606-5	.	gene	40458	41414	.	-	0	Alias=ECB_00244;ID=ECB_00244;Name=yagS
 REL606-5	.	CDS	41411	42100	.	-	0	Alias=ECB_00245;ID=ECB_00245;Name=yagT;Note=predicted xanthine dehydrogenase%2C 2Fe-2S subunit;transl_table=11
-REL606-5	.	gene	42517	43131	.	+	0	Alias=ECB_00246;ID=ECB_00246;Name=yagU
+REL606-5	.	gene	41411	42100	.	-	0	Alias=ECB_00245;ID=ECB_00245;Name=yagT
 REL606-5	.	CDS	42517	43131	.	+	0	Alias=ECB_00246;ID=ECB_00246;Name=yagU;Note=conserved inner membrane protein;transl_table=11
-REL606-5	.	gene	43378	43707	.	-	0	Alias=ECB_00247;ID=ECB_00247;Name=ykgJ
+REL606-5	.	gene	42517	43131	.	+	0	Alias=ECB_00246;ID=ECB_00246;Name=yagU
 REL606-5	.	CDS	43378	43707	.	-	0	Alias=ECB_00247;ID=ECB_00247;Name=ykgJ;Note=predicted ferredoxin;transl_table=11
-REL606-5	.	gene	44020	44730	.	-	0	Alias=ECB_00248;ID=ECB_00248;Name=yagV
+REL606-5	.	gene	43378	43707	.	-	0	Alias=ECB_00247;ID=ECB_00247;Name=ykgJ
 REL606-5	.	CDS	44020	44730	.	-	0	Alias=ECB_00248;ID=ECB_00248;Name=yagV;Note=hypothetical protein;transl_table=11
-REL606-5	.	gene	44699	46342	.	-	0	Alias=ECB_00249;ID=ECB_00249;Name=yagW
+REL606-5	.	gene	44020	44730	.	-	0	Alias=ECB_00248;ID=ECB_00248;Name=yagV
 REL606-5	.	CDS	44699	46342	.	-	0	Alias=ECB_00249;ID=ECB_00249;Name=yagW;Note=predicted receptor;transl_table=11
-REL606-5	.	gene	46332	47131	.	-	0	Alias=ECB_00250;ID=ECB_00250;Name=yagX
+REL606-5	.	gene	44699	46342	.	-	0	Alias=ECB_00249;ID=ECB_00249;Name=yagW
 REL606-5	.	CDS	46332	47131	.	-	0	Alias=ECB_00250;ID=ECB_00250;Name=yagX;Note=predicted aromatic compound dioxygenase;transl_table=11
+REL606-5	.	gene	46332	47131	.	-	0	Alias=ECB_00250;ID=ECB_00250;Name=yagX
 ##FASTA
 >REL606-5
 CTTACAACGCCGAAGATGTTTTGGCGGATTGAGAGAATTTCAGCTTTGATTCAGAGTCCG

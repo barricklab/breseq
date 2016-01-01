@@ -2300,6 +2300,9 @@ void cGenomeDiff::write(const string& filename) {
   for (vector<string>::iterator it=metadata.ref_seqs.begin(); it !=metadata.ref_seqs.end(); it++) {
     fprintf(os, "#=REFSEQ\t%s\n", it->c_str());
   }
+  for (vector<string>::iterator it=metadata.adapter_seqs.begin(); it !=metadata.adapter_seqs.end(); it++) {
+    fprintf(os, "#=ADAPTSEQ\t%s\n", it->c_str());
+  }
   for (vector<string>::iterator it=metadata.read_seqs.begin(); it !=metadata.read_seqs.end(); it++) {
     fprintf(os, "#=READSEQ\t%s\n", it->c_str());
   }

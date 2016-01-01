@@ -2837,7 +2837,11 @@ int do_runfile(int argc, char *argv[])
 			// Part 4: each read file as unnamed arg
 			for (vector<string>::const_iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {
 				
-				ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
+				if (file_exists( cString(download_dir + "/" + cString(*read_file_it).get_base_name_unzipped()).c_str() )) {
+					ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
+				} else {
+					ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name();
+				}
 			}
 		
 			//! Part 5: Error log path.
