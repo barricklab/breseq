@@ -48,19 +48,19 @@ namespace breseq {
     format_to_chr_offset["ILLUMINA_1.3+"] = 64;
     
     // Summary information that will be printed at the end
-    uint32_t max_read_length = 0;
-    uint8_t min_quality_score = 255;
-    uint8_t max_quality_score = 0;
-    uint64_t original_num_bases = 0;
-    uint64_t num_bases = 0;
-    uint64_t original_num_reads = 0;
-    uint64_t num_reads = 0;
-    uint64_t homopolymer_filtered_reads = 0;
-    uint64_t N_filtered_reads = 0;
+    uint32_t max_read_length;
+    uint8_t min_quality_score;
+    uint8_t max_quality_score;
+    uint64_t original_num_bases;
+    uint64_t original_num_reads;
     
     // Predict the format (and count original stats)
     string quality_format = cFastqQualityConverter::predict_fastq_file_format(file_name, original_num_reads, original_num_bases, max_read_length, min_quality_score, max_quality_score);
     
+    uint64_t num_bases = 0;
+    uint64_t num_reads = 0;
+    uint64_t homopolymer_filtered_reads = 0;
+    uint64_t N_filtered_reads = 0;
     
     //debug
     //cerr << "min_quality_score "     << (int)min_quality_score  << endl;
@@ -318,6 +318,12 @@ namespace breseq {
   
   string cFastqQualityConverter::predict_fastq_file_format(const string& file_name, uint64_t& original_num_reads, uint64_t& original_num_bases, uint32_t& max_read_length, uint8_t& min_quality_score, uint8_t& max_quality_score) 
   {
+  // Initialize the input variables!
+    original_num_reads = 0;
+    original_num_bases = 0;
+    max_read_length = 0;
+    min_quality_score = UINT8_MAX;
+    max_quality_score = 0;
     
   // Set up maps between formats
   map<string,uint8_t> format_to_chr_offset;
