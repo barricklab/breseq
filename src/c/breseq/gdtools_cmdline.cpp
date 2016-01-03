@@ -1777,6 +1777,10 @@ int do_read_count(int argc, char* argv[])
 		uint32_t max_read_length;
 		uint8_t min_quality_score, max_quality_score;
 		string quality_format = cFastqQualityConverter::predict_fastq_file_format(options.getArgv(i), original_num_reads, original_num_bases, max_read_length, min_quality_score, max_quality_score);
+		
+		uout << "  Reads: " << original_num_reads << endl;
+		uout << "  Bases: " << original_num_bases << endl;
+		
 		total_reads += original_num_reads;
 		total_bases += original_num_bases;
 	}
