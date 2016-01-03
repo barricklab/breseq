@@ -1781,8 +1781,8 @@ int do_read_count(int argc, char* argv[])
 		total_bases += original_num_bases;
 	}
 	
-	gd.add_breseq_data("ORIGINAL-READS", to_string(total_reads));
-	gd.add_breseq_data("ORIGINAL-BASES", to_string(total_bases));
+	gd.add_breseq_data("ORIGINAL-READS", to_string<uint64_t>(total_reads));
+	gd.add_breseq_data("ORIGINAL-BASES", to_string<uint64_t>(total_bases));
 	
 	uout << "Writing output GenomeDiff file: " << options["output"] << endl;
 	gd.write(options["output"]);
