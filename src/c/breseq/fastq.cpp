@@ -322,7 +322,7 @@ namespace breseq {
     original_num_reads = 0;
     original_num_bases = 0;
     max_read_length = 0;
-    min_quality_score = UINT8_MAX;
+    min_quality_score = 255;
     max_quality_score = 0;
     
   // Set up maps between formats
