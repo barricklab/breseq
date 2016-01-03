@@ -32,6 +32,7 @@ LICENSE AND COPYRIGHT
 #include <string.h>
 #include <time.h>
 #include <limits.h>
+#include <stdint.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -42,7 +43,6 @@ LICENSE AND COPYRIGHT
 #include <set>
 #include <vector>
 #include <string>
-#include <cstdint>
 // Streams
 #include <fstream>
 #include <sstream>
