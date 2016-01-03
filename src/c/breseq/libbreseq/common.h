@@ -42,6 +42,7 @@ LICENSE AND COPYRIGHT
 #include <set>
 #include <vector>
 #include <string>
+#include <cstdint>
 // Streams
 #include <fstream>
 #include <sstream>
