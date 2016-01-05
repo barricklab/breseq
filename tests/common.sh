@@ -19,7 +19,7 @@ then
 	exit
 fi
 
-BRESEQ="${TESTBINPREFIX}/breseq -j 2"
+BRESEQ="${TESTBINPREFIX}/breseq"
 GDTOOLS="${TESTBINPREFIX}/gdtools"
 
 # path to test data:
