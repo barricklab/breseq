@@ -283,7 +283,7 @@ namespace breseq
     options.addUsage("");
 		options.addUsage("Utility Command Usage: breseq [command] options ...");
     options.addUsage("  Sequence Utility Commands: CONVERT-FASTQ, CONVERT-REFERENCE, GET-SEQUENCE");
-    options.addUsage("  Breseq Post-Run Commands: BAM2ALN, BAM2COV");
+    options.addUsage("  Breseq Post-Run Commands: BAM2ALN, BAM2COV, CL-TABULATE");
     options.addUsage("");
     options.addUsage("For help using a utility command, type: breseq [command] "); 
     options.addUsage("");

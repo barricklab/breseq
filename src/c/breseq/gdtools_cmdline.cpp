@@ -2492,7 +2492,10 @@ int do_runfile(int argc, char *argv[])
       }
       //! Part 2: Pipeline's output path.
       ss << " -o " << output_dir + "/" + gd.get_title();  
-				
+			
+			//! Part 2b: input the genome_diff to keep the original meta info
+			ss << " -g " << file_name;
+			
 			//! Part 3: Reference argument path(s).
 			for (vector<string>::const_iterator ref_file_it=refs.begin(); ref_file_it != refs.end(); ref_file_it++) {  
 				ss << " -r " << download_dir << "/" << cString(*ref_file_it).get_base_name();

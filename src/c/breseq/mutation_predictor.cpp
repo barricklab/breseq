@@ -2561,14 +2561,43 @@ namespace breseq {
     sort(mob_mediated_name_list.begin(), mob_mediated_name_list.end());
     vector<string> con_mediated_name_list = map_keys_to_list<string,bool>(con_mediated_name_hash);
     sort(con_mediated_name_list.begin(), con_mediated_name_list.end());
+    
+    
+    // Handle metadata
+    bool has_metadata_treatment(false);
+    bool has_metadata_population(false);
+    bool has_metadata_time(false);
+    bool has_metadata_clone(false);
+    
+    // Handle other #=ITEM metadata things in the header in a general way
+    set<string> other_metadata_headers;
+    
+    for (vector<cGenomeDiff>::iterator it=sorted_genome_diffs.begin(); it != sorted_genome_diffs.end(); ++it) {
+      cGenomeDiff &gd = *it;
+      
+      if (gd.metadata.treatment.size()) has_metadata_treatment = true;
+      if (gd.metadata.population.size()) has_metadata_population = true;
+      if (gd.metadata.time != -1.0) has_metadata_time = true;
+      if (gd.metadata.clone.size()) has_metadata_clone = true;
 
+      for (map<string,string>::iterator itd=gd.metadata.breseq_data.begin(); itd != gd.metadata.breseq_data.end(); ++itd) {
+        const string &key = to_upper(itd->first);
+        const string &value = itd->second;
+        other_metadata_headers.insert(key);
+      }
+    }
+    
     vector<string> column_headers;
     column_headers.push_back("file");
     column_headers.push_back("sample");
-    column_headers.push_back("treatment");
-    column_headers.push_back("population");
-    column_headers.push_back("time");
-    column_headers.push_back("clone");
+    if (has_metadata_treatment) column_headers.push_back("treatment");
+    if (has_metadata_population) column_headers.push_back("population");
+    if (has_metadata_time) column_headers.push_back("time");
+    if (has_metadata_clone) column_headers.push_back("clone");
+    // Handle other #=ITEM metadata things in the header in a general way
+    for (set<string>::iterator it=other_metadata_headers.begin(); it!=other_metadata_headers.end(); it++) {
+      column_headers.push_back(*it);
+    }
     column_headers.push_back("total");
     column_headers.push_back("base_substitution");
     column_headers.push_back("small_indel");
@@ -2654,10 +2683,25 @@ namespace breseq {
       cGenomeDiff &gd = *it;
       cout << "    Counting mutations " + gd.get_title() << endl << endl;
       
-      vector<string> line_prefix_items = make_vector<string>(gd.get_file_name())
-          (gd.metadata.title)(gd.metadata.treatment)(gd.metadata.population)
-          ((gd.metadata.time != -1.0) ? to_string<double>(gd.metadata.time) : "")
-          (gd.metadata.clone);
+      vector<string> line_prefix_items;
+      line_prefix_items.push_back(gd.get_file_name());
+      line_prefix_items.push_back(gd.metadata.title);
+      
+      if (has_metadata_treatment) line_prefix_items.push_back(gd.metadata.treatment);
+      if (has_metadata_population) line_prefix_items.push_back(gd.metadata.population);
+      if (has_metadata_time)
+        line_prefix_items.push_back((gd.metadata.time != -1.0) ? to_string<double>(gd.metadata.time) : "");
+      if (has_metadata_clone) line_prefix_items.push_back(gd.metadata.clone);
+      
+      // Handle other #=ITEM metadata things in the header in a general way
+      for (set<string>::iterator it=other_metadata_headers.begin(); it!=other_metadata_headers.end(); it++) {
+        if (gd.metadata.breseq_data.find(*it) != gd.metadata.breseq_data.end()) {
+          line_prefix_items.push_back(gd.metadata.breseq_data[*it]);
+        } else {
+          line_prefix_items.push_back("");
+        }
+      }
+      
       
       string detailed_line_prefix = join(line_prefix_items, "\t");
       
