@@ -4120,29 +4120,53 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
           ASSERT(size > 0, "Attempt to apply mutation with non-positive size.");
         }
         
-        // Set up attributes -- we normally show the base before (if there is one)
-        replace_seq_id = mut[SEQ_ID];
-        replace_start = position - 1;
-        replace_end = position - 1 + size;
+        // We normally show the base before (if there is one)
+        int32_t remaining_base_start_shown = 1;
+        int32_t remaining_base_end_shown = 0;
+
         
-        if (replace_start == 0) {
-          replace_start++;
-          replace_end++;
+        // Set up attributes
+        replace_seq_id = mut[SEQ_ID];
+        
+        if (position == 1) {
+          // Show the base after if deletion starts on first base
+          remaining_base_start_shown = 0;
+          remaining_base_end_shown = 1;
+          
+          // Show no bases if deletion encompasses entire genome fragment
+          if ( position - 1 + size == new_ref_seq_info[replace_seq_id].get_sequence_length() ) {
+            remaining_base_end_shown = 0;
+          }
         }
+        
+        replace_start = position - remaining_base_start_shown;
+        replace_end = position - 1 + size + remaining_base_end_shown;
+        
         replace_seq = new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end);
-        replace_seq.insert(0,"(");
-        replace_seq.insert(2,")");
+        if (remaining_base_start_shown) {
+          replace_seq.insert(0,"(");
+          replace_seq.insert(2,")");
+        } else if (remaining_base_end_shown) {
+          replace_seq.insert(replace_seq.size()-1,"(");
+          replace_seq.insert(replace_seq.size(),")");
+        } else {
+          replace_seq.insert(0, "(.)");
+        }
         
         applied_seq_id = mut[SEQ_ID];
-        applied_start = position - 1;
-        applied_end = position - 1;
-        
-        if (applied_start == 0) {
-          applied_seq = "";
-        } else {
+        if (remaining_base_start_shown) {
+          applied_start = position - 1;
+          applied_end = position - 1;
           applied_seq = new_ref_seq_info.get_sequence_1(applied_seq_id, applied_start, applied_end);
+        } else if (remaining_base_end_shown) {
+          applied_start = position - 1 + size + remaining_base_end_shown;
+          applied_end = position - 1 + size + remaining_base_end_shown;
+          applied_seq = new_ref_seq_info.get_sequence_1(applied_seq_id, applied_start, applied_end);
+        } else {
+          applied_start = 0;
+          applied_end = 0;
+          applied_seq = ".";
         }
-          
         applied_seq.insert(0,"(");
         applied_seq.insert(2,")");
 
