@@ -1829,7 +1829,7 @@ void Html_Mutation_Table_String::Header_Line(bool print_main_header)
   // (1) We don't want it at all. (Single genome no poly prediction)
   vector<string> freq_header_list;
 
-  if (options.gd_name_list_ref.size() > 1) {
+  if ( (options.gd_name_list_ref.size() > 1) || (options.force_show_sample_headers)) {
     freq_header_list = options.gd_name_list_ref;
   } 
   else if(settings.polymorphism_prediction || options.force_frequencies_for_one_reference) {
@@ -1994,7 +1994,7 @@ void Html_Mutation_Table_String::Item_Lines()
     vector<string> freq_list;
    
     // (2) We are in compare mode and need a column for each file
-    if (options.gd_name_list_ref.size() > 1) {
+    if ((options.gd_name_list_ref.size() > 1) || (options.force_show_sample_headers)) {
       //for each gd
       for (uint32_t j = 0; j < options.gd_name_list_ref.size(); j++) {
         string base_name = options.gd_name_list_ref[j];

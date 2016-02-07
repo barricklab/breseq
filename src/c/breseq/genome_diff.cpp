@@ -2439,6 +2439,15 @@ void cGenomeDiff::remove_type(gd_entry_type _type)
     if (advance_it) ++it;
   }
 }
+  
+void cGenomeDiff::remove_all_but_mutations_and_unknown()
+{
+  remove_group(cGenomeDiff::VALIDATION);
+  remove_type(RA);
+  remove_type(MC);
+  remove_type(CN);
+  remove_type(JC);
+}
 
 /*! Given an id return the entry if it exists. NULL otherwise.
  */ 
@@ -3112,8 +3121,14 @@ void cGenomeDiff::merge(cGenomeDiff& merge_gd, bool unique, bool new_id, bool ph
     }
   }
   
-
-
+  // @JEB: Added 2016-02-06
+  // It is now safe to delete (in fact we should) the phylogeny information?
+  if (!phylogeny_id_aware) {
+    for (diff_entry_list_t::iterator it=_entry_list.begin(); it!= _entry_list.end(); it++) {
+      (*it)->erase("phylogeny_id");
+      (*it)->erase("population_id");
+    }
+  }
   
   //Notify user of the update
   if(verbose)cout << "\tMERGE DONE - " << merge_gd.get_file_path() << endl;
@@ -4628,6 +4643,48 @@ void cGenomeDiff::mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, boo
   this->reassign_unique_ids();
 }
   
+  
+void cGenomeDiff::filter_to_within_region(cReferenceSequences& ref_seq_info, const string& region) {
+  
+  uint32_t target_id, start_pos, end_pos, insert_start, insert_end;
+  ref_seq_info.parse_region(region, target_id, start_pos, end_pos);
+  string seq_id = ref_seq_info[target_id].m_seq_id;
+  
+  // Create one flagged region
+  cFlaggedRegions flagged_regions;
+  flagged_regions.flag_region(seq_id, start_pos, end_pos);
+  
+  // Mask mutations by removing entries from the current GD file
+  diff_entry_list_t::iterator mut_it = this->_entry_list.begin();
+  
+  bool advance_it(true);
+  while (mut_it != this->_entry_list.end()) {
+    
+    diff_entry_ptr_t& mut = *mut_it;
+    
+    // ONLY mutations
+    if (!mut->is_mutation()) {
+      ++mut_it;
+      continue;
+    }
+    
+    cReferenceCoordinate start_coord = mut->get_reference_coordinate_start();
+    cReferenceCoordinate end_coord = mut->get_reference_coordinate_end();
+    
+    cFlaggedRegions::regions_t contained_within = flagged_regions.regions_that_overlap(mut->at(SEQ_ID), start_coord, end_coord);
+    
+    // Remove if mutation does not overlap region of interest
+    advance_it = true;
+    if (contained_within.size() == 0) {
+      mut_it = this->remove(mut_it);
+      advance_it = false;
+    }
+    if (advance_it) ++mut_it;
+  }
+
+}
+
+  
 void cGenomeDiff::normalize_mutations(cReferenceSequences& ref_seq_info, Settings& settings, bool verbose)
 {
   (void) verbose;
@@ -5178,7 +5235,8 @@ void cGenomeDiff::write_jc_score_table(cGenomeDiff& compare, string table_file_p
 void cGenomeDiff::tabulate_frequencies_from_multiple_gds(
                                                          cGenomeDiff& master_gd, 
                                                          vector<cGenomeDiff>& gd_list, 
-                                                         vector<string> &title_list, 
+                                                         vector<string> &title_list,
+                                                         bool phylogeny_id_aware,
                                                          bool verbose
                                                          )
 {  
@@ -5263,6 +5321,12 @@ void cGenomeDiff::tabulate_frequencies_from_multiple_gds(
       
       if (verbose)
         cout << ">" << title_list[i] << endl << check_mut->as_string() << endl;
+      
+      // Prevent keeping things separate based on phylogeny id
+      if (!phylogeny_id_aware) {
+        check_mut->erase("phylogeny_id");
+        check_mut->erase("population_id");
+      }
       
       // we found the exact same mutation
       if ( (check_mut.get() != NULL) && (*check_mut == *this_mut) ) {

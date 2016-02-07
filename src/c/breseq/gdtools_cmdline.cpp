@@ -894,7 +894,10 @@ int do_annotate(int argc, char* argv[])
 	options("ignore-pseudogenes", "Treat pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT);
   options("repeat-header", "In HTML mode, repeat the header line every this many rows (0=OFF)", "10");
 	options("phylogeny-aware,p", "Check the optional 'phylogeny_id' field when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
-
+	options("region,g", "Only show mutations that overlap this reference fragment (e.g., REL606:64722-65312)");
+	options("collapse,c", "Do not show samples (columns) unless they hav at least one mutation", TAKES_NO_ARGUMENT);
+	
+	
   options.addUsage("");
   options.addUsage("If multiple GenomeDiff input files are provided, then they are merged and the frequencies from each file are shown for each mutation.");
   options.addUsage("");
@@ -960,6 +963,12 @@ int do_annotate(int argc, char* argv[])
 	
 	ASSERT((output_format != "PHYLIP") || (compare_mode), "You must provide more than one input GD file in PHYLIP mode.");
 	
+	// Load reference files
+	vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
+	uout("Reading input reference sequence files") << reference_file_names << endl;
+	cReferenceSequences ref_seq_info;
+	ref_seq_info.LoadFiles(reference_file_names);
+	
   // First use merge to produce a file with a line for each mutation
   cGenomeDiff gd;
   vector<string> gd_titles;
@@ -980,15 +989,23 @@ int do_annotate(int argc, char* argv[])
         }
       }
     }
-    gd_list.push_back(single_gd);
-
-    cGenomeDiff cleaned_single_gd(single_gd);  
-    cleaned_single_gd.remove_group(cGenomeDiff::EVIDENCE);
-    gd.merge(cleaned_single_gd, true, false, options.count("phylogeny-aware"));
+		
+    single_gd.remove_all_but_mutations_and_unknown();
+		
+		// Clean to the desired region here to avoid
+		if (options.count("region")) {
+			single_gd.filter_to_within_region(ref_seq_info, options["region"]);
+		}
+		
+		// Decide whether to merge in a new column
+		if ( (!options.count("collapse")) || (single_gd.mutation_list().size() > 0)) {
+			gd.merge(single_gd, true, false, options.count("phylogeny-aware"));
+			gd_list.push_back(single_gd); // it's important to add a copy that has UN items intact
+		}
 		
 		// Copy over the metadata if there is only one file
 		if (gd_path_names.size() == 1) {
-			gd.metadata = cleaned_single_gd.metadata;
+			gd.metadata = single_gd.metadata;
 		}
   }
 	
@@ -1001,13 +1018,8 @@ int do_annotate(int argc, char* argv[])
 
   // Then add frequency columns for all genome diffs
   if (compare_mode || polymorphisms_found) {
-    cGenomeDiff::tabulate_frequencies_from_multiple_gds(gd, gd_list, gd_titles);
+    cGenomeDiff::tabulate_frequencies_from_multiple_gds(gd, gd_list, gd_titles, options.count("phylogeny-aware"));
   }
-  
-  vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
-  uout("Reading input reference sequence files") << reference_file_names << endl;
-  cReferenceSequences ref_seq_info;
-  ref_seq_info.LoadFiles(reference_file_names);
     
   uout("Annotating mutations");
   ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"), compare_mode);
@@ -1027,6 +1039,7 @@ int do_annotate(int argc, char* argv[])
       mt_options.force_frequencies_for_one_reference = true;
     mt_options.one_ref_seq = ref_seq_info.size() == 1;
     mt_options.gd_name_list_ref = gd_titles;
+		mt_options.force_show_sample_headers = gd_path_names.size() > 0;
     mt_options.repeat_header = from_string<int32_t>(options["repeat-header"]);
     html_compare(settings, output_file_name, "Mutation Comparison", gd, mt_options);
         

@@ -640,6 +640,8 @@ public:
   //! Remove all of a specific type of entry
   void remove_type(gd_entry_type _type);
   
+  void remove_all_but_mutations_and_unknown();
+  
   //!---- Accessing Entries ---- !//
   
   diff_entry_ptr_t find_by_id(string _id);
@@ -760,6 +762,8 @@ public:
   //! Remove mutations that overlap MASK items in another GD
   void mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, bool verbose);
 
+  void filter_to_within_region(cReferenceSequences& ref_seq_info, const string& region);
+  
   //! Shift mutations to preferred descriptions
   void normalize_mutations(cReferenceSequences &ref_seq, Settings& settings, bool verbose = false);
    
@@ -779,6 +783,7 @@ public:
   static void tabulate_frequencies_from_multiple_gds(cGenomeDiff& master_gd, 
                                                      vector<cGenomeDiff>& gd_list,
                                                      vector<string> &title_list,
+                                                     bool phylogeny_aware = false,
                                                      bool verbose = false);
 
   

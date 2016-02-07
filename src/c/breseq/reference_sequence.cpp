@@ -2469,7 +2469,7 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
   
   string default_key = "default";
   vector<string>compare_key_list;
-  if (compare_mode) {
+  if (compare_mode && muts.size()) {
     diff_entry_ptr_t p = *muts.begin();
     for(cDiffEntry::iterator it = p->begin(); it != p->end(); ++it) {
       if (it->first.compare(0, 10, "frequency_") == 0) {
