@@ -645,7 +645,6 @@ int do_error_count(int argc, char* argv[]) {
 		("bam,b", "bam file containing sequences to be aligned", "data/reference.bam")
 		("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
 		("output,o", "output directory", "./")
-		("readfile,r", "name of readfile (no extension). may occur multiple times")
 		("coverage", "generate unique coverage distribution output", TAKES_NO_ARGUMENT)
 		("errors", "generate unique error count output", TAKES_NO_ARGUMENT)
     ("covariates", "covariates for error model. a comma separated list (no spaces) of these choices: ref_base, obs_base, prev_base, quality, read_set, ref_pos, read_pos, base_repeat. For quality, read_pos, and base_repeat you must specify the maximum value possible, e.g. quality=40")
@@ -654,7 +653,6 @@ int do_error_count(int argc, char* argv[]) {
   
 	// make sure that the config options are good:
 	if(options.count("help")
-		 || !options.count("readfile")
 		 || (!options.count("coverage") && !options.count("errors")) ) {
 		options.printUsage();
 		return -1;
@@ -665,29 +663,35 @@ int do_error_count(int argc, char* argv[]) {
 		options.printUsage();
 		return -1;
 	}
-	
-	// attempt to calculate error calibrations:
-	try {
-    Summary summary;
-    Settings settings;
-		error_count(
-                settings,
-                summary,
-                options["bam"],
-                options["fasta"],
-                options["output"],
-                split(options["readfile"], "\n"),
-                options.count("coverage"),
-                options.count("errors"),
-                false,
-                from_string<uint32_t>(options["minimum-quality-score"]),
-                options["covariates"]
-                );
-	} catch(...) {
-		// failed; 
-    std::cout << "<<<Failed>>>" << std::endl;
-		return -1;
-	}
+
+  Summary summary;
+  Settings settings;
+  
+  // This loading required to set up reference
+  // sequences that get parsed during error count
+  // BETTER: would be to read them from the saved settings
+  // of the breseq run?
+  cReferenceSequences ref_seq_info;
+  vector<string> reference_file_names;
+  reference_file_names.push_back(options["fasta"]);
+  ref_seq_info.LoadFiles(reference_file_names);
+  settings.init_reference_sets(ref_seq_info);
+  
+  vector<string> no_read_file_names;
+
+  error_count(
+              settings,
+              summary,
+              options["bam"],
+              options["fasta"],
+              options["output"],
+              no_read_file_names,
+              options.count("coverage"),
+              options.count("errors"),
+              false,
+              from_string<uint32_t>(options["minimum-quality-score"]),
+              options["covariates"]
+              );
   
 	return 0;
 }

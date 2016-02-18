@@ -1,7 +1,7 @@
 Version 0.27.2
    * breseq CL-TABULATE command for analyzing changes in contingency loci
      (hypermutable homopolymer stretches).
-   * Bug fixes and updates to various gdtools commands.
+   * Bug fixes and updates to various gdtools and breseq utility commands.
 
 Version 0.27.1
    * Improved stability; fixed two sources of rare crashes.
