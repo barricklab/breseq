@@ -19,9 +19,14 @@ const char* FILE_NAME="file_name";
 const char* FISHER_STRAND_P_VALUE="fisher_strand_p_value";
 const char* FLANKING_LEFT="flanking_left";
 const char* GENES="genes";
+const char* HTML_SEQ_ID="html_seq_id";
 const char* GENE_NAME="gene_name";
 const char* HTML_GENE_NAME="html_gene_name";
 const char* GENE_POSITION="gene_position";
+const char* HTML_POSITION="html_position";
+const char* HTML_MUTATION = "html_mutation";
+const char* HTML_MUTATION_ANNOTATION = "html_mutation_annotation";
+const char* HTML_GENE_PRODUCT = "html_gene_product";
 const char* GENE_PRODUCT="gene_product";
 const char* GENE_PRODUCT_HIDE="_gene_product_hide";
 const char* GHOST_END="ghost_end";
@@ -1781,10 +1786,171 @@ void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenom
   }
 }
 
+  
+void add_html_fields_to_mutation(cDiffEntry& mut, const Settings& settings, MutationTableOptions& options) {
+  
+  string cell_seq_id = nonbreaking(mut[SEQ_ID]);
+  string cell_position = commify(mut[POSITION]);
+  string cell_mutation;
+  string cell_mutation_annotation = formatted_mutation_annotation(mut); // Do NOT make nonbreaking
+  string cell_gene_name = nonbreaking(mut[HTML_GENE_NAME]);
+  string cell_gene_product = htmlize(mut[GENE_PRODUCT]);
+  
+  // @MDS - If the product contains more than a set number of genes
+  // replace the name with the one that hides it with javascript.
+  if (!settings.no_javascript) {
+    if(mut.count(GENE_PRODUCT_HIDE) && (mut[GENE_PRODUCT_HIDE].size() > 0)) {
+      cell_gene_product = htmlize(mut[GENE_PRODUCT_HIDE]);
+    }
+  }
+  
+  // build 'mutation' column = description of the genetic change
+  switch (mut._type)
+  {
+    case SNP:{
+      cell_mutation = mut["_ref_seq"] + "&rarr;" + mut[NEW_SEQ];
+    } break;
+      
+    case INS:{
+      if (mut.entry_exists("repeat_seq")) {
+        // alternative way of depicting
+        cell_mutation = "(" + mut["repeat_seq"] + ")" + "<sub>" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"] + "</sub>";
+        //cell_mutation = mut["repeat_seq"] + "&times;" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"];
+      }
+      // If repeat seq is very long, it will not be present
+      else if (mut.entry_exists("repeat_length")) {
+        cell_mutation = "(" + mut["repeat_length"] + " bp)" + "<sub>" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"] + "</sub>";
+      }
+      else if (options.detailed || (mut["new_seq"].size() <= settings.output_max_nucleotides_to_show_in_tables)) {
+        cell_mutation = "+" + mut[NEW_SEQ];
+      } else {
+        cell_mutation = "+" + s(mut[NEW_SEQ].size()) + " bp";
+      }
+    } break;
+      
+    case DEL:{
+      
+      if (mut.entry_exists("repeat_seq")) {
+        // alternative way of depicting
+        if (mut["repeat_seq"].size() > 12) {
+          cell_mutation = "(" + to_string<int32_t>(mut["repeat_seq"].size()) + "-bp)" + "<sub>" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"] + "</sub>";
+        } else {
+          cell_mutation = "(" + mut["repeat_seq"] + ")" + "<sub>" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"] + "</sub>";
+        }
+        //cell_mutation = mut["repeat_seq"] + "&times;" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"];
+      }
+      else {
+        cell_mutation = nonbreaking("&Delta;" + commify(mut["size"]) + " bp");
+        
+        string annotation_str;
+        
+        // special annotation for mediated- and between repeat elements
+        if (mut.entry_exists("mediated"))
+          annotation_str = html_format_repeat_name(mut["mediated"]) + "-mediated";
+        if (mut.entry_exists("between"))
+          annotation_str = "between " + html_format_repeat_name(mut["between"]);
+        // default
+        if(annotation_str.empty()) {
+          annotation_str = nonbreaking(mut["gene_position"]);
+        }
+        cell_mutation_annotation =  nonbreaking(annotation_str);
+      }
+    } break;
+      
+    case SUB:{
+      if (options.detailed || (mut["new_seq"].size() <= 4)) {
+        cell_mutation = nonbreaking(mut["size"] + " bp&rarr;" + mut["new_seq"]);
+      } else {
+        cell_mutation = nonbreaking(mut["size"] + " bp&rarr;" + s(mut["new_seq"].size()) + " bp");
+      }
+    } break;
+      
+    case CON:{
+      cell_mutation = nonbreaking(mut["size"] + " bp&rarr;" + mut["region"]);
+    } break;
+      
+    case MOB:{
+      stringstream s;
+      
+      stringstream s_start;
+      if (mut.entry_exists("ins_start")) {
+        s_start << "+" << mut["ins_start"] << " ";
+      }
+      if (mut.entry_exists("del_start")) {
+        s_start << "&Delta;" << mut["del_start"] << " bp ";
+      }
+      if (!(s_start.str()).empty()) {
+        s << s_start.str() << ":: ";
+      }
+      
+      s << html_format_repeat_name(mut["repeat_name"]) << " (";
+      switch (from_string<int32_t>(mut["strand"]))
+      {
+        case -1:
+          s << "–";
+          break;
+        case 0:
+          s << "?";
+          break;
+        case +1:
+          s << "+";
+          break;
+      }
+      s << ")";
+      
+      if (from_string<int32_t>(mut["duplication_size"]) > 0) {
+        s << " +" << mut["duplication_size"] << " bp";
+      } else if (from_string<int32_t>(mut["duplication_size"]) < 0) {
+        s << " &Delta;" << abs(from_string<int32_t>(mut["duplication_size"])) << " bp";
+      }
+      
+      stringstream s_end;
+      if (mut.entry_exists("del_end")) {
+        s_end << " &Delta;" << mut["del_end"] << " bp";
+      }
+      if (mut.entry_exists("ins_end")) {
+        s_end << " +" << mut["ins_end"];
+      }
+      if (!(s_end.str()).empty()) {
+        s << " ::" << s_end.str();
+      }
+      
+      cell_mutation = nonbreaking(s.str());
+    } break;
+      
+    case INV:{
+      cell_mutation = nonbreaking(commify(mut["size"]) + " bp inversion");
+      cell_gene_name = i(nonbreaking(mut["gene_name_1"])) + "&darr;" +
+      i(nonbreaking(mut["gene_name_2"]));
+      cell_gene_product = htmlize(mut["gene_product_1"]) + "&darr;" +
+      htmlize(mut["gene_product_2"]);
+    } break;
+      
+    case AMP:{
+      cell_mutation = nonbreaking(commify(mut["size"]) + " bp x " + mut["new_copy_number"]);
+      cell_mutation_annotation =
+      from_string<uint32_t>(mut["new_copy_number"]) == 2 ?
+      "duplication" : "amplification";
+    } break;
+      
+    default:
+      break;
+  }
+
+  mut[HTML_SEQ_ID] = cell_seq_id;
+  mut[HTML_POSITION] = cell_position;
+  mut[HTML_GENE_NAME] = cell_gene_name;
+  mut[HTML_MUTATION] = cell_mutation;
+  mut[HTML_MUTATION_ANNOTATION] = cell_mutation_annotation;
+  mut[HTML_GENE_NAME] = cell_gene_name;
+  mut[HTML_GENE_PRODUCT] = cell_gene_product;
+  
+}
+  
 /*
  * =====================================================================================
  *        Class:  Html_Mutation_Table_String
- *  Description:  
+ *  Description:
  * =====================================================================================
  */
 Html_Mutation_Table_String::Html_Mutation_Table_String(
@@ -2017,153 +2183,9 @@ void Html_Mutation_Table_String::Item_Lines()
     }
       
     // ### marshal cells defined depending on mutation type/Users/jbarrick/src/breseq/src/c/breseq/alignment_output.cpp
-    string cell_seq_id = nonbreaking(mut[SEQ_ID]);
-    string cell_position = commify(mut[POSITION]);
-    string cell_mutation;
-    string cell_mutation_annotation = formatted_mutation_annotation(mut); // Do NOT make nonbreaking
-    string cell_gene_name = nonbreaking(mut[HTML_GENE_NAME]);
-    string cell_gene_product = htmlize(mut[GENE_PRODUCT]);
     
-    // @MDS - If the product contains more than a set number of genes
-    // replace the name with the one that hides it with javascript.
-    if (!settings.no_javascript) {
-      if(mut.count(GENE_PRODUCT_HIDE) && (mut[GENE_PRODUCT_HIDE].size() > 0)) {
-          cell_gene_product = htmlize(mut[GENE_PRODUCT_HIDE]);
-      }
-    }
+    add_html_fields_to_mutation(mut, settings, options);
     
-    // build 'mutation' column = description of the genetic change    
-    switch (mut._type)
-    {
-      case SNP:{
-        cell_mutation = mut["_ref_seq"] + "&rarr;" + mut[NEW_SEQ];
-      } break;
-        
-      case INS:{
-        if (mut.entry_exists("repeat_seq")) {
-          // alternative way of depicting
-          cell_mutation = "(" + mut["repeat_seq"] + ")" + "<sub>" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"] + "</sub>";
-          //cell_mutation = mut["repeat_seq"] + "&times;" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"];
-        }
-        // If repeat seq is very long, it will not be present 
-        else if (mut.entry_exists("repeat_length")) {
-          cell_mutation = "(" + mut["repeat_length"] + " bp)" + "<sub>" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"] + "</sub>";
-        }
-        else if (options.detailed || (mut["new_seq"].size() <= settings.output_max_nucleotides_to_show_in_tables)) {
-          cell_mutation = "+" + mut[NEW_SEQ];
-        } else {
-          cell_mutation = "+" + s(mut[NEW_SEQ].size()) + " bp";
-        }
-      } break;
-        
-      case DEL:{
-        
-        if (mut.entry_exists("repeat_seq")) {
-          // alternative way of depicting
-          if (mut["repeat_seq"].size() > 12) {
-            cell_mutation = "(" + to_string<int32_t>(mut["repeat_seq"].size()) + "-bp)" + "<sub>" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"] + "</sub>";
-          } else {
-            cell_mutation = "(" + mut["repeat_seq"] + ")" + "<sub>" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"] + "</sub>";
-          }
-          //cell_mutation = mut["repeat_seq"] + "&times;" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"];
-        }
-        else {
-          cell_mutation = nonbreaking("&Delta;" + commify(mut["size"]) + " bp");
-              
-          string annotation_str;
-          
-          // special annotation for mediated- and between repeat elements
-          if (mut.entry_exists("mediated")) 
-            annotation_str = html_format_repeat_name(mut["mediated"]) + "-mediated"; 
-          if (mut.entry_exists("between")) 
-            annotation_str = "between " + html_format_repeat_name(mut["between"]);
-          // default
-          if(annotation_str.empty()) {
-            annotation_str = nonbreaking(mut["gene_position"]);
-          } 
-          cell_mutation_annotation =  nonbreaking(annotation_str);
-        }
-      } break;
-        
-      case SUB:{
-        if (options.detailed || (mut["new_seq"].size() <= 4)) {
-          cell_mutation = nonbreaking(mut["size"] + " bp&rarr;" + mut["new_seq"]);
-        } else {
-          cell_mutation = nonbreaking(mut["size"] + " bp&rarr;" + s(mut["new_seq"].size()) + " bp");
-        }
-      } break;
-        
-      case CON:{
-        cell_mutation = nonbreaking(mut["size"] + " bp&rarr;" + mut["region"]);
-      } break;
-        
-      case MOB:{
-        stringstream s;
-        
-        stringstream s_start;
-        if (mut.entry_exists("ins_start")) {
-          s_start << "+" << mut["ins_start"] << " ";
-        }
-        if (mut.entry_exists("del_start")) {
-          s_start << "&Delta;" << mut["del_start"] << " bp ";
-        }
-        if (!(s_start.str()).empty()) {
-          s << s_start.str() << ":: ";
-        }
-        
-        s << html_format_repeat_name(mut["repeat_name"]) << " (";
-        switch (from_string<int32_t>(mut["strand"]))
-        {
-          case -1:
-            s << "–";
-            break;
-          case 0:
-            s << "?";
-            break;
-          case +1:
-            s << "+";
-            break;
-        }
-        s << ")";
-        
-        if (from_string<int32_t>(mut["duplication_size"]) > 0) {
-          s << " +" << mut["duplication_size"] << " bp";
-        } else if (from_string<int32_t>(mut["duplication_size"]) < 0) {
-          s << " &Delta;" << abs(from_string<int32_t>(mut["duplication_size"])) << " bp";
-        }
-        
-        stringstream s_end;
-        if (mut.entry_exists("del_end")) {
-          s_end << " &Delta;" << mut["del_end"] << " bp";
-        }
-        if (mut.entry_exists("ins_end")) {
-          s_end << " +" << mut["ins_end"];
-        }
-        if (!(s_end.str()).empty()) {
-          s << " ::" << s_end.str();
-        }
-        
-        cell_mutation = nonbreaking(s.str());
-      } break;
-        
-      case INV:{
-        cell_mutation = nonbreaking(commify(mut["size"]) + " bp inversion");
-        cell_gene_name = i(nonbreaking(mut["gene_name_1"])) + "&darr;" +
-        i(nonbreaking(mut["gene_name_2"]));
-        cell_gene_product = htmlize(mut["gene_product_1"]) + "&darr;" + 
-        htmlize(mut["gene_product_2"]);
-      } break;
-        
-      case AMP:{
-        cell_mutation = nonbreaking(commify(mut["size"]) + " bp x " + mut["new_copy_number"]);
-        cell_mutation_annotation = 
-        from_string<uint32_t>(mut["new_copy_number"]) == 2 ?
-        "duplication" : "amplification";
-      } break;
-        
-      default:
-        break;
-    }
     // ###### PRINT THE TABLE ROW ####
     ss << endl << "<!-- Print The Table Row -->" << endl; 
     ss << start_tr("class=\"" + row_class + "\"") << endl;
@@ -2172,17 +2194,17 @@ void Html_Mutation_Table_String::Item_Lines()
       ss << td(ALIGN_CENTER, evidence_string) << "<!-- Evidence -->" << endl;
     }
     if (!options.one_ref_seq) {
-      ss << td(ALIGN_CENTER, cell_seq_id) << "<!-- Seq_Id -->" << endl;
+      ss << td(ALIGN_CENTER, mut[HTML_SEQ_ID]) << "<!-- Seq_Id -->" << endl;
     }
-    ss << td(ALIGN_RIGHT, cell_position) << "<!-- Position -->" << endl;
+    ss << td(ALIGN_RIGHT, mut[HTML_POSITION]) << "<!-- Position -->" << endl;
     
-    ss << td(ALIGN_CENTER, cell_mutation) << "<!-- Cell Mutation -->" << endl;
+    ss << td(ALIGN_CENTER, mut[HTML_MUTATION]) << "<!-- Cell Mutation -->" << endl;
           
     if (settings.lenski_format) {
       ss << "<!-- Lenski_Format -->" << endl;
-      ss << td(ALIGN_CENTER, cell_mutation_annotation) << endl;
-      ss << td(ALIGN_CENTER, cell_gene_name) << endl;
-      ss << td(ALIGN_LEFT, cell_gene_product) << endl;
+      ss << td(ALIGN_CENTER, mut[HTML_MUTATION_ANNOTATION]) << endl;
+      ss << td(ALIGN_CENTER, mut[HTML_GENE_NAME]) << endl;
+      ss << td(ALIGN_LEFT, mut[HTML_GENE_PRODUCT]) << endl;
     }
     
     //Need if statement for C++
@@ -2191,11 +2213,11 @@ void Html_Mutation_Table_String::Item_Lines()
     } 
     if (settings.lenski_format) {
       ss << "<!-- Lenski Format -->" << endl;
-      ss << td(ALIGN_CENTER, cell_position) << endl;
+      ss << td(ALIGN_CENTER, mut[HTML_POSITION]) << endl;
     } else {
-      ss << td(ALIGN_CENTER, cell_mutation_annotation) << endl;
-      ss << td(ALIGN_CENTER, cell_gene_name) << endl;
-      ss << td(ALIGN_LEFT, cell_gene_product) << endl;
+      ss << td(ALIGN_CENTER, mut[HTML_MUTATION_ANNOTATION]) << endl;
+      ss << td(ALIGN_CENTER, mut[HTML_GENE_NAME]) << endl;
+      ss << td(ALIGN_LEFT, mut[HTML_GENE_PRODUCT]) << endl;
     }
     ss << end_tr() << endl;
 

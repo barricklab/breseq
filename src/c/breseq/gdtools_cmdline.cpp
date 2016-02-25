@@ -1023,7 +1023,7 @@ int do_annotate(int argc, char* argv[])
     
   uout("Annotating mutations");
   ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"), compare_mode);
-    
+	
   if (output_format == "HTML") {
     
     uout("Writing output HTML file", output_file_name);
@@ -1045,6 +1045,22 @@ int do_annotate(int argc, char* argv[])
         
   } else if (output_format == "GD") {
     uout("Writing output Genome Diff file", options["output"]);
+		
+		// Only defaults accessible - which include javascript output...
+		MutationTableOptions options;
+		Settings settings;
+		
+		// Add extra HTML annotations
+		diff_entry_list_t muts = gd.mutation_list();
+		for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr ++) {
+			cDiffEntry& mut = (**itr);
+			add_html_fields_to_mutation(mut, settings, options);
+			
+			// And add start and end position info
+			mut["start_position"] = to_string<int32_t>(mut.get_reference_coordinate_start().get_position());
+			mut["end_position"] = to_string<int32_t>(mut.get_reference_coordinate_end().get_position());
+		}
+		
     gd.write(output_file_name);
   } else if (output_format == "PHYLIP") {
       uout("Writing output PHYLIP alignment file", options["output"]);

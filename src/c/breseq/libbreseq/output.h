@@ -11,6 +11,7 @@ namespace breseq
  *  Diff_Entry Keywords - Specific to breseq output! 
  *  Others are defined in genome_diff.*
  *-----------------------------------------------------------------------------*/
+  
 extern const char* ALIGNMENT_EMPTY_CHANGE_LINE;
 extern const char* ALIGNMENT_OVERLAP;
 extern const char* BAM_PATH;
@@ -20,9 +21,14 @@ extern const char* FILE_NAME;
 extern const char* FISHER_STRAND_P_VALUE;
 extern const char* FLANKING_LEFT;
 extern const char* GENES;
+extern const char* HTML_SEQ_ID;
 extern const char* GENE_NAME;
 extern const char* HTML_GENE_NAME;
 extern const char* GENE_POSITION;
+extern const char* HTML_POSITION;
+extern const char* HTML_MUTATION;
+extern const char* HTML_MUTATION_ANNOTATION;
+extern const char* HTML_GENE_PRODUCT;
 extern const char* GENE_PRODUCT;
 extern const char* GHOST_END;
 extern const char* GHOST_SEQ_ID_END;
@@ -254,6 +260,9 @@ string decode_reject_reason(const string & reject);
 
 // sub draw_coverage
 void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenomeDiff& gd);
+  
+// add "HTML_*" entries to mutation (except HTML_GENE which is added in cReferenceSequence)
+void add_html_fields_to_mutation(cDiffEntry& mut, const Settings& settings, MutationTableOptions& options);
   
 /*-----------------------------------------------------------------------------
  *  Create_Evidence_Files
