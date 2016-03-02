@@ -591,29 +591,7 @@ int32_t cDiffEntry::compare(const cDiffEntry& a, const cDiffEntry& b)
       }
     }
   }
-  
-/* This code breaks compare
-  
-  {
-    bool a_exists = a.entry_exists("before");
-    bool b_exists = b.entry_exists("before");
-    
-    
-    if (a_exists || b_exists) {
 
-      if (!b_exists) return -1;
-      if (!a_exists) return +1;
-      
-      string a_string = a.find("before")->second;
-      string b_string = b.find("before")->second;
-      
-      if (a_string < b_string)
-        return -1;
-      else if (a_string > b_string)
-        return +1;
-    }
-  }
-*/
   //////////////////////////////////////////////////////////////////
   // Return zero if the entries are equal (according to major specs)
   return 0;
@@ -3386,12 +3364,43 @@ void cGenomeDiff::sort_and_check_for_duplicates(cFileParseErrors* file_parse_err
     it2++;
     
     if ((it2 != this->_entry_list.end()) && (**it1 == **it2)) {
+    
+      // We allow loading these kinds of duplicates for 'within'
+      bool still_duplicate = true;
       
-      if (!file_parse_errors) {
-        ERROR("Duplicate entries in Genome Diff:\n" + (*it1)->as_string() + "\n" + (*it2)->as_string()
-            + "\nAdd a 'unique' tag to one if this is intentional.");
-      } else {
-        file_parse_errors->add_line_error(from_string<uint32_t>((**it2)["_line_number"]), (*it2)->as_string(), "Attempt to add duplicate of this existing entry from line " + (**it1)["_line_number"] + ":\n" + substitute((*it1)->as_string(),"\t", "<tab>") + "\nAdd a 'unique' tag to one if this is intentional.", true);
+      cDiffEntry& a = **it1;
+      cDiffEntry& b = **it2;
+
+      bool a_exists = a.entry_exists("within");
+      bool b_exists = b.entry_exists("within");
+      
+      if (a_exists || b_exists) {
+        
+        if (!b_exists) still_duplicate = false;
+        if (!a_exists) still_duplicate = false;
+        
+        string a_string = a.find("within")->second;
+        string b_string = b.find("within")->second;
+        
+        vector<string> a_string_list = split(a_string, ":");
+        vector<string> b_string_list = split(b_string, ":");
+        
+        size_t i = 0;
+        while ( ( i < a_string_list.size() ) && (i < b_string_list.size()) ) {
+          if (a_string_list[i] != b_string_list[i]) {
+            still_duplicate = false;
+          }
+          i++;
+        }
+      }
+
+      if (still_duplicate) {
+        if (!file_parse_errors) {
+          ERROR("Duplicate entries in Genome Diff:\n" + (*it1)->as_string() + "\n" + (*it2)->as_string()
+              + "\nAdd a 'unique' tag to one if this is intentional.");
+        } else {
+          file_parse_errors->add_line_error(from_string<uint32_t>((**it2)["_line_number"]), (*it2)->as_string(), "Attempt to add duplicate of this existing entry from line " + (**it1)["_line_number"] + ":\n" + substitute((*it1)->as_string(),"\t", "<tab>") + "\nAdd a 'unique' tag to one if this is intentional.", true);
+        }
       }
     }
   }

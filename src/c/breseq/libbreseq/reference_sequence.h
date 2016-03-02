@@ -747,7 +747,7 @@ namespace breseq {
     }
     
     vector<string> seq_ids() const
-    {
+    { 
       vector<string> ret_val;
       for(map<string,int>::const_iterator it=m_seq_id_to_index.begin(); it!= m_seq_id_to_index.end(); it++) {
         ret_val.push_back(it->first);
