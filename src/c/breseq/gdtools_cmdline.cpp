@@ -2151,7 +2151,7 @@ int do_download(int argc, char *argv[])
     return -1;
   }
 	
-	string hostname = SYSTEM_CAPTURE("hostname", true);
+	string hostname = SYSTEM_CAPTURE("hostname -f", true);
   cout << endl << "Hostname:" << hostname << endl;
 	bool onTACC = (hostname.find("tacc.utexas.edu") != string::npos);
 	if (onTACC) cout << "Detected TACC system..." << endl;
