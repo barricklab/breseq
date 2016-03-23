@@ -2182,9 +2182,7 @@ int do_download(int argc, char *argv[])
 		lookup_table["BARRICKLAB-PRIVATE"]
 			["url_format"] = "cp /corral-repl/utexas/breseq/%s";
 	}
-		
-	options.count("login") ? "ftp://" + options["login"] + "@backup.barricklab.org/%s" : "";
-	
+			
 	// Old usage
 	//    lookup_table["BARRICKLAB-PRIVATE"]
   //      ["url_format"] = options.count("login") ? "ftp://" + options["login"] + "@backup.barricklab.org/%s" : "";
