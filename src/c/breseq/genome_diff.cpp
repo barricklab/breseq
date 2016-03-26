@@ -2293,7 +2293,8 @@ void cGenomeDiff::write(const string& filename) {
   }
   
   // sort
-  this->sort_and_check_for_duplicates();
+  cFileParseErrors fpe;
+  this->sort_and_check_for_duplicates(&fpe);
   
   // @JEB: "comment_out" tag is legacy used internally for filtering where
   // deletion from the list should really be used.
@@ -2307,6 +2308,12 @@ void cGenomeDiff::write(const string& filename) {
     }
   }
   os.close();
+
+  if (fpe.fatal()) {
+    fpe.print_errors();
+    ERROR("Fatal formatting error in GD file being written: " + filename);
+  }
+
 }
   
 /*! Find the next unused unique id.
@@ -3399,7 +3406,10 @@ void cGenomeDiff::sort_and_check_for_duplicates(cFileParseErrors* file_parse_err
           ERROR("Duplicate entries in Genome Diff:\n" + (*it1)->as_string() + "\n" + (*it2)->as_string()
               + "\nAdd a 'unique' tag to one if this is intentional.");
         } else {
-          file_parse_errors->add_line_error(from_string<uint32_t>((**it2)["_line_number"]), (*it2)->as_string(), "Attempt to add duplicate of this existing entry from line " + (**it1)["_line_number"] + ":\n" + substitute((*it1)->as_string(),"\t", "<tab>") + "\nAdd a 'unique' tag to one if this is intentional.", true);
+          string line_number_1 = (**it1).entry_exists("_line_number") ? (**it1)["_line_number"] : "NA";
+          uint32_t line_number_2 = (**it2).entry_exists("_line_number") ? from_string<uint32_t>((**it2)["_line_number"]) : 0;
+          
+          file_parse_errors->add_line_error(line_number_2, (*it2)->as_string(), "Attempt to add duplicate of this existing entry from line " + line_number_1 + ":\n" + substitute((*it1)->as_string(),"\t", "<tab>") + "\nAdd a 'unique' tag to one if this is intentional.", true);
         }
       }
     }

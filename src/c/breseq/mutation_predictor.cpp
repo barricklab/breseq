@@ -378,6 +378,58 @@ namespace breseq {
         // It's possible for this to be in the SAME copy of the element,
         // in which case the deletion size here is zero bases
         if (n(mut["size"]) > 0) {
+         
+          // @JEB 2016-03-26
+          // Its possible that NOW after this adjustment the MC ends exactly match a JC item
+          // This is the loop to find that JC item!
+          for(diff_entry_list_t::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) //JC
+          {
+            cDiffEntry& jc_item = **jc_it;
+            
+            if (jc_item["side_1_seq_id"] != mut["seq_id"] || jc_item["side_2_seq_id"] != mut["seq_id"])  {
+              continue;
+            }
+            
+            // Due to overlap resolution, this can change from the time when we sorted this way... *Ugh* ..
+            // so we fix it here so that the lower coordinate part of the junction is first.
+            
+            int32_t side_1_position = n(jc_item["side_1_position"]);
+            int32_t side_2_position = n(jc_item["side_2_position"]);
+            int32_t side_1_strand = n(jc_item["side_1_strand"]);
+            int32_t side_2_strand = n(jc_item["side_2_strand"]);
+            
+            if (side_2_position < side_1_position) {
+              swap(side_1_position, side_2_position);
+              swap(side_1_strand, side_2_strand);
+            }
+            
+            if (
+                (side_1_position == n(mut["position"])-1)
+                && (side_1_strand == -1)
+                && (side_2_position == n(mut["position"])+n(mut["size"]))
+                && (side_2_strand == +1)
+                )
+            {
+              mut._evidence.push_back(jc_item._id);
+              
+              // If there is unique sequence in the junction, then it is actually a SUB
+              JunctionInfo ji(jc_item["key"]);
+              if (ji.unique_read_sequence.size() > 0) {
+                mut._type = SUB;
+                mut[NEW_SEQ] = ji.unique_read_sequence;
+              }
+              
+              // do not re-use the junction
+              jc_it = jc.erase(jc_it);
+              
+              if (verbose)
+                cout << "**** Junction matching MC deletion between repeats found ****\n";
+              done = true;
+              
+              break; // out of jc item loop;
+            }
+          } // End of JC loop
+          
           // remember the name of the element
           mut["between"] = r1["name"];
           gd.add(mut);
