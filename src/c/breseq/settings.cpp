@@ -549,7 +549,7 @@ namespace breseq
     fprintf(stderr, "Foundation; either version 2, or (at your option) any later version.\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "Copyright (c) 2008-2010 Michigan State University\n");
-    fprintf(stderr, "Copyright (c) 2011-2015 The University of Texas at Austin\n");
+    fprintf(stderr, "Copyright (c) 2011-2016 The University of Texas at Austin\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "If you use breseq in your research, please cite:\n");
     fprintf(stderr, "\n");
