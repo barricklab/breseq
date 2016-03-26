@@ -19,10 +19,18 @@ make clean
 make -j 6 install
 
 #Documentation and information
-make docs
-cp -r src/doc/_build/html ${BINARYDIR}/documentation
+if [ "$BINARYPLATFORM" == "Darwin" ]; then
+        make docs
+        cp -r src/doc/_build/html ${BINARYDIR}/documentation
+else
+        echo "=================================================="
+        echo "REMEMBER! HTML DOCUMENTATION ONLY BUILT ON DARWIN "
+        echo "--->  COPY THE DOCUMENTATION FOLDER INTO THIS DIST"
+        echo "=================================================="
+fi
 cp -r LICENSE ${BINARYDIR}
 cp -r README-BINARY ${BINARYDIR}/README
+
 
 #Test
 mkdir -p ${BINARYDIR}/tests/lambda_mult_ref_read
