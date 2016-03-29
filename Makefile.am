@@ -40,7 +40,7 @@ EXTRA_DIST = \
 	src/doc/faq.rst \
 	src/doc/gd_format.rst \
 	src/doc/gd_usage.rst \
-	src/doc/hidden_code_block.py \
+	src/doc/extensions/hidden_code_block.py \
 	src/doc/index.rst \
 	src/doc/installation.rst \
 	src/doc/introduction.rst \
