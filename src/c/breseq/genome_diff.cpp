@@ -3256,6 +3256,13 @@ bool cGenomeDiff::diff_entry_ptr_sort(const diff_entry_ptr_t& a, const diff_entr
     return false;
   } 
   
+  //Finally try the evidence fields
+  if (join(a->_evidence, ",") < join(b->_evidence, ",")) {
+    return true;
+  } else if (join(a->_evidence, ",") > join(b->_evidence, ",")) {
+    return false;
+  }
+  
   ERROR("Identical diff entry items found in sort:\n1>>\n" + a->as_string() + "\n2>>\n" + b->as_string() + "\n" );
   return false;
 }
