@@ -1826,7 +1826,7 @@ int breseq_default_action(int argc, char* argv[])
 
 	if (settings.do_step(settings.error_counts_done_file_name, "Tabulating error counts"))
 	{
-        create_path(settings.error_calibration_path);
+    create_path(settings.error_calibration_path);
 
 		string reference_fasta_file_name = settings.reference_fasta_file_name;
 		string reference_bam_file_name = settings.reference_bam_file_name;
@@ -1996,10 +1996,6 @@ int breseq_default_action(int argc, char* argv[])
      * 09 Copy number variation
      * --------------------------------
      * This conditional is run if "--cnv" is passed as argument when invoking breseq on command line.
-     * Ex: breseq --cnv -r lambda.gbk lambda.fastq
-     * NOTE: "--cnv" runs the whole pipeline including the below copy number variation conditional,
-     * whereas "CNV" just runs the copy number variation part of the pipeline by itself, see separate
-     * do_copy_number_variation() function.
      */
   if (settings.do_copy_number_variation) {
         
@@ -2013,7 +2009,11 @@ int breseq_default_action(int argc, char* argv[])
       // Sequence iterator, one sequence at a time from .fastq file
       cAnnotatedSequence& seq = *it;
 
-      // Create filename: [genome].coverage.txt, this is LONG file where the coverage data is coming from
+      // @JEB: TODO
+      // For maximum accuracy, we should generate this based on the
+      // final BAM file (in which junctions read halves are properly placed)
+      
+      // Create filename: [genome].coverage.tab, this is LONG file where the coverage data is coming from
       string this_complete_coverage_text_file_name = settings.file_name(settings.complete_coverage_text_file_name, "@", seq.m_seq_id);
 
       // Create filename: [genome].tiled.tab, this is LONG file where the tiled coverage data will be output

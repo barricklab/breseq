@@ -139,38 +139,60 @@ namespace breseq {
 
 	}; // class CoverageDistribution
 
+  
+
+struct search_pair_t {
+  
+  search_pair_t(): first(0), second(0), t_score_exists(-1.0), p_value_exists(-1.0)
+  {}
+  
+  int32_t first;
+  int32_t second;
+  double t_score_exists;
+  double p_value_exists;
+  
+};
+  
+  
+/*
+ * Data structure to store a range and its associated copy number,
+ * for range merging within ::smooth_segments function.
+ * Written by Tyler Fields.
+ */
+struct range_t {
+  
+  range_t(): copy_number(-1), copy_number_float(-1)
+           , t_score_within(-1), p_value_within(-1)
+           , t_score_exists(-1), p_value_exists(-1)
+    {}
+  
+  // A range pair is a terminal "range", that is, a contiguous region in a
+  // genome with the same copy number. Each range is thus either
+  // an outlier, or the remaining area between or beside outliers. So each range
+  // demarcates where an outlier either starts or ends.
+  // The unit is position (in base pairs), not tile
+  pair<int32_t, int32_t> range_pair;
+  
+  // Copy number
+  double copy_number;
+  double copy_number_float;
+
+  // values for whether there was something within this
+  double t_score_within;
+  double p_value_within;
+
+  // values for whether this tile "exists" (was different from those outside it)
+  double t_score_exists;
+  double p_value_exists;
+
+  // Overloading "<" operator so the c++ standard sort() fn will work properly  
+  bool operator < (const range_t& r) const
+  {
+    return range_pair.first < r.range_pair.first;
+  }
     
-    /* 
-     * Data structure to store a range and its associated copy number,
-     * for range merging within ::smooth_segments function.
-     * Written by Tyler Fields.
-     */
-    struct range_t {
-        
-        // A range pair is a terminal "range", that is, a contiguous region in a
-        // genome with the same copy number. Each range is thus either
-        // an outlier, or the remaining area between or beside outliers. So each range
-        // demarcates where an outlier either starts or ends.
-        // The unit is position (in base pairs), not tile
-        pair<int32_t, int32_t> range_pair;
-        
-        // Copy number
-        double copy_number;
-        double copy_number_float;
-        //vector<double> t_scores;
-        //vector<double> p_values;
-        
-        double t_score;
-        double p_value;
-        
-        // Overloading "<" operator so the c++ standard sort() fn will work properly  
-        bool operator < (const range_t& r) const
-        {
-            return range_pair.first < r.range_pair.first;
-        }
-        
-    };
-    
+};
+  
 } // namespace breseq
 
 #endif

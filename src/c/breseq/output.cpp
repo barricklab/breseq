@@ -1628,13 +1628,13 @@ string html_copy_number_table_string(diff_entry_list_t& list_ref, bool show_deta
   if (link) {
     ss << th("&nbsp;") << endl;
   }
-  ss << th("seq&nbsp;id") << endl;
+  ss << th(nonbreaking("seq id")) << endl;
   ss << th("start") << endl;
   ss << th("end") << endl;
-  ss << th("tile&nbsp;size") << endl;
-  ss << th("copy&nbsp;number") << endl;
-  ss << th("p-value") << endl;
-  ss << th("rel&nbsp;coverage") << endl;
+  ss << th(nonbreaking("tile size")) << endl;
+  ss << th(nonbreaking("copy number")) << endl;
+  ss << th(nonbreaking("p-value")) << endl;
+  ss << th(nonbreaking("rel cov")) << endl;
   ss << th("gene") << endl;
   ss << th("width=\"100%\"","product") << endl;
   ss << "</tr>" << endl;
@@ -1659,7 +1659,7 @@ string html_copy_number_table_string(diff_entry_list_t& list_ref, bool show_deta
     ss << td(ALIGN_CENTER, nonbreaking(c["tile_size"])) << endl;
     ss << td(ALIGN_CENTER, nonbreaking(c["copy_number"])) << endl;
     
-    ss << td(ALIGN_CENTER, nonbreaking(c["p_value"])) << endl;
+    ss << td(ALIGN_CENTER, nonbreaking(c["p-value"])) << endl;
     
     stringstream num; 
     num << fixed << setprecision(2) << from_string<double>(c["relative_coverage"]);

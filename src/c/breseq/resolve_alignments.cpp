@@ -777,8 +777,7 @@ void load_junction_alignments(
             it++; 
         }
         
-        // @JEB Testing
-        // this score is the number of matches
+        // The score is the number of matches
         best_junction_score = eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments, true, best_reference_score);
         
         
