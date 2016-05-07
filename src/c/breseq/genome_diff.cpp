@@ -5303,6 +5303,11 @@ void cGenomeDiff::tabulate_frequencies_from_multiple_gds(
     diff_entry_ptr_t& this_mut = *it;
     uint32_t this_mut_position = from_string<uint32_t>((*this_mut)[POSITION]);
     
+    if (!phylogeny_id_aware) {
+      this_mut->erase("phylogeny_id");
+      this_mut->erase("population_id");
+    }
+    
     if (verbose) cout << ">> Master Mutation" << endl<< this_mut->as_string() << endl;
     
     // for each genome diff compared
