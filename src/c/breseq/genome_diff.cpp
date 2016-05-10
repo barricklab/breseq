@@ -3256,6 +3256,13 @@ bool cGenomeDiff::diff_entry_ptr_sort(const diff_entry_ptr_t& a, const diff_entr
     return false;
   } 
   
+  //Finally try the evidence fields
+  if (join(a->_evidence, ",") < join(b->_evidence, ",")) {
+    return true;
+  } else if (join(a->_evidence, ",") > join(b->_evidence, ",")) {
+    return false;
+  }
+  
   ERROR("Identical diff entry items found in sort:\n1>>\n" + a->as_string() + "\n2>>\n" + b->as_string() + "\n" );
   return false;
 }
@@ -5295,6 +5302,11 @@ void cGenomeDiff::tabulate_frequencies_from_multiple_gds(
     
     diff_entry_ptr_t& this_mut = *it;
     uint32_t this_mut_position = from_string<uint32_t>((*this_mut)[POSITION]);
+    
+    if (!phylogeny_id_aware) {
+      this_mut->erase("phylogeny_id");
+      this_mut->erase("population_id");
+    }
     
     if (verbose) cout << ">> Master Mutation" << endl<< this_mut->as_string() << endl;
     

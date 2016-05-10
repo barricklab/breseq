@@ -1197,8 +1197,12 @@ int do_phylogeny(int argc, char* argv[])
 
 	// Then add frequency columns for all genome diffs
 	vector<string> dummy_title_list;
-	cGenomeDiff::tabulate_frequencies_from_multiple_gds(gd, gd_list, dummy_title_list);
+	cGenomeDiff::tabulate_frequencies_from_multiple_gds(gd, gd_list, dummy_title_list, options.count("phylogeny-aware"));
 
+	// Save merged GD file
+	string merged_gd_file_name =  output_base_name + ".merged.gd";
+	gd.write(merged_gd_file_name);
+	
 	vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
 	uout("Reading input reference sequence files") << reference_file_names << endl;
 	cReferenceSequences ref_seq_info;
@@ -1268,9 +1272,6 @@ int do_phylogeny(int argc, char* argv[])
 	for(vector<string>::iterator it = title_list.begin(); it != title_list.end(); it++) {
 			sample_key << "_" + to_string<uint32_t>(i++) + "_" << "\t" << *it << endl;
 	}
-	
-	string merged_gd_file_name =  output_base_name + ".merged.gd";
-	gd.write(merged_gd_file_name);
 	
 	return 0;
 }
@@ -2567,8 +2568,15 @@ int do_runfile(int argc, char *argv[])
 			}
 			
 			//! Part 4: Read argument path(s).
-			for (vector<string>::const_iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {  
-				ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
+			// Handles zipped or unzipped
+			for (vector<string>::const_iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {
+				
+				// Handles zipped or unzipped
+				if (file_exists( cString(download_dir + "/" + cString(*read_file_it).get_base_name_unzipped()).c_str() )) {
+					ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
+				} else {
+					ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name();
+				}
 			}
 			
       //! Part 5: Error log path.
