@@ -1241,7 +1241,6 @@ int breseq_default_action(int argc, char* argv[])
 
         s.reads[base_name] = s_rf;
       }
-      if (read_file_start_delete_index) settings.read_files.resize(read_file_start_delete_index);
       
       s.avg_read_length = static_cast<double>(s.num_bases) / static_cast<double>(s.num_reads);
       s.max_read_length = overall_max_read_length;
@@ -1285,14 +1284,30 @@ int breseq_default_action(int argc, char* argv[])
   // Calculate the total reference sequence length
   summary.sequence_conversion.total_reference_sequence_length = ref_seq_info.total_length();
   
-  // @JEB -- This is a bit of an ugly wart from when converting the input file was optional.
-	// reload certain information into $settings from $summary  
+	// Reload certain information into settings from summary to make re-entrant
+  map<string, bool> read_files_surviving_conversion;
+  
+  // --> converted names
 	for (map<string, Summary::AnalyzeFastq>::iterator it = summary.sequence_conversion.reads.begin(); it != summary.sequence_conversion.reads.end(); it++)
 	{
-		string read_file = it->first;
-		if (it->second.converted_fastq_name.size() > 0)
-			settings.read_files.read_file_to_converted_fastq_file_name_map[read_file] = it->second.converted_fastq_name;
+		string base_name = it->first;
+    read_files_surviving_conversion[base_name] = true;
+
+    if (it->second.converted_fastq_name.size() > 0) {
+			settings.read_files.read_file_to_converted_fastq_file_name_map[base_name] = it->second.converted_fastq_name;
+    }
 	}
+  
+  // --> remove any read files that were not used due to coverage limits
+  for (cReadFiles::iterator it=settings.read_files.begin(); it != settings.read_files.end(); ) {
+    if (read_files_surviving_conversion.count(it->base_name())) {
+      it++;
+    } else {
+      settings.read_files.read_file_to_fastq_file_name_map.erase(it->file_name());
+      settings.read_files.read_file_to_converted_fastq_file_name_map.erase(it->file_name());
+      settings.read_files.erase(it);
+    }
+  }
 
 	//
   // 02_reference_alignment
