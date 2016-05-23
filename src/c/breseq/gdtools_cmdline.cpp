@@ -3342,7 +3342,7 @@ int do_deleted_genes(int argc, char* argv[])
 			}
 		}
 		
-		ofstream out(options["output"]);
+		ofstream out(options["output"].c_str());
 		
 		out << join(make_vector<string>("file")("title")("gene")("locus_tag")("deleted"), ",") << endl;
 		for(cReferenceSequences::iterator its=ref_seq_info.begin(); its!=ref_seq_info.end(); its++) {
