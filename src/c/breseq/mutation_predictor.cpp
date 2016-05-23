@@ -594,7 +594,6 @@ namespace breseq {
       
 			// Compile a list of the next possibilities within a certain length of bases
       vector<diff_entry_ptr_t> j2_list;
-			vector<diff_entry_list_t::iterator> it_delete_list_2;
       
       // start looking at the next JC entry
       diff_entry_list_t::iterator jc2_it = jc1_it;
@@ -611,7 +610,6 @@ namespace breseq {
             || (j1["_" + j1["_is_interval"] + "_is_name"] != j2["_" + j2["_is_interval"] + "_is_name"]) )
 					continue;
         
-        it_delete_list_2.push_back(jc2_it);        
 				j2_list.push_back(*jc2_it);
 			}
       if (verbose)
@@ -621,13 +619,10 @@ namespace breseq {
       
 			sort(j2_list.begin(), j2_list.end(), sort_by_reject_score);
       
-			// We need to go through all with the same coordinate (or within a certain coordinate stretch?)
+			// We need to go through all with the same coordinate (or within a certain coordinate stretch)
 			// because sometimes a failed junction will be in between the successful junctions
       for(size_t i=0; i<j2_list.size(); i++)
-			{
-        // we may have already used this j1
-        if (jc1_erased) break;
-        
+			{        
 				cDiffEntry& j2 = *(j2_list[i]);
         
         if (verbose) 
@@ -656,13 +651,6 @@ namespace breseq {
 				// What strand is the IS on relative to the top strand of the genome
 				int32_t is1_strand = - (n(j1[j1["_is_interval"] + "_strand"]) * n(j1["_" + j1["_is_interval"] + "_is_strand"]) * n(j1[j1["_unique_interval"] + "_strand"]));
 				int32_t is2_strand = - (n(j2[j2["_is_interval"] + "_strand"]) * n(j2["_" + j2["_is_interval"] + "_is_strand"]) * n(j2[j2["_unique_interval"] + "_strand"]));
-        
-				// Remove these predictions from the list
-        // it's important to remove jc1_it LAST so that we don't accidentally invalidate
-        // this iterator by erasing what it points to again with the it_delete_list_2 call
-				jc.erase(it_delete_list_2[i]);
-        jc1_it = jc.erase(jc1_it); // iterator is now past element erased
-        jc1_erased = true; // this tells us to not increment the list
 
 				// Create the mutation, with evidence
         
@@ -1150,6 +1138,18 @@ namespace breseq {
           }
           
         }
+        
+        // Remove the two JC evidence items that we used from the list.
+        // --> be sure to remove JC2 first so we don't invalidate JC1
+        diff_entry_list_t::iterator jc2_it(jc1_it);
+        do  {
+          ASSERT(jc2_it != jc.end(), "Could not find 2nd junction used to predict MOB.");
+          jc2_it++;
+        } while (**jc2_it != j2);
+          
+        jc.erase(jc2_it);
+        jc1_it = jc.erase(jc1_it); // iterator is now past element erased
+        jc1_erased = true; // this tells us to not increment the iterator
         
 				gd.add(mut);
 				break; // next JC1

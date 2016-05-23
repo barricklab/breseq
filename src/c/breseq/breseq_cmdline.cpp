@@ -1305,7 +1305,7 @@ int breseq_default_action(int argc, char* argv[])
     } else {
       settings.read_files.read_file_to_fastq_file_name_map.erase(it->file_name());
       settings.read_files.read_file_to_converted_fastq_file_name_map.erase(it->file_name());
-      settings.read_files.erase(it);
+      it = settings.read_files.erase(it);
     }
   }
 

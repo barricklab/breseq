@@ -2333,9 +2333,6 @@ uint32_t cGenomeDiff::new_unique_id()
  */
 void cGenomeDiff::assign_unique_id_to_entry(cDiffEntry &de) {
   
-  int32_t current_id;
-  bool is_int = is_integer(de._id, current_id);
-  
   //Get a new valid id if needed
   de._id = to_string<int32_t>(new_unique_id());
   
