@@ -3279,6 +3279,104 @@ int do_gd2coverage(int argc, char* argv[])
 	return 0;
 }
 
+
+int do_deleted_genes(int argc, char* argv[])
+{
+	
+	AnyOption options("gdtools deleted-genes [-o output.csv -r reference.gbk] input1.gd input2.gd ... ");
+	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+	options("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
+	options("output,o","Name of output table file", "output.csv");
+	
+	
+	options.addUsage("");
+	options.addUsage("Writes out a table of 0/1 for whether a big deletion (>50 nt) overlaps each gene.");
+	
+	options.processCommandArgs( argc,argv);
+	
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
+	if (!options.count("reference")) {
+		options.addUsage("");
+		options.addUsage("You must provide a reference sequence file (-r).");
+		options.printUsage();
+		return -1;
+	}
+		
+	if (options.getArgc() == 0) {
+		options.addUsage("");
+		options.addUsage("You must provide at least one Genome Diff file.");
+		options.printUsage();
+		return -1;
+	}
+
+	// Load references
+	vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
+	cReferenceSequences ref_seq_info;
+	ref_seq_info.LoadFiles(reference_file_names);
+	
+	// Handle each GD
+	vector<string> gd_file_names;
+	for (int32_t i = 0; i < options.getArgc(); i++)
+	{
+		string file_name = options.getArgv(i);
+		
+		cGenomeDiff gd(file_name);
+		
+		// Create flagged regions
+		cFlaggedRegions fr;
+		
+		diff_entry_list_t muts = gd.mutation_list();
+		for (diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); it++) {
+			cDiffEntry& mut = **it;
+			
+			if (mut._type == DEL) {
+				cReferenceCoordinate start_1 = mut.get_reference_coordinate_start();
+				cReferenceCoordinate end_1 = mut.get_reference_coordinate_end();
+				if (end_1 - start_1 + 1 >= 50) {
+					fr.flag_region(mut[SEQ_ID], start_1.get_position(), end_1.get_position());
+				}
+			}
+		}
+		
+		ofstream out(options["output"]);
+		
+		out << join(make_vector<string>("file")("title")("gene")("locus_tag")("deleted"), ",") << endl;
+		for(cReferenceSequences::iterator its=ref_seq_info.begin(); its!=ref_seq_info.end(); its++) {
+			
+			cAnnotatedSequence& ref_seq = *its;
+				
+			for (cSequenceFeatureList::iterator it = ref_seq.m_genes.begin(); it != ref_seq.m_genes.end(); ++it) {
+				cSequenceFeature& feat = **it;
+				cGeneFeature gene = cGeneFeature(feat); // up-cast
+			
+				out << gd.get_file_name();
+				out << "," << gd.get_title();
+				out << "," << gene.name;
+				out << "," << gene.m_gff_attributes["ID"];
+				
+				if (fr.is_flagged(ref_seq.m_seq_id, gene.get_start_1(), gene.get_end_1())) {
+					out << ",1";
+				} else {
+					out << ",0";
+				}
+				out << endl;
+			}
+			
+		}
+	
+	}
+	
+	// Output loop
+	
+	
+	return 0;
+}
+
+
                                             
 int main(int argc, char* argv[]) {
 	
@@ -3383,6 +3481,8 @@ int main(int argc, char* argv[]) {
       return do_gd2oli(argc_new, argv_new);
 	} else if (command == "GD2COV") {
 		return do_gd2coverage(argc_new, argv_new);
+	} else if (command == "DELETED-GENES") {
+		return do_deleted_genes(argc_new, argv_new);
 	} else if (command =="MUMMER2MASK") {
 		return do_mummer2mask(argc_new, argv_new);
 	} else if (command =="MASK") {
