@@ -504,6 +504,14 @@ namespace breseq
     if (options.count("polymorphism-minimum-coverage-each-strand"))
       this->polymorphism_minimum_new_coverage_each_strand = from_string<uint32_t>(options["polymorphism-minimum-coverage-each-strand"]);
 
+    // Warn of possibly confusing settings
+    if (this->consensus_frequency_cutoff > 1 - this->polymorphism_frequency_cutoff) {
+      cerr << endl << "=== WARNING ===" << endl;
+      cerr << "Mutations with a frequency between " << (1 - this->polymorphism_frequency_cutoff) << " and " << this->consensus_frequency_cutoff << " will not be predicted with these settings. ";
+      cerr << "Unless this is your intent, either set \'--consensus_frequency_cutoff " << (1 - this->polymorphism_frequency_cutoff) << "\' or set \'--polymorphism_frequency_cutoff " << (1 - this->consensus_frequency_cutoff) << "\' on the command line." << endl << endl;
+    }
+    
+    
     // Junction options
     if (options.count("junction-minimum-pos-hash-score"))
       this->minimum_alignment_resolution_pos_hash_score = from_string<uint32_t>(options["junction-minimum-pos-hash-score"]);
