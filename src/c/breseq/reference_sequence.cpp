@@ -1116,8 +1116,6 @@ void cReferenceSequences::WriteCSV(const string &file_name) {
       }
     }
   }
-
-  
 }
 
 void cReferenceSequences::ReadGenBank(const string& in_file_name) {
@@ -1149,6 +1147,7 @@ void cReferenceSequences::ReadGenBank(const string& in_file_name) {
     
     ReadGenBankFileSequence(in, this_seq);   
     this_seq.set_sequence_loaded_from_file(in_file_name);
+    
   }
 }
 
@@ -1255,7 +1254,7 @@ void cSequenceFeature::ReadGenBankCoords(string& s, ifstream& in) {
   s = substitute(s, "\t", "");
   
   m_location = ParseGenBankCoords(s);
-
+  
   return;
 }
   
@@ -1279,7 +1278,7 @@ cLocation cSequenceFeature::ParseGenBankCoords(string& s, int8_t in_strand)
     int8_t consensus_strand = 0;
     for (uint32_t i = 0; i < tokens.size(); ++i) {
       cLocation sub_loc = ParseGenBankCoords(tokens[i], in_strand);
-      loc.m_sub_locations.push_back( sub_loc);
+      loc.add_sub_location(sub_loc);
       
       // Strand is set to 0 if disagreement
       if (i==0) 
@@ -1288,16 +1287,24 @@ cLocation cSequenceFeature::ParseGenBankCoords(string& s, int8_t in_strand)
         consensus_strand = 0;
     }
     
+    // Get cLocation::start,end from outer sub_locations.
+    // Example of difficult lines:
+    //
+    // gene            complement(join(205502..452528,1..182513))
+    // CDS             complement(join(205502..205689,207093..207665,
+    //                 210083..210243,181155..181546,182361..182513))
+    
+    loc.set_strand(consensus_strand);
+    
+    loc.set_start_1(loc.get_all_sub_locations().front().get_start_1());
+    loc.set_end_1(loc.get_all_sub_locations().back().get_end_1());
+    
     // Lines like this: join(complement(381815..382096), complement(380068..380483))
     // ...need the sublocations reversed in order to be coordinate sorted correctly
-    if (loc.m_sub_locations.front().get_start_1() > loc.m_sub_locations.back().get_end_1() ) {
-      reverse(loc.m_sub_locations.begin(),loc.m_sub_locations.end());
+    if ( consensus_strand == -1 ) {
+      loc.reverse_sub_locations();
     }
     
-    //Get cLocation::start,end from outer sub_locations.
-    loc.set_strand(consensus_strand);
-    loc.set_start_1(loc.m_sub_locations.front().get_start_1());
-    loc.set_end_1(loc.m_sub_locations.back().get_end_1());
   }
   else {
     //Split on .. (usually 2)
@@ -1317,7 +1324,7 @@ cLocation cSequenceFeature::ParseGenBankCoords(string& s, int8_t in_strand)
     loc.set_end_1(atoi(tokens.back().c_str()));
   }
   
-  ASSERT(loc.get_start_1() <= loc.get_end_1(), "Start coordinate is greater than end coordinate. Error parsing corrdinates:\n" + s);
+  //ASSERT(loc.get_start_1() <= loc.get_end_1(), "Start coordinate is greater than end coordinate. Error parsing corrdinates:\n" + s);
   
   return loc;
 }
@@ -1550,8 +1557,9 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
     if (feature.SafeGet("transl_table") != "")
       feature.m_gff_attributes["transl_table"] = make_vector<string>(feature["transl_table"]);
 
-    
+    //@JEB: Removed 2016-06-16 with change in handling sublocations
     // add an extra copy of the feature if it crosses the origin of a circular chromosome
+    /*
     if (feature.get_end_1() < feature.get_start_1()) {
       cSequenceFeaturePtr bonus_circular_feature(new cSequenceFeature);
       *bonus_circular_feature = feature;
@@ -1563,7 +1571,10 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
                                                      bonus_circular_feature->m_location.is_indeterminate_end()
                                                      );
       s.feature_push_front( bonus_circular_feature );
+      
+          cout << " HERE: " << (bonus_circular_feature)->get_locus_tag() << " " << (bonus_circular_feature)->get_start_1() << " " << (bonus_circular_feature)->get_end_1() << endl;
     }
+     */
     
     s.feature_push_back(*it);
   }
@@ -1867,8 +1878,11 @@ cSequenceFeaturePtr cReferenceSequences::get_overlapping_feature(cSequenceFeatur
   cSequenceFeaturePtr feature_ptr(NULL);
   for (cSequenceFeatureList::iterator it = feature_list.begin(); it != feature_list.end(); ++it) {
     cSequenceFeaturePtr test_feature_ptr = *it;
-    if (pos >= test_feature_ptr->get_start_1() && pos <= test_feature_ptr->get_end_1())
+    
+    if ( test_feature_ptr->distance_to_position(pos) == 0 ) {
       feature_ptr = test_feature_ptr;
+    }
+    
   }
   return feature_ptr;
 }
@@ -1892,17 +1906,17 @@ void cReferenceSequences::find_nearby_genes(
 
     if (test_gene.get_end_1() < pos_1)
       prev_gene = test_gene;
-
-    if (  (test_gene.get_start_1() <= pos_1) && (test_gene.get_end_1() >= pos_1)
-       && (test_gene.get_start_1() <= pos_2) && (test_gene.get_end_1() >= pos_2) )
+    
+    if (  ( test_gene.distance_to_position(pos_1) == 0 )
+       && ( test_gene.distance_to_position(pos_2) == 0 ) )
     {
       within_genes.push_back(test_gene);
     }
-    else if ( (test_gene.get_start_1() <= pos_1) && (test_gene.get_end_1() >= pos_1) )
+    else if ( test_gene.distance_to_position(pos_1) == 0 )
     {
       inside_left_genes.push_back(test_gene);
     }
-    else if ( (test_gene.get_start_1() <= pos_2) && (test_gene.get_end_1() >= pos_2) )
+    else if ( test_gene.distance_to_position(pos_2) == 0 )
     {
       inside_right_genes.push_back(test_gene);
     }
@@ -2226,61 +2240,83 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
       mut["ref_seq"] = this->get_sequence_1(ra_seq_id, ra_position, ra_position);
       mut["new_seq"] = (mut[MAJOR_BASE] == mut["ref_seq"]) ? mut[MINOR_BASE] : mut[MAJOR_BASE];
     }
-
-    // >> CODE_INDETERMINATE
-    // Needs to 
-    // determine the old and new translation of this codon
-// @JEB this should be fixed for split genes!!! -- use cLocationTraverser
-// Issue 
-    int32_t codon_number_1 = (from_string<int32_t>(mut["gene_position"]) - 1) / 3 + 1;
-    mut["aa_position"] = to_string<int32_t>(codon_number_1); // 1-indexed
-    uint32_t codon_pos_1 = int(abs(static_cast<int32_t>(start) - within_gene_start)) % 3 + 1;
-    mut["codon_position"] = to_string<int32_t>(codon_pos_1); // 1-indexed
-    mut["codon_number"] = to_string<int32_t>(codon_number_1); // 1-indexed
     
-    string& ref_string = (*this)[seq_id].m_fasta_sequence.m_sequence;
+    // SNP and RA entries make it here
     
-    // @JEB 01-24-2014 Updated code to not crash on genes that end prematurely
-    //                 and out-of-frame at the end of a contig
-    string codon_seq("NNN");
-    uint32_t aa_position = from_string<uint32_t>(mut["aa_position"]);
+    // @JEB 06-16-2016
+    // Traversing the sequence is the only way to properly code codon changes
+    // for genes with introns, etc.
+    
+    cLocationTraverser loc_trav(&(*this)[seq_id], &gene.m_location);
+    
+    // The position we are looking for
+    int32_t mutated_position = from_string<int32_t>(mut[POSITION]);
+    
+    // Values saved when we find this position
+    int32_t mutated_codon_number_1;
+    int32_t mutated_codon_pos_1;
+    int8_t mutated_strand;
+    
+    // Values used in iterating through the reading frame
     uint32_t on_codon_pos_1 = 0;
-    uint32_t on_codon_start_pos_1;
-
-    if (gene.is_top_strand()) {
-      on_codon_start_pos_1 = gene.get_start_1() + 3 * (aa_position - 1) + on_codon_pos_1;
-      while ((on_codon_start_pos_1 + on_codon_pos_1 <= ref_string.length()) && (on_codon_pos_1 < 3)) {
-        codon_seq[on_codon_pos_1] = (*this)[seq_id].get_sequence_1(on_codon_start_pos_1 + on_codon_pos_1);
-        on_codon_pos_1++;
-      }
-    }
-    else {
-      on_codon_start_pos_1 = gene.get_end_1() - 3 * (aa_position - 1);
-      while ((on_codon_start_pos_1 - on_codon_pos_1 >= 1) && (on_codon_pos_1 < 3)) {
-        codon_seq[on_codon_pos_1] = reverse_complement((*this)[seq_id].get_sequence_1(on_codon_start_pos_1 - on_codon_pos_1));
-        on_codon_pos_1++;
-      }
-    }
+    int32_t on_codon_number_1 = 1;
     
-    mut["codon_ref_seq"] = codon_seq;
-    mut["aa_ref_seq"] = translate_codon(mut["codon_ref_seq"], gene.translation_table, codon_number_1);
+    // Filled after hitting the mutation, potentially
+    string codon_seq("NNN");
+    
+    bool mutated_codon_found = false;
+    
+    do {
+      
+      on_codon_pos_1++;
+      if (on_codon_pos_1 > 3) {
+        
+        // Now we're done
+        if (mutated_codon_found) break;
+        
+        on_codon_pos_1 = 1;
+        on_codon_number_1++;
+        codon_seq = "NNN";
+      }
+      
+      codon_seq[on_codon_pos_1-1] = loc_trav.on_base_stranded_1();
+      
+      if (loc_trav.on_position_1() == mutated_position) {
+        mutated_codon_found = true;
+        mutated_codon_pos_1 = on_codon_pos_1;
+        mutated_codon_number_1 = on_codon_number_1;
+        mutated_strand = loc_trav.on_base_strand();
+      }
+      
+    } while (loc_trav.offset_to_next_position(false));
+    
+    
+    ASSERT(mutated_codon_found, "Position not found within ORF.");
+    
+      
+    // Save what we know so far
+    mut["codon_position"] = to_string<int32_t>(mutated_codon_pos_1); // 1-indexed
+    mut["codon_number"] = to_string<int32_t>(mutated_codon_number_1);
+    mut["aa_position"] = to_string<int32_t>(mutated_codon_number_1);
 
+    mut["codon_ref_seq"] = codon_seq;
+    
+    mut["aa_ref_seq"] =  translate_codon(mut["codon_ref_seq"], gene.translation_table, mutated_codon_number_1);
+    
+    // Generate mutated sequence
     mut["codon_new_seq"] = codon_seq;
     //#remember to revcom the change if gene is on opposite strand
-    mut["codon_new_seq"][from_string<uint32_t>(mut["codon_position"]) - 1] = gene.is_top_strand() 
-      ? mut["new_seq"][0]
-      : reverse_complement(mut["new_seq"])[0];
-    mut["aa_new_seq"] =  translate_codon(mut["codon_new_seq"], gene.translation_table, codon_number_1);
+    mut["codon_new_seq"][mutated_codon_pos_1 - 1] = (mutated_strand == 1) ? mut["new_seq"][0] : reverse_complement(mut["new_seq"])[0];
+    mut["aa_new_seq"] =  translate_codon(mut["codon_new_seq"], gene.translation_table, mutated_codon_number_1);
     mut["transl_table"] = to_string(gene.translation_table);
     
-    if ((mut._type == SNP) || (mut._type == RA)) {
-      if ((mut["aa_ref_seq"] != "*") && (mut["aa_new_seq"] == "*"))
-        mut["snp_type"] = "nonsense";
-      else if (mut["aa_ref_seq"] != mut["aa_new_seq"])
-        mut["snp_type"] = "nonsynonymous";
-      else
-        mut["snp_type"] = "synonymous";
-    }
+    if ((mut["aa_ref_seq"] != "*") && (mut["aa_new_seq"] == "*"))
+      mut["snp_type"] = "nonsense";
+    else if (mut["aa_ref_seq"] != mut["aa_new_seq"])
+      mut["snp_type"] = "nonsynonymous";
+    else
+      mut["snp_type"] = "synonymous";
+    
   }
 
   //The mutation actually contains several genes

@@ -2307,11 +2307,11 @@ namespace breseq {
         vector<uint32_t> this_codon_locations_0(3, 0); // 0-indexed
         
         uint32_t total_nucleotide_length = 0; 
-        int8_t strand = sub_locations.front().m_strand;
+        int8_t strand = sub_locations.front().get_strand();
         
         for(vector<cLocation>::iterator it3=sub_locations.begin(); it3!=sub_locations.end(); ++it3) {
           cLocation& loc = *it3;
-          total_nucleotide_length += loc.m_end - loc.m_start + 1;
+          total_nucleotide_length += loc.get_end_1() - loc.get_start_1() + 1;
         }
         
         // >>CODE_INDETERMINATE
@@ -2329,9 +2329,9 @@ namespace breseq {
         for(vector<cLocation>::iterator it3=sub_locations.begin(); it3!=sub_locations.end(); ++it3) {
           
           cLocation& loc = *it3;
-          ASSERT(strand == loc.m_strand, "CDS has sublocations on different strands: " + g["name"]);
+          ASSERT(strand == loc.get_strand(), "CDS has sublocations on different strands: " + g["name"]);
           
-          for (int32_t pos_1=loc.m_start; pos_1<=loc.m_end; pos_1++) {
+          for (int32_t pos_1=loc.get_start_1(); pos_1<=loc.get_end_1(); pos_1++) {
             int32_t pos_0 = pos_1 - 1;
             
             //// Remember the strand of the gene overlapping this position

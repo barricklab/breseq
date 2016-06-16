@@ -2908,7 +2908,7 @@ void cGenomeDiff::merge(cGenomeDiff& merge_gd, bool unique, bool new_id, bool ph
   cGenomeDiff new_gd;
   
   // Add population info if we are phylogeny aware, we do this outside the
-  // loop because changing it shouldn't be able to disambiguoate any entries
+  // loop because changing it shouldn't be able to disambiguate any entries
   // unlike phylogeny_id and population_id when in !phylogeny_id_aware mode
   if (phylogeny_id_aware) {
     
@@ -3105,12 +3105,14 @@ void cGenomeDiff::merge(cGenomeDiff& merge_gd, bool unique, bool new_id, bool ph
   
   // @JEB: Added 2016-02-06
   // It is now safe to delete (in fact we should) the phylogeny information?
+  /*
   if (!phylogeny_id_aware) {
     for (diff_entry_list_t::iterator it=_entry_list.begin(); it!= _entry_list.end(); it++) {
       (*it)->erase("phylogeny_id");
       (*it)->erase("population_id");
     }
   }
+   */
   
   //Notify user of the update
   if(verbose)cout << "\tMERGE DONE - " << merge_gd.get_file_path() << endl;
@@ -5125,8 +5127,8 @@ void cGenomeDiff::mutations_to_evidence(cReferenceSequences &ref_seq, bool remov
       de1["side_1_position"] = s(n(de["position"]) + n(de["duplication_size"]) - 1);
       de1["side_1_strand"] = "-1";
       de1["side_2_seq_id"] = repeat_seq_id;
-      int32_t strand = repeat_feature.m_location.m_strand * n(de["strand"]);
-      de1["side_2_position"] = (strand > 0) ? s(repeat_feature.m_location.m_start) : s(repeat_feature.m_location.m_end);
+      int32_t strand = repeat_feature.m_location.get_strand() * n(de["strand"]);
+      de1["side_2_position"] = (strand > 0) ? s(repeat_feature.m_location.get_start_1()) : s(repeat_feature.m_location.get_end_1());
       de1["side_2_strand"] = s(strand);
       de1["overlap"] = "0";
       (*it)->_evidence.push_back(this->add(de1)->_id);
@@ -5138,7 +5140,7 @@ void cGenomeDiff::mutations_to_evidence(cReferenceSequences &ref_seq, bool remov
       de2["side_1_position"] = s(n(de["position"]));
       de2["side_1_strand"] = "1";
       de2["side_2_seq_id"] = repeat_seq_id;
-      de2["side_2_position"] = (strand > 0) ? s(repeat_feature.m_location.m_end) : s(repeat_feature.m_location.m_start);
+      de2["side_2_position"] = (strand > 0) ? s(repeat_feature.m_location.get_end_1()) : s(repeat_feature.m_location.get_start_1());
       de2["side_2_strand"] = s(-strand);
       (*it)->_evidence.push_back(this->add(de2)->_id);
       
@@ -6160,7 +6162,7 @@ void cGenomeDiff::GD2Circos(const vector<string> &gd_file_names,
       mob_file << ref_seq.m_seq_id << " " <<
       middle << " " <<
       middle << " " <<
-      "i" << ((seq_feature.m_location.m_strand == 1)? "right" : "left" ) << " " <<
+      "i" << ((seq_feature.m_location.get_strand() == 1)? "right" : "left" ) << " " <<
       "color=" << color << endl;
     }
   }
@@ -6259,7 +6261,7 @@ void cGenomeDiff::GD2Circos(const vector<string> &gd_file_names,
           mob_file << ref_seq.m_seq_id << " " <<
           middle << " " <<
           middle << " " <<
-          "o" << ((seq_feature.m_location.m_strand == 1)? "right" : "left" ) << " " <<
+          "o" << ((seq_feature.m_location.get_strand() == 1)? "right" : "left" ) << " " <<
           "color=" << color << endl;
         }
       }

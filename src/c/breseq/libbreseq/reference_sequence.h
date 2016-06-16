@@ -123,13 +123,15 @@ namespace breseq {
 	/*! Interface for loading sequences and sequence features from GenBank files.
   */
   class cLocation {
-  public:
+    
+  private:
     int32_t m_start, m_end; // 1-indexed
     int8_t m_strand;
     bool m_indeterminate_start, m_indeterminate_end; 
       // for when coords are marked as extending last here (<1..514)
     vector<cLocation> m_sub_locations;
-     
+    
+  public:
     cLocation() 
       : m_start(0)
       , m_end(0)
@@ -193,11 +195,11 @@ namespace breseq {
       return m_strand;
     }
 
-    vector<cLocation> get_all_sub_locations() {
+    vector<cLocation> get_all_sub_locations() const {
       
       vector<cLocation> return_locations;
       if (m_sub_locations.size() > 0) {
-        for (vector<cLocation>::iterator it=m_sub_locations.begin(); it!=m_sub_locations.end(); ++it) {
+        for (vector<cLocation>::const_iterator it=m_sub_locations.begin(); it!=m_sub_locations.end(); ++it) {
           vector<cLocation> this_locations = it->get_all_sub_locations();
           return_locations.insert(return_locations.end(), this_locations.begin(), this_locations.end());
         }
@@ -208,6 +210,14 @@ namespace breseq {
       
       return return_locations;
 
+    }
+    
+    void reverse_sub_locations() {
+      reverse(m_sub_locations.begin(),m_sub_locations.end());
+    }
+    
+    void add_sub_location(cLocation& in_location) {
+      m_sub_locations.push_back( in_location );
     }
     
     void set_start_1(int32_t _start) {
@@ -231,6 +241,47 @@ namespace breseq {
     void add_sub_location( const cLocation& value) {
       m_sub_locations.push_back(value);
     }
+    
+    string as_string(const uint32_t indent_level=0) {
+      string s;
+      s += repeat_char(' ', indent_level*2) + to_string(m_start) + "-" + to_string(m_end) + " " + to_string<int32_t>(m_strand) + "\n";
+      for (vector<cLocation>::iterator it=m_sub_locations.begin(); it != m_sub_locations.end(); it++ ) {
+        s += it->as_string(indent_level+1);
+      }
+      return s;
+    }
+    
+    int32_t distance_to_position(const int32_t pos) const {
+      int32_t distance = numeric_limits<int32_t>::max();
+      
+      vector<cLocation> locs = get_all_sub_locations();
+      
+      for(vector<cLocation>::iterator it = locs.begin(); it != locs.end(); it++) {
+      
+        int32_t start = it->get_start_1();
+        int32_t end = it->get_end_1();
+        
+        // Piece passes through origin of circular chromosome
+        if (start > end) {
+          
+          if ((pos >= start) || (pos <= end)) {
+            distance = 0;
+          } else {
+            distance = min(distance, min(abs(pos - start), abs(pos - end)));
+          }
+          
+        } else {
+          if ((pos >= m_start) && (pos <= end)) {
+            distance = 0;
+          } else {
+            distance = min(distance,min(abs(pos - start), abs(pos - end)));
+          }
+        }
+      }
+      
+      return distance;
+    }
+    
   };
   
   
@@ -305,12 +356,18 @@ namespace breseq {
         return it->second;
       }
     
+      int32_t distance_to_position(const int32_t pos) const {
+        
+        return m_location.distance_to_position(pos);
+      }
+    
       //<! accessors
       int32_t get_start_1()     const { return m_location.get_start_1();  }
       int32_t get_end_1()       const { return m_location.get_end_1();    }
       int32_t get_strand()      const { return m_location.get_strand();   }
       bool is_top_strand()      const { return get_strand() == +1;        }
       bool is_bottom_strand()   const { return get_strand() == -1;        }
+    
       string get_locus_tag() {
         if (m_gff_attributes.count("Alias")) {
           return m_gff_attributes["Alias"][0];
@@ -651,9 +708,12 @@ namespace breseq {
       return true;
     }
     
-    uint32_t on_position_1() { return static_cast<uint32_t>(on_pos); }
+    int32_t on_position_1() { return static_cast<int32_t>(on_pos); }
     
     char on_base_stranded_1();
+    
+    int8_t on_base_strand() { return sub_locs[on_loc_index].get_strand(); } ;
+
   };
   
   /*! Reference Sequences

@@ -895,7 +895,7 @@ int do_annotate(int argc, char* argv[])
   options("repeat-header", "In HTML mode, repeat the header line every this many rows (0=OFF)", "10");
 	options("phylogeny-aware,p", "Check the optional 'phylogeny_id' field when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
 	options("region,g", "Only show mutations that overlap this reference fragment (e.g., REL606:64722-65312)");
-	options("collapse,c", "Do not show samples (columns) unless they hav at least one mutation", TAKES_NO_ARGUMENT);
+	options("collapse,c", "Do not show samples (columns) unless they have at least one mutation", TAKES_NO_ARGUMENT);
 	
 	
   options.addUsage("");
