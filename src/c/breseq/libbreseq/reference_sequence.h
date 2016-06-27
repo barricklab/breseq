@@ -496,11 +496,6 @@ namespace breseq {
         m_end_is_indeterminate = loc.stranded_end_is_indeterminate();
       }
     
-      // Read GenBank coords
-      void ReadGenBankCoords(string& s, ifstream& in);
-      //Parse portion of GenBank coords string
-      static list<cLocation> ParseGenBankCoords(string& s, int8_t in_strand = 1);
-    
       void ReadGenBankTag(string& tag, string& s, ifstream& in);
     
       string get_nucleotide_sequence(const cAnnotatedSequence& seq) const;
@@ -697,6 +692,19 @@ namespace breseq {
         copy.update_feature_lists();
         return copy;
       }
+    
+      // Read GenBank coords
+      list<cLocation>  ReadGenBankCoords(string& s, ifstream& in);
+      //Parse portion of GenBank coords string
+      list<cLocation> ParseGenBankCoords(string& s, int8_t in_strand = 1);
+    
+      list<cLocation> SafeCreateLocations(
+                                          int32_t in_start_1,
+                                          int32_t in_end_1,
+                                          int8_t in_strand,
+                                          bool in_start_is_indeterminate,
+                                          bool in_end_is_indeterminate
+                                          );
   };
   
   /*! Reference Sequences
@@ -761,7 +769,6 @@ namespace breseq {
     //!< Read GenBank file
     void ReadGenBank(const string& in_file_names);
     bool ReadGenBankFileHeader(std::ifstream& in, const string& file_name);
-    void ReadGenBankCoords(string& s, ifstream& in);
     //void ReadGenBankTag(std::string& tag, std::string& s, std::ifstream& in);
     void ReadGenBankFileSequenceFeatures(std::ifstream& in, cAnnotatedSequence& s);
     void ReadGenBankFileSequence(std::ifstream& in, cAnnotatedSequence& s);

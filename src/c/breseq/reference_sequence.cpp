@@ -1052,8 +1052,6 @@ namespace breseq {
       else if (strand_s == "-")
         strand = -1;
       
-      feature.add_location(cLocation(start, end, strand));
-      
       // Column 8: "phase"
       feature["phase"] = split_line[7];
       // Column 9: "attributes"
@@ -1121,31 +1119,26 @@ namespace breseq {
         feature["transl_table"] = feature.m_gff_attributes["transl_table"][0];
 
       // Load indeterminate start/end coordinates according to out custom fields.
+      bool start_is_indeterminate = false;
+      bool end_is_indeterminate = false;
       if (feature.m_gff_attributes.count("indeterminate_coordinate")) {
         for (vector<string>::iterator it=feature.m_gff_attributes["indeterminate_coordinate"].begin(); it!=feature.m_gff_attributes["indeterminate_coordinate"].end(); it++) {
           if (*it == "start")
-            feature.m_locations.front().set_start_is_indeterminate(true);
+            start_is_indeterminate = true;
           else if (*it == "end")
-            feature.m_locations.front().set_end_is_indeterminate(true);
+            end_is_indeterminate = true;
         }
         // Erase this property because it will be added back
         feature.m_gff_attributes.erase("indeterminate_coordinate");
       }
       
-      // Handle regions that cross the origin by splitting them into two
-      // (and maintaining the right order).
-      // Breseq will not generate this kind of interval, but a "normal" GFF3 might
-      if (feature.m_locations.front().get_end_1() > (*this)[seq_id].m_length) {
-        
-        int32_t size_past_end = feature.m_locations.front().get_end_1() - (*this)[seq_id].get_sequence_length();
-        feature.m_locations.front().set_end_1((*this)[seq_id].get_sequence_length());
-        feature.m_locations.front().set_end_is_indeterminate(false);
-        feature.add_location(cLocation(1, size_past_end, feature.m_locations.front().get_strand(), false, feature.m_locations.front().end_is_indeterminate()));
+      list<cLocation> locs = ((*this)[seq_id]).SafeCreateLocations(start, end, strand, start_is_indeterminate, end_is_indeterminate);
+      for(list<cLocation>::iterator it_add_r=locs.begin(); it_add_r!=locs.end(); it_add_r++) {
+        feature.add_location(*it_add_r);
       }
 
       //! Step 4: Determine if sequence already exists (find or create if not found)
       this->add_new_seq(seq_id, file_name);
-      
     
       // If this is a landmark "region" corresponding to the entire chromosome grab extra information
       if ((feature["type"] == "region") && (feature.m_locations.front().get_start_1() == 1) && (feature.m_locations.front().get_end_1() == (*this)[seq_id].m_length)) {
@@ -1344,6 +1337,7 @@ void cReferenceSequences::ReadGenBank(const string& in_file_name) {
     cSequenceFeaturePtr f(new cSequenceFeature);
     (*f)["type"] = "region";
     
+    ASSERT(this_seq.m_length != 0, "Did not find bp length in GenBank LOCUS Line for sequence: " + this_seq.m_seq_id);
     f->add_location(cLocation(1, this_seq.m_length, 1));
     
     if (this_seq.m_is_circular)
@@ -1418,7 +1412,7 @@ bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file
  *  The string may cover multiple lines. Currently we do not handle discontinuous features,
  *  and features that cross the origin of a circular chromosome are returned with end < start. 
  */
-void cSequenceFeature::ReadGenBankCoords(string& s, ifstream& in) {
+list<cLocation> cAnnotatedSequence::ReadGenBankCoords(string& s, ifstream& in) {
 
 // Typical coordinate strings:
 //   1485..1928
@@ -1466,16 +1460,11 @@ void cSequenceFeature::ReadGenBankCoords(string& s, ifstream& in) {
   s = substitute(s, "\t", "");
   
   // Parse and add locations
-  list<cLocation> locs = ParseGenBankCoords(s);
-  for(list<cLocation>::iterator it=locs.begin(); it!=locs.end(); it++) {
-    this->add_location(*it);
-  }
-  
-  return;
+  return ParseGenBankCoords(s);
 }
   
 // Parses a sub-part of the full location string
-list<cLocation> cSequenceFeature::ParseGenBankCoords(string& s, int8_t in_strand)
+list<cLocation> cAnnotatedSequence::ParseGenBankCoords(string& s, int8_t in_strand)
 {
   list<cLocation> locs;
   
@@ -1523,15 +1512,15 @@ list<cLocation> cSequenceFeature::ParseGenBankCoords(string& s, int8_t in_strand
       tokens.back().replace(0,1,"");
     }
     
-    locs.push_back(
-                  cLocation(
-                           atoi(tokens.front().c_str()),
-                           atoi(tokens.back().c_str()),
-                           in_strand,
-                           start_is_indeterminate,
-                           end_is_indeterminate
-                            )
-                   );
+    list<cLocation> new_locs = this->SafeCreateLocations(
+                                                         atoi(tokens.front().c_str()),
+                                                         atoi(tokens.back().c_str()),
+                                                         in_strand,
+                                                         start_is_indeterminate,
+                                                         end_is_indeterminate
+                                                         );
+    
+    locs.insert(locs.end(), new_locs.begin(), new_locs.end());
 
   }
   
@@ -1540,6 +1529,74 @@ list<cLocation> cSequenceFeature::ParseGenBankCoords(string& s, int8_t in_strand
   return locs;
 }
 
+// By "safe" we mean for circular genomes with pronblem features that need to be split
+// 1) Considers locations that wrap around origin (when start > end)
+// 2) Considers locations that extend past the end of the numbering wrapping around
+list<cLocation> cAnnotatedSequence::SafeCreateLocations(
+                                                        int32_t in_start_1,
+                                                        int32_t in_end_1,
+                                                        int8_t in_strand,
+                                                        bool in_start_is_indeterminate,
+                                                        bool in_end_is_indeterminate
+  )
+{
+  list<cLocation> locs;
+  
+  if (m_is_circular) {
+    in_end_1 %= this->m_length;
+    in_start_1 %= this->m_length;
+  }
+  
+  // Normal case
+  if (in_start_1 <= in_end_1) {
+  
+    locs.push_back(
+                   cLocation(
+                             in_start_1,
+                             in_end_1,
+                             in_strand,
+                             in_start_is_indeterminate,
+                             in_end_is_indeterminate
+                             )
+                   );
+
+    
+  } else if (m_is_circular) {
+    // extends around origin, add as two features
+    // recall that end_1 < start_1
+    
+    locs.push_back(
+                   cLocation(
+                             1,
+                             in_end_1,
+                             in_strand,
+                             false,
+                             in_end_is_indeterminate
+                             )
+                   );
+    
+    locs.push_back(
+                   cLocation(
+                             in_start_1,
+                             this->m_length,
+                             in_strand,
+                             in_start_is_indeterminate,
+                             false
+                            )
+                   );
+    
+    // reverse if on the top strand!
+    if (in_strand == 1) locs.reverse();
+    
+  } else {
+    ERROR("Start coordinate (" + to_string<int32_t>(in_start_1) + ") must be less than or equal to end coordinate (" + to_string<int32_t>(in_end_1) + ") for feature that is not on a circular sequence.")
+  }
+  
+  
+  return locs;
+}
+
+  
 // Examples of lines
 //
 // One-liner
@@ -1664,7 +1721,12 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
           WARN("Error reading GenBank entry: coordinates expected at end of line. This line will be skipped:\n" + first_word + " " + coord_s);
           continue;
         }
-        current_feature->ReadGenBankCoords(coord_s, in);
+        
+        list<cLocation> locs = s.ReadGenBankCoords(coord_s, in);
+        for(list<cLocation>::iterator it=locs.begin(); it!=locs.end(); it++) {
+          current_feature->add_location(*it);
+        }
+        
       }
     }
     // Minor tag = information about current feature
@@ -1673,38 +1735,38 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
       current_feature->ReadGenBankTag(first_word, line, in); // reads multi-line entries
     }
   }
-
-
+  
   for (cSequenceFeatureList::iterator it = all_features.begin(); it != all_features.end(); it++) {
     cSequenceFeature& feature = **it;
 
     // common changes for any type
     // use /note as the product if there is not product
-    if (feature.SafeGet("product") == "")
-    {
+    if (feature.SafeGet("product") == "") {
       feature["product"] = feature.SafeGet("note");
+    }
+    
+    if (feature.SafeGet("note") != "") {
+      feature["name"] = feature.SafeGet("note");
     }
 
     if (feature["type"] == "repeat_region" || feature["type"] == "mobile_element") {
-      // Don't add unnamed ones to the list...
-      //if (it->SafeGet("mobile_element") == "") continue;
 
+      // Give the repeat region a name if NOTHING else can be found
       feature["name"] = "repeat_region";
       
-      // Give the repeat region a name if NOTHING else can be found
-      if (feature.SafeGet("note") != "")
+      if (feature.SafeGet("label") != "")  // Benchling exports "label"
+        feature["name"] = feature.SafeGet("label");
+      else if (feature.SafeGet("note") != "")
         feature["name"] = feature.SafeGet("note");
-
+      
       // E. coli case:
       if (feature.count("mobile_element") || 
           feature.count("mobile_element_type"))
       {
-        if (feature.count("mobile_element")) {  
+        if (feature.count("mobile_element"))
           feature["name"] = feature["mobile_element"];
-        }
-        if (feature.count("mobile_element_type")) {
+        if (feature.count("mobile_element_type"))
           feature["name"] = feature["mobile_element_type"];
-        }
 
         string& name = feature["name"];
 
@@ -1727,22 +1789,31 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
       if (feature.SafeGet("rpt_family") != "")
         feature["name"] = feature["rpt_family"];
 
+      // Benchling export only has label
+      
       //std::cerr << (*it).SafeGet("mobile_element") << " " << (*it).SafeGet("name") << std::endl;
 
       if (feature.SafeGet("product") == "")
         feature["product"] = "repeat region";
     }
-    else
+    else // genes (anything not a repeat region)
     {
-      // Add information
+      feature["name"] = "unknown";
+      
+      // Add name from these fields in order of preference
       if (feature.SafeGet("gene") != "")
         feature["name"] = feature["gene"];
-
+      else if (feature.SafeGet("locus_tag") != "")
+        feature["name"] = feature["locus_tag"];
+      else if (feature.SafeGet("label") != "")  // Benchling exports "label"
+        feature["name"] = feature.SafeGet("label");
+      else if (feature.SafeGet("note") != "")
+        feature["name"] = feature["note"];
+      
       if (feature.SafeGet("transl_table") != "")
         feature["transl_table"] = feature["transl_table"];
       
-      if ( (feature.SafeGet("name") == "") && (feature.SafeGet("locus_tag") != "") )
-        feature["name"] = feature["locus_tag"];
+      // Need backups to deal with cases of unnamed genes
 
       //std::cerr << (*it).SafeGet("name") << " " << (*it).SafeGet("gene") << " " << (*it).SafeGet("locus_tag") << std::endl;
 
