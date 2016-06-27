@@ -8,6 +8,7 @@
 *.tgz
 *.tab
 *.txt
+*.csv
 *.out
 *.html
 *.tab
