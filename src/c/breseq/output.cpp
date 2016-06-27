@@ -993,7 +993,7 @@ string formatted_mutation_annotation(const cDiffEntry& mut)
     if (mut.get("codon_number") == "1")
       s+= "&nbsp;&dagger;";
     
-    // Dagger for multiple SNPs in same codon
+    // Double dagger for multiple SNPs in same codon
     if (mut.entry_exists("multiple_polymorphic_SNPs_in_same_codon"))
       s+= "&nbsp;&Dagger;";
   }

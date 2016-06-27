@@ -205,6 +205,7 @@ int do_apply(int argc, char *argv[])
   }
   else {
     output = "output." + to_lower(format);
+		if (format=="GFF3") output = "output.gff";
   }  
 
   if (!options.getArgc()) {

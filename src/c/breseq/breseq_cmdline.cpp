@@ -478,11 +478,11 @@ int do_convert_reference(int argc, char* argv[]) {
     return -1;
 	}
   
-  options["format"] = to_upper(options["format"]);
-  if (options["format"]=="GFF") options["format"]="GFF3";
-  if ((options["format"] != "FASTA") && (options["format"] != "GFF") && (options["format"] != "CSV")) {
+  string output_format = to_upper(options["format"]);
+  if (output_format=="GFF") output_format="GFF3";
+  if ((output_format != "FASTA") && (output_format != "GFF3") && (output_format != "CSV")) {
     options.addUsage("");
-    options.addUsage("Unknown output file format requested: " + options["format"]);
+    options.addUsage("Unknown output file format requested: " + to_upper(options["format"]));
     options.printUsage();
     return -1;
   }
@@ -501,12 +501,11 @@ int do_convert_reference(int argc, char* argv[]) {
 
   cerr << "+++   Writing reference file..." << endl;
   
-  string output_format = to_upper(options["format"]);
   cerr << "  Output : " << options["output"] << endl;
   cerr << "  Format : " << output_format << endl;
   if (output_format == "FASTA") {
     refs.WriteFASTA(options.count("output") ? options["output"] : "output.fna");
-  } else if (output_format == "GFF") {
+  } else if (output_format == "GFF3") {
     refs.WriteGFF(options.count("output") ? options["output"] : "output.gff");
   } else if (output_format == "CSV") {
     refs.WriteCSV(options.count("output") ? options["output"] : "output.csv");
