@@ -1473,7 +1473,12 @@ list<cLocation> cAnnotatedSequence::ParseGenBankCoords(string& s, int8_t in_stra
   if (s.find("complement(") == 0) {
     uint32_t n = string("complement(").size();
     string value = s.substr(n, s.size() - n - 1);
-    list<cLocation> sub_locs = ParseGenBankCoords(value, -1 * in_strand);
+    list<cLocation> sub_locs = ParseGenBankCoords(value, in_strand);
+    // Set all strands to opposite and reverse order
+    for(list<cLocation>::iterator it = sub_locs.begin(); it != sub_locs.end(); it++) {
+      it->set_strand(-it->get_strand());
+    }
+    sub_locs.reverse();
     locs.insert(locs.end(), sub_locs.begin(), sub_locs.end());
   }
   //join()
@@ -1487,7 +1492,6 @@ list<cLocation> cAnnotatedSequence::ParseGenBankCoords(string& s, int8_t in_stra
       locs.insert(locs.end(), sub_locs.begin(), sub_locs.end());
     }
     
-    // Get cLocation::start,end from outer sub_locations.
     // Example of difficult lines:
     //
     // gene            complement(join(205502..452528,1..182513))

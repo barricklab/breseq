@@ -460,7 +460,7 @@ int do_convert_reference(int argc, char* argv[]) {
   options.addUsage("");
   options.addUsage("Allowed Options");
   options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("format,f", "Output format. Valid options: FASTA, GFF, CSV (Default = FASTA)", "FASTA");
+  options("format,f", "Output format. Valid options: FASTA, GFF3, CSV (Default = FASTA)", "FASTA");
   options("output,o", "Output reference file path (Default = output.*)");
 
 	options.processCommandArgs(argc, argv);
@@ -479,6 +479,7 @@ int do_convert_reference(int argc, char* argv[]) {
 	}
   
   options["format"] = to_upper(options["format"]);
+  if (options["format"]=="GFF") options["format"]="GFF3";
   if ((options["format"] != "FASTA") && (options["format"] != "GFF") && (options["format"] != "CSV")) {
     options.addUsage("");
     options.addUsage("Unknown output file format requested: " + options["format"]);

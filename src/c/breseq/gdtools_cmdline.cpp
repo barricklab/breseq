@@ -189,8 +189,9 @@ int do_apply(int argc, char *argv[])
 		return -1;
 	}
 	
-  string format = to_upper(options["format"]);
 
+	string format = to_upper(options["format"]);
+	if (format == "GFF") format = "GFF3"; // allow synonym
   if ((format != "FASTA") && (format != "GFF3")) {
     options.addUsage("");
     options.addUsage("Did not recognize format: " + options["format"]);
