@@ -40,7 +40,6 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/summary.h"
 #include "libbreseq/contingency_loci.h"
 #include "libbreseq/mutation_predictor.h"
-#include "libbreseq/rna_seq.h"
 #include "libbreseq/output.h"
 
 
@@ -479,8 +478,15 @@ int do_convert_reference(int argc, char* argv[]) {
     return -1;
 	}
   
+  options["format"] = to_upper(options["format"]);
+  if ((options["format"] != "FASTA") && (options["format"] != "GFF") && (options["format"] != "CSV")) {
+    options.addUsage("");
+    options.addUsage("Unknown output file format requested: " + options["format"]);
+    options.printUsage();
+    return -1;
+  }
+  
   cerr << "COMMAND: CONVERT-REFERENCE" << endl;
-
   
   cerr << "+++   Loading reference files..." << endl;
   vector<string> reference_file_names;
@@ -826,8 +832,8 @@ int do_simulate_read(int argc, char *argv[])
   cReferenceSequences ref_seq_info;
   cReferenceSequences new_ref_seq_info;
   const string &ref_file_name = options["reference"];
-  ref_seq_info.LoadFile(ref_file_name);
-  new_ref_seq_info.LoadFile(ref_file_name);
+  ref_seq_info.LoadFiles(make_vector<string>(ref_file_name));
+  new_ref_seq_info.LoadFiles(make_vector<string>(ref_file_name));
 
 
   //! Step: Apply genome diff mutations to reference sequence.
@@ -897,7 +903,7 @@ int do_copy_number_variation(int argc, char *argv[])
 
     //(re)load the reference sequences from our converted files
     cReferenceSequences ref_seq_info;
-    ref_seq_info.ReadGFF(settings.reference_gff3_file_name);
+    ref_seq_info.LoadFiles(make_vector<string>(settings.reference_gff3_file_name));
 
     // Where error rate summary data will be output
     Summary summary;
@@ -982,7 +988,7 @@ int do_periodicity(int argc, char *argv[])
   
   //(re)load the reference sequences from our converted files
   cReferenceSequences ref_seq_info;
-  ref_seq_info.ReadGFF(settings.reference_gff3_file_name);
+  ref_seq_info.LoadFiles(make_vector<string>(settings.reference_gff3_file_name));
   
   Summary summary;
   summary.unique_coverage.retrieve(settings.error_rates_summary_file_name);
@@ -1275,10 +1281,14 @@ int breseq_default_action(int argc, char* argv[])
 	summary.sequence_conversion.retrieve(settings.sequence_conversion_summary_file_name);
 	ASSERT(summary.sequence_conversion.max_read_length != UNDEFINED_UINT32, "Can't retrieve max read length from file: " + settings.sequence_conversion_summary_file_name);
 
-  //(re)load the reference sequences from our converted files
-  ref_seq_info.ReadGFF(settings.reference_gff3_file_name);
+  // (re)load the reference sequences from our converted files
+  // we must be sure to associate them with their original file names
+  // so that contig and junction-only references are correctly flagged
+  ref_seq_info.LoadFiles(make_vector<string>(settings.reference_gff3_file_name));
+  ref_seq_info.use_original_file_names();
   
   // update the normal versus junction-only lists
+  // - must be done after reading from our own GFF3 file
   settings.init_reference_sets(ref_seq_info);
   
   // Calculate the total reference sequence length

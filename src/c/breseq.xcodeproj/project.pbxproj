@@ -43,7 +43,6 @@
 		708D62441390B1D5007FF13C /* resolve_alignments.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 708D62431390B1D5007FF13C /* resolve_alignments.cpp */; };
 		708FA5FD13257A7D00864C40 /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 708FA5DA132578BE00864C40 /* libbreseq.a */; };
 		7092FAF2140AC70200DDECA2 /* coverage_output.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7092FAF1140AC70200DDECA2 /* coverage_output.cpp */; };
-		70990AE614D5A4FA005255D4 /* rna_seq.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70990AE514D5A4FA005255D4 /* rna_seq.cpp */; };
 		70A8364D13477AAE0037F8DE /* alignment_output.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70A8364C13477AAE0037F8DE /* alignment_output.cpp */; };
 		70B48C4B13A9918E00BF2BF0 /* anyoption.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B48C4A13A9918E00BF2BF0 /* anyoption.cpp */; };
 		70B48C4F13A991BE00BF2BF0 /* chisquare.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B48C4E13A991BE00BF2BF0 /* chisquare.cpp */; };
@@ -160,8 +159,6 @@
 		708FA5DA132578BE00864C40 /* libbreseq.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libbreseq.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		7090A56715DDD997000010EE /* plot_jc_scores.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = plot_jc_scores.r; path = breseq/plot_jc_scores.r; sourceTree = "<group>"; };
 		7092FAF1140AC70200DDECA2 /* coverage_output.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = coverage_output.cpp; path = breseq/coverage_output.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
-		70990AE514D5A4FA005255D4 /* rna_seq.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = rna_seq.cpp; path = breseq/rna_seq.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
-		70990AE814D5A520005255D4 /* rna_seq.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = rna_seq.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		70A8364C13477AAE0037F8DE /* alignment_output.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = alignment_output.cpp; path = breseq/alignment_output.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		70B48C4A13A9918E00BF2BF0 /* anyoption.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = anyoption.cpp; path = breseq/anyoption.cpp; sourceTree = SOURCE_ROOT; };
 		70B48C4E13A991BE00BF2BF0 /* chisquare.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = chisquare.cpp; path = breseq/chisquare.cpp; sourceTree = SOURCE_ROOT; };
@@ -291,7 +288,6 @@
 				7087728C12BC169C000F9B57 /* pileup_base.cpp */,
 				707F34A1155D97B900F5C89F /* reference_sequence.cpp */,
 				708D62431390B1D5007FF13C /* resolve_alignments.cpp */,
-				70990AE514D5A4FA005255D4 /* rna_seq.cpp */,
 				700FD0751C0A68D4003D8459 /* samtools_commands.cpp */,
 				70B9320E1394008200885753 /* settings.cpp */,
 				707F349E155D970000F5C89F /* summary.cpp */,
@@ -355,7 +351,6 @@
 				70CB7222140FEB6400D578EB /* pileup_base.h */,
 				707F34A3155D9C9200F5C89F /* reference_sequence.h */,
 				70CB7223140FEB6400D578EB /* resolve_alignments.h */,
-				70990AE814D5A520005255D4 /* rna_seq.h */,
 				700FD0761C0A68D4003D8459 /* samtools_commands.h */,
 				70CB7224140FEB6400D578EB /* settings.h */,
 				70CB7225140FEB6400D578EB /* storable.h */,
@@ -518,7 +513,6 @@
 				7092FAF2140AC70200DDECA2 /* coverage_output.cpp in Sources */,
 				702A20BC1A4F2485006DCA5F /* flagged_regions.cpp in Sources */,
 				700FD0771C0A68D4003D8459 /* samtools_commands.cpp in Sources */,
-				70990AE614D5A4FA005255D4 /* rna_seq.cpp in Sources */,
 				707F349F155D970000F5C89F /* summary.cpp in Sources */,
 				707F34A2155D97B900F5C89F /* reference_sequence.cpp in Sources */,
 			);

@@ -1039,7 +1039,7 @@ int do_annotate(int argc, char* argv[])
       mt_options.force_frequencies_for_one_reference = true;
     mt_options.one_ref_seq = ref_seq_info.size() == 1;
     mt_options.gd_name_list_ref = gd_titles;
-		mt_options.force_show_sample_headers = gd_path_names.size() > 0;
+		mt_options.force_show_sample_headers = gd_path_names.size() > 1;
     mt_options.repeat_header = from_string<int32_t>(options["repeat-header"]);
     html_compare(settings, output_file_name, "Mutation Comparison", gd, mt_options);
         
@@ -1546,7 +1546,7 @@ int do_remove_gd(int argc, char* argv[])
         }
       }
     }
-    muts = gd.list(mut_types);
+    muts = gd.get_list(mut_types);
   }
     
   const vector<string> evals = make_vector<string>("==")("!=")("<=")(">=")("<")(">");
@@ -1749,7 +1749,7 @@ int do_mask_gd(int argc, char* argv[])
 	cGenomeDiff new_gd(gd);
 	new_gd.metadata = gd.metadata; // copy all of the important information
 	
-	diff_entry_list_t masks = mask_gd.list(make_vector<gd_entry_type>(MASK));
+	diff_entry_list_t masks = mask_gd.get_list(make_vector<gd_entry_type>(MASK));
 	
 	// Create all of the flagged regions
 	cFlaggedRegions flagged_regions;
@@ -3162,26 +3162,23 @@ int do_translate_proteome(int argc, char *argv[])
 							
 							total_protein_count++;
 							
-							if (on_feature.get_strand() != 0) {                
-									string n_protein = cReferenceSequences::translate_protein(on_seq, on_feature.m_location, n_translation_table, n_translation_table_1);
-									string a_protein = cReferenceSequences::translate_protein(on_seq, on_feature.m_location, a_translation_table, a_translation_table_1);
-									
-									int32_t length_diff = a_protein.size() - n_protein.size();
-									
-									nfile << ">" << on_feature["locus_tag"] << "|" << on_feature["name"] << endl << n_protein << endl;
-									afile << ">" << on_feature["locus_tag"] << "|" << on_feature["name"] << "|amber" << endl << a_protein << endl; //_" << length_diff << "_bp_to_new_stop" ;
-									
-									ufile << ">" << on_feature["locus_tag"] << "|" << on_feature["name"] << endl << n_protein << endl;
-									if (length_diff) {
-											amber_terminated_protein_count++;
-											ufile << ">" << on_feature["locus_tag"] << "|" << on_feature["name"] << "|amber" << endl << a_protein << endl; // _" << length_diff << "_bp_to_new_stop" 
-											bfile << on_feature["name"] << "\t" << length_diff << "\t" << on_feature["locus_tag"] <<  "\t" << on_feature["product"] << endl;
-									}
-							}
-							else
-							{
-									skipped_protein_count++;
-							}
+							string n_protein = cReferenceSequences::translate_protein(on_seq, on_feature, n_translation_table, n_translation_table_1);
+							string a_protein = cReferenceSequences::translate_protein(on_seq, on_feature, a_translation_table, a_translation_table_1);
+							
+							int32_t length_diff = a_protein.size() - n_protein.size();
+							
+							nfile << ">" << on_feature["locus_tag"] << "|" << on_feature["name"] << endl << n_protein << endl;
+							afile << ">" << on_feature["locus_tag"] << "|" << on_feature["name"] << "|amber" << endl << a_protein << endl; //_" << length_diff << "_bp_to_new_stop" ;
+							
+							ufile << ">" << on_feature["locus_tag"] << "|" << on_feature["name"] << endl << n_protein << endl;
+							if (length_diff) {
+									amber_terminated_protein_count++;
+									ufile << ">" << on_feature["locus_tag"] << "|" << on_feature["name"] << "|amber" << endl << a_protein << endl; // _" << length_diff << "_bp_to_new_stop" 
+									bfile << on_feature["name"] << "\t" << length_diff << "\t" << on_feature["locus_tag"] <<  "\t" << on_feature["product"] << endl;
+						}
+						else {
+								skipped_protein_count++;
+						}
 							
 					}
 			}
@@ -3358,7 +3355,12 @@ int do_deleted_genes(int argc, char* argv[])
 				out << "," << gene.name;
 				out << "," << gene.m_gff_attributes["ID"];
 				
-				if (fr.is_flagged(ref_seq.m_seq_id, gene.get_start_1(), gene.get_end_1())) {
+				bool is_deleted = false;
+				for (cFeatureLocationList::iterator itr = feat.m_locations.begin(); itr != feat.m_locations.end(); itr++) {
+					is_deleted = is_deleted || fr.is_flagged(ref_seq.m_seq_id, itr->get_start_1(), itr->get_end_1());
+				}
+				
+				if (is_deleted) {
 					out << ",1";
 				} else {
 					out << ",0";

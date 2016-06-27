@@ -27,6 +27,7 @@ class cAnnotatedSequence;
 class cDiffEntry;
 class cGenomeDiff;
 class cReferenceSequences;
+class cFeatureLocation;
 class cSequenceFeature;
 class Settings;
 class cReferenceCoordinate;
@@ -647,10 +648,9 @@ public:
   diff_entry_ptr_t find_by_id(string _id);
   
   //! Retrieve cDiffEntrys that match given type(s) 
-  const diff_entry_list_t list() const { return _entry_list; }
-  diff_entry_list_t list(const vector<gd_entry_type>& types = vector<gd_entry_type>());
+  const diff_entry_list_t get_const_list() const { return _entry_list; }
+  diff_entry_list_t get_list(const vector<gd_entry_type>& types = vector<gd_entry_type>());
   
-  diff_entry_list_t get_list() { return _entry_list; }
   void set_list(diff_entry_list_t& in_list) {  _entry_list = in_list; }
   
   //! retrieve cDiffEntrys that match given type(s) and do not have 'no_show' set
@@ -752,7 +752,7 @@ public:
   string mob_replace_sequence(cReferenceSequences& ref_seq_info, 
                               cDiffEntry& mut, 
                               string* picked_seq_id = NULL, 
-                              cSequenceFeature* picked_sequence_feature = NULL
+                              cFeatureLocation* picked_sequence_feature = NULL
                               );
   
   //! Call to apply Genome Diff to sequences

@@ -6,19 +6,19 @@ REL606-5	.	gene	190	309	.	+	0	Alias=ECB_r00003;ID=ECB_r00003;Name=rrfH
 REL606-5	.	rRNA	190	309	.	+	0	Alias=ECB_r00003;ID=ECB_r00003;Name=rrfH;Note=5S ribosomal RNA
 REL606-5	.	gene	362	438	.	+	0	Alias=ECB_t00003;ID=ECB_t00003;Name=aspU
 REL606-5	.	tRNA	362	438	.	+	0	Alias=ECB_t00003;ID=ECB_t00003;Name=aspU;Note=tRNA-Asp
-REL606-5	.	gene	601	949	.	+	0	Alias=ECB_00200_1;ID=ECB_00200;Name=dkgB_1;Pseudo=true
-REL606-5	.	fCDS	601	949	.	+	0	Alias=ECB_00200_1;ID=ECB_00200;Name=dkgB_1;Note=2%2C5-diketo-D-gluconate reductase B;Pseudo=true;transl_table=11
-REL606-5	.	gene	950	1304	.	+	0	Alias=ECB_00200_2;ID=ECB_00200;Name=dkgB_2;Pseudo=true
-REL606-5	.	fCDS	950	1304	.	+	0	Alias=ECB_00200_2;ID=ECB_00200;Name=dkgB_2;Note=2%2C5-diketo-D-gluconate reductase B;Pseudo=true;transl_table=11
-REL606-5	.	gene	1301	2713	.	-	0	Alias=ECB_00201_1;ID=ECB_00201;Name=yafC_1;Pseudo=true
-REL606-5	.	fCDS	1301	2713	.	-	0	Alias=ECB_00201_1;ID=ECB_00201;Name=yafC_1;Note=predicted DNA-binding transcriptional regulator;Pseudo=true;transl_table=11
+REL606-5	.	gene	601	949	.	+	0	Alias=ECB_00200;ID=ECB_00200;Name=dkgB;Pseudo=true
+REL606-5	.	gene	1535	2713	.	-	0	Alias=ECB_00200;ID=ECB_00200;Name=dkgB;Pseudo=true
+REL606-5	.	fCDS	601	949	.	+	0	Alias=ECB_00200;ID=ECB_00200;Name=dkgB;Note=2%2C5-diketo-D-gluconate reductase B;Pseudo=true;transl_table=11
+REL606-5	.	fCDS	1535	2713	.	-	0	Alias=ECB_00200;ID=ECB_00200;Name=dkgB;Note=2%2C5-diketo-D-gluconate reductase B;Pseudo=true;transl_table=11
+REL606-5	.	gene	950	1538	.	+	0	Alias=ECB_00201;ID=ECB_00201;Name=yafC;Pseudo=true
+REL606-5	.	gene	2714	3029	.	-	0	Alias=ECB_00201;ID=ECB_00201;Name=yafC;Pseudo=true
+REL606-5	.	fCDS	950	1538	.	+	0	Alias=ECB_00201;ID=ECB_00201;Name=yafC;Note=predicted DNA-binding transcriptional regulator;Pseudo=true;transl_table=11
+REL606-5	.	fCDS	2714	3029	.	-	0	Alias=ECB_00201;ID=ECB_00201;Name=yafC;Note=predicted DNA-binding transcriptional regulator;Pseudo=true;transl_table=11
 REL606-5	.	repeat_region	1747	2507	.	+	0	Name=IS1;Note=repeat region
-REL606-5	.	CDS	1799	2074	.	+	0	Alias=ECB_00210;ID=ECB_00210;Name=insA-2;Note=IS1 protein InsA;transl_table=11
-REL606-5	.	gene	1799	2074	.	+	0	Alias=ECB_00210;ID=ECB_00210;Name=insA-2
-REL606-5	.	CDS	1993	2496	.	+	0	Alias=ECB_00211;ID=ECB_00211;Name=insB-2;Note=IS1 protein InsB;transl_table=11
-REL606-5	.	gene	1993	2496	.	+	0	Alias=ECB_00211;ID=ECB_00211;Name=insB-2
-REL606-5	.	gene	2714	3029	.	-	0	Alias=ECB_00201_2;ID=ECB_00201;Name=yafC_2;Pseudo=true
-REL606-5	.	fCDS	2714	3029	.	-	0	Alias=ECB_00201_2;ID=ECB_00201;Name=yafC_2;Note=predicted DNA-binding transcriptional regulator;Pseudo=true;transl_table=11
+REL606-5	.	gene	1799	2074	.	+	0	Alias=ECB_00210_1;ID=ECB_00210;Name=insA-2
+REL606-5	.	CDS	1799	2074	.	+	0	Alias=ECB_00210_1;ID=ECB_00210;Name=insA-2;Note=IS1 protein InsA;transl_table=11
+REL606-5	.	gene	1993	2496	.	+	0	Alias=ECB_00211_1;ID=ECB_00211;Name=insB-2
+REL606-5	.	CDS	1993	2496	.	+	0	Alias=ECB_00211_1;ID=ECB_00211;Name=insB-2;Note=IS1 protein InsB;transl_table=11
 REL606-5	.	gene	3270	4070	.	+	0	Alias=ECB_00202;ID=ECB_00202;Name=yafD
 REL606-5	.	CDS	3270	4070	.	+	0	Alias=ECB_00202;ID=ECB_00202;Name=yafD;Note=hypothetical protein;transl_table=11
 REL606-5	.	gene	4074	4697	.	+	0	Alias=ECB_00203;ID=ECB_00203;Name=yafE
@@ -38,10 +38,10 @@ REL606-5	.	tRNA	9079	9155	.	+	0	Alias=ECB_t00004;ID=ECB_t00004;Name=aspV;Note=tR
 REL606-5	.	gene	9485	10270	.	+	0	Alias=ECB_00209;ID=ECB_00209;Name=yafT
 REL606-5	.	CDS	9485	10270	.	+	0	Alias=ECB_00209;ID=ECB_00209;Name=yafT;Note=predicted aminopeptidase;transl_table=11
 REL606-5	.	repeat_region	10481	11248	.	+	0	Name=IS1;Note=repeat region
-REL606-5	.	gene	10536	10811	.	+	0	Alias=ECB_00210;ID=ECB_00210;Name=insA-2
-REL606-5	.	CDS	10536	10811	.	+	0	Alias=ECB_00210;ID=ECB_00210;Name=insA-2;Note=IS1 protein InsA;transl_table=11
-REL606-5	.	gene	10730	11233	.	+	0	Alias=ECB_00211;ID=ECB_00211;Name=insB-2
-REL606-5	.	CDS	10730	11233	.	+	0	Alias=ECB_00211;ID=ECB_00211;Name=insB-2;Note=IS1 protein InsB;transl_table=11
+REL606-5	.	gene	10536	10811	.	+	0	Alias=ECB_00210_2;ID=ECB_00210;Name=insA-2
+REL606-5	.	CDS	10536	10811	.	+	0	Alias=ECB_00210_2;ID=ECB_00210;Name=insA-2;Note=IS1 protein InsA;transl_table=11
+REL606-5	.	gene	10730	11233	.	+	0	Alias=ECB_00211_2;ID=ECB_00211;Name=insB-2
+REL606-5	.	CDS	10730	11233	.	+	0	Alias=ECB_00211_2;ID=ECB_00211;Name=insB-2;Note=IS1 protein InsB;transl_table=11
 REL606-5	.	gene	11235	11606	.	+	0	Alias=ECB_00212;ID=ECB_00212;Name=ECB_00212
 REL606-5	.	CDS	11235	11606	.	+	0	Alias=ECB_00212;ID=ECB_00212;Name=ECB_00212;Note=hypothetical protein;transl_table=11
 REL606-5	.	gene	12037	13173	.	+	0	Alias=ECB_00213;ID=ECB_00213;Name=yhhI

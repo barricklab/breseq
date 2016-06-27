@@ -478,7 +478,7 @@ void test_RA_evidence(
   //  * POLYMORPHISM_SCORE may or may not be present      = mixed model
   //  * NEW_COV, REF_COV present for all entries
   
-  diff_entry_list_t list = gd.list();
+  diff_entry_list_t list = gd.get_list();
   // Note nonstandard non-increment, since we remove items
   for (diff_entry_list_t::iterator it = list.begin(); it != list.end(); ) {
     
@@ -617,7 +617,7 @@ void identify_mutations_pileup::load_user_ra_evidence_from_gd()
   gd.strip_to_spec();
   
   // Return just RA entries
-  _user_evidence_ra_list = gd.list(make_vector<gd_entry_type>(RA));
+  _user_evidence_ra_list = gd.get_list(make_vector<gd_entry_type>(RA));
 }
 
 /*! Destructor.
@@ -1004,7 +1004,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       
       // what's going on here? we may need to change a value latter,
       // and add added a copy not the current one
-      added_mut_p = _gd.list().back();
+      added_mut_p = _gd.get_list().back();
     } // END ra_output
     
     // Now we print additional RA items as user= if they have not already been printed.

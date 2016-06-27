@@ -27,6 +27,70 @@ namespace breseq {
   
   const string BULL_DUMMY_SEQ_ID = "__BULL_DUMMY_SEQ_ID__";
   
+  
+  
+  cFeatureLocation::cFeatureLocation(cSequenceFeature* feature, const cLocation& loc)
+    : cLocation(loc)
+    , m_feature(feature)
+  {
+    m_index = feature->m_locations.size()+1;
+    
+    if (m_index == 1) {
+      m_offset = feature->m_locations.back().get_end_1() - feature->m_locations.back().get_start_1();
+    } else {
+      m_offset = 1;
+    }
+  }
+
+  
+  // This constructor takes into account
+  // any previously assigned locations in feature
+  // to automatically fill in m_index and m_offset
+  cFeatureLocation::cFeatureLocation(
+                                     cSequenceFeature* feature,
+                                     int32_t start_1,
+                                     int32_t end_1,
+                                     int8_t strand,
+                                     bool start_is_indeterminate,
+                                     bool end_is_indeterminate
+                                     )
+  {
+    cFeatureLocation(feature, cLocation(start_1, end_1, strand, start_is_indeterminate, end_is_indeterminate));
+  }
+  
+  string cSequenceFeature::get_nucleotide_sequence(const cAnnotatedSequence& seq) const
+  {
+    string s;
+    for(cFeatureLocationList::const_iterator it = m_locations.begin(); it != m_locations.end(); it++ ) {
+      s += seq.get_stranded_sequence_1( it->get_strand(), it->get_start_1(), it->get_end_1() );
+    }
+    return s;
+  }
+  
+  void cSequenceFeature::genomic_position_to_index_strand_1(int32_t pos_1, int32_t& index_1, int8_t& strand) const
+  {
+    index_1 = 0;
+    strand = 0;
+    for(cFeatureLocationList::const_iterator it = m_locations.begin(); it != m_locations.end(); it++ ) {
+
+      if ( (pos_1 >= it->get_start_1()) && (pos_1 <= it->get_end_1()) ) {
+        
+        strand = it->get_strand();
+        if (strand == +1) {
+          index_1 += pos_1 - it->get_start_1() + 1;
+        } else {
+          index_1 += it->get_end_1() - pos_1 + 1;
+        }
+        return;
+      }
+          
+      // Add the entire length of this region
+      index_1 += it->get_end_1() - it->get_start_1() + 1;
+    }
+      
+    ERROR("Cannot find index of position that is not within gene.");
+  }
+  
   string cAnnotatedSequence::get_stranded_sequence_1(int32_t strand, int32_t start_1, int32_t end_1) const
   {
     ASSERT( (strand==-1) || (strand ==+1), "Expected strand +/-1. Provided: " + to_string(strand));
@@ -111,19 +175,118 @@ namespace breseq {
     
     // We will be erasing inside the it loop.  This is to keep
     // track of whether or not we should iterate to the next element.
-    bool it_iterate = true;
+    bool it_feature_iterate = true;
     
     //Iterate through all the features
-    for (list<cSequenceFeaturePtr>::iterator it = m_features.begin(); it != m_features.end(); )
+    for (list<cSequenceFeaturePtr>::iterator it_feature = m_features.begin(); it_feature != m_features.end(); )
     {
-      it_iterate = true;
-      
+      it_feature_iterate = true;
       //The current feature we're looking at
-      cSequenceFeature& feat = **it;
+      cSequenceFeature& feat = **it_feature;
       
-      //Does the feature start and end inside of the replacement?
-      if(feat.m_location.get_start_1() >= start_1 && feat.m_location.get_end_1() <= end_1)
+      // Iterature through all regions of the feature
+      bool it_region_iterate = true;
+
+      for (cFeatureLocationList::iterator it_region = feat.m_locations.begin(); it_region != feat.m_locations.end(); )
       {
+        it_region_iterate = true;
+        cFeatureLocation& region = *it_region;
+
+      
+        //Does the region start and end inside of the replacement?
+        if(region.get_start_1() >= start_1 && region.get_end_1() <= end_1)
+        {
+          it_region = feat.m_locations.erase(it_region);
+          it_region_iterate = false;
+        }
+        
+        //Does the feature end after the replacement starts?
+        else if(region.get_end_1() > start_1 && region.get_end_1() < end_1)
+        {
+          //Temporary variable for the new end position
+          uint32_t end_temp = start_1 - 1;
+          
+          //Notify the user of the action
+          if(verbose){cout << "MODIFY\t" << feat["type"]<< "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
+          
+          //Modify the end of the feature
+          region.set_end_1(end_temp);
+          
+          //Mark it as pseudo
+          feat.flag_pseudo(verbose);
+          
+          //Modify the notes for this feature
+          //If this feature is already pseudo or a region, do nothing.
+          //if(feat["type"] != "region" && feat["type"] != "source" && !feat.m_gff_attributes.count("Mutation from " + mut_type))feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
+        }
+        
+        //Everything that starts after the replacement starts needs to be shifted          
+        else if(region.get_start_1() > start_1)
+        {
+          //Does the feature start before the replacement ends?
+          if(region.get_start_1() < end_1)
+          {
+            //Temporary variable for the new start postion
+            uint32_t start_temp = end_1 + 1;
+            
+            //Notify the user of the action
+            if(verbose){cout << "MODIFY\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
+            
+            //Modify the start of the feature
+            region.set_start_1(start_temp);
+            
+            //Mark it as pseudo
+            feat.flag_pseudo(verbose);
+            
+            //Modify the notes for this feature
+            //if(feat["type"] != "region" && feat["type"] != "source" && !feat.m_gff_attributes.count("Mutation from " + mut_type))feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
+          }             
+          
+          //Is there any reason to shift?
+          if(shift)
+          {          
+            //Modify  both the start and end of the region
+            region.set_start_1(region.get_start_1() - shift);
+            region.set_end_1(region.get_end_1() - shift);
+            
+            //Notify the user of the action
+            if(verbose){cout << "SHIFT\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
+          }
+          
+        }
+        
+        //Any feature the encompases the replaced sequence needs to be resized
+        else if(region.get_start_1() <= start_1 && region.get_end_1() >= end_1)
+        {                          
+          //Is there anything to modify?
+          if(shift)
+          {
+            //Temporary variable for the new end position
+            uint32_t end_temp = region.get_end_1() - shift;
+            
+            //Notify the user of the action
+            if(verbose){cout << "MODIFY\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
+            
+            //Modify the just the end of the feature
+            region.set_end_1(end_temp);
+            
+            //Mark it as pseudo
+            feat.flag_pseudo(verbose);
+            
+            //Modify the notes for this feature
+            //if(feat["type"] != "region" && feat["type"] != "source" && !feat.m_gff_attributes.count("Mutation from " + mut_type))feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
+          }
+        }
+        
+        // Iterate it ONLY if we haven't erased region.
+        if (it_region_iterate) it_region++;
+
+      }
+      
+      // Now DELETE features that no longer have any regions!
+      if (feat.m_locations.size() == 0) {
+        
+        
         //We'll also be checking other lists to see if they
         //contain a copy of the current feature
         list<cSequenceFeaturePtr>::iterator gene_it;
@@ -138,91 +301,15 @@ namespace breseq {
         if(verbose){cout << "REMOVED\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
         
         //Remove the current feature
-        it = m_features.erase(it);
+        it_feature = m_features.erase(it_feature);
         
-        //We just removed the current feauture, do not iterate.
-        it_iterate = false;
-      }
-      
-      //Does the feature end after the replacement starts?
-      else if(feat.m_location.get_end_1() > start_1 && feat.m_location.get_end_1() < end_1)
-      {
-        //Temporary variable for the new end position
-        uint32_t end_temp = start_1 - 1;
+        //We just removed the current feature, do not iterate.
+        it_feature_iterate = false;
         
-        //Notify the user of the action
-        if(verbose){cout << "MODIFY\t" << feat["type"]<< "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
-        
-        //Modify the end of the feature
-        feat.m_location.set_end_1(end_temp);
-        
-        //Mark it as pseudo
-        feat.flag_pseudo(verbose);
-        
-        //Modify the notes for this feature
-        //If this feature is already pseudo or a region, do nothing.
-        //if(feat["type"] != "region" && feat["type"] != "source" && !feat.m_gff_attributes.count("Mutation from " + mut_type))feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
-      }
-      
-      //Everything that starts after the replacement starts needs to be shifted          
-      else if(feat.m_location.get_start_1() > start_1)
-      {
-        //Does the feature start before the replacement ends?
-        if(feat.m_location.get_start_1() < end_1)
-        {
-          //Temporary variable for the new start postion
-          uint32_t start_temp = end_1 + 1;
-          
-          //Notify the user of the action
-          if(verbose){cout << "MODIFY\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
-          
-          //Modify the start of the feature
-          feat.m_location.set_start_1(start_temp);
-          
-          //Mark it as pseudo
-          feat.flag_pseudo(verbose);
-          
-          //Modify the notes for this feature
-          //if(feat["type"] != "region" && feat["type"] != "source" && !feat.m_gff_attributes.count("Mutation from " + mut_type))feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
-        }             
-        
-        //Is there any reason to shift?
-        if(shift)
-        {          
-          //Modify the both the start and end of the feature
-          feat.m_location.set_start_1(feat.m_location.get_start_1() - shift);
-          feat.m_location.set_end_1(feat.m_location.get_end_1() - shift);
-          
-          //Notify the user of the action
-          if(verbose){cout << "SHIFT\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
-        }
-      }
-      
-      //Any feature the encompases the replaced sequence needs to be resized
-      else if(feat.m_location.get_start_1() <= start_1 && feat.m_location.get_end_1() >= end_1)
-      {                          
-        //Is there anything to modify?
-        if(shift)
-        {
-          //Temporary variable for the new end position
-          uint32_t end_temp = feat.m_location.get_end_1() - shift;
-          
-          //Notify the user of the action
-          if(verbose){cout << "MODIFY\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
-          
-          //Modify the just the end of the feature
-          feat.m_location.set_end_1(end_temp);
-          
-          //Mark it as pseudo
-          feat.flag_pseudo(verbose);
-          
-          //Modify the notes for this feature
-          //if(feat["type"] != "region" && feat["type"] != "source" && !feat.m_gff_attributes.count("Mutation from " + mut_type))feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
-        }
       }
       
       // Iterate it ONLY if we haven't erased something.
-      if(it_iterate)it++;
+      if (it_feature_iterate) it_feature++;
     }
   }
   
@@ -250,53 +337,59 @@ namespace breseq {
     //if(verbose)cout << "** " << mut_type << " **" << endl;
     
     //Iterate through all the features
-    for (list<cSequenceFeaturePtr>::iterator it = m_features.begin(); it != m_features.end(); it++)
+    for (list<cSequenceFeaturePtr>::iterator it_feature = m_features.begin(); it_feature != m_features.end(); it_feature++)
     {
       //The current feature we're looking at
-      cSequenceFeature& feat = **it;
-         
-      //Does the feature end after the insertion?
-      //If it ends on the same postion, do nothing
-      //because we're adding it AFTER.
-      if(feat.m_location.get_end_1() > pos_1)
+      cSequenceFeature& feat = **it_feature;
+      
+      // Iterature through all regions of the feature
+      for (cFeatureLocationList::iterator it_region = feat.m_locations.begin(); it_region != feat.m_locations.end(); it_region++)
       {
-        //Does the feature start after the insertion?
-        //Starting on the same postion will mean we
-        //do NOT alter the start postion.
-        if(feat.m_location.get_start_1() > pos_1)
-        {                
-          //Notify the user of the upcomming action
-          //if(verbose){cout << "SHIFT\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
-          
-          //Shift the entire feature down the line
-          feat.m_location.set_start_1(feat.m_location.get_start_1() + insert_length);
-          feat.m_location.set_end_1(feat.m_location.get_end_1() + insert_length);
-        }
-        else //If we can't move the start, only move the end.  This is a modification of the feature
+        cFeatureLocation& region = *it_region;
+         
+        //Does the region end after the insertion?
+        //If it ends on the same postion, do nothing
+        //because we're adding it AFTER.
+        if(region.get_end_1() > pos_1)
         {
-          //Temporary variable for the new end position
-          uint32_t end_temp = feat.m_location.get_end_1() + insert_length;
-          
-          //Notify the user of the action
-          //if(verbose){cout << "MODIFY\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
-          
-          //Modify the end position
-          feat.m_location.set_end_1(feat.m_location.get_end_1() + insert_length);
-          
-          //Mark it as pseudo
-          feat.flag_pseudo(verbose);
-          
-          //Modify the notes for this feature
-          //if(feat["type"] != "region" && feat["type"] != "source" && !feat.m_gff_attributes.count("Mutation from " + mut_type))feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
-        }            
+          //Does the feature start after the insertion?
+          //Starting on the same postion will mean we
+          //do NOT alter the start postion.
+          if(region.get_start_1() > pos_1)
+          {                
+            //Notify the user of the upcomming action
+            //if(verbose){cout << "SHIFT\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
+            
+            //Shift the entire feature down the line
+            region.set_start_end_1(region.get_start_1() + insert_length, region.get_end_1() + insert_length);
+          }
+          else //If we can't move the start, only move the end.  This is a modification of the feature
+          {
+            //Temporary variable for the new end position
+            uint32_t end_temp = region.get_end_1() + insert_length;
+            
+            //Notify the user of the action
+            //if(verbose){cout << "MODIFY\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
+            
+            //Modify the end position
+            region.set_end_1(region.get_end_1() + insert_length);
+            
+            //Mark it as pseudo
+            feat.flag_pseudo(verbose);
+            
+            //Modify the notes for this feature
+            //if(feat["type"] != "region" && feat["type"] != "source" && !feat.m_gff_attributes.count("Mutation from " + mut_type))feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
+          }            
+        }
       }
     }
   }
   
+  
+  typedef enum{OUTSIDE=0, INSIDE, OVERLAP_START, OVERLAP_END, OVERLAP_BOTH} overlap_region_type;
+  
   // Inverts the sequence from start_1 to end_1
   // Any features overlapping the ends are split into two and pseudo'ed
-  // 
-  // Successfully checks all three feature lists.  m_features, m_genes, and m_repeats.
   void cAnnotatedSequence::invert_sequence_1(int32_t start_1, int32_t end_1, string mut_type, bool verbose)
   {
     (void) verbose;
@@ -306,68 +399,120 @@ namespace breseq {
     m_fasta_sequence.m_sequence.replace(start_1-1, end_1-start_1+1, inv_seq);
     
     //Iterate through all the features
-    for (list<cSequenceFeaturePtr>::iterator it = m_features.begin(); it != m_features.end(); it++)
+    for (list<cSequenceFeaturePtr>::iterator it_feature = m_features.begin(); it_feature != m_features.end(); )
     {
       //The current feature we're looking at
-      cSequenceFeature& feat = **it;
-            
-      // Is the feature contained in the inversion
-      if ((feat.m_location.get_start_1() >= start_1) && (feat.m_location.get_end_1() <= end_1)) {
-        
-        // Flip the feature's coords
-        int32_t original_start_1 = feat.m_location.get_start_1();
-        int32_t original_end_1 = feat.m_location.get_end_1();
-        feat.m_location.set_start_1(start_1 +  (end_1 - original_end_1) );
-        feat.m_location.set_end_1( start_1 + (end_1 - original_start_1) );
-        feat.m_location.set_strand(-feat.m_location.get_strand());
-      }
+      cSequenceFeature& feat = **it_feature;
+      bool advance_it_feature = true;
       
-      // Only the end of the feature is inside the inversion
-      else if ((feat.m_location.get_end_1() >= start_1) && (feat.m_location.get_end_1() <= end_1))
-      {
-        // Create new feature copy
-        cSequenceFeaturePtr new_feat(new cSequenceFeature(feat));
+      if (!feat.is_source()) {
+      
+        // Iterature through all regions of the feature
+        // classify them as (outside, overlapping endpoints, or inside of the inversion)
+        list<overlap_region_type> region_type_list;
+        overlap_region_type consensus_region_type(OUTSIDE);
+      
+        for (cFeatureLocationList::iterator it_region = feat.m_locations.begin(); it_region != feat.m_locations.end(); it_region++)
+        {
+          bool overlap_start(false);
+          bool overlap_end(false);
+          
+          cFeatureLocation& region = *it_region;
+          overlap_region_type this_region_type(OUTSIDE);
+          
+          if ((region.get_start_1() >= start_1) && (region.get_end_1() <= end_1))
+            this_region_type = INSIDE;
+          else if (((region.get_end_1() >= start_1) && (region.get_end_1() <= end_1)) && ((region.get_start_1() >= start_1) && (region.get_start_1() <= end_1)))
+            this_region_type = OVERLAP_BOTH;
+          else if ((region.get_end_1() >= start_1) && (region.get_end_1() <= end_1))
+            this_region_type = OVERLAP_END;
+          else if ((region.get_start_1() >= start_1) && (region.get_start_1() <= end_1))
+            this_region_type = OVERLAP_START;
+          
+          region_type_list.push_back(this_region_type);
+          consensus_region_type = max(consensus_region_type, this_region_type);
+        }
         
-        // split feature: modify name, end, and mark as pseudo
-        feat.append_to_names_and_ids("_1");
-        feat.m_location.set_end_1(start_1-1);
-        feat.flag_pseudo(verbose);
+        // Now decide what to do as far as making a new feature
+        // --> if it was all outside, then we don't do anything
+        if (consensus_region_type != OUTSIDE) {
         
-        // Modify new feature
-        new_feat->append_to_names_and_ids("_2");
-        new_feat->m_location.set_start_1( end_1 - (new_feat->m_location.get_end_1() - start_1) );
-        new_feat->m_location.set_end_1(end_1);
-        new_feat->m_location.set_strand(-new_feat->m_location.get_strand());
-        new_feat->flag_pseudo(verbose);
+          // We make a pseudogene and connect the regions in the correct order and
+          // orientation that the old reading frame would still be in this order
+          cFeatureLocationList old_locations = feat.m_locations;
+          feat.m_locations.clear();
+          
+          overlap_region_type last_region_type = region_type_list.front();
+          
+          list<overlap_region_type>::iterator region_type_list_it = region_type_list.begin();
+          for (cFeatureLocationList::iterator it_region = old_locations.begin(); it_region != old_locations.end(); it_region++) {
+            
+            if (*region_type_list_it == OUTSIDE) {
+              feat.add_location(static_cast<cLocation>(*it_region));
+            } else if (*region_type_list_it == INSIDE) {
+              
+              // Add a new inverted location
+              feat.add_location(static_cast<cLocation>(*it_region));
+              feat.m_locations.back().invert_within_region(start_1, end_1);
+              
+            } else if (*region_type_list_it == OVERLAP_END) {
+              
+              // We can't add split repeat regions
+              if (feat.is_repeat()) {
+                this->m_features.erase(it_feature);
+                advance_it_feature = false;
+              } else {
+                feat.add_location(static_cast<cLocation>(*it_region));
+                feat.m_locations.back().set_end_1(start_1-1);
+                
+                feat.add_location(static_cast<cLocation>(*it_region));
+                feat.m_locations.back().set_start_1(start_1);
+                feat.m_locations.back().invert_within_region(start_1, end_1);
+              }
+              
+            } if (*region_type_list_it == OVERLAP_START) {
+              
+              // We can't add split repeat regions
+              if (feat.is_repeat()) {
+                this->m_features.erase(it_feature);
+                advance_it_feature = false;
+              } else {
+                feat.add_location(static_cast<cLocation>(*it_region));
+                feat.m_locations.back().set_end_1(end_1);
+                feat.m_locations.back().invert_within_region(start_1, end_1);
+                
+                feat.add_location(static_cast<cLocation>(*it_region));
+                feat.m_locations.back().set_start_1(end_1+1);
+              }
 
-        feature_push_back(new_feat);
-      }
-      // Only the start of the feature is inside the inversion
-      else if ((feat.m_location.get_start_1() >= start_1) && (feat.m_location.get_start_1() <= end_1))
-      {
-        // Create new feature copy
-        cSequenceFeaturePtr new_feat(new cSequenceFeature(feat));
-        
-        // split feature: modify name, end, and mark as pseudo
-        feat.append_to_names_and_ids("_2");
-        feat.m_location.set_start_1(end_1+1);
-        feat.flag_pseudo(verbose);
-        
-        // Modify new feature
-        new_feat->append_to_names_and_ids("_1");
-        new_feat->m_location.set_end_1( start_1 + (end_1 - new_feat->m_location.get_start_1()) );
-        new_feat->m_location.set_start_1( start_1 );
-        new_feat->m_location.set_strand(-new_feat->m_location.get_strand());
-        new_feat->flag_pseudo(verbose);
+            } if (*region_type_list_it == OVERLAP_BOTH) {
+              
+              if (feat.is_repeat()) {
+                this->m_features.erase(it_feature);
+                advance_it_feature = false;
+              } else {
+                // Add three locations
+                feat.add_location(static_cast<cLocation>(*it_region));
+                feat.m_locations.back().set_end_1(start_1-1);
 
-        feature_push_back(new_feat);
+                feat.add_location(cLocation(start_1, end_1, -it_region->get_strand() ));
+                feat.m_locations.back().set_start_end_1(start_1, end_1);
+                
+                feat.add_location(static_cast<cLocation>(*it_region));
+                feat.m_locations.back().set_end_1(end_1+1);
+                
+                feat.flag_pseudo();
+              }
+            }
+          }
+          
+          region_type_list_it++;
+        }
       }
+      if (advance_it_feature) it_feature++;
     }
-  
-  // Features are all out of order now...
-    this->sort_features();
   }
-  
+
   // Repeat features within the given interval, on the given strand,
   // starting at the specified position (not after it). The sequence 
   // for these features must already have been inserted.
@@ -376,11 +521,6 @@ namespace breseq {
   {
     (void) verbose;
     //verbose = true;
-
-    // This sorting should be completely unnecessary. To be
-    // safe, we sort here only because the following code
-    // assumes that these lists are in order from least to greatest.
-    this->sort_features();
     
     int32_t new_start = pos;
     int32_t new_end = pos + repeated_region.get_end_1() - repeated_region.get_start_1();
@@ -397,68 +537,102 @@ namespace breseq {
     cSequenceFeatureList& features = repeated_ref_seq_info[repeated_seq_id].m_features;
     cSequenceFeatureList feat_list_new;        
            
-    // Go through ALL the features of the original sequence
-    for (cSequenceFeatureList::iterator itr_feat = features.begin(); itr_feat != features.end(); itr_feat++)
+    //Iterate through ALL the features in the ORIGINAL reference sequence info (not the updated one)
+    for (list<cSequenceFeaturePtr>::iterator it_feature = features.begin(); it_feature != features.end(); it_feature++)
     {
-      cSequenceFeature& feat = **itr_feat;
+      //The current feature we're looking at
+      cSequenceFeature& feat = **it_feature;
       
-      // Does this feature start and end inside of the repeat?
-      if(feat.get_start_1() >= repeated_region.get_start_1() && feat.get_end_1() <= repeated_region.get_end_1() && feat["type"] != "region" && feat["type"] != "source")
+      list<cLocation> overlapping_regions;
+      bool overlapping_is_pseudogene = false;
+      
+      // Iterature through all regions of the feature
+      for (cFeatureLocationList::iterator it_region = feat.m_locations.begin(); it_region != feat.m_locations.end(); it_region++)
       {
+        cFeatureLocation& region = *it_region;
+
+        // Which regions of the feature start and end inside of the repeat?
+        
+        if(  (region.get_start_1() >= repeated_region.get_start_1())
+          && (region.get_end_1() <= repeated_region.get_end_1())
+          && (!feat.is_source()) )
+        {
+          // Bona fide copy
+          cLocation region_new = *it_region;
+
+          // Depending on the strand of the mutation, relative to the
+          // copy that we pulled, juggle the starts and ends here.
+          // Note: start_del and end_del do not depend on the strand!! 
+          //   (they are always in lowest coords, the highest coords)
+          
+          if(strand * region.get_strand() < 0) {
+            //Set start to position plus the difference between the repeat feature's start, and this feature's start
+            //Set end to start plus feature length
+            int32_t start_1 = pos + (repeated_region.get_end_1() - region.get_end_1()) - start_del;
+            int32_t end_1 = start_1 + (region.get_end_1() - region.get_start_1());
+            region_new.set_start_end_1(start_1, end_1);
+            // We are on the opposite strand
+            region_new.set_strand( -region.get_strand());
+          } else {
+            //Set start to position plus the difference between the repeat feature's start, and this feature's start
+            //Set end to start plus feature length
+            int32_t start_1 = pos + (region.get_start_1() - repeated_region.get_start_1()) - start_del;
+            int32_t end_1 = start_1 + (region.get_end_1() - region.get_start_1());
+            region_new.set_start_end_1(start_1, end_1);
+            //This is actaully already true from the clone, but put here to make it obvious
+            region_new.set_strand( region.get_strand() );
+          }
+          
+          //If the feature start got shifted below the repeat start, set the start to the pos and flag it as pseudo
+          if( region_new.get_start_1() < adjusted_for_del_start)  {
+            region_new.set_start_1( adjusted_for_del_start );
+            overlapping_is_pseudogene = true;
+          }
+          //Do we have an end_del? Does this feature end in an area that got deleted?
+          if( region_new.get_end_1() > adjusted_for_del_end)  {
+            region_new.set_end_1( adjusted_for_del_end );
+            overlapping_is_pseudogene = true;
+          }
+          
+          overlapping_regions.push_back(region_new);
+        }
+      }
+        
+      // If any of the regions overlapped, we are adding
+      if (overlapping_regions.size() > 0) {
+        
+        // It's a pseudogene unless it is complete
+        overlapping_is_pseudogene = overlapping_is_pseudogene || (overlapping_regions.size() != feat.m_locations.size());
+        
         // Create a brand new feature, that we can love and cuddle.
         // This is where we copy the feature and all the attributes.
-        cSequenceFeaturePtr fp(new cSequenceFeature(feat));              
-        cSequenceFeature& feat_new = *fp;              
+        cSequenceFeaturePtr fp(new cSequenceFeature(feat));
+        cSequenceFeature& feat_new = *fp;
         
-        // Depending on the strand of the mutation, relative to the
-        // copy that we pulled, juggle the starts and ends here.
-        // Note: start_del and end_del do not depend on the strand!! 
-        //   (they are always in lowest coords, the highest coords)
+        // NOTE: You must FIX the gene names so that they are not identical after this call, this happens after APPLY is complete
         
-         
-        if (verbose) cout << "Adjusting feature:" << endl;
-        if (verbose) cout << "  Original   : " << feat["type"] << " " << feat.get_start_1() << "-" << feat.get_end_1() << " strand " << feat.get_strand() << (feat.m_pseudo ? " pseudo" : "") << endl; 
-        
-        if(strand * feat.get_strand() < 0) { 
-          //Set start to position plus the difference betwen the repeat's end, and this feature's end
-          feat_new.m_location.set_start_1( pos + (repeated_region.get_end_1() - feat.get_end_1()) - start_del);  
-          //Set end to start plus feature length
-          feat_new.m_location.set_end_1( feat_new.get_start_1() + (feat.get_end_1() - feat.get_start_1()));  
-          // We are on the opposite strand
-          feat_new.m_location.set_strand( -feat.get_strand());
-        } else {
-          //Set start to position plus the difference between the repeat feature's start, and this feature's start
-          feat_new.m_location.set_start_1( pos + (feat.get_start_1() - repeated_region.get_start_1()) - start_del);
-          //Set end to start plus feature length
-          feat_new.m_location.set_end_1( feat_new.get_start_1() + (feat.get_end_1() - feat.get_start_1()) );  
-          //This is actaully already true from the clone, but put here to make it obvious
-          feat_new.m_location.set_strand( feat.get_strand() );
-        }
-        
-        //If the feature start got shifted below the repeat start, set the start to the pos and flag it as pseudo
-        if( feat_new.m_location.get_start_1() < adjusted_for_del_start)  {  
-          feat_new.m_location.set_start_1( adjusted_for_del_start );
+        if (overlapping_is_pseudogene)
           feat_new.flag_pseudo();
-        }
-        //Do we have an end_del? Does this feature end in an area that got deleted?
-        if( feat_new.m_location.get_end_1() > adjusted_for_del_end)  {  
-          feat_new.m_location.set_end_1( adjusted_for_del_end );
-          feat_new.flag_pseudo();
-        }
-                
-        if (verbose) cout << "  New Feature: " << feat_new["type"] << " " << feat_new.get_start_1() << "-" << feat_new.get_end_1() << " strand " << feat_new.get_strand() << (feat_new.m_pseudo ? " pseudo" : "") << endl; 
+        feat_new.m_locations.clear();
         
+        if (verbose) cout << "  New Feature: " << feat_new["type"] << (feat_new.m_pseudo ? " pseudo" : "") << endl;
+        
+        for (list<cLocation>::iterator it_loc=overlapping_regions.begin(); it_loc !=overlapping_regions.end(); it_loc++) {
+          feat_new.add_location(*it_loc);
+          if (verbose) cout << " " << it_loc->get_start_1() << "-" << it_loc->get_end_1() << " strand " << it_loc->get_strand() << endl;
+        }
         feat_list_new.push_back(fp);
       }
     }
     
     //cout << "Number of features before: " << m_features.size() << " " << m_genes.size() << " " << m_repeats.size() << endl;
     
-    // Add these to all the correct feature lists, and in the right order.
+    // Add these to all the feature list only at the end so that we don't duplicate duplicate them
     for (cSequenceFeatureList::reverse_iterator itr_feat = feat_list_new.rbegin(); itr_feat != feat_list_new.rend(); itr_feat++)
     {
       cSequenceFeature& feat = **itr_feat;
       
+      /*
       // Load certain information into the main hash, so breseq knows to use it.
       // It's unlikely this will be necessary, but you can never be too cautious
       if (feat.m_gff_attributes.count("Note"))
@@ -469,8 +643,8 @@ namespace breseq {
       
       if (feat.m_gff_attributes.count("Name"))
         feat["name"] = join(feat.m_gff_attributes["Name"], ",");
-      
-      this->feature_push_back(*itr_feat);
+      */
+      this->m_features.push_back(*itr_feat);
     }
     
     //cout << "Number of features after: " << m_features.size() << " " << m_genes.size() << " " << m_repeats.size() << endl;
@@ -479,14 +653,55 @@ namespace breseq {
     this->sort_features();
   }
   
-  char cLocationTraverser::on_base_stranded_1() {
-    string on_char = my_seq->get_sequence_1(on_pos, on_pos);
-    if (my_loc[on_loc_index].get_strand() == -1) {
-      on_char = reverse_complement(on_char); 
-    }
-    //cout << on_pos << " " << on_char << endl;
+  //>! This function should be called after rearranging or changing the feature lists
+  //   such as on first loading or after an APPLY
+  void cAnnotatedSequence::update_feature_lists() {
     
-    return on_char[0];
+    // The assumption here is that the feature list is correct,
+    // but all other lists need to be regenerated from it.
+      
+    // Sort the list
+    this->m_features.sort();
+    
+    // Regenerate repeat and gene lists
+    this->m_genes.clear();
+    this->m_repeats.clear();
+    
+    this->m_gene_locations.clear();
+    this->m_repeat_locations.clear();
+    
+    for (cSequenceFeatureList::iterator itf = this->m_features.begin(); itf != this->m_features.end(); itf++ ) {
+      cSequenceFeaturePtr& feat_p = *itf;
+      
+      // This is a double-check that features with indeterminate starts and ends are marked
+      // pseudo so that we never have to worry about dealing with accidentally translating them
+      if (feat_p->start_is_indeterminate() && feat_p->end_is_indeterminate())
+        feat_p->flag_pseudo();
+      
+      ASSERT(feat_p->m_locations.size() != 0, "Feature lacks location: " + (*feat_p)["accession"] );
+      
+      if ( ((*feat_p)["type"] == "repeat_region") || ((*feat_p)["type"] == "mobile_element") )
+      {
+        this->m_repeats.push_back(feat_p);
+        ASSERT(feat_p->m_locations.size() == 1, "Repeat feature must have only one location: " + (*feat_p)["accession"] );
+        
+        this->m_repeat_locations.insert(this->m_repeat_locations.end(), feat_p->m_locations.begin(), feat_p->m_locations.end());
+      }
+      else if ( ((*feat_p)["type"] == "CDS") || ((*feat_p)["type"] == "tRNA") || ((*feat_p)["type"] == "rRNA") || ((*feat_p)["type"] == "RNA") )
+      {
+        this->m_genes.push_back(feat_p);
+        this->m_gene_locations.insert(this->m_gene_locations.end(), feat_p->m_locations.begin(), feat_p->m_locations.end());
+      }
+      
+    }
+    
+    // Sort everything
+    
+    this->m_genes.sort();
+    this->m_repeats.sort();
+    
+    this->m_gene_locations.sort();
+    this->m_repeat_locations.sort();
   }
   
   // Load a complete collection of files and verify that sufficient information was loaded
@@ -495,7 +710,8 @@ namespace breseq {
     list<string> sorted_unique_file_names(file_names.begin(), file_names.end());
 
     sorted_unique_file_names.unique();//Removes non-unique file names
-
+    m_seq_id_to_original_file_name.clear(); // Clear old file names
+    
     for(list<string>::const_iterator it = sorted_unique_file_names.begin(); it != sorted_unique_file_names.end(); it++)
     {
       this->LoadFile(*it);
@@ -503,6 +719,9 @@ namespace breseq {
     
     this->Verify();
     this->m_initialized = true;
+    
+    // Finally, update feature lists
+    this->update_feature_lists();
   }
   
   void cReferenceSequences::LoadFile(const string& file_name)
@@ -743,12 +962,12 @@ namespace breseq {
           continue;
         }
         else if (line.find("##original-file-name") == 0) {
-          // Line of form ##orignal-file-name seq_id file_name
+          // Line of form ##original-file-name seq_id file_name
           stringstream ls(line);
-          string x, seq_id, file_name;
-          ls >> x >> seq_id >> file_name;
+          string x, seq_id, original_file_name;
+          ls >> x >> seq_id >> original_file_name;
           this->add_new_seq(seq_id, file_name);
-          (*this)[seq_id].m_file_name = file_name;
+          this->m_seq_id_to_original_file_name[seq_id] = original_file_name;
           continue;
         }
         // Find embedded fasta file
@@ -820,18 +1039,21 @@ namespace breseq {
       // Column 3: "type"
       feature["type"] = split_line[2];
       // Column 4: "start"
-      feature.m_location.set_start_1( from_string<uint32_t>(split_line[3]));
+      int32_t start = from_string<int32_t>(split_line[3]);
       // Column 5: "end"
-      feature.m_location.set_end_1( from_string<uint32_t>(split_line[4]));
+      int32_t end = from_string<int32_t>(split_line[4]);
       // Column 6: "score"
       feature["score"] = split_line[5];
       // Column 7: "strand"
-      string strand = split_line[6];
-      feature.m_location.set_strand(0);
-      if (strand == "+")
-        feature.m_location.set_strand(1);
-      else if (strand == "-")
-        feature.m_location.set_strand(-1);        
+      string strand_s = split_line[6];
+      int8_t strand(0);
+      if (strand_s == "+")
+        strand = 1;
+      else if (strand_s == "-")
+        strand = -1;
+      
+      feature.add_location(cLocation(start, end, strand));
+      
       // Column 8: "phase"
       feature["phase"] = split_line[7];
       // Column 9: "attributes"
@@ -902,30 +1124,31 @@ namespace breseq {
       if (feature.m_gff_attributes.count("indeterminate_coordinate")) {
         for (vector<string>::iterator it=feature.m_gff_attributes["indeterminate_coordinate"].begin(); it!=feature.m_gff_attributes["indeterminate_coordinate"].end(); it++) {
           if (*it == "start")
-            feature.m_location.set_indeterminate_start(true);
+            feature.m_locations.front().set_start_is_indeterminate(true);
           else if (*it == "end")
-            feature.m_location.set_indeterminate_end(true);
+            feature.m_locations.front().set_end_is_indeterminate(true);
         }
         // Erase this property because it will be added back
         feature.m_gff_attributes.erase("indeterminate_coordinate");
       }
-
       
+      // Handle regions that cross the origin by splitting them into two
+      // (and maintaining the right order).
+      // Breseq will not generate this kind of interval, but a "normal" GFF3 might
+      if (feature.m_locations.front().get_end_1() > (*this)[seq_id].m_length) {
+        
+        int32_t size_past_end = feature.m_locations.front().get_end_1() - (*this)[seq_id].get_sequence_length();
+        feature.m_locations.front().set_end_1((*this)[seq_id].get_sequence_length());
+        feature.m_locations.front().set_end_is_indeterminate(false);
+        feature.add_location(cLocation(1, size_past_end, feature.m_locations.front().get_strand(), false, feature.m_locations.front().end_is_indeterminate()));
+      }
+
       //! Step 4: Determine if sequence already exists (find or create if not found)
       this->add_new_seq(seq_id, file_name);
       
-      // Handle features that cross the origin by adding them twice (only one will be written)
-      // @GRC Should this be handled with cLocation rather then a 'bonus feature'
-      if (feature.get_end_1() > (*this)[seq_id].m_length) {
-        cSequenceFeaturePtr bonus_circular_feature_ptr(new cSequenceFeature);
-        *bonus_circular_feature_ptr = feature;
-        bonus_circular_feature_ptr->m_location.set_start_1(bonus_circular_feature_ptr->get_start_1() + 1 - (*this)[seq_id].m_length);
-        bonus_circular_feature_ptr->m_location.set_end_1(bonus_circular_feature_ptr->get_end_1() - (*this)[seq_id].m_length);
-        (*this)[seq_id].feature_push_front(bonus_circular_feature_ptr);
-      }
     
       // If this is a landmark "region" corresponding to the entire chromosome grab extra information
-      if ((feature["type"] == "region") && (feature.get_start_1() == 1) && (feature.get_end_1() == (*this)[seq_id].m_length)) {
+      if ((feature["type"] == "region") && (feature.m_locations.front().get_start_1() == 1) && (feature.m_locations.front().get_end_1() == (*this)[seq_id].m_length)) {
         if (feature.m_gff_attributes.count("Is_circular"))
           (*this)[seq_id].m_is_circular = (feature.m_gff_attributes["Is_circular"][0] == "true");
 
@@ -933,7 +1156,8 @@ namespace breseq {
           (*this)[seq_id].m_description = feature.m_gff_attributes["Note"][0];
       }
 
-      // Add feature / determine if it needs to be added as a sub_location to another feature.
+      // Add feature / determine if it needs to be added as an additional region of a previous feature.
+      // In this case, look for a sort_index field to properly add it
       if (feature.m_gff_attributes.count("ID")) {
         string id = feature.m_gff_attributes["ID"][0];
         if (id_features_table.count(id))  {
@@ -943,8 +1167,11 @@ namespace breseq {
           //Search to see if 'type' matches also.
           for (uint32_t i = 0; i < features.size();  ++i) {
             if ((*features[i])["type"] == feature["type"]) {
-              //Update cLocation to include this sublocation.
-              features[i]->m_location.add_sub_location(feature.m_location);
+              
+              //Update cLocation to include this sublocation (or all sublocaitons for split across origin case)
+              for(cFeatureLocationList::iterator it_add_r=feature.m_locations.begin(); it_add_r!=feature.m_locations.end(); it_add_r++) {
+                features[i]->add_location(*it_add_r);
+              }
               is_sub_location = true;
               break;
             }
@@ -959,22 +1186,18 @@ namespace breseq {
         }
       }
 
-      (*this)[seq_id].feature_push_back(fp);
+      (*this)[seq_id].m_features.push_back(fp);
       (*this)[seq_id].set_features_loaded_from_file(file_name, true); // features may be spread across multiple files
-    }
-    
-    // sort because they may now be out of order
-    for (vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
-      // sort the list
-      it_as->m_features.sort();
-      it_as->m_genes.sort();
-      it_as->m_repeats.sort();
     }
   }
   
   
 /*! WriteGFF abides by the following format:
-  http://www.sequenceontology.org/gff3.shtml !*/
+  http://www.sequenceontology.org/gff3.shtml 
+    Parent-child relationships are not encoded,
+    Instead the "discontinuous feature" rules are used.
+    Note: This puts pieces of CDS for a spliced gene out of position order
+!*/
 void cReferenceSequences::WriteGFF( const string &file_name){
 
   cFastaFile out(file_name.c_str(), ios_base::out);
@@ -995,15 +1218,8 @@ void cReferenceSequences::WriteGFF( const string &file_name){
   //! Step 2: Features
   for (vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
     
-    // sort the list
-    it_as->m_features.sort();
-    
     for (cSequenceFeatureList::iterator it = it_as->m_features.begin(); it != it_as->m_features.end(); it++) {
       cSequenceFeature& feat = **it;
-
-      // skip first example of doubly-loaded feature that overlaps circular genome
-      if (feat.get_start_1() < 1)
-        continue;
 
       enum {SEQID = 0, SOURCE, TYPE, START_1, END_1, SCORE, STRAND, PHASE, ATTRIBUTES};
       vector<string> columns(9, ".");
@@ -1017,9 +1233,8 @@ void cReferenceSequences::WriteGFF( const string &file_name){
         columns[TYPE] = "fCDS";
       }
       
-      //Note: Will add start_1 and end_1 below.
+      //Note: Will add start_1 and end_1 and strand  below.
       if (feat.count("score"))  columns[SCORE] = feat["score"];
-      columns[STRAND] = feat.is_top_strand() ? "+" : "-";
       if (feat.count("phase"))  columns[PHASE] = feat["phase"];
 
       //Attributes
@@ -1038,26 +1253,29 @@ void cReferenceSequences::WriteGFF( const string &file_name){
       }
       string attributes_column = join(attributes, ";");
 
-      const vector<cLocation> locations = feat.m_location.get_all_sub_locations();
-      for (uint32_t i = 0; i < locations.size(); ++i) {
-        columns[START_1] = to_string(locations[i].get_start_1());
-        columns[END_1]   = to_string(locations[i].get_end_1());
+      int32_t location_index = 1;
+      for (cFeatureLocationList::const_iterator it = feat.m_locations.begin(); it != feat.m_locations.end(); it++ ) {
         
+        const cFeatureLocation& region = *it;
+        columns[START_1] = to_string(region.get_start_1());
+        columns[END_1]   = to_string(region.get_end_1());
+        columns[STRAND]  = (region.get_strand() == 1) ? "+" : "-";
+
         // Overly complicated way of writing out indeterminacy
         columns[ATTRIBUTES] = attributes_column;
-        if (locations[i].is_indeterminate_start() || locations[i].is_indeterminate_end()) {
+        if (region.start_is_indeterminate() || region.end_is_indeterminate()) {
           columns[ATTRIBUTES] += (!attributes_column.empty() ? ";" : "");
           columns[ATTRIBUTES] += "indeterminate_coordinate=";
         }                          
-        if (locations[i].is_indeterminate_start())
+        if (region.start_is_indeterminate())
           columns[ATTRIBUTES] += "start";  
-        if (locations[i].is_indeterminate_start() && locations[i].is_indeterminate_end())
+        if (region.start_is_indeterminate() && region.end_is_indeterminate())
           columns[ATTRIBUTES] += ","; 
-        if (locations[i].is_indeterminate_end())
-          columns[ATTRIBUTES] += "end";        
+        if (region.end_is_indeterminate())
+          columns[ATTRIBUTES] += "end";
         
         out << join(columns, "\t") << endl;
-
+        location_index++;
       }
 
 
@@ -1081,21 +1299,13 @@ void cReferenceSequences::WriteCSV(const string &file_name) {
   // iterate through sequences
   for (vector<cAnnotatedSequence>::iterator it_as = this->begin(); it_as < this->end(); it_as++) {
     
-    // sort the list
-    it_as->m_features.sort();
-    
     // iterate through features
     for (cSequenceFeatureList::iterator it = it_as->m_features.begin(); it != it_as->m_features.end(); it++) {
       cSequenceFeature& feat = **it;
       
-      // skip first example of doubly-loaded feature that overlaps circular genome
-      if (feat.get_start_1() < 1)
-        continue;
-      
       vector<string> columns(NUM_COLS, "");
       
       columns[SEQ_ID] = double_quote(it_as->m_seq_id);
-      columns[STRAND] = feat.is_top_strand() ? "1" : "-1";
       if (feat.count("accession"))   columns[FEAT_ID] = double_quote(feat["accession"]);
       if (feat.count("type"))   columns[FEAT_TYPE] = double_quote(feat["type"]);
       if (feat.m_pseudo && (columns[FEAT_TYPE] == "CDS")) {
@@ -1107,11 +1317,14 @@ void cReferenceSequences::WriteCSV(const string &file_name) {
       //Note: Adds start_1 and end_1 below.
       
       //Attributes
-      const vector<cLocation> locations = feat.m_location.get_all_sub_locations();
-      for (uint32_t i = 0; i < locations.size(); ++i) {
-        columns[START_1] = to_string(locations[i].get_start_1());
-        columns[END_1]   = to_string(locations[i].get_end_1());
+      for (cFeatureLocationList::const_iterator it = feat.m_locations.begin(); it != feat.m_locations.end(); it++ ) {
         
+        const cFeatureLocation& region = *it;
+
+        columns[START_1] = to_string(region.get_start_1());
+        columns[END_1]   = to_string(region.get_end_1());
+        columns[STRAND] = (region.get_strand() == 1) ? "1" : "-1";
+
         out << join(columns, ",") << endl;
       }
     }
@@ -1130,9 +1343,8 @@ void cReferenceSequences::ReadGenBank(const string& in_file_name) {
     // add a 'region' feature for GFF3 output
     cSequenceFeaturePtr f(new cSequenceFeature);
     (*f)["type"] = "region";
-    f->m_location.set_strand(1);
-    f->m_location.set_start_1(1);
-    f->m_location.set_end_1(this_seq.m_length);
+    
+    f->add_location(cLocation(1, this_seq.m_length, 1));
     
     if (this_seq.m_is_circular)
       f->m_gff_attributes["Is_circular"].push_back("true");
@@ -1140,7 +1352,7 @@ void cReferenceSequences::ReadGenBank(const string& in_file_name) {
       f->m_gff_attributes["Is_circular"].push_back("false");
     
     f->m_gff_attributes["Note"].push_back(this_seq.m_description);
-    this_seq.feature_push_back(f);
+    this_seq.m_features.push_back(f);
     
     ReadGenBankFileSequenceFeatures(in, this_seq);
     this_seq.set_features_loaded_from_file(in_file_name);
@@ -1253,22 +1465,27 @@ void cSequenceFeature::ReadGenBankCoords(string& s, ifstream& in) {
   s = substitute(s, " ", "");
   s = substitute(s, "\t", "");
   
-  m_location = ParseGenBankCoords(s);
+  // Parse and add locations
+  list<cLocation> locs = ParseGenBankCoords(s);
+  for(list<cLocation>::iterator it=locs.begin(); it!=locs.end(); it++) {
+    this->add_location(*it);
+  }
   
   return;
 }
   
 // Parses a sub-part of the full location string
-cLocation cSequenceFeature::ParseGenBankCoords(string& s, int8_t in_strand)
+list<cLocation> cSequenceFeature::ParseGenBankCoords(string& s, int8_t in_strand)
 {
-  cLocation loc;
+  list<cLocation> locs;
   
   //Look for an operation.
   //complement().
   if (s.find("complement(") == 0) {
     uint32_t n = string("complement(").size();
     string value = s.substr(n, s.size() - n - 1);
-    loc = ParseGenBankCoords(value, -1 * in_strand);
+    list<cLocation> sub_locs = ParseGenBankCoords(value, -1 * in_strand);
+    locs.insert(locs.end(), sub_locs.begin(), sub_locs.end());
   }
   //join()
   else if (s.find("join(") == 0) {
@@ -1277,14 +1494,8 @@ cLocation cSequenceFeature::ParseGenBankCoords(string& s, int8_t in_strand)
     
     int8_t consensus_strand = 0;
     for (uint32_t i = 0; i < tokens.size(); ++i) {
-      cLocation sub_loc = ParseGenBankCoords(tokens[i], in_strand);
-      loc.add_sub_location(sub_loc);
-      
-      // Strand is set to 0 if disagreement
-      if (i==0) 
-        consensus_strand = sub_loc.get_strand();
-      else if (consensus_strand != sub_loc.get_strand())
-        consensus_strand = 0;
+      list<cLocation> sub_locs = ParseGenBankCoords(tokens[i], in_strand);
+      locs.insert(locs.end(), sub_locs.begin(), sub_locs.end());
     }
     
     // Get cLocation::start,end from outer sub_locations.
@@ -1294,39 +1505,39 @@ cLocation cSequenceFeature::ParseGenBankCoords(string& s, int8_t in_strand)
     // CDS             complement(join(205502..205689,207093..207665,
     //                 210083..210243,181155..181546,182361..182513))
     
-    loc.set_strand(consensus_strand);
-    
-    loc.set_start_1(loc.get_all_sub_locations().front().get_start_1());
-    loc.set_end_1(loc.get_all_sub_locations().back().get_end_1());
-    
-    // Lines like this: join(complement(381815..382096), complement(380068..380483))
-    // ...need the sublocations reversed in order to be coordinate sorted correctly
-    if ( consensus_strand == -1 ) {
-      loc.reverse_sub_locations();
-    }
-    
   }
   else {
     //Split on .. (usually 2)
     vector<string> tokens = split(s, "..");
-    loc.set_strand(in_strand);
     
     // Handle < and > for indeterminate coords (and remove so atoi works)
+    bool start_is_indeterminate = false;
     if (tokens.front()[0] == '<') {
-      loc.set_indeterminate_start(true);
+      start_is_indeterminate = true;
       tokens.front().replace(0,1,"");
     }
+    
+    bool end_is_indeterminate = false;
     if (tokens.back()[0] == '>') {
-      loc.set_indeterminate_end(true);
+      end_is_indeterminate = true;
       tokens.back().replace(0,1,"");
     }
-    loc.set_start_1(atoi(tokens.front().c_str()));
-    loc.set_end_1(atoi(tokens.back().c_str()));
+    
+    locs.push_back(
+                  cLocation(
+                           atoi(tokens.front().c_str()),
+                           atoi(tokens.back().c_str()),
+                           in_strand,
+                           start_is_indeterminate,
+                           end_is_indeterminate
+                            )
+                   );
+
   }
   
   //ASSERT(loc.get_start_1() <= loc.get_end_1(), "Start coordinate is greater than end coordinate. Error parsing corrdinates:\n" + s);
   
-  return loc;
+  return locs;
 }
 
 // Examples of lines
@@ -1576,13 +1787,8 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
     }
      */
     
-    s.feature_push_back(*it);
+    s.m_features.push_back(*it);
   }
-  
-  // sort the list
-  s.m_features.sort();
-  s.m_genes.sort();
-  s.m_repeats.sort();
 }
 
 void cReferenceSequences::ReadGenBankFileSequence(std::ifstream& in, cAnnotatedSequence& s) {
@@ -1647,9 +1853,23 @@ void cReferenceSequences::ReadBull(const string& file_name) {
     
     cSequenceFeaturePtr current_feature(new cSequenceFeature);
     
-    current_feature->m_location.set_start_1( from_string<uint32_t>(s[0]));
-    current_feature->m_location.set_end_1( from_string<uint32_t>(s[1]));
-    current_feature->m_location.set_strand( (current_feature->get_start_1() <= current_feature->get_end_1()) ? 1 : -1);
+    int32_t start_1 = from_string<uint32_t>(s[0]);
+    int32_t end_1 = from_string<uint32_t>(s[1]);
+    int8_t strand = 1;
+    
+    if (start_1 > end_1) {
+      ::swap(start_1, end_1);
+      strand = -1;
+    }
+
+    
+    current_feature->add_location(
+                                  cLocation(
+                                            start_1,
+                                            end_1,
+                                            strand
+                                            )
+                                  );
     
     // transfer to GenBank
     (*current_feature)["name"] = s[2];
@@ -1687,7 +1907,7 @@ string cReferenceSequences::repeat_family_sequence(
                                                    int8_t strand, 
                                                    string* repeat_region, 
                                                    string* picked_seq_id, 
-                                                   cSequenceFeature* picked_sequence_feature,
+                                                   cFeatureLocation* picked_sequence_feature,
                                                    bool fatal_error
                                                    )
 {  
@@ -1698,7 +1918,7 @@ string cReferenceSequences::repeat_family_sequence(
     if (repeat_region) cout << "Specific repeat region requested: " << *repeat_region << endl;
   }
   
-  counted_ptr<cSequenceFeature> picked_rep(NULL);
+  cFeatureLocation* picked_rep(NULL);
   cAnnotatedSequence* picked_seq(NULL);
   
   map<string, uint32_t> repeat_sequence_count;
@@ -1714,28 +1934,28 @@ string cReferenceSequences::repeat_family_sequence(
     parse_region(*repeat_region, target_id, start_pos_1, end_pos_1);
         
     cAnnotatedSequence& this_seq = (*this)[target_id];
-    cSequenceFeatureList& repeats = this_seq.m_repeats;
+    cFeatureLocationList& repeat_locations = this_seq.m_repeat_locations;
     
-    for (cSequenceFeatureList::iterator itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++) {
-      cSequenceFeature& rep = **itr_rep;
+    for (cFeatureLocationList::iterator itr_rep = repeat_locations.begin(); itr_rep != repeat_locations.end(); itr_rep++) {
+      cFeatureLocation& rep = *itr_rep;
       
       // Not the right family...
-      if(rep.SafeGet("name") != repeat_name)
+      if(rep.get_feature()->SafeGet("name") != repeat_name)
         continue;
       
       // We accept either seq_id:start-end or seq_id:end_start (for complement features),
       // but ignore which strand was provided and use the correct strand.
       if ((rep.get_start_1() == static_cast<int32_t>(start_pos_1)) && (rep.get_end_1() == static_cast<int32_t>(end_pos_1))) {
         picked_seq = &this_seq;
-        picked_rep = *itr_rep;
+        picked_rep = &rep;
       }
       else if ((rep.get_end_1() == static_cast<int32_t>(start_pos_1)) && (rep.get_start_1() == static_cast<int32_t>(end_pos_1))) {
         picked_seq = &this_seq;
-        picked_rep = *itr_rep;
+        picked_rep = &rep;
       }
     }
     
-    ASSERT(picked_rep.get(), "Could not find repeat of type [" + repeat_name + "] matching requested reference sequence region: " + *repeat_region);
+    ASSERT(picked_rep, "Could not find repeat of type [" + repeat_name + "] matching requested reference sequence region: " + *repeat_region);
   }
   
   // OPTION 2: TYPICAL REPEAT
@@ -1743,13 +1963,13 @@ string cReferenceSequences::repeat_family_sequence(
     // Loop through all reference sequences
     for (vector<cAnnotatedSequence>::iterator itr_seq = this->begin(); itr_seq != this->end(); itr_seq++) {
       cAnnotatedSequence& this_seq = *itr_seq;
-      cSequenceFeatureList& repeats = this_seq.m_repeats;
+      cFeatureLocationList& repeat_locations = this_seq.m_repeat_locations;
       
-      for (cSequenceFeatureList::iterator itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++) {
-        cSequenceFeature& rep = **itr_rep;
+      for (cFeatureLocationList::iterator itr_rep = repeat_locations.begin(); itr_rep != repeat_locations.end(); itr_rep++) {
+        cFeatureLocation& rep = *itr_rep;
         
         // Not the right family...
-        if(rep.SafeGet("name") != repeat_name)
+        if(rep.get_feature()->SafeGet("name") != repeat_name)
           continue;
         
         // Stores all the sequences of this family so we can compare them and pick the most "typical".
@@ -1784,26 +2004,26 @@ string cReferenceSequences::repeat_family_sequence(
     // Loop through all reference sequences
     for (vector<cAnnotatedSequence>::iterator itr_seq = this->begin(); itr_seq != this->end(); itr_seq++) {
       cAnnotatedSequence& this_seq = *itr_seq;
-      cSequenceFeatureList& repeats = this_seq.m_repeats;
+      cFeatureLocationList& repeat_locations = this_seq.m_repeat_locations;
       
-      for (cSequenceFeatureList::iterator itr_rep = repeats.begin(); itr_rep != repeats.end(); itr_rep++) {
-        cSequenceFeature& rep = **itr_rep;
+      for (cFeatureLocationList::iterator itr_rep = repeat_locations.begin(); itr_rep != repeat_locations.end(); itr_rep++) {
+        cFeatureLocation& rep = *itr_rep;
         
-        if(rep.SafeGet("name") != repeat_name)
+        if(rep.get_feature()->SafeGet("name") != repeat_name)
           continue;
         
         if (region_pos == rep.get_start_1()) {
           picked_seq = &this_seq;
-          picked_rep = *itr_rep;
+          picked_rep = &rep;
           break;
         }
       }
     }
     
     if (fatal_error) {
-      ASSERT(picked_rep.get(), "Could not find repeat of type [" + repeat_name + "] in reference sequences.\n");
+      ASSERT(picked_rep, "Could not find repeat of type [" + repeat_name + "] in reference sequences.\n");
     }
-    else if (!picked_rep.get()) {
+    else if (!picked_rep) {
       return "";
     }
   }
@@ -1832,16 +2052,18 @@ string cReferenceSequences::repeat_family_sequence(
     unless include_interior_matches (off by default) is set, in which case matches
     in the interior count as being zero distance from the boundary
  */
-cSequenceFeaturePtr cReferenceSequences::find_closest_repeat_region_boundary(int32_t position,
-                                                                             cSequenceFeatureList& repeat_list,
+cFeatureLocation* cReferenceSequences::find_closest_repeat_region_boundary(int32_t position,
+                                                                             const cSequenceFeatureList& repeat_list,
                                                                              int32_t& max_distance,
                                                                              int32_t direction,
                                                                              bool include_interior_matches)
 {
-  cSequenceFeaturePtr repeat_ptr(NULL);
+  cFeatureLocation* repeat_ptr(NULL);
   
-  for (cSequenceFeatureList::iterator it = repeat_list.begin(); it != repeat_list.end(); ++it) {
-    cSequenceFeaturePtr test_repeat_ptr = *it;
+  for (cSequenceFeatureList::const_iterator it = repeat_list.begin(); it != repeat_list.end(); ++it) {
+    ASSERT((*it)->m_locations.size()==1, "Repeat reagions cannot have sublocations.");
+
+    cFeatureLocation* test_repeat_ptr = &(*it)->m_locations.front();
     
     // Distance from the closest end of the repeat, given the direction we are moving
     int32_t test_distance = ((direction == -1) ? position - static_cast<int32_t>(test_repeat_ptr->get_end_1()) : static_cast<int32_t>(test_repeat_ptr->get_start_1()) - position);
@@ -1860,7 +2082,7 @@ cSequenceFeaturePtr cReferenceSequences::find_closest_repeat_region_boundary(int
       
       // Same distance, then choose the LONGEST repeat region
       // Important for transposons where each end may be annotated with a contained repeat region
-      if ((repeat_ptr.get() != NULL) && (test_distance == max_distance)) {
+      if (repeat_ptr && (test_distance == max_distance)) {
         if (test_repeat_ptr->get_end_1() - test_repeat_ptr->get_start_1() + 1 < repeat_ptr->get_end_1() - repeat_ptr->get_start_1() + 1)
           continue;
       }
@@ -1873,62 +2095,73 @@ cSequenceFeaturePtr cReferenceSequences::find_closest_repeat_region_boundary(int
 
 /*! Returns the last feature encountered that overlaps a position
  */
-cSequenceFeaturePtr cReferenceSequences::get_overlapping_feature(cSequenceFeatureList& feature_list, int32_t pos)
+cFeatureLocation* cReferenceSequences::get_overlapping_feature(cFeatureLocationList& feature_list, int32_t pos)
 {
-  cSequenceFeaturePtr feature_ptr(NULL);
-  for (cSequenceFeatureList::iterator it = feature_list.begin(); it != feature_list.end(); ++it) {
-    cSequenceFeaturePtr test_feature_ptr = *it;
-    
-    if ( test_feature_ptr->distance_to_position(pos) == 0 ) {
-      feature_ptr = test_feature_ptr;
+  cFeatureLocation* feature_ptr(NULL);
+  for (cFeatureLocationList::iterator it = feature_list.begin(); it != feature_list.end(); ++it) {
+    if ( it->distance_to_position(pos) == 0 ) {
+      feature_ptr = &(*it);
     }
     
   }
   return feature_ptr;
 }
 
+  
+/* This function is much less efficient than ideal
+   but we need to set up a sorted list of regions
+   or a binary tree based on regions to be more efficient
+*/
+ 
 void cReferenceSequences::find_nearby_genes(
-                                            cSequenceFeatureList& gene_list,
+                                            cFeatureLocationList& gene_list,
                                             int32_t pos_1,
                                             int32_t pos_2,
-                                            vector<cGeneFeature>& within_genes,
-                                            vector<cGeneFeature>& between_genes,
-                                            vector<cGeneFeature>& inside_left_genes,
-                                            vector<cGeneFeature>& inside_right_genes,
-                                            cGeneFeature& prev_gene,
-                                            cGeneFeature& next_gene
+                                            vector<cFeatureLocation*>& within_genes,
+                                            vector<cFeatureLocation*>& between_genes,
+                                            vector<cFeatureLocation*>& inside_left_genes,
+                                            vector<cFeatureLocation*>& inside_right_genes,
+                                            cFeatureLocation*& prev_gene,
+                                            cFeatureLocation*& next_gene
                                             )
 {
-  for (cSequenceFeatureList::iterator it = gene_list.begin(); it != gene_list.end(); ++it)
+  int32_t min_distance_to_prev = numeric_limits<int32_t>::max();
+  int32_t min_distance_to_next = numeric_limits<int32_t>::max();
+  
+  for (cFeatureLocationList::iterator it = gene_list.begin(); it != gene_list.end(); ++it)
   {
-    cSequenceFeature& test_gene_feat = **it;
-    cGeneFeature test_gene = cGeneFeature(test_gene_feat); // up-cast, should be a better way to do this @JEB
-
-    if (test_gene.get_end_1() < pos_1)
-      prev_gene = test_gene;
+    cFeatureLocation& region = *it;
     
-    if (  ( test_gene.distance_to_position(pos_1) == 0 )
-       && ( test_gene.distance_to_position(pos_2) == 0 ) )
-    {
-      within_genes.push_back(test_gene);
+    if (region.get_end_1() < pos_1) {
+      if (pos_1 - region.get_end_1() < min_distance_to_prev) {
+        min_distance_to_prev = pos_1 - region.get_end_1();
+        prev_gene = &region;
+      }
     }
-    else if ( test_gene.distance_to_position(pos_1) == 0 )
+    
+    if (  ( region.distance_to_position(pos_1) == 0 )
+       && ( region.distance_to_position(pos_2) == 0 ) )
     {
-      inside_left_genes.push_back(test_gene);
+      within_genes.push_back(&region);
     }
-    else if ( test_gene.distance_to_position(pos_2) == 0 )
+    else if ( region.distance_to_position(pos_1) == 0 )
     {
-      inside_right_genes.push_back(test_gene);
+      inside_left_genes.push_back(&region);
     }
-    else if ( (test_gene.get_start_1() >= pos_1) && (test_gene.get_end_1() <= pos_2) )
+    else if ( region.distance_to_position(pos_2) == 0 )
     {
-      between_genes.push_back(test_gene);
+      inside_right_genes.push_back(&region);
     }
-    // We've passed the changes, so it is in the previous intergenic space
-    if (test_gene.get_start_1() > pos_2)
+    else if ( (region.get_start_1() >= pos_1) && (region.get_end_1() <= pos_2) )
     {
-      next_gene = test_gene;
-      break;
+      between_genes.push_back(&region);
+    }
+    
+    if (region.get_start_1() > pos_2) {
+      if (region.get_start_1() - pos_2 < min_distance_to_next) {
+        min_distance_to_next = region.get_start_1() - pos_2;
+        next_gene = &region;
+      }
     }
   }
 }
@@ -2035,32 +2268,39 @@ char cReferenceSequences::translate_codon(string seq, string translation_table, 
   : tt[cReferenceSequences::codon_to_aa_index[seq]];
 }
   
-string cReferenceSequences::translate_protein(cAnnotatedSequence& seq, cLocation& loc, string translation_table, string translation_table_1)
-{  
-  cLocationTraverser pos_trav(&seq, &loc);
+string cReferenceSequences::translate_protein(cAnnotatedSequence& seq, cSequenceFeature& gene, string translation_table, string translation_table_1)
+{
+  // We can't translate a feature with an indeterminate start
+  if (gene.start_is_indeterminate()) return "";
   
   // Go one codon at a time...    
   string on_codon;
   uint32_t on_codon_number_1 = 0;
   char on_aa = ' ';
+  string nt_sequence = gene.get_nucleotide_sequence(seq);
+  uint32_t on_nt_pos = 0;
   string protein_sequence;
   
-  while (on_aa != '*') {
+  // This block protects against CDS that are not multiples of three (due to indeterminate ends)
+  uint32_t dangling_nts = nt_sequence.length() % 3;
+  uint32_t max_nt_pos = nt_sequence.length() - dangling_nts;
+  if ((dangling_nts != 0) && !gene.end_is_indeterminate()) {
+    WARN("Attempt to translate a gene with a length that is not multiple of 3 nucleotides." + gene.get_locus_tag());
+  }
+  
+  while (on_nt_pos < max_nt_pos) {
     
     on_codon = "";
     on_codon_number_1++;
     
     while (on_codon.size() < 3) {
-      
-      on_codon += pos_trav.on_base_stranded_1();      
-      pos_trav.offset_to_next_position(true);
+      on_codon += nt_sequence[on_nt_pos];
+      on_nt_pos++;
     }
-    on_aa = translate_codon(on_codon, translation_table, translation_table_1, on_codon_number_1);
-    
-    if (on_aa != '*')
-      protein_sequence += on_aa;
+    protein_sequence += translate_codon(on_codon, translation_table, translation_table_1, on_codon_number_1);
     
   }
+  
   return protein_sequence;
 }
 
@@ -2092,38 +2332,42 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
 
   //or die "Unknown seq_id in reference sequence info: $seq_id\n";
 
-  cSequenceFeatureList& gene_list_ref = (*this)[seq_id].m_genes;
-  cSequenceFeatureList& repeat_list_ref = (*this)[seq_id].m_repeats;
+  cFeatureLocationList& gene_list_ref = (*this)[seq_id].m_gene_locations;
+  cFeatureLocationList& repeat_list_ref = (*this)[seq_id].m_repeat_locations;
 
   int32_t size = end - start + 1;
 
-  cGeneFeature prev_gene, next_gene;
-  vector<cGeneFeature> within_genes;
-  vector<cGeneFeature> between_genes;
-  vector<cGeneFeature> inside_left_genes;
-  vector<cGeneFeature> inside_right_genes;
+  cFeatureLocation* prev_gene_loc(NULL);
+  cFeatureLocation* next_gene_loc(NULL);
+  vector<cFeatureLocation*> within_gene_locs;
+  vector<cFeatureLocation*> between_gene_locs;
+  vector<cFeatureLocation*> inside_left_gene_locs;
+  vector<cFeatureLocation*> inside_right_gene_locs;
 
-  cSequenceFeaturePtr repeat_ptr(NULL);
+  cFeatureLocation* repeat_ptr(NULL);
   if (repeat_override)
   {
     assert(start == end);
     repeat_ptr = get_overlapping_feature(repeat_list_ref, start);
-    if (repeat_ptr.get() != NULL)
+    if (repeat_ptr != NULL)
     {
-      cGeneFeature within_gene(*repeat_ptr);
-      within_genes.push_back(within_gene);
+      within_gene_locs.push_back(repeat_ptr);
     }
   }
 
-  if (repeat_ptr.get() == NULL)
-    find_nearby_genes(gene_list_ref, start, end, within_genes, between_genes, inside_left_genes, inside_right_genes, prev_gene, next_gene);
+  if (repeat_ptr == NULL)
+    find_nearby_genes(gene_list_ref, start, end, within_gene_locs, between_gene_locs, inside_left_gene_locs, inside_right_gene_locs, prev_gene_loc, next_gene_loc);
 
   // Mutation is intergenic
-  if (within_genes.size() + between_genes.size() + inside_left_genes.size() + inside_right_genes.size() == 0)
+  if (within_gene_locs.size() + between_gene_locs.size() + inside_left_gene_locs.size() + inside_right_gene_locs.size() == 0)
   {
     if ((mut._type == SNP) || (mut._type == RA)) {
       mut["snp_type"] = "intergenic";
     }
+    
+    cGeneFeature prev_gene, next_gene;
+    if (prev_gene_loc) prev_gene = (cGeneFeature)*(prev_gene_loc->get_feature());
+    if (next_gene_loc) next_gene = (cGeneFeature)*(next_gene_loc->get_feature());
     
     mut["gene_list"] = prev_gene.name + "," + next_gene.name;
     
@@ -2132,10 +2376,10 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     mut["gene_name"] += (next_gene.name.size() > 0) ? next_gene.name : no_gene_name;
 
     mut["html_gene_name"] += (prev_gene.name.size() > 0) ? "<i>" + prev_gene.name + "</i>" : no_gene_name;
-    if (prev_gene.name.size() > 0) mut["html_gene_name"] += (prev_gene.get_strand() == -1) ? "&nbsp;&larr;" : "&nbsp;&rarr;";
+    if (prev_gene.name.size() > 0) mut["html_gene_name"] += (prev_gene_loc->get_strand() == -1) ? "&nbsp;&larr;" : "&nbsp;&rarr;";
     mut["html_gene_name"] += "&nbsp;";
     mut["html_gene_name"] += html_intergenic_separator;
-    if (next_gene.name.size() > 0) mut["html_gene_name"] += (next_gene.get_strand() == -1) ? "&nbsp;&larr;" : "&nbsp;&rarr;";
+    if (next_gene.name.size() > 0) mut["html_gene_name"] += (next_gene_loc->get_strand() == -1) ? "&nbsp;&larr;" : "&nbsp;&rarr;";
     mut["html_gene_name"] += "&nbsp;";
     mut["html_gene_name"] += (next_gene.name.size() > 0) ? "<i>" + next_gene.name + "</i>": no_gene_name;
     
@@ -2146,8 +2390,8 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     if (prev_gene.name.size() > 0)
     {
       mut["gene_position"] += "intergenic (";
-      mut["gene_position"] += prev_gene.is_top_strand() ? "+" : "-"; //hyphen
-      mut["gene_position"] += to_string(start - prev_gene.get_end_1());
+      mut["gene_position"] += prev_gene_loc->is_top_strand() ? "+" : "-"; //hyphen
+      mut["gene_position"] += to_string(start - prev_gene_loc->get_end_1());
     }
     else
     {
@@ -2156,8 +2400,8 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     mut["gene_position"] += intergenic_separator;
     if (next_gene.name.size() > 0)
     {
-      mut["gene_position"] += next_gene.is_top_strand() ? "-" : "+"; //hyphen
-      mut["gene_position"] += to_string(next_gene.get_start_1() - end);
+      mut["gene_position"] += next_gene_loc->is_top_strand() ? "-" : "+"; //hyphen
+      mut["gene_position"] += to_string(next_gene_loc->get_start_1() - end);
     }
     else
     {
@@ -2172,15 +2416,17 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     return;
   }
   // Mutation is completely within genes
-  else if (within_genes.size() > 0)
+  else if (within_gene_locs.size() > 0)
   {
     /// It can be within multiple genes, in which case we need to annotate
     /// the change it causes in each reading frame UGH! YUCKY!
     /// FOR NOW: just take the first of the within genes...
-    cGeneFeature gene = within_genes[0];
+    cFeatureLocation* gene_loc = within_gene_locs[0];
+    cGeneFeature gene = (cGeneFeature)(*(gene_loc->get_feature()));
+
     mut["gene_name"] = gene.name;
     mut["html_gene_name"] = "<i>" + gene.name + "</i>";
-    mut["html_gene_name"] += (gene.get_strand() == -1) ? "&nbsp;&larr;" : "&nbsp;&rarr;";
+    mut["html_gene_name"] += (gene_loc->get_strand() == -1) ? "&nbsp;&larr;" : "&nbsp;&rarr;";
     mut["gene_product"] = gene.product;
     if (gene.get_locus_tag().size()) {
       mut["locus_tag"] = gene.get_locus_tag();
@@ -2189,7 +2435,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     //#added for gene table
     mut["gene_list"] = gene.name;
 
-    int32_t within_gene_start = gene.is_top_strand() ? gene.get_start_1() : gene.get_end_1();
+    int32_t within_gene_start = gene_loc->is_top_strand() ? gene_loc->get_start_1() : gene_loc->get_end_1();
 
     if (start == end)
     {
@@ -2204,8 +2450,8 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
         : to_string(gene_end) + "-" + to_string(gene_start); //hyphen
     }
 
-    string gene_nt_size = to_string(gene.get_end_1() - gene.get_start_1() + 1);
-    string gene_strand_char = gene.is_top_strand() ? ">" : "<"; 
+    string gene_nt_size = to_string(gene_loc->get_end_1() - gene_loc->get_start_1() + 1);
+    string gene_strand_char = gene_loc->is_top_strand() ? ">" : "<";
     mut["gene_strand"] = gene_strand_char;
     
     // ...but the gene is a pseudogene or not a protein coding gene
@@ -2226,14 +2472,17 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
       return;
     }
 
-    //#only add gene information to SNPs and RA mutations that don"t include indels...
-    if ((mut._type != SNP) && !((mut._type == RA) && (mut[MAJOR_BASE] != ".") && (mut[MINOR_BASE] != ".")))
+    // only add gene information to SNPs and RA mutations that don't include indels
+    if ((mut._type != SNP) && !((mut._type == RA) && ((mut[MAJOR_BASE] != ".") && (mut[MINOR_BASE] != "."))))
     {
       mut["gene_position"] = "coding (" + mut["gene_position"] + "/" + gene_nt_size + " nt)";
       return;
     }
+    
+    // These genes should be marked pseudo, so this should
+    ASSERT(!(gene.start_is_indeterminate() && gene.end_is_indeterminate()), "Attempt to translate CDS with indeterminate start and end coordinates: " + gene["locus_tag"]);
 
-    // this is for RA...
+    // Special additions for RA so that they can use the common code...
     if (mut._type == RA)  {
       string ra_seq_id = mut[SEQ_ID];
       int32_t ra_position = from_string<int32_t>(mut[POSITION]);
@@ -2243,57 +2492,40 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     
     // SNP and RA entries make it here
     
-    // @JEB 06-16-2016
-    // Traversing the sequence is the only way to properly code codon changes
-    // for genes with introns, etc.
+    // Get full gene nucleotide sequence. Pad with N's so that we can use a first or last
+    // indeterminate codon if necessary
     
-    cLocationTraverser loc_trav(&(*this)[seq_id], &gene.m_location);
+    // The position within a codon... indexed to start at 0.
+    string gene_nt_sequence = gene.get_nucleotide_sequence((*this)[seq_id]);
     
-    // The position we are looking for
-    int32_t mutated_position = from_string<int32_t>(mut[POSITION]);
+    // The position within a codon... indexed to start at 0.
+    size_t indeterminate_codon_pos_offset_0 = 0;
     
-    // Values saved when we find this position
-    int32_t mutated_codon_number_1;
-    int32_t mutated_codon_pos_1;
+    // Add padding to put us in-frame if we have an indeterminate start
+    if (gene.start_is_indeterminate()) {
+      indeterminate_codon_pos_offset_0 = gene_nt_sequence.length() % 3;
+      gene_nt_sequence = repeat_char('N', gene_nt_sequence.length() % 3) + gene_nt_sequence;
+      // flag so that we know the codon position is not to be trusted
+      mut["codon_position_is_indeterminate"] = "1";
+    }
+    if (gene.end_is_indeterminate()) {
+      gene_nt_sequence += repeat_char('N', gene_nt_sequence.length() % 3);
+    }
+    
+    // The genomic position we are looking for
+    int32_t mutated_genomic_position_1 = from_string<int32_t>(mut[POSITION]);
+    
+    // Translate to nucleotide index within the gene
+    int32_t mutated_index_1;
     int8_t mutated_strand;
+    gene.genomic_position_to_index_strand_1(mutated_genomic_position_1, mutated_index_1, mutated_strand);
     
-    // Values used in iterating through the reading frame
-    uint32_t on_codon_pos_1 = 0;
-    int32_t on_codon_number_1 = 1;
+    // Set the codon position that is mutated (including offset for indeterminate_start)
+    int32_t mutated_codon_pos_1 = 1 + (mutated_index_1 + indeterminate_codon_pos_offset_0 - 1) % 3;
     
-    // Filled after hitting the mutation, potentially
-    string codon_seq("NNN");
+    int32_t mutated_codon_number_1 = 1 + int(floor(indeterminate_codon_pos_offset_0 + mutated_index_1 - 1)/3);
+    string codon_seq = gene_nt_sequence.substr((mutated_codon_number_1-1)*3, 3);
     
-    bool mutated_codon_found = false;
-    
-    do {
-      
-      on_codon_pos_1++;
-      if (on_codon_pos_1 > 3) {
-        
-        // Now we're done
-        if (mutated_codon_found) break;
-        
-        on_codon_pos_1 = 1;
-        on_codon_number_1++;
-        codon_seq = "NNN";
-      }
-      
-      codon_seq[on_codon_pos_1-1] = loc_trav.on_base_stranded_1();
-      
-      if (loc_trav.on_position_1() == mutated_position) {
-        mutated_codon_found = true;
-        mutated_codon_pos_1 = on_codon_pos_1;
-        mutated_codon_number_1 = on_codon_number_1;
-        mutated_strand = loc_trav.on_base_strand();
-      }
-      
-    } while (loc_trav.offset_to_next_position(false));
-    
-    
-    ASSERT(mutated_codon_found, "Position not found within ORF.");
-    
-      
     // Save what we know so far
     mut["codon_position"] = to_string<int32_t>(mutated_codon_pos_1); // 1-indexed
     mut["codon_number"] = to_string<int32_t>(mutated_codon_number_1);
@@ -2301,13 +2533,13 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
 
     mut["codon_ref_seq"] = codon_seq;
     
-    mut["aa_ref_seq"] =  translate_codon(mut["codon_ref_seq"], gene.translation_table, mutated_codon_number_1);
+    mut["aa_ref_seq"] =  translate_codon(mut["codon_ref_seq"], gene.translation_table, ( gene.start_is_indeterminate() && (mutated_codon_number_1 == 1) ) ? 2 : mutated_codon_number_1);
     
     // Generate mutated sequence
     mut["codon_new_seq"] = codon_seq;
     //#remember to revcom the change if gene is on opposite strand
     mut["codon_new_seq"][mutated_codon_pos_1 - 1] = (mutated_strand == 1) ? mut["new_seq"][0] : reverse_complement(mut["new_seq"])[0];
-    mut["aa_new_seq"] =  translate_codon(mut["codon_new_seq"], gene.translation_table, mutated_codon_number_1);
+    mut["aa_new_seq"] =  translate_codon(mut["codon_new_seq"], gene.translation_table, ( gene.start_is_indeterminate() && (mutated_codon_number_1 == 1) ) ? 2 : mutated_codon_number_1);
     mut["transl_table"] = to_string(gene.translation_table);
     
     if ((mut["aa_ref_seq"] != "*") && (mut["aa_new_seq"] == "*"))
@@ -2320,39 +2552,41 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
   }
 
   //The mutation actually contains several genes
-  else if (between_genes.size() + inside_left_genes.size() + inside_right_genes.size() > 0)
+  else if (between_gene_locs.size() + inside_left_gene_locs.size() + inside_right_gene_locs.size() > 0)
   {
-    vector<cGeneFeature> gene_list;
-    gene_list.insert( gene_list.end(), inside_left_genes.begin(), inside_left_genes.end() );
-    gene_list.insert( gene_list.end(), between_genes.begin(), between_genes.end() );
-    gene_list.insert( gene_list.end(), inside_right_genes.begin(), inside_right_genes.end() );
 
     vector<string> gene_name_list;
     vector<string> locus_tag_list;
-    for (vector<cGeneFeature>::iterator it=inside_left_genes.begin(); it != inside_left_genes.end(); it++)
+    for (vector<cFeatureLocation*>::iterator it=inside_left_gene_locs.begin(); it != inside_left_gene_locs.end(); it++)
     {
-      gene_name_list.push_back("[" + it->name + "]");
+      cGeneFeature gene = (cGeneFeature)(*((*it)->get_feature()));
 
-      if (it->get_locus_tag().size()) {
-        locus_tag_list.push_back("[" + it->get_locus_tag() + "]");
+      gene_name_list.push_back("[" + gene.name + "]");
+
+      if (gene.get_locus_tag().size()) {
+        locus_tag_list.push_back("[" + gene.get_locus_tag() + "]");
       }
 
     }
-    for (vector<cGeneFeature>::iterator it=between_genes.begin(); it != between_genes.end(); it++)
+    for (vector<cFeatureLocation*>::iterator it=between_gene_locs.begin(); it != between_gene_locs.end(); it++)
     {
-      gene_name_list.push_back(it->name);
+      cGeneFeature gene = (cGeneFeature)(*((*it)->get_feature()));
+      
+      gene_name_list.push_back(gene.name);
 
-      if (it->get_locus_tag().size()) {
-        locus_tag_list.push_back("[" + it->get_locus_tag() + "]");
+      if (gene.get_locus_tag().size()) {
+        locus_tag_list.push_back("[" + gene.get_locus_tag() + "]");
       }
 
     }
-    for (vector<cGeneFeature>::iterator it=inside_right_genes.begin(); it != inside_right_genes.end(); it++)
+    for (vector<cFeatureLocation*>::iterator it=inside_right_gene_locs.begin(); it != inside_right_gene_locs.end(); it++)
     {
-      gene_name_list.push_back("[" + it->name + "]");
+      cGeneFeature gene = (cGeneFeature)(*((*it)->get_feature()));
 
-      if (it->get_locus_tag().size()) {
-        locus_tag_list.push_back("[" + it->get_locus_tag() + "]");
+      gene_name_list.push_back("[" + gene.name + "]");
+
+      if (gene.get_locus_tag().size()) {
+        locus_tag_list.push_back("[" + gene.get_locus_tag() + "]");
       }
 
     }
@@ -2370,20 +2604,20 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     //
     // Non-Button Toggle - Replace <input>
     // <a href=\"javascript:hideTog('" + sID + "');\">Toggle Genes</a>
-    if(gene_list.size() > 15)
+    if(gene_name_list.size() > 15)
     {
       string sID = "gene_hide_" + to_string(mut._type) + "_" + mut._id;
       string sButtonID = sID + "_button";
       mut["_gene_product_hide"] =
         "<i title=\"" + sJoinedGeneList + "\"><b>" +
-        to_string(gene_list.size()) +
+        to_string(gene_name_list.size()) +
         " genes</b> <noscript>Javascript Disabled: All genes shown.<br></noscript></i>"
         + "<noscript>" + mut["gene_product"] + "</noscript>"
         + "<div id=\"" + sID + "\" class=\"hidden\">"
         + mut["gene_product"] + "</div>"
         + "<input id=\"" + sButtonID + "\" type=\"button\" onclick=\"hideTog('" + sID + "');showTog('" + sButtonID + "')\" value=\"Show\" />";
       mut["gene_product"] = "<i>";
-      mut["gene_product"] += "<b>" + to_string(gene_list.size()) + " genes</b><BR>";
+      mut["gene_product"] += "<b>" + to_string(gene_name_list.size()) + " genes</b><BR>";
       mut["gene_product"] += sJoinedGeneList;
       mut["gene_product"] += "</i>";
     }

@@ -291,7 +291,7 @@ void resolve_alignments(
   //## so that we only have to split the names once
   
   if (junction_prediction) {
-    junction_ref_seq_info.ReadFASTA(settings.candidate_junction_fasta_file_name);
+    junction_ref_seq_info.LoadFiles(make_vector<string>(settings.candidate_junction_fasta_file_name));
 		string junction_sam_file_name = settings.file_name(settings.candidate_junction_sam_file_name, "#", read_files[0].m_base_name);
 		tam_file junction_tam(junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::in);
 
@@ -1566,33 +1566,32 @@ cDiffEntry junction_to_diff_entry(
 	// The goal is to offset through positive overlap to get as close as possible to the ends of the IS
 	///
 
-	cSequenceFeaturePtr repeat_ptr(NULL);
+	cFeatureLocation* repeat_ptr(NULL);
 	for (int32_t i = 0; i <= 1; i++)
 	{
 		// Determine IS elements
 		// Is it within an IS or near the boundary of an IS in the direction leading up to the junction?
     int32_t max_distance_to_repeat = 20;
 		repeat_ptr = cReferenceSequences::find_closest_repeat_region_boundary(jc.sides[i].position, ref_seq_info[jc.sides[i].seq_id].m_repeats, max_distance_to_repeat, jc.sides[i].strand);
-		if (repeat_ptr.get() != NULL)
-		{
+		if (repeat_ptr != NULL) {
 			jc.sides[i].is = repeat_ptr;
-			jc.sides[i].is_interval = (repeat_ptr->m_location.get_strand() == 1) 
-        ? to_string(repeat_ptr->m_location.get_start_1()) + "-" + to_string(repeat_ptr->m_location.get_end_1()) 
-        : to_string(repeat_ptr->m_location.get_end_1()) + "-" + to_string(repeat_ptr->m_location.get_start_1());
+			jc.sides[i].is_interval = (repeat_ptr->get_strand() == 1)
+        ? to_string(repeat_ptr->get_start_1()) + "-" + to_string(repeat_ptr->get_end_1())
+        : to_string(repeat_ptr->get_end_1()) + "-" + to_string(repeat_ptr->get_start_1());
 		}
 	}
 
 	// Determine which side of the junction is the IS and which is unique
 	// these point to the correct initial interval...
 	jc.is_side = UNDEFINED_UINT32;
-	if (jc.sides[0].is.get() && !jc.sides[1].is.get())
+	if (jc.sides[0].is && !jc.sides[1].is)
 	{
-		if (abs(static_cast<int32_t>(jc.sides[0].is->m_location.get_start_1()) - static_cast<int32_t>(jc.sides[0].position)) <= 20)
+		if (abs(static_cast<int32_t>(jc.sides[0].is->get_start_1()) - static_cast<int32_t>(jc.sides[0].position)) <= 20)
 		{
 			jc.is_side = 0;
 			jc.sides[jc.is_side].is_side_key = "start";
 		}
-		else if (abs(static_cast<int32_t>(jc.sides[0].is->m_location.get_end_1()) - static_cast<int32_t>(jc.sides[0].position)) <= 20 )
+		else if (abs(static_cast<int32_t>(jc.sides[0].is->get_end_1()) - static_cast<int32_t>(jc.sides[0].position)) <= 20 )
 		{
 			jc.is_side = 0;
 			jc.sides[jc.is_side].is_side_key = "end";
@@ -1600,14 +1599,14 @@ cDiffEntry junction_to_diff_entry(
 		jc.unique_side = 1;
 	}
 
-	else if (!jc.sides[0].is.get() && jc.sides[1].is.get())
+	else if (!jc.sides[0].is && jc.sides[1].is)
 	{
-		if (abs(static_cast<int32_t>(jc.sides[1].is->m_location.get_start_1()) - static_cast<int32_t>(jc.sides[1].position)) <= 20)
+		if (abs(static_cast<int32_t>(jc.sides[1].is->get_start_1()) - static_cast<int32_t>(jc.sides[1].position)) <= 20)
 		{
 			jc.is_side = 1;
 			jc.sides[jc.is_side].is_side_key = "start";
 		}
-		else if (abs(static_cast<int32_t>(jc.sides[1].is->m_location.get_end_1()) - static_cast<int32_t>(jc.sides[1].position)) <= 20 )
+		else if (abs(static_cast<int32_t>(jc.sides[1].is->get_end_1()) - static_cast<int32_t>(jc.sides[1].position)) <= 20 )
 		{
 			jc.is_side = 1;
 			jc.sides[jc.is_side].is_side_key = "end";
@@ -1631,7 +1630,7 @@ cDiffEntry junction_to_diff_entry(
 			// first, adjust the repetitive sequence boundary to get as close to the IS as possible
       assert(jc.sides[jc.is_side].is_side_key.size() > 0);
 			int32_t move_dist = jc.sides[jc.is_side].strand * (static_cast<int32_t>((jc.sides[jc.is_side].is_side_key == "start" 
-          ? jc.sides[jc.is_side].is->m_location.get_start_1() : jc.sides[jc.is_side].is->m_location.get_end_1())) - jc.sides[jc.is_side].position);
+          ? jc.sides[jc.is_side].is->get_start_1() : jc.sides[jc.is_side].is->get_end_1())) - jc.sides[jc.is_side].position);
 
 			if (move_dist < 0) move_dist = 0;
 			if (move_dist > jc.overlap) move_dist = jc.overlap ;
@@ -2102,7 +2101,7 @@ void  assign_junction_read_counts(
   // Could be added as a parameter to reduce problems due to one-base mismatches
   static int32_t require_overlap = 0;
   
-  diff_entry_list_t jc = gd.list(make_vector<gd_entry_type>(JC));
+  diff_entry_list_t jc = gd.get_list(make_vector<gd_entry_type>(JC));
 
   if (jc.size() == 0) return;
   // Next calls can fail if there are no junctions (and therefore no FASTA file of junctions).
@@ -2133,7 +2132,7 @@ void  assign_junction_read_coverage(
                                   )
 {
   (void) settings;
-  diff_entry_list_t jc = gd.list(make_vector<gd_entry_type>(JC));
+  diff_entry_list_t jc = gd.get_list(make_vector<gd_entry_type>(JC));
   
   if (jc.size() == 0) return;
   // Next calls can fail if there are no junctions (and therefore no FASTA file of junctions).

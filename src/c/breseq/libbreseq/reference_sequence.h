@@ -120,170 +120,209 @@ namespace breseq {
     }
   };
   
-	/*! Interface for loading sequences and sequence features from GenBank files.
-  */
   class cLocation {
     
   private:
-    int32_t m_start, m_end; // 1-indexed
+    int32_t m_start_1, m_end_1;
     int8_t m_strand;
-    bool m_indeterminate_start, m_indeterminate_end; 
-      // for when coords are marked as extending last here (<1..514)
-    vector<cLocation> m_sub_locations;
+    
+    // for when coords are marked as extending last here (<1..514)
+    bool m_start_is_indeterminate, m_end_is_indeterminate;
     
   public:
-    cLocation() 
-      : m_start(0)
-      , m_end(0)
-      , m_strand(0)
-      , m_indeterminate_start(false)
-      , m_indeterminate_end(false)
-      {};
+    cLocation()
+    : m_start_1(0)
+    , m_end_1(0)
+    , m_strand(0)
+    , m_start_is_indeterminate(false)
+    , m_end_is_indeterminate(false)
+    {};
+    
     cLocation(
-              int32_t start, 
-              int32_t end, 
-              int8_t strand, 
-              bool indeterminate_start = false, 
-              bool indeterminate_end = false
-              ) 
-      : m_start(start)
-      , m_end(end)
-      , m_strand(strand)
-      , m_indeterminate_start(indeterminate_start)
-      , m_indeterminate_end(indeterminate_end) 
-    { }
-
-    cLocation(const cLocation& copy)
-      : m_start(copy.m_start)
-      , m_end(copy.m_end)
-      , m_strand(copy.m_strand)
-      , m_indeterminate_start(copy.m_indeterminate_start)
-      , m_indeterminate_end(copy.m_indeterminate_end)  
-      , m_sub_locations(copy.m_sub_locations) { }
-
-
-    cLocation& operator=(const cLocation& assign) {
-      m_start               = assign.m_start;
-      m_end                 = assign.m_end;
-      m_strand              = assign.m_strand;
-      m_indeterminate_start = assign.m_indeterminate_start;
-      m_indeterminate_end   = assign.m_indeterminate_end;
-      m_sub_locations       = assign.m_sub_locations; 
-      return *this;
+             int32_t start_1,
+             int32_t end_1,
+             int8_t strand,
+             bool start_is_indeterminate = false,
+             bool end_is_indeterminate = false
+             )
+    : m_start_1(start_1)
+    , m_end_1(end_1)
+    , m_strand(strand)
+    , m_start_is_indeterminate(start_is_indeterminate)
+    , m_end_is_indeterminate(end_is_indeterminate)
+    {
+      ASSERT(m_start_1 <= m_end_1, "Location regions cannot have start > end");
     }
-
+    
+    //>! For sorting
+    bool operator < (const cLocation& in) const
+    {
+      if (m_start_1 != in.m_start_1)
+        return (m_start_1 < in.m_start_1);
+      
+      return (m_end_1 < in.m_end_1);
+    }
+    
+    bool operator > (const cLocation& in) const
+    {
+      return (in < *this);
+    }
+    
+    bool operator != (const cLocation& in) const
+    {
+      return (*this < in) || (*this > in);
+    }
+    
+    bool operator == (const cLocation& in) const
+    {
+      return !(*this < in) && !(*this > in);
+    }
+    
     //>! Get 1-indexed start position
     int32_t get_start_1() const {
-      return m_start;
+      return m_start_1;
     }
     //>! Get 1-indexed end position
     int32_t get_end_1() const {
-      return m_end;
+      return m_end_1;
     }
     
     //>! Get whether start position is indeterminate
-    bool is_indeterminate_start() const {
-      return m_indeterminate_start;
+    bool start_is_indeterminate() const {
+      return m_start_is_indeterminate;
     }
     //>! Get whether end position is indeterminate
-    bool is_indeterminate_end() const {
-      return m_indeterminate_end;
+    bool end_is_indeterminate() const {
+      return m_end_is_indeterminate;
+    }
+    
+    //>! Get whether start position is indeterminate
+    bool stranded_start_is_indeterminate() const {
+      return (m_strand==1) ? m_start_is_indeterminate : m_end_is_indeterminate;
+    }
+    //>! Get whether end position is indeterminate
+    bool stranded_end_is_indeterminate() const {
+      return (m_strand==1) ? m_end_is_indeterminate : m_start_is_indeterminate;
     }
     
     //>! Strand is -1 or +1
-    int8_t get_strand() const {
-      return m_strand;
-    }
-
-    vector<cLocation> get_all_sub_locations() const {
-      
-      vector<cLocation> return_locations;
-      if (m_sub_locations.size() > 0) {
-        for (vector<cLocation>::const_iterator it=m_sub_locations.begin(); it!=m_sub_locations.end(); ++it) {
-          vector<cLocation> this_locations = it->get_all_sub_locations();
-          return_locations.insert(return_locations.end(), this_locations.begin(), this_locations.end());
-        }
-      }
-      else {
-        return_locations.push_back(*this);
-      }
-      
-      return return_locations;
-
+    int8_t get_strand() const { return m_strand; }
+    
+    bool is_top_strand() const { return m_strand==1; }
+    
+    int32_t get_strand_aware_initial_position_1() const {
+      return (m_strand == 1) ? m_start_1 : m_end_1;
     }
     
-    void reverse_sub_locations() {
-      reverse(m_sub_locations.begin(),m_sub_locations.end());
+    void set_start_1(int32_t start_1) {
+      m_start_1 = start_1;
+      ASSERT(m_start_1 <= m_end_1, "Location regions cannot have start > end");
+    }
+    void set_end_1(int32_t end_1) {
+      m_end_1 = end_1;
+      ASSERT(m_start_1 <= m_end_1, "Location regions cannot have start > end");
     }
     
-    void add_sub_location(cLocation& in_location) {
-      m_sub_locations.push_back( in_location );
+    // This function is provided to not transiently create unallowed start/end combinations
+    void set_start_end_1(int32_t start_1, int32_t end_1) {
+      m_start_1 = start_1;
+      m_end_1 = end_1;
+      ASSERT(m_start_1 <= m_end_1, "Location regions cannot have start > end");
     }
     
-    void set_start_1(int32_t _start) {
-      m_start = _start;
+    void set_start_is_indeterminate(bool start_is_indeterminate) {
+      m_start_is_indeterminate = start_is_indeterminate;
     }
-    void set_end_1(int32_t _end) {
-      m_end = _end;
-    }
-    
-    void set_indeterminate_start(bool _indeterminate_start) {
-      m_indeterminate_start = _indeterminate_start;
-    }
-    void set_indeterminate_end(bool _indeterminate_end) {
-      m_indeterminate_end = _indeterminate_end;
+    void set_end_is_indeterminate(bool end_is_indeterminate) {
+      m_end_is_indeterminate = end_is_indeterminate;
     }
     
     void set_strand(int8_t _strand) {
       m_strand = _strand;
     }
-
-    void add_sub_location( const cLocation& value) {
-      m_sub_locations.push_back(value);
-    }
-    
-    string as_string(const uint32_t indent_level=0) {
-      string s;
-      s += repeat_char(' ', indent_level*2) + to_string(m_start) + "-" + to_string(m_end) + " " + to_string<int32_t>(m_strand) + "\n";
-      for (vector<cLocation>::iterator it=m_sub_locations.begin(); it != m_sub_locations.end(); it++ ) {
-        s += it->as_string(indent_level+1);
-      }
-      return s;
-    }
     
     int32_t distance_to_position(const int32_t pos) const {
-      int32_t distance = numeric_limits<int32_t>::max();
       
-      vector<cLocation> locs = get_all_sub_locations();
+      if ((pos >= m_start_1) && (pos <= m_end_1))
+        return 0;
       
-      for(vector<cLocation>::iterator it = locs.begin(); it != locs.end(); it++) {
-      
-        int32_t start = it->get_start_1();
-        int32_t end = it->get_end_1();
-        
-        // Piece passes through origin of circular chromosome
-        if (start > end) {
-          
-          if ((pos >= start) || (pos <= end)) {
-            distance = 0;
-          } else {
-            distance = min(distance, min(abs(pos - start), abs(pos - end)));
-          }
-          
-        } else {
-          if ((pos >= m_start) && (pos <= end)) {
-            distance = 0;
-          } else {
-            distance = min(distance,min(abs(pos - start), abs(pos - end)));
-          }
-        }
-      }
-      
-      return distance;
+      return min(abs(pos - m_start_1), abs(pos - m_end_1));
+    }
+    
+    void invert_within_region(const int32_t invert_start_1, int32_t invert_end_1) {
+      int32_t original_start_1 = get_start_1();
+      int32_t original_end_1 = get_end_1();
+      set_start_end_1(
+                      invert_start_1 +  (invert_end_1 - original_end_1),
+                      invert_start_1 + (invert_end_1 - original_start_1)
+                      );
+      set_strand(-get_strand());
+    }
+    
+    string as_string() const {
+      return to_string(get_start_1()) + "-" + to_string(get_end_1()) + " " + to_string<int32_t>(get_strand());
     }
     
   };
   
+  
+  class cSequenceFeature;
+  
+  /*! We allow a feeature to consist of an ordered list of regions
+   * For most features, there is only one location
+   * this enables representing spliced and even trans spliced genes
+   */
+  
+  class cFeatureLocation : public cLocation {
+    
+  private:
+    cSequenceFeature* m_feature;
+    
+    // additional information for linking together sublocations
+    uint32_t m_index;   // index of this exon or piece within the feature
+    int32_t m_offset;   // within-gene location of the start of the location
+                        // 1 for the first piece
+    
+  public:
+    cFeatureLocation()
+      : cLocation()
+      , m_feature(NULL)
+      , m_index(0)
+      , m_offset(1)
+    {};
+    
+    cFeatureLocation(cSequenceFeature* feature, const cLocation& loc);
+    
+    // This constructor takes into account
+    // any previously assigned locations in feature
+    // to automatically fill in m_index and m_offset
+    cFeatureLocation(
+                    cSequenceFeature* feature,
+                    int32_t start_1,
+                    int32_t end_1,
+                    int8_t strand,
+                    bool start_is_indeterminate = false,
+                    bool end_is_indeterminate = false
+                    );
+
+    
+    //>! Get sort index
+    int32_t get_index() const {
+      return m_index;
+    }
+    
+    cSequenceFeature* get_feature() {
+      ASSERT(m_feature, "Feature location does not have associated feature.");
+      return m_feature;
+    }
+    
+    void set_feature(cSequenceFeature* feature) {
+      m_feature = feature;
+    }
+    
+  };
+  
+  typedef list<cFeatureLocation> cFeatureLocationList;
   
   extern const vector<string> snp_types;
     
@@ -318,55 +357,87 @@ namespace breseq {
     public:
 
       // Could add accessors that convert strings to numbers...
-      cLocation m_location;
+      cFeatureLocationList m_locations;
+      bool m_start_is_indeterminate;
+      bool m_end_is_indeterminate;
       bool m_pseudo;
       map<string, vector<string> > m_gff_attributes;
     
-      cSequenceFeature() : m_pseudo(0) {}
+      cSequenceFeature() : m_start_is_indeterminate(false), m_end_is_indeterminate(false), m_pseudo(false) {}
 
       cSequenceFeature(const cSequenceFeature& copy) 
         : sequence_feature_map_t(copy)
-        , m_location(copy.m_location)
+        , m_locations(copy.m_locations)
+        , m_start_is_indeterminate(copy.m_start_is_indeterminate)
+        , m_end_is_indeterminate(copy.m_end_is_indeterminate)
         , m_pseudo(copy.m_pseudo)
-        , m_gff_attributes(copy.m_gff_attributes) { }
+        , m_gff_attributes(copy.m_gff_attributes)
+      {
+        // need to update locations to point to this feature
+        for (list<cFeatureLocation>::iterator it=m_locations.begin(); it!=m_locations.end(); it++) {
+          it->set_feature(this);
+        }
+      }
 
       // Sort to have genes after CDS, rRNA, etc.
-      bool operator<(const cSequenceFeature& _in) const
+      bool operator<(const cSequenceFeature& in) const
       {
-        if (this->m_location.get_start_1() == _in.m_location.get_start_1()) {
-          if (this->m_location.get_end_1() == _in.m_location.get_end_1()) {
-            
-            if ( (this->SafeGet("type") == "gene") && (_in.SafeGet("type") != "gene")) {
-              return true;
-            } else {
-              return (this->SafeGet("type") < _in.SafeGet("type"));
-            }
-          } else {
-            return (this->m_location.get_end_1() < _in.m_location.get_end_1());
+        list<cFeatureLocation>::const_iterator it1 = this->m_locations.begin();
+        list<cFeatureLocation>::const_iterator it2 = in.m_locations.begin();
+        
+        // Smallest start positions
+        while ((it1 != this->m_locations.end()) && (it2 != in.m_locations.end())) {
+          if (*it1 != *it2) {
+            return *it1 < *it2;
           }
+          it1++; it2++;
+        } ;
+        
+        
+        // Different length? Longer first.
+        int32_t l1 = this->get_length();
+        int32_t l2 = in.get_length();
+        if (l1 != l2) {
+          return l1 < l2;
         }
-        return (this->m_location.get_start_1() < _in.m_location.get_start_1());
+        
+        // Different number of positions? Fewest first.
+        if (! ((it1 == this->m_locations.end()) && (it2 == in.m_locations.end())) ) {
+        if (it1 == this->m_locations.end())
+          return true;
+        if (it2 == in.m_locations.end())
+          return false;
+        }
+
+        
+        // Break ties by type. It's important to put genes first before CDS
+        if ( (this->SafeGet("type") == "gene") && (in.SafeGet("type") != "gene"))
+          return true;
+        if ( (this->SafeGet("type") != "gene") && (in.SafeGet("type") == "gene") )
+          return false;
+        
+        return (this->SafeGet("type") < in.SafeGet("type"));
       }
     
-      //<! Safe accessor that returns empty string if not defined. 
+      //<! Safe accessor that returns empty string if not defined.
       string SafeGet(sequence_feature_key_t in_key) const 
       { 
         sequence_feature_map_t::const_iterator it = this->find(in_key);
         if (it == this->end()) return std::string("");
         return it->second;
       }
-    
-      int32_t distance_to_position(const int32_t pos) const {
-        
-        return m_location.distance_to_position(pos);
+  
+      bool is_repeat() {
+        return ((*this)["type"] == "mobile_element") || ((*this)["type"] == "repeat_region");
       }
     
-      //<! accessors
-      int32_t get_start_1()     const { return m_location.get_start_1();  }
-      int32_t get_end_1()       const { return m_location.get_end_1();    }
-      int32_t get_strand()      const { return m_location.get_strand();   }
-      bool is_top_strand()      const { return get_strand() == +1;        }
-      bool is_bottom_strand()   const { return get_strand() == -1;        }
+      bool is_source() {
+        return ((*this)["type"] == "region") || ((*this)["type"] == "source");
+      }
+    
+      bool is_gene() {
+        return ((*this)["type"] == "gene") || ((*this)["type"] == "CDS");
+      }
     
       string get_locus_tag() {
         if (m_gff_attributes.count("Alias")) {
@@ -397,21 +468,47 @@ namespace breseq {
       }
     
       // Adds append_str to all important IDs and gene names
-      void append_to_names_and_ids(const string& append_str)
+      void append_to_accession(const string& append_str)
       {
-        (*this)["name"] += append_str;
+        //(*this)["name"] += append_str;
         (*this)["accession"] += append_str;
         if (m_gff_attributes.count("Alias")) m_gff_attributes["Alias"][0] += append_str;
-        if (m_gff_attributes.count("IS")) m_gff_attributes["ID"][0] += append_str;
-        if (m_gff_attributes.count("Name")) m_gff_attributes["Name"][0] += append_str;
+        //if (m_gff_attributes.count("IS")) m_gff_attributes["ID"][0] += append_str;
+        //if (m_gff_attributes.count("Name")) m_gff_attributes["Name"][0] += append_str;
       }
-      
+
+      int32_t get_length() const {
+        int32_t total_length(0);
+        for(cFeatureLocationList::const_iterator it=m_locations.begin(); it!=m_locations.end(); ++it) {
+          const cFeatureLocation& loc = *it;
+          total_length += loc.get_end_1() - loc.get_start_1() + 1;
+        }
+        return total_length;
+      }
+    
+      void add_location(const cLocation& loc) {
+        this->m_locations.push_back(cFeatureLocation(this, loc));
+        
+        // Update indeterminate start and end
+        if (this->m_locations.size()==1) {
+          m_start_is_indeterminate = loc.stranded_start_is_indeterminate();
+        }
+        m_end_is_indeterminate = loc.stranded_end_is_indeterminate();
+      }
+    
       // Read GenBank coords
       void ReadGenBankCoords(string& s, ifstream& in);
       //Parse portion of GenBank coords string
-      static cLocation ParseGenBankCoords(string& s, int8_t in_strand = 1);
+      static list<cLocation> ParseGenBankCoords(string& s, int8_t in_strand = 1);
     
       void ReadGenBankTag(string& tag, string& s, ifstream& in);
+    
+      string get_nucleotide_sequence(const cAnnotatedSequence& seq) const;
+    
+      void genomic_position_to_index_strand_1(int32_t pos_1, int32_t& index_1, int8_t& strand) const;
+    
+      bool start_is_indeterminate() { return m_start_is_indeterminate; }
+      bool end_is_indeterminate() { return m_end_is_indeterminate; }
   };
   
   //!< Subclass of reference features with more information
@@ -446,7 +543,7 @@ namespace breseq {
 
 
   };
-
+  
   typedef counted_ptr<cGeneFeature> cGeneFeaturePtr;
   typedef counted_ptr<cSequenceFeature> cSequenceFeaturePtr;
   typedef list<cSequenceFeaturePtr> cSequenceFeatureList;
@@ -463,13 +560,20 @@ namespace breseq {
       string m_seq_id;      // GenBank (LOCUS)      | GFF (seqid), from ##sequence-region line
       string m_file_name;   // Name of file this sequence was loaded from
 
-    cFastaSequence m_fasta_sequence;            //!< Nucleotide sequence
+      cFastaSequence m_fasta_sequence;            //!< Nucleotide sequence
     
       // Features are stored as counted pointers so that we can have ready-made lists
       // of different types of features. 
       cSequenceFeatureList m_features;    //!< Full list of sequence features
+    
+      // These lists are subsets of the original list
       cSequenceFeatureList m_genes;       //!< Subset of features
       cSequenceFeatureList m_repeats;     //!< Subset of features
+    
+      // Storage as list of locations is used for identifying features
+      // that overlap a certain position
+      cFeatureLocationList m_gene_locations;
+      cFeatureLocationList m_repeat_locations;
     
       string m_features_loaded_from_file; //!< File name features were loaded from
       string m_sequence_loaded_from_file; //!< File name sequence was loaded from
@@ -574,42 +678,10 @@ namespace breseq {
         return m_file_name;
       }
     
-      //! Correctly adds features across different lists
-      //  so that they all still refer to a copy of the same feature via counted_ptrs
-      void feature_push_back(cSequenceFeaturePtr& fp)
-      {
-        m_features.push_back(fp);
-        
-        if ( ((*fp)["type"] == "repeat_region") || ((*fp)["type"] == "mobile_element") )
-        {
-          m_repeats.push_back(fp); 
-        }
-        else if ( ((*fp)["type"] == "CDS") || ((*fp)["type"] == "tRNA") || ((*fp)["type"] == "rRNA") || ((*fp)["type"] == "RNA") )
-        { 
-          m_genes.push_back(fp);
-        }
-      }
-  
+      void update_feature_lists();
     
-      //! Correctly adds features across different lists
-      //  so that they all still refer to a copy of the same feature via counted_ptrs
-      void feature_push_front(cSequenceFeaturePtr& fp)
-      {
-        m_features.push_front(fp);
-        
-        if ((*fp)["type"] == "repeat_region")
-        {
-          m_repeats.push_front(fp);
-        }
-        else if (((*fp)["type"] == "CDS") || ((*fp)["type"] == "tRNA") || ((*fp)["type"] == "rRNA") || ((*fp)["type"] == "RNA"))
-        {
-          m_genes.push_front(fp);
-        }
-      }
-      
       static cAnnotatedSequence deep_copy(cAnnotatedSequence in) {
         cAnnotatedSequence copy;
-
 
         copy.m_length = in.m_length;
         copy.m_is_circular = in.m_is_circular;
@@ -620,100 +692,11 @@ namespace breseq {
         //Features.
         for (cSequenceFeatureList::iterator it = in.m_features.begin(); it != in.m_features.end(); ++it) {
           cSequenceFeaturePtr new_feature(new cSequenceFeature(**it));
-          copy.feature_push_back(new_feature);
+          copy.m_features.push_back(new_feature);
         }
+        copy.update_feature_lists();
         return copy;
       }
-  };
-
-  /*! Reference Sequences
-   
-   For properly stepping through a feature (including join operations)
-	 */   
-  class cLocationTraverser {
-    
-    cAnnotatedSequence *my_seq;
-    cLocation* my_loc;
-    int32_t on_pos;
-    vector<cLocation> sub_locs;
-    int32_t on_loc_index;
-    
-  public:
-    cLocationTraverser(cAnnotatedSequence* sequence, cLocation* location) {
-      my_loc = location;
-      my_seq = sequence;
-      sub_locs = my_loc->get_all_sub_locations();
-      
-      assert(sub_locs.size() > 0);
-      
-      if (my_loc->get_strand() == 1) {
-        on_loc_index = 0;
-        on_pos = sub_locs[on_loc_index].get_start_1();
-      } else {
-        on_loc_index = sub_locs.size() - 1;
-        on_pos = sub_locs[on_loc_index].get_end_1();
-      }
-    }
-    
-    ~cLocationTraverser() {};
-    
-    // returns whether moved out of location
-    bool offset_to_next_position(bool allow_past_end) 
-    {      
-      if (sub_locs[on_loc_index].get_strand() == 1) {
-        
-        // jump to the next location
-        if ((on_loc_index<static_cast<int32_t>(sub_locs.size())) && (on_pos == sub_locs[on_loc_index].get_end_1())) {
-          on_loc_index++;
-          if (on_loc_index>=static_cast<int32_t>(sub_locs.size())) {
-            if (!allow_past_end) {
-             return false; 
-            }
-            on_loc_index = static_cast<int32_t>(sub_locs.size()) - 1;
-            // execution continues to move position
-          }
-          else {
-            on_pos = sub_locs[on_loc_index].get_start_1();
-            return true;
-          }
-        }
-        
-        on_pos++;
-        if (on_pos > my_seq->m_length)
-          on_pos = 1;
-      }
-      
-      else {
-        // jump to the next location
-        if ((on_loc_index>=0) && (on_pos == sub_locs[on_loc_index].get_start_1())) {
-          on_loc_index--;
-          if (on_loc_index<0) {
-            if (!allow_past_end) {
-              return false;
-            }
-            on_loc_index = 0;
-            // execution continues to move position
-          }
-          else {
-            on_pos = sub_locs[on_loc_index].get_end_1();
-            return true;
-          }
-        }
-        
-        on_pos--;
-        if (on_pos < 1)
-          on_pos = my_seq->m_length;
-      }
-    
-      return true;
-    }
-    
-    int32_t on_position_1() { return static_cast<int32_t>(on_pos); }
-    
-    char on_base_stranded_1();
-    
-    int8_t on_base_strand() { return sub_locs[on_loc_index].get_strand(); } ;
-
   };
   
   /*! Reference Sequences
@@ -732,6 +715,7 @@ namespace breseq {
     uint32_t m_index_id;
     bool m_initialized;
     bool m_use_safe_seq_ids;
+    map<string,string> m_seq_id_to_original_file_name;
 
     //!< Currently supported file types.
     enum FileType {UNKNOWN, GENBANK, FASTA, GFF3, BULL};
@@ -744,8 +728,22 @@ namespace breseq {
       , m_use_safe_seq_ids(_use_safe_seq_ids)
     {}
 
-    //!< Load all reference files and verify
+    //!< Load all reference files and verify - this is the only public load method!
     void LoadFiles(const vector<string>& file_names);
+    
+    //!< Fixes gene lists and other properties. Called after load
+    void update_feature_lists() {
+      for (vector<cAnnotatedSequence>::iterator its= this->begin(); its != this->end(); its++) {
+        cAnnotatedSequence& as = *its;
+        as.update_feature_lists();
+      }
+    }
+    
+  protected:
+    
+    //!< Read reference file - not safe to call on their own = private
+    //!< because we need to do some pre- and post-load
+    // !< initializations that are handled centrally in LoadFiles
     
     //!< Load reference file into object
     //!< Detect file type and load the information in it appropriately
@@ -755,18 +753,10 @@ namespace breseq {
     void Verify();
     bool Initialized() {return m_initialized;}
     
-    //!< Read/Write FASTA file     
     void ReadFASTA(const std::string &file_name);
     void ReadFASTA(cFastaFile& ff);
-    void WriteFASTA(const string &file_name);
-    void WriteFASTA(cFastaFile& ff);
-        
-    //!< Read/Write a tab delimited GFF3 file
     void ReadGFF(const string& file_name);
-    void WriteGFF(const string &file_name);
-    
-    //!< Write CSV file, suitable for input into R
-    void WriteCSV(const string &file_name);
+    void ReadBull(const string& file_name);
 
     //!< Read GenBank file
     void ReadGenBank(const string& in_file_names);
@@ -776,8 +766,24 @@ namespace breseq {
     void ReadGenBankFileSequenceFeatures(std::ifstream& in, cAnnotatedSequence& s);
     void ReadGenBankFileSequence(std::ifstream& in, cAnnotatedSequence& s);
     
-    //!< Read Bull gene table file
-    void ReadBull(const string& file_name);
+  public:
+    void WriteFASTA(const string &file_name);
+    void WriteFASTA(cFastaFile& ff);
+    void WriteGFF(const string &file_name);
+    void WriteCSV(const string &file_name);
+    
+    //!< Moves over original file names to the current names
+    //!< This is key for the relaod of GFF that happens during a breseq
+    //!< run maintaining junction-only and contig reference designations
+    void use_original_file_names() {
+      
+      ASSERT(m_seq_id_to_original_file_name.size() == this->size(), "Number of original file names saved does not match the actual number of sequences.");
+      
+      for(vector<cAnnotatedSequence>::iterator it = this->begin(); it != this->end(); it++) {
+        ASSERT(m_seq_id_to_original_file_name.find(it->m_seq_id) != m_seq_id_to_original_file_name.end(), "Could not find original file name for seq id: " + it->m_seq_id);
+        it->m_file_name = m_seq_id_to_original_file_name[it->m_seq_id];
+      }
+    }
     
     //!< Calculates the total length of all reference sequences together
     uint32_t total_length()
@@ -855,7 +861,6 @@ namespace breseq {
     
     string get_sequence_1(uint32_t tid, int32_t start_1, int32_t end_1) const
     {
-      // TODO: Handle circular genomes
       return (*this)[tid].get_sequence_1(start_1, end_1);
     }
     
@@ -884,7 +889,7 @@ namespace breseq {
       (*this)[seq_id].invert_sequence_1(start_1, end_1, mut_type, verbose);
     }
     
-    void repeat_feature_1(const string& seq_id, int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& orig_ref_seq_info, string& orig_seq_id, int8_t strand, cLocation &repeated_region, bool verbose = false)
+    void repeat_feature_1(const string& seq_id, int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& orig_ref_seq_info, string& orig_seq_id, int8_t strand, cLocation&repeated_region, bool verbose = false)
     {
       (*this)[seq_id].repeat_feature_1(pos, start_del, end_del, orig_ref_seq_info, orig_seq_id, strand, repeated_region, verbose);
     }
@@ -961,25 +966,25 @@ namespace breseq {
     static vector<string> initiation_codon_translation_tables;
     static map<string,uint16_t> codon_to_aa_index;
 
-    static cSequenceFeaturePtr find_closest_repeat_region_boundary(int32_t position, cSequenceFeatureList& repeat_list, int32_t& max_distance, int32_t direction, bool include_interior_matches = false);
-    static cSequenceFeaturePtr get_overlapping_feature(cSequenceFeatureList& feature_list, int32_t pos);
+    static cFeatureLocation* find_closest_repeat_region_boundary(int32_t position, const cSequenceFeatureList& repeat_list, int32_t& max_distance, int32_t direction, bool include_interior_matches = false);
+    static cFeatureLocation* get_overlapping_feature(cFeatureLocationList& feature_list, int32_t pos);
     static char translate_codon(string seq, uint32_t translation_table, uint32_t codon_number_1);
     static char translate_codon(string seq, string translation_table, string translation_table_1, uint32_t codon_number_1);
-    static string translate_protein(cAnnotatedSequence& seq, cLocation& loc, string translation_table, string translation_table_1);
+    static string translate_protein(cAnnotatedSequence& seq, cSequenceFeature& loc, string translation_table, string translation_table_1);
     static void find_nearby_genes(
-                                  cSequenceFeatureList& gene_list, 
+                                  cFeatureLocationList& gene_list,
                                   int32_t pos_1, 
                                   int32_t pos_2, 
-                                  vector<cGeneFeature>& within_genes, 
-                                  vector<cGeneFeature>& between_genes, 
-                                  vector<cGeneFeature>& inside_left_genes, 
-                                  vector<cGeneFeature>& inside_right_genes,
-                                  cGeneFeature& prev_gene, 
-                                  cGeneFeature& next_gene);
+                                  vector<cFeatureLocation*>& within_genes,
+                                  vector<cFeatureLocation*>& between_genes,
+                                  vector<cFeatureLocation*>& inside_left_genes,
+                                  vector<cFeatureLocation*>& inside_right_genes,
+                                  cFeatureLocation*& prev_gene,
+                                  cFeatureLocation*& next_gene);
     void annotate_1_mutation(cDiffEntry& mut, uint32_t start, uint32_t end, bool repeat_override = false, bool ignore_pseudogenes = false);
     void annotate_mutations(cGenomeDiff& gd, bool only_muts = false, bool ignore_pseudogenes = false, bool compare_mode = false, bool verbose = false);
     void polymorphism_statistics(Settings& settings, Summary& summary);
-    string repeat_family_sequence(const string& repeat_name, int8_t strand, string* repeat_region = NULL, string* picked_seq_id=NULL, cSequenceFeature* picked_sequence_feature=NULL, bool fatal_error=true);
+    string repeat_family_sequence(const string& repeat_name, int8_t strand, string* repeat_region = NULL, string* picked_seq_id=NULL, cFeatureLocation* picked_sequence_feature=NULL, bool fatal_error=true);
     
     string safe_seq_id_name(const string& input)
     {

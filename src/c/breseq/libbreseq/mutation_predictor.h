@@ -66,7 +66,7 @@ namespace breseq {
 	private:
 
     // Helper functions for tandem repeats
-		cSequenceFeature* within_repeat(string seq_id, int32_t position);
+		cFeatureLocation* within_repeat(string seq_id, int32_t position);
     void find_repeat_unit(string& mutation_sequence, uint32_t& repeat_size, string& repeat_sequence);
     
     void normalizeINSposition(cAnnotatedSequence& ref_seq, cDiffEntry& de, string& repeat_sequence);

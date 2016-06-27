@@ -434,7 +434,7 @@ void cDiffEntry::valid_field_variable_types(cFileParseErrors& parse_errors) {
     
     if (variable_type == kDiffEntryFieldVariableType_BaseSequence) {
       if (!is_base_sequence(value))
-        parse_errors.add_line_error(from_string<uint32_t>((*this)["_line_number"]), this->as_string(), "Expected base sequence for field containing only characters 'ATCGN' for field " + to_string<uint32_t>(field_count) + ": [" + key + "] instead of [" + value + "]." , true);
+        parse_errors.add_line_error(from_string<uint32_t>((*this)["_line_number"]), this->as_string(), "Expected base sequence for field containing only characters 'ATCGN' for field #" + to_string<uint32_t>(field_count) + " (" + key +  "): [" + key + "] instead of [" + value + "]." , true);
       continue;
     }
     
@@ -719,7 +719,7 @@ int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info)
       // Special case of mediated AMP
       if (this->entry_exists(MEDIATED)) {
         
-        cSequenceFeature repeat_feature_picked;
+        cFeatureLocation repeat_feature_picked;
         string seq_id_picked;
         string mediated_string;
         string mob_region;
@@ -1064,32 +1064,32 @@ void cDiffEntry::annotate_repeat_hotspots(cReferenceSequences& new_ref_seq_info,
   
   // We make no assumptions about the directions of relevant IS elements in between/mediated here.
   int32_t tmp_slop_distance = slop_distance;
-  cSequenceFeaturePtr start_repeat = cReferenceSequences::find_closest_repeat_region_boundary(mut_start_1, this_seq.m_repeats, tmp_slop_distance, -1, true);
-  if (start_repeat.get() == NULL) {
+  cFeatureLocation* start_repeat = cReferenceSequences::find_closest_repeat_region_boundary(mut_start_1, this_seq.m_repeats, tmp_slop_distance, -1, true);
+  if (start_repeat == NULL) {
     tmp_slop_distance = slop_distance;
     start_repeat = cReferenceSequences::find_closest_repeat_region_boundary(mut_start_1, this_seq.m_repeats, tmp_slop_distance, 1, true);
   }
   
   tmp_slop_distance = slop_distance;
-  cSequenceFeaturePtr end_repeat = cReferenceSequences::find_closest_repeat_region_boundary(mut_end_1, this_seq.m_repeats, tmp_slop_distance, 1, true);
-  if (end_repeat.get() == NULL) {
+  cFeatureLocation* end_repeat = cReferenceSequences::find_closest_repeat_region_boundary(mut_end_1, this_seq.m_repeats, tmp_slop_distance, 1, true);
+  if (end_repeat == NULL) {
     tmp_slop_distance = slop_distance;
     end_repeat = cReferenceSequences::find_closest_repeat_region_boundary(mut_end_1, this_seq.m_repeats, tmp_slop_distance, -1, true);
   }
   
-  if ((start_repeat.get() != NULL) && (end_repeat.get() != NULL)) {
-    if ( (*start_repeat)["name"] != (*end_repeat)["name"]) {
+  if ((start_repeat != NULL) && (end_repeat != NULL)) {
+    if ( (*(start_repeat->get_feature()))["name"] != (*(end_repeat->get_feature()))["name"]) {
       // different names is an odd case - WARN and don't assign anything
       WARN("Mutation has boundaries near two different repeat families, saving only the first one:\n" + mut.as_string());
-      nearby_tags[one_close_key] = (*start_repeat)["name"];
+      nearby_tags[one_close_key] = (*(start_repeat->get_feature()))["name"];
     } else {
-      nearby_tags[both_close_key] = (*start_repeat)["name"];
+      nearby_tags[both_close_key] = (*(start_repeat->get_feature()))["name"];
     }
     
-  } else if (start_repeat.get() != NULL) {
-    nearby_tags[one_close_key] = (*start_repeat)["name"];
-  } else if (end_repeat.get() != NULL) {
-    nearby_tags[one_close_key] = (*end_repeat)["name"];
+  } else if (start_repeat != NULL) {
+    nearby_tags[one_close_key] = (*(start_repeat->get_feature()))["name"];
+  } else if (end_repeat != NULL) {
+    nearby_tags[one_close_key] = (*(end_repeat->get_feature()))["name"];
   }
   
   if (!warn_after_mode) {
@@ -1829,7 +1829,7 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
   }
   
   // Assign ids to any entries that don't have them (e.g., '.' or '' put in by user)
-  diff_entry_list_t the_list = this->list();
+  diff_entry_list_t the_list = this->get_list();
   for(diff_entry_list_t::iterator it = the_list.begin(); it != the_list.end(); it++ ) {
     if (!cDiffEntry::valid_id((*it)->_id))
         this->assign_unique_id_to_entry(**it);
@@ -2007,7 +2007,7 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
               
               if ( within_de->entry_exists("mediated") && within_de->entry_exists("mediated_strand") ) {
                 string picked_seq_id;
-                cSequenceFeature picked_sequence_feature;
+                cFeatureLocation picked_sequence_feature;
                 string mob_region;
                 if (within_de->entry_exists("mob_region")) {
                   mob_region = (*within_de)["mob_region"];
@@ -2024,7 +2024,7 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
                // it is within the newly inserted sequence, tricky coordinates in play 
                 
                 string picked_seq_id;
-                cSequenceFeature picked_sequence_feature;
+                cFeatureLocation picked_sequence_feature;
                 string mob_seq = mob_replace_sequence(ref_seq, *within_de, &picked_seq_id, &picked_sequence_feature);
                 valid_start = within_position + max(0, from_string<int32_t>((*within_de)[DUPLICATION_SIZE]));
                 valid_end = valid_start + mob_seq.size() - 1;
@@ -2451,7 +2451,7 @@ diff_entry_ptr_t cGenomeDiff::find_by_id(string _id)
 /*! Given a list of types, search and return the cDiffEntry's within diff_entry_list_t whose 
  * _type parameter matches one of those within input types. 
  */ 
-diff_entry_list_t cGenomeDiff::list(const vector<gd_entry_type>& types)
+diff_entry_list_t cGenomeDiff::get_list(const vector<gd_entry_type>& types)
 {
   // default is to have to types
   if (types.size() == 0)
@@ -2476,7 +2476,7 @@ diff_entry_list_t cGenomeDiff::list(const vector<gd_entry_type>& types)
 
 diff_entry_list_t cGenomeDiff::show_list(const vector<gd_entry_type>& types)
 {
-  diff_entry_list_t ret_list = list(types);
+  diff_entry_list_t ret_list = get_list(types);
   ret_list.remove_if(cDiffEntry::fields_exist(make_vector<diff_entry_key_t>("deleted")));
   ret_list.remove_if(cDiffEntry::fields_exist(make_vector<diff_entry_key_t>("no_show")));
   return ret_list;
@@ -2641,7 +2641,7 @@ bool cGenomeDiff::mutation_in_entry_of_type(cDiffEntry mut, const gd_entry_type 
   cReferenceCoordinate start = mut.get_reference_coordinate_start();
   cReferenceCoordinate end = mut.get_reference_coordinate_end();
   
-  diff_entry_list_t check_list = list(make_vector<gd_entry_type>(type));
+  diff_entry_list_t check_list = get_list(make_vector<gd_entry_type>(type));
   
   for (diff_entry_list_t::iterator itr = check_list.begin(); itr != check_list.end(); itr++) {
     
@@ -3122,7 +3122,7 @@ void cGenomeDiff::merge(cGenomeDiff& merge_gd, bool unique, bool new_id, bool ph
 
 void cGenomeDiff::fast_merge(const cGenomeDiff& gd)
 {  
-  diff_entry_list_t gd_list = gd.list();
+  diff_entry_list_t gd_list = gd.get_const_list();
   for(diff_entry_list_t::const_iterator it=gd_list.begin(); it!= gd_list.end(); it++) {
     this->add(**it);
   }
@@ -3568,37 +3568,39 @@ void cGenomeDiff::random_mutations(string exclusion_file,
   }
   else if (mut_type == "RMD") {
     //Get all available IS elements.
-    cSequenceFeatureList repeats = ref.m_repeats;
+    cFeatureLocationList repeats = ref.m_repeat_locations;
     ASSERT(repeats.size(), "No repeat_regions / ISX elements in reference sequence.");
     CHECK(n_muts <= repeats.size(), "Too many deletions requested, creating a potential maximum of " + s(repeats.size()));
 
 
     //Unflag repeat-match regions which affect an IS element and then store them.
     cFlaggedRegions IS_element_regions;
-    for (cSequenceFeatureList::iterator it = repeats.begin(); it != repeats.end(); ++it) {
-        uint32_t start_1 = (*it)->get_start_1(), end_1   = (*it)->get_end_1();
-        IS_element_regions.flag_region(ref.m_seq_id, start_1, end_1 + 1); //Want end_1 + 1 because a deletion will occur there.
+    for (cFeatureLocationList::iterator it = repeats.begin(); it != repeats.end(); ++it) {
+      cFeatureLocation& repeat = *it;
+      cSequenceFeature* feature = repeat.get_feature();
+      
+      uint32_t start_1 = repeat.get_start_1();
+      uint32_t end_1   = repeat.get_end_1();
+      IS_element_regions.flag_region(ref.m_seq_id, start_1, end_1 + 1); //Want end_1 + 1 because a deletion will occur there.
 
+      cFlaggedRegions::regions_t regions = repeat_match_regions.regions_that_overlap(ref.m_seq_id, start_1, end_1);
 
+      if (regions.size()) {
+        uint32_t lower = regions.begin()->first;
+        uint32_t upper = regions.rbegin()->second;
+        
+        cerr << "\tRemoving repeat-match excluded region: " << lower << "-" << upper << endl;
+        cerr << "\t\tFor IS element: " << (*feature)["name"] << "\t" << repeat.get_start_1() << "-" << repeat.get_end_1() << endl;
+        cerr << endl;
 
-        cFlaggedRegions::regions_t regions = repeat_match_regions.regions_that_overlap(ref.m_seq_id, start_1, end_1);
+        repeat_match_regions.remove(ref.m_seq_id, regions);
 
-        if (regions.size()) {
-            uint32_t lower = regions.begin()->first; 
-            uint32_t upper = regions.rbegin()->second;
-            
-            cerr << "\tRemoving repeat-match excluded region: " << lower << "-" << upper << endl;
-            cerr << "\t\tFor IS element: " << (**it)["name"] << "\t" << (*it)->get_start_1() << "-" << (*it)->get_end_1() << endl;
-            cerr << endl;
-
-            repeat_match_regions.remove(ref.m_seq_id, regions);
-
-          }
+      }
     }
 
     while (n_muts && repeats.size() && n_attempts) {
       vector<cDiffEntry> valid_items;
-      cSequenceFeatureList::iterator it;
+      cFeatureLocationList::iterator it;
 
       //Randomly choose deletion size.
       uint32_t pos_1 = 0;
@@ -3611,7 +3613,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
 
         //Collect potentially valid left_side and right_side positions.
         vector<int32_t> valid_pos_1;
-        uint32_t start_1 = (*it)->get_start_1(), end_1   = (*it)->get_end_1();
+        uint32_t start_1 = it->get_start_1(), end_1   = it->get_end_1();
         valid_pos_1.push_back(start_1 - size);
         valid_pos_1.push_back(end_1 + 1);
 
@@ -3646,15 +3648,15 @@ void cGenomeDiff::random_mutations(string exclusion_file,
       } else {
         --n_muts, n_attempts = max_attempts;
         cDiffEntry new_item = valid_items[rand() % valid_items.size()];
-        new_item["mediated"] = (**it)["name"];
+        new_item["mediated"] = (*(it->get_feature()))["name"];
         this->add(new_item);
         pos_1 = un(new_item["position"]);
         size = un(new_item["size"]);
         used_mutation_regions.flag_region(ref.m_seq_id, pos_1, pos_1 + size);
-        repeat_match_regions.flag_region(ref.m_seq_id, (*it)->get_start_1(), (*it)->get_end_1());
+        repeat_match_regions.flag_region(ref.m_seq_id, it->get_start_1(), it->get_end_1());
 
         if (verbose) {
-          cerr << "[ISX]: " + (**it)["name"] << "\t[start_1]: " << (*it)->get_start_1() << "\t[end_1]: " << (*it)->get_end_1() << endl;
+          cerr << "[ISX]: " + (*(it->get_feature()))["name"] << "\t[start_1]: " << it->get_start_1() << "\t[end_1]: " << it->get_end_1() << endl;
           cerr << "\t[DEL]: " << new_item << endl;
           cerr << endl;
         }
@@ -3694,8 +3696,8 @@ void cGenomeDiff::random_mutations(string exclusion_file,
     }
 
     //Display IS elements that could not be used.
-    for (cSequenceFeatureList::iterator it = repeats.begin(); it != repeats.end(); ++it) {
-      WARN("Unused IS element: " + (**it)["name"]+ '\t' + s((*it)->get_start_1()) + '-' + s((*it)->get_end_1()));
+    for (cFeatureLocationList::iterator it = repeats.begin(); it != repeats.end(); ++it) {
+      WARN("Unused IS element: " + (*(it->get_feature()))["name"]+ '\t' + s(it->get_start_1()) + '-' + s(it->get_end_1()));
     }
 
   }
@@ -3891,7 +3893,7 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
           // Special case of IS mediated AMP, must add in size of IS element to offset
           if (current_mut.entry_exists(MEDIATED)) {
             
-            cSequenceFeature repeat_feature_picked;
+            cFeatureLocation repeat_feature_picked;
             string seq_id_picked;
             string mediated_string;
             string mob_region;
@@ -3969,7 +3971,7 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
 string cGenomeDiff::mob_replace_sequence(cReferenceSequences& ref_seq_info, 
                                          cDiffEntry& mut, 
                                          string* picked_seq_id, 
-                                         cSequenceFeature* picked_sequence_feature)
+                                         cFeatureLocation* picked_sequence_feature)
 {
   bool verbose = false;
 
@@ -3986,11 +3988,9 @@ string cGenomeDiff::mob_replace_sequence(cReferenceSequences& ref_seq_info,
     iDelEnd = from_string<int32_t>(mut["del_end"]);
   ASSERT((iDelStart >= 0) && (iDelEnd >= 0), (to_string(mut._type) + " " + mut._id) + " - NEGATIVE DELETION");
     
-  // @JEB: correct here to look for where the repeat is in the original ref_seq_info???
-  // This saves us from possibly looking at a shifted location...
-  string this_picked_seq_id;
-  cSequenceFeature this_picked_sequence_feature;
-  string rep_string = ref_seq_info.repeat_family_sequence(mut["repeat_name"], from_string<int16_t>(mut["strand"]), mut.entry_exists("mob_region") ? &mut["mob_region"] : NULL, &this_picked_seq_id, &this_picked_sequence_feature);
+  // @JEB: We look for repeat sequence in original reference sequence.
+  //       This saves us from possibly looking at a shifted location...
+  string rep_string = ref_seq_info.repeat_family_sequence(mut["repeat_name"], from_string<int16_t>(mut["strand"]), mut.entry_exists("mob_region") ? &mut["mob_region"] : NULL, picked_seq_id, picked_sequence_feature);
   mut["repeat_size"] = to_string(rep_string.length()); // saving this for shifting
   
   // This is the string we're going to pass to be inserted.
@@ -4016,9 +4016,6 @@ string cGenomeDiff::mob_replace_sequence(cReferenceSequences& ref_seq_info,
   
   if (verbose) cout << "  Final sequence:" << endl << new_seq_string << endl;
   
-  if (picked_seq_id) *picked_seq_id = this_picked_seq_id;
-  if (picked_sequence_feature) *picked_sequence_feature = this_picked_sequence_feature;
-  
   return new_seq_string;
 }
   
@@ -4040,7 +4037,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
   
   // Handle all mutation types, plus MASK four-letter type.
   diff_entry_list_t mutation_list = this->mutation_list();
-  diff_entry_list_t mask_list = this->list(make_vector<gd_entry_type>(MASK));
+  diff_entry_list_t mask_list = this->get_list(make_vector<gd_entry_type>(MASK));
   mutation_list.insert(mutation_list.end(), mask_list.begin(), mask_list.end());
   
   for (diff_entry_list_t::iterator itr_mut = mutation_list.begin(); itr_mut != mutation_list.end(); itr_mut++)
@@ -4249,7 +4246,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         }
         
         // Special case of mediated AMP
-        cSequenceFeature repeat_feature_picked;
+        cFeatureLocation repeat_feature_picked;
         string seq_id_picked;
         string mediated_string;
         if (mut.entry_exists(MEDIATED)) {
@@ -4295,7 +4292,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
             // inside of and including the repeat region.
             
             // Starts at specified position (NOT after it)
-            new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position, 0, 0, ref_seq_info, seq_id_picked, from_string<int16_t>(mut[MEDIATED_STRAND]), repeat_feature_picked.m_location);
+            new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position, 0, 0, ref_seq_info, seq_id_picked, from_string<int16_t>(mut[MEDIATED_STRAND]), repeat_feature_picked);
             
             // This is constructed *only* for debugging output!
             duplicated_sequence_full_addition = "[" + mediated_string + "]" + duplicated_sequence_full_addition;
@@ -4428,7 +4425,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         // This includes all but the duplicated target site bases --
         // notice we pass the original reference sequence in case
         // a relevant feature has been deleted in the new reference
-        cSequenceFeature repeat_feature_picked;
+        cFeatureLocation repeat_feature_picked;
         string seq_id_picked;
         new_seq_string += mob_replace_sequence(ref_seq_info, mut, &seq_id_picked, &repeat_feature_picked);
 
@@ -4457,7 +4454,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         
         // We've repeated the sequence, now it's time to repeat all the features
         // inside of and including the repeat region.
-        new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+iInsStart+iDupSeqLen, iDelStart, iDelEnd, ref_seq_info, seq_id_picked, from_string<int16_t>(mut["strand"]), repeat_feature_picked.m_location);
+        new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+iInsStart+iDupSeqLen, iDelStart, iDelEnd, ref_seq_info, seq_id_picked, from_string<int16_t>(mut["strand"]), repeat_feature_picked);
         
         bases_inserted += new_seq_string.size();
         
@@ -4540,9 +4537,45 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
       cGenomeDiff::sort_apply_order();
     }
     
-    
-    
   }
+  
+  // BEGIN Fix duplicate accessions locus_tags
+  map<string,int32_t> locus_tag_tracker;
+  for (vector<cAnnotatedSequence>::iterator it_as = new_ref_seq_info.begin(); it_as < new_ref_seq_info.end(); it_as++) {
+    for(cSequenceFeatureList::iterator it_feat = it_as->m_features.begin(); it_feat != it_as->m_features.end(); it_feat++) {
+      if ((**it_feat)["accession"] == "") continue;
+      string type_accession =  (**it_feat)["type"] + "__" + (**it_feat)["accession"];
+      if (locus_tag_tracker.find(type_accession) == locus_tag_tracker.end())
+        locus_tag_tracker[type_accession]=1;
+      else
+        locus_tag_tracker[type_accession]++;
+    }
+  }
+  
+  // Second pass, rename all that occur multiple times
+  map<string,int32_t> locus_tag_tracker_count;
+  for (vector<cAnnotatedSequence>::iterator it_as = new_ref_seq_info.begin(); it_as < new_ref_seq_info.end(); it_as++) {
+    for(cSequenceFeatureList::iterator it_feat = it_as->m_features.begin(); it_feat != it_as->m_features.end(); it_feat++) {
+      if ((**it_feat)["accession"] == "") continue;
+      string type_accession =  (**it_feat)["type"] +  "__" + (**it_feat)["accession"];
+      
+      if (locus_tag_tracker[type_accession] == 1) continue;
+      
+      if (locus_tag_tracker_count.find(type_accession) == locus_tag_tracker_count.end())
+        locus_tag_tracker_count[type_accession]=1;
+      else
+        locus_tag_tracker_count[type_accession]++;
+      
+       (*it_feat)->append_to_accession("_" + to_string<int32_t>(locus_tag_tracker_count[type_accession]) );
+    }
+  }
+  // END  fix of duplicate accessions
+  
+  
+  // Fix all of the sublists we have not been paying attention to
+  new_ref_seq_info.update_feature_lists();
+  
+  // Regenerate
   
   if (verbose)
   {    
@@ -4575,7 +4608,7 @@ void cGenomeDiff::mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, boo
 {
   const int32_t mask_small_max_size_limit = 20;
   
-  diff_entry_list_t masks = mask_gd.list(make_vector<gd_entry_type>(MASK));
+  diff_entry_list_t masks = mask_gd.get_list(make_vector<gd_entry_type>(MASK));
   
   // Create all of the flagged regions
   cFlaggedRegions flagged_regions;
@@ -4642,7 +4675,7 @@ void cGenomeDiff::mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, boo
   
   
   // Merge UN evidence into flagged regions
-  diff_entry_list_t uns = list(make_vector<gd_entry_type>(UN));
+  diff_entry_list_t uns = get_list(make_vector<gd_entry_type>(UN));
   for (diff_entry_list_t::iterator un_it = uns.begin(); un_it != uns.end(); un_it++) {
     diff_entry_ptr_t& un = *un_it;
     flagged_regions.flag_region(un->at(SEQ_ID), from_string<uint32_t>(un->at(START)), from_string<uint32_t>(un->at(END)));
@@ -4954,7 +4987,7 @@ cGenomeDiff cGenomeDiff::check_evidence(cReferenceSequences& sequence,
   
   jc_data_t ctrl_jc;
   
-  diff_entry_list_t ctrl_list = ctrl.list(make_vector<gd_entry_type>(JC));
+  diff_entry_list_t ctrl_list = ctrl.get_list(make_vector<gd_entry_type>(JC));
   ctrl_list.remove_if(cDiffEntry::field_exists("circular_chromosome")); 
   
   ////////////////////////////
@@ -4991,7 +5024,7 @@ cGenomeDiff cGenomeDiff::check_evidence(cReferenceSequences& sequence,
   // For recovering full information about a junction from the set
   jc_data_t test_jc;
   
-  diff_entry_list_t test_list = test.list(make_vector<gd_entry_type>(JC));
+  diff_entry_list_t test_list = test.get_list(make_vector<gd_entry_type>(JC));
   test_list.remove_if(cDiffEntry::field_exists("circular_chromosome")); 
   if (jc_only_accepted) test_list.remove_if(cDiffEntry::field_exists("reject")); 
   
@@ -5116,7 +5149,7 @@ void cGenomeDiff::mutations_to_evidence(cReferenceSequences &ref_seq, bool remov
     cDiffEntry& de = **it;
     if (de._type == MOB) {
       // Return the actual copy of the sequence feature found...
-      cSequenceFeature repeat_feature;
+      cFeatureLocation repeat_feature;
       string repeat_seq_id;
       string requested_repeat_region;
       ref_seq.repeat_family_sequence(de["repeat_name"], +1, de.entry_exists("mob_region") ? &de["mob_region"] : NULL, &repeat_seq_id, &repeat_feature);
@@ -5127,8 +5160,8 @@ void cGenomeDiff::mutations_to_evidence(cReferenceSequences &ref_seq, bool remov
       de1["side_1_position"] = s(n(de["position"]) + n(de["duplication_size"]) - 1);
       de1["side_1_strand"] = "-1";
       de1["side_2_seq_id"] = repeat_seq_id;
-      int32_t strand = repeat_feature.m_location.get_strand() * n(de["strand"]);
-      de1["side_2_position"] = (strand > 0) ? s(repeat_feature.m_location.get_start_1()) : s(repeat_feature.m_location.get_end_1());
+      int32_t strand = repeat_feature.get_strand() * n(de["strand"]);
+      de1["side_2_position"] = (strand > 0) ? s(repeat_feature.get_start_1()) : s(repeat_feature.get_end_1());
       de1["side_2_strand"] = s(strand);
       de1["overlap"] = "0";
       (*it)->_evidence.push_back(this->add(de1)->_id);
@@ -5140,7 +5173,7 @@ void cGenomeDiff::mutations_to_evidence(cReferenceSequences &ref_seq, bool remov
       de2["side_1_position"] = s(n(de["position"]));
       de2["side_1_strand"] = "1";
       de2["side_2_seq_id"] = repeat_seq_id;
-      de2["side_2_position"] = (strand > 0) ? s(repeat_feature.m_location.get_end_1()) : s(repeat_feature.m_location.get_start_1());
+      de2["side_2_position"] = (strand > 0) ? s(repeat_feature.get_end_1()) : s(repeat_feature.get_start_1());
       de2["side_2_strand"] = s(-strand);
       (*it)->_evidence.push_back(this->add(de2)->_id);
       
@@ -5171,7 +5204,7 @@ void cGenomeDiff::write_jc_score_table(cGenomeDiff& compare, string table_file_p
   typedef map<float, map<string, uint32_t> > table_t;
   table_t table;
   
-  diff_entry_list_t jc = compare.list(make_vector<gd_entry_type>(JC));
+  diff_entry_list_t jc = compare.get_list(make_vector<gd_entry_type>(JC));
   double max_score = 0;
   uint32_t total_gold_standard_predictions = 0;
   for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); ++it) {
@@ -5645,7 +5678,7 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
 void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_info, bool snv_only)
 {  
 
-  diff_entry_list_t diff_entry_list = this->list();
+  diff_entry_list_t diff_entry_list = this->get_list();
   diff_entry_list_t::iterator it = diff_entry_list.begin();
   
   // Stores the features
@@ -6137,32 +6170,33 @@ void cGenomeDiff::GD2Circos(const vector<string> &gd_file_names,
   for(size_t i = 0; i < ref.size(); i++){
     cAnnotatedSequence& ref_seq = ref[i];
     
-    for(cSequenceFeatureList::iterator it = ref_seq.m_repeats.begin(); it != ref_seq.m_repeats.end(); it++){
-      cSequenceFeature& seq_feature = **it;
-      int32_t middle = int32_t(seq_feature.m_location.get_start_1() + seq_feature.m_location.get_end_1()) / 2;
+    for(cFeatureLocationList::iterator it = ref_seq.m_repeat_locations.begin(); it != ref_seq.m_repeat_locations.end(); it++){
+      cFeatureLocation& repeat = *it;
+      cSequenceFeature& feature = *repeat.get_feature();
+      int32_t middle = int32_t(repeat.get_start_1() + repeat.get_end_1()) / 2;
       
       string color;
       
       // Color assignment -- prefer preassigned, then grab next from list
       // and assign that color permanently to copies of this repeat
-      if (pre_assigned_mob_colors.count(seq_feature["name"])){
-        color = seq_feature["name"];
-        mob_colors[seq_feature["name"]] = color;
+      if (pre_assigned_mob_colors.count(feature["name"])){
+        color = feature["name"];
+        mob_colors[feature["name"]] = color;
       }
-      else if (mob_colors.count(seq_feature["name"]) == 0){
+      else if (mob_colors.count(feature["name"]) == 0){
         if (next_color >=25 ) next_color = 0; // this is how many colors are available above!
         color = colors[next_color];
-        mob_colors[seq_feature["name"]] = color;
+        mob_colors[feature["name"]] = color;
         next_color++;
       }
       else{
-        color = mob_colors[seq_feature["name"]];
+        color = mob_colors[feature["name"]];
       }
       
       mob_file << ref_seq.m_seq_id << " " <<
       middle << " " <<
       middle << " " <<
-      "i" << ((seq_feature.m_location.get_strand() == 1)? "right" : "left" ) << " " <<
+      "i" << ((repeat.get_strand() == 1)? "right" : "left" ) << " " <<
       "color=" << color << endl;
     }
   }
@@ -6228,40 +6262,40 @@ void cGenomeDiff::GD2Circos(const vector<string> &gd_file_names,
           
           int32_t max_distance_to_repeat_1 = 0;
           int32_t max_distance_to_repeat_2 = 0;
-          cSequenceFeaturePtr feat1 = cReferenceSequences::find_closest_repeat_region_boundary(n(diff["position"]) - 1, ref[diff["seq_id"]].m_repeats, max_distance_to_repeat_1,-1);
-          cSequenceFeaturePtr feat2 = cReferenceSequences::find_closest_repeat_region_boundary(n(diff["position"]) + n(diff["size"]) + 1 - 1, ref[diff["seq_id"]].m_repeats, max_distance_to_repeat_2,1);
+          cFeatureLocation* feat1 = cReferenceSequences::find_closest_repeat_region_boundary(n(diff["position"]) - 1, ref[diff["seq_id"]].m_repeats, max_distance_to_repeat_1,-1);
+          cFeatureLocation* feat2 = cReferenceSequences::find_closest_repeat_region_boundary(n(diff["position"]) + n(diff["size"]) + 1 - 1, ref[diff["seq_id"]].m_repeats, max_distance_to_repeat_2,1);
           
-          if (!feat1.get() && !feat2.get()) {
+          if (!feat1 && !feat2) {
             cerr << diff << endl;
             ASSERT(false,"Could not find mediating repeat.");
           }  
           
-          cSequenceFeature& seq_feature = feat1.get() ? *(feat1.get()) : *(feat2.get());
+          cFeatureLocation& repeat = feat1 ? *feat1: *feat2;
+          cSequenceFeature& feature = *(repeat.get_feature());
+          cAnnotatedSequence& ref_seq = ref[diff["seq_id"]];
           
-          cAnnotatedSequence ref_seq = ref[diff["seq_id"]];
-          
-          int32_t middle = feat1.get() ? n(diff["position"]) + n(diff["size"]) - 1 : n(diff["position"]);
+          int32_t middle = feat1 ? n(diff["position"]) + n(diff["size"]) - 1 : n(diff["position"]);
           
           string color;
           
           // Color assignment -- prefer preassigned, then grab next from list
           // and assign that color permanently to copies of this repeat
-          if (pre_assigned_mob_colors.count(seq_feature["name"])){
-            color = seq_feature["name"];
+          if (pre_assigned_mob_colors.count(feature["name"])){
+            color = feature["name"];
           }
-          else if (mob_colors.count(seq_feature["name"]) == 0){
+          else if (mob_colors.count(feature["name"]) == 0){
             color = colors[next_color];
-            mob_colors[seq_feature["name"]] = color;
+            mob_colors[feature["name"]] = color;
             next_color++;
           }
           else{
-            color = mob_colors[seq_feature["name"]];
+            color = mob_colors[feature["name"]];
           }
           
           mob_file << ref_seq.m_seq_id << " " <<
           middle << " " <<
           middle << " " <<
-          "o" << ((seq_feature.m_location.get_strand() == 1)? "right" : "left" ) << " " <<
+          "o" << ((repeat.get_strand() == 1)? "right" : "left" ) << " " <<
           "color=" << color << endl;
         }
       }
@@ -6637,7 +6671,7 @@ void cGenomeDiff::GD2COV(const vector<string> &gd_file_names,
     vector<int32_t> this_dup_cov(num_chunk, 0);
     vector<int32_t> this_del_cov(num_chunk, 0);
     
-    diff_entry_list_t mut_list = gd.list(make_vector<gd_entry_type>(DEL)(AMP));
+    diff_entry_list_t mut_list = gd.get_list(make_vector<gd_entry_type>(DEL)(AMP));
 
     for(diff_entry_list_t::iterator mut_it = mut_list.begin(); mut_it != mut_list.end(); mut_it++) {
       

@@ -42,7 +42,7 @@ namespace breseq {
     int32_t redundant;
     
     // Extended properties for resolve_alignments.cpp
-    cSequenceFeaturePtr is;
+    cFeatureLocation* is;
     string is_interval;
 		string is_side_key;
     

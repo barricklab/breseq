@@ -48,7 +48,6 @@ libbreseq_la_SOURCES = \
 	pileup_base.cpp \
 	reference_sequence.cpp \
 	resolve_alignments.cpp \
-	rna_seq.cpp \
 	samtools_commands.cpp \
 	settings.cpp \
 	summary.cpp \
@@ -75,7 +74,6 @@ libbreseq_la_SOURCES = \
 	libbreseq/pileup_base.h \
 	libbreseq/reference_sequence.h \
 	libbreseq/resolve_alignments.h \
-	libbreseq/rna_seq.h \
 	libbreseq/samtools_commands.h \
 	libbreseq/settings.h \
 	libbreseq/storable.h \

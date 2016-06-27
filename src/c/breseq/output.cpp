@@ -298,7 +298,7 @@ void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd)
   //////
   
   vector<gd_entry_type> ra_types = make_vector<gd_entry_type>(RA);
-  list<counted_ptr<cDiffEntry> > ra_list = gd.filter_used_as_evidence(gd.list(ra_types));
+  list<counted_ptr<cDiffEntry> > ra_list = gd.filter_used_as_evidence(gd.get_list(ra_types));
   ra_list.remove_if(cDiffEntry::field_exists("deleted"));
   
   if (settings.polymorphism_prediction) {
@@ -316,7 +316,7 @@ void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd)
   //////
   
   vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
-  diff_entry_list_t jc_list = gd.filter_used_as_evidence(gd.list(jc_types));
+  diff_entry_list_t jc_list = gd.filter_used_as_evidence(gd.get_list(jc_types));
   jc_list.remove_if(not1(cDiffEntry::field_exists("reject")));
   // Makes more sense to sort by score because some good junctions have frequency = "NA"
   jc_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>("neg_log10_pos_hash_p_value")));
@@ -366,7 +366,7 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   
   // CONSENSUS mode: this list includes only 'polymorphism' RA entries that do not have a 'reject' reason
   // POLYMORPHISM mode: this list includes only 'polymorphism' RA entries with a 'reject' reason
-  list<counted_ptr<cDiffEntry> > ra_list = gd.filter_used_as_evidence(gd.list(make_vector<gd_entry_type>(RA)));
+  list<counted_ptr<cDiffEntry> > ra_list = gd.filter_used_as_evidence(gd.get_list(make_vector<gd_entry_type>(RA)));
   ra_list.remove_if(cDiffEntry::field_exists("deleted"));
   if (settings.polymorphism_prediction) {
     ra_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
@@ -401,7 +401,7 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   // Marginal JC evidence
   /////////////////////////
   
-  diff_entry_list_t jc_list = gd.filter_used_as_evidence(gd.list(make_vector<gd_entry_type>(JC)));
+  diff_entry_list_t jc_list = gd.filter_used_as_evidence(gd.get_list(make_vector<gd_entry_type>(JC)));
   jc_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
   size_t full_marginal_jc_list_size = jc_list.size();
   jc_list.remove_if(cDiffEntry::field_exists(NO_SHOW));
@@ -2080,7 +2080,7 @@ void Html_Mutation_Table_String::Header_Line(bool print_main_header)
       for (vector<string>::iterator itr = freq_header_list.begin() ;
           itr != freq_header_list.end() ; itr++) {
         string& freq_header_item = *itr;
-        ss << th(freq_header_item) << endl;  //@ded how does this lead to "freq" appearing on the table ...
+        ss << th(freq_header_item) << endl;
       }
     }
  
@@ -2170,7 +2170,7 @@ void Html_Mutation_Table_String::Item_Lines()
     }
     
     // (3) We want a single column (polymorphism prediction)
-    if (settings.polymorphism_prediction || options.force_frequencies_for_one_reference) {
+    else if (settings.polymorphism_prediction || options.force_frequencies_for_one_reference) {
       // polymorphisms get highlighted
       if(mut.entry_exists(FREQUENCY) && (from_string<double>(mut[FREQUENCY]) != 1.0)) {
         row_class = "polymorphism_table_row";

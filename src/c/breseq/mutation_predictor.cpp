@@ -35,18 +35,17 @@ namespace breseq {
 	}
 
 	// Private methods
-
-	cSequenceFeature* MutationPredictor::within_repeat(string seq_id, int32_t position)
+	cFeatureLocation* MutationPredictor::within_repeat(string seq_id, int32_t position)
 	{
-		cSequenceFeatureList& repeat_list = ref_seq_info[seq_id].m_repeats;
-    cSequenceFeature* repeat= NULL;
+		cFeatureLocationList& repeat_list = ref_seq_info[seq_id].m_repeat_locations;
+    cFeatureLocation* repeat= NULL;
     
     // by returning the last one we encounter that we are inside, 
     // we get the inner repeat in nested cases
-    for(cSequenceFeatureList::iterator it = repeat_list.begin(); it != repeat_list.end(); it++) {
-      cSequenceFeaturePtr& test_repeat = *it;
-			if ((test_repeat->m_location.get_start_1() <= position) && (position <= test_repeat->m_location.get_end_1()))
-				repeat = test_repeat.get();
+    for(cFeatureLocationList::iterator it = repeat_list.begin(); it != repeat_list.end(); it++) {
+      cFeatureLocation& test_repeat = *it;
+			if ((test_repeat.get_start_1() <= position) && (position <= test_repeat.get_end_1()))
+				repeat = &test_repeat;
     }
 		return repeat;
 	}
@@ -116,7 +115,7 @@ namespace breseq {
     
     // For all that follows, we need information about repeat_regions overlapping the sides of junctions
     vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
-		diff_entry_list_t jc = gd.list(jc_types);
+		diff_entry_list_t jc = gd.get_list(jc_types);
     
     const int32_t max_distance_to_repeat = 50;
     
@@ -131,19 +130,19 @@ namespace breseq {
 			{
 				string side_key = "side_" + s(side);
         int32_t this_max_distance_to_repeat = max_distance_to_repeat;
-				cSequenceFeaturePtr is = ref_seq_info.find_closest_repeat_region_boundary(
+				cFeatureLocation* is = ref_seq_info.find_closest_repeat_region_boundary(
                                                                                   n(j[side_key + "_position"]),
                                                                                   ref_seq_info[j[side_key + "_seq_id"]].m_repeats,
                                                                                   this_max_distance_to_repeat,
                                                                                   n(j[side_key + "_strand"])
                                                                                   );
-				if (is.get() != NULL)
+				if (is != NULL)
 				{
 					j["_" + side_key + "_is"] = "1";
-					j["_" + side_key + "_is_start"] = s(is->m_location.get_start_1());
-					j["_" + side_key + "_is_end"] = s(is->m_location.get_end_1());
-          j["_" + side_key + "_is_name"] = (*is)["name"];
-          j["_" + side_key + "_is_strand"] = s(is->m_location.get_strand());
+					j["_" + side_key + "_is_start"] = s(is->get_start_1());
+					j["_" + side_key + "_is_end"] = s(is->get_end_1());
+          j["_" + side_key + "_is_name"] = (*(is->get_feature()))["name"];
+          j["_" + side_key + "_is_strand"] = s(is->get_strand());
           j["_" + side_key + "_is_distance"] = s(this_max_distance_to_repeat);
 				}
 				
@@ -282,27 +281,27 @@ namespace breseq {
 				{
           
           //it's possible that one or both sides are in repeat elements
-          cSequenceFeature* r1_pointer = within_repeat(jc_item["side_1_seq_id"], side_1_position);
-          cSequenceFeature* r2_pointer = within_repeat(jc_item["side_2_seq_id"], side_2_position);
+          cFeatureLocation* r1_pointer = within_repeat(jc_item["side_1_seq_id"], side_1_position);
+          cFeatureLocation* r2_pointer = within_repeat(jc_item["side_2_seq_id"], side_2_position);
           
           // one repeat cases where the end matches up exactly
           if (r1_pointer) 
           {
             // must match up to an end of the repeat
-            if (side_1_position == static_cast<int32_t>(r1_pointer->m_location.get_start_1())
-                || (side_1_position == static_cast<int32_t>(r1_pointer->m_location.get_end_1())))
+            if (side_1_position == static_cast<int32_t>(r1_pointer->get_start_1())
+                || (side_1_position == static_cast<int32_t>(r1_pointer->get_end_1())))
             {
-              mut["mediated"] = (*r1_pointer)["name"];
+              mut["mediated"] = (*r1_pointer->get_feature())["name"];
             }
           }
           // if it didn't match, then check possibility of a second repeat
           if (!mut.count("mediated") && r2_pointer) 
           {
             // must match up to an end of the repeat
-            if ((side_2_position == static_cast<int32_t>(r2_pointer->m_location.get_start_1())
-                 || (side_2_position) == static_cast<int32_t>(r2_pointer->m_location.get_end_1())))
+            if ((side_2_position == static_cast<int32_t>(r2_pointer->get_start_1())
+                 || (side_2_position) == static_cast<int32_t>(r2_pointer->get_end_1())))
             {
-              mut["mediated"] = (*r2_pointer)["name"];
+              mut["mediated"] = (*r2_pointer->get_feature())["name"];
             }
           }    
           
@@ -331,8 +330,8 @@ namespace breseq {
       if (done) continue; // to next mc item
       
       
-      cSequenceFeature* r1_pointer = within_repeat(mut["seq_id"], n(mut["position"]));
-      cSequenceFeature* r2_pointer = within_repeat(mut["seq_id"], n(mut["position"]) + n(mut["size"]));
+      cFeatureLocation* r1_pointer = within_repeat(mut["seq_id"], n(mut["position"]));
+      cFeatureLocation* r2_pointer = within_repeat(mut["seq_id"], n(mut["position"]) + n(mut["size"]));
       
 			///
 			// (2) there is no junction, but both ends of the deletion are in different copies of the same repeat sequence
@@ -343,10 +342,10 @@ namespace breseq {
            (r1_pointer != r2_pointer) 
            && (r1_pointer != NULL) 
            && (r2_pointer != NULL) 
-           && ((*r1_pointer)["name"] == (*r2_pointer)["name"])
+           && ((*r1_pointer->get_feature())["name"] == (*r2_pointer->get_feature())["name"])
            )
 			{
-				cSequenceFeature& r1 = *r1_pointer, r2 = *r2_pointer;
+				cFeatureLocation& r1 = *r1_pointer, r2 = *r2_pointer;
         
 				// there may be more evidence that one or the other is deleted...
 				int32_t r1_overlap_end = n(mc_item["start"]) + n(mc_item["start_range"]);
@@ -431,7 +430,7 @@ namespace breseq {
           } // End of JC loop
           
           // remember the name of the element
-          mut["between"] = r1["name"];
+          mut["between"] = (*r1.get_feature())["name"];
           gd.add(mut);
           
           mc_it = mc.erase(mc_it); // iterator is now past the erased element
@@ -450,7 +449,7 @@ namespace breseq {
 			///
 			// (3) there is a junction between unique sequence and a repeat element
 			///
-			cSequenceFeature& r = (r1_pointer != NULL) ? *r1_pointer : *r2_pointer;
+			cFeatureLocation& r = (r1_pointer != NULL) ? *r1_pointer : *r2_pointer;
 			int32_t redundant_deletion_side = (r1_pointer != NULL) ? -1 : +1;
 			int32_t unique_deletion_strand = -redundant_deletion_side;
 			int32_t needed_coord = (r1_pointer != NULL)
@@ -475,8 +474,8 @@ namespace breseq {
         
 				// check type of IS
 				if (verbose)
-					cout << "Check 2: " << r["name"] << " ne " << j["_" + j["_is_interval"] + "_is_name"] << endl;
-				if (r["name"] != j["_" + j["_is_interval"] + "_is_name"])
+					cout << "Check 2: " << (*r.get_feature())["name"] << " ne " << j["_" + j["_is_interval"] + "_is_name"] << endl;
+				if ((*r.get_feature())["name"] != j["_" + j["_is_interval"] + "_is_name"])
 					continue;
         
 				if (verbose) cout << "Pass 2" << endl;
@@ -525,7 +524,7 @@ namespace breseq {
           continue;
         
 				// OK, we're good!
-				mut["mediated"] = r["name"];
+				mut["mediated"] = (*r.get_feature())["name"];
 				mut._evidence.push_back(j._id);
 				jc.erase(jc_it);
 				gd.add(mut);
@@ -1387,7 +1386,7 @@ namespace breseq {
     
     // Pull settings variables    
     vector<gd_entry_type> ra_types = make_vector<gd_entry_type>(RA);
-    diff_entry_list_t ra = gd.list(ra_types);
+    diff_entry_list_t ra = gd.get_list(ra_types);
     
 		///
 		// Ignore RA that overlap DEL or MC unless they are user
@@ -1395,7 +1394,7 @@ namespace breseq {
 		///
     
     vector<gd_entry_type> del_types = make_vector<gd_entry_type>(DEL);
-    diff_entry_list_t del = gd.list(del_types);
+    diff_entry_list_t del = gd.get_list(del_types);
     
     // Don't add deleted flags if we are in targeted sequencing mode
     if (!settings.targeted_sequencing) {
@@ -1887,11 +1886,11 @@ namespace breseq {
     
     // Do not use rejected junctions unless they are user-defined
     vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
-		diff_entry_list_t jc = gd.list(jc_types);
+		diff_entry_list_t jc = gd.get_list(jc_types);
     
     // Do not use rejected missing coverage evidence
     vector<gd_entry_type> mc_types = make_vector<gd_entry_type>(MC);
-		diff_entry_list_t mc = gd.list(mc_types);
+		diff_entry_list_t mc = gd.get_list(mc_types);
     mc.remove_if(cDiffEntry::field_exists("reject"));
     
     
@@ -2271,17 +2270,15 @@ namespace breseq {
       
       for(cSequenceFeatureList::iterator it2=seq.m_features.begin(); it2!=seq.m_features.end(); ++it2) {
         cSequenceFeature& f = **it2;
-        if (verbose) cout << f.SafeGet("name") << " " << f.get_start_1() << " " << f.get_end_1() << " " << f.get_strand() << endl;
-        
-        
-        // By taking anything within a gene as NONCODING, it will also include **introns** in this category
-        // instead of an alternative strategy which might be to give them their own category or call them intergenic.
         
         // Catches tRNA/rRNA/pseudogenes...
+        // Things within introns are still called INTERGENIC
         if (f["type"] == "gene") {
-          vector<cLocation> sub_locations = f.m_location.get_all_sub_locations();
-          for(vector<cLocation>::iterator it3=sub_locations.begin(); it3!=sub_locations.end(); ++it3) {
-            cLocation& loc = *it3;
+          for (cFeatureLocationList::iterator it3=f.m_locations.begin(); it3!=f.m_locations.end(); ++it3) {
+            cFeatureLocation& loc = *it3;
+            
+            if (verbose) cout << f.SafeGet("name") << " " << loc.get_start_1() << " " << loc.get_end_1() << " " << loc.get_strand() << endl;
+            
             for (int32_t this_location_1=loc.get_start_1(); this_location_1<=loc.get_end_1(); this_location_1++) {
               int32_t this_location_0 = this_location_1-1;
               for (size_t b=0; b<BaseSubstitutionEffects::base_char_list.size(); b++)
@@ -2291,95 +2288,103 @@ namespace breseq {
         }
         
         // Remainder is only for coding sequences (and not pseudogenes)
+        //
         if ((f["type"] != "CDS") || f.m_pseudo)
           continue;
         
+        // We cannot have both an indeterminate start and end for a CDS
+        // This should never happen because they are marked pseudo
+        ASSERT(!(f.start_is_indeterminate() && f.end_is_indeterminate()), "CDS with indetermine start and end cannot be translated:" + f["locus_tag"]);
+        
         // initialize gene structure
         cGeneFeature g(f);
-        
         total_orfs++;
         
-        // Piece together the gene - at each nucleotide make all three possible changes
+        string gene_nt_sequence = f.get_nucleotide_sequence(seq);
+        
+        // The position within a codon... indexed to start at 0.
+        size_t on_codon_pos_0 = 0;
+
+        // Add padding to put us in-frame if we have an indeterminate start
+        if (f.start_is_indeterminate()) {
+          on_codon_pos_0 = gene_nt_sequence.length() % 3;
+          gene_nt_sequence = repeat_char('N', gene_nt_sequence.length() % 3) + gene_nt_sequence;
+        }
+        size_t gene_nt_sequence_length = gene_nt_sequence.size();
+        if (f.end_is_indeterminate()) {
+          gene_nt_sequence += repeat_char('N', gene_nt_sequence.length() % 3);
+        }
+        size_t on_nt_pos_0 = on_codon_pos_0;
         
         string this_codon = "NNN";
-        vector<cLocation> sub_locations = g.m_location.get_all_sub_locations();
-        size_t on_codon_pos_0 = 0; // The position within a codon... indexed to start at 0.
-        vector<uint32_t> this_codon_locations_0(3, 0); // 0-indexed
-        
-        uint32_t total_nucleotide_length = 0; 
-        int8_t strand = sub_locations.front().get_strand();
-        
-        for(vector<cLocation>::iterator it3=sub_locations.begin(); it3!=sub_locations.end(); ++it3) {
-          cLocation& loc = *it3;
-          total_nucleotide_length += loc.get_end_1() - loc.get_start_1() + 1;
-        }
-        
-        // >>CODE_INDETERMINATE
-        // If we have an indeterminate start or end, we may need to start out-of-frame
-        // @JEB: this happens at the ends of sequences (usually contigs from a de novo assembly,
-        //       when a gene runs into the end of a contig
-        // We also need to adjust things so that codon #1 is either missing (indeterminate gene start)
-        // or happens at the last codon present (indeterminate gene end)
-        
-        uint32_t total_amino_acid_length = total_nucleotide_length / 3;
-        uint32_t on_codon_number_1 = 1; // The number of the amino acid / codon indexed to start at 1
-        if (strand == -1) on_codon_number_1 = total_amino_acid_length;
+        cFeatureLocationList& sub_locations = g.m_locations;
+        vector<uint32_t> this_codon_locations_0(3, numeric_limits<uint32_t>::max()); // 0-indexed
+        vector<int8_t> this_codon_strands(3, 0);
 
+        // This length includes any incomplete codons
+        // at the end or beginning due to indeterminate codons
+        // because we use it to bound our traversal of the sequence
+        uint32_t total_amino_acid_length = gene_nt_sequence.size() / 3;
+        uint32_t on_codon_number_1 = 1; // The number of the amino acid / codon indexed to start at 1
         
-        for(vector<cLocation>::iterator it3=sub_locations.begin(); it3!=sub_locations.end(); ++it3) {
+        cFeatureLocationList::iterator it3=f.m_locations.begin();
+        cFeatureLocation& loc = *it3;
+        int8_t strand = loc.get_strand();
+        int32_t pos_1 = loc.get_strand_aware_initial_position_1();
+        size_t location_position_count_down = loc.get_end_1() - loc.get_start_1() + 1;
+
+        while (on_codon_number_1 <= total_amino_acid_length) {
           
-          cLocation& loc = *it3;
-          ASSERT(strand == loc.get_strand(), "CDS has sublocations on different strands: " + g["name"]);
+          int32_t pos_0 = pos_1 - 1;
           
-          for (int32_t pos_1=loc.get_start_1(); pos_1<=loc.get_end_1(); pos_1++) {
-            int32_t pos_0 = pos_1 - 1;
+          //// Remember the strand of the gene overlapping this position
+          if (seq_bcs[pos_0] == conflict) {
+            // do nothing
+          }
+          // Don't count if we have genes on both strands overlapping same nucleotide
+          else if (seq_bcs[pos_0] != no_CDS) {
+            if ((loc.get_strand() == +1) && (seq_bcs[pos_0] == reverse) )
+              seq_bcs[pos_0] = conflict;
+            if ((loc.get_strand() == -1) && (seq_bcs[pos_0] == forward) )
+              seq_bcs[pos_0] = conflict;
+          }
+          else {
+            seq_bcs[pos_0] = (loc.get_strand() == +1 ? forward : reverse);
+          }
+          
+          //// Handle codon synonymous/nonsynonymous changes
+          this_codon_locations_0[on_codon_pos_0] = pos_0;
+          this_codon[on_codon_pos_0] = gene_nt_sequence[on_nt_pos_0];
+          this_codon_strands[on_codon_pos_0] = strand;
+          
+          on_codon_pos_0++;
+          
+          // The codon is filled, now make all mutations and assign to proper nucleotides
+          if (on_codon_pos_0 == 3) {
             
-            //// Remember the strand of the gene overlapping this position
-            if (seq_bcs[pos_0] == conflict) {
-              // do nothing
-            }
-            // Don't count if we have genes on both strands overlapping same nucleotide
-            else if (seq_bcs[pos_0] != no_CDS) {
-              if ((loc.get_strand() == +1) && (seq_bcs[pos_0] == reverse) )
-                seq_bcs[pos_0] = conflict;
-              if ((loc.get_strand() == -1) && (seq_bcs[pos_0] == forward) )
-                seq_bcs[pos_0] = conflict;
-            }
-            else
-            {
-              seq_bcs[pos_0] = (loc.get_strand() == +1 ? forward : reverse);
-            }
+            // The adjustment to codon number is so that we don't count
+            // the first codon of an indeterminate start as a start codon!
+            char original_amino_acid = cReferenceSequences::translate_codon(this_codon, g.translation_table, ( g.start_is_indeterminate() && (on_codon_number_1 == 1) ) ? 2 : on_codon_number_1);
             
-            //// Handle codon synonymous/nonsynonymous changes
-            this_codon_locations_0[on_codon_pos_0] = pos_0;
-            this_codon[on_codon_pos_0] = seq.get_sequence_1(pos_1);
-            
-            on_codon_pos_0++;
-            
-            // The codon is filled, now make all mutations and assign to proper nucleotides
-            if (on_codon_pos_0 == 3) {
+            for (int32_t test_codon_index=0; test_codon_index<3; test_codon_index++) {
               
-              // change the codon to the right strand
-              string original_codon = this_codon;
-              if (strand == -1)
-                original_codon = reverse_complement(original_codon);
-              
-              char original_amino_acid = cReferenceSequences::translate_codon(original_codon, g.translation_table, on_codon_number_1);
-              
-               
-              for (int32_t test_codon_index=0; test_codon_index<3; test_codon_index++) {
+              for (size_t b=0; b<BaseSubstitutionEffects::base_char_list.size(); b++) {
                 
-                for (size_t b=0; b<BaseSubstitutionEffects::base_char_list.size(); b++) {
-                  
-                  char mut_base = BaseSubstitutionEffects::base_char_list[b];
-                  
-                  string test_codon = this_codon;
-                  test_codon[test_codon_index] = mut_base;
-                  
-                  if (strand == -1)
-                    test_codon = reverse_complement(test_codon);
-                  
-                  char mut_amino_acid = cReferenceSequences::translate_codon(test_codon, g.translation_table, on_codon_number_1);
+                char mut_base = BaseSubstitutionEffects::base_char_list[b];
+                
+                // We have to complement the base we are changing in the codon if this
+                // part of the reading frame was on the reverse genomic strand!
+                if (this_codon_strands[test_codon_index] == -1)
+                  mut_base = complement_base_char(mut_base);
+                
+                string test_codon = this_codon;
+                test_codon[test_codon_index] = mut_base;
+                
+                char mut_amino_acid = cReferenceSequences::translate_codon(test_codon, g.translation_table, ( g.start_is_indeterminate() && (on_codon_number_1 == 1) ) ? 2 : on_codon_number_1);
+                
+                // We are testing whether we defined this to avoid going out of position due to
+                // indeterminate coordinates
+                if (this_codon_locations_0[test_codon_index] != numeric_limits<uint32_t>::max()) {
                   
                   if ((mut_amino_acid == '?') || (original_amino_acid == '?'))
                     seq_bse[this_codon_locations_0[test_codon_index]*4+b] = max(seq_bse[this_codon_locations_0[test_codon_index]*4+b], unknown_coding_base_substitution);
@@ -2389,33 +2394,32 @@ namespace breseq {
                     seq_bse[this_codon_locations_0[test_codon_index]*4+b] = max(seq_bse[this_codon_locations_0[test_codon_index]*4+b], nonsense_coding_base_substitution);
                   else
                     seq_bse[this_codon_locations_0[test_codon_index]*4+b] = max(seq_bse[this_codon_locations_0[test_codon_index]*4+b], nonsynonymous_coding_base_substitution);
-                  
                 }
-                
               }
-              
-              on_codon_number_1 += strand;
-              on_codon_pos_0 = 0;
             }
+            
+            // reset
+            on_codon_pos_0 = 0;
+            on_codon_number_1++;
+            this_codon_locations_0 = vector<uint32_t>(3, numeric_limits<uint32_t>::max()); // 0-indexed
           }
-        } // end sublocation loop
+          
+          // Move to the next location
+          location_position_count_down--;
+          on_nt_pos_0++;
         
-        // @JEB 01-24-2014 - will there be crashes with this? 
-        // BUG REPORT: It fails when a gene is truncated at the end of a contig
-        // TEST CASE: 
-        if (on_codon_pos_0 != 0) {
-          WARN("Number of base pairs in CDS not a multiple of 3: " + g["name"]);
-        }
-        // Currently these changes are not counted as anything when the codon overlaps the end of the sequence
-        // that seems fine!
-        
-        /// code to debug consistency with Perl
-        /*
-        cout << ">" << g.name << endl;
-        cout << codon_sequence << endl;
-        cout << amino_acid_sequence << endl;
-        */
-        
+          if (location_position_count_down == 0) {
+            it3++;
+            loc = *it3;
+            strand = loc.get_strand();
+            location_position_count_down = loc.get_end_1() - loc.get_start_1() + 1;
+            pos_1 = loc.get_strand_aware_initial_position_1();
+          } else {
+            pos_1 += strand;
+          }
+        } //
+
+      
       } // end feature loop
       
       if (verbose) {
@@ -2897,7 +2901,7 @@ namespace breseq {
       // statistics for UN
       int32_t un_bp = 0;
       
-      diff_entry_list_t un_list = gd.list(make_vector<gd_entry_type>(UN));
+      diff_entry_list_t un_list = gd.get_list(make_vector<gd_entry_type>(UN));
       for (diff_entry_list_t::iterator it=un_list.begin(); it!= un_list.end(); ++it) {
         cDiffEntry& un = **it;
         un_bp += from_string<int32_t>(un[END]) - from_string<int32_t>(un[START]) + 1;

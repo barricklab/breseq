@@ -615,11 +615,11 @@ FEATURES             Location/Qualifiers
                      /locus_tag="lambdap25"
                      /db_xref="GeneID:2703472"
                      /product="mRNA-pl (alt.; via t'j1 terminator)"
-     gene            9265..9700
+     gene            9265..>9700
                      /locus_tag="lambdap26"
                      /db_xref="GeneID:2703517"
                      /gene="lom"
-     CDS             9265..9700
+     CDS             9265..>9700
                      /locus_tag="lambdap26"
                      /protein_id="NP_040601.1"
                      /gene="lom"

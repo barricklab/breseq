@@ -926,7 +926,7 @@ namespace breseq {
 
     int32_t max_read_length = summary.sequence_conversion.max_read_length;
     
-    diff_entry_list_t _entry_list = gd.list(make_vector<gd_entry_type>(JC));
+    diff_entry_list_t _entry_list = gd.get_list(make_vector<gd_entry_type>(JC));
     for (diff_entry_list_t::iterator it = _entry_list.begin(); it != _entry_list.end(); it++)
     {
       cDiffEntry& user_junction = **it;
