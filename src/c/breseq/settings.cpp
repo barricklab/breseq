@@ -299,9 +299,18 @@ namespace breseq
     //! Settings: Global Workflow and Output
     
     this->base_output_path = options["output"];
+    
     // Do this so the default printed can be pretty
     if (this->base_output_path == "current directory")
       this->base_output_path = ".";
+    
+    vector<string> split_output_path = split(this->base_output_path, "\n");
+    if (split_output_path.size() > 1) {
+      options.addUsage("");
+      options.addUsage("Only one output path can be specified (-o).");
+      options.printUsage();
+      exit(-1);
+    }
     
     // Remaining command line items are read files
     // Read sequence file provided?

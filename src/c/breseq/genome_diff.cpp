@@ -4161,7 +4161,6 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         int32_t remaining_base_start_shown = 1;
         int32_t remaining_base_end_shown = 0;
 
-        
         // Set up attributes
         replace_seq_id = mut[SEQ_ID];
         

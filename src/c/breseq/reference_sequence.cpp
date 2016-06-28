@@ -197,7 +197,7 @@ namespace breseq {
       
       // Iterature through all regions of the feature
       bool it_region_iterate = true;
-
+      
       for (cFeatureLocationList::iterator it_region = feat.m_locations.begin(); it_region != feat.m_locations.end(); )
       {
         it_region_iterate = true;
@@ -257,8 +257,7 @@ namespace breseq {
           if(shift)
           {          
             //Modify  both the start and end of the region
-            region.set_start_1(region.get_start_1() - shift);
-            region.set_end_1(region.get_end_1() - shift);
+            region.set_start_end_1(region.get_start_1() - shift, region.get_end_1() - shift);
             
             //Notify the user of the action
             if(verbose){cout << "SHIFT\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
@@ -297,17 +296,6 @@ namespace breseq {
       // Now DELETE features that no longer have any regions!
       if (feat.m_locations.size() == 0) {
         
-        
-        //We'll also be checking other lists to see if they
-        //contain a copy of the current feature
-        list<cSequenceFeaturePtr>::iterator gene_it;
-        list<cSequenceFeaturePtr>::iterator repeat_it;
-        
-        //Is the feature in any extra lists?
-        //If so, annihilate it.
-        if(find_feature(m_genes, feat, gene_it)){m_genes.erase(gene_it);}
-        if(find_feature(m_repeats, feat, repeat_it)){m_repeats.erase(repeat_it);}
-        
         //Notify the user of the action
         if(verbose){cout << "REMOVED\t" << feat["type"] << "\t" << feat.m_gff_attributes["ID"] << " " << feat.m_gff_attributes["Name"] << endl;}
         
@@ -322,6 +310,8 @@ namespace breseq {
       // Iterate it ONLY if we haven't erased something.
       if (it_feature_iterate) it_feature++;
     }
+    
+    this->update_feature_lists();
   }
   
   // Inserts AFTER the input position
@@ -394,6 +384,9 @@ namespace breseq {
         }
       }
     }
+    
+    this->update_feature_lists();
+
   }
   
   
@@ -522,6 +515,8 @@ namespace breseq {
       }
       if (advance_it_feature) it_feature++;
     }
+    
+    this->update_feature_lists();
   }
 
   // Repeat features within the given interval, on the given strand,
@@ -638,30 +633,15 @@ namespace breseq {
     
     //cout << "Number of features before: " << m_features.size() << " " << m_genes.size() << " " << m_repeats.size() << endl;
     
-    // Add these to all the feature list only at the end so that we don't duplicate duplicate them
-    for (cSequenceFeatureList::reverse_iterator itr_feat = feat_list_new.rbegin(); itr_feat != feat_list_new.rend(); itr_feat++)
-    {
+    // Add these to all the feature list only now, at the end, so that we don't duplicate duplicate them
+    for (cSequenceFeatureList::reverse_iterator itr_feat = feat_list_new.rbegin(); itr_feat != feat_list_new.rend(); itr_feat++) {
       cSequenceFeature& feat = **itr_feat;
-      
-      /*
-      // Load certain information into the main hash, so breseq knows to use it.
-      // It's unlikely this will be necessary, but you can never be too cautious
-      if (feat.m_gff_attributes.count("Note"))
-        feat["product"] = join(feat.m_gff_attributes["Note"], ",");
-      
-      if (feat.m_gff_attributes.count("Alias"))
-        feat["accession"] = join(feat.m_gff_attributes["Alias"], ",");
-      
-      if (feat.m_gff_attributes.count("Name"))
-        feat["name"] = join(feat.m_gff_attributes["Name"], ",");
-      */
       this->m_features.push_back(*itr_feat);
     }
     
     //cout << "Number of features after: " << m_features.size() << " " << m_genes.size() << " " << m_repeats.size() << endl;
-
-    // Sort, because we may have put the new features in backwards    
-    this->sort_features();
+   
+    this->update_feature_lists();
   }
   
   //>! This function should be called after rearranging or changing the feature lists
@@ -1560,6 +1540,9 @@ list<cLocation> cAnnotatedSequence::SafeCreateLocations(
   if (m_is_circular) {
     in_end_1 %= this->m_length;
     in_start_1 %= this->m_length;
+    if (in_end_1 == 0) in_end_1 = this->m_length;
+    if (in_start_1 == 0) in_start_1 = this->m_length;
+
   }
   
   // Normal case
@@ -2147,7 +2130,8 @@ cFeatureLocation* cReferenceSequences::find_closest_repeat_region_boundary(int32
   cFeatureLocation* repeat_ptr(NULL);
   
   for (cSequenceFeatureList::const_iterator it = repeat_list.begin(); it != repeat_list.end(); ++it) {
-    ASSERT((*it)->m_locations.size()==1, "Repeat reagions cannot have sublocations.");
+    ASSERT((*it)->m_locations.size()!=0, "Repeat region with no locations found: " + join((*it)->m_gff_attributes["name"], ","));
+    ASSERT((*it)->m_locations.size()==1, "Repeat regions cannot have multiple sublocations:");
 
     cFeatureLocation* test_repeat_ptr = &(*it)->m_locations.front();
     
@@ -2900,6 +2884,8 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
         (*snp_muts[on_key][j])["codon_new_seq"] = new_codon;
         (*snp_muts[on_key][i])["aa_new_seq"] =  translate_codon(new_codon, from_string((*snp_muts[on_key][i])["transl_table"]), from_string((*snp_muts[on_key][i])["aa_position"]));
         (*snp_muts[on_key][j])["aa_new_seq"] =  translate_codon(new_codon, from_string((*snp_muts[on_key][j])["transl_table"]), from_string((*snp_muts[on_key][j])["aa_position"]));
+        
+        // @JEB: Debatable what we should do with SNP-type here. For now it remains that of the single mutations...
       }
     } // SNP handling
   }//for
