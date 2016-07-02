@@ -2196,9 +2196,23 @@ void Html_Mutation_Table_String::Item_Lines()
     if (!options.one_ref_seq) {
       ss << td(ALIGN_CENTER, mut[HTML_SEQ_ID]) << "<!-- Seq_Id -->" << endl;
     }
-    ss << td(ALIGN_RIGHT, mut[HTML_POSITION]) << "<!-- Position -->" << endl;
     
-    ss << td(ALIGN_CENTER, mut[HTML_MUTATION]) << "<!-- Cell Mutation -->" << endl;
+    // Embellish with insert position and phylogeny ID information.
+    string position_str = mut[HTML_POSITION];
+    if (mut.entry_exists(INSERT_POSITION)) {
+      if (mut[HTML_POSITION] != "0") {
+        position_str += nonbreaking(":" + mut[INSERT_POSITION]);
+      }
+    }
+    ss << td(ALIGN_RIGHT, position_str) << "<!-- Position -->" << endl;
+    
+    string mutation_str = mut[HTML_MUTATION];
+    if (mut.entry_exists(PHYLOGENY_ID)) {
+      if (mut[PHYLOGENY_ID] != "0") {
+        mutation_str += nonbreaking(" #" + mut[PHYLOGENY_ID]);
+      }
+    }
+    ss << td(ALIGN_CENTER, mutation_str) << "<!-- Cell Mutation -->" << endl;
           
     if (settings.lenski_format) {
       ss << "<!-- Lenski_Format -->" << endl;

@@ -47,6 +47,7 @@ extern const char* RIGHT_INSIDE_COV;
 extern const char* RIGHT_OUTSIDE_COV;
 extern const char* POSITION;
 extern const char* INSERT_POSITION;
+extern const char* PHYLOGENY_ID;
 extern const char* SCORE;
 extern const char* CONSENSUS_SCORE;
 extern const char* POLYMORPHISM_SCORE;

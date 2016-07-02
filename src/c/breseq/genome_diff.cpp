@@ -35,6 +35,7 @@ const char* END="end";
 const char* STRAND="strand";
 const char* POSITION="position";
 const char* INSERT_POSITION="insert_position";
+const char* PHYLOGENY_ID="phylogeny_id";
 const char* FREQUENCY="frequency";
 const char* REJECT="reject";
 const char* MEDIATED="mediated";
