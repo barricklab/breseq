@@ -6,11 +6,15 @@ SOURCE      pDCAF3 mutated for breseq tests
   ORGANISM  Cloning vector pDCAF3 other sequences; artificial sequences;       
             vectors.
 FEATURES             Location/Qualifiers
+     gene            complement(1419..>1608)
+                     /label="putative gene"
+     CDS             complement(1419..>1608)
+                     /label="putative gene"
      mobile_element  333..1527
                      /label="IS5"
      misc_feature    complement(2600..2633)
                      /label="EQ_NdmA_rev"
-     CDS             6471..>7145
+     CDS             6471..>7115
                      /label="gst9 CDS"
      primer_bind     7307..7329
                      /label="iGEM14-28"
@@ -46,11 +50,11 @@ FEATURES             Location/Qualifiers
                      /label="EQ_NdmB_rev"
      terminator      7182..7253
                      /label="E. coli his operon terminator"
-     gene            complement(<8320..59)
+     gene            complement(<8302..59)
                      /label="chlR gene"
      primer_bind     7146..7178
                      /label="EQ_pSB1C3_gst9_for"
-     gene            1578..2633
+     gene            <1878..2633
                      /label="ndmA gene"
      rep_origin      7421..8035
                      /label="rep (pMB1)"
@@ -66,7 +70,7 @@ FEATURES             Location/Qualifiers
                      /label="pDCAF3"
      primer_bind     173..192
                      /label="Verification forward (VF2) primer binding site"
-     gene            6471..>7145
+     gene            6471..>7115
                      /label="gst9 gene"
      rep_origin      7436..7436
                      /label="ORI"
@@ -82,13 +86,13 @@ FEATURES             Location/Qualifiers
                      /label="BBa B0034 RBS"
      RBS             1553..1577
                      /label="derived from BBa K515105 RBS"
-     CDS             1578..2633
+     CDS             <1878..2633
                      /label="ndmA CDS"
      misc_feature    6413..6810
                      /label="EQ_gst9_1 (gBLOCK)"
      RBS             4624..4635
                      /label="BBa B0034 RBS"
-     CDS             complement(<8320..59)
+     CDS             complement(<8302..59)
                      /label="chlR CDS"
      terminator      7190..7224
                      /label="stem loop"

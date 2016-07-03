@@ -379,7 +379,6 @@ namespace breseq {
         }
       }
 
-      // Sort to have genes after CDS, rRNA, etc.
       bool operator<(const cSequenceFeature& in) const
       {
         list<cFeatureLocation>::const_iterator it1 = this->m_locations.begin();
@@ -388,25 +387,32 @@ namespace breseq {
         // Smallest start positions
         while ((it1 != this->m_locations.end()) && (it2 != in.m_locations.end())) {
           if (*it1 != *it2) {
-            return *it1 < *it2;
+            return it1->get_start_1() < it2->get_start_1();
           }
           it1++; it2++;
         } ;
         
+        /*
+        // Sort 'source' and 'region' entries to the front of the list
+        if ( ((this->SafeGet("type") == "source") || (this->SafeGet("type") == "region")) && (in.SafeGet("type") != "source") && (in.SafeGet("type") != "region") )
+          return true;
+        if ( (this->SafeGet("type") != "source") && (this->SafeGet("type") != "region") && ((in.SafeGet("type") == "source") || (in.SafeGet("type") == "region")) )
+          return false;
+        */
+        
+        // Different number of positions? Fewest first.
+        if (! ((it1 == this->m_locations.end()) && (it2 == in.m_locations.end())) ) {
+          if (it1 == this->m_locations.end())
+            return true;
+          if (it2 == in.m_locations.end())
+            return false;
+        }
         
         // Different length? Longer first.
         int32_t l1 = this->get_length();
         int32_t l2 = in.get_length();
         if (l1 != l2) {
-          return l1 < l2;
-        }
-        
-        // Different number of positions? Fewest first.
-        if (! ((it1 == this->m_locations.end()) && (it2 == in.m_locations.end())) ) {
-        if (it1 == this->m_locations.end())
-          return true;
-        if (it2 == in.m_locations.end())
-          return false;
+          return l1 > l2;
         }
 
         

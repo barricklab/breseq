@@ -2340,8 +2340,8 @@ char cReferenceSequences::translate_codon(string seq, string translation_table, 
   
 string cReferenceSequences::translate_protein(cAnnotatedSequence& seq, cSequenceFeature& gene, string translation_table, string translation_table_1)
 {
-  // We can't translate a feature with an indeterminate start
-  if (gene.start_is_indeterminate()) return "";
+  // We don't translate a feature with an indeterminate start or end
+  if (gene.start_is_indeterminate() || gene.end_is_indeterminate()) return "";
   
   // Go one codon at a time...    
   string on_codon;
@@ -2353,10 +2353,10 @@ string cReferenceSequences::translate_protein(cAnnotatedSequence& seq, cSequence
   
   // This block protects against CDS that are not multiples of three (due to indeterminate ends)
   uint32_t dangling_nts = nt_sequence.length() % 3;
-  uint32_t max_nt_pos = nt_sequence.length() - dangling_nts;
-  if ((dangling_nts != 0) && !gene.end_is_indeterminate()) {
+  if (dangling_nts != 0) {
     WARN("Attempt to translate a gene with a length that is not multiple of 3 nucleotides." + gene.get_locus_tag());
   }
+  uint32_t max_nt_pos = nt_sequence.length();
   
   while (on_nt_pos < max_nt_pos) {
     
@@ -2479,9 +2479,9 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     }
     mut["gene_position"] += ")";
 
-    mut["gene_product"] += (prev_gene.name.size() > 0) ? prev_gene.product : "–"; //en-dash
+    mut["gene_product"] += (prev_gene.product.size() > 0) ? prev_gene.product : "–"; //en-dash
     mut["gene_product"] += intergenic_separator;
-    mut["gene_product"] += (next_gene.name.size() > 0) ? next_gene.product : "–"; //en-dash
+    mut["gene_product"] += (next_gene.product.size() > 0) ? next_gene.product : "–"; //en-dash
 
     return;
   }
@@ -2573,8 +2573,8 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     
     // Add padding to put us in-frame if we have an indeterminate start
     if (gene.start_is_indeterminate()) {
-      indeterminate_codon_pos_offset_0 = gene_nt_sequence.length() % 3;
-      gene_nt_sequence = repeat_char('N', gene_nt_sequence.length() % 3) + gene_nt_sequence;
+      indeterminate_codon_pos_offset_0 =  (3 - gene_nt_sequence.length() % 3) % 3;
+      gene_nt_sequence = repeat_char('N', indeterminate_codon_pos_offset_0) + gene_nt_sequence;
       // flag so that we know the codon position is not to be trusted
       mut["codon_position_is_indeterminate"] = "1";
     }

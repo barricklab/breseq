@@ -991,11 +991,14 @@ string formatted_mutation_annotation(const cDiffEntry& mut)
     
     // Dagger for initiation codons
     if (mut.get("codon_number") == "1")
-      s+= "&nbsp;&dagger;";
+      s+= "&dagger;";
     
     // Double dagger for multiple SNPs in same codon
     if (mut.entry_exists("multiple_polymorphic_SNPs_in_same_codon"))
-      s+= "&nbsp;&Dagger;";
+      s+= "&Dagger;";
+    
+    if (mut.entry_exists("codon_position_is_indeterminate"))
+      s+= "&ordm;";
   }
   else // other SNP/mutation types that don't give amino acid change or no snp change
   {
@@ -2200,7 +2203,7 @@ void Html_Mutation_Table_String::Item_Lines()
     // Embellish with insert position and phylogeny ID information.
     string position_str = mut[HTML_POSITION];
     if (mut.entry_exists(INSERT_POSITION)) {
-      if (mut[HTML_POSITION] != "0") {
+      if (mut[INSERT_POSITION] != "0") {
         position_str += nonbreaking(":" + mut[INSERT_POSITION]);
       }
     }
