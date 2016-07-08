@@ -532,7 +532,7 @@ namespace breseq {
 	 */
 	void CandidateJunctions::identify_candidate_junctions(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info)
 	{
-		(void)summary; // TODO: save statistics
+		(void)summary; // TO DO: save statistics
     bool verbose = false;
     int32_t max_read_length = summary.sequence_conversion.max_read_length;
     
@@ -782,9 +782,9 @@ namespace breseq {
     
 		fprintf(stderr, "  Minimum number to keep: %7d \n", minimum_candidate_junctions);
     if (maximum_candidate_junctions==0)
-      fprintf(stderr, "  Maximum number to keep: %7d \n", maximum_candidate_junctions);
-    else
       fprintf(stderr, "  Maximum number to keep: no limit \n");
+    else
+      fprintf(stderr, "  Maximum number to keep: %7d \n", maximum_candidate_junctions);
 		fprintf(stderr, "  Maximum length to keep: %7d bases\n", cj_length_limit);
     
 		cerr << "    Initial: Number = " << total_candidate_junction_number << ", Cumulative Length = " << total_cumulative_cj_length << " bases" << endl;

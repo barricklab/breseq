@@ -31,6 +31,14 @@ par(family="sans")
 plot_poisson = 0;
 pdf_output = 1;
 
+debug = T
+
+this.print.level = 0
+if (debug)
+{
+  this.print.level = 2
+}
+
 for (e in commandArgs()) {
   ta = strsplit(e,"=",fixed=TRUE)
   if(! is.na(ta[[1]][2])) {
@@ -137,6 +145,27 @@ if (start_i == end_i)
 
 cat("Fitting from coverage of ", start_i, " to ", end_i, ".\n", sep="")
 
+
+##
+# Course grain so that we are only fitting a number of bins that is 1000-2000
+#
+# We will go through positions start_i to end_i by intervals of num_per_bin
+##
+
+num_per_bin = trunc((end_i - start_i) / 1000)
+if (num_per_bin > 1) 
+{
+  cat("Course-graining for fits\n")
+  start_i = trunc(start_i/num_per_bin) * num_per_bin
+  end_i = trunc(end_i/num_per_bin) * num_per_bin
+  num_bins = (end_i - start_i)/num_per_bin + 1
+  cat("Fitting from coverage of ", start_i, " to ", end_i, ".\n", sep="")
+  cat("Number of bins ", num_bins, ". Each bin has ", num_per_bin, " coverage values.\n", sep="")
+} else {
+  ## AVOID num_per_bin equalling zero!!
+  num_per_bin = 1
+}
+
 ##
 # Commented code does this by establishing a coverage cutoff instead.
 ## 
@@ -167,6 +196,9 @@ for (i in start_i:end_i)
 }
 total_total<-sum(X$n);
 
+## let's preconstruct these for speed
+dist = vector("double", end_i)
+positions_to_calculate = seq(start_i, end_i, by=num_per_bin)
 
 f_nb <- function(par) {
 
@@ -183,7 +215,7 @@ f_nb <- function(par) {
   
 	dist<-c()
 	total <- 0;
-	for (i in start_i:end_i)
+	for (i in positions_to_calculate)
 	{	
 		dist[i] <- dnbinom(i, size=size, mu=mu);
 		total <- total + dist[i] 
@@ -191,7 +223,7 @@ f_nb <- function(par) {
 	#print (mu, size)
 
  	l <- 0;
-	for (i in start_i:end_i)
+	for (i in positions_to_calculate)
 	{
 		l <- l + ((X$n[i]/inner_total)-(dist[i]/total))^2;
 	}
@@ -227,7 +259,7 @@ while ( ((nb_fit_mu < 0) || (nb_fit_size < 0) || (nb_fit$code != 1)) && (try_siz
   ## SIZE ESTIMATE from the censored data can be negative, so try various values instead
   cat("Try Mean: ", mean_estimate, " Size: ", try_size, "\n")
 
-  nb_fit<-nlm(f_nb, c(mean_estimate, try_size), iterlim=1000 )
+  nb_fit<-nlm(f_nb, c(mean_estimate, try_size), iterlim=1000, print.level=this.print.level )
 
   nb_fit_mu = nb_fit$estimate[1];
   nb_fit_size = nb_fit$estimate[2];
@@ -265,16 +297,15 @@ if (nb_fit_mu > 0)
 
 f_p <- function(par) {
 
-	lambda = par[1];
+  lambda = par[1];
 
   if (lambda <= 0)
   {
     return(0);
   }
   
-	dist<-c()
 	total <- 0;
-	for (i in start_i:end_i)
+	for (i in positions_to_calculate)
 	{	
     #cat(i, " ", lambda, "\n");
 		dist[i] <- dpois(i, lambda=lambda);
@@ -283,7 +314,7 @@ f_p <- function(par) {
 	#print (total)
 
  	l <- 0;
-	for (i in start_i:end_i)
+	for (i in positions_to_calculate)
 	{
 		l <- l + ((X$n[i]/inner_total)-(dist[i]/total))^2;
 	}
@@ -295,7 +326,7 @@ f_p <- function(par) {
 ## - allow fit to fail and set all params to zero/empty if that is the case
 
 p_fit = NULL
-try(p_fit<-nlm(f_p, c(m)))
+try(p_fit<-nlm(f_p, c(m), print.level=this.print.level))
 
 fit_p = c()
 if (!is.null(p_fit) && (p_fit$estimate[1] > 0))
