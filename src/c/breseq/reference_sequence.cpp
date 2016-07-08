@@ -585,7 +585,7 @@ namespace breseq {
             int32_t start_1 = pos + (region.get_start_1() - repeated_region.get_start_1()) - start_del;
             int32_t end_1 = start_1 + (region.get_end_1() - region.get_start_1());
             region_new.set_start_end_1(start_1, end_1);
-            //This is actaully already true from the clone, but put here to make it obvious
+            //This is actually already true from the clone, but put here to make it obvious
             region_new.set_strand( region.get_strand() );
           }
           
@@ -599,7 +599,6 @@ namespace breseq {
             region_new.set_end_1( adjusted_for_del_end );
             overlapping_is_pseudogene = true;
           }
-          
           overlapping_regions.push_back(region_new);
         }
       }
@@ -613,18 +612,17 @@ namespace breseq {
         // Create a brand new feature, that we can love and cuddle.
         // This is where we copy the feature and all the attributes.
         cSequenceFeaturePtr fp(new cSequenceFeature(feat));
-        cSequenceFeature& feat_new = *fp;
         
         // NOTE: You must FIX the gene names so that they are not identical after this call, this happens after APPLY is complete
         
         if (overlapping_is_pseudogene)
-          feat_new.flag_pseudo();
-        feat_new.m_locations.clear();
+          fp->flag_pseudo();
+        fp->m_locations.clear();
         
-        if (verbose) cout << "  New Feature: " << feat_new["type"] << (feat_new.m_pseudo ? " pseudo" : "") << endl;
+        if (verbose) cout << "  New Feature: " << (*fp)["type"] << (fp->m_pseudo ? " pseudo" : "") << endl;
         
         for (list<cLocation>::iterator it_loc=overlapping_regions.begin(); it_loc !=overlapping_regions.end(); it_loc++) {
-          feat_new.add_location(*it_loc);
+          fp->add_location(static_cast<cLocation>(*it_loc));
           if (verbose) cout << " " << it_loc->get_start_1() << "-" << it_loc->get_end_1() << " strand " << it_loc->get_strand() << endl;
         }
         feat_list_new.push_back(fp);
@@ -670,6 +668,10 @@ namespace breseq {
         feat_p->flag_pseudo();
       
       ASSERT(feat_p->m_locations.size() != 0, "Feature lacks location: " + (*feat_p)["accession"] );
+      
+      for (cFeatureLocationList::iterator itl = feat_p->m_locations.begin(); itl != feat_p->m_locations.end(); itl++ ) {
+          ASSERT(itl->is_valid(), "Feature has invalid location: " + (*feat_p)["accession"] + "\n" + itl->as_string())
+      }
       
       if ( ((*feat_p)["type"] == "repeat_region") || ((*feat_p)["type"] == "mobile_element") )
       {
@@ -1125,7 +1127,7 @@ namespace breseq {
       
       list<cLocation> locs = ((*this)[seq_id]).SafeCreateLocations(start, end, strand, start_is_indeterminate, end_is_indeterminate);
       for(list<cLocation>::iterator it_add_r=locs.begin(); it_add_r!=locs.end(); it_add_r++) {
-        feature.add_location(*it_add_r);
+        feature.add_location(static_cast<cLocation>(*it_add_r));
       }
 
       //! Step 4: Determine if sequence already exists (find or create if not found)

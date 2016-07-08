@@ -4305,6 +4305,9 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
           // Starts at specified position (NOT after it)
           new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position, 0, 0, ref_seq_info, mut[SEQ_ID], +1, duplicated_region);
 
+          // TEMPORARY check
+          new_ref_seq_info.update_feature_lists();
+          
           if (wraps_around_circular_chromosome) {
             new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position + (new_ref_seq_info.get_sequence_length(mut[SEQ_ID]) - position) + 1, 0, 0, ref_seq_info, mut[SEQ_ID], +1, duplicated_region_wrap);
           }

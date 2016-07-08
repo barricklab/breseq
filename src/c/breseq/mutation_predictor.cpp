@@ -2296,66 +2296,77 @@ namespace breseq {
         // This should never happen because they are marked pseudo
         ASSERT(!(f.start_is_indeterminate() && f.end_is_indeterminate()), "CDS with indetermine start and end cannot be translated:" + f["locus_tag"]);
         
+        
         // initialize gene structure
-        cGeneFeature g(f);
+        cGeneFeature gene(f);
         total_orfs++;
         
-        string gene_nt_sequence = f.get_nucleotide_sequence(seq);
+        string gene_nt_sequence = gene.get_nucleotide_sequence(seq);
         
         // The position within a codon... indexed to start at 0.
-        size_t on_codon_pos_0 = 0;
-
+        size_t indeterminate_codon_pos_offset_0 = 0;
+        
         // Add padding to put us in-frame if we have an indeterminate start
-        if (f.start_is_indeterminate()) {
-          on_codon_pos_0 = gene_nt_sequence.length() % 3;
-          gene_nt_sequence = repeat_char('N', gene_nt_sequence.length() % 3) + gene_nt_sequence;
+        if (gene.start_is_indeterminate()) {
+          indeterminate_codon_pos_offset_0 =  (3 - gene_nt_sequence.length() % 3) % 3;
+          gene_nt_sequence = repeat_char('N', indeterminate_codon_pos_offset_0) + gene_nt_sequence;
         }
-        size_t gene_nt_sequence_length = gene_nt_sequence.size();
-        if (f.end_is_indeterminate()) {
+        if (gene.end_is_indeterminate()) {
           gene_nt_sequence += repeat_char('N', gene_nt_sequence.length() % 3);
         }
+        
+        // The position within a codon (bounds: 0-2)
+        size_t on_codon_pos_0 = indeterminate_codon_pos_offset_0;
+        // Positition withing gene_nt_sequence
         size_t on_nt_pos_0 = on_codon_pos_0;
         
-        string this_codon = "NNN";
-        cFeatureLocationList& sub_locations = g.m_locations;
-        vector<uint32_t> this_codon_locations_0(3, numeric_limits<uint32_t>::max()); // 0-indexed
+        cFeatureLocationList& sub_locations = gene.m_locations;
+        vector<int32_t> this_codon_locations_0(3, numeric_limits<int32_t>::max()); // 0-indexed
         vector<int8_t> this_codon_strands(3, 0);
 
         // This length includes any incomplete codons
         // at the end or beginning due to indeterminate codons
         // because we use it to bound our traversal of the sequence
         uint32_t total_amino_acid_length = gene_nt_sequence.size() / 3;
-        uint32_t on_codon_number_1 = 1; // The number of the amino acid / codon indexed to start at 1
+        
+        // The number of the amino acid / codon indexed to start at 1
+        uint32_t on_codon_number_1 = 1;
+        string this_codon = "NNN";
         
         cFeatureLocationList::iterator it3=f.m_locations.begin();
         cFeatureLocation& loc = *it3;
         int8_t strand = loc.get_strand();
         int32_t pos_1 = loc.get_strand_aware_initial_position_1();
+        
+        // Decremented until zero to determine when to move to next location
         size_t location_position_count_down = loc.get_end_1() - loc.get_start_1() + 1;
 
         while (on_codon_number_1 <= total_amino_acid_length) {
           
           int32_t pos_0 = pos_1 - 1;
           
-          //// Remember the strand of the gene overlapping this position
-          if (seq_bcs[pos_0] == conflict) {
-            // do nothing
+          // Prevent going out of range at the end of indeterminate genes
+          if ((pos_1 >=1) && (pos_1 <= static_cast<int32_t>(seq.get_sequence_length()))) {
+            //// Remember the strand of the gene overlapping this position
+            if (seq_bcs[pos_0] == conflict) {
+              // do nothing
+            }
+            // Don't count if we have genes on both strands overlapping same nucleotide
+            else if (seq_bcs[pos_0] != no_CDS) {
+              if ((loc.get_strand() == +1) && (seq_bcs[pos_0] == reverse) )
+                seq_bcs[pos_0] = conflict;
+              if ((loc.get_strand() == -1) && (seq_bcs[pos_0] == forward) )
+                seq_bcs[pos_0] = conflict;
+            }
+            else {
+              seq_bcs[pos_0] = (loc.get_strand() == +1 ? forward : reverse);
+            }
+            
+            //// Handle codon synonymous/nonsynonymous changes
+            this_codon_locations_0[on_codon_pos_0] = pos_0;
+            this_codon[on_codon_pos_0] = gene_nt_sequence[on_nt_pos_0];
+            this_codon_strands[on_codon_pos_0] = strand;
           }
-          // Don't count if we have genes on both strands overlapping same nucleotide
-          else if (seq_bcs[pos_0] != no_CDS) {
-            if ((loc.get_strand() == +1) && (seq_bcs[pos_0] == reverse) )
-              seq_bcs[pos_0] = conflict;
-            if ((loc.get_strand() == -1) && (seq_bcs[pos_0] == forward) )
-              seq_bcs[pos_0] = conflict;
-          }
-          else {
-            seq_bcs[pos_0] = (loc.get_strand() == +1 ? forward : reverse);
-          }
-          
-          //// Handle codon synonymous/nonsynonymous changes
-          this_codon_locations_0[on_codon_pos_0] = pos_0;
-          this_codon[on_codon_pos_0] = gene_nt_sequence[on_nt_pos_0];
-          this_codon_strands[on_codon_pos_0] = strand;
           
           on_codon_pos_0++;
           
@@ -2364,27 +2375,33 @@ namespace breseq {
             
             // The adjustment to codon number is so that we don't count
             // the first codon of an indeterminate start as a start codon!
-            char original_amino_acid = cReferenceSequences::translate_codon(this_codon, g.translation_table, ( g.start_is_indeterminate() && (on_codon_number_1 == 1) ) ? 2 : on_codon_number_1);
+            char original_amino_acid = cReferenceSequences::translate_codon(this_codon, gene.translation_table, ( gene.start_is_indeterminate() && (on_codon_number_1 == 1) ) ? 2 : on_codon_number_1);
             
             for (int32_t test_codon_index=0; test_codon_index<3; test_codon_index++) {
               
-              for (size_t b=0; b<BaseSubstitutionEffects::base_char_list.size(); b++) {
+              // Only do locations that are within range
+              if (this_codon_locations_0[test_codon_index] != numeric_limits<int32_t>::max()) {
+              
+                // Check range to avoid problems writing to random memory
+                ASSERT( (this_codon_locations_0[test_codon_index] >= 0) && (this_codon_locations_0[test_codon_index] < static_cast<int32_t>(seq.get_sequence_length())), "Position within gene is out of range: " + gene.get_locus_tag() );
                 
-                char mut_base = BaseSubstitutionEffects::base_char_list[b];
-                
-                // We have to complement the base we are changing in the codon if this
-                // part of the reading frame was on the reverse genomic strand!
-                if (this_codon_strands[test_codon_index] == -1)
-                  mut_base = complement_base_char(mut_base);
-                
-                string test_codon = this_codon;
-                test_codon[test_codon_index] = mut_base;
-                
-                char mut_amino_acid = cReferenceSequences::translate_codon(test_codon, g.translation_table, ( g.start_is_indeterminate() && (on_codon_number_1 == 1) ) ? 2 : on_codon_number_1);
-                
-                // We are testing whether we defined this to avoid going out of position due to
-                // indeterminate coordinates
-                if (this_codon_locations_0[test_codon_index] != numeric_limits<uint32_t>::max()) {
+                for (size_t b=0; b<BaseSubstitutionEffects::base_char_list.size(); b++) {
+                  
+                  char mut_base = BaseSubstitutionEffects::base_char_list[b];
+                  
+                  // We have to complement the base we are changing in the codon if this
+                  // part of the reading frame was on the reverse genomic strand!
+                  if (this_codon_strands[test_codon_index] == -1)
+                    mut_base = complement_base_char(mut_base);
+                  
+                  string test_codon = this_codon;
+                  test_codon[test_codon_index] = mut_base;
+                  
+                  char mut_amino_acid = cReferenceSequences::translate_codon(test_codon, gene.translation_table, ( gene.start_is_indeterminate() && (on_codon_number_1 == 1) ) ? 2 : on_codon_number_1);
+                  
+                  // We are testing whether we defined this to avoid going out of position due to
+                  // indeterminate coordinates
+                  
                   
                   if ((mut_amino_acid == '?') || (original_amino_acid == '?'))
                     seq_bse[this_codon_locations_0[test_codon_index]*4+b] = max(seq_bse[this_codon_locations_0[test_codon_index]*4+b], unknown_coding_base_substitution);
@@ -2400,24 +2417,33 @@ namespace breseq {
             
             // reset
             on_codon_pos_0 = 0;
+            this_codon = "NNN";
             on_codon_number_1++;
-            this_codon_locations_0 = vector<uint32_t>(3, numeric_limits<uint32_t>::max()); // 0-indexed
+            vector<int8_t> this_codon_strands(3, 0);
+            this_codon_locations_0 = vector<int32_t>(3, numeric_limits<int32_t>::max()); // 0-indexed
           }
           
           // Move to the next location
           location_position_count_down--;
           on_nt_pos_0++;
         
+          // we have to allow the countdown to go past the end of the
+          // last location for indeterminate end features
           if (location_position_count_down == 0) {
             it3++;
-            loc = *it3;
-            strand = loc.get_strand();
-            location_position_count_down = loc.get_end_1() - loc.get_start_1() + 1;
-            pos_1 = loc.get_strand_aware_initial_position_1();
-          } else {
-            pos_1 += strand;
+            if (it3 != f.m_locations.end()) {
+              loc = *it3;
+              strand = loc.get_strand();
+              location_position_count_down = loc.get_end_1() - loc.get_start_1() + 1;
+              pos_1 = loc.get_strand_aware_initial_position_1();
+              continue; // skips moving position below
+            }
           }
-        } //
+          
+          // otherwise increment
+          pos_1 += strand;
+          
+        } // end location within gene loop
 
       
       } // end feature loop
@@ -2429,25 +2455,6 @@ namespace breseq {
           << seq_bse[i_0*4+0] << "\t" << seq_bse[i_0*4+1] << "\t" << seq_bse[i_0*4+2] << "\t" << seq_bse[i_0*4+3] << endl;
         }
       }
-      
-      // For debugging consistency with Perl
-      /*
-      for(size_t pos_1=1; pos_1 <= seq.get_sequence_length(); pos_1++) {
-        cout << pos_1 << " " << seq.get_sequence_1(pos_1);
-        size_t pos_0 = pos_1-1;
-        
-        BaseSubstitutionEffectPositionInfo position_info = position_info_1(ref_seq_info, seq.m_seq_id, pos_1);
-        BaseType bt = position_info.m_base_type;
-        
-        cout << " " << bt;
-        
-        //for (uint8_t base_index=0; base_index<4; ++base_index) {
-        //  cout << " " << ((seq_bse[pos_0*4+base_index] == nonsynonymous_base_substitution) ? "1" : "0");
-        //}
-        
-        cout << endl;
-      }
-      */
       
     } // end sequence loop
   }    
@@ -2696,7 +2703,6 @@ namespace breseq {
       bse.initialize_from_sequence(ref_seq_info);
       total_bsec.initialize_possible_totals(ref_seq_info, bse);
     }
-    
     
     // Create the column headings for the detailed base substitution counts.
     if (base_substitution_statistics) {

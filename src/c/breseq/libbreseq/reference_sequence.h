@@ -151,7 +151,17 @@ namespace breseq {
     , m_start_is_indeterminate(start_is_indeterminate)
     , m_end_is_indeterminate(end_is_indeterminate)
     {
-      ASSERT(m_start_1 <= m_end_1, "Location regions cannot have start > end");
+      this->check_valid();
+    }
+    
+    cLocation(const cLocation& in)
+    : m_start_1(in.m_start_1)
+    , m_end_1(in.m_end_1)
+    , m_strand(in.m_strand)
+    , m_start_is_indeterminate(in.m_start_is_indeterminate)
+    , m_end_is_indeterminate(in.m_end_is_indeterminate)
+    {
+      this->check_valid();
     }
     
     //>! For sorting
@@ -214,20 +224,34 @@ namespace breseq {
       return (m_strand == 1) ? m_start_1 : m_end_1;
     }
     
+    string as_string() {
+      cString s;
+      s = "start = " + to_string(m_start_1) + " end = " + to_string(m_end_1) + " strand " + to_string<int32_t>(m_strand);
+      return s;
+    }
+    
+    bool is_valid() {
+      return (m_start_1 <= m_end_1) && (m_strand >=-1) && (m_strand <=1);
+    }
+    
+    void check_valid() {
+      ASSERT(this->is_valid(), "Location has invalid start-end coordinates or strand:\n" + this->as_string());
+    }
+    
     void set_start_1(int32_t start_1) {
       m_start_1 = start_1;
-      ASSERT(m_start_1 <= m_end_1, "Location regions cannot have start > end");
+      this->check_valid();
     }
     void set_end_1(int32_t end_1) {
       m_end_1 = end_1;
-      ASSERT(m_start_1 <= m_end_1, "Location regions cannot have start > end");
+      this->check_valid();
     }
     
     // This function is provided to not transiently create unallowed start/end combinations
     void set_start_end_1(int32_t start_1, int32_t end_1) {
       m_start_1 = start_1;
       m_end_1 = end_1;
-      ASSERT(m_start_1 <= m_end_1, "Location regions cannot have start > end");
+      this->check_valid();
     }
     
     void set_start_is_indeterminate(bool start_is_indeterminate) {
@@ -479,7 +503,7 @@ namespace breseq {
         //(*this)["name"] += append_str;
         (*this)["accession"] += append_str;
         if (m_gff_attributes.count("Alias")) m_gff_attributes["Alias"][0] += append_str;
-        //if (m_gff_attributes.count("IS")) m_gff_attributes["ID"][0] += append_str;
+        if (m_gff_attributes.count("ID")) m_gff_attributes["ID"][0] += append_str;
         //if (m_gff_attributes.count("Name")) m_gff_attributes["Name"][0] += append_str;
       }
 
