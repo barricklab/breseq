@@ -201,12 +201,22 @@ double PosHashProbabilityTable::probability(string& seq_id, uint32_t pos_hash_sc
     cout << "Negative Binomial Fit: Size = " << p.negative_binomial_size << " Prob = " << p.negative_binomial_prob << endl;
   }
   
-  for (uint32_t this_coverage=1; this_coverage<= max_coverage; this_coverage++) {
+  // This calculation can be incredibly slow when there is very high coverage 100,000s
+  // estimate using this many equal sized bins.
+  const   int32_t target_num_bins_for_estimate = 10000;
+  int32_t bin_size = trunc(static_cast<double>(max_coverage)/target_num_bins_for_estimate)+1;
+  
+  for (uint32_t this_coverage=bin_size; this_coverage<= max_coverage; this_coverage+=bin_size) {
     
+    // This calculation takes care of the bin size, we are getting the
+    // full probabiliy all the way in the range from this_coverage to this_coverage + bin_size - 1
     double this_cov_pr =  nbdtr(this_coverage, p.negative_binomial_size, p.negative_binomial_prob)
-                        - nbdtr(this_coverage-1, p.negative_binomial_size, p.negative_binomial_prob); 
+                        - nbdtr(this_coverage-bin_size, p.negative_binomial_size, p.negative_binomial_prob);
 
-    double this_ratio_of_coverage_to_average = static_cast<double>(this_coverage) / static_cast<double>(p.average_coverage);
+    // This calculaation uses the middle coverage value in the bin as an estimate for the
+    // probability across the entire bin
+    double this_coverage_middle = this_coverage + (bin_size-1) / 2;
+    double this_ratio_of_coverage_to_average = this_coverage_middle / static_cast<double>(p.average_coverage);
     double this_chance_per_pos_strand_read_start = 1 - pow(p.chance_per_pos_strand_no_read_start, this_ratio_of_coverage_to_average);
 
     double this_pos_hash_pr = 0;
@@ -561,8 +571,10 @@ void resolve_alignments(
     
     junction_test_info_list.pop_back();
     
-    // @JEB TODO: Re-score ones that might have changed due to removing repeat matches and re-sort
+    // @JEB Could re-score ones that might have changed due to removing repeat matches and re-sort
     // to do this efficiently, we need a list of their junction id's to be passed back by resolve_junction
+    // for now, we assume that this is unlikely to change the results of favoring one junction over another.
+    
     //junction_test_info_list.sort();
   }
     
@@ -1020,7 +1032,7 @@ bool alignment_overlaps_junction(const vector<ResolveJunctionInfo>& junction_inf
 
 void _write_reference_matches(const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info, const SequenceTrimsList& trims_list, alignment_list& reference_alignments, tam_file& reference_tam, uint32_t fastq_file_index)
 {
-  (void)settings; //TODO: unused?
+  (void)settings;
 	// Nice try, no alignments
 	if (reference_alignments.size() == 0) return;
 

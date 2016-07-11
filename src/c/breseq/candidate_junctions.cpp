@@ -546,6 +546,7 @@ namespace breseq {
     
     uint32_t i = 0;
     uint64_t passed_alignment_pairs_considered = 0;
+    uint64_t total_reads_examined = 0;
     for (uint32_t j = 0; j < settings.read_files.size(); j++)
     {
       cReadFile read_file = settings.read_files[j];
@@ -579,8 +580,10 @@ namespace breseq {
           break;
       }
       
-      if ((settings.maximum_junction_sequence_passed_alignment_pairs_to_consider != 0) && (passed_alignment_pairs_considered >= settings.maximum_junction_sequence_passed_alignment_pairs_to_consider))
+      if ((settings.maximum_junction_sequence_passed_alignment_pairs_to_consider != 0) && (passed_alignment_pairs_considered >= settings.maximum_junction_sequence_passed_alignment_pairs_to_consider)) {
         break;
+      }
+      
     }
     
     summary.candidate_junction.passed_alignment_pairs_considered = passed_alignment_pairs_considered;
