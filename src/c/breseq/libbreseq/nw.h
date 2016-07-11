@@ -9,11 +9,7 @@
 #ifndef _BRESEQ_NW_H_
 #define _BRESEQ_NW_H_
 
-#include <iostream>
-#include <string>
-#include <algorithm>
-#include <stdlib.h>
-#include <stdio.h>
+#include "common.h"
 
 #define DEBUG 0
 

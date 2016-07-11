@@ -244,7 +244,7 @@ void resolve_alignments(
                         cReadFiles& read_files
                         ) 
 {    
-	bool verbose = true;
+	bool verbose = false;
   
   // local variables for convenience
   map<string,int32_t>& distance_cutoffs = summary.alignment_resolution.distance_cutoffs;
