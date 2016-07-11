@@ -21,6 +21,7 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/candidate_junctions.h"
 
 #include "libbreseq/fastq.h"
+#include "libbreseq/nw.h"
 
 using namespace std;
 
@@ -42,7 +43,7 @@ namespace breseq {
    *  and return the BEST SCORE, which is currently the length of the aligned region of the read
    *  minus the number of base mismatches and minus the number of indels.
    *
-   *  In junction_mode, negaive overlap of the junction sequence is also subtracted from the score.
+   *  In junction_mode, negative overlap of the junction sequence is also subtracted from the score.
    *    and returns all alignments above the minimum.
    *  Otherwise, returns only alignments tied for best.
    */
@@ -79,11 +80,8 @@ namespace breseq {
     uint32_t read_length = alignments.front()->read_length();
     alignment_score_map.clear();
     for (alignment_list::iterator it = alignments.begin(); it != alignments.end();)
-    {  
-      
-
+    {
       bam_alignment* ap = it->get(); // we are saving the pointer value as the map key
-      
       
       uint32_t i;
       if (true) {
@@ -680,7 +678,7 @@ namespace breseq {
     
 		map<string, int32_t> handled_seq;
 		map<string, JunctionCandidate> ids_to_print;
-        
+    
 		// Map is pre-sorted by CandidateJunction::Sorter
 		for (list<JunctionCandidatePtr>::iterator it = junction_candidate_list.begin(); it != junction_candidate_list.end(); ++it)
 		{
@@ -795,6 +793,7 @@ namespace breseq {
 			vector<JunctionCandidate> list_in_waiting;
 			int32_t add_cj_length = 0;
 			int32_t num_duplicates = 0;
+      int32_t filtered_nw_similar = 0;
       
 			i = 0;
 			uint32_t current_pos_hash_score = combined_candidate_junctions[i].pos_hash_score();
@@ -815,6 +814,7 @@ namespace breseq {
 				add_cj_length = 0;
 				list_in_waiting.clear();
 				num_duplicates = 0;
+        filtered_nw_similar = 0;
         
 				// Check to make sure we haven't exhausted the list
 				if (i >= combined_candidate_junctions.size()) break;
@@ -827,15 +827,95 @@ namespace breseq {
                )
 				{
 					JunctionCandidate c = combined_candidate_junctions[i];
-					list_in_waiting.push_back(c);
-					add_cj_length += c.sequence.size();
+          
+          // Only add if Needleman-Wunsch alignment difference is not
+          // consistent with this junction being due to errors in a much better junction
+          //
+          // Our threshold is if there are < 1/cutoff_score_factor as many reads
+          // per indel or base mismatch then we do not add the new junction.
+          
+          bool too_similar = false;
+    
+// BEGIN EXPERIMENTAL CODE TO RULE OUT SIMILAR JUNCTIONS
+// @JEB: 2016-07-10 doesn't seem to improve performance enough to
+//       justify including this step. A bigger problem is distinct
+//       junction candidates that re-use one side of a junction
+//       If coding on this restarts, then nw.cpp needs to be adjusted
+//       to not count mismatches at the ends against an alignment
+//       (I believe this would be in the setup step.)
+//#define NW_FILTER
+#ifdef NW_FILTER
+          
+          int32_t score(0);
+          double cutoff_adjust(0.0);
+          
+          bool debug_nw_filter = true;
+          const int32_t min_nw_score = -10;
+          const double cutoff_score_factor = 3.16227766;
+          
+          string al1, al2;
+          for(vector<JunctionCandidate>::iterator it=remaining_ids.begin(); it!=remaining_ids.end(); it++ ) {
+            
+            score = nw(c.sequence, it->sequence, al1, al2, false, min_nw_score);
+            if (score >=min_nw_score) {
+              cutoff_adjust = exp(-score*log(cutoff_score_factor));
+
+              if (debug_nw_filter) {
+                cout << "Test! " << score << " " << cutoff_adjust << endl;
+                cout << it->num_matching_reads() << " " << al2 << endl;
+                cout << c.num_matching_reads() << " " << al1 << endl;
+              }
+              
+              if (it->num_matching_reads() > c.num_matching_reads() * cutoff_adjust  ) {
+                too_similar = true;
+                filtered_nw_similar++;
+                if (debug_nw_filter) {
+                  cout << "Too similar! " << score << " " << cutoff_adjust << endl;
+                  cout << it->num_matching_reads() << " " << al2 << endl;
+                  cout << c.num_matching_reads() << " " << al1 << endl;
+                }
+                break;
+              }
+            }
+            
+            score = nw(c.sequence, it->reverse_complement_sequence, al1, al2, false, min_nw_score);
+            if (score >= min_nw_score) {
+
+              cutoff_adjust = exp(-score*log(cutoff_score_factor));
+
+              cout << "Test! " << score << " " << cutoff_adjust << endl;
+              cout << it->num_matching_reads() << " " << al2 << endl;
+              cout << c.num_matching_reads() << " " << al1 << endl;
+              
+              if (it->num_matching_reads() > c.num_matching_reads() * cutoff_adjust  ) {
+                too_similar = true;
+                filtered_nw_similar++;
+                if (debug_nw_filter) {
+                  cout << "Too similar! " << score << " " << cutoff_adjust << endl;
+                  cout << it->num_matching_reads() << " " << al2 << endl;
+                  cout << c.num_matching_reads() << " " << al1 << endl;
+                }
+                break;
+              }
+            }
+          }
+#endif
+          
+          if (!too_similar) {
+            list_in_waiting.push_back(c);
+            add_cj_length += c.sequence.size();
+          }
 					i++;
 				}
         
 				new_number = remaining_ids.size() + list_in_waiting.size();
 				new_length = cumulative_cj_length + add_cj_length;
         
-				fprintf(stderr, "      Testing Pos Hash Score = %4d, Num = %6d, Length = %6d\n", current_pos_hash_score, int32_t(list_in_waiting.size()), add_cj_length);
+        if (filtered_nw_similar == 0) {
+          fprintf(stderr, "      Testing Pos Hash Score = %4d, Num = %6d, Length = %6d\n", current_pos_hash_score, int32_t(list_in_waiting.size()), add_cj_length);
+        } else {
+          fprintf(stderr, "      Testing Pos Hash Score = %4d, Num = %6d, Length = %6d [Omitted Similar = %6d]\n", current_pos_hash_score, int32_t(list_in_waiting.size()), add_cj_length, filtered_nw_similar);
+        }
 			}
 			combined_candidate_junctions = remaining_ids;
 		}

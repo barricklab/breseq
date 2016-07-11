@@ -44,6 +44,8 @@
 		708FA5FD13257A7D00864C40 /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 708FA5DA132578BE00864C40 /* libbreseq.a */; };
 		7092FAF2140AC70200DDECA2 /* coverage_output.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7092FAF1140AC70200DDECA2 /* coverage_output.cpp */; };
 		70A8364D13477AAE0037F8DE /* alignment_output.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70A8364C13477AAE0037F8DE /* alignment_output.cpp */; };
+		70B142F31D31F6130019D5A5 /* nw.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B142F21D31F6130019D5A5 /* nw.cpp */; };
+		70B142F51D31F6220019D5A5 /* nw.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B142F41D31F6220019D5A5 /* nw.h */; };
 		70B48C4B13A9918E00BF2BF0 /* anyoption.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B48C4A13A9918E00BF2BF0 /* anyoption.cpp */; };
 		70B48C4F13A991BE00BF2BF0 /* chisquare.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B48C4E13A991BE00BF2BF0 /* chisquare.cpp */; };
 		70B4AEB01391F72200B9638D /* fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B4AEAF1391F72200B9638D /* fasta.cpp */; };
@@ -160,6 +162,8 @@
 		7090A56715DDD997000010EE /* plot_jc_scores.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = plot_jc_scores.r; path = breseq/plot_jc_scores.r; sourceTree = "<group>"; };
 		7092FAF1140AC70200DDECA2 /* coverage_output.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = coverage_output.cpp; path = breseq/coverage_output.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		70A8364C13477AAE0037F8DE /* alignment_output.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = alignment_output.cpp; path = breseq/alignment_output.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		70B142F21D31F6130019D5A5 /* nw.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = nw.cpp; path = breseq/nw.cpp; sourceTree = SOURCE_ROOT; };
+		70B142F41D31F6220019D5A5 /* nw.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = nw.h; sourceTree = "<group>"; };
 		70B48C4A13A9918E00BF2BF0 /* anyoption.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = anyoption.cpp; path = breseq/anyoption.cpp; sourceTree = SOURCE_ROOT; };
 		70B48C4E13A991BE00BF2BF0 /* chisquare.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = chisquare.cpp; path = breseq/chisquare.cpp; sourceTree = SOURCE_ROOT; };
 		70B4AEAF1391F72200B9638D /* fasta.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = fasta.cpp; path = breseq/fasta.cpp; sourceTree = SOURCE_ROOT; };
@@ -283,6 +287,7 @@
 				7087728A12BC169C000F9B57 /* genome_diff.cpp */,
 				7087728B12BC169C000F9B57 /* identify_mutations.cpp */,
 				7084E56613CFD471005B57D1 /* mutation_predictor.cpp */,
+				70B142F21D31F6130019D5A5 /* nw.cpp */,
 				70D789D313C3CEB70036BEAB /* output.cpp */,
 				7087728D12BC169C000F9B57 /* pileup.cpp */,
 				7087728C12BC169C000F9B57 /* pileup_base.cpp */,
@@ -346,6 +351,7 @@
 				70E915D51B8BC2C000D941BF /* gzstream.h */,
 				70CB721E140FEB6400D578EB /* identify_mutations.h */,
 				70CB721F140FEB6400D578EB /* mutation_predictor.h */,
+				70B142F41D31F6220019D5A5 /* nw.h */,
 				70CB7220140FEB6400D578EB /* output.h */,
 				70CB7221140FEB6400D578EB /* pileup.h */,
 				70CB7222140FEB6400D578EB /* pileup_base.h */,
@@ -369,6 +375,7 @@
 			files = (
 				700FD0781C0A68D4003D8459 /* samtools_commands.h in Headers */,
 				70E915D61B8BC2C000D941BF /* gzstream.h in Headers */,
+				70B142F51D31F6220019D5A5 /* nw.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -501,6 +508,7 @@
 				7087729212BC169C000F9B57 /* pileup.cpp in Sources */,
 				707F211613478B7700ED2F3E /* candidate_junctions.cpp in Sources */,
 				70B69DF41369D8B20001B750 /* calculate_trims.cpp in Sources */,
+				70B142F31D31F6130019D5A5 /* nw.cpp in Sources */,
 				708D62441390B1D5007FF13C /* resolve_alignments.cpp in Sources */,
 				70B4AEB01391F72200B9638D /* fasta.cpp in Sources */,
 				70B9320F1394008200885753 /* settings.cpp in Sources */,

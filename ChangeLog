@@ -3,12 +3,8 @@ Version 0.28.0
      cases: trans-spliced genes, internal frameshifts, indeterminate start/end 
      coordinated found in incomplete genomes, genes that cross the origin of
      circular chromosomes, etc.
-   * Fixed pathologically slow fitting of very high coverage samples / sequences
-     (sometimes encountered in samples containing high copy number plasmids).
-   * Changed defaults for number of candidates tested by junction prediction step
-     to 500 from 5000 to speed up processing of high coverage samples. You can set  
-     this to the old default using --junction-maximum-candidates 5000 if you expect
-     a very large number of junctions in a sample.
+   * Fixed pathologically slow fitting of very high coverage reference sequences
+     (for example, in samples containing high copy number plasmids).
 
 Version 0.27.2
    * breseq CL-TABULATE command for analyzing changes in contingency loci

@@ -234,6 +234,15 @@ namespace breseq {
       return read_begin_hash.size();
     }
     
+    size_t num_matching_reads() const
+    {
+      size_t num(0);
+      for(map<uint32_t, uint32_t>::const_iterator it=read_begin_hash.begin(); it!=read_begin_hash.end(); it++ ) {
+        num += it->second;
+      }
+      return num;
+    }
+    
     // Sort by unique coordinate, then redundant (or second unique) coordinate to get reliable ordering for output
     static bool sort_by_score_unique_coord(const JunctionCandidate& a, const JunctionCandidate &b)
     {

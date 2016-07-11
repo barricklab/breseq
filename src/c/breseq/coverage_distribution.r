@@ -31,13 +31,8 @@ par(family="sans")
 plot_poisson = 0;
 pdf_output = 1;
 
-debug = T
-
 this.print.level = 0
-if (debug)
-{
-  this.print.level = 2
-}
+#this.print.level = 2
 
 for (e in commandArgs()) {
   ta = strsplit(e,"=",fixed=TRUE)
@@ -145,60 +140,62 @@ if (start_i == end_i)
 
 cat("Fitting from coverage of ", start_i, " to ", end_i, ".\n", sep="")
 
-
 ##
-# Course grain so that we are only fitting a number of bins that is 1000-2000
+# Coarse grain so that we are only fitting a number of bins that is 1000-2000
 #
-# We will go through positions start_i to end_i by intervals of num_per_bin
+# The later adjustment for doing the fits this way is to multiply the means
+# of the negative binomial and poisson distributions by the binning number.
+# (The size parameter of the negative binomial doesn't need to be adjusted.)
 ##
+
 
 num_per_bin = trunc((end_i - start_i) / 1000)
+
 if (num_per_bin > 1) 
 {
-  cat("Course-graining for fits\n")
-  start_i = trunc(start_i/num_per_bin) * num_per_bin
-  end_i = trunc(end_i/num_per_bin) * num_per_bin
-  num_bins = (end_i - start_i)/num_per_bin + 1
-  cat("Fitting from coverage of ", start_i, " to ", end_i, ".\n", sep="")
+  cat("Coarse-graining for fits\n")
+  start_i_for_fits = trunc(start_i/num_per_bin)
+  end_i_for_fits = ceiling(end_i/num_per_bin)
+  num_bins = end_i - start_i  + 1
+  cat("Fitting from coverage in adjusted bins ", start_i_for_fits, " to ", end_i_for_fits, ".\n", sep="")
   cat("Number of bins ", num_bins, ". Each bin has ", num_per_bin, " coverage values.\n", sep="")
+
+  # Create a new vector where we've added together values in bins
+  X.for.fits = vector("double", end_i_for_fits)
+  for (i in start_i_for_fits:end_i_for_fits)
+  {
+    for (j in 1:num_per_bin)
+    {
+      if (i*num_per_bin+j <= length(X$n))
+      {
+        X.for.fits[i] = X.for.fits[i] + X$n[i*num_per_bin+j]
+      }
+    }
+  }
+
 } else {
   ## AVOID num_per_bin equalling zero!!
+  X.for.fits = X$n[1:end_i]
   num_per_bin = 1
+  start_i_for_fits = start_i
+  end_i_for_fits = end_i
 }
 
-##
-# Commented code does this by establishing a coverage cutoff instead.
-## 
-
-#coverage_factor <- 0.25;
-#i<-max_i
-#while (i >= 1 && X$ma[i] && X$ma[i]>coverage_factor*max_n)
-#{	
-#	i <- i-1;
-#}
-#start_i = i;
-#i<-length(X$ma);
-#i<-max_i
-#while (i <= length(X$ma) && X$ma[i]>coverage_factor*max_n)
-#{		
-#	i <- i+1;
-#}
-#end_i <-i
 
 ##
-# Now perform fitting to the censored data
+# Now perform negative binomial fitting to the censored data
 ##
 
 inner_total<-0;
-for (i in start_i:end_i)
+for (i in start_i_for_fits:end_i_for_fits)
 {
-	inner_total = inner_total + X$n[i]; 
+	inner_total = inner_total + X.for.fits[i]; 
 }
+# Yes: it's correct to use X here because we want the overall total total
 total_total<-sum(X$n);
 
 ## let's preconstruct these for speed
-dist = vector("double", end_i)
-positions_to_calculate = seq(start_i, end_i, by=num_per_bin)
+dist = vector("double", end_i_for_fits)
 
 f_nb <- function(par) {
 
@@ -210,12 +207,12 @@ f_nb <- function(par) {
     return(0);
   }
   
-  cat(start_i, " ", end_i, "\n");
+  cat(start_i_for_fits, " ", end_i_for_fits, "\n");
   cat(mu, " ", size, "\n");
   
 	dist<-c()
 	total <- 0;
-	for (i in positions_to_calculate)
+	for (i in start_i_for_fits:end_i_for_fits)
 	{	
 		dist[i] <- dnbinom(i, size=size, mu=mu);
 		total <- total + dist[i] 
@@ -223,9 +220,9 @@ f_nb <- function(par) {
 	#print (mu, size)
 
  	l <- 0;
-	for (i in positions_to_calculate)
+	for (i in start_i_for_fits:end_i_for_fits)
 	{
-		l <- l + ((X$n[i]/inner_total)-(dist[i]/total))^2;
+		l <- l + ((X.for.fits[i]/inner_total)-(dist[i]/total))^2;
 	}
 	return(l);
 }
@@ -235,17 +232,7 @@ f_nb <- function(par) {
 ## Fit negative binomial 
 ## - allow fit to fail and set all params to zero/empty if that is the case
 nb_fit = NULL
-uncensored_data <- subset(X, (coverage>=start_i) & (coverage<=end_i) );
-
-##stats restricted to uncensored_data
-Y<-rep(uncensored_data$coverage, uncensored_data$n)
-uncensored_m<-mean(Y)
-uncensored_v<-var(Y)
-uncensored_D<-uncensored_v/uncensored_m
-
-size_estimate = uncensored_m ^ 2 / (uncensored_v - uncensored_m)
-mean_estimate = uncensored_m
-cat("Estimated Mean: ", mean_estimate, " Size: ", size_estimate, "\n")
+mean_estimate = sum(((1:end_i_for_fits)*X.for.fits))/sum(X.for.fits)
 
 nb_fit_mu = -1
 nb_fit_size = -1
@@ -289,9 +276,15 @@ if ((nb_fit_mu < 0) || (nb_fit_size < 0) || (nb_fit$code != 1))
 fit_nb = c()
 if (nb_fit_mu > 0)
 {
-  end_fract = pnbinom(end_i, mu = nb_fit_mu, size=nb_fit_size)
-  start_fract = pnbinom(start_i, mu = nb_fit_mu, size=nb_fit_size)
+  end_fract = pnbinom(end_i_for_fits, mu = nb_fit_mu, size=nb_fit_size)
+  start_fract = pnbinom(start_i_for_fits, mu = nb_fit_mu, size=nb_fit_size)
   included_fract = end_fract-start_fract;
+
+  ## Adjust so that we are back in full coords before making fit!!
+  if (num_per_bin > 1) 
+  {
+    nb_fit_mu = nb_fit_mu * num_per_bin
+  }
   fit_nb = dnbinom(0:max(X$coverage), mu = nb_fit_mu, size=nb_fit_size)*inner_total/included_fract;
 }
 
@@ -305,7 +298,7 @@ f_p <- function(par) {
   }
   
 	total <- 0;
-	for (i in positions_to_calculate)
+	for (i in start_i_for_fits:end_i_for_fits)
 	{	
     #cat(i, " ", lambda, "\n");
 		dist[i] <- dpois(i, lambda=lambda);
@@ -314,9 +307,9 @@ f_p <- function(par) {
 	#print (total)
 
  	l <- 0;
-	for (i in positions_to_calculate)
+	for (i in start_i_for_fits:end_i_for_fits)
 	{
-		l <- l + ((X$n[i]/inner_total)-(dist[i]/total))^2;
+		l <- l + ((X.for.fits[i]/inner_total)-(dist[i]/total))^2;
 	}
 	return(l);
 }
@@ -335,13 +328,21 @@ if (!is.null(p_fit) && (p_fit$estimate[1] > 0))
   p_fit_lambda = p_fit$estimate[1];
   #print(0:max(X$coverage))
 
-  end_fract = ppois(end_i, lambda = p_fit_lambda)
-  start_fract = ppois(start_i, lambda = p_fit_lambda)
+  end_fract = ppois(end_i_for_fits, lambda = p_fit_lambda)
+  start_fract = ppois(start_i_for_fits, lambda = p_fit_lambda)
   included_fract = end_fract-start_fract;
 
+  ## Adjust so that we are back in full coords before making fit!!
+  if (num_per_bin > 1) 
+  {
+    p_fit_lambda = p_fit_lambda * num_per_bin
+  }
   fit_p<-dpois(0:max(X$coverage), lambda = p_fit_lambda)*inner_total/included_fract;
 }
 
+
+## Graphing
+##
 ## don't graph very high values with very little coverage
 i<-max_i
 while (i <= length(X$n) && X$n[i]>0.01*max_n)
@@ -420,12 +421,13 @@ if (plot_poisson) {
 
 dev.off()
 
+## Fit the marginal value that we use for propagating deletions
+
 if (nb_fit_size != 0)
 {
   cat(nb_fit_size, " ", nb_fit_mu, "\n")
   deletion_propagation_coverage = qnbinom(deletion_propagation_pr_cutoff, size = nb_fit_size, mu = nb_fit_mu)
 }
-
 
 #print out statistics
 
