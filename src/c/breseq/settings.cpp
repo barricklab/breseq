@@ -655,8 +655,9 @@ namespace breseq
     // Note: this leaves off -L, since it is set based on read length
     this->bowtie2_min_score_relaxed  = "-i S,1,0.25 --score-min L,6,0.2"; // "-L 9 -i C,1,0 --score-min L,6,0.2 ";
 
-    this->bowtie2_min_score_junction  = "-i S,1,0.25 --score-min L,0,0.65"; // "-L 9 -i C,1,0 --score-min L,6,0.2 ";
-
+    //this->bowtie2_min_score_junction  = "-i S,1,0.25 --score-min L,0,0.65"; // "-L 9 -i C,1,0 --score-min L,6,0.2 ";
+    //JEB: Changed 2015-07-13 to not give too many alignments for longer (150 bp) reads, but to keep thresholds similar for short (36 bp) reads
+    this->bowtie2_min_score_junction  = "-i S,1,0.25 --score-min L,-7,0.85"; // "-L 9 -i C,1,0 --score-min L,6,0.2 ";
     
     this->num_processors = 1;
     

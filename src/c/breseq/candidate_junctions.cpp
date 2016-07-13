@@ -846,18 +846,28 @@ namespace breseq {
 //       If coding on this restarts, then nw.cpp needs to be adjusted
 //       to not count mismatches at the ends against an alignment
 //       (I believe this would be in the setup step.)
-//#define NW_FILTER
+#define NW_FILTER
 #ifdef NW_FILTER
           
           int32_t score(0);
           double cutoff_adjust(0.0);
           
-          bool debug_nw_filter = true;
-          const int32_t min_nw_score = -10;
-          const double cutoff_score_factor = 3.16227766;
+          bool debug_nw_filter = false;
+          const int32_t min_nw_score = -20;
+          const double cutoff_score_factor = 2; // per difference require greater than this fold fewer reads
           
           string al1, al2;
+          int32_t this_num_matching_reads = c.num_matching_reads();
+          
           for(vector<JunctionCandidate>::iterator it=remaining_ids.begin(); it!=remaining_ids.end(); it++ ) {
+            
+            int32_t test_num_matching_reads = it->num_matching_reads();
+            
+            // Screen out ones that don't have required minimal read differential to
+            // reduce number of slow alignment steps.
+            if (test_num_matching_reads <= c.num_matching_reads() * cutoff_score_factor) {
+              continue;
+            }
             
             score = nw(c.sequence, it->sequence, al1, al2, false, min_nw_score);
             if (score >=min_nw_score) {

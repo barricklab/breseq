@@ -98,6 +98,8 @@ int nw_align(                  // Needleman-Wunsch algorithm
   seq_1_al = "";
   seq_2_al = "";
   
+  // This is the maximimum that can be added back to the score due to end gaps
+  int32_t length_difference = abs(static_cast<int32_t>(seq_1.length()) - static_cast<int32_t>(seq_2.length()));
   
   int32_t        k = 0, x = 0, y = 0;
   int32_t        fU, fD, fL ;
@@ -153,7 +155,7 @@ int nw_align(                  // Needleman-Wunsch algorithm
     }
     
     // Leave early if we are above the max, this is not as efficient as would be possible
-    if (max_row_score < min_score) return max_row_score;
+    if (max_row_score + length_difference < min_score) return max_row_score;
   }
   i-- ; j-- ;
   int32_t score = F[ i ][ j ];
@@ -182,7 +184,40 @@ int nw_align(                  // Needleman-Wunsch algorithm
   reverse( seq_1_al.begin(), seq_1_al.end() );
   reverse( seq_2_al.begin(), seq_2_al.end() );
 
-  return  score ;
+  // Add back to score for end gaps
+  int32_t p;
+  
+  int32_t seq_1_start_gaps = 0;
+  p=0;
+  while((p<static_cast<int32_t>(seq_1_al.length())) && (seq_1_al[p] == '-')) {
+    p++;
+    seq_1_start_gaps++;
+  }
+  
+  int32_t seq_2_start_gaps = 0;
+  p=0;
+  while((p<static_cast<int32_t>(seq_2_al.length())) && (seq_2_al[p] == '-')) {
+    p++;
+    seq_2_start_gaps++;
+  }
+  
+  int32_t seq_1_end_gaps = 0;
+  p=seq_1_al.length()-1;
+  while((p>=0) && (seq_1_al[p] == '-')) {
+    p--;
+    seq_1_end_gaps++;
+  }
+  
+  int32_t seq_2_end_gaps = 0;
+  p=seq_2_al.length()-1;
+  while((p>=0) && (seq_2_al[p] == '-')) {
+    p--;
+    seq_2_end_gaps++;
+  }
+  int32_t end_gap_adjustment = max(seq_1_start_gaps, seq_2_start_gaps) + max(seq_1_end_gaps, seq_2_end_gaps);
+  
+  // d is negative and less negative scores are better
+  return  score - end_gap_adjustment * d;
 }
 
 
