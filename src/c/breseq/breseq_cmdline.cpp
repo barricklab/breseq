@@ -1160,8 +1160,7 @@ int do_assemble_unmatched(int argc, char* argv[])
 }
   
 int breseq_default_action(int argc, char* argv[])
-{  
-  
+{
 	///
 	/// Get options from the command line
 	///
