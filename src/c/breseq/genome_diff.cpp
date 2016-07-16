@@ -1842,8 +1842,8 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
   
 // Helper struct for below
 typedef struct  {
-  int32_t start;
-  int32_t end;
+  cReferenceCoordinate start;
+  cReferenceCoordinate end;
   string mutation_id; // of the mutation leading to the requirements
 } dr_item;
   
@@ -1933,27 +1933,19 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
     for(diff_entry_list_t::iterator it=mut_list.begin(); it!=mut_list.end(); ++it) {
       diff_entry_ptr_t& de = *it;
       
-      if (de->_type == MOB) {
+       if ( (de->_type == MOB) || (de->_type == AMP) || (de->_type == DEL) || (de->_type == SUB) ) {
         
         dr_item new_dr_item;
         new_dr_item.mutation_id = de->_id;
-        new_dr_item.start = from_string<uint32_t>((*de)[POSITION]);
-        new_dr_item.end = new_dr_item.start + from_string<int32_t>((*de)[DUPLICATION_SIZE]) - 1;
+        new_dr_item.start = de->get_reference_coordinate_start();
+        new_dr_item.end = de->get_reference_coordinate_end();
         // @JEB: Note this works properly with respect to negative duplication sizes -> they never overlap anything
-        disambiguate_requirements[(*de)[SEQ_ID]].push_back(new_dr_item);
-        
-      } else if (de->_type == AMP) {
-        
-        dr_item new_dr_item;
-        new_dr_item.mutation_id = de->_id;
-        new_dr_item.start = from_string<uint32_t>((*de)[POSITION]);
-        new_dr_item.end = new_dr_item.start + from_string<int32_t>((*de)[SIZE]) - 1;
         disambiguate_requirements[(*de)[SEQ_ID]].push_back(new_dr_item);
         
       }
     }
   }
-  
+
   if (!parse_errors.fatal()) {
 
     // Third pass -- check for specific requirements concerning 'before' and 'within' tags.
@@ -2144,11 +2136,12 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
           // Check to see if we are in a spot that would be ambiguous without a 'within' or 'before' attribute!
           
           vector<dr_item> check_ambiguous = disambiguate_requirements[(*de)[SEQ_ID]];
-          int32_t position = from_string<int32_t>((*de)[POSITION]);
+          cReferenceCoordinate position_start = de->get_reference_coordinate_start();
+          cReferenceCoordinate position_end = de->get_reference_coordinate_end();
 
           for (vector<dr_item>::iterator ita=check_ambiguous.begin(); ita!=check_ambiguous.end(); ita++) {
             
-            if ((de->_id != ita->mutation_id) && (position >= ita->start) && (position <= ita->end)) {
+            if ((de->_id != ita->mutation_id) && (position_start >= ita->start) && (position_end <= ita->end)) {
               
               // It's possible that the mutation creating ambiguity is actually 'within' the current mutation
               // in which case the position of the current mutation is not ambiguous
@@ -2162,7 +2155,7 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
                   continue;
               }
               
-              parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Mutation requires 'before' or 'within' field to disambiguate when and how it occurs because it overlaps AMP or MOB duplicated bases.", true); 
+              parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Mutation requires 'before' or 'within' field to disambiguate when and how it occurs because it overlaps bases that are duplicated or deleted by another mutation.", true);
             } 
           }
         }

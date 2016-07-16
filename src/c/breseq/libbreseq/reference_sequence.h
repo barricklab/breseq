@@ -41,6 +41,9 @@ namespace breseq {
     int32_t m_position;
     int32_t m_insert_position;
   public:
+    
+    cReferenceCoordinate(): m_position(0), m_insert_position(0) { }
+    
     cReferenceCoordinate(const int32_t position, const int32_t insert_position = 0)
     : m_position(position), m_insert_position(insert_position) { }
     
