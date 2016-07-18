@@ -1933,7 +1933,7 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
     for(diff_entry_list_t::iterator it=mut_list.begin(); it!=mut_list.end(); ++it) {
       diff_entry_ptr_t& de = *it;
       
-       if ( (de->_type == MOB) || (de->_type == AMP) || (de->_type == DEL) || (de->_type == SUB) ) {
+       if ( (de->_type == MOB) || (de->_type == AMP) || (de->_type == DEL) || (de->_type == SUB) || (de->_type == CON) ) {
         
         dr_item new_dr_item;
         new_dr_item.mutation_id = de->_id;
