@@ -6,6 +6,7 @@ Version 0.28.0
    * Optimizations to improve slow fitting of very high coverage reference sequences,
      and for junction predictions involving these sequences (for example, in samples 
      containing high copy number plasmids).
+   * Various fixes for gdtools commands.
 
 Version 0.27.2
    * breseq CL-TABULATE command for analyzing changes in contingency loci
