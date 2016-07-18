@@ -3,8 +3,9 @@ Version 0.28.0
      cases: trans-spliced genes, internal frameshifts, indeterminate start/end 
      coordinated found in incomplete genomes, genes that cross the origin of
      circular chromosomes, etc.
-   * Fixed pathologically slow fitting of very high coverage reference sequences
-     (for example, in samples containing high copy number plasmids).
+   * Optimizations to improve slow fitting of very high coverage reference sequences,
+     and for junction predictions involving these sequences (for example, in samples 
+     containing high copy number plasmids).
 
 Version 0.27.2
    * breseq CL-TABULATE command for analyzing changes in contingency loci
