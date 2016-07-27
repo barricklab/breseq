@@ -2019,8 +2019,14 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
                 string picked_seq_id;
                 cFeatureLocation picked_sequence_feature;
                 string mob_seq = mob_replace_sequence(ref_seq, *within_de, &picked_seq_id, &picked_sequence_feature);
+                
+                int32_t ins_end_length = 0;
+                if (within_de->entry_exists(INS_END)) ins_end_length = (*within_de)[INS_END].length();
+                int32_t ins_start_length = 0;
+                if (within_de->entry_exists(INS_START)) ins_start_length = (*within_de)[INS_START].length();
+                
                 valid_start = within_position + max(0, from_string<int32_t>((*within_de)[DUPLICATION_SIZE]));
-                valid_end = valid_start + mob_seq.size() - 1;
+                valid_end = valid_start + ins_end_length + ins_start_length + mob_seq.size() - 1;
                 
               }
               else if (split_within.size() == 2) {
