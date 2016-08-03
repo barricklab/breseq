@@ -662,7 +662,7 @@ cReferenceCoordinate cDiffEntry::get_reference_coordinate_end() const
       if (from_string<uint32_t>(this->at("duplication_size")) == 0) {
         return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)) + from_string<uint32_t>(this->at("duplication_size")), 1);
       } else {
-        return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)) + from_string<uint32_t>(this->at("duplication_size")) - 1);
+        return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)) + abs(from_string<int32_t>(this->at("duplication_size"))) - 1);
       }
     }
     case UN:

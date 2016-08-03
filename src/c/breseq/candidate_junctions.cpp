@@ -896,9 +896,11 @@ namespace breseq {
 
               cutoff_adjust = exp(-score*log(cutoff_score_factor));
 
-              cout << "Test! " << score << " " << cutoff_adjust << endl;
-              cout << it->num_matching_reads() << " " << al2 << endl;
-              cout << c.num_matching_reads() << " " << al1 << endl;
+              if (debug_nw_filter) {
+                cout << "Test! " << score << " " << cutoff_adjust << endl;
+                cout << it->num_matching_reads() << " " << al2 << endl;
+                cout << c.num_matching_reads() << " " << al1 << endl;
+              }
               
               if (it->num_matching_reads() > c.num_matching_reads() * cutoff_adjust  ) {
                 too_similar = true;
