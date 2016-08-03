@@ -232,7 +232,8 @@ f_nb <- function(par) {
 ## Fit negative binomial 
 ## - allow fit to fail and set all params to zero/empty if that is the case
 nb_fit = NULL
-mean_estimate = sum(((1:end_i_for_fits)*X.for.fits))/sum(X.for.fits)
+## as.numeric prevents overflow in sums involving integers
+mean_estimate = sum((as.numeric(1:end_i_for_fits)*as.numeric(X.for.fits)))/sum(as.numeric(X.for.fits))
 
 nb_fit_mu = -1
 nb_fit_size = -1

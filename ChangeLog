@@ -1,3 +1,10 @@
+Version 0.28.1
+   * Fixed R out-of-range integer error encountered when one of the reference 
+     sequences had very high read-depth coverage.
+   * Extra validation steps for Genome Diff files with complex mutational series
+     (using 'within' and 'before' fields) may require updates (corrections) for 
+     manually edited Genome Diff files when they are used with certain gdtools commands.
+
 Version 0.28.0
    * Revamped how gene locations are handled internally to deal with complicated
      cases: trans-spliced genes, internal frameshifts, indeterminate start/end 
