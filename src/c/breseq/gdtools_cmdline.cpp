@@ -1294,7 +1294,7 @@ int do_count(int argc, char* argv[])
 	options.addUsage("");
 	options.addUsage("Counts the numbers of mutations and other statistics for each input GenomeDiff file.");
   options.addUsage("");
-  options.addUsage("In the output \"small\" mutations are ≤ 50 bp. \"large\" mutations are >50 bp");
+  options.addUsage("In the output \"small\" mutations are ≤ " + to_string<int32_t>(kBreseq_large_mutation_size_cutoff) + " bp. \"large\" mutations are >" + to_string<int32_t>(kBreseq_large_mutation_size_cutoff) + " bp");
 	
   options.processCommandArgs(argc, argv);
 	
@@ -1324,15 +1324,17 @@ int do_count(int argc, char* argv[])
   ref_seq_info.LoadFiles(reference_file_names);
   
   // Load and annotate genome diffs
-  vector<cGenomeDiff> genome_diffs; 
-
+  vector<cGenomeDiff> genome_diffs;
+	
   for (uint32_t i=0; i<gd_path_names.size(); i++) {
     cGenomeDiff gd(gd_path_names[i]);
     uout("Annotating mutations " + gd_path_names[i]);
-    ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"), options.count("verbose"));
+    ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"), false, kBreseq_large_mutation_size_cutoff, options.count("verbose"));
     genome_diffs.push_back(gd);
   }
 	
+	
+
 	
 	string detailed_output_file_name = options.count("detailed-output") ? options["detailed-output"] : "";
   MutationCountFile(

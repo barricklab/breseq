@@ -18,6 +18,7 @@
 #include "libbreseq/reference_sequence.h"
 
 #include "libbreseq/error_count.h"
+#include "libbreseq/genome_diff.h"
 
 using namespace std;
 
@@ -2400,6 +2401,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
   mut["_gene_product_hide"] = "";
   mut["gene_list"] = ""; //#affected genes
 
+  
   string seq_id = mut["seq_id"];
 
   //or die "Unknown seq_id in reference sequence info: $seq_id\n";
@@ -2710,8 +2712,69 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     }
   }
 }
+  
+// Adds "mutation_category" to GD entry
+void cReferenceSequences::categorize_1_mutation(cDiffEntry& mut, int32_t large_size_cutoff)
+{
+  if (mut._type == SNP) {
+    
+    ASSERT(mut.entry_exists("snp_type"), "Attempt to classify SNP before annotating its snp type");
+    mut["mutation_category"] = "snp_" + mut["snp_type"];
+    
+  } else if (mut._type == DEL) {
+    
+    if (from_string<int32_t>(mut["size"]) > large_size_cutoff) {
+      mut["mutation_category"] = "large_deletion";
+    } else {
+      mut["mutation_category"] = "small_indel";
+    }
+    
+  } else if (mut._type == INS) {
+    int32_t ins_size = mut[NEW_SEQ].size();
+    
+    if (ins_size > large_size_cutoff) {
+      mut["mutation_category"] = "large_insertion";
+    } else {
+      mut["mutation_category"] = "small_indel";
+    }
+    
+  } else if (mut._type == SUB) {
+    int32_t old_size = from_string<int32_t>(mut[SIZE]);
+    int32_t new_size = mut[NEW_SEQ].size();
+    
+    if (abs(new_size - old_size) > large_size_cutoff) {
+      mut["mutation_category"] ="large_substitution";
+    } else {
+      mut["mutation_category"] = "small_indel";
+    }
+  } else if (mut._type == CON) {
+    
+    mut["mutation_category"] = "gene_conversion";
+    
+  } else if (mut._type == MOB) {
+    
+    mut["mutation_category"] = "mobile_element_insertion";
+    
+  } else if (mut._type == AMP) {
+    int32_t this_size = from_string<uint32_t>(mut[SIZE]) * (from_string<uint32_t>(mut["new_copy_number"]) - 1);
+    
+    if (this_size > large_size_cutoff) {
+      mut["mutation_category"] = "large_amplification";
+    } else {
+      mut["mutation_category"] = "small_indel";
+    }
+    
+  } else if (mut._type == INV) {
+    
+    mut["mutation_category"] = "inversion";
+    
+  } else {
+    ERROR("Could not classify mutation:\n" + mut.as_string());
+  }
 
-void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bool ignore_pseudogenes, bool compare_mode, bool verbose)
+}
+
+void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bool ignore_pseudogenes, bool compare_mode, int32_t large_size_cutoff, bool verbose)
 {
   //keep track of other mutations that affect SNPs
   //because we may double-hit a codon
@@ -2748,7 +2811,7 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
     if (verbose) cerr << "Annotating: " << mut << endl;
 
     if (only_muts && !(mut.is_mutation())) continue;
-
+    
     switch (mut._type)
     {
       case SNP:{
@@ -2834,6 +2897,11 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
         
       default:{
       } break;
+    }
+    
+    // Perform mutation classification
+    if (mut.is_mutation()) {
+      categorize_1_mutation(mut, large_size_cutoff);
     }
   }
   

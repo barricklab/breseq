@@ -2587,8 +2587,6 @@ namespace breseq {
                          bool verbose
                          )
   {
-    // Could be a parameter > this is a "large" mutation, <= this is an "small" mutation
-    int32_t large_size_cutoff = 50;
       
     // Figure out the names of all "repeat" columns
     map<string,bool> mob_name_hash;
@@ -2810,6 +2808,13 @@ namespace breseq {
         if (verbose) cerr << "Counting: " << mut << endl;
         total_mutations++;
         
+        // Main count
+        ASSERT(mut.entry_exists("mutation_category"), "mutation_category entry does not exist in mutation\n" + mut.as_string());
+        count[mut["mutation_category"]][""]++;
+        
+        
+        // Below we save some classes of mutations for additional output and
+        // count lists of things sliced and diced in different ways.
         if (mut._type == SNP) {
           count["base_substitution"][""]++;
           if (base_substitution_statistics) {
@@ -2823,48 +2828,37 @@ namespace breseq {
           if (mut.entry_exists("mediated"))
             count["mob_mediated"][mut["mediated"]]++;
           
-          if (from_string<int32_t>(mut[SIZE]) > large_size_cutoff) {
-            count["large_deletion"][""]++;
+          if ( mut["mutation_category"] == "large_deletion" ) {
             large_deletion_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
           } else {
-            count["small_indel"][""]++;
             small_indel_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
           }
           
         } else if (mut._type == INS) {
-          int32_t ins_size = mut[NEW_SEQ].size();
           
           if (mut.entry_exists("mediated"))
             count["mob_mediated"][mut["mediated"]]++;
           
-          if (ins_size > large_size_cutoff) {
-            count["large_insertion"][""]++;
+          if ( mut["mutation_category"] == "large_insertion" ) {
             large_insertion_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
           } else {
-            count["small_indel"][""]++;
             small_indel_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
           }
           
         } else if (mut._type == SUB) {
-          int32_t old_size = from_string<int32_t>(mut[SIZE]);
-          int32_t new_size = mut[NEW_SEQ].size();
           
           if (mut.entry_exists("mediated"))
             count["mob_mediated"][mut["mediated"]]++;
           
-          if (abs(new_size - old_size) > large_size_cutoff) {
-            count["large_substitution"][""]++;
+          
+          if ( mut["mutation_category"] == "large_substitution" ) {
             large_substitution_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
           } else {
-            count["small_indel"][""]++;
             small_indel_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
           }
           
         } else if (mut._type == CON) {
           
-          if (mut.entry_exists("mediated"))
-            count["con_mediated"][mut["mediated"]]++;
-          count["gene_conversion"][""]++;
           gene_conversion_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
         
         } else if (mut._type == MOB) {
@@ -2877,7 +2871,6 @@ namespace breseq {
           this_length += from_string<int32_t>(mut["duplication_size"]);
           
           count["mob"][mut["repeat_name"]]++;
-          count["mobile_element_insertion"][""]++;
           mobile_element_insertion_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
           
         } else if (mut._type == AMP) {
@@ -2886,17 +2879,14 @@ namespace breseq {
           if (mut.entry_exists("mediated"))
             count["mob_mediated"][mut["mediated"]]++;
           
-          if (this_size > large_size_cutoff) {
-            count["large_amplification"][""]++;
+          if ( mut["mutation_category"] == "large_amplification" ) {
             large_amplification_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
           } else {
-            count["small_indel"][""]++;
             small_indel_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
           }
         
         } else if (mut._type == INV) {
           
-          count["inversion"][""]++;
           inversion_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
           
         } else {
@@ -2925,7 +2915,7 @@ namespace breseq {
       
       if (calculate_genome_size) {
         cReferenceSequences new_ref_seq_info = cReferenceSequences::deep_copy(ref_seq_info);
-        gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, false, 20, large_size_cutoff);
+        gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, false, 20);
       }
         
       int32_t called_bp = total_bp - un_bp;

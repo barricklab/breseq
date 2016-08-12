@@ -32,6 +32,10 @@ class cSequenceFeature;
 class Settings;
 class cReferenceCoordinate;
   
+// constants used more places than just settings
+extern const int32_t kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation;
+extern const int32_t kBreseq_large_mutation_size_cutoff;
+  
 // Common keywords used for diff entries:
 extern const char* TYPE;
 extern const char* ID;
@@ -54,6 +58,8 @@ extern const char* POLYMORPHISM_SCORE;
 extern const char* PREDICTION;
 extern const char* REF_BASE;
 extern const char* NEW_BASE;
+extern const char* SIZE;
+extern const char* NEW_SEQ;
 extern const char* MAJOR_BASE;
 extern const char* MINOR_BASE;
 extern const char* FREQUENCY;
@@ -275,7 +281,7 @@ public:
   // Updates positions for inversion and reverse-complements mutation
   void mutation_invert_position_sequence(cDiffEntry& inverting_mutation);
   
-  bool is_small_mutation(uint32_t large_size_cutoff=20);
+  bool is_small_mutation(uint32_t large_size_cutoff=kBreseq_large_mutation_size_cutoff);
   
   // Updates 
   void annotate_repeat_hotspots(cReferenceSequences& new_ref_seq_info, int32_t slop_distance, int32_t size_cutoff_AMP_becomes_INS_DEL_mutation, bool remove_old_tags, bool warn_mode = false);
@@ -758,7 +764,7 @@ public:
   
   //! Call to apply Genome Diff to sequences
   void apply_to_sequences(cReferenceSequences &ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose=false, 
-                          int32_t slop_distance=10, int32_t size_cutoff_AMP_becomes_INS_DEL_mutation = 50);
+                          int32_t slop_distance=10, int32_t size_cutoff_AMP_becomes_INS_DEL_mutation =kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation);
   
   //! Remove mutations that overlap MASK items in another GD
   void mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, bool verbose);

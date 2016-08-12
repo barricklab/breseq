@@ -42,11 +42,16 @@ const char* MEDIATED="mediated";
 const char* BETWEEN="between";
   
 // For APPLY
-  
 const char* WITHIN="within";
 const char* BEFORE="before";
 const char* APPLY_SIZE_ADJUST = "apply_size_adjust";
   
+// For DEL
+const char* SIZE="size";
+
+// For INS
+const char* NEW_SEQ="new_seq";
+
 // For MOB
 const char* REPEAT_NAME = "repeat_name";
 const char* DUPLICATION_SIZE = "duplication_size";
@@ -76,6 +81,7 @@ const char* REF_BASE="ref_base";
 const char* NEW_BASE="new_base";
 const char* REF_COV="ref_cov";
 const char* NEW_COV="new_cov";
+  
 // new fields
 const char* MAJOR_BASE="major_base";
 const char* MINOR_BASE="minor_base";

@@ -29,13 +29,16 @@ using namespace std;
 namespace breseq
 {
   const int32_t kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation = 50;
+  
+  // small mutation <= kBreseq_large_mutation_size_cutoff < large_mutation
+  const int32_t kBreseq_large_mutation_size_cutoff = kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation;
+  
   const char* kBreseqAlignmentScoreBAMTag = "X5";
   const char* kBreseqBestAlignmentScoreBAMTag = "X6";
 
   string Settings::global_bin_path;
   string Settings::global_program_data_path;
 
-  
   string Settings::output_divider("================================================================================");
   
 	void cReadFiles::Init(const vector<string>& read_file_names, bool sam_files)
