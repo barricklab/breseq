@@ -61,9 +61,9 @@ LICENSE AND COPYRIGHT
 
 // Begin breseq specific --->
 // Library specific headers
-#include <bam.h>
-#include <sam.h>
-#include <htslib/faidx.h>
+#include "bam.h"
+#include "sam.h"
+#include "htslib/faidx.h"
 
 #define _base_bam_is_A(x) (x == 0x01)
 #define _base_bam_is_C(x) (x == 0x02)

@@ -75,6 +75,9 @@ extern/samtools-*/misc/md5sum-lite
 extern/samtools-*/misc/seqtk
 extern/samtools-*/misc/wgsim
 extern/samtools-*/.dirstamp
+extern/samtools-*/version.h
+extern/samtools-*/htslib-*/.dirstamp
+extern/samtools-*/htslib-*/version.h
 
 ## Perl GenomeDiff
 src/perl/GenomeDiff/GenomeDiff-*
