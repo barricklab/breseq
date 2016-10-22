@@ -423,7 +423,6 @@ namespace breseq
     string candidate_junction_done_file_name;
 		string coverage_junction_best_bam_unsorted_file_name;
 		string coverage_junction_best_bam_file_name;
-		string coverage_junction_best_bam_prefix;
 		string coverage_junction_distribution_file_name;
 		string coverage_junction_plot_file_name;
 		string coverage_junction_summary_file_name;
@@ -459,7 +458,6 @@ namespace breseq
 
 		string reference_bam_unsorted_file_name;
 		string junction_bam_unsorted_file_name;
-		string junction_bam_prefix;
 		string junction_bam_file_name;
 
 		//! Paths: Error Calibration
@@ -538,7 +536,6 @@ namespace breseq
     //! Paths: Data
     string data_path;
     
-		string reference_bam_prefix;
 		string reference_bam_file_name;
     string reference_fasta_file_name;
 		string reference_faidx_file_name;

@@ -680,7 +680,7 @@ cReferenceCoordinate cDiffEntry::get_reference_coordinate_end() const
   return 0;
 }
   
-int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info)
+int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info) const
 {
   int32_t size_change(0);
   
@@ -691,22 +691,22 @@ int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info)
       break;
       
     case SUB:
-      size_change = - from_string<uint32_t>((*this)[SIZE]);
+      size_change = - from_string<uint32_t>(this->get(SIZE));
       if (this->entry_exists(APPLY_SIZE_ADJUST)) {
-        size_change -= from_string<int32_t>((*this)[APPLY_SIZE_ADJUST]);
+        size_change -= from_string<int32_t>(this->get(APPLY_SIZE_ADJUST));
         ASSERT(size_change < 0, "Mutation has zero or negative size after adding APPLY_SIZE_ADJUST:\n" + this->as_string() );
       }
-      size_change += (*this)[NEW_SEQ].length();
+      size_change += this->get(NEW_SEQ).length();
       break;
       
     case INS:
-      size_change = (*this)[NEW_SEQ].length();
+      size_change = this->get(NEW_SEQ).length();
       break;
       
     case DEL:
-      size_change = -(from_string<uint32_t>((*this)[SIZE]));
+      size_change = -(from_string<uint32_t>(this->get(SIZE)));
       if (this->entry_exists(APPLY_SIZE_ADJUST)) {
-        size_change -= from_string<int32_t>((*this)[APPLY_SIZE_ADJUST]);
+        size_change -= from_string<int32_t>(this->get(APPLY_SIZE_ADJUST));
         ASSERT(size_change < 0, "Mutation has zero or negative size after adding APPLY_SIZE_ADJUST:\n" + this->as_string() );
       }
       break;
@@ -721,7 +721,7 @@ int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info)
       
     case AMP:
     {
-      size_change = from_string<uint32_t>((*this)[SIZE]) * (from_string<uint32_t>((*this)["new_copy_number"]) - 1);
+      size_change = from_string<uint32_t>(this->get(SIZE)) * (from_string<uint32_t>(this->get("new_copy_number")) - 1);
       
       // Special case of mediated AMP
       if (this->entry_exists(MEDIATED)) {
@@ -732,16 +732,16 @@ int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info)
         string mob_region;
         
         if (this->entry_exists(MOB_REGION)) {
-          mob_region = (*this)[MOB_REGION];
+          mob_region = this->get(MOB_REGION);
         }
         
-        mediated_string = ref_seq_info.repeat_family_sequence((*this)[MEDIATED], from_string<int16_t>((*this)[MEDIATED_STRAND]), mob_region.size() ? &mob_region : NULL, &seq_id_picked, &repeat_feature_picked);
+        mediated_string = ref_seq_info.repeat_family_sequence(this->get(MEDIATED), from_string<int16_t>(this->get(MEDIATED_STRAND)), mob_region.size() ? &mob_region : NULL, &seq_id_picked, &repeat_feature_picked);
         
-        size_change += mediated_string.size() * (from_string<uint32_t>((*this)["new_copy_number"]) - 1);
+        size_change += mediated_string.size() * (from_string<uint32_t>(this->get("new_copy_number")) - 1);
       }
       
       if (this->entry_exists(APPLY_SIZE_ADJUST)) {
-        size_change += from_string<int32_t>((*this)[APPLY_SIZE_ADJUST]) * (from_string<uint32_t>((*this)["new_copy_number"]) - 1);
+        size_change += from_string<int32_t>(this->get(APPLY_SIZE_ADJUST)) * (from_string<uint32_t>(this->get("new_copy_number")) - 1);
         ASSERT(size_change > 0, "Mutation has zero or negative size after adding APPLY_SIZE_ADJUST:\n" + this->as_string() );
       }
       break;
@@ -752,26 +752,26 @@ int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info)
       // @JEB: Important: repeat_size is not a normal attribute and must be set before calling this function
       //       Also: this size includes the target site duplication
       ASSERT(this->entry_exists("repeat_size"), "Repeat size field does not exist for entry:\n" + this->as_string());
-      size_change = from_string<int32_t>((*this)["repeat_size"]) + from_string<int32_t>((*this)["duplication_size"]);
+      size_change = from_string<int32_t>(this->get("repeat_size")) + from_string<int32_t>(this->get("duplication_size"));
       if (this->entry_exists("del_start"))
-        size_change -= from_string<uint32_t>((*this)["del_start"]);
+        size_change -= from_string<uint32_t>(this->get("del_start"));
       if (this->entry_exists("del_end"))
-        size_change -= from_string<uint32_t>((*this)["del_end"]);
+        size_change -= from_string<uint32_t>(this->get("del_end"));
       if (this->entry_exists("ins_start"))
-        size_change += (*this)["ins_start"].length();
+        size_change += this->get("ins_start").length();
       if (this->entry_exists("ins_end"))
-        size_change += (*this)["ins_end"].length();
+        size_change += this->get("ins_end").length();
       break;
     }
       
     case CON:
     {
       uint32_t replace_target_id, replace_start, replace_end;
-      ref_seq_info.parse_region((*this)["region"], replace_target_id, replace_start, replace_end);  
-      size_change = from_string<uint32_t>((*this)[SIZE]);
+      ref_seq_info.parse_region(this->get("region"), replace_target_id, replace_start, replace_end);
+      size_change = from_string<uint32_t>(this->get(SIZE));
       
       if (this->entry_exists(APPLY_SIZE_ADJUST)) {
-        size_change += from_string<int32_t>((*this)[APPLY_SIZE_ADJUST]);
+        size_change += from_string<int32_t>(this->get(APPLY_SIZE_ADJUST));
         ASSERT(size_change > 0, "Mutation has zero or negative size after adding APPLY_SIZE_ADJUST:\n" + this->as_string() );
       }
       
@@ -3124,7 +3124,7 @@ void cGenomeDiff::merge(cGenomeDiff& merge_gd, bool unique, bool new_id, bool ph
   if(verbose)cout << "\tMERGE DONE - " << merge_gd.get_file_path() << endl;
   
 }
-
+  
 
 void cGenomeDiff::fast_merge(const cGenomeDiff& gd)
 {  
@@ -5427,6 +5427,67 @@ void cGenomeDiff::tabulate_frequencies_from_multiple_gds(
 
 }
 
+  
+// This output is meant to be a dump to be parsable in R
+// it includes extra metadata on every row to identify the file, population, time, clone, etc.
+void cGenomeDiff::write_tsv(
+                            string& output_csv_file_name,
+                            vector<cGenomeDiff>& gd_list,
+                            bool verbose
+                            )
+{
+  (void)verbose;
+  
+  set<string> key_set;
+  
+  // Go through all entries and merge keys into one big map
+  // Go through each row and write everything, with blanks for when keys are missing
+  
+  for (vector<cGenomeDiff>::iterator gd_it = gd_list.begin(); gd_it != gd_list.end(); gd_it++)  {
+    
+    diff_entry_list_t de_list = gd_it->get_list();
+    for (diff_entry_list_t::iterator de_it = de_list.begin(); de_it != de_list.end(); de_it++)  {
+      
+      (**de_it)["type"] = gd_entry_type_lookup_table[(*de_it)->_type];
+      (**de_it)["title"] = gd_it->metadata.title;
+      (**de_it)["treatment"] = gd_it->metadata.treatment;
+      (**de_it)["population"] = gd_it->metadata.population;
+      (**de_it)["time"] = to_string<double>(gd_it->metadata.time);
+      (**de_it)["clone"] = gd_it->metadata.clone;
+
+      
+      (**de_it)["mutator_status"] = (gd_it->metadata.breseq_data.find("MUTATOR_STATUS") != gd_it->metadata.breseq_data.end()) ? gd_it->metadata.breseq_data["MUTATOR_STATUS"] : "";
+
+      
+      for (diff_entry_map_t::iterator it = (*de_it)->begin(); it != (*de_it)->end(); it++) {
+        if (it->first[0] != '_') {
+          key_set.insert(it->first);
+        }
+      }
+    }
+  }
+  
+  vector<string> key_list( key_set.begin(), key_set.end() );
+  
+  ofstream output_file(output_csv_file_name.c_str());
+  output_file <<  join(key_list, "\t") << endl;
+
+  for (vector<cGenomeDiff>::iterator gd_it = gd_list.begin(); gd_it != gd_list.end(); gd_it++)  {
+  
+    diff_entry_list_t de_list = gd_it->get_list();
+    for (diff_entry_list_t::iterator de_it = de_list.begin(); de_it != de_list.end(); de_it++)  {
+      
+      bool first_time = true;
+      for (vector<string>::iterator it = key_list.begin(); it != key_list.end(); it++) {
+        if (!first_time) output_file << "\t";
+        output_file << ( (*de_it)->entry_exists(*it) ? (*de_it)->get(*it) : "");
+        first_time = false;
+      }
+      output_file << endl;
+    }
+  }
+  
+}
   
 // Convert GD file to VCF file
 //

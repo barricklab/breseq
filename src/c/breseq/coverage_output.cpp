@@ -40,7 +40,7 @@ void coverage_output::plot(const string& region, const string& output_file_name,
   
   // extend the region and re-check endpoints
   int32_t extended_start = start_pos - m_shaded_flanking;
-  if (extended_start < 0) extended_start = 0;
+  if (extended_start < 1) extended_start = 1;
 
   int32_t extended_end = end_pos + m_shaded_flanking;
   if (extended_end > static_cast<int32_t>(this->target_length(target_id)) ) extended_end = this->target_length(target_id);

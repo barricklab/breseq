@@ -63,7 +63,7 @@ LICENSE AND COPYRIGHT
 // Library specific headers
 #include <bam.h>
 #include <sam.h>
-#include <faidx.h>
+#include <htslib/faidx.h>
 
 #define _base_bam_is_A(x) (x == 0x01)
 #define _base_bam_is_C(x) (x == 0x02)
@@ -705,7 +705,7 @@ namespace breseq {
   inline bool is_integer(string& s, int32_t& ret_value)
   {
     char* p;
-    ret_value = strtol(s.c_str(), &p, 10);
+    ret_value = static_cast<int32_t>(strtol(s.c_str(), &p, 10));
     return !(*p);
   }
   

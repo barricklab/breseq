@@ -3,7 +3,33 @@
 ##
 ## We have increased that limit.
 
-172c172
+htslib/sam.c:
 < 	iter->maxcnt = 8000;
 ---
 > 	iter->maxcnt = 1000000000;
+
+
+bamtk.c
+Comment out main function
+
+Copy Makefile to Makefile.original
+
+Makefile:
+# Build extra code into this library
+libbam.a:$(LOBJS) $(AOBJS)
+	$(AR) -csru $@ $(LOBJS) $(AOBJS)
+
+Move lib:libbam.a to top of makefile
+
+
+
+$(LIBBAM)
+
+
+libhts/Makefile:
+Move to top of makefile
+lib-static: libhts.a
+
+libhts/bam_import.c
+#comment out error printing
+//fprintf(stderr, "[sam_header_read2] %d sequences loaded.\n", n_targets);

@@ -398,7 +398,6 @@ class bam_alignment : public bam1_t, public alignment_wrapper
 public:
   bam_alignment() : bam1_t(), alignment_wrapper(this)
   {
-    l_aux = 0;
     data_len = 0;
     m_data = 0;
     data = NULL;
@@ -406,7 +405,6 @@ public:
 
     bam_alignment(const bam1_t& _in) : alignment_wrapper(this)
   {
-    l_aux = 0;
     data_len = 0;
     m_data = 0;
     data = NULL;
@@ -415,7 +413,6 @@ public:
     
   bam_alignment(const alignment_wrapper& _in)  : alignment_wrapper(this)
   {
-      l_aux = 0;
       data_len = 0;
       m_data = 0;
       data = NULL;
@@ -424,7 +421,6 @@ public:
   
   bam_alignment(const bam_alignment& _in) : alignment_wrapper(_in._a)
   {
-    l_aux = 0;
     data_len = 0;
     m_data = 0; 
     data = NULL;

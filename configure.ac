@@ -19,7 +19,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.65])
-AC_INIT([breseq], [0.28.1], [jeffrey.e.barrick@gmail.com], [breseq], [http://barricklab.org/breseq])
+AC_INIT([breseq], [0.28.2rc1], [jeffrey.e.barrick@gmail.com], [breseq], [http://barricklab.org/breseq])
 AC_CONFIG_AUX_DIR(aux_build)
 AC_CONFIG_MACRO_DIR([aux_build/m4])
 AC_CONFIG_HEADERS([aux_build/config.h])
@@ -62,8 +62,8 @@ AC_FUNC_MALLOC
 AC_FUNC_REALLOC
 AC_CHECK_FUNCS([bzero gethostbyaddr gethostbyname memmove memset pow select socket sqrt strchr strdup strerror strstr strtol ftello])
 
-AC_SEARCH_LIBS([wclear], [curses ncurses], [],
-   [AC_MSG_ERROR(["lib(n)curses is required."])])
+#AC_SEARCH_LIBS([wclear], [curses ncurses], [],
+#   [AC_MSG_ERROR(["lib(n)curses is required."])])
 
 AC_SEARCH_LIBS([deflateSetHeader], [z], [], [AC_MSG_ERROR(["libz >=1.2.2.1 is required."])])
 AC_SEARCH_LIBS([acosf], [m], [], [AC_MSG_ERROR(["libm is required."])])
@@ -76,8 +76,8 @@ AC_SEARCH_LIBS([acosf], [m], [], [AC_MSG_ERROR(["libm is required."])])
 #AC_SEARCH_LIBS([bam_fetch], [bam], [], [AC_MSG_ERROR(["libbam is required."])])
 
 
-AC_SUBST([LIBBCF], [extern/samtools-0.1.18/bcftools])
-AC_SUBST([LIBBAM], [extern/samtools-0.1.18])
+AC_SUBST([HTSLIB], [extern/samtools-1.3.1/htslib-1.3.1])
+AC_SUBST([LIBBAM], [extern/samtools-1.3.1])
 AC_SUBST([BRESEQ], [src/c/breseq])
 AC_SUBST([GDTOOLS], [src/c/gdtools])
 
@@ -108,13 +108,11 @@ case $host_os in
         ;;
 esac
 
-
 AC_CONFIG_FILES([
-    extern/samtools-0.1.18/bcftools/Makefile
-    extern/samtools-0.1.18/Makefile
+    extern/samtools-1.3.1/htslib-1.3.1/Makefile
+    extern/samtools-1.3.1/Makefile
     src/c/breseq/Makefile
     Makefile
 ])
+
 AC_OUTPUT
-
-

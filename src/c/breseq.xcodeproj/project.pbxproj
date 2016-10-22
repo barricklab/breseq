@@ -28,8 +28,12 @@
 		702A20BC1A4F2485006DCA5F /* flagged_regions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702A20BA1A4F2349006DCA5F /* flagged_regions.cpp */; };
 		702EABF713421A8400103019 /* fastq.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702EABF613421A8400103019 /* fastq.cpp */; };
 		70367D2113EB232C000787CC /* coverage_distribution.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70367D2013EB232C000787CC /* coverage_distribution.cpp */; };
-		70436D5B13FF7675006448FB /* samtools in CopyFiles */ = {isa = PBXBuildFile; fileRef = 70436D5A13FF7675006448FB /* samtools */; };
-		704A07D01A340A2600B3ACC7 /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 704A07CF1A3409EA00B3ACC7 /* libz.a */; };
+		705978081DB9A736001BBA6B /* libhts.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 705977FC1DB99E11001BBA6B /* libhts.a */; };
+		705978091DB9A736001BBA6B /* libhts.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 705977FC1DB99E11001BBA6B /* libhts.a */; };
+		7059780A1DB9A739001BBA6B /* libbam.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B69E051369E2440001B750 /* libbam.a */; };
+		7059780B1DB9A73A001BBA6B /* libbam.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B69E051369E2440001B750 /* libbam.a */; };
+		7059780C1DB9A73D001BBA6B /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 704A07CF1A3409EA00B3ACC7 /* libz.a */; };
+		7059780D1DB9A73E001BBA6B /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 704A07CF1A3409EA00B3ACC7 /* libz.a */; };
 		707F211613478B7700ED2F3E /* candidate_junctions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 707F211513478B7700ED2F3E /* candidate_junctions.cpp */; };
 		707F349F155D970000F5C89F /* summary.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 707F349E155D970000F5C89F /* summary.cpp */; };
 		707F34A2155D97B900F5C89F /* reference_sequence.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 707F34A1155D97B900F5C89F /* reference_sequence.cpp */; };
@@ -51,14 +55,10 @@
 		70B4AEB01391F72200B9638D /* fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B4AEAF1391F72200B9638D /* fasta.cpp */; };
 		70B69DE61369B8700001B750 /* breseq_cmdline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B69DE51369B8700001B750 /* breseq_cmdline.cpp */; };
 		70B69DF41369D8B20001B750 /* calculate_trims.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B69DE91369D3510001B750 /* calculate_trims.cpp */; };
-		70B69E061369E2440001B750 /* libbam.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B69E051369E2440001B750 /* libbam.a */; };
-		70B69E071369E2440001B750 /* libbam.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B69E051369E2440001B750 /* libbam.a */; };
 		70B9320F1394008200885753 /* settings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B9320E1394008200885753 /* settings.cpp */; };
 		70D789D413C3CEB70036BEAB /* output.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70D789D313C3CEB70036BEAB /* output.cpp */; };
 		70E915D61B8BC2C000D941BF /* gzstream.h in Headers */ = {isa = PBXBuildFile; fileRef = 70E915D51B8BC2C000D941BF /* gzstream.h */; };
 		70E92F14151AB74200F86F2D /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 708FA5DA132578BE00864C40 /* libbreseq.a */; };
-		70E92F15151AB74200F86F2D /* libbam.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B69E051369E2440001B750 /* libbam.a */; };
-		70E92F17151AB74200F86F2D /* samtools in CopyFiles */ = {isa = PBXBuildFile; fileRef = 70436D5A13FF7675006448FB /* samtools */; };
 		70E92F22151AB8AF00F86F2D /* gdtools_cmdline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70E92F21151AB8AF00F86F2D /* gdtools_cmdline.cpp */; };
 /* End PBXBuildFile section */
 
@@ -84,6 +84,13 @@
 			remoteGlobalIDString = 7056AE0014511F5D00890AB0;
 			remoteInfo = samtools;
 		};
+		705978011DB99EB9001BBA6B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 705977FD1DB99E7C001BBA6B;
+			remoteInfo = htslib;
+		};
 		708FA5D4132578BD00864C40 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
@@ -107,7 +114,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 16;
 			files = (
-				70436D5B13FF7675006448FB /* samtools in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -117,7 +123,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 16;
 			files = (
-				70E92F17151AB74200F86F2D /* samtools in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -136,8 +141,8 @@
 		702EABF613421A8400103019 /* fastq.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = fastq.cpp; path = breseq/fastq.cpp; sourceTree = SOURCE_ROOT; };
 		70367D2013EB232C000787CC /* coverage_distribution.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = coverage_distribution.cpp; path = breseq/coverage_distribution.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		70436D5713FF6D7D006448FB /* coverage_distribution.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = coverage_distribution.r; path = breseq/coverage_distribution.r; sourceTree = "<group>"; };
-		70436D5A13FF7675006448FB /* samtools */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; name = samtools; path = "../../extern/samtools-0.1.18/samtools"; sourceTree = SOURCE_ROOT; };
 		704A07CF1A3409EA00B3ACC7 /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = "/Users/jbarrick/Library/Developer/Xcode/DerivedData/breseq-canagyzpaxpsjgbtjxenmavcspzz/Build/Products/Debug/../../../../../../../../../../opt/local/lib/libz.a"; sourceTree = "<absolute>"; };
+		705977FC1DB99E11001BBA6B /* libhts.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libhts.a; path = "../../extern/samtools-1.3.1/htslib-1.3.1/libhts.a"; sourceTree = "<group>"; };
 		70616DCF1400A0C0006E7800 /* plot_coverage.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = plot_coverage.r; path = breseq/plot_coverage.r; sourceTree = "<group>"; };
 		70616DD01400A0C0006E7800 /* plot_error_rate.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = plot_error_rate.r; path = breseq/plot_error_rate.r; sourceTree = "<group>"; };
 		70616DD11400A0C0006E7800 /* polymorphism_statistics.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = polymorphism_statistics.r; path = breseq/polymorphism_statistics.r; sourceTree = "<group>"; };
@@ -169,7 +174,7 @@
 		70B4AEAF1391F72200B9638D /* fasta.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = fasta.cpp; path = breseq/fasta.cpp; sourceTree = SOURCE_ROOT; };
 		70B69DE51369B8700001B750 /* breseq_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = breseq_cmdline.cpp; path = breseq/breseq_cmdline.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		70B69DE91369D3510001B750 /* calculate_trims.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = calculate_trims.cpp; path = breseq/calculate_trims.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
-		70B69E051369E2440001B750 /* libbam.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libbam.a; path = "../../extern/samtools-0.1.18/.libs/libbam.a"; sourceTree = SOURCE_ROOT; };
+		70B69E051369E2440001B750 /* libbam.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libbam.a; path = "../../extern/samtools-1.3.1/libbam.a"; sourceTree = SOURCE_ROOT; };
 		70B69E091369E51E0001B750 /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		70B69E0A1369E51E0001B750 /* Release.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		70B69E0B1369E51E0001B750 /* Shared.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Shared.xcconfig; sourceTree = "<group>"; };
@@ -208,7 +213,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				708FA5FD13257A7D00864C40 /* libbreseq.a in Frameworks */,
-				70B69E071369E2440001B750 /* libbam.a in Frameworks */,
+				7059780A1DB9A739001BBA6B /* libbam.a in Frameworks */,
+				7059780C1DB9A73D001BBA6B /* libz.a in Frameworks */,
+				705978081DB9A736001BBA6B /* libhts.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -216,8 +223,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				704A07D01A340A2600B3ACC7 /* libz.a in Frameworks */,
-				70B69E061369E2440001B750 /* libbam.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -226,7 +231,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				70E92F14151AB74200F86F2D /* libbreseq.a in Frameworks */,
-				70E92F15151AB74200F86F2D /* libbam.a in Frameworks */,
+				7059780B1DB9A73A001BBA6B /* libbam.a in Frameworks */,
+				7059780D1DB9A73E001BBA6B /* libz.a in Frameworks */,
+				705978091DB9A736001BBA6B /* libhts.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -236,7 +243,6 @@
 		421ACEB51170DB9600C2EB85 = {
 			isa = PBXGroup;
 			children = (
-				70436D5A13FF7675006448FB /* samtools */,
 				70A9AEA6135BA2DF006B6D79 /* config */,
 				70CB720E140FEB6400D578EB /* libbreseq */,
 				4247E77F1268E175006A6D78 /* breseq */,
@@ -260,8 +266,9 @@
 		421ACF5F1170E06300C2EB85 /* lib */ = {
 			isa = PBXGroup;
 			children = (
-				704A07CF1A3409EA00B3ACC7 /* libz.a */,
+				705977FC1DB99E11001BBA6B /* libhts.a */,
 				70B69E051369E2440001B750 /* libbam.a */,
+				704A07CF1A3409EA00B3ACC7 /* libz.a */,
 			);
 			name = lib;
 			sourceTree = "<group>";
@@ -384,17 +391,31 @@
 /* Begin PBXLegacyTarget section */
 		7056AE0014511F5D00890AB0 /* samtools */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "CFLAGS=\"-arch $(ARCHS)\" $(ACTION)";
+			buildArgumentsString = "-f Makefile.xcode CFLAGS=\"-arch $(ARCHS)\" $(ACTION)";
 			buildConfigurationList = 7056AE0114511F5D00890AB0 /* Build configuration list for PBXLegacyTarget "samtools" */;
 			buildPhases = (
 			);
 			buildToolPath = /usr/bin/make;
-			buildWorkingDirectory = "$(PROJECT_DIR)/../../extern/samtools-0.1.18";
+			buildWorkingDirectory = "$(PROJECT_DIR)/../../extern/samtools-1.3.1";
 			dependencies = (
 			);
 			name = samtools;
 			passBuildSettingsInEnvironment = 1;
 			productName = samtools3;
+		};
+		705977FD1DB99E7C001BBA6B /* htslib */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "-f Makefile.xcode CFLAGS=\"-arch $(ARCHS)\" $(ACTION)";
+			buildConfigurationList = 705977FE1DB99E7C001BBA6B /* Build configuration list for PBXLegacyTarget "htslib" */;
+			buildPhases = (
+			);
+			buildToolPath = /usr/bin/make;
+			buildWorkingDirectory = "$(PROJECT_DIR)/../../extern/samtools-1.3.1/htslib-1.3.1";
+			dependencies = (
+			);
+			name = htslib;
+			passBuildSettingsInEnvironment = 1;
+			productName = htslib;
 		};
 /* End PBXLegacyTarget section */
 
@@ -428,6 +449,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				705978021DB99EB9001BBA6B /* PBXTargetDependency */,
 				7056AE051451201100890AB0 /* PBXTargetDependency */,
 			);
 			name = libbreseq;
@@ -459,7 +481,13 @@
 		421ACEB71170DB9600C2EB85 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0700;
+				LastUpgradeCheck = 0800;
+				TargetAttributes = {
+					705977FD1DB99E7C001BBA6B = {
+						CreatedOnToolsVersion = 8.0;
+						ProvisioningStyle = Automatic;
+					};
+				};
 			};
 			buildConfigurationList = 421ACEBA1170DB9600C2EB85 /* Build configuration list for PBXProject "breseq" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -477,6 +505,7 @@
 			projectRoot = "";
 			targets = (
 				422D46201219DEFF003FD94D /* all */,
+				705977FD1DB99E7C001BBA6B /* htslib */,
 				7056AE0014511F5D00890AB0 /* samtools */,
 				42BA690B1189B7FD000B00B1 /* libbreseq */,
 				42B6EDB811C69CC70075F8A3 /* breseq */,
@@ -552,6 +581,11 @@
 			target = 7056AE0014511F5D00890AB0 /* samtools */;
 			targetProxy = 7056AE041451201100890AB0 /* PBXContainerItemProxy */;
 		};
+		705978021DB99EB9001BBA6B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 705977FD1DB99E7C001BBA6B /* htslib */;
+			targetProxy = 705978011DB99EB9001BBA6B /* PBXContainerItemProxy */;
+		};
 		708FA5D5132578BD00864C40 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 42B6EDB811C69CC70075F8A3 /* breseq */;
@@ -568,11 +602,29 @@
 		421ACEB81170DB9600C2EB85 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = NO;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
 				GCC_VERSION = "";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS = "$(value)";
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
@@ -583,10 +635,28 @@
 		421ACEB91170DB9600C2EB85 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = NO;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
 				GCC_VERSION = "";
+				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS = "$(value)";
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
@@ -766,6 +836,68 @@
 			};
 			name = Release;
 		};
+		705977FF1DB99E7C001BBA6B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVES = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				DEBUGGING_SYMBOLS = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		705978001DB99E7C001BBA6B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_SUSPICIOUS_MOVES = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 		70E92F19151AB74200F86F2D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 70B69E091369E51E0001B750 /* Debug.xcconfig */;
@@ -866,6 +998,15 @@
 			buildConfigurations = (
 				7056AE0214511F5D00890AB0 /* Debug */,
 				7056AE0314511F5D00890AB0 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		705977FE1DB99E7C001BBA6B /* Build configuration list for PBXLegacyTarget "htslib" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				705977FF1DB99E7C001BBA6B /* Debug */,
+				705978001DB99E7C001BBA6B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -884,10 +884,58 @@ int do_not_evidence(int argc, char *argv[])
   return 0;
 }
 
+
+void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list, vector<string>& gd_path_names, vector<string>& gd_titles, cReferenceSequences& ref_seq_info, bool& polymorphisms_found, bool compare_mode, AnyOption& options, UserOutput& uout)
+{
+	polymorphisms_found = false; // handled putting in the polymorphism column if only one file provided
+	for (uint32_t i = 0; i < gd_path_names.size(); i++) {
+		uout("Reading input GD file",gd_path_names[i]);
+		cGenomeDiff single_gd(gd_path_names[i]);
+		
+		if (!compare_mode && (i==0)) {
+			diff_entry_list_t muts = single_gd.mutation_list();
+			for(diff_entry_list_t::iterator it=muts.begin(); it != muts.end(); it++) {
+				cDiffEntry de = **it;
+				if (de.count(FREQUENCY) && from_string<double>(de[FREQUENCY]) != 1.0) {
+					polymorphisms_found = true;
+					break;
+				}
+			}
+		}
+		
+		single_gd.remove_all_but_mutations_and_unknown();
+		
+		// Clean to the desired region here to avoid
+		if (options.count("region")) {
+			single_gd.filter_to_within_region(ref_seq_info, options["region"]);
+		}
+		
+		// Decide whether to merge in a new column
+		if ( (!options.count("collapse")) || (single_gd.mutation_list().size() > 0)) {
+			gd.merge(single_gd, true, false, options.count("phylogeny-aware"));
+			gd_list.push_back(single_gd); // it's important to add a copy that has UN items intact
+		}
+		
+		// Copy over the metadata if there is only one file
+		if (gd_path_names.size() == 1) {
+			gd.metadata = single_gd.metadata;
+		}
+	}
+	
+	// Sort the full merged list
+	gd.sort();
+	
+	// Then add frequency columns for all genome diffs
+	if (compare_mode || polymorphisms_found) {
+		uout("Tabulating frequencies of mutations across all files");
+		cGenomeDiff::tabulate_frequencies_from_multiple_gds(gd, gd_list, gd_titles, options.count("phylogeny-aware"));
+	}
+}
+
+
 int do_annotate(int argc, char* argv[])
 {
   AnyOption options("gdtools ANNOTATE/COMPARE [-o annotated.html] -r reference.gbk input.1.gd [input.2.gd ... ]");
-  
 	
   options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
 	options("output,o", "Path to output file with added mutation data. (DEFAULT: output.*");
@@ -906,7 +954,8 @@ int do_annotate(int argc, char* argv[])
   options.addUsage("Valid output formats:");
   options.addUsage("  HTML    Descriptive table viewable in a web browser"); 
   options.addUsage("  GD      GenomeDiff with added annotation of mutations");
-  options.addUsage("  PHYLIP  Alignment file suitable for input into PHYLIP");
+	options.addUsage("  TSV     Tab-separated values file suitable for input into R or Excel");
+	options.addUsage("  PHYLIP  Alignment file suitable for input into PHYLIP");
 	options.addUsage("");
 	options.addUsage("In GD output, frequencies of 'D' mean that this mutation occurs within");
 	options.addUsageSameLine("a region that is deleted by a different mutation in the genome in question. Frequencies");
@@ -934,26 +983,27 @@ int do_annotate(int argc, char* argv[])
   
   string output_format = to_upper(options["format"]);
   string output_file_name;
-    
   if (output_format == "HTML") {
     output_file_name = "output.html";
   } else if (output_format == "GD") {
     output_file_name = "output.gd";
   } else if (output_format == "PHYLIP") {
     output_file_name = "output.phylip";
+	} else if (output_format == "TSV") {
+		output_file_name = "output.tsv";
   } else {
-    ERROR("Unknown output format (--format|-f) of " + output_format + " requested. Valid choices are HTML, GD, PHYLIP");
+    ERROR("Unknown output format (--format|-f) of " + output_format + " requested. Valid choices are HTML, GD, TSV, PHYLIP");
   }
-
   // User setting overrules default names
   if (options.count("output")) 
     output_file_name = options["output"];
     
+						 
   vector<string> gd_path_names;
   for (int32_t i = 0; i < options.getArgc(); ++i) {
     gd_path_names.push_back(options.getArgv(i));
   }
-  
+						 
   if ( (gd_path_names.size() == 0) 
     || !options.count("reference")){
     options.printUsage();
@@ -962,7 +1012,6 @@ int do_annotate(int argc, char* argv[])
   
   // more than one file was provided as input
   bool compare_mode = (gd_path_names.size() > 1);
-	
 	ASSERT((output_format != "PHYLIP") || (compare_mode), "You must provide more than one input GD file in PHYLIP mode.");
 	
 	// Load reference files
@@ -971,65 +1020,21 @@ int do_annotate(int argc, char* argv[])
 	cReferenceSequences ref_seq_info;
 	ref_seq_info.LoadFiles(reference_file_names);
 	
-  // First use merge to produce a file with a line for each mutation
-  cGenomeDiff gd;
-  vector<string> gd_titles;
-  vector<cGenomeDiff> gd_list;
-
-  bool polymorphisms_found = false; // handled putting in the polymorphism column if only one file provided
-  for (uint32_t i = 0; i < gd_path_names.size(); i++) {
-    uout("Reading input GD file",gd_path_names[i]);
-    cGenomeDiff single_gd(gd_path_names[i]);
-      
-    if (!compare_mode && (i==0)) {
-      diff_entry_list_t muts = single_gd.mutation_list();
-      for(diff_entry_list_t::iterator it=muts.begin(); it != muts.end(); it++) {
-        cDiffEntry de = **it;  
-        if (de.count(FREQUENCY) && from_string<double>(de[FREQUENCY]) != 1.0) {
-          polymorphisms_found = true;
-          break;
-        }
-      }
-    }
-		
-    single_gd.remove_all_but_mutations_and_unknown();
-		
-		// Clean to the desired region here to avoid
-		if (options.count("region")) {
-			single_gd.filter_to_within_region(ref_seq_info, options["region"]);
-		}
-		
-		// Decide whether to merge in a new column
-		if ( (!options.count("collapse")) || (single_gd.mutation_list().size() > 0)) {
-			gd.merge(single_gd, true, false, options.count("phylogeny-aware"));
-			gd_list.push_back(single_gd); // it's important to add a copy that has UN items intact
-		}
-		
-		// Copy over the metadata if there is only one file
-		if (gd_path_names.size() == 1) {
-			gd.metadata = single_gd.metadata;
-		}
-  }
-	
-	cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
-	
-	// Sort the full merged list
-  gd.sort();
-  
-  uout("Tabulating frequencies of mutations across all files");
-
-  // Then add frequency columns for all genome diffs
-  if (compare_mode || polymorphisms_found) {
-    cGenomeDiff::tabulate_frequencies_from_multiple_gds(gd, gd_list, gd_titles, options.count("phylogeny-aware"));
-  }
-    
-  uout("Annotating mutations");
-  ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"), compare_mode);
+	cGenomeDiff gd;
+	vector<cGenomeDiff> gd_list;
+	vector<string> gd_titles;
+	bool polymorphisms_found(false);
 	
   if (output_format == "HTML") {
-    
+		
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, compare_mode, polymorphisms_found, options, uout);
+		cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
+
+		uout("Annotating mutations");
+		ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"), compare_mode);
+		
     uout("Writing output HTML file", output_file_name);
-    
+		
     Settings settings;
     // No evidence needs to be transferred to options and initialized correctly within breseq
     settings.no_evidence = true;
@@ -1046,7 +1051,14 @@ int do_annotate(int argc, char* argv[])
     html_compare(settings, output_file_name, "Mutation Comparison", gd, mt_options);
         
   } else if (output_format == "GD") {
-    uout("Writing output Genome Diff file", options["output"]);
+		
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, compare_mode, polymorphisms_found, options, uout);
+		cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
+		
+		uout("Annotating mutations");
+		ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"), compare_mode);
+		
+		uout("Writing output Genome Diff file", options["output"]);
 		
 		// Only defaults accessible - which include javascript output...
 		MutationTableOptions options;
@@ -1067,8 +1079,24 @@ int do_annotate(int argc, char* argv[])
   } else if (output_format == "PHYLIP") {
       uout("Writing output PHYLIP alignment file", options["output"]);
       gd.write_phylip(output_file_name, gd, gd_list, ref_seq_info);
-  }
-  
+	} else if (output_format == "TSV") {
+		uout("Writing output TSV file", options["output"]);
+		
+		// Load the entire list and pass it to write_csv
+		for (vector<string>::iterator it=gd_path_names.begin(); it!=gd_path_names.end(); it++) {
+			uout("Reading/annotating input GD file",*it);
+
+			cGenomeDiff this_gd(*it);
+			//remove all but mutations
+			this_gd.remove_group(cGenomeDiff::EVIDENCE);
+			this_gd.remove_group(cGenomeDiff::VALIDATION);
+			ref_seq_info.annotate_mutations(this_gd, true, options.count("ignore-pseudogenes"), compare_mode);
+			gd_list.push_back(this_gd);
+		}
+		
+		gd.write_tsv(output_file_name, gd_list);
+	}
+	
   return 0;
 }
 

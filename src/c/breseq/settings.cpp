@@ -786,7 +786,6 @@ namespace breseq
     this->coverage_junction_done_file_name = this->candidate_junction_path + "/coverage_junction_alignment.done";
 		this->coverage_junction_best_bam_unsorted_file_name = this->candidate_junction_path + "/best.unsorted.bam";
 		this->coverage_junction_best_bam_file_name = this->candidate_junction_path + "/best.bam";
-		this->coverage_junction_best_bam_prefix = this->candidate_junction_path + "/best";
 		this->coverage_junction_distribution_file_name = this->candidate_junction_path + "/@.unique_only_coverage_distribution.tab";
 		this->coverage_junction_plot_file_name = this->candidate_junction_path + "/@.coverage.pdf";
 		this->coverage_junction_summary_file_name = this->candidate_junction_path + "/coverage.summary.bin";
@@ -825,7 +824,6 @@ namespace breseq
 
 		this->reference_bam_unsorted_file_name = this->bam_path + "/reference.unsorted.bam";
 		this->junction_bam_unsorted_file_name = this->bam_path + "/junction.unsorted.bam";
-		this->junction_bam_prefix = this->bam_path + "/junction";
 		this->junction_bam_file_name = this->bam_path + "/junction.bam";
 
 		//! Paths: Error Calibration
@@ -909,7 +907,6 @@ namespace breseq
 		this->data_path = "data";
 		if (this->base_output_path.size() > 0) this->data_path = this->base_output_path + "/" + this->data_path;
 
-		this->reference_bam_prefix = this->data_path + "/reference";
 		this->reference_bam_file_name = this->data_path + "/reference.bam";
 		this->reference_fasta_file_name = this->data_path + "/reference.fasta";
 		this->reference_faidx_file_name = this->data_path + "/reference.fasta.fai";

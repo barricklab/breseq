@@ -17,7 +17,7 @@
 
 ACLOCAL_AMFLAGS = -I aux_build/m4
 
-SUBDIRS = $(LIBBAM) $(BRESEQ)
+SUBDIRS = $(HTSLIB) $(LIBBAM) $(BRESEQ)
 
 ### Tests! -- only one test included for now in distribution.
 EXTRA_DIST = \
@@ -98,8 +98,8 @@ SAMTOOLSDIR=$(top_srcdir)/$(LIBBAM)
 ## Main hooks called after normal make steps
 
 all-local :
-	
-	
+
+
 install-exec-local :
 
 	

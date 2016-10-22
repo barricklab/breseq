@@ -1023,6 +1023,8 @@ namespace breseq {
                                   vector<cFeatureLocation*>& inside_right_genes,
                                   cFeatureLocation*& prev_gene,
                                   cFeatureLocation*& next_gene);
+    
+    bool mutation_overlapping_gene_is_inactivating(const cDiffEntry& mut, const uint32_t start, const uint32_t end, const cGeneFeature& gene, const double inactivate_overlap_fraction);
     void annotate_1_mutation(cDiffEntry& mut, uint32_t start, uint32_t end, bool repeat_override = false, bool ignore_pseudogenes = false);
     void categorize_1_mutation(cDiffEntry& mut, int32_t large_size_cutoff);
     void annotate_mutations(cGenomeDiff& gd, bool only_muts = false, bool ignore_pseudogenes = false, bool compare_mode = false, int32_t large_size_cutoff=kBreseq_large_mutation_size_cutoff, bool verbose = false);

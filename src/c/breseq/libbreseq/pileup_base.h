@@ -150,19 +150,16 @@ class pileup_base {
       return ret_val;
     }
   
-    //! Pass through to BAM.
-    void parse_region(const string& region, uint32_t& target_id, uint32_t& start_pos_1, uint32_t& end_pos_1)
+    int32_t seq_id_to_target_id(const string& seq_id) const
     {
-      int temp_target_id, temp_start_pos, temp_end_pos;
-      bam_parse_region(m_bam_header, region.c_str(), &temp_target_id, &temp_start_pos, &temp_end_pos); 
-      
-      // Target was not found.
-      ASSERT(temp_target_id != -1, "Target seq id was not found for region [" + region + "] using FASTA file [" + m_fasta_file_name + "].\n" + "Valid seq ids: " + join(this->valid_seq_ids(), ", ") );
-      
-      target_id = static_cast<uint32_t>(temp_target_id);
-      start_pos_1 = static_cast<uint32_t>(temp_start_pos)+1; // bam_parse_region returns zero indexed start
-      end_pos_1 = static_cast<uint32_t>(temp_end_pos);       // bam_parse_region returns one indexed end
+      for(uint32_t i=0; i< num_targets(); i++) {
+        if (target_name(i) == seq_id) {
+          return i;
+        }
+      }
+      return -1;
     }
+  
   
     //! Special parsing for seq_id:start.insert_start-end.insert_end form.
     void parse_region(const string& region, uint32_t& target_id, uint32_t& start_pos_1, uint32_t& end_pos_1, uint32_t& insert_start, uint32_t& insert_end)
@@ -214,11 +211,24 @@ class pileup_base {
         start = end+1;
       }
 
-      string new_region = target_name + ":" + start_pos_1_string + "-" + end_pos_1_string;
-      parse_region(new_region, target_id, start_pos_1, end_pos_1);
+      // Save target id
+      int32_t temp_target_id = seq_id_to_target_id(target_name);
+      // Target was not found.
+      ASSERT(temp_target_id != -1, "Target seq id was not found for region [" + target_name + "] using FASTA file [" + m_fasta_file_name + "].\n" + "Valid seq ids: " + join(this->valid_seq_ids(), ", ") );
+      target_id = static_cast<uint32_t>(temp_target_id);
+      
+      //
+      start_pos_1 = from_string<uint32_t>(start_pos_1_string);
+      end_pos_1 = from_string<uint32_t>(end_pos_1_string);
       
       insert_start = from_string<uint32_t>(insert_start_string);
       insert_end = from_string<uint32_t>(insert_end_string);
+    }
+  
+    void parse_region(const string& region, uint32_t& target_id, uint32_t& start_pos_1, uint32_t& end_pos_1)
+    {
+      uint32_t temp_insert_start, temp_insert_end;
+      parse_region(region, target_id, start_pos_1, end_pos_1, temp_insert_start, temp_insert_end);
     }
   
   inline void set_print_progress(bool print_progress) { m_print_progress = print_progress; }

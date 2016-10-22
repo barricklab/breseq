@@ -269,7 +269,7 @@ public:
   cReferenceCoordinate get_reference_coordinate_end() const;
 
   //! Common function giving change in size of genome at site of applying entry
-  int32_t mutation_size_change(cReferenceSequences& ref_seq_info);
+  int32_t mutation_size_change(cReferenceSequences& ref_seq_info) const;
   
   //!---- Functions for updating mutations ---- !//
   
@@ -807,7 +807,13 @@ public:
   
   //!---- Format Conversion Functions: Static Convenience ---- !//
 
-
+  //! Convert GD to TSV input file
+  //!
+  static void write_tsv(
+                        string& output_csv_file_name,
+                        vector<cGenomeDiff>& gd_list,
+                        bool verbose = false
+                       );
   
   //! Convert genome diff to GVF
   static void GD2GVF( const string& gdfile, const string& gvffile, cReferenceSequences& ref_seq_info, bool snv_only = false )
@@ -828,6 +834,9 @@ public:
                            cReferenceSequences& ref_seq_info,
                            bool missing_as_ancestral = false,
                            bool verbose = false);
+  
+
+  
   
   //! Convert GD to Circos files
   static void GD2Circos(const vector<string> &gd_file_names,

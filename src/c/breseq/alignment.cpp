@@ -570,7 +570,7 @@ tam_file::tam_file(const string& tam_file_name, const string& fasta_file_name, i
   
 tam_file::~tam_file()
 {
-  sam_close(input_tam);
+  if (input_tam) { sam_close(input_tam); input_tam=NULL; }
   if (bam_header) bam_header_destroy(bam_header);
 }
   

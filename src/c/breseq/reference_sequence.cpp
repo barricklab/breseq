@@ -20,6 +20,7 @@
 #include "libbreseq/error_count.h"
 #include "libbreseq/genome_diff.h"
 
+
 using namespace std;
 
 namespace breseq {
@@ -68,6 +69,9 @@ namespace breseq {
     return s;
   }
   
+  
+  // @JEB: 2016-10-04
+  // changed to return an index_1 of 0 and a strand of 0 instead of an error if position does not overlap gene
   void cSequenceFeature::genomic_position_to_index_strand_1(int32_t pos_1, int32_t& index_1, int8_t& strand) const
   {
     index_1 = 0;
@@ -89,7 +93,7 @@ namespace breseq {
       index_1 += it->get_end_1() - it->get_start_1() + 1;
     }
       
-    ERROR("Cannot find index of position that is not within gene.");
+    //ERROR("Cannot find index of position that is not within gene.");
   }
   
   string cAnnotatedSequence::get_stranded_sequence_1(int32_t strand, int32_t start_1, int32_t end_1) const
@@ -2376,6 +2380,43 @@ string cReferenceSequences::translate_protein(cAnnotatedSequence& seq, cSequence
   
   return protein_sequence;
 }
+  
+  
+// This only tests mutations that partially overlap a gene or are contained within it!
+// completely deleted genes are annotated outside of this function
+bool cReferenceSequences::mutation_overlapping_gene_is_inactivating(const cDiffEntry& mut, const uint32_t start, const uint32_t end, const cGeneFeature& gene, const double inactivate_overlap_fraction)
+{
+
+  bool is_inactivating = false;
+
+  // These coords are internal to the gene that was mutated (accounts for multiple sublocations)
+  int32_t mutated_gene_index_start_1, mutated_gene_index_end_1;
+  int8_t mutated_strand;
+  gene.genomic_position_to_index_strand_1(start, mutated_gene_index_start_1, mutated_strand);
+  gene.genomic_position_to_index_strand_1(end, mutated_gene_index_end_1, mutated_strand);
+  int32_t gene_inactivating_overlap_length = floor(inactivate_overlap_fraction * static_cast<double>(gene.get_length()));
+
+  // values of 0 mean that it was not within the gene
+  if (   ((mutated_gene_index_start_1 != 0) && (mutated_gene_index_start_1 <= gene_inactivating_overlap_length))
+      || ((mutated_gene_index_end_1 != 0) && (mutated_gene_index_end_1 <= gene_inactivating_overlap_length)) ) {
+  
+    if ((gene.type == "CDS") && (mut._type == SNP)) {
+      is_inactivating = (mut.get("snp_type") == "nonsense");
+    }
+    else if ( ((mut._type == INS) || (mut._type == DEL) || (mut._type == SUB)) ) {
+      int32_t size_change = mut.mutation_size_change(*this);
+      if ((size_change <= 15) && (gene.type == "CDS")) {
+        is_inactivating = (size_change!=3);
+      } else {
+        is_inactivating = true;
+      }
+    } else if (mut._type == MOB) {
+      is_inactivating = true;
+    }
+  }
+  
+  return is_inactivating;
+}
 
 void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, uint32_t end, bool repeat_override, bool ignore_pseudogenes)
 {
@@ -2399,8 +2440,34 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
   mut["gene_position"] = "";
   mut["gene_product"] = "";
   mut["_gene_product_hide"] = "";
-  mut["gene_list"] = ""; //#affected genes
+  
+  
+  mut["genes_overlapping"] = "";
+  mut["locus_tags_overlapping"] = "";
 
+  // Overlaps ANY part of these genes
+  
+  mut["genes_inactivated"] = "";
+  mut["locus_tags_inactivated"] = "";
+
+  const double k_inactivate_overlap_fraction = 0.8;
+
+  // This is a SUBSET of genes_overlapping
+  // Must overlap just one gene
+  // For mutations within first 80% of a gene's length, includes:
+  //  SNP if it is a nonsense mutation AND gene is protein coding.
+  //  INS/DEL/SUB if it is inframe AND the size change is <=15 nt AND gene is protein coding.
+  //  INS/DEL/SUB if the size change is >15 nt for all genes
+  //  MOB for all genes
+  
+  mut["genes_promoter"] = "";
+  mut["locus_tags_promoter"] = "";
+
+  const int32_t k_promoter_distance = 150;
+  // Does NOT overlap gene and occurs within an intergenic region
+  // within a region extending upstream of the start codon by k_promoter_distance
+  // If two genes qualify due to divergent transcription (<-- -->), the closer one is chosen.
+  
   
   string seq_id = mut["seq_id"];
 
@@ -2443,7 +2510,90 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     if (prev_gene_loc) prev_gene = (cGeneFeature)*(prev_gene_loc->get_feature());
     if (next_gene_loc) next_gene = (cGeneFeature)*(next_gene_loc->get_feature());
     
-    mut["gene_list"] = prev_gene.name + "," + next_gene.name;
+    // --------------  Begin "genes_promoter" field
+
+    
+    /* code for assigning only to closest one
+    if (mut.is_mutation()) {
+      // Decide on promoter mutations
+      int32_t prev_gene_distance(numeric_limits<int32_t>::max()), next_gene_distance(numeric_limits<int32_t>::max());
+      if (prev_gene.name.size() > 0) {
+        int32_t start_coord = mut.get_reference_coordinate_start().get_position();
+        for (cFeatureLocationList::iterator it = prev_gene.m_locations.begin(); it != prev_gene.m_locations.end(); it++) {
+          if (it->get_strand() == -1) {
+            int32_t dist = start - it->get_end_1();
+            prev_gene_distance = min(dist, prev_gene_distance);
+          }
+        }
+      }
+      if (next_gene.name.size() > 0) {
+        int32_t start_coord = mut.get_reference_coordinate_start().get_position();
+        for (cFeatureLocationList::iterator it = prev_gene.m_locations.begin(); it != prev_gene.m_locations.end(); it++) {
+          if (it->get_strand() == +1) {
+            int32_t dist = it->get_start_1() - end;
+            next_gene_distance = min(dist, next_gene_distance);
+          }
+        }
+      }
+      
+      
+      // ties go to prev_gene!
+      if ((prev_gene_distance <= k_promoter_distance) && (prev_gene_distance <= next_gene_distance)) {
+        mut["genes_promoter"] = prev_gene.name;
+        mut["locus_tags_promoter"] = prev_gene.get_locus_tag();
+
+      } else if (next_gene_distance <= k_promoter_distance) {
+        mut["genes_promoter"] = next_gene.name;
+        mut["locus_tags_promoter"] = next_gene.get_locus_tag();
+
+      }
+    }
+    */
+    
+    if (mut.is_mutation()) {
+      int32_t prev_gene_distance(numeric_limits<int32_t>::max()), next_gene_distance(numeric_limits<int32_t>::max());
+      if (prev_gene.name.size() > 0) {
+        int32_t start_coord = mut.get_reference_coordinate_start().get_position();
+        for (cFeatureLocationList::iterator it = prev_gene.m_locations.begin(); it != prev_gene.m_locations.end(); it++) {
+          if (it->get_strand() == -1) {
+            int32_t dist = start - it->get_end_1();
+            prev_gene_distance = min(dist, prev_gene_distance);
+          }
+        }
+      }
+      if (next_gene.name.size() > 0) {
+        int32_t start_coord = mut.get_reference_coordinate_start().get_position();
+        for (cFeatureLocationList::iterator it = prev_gene.m_locations.begin(); it != prev_gene.m_locations.end(); it++) {
+          if (it->get_strand() == +1) {
+            int32_t dist = it->get_start_1() - end;
+            next_gene_distance = min(dist, next_gene_distance);
+          }
+        }
+      }
+      
+      vector<string> genes_promoter_list;
+      vector<string> locus_tags_promoter_list;
+
+      if ((prev_gene_distance <= k_promoter_distance)) {
+        
+        genes_promoter_list.push_back(prev_gene.name);
+        locus_tags_promoter_list.push_back(prev_gene.get_locus_tag());
+        
+      } else if (next_gene_distance <= k_promoter_distance) {
+        
+        genes_promoter_list.push_back(next_gene.name);
+        locus_tags_promoter_list.push_back(next_gene.get_locus_tag());
+        
+      }
+      
+      mut["genes_promoter"] = join(genes_promoter_list, ",");
+      mut["locus_tags_promoter"] = join(locus_tags_promoter_list, ",");
+
+    }
+    
+    
+    // --------------  End "genes_promoter" field
+
     
     mut["gene_name"] += (prev_gene.name.size() > 0) ? prev_gene.name : no_gene_name;
     mut["gene_name"] += intergenic_separator;
@@ -2494,7 +2644,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
   {
     /// It can be within multiple genes, in which case we need to annotate
     /// the change it causes in each reading frame UGH! YUCKY!
-    /// FOR NOW: just take the first of the within genes...
+    /// FOR NOW: just take the FIRST of the within genes...
     cFeatureLocation* gene_loc = within_gene_locs[0];
     cGeneFeature gene = (cGeneFeature)(*(gene_loc->get_feature()));
 
@@ -2505,9 +2655,6 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     if (gene.get_locus_tag().size()) {
       mut["locus_tag"] = gene.get_locus_tag();
     }
-
-    //#added for gene table
-    mut["gene_list"] = gene.name;
 
     int32_t within_gene_start = gene_loc->is_top_strand() ? gene_loc->get_start_1() : gene_loc->get_end_1();
 
@@ -2547,90 +2694,105 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     }
 
     // only add gene information to SNPs and RA mutations that don't include indels
-    if ((mut._type != SNP) && !((mut._type == RA) && ((mut[MAJOR_BASE] != ".") && (mut[MINOR_BASE] != "."))))
-    {
+    if ((mut._type != SNP) && !((mut._type == RA) && ((mut[MAJOR_BASE] != ".") && (mut[MINOR_BASE] != ".")))) {
       mut["gene_position"] = "coding (" + mut["gene_position"] + "/" + gene_nt_size + " nt)";
-      return;
-    }
+    } else {
     
-    // These genes should be marked pseudo, so this should
-    ASSERT(!(gene.start_is_indeterminate() && gene.end_is_indeterminate()), "Attempt to translate CDS with indeterminate start and end coordinates: " + gene["locus_tag"]);
+      // These genes should be marked pseudo, so this should
+      ASSERT(!(gene.start_is_indeterminate() && gene.end_is_indeterminate()), "Attempt to translate CDS with indeterminate start and end coordinates: " + gene["locus_tag"]);
 
-    // Special additions for RA so that they can use the common code...
-    if (mut._type == RA)  {
-      string ra_seq_id = mut[SEQ_ID];
-      int32_t ra_position = from_string<int32_t>(mut[POSITION]);
-      mut["ref_seq"] = this->get_sequence_1(ra_seq_id, ra_position, ra_position);
-      mut["new_seq"] = (mut[MAJOR_BASE] == mut["ref_seq"]) ? mut[MINOR_BASE] : mut[MAJOR_BASE];
-    }
-    
-    // SNP and RA entries make it here
-    
-    // Get full gene nucleotide sequence. Pad with N's so that we can use a first or last
-    // indeterminate codon if necessary
-    
-    // The position within a codon... indexed to start at 0.
-    string gene_nt_sequence = gene.get_nucleotide_sequence((*this)[seq_id]);
-    
-    // The position within a codon... indexed to start at 0.
-    size_t indeterminate_codon_pos_offset_0 = 0;
-    
-    // Add padding to put us in-frame if we have an indeterminate start
-    if (gene.start_is_indeterminate()) {
-      indeterminate_codon_pos_offset_0 =  (3 - gene_nt_sequence.length() % 3) % 3;
-      gene_nt_sequence = repeat_char('N', indeterminate_codon_pos_offset_0) + gene_nt_sequence;
-      // flag so that we know the codon position is not to be trusted
-      mut["codon_position_is_indeterminate"] = "1";
-    }
-    if (gene.end_is_indeterminate()) {
-      gene_nt_sequence += repeat_char('N', gene_nt_sequence.length() % 3);
-    }
-    
-    // The genomic position we are looking for
-    int32_t mutated_genomic_position_1 = from_string<int32_t>(mut[POSITION]);
-    
-    // Translate to nucleotide index within the gene
-    int32_t mutated_index_1;
-    int8_t mutated_strand;
-    gene.genomic_position_to_index_strand_1(mutated_genomic_position_1, mutated_index_1, mutated_strand);
-    
-    // Set the codon position that is mutated (including offset for indeterminate_start)
-    int32_t mutated_codon_pos_1 = 1 + (mutated_index_1 + indeterminate_codon_pos_offset_0 - 1) % 3;
-    
-    int32_t mutated_codon_number_1 = 1 + int(floor(indeterminate_codon_pos_offset_0 + mutated_index_1 - 1)/3);
-    string codon_seq = gene_nt_sequence.substr((mutated_codon_number_1-1)*3, 3);
-    
-    // Save what we know so far
-    mut["codon_position"] = to_string<int32_t>(mutated_codon_pos_1); // 1-indexed
-    mut["codon_number"] = to_string<int32_t>(mutated_codon_number_1);
-    mut["aa_position"] = to_string<int32_t>(mutated_codon_number_1);
+      // Special additions for RA so that they can use the common code...
+      if (mut._type == RA)  {
+        string ra_seq_id = mut[SEQ_ID];
+        int32_t ra_position = from_string<int32_t>(mut[POSITION]);
+        mut["ref_seq"] = this->get_sequence_1(ra_seq_id, ra_position, ra_position);
+        mut["new_seq"] = (mut[MAJOR_BASE] == mut["ref_seq"]) ? mut[MINOR_BASE] : mut[MAJOR_BASE];
+      }
+      
+      // SNP and RA entries make it here
+      
+      // Get full gene nucleotide sequence. Pad with N's so that we can use a first or last
+      // indeterminate codon if necessary
+      
+      // The position within a codon... indexed to start at 0.
+      string gene_nt_sequence = gene.get_nucleotide_sequence((*this)[seq_id]);
+      
+      // The position within a codon... indexed to start at 0.
+      size_t indeterminate_codon_pos_offset_0 = 0;
+      
+      // Add padding to put us in-frame if we have an indeterminate start
+      if (gene.start_is_indeterminate()) {
+        indeterminate_codon_pos_offset_0 =  (3 - gene_nt_sequence.length() % 3) % 3;
+        gene_nt_sequence = repeat_char('N', indeterminate_codon_pos_offset_0) + gene_nt_sequence;
+        // flag so that we know the codon position is not to be trusted
+        mut["codon_position_is_indeterminate"] = "1";
+      }
+      if (gene.end_is_indeterminate()) {
+        gene_nt_sequence += repeat_char('N', gene_nt_sequence.length() % 3);
+      }
+      
+      // The genomic position we are looking for
+      int32_t mutated_genomic_position_1 = from_string<int32_t>(mut[POSITION]);
+      
+      // Translate to nucleotide index within the gene
+      int32_t mutated_index_1;
+      int8_t mutated_strand;
+      gene.genomic_position_to_index_strand_1(mutated_genomic_position_1, mutated_index_1, mutated_strand);
+      
+      // Set the codon position that is mutated (including offset for indeterminate_start)
+      int32_t mutated_codon_pos_1 = 1 + (mutated_index_1 + indeterminate_codon_pos_offset_0 - 1) % 3;
+      
+      int32_t mutated_codon_number_1 = 1 + int(floor(indeterminate_codon_pos_offset_0 + mutated_index_1 - 1)/3);
+      string codon_seq = gene_nt_sequence.substr((mutated_codon_number_1-1)*3, 3);
+      
+      // Save what we know so far
+      mut["codon_position"] = to_string<int32_t>(mutated_codon_pos_1); // 1-indexed
+      mut["codon_number"] = to_string<int32_t>(mutated_codon_number_1);
+      mut["aa_position"] = to_string<int32_t>(mutated_codon_number_1);
 
-    mut["codon_ref_seq"] = codon_seq;
+      mut["codon_ref_seq"] = codon_seq;
+      
+      mut["aa_ref_seq"] =  translate_codon(mut["codon_ref_seq"], gene.translation_table, ( gene.start_is_indeterminate() && (mutated_codon_number_1 == 1) ) ? 2 : mutated_codon_number_1);
+      
+      // Generate mutated sequence
+      mut["codon_new_seq"] = codon_seq;
+      //#remember to revcom the change if gene is on opposite strand
+      mut["codon_new_seq"][mutated_codon_pos_1 - 1] = (mutated_strand == 1) ? mut["new_seq"][0] : reverse_complement(mut["new_seq"])[0];
+      mut["aa_new_seq"] =  translate_codon(mut["codon_new_seq"], gene.translation_table, ( gene.start_is_indeterminate() && (mutated_codon_number_1 == 1) ) ? 2 : mutated_codon_number_1);
+      mut["transl_table"] = to_string(gene.translation_table);
+      
+      if ((mut["aa_ref_seq"] != "*") && (mut["aa_new_seq"] == "*"))
+        mut["snp_type"] = "nonsense";
+      else if (mut["aa_ref_seq"] != mut["aa_new_seq"])
+        mut["snp_type"] = "nonsynonymous";
+      else
+        mut["snp_type"] = "synonymous";
+    }
     
-    mut["aa_ref_seq"] =  translate_codon(mut["codon_ref_seq"], gene.translation_table, ( gene.start_is_indeterminate() && (mutated_codon_number_1 == 1) ) ? 2 : mutated_codon_number_1);
     
-    // Generate mutated sequence
-    mut["codon_new_seq"] = codon_seq;
-    //#remember to revcom the change if gene is on opposite strand
-    mut["codon_new_seq"][mutated_codon_pos_1 - 1] = (mutated_strand == 1) ? mut["new_seq"][0] : reverse_complement(mut["new_seq"])[0];
-    mut["aa_new_seq"] =  translate_codon(mut["codon_new_seq"], gene.translation_table, ( gene.start_is_indeterminate() && (mutated_codon_number_1 == 1) ) ? 2 : mutated_codon_number_1);
-    mut["transl_table"] = to_string(gene.translation_table);
-    
-    if ((mut["aa_ref_seq"] != "*") && (mut["aa_new_seq"] == "*"))
-      mut["snp_type"] = "nonsense";
-    else if (mut["aa_ref_seq"] != mut["aa_new_seq"])
-      mut["snp_type"] = "nonsynonymous";
-    else
-      mut["snp_type"] = "synonymous";
-    
+    // --------------  Begin "genes_inactivated" field
+    if (mut.is_mutation()) {
+      
+      // Can only be one of inactivating and overlapping
+      if (mutation_overlapping_gene_is_inactivating(mut, start, end, gene, k_inactivate_overlap_fraction)) {
+        mut["genes_inactivated"] = gene.name;
+        mut["locus_tags_inactivated"] = gene.get_locus_tag();
+      } else {
+        mut["genes_overlapping"] = gene.name;
+        mut["locus_tags_overlapping"] = gene.get_locus_tag();
+      }
+      
+    }
+    // --------------  End "genes_inactivated" field
+
   }
 
-  //The mutation actually contains several genes
+  //The mutation actually contains several genes or overlaps the ends of the gene
   else if (between_gene_locs.size() + inside_left_gene_locs.size() + inside_right_gene_locs.size() > 0)
   {
 
-    vector<string> gene_name_list;
-    vector<string> locus_tag_list;
+    vector<string> gene_name_list, locus_tag_list; // human readable, indicates partial overlaps with brackets []
+
     for (vector<cFeatureLocation*>::iterator it=inside_left_gene_locs.begin(); it != inside_left_gene_locs.end(); it++)
     {
       cGeneFeature gene = (cGeneFeature)(*((*it)->get_feature()));
@@ -2665,7 +2827,59 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
 
     }
     
-    mut["gene_list"] = join(gene_name_list, ",");
+    // --------------  Begin "genes_inactivated" and other genes fields
+    vector<string> genes_overlapping_list, locus_tags_overlapping_list; // straight list of genes
+
+    if (mut.is_mutation()) {
+    
+      vector<string> inactivated_gene_list, inactivated_locus_tag_list;
+
+      for (vector<cFeatureLocation*>::iterator it = inside_left_gene_locs.begin(); it != inside_left_gene_locs.end(); it++) {
+        
+        cGeneFeature gene = (cGeneFeature)(*((*it)->get_feature()));
+        
+        if (mutation_overlapping_gene_is_inactivating(mut, start, end, gene, k_inactivate_overlap_fraction)) {
+          inactivated_gene_list.push_back(gene.name);
+          inactivated_locus_tag_list.push_back(gene.get_locus_tag());
+        } else {
+          genes_overlapping_list.push_back(gene.name);
+          locus_tags_overlapping_list.push_back(gene.get_locus_tag());
+        }
+        
+      }
+      
+      // Note difference for within is that we know these are inactivating
+      for (vector<cFeatureLocation*>::iterator it = between_gene_locs.begin(); it != between_gene_locs.end(); it++) {
+        
+        cGeneFeature gene = (cGeneFeature)(*((*it)->get_feature()));
+        
+        inactivated_gene_list.push_back(gene.name);
+        inactivated_locus_tag_list.push_back(gene.get_locus_tag());
+        
+      }
+      
+      for (vector<cFeatureLocation*>::iterator it = inside_right_gene_locs.begin(); it != inside_right_gene_locs.end(); it++) {
+        
+        cGeneFeature gene = (cGeneFeature)(*((*it)->get_feature()));
+        
+        if (mutation_overlapping_gene_is_inactivating(mut, start, end, gene, k_inactivate_overlap_fraction)) {
+          inactivated_gene_list.push_back(gene.name);
+          inactivated_locus_tag_list.push_back(gene.get_locus_tag());
+        } else {
+          genes_overlapping_list.push_back(gene.name);
+          locus_tags_overlapping_list.push_back(gene.get_locus_tag());
+        }
+        
+      }
+      
+      mut["genes_inactivated"] = join(inactivated_gene_list, ",");
+      mut["locus_tags_inactivated"] = join(inactivated_locus_tag_list, ",");
+      
+      mut["genes_overlapping"] = join(genes_overlapping_list, ",");
+      mut["locus_tags_overlapping"] = join(locus_tags_overlapping_list, ",");
+      
+    }
+    // --------------  End "genes_inactivated" field
     
     // We ended up calling this function a lot.
     string sJoinedGeneList = join(gene_name_list, ", ");
@@ -2816,7 +3030,7 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
     {
       case SNP:{
         mut["_ref_seq"] = get_sequence_1(mut["seq_id"], from_string<uint32_t>(mut["position"]), from_string<int32_t>(mut["position"]));
-        annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]), false, ignore_pseudogenes);
+        annotate_1_mutation(mut, mut.get_reference_coordinate_start().get_position(), mut.get_reference_coordinate_end().get_position(), false, ignore_pseudogenes);
        
         for(vector<string>::iterator itc = compare_key_list.begin(); itc != compare_key_list.end(); ++itc) {
           if (*itc == default_key) {
@@ -2828,24 +3042,14 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
         }
       } break;
         
-      case SUB:{
-        annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"]) - 1);
-      } break;
-        
-      case DEL:{
-        annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"]) - 1);
-      } break;
-        
-      case INS:{
-        annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]));
-      } break;
-        
-      case CON:{
-        annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"]) - 1);
-      } break;
-        
-      case MOB:{
-        annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["duplication_size"]) - 1);
+      case SUB:
+      case DEL:
+      case INS:
+      case CON:
+      case MOB:
+      case AMP:
+      {
+        annotate_1_mutation(mut, mut.get_reference_coordinate_start().get_position(), mut.get_reference_coordinate_end().get_position());
       } break;
         
       case INV:{
@@ -2857,10 +3061,6 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
         mut["gene_product_2"] = mut["gene_product"];
         mut.erase("gene_name");
         mut.erase("gene_product");
-      } break;
-        
-      case AMP:{
-        annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"]) - 1);
       } break;
         
       case JC:{

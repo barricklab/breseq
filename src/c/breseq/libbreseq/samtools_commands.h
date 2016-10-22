@@ -82,7 +82,7 @@ void samtools_index(const string& bam_file_name);
 
 void samtools_sort(
                    const string& unsorted_bam_file_name,
-                   const string& sorted_bam_prefix
+                   const string& sorted_bam_file_name
                    );
 
 void samtools_import(
