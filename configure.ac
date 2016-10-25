@@ -67,6 +67,7 @@ AC_CHECK_FUNCS([bzero gethostbyaddr gethostbyname memmove memset pow select sock
 
 AC_SEARCH_LIBS([deflateSetHeader], [z], [], [AC_MSG_ERROR(["libz >=1.2.2.1 is required."])])
 AC_SEARCH_LIBS([acosf], [m], [], [AC_MSG_ERROR(["libm is required."])])
+AC_SEARCH_LIBS([pthread_create], [pthread], [], [AC_MSG_ERROR(["libpthread is required."])])
 
 # This code could be used to check for an existing samtools/libbam.a
 # But unfortunately we have to compile them ourselves with a patch
