@@ -18,11 +18,12 @@
 BUILT_SOURCES = version.h
 DISTCLEANFILES =  version.h
 
+PACKAGE_VERSION  = 1.3.1
+
 version.h:
 	echo '#define HTS_VERSION "$(PACKAGE_VERSION)"' > $@
 
-PACKAGE_VERSION  = 1.3.1
-AM_CFLAGS = -g -Wall -O2
+AM_CFLAGS = -Wall -O2 $(SAMTOOLS_ADDITIONAL_CFLAGS)
 
 noinst_LTLIBRARIES = libhts.la
 libhts_la_SOURCES = \

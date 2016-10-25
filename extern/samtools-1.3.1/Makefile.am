@@ -15,13 +15,19 @@
 ##
 ###
 
+SUBDIRS = htslib-1.3.1
+
 BUILT_SOURCES = version.h
 DISTCLEANFILES =  version.h
+
+PACKAGE_VERSION  = 1.3.1
 
 version.h:
 	echo '#define SAMTOOLS_VERSION "$(PACKAGE_VERSION)"' > $@
 
-AM_CFLAGS = -g -Wall -O2 -I$(top_srcdir)/$(HTSLIB)
+AM_CFLAGS = -Wall -O2 -I$(top_srcdir)/$(HTSLIB) $(SAMTOOLS_ADDITIONAL_CFLAGS)
+
+LIBADD = $(top_builddir)/$(HTSLIB)/libhts.la
 
 noinst_LTLIBRARIES = libbam.la
 libbam_la_SOURCES = \

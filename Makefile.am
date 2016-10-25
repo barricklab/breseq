@@ -17,7 +17,7 @@
 
 ACLOCAL_AMFLAGS = -I aux_build/m4
 
-SUBDIRS = $(HTSLIB) $(LIBBAM) $(BRESEQ)
+SUBDIRS = $(LIBBAM) $(BRESEQ)
 
 ### Tests! -- only one test included for now in distribution.
 EXTRA_DIST = \
