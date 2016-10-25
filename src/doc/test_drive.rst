@@ -37,9 +37,6 @@ If you open the GenBank file that you downloaded in a text editor, you should se
                181 acaacatcca tgaaacgcat tagcaccacc attaccacca ccatcaccat taccacaggt
                241 aacggtgcgg gctgacgcgt acaggaaaca cagaaaaaag cccgcacctg acagtgcggg
 
-Running |breseq| on a full data set like this is not fast. Depending on your computer, this could take several hours. To speed things up, you can set -j option to the number of cores on your machine to enable multithreaded execution of some steps (e.g., -j 4 for a quad-core machine). If you want to speed this example up, you might also include only one of the two input read files on the command line.
-
-
 Read files
 ++++++++++++++
 
