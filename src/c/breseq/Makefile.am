@@ -78,7 +78,7 @@ libbreseq_la_SOURCES = \
 	libbreseq/summary.h 
 libbreseq_la_LIBADD = $(top_builddir)/$(HTSLIB)/libhts.la $(top_builddir)/$(LIBBAM)/libbam.la
 
-LDADD = $(top_builddir)/$(HTSLIB)/libhts.la $(top_builddir)/$(LIBBAM)/libbam.la libbreseq.la
+LDADD = libbreseq.la
 
 bin_PROGRAMS = breseq gdtools 
 breseq_SOURCES = breseq_cmdline.cpp

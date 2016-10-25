@@ -18,9 +18,27 @@ First, create a directory called **test_drive**:
 Reference sequence
 ++++++++++++++++++++
 
-|breseq| prefers the reference sequence in Genbank or GFF3 format. In this example, the reference sequence is *Escherichia coli* B strain REL606. The Genbank (Refseq) accession number is: **NC_012967** . You can search for this sequence at http://www.ncbi.nlm.nih.gov/ or follow this `direct link <http://www.ncbi.nlm.nih.gov/nuccore/NC_012967>`_.
+|breseq| prefers the reference sequence in Genbank or GFF3 format. In this example, the reference sequence is *Escherichia coli* B strain REL606. The Genbank (Refseq) accession number is: **NC_012967**. You can search for this sequence at http://www.ncbi.nlm.nih.gov/ or follow this `direct link <http://www.ncbi.nlm.nih.gov/nuccore/NC_012967>`_.
 
-Once the sequence is displayed, you will want to select "Show sequence" from the Display options on the right then click update view. Finally, use the send menu to choose "Complete Record" and Destination: "File" and "Genbank (Full)". It should start downloading a file called "sequence.gb". Rename this to **NC_012967.gbk** after it downloads.
+Once the sequence is displayed, you will want to select "Show sequence" from the Display options on the right then click "Update View" and let the sequence download complete. Finally, use the "Send:" menu to choose "Complete Record" and Destination: "File" and "Genbank (Full)". It should start downloading a file called "sequence.gb". Rename this to **NC_012967.gbk** after it downloads.
+
+.. warning::
+   
+   A common error in using |breseq| is to download and try to use a GenBank file that does not include the DNA sequence of the genome. Remember to "Show sequence" from the Display options on the right then click "Update View" before downloading to avoid this problem!
+
+If you open the GenBank file that you downloaded in a text editor, you should see a section with ORIGIN followed by the DNA sequence of the genome, like this:
+
+.. code-block:: text
+
+   ORIGIN
+                 1 agcttttcat tctgactgca acgggcaata tgtctctgtg tggattaaaa aaagagtgtc
+                61 tgatagcagc ttctgaactg gttacctgcc gtgagtaaat taaaatttta ttgacttagg
+               121 tcactaaata ctttaaccaa tataggcata gcgcacagac agataaaaat tacagagtac
+               181 acaacatcca tgaaacgcat tagcaccacc attaccacca ccatcaccat taccacaggt
+               241 aacggtgcgg gctgacgcgt acaggaaaca cagaaaaaag cccgcacctg acagtgcggg
+
+Running |breseq| on a full data set like this is not fast. Depending on your computer, this could take several hours. To speed things up, you can set -j option to the number of cores on your machine to enable multithreaded execution of some steps (e.g., -j 4 for a quad-core machine). If you want to speed this example up, you might also include only one of the two input read files on the command line.
+
 
 Read files
 ++++++++++++++
