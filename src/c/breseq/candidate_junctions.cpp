@@ -84,9 +84,9 @@ namespace breseq {
       bam_alignment* ap = it->get(); // we are saving the pointer value as the map key
       
       uint32_t i;
-      if (true) {
-        i = ap->aux_get_i("AS"); // test using alignment score instead of mismatches.
-      } else {
+      // Use alignment score instead of mismatches, by default, but fallback if not present
+      bool AS_found = ap->aux_get_i("AS", i);
+      if (!AS_found) {
         i = alignment_mismatches(*ap, ref_seq_info);
       
         // @JEB may want to revisit this.
@@ -104,6 +104,7 @@ namespace breseq {
          
          
         i = read_length - i;
+        ap->aux_set("AS", 'I', sizeof(uint32_t), (uint8_t*)&i);
       }
       
       // Only keep ones with a minimum score

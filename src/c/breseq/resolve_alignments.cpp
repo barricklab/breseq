@@ -1155,7 +1155,9 @@ void score_junction(
 		assert(a != NULL);
 
     // Only count alignments tied for best
-    int32_t is_best = a->aux_get_i(kBreseqBestAlignmentScoreBAMTag);
+    uint32_t is_best;
+    bool tag_found = a->aux_get_i(kBreseqBestAlignmentScoreBAMTag, is_best);
+    ASSERT(tag_found, "Did not find tag " + string(kBreseqBestAlignmentScoreBAMTag) + " for alignment");
     if (!is_best) 
       continue;
     

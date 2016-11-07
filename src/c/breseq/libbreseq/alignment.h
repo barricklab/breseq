@@ -267,11 +267,13 @@ class alignment_wrapper {
     // Don't call this directly - it has to be passed through a formatting function
     //inline uint8_t* aux_get(const char tag[2]) const { return bam_aux_get(_a, tag); }
   
-    inline int32_t aux_get_i(const char tag[2]) const 
+    // Returns whether tag was found
+    inline bool aux_get_i(const char tag[2], uint32_t &value) const
     { 
       uint8_t *auxl = bam_aux_get(_a, tag);
-      ASSERT(auxl, "BAM alignment aux tag not found: " + string(tag));
-      return bam_aux2i(auxl); 
+      if (auxl == NULL) return false;
+      value = bam_aux2i(auxl);
+      return true;
     }
 
 	inline bool proper_pair() const

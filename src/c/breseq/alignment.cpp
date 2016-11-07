@@ -662,7 +662,11 @@ void tam_file::write_alignments(
 
 		stringstream aux_tags_ss;
     
-		aux_tags_ss << "AS:i:" << a.aux_get_i("AS") << "\t" << "X1:i:" << alignments.size() << "\t" << "X2:i:" << fastq_file_index;
+    uint32_t as;
+    bool AS_found = a.aux_get_i("AS", as);
+    ASSERT(AS_found, "Could not find required tag AS for alignment.");
+    
+		aux_tags_ss << "AS:i:" << as << "\t" << "X1:i:" << alignments.size() << "\t" << "X2:i:" << fastq_file_index;
 
 		if ((trims != NULL) && (trims->size() > i)) {
 			Trims trim = (*trims)[i];
@@ -1198,7 +1202,12 @@ void tam_file::write_moved_alignment(
 	////
 
 	stringstream aux_tags_ss;
-	aux_tags_ss << "AS:i:" << a.aux_get_i("AS") << "\t" << "X1:i:" << 1 << "\t" << "X2:i:" << fastq_file_index;
+  
+  uint32_t as;
+  bool AS_found = a.aux_get_i("AS", as);
+  ASSERT(AS_found, "Could not find required tag AS for alignment.");
+  
+	aux_tags_ss << "AS:i:" << as << "\t" << "X1:i:" << 1 << "\t" << "X2:i:" << fastq_file_index;
 
 	//this flag indicates this is a junction match and which side of the match is in the middle of the read across the junction
 	int32_t within_side = (reference_strand == 1) ? junction_side : (junction_side + 1) % 2;

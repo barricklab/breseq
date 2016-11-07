@@ -1293,28 +1293,33 @@ int breseq_default_action(int argc, char* argv[])
   // Calculate the total reference sequence length
   summary.sequence_conversion.total_reference_sequence_length = ref_seq_info.total_length();
   
-	// Reload certain information into settings from summary to make re-entrant
-  map<string, bool> read_files_surviving_conversion;
   
-  // --> converted names
-	for (map<string, Summary::AnalyzeFastq>::iterator it = summary.sequence_conversion.reads.begin(); it != summary.sequence_conversion.reads.end(); it++)
-	{
-		string base_name = it->first;
-    read_files_surviving_conversion[base_name] = true;
+  // Reload certain information into settings from summary to make re-entrant
+  // Aligned SAM mode knows nothing of read limits, so unused.
+  
+  if (!settings.aligned_sam_mode) {
+    map<string, bool> read_files_surviving_conversion;
+    
+    // --> converted names
+    for (map<string, Summary::AnalyzeFastq>::iterator it = summary.sequence_conversion.reads.begin(); it != summary.sequence_conversion.reads.end(); it++)
+    {
+      string base_name = it->first;
+      read_files_surviving_conversion[base_name] = true;
 
-    if (it->second.converted_fastq_name.size() > 0) {
-			settings.read_files.read_file_to_converted_fastq_file_name_map[base_name] = it->second.converted_fastq_name;
+      if (it->second.converted_fastq_name.size() > 0) {
+        settings.read_files.read_file_to_converted_fastq_file_name_map[base_name] = it->second.converted_fastq_name;
+      }
     }
-	}
-  
-  // --> remove any read files that were not used due to coverage limits
-  for (cReadFiles::iterator it=settings.read_files.begin(); it != settings.read_files.end(); ) {
-    if (read_files_surviving_conversion.count(it->base_name())) {
-      it++;
-    } else {
-      settings.read_files.read_file_to_fastq_file_name_map.erase(it->file_name());
-      settings.read_files.read_file_to_converted_fastq_file_name_map.erase(it->file_name());
-      it = settings.read_files.erase(it);
+    
+    // --> remove any read files that were not used due to coverage limits
+    for (cReadFiles::iterator it=settings.read_files.begin(); it != settings.read_files.end(); ) {
+      if (read_files_surviving_conversion.count(it->base_name())) {
+        it++;
+      } else {
+        settings.read_files.read_file_to_fastq_file_name_map.erase(it->file_name());
+        settings.read_files.read_file_to_converted_fastq_file_name_map.erase(it->file_name());
+        it = settings.read_files.erase(it);
+      }
     }
   }
 
