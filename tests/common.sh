@@ -115,8 +115,8 @@ do_check() {
 			echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
 			echo ""
 			popd > /dev/null
-			if [[ -n "${REFERENCE_ARG+1}" ]]; then
-				rm -r ${SELF}/failed_compare.html
+			if [ -e "${SELF}/failed_compare.html" ]; then
+				rm -Rf ${SELF}/failed_compare.html
 			fi
 		fi
 	done

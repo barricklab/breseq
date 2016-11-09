@@ -176,7 +176,7 @@ namespace breseq {
       case 2: return 1;
       case 3: return 0;
       case 4: return 4;
-      default: ASSERT(false, "Unrecognized base index");
+      default: return 4; //ASSERT(false, "Unrecognized base index");
     }
     return 0;
   }
@@ -193,7 +193,7 @@ namespace breseq {
       case 0x08: return 'T';
       case '.': return '.';
       case 0x0f: return 'N'; // might want to assert here 
-      default: ASSERT(false, "Unrecognized BAM base");
+      default: return 'N';   //ASSERT(false, "Unrecognized BAM base");
     }		
     return ' ';
 	}
