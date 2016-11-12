@@ -269,8 +269,8 @@ bool test_RA_evidence_CONSENSUS_mode(
   // Decide if we are a polymorphism (or mixed base) prediction or a consensus prediction
   ePredictionType prediction(unknown);
   
-  double consensus_score = from_string<double>(ra[CONSENSUS_SCORE]);
-  double polymorphism_score = (ra[POLYMORPHISM_SCORE]=="NA") ? numeric_limits<double>::quiet_NaN() : from_string<double>(ra[POLYMORPHISM_SCORE]);
+  double consensus_score = double_from_string(ra[CONSENSUS_SCORE]);
+  double polymorphism_score = double_from_string(ra[POLYMORPHISM_SCORE]);
   double variant_frequency = from_string<double>(ra[POLYMORPHISM_FREQUENCY]);
   
   // Score must be below one of the thresholds
@@ -346,8 +346,8 @@ bool test_RA_evidence_POLYMORPHISM_mode(
   // Decide if we are a polymorphism (or mixed base) prediction or a consensus prediction
   ePredictionType prediction(unknown);
   
-  double consensus_score = from_string<double>(ra[CONSENSUS_SCORE]);
-  double polymorphism_score = (ra[POLYMORPHISM_SCORE]=="NA") ? numeric_limits<double>::quiet_NaN() : from_string<double>(ra[POLYMORPHISM_SCORE]);
+  double consensus_score = double_from_string(ra[CONSENSUS_SCORE]);
+  double polymorphism_score = double_from_string(ra[POLYMORPHISM_SCORE]);
   double variant_frequency = from_string<double>(ra[POLYMORPHISM_FREQUENCY]);
   
   // Set up polymorphism as default

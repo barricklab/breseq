@@ -16,7 +16,9 @@ BINARYDIR=${PWD}/${BINARYLOCALDIR}
 rm -r ${BINARYDIR} ${BINARYDIR}.tgz
 ./configure CFLAGS="${MYCFLAGS}" CXXFLAGS="${MYCFLAGS}" LDFLAGS="${MYCFLAGS}" --prefix="${BINARYDIR}"
 make clean
-make -j 6 install
+make -j 6
+make test 
+make install
 
 #Documentation and information
 if [ "$BINARYPLATFORM" == "Darwin" ]; then

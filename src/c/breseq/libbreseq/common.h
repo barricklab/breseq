@@ -735,7 +735,11 @@ namespace breseq {
     return "\"" + input + "\"";
   }
   
-  //! special handling of NA and INF, compatible with C++ limits and R representations
+  //  Special handling of NA and INF values in doubles
+  //  Used in 
+  //  compatible with C++ limits and R representations
+  //  Using this function prevents some incompatibilities
+  //  In different compilers (MacOS 10.7 compilation, for example)
   inline double double_from_string(const string& input)
   {
     string compare_string = to_upper(input);
@@ -743,6 +747,8 @@ namespace breseq {
       return numeric_limits<double>::quiet_NaN();
     if (compare_string == "INF")
       return numeric_limits<double>::infinity();
+    if (compare_string == "-INF")
+      return -numeric_limits<double>::infinity();
     
     return from_string<double>(input);
   }
