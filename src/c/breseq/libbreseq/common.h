@@ -736,7 +736,7 @@ namespace breseq {
   }
   
   //  Special handling of NA and INF values in doubles
-  //  Used in 
+  //  Used for consensus and polymorphism scores
   //  compatible with C++ limits and R representations
   //  Using this function prevents some incompatibilities
   //  In different compilers (MacOS 10.7 compilation, for example)
