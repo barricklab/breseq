@@ -244,10 +244,10 @@ namespace breseq
     ("polymorphism-score-cutoff", "Log10 E-value cutoff for test of polymorphism vs no polymorphism (DEFAULT = consensus mode, 10; polymorphism mode, 2)", "", ADVANCED_OPTION)
     ("polymorphism-frequency-cutoff", "Only predict polymorphisms when both allele frequencies are greater than this value. (DEFAULT = consensus mode, 0.2; polymorphism mode, 0.05)", "", ADVANCED_OPTION)
     ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms for which at least this many reads on each strand support each alternative allele. (DEFAULT = consensus mode, 0; polymorphism mode, 2)", "", ADVANCED_OPTION)
-    ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 0.001)", "", ADVANCED_OPTION)
+    ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, OFF)", "", ADVANCED_OPTION)
     ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms from read alignment evidence", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("polymorphism-reject-indel-homopolymer-length", "Reject insertion/deletion polymorphisms which could result from expansion/contraction of homopolymer repeats with this length or greater in the reference genome (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 3) ", "", ADVANCED_OPTION)
-    ("polymorphism-reject-surrounding-homopolymer-length", "Do not predict polymorphic base substitutions that create a homopolymer when they have this many adjacent bases of that homopolymer on each side. For example, a mutation TTATT -> TTTTT would be rejected with a setting of 2. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 2)", "", ADVANCED_OPTION)
+    ("polymorphism-reject-surrounding-homopolymer-length", "Do not predict polymorphic base substitutions that create a homopolymer when they have this many adjacent bases of that homopolymer on each side. For example, TTATT->TTTTT would be rejected with a setting of 2. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 2)", "", ADVANCED_OPTION)
     ;
     
     options.addUsage("", ADVANCED_OPTION);

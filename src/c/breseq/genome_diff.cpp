@@ -665,8 +665,8 @@ cReferenceCoordinate cDiffEntry::get_reference_coordinate_end() const
       return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)), this->entry_exists(INSERT_POSITION) ? from_string<uint32_t>(this->at(INSERT_POSITION)) : 1);
     case MOB:
     {
-      if (from_string<uint32_t>(this->at("duplication_size")) == 0) {
-        return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)) + from_string<uint32_t>(this->at("duplication_size")), 1);
+      if (from_string<int32_t>(this->at("duplication_size")) == 0) {
+        return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)) + from_string<int32_t>(this->at("duplication_size")), 1);
       } else {
         return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)) + abs(from_string<int32_t>(this->at("duplication_size"))) - 1);
       }
