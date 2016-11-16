@@ -9,11 +9,12 @@ REFERENCE_ARG="-r ${DATADIR}/lambda/lambda.5.gbk"
 
 
 TESTCMD=" \
-		${BRESEQ} \
-		-b 0 \
-        -o ${SELF} \
-        ${REFERENCE_ARG} \
-        ${DATADIR}/lambda/lambda.short_sequence_repeats.fastq
+    ${BRESEQ} \
+    ${BRESEQ_TEST_THREAD_ARG} \
+    -b 0 \
+    -o ${SELF} \
+    ${REFERENCE_ARG} \
+    ${DATADIR}/lambda/lambda.short_sequence_repeats.fastq
 	"
 
 do_test $1 ${SELF}

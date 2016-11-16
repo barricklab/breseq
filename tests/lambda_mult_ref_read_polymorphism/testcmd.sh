@@ -9,14 +9,15 @@ REFERENCE_ARG="-r ${DATADIR}/lambda/lambda.1-2.gbk -r ${DATADIR}/lambda/lambda.3
 
 TESTCMD="\
     ${BRESEQ} \
-        --polymorphism-prediction \
-        -o ${SELF} \
-        ${REFERENCE_ARG} \
-        ${DATADIR}/lambda/lambda_mixed_population.1.fastq \
-        ${DATADIR}/lambda/lambda_mixed_population.2.fastq \
-        ${DATADIR}/lambda/lambda_mixed_population.3.fastq \
-        ${DATADIR}/lambda/lambda_mixed_population.4.fastq \
-        ${DATADIR}/lambda/lambda_mixed_population.5.fastq \
+    ${BRESEQ_TEST_THREAD_ARG} \
+    --polymorphism-prediction \
+    -o ${SELF} \
+    ${REFERENCE_ARG} \
+    ${DATADIR}/lambda/lambda_mixed_population.1.fastq \
+    ${DATADIR}/lambda/lambda_mixed_population.2.fastq \
+    ${DATADIR}/lambda/lambda_mixed_population.3.fastq \
+    ${DATADIR}/lambda/lambda_mixed_population.4.fastq \
+    ${DATADIR}/lambda/lambda_mixed_population.5.fastq \
     "
 
 do_test $1 ${SELF}

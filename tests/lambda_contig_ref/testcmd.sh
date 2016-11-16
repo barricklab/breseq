@@ -9,9 +9,10 @@ REFERENCE_ARG="-r ${DATADIR}/lambda/lambda-contig.gbk"
 
 TESTCMD="\
     ${BRESEQ} \
-        -o ${SELF} \
-        -c ${DATADIR}/lambda/lambda-contig.gbk \
-        ${DATADIR}/lambda/lambda_mixed_population.fastq \
+    ${BRESEQ_TEST_THREAD_ARG} \
+    -o ${SELF} \
+    -c ${DATADIR}/lambda/lambda-contig.gbk \
+    ${DATADIR}/lambda/lambda_mixed_population.fastq \
     "
 
 do_test $1 ${SELF}

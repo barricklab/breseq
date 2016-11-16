@@ -8,11 +8,12 @@ EXPECTED_OUTPUTS[0]="expected.gd"
 REFERENCE_ARG="-r ${DATADIR}/REL606/REL606.fragment.gbk"
 
 TESTCMD=" \
-		${BRESEQ} \
-		-b 0 \
-        -o ${SELF} \
-        ${REFERENCE_ARG} \
-        ${DATADIR}/REL606/REL606.fragment.3.fastq.gz
+    ${BRESEQ} \
+    ${BRESEQ_TEST_THREAD_ARG} \
+    -b 0 \
+    -o ${SELF} \
+    ${REFERENCE_ARG} \
+    ${DATADIR}/REL606/REL606.fragment.3.fastq.gz
 	"
 
 do_test $1 ${SELF}

@@ -47,6 +47,7 @@ void samtools_index(const string& bam_file_name) {
   
   cli_arguments args;
   args.push_back("index");
+  
   args.push_back(bam_file_name);
   args.push_back(bam_file_name + ".bai");
   
@@ -61,10 +62,12 @@ void samtools_index(const string& bam_file_name) {
   
 }
 
-void samtools_sort(const string& unsorted_bam_file_name, const string& sorted_bam_file_name) {
+void samtools_sort(const string& unsorted_bam_file_name, const string& sorted_bam_file_name, uint32_t const num_threads) {
   
   cli_arguments args;
   args.push_back("sort");
+  args.push_back("--threads");
+  args.push_back(to_string(num_threads));
   args.push_back("-o");
   args.push_back(sorted_bam_file_name);
   args.push_back("-T");

@@ -9,6 +9,7 @@ REFERENCE_ARG="-r ${DATADIR}/lambda/lambda.gbk"
 
 TESTCMD="\
     ${BRESEQ} \
+    ${BRESEQ_TEST_THREAD_ARG} \
     -o ${SELF} \
     -g ${SELF}/header.gd \
     ${REFERENCE_ARG} \

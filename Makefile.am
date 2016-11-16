@@ -158,6 +158,7 @@ test:
 	echo "export TESTBINPREFIX=$(top_srcdir)/src/c/breseq" > $(top_srcdir)/tests/test.config;
 	echo "export BRESEQ_DATA_PATH=$(top_srcdir)/src/c/breseq" >> $(top_srcdir)/tests/test.config;
 	echo "export BRESEQ_SAMTOOLS_PATH=$(top_srcdir)/extern/samtools-0.1.18" >> $(top_srcdir)/tests/test.config;
+	echo "export BRESEQ_TEST_THREAD_ARG=\"-j 4\"" >> $(top_srcdir)/tests/test.config;
 	$(top_srcdir)/tests/test.sh test tests
 
 

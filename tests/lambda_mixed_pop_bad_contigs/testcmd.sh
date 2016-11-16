@@ -9,6 +9,7 @@ REFERENCE_ARG="-r ${DATADIR}/lambda/lambda.gbk -r ${DATADIR}/lambda/other.gbk -r
 
 TESTCMD="\
     ${BRESEQ} \
+    ${BRESEQ_TEST_THREAD_ARG} \
     -o ${SELF} \
     ${REFERENCE_ARG} \
     ${DATADIR}/lambda/lambda_mixed_population.fastq \

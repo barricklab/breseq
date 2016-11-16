@@ -78,11 +78,13 @@ public:
   
 };
   
-void samtools_index(const string& bam_file_name);
+void samtools_index(const string& bam_file_name
+                    );
 
 void samtools_sort(
                    const string& unsorted_bam_file_name,
-                   const string& sorted_bam_file_name
+                   const string& sorted_bam_file_name,
+                   const uint32_t num_threads
                    );
 
 void samtools_import(
