@@ -74,17 +74,17 @@ namespace breseq {
     }
     if (alignments.size() == 0) return 0;
     
-    // @JEB: We would ideally sort by alignment/mapping score here
-    // the number of mismatches is our current proxy for this.
-    
     uint32_t read_length = alignments.front()->read_length();
     alignment_score_map.clear();
     for (alignment_list::iterator it = alignments.begin(); it != alignments.end();)
     {
       bam_alignment* ap = it->get(); // we are saving the pointer value as the map key
-      
+        
       uint32_t i;
-      // Use alignment score instead of mismatches, by default, but fallback if not present
+      // Use alignment score 'AS' instead of mismatches, by default, but fallback if not present
+      // NOTE: This solution does not work for split-read alignments like 35M303D65M
+      //       that are output by some aligners that could be used as SAM input files.
+      //       We expect these to be two separate alignments and in a junction file.
       bool AS_found = ap->aux_get_i("AS", i);
       if (!AS_found) {
         i = alignment_mismatches(*ap, ref_seq_info);
@@ -99,11 +99,11 @@ namespace breseq {
             i -= junction_info.alignment_overlap;
         }
         */
-        ASSERT(read_length >= i, "More mismatches than matches for read alignment. ");
+        //ASSERT(read_length >= i, "More mismatches than matches for read alignment. ");
         //ASSERT(read_length >= i, "More mismatches than matches for read alignment. " + ap->read_name());
          
-         
-        i = read_length - i;
+        // We only record positive scores
+        i = (i > read_length) ? 0 : read_length - i ;
         ap->aux_set("AS", 'I', sizeof(uint32_t), (uint8_t*)&i);
       }
       

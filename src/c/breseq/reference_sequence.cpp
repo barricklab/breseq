@@ -3386,6 +3386,17 @@ uint32_t alignment_mismatches(const alignment_wrapper& a, const cReferenceSequen
         ref_pos++;
       }
     }
+    else if (op == BAM_CEQUAL) {
+      read_pos++;
+      ref_pos++;
+    } else if (op == BAM_CDIFF) {
+      mismatches++;
+      read_pos++;
+      ref_pos++;
+    }
+    else {
+      ERROR("Unrecognized CIGAR operation in string: " + a.cigar_string());
+    }
   }
 
   return mismatches;
