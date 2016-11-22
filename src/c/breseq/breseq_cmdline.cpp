@@ -1610,7 +1610,7 @@ int breseq_default_action(int argc, char* argv[])
         SYSTEM(command);
         */
         
-        settings.track_intermediate_file(settings.output_done_file_name, candidate_junction_sam_file_name + "*");
+        settings.track_intermediate_file(settings.alignment_correction_done_file_name, candidate_junction_sam_file_name + "*");
       }
 
 			settings.done_step(settings.candidate_junction_alignment_done_file_name);
