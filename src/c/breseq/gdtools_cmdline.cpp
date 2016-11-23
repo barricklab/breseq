@@ -1027,7 +1027,7 @@ int do_annotate(int argc, char* argv[])
 	
   if (output_format == "HTML") {
 		
-		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, compare_mode, polymorphisms_found, options, uout);
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, polymorphisms_found, compare_mode, options, uout);
 		cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
 
 		uout("Annotating mutations");
@@ -1052,7 +1052,7 @@ int do_annotate(int argc, char* argv[])
         
   } else if (output_format == "GD") {
 		
-		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, compare_mode, polymorphisms_found, options, uout);
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, polymorphisms_found, compare_mode, options, uout);
 		cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
 		
 		uout("Annotating mutations");
