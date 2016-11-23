@@ -77,9 +77,9 @@ libbreseq_la_SOURCES = \
 	libbreseq/storable.h \
 	libbreseq/summary.h 
 libbreseq_la_LIBADD = $(top_builddir)/$(HTSLIB)/libhts.la $(top_builddir)/$(LIBBAM)/libbam.la
+
 LDADD = libbreseq.la
 
-AM_LDFLAGS = -all-static
 bin_PROGRAMS = breseq gdtools 
 breseq_SOURCES = breseq_cmdline.cpp
 gdtools_SOURCES = gdtools_cmdline.cpp
