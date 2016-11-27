@@ -232,7 +232,7 @@ namespace breseq
     options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Consensus Read Alignment (RA) Evidence Options", ADVANCED_OPTION);
     options
-    ("consensus-score-cutoff", "Log10 E-value cutoff for consensus base substitutions and small indels", "", ADVANCED_OPTION)
+    ("consensus-score-cutoff", "Log10 E-value cutoff for consensus base substitutions and small indels (DEFAULT = 10)", "", ADVANCED_OPTION)
     ("consensus-frequency-cutoff", "Only predict consensus mutations when the variant allele frequency is above this value. (DEFAULT = consensus mode, 0.8; polymorphism mode, 0.95", "", ADVANCED_OPTION)
     ("consensus-minimum-coverage-each-strand", "Only predict consensus mutations when at least this many reads on each strand support the mutation. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", ADVANCED_OPTION)
     ;
@@ -474,7 +474,7 @@ namespace breseq
       this->polymorphism_reject_surrounding_homopolymer_length = 0; // zero is OFF!
       this->polymorphism_bias_p_value_cutoff = 0;
       this->no_indel_polymorphisms = false;
-      this->polymorphism_precision_decimal = 0.000001; // Not actually used because only ML frequency is tested
+      this->polymorphism_precision_decimal = 0.000001;
       this->polymorphism_precision_places = 3;
       
       this->minimum_alignment_resolution_pos_hash_score = 3;

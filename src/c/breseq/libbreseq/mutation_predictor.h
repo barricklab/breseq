@@ -76,6 +76,9 @@ namespace breseq {
     
     uint32_t find_original_num_repeat_units(cAnnotatedSequence& ref_seq, int32_t position, string& repeat_sequence);
     
+    void combine_newly_adjacent_mutations(cGenomeDiff& gd);
+
+    
 	}; // class MutationPredictor
   
   

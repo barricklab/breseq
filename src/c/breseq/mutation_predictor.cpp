@@ -1654,29 +1654,36 @@ namespace breseq {
   // so on, but it's not obvious how to do this: set it to the final state for all mutations)
   // or set it to the state after each mutation and make that the original state for the next one.
   
+  // * 2016-11-26
+  // Fixed incorrect overlapping mutations after shifts possible in breseq output
+  //
+  // For example CCAAAAGT => CCAAATGT will be predicted as two mutations (DEL and SNP) initially
+  // like this: CC(-A)AA(A=>T)GT. These two events will be shifted to the same position if we are
+  // not careful about looking at the next mutation in the list. The best annotation is a SUB
+  // like this: CCAA(AA=>T)GT
+  
   void MutationPredictor::normalize_and_annotate_tandem_repeat_mutations(Settings& settings, Summary& summary, cGenomeDiff& gd)
   { 
     (void)settings;
     (void) summary;
 
-    // Sort for reproducibility -- but note this sort will possibly be changed by the
-    // position shifts that we make within this function!!
+    // Sort to absolutely guarantee reproducibility
+    // and having mutations in the proper order for merges
     gd.sort();
     
     uint32_t minimum_tandem_repeat_length = 5;
     uint32_t minimum_repeat_ref_copies = 2;
     uint32_t maximum_repeat_sequence_length_to_show = 40;
-
-    
-    // moving previous mutations back if they are put on top of existing;
-    // Currently only implemented for DEL
-    cDiffEntry* previous_mutation = NULL;
-    int32_t previous_position;
     
     diff_entry_list_t test_muts = gd.mutation_list();
     
     // Add additional fields for INS or DEL mutations that are in tandem repeats
-    for(diff_entry_list_t::iterator it = test_muts.begin(); it != test_muts.end(); it++) {
+    
+    // We iterate in reverse order, because our normalize functions are moving
+    // mutations to the HIGHEST corredinates possible when they are in tandem repeats.
+    cDiffEntry* last_mut(NULL);
+    
+    for(diff_entry_list_t::reverse_iterator it = test_muts.rbegin(); it != test_muts.rend(); it++) {
       
       cDiffEntry& mut = **it;
       
@@ -1687,14 +1694,9 @@ namespace breseq {
       // because a mutation could be applied only after one with the 'before' tag, making the shift
       // incorrect. So, setting 'no_normalize' is an out that can be used.
       
-      if (mut.entry_exists("within") || mut.entry_exists("no_normalize") ) continue;
+      if (mut.entry_exists("within") || mut.entry_exists("no_normalize") ) goto next_mutation;
       
       if (mut._type == INS) {
-        
-        // This field only exists when manually added to split an insertion into separate events 
-        // or in polymorphism mode when a mutation may be split into each inserted base.
-        // This code may inappropriately shift the position in those cases.
-        if (mut.entry_exists(INSERT_POSITION) || settings.polymorphism_prediction) continue;
         
         int32_t size = mut["new_seq"].size();
         int32_t position = from_string<int32_t>(mut["position"]);
@@ -1702,13 +1704,20 @@ namespace breseq {
         uint32_t repeat_unit_size;
         string repeat_unit_sequence;
         find_repeat_unit(mutation_sequence, repeat_unit_size, repeat_unit_sequence);
-                
         
         normalizeINSposition(ref_seq_info[mut["seq_id"]], mut, repeat_unit_sequence);
         int32_t new_position = from_string<int32_t>(mut["position"]);
         string new_mutation_sequence = mut["new_seq"];
         
-        // ---> stub for future development of checking versus previous mutation
+        // Did we get shifted into the position of the next mutation? Then back off.
+        if (last_mut && (mut[SEQ_ID] == (*last_mut)[SEQ_ID]) && (mut.get_reference_coordinate_end() >= last_mut->get_reference_coordinate_start())) {
+          // The position of this insert mutation should be one before the mutation, unless it is another INS
+          if (last_mut->_type == INS) {
+            mut["position"] = (*last_mut)["position"];
+          } else {
+            mut["position"] = to_string(from_string<int32_t>((*last_mut)["position"]) - 1);
+          }
+        }
         
         // repeat info may have changed, so reload
         position = new_position;
@@ -1724,10 +1733,10 @@ namespace breseq {
         mut["new_seq"] = mutation_sequence;
         
         if (original_num_repeat_units * repeat_unit_size < minimum_tandem_repeat_length)
-          continue;
+          goto next_mutation;
         
         if (original_num_repeat_units + num_repeat_units < minimum_repeat_ref_copies)
-          continue;
+          goto next_mutation;
         
         mut.erase("repeat_seq");
         if (repeat_unit_size <= maximum_repeat_sequence_length_to_show)
@@ -1738,11 +1747,6 @@ namespace breseq {
       }
       
       else if (mut._type == DEL) {
-        
-        // If we are in polymorphism mode, don't shift the coordinates
-        // because we can shift two adjacent (but separately) deleted bases
-        // onto the same position!
-        if (settings.polymorphism_prediction) continue;
         
         int32_t size = from_string<int32_t>(mut["size"]);
         
@@ -1755,50 +1759,32 @@ namespace breseq {
         
         normalizeDELposition(ref_seq_info[mut["seq_id"]], mut, repeat_unit_sequence);
         
-        // Normalize may actually change the sequence used for the repeat... so call again here.
-        int32_t new_position = from_string<int32_t>(mut["position"]);
-        string new_mutation_sequence = ref_seq_info.get_sequence_1(mut["seq_id"], position, position + size - 1);
-        
-        // check against previous mutations to see if we are within the same repeat
-        if (previous_mutation && (previous_mutation->_type == DEL)) {
-
-          // Put things back if we are moving this to the exact same base
-          int32_t updated_prev_position = from_string<int32_t>((*previous_mutation)["position"]);
-          if (new_position == updated_prev_position) {
-            // revert the previous mutation
-            (*previous_mutation)["position"] = to_string<int32_t>(previous_position);
-            previous_position = position;
-            previous_mutation = &mut;
-            continue;
-          }
+        // Did we get shifted into the position of the next mutation? Then back off.
+        if (last_mut && (mut[SEQ_ID] == (*last_mut)[SEQ_ID]) && (mut.get_reference_coordinate_end() >= last_mut->get_reference_coordinate_start())) {
+          // The position of this insert mutation should be as many bases as the
+          // deletion is long before the next mutation
+          mut["position"] = to_string(from_string<int32_t>((*last_mut)["position"]) - size);
         }
         
-        // must set before jumping out or updating
-        previous_position = position;
-        previous_mutation = &mut;
-        
-        // repeat info may have changed, so reload
-        position = new_position;
-        mutation_sequence = new_mutation_sequence;
+        // Normalize may actually change the sequence used for the repeat... so call again here.
+        position = from_string<int32_t>(mut["position"]);
+        mutation_sequence = ref_seq_info.get_sequence_1(mut["seq_id"], position, position + size - 1);
 
         find_repeat_unit(mutation_sequence, repeat_unit_size, repeat_unit_sequence);
         uint32_t num_repeat_units = size / repeat_unit_size;
-
-        // must set before jumping out
-        previous_mutation = &mut;
         
         // Note that we add the number of repeats that were deleted
         uint32_t original_num_repeat_units = find_original_num_repeat_units(ref_seq_info[mut["seq_id"]], position, repeat_unit_sequence) + num_repeat_units;
         
         if (original_num_repeat_units * repeat_unit_size < minimum_tandem_repeat_length)
-          continue;
+          goto next_mutation;
         
         if (original_num_repeat_units < minimum_repeat_ref_copies)
-          continue;
+          goto next_mutation;
         
         // We only count if there is at least one unit remaining...
         if (original_num_repeat_units - num_repeat_units == 0)
-          continue;
+          goto next_mutation;
         
         mut.erase("repeat_seq");
         if (repeat_unit_size <= maximum_repeat_sequence_length_to_show)
@@ -1807,8 +1793,10 @@ namespace breseq {
         mut["repeat_ref_copies"] = s(original_num_repeat_units);
         mut["repeat_new_copies"] = s(original_num_repeat_units - num_repeat_units);
       }
-      else { // not deletion or insertion
-        previous_mutation = NULL;
+      
+      // always save this mutation as the last one
+      next_mutation: {
+        last_mut = &**it;
       }
     }
   }
@@ -1939,12 +1927,14 @@ namespace breseq {
 		// Read Alignments => SNP, DEL, INS, SUB
 		///
     
-    // Normalizing in polymorphism mode causes consistency issues when multiple INS or DEL are next to each other
-    // (which is not possible in consensus mode).
+    normalize_and_annotate_tandem_repeat_mutations(settings, summary, gd);
+    
+    // Combine INS/DEL mutations that have been shifted to be adjacent to other mutations.
+    // But NOT in polymorphism mode where we are uncertain if they are different mutations!
     if (!settings.polymorphism_prediction) {
-      normalize_and_annotate_tandem_repeat_mutations(settings, summary, gd);
+      combine_newly_adjacent_mutations(gd);
     }
-        
+    
     ///
 		// mutation INS => mutation AMP
 		///
@@ -2126,7 +2116,6 @@ namespace breseq {
   }
   
   
-  
   ///
   // Expects position to be the first position of the repeat we are looking for
   // due to earlier normalization (shifting) of these mutations.
@@ -2161,6 +2150,91 @@ namespace breseq {
     return num_repeat_units;
   }
 
+  
+  // We should only have to combine INS-SNP, DEL-SNP, and INS-DEL, DEL-INS combinations
+  void MutationPredictor::combine_newly_adjacent_mutations(cGenomeDiff& gd)
+  {
+    diff_entry_list_t muts = gd.mutation_list();
+    diff_entry_list_t new_muts;
+    
+    bool any_changes(false);
+    cDiffEntry* last_mut(NULL);
+    for (diff_entry_list_t::iterator it=muts.begin(); it != muts.end(); it++) {
+      
+      cDiffEntry& mut = **it;
+      
+      // Require both mutations to be one of these four types
+      if ((mut._type != SNP) && (mut._type != DEL) && (mut._type != INS) && (mut._type != SUB)) {
+        last_mut = NULL;
+        continue;
+      }
+      
+      // If they are directly adjacent on the same SEQ_ID (add one to the position)
+      // Notice that we require muts to be of different types, this is to
+      // prevent cases of two INS mutations that should have been combined previous
+      // and would spuriously be combined based on our checking of positions here.
+      if (last_mut && ((*last_mut)[SEQ_ID] == mut[SEQ_ID]) && (last_mut->_type != mut._type)) {
+        if (mut.get_reference_coordinate_start() - last_mut->get_reference_coordinate_end() <= cReferenceCoordinate(1, 0) ) {
+          
+          //cout << "Combining:\n" + last_mut->as_string() + "\n" + mut.as_string() + "\n";
+          
+          any_changes = true;
+          
+          // We can only make a SUB mutation
+          cDiffEntry* new_mut = new cDiffEntry(SUB);
+          (*new_mut)[SEQ_ID] = mut[SEQ_ID];
+          
+          new_mut->_evidence.insert(new_mut->_evidence.end(), mut._evidence.begin(), mut._evidence.end());
+          new_mut->_evidence.insert(new_mut->_evidence.end(), last_mut->_evidence.begin(), last_mut->_evidence.end());
+          (*new_mut)[POSITION] = (last_mut->_type != INS) ? (*last_mut)[POSITION] : mut[POSITION];
+          
+          int32_t size(0);
+          string new_seq;
+
+          if (last_mut->_type == SNP) {
+            size++;
+            new_seq += (*last_mut)[NEW_SEQ];
+          } else if (last_mut->_type == DEL) {
+            size += from_string<int32_t>((*last_mut)[SIZE]);
+          } else if (last_mut->_type == INS) {
+            new_seq += (*last_mut)[NEW_SEQ];
+          }
+          
+          if (mut._type == SNP) {
+            size++;
+            new_seq += mut[NEW_SEQ];
+          } else if (mut._type == DEL) {
+            size += from_string<int32_t>(mut[SIZE]);
+          } else if (mut._type == INS) {
+            new_seq += mut[NEW_SEQ];
+          }
+          
+          (*new_mut)[SIZE] = to_string(size);
+          (*new_mut)[NEW_SEQ] = new_seq;
+          
+          //cout << "New:\n" + new_mut->as_string() + "\n";
+          
+          // Erase both old entries
+          it--;           // start on last_mut
+          it = muts.erase(it); // advances to mut
+          it = muts.erase(it); // now points past mut
+          
+          // Insert new mutation before the specified position
+          diff_entry_ptr_t new_mut_p(new_mut);
+          muts.insert(it, new_mut_p);
+          it--;           // now go back to point at the inserted mutation
+        }
+      }
+      
+      last_mut = &**it;
+    }
+    
+    
+    
+    // Sorts and fixes ID gaps
+    if (any_changes) gd.reassign_unique_ids();
+  }
+  
   
   string BaseSubstitutionEffects::separator = ".";
   
