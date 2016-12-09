@@ -2117,6 +2117,7 @@ int breseq_default_action(int argc, char* argv[])
 		///
 		// Output Genome Diff File
 		///
+    
 		cerr << "Creating merged genome diff evidence file..." << endl;
 
 		// merge all of the evidence GenomeDiff files into one...
@@ -2231,8 +2232,8 @@ int breseq_default_action(int argc, char* argv[])
 		//
 		// Plot coverage of genome and large deletions
 		//
-		cerr << "Drawing coverage plots..." << endl;
-		output::draw_coverage(settings, ref_seq_info, gd);
+    cerr << "Drawing coverage plots..." << endl;
+    output::draw_coverage(settings, ref_seq_info, gd);
     
 		//
 		// Create evidence files containing alignments and coverage plots

@@ -2054,21 +2054,30 @@ void  assign_one_junction_read_counts(
     // Order of precedence depends on mode
     if (settings.polymorphism_prediction) {
       
-      if ((new_junction_frequency_value >= settings.polymorphism_frequency_cutoff) && (new_junction_frequency_value <= 1 - settings.polymorphism_frequency_cutoff)) {
+      // Above 1-cutoff, we reject unless we change to consensus
+      if (new_junction_frequency_value > 1.0 - settings.polymorphism_frequency_cutoff - settings.polymorphism_precision_decimal) {
+        
+        if (new_junction_frequency_value >= settings.consensus_frequency_cutoff - settings.polymorphism_precision_decimal) {
+          j[PREDICTION] = "consensus";
+          j[FREQUENCY] = "1";
+        } else {
+          j.add_reject_reason("FREQUENCY_CUTOFF");
+          j[PREDICTION] = "polymorphism";
+        }
+      }
+      // Below the cutoff, just reject
+      else if (new_junction_frequency_value < settings.polymorphism_frequency_cutoff - settings.polymorphism_precision_decimal) {
+        j.add_reject_reason("FREQUENCY_CUTOFF");
         j[PREDICTION] = "polymorphism";
-      } else if (new_junction_frequency_value >= settings.consensus_frequency_cutoff) {
-        j[PREDICTION] = "consensus";
-        j[FREQUENCY] = "1";
       } else {
         j[PREDICTION] = "polymorphism";
-        j.add_reject_reason("FREQUENCY_CUTOFF");
       }
       
     } else {
-      if (new_junction_frequency_value >=  settings.consensus_frequency_cutoff) {
+      if (new_junction_frequency_value >=  settings.consensus_frequency_cutoff - settings.polymorphism_precision_decimal) {
         j[PREDICTION] = "consensus";
         j[FREQUENCY] = "1";
-      } else if ((new_junction_frequency_value >= settings.polymorphism_frequency_cutoff) && (new_junction_frequency_value <= 1 - settings.polymorphism_frequency_cutoff)) {
+      } else if ((new_junction_frequency_value >= settings.polymorphism_frequency_cutoff - settings.polymorphism_precision_decimal) && (new_junction_frequency_value <= 1 - settings.polymorphism_frequency_cutoff - settings.polymorphism_precision_decimal)) {
         j[PREDICTION] = "polymorphism";
       } else {
         j[PREDICTION] = "polymorphism";

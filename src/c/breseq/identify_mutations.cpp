@@ -316,7 +316,7 @@ bool test_RA_evidence_CONSENSUS_mode(
   if (variant_frequency > 1.0 - settings.polymorphism_frequency_cutoff - settings.polymorphism_precision_decimal) {
     rejected_RA_polymorphism_frequency = true;
     ra.add_reject_reason("FREQUENCY_CUTOFF");
-  } else if (variant_frequency < settings.polymorphism_frequency_cutoff) {
+  } else if (variant_frequency < settings.polymorphism_frequency_cutoff - settings.polymorphism_precision_decimal) {
     rejected_RA_polymorphism_frequency = true;
     ra.add_reject_reason("FREQUENCY_CUTOFF");
   }
@@ -373,7 +373,7 @@ bool test_RA_evidence_POLYMORPHISM_mode(
     if (variant_frequency > 1.0 - settings.polymorphism_frequency_cutoff - settings.polymorphism_precision_decimal) {
       rejected_RA_polymorphism_frequency = true;
       ra.add_reject_reason("FREQUENCY_CUTOFF");
-    } else if (variant_frequency < settings.polymorphism_frequency_cutoff) {
+    } else if (variant_frequency < settings.polymorphism_frequency_cutoff - settings.polymorphism_precision_decimal) {
       rejected_RA_polymorphism_frequency = true;
       ra.add_reject_reason("FREQUENCY_CUTOFF");
     }

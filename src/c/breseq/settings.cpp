@@ -233,7 +233,7 @@ namespace breseq
     options.addUsage("Consensus Read Alignment (RA) Evidence Options", ADVANCED_OPTION);
     options
     ("consensus-score-cutoff", "Log10 E-value cutoff for consensus base substitutions and small indels (DEFAULT = 10)", "", ADVANCED_OPTION)
-    ("consensus-frequency-cutoff", "Only predict consensus mutations when the variant allele frequency is above this value. (DEFAULT = consensus mode, 0.8; polymorphism mode, 0.95", "", ADVANCED_OPTION)
+    ("consensus-frequency-cutoff", "Only predict consensus mutations when the variant allele frequency is above this value. (DEFAULT = consensus mode, 0.8; polymorphism mode, 0.0)", "", ADVANCED_OPTION)
     ("consensus-minimum-coverage-each-strand", "Only predict consensus mutations when at least this many reads on each strand support the mutation. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", ADVANCED_OPTION)
     ;
 
@@ -242,7 +242,7 @@ namespace breseq
     options
 
     ("polymorphism-score-cutoff", "Log10 E-value cutoff for test of polymorphism vs no polymorphism (DEFAULT = consensus mode, 10; polymorphism mode, 2)", "", ADVANCED_OPTION)
-    ("polymorphism-frequency-cutoff", "Only predict polymorphisms when both allele frequencies are greater than this value. (DEFAULT = consensus mode, 0.2; polymorphism mode, 0.05)", "", ADVANCED_OPTION)
+    ("polymorphism-frequency-cutoff", "Only predict polymorphisms when the non-reference allele frequency is greater than this value. (DEFAULT = consensus mode, 0.2; polymorphism mode, 0.05)", "", ADVANCED_OPTION)
     ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms for which at least this many reads on each strand support each alternative allele. (DEFAULT = consensus mode, 0; polymorphism mode, 2)", "", ADVANCED_OPTION)
     ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, OFF)", "", ADVANCED_OPTION)
     ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms from read alignment evidence", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
@@ -439,7 +439,7 @@ namespace breseq
     if (this->polymorphism_prediction) {
       
       this->mutation_log10_e_value_cutoff = 10;
-      this->consensus_frequency_cutoff = 0.95;
+      this->consensus_frequency_cutoff = 0; // zero is OFF - ensures any rejected poly with high freq move to consensus!
       this->consensus_minimum_new_coverage_each_strand = 0;
       
       this->polymorphism_log10_e_value_cutoff = 2;
@@ -456,7 +456,6 @@ namespace breseq
       
       this->minimum_alignment_resolution_pos_hash_score = 3;
       this->junction_minimum_side_match = 6;
-      
       this->junction_pos_hash_neg_log10_p_value_cutoff = 0; // OFF
     }
     // This is strictly true if we are not in polymorphism mode...
@@ -482,6 +481,7 @@ namespace breseq
     }
     
     // override the default settings
+    
     if (options.count("consensus-score-cutoff"))
       this->mutation_log10_e_value_cutoff = from_string<double>(options["consensus-score-cutoff"]);
     if (this->mutation_log10_e_value_cutoff < 0) {
@@ -522,7 +522,6 @@ namespace breseq
       cerr << "Mutations with a frequency between " << (1 - this->polymorphism_frequency_cutoff) << " and " << this->consensus_frequency_cutoff << " will not be predicted with these settings. ";
       cerr << "Unless this is your intent, either set \'--consensus_frequency_cutoff " << (1 - this->polymorphism_frequency_cutoff) << "\' or set \'--polymorphism_frequency_cutoff " << (1 - this->consensus_frequency_cutoff) << "\' on the command line." << endl << endl;
     }
-    
     
     // Junction options
     if (options.count("junction-minimum-pos-hash-score"))

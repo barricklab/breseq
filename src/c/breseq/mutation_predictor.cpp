@@ -1100,15 +1100,26 @@ namespace breseq {
           
           // Determine consensus vs. polymorphism
           if (settings.polymorphism_prediction) {
-            if (frequency >= settings.consensus_frequency_cutoff) {
-              mut[FREQUENCY] = "1";
-            } else if ((frequency >= 1.0 - settings.polymorphism_frequency_cutoff) || (frequency < settings.polymorphism_frequency_cutoff)) {
+            
+            // Above 1-cutoff, we reject unless we change to consensus
+            if (frequency > 1.0 - settings.polymorphism_frequency_cutoff - settings.polymorphism_precision_decimal) {
+              
+              if (frequency >= settings.consensus_frequency_cutoff - settings.polymorphism_precision_decimal) {
+                mut[FREQUENCY] = "1";
+              } else {
+                mut.add_reject_reason("FREQUENCY_CUTOFF");
+                // @JEB 08-08-13 we might want to keep the mutation as rejected. This discards completely.
+                continue;
+              }
+            }
+            // Below the cutoff, just reject
+            else if (frequency < settings.polymorphism_frequency_cutoff - settings.polymorphism_precision_decimal) {
               mut.add_reject_reason("FREQUENCY_CUTOFF");
               // @JEB 08-08-13 we might want to keep the mutation as rejected. This discards completely.
               continue;
             }
           } else { // consensus mode
-            if (frequency >= settings.consensus_frequency_cutoff) {
+            if (frequency >= settings.consensus_frequency_cutoff - settings.polymorphism_precision_decimal) {
               mut[FREQUENCY] = "1";
             } else {
               // @JEB 08-08-13 we might want to keep the mutation as rejected. This discards completely.
