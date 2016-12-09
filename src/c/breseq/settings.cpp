@@ -645,12 +645,17 @@ namespace breseq
     this->require_match_fraction = 0.9; // CL value overrides
     this->maximum_read_mismatches = -1;
 
-    this->bowtie2_maximum_alignments_to_consider_per_read = 2000;
+    this->bowtie2_junction_maximum_alignments_to_consider_per_read = 2000;
     this->bowtie2_score_parameters = "--ma 1 --mp 3 --np 0 --rdg 2,3 --rfg 2,3 --ignore-quals";
     //this->bowtie2_score_parameters = "--ma 1 --mp 3 --np 0 --rdg 2,3 --rfg 2,3";
     
-    this->bowtie2_score_parameters += (bowtie2_maximum_alignments_to_consider_per_read > 0)
-    ? " -k " + to_string(this->bowtie2_maximum_alignments_to_consider_per_read) : " -a";
+    // Different values for these:
+    // We report ALL alignments for junctions
+    this->bowtie2_junction_alignment_reporting_parameters += (bowtie2_junction_maximum_alignments_to_consider_per_read > 0)
+    ? " -k " + to_string(this->bowtie2_junction_maximum_alignments_to_consider_per_read) : " -a";
+    
+    // Need to report all matches for proper handling of
+    this->bowtie2_genome_alignment_reporting_parameters = "-a";
     
     this->bowtie2_min_score_stringent = "-i S,1,0.25 --score-min L,0,0.9 "; // "-L 22 -i S,1,0.25 --score-min L,0,0.9 ";
     

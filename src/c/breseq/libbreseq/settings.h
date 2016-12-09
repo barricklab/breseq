@@ -247,8 +247,10 @@ namespace breseq
     bool keep_all_intermediates;              // Default = false
 
     //! Settings: Read Alignment and Candidate Junction Read Alignment
-    uint64_t bowtie2_maximum_alignments_to_consider_per_read;       // Default = 2000
+    uint64_t bowtie2_junction_maximum_alignments_to_consider_per_read;       // Default = 2000
     string bowtie2_score_parameters;
+    string bowtie2_junction_alignment_reporting_parameters;
+    string bowtie2_genome_alignment_reporting_parameters;
     string bowtie2_min_score_stringent;
     string bowtie2_min_score_relaxed;
     string bowtie2_min_score_junction;

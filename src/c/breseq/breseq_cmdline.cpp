@@ -1367,7 +1367,7 @@ int breseq_default_action(int argc, char* argv[])
       bowtie2_seed_substring_size_stringent = min<uint32_t>(31, bowtie2_seed_substring_size_stringent);
       
       string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local " + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_stringent) + " "
-      + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_stringent + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + stage1_reference_sam_file_name + " --un " + stage1_unmatched_fastq_file_name; 
+      + settings.bowtie2_score_parameters + " " + settings.bowtie2_genome_alignment_reporting_parameters + " " + settings.bowtie2_min_score_stringent + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + stage1_reference_sam_file_name + " --un " + stage1_unmatched_fastq_file_name;
       SYSTEM(command);
       
       settings.track_intermediate_file(settings.reference_alignment_done_file_name, stage1_unmatched_fastq_file_name);
@@ -1419,7 +1419,7 @@ int breseq_default_action(int argc, char* argv[])
         bowtie2_seed_substring_size_relaxed = min<uint32_t>(31, bowtie2_seed_substring_size_relaxed);
         
         string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local " + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_relaxed) 
-          + " " + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_relaxed + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + reference_sam_file_name; 
+          + " " + settings.bowtie2_score_parameters + " " + settings.bowtie2_genome_alignment_reporting_parameters + " " + settings.bowtie2_min_score_relaxed + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + reference_sam_file_name;
         SYSTEM(command);
         
         settings.track_intermediate_file(settings.reference_alignment_done_file_name, reference_sam_file_name);
@@ -1593,22 +1593,9 @@ int breseq_default_action(int argc, char* argv[])
         bowtie2_seed_substring_size_junction = min<uint32_t>(31, bowtie2_seed_substring_size_junction);
         
         string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local " + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_junction) + " "
-        + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_junction + " --reorder -x " + candidate_junction_hash_file_name + " -U " + read_fastq_file + " -S " + candidate_junction_sam_file_name;
+        + settings.bowtie2_score_parameters + " " + settings.bowtie2_junction_alignment_reporting_parameters + " " + settings.bowtie2_min_score_junction + " --reorder -x " + candidate_junction_hash_file_name + " -U " + read_fastq_file + " -S " + candidate_junction_sam_file_name;
         
         SYSTEM(command);
-        
-        
-        /* 
-        /// OLD CODE
-        uint32_t bowtie2_seed_substring_size_stringent = trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].avg_read_length * 0.5);
-        // Check bounds
-        bowtie2_seed_substring_size_stringent = max<uint32_t>(9, bowtie2_seed_substring_size_stringent);
-        bowtie2_seed_substring_size_stringent = min<uint32_t>(31, bowtie2_seed_substring_size_stringent);
-        
-        string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local " + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_stringent) + " "
-         + settings.bowtie2_score_parameters + " " + settings.bowtie2_min_score_stringent + " --reorder -x " + candidate_junction_hash_file_name + " -U " + read_fastq_file + " -S " + candidate_junction_sam_file_name; 
-        SYSTEM(command);
-        */
         
         settings.track_intermediate_file(settings.alignment_correction_done_file_name, candidate_junction_sam_file_name + "*");
       }
