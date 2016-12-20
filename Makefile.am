@@ -132,6 +132,7 @@ docs :
 	make -f Makefile BUILDDIR=$(DOCBUILDDIR) html ;
 	
 dist-hook: docs
+	find $(distdir) -name '.DS_Store' -type f -delete
 
 ## This environmental variable is used by python Sphinx
 	
@@ -169,5 +170,6 @@ clean-tests:
 
 distclean-local:
 	rm -rf $(DOCBUILDDIR);
+	find $(abs_top_builddir) -name '.DS_Store' -type f -delete
 
 	
