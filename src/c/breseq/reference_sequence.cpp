@@ -3394,13 +3394,100 @@ uint32_t alignment_mismatches(const alignment_wrapper& a, const cReferenceSequen
       read_pos++;
       ref_pos++;
     }
-    else {
+    else if (op != BAM_CHARD_CLIP) {
       ERROR("Unrecognized CIGAR operation in string: " + a.cigar_string());
     }
   }
 
   return mismatches;
 }
+  
+  
+/*
+ Sometimes scoring by bowtie2 is inconsistent (the same alignment on different strands gives a slightly different "AS")
+ This function is to recalculate the score.
+ 
+ Assumes reads were aligned with thse scoring options:
+ --ma 1 --mp 3 --np 0 --rdg 2,3 --rfg 2,3 --ignore-quals";
+
+ NOTE: For some reason bowtie2 scores are still lower than given (perhaps due to qual issues)
+ */
+int32_t alignment_score(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info)
+{
+  const int32_t match_score = +1;
+  const int32_t mismatch_score = -3;
+  const int32_t gap_open_score = -2;
+  const int32_t gap_extend_score = -3;
+
+  
+  bool verbose = false;
+  int32_t alignment_score = 0;
+  
+  uint32_t index = a.reference_target_id();
+  const string& const_ref_string = ref_seq_info[index].m_fasta_sequence.m_sequence;
+  string ref_string = const_ref_string.substr(a.reference_start_0(), a.reference_match_length());
+  uint32_t ref_pos = 0;
+  
+  string read_string = a.read_char_sequence().substr(a.query_start_0(), a.query_match_length());
+  uint32_t read_pos = 0;
+  
+  uint32_t* cigar_list = a.cigar_array(); // cigar array for this alignment
+  
+  if (verbose)
+  {
+    cout << a.read_name() << endl;
+  }
+  
+  for (uint32_t i = 0; i < a.cigar_array_length(); i++)
+  {
+    char op = cigar_list[i] & BAM_CIGAR_MASK;
+    uint32_t len = cigar_list[i] >> BAM_CIGAR_SHIFT;
+    
+    if (op == BAM_CDEL)
+    {
+      alignment_score += gap_open_score;
+      alignment_score += gap_extend_score*len;
+      ref_pos += len;
+    }
+    else if (op == BAM_CINS)
+    {
+      alignment_score += gap_open_score;
+      alignment_score += gap_extend_score*len;
+      read_pos += len;
+    }
+    else if (op == BAM_CMATCH)
+    {
+      for (uint32_t j = 0; j < len; j++)
+      {
+        if (verbose)
+        {
+          cout << "REF: " << ref_pos << "  " << ref_string[ref_pos] << endl;
+          cout << "READ: " << read_pos << "  " << read_string[read_pos] << endl;
+        }
+        
+        alignment_score += (ref_string[ref_pos] != read_string[read_pos]) ? mismatch_score : match_score;
+        read_pos++;
+        ref_pos++;
+      }
+    }
+    else if (op == BAM_CEQUAL) {
+      alignment_score +=  match_score;
+      read_pos++;
+      ref_pos++;
+    } else if (op == BAM_CDIFF) {
+      alignment_score +=  mismatch_score;
+      read_pos++;
+      ref_pos++;
+    }
+    else if ((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP))
+    {
+      ERROR("Unrecognized CIGAR operation in string: " + a.cigar_string());
+    }
+  }
+  
+  return alignment_score;
+}
+
 
 string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info)
 {

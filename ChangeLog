@@ -1,3 +1,10 @@
+Version 0.29.0
+   * CRITICAL fixes for polymorphism mode bugs that could lead to missing high frequency
+     mutations when compiled on certain platforms and in very high coverage samples.
+   * Updated included SAMtools version to 1.3.1; added multithreading to samtools sort steps.
+   * Other fixes to enable output from other mapping programs using --aligned-sam mode.
+   * Other minor bug fixes and improvements.
+
 Version 0.28.1
    * Fixed R out-of-range integer error encountered when one of the reference 
      sequences had very high read-depth coverage.

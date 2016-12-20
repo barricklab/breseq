@@ -1030,7 +1030,7 @@ void tam_file::write_moved_alignment(
 					n -= overshoot;
 					// push back the reduced match length onto the CIGAR
 					// so that it can become part of the side 2 match
-					pair<char,uint16_t> new_element = make_pair<char,uint16_t>(c.first, overshoot);
+					pair<char,uint16_t> new_element = make_pair<char,uint16_t>(op, overshoot);
 					cigar_list.insert(cigar_list.begin(), new_element);
 				}
 				// After $n may have been adjusted add it to both positions
@@ -1039,7 +1039,7 @@ void tam_file::write_moved_alignment(
 					test_read_pos += n;
 			}
 
-			pair<char,uint16_t> new_element = make_pair<char,uint16_t>(c.first, n);
+			pair<char,uint16_t> new_element = make_pair<char,uint16_t>(op, n);
 			side_1_cigar_list.push_back(new_element);
 			if (test_junction_pos > junction_pos) break;
 		}

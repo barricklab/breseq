@@ -1781,15 +1781,6 @@ int do_mask_gd(int argc, char* argv[])
 	cGenomeDiff new_gd(gd);
 	new_gd.metadata = gd.metadata; // copy all of the important information
 	
-	diff_entry_list_t masks = mask_gd.get_list(make_vector<gd_entry_type>(MASK));
-	
-	// Create all of the flagged regions
-	cFlaggedRegions flagged_regions;
-	for (diff_entry_list_t::iterator mask_it = masks.begin(); mask_it != masks.end(); mask_it++) {
-		diff_entry_ptr_t& mask = *mask_it;
-		flagged_regions.flag_region(mask->at(SEQ_ID), from_string<uint32_t>(mask->at(POSITION)), from_string<uint32_t>(mask->at(POSITION)) + from_string<uint32_t>(mask->at(SIZE)) - 1);
-	}
-	
 	// Mask mutations
 	new_gd.mask_mutations(mask_gd, options.count("small"), options.count("verbose"));
 	

@@ -48,7 +48,7 @@ namespace breseq {
    *  Otherwise, returns only alignments tied for best.
    */
   
- uint32_t eligible_read_alignments(const Settings& settings, const cReferenceSequences& ref_seq_info, alignment_list& alignments, bool junction_mode, uint32_t min_match_score)
+ uint32_t eligible_read_alignments(const Settings& settings, const cReferenceSequences& ref_seq_info, alignment_list& alignments, bool junction_mode, int32_t min_match_score)
   {
     bool verbose = false;
     
@@ -80,40 +80,32 @@ namespace breseq {
     {
       bam_alignment* ap = it->get(); // we are saving the pointer value as the map key
         
-      uint32_t i;
-      // Use alignment score 'AS' instead of mismatches, by default, but fallback if not present
-      // NOTE: This solution does not work for split-read alignments like 35M303D65M
-      //       that are output by some aligners that could be used as SAM input files.
-      //       We expect these to be two separate alignments and in a junction file.
-      bool AS_found = ap->aux_get_i("AS", i);
-      if (!AS_found) {
-        i = alignment_mismatches(*ap, ref_seq_info);
+      int32_t as;
       
-        // @JEB may want to revisit this.
-        // add in read only bases (negative overlap) as mismatches
-        /*
-        if (junction_mode) {
-          JunctionInfo junction_info( ref_seq_info[ap->reference_target_id()].m_seq_id );
-          if (junction_info.alignment_overlap < 0)
-            // NOTE: subtraction here is adding b/c alignment_overlap < 0
-            i -= junction_info.alignment_overlap;
-        }
-        */
-        //ASSERT(read_length >= i, "More mismatches than matches for read alignment. ");
-        //ASSERT(read_length >= i, "More mismatches than matches for read alignment. " + ap->read_name());
-         
-        // We only record positive scores
-        i = (i > read_length) ? 0 : read_length - i ;
-        ap->aux_set("AS", 'I', sizeof(uint32_t), (uint8_t*)&i);
-      }
+      
+      // IMPORTANT NOTE @JEB 2016-12-09
+      //
+      // We would like to use the 'AS' output by bowtie2, but it isn't consistent.
+      // For equal alignments it still gives different scores even with --ignore-quals
+      // at times when it matches on different strands.
+      //
+      // If this gets ironed out someday...
+      //
+      
+      as = alignment_score(*ap, ref_seq_info);
+       
+      // We only record positive scores
+      as = (as < 0) ? 0 : as;
+      ap->aux_set("AS", 'I', sizeof(int32_t), (uint8_t*)&as);
+
       
       // Only keep ones with a minimum score
-      if (i < min_match_score) {
+      if (as < min_match_score) {
         it = alignments.erase(it);
       }
       else {
-        ap->aux_set(kBreseqAlignmentScoreBAMTag, 'I', sizeof(uint32_t), (uint8_t*)&i);
-        alignment_score_map[ap] = i;
+        ap->aux_set(kBreseqAlignmentScoreBAMTag, 'I', sizeof(uint32_t), (uint8_t*)&as);
+        alignment_score_map[ap] = as;
         it++;
       }
       

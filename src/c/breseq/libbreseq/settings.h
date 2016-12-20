@@ -248,6 +248,7 @@ namespace breseq
 
     //! Settings: Read Alignment and Candidate Junction Read Alignment
     uint64_t bowtie2_junction_maximum_alignments_to_consider_per_read;       // Default = 2000
+    uint64_t bowtie2_genome_maximum_alignments_to_consider_per_read;         // Default = 2000
     string bowtie2_score_parameters;
     string bowtie2_junction_alignment_reporting_parameters;
     string bowtie2_genome_alignment_reporting_parameters;

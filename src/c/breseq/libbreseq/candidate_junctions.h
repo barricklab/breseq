@@ -312,7 +312,7 @@ namespace breseq {
                                     const cReferenceSequences& ref_seq_info, 
                                     alignment_list& alignments, 
                                     bool junction_mode = false,
-                                    uint32_t min_match_score = 0
+                                    int32_t min_match_score = 0
                                     );
   
 	bool test_read_alignment_requirements(
