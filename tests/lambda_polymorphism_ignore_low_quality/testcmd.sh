@@ -12,6 +12,8 @@ TESTCMD="\
     ${BRESEQ_TEST_THREAD_ARG} \
     --polymorphism-prediction \
     --polymorphism-frequency-cutoff 0.2 \
+    --polymorphism-reject-indel-homopolymer-length 0 \
+    --polymorphism-reject-surrounding-homopolymer-length 2 \
     -b 20 \
     -o ${SELF} \
     ${REFERENCE_ARG} \

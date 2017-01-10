@@ -365,7 +365,6 @@ bool test_RA_evidence_POLYMORPHISM_mode(
   
   bool tested_indel_homopolymer = false;
   bool failed_indel_homopolymer_test = false;
-  string saved_polymorphism_reject;
   if (prediction == polymorphism) {
     
     // Perform further checks for polymorphisms
@@ -400,7 +399,7 @@ bool test_RA_evidence_POLYMORPHISM_mode(
       return false;
     }
     
-    saved_polymorphism_reject = ra[REJECT];
+    ra[POLYMORPHISM_REJECT] = ra[REJECT];
     ra.clear_reject_reasons();
   }
   
@@ -450,7 +449,8 @@ bool test_RA_evidence_POLYMORPHISM_mode(
   }
   
   // We are back to a polymorphism, albeit a rejected one
-  ra[REJECT] = saved_polymorphism_reject;
+  ra[REJECT] = ra[POLYMORPHISM_REJECT];
+  ra.erase(POLYMORPHISM_REJECT);
   
   // Must pass this test in order to be retained as a marginal prediction
   // Saving previously calculated value prevents doing a computationally intensive test twice.

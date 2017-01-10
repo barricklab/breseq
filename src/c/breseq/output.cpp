@@ -386,9 +386,9 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
     string marginal_ra_title = "Marginal read alignment evidence";
     if (full_marginal_ra_list_size > ra_list.size()) {
       if (!settings.polymorphism_prediction) {
-        marginal_ra_title += " (highest frequency " + to_string(settings.max_rejected_read_alignment_evidence_to_show) + " of " + to_string(full_marginal_ra_list_size) + " shown)";
+        marginal_ra_title += " (highest frequency " + to_string(settings.max_rejected_read_alignment_evidence_to_show) + " of " + to_string(full_marginal_ra_list_size) + " shown, sorted by frequency from high to low)";
       } else {
-        marginal_ra_title += " (highest polymorphism score " + to_string(settings.max_rejected_read_alignment_evidence_to_show) + " of " + to_string(full_marginal_ra_list_size) + " shown)";
+        marginal_ra_title += " (highest polymorphism score " + to_string(settings.max_rejected_read_alignment_evidence_to_show) + " of " + to_string(full_marginal_ra_list_size) + " shown, sorted by polymorphism_score from high to low)";
       }
     }
     HTML << "<p>" << endl;
@@ -1263,6 +1263,15 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
                     "Rejected: " + decode_reject_reason(reject)));
       }
       
+      vector<string> polymorphosm_reject_reasons = c.get_reject_reasons(POLYMORPHISM_REJECT);
+      for (vector<string>::iterator itr = polymorphosm_reject_reasons.begin(); itr != polymorphosm_reject_reasons.end(); itr ++)
+      {
+        string& reject = (*itr);
+        ss << tr("class=\"reject_table_row\"",
+                 td("colspan=\"" + to_string(total_cols) + "\"",
+                    "Rejected as polymorphism: " + decode_reject_reason(reject)));
+      }
+      
       /* User Defined Evidence */
       if (c.entry_exists("user_defined"))
       {
@@ -1705,7 +1714,7 @@ string decode_reject_reason(const string& reject)
   }
   else if (reject == "FREQUENCY_CUTOFF")
   {
-    return "Frequency below cutoff threshold.";
+    return "Frequency below/above cutoff threshold.";
   }
   else if (reject == "KS_BASE_QUALITY")
   {

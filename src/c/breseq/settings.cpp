@@ -238,7 +238,7 @@ namespace breseq
     ;
 
     options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("Polymorphic Read Alignment (RA) Evidence Options", ADVANCED_OPTION);
+    options.addUsage("Polymorphism Read Alignment (RA) Evidence Options", ADVANCED_OPTION);
     options
 
     ("polymorphism-score-cutoff", "Log10 E-value cutoff for test of polymorphism vs no polymorphism (DEFAULT = consensus mode, 10; polymorphism mode, 2)", "", ADVANCED_OPTION)
@@ -247,7 +247,7 @@ namespace breseq
     ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, OFF)", "", ADVANCED_OPTION)
     ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms from read alignment evidence", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("polymorphism-reject-indel-homopolymer-length", "Reject insertion/deletion polymorphisms which could result from expansion/contraction of homopolymer repeats with this length or greater in the reference genome (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 3) ", "", ADVANCED_OPTION)
-    ("polymorphism-reject-surrounding-homopolymer-length", "Do not predict polymorphic base substitutions that create a homopolymer when they have this many adjacent bases of that homopolymer on each side. For example, TTATT->TTTTT would be rejected with a setting of 2. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 2)", "", ADVANCED_OPTION)
+    ("polymorphism-reject-surrounding-homopolymer-length", "Reject polymorphic base substitutions that create a homopolymer with this many or more of one base in a row. The homopolymer must begin and end after the changed base. For example, TATTT->TTTTT would be rejected with a setting of 5, but ATTTT->TTTTT would not. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 5)", "", ADVANCED_OPTION)
     ;
     
     options.addUsage("", ADVANCED_OPTION);
@@ -448,7 +448,7 @@ namespace breseq
       
       this->mixed_base_prediction = false;
       this->polymorphism_reject_indel_homopolymer_length = 3; // zero is OFF!
-      this->polymorphism_reject_surrounding_homopolymer_length = 2; // zero is OFF!
+      this->polymorphism_reject_surrounding_homopolymer_length = 5; // zero is OFF!
       this->polymorphism_bias_p_value_cutoff = 0;
       this->no_indel_polymorphisms = false;
       this->polymorphism_precision_decimal = 0.000001;

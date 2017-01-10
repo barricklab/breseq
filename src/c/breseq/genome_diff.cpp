@@ -38,6 +38,7 @@ const char* INSERT_POSITION="insert_position";
 const char* PHYLOGENY_ID="phylogeny_id";
 const char* FREQUENCY="frequency";
 const char* REJECT="reject";
+const char* POLYMORPHISM_REJECT="polymorphism_reject";
 const char* MEDIATED="mediated";
 const char* BETWEEN="between";
   
@@ -1198,11 +1199,11 @@ size_t cDiffEntry::number_reject_reasons()
   return 0;
 }
 
-vector<string> cDiffEntry::get_reject_reasons()
+vector<string> cDiffEntry::get_reject_reasons(const string field)
 {
   vector<string> return_value;
-  if (this->entry_exists(REJECT)) {
-    return_value = split((*this)[REJECT], ",");
+  if (this->entry_exists(field)) {
+    return_value = split((*this)[field], ",");
   } 
   return return_value;
 }
