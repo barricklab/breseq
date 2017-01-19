@@ -799,6 +799,19 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   //HTML << h2("Command Line") << endl;
   //HTML << "<code>" << settings.full_command_line << "</code>" << endl;
   
+  
+  ////
+  // Write software versions
+  ////
+  
+  HTML << "<p>"<< endl;
+  HTML << h2("Software Versions") << endl;
+  HTML << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"5\"") << endl;
+  HTML << "<tr>" << th("program") << th("version") << "</tr>" << endl;
+  HTML << "<tr>" << td("bowtie2") << td(settings.installed.find("bowtie2_version_string")->second) << "</tr>" << endl;
+  HTML << "<tr>" << td("R") << td(settings.installed.find("R_version_string")->second) << "</tr>" << endl;
+  HTML << "</table>";
+  
   ////
   // Write Execution Times
   ////
@@ -830,8 +843,8 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << "<td colspan=\"3\" >" << b("Total") << "</td>" << endl;
   HTML << "<td>" << (b(nonbreaking(Settings::elapsedtime2string(total_time_elapsed)))) << "</td>" << endl;
   HTML << "</tr>" << endl;
-
   HTML << "</table>";
+  
   HTML << html_footer();
   HTML.close();
 }
