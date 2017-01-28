@@ -2319,25 +2319,25 @@ map<string,uint16_t> cReferenceSequences::codon_to_aa_index = make_map<string,ui
   ("GGT", 60)("GGC", 61)("GGA", 62)("GGG", 63)
 ;
 
-char cReferenceSequences::translate_codon(string seq, uint32_t translation_table, uint32_t codon_number_1)
+char cReferenceSequences::translate_codon(string seq, uint32_t translation_table, uint32_t codon_number_1, const string& gene)
 {  
-  ASSERT(seq.size()==3, "Attempt to translate codon without three bases.");
-  ASSERT(translation_table <= cReferenceSequences::translation_tables.size(), "Unknown translation table requested.");
+  ASSERT(seq.size()==3, "Attempt to translate codon without three bases" + (gene.size()>0 ? " in gene " + gene :"") + ".");
+  ASSERT(translation_table <= cReferenceSequences::translation_tables.size(), "Unknown translation table #" + to_string(translation_table) + " requested." + (gene.size()>0 ? " for gene " + gene :"") + ".");
   const string& tt = (codon_number_1 == 1) 
     ? cReferenceSequences::initiation_codon_translation_tables[translation_table]
     : cReferenceSequences::translation_tables[translation_table]
   ;
-  ASSERT(tt.size() == 64, "Unknown translation table requested.");
+  ASSERT(tt.size() == 64, "Provided translation table #" + to_string(translation_table) + " does not have 64 codons." + (gene.size()>0 ? " for gene " + gene :"") + ".");
   
   return (cReferenceSequences::codon_to_aa_index.count(seq) == 0) 
     ? '?' 
     : tt[cReferenceSequences::codon_to_aa_index[seq]];
 }
   
-char cReferenceSequences::translate_codon(string seq, string translation_table, string translation_table_1, uint32_t codon_number_1)
+char cReferenceSequences::translate_codon(string seq, string translation_table, string translation_table_1, uint32_t codon_number_1, const string& gene)
 {  
-  ASSERT(seq.size()==3, "Attempt to translate codon without three bases.");
-  ASSERT(translation_table.size()==64, "Provided genetic code does not have 64 codons.");
+  ASSERT(seq.size()==3, "Attempt to translate codon without three bases" + (gene.size()>0 ? " in gene " + gene :"") + ".");
+  ASSERT(translation_table.size()==64, "Provided translation table #" + to_string(translation_table) + " does not have 64 codons." + (gene.size()>0 ? " for gene " + gene :"") + ".");
   const string& tt = (codon_number_1 == 1) ? translation_table_1 : translation_table;
   
   return (cReferenceSequences::codon_to_aa_index.count(seq) == 0) 
@@ -2374,7 +2374,7 @@ string cReferenceSequences::translate_protein(cAnnotatedSequence& seq, cSequence
       on_codon += nt_sequence[on_nt_pos];
       on_nt_pos++;
     }
-    protein_sequence += translate_codon(on_codon, translation_table, translation_table_1, on_codon_number_1);
+    protein_sequence += translate_codon(on_codon, translation_table, translation_table_1, on_codon_number_1, gene.get_locus_tag());
     
   }
   
@@ -2752,13 +2752,13 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
 
       mut["codon_ref_seq"] = codon_seq;
       
-      mut["aa_ref_seq"] =  translate_codon(mut["codon_ref_seq"], gene.translation_table, ( gene.start_is_indeterminate() && (mutated_codon_number_1 == 1) ) ? 2 : mutated_codon_number_1);
+      mut["aa_ref_seq"] =  translate_codon(mut["codon_ref_seq"], gene.translation_table, ( gene.start_is_indeterminate() && (mutated_codon_number_1 == 1) ) ? 2 : mutated_codon_number_1, gene.get_locus_tag());
       
       // Generate mutated sequence
       mut["codon_new_seq"] = codon_seq;
       //#remember to revcom the change if gene is on opposite strand
       mut["codon_new_seq"][mutated_codon_pos_1 - 1] = (mutated_strand == 1) ? mut["new_seq"][0] : reverse_complement(mut["new_seq"])[0];
-      mut["aa_new_seq"] =  translate_codon(mut["codon_new_seq"], gene.translation_table, ( gene.start_is_indeterminate() && (mutated_codon_number_1 == 1) ) ? 2 : mutated_codon_number_1);
+      mut["aa_new_seq"] =  translate_codon(mut["codon_new_seq"], gene.translation_table, ( gene.start_is_indeterminate() && (mutated_codon_number_1 == 1) ) ? 2 : mutated_codon_number_1, gene.get_locus_tag());
       mut["transl_table"] = to_string(gene.translation_table);
       
       if ((mut["aa_ref_seq"] != "*") && (mut["aa_new_seq"] == "*"))

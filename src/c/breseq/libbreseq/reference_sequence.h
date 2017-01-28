@@ -1010,8 +1010,8 @@ namespace breseq {
 
     static cFeatureLocation* find_closest_repeat_region_boundary(int32_t position, const cSequenceFeatureList& repeat_list, int32_t& max_distance, int32_t direction, bool include_interior_matches = false);
     static cFeatureLocation* get_overlapping_feature(cFeatureLocationList& feature_list, int32_t pos);
-    static char translate_codon(string seq, uint32_t translation_table, uint32_t codon_number_1);
-    static char translate_codon(string seq, string translation_table, string translation_table_1, uint32_t codon_number_1);
+    static char translate_codon(string seq, uint32_t translation_table, uint32_t codon_number_1, const string& gene="");
+    static char translate_codon(string seq, string translation_table, string translation_table_1, uint32_t codon_number_1, const string& gene="");
     static string translate_protein(cAnnotatedSequence& seq, cSequenceFeature& loc, string translation_table, string translation_table_1);
     static void find_nearby_genes(
                                   cFeatureLocationList& gene_list,

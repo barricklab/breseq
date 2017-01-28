@@ -1,10 +1,13 @@
 Version 0.29.1
+   * Options used in calls to bowtie2 were changed to be compatible with v2.3.0. These changes
+     may result in (small) changes in how reads are aligned versus in older breseq versions.
    * Fixed bug in polymorphism mode option --polymorphism-reject-surrounding-homopolymer-length.
      and its default setting. This filter had been operating differently, and more stringently than 
      intended, resulting in the rejection of certain polymorphisms when the same base as the variant
      base was present in the reference genome at positions immediately before and after the mutation.
    * HTML and GD output now include a POLYMORPHISM_REJECT field describing why a putative polymorphism
      was reassigned as a consensus mutation with 100% frequency (i.e., rejected as a polymorphism).
+   * Fixed cases where certain GenomeDiff files output by breseq failed when they were used with gdtool APPLY.
 
 Version 0.29.0
    * CRITICAL fixes for polymorphism mode bugs that could lead to missing high frequency

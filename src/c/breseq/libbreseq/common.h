@@ -1165,7 +1165,7 @@ inline cKeyValuePair::cKeyValuePair(const string &line, const char split_chr)
 {}
 
 inline bool cKeyValuePair::valid(void) const
-{ return count(this->begin(), this->end(), _split_chr) == 1 && _key.size() && _value.size(); }
+{ return count(this->begin(), this->end(), _split_chr) >= 1 && _key.size() && _value.size(); }
 
 inline string cKeyValuePair::get_key() const
 { return _key; }

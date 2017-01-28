@@ -2460,7 +2460,7 @@ namespace breseq {
             
             // The adjustment to codon number is so that we don't count
             // the first codon of an indeterminate start as a start codon!
-            char original_amino_acid = cReferenceSequences::translate_codon(this_codon, gene.translation_table, ( gene.start_is_indeterminate() && (on_codon_number_1 == 1) ) ? 2 : on_codon_number_1);
+            char original_amino_acid = cReferenceSequences::translate_codon(this_codon, gene.translation_table, ( gene.start_is_indeterminate() && (on_codon_number_1 == 1) ) ? 2 : on_codon_number_1, gene.get_locus_tag());
             
             for (int32_t test_codon_index=0; test_codon_index<3; test_codon_index++) {
               
@@ -2482,7 +2482,7 @@ namespace breseq {
                   string test_codon = this_codon;
                   test_codon[test_codon_index] = mut_base;
                   
-                  char mut_amino_acid = cReferenceSequences::translate_codon(test_codon, gene.translation_table, ( gene.start_is_indeterminate() && (on_codon_number_1 == 1) ) ? 2 : on_codon_number_1);
+                  char mut_amino_acid = cReferenceSequences::translate_codon(test_codon, gene.translation_table, ( gene.start_is_indeterminate() && (on_codon_number_1 == 1) ) ? 2 : on_codon_number_1, gene.get_locus_tag());
                   
                   // We are testing whether we defined this to avoid going out of position due to
                   // indeterminate coordinates
