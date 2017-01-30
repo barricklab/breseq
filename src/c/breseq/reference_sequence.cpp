@@ -1843,25 +1843,6 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
 
     if (feature.SafeGet("transl_table") != "")
       feature.m_gff_attributes["transl_table"] = make_vector<string>(feature["transl_table"]);
-
-    //@JEB: Removed 2016-06-16 with change in handling sublocations
-    // add an extra copy of the feature if it crosses the origin of a circular chromosome
-    /*
-    if (feature.get_end_1() < feature.get_start_1()) {
-      cSequenceFeaturePtr bonus_circular_feature(new cSequenceFeature);
-      *bonus_circular_feature = feature;
-      bonus_circular_feature->m_location = cLocation(
-                                                     bonus_circular_feature->get_start_1() - s.m_length + 1, 
-                                                     feature.m_location.get_end_1() + s.m_length,
-                                                     bonus_circular_feature->m_location.get_strand(),
-                                                     bonus_circular_feature->m_location.is_indeterminate_start(),
-                                                     bonus_circular_feature->m_location.is_indeterminate_end()
-                                                     );
-      s.feature_push_front( bonus_circular_feature );
-      
-          cout << " HERE: " << (bonus_circular_feature)->get_locus_tag() << " " << (bonus_circular_feature)->get_start_1() << " " << (bonus_circular_feature)->get_end_1() << endl;
-    }
-     */
     
     s.m_features.push_back(*it);
   }

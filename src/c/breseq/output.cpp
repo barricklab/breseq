@@ -1784,28 +1784,31 @@ void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenom
     co.plot(region, this_complete_coverage_text_file_name);
    }
   
-  // Zoom-in plots of individual deletions and copy number variation
-  vector<gd_entry_type> mc_types = make_vector<gd_entry_type>(MC)(CN);
-	diff_entry_list_t mc = gd.show_list(mc_types);
-  for (diff_entry_list_t::iterator it=mc.begin(); it!=mc.end(); it++)
-  {
-    diff_entry_ptr_t& item = *it;
-    uint32_t start = from_string<uint32_t>((*item)[START]);
-    uint32_t end = from_string<uint32_t>((*item)[END]);
-    uint32_t size = end - start + 1;
-    
-    uint32_t _shaded_flanking = static_cast<uint32_t>(floor(static_cast<double>(size) / 10.0));
-    if (_shaded_flanking < 100) _shaded_flanking = 100;
-    co.shaded_flanking(_shaded_flanking);
-    
-    string region = (*item)[SEQ_ID] + ":" + (*item)[START] + "-" + (*item)[END];
-    string coverage_plot_file_name = settings.evidence_path + "/" + (*item)[SEQ_ID] + "_" + (*item)[START] + "-" + (*item)[END] + "." + co.output_format();
+  // Don't create other plots in --brief-html-mode
+  if (!settings.no_alignment_or_plot_generation) {
+    // Zoom-in plots of individual deletions and copy number variation
+    vector<gd_entry_type> mc_types = make_vector<gd_entry_type>(MC)(CN);
+    diff_entry_list_t mc = gd.show_list(mc_types);
+    for (diff_entry_list_t::iterator it=mc.begin(); it!=mc.end(); it++)
+    {
+      diff_entry_ptr_t& item = *it;
+      uint32_t start = from_string<uint32_t>((*item)[START]);
+      uint32_t end = from_string<uint32_t>((*item)[END]);
+      uint32_t size = end - start + 1;
+      
+      uint32_t _shaded_flanking = static_cast<uint32_t>(floor(static_cast<double>(size) / 10.0));
+      if (_shaded_flanking < 100) _shaded_flanking = 100;
+      co.shaded_flanking(_shaded_flanking);
+      
+      string region = (*item)[SEQ_ID] + ":" + (*item)[START] + "-" + (*item)[END];
+      string coverage_plot_file_name = settings.evidence_path + "/" + (*item)[SEQ_ID] + "_" + (*item)[START] + "-" + (*item)[END] + "." + co.output_format();
 
-    string link_coverage_plot_file_name = Settings::relative_path(coverage_plot_file_name, settings.evidence_path);    
-    (*item)[_COVERAGE_PLOT_FILE_NAME] = link_coverage_plot_file_name;
-    
-    cerr << "Creating coverage plot for region: " << region << endl;
-    co.plot(region, coverage_plot_file_name);
+      string link_coverage_plot_file_name = Settings::relative_path(coverage_plot_file_name, settings.evidence_path);    
+      (*item)[_COVERAGE_PLOT_FILE_NAME] = link_coverage_plot_file_name;
+      
+      cerr << "Creating coverage plot for region: " << region << endl;
+      co.plot(region, coverage_plot_file_name);
+    }
   }
 }
 

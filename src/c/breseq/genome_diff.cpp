@@ -642,6 +642,10 @@ cReferenceCoordinate cDiffEntry::get_reference_coordinate_start() const
         return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)));
       }
     }
+    case RA:
+      return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)), from_string<uint32_t>(this->at(INSERT_POSITION)));
+    case MC:
+      return cReferenceCoordinate(from_string<uint32_t>(this->at(START)));
     case UN:
       return cReferenceCoordinate(from_string<uint32_t>(this->at(START)));
     default:
@@ -672,6 +676,10 @@ cReferenceCoordinate cDiffEntry::get_reference_coordinate_end() const
         return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)) + abs(from_string<int32_t>(this->at("duplication_size"))) - 1);
       }
     }
+    case RA:
+      return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)), from_string<uint32_t>(this->at(INSERT_POSITION)));
+    case MC:
+      return cReferenceCoordinate(from_string<uint32_t>(this->at(END)));
     case UN:
       return cReferenceCoordinate(from_string<uint32_t>(this->at(END)));
     
@@ -679,6 +687,15 @@ cReferenceCoordinate cDiffEntry::get_reference_coordinate_end() const
       ERROR("cDiffEntry::get_reference_coordinate_end not implemented for type: " + gd_entry_type_lookup_table[this->_type]);
   }
   return 0;
+}
+  
+bool cDiffEntry::located_within(const cDiffEntry &within) const
+{
+  return(
+         (this->get(SEQ_ID) == within.get(SEQ_ID))
+         && (this->get_reference_coordinate_start() >= within.get_reference_coordinate_start())
+         && (this->get_reference_coordinate_end() <= within.get_reference_coordinate_end())
+         );
 }
   
 int32_t cDiffEntry::mutation_size_change(cReferenceSequences& ref_seq_info) const

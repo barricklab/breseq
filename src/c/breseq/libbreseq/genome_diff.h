@@ -269,8 +269,12 @@ public:
   cReferenceCoordinate get_reference_coordinate_start() const;
   cReferenceCoordinate get_reference_coordinate_end() const;
 
+  //! Is this item located within another and on same seq_id?
+  bool located_within(const cDiffEntry &within) const;
+  
   //! Common function giving change in size of genome at site of applying entry
   int32_t mutation_size_change(cReferenceSequences& ref_seq_info) const;
+
   
   //!---- Functions for updating mutations ---- !//
   

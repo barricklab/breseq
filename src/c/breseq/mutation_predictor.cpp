@@ -1400,11 +1400,11 @@ namespace breseq {
     diff_entry_list_t ra = gd.get_list(ra_types);
     
 		///
-		// Ignore RA that overlap DEL or MC unless they are user
-		// They are due to low spurious coverage in deleted regions!
+		// Ignore RA that overlap DEL, MC unless they are user
+		// They are due to low spurious coverage in deleted regions or replicate bases changed!
 		///
     
-    vector<gd_entry_type> del_types = make_vector<gd_entry_type>(DEL);
+    vector<gd_entry_type> del_types = make_vector<gd_entry_type>(DEL)(INS)(SUB);
     diff_entry_list_t del = gd.get_list(del_types);
     
     // Don't add deleted flags if we are in targeted sequencing mode
@@ -1424,11 +1424,7 @@ namespace breseq {
         {
           cDiffEntry& del_item = **del_it;
           
-          if (ra_item["seq_id"] != del_item["seq_id"])
-            continue;
-          
-          // there might be a problem here with insert_position > 0
-          if ( (n(ra_item["position"]) >= n(del_item["position"])) && (n(ra_item["position"]) <= n(del_item["position"]) + n(del_item["size"]) - 1) )
+          if (ra_item.located_within(del_item))
           {
             ra_item["deleted"] = "1";
             next_ra = true;
@@ -1441,14 +1437,13 @@ namespace breseq {
         {
           cDiffEntry& mc_item = **mc_it;
           
-          if (ra_item["seq_id"] != mc_item["seq_id"]) continue;
-          
-          if ( (n(ra_item["position"]) >= n(mc_item["start"])) && (n(ra_item["position"]) <= n(mc_item["end"])) )
+          if (ra_item.located_within(mc_item))
           {
             ra_item["deleted"] = "1";
             break;
           }
         }
+        
       }
     }
     
@@ -1932,7 +1927,6 @@ namespace breseq {
 		///
     
     predictRAtoSNPorDELorINSorSUB(settings, summary, gd, jc, mc);
-    
 		
     ///
 		// Read Alignments => SNP, DEL, INS, SUB
@@ -1950,7 +1944,14 @@ namespace breseq {
 		// mutation INS => mutation AMP
 		///
     normalize_INS_to_AMP(settings, summary, gd);
-      
+    
+    ///
+    // Check for certain kinds of overlap that need 'before' or 'within' fields to resolve
+    ///
+    if (!settings.polymorphism_prediction) {
+      assign_before_within_to_mutations(gd);
+    }
+    
     ///////////////////////////////////////////////////////
     // Check to be sure the "frequency" field is present //
     // as appropriate in consensus/polymorphism mode.    //
@@ -2244,6 +2245,64 @@ namespace breseq {
     
     // Sorts and fixes ID gaps
     if (any_changes) gd.reassign_unique_ids();
+  }
+  
+  
+  
+  // Currently, only adds before tag to any small mutation predicted that is within the
+  // duplication region of a MOB in consensus mode as 'before'
+  
+  void MutationPredictor::assign_before_within_to_mutations(cGenomeDiff& gd)
+  {
+    diff_entry_list_t muts = gd.mutation_list();
+    
+    // Since they are sorted, we only have to look around the MOB in the list, for efficiency.
+    // IMPORTANT: MOBs with the same position get sorted after SNP, INS, DEL, etc., so we must check backwards.
+    
+    for (diff_entry_list_t::iterator it_mob=muts.begin(); it_mob != muts.end(); it_mob++) {
+      
+      cDiffEntry& mob = **it_mob;
+      if (mob._type != MOB) continue;
+      
+      // Find the beginning
+      diff_entry_list_t::iterator it_test_start = muts.begin();
+      if (it_mob != muts.begin()) {
+        it_test_start=it_mob;
+        it_test_start--;
+        while (it_test_start!=muts.begin()) {
+          cDiffEntry& test = **it_test_start;
+          if (test[SEQ_ID] != mob[SEQ_ID]) break;
+          if (test.get_reference_coordinate_start() < mob.get_reference_coordinate_start()) break;
+          it_test_start--;
+        }
+      }
+      
+      // Find the end
+      diff_entry_list_t::iterator it_test_end = muts.end();
+      if (it_mob != muts.end()) {
+        it_test_end=it_mob;
+        it_test_end++;
+        while (it_test_end!=muts.end()) {
+          cDiffEntry& test = **it_test_end;
+          if (test[SEQ_ID] != mob[SEQ_ID]) break;
+          if (test.get_reference_coordinate_start() > mob.get_reference_coordinate_end()) break;
+          it_test_end++;
+        }
+      }
+      
+      if (it_test_start != it_test_end) {
+        for (diff_entry_list_t::iterator it_test=it_test_start; it_test != it_test_end; it_test++) {
+          if (it_test == it_mob) continue;
+          cDiffEntry& test = **it_test;
+          
+          // Must be entirely within
+          if ( test.located_within(mob) ) {
+            test[BEFORE] = to_string(mob._id);
+          }
+        }
+      }
+      
+    }
   }
   
   
