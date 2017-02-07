@@ -2176,7 +2176,7 @@ int breseq_default_action(int argc, char* argv[])
     mpgd.add_breseq_data("INPUT-BASES", to_string(summary.sequence_conversion.original_num_bases));
     mpgd.add_breseq_data("CONVERTED-READS", to_string(summary.alignment_resolution.total_reads));
     mpgd.add_breseq_data("CONVERTED-BASES", to_string(summary.alignment_resolution.total_bases));
-    mpgd.add_breseq_data("MAPPED-READS", to_string(summary.alignment_resolution.total_reads_mapped_to_references));
+    mpgd.add_breseq_data("MAPPED-READS", to_string(static_cast<int64_t>(summary.alignment_resolution.total_reads_mapped_to_references)));
     mpgd.add_breseq_data("MAPPED-BASES", to_string(summary.alignment_resolution.total_bases_mapped_to_references));
     
     /*

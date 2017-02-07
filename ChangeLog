@@ -1,4 +1,4 @@
-Version 0.29.1
+Version 0.30.0
    * Options used in calls to bowtie2 were changed to be compatible with v2.3.0. These changes
      may result in (small) changes in how reads are aligned versus in older breseq versions.
    * Fixed bug in polymorphism mode option --polymorphism-reject-surrounding-homopolymer-length.

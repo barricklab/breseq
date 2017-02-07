@@ -1038,7 +1038,7 @@ void _write_reference_matches(const Settings& settings, Summary& summary, cRefer
 
 	vector<Trims> trims;
 
-  double redundancy_corrected_count = 1.0 / reference_alignments.size();
+  double redundancy_corrected_count = 1.0 / static_cast<double>(reference_alignments.size());
   for(alignment_list::iterator it=reference_alignments.begin(); it!=reference_alignments.end(); it++)
   {
     Trims t = get_alignment_trims(**it, trims_list);

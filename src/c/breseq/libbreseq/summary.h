@@ -85,9 +85,9 @@ namespace breseq{
       map<int32_t, int32_t> observed_pos_hash_score_distribution;
       map<int32_t, int32_t> accepted_pos_hash_score_distribution;
 
-      uint64_t total_reads_mapped_to_references;
+      double total_reads_mapped_to_references;
       uint64_t total_bases_mapped_to_references;
-      storable_vector<uint64_t> reads_mapped_to_references;
+      storable_vector<double> reads_mapped_to_references;
 
       AlignmentResolution()
       : total_unmatched_reads(0)
