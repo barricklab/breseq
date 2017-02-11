@@ -7,7 +7,10 @@ Version 0.30.0
      base was present in the reference genome at positions immediately before and after the mutation.
    * HTML and GD output now include a POLYMORPHISM_REJECT field describing why a putative polymorphism
      was reassigned as a consensus mutation with 100% frequency (i.e., rejected as a polymorphism).
-   * Fixed cases where certain GenomeDiff files output by breseq failed when they were used with gdtool APPLY.
+   * Fixed rare cases where certain GenomeDiff files output by breseq failed when they were used 
+     with gdtools APPLY.
+   * Fixed various bugs related to reference files containing nonstandard bases, spliced genes, and 
+     certain seq_id names.
 
 Version 0.29.0
    * CRITICAL fixes for polymorphism mode bugs that could lead to missing high frequency
