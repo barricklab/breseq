@@ -69,6 +69,7 @@ namespace breseq {
       m_current_line = substitute(m_current_line, "\r", "");
       m_current_line = substitute(m_current_line, "\n", "");
       
+      
       sequence.m_sequence += m_current_line;
 
       breseq::getline(*this, m_current_line);

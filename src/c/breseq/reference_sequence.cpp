@@ -718,9 +718,41 @@ namespace breseq {
     this->Verify();
     this->m_initialized = true;
     
+    // To uppercase and change nonstandard chars to 'N' in all sequences.
+    for (size_t i=0; i<this->size(); i++) {
+      string& this_sequence = (*this)[i].m_fasta_sequence.m_sequence;
+      
+      // Uppercase
+      this_sequence = to_upper(this_sequence);
+      
+      // Remedy nonstandard characters to 'N'
+      map<char,uint32_t> bad_char;
+      for (size_t j=0; j<(*this)[i].m_fasta_sequence.m_sequence.size(); j++) {
+        if ( !strchr( "ATCGN",  this_sequence[j] )) {
+          if (bad_char.count(this_sequence[j])) {
+            bad_char[this_sequence[j]]++;
+          } else {
+            bad_char[this_sequence[j]] = 1;
+          }
+          this_sequence[j] = 'N';
+        }
+      }
+      
+      // Found some bad characters...
+      if (bad_char.size()) {
+        string warning_string("Non-standard base characters found in sequence: " + (*this)[i].m_seq_id + "\n");
+        for(map<char,uint32_t>::iterator it = bad_char.begin(); it != bad_char.end(); it++) {
+          warning_string += "  character: '" + to_string<char>(it->first) + "'  (occurrences: " + to_string(it->second) + ")\n";
+        }
+        warning_string +="Characters that are not in the set 'ATCGN' will be changed to 'N'.";
+        WARN(warning_string);
+      }
+    }
+    
     // Finally, update feature lists
     this->update_feature_lists();
   }
+  
   
   void cReferenceSequences::LoadFile(const string& file_name)
   {
@@ -764,8 +796,6 @@ namespace breseq {
     }
     //! Step 2: Load appropriate file
     
-    size_t last_uppercased = this->size();
-    // Remember last sequence before loading for uppercasing
     switch (file_type) {
       case GENBANK:
       {
@@ -801,36 +831,6 @@ namespace breseq {
         
       default:
         WARN("Could not load the reference file: " +file_name);
-    }
-    
-    // To uppercase and fix names for the most recently loaded sequences.
-    for (size_t i=last_uppercased; i<this->size(); i++) {
-      string& this_sequence = (*this)[i].m_fasta_sequence.m_sequence;
-      this_sequence = to_upper(this_sequence);
-      (*this)[i].m_file_name = file_name;
-      
-      // Remedy nonstandard characters to 'N'
-      map<char,uint32_t> bad_char;
-      for (size_t j=0; j<(*this)[i].m_fasta_sequence.m_sequence.size(); j++) {
-        if ( !strchr( "ATCGN",  this_sequence[j] )) {
-          if (bad_char.count(this_sequence[j])) {
-            bad_char[this_sequence[j]]++;
-          } else {
-            bad_char[this_sequence[j]] = 1;
-          }
-          this_sequence[j] = 'N';
-        }
-      }
-      
-      // Found some bad characters...
-      if (bad_char.size()) {
-        string warning_string("Non-standard base characters found in sequence: " + (*this)[i].m_seq_id + "\n");
-        for(map<char,uint32_t>::iterator it = bad_char.begin(); it != bad_char.end(); it++) {
-          warning_string += "  character: '" + to_string<char>(it->first) + "'  (occurrences: " + to_string(it->second) + ")\n";
-        }
-        warning_string +="Characters that are not in the set 'ATCGN' will be changed to 'N'.";
-        WARN(warning_string);
-      }
     }
   }
   
@@ -901,6 +901,7 @@ namespace breseq {
     while ( ff.read_sequence(on_seq) ) {
       
       on_seq.m_name = safe_seq_id_name(on_seq.m_name);
+
       this->add_new_seq(on_seq.m_name, ff.m_file_name);
       cAnnotatedSequence& this_seq = (*this)[on_seq.m_name];
       this_seq.m_fasta_sequence = on_seq;
@@ -1151,9 +1152,11 @@ namespace breseq {
       // In this case, look for a sort_index field to properly add it
       if (feature.m_gff_attributes.count("ID")) {
         string id = feature.m_gff_attributes["ID"][0];
+        
+        bool is_sub_location = false;
+        
         if (id_features_table.count(id))  {
           vector<cSequenceFeature*> features = id_features_table[id];
-          bool is_sub_location = false;
           
           //Search to see if 'type' matches also.
           for (uint32_t i = 0; i < features.size();  ++i) {
@@ -1167,14 +1170,14 @@ namespace breseq {
               break;
             }
           }
-
-          if (is_sub_location) {
-            continue; //Don't add to feature lists.
-          } else { 
-            id_features_table[id].push_back(&feature);
-          }
-
         }
+        
+        if (is_sub_location) {
+          continue; //Don't add to feature lists.
+        } else {
+          id_features_table[id].push_back(&feature);
+        }
+
       }
 
       (*this)[seq_id].m_features.push_back(fp);
@@ -1861,19 +1864,15 @@ void cReferenceSequences::ReadGenBankFileSequence(std::ifstream& in, cAnnotatedS
     //cerr << first_word << "::" << line << std::endl;
 
     if (first_word == "//") break;
+    
+    // Load, but skip spaces
     for(string::iterator i=line.begin(); i!=line.end(); ++i) {
       if (*i == ' ') continue;
-      *i = toupper(*i);
-
-      // Scrub nonstandard characters
-      if ((*i != 'A' ) && (*i != 'T' ) && (*i != 'C' ) && (*i != 'G' )) {
-        *i = 'N';
-      }
-
       s.m_fasta_sequence.m_sequence += *i;
     }
+    
   }
-
+  
   //cout << s.m_sequence << std::endl;
 }
 

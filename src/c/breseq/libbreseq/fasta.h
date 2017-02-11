@@ -28,11 +28,8 @@ namespace breseq {
 	/*! Interface for loading and manipulating files in FASTA format.
    */
   
-  
   /*! Sequence class.
    */
-
-
    
   struct cFastaSequence {
     public:

@@ -790,6 +790,7 @@ namespace breseq {
     
     //!< Load reference file into object
     //!< Detect file type and load the information in it appropriately
+    //!< Should not be called directly, only through LoadFiles!
     void LoadFile(const string& file_name);
     
     //!< Verify that all seq_id have sequence;
@@ -1052,6 +1053,15 @@ namespace breseq {
         new_s = substitute(s,"__","_");
       }
       s = new_s;
+      
+      // Also remove any leading or trailing underscores
+      pos = s.find_first_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890.-");
+      s.replace(0, pos, "");
+
+      pos = s.find_last_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890.-");
+      s.replace(pos+1, s.size()-pos+1, "");
+      
+      ASSERT(s.find_first_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890.-") != string::npos, "Seq id " + input + " does not contain any valid alphanumeric characters.");
       
       if (s != input) {
         WARN("Reference seq id converted from '" + input + "' to '" + s + "'.\nOnly alphanumeric characters, periods, dashes, and single underscores '_' are allowed in seq ids.");
