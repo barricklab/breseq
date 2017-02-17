@@ -358,8 +358,8 @@ cDiffEntry::cDiffEntry(const string &line, uint32_t line_number, cFileParseError
       
       // Certain keys are only allowed for specific entries
       if (key == MEDIATED) {
-        if ( (de._type != DEL) && (de._type != AMP) ) {
-          if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'mediated' is only allowed for entries of type DEL or AMP.", true);
+        if ( (de._type != DEL) && (de._type != AMP) && (de._type != SUB) ) {
+          if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'mediated' is only allowed for entries of type DEL, AMP, or SUB.", true);
         }
       }
       
