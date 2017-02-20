@@ -93,8 +93,8 @@ namespace breseq {
     return false;
 	}
 
-	// look at SNPs and small indels predicted by read alignments.
-	// be sure they are sorted by position
+	// Look at SNPs and small indels predicted by read alignments.
+	// Make sure they are sorted by position.
 	bool MutationPredictor::sort_by_pos(const counted_ptr<cDiffEntry>& a, const counted_ptr<cDiffEntry>& b)
 	{
 		return (
@@ -1687,7 +1687,7 @@ namespace breseq {
     
     // We iterate in reverse order, because our normalize functions are moving
     // mutations to the HIGHEST corredinates possible when they are in tandem repeats.
-    cDiffEntry* last_mut(NULL);
+    const cDiffEntry* last_mut(NULL);
     
     for(diff_entry_list_t::reverse_iterator it = test_muts.rbegin(); it != test_muts.rend(); it++) {
       
@@ -1706,6 +1706,8 @@ namespace breseq {
         
         int32_t size = mut["new_seq"].size();
         int32_t position = from_string<int32_t>(mut["position"]);
+        int32_t insert_position = mut.entry_exists("insert_position") ? from_string<int32_t>(mut["insert_position"]) : 1;
+
         string mutation_sequence = mut["new_seq"];
         uint32_t repeat_unit_size;
         string repeat_unit_sequence;
@@ -1714,19 +1716,42 @@ namespace breseq {
         normalizeINSposition(ref_seq_info[mut["seq_id"]], mut, repeat_unit_sequence);
         int32_t new_position = from_string<int32_t>(mut["position"]);
         string new_mutation_sequence = mut["new_seq"];
+        int32_t new_insert_position = mut.entry_exists("insert_position") ? from_string<int32_t>(mut["insert_position"]) : 1;
         
         // Did we get shifted into the position of the next mutation? Then back off.
-        if (last_mut && (mut[SEQ_ID] == (*last_mut)[SEQ_ID]) && (mut.get_reference_coordinate_end() >= last_mut->get_reference_coordinate_start())) {
-          // The position of this insert mutation should be one before the mutation, unless it is another INS
+        if (last_mut && (mut[SEQ_ID] == last_mut->get(SEQ_ID)) && (mut.get_reference_coordinate_end() >= last_mut->get_reference_coordinate_start())) {
+          // The position of this insert mutation should be one before the mutation, unless it is another INS,
+          // In the INS case, we need to properly update all of the insert positions
+          
           if (last_mut->_type == INS) {
-            mut["position"] = (*last_mut)["position"];
+
+            // Don't directly change the position in here... it gets assigned afterward
+            int32_t assign_insert_position = 1;
+            new_position = n(last_mut->get(POSITION));
+            new_insert_position = assign_insert_position;
+            
+            diff_entry_list_t::reverse_iterator it_ins = it;
+            it_ins--;
+            cDiffEntry* ins_mut = (*it_ins).get();
+            while (   (ins_mut->_type == INS)
+                   && (n((*ins_mut)["position"]) == new_position)
+                  )
+            {
+              assign_insert_position++;
+              (*ins_mut)["insert_position"] = s(assign_insert_position);
+              it_ins--;
+              if (it_ins == test_muts.rbegin()) break;
+              cDiffEntry* ins_mut = (*it_ins).get();
+            }
+            
           } else {
-            mut["position"] = to_string(from_string<int32_t>((*last_mut)["position"]) - 1);
+            new_position = n(last_mut->get(POSITION)) - 1;
           }
         }
         
         // repeat info may have changed, so reload
         position = new_position;
+        insert_position = new_insert_position;
         mutation_sequence = new_mutation_sequence;
         find_repeat_unit(mutation_sequence, repeat_unit_size, repeat_unit_sequence);
         uint32_t num_repeat_units = size / repeat_unit_size;
@@ -1736,6 +1761,7 @@ namespace breseq {
 
         // save normalized position even if we aren't a repeat
         mut["position"] = to_string<int32_t>(position);
+        mut["insert_position"] = to_string<int32_t>(insert_position);
         mut["new_seq"] = mutation_sequence;
         
         if (original_num_repeat_units * repeat_unit_size < minimum_tandem_repeat_length)
@@ -1757,6 +1783,7 @@ namespace breseq {
         int32_t size = from_string<int32_t>(mut["size"]);
         
         int32_t position = from_string<int32_t>(mut["position"]);
+        
         string mutation_sequence = ref_seq_info.get_sequence_1(mut["seq_id"], position, position + size - 1);
         
         uint32_t repeat_unit_size;
@@ -1766,10 +1793,10 @@ namespace breseq {
         normalizeDELposition(ref_seq_info[mut["seq_id"]], mut, repeat_unit_sequence);
         
         // Did we get shifted into the position of the next mutation? Then back off.
-        if (last_mut && (mut[SEQ_ID] == (*last_mut)[SEQ_ID]) && (mut.get_reference_coordinate_end() >= last_mut->get_reference_coordinate_start())) {
+        if (last_mut && (mut[SEQ_ID] == last_mut->get(SEQ_ID)) && (mut.get_reference_coordinate_end() >= last_mut->get_reference_coordinate_start())) {
           // The position of this insert mutation should be as many bases as the
           // deletion is long before the next mutation
-          mut["position"] = to_string(from_string<int32_t>((*last_mut)["position"]) - size);
+          mut["position"] = s(n(last_mut->get("position")) - size);
         }
         
         // Normalize may actually change the sequence used for the repeat... so call again here.
@@ -1850,7 +1877,6 @@ namespace breseq {
       mut.erase("repeat_new_copies");
       mut.erase("repeat_ref_copies");
     }
-    
   }
 
   
@@ -1957,14 +1983,50 @@ namespace breseq {
     // as appropriate in consensus/polymorphism mode.    //
     ///////////////////////////////////////////////////////
     
-    diff_entry_list_t check_mut_list = gd.mutation_list();
-    for (diff_entry_list_t::iterator it=check_mut_list.begin(); it != check_mut_list.end(); it++) {
-      cDiffEntry& de = **it;
-      if (settings.polymorphism_prediction) {
-        ASSERT(de.entry_exists(FREQUENCY) && !de[FREQUENCY].empty(), "Expected polymorphism field [frequency] not found for mutation.\n" + de.as_string() );
-      } else {
-        ASSERT(!de.entry_exists(FREQUENCY) || !de[FREQUENCY].empty(), "Field [frequency] not expected in consensus mode for mutation.\n" + de.as_string() );
+    {
+      diff_entry_list_t check_mut_list = gd.mutation_list();
+      for (diff_entry_list_t::iterator it=check_mut_list.begin(); it != check_mut_list.end(); it++) {
+        cDiffEntry& de = **it;
+        if (settings.polymorphism_prediction) {
+          ASSERT(de.entry_exists(FREQUENCY) && !de[FREQUENCY].empty(), "Expected polymorphism field [frequency] not found for mutation.\n" + de.as_string() );
+        } else {
+          ASSERT(!de.entry_exists(FREQUENCY) || !de[FREQUENCY].empty(), "Field [frequency] not expected in consensus mode for mutation.\n" + de.as_string() );
+        }
       }
+    }
+    
+    
+
+    // In consensus mode, polish up the insert_position fields of INS predictions
+    // so that if there is only one, then insert_position=1 is removed.
+    if (!settings.polymorphism_prediction) {
+      diff_entry_list_t ins_list = gd.get_list(make_vector<gd_entry_type>(INS));
+      cDiffEntry* last_ins(NULL);
+      for (diff_entry_list_t::iterator it=ins_list.begin(); it != ins_list.end(); it++) {
+        cDiffEntry* ins = it->get();
+        
+        if (
+            last_ins
+            && ((*ins)[POSITION] != (*last_ins)[POSITION])
+            && last_ins->entry_exists(INSERT_POSITION)
+            && ( n(last_ins->get(INSERT_POSITION)) == 1)
+            )
+        {
+          last_ins->erase(INSERT_POSITION);
+        }
+        last_ins = ins;
+      }
+      
+      // Catch the last INS mutation
+      if (
+          last_ins
+          && last_ins->entry_exists(INSERT_POSITION)
+          && ( n(last_ins->get(INSERT_POSITION)) == 1)
+          )
+      {
+        last_ins->erase(INSERT_POSITION);
+      }
+
     }
     
 	}
