@@ -1725,6 +1725,10 @@ namespace breseq {
           
           if (last_mut->_type == INS) {
 
+            if (mut[POSITION] == "189548") {
+              cout << "help" << endl;
+            }
+            
             // Don't directly change the position in here... it gets assigned afterward
             int32_t assign_insert_position = 1;
             new_position = n(last_mut->get(POSITION));
@@ -1739,9 +1743,10 @@ namespace breseq {
             {
               assign_insert_position++;
               (*ins_mut)["insert_position"] = s(assign_insert_position);
+              cout << ins_mut->as_string() << endl;
               it_ins--;
               if (it_ins == test_muts.rbegin()) break;
-              cDiffEntry* ins_mut = (*it_ins).get();
+              ins_mut = (*it_ins).get();
             }
             
           } else {
