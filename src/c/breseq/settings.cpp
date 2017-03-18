@@ -220,6 +220,7 @@ namespace breseq
     options.addUsage("Junction (JC) Evidence Options", ADVANCED_OPTION);
     options
     ("no-junction-prediction", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
+    ("junction-indel-split-length", "Split read alignments on indels of this many or more bases. Indel mutations of this length or longer will be prdicted by JC evidence and those that are shorter will be predicted from RA evience (DEFAULT = consensus mode, 3; polymorphism mode, 2)", "", ADVANCED_OPTION)
     ("junction-alignment-pair-limit", "Only consider this many passed alignment pairs when creating candidate junction sequences (0 = DO NOT LIMIT)", 100000, ADVANCED_OPTION)
     ("junction-minimum-candidates", "Test at least this many of the top-scoring junction candidates, regardless of their length", 100, ADVANCED_OPTION)
     ("junction-maximum-candidates", "Test no more than this many of the top-scoring junction candidates (0 = DO NOT LIMIT)", 5000, ADVANCED_OPTION)
@@ -242,7 +243,7 @@ namespace breseq
     options
 
     ("polymorphism-score-cutoff", "Log10 E-value cutoff for test of polymorphism vs no polymorphism (DEFAULT = consensus mode, 10; polymorphism mode, 2)", "", ADVANCED_OPTION)
-    ("polymorphism-frequency-cutoff", "Only predict polymorphisms when the non-reference allele frequency is greater than this value. (DEFAULT = consensus mode, 0.2; polymorphism mode, 0.05)", "", ADVANCED_OPTION)
+    ("polymorphism-frequency-cutoff", "Only predict polymorphisms when the minor variant allele frequency is greater than this value. For example, a setting of 0.05 will reject all polymorphisms with a non-reference frequency of <0.05, and any variants with a non-reference frequency of ≥ 0.95 (which is 1 - 0.05) will be rejected as polymorphisms and instead predicted to be consensus mutations (DEFAULT = consensus mode, 0.2; polymorphism mode, 0.05)", "", ADVANCED_OPTION)
     ("polymorphism-minimum-coverage-each-strand", "Only predict polymorphisms for which at least this many reads on each strand support each alternative allele. (DEFAULT = consensus mode, 0; polymorphism mode, 2)", "", ADVANCED_OPTION)
     ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, OFF)", "", ADVANCED_OPTION)
     ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms from read alignment evidence", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
@@ -441,6 +442,7 @@ namespace breseq
       this->mutation_log10_e_value_cutoff = 10;
       this->consensus_frequency_cutoff = 0; // zero is OFF - ensures any rejected poly with high freq move to consensus!
       this->consensus_minimum_new_coverage_each_strand = 0;
+      this->preprocess_junction_min_indel_split_length = 2;
       
       this->polymorphism_log10_e_value_cutoff = 2;
       this->polymorphism_frequency_cutoff = 0.05;
@@ -457,6 +459,7 @@ namespace breseq
       this->minimum_alignment_resolution_pos_hash_score = 3;
       this->junction_minimum_side_match = 6;
       this->junction_pos_hash_neg_log10_p_value_cutoff = 0; // OFF
+      
     }
     // This is strictly true if we are not in polymorphism mode...
     else /* if (this->mixed_base_prediction)*/ {
@@ -464,6 +467,7 @@ namespace breseq
       this->mutation_log10_e_value_cutoff = 10;
       this->consensus_frequency_cutoff = 0.8;
       this->consensus_minimum_new_coverage_each_strand = 0;
+      this->preprocess_junction_min_indel_split_length = 3;
       
       this->polymorphism_log10_e_value_cutoff = 10;
       this->polymorphism_frequency_cutoff = 0.2;
@@ -481,6 +485,9 @@ namespace breseq
     }
     
     // override the default settings
+    
+    if (options.count("junction-indel-split-length"))
+      this->preprocess_junction_min_indel_split_length = from_string<int32_t>(options["junction-indel-split-length"]);
     
     if (options.count("consensus-score-cutoff"))
       this->mutation_log10_e_value_cutoff = from_string<double>(options["consensus-score-cutoff"]);

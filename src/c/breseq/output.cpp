@@ -1276,8 +1276,8 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
                     "Rejected: " + decode_reject_reason(reject)));
       }
       
-      vector<string> polymorphosm_reject_reasons = c.get_reject_reasons(POLYMORPHISM_REJECT);
-      for (vector<string>::iterator itr = polymorphosm_reject_reasons.begin(); itr != polymorphosm_reject_reasons.end(); itr ++)
+      vector<string> polymorphism_reject_reasons = c.get_reject_reasons(POLYMORPHISM_REJECT);
+      for (vector<string>::iterator itr = polymorphism_reject_reasons.begin(); itr != polymorphism_reject_reasons.end(); itr ++)
       {
         string& reject = (*itr);
         ss << tr("class=\"reject_table_row\"",
