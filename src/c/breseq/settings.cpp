@@ -220,7 +220,7 @@ namespace breseq
     options.addUsage("Junction (JC) Evidence Options", ADVANCED_OPTION);
     options
     ("no-junction-prediction", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
-    ("junction-indel-split-length", "Split read alignments on indels of this many or more bases. Indel mutations of this length or longer will be prdicted by JC evidence and those that are shorter will be predicted from RA evience (DEFAULT = consensus mode, 3; polymorphism mode, 2)", "", ADVANCED_OPTION)
+    ("junction-indel-split-length", "Split read alignments on indels of this many or more bases. Indel mutations of this length or longer will be prdicted by JC evidence and those that are shorter will be predicted from RA evience", 3, ADVANCED_OPTION)
     ("junction-alignment-pair-limit", "Only consider this many passed alignment pairs when creating candidate junction sequences (0 = DO NOT LIMIT)", 100000, ADVANCED_OPTION)
     ("junction-minimum-candidates", "Test at least this many of the top-scoring junction candidates, regardless of their length", 100, ADVANCED_OPTION)
     ("junction-maximum-candidates", "Test no more than this many of the top-scoring junction candidates (0 = DO NOT LIMIT)", 5000, ADVANCED_OPTION)
@@ -442,7 +442,6 @@ namespace breseq
       this->mutation_log10_e_value_cutoff = 10;
       this->consensus_frequency_cutoff = 0; // zero is OFF - ensures any rejected poly with high freq move to consensus!
       this->consensus_minimum_new_coverage_each_strand = 0;
-      this->preprocess_junction_min_indel_split_length = 2;
       
       this->polymorphism_log10_e_value_cutoff = 2;
       this->polymorphism_frequency_cutoff = 0.05;
@@ -467,7 +466,6 @@ namespace breseq
       this->mutation_log10_e_value_cutoff = 10;
       this->consensus_frequency_cutoff = 0.8;
       this->consensus_minimum_new_coverage_each_strand = 0;
-      this->preprocess_junction_min_indel_split_length = 3;
       
       this->polymorphism_log10_e_value_cutoff = 10;
       this->polymorphism_frequency_cutoff = 0.2;
