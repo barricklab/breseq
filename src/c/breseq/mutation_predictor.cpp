@@ -1890,13 +1890,26 @@ namespace breseq {
 	void MutationPredictor::predict(Settings& settings, Summary& summary, cGenomeDiff& gd)
 	{
     bool verbose = false; // for debugging
-
+    
+    {
+      vector<gd_entry_type> ev_types = make_vector<gd_entry_type>(MC)(RA)(JC)(CN);
+      diff_entry_list_t ev = gd.get_list(ev_types);
+      ev.remove_if(cDiffEntry::field_exists("reject"));
+      uint64_t num_evidence_items = ev.size();
+      uint64_t total_ref_seq_length = summary.sequence_conversion.total_reference_sequence_length;
+      double maximum_sequence_divergence = static_cast<double>(num_evidence_items)*100/static_cast<double>(total_ref_seq_length);
+      if ( (num_evidence_items > 0) && (maximum_sequence_divergence > 0.2) ) {
+        WARN("Large number of differences detected between the sample and the reference sequence (" + to_string<uint64_t>(num_evidence_items) + " evidence items, suggesting approximately " +  to_string(formatted_double(maximum_sequence_divergence,2)) + "% sequence divergence). If this is unexpected, check that you are using the closest available reference sequence for this sample (for example, the correct strain of a bacterial species). Mutation prediction can become less accurate with too much divergence from the reference sequence. It may also take a long time to predict mutations and generate output files.");
+      }
+    }
+    
 		///
 		//  Preprocessing of JC evidence
     //  NB: This call is likely redundant in the normal pipeline, but preserved here so that 
     //  predict can be a stand-alone call that is not dependent on other processing.
 		///
     
+    cerr << "  Preparing junctions..." << endl;
     prepare_junctions(settings, summary, gd);
 
     ///
@@ -1918,6 +1931,7 @@ namespace breseq {
     // evidence JC + JC = MOB mutation
     ///
     
+    cerr << "  Predicting mobile element insertions..." << endl;
     predictJCplusJCtoMOB(settings, summary, gd, jc, mc);
     
     // Don't use rejected junctions for predicting DEL, INS, SUB, *just* MOB
@@ -1928,9 +1942,9 @@ namespace breseq {
 		///
 		// evidence MC + JC => DEL mutation
 		///
+    cerr << "  Predicting large deletions..." << endl;
     predictMCplusJCtoDEL(settings, summary, gd, jc, mc);
 
-		
 		///
 		// evidence JC => INS, SUB, DEL mutations
     ///
@@ -1946,18 +1960,20 @@ namespace breseq {
     if (!settings.polymorphism_prediction) {
       jc.remove_if(cDiffEntry::field_equals(PREDICTION, "polymorphism"));
     }
+    cerr << "  Predicting small indels and substitutions from junctions..." << endl;
     predictJCtoINSorSUBorDEL(settings, summary, gd, jc, mc);
     
 		///
 		// evidence RA => SNP, DEL, INS, SUB
 		///
-    
+    cerr << "  Predicting small indels and substitutions from alignments..." << endl;
     predictRAtoSNPorDELorINSorSUB(settings, summary, gd, jc, mc);
 		
     ///
 		// Read Alignments => SNP, DEL, INS, SUB
 		///
     
+    cerr << "  Making final adjustments to mutations..." << endl;
     normalize_and_annotate_tandem_repeat_mutations(settings, summary, gd);
     
     // Combine INS/DEL mutations that have been shifted to be adjacent to other mutations.

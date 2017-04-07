@@ -6,7 +6,9 @@ Frequently Asked Questions (FAQ)
 
 Does |breseq| use paired-end or mate-paired information?
 ----------------------------------------------------------
-No. Your reads are mapped in single-end mode even if you are using paired-end or mate-paired data. 
+Short answer: No. 
+
+Your reads are mapped in single-end mode even if you are using paired-end or mate-paired data. 
 For most microbial genomes, you don't gain much sensitivity (in terms of the number of reference positions at
 which there are enough uniquely-mapped reads to call mutations) by doing paired read mapping. Furthermore,
 the split-read analysis approach that  |breseq| uses to discover new sequence junctions is more precise 
