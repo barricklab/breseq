@@ -1150,6 +1150,13 @@ namespace breseq
       cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
       cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
     }
+    else if (from_string<uint32_t>(this->installed["bowtie2_version"]) == 2003001000) {
+      good_to_go = false;
+      cerr << "---> ERROR \"bowtie2\" version 2.3.1 is known to have a major bug in SAM" << endl;
+      cerr << "---> ERROR output that will cause breseq to crash. Please upgrade/downgrade." << endl;
+      cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
+      cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
+    }
     else {
       cout << "---> bowtie2  :: version " << this->installed["bowtie2_version_string"] << " [" << this->installed["bowtie2"] << "]" << endl;
     }
