@@ -434,11 +434,12 @@ int do_convert_fastq(int argc, char* argv[])
 
     uint64_t original_num_reads;
     uint64_t original_num_bases;
+    uint32_t min_read_length;
     uint32_t max_read_length;
     uint8_t min_quality_score;
     uint8_t max_quality_score;
     
-    input_format = cFastqQualityConverter::predict_fastq_file_format(input_file_name, original_num_reads, original_num_bases, max_read_length, min_quality_score, max_quality_score);
+    input_format = cFastqQualityConverter::predict_fastq_file_format(input_file_name, original_num_reads, original_num_bases, min_read_length, max_read_length, min_quality_score, max_quality_score);
     
     cerr << " Predicted input format : " << input_format << endl;;
   }
@@ -1109,10 +1110,11 @@ int do_assemble_unmatched(int argc, char* argv[])
     // Figure out format (but just check one of the files to do this)
     uint64_t original_num_reads;
     uint64_t original_num_bases;
+    uint32_t min_read_length;
     uint32_t max_read_length;
     uint8_t min_quality_score;
     uint8_t max_quality_score;
-    string quality_format = cFastqQualityConverter::predict_fastq_file_format(read_file_name_1, original_num_reads, original_num_bases, max_read_length, min_quality_score, max_quality_score);
+    string quality_format = cFastqQualityConverter::predict_fastq_file_format(read_file_name_1, original_num_reads, original_num_bases, min_read_length, max_read_length, min_quality_score, max_quality_score);
     
     cFastqQualityConverter fqc(quality_format, "SANGER");
     cFastqQualityConverter unmatched_fqc("SANGER", "SANGER");
@@ -1198,6 +1200,7 @@ int breseq_default_action(int argc, char* argv[])
     if (!settings.aligned_sam_mode) {
       
       //Check the FASTQ format and collect some information about the input read files at the same time
+      uint32_t overall_min_read_length = UNDEFINED_UINT32;
       uint32_t overall_max_read_length = UNDEFINED_UINT32;
       uint32_t overall_max_qual = 0;
 
@@ -1227,7 +1230,17 @@ int breseq_default_action(int argc, char* argv[])
         string convert_file_name =  settings.file_name(settings.converted_fastq_file_name, "#", base_name);
 
         // Parse output
-        Summary::AnalyzeFastq s_rf = normalize_fastq(fastq_file_name, convert_file_name, i+1, settings.quality_score_trim, !settings.no_read_filtering, s.num_bases, read_file_base_limit);
+        Summary::AnalyzeFastq s_rf = normalize_fastq(fastq_file_name,
+                                                     convert_file_name,
+                                                     i+1,
+                                                     settings.quality_score_trim,
+                                                     !settings.no_read_filtering,
+                                                     s.num_bases,
+                                                     read_file_base_limit,
+                                                     settings.read_file_min_read_length,
+                                                     settings.read_file_max_same_base_fraction,
+                                                     settings.read_file_max_N_fraction
+                                                     );
         settings.track_intermediate_file(settings.alignment_correction_done_file_name, convert_file_name);
         
         // Save the converted file name -- have to save it in summary because only that
@@ -1235,6 +1248,8 @@ int breseq_default_action(int argc, char* argv[])
         s.converted_fastq_name[base_name] = s_rf.converted_fastq_name;
 
         // Record statistics
+        if ((overall_min_read_length == UNDEFINED_UINT32) || (s_rf.min_read_length > overall_min_read_length))
+          overall_min_read_length = s_rf.max_read_length;
         if ((overall_max_read_length == UNDEFINED_UINT32) || (s_rf.max_read_length > overall_max_read_length))
           overall_max_read_length = s_rf.max_read_length;
         if ((overall_max_qual == UNDEFINED_UINT32) || (s_rf.max_quality_score > overall_max_qual))
@@ -1248,6 +1263,7 @@ int breseq_default_action(int argc, char* argv[])
       }
       
       s.avg_read_length = static_cast<double>(s.num_bases) / static_cast<double>(s.num_reads);
+      s.min_read_length = overall_min_read_length;
       s.max_read_length = overall_max_read_length;
       s.max_qual = overall_max_qual;
       summary.sequence_conversion = s;
@@ -1256,7 +1272,7 @@ int breseq_default_action(int argc, char* argv[])
       cerr << "  ::TOTAL::" << endl;
       cerr << "    Original reads: " << s.original_num_reads << " bases: " << s.original_num_bases << endl;
       cerr << "    Analyzed reads: " << s.num_reads << " bases: " << s.num_bases << endl;
-
+      
     }
     
       

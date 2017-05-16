@@ -36,8 +36,11 @@ namespace breseq {
                                         const int32_t trim_end_on_base_quality, 
                                         const bool filter_reads,
                                         uint64_t current_read_file_bases,
-                                        const uint64_t read_file_base_limit
-                                        ) 
+                                        const uint64_t read_file_base_limit,
+                                        const uint32_t _min_read_length,
+                                        const double _max_same_base_fraction,
+                                        const double _max_N_fraction
+                                        )
   {
     cerr << "    Converting/filtering FASTQ file..." << endl;
     
@@ -49,18 +52,25 @@ namespace breseq {
     
     // Summary information that will be printed at the end
     uint32_t max_read_length;
+    uint32_t min_read_length;
     uint8_t min_quality_score;
     uint8_t max_quality_score;
     uint64_t original_num_bases;
     uint64_t original_num_reads;
     
     // Predict the format (and count original stats)
-    string quality_format = cFastqQualityConverter::predict_fastq_file_format(file_name, original_num_reads, original_num_bases, max_read_length, min_quality_score, max_quality_score);
+    string quality_format = cFastqQualityConverter::predict_fastq_file_format(file_name, original_num_reads, original_num_bases, min_read_length, max_read_length, min_quality_score, max_quality_score);
     
     uint64_t num_bases = 0;
     uint64_t num_reads = 0;
-    uint64_t homopolymer_filtered_reads = 0;
+    
+    uint64_t min_length_filtered_reads = 0;
+    uint64_t same_base_filtered_reads = 0;
     uint64_t N_filtered_reads = 0;
+    
+    uint64_t min_length_filtered_bases = 0;
+    uint64_t same_base_filtered_bases = 0;
+    uint64_t N_filtered_bases = 0;
     
     //debug
     //cerr << "min_quality_score "     << (int)min_quality_score  << endl;
@@ -70,6 +80,9 @@ namespace breseq {
     
     //std::cout << m_quality_format << std::endl;
 
+    uint32_t width_for_reads = to_string(original_num_reads).size();
+    uint32_t width_for_bases = to_string(original_num_bases).size();
+    
     cerr << "    Original base quality format: " << quality_format << " New format: SANGER"<< endl;
     cerr << "    Original reads: " << original_num_reads << " bases: "<< original_num_bases << endl;
 
@@ -97,25 +110,34 @@ namespace breseq {
       
       if ( filter_reads ) {
 
+        // Discard sequences that are too short
+        if ( _min_read_length && (on_sequence.length() < _min_read_length) ) {
+          min_length_filtered_reads++;
+          min_length_filtered_bases += on_sequence.length();
+          continue;
+        }
+        
         // Discard sequences that are 50% or more N.
-        if ( 0.5 * static_cast<double>(on_sequence.length()) <= static_cast<double>(on_sequence.m_base_counts[base_list_N_index]) ) {
+        if ( _max_N_fraction && (_max_N_fraction * static_cast<double>(on_sequence.length()) <= static_cast<double>(on_sequence.m_base_counts[base_list_N_index]) )) {
           N_filtered_reads++;
+          N_filtered_bases += on_sequence.length();
           continue;
         }
         
         // Ignore heavily homopolymer reads, as these are a common type of machine error
         // Discard sequences that are 90% or more of a single base or N.
-        bool homopolymer_filtered = false;
+        bool same_base_filtered = false;
         for (uint8_t i=0; i<base_list_including_N_size; i++) {
-          if ( 0.9 * static_cast<double>(on_sequence.length()) <= 
+          if ( _max_same_base_fraction && (_max_same_base_fraction * static_cast<double>(on_sequence.length())) <=
               static_cast<double>(on_sequence.m_base_counts[i] + on_sequence.m_base_counts[base_list_N_index]) ) {
-            homopolymer_filtered = true;
+            same_base_filtered = true;
             break;
           }
         }
         
-        if (homopolymer_filtered)  {
-          homopolymer_filtered_reads++;
+        if (same_base_filtered)  {
+          same_base_filtered_reads++;
+          same_base_filtered_bases += on_sequence.length();
           continue;
         }
         
@@ -169,8 +191,32 @@ namespace breseq {
     //cerr << "min_quality_score "     << (int)min_quality_score  << endl;
     //cerr << "max_quality_score "     << (int)max_quality_score  << endl;
 
+    string display_same_base_percent = to_string(_max_same_base_fraction);
+    string display_N_percent = to_string(_max_N_fraction);
+    
     if (filter_reads) {
-      cerr << "    Filtered reads: " << N_filtered_reads << " (≥50% N) " << homopolymer_filtered_reads << " (≥90% one base)" << endl;
+      if (N_filtered_reads + same_base_filtered_reads + min_length_filtered_reads == 0) {
+        cerr << "    Filtered reads: none" << endl;
+      } else {
+        
+        if (min_length_filtered_reads) {
+          cerr << "    Filtered reads: " << setw(width_for_reads) << min_length_filtered_reads;
+          cerr << " bases: "<< setw(width_for_bases) << min_length_filtered_bases;
+          cerr << " (<" << _min_read_length << " bases long)" << endl;
+        }
+        if (N_filtered_reads) {
+          string percentage = formatted_double(100 * _max_N_fraction, 1).to_string();
+          cerr << "    Filtered reads: " << setw(width_for_reads) << N_filtered_reads;
+          cerr << " bases: "<< setw(width_for_bases) << N_filtered_bases;
+          cerr << " (≥" << percentage << "% bases N)" << endl;
+        }
+        if (same_base_filtered_reads) {
+          string percentage = formatted_double(100 * _max_same_base_fraction, 1).to_string();
+          cerr << "    Filtered reads: " << setw(width_for_reads) << same_base_filtered_reads;
+          cerr << " bases: "<< setw(width_for_bases) << same_base_filtered_bases;
+          cerr << " (≥" << percentage << "% same base)" << endl;
+        }
+      }
     }
     cerr << "    Analyzed reads: " << num_reads << " bases: "<< num_bases << endl;
 
@@ -178,10 +224,12 @@ namespace breseq {
     double avg_read_length = static_cast<double>(num_bases) / static_cast<double>(num_reads);
     
     Summary::AnalyzeFastq retval(
+                                 min_read_length,
                                  max_read_length, 
                                  avg_read_length,
                                  original_num_reads,
-                                 homopolymer_filtered_reads,
+                                 min_length_filtered_reads,
+                                 same_base_filtered_reads,
                                  N_filtered_reads,
                                  num_reads, 
                                  min_quality_score, 
@@ -316,11 +364,12 @@ namespace breseq {
     }
   }
   
-  string cFastqQualityConverter::predict_fastq_file_format(const string& file_name, uint64_t& original_num_reads, uint64_t& original_num_bases, uint32_t& max_read_length, uint8_t& min_quality_score, uint8_t& max_quality_score) 
+  string cFastqQualityConverter::predict_fastq_file_format(const string& file_name, uint64_t& original_num_reads, uint64_t& original_num_bases, uint32_t& min_read_length, uint32_t& max_read_length, uint8_t& min_quality_score, uint8_t& max_quality_score)
   {
   // Initialize the input variables!
     original_num_reads = 0;
     original_num_bases = 0;
+    min_read_length = numeric_limits<uint32_t>::max();
     max_read_length = 0;
     min_quality_score = 255;
     max_quality_score = 0;
@@ -343,10 +392,12 @@ namespace breseq {
     original_num_reads++;
     
     //check sequence length
-    if( on_sequence.m_sequence.size() > max_read_length ) max_read_length = on_sequence.m_sequence.size();
-      
-      //add current sequence length to number of bases
-      original_num_bases += on_sequence.m_sequence.size();
+    min_read_length = min<uint32_t>(min_read_length, on_sequence.m_sequence.size());
+    max_read_length = max<uint32_t>(max_read_length, on_sequence.m_sequence.size());
+
+    
+    //add current sequence length to number of bases
+    original_num_bases += on_sequence.m_sequence.size();
       
       //iterate through sequence grabbing the associated scores
     for (uint32_t i=0; i<on_sequence.m_qualities.size(); i++) {

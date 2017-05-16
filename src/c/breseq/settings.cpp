@@ -193,6 +193,9 @@ namespace breseq
     options
     ("limit-fold-coverage,l", "Analyze a subset of the input FASTQ sequencing reads with enough bases to provide this theoretical coverage of the reference sequences. A value between 60 and 120 will usually speed up the analysis with no loss in sensitivity for clonal samples. The actual coverage achieved will be somewhat less because not all reads will map (DEFAULT=OFF)", "", ADVANCED_OPTION)
     ("aligned-sam", "Input files are aligned SAM files, rather than FASTQ files. Junction prediction steps will be skipped. Be aware that breseq assumes: (1) Your SAM file is sorted such that all alignments for a given read are on consecutive lines. You can use 'samtools sort -n' if you are not sure that this is true for the output of your alignment program. (2) You EITHER have alignment scores as additional SAM fields with the form 'AS:i:n', where n is a positive integer and higher values indicate a better alignment OR it defaults to calculating an alignment score that is equal to the number of bases in the read minus the number of inserted bases, deleted bases, and soft clipped bases in the alignment to the reference. The default highly penalizes split-read matches (with CIGAR strings such as M35D303M65).", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("read-min-length", "Reads in the input FASTQ file that are shorter than this length will be ignored. (0 = OFF)", 18, ADVANCED_OPTION)
+    ("read-max-same-base-fraction", "Reads in the input FASTQ file in which this fraction or more of the bases are the same will be ignored. (0 = OFF)", 0.9, ADVANCED_OPTION)
+    ("read-max-N-fraction", "Reads in the input FASTQ file in which this fraction or more of the bases are uncalled as N will be ignored. (0 = OFF)", 0.5, ADVANCED_OPTION)
     ;
     
     options.addUsage("", ADVANCED_OPTION);
@@ -341,6 +344,11 @@ namespace breseq
     if (options.count("limit-fold-coverage")) {
       this->read_file_coverage_fold_limit = from_string<double>(options["limit-fold-coverage"]);
     }
+    
+    this->read_file_min_read_length = from_string<double>(options["read-min-length"]);
+    this->read_file_max_same_base_fraction = from_string<double>(options["read-max-same-base-fraction"]);
+    this->read_file_max_N_fraction = from_string<double>(options["read-max-N-fraction"]);
+
     
     // Reference sequence provided?
 		if (options.count("reference") + options.count("contig-reference") + options.count("junction-only-reference") == 0)
@@ -627,6 +635,8 @@ namespace breseq
     //! Read file options
     this->aligned_sam_mode  = false;
     this->read_file_coverage_fold_limit = 0.0;
+    this->read_file_max_same_base_fraction = 0.9;
+    this->read_file_min_read_length = 18;
     
     //! Options that control which parts of the pipeline to execute
     this->no_read_filtering = false;

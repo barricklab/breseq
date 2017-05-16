@@ -179,10 +179,12 @@ namespace breseq{
     
     class AnalyzeFastq : public Storable {
     public:
+      uint32_t min_read_length;
       uint32_t max_read_length;
       double avg_read_length;
       uint64_t original_reads;
-      uint64_t homopolymer_filtered_reads;
+      uint64_t too_short_filtered_reads;
+      uint64_t same_base_filtered_reads;
       uint64_t N_filtered_reads;
       uint64_t num_reads;         // original_reads = homopolymer_filtered_reads + N_filtered_reads + num_reads
       uint32_t min_quality_score;
@@ -196,10 +198,12 @@ namespace breseq{
       AnalyzeFastq() {};
       
       AnalyzeFastq(
-                   uint32_t _max_read_length, 
+                   uint32_t _min_read_length,
+                   uint32_t _max_read_length,
                    double _avg_read_length,
                    uint64_t _original_reads,
-                   uint64_t _homopolymer_filtered_reads,
+                   uint64_t _too_short_filtered_reads,
+                   uint64_t _same_base_filtered_reads,
                    uint64_t _N_filtered_reads,
                    uint64_t _num_reads, 
                    uint32_t _min_quality_score, 
@@ -210,10 +214,12 @@ namespace breseq{
                    const string& _quality_format,
                    const string& _converted_fastq_name
                    )
-      : max_read_length(_max_read_length)
+      : min_read_length(_min_read_length)
+      , max_read_length(_max_read_length)
       , avg_read_length(_avg_read_length)
       , original_reads(_original_reads)
-      , homopolymer_filtered_reads(_homopolymer_filtered_reads)
+      , too_short_filtered_reads(_too_short_filtered_reads)
+      , same_base_filtered_reads(_same_base_filtered_reads)
       , N_filtered_reads(_N_filtered_reads)
       , num_reads(_num_reads)
       , min_quality_score(_min_quality_score)
@@ -228,10 +234,12 @@ namespace breseq{
       
       void serialize(ofstream& f)
       {
+        write_to_file(f, min_read_length);
         write_to_file(f, max_read_length);
         write_to_file(f, avg_read_length);
         write_to_file(f, original_reads);
-        write_to_file(f, homopolymer_filtered_reads);
+        write_to_file(f, too_short_filtered_reads);
+        write_to_file(f, same_base_filtered_reads);
         write_to_file(f, N_filtered_reads);
         write_to_file(f, num_reads);
         write_to_file(f, min_quality_score);
@@ -245,10 +253,12 @@ namespace breseq{
       }
       void deserialize(ifstream& f)
       {
+        read_from_file(f, min_read_length);
         read_from_file(f, max_read_length);
         read_from_file(f, avg_read_length);
         read_from_file(f, original_reads);
-        read_from_file(f, homopolymer_filtered_reads);
+        read_from_file(f, too_short_filtered_reads);
+        read_from_file(f, same_base_filtered_reads);
         read_from_file(f, N_filtered_reads);
         read_from_file(f, num_reads);
         read_from_file(f, min_quality_score);
@@ -357,6 +367,7 @@ namespace breseq{
 			storable_map<string, AnalyzeFastq> reads;
 			uint64_t total_reference_sequence_length;
 			uint32_t max_read_length;
+      uint32_t min_read_length;
 
       SequenceConversion()
       : avg_read_length(0.0)
@@ -365,6 +376,8 @@ namespace breseq{
       , original_num_reads(0)
       , num_bases(0)
       , original_num_bases(0)
+      , max_read_length(0)
+      , min_read_length(0)
       { }
       
 			void serialize(ofstream& f)
@@ -379,6 +392,8 @@ namespace breseq{
         reads.serialize(f);
         write_to_file(f, total_reference_sequence_length);
 				write_to_file(f, max_read_length);
+        write_to_file(f, min_read_length);
+
 			}
 			void deserialize(ifstream& f)
 			{
@@ -392,6 +407,8 @@ namespace breseq{
         reads.deserialize(f);
         read_from_file(f, total_reference_sequence_length);
 				read_from_file(f, max_read_length);
+        read_from_file(f, min_read_length);
+
 			}
 
 		} sequence_conversion;

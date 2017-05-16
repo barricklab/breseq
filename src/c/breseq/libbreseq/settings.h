@@ -208,9 +208,12 @@ namespace breseq
     string base_output_path;              // Default = cwd COMMAND-LINE OPTION
     
     //! Settings: Read File Options
-    vector<string> read_file_names;         // REQUIRED COMMAND-LINE OPTION
-    double  read_file_coverage_fold_limit;  // Default = 0 (OFF) COMMAND-LINE OPTION
-    bool aligned_sam_mode;                  // Default = false COMMAND-LINE OPTION
+    vector<string> read_file_names;             // REQUIRED COMMAND-LINE OPTION
+    bool aligned_sam_mode;                      // Default = false COMMAND-LINE OPTION
+    double  read_file_coverage_fold_limit;      // Default = 0 (OFF) COMMAND-LINE OPTION
+    uint32_t read_file_min_read_length;         // Default = 18 COMMAND-LINE OPTION
+    double read_file_max_same_base_fraction;    // Default = 0.9 COMMAND-LINE OPTION
+    double read_file_max_N_fraction;            // Default = 0.5 COMMAND-LINE OPTION
     
     // Reference sequences
     vector<string> all_reference_file_names;  // REQUIRED COMMAND-LINE OPTION (filled by below)    

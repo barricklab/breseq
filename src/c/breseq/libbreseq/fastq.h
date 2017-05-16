@@ -42,7 +42,10 @@ class cAnnotatedSequence;
                                         const int32_t trim_end_on_base_quality, 
                                         const bool filter_reads,
                                         uint64_t current_read_file_bases,
-                                        const uint64_t read_file_base_limit
+                                        const uint64_t read_file_base_limit,
+                                        const uint32_t min_read_length,
+                                        const double max_same_base_fraction,
+                                        const double max_N_fraction
                                         );
   
   // Utility function for converting FASTQ files between formats
@@ -152,7 +155,7 @@ class cAnnotatedSequence;
     
     void convert_sequence(cFastqSequence &seq);
     
-    static string predict_fastq_file_format(const string& file_name, uint64_t& original_num_reads, uint64_t& original_num_bases, uint32_t& max_read_length, uint8_t& min_quality_score, uint8_t& max_quality_score);
+    static string predict_fastq_file_format(const string& file_name, uint64_t& original_num_reads, uint64_t& original_num_bases, uint32_t& min_read_length, uint32_t& max_read_length, uint8_t& min_quality_score, uint8_t& max_quality_score);
 
   };
    
