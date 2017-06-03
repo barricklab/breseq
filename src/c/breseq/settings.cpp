@@ -278,11 +278,6 @@ namespace breseq
     ("cnv","Do experimental copy number variation prediction",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("cnv-tile-size", "Tile size for copy number variation prediction", 500, ADVANCED_OPTION)
     ("cnv-ignore-redundant", "Only consider non-redundant coverage when using cnv", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    //("periodicity", "Finding sum of differences squared of a coverage file", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    //("periodicity-method", "Which method to use for periodicity", 1, ADVANCED_OPTION)
-    //("periodicity-start", "Start of offsets", 1, ADVANCED_OPTION)
-    //("periodicity-end", "End of offsets", 2, ADVANCED_OPTION)
-    //("periodicity-step", "Increment of offsets", 1, ADVANCED_OPTION)
     ;
     
     options.processCommandArgs(argc, argv);
@@ -400,14 +395,6 @@ namespace breseq
     this->do_copy_number_variation = options.count("cnv");
     this->copy_number_variation_tile_size = from_string<uint32_t>(options["cnv-tile-size"]);
     this->ignore_redundant_coverage = options.count("cnv-ignore-redundant");
-    
-    /*
-    this->do_periodicity = options.count("periodicity");
-    this->periodicity_method = from_string<uint32_t>(options["periodicity-method"]);
-    this->periodicity_start = from_string<uint32_t>(options["periodicity-start"]);
-    this->periodicity_end = from_string<uint32_t>(options["periodicity-end"]);
-    this->periodicity_step = from_string<uint32_t>(options["periodicity-step"]);
-    */
     
     this->verbose = options.count("verbose");
     
@@ -893,9 +880,6 @@ namespace breseq
     this->smoothed_ranges_text_file_name = this->copy_number_variation_path + "/@.smoothed_ranges.tab";
     this->final_cnv_text_file_name = this->copy_number_variation_path + "/@.cnv_final.tab";
     this->copy_number_variation_cn_genome_diff_file_name = this->copy_number_variation_path + "/@.cn_evidence.gd";
-    
-    this->periodicity_done_file_name = this->copy_number_variation_path + "/@.periodicity.done";
-    this->periodicity_table_file_name = this->copy_number_variation_path + "/@.periodicity.tab";
     
     //! Paths: Output
 		this->output_path = "output";

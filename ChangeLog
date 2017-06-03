@@ -1,4 +1,5 @@
 Version 0.30.1
+   * Reports an error if Bowtie2 version 2.3.1 is used. Upgrade to a newer Bowtie2 version.
    * Command line options added to allow control over how reads are filtered.
    * Reads with length ≤18 are now ignored by default to avoid problematic memory usage associated 
      with how they can ambiguously match many different junction sequences. 

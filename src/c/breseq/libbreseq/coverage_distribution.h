@@ -25,6 +25,7 @@ LICENSE AND COPYRIGHT
 
 #include "reference_sequence.h"
 #include "settings.h"
+#include "pileup_base.h"
 
 using namespace std;
 
@@ -114,27 +115,12 @@ namespace breseq {
                                 string gd_file_name
                                 );
     
-    //Given a coverage file, this will find the sum of all differences squared
-    //of the specified coverage values element-by-element.
-    
-    //If the method is "ut,ub" the data taken will be the unique_top coverage
-    //and the unique_bot coverage.
-    //If the method is "ut+rt,ut+rb" the data taken will be the unique_top
-    //coverage + the redundant_top coverage and the unique_top coverage +
-    //the redundant_bot coverage.
-    
-    //The offset will shift the second set of data (either the unique_bot or
-    //the unique_top coverage + the redundant_bot coverage), to the left and
-    //append whatever is misaligned to the end of the data.
-    
-    //Written by Aaron Reba
-    static void calculate_periodicity (
-                                      string coverage_file_name,
-                                      string period_file_name,
-                                      uint32_t method,
-                                      uint32_t offset_start,
-                                      uint32_t offset_end,
-                                      uint32_t offset_step
+    // Output GC content of all reads (of a theorized length)
+    static void analyze_coverage_bias (
+                                       const string& _fasta_file_name,
+                                       const string& _bam_file_name,
+                                       const string& _output_file_name,
+                                       const int32_t _read_length
                                       );
 
 	}; // class CoverageDistribution

@@ -1902,168 +1902,71 @@ void CoverageDistribution::smooth_segments(
  * --------------------------------
  * SUMMARY GOES HERE
  */
-void CoverageDistribution::calculate_periodicity (
-                                                  string coverage_file_name,
-                                                  string period_file_name,
-                                                  uint32_t method,
-                                                  uint32_t start_range,
-                                                  uint32_t end_range,
-                                                  uint32_t step
-                                                  ){
+void CoverageDistribution::analyze_coverage_bias (
+                                                   const string& _fasta_file_name,
+                                                   const string& _bam_file_name,
+                                                   const string& _output_file_name_prefix,
+                                                   const int32_t _read_length
+                                                   )
   
-  //used for indexing the coverage_file's values.
-  stringstream line_stream;
-  string line;
+{
   
-  string column_title;
-  uint8_t current_column;
-  uint8_t column_count;
+  cReferenceSequences ref_seq_info;
+  ref_seq_info.LoadFile(_fasta_file_name);
   
-  uint8_t unique_top_column;
-  uint8_t unique_bot_column;
-  uint8_t redundant_top_column;
-  uint8_t redundant_bot_column;
+  bam_file bam;
+  bam.open_read(_bam_file_name, _fasta_file_name);
   
-  int32_t unique_top;
-  int32_t unique_bot;
-  int32_t redundant_top;
-  int32_t redundant_bot;
   
-  //used to ignore values.
-  string skip;
+  string read_output_file_name = _output_file_name_prefix + ".read.csv";
+  ofstream read_out(read_output_file_name.c_str());
   
-  ifstream coverage_file;
-  ofstream period_file;
+  // First line of output is read_length
+  read_out << _read_length << endl;
   
-  //used for holding file data
-  vector<int32_t> unique_top_vector;
-  vector<int32_t> unique_bot_vector;
-  vector<int32_t> redundant_top_vector;
-  vector<int32_t> redundant_bot_vector;
-  
-  //used to hold values for operations
-  vector<int32_t> offset_range;
-  vector<int32_t> top_vector;
-  vector<int32_t> bot_vector;
-  vector<int32_t> offset_bot_vector;
-  int32_t bot_value;
-  int32_t offset_sum;
-  
-  //reserve vector space
-  unique_top_vector.reserve(4700000);
-  unique_bot_vector.reserve(4700000);
-  redundant_top_vector.reserve(4700000);
-  redundant_bot_vector.reserve(4700000);
-  
-  coverage_file.open( coverage_file_name.c_str() );
-  period_file.open( period_file_name.c_str() );
-  
-  //populate offset_range
-  for (uint32_t i = start_range; i <= end_range; i += step){
-    offset_range.push_back(i);
+  // Second line is lengths of reference sequences
+  for (cReferenceSequences::iterator it=ref_seq_info.begin(); it != ref_seq_info.end(); it++) {
+    if (it != ref_seq_info.begin()) read_out << ",";
+    read_out << it->get_sequence_length() << endl;
   }
   
-  //parse header line so that each line can be correctly indexed.
-  getline(coverage_file, line);
-  line_stream.str(line);
-  
-  column_count = 0;
-  while (getline(line_stream, column_title, '\t')){
-    if (column_title == "unique_top_cov"){
-      unique_top_column = column_count;
-    }
-    else if (column_title == "unique_bot_cov"){
-      unique_bot_column = column_count;
-    }
-    else if (column_title == "redundant_top_cov"){
-      redundant_top_column = column_count;
-    }
-    else if (column_title == "redundant_bot_cov"){
-      redundant_bot_column = column_count;
-    }
-    
-    column_count++;
+  // Third line is GC of reference sequences
+  for (cReferenceSequences::iterator it=ref_seq_info.begin(); it != ref_seq_info.end(); it++) {
+    if (it != ref_seq_info.begin()) read_out << ",";
+    read_out << gc_percentage_string(it->m_fasta_sequence.m_sequence) << endl;
   }
   
-  //read the entire file and store it in the 4 coverage vectors
-  line_stream.clear();
-  while ( getline(coverage_file, line) ){
-    
-    if (line == ""){
-      break;
+  alignment_list alignments;
+  while (bam.read_alignments(alignments, false)) {
+    double gc(0);
+
+    for(alignment_list::iterator it=alignments.begin(); it!=alignments.end(); it++)
+    {
+      bam_alignment& a = *(it->get());
+      
+      int64_t start = (a.strand()==-1) ? a.reference_end_1() - _read_length + 1 : a.reference_start_1();
+      string read_string = ref_seq_info[a.reference_target_id()].get_circular_sequence_1(start, _read_length);
+      // Don't need to reverse complement for GC content
+      
+      gc += gc_percentage_string(read_string);
     }
+
+    gc /= alignments.size();
     
-    line_stream.clear();
-    line_stream.str(line);
-    
-    for (current_column = 0; current_column < column_count; current_column++){
-      if (current_column == unique_top_column){
-        line_stream >> unique_top;
-      }
-      else if (current_column == unique_bot_column){
-        line_stream >> unique_bot;
-      }
-      else if (current_column == redundant_top_column){
-        line_stream >> redundant_top;
-      }
-      else if (current_column == redundant_bot_column){
-        line_stream >> redundant_bot;
-      }
-      else {
-        line_stream >> skip;
-      }
-    }
-    
-    unique_top_vector.push_back(unique_top);
-    unique_bot_vector.push_back(unique_bot);
-    redundant_top_vector.push_back(redundant_top);
-    redundant_bot_vector.push_back(redundant_bot);
+    read_out << gc << endl;
   }
   
-  //set up template top and bot vectors for calculations
-  if ( method == 1 ){
-    top_vector = unique_top_vector;
-    bot_vector = unique_bot_vector;
-  }
-  else if ( method == 2 ){
-    top_vector = unique_top_vector;
-    bot_vector = unique_top_vector;
-    
-    for ( uint32_t i = 0; i < unique_top_vector.size(); i++ ){
-      top_vector[i] += redundant_top_vector[i];
-      bot_vector[i] += redundant_bot_vector[i];
+  // Now the reference file
+  string ref_output_file_name = _output_file_name_prefix + ".ref.csv";
+  ofstream ref_out(ref_output_file_name.c_str());
+  for (cReferenceSequences::iterator it=ref_seq_info.begin(); it != ref_seq_info.end(); it++) {
+
+    for (size_t i=1; i<= it->get_sequence_length(); i++) {
+      string read_string = it->get_circular_sequence_1(i, _read_length);
+      ref_out << gc_percentage_string(read_string) << endl;
     }
   }
-  
-  //go through each offset and find the offset sum
-  for ( uint32_t i = 0; i < offset_range.size(); i++ ){
-    //cout << offset_range[i] << "\r";
-    //cout.flush();
-    
-    //set up bottom vector for this offset
-    offset_bot_vector = bot_vector;
-    
-    for ( int32_t j = 0; j < offset_range[i]; j++ ){
-      bot_value = offset_bot_vector[0];
-      offset_bot_vector.erase(offset_bot_vector.begin());
-      offset_bot_vector.push_back( bot_value );
-    }
-    
-    //finding sum
-    
-    offset_sum = 0;
-    
-    for (uint32_t j = 0; j < top_vector.size(); j++ ){
-      //ignoring spots where there is 0 coverage in either the top or bottom
-      if (top_vector[j] == 0 || offset_bot_vector[j] == 0 ) continue;
-      offset_sum += ((top_vector[j] - offset_bot_vector[j]) * (top_vector[j] - offset_bot_vector[j]));
-    }
-    
-    period_file << offset_range[i] << "\t" << offset_sum << endl;
-  }
-  //cout << endl;
-  coverage_file.close();
-  period_file.close();
 }
+  
 
 } // namespace breseq

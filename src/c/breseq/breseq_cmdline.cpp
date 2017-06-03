@@ -462,6 +462,7 @@ int do_convert_reference(int argc, char* argv[]) {
   options.addUsage("Allowed Options");
   options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("format,f", "Output format. Valid options: FASTA, GFF3, CSV (Default = FASTA)", "FASTA");
+  options("no-sequence,n", "Do not include the nucleotide sequence. The output file will only have features. (Not allowed with FASTA format.)", TAKES_NO_ARGUMENT);
   options("output,o", "Output reference file path (Default = output.*)");
 
 	options.processCommandArgs(argc, argv);
@@ -488,6 +489,13 @@ int do_convert_reference(int argc, char* argv[]) {
     return -1;
   }
   
+  if ( (output_format=="FASTA") && (options.count("no-sequence")) ) {
+    options.addUsage("");
+    options.addUsage("The --no-sequence|n option cannot be used with output format FASTA.");
+    options.printUsage();
+    return -1;
+  }
+  
   cerr << "COMMAND: CONVERT-REFERENCE" << endl;
   
   cerr << "+++   Loading reference files..." << endl;
@@ -507,7 +515,7 @@ int do_convert_reference(int argc, char* argv[]) {
   if (output_format == "FASTA") {
     refs.WriteFASTA(options.count("output") ? options["output"] : "output.fna");
   } else if (output_format == "GFF3") {
-    refs.WriteGFF(options.count("output") ? options["output"] : "output.gff");
+    refs.WriteGFF(options.count("output") ? options["output"] : "output.gff", options.count("no-sequence"));
   } else if (output_format == "CSV") {
     refs.WriteCSV(options.count("output") ? options["output"] : "output.csv");
   }
@@ -983,37 +991,52 @@ int do_copy_number_variation(int argc, char *argv[])
     return 0;
 }
 
-int do_periodicity(int argc, char *argv[])
+
+// Analyze biases in the coverage - must be done after a breseq run
+int do_coverage_bias(int argc, char *argv[])
 {
-	Settings settings(argc, argv);
+  // setup and parse configuration options:
+  AnyOption options("Usage: breseq COVERAGE-BIAS [-b reference.bam -f reference.fasta -o alignment.html -n 200] region1 [region2 region3 ...]");
+  options.addUsage("");
+  options.addUsage("Display reads aligned to the specified region or regions.");
+  options.addUsage("");
+  options.addUsage("Allowed Options");
+  options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+  options("bam,b", "BAM database file of read alignments", "data/reference.bam");
+  options("fasta,f", "FASTA file of reference sequences", "data/reference.fasta");
+  options("read-length,l", "Length of read used to calculate %GC", 200);
+  options("output,o", "Output file prefix", "coverage_bias");
+  options.processCommandArgs(argc, argv);
+  
+  if(options.count("help")) {
+    options.printAdvancedUsage();
+    return -1;
+  }
+  
+  if (!file_exists(options["fasta"].c_str())) {
+    options.addUsage("");
+    options.addUsage("Could not open input reference FASTA file (-f):\n  " + options["fasta"]);
+    options.printUsage();
+    return -1;
+  }
+  
+  if (!file_exists(options["bam"].c_str())) {
+    options.addUsage("");
+    options.addUsage("Could not open input BAM file of aligned reads (-b):\n  " + options["bam"]);
+    options.printUsage();
+    return -1;
+  }
   
   //(re)load the reference sequences from our converted files
-  cReferenceSequences ref_seq_info;
-  ref_seq_info.LoadFiles(make_vector<string>(settings.reference_gff3_file_name));
-  
-  Summary summary;
-  summary.unique_coverage.retrieve(settings.error_rates_summary_file_name);
-  
-  CandidateJunctions::identify_candidate_junctions(settings, summary, ref_seq_info);
-  
-  //create directory
-  create_path( settings.copy_number_variation_path );
-  
-  for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it)
-  {
-    cAnnotatedSequence& seq = *it;
-    string this_complete_coverage_text_file_name = settings.file_name(settings.complete_coverage_text_file_name, "@", seq.m_seq_id);
-    string this_periodicity_complete_coverage_text_file_name = settings.file_name(settings.periodicity_table_file_name, "@", seq.m_seq_id);
-    CoverageDistribution::calculate_periodicity(
-          this_complete_coverage_text_file_name, 
-          this_periodicity_complete_coverage_text_file_name,
-          settings.periodicity_method,
-          settings.periodicity_start,
-          settings.periodicity_end,
-          settings.periodicity_step
-          );
+  //cReferenceSequences ref_seq_info;
+  //ref_seq_info.LoadFiles(make_vector<string>(settings.reference_gff3_file_name));
     
-   }
+  CoverageDistribution::analyze_coverage_bias(
+        options["fasta"].c_str(),
+        options["bam"].c_str(),
+        options["output"],
+        from_string<int32_t>(options["read-length"])
+        );
   
   return 0;
 }
@@ -2087,31 +2110,6 @@ int breseq_default_action(int argc, char* argv[])
   
   } // End of if do_cnv
 
-  // @JEB: Should be removed -- this is no longer useful.
-  if (settings.do_periodicity) {
-    create_path (settings.copy_number_variation_path);
-    
-    if (settings.do_step(settings.periodicity_done_file_name, "Periodicity")){
-      for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it){
-        cAnnotatedSequence& seq = *it;
-        
-        string this_complete_coverage_text_file_name = settings.file_name(settings.complete_coverage_text_file_name, "@", seq.m_seq_id);
-        string this_period_complete_coverage_text_file_name = settings.file_name(settings.periodicity_table_file_name, "@", seq.m_seq_id);
-        
-        CoverageDistribution::calculate_periodicity(
-                                                    this_complete_coverage_text_file_name,
-                                                    this_period_complete_coverage_text_file_name,
-                                                    settings.periodicity_method,
-                                                    settings.periodicity_start,
-                                                    settings.periodicity_end,
-                                                    settings.periodicity_step
-                                                    );
-      }
-      settings.done_step(settings.periodicity_done_file_name);
-    }
-    
-  } // End of if_do_periodicity
-
    
   create_path(settings.evidence_path); //need output for plots
 
@@ -2330,8 +2328,8 @@ int main(int argc, char* argv[]) {
     return do_simulate_read(argc_new, argv_new);
   } else if (command == "CNV") {
     return do_copy_number_variation(argc_new, argv_new);
-  } else if (command == "PERIODICITY"){
-    return do_periodicity(argc_new, argv_new);
+  } else if (command == "COVERAGE-BIAS"){
+    return do_coverage_bias(argc_new, argv_new);
   } else if (command == "ERROR_COUNT") {
     return do_error_count(argc_new, argv_new);
   } else if (command == "JUNCTION-POLYMORPHISM") {

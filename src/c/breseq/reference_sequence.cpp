@@ -712,7 +712,7 @@ namespace breseq {
     
     for(list<string>::const_iterator it = sorted_unique_file_names.begin(); it != sorted_unique_file_names.end(); it++)
     {
-      this->LoadFile(*it);
+      this->PrivateLoadFile(*it);
     }
     
     this->Verify();
@@ -754,7 +754,7 @@ namespace breseq {
   }
   
   
-  void cReferenceSequences::LoadFile(const string& file_name)
+  void cReferenceSequences::PrivateLoadFile(const string& file_name)
   {
     ifstream in(file_name.c_str());
     ASSERT(in.good(), "Could not open reference file: " +file_name);
@@ -1192,7 +1192,7 @@ namespace breseq {
     Instead the "discontinuous feature" rules are used.
     Note: This puts pieces of CDS for a spliced gene out of position order
 !*/
-void cReferenceSequences::WriteGFF( const string &file_name){
+void cReferenceSequences::WriteGFF( const string &file_name, bool no_sequence) {
 
   cFastaFile out(file_name.c_str(), ios_base::out);
 
@@ -1275,9 +1275,12 @@ void cReferenceSequences::WriteGFF( const string &file_name){
 
     }
   }
-  //! Step 3: Fasta, one command writes out all sequences
-  out << "##FASTA" << endl;
-  this->WriteFASTA(out);
+  
+  if (!no_sequence) {
+    //! Step 3: Fasta, one command writes out all sequences
+    out << "##FASTA" << endl;
+    this->WriteFASTA(out);
+  }
   
   out.close();
 }

@@ -774,6 +774,10 @@ namespace breseq {
     //!< Load all reference files and verify - this is the only public load method!
     void LoadFiles(const vector<string>& file_names);
     
+    //!: Convenience function to load just one file
+    void LoadFile(const string& file_name)
+      { LoadFiles(make_vector<string>(file_name)); }
+    
     //!< Fixes gene lists and other properties. Called after load
     void update_feature_lists() {
       for (vector<cAnnotatedSequence>::iterator its= this->begin(); its != this->end(); its++) {
@@ -791,7 +795,7 @@ namespace breseq {
     //!< Load reference file into object
     //!< Detect file type and load the information in it appropriately
     //!< Should not be called directly, only through LoadFiles!
-    void LoadFile(const string& file_name);
+    void PrivateLoadFile(const string& file_name);
     
     //!< Verify that all seq_id have sequence;
     void Verify();
@@ -812,7 +816,7 @@ namespace breseq {
   public:
     void WriteFASTA(const string &file_name);
     void WriteFASTA(cFastaFile& ff);
-    void WriteGFF(const string &file_name);
+    void WriteGFF(const string &file_name, bool no_sequence = false);
     void WriteCSV(const string &file_name);
     
     //!< Moves over original file names to the current names
@@ -1147,6 +1151,17 @@ namespace breseq {
     private:
       string m_name;
   };
+  
+  inline double gc_percentage_string(const string& seq)
+  {
+    double gc = 0;
+    for (size_t i=0; i<seq.length(); i++)
+    {
+      if ( (seq[i] == 'G') ||(seq[i] == 'C') )
+        gc++;
+    }
+    return gc / seq.length();
+  }
 
 } // breseq namespace
 

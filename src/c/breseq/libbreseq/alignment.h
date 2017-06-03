@@ -536,6 +536,34 @@ protected:
   ofstream output_tam;              // used for output
   bam_alignment_ptr last_alignment; // contains alignment* last_alignment
 };
+  
+  
+// Class to read in bam format output by breseq
+class bam_file {
+  
+public:
+  bam_file() : m_bam_file(NULL) {}
+  bam_file(const string& bam_file_name, const string& fasta_file_name, ios_base::openmode mode);
+  ~bam_file();
+  
+  void open_read(const string& bam_file_name, const string& fasta_file_name);
+  void open_write(const string& bam_file_name, const string& fasta_file_name);
+  
+  bool read_alignments(alignment_list& alignments, bool paired = false);
+  
+  inline const char* target_name(const alignment_wrapper& a)
+  {
+    int32_t tid = a.reference_target_id();
+    assert (tid < bam_header->n_targets);
+    return bam_header->target_name[tid];
+  }
+  
+  bam_header_t* bam_header;
+  
+protected:
+  bamFile m_bam_file;                // used for input
+  bam_alignment_ptr m_last_alignment; // contains alignment* last_alignment
+};
 	
 }
 

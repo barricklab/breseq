@@ -1161,7 +1161,6 @@ void tam_file::write_moved_alignment(
 	if (read_strand == -1)
 		reverse(cigar_list.begin(), cigar_list.end());
 
-	//if (verbose) cerr << "Final CIGAR:" << endl << Dumper($cigar_list);
 
 	// Determine the reference coordinate we will write out for this junction side match.
 	// Recall:
@@ -1251,4 +1250,91 @@ void tam_file::write_moved_alignment(
 	output_tam << l;
 }
 
+bam_file::bam_file(const string& bam_file_name, const string& fasta_file_name, ios_base::openmode mode)
+: bam_header(NULL), m_bam_file(NULL)
+{
+  if (mode == ios_base::in)
+  {
+    open_read(bam_file_name, fasta_file_name);
+  }
+  else
+  {
+    open_write(bam_file_name, fasta_file_name);
+  }
+}
+
+bam_file::~bam_file()
+{
+  if (bam) { bam_close(m_bam_file); m_bam_file=NULL; }
+  if (bam_header) bam_header_destroy(bam_header);
+}
+
+void bam_file::open_read(const string& bam_file_name, const string& fasta_file_name)
+{
+  string faidx_file_name(fasta_file_name);
+  faidx_file_name += ".fai";
+  
+  // Alternately, we could automatically generate the index.
+  ASSERT(file_exists(faidx_file_name.c_str()), "FAI file for FASTA file does not exist: " + faidx_file_name
+         + "\nTry running the command:\nsamtools faidx " + fasta_file_name);
+  
+  m_bam_file = bam_open(bam_file_name.c_str(), "r");
+  ASSERT(m_bam_file, "Could not open bam file: " + bam_file_name);
+  
+  // but we keep a header
+  bam_header = bam_header_read(m_bam_file);
+}
+
+void bam_file::open_write(const string& bam_file_name, const string& fasta_file_name)
+{
+  string faidx_file_name(fasta_file_name);
+  faidx_file_name += ".fai";
+  
+  m_bam_file = bam_open(bam_file_name.c_str(), "w");
+  ASSERT(m_bam_file, "Could not open bam file: " + bam_file_name);
+  bam_header = sam_header_read2(faidx_file_name.c_str());
+  
+  bam_header_write(m_bam_file, bam_header);
+}
+
+bool bam_file::read_alignments(alignment_list& alignments, bool paired)
+{
+  (void)paired;
+  alignments.clear();
+  
+  string last_read_name = "";
+  if (m_last_alignment.get() != NULL)
+  {
+    last_read_name = m_last_alignment->read_name();
+    alignments.push_back(m_last_alignment);
+    m_last_alignment = counted_ptr<bam_alignment>(NULL);
+  }
+  
+  while (true)
+  {
+    bam_alignment* this_alignment_bam = new bam_alignment();
+    
+    counted_ptr<bam_alignment> this_alignment(this_alignment_bam);
+    
+    int32_t bytes = bam_read1(m_bam_file, this_alignment_bam);
+    if (bytes < 0) break;
+    
+    m_last_alignment = this_alignment;
+    
+    string read_name = this_alignment->read_name();
+    
+    if (last_read_name.size() == 0)
+    {
+      last_read_name = read_name;
+    }
+    else
+    {
+      if (read_name != last_read_name) break; 
+    }
+    alignments.push_back(this_alignment);
+  }
+  return (!alignments.empty());
+}
+
+  
 }

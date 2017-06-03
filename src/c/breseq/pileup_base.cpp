@@ -29,7 +29,7 @@ namespace breseq {
  Open the FASTA and read the target reference sequence.
  */
   
-// @JEB TODO: remove reference_sequence object and 
+// @JEB : remove reference_sequence object and 
 // only load reference sequences as requested from a single fai index
 // stored in the pileup object. This is currently very inefficient.
 reference_sequence::reference_sequence(faidx_t* m_ref, const string& fasta_filename, const string& target)
