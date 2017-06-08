@@ -1324,7 +1324,7 @@ void CoverageDistribution::find_segments(const Settings& settings,
   /**
    ** Sort the ranges by position (base pair) in genome, lowest to highest.
    ** (This works because the "<" operator is overloaded in the range_t struct
-   ** in coverage_distribuion.h)
+   ** in coverage_distribution.h)
    **/
   sort(range_t_vector.begin(), range_t_vector.end());
   

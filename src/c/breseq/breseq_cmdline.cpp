@@ -2077,6 +2077,15 @@ int breseq_default_action(int argc, char* argv[])
         // (contains: Start_Search, End_Search, Start_Position, End_Position, Start_Segment, End_Segment... 16 values total)
         string this_cnv_history_text_file_name = settings.file_name(settings.cnv_history_text_file_name, "@", seq.m_seq_id);
 
+        // Generates [genome].ranges.tab & [genome].history.tab, one line at a time with each for-loop,
+        CoverageDistribution::find_segments(settings,
+                                            summary.unique_coverage[seq.m_seq_id].nbinom_mean_parameter,
+                                            this_tiled_complete_coverage_text_file_name,
+                                            this_tiled_for_edging_text_file_name, // tiled_for_edging_file_name (tiled_for_edging.tab)
+                                            this_ranges_text_file_name,
+                                            this_cnv_history_text_file_name
+                                            );
+        
         // Create filename: [genome].smoothed_ranges.tab, this is LONG file used for ???
         // (contains: Position, Smooth_Coverage)
         string this_smoothed_ranges_text_file_name = settings.file_name(settings.smoothed_ranges_text_file_name, "@", seq.m_seq_id);
