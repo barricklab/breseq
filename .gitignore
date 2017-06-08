@@ -15,6 +15,7 @@
 *.tab
 *.swp
 *.tmproj
+*.idea
 *.pyc
 
 ## These are for autoconf/automake/libtool
