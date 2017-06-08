@@ -2707,12 +2707,6 @@ int do_runfile(int argc, char *argv[])
 				++n_cmds;
 			}
 			
-			cout << "REMEMBER: To trimmomatic you must first do the following:" << endl;
-			cout << "  1. Copy the trimmomatic binary directory to $HOME/local/trimmomatic:" << endl;
-			cout << "  2. Add the following line to your shell login script (e.g., $HOME/.bashrc)" << endl;
-			cout << "       alias trimmomatic=\"java -jar $HOME/local/trimmomatic/trimmomatic-XX.jar\"" << endl;
-			cout << "       (Replace XX with the version number ofyour trimmomatic install)" << endl;
-			
 		} else if (options["mode"] == "trimmomatic-PE-unique") {
 			
 			// Uses palindrome trimming mode and creates R1 and R2 files that ARE NOT PAIRED
@@ -2832,12 +2826,6 @@ int do_runfile(int argc, char *argv[])
 				++n_cmds;
 			}
 			
-			cout << "REMEMBER: To trimmomatic you must first do the following:" << endl;
-			cout << "  1. Copy the trimmomatic binary directory to $HOME/local/trimmomatic:" << endl;
-			cout << "  2. Add the following line to your shell login script (e.g., $HOME/.bashrc)" << endl;
-			cout << "       alias trimmomatic=\"java -jar $HOME/local/trimmomatic/trimmomatic-XX.jar\"" << endl;
-			cout << "       (Replace XX with the version number ofyour trimmomatic install)" << endl;
-			
 		} else if (options["mode"] == "read-count") {
 			
 			//! Step: Begin building command line.
@@ -2874,7 +2862,7 @@ int do_runfile(int argc, char *argv[])
 			++n_cmds;
 		}
 	}
-
+	
   cerr << endl << "Total commands: " << n_cmds << endl;
 	
   return 0;
