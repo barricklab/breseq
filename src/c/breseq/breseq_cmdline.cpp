@@ -1909,9 +1909,9 @@ int breseq_default_action(int argc, char* argv[])
   
 	if (settings.do_step(settings.error_rates_done_file_name, "Re-calibrating base error rates"))
 	{
-		if (!settings.no_deletion_prediction)
-			CoverageDistribution::analyze_unique_coverage_distributions(
-                                                                  settings, 
+    if (!settings.no_deletion_prediction) {
+      CoverageDistribution::analyze_unique_coverage_distributions(
+                                                                  settings,
                                                                   summary, 
                                                                   ref_seq_info,
                                                                   settings.unique_only_coverage_plot_file_name, 
@@ -1919,44 +1919,72 @@ int breseq_default_action(int argc, char* argv[])
                                                                   "NULL" // means to never delete intermediates
                                                                   );
 
-    //Coverage distribution user option --deletion-coverage-propagation-cutoff
-    if (settings.deletion_coverage_propagation_cutoff) {
-      if (settings.deletion_coverage_propagation_cutoff < 1) {
-        for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
-          string seq_id = ref_seq_info[i].m_seq_id;
-          double average = summary.unique_coverage[seq_id].average;
-          double &deletion_coverage_propagation_cutoff = summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff;
+      
+      //Coverage distribution user option --deletion-coverage-propagation-cutoff
+      if (settings.deletion_coverage_propagation_cutoff) {
+        if (settings.deletion_coverage_propagation_cutoff < 1) {
+          for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+            string seq_id = ref_seq_info[i].m_seq_id;
+            double average = summary.unique_coverage[seq_id].average;
+            double &deletion_coverage_propagation_cutoff = summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff;
 
-          deletion_coverage_propagation_cutoff = average * settings.deletion_coverage_propagation_cutoff;
-        }
-      } else if (settings.deletion_coverage_propagation_cutoff >= 1) {
-        for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
-          string seq_id = ref_seq_info[i].m_seq_id;
-          double &deletion_coverage_propagation_cutoff = summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff;
+            deletion_coverage_propagation_cutoff = average * settings.deletion_coverage_propagation_cutoff;
+          }
+        } else if (settings.deletion_coverage_propagation_cutoff >= 1) {
+          for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+            string seq_id = ref_seq_info[i].m_seq_id;
+            double &deletion_coverage_propagation_cutoff = summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff;
 
-          deletion_coverage_propagation_cutoff = settings.deletion_coverage_propagation_cutoff;
-        }
-      }
-    }
-
-    //Coverage distribution user option --deletion-coverage-seed-cutoff
-    if (settings.deletion_coverage_seed_cutoff) {
-      if (settings.deletion_coverage_seed_cutoff < 1) {
-        for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
-          string seq_id = ref_seq_info[i].m_seq_id;
-          double average = summary.unique_coverage[seq_id].average;
-          double &deletion_coverage_seed_cutoff = summary.unique_coverage[seq_id].deletion_coverage_seed_cutoff;
-
-          deletion_coverage_seed_cutoff = average * settings.deletion_coverage_seed_cutoff;
-        }
-    } else if (settings.deletion_coverage_seed_cutoff >= 1) {
-        for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
-          string seq_id = ref_seq_info[i].m_seq_id;
-          double &deletion_coverage_seed_cutoff = summary.unique_coverage[seq_id].deletion_coverage_seed_cutoff;
-
-          deletion_coverage_seed_cutoff = settings.deletion_coverage_seed_cutoff;
+            deletion_coverage_propagation_cutoff = settings.deletion_coverage_propagation_cutoff;
+          }
         }
       }
+      
+      
+      // If the fit failed and there was not very low coverage
+      // (deletion_coverage_propagation_cutoff == -1 in that case)
+      vector<string> failed_seq_ids;
+      for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+        string seq_id = ref_seq_info[i].m_seq_id;
+        
+        if ((summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff > 0) && (summary.unique_coverage[seq_id].nbinom_mean_parameter == 0)) {
+          failed_seq_ids.push_back(seq_id);
+        }
+      }
+      
+
+      if (failed_seq_ids.size()) {
+        
+        string warning_string = "Failed to fit coverage distribution for some reference sequences. This may degrade the quality of predicting mutations from new sequence junctions (JC evidence).";
+        if (!settings.deletion_coverage_propagation_cutoff) {
+          warning_string += " You may want to set --deletion-coverage-propagation-cutoff to improve the quality of deletion prediction (MC evidence).";
+        }
+        warning_string += "\nFailed seq ids: " + join(failed_seq_ids, ", ");
+        
+        WARN(warning_string);
+      }
+    
+
+      //Coverage distribution user option --deletion-coverage-seed-cutoff
+      if (settings.deletion_coverage_seed_cutoff) {
+        if (settings.deletion_coverage_seed_cutoff < 1) {
+          for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+            string seq_id = ref_seq_info[i].m_seq_id;
+            double average = summary.unique_coverage[seq_id].average;
+            double &deletion_coverage_seed_cutoff = summary.unique_coverage[seq_id].deletion_coverage_seed_cutoff;
+
+            deletion_coverage_seed_cutoff = average * settings.deletion_coverage_seed_cutoff;
+          }
+      } else if (settings.deletion_coverage_seed_cutoff >= 1) {
+          for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+            string seq_id = ref_seq_info[i].m_seq_id;
+            double &deletion_coverage_seed_cutoff = summary.unique_coverage[seq_id].deletion_coverage_seed_cutoff;
+
+            deletion_coverage_seed_cutoff = settings.deletion_coverage_seed_cutoff;
+          }
+        }
+      }
+      
     }
 		string command;
 		for (uint32_t i = 0; i<settings.read_files.size(); i++) {

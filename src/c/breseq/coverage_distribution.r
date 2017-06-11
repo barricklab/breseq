@@ -26,6 +26,17 @@
 ##   plot_poisson=0 or 1
 ##   pdf_output=0 or 1
 
+## Returns these values printed out to output log
+## 
+##  1. print(nb_fit_size); # 0 if fit failed
+##  2. print(nb_fit_mu);   # 0 if fit failed
+##  3. print(m)q
+##  4. print(v)
+##  5. print(D)
+##  6. print(deletion_propagation_coverage)
+##     -1 if it was <1 after fitting (implying reference sequence is deleted)
+##
+
 par(family="sans")
 
 plot_poisson = 0;
@@ -238,21 +249,36 @@ mean_estimate = sum((as.numeric(1:end_i_for_fits)*as.numeric(X.for.fits)))/sum(a
 nb_fit_mu = -1
 nb_fit_size = -1
 try_size = 100000
+try_means_index = 1
+#This is a list of different means to test <-  sometimes the actual mean doesn't lead to a fit
+try_means = c(mean_estimate, 
+              end_i_for_fits, 
+              start_i_for_fits, 
+              1*(end_i_for_fits + start_i_for_fits)/4,
+              2*(end_i_for_fits + start_i_for_fits)/4,
+              3*(end_i_for_fits + start_i_for_fits)/4
+              )
 nb_fit = c()
 
-while ( ((nb_fit_mu < 0) || (nb_fit_size < 0) || (nb_fit$code != 1)) && (try_size > 0.001))
+while ( ((nb_fit_mu < 0) || (nb_fit_size < 0) || (nb_fit$code != 1)) && (try_size > 0.001) && (try_means_index <= length(try_means)))
 {
   try_size = try_size / 10
+  try_mean = try_means[try_means_index]
 
   ## SIZE ESTIMATE from the censored data can be negative, so try various values instead
-  cat("Try Mean: ", mean_estimate, " Size: ", try_size, "\n")
+  cat("Try Mean: ", try_mean, " Size: ", try_size, "\n")
 
-  nb_fit<-nlm(f_nb, c(mean_estimate, try_size), iterlim=1000, print.level=this.print.level )
+  nb_fit<-nlm(f_nb, c(try_mean, try_size), iterlim=1000, print.level=this.print.level )
 
   nb_fit_mu = nb_fit$estimate[1];
   nb_fit_size = nb_fit$estimate[2];
 
   cat("Fit Mean: ", nb_fit_mu, " Size: ", nb_fit_size, " Code: ", nb_fit$code, "\n")
+  
+  if (try_size <= 0.001) {
+    try_size = 100000
+    try_means_index = try_means_index + 1
+  }
 }
 
 cat("Final Fit Mean: ", nb_fit_mu, " Size: ", nb_fit_size, " Code: ", nb_fit$code, " Try Size: ", try_size, "\n")
@@ -266,6 +292,20 @@ if ((nb_fit_mu < 0) || (nb_fit_size < 0) || (nb_fit$code != 1))
   print(v)
   print(D)
 
+  cat("Fallback to calculating off an estimate of just variance = mu + mu^2/size\n")
+  size_estimate = (1/(v-m))*(m*m)
+  cat("Mu estimate=", m," Size estimate =", size_estimate, "\n")
+  deletion_propagation_coverage = qnbinom(deletion_propagation_pr_cutoff, size = size_estimate, mu = m)
+  
+  if (is.nan(deletion_propagation_coverage) || (deletion_propagation_coverage < 1)) {
+    cat("Double fallback to calculating as just 20% of the mean\n")
+    deletion_propagation_coverage = m * 0.2 
+  }
+  
+  #Call it as deleted if this number is also basically zero, implying very low coverage
+  if (deletion_propagation_coverage < 1) {
+    deletion_propagation_coverage = -1
+  }
   print(deletion_propagation_coverage)
 
   q()
@@ -424,10 +464,12 @@ dev.off()
 
 ## Fit the marginal value that we use for propagating deletions
 
-if (nb_fit_size != 0)
-{
-  cat(nb_fit_size, " ", nb_fit_mu, "\n")
-  deletion_propagation_coverage = qnbinom(deletion_propagation_pr_cutoff, size = nb_fit_size, mu = nb_fit_mu)
+cat(nb_fit_size, " ", nb_fit_mu, "\n")
+deletion_propagation_coverage = qnbinom(deletion_propagation_pr_cutoff, size = nb_fit_size, mu = nb_fit_mu)
+
+#Call it as deleted if this number is also basically zero, implying very low coverage
+if (deletion_propagation_coverage < 1) {
+   deletion_propagation_coverage = -1
 }
 
 #print out statistics

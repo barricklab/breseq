@@ -566,6 +566,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
           "</tr>" << endl;
              
   size_t total_length = 0;
+  bool one_failed_fit = false;
 
   for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++) {
     
@@ -575,8 +576,8 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     double this_reference_fraction_mapped_reads = 100 * this_reference_mapped_reads / total_mapped_reads; 
       
     bool fragment_with_fit_coverage = (summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter != 0);
-    bool fragment_with_no_coverage = (summary.unique_coverage[it->m_seq_id].average == 0);
-    HTML << (fragment_with_fit_coverage ? "<tr>" : "<tr class=\"gray_table_row\">");
+    bool fragment_with_no_coverage = (summary.unique_coverage[it->m_seq_id].deletion_coverage_propagation_cutoff <= 0);
+    HTML << (!fragment_with_no_coverage ? "<tr>" : "<tr class=\"gray_table_row\">");
 
     // Normal reference sequence
     if (settings.call_mutations_seq_id_set().count(it->m_seq_id)) {
@@ -599,7 +600,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
                  ); 
       }
       else {
-        HTML << td(nonbreaking("none aligned"));
+        HTML << td("align=\"center\"", nonbreaking("deleted"));
       }
     }
     // Junction-Only reference sequence
@@ -610,19 +611,23 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     HTML << td(it->m_seq_id);
     HTML << td(ALIGN_RIGHT, commify(to_string(it->m_length)));
     
-    if (summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter == 0) {
-      HTML << td(ALIGN_CENTER, "NA"); 
+    if (fragment_with_no_coverage) {
+      HTML << td(ALIGN_CENTER, "NA");
+      HTML << td(ALIGN_CENTER, "NA");
+    } else {
+      if (summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter == 0) {
+        HTML << td(ALIGN_CENTER, "*" + to_string(summary.unique_coverage[it->m_seq_id].average, 1));
+        HTML << td(ALIGN_CENTER, "*" + to_string(summary.unique_coverage[it->m_seq_id].dispersion, 1));
+        one_failed_fit = true;
+      }
+      else {
+        HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter, 1));
+        HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_dispersion));
+      }
     }
-    else {
-     HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter, 1)); 
-    }
-    HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_dispersion));
     
     HTML << td(ALIGN_CENTER, to_string(this_reference_fraction_mapped_reads) + "%");
     
-    //HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter, 1));
-    //HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_size_parameter, 1));
-
     HTML << td(it->m_description);
     HTML << "</tr>";
   }  
@@ -640,6 +645,10 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << "</table>" << endl;
 
   HTML << "<p>" << "<b>fit dispersion</b> is the ratio of the variance to the mean for the negative binomial fit. It is =1 for Poisson and >1 for over-dispersed data." << endl;
+  
+  if (one_failed_fit) {
+      HTML << "<p>" << "*<b>Warning!</b> Negative binomial fit failed for this sequence. It may have very low coverage or an unusual coverage depth distribution. JC and MC predictions may be less accurate." << endl;
+  }
   
   ////
   // Junction evidence

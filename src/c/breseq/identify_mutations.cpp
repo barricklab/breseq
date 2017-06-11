@@ -1146,7 +1146,7 @@ void identify_mutations_pileup::at_target_end(const uint32_t tid) {
 
   // if this target failed to have its coverage fit, mark the entire thing as a deletion
   double _this_deletion_propagation_cutoff = _deletion_propagation_cutoffs[tid];
-  // if the propagation cutoff is zero then the coverage distribution failed
+  // if the propagation cutoff is -1 then the coverage distribution failed
   if (!_settings.no_deletion_prediction && (_this_deletion_propagation_cutoff < 0.0))
   {
     cDiffEntry del(MC);
