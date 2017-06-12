@@ -1,3 +1,9 @@
+Version 0.30.2
+   * Improved robustness of fitting coverage distribution and added fallbacks if fitting fails.
+   * More information at the command line and on the HTML summary page about when insufficient 
+     coverage leads to an entire reference sequence being called as deleted and when predictions 
+     will be less reliable due to failure fitting the coverage distribution.
+
 Version 0.30.1
    * Reports an error if Bowtie2 version 2.3.1 is used. Upgrade to a newer Bowtie2 version.
    * Command line options added to allow control over how reads are filtered.

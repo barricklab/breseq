@@ -258,6 +258,8 @@ try_means = c(mean_estimate,
               2*(end_i_for_fits + start_i_for_fits)/4,
               3*(end_i_for_fits + start_i_for_fits)/4
               )
+              
+              
 nb_fit = c()
 
 while ( ((nb_fit_mu < 0) || (nb_fit_size < 0) || (nb_fit$code != 1)) && (try_size > 0.001) && (try_means_index <= length(try_means)))
@@ -283,32 +285,11 @@ while ( ((nb_fit_mu < 0) || (nb_fit_size < 0) || (nb_fit$code != 1)) && (try_siz
 
 cat("Final Fit Mean: ", nb_fit_mu, " Size: ", nb_fit_size, " Code: ", nb_fit$code, " Try Size: ", try_size, "\n")
 
+## Fit failed = reset parameters so graphing and output code can recognize this
 if ((nb_fit_mu < 0) || (nb_fit_size < 0) || (nb_fit$code != 1))
 {
-  print(0);
-  print(0);
-
-  print(m)
-  print(v)
-  print(D)
-
-  cat("Fallback to calculating off an estimate of just variance = mu + mu^2/size\n")
-  size_estimate = (1/(v-m))*(m*m)
-  cat("Mu estimate=", m," Size estimate =", size_estimate, "\n")
-  deletion_propagation_coverage = qnbinom(deletion_propagation_pr_cutoff, size = size_estimate, mu = m)
-  
-  if (is.nan(deletion_propagation_coverage) || (deletion_propagation_coverage < 1)) {
-    cat("Double fallback to calculating as just 20% of the mean\n")
-    deletion_propagation_coverage = m * 0.2 
-  }
-  
-  #Call it as deleted if this number is also basically zero, implying very low coverage
-  if (deletion_propagation_coverage < 1) {
-    deletion_propagation_coverage = -1
-  }
-  print(deletion_propagation_coverage)
-
-  q()
+  nb_fit_mu = 0
+  nb_fit_size = 0
 }
 
 
@@ -452,7 +433,9 @@ if (plot_poisson) {
 }
 
 #graph the negative binomial fit
-lines(0:max(X$coverage), fit_nb, lwd=3, col="black");
+if (nb_fit_mu > 0) {
+  lines(0:max(X$coverage), fit_nb, lwd=3, col="black");
+}
 
 if (plot_poisson) {
 	legend("topright", c("Coverage distribution", "Censored data", "Negative binomial", "Poisson"), lty=c("blank","blank","solid","22"), lwd=c(1,1,2,2), pch=c(my_pch, my_pch, -1, -1), col=c("black", "red", "black", "black"), bty="n")
@@ -464,12 +447,23 @@ dev.off()
 
 ## Fit the marginal value that we use for propagating deletions
 
-cat(nb_fit_size, " ", nb_fit_mu, "\n")
-deletion_propagation_coverage = qnbinom(deletion_propagation_pr_cutoff, size = nb_fit_size, mu = nb_fit_mu)
+if (nb_fit_mu > 0) {
+  cat(nb_fit_size, " ", nb_fit_mu, "\n")
+  deletion_propagation_coverage = qnbinom(deletion_propagation_pr_cutoff, size = nb_fit_size, mu = nb_fit_mu)
+} else {
+  cat("Fallback to calculating off an estimate of just variance = mu + mu^2/size\n")
+  size_estimate = (1/(v-m))*(m*m)
+  cat("Mu estimate=", m," Size estimate =", size_estimate, "\n")
+  deletion_propagation_coverage = qnbinom(deletion_propagation_pr_cutoff, size = size_estimate, mu = m)
+  if (is.nan(deletion_propagation_coverage) || (deletion_propagation_coverage < 1)) {
+    cat("Double fallback to calculating as just 20% of the mean\n")
+    deletion_propagation_coverage = m * 0.2 
+  }
+}
 
 #Call it as deleted if this number is also basically zero, implying very low coverage
 if (deletion_propagation_coverage < 1) {
-   deletion_propagation_coverage = -1
+    deletion_propagation_coverage = -1
 }
 
 #print out statistics

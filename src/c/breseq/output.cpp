@@ -560,13 +560,12 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
                     th(ALIGN_CENTER, "fit mean") <<
                     th(ALIGN_CENTER, "fit dispersion") <<
                     th(ALIGN_CENTER, "% mapped reads") <<
- //                   th(ALIGN_CENTER, "nbinom mean") <<
- //                   th(ALIGN_CENTER, "nbinom size") <<
                     th(ALIGN_LEFT, "description") <<
           "</tr>" << endl;
              
   size_t total_length = 0;
   bool one_failed_fit = false;
+  bool one_no_coverage = false;
 
   for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++) {
     
@@ -574,10 +573,26 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     double this_reference_mapped_reads = summary.alignment_resolution.reads_mapped_to_references[tid];  
     double total_mapped_reads = summary.alignment_resolution.total_reads_mapped_to_references;
     double this_reference_fraction_mapped_reads = 100 * this_reference_mapped_reads / total_mapped_reads; 
-      
-    bool fragment_with_fit_coverage = (summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter != 0);
-    bool fragment_with_no_coverage = (summary.unique_coverage[it->m_seq_id].deletion_coverage_propagation_cutoff <= 0);
-    HTML << (!fragment_with_no_coverage ? "<tr>" : "<tr class=\"gray_table_row\">");
+    
+    // Keep track of references that were special
+    // If it had no coverage then it also failed fit, but track separately
+    bool fragment_failed_fit = (summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter == 0);
+    bool fragment_no_coverage = (summary.unique_coverage[it->m_seq_id].deletion_coverage_propagation_cutoff <= 0);
+    
+    if (fragment_no_coverage) {
+      one_no_coverage = true;
+    } else if (fragment_failed_fit) {
+      one_failed_fit = true;
+    }
+    
+    // Decide on row color
+    if (fragment_no_coverage) {
+      HTML << "<tr class=\"gray_table_row\">";
+    } else if (fragment_failed_fit) {
+      HTML << "<tr class=\"reject_table_row\">";
+    } else {
+      HTML << "<tr>";
+    }
 
     // Normal reference sequence
     if (settings.call_mutations_seq_id_set().count(it->m_seq_id)) {
@@ -591,17 +606,17 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
                  );
       
       // There may be absolutely no coverage and no graph will exist...
-      if (!fragment_with_no_coverage) {
-        HTML << td( a(Settings::relative_path( 
+      //if (!fragment_no_coverage) {
+      HTML << td( a(Settings::relative_path(
                                             settings.file_name(settings.unique_only_coverage_plot_file_name, "@", to_string<uint32_t>(settings.seq_id_to_coverage_group(it->m_seq_id))), settings.output_path
                                             ), 
                     "distribution" 
                     )
                  ); 
-      }
-      else {
-        HTML << td("align=\"center\"", nonbreaking("deleted"));
-      }
+      //}
+      //else {
+      //  HTML << td("");
+      //}
     }
     // Junction-Only reference sequence
     else {
@@ -611,19 +626,15 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     HTML << td(it->m_seq_id);
     HTML << td(ALIGN_RIGHT, commify(to_string(it->m_length)));
     
-    if (fragment_with_no_coverage) {
+    if (fragment_no_coverage) {
       HTML << td(ALIGN_CENTER, "NA");
       HTML << td(ALIGN_CENTER, "NA");
+    } else if (fragment_failed_fit) {
+      HTML << td(ALIGN_CENTER, "[" + to_string(summary.unique_coverage[it->m_seq_id].average, 1) + "]");
+      HTML << td(ALIGN_CENTER, "[" + to_string(summary.unique_coverage[it->m_seq_id].dispersion, 1) + "]");
     } else {
-      if (summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter == 0) {
-        HTML << td(ALIGN_CENTER, "*" + to_string(summary.unique_coverage[it->m_seq_id].average, 1));
-        HTML << td(ALIGN_CENTER, "*" + to_string(summary.unique_coverage[it->m_seq_id].dispersion, 1));
-        one_failed_fit = true;
-      }
-      else {
-        HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter, 1));
-        HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_dispersion));
-      }
+      HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter, 1));
+      HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_dispersion));
     }
     
     HTML << td(ALIGN_CENTER, to_string(this_reference_fraction_mapped_reads) + "%");
@@ -647,7 +658,10 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << "<p>" << "<b>fit dispersion</b> is the ratio of the variance to the mean for the negative binomial fit. It is =1 for Poisson and >1 for over-dispersed data." << endl;
   
   if (one_failed_fit) {
-      HTML << "<p>" << "*<b>Warning!</b> Negative binomial fit failed for this sequence. It may have very low coverage or an unusual coverage depth distribution. JC and MC predictions may be less accurate." << endl;
+    HTML << "<p>" << "<span class=\"reject_table_row\">Fit failed</span> Negative binomial fit failed for this reference sequence. It may have an unusual coverage depth distribution. JC and MC predictions may be less accurate." << endl;
+  }
+  if (one_no_coverage) {
+    HTML << "<p>" << "<span class=\"gray_table_row\">Insufficient coverage</span> Reference sequence counted as entirely deleted due to low coverage. Try either the <code>-t,--targeted-sequencing</code> or the <code>-c,--contig-reference </code> option if you want mutations called for these reference sequences." << endl;
   }
   
   ////

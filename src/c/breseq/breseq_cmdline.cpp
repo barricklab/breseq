@@ -657,7 +657,7 @@ int do_error_count(int argc, char* argv[]) {
 	AnyOption options("Usage: breseq ERROR_COUNT --bam reference.bam --fasta reference.fasta --output test --readfile reads.fastq --covariates ref_base,obs_base,quality=40 [--coverage] [--errors] [--minimum-quality-score 3]");
 	options
 		("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-		("bam,b", "bam file containing sequences to be aligned", "data/reference.bam")
+		("bam,b", "BAM file containing aligned read sequences", "data/reference.bam")
 		("fasta,f", "FASTA file of reference sequence", "data/reference.fasta")
 		("output,o", "output directory", "./")
 		("coverage", "generate unique coverage distribution output", TAKES_NO_ARGUMENT)
@@ -727,7 +727,7 @@ int do_tabulate_contingency_loci(int argc, char* argv[]) {
   options.addUsage("");
   options.addUsage("Allowed Options");
   options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("bam,b", "bam file containing sequences to be aligned", "data/reference.bam");
+  options("bam,b", "BAM file containing aligned read sequences", "data/reference.bam");
   options("fasta,f", "FASTA file of reference sequence", "data/reference.fasta");
   options("reference,r","File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files", "data/reference.gff3");
   options("output,o", "Output CSV file", "contingency_loci.csv");
@@ -1941,25 +1941,37 @@ int breseq_default_action(int argc, char* argv[])
       }
       
       
-      // If the fit failed and there was not very low coverage
-      // (deletion_coverage_propagation_cutoff == -1 in that case)
-      vector<string> failed_seq_ids;
+      // If the fit failed or there was insufficient coverage for some reference sequences
+      //    deletion_coverage_propagation_cutoff == -1 for insufficient coverage
+      //    nbinom_mean_parameter == 0 for failed fit
+      vector<string> failed_fit_seq_ids;
+      vector<string> no_coverage_seq_ids;
+
       for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
         string seq_id = ref_seq_info[i].m_seq_id;
         
-        if ((summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff > 0) && (summary.unique_coverage[seq_id].nbinom_mean_parameter == 0)) {
-          failed_seq_ids.push_back(seq_id);
+        if (summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff <= 0) {
+          no_coverage_seq_ids.push_back(seq_id);
+        } else if (summary.unique_coverage[seq_id].nbinom_mean_parameter == 0) {
+          failed_fit_seq_ids.push_back(seq_id);
         }
       }
       
-
-      if (failed_seq_ids.size()) {
+      if (failed_fit_seq_ids.size()) {
         
         string warning_string = "Failed to fit coverage distribution for some reference sequences. This may degrade the quality of predicting mutations from new sequence junctions (JC evidence).";
         if (!settings.deletion_coverage_propagation_cutoff) {
           warning_string += " You may want to set --deletion-coverage-propagation-cutoff to improve the quality of deletion prediction (MC evidence).";
         }
-        warning_string += "\nFailed seq ids: " + join(failed_seq_ids, ", ");
+        warning_string += "\n\nFailed fit seq ids: " + join(failed_fit_seq_ids, ", ");
+        
+        WARN(warning_string);
+      }
+      
+      if (no_coverage_seq_ids.size()) {
+        
+        string warning_string = "Insufficient coverage to call mutations for some reference sequences. Set either the --targeted-sequencing or --contig-reference option if you want mutations called on these reference sequences.";
+        warning_string += "\n\nInsufficient coverage seq ids: " + join(no_coverage_seq_ids, ", ");
         
         WARN(warning_string);
       }
