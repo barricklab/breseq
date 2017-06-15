@@ -140,8 +140,8 @@ namespace breseq {
   }
   
   inline void seg_fault_handler(int sig) {
-    
-    my_error_handler(false, true, true, NULL, NULL, 0 , "Segmentation Fault (Signal: " + to_string(sig) + ")");
+    (void) sig;
+    my_error_handler(false, true, true, NULL, NULL, 0 , "Segmentation Fault");
   }
   
   
