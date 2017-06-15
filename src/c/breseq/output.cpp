@@ -579,12 +579,6 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     bool fragment_failed_fit = (summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter == 0);
     bool fragment_no_coverage = (summary.unique_coverage[it->m_seq_id].deletion_coverage_propagation_cutoff <= 0);
     
-    if (fragment_no_coverage) {
-      one_no_coverage = true;
-    } else if (fragment_failed_fit) {
-      one_failed_fit = true;
-    }
-    
     // Decide on row color
     if (fragment_no_coverage) {
       HTML << "<tr class=\"gray_table_row\">";
@@ -597,6 +591,13 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     // Normal reference sequence
     if (settings.call_mutations_seq_id_set().count(it->m_seq_id)) {
     
+      // Only provide feeedback about sequences we are calling mutations for
+      if (fragment_no_coverage) {
+        one_no_coverage = true;
+      } else if (fragment_failed_fit) {
+        one_failed_fit = true;
+      }
+      
       total_length += it->m_length;
       HTML << td( a(Settings::relative_path( 
                                             settings.file_name(settings.overview_coverage_plot_file_name, "@", it->m_seq_id), settings.output_path

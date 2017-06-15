@@ -641,16 +641,12 @@ namespace breseq {
       // Utility to get top strand sequence
       string get_sequence_1(int32_t start_1, int32_t end_1) const
       {
-        // Allow start and end to both be zero.
-        // @JEB: This can happen for an insert into a fragment that is otherwise deleted in gdtools APPLY
-        if ((start_1==0) && (end_1==0)) return "";
-        ASSERT(start_1 <= end_1, "start (" + to_string(start_1) + ") not less than or equal to end (" + to_string(end_1) + ")");
-        return m_fasta_sequence.m_sequence.substr(start_1 - 1, (end_1-start_1) + 1);
+        return m_fasta_sequence.get_sequence_1(start_1, end_1);
       }
     
       char get_sequence_1(int32_t pos_1) const
       {
-        return m_fasta_sequence.m_sequence.substr(pos_1-1, 1)[0];
+        return m_fasta_sequence.get_sequence_1(pos_1);
       }
     
       string get_stranded_sequence_1(int32_t strand, int32_t start_1, int32_t end_1) const;
@@ -659,9 +655,9 @@ namespace breseq {
       int32_t get_circular_distance_1(int32_t pos_1, int32_t pos_2) const;
 
     
-      size_t get_sequence_size(void) const
+      size_t get_sequence_length(void) const
       {
-        return m_fasta_sequence.m_sequence.size();
+        return m_fasta_sequence.get_sequence_length();
       }
 
       // Replace Sequence with Input
@@ -696,11 +692,6 @@ namespace breseq {
         
         //If we got this far and found nothing, return false
         return false;
-      }
-        
-      uint32_t get_sequence_length() const
-      {
-        return m_fasta_sequence.m_sequence.length();
       }
     
       string get_file_name() const

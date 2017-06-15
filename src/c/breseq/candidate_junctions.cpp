@@ -976,10 +976,7 @@ namespace breseq {
 		for (uint32_t j = 0; j < combined_candidate_junctions.size(); j++) {
       
 			JunctionCandidate& junction = combined_candidate_junctions[j];
-      cFastaSequence seq; //= { junction.junction_key(), "", junction.sequence };
-      seq.m_name = junction.junction_key();
-      seq.m_description = "";
-      seq.m_sequence = junction.sequence;
+      cFastaSequence seq(junction.junction_key(), "", junction.sequence); //= { junction.junction_key(), "", junction.sequence };
 			out.write_sequence(seq);
       
       // write to detailed file
@@ -1241,11 +1238,11 @@ namespace breseq {
 		// create hash key and store information about the location of this hit
 		bool hash_strand_1 = q1.reversed();
 		string hash_seq_id_1 = ref_seq_info[q1.reference_target_id()].m_seq_id;
-		const string& ref_seq_1(ref_seq_info[q1.reference_target_id()].m_fasta_sequence.m_sequence);
+		const cAnnotatedSequence * ref_seq_1(&ref_seq_info[q1.reference_target_id()]);
 		
 		bool hash_strand_2 = !q2.reversed();
 		string hash_seq_id_2 = ref_seq_info[q2.reference_target_id()].m_seq_id;
-		const string& ref_seq_2(ref_seq_info[q2.reference_target_id()].m_fasta_sequence.m_sequence);
+		const cAnnotatedSequence * ref_seq_2(&ref_seq_info[q2.reference_target_id()]);
     
 		// how much overlap is there between the two matches?
 		// positive if the middle sequence can match either side of the read
@@ -1268,8 +1265,8 @@ namespace breseq {
 
 		if (verbose)
 		{
-			string ref_seq_matched_1 = ref_seq_1.substr(r1_start - 1, r1_end - r1_start + 1);
-			string ref_seq_matched_2 = ref_seq_2.substr(r2_start - 1, r2_end - r2_start + 1);
+			string ref_seq_matched_1 = ref_seq_1->get_sequence_1(r1_start, r1_end);
+			string ref_seq_matched_2 = ref_seq_2->get_sequence_1(r2_start, r2_end);
 
 			cout << "==============> Initial Matches" << endl;
 			cout << "Alignment #1" << endl;
@@ -1388,15 +1385,15 @@ namespace breseq {
       else
         test_r1_pos += move_r1_pos;
       
-      if ( (test_r1_pos >= 1) && (test_r1_pos <= ref_seq_1.size() )
-        && (test_r2_pos >= 1) && (test_r2_pos <= ref_seq_2.size() ) )
+      if ( (test_r1_pos >= 1) && (test_r1_pos <= ref_seq_1->get_sequence_length() )
+        && (test_r2_pos >= 1) && (test_r2_pos <= ref_seq_2->get_sequence_length() ) )
       {
         string test_r1_char;
         string test_r2_char;
 
-        test_r1_char = ref_seq_1.substr(test_r1_pos - 1, 1);
+        test_r1_char = ref_seq_1->get_sequence_1(test_r1_pos);
         if (hash_strand_1) test_r1_char = reverse_complement(test_r1_char);
-        test_r2_char = ref_seq_2.substr(test_r2_pos - 1, 1);
+        test_r2_char = ref_seq_2->get_sequence_1(test_r2_pos);
         if (!hash_strand_2) test_r2_char = reverse_complement(test_r2_char);
         
         while (test_r1_char == test_r2_char)
@@ -1405,8 +1402,8 @@ namespace breseq {
           test_r2_pos += move_r2_pos;
           
           if (! (
-                 (test_r1_pos >= 1) && (test_r1_pos <= ref_seq_1.size())
-                 && (test_r2_pos >= 1) && (test_r2_pos <= ref_seq_2.size()) 
+                 (test_r1_pos >= 1) && (test_r1_pos <= ref_seq_1->get_sequence_length())
+                 && (test_r2_pos >= 1) && (test_r2_pos <= ref_seq_2->get_sequence_length())
                  ) )
           {
             test_r1_pos -= move_r1_pos;
@@ -1415,9 +1412,9 @@ namespace breseq {
           }
 
           
-          test_r1_char = ref_seq_1.substr(test_r1_pos - 1, 1);
+          test_r1_char = ref_seq_1->get_sequence_1(test_r1_pos);
           if (hash_strand_1) test_r1_char = reverse_complement(test_r1_char);
-          test_r2_char = ref_seq_2.substr(test_r2_pos - 1, 1);
+          test_r2_char = ref_seq_2->get_sequence_1(test_r2_pos);
           if (!hash_strand_2) test_r2_char = reverse_complement(test_r2_char);
         }
         
@@ -1441,8 +1438,8 @@ namespace breseq {
 
 		if (verbose)
 		{
-			string ref_seq_matched_1 = ref_seq_1.substr(r1_start - 1, r1_end - r1_start + 1);
-			string ref_seq_matched_2 = ref_seq_2.substr(r2_start - 1, r2_end - r2_start + 1);
+			string ref_seq_matched_1 = ref_seq_1->get_sequence_1(r1_start, r1_end);
+			string ref_seq_matched_2 = ref_seq_2->get_sequence_1(r2_start, r2_end);
 
 			cout << "==============> Final Matches" << endl;
 			cout << "Alignment #1" << endl;

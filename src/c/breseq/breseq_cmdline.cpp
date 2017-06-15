@@ -621,12 +621,12 @@ int do_get_sequence(int argc, char *argv[])
     new_seq_info.add_new_seq(seq_name, "");
     cAnnotatedSequence& new_seq = new_seq_info[seq_name];
     new_seq.m_fasta_sequence = ref_seq_info[replace_target_id].m_fasta_sequence;
-    new_seq.m_fasta_sequence.m_name = seq_name;
-    new_seq.m_fasta_sequence.m_sequence = to_upper(ref_seq_info.get_sequence_1(replace_target_id, replace_start, replace_end));
+    new_seq.m_fasta_sequence.set_name(seq_name);
+    new_seq.m_fasta_sequence.set_sequence(to_upper(ref_seq_info.get_sequence_1(replace_target_id, replace_start, replace_end)));
     if(do_reverse_complement)
-      new_seq.m_fasta_sequence.m_sequence = reverse_complement(new_seq.m_fasta_sequence.m_sequence);
+      new_seq.m_fasta_sequence.set_sequence(reverse_complement(new_seq.m_fasta_sequence.get_sequence()));
     new_seq.m_seq_id = region_list[j];
-    new_seq.m_length = new_seq.m_fasta_sequence.m_sequence.size();
+    new_seq.m_length = new_seq.m_fasta_sequence.get_sequence_length();
     
     if(to_stdout)  {
       cout << new_seq.m_fasta_sequence << endl;
@@ -859,7 +859,7 @@ int do_simulate_read(int argc, char *argv[])
   uint32_t coverage = from_string<uint32_t>(options["coverage"]);
   uint32_t read_size = from_string<uint32_t>(options["length"]);
 
-  uint32_t n_reads = (sequence.get_sequence_size() / read_size) * coverage;
+  uint32_t n_reads = (sequence.get_sequence_length() / read_size) * coverage;
 
   if (options.count("paired-ends")) {
     cString output = options["output"];
@@ -1950,10 +1950,13 @@ int breseq_default_action(int argc, char* argv[])
       for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
         string seq_id = ref_seq_info[i].m_seq_id;
         
-        if (summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff <= 0) {
-          no_coverage_seq_ids.push_back(seq_id);
-        } else if (summary.unique_coverage[seq_id].nbinom_mean_parameter == 0) {
-          failed_fit_seq_ids.push_back(seq_id);
+        // For junction-only sequences, don't provide these warnings
+        if (settings.call_mutations_seq_id_set().count(seq_id)) {
+          if (summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff <= 0) {
+            no_coverage_seq_ids.push_back(seq_id);
+          } else if (summary.unique_coverage[seq_id].nbinom_mean_parameter == 0) {
+            failed_fit_seq_ids.push_back(seq_id);
+          }
         }
       }
       
@@ -2253,6 +2256,7 @@ int breseq_default_action(int argc, char* argv[])
     */
 
     // Write the output.gd file
+    cerr << "  Writing final GD file..." << endl;
     mpgd.write(settings.final_genome_diff_file_name);
     
     //Don't reload -- we lose invisible fields that we need
@@ -2264,6 +2268,8 @@ int breseq_default_action(int argc, char* argv[])
     gd.metadata = cGenomeDiff::Metadata();
     
     // Write VCF conversion
+    cerr << "  Writing final VCF file..." << endl;
+
     mpgd.write_vcf(settings.output_vcf_file_name, ref_seq_info);
     
     //

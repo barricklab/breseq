@@ -2467,8 +2467,8 @@ namespace breseq {
     // Load sequence
     for(vector<cAnnotatedSequence>::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); ++it) {
       cAnnotatedSequence& seq = *it;
-      for(size_t i=0; i<seq.get_sequence_length(); ++i) {
-        char base = seq.m_fasta_sequence.m_sequence[i];
+      for(size_t i=1; i<=seq.get_sequence_length(); ++i) {
+        char base = seq.get_sequence_1(i);
         if ((base != 'A') && (base != 'T') && (base != 'C') && (base != 'G'))
           cerr << "WARNING: Nonstandard base in sequence:" << base << "\n"; 
         else
@@ -2671,9 +2671,10 @@ namespace breseq {
       } // end feature loop
       
       if (verbose) {
-        for(size_t i_0=0; i_0<seq.get_sequence_length(); ++i_0) {
-          char base = seq.m_fasta_sequence.m_sequence[i_0];        
-          cout << (i_0+1) << "\t" << base << "\t" << seq_bcs[i_0] << "\t" 
+        for(size_t i=1; i<=seq.get_sequence_length(); ++i) {
+          const size_t i_0 = i-1;
+          char base = seq.get_sequence_1(i);
+          cout << i << "\t" << base << "\t" << seq_bcs[i_0] << "\t"
           << seq_bse[i_0*4+0] << "\t" << seq_bse[i_0*4+1] << "\t" << seq_bse[i_0*4+2] << "\t" << seq_bse[i_0*4+3] << endl;
         }
       }

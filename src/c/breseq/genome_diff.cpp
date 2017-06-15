@@ -3549,7 +3549,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
       uint32_t n_size_attempts = max_attempts;
 
       while (n_size_attempts) {
-        pos_1 = (rand() % (ref.get_sequence_size() - buffer - size)) + buffer;
+        pos_1 = (rand() % (ref.get_sequence_length() - buffer - size)) + buffer;
         new_item["position"] = to_string(pos_1);
 
         if (mut_type == "SNP") {
@@ -3738,7 +3738,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
       uint32_t n_size_attempts = max_attempts;
 
       while (n_size_attempts) {
-        pos_1 = (rand() % (ref.get_sequence_size() - buffer - size)) + buffer;
+        pos_1 = (rand() % (ref.get_sequence_length() - buffer - size)) + buffer;
 
         new_item["position"] = to_string(pos_1);
         new_item["size"] = s(size);
@@ -3794,7 +3794,7 @@ void cGenomeDiff::random_mutations(string exclusion_file,
 
       uint32_t n_size_attempts = max_attempts;
       while (n_size_attempts) {
-        pos_1 = (rand() % (ref.get_sequence_size() - buffer)) + buffer;
+        pos_1 = (rand() % (ref.get_sequence_length() - buffer)) + buffer;
         string temp_seq = ref.get_sequence_1(pos_1, pos_1 + size - 1);
         cDiffEntry temp_item;        
         temp_item._type = INS;
@@ -5567,7 +5567,7 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
   for (diff_entry_list_t::iterator it=muts.begin(); it!=muts.end(); it++) {
 
     cDiffEntry& mut = **it;
-    uint32_t pos = from_string<uint32_t>(mut[POSITION]);
+    int32_t pos = from_string<int32_t>(mut[POSITION]);
     
     string chrom = mut[SEQ_ID];
     string id = ".";
@@ -6197,7 +6197,7 @@ void cGenomeDiff::GD2Circos(const vector<string> &gd_file_names,
   
   for (uint32_t i = 0; i < seq_ids.size(); i++){
     uint32_t seq_size;
-    seq_size = ref[seq_ids[i]].get_sequence_size();
+    seq_size = ref[seq_ids[i]].get_sequence_length();
     
     karyotype_file << "chr - " << seq_ids[i] << " 1 1 " <<
     seq_size << " black" << endl;

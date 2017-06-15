@@ -1511,7 +1511,7 @@ int do_normalize_gd(int argc, char* argv[])
 		
 		for (vector<string>::const_iterator it = seq_ids.begin(); it != seq_ids.end(); it++)
 		{
-			if (new_ref_seq_info[*it].m_fasta_sequence.m_sequence != verify_ref_seq_info[*it].m_fasta_sequence.m_sequence) {
+			if (new_ref_seq_info[*it].m_fasta_sequence.get_sequence() != verify_ref_seq_info[*it].m_fasta_sequence.get_sequence()) {
 				WARN("Failed APPLY test. Discrepancies beween sequences produced before and after NORMALIZE. Check ordering of mutations.");
 			}
 		}

@@ -128,12 +128,12 @@ namespace breseq {
     // If start_1 is negative, move forward by genome-sized
     // chunks until it is within bounds
     while (start_1 < 1) {
-      start_1 = this->get_sequence_size() + start_1; 
+      start_1 = this->get_sequence_length() + start_1;
     }
     
     //If start_1 is too large, set to where it lines up if you go round and round the genome.
-    start_1 = start_1 % this->get_sequence_size();
-    if (start_1 == 0) start_1 = this->get_sequence_size();
+    start_1 = start_1 % this->get_sequence_length();
+    if (start_1 == 0) start_1 = this->get_sequence_length();
     //-- After all that, start1 should be in the range [1,sequence_size]
     
     // Build the return sequence, which may wrap around from the end to beginning of genome
@@ -141,7 +141,7 @@ namespace breseq {
     
     while (size > ret_val.size()) {
       
-      uint32_t leftover_genome_size = this->get_sequence_size() - (start_1 - 1);
+      uint32_t leftover_genome_size = this->get_sequence_length() - (start_1 - 1);
       int32_t chunk_size = leftover_genome_size < size ? leftover_genome_size : size;
       
       ret_val += this->get_sequence_1(start_1, start_1 + chunk_size - 1);
@@ -173,7 +173,7 @@ namespace breseq {
   void cAnnotatedSequence::replace_sequence_1(int32_t start_1, int32_t end_1, const string &replacement_seq, string mut_type, bool verbose)
   {
     ASSERT(start_1 <= end_1, "start (" + to_string(start_1) + ") not less than or equal to end (" + to_string(end_1) + ")");
-    m_fasta_sequence.m_sequence.replace(start_1-1, end_1-start_1+1, replacement_seq);
+    m_fasta_sequence.replace_sequence_1(start_1, end_1, replacement_seq);
     
     //Temporary variable for the amount to shift the start and end positions
     // Example:
@@ -330,7 +330,7 @@ namespace breseq {
   {
     (void) verbose;
     (void) mut_type;
-    m_fasta_sequence.m_sequence.insert(pos_1, insertion_seq);
+    m_fasta_sequence.insert_sequence_1(pos_1, insertion_seq);
     
     //Variable for insertion length, only want to call the
     //function once
@@ -405,7 +405,7 @@ namespace breseq {
     (void) mut_type;
     
     string inv_seq = reverse_complement(get_sequence_1(start_1, end_1));
-    m_fasta_sequence.m_sequence.replace(start_1-1, end_1-start_1+1, inv_seq);
+    m_fasta_sequence.replace_sequence_1(start_1, end_1, inv_seq);
     
     //Iterate through all the features
     for (list<cSequenceFeaturePtr>::iterator it_feature = m_features.begin(); it_feature != m_features.end(); )
@@ -720,14 +720,13 @@ namespace breseq {
     
     // To uppercase and change nonstandard chars to 'N' in all sequences.
     for (size_t i=0; i<this->size(); i++) {
-      string& this_sequence = (*this)[i].m_fasta_sequence.m_sequence;
       
       // Uppercase
-      this_sequence = to_upper(this_sequence);
+      string this_sequence = to_upper((*this)[i].m_fasta_sequence.get_sequence());
       
       // Remedy nonstandard characters to 'N'
       map<char,uint32_t> bad_char;
-      for (size_t j=0; j<(*this)[i].m_fasta_sequence.m_sequence.size(); j++) {
+      for (size_t j=0; j<this_sequence.size(); j++) {
         if ( !strchr( "ATCGN",  this_sequence[j] )) {
           if (bad_char.count(this_sequence[j])) {
             bad_char[this_sequence[j]]++;
@@ -737,6 +736,8 @@ namespace breseq {
           this_sequence[j] = 'N';
         }
       }
+      
+      (*this)[i].m_fasta_sequence.set_sequence(this_sequence);
       
       // Found some bad characters...
       if (bad_char.size()) {
@@ -867,7 +868,7 @@ namespace breseq {
 
     while ( ff.read_sequence(on_seq) ) {
       
-      on_seq.m_name = safe_seq_id_name(on_seq.m_name);
+      on_seq.set_name(safe_seq_id_name(on_seq.get_name()));
       
       // @JEB sorting the input files by type seems like a better way of doing this,
       //    but we can't do it just by looking at file name endings...
@@ -877,19 +878,19 @@ namespace breseq {
       if (m_seq_id_to_index.count(BULL_DUMMY_SEQ_ID)) {
         uint32_t seq_index = this->m_seq_id_to_index[BULL_DUMMY_SEQ_ID];
         this->m_seq_id_to_index.erase(BULL_DUMMY_SEQ_ID);
-        (*this)[seq_index].m_seq_id = on_seq.m_name;
+        (*this)[seq_index].m_seq_id = on_seq.get_name();
         m_seq_id_to_index[(*this)[seq_index].m_seq_id] = seq_index;       
       }
       else {
-        this->add_new_seq(on_seq.m_name, file_name);
+        this->add_new_seq(on_seq.get_name(), file_name);
       }
             
       // copy the info over (could define an assignment operator...)
-      cAnnotatedSequence& this_seq = (*this)[on_seq.m_name];      
+      cAnnotatedSequence& this_seq = (*this)[on_seq.get_name()];
       this_seq.m_fasta_sequence = on_seq;
-      this_seq.m_seq_id = on_seq.m_name;
-      this_seq.m_description = on_seq.m_description;
-      this_seq.m_length = on_seq.m_sequence.size();
+      this_seq.m_seq_id = on_seq.get_name();
+      this_seq.m_description = on_seq.get_description();
+      this_seq.m_length = on_seq.get_sequence_length();
       this_seq.set_sequence_loaded_from_file(file_name);
     }
   }
@@ -900,13 +901,13 @@ namespace breseq {
 
     while ( ff.read_sequence(on_seq) ) {
       
-      on_seq.m_name = safe_seq_id_name(on_seq.m_name);
+      on_seq.set_name(safe_seq_id_name(on_seq.get_name()));
 
-      this->add_new_seq(on_seq.m_name, ff.m_file_name);
-      cAnnotatedSequence& this_seq = (*this)[on_seq.m_name];
+      this->add_new_seq(on_seq.get_name(), ff.m_file_name);
+      cAnnotatedSequence& this_seq = (*this)[on_seq.get_name()];
       this_seq.m_fasta_sequence = on_seq;
-      this_seq.m_seq_id = on_seq.m_name;
-      this_seq.m_length = on_seq.m_sequence.size();
+      this_seq.m_seq_id = on_seq.get_name();
+      this_seq.m_length = on_seq.get_sequence_length();
       this_seq.set_sequence_loaded_from_file(ff.m_file_name);
     }
 
@@ -1000,22 +1001,25 @@ namespace breseq {
           //ASSERT(this->m_seq_id_to_index[seq_id], "Attempt to load sequence for non-existent seq_id with line:\n" + line);
                  
           cAnnotatedSequence& this_seq = (*this)[seq_id];
-          this_seq.m_fasta_sequence.m_sequence = "";
-          this_seq.m_fasta_sequence.m_name=seq_id;
+          this_seq.m_fasta_sequence.set_sequence("");
+          this_seq.m_fasta_sequence.set_name(seq_id);
           
           getline(in,line);
           RemoveLeadingTrailingWhitespace(line);
-
+          
+          string nucleotide_sequence;
+          
           while (!in.eof() && (line.find("##end-DNA") != 0)) {
 
             ASSERT(line.find("##") == 0, "Expected beginning ## and sequence line, but found:\n" + line); 
             string add_seq = line.substr(2);
             RemoveLeadingWhitespace(add_seq);
-            this_seq.m_fasta_sequence.m_sequence += add_seq;
+            nucleotide_sequence += add_seq;
             getline(in,line);
             RemoveLeadingTrailingWhitespace(line);
           }
-          this_seq.m_length = this_seq.m_fasta_sequence.m_sequence.size();
+          this_seq.m_fasta_sequence.set_sequence(nucleotide_sequence);
+          this_seq.m_length = this_seq.m_fasta_sequence.get_sequence_length();
           this_seq.set_sequence_loaded_from_file(file_name);
 
           continue;
@@ -1856,9 +1860,10 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
 
 void cReferenceSequences::ReadGenBankFileSequence(std::ifstream& in, cAnnotatedSequence& s) {
 
-  s.m_fasta_sequence.m_name = s.m_seq_id;
+  s.m_fasta_sequence.set_name(s.m_seq_id);
 
   string line;
+  string nucleotide_sequence;
   while (!in.eof()) {
     getline(in, line);
     string first_word = GetWord(line);
@@ -1869,12 +1874,13 @@ void cReferenceSequences::ReadGenBankFileSequence(std::ifstream& in, cAnnotatedS
     if (first_word == "//") break;
     
     // Load, but skip spaces
+
     for(string::iterator i=line.begin(); i!=line.end(); ++i) {
       if (*i == ' ') continue;
-      s.m_fasta_sequence.m_sequence += *i;
+      nucleotide_sequence += *i;
     }
-    
   }
+  s.m_fasta_sequence.set_sequence(nucleotide_sequence);
   
   //cout << s.m_sequence << std::endl;
 }
@@ -3317,9 +3323,7 @@ uint32_t alignment_mismatches(const alignment_wrapper& a, const cReferenceSequen
   bool verbose = false;
   uint32_t mismatches = 0;
 
-  uint32_t index = a.reference_target_id();
-  const string& const_ref_string = ref_seq_info[index].m_fasta_sequence.m_sequence;
-  string ref_string = const_ref_string.substr(a.reference_start_0(), a.reference_match_length());
+  const string ref_string = ref_seq_info[a.reference_target_id()].get_sequence_1(a.reference_start_1(), a.reference_end_1());
   uint32_t ref_pos = 0;
 
   string read_string = a.read_char_sequence().substr(a.query_start_0(), a.query_match_length());
@@ -3406,9 +3410,7 @@ int32_t alignment_score(const alignment_wrapper& a, const cReferenceSequences& r
   bool verbose = false;
   int32_t alignment_score = 0;
   
-  uint32_t index = a.reference_target_id();
-  const string& const_ref_string = ref_seq_info[index].m_fasta_sequence.m_sequence;
-  string ref_string = const_ref_string.substr(a.reference_start_0(), a.reference_match_length());
+  const string ref_string = ref_seq_info[a.reference_target_id()].get_sequence_1(a.reference_start_1(), a.reference_end_1());
   uint32_t ref_pos = 0;
   
   string read_string = a.read_char_sequence().substr(a.query_start_0(), a.query_match_length());
@@ -3476,7 +3478,7 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
 {
   bool verbose = false;
 
-  string ref_seq = ref_seq_info[a.reference_target_id()].m_fasta_sequence.m_sequence;
+  const string ref_seq = ref_seq_info[a.reference_target_id()].get_sequence_1(a.reference_start_1(), a.reference_end_1());
   uint32_t ref_seq_index = 0;
   string read_seq = a.read_char_sequence();
   uint32_t read_seq_index = 0;

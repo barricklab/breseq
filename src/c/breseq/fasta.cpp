@@ -40,9 +40,9 @@ namespace breseq {
   bool cFastaFile::read_sequence(cFastaSequence &sequence) {
     
     // clear sequence
-    sequence.m_name = "";
-    sequence.m_description = "";
-    sequence.m_sequence = "";
+    sequence.set_name("");
+    sequence.set_description("");
+    sequence.set_sequence("");
     
     // We're done, no error
     if (this->eof()) return false;
@@ -54,13 +54,13 @@ namespace breseq {
     
     // The sequence name is the first word
     size_t pos = m_current_line.find_first_of(" \t\r\n", 1);
-    sequence.m_name = m_current_line.substr(1,(pos != string::npos) ? pos-1 : string::npos);
+    sequence.set_name(m_current_line.substr(1,(pos != string::npos) ? pos-1 : string::npos));
     pos = m_current_line.find_first_not_of( " \t\r\n", pos);
-    if (pos != string::npos) sequence.m_description = m_current_line.substr(pos);
+    if (pos != string::npos) sequence.set_description(m_current_line.substr(pos));
         
     breseq::getline(*this, m_current_line);
     m_current_line_num++;
-    
+    string nucleotide_sequence;
     while ((m_current_line[0] != '>') && !this->eof()) {
       
       // Clean the sequence of spaces and extra line returns ('\r' is particularly dangerous).
@@ -70,24 +70,26 @@ namespace breseq {
       m_current_line = substitute(m_current_line, "\n", "");
       
       
-      sequence.m_sequence += m_current_line;
+      nucleotide_sequence += m_current_line;
 
       breseq::getline(*this, m_current_line);
       m_current_line_num++;
     }
-      
-    assert(sequence.m_sequence.length() > 0);
+    
+    assert(nucleotide_sequence.length() > 0);
+    sequence.set_sequence(nucleotide_sequence);
+
     return true;
   }
 
   void cFastaFile::write_sequence(const cFastaSequence &sequence) {
     
-    (*this) << ">" << sequence.m_name << endl;
+    (*this) << ">" << sequence.get_name() << endl;
     
-    uint32_t start = 0;
-    while (start < sequence.m_sequence.length()) {
-      (*this) << sequence.m_sequence.substr(start,m_bases_per_line) << endl;
-      start += m_bases_per_line;
+    int32_t start_1 = 1;
+    while (start_1 <= (int32_t)sequence.get_sequence_length()) {
+      (*this) << sequence.get_sequence_1(start_1, min<int32_t>(start_1 + m_bases_per_line - 1, sequence.get_sequence_length())) << endl;
+      start_1 += m_bases_per_line;
     }
 
   }

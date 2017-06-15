@@ -1935,7 +1935,7 @@ void CoverageDistribution::analyze_coverage_bias (
   // Third line is GC of reference sequences
   for (cReferenceSequences::iterator it=ref_seq_info.begin(); it != ref_seq_info.end(); it++) {
     if (it != ref_seq_info.begin()) read_out << ",";
-    read_out << gc_percentage_string(it->m_fasta_sequence.m_sequence) << endl;
+    read_out << gc_percentage_string(it->m_fasta_sequence.get_sequence()) << endl;
   }
   
   alignment_list alignments;

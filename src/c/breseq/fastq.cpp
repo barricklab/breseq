@@ -1011,7 +1011,7 @@ namespace breseq {
 
     srand(cSimFastqSequence::SEED_VALUE);
     for (uint32_t i = 0; i < n_reads; ++i) {
-      uint32_t start_1 = rand() % sequence.get_sequence_size() + 1;
+      uint32_t start_1 = rand() % sequence.get_sequence_length() + 1;
       int8_t strand    = (rand() % 2) == 0 ? 1 : -1;
       cFastqSequence read = cSimFastqSequence::simulate(sequence,
                                                         start_1,
@@ -1042,7 +1042,7 @@ namespace breseq {
     for (uint32_t i = 0; i < n_reads; ++i) {
 
       //Pair 1
-      uint32_t start_1 = rand() % sequence.get_sequence_size() + 1;
+      uint32_t start_1 = rand() % sequence.get_sequence_length() + 1;
       int8_t strand    = 1;
       cFastqSequence pair_1 = cSimFastqSequence::simulate(sequence,
                                                           start_1,
@@ -1052,7 +1052,7 @@ namespace breseq {
                                                           verbose); 
 
       //Pair 2
-      start_1 = (start_1 + random_size.sample() - (read_size * 2)) % sequence.get_sequence_size();
+      start_1 = (start_1 + random_size.sample() - (read_size * 2)) % sequence.get_sequence_length();
       strand  = -1;
       cFastqSequence pair_2 = cSimFastqSequence::simulate(sequence,
                                                           start_1,

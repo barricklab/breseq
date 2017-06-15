@@ -144,29 +144,29 @@ void identify_homopolymer_repeats(
     size_t rnumber = 0;
     
     // For each nucleotide in the sequence
-    for( size_t j=0; j<ref_seqs[i].m_fasta_sequence.m_sequence.size(); j++ ){
-      if( ref_seqs[i].m_fasta_sequence.m_sequence[j] == base ){
+    for( size_t j=1; j<=ref_seqs[i].get_sequence_length(); j++ ){
+      if( ref_seqs[i].get_sequence_1(j) == base ){
         rnumber++;
       }
       else{
         if( (base != 'N') && (rnumber >= minimum_length) ){
           homopolymer_repeat r;
-          r.seq_id = ref_seqs[i].m_fasta_sequence.m_name;
-          r.start = j+1-rnumber;
+          r.seq_id = ref_seqs[i].m_fasta_sequence.get_name();
+          r.start = j-rnumber;
           r.base = base;
           r.length = rnumber;
           hr.push_back(r);
           //printf( "%i:%c\n", r.start, r.base );
         }
-        base = ref_seqs[i].m_fasta_sequence.m_sequence[j];
+        base = ref_seqs[i].get_sequence_1(j);
         rnumber = 1;
       }
     }
     // This checks if the last nucleotide was part of a repeat
     if( rnumber >= minimum_length ){
       homopolymer_repeat r;
-      r.seq_id = ref_seqs[i].m_fasta_sequence.m_name;
-      r.start = ref_seqs[i].m_fasta_sequence.m_sequence.size()+1-rnumber;
+      r.seq_id = ref_seqs[i].m_fasta_sequence.get_name();
+      r.start = ref_seqs[i].get_sequence_length()+1-rnumber;
       r.base = base;
       r.length = rnumber;
       hr.push_back(r);

@@ -275,7 +275,7 @@ void resolve_alignments(
     cFastaSequence fs;
     while (ff.read_sequence(fs))
     {
-      SequenceTrims st(fs.m_sequence);
+      SequenceTrims st(fs.get_sequence());
       junction_trims_list.push_back(st);
     }
   }
@@ -364,7 +364,7 @@ void resolve_alignments(
     cFastaFile ff(settings.candidate_junction_fasta_file_name, ios::in);
     cFastaSequence sequence;
     while( ff.read_sequence(sequence) ) {
-      all_junction_ids[sequence.m_name]++;
+      all_junction_ids[sequence.get_name()]++;
     }
   }
   
