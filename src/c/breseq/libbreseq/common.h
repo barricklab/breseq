@@ -22,6 +22,7 @@ LICENSE AND COPYRIGHT
 // System headers
 
 // C
+#include <execinfo.h>
 #include <assert.h>
 #include <libgen.h>
 #include <limits.h>
@@ -81,41 +82,77 @@ namespace breseq {
 	
   // These are our own local wrappers for common functions.
   
-  inline void  my_assertion_handler(bool condition, const char *file, const char *base_file, int line, const string& message = "")
+  inline void  my_error_handler(bool condition, bool fatal, bool include_backtrace, const char *file, const char *base_file, int line, const string& message = "")
   {
     (void)base_file;
-    if (!condition)
-    {
+    if (condition) return;
+    
+    
+    if (fatal) {
+      
       cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!> FATAL ERROR <!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
       if (message.length() > 0) cerr << message << endl;
-      cerr << "FILE: " << file << "   LINE: " << line << endl;
+      if (file && base_file && line) {
+        cerr << "FILE: " << file << "   LINE: " << line << endl;
+      }
       cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
-#ifdef DEBUG
-      assert(false);
-#else
-      exit(0);
-#endif
-    }
-  }
-  
-  inline void  my_warning_handler(bool condition, const char *file, const char *base_file, int line, const string& message = "")
-  {
-    (void)base_file;
-    if (!condition)
-    {
+
+    } else {
       cerr << "----------------------------------> WARNING <-----------------------------------" << endl;
       if (message.length() > 0) cerr << message << endl;
       if (file && base_file && line) {
         cerr << "FILE: " << file << "   LINE: " << line << endl;
       }
       cerr << "--------------------------------------------------------------------------------" << endl;
+
+    }
+    
+    if (include_backtrace) {
+      void *array[20];
+      size_t size;
+      char **strings;
+      size_t i;
+      
+      size = backtrace(array, 20);
+      strings = backtrace_symbols(array, size);
+      
+      printf ("Backtrace with %zd stack frames.\n", size);
+      
+      for (i = 0; i < size; i++)
+        cerr << strings[i] << endl;
+      
+      free (strings);
+      
+      if (fatal) {
+        cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+      } else {
+        cerr << "--------------------------------------------------------------------------------" << endl;
+      }
+    }
+      
+    if (fatal) {
+#ifdef DEBUG
+    assert(false);
+#else
+    exit(0);
+#endif
     }
   }
   
-#define ASSERT(condition, message) { my_assertion_handler( condition,  __FILE__, __BASE_FILE__, __LINE__, message); }
-#define ERROR(message) { my_assertion_handler( false,  __FILE__, __BASE_FILE__, __LINE__, message); }
-#define WARN(message) { my_warning_handler( false,  NULL, NULL, 0, message); }
-#define CHECK(condition, message) { my_warning_handler( condition,  __FILE__, __BASE_FILE__, __LINE__, message); }
+  inline void seg_fault_handler(int sig) {
+    
+    my_error_handler(false, true, true, NULL, NULL, 0 , "Segmentation Fault (Signal: " + to_string(sig) + ")");
+  }
+  
+  
+// Fatal versions, always add backtrace
+#define ASSERT(condition, message) { my_error_handler( condition, true, true, __FILE__, __BASE_FILE__, __LINE__, message); }
+#define ERROR(message) { my_error_handler( false, true, true, __FILE__, __BASE_FILE__, __LINE__, message); }
+  
+// Nonfatal versions, add backtrace if requested
+#define CHECK(condition, message) { my_error_handler( condition, false, false, __FILE__, __BASE_FILE__, __LINE__, message); }
+#define WARN(message) { my_error_handler( false,  false, false, NULL, NULL, 0, message); }
+#define WARN_WITH_BACKTRACE(message) { my_error_handler( false, false, true, __FILE__, __BASE_FILE__, __LINE__, message); }
   
   // There are three ways to represent a base.
   // We use typing to prevent coding errors when converting.

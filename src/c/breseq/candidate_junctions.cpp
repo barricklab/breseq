@@ -50,6 +50,7 @@ namespace breseq {
   
  uint32_t eligible_read_alignments(const Settings& settings, const cReferenceSequences& ref_seq_info, alignment_list& alignments, bool junction_mode, int32_t min_match_score)
   {
+
     bool verbose = false;
     
     if (alignments.size() == 0) return 0;

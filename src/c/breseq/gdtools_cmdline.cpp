@@ -3349,6 +3349,7 @@ int do_deleted_genes(int argc, char* argv[])
                                             
 int main(int argc, char* argv[]) {
 	
+	signal(SIGSEGV, seg_fault_handler);
 	Settings::set_global_paths(argc, argv);
 	
 	//Extract the sub-command argument.
