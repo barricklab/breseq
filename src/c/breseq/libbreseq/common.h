@@ -23,6 +23,7 @@ LICENSE AND COPYRIGHT
 
 // C
 #include <execinfo.h>
+#include <signal.h>
 #include <assert.h>
 #include <libgen.h>
 #include <limits.h>
