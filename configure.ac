@@ -68,39 +68,55 @@ AC_CHECK_FUNCS([bzero gethostbyaddr gethostbyname memmove memset pow select sock
 AC_SEARCH_LIBS([deflateSetHeader], [z], [], [AC_MSG_ERROR(["libz >=1.2.2.1 is required."])])
 AC_SEARCH_LIBS([acosf], [m], [], [AC_MSG_ERROR(["libm is required."])])
 AC_SEARCH_LIBS([pthread_create], [pthread], [], [AC_MSG_ERROR(["libpthread is required."])])
-#AC_SEARCH_LIBS([_Unwind_Backtrace], [unwind], [AC_DEFINE([HAVE_LIBUNWIND],[1],[Lib unwind])], [])
 
-AC_MSG_CHECKING([for target architecture])
-case x"$target" in
-xNONE | x)
-target_or_host="$host" ;;
-*)
-target_or_host="$target" ;;
-esac
-AC_MSG_RESULT([$target_or_host])
+#Find libunwind
+AC_CHECK_HEADER(libunwind.h, FOUND_LIBUNWIND_H=1)
+AC_SEARCH_LIBS([unw_getcontext], [unwind], FOUND_LIBUNWIND=1,  FOUND_LIBUNWIND=0)
 
-case "$target_or_host" in
-i*86-*)
-TARGET_PLATFORM="x86"
-;;
+if [[ $FOUND_LIBUNWIND == 0 ]]; then
 
-x86_64-*)
-TARGET_PLATFORM="x86_64"
-;;
+    AC_MSG_CHECKING([libunwind])
+    AC_MSG_CHECKING([for target architecture])
+    case x"$target" in
+    xNONE | x)
+    target_or_host="$host" ;;
+    *)
+    target_or_host="$target" ;;
+    esac
+    AC_MSG_RESULT([$target_or_host])
 
-arm-*)
-TARGET_PLATFORM="arm"
-;;
-esac
+    case "$target_or_host" in
+    i*86-*)
+    TARGET_PLATFORM="x86"
+    ;;
+
+    x86_64-*)
+    TARGET_PLATFORM="x86_64"
+    ;;
+
+    arm-*)
+    TARGET_PLATFORM="arm"
+    ;;
+    esac
+
+    AC_SEARCH_LIBS([_UL${TARGET_PLATFORM}_step], [unwind], FOUND_LIBUNWIND=1, [])
+    
+    if [[ $FOUND_LIBUNWIND == 1 ]]; then
+        UNWIND_LIBS="-lunwind-$TARGET_PLATFORM"
+        AC_SUBST(UNWIND_LIBS)
+    fi
+fi
 
 
-AC_CHECK_HEADER(libunwind.h,
-UNWIND_LIBS="-lunwind-$TARGET_PLATFORM -lunwind",
-AC_MSG_ERROR([
-*** libunwind header files missing ***]))
-AC_SUBST(UNWIND_LIBS)
 
-AC_SEARCH_LIBS([_UL${TARGET_PLATFORM}_step], [unwind], [AC_DEFINE([HAVE_LIBUNWIND],[1],[Lib unwind])], [])
+if [[ $FOUND_LIBUNWIND == 1 ]] && [[ $FOUND_LIBUNWIND_H == 1 ]]; then
+    AC_MSG_RESULT([Using libunwind.h for backtrace.])
+    AC_DEFINE([HAVE_LIBUNWIND],[1],[Lib unwind])
+else
+    AC_MSG_RESULT([Using execinfo.h for backtrace.])
+fi
+
+
 
 
 # This code could be used to check for an existing samtools/libbam.a
