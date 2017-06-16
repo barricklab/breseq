@@ -55,12 +55,12 @@ namespace breseq {
     // Utility function for checking and correcting bounds
     void correct_coordinate_bounds(int64_t &pos_1) const {
       if (pos_1 < 1) {
-        WARN_WITH_BACKTRACE("Coordinate (" + to_string(pos_1) + ") requested for get_sequence_1 is < 1.");
+        WARN_WITH_BACKTRACE("Coordinate (" + to_string<int64_t>(pos_1) + ") requested for get_sequence_1 is < 1.");
         pos_1 = 1;
       }
       
       if (pos_1 > (int64_t)(m_sequence.length())) {
-        WARN_WITH_BACKTRACE("Coordinate (" + to_string(pos_1) + ") requested for get_sequence_1 is > length of sequence (" + to_string(m_sequence.length()) + ") .");
+        WARN_WITH_BACKTRACE("Coordinate (" + to_string<int64_t>(pos_1) + ") requested for get_sequence_1 is > length of sequence (" + to_string(m_sequence.length()) + ") .");
         pos_1 = m_sequence.length();
       }
       
@@ -69,7 +69,7 @@ namespace breseq {
     void correct_range_bounds(int64_t &start_1, int64_t &end_1) const {
       
       if (start_1 > end_1) {
-        WARN_WITH_BACKTRACE("Start coordinate (" + to_string(start_1) + ") is > end coordinate (" + to_string(end_1) + ") for range.");
+        WARN_WITH_BACKTRACE("Start coordinate (" + to_string<int64_t>(start_1) + ") is > end coordinate (" + to_string<int64_t>(end_1) + ") for range.");
         end_1 = start_1;
       }
     }
