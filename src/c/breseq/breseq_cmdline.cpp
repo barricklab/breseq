@@ -20,8 +20,6 @@ LICENSE AND COPYRIGHT
 #include <string>
 #include <vector>
 
-#include "config.h"
-
 #include "libbreseq/anyoption.h"
 #include "libbreseq/alignment_output.h"
 #include "libbreseq/reference_sequence.h"

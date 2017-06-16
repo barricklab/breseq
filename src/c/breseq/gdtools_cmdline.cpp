@@ -16,8 +16,6 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
-#include "config.h"
-
 #include "libbreseq/common.h"
 #include "libbreseq/settings.h"
 #include "libbreseq/anyoption.h"

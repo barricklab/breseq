@@ -21,9 +21,10 @@ LICENSE AND COPYRIGHT
 
 // System headers
 
+#include <config.h>
+
 // C
 #include <signal.h>
-#include <libunwind.h>
 #include <assert.h>
 #include <libgen.h>
 #include <limits.h>
@@ -36,6 +37,10 @@ LICENSE AND COPYRIGHT
 #include <limits.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+
+#if HAVE_LIBUNWIND
+  #include <libunwind.h>
+#endif
 
 // C++
 // Containers
@@ -106,6 +111,7 @@ namespace breseq {
       
     }
     
+#if HAVE_LIBUNWIND
     if (include_backtrace) {
 
       if (fatal) {
@@ -114,7 +120,6 @@ namespace breseq {
         cerr << "--------------------------------> STACK TRACE <---------------------------------" << endl;
       }
 
-      
       unw_cursor_t    cursor;
       unw_context_t   context;
       
@@ -131,41 +136,44 @@ namespace breseq {
         fname[0] = '\0';
         (void) unw_get_proc_name(&cursor, fname, sizeof(fname), &offset);
         cerr << "0x" << hex << setw(16) << setfill('0') << pc << " " << fname << endl;
-        //printf ("%llu : (%s+0x%llx) [%llu]\n", pc, fname, offset, pc);
       }
     }
+    
+#else
+    //Alternative fallback version which uses backtrace_symbols
+    //This doesn't work with statically linked libraries.
+  
+    if (include_backtrace) {
+      
+      if (fatal) {
+        cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!> STACK TRACE <!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+      } else {
+        cerr << "--------------------------------> STACK TRACE <---------------------------------" << endl;
+      }
+      
+      void *array[20];
+      size_t size;
+      char **strings;
+      size_t i;
+      
+      size = backtrace(array, 20);
+      strings = backtrace_symbols(array, size);
+      
+      printf ("Backtrace with %zd stack frames.\n", size);
+      
+      for (i = 0; i < size; i++)
+        cerr << strings[i] << endl;
+      
+      free (strings);
+    }
+#endif
     
     if (fatal) {
       cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
     } else {
       cerr << "--------------------------------------------------------------------------------" << endl;
     }
-    
-// Alternative version which uses backtrace_symbols
-// This doesn't work with statically linked libraries.
-  
-//    if (include_backtrace) {
-//      void *array[20];
-//      size_t size;
-//      char **strings;
-//      size_t i;
-//      
-//      size = backtrace(array, 20);
-//      strings = backtrace_symbols(array, size);
-//      
-//      printf ("Backtrace with %zd stack frames.\n", size);
-//      
-//      for (i = 0; i < size; i++)
-//        cerr << strings[i] << endl;
-//      
-//      free (strings);
-//      
-//      if (fatal) {
-//        cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
-//      } else {
-//        cerr << "--------------------------------------------------------------------------------" << endl;
-//      }
-//    }
+
     
     if (fatal) {
 #ifdef DEBUG
