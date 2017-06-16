@@ -22,8 +22,8 @@ LICENSE AND COPYRIGHT
 // System headers
 
 // C
-#include <execinfo.h>
 #include <signal.h>
+#include <libunwind.h>
 #include <assert.h>
 #include <libgen.h>
 #include <limits.h>
@@ -96,7 +96,6 @@ namespace breseq {
       if (file && base_file && line) {
         cerr << "FILE: " << file << "   LINE: " << line << endl;
       }
-      cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
 
     } else {
       cerr << "----------------------------------> WARNING <-----------------------------------" << endl;
@@ -104,33 +103,70 @@ namespace breseq {
       if (file && base_file && line) {
         cerr << "FILE: " << file << "   LINE: " << line << endl;
       }
-      cerr << "--------------------------------------------------------------------------------" << endl;
-
+      
     }
     
     if (include_backtrace) {
-      void *array[20];
-      size_t size;
-      char **strings;
-      size_t i;
-      
-      size = backtrace(array, 20);
-      strings = backtrace_symbols(array, size);
-      
-      printf ("Backtrace with %zd stack frames.\n", size);
-      
-      for (i = 0; i < size; i++)
-        cerr << strings[i] << endl;
-      
-      free (strings);
-      
+
       if (fatal) {
-        cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+        cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!> STACK TRACE <!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
       } else {
-        cerr << "--------------------------------------------------------------------------------" << endl;
+        cerr << "--------------------------------> STACK TRACE <---------------------------------" << endl;
+      }
+
+      
+      unw_cursor_t    cursor;
+      unw_context_t   context;
+      
+      unw_getcontext(&context);
+      unw_init_local(&cursor, &context);
+      
+      while (unw_step(&cursor) > 0)
+      {
+        unw_word_t  offset, pc;
+        char        fname[64];
+        
+        unw_get_reg(&cursor, UNW_REG_IP, &pc);
+        
+        fname[0] = '\0';
+        (void) unw_get_proc_name(&cursor, fname, sizeof(fname), &offset);
+        cerr << "0x" << hex << setw(16) << setfill('0') << pc << " " << fname << endl;
+        //printf ("%llu : (%s+0x%llx) [%llu]\n", pc, fname, offset, pc);
       }
     }
-      
+    
+    if (fatal) {
+      cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+    } else {
+      cerr << "--------------------------------------------------------------------------------" << endl;
+    }
+    
+// Alternative version which uses backtrace_symbols
+// This doesn't work with statically linked libraries.
+  
+//    if (include_backtrace) {
+//      void *array[20];
+//      size_t size;
+//      char **strings;
+//      size_t i;
+//      
+//      size = backtrace(array, 20);
+//      strings = backtrace_symbols(array, size);
+//      
+//      printf ("Backtrace with %zd stack frames.\n", size);
+//      
+//      for (i = 0; i < size; i++)
+//        cerr << strings[i] << endl;
+//      
+//      free (strings);
+//      
+//      if (fatal) {
+//        cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+//      } else {
+//        cerr << "--------------------------------------------------------------------------------" << endl;
+//      }
+//    }
+    
     if (fatal) {
 #ifdef DEBUG
     assert(false);

@@ -19,7 +19,7 @@
 BRESEQDATADIR= $(DESTDIR)$(datadir)/$(PACKAGE_NAME)
 BRESEQRELATIVEDATADIR= $(BIN_TO_DATA_RELATIVE_PATH)/$(PACKAGE_NAME)
 
-AM_CPPFLAGS = -g -I$(top_srcdir)/$(LIBBAM) -I$(top_srcdir)/$(HTSLIB) -I$(top_srcdir)/aux_build -DDATADIR=\"$(BRESEQRELATIVEDATADIR)/\"
+AM_CPPFLAGS = -I$(top_srcdir)/$(LIBBAM) -I$(top_srcdir)/$(HTSLIB) -I$(top_srcdir)/aux_build -DDATADIR=\"$(BRESEQRELATIVEDATADIR)/\"
 
 noinst_LTLIBRARIES = libbreseq.la
 libbreseq_la_SOURCES = \
