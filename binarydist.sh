@@ -3,18 +3,18 @@ BRESEQVERSIONSTRING=`perl -ne 's/AC_INIT\(\[(.+?)\].+?\[(.+?)\].+/\1-\2/ && prin
 ./bootstrap.sh
 BINARYPLATFORM=`uname`
 BINARYARCH=`arch`
-MYCFLAGS="$CFLAGS"
+ARCHFLAGS=""
 BINARYNAME=${BINARYPLATFORM}-${BINARYARCH}
 if [ "$BINARYPLATFORM" == "Darwin" ]; then
 	BINARYARCH="universal"
-	MYCFLAGS="-arch i386 -arch x86_64 -mmacosx-version-min=10.7"
+	ARCHFLAGS="-arch i386 -arch x86_64 -mmacosx-version-min=10.7"
 	BINARYNAME="MacOSX-10.7+"
 fi
 
 BINARYLOCALDIR=${BRESEQVERSIONSTRING}-${BINARYNAME}
 BINARYDIR=${PWD}/${BINARYLOCALDIR}
 rm -r ${BINARYDIR} ${BINARYDIR}.tgz
-./configure CFLAGS="${MYCFLAGS}" CXXFLAGS="${MYCFLAGS}" LDFLAGS="${MYCFLAGS}" --prefix="${BINARYDIR}"
+./configure CFLAGS="${CFLAGS} $ARCHFLAGS" CXXFLAGS="${CXXFLAGS} $ARCHFLAGS" LDFLAGS="${LDFLAGS} $ARCHFLAGS" --prefix="${BINARYDIR}"
 make clean
 make -j 6
 make test 
