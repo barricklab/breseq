@@ -76,7 +76,7 @@ libbreseq_la_SOURCES = \
 	libbreseq/settings.h \
 	libbreseq/storable.h \
 	libbreseq/summary.h 
-libbreseq_la_LIBADD = $(top_builddir)/$(HTSLIB)/libhts.la $(top_builddir)/$(LIBBAM)/libbam.la
+libbreseq_la_LIBADD = $(UNWIND_LIBS) $(top_builddir)/$(HTSLIB)/libhts.la $(top_builddir)/$(LIBBAM)/libbam.la
 
 LDADD = libbreseq.la
 

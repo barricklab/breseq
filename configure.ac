@@ -68,7 +68,39 @@ AC_CHECK_FUNCS([bzero gethostbyaddr gethostbyname memmove memset pow select sock
 AC_SEARCH_LIBS([deflateSetHeader], [z], [], [AC_MSG_ERROR(["libz >=1.2.2.1 is required."])])
 AC_SEARCH_LIBS([acosf], [m], [], [AC_MSG_ERROR(["libm is required."])])
 AC_SEARCH_LIBS([pthread_create], [pthread], [], [AC_MSG_ERROR(["libpthread is required."])])
-AC_SEARCH_LIBS([unw_getcontext], [unwind], [AC_DEFINE([HAVE_LIBUNWIND],[1],[Lib unwind])], [])
+#AC_SEARCH_LIBS([_Unwind_Backtrace], [unwind], [AC_DEFINE([HAVE_LIBUNWIND],[1],[Lib unwind])], [])
+
+AC_MSG_CHECKING([for target architecture])
+case x"$target" in
+xNONE | x)
+target_or_host="$host" ;;
+*)
+target_or_host="$target" ;;
+esac
+AC_MSG_RESULT([$target_or_host])
+
+case "$target_or_host" in
+i*86-*)
+TARGET_PLATFORM="x86"
+;;
+
+x86_64-*)
+TARGET_PLATFORM="x86_64"
+;;
+
+arm-*)
+TARGET_PLATFORM="arm"
+;;
+esac
+
+
+AC_CHECK_HEADER(libunwind.h,
+UNWIND_LIBS="-lunwind-$TARGET_PLATFORM -lunwind",
+AC_MSG_ERROR([
+*** libunwind header files missing ***]))
+AC_SUBST(UNWIND_LIBS)
+
+AC_SEARCH_LIBS([_UL${TARGET_PLATFORM}_step], [unwind], [AC_DEFINE([HAVE_LIBUNWIND],[1],[Lib unwind])], [])
 
 
 # This code could be used to check for an existing samtools/libbam.a
