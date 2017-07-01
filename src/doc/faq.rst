@@ -33,3 +33,25 @@ When |breseq| is run in **polymorphism mode** (by supplying the **--polymorphism
 it uses a statistical approach that finds the maximum likelihood best frequency over the entire range 0-100%. 
 If the prediction of a polymorphism fails some filtering steps (controlled by options) than it is rejected as a
 polymorphism and changed to a consensus prediction with 0% or 100% frequency.
+
+Why am I seeing a lot of junction (JC) predictions and no mobile element (MOB) mutations?
+---------------------------------------------------------------------------------------------
+|breseq| needs to recognize how mobile elements (such as bacterial insertion sequences) are annotated in the
+reference genome file. The syntax for doing this is less standardized than it is for annotating genes, but |breseq|
+tries to be flexible. For predicting MOB mutations, it will use any annotation item with a major type
+of ``repeat_region`` or ``mobile_element``. To determine the name of the mobile element, it will look for a sub-tag in 
+this annotation item matching: ``label``, ``note``, ``mobile_element``, ``mobile_element_type``, or ``rpt_family``. For
+proper predictions of MOBs by matching together JC predictions, all elements in the same family should have the same name.
+  
+For example, here are two common ways that IS elements are annotated in GenBank files. Both are recognized by |breseq|.
+ 
+.. code-block:: text
+
+   repeat_region   15387..16731
+                   /mobile_element="insertion sequence:IS186A"
+   
+   mobile_element  321573..322809
+                   /mobile_element_type="insertion sequence:IS1236"
+
+If you find another common way that mobile elements are annotated in your input files, feel free to add a feature 
+request on GitHub for |breseq| to recognize this format.
