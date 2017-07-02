@@ -251,7 +251,7 @@ First, it is generally overdispersed relative to a Poisson distribution, e.g., t
 
 Second, there may be real mutations in the sample that affect the observed coverage distribution, such as large deletions and duplications. Deletions will add weight to the low end of the distribution because they cause reference positions to have zero or very low coverage. Non-zero coverage in true deletions is sometimes present in practice because there may be a small amount of contaminating DNA from a different sample that does not have this deletion or high error rate reads may spuriously map there. Duplications and amplifications will add weight to the distribution at higher coverage values.
 
-|breseq| fits a  negative binomial distribution (an overdispersed Poisson distribution) to the read coverage depth observed at unique-only reference positions. It uses left censored data to mitigate the effects of deleted regions on the overall fit. The threshold for censoring is determined by first finding the read depth with the maximum representaton in the distribution after smoothing using a moving average window size of 5 bases. Positions with coverage less than half this maximal read depth are ignored during fitting.
+For a normal sample, |breseq| attempts to fit a negative binomial distribution (an overdispersed Poisson distribution) to the read coverage depth observed at unique-only reference positions for each reference sequence (e.g., chromosome). It uses left censored data to mitigate the effects of deleted regions on the overall fit. The threshold for censoring is determined by first finding the read depth with the maximum representaton in the distribution after smoothing using a moving average window size of 5 bases. Positions with coverage less than half this maximal read depth are ignored during fitting.
 
 .. figure:: images/coverage_distribution.png
    :width: 500px
@@ -261,6 +261,10 @@ Second, there may be real mutations in the sample that affect the observed cover
    **Example of coverage distributon fit.**
 
 In this example of real data, circles represent the number of positions in the reference with a given depth of read coverage. Data points that were censored during fitting are shown in red. The solid line is the least-squares best fit of a negative binomial distribution, and the dashed line is the best Poisson fit.
+
+If a draft genome sequence is used as a reference, it may have short contigs for which this distribution cannot be fit. You should use the ``-c`` option in place of the ``-r`` option for this reference file to notify |breseq| that this is the case so that it will fit the coverage distribution of all reference sequences in that input file together (e.g., as one chromosome).
+
+It is possible that the fitting procedure will fail for certain highly biased data or when coverage is very low for a certain reference sequence. For example, if you have done a pull-down of only certain regions of a chromosome (like in exon sequencing). In this case, |breseq| will fall back to a rougher estimate of the coverage and cutoffs for calling deletions or it may call the entire reference sequence as deleted (and not call mutations in it). If you are doing targeted sequencing, you should use the ``-t`` option so that |breseq| will call mutations in these sequences no matter what coverage distribution looks like (naturally, deletion mutations will not be called in this case).
 
 Seed and extend algorithm
 *************************
