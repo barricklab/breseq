@@ -62,13 +62,15 @@ pileup_base::pileup_base(const string& bam, const string& fasta)
   m_downsample(0), m_last_tid(static_cast<uint32_t>(-1)), m_print_progress(false)
 {
 	m_bam = samopen(bam.c_str(), "rb", 0);
-	assert(m_bam);
+  ASSERT(m_bam, "Could not load bam file: " + bam + "\nCheck that file exists and is in right format!");
+  
+  //m_bam_file = m_bam->x.bam;
   
   m_bam_file = bam_open(bam.c_str(), "r");
-  assert(m_bam_file);
+  ASSERT(m_bam_file, "Could not load bam file: " + bam + "\nCheck that file exists and is in right format!");
   
   m_bam_index = bam_index_load(bam.c_str());
-  assert(m_bam_index);
+  ASSERT(m_bam_index, "Could not load bam index file: " + bam + "\nCheck to be sure " + bam + ".bai exists!");
 
   m_bam_header = bam_header_read(m_bam_file);
   assert(m_bam_header);

@@ -45,9 +45,13 @@ bool alignment_wrapper::is_redundant() const {
 
 
 /*! Number of redundancies at this alignment.
+    Defaults to 1 when custome breseq tag is missing
  */
 uint32_t alignment_wrapper::redundancy() const {
-	return bam_aux2i(bam_aux_get(_a,"X1"));
+      
+  uint8_t *aux = bam_aux_get(_a, "X1");
+  if (aux == NULL) return 1;
+  return bam_aux2i(aux);
 }
 
 
