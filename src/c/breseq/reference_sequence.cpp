@@ -681,7 +681,7 @@ namespace breseq {
       if ( ((*feat_p)["type"] == "repeat_region") || ((*feat_p)["type"] == "mobile_element") )
       {
         this->m_repeats.push_back(feat_p);
-        ASSERT(feat_p->m_locations.size() == 1, "Repeat feature must have only one location: " + (*feat_p)["accession"] );
+        ASSERT(feat_p->m_locations.size() == 1, "Repeat feature must have only one location: " + (*feat_p)["accession"] + "\nPlease rename the duplicates so that they have unique locus_tags & names, e.g., gene_1 and gene_2" );
         
         this->m_repeat_locations.insert(this->m_repeat_locations.end(), feat_p->m_locations.begin(), feat_p->m_locations.end());
       }

@@ -335,6 +335,8 @@ namespace breseq {
   inline istream& getline(istream& is, string& str) {
     std::getline(is, str);
     
+    if (str.size() == 0) return is;
+      
     if( str[str.size()-1] == '\r') {
       str.resize(str.size()-1);
     }
