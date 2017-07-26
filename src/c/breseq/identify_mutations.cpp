@@ -626,7 +626,7 @@ identify_mutations_pileup::~identify_mutations_pileup()
 {
 }
 
-/*! Called for each alignment.
+/*! Called for each reference genome position.
  */
 void identify_mutations_pileup::pileup_callback(const pileup& p) {
   

@@ -80,8 +80,8 @@ LICENSE AND COPYRIGHT
 #define _base_bam_is_N(x) (x == 0x0f)
 #define _base_char_is_N(x) (x == 'N')
 
-#define UNDEFINED_UINT32 UINT_MAX
-#define UNDEFINED_INT32 INT_MAX
+#define UNDEFINED_UINT32 0xFFFFFFFF
+#define UNDEFINED_INT32 0x80000000
 
 using namespace std;
 
