@@ -1,22 +1,20 @@
-###
-##
-## NAME
-##
-## polymorphism_statistics.r
-##
-## AUTHOR
-##
-## Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
-##
-## LICENSE AND COPYRIGHT
-##
-## Copyright (c) 2011-20122010 Michigan State University
-##
-## breseq is free software; you can redistribute it and/or modify it under the terms the 
-## GNU General Public License as published by the Free Software Foundation; either 
-## version 1, or (at your option) any later version.
-##
-###
+/*****************************************************************************
+ 
+ AUTHORS
+ 
+ Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
+ David B. Knoester
+ 
+ LICENSE AND COPYRIGHT
+ 
+ Copyright (c) 2008-2010 Michigan State University
+ Copyright (c) 2011-2017 The University of Texas at Austin
+ 
+ breseq is free software; you can redistribute it and/or modify it under the
+ terms the GNU General Public License as published by the Free Software
+ Foundation; either version 1, or (at your option) any later version.
+ 
+ *****************************************************************************/
 
 ## Args should be in_file=/path/to/input out_file=/path/to/output total_length=<total_length_of_sequences>  qual_file=
 

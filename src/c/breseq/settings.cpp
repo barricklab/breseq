@@ -1,19 +1,19 @@
 /*****************************************************************************
-
-AUTHORS
-
-  Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
-  David B. Knoester
-
-LICENSE AND COPYRIGHT
-
-  Copyright (c) 2008-2010 Michigan State University
-  Copyright (c) 2011-2012 The University of Texas at Austin
-
-  breseq is free software; you can redistribute it and/or modify it under the  
-  terms the GNU General Public License as published by the Free Software 
-  Foundation; either version 1, or (at your option) any later version.
-
+ 
+ AUTHORS
+ 
+ Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
+ David B. Knoester
+ 
+ LICENSE AND COPYRIGHT
+ 
+ Copyright (c) 2008-2010 Michigan State University
+ Copyright (c) 2011-2017 The University of Texas at Austin
+ 
+ breseq is free software; you can redistribute it and/or modify it under the
+ terms the GNU General Public License as published by the Free Software
+ Foundation; either version 1, or (at your option) any later version.
+ 
  *****************************************************************************/
 
 
@@ -566,7 +566,7 @@ namespace breseq
     fprintf(stderr, "Foundation; either version 2, or (at your option) any later version.\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "Copyright (c) 2008-2010 Michigan State University\n");
-    fprintf(stderr, "Copyright (c) 2011-2016 The University of Texas at Austin\n");
+    fprintf(stderr, "Copyright (c) 2011-2017 The University of Texas at Austin\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "If you use breseq in your research, please cite:\n");
     fprintf(stderr, "\n");
