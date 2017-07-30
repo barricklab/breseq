@@ -207,7 +207,7 @@ namespace breseq {
     
 		// DEL prediction:
 		// (1) there is a junction that exactly crosses the deletion boundary
-		// (2) there is is no junction, but both ends of the deletion are in repeat sequences
+		// (2) there is no junction, but both ends of the deletion are in repeat sequences
 		// (3) there is a junction between unique sequence and a repeat element
     
     for(diff_entry_list_t::iterator mc_it = mc.begin(); mc_it != mc.end(); mc_it++)
@@ -1648,6 +1648,20 @@ namespace breseq {
 
   }
   
+  void MutationPredictor::remove_mutations_on_deleted_reference_sequences(Settings& settings, Summary& summary, cGenomeDiff& gd)
+  {
+    (void)settings;
+    
+    for (map<string,Summary::Coverage>::iterator it=summary.unique_coverage.begin(); it!=summary.unique_coverage.end(); it++) {
+      
+      // This is how we know it was deleted
+      if (it->second.deletion_coverage_propagation_cutoff >= 0.0) continue;
+      gd.remove_mutations_on_deleted_reference_sequence(it->first, ref_seq_info[it->first].get_sequence_length());
+
+    }
+  }
+  
+  
   // Normalizes INS/DEL mutations by shifting them to the highest coordinates possible
   // by repeat units.
   
@@ -1891,6 +1905,7 @@ namespace breseq {
 	{
     bool verbose = false; // for debugging
     
+    // This checks for using a bad reference and warns
     {
       vector<gd_entry_type> ev_types = make_vector<gd_entry_type>(MC)(RA)(JC)(CN);
       diff_entry_list_t ev = gd.get_list(ev_types);
@@ -1902,6 +1917,7 @@ namespace breseq {
         WARN("Large number of differences detected between the sample and the reference sequence (" + to_string<uint64_t>(num_evidence_items) + " evidence items, suggesting approximately " +  to_string(formatted_double(maximum_sequence_divergence,2)) + "% sequence divergence). If this is unexpected, check that you are using the closest available reference sequence for this sample (for example, the correct strain of a bacterial species). Mutation prediction can become less accurate with too much divergence from the reference sequence. It may also take a long time to predict mutations and generate output files.");
       }
     }
+    
     
 		///
 		//  Preprocessing of JC evidence
@@ -1968,10 +1984,16 @@ namespace breseq {
 		///
     cerr << "  Predicting small indels and substitutions from alignments..." << endl;
     predictRAtoSNPorDELorINSorSUB(settings, summary, gd, jc, mc);
-		
+    
     ///
-		// Read Alignments => SNP, DEL, INS, SUB
-		///
+    //  Check for completely deleted reference sequences
+    //  we need to be careful and not predict any mutations on these
+    //  as they can mess up shifting
+    //  @JEB: It would be better to never add these to the GenomeDiff in the first
+    //        place, but for now we strip them out at the end, leaving only
+    //        the deletion of the entire fragment and no other muts on that reference
+    ///
+    remove_mutations_on_deleted_reference_sequences(settings, summary, gd);
     
     cerr << "  Making final adjustments to mutations..." << endl;
     normalize_and_annotate_tandem_repeat_mutations(settings, summary, gd);
@@ -2141,26 +2163,36 @@ namespace breseq {
   
   void MutationPredictor::normalizeDELposition(cAnnotatedSequence& ref_seq, cDiffEntry& de, string& repeat_sequence)
   {
+    bool verbose = false;
+    
+    if (verbose)
+      cout << de << endl;
+    
     // Don't shift mediated or between mutations
     if (de.entry_exists("mediated") || de.entry_exists("between")) return;
     
-    int32_t test_position = from_string<int32_t>(de[POSITION]) + from_string<int32_t>(de[SIZE]);   
+    int32_t original_position = from_string<int32_t>(de[POSITION]);
+    int32_t test_position(original_position);
+    int32_t new_position(original_position);
     // The offset of 1 ensures we are on the first base of a possible repeat unit (relative to the reference).
     
     // attempt to move forward by repeat units at a time from the current position
+    // check to be sure the entire new repeat that we might shift mutation to is in bounds!!
+    test_position += repeat_sequence.size();
     while ( test_position + repeat_sequence.size() - 1 <= ref_seq.get_sequence_length()) {
       
       string test_sequence = ref_seq.get_sequence_1(test_position, test_position + repeat_sequence.size() - 1);
-      
-      if (test_sequence != repeat_sequence) break;
-      test_position += repeat_sequence.size();
+      if (test_sequence == repeat_sequence) {
+        new_position = test_position;
+        test_position += repeat_sequence.size();
+      } else {
+        break;
+      }
     }
     
-    string new_position = to_string<int32_t>(test_position - from_string<int32_t>(de[SIZE]));
-    
-    if (new_position != de[POSITION]) {
+    if (new_position != original_position) {
       de["_original_aligned_position"] = de[POSITION]; // Save the original position for marking in alignments
-      de[POSITION] = new_position;
+      de[POSITION] = to_string<int32_t>(new_position);
     }
     
     // This section checks for rare cases where a DEL can be written in two ways 

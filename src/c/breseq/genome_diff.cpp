@@ -2454,6 +2454,30 @@ void cGenomeDiff::remove_all_but_mutations_and_unknown()
   remove_type(CN);
   remove_type(JC);
 }
+  
+void cGenomeDiff::remove_mutations_on_deleted_reference_sequence(const string& seq_id, const int32_t seq_length)
+{
+  diff_entry_list_t::iterator it = _entry_list.begin();
+  
+  bool advance_it(true);
+  while (it != _entry_list.end()) {
+    advance_it = true;
+    
+    
+    if ((*it)->is_mutation()) {
+      if ((**it)[SEQ_ID]==seq_id) {
+        if (((*it)->_type != DEL) || ! ( ((**it)[POSITION] == "1")  && ((**it)[SIZE]==to_string<int32_t>(seq_length)) )) {
+          //cout << (**it) << endl;
+          it = remove(it);
+          advance_it = false;
+        }
+      }
+    }
+    
+    if (advance_it) ++it;
+  }
+}
+
 
 /*! Given an id return the entry if it exists. NULL otherwise.
  */ 

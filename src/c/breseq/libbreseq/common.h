@@ -80,12 +80,14 @@ LICENSE AND COPYRIGHT
 #define _base_bam_is_N(x) (x == 0x0f)
 #define _base_char_is_N(x) (x == 'N')
 
-#define UNDEFINED_UINT32 0xFFFFFFFF
-#define UNDEFINED_INT32 0x80000000
+
 
 using namespace std;
 
 namespace breseq {
+  
+  const uint32_t UNDEFINED_UINT32 = 0xFFFFFFFF;
+  const int32_t UNDEFINED_INT32 = 0x80000000;
 	
   // These are our own local wrappers for common functions.
   

@@ -655,6 +655,9 @@ public:
   
   void remove_all_but_mutations_and_unknown();
   
+  //! Remove all mutations except for deletions of the entire sequence
+  void remove_mutations_on_deleted_reference_sequence(const string& seq_id, const int32_t sequence_length);
+  
   //!---- Accessing Entries ---- !//
   
   diff_entry_ptr_t find_by_id(string _id);
@@ -669,6 +672,7 @@ public:
   diff_entry_list_t show_list(const vector<gd_entry_type>& types = vector<gd_entry_type>());
   
   //! Returns _entry_list with matching item._evidence
+  //  (That is, any entries using 'item' as evidence)
   diff_entry_list_t mutation_evidence_list(const cDiffEntry& item);
   
   diff_entry_list_t mutation_list();
