@@ -70,6 +70,8 @@ v = 0
 D = 0
 deletion_propagation_coverage = -1
 
+min_fraction_included_in_nb_fit = 0.01
+
 #load data
 X<-read.table(distribution_file, header=T)
 
@@ -292,18 +294,29 @@ if ((nb_fit_mu < 0) || (nb_fit_size < 0) || (nb_fit$code != 1))
 ## things can go wrong with fitting and we can still end up with invalid values
 
 fit_nb = c()
+included_fract = 0
 if (nb_fit_mu > 0)
 {
   end_fract = pnbinom(end_i_for_fits, mu = nb_fit_mu, size=nb_fit_size)
   start_fract = pnbinom(start_i_for_fits, mu = nb_fit_mu, size=nb_fit_size)
   included_fract = end_fract-start_fract;
 
-  ## Adjust so that we are back in full coords before making fit!!
-  if (num_per_bin > 1) 
-  {
-    nb_fit_mu = nb_fit_mu * num_per_bin
+  if (included_fract >= 0.01) {
+
+    ## Adjust so that we are back in full coords before making fit!!
+    if (num_per_bin > 1) 
+    {
+      nb_fit_mu = nb_fit_mu * num_per_bin
+    }
+    fit_nb = dnbinom(0:max(X$coverage), mu = nb_fit_mu, size=nb_fit_size)*inner_total/included_fract;
   }
-  fit_nb = dnbinom(0:max(X$coverage), mu = nb_fit_mu, size=nb_fit_size)*inner_total/included_fract;
+}
+
+## If an insufficient amount of fit was included, then invalidate it
+if (included_fract < 0.01)
+{
+  nb_fit_mu = 0
+  nb_fit_size = 0
 }
 
 f_p <- function(par) {
