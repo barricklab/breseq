@@ -1,7 +1,7 @@
-Version 0.30.3
-   * Fixed critical error that could give negative positions when a reference sequence fragment
-     was called as deleted.
-   * Fixed  rare case where fitting coverage distribution could lead to fatal error.
+Version 0.31.0
+   * Fixed critical error that could give negative positions for mutations when a reference sequence 
+     fragment was called as deleted.
+   * Fixed several cases where fitting coverage distribution could fail or lead to a fatal error.
 
 Version 0.30.2
    * Improved robustness of fitting coverage distribution and added fallbacks if fitting fails.

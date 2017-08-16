@@ -465,14 +465,20 @@ if (nb_fit_mu > 0) {
   cat("Mu estimate=", m," Size estimate =", size_estimate, "\n")
   deletion_propagation_coverage = qnbinom(deletion_propagation_pr_cutoff, size = size_estimate, mu = m)
   if (is.nan(deletion_propagation_coverage) || (deletion_propagation_coverage < 1)) {
-    cat("Double fallback to calculating as just 20% of the mean\n")
-    deletion_propagation_coverage = m * 0.2 
+    cat("Double fallback to calculating as just 10% of the mean\n")
+    deletion_propagation_coverage = m * 0.1
   }
 }
 
-#Call it as deleted if this number is also basically zero, implying very low coverage
+#Don't allow one read to indicate non-deleted regions
 if (deletion_propagation_coverage < 1) {
-    deletion_propagation_coverage = -1
+    deletion_propagation_coverage = 1
+}
+
+#This works fine with the negative values
+#If we have both low fit coverage and low straight average coverage then we're deleted...
+if ( (nb_fit_mu <= 3) && (m <= 3) ) {
+  deletion_propagation_coverage = -1
 }
 
 #print out statistics
