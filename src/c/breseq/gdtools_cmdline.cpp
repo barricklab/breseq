@@ -2784,12 +2784,12 @@ int do_runfile(int argc, char *argv[])
 						ss << " && cat";
 						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P1.fastq";
 						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U1.fastq";
-						ss << " >> " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped();
+						ss << " > " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped();
 						
 						ss << " && cat";
 						ss << " " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name_no_extension(true, true) + "_P2.fastq";
 						ss << " " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name_no_extension(true, true) + "_U2.fastq";
-						ss << " >> " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name_unzipped();
+						ss << " > " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name_unzipped();
 						
 						ss << " && rm";
 						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P1.fastq";
@@ -2802,12 +2802,12 @@ int do_runfile(int argc, char *argv[])
 						ss << " && cat";
 						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P1.fastq.gz";
 						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U1.fastq.gz";
-						ss << " >> " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name();
+						ss << " > " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name();
 						
 						ss << " && cat";
 						ss << " " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name_no_extension(true, true) + "_P2.fastq.gz";
 						ss << " " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name_no_extension(true, true) + "_U2.fastq.gz";
-						ss << " >> " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name();
+						ss << " > " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name();
 						
 						ss << " && rm";
 						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P1.fastq.gz";
