@@ -32,7 +32,7 @@ Reference sequence
 Read files
 ++++++++++++++
 
-We're going to use Illumina genome re-sequencing data from mixed populations that evolved for up to 40,000 generations in a long-term evolution experiment [Blount2008]_ [Blount2011]_. This data is available in the European Nucleotide Archive (ENA). Go to http://www.ebi.ac.uk/ and search for the accession number: **SRR030257**. Then click on the accession number to open the record and download the two FASTQ files using the links in the 'ftp' column. 
+We're going to use Illumina genome re-sequencing data from mixed populations that evolved for up to 40,000 generations in a long-term evolution experiment [Blount2008]_ [Blount2011]_. This data is available in the European Nucleotide Archive (ENA). Go to http://www.ebi.ac.uk/ and search for the accession number: **SRR1721884**. Then click on the accession number to open the record and download the two FASTQ files using the links in the 'ftp' column. 
 
 This particular sample was taken at 20,000 generations from population Ara-3. You'll use it to illustrate running |breseq| in polymorphism mode and the consequences of different filtering options for ruling out false-positives. If you would like to access the entire time-series of population samples from this population check out `SRP051254 <http://www.ebi.ac.uk/ena/data/view/SRP051254>`_.
 
@@ -50,15 +50,15 @@ Now, run |breseq| using this command:
 
 .. code-block:: bash
 
-   $ breseq -j 8 -p -o REL8593M-default -r REL606.gbk SRR030257_1.fastq SRR030257_2.fastq
+   $ breseq -j 8 -p -o REL8595M-default -r REL606.gbk SRR030257_1.fastq SRR030257_2.fastq
 
 This command is expected to take roughly 30 minutes to an hour to complete.
 
 .. note::
 
-   If you are unable to complete this command, please download the `output for REL8593M-default <http://barricklab.org/release/breseq_tutorial/REL8593M-default.tgz>`_ to continue the tutorial.
+   If you are unable to complete this command, please download the `output for REL8595M-default <http://barricklab.org/release/breseq_tutorial/REL8595M-default.tgz>`_ to continue the tutorial.
 
-Open ``REL8593M-default/output/index.html``. Examine the mutation lines that are highlighted in green, which are predicted to be polymorphic in the mixed population sample (the predicted allele has an estimated maximum likelihood frequency between 0% and 100%). Click on some of the **RA** and **JC** links for these items. How are they different from those that you observed when |breseq| was run in consensus mode on a clone?
+Open ``REL8595M-default/output/index.html``. Examine the mutation lines that are highlighted in green, which are predicted to be polymorphic in the mixed population sample (the predicted allele has an estimated maximum likelihood frequency between 0% and 100%). Click on some of the **RA** and **JC** links for these items. How are they different from those that you observed when |breseq| was run in consensus mode on a clone?
 
 3. Run |breseq| with no filters
 ----------------------------------
@@ -77,13 +77,13 @@ The relevant options are listed under **Polymorphism (Mixed Population) Options*
 
 .. code-block:: bash
 
-   $ breseq -j 8 -p --polymorphism-reject-indel-homopolymer-length 0 --polymorphism-reject-surrounding-homopolymer-length 0 --polymorphism-bias-cutoff 0 --polymorphism-minimum-coverage-each-strand 0 -o REL8593M-no-filters -r REL606.gbk SRR030257_1.fastq SRR030257_2.fastq
+   $ breseq -j 8 -p --polymorphism-reject-indel-homopolymer-length 0 --polymorphism-reject-surrounding-homopolymer-length 0 --polymorphism-bias-cutoff 0 --polymorphism-minimum-coverage-each-strand 0 -o REL8595M-no-filters -r REL606.gbk SRR030257_1.fastq SRR030257_2.fastq
 
 This command is expected to take roughly 30 minutes to an hour to complete.
 
 .. note::
 
-   If you are unable to complete this command, please download the `output for REL8593M-no-filters <http://barricklab.org/release/breseq_tutorial/REL8593M-no-filters.tgz>`_ to continue the tutorial.
+   If you are unable to complete this command, please download the `output for REL8595M-no-filters <http://barricklab.org/release/breseq_tutorial/REL8595M-no-filters.tgz>`_ to continue the tutorial.
 
 4. Compare predictions of mutations
 -----------------------------------
@@ -94,8 +94,8 @@ You might first want to create a comparison table of the results from the two |b
 
 .. code-block:: bash
 
-   $ cp REL8593M-default/output/output.gd default.gd
-   $ cp REL8593M-no-filters/output/output.gd no-filters.gd
+   $ cp REL8595M-default/output/output.gd default.gd
+   $ cp REL8595M-no-filters/output/output.gd no-filters.gd
    $ gdtools COMPARE -o compare.html -r REL606.gbk default.gd no-filters.gd
 
 Can you find any predictions that look like plausible mutations that were incorrectly rejected by the default filters? 

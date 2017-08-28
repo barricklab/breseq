@@ -1360,6 +1360,8 @@ inline cString cString::get_base_name_no_extension(bool remove_all_extensions, b
   if (one_name_for_pair) {
     this_return = substitute(this_return, "_R1_", "_RX_");
     this_return = substitute(this_return, "_R2_", "_RX_");
+    this_return = substitute(this_return, "_R1.", "_RX.");
+    this_return = substitute(this_return, "_R2.", "_RX.");
   }
   
   size_t pos;
