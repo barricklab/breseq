@@ -2391,7 +2391,12 @@ int do_runfile(int argc, char *argv[])
   options("log-dir,l",        "Directory for error log file that captures the executable's stdout and sterr. (Default = 04_Logs for breseq; 04_Apply_Logs for breseq-apply; 04_Trim_Logs for flexbar*)");
 	options("preserve-pairs,p",  "Keep track of paired and unpaired reads for trimming and using trimmed reads.", TAKES_NO_ARGUMENT);
 
-
+	options.addUsage("\n");
+	options.addUsage("These GD header fields are used for trimmomatic modes");
+	options.addUsage("  #=ADAPTSEQ <path/to/fasta/file> [required]");
+	options.addUsage("  #=TRIM-START-BASES <int>        [optional]");
+	options.addUsage("  #=TRIM-END-BASES <int>          [optional]");
+	
   options.addUsage("\n");
   options.addUsage("Examples:");
   options.addUsage("\tCommand: gdtools runfile -o 1B4_Mutated -l 1B4_Mutated_Errors 1B4.gd");
