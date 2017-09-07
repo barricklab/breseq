@@ -269,7 +269,7 @@ public:
   cReferenceCoordinate get_reference_coordinate_start() const;
   cReferenceCoordinate get_reference_coordinate_end() const;
 
-  //! Is this item located within another and on same seq_id?
+  //! Is this item located within another and on same seq_id? Testing by location.
   bool located_within(const cDiffEntry &within) const;
   
   //! Common function giving change in size of genome at site of applying entry
@@ -290,6 +290,16 @@ public:
   
   // Updates 
   void annotate_repeat_hotspots(cReferenceSequences& new_ref_seq_info, int32_t slop_distance, int32_t size_cutoff_AMP_becomes_INS_DEL_mutation, bool remove_old_tags, bool warn_mode = false);
+  
+  //!---- Functions related to complex APPLY situations ---- !//
+  
+  //! Does this item have a "within" key for a certain mutation? Returns empty string if not.
+  const string get_within_mutation_id() const
+  {
+    if (!this->entry_exists(WITHIN)) return "";
+    vector<string> split_within = split(this->get(WITHIN), ":");
+    return split_within[0];
+  }
   
   //!---- Output ---- !//
   
@@ -746,6 +756,25 @@ public:
 
   // Sort -- taking into account 'before' and 'within' tags
   void sort_apply_order();
+  
+  
+  // Test is entry with first_id is applied before second_id using BEFORE entries
+  bool applied_before_id(const string& first_id, const string& second_id)
+  {
+    set<string> before_ids;
+    diff_entry_ptr_t de = this->find_by_id(first_id);
+    ASSERT(de.get(), "Invalid mutation id");
+    while(de->entry_exists(BEFORE)) {
+      string before_id = de->get(BEFORE);
+      
+      // break out if we encounter a circular situation!
+      if (before_ids.find(before_id) != before_ids.end()) break;
+      before_ids.insert(before_id);
+      de = this->find_by_id(before_id);
+    }
+    
+    return before_ids.find(second_id) != before_ids.end();
+  }
   
   void sort_and_check_for_duplicates(cFileParseErrors* file_parse_errors = NULL);
   

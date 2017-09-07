@@ -1722,7 +1722,7 @@ namespace breseq {
         int32_t insert_position = mut.entry_exists("insert_position") ? from_string<int32_t>(mut["insert_position"]) : 1;
 
         string mutation_sequence = mut["new_seq"];
-        uint32_t repeat_unit_size;
+        uint32_t repeat_unit_size(0);
         string repeat_unit_sequence;
         find_repeat_unit(mutation_sequence, repeat_unit_size, repeat_unit_sequence);
         
@@ -1731,8 +1731,9 @@ namespace breseq {
         string new_mutation_sequence = mut["new_seq"];
         int32_t new_insert_position = mut.entry_exists("insert_position") ? from_string<int32_t>(mut["insert_position"]) : 1;
         
-        // Did we get shifted into the position of the next mutation? Then back off.
-        if (last_mut && (mut[SEQ_ID] == last_mut->get(SEQ_ID)) && (mut.get_reference_coordinate_end() >= last_mut->get_reference_coordinate_start())) {
+        // Did we get shifted into the position of the next mutation? Then back off
+        // Note: We don't do this with converted AMPs as this creates problems (an insertion within them can shift their position)
+        if (last_mut && (mut[SEQ_ID] == last_mut->get(SEQ_ID)) && (mut.get_reference_coordinate_end() >= last_mut->get_reference_coordinate_start()) && !mut.entry_exists("_was_AMP")) {
           // The position of this insert mutation should be one before the mutation, unless it is another INS,
           // In the INS case, we need to properly update all of the insert positions
           
@@ -1806,7 +1807,7 @@ namespace breseq {
         normalizeDELposition(ref_seq_info[mut["seq_id"]], mut, repeat_unit_sequence);
         
         // Did we get shifted into the position of the next mutation? Then back off.
-        if (last_mut && (mut[SEQ_ID] == last_mut->get(SEQ_ID)) && (mut.get_reference_coordinate_end() >= last_mut->get_reference_coordinate_start())) {
+        if (last_mut && !gd.applied_before_id(last_mut->_id, mut._id) && (mut[SEQ_ID] == last_mut->get(SEQ_ID)) && (mut.get_reference_coordinate_end() >= last_mut->get_reference_coordinate_start())) {
           // The position of this insert mutation should be as many bases as the
           // deletion is long before the next mutation
           mut["position"] = s(n(last_mut->get("position")) - size);
@@ -1820,7 +1821,7 @@ namespace breseq {
         uint32_t num_repeat_units = size / repeat_unit_size;
         
         // Note that we add the number of repeats that were deleted
-        uint32_t original_num_repeat_units = find_original_num_repeat_units(ref_seq_info[mut["seq_id"]], position, repeat_unit_sequence) + num_repeat_units;
+        uint32_t original_num_repeat_units = find_original_num_repeat_units(ref_seq_info[mut["seq_id"]], position, repeat_unit_sequence);
         
         if (original_num_repeat_units * repeat_unit_size < minimum_tandem_repeat_length)
           goto next_mutation;
@@ -1876,15 +1877,16 @@ namespace breseq {
       int32_t new_copy_number = from_string<uint32_t>(mut["repeat_new_copies"]);
       
       mut._type = AMP;
-      int32_t pos = from_string<uint32_t>(mut[POSITION]) - unit_size;
+      int32_t pos = from_string<uint32_t>(mut[POSITION]) - unit_size * (from_string<uint32_t>(mut["repeat_ref_copies"])-1) + 1;
       // note shift back up of position by one is correct
       // because INS are after this position, but AMP start at this position
-      mut["position"] = to_string<int32_t>(pos+1);
+      mut["position"] = to_string<int32_t>(pos);
       mut["new_copy_number"] = mut["repeat_new_copies"];
       mut["size"] = mut["repeat_length"];
       
       // delete all the repeat information...
       mut.erase(NEW_SEQ);
+      mut.erase("insert_position");
       mut.erase("repeat_length");
       mut.erase("repeat_sequence");
       mut.erase("repeat_new_copies");
@@ -2102,9 +2104,7 @@ namespace breseq {
   
   void MutationPredictor::normalizeINSposition(cAnnotatedSequence& ref_seq, cDiffEntry& de, string& repeat_sequence)
   {
-    
-    uint32_t num_repeat_units = 0;
-    
+
     int32_t test_position = 1 + from_string<int32_t>(de[POSITION]);   
     // The offset of 1 ensures we are on the first base of a possible repeat unit (relative to the reference).
 
@@ -2160,7 +2160,10 @@ namespace breseq {
 
   }
   
-  void MutationPredictor::normalizeDELposition(cAnnotatedSequence& ref_seq, cDiffEntry& de, string& repeat_sequence)
+  // repeat_unit_sequence is the smallest repeated unit
+  //
+  
+  void MutationPredictor::normalizeDELposition(cAnnotatedSequence& ref_seq, cDiffEntry& de, string& repeat_unit_sequence)
   {
     bool verbose = false;
     
@@ -2170,20 +2173,32 @@ namespace breseq {
     // Don't shift mediated or between mutations
     if (de.entry_exists("mediated") || de.entry_exists("between")) return;
     
+    uint32_t mutation_size = from_string<uint32_t>(de[SIZE]);
     int32_t original_position = from_string<int32_t>(de[POSITION]);
     int32_t test_position(original_position);
     int32_t new_position(original_position);
+    
+    // Offset the test position to where the next repeat would fall.
+    // Ex: initial del    GG
+    //     genome       CTGGGTAAGCTAG
+    //     mutation pos   ^
+    //     test pos         *
+    //     final del       GG
+    
+    test_position += mutation_size;
+    
     // The offset of 1 ensures we are on the first base of a possible repeat unit (relative to the reference).
     
     // attempt to move forward by repeat units at a time from the current position
     // check to be sure the entire new repeat that we might shift mutation to is in bounds!!
-    test_position += repeat_sequence.size();
-    while ( test_position + repeat_sequence.size() - 1 <= ref_seq.get_sequence_length()) {
+    test_position += repeat_unit_sequence.size();
+    while ( test_position + repeat_unit_sequence.size() - 1 <= ref_seq.get_sequence_length()) {
       
-      string test_sequence = ref_seq.get_sequence_1(test_position, test_position + repeat_sequence.size() - 1);
-      if (test_sequence == repeat_sequence) {
-        new_position = test_position;
-        test_position += repeat_sequence.size();
+      string test_sequence = ref_seq.get_sequence_1(test_position, test_position + repeat_unit_sequence.size() - 1);
+      if (test_sequence == repeat_unit_sequence) {
+        // New positon: remember, needs to be back at the start of the whole mutation
+        new_position = test_position - mutation_size;
+        test_position += repeat_unit_sequence.size();
       } else {
         break;
       }
@@ -2249,7 +2264,7 @@ namespace breseq {
   
   uint32_t MutationPredictor::find_original_num_repeat_units(cAnnotatedSequence& ref_seq, int32_t position, string& repeat_sequence)
   {
-    uint32_t num_repeat_units = 0;
+    uint32_t num_repeat_units = 1;
     
     int32_t test_position = position;
     

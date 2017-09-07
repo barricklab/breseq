@@ -1990,7 +1990,7 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
         
         if (de->entry_exists("within")) {
           
-          vector<string> split_within = split((*de)["within"], ":");
+          vector<string> split_within = split(de->get("within"), ":");
           string &within_mutation_id = split_within[0];
           
           // Track down the mutation
@@ -4810,6 +4810,8 @@ void cGenomeDiff::normalize_mutations(cReferenceSequences& ref_seq_info, Setting
     
     if ( mut.entry_exists("within") || mut.entry_exists("no_normalize") )
       continue;
+    
+    mut["_was_AMP"] = "1";
       
     int32_t new_copy_number = from_string<uint32_t>(mut["new_copy_number"]);
     int32_t unit_size = from_string<int32_t>(mut[SIZE]);
