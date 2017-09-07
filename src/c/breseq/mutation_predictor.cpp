@@ -1820,8 +1820,8 @@ namespace breseq {
         find_repeat_unit(mutation_sequence, repeat_unit_size, repeat_unit_sequence);
         uint32_t num_repeat_units = size / repeat_unit_size;
         
-        // Note that we add the number of repeats that were deleted
-        uint32_t original_num_repeat_units = find_original_num_repeat_units(ref_seq_info[mut["seq_id"]], position, repeat_unit_sequence);
+        // Note shift to +size to get to the spot immediately past all reference repeats
+        uint32_t original_num_repeat_units = find_original_num_repeat_units(ref_seq_info[mut["seq_id"]], position+size, repeat_unit_sequence);
         
         if (original_num_repeat_units * repeat_unit_size < minimum_tandem_repeat_length)
           goto next_mutation;
@@ -2191,14 +2191,13 @@ namespace breseq {
     
     // attempt to move forward by repeat units at a time from the current position
     // check to be sure the entire new repeat that we might shift mutation to is in bounds!!
-    test_position += repeat_unit_sequence.size();
     while ( test_position + repeat_unit_sequence.size() - 1 <= ref_seq.get_sequence_length()) {
       
       string test_sequence = ref_seq.get_sequence_1(test_position, test_position + repeat_unit_sequence.size() - 1);
       if (test_sequence == repeat_unit_sequence) {
         // New positon: remember, needs to be back at the start of the whole mutation
-        new_position = test_position - mutation_size;
         test_position += repeat_unit_sequence.size();
+        new_position = test_position - mutation_size;
       } else {
         break;
       }
@@ -2255,16 +2254,24 @@ namespace breseq {
   ///
   // Expects position to be the first position of the repeat we are looking for
   // due to earlier normalization (shifting) of these mutations.
-  //          *
-  // ABCABCABCABC
   //
-  // For INS this is the position of the base before the insertion (same as the mutation position).
-  // For DEL it is one position before the first deleted base (one before the mutation position).
-  /// 
+  // For DEL it is the first deleted base (mutation position).
+  //
+  //          ***
+  // ABCABCABCABC    => 4 repeats in reference
+  //          ^
+  //
+  // For INS this is the position one past where the insertion starts (mutation position+1).
+  //
+  //          ABC
+  // ABCABCABC   XYZ => 3 repeats in reference
+  //             ^
+  //
+  ///
   
   uint32_t MutationPredictor::find_original_num_repeat_units(cAnnotatedSequence& ref_seq, int32_t position, string& repeat_sequence)
   {
-    uint32_t num_repeat_units = 1;
+    uint32_t num_repeat_units = 0;
     
     int32_t test_position = position;
     
