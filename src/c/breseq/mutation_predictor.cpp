@@ -1877,7 +1877,7 @@ namespace breseq {
       int32_t new_copy_number = from_string<uint32_t>(mut["repeat_new_copies"]);
       
       mut._type = AMP;
-      int32_t pos = from_string<uint32_t>(mut[POSITION]) - unit_size * (from_string<uint32_t>(mut["repeat_ref_copies"])-1) + 1;
+      int32_t pos = from_string<uint32_t>(mut[POSITION]) - unit_size * from_string<uint32_t>(mut["repeat_ref_copies"]) + 1;
       // note shift back up of position by one is correct
       // because INS are after this position, but AMP start at this position
       mut["position"] = to_string<int32_t>(pos);
