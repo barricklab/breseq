@@ -1046,50 +1046,25 @@ namespace breseq {
           }
           
         } else { // polymorphism mode
-          // @JEB 01-04-13
+          // @JEB 01-04-13 updated 09-22-17
           // Calculate a frequency for the mobile element insertion from the reads supporting the new and old junctions on each side
           
-          double a1 = from_string<uint32_t>(j1[SIDE_1_READ_COUNT]);
-          double b1 = from_string<uint32_t>(j1[SIDE_2_READ_COUNT]);
-          double c1 = from_string<uint32_t>(j1[NEW_JUNCTION_READ_COUNT]);
-          double d1 = 2.0;
+          // ref_read_count_1 is the total reads supporting either old junction (side 1/2) in the reference normalized by the number of sides
+          // new_read_count_1 a1 is total counts supporting old junctions (added together)
+          // function returns false if it cannot determine the counts for/against, which happens when both ref junctions are in repeats
+          double new_read_count_1, total_read_count_1;
+          bool j1_has_ref_reads = gd.read_counts_for_entry(j1, new_read_count_1, total_read_count_1);
           
-          if (j1[SIDE_1_READ_COUNT] == "NA") {
-            a1 = 0; //"NA" in read count sets value to 1 not 0
-            d1--;
-          }
-          if (j1[SIDE_2_READ_COUNT] == "NA") {
-            b1 = 0; //"NA" in read count sets value to 1 not 0
-            d1--;
-          }
-          
-          double a2 = from_string<uint32_t>(j2[SIDE_1_READ_COUNT]);
-          double b2 = from_string<uint32_t>(j2[SIDE_2_READ_COUNT]);
-          double c2 = from_string<uint32_t>(j2[NEW_JUNCTION_READ_COUNT]);
-          double d2 = 2.0;
-          
-          if (j2[SIDE_1_READ_COUNT] == "NA") {
-            a2 = 0; //"NA" in read count sets value to 1 not 0
-            d2--;
-          }
-          if (j2[SIDE_2_READ_COUNT] == "NA") {
-            b2 = 0; //"NA" in read count sets value to 1 not 0
-            d2--;
-          }
-          
+          double new_read_count_2, total_read_count_2;
+          bool j2_has_ref_reads = gd.read_counts_for_entry(j2, new_read_count_2, total_read_count_2);
+
           double frequency;
-          if (d1 && d2) {
-            frequency = (c1 + c2) / (c1 + (a1 + b1)/d1 + c2 + (a2 + b2)/d2);
-            mut[FREQUENCY] = formatted_double(frequency, settings.polymorphism_precision_places, true).to_string();
-          } else if (d1) {
-            frequency = (c1) / (c1 + (a1 + b1)/d1);
-            mut[FREQUENCY] = formatted_double(frequency, settings.polymorphism_precision_places, true).to_string();
-          } else if (d2) {
-            frequency = (c2) / (c2 + (a2 + b2)/d2);
+          if (j1_has_ref_reads || j2_has_ref_reads) {
+            frequency = (new_read_count_1 + new_read_count_2) / (total_read_count_1 + total_read_count_2);
             mut[FREQUENCY] = formatted_double(frequency, settings.polymorphism_precision_places, true).to_string();
           } else {
             // Can't calculate a frequency if no sides of the junction fall in unique sequence
-            mut[FREQUENCY] = "NA";          
+            mut[FREQUENCY] = "NA";
           }
           
           if (mut[FREQUENCY] == "NA") {

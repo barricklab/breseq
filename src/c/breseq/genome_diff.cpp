@@ -619,8 +619,7 @@ bool cDiffEntry::is_validation() const
 {
   return gd_entry_type_lookup_table[_type].size() == 4;
 }
- 
-  
+
 cReferenceCoordinate cDiffEntry::get_reference_coordinate_start() const
 {
   switch (this->_type) {
@@ -4842,6 +4841,80 @@ void cGenomeDiff::normalize_mutations(cReferenceSequences& ref_seq_info, Setting
   mp.normalize_INS_to_AMP(settings, summary, *this);
 
 }
+  
+  
+// Normalized read counts for variant (new) and ancestor (ref)
+// Returns false, 0.0, 0.0 if there is no valide read count
+bool cGenomeDiff::read_counts_for_entry(const cDiffEntry& de, double& new_read_count, double& total_read_count)
+{
+  total_read_count = 0.0;
+  new_read_count = 0.0;
+  
+  // Mutations traverse into their evidence
+  if (de.is_mutation()) {
+    double in_sub_entries(0.0);
+    diff_entry_list_t ev = this->mutation_evidence_list(de);
+    for ( diff_entry_list_t::const_iterator it = ev.begin(); it != ev.end(); it++ ) {
+      double add_total_read_count = 0.0;
+      double add_new_read_count = 0.0;
+      if (read_counts_for_entry(**it, add_new_read_count, add_total_read_count)) {
+        total_read_count += add_total_read_count;
+        new_read_count += add_new_read_count;
+        in_sub_entries++;
+      }
+    }
+    
+    if (in_sub_entries > 1.0) {
+      total_read_count /= in_sub_entries;
+      new_read_count /= in_sub_entries;
+    }
+
+  } else if (de.is_evidence()) {
+    
+    switch (de._type) {
+        
+      case RA:
+      {
+        vector<string> new_cov = split(de.get(NEW_COV), "/");
+        vector<string> total_cov = split(de.get(TOTAL_COV), "/");
+        split(de.get(NEW_COV), "/");
+        new_read_count = from_string<int32_t>(new_cov[0]) + from_string<int32_t>(new_cov[1]);
+        total_read_count = from_string<int32_t>(total_cov[0]) + from_string<int32_t>(total_cov[1]);
+        break;
+      }
+        
+      case JC:
+      {
+        double a = from_string<uint32_t>(de.get(SIDE_1_READ_COUNT));
+        double b = from_string<uint32_t>(de.get(SIDE_2_READ_COUNT));
+        double c = from_string<uint32_t>(de.get(NEW_JUNCTION_READ_COUNT));
+        double d = 2.0;
+        
+        if (de.get(SIDE_1_READ_COUNT) == "NA") {
+          a = 0; //"NA" in read count sets value to 1 not 0
+          d--;
+        }
+        if (de.get(SIDE_2_READ_COUNT) == "NA") {
+          b = 0; //"NA" in read count sets value to 1 not 0
+          d--;
+        }
+        
+        // We only count if at least one ref side exists in a non-repeat
+        if (d!=0) {
+          new_read_count = c;
+          total_read_count = c + (a + b) / d;
+        }
+        break;
+      }
+        
+      default:
+        break;
+      }
+  }
+  
+  return (total_read_count != 0);
+}
+
 
 cGenomeDiff cGenomeDiff::check(cGenomeDiff& ctrl, cGenomeDiff& test, bool verbose)
 {
@@ -5582,6 +5655,8 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
   }
   
   output << "##INFO=<ID=AF,Number=A,Type=Float,Description=\"Allele Frequency\">" << endl;
+  output << "##INFO=<ID=AD,Number=1,Type=Float,Description=\"Allele Depth (avg read count)\">" << endl;
+  output << "##INFO=<ID=DP,Number=1,Type=Float,Description=\"Total Depth (avg read count)\">" << endl;
   output << "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">" << endl;
 
   
@@ -5601,18 +5676,50 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
     string alt;
     string qual = ".";
     string filter = ".";
-    string info;
     string format = "GT";
     string sample = "1/1";
     
-    // For now, only allele frequency info field
+    vector<string> info_entries;
+
+    // Allele frequency field
     double freq = 1.0;
-    
     if (mut.entry_exists(FREQUENCY)) {
         freq = from_string<double>(mut[FREQUENCY]);
     }
-    string AF = formatted_double(freq, 4).to_string(); // allele frequency
-    info = "AF=" + AF;
+    
+    // Allele frequency
+    string AF = formatted_double(freq, 4).to_string();
+    info_entries.push_back("AF=" + AF);
+    
+    double new_read_count(0.0), total_read_count(0.0);
+    if (read_counts_for_entry(mut, new_read_count, total_read_count)) {
+      info_entries.push_back("AD=" + to_string<double>(new_read_count));
+      info_entries.push_back("DP=" + to_string<double>(total_read_count));
+    }
+    
+    // Quality
+    // Gets carried forward from RA lines (and averaged if multiple apply)
+    
+    // Carry forward quality from related RA evidence
+    diff_entry_list_t ev = mutation_evidence_list(mut);
+    if ((ev.size() >= 1)) {
+      double num_evidence(0.0);
+      double quality(0.0);
+      for(diff_entry_list_t::iterator it=ev.begin(); it != ev.end(); it++) {
+        if (ev.front()->entry_exists(PREDICTION)) {
+          if ( ((*it)->get(PREDICTION) == "consensus") && (ev.front()->entry_exists(CONSENSUS_SCORE)) ) {
+            num_evidence++;
+            quality += from_string<double>((*it)->get(CONSENSUS_SCORE));
+          } else if ( ((*it)->get(PREDICTION) == "polymorphism") && (ev.front()->entry_exists(POLYMORPHISM_SCORE)) ) {
+              num_evidence++;
+              quality += from_string<double>((*it)->get(POLYMORPHISM_SCORE));
+          }
+        }
+      }
+      if (num_evidence != 0.0) {
+        qual = formatted_double(quality/num_evidence, 1).to_string();
+      }
+    }
     
     switch (mut._type) 
     {
@@ -5620,28 +5727,14 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
       { 
         alt = mut[NEW_SEQ];
         ref = ref_seq_info.get_sequence_1(mut[SEQ_ID], pos, pos);
-        
-        // Carry forward qulity from related RA evidence
-        diff_entry_list_t ev = mutation_evidence_list(mut);
-        if (ev.size() == 1) 
-          qual = ev.front()->count("genotype_quality") ? (*ev.front())["genotype_quality"] : ".";
-
       } break;
         
       case SUB:
       {
         // We know Ref seq is not just a "." in this case.
-        
         alt = mut[NEW_SEQ];
         const uint32_t& size = from_string<uint32_t>(mut[SIZE]);
         ref = ref_seq_info.get_sequence_1(mut[SEQ_ID], pos, pos + size - 1);
-
-        // Carry forward qulity from related RA evidence
-        // @JEB should do something with multiple evidence
-        diff_entry_list_t ev = mutation_evidence_list(mut);
-        if (ev.size() == 1) 
-          qual = ev.front()->count("genotype_quality") ? (*ev.front())["genotype_quality"] : ".";
-        
       } break;
         
       case INS:
@@ -5657,13 +5750,6 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
         // Correct position of first base shown, if necessary
         
         alt = before_base ? ref + mut[NEW_SEQ] : mut[NEW_SEQ] + ref;
-        
-        // Carry forward quality from related RA evidence
-        // @JEB should do something with multiple evidence
-        diff_entry_list_t ev = mutation_evidence_list(mut);
-        if (ev.size() == 1) 
-          qual = ev.front()->count("genotype_quality") ? (*ev.front())["genotype_quality"] : ".";
-        
       } break;
         
       case DEL:
@@ -5680,13 +5766,6 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
 
         // Correct position of first base shown, if necessary
         if (before_base) pos--;
-        
-        // Carry forward quality from related RA evidence
-        // @JEB should do something with multiple evidence
-        diff_entry_list_t ev = mutation_evidence_list(mut);
-        if (ev.size() == 1) 
-          qual = ev.front()->count(CONSENSUS_SCORE) ? (*ev.front())[CONSENSUS_SCORE] : ".";
-        
       } break;
         
       case AMP:
@@ -5699,16 +5778,11 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
         ASSERT(!alt.empty(), "Duplicate sequence is empty. You may have specified an AMP with a new copy number of 1.");
         
         ref = ref_seq_info.get_sequence_1(mut[SEQ_ID], pos, pos+size-1);
-
-        // @JEB should do something with multiple evidence
-        diff_entry_list_t ev = mutation_evidence_list(mut);
-        if (ev.size() == 1) qual = ev.front()->count("genotype_quality") ? (*ev.front())["genotype_quality"] : ".";
-        
       } break;
         
       case INV:
       {        
-        WARN("INV: mutation type not handled yet");
+        WARN("INV mutation type not handled by VCF converter (will be omitted):\n" + mut.as_string());
       } break;
         
       case MOB:
@@ -5780,8 +5854,7 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
     }
     
     //output << chrom << "\t" << pos << "\t" << id << "\t" << ref << "\t" << alt << "\t" << qual << "\t" << filter << "\t" << info << "\t" << format << "\t" << sample << endl;
-    
-        output << chrom << "\t" << pos << "\t" << id << "\t" << ref << "\t" << alt << "\t" << qual << "\t" << filter << "\t" << info << endl;
+    output << chrom << "\t" << pos << "\t" << id << "\t" << ref << "\t" << alt << "\t" << qual << "\t" << filter << "\t" << join(info_entries, ";") << endl;
   }
   
   output.close();

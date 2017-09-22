@@ -811,7 +811,9 @@ public:
   
   //! Shift mutations to preferred descriptions
   void normalize_mutations(cReferenceSequences &ref_seq, Settings& settings, bool verbose = false);
-   
+  
+  bool read_counts_for_entry(const cDiffEntry& de, double& new_read_count, double& total_read_count);
+  
   //!---- Comparing known lists of mutations/evidence to test files ---- !//
   
   static cGenomeDiff check(cGenomeDiff& ctrl, cGenomeDiff& test, bool verbose = false);
