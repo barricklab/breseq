@@ -1092,8 +1092,8 @@ void score_junction(
 		if (resolved_junction_tam.bam_header->target_name[junction_tid] == junction_id) break;
 	ASSERT(junction_tid < static_cast<uint32_t>(resolved_junction_tam.bam_header->n_targets), "Junction target id out of range.");
   
-  size_t unique_matches_size = (unique_matches) ? unique_matches->size() : 0;
-  size_t repeat_matches_size = (repeat_matches) ? repeat_matches->size() : 0;
+  uint32_t unique_matches_size = (unique_matches) ? unique_matches->size() : 0;
+  uint32_t repeat_matches_size = (repeat_matches) ? repeat_matches->size() : 0;
   
 	if (verbose) {
 		cout << "Testing Junction Candidate: " << junction_id << endl;
@@ -1105,7 +1105,7 @@ void score_junction(
 	map<bool,int32_t> max_right_per_strand = make_map<bool,int32_t>(true,0)(false,0);
 	map<bool,int32_t> max_min_left_per_strand = make_map<bool,int32_t>(true,0)(false,0);
 	map<bool,int32_t> max_min_right_per_strand = make_map<bool,int32_t>(true,0)(false,0);
-	map<bool,int32_t> count_per_strand = make_map<bool,int32_t>(true,0)(false,0);
+	map<bool,uint32_t> count_per_strand = make_map<bool,uint32_t>(true,0)(false,0);
 	uint32_t total_non_overlap_reads = 0;
 	map<int32_t,bool> pos_hash;
   vector<pair<uint32_t,uint32_t> > start_end_check_list;
@@ -1234,7 +1234,7 @@ void score_junction(
       }
       
       if (!has_reads_with_both_different_start_and_end) {
-        start_end_check_list.push_back(make_pair<uint32_t,uint32_t>(reference_start_1,reference_end_1));
+        start_end_check_list.push_back(std::pair<uint32_t,uint32_t>(reference_start_1,reference_end_1));
       }
     }
       
@@ -1351,11 +1351,11 @@ void score_junction(
 		max_min_left,                       //max_min_left
 		max_min_left_per_strand[false],     //max_min_left_minus
 		max_min_left_per_strand[true],      //max_min_left_plus
-		count_per_strand[false],            //coverage_minus
-		count_per_strand[true],             //coverage_plus
+    count_per_strand[false],            //coverage_minus
+    count_per_strand[true],             //coverage_plus
 		total_non_overlap_reads,            //total_non_overlap_reads
     pos_hash_count,                     //pos_hash_score
-    max(0,max_pos_hash_score),          //max_pos_hash_score
+    static_cast<uint32_t>(max(0,max_pos_hash_score)),          //max_pos_hash_score
     unique_matches_size,                //unique_matches_size
     repeat_matches_size,                //repeat_matches_size
     has_reads_with_both_different_start_and_end, //2 diff reads have both different start and different end

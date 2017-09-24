@@ -22,10 +22,14 @@ LICENSE AND COPYRIGHT
 
 #include "common.h"
 
+#include "json.hpp"
+
 using namespace std;
 
 namespace breseq
 {
+  
+  // This class stores things in
 	class Storable
 	{
 	  protected:
@@ -192,6 +196,33 @@ namespace breseq
     
   };
   
+  // Stub in this commit
+  class JSONStorable
+  {
+  public:
+    
+    // classes that inherit from this must define how to write and read themselves
+    virtual void serialize(ofstream& f) = 0;
+    virtual void deserialize(ifstream& f) = 0;
+    
+    void store(string filename)
+    {
+      ofstream outfile(filename.c_str());
+      assert(!outfile.fail());
+      //ASSERT(!outfile.fail(), "Error storing in file: " + filename);
+      serialize(outfile);
+      outfile.close();
+    }
+    
+    void retrieve(string filename)
+    {
+      ifstream infile(filename.c_str());
+      assert(!infile.fail());
+      //ASSERT(!infile.fail(), "Error retrieving from file: " + filename);
+      deserialize(infile);
+      infile.close();
+    }
+  };
 
 } // breseq namespace
 

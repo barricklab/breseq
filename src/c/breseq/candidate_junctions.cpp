@@ -259,14 +259,14 @@ namespace breseq {
     ofstream out_sam_file(output_sam_file_name.c_str());
     
     string line_1, line_2;
-    bool not_done_1 = getline(input_sam_file_1, line_1);
+    bool not_done_1 = !getline(input_sam_file_1, line_1).eof();
     while (not_done_1 && (line_1[0] == '@')) {
-      not_done_1 = getline(input_sam_file_1, line_1);
+      not_done_1 = !getline(input_sam_file_1, line_1).eof();
     }
     
-    bool not_done_2 = getline(input_sam_file_2, line_2);
+    bool not_done_2 = !getline(input_sam_file_2, line_2).eof();
     while (not_done_2 && (line_2[0] == '@')) {
-      not_done_2 = getline(input_sam_file_2, line_2);
+      not_done_2 = !getline(input_sam_file_2, line_2).eof();
     }
          
     int64_t index_1 = -1; 
@@ -291,7 +291,7 @@ namespace breseq {
           out_sam_file << line_1 << endl;
         
         // read next line not beginning in @
-        not_done_1 = getline(input_sam_file_1, line_1);
+        not_done_1 = !getline(input_sam_file_1, line_1).eof();
         
         if (not_done_1) {
           line_to_read_index(line_1, index_1, mapped_1);
@@ -304,7 +304,7 @@ namespace breseq {
           out_sam_file << line_2 << endl;
         
         // read next line
-        not_done_2 = getline(input_sam_file_2, line_2);
+        not_done_2 = !getline(input_sam_file_2, line_2).eof();
 
         if (not_done_2) {
           line_to_read_index(line_2, index_2, mapped_2);

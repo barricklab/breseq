@@ -3606,7 +3606,8 @@ void cGenomeDiff::random_mutations(string exclusion_file,
       if (n_size_attempts == 0) {
         --n_attempts;
       } else {
-        --n_muts, n_attempts = max_attempts;
+        --n_muts;
+        n_attempts = max_attempts;
         this->add(new_item);
         used_mutation_regions.flag_region(ref.m_seq_id, pos_1, pos_1 + size);
       }
@@ -3693,7 +3694,8 @@ void cGenomeDiff::random_mutations(string exclusion_file,
       if (n_size_attempts == 0) {
         --n_attempts;
       } else {
-        --n_muts, n_attempts = max_attempts;
+        --n_muts;
+        n_attempts = max_attempts;
         cDiffEntry new_item = valid_items[rand() % valid_items.size()];
         new_item["mediated"] = (*(it->get_feature()))["name"];
         this->add(new_item);
@@ -3787,7 +3789,8 @@ void cGenomeDiff::random_mutations(string exclusion_file,
       if (n_size_attempts == 0) {
         --n_attempts;
       } else {
-        --n_muts, n_attempts = max_attempts;
+        --n_muts;
+        n_attempts = max_attempts;
         new_item.erase("norm");
         this->add(new_item);
         used_mutation_regions.flag_region(ref.m_seq_id, pos_1, pos_1 + (size * un(new_item["new_copy_number"])));
@@ -3845,7 +3848,8 @@ void cGenomeDiff::random_mutations(string exclusion_file,
       if (n_size_attempts == 0) {
         --n_attempts;
       } else {
-        --n_muts, n_attempts = max_attempts;
+        --n_muts;
+        n_attempts = max_attempts;
         cDiffEntry new_item;        
         new_item._type = MOB;
         new_item["seq_id"] = ref.m_seq_id;
@@ -5360,7 +5364,7 @@ void cGenomeDiff::write_jc_score_table(cGenomeDiff& compare, string table_file_p
 
 
   ofstream out(table_file_path.c_str());
-  ASSERT(out, "Could not write to file: " + table_file_path);
+  ASSERT(out.is_open(), "Could not write to file: " + table_file_path);
   
   out << "score" << '\t' << "TP" << '\t' << "FN" << '\t' << "FP" << endl;
   if (verbose) {
