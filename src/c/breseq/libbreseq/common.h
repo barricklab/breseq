@@ -737,7 +737,7 @@ namespace breseq {
 	}
 	inline string to_string (const double& t, const uint32_t precision=1, const bool use_scientific=false)
 	{
-		if(isnan(t)) {
+    if(std::isnan(t)) {
 			return "NA";
 		} else {
 			ostringstream interpreter;

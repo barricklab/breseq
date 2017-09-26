@@ -865,7 +865,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
     //## evaluate whether to call an actual mutation!
     // -- note that we accept > 0 and only reject later
     // so that these can potentially make it into the marginal data
-    bool passed_as_consensus_prediction = (best_base_char != ref_base_char) && (!isnan(consensus_bonferroni_score) && (consensus_bonferroni_score > 0));
+    bool passed_as_consensus_prediction = (best_base_char != ref_base_char) && (!std::isnan(consensus_bonferroni_score) && (consensus_bonferroni_score > 0));
     
     // Find the bases with the highest and second highest coverage
     // We only predict polymorphisms involving these 'major' and 'minor' alleles
@@ -1189,7 +1189,7 @@ void identify_mutations_pileup::check_deletion_completion(uint32_t position, uin
     _last_position_coverage = position_coverage(numeric_limits<double>::quiet_NaN());
   
   // print to optional output file
-  if (!isnan(this_position_coverage.unique[1]) && _coverage_data.is_open()) {
+  if (!std::isnan(this_position_coverage.unique[1]) && _coverage_data.is_open()) {
     _coverage_data << this_position_coverage.unique[0] << "\t"
     << this_position_coverage.unique[2] << "\t"
     << this_position_coverage.redundant[0] << "\t"
@@ -1211,14 +1211,14 @@ void identify_mutations_pileup::check_deletion_completion(uint32_t position, uin
   }
 		
   //##keep track of whether we've encountered the seed value
-  if(!isnan(this_position_coverage.unique[1]) && (this_position_coverage.total <= _this_deletion_seed_cutoff)) {
+  if(!std::isnan(this_position_coverage.unique[1]) && (this_position_coverage.total <= _this_deletion_seed_cutoff)) {
     _this_deletion_reaches_seed_value = true;
   }
 	
 	//## If we are in a deletion and rise back above the propagation cutoff OR we are at the end of this fragment (NAN),
   //## then record the current deletion.
 	if( (_last_deletion_start_position != UNDEFINED_UINT32) && 
-     ( isnan(this_position_coverage.unique[1]) || (this_position_coverage.unique[1] > _this_deletion_propagation_cutoff) ) )
+     ( std::isnan(this_position_coverage.unique[1]) || (this_position_coverage.unique[1] > _this_deletion_propagation_cutoff) ) )
   {
 		
 		if(_this_deletion_reaches_seed_value) {

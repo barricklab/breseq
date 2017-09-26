@@ -666,7 +666,7 @@ void cErrorTable::write_log10_prob_table(const string& filename) {
             uint32_t idx = r * m_covariate_max[k_obs_base] * m_covariate_max[k_ref_base] * m_covariate_max[k_quality]
                       + q * m_covariate_max[k_obs_base] * m_covariate_max[k_ref_base] + b1 * m_covariate_max[k_ref_base] + b2;
             out << "\t";
-            if (isnan(output_table[idx]))
+            if (std::isnan(output_table[idx]))
               out << "NA";
             else 
               out << output_table[idx];
