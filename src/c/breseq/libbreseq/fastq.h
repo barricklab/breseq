@@ -35,7 +35,7 @@ class cAnnotatedSequence;
       Main function for this analysis. Prints summary information
       about fastq and converts file to SANGER format if necessary.
    */  
-  Summary::AnalyzeFastq normalize_fastq(
+  AnalyzeFastqSummary normalize_fastq(
                                         const string &file_name, 
                                         const string &convert_file_name, 
                                         const uint32_t file_index, 

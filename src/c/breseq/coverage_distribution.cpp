@@ -92,21 +92,11 @@ void CoverageDistribution::analyze_unique_coverage_distribution(
   
   vector<string> seq_ids = settings.refseq_settings.m_seq_ids_by_coverage_group[coverage_group_id];
   
-  //initialize summary information
+  // We need to know the total sequence length of just this group
   uint32_t sequence_length = 0;
   for (vector<string>::iterator it=seq_ids.begin(); it!=seq_ids.end(); it++) {
-    string seq_id = *it;
-    summary.unique_coverage[seq_id].nbinom_size_parameter = NAN;
-    summary.unique_coverage[seq_id].nbinom_mean_parameter = NAN;
-    summary.unique_coverage[seq_id].nbinom_prob_parameter = NAN;
-    summary.unique_coverage[seq_id].average = 1.0;
-    summary.unique_coverage[seq_id].variance = NAN;
-    summary.unique_coverage[seq_id].dispersion = NAN;
-    summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff = 0.0;
-    summary.unique_coverage[seq_id].deletion_coverage_seed_cutoff = 0;
-    
-    // Keep running total of sequence length
-    sequence_length += ref_seq_info[ref_seq_info.seq_id_to_index(seq_id)].m_length;
+    string& seq_id = *it;
+    sequence_length += ref_seq_info.get_sequence_length(seq_id);
   }
   
   // Perform no fitting if we are in targeted_sequencing mode.
@@ -157,13 +147,17 @@ void CoverageDistribution::analyze_unique_coverage_distribution(
     summary.unique_coverage[seq_id].nbinom_size_parameter = from_string<double>(lines[0]);
     summary.unique_coverage[seq_id].nbinom_mean_parameter = from_string<double>(lines[1]);
     // Calculated by formula, prob = size/(size + mu)
-    summary.unique_coverage[seq_id].nbinom_prob_parameter = summary.unique_coverage[seq_id].nbinom_size_parameter
-    / (summary.unique_coverage[seq_id].nbinom_mean_parameter + summary.unique_coverage[seq_id].nbinom_size_parameter);
-    // Calculated by formula variance = mu + mu ^ 2 / size
-    summary.unique_coverage[seq_id].nbinom_variance = summary.unique_coverage[seq_id].nbinom_mean_parameter
-    + pow(summary.unique_coverage[seq_id].nbinom_mean_parameter, 2) / summary.unique_coverage[seq_id].nbinom_size_parameter;
-    // Calculated by formula dispersion = variance / mu
-    summary.unique_coverage[seq_id].nbinom_dispersion = summary.unique_coverage[seq_id].nbinom_variance / summary.unique_coverage[seq_id].nbinom_mean_parameter;
+    
+    // These remain at their defaults of zero if this is zero = fit failed
+    if (summary.unique_coverage[seq_id].nbinom_mean_parameter != 0) {
+      summary.unique_coverage[seq_id].nbinom_prob_parameter = summary.unique_coverage[seq_id].nbinom_size_parameter
+      / (summary.unique_coverage[seq_id].nbinom_mean_parameter + summary.unique_coverage[seq_id].nbinom_size_parameter);
+      // Calculated by formula variance = mu + mu ^ 2 / size
+      summary.unique_coverage[seq_id].nbinom_variance = summary.unique_coverage[seq_id].nbinom_mean_parameter
+      + pow(summary.unique_coverage[seq_id].nbinom_mean_parameter, 2) / summary.unique_coverage[seq_id].nbinom_size_parameter;
+      // Calculated by formula dispersion = variance / mu
+      summary.unique_coverage[seq_id].nbinom_dispersion = summary.unique_coverage[seq_id].nbinom_variance / summary.unique_coverage[seq_id].nbinom_mean_parameter;
+    }
     
     summary.unique_coverage[seq_id].average = from_string<double>(lines[2]);
     summary.unique_coverage[seq_id].variance = from_string<double>(lines[3]);

@@ -548,6 +548,7 @@ namespace breseq
 		string reference_gff3_file_name;
     string unmatched_read_file_name;
     string output_vcf_file_name;
+    string data_summary_file_name;
     
     //! Paths: Experimental
 		string long_pairs_file_name;

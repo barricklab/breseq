@@ -25,6 +25,7 @@ LICENSE AND COPYRIGHT
 #include "json.hpp"
 
 using namespace std;
+using namespace nlohmann;
 
 namespace breseq
 {
@@ -137,7 +138,7 @@ namespace breseq
 
 
 	}; // class Storable
-
+  
   
   template <typename T,typename U> class storable_map : public Storable, public map<T,U>
   {
@@ -196,34 +197,38 @@ namespace breseq
     
   };
   
-  // Stub in this commit
-  class JSONStorable
+  template <class C> class JSONStorable
   {
   public:
     
-    // classes that inherit from this must define how to write and read themselves
-    virtual void serialize(ofstream& f) = 0;
-    virtual void deserialize(ifstream& f) = 0;
-    
-    void store(string filename)
+    virtual void store(const string& filename)
     {
       ofstream outfile(filename.c_str());
       assert(!outfile.fail());
       //ASSERT(!outfile.fail(), "Error storing in file: " + filename);
-      serialize(outfile);
+      json j;
+      to_json(j, static_cast<C&>(*this));
+      outfile << j.dump(2);
       outfile.close();
     }
     
-    void retrieve(string filename)
+    virtual void retrieve(const string& filename)
     {
       ifstream infile(filename.c_str());
       assert(!infile.fail());
       //ASSERT(!infile.fail(), "Error retrieving from file: " + filename);
-      deserialize(infile);
+      json j;
+      infile >> j;
+      from_json(j, dynamic_cast<C&>(*this));
       infile.close();
     }
   };
+  
+  // Summary
+ // inline void to_json(json& j, const JSONStorable& s) {(void)j; (void)s;};
+ // inline void from_json(const json& j, JSONStorable& s) {(void)s; (void)j;};
 
+  
 } // breseq namespace
 
 #endif

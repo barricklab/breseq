@@ -915,7 +915,7 @@ int do_copy_number_variation(int argc, char *argv[])
     // Where error rate summary data will be output
     Summary summary;
     summary.unique_coverage.retrieve(settings.error_rates_summary_file_name);
-
+  
     // Create copy_number_variation directory
     create_path( settings.copy_number_variation_path );
 
@@ -1203,14 +1203,15 @@ int breseq_default_action(int argc, char* argv[])
 
 	if (settings.do_step(settings.sequence_conversion_done_file_name, "Read and reference sequence file input"))
 	{
-		Summary::SequenceConversion s;
+		SequenceConversionSummary s;
     cReferenceSequences conv_ref_seq_info;
     
     // Load all of the reference sequences and convert to FASTA and GFF3
     conv_ref_seq_info.LoadFiles(settings.all_reference_file_names);
     conv_ref_seq_info.WriteFASTA(settings.reference_fasta_file_name);
     conv_ref_seq_info.WriteGFF(settings.reference_gff3_file_name);
-
+    s.total_reference_sequence_length = conv_ref_seq_info.total_length();
+    
     // Do a quick load of the file to detect formatting errors.
     if (settings.user_evidence_genome_diff_file_name != "") {
       cGenomeDiff gd(settings.user_evidence_genome_diff_file_name);
@@ -1251,7 +1252,7 @@ int breseq_default_action(int argc, char* argv[])
         string convert_file_name =  settings.file_name(settings.converted_fastq_file_name, "#", base_name);
 
         // Parse output
-        Summary::AnalyzeFastq s_rf = normalize_fastq(fastq_file_name,
+        AnalyzeFastqSummary s_rf = normalize_fastq(fastq_file_name,
                                                      convert_file_name,
                                                      i+1,
                                                      settings.quality_score_trim,
@@ -1264,10 +1265,6 @@ int breseq_default_action(int argc, char* argv[])
                                                      );
         settings.track_intermediate_file(settings.alignment_correction_done_file_name, convert_file_name);
         
-        // Save the converted file name -- have to save it in summary because only that
-        // is reloaded if we skip this step.
-        s.converted_fastq_name[base_name] = s_rf.converted_fastq_name;
-
         // Record statistics
         if ((overall_min_read_length == UNDEFINED_UINT32) || (s_rf.min_read_length > overall_min_read_length))
           overall_min_read_length = s_rf.max_read_length;
@@ -1338,7 +1335,7 @@ int breseq_default_action(int argc, char* argv[])
     map<string, bool> read_files_surviving_conversion;
     
     // --> converted names
-    for (map<string, Summary::AnalyzeFastq>::iterator it = summary.sequence_conversion.reads.begin(); it != summary.sequence_conversion.reads.end(); it++)
+    for (map<string, AnalyzeFastqSummary>::iterator it = summary.sequence_conversion.reads.begin(); it != summary.sequence_conversion.reads.end(); it++)
     {
       string base_name = it->first;
       read_files_surviving_conversion[base_name] = true;
@@ -1580,8 +1577,6 @@ int breseq_default_action(int argc, char* argv[])
       
       settings.track_intermediate_file(settings.output_done_file_name, settings.candidate_junction_fasta_file_name);
       settings.track_intermediate_file(settings.output_done_file_name, settings.candidate_junction_fasta_file_name + ".fai");
-
-
 
 			summary.candidate_junction.store(candidate_junction_summary_file_name);
 			settings.done_step(settings.candidate_junction_done_file_name);
@@ -2041,7 +2036,7 @@ int breseq_default_action(int argc, char* argv[])
       for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
         deletion_propagation_cutoffs.push_back(summary.unique_coverage[ref_seq_info[i].m_seq_id].deletion_coverage_propagation_cutoff);
         deletion_seed_cutoffs.push_back(summary.unique_coverage[ref_seq_info[i].m_seq_id].deletion_coverage_seed_cutoff);
-        //cout << ref_seq_info[i].m_seq_id << " " << to_string(deletion_propagation_cutoffs.back()) << " " << to_string(deletion_seed_cutoffs.back()) << endl;
+        //cout << ref_seq_info[i].m_seq_id << " " << to_string<double>(deletion_propagation_cutoffs.back()) << " " << to_string<double>(deletion_seed_cutoffs.back()) << endl;
       }
 
 			identify_mutations(
@@ -2269,6 +2264,9 @@ int breseq_default_action(int argc, char* argv[])
     cerr << "  Writing final VCF file..." << endl;
 
     mpgd.write_vcf(settings.output_vcf_file_name, ref_seq_info);
+    
+    // Write a final JSON file with all summary information
+    summary.store(settings.data_summary_file_name);
     
     //
     // Mark marginal items as no_show to prevent further processing

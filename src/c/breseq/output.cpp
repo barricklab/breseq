@@ -527,8 +527,8 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
                     th("bases") <<  th("passed&nbsp;filters") << th("average") << th("longest") << th("mapped") << "</tr>" << endl;
   for(cReadFiles::const_iterator it=settings.read_files.begin(); it!=settings.read_files.end(); it++)
   {
-    const Summary::AnalyzeFastq& s = summary.sequence_conversion.reads[it->m_base_name];
-    const Summary::AlignmentResolution::ReadFile& rf = summary.alignment_resolution.read_file[it->m_base_name];
+    const AnalyzeFastqSummary& s = summary.sequence_conversion.reads[it->m_base_name];
+    const ReadFileSummary& rf = summary.alignment_resolution.read_file[it->m_base_name];
     HTML << start_tr();
     HTML << td( a(Settings::relative_path( 
                       settings.file_name(settings.error_rates_plot_file_name, "#", it->m_base_name), settings.output_path
@@ -702,15 +702,15 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
                );
     HTML << tr(td("Coverage evenness (position-hash) score of junction candidates")
                + td(ALIGN_CENTER, "&ge;&nbsp;" + to_string<uint32_t>(settings.minimum_candidate_junction_pos_hash_score))
-               + td(ALIGN_CENTER, "&ge;&nbsp;" + to_string<uint32_t>(summary.candidate_junction.accepted.pos_hash_score_cutoff))
+               + td(ALIGN_CENTER, "&ge;&nbsp;" + to_string<uint32_t>(summary.candidate_junction.accepted_pos_hash_score_cutoff))
                );
     HTML << tr(td("Test this many junction candidates (n). May be smaller if not enough passed the coverage evenness threshold")
                + td(ALIGN_CENTER, to_string<uint32_t>(settings.minimum_candidate_junctions) + "&nbsp;&le;&nbsp;n&nbsp;&le;&nbsp;" + ((settings.maximum_candidate_junctions == 0) ? "NO&nbsp;LIMIT" : to_string<uint32_t>(settings.maximum_candidate_junctions)))
-               + td(ALIGN_CENTER, to_string<uint32_t>(summary.candidate_junction.accepted.number))
+               + td(ALIGN_CENTER, to_string<uint32_t>(summary.candidate_junction.accepted_number))
                );
     HTML << tr(td("Total length of all junction candidates (factor times the reference genome length)")
                + td(ALIGN_CENTER, (settings.maximum_candidate_junction_length_factor == 0.0) ? "NO&nbsp;LIMIT" : "&le;&nbsp;" + to_string<double>(settings.maximum_candidate_junction_length_factor))
-               + td(ALIGN_CENTER, formatted_double(static_cast<double>(summary.candidate_junction.accepted.length)/static_cast<double>(total_length), 3, false).to_string())
+               + td(ALIGN_CENTER, formatted_double(static_cast<double>(summary.candidate_junction.accepted_length)/static_cast<double>(total_length), 3, false).to_string())
                );
     HTML << end_table() << endl;
 
@@ -741,8 +741,6 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
         HTML << td(ALIGN_CENTER, "NA");
       } else {
         HTML << td(ALIGN_CENTER, to_string(summary.preprocess_error_count[it->m_seq_id].no_pos_hash_per_position_pr, 5));
-        //        HTML << td(ALIGN_CENTER, to_string(summary.alignment_resolution.pos_hash_cutoffs[it->m_seq_id].back()
-        //        HTML << td(ALIGN_CENTER, to_string(summary.alignment_resolution.distance_cutoffs[it->m_seq_id]));
       }
       HTML << end_tr();
     }

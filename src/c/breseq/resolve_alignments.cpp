@@ -154,11 +154,11 @@ void calculate_continuation(
 PosHashProbabilityTable::PosHashProbabilityTable(Summary& summary)
 {
   average_read_length = static_cast<int32_t>(round(summary.sequence_conversion.avg_read_length));
-  for (map<string,Summary::Coverage>::iterator it=summary.preprocess_coverage.begin();
+  for (map<string,CoverageSummary>::iterator it=summary.preprocess_coverage.begin();
        it != summary.preprocess_coverage.end(); it++) {
     
     string seq_id = it->first;
-    Summary::Coverage& cov = it->second;
+    CoverageSummary& cov = it->second;
     
     Parameters p = {
           cov.nbinom_size_parameter,
@@ -257,8 +257,6 @@ void resolve_alignments(
 	bool verbose = false;
   
   // local variables for convenience
-  map<string,int32_t>& distance_cutoffs = summary.alignment_resolution.distance_cutoffs;
-  storable_map<string, storable_vector<int32_t> >& pos_hash_cutoffs = summary.alignment_resolution.pos_hash_cutoffs;
   int32_t avg_read_length = static_cast<int32_t>(round(summary.sequence_conversion.avg_read_length));
   summary.alignment_resolution.reads_mapped_to_references.resize(ref_seq_info.size(),0);
 
@@ -578,8 +576,7 @@ void resolve_alignments(
     //junction_test_info_list.sort();
   }
     
-  map<int32_t, int32_t> accepted_pos_hash_score_distribution;
-	map<int32_t, int32_t> observed_pos_hash_score_distribution;
+  PosHashScoreDistribution accepted_pos_hash_score_distribution;
   for(list<JunctionTestInfo>::iterator it = passed_junction_test_info_list.begin(); it != passed_junction_test_info_list.end(); it++)
   {
     JunctionTestInfo& junction_test_info = *it;
@@ -589,7 +586,7 @@ void resolve_alignments(
 		gd.add(item);
 
 		// save the score in the distribution
-		add_score_to_distribution(accepted_pos_hash_score_distribution, junction_test_info.pos_hash_score);
+		accepted_pos_hash_score_distribution.add_score(junction_test_info.pos_hash_score);
 
 		// Create matches from UNIQUE sides of each match to reference genome
 		// this fixes, for example appearing to not have any coverage at the origin of a circular DNA fragment
@@ -645,7 +642,6 @@ void resolve_alignments(
 	}
 
   // Save summary statistics
-	summary.alignment_resolution.observed_pos_hash_score_distribution = observed_pos_hash_score_distribution;
 	summary.alignment_resolution.accepted_pos_hash_score_distribution = accepted_pos_hash_score_distribution;
   
   // Write the genome diff file
@@ -682,7 +678,7 @@ void load_junction_alignments(
     
     cerr << "  READ FILE:" << rf.m_base_name << endl;
     
-    Summary::AlignmentResolution::ReadFile read_file_summary_info;
+    ReadFileSummary read_file_summary_info;
     
     // Traverse the original fastq files to keep track of order
     // b/c some matches may exist in only one or the other file
@@ -944,7 +940,7 @@ void load_sam_only_alignments(
     
     cerr << "  READ FILE:" << rf.m_base_name << endl;
     
-    Summary::AlignmentResolution::ReadFile summary_info;
+    ReadFileSummary summary_info;
     
     string this_unmatched_file_name = settings.data_path + "/unmatched." + rf.m_base_name + ".fastq";
     cFastqFile out_unmatched_fastq(this_unmatched_file_name, ios::out);

@@ -768,7 +768,7 @@ namespace breseq
 		this->converted_fastq_file_name = this->sequence_conversion_path + "/#.converted.fastq";
 		this->unwanted_fasta_file_name = this->sequence_conversion_path + "/unwanted.fasta";
 		this->reference_trim_file_name = this->sequence_conversion_path + "/@.trims";
-		this->sequence_conversion_summary_file_name = this->sequence_conversion_path + "/summary.bin";
+		this->sequence_conversion_summary_file_name = this->sequence_conversion_path + "/summary.json";
 
     //! Paths: Read alignment
 		this->reference_alignment_path = "02_reference_alignment";
@@ -795,11 +795,11 @@ namespace breseq
 		this->coverage_junction_best_bam_file_name = this->candidate_junction_path + "/best.bam";
 		this->coverage_junction_distribution_file_name = this->candidate_junction_path + "/@.unique_only_coverage_distribution.tab";
 		this->coverage_junction_plot_file_name = this->candidate_junction_path + "/@.coverage.pdf";
-		this->coverage_junction_summary_file_name = this->candidate_junction_path + "/coverage.summary.bin";
-    this->coverage_junction_error_count_summary_file_name = this->candidate_junction_path + "/error_count.summary.bin";
+		this->coverage_junction_summary_file_name = this->candidate_junction_path + "/coverage.summary.json";
+    this->coverage_junction_error_count_summary_file_name = this->candidate_junction_path + "/error_count.summary.json";
 
     this->candidate_junction_done_file_name = this->candidate_junction_path + "/candidate_junction.done";
-		this->candidate_junction_summary_file_name = this->candidate_junction_path + "/candidate_junction_summary.bin";
+		this->candidate_junction_summary_file_name = this->candidate_junction_path + "/candidate_junction_summary.json";
 		this->candidate_junction_fasta_file_name = this->candidate_junction_path + "/candidate_junction.fasta";
     this->candidate_junction_detailed_file_name = this->candidate_junction_path + "/candidate_junction.detailed.txt";
 		this->candidate_junction_faidx_file_name = this->candidate_junction_path + "/candidate_junction.fasta.fai";
@@ -819,7 +819,7 @@ namespace breseq
 
 		this->resolved_reference_sam_file_name = this->alignment_resolution_path + "/reference.sam";
 		this->resolved_junction_sam_file_name = this->alignment_resolution_path + "/junction.sam";
-		this->alignment_resolution_summary_file_name = this->alignment_resolution_path + "/summary.bin";
+		this->alignment_resolution_summary_file_name = this->alignment_resolution_path + "/summary.json";
 		this->jc_genome_diff_file_name = this->alignment_resolution_path + "/jc_evidence.gd";
 
     this->junction_debug_file_name = this->alignment_resolution_path + "/junction_debug.txt";
@@ -843,7 +843,7 @@ namespace breseq
 		this->error_counts_done_file_name = this->error_calibration_path + "/error_counts.done";
 		this->coverage_file_name = this->error_calibration_path + "/@.coverage.tab";
 		this->unique_only_coverage_distribution_file_name = this->error_calibration_path + "/@.unique_only_coverage_distribution.tab";
-		this->error_rates_summary_file_name = this->error_calibration_path + "/summary.bin";
+		this->error_rates_summary_file_name = this->error_calibration_path + "/summary.json";
 		this->error_rates_base_qual_error_prob_file_name = this->error_calibration_path + "/base_qual_error_prob.#.tab";
 		this->plot_error_rates_r_script_file_name = this->program_data_path + "/plot_error_rate.r";
 		this->plot_error_rates_fit_r_script_file_name = this->error_calibration_path + "/fit.#.r_script";
@@ -917,6 +917,8 @@ namespace breseq
 		this->reference_gff3_file_name = this->data_path + "/reference.gff3";
 		this->unmatched_read_file_name = this->data_path + "/#.unmatched.fastq";
     this->output_vcf_file_name = this->data_path + "/output.vcf";
+    this->data_summary_file_name = this->data_path + "/summary.json";
+
 
     //! Paths: Experimental
     this->long_pairs_file_name = this->output_path + "/long_pairs.tab";

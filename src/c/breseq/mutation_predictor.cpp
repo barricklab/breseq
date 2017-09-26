@@ -1626,7 +1626,7 @@ namespace breseq {
   {
     (void)settings;
     
-    for (map<string,Summary::Coverage>::iterator it=summary.unique_coverage.begin(); it!=summary.unique_coverage.end(); it++) {
+    for (map<string,CoverageSummary>::iterator it=summary.unique_coverage.begin(); it!=summary.unique_coverage.end(); it++) {
       
       // This is how we know it was deleted
       if (it->second.deletion_coverage_propagation_cutoff >= 0.0) continue;

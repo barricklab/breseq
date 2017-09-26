@@ -3225,7 +3225,7 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
 
   string polymorphism_statistics_r_script_file_name = settings.polymorphism_statistics_r_script_file_name;
   string polymorphism_statistics_r_script_log_file_name = settings.polymorphism_statistics_r_script_log_file_name;
-  uint32_t total_reference_length = summary.sequence_conversion.total_reference_sequence_length;
+  uint64_t total_reference_length = summary.sequence_conversion.total_reference_sequence_length;
 
   string command = "R --vanilla total_length=" + to_string<uint32_t>(total_reference_length) +
     " in_file="   + cString(polymorphism_statistics_input_file_name).escape_shell_chars() +

@@ -30,7 +30,7 @@ namespace breseq {
 
    */
 
-  Summary::AnalyzeFastq normalize_fastq(
+  AnalyzeFastqSummary normalize_fastq(
                                         const string &file_name, 
                                         const string &convert_file_name, 
                                         const uint32_t file_index, 
@@ -224,7 +224,7 @@ namespace breseq {
     
     double avg_read_length = static_cast<double>(num_bases) / static_cast<double>(num_reads);
     
-    Summary::AnalyzeFastq retval(
+    AnalyzeFastqSummary retval(
                                  min_read_length,
                                  max_read_length, 
                                  avg_read_length,

@@ -875,15 +875,6 @@ namespace breseq {
     }
     return s;
   }
-
-
-	inline void add_score_to_distribution(map<int32_t, int32_t> distribution_hash_ref, int32_t score)
-	{
-		if (distribution_hash_ref.count(score) == 0)
-			distribution_hash_ref[score] = 1; // Initialize value
-		else
-			distribution_hash_ref[score]++;
-	}
   
   // Return the path of the file without the trailing forward-slash
   inline string path_to_dirname(string file_name)

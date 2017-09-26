@@ -536,7 +536,7 @@ namespace breseq {
     SequenceToKeyToJunctionCandidateMap candidate_junctions;
     
     // shortcut to summary data for this step
-    Summary::CandidateJunctionSummaryData& hcs(summary.candidate_junction);
+    CandidateJunctionSummary& hcs(summary.candidate_junction);
     
     uint32_t i = 0;
     uint64_t passed_alignment_pairs_considered = 0;
@@ -669,7 +669,7 @@ namespace breseq {
     //    (and also its reverse complement)
 		////
     
-		map<int32_t, int32_t> observed_pos_hash_score_distribution;
+		PosHashScoreDistribution observed_pos_hash_score_distribution;
     
 		vector<JunctionCandidate> combined_candidate_junctions;
     
@@ -699,7 +699,7 @@ namespace breseq {
 			handled_seq[rc_junction_seq]++;
             
 			// Save the score in the distribution
-			add_score_to_distribution(observed_pos_hash_score_distribution, best_candidate_junction.pos_hash_score());
+			observed_pos_hash_score_distribution.add_score(best_candidate_junction.pos_hash_score());
       
 			// Check minimum requirements
 			if (best_candidate_junction.pos_hash_score() < settings.minimum_candidate_junction_pos_hash_score)
@@ -933,12 +933,12 @@ namespace breseq {
 		cerr << "    Accepted: Number = " << accepted_candidate_junction_number << ", Pos Hash Score >= " << lowest_accepted_pos_hash_score << ", Cumulative Length = " << cumulative_cj_length << " bases" << endl;
     
 		// Save summary statistics
-		hcs.total.number = total_candidate_junction_number;
-		hcs.total.length = total_cumulative_cj_length;
+		hcs.total_number = total_candidate_junction_number;
+		hcs.total_length = total_cumulative_cj_length;
     
-		hcs.accepted.number = accepted_candidate_junction_number;
-		hcs.accepted.length = cumulative_cj_length;
-		hcs.accepted.pos_hash_score_cutoff = lowest_accepted_pos_hash_score;
+		hcs.accepted_number = accepted_candidate_junction_number;
+		hcs.accepted_length = cumulative_cj_length;
+		hcs.accepted_pos_hash_score_cutoff = lowest_accepted_pos_hash_score;
 		hcs.pos_hash_score_distribution = observed_pos_hash_score_distribution;
     
     ///
