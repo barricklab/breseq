@@ -3,8 +3,7 @@
 # -*- coding: utf-8 -*-
 """
 Created on Thu June  1 16:56:12 2017
-read in all contents of all specified .gd file into python dictionary
-
+read in all contents of all specified .gd file into python dictionary using function gd_dictionary_read_in
 
 improvements needed:
 
@@ -46,12 +45,12 @@ def files_to_compare():
     return temp_list
 
 
-def gd_dictionary_read_in(sample, files):
-    """read gd file in and return dicionary"""
-    assert files.endswith(".gd"), "non-gd file found:\n%s\n\n Should not be possible if files_to_compare function used." % files
+def gd_dictionary_read_in(sample_name, gd_file):
+    """read gd_file in and return ordered dicionary with sample_name as """
+    assert gd_file.endswith(".gd"), "non-gd file found:\n%s\n\n Should not be possible if files_to_compare function used." % gd_file
     gd_dict = {}
-    gd_dict[sample] = OrderedDict()  # ordered to ensure headers stored at front
-    with open(files, "r") as F:
+    gd_dict[sample_name] = OrderedDict()  # ordered to ensure headers stored at front
+    with open(gd_file, "r") as F:
 
         for line in F:
             line = line.rstrip().split('\t')
@@ -63,12 +62,12 @@ def gd_dictionary_read_in(sample, files):
 
                 if len(line) == 1:  # Version line
                     assert line[0] == "#=GENOME_DIFF 1.0", "The following line lacks tabs, and is not the #=GENOME_DIFF 1.0 line:\n%s" % line
-                    assert "meta_data" not in gd_dict[sample], "Multiple version lines detected, possible formatting error:\n%s" % line
-                    gd_dict[sample]["meta_data"] = [line]  # Defined here to ensure is first line, else block will throw KeyError if version line not detected previously
+                    assert "meta_data" not in gd_dict[sample_name], "Multiple version lines detected, possible formatting error:\n%s" % line
+                    gd_dict[sample_name]["meta_data"] = [line]  # Defined here to ensure is first line, else block will throw KeyError if version line not detected previously
 
                 else:
                     try:  # All other header/metadata lines
-                        gd_dict[sample]["meta_data"].append(line)
+                        gd_dict[sample_name]["meta_data"].append(line)
                     except KeyError:
                         assert False, "The following line was encountered before the version line. Please ensure file starts with #=GENOME_DIFF 1.0. Note space, NOT tab between F and 1.\n%s" % line
 
@@ -80,11 +79,11 @@ def gd_dictionary_read_in(sample, files):
                 commented_out = True  # Needed to replace comment status after storage
 
             # Verify ID is unique and store 3 core elements to new dictionary entry
-            assert line[1] not in gd_dict[sample], "The ID %s is duplicated in %s from the following line:\n%s" % (line[1], files, line)
-            gd_dict[sample][line[1]] = OrderedDict()  # OrderedDict used such that iterating over keys will naturally reproduce original order
-            gd_dict[sample][line[1]]["type"] = line[0]
-            gd_dict[sample][line[1]]["id"] = line[1]
-            gd_dict[sample][line[1]]["parent-ids"] = line[2]
+            assert line[1] not in gd_dict[sample_name], "The ID %s is duplicated in %s from the following line:\n%s" % (line[1], gd_file, line)
+            gd_dict[sample_name][line[1]] = OrderedDict()  # OrderedDict used such that iterating over keys will naturally reproduce original order
+            gd_dict[sample_name][line[1]]["type"] = line[0]
+            gd_dict[sample_name][line[1]]["id"] = line[1]
+            gd_dict[sample_name][line[1]]["parent-ids"] = line[2]
 
             # Validation lines
             if re.match("^[A-Z]{4}$", line[0]):
@@ -92,61 +91,61 @@ def gd_dictionary_read_in(sample, files):
                 # No fields common to all Validation entries.
 
                 if line[0] == "NOTE":  # Listed first as is most common
-                    gd_dict[sample][line[1]]["note"] = line[3]
+                    gd_dict[sample_name][line[1]]["note"] = line[3]
 
                 elif line[0] in ["CURA", "FPOS"]:  # share 100% required fields
-                    gd_dict[sample][line[1]]["expert"] = line[3]
+                    gd_dict[sample_name][line[1]]["expert"] = line[3]
 
                 elif line[0] in ["TSEQ", "PFLP", "RFLP", "PFGE", "MASK"]:
-                    gd_dict[sample][line[1]]["seq_id"] = line[3]  # shared among all 5
+                    gd_dict[sample_name][line[1]]["seq_id"] = line[3]  # shared among all 5
 
                     if line[0] == "MASK":
-                        gd_dict[sample][line[1]]["position"] = line[4]
-                        gd_dict[sample][line[1]]["size"] = line[5]
+                        gd_dict[sample_name][line[1]]["position"] = line[4]
+                        gd_dict[sample_name][line[1]]["size"] = line[5]
 
                     elif line[0] == "PFGE":
-                        gd_dict[sample][line[1]]["restriction_enzyme"] = line[4]
+                        gd_dict[sample_name][line[1]]["restriction_enzyme"] = line[4]
 
                     else:  # TSEQ, PFLP, and RFLP share additional 4 common fields
-                        gd_dict[sample][line[1]]["primer1_start"] = line[4]
-                        gd_dict[sample][line[1]]["primer1_end"] = line[5]
-                        gd_dict[sample][line[1]]["primer2_start"] = line[6]
-                        gd_dict[sample][line[1]]["primer2_end"] = line[7]
+                        gd_dict[sample_name][line[1]]["primer1_start"] = line[4]
+                        gd_dict[sample_name][line[1]]["primer1_end"] = line[5]
+                        gd_dict[sample_name][line[1]]["primer2_start"] = line[6]
+                        gd_dict[sample_name][line[1]]["primer2_end"] = line[7]
 
                         if line[0] == "RFLP":
-                            gd_dict[sample][line[1]]["enzyme"] = line[8]
+                            gd_dict[sample_name][line[1]]["enzyme"] = line[8]
                 else:
                     assert line[0] == "PHYL", "The following 4 letter code mutation not recognized, please check formatting:\n%s\nFrom:\n%s" % (line[0], line)
-                    gd_dict[sample][line[1]]["gd"] = line[3]
+                    gd_dict[sample_name][line[1]]["gd"] = line[3]
 
             # Mutation Line
             elif re.match("^[A-Z]{3}$", line[0]):
 
                 # Store 2 core elements of each mutation to dictionary
-                gd_dict[sample][line[1]]["seq_id"] = line[3]
-                gd_dict[sample][line[1]]["position"] = line[4]
+                gd_dict[sample_name][line[1]]["seq_id"] = line[3]
+                gd_dict[sample_name][line[1]]["position"] = line[4]
 
                 # Add other required elements of each mutation to dictionary
                 if line[0] in ["SNP", "INS"]:  # Both SNP and INS share 100% of required fields
-                    gd_dict[sample][line[1]]["new_seq"] = line[5]
+                    gd_dict[sample_name][line[1]]["new_seq"] = line[5]
 
                 elif line[0] in ["DEL", "AMP", "SUB", "CON", "INV"]:
-                    gd_dict[sample][line[1]]["size"] = line[5]  # Required for all, only additional required for DEL, INV
+                    gd_dict[sample_name][line[1]]["size"] = line[5]  # Required for all, only additional required for DEL, INV
 
                     if line[0] == "AMP":
-                        gd_dict[sample][line[1]]["new_copy_number"] = line[6]
+                        gd_dict[sample_name][line[1]]["new_copy_number"] = line[6]
 
                     elif line[0] == "SUB":
-                        gd_dict[sample][line[1]]["new_seq"] = line[6]
+                        gd_dict[sample_name][line[1]]["new_seq"] = line[6]
 
                     elif line[0] == "CON":
-                        gd_dict[sample][line[1]]["region"] = line[6]
+                        gd_dict[sample_name][line[1]]["region"] = line[6]
 
                 else:
                     assert line[0] == "MOB", "The following 3 letter code mutation not recognized, please check formatting:\n%s\nFrom:\n%s" % (line[0], line)
-                    gd_dict[sample][line[1]]["repeat_name"] = line[5]
-                    gd_dict[sample][line[1]]["strand"] = line[6]
-                    gd_dict[sample][line[1]]["duplicated_size"] = line[7]
+                    gd_dict[sample_name][line[1]]["repeat_name"] = line[5]
+                    gd_dict[sample_name][line[1]]["strand"] = line[6]
+                    gd_dict[sample_name][line[1]]["duplicated_size"] = line[7]
 
             # Evidence lines
             elif re.match("^[A-Z]{2}$", line[0]):
@@ -155,49 +154,49 @@ def gd_dictionary_read_in(sample, files):
 
                 # Add other required fields to each evidence entry in dictionary
                 if line[0] in ["RA", "MC", "UN"]:
-                    gd_dict[sample][line[1]]["seq_id"] = line[3]  # shared by all evidence save JC
+                    gd_dict[sample_name][line[1]]["seq_id"] = line[3]  # shared by all evidence save JC
 
                     if line[0] in ["MC", "UN"]:  # MC & UN share start and end, UN requires no additional
-                        gd_dict[sample][line[1]]["start"] = line[4]
-                        gd_dict[sample][line[1]]["end"] = line[5]
+                        gd_dict[sample_name][line[1]]["start"] = line[4]
+                        gd_dict[sample_name][line[1]]["end"] = line[5]
 
                         if line[0] == "MC":
-                            gd_dict[sample][line[1]]["start_range"] = line[6]
-                            gd_dict[sample][line[1]]["end_range"] = line[7]
+                            gd_dict[sample_name][line[1]]["start_range"] = line[6]
+                            gd_dict[sample_name][line[1]]["end_range"] = line[7]
 
                     else:  # RA
-                        gd_dict[sample][line[1]]["position"] = line[4]
-                        gd_dict[sample][line[1]]["insert_position"] = line[5]
-                        gd_dict[sample][line[1]]["ref_base"] = line[6]
-                        gd_dict[sample][line[1]]["new_base"] = line[7]
+                        gd_dict[sample_name][line[1]]["position"] = line[4]
+                        gd_dict[sample_name][line[1]]["insert_position"] = line[5]
+                        gd_dict[sample_name][line[1]]["ref_base"] = line[6]
+                        gd_dict[sample_name][line[1]]["new_base"] = line[7]
 
                 else:
                     assert line[0] == "JC", "2 letter code found not matching 'RA, MC, UN, JC':\n%s" % line
-                    gd_dict[sample][line[1]]["side_1_seq_id"] = line[3]
-                    gd_dict[sample][line[1]]["side_1_position"] = line[4]
-                    gd_dict[sample][line[1]]["side_1_strand"] = line[5]
-                    gd_dict[sample][line[1]]["side_2_seq_id"] = line[6]
-                    gd_dict[sample][line[1]]["side_2_position"] = line[7]
-                    gd_dict[sample][line[1]]["side_2_strand"] = line[8]
-                    gd_dict[sample][line[1]]["overlap"] = line[9]
+                    gd_dict[sample_name][line[1]]["side_1_seq_id"] = line[3]
+                    gd_dict[sample_name][line[1]]["side_1_position"] = line[4]
+                    gd_dict[sample_name][line[1]]["side_1_strand"] = line[5]
+                    gd_dict[sample_name][line[1]]["side_2_seq_id"] = line[6]
+                    gd_dict[sample_name][line[1]]["side_2_position"] = line[7]
+                    gd_dict[sample_name][line[1]]["side_2_strand"] = line[8]
+                    gd_dict[sample_name][line[1]]["overlap"] = line[9]
 
             else:
-                assert False, "The following line was not added to dictionary in %s:\n%s" % (files, line)
+                assert False, "The following line was not added to dictionary in %s:\n%s" % (gd_file, line)
 
             # Add additional key=value pairs to dictionary with key, and value as keys and values for dictionary entries.
-            if len(line) > len(gd_dict[sample][line[1]]):
-                for entry in line[len(gd_dict[sample][line[1]]):]:
+            if len(line) > len(gd_dict[sample_name][line[1]]):
+                for entry in line[len(gd_dict[sample_name][line[1]]):]:
                     assert len(entry.split("=")) == 2, "Non key=value pair found for mutation:\n%s\n\nSpecifically: %s" % (line, entry)
                     assert entry.split("=")[0] not in named_fields, "Key in key=value pair, duplicates explicitly named field, will need to recode this 'somehow'\n%s\n\nSpecifically Duplicated: %s" % (line, entry.split("=")[0])
-                    assert entry.split("=")[0] not in gd_dict[sample][line[1]], "Duplicated key from key=value pairs in mutation:\n%s\n\nSpecifically: %s" % (line, entry.split("=")[0])
-                    gd_dict[sample][line[1]][entry.split("=")[0]] = entry.split("=")[1]
+                    assert entry.split("=")[0] not in gd_dict[sample_name][line[1]], "Duplicated key from key=value pairs in mutation:\n%s\n\nSpecifically: %s" % (line, entry.split("=")[0])
+                    gd_dict[sample_name][line[1]][entry.split("=")[0]] = entry.split("=")[1]
 
             if commented_out:
-                gd_dict[sample][line[1]]["type"] = "#" + line[0]  # Replace comment as appropriate
+                gd_dict[sample_name][line[1]]["type"] = "#" + line[0]  # Replace comment as appropriate
                 # will need to deal with in subsequent functions if filtering or sorting
                 # Alternatively, could re-engineer to have additional key saying 'commented' or 'ignored' or something
 
-    return gd_dict[sample]
+    return gd_dict[sample_name]
 
 
 # The following are the 35 named fields that breseq may find among evidence, mutation, and validation lines.
