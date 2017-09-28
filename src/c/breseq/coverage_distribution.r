@@ -464,7 +464,7 @@ if (nb_fit_mu > 0) {
   size_estimate = (1/(v-m))*(m*m)
   cat("Mu estimate=", m," Size estimate =", size_estimate, "\n")
   deletion_propagation_coverage = qnbinom(deletion_propagation_pr_cutoff, size = size_estimate, mu = m)
-  if (is.nan(deletion_propagation_coverage) || (deletion_propagation_coverage < 1)) {
+  if (is.na(deletion_propagation_coverage) || is.nan(deletion_propagation_coverage) || (deletion_propagation_coverage < 1)) {
     cat("Double fallback to calculating as just 10% of the mean\n")
     deletion_propagation_coverage = m * 0.1
   }
