@@ -2262,7 +2262,6 @@ int breseq_default_action(int argc, char* argv[])
     
     // Write VCF conversion
     cerr << "  Writing final VCF file..." << endl;
-
     mpgd.write_vcf(settings.output_vcf_file_name, ref_seq_info);
     
     // Write a final JSON file with all summary information
@@ -2278,7 +2277,6 @@ int breseq_default_action(int argc, char* argv[])
 		//
 		cerr << "Annotating mutations..." << endl;
 		ref_seq_info.annotate_mutations(gd);
-    
     gd.write(settings.annotated_genome_diff_file_name);
     
 		//

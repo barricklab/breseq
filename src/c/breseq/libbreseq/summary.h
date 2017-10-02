@@ -67,7 +67,7 @@ namespace breseq{
     PosHashScoreDistribution observed_pos_hash_score_distribution;
     PosHashScoreDistribution accepted_pos_hash_score_distribution;
     
-    double total_reads_mapped_to_references;
+    uint64_t total_reads_mapped_to_references;
     uint64_t total_bases_mapped_to_references;
     vector<double> reads_mapped_to_references;
     
@@ -76,7 +76,7 @@ namespace breseq{
     , total_unmatched_bases(0)
     , total_reads(0)
     , total_bases(0)
-    , total_reads_mapped_to_references(0.0)
+    , total_reads_mapped_to_references(0)
     , total_bases_mapped_to_references(0)
     {}
     

@@ -28,6 +28,8 @@ namespace breseq {
 
 // Common keywords used for diff entries:
 
+const string cDiffEntry::unprintable_key_prefix("_");
+  
 // Shared   
 const char* SEQ_ID="seq_id";
 const char* START="start";
@@ -1186,7 +1188,7 @@ void cDiffEntry::marshal(vector<string>& s) const {
   for(diff_entry_map_t::iterator i=cp.begin(); i!=cp.end(); ++i) {
     
     assert(i->first.size());
-    if (i->first.substr(0,1) == "_") continue;
+    if (is_unprintable_key(i->first)) continue;
     if (i->second.empty()) continue;
     
     // Be sure the entry is non-empty! Would rather have this as a check.
@@ -6050,8 +6052,77 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
   output.close();
   
 }
-
   
+// Convert GD file to json file
+void cGenomeDiff::write_json(const string &jsonfile)
+{
+  // Write results to file
+  ofstream output( jsonfile.c_str() );
+  
+  json j;
+  
+  // Header fields
+  if (this->metadata.version.size())
+    j["metadata"]["version"] = this->metadata.version;
+  if (this->metadata.title.size())
+    j["metadata"]["title"] = this->metadata.title;
+  if (this->metadata.author.size())
+    j["metadata"]["author"] = this->metadata.author;
+  if (this->metadata.created.size())
+    j["metadata"]["created"] = this->metadata.created;
+  if (this->metadata.program.size())
+    j["metadata"]["program"] = this->metadata.program;
+  if (this->metadata.command.size())
+    j["metadata"]["command"] = this->metadata.command;
+  if (this->metadata.ref_seqs.size())
+    j["metadata"]["ref_seqs"] = this->metadata.ref_seqs;
+  if (this->metadata.read_seqs.size())
+    j["metadata"]["read_seqs"] = this->metadata.read_seqs;
+  if (this->metadata.adapter_seqs.size())
+    j["metadata"]["adapter_seqs"] = this->metadata.adapter_seqs;
+  if (this->metadata.adapters_for_reads.size())
+    j["metadata"]["adapters_for_reads"] = this->metadata.adapters_for_reads;
+  if (this->metadata.reads_by_pair.size())
+    j["metadata"]["reads_by_pair"] = this->metadata.reads_by_pair;
+  if (this->metadata.reads_by_pair.size())
+    j["metadata"]["reads_by_pair"] = this->metadata.reads_by_pair;
+  for (map<string,string>::const_iterator it=this->metadata.breseq_data.begin(); it!=this->metadata.breseq_data.begin(); it++) {
+    j["metadata"][it->first] = it->second;
+  }
+  if (this->metadata.population.size())
+    j["metadata"]["population"] = this->metadata.population;
+  if (this->metadata.treatment.size())
+    j["metadata"]["treatment"] = this->metadata.treatment;
+  if (this->metadata.time != -1.0)
+    j["metadata"]["time"] = this->metadata.time;
+  if (this->metadata.clone.size())
+    j["metadata"]["clone"] = this->metadata.clone;
+  
+  
+  for (diff_entry_list_t::const_iterator it=this->_entry_list.begin(); it!=this->_entry_list.end(); it++) {
+    const cDiffEntry& de = **it;
+    json je;
+    je["type"] = to_string(de._type);
+    je["id"] = de._id;
+    
+    // Only add evidence if not empty
+    if ((de._evidence.size() > 0) && (de._evidence[0] != ".")) {
+      je["evidence_ids"] = de._evidence;
+    }
+
+    for(diff_entry_map_t::const_iterator itd=de.begin(); itd != de.end(); itd++) {
+      if (!cDiffEntry::is_unprintable_key(itd->first)) {
+        je[itd->first] = itd->second;
+      }
+    }
+    
+    j["entries"].push_back(je);
+  }
+
+  output << j.dump(2);
+  output.close();
+}
+
 void cGenomeDiff::read_vcf(const string &file_name)
 {
   //VCF Column order.

@@ -87,7 +87,7 @@ void from_json(const json& j, AlignmentResolutionSummary& s)
   s.max_sam_base_quality_score = j.at("max_sam_base_quality_score").get<int32_t>();
   s.observed_pos_hash_score_distribution = j.at("observed_pos_hash_score_distribution").get<PosHashScoreDistribution>();
   s.accepted_pos_hash_score_distribution = j.at("accepted_pos_hash_score_distribution").get<PosHashScoreDistribution>();
-  s.total_reads_mapped_to_references = j.at("total_reads_mapped_to_references").get<double>();
+  s.total_reads_mapped_to_references = j.at("total_reads_mapped_to_references").get<uint64_t>();
   s.total_bases_mapped_to_references = j.at("total_bases_mapped_to_references").get<uint64_t>();
   s.reads_mapped_to_references = j.at("reads_mapped_to_references").get<vector<double> >();
 }

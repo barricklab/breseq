@@ -251,6 +251,13 @@ public:
   //! Return if a given key value exists in _fields
   bool entry_exists(const diff_entry_key_t& k) const { return (count(k) > 0); }
   
+  //! Return if this entry should be printed (does not begin with an underscore)
+  static const string unprintable_key_prefix;
+  static bool is_unprintable_key(const diff_entry_key_t& k)
+    { return k.find(unprintable_key_prefix) == 0; }
+  static string make_unprintable_key(const diff_entry_key_t & k)
+    { return unprintable_key_prefix + k; }
+  
   //! Return if this diff entry is a mutation
   bool is_mutation() const;
 
@@ -840,10 +847,12 @@ public:
   void read_vcf(const string& filename);
   void write_vcf(const string& filename, cReferenceSequences& ref_seq_info);
 
-
   //! GVF files
   void write_gvf(const string& filename, cReferenceSequences& ref_seq_info, bool snv_only = false);
   
+  //! JSON files
+  void write_json(const string &jsonfile);
+
   
   //!---- Format Conversion Functions: Static Convenience ---- !//
 

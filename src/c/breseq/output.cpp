@@ -589,7 +589,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     
     uint32_t tid = ref_seq_info.seq_id_to_index(it->m_seq_id);
     double this_reference_mapped_reads = summary.alignment_resolution.reads_mapped_to_references[tid];  
-    double total_mapped_reads = summary.alignment_resolution.total_reads_mapped_to_references;
+    uint64_t total_mapped_reads = summary.alignment_resolution.total_reads_mapped_to_references;
     double this_reference_fraction_mapped_reads = 100 * this_reference_mapped_reads / total_mapped_reads; 
     
     // Keep track of references that were special

@@ -529,9 +529,9 @@ int do_validate(int argc, char *argv[])
 int do_check(int argc, char *argv[])
 {
   AnyOption options("gdtools CHECK [-o output.gd] control.gd test.gd");
-	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+	options("help,h", "display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o",         "output GD file", "comp.gd");
-  options("reference,r",      "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
+  options("reference,r",      "file containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
   options("evidence",         "compare evidence", TAKES_NO_ARGUMENT);
   options("jc-buffer",        "when comparing JC evidence, length of sequence segment to compare for JC evidence", 50);
   options("jc-shorten",       "when comparing JC evidence, length to shorten control segments by when comparing JC evidence for overlap", 5);
@@ -628,7 +628,117 @@ int do_check(int argc, char *argv[])
   return 0;
 }
 
-int do_gd2vcf( int argc, char* argv[])
+int do_convert(int argc, char* argv[])
+{
+	AnyOption options("gdtools CONVERT -f <format> [-o <output_file> -r <refseq>] <input_file>");
+
+	options("help,h", "display detailed help message", TAKES_NO_ARGUMENT);
+	options("format,f","file format to output: GD, VCF, GVF, or JSON (REQUIRED)");
+	options("output,o","name of output file (DEFAULT = <input_file>.*)", "");
+		options("reference,r",  "file containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED for VCF input or with annotate option)");
+	options("annotate,a","annotate mutations and evidence in input file", TAKES_NO_ARGUMENT);
+
+	options.processCommandArgs( argc,argv);
+	
+	options.addUsage("");
+	options.addUsage("Convert a single file from/to GenomeDiff format.");
+	options.addUsage("Allowed input formats: GD, VCF");
+	options.addUsage("");
+	
+	if (options.count("help")) {
+		options.printUsage();
+		return -1;
+	}
+	
+	UserOutput uout("CONVERT");
+	
+	if (!options.count("format")) {
+		options.addUsage("");
+		options.addUsage("You must supply the output file format option (--format,-f).");
+		options.printUsage();
+		return -1;
+	}
+	
+	string output_format = to_upper(options["format"]);
+	
+	if( options.getArgc() != 1 ){
+		options.addUsage("");
+		options.addUsage("You must provide exactly one input Genome Diff file.");
+		options.printUsage();
+		return -1;
+	}
+	string input_file_name = options.getArgv(0);
+	
+	// Set default output file name
+	string output_file_name = options["output"];
+	if (output_file_name.size() == 0) {
+		string default_ending = to_lower(output_format);
+		output_file_name = cString(input_file_name).get_base_name_no_extension();
+		output_file_name += "." + default_ending;
+	}
+	
+	cReferenceSequences ref_seq_info;
+	if ( (output_format == "VCF") || options.count("annotate") ) {
+		if (!options.count("reference")) {
+			options.addUsage("");
+			if (output_format == "VCF") {
+			options.addUsage("You must provide a reference sequence file (-r) for VCF output.");
+			} else if (options.count("annotate")) {
+				options.addUsage("You must provide a reference sequence file (-r) with the annotate (-a) option.");
+			}
+			options.printUsage();
+			return -1;
+		}
+		ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
+	}
+
+	// Load the input file
+	
+	// Sniff the first line of the file to determine format
+	ifstream sniff(input_file_name);
+	ASSERT(sniff.is_open(), "Could not open input file: " + input_file_name);
+	string first_line;
+	getline(sniff, first_line);
+	first_line = to_upper(first_line);
+	sniff.close();
+	
+	// Load as GenomeDiff
+	uout("Reading file", input_file_name);
+	cGenomeDiff gd;
+
+	if (first_line.find("##FILEFORMAT=VCF") != string::npos) {
+		uout("Input format", "VCF");
+		gd.read_vcf(input_file_name);
+	} else if (first_line.find("#=GENOME_DIFF") != string::npos) {
+		uout("Input format", "GD");
+		gd.read(input_file_name);
+	} else {
+		ERROR("Could not determine file format of input file. Expected first line to contain:\n   #=GENOME_DIFF for GenomeDiff\n   ##FILEFORMAT=VCF for VCF");
+	}
+	
+	// Annotate if requested - not just mutations
+	if (options.count("annotate")) {
+		uout("Annotating mutations");
+		ref_seq_info.annotate_mutations(gd, false, false);
+	}
+					
+	// Write in format requested
+	uout("Writing file", output_file_name);
+	uout("Output format", output_format);
+	if ( (output_format == "GENOMEDIFF") || (output_format == "GD") ) {
+		gd.write(output_file_name);
+	} else if (output_format == "VCF") {
+		gd.write_vcf(output_file_name, ref_seq_info);
+	} else if (output_format == "GVF") {
+		gd.write_gvf(output_file_name, ref_seq_info);
+	} else if (output_format == "JSON") {
+		gd.write_json(output_file_name);
+	}
+	
+	return 0;
+}
+
+int do_gd2vcf(int argc, char* argv[])
 {
 	AnyOption options("gdtools GD2VCF [-o output.vcf] input.gd");
 
@@ -944,18 +1054,17 @@ int do_annotate(int argc, char* argv[])
 	options("phylogeny-aware,p", "Check the optional 'phylogeny_id' field when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
 	options("region,g", "Only show mutations that overlap this reference fragment (e.g., REL606:64722-65312)");
 	options("collapse,c", "Do not show samples (columns) unless they have at least one mutation", TAKES_NO_ARGUMENT);
-	
-	
-  options.addUsage("");
-  options.addUsage("If multiple GenomeDiff input files are provided, then they are merged and the frequencies from each file are shown for each mutation.");
+	options.addUsage("");
+	options.addUsage("Annotate mutations in one or more GenomeDiff files. If multiple input files are provided, then a table is created to compare the frequencies for identical mutations across samples.");
   options.addUsage("");
   options.addUsage("Valid output formats:");
   options.addUsage("  HTML    Descriptive table viewable in a web browser"); 
   options.addUsage("  GD      GenomeDiff with added annotation of mutations");
 	options.addUsage("  TSV     Tab-separated values file suitable for input into R or Excel");
 	options.addUsage("  PHYLIP  Alignment file suitable for input into PHYLIP");
+	options.addUsage("  JSON  	JavaScript object notation file suitable for parsing");
 	options.addUsage("");
-	options.addUsage("In GD output, frequencies of 'D' mean that this mutation occurs within");
+	options.addUsage("In output, frequencies of 'D' mean that this mutation occurs within");
 	options.addUsageSameLine("a region that is deleted by a different mutation in the genome in question. Frequencies");
 	options.addUsageSameLine("of '?' indicate that there were not enough aligned reads to call a mutation at this position");
 	options.addUsageSameLine("in the genome in question (either for or against the mutation).");
@@ -989,7 +1098,9 @@ int do_annotate(int argc, char* argv[])
     output_file_name = "output.phylip";
 	} else if (output_format == "TSV") {
 		output_file_name = "output.tsv";
-  } else {
+  } else if (output_format == "JSON") {
+		output_file_name = "JSON";
+	} else {
     ERROR("Unknown output format (--format|-f) of " + output_format + " requested. Valid choices are HTML, GD, TSV, PHYLIP");
   }
   // User setting overrules default names
@@ -1075,10 +1186,9 @@ int do_annotate(int argc, char* argv[])
 		
     gd.write(output_file_name);
   } else if (output_format == "PHYLIP") {
-      uout("Writing output PHYLIP alignment file", options["output"]);
-      gd.write_phylip(output_file_name, gd, gd_list, ref_seq_info);
+		uout("Writing output PHYLIP alignment file", options["output"]);
+		gd.write_phylip(output_file_name, gd, gd_list, ref_seq_info);
 	} else if (output_format == "TSV") {
-		uout("Writing output TSV file", options["output"]);
 		
 		// Load the entire list and pass it to write_csv
 		for (vector<string>::iterator it=gd_path_names.begin(); it!=gd_path_names.end(); it++) {
@@ -1092,7 +1202,37 @@ int do_annotate(int argc, char* argv[])
 			gd_list.push_back(this_gd);
 		}
 		
+		uout("Writing output TSV file", options["output"]);
 		gd.write_tsv(output_file_name, gd_list);
+		
+	} else if (output_format == "JSON") {
+		uout("Writing output JSON file", options["output"]);
+		
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, polymorphisms_found, compare_mode, options, uout);
+		cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
+		
+		uout("Annotating mutations");
+		ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"), compare_mode);
+		
+		uout("Writing output JSON file", output_file_name);
+		
+		// Only defaults accessible - which include javascript output...
+		MutationTableOptions options;
+		Settings settings;
+		
+		// Add extra HTML annotations
+		diff_entry_list_t muts = gd.mutation_list();
+		for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr ++) {
+			cDiffEntry& mut = (**itr);
+			add_html_fields_to_mutation(mut, settings, options);
+			
+			// And add start and end position info
+			mut["start_position"] = to_string<int32_t>(mut.get_reference_coordinate_start().get_position());
+			mut["end_position"] = to_string<int32_t>(mut.get_reference_coordinate_end().get_position());
+		}
+		
+		gd.write_json(output_file_name);
+		
 	}
 	
   return 0;
@@ -3421,9 +3561,10 @@ int main(int argc, char* argv[]) {
     return do_subtract(argc_new, argv_new);    
   } else if (command == "MERGE") {
 		return do_union(argc_new, argv_new);
-		//return do_merge(argc_new, argv_new);
   } else if (command == "WEIGHTS") {
     return do_weights(argc_new, argv_new);
+	} else if (command == "CONVERT") {
+		return do_convert(argc_new, argv_new);
   } else if (command == "GD2VCF") {             
     return do_gd2vcf(argc_new, argv_new);
   } else if (command == "VCF2GD") {             
@@ -3449,9 +3590,9 @@ int main(int argc, char* argv[]) {
   } else if (command == "MRNA-STABILITY") {
     return do_mrna_stability(argc_new, argv_new);
   } else if (command == "PROTEOME") {
-      return do_translate_proteome(argc_new, argv_new);
+		return do_translate_proteome(argc_new, argv_new);
   } else if (command == "GD2OLI") {
-      return do_gd2oli(argc_new, argv_new);
+		return do_gd2oli(argc_new, argv_new);
 	} else if (command == "GD2COV") {
 		return do_gd2coverage(argc_new, argv_new);
 	} else if (command == "DELETED-GENES") {
