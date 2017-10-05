@@ -7,8 +7,8 @@ ARCHFLAGS=""
 BINARYNAME=${BINARYPLATFORM}-${BINARYARCH}
 if [ "$BINARYPLATFORM" == "Darwin" ]; then
 	BINARYARCH="universal"
-	ARCHFLAGS="-arch i386 -arch x86_64 -mmacosx-version-min=10.7"
-	BINARYNAME="MacOSX-10.7+"
+	ARCHFLAGS="-arch i386 -arch x86_64 -mmacosx-version-min=10.9"
+	BINARYNAME="MacOSX-10.9+"
 fi
 
 BINARYLOCALDIR=${BRESEQVERSIONSTRING}-${BINARYNAME}
@@ -16,8 +16,8 @@ BINARYDIR=${PWD}/${BINARYLOCALDIR}
 rm -r ${BINARYDIR} ${BINARYDIR}.tgz
 
 echo "${BINARYDIR}"
-echo "./configure --prefix=\"${BINARYDIR}\" CFLAGS=\"${ARCHFLAGS} ${CFLAGS}\" CXXFLAGS=\"${ARCHFLAGS} ${CXXFLAGS}\" LDFLAGS=\"${ARCHFLAGS} ${LDFLAGS}\""
-./configure --prefix="${BINARYDIR}" CFLAGS="${ARCHFLAGS} ${CFLAGS}" CXXFLAGS="${ARCHFLAGS} ${CXXFLAGS}" LDFLAGS="${ARCHFLAGS} ${LDFLAGS}"
+echo "./configure --prefix=\"${BINARYDIR}\" --enable-static CFLAGS=\"${ARCHFLAGS} ${CFLAGS}\" CXXFLAGS=\"${ARCHFLAGS} ${CXXFLAGS}\" LDFLAGS=\"${ARCHFLAGS} ${LDFLAGS}\""
+./configure --prefix="${BINARYDIR}" --enable-static CFLAGS="${ARCHFLAGS} ${CFLAGS}" CXXFLAGS="${ARCHFLAGS} ${CXXFLAGS}" LDFLAGS="${ARCHFLAGS} ${LDFLAGS}"
 
 make clean
 make -j 6
