@@ -407,6 +407,13 @@ cDiffEntry::cDiffEntry(const string &line, uint32_t line_number, cFileParseError
     }
   }
   
+  // We need to implicitly treat INS with no insert_position as having 1 for that
+  //   but also flag so that it will be removed when we write
+  if ( (de._type == INS) && (!de.entry_exists(INSERT_POSITION))) {
+    de[INSERT_POSITION] = "1";
+    de["_dont_print_insert_position"] = "1";
+  }
+  
   return;
 }
   
@@ -1182,6 +1189,11 @@ void cDiffEntry::marshal(vector<string>& s) const {
     s.push_back(iter->second);
     cp.erase(iter);
     
+  }
+  
+  // Remove insert_position is it was added
+  if ( (cp._type == INS) && (cp.entry_exists("_dont_print_insert_position" )) ) {
+    cp.erase(INSERT_POSITION);
   }
   
   // marshal whatever's left, unless it _begins with an underscore or is empty (a placeholder)

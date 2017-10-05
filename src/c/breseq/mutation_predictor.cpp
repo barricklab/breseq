@@ -2026,7 +2026,8 @@ namespace breseq {
             && ( n(last_ins->get(INSERT_POSITION)) == 1)
             )
         {
-          last_ins->erase(INSERT_POSITION);
+          (*last_ins)["_dont_print_insert_position"] = "1";
+          //last_ins->erase(INSERT_POSITION);
         }
         last_ins = ins;
       }
@@ -2038,7 +2039,8 @@ namespace breseq {
           && ( n(last_ins->get(INSERT_POSITION)) == 1)
           )
       {
-        last_ins->erase(INSERT_POSITION);
+        (*last_ins)["_dont_print_insert_position"] = "1";
+        //last_ins->erase(INSERT_POSITION);
       }
 
     }

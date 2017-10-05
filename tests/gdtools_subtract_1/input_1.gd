@@ -3,6 +3,8 @@ SNP	1	25	ref	830180	G
 INS	2	26	ref	866932	G
 SNP	3	28	ref	1717943	T
 SNP	4	29	ref	1812120	G
+INS	.	30	ref	1820930	A	insert_position=1	frequency=1
+INS	.	30	ref	1820940	A
 SNP	5	30	ref	1823930	A
 DEL	6	32	ref	2304200	1
 SNP	7	34	ref	2654787	G
