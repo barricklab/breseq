@@ -3,6 +3,8 @@
 SNP	1	.	ref	830180	G
 INS	2	.	ref	866932	G
 SNP	3	.	ref	1717943	T
+INS	.	.	ref	1820930	A
+INS	.	.	ref	1820940	A	frequency=0.5
 DEL	4	.	ref	2304200	1
 SNP	5	.	ref	2654787	G
 DEL	6	.	ref	3589286	663

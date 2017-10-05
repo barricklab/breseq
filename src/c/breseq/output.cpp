@@ -2267,7 +2267,7 @@ void Html_Mutation_Table_String::Item_Lines()
     
     // Embellish with insert position and phylogeny ID information.
     string position_str = mut[HTML_POSITION];
-    if (mut.entry_exists(INSERT_POSITION)) {
+    if (mut.entry_exists(INSERT_POSITION) && !mut.entry_exists("_dont_print_insert_position") ) {
       if (mut[INSERT_POSITION] != "0") {
         position_str += nonbreaking(":" + mut[INSERT_POSITION]);
       }
