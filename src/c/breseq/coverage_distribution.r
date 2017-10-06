@@ -268,7 +268,7 @@ while ( ((nb_fit_mu < 0) || (nb_fit_size < 0) || (nb_fit$code != 1)) && (try_siz
   ## SIZE ESTIMATE from the censored data can be negative, so try various values instead
   cat("Try Mean: ", try_mean, " Size: ", try_size, "\n")
 
-  nb_fit<-nlm(f_nb, c(try_mean, try_size), iterlim=1000, print.level=this.print.level )
+  try( suppressWarnings(nb_fit<-nlm(f_nb, c(try_mean, try_size), iterlim=1000, print.level=this.print.level)) )
 
   nb_fit_mu = nb_fit$estimate[1];
   nb_fit_size = nb_fit$estimate[2];
@@ -350,7 +350,7 @@ f_p <- function(par) {
 ## - allow fit to fail and set all params to zero/empty if that is the case
 
 p_fit = NULL
-try(p_fit<-nlm(f_p, c(m), print.level=this.print.level))
+try(suppressWarnings(p_fit<-nlm(f_p, c(m), print.level=this.print.level)))
 
 fit_p = c()
 if (!is.null(p_fit) && (p_fit$estimate[1] > 0))
@@ -458,12 +458,12 @@ dev.off()
 
 if (nb_fit_mu > 0) {
   cat(nb_fit_size, " ", nb_fit_mu, "\n")
-  deletion_propagation_coverage = qnbinom(deletion_propagation_pr_cutoff, size = nb_fit_size, mu = nb_fit_mu)
+  deletion_propagation_coverage = suppressWarnings(qnbinom(deletion_propagation_pr_cutoff, size = nb_fit_size, mu = nb_fit_mu))
 } else {
   cat("Fallback to calculating off an estimate of just variance = mu + mu^2/size\n")
   size_estimate = (1/(v-m))*(m*m)
   cat("Mu estimate=", m," Size estimate =", size_estimate, "\n")
-  deletion_propagation_coverage = qnbinom(deletion_propagation_pr_cutoff, size = size_estimate, mu = m)
+  deletion_propagation_coverage = suppressWarnings(qnbinom(deletion_propagation_pr_cutoff, size = size_estimate, mu = m))
   if (is.na(deletion_propagation_coverage) || is.nan(deletion_propagation_coverage) || (deletion_propagation_coverage < 1)) {
     cat("Double fallback to calculating as just 10% of the mean\n")
     deletion_propagation_coverage = m * 0.1
