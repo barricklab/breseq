@@ -1,3 +1,8 @@
+Version 0.31.1
+   * Fixed checking bowtie2 versions with extra decimal (e.g., 2.3.3.1).
+   * Additional bug fixes for fitting coverage distribution.
+   * Fix for gdtools SUBTRACT when using mixed polymorphism and consensus inputs.
+
 Version 0.31.0
    * Fixed critical error that could give negative positions for mutations when a reference sequence 
      fragment was called as deleted.
