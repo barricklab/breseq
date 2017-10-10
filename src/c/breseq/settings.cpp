@@ -1030,20 +1030,28 @@ namespace breseq
         
         new_version_string += "." + version_string.substr(start_version_pos, end_version_pos - start_version_pos);
         this->installed["bowtie2_version_string"] = new_version_string;
-        new_version_string = substitute(new_version_string, "-", ".");
         
-        // beta counts as another sub version
+        // - instead of . appears with beta
+        new_version_string = substitute(new_version_string, "-", ".");
+
+        // beta counts as another sub version, just delete that string
         if (new_version_string.find("beta") != string::npos) {
           new_version_string = substitute(new_version_string, "beta", "");
-        } else {
-          new_version_string += ".0";
         }
         
+        // Split apart string
         vector<string> split_version = split(new_version_string, ".");
-        uint32_t numerical_version = 0;
-        for (vector<string>::iterator it=split_version.begin(); it != split_version.end(); it++) {
+        
+        // Pad things out to four items
+        for(size_t i=split_version.size(); i<4; i++) {
+          split_version.push_back("0");
+        }
+        
+        // Only pay attention to four items!
+        uint64_t numerical_version = 0;
+        for(size_t i=0; i<4; i++) {
           numerical_version *= 1000;
-          numerical_version += n(*it);
+          numerical_version += n(split_version[i]);
         }
         this->installed["bowtie2_version"] = s(numerical_version);
         //cout << this->installed["bowtie2_version"] << endl;
@@ -1120,21 +1128,21 @@ namespace breseq
       cerr << this->installed["bowtie2_version_error_message"] << endl;
     }
     // version encoded in triplets of numbers
-    else if (from_string<uint32_t>(this->installed["bowtie2_version"]) < 2000000007) {
+    else if (from_string<uint64_t>(this->installed["bowtie2_version"]) < 2000000007) {
       good_to_go = false;
       cerr << "---> ERROR Required executable \"bowtie2\" version 2.0.0-beta7 or later not found." << endl;
       cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
       cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
     }
-    else if ((from_string<uint32_t>(this->installed["bowtie2_version"]) == 2000003000)
-             ||  (from_string<uint32_t>(this->installed["bowtie2_version"]) == 2000004000)) {
+    else if ((from_string<uint64_t>(this->installed["bowtie2_version"]) == 2000003000)
+             ||  (from_string<uint64_t>(this->installed["bowtie2_version"]) == 2000004000)) {
       good_to_go = false;
       cerr << "---> ERROR \"bowtie2\" versions 2.0.3 and 2.0.4 are known to have bugs in" << endl;
       cerr << "---> ERROR SAM output that can cause breseq to crash. Please upgrade." << endl;
       cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
       cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
     }
-    else if (from_string<uint32_t>(this->installed["bowtie2_version"]) < 2001000000) {
+    else if (from_string<uint64_t>(this->installed["bowtie2_version"]) < 2001000000) {
       good_to_go = true;
       cerr << "---> WARNING \"bowtie2\" versions before 2.1.0 may produce output that varies slightly" << endl;
       cerr << "---> WARNING from later versions. This may cause consistency tests to fail." << endl;
@@ -1142,7 +1150,7 @@ namespace breseq
       cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
       cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
     }
-    else if (from_string<uint32_t>(this->installed["bowtie2_version"]) == 2003001000) {
+    else if (from_string<uint64_t>(this->installed["bowtie2_version"]) == 2003001000) {
       good_to_go = false;
       cerr << "---> ERROR \"bowtie2\" version 2.3.1 is known to have a major bug in SAM" << endl;
       cerr << "---> ERROR output that will cause breseq to crash. Please upgrade/downgrade." << endl;

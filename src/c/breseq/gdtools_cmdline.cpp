@@ -2387,8 +2387,8 @@ int do_runfile(int argc, char *argv[])
 	options("runfile,r",        "Name of the run file to be output.", "commands");
   options("data-dir,g",       "Directory to search for genome diff files.", "01_Data");
   options("downloads-dir,d",  "Downloads directory where read and reference files are located. Defaults to 02_Trimmed for read files if #=ADAPTSEQ tags are present. (Default = 02_Downloads; 02_Trimmed for read files if #=ADAPTSEQ tags are present for breseq; 02_Apply for reference files for breseq-apply)");
-  options("output-dir,o",     "Output directory for commands within the runfile. (Default = 03_Output for breseq*; = 02_Trimmed for flexbar*)");
-  options("log-dir,l",        "Directory for error log file that captures the executable's stdout and sterr. (Default = 04_Logs for breseq; 04_Apply_Logs for breseq-apply; 04_Trim_Logs for flexbar*)");
+  options("output-dir,o",     "Output directory for commands within the runfile. (Default = 03_Output for breseq*; = 02_Trimmed for trimmomatic*)");
+  options("log-dir,l",        "Directory for error log file that captures the executable's stdout and sterr. (Default = 04_Logs for breseq; 04_Apply_Logs for breseq-apply; 04_Trim_Logs for trimmomatic*)");
 	options("preserve-pairs,p",  "Keep track of paired and unpaired reads for trimming and using trimmed reads.", TAKES_NO_ARGUMENT);
 
 	options.addUsage("\n");
