@@ -2742,7 +2742,27 @@ void cGenomeDiff::set_subtract(cGenomeDiff& gd, bool phylogeny_id_aware, bool ve
   set<cDiffEntry> seen;
   diff_entry_list_t muts = gd.mutation_list();
   for (diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); ++it) {
-    seen.insert(**it);
+    
+    // We have to add up the frequencies of the mutations we are subtracting...
+    double frequency = 0;
+    if (seen.count(**it)) {
+      if ( seen.find(**it)->entry_exists(FREQUENCY) ) {
+        frequency = from_string<double>(seen.find(**it)->get(FREQUENCY));
+      } else {
+        frequency = 1;
+      }
+    }
+    
+    if ( (*it)->entry_exists(FREQUENCY) ) {
+      frequency += from_string<double>((*it)->get(FREQUENCY));
+    } else {
+      frequency += 1;
+    }
+    
+    cDiffEntry de(**it);
+    de[FREQUENCY] = to_string<double>(frequency);
+    
+    seen.insert(de);
   }
   
   // We will be erasing inside the it loop.  This is to keep
@@ -2773,8 +2793,18 @@ void cGenomeDiff::set_subtract(cGenomeDiff& gd, bool phylogeny_id_aware, bool ve
     
     //Subtract mutations that we've seen
     if(entry.is_mutation() && seen.count(entry)) {
-      it = _entry_list.erase(it);
-      it_advance = false;
+      
+      double frequency = ( entry.entry_exists(FREQUENCY) ) ? from_string<double>(entry.get(FREQUENCY)) : 1;
+      frequency -= from_string<double>(seen.find(entry)->get(FREQUENCY));
+    
+      // Delete if we subtracted to less than zero frequency, adjust otherwise
+      if (frequency <= 0) {
+        it = _entry_list.erase(it);
+        it_advance = false;
+      } else {
+        entry[FREQUENCY] = to_string<double>(frequency);
+      }
+      
     } else if (!phylogeny_id_aware) {
       if (entry.entry_exists("_phylogeny_id")) {
         entry["phylogeny_id"] = entry["_phylogeny_id"];
