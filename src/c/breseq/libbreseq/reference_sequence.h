@@ -472,12 +472,12 @@ namespace breseq {
         return ((*this)["type"] == "gene") || ((*this)["type"] == "CDS");
       }
     
-      string get_locus_tag() {
+      string get_locus_tag() const {
         if (m_gff_attributes.count("Alias")) {
-          return m_gff_attributes["Alias"][0];
+          return m_gff_attributes.at("Alias")[0];
         }
         else if (this->count("locus_tag")) {
-          return (*this)["locus_tag"];
+          return this->at("locus_tag");
         }
         return "";
 
@@ -720,11 +720,12 @@ namespace breseq {
       }
     
       // Read GenBank coords
-      list<cLocation>  ReadGenBankCoords(string& s, ifstream& in);
+      list<cLocation> ReadGenBankCoords(const cSequenceFeature& in_feature, string& s, ifstream& in);
       //Parse portion of GenBank coords string
-      list<cLocation> ParseGenBankCoords(string& s, int8_t in_strand = 1);
+      list<cLocation> ParseGenBankCoords(const cSequenceFeature& in_feature, string& s, int8_t in_strand = 1);
     
-      list<cLocation> SafeCreateLocations(
+      list<cLocation> SafeCreateFeatureLocations(
+                                          const cSequenceFeature& in_feature,
                                           int32_t in_start_1,
                                           int32_t in_end_1,
                                           int8_t in_strand,
@@ -788,8 +789,8 @@ namespace breseq {
     //!< Should not be called directly, only through LoadFiles!
     void PrivateLoadFile(const string& file_name);
     
-    //!< Verify that all seq_id have sequence;
-    void Verify();
+    //!< Verify that all seq_id have sequence and that features fit in sequence;
+    void VerifySequenceFeatureMatch();
     bool Initialized() {return m_initialized;}
     
     void ReadFASTA(const std::string &file_name);

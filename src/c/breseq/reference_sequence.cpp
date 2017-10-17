@@ -716,7 +716,7 @@ namespace breseq {
       this->PrivateLoadFile(*it);
     }
     
-    this->Verify();
+    this->VerifySequenceFeatureMatch();
     this->m_initialized = true;
     
     // To uppercase and change nonstandard chars to 'N' in all sequences.
@@ -836,7 +836,7 @@ namespace breseq {
     }
   }
   
-  void cReferenceSequences::Verify()
+  void cReferenceSequences::VerifySequenceFeatureMatch()
   {
     bool Error = false;
     stringstream ss;    
@@ -852,9 +852,10 @@ namespace breseq {
       }
       else if ((uint32_t)as.m_length != as.get_sequence_length())  {
         ss << "Contradictory lengths given in feature file and sequence file for reference: " << as.m_seq_id << endl;
-        ss << (uint32_t)as.m_length << "\tVS:\t" << as.get_sequence_length() << " (Sequence Length)" << endl;
+        ss << (uint32_t)as.m_length << "  VS  " << as.get_sequence_length() << " (Sequence Length)" << endl;
         Error = true;
       }
+      
     }
     if (Error) ERROR(ss.str());
     if (this->empty()) ERROR("Reference files were not loaded");
@@ -1136,11 +1137,12 @@ namespace breseq {
         feature.m_gff_attributes.erase("indeterminate_coordinate");
       }
       
-      list<cLocation> locs = ((*this)[seq_id]).SafeCreateLocations(start, end, strand, start_is_indeterminate, end_is_indeterminate);
-      for(list<cLocation>::iterator it_add_r=locs.begin(); it_add_r!=locs.end(); it_add_r++) {
-        feature.add_location(static_cast<cLocation>(*it_add_r));
+      list<cLocation> locs = ((*this)[seq_id]).SafeCreateFeatureLocations(feature, start, end, strand, start_is_indeterminate, end_is_indeterminate);
+      
+      for(list<cLocation>::iterator it=locs.begin(); it!=locs.end(); it++) {
+        feature.add_location(*it);
       }
-
+      
       //! Step 4: Determine if sequence already exists (find or create if not found)
       this->add_new_seq(seq_id, file_name);
     
@@ -1421,7 +1423,7 @@ bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file
  *  The string may cover multiple lines. Currently we do not handle discontinuous features,
  *  and features that cross the origin of a circular chromosome are returned with end < start. 
  */
-list<cLocation> cAnnotatedSequence::ReadGenBankCoords(string& s, ifstream& in) {
+list<cLocation> cAnnotatedSequence::ReadGenBankCoords(const cSequenceFeature& in_feature, string& s, ifstream& in) {
 
 // Typical coordinate strings:
 //   1485..1928
@@ -1469,11 +1471,11 @@ list<cLocation> cAnnotatedSequence::ReadGenBankCoords(string& s, ifstream& in) {
   s = substitute(s, "\t", "");
   
   // Parse and add locations
-  return ParseGenBankCoords(s);
+  return ParseGenBankCoords(in_feature, s);
 }
   
 // Parses a sub-part of the full location string
-list<cLocation> cAnnotatedSequence::ParseGenBankCoords(string& s, int8_t in_strand)
+list<cLocation> cAnnotatedSequence::ParseGenBankCoords(const cSequenceFeature& in_feature, string& s, int8_t in_strand)
 {
   list<cLocation> locs;
   
@@ -1482,7 +1484,7 @@ list<cLocation> cAnnotatedSequence::ParseGenBankCoords(string& s, int8_t in_stra
   if (s.find("complement(") == 0) {
     uint32_t n = string("complement(").size();
     string value = s.substr(n, s.size() - n - 1);
-    list<cLocation> sub_locs = ParseGenBankCoords(value, in_strand);
+    list<cLocation> sub_locs = ParseGenBankCoords(in_feature, value, in_strand);
     // Set all strands to opposite and reverse order
     for(list<cLocation>::iterator it = sub_locs.begin(); it != sub_locs.end(); it++) {
       it->set_strand(-it->get_strand());
@@ -1497,7 +1499,7 @@ list<cLocation> cAnnotatedSequence::ParseGenBankCoords(string& s, int8_t in_stra
     
     int8_t consensus_strand = 0;
     for (uint32_t i = 0; i < tokens.size(); ++i) {
-      list<cLocation> sub_locs = ParseGenBankCoords(tokens[i], in_strand);
+      list<cLocation> sub_locs = ParseGenBankCoords(in_feature, tokens[i], in_strand);
       locs.insert(locs.end(), sub_locs.begin(), sub_locs.end());
     }
     
@@ -1525,16 +1527,15 @@ list<cLocation> cAnnotatedSequence::ParseGenBankCoords(string& s, int8_t in_stra
       tokens.back().replace(0,1,"");
     }
     
-    list<cLocation> new_locs = this->SafeCreateLocations(
+    list<cLocation> new_locs = this->SafeCreateFeatureLocations(
+                                                         in_feature,
                                                          atoi(tokens.front().c_str()),
                                                          atoi(tokens.back().c_str()),
                                                          in_strand,
                                                          start_is_indeterminate,
                                                          end_is_indeterminate
                                                          );
-    
     locs.insert(locs.end(), new_locs.begin(), new_locs.end());
-
   }
   
   //ASSERT(loc.get_start_1() <= loc.get_end_1(), "Start coordinate is greater than end coordinate. Error parsing corrdinates:\n" + s);
@@ -1542,10 +1543,11 @@ list<cLocation> cAnnotatedSequence::ParseGenBankCoords(string& s, int8_t in_stra
   return locs;
 }
 
-// By "safe" we mean for circular genomes with pronblem features that need to be split
+// By "safe" we mean for circular genomes with problem features that need to be split
 // 1) Considers locations that wrap around origin (when start > end)
 // 2) Considers locations that extend past the end of the numbering wrapping around
-list<cLocation> cAnnotatedSequence::SafeCreateLocations(
+list<cLocation> cAnnotatedSequence::SafeCreateFeatureLocations(
+                                                        const cSequenceFeature& in_feature,
                                                         int32_t in_start_1,
                                                         int32_t in_end_1,
                                                         int8_t in_strand,
@@ -1553,8 +1555,23 @@ list<cLocation> cAnnotatedSequence::SafeCreateLocations(
                                                         bool in_end_is_indeterminate
   )
 {
+  // Unfortunately, we cannot count on this being initialized with information that would help with debugging
+  (void)in_feature;
+  
   list<cLocation> locs;
   
+  // We need to check that the feature is not entirely outside of the reference
+  if (m_is_circular) {
+    if ((in_start_1 > this->m_length) && (in_end_1 > this->m_length) ) {
+      ERROR("Error in reference file. Feature on sequence " + this->m_seq_id + " has coordinates (" + to_string(in_start_1) + "-" + to_string(in_end_1) + ") that are both outside of the circular sequence bounds (1-" + to_string(this->m_length) + ").");
+    }
+  } else {
+    if ((in_start_1 > this->m_length) || (in_end_1 > this->m_length) ) {
+      ERROR("Error in reference file. Feature on sequence " + this->m_seq_id + " has coordinates (" + to_string(in_start_1) + "-" + to_string(in_end_1) + ") that are outside of the sequence bounds (1-" + to_string(this->m_length) + ").");
+    }
+  }
+  
+    
   if (m_is_circular) {
     in_end_1 %= this->m_length;
     in_start_1 %= this->m_length;
@@ -1607,8 +1624,6 @@ list<cLocation> cAnnotatedSequence::SafeCreateLocations(
   } else {
     ERROR("Start coordinate (" + to_string<int32_t>(in_start_1) + ") must be less than or equal to end coordinate (" + to_string<int32_t>(in_end_1) + ") for feature that is not on a circular sequence.")
   }
-  
-  
   return locs;
 }
 
@@ -1738,7 +1753,7 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
           continue;
         }
         
-        list<cLocation> locs = s.ReadGenBankCoords(coord_s, in);
+        list<cLocation> locs = s.ReadGenBankCoords(*current_feature, coord_s, in);
         for(list<cLocation>::iterator it=locs.begin(); it!=locs.end(); it++) {
           current_feature->add_location(*it);
         }
