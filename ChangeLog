@@ -1,3 +1,12 @@
+Version 0.32.0
+   * New output of summary and settings information in JSON format in data directory.
+   * Fixed problem inputting some FASTQ files (discovered on Nanopore data).
+
+Version 0.31.1
+   * Critical fix for checking new bowtie2 versions with extra decimal place (e.g., 2.3.3.1).
+   * Additional bug fixes for fitting coverage distribution.
+   * Fix for `gdtools SUBTRACT` when using both polymorphism and consensus inputs.
+
 Version 0.31.0
    * Fixed critical error that could give negative positions for mutations when a reference sequence 
      fragment was called as deleted.
