@@ -2721,7 +2721,7 @@ bool cGenomeDiff::mutation_in_entry_of_type(cDiffEntry mut, const gd_entry_type 
 void cGenomeDiff::set_subtract(cGenomeDiff& gd, bool phylogeny_id_aware, bool verbose)
 {
   (void)verbose; //unused
-
+  
   // Temporarily delete 'phylogeny_id' if we are not phylogeny aware
   if (!phylogeny_id_aware) {
     for (diff_entry_list_t::iterator it_new = gd._entry_list.begin(); it_new != gd._entry_list.end(); it_new++) {
@@ -2744,15 +2744,15 @@ void cGenomeDiff::set_subtract(cGenomeDiff& gd, bool phylogeny_id_aware, bool ve
   for (diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); ++it) {
     
     // We have to add up the frequencies of the mutations we are subtracting...
+    // ... so get the existing frequency stored with any mutation
     double frequency = 0;
     if (seen.count(**it)) {
       if ( seen.find(**it)->entry_exists(FREQUENCY) ) {
         frequency = from_string<double>(seen.find(**it)->get(FREQUENCY));
-      } else {
-        frequency = 1;
       }
     }
     
+    // Add the frequency of the current one
     if ( (*it)->entry_exists(FREQUENCY) ) {
       frequency += from_string<double>((*it)->get(FREQUENCY));
     } else {
@@ -2761,6 +2761,7 @@ void cGenomeDiff::set_subtract(cGenomeDiff& gd, bool phylogeny_id_aware, bool ve
     
     cDiffEntry de(**it);
     de[FREQUENCY] = to_string<double>(frequency);
+    //if (verbose) cout << de.as_string() << endl;
     
     seen.insert(de);
   }
@@ -2776,7 +2777,7 @@ void cGenomeDiff::set_subtract(cGenomeDiff& gd, bool phylogeny_id_aware, bool ve
     //The current entry we're looking at
     cDiffEntry& entry = **it;
     
-    //if (verbose) cout << entry << endl;
+    //if (verbose) cout << entry.as_string() << endl;
     
     if (!phylogeny_id_aware) {
       // Save this info in field that won't affect comparisons
