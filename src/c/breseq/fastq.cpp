@@ -618,10 +618,10 @@ namespace breseq {
   }
 
   void cFastqFile::write_sequence(const cFastqSequence &sequence) {
-    fprintf(*m_stream, "@%s\n", sequence.m_name.c_str()     );
-    fprintf(*m_stream, "%s\n" , sequence.m_sequence.c_str() );
-    fprintf(*m_stream, "+%s\n", sequence.m_name_plus.c_str());
-    fprintf(*m_stream, "%s\n" , sequence.m_qualities.c_str());
+    *m_stream << "@" << sequence.m_name << endl;
+    *m_stream << sequence.m_sequence << endl;
+    *m_stream << "+" << sequence.m_name_plus << endl;
+    *m_stream << sequence.m_qualities << endl;
   }
 
 
