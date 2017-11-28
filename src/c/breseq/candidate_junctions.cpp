@@ -526,7 +526,7 @@ namespace breseq {
 	{
 		(void)summary; // TO DO: save statistics
     bool verbose = false;
-    int32_t max_read_length = summary.sequence_conversion.max_read_length;
+    int32_t read_length_max = summary.sequence_conversion.read_length_max;
     
     /// Load all of the user-defined junctions
     
@@ -957,7 +957,7 @@ namespace breseq {
       cDiffEntry& user_junction = it->second;
       JunctionInfo user_junction_info(it->first);
       user_junction_info.user_defined = true;
-      string junction_sequence = construct_junction_sequence(ref_seq_info, user_junction, max_read_length, false);
+      string junction_sequence = construct_junction_sequence(ref_seq_info, user_junction, read_length_max, false);
       JunctionCandidate new_jc(user_junction_info, junction_sequence);
       combined_candidate_junctions.push_back(new_jc);
     }
@@ -1010,7 +1010,7 @@ namespace breseq {
     
     cGenomeDiff gd(settings.user_evidence_genome_diff_file_name);
 
-    int32_t max_read_length = summary.sequence_conversion.max_read_length;
+    int32_t read_length_max = summary.sequence_conversion.read_length_max;
     
     diff_entry_list_t _entry_list = gd.get_list(make_vector<gd_entry_type>(JC));
     for (diff_entry_list_t::iterator it = _entry_list.begin(); it != _entry_list.end(); it++)
@@ -1026,8 +1026,8 @@ namespace breseq {
       //cout << user_junction.as_string() << endl;
       
       // set initial flanking lengths, these may be reduced by construct_junction_sequence
-      user_junction["flanking_left"] = to_string<int32_t>(max_read_length);
-      user_junction["flanking_right"] = to_string<int32_t>(max_read_length);
+      user_junction["flanking_left"] = to_string<int32_t>(read_length_max);
+      user_junction["flanking_right"] = to_string<int32_t>(read_length_max);
       
       // Fix the overlap...
       normalize_junction_overlap(ref_seq_info, user_junction);
@@ -1191,7 +1191,7 @@ namespace breseq {
     
 
 		// set up local settings
-		int32_t flanking_length = summary.sequence_conversion.max_read_length;
+		int32_t flanking_length = summary.sequence_conversion.read_length_max;
 
     bam_alignment& a1 = ap.a1;
     bam_alignment& a2 = ap.a2;

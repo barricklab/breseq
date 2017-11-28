@@ -25,6 +25,7 @@ else
 			echo "TEST:" $i $1
 			$i $1
 		fi
+
 	done
 fi
 

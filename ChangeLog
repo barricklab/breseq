@@ -1,6 +1,11 @@
 Version 0.32.0
-   * New output of summary and settings information in JSON format in data directory.
-   * Fixed problem inputting some FASTQ files (discovered on Nanopore data).
+   * New output of summary information and settings in JSON format in data directory file
+     'summary.json.
+   * Corrected case in polymorphism mode where failing consensus mutations could be  
+     incorrectly predicted if a polymorphism was rejected. More thorough and consistent
+     output of rejection information for RA evidence.
+   * Fixed problem reading some FASTQ files (discovered on Nanopore data).
+   * C++11 is now required for compilation. Optimization added to default compiler settings.
 
 Version 0.31.1
    * Critical fix for checking new bowtie2 versions with extra decimal place (e.g., 2.3.3.1).

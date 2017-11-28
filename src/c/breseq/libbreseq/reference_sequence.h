@@ -825,10 +825,10 @@ namespace breseq {
     }
     
     //!< Calculates the total length of all reference sequences together
-    uint64_t total_length()
+    uint64_t total_length() const
     {
       uint64_t ret_val(0);
-      for (cReferenceSequences::iterator it = (*this).begin(); it != (*this).end(); it++)
+      for (cReferenceSequences::const_iterator it = (*this).begin(); it != (*this).end(); it++)
       {
         ret_val += it->m_length;
       }

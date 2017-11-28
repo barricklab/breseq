@@ -273,18 +273,24 @@ bool test_RA_evidence_CONSENSUS_mode(
   double polymorphism_score = double_from_string(ra[POLYMORPHISM_SCORE]);
   double variant_frequency = from_string<double>(ra[POLYMORPHISM_FREQUENCY]);
   
-  // Score must be below one of the thresholds
-  if (consensus_score >= settings.mutation_log10_e_value_cutoff) {
-    prediction = consensus;
-  } else if (polymorphism_score >= settings.polymorphism_log10_e_value_cutoff) {
-    prediction = polymorphism;
-  } else {
+  // Score must be below one of the thresholds.
+  // This is to quickly check whether it has any hope and exit if not.
+  if ( (polymorphism_score < settings.polymorphism_log10_e_value_cutoff)
+      && (consensus_score < settings.mutation_log10_e_value_cutoff) ) {
     return true;
   }
   
+  /////////////////////////////////
+  // Perform CONSENSUS checks
+  /////////////////////////////////
+  
+  if (consensus_score < settings.mutation_log10_e_value_cutoff) {
+    ra.add_reject_reason("SCORE_CUTOFF");
+  }
+  
   // Drop down to a polymorphism if we don't pass consensus frequency criterion
-  if ((prediction == consensus) && (variant_frequency < settings.consensus_frequency_cutoff - settings.polymorphism_precision_decimal)) {
-    prediction = polymorphism;
+  if (variant_frequency < settings.consensus_frequency_cutoff - settings.polymorphism_precision_decimal) {
+    ra.add_reject_reason("FREQUENCY_CUTOFF");
   }
   
   // Drop down to a polymorphism if we don't pass the consensus strand criterion
@@ -292,47 +298,62 @@ bool test_RA_evidence_CONSENSUS_mode(
     vector<string> top_bot = split(ra[MAJOR_COV], "/");
     if ( (from_string<double>(top_bot[0]) < settings.consensus_minimum_new_coverage_each_strand) ||
         (from_string<double>(top_bot[1]) < settings.consensus_minimum_new_coverage_each_strand) ) {
-      prediction = polymorphism;
+      ra.add_reject_reason("STRAND_COVERAGE");
     }
   }
   
-  // Bail now if consensus
-  if (prediction == consensus) {
-    ra[PREDICTION] = "consensus";
-    ra[FREQUENCY] = (ra[REF_BASE] == ra[MAJOR_BASE]) ? "0" : "1";
+  // Succeed and bail now if still consensus prediction or keep as a failed consensus
+  if (ra.entry_exists(REJECT)) {
+    ra[CONSENSUS_REJECT] = ra[REJECT];
+    ra.clear_reject_reasons();
+  }
+  
+  bool consensus_rejected = ra.entry_exists(CONSENSUS_REJECT);
+  
+  // Consensus was not rejected, we are done
+  if (!consensus_rejected) {
     
-    // and delete if we are just the reference base!
+    ra[PREDICTION] = "consensus";
+    ra[FREQUENCY] = "1";
+    
+    // Delete if we are just the reference base!
     return (ra[REF_BASE] == ra[MAJOR_BASE]);
   }
   
-  // Code only reaaches here for non-consensus predictions
+  /////////////////////////////////
+  // Perform POLYMORPHISM checks
+  /////////////////////////////////
   
-  // Set us up as a potential polymorphism
-  ra[PREDICTION] = "polymorphism";
-  ra[FREQUENCY] = ra[POLYMORPHISM_FREQUENCY];
+  if (polymorphism_score < settings.polymorphism_log10_e_value_cutoff) {
+    ra.add_reject_reason("SCORE_CUTOFF");
+  }
   
   // Perform further checks for polymorphisms
-  bool rejected_RA_polymorphism_frequency = false;
   if (variant_frequency > 1.0 - settings.polymorphism_frequency_cutoff - settings.polymorphism_precision_decimal) {
-    rejected_RA_polymorphism_frequency = true;
     ra.add_reject_reason("FREQUENCY_CUTOFF");
   } else if (variant_frequency < settings.polymorphism_frequency_cutoff - settings.polymorphism_precision_decimal) {
-    rejected_RA_polymorphism_frequency = true;
     ra.add_reject_reason("FREQUENCY_CUTOFF");
   }
-  if (rejected_RA_polymorphism_frequency)
-    return true;
   
-  if (rejected_RA_polymorphism_bias(ra, ref_seq_info, settings))
-    return true;
+  rejected_RA_polymorphism_bias(ra, ref_seq_info, settings);
+  rejected_RA_polymorphism_coverage(ra, ref_seq_info, settings);
+  rejected_RA_indel_homopolymer(ra, ref_seq_info, settings);
   
-  if (rejected_RA_polymorphism_coverage(ra, ref_seq_info, settings))
-    return true;
+  // Succeed and bail now if still consensus prediction or keep as a failed consensus
+  if (ra.entry_exists(REJECT)) {
+    ra[POLYMORPHISM_REJECT] = ra[REJECT];
+    ra.clear_reject_reasons();
+  }
   
-  if (rejected_RA_indel_homopolymer(ra, ref_seq_info, settings))
-    return true;
+  bool polymorphism_rejected = ra.entry_exists(POLYMORPHISM_REJECT);
   
-  return false;
+  if (!polymorphism_rejected) {
+    ra[PREDICTION] = "polymorphism";
+    ra[FREQUENCY] = ra[POLYMORPHISM_FREQUENCY];
+    return false;
+  }
+  
+  return true;
 }
   
 // Returns whether it should be deleted
@@ -342,125 +363,118 @@ bool test_RA_evidence_POLYMORPHISM_mode(
                                      const Settings& settings
                                      )
 {
-  
-  // Decide if we are a polymorphism (or mixed base) prediction or a consensus prediction
-  ePredictionType prediction(unknown);
+  bool user_defined = ra.entry_exists("user_defined"); // => Must always be polymorphism
   
   double consensus_score = double_from_string(ra[CONSENSUS_SCORE]);
   double polymorphism_score = double_from_string(ra[POLYMORPHISM_SCORE]);
   double variant_frequency = from_string<double>(ra[POLYMORPHISM_FREQUENCY]);
   
-  // Set up polymorphism as default
-  ra[PREDICTION] = "polymorphism";
-  ra[FREQUENCY] = ra[POLYMORPHISM_FREQUENCY];
-  
-  // Score must be below one of the thresholds
-  if (polymorphism_score >= settings.polymorphism_log10_e_value_cutoff) {
-    prediction = polymorphism;
-  } else if (consensus_score >= settings.mutation_log10_e_value_cutoff) {
-    prediction = consensus;
-  } else {
+  // Score must be below one of the thresholds.
+  // This is to quickly check whether it has any hope and exit if not.
+  if ( (polymorphism_score < settings.polymorphism_log10_e_value_cutoff)
+      && (consensus_score < settings.mutation_log10_e_value_cutoff) ) {
     return true;
   }
   
-  bool tested_indel_homopolymer = false;
   bool failed_indel_homopolymer_test = false;
-  if (prediction == polymorphism) {
+  
+  /////////////////////////////////
+  // Perform POLYMORPHISM checks
+  /////////////////////////////////
+  
+  if (polymorphism_score < settings.polymorphism_log10_e_value_cutoff) {
+    ra.add_reject_reason("SCORE_CUTOFF");
+  }
+  
+  bool rejected_RA_polymorphism_frequency = false;
+  if (variant_frequency > 1.0 - settings.polymorphism_frequency_cutoff - settings.polymorphism_precision_decimal) {
+    ra.add_reject_reason("FREQUENCY_CUTOFF");
+  } else if (variant_frequency < settings.polymorphism_frequency_cutoff - settings.polymorphism_precision_decimal) {
+    ra.add_reject_reason("FREQUENCY_CUTOFF");
+  }
     
-    // Perform further checks for polymorphisms
-    bool rejected_RA_polymorphism_frequency = false;
-    if (variant_frequency > 1.0 - settings.polymorphism_frequency_cutoff - settings.polymorphism_precision_decimal) {
-      rejected_RA_polymorphism_frequency = true;
-      ra.add_reject_reason("FREQUENCY_CUTOFF");
-    } else if (variant_frequency < settings.polymorphism_frequency_cutoff - settings.polymorphism_precision_decimal) {
-      rejected_RA_polymorphism_frequency = true;
-      ra.add_reject_reason("FREQUENCY_CUTOFF");
-    }
-    if (rejected_RA_polymorphism_frequency)
-      prediction = consensus;
-    
-    if (prediction == polymorphism) {
-      if (rejected_RA_polymorphism_bias(ra, ref_seq_info, settings))
-        prediction = consensus;
-    }
-    if (prediction == polymorphism) {
-      if (rejected_RA_polymorphism_coverage(ra, ref_seq_info, settings))
-        prediction = consensus;
-    }
-    if (prediction == polymorphism) {
-      tested_indel_homopolymer = true;
-      failed_indel_homopolymer_test = rejected_RA_indel_homopolymer(ra, ref_seq_info, settings);
-      if (failed_indel_homopolymer_test)
-        prediction = consensus;
-    }
-    
-    // If we're still a good polymorphism -- fill out values and return
-    if (prediction == polymorphism) {
-      return false;
-    }
-    
+  rejected_RA_polymorphism_bias(ra, ref_seq_info, settings);
+  rejected_RA_polymorphism_coverage(ra, ref_seq_info, settings);
+  failed_indel_homopolymer_test = rejected_RA_indel_homopolymer(ra, ref_seq_info, settings);
+  
+  // Copy reject reasons over to why we rejected a polymorphism
+  if (ra.entry_exists(REJECT)) {
     ra[POLYMORPHISM_REJECT] = ra[REJECT];
     ra.clear_reject_reasons();
   }
   
-  // If we get here, we are back to testing for a consensus
+  bool polymorphism_rejected = ra.entry_exists(POLYMORPHISM_REJECT);
+
+  // We don't need to test whether the consensus mutation was also valid
+  // accept the passing polymorphism and exit immediately
+  if (!polymorphism_rejected || user_defined) {
+    ra[PREDICTION] = "polymorphism";
+    ra[FREQUENCY] = ra[POLYMORPHISM_FREQUENCY];
+    return false;
+  }
+  
+  /////////////////////////////////
+  // Perform CONSENSUS checks
+  /////////////////////////////////
+  
+  if (consensus_score < settings.mutation_log10_e_value_cutoff) {
+    ra.add_reject_reason("SCORE_CUTOFF");
+  }
+  
+  // If we get here, we are testing for a consensus,
+  //   either b/c the polymorphism score didn't originally pass
+  //   or b/c the polymorphism was rejected by another test
   
   // Drop back to a polymorphism if we don't pass consensus frequency criterion
-  if ((prediction == consensus) && (variant_frequency < settings.consensus_frequency_cutoff - settings.polymorphism_precision_decimal)) {
-    prediction = polymorphism;
+  if (variant_frequency < settings.consensus_frequency_cutoff - settings.polymorphism_precision_decimal) {
     ra.add_reject_reason("FREQUENCY_CUTOFF");
   }
   
   // Drop down to a rejected polymorphism if we don't pass the consensus strand criterion
-  if ( (prediction == consensus) && (settings.consensus_minimum_new_coverage_each_strand > 0) ) {
+  if (settings.consensus_minimum_new_coverage_each_strand > 0) {
     vector<string> top_bot = split(ra[MAJOR_COV], "/");
     if ( (from_string<double>(top_bot[0]) < settings.consensus_minimum_new_coverage_each_strand) ||
         (from_string<double>(top_bot[1]) < settings.consensus_minimum_new_coverage_each_strand) ) {
-      prediction = polymorphism;
       ra.add_reject_reason("STRAND_COVERAGE");
     }
   }
   
-  // We can only go back to a consensus prediction if we are not user_evidence
-  if (!ra.entry_exists("user_defined")) {
+  if (ra.entry_exists(REJECT)) {
+    ra[CONSENSUS_REJECT] = ra[REJECT];
+    ra.clear_reject_reasons();
+  }
+
+  bool consensus_rejected = ra.entry_exists(CONSENSUS_REJECT);
   
-    // Bail now if still consensus
-    if (prediction == consensus) {
-      
-      ra[PREDICTION] = "consensus";
-      ra[FREQUENCY] = "1";
-      
-      // and delete if we are just the reference base!
-      return (ra[REF_BASE] == ra[MAJOR_BASE]);
-    }
+  // Polymorphism was rejected and consensus was not, predict consensus
+  if (!consensus_rejected) {
     
-    // We got kicked out of consensus mode, but we don't pass the polymorphism
-    // score cutoff, so we are now a rejected consensus mutation
-    // This is the only case that inherits the rejections from consensus tests above
-    if (polymorphism_score < settings.polymorphism_log10_e_value_cutoff) {
-      
-      ra[PREDICTION] = "consensus";
-      ra[FREQUENCY] = "1";
-      
-      // and delete if we are just the reference base!
-      return (ra[REF_BASE] == ra[MAJOR_BASE]);
-      
-    }
+    ra[PREDICTION] = "consensus";
+    ra[FREQUENCY] = "1";
+    
+    // Delete if we are just the reference base!
+    return (ra[REF_BASE] == ra[MAJOR_BASE]);
   }
   
-  // We are back to a polymorphism, albeit a rejected one
+  /////////////////////////////////////////////
+  // Both POLYMORPHISM and CONSENSUS rejected
+  //   keep as rejected POLYMORPHISM
+  /////////////////////////////////////////////
+  
+  // @JEB: removed this condition 11-27-2018 since it might be confusing for these to be missing entirely
+  // Mutation must pass this test in order to be retained as a marginal prediction...
+  // Saving previously calculated value prevents doing a computationally intensive test twice.
+  //if (!failed_indel_homopolymer_test) {
+  
+  // We know POLYMORPHISM_REJECT exists from previous conditional
+  ra[PREDICTION] = "polymorphism";
+  ra[FREQUENCY] = ra[POLYMORPHISM_FREQUENCY];
   ra[REJECT] = ra[POLYMORPHISM_REJECT];
   ra.erase(POLYMORPHISM_REJECT);
   
-  // Must pass this test in order to be retained as a marginal prediction
-  // Saving previously calculated value prevents doing a computationally intensive test twice.
-  if ( (tested_indel_homopolymer && failed_indel_homopolymer_test)
-      || rejected_RA_indel_homopolymer(ra, ref_seq_info, settings)) {
-    return true;
-  }
+  //}
 
-  return false;
-  
+  return true;
 }
   
 void test_RA_evidence(
@@ -849,7 +863,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		//## DELETION DELETION DELETION
 		//###
 		
-    if(!_settings.no_deletion_prediction && (insert_count == 0))
+    if(!_settings.skip_deletion_prediction && (insert_count == 0))
       check_deletion_completion(position, p.target(), this_position_coverage, consensus_bonferroni_score);
 		
 		//###
@@ -1139,7 +1153,7 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
 void identify_mutations_pileup::at_target_end(const uint32_t tid) {
 
   // end "open" Missing Coverahge and Unknown intervals
-  if (!_settings.no_deletion_prediction) {
+  if (!_settings.skip_deletion_prediction) {
     check_deletion_completion(target_length(tid)+1, tid, position_coverage(numeric_limits<double>::quiet_NaN()), numeric_limits<double>::quiet_NaN());
   }
   update_unknown_intervals(target_length(tid)+1, tid, true, false);
@@ -1147,7 +1161,7 @@ void identify_mutations_pileup::at_target_end(const uint32_t tid) {
   // if this target failed to have its coverage fit, mark the entire thing as a deletion
   double _this_deletion_propagation_cutoff = _deletion_propagation_cutoffs[tid];
   // if the propagation cutoff is -1 then the coverage distribution failed
-  if (!_settings.no_deletion_prediction && (_this_deletion_propagation_cutoff < 0.0))
+  if (!_settings.skip_deletion_prediction && (_this_deletion_propagation_cutoff < 0.0))
   {
     cDiffEntry del(MC);
     del[SEQ_ID] = target_name(tid);

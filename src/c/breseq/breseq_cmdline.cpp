@@ -430,14 +430,14 @@ int do_convert_fastq(int argc, char* argv[])
   if (input_format == "GUESS") {
     cerr << "+++   Predicting input format..." << endl;
 
-    uint64_t original_num_reads;
-    uint64_t original_num_bases;
-    uint32_t min_read_length;
-    uint32_t max_read_length;
+    uint64_t num_original_reads;
+    uint64_t num_original_bases;
+    uint32_t read_length_min;
+    uint32_t read_length_max;
     uint8_t min_quality_score;
     uint8_t max_quality_score;
     
-    input_format = cFastqQualityConverter::predict_fastq_file_format(input_file_name, original_num_reads, original_num_bases, min_read_length, max_read_length, min_quality_score, max_quality_score);
+    input_format = cFastqQualityConverter::predict_fastq_file_format(input_file_name, num_original_reads, num_original_bases, read_length_min, read_length_max, min_quality_score, max_quality_score);
     
     cerr << " Predicted input format : " << input_format << endl;;
   }
@@ -1129,13 +1129,13 @@ int do_assemble_unmatched(int argc, char* argv[])
     cFastqSequence on_seq_1, on_seq_2, um_on_seq_1, um_on_seq_2;
     
     // Figure out format (but just check one of the files to do this)
-    uint64_t original_num_reads;
-    uint64_t original_num_bases;
-    uint32_t min_read_length;
-    uint32_t max_read_length;
+    uint64_t num_original_reads;
+    uint64_t num_original_bases;
+    uint32_t read_length_min;
+    uint32_t read_length_max;
     uint8_t min_quality_score;
     uint8_t max_quality_score;
-    string quality_format = cFastqQualityConverter::predict_fastq_file_format(read_file_name_1, original_num_reads, original_num_bases, min_read_length, max_read_length, min_quality_score, max_quality_score);
+    string quality_format = cFastqQualityConverter::predict_fastq_file_format(read_file_name_1, num_original_reads, num_original_bases, read_length_min, read_length_max, min_quality_score, max_quality_score);
     
     cFastqQualityConverter fqc(quality_format, "SANGER");
     cFastqQualityConverter unmatched_fqc("SANGER", "SANGER");
@@ -1222,8 +1222,8 @@ int breseq_default_action(int argc, char* argv[])
     if (!settings.aligned_sam_mode) {
       
       //Check the FASTQ format and collect some information about the input read files at the same time
-      uint32_t overall_min_read_length = UNDEFINED_UINT32;
-      uint32_t overall_max_read_length = UNDEFINED_UINT32;
+      uint32_t overall_read_length_min = UNDEFINED_UINT32;
+      uint32_t overall_read_length_max = UNDEFINED_UINT32;
       uint32_t overall_max_qual = 0;
 
       s.num_reads = 0;
@@ -1256,39 +1256,39 @@ int breseq_default_action(int argc, char* argv[])
                                                      convert_file_name,
                                                      i+1,
                                                      settings.quality_score_trim,
-                                                     !settings.no_read_filtering,
+                                                     !settings.skip_read_filtering,
                                                      s.num_bases,
                                                      read_file_base_limit,
-                                                     settings.read_file_min_read_length,
+                                                     settings.read_file_read_length_min,
                                                      settings.read_file_max_same_base_fraction,
                                                      settings.read_file_max_N_fraction
                                                      );
         settings.track_intermediate_file(settings.alignment_correction_done_file_name, convert_file_name);
         
         // Record statistics
-        if ((overall_min_read_length == UNDEFINED_UINT32) || (s_rf.min_read_length > overall_min_read_length))
-          overall_min_read_length = s_rf.max_read_length;
-        if ((overall_max_read_length == UNDEFINED_UINT32) || (s_rf.max_read_length > overall_max_read_length))
-          overall_max_read_length = s_rf.max_read_length;
+        if ((overall_read_length_min == UNDEFINED_UINT32) || (s_rf.read_length_min > overall_read_length_min))
+          overall_read_length_min = s_rf.read_length_max;
+        if ((overall_read_length_max == UNDEFINED_UINT32) || (s_rf.read_length_max > overall_read_length_max))
+          overall_read_length_max = s_rf.read_length_max;
         if ((overall_max_qual == UNDEFINED_UINT32) || (s_rf.max_quality_score > overall_max_qual))
           overall_max_qual = s_rf.max_quality_score;
         s.num_reads += s_rf.num_reads;
-        s.original_num_reads += s_rf.original_reads;
+        s.num_original_reads += s_rf.num_original_reads;
         s.num_bases += s_rf.num_bases;
-        s.original_num_bases += s_rf.original_num_bases;        
+        s.num_original_bases += s_rf.num_original_bases;        
 
         s.reads[base_name] = s_rf;
       }
       
-      s.avg_read_length = static_cast<double>(s.num_bases) / static_cast<double>(s.num_reads);
-      s.min_read_length = overall_min_read_length;
-      s.max_read_length = overall_max_read_length;
+      s.read_length_avg = static_cast<double>(s.num_bases) / static_cast<double>(s.num_reads);
+      s.read_length_min = overall_read_length_min;
+      s.read_length_max = overall_read_length_max;
       s.max_qual = overall_max_qual;
       summary.sequence_conversion = s;
       
       // Print totals
       cerr << "  ::TOTAL::" << endl;
-      cerr << "    Original reads: " << s.original_num_reads << " bases: " << s.original_num_bases << endl;
+      cerr << "    Original reads: " << s.num_original_reads << " bases: " << s.num_original_bases << endl;
       cerr << "    Analyzed reads: " << s.num_reads << " bases: " << s.num_bases << endl;
       
     }
@@ -1312,7 +1312,7 @@ int breseq_default_action(int argc, char* argv[])
 	}
 
 	summary.sequence_conversion.retrieve(settings.sequence_conversion_summary_file_name);
-	ASSERT(summary.sequence_conversion.max_read_length != UNDEFINED_UINT32, "Can't retrieve max read length from file: " + settings.sequence_conversion_summary_file_name);
+	ASSERT(summary.sequence_conversion.read_length_max != UNDEFINED_UINT32, "Can't retrieve max read length from file: " + settings.sequence_conversion_summary_file_name);
 
   // (re)load the reference sequences from our converted files
   // we must be sure to associate them with their original file names
@@ -1395,7 +1395,7 @@ int breseq_default_action(int argc, char* argv[])
       string stage1_unmatched_fastq_file_name = settings.file_name(settings.stage1_unmatched_fastq_file_name, "#", base_read_file_name);
       
       //Split alignment into unmatched and matched files.
-      uint32_t bowtie2_seed_substring_size_stringent = trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].avg_read_length * 0.5);
+      uint32_t bowtie2_seed_substring_size_stringent = trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.5);
       // Check bounds
       bowtie2_seed_substring_size_stringent = max<uint32_t>(9, bowtie2_seed_substring_size_stringent);
       bowtie2_seed_substring_size_stringent = min<uint32_t>(31, bowtie2_seed_substring_size_stringent);
@@ -1447,7 +1447,7 @@ int breseq_default_action(int argc, char* argv[])
         string read_fastq_file = settings.file_name(settings.stage1_unmatched_fastq_file_name, "#", base_read_file_name);
         string reference_sam_file_name = settings.file_name(settings.stage2_reference_sam_file_name, "#", base_read_file_name);
           
-        uint32_t bowtie2_seed_substring_size_relaxed = 5 + trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].avg_read_length * 0.1);
+        uint32_t bowtie2_seed_substring_size_relaxed = 5 + trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.1);
         // Check bounds
         bowtie2_seed_substring_size_relaxed = max<uint32_t>(9, bowtie2_seed_substring_size_relaxed);
         bowtie2_seed_substring_size_relaxed = min<uint32_t>(31, bowtie2_seed_substring_size_relaxed);
@@ -1492,7 +1492,7 @@ int breseq_default_action(int argc, char* argv[])
 	// * Identify candidate junctions from split read alignments
 	//
 	if (
-      !settings.no_junction_prediction
+      !settings.skip_junction_prediction
       && !settings.aligned_sam_mode
       )
 	{
@@ -1619,7 +1619,7 @@ int breseq_default_action(int argc, char* argv[])
           continue;
     
         /// NEW CODE mapping to junctions with somewhat relaxed parameters
-        uint32_t bowtie2_seed_substring_size_junction = trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].avg_read_length * 0.3);
+        uint32_t bowtie2_seed_substring_size_junction = trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.3);
         // Check bounds
         bowtie2_seed_substring_size_junction = max<uint32_t>(9, bowtie2_seed_substring_size_junction);
         bowtie2_seed_substring_size_junction = min<uint32_t>(31, bowtie2_seed_substring_size_junction);
@@ -1645,7 +1645,7 @@ int breseq_default_action(int argc, char* argv[])
 	{
 		create_path(settings.alignment_resolution_path);
 
-    bool junction_prediction = !settings.no_junction_prediction;
+    bool junction_prediction = !settings.skip_junction_prediction;
     if (junction_prediction && file_empty(settings.candidate_junction_fasta_file_name.c_str())) junction_prediction = false;
     
 		resolve_alignments(
@@ -1902,7 +1902,7 @@ int breseq_default_action(int argc, char* argv[])
   
 	if (settings.do_step(settings.error_rates_done_file_name, "Re-calibrating base error rates"))
 	{
-    if (!settings.no_deletion_prediction) {
+    if (!settings.skip_deletion_prediction) {
       CoverageDistribution::analyze_unique_coverage_distributions(
                                                                   settings,
                                                                   summary, 
@@ -2018,7 +2018,7 @@ int breseq_default_action(int argc, char* argv[])
 	// Make predictions of point mutations, small indels, and large deletions
 	//
 
-	if (!settings.no_mutation_prediction)
+	if (!settings.skip_mutation_prediction)
 	{
 		create_path(settings.mutation_identification_path);
 
@@ -2158,16 +2158,15 @@ int breseq_default_action(int argc, char* argv[])
    
   create_path(settings.evidence_path); //need output for plots
 
-	if (settings.do_step(settings.output_done_file_name, "Output"))
-	{
-		///
-		// Output Genome Diff File
-		///
-    
-		cerr << "Creating merged genome diff evidence file..." << endl;
+  if (settings.do_step(settings.output_done_file_name, "Output")) {
+    ///
+    // Output Genome Diff File
+    ///
 
-		// merge all of the evidence GenomeDiff files into one...
-		create_path(settings.evidence_path);
+    cerr << "Creating merged genome diff evidence file..." << endl;
+
+    // merge all of the evidence GenomeDiff files into one...
+    create_path(settings.evidence_path);
     
     cGenomeDiff jc_gd(settings.jc_genome_diff_file_name);
          
@@ -2192,10 +2191,10 @@ int breseq_default_action(int argc, char* argv[])
         evidence_gd.fast_merge(cn_gd);
       }
     }
-		evidence_gd.write(settings.evidence_genome_diff_file_name);
+    evidence_gd.write(settings.evidence_genome_diff_file_name);
 
-		// predict mutations from evidence in the GenomeDiff
-		cerr << "Predicting mutations from evidence..." << endl;
+    // predict mutations from evidence in the GenomeDiff
+    cerr << "Predicting mutations from evidence..." << endl;
 
     MutationPredictor mp(ref_seq_info);
     cGenomeDiff mpgd(settings.evidence_genome_diff_file_name);
@@ -2214,7 +2213,7 @@ int breseq_default_action(int argc, char* argv[])
     }
     
     // These fields will be overwritten by any header GenomeDiff provided
-    mpgd.metadata.title = settings.run_name;
+    mpgd.metadata.title = settings.custom_run_name;
     
     // Load metadata from existing header GenomeDiff file
     // This is purposefully done AFTER the previous metadata defs
@@ -2231,26 +2230,19 @@ int breseq_default_action(int argc, char* argv[])
     
     // Add additional SUMMARY metadata
     
-    mpgd.add_breseq_data("INPUT-READS", to_string(summary.sequence_conversion.original_num_reads));
-    mpgd.add_breseq_data("INPUT-BASES", to_string(summary.sequence_conversion.original_num_bases));
+    mpgd.add_breseq_data("INPUT-READS", to_string(summary.sequence_conversion.num_original_reads));
+    mpgd.add_breseq_data("INPUT-BASES", to_string(summary.sequence_conversion.num_original_bases));
     mpgd.add_breseq_data("CONVERTED-READS", to_string(summary.alignment_resolution.total_reads));
     mpgd.add_breseq_data("CONVERTED-BASES", to_string(summary.alignment_resolution.total_bases));
     mpgd.add_breseq_data("MAPPED-READS", to_string(static_cast<int64_t>(summary.alignment_resolution.total_reads_mapped_to_references)));
     mpgd.add_breseq_data("MAPPED-BASES", to_string(summary.alignment_resolution.total_bases_mapped_to_references));
-    
-    /*
-    // Add additional header lines if needed.
-    if (settings.add_metadata_to_gd){
-      for (storable_map<string, Summary::Coverage>::iterator it = summary.unique_coverage.begin();
-            it != summary.unique_coverage.end(); it ++) {
-         //Usually needed for gathering breseq data.
-       }
-    }
-    */
 
     // Write the output.gd file
     cerr << "  Writing final GD file..." << endl;
     mpgd.write(settings.final_genome_diff_file_name);
+    
+    // Make a copy in both output and data folders
+    SYSTEM("cp " + settings.final_genome_diff_file_name + " " + settings.output_genome_diff_file_name);
     
     //Don't reload -- we lose invisible fields that we need
     //cGenomeDiff gd(settings.final_genome_diff_file_name);
@@ -2265,7 +2257,8 @@ int breseq_default_action(int argc, char* argv[])
     mpgd.write_vcf(settings.output_vcf_file_name, ref_seq_info);
     
     // Write a final JSON file with all summary information
-    summary.store(settings.data_summary_file_name);
+    PublicSummary public_summary(summary, settings, ref_seq_info);
+    public_summary.store(settings.data_summary_file_name);
     
     //
     // Mark marginal items as no_show to prevent further processing
@@ -2288,7 +2281,7 @@ int breseq_default_action(int argc, char* argv[])
 		//
 		// Create evidence files containing alignments and coverage plots
 		// --- must occur after marking entries no_show
-		if (!settings.no_alignment_or_plot_generation)
+		if (!settings.skip_alignment_or_plot_generation)
 			output::cOutputEvidenceFiles(settings, gd);
 
 		///

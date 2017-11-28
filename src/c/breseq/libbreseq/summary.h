@@ -25,13 +25,21 @@ LICENSE AND COPYRIGHT
 
 namespace breseq{
   
+  class cReferenceSequences;
+  class cAnnotatedSequence;
+  class Settings;
+  class cReferenceSequenceSettings;
+  
+  // PRIVATE Summaries
+  //
+  // Files for internal use only. Not documented.
+  
   class ReadFileSummary : public JSONStorable<ReadFileSummary> {
   public:
     uint64_t num_unmatched_reads;
     uint64_t num_unmatched_bases;
     uint64_t num_total_reads;
     uint64_t num_total_bases;
-    
     
     ReadFileSummary()
     : num_unmatched_reads(0)
@@ -54,6 +62,20 @@ namespace breseq{
     }
   };
   
+  
+  class AlignmentResolutionReferenceSummary : public JSONStorable<AlignmentResolutionReferenceSummary>
+  {
+  public:
+    // These amounts are divided by the number of different equal mappings
+    double reads_mapped_to_reference;
+    double bases_mapped_to_reference;
+    
+    AlignmentResolutionReferenceSummary()
+    : reads_mapped_to_reference(0)
+    , bases_mapped_to_reference(0)
+    {}
+  };
+  
   class AlignmentResolutionSummary : public JSONStorable<AlignmentResolutionSummary>
   {
   public:
@@ -69,13 +91,16 @@ namespace breseq{
     
     uint64_t total_reads_mapped_to_references;
     uint64_t total_bases_mapped_to_references;
-    vector<double> reads_mapped_to_references;
+    
+    // This is stored as a vector rather than as a map for speed in adding them up
+    vector<AlignmentResolutionReferenceSummary> reference;
     
     AlignmentResolutionSummary()
     : total_unmatched_reads(0)
     , total_unmatched_bases(0)
     , total_reads(0)
     , total_bases(0)
+    , max_sam_base_quality_score(0)
     , total_reads_mapped_to_references(0)
     , total_bases_mapped_to_references(0)
     {}
@@ -114,67 +139,68 @@ namespace breseq{
   class AnalyzeFastqSummary : public JSONStorable<AnalyzeFastqSummary>
   {
   public:
-    uint32_t min_read_length;
-    uint32_t max_read_length;
-    double avg_read_length;
-    uint64_t original_reads;
-    uint64_t too_short_filtered_reads;
-    uint64_t same_base_filtered_reads;
-    uint64_t N_filtered_reads;
-    uint64_t num_reads;         // original_reads = homopolymer_filtered_reads + N_filtered_reads + num_reads
+    uint32_t read_length_min;
+    uint32_t read_length_max;
+    double read_length_avg;
+    // original_reads = homopolymer_filtered_reads + num_filtered_too_many_N_reads + num_reads
+    uint64_t num_original_reads;
+    uint64_t num_filtered_too_short_reads;
+    uint64_t num_filtered_same_base_reads;
+    uint64_t num_filtered_too_many_N_reads;
+    uint64_t num_reads;
     uint32_t min_quality_score;
     uint32_t max_quality_score;
-    uint64_t original_num_bases;
+    uint64_t num_original_bases;
     uint64_t num_bases;
-    string original_qual_format;
+    string quality_format_original;
     string quality_format;
     string converted_fastq_name;
     
     AnalyzeFastqSummary()
-    : min_read_length(0)
-    , max_read_length(0)
-    , avg_read_length(0.0)
-    , original_reads(0)
-    , too_short_filtered_reads(0)
-    , same_base_filtered_reads(0)
-    , N_filtered_reads(0)
+    : read_length_min(0)
+    , read_length_max(0)
+    , read_length_avg(0.0)
+    , num_original_reads(0)
+    , num_filtered_too_short_reads(0)
+    , num_filtered_same_base_reads(0)
+    , num_filtered_too_many_N_reads(0)
     , num_reads(0)
     , min_quality_score(0)
     , max_quality_score(0)
-    , original_num_bases(0)
+    , num_original_bases(0)
     , num_bases(0)
     { }
     
     AnalyzeFastqSummary(
-                 uint32_t _min_read_length,
-                 uint32_t _max_read_length,
-                 double _avg_read_length,
-                 uint64_t _original_reads,
-                 uint64_t _too_short_filtered_reads,
-                 uint64_t _same_base_filtered_reads,
-                 uint64_t _N_filtered_reads,
+                 uint32_t _read_length_min,
+                 uint32_t _read_length_max,
+                 double _read_length_avg,
+                 uint64_t _num_original_reads,
+                 uint64_t _num_filtered_too_short_reads,
+                 uint64_t _num_filtered_same_base_reads,
+                 uint64_t _num_filtered_too_many_N_reads,
                  uint64_t _num_reads,
                  uint32_t _min_quality_score,
                  uint32_t _max_quality_score,
-                 uint64_t _original_num_bases,
+                 uint64_t _num_original_bases,
                  uint64_t _num_bases,
-                 const string& _original_qual_format,
+                 const string& _quality_format_original,
                  const string& _quality_format,
                  const string& _converted_fastq_name
                  )
-    : min_read_length(_min_read_length)
-    , max_read_length(_max_read_length)
-    , avg_read_length(_avg_read_length)
-    , original_reads(_original_reads)
-    , too_short_filtered_reads(_too_short_filtered_reads)
-    , same_base_filtered_reads(_same_base_filtered_reads)
-    , N_filtered_reads(_N_filtered_reads)
+    : read_length_min(_read_length_min)
+    , read_length_max(_read_length_max)
+    , read_length_avg(_read_length_avg)
+    , num_original_reads(_num_original_reads)
+    , num_filtered_too_short_reads(_num_filtered_too_short_reads)
+    , num_filtered_same_base_reads(_num_filtered_same_base_reads)
+    , num_filtered_too_many_N_reads(_num_filtered_too_many_N_reads)
     , num_reads(_num_reads)
     , min_quality_score(_min_quality_score)
     , max_quality_score(_max_quality_score)
-    , original_num_bases(_original_num_bases)
+    , num_original_bases(_num_original_bases)
     , num_bases(_num_bases)
-    , original_qual_format(_original_qual_format)
+    , quality_format_original(_quality_format_original)
     , quality_format(_quality_format)
     , converted_fastq_name(_converted_fastq_name)
     { }
@@ -221,27 +247,27 @@ namespace breseq{
   class SequenceConversionSummary : public JSONStorable<SequenceConversionSummary>
   {
   public:
-    float avg_read_length;
+    float read_length_avg;
     uint32_t max_qual;
     uint64_t num_reads;
-    uint64_t original_num_reads;
+    uint64_t num_original_reads;
     uint64_t num_bases;
-    uint64_t original_num_bases;
+    uint64_t num_original_bases;
     map<string, AnalyzeFastqSummary> reads;
     uint64_t total_reference_sequence_length;
-    uint32_t max_read_length;
-    uint32_t min_read_length;
+    uint32_t read_length_max;
+    uint32_t read_length_min;
     
     SequenceConversionSummary()
-    : avg_read_length(0.0)
+    : read_length_avg(0.0)
     , max_qual(255)
     , num_reads(0)
-    , original_num_reads(0)
+    , num_original_reads(0)
     , num_bases(0)
-    , original_num_bases(0)
+    , num_original_bases(0)
     , total_reference_sequence_length(0)
-    , max_read_length(0)
-    , min_read_length(0)
+    , read_length_max(0)
+    , read_length_min(0)
     { }
   };
   
@@ -278,7 +304,7 @@ namespace breseq{
     
     Summary() {}
 	};
-  
+ 
   // ReadFileSummary
   void to_json(json& j, const ReadFileSummary& s);
   void from_json(const json& j, ReadFileSummary& s);
@@ -286,6 +312,10 @@ namespace breseq{
   // PosHashScoreDistribution
   void to_json(json& j, const PosHashScoreDistribution& s);
   void from_json(const json& j, PosHashScoreDistribution& s);
+
+  // AlignmentResolutionReferenceSummary
+  void to_json(json& j, const AlignmentResolutionReferenceSummary& s);
+  void from_json(const json& j, AlignmentResolutionReferenceSummary& s);
   
   // AlignmentResolutionSummary
   void to_json(json& j, const AlignmentResolutionSummary& s);
@@ -306,7 +336,7 @@ namespace breseq{
   // CandidateJunctionSummary
   void to_json(json& j, const CandidateJunctionSummary& s);
   void from_json(const json& j, CandidateJunctionSummary& s);
-
+  
   // SequenceConversionSummmary
   void to_json(json& j, const SequenceConversionSummary& s);
   void from_json(const json& j, SequenceConversionSummary& s);
@@ -327,6 +357,252 @@ namespace breseq{
   void to_json(json& j, const Summary& s);
   void from_json(const json& j, Summary& s);
   
+  
+  // PUBLIC Summaries
+  //
+  // Special summary objects refactored to collate all information about read files / reference files
+  // together and be output as a file for users. Should have constructors that take other summary objects
+  // or information about the run to let them transfer over the fields.
+  
+  class PublicReadFileSummary : public JSONStorable<PublicReadFileSummary> {
+  public:
+    uint32_t read_length_min;
+    uint32_t read_length_max;
+    double read_length_avg;
+    // num_original_reads = homopolymer_filtered_reads + num_filtered_too_many_N_reads + num_reads
+    uint64_t num_original_reads;
+    uint64_t num_filtered_too_short_reads;
+    uint64_t num_filtered_same_base_reads;
+    uint64_t num_filtered_too_many_N_reads;
+    uint64_t num_reads;
+    uint32_t min_quality_score;
+    uint32_t max_quality_score;
+    uint64_t num_original_bases;
+    uint64_t num_bases;
+    string quality_format_original;
+    string quality_format;
+    
+    uint64_t num_aligned_reads;
+    uint64_t num_aligned_bases;
+    double fraction_aligned_reads;
+    double fraction_aligned_bases;
+    
+    PublicReadFileSummary() {}
+    PublicReadFileSummary(const ReadFileSummary &rfs, const AnalyzeFastqSummary &afs);
+  };
+  
+  class PublicReadFileSummaries : public map<string, PublicReadFileSummary>, public JSONStorable<PublicReadFileSummaries> {
+  public:
+    PublicReadFileSummaries() {}
+  };
+  
+  class PublicReadSummary : public JSONStorable<PublicReadSummary> {
+  public:
+    
+    uint64_t total_reads;
+    uint64_t total_bases;
+    uint64_t total_aligned_reads;
+    uint64_t total_aligned_bases;
+    double total_fraction_aligned_reads;
+    double total_fraction_aligned_bases;
+    
+    PublicReadFileSummaries read_file;
+    
+    PublicReadSummary() {}
+    PublicReadSummary(const Summary &s);
+  };
+  
+  class PublicReferenceSummary : public JSONStorable<PublicReferenceSummary> {
+  public:
+    
+    uint64_t length;
+    uint64_t num_features;
+    uint64_t num_genes;
+    uint64_t num_repeats;
+    
+    double num_reads_mapped_to_reference;
+    double num_bases_mapped_to_reference;
+    
+    double coverage_deletion_coverage_propagation_cutoff;
+    double coverage_deletion_coverage_seed_cutoff;
+    double coverage_nbinom_size_parameter;
+    double coverage_nbinom_mean_parameter;
+    double coverage_nbinom_prob_parameter;
+    double coverage_nbinom_variance;
+    double coverage_nbinom_dispersion;
+    double coverage_average;
+    double coverage_variance;
+    double coverage_dispersion;
+    
+    int32_t coverage_group;
+    bool junction_only;
+    
+    PublicReferenceSummary() {}
+    PublicReferenceSummary(
+                           const AlignmentResolutionReferenceSummary &arrs,
+                           const CoverageSummary &cs,
+                           const cAnnotatedSequence &r,
+                           const cReferenceSequenceSettings &rss
+                           );
+  };
+
+  class PublicReferenceSummaries : public map<string, PublicReferenceSummary>, public JSONStorable<PublicReferenceSummaries> {
+  public:
+    PublicReferenceSummaries() {}
+  };
+  
+  class PublicReferencesSummary : public JSONStorable<PublicReferencesSummary> {
+  public:
+
+    uint64_t total_length;
+    uint64_t total_features;
+    uint64_t total_genes;
+    uint64_t total_repeats;
+    
+    PublicReferenceSummaries reference;
+    
+    PublicReferencesSummary() {}
+    PublicReferencesSummary(const Summary &s, const cReferenceSequences& r, const cReferenceSequenceSettings &rss);
+  };
+  
+  class PublicOptionsSummary : public JSONStorable<PublicOptionsSummary> {
+  public:
+    
+    //! Settings: Workflow
+    string custom_run_name;
+    int32_t num_processors;
+    bool skip_read_filtering;
+    bool skip_junction_prediction;
+    bool skip_mutation_prediction;
+    bool skip_deletion_prediction;
+    bool skip_alignment_or_plot_generation;
+
+    //! Settings: Read File
+    bool aligned_sam_mode;
+    double  read_file_coverage_fold_limit;
+    uint32_t read_file_read_length_min;
+    double read_file_max_same_base_fraction;
+    double read_file_max_N_fraction;
+    
+    //! Settings: Read Alignment
+    uint64_t bowtie2_junction_maximum_alignments_to_consider_per_read;
+    uint64_t bowtie2_genome_maximum_alignments_to_consider_per_read;
+    string bowtie2_score_parameters;
+    string bowtie2_junction_alignment_reporting_parameters;
+    string bowtie2_genome_alignment_reporting_parameters;
+    string bowtie2_min_score_stringent;
+    string bowtie2_min_score_relaxed;
+    string bowtie2_min_score_junction;
+    uint32_t require_match_length;
+    double   require_match_fraction;
+    int32_t  maximum_read_mismatches;
+    
+    //! Settings: Candidate Junction
+    int32_t  preprocess_junction_min_indel_split_length;
+    int32_t required_both_unique_length_per_side;
+    double   required_both_unique_length_per_side_fraction;
+    int32_t required_one_unique_length_per_side;
+    uint32_t unmatched_end_minimum_read_length;
+    double   unmatched_end_length_factor;
+    uint32_t maximum_junction_sequence_insertion_length;
+    uint32_t maximum_junction_sequence_overlap_length;
+    double maximum_junction_sequence_negative_overlap_length_fraction;
+    uint32_t maximum_junction_sequence_negative_overlap_length_minimum;
+    double maximum_junction_sequence_positive_overlap_length_fraction;
+    uint32_t maximum_junction_sequence_positive_overlap_length_minimum;
+    uint32_t highly_redundant_junction_ignore_passed_pair_limit;
+    uint64_t maximum_junction_sequence_passed_alignment_pairs_to_consider;
+    uint32_t minimum_candidate_junction_pos_hash_score;
+    uint32_t minimum_candidate_junctions;
+    uint32_t maximum_candidate_junctions;
+    double maximum_candidate_junction_length_factor;
+
+    //! Settings: Alignment Resolution
+    bool add_split_junction_sides;
+    uint32_t minimum_alignment_resolution_pos_hash_score;
+    int32_t junction_minimum_side_match;
+    double junction_pos_hash_neg_log10_p_value_cutoff;
+    
+    //! Settings: Mutation Identification
+    string user_evidence_genome_diff_file_name;
+    uint32_t base_quality_cutoff;
+    uint32_t quality_score_trim;
+    double deletion_coverage_propagation_cutoff;
+    double deletion_coverage_seed_cutoff;
+    bool polymorphism_prediction;
+    bool mixed_base_prediction;
+    bool targeted_sequencing;
+    bool print_mutation_identification_per_position_file;
+    double mutation_log10_e_value_cutoff;
+    uint32_t consensus_minimum_new_coverage_each_strand;
+    double consensus_frequency_cutoff;
+    double polymorphism_log10_e_value_cutoff;
+    double polymorphism_bias_p_value_cutoff;
+    double polymorphism_frequency_cutoff;
+    uint32_t polymorphism_minimum_new_coverage_each_strand;
+    uint32_t polymorphism_reject_indel_homopolymer_length;
+    uint32_t polymorphism_reject_surrounding_homopolymer_length;
+    bool no_indel_polymorphisms;
+
+    //! Settings: Mutation Prediction
+    int32_t size_cutoff_AMP_becomes_INS_DEL_mutation;
+    
+    //! Settings: Output
+    uint32_t max_displayed_reads;
+    bool no_javascript;
+    string header_genome_diff_file_name;
+    uint32_t max_nucleotides_to_show_in_tables;
+    uint32_t max_rejected_read_alignment_evidence_to_show;
+    uint32_t max_rejected_junction_evidence_to_show;
+    bool hide_circular_genome_junctions;
+
+    PublicOptionsSummary() {}
+    PublicOptionsSummary(const Settings &t);
+  };
+  
+  class PublicSummary : public JSONStorable<PublicSummary>
+  {
+  public:
+    PublicReadSummary reads;
+    PublicReferencesSummary references;
+    PublicOptionsSummary options;
+    
+    PublicSummary() {}
+    PublicSummary(const Summary &s, const Settings &t, const cReferenceSequences &r);
+  };
+  
+  // PublicReadFileSummary
+  void to_json(json& j, const PublicReadFileSummary& s);
+  void from_json(const json& j, PublicReadFileSummary& s);
+  
+  // PublicReadFileSummaries
+  void to_json(json& j, const PublicReadFileSummaries& s);
+  void from_json(const json& j, PublicReadFileSummaries& s);
+
+  // PublicReadSummary
+  void to_json(json& j, const PublicReadSummary& s);
+  void from_json(const json& j, PublicReadSummary& s);
+
+  // PublicReferenceSummary
+  void to_json(json& j, const PublicReferenceSummary& s);
+  void from_json(const json& j, PublicReferenceSummary& s);
+
+  // PublicReferenceSummaries
+  void to_json(json& j, const PublicReferenceSummaries& s);
+  void from_json(const json& j, PublicReferenceSummaries& s);
+  
+  // PublicReferencesSummary
+  void to_json(json& j, const PublicReferencesSummary& s);
+  void from_json(const json& j, PublicReferencesSummary& s);
+
+  // PublicOptionsSummary
+  void to_json(json& j, const PublicOptionsSummary& s);
+  void from_json(const json& j, PublicOptionsSummary& s);
+
+  // PublicSummary
+  void to_json(json& j, const PublicSummary& s);
+  void from_json(const json& j, PublicSummary& s);
+
 } // breseq namespace
 
 #endif

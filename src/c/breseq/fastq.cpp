@@ -38,7 +38,7 @@ namespace breseq {
                                         const bool filter_reads,
                                         uint64_t current_read_file_bases,
                                         const uint64_t read_file_base_limit,
-                                        const uint32_t _min_read_length,
+                                        const uint32_t _read_length_min,
                                         const double _max_same_base_fraction,
                                         const double _max_N_fraction
                                         )
@@ -52,22 +52,22 @@ namespace breseq {
     format_to_chr_offset["ILLUMINA_1.3+"] = 64;
     
     // Summary information that will be printed at the end
-    uint32_t max_read_length;
-    uint32_t min_read_length;
+    uint32_t read_length_max;
+    uint32_t read_length_min;
     uint8_t min_quality_score;
     uint8_t max_quality_score;
-    uint64_t original_num_bases;
-    uint64_t original_num_reads;
+    uint64_t num_original_bases;
+    uint64_t num_original_reads;
     
     // Predict the format (and count original stats)
-    string quality_format = cFastqQualityConverter::predict_fastq_file_format(file_name, original_num_reads, original_num_bases, min_read_length, max_read_length, min_quality_score, max_quality_score);
+    string quality_format = cFastqQualityConverter::predict_fastq_file_format(file_name, num_original_reads, num_original_bases, read_length_min, read_length_max, min_quality_score, max_quality_score);
     
     uint64_t num_bases = 0;
     uint64_t num_reads = 0;
     
     uint64_t min_length_filtered_reads = 0;
-    uint64_t same_base_filtered_reads = 0;
-    uint64_t N_filtered_reads = 0;
+    uint64_t num_filtered_same_base_reads = 0;
+    uint64_t num_filtered_too_many_N_reads = 0;
     
     uint64_t min_length_filtered_bases = 0;
     uint64_t same_base_filtered_bases = 0;
@@ -81,11 +81,11 @@ namespace breseq {
     
     //std::cout << m_quality_format << std::endl;
 
-    uint32_t width_for_reads = to_string(original_num_reads).size();
-    uint32_t width_for_bases = to_string(original_num_bases).size();
+    uint32_t width_for_reads = to_string(num_original_reads).size();
+    uint32_t width_for_bases = to_string(num_original_bases).size();
     
     cerr << "    Original base quality format: " << quality_format << " New format: SANGER"<< endl;
-    cerr << "    Original reads: " << original_num_reads << " bases: "<< original_num_bases << endl;
+    cerr << "    Original reads: " << num_original_reads << " bases: "<< num_original_bases << endl;
 
     cFastqQualityConverter fqc(quality_format, "SANGER");
     cFastqSequence on_sequence;
@@ -112,7 +112,7 @@ namespace breseq {
       if ( filter_reads ) {
 
         // Discard sequences that are too short
-        if ( _min_read_length && (on_sequence.length() < _min_read_length) ) {
+        if ( _read_length_min && (on_sequence.length() < _read_length_min) ) {
           min_length_filtered_reads++;
           min_length_filtered_bases += on_sequence.length();
           continue;
@@ -120,7 +120,7 @@ namespace breseq {
         
         // Discard sequences that are 50% or more N.
         if ( _max_N_fraction && (_max_N_fraction * static_cast<double>(on_sequence.length()) <= static_cast<double>(on_sequence.m_base_counts[base_list_N_index]) )) {
-          N_filtered_reads++;
+          num_filtered_too_many_N_reads++;
           N_filtered_bases += on_sequence.length();
           continue;
         }
@@ -137,7 +137,7 @@ namespace breseq {
         }
         
         if (same_base_filtered)  {
-          same_base_filtered_reads++;
+          num_filtered_same_base_reads++;
           same_base_filtered_bases += on_sequence.length();
           continue;
         }
@@ -196,24 +196,24 @@ namespace breseq {
     string display_N_percent = to_string(_max_N_fraction);
     
     if (filter_reads) {
-      if (N_filtered_reads + same_base_filtered_reads + min_length_filtered_reads == 0) {
+      if (num_filtered_too_many_N_reads + num_filtered_same_base_reads + min_length_filtered_reads == 0) {
         cerr << "    Filtered reads: none" << endl;
       } else {
         
         if (min_length_filtered_reads) {
           cerr << "    Filtered reads: " << setw(width_for_reads) << min_length_filtered_reads;
           cerr << " bases: "<< setw(width_for_bases) << min_length_filtered_bases;
-          cerr << " (<" << _min_read_length << " bases long)" << endl;
+          cerr << " (<" << _read_length_min << " bases long)" << endl;
         }
-        if (N_filtered_reads) {
+        if (num_filtered_too_many_N_reads) {
           string percentage = formatted_double(100 * _max_N_fraction, 1).to_string();
-          cerr << "    Filtered reads: " << setw(width_for_reads) << N_filtered_reads;
+          cerr << "    Filtered reads: " << setw(width_for_reads) << num_filtered_too_many_N_reads;
           cerr << " bases: "<< setw(width_for_bases) << N_filtered_bases;
           cerr << " (≥" << percentage << "% bases N)" << endl;
         }
-        if (same_base_filtered_reads) {
+        if (num_filtered_same_base_reads) {
           string percentage = formatted_double(100 * _max_same_base_fraction, 1).to_string();
-          cerr << "    Filtered reads: " << setw(width_for_reads) << same_base_filtered_reads;
+          cerr << "    Filtered reads: " << setw(width_for_reads) << num_filtered_same_base_reads;
           cerr << " bases: "<< setw(width_for_bases) << same_base_filtered_bases;
           cerr << " (≥" << percentage << "% same base)" << endl;
         }
@@ -222,20 +222,20 @@ namespace breseq {
     cerr << "    Analyzed reads: " << num_reads << " bases: "<< num_bases << endl;
 
     
-    double avg_read_length = static_cast<double>(num_bases) / static_cast<double>(num_reads);
+    double read_length_avg = static_cast<double>(num_bases) / static_cast<double>(num_reads);
     
     AnalyzeFastqSummary retval(
-                                 min_read_length,
-                                 max_read_length, 
-                                 avg_read_length,
-                                 original_num_reads,
+                                 read_length_min,
+                                 read_length_max, 
+                                 read_length_avg,
+                                 num_original_reads,
                                  min_length_filtered_reads,
-                                 same_base_filtered_reads,
-                                 N_filtered_reads,
+                                 num_filtered_same_base_reads,
+                                 num_filtered_too_many_N_reads,
                                  num_reads, 
                                  min_quality_score, 
                                  max_quality_score, 
-                                 original_num_bases,
+                                 num_original_bases,
                                  num_bases, 
                                  quality_format, 
                                  "SANGER", 
@@ -365,13 +365,13 @@ namespace breseq {
     }
   }
   
-  string cFastqQualityConverter::predict_fastq_file_format(const string& file_name, uint64_t& original_num_reads, uint64_t& original_num_bases, uint32_t& min_read_length, uint32_t& max_read_length, uint8_t& min_quality_score, uint8_t& max_quality_score)
+  string cFastqQualityConverter::predict_fastq_file_format(const string& file_name, uint64_t& num_original_reads, uint64_t& num_original_bases, uint32_t& read_length_min, uint32_t& read_length_max, uint8_t& min_quality_score, uint8_t& max_quality_score)
   {
   // Initialize the input variables!
-    original_num_reads = 0;
-    original_num_bases = 0;
-    min_read_length = numeric_limits<uint32_t>::max();
-    max_read_length = 0;
+    num_original_reads = 0;
+    num_original_bases = 0;
+    read_length_min = numeric_limits<uint32_t>::max();
+    read_length_max = 0;
     min_quality_score = 255;
     max_quality_score = 0;
     
@@ -390,15 +390,15 @@ namespace breseq {
   while (input_fastq_file.read_sequence(on_sequence, prelim_fqc)) {
     
     //increment read number
-    original_num_reads++;
+    num_original_reads++;
     
     //check sequence length
-    min_read_length = min<uint32_t>(min_read_length, on_sequence.m_sequence.size());
-    max_read_length = max<uint32_t>(max_read_length, on_sequence.m_sequence.size());
+    read_length_min = min<uint32_t>(read_length_min, on_sequence.m_sequence.size());
+    read_length_max = max<uint32_t>(read_length_max, on_sequence.m_sequence.size());
 
     
     //add current sequence length to number of bases
-    original_num_bases += on_sequence.m_sequence.size();
+    num_original_bases += on_sequence.m_sequence.size();
       
       //iterate through sequence grabbing the associated scores
     for (uint32_t i=0; i<on_sequence.m_qualities.size(); i++) {

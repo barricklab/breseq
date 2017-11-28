@@ -41,6 +41,7 @@ const char* PHYLOGENY_ID="phylogeny_id";
 const char* FREQUENCY="frequency";
 const char* REJECT="reject";
 const char* POLYMORPHISM_REJECT="polymorphism_reject";
+const char* CONSENSUS_REJECT="consensus_reject";
 const char* MEDIATED="mediated";
 const char* BETWEEN="between";
   
@@ -1229,7 +1230,7 @@ size_t cDiffEntry::number_reject_reasons()
   return 0;
 }
 
-vector<string> cDiffEntry::get_reject_reasons(const string field)
+vector<string> cDiffEntry::get_reject_reasons(const string& field)
 {
   vector<string> return_value;
   if (this->entry_exists(field)) {
@@ -1240,32 +1241,32 @@ vector<string> cDiffEntry::get_reject_reasons(const string field)
 
 /*! Add reject reason to diff entry.
  */
-void cDiffEntry::add_reject_reason(const string &reason) {
-
-  if (!this->entry_exists(REJECT)) {
-    (*this)[REJECT] = reason;
+void cDiffEntry::add_reject_reason(const string &reason, const string& field) {
+  
+  if (!this->entry_exists(field)) {
+    (*this)[field] = reason;
   }
   // exists already, make comma separated list
   else {
-    vector<string> current_reject_reasons = split((*this)[REJECT], ",");
+    vector<string> current_reject_reasons = split((*this)[field], ",");
     bool reject_exists = false;
     for (vector<string>::iterator it=current_reject_reasons.begin(); it != current_reject_reasons.end(); it++) {
       if (*it == reason) reject_exists = true;
     }
     if (!reject_exists) {
       current_reject_reasons.push_back(reason);
-      (*this)[REJECT] = join(current_reject_reasons, ",");
+      (*this)[field] = join(current_reject_reasons, ",");
     }
   }
 }
   
 /*! Add reject reason to diff entry.
  */
-void cDiffEntry::remove_reject_reason(const string &reason) {
+void cDiffEntry::remove_reject_reason(const string &reason, const string& field) {
   
-  if (!this->entry_exists(REJECT)) return;
+  if (!this->entry_exists(field)) return;
   
-  vector<string> current_reject_reasons = split((*this)[REJECT], ",");
+  vector<string> current_reject_reasons = split((*this)[field], ",");
   vector<string> new_reject_reasons;
   
   for (vector<string>::iterator it=current_reject_reasons.begin(); it != current_reject_reasons.end(); it++) {
@@ -1275,7 +1276,7 @@ void cDiffEntry::remove_reject_reason(const string &reason) {
   }
   
   if (current_reject_reasons.size() > 0) {
-    (*this)[REJECT] = join(current_reject_reasons, ",");
+    (*this)[field] = join(current_reject_reasons, ",");
   }
 }
   

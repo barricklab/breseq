@@ -207,11 +207,22 @@ namespace breseq
     //! Settings: Global Workflow and Output
     string base_output_path;              // Default = cwd COMMAND-LINE OPTION
     
+    //! Options that control which parts of the pipeline to execute
+    string custom_run_name;          // Default = <none> COMMAND-LINE OPTION
+    string print_custom_run_name;    // custom_run_name with '_' replaced by ' '
+    bool skip_read_filtering;               // Default = false
+    bool skip_junction_prediction;          // Default = false COMMAND-LINE OPTION
+    bool skip_mutation_prediction;          // Default = false
+    bool skip_deletion_prediction;          // Default = false set to true if targeted_sequencing
+    bool skip_alignment_or_plot_generation; // Default = false COMMAND-LINE OPTION
+    bool do_copy_number_variation;        // Default = false COMMAND-LINE OPTION
+    bool do_periodicity;                  // Default = false COMMAND-LINE OPTION
+    
     //! Settings: Read File Options
     vector<string> read_file_names;             // REQUIRED COMMAND-LINE OPTION
     bool aligned_sam_mode;                      // Default = false COMMAND-LINE OPTION
     double  read_file_coverage_fold_limit;      // Default = 0 (OFF) COMMAND-LINE OPTION
-    uint32_t read_file_min_read_length;         // Default = 18 COMMAND-LINE OPTION
+    uint32_t read_file_read_length_min;         // Default = 18 COMMAND-LINE OPTION
     double read_file_max_same_base_fraction;    // Default = 0.9 COMMAND-LINE OPTION
     double read_file_max_N_fraction;            // Default = 0.5 COMMAND-LINE OPTION
     
@@ -222,19 +233,6 @@ namespace breseq
     vector<string> junction_only_file_names;    // Default = EMPTY COMMAND-LINE OPTION
     cReferenceSequenceSettings refseq_settings; // This is extra settings data initialized from
                                                 // refseqs and how they are provided to the CLI
-    
-    string user_evidence_genome_diff_file_name; // Default = none COMMAND-LINE OPTION
-    string run_name;          // Default = <none> COMMAND-LINE OPTION
-    string print_run_name;    // run_name with '_' replaced by ' '
-    
-    //! Options that control which parts of the pipeline to execute
-    bool no_read_filtering;               // Default = false
-    bool no_junction_prediction;          // Default = false COMMAND-LINE OPTION
-		bool no_mutation_prediction;          // Default = false
-		bool no_deletion_prediction;          // Default = false set to true if targeted_sequencing
-		bool no_alignment_or_plot_generation; // Default = false COMMAND-LINE OPTION
-		bool do_copy_number_variation;        // Default = false COMMAND-LINE OPTION
-		bool do_periodicity;							    // Default = false COMMAND-LINE OPTION
 
     //! DEBUG options
     
@@ -322,6 +320,8 @@ namespace breseq
     
     //! Settings: Mutation Identification
     
+    string user_evidence_genome_diff_file_name; // Default = none COMMAND-LINE OPTION
+    
     //! ignore bases below this cutoff for RA evidence (still counted for deletions?)
     uint32_t base_quality_cutoff;                         // Default 3    COMMAND-LINE OPTION
     uint32_t quality_score_trim;                          // Default OFF  COMMAND-LINE OPTION
@@ -372,7 +372,7 @@ namespace breseq
     //! don't include javascript in HTML output, for Galaxy integration
     bool no_javascript;                                     // Default = false COMMAND-LINE OPTION
     string header_genome_diff_file_name;                    // Default = NONE  COMMAND-LINE OPTION
-    uint32_t output_max_nucleotides_to_show_in_tables;      // Default = 8
+    uint32_t max_nucleotides_to_show_in_tables;      // Default = 8
     uint32_t max_rejected_read_alignment_evidence_to_show;  // Default = 20
 		uint32_t max_rejected_junction_evidence_to_show;        // Default = 10
 		bool hide_circular_genome_junctions;                    // Default = true
@@ -548,6 +548,7 @@ namespace breseq
 		string reference_gff3_file_name;
     string unmatched_read_file_name;
     string output_vcf_file_name;
+    string output_genome_diff_file_name;
     string data_summary_file_name;
     
     //! Paths: Experimental

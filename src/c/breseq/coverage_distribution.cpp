@@ -125,7 +125,7 @@ void CoverageDistribution::analyze_unique_coverage_distribution(
   // We really want somewhere between these two, try this...
   double junction_accept_pr_cutoff = 0.01;
   double junction_keep_pr_cutoff = 0.01 / sqrt(sequence_length);
-  int32_t junction_max_score = int(2 * summary.sequence_conversion.avg_read_length);
+  int32_t junction_max_score = int(2 * summary.sequence_conversion.read_length_avg);
   
   CoverageDistribution dist;
   vector<string> lines = dist.fit(settings,

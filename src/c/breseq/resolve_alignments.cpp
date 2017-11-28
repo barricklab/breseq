@@ -153,7 +153,7 @@ void calculate_continuation(
   
 PosHashProbabilityTable::PosHashProbabilityTable(Summary& summary)
 {
-  average_read_length = static_cast<int32_t>(round(summary.sequence_conversion.avg_read_length));
+  average_read_length = static_cast<int32_t>(round(summary.sequence_conversion.read_length_avg));
   for (map<string,CoverageSummary>::iterator it=summary.preprocess_coverage.begin();
        it != summary.preprocess_coverage.end(); it++) {
     
@@ -257,9 +257,11 @@ void resolve_alignments(
 	bool verbose = false;
   
   // local variables for convenience
-  int32_t avg_read_length = static_cast<int32_t>(round(summary.sequence_conversion.avg_read_length));
-  summary.alignment_resolution.reads_mapped_to_references.resize(ref_seq_info.size(),0);
-
+  int32_t read_length_avg = static_cast<int32_t>(round(summary.sequence_conversion.read_length_avg));
+  
+  // Initialize out summary so we can add to it
+  summary.alignment_resolution.reference.resize(ref_seq_info.size(), AlignmentResolutionReferenceSummary());
+  
   // Load the reference sequence trims, for writing resolved alignments
   SequenceTrimsList trims_list;
   read_trims(trims_list, ref_seq_info, settings.reference_trim_file_name);
@@ -1039,10 +1041,11 @@ void _write_reference_matches(const Settings& settings, Summary& summary, cRefer
   {
     Trims t = get_alignment_trims(**it, trims_list);
 		trims.push_back(t);
-    summary.alignment_resolution.reads_mapped_to_references[(*it)->reference_target_id()]+=redundancy_corrected_count;
+    summary.alignment_resolution.reference[(*it)->reference_target_id()].reads_mapped_to_reference  +=redundancy_corrected_count;
+    summary.alignment_resolution.reference[(*it)->reference_target_id()].bases_mapped_to_reference  +=redundancy_corrected_count * (*it)->query_match_length();
   }
   summary.alignment_resolution.total_reads_mapped_to_references+=1;
-  summary.alignment_resolution.total_bases_mapped_to_references+=reference_alignments.front()->reference_match_length();
+  summary.alignment_resolution.total_bases_mapped_to_references+=reference_alignments.front()->query_match_length();
   
 	reference_tam.write_alignments((int32_t)fastq_file_index, reference_alignments, &trims, &ref_seq_info, true);
 }
@@ -1319,12 +1322,12 @@ void score_junction(
   uint32_t side_1_continuation, side_2_continuation;
   calculate_continuation(scj, ref_seq_info, junction_ref_seq_info, side_1_continuation, side_2_continuation);
   
-  uint32_t avg_read_length = static_cast<uint32_t>(round(summary.sequence_conversion.avg_read_length));
+  uint32_t read_length_avg = static_cast<uint32_t>(round(summary.sequence_conversion.read_length_avg));
   
   // For  junctions the number of start sites where reads crossing the
   // new junction sequence could occur is reduced by overlap (positive or negative):
   int32_t overlap_positions_max_pos_hash_score_reduction = abs(scj.alignment_overlap);
-  int32_t max_pos_hash_score = 2 * (avg_read_length - 1 - 2 * (settings.required_both_unique_length_per_side - 1) - overlap_positions_max_pos_hash_score_reduction - side_1_continuation - side_2_continuation);
+  int32_t max_pos_hash_score = 2 * (read_length_avg - 1 - 2 * (settings.required_both_unique_length_per_side - 1) - overlap_positions_max_pos_hash_score_reduction - side_1_continuation - side_2_continuation);
   
   //@JEB Actually, this can happen if the read lengths vary, so we better not rule it out as an error!
   /*
@@ -1803,7 +1806,7 @@ void  assign_one_junction_read_counts(
   bool verbose = false;
   bool debug_output = settings.junction_debug;
   
-  uint32_t avg_read_length = summary.sequence_conversion.avg_read_length;
+  uint32_t read_length_avg = summary.sequence_conversion.read_length_avg;
  
   fstream ofile;
   if (settings.junction_debug) {
@@ -1882,7 +1885,7 @@ void  assign_one_junction_read_counts(
     j["junction_start_pos_for_counting"] = to_string(start);
     j["junction_end_pos_for_counting"] = to_string(end);
   }
-  j["junction_possible_overlap_registers"] = to_string(avg_read_length - abs(end - start));
+  j["junction_possible_overlap_registers"] = to_string(read_length_avg - abs(end - start));
 
   if (settings.junction_debug) ofile << "JUNCTION: start " << start << " end " << end << endl;
   if (verbose) cerr << "JUNCTION: start " << start << " end " << end << endl;
@@ -1928,7 +1931,7 @@ void  assign_one_junction_read_counts(
       j["side_1_end_pos_for_counting"] = to_string(end);
     }
     
-    j["side_1_possible_overlap_registers"] = to_string(avg_read_length - abs(end - start));
+    j["side_1_possible_overlap_registers"] = to_string(read_length_avg - abs(end - start));
     
     j[SIDE_1_READ_COUNT] = to_string(reference_jrc.count(j[SIDE_1_SEQ_ID], start, end, junction_read_names, empty_read_names));
     
@@ -1977,7 +1980,7 @@ void  assign_one_junction_read_counts(
       j["side_2_end_pos_for_counting"] = to_string(end);
     }
     
-    j["side_2_possible_overlap_registers"] = to_string(avg_read_length - abs(end - start));
+    j["side_2_possible_overlap_registers"] = to_string(read_length_avg - abs(end - start));
 
     j[SIDE_2_READ_COUNT] = to_string(reference_jrc.count(j[SIDE_2_SEQ_ID], start, end, junction_read_names, empty_read_names));
     
@@ -2088,7 +2091,7 @@ void  assign_one_junction_read_counts(
       j[SIDE_1_COVERAGE] = "NA";
   }
   else {
-    double side_1_correction = static_cast<double>(from_string<uint32_t>(j["side_1_possible_overlap_registers"])) / avg_read_length;
+    double side_1_correction = static_cast<double>(from_string<uint32_t>(j["side_1_possible_overlap_registers"])) / read_length_avg;
     j[SIDE_1_COVERAGE] = to_string(from_string<double>(j[SIDE_1_READ_COUNT]) / summary.unique_coverage[j[SIDE_1_SEQ_ID]].average / side_1_correction, 2);
   }
   
@@ -2096,12 +2099,12 @@ void  assign_one_junction_read_counts(
     j[SIDE_2_COVERAGE] = "NA";
   }
   else {
-    double side_2_correction = static_cast<double>(from_string<uint32_t>(j["side_2_possible_overlap_registers"])) / avg_read_length;
+    double side_2_correction = static_cast<double>(from_string<uint32_t>(j["side_2_possible_overlap_registers"])) / read_length_avg;
     j[SIDE_2_COVERAGE] = to_string(from_string<double>(j[SIDE_2_READ_COUNT]) / summary.unique_coverage[j[SIDE_2_SEQ_ID]].average / side_2_correction, 2);
   }
   
   //corrects for overlap making it less likely for a read to span
-  double overlap_correction = static_cast<double>(from_string<uint32_t>(j["junction_possible_overlap_registers"])) / avg_read_length;
+  double overlap_correction = static_cast<double>(from_string<uint32_t>(j["junction_possible_overlap_registers"])) / read_length_avg;
   double new_junction_average_read_count = (summary.unique_coverage[j[SIDE_1_SEQ_ID]].average + summary.unique_coverage[j[SIDE_2_SEQ_ID]].average) / 2;
   j[NEW_JUNCTION_COVERAGE] = to_string(from_string<double>(j[NEW_JUNCTION_READ_COUNT]) / new_junction_average_read_count / overlap_correction, 2);
 
@@ -2163,14 +2166,14 @@ void  assign_junction_read_coverage(
       
     // This sections just normalizes read counts to the average coverage of the correct sequence fragment
     
-    double side_1_correction = (summary.sequence_conversion.avg_read_length - 1 - abs(from_string<double>(j["alignment_overlap"])) - from_string<double>(j["continuation_left"])) / (summary.sequence_conversion.avg_read_length - 1);
+    double side_1_correction = (summary.sequence_conversion.read_length_avg - 1 - abs(from_string<double>(j["alignment_overlap"])) - from_string<double>(j["continuation_left"])) / (summary.sequence_conversion.read_length_avg - 1);
     
     if (j[SIDE_1_READ_COUNT] == "NA")
       j[SIDE_1_COVERAGE] = "NA";
     else
       j[SIDE_1_COVERAGE] = to_string(from_string<double>(j[SIDE_1_READ_COUNT]) / summary.unique_coverage[j[SIDE_1_SEQ_ID]].average / side_1_correction, 2);
     
-    double side_2_correction = (summary.sequence_conversion.avg_read_length - 1 - abs(from_string<double>(j["alignment_overlap"])) - from_string<double>(j["continuation_right"])) / (summary.sequence_conversion.avg_read_length - 1);
+    double side_2_correction = (summary.sequence_conversion.read_length_avg - 1 - abs(from_string<double>(j["alignment_overlap"])) - from_string<double>(j["continuation_right"])) / (summary.sequence_conversion.read_length_avg - 1);
     
     if (j[SIDE_2_READ_COUNT] == "NA")
       j[SIDE_2_COVERAGE] = "NA";
@@ -2178,7 +2181,7 @@ void  assign_junction_read_coverage(
       j[SIDE_2_COVERAGE] = to_string(from_string<double>(j[SIDE_2_READ_COUNT]) / summary.unique_coverage[j[SIDE_2_SEQ_ID]].average, 2);
     
     //corrects for overlap making it less likely for a read to span
-    double overlap_correction = (summary.sequence_conversion.avg_read_length - 1 - abs(from_string<double>(j["alignment_overlap"])) - from_string<double>(j["continuation_left"]) - from_string<double>(j["continuation_right"])) / (summary.sequence_conversion.avg_read_length - 1);
+    double overlap_correction = (summary.sequence_conversion.read_length_avg - 1 - abs(from_string<double>(j["alignment_overlap"])) - from_string<double>(j["continuation_left"]) - from_string<double>(j["continuation_right"])) / (summary.sequence_conversion.read_length_avg - 1);
     double new_junction_average_read_count = (summary.unique_coverage[j[SIDE_1_SEQ_ID]].average + summary.unique_coverage[j[SIDE_2_SEQ_ID]].average) / 2;
     
     j[NEW_JUNCTION_COVERAGE] = to_string(from_string<double>(j[NEW_JUNCTION_READ_COUNT]) / new_junction_average_read_count / overlap_correction, 2);

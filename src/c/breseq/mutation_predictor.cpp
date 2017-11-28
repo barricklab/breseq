@@ -202,7 +202,7 @@ namespace breseq {
     (void) summary;
     bool verbose = false; // for debugging
     
-    int32_t max_read_length = summary.sequence_conversion.max_read_length;
+    int32_t read_length_max = summary.sequence_conversion.read_length_max;
     
 		// DEL prediction:
 		// (1) there is a junction that exactly crosses the deletion boundary
@@ -358,7 +358,7 @@ namespace breseq {
 				int32_t r2_overlap = n(mc_item["end"]) - r2_overlap_start + 1;
         
 				// it may be really close...defined by read length of genome in which case
-				uint32_t slop_distance = max_read_length;
+				uint32_t slop_distance = read_length_max;
         
 				// prefer to delete the second copy
 				if ( (static_cast<uint32_t>(abs(r1_overlap - r2_overlap)) <= slop_distance) || (r2_overlap > r1_overlap ))
@@ -1152,7 +1152,7 @@ namespace breseq {
     bool verbose = false;
     
     // variables pulled from the settings
-    int32_t avg_read_length = static_cast<int32_t>(summary.sequence_conversion.avg_read_length);
+    int32_t read_length_avg = static_cast<int32_t>(summary.sequence_conversion.read_length_avg);
     
     // @JEB 03-09-2014 Changed this section to produce INS and DEL instead of AMP,
     //                 when the mutation size is less than or equal to threshold in settings. 
@@ -1218,7 +1218,7 @@ namespace breseq {
       
       // Insertion or deletion must be smaller than read length to be predicted
       // by this evidence alone.
-      if (abs(size) > avg_read_length) 
+      if (abs(size) > read_length_avg) 
         continue;
       
       // At this point, we have committed to adding a mutation...

@@ -338,7 +338,7 @@ namespace breseq
       this->read_file_coverage_fold_limit = from_string<double>(options["limit-fold-coverage"]);
     }
     
-    this->read_file_min_read_length = from_string<double>(options["read-min-length"]);
+    this->read_file_read_length_min = from_string<double>(options["read-min-length"]);
     this->read_file_max_same_base_fraction = from_string<double>(options["read-max-same-base-fraction"]);
     this->read_file_max_N_fraction = from_string<double>(options["read-max-N-fraction"]);
 
@@ -386,7 +386,7 @@ namespace breseq
     
     this->user_evidence_genome_diff_file_name = options["user-evidence-gd"];
     
-    this->run_name = options["name"];
+    this->custom_run_name = options["name"];
     
     this->num_processors = from_string<int32_t>(options["num-processors"]);
     
@@ -411,7 +411,7 @@ namespace breseq
     ASSERT(this->deletion_coverage_propagation_cutoff >= 0, "Argument --deletion-coverage-seed-cutoff must be >= 0")
     
     //! Settings: Junction Prediction
-    this->no_junction_prediction = options.count("no-junction-prediction");
+    this->skip_junction_prediction = options.count("no-junction-prediction");
     this->minimum_candidate_junctions = from_string<int32_t>(options["junction-minimum-candidates"]);
     this->maximum_candidate_junctions = from_string<int32_t>(options["junction-maximum-candidates"]);
     this->maximum_candidate_junction_length_factor = from_string<double>(options["junction-candidate-length-factor"]);    
@@ -533,14 +533,14 @@ namespace breseq
     
     this->targeted_sequencing = options.count("targeted-sequencing");
     if (this->targeted_sequencing)
-      this->no_deletion_prediction = true;
+      this->skip_deletion_prediction = true;
     
     this->print_mutation_identification_per_position_file = options.count("per-position-file");
     
     this->junction_debug = options.count("junction-debug");
     
     this->max_displayed_reads = from_string<int32_t>(options["max-displayed-reads"]);
-    this->no_alignment_or_plot_generation = options.count("brief-html-output");
+    this->skip_alignment_or_plot_generation = options.count("brief-html-output");
     this->no_javascript = options.count("no-javascript");
     if (options.count("header-genome-diff"))
       this->header_genome_diff_file_name = options["header-genome-diff"];
@@ -621,14 +621,14 @@ namespace breseq
     this->aligned_sam_mode  = false;
     this->read_file_coverage_fold_limit = 0.0;
     this->read_file_max_same_base_fraction = 0.9;
-    this->read_file_min_read_length = 18;
+    this->read_file_read_length_min = 18;
     
     //! Options that control which parts of the pipeline to execute
-    this->no_read_filtering = false;
-    this->no_junction_prediction = false;
-		this->no_mutation_prediction = false;
-		this->no_deletion_prediction = false;
-    this->no_alignment_or_plot_generation = false;
+    this->skip_read_filtering = false;
+    this->skip_junction_prediction = false;
+		this->skip_mutation_prediction = false;
+		this->skip_deletion_prediction = false;
+    this->skip_alignment_or_plot_generation = false;
 		this->do_copy_number_variation = false;
 		this->do_periodicity = false;
     
@@ -718,7 +718,7 @@ namespace breseq
     //! Settings: Output
     this->max_displayed_reads = 100;
     this->alignment_mask_ref_matches = false;
-    this->output_max_nucleotides_to_show_in_tables = 20;
+    this->max_nucleotides_to_show_in_tables = 20;
 		this->max_rejected_read_alignment_evidence_to_show = 20;
 		this->max_rejected_junction_evidence_to_show = 10;
 		this->hide_circular_genome_junctions = true;
@@ -748,7 +748,7 @@ namespace breseq
     
 		// problems if there are spaces b/c shell removes quotes before we know about them
 		// thus require run names to only use underscores (but when printing output, remove).
-    this->print_run_name = substitute(this->run_name, "_", " ");
+    this->print_custom_run_name = substitute(this->custom_run_name, "_", " ");
     
     ////////////////////
     //! File Paths
@@ -917,6 +917,7 @@ namespace breseq
 		this->reference_gff3_file_name = this->data_path + "/reference.gff3";
 		this->unmatched_read_file_name = this->data_path + "/#.unmatched.fastq";
     this->output_vcf_file_name = this->data_path + "/output.vcf";
+    this->output_genome_diff_file_name = this->data_path + "/output.gd";
     this->data_summary_file_name = this->data_path + "/summary.json";
 
 

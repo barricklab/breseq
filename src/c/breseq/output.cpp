@@ -459,8 +459,8 @@ string html_header (const string& title, const Settings& settings)
   ss << "<html>" << endl;  
   ss << "<head>" << endl;
   ss << "<title>";
-  if (!settings.print_run_name.empty()) {
-    ss << settings.print_run_name << " :: ";
+  if (!settings.print_custom_run_name.empty()) {
+    ss << settings.print_custom_run_name << " :: ";
   }
   ss << title;
   ss << "</title>" << endl;
@@ -538,13 +538,13 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
               );
     HTML << td(it->m_base_name);
     
-    double avg_read_length = static_cast<double>(s.num_bases) / static_cast<double>(s.num_reads);
+    double read_length_avg = static_cast<double>(s.num_bases) / static_cast<double>(s.num_reads);
     HTML << td(ALIGN_RIGHT, commify(to_string(s.num_reads)));
     HTML << td(ALIGN_RIGHT, commify(to_string(s.num_bases)));
-    double percent_pass_filters = 100 * (static_cast<double>(s.num_reads) / static_cast<double>(s.original_reads));
+    double percent_pass_filters = 100 * (static_cast<double>(s.num_reads) / static_cast<double>(s.num_original_reads));
     HTML << td(ALIGN_RIGHT, to_string(percent_pass_filters, 1) + "%");
-    HTML << td(ALIGN_RIGHT, to_string(avg_read_length, 1) + "&nbsp;bases");
-    HTML << td(ALIGN_RIGHT, to_string(s.max_read_length) + "&nbsp;bases");
+    HTML << td(ALIGN_RIGHT, to_string(read_length_avg, 1) + "&nbsp;bases");
+    HTML << td(ALIGN_RIGHT, to_string(s.read_length_max) + "&nbsp;bases");
     double percent_mapped = 100 * (1.0 - static_cast<double>(rf.num_unmatched_reads) / static_cast<double>(rf.num_total_reads));
     HTML << td(ALIGN_RIGHT, to_string(percent_mapped, 1) + "%");
     HTML << end_tr();
@@ -555,10 +555,10 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << td(b("total"));  
   HTML << td(ALIGN_RIGHT , b(commify(to_string(summary.sequence_conversion.num_reads))) );
   HTML << td(ALIGN_RIGHT , b(commify(to_string(summary.sequence_conversion.num_bases))) );
-  double total_percent_pass_filters = 100 * (static_cast<double>(summary.sequence_conversion.num_reads) / static_cast<double>(summary.sequence_conversion.original_num_reads));
+  double total_percent_pass_filters = 100 * (static_cast<double>(summary.sequence_conversion.num_reads) / static_cast<double>(summary.sequence_conversion.num_original_reads));
   HTML << td(ALIGN_RIGHT, to_string(total_percent_pass_filters, 1) + "%");
-  HTML << td(ALIGN_RIGHT, to_string(summary.sequence_conversion.avg_read_length, 1) + "&nbsp;bases");
-  HTML << td(b(commify(to_string(summary.sequence_conversion.max_read_length))) + "&nbsp;bases");
+  HTML << td(ALIGN_RIGHT, to_string(summary.sequence_conversion.read_length_avg, 1) + "&nbsp;bases");
+  HTML << td(b(commify(to_string(summary.sequence_conversion.read_length_max))) + "&nbsp;bases");
   double total_percent_mapped = 100 * (1.0 - static_cast<double>(summary.alignment_resolution.total_unmatched_reads) / static_cast<double>(summary.alignment_resolution.total_reads));
   HTML << td(ALIGN_RIGHT, to_string(total_percent_mapped, 1) + "%");
   HTML << end_tr();
@@ -588,7 +588,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++) {
     
     uint32_t tid = ref_seq_info.seq_id_to_index(it->m_seq_id);
-    double this_reference_mapped_reads = summary.alignment_resolution.reads_mapped_to_references[tid];  
+    double this_reference_mapped_reads = summary.alignment_resolution.reference[tid].reads_mapped_to_reference;
     uint64_t total_mapped_reads = summary.alignment_resolution.total_reads_mapped_to_references;
     double this_reference_fraction_mapped_reads = 100 * this_reference_mapped_reads / total_mapped_reads; 
     
@@ -687,7 +687,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   // Junction evidence
   ////
   
-  if (!settings.no_junction_prediction) {
+  if (!settings.skip_junction_prediction) {
     
     HTML << h2("New Junction Evidence") << endl;
     HTML << "<p>" << endl;
@@ -1316,6 +1316,15 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
                     "Rejected: " + decode_reject_reason(reject)));
       }
       
+      vector<string> consensus_reject_reasons = c.get_reject_reasons(CONSENSUS_REJECT);
+      for (vector<string>::iterator itr = consensus_reject_reasons.begin(); itr != consensus_reject_reasons.end(); itr ++)
+      {
+        string& reject = (*itr);
+        ss << tr("class=\"reject_table_row\"",
+                 td("colspan=\"" + to_string(total_cols) + "\"",
+                    "Rejected as consensus: " + decode_reject_reason(reject)));
+      }
+      
       vector<string> polymorphism_reject_reasons = c.get_reject_reasons(POLYMORPHISM_REJECT);
       for (vector<string>::iterator itr = polymorphism_reject_reasons.begin(); itr != polymorphism_reject_reasons.end(); itr ++)
       {
@@ -1560,7 +1569,7 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
       string unique_read_sequence_string;
       if (c.entry_exists("unique_read_sequence")) {
         unique_read_sequence_string = "<br>";
-        if (show_details || (c["unique_read_sequence"].size() <= settings.output_max_nucleotides_to_show_in_tables)) {
+        if (show_details || (c["unique_read_sequence"].size() <= settings.max_nucleotides_to_show_in_tables)) {
           unique_read_sequence_string += "+" + c["unique_read_sequence"];
         } else {
           unique_read_sequence_string += "+" + to_string<uint32_t>(c["unique_read_sequence"].size()) + " bp";
@@ -1761,9 +1770,9 @@ string decode_reject_reason(const string& reject)
   {
     return "Coverage evenness skew score above cutoff.";
   }
-  else if (reject == "CONSENSUS_SCORE_CUTOFF")
+  else if (reject == "SCORE_CUTOFF")
   {
-    return "Variant score below prediction cutoff.";
+    return "E-value score below prediction cutoff.";
   }
   else if (reject == "FREQUENCY_CUTOFF")
   {
@@ -1825,7 +1834,7 @@ void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenom
    }
   
   // Don't create other plots in --brief-html-mode
-  if (!settings.no_alignment_or_plot_generation) {
+  if (!settings.skip_alignment_or_plot_generation) {
     // Zoom-in plots of individual deletions and copy number variation
     vector<gd_entry_type> mc_types = make_vector<gd_entry_type>(MC)(CN);
     diff_entry_list_t mc = gd.show_list(mc_types);
@@ -1887,7 +1896,7 @@ void add_html_fields_to_mutation(cDiffEntry& mut, const Settings& settings, Muta
       else if (mut.entry_exists("repeat_length")) {
         cell_mutation = "(" + mut["repeat_length"] + " bp)" + "<sub>" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"] + "</sub>";
       }
-      else if (options.detailed || (mut["new_seq"].size() <= settings.output_max_nucleotides_to_show_in_tables)) {
+      else if (options.detailed || (mut["new_seq"].size() <= settings.max_nucleotides_to_show_in_tables)) {
         cell_mutation = "+" + mut[NEW_SEQ];
       } else {
         cell_mutation = "+" + s(mut[NEW_SEQ].size()) + " bp";

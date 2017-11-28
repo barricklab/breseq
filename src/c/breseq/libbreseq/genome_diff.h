@@ -68,6 +68,7 @@ extern const char* POLYMORPHISM_FREQUENCY;
 extern const char* POLYMORPHISM_EXISTS;
 extern const char* REJECT;
 extern const char* POLYMORPHISM_REJECT;
+extern const char* CONSENSUS_REJECT;
 extern const char* REF_COV;
 extern const char* NEW_COV;
 extern const char* MAJOR_COV;
@@ -333,17 +334,17 @@ public:
   bool is_rejected() { return (number_reject_reasons() > 0); }
   
   //! Returns values for cDiffEntry["reject"]
-  vector<string> get_reject_reasons(const string field=REJECT);
+  vector<string> get_reject_reasons(const string& field=REJECT);
   
   //! Adds a reject reason to cDiffEntry["reject"] as a list
-  void add_reject_reason(const string &reason);
+  void add_reject_reason(const string &reason, const string& field=REJECT);
   
   //! Removes just this reject reason
-  void remove_reject_reason(const string &reason);
+  void remove_reject_reason(const string &reason, const string& field=REJECT);
   
   //! Removes all of the reject reasons
-  void clear_reject_reasons()
-    { this->erase(REJECT); }
+  void clear_reject_reasons(const string& field=REJECT)
+  { this->erase(field); }
 
   //!---- Simplifying entries ---- !//
   
