@@ -944,8 +944,8 @@ void tam_file::write_moved_alignment(
 
 	// Remove soft padding from CIGAR (since it does not correspond to the
 	// aligned positions we are dealing with. It is added back later.
-	uint32_t left_padding = 0;
-	uint32_t right_padding = 0;
+	uint16_t left_padding = 0;
+	uint16_t right_padding = 0;
 	if (cigar_list[0].first == 'S')
 	{
 		left_padding = cigar_list.front().second;
@@ -1153,12 +1153,12 @@ void tam_file::write_moved_alignment(
   // Add the padding to the cigar list
 	if (left_padding > 0)
 	{
-		pair<char,uint16_t> new_element = make_pair<char,uint16_t>('S', left_padding);
+		pair<char,uint16_t> new_element = make_pair('S', left_padding);
 		cigar_list.insert(cigar_list.begin(), new_element);
   }
 	if (right_padding > 0)
 	{
-		pair<char,uint16_t> new_element = make_pair<char,uint16_t>('S', right_padding);
+		pair<char,uint16_t> new_element = make_pair('S', right_padding);
 		cigar_list.push_back(new_element);
 	}
 

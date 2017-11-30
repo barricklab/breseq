@@ -6,6 +6,8 @@ Version 0.32.0
      output of rejection information for RA evidence.
    * Fixed problem reading some FASTQ files (discovered on Nanopore data).
    * C++11 is now required for compilation. Optimization added to default compiler settings.
+   * Fixed coding compatibility issues when building with certain versions of GCC.
+
 
 Version 0.31.1
    * Critical fix for checking new bowtie2 versions with extra decimal place (e.g., 2.3.3.1).

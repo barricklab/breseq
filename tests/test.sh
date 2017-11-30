@@ -5,7 +5,11 @@
 #
 # $1 == test action
 # $2 == testdir
+# $3 == long
 # load the common testing tools (relative to this script):
+
+echo "3 " $3
+
 TESTDIR=`dirname ${BASH_SOURCE}`
 . ${TESTDIR}/common.sh
 
@@ -21,9 +25,12 @@ else
 	for i in `find $2 -name ${TESTEXEC}`; do
 
 		# skip test directories that begin with an underscore!
-		if [[ ${i:${#TESTDIR}+1:1} != '_' ]]; then 
-			echo "TEST:" $i $1
-			$i $1
+		if [[ (! $i =~ "/_") && (! $i =~ "^_") ]]; then 
+			#Only do long tests if requested
+			if [[ ($3 = "long") ]] || [[ (! $i =~ "/long") && (! $i =~ "^long") ]];  then 
+				echo "TEST:" $i $1
+				$i $1
+			fi
 		fi
 
 	done

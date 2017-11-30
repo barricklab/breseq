@@ -306,12 +306,6 @@ cFlaggedRegions::regions_t cFlaggedRegions::regions_that_overlap(const string& s
   }
 
   // find all overlapping ones
-  
-  // Should be something clever we can do here to use binary search
-  //regions_t::iterator it_lower = m_regions.at(seq_id).lower_bound( make_pair<uint32_t, uint32_t>(start_1, 0) );
-  //if (it_lower != m_regions.at(seq_id).begin())
-  //  it_lower--;
-  
   regions_t overlapping;
   
   for (regions_t::iterator it = m_regions.at(seq_id).begin(); it != m_regions.at(seq_id).end(); it++) {

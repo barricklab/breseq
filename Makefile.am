@@ -162,11 +162,20 @@ test:
 	echo "export BRESEQ_TEST_THREAD_ARG=\"-j 4\"" >> $(top_srcdir)/tests/test.config;
 	$(top_srcdir)/tests/test.sh test tests
 
+test-long:
+	## NEW method: 'make test' after 'make'
+	## This must be located here so that it is run after EXTRA_DIST files are included
+	echo "export TESTBINPREFIX=$(top_srcdir)/src/c/breseq" > $(top_srcdir)/tests/test.config;
+	echo "export BRESEQ_DATA_PATH=$(top_srcdir)/src/c/breseq" >> $(top_srcdir)/tests/test.config;
+	echo "export BRESEQ_SAMTOOLS_PATH=$(top_srcdir)/extern/samtools-0.1.18" >> $(top_srcdir)/tests/test.config;
+	echo "export BRESEQ_TEST_THREAD_ARG=\"-j 4\"" >> $(top_srcdir)/tests/test.config;
+	$(top_srcdir)/tests/test.sh test tests long
+
 
 clean-tests:
 	##This is commented out to not break make distcheck, which requires we not modify the source in this way?
 	##echo "export TESTBINPREFIX=$(top_srcdir)/src/c/breseq" > $(top_srcdir)/tests/test.config;
-	$(top_srcdir)/tests/test.sh clean tests
+	$(top_srcdir)/tests/test.sh clean tests long
 
 distclean-local:
 	rm -rf $(DOCBUILDDIR);

@@ -3525,7 +3525,7 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
 
       if (all_same_base)
       {
-        uint32_t shift_amount = 0;
+        uint16_t shift_amount = 0;
         while (ref_seq[ref_seq_index + len + shift_amount] == base)
           shift_amount++;
 
@@ -3539,12 +3539,12 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
           if (it != cigar_pair_array.begin())
             (it - 1)->second += shift_amount;
           else
-            cigar_pair_array.insert(it, make_pair<char,uint16_t>('M', shift_amount));
+            cigar_pair_array.insert(it, make_pair('M', shift_amount));
 
           if (it != cigar_pair_array.end())
             (it + 1)->second -= shift_amount;
           else
-            cigar_pair_array.push_back(make_pair<char,uint16_t>('M', shift_amount));
+            cigar_pair_array.push_back(make_pair('M', shift_amount));
         }
 
         ref_seq_index += len + shift_amount;
@@ -3563,7 +3563,7 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
 
       if (all_same_base)
       {
-        uint32_t shift_amount = 0;
+        uint16_t shift_amount = 0;
         while (read_seq[read_seq_index + len + shift_amount] == base)
           shift_amount++;
 
@@ -3577,12 +3577,12 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
           if (it != cigar_pair_array.begin())
             (it - 1)->second += shift_amount;
           else
-            cigar_pair_array.insert(it, make_pair<char,uint16_t>('M', shift_amount));
+            cigar_pair_array.insert(it, make_pair('M', shift_amount));
 
           if (it != cigar_pair_array.end())
             (it + 1)->second -= shift_amount;
           else
-            cigar_pair_array.push_back(make_pair<char,uint16_t>('M', shift_amount));
+            cigar_pair_array.push_back(make_pair('M', shift_amount));
         }
 
         read_seq_index += len + shift_amount;

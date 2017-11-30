@@ -86,7 +86,7 @@ namespace breseq
 	public:
 		string m_original_file_name;  // the original name provided at the command line
 		string m_base_name;           // the original name minus path and .fastq ending (if any)
-    string m_converted_file_name; // the name of the converted FASTQ file (if it exists)
+        string m_converted_file_name; // the name of the converted FASTQ file (if it exists)
 		uint32_t m_paired_end_group;  // indicates what file contains paired reads
 		uint32_t m_error_group;       // indicates what other read files have the same error rates
 		uint32_t m_id;                // index used to refer to this fastq file in BAM
@@ -114,11 +114,11 @@ namespace breseq
     map<string,string> read_file_to_converted_fastq_file_name_map;
 
     
-		cReadFiles() { };
-		cReadFiles(const vector<string>& read_file_names, bool sam_files) { Init(read_file_names, sam_files); };
-		~cReadFiles() { };
+    cReadFiles() { };
+    cReadFiles(const vector<string>& read_file_names, bool sam_files) { Init(read_file_names, sam_files); };
+    ~cReadFiles() { };
 
-		void Init(const vector<string>& read_file_names, bool sam_files);
+    void Init(const vector<string>& read_file_names, bool sam_files);
     string base_name_to_read_file_name(const string& base_name);
     vector<string> base_names()
     {
