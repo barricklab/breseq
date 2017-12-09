@@ -485,14 +485,12 @@ namespace breseq{
     double read_file_max_N_fraction;
     
     //! Settings: Read Alignment
+    string bowtie2_scoring;
+    string bowtie2_stage1;
+    string bowtie2_stage2;
+    string bowtie2_junction;
     uint64_t bowtie2_junction_maximum_alignments_to_consider_per_read;
     uint64_t bowtie2_genome_maximum_alignments_to_consider_per_read;
-    string bowtie2_score_parameters;
-    string bowtie2_junction_alignment_reporting_parameters;
-    string bowtie2_genome_alignment_reporting_parameters;
-    string bowtie2_min_score_stringent;
-    string bowtie2_min_score_relaxed;
-    string bowtie2_min_score_junction;
     uint32_t require_match_length;
     double   require_match_fraction;
     int32_t  maximum_read_mismatches;

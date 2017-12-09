@@ -248,16 +248,19 @@ namespace breseq
     bool keep_all_intermediates;              // Default = false
 
     //! Settings: Read Alignment and Candidate Junction Read Alignment
+    
+    int32_t num_processors;       // Defaults = 2
+
+    // bowtie2 options. These are coceptually divided into
+    //  1) the scoring scheme for alignments, which MUST be the same for all calls to bowtie2!
+    //  2) various mapping cutoffs, which are different for each stage and for junctions
+    string bowtie2_scoring;         // COMMAND-LINE OPTION
+    string bowtie2_stage1;          // COMMAND-LINE OPTION
+    string bowtie2_stage2;          // COMMAND-LINE OPTION (can be blank to skip step)
+    string bowtie2_junction;        // COMMAND-LINE OPTION
     uint64_t bowtie2_junction_maximum_alignments_to_consider_per_read;       // Default = 2000
     uint64_t bowtie2_genome_maximum_alignments_to_consider_per_read;         // Default = 2000
-    string bowtie2_score_parameters;
-    string bowtie2_junction_alignment_reporting_parameters;
-    string bowtie2_genome_alignment_reporting_parameters;
-    string bowtie2_min_score_stringent;
-    string bowtie2_min_score_relaxed;
-    string bowtie2_min_score_junction;
-    int32_t num_processors;       // Defaults = 2
-    
+
     //! reads are never included in the BAM alignment file if they fail these guards
 		uint32_t require_match_length;    // Default = 0 (OFF) COMMAND-LINE OPTION
 		double   require_match_fraction;  // Default = 0.9     COMMAND-LINE OPTION

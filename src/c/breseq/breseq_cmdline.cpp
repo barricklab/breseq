@@ -1379,93 +1379,72 @@ int breseq_default_action(int argc, char* argv[])
     string command = "bowtie2-build -q " + settings.reference_fasta_file_name + " " + reference_hash_file_name;
     SYSTEM(command);
     settings.track_intermediate_file(settings.reference_alignment_done_file_name, settings.reference_hash_file_name + "*");
-    
-    ///////////////////////
-    // STAGE 1 ALIGNMENT //
-    ///////////////////////
-    
+
+    ////// For each read_file
     for (uint32_t i = 0; i < settings.read_files.size(); i++)
     {
+      ///////////////////////
+      // STAGE 1 ALIGNMENT //
+      ///////////////////////
+      
+      bool do_2_stage_alignment = settings.bowtie2_stage2.size() != 0;
+      
       cReadFile read_file = settings.read_files[i];
       string base_read_file_name = read_file.base_name();
-      string read_fastq_file = settings.base_name_to_read_file_name(base_read_file_name);
-              
-      //Paths
-      string stage1_reference_sam_file_name = settings.file_name(settings.stage1_reference_sam_file_name, "#", base_read_file_name);
-      string stage1_unmatched_fastq_file_name = settings.file_name(settings.stage1_unmatched_fastq_file_name, "#", base_read_file_name);
+      string reference_sam_file_name = settings.file_name(settings.reference_sam_file_name, "#", base_read_file_name);
       
-      //Split alignment into unmatched and matched files.
-      uint32_t bowtie2_seed_substring_size_stringent = trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.5);
-      // Check bounds
-      bowtie2_seed_substring_size_stringent = max<uint32_t>(9, bowtie2_seed_substring_size_stringent);
-      bowtie2_seed_substring_size_stringent = min<uint32_t>(31, bowtie2_seed_substring_size_stringent);
-      
-      string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local " + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_stringent) + " "
-      + settings.bowtie2_score_parameters + " " + settings.bowtie2_genome_alignment_reporting_parameters + " " + settings.bowtie2_min_score_stringent + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + stage1_reference_sam_file_name + " --un " + stage1_unmatched_fastq_file_name;
-      SYSTEM(command);
-      
-      settings.track_intermediate_file(settings.reference_alignment_done_file_name, stage1_unmatched_fastq_file_name);
-      settings.track_intermediate_file(settings.reference_alignment_done_file_name, stage1_reference_sam_file_name);
-    }
+      { // local vars
 
- 
-    ///////////////////////
-    // STAGE 2 ALIGNMENT //
-    ///////////////////////
-    
-		/// align reads to reference sequences
-		for (uint32_t i = 0; i < settings.read_files.size(); i++)
-		{
-			cReadFile read_file = settings.read_files[i];
-
-
-			//reads are paired -- Needs to be re-implemented with major changes elsewhere. @JEB
-			//if (is_defined(read_struct.min_pair_dist) && is_defined(read_struct.max_pair_dist))
-			//if (is_defined(read_file.m_paired_end_group))
-			//{
-				// JEB this is not working currently
-			//	breseq_assert(false);
-				/*
-				die "Paired end mapping is broken.";
-				die if (scalar @{$read_struct->{read_fastq_list}} != 2);
-
-				my $fastq_1 = $read_struct->{read_fastq_list}->[0];
-				my $fastq_2 = $read_struct->{read_fastq_list}->[1];
-				my $min = $read_struct->{min_pair_dist};
-				my $max = $read_struct->{max_pair_dist};
-
-				my $reference_sam_file_name = $settings->file_name("reference_sam_file_name", {"//"=>$read_struct->{base_name}});
-				Breseq::Shared::system("ssaha2 -disk 2 -save $reference_hash_file_name -kmer 13 -skip 1 -seeds 1 -score 12 -cmatch 9 -ckmer 1 -output sam_soft -outfile $reference_sam_file_name -multi 1 -mthresh 9 -pair $min,$max $fastq_1 $fastq_2");
-				*/
-			//}
-			//else //reads are not paired
-    
-			{
-				string base_read_file_name = read_file.base_name();
+        string read_fastq_file = settings.base_name_to_read_file_name(base_read_file_name);
         
-        // If we are doing staged alignment -- only align the unmatched reads and save to different name initially
-        string read_fastq_file = settings.file_name(settings.stage1_unmatched_fastq_file_name, "#", base_read_file_name);
-        string reference_sam_file_name = settings.file_name(settings.stage2_reference_sam_file_name, "#", base_read_file_name);
-          
-        uint32_t bowtie2_seed_substring_size_relaxed = 5 + trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.1);
+        //Paths
+        string stage1_reference_sam_file_name = settings.file_name(settings.stage1_reference_sam_file_name, "#", base_read_file_name);
+        string stage1_unmatched_fastq_file_name = settings.file_name(settings.stage1_unmatched_fastq_file_name, "#", base_read_file_name);
+        
+        //Split alignment into unmatched and matched files.
+        uint32_t bowtie2_seed_substring_size_stringent = trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.5);
         // Check bounds
-        bowtie2_seed_substring_size_relaxed = max<uint32_t>(9, bowtie2_seed_substring_size_relaxed);
-        bowtie2_seed_substring_size_relaxed = min<uint32_t>(31, bowtie2_seed_substring_size_relaxed);
+        bowtie2_seed_substring_size_stringent = max<uint32_t>(9, bowtie2_seed_substring_size_stringent);
+        bowtie2_seed_substring_size_stringent = min<uint32_t>(31, bowtie2_seed_substring_size_stringent);
         
-        string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local " + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_relaxed) 
-          + " " + settings.bowtie2_score_parameters + " " + settings.bowtie2_genome_alignment_reporting_parameters + " " + settings.bowtie2_min_score_relaxed + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + reference_sam_file_name;
+        string command = "bowtie2 -t -p " + s(settings.num_processors) + " -L " +  to_string<uint32_t>(bowtie2_seed_substring_size_stringent) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage1 + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + (do_2_stage_alignment ? stage1_reference_sam_file_name + " --un " + stage1_unmatched_fastq_file_name : reference_sam_file_name);
         SYSTEM(command);
         
-        settings.track_intermediate_file(settings.reference_alignment_done_file_name, reference_sam_file_name);
+        if (do_2_stage_alignment) {
+          settings.track_intermediate_file(settings.reference_alignment_done_file_name, stage1_unmatched_fastq_file_name);
+          settings.track_intermediate_file(settings.reference_alignment_done_file_name, stage1_reference_sam_file_name);
+        }
+      }
+      
+
+      
+      ///////////////////////
+      // STAGE 2 ALIGNMENT //
+      ///////////////////////
+      
+      /// align reads to reference sequences
+      if (do_2_stage_alignment) {
+        
+        { // local vars
+        
+          // If we are doing staged alignment -- only align the unmatched reads and save to different name initially
+          string read_fastq_file = settings.file_name(settings.stage1_unmatched_fastq_file_name, "#", base_read_file_name);
+
+          uint32_t bowtie2_seed_substring_size_relaxed = 5 + trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.1);
+          // Check bounds
+          bowtie2_seed_substring_size_relaxed = max<uint32_t>(9, bowtie2_seed_substring_size_relaxed);
+          bowtie2_seed_substring_size_relaxed = min<uint32_t>(31, bowtie2_seed_substring_size_relaxed);
+        
+          string command = "bowtie2 -t -p " + s(settings.num_processors) + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_relaxed) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage2 + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + reference_sam_file_name;
+          SYSTEM(command);
+        }
         
         /////////////////////
         // MERGE SAM FILES //
-        /////////////////////        
+        /////////////////////
         
         // Merge the stage1 and stage2 output files
-        {
-          string base_read_file_name = read_file.base_name();
-          string read_fastq_file = settings.base_name_to_read_file_name(base_read_file_name);
+        { // local vars
           
           string stage1_reference_sam_file_name = settings.file_name(settings.stage1_reference_sam_file_name, "#", base_read_file_name);
           string stage2_reference_sam_file_name = settings.file_name(settings.stage2_reference_sam_file_name, "#", base_read_file_name);
@@ -1478,10 +1457,14 @@ int breseq_default_action(int argc, char* argv[])
                                                      reference_sam_file_name
                                                      );
           
-          // Not deleted until after resolving alignments
-          settings.track_intermediate_file(settings.alignment_correction_done_file_name, reference_sam_file_name);
+          
         }
-      }
+      } // end do_stage_2_alignment
+      
+      
+      // Not deleted until after resolving alignments
+      settings.track_intermediate_file(settings.alignment_correction_done_file_name, reference_sam_file_name);
+      
     }
 
 		settings.done_step(settings.reference_alignment_done_file_name);
@@ -1625,7 +1608,7 @@ int breseq_default_action(int argc, char* argv[])
         bowtie2_seed_substring_size_junction = min<uint32_t>(31, bowtie2_seed_substring_size_junction);
         
         string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local " + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_junction) + " "
-        + settings.bowtie2_score_parameters + " " + settings.bowtie2_junction_alignment_reporting_parameters + " " + settings.bowtie2_min_score_junction + " --reorder -x " + candidate_junction_hash_file_name + " -U " + read_fastq_file + " -S " + candidate_junction_sam_file_name;
+        + settings.bowtie2_scoring + " " + settings.bowtie2_junction + " --reorder -x " + candidate_junction_hash_file_name + " -U " + read_fastq_file + " -S " + candidate_junction_sam_file_name;
         
         SYSTEM(command);
         

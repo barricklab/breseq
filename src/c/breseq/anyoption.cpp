@@ -410,8 +410,11 @@ namespace breseq {
 			if (argv[i][0] == long_opt_prefix[0] && argv[i][1] == long_opt_prefix[1])
 			{
 				int match_at = parseGNU(argv[i] + 2); /* skip -- */
-				if (match_at >= 0 && i < argc - 1) /* found match */
+        if (match_at >= 0 && i < argc - 1) /* found match */ {
+          cout << argv[i] << endl;
+          cout << argv[i+1] << endl;
 					setValue(options[match_at], argv[++i]);
+        }
 			}
 			/* POSIX char */
 			else if (argv[i][0] == opt_prefix_char)
@@ -419,15 +422,35 @@ namespace breseq {
 				if (POSIX())
 				{
 					char ch = parsePOSIX(argv[i] + 1);/* skip - */
-					if (ch != '0' && i < argc - 1) /* matching char */
-						setValue(ch, argv[++i]);
+          if (ch != '0' && i < argc - 1) /* matching char */ {
+            string combined_arg = argv[++i];
+            if (i<argc && strchr("\"'", combined_arg[0])) {
+              combined_arg.erase(0,1);
+              while (i<argc && !strchr("\"'", combined_arg[combined_arg.length()-1])) {
+                combined_arg += " ";
+                combined_arg + argv[++i];
+              }
+              combined_arg.erase(combined_arg.length()-1,1);
+            }
+						setValue(ch, combined_arg);
+          }
 				}
 				/* treat it as GNU option with a - */
 				else
 				{
 					int match_at = parseGNU(argv[i] + 1); /* skip - */
-					if (match_at >= 0 && i < argc - 1) /* found match */
-						setValue(options[match_at], argv[++i]);
+          if (match_at >= 0 && i < argc - 1) /* found match */ {
+            string combined_arg = argv[++i];
+            if (i<argc && strchr("\"'", combined_arg[0])) {
+              combined_arg.erase(0,1);
+              while (i<argc && !strchr("\"'", combined_arg[combined_arg.length()-1])) {
+                combined_arg += " ";
+                combined_arg + argv[++i];
+              }
+              combined_arg.erase(combined_arg.length()-1,1);
+            }
+						setValue(options[match_at], combined_arg);
+          }
 				}
 			}
 			/* not option but an argument keep index */

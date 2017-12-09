@@ -448,14 +448,12 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   read_file_max_N_fraction = t.read_file_max_N_fraction;
   
   //! Settings: Read Alignment
+  bowtie2_scoring = t.bowtie2_scoring;
+  bowtie2_stage1 = t.bowtie2_stage1;
+  bowtie2_stage2 = t.bowtie2_stage2;
+  bowtie2_junction = t.bowtie2_junction;
   bowtie2_junction_maximum_alignments_to_consider_per_read = t.bowtie2_junction_maximum_alignments_to_consider_per_read;
   bowtie2_genome_maximum_alignments_to_consider_per_read = t.bowtie2_genome_maximum_alignments_to_consider_per_read;
-  bowtie2_score_parameters = t.bowtie2_score_parameters;
-  bowtie2_junction_alignment_reporting_parameters = t.bowtie2_junction_alignment_reporting_parameters;
-  bowtie2_genome_alignment_reporting_parameters = t.bowtie2_genome_alignment_reporting_parameters;
-  bowtie2_min_score_stringent = t.bowtie2_min_score_stringent;
-  bowtie2_min_score_relaxed = t.bowtie2_min_score_relaxed;
-  bowtie2_min_score_junction = t.bowtie2_min_score_junction;
   require_match_length = t.require_match_length;
   require_match_fraction = t.require_match_fraction;
   maximum_read_mismatches = t.maximum_read_mismatches;
@@ -740,14 +738,12 @@ void to_json(json& j, const PublicOptionsSummary& s)
     
     //! Settings: Read Alignment
     {"read_alignment", json{
+      {"bowtie2_scoring", s.bowtie2_scoring},
+      {"bowtie2_stage1", s.bowtie2_stage1},
+      {"bowtie2_stage2", s.bowtie2_stage2},
+      {"bowtie2_junction", s.bowtie2_junction},
       {"bowtie2_junction_maximum_alignments_to_consider_per_read", s.bowtie2_junction_maximum_alignments_to_consider_per_read},
       {"bowtie2_genome_maximum_alignments_to_consider_per_read", s.bowtie2_genome_maximum_alignments_to_consider_per_read},
-      {"bowtie2_score_parameters", s.bowtie2_score_parameters},
-      {"bowtie2_junction_alignment_reporting_parameters", s.bowtie2_junction_alignment_reporting_parameters},
-      {"bowtie2_genome_alignment_reporting_parameters", s.bowtie2_genome_alignment_reporting_parameters},
-      {"bowtie2_min_score_stringent", s.bowtie2_min_score_stringent},
-      {"bowtie2_min_score_relaxed", s.bowtie2_min_score_relaxed},
-      {"bowtie2_min_score_junction", s.bowtie2_min_score_junction},
       {"require_match_length", s.require_match_length},
       {"require_match_fraction", s.require_match_fraction},
       {"maximum_read_mismatches", s.maximum_read_mismatches},

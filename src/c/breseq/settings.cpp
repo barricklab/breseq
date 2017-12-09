@@ -214,8 +214,17 @@ namespace breseq
     ("require-match-fraction", "Only consider alignments that cover this fraction of a read", 0.9, ADVANCED_OPTION)
     ("deletion-coverage-propagation-cutoff","Value for coverage above which deletions are cutoff. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
     ("deletion-coverage-seed-cutoff","Value for coverage below which deletions are seeded", 0, ADVANCED_OPTION)
-
     ;
+    
+    options.addUsage("", ADVANCED_OPTION);
+    options.addUsage("bowtie2 mapping/alignment options", ADVANCED_OPTION);
+    options
+    ("bowtie2-scoring", "All calls to bowtie2 must use the same commands for assigning scores to read alignments. Larger scores are assumed to be better by breseq. Each call to bowtie2 has this option added to its command line. (DEFAULT=\"" + this->bowtie2_scoring + "\")", "", ADVANCED_OPTION)
+    ("bowtie2-stage1", "Settings for mapping criteria used for the stage 1 alignment. This step is normally meant for quickly aligning near-perfect matches. (DEFAULT=\"" + this->bowtie2_stage1 + "\")", "", ADVANCED_OPTION)
+    ("bowtie2-stage2", "Settings for mapping criteria used for the stage 2 alignment. If set to the empty string \"\", then stage 2 alignment is skipped. This step is normally meant for exhaustively mapping reads that were unmapped by stage 1. (DEFAULT=\"" + this->bowtie2_stage2 + "\")", "", ADVANCED_OPTION)
+    ("bowtie2-junction", "Settings for mapping criteria used in aligning reads to candidate junctions. (DEFAULT=\"" + this->bowtie2_junction + "\")", "", ADVANCED_OPTION)
+    ;
+    options.addUsage("In addition to these values, breseq automatically sets the seed size for bowtie2 read mapping (-L option) to a value that is scaled to the read length (r). This value is 0.5 * r for stage 1, 5 + 0.1 * r for stage 2, and 0.3 * r for junction mapping. In each case, it is bounded to the range [4,31] as required by bowtie2.", ADVANCED_OPTION);
     
     options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Junction (JC) Evidence Options", ADVANCED_OPTION);
@@ -410,6 +419,13 @@ namespace breseq
     this->deletion_coverage_seed_cutoff = from_string<double>(options["deletion-coverage-seed-cutoff"]);
     ASSERT(this->deletion_coverage_propagation_cutoff >= 0, "Argument --deletion-coverage-seed-cutoff must be >= 0")
     
+    //! Settings: bowtie2
+    //  all have default that we only overwrite if present on command line
+    if (options.count("bowtie2-scoring")) this->bowtie2_scoring = options["bowtie2-scoring"];
+    if (options.count("bowtie2-stage1")) this->bowtie2_stage1 = options["bowtie2-stage1"];
+    if (options.count("bowtie2-stage2")) this->bowtie2_stage2 = options["bowtie2-stage2"];
+    if (options.count("bowtie2-junction")) this->bowtie2_scoring = options["bowtie2-junction"];
+
     //! Settings: Junction Prediction
     this->skip_junction_prediction = options.count("no-junction-prediction");
     this->minimum_candidate_junctions = from_string<int32_t>(options["junction-minimum-candidates"]);
@@ -648,26 +664,28 @@ namespace breseq
     this->bowtie2_junction_maximum_alignments_to_consider_per_read = 2000;
     this->bowtie2_genome_maximum_alignments_to_consider_per_read = 2000;
 
-    this->bowtie2_score_parameters = "--ma 1 --mp 3 --np 0 --rdg 2,3 --rfg 2,3 --ignore-quals";
+    this->bowtie2_scoring = "--ma 1 --mp 3 --np 0 --rdg 2,3 --rfg 2,3 --ignore-quals";
     //this->bowtie2_score_parameters = "--ma 1 --mp 3 --np 0 --rdg 2,3 --rfg 2,3";
     
     // Different values for these:
     // We report ALL alignments for junctions
-    this->bowtie2_junction_alignment_reporting_parameters = (bowtie2_junction_maximum_alignments_to_consider_per_read > 0)
+    string bowtie2_junction_alignment_reporting_parameters = (bowtie2_junction_maximum_alignments_to_consider_per_read > 0)
     ? " -k " + to_string(this->bowtie2_junction_maximum_alignments_to_consider_per_read) : " -a";
     
     // Need to report all matches for proper handling of
-    this->bowtie2_genome_alignment_reporting_parameters = (bowtie2_genome_maximum_alignments_to_consider_per_read > 0)
+    string bowtie2_genome_alignment_reporting_parameters = (bowtie2_genome_maximum_alignments_to_consider_per_read > 0)
     ? " -k " + to_string(this->bowtie2_genome_maximum_alignments_to_consider_per_read) : " -a";
-    
-    this->bowtie2_min_score_stringent = "-i S,1,0.25 --score-min L,1,0.9 "; // "-L 22 -i S,1,0.25 --score-min L,0,0.9 ";
-    
+        
     // Note: this leaves off -L, since it is set based on read length
-    this->bowtie2_min_score_relaxed  = "-i S,1,0.25 --score-min L,6,0.2"; // "-L 9 -i C,1,0 --score-min L,6,0.2 ";
-
-    //this->bowtie2_min_score_junction  = "-i S,1,0.25 --score-min L,0,0.65"; // "-L 9 -i C,1,0 --score-min L,6,0.2 ";
+    
+    // Set these defaults
+    this->bowtie2_stage1 = "--local -i S,1,0.25 --score-min L,1,0.9" + bowtie2_genome_alignment_reporting_parameters; // "-L 22 -i S,1,0.25 --score-min L,0,0.9";
+    
+    this->bowtie2_stage2 = "--local -i S,1,0.25 --score-min L,6,0.2" + bowtie2_genome_alignment_reporting_parameters; // "-L 9 -i C,1,0 --score-min L,6,0.2";
+    
     //JEB: Changed 2015-07-13 to not give too many alignments for longer (150 bp) reads, but to keep thresholds similar for short (36 bp) reads
-    this->bowtie2_min_score_junction  = "-i S,1,0.25 --score-min L,1,0.70"; // "-L 9 -i C,1,0 --score-min L,6,0.2 ";
+    this->bowtie2_junction = "--local -i S,1,0.25 --score-min L,1,0.70" + bowtie2_junction_alignment_reporting_parameters; // "-L 9 -i C,1,0 --score-min L,6,0.2";
+
     
     this->num_processors = 1;
     
@@ -779,7 +797,7 @@ namespace breseq
 		this->reference_sam_file_name = this->reference_alignment_path + "/#.reference.sam";
 
     this->stage1_reference_sam_file_name = this->reference_alignment_path + "/#.stage1.sam";
-    this->stage1_unmatched_fastq_file_name = this->reference_alignment_path + "/#.stage1.unmatched.fastq";
+    this->stage1_unmatched_fastq_file_name = this->reference_alignment_path + "/#.stage1.fastq";
     this->stage2_reference_sam_file_name = this->reference_alignment_path + "/#.stage2.matched.sam";
 
     //! Paths: Junction Prediction
