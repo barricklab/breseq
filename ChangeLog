@@ -5,6 +5,7 @@ Version 0.32.0
      incorrectly predicted if a polymorphism was rejected. More thorough and consistent
      output of rejection information for RA evidence.
    * Fixed problem reading some FASTQ files (discovered on Nanopore data).
+   * Removed extra slash in paths to invoke R scripts.
    * C++11 is now required for compilation. Optimization added to default compiler settings.
    * Fixed coding compatibility issues when building with certain versions of GCC.
 

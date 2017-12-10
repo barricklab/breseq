@@ -26,6 +26,7 @@
 		700FD0781C0A68D4003D8459 /* samtools_commands.h in Headers */ = {isa = PBXBuildFile; fileRef = 700FD0761C0A68D4003D8459 /* samtools_commands.h */; };
 		701EE98313C4BB5200F2EC70 /* contingency_loci.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 701EE98213C4BB5200F2EC70 /* contingency_loci.cpp */; };
 		702A20BC1A4F2485006DCA5F /* flagged_regions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702A20BA1A4F2349006DCA5F /* flagged_regions.cpp */; };
+		702C41631FDD88D900D4B159 /* json.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 702C41621FDD88D900D4B159 /* json.hpp */; };
 		702EABF713421A8400103019 /* fastq.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702EABF613421A8400103019 /* fastq.cpp */; };
 		70367D2113EB232C000787CC /* coverage_distribution.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70367D2013EB232C000787CC /* coverage_distribution.cpp */; };
 		705978081DB9A736001BBA6B /* libhts.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 705977FC1DB99E11001BBA6B /* libhts.a */; };
@@ -138,6 +139,7 @@
 		7024BBE0155DEC31007CCA5B /* mutations.conf */ = {isa = PBXFileReference; lastKnownFileType = text; name = mutations.conf; path = breseq/mutations.conf; sourceTree = "<group>"; };
 		702A20BA1A4F2349006DCA5F /* flagged_regions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = flagged_regions.cpp; path = breseq/flagged_regions.cpp; sourceTree = SOURCE_ROOT; };
 		702A20BB1A4F2399006DCA5F /* flagged_regions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = flagged_regions.h; sourceTree = "<group>"; };
+		702C41621FDD88D900D4B159 /* json.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = json.hpp; path = breseq/libbreseq/json.hpp; sourceTree = SOURCE_ROOT; };
 		702EABF613421A8400103019 /* fastq.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = fastq.cpp; path = breseq/fastq.cpp; sourceTree = SOURCE_ROOT; };
 		70367D2013EB232C000787CC /* coverage_distribution.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = coverage_distribution.cpp; path = breseq/coverage_distribution.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		70436D5713FF6D7D006448FB /* coverage_distribution.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = coverage_distribution.r; path = breseq/coverage_distribution.r; sourceTree = "<group>"; };
@@ -357,6 +359,7 @@
 				70CB721D140FEB6400D578EB /* genome_diff.h */,
 				70E915D51B8BC2C000D941BF /* gzstream.h */,
 				70CB721E140FEB6400D578EB /* identify_mutations.h */,
+				702C41621FDD88D900D4B159 /* json.hpp */,
 				70CB721F140FEB6400D578EB /* mutation_predictor.h */,
 				70B142F41D31F6220019D5A5 /* nw.h */,
 				70CB7220140FEB6400D578EB /* output.h */,
@@ -380,6 +383,7 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				702C41631FDD88D900D4B159 /* json.hpp in Headers */,
 				700FD0781C0A68D4003D8459 /* samtools_commands.h in Headers */,
 				70E915D61B8BC2C000D941BF /* gzstream.h in Headers */,
 				70B142F51D31F6220019D5A5 /* nw.h in Headers */,

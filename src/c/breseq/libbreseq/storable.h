@@ -206,7 +206,7 @@ namespace breseq
       ofstream outfile(filename.c_str());
       assert(!outfile.fail());
       //ASSERT(!outfile.fail(), "Error storing in file: " + filename);
-      json j;
+      nlohmann::json j;
       to_json(j, static_cast<C&>(*this));
       outfile << j.dump(2);
       outfile.close();
@@ -217,7 +217,7 @@ namespace breseq
       ifstream infile(filename.c_str());
       assert(!infile.fail());
       //ASSERT(!infile.fail(), "Error retrieving from file: " + filename);
-      json j;
+      nlohmann::json j;
       infile >> j;
       from_json(j, dynamic_cast<C&>(*this));
       infile.close();
