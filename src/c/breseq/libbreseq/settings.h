@@ -576,8 +576,6 @@ namespace breseq
     {
       (void) argc;
       global_bin_path = getExecPath(argv[0]);
-      //size_t slash_pos = global_bin_path.rfind("/");
-      //if (slash_pos != string::npos) global_bin_path.erase(slash_pos);
       
       //absolute path (used by XCode)
       if (string(DATADIR).substr(0, 1) == "/") {
@@ -594,6 +592,10 @@ namespace breseq
         global_program_data_path = breseq_data_path;
         cerr << "In test mode. Program data path: " << breseq_data_path << endl;
       }
+      
+      // Get rid of any trailing slash in breseq_data_path
+      if (global_program_data_path[global_program_data_path.length()-1] == '/')
+        global_program_data_path.erase(global_program_data_path.length()-1, 1);
     }
     
     //! Utility functions for getting paths

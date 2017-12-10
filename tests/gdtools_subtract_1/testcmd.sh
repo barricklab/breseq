@@ -8,7 +8,7 @@ EXPECTED_OUTPUTS[0]="expected.gd"
 
 TESTCMD="\
     ${GDTOOLS} \
-        SUBTRACT
+        SUBTRACT \
         -o ${SELF}/output.gd \
         ${SELF}/input_1.gd \
         ${SELF}/input_2.gd \

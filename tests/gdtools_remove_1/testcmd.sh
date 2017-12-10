@@ -9,7 +9,7 @@ EXPECTED_OUTPUTS[0]="expected.gd"
 TESTCMD="\
     ${GDTOOLS} \
         REMOVE \
-        -c frequency<1 \
+        -c 'frequency<1' \
         -c label==remove_me \
         -o ${SELF}/output.gd \
         ${SELF}/input.gd \

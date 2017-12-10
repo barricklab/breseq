@@ -125,9 +125,9 @@ do_check() {
 do_breseq() {
 	echo "BRESEQ COMMAND:" 
 	echo $TESTCMD
-	${!TESTCMD}
+	eval "${TESTCMD}"
 	if [[ "$?" -ne 0 ]]; then
-	    echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+        echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         echo "Failed check"
         echo "Non-zero error code returned."
         echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 

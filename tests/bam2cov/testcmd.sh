@@ -9,11 +9,11 @@ REFERENCE_ARG="-r ${DATADIR}/bull/bull_1.gbk"
 
 TESTCMD="\
     ${BRESEQ} BAM2COV \
-    -t
-    -f ${DATADIR}/bull/bull_1.fasta
-    -b ${DATADIR}/bull/bull_1.bam
-    -o ${SELF}/output
-    -r rachael:657-2167
+    -t \
+    -f ${DATADIR}/bull/bull_1.fasta \
+    -b ${DATADIR}/bull/bull_1.bam \
+    -o ${SELF}/output \
+    -r rachael:657-2167 \
     "
 
 do_test $1 ${SELF}

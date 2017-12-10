@@ -8,8 +8,8 @@ EXPECTED_OUTPUTS[0]="expected.gff3"
 
 TESTCMD="\
     ${BRESEQ} \
-        CONVERT-REFERENCE
-        -f GFF
+        CONVERT-REFERENCE \
+        -f GFF \
         -o ${SELF}/output.gff3 \
         ${DATADIR}/pDCAF3/pDCAF3.gbk \
     "

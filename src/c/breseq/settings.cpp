@@ -797,7 +797,7 @@ namespace breseq
 		this->reference_sam_file_name = this->reference_alignment_path + "/#.reference.sam";
 
     this->stage1_reference_sam_file_name = this->reference_alignment_path + "/#.stage1.sam";
-    this->stage1_unmatched_fastq_file_name = this->reference_alignment_path + "/#.stage1.fastq";
+    this->stage1_unmatched_fastq_file_name = this->reference_alignment_path + "/#.stage1.unmatched.fastq";
     this->stage2_reference_sam_file_name = this->reference_alignment_path + "/#.stage2.matched.sam";
 
     //! Paths: Junction Prediction

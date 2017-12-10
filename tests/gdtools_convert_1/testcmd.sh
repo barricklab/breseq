@@ -8,9 +8,9 @@ EXPECTED_OUTPUTS[0]="expected.json"
 
 TESTCMD="\
     ${GDTOOLS} \
-        CONVERT
-        -a
-        -f JSON
+        CONVERT \
+        -a \
+        -f JSON \
         -o ${SELF}/output.json \
         -r ${DATADIR}/lambda/lambda.1-2.gbk \
         -r ${DATADIR}/lambda/lambda.3.gbk \

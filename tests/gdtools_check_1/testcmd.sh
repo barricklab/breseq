@@ -8,7 +8,7 @@ EXPECTED_OUTPUTS[0]="expected.gd"
 
 TESTCMD="\
     ${GDTOOLS} \
-        CHECK
+        CHECK \
         -o ${SELF}/output.gd \
         -r ${DATADIR}/lambda/lambda.1-2.gbk \
         -r ${DATADIR}/lambda/lambda.3.gbk \

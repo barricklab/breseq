@@ -8,8 +8,8 @@ EXPECTED_OUTPUTS[0]="expected.html"
 
 TESTCMD="\
     ${GDTOOLS} \
-        COMPARE
-        -f HTML
+        COMPARE \
+        -f HTML \
         -o ${SELF}/output.html \
         -r ${DATADIR}/pDCAF3/pDCAF3.gbk \
         ${SELF}/input.gd \

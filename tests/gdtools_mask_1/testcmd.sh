@@ -8,7 +8,7 @@ EXPECTED_OUTPUTS[0]="expected.gd"
 
 TESTCMD="\
     ${GDTOOLS} \
-        MASK
+        MASK \
         -o ${SELF}/output.gd \
         ${SELF}/input.gd \
         ${SELF}/mask.gd \

@@ -8,7 +8,7 @@ EXPECTED_OUTPUTS[0]="expected.gd"
 
 TESTCMD="\
     ${GDTOOLS} \
-        UNION
+        UNION \
         -o ${SELF}/output.gd \
         ${SELF}/input_1.gd \
         ${SELF}/input_2.gd \

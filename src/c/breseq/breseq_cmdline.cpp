@@ -1429,13 +1429,14 @@ int breseq_default_action(int argc, char* argv[])
         
           // If we are doing staged alignment -- only align the unmatched reads and save to different name initially
           string read_fastq_file = settings.file_name(settings.stage1_unmatched_fastq_file_name, "#", base_read_file_name);
-
+          string stage2_reference_sam_file_name = settings.file_name(settings.stage2_reference_sam_file_name, "#", base_read_file_name);
+          
           uint32_t bowtie2_seed_substring_size_relaxed = 5 + trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.1);
           // Check bounds
           bowtie2_seed_substring_size_relaxed = max<uint32_t>(9, bowtie2_seed_substring_size_relaxed);
           bowtie2_seed_substring_size_relaxed = min<uint32_t>(31, bowtie2_seed_substring_size_relaxed);
         
-          string command = "bowtie2 -t -p " + s(settings.num_processors) + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_relaxed) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage2 + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + reference_sam_file_name;
+          string command = "bowtie2 -t -p " + s(settings.num_processors) + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_relaxed) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage2 + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + stage2_reference_sam_file_name;
           SYSTEM(command);
         }
         

@@ -8,8 +8,8 @@ EXPECTED_OUTPUTS[0]="expected.csv"
 
 TESTCMD="\
     ${GDTOOLS} \
-        COUNT
-        -b
+        COUNT \
+        -b \
         -o ${SELF}/output.csv \
         -r ${DATADIR}/lambda/lambda.1-2.gbk \
         -r ${DATADIR}/lambda/lambda.3.gbk \
