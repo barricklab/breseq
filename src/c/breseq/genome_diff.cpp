@@ -5725,9 +5725,12 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
     string ref;
     string alt;
     string qual = ".";
-    string filter = ".";
+    string filter = "PASS";
     string format = "GT";
     string sample = "1/1";
+    
+    // This is currently unused, only mutations are output
+    //if (mut.entry_exists(REJECT)) filter=mut[REJECT];
     
     vector<string> info_entries;
 
