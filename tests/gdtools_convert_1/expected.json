@@ -31,36 +31,37 @@
       "type": "INS"
     },
     {
-      "aa_new_seq": "E",
-      "aa_position": "338",
-      "aa_ref_seq": "K",
-      "codon_new_seq": "GAA",
-      "codon_number": "338",
-      "codon_position": "1",
-      "codon_ref_seq": "AAA",
+      "aa_new_seq": "E;S",
+      "aa_position": "338;36",
+      "aa_ref_seq": "K;F",
+      "codon_new_seq": "GAA;TCT",
+      "codon_number": "338;36",
+      "codon_position": "1;2",
+      "codon_position_is_indeterminate": "",
+      "codon_ref_seq": "AAA;TTT",
       "evidence_ids": [
         "75"
       ],
       "frequency": "1",
-      "gene_name": "orf-401",
-      "gene_position": "1012",
-      "gene_product": "Tail fiber protein",
-      "gene_strand": ">",
+      "gene_name": "orf-401;orf206b",
+      "gene_position": "1012;107",
+      "gene_product": "Tail fiber protein;hypothetical protein",
+      "gene_strand": ">;<",
       "genes_inactivated": "",
-      "genes_overlapping": "orf-401",
+      "genes_overlapping": "orf-401,orf206b",
       "genes_promoter": "",
-      "html_gene_name": "<i>orf-401</i>&nbsp;&rarr;",
+      "html_gene_name": "<i>orf-401</i>&nbsp;&rarr;<br><i>orf206b</i>&nbsp;&larr;",
       "id": "3",
-      "locus_tag": "lambdap27",
+      "locus_tag": "lambdap27;lambdap90",
       "locus_tags_inactivated": "",
-      "locus_tags_overlapping": "lambdap27",
+      "locus_tags_overlapping": "lambdap27,lambdap90",
       "locus_tags_promoter": "",
-      "mutation_category": "snp_nonsynonymous",
+      "mutation_category": "snp_nonsynonymous;nonsynonymous",
       "new_seq": "G",
       "position": "1261",
       "seq_id": "NC_001416-2",
-      "snp_type": "nonsynonymous",
-      "transl_table": "11",
+      "snp_type": "nonsynonymous;nonsynonymous",
+      "transl_table": "11;11",
       "type": "SNP"
     },
     {
@@ -68,7 +69,9 @@
       "aa_position": "",
       "aa_ref_seq": "",
       "codon_new_seq": "",
+      "codon_number": "",
       "codon_position": "",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "",
       "evidence_ids": [
         "76"
@@ -92,6 +95,8 @@
       "new_seq": "C",
       "position": "1435",
       "seq_id": "NC_001416-2",
+      "snp_type": "",
+      "transl_table": "",
       "type": "INS"
     },
     {
@@ -101,6 +106,7 @@
       "codon_new_seq": "AAC",
       "codon_number": "229",
       "codon_position": "2",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "AGC",
       "evidence_ids": [
         "77"
@@ -134,6 +140,7 @@
       "codon_new_seq": "CGT",
       "codon_number": "73",
       "codon_position": "1",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "GGT",
       "evidence_ids": [
         "77"
@@ -161,36 +168,37 @@
       "type": "SNP"
     },
     {
-      "aa_new_seq": "E",
-      "aa_position": "3",
-      "aa_ref_seq": "E",
-      "codon_new_seq": "GAG",
-      "codon_number": "3",
-      "codon_position": "3",
-      "codon_ref_seq": "GAA",
+      "aa_new_seq": "E;D",
+      "aa_position": "3;61",
+      "aa_ref_seq": "E;N",
+      "codon_new_seq": "GAG;GAC",
+      "codon_number": "3;61",
+      "codon_position": "3;1",
+      "codon_position_is_indeterminate": "",
+      "codon_ref_seq": "GAA;AAC",
       "evidence_ids": [
         "94"
       ],
       "frequency": "1",
-      "gene_name": "orf61",
-      "gene_position": "9",
-      "gene_product": "hypothetical protein",
-      "gene_strand": "<",
+      "gene_name": "orf61;orf63",
+      "gene_position": "9;181",
+      "gene_product": "hypothetical protein;hypothetical protein",
+      "gene_strand": "<;<",
       "genes_inactivated": "",
-      "genes_overlapping": "orf61",
+      "genes_overlapping": "orf61,orf63",
       "genes_promoter": "",
-      "html_gene_name": "<i>orf61</i>&nbsp;&larr;",
+      "html_gene_name": "<i>orf61</i>&nbsp;&larr;<br><i>orf63</i>&nbsp;&larr;",
       "id": "7",
-      "locus_tag": "lambdap37",
+      "locus_tag": "lambdap37;lambdap38",
       "locus_tags_inactivated": "",
-      "locus_tags_overlapping": "lambdap37",
+      "locus_tags_overlapping": "lambdap37,lambdap38",
       "locus_tags_promoter": "",
-      "mutation_category": "snp_synonymous",
+      "mutation_category": "snp_synonymous;nonsynonymous",
       "new_seq": "C",
       "position": "1915",
       "seq_id": "NC_001416-3",
-      "snp_type": "synonymous",
-      "transl_table": "11",
+      "snp_type": "synonymous;nonsynonymous",
+      "transl_table": "11;11",
       "type": "SNP"
     },
     {
@@ -200,6 +208,7 @@
       "codon_new_seq": "GGG",
       "codon_number": "151",
       "codon_position": "3",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "GGA",
       "evidence_ids": [
         "96"
@@ -231,7 +240,9 @@
       "aa_position": "",
       "aa_ref_seq": "",
       "codon_new_seq": "",
+      "codon_number": "",
       "codon_position": "",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "",
       "evidence_ids": [
         "97"
@@ -254,6 +265,8 @@
       "position": "8717",
       "seq_id": "NC_001416-3",
       "size": "1",
+      "snp_type": "",
+      "transl_table": "",
       "type": "DEL"
     },
     {
@@ -263,6 +276,7 @@
       "codon_new_seq": "TTC",
       "codon_number": "42",
       "codon_position": "3",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "TTT",
       "evidence_ids": [
         "100"
@@ -296,6 +310,7 @@
       "codon_new_seq": "CGC",
       "codon_number": "57",
       "codon_position": "3",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "CGT",
       "evidence_ids": [
         "101"
@@ -329,6 +344,7 @@
       "codon_new_seq": "GCA",
       "codon_number": "63",
       "codon_position": "3",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "GCG",
       "evidence_ids": [
         "102"
@@ -362,6 +378,7 @@
       "codon_new_seq": "CTG",
       "codon_number": "64",
       "codon_position": "3",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "CTC",
       "evidence_ids": [
         "103"
@@ -395,6 +412,7 @@
       "codon_new_seq": "GAA",
       "codon_number": "66",
       "codon_position": "2",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "GCA",
       "evidence_ids": [
         "104"
@@ -428,6 +446,7 @@
       "codon_new_seq": "AAT",
       "codon_number": "74",
       "codon_position": "1",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "GAT",
       "evidence_ids": [
         "105"
@@ -455,36 +474,37 @@
       "type": "SNP"
     },
     {
-      "aa_new_seq": "A",
-      "aa_position": "75",
-      "aa_ref_seq": "A",
-      "codon_new_seq": "GCG",
-      "codon_number": "75",
-      "codon_position": "3",
-      "codon_ref_seq": "GCT",
+      "aa_new_seq": "A;R",
+      "aa_position": "75;2",
+      "aa_ref_seq": "A;L",
+      "codon_new_seq": "GCG;CGA",
+      "codon_number": "75;2",
+      "codon_position": "3;2",
+      "codon_position_is_indeterminate": "",
+      "codon_ref_seq": "GCT;CTA",
       "evidence_ids": [
         "106"
       ],
       "frequency": "0.1100",
-      "gene_name": "Rz",
-      "gene_position": "225",
-      "gene_product": "cell lysis protein",
-      "gene_strand": ">",
+      "gene_name": "Rz;Rz1",
+      "gene_position": "225;5",
+      "gene_product": "cell lysis protein;Rz1 protein",
+      "gene_strand": ">;>",
       "genes_inactivated": "",
-      "genes_overlapping": "Rz",
+      "genes_overlapping": "Rz,Rz1",
       "genes_promoter": "",
-      "html_gene_name": "<i>Rz</i>&nbsp;&rarr;",
+      "html_gene_name": "<i>Rz</i>&nbsp;&rarr;<br><i>Rz1</i>&nbsp;&rarr;",
       "id": "16",
-      "locus_tag": "lambdap76",
+      "locus_tag": "lambdap76;lambdap91",
       "locus_tags_inactivated": "",
-      "locus_tags_overlapping": "lambdap76",
+      "locus_tags_overlapping": "lambdap76,lambdap91",
       "locus_tags_promoter": "",
-      "mutation_category": "snp_synonymous",
+      "mutation_category": "snp_synonymous;nonsynonymous",
       "new_seq": "G",
       "position": "7389",
       "seq_id": "NC_001416-4",
-      "snp_type": "synonymous",
-      "transl_table": "11",
+      "snp_type": "synonymous;nonsynonymous",
+      "transl_table": "11;11",
       "type": "SNP"
     },
     {
@@ -492,7 +512,6 @@
       "aa_position": "",
       "aa_ref_seq": "",
       "codon_new_seq": "",
-      "codon_number": "",
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
@@ -525,6 +544,7 @@
       "codon_new_seq": "GTT",
       "codon_number": "52",
       "codon_position": "3",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "GTC",
       "evidence_ids": [
         "108"
@@ -558,6 +578,7 @@
       "codon_new_seq": "GAG",
       "codon_number": "49",
       "codon_position": "1",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "AAG",
       "evidence_ids": [
         "109"
@@ -591,6 +612,7 @@
       "codon_new_seq": "GGA",
       "codon_number": "47",
       "codon_position": "3",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "GGG",
       "evidence_ids": [
         "110"
@@ -624,6 +646,7 @@
       "codon_new_seq": "TCG",
       "codon_number": "44",
       "codon_position": "3",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "TCT",
       "evidence_ids": [
         "111"
@@ -657,6 +680,7 @@
       "codon_new_seq": "CAC",
       "codon_number": "40",
       "codon_position": "3",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "CAT",
       "evidence_ids": [
         "112"
@@ -690,6 +714,7 @@
       "codon_new_seq": "ACA",
       "codon_number": "32",
       "codon_position": "1",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "GCA",
       "evidence_ids": [
         "113"
@@ -723,6 +748,7 @@
       "codon_new_seq": "ACA",
       "codon_number": "29",
       "codon_position": "1",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "GCA",
       "evidence_ids": [
         "114"
@@ -756,6 +782,7 @@
       "codon_new_seq": "CGA",
       "codon_number": "25",
       "codon_position": "2",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "CAA",
       "evidence_ids": [
         "115"
@@ -774,7 +801,7 @@
       "locus_tags_inactivated": "",
       "locus_tags_overlapping": "lambdap77",
       "locus_tags_promoter": "",
-      "multiple_polymorphic_SNPs_in_same_codon": "1",
+      "multiple_polymorphic_SNPs_in_same_codon": "0",
       "mutation_category": "snp_nonsynonymous",
       "new_seq": "C",
       "position": "7878",
@@ -790,6 +817,7 @@
       "codon_new_seq": "GAA",
       "codon_number": "25",
       "codon_position": "1",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "CAA",
       "evidence_ids": [
         "116"
@@ -808,7 +836,7 @@
       "locus_tags_inactivated": "",
       "locus_tags_overlapping": "lambdap77",
       "locus_tags_promoter": "",
-      "multiple_polymorphic_SNPs_in_same_codon": "1",
+      "multiple_polymorphic_SNPs_in_same_codon": "0",
       "mutation_category": "snp_nonsynonymous",
       "new_seq": "C",
       "position": "7879",
@@ -824,6 +852,7 @@
       "codon_new_seq": "ATG",
       "codon_number": "12",
       "codon_position": "1",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "CTG",
       "evidence_ids": [
         "117"
@@ -857,6 +886,7 @@
       "codon_new_seq": "GCA",
       "codon_number": "11",
       "codon_position": "3",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "GCC",
       "evidence_ids": [
         "118"
@@ -888,7 +918,6 @@
       "aa_position": "",
       "aa_ref_seq": "",
       "codon_new_seq": "",
-      "codon_number": "",
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
@@ -919,7 +948,6 @@
       "aa_position": "",
       "aa_ref_seq": "",
       "codon_new_seq": "",
-      "codon_number": "",
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
@@ -980,7 +1008,6 @@
       "aa_position": "",
       "aa_ref_seq": "",
       "codon_new_seq": "",
-      "codon_number": "",
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
@@ -1041,7 +1068,6 @@
       "aa_position": "",
       "aa_ref_seq": "",
       "codon_new_seq": "",
-      "codon_number": "",
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
@@ -1072,7 +1098,6 @@
       "aa_position": "",
       "aa_ref_seq": "",
       "codon_new_seq": "",
-      "codon_number": "",
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
@@ -1103,7 +1128,6 @@
       "aa_position": "",
       "aa_ref_seq": "",
       "codon_new_seq": "",
-      "codon_number": "",
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
@@ -1136,6 +1160,7 @@
       "codon_new_seq": "CAC",
       "codon_number": "149",
       "codon_position": "3",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "CAT",
       "evidence_ids": [
         "130"
@@ -1169,6 +1194,7 @@
       "codon_new_seq": "ATT",
       "codon_number": "145",
       "codon_position": "1",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "GTT",
       "evidence_ids": [
         "131"
@@ -1202,6 +1228,7 @@
       "codon_new_seq": "AAT",
       "codon_number": "111",
       "codon_position": "3",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "AAC",
       "evidence_ids": [
         "132"
@@ -1235,6 +1262,7 @@
       "codon_new_seq": "ATT",
       "codon_number": "87",
       "codon_position": "3",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "ATC",
       "evidence_ids": [
         "133"
@@ -1268,6 +1296,7 @@
       "codon_new_seq": "AAT",
       "codon_number": "72",
       "codon_position": "3",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "AAC",
       "evidence_ids": [
         "134"
@@ -1301,6 +1330,7 @@
       "codon_new_seq": "AAC",
       "codon_number": "60",
       "codon_position": "1",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "GAC",
       "evidence_ids": [
         "135"
@@ -1334,6 +1364,7 @@
       "codon_new_seq": "GCG",
       "codon_number": "23",
       "codon_position": "1",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "ACG",
       "evidence_ids": [
         "136"
@@ -1367,6 +1398,7 @@
       "codon_new_seq": "AAG",
       "codon_number": "16",
       "codon_position": "2",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "AGG",
       "evidence_ids": [
         "137"
@@ -1400,6 +1432,7 @@
       "codon_new_seq": "TTG",
       "codon_number": "1",
       "codon_position": "1",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "GTG",
       "evidence_ids": [
         "138"
@@ -1431,7 +1464,6 @@
       "aa_position": "",
       "aa_ref_seq": "",
       "codon_new_seq": "",
-      "codon_number": "",
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
@@ -1464,6 +1496,7 @@
       "codon_new_seq": "AGG",
       "codon_number": "47",
       "codon_position": "3",
+      "codon_position_is_indeterminate": "",
       "codon_ref_seq": "AGA",
       "evidence_ids": [
         "140"
@@ -1495,7 +1528,6 @@
       "aa_position": "",
       "aa_ref_seq": "",
       "codon_new_seq": "",
-      "codon_number": "",
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
@@ -1557,7 +1589,6 @@
       "aa_position": "",
       "aa_ref_seq": "",
       "codon_new_seq": "",
-      "codon_number": "",
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
@@ -1588,7 +1619,6 @@
       "aa_position": "",
       "aa_ref_seq": "",
       "codon_new_seq": "",
-      "codon_number": "",
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
@@ -1619,7 +1649,6 @@
       "aa_position": "",
       "aa_ref_seq": "",
       "codon_new_seq": "",
-      "codon_number": "",
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
@@ -1650,7 +1679,6 @@
       "aa_position": "",
       "aa_ref_seq": "",
       "codon_new_seq": "",
-      "codon_number": "",
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
@@ -1681,7 +1709,6 @@
       "aa_position": "",
       "aa_ref_seq": "",
       "codon_new_seq": "",
-      "codon_number": "",
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
@@ -1712,7 +1739,6 @@
       "aa_position": "",
       "aa_ref_seq": "",
       "codon_new_seq": "",
-      "codon_number": "",
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
@@ -1743,7 +1769,6 @@
       "aa_position": "",
       "aa_ref_seq": "",
       "codon_new_seq": "",
-      "codon_number": "",
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
@@ -1774,7 +1799,6 @@
       "aa_position": "",
       "aa_ref_seq": "",
       "codon_new_seq": "",
-      "codon_number": "",
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
@@ -1805,7 +1829,6 @@
       "aa_position": "",
       "aa_ref_seq": "",
       "codon_new_seq": "",
-      "codon_number": "",
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
@@ -1836,7 +1859,6 @@
       "aa_position": "",
       "aa_ref_seq": "",
       "codon_new_seq": "",
-      "codon_number": "",
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
@@ -1867,7 +1889,6 @@
       "aa_position": "",
       "aa_ref_seq": "",
       "codon_new_seq": "",
-      "codon_number": "",
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [

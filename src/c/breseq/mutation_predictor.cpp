@@ -3073,7 +3073,27 @@ namespace breseq {
           if (base_substitution_statistics) {
             this_bsec.change_position_1_observed_totals(ref_seq_info, bse, mut[SEQ_ID], from_string<int32_t>(mut[POSITION]), mut[NEW_SEQ], +1);					
           }
-          count["type"][mut["snp_type"]]++;
+          
+          // @JEB 2017-12-14 new code to account for multiple SNP types if it overlaps multiple genes
+          string _snp_type;
+          vector<string> _snp_type_list = split(mut["snp_type"], cReferenceSequences::multiple_separator);
+          _snp_type = _snp_type_list[0];
+          
+          
+          // The only SNP types present if multiple are syn, nonsyn, nonsense
+          // prefer ----> is what this logic does (and it matches the earlier assignment of
+          // all positions in the chromosome into these categories)
+          for (vector<string>::iterator it=_snp_type_list.begin(); it != _snp_type_list.end(); it++) {
+            if (*it == "nonsense") {
+              _snp_type = "nonsense";
+              break;
+            }
+            if (*it == "nonsynonymous") {
+              _snp_type = "nonsynonymous";
+            }
+          }
+          
+          count["type"][_snp_type]++;
           base_substitution_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());
         
         } else if (mut._type == DEL) {

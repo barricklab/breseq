@@ -19,8 +19,8 @@ NC_001416,3542,3546,T,"> coding (707-711/1602 nt)","B","capsid component",0,0,0,
 NC_001416,4160,4164,G,"> coding (1325-1329/1602 nt)","B","capsid component",0,0,0,0,37,0,0
 NC_001416,4301,4305,T,"> coding (1466-1470/1602 nt)","B","capsid component",0,0,0,0,58,0,0
 NC_001416,4831,4835,G,"> coding (414-418/1320 nt)","C","capsid component",0,0,0,0,38,0,0
-NC_001416,5565,5569,C,"> coding (1148-1152/1320 nt)","C","capsid component",0,0,0,0,32,0,0
-NC_001416,5662,5666,G,"> coding (1245-1249/1320 nt)","C","capsid component",0,0,0,0,37,0,0
+NC_001416,5565,5569,C,">;> coding (1148-1152/1320 nt);coding (434-438/606 nt)","C;nu3","capsid component;capsid assembly protein",0,0,0,0,32,0,0
+NC_001416,5662,5666,G,">;> coding (1245-1249/1320 nt);coding (531-535/606 nt)","C;nu3","capsid component;capsid assembly protein",0,0,0,0,37,0,0
 NC_001416,6035,6040,A,"> coding (289-294/333 nt)","D","head-DNA stabilization protein",0,0,0,0,0,70,0
 NC_001416,6115,6121,T," intergenic (+36/-14)","D/E","head-DNA stabilization protein/capsid component",0,0,0,0,0,0,31
 NC_001416,6128,6134,T," intergenic (+49/-1)","D/E","head-DNA stabilization protein/capsid component",0,0,0,0,0,0,37
@@ -72,10 +72,10 @@ NC_001416,18476,18481,A,"> coding (2972-2977/3399 nt)","J","tail:host specificit
 NC_001416,19174,19178,G,"> coding (210-214/621 nt)","lom","outer host membrane",0,0,0,0,73,0,0
 NC_001416,19208,19212,A,"> coding (244-248/621 nt)","lom","outer host membrane",0,0,0,0,88,0,0
 NC_001416,19633,19638,T," intergenic (+48/-12)","lom/orf-401","outer host membrane/Tail fiber protein",0,0,0,0,0,55,0
-NC_001416,20200,20205,A,"> coding (551-556/1206 nt)","orf-401","Tail fiber protein",0,0,0,0,0,29,0
-NC_001416,20228,20233,A,"> coding (579-584/1206 nt)","orf-401","Tail fiber protein",0,0,0,0,0,55,0
-NC_001416,20471,20475,A,"> coding (822-826/1206 nt)","orf-401","Tail fiber protein",0,0,0,0,26,0,0
-NC_001416,20543,20547,A,"> coding (894-898/1206 nt)","orf-401","Tail fiber protein",0,0,0,0,17,0,0
+NC_001416,20200,20205,A,">;< coding (551-556/1206 nt);coding (563-568/621 nt)","orf-401;orf206b","Tail fiber protein;hypothetical protein",0,0,0,0,0,29,0
+NC_001416,20228,20233,A,">;< coding (579-584/1206 nt);coding (535-540/621 nt)","orf-401;orf206b","Tail fiber protein;hypothetical protein",0,0,0,0,0,55,0
+NC_001416,20471,20475,A,">;< coding (822-826/1206 nt);coding (293-297/621 nt)","orf-401;orf206b","Tail fiber protein;hypothetical protein",0,0,0,0,26,0,0
+NC_001416,20543,20547,A,">;< coding (894-898/1206 nt);coding (221-225/621 nt)","orf-401;orf206b","Tail fiber protein;hypothetical protein",0,0,0,0,17,0,0
 NC_001416,21101,21105,A,"> coding (73-77/945 nt)","orf-314","Tail fiber",0,0,0,0,37,0,0
 NC_001416,21181,21186,A,"> coding (153-158/945 nt)","orf-314","Tail fiber",0,0,0,0,0,39,0
 NC_001416,21568,21572,G,"> coding (540-544/945 nt)","orf-314","Tail fiber",0,0,0,0,55,0,0
@@ -203,7 +203,7 @@ NC_001416,42459,42463,A,"> coding (31-35/615 nt)","NinG","NinG protein",0,0,0,0,
 NC_001416,42568,42572,A,"> coding (140-144/615 nt)","NinG","NinG protein",0,0,0,0,78,0,0
 NC_001416,42577,42581,A,"> coding (149-153/615 nt)","NinG","NinG protein",0,0,0,0,95,0,0
 NC_001416,43054,43058,A,"> coding (15-19/207 nt)","NinH","NinH protein",0,0,0,0,99,0,0
-NC_001416,43237,43242,A,"> coding (198-203/207 nt)","NinH","NinH protein",0,0,0,0,0,79,0
+NC_001416,43237,43242,A,">;> coding (198-203/207 nt);coding (14-19/666 nt)","NinH;NinI","NinH protein;NinI protein",0,0,0,0,0,79,0
 NC_001416,43341,43346,A,"> coding (118-123/666 nt)","NinI","NinI protein",0,0,0,0,0,127,0
 NC_001416,43620,43625,A,"> coding (397-402/666 nt)","NinI","NinI protein",0,0,0,0,0,73,0
 NC_001416,43921,43925,A,"> coding (36-40/624 nt)","Q","late gene regulator",0,0,0,0,61,0,0
@@ -211,11 +211,11 @@ NC_001416,44227,44231,G,"> coding (342-346/624 nt)","Q","late gene regulator",0,
 NC_001416,44292,44296,G,"> coding (407-411/624 nt)","Q","late gene regulator",0,0,0,0,41,0,0
 NC_001416,44774,44779,T,"> coding (154-159/195 nt)","orf-64","hypothetical protein",0,0,0,0,0,52,0
 NC_001416,45175,45179,G," intergenic (+360/-7)","orf-64/S","hypothetical protein/anti-holin",0,0,0,0,59,0,0
-NC_001416,45199,45203,A,"> coding (14-18/324 nt)","S","anti-holin",0,0,0,0,71,0,0
-NC_001416,45311,45315,A,"> coding (126-130/324 nt)","S","anti-holin",0,0,0,0,56,0,0
-NC_001416,45474,45479,A,"> coding (289-294/324 nt)","S","anti-holin",0,0,0,0,0,51,0
+NC_001416,45199,45203,A,">;> coding (14-18/324 nt);coding (8-12/318 nt)","S;S'","anti-holin;holin",0,0,0,0,71,0,0
+NC_001416,45311,45315,A,">;> coding (126-130/324 nt);coding (120-124/318 nt)","S;S'","anti-holin;holin",0,0,0,0,56,0,0
+NC_001416,45474,45479,A,">;> coding (289-294/324 nt);coding (283-288/318 nt)","S;S'","anti-holin;holin",0,0,0,0,0,51,0
 NC_001416,46080,46084,A,"> coding (115-119/462 nt)","Rz","cell lysis protein",0,0,0,0,58,0,0
-NC_001416,46312,46317,C,"> coding (347-352/462 nt)","Rz","cell lysis protein",0,0,0,0,0,42,0
+NC_001416,46312,46317,C,">;> coding (347-352/462 nt);coding (127-132/183 nt)","Rz;Rz1","cell lysis protein;Rz1 protein",0,0,0,0,0,42,0
 NC_001416,46378,46382,A,"> coding (413-417/462 nt)","Rz","cell lysis protein",0,0,0,0,65,0,0
 NC_001416,46743,46749,T,"< coding (4-10/294 nt)","bor","Bor protein precursor",0,0,0,0,0,0,65
 NC_001416,46770,46774,T," intergenic (-18/+268)","bor/lambdap78","Bor protein precursor/putative envelope protein",0,0,0,0,53,0,0

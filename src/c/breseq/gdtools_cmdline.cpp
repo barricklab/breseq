@@ -1462,6 +1462,8 @@ int do_count(int argc, char* argv[])
   options.addUsage("");
   options.addUsage("In the output \"small\" mutations are ≤ " + to_string<int32_t>(kBreseq_large_mutation_size_cutoff) + " bp. \"large\" mutations are >" + to_string<int32_t>(kBreseq_large_mutation_size_cutoff) + " bp");
 	
+	options.addUsage("For base substitutions overlapping multiple genes, the mutation is counted as the most signficant effect it has on any of the genes it overlaps with the precedence: nonsense > nonsynonymous > synonymous.");
+	
   options.processCommandArgs(argc, argv);
 	
 	if (options.count("help")) {
