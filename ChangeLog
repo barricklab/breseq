@@ -1,14 +1,17 @@
 Version 0.32.0
+   * If a mutation overlaps multiple genes, its effect on each gene is now annotated.
+     (Previously only the first gene encountered was annotated.) The relevant Genome Diff 
+     fields use a semicolon to separate the information about each impacted gene.
    * New output of summary information and settings in JSON format in data directory file
      'summary.json.
    * Corrected case in polymorphism mode where failing consensus mutations could be  
      incorrectly predicted if a polymorphism was rejected. More thorough and consistent
      output of rejection information for RA evidence.
    * Fixed problem reading some FASTQ files (discovered on Nanopore data).
+   * New options to use custom bowtie2 options for alignment. (Only intended for expert users!)
    * Removed extra slash in paths to invoke R scripts.
    * C++11 is now required for compilation. Optimization added to default compiler settings.
-   * Fixed coding compatibility issues when building with certain versions of GCC.
-
+   * Fixed compatibility issues when compiling with certain versions of GCC.
 
 Version 0.31.1
    * Critical fix for checking new bowtie2 versions with extra decimal place (e.g., 2.3.3.1).
