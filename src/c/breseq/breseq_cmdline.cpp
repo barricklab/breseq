@@ -1229,8 +1229,6 @@ int breseq_default_action(int argc, char* argv[])
       s.num_reads = 0;
       s.num_bases = 0;
       
-      // If limiting reads results in skipping later file, the index of the first one to delete
-      uint32_t read_file_start_delete_index = 0; 
       
       uint64_t read_file_base_limit = floor(settings.read_file_coverage_fold_limit * static_cast<double>(conv_ref_seq_info.total_length())); 
       
@@ -1244,7 +1242,6 @@ int breseq_default_action(int argc, char* argv[])
         // The 1000, is so that we have enough bases counted in a read file to fit the error rates.
         if ((settings.read_file_coverage_fold_limit) && (i!= 0) && (s.num_bases + 1000 >= read_file_base_limit)) {
           cerr << "  ::SKIPPED DUE TO REACHING COVERAGE LIMIT::" << endl;
-          if (!read_file_start_delete_index) read_file_start_delete_index = i;
           continue;
         }
         
@@ -1287,9 +1284,12 @@ int breseq_default_action(int argc, char* argv[])
       summary.sequence_conversion = s;
       
       // Print totals
+      uint32_t width_for_reads = to_string(s.num_original_reads).size();
+      uint32_t width_for_bases = to_string(s.num_original_bases).size();
+      
       cerr << "  ::TOTAL::" << endl;
-      cerr << "    Original reads: " << s.num_original_reads << " bases: " << s.num_original_bases << endl;
-      cerr << "    Analyzed reads: " << s.num_reads << " bases: " << s.num_bases << endl;
+      cerr << "    Original reads: " << setw(width_for_reads) << s.num_original_reads << " bases: " << setw(width_for_bases) << s.num_original_bases << endl;
+      cerr << "    Analyzed reads: " << setw(width_for_reads) << s.num_reads << " bases: " << setw(width_for_bases) << s.num_bases << endl;
       
     }
     
@@ -1338,7 +1338,7 @@ int breseq_default_action(int argc, char* argv[])
     for (map<string, AnalyzeFastqSummary>::iterator it = summary.sequence_conversion.reads.begin(); it != summary.sequence_conversion.reads.end(); it++)
     {
       string base_name = it->first;
-      read_files_surviving_conversion[base_name] = true;
+      read_files_surviving_conversion[base_name] = (it->second.num_reads != 0);
 
       if (it->second.converted_fastq_name.size() > 0) {
         settings.read_files.read_file_to_converted_fastq_file_name_map[base_name] = it->second.converted_fastq_name;
@@ -1438,6 +1438,8 @@ int breseq_default_action(int argc, char* argv[])
         
           string command = "bowtie2 -t -p " + s(settings.num_processors) + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_relaxed) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage2 + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + stage2_reference_sam_file_name;
           SYSTEM(command);
+          
+          settings.track_intermediate_file(settings.reference_alignment_done_file_name, stage2_reference_sam_file_name);
         }
         
         /////////////////////

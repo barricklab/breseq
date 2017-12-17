@@ -150,6 +150,7 @@ void to_json(json& j, const AnalyzeFastqSummary& s)
     {"num_filtered_too_short_reads", s.num_filtered_too_short_reads},
     {"num_filtered_same_base_reads", s.num_filtered_same_base_reads},
     {"num_filtered_too_many_N_reads", s.num_filtered_too_many_N_reads},
+    {"num_filtered_coverage_limit_reads", s.num_filtered_coverage_limit_reads},
     {"num_reads", s.num_reads},
     {"min_quality_score", s.min_quality_score},
     {"max_quality_score", s.max_quality_score},
@@ -170,6 +171,7 @@ void from_json(const json& j, AnalyzeFastqSummary& s)
   s.num_filtered_too_short_reads = j.at("num_filtered_too_short_reads").get<uint64_t>();
   s.num_filtered_same_base_reads = j.at("num_filtered_same_base_reads").get<uint64_t>();
   s.num_filtered_too_many_N_reads = j.at("num_filtered_too_many_N_reads").get<uint64_t>();
+  s.num_filtered_coverage_limit_reads = j.at("num_filtered_coverage_limit_reads").get<uint64_t>();
   s.num_reads = j.at("num_reads").get<uint64_t>();
   s.min_quality_score = j.at("min_quality_score").get<uint32_t>();
   s.max_quality_score = j.at("max_quality_score").get<uint32_t>();

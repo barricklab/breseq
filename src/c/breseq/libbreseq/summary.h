@@ -142,11 +142,12 @@ namespace breseq{
     uint32_t read_length_min;
     uint32_t read_length_max;
     double read_length_avg;
-    // original_reads = homopolymer_filtered_reads + num_filtered_too_many_N_reads + num_reads
+    // original_reads = homopolymer_filtered_reads + num_filtered_too_many_N_reads + num_filtered_coverage_limit_reads + num_reads
     uint64_t num_original_reads;
     uint64_t num_filtered_too_short_reads;
     uint64_t num_filtered_same_base_reads;
     uint64_t num_filtered_too_many_N_reads;
+    uint64_t num_filtered_coverage_limit_reads;
     uint64_t num_reads;
     uint32_t min_quality_score;
     uint32_t max_quality_score;
@@ -164,6 +165,7 @@ namespace breseq{
     , num_filtered_too_short_reads(0)
     , num_filtered_same_base_reads(0)
     , num_filtered_too_many_N_reads(0)
+    , num_filtered_coverage_limit_reads(0)
     , num_reads(0)
     , min_quality_score(0)
     , max_quality_score(0)
@@ -179,6 +181,7 @@ namespace breseq{
                  uint64_t _num_filtered_too_short_reads,
                  uint64_t _num_filtered_same_base_reads,
                  uint64_t _num_filtered_too_many_N_reads,
+                 uint64_t _num_filtered_coverage_limit_reads,
                  uint64_t _num_reads,
                  uint32_t _min_quality_score,
                  uint32_t _max_quality_score,
@@ -195,6 +198,7 @@ namespace breseq{
     , num_filtered_too_short_reads(_num_filtered_too_short_reads)
     , num_filtered_same_base_reads(_num_filtered_same_base_reads)
     , num_filtered_too_many_N_reads(_num_filtered_too_many_N_reads)
+    , num_filtered_coverage_limit_reads(_num_filtered_coverage_limit_reads)
     , num_reads(_num_reads)
     , min_quality_score(_min_quality_score)
     , max_quality_score(_max_quality_score)

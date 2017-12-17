@@ -3075,23 +3075,14 @@ namespace breseq {
           }
           
           // @JEB 2017-12-14 new code to account for multiple SNP types if it overlaps multiple genes
-          string _snp_type;
+          // Return the highest category of base substitution effect, according to the normal heirarchy
+
           vector<string> _snp_type_list = split(mut["snp_type"], cReferenceSequences::multiple_separator);
-          _snp_type = _snp_type_list[0];
-          
-          
-          // The only SNP types present if multiple are syn, nonsyn, nonsense
-          // prefer ----> is what this logic does (and it matches the earlier assignment of
-          // all positions in the chromosome into these categories)
+          BaseSubstitutionEffect bse(intergenic_base_substitution);
           for (vector<string>::iterator it=_snp_type_list.begin(); it != _snp_type_list.end(); it++) {
-            if (*it == "nonsense") {
-              _snp_type = "nonsense";
-              break;
-            }
-            if (*it == "nonsynonymous") {
-              _snp_type = "nonsynonymous";
-            }
+            bse = max(string_to_bse(*it), bse);
           }
+          string _snp_type = bse_to_string(bse);
           
           count["type"][_snp_type]++;
           base_substitution_lines.push_back(detailed_line_prefix + "\t" + mut.as_string());

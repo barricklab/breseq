@@ -65,13 +65,16 @@ namespace breseq {
     uint64_t num_bases = 0;
     uint64_t num_reads = 0;
     
-    uint64_t min_length_filtered_reads = 0;
+    uint64_t num_filtered_too_short_reads = 0;
     uint64_t num_filtered_same_base_reads = 0;
     uint64_t num_filtered_too_many_N_reads = 0;
+    uint64_t num_filtered_coverage_limit_reads = 0;
     
-    uint64_t min_length_filtered_bases = 0;
-    uint64_t same_base_filtered_bases = 0;
-    uint64_t N_filtered_bases = 0;
+    uint64_t num_filtered_too_short_bases = 0;
+    uint64_t num_filtered_same_base_bases = 0;
+    uint64_t num_filtered_too_many_N_bases = 0;
+    uint64_t num_filtered_coverage_limit_bases = 0;
+
     
     //debug
     //cerr << "min_quality_score "     << (int)min_quality_score  << endl;
@@ -113,15 +116,15 @@ namespace breseq {
 
         // Discard sequences that are too short
         if ( _read_length_min && (on_sequence.length() < _read_length_min) ) {
-          min_length_filtered_reads++;
-          min_length_filtered_bases += on_sequence.length();
+          num_filtered_too_short_reads++;
+          num_filtered_too_short_bases += on_sequence.length();
           continue;
         }
         
         // Discard sequences that are 50% or more N.
         if ( _max_N_fraction && (_max_N_fraction * static_cast<double>(on_sequence.length()) <= static_cast<double>(on_sequence.m_base_counts[base_list_N_index]) )) {
           num_filtered_too_many_N_reads++;
-          N_filtered_bases += on_sequence.length();
+          num_filtered_too_many_N_bases += on_sequence.length();
           continue;
         }
         
@@ -138,7 +141,7 @@ namespace breseq {
         
         if (same_base_filtered)  {
           num_filtered_same_base_reads++;
-          same_base_filtered_bases += on_sequence.length();
+          num_filtered_same_base_bases += on_sequence.length();
           continue;
         }
         
@@ -183,6 +186,10 @@ namespace breseq {
       
     }
     
+    // We figure out filtering over the coverage limit as what was not looked at
+    num_filtered_coverage_limit_reads = num_original_reads - num_reads - num_filtered_too_short_reads - num_filtered_same_base_reads -num_filtered_too_many_N_reads;
+    num_filtered_coverage_limit_bases = num_original_bases - num_bases - num_filtered_too_short_bases - num_filtered_same_base_bases - num_filtered_too_many_N_bases;
+    
     converted_fastq_name = convert_file_name;
     
     // quality scores are in SANGER at this point
@@ -196,30 +203,36 @@ namespace breseq {
     string display_N_percent = to_string(_max_N_fraction);
     
     if (filter_reads) {
-      if (num_filtered_too_many_N_reads + num_filtered_same_base_reads + min_length_filtered_reads == 0) {
+      if (num_filtered_too_many_N_reads + num_filtered_same_base_reads + num_filtered_too_short_reads + num_filtered_coverage_limit_reads == 0) {
         cerr << "    Filtered reads: none" << endl;
       } else {
         
-        if (min_length_filtered_reads) {
-          cerr << "    Filtered reads: " << setw(width_for_reads) << min_length_filtered_reads;
-          cerr << " bases: "<< setw(width_for_bases) << min_length_filtered_bases;
+        if (num_filtered_too_short_reads) {
+          cerr << "    Filtered reads: " << setw(width_for_reads) << num_filtered_too_short_reads;
+          cerr << " bases: "<< setw(width_for_bases) << num_filtered_too_short_bases;
           cerr << " (<" << _read_length_min << " bases long)" << endl;
         }
         if (num_filtered_too_many_N_reads) {
           string percentage = formatted_double(100 * _max_N_fraction, 1).to_string();
           cerr << "    Filtered reads: " << setw(width_for_reads) << num_filtered_too_many_N_reads;
-          cerr << " bases: "<< setw(width_for_bases) << N_filtered_bases;
+          cerr << " bases: "<< setw(width_for_bases) << num_filtered_too_many_N_bases;
           cerr << " (≥" << percentage << "% bases N)" << endl;
         }
         if (num_filtered_same_base_reads) {
           string percentage = formatted_double(100 * _max_same_base_fraction, 1).to_string();
           cerr << "    Filtered reads: " << setw(width_for_reads) << num_filtered_same_base_reads;
-          cerr << " bases: "<< setw(width_for_bases) << same_base_filtered_bases;
+          cerr << " bases: "<< setw(width_for_bases) << num_filtered_same_base_bases;
           cerr << " (≥" << percentage << "% same base)" << endl;
+        }
+        
+        if (num_filtered_coverage_limit_reads) {
+          cerr << "    Filtered reads: " << setw(width_for_reads) << num_filtered_coverage_limit_reads;
+          cerr << " bases: "<< setw(width_for_bases) << num_filtered_coverage_limit_bases;
+          cerr << " (coverage limit option)" << endl;
         }
       }
     }
-    cerr << "    Analyzed reads: " << num_reads << " bases: "<< num_bases << endl;
+    cerr << "    Analyzed reads: " << setw(width_for_reads) << num_reads << " bases: " << setw(width_for_bases) << num_bases << endl;
 
     
     double read_length_avg = static_cast<double>(num_bases) / static_cast<double>(num_reads);
@@ -229,9 +242,10 @@ namespace breseq {
                                  read_length_max, 
                                  read_length_avg,
                                  num_original_reads,
-                                 min_length_filtered_reads,
+                                 num_filtered_too_short_reads,
                                  num_filtered_same_base_reads,
                                  num_filtered_too_many_N_reads,
+                                 num_filtered_coverage_limit_reads,
                                  num_reads, 
                                  min_quality_score, 
                                  max_quality_score, 

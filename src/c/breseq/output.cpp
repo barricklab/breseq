@@ -1056,6 +1056,8 @@ string formatted_mutation_annotation(const cDiffEntry& mut)
     vector<string> codon_number_list = split(mut.get("codon_number"), cReferenceSequences::multiple_separator);
     ASSERT(mut.entry_exists("codon_position"), "Missing codon_position");
     vector<string> codon_position_list = split(mut.get("codon_position"), cReferenceSequences::multiple_separator);
+    ASSERT(mut.entry_exists("gene_position"), "Missing gene_position");
+    vector<string> gene_position_list = split(mut.get("gene_position"), cReferenceSequences::multiple_separator);
     
     // These may or may not exist... only added if there was a nonzero value
     vector<string> multiple_polymorphic_SNPs_in_same_codon_list;
@@ -1068,9 +1070,13 @@ string formatted_mutation_annotation(const cDiffEntry& mut)
       codon_position_is_indeterminate_list = split(mut.get("codon_position_is_indeterminate"), cReferenceSequences::multiple_separator);
     }
     
-    for (size_t i=0; i<snp_type_list.size(); i++) {
     
+    // One among these can still be noncoding - we are just guaranteed that at least one is coding
+    for (size_t i=0; i<snp_type_list.size(); i++) {
+      
       if (i>0) s+= cReferenceSequences::html_multiple_separator;
+      
+      if  ( (snp_type_list[i] == "nonsynonymous") || (snp_type_list[i] == "synonymous") || (snp_type_list[i] == "nonsense") ) {
       
       s += font("class=\"snp_type_" + snp_type_list[i] + "\"", aa_ref_seq_list[i] + aa_position_list[i] + aa_new_seq_list[i]);
       
@@ -1089,6 +1095,10 @@ string formatted_mutation_annotation(const cDiffEntry& mut)
       
       if (codon_position_is_indeterminate_list.size() && (codon_position_is_indeterminate_list[i] == "1"))
         s+= "&ordm;";
+      } else {
+        // Noncoding
+        s+= nonbreaking(gene_position_list[i]);
+      }
     }
   }
   else // other SNP/mutation types that don't give amino acid change or no snp change

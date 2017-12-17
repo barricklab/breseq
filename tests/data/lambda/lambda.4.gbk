@@ -50,34 +50,25 @@ FEATURES             Location/Qualifiers
                      WVQDAGEYLHMMSDAGIRIKGE"
                      /product="ea22"
      gene            complement(1738..1923)
-                     /locus_tag="lambdap37"
+                     /locus_tag="lambdap37_made_noncoding"
                      /db_xref="GeneID:2703506"
                      /gene="orf61"
-     CDS             complement(1738..1923)
-                     /locus_tag="lambdap37"
-                     /protein_id="NP_040613.1"
+     RNA             complement(1738..1923)
+                     /locus_tag="lambdap37_made_noncoding"
                      /gene="orf61"
-                     /transl_table=11
+                     /pseudo
                      /db_xref="GI:9626277"
                      /db_xref="GeneID:2703506"
-                     /codon_start=1
-                     /translation="MRETRYDNHGMHFSGSGLHILCAYACRHGTCSMTPQQENALRSI
-                     ARQANSEIKKSQTAVSG"
                      /product="hypothetical protein"
      gene            complement(1904..2095)
-                     /locus_tag="lambdap38"
+                     /locus_tag="lambdap38_made_noncoding"
                      /db_xref="GeneID:2703507"
                      /gene="orf63"
-     CDS             complement(1904..2095)
-                     /locus_tag="lambdap38"
-                     /protein_id="NP_040614.1"
+     RNA             complement(1904..2095)
+                     /locus_tag="lambdap38_made_noncoding"
                      /gene="orf63"
-                     /transl_table=11
                      /db_xref="GI:9626278"
                      /db_xref="GeneID:2703507"
-                     /codon_start=1
-                     /translation="MHKASSVELRTSIEMAHSLAQIGIRFVPIPVETDEEFHTLAASL
-                     SQKLEMMVAKAEADERNQV"
                      /product="hypothetical protein"
      gene            complement(2068..2250)
                      /locus_tag="lambdap39"

@@ -25,22 +25,13 @@ FEATURES             Location/Qualifiers
                      RKAHWTVRH"
                      /product="Tail fiber protein"
      gene            complement(747..1367)
-                     /locus_tag="lambdap90"
+                     /locus_tag="lambdap90_made_noncoding"
                      /db_xref="GeneID:3827061"
                      /gene="orf206b"
-     CDS             complement(747..1367)
-                     /locus_tag="lambdap90"
-                     /protein_id="NP_040603.1"
-                     /gene="orf206b"
-                     /transl_table=11
-                     /db_xref="GI:9626267"
+     RNA             complement(747..1367)
+                     /locus_tag="lambdap90_made_noncoding"
                      /db_xref="GeneID:3827061"
-                     /codon_start=1
-                     /translation="MLLVALLSCTIPFLVVSASSSATAEAISSARFAEFFARIAAASA
-                     ALLLCDADTALPAASVAFVDAVDALPAAAVFASAAAEALRSAAVSDDLAFVSDVFAAL
-                     AEFSAAVAEEAARPALDDAFVSDDFAASFEATASRAEVAASDAFVAAVEADVAADCCD
-                     AAAFVSDVFAAPALVAAAFFEDSAAAALFSASVAFADAASAPEDAS"
-                     /product="hypothetical protein"
+                     /gene="orf206b"
      gene            1629..2573
                      /locus_tag="lambdap28"
                      /db_xref="GeneID:2703519"

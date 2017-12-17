@@ -103,6 +103,34 @@ namespace breseq {
   };
   typedef vector<BaseSubstitutionEffect> SequenceBaseSubstitutionEffects;
   
+  inline BaseSubstitutionEffect string_to_bse(const string& s) {
+    if (s == "intergenic") return intergenic_base_substitution;
+    if (s == "noncoding") return noncoding_base_substitution;
+    if (s == "pseudogene") return pseudogene_base_substitution;
+    if (s == "synonymous") return synonymous_coding_base_substitution;
+    if (s == "nonsynonymous") return nonsynonymous_coding_base_substitution;
+    if (s == "nonsense") return nonsense_coding_base_substitution;
+    if (s == "unknown") return unknown_coding_base_substitution;
+    if (s == "no_change") return no_change_base_substitution;
+
+    ERROR("Attempt to convert unrecognized string to base substititon effect: " + s);
+    return unknown_coding_base_substitution;
+  }
+
+  inline string bse_to_string(BaseSubstitutionEffect bse) {
+    switch (bse){
+        case intergenic_base_substitution: return "intergenic";
+        case noncoding_base_substitution: return "noncoding";
+        case pseudogene_base_substitution: return "pseudogene";
+        case synonymous_coding_base_substitution: return "synonymous";
+        case nonsynonymous_coding_base_substitution: return "nonsynonymous";
+        case nonsense_coding_base_substitution: return "nonsense";
+        case unknown_coding_base_substitution: return "unknown";
+        case no_change_base_substitution: return "no_change";
+    }
+  }
+  
+  
   enum BaseType {
     intergenic_base,
     noncoding_base,
