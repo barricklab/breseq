@@ -221,13 +221,13 @@ uint32_t alignment_wrapper::query_start_1() const {
   // traverse the cigar array
   uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
   int32_t pos = 1;
-	
+  
   for(uint32_t j=0; j<=_a->core.n_cigar; j++) {
     uint32_t op = cigar[j] & BAM_CIGAR_MASK;
     uint32_t len = cigar[j] >> BAM_CIGAR_SHIFT;
 		
     // if we encounter padding, or a gap in reference then we are done
-    if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP)) {
+    if(op != BAM_CSOFT_CLIP) {
 			break;
     }
     
@@ -241,16 +241,18 @@ uint32_t alignment_wrapper::query_start_1() const {
 uint32_t alignment_wrapper::query_end_1() const {
   // traverse the cigar array
   uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
-  int32_t pos = bam_cigar2qlen(&_a->core, cigar); // total length of the query
+  int32_t pos = bam_cigar2qlen(&_a->core, cigar); // total length of the query includes soft clipped nucleotides
   
-  for(uint32_t j=(_a->core.n_cigar-1); j>0; j--) {
+  uint32_t j;
+  for(j=(_a->core.n_cigar-1); j>0; j--) {
     uint32_t op = cigar[j] & BAM_CIGAR_MASK;
     uint32_t len = cigar[j] >> BAM_CIGAR_SHIFT;
     
-    // if we encounter padding, or a gap in reference then we are done
-    if((op != BAM_CSOFT_CLIP) && (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP)) {
+    // if we encounter non-padding padding, or a gap in reference then we are done
+    if(op != BAM_CSOFT_CLIP) {
       break;
     }
+
     pos -= len;
   }
 	
