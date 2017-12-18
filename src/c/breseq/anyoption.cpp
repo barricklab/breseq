@@ -411,8 +411,8 @@ namespace breseq {
 			{
 				int match_at = parseGNU(argv[i] + 2); /* skip -- */
         if (match_at >= 0 && i < argc - 1) /* found match */ {
-          cout << argv[i] << endl;
-          cout << argv[i+1] << endl;
+          //cout << argv[i] << endl;
+          //cout << argv[i+1] << endl;
 					setValue(options[match_at], argv[++i]);
         }
 			}

@@ -53,7 +53,7 @@ FEATURES             Location/Qualifiers
                      /locus_tag="lambdap37_made_noncoding"
                      /db_xref="GeneID:2703506"
                      /gene="orf61"
-     RNA             complement(1738..1923)
+     ncRNA           complement(1738..1923)
                      /locus_tag="lambdap37_made_noncoding"
                      /gene="orf61"
                      /pseudo
