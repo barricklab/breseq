@@ -1627,7 +1627,7 @@ int breseq_default_action(int argc, char* argv[])
   // 05 alignment_correction
 	// * Resolve matches to new junction candidates
 	//
-	if (settings.do_step(settings.alignment_correction_done_file_name, "Resolving alignments with junction candidates"))
+	if (settings.do_step(settings.alignment_correction_done_file_name, "Resolving best read alignments"))
 	{
 		create_path(settings.alignment_resolution_path);
 

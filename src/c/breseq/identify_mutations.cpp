@@ -110,8 +110,7 @@ bool rejected_RA_polymorphism_coverage(cDiffEntry& ra,
   bool rejected = false;
 
   // Minimum coverage on both strands for both reference and new allele
-  if (settings.polymorphism_minimum_new_coverage_each_strand > 0) {
-    double polymorphism_coverage_limit_both_bases = settings.polymorphism_minimum_new_coverage_each_strand;
+  if (settings.polymorphism_minimum_variant_coverage_each_strand > 0) {
     bool passed = true;
     vector<string> top_bot;
     double top;
@@ -120,18 +119,112 @@ bool rejected_RA_polymorphism_coverage(cDiffEntry& ra,
     top_bot = split(ra[MAJOR_COV], "/");
     top = from_string<double>(top_bot[0]);
     bot = from_string<double>(top_bot[1]);
-    passed = passed && (top >= polymorphism_coverage_limit_both_bases);
-    passed = passed && (bot >= polymorphism_coverage_limit_both_bases);
+    passed = passed && (top >= settings.polymorphism_minimum_variant_coverage_each_strand);
+    passed = passed && (bot >= settings.polymorphism_minimum_variant_coverage_each_strand);
     
     top_bot = split(ra[MINOR_COV], "/");
     top = from_string<double>(top_bot[0]);
     bot = from_string<double>(top_bot[1]);
-    passed = passed && (top >= polymorphism_coverage_limit_both_bases);
-    passed = passed && (bot >= polymorphism_coverage_limit_both_bases);
+    passed = passed && (top >= settings.polymorphism_minimum_variant_coverage_each_strand);
+    passed = passed && (bot >= settings.polymorphism_minimum_variant_coverage_each_strand);
     
     if (!passed) {
       rejected = true;
-      ra.add_reject_reason("STRAND_COVERAGE");
+      ra.add_reject_reason("VARIANT_STRAND_COVERAGE");
+    }
+  }
+  
+  if (settings.polymorphism_minimum_total_coverage_each_strand > 0) {
+    bool passed = true;
+    vector<string> top_bot;
+    double top;
+    double bot;
+    
+    top_bot = split(ra[TOTAL_COV], "/");
+    top = from_string<double>(top_bot[0]);
+    bot = from_string<double>(top_bot[1]);
+    passed = passed && (top >= settings.polymorphism_minimum_total_coverage_each_strand);
+    passed = passed && (bot >= settings.polymorphism_minimum_total_coverage_each_strand);
+    
+    if (!passed) {
+      rejected = true;
+      ra.add_reject_reason("TOTAL_STRAND_COVERAGE");
+    }
+  }
+  
+  if (settings.polymorphism_minimum_variant_coverage > 0) {
+    
+    bool passed = true;
+    vector<string> top_bot;
+    double top;
+    double bot;
+    
+    top_bot = split(ra[MAJOR_COV], "/");
+    top = from_string<double>(top_bot[0]);
+    bot = from_string<double>(top_bot[1]);
+    passed = passed && (top+bot >= settings.polymorphism_minimum_variant_coverage);
+    
+    top_bot = split(ra[MINOR_COV], "/");
+    top = from_string<double>(top_bot[0]);
+    bot = from_string<double>(top_bot[1]);
+    passed = passed && (top+bot >= settings.polymorphism_minimum_variant_coverage);
+    
+    if (!passed) {
+      rejected = true;
+      ra.add_reject_reason("VARIANT_COVERAGE");
+    }
+  }
+  
+  if (settings.polymorphism_minimum_total_coverage > 0) {
+    vector<string> top_bot = split(ra[TOTAL_COV], "/");
+    if ( from_string<double>(top_bot[0]) + from_string<double>(top_bot[1]) < settings.polymorphism_minimum_total_coverage ) {
+      ra.add_reject_reason("TOTAL_COVERAGE");
+      rejected = true;
+    }
+  }
+  
+  return rejected;
+}
+  
+bool rejected_RA_consensus_coverage(cDiffEntry& ra,
+                                    cReferenceSequences& ref_seq_info,
+                                    const Settings& settings
+                                    )
+{
+  (void)ref_seq_info;
+  bool rejected = false;
+  
+  if (settings.consensus_minimum_variant_coverage_each_strand > 0) {
+    vector<string> top_bot = split(ra[MAJOR_COV], "/");
+    if ( (from_string<double>(top_bot[0]) < settings.consensus_minimum_variant_coverage_each_strand) ||
+        (from_string<double>(top_bot[1]) < settings.consensus_minimum_variant_coverage_each_strand) ) {
+      ra.add_reject_reason("VARIANT_STRAND_COVERAGE");
+      rejected = true;
+    }
+  }
+  
+  if (settings.consensus_minimum_total_coverage_each_strand > 0) {
+    vector<string> top_bot = split(ra[TOTAL_COV], "/");
+    if ( (from_string<double>(top_bot[0]) < settings.consensus_minimum_variant_coverage_each_strand) ||
+        (from_string<double>(top_bot[1]) < settings.consensus_minimum_variant_coverage_each_strand) ) {
+      ra.add_reject_reason("TOTAL_STRAND_COVERAGE");
+      rejected = true;
+    }
+  }
+  
+  if (settings.consensus_minimum_variant_coverage > 0) {
+    vector<string> top_bot = split(ra[MAJOR_COV], "/");
+    if ( from_string<double>(top_bot[0]) + from_string<double>(top_bot[1]) < settings.consensus_minimum_total_coverage ) {
+      ra.add_reject_reason("VARIANT_COVERAGE");
+      rejected = true;
+    }
+  }
+  
+  if (settings.consensus_minimum_total_coverage > 0) {
+    vector<string> top_bot = split(ra[TOTAL_COV], "/");
+    if ( from_string<double>(top_bot[0]) + from_string<double>(top_bot[1]) < settings.consensus_minimum_total_coverage ) {
+      ra.add_reject_reason("TOTAL_COVERAGE");
+      rejected = true;
     }
   }
   
@@ -293,13 +386,9 @@ bool test_RA_evidence_CONSENSUS_mode(
     ra.add_reject_reason("FREQUENCY_CUTOFF");
   }
   
-  // Drop down to a polymorphism if we don't pass the consensus strand criterion
-  if ( (prediction == consensus) && (settings.consensus_minimum_new_coverage_each_strand > 0) ) {
-    vector<string> top_bot = split(ra[MAJOR_COV], "/");
-    if ( (from_string<double>(top_bot[0]) < settings.consensus_minimum_new_coverage_each_strand) ||
-        (from_string<double>(top_bot[1]) < settings.consensus_minimum_new_coverage_each_strand) ) {
-      ra.add_reject_reason("STRAND_COVERAGE");
-    }
+  // Drop down to a polymorphism if we don't pass the consensus read coverage criterion
+  if (prediction == consensus) {
+    rejected_RA_consensus_coverage(ra, ref_seq_info, settings);
   }
   
   // Succeed and bail now if still consensus prediction or keep as a failed consensus
@@ -431,13 +520,7 @@ bool test_RA_evidence_POLYMORPHISM_mode(
   }
   
   // Drop down to a rejected polymorphism if we don't pass the consensus strand criterion
-  if (settings.consensus_minimum_new_coverage_each_strand > 0) {
-    vector<string> top_bot = split(ra[MAJOR_COV], "/");
-    if ( (from_string<double>(top_bot[0]) < settings.consensus_minimum_new_coverage_each_strand) ||
-        (from_string<double>(top_bot[1]) < settings.consensus_minimum_new_coverage_each_strand) ) {
-      ra.add_reject_reason("STRAND_COVERAGE");
-    }
-  }
+  rejected_RA_consensus_coverage(ra, ref_seq_info, settings);
   
   if (ra.entry_exists(REJECT)) {
     ra[CONSENSUS_REJECT] = ra[REJECT];

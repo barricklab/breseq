@@ -345,13 +345,20 @@ namespace breseq
     bool print_mutation_identification_per_position_file;
 
     double mutation_log10_e_value_cutoff;                         // Default = 10
-    uint32_t consensus_minimum_new_coverage_each_strand;            // Default = 0
+    uint32_t consensus_minimum_variant_coverage;                  // Default = 0
+    uint32_t consensus_minimum_total_coverage;                    // Default = 0
+    uint32_t consensus_minimum_variant_coverage_each_strand;      // Default = 0
+    uint32_t consensus_minimum_total_coverage_each_strand;        // Default = 0
+
     double consensus_frequency_cutoff;                            // Default = 0.8
     
     double polymorphism_log10_e_value_cutoff;                     // Default = mutation_log10_e_value_cutoff = 10
 		double polymorphism_bias_p_value_cutoff;                      // Default = 0.05 for mixed base | 0 (OFF) for polymorphism
 		double polymorphism_frequency_cutoff;                         // Default = 0.1 for mixed base | 0.0 for polymorphism
-		uint32_t polymorphism_minimum_new_coverage_each_strand;        // Default = 1
+    uint32_t polymorphism_minimum_variant_coverage;               // Default = 0
+    uint32_t polymorphism_minimum_total_coverage;                 // Default = 0
+    uint32_t polymorphism_minimum_variant_coverage_each_strand;   // Default = 0
+		uint32_t polymorphism_minimum_total_coverage_each_strand;     // Default = 0 for mixed base | 2 for polymorphism
 		uint32_t polymorphism_reject_indel_homopolymer_length;        // Default = 0 (OFF)
     uint32_t polymorphism_reject_surrounding_homopolymer_length;  // Default = 0 (OFF)
 		bool no_indel_polymorphisms;                                  // Default = false

@@ -3580,7 +3580,7 @@ uint32_t alignment_mismatches(const alignment_wrapper& a, const cReferenceSequen
       read_pos++;
       ref_pos++;
     }
-    else if (op != BAM_CHARD_CLIP) {
+    else if ( (op != BAM_CHARD_CLIP) && (op != BAM_CREF_SKIP) ) {
       ERROR("Unrecognized CIGAR operation in string: " + a.cigar_string());
     }
   }

@@ -792,16 +792,34 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     HTML << tr(td("Consensus frequency cutoff")
                + td((settings.consensus_frequency_cutoff == 0) ? "OFF" : to_string<double>(settings.consensus_frequency_cutoff))
                );
-    HTML << tr(td("Consensus minimum coverage each strand")
-               + td((settings.consensus_minimum_new_coverage_each_strand == 0) ? "OFF" : to_string<int32_t>(settings.consensus_minimum_new_coverage_each_strand))
+    HTML << tr(td("Consensus minimum variant coverage each strand")
+               + td((settings.consensus_minimum_variant_coverage_each_strand == 0) ? "OFF" : to_string<int32_t>(settings.consensus_minimum_variant_coverage_each_strand))
+               );
+    HTML << tr(td("Consensus minimum total coverage each strand")
+               + td((settings.consensus_minimum_total_coverage_each_strand == 0) ? "OFF" : to_string<int32_t>(settings.consensus_minimum_total_coverage_each_strand))
+               );
+    HTML << tr(td("Consensus minimum variant coverage")
+               + td((settings.consensus_minimum_variant_coverage == 0) ? "OFF" : to_string<int32_t>(settings.consensus_minimum_variant_coverage))
+               );
+    HTML << tr(td("Consensus minimum total coverage")
+               + td((settings.consensus_minimum_total_coverage == 0) ? "OFF" : to_string<int32_t>(settings.consensus_minimum_total_coverage))
                );
 
     HTML << tr(td("Polymorphism E-value cutoff") + td(s(settings.polymorphism_log10_e_value_cutoff)));
     HTML << tr(td("Polymorphism frequency cutoff")
                + td((settings.polymorphism_frequency_cutoff == 0) ? "OFF" : to_string<double>(settings.polymorphism_frequency_cutoff))
                );
-    HTML << tr(td("Polymorphism minimum coverage each strand") 
-               + td((settings.polymorphism_minimum_new_coverage_each_strand == 0) ? "OFF" : to_string<int32_t>(settings.polymorphism_minimum_new_coverage_each_strand))
+    HTML << tr(td("Polymorphism minimum variant coverage each strand")
+               + td((settings.polymorphism_minimum_variant_coverage_each_strand == 0) ? "OFF" : to_string<int32_t>(settings.polymorphism_minimum_variant_coverage_each_strand))
+               );
+    HTML << tr(td("Polymorphism minimum total coverage each strand")
+               + td((settings.polymorphism_minimum_total_coverage_each_strand == 0) ? "OFF" : to_string<int32_t>(settings.polymorphism_minimum_total_coverage_each_strand))
+               );
+    HTML << tr(td("Polymorphism minimum variant coverage")
+               + td((settings.polymorphism_minimum_variant_coverage == 0) ? "OFF" : to_string<int32_t>(settings.polymorphism_minimum_variant_coverage))
+               );
+    HTML << tr(td("Polymorphism minimum total coverage")
+               + td((settings.polymorphism_minimum_total_coverage == 0) ? "OFF" : to_string<int32_t>(settings.polymorphism_minimum_total_coverage))
                );
     HTML << tr(td("Polymorphism bias cutoff") 
                + td((settings.polymorphism_bias_p_value_cutoff == 0) ? "OFF" : to_string<double>(settings.polymorphism_bias_p_value_cutoff))
@@ -1842,10 +1860,23 @@ string decode_reject_reason(const string& reject)
   {
     return "Biased read strand distribution supporting prediction.";
   }
-  else if (reject == "STRAND_COVERAGE")
+  else if (reject == "VARIANT_COVERAGE")
   {
-    return "Not supported by required number of reads on both strands.";
+    return "Variant not supported by required number of total reads.";
   }
+  else if (reject == "TOTAL_COVERAGE")
+  {
+    return "Genome position does not have required minimum number of aligned reads.";
+  }
+  else if (reject == "VARIANT_STRAND_COVERAGE")
+  {
+    return "Variant not supported by required number of reads on each strand.";
+  }
+  else if (reject == "TOTAL_STRAND_COVERAGE")
+  {
+    return "Genome position does not have required minimum number of aligned reads on each strand.";
+  }
+  
   else if (reject == "INDEL_HOMOPOLYMER")
   {
     return "Polymorphic indel expands or contracts a homopolymer stretch.";
