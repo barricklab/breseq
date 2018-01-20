@@ -7,9 +7,18 @@ Version 0.32.0
    * Corrected case in polymorphism mode where failing consensus mutations could be  
      incorrectly predicted if a polymorphism was rejected. More thorough and consistent
      output of rejection information for RA evidence.
+   * Updates to VCF output.
    * Fixed problem reading some FASTQ files (discovered on Nanopore data).
-   * New options to use custom bowtie2 options for alignment. (Only intended for expert users!)
+   * More granular options to filter predictions on the coverage of reads supporting them:
+     e.g., --polymorphism-minimum-variant-coverage
+           --polymorphism-minimum-total-coverage
+           --polymorphism-minimum-variant-coverage-each-strand
+           --polymorphism-minimum-total-coverage-each-strand
+     WARNING: Previous versions of these options have been renamed for consistency.
+   * New options to customize bowtie2 options used for alignment. (Only intended for expert users!)
+       --bowtie2-scoring, --bowtie2-stage1, --bowtie2-stage2, --bowtie2-junction
    * Removed extra slash in paths to invoke R scripts.
+   * Removed split alignment pieces that were completely soft-padded in output BAM file.
    * C++11 is now required for compilation. Optimization added to default compiler settings.
    * Fixed compatibility issues when compiling with certain versions of GCC.
 

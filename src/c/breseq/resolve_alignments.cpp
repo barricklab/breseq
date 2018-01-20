@@ -608,7 +608,7 @@ void resolve_alignments(
 			{
 				string side_key = "side_" + to_string(side);
 
-				// Do not count for coverage if it is redundant!!
+				// Do not count for coverage or write it out if it is redundant!!
 				if (from_string<int32_t>(item[side_key + "_redundant"])) continue;
         
 				// Write out match corresponding to this part to SAM file
@@ -2243,10 +2243,6 @@ void junction_read_counter::fetch_callback ( const alignment_wrapper& a )
   
   // read is to be ignored
   if (_ignore_read_names.count(a.read_name())
-      /* @ded not working as intended. Reads that end with -M1/2 are still being counted. unsure why
-      || _ignore_read_names.count(a.read_name() + "-M1")
-      || _ignore_read_names.count(a.read_name() + "-M2")
-      )*/
       ||a.read_name().find("-M1") != string::npos
       ||a.read_name().find("-M2") != string::npos
       )   

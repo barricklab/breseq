@@ -757,6 +757,7 @@ void tam_file::write_alignments(
 	}
 }
 
+// splits one alignment into multiple separate entries if it has indels
 void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignment_wrapper& a, const alignment_list& alignments)
 {
   // Debug
@@ -890,20 +891,21 @@ void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
 // This is probably the most complicated function in all of breseq.
 // Abandon all hope, ye who enter here.
 /*
-	$a, 					# CJ: SAM alignment object for the read to the candidate junction
-	$fastq_file_index, 		# which fastq file this read came from
-	$seq_id, 				# REFERENCE: sequence id
-	$reference_pos, 		# REFERENCE: position of this junction side
-	$reference_strand, 		# REFERENCE: strand of this junction side (-1 or +1)
-	$reference_overlap, 	# REFERENCE: amount of overlap in the reference coords on this side
-	$junction_side, 		# CJ: side of the junction (0 or 1) that we are writing
-	$junction_flanking, 	# CJ: number of bases before overlap in the candidate junction sequence
-	$junction_overlap, 		# CJ: amount of overlap in the candidate junction sequence that we aligned to
-	$trim					# CJ: list with two items, indicating what the trim on each end is
+	a, 					                  # SAM alignment object for the read to the candidate junction
+  readjunction_reference_name,  # Name of junction reference for this alignment (only used for debug output)
+	fastq_file_index, 		        # Which fastq file this read came from
+	seq_id, 				              # REFERENCE: sequence id
+	reference_pos, 		            # REFERENCE: position of this junction side
+	reference_strand, 		        # REFERENCE: strand of this junction side (-1 or +1)
+	reference_overlap, 	          # REFERENCE: amount of overlap in the reference coords on this side
+  junction_side, 		            # JUNCTION: side of the junction (0 or 1) that we are writing
+	junction_flanking, 	          # JUNCTION: number of bases before overlap in the candidate junction sequence
+	junction_overlap, 		        # JUNCTION: amount of overlap in the candidate junction sequence that we aligned to
+	trim					                # List with two items, indicating what the trim on each end is
 */
 void tam_file::write_moved_alignment(
                                      const alignment_wrapper& a, 
-                                     const string& rname,
+                                     const string& junction_reference_name,
                                      uint32_t fastq_file_index, 
                                      const string& seq_id, 
                                      int32_t reference_pos, 
@@ -924,7 +926,7 @@ void tam_file::write_moved_alignment(
 	if (verbose)
 	{
 		cerr << "qname                 = " << a.read_name() << endl;
-		cerr << "rname                 = " << rname << endl;
+		cerr << "junction_ref_name     = " << junction_reference_name << endl;
 		cerr << "seq_id                = " << seq_id << endl;
 		cerr << "reference_pos	       = " << reference_pos << endl;
 		cerr << "reference_strand      = " << reference_strand << endl;
@@ -1210,6 +1212,7 @@ void tam_file::write_moved_alignment(
 	//// is correct and that there are no negative nums
 	stringstream cigar_string_ss;
 	uint32_t cigar_length = 0;
+  bool all_soft_padded = true;
 	for (uint32_t i = 0; i < cigar_list.size(); i++) //CIGAR
 	{
 		char op = cigar_list[i].first;
@@ -1218,8 +1221,15 @@ void tam_file::write_moved_alignment(
 		assert(len > 0);
 		cigar_string_ss << len << op;
 		if (op != 'D') cigar_length += len;
+    if (op != 'S') all_soft_padded = false;
 	}
 	string cigar_string = cigar_string_ss.str();
+  
+  ////
+  //// Don't write if this side turns out to be all soft-padded!  Issue #146
+  ////
+  
+  if (all_soft_padded) return;
   
 	////
 	//// Assemble the quality score string
