@@ -4381,13 +4381,16 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
           // We have to insert a copy of the IS element first (so all copies end up between repeats)
           if (mediated_string.size()) {
             
-            // inserted AFTER specified position
+            // inserted BEFORE specified position
             new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position-1, mediated_string, (to_string(mut._type) + " " + mut._id));
+            
+            duplicated_region.offset(mediated_string.size());
             
             // We've repeated the sequence, now it's time to repeat all the features
             // inside of and including the repeat region.
             
             // Starts at specified position (NOT after it)
+            // For the repeat we MUST use the original reference sequence!
             new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position, 0, 0, ref_seq_info, seq_id_picked, from_string<int16_t>(mut[MEDIATED_STRAND]), repeat_feature_picked);
             
             // This is constructed *only* for debugging output!
@@ -4397,15 +4400,19 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
           
           // inserted AFTER specified position
           new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position-1, duplicated_sequence_one_copy, (to_string(mut._type) + " " + mut._id));
+          duplicated_region.offset(duplicated_sequence_one_copy.size());
           
           // Starts at specified position (NOT after it)
-          new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position, 0, 0, ref_seq_info, mut[SEQ_ID], +1, duplicated_region);
+          // For the duplication, use the current, modified genome!
+          new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position, 0, 0, new_ref_seq_info, mut[SEQ_ID], +1, duplicated_region);
 
           // TEMPORARY check
           new_ref_seq_info.update_feature_lists();
           
+          // Note: the wrapped region does not need to be offset in new ref coords. Why? It starts at position 1
+          // and all of the new bases therefore do not shift its position
           if (wraps_around_circular_chromosome) {
-            new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position + (new_ref_seq_info.get_sequence_length(mut[SEQ_ID]) - position) + 1, 0, 0, ref_seq_info, mut[SEQ_ID], +1, duplicated_region_wrap);
+            new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position + (new_ref_seq_info.get_sequence_length(mut[SEQ_ID]) - position) + 1, 0, 0, new_ref_seq_info, mut[SEQ_ID], +1, duplicated_region_wrap);
           }
           
           // This is constructed *only* for debugging output!

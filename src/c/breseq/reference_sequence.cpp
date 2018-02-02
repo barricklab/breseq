@@ -186,6 +186,7 @@ namespace breseq {
   // Successfully checks all three feature lists.  m_features, m_genes, and m_repeats.
   void cAnnotatedSequence::replace_sequence_1(int32_t start_1, int32_t end_1, const string &replacement_seq, string mut_type, bool verbose)
   {
+    // verbose = true;
     ASSERT(start_1 <= end_1, "start (" + to_string(start_1) + ") not less than or equal to end (" + to_string(end_1) + ")");
     m_fasta_sequence.replace_sequence_1(start_1, end_1, replacement_seq);
     
@@ -545,7 +546,7 @@ namespace breseq {
   void cAnnotatedSequence::repeat_feature_1(int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& repeated_ref_seq_info, string& repeated_seq_id, int8_t strand, cLocation &repeated_region, bool verbose)
   {
     (void) verbose;
-    //verbose = true;
+    // verbose = true;
     
     int32_t new_start = pos;
     int32_t new_end = pos + repeated_region.get_end_1() - repeated_region.get_start_1();

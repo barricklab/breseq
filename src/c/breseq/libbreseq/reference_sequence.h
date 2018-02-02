@@ -250,6 +250,11 @@ namespace breseq {
       this->check_valid();
     }
     
+    void offset(int32_t shift) {
+      m_start_1 += shift;
+      m_end_1 += shift;
+    }
+    
     // This function is provided to not transiently create unallowed start/end combinations
     void set_start_end_1(int32_t start_1, int32_t end_1) {
       m_start_1 = start_1;
