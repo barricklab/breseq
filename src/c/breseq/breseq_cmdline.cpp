@@ -2159,6 +2159,7 @@ int breseq_default_action(int argc, char* argv[])
     // Add read count information to the JC entries -- call fails if no predictions, because BAM does not exist
     MutationPredictor mpj(ref_seq_info);
     mpj.prepare_junctions(settings, summary, jc_gd); // this step has to be done twice currently, which is a bit wasteful
+    
     assign_junction_read_counts(settings, summary, jc_gd);
 
     cGenomeDiff ra_mc_gd(settings.ra_mc_genome_diff_file_name);

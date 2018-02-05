@@ -47,8 +47,7 @@ int gdtools_usage()
   uout("Set and Filtering Operations:");
   uout << "SUBTRACT               remove mutations in one file from another" << endl;
   uout << "INTERSECT              keep shared mutations in two files" << endl;
-  uout << "UNION                  combine mutations, removing duplicates" << endl;
-  uout << "MERGE                  combine mutations, preserving duplicates" << endl;
+  uout << "UNION/MERGE            combine mutations, removing duplicates" << endl;
 	uout << "REMOVE                 remove mutations matching specified conditions" << endl;
 	uout << "MASK                   remove mutation predictions in masked regions" << endl;
   uout << "NOT-EVIDENCE           remove evidence not used by any mutations" << endl;
@@ -1064,6 +1063,11 @@ int do_annotate(int argc, char* argv[])
 	options.addUsage("  PHYLIP  Alignment file suitable for input into PHYLIP");
 	options.addUsage("  JSON  	JavaScript object notation file suitable for parsing");
 	options.addUsage("");
+	options.addUsage(" When multiple GD files are provided, the #=TITLE metadata line in each file is used to name each sample/column. If that information is not present, then the GD file name is used (removing the *.gd suffix).");
+	options.addUsage("");
+	options.addUsage("");
+	options.addUsage("");
+	
 	options.addUsage("In output, frequencies of 'D' mean that this mutation occurs within");
 	options.addUsageSameLine("a region that is deleted by a different mutation in the genome in question. Frequencies");
 	options.addUsageSameLine("of '?' indicate that there were not enough aligned reads to call a mutation at this position");
@@ -3559,10 +3563,10 @@ int main(int argc, char* argv[]) {
     return do_intersection(argc_new, argv_new);
   } else if (command == "UNION") {
     return do_union(argc_new, argv_new);
-  } else if (command == "SUBTRACT") {
-    return do_subtract(argc_new, argv_new);    
-  } else if (command == "MERGE") {
+	} else if (command == "MERGE") {
 		return do_union(argc_new, argv_new);
+  } else if (command == "SUBTRACT") {
+    return do_subtract(argc_new, argv_new);
   } else if (command == "WEIGHTS") {
     return do_weights(argc_new, argv_new);
 	} else if (command == "CONVERT") {

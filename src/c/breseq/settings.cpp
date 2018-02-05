@@ -202,6 +202,7 @@ namespace breseq
     ("contig-reference,c", "File containing reference sequences in GenBank, GFF3, or FASTA format. The same coverage distribution will be fit to all of the reference sequences in this file simultaneously. This is appropriate when they are all contigs from a genome that should be present with the same copy number. Use of this option will improve performance when there are many contigs and especially when some are very short (≤1,000 bases).", NULL, ADVANCED_OPTION)
     ("junction-only-reference,s", "File containing reference sequences in GenBank, GFF3, or FASTA format. These references are only used for calling junctions with other reference sequences. An example of appropriate usage is including a transposon sequence not present in a reference genome. Option may be provided multiple times for multiple files.", NULL, ADVANCED_OPTION)
     ("targeted-sequencing,t", "Reference sequences were targeted for ultra-deep sequencing (using pull-downs or amplicons). Do not fit coverage distribution.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("user-evidence-gd","User supplied Genome Diff file of JC and/or RA evidence items. The breseq output will report the support for these sequence changes even if they do not pass the normal filters for calling mutations in this sample.", "", ADVANCED_OPTION)
     ;
     
     
@@ -217,7 +218,7 @@ namespace breseq
     ;
     
     options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("bowtie2 mapping/alignment options", ADVANCED_OPTION);
+    options.addUsage("Bowtie2 Mapping/Alignment Options", ADVANCED_OPTION);
     options
     ("bowtie2-scoring", "All calls to bowtie2 must use the same commands for assigning scores to read alignments. Larger scores are assumed to be better by breseq. Each call to bowtie2 has this option added to its command line. (DEFAULT=\"" + this->bowtie2_scoring + "\")", "", ADVANCED_OPTION)
     ("bowtie2-stage1", "Settings for mapping criteria used for the stage 1 alignment. This step is normally meant for quickly aligning near-perfect matches. (DEFAULT=\"" + this->bowtie2_stage1 + "\")", "", ADVANCED_OPTION)
@@ -287,7 +288,6 @@ namespace breseq
     options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Experimental Options (Use at your own risk)", ADVANCED_OPTION);
     options
-    ("user-evidence-gd","User supplied genome diff file of JC or RA evidence to report support for, regardless of whether they would have been predicted as mutations.", "", ADVANCED_OPTION)
     ("cnv","Do experimental copy number variation prediction",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("cnv-tile-size", "Tile size for copy number variation prediction", 500, ADVANCED_OPTION)
     ("cnv-ignore-redundant", "Only consider non-redundant coverage when using cnv", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
@@ -595,6 +595,18 @@ namespace breseq
       this->header_genome_diff_file_name = options["header-genome-diff"];
   
 		this->post_option_initialize();
+    
+    //////// Check here for any conflicting options
+    
+    /*
+    if (this->user_evidence_genome_diff_file_name.size() && !this->polymorphism_prediction) {
+      ERROR("You must run breseq in polymorphism mode (-p) when supplying --user-evidence-gd.");
+    }
+    */
+    
+    ////////
+    
+    
     
     // Log the command line
     time_t stamp_time = time(NULL);

@@ -1,3 +1,7 @@
+Version 0.32.1
+   * Removed the gdtools MERGE subcommand (it had become equivalent to gdtools UNION).
+   * Fixed adding correct gene features to copies created by AMP mutations in gdtools APPLY.
+
 Version 0.32.0
    * If a mutation overlaps multiple genes, its effect on each gene is now annotated.
      (Previously only the first gene encountered was annotated.) The relevant Genome Diff 

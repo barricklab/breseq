@@ -1111,9 +1111,8 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
            && (from_string<int32_t>((*(_user_evidence_ra_list.front()))[INSERT_POSITION]) == insert_count)) {
       
       // Note! mut only exists as a valid record for comparison
-      // if output_ra_on_merits is true!!
       if ((passed_as_consensus_prediction || passed_as_polymorphism_prediction) && (*added_mut_p == *(_user_evidence_ra_list.front()))) {
-        // in this case we have already created a valid junction
+        // in this case we have already created a valid RA item
         (*added_mut_p)["user_defined"] = "1";
         
         // do not mark it as user_defined or there will be problems:
@@ -1146,7 +1145,8 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         double polymorphism_bonferroni_score = 10 * (-(log(ppred.likelihood_ratio_test_p_value)/log(10)) - _log10_ref_length);
         
         // These defs of major and minor base are not quite always accurate.
-        // because they only take from ref_base and new_base of the RA line
+        // because they only take into account ref_base and new_base of the RA line
+        // (and there could be a 3rd base that matters)
         // ---> in the future it may be better to KEEP the major and minor alleles and work with
         //      these instead, but that leads to its own issues
         mut[MAJOR_BASE] = (ppred.frequency > 0.5) ? best_base_char : second_best_base_char;
@@ -1155,6 +1155,17 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         
         // The frequency of the variant is always this, due to the way the ref_base is set as best_base_char
         mut[POLYMORPHISM_FREQUENCY] = formatted_double(1 - ppred.frequency, _polymorphism_precision_places, true).to_string();
+        
+        // Consensus mode
+        if (!_settings.polymorphism_prediction) {
+          if (from_string<double>(mut[POLYMORPHISM_FREQUENCY]) > 0.5 ) {
+            mut[FREQUENCY] = "1";
+          } else {
+            mut[FREQUENCY] = "0";
+          }
+        } else { // Polymorphism mode
+          mut[FREQUENCY] =  mut[POLYMORPHISM_FREQUENCY];
+        }
         
         // Genotype quality is for the top called genotype
         mut[CONSENSUS_SCORE] = formatted_double(consensus_bonferroni_score, kMutationScorePrecision).to_string();
