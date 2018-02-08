@@ -2289,9 +2289,9 @@ void Html_Mutation_Table_String::Item_Lines()
     if (!settings.no_evidence) {
       bool already_added_RA = false;
        
-      diff_entry_list_t mutation_evidence_list = gd.mutation_evidence_list(mut);
+      diff_entry_list_t in_evidence_list = gd.in_evidence_list(mut);
       
-      for (diff_entry_list_t::iterator evitr = mutation_evidence_list.begin(); evitr != mutation_evidence_list.end(); evitr ++) {  
+      for (diff_entry_list_t::iterator evitr = in_evidence_list.begin(); evitr != in_evidence_list.end(); evitr ++) {  
         cDiffEntry& evidence_item = **evitr;
 
         if (evidence_item._type == RA) {
@@ -2512,9 +2512,13 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
   {  
     diff_entry_ptr_t item(*itr);
     
-    diff_entry_ptr_t parent_item(gd.parent(*item));
-    if (parent_item.get() == NULL)
+    diff_entry_ptr_t parent_item;
+    diff_entry_list_t parents = gd.using_evidence_list(*item);
+    if (parents.size() > 0)
+      parent_item = parents.front();
+    else {
       parent_item = *itr;
+    }
     
     add_evidence(_SIDE_1_EVIDENCE_FILE_NAME,
                  item,
@@ -2560,7 +2564,7 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
   for (diff_entry_list_t::iterator itr = items_SNP_INS_DEL_SUB.begin(); itr != items_SNP_INS_DEL_SUB.end(); itr ++) 
   {  
     diff_entry_ptr_t item = *itr;
-    diff_entry_list_t mutation_evidence_list = gd.mutation_evidence_list(*item);
+    diff_entry_list_t in_evidence_list = gd.in_evidence_list(*item);
     
     // #this reconstructs the proper columns to draw
     uint32_t start = from_string<uint32_t>((*item)[POSITION]);
@@ -2573,7 +2577,7 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
     
     if (item->_type == INS) 
     {
-      diff_entry_list_t ins_evidence_list = gd.mutation_evidence_list(*item);
+      diff_entry_list_t ins_evidence_list = gd.in_evidence_list(*item);
       ASSERT(ins_evidence_list.size() != 0, "Could not find evidence for INS entry:\n" + item->as_string());
       
       if (ins_evidence_list.front()->_type == RA) {
@@ -2589,7 +2593,7 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
     else if (item->_type == DEL) 
     {
       bool has_ra_evidence = false;
-      for (diff_entry_list_t::iterator itr = mutation_evidence_list.begin(); itr != mutation_evidence_list.end(); itr ++) 
+      for (diff_entry_list_t::iterator itr = in_evidence_list.begin(); itr != in_evidence_list.end(); itr ++) 
       {  
         cDiffEntry& evidence_item = **itr;
         if (evidence_item._type == RA) has_ra_evidence = true;
@@ -2619,7 +2623,7 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
     
     
     // Add evidence to RA items as well
-    for (diff_entry_list_t::iterator itr = mutation_evidence_list.begin(); itr != mutation_evidence_list.end(); itr ++) 
+    for (diff_entry_list_t::iterator itr = in_evidence_list.begin(); itr != in_evidence_list.end(); itr ++) 
     {  
       cDiffEntry& evidence_item = **itr;
       if (evidence_item._type != RA) continue;
@@ -2663,9 +2667,13 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
   {  
     diff_entry_ptr_t item = *itr;
     
-    diff_entry_ptr_t parent_item(gd.parent(*item));
-    if (parent_item.get() == NULL)
+    diff_entry_ptr_t parent_item;
+    diff_entry_list_t parents = gd.using_evidence_list(*item);
+    if (parents.size() > 0)
+      parent_item = parents.front();
+    else {
       parent_item = *itr;
+    }
     
     uint32_t start = from_string<uint32_t>((*item)[FLANKING_LEFT]);
     uint32_t end = from_string<uint32_t>((*item)[FLANKING_LEFT]) + 1 + abs(from_string<int32_t>((*item)[ALIGNMENT_OVERLAP]));
@@ -2806,7 +2814,7 @@ cOutputEvidenceFiles::html_evidence_file (
   HTML << html_genome_diff_item_table_string(settings, gd, parent_list);
   HTML << "<p>";
   
-  diff_entry_list_t evidence_list = gd.mutation_evidence_list(*parent_item);
+  diff_entry_list_t evidence_list = gd.in_evidence_list(*parent_item);
   
   vector<gd_entry_type> types = make_vector<gd_entry_type>(RA)(MC)(JC);
   

@@ -17,6 +17,8 @@
  *****************************************************************************/
 
 #include "libbreseq/flagged_regions.h"
+#include "libbreseq/file_parse_errors.h"
+
 
 #include "libbreseq/reference_sequence.h"
 

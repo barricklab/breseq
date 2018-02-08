@@ -28,7 +28,7 @@ namespace breseq
 {
   // constants used more places than just settings
   extern const int32_t kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation;
-  extern const int32_t kBreseq_large_mutation_cutoff;
+  extern const int32_t kBreseq_large_mutation_size_cutoff;
   extern const char* kBreseqAlignmentScoreBAMTag;
   extern const char* kBreseqBestAlignmentScoreBAMTag;
 

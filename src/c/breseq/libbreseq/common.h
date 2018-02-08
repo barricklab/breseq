@@ -1090,19 +1090,26 @@ namespace breseq {
       }
       return *this;
     }
-    friend bool operator!= (const counted_ptr<X>& lhs, const counted_ptr<X>& rhs)
-    {return (lhs.itsCounter->ptr == rhs.itsCounter->ptr);}
+    
+    // Full suite of comparison operators defined for what we point to
     friend bool operator== (const counted_ptr<X>& lhs, const counted_ptr<X>& rhs)
-    {return (lhs.itsCounter->ptr == rhs.itsCounter->ptr);}
+      {return *(lhs.itsCounter->ptr) == *(rhs.itsCounter->ptr);}
+    friend bool operator!= (const counted_ptr<X>& lhs, const counted_ptr<X>& rhs)
+      {return !(lhs == rhs);}
+    friend bool operator< (const counted_ptr<X>& lhs, const counted_ptr<X>& rhs)
+      {return *(lhs.itsCounter->ptr) < *(rhs.itsCounter->ptr);}
+    friend bool operator> (const counted_ptr<X>& lhs, const counted_ptr<X>& rhs)
+      {return (rhs < lhs);}
+    friend bool operator<= (const counted_ptr<X>& lhs, const counted_ptr<X>& rhs)
+      {return !(lhs > rhs);}
+    friend bool operator>= (const counted_ptr<X>& lhs, const counted_ptr<X>& rhs)
+      {return !(lhs < rhs);}
+    
     X& operator*()  const throw()   {return *itsCounter->ptr;}
     X* operator->() const throw()   {return itsCounter->ptr;}
     X* get()        const throw()   {return itsCounter ? itsCounter->ptr : 0;}
     bool unique()   const throw()
-    {return (itsCounter ? itsCounter->count == 1 : true);}
-    
-    //! compare what we point to, for convenience
-    bool operator<(const counted_ptr& _in) const
-    { return *(this->get())< *(_in.get()); }
+      {return (itsCounter ? itsCounter->count == 1 : true);}
     
   private:
     
