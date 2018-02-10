@@ -1891,10 +1891,10 @@ void cGenomeDiff::sort_and_check_for_duplicates(cFileParseErrors* file_parse_err
           ERROR("Duplicate entries in Genome Diff:\n" + (*it1)->as_string() + "\n" + (*it2)->as_string()
               + "\nAdd a 'unique' tag to one if this is intentional.");
         } else {
-          string line_number_1 = (**it1).entry_exists("_line_number") ? (**it1)["_line_number"] : "NA";
+          string line_number_1 = (**it1).entry_exists("_line_number") ? " from LINE: " + (**it1)["_line_number"] : "";
           uint32_t line_number_2 = (**it2).entry_exists("_line_number") ? from_string<uint32_t>((**it2)["_line_number"]) : 0;
           
-          file_parse_errors->add_line_error(line_number_2, (*it2)->as_string(), "Attempt to add duplicate of this existing entry from line " + line_number_1 + ":\n" + substitute((*it1)->as_string(),"\t", "<tab>") + "\nAdd a 'unique' tag to one if this is intentional.", true);
+          file_parse_errors->add_line_error(line_number_2, (*it2)->as_string(), "Attempt to add duplicate of this existing entry" + line_number_1 + ":\n" + substitute((*it1)->as_string(),"\t", "<tab>") + "\nAdd a 'unique' tag to one if this is intentional.", true);
         }
       }
     }

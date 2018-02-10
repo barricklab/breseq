@@ -1099,6 +1099,8 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       
       _gd.add(mut);
       
+      //cout << "Added:" << _gd.evidence_list().back()->as_string() << endl;
+      
       // what's going on here? we may need to change a value latter,
       // and add added a copy not the current one
       added_mut_p = _gd.get_list().back();
@@ -1107,17 +1109,30 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
     // Now we print additional RA items as user= if they have not already been printed.
     // for this position and insert_count
     while (_user_evidence_ra_list.size()
+           && (((*(_user_evidence_ra_list.front()))[SEQ_ID]) == p.target_name())
            && (from_string<uint32_t>((*(_user_evidence_ra_list.front()))[POSITION]) == position)
            && (from_string<int32_t>((*(_user_evidence_ra_list.front()))[INSERT_POSITION]) == insert_count)) {
       
       // Note! mut only exists as a valid record for comparison
-      if ((passed_as_consensus_prediction || passed_as_polymorphism_prediction) && (*added_mut_p == *(_user_evidence_ra_list.front()))) {
-        // in this case we have already created a valid RA item
-        (*added_mut_p)["user_defined"] = "1";
+      if (passed_as_consensus_prediction || passed_as_polymorphism_prediction) {
         
-        // do not mark it as user_defined or there will be problems:
-        // (it will not show up in HTML and it will mess up polymorphism stats)
+        //cout << "Comparing:" << added_mut_p->as_string() << endl;
+        //cout << "       to:" << (_user_evidence_ra_list.front())->as_string() << endl;
+        
+        if (*added_mut_p == *(_user_evidence_ra_list.front())) {
+          cout << "FOUND MATCH in user evidence. User evidence not added" << endl;
+          
+          // in this case we have already created a valid RA item
+          (*added_mut_p)["user_defined"] = "1";
+          
+          // do not mark it as user_defined or there will be problems:
+          // (it will not show up in HTML and it will mess up polymorphism stats)
+        }
       } else {
+        
+        //cout << "User evidence for position:" << (_user_evidence_ra_list.front().get())->as_string() << endl;
+        //cout << "NO MATCH to new mutation prediction. Added user evidence entry" << endl;
+        
         // copy the input entry and fill in more information
         cDiffEntry mut = *(_user_evidence_ra_list.front().get());
         mut.to_spec(); //remove additional fields that might be left over!!
@@ -1186,6 +1201,8 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         mut[TOTAL_COV] = to_string(make_pair(total_cov[2], total_cov[0]));
         
         _gd.add(mut);
+        
+        //cout << "Added:" << _gd.evidence_list().back()->as_string() << endl;
       }
       
       _user_evidence_ra_list.pop_front();

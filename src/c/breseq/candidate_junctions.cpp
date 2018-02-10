@@ -1029,8 +1029,16 @@ namespace breseq {
       user_junction["flanking_left"] = to_string<int32_t>(read_length_max);
       user_junction["flanking_right"] = to_string<int32_t>(read_length_max);
       
+
       // Fix the overlap...
       normalize_junction_overlap(ref_seq_info, user_junction);
+      
+      // @JEB 2018-02-09 Construct the junction sequence here purely to correct the
+      // 'flanking_left' and 'flanking_right' fields so that we will have the correct junction key
+      // for comparing to the junctions that are predicted in this sample during merging.
+      // Failure to do so can result in duplicate junctions. Must do this after fixing overlap!
+      string throwaway_sequence = construct_junction_sequence(ref_seq_info, user_junction, read_length_max);
+      
       JunctionInfo junction_info(user_junction);
       user_defined_junctions[junction_info.junction_key()] = user_junction;
       

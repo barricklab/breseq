@@ -47,9 +47,9 @@ namespace breseq {
       {
         string tab_line = substitute(_line, "\t", "<tab>");
         
-        cerr << ">>ERROR: " << _error_message << endl;
+        cerr << endl << ">>ERROR: " << _error_message << endl;
         if ((_line_number != 0) || (_line != "")) {
-          cerr << ">>LINE: " << setw(5) <<  _line_number << endl << tab_line << endl;
+          cerr << ">>ON LINE: " << setw(5) <<  _line_number << endl << tab_line << endl;
         }
       }
     };
