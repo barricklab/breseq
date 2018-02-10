@@ -1120,7 +1120,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         //cout << "       to:" << (_user_evidence_ra_list.front())->as_string() << endl;
         
         if (*added_mut_p == *(_user_evidence_ra_list.front())) {
-          cout << "FOUND MATCH in user evidence. User evidence not added" << endl;
+        //  cout << "FOUND MATCH in user evidence. User evidence not added" << endl;
           
           // in this case we have already created a valid RA item
           (*added_mut_p)["user_defined"] = "1";
