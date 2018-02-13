@@ -1114,20 +1114,20 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
            && (from_string<int32_t>((*(_user_evidence_ra_list.front()))[INSERT_POSITION]) == insert_count)) {
       
       // Note! mut only exists as a valid record for comparison
-      if (passed_as_consensus_prediction || passed_as_polymorphism_prediction) {
+      // Must check everything here so multiple user_evidence items added at same position can pass
+      if ( (passed_as_consensus_prediction || passed_as_polymorphism_prediction) && (*added_mut_p == *(_user_evidence_ra_list.front())))  {
         
         //cout << "Comparing:" << added_mut_p->as_string() << endl;
         //cout << "       to:" << (_user_evidence_ra_list.front())->as_string() << endl;
         
-        if (*added_mut_p == *(_user_evidence_ra_list.front())) {
         //  cout << "FOUND MATCH in user evidence. User evidence not added" << endl;
           
-          // in this case we have already created a valid RA item
-          (*added_mut_p)["user_defined"] = "1";
+        // in this case we have already created a valid RA item
+        (*added_mut_p)["user_defined"] = "1";
           
-          // do not mark it as user_defined or there will be problems:
-          // (it will not show up in HTML and it will mess up polymorphism stats)
-        }
+        // do not mark it as user_defined or there will be problems:
+        // (it will not show up in HTML and it will mess up polymorphism stats)
+        
       } else {
         
         //cout << "User evidence for position:" << (_user_evidence_ra_list.front().get())->as_string() << endl;
