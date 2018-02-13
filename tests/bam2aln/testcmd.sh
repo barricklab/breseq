@@ -3,8 +3,8 @@
 SELF=`dirname ${BASH_SOURCE}`
 . ${SELF}/../common.sh
 
-CURRENT_OUTPUTS[0]="output.txt"
-EXPECTED_OUTPUTS[0]="expected.txt"
+CURRENT_OUTPUTS[0]="${SELF}/output.txt"
+EXPECTED_OUTPUTS[0]="${SELF}/expected.txt"
 REFERENCE_ARG="-r ${DATADIR}/bull/bull_1.gbk"
 
 TESTCMD="\

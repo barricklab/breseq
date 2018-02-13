@@ -3,8 +3,8 @@
 SELF=`dirname ${BASH_SOURCE}`
 . ${SELF}/../common.sh
 
-CURRENT_OUTPUTS[0]="output.html"
-EXPECTED_OUTPUTS[0]="expected.html"
+CURRENT_OUTPUTS[0]="${SELF}/output.html"
+EXPECTED_OUTPUTS[0]="${SELF}/expected.html"
 
 TESTCMD="\
     ${GDTOOLS} \

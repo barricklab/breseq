@@ -5,8 +5,8 @@
 SELF=`dirname ${BASH_SOURCE}`
 . ${SELF}/../common.sh
 
-CURRENT_OUTPUTS[0]="contingency_loci.csv"
-EXPECTED_OUTPUTS[0]="expected.csv"
+CURRENT_OUTPUTS[0]="${SELF}/contingency_loci.csv"
+EXPECTED_OUTPUTS[0]="${SELF}/expected.csv"
 
 TESTCMD="\
     ${BRESEQ} CL-TABULATE \

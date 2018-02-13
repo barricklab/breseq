@@ -3,8 +3,8 @@
 SELF=`dirname ${BASH_SOURCE}`
 . ${SELF}/../common.sh
 
-CURRENT_OUTPUTS[0]="output.csv"
-EXPECTED_OUTPUTS[0]="expected.csv"
+CURRENT_OUTPUTS[0]="${SELF}/output.csv"
+EXPECTED_OUTPUTS[0]="${SELF}/expected.csv"
 
 TESTCMD="\
     ${GDTOOLS} \

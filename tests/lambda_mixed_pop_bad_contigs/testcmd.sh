@@ -3,8 +3,8 @@
 SELF=`dirname ${BASH_SOURCE}`
 . ${SELF}/../common.sh
 
-CURRENT_OUTPUTS[0]="output/evidence/annotated.gd"
-EXPECTED_OUTPUTS[0]="expected.gd"
+CURRENT_OUTPUTS[0]="${SELF}/output/evidence/annotated.gd"
+EXPECTED_OUTPUTS[0]="${SELF}/expected.gd"
 REFERENCE_ARG="-r ${DATADIR}/lambda/lambda.gbk -r ${DATADIR}/lambda/other.gbk -r ${DATADIR}/REL606/REL606.fragment.gbk"
 
 TESTCMD="\

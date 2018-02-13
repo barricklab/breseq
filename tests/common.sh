@@ -38,7 +38,6 @@ TESTEXEC=testcmd.sh
 # $1 == testdir
 #
 do_build() {
-    pushd $1 > /dev/null
 #    for i in `find . ${FILE_PATTERN}`; do
 #       ${HASH} $i
 #    done > ${EXPECTED}
@@ -46,7 +45,6 @@ do_build() {
 		echo "cp ${CURRENT_OUTPUTS[$i]} ${EXPECTED_OUTPUTS[$i]}"
     	cp ${CURRENT_OUTPUTS[$i]} ${EXPECTED_OUTPUTS[$i]}
 	done
-    popd > /dev/null
 }
 
 
@@ -54,9 +52,7 @@ do_build() {
 # $1 == testdir
 #
 do_show() {
-    pushd $1 > /dev/null
     find . ${FILE_PATTERN}
-    popd > /dev/null
 }
 
 
@@ -66,7 +62,7 @@ do_show() {
 do_check() {
 	NEEDS_UPDATING=0
     for EXPECTED_OUTPUT in "${EXPECTED_OUTPUTS[@]}"; do  
-		if [[ ! -e ${1}/${EXPECTED_OUTPUT} ]]; then
+		if [[ ! -e ${EXPECTED_OUTPUT} ]]; then
 			NEEDS_UPDATING=1
 		fi
 	done
@@ -91,7 +87,6 @@ do_check() {
 #       	exit -1
 #       fi
 #    done
-    pushd $1 > /dev/null
     echo ""
 #   CHK=`${HASH} -s --check ${EXPECTED} 2>&1`
 	for (( i=0; i<${#EXPECTED_OUTPUTS[@]}; i++ )); do
@@ -104,7 +99,6 @@ do_check() {
 			${DIFF_BIN} ${CURRENT_OUTPUTS[$i]} ${EXPECTED_OUTPUTS[$i]}
 			echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 
 			echo ""
-			popd > /dev/null
 			if [[ -n "${REFERENCE_ARG+1}" ]]; then
 				echo ${GDTOOLS} COMPARE ${REFERENCE_ARG} -o ${SELF}/failed_compare.html ${SELF}/${CURRENT_OUTPUTS[$i]} ${SELF}/${EXPECTED_OUTPUTS[$i]}
 				${GDTOOLS} COMPARE ${REFERENCE_ARG} -o ${SELF}/failed_compare.html ${SELF}/${CURRENT_OUTPUTS[$i]} ${SELF}/${EXPECTED_OUTPUTS[$i]}
@@ -114,7 +108,6 @@ do_check() {
 			echo "Passed check"
 			echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
 			echo ""
-			popd > /dev/null
 			if [ -e "${SELF}/failed_compare.html" ]; then
 				rm -Rf ${SELF}/failed_compare.html
 			fi
@@ -142,13 +135,10 @@ do_vcheck() {
         echo "Building expected values for test $1..."
         do_build $1
     fi
-    pushd $1 > /dev/null
     if ! ${HASH} --check ${EXPECTED}; then
-        popd > /dev/null
         echo "Failed check: $1"
         exit -1
     fi
-    popd > /dev/null
     echo "Passed check: $1"
     exit 0
 }
