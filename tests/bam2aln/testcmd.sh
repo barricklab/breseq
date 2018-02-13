@@ -13,7 +13,7 @@ TESTCMD="\
     -f ${DATADIR}/bull/bull_1.fasta \
     -b ${DATADIR}/bull/bull_1.bam \
     -n 50 \
-    -o ${SELF}/${CURRENT_OUTPUTS[0]} \
+    -o ${CURRENT_OUTPUTS[0]} \
     -r rachael:57-167 \
     "
 
