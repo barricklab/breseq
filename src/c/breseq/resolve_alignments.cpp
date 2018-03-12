@@ -213,7 +213,7 @@ double PosHashProbabilityTable::probability(string& seq_id, uint32_t pos_hash_sc
     double this_cov_pr =  nbdtr(this_coverage, p.negative_binomial_size, p.negative_binomial_prob)
                         - nbdtr(this_coverage-bin_size, p.negative_binomial_size, p.negative_binomial_prob);
 
-    // This calculaation uses the middle coverage value in the bin as an estimate for the
+    // This calculation uses the middle coverage value in the bin as an estimate for the
     // probability across the entire bin
     double this_coverage_middle = this_coverage + (bin_size-1) / 2;
     double this_ratio_of_coverage_to_average = this_coverage_middle / static_cast<double>(p.average_coverage);

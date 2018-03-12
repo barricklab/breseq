@@ -213,6 +213,7 @@ namespace breseq
     ("quality-score-trim", "Trim the ends of reads past any base with a quality score below --base-quality-score-cutoff.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("require-match-length", "Only consider alignments that cover this many bases of a read", 0, ADVANCED_OPTION)
     ("require-match-fraction", "Only consider alignments that cover this fraction of a read", 0.9, ADVANCED_OPTION)
+    ("maximum-read-mismatches", "Don't consider reads with this many or more based that are different from the reference sequence. Unaligned bases at the end of a read also count as mismatches. Unaligned bases at the beginning of the read do NOT count as mismatches. (DEFAULT=OFF)", "", ADVANCED_OPTION)
     ("deletion-coverage-propagation-cutoff","Value for coverage above which deletions are cutoff. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
     ("deletion-coverage-seed-cutoff","Value for coverage below which deletions are seeded", 0, ADVANCED_OPTION)
     ;
@@ -231,7 +232,7 @@ namespace breseq
     options.addUsage("Junction (JC) Evidence Options", ADVANCED_OPTION);
     options
     ("no-junction-prediction", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
-    ("junction-indel-split-length", "Split read alignments on indels of this many or more bases. Indel mutations of this length or longer will be prdicted by JC evidence and those that are shorter will be predicted from RA evience", 3, ADVANCED_OPTION)
+    ("junction-indel-split-length", "Split read alignments on indels of this many or more bases. Indel mutations of this length or longer will be predicted by JC evidence and those that are shorter will be predicted from RA evience", 3, ADVANCED_OPTION)
     ("junction-alignment-pair-limit", "Only consider this many passed alignment pairs when creating candidate junction sequences (0 = DO NOT LIMIT)", 100000, ADVANCED_OPTION)
     ("junction-minimum-candidates", "Test at least this many of the top-scoring junction candidates, regardless of their length", 100, ADVANCED_OPTION)
     ("junction-maximum-candidates", "Test no more than this many of the top-scoring junction candidates (0 = DO NOT LIMIT)", 5000, ADVANCED_OPTION)
@@ -415,7 +416,10 @@ namespace breseq
 
     this->require_match_length = from_string<uint32_t>(options["require-match-length"]);
     this->require_match_fraction = from_string<double>(options["require-match-fraction"]);
-
+    if (options.count("maximum-read-mismatches")) {
+        this->maximum_read_mismatches = from_string<int32_t>(options["maximum-read-mismatches"]);
+    }
+    
     //! Settings: Mutation Identification
     this->base_quality_cutoff = from_string<uint32_t>(options["base-quality-cutoff"]);
     if (options.count("quality-score-trim")) this->quality_score_trim = this->base_quality_cutoff;
