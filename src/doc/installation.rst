@@ -15,7 +15,7 @@ Install external dependencies
 
 To install each dependency, visit the respective web pages linked above and follow the instructions for your platform. You must make sure that the executables for |Bowtie2| and :program:`R` are in your environment's ``$PATH`` for |breseq| to function.
 
-Method 1. Binary distribution
+Method 1. Binary download
 +++++++++++++++++++++++++++++
 
 Linux and MacOSX packages with precompiled executables are available for download. Using these is the quickest and easiest install option that should be used by most users.
@@ -39,7 +39,7 @@ You may also run this command to test the |breseq| install:
 
 .. _installing-source-code-package:
 
-Method 2. Source code package
+Method 2. Source code download
 ++++++++++++++++++++++++++++++
 
 |breseq| installation from the source code requires some basic familiarity with UNIX commands and environments.
@@ -124,7 +124,7 @@ For a :program:`bash` shell you can usually use a command like this:
 
 But the exact way to do this may depend on your system. You may also want to similarly update your $MANPATH, $CPPFLAGS, $LD_FLAGS, etc. Now you should be able to invoke |breseq| commands once you open a new terminal window.
 
-Method 3. Development source code
+Method 3. GitHub source code
 +++++++++++++++++++++++++++++++++
 
 If you are working with a development version of |breseq| cloned from the `GitHub code repository <https://github.com/barricklab/breseq>`_, then you will need to run some additional commands and have other tools installed on your system in order to get it to compile or work with the XCode project.
