@@ -70,7 +70,7 @@ AC_SEARCH_LIBS([acosf], [m], [], [AC_MSG_ERROR(["libm is required."])])
 AC_SEARCH_LIBS([pthread_create], [pthread], [], [AC_MSG_ERROR(["libpthread is required."])])
 
 #Find libunwind
-AC_CHECK_HEADER(libunwind.h, FOUND_LIBUNWIND_H=1)
+AC_CHECK_HEADER(libunwind.h, FOUND_LIBUNWIND_H=1, FOUND_LIBUNWIND_H=0)
 AC_SEARCH_LIBS([unw_getcontext], [unwind], FOUND_LIBUNWIND=1,  FOUND_LIBUNWIND=0)
 
 if [[ $FOUND_LIBUNWIND == 0 ]]; then

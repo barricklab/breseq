@@ -52,9 +52,6 @@ int gdtools_usage()
 	uout << "MASK                   remove mutation predictions in masked regions" << endl;
   uout << "NOT-EVIDENCE           remove evidence not used by any mutations" << endl;
 	
-  uout("Creating test data:");
-  uout << "SIMULATE-MUTATIONS     create a file containing random mutations" << endl;
-    
   uout("Format Conversions:");
   uout << "GD2VCF                 GD to Variant Call Format (VCF)" << endl;
 	uout << "VCF2GD                 Variant Call Format(VCF) to GD" << endl;
@@ -62,8 +59,12 @@ int gdtools_usage()
   uout << "GD2CIRCOS              GD to Circos Data" << endl;
 	uout << "MUMMER2MASK            Create a mask GD file from MUMmer output" << endl;
 
+	uout("Analysis:");
+	uout << "COUNT                  count statistics for different types of mutations" << endl;
+	uout << "PHYLOGENY              create maximum parsimony tree from mutations (requires PHYLIP)" << endl;
+	
   uout("TACC Utilities:");
-  uout << "DOWNLOAD               download reference and read files given appropriate GD header info" << endl;
+  uout << "DOWNLOAD               download reference and read files from GD header info" << endl;
   uout << "RUNFILE                create a commands file and launcher script for use on TACC" << endl;
   
   return 0;
@@ -1064,9 +1065,7 @@ int do_annotate(int argc, char* argv[])
 	options.addUsage("  PHYLIP  Alignment file suitable for input into PHYLIP");
 	options.addUsage("  JSON  	JavaScript object notation file suitable for parsing");
 	options.addUsage("");
-	options.addUsage(" When multiple GD files are provided, the #=TITLE metadata line in each file is used to name each sample/column. If that information is not present, then the GD file name is used (removing the *.gd suffix).");
-	options.addUsage("");
-	options.addUsage("");
+	options.addUsage("When multiple GD files are provided, the #=TITLE metadata line in each file is used to name each sample/column. If that information is not present, then the GD file name is used (removing the *.gd suffix).");
 	options.addUsage("");
 	
 	options.addUsage("In output, frequencies of 'D' mean that this mutation occurs within");
@@ -1310,9 +1309,11 @@ int do_phylogeny(int argc, char* argv[])
 	options("phylogeny-aware,p", "Check the optional 'phylogeny_id' field when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
 	
 	options.addUsage("");
-	options.addUsageSameLine("Uses PHYLIP to construct a phylogentic tree. If you are including an ancestor");
+	options.addUsage("Uses PHYLIP to construct a phylogentic tree. If you are including an ancestor");
 	options.addUsageSameLine("to root the tree, you should include it as the very first Genome Diff file.");
-    
+	options.addUsage("");
+	options.addUsage("You MUST have 'dnapars' from PHYLIP installed and in your path to use this commend.");
+
 	options.processCommandArgs(argc, argv);
 	
 	if (options.count("help")) {
