@@ -603,6 +603,7 @@ namespace breseq {
       string m_description; // GenBank (DEFINITION) | GFF (description), from main feature line
       string m_seq_id;      // GenBank (LOCUS)      | GFF (seqid), from ##sequence-region line
       string m_file_name;   // Name of file this sequence was loaded from
+      string m_file_format; // Format of file used to load sequence
 
       cFastaSequence m_fasta_sequence;            //!< Nucleotide sequence
     
@@ -640,6 +641,11 @@ namespace breseq {
       void set_sequence_loaded_from_file(const string& file_name, bool allow_reload = false) {
         ASSERT(allow_reload || (m_sequence_loaded_from_file.size() == 0), "Duplicate seq id found in file '" + file_name + "'! DNA sequence for '" + m_seq_id + "' was already loaded from file '" + m_sequence_loaded_from_file + "'.")
         m_sequence_loaded_from_file = file_name;
+      }
+    
+      void set_file_format(const string& file_format) {
+        if (m_file_format.length() > 0) m_file_format += "+";
+        m_file_format += file_format;
       }
     
       void sort_features()
@@ -865,7 +871,7 @@ namespace breseq {
     }
     
     //!< Calculates the total length of all reference sequences together
-    uint64_t total_length() const
+    uint64_t get_total_length() const
     {
       uint64_t ret_val(0);
       for (cReferenceSequences::const_iterator it = (*this).begin(); it != (*this).end(); it++)
@@ -873,6 +879,60 @@ namespace breseq {
         ret_val += it->m_length;
       }
       return ret_val;
+    }
+    
+    uint64_t get_total_num_genes() const
+    {
+      uint64_t ret_val(0);
+      for (cReferenceSequences::const_iterator it = (*this).begin(); it != (*this).end(); it++)
+      {
+        ret_val += it->m_genes.size();
+      }
+      return ret_val;
+    }
+    
+    uint64_t get_total_num_repeats() const
+    {
+      uint64_t ret_val(0);
+      for (cReferenceSequences::const_iterator it = (*this).begin(); it != (*this).end(); it++)
+      {
+        ret_val += it->m_repeats.size();
+      }
+      return ret_val;
+    }
+    
+    string get_file_formats() const
+    {
+      set<string> formats;
+      for (cReferenceSequences::const_iterator it = (*this).begin(); it != (*this).end(); it++)
+      {
+        vector<string> this_formats = split(it->m_file_format,"+");
+        for (vector<string>::const_iterator it2 = this_formats.begin(); it2 != this_formats.end(); it2++) {
+          formats.insert(*it2);
+        }
+      }
+      
+      vector<string> concat_formats;
+      std::copy(formats.begin(), formats.end(), std::back_inserter(concat_formats));
+      std::sort(concat_formats.begin(), concat_formats.end());
+      return join(concat_formats, "+");
+    }
+    
+    double get_total_gc_content() const
+    {
+      double gc = 0;
+      uint64_t len = 0;
+      for (cReferenceSequences::const_iterator it = (*this).begin(); it != (*this).end(); it++)
+      {
+        string s = it->m_fasta_sequence.get_sequence();
+        len+= s.size();
+        for (size_t i=0; i<s.length(); i++)
+        {
+          if ( (s[i] == 'G') ||(s[i] == 'C') )
+            gc++;
+        }
+      }
+      return gc / len;
     }
 
     void add_new_seq(const string& seq_id, const string& file_name)

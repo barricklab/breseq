@@ -3023,7 +3023,7 @@ namespace breseq {
       if (base_substitution_statistics)
         this_bsec = total_bsec;
 
-      int32_t total_bp = ref_seq_info.total_length();
+      int32_t total_bp = ref_seq_info.get_total_length();
       
       // Complicated map storing a bunch of counts
       map<string,map<string,int32_t> > count;

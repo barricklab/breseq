@@ -3086,8 +3086,8 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
   this->add_breseq_data("BASES-CHANGED", to_string<uint32_t>(bases_changed));
   this->add_breseq_data("BASES-INSERTED", to_string<uint32_t>(bases_inserted));
   this->add_breseq_data("BASES-DELETED", to_string<uint32_t>(bases_deleted));
-  this->add_breseq_data("GENOME-SIZE-INITIAL", to_string(ref_seq_info.total_length()));
-  this->add_breseq_data("GENOME-SIZE-FINAL", to_string(new_ref_seq_info.total_length()));
+  this->add_breseq_data("GENOME-SIZE-INITIAL", to_string(ref_seq_info.get_total_length()));
+  this->add_breseq_data("GENOME-SIZE-FINAL", to_string(new_ref_seq_info.get_total_length()));
   
   //Cleanup.  If any of the sequences are of zero length, remove them.
   for (vector<cAnnotatedSequence>::iterator it_as = new_ref_seq_info.begin(); it_as < new_ref_seq_info.end(); it_as++) {
@@ -4781,7 +4781,7 @@ void cGenomeDiff::GD2Circos(const vector<string> &gd_file_names,
   int32_t current_position = 0;
   
   int32_t half_ref_length;
-  half_ref_length = int32_t(ref.total_length() / 2) + 1;
+  half_ref_length = int32_t(ref.get_total_length() / 2) + 1;
   
   for (uint32_t i = 0; i < seq_ids.size(); i++){
     uint32_t seq_size;
@@ -4800,7 +4800,7 @@ void cGenomeDiff::GD2Circos(const vector<string> &gd_file_names,
   empty_plot_file.close();
   
   //minimum tile size width for indel graph
-  const int32_t MIN_WIDTH = static_cast<int32_t>(floor(static_cast<double>(ref.total_length()) * 0.000));
+  const int32_t MIN_WIDTH = static_cast<int32_t>(floor(static_cast<double>(ref.get_total_length()) * 0.000));
   const int32_t MIN_DISPLAY_LENGTH = 51; //inclusive
   
   ofstream indel_file;

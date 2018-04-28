@@ -910,7 +910,8 @@ namespace breseq {
       this_seq.m_seq_id = on_seq.get_name();
       this_seq.m_description = on_seq.get_description();
       this_seq.m_length = on_seq.get_sequence_length();
-      this_seq.set_sequence_loaded_from_file(file_name);
+      this_seq.set_file_format("FASTA");
+      this_seq.set_sequence_loaded_from_file(file_name, "FASTA");
     }
   }
     
@@ -927,6 +928,7 @@ namespace breseq {
       this_seq.m_fasta_sequence = on_seq;
       this_seq.m_seq_id = on_seq.get_name();
       this_seq.m_length = on_seq.get_sequence_length();
+      this_seq.set_file_format("FASTA");
       this_seq.set_sequence_loaded_from_file(ff.m_file_name);
     }
 
@@ -1039,6 +1041,7 @@ namespace breseq {
           }
           this_seq.m_fasta_sequence.set_sequence(nucleotide_sequence);
           this_seq.m_length = this_seq.m_fasta_sequence.get_sequence_length();
+          this_seq.set_file_format("GFF");
           this_seq.set_sequence_loaded_from_file(file_name);
 
           continue;
@@ -1379,7 +1382,8 @@ void cReferenceSequences::ReadGenBank(const string& in_file_name) {
     ReadGenBankFileSequenceFeatures(in, this_seq);
     this_seq.set_features_loaded_from_file(in_file_name);
     
-    ReadGenBankFileSequence(in, this_seq);   
+    ReadGenBankFileSequence(in, this_seq);
+    this_seq.set_file_format("GenBank");
     this_seq.set_sequence_loaded_from_file(in_file_name);
     
   }
@@ -3356,7 +3360,7 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
   vector<string> seq_ids = this->seq_ids();
 
   // some local variable lookups for convenience
-  double log10_ref_length = log(this->total_length()) / log(10);
+  double log10_ref_length = log(this->get_total_length()) / log(10);
 
   string count_file_name = settings.error_counts_file_name;
 

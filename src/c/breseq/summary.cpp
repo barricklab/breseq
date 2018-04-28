@@ -406,7 +406,7 @@ PublicReferencesSummary::PublicReferencesSummary(
                                                  const cReferenceSequenceSettings &rss
                                                  )
 {
-  total_length = r.total_length();
+  total_length = r.get_total_length();
   total_features = 0;
   total_genes = 0;
   total_repeats = 0;
