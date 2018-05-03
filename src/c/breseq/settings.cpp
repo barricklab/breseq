@@ -434,7 +434,7 @@ namespace breseq
     if (options.count("bowtie2-scoring")) this->bowtie2_scoring = options["bowtie2-scoring"];
     if (options.count("bowtie2-stage1")) this->bowtie2_stage1 = options["bowtie2-stage1"];
     if (options.count("bowtie2-stage2")) this->bowtie2_stage2 = options["bowtie2-stage2"];
-    if (options.count("bowtie2-junction")) this->bowtie2_scoring = options["bowtie2-junction"];
+    if (options.count("bowtie2-junction")) this->bowtie2_junction = options["bowtie2-junction"];
 
     //! Settings: Junction Prediction
     this->skip_junction_prediction = options.count("no-junction-prediction");
