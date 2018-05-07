@@ -50,7 +50,6 @@ namespace breseq {
   
  uint32_t eligible_read_alignments(const Settings& settings, const cReferenceSequences& ref_seq_info, alignment_list& alignments, bool junction_mode, int32_t min_match_score)
   {
- 
     bool verbose = false;
     
     if (alignments.size() == 0) return 0;
@@ -65,15 +64,12 @@ namespace breseq {
     }
     if (alignments.size() == 0) return 0;
     
-    // require a minimum length of the read to be mapped
-    for (alignment_list::iterator it = alignments.begin(); it != alignments.end();)
-    {
-      if ( !test_read_alignment_requirements(settings, ref_seq_info, *(it->get())) )
-        it = alignments.erase(it);
-      else
-        it++;
-    }
-    if (alignments.size() == 0) return 0;
+    // JEB 2018-05-05
+    // We must find the best alignment score **BEFORE** applying the
+    // guard on minimum length of the read being aligned. Otherwise,
+    // we can throw out the match with the best alignment score if it doesn't
+    // extend all the way to the end of the read and be left with a worse
+    // match that happens to extend further and pass but has many mismatches.
     
     uint32_t read_length = alignments.front()->read_length();
     alignment_score_map.clear();
@@ -129,9 +125,10 @@ namespace breseq {
     uint32_t best_score = alignment_score_map[alignments.front().get()];
     
     // In non-junction mode we only return the best
-    // In junction mode we return all above or equal to the minimum score (which is for the alignment to the reference genome).
+    // In junction mode we return all above or equal to the minimum score
+    //   (which is for the alignment to the reference genome).
+    // In BOTH modes this code must be executed to set kBreseqBestAlignmentScoreBAMTag
     
-    // no scores meet minimum
     for (alignment_list::iterator it = alignments.begin()++; it != alignments.end(); it++)
     {
       bam_alignment* ap = it->get();
@@ -147,9 +144,18 @@ namespace breseq {
     if (!junction_mode)
       alignments.resize(last_best);
     
+    // Require a minimum length of the read to be mapped
+    // Must be applied AFTER sorting and accepting based on score
+    for (alignment_list::iterator it = alignments.begin(); it != alignments.end();)
+    {
+      if ( !test_read_alignment_requirements(settings, ref_seq_info, *(it->get())) )
+        it = alignments.erase(it);
+      else
+        it++;
+    }
+    
     if (verbose)
     {
-      cerr << last_best << endl;
       for (alignment_list::iterator it = alignments.begin(); it != alignments.end(); it++)
       {
         bam_alignment& a = *(it->get());
@@ -172,6 +178,10 @@ namespace breseq {
     if (a.unmapped()) return false;
     
     if (a.query_match_length() < settings.require_match_length)
+      return false;
+    
+    // Later: Move to being a guard during mutation identification and not here.
+    if (a.mapping_quality() < settings.minimum_mapping_quality)
       return false;
     
     if (a.query_match_length() < settings.require_match_fraction * static_cast<double>(a.read_length()) )

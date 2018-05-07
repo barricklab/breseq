@@ -1,4 +1,7 @@
 Version 0.32.1
+   * Added --minimum-mapping-quality option. Currently it is OFF by default.
+   * Fixed incorrect ordering of read mapping criteria that could lead to longer but worse alignment
+     being accepted over shorter match that did not meet --required-match-fraction
    * Removed the gdtools MERGE subcommand (it had become equivalent to gdtools UNION).
    * Fixed adding correct gene features to copies created by AMP mutations in gdtools APPLY.
 

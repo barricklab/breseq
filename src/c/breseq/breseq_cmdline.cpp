@@ -65,7 +65,8 @@ int do_bam2aln(int argc, char* argv[]) {
   options("format", "Format of output alignment(s): HTML or TXT", "HTML");
   options("max-reads,n", "Maximum number of reads to show in alignment", 200);
   options("repeat", "Show reads with multiple best matches in reference", TAKES_NO_ARGUMENT, ADVANCED_OPTION);
-  options("quality-score-cutoff,c", "Quality score cutoff below which reads are highlighted as yellow", 0);
+  options("quality-score-cutoff,c", "Base quality score cutoff below which reads are highlighted as yellow", 0);
+  options("minimum-mapping-quality,m", "Mapping quality (MQ) score cutoff below which reads are counted as repeat matches (0=OFF)", 0);
   options("stdout", "Write output to stdout", TAKES_NO_ARGUMENT, ADVANCED_OPTION);
   options.processCommandArgs(argc, argv);
   
@@ -132,7 +133,8 @@ int do_bam2aln(int argc, char* argv[]) {
                         from_string<uint32_t>(options["quality-score-cutoff"]),
                         1,
                         false,
-                        options.count("repeat")
+                        options.count("repeat"),
+                        from_string<uint32_t>(options["minimum-mapping-quality"])
                         );
     
     string default_file_name = region_list[j];

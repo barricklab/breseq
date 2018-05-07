@@ -209,11 +209,12 @@ namespace breseq
     options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Read Alignment Options", ADVANCED_OPTION);
     options
+    ("minimum-mapping-quality,m", "Ignore alignments with less than this mapping quality (MQ) when calling mutations. MQ scores are equal to -10log10(P), where P is the probability that the best alignment is not to the correct location in the reference genome. The range of MQ scores returned by bowtie2 is 0 to 255.", 0, ADVANCED_OPTION)
     ("base-quality-cutoff,b", "Ignore bases with quality scores lower than this value", 3, ADVANCED_OPTION)
     ("quality-score-trim", "Trim the ends of reads past any base with a quality score below --base-quality-score-cutoff.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("require-match-length", "Only consider alignments that cover this many bases of a read", 0, ADVANCED_OPTION)
     ("require-match-fraction", "Only consider alignments that cover this fraction of a read", 0.9, ADVANCED_OPTION)
-    ("maximum-read-mismatches", "Don't consider reads with this many or more based that are different from the reference sequence. Unaligned bases at the end of a read also count as mismatches. Unaligned bases at the beginning of the read do NOT count as mismatches. (DEFAULT=OFF)", "", ADVANCED_OPTION)
+    ("maximum-read-mismatches", "Don't consider reads with this many or more bases or indels that are different from the reference sequence. Unaligned bases at the end of a read also count as mismatches. Unaligned bases at the beginning of the read do NOT count as mismatches. (DEFAULT=OFF)", "", ADVANCED_OPTION)
     ("deletion-coverage-propagation-cutoff","Value for coverage above which deletions are cutoff. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
     ("deletion-coverage-seed-cutoff","Value for coverage below which deletions are seeded", 0, ADVANCED_OPTION)
     ;
@@ -458,6 +459,8 @@ namespace breseq
     this->polymorphism_prediction = options.count("polymorphism-prediction");
     if (this->polymorphism_prediction) {
       
+      this->minimum_mapping_quality = 0;
+      
       this->mutation_log10_e_value_cutoff = 10;
       this->consensus_frequency_cutoff = 0; // zero is OFF - ensures any rejected poly with high freq move to consensus!
       this->consensus_minimum_variant_coverage = 0;
@@ -488,6 +491,8 @@ namespace breseq
     // This is strictly true if we are not in polymorphism mode...
     else /* if (this->mixed_base_prediction)*/ {
 
+      this->minimum_mapping_quality = 0;
+      
       this->mutation_log10_e_value_cutoff = 10;
       this->consensus_frequency_cutoff = 0.8;
       this->consensus_minimum_variant_coverage = 0;
@@ -514,6 +519,10 @@ namespace breseq
     }
     
     // override the default settings
+    
+    if (options.count("minimum-mapping-quality")) {
+      this->minimum_mapping_quality = from_string<int32_t>(options["minimum-mapping-quality"]);
+    }
     
     if (options.count("junction-indel-split-length"))
       this->preprocess_junction_min_indel_split_length = from_string<int32_t>(options["junction-indel-split-length"]);

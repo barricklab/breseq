@@ -803,7 +803,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         on_insert_position_past_base = false; 
       }
             
-      //## don't use bases without qualities!!
+      // Don't count bases without qualities!! -- not safe to even count them for coverage
       if(_base_bam_is_N(read_base_bam)) continue;
       
       //## gather information about the aligned base
@@ -835,11 +835,19 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
           ++redundant_pos_info[basebam2char(read_base_bam)][1+strand];
       }
       
-      //## don't use information from trimmed or redundant reads
-      //## to predict base substitutions and short indels!!
-      if(trimmed || (redundancy > 1)) {
-        continue;
-      }
+      
+      // When predicting base substitutions and short indels...
+
+      // 1. Don't use information from redundantly mapped reads
+      if (redundancy > 1) continue;
+      
+      // 2. Don't use information from trimmed bases in mapped reads
+      if (trimmed) continue;
+
+      // Right now this happens during resolution of read mappings
+      // Later: Re-implement this here, along with other guards that use saved alignment values that can be easily looked up
+      // 3. Don't use reads with low mapping quality (if requested in settings)
+      //if (i->mapping_quality() < _settings.minimum_mapping_quality) continue;
 
 			//##### deal with base calls
       //cerr << "POSITION:" << position << endl;

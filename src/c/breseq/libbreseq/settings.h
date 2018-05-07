@@ -262,8 +262,9 @@ namespace breseq
     uint64_t bowtie2_genome_maximum_alignments_to_consider_per_read;         // Default = 2000
 
     //! reads are never included in the BAM alignment file if they fail these guards
-		uint32_t require_match_length;    // Default = 0 (OFF) COMMAND-LINE OPTION
-		double   require_match_fraction;  // Default = 0.9     COMMAND-LINE OPTION
+    uint32_t minimum_mapping_quality;  // COMMAND-LINE OPTION
+		uint32_t require_match_length;     // Default = 0 (OFF) COMMAND-LINE OPTION
+		double   require_match_fraction;   // Default = 0.9     COMMAND-LINE OPTION
     //! ignore reads with this many or more mismatches (I+D+MM)
     int32_t  maximum_read_mismatches;     // Default = -1 (OFF)
     

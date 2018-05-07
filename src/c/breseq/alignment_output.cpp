@@ -42,10 +42,12 @@ uint8_t alignment_output::k_reserved_quality_max = 255;
 alignment_output::Alignment_Output_Pileup::Alignment_Output_Pileup ( 
                                                                     const string& bam, 
                                                                     const string& fasta, 
-                                                                    const bool show_ambiguously_mapped 
+                                                                    const bool show_ambiguously_mapped,
+                                                                    const uint32_t minimum_mapping_quality
                                                                     )
         : pileup_base ( bam, fasta )
         , _show_ambiguously_mapped(show_ambiguously_mapped)
+        , _minimum_mapping_quality(minimum_mapping_quality)
         , unique_start ( 0 )
         , unique_end ( 0 )
 {
@@ -274,9 +276,10 @@ void alignment_output::Alignment_Output_Pileup::pileup_callback( const pileup& p
 /*! Called for each read alignment.*/
 void alignment_output::Alignment_Output_Pileup::fetch_callback ( const alignment_wrapper& a )
 {
-  // we only keep track of unique alignments 
-  if ( !_show_ambiguously_mapped && a.is_redundant() ) return;
-  
+  // we only keep track of unique alignments
+  bool ambiguously_mapped = a.is_redundant() || (a.mapping_quality() < _minimum_mapping_quality);
+  if ( !_show_ambiguously_mapped && ambiguously_mapped ) return;
+
   // create a new empty structure and fill it  
   Aligned_Read aligned_read;
   aligned_read.seq_id = a.read_name();
@@ -285,7 +288,7 @@ void alignment_output::Alignment_Output_Pileup::fetch_callback ( const alignment
   aligned_read.read_sequence = a.read_char_sequence();
   aligned_read.qual_sequence = a.read_base_quality_bam_string();
   aligned_read.is_redundant = a.is_redundant();
-  aligned_read.read_name_style =  aligned_read.is_redundant ? "AM" : "NC";
+  aligned_read.read_name_style =  ambiguously_mapped ? "AM" : "NC";
   
   aligned_read.mapping_quality = a.mapping_quality();
   
@@ -317,15 +320,17 @@ alignment_output::alignment_output ( string bam,
                                     const uint32_t quality_score_cutoff,
                                     const int32_t junction_minimum_size_match,
                                     const bool mask_ref_matches,
-                                    const bool show_ambiguously_mapped
+                                    const bool show_ambiguously_mapped,
+                                    const uint32_t minimum_mapping_quality
                                     )
-        : m_alignment_output_pileup ( bam, fasta, show_ambiguously_mapped )
+        : m_alignment_output_pileup ( bam, fasta, show_ambiguously_mapped, minimum_mapping_quality )
         , m_aligned_reads ( m_alignment_output_pileup.aligned_reads )
         , m_quality_score_cutoff ( quality_score_cutoff )
         , m_maximum_to_align ( maximum_to_align )
         , m_junction_minimum_size_match ( junction_minimum_size_match )
         , m_mask_ref_matches (mask_ref_matches) 
         , m_show_ambiguously_mapped ( show_ambiguously_mapped )
+        , m_minimum_mapping_quality ( minimum_mapping_quality )
         , m_is_junction(false)
         , m_is_junction_junction(false)
 {
@@ -1370,8 +1375,11 @@ string alignment_output::html_legend()
   output += end_tr();
   
   if (m_show_ambiguously_mapped) {
-    output += tr(td("<code><font class=\"AM\">&nbsp;read_name</font></code> Reads with multiple best matches in reference."));
-    
+    if (m_minimum_mapping_quality > 0) {
+      output += tr(td("Reads with multiple best matches in reference or mappinq quality scores below " + to_string<uint32_t>(m_minimum_mapping_quality) + ": <code><font class=\"AM\">read_name</font></code>"));
+    } else {
+      output += tr(td("<Reads with multiple best matches in reference: <code><font class=\"AM\">read_name</font></code>"));
+    }
   }
   
   if (m_is_junction) {

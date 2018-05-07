@@ -495,6 +495,7 @@ namespace breseq{
     string bowtie2_junction;
     uint64_t bowtie2_junction_maximum_alignments_to_consider_per_read;
     uint64_t bowtie2_genome_maximum_alignments_to_consider_per_read;
+    uint32_t minimum_mapping_quality;
     uint32_t require_match_length;
     double   require_match_fraction;
     int32_t  maximum_read_mismatches;
