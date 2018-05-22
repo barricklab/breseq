@@ -70,11 +70,14 @@ AC_SEARCH_LIBS([acosf], [m], [], [AC_MSG_ERROR(["libm is required."])])
 AC_SEARCH_LIBS([pthread_create], [pthread], [], [AC_MSG_ERROR(["libpthread is required."])])
 
 #Find libunwind
-AC_CHECK_HEADER(libunwind.h, FOUND_LIBUNWIND_H=1, FOUND_LIBUNWIND_H=0)
-AC_SEARCH_LIBS([unw_getcontext], [unwind], FOUND_LIBUNWIND=1,  FOUND_LIBUNWIND=0)
+AC_ARG_WITH([libunwind],
+AS_HELP_STRING([--without-libunwind], [Disable preferring to use libunwind for debug info]))
 
-if [[ $FOUND_LIBUNWIND == 0 ]]; then
-
+AS_IF([test "x$with_libunwind" != "xno"], [
+  AC_CHECK_HEADER(libunwind.h, FOUND_LIBUNWIND_H=1, FOUND_LIBUNWIND_H=0)
+  AC_SEARCH_LIBS([unw_getcontext], [unwind], FOUND_LIBUNWIND=1,  FOUND_LIBUNWIND=0)
+  
+  if [[ $FOUND_LIBUNWIND == 0 ]]; then
     AC_MSG_CHECKING([libunwind])
     AC_MSG_CHECKING([for target architecture])
     case x"$target" in
@@ -100,13 +103,17 @@ if [[ $FOUND_LIBUNWIND == 0 ]]; then
     esac
 
     AC_SEARCH_LIBS([_UL${TARGET_PLATFORM}_step], [unwind], FOUND_LIBUNWIND=1, [])
-    
+  
     if [[ $FOUND_LIBUNWIND == 1 ]]; then
         UNWIND_LIBS="-lunwind-$TARGET_PLATFORM"
         AC_SUBST(UNWIND_LIBS)
     fi
-fi
-
+  fi
+],
+[ 
+  FOUND_LIBUNWIND_H=0
+  FOUND_LIBUNWIND=0
+])
 
 
 if [[ $FOUND_LIBUNWIND == 1 ]] && [[ $FOUND_LIBUNWIND_H == 1 ]]; then
@@ -115,7 +122,6 @@ if [[ $FOUND_LIBUNWIND == 1 ]] && [[ $FOUND_LIBUNWIND_H == 1 ]]; then
 else
     AC_MSG_RESULT([Using execinfo.h for backtrace.])
 fi
-
 
 
 
