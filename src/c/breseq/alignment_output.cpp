@@ -34,6 +34,7 @@ char  alignment_output::s_end_gap_character = '-';
 char  alignment_output::s_reference_match_character = '.';
 char  alignment_output::s_reference_match_masked_character = ',';
 
+uint8_t alignment_output::k_reserved_quality_start = 250;
 uint8_t alignment_output::k_reserved_quality_junction_overlap = 253;
 uint8_t alignment_output::k_reserved_quality_dont_highlight = 254;
 uint8_t alignment_output::k_reserved_quality_max = 255;
@@ -336,7 +337,7 @@ alignment_output::alignment_output ( string bam,
 {
   // zero is the default if no arg provided, make a reasonable value
   if (m_maximum_to_align == 0)
-    m_maximum_to_align = 200;
+    m_maximum_to_align = numeric_limits<uint32_t>::max();
   
   // the default for m_quality_score_cutoff is zero, which makes sense
 }
@@ -938,7 +939,50 @@ string alignment_output::text_alignment( const string& region, cOutputEvidenceIt
   output += "\n";
   
   return output;
-}  
+}
+  
+  
+string alignment_output::json_alignment( const string& region, cOutputEvidenceItem* output_evidence_item_ptr )
+{
+  
+  // this sets object values (not re-usable currently)
+  create_alignment(region, output_evidence_item_ptr);
+  
+  json j;
+  
+  if (m_error_message.size() > 0)
+  {
+    j["message"] = this->m_error_message;
+    return j.dump(2);
+  }
+  
+  /// all built by create_alignment and stored as member, m_ , variables.
+  set_quality_range(m_quality_score_cutoff);
+  
+  // @JEB sorting is not working yet
+  Sorted_Keys sorted_keys;
+  for (Aligned_Reads::iterator itr_read = m_aligned_reads.begin(); itr_read != m_aligned_reads.end(); itr_read++)
+  {
+    Sorted_Key sorted_key;
+    sorted_key.seq_id = itr_read->first;
+    sorted_key.aligned_bases = itr_read->second.aligned_bases;
+    sorted_keys.push_back(sorted_key);
+  }
+  std::sort(sorted_keys.begin(),sorted_keys.end(),alignment_output::sort_by_aligned_bases_length);
+  
+  
+  for (uint32_t index = 0; index < m_aligned_references.size(); index++)  {
+    j["reference"][index] = json_alignment_line( m_aligned_references[index] );
+  }
+  
+  uint32_t read_index = 0;
+  for (Sorted_Keys::iterator itr_key = sorted_keys.begin(); itr_key != sorted_keys.end(); itr_key ++)  {
+    j["read"][read_index++] = json_alignment_line( m_aligned_reads[itr_key->seq_id]);
+  }
+  
+  return j.dump(2);
+}
+
   
 
 // 'quality_score_cutoff' = below this value you get a special color -- for bad Illumina bases
@@ -1437,5 +1481,43 @@ string alignment_output::text_alignment_strand(const int8_t &strand)
   if (strand == 1) return ">";
   return ".";
 }
+
+json alignment_output::json_alignment_line(const alignment_output::Alignment_Base& a)
+{
+  json j;
+  
+  string bases, qualities;
+  for(uint32_t index = 0; index < a.aligned_bases.length(); index++) {
+    
+    // Base
+    string b=to_string(a.aligned_bases[index]);
+    bases += b;
+    
+    // Quality Score - PHRED
+    uint8_t q = k_reserved_quality_max;
+    if(!a.aligned_quals.empty()) {
+      q = a.aligned_quals[index];
+    }
+    
+    if (q <= k_reserved_quality_start) {
+      q = static_cast<uint8_t>(a.aligned_quals[index]+33);
+    } else {
+      q = ' ';
+    }
+    qualities += q;
+  }
+  j["bases"] = bases;
+  if(!a.aligned_quals.empty()) j["qualities"] = qualities;
+  j["strand"] = text_alignment_strand(a.strand);
+  
+  j["read_id"] = a.seq_id;
+  j["read_start"] = to_string<uint32_t>(a.start);
+  j["read_end"] = to_string<uint32_t>(a.end);
+
+  j["mapping_quality"] = to_string<uint32_t>(a.end);
+  
+  return j;
+}
+
 
 } // namespace breseq

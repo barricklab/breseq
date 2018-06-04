@@ -3242,7 +3242,6 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
         }
       }
     }
-
   }
   
   // Hugely inefficient step --!!

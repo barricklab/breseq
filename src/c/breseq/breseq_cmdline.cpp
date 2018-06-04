@@ -62,7 +62,7 @@ int do_bam2aln(int argc, char* argv[]) {
   options("fasta,f", "FASTA file of reference sequences", "data/reference.fasta");
   options("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=region1.*). If there are multiple regions, this argument must be a directory path, and all output files will be output here with names region1.*, region2.*, ... (DEFAULT=.)");
   options("region,r", "Regions to create alignments for. Must be provided as sequence regions in the format ACCESSION:START-END, where ACCESSION is a valid identifier for one of the sequences in the FASTA file, and START and END are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments");
-  options("format", "Format of output alignment(s): HTML or TXT", "HTML");
+  options("format", "Format of output alignment(s): HTML, TXT, or JSON", "HTML");
   options("max-reads,n", "Maximum number of reads to show in alignment", 200);
   options("repeat", "Show reads with multiple best matches in reference", TAKES_NO_ARGUMENT, ADVANCED_OPTION);
   options("quality-score-cutoff,c", "Base quality score cutoff below which reads are highlighted as yellow", 0);
@@ -109,7 +109,7 @@ int do_bam2aln(int argc, char* argv[]) {
   }
   
   string format = to_upper(options["format"]);
-  if ((format != "HTML") && (format != "TXT")) {
+  if ((format != "HTML") && (format != "TXT") && (format != "JSON")) {
     options.addUsage("");
     options.addUsage("Unknown format requested: " + format);
     options.printUsage();
@@ -146,6 +146,10 @@ int do_bam2aln(int argc, char* argv[]) {
     }
     else if (format == "TXT") {
       output_string = ao.text_alignment(region_list[j]);
+      default_file_name += ".txt";
+    }
+    else if (format == "JSON") {
+      output_string = ao.json_alignment(region_list[j]);
       default_file_name += ".txt";
     }
       
@@ -2383,6 +2387,16 @@ int breseq_default_action(int argc, char* argv[])
 		//
 		cerr << "Annotating mutations..." << endl;
 		ref_seq_info.annotate_mutations(gd);
+    
+    // Add the additional HTML fields with no javascript
+    MutationTableOptions mt_options(settings);
+    mt_options.no_javascript = true;
+    diff_entry_list_t muts = gd.mutation_list();
+    for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr ++) {
+      cDiffEntry& mut = (**itr);
+      add_html_fields_to_mutation(mut, mt_options);
+    }
+
     gd.write(settings.annotated_genome_diff_file_name);
     
 		//

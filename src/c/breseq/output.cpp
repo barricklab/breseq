@@ -238,7 +238,7 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   if(!relative_path.empty())
     relative_path += "/";
   HTML << "<p>" << endl;
-  MutationTableOptions mt_options;
+  MutationTableOptions mt_options(settings);
   mt_options.relative_link = relative_path;
   mt_options.one_ref_seq = (ref_seq_info.size() == 1);
   HTML << Html_Mutation_Table_String(settings, gd, muts, mt_options) << endl;
@@ -1012,7 +1012,7 @@ string html_genome_diff_item_table_string(const Settings& settings, cGenomeDiff&
   //mutation
   if(first_item.is_mutation())
   {
-    MutationTableOptions mt_options;
+    MutationTableOptions mt_options(settings);
     mt_options.detailed=true;
     return Html_Mutation_Table_String(settings, gd, list_ref, mt_options); 
   }
@@ -1949,7 +1949,7 @@ void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenom
 }
 
   
-void add_html_fields_to_mutation(cDiffEntry& mut, const Settings& settings, MutationTableOptions& options) {
+void add_html_fields_to_mutation(cDiffEntry& mut, MutationTableOptions& options) {
   
   string cell_seq_id = nonbreaking(mut[SEQ_ID]);
   string cell_position = commify(mut[POSITION]);
@@ -1960,7 +1960,7 @@ void add_html_fields_to_mutation(cDiffEntry& mut, const Settings& settings, Muta
   
   // @MDS - If the product contains more than a set number of genes
   // replace the name with the one that hides it with javascript.
-  if (!settings.no_javascript) {
+  if (!options.no_javascript) {
     if(mut.count(GENE_PRODUCT_HIDE) && (mut[GENE_PRODUCT_HIDE].size() > 0)) {
       cell_gene_product = htmlize(mut[GENE_PRODUCT_HIDE]);
     }
@@ -1983,7 +1983,7 @@ void add_html_fields_to_mutation(cDiffEntry& mut, const Settings& settings, Muta
       else if (mut.entry_exists("repeat_length")) {
         cell_mutation = "(" + mut["repeat_length"] + " bp)" + "<sub>" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"] + "</sub>";
       }
-      else if (options.detailed || (mut["new_seq"].size() <= settings.max_nucleotides_to_show_in_tables)) {
+      else if (options.detailed || (mut["new_seq"].size() <= options.max_nucleotides_to_show_in_tables)) {
         cell_mutation = "+" + mut[NEW_SEQ];
       } else {
         cell_mutation = "+" + s(mut[NEW_SEQ].size()) + " bp";
@@ -2107,6 +2107,9 @@ void add_html_fields_to_mutation(cDiffEntry& mut, const Settings& settings, Muta
   mut[HTML_GENE_NAME] = cell_gene_name;
   mut[HTML_GENE_PRODUCT] = cell_gene_product;
   
+  // And add start and end position info
+  mut["start_position"] = to_string<int32_t>(mut.get_reference_coordinate_start().get_position());
+  mut["end_position"] = to_string<int32_t>(mut.get_reference_coordinate_end().get_position());
 }
   
 /*
@@ -2346,7 +2349,7 @@ void Html_Mutation_Table_String::Item_Lines()
       
     // ### marshal cells defined depending on mutation type/Users/jbarrick/src/breseq/src/c/breseq/alignment_output.cpp
     
-    add_html_fields_to_mutation(mut, settings, options);
+    add_html_fields_to_mutation(mut, options);
     
     // ###### PRINT THE TABLE ROW ####
     ss << endl << "<!-- Print The Table Row -->" << endl; 

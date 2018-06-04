@@ -203,6 +203,7 @@ namespace breseq
     static char s_reference_match_character;          // Default = "."
     static char s_reference_match_masked_character;   // Default = ","
     
+    static uint8_t k_reserved_quality_start;
     static uint8_t k_reserved_quality_junction_overlap;
     static uint8_t k_reserved_quality_dont_highlight;
     static uint8_t k_reserved_quality_max;
@@ -223,6 +224,7 @@ namespace breseq
     void create_alignment ( const string& region, cOutputEvidenceItem * output_evidence_item = NULL );
     string html_alignment ( const string& region, cOutputEvidenceItem * output_evidence_item = NULL );
     string text_alignment ( const string& region, cOutputEvidenceItem * output_evidence_item = NULL );
+    string json_alignment ( const string& region, cOutputEvidenceItem * output_evidence_item = NULL );
     void set_quality_range(const uint32_t quality_score_cutoff = 0);
   private:
     uint32_t no_color_index;
@@ -232,6 +234,8 @@ namespace breseq
     string html_legend();
     string text_alignment_line(const Alignment_Base& a, const bool coords);
     string text_alignment_strand(const int8_t &strand);
+    json json_alignment_line(const Alignment_Base& a);
+
     
     static bool sort_by_aligned_bases_length ( const Sorted_Key& a, const Sorted_Key& b )
     {

@@ -157,7 +157,7 @@ extern const char* ALIGN_LEFT;
 // Convenience structure for passing many options
 struct MutationTableOptions {
   
-  MutationTableOptions() 
+  MutationTableOptions(const Settings& _settings)
   : repeat_header(0)
   , legend_row(false)
   , force_show_sample_headers(false)
@@ -165,7 +165,11 @@ struct MutationTableOptions {
   , force_frequencies_for_one_reference(false)
   , shade_frequencies(false)
   , detailed(false)
+  , max_nucleotides_to_show_in_tables(_settings.max_nucleotides_to_show_in_tables)
+  , no_javascript(_settings.no_javascript)
   {}
+  
+  
   
   uint32_t repeat_header;
   bool legend_row;
@@ -176,7 +180,8 @@ struct MutationTableOptions {
   bool detailed;
   vector<string> gd_name_list_ref;
   string relative_link;
-  
+  uint32_t max_nucleotides_to_show_in_tables;
+  bool no_javascript;
 };
   
 void html_index(const string& file_name, const Settings& settings, Summary& summary,
@@ -278,7 +283,7 @@ string decode_reject_reason(const string & reject);
 void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenomeDiff& gd);
   
 // add "HTML_*" entries to mutation (except HTML_GENE which is added in cReferenceSequence)
-void add_html_fields_to_mutation(cDiffEntry& mut, const Settings& settings, MutationTableOptions& options);
+void add_html_fields_to_mutation(cDiffEntry& mut, MutationTableOptions& options);
   
 /*-----------------------------------------------------------------------------
  *  Create_Evidence_Files

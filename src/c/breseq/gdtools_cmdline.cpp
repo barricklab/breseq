@@ -1152,7 +1152,7 @@ int do_annotate(int argc, char* argv[])
     // No evidence needs to be transferred to options and initialized correctly within breseq
     settings.no_evidence = true;
     
-    MutationTableOptions mt_options;
+    MutationTableOptions mt_options(settings);
     if (compare_mode)
       mt_options.repeat_header = true;
     if (polymorphisms_found)
@@ -1174,18 +1174,14 @@ int do_annotate(int argc, char* argv[])
 		uout("Writing output Genome Diff file", options["output"]);
 		
 		// Only defaults accessible - which include javascript output...
-		MutationTableOptions options;
 		Settings settings;
+		MutationTableOptions options(settings);
 		
 		// Add extra HTML annotations
 		diff_entry_list_t muts = gd.mutation_list();
 		for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr ++) {
 			cDiffEntry& mut = (**itr);
-			add_html_fields_to_mutation(mut, settings, options);
-			
-			// And add start and end position info
-			mut["start_position"] = to_string<int32_t>(mut.get_reference_coordinate_start().get_position());
-			mut["end_position"] = to_string<int32_t>(mut.get_reference_coordinate_end().get_position());
+			add_html_fields_to_mutation(mut, options);
 		}
 		
     gd.write(output_file_name);
@@ -1221,18 +1217,14 @@ int do_annotate(int argc, char* argv[])
 		uout("Writing output JSON file", output_file_name);
 		
 		// Only defaults accessible - which include javascript output...
-		MutationTableOptions options;
 		Settings settings;
+		MutationTableOptions options(settings);
 		
 		// Add extra HTML annotations
 		diff_entry_list_t muts = gd.mutation_list();
 		for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr ++) {
 			cDiffEntry& mut = (**itr);
-			add_html_fields_to_mutation(mut, settings, options);
-			
-			// And add start and end position info
-			mut["start_position"] = to_string<int32_t>(mut.get_reference_coordinate_start().get_position());
-			mut["end_position"] = to_string<int32_t>(mut.get_reference_coordinate_end().get_position());
+			add_html_fields_to_mutation(mut, options);
 		}
 		
 		gd.write_json(output_file_name);
@@ -2678,12 +2670,12 @@ int do_runfile(int argc, char *argv[])
 		
 		
     if (refs.size() == 0) {
-      cerr << ">> Skipping file because no #REFSEQ= header lines found." << endl ;
+      cerr << ">> Skipping file because no #=REFSEQ header lines found." << endl ;
       continue;  
     }
     
     if (reads.size() == 0) {
-      cerr << ">> Skipping file because no #READSEQ= header lines found." << endl ;
+      cerr << ">> Skipping file because no #=READSEQ header lines found." << endl ;
       continue;  
     }
   
