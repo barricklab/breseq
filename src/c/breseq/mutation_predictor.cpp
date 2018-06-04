@@ -1729,7 +1729,7 @@ namespace breseq {
               assign_insert_position++;
               (*ins_mut)["insert_position"] = s(assign_insert_position);
               it_ins--;
-              if (it_ins == test_muts.rbegin()) break;
+              if (it_ins == test_muts.rend()) break;
               ins_mut = (*it_ins).get();
             }
             
