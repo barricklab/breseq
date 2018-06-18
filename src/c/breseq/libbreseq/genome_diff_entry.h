@@ -242,8 +242,12 @@ namespace breseq {
     // Returns -1 if a < b, 0 if a == b, and +1 is a > b
     
     bool operator<(const cDiffEntry& de) const { return (compare(*this, de) < 0); }
+    bool operator<=(const cDiffEntry& de) const { return (compare(*this, de) <= 0); }
+    bool operator>(const cDiffEntry& de) const { return (compare(*this, de) > 0); }
+    bool operator>=(const cDiffEntry& de) const { return (compare(*this, de) >= 0); }
     bool operator==(const cDiffEntry& de) const { return (compare(*this, de) == 0); }
-    
+    bool operator!=(const cDiffEntry& de) const { return (compare(*this, de) != 0); }
+
     //! Return if a given key value exists in _fields
     bool entry_exists(const diff_entry_key_t& k) const { return (count(k) > 0); }
     

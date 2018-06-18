@@ -2387,16 +2387,6 @@ int breseq_default_action(int argc, char* argv[])
 		//
 		cerr << "Annotating mutations..." << endl;
 		ref_seq_info.annotate_mutations(gd);
-    
-    // Add the additional HTML fields with no javascript
-    MutationTableOptions mt_options(settings);
-    mt_options.no_javascript = true;
-    diff_entry_list_t muts = gd.mutation_list();
-    for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr ++) {
-      cDiffEntry& mut = (**itr);
-      add_html_fields_to_mutation(mut, mt_options);
-    }
-
     gd.write(settings.annotated_genome_diff_file_name);
     
 		//

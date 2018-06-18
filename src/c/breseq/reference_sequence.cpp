@@ -26,15 +26,18 @@ using namespace std;
 
 namespace breseq {
   
-  const string cSequenceFeature::feature_list_separator = ";";
   
-  
-  // this could be moved to the object
   const string cReferenceSequences::intergenic_separator = "/";
   const string cReferenceSequences::html_intergenic_separator = "/";
+  const string cReferenceSequences::gene_list_separator = ",";
+  const string cReferenceSequences::html_gene_list_separator = ",";
   const string cReferenceSequences::no_gene_name = "–"; //en-dash
-  const string cReferenceSequences::multiple_separator = cSequenceFeature::feature_list_separator;
+  const string cReferenceSequences::gene_range_separator = "–"; //en-dash
+  const string cReferenceSequences::multiple_separator = "|";
   const string cReferenceSequences::html_multiple_separator = "<br>";
+  const string cReferenceSequences::gene_strand_reverse_char = "<";
+  const string cReferenceSequences::gene_strand_forward_char = ">";
+  
   const double cReferenceSequences::k_inactivate_overlap_fraction = 0.8;
   const int32_t cReferenceSequences::k_promoter_distance = 150;
 
@@ -108,6 +111,24 @@ namespace breseq {
     }
       
     //ERROR("Cannot find index of position that is not within gene.");
+  }
+  
+  // Clean up some strings to not use our separator characters
+  void cSequenceFeature::make_feature_strings_safe()
+  {
+  
+    if (this->count("name")) {
+      (*this)["name"] = substitute((*this)["name"], cReferenceSequences::intergenic_separator, "_");
+      (*this)["name"] = substitute((*this)["name"], cReferenceSequences::multiple_separator, "_");
+      (*this)["name"] = substitute((*this)["name"], cReferenceSequences::gene_list_separator, "_");
+    }
+    
+    // We don't have to worry about intergenic or gene list separators in the products
+    if (this->count("product")) {
+      //(*this)["product"] = substitute((*this)["product"], cReferenceSequences::intergenic_separator, "_");
+      (*this)["product"] = substitute((*this)["product"], cReferenceSequences::multiple_separator, ";");
+      //(*this)["product"] = substitute((*this)["product"], cReferenceSequences::gene_list_separator, "_");
+    }
   }
   
   string cAnnotatedSequence::get_stranded_sequence_1(int32_t strand, int32_t start_1, int32_t end_1) const
@@ -215,7 +236,7 @@ namespace breseq {
       //The current feature we're looking at
       cSequenceFeature& feat = **it_feature;
       
-      // Iterature through all regions of the feature
+      // Iterate through all regions of the feature
       bool it_region_iterate = true;
       
       for (cFeatureLocationList::iterator it_region = feat.m_locations.begin(); it_region != feat.m_locations.end(); )
@@ -765,8 +786,9 @@ namespace breseq {
       }
     }
     
-    // Make certain feature items safe for making into lists separated by semicolons
-    this->make_features_safe();
+    // Make certain feature items safe for GenomeDiff and HTML output operations
+    // that divide them into lists, add intergenic, or multiple-item separators etc.
+    this->make_feature_strings_safe();
     
     // Finally, update feature lists
     this->update_feature_lists();
@@ -2466,7 +2488,6 @@ void cReferenceSequences::annotate_1_mutation_in_genes(cDiffEntry& mut, vector<c
 {
   // Separated by semicolons (separate for each gene)
   vector<string> gene_name_list;
-  vector<string> html_gene_name_list;
   vector<string> gene_product_list;
   vector<string> locus_tag_list;
   vector<string> gene_position_list;
@@ -2492,7 +2513,6 @@ void cReferenceSequences::annotate_1_mutation_in_genes(cDiffEntry& mut, vector<c
     
     // Per gene values
     string gene_name;
-    string html_gene_name;
     string gene_product;
     string locus_tag;
     string gene_position;
@@ -2506,10 +2526,6 @@ void cReferenceSequences::annotate_1_mutation_in_genes(cDiffEntry& mut, vector<c
     cGeneFeature gene = (cGeneFeature)(*(gene_loc->get_feature()));
     
     gene_name = gene.name;
-    
-    html_gene_name = "<i>" + gene.name + "</i>";
-    html_gene_name += (gene_loc->get_strand() == -1) ? "&nbsp;&larr;" : "&nbsp;&rarr;";
-    
     gene_product = gene.product;
     locus_tag = gene.get_locus_tag();
     
@@ -2529,10 +2545,9 @@ void cReferenceSequences::annotate_1_mutation_in_genes(cDiffEntry& mut, vector<c
     }
 
     string gene_nt_size = to_string(gene_loc->get_end_1() - gene_loc->get_start_1() + 1);
-    string gene_strand_char = gene_loc->is_top_strand() ? ">" : "<";
-    gene_strand = gene_strand_char;
+    gene_strand = gene_strand_to_string(gene_loc->is_top_strand());
     
-    // Set deafaults
+    // Set defaults
     string codon_position_is_indeterminate("0");
     string codon_position("NA");
     string codon_number("NA");
@@ -2665,7 +2680,6 @@ void cReferenceSequences::annotate_1_mutation_in_genes(cDiffEntry& mut, vector<c
     
     // Push everything on the list
     gene_name_list.push_back(gene_name);
-    html_gene_name_list.push_back(html_gene_name);
     gene_product_list.push_back(gene_product);
     locus_tag_list.push_back(locus_tag);
     gene_position_list.push_back(gene_position);
@@ -2675,7 +2689,6 @@ void cReferenceSequences::annotate_1_mutation_in_genes(cDiffEntry& mut, vector<c
   
   // These are always present for every gene
   mut["gene_name"] = join(gene_name_list, multiple_separator);
-  mut["html_gene_name"] = join(html_gene_name_list, html_multiple_separator);
   mut["gene_product"] = join(gene_product_list, multiple_separator);
   mut["locus_tag"] = join(locus_tag_list, multiple_separator);
   mut["gene_position"] = join(gene_position_list, multiple_separator);
@@ -2717,11 +2730,9 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
   mut["codon_ref_seq"] = "";
   mut["codon_new_seq"] = "";
   mut["gene_name"] = "";
-  mut["html_gene_name"] = "";
   mut["gene_position"] = "";
+  mut["gene_strand"] = "";
   mut["gene_product"] = "";
-  mut["_gene_product_hide"] = "";
-  
   
   mut["genes_overlapping"] = "";
   mut["locus_tags_overlapping"] = "";
@@ -2872,33 +2883,27 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     
     
     // --------------  End "genes_promoter" field
-
+    mut["gene_strand"] += (prev_gene.name.size() > 0) ? gene_strand_to_string(prev_gene_loc->get_strand() == 1) : no_gene_name;
+    mut["gene_strand"] += intergenic_separator;
+    mut["gene_strand"] += (next_gene.name.size() > 0) ? gene_strand_to_string(next_gene_loc->get_strand() == 1) : no_gene_name;
     
     mut["gene_name"] += (prev_gene.name.size() > 0) ? prev_gene.name : no_gene_name;
     mut["gene_name"] += intergenic_separator;
     mut["gene_name"] += (next_gene.name.size() > 0) ? next_gene.name : no_gene_name;
 
-    mut["html_gene_name"] += (prev_gene.name.size() > 0) ? "<i>" + prev_gene.name + "</i>" : no_gene_name;
-    if (prev_gene.name.size() > 0) mut["html_gene_name"] += (prev_gene_loc->get_strand() == -1) ? "&nbsp;&larr;" : "&nbsp;&rarr;";
-    mut["html_gene_name"] += "&nbsp;";
-    mut["html_gene_name"] += html_intergenic_separator;
-    if (next_gene.name.size() > 0) mut["html_gene_name"] += (next_gene_loc->get_strand() == -1) ? "&nbsp;&larr;" : "&nbsp;&rarr;";
-    mut["html_gene_name"] += "&nbsp;";
-    mut["html_gene_name"] += (next_gene.name.size() > 0) ? "<i>" + next_gene.name + "</i>": no_gene_name;
-    
     mut["locus_tag"] += (prev_gene.get_locus_tag().size() > 0) ? prev_gene.get_locus_tag() : no_gene_name;
     mut["locus_tag"] += intergenic_separator;
     mut["locus_tag"] += (next_gene.get_locus_tag().size() > 0) ? next_gene.get_locus_tag() : no_gene_name;
 
+    mut["gene_position"] += "intergenic (";
     if (prev_gene.name.size() > 0)
     {
-      mut["gene_position"] += "intergenic (";
       mut["gene_position"] += prev_gene_loc->is_top_strand() ? "+" : "-"; //hyphen
       mut["gene_position"] += to_string(start - prev_gene_loc->get_end_1());
     }
     else
     {
-      mut["gene_position"] += "intergenic (–";
+      mut["gene_position"] += no_gene_name;
     }
     mut["gene_position"] += intergenic_separator;
     if (next_gene.name.size() > 0)
@@ -2908,13 +2913,13 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     }
     else
     {
-      mut["gene_position"] += "–"; //en-dash
+      mut["gene_position"] += no_gene_name; //en-dash
     }
     mut["gene_position"] += ")";
 
-    mut["gene_product"] += (prev_gene.product.size() > 0) ? prev_gene.product : "–"; //en-dash
+    mut["gene_product"] += (prev_gene.product.size() > 0) ? prev_gene.product : no_gene_name; //en-dash
     mut["gene_product"] += intergenic_separator;
-    mut["gene_product"] += (next_gene.product.size() > 0) ? next_gene.product : "–"; //en-dash
+    mut["gene_product"] += (next_gene.product.size() > 0) ? next_gene.product : no_gene_name; //en-dash
 
     return;
   }
@@ -3019,47 +3024,19 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     // --------------  End "genes_inactivated" field
     
     // We ended up calling this function a lot.
-    string sJoinedGeneList = join(gene_name_list, ", ");
-    
-    mut["gene_product"] += sJoinedGeneList;
-    mut["_gene_product_hide"] = "<i>" + mut["gene_product"] + "</i>";
-    
-    // @MDS0004 - This number here will condense the number of genes listed.
-    // Change to show how many appear in HTML. This is a javascript call.
-    //
-    // Non-Button Toggle - Replace <input>
-    // <a href=\"javascript:hideTog('" + sID + "');\">Toggle Genes</a>
-    if(gene_name_list.size() > 15)
-    {
-      string sID = "gene_hide_" + to_string(mut._type) + "_" + mut._id;
-      string sButtonID = sID + "_button";
-      mut["_gene_product_hide"] =
-        "<i title=\"" + sJoinedGeneList + "\"><b>" +
-        to_string(gene_name_list.size()) +
-        " genes</b> <noscript>Javascript Disabled: All genes shown.<br></noscript></i>"
-        + "<noscript>" + mut["gene_product"] + "</noscript>"
-        + "<div id=\"" + sID + "\" class=\"hidden\">"
-        + mut["gene_product"] + "</div>"
-        + "<input id=\"" + sButtonID + "\" type=\"button\" onclick=\"hideTog('" + sID + "');showTog('" + sButtonID + "')\" value=\"Show\" />";
-      mut["gene_product"] = "<i>";
-      mut["gene_product"] += "<b>" + to_string(gene_name_list.size()) + " genes</b><BR>";
-      mut["gene_product"] += sJoinedGeneList;
-      mut["gene_product"] += "</i>";
-    }
+    mut["gene_product"] = join(gene_name_list, gene_list_separator);
 
     if (gene_name_list.size() == 1) {
       mut["gene_name"] = gene_name_list[0];
-      mut["html_gene_name"] = "<i>" + gene_name_list[0] + "</i>";
     } else {
-      mut["gene_name"] = gene_name_list.front() + "–" + gene_name_list.back();  //en-dash  
-      mut["html_gene_name"] = "<i>" + gene_name_list.front() + "</i>–<i>" + gene_name_list.back() + "</i>";  //en-dash      
+      mut["gene_name"] = gene_name_list.front() + gene_range_separator + gene_name_list.back();  //en-dash
     }
 
     if (locus_tag_list.size() == 1) {
       mut["locus_tag"] = locus_tag_list[0];
     }
     else if (locus_tag_list.size() > 1) {
-      mut["locus_tag"] = locus_tag_list.front() + "–" + locus_tag_list.back();  //en-dash
+      mut["locus_tag"] = locus_tag_list.front() + gene_range_separator + locus_tag_list.back();  //en-dash
     }
   }
 }
@@ -3226,8 +3203,12 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
       } break;
     }
     
-    // Perform mutation classification
+    // Add start and end position info and perform mutation classification
     if (mut.is_mutation()) {
+      
+      mut["position_start"] = to_string<int32_t>(mut.get_reference_coordinate_start().get_position());
+      mut["position_end"] = to_string<int32_t>(mut.get_reference_coordinate_end().get_position());
+      
       categorize_1_mutation(mut, large_size_cutoff);
     }
     
@@ -3281,7 +3262,6 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
           
           for (size_t jj = 0; jj < codon_number_list_j.size(); jj++) {
 
-            
             if ((codon_number_list_j[jj] == "") || (codon_position_list_j[jj] == ""))
               continue;
             int32_t j_codon_number = from_string<int32_t>(codon_number_list_j[jj]);
@@ -3328,7 +3308,7 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
             vector<string> codon_new_seq_list_i = split((*snp_muts[on_key][i])["codon_new_seq"], multiple_separator);
             string new_codon = codon_new_seq_list_i[ii];
             char new_char = (*snp_muts[on_key][j])["new_seq"][0];
-            if ((*snp_muts[on_key][i])["gene_strand"] == "<") new_char = reverse_complement(new_char);
+            if ((*snp_muts[on_key][i])["gene_strand"] == gene_strand_reverse_char) new_char = reverse_complement(new_char);
             new_codon[j_codon_position - 1] = new_char;
             
             vector<string> codon_new_seq_list_j = split((*snp_muts[on_key][j])["codon_new_seq"], multiple_separator);

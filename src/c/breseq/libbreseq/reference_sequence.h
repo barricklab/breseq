@@ -387,8 +387,6 @@ namespace breseq {
     //  
     
     public:
-
-      static const string feature_list_separator;
     
       // Could add accessors that convert strings to numbers...
       cFeatureLocationList m_locations;
@@ -545,14 +543,7 @@ namespace breseq {
       bool start_is_indeterminate() { return m_start_is_indeterminate; }
       bool end_is_indeterminate() { return m_end_is_indeterminate; }
     
-      void make_feature_safe() {
-        const vector<string> fields = make_vector<string>("name")("product")("type");
-        
-        for (vector<string>::const_iterator it=fields.begin(); it !=fields.end(); it++)
-        if (this->SafeGet("product") != "") {
-          (*this)[*it] = substitute((*this)[*it], feature_list_separator, ",");
-        }
-      }
+      void make_feature_strings_safe();
   };
   
   //!< Subclass of reference features with more information
@@ -721,10 +712,10 @@ namespace breseq {
         return m_file_name;
       }
     
-      void make_features_safe() {
+      void make_feature_strings_safe() {
         for (list<cSequenceFeaturePtr>::iterator it = m_features.begin(); it != m_features.end(); it++)
         {
-          (*it)->make_feature_safe();
+          (*it)->make_feature_strings_safe();
         }
       }
 
@@ -789,9 +780,15 @@ namespace breseq {
     // Used for annotating mutations
     static const string intergenic_separator;
     static const string html_intergenic_separator;
+    static const string gene_list_separator;
+    static const string html_gene_list_separator;
     static const string no_gene_name;
+    static const string gene_range_separator;
     static const string multiple_separator;
     static const string html_multiple_separator;
+    static const string gene_strand_reverse_char;
+    static const string gene_strand_forward_char;
+
     static const double k_inactivate_overlap_fraction;
     static const int32_t k_promoter_distance;
     
@@ -808,15 +805,15 @@ namespace breseq {
     void LoadFile(const string& file_name)
       { LoadFiles(make_vector<string>(file_name)); }
     
-    //!< Fixes gene/product names so that our separator character is unique
-    void make_features_safe() {
+    //!< Fixes gene/product names so that our separator character is unique. Called after load.
+    void make_feature_strings_safe() {
       for (vector<cAnnotatedSequence>::iterator its= this->begin(); its != this->end(); its++) {
         cAnnotatedSequence& as = *its;
-        as.make_features_safe();
+        as.make_feature_strings_safe();
       }
     }
     
-    //!< Fixes gene lists and other properties. Called after load
+    //!< Updates gene lists and other properties. Called after load.
     void update_feature_lists() {
       for (vector<cAnnotatedSequence>::iterator its= this->begin(); its != this->end(); its++) {
         cAnnotatedSequence& as = *its;
@@ -1124,6 +1121,10 @@ namespace breseq {
     bool mutation_overlapping_gene_is_inactivating(const cDiffEntry& mut, const string& snp_type, const uint32_t start, const uint32_t end, const cGeneFeature& gene, const double inactivate_overlap_fraction);
     
     static string list_to_entry(const vector<string>& _list, const string& _ignore);
+    
+    // Cleans out intergenic and list separators
+    static string gene_strand_to_string(const bool forward)
+    { return (forward ? gene_strand_forward_char : gene_strand_reverse_char); }
     
     void annotate_1_mutation_in_genes(cDiffEntry& mut, vector<cFeatureLocation*>& within_gene_locs, uint32_t start, uint32_t end, bool ignore_pseudogenes);
     void annotate_1_mutation(cDiffEntry& mut, uint32_t start, uint32_t end, bool repeat_override = false, bool ignore_pseudogenes = false);

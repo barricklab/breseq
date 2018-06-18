@@ -1139,107 +1139,89 @@ bool cGenomeDiff::mutation_in_entry_of_type(cDiffEntry mut, const gd_entry_type 
   return false;
 }
 
-//! Subtract mutations
-//Note: Preserves evidence in the file being subtracted from
-void cGenomeDiff::set_subtract(cGenomeDiff& gd, bool phylogeny_id_aware, bool verbose)
+//! Subtract mutations in the input gd file from this one
+//Note: Preserves all evidence in the file being subtracted from
+void cGenomeDiff::set_subtract(cGenomeDiff& gd, bool phylogeny_id_aware, bool frequency_aware, bool verbose)
 {
   (void)verbose; //unused
   
   // Temporarily delete 'phylogeny_id' if we are not phylogeny aware
   if (!phylogeny_id_aware) {
-    for (diff_entry_list_t::iterator it_new = gd._entry_list.begin(); it_new != gd._entry_list.end(); it_new++) {
+    
+    // ... in the subtracted genome diff
+    for (diff_entry_list_t::iterator it = gd._entry_list.begin(); it != gd._entry_list.end(); it++) {
       
       // Save this info in field that won't affect comparisons
-      if ((*it_new)->entry_exists("phylogeny_id")) {
-        (**it_new)["_phylogeny_id"] = (**it_new)["phylogeny_id"];
+      if ((*it)->entry_exists("phylogeny_id")) {
+        (**it)["_phylogeny_id"] = (**it)["phylogeny_id"];
       }
-      if ((*it_new)->entry_exists("population_id")) {
-        (**it_new)["_population_id"] = (**it_new)["population_id"];
+      if ((*it)->entry_exists("population_id")) {
+        (**it)["_population_id"] = (**it)["population_id"];
       }
       
-      (*it_new)->erase("phylogeny_id");
-      (*it_new)->erase("population_id");
+      (*it)->erase("phylogeny_id");
+      (*it)->erase("population_id");
+    }
+    
+    // ... in this genome diff
+    for (diff_entry_list_t::iterator it = this->_entry_list.begin(); it != this->_entry_list.end(); it++) {
+      
+      // Save this info in field that won't affect comparisons
+      if ((*it)->entry_exists("phylogeny_id")) {
+        (**it)["_phylogeny_id"] = (**it)["phylogeny_id"];
+      }
+      if ((*it)->entry_exists("population_id")) {
+        (**it)["_population_id"] = (**it)["population_id"];
+      }
+      
+      (*it)->erase("phylogeny_id");
+      (*it)->erase("population_id");
     }
   }
   
-  set<cDiffEntry> seen;
-  diff_entry_list_t muts = gd.mutation_list();
-  for (diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); ++it) {
-    
-    // We have to add up the frequencies of the mutations we are subtracting...
-    // ... so get the existing frequency stored with any mutation
-    double frequency = 0;
-    if (seen.count(**it)) {
-      if ( seen.find(**it)->entry_exists(FREQUENCY) ) {
-        frequency = from_string<double>(seen.find(**it)->get(FREQUENCY));
-      }
-    }
-    
-    // Add the frequency of the current one
-    if ( (*it)->entry_exists(FREQUENCY) ) {
-      frequency += from_string<double>((*it)->get(FREQUENCY));
-    } else {
-      frequency += 1;
-    }
-    
-    cDiffEntry de(**it);
-    de[FREQUENCY] = to_string<double>(frequency);
-    //if (verbose) cout << de.as_string() << endl;
-    
-    seen.insert(de);
-  }
+  // We need to sort both lists to be sure iterating in this way matches everything up
+  gd.sort();
+  this->sort();
   
-  // We will be erasing inside the it loop.  This is to keep
-  // track of whether or not we should iterate to the next element.
-  bool it_advance = true;
+  // Iterator for subtracted genome diff (mutations only)
+  diff_entry_list_t subtract_muts = gd.mutation_list();
+  diff_entry_list_t::iterator it_subtract = subtract_muts.begin();
   
-  //Iterate through all the entries
-  for (diff_entry_list_t::iterator it = _entry_list.begin(); it != _entry_list.end(); )
-  {
-    it_advance = true;
-    //The current entry we're looking at
-    cDiffEntry& entry = **it;
-    
-    //if (verbose) cout << entry.as_string() << endl;
-    
-    if (!phylogeny_id_aware) {
-      // Save this info in field that won't affect comparisons
-      if (entry.entry_exists("phylogeny_id")) {
-        entry["_phylogeny_id"] = entry["phylogeny_id"];
-      }
-      if (entry.entry_exists("population_id")) {
-        entry["_population_id"] = entry["population_id"];
-      }
+  // Iterator for this genome diff (authentic entries)
+  diff_entry_list_t::iterator it = this->_entry_list.begin();
+
+  while ( (it_subtract != subtract_muts.end()) && (it != _entry_list.end()) ) {
+    //cout << **it_subtract << endl;
+    //cout << **it << endl << endl;
+    if (**it_subtract < **it) {
+      it_subtract++;
     }
-    
-    entry.erase("phylogeny_id");
-    entry.erase("population_id");
-    
-    //Subtract mutations that we've seen
-    if(entry.is_mutation() && seen.count(entry)) {
+    else if (**it_subtract > **it) {
+      it++;
+      if ( !(*it)->is_mutation() ) break;
+    }
+    else {
       
-      double frequency = ( entry.entry_exists(FREQUENCY) ) ? from_string<double>(entry.get(FREQUENCY)) : 1;
-      frequency -= from_string<double>(seen.find(entry)->get(FREQUENCY));
-    
-      // Delete if we subtracted to less than zero frequency, adjust otherwise
-      if (frequency <= 0) {
+      if (!frequency_aware) {
         it = _entry_list.erase(it);
-        it_advance = false;
-      } else {
-        entry[FREQUENCY] = to_string<double>(frequency);
+        it_subtract++;
       }
-      
-    } else if (!phylogeny_id_aware) {
-      if (entry.entry_exists("_phylogeny_id")) {
-        entry["phylogeny_id"] = entry["_phylogeny_id"];
-      }
-      if (entry.entry_exists("_population_id")) {
-        entry["population_id"] = entry["_population_id"];
+      else {
+
+        double this_freq = ( (**it).entry_exists(FREQUENCY) ) ? from_string<double>((**it).get(FREQUENCY)) : 1.0;
+        double subtract_freq = ( (**it_subtract).entry_exists(FREQUENCY) ) ? from_string<double>((**it_subtract).get(FREQUENCY)) : 1.0;
+        
+        this_freq -= subtract_freq;
+        if (this_freq <= 0) {
+          it = _entry_list.erase(it);
+          it_subtract++;
+        } else {
+          (**it)[FREQUENCY] = to_string<double>(this_freq);
+          it_subtract++;
+          it++;
+        }
       }
     }
-    
-    // Iterate it ONLY if we haven't erased something.
-    if(it_advance)it++;
   }
   
   // Restore fields that we hid if we are not phylogeny aware
@@ -1255,7 +1237,7 @@ void cGenomeDiff::set_subtract(cGenomeDiff& gd, bool phylogeny_id_aware, bool ve
     }
   }
   
-  reassign_unique_ids();
+  this->reassign_unique_ids();
 }
  
   

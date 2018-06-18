@@ -42,6 +42,7 @@ extern const char* GENES;
 extern const char* HTML_SEQ_ID;
 extern const char* GENE_NAME;
 extern const char* HTML_GENE_NAME;
+extern const char* GENE_STRAND;
 extern const char* GENE_POSITION;
 extern const char* HTML_POSITION;
 extern const char* HTML_MUTATION;

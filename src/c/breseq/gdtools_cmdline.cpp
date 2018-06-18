@@ -250,11 +250,13 @@ int do_subtract(int argc, char *argv[])
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o",  "output GD file", "output.gd");
 	options("phylogeny-aware,p", "Check the optional 'phylogeny_id' field when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
+	options("frequency-aware,f", "Use the frequencies of mutations when performing the subtraction. Normally an input mutation is removed if it appears at any frequency in a subtracted file. In this mode its frequency is reduced by the frequency in each subtracted file. If the resulting frequency is zero or below, then the mutation is removed.", TAKES_NO_ARGUMENT);
+
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
-	options.addUsage("Creates a new Genome Diff file that contains all entries that are still");
+	options.addUsage("Creates a new Genome Diff file that contains all mutation entries that are still");
 	options.addUsage("present in the input file after removing mutations that are in any of the");
 	options.addUsage("subtracted Genome Diff files. All evidence and validation entries are");
 	options.addUsage("retained in the output file.");
@@ -282,7 +284,7 @@ int do_subtract(int argc, char *argv[])
   for (int32_t i = 1; i < options.getArgc(); ++i) {
     uout << options.getArgv(i) << endl;
     cGenomeDiff gd2(options.getArgv(i));
-    gd1.set_subtract(gd2, options.count("phylogeny-aware"), verbose);
+    gd1.set_subtract(gd2, options.count("phylogeny-aware"), options.count("frequency-aware"), verbose);
   }
   
   uout("Writing output GD file", options["output"]);
@@ -1050,6 +1052,7 @@ int do_annotate(int argc, char* argv[])
 	options("output,o", "Path to output file with added mutation data. (DEFAULT: output.*");
 	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
 	options("format,f", "Type of output file to generate. See options below", "HTML");
+	options("add-html-fields,a", "Add formatted fields that are used for generating HTML output. Only applicable to GD and JSON output formats", TAKES_NO_ARGUMENT);
 	options("ignore-pseudogenes", "Treat pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT);
   options("repeat-header", "In HTML mode, repeat the header line every this many rows (0=OFF)", "10");
 	options("phylogeny-aware,p", "Check the optional 'phylogeny_id' field when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
@@ -1138,6 +1141,11 @@ int do_annotate(int argc, char* argv[])
 	vector<string> gd_titles;
 	bool polymorphisms_found(false);
 	
+	// Give a warning if add-html-fields used when it isn't necessary
+	if (options.count("add-html-fields") && !((output_format == "GD") || (output_format == "JSON")) ) {
+		WARN("--add-html-fields option is not used for output format " + output_format);
+	}
+	
   if (output_format == "HTML") {
 		
 		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, polymorphisms_found, compare_mode, options, uout);
@@ -1173,15 +1181,16 @@ int do_annotate(int argc, char* argv[])
 		
 		uout("Writing output Genome Diff file", options["output"]);
 		
-		// Only defaults accessible - which include javascript output...
-		Settings settings;
-		MutationTableOptions options(settings);
-		
 		// Add extra HTML annotations
-		diff_entry_list_t muts = gd.mutation_list();
-		for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr ++) {
-			cDiffEntry& mut = (**itr);
-			add_html_fields_to_mutation(mut, options);
+		if (options.count("add-html-fields")) {
+			// Only defaults accessible - which include javascript output...
+			Settings settings;
+			MutationTableOptions mutation_table_options(settings);
+			diff_entry_list_t muts = gd.mutation_list();
+			for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr ++) {
+				cDiffEntry& mut = (**itr);
+				add_html_fields_to_mutation(mut, mutation_table_options);
+			}
 		}
 		
     gd.write(output_file_name);
@@ -1216,15 +1225,17 @@ int do_annotate(int argc, char* argv[])
 		
 		uout("Writing output JSON file", output_file_name);
 		
-		// Only defaults accessible - which include javascript output...
-		Settings settings;
-		MutationTableOptions options(settings);
-		
 		// Add extra HTML annotations
-		diff_entry_list_t muts = gd.mutation_list();
-		for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr ++) {
-			cDiffEntry& mut = (**itr);
-			add_html_fields_to_mutation(mut, options);
+		if (options.count("add-html-fields")) {
+			// Only defaults accessible - which include javascript output...
+			Settings settings;
+			MutationTableOptions options(settings);
+			
+			diff_entry_list_t muts = gd.mutation_list();
+			for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr ++) {
+				cDiffEntry& mut = (**itr);
+				add_html_fields_to_mutation(mut, options);
+			}
 		}
 		
 		gd.write_json(output_file_name);
