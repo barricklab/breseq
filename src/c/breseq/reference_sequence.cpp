@@ -123,6 +123,12 @@ namespace breseq {
       (*this)["name"] = substitute((*this)["name"], cReferenceSequences::gene_list_separator, "_");
     }
     
+    if (this->count("locus_tag")) {
+      (*this)["locus_tag"] = substitute((*this)["locus_tag"], cReferenceSequences::intergenic_separator, "_");
+      (*this)["locus_tag"] = substitute((*this)["locus_tag"], cReferenceSequences::multiple_separator, "_");
+      (*this)["locus_tag"] = substitute((*this)["locus_tag"], cReferenceSequences::gene_list_separator, "_");
+    }
+    
     // We don't have to worry about intergenic or gene list separators in the products
     if (this->count("product")) {
       //(*this)["product"] = substitute((*this)["product"], cReferenceSequences::intergenic_separator, "_");
