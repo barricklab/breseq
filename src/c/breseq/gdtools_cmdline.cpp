@@ -1023,7 +1023,7 @@ void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list,
 		// Decide whether to merge in a new column
 		if ( (!options.count("collapse")) || (single_gd.mutation_list().size() > 0)) {
 			gd.merge(single_gd, false, options.count("phylogeny-aware"));
-			cout << gd.get_list().size();
+			//cout << gd.get_list().size();
 			gd_list.push_back(single_gd); // it's important to add a copy that has UN items intact
 		}
 		
