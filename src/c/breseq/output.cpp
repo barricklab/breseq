@@ -2045,12 +2045,20 @@ void add_html_fields_to_mutation(cDiffEntry& mut, MutationTableOptions& options)
       
     // add italics  and gene strands if there are true gene names
     vector<string> html_gene_names;
-    for(vector<string>::iterator it = gene_name_lists.begin(); it != gene_name_lists.end(); it++) {
+    
+    for(size_t i = 0; i<gene_name_lists.size(); i++) {
       
-      if (*it != cReferenceSequences::no_gene_name) {
-        html_gene_names.push_back("<i>" + *it + "</i>" + ((gene_strands[0] == cReferenceSequences::gene_strand_reverse_char) ? "&nbsp;&larr;" : "&nbsp;&rarr;"));
+      string this_gene_name = gene_name_lists[i];
+      
+      if (this_gene_name != cReferenceSequences::no_gene_name) {
+        string this_html_gene_name = "<i>" + this_gene_name + "</i>";
+        if (i < gene_strands.size()) {
+          this_html_gene_name += (gene_strands[i] == cReferenceSequences::gene_strand_reverse_char) ? "&nbsp;&larr;" : "&nbsp;&rarr;";
+        }
+        html_gene_names.push_back(this_html_gene_name);
+
       } else {
-        html_gene_names.push_back(*it);
+        html_gene_names.push_back(this_gene_name);
       }
     }
       
