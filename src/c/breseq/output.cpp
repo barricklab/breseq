@@ -1994,9 +1994,11 @@ void add_html_fields_to_mutation(cDiffEntry& mut, MutationTableOptions& options)
     
     html_gene_product = mut[GENE_PRODUCT];
     
-  } else if (mut[GENE_NAME].find(cReferenceSequences::gene_range_separator) != string::npos ) {
+  } else if ( (mut[GENE_NAME].find(cReferenceSequences::gene_range_separator) != string::npos )
+             || ((mut[GENE_NAME][0] == '[') && (mut[GENE_NAME][mut[GENE_NAME].size()-1] == ']')) )
+  {
     //
-    // Mutation covers a range of genes
+    // Mutation covers a range of genes, including a large deletion overlapping one gene in brackets
     //
     
     // IMPORTANT: gene names are stored as a list in GENE_PRODUCT not GENE_NAME in this case
@@ -2009,7 +2011,14 @@ void add_html_fields_to_mutation(cDiffEntry& mut, MutationTableOptions& options)
       }
     }
     
-    html_gene_name = gene_names.front() + cReferenceSequences::gene_range_separator + gene_names.back();
+    if (mut[GENE_NAME].find(cReferenceSequences::gene_range_separator) != string::npos ) {
+      // multiple genes
+      html_gene_name = gene_names.front() + cReferenceSequences::gene_range_separator + gene_names.back();
+    } else {
+      // one gene in brackets
+      html_gene_name = gene_names.front();
+    }
+    
     
     string sJoinedGeneList = join(gene_names, cReferenceSequences::html_gene_list_separator + " ");
     
@@ -2017,7 +2026,7 @@ void add_html_fields_to_mutation(cDiffEntry& mut, MutationTableOptions& options)
     // and, if javascript is enabled, hide the gene names until a button is pushed.
     
     if (gene_names.size() < 15) {
-      html_gene_product += sJoinedGeneList;
+      html_gene_product = sJoinedGeneList;
     } else {
       
       if (options.no_javascript) {

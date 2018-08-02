@@ -4,8 +4,14 @@
 # body of code lives in ./common.sh.
 #
 # $1 == test action
-# $2 == testdir
+# $2 == testdir ('tests' is an alias for all tests)
 # $3 == long
+#
+#
+# Example commands:   ./test.sh test tests            #Run normal tests
+#                     ./test.sh build tests long      #Run all tests, including long tests
+#                     ./test.sh test tests long       #Run normal tests and long tests
+#
 # load the common testing tools (relative to this script):
 
 echo "3 " $3

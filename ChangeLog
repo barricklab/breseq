@@ -1,4 +1,6 @@
 Version 0.33.1
+   * CRITICAL bug fix for a crash during the final output step when there are 
+     large deletions overlapping a single gene.
    * Positions of indel mutations are no longer normalized in polymorphism mode
      because this process can fail and lead to duplicate GD entries. Note: you *can*
      still use gdtools NORMALIZE on a GD file output by a polymorphism mode run if you
