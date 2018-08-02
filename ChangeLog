@@ -1,6 +1,10 @@
 Version 0.33.1
    * Positions of indel mutations are no longer normalized in polymorphism mode
-     because this process can fail and lead to duplicate GD entries.
+     because this process can fail and lead to duplicate GD entries. Note: you *can*
+     still use gdtools NORMALIZE on a GD file output by a polymorphism mode run if you
+     want to compare it to GD files from consensus mode. Just be aware that NORMALIZE
+     may fail if you have certain complicated cases with multiple base substitutions
+     and indels near one another such that shifting them can lead to conflicts.
    * Added option to preserve evidence entries to gdtools ANNOTATE.
 
 Version 0.33.0
