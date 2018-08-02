@@ -1,3 +1,8 @@
+Version 0.33.1
+   * Positions of indel mutations are no longer normalized in polymorphism mode
+     because this process can fail and lead to duplicate GD entries.
+   * Added option to preserve evidence entries to gdtools ANNOTATE.
+
 Version 0.33.0
    * Changed behavior of gdtools SUBTRACT to ignore mutation frequencies by default;
      and fixed floating point error when frequencies are taken into account
@@ -7,7 +12,7 @@ Version 0.33.0
    * Changed character separating annotation information about multiple overlapping
       genes to '|' from ';'.
    * Improved automatic detection of libunwind and added configure option (--without-libunwind).
-     Changed default settings to not une libunwind for binary builds to improve compatibility.
+     Changed default settings to not use libunwind for binary builds to improve compatibility.
 
 Version 0.32.1
    * Added --minimum-mapping-quality option. Currently it is OFF by default.

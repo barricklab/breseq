@@ -1656,6 +1656,13 @@ namespace breseq {
   // not careful about looking at the next mutation in the list. The best annotation is a SUB
   // like this: CCAA(AA=>T)GT
   
+  // * 2018-08-01
+  // There are a lot of times in polymorphism mode where this can go awry if we shift mutations
+  // (The nsAA phage samples break the code when there are lots of insertions and also substitutions
+  // in the same homopolymer repeat, for example. The same base can be both deleted and substituted!)
+  // The only safe way to deal with this will be local re-alignment. For now removing shifts in
+  // polymorphism mode. We *do* still annotate them as being in repeats.
+  
   void MutationPredictor::normalize_and_annotate_tandem_repeat_mutations(Settings& settings, Summary& summary, cGenomeDiff& gd)
   { 
     (void)settings;
@@ -1674,7 +1681,7 @@ namespace breseq {
     // Add additional fields for INS or DEL mutations that are in tandem repeats
     
     // We iterate in reverse order, because our normalize functions are moving
-    // mutations to the HIGHEST corredinates possible when they are in tandem repeats.
+    // mutations to the HIGHEST coordinates possible when they are in tandem repeats.
     const cDiffEntry* last_mut(NULL);
     
     for(diff_entry_list_t::reverse_iterator it = test_muts.rbegin(); it != test_muts.rend(); it++) {
@@ -1701,57 +1708,66 @@ namespace breseq {
         string repeat_unit_sequence;
         find_repeat_unit(mutation_sequence, repeat_unit_size, repeat_unit_sequence);
         
-        normalizeINSposition(ref_seq_info[mut["seq_id"]], mut, repeat_unit_sequence);
-        int32_t new_position = from_string<int32_t>(mut["position"]);
-        string new_mutation_sequence = mut["new_seq"];
-        int32_t new_insert_position = mut.entry_exists("insert_position") ? from_string<int32_t>(mut["insert_position"]) : 1;
-        
-        // Did we get shifted into the position of the next mutation? Then back off
-        // Note: We don't do this with converted AMPs as this creates problems (an insertion within them can shift their position)
-        if (last_mut && (mut[SEQ_ID] == last_mut->get(SEQ_ID)) && (mut.get_reference_coordinate_end() >= last_mut->get_reference_coordinate_start()) && !mut.entry_exists("_was_AMP")) {
-          // The position of this insert mutation should be one before the mutation, unless it is another INS,
-          // In the INS case, we need to properly update all of the insert positions
-          
-          if (last_mut->_type == INS) {
-            
-            // Don't directly change the position in here... it gets assigned afterward
-            int32_t assign_insert_position = 1;
-            new_position = n(last_mut->get(POSITION));
-            new_insert_position = assign_insert_position;
-            
-            diff_entry_list_t::reverse_iterator it_ins = it;
-            it_ins--;
-            cDiffEntry* ins_mut = (*it_ins).get();
-            while (   (ins_mut->_type == INS)
-                   && (n((*ins_mut)["position"]) == new_position)
-                  )
-            {
-              assign_insert_position++;
-              (*ins_mut)["insert_position"] = s(assign_insert_position);
-              it_ins--;
-              if (it_ins == test_muts.rend()) break;
-              ins_mut = (*it_ins).get();
-            }
-            
-          } else {
-            new_position = n(last_mut->get(POSITION)) - 1;
-          }
-        }
-        
-        // repeat info may have changed, so reload
-        position = new_position;
-        insert_position = new_insert_position;
-        mutation_sequence = new_mutation_sequence;
-        find_repeat_unit(mutation_sequence, repeat_unit_size, repeat_unit_sequence);
         uint32_t num_repeat_units = size / repeat_unit_size;
         
         // Note shift to +1 to get to where the first unit of a repeat would be for INS
         uint32_t original_num_repeat_units = find_original_num_repeat_units(ref_seq_info[mut["seq_id"]], position+1, repeat_unit_sequence);
+        
+        // Begin consensus mode shifting of coordinates ---->
+        if (!settings.polymorphism_prediction) {
+          normalizeINSposition(ref_seq_info[mut["seq_id"]], mut, repeat_unit_sequence);
+          int32_t new_position = from_string<int32_t>(mut["position"]);
+          string new_mutation_sequence = mut["new_seq"];
+          int32_t new_insert_position = mut.entry_exists("insert_position") ? from_string<int32_t>(mut["insert_position"]) : 1;
+          
+          // Did we get shifted into the position of the next mutation? Then back off
+          // Note: We don't do this with converted AMPs as this creates problems (an insertion within them can shift their position)
+          if (last_mut && (mut[SEQ_ID] == last_mut->get(SEQ_ID)) && (mut.get_reference_coordinate_end() >= last_mut->get_reference_coordinate_start()) && !mut.entry_exists("_was_AMP")) {
+            // The position of this insert mutation should be one before the mutation, unless it is another INS,
+            // In the INS case, we need to properly update all of the insert positions
+            
+            if (last_mut->_type == INS) {
+              
+              // Don't directly change the position in here... it gets assigned afterward
+              int32_t assign_insert_position = 1;
+              new_position = n(last_mut->get(POSITION));
+              new_insert_position = assign_insert_position;
+              
+              diff_entry_list_t::reverse_iterator it_ins = it;
+              it_ins--;
+              cDiffEntry* ins_mut = (*it_ins).get();
+              while (   (ins_mut->_type == INS)
+                     && (n((*ins_mut)["position"]) == new_position)
+                    )
+              {
+                assign_insert_position++;
+                (*ins_mut)["insert_position"] = s(assign_insert_position);
+                it_ins--;
+                if (it_ins == test_muts.rend()) break;
+                ins_mut = (*it_ins).get();
+              }
+              
+            } else {
+              new_position = n(last_mut->get(POSITION)) - 1;
+            }
+          }
+          
+          // repeat info may have changed, so reload
+          position = new_position;
+          insert_position = new_insert_position;
+          mutation_sequence = new_mutation_sequence;
+          find_repeat_unit(mutation_sequence, repeat_unit_size, repeat_unit_sequence);
+          num_repeat_units = size / repeat_unit_size;
+          
+          // Note shift to +1 to get to where the first unit of a repeat would be for INS
+          original_num_repeat_units = find_original_num_repeat_units(ref_seq_info[mut["seq_id"]], position+1, repeat_unit_sequence);
 
-        // save normalized position even if we aren't a repeat
-        mut["position"] = to_string<int32_t>(position);
-        mut["insert_position"] = to_string<int32_t>(insert_position);
-        mut["new_seq"] = mutation_sequence;
+          // save normalized position even if we aren't a repeat
+          mut["position"] = to_string<int32_t>(position);
+          mut["insert_position"] = to_string<int32_t>(insert_position);
+          mut["new_seq"] = mutation_sequence;
+          
+        } // <-------  End of consensus mode shifting of positions
         
         if (original_num_repeat_units * repeat_unit_size < minimum_tandem_repeat_length)
           goto next_mutation;
@@ -1779,25 +1795,35 @@ namespace breseq {
         string repeat_unit_sequence;
         find_repeat_unit(mutation_sequence, repeat_unit_size, repeat_unit_sequence);
         
-        normalizeDELposition(ref_seq_info[mut["seq_id"]], mut, repeat_unit_sequence);
-        
-        // Did we get shifted into the position of the next mutation? Then back off.
-        if (last_mut && !gd.applied_before_id(last_mut->_id, mut._id) && (mut[SEQ_ID] == last_mut->get(SEQ_ID)) && (mut.get_reference_coordinate_end() >= last_mut->get_reference_coordinate_start())) {
-          // The position of this insert mutation should be as many bases as the
-          // deletion is long before the next mutation
-          mut["position"] = s(n(last_mut->get("position")) - size);
-        }
-        
-        // Normalize may actually change the sequence used for the repeat... so call again here.
-        position = from_string<int32_t>(mut["position"]);
-        mutation_sequence = ref_seq_info.get_sequence_1(mut["seq_id"], position, position + size - 1);
-
         find_repeat_unit(mutation_sequence, repeat_unit_size, repeat_unit_sequence);
         uint32_t num_repeat_units = size / repeat_unit_size;
         
         // Note shift to +size to get to the spot immediately past all reference repeats
         uint32_t original_num_repeat_units = find_original_num_repeat_units(ref_seq_info[mut["seq_id"]], position+size, repeat_unit_sequence);
         
+        // Begin consensus mode shifting of coordinates ---->
+        if (!settings.polymorphism_prediction) {
+        
+          normalizeDELposition(ref_seq_info[mut["seq_id"]], mut, repeat_unit_sequence);
+          
+          // Did we get shifted into the position of the next mutation? Then back off.
+          if (last_mut && !gd.applied_before_id(last_mut->_id, mut._id) && (mut[SEQ_ID] == last_mut->get(SEQ_ID)) && (mut.get_reference_coordinate_end() >= last_mut->get_reference_coordinate_start())) {
+            // The position of this insert mutation should be as many bases as the
+            // deletion is long before the next mutation
+            mut["position"] = s(n(last_mut->get("position")) - size);
+          }
+          
+          // Normalize may actually change the sequence used for the repeat... so call again here.
+          position = from_string<int32_t>(mut["position"]);
+          mutation_sequence = ref_seq_info.get_sequence_1(mut["seq_id"], position, position + size - 1);
+
+          find_repeat_unit(mutation_sequence, repeat_unit_size, repeat_unit_sequence);
+          num_repeat_units = size / repeat_unit_size;
+          
+          // Note shift to +size to get to the spot immediately past all reference repeats
+          original_num_repeat_units = find_original_num_repeat_units(ref_seq_info[mut["seq_id"]], position+size, repeat_unit_sequence);
+        } // <-------  End of consensus mode shifting of positions
+
         if (original_num_repeat_units * repeat_unit_size < minimum_tandem_repeat_length)
           goto next_mutation;
         

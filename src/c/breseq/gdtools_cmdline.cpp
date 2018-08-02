@@ -995,7 +995,7 @@ int do_not_evidence(int argc, char *argv[])
 }
 
 
-void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list, vector<string>& gd_path_names, vector<string>& gd_titles, cReferenceSequences& ref_seq_info, bool& polymorphisms_found, bool compare_mode, AnyOption& options, UserOutput& uout)
+void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list, vector<string>& gd_path_names, vector<string>& gd_titles, cReferenceSequences& ref_seq_info, bool strip_to_mutations_and_unknown, bool& polymorphisms_found, bool compare_mode, AnyOption& options, UserOutput& uout)
 {
 	polymorphisms_found = false; // handled putting in the polymorphism column if only one file provided
 	for (uint32_t i = 0; i < gd_path_names.size(); i++) {
@@ -1013,7 +1013,9 @@ void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list,
 			}
 		}
 		
-		single_gd.remove_all_but_mutations_and_unknown();
+		if (strip_to_mutations_and_unknown) {
+			single_gd.remove_all_but_mutations_and_unknown();
+		}
 		
 		// Clean to the desired region here to avoid
 		if (options.count("region")) {
@@ -1057,6 +1059,7 @@ int do_annotate(int argc, char* argv[])
   options("repeat-header", "In HTML mode, repeat the header line every this many rows (0=OFF)", "10");
 	options("phylogeny-aware,p", "Check the optional 'phylogeny_id' field when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
 	options("region,g", "Only show mutations that overlap this reference fragment (e.g., REL606:64722-65312)");
+	options("preserve-evidence,e", "By default evidence items with two-letter codes are removed (RA, JC, MC, ...). Supply this option to retain them. Only affects output in GD and JSON formats.", TAKES_NO_ARGUMENT);
 	options("collapse,c", "Do not show samples (columns) unless they have at least one mutation", TAKES_NO_ARGUMENT);
 	options.addUsage("");
 	options.addUsage("Annotate mutations in one or more GenomeDiff files. If multiple input files are provided, then a table is created to compare the frequencies for identical mutations across samples.");
@@ -1148,11 +1151,11 @@ int do_annotate(int argc, char* argv[])
 	
   if (output_format == "HTML") {
 		
-		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, polymorphisms_found, compare_mode, options, uout);
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, polymorphisms_found, compare_mode, options, uout);
 		cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
 
 		uout("Annotating mutations");
-		ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"), compare_mode);
+		ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"), compare_mode);
 		
     uout("Writing output HTML file", output_file_name);
 		
@@ -1173,11 +1176,11 @@ int do_annotate(int argc, char* argv[])
         
   } else if (output_format == "GD") {
 		
-		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, polymorphisms_found, compare_mode, options, uout);
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, !options.count("preserve-evidence"), polymorphisms_found, compare_mode, options, uout);
 		cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
 		
 		uout("Annotating mutations");
-		ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"), compare_mode);
+		ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"), compare_mode);
 		
 		uout("Writing output Genome Diff file", options["output"]);
 		
@@ -1205,9 +1208,11 @@ int do_annotate(int argc, char* argv[])
 
 			cGenomeDiff this_gd(*it);
 			//remove all but mutations
-			this_gd.remove_group(cGenomeDiff::EVIDENCE);
-			this_gd.remove_group(cGenomeDiff::VALIDATION);
-			ref_seq_info.annotate_mutations(this_gd, true, options.count("ignore-pseudogenes"), compare_mode);
+			if (!options.count("preserve-evidence")) {
+				this_gd.remove_group(cGenomeDiff::EVIDENCE);
+				//this_gd.remove_group(cGenomeDiff::VALIDATION);
+			}
+			ref_seq_info.annotate_mutations(this_gd, false, options.count("ignore-pseudogenes"), compare_mode);
 			gd_list.push_back(this_gd);
 		}
 		
@@ -1217,11 +1222,11 @@ int do_annotate(int argc, char* argv[])
 	} else if (output_format == "JSON") {
 		uout("Writing output JSON file", options["output"]);
 		
-		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, polymorphisms_found, compare_mode, options, uout);
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, !options.count("preserve-evidence"), polymorphisms_found, compare_mode, options, uout);
 		cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
 		
 		uout("Annotating mutations");
-		ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"), compare_mode);
+		ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"), compare_mode);
 		
 		uout("Writing output JSON file", output_file_name);
 		
