@@ -1038,6 +1038,11 @@ void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list,
 	// Sort the full merged list
 	gd.sort();
 	
+	// Also sort the order of the genome diff files to take into account
+	// population, time, clone, etc. information
+	
+	cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
+
 	// Then add frequency columns for all genome diffs
 	if (compare_mode || polymorphisms_found) {
 		uout("Tabulating frequencies of mutations across all files");
@@ -1152,7 +1157,6 @@ int do_annotate(int argc, char* argv[])
   if (output_format == "HTML") {
 		
 		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, polymorphisms_found, compare_mode, options, uout);
-		cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
 
 		uout("Annotating mutations");
 		ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"), compare_mode);
@@ -1177,7 +1181,6 @@ int do_annotate(int argc, char* argv[])
   } else if (output_format == "GD") {
 		
 		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, !options.count("preserve-evidence"), polymorphisms_found, compare_mode, options, uout);
-		cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
 		
 		uout("Annotating mutations");
 		ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"), compare_mode);
@@ -1223,7 +1226,6 @@ int do_annotate(int argc, char* argv[])
 		uout("Writing output JSON file", options["output"]);
 		
 		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, !options.count("preserve-evidence"), polymorphisms_found, compare_mode, options, uout);
-		cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
 		
 		uout("Annotating mutations");
 		ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"), compare_mode);

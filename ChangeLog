@@ -1,3 +1,6 @@
+Version 0.33.2
+   * Fixed sorting of columns in gdtool COMPARE based on GenomeDiff metadata.
+
 Version 0.33.1
    * CRITICAL bug fix for a crash during the final output step when there are 
      large deletions overlapping a single gene.
