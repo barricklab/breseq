@@ -1198,7 +1198,7 @@ namespace breseq {
                                                             JunctionCandidatePtr& returned_junction_candidate
                                                             )
 	{    
-		bool verbose = false;
+    bool verbose = false;
     
     //if (ap.a1.read_name() == "1:379655") {
     //   verbose = true;
@@ -1967,7 +1967,7 @@ namespace breseq {
       //cout << "number 1:" << endl;
       //cout << start_pos + 1 << " " << start_pos + flanking_left + overlap_offset << endl;
       
-      if (flanking_left > 0) {
+      if (flanking_left + overlap_offset > 0) {
         string add_seq = ref_seq_1.get_sequence_1(start_pos, start_pos + flanking_left + overlap_offset - 1);        
         if (verbose) cout << "1F: " << add_seq << endl;
         junction_seq_string += add_seq;
@@ -1978,7 +1978,7 @@ namespace breseq {
       // end_pos is in 1-based coordinates
       int32_t end_pos = hash_coord_1 + (flanking_left - 1) + overlap_offset;
       if (end_pos > ref_seq_1.m_length) {
-        if (verbose) cout << "END POS 1: (" << end_pos << " < length" << endl;
+        if (verbose) cout << "END POS 1: " << end_pos << " > length" << endl;
         flanking_left -= end_pos - ref_seq_1.m_length;
         flanking_left = max(0, flanking_left);
         end_pos = ref_seq_1.m_length;
@@ -1986,7 +1986,7 @@ namespace breseq {
       
       //cout << "number 1:" << endl;
       //cout << end_pos - (flanking_left + overlap_offset) + 1 << " " << end_pos << endl;
-      if (flanking_left > 0) {
+      if (flanking_left + overlap_offset > 0) {
         string add_seq = ref_seq_1.get_sequence_1(end_pos - (flanking_left + overlap_offset) + 1, end_pos);
         add_seq = reverse_complement(add_seq);
         if (verbose) cout << "1R: " << add_seq << endl;
@@ -2010,7 +2010,7 @@ namespace breseq {
       int32_t end_pos = hash_coord_2 + (flanking_right - 1) + overlap_offset;
       if (end_pos > ref_seq_2.m_length) {
         if (verbose)
-          cout << "END POS 2: (" << end_pos << " < length" << endl;
+          cout << "END POS 2: " << end_pos << " > length" << endl;
         flanking_right -= (end_pos - ref_seq_2.m_length);
         flanking_right = max(0, flanking_right);
         end_pos = ref_seq_2.m_length;
@@ -2056,7 +2056,7 @@ namespace breseq {
     if (static_cast<int32_t>(junction_seq_string.size()) != flanking_left + flanking_right + abs(overlap)) {
       stringstream s;
       s << jc << endl;
-      ERROR( s.str() + "Incorrect junction sequence length: "  +  to_string(junction_seq_string.size()));
+      ERROR( s.str() + "Incorrect junction sequence length: "  +  to_string(junction_seq_string.size()) + "\nExpected junction sequence length: " + to_string(flanking_left + flanking_right + abs(overlap)));
     }
     
     //cout << hash_coord_1 << " " << hash_strand_1 << " " << hash_coord_2 << " " << hash_strand_2 << endl;
