@@ -1340,11 +1340,17 @@ inline cString cString::trim_ends_of(const char val)
 //! Returns file name and extension, removes any directory path beforehand.
 inline cString cString::get_base_name() const
 {
-  const size_t pos = this->rfind('/');
-  if (pos == string::npos)
-    return *this;
-  else
+  // If it's a full path then we hit a slash last
+  size_t pos = this->rfind('/');
+  if (pos != string::npos)
     return this->substr(pos + 1);
+  
+  // If it is just a file name after a colon (e.g., no-download:file.fastq)
+  pos = this->rfind(':');
+  if (pos != string::npos)
+    return this->substr(pos + 1);
+  
+  return *this;
 }
 
 //! Returns file name with no extension, removes any directory path beforehand.

@@ -2352,6 +2352,8 @@ int do_download(int argc, char *argv[])
         ["url_format"] = "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/%s/%s/%s.fastq.gz";
     lookup_table["BARRICKLAB-PUBLIC"]
         ["url_format"] = "http://barricklab.org/%s";
+		lookup_table["NO-DOWNLOAD"]
+				["url_format"] = "no-download:%s";
 		lookup_table["DEFAULT"]
 				["url_format"] = "%s";
 	
@@ -2376,6 +2378,8 @@ int do_download(int argc, char *argv[])
         ["file_path_format"] = download_dir + "/%s";
     lookup_table["BARRICKLAB-PRIVATE"]
         ["file_path_format"] = download_dir + "/%s";
+		lookup_table["NO-DOWNLOAD"]
+				["file_path_format"] = download_dir + "/%s";
 		lookup_table["DEFAULT"]
 				["file_path_format"] = download_dir + "/%s";
 	
@@ -2413,6 +2417,8 @@ int do_download(int argc, char *argv[])
 				key = "DEFAULT";
 				value = seqs_kv_pairs.front();
 			}
+			
+			if (key == "NO-DOWNLOAD") continue;
 
       //! Step: Get file path and check if it has already been downloaded or is empty.
       const string &base_name = cString(value).get_base_name();
@@ -2422,7 +2428,7 @@ int do_download(int argc, char *argv[])
 
       bool is_downloaded =
           ifstream(file_path.c_str()).good() && !file_empty(file_path.c_str());
-
+			
       bool is_gzip =
           cString(file_path).ends_with(".gz");
 			if (options.count("ungzip")) is_gzip = true;
@@ -2705,10 +2711,17 @@ int do_runfile(int argc, char *argv[])
     
       //! Part 1: Executable and options to pass to it if given by user.
       ss << exe;
-    
+			
+			// Write options from the command line
       if (options.count("options")) {
         ss << " " << options["options"];
       }
+			
+			// Write options in the GD file
+			if (gd.metadata.breseq_data.count("BRESEQ_OPTIONS")) {
+				ss << " " << gd.metadata.breseq_data["BRESEQ_OPTIONS"];
+			}
+			
       //! Part 2: Pipeline's output path.
       ss << " -o " << output_dir + "/" + gd.get_title();  
 			
