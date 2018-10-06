@@ -28,6 +28,7 @@ LICENSE AND COPYRIGHT
 #include <execinfo.h>
 #include <assert.h>
 #include <libgen.h>
+#include <libproc.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -929,81 +930,37 @@ namespace breseq {
 		return path;
 	}
   
-  /* Returns executable path */
-  inline string getExecPath (char * argv0)
+  /* Returns executable path or empty string if not able to find it */
+  inline string getExecPath ()
   {
-    uint32_t dest_len = 512;
+    bool debug = false;
+    
+    uint32_t dest_len = 1024;
     char path[dest_len];
     
-    char * baseName = NULL;
-    char * systemPath = NULL;
-    char * candidateDir = NULL;
-    
     /* the easiest case: we are in linux */
+    
     if (readlink ("/proc/self/exe", path, dest_len) != -1)
     {
+      if (debug) cout << "Found path using /proc/self/exe" << endl;
       size_t len = readlink ("/proc/self/exe", path, dest_len);
       path[len] = '\0';
       return path_to_dirname(path);
     }
     
-    /* Ups... not in linux, no  guarantee */
+    /* code that should work in MacOSX */
     
-    /* check if we have something like execve("foobar", NULL, NULL) */
-    if (argv0 == NULL)
+    pid_t pid = getpid();
+    int ret = proc_pidpath(pid, path, dest_len);
+    if (path[0] != '\0')
     {
-      /* we surrender and give current path instead */
-      if (getcwd (path, dest_len) == NULL) return NULL;
-      return path;
-    }
-    
-    
-    /* argv[0] */
-    /* if dest_len < PATH_MAX may cause buffer overflow */
-    if ((realpath (argv0, path)) && (!access (path, F_OK)))
-    {
+      if (debug) cout << "Found path using proc_pidpath" << endl;
       return path_to_dirname(path);
     }
     
-    /* Current path */
-    baseName = basename (argv0);
-    if (getcwd (path, dest_len - strlen (baseName) - 1) == NULL)
-      return "";
-    
-    strcat (path, "/");
-    strcat (path, baseName);
-    if (access (path, F_OK) == 0)
-    {
-      return path_to_dirname(path);
-    }
-    
-    /* Try the PATH. */
-    systemPath = getenv ("PATH");
-    if (systemPath != NULL)
-    {
-      dest_len--;
-      systemPath = strdup (systemPath);
-      for (candidateDir = strtok (systemPath, ":"); candidateDir != NULL; candidateDir = strtok (NULL, ":"))
-      {
-        strncpy (path, candidateDir, dest_len);
-        strncat (path, "/", dest_len);
-        strncat (path, baseName, dest_len);
-        
-        if (access(path, F_OK) == 0)
-        {
-          free (systemPath);
-          return path_to_dirname(path);
-        }
-      }
-      free(systemPath);
-      dest_len++;
-    }
-    
-    /* again someone has use execve: we dont know the executable name; we surrender and give instead current path */
-    if (getcwd (path, dest_len - 1) == NULL) return NULL;
-    return path;
+    return "";
   }
-  
+
   inline vector<string> prefix_each_in_vector(const vector<string>& in_list, string prefix)
   {
     vector<string> return_list;

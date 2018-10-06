@@ -818,7 +818,7 @@ namespace breseq
     
     this->bin_path = get_bin_path();
     this->program_data_path = get_program_data_path();
-    ASSERT(this->bin_path.size() > 0, "Uninitialized bin_path");
+    //ASSERT(this->bin_path.size() > 0, "Uninitialized bin_path");
     ASSERT(this->program_data_path.size() > 0, "Uninitialized program_data_path");
   }
 
