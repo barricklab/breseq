@@ -28,7 +28,9 @@ LICENSE AND COPYRIGHT
 #include <execinfo.h>
 #include <assert.h>
 #include <libgen.h>
-#include <libproc.h>
+#if (__APPLE__)
+  #include <libproc.h>
+#endif
 #include <limits.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -950,6 +952,7 @@ namespace breseq {
     
     /* code that should work in MacOSX */
     
+#if (__APPLE__)
     pid_t pid = getpid();
     int ret = proc_pidpath(pid, path, dest_len);
     if (path[0] != '\0')
@@ -957,9 +960,11 @@ namespace breseq {
       if (debug) cout << "Found path using proc_pidpath" << endl;
       return path_to_dirname(path);
     }
+#endif
     
     return "";
   }
+
 
   inline vector<string> prefix_each_in_vector(const vector<string>& in_list, string prefix)
   {
