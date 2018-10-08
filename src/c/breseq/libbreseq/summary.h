@@ -541,6 +541,9 @@ namespace breseq{
     uint32_t consensus_minimum_total_coverage_each_strand;
     uint32_t consensus_minimum_variant_coverage;
     uint32_t consensus_minimum_total_coverage;
+    uint32_t consensus_reject_indel_homopolymer_length;
+    uint32_t consensus_reject_surrounding_homopolymer_length;
+    
     double consensus_frequency_cutoff;
     double polymorphism_log10_e_value_cutoff;
     double polymorphism_bias_p_value_cutoff;

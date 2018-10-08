@@ -233,10 +233,11 @@ bool rejected_RA_consensus_coverage(cDiffEntry& ra,
   
 bool rejected_RA_indel_homopolymer(cDiffEntry& ra,
                               cReferenceSequences& ref_seq_info,
-                              const Settings& settings
+                              uint32_t reject_indel_homopolymer_length,
+                              uint32_t reject_surrounding_homopolymer_length,
+                              bool no_indel_polymorphisms
                                )
 {
-  
   bool rejected = false;
   
   ////// Optionally, ignore if in a homopolymer stretch longer than this
@@ -248,7 +249,7 @@ bool rejected_RA_indel_homopolymer(cDiffEntry& ra,
   //
   // First case,
   // 1) indel in what was originally a homopolymer adding a base that is the same
-  if (settings.polymorphism_reject_indel_homopolymer_length && ((ra[MAJOR_BASE] == ".") || (ra[MINOR_BASE] == ".")))
+  if (reject_indel_homopolymer_length && ((ra[MAJOR_BASE] == ".") || (ra[MINOR_BASE] == ".")))
   {
     // Code needs to be robust to the mutation being at the beginning
     // OR end of the homopolymer tract
@@ -295,7 +296,7 @@ bool rejected_RA_indel_homopolymer(cDiffEntry& ra,
       homopolymer_length = end_pos - start_pos + 1;
     }
     
-    if (homopolymer_length >= static_cast<int32_t>(settings.polymorphism_reject_indel_homopolymer_length))
+    if (homopolymer_length >= static_cast<int32_t>(reject_indel_homopolymer_length))
     {
       rejected = true;
       ra.add_reject_reason("INDEL_HOMOPOLYMER");
@@ -306,7 +307,7 @@ bool rejected_RA_indel_homopolymer(cDiffEntry& ra,
   // 2) A mutation in the middle of a stretch of one base to what is in the rest of that stretch
   //    TTTTTTATTTTTT
   //    TTTTTTTTTTTTT
-  if (settings.polymorphism_reject_surrounding_homopolymer_length && (ra[MAJOR_BASE] != ".") && (ra[MINOR_BASE] != "."))    {
+  if (reject_surrounding_homopolymer_length && (ra[MAJOR_BASE] != ".") && (ra[MINOR_BASE] != "."))    {
     
     string seq_id = ra["seq_id"];
     int32_t mut_pos = from_string<int32_t>(ra["position"]);
@@ -335,19 +336,18 @@ bool rejected_RA_indel_homopolymer(cDiffEntry& ra,
     end_pos--;
     
     // check bounds
-    if ( (start_pos < mut_pos) && (end_pos > mut_pos) && (end_pos - start_pos + 1 >= static_cast<int32_t>(settings.polymorphism_reject_surrounding_homopolymer_length)) ) {
+    if ( (start_pos < mut_pos) && (end_pos > mut_pos) && (end_pos - start_pos + 1 >= static_cast<int32_t>(reject_surrounding_homopolymer_length)) ) {
       rejected = true;
       ra.add_reject_reason("SURROUNDING_HOMOPOLYMER");
     }
   }
   ////// END checking on homopolymers
   
-  if (settings.no_indel_polymorphisms && ((ra[MAJOR_BASE] == ".") || (ra[MINOR_BASE] == ".")))
+  if (no_indel_polymorphisms && ((ra[MAJOR_BASE] == ".") || (ra[MINOR_BASE] == ".")))
   {
     rejected = true;
-    ra.add_reject_reason("INDEL_POLYMORPHISM");
+    ra.add_reject_reason("INDEL");
   }
-  
   return rejected;
 }
   
@@ -359,8 +359,8 @@ bool test_RA_evidence_CONSENSUS_mode(
                                      )
 {
   
-  // Decide if we are a polymorphism (or mixed base) prediction or a consensus prediction
-  ePredictionType prediction(unknown);
+  // Decide if we are a polymorphism (or mixed base) prediction or a consensus prediction @JEB 2018-10-07
+  //ePredictionType prediction(unknown);
   
   double consensus_score = double_from_string(ra[CONSENSUS_SCORE]);
   double polymorphism_score = double_from_string(ra[POLYMORPHISM_SCORE]);
@@ -387,9 +387,17 @@ bool test_RA_evidence_CONSENSUS_mode(
   }
   
   // Drop down to a polymorphism if we don't pass the consensus read coverage criterion
-  if (prediction == consensus) {
+  //if (prediction == consensus) { @JEB 2018-10-07
     rejected_RA_consensus_coverage(ra, ref_seq_info, settings);
-  }
+  //}
+  
+  // @JEB Added 2018-10-07
+  rejected_RA_indel_homopolymer(ra,
+                                ref_seq_info,
+                                settings.consensus_reject_indel_homopolymer_length,
+                                settings.consensus_reject_surrounding_homopolymer_length,
+                                false
+                                );
   
   // Succeed and bail now if still consensus prediction or keep as a failed consensus
   if (ra.entry_exists(REJECT)) {
@@ -426,7 +434,12 @@ bool test_RA_evidence_CONSENSUS_mode(
   
   rejected_RA_polymorphism_bias(ra, ref_seq_info, settings);
   rejected_RA_polymorphism_coverage(ra, ref_seq_info, settings);
-  rejected_RA_indel_homopolymer(ra, ref_seq_info, settings);
+  rejected_RA_indel_homopolymer(ra,
+                                ref_seq_info,
+                                settings.polymorphism_reject_indel_homopolymer_length,
+                                settings.polymorphism_reject_surrounding_homopolymer_length,
+                                settings.no_indel_polymorphisms
+                                );
   
   // Succeed and bail now if still consensus prediction or keep as a failed consensus
   if (ra.entry_exists(REJECT)) {
@@ -484,7 +497,12 @@ bool test_RA_evidence_POLYMORPHISM_mode(
     
   rejected_RA_polymorphism_bias(ra, ref_seq_info, settings);
   rejected_RA_polymorphism_coverage(ra, ref_seq_info, settings);
-  failed_indel_homopolymer_test = rejected_RA_indel_homopolymer(ra, ref_seq_info, settings);
+  failed_indel_homopolymer_test = rejected_RA_indel_homopolymer(ra,
+                                                                ref_seq_info,
+                                                                settings.polymorphism_reject_indel_homopolymer_length,
+                                                                settings.polymorphism_reject_surrounding_homopolymer_length,
+                                                                settings.no_indel_polymorphisms
+                                                                );
   
   // Copy reject reasons over to why we rejected a polymorphism
   if (ra.entry_exists(REJECT)) {
@@ -521,6 +539,14 @@ bool test_RA_evidence_POLYMORPHISM_mode(
   
   // Drop down to a rejected polymorphism if we don't pass the consensus strand criterion
   rejected_RA_consensus_coverage(ra, ref_seq_info, settings);
+  
+  // @JEB Added 2018-10-07
+  rejected_RA_indel_homopolymer(ra,
+                                ref_seq_info,
+                                settings.consensus_reject_indel_homopolymer_length,
+                                settings.consensus_reject_surrounding_homopolymer_length,
+                                false
+                                );
   
   if (ra.entry_exists(REJECT)) {
     ra[CONSENSUS_REJECT] = ra[REJECT];

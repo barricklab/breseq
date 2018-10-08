@@ -350,6 +350,8 @@ namespace breseq
     uint32_t consensus_minimum_total_coverage;                    // Default = 0
     uint32_t consensus_minimum_variant_coverage_each_strand;      // Default = 0
     uint32_t consensus_minimum_total_coverage_each_strand;        // Default = 0
+    uint32_t consensus_reject_indel_homopolymer_length;        // Default = 0 (OFF)
+    uint32_t consensus_reject_surrounding_homopolymer_length;  // Default = 0 (OFF)
 
     double consensus_frequency_cutoff;                            // Default = 0.8
     

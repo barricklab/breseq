@@ -809,6 +809,8 @@ void to_json(json& j, const PublicOptionsSummary& s)
       {"consensus_minimum_variant_coverage", s.consensus_minimum_variant_coverage},
       {"consensus_minimum_total_coverage", s.consensus_minimum_total_coverage},
       {"consensus_frequency_cutoff", s.consensus_frequency_cutoff},
+      {"consensus_reject_indel_homopolymer_length", s.consensus_reject_indel_homopolymer_length},
+      {"consensus_reject_surrounding_homopolymer_length", s.consensus_reject_surrounding_homopolymer_length},
       {"polymorphism_log10_e_value_cutoff", s.polymorphism_log10_e_value_cutoff},
       {"polymorphism_bias_p_value_cutoff", s.polymorphism_bias_p_value_cutoff},
       {"polymorphism_frequency_cutoff", s.polymorphism_frequency_cutoff},

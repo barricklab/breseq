@@ -252,6 +252,8 @@ namespace breseq
     ("consensus-minimum-total-coverage", "Only predict consensus mutations when at least this many reads total are aligned to a genome position. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", ADVANCED_OPTION)
     ("consensus-minimum-variant-coverage-each-strand", "Only predict consensus mutations when at least this many reads on each strand support the mutation. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", ADVANCED_OPTION)
     ("consensus-minimum-total-coverage-each-strand", "Only predict consensus mutations when at least this many reads on each strand are aligned to a genome position. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", ADVANCED_OPTION)
+    ("consensus-reject-indel-homopolymer-length", "Reject insertion/deletion polymorphisms which could result from expansion/contraction of homopolymer repeats with this length or greater in the reference genome (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, OFF) ", "", ADVANCED_OPTION)
+    ("consensus-reject-surrounding-homopolymer-length", "Reject polymorphic base substitutions that create a homopolymer with this many or more of one base in a row. The homopolymer must begin and end after the changed base. For example, TATTT->TTTTT would be rejected with a setting of 5, but ATTTT->TTTTT would not. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, OFF)", "", ADVANCED_OPTION)
     ;
 
     options.addUsage("", ADVANCED_OPTION);
@@ -467,6 +469,8 @@ namespace breseq
       this->consensus_minimum_total_coverage = 0;
       this->consensus_minimum_variant_coverage_each_strand = 0;
       this->consensus_minimum_total_coverage_each_strand = 0;
+      this->consensus_reject_indel_homopolymer_length = 0; // zero is OFF!
+      this->consensus_reject_surrounding_homopolymer_length = 0; // zero is OFF!
       
       this->polymorphism_log10_e_value_cutoff = 2;
       this->polymorphism_frequency_cutoff = 0.05;
@@ -499,6 +503,8 @@ namespace breseq
       this->consensus_minimum_total_coverage = 0;
       this->consensus_minimum_variant_coverage_each_strand = 0;
       this->consensus_minimum_total_coverage_each_strand = 0;
+      this->consensus_reject_indel_homopolymer_length = 0; // zero is OFF!
+      this->consensus_reject_surrounding_homopolymer_length = 0; // zero is OFF!
       
       this->polymorphism_log10_e_value_cutoff = 10;
       this->polymorphism_frequency_cutoff = 0.2;
@@ -546,6 +552,10 @@ namespace breseq
       this->consensus_minimum_variant_coverage_each_strand = from_string<uint32_t>(options["consensus-minimum-variant-coverage-each-strand"]);
     if (options.count("consensus-minimum-total-coverage-each-strand"))
       this->consensus_minimum_total_coverage_each_strand = from_string<uint32_t>(options["consensus-minimum-total-coverage-each-strand"]);
+    if (options.count("consensus-reject-indel-homopolymer-length"))
+      this->consensus_reject_indel_homopolymer_length = from_string<int32_t>(options["consensus-reject-indel-homopolymer-length"]);
+    if (options.count("consensus-reject-surrounding-homopolymer-length"))
+      this->consensus_reject_surrounding_homopolymer_length = from_string<int32_t>(options["consensus-reject-surrounding-homopolymer-length"]);
     
     if (options.count("polymorphism-frequency-cutoff"))
       this->polymorphism_frequency_cutoff = from_string<double>(options["polymorphism-frequency-cutoff"]);
