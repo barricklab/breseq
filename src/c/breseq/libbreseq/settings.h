@@ -584,13 +584,16 @@ namespace breseq
     //! Call this at the very beginning of execution to set up program paths
     void static set_global_paths()
     {
+      //debug
+      //cout << "DATADIR:" << DATADIR << endl;
+      
       global_bin_path = getExecPath();
       
-      // 1st choice: use absolute DATADIR (set by XCode)
+      // 1st choice: use *absolute* DATADIR (set by XCode)
       if (string(DATADIR).substr(0, 1) == "/") {
         global_program_data_path = DATADIR;
-        ASSERT(file_exists((global_program_data_path + "/coverage_distribution.r").c_str()), "Could not find expected R scripts inside of path set by development environment: " + global_program_data_path);
-        // relative path (used by dists)
+        string test_file = global_program_data_path + "/coverage_distribution.r";
+        ASSERT(file_exists(test_file.c_str()), "Could not find expected R scripts inside of path set by development environment: " + global_program_data_path);
       }
       
       // 2nd choice: use BRESEQ_DATA_PATH environmental variable
@@ -601,22 +604,26 @@ namespace breseq
         global_program_data_path = breseq_data_path;
         cerr << "Program data path set via BRESEQ_DATA_PATH: " << breseq_data_path << endl;
         
-        ASSERT(file_exists((global_program_data_path + "/coverage_distribution.r").c_str()), "Could not find expected R scripts inside of data path set by environmental variable BRESEQ_DATA_PATH. Please correct this setting.");
+        string test_file = global_program_data_path + "/coverage_distribution.r";
+        ASSERT(file_exists(test_file.c_str()), "Could not find expected R scripts inside of data path set by environmental variable BRESEQ_DATA_PATH: " + global_program_data_path + "\nPlease correct this setting.");
       }
       
-      // 3rd choice: build it from the executable path, if we found one
+      // 3rd choice: Build it from the executable path, if we found one.
+      //             DATADIR is a relative path (../share/breseq)
+      //             This case is the default for binary distributions
       if (global_program_data_path.length() == 0) {
-        ASSERT(global_bin_path.length() != 0, string("Failed to automatically detect the location of this executable. To continue, set the BRESEQ_DATA_PATH environmental variable to the 'share/") + PACKAGE_NAME + " =' directory of your installation. For example, to '/path/to/executable/../share/'" + PACKAGE_NAME + "'");
+        ASSERT(global_bin_path.length() != 0, string("Failed to automatically detect the location of this executable. To continue, set the BRESEQ_DATA_PATH environmental variable to the 'share/") + PACKAGE_NAME + "' directory of your installation. For example, to '/path/to/executable/../share/'" + PACKAGE_NAME + "'");
         
         global_program_data_path = global_bin_path + "/" + DATADIR;
+        
+        // Get rid of any trailing slash in breseq_data_path
+        if (global_program_data_path[global_program_data_path.length()-1] == '/') {
+          global_program_data_path.erase(global_program_data_path.length()-1, 1);
+        }
+        
+        string test_file = global_program_data_path + "/coverage_distribution.r";
+        ASSERT(file_exists(test_file.c_str()), "Could not find expected R scripts inside of data path set relative to executable: " + global_program_data_path + "\nPlease, see the installation instructions in the HTM documentation.");
       }
-      
-      // Get rid of any trailing slash in breseq_data_path
-      if (global_program_data_path[global_program_data_path.length()-1] == '/') {
-        global_program_data_path.erase(global_program_data_path.length()-1, 1);
-        ASSERT(file_exists((global_program_data_path + "/coverage_distribution.r").c_str()), "Could not find expected R scripts inside of data path set relative to executable: " + global_program_data_path + "\nPlease, see the installation instructions in the HTM documentation.");
-      }
-      
       
       //for debug
       //cout << "Global bin path: " + global_bin_path << endl;
