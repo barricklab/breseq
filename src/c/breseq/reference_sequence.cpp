@@ -3224,6 +3224,10 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
         if (*itc == default_key) {
           snp_muts[default_key].push_back(&mut);
         } else {
+          if (verbose) {
+            cout << *itc << endl;
+            cout << mut.as_string() << endl;
+          }
           if ( from_string<double>(mut[*itc]) != 0)
             snp_muts[*itc].push_back(&mut);
         }

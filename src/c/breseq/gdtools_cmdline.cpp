@@ -1017,6 +1017,9 @@ void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list,
 			single_gd.remove_all_but_mutations_and_unknown();
 		}
 		
+		// Safety for downstream operations - must strip_to_mutations_and_unknown if in compare mode
+		ASSERT(compare_mode || strip_to_mutations_and_unknown, "Unable to merge multiple GD files and preserve evidence entries.");
+		
 		// Clean to the desired region here to avoid
 		if (options.count("region")) {
 			single_gd.filter_to_within_region(ref_seq_info, options["region"]);
@@ -1046,8 +1049,9 @@ void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list,
 	// Then add frequency columns for all genome diffs
 	if (compare_mode || polymorphisms_found) {
 		uout("Tabulating frequencies of mutations across all files");
-		cGenomeDiff::tabulate_frequencies_from_multiple_gds(gd, gd_list, gd_titles, options.count("phylogeny-aware"));
+		cGenomeDiff::tabulate_mutation_frequencies_from_multiple_gds(gd, gd_list, gd_titles, options.count("phylogeny-aware"));
 	}
+	
 }
 
 
@@ -1056,18 +1060,18 @@ int do_annotate(int argc, char* argv[])
   AnyOption options("gdtools ANNOTATE/COMPARE [-o annotated.html] -r reference.gbk input.1.gd [input.2.gd ... ]");
 	
   options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-	options("output,o", "Path to output file with added mutation data. (DEFAULT: output.*");
+	options("output,o", "Path to output file with added mutation data. (DEFAULT: output.*)");
 	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
 	options("format,f", "Type of output file to generate. See options below", "HTML");
 	options("add-html-fields,a", "Add formatted fields that are used for generating HTML output. Only applicable to GD and JSON output formats", TAKES_NO_ARGUMENT);
-	options("ignore-pseudogenes", "Treat pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT);
+	options("ignore-pseudogenes", "Treat pseudogenes as valid ORFs for calling amino acid substitutions", TAKES_NO_ARGUMENT);
   options("repeat-header", "In HTML mode, repeat the header line every this many rows (0=OFF)", "10");
 	options("phylogeny-aware,p", "Check the optional 'phylogeny_id' field when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
-	options("region,g", "Only show mutations that overlap this reference fragment (e.g., REL606:64722-65312)");
-	options("preserve-evidence,e", "By default evidence items with two-letter codes are removed (RA, JC, MC, ...). Supply this option to retain them. Only affects output in GD and JSON formats.", TAKES_NO_ARGUMENT);
+	options("region,g", "Only show mutations that overlap this reference sequence region (e.g., REL606:64722-65312)");
+	options("preserve-evidence,e", "By default evidence items with two-letter codes are removed (RA, JC, MC, ...). Supply this option to retain them. Only affects output in GD and JSON formats. This option can only be used with a single input GD file (i.e., not in COMPARE mode). ", TAKES_NO_ARGUMENT);
 	options("collapse,c", "Do not show samples (columns) unless they have at least one mutation", TAKES_NO_ARGUMENT);
 	options.addUsage("");
-	options.addUsage("Annotate mutations in one or more GenomeDiff files. If multiple input files are provided, then a table is created to compare the frequencies for identical mutations across samples.");
+	options.addUsage("ANNOTATE mutations in one or more GenomeDiff files. If multiple input files are provided, then also COMPARE the frequencies for identical mutations across samples.");
   options.addUsage("");
   options.addUsage("Valid output formats:");
   options.addUsage("  HTML    Descriptive table viewable in a web browser"); 
@@ -1116,8 +1120,11 @@ int do_annotate(int argc, char* argv[])
   } else if (output_format == "JSON") {
 		output_file_name = "JSON";
 	} else {
-    ERROR("Unknown output format (--format|-f) of " + output_format + " requested. Valid choices are HTML, GD, TSV, PHYLIP");
-  }
+		options.addUsage("");
+		options.addUsage("OPTION ERROR:\nUnknown output format (--format|-f) of " + output_format + " requested. Valid choices are HTML, GD, TSV, PHYLIP");
+		options.printUsage();
+		return -1;
+	}
   // User setting overrules default names
   if (options.count("output")) 
     output_file_name = options["output"];
@@ -1136,7 +1143,25 @@ int do_annotate(int argc, char* argv[])
   
   // more than one file was provided as input
   bool compare_mode = (gd_path_names.size() > 1);
-	ASSERT((output_format != "PHYLIP") || (compare_mode), "You must provide more than one input GD file in PHYLIP mode.");
+	
+	// Perform some pre-checks to keep things in scope
+	if ( (output_format == "PHYLIP") && !compare_mode) {
+		options.addUsage("");
+		options.addUsage("OPTION ERROR:\nYou must provide more than one input GD file in PHYLIP mode.");
+		options.printUsage();
+		return -1;
+	}
+	if (compare_mode && options.count("preserve-evidence")) {
+		options.addUsage("");
+		options.addUsage("OPTION ERROR:\nThe --preserve-evidence option can only be used with one input GD file.");
+		options.printUsage();
+		return -1;
+	}
+	
+	// Give a warning if add-html-fields used when it isn't necessary
+	if (options.count("add-html-fields") && !((output_format == "GD") || (output_format == "JSON") || (output_format == "PHYLIP")) ) {
+		WARN("--add-html-fields option is not used for output format " + output_format);
+	}
 	
 	// Load reference files
 	vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
@@ -1148,11 +1173,6 @@ int do_annotate(int argc, char* argv[])
 	vector<cGenomeDiff> gd_list;
 	vector<string> gd_titles;
 	bool polymorphisms_found(false);
-	
-	// Give a warning if add-html-fields used when it isn't necessary
-	if (options.count("add-html-fields") && !((output_format == "GD") || (output_format == "JSON")) ) {
-		WARN("--add-html-fields option is not used for output format " + output_format);
-	}
 	
   if (output_format == "HTML") {
 		
@@ -1202,10 +1222,12 @@ int do_annotate(int argc, char* argv[])
     gd.write(output_file_name);
   } else if (output_format == "PHYLIP") {
 		uout("Writing output PHYLIP alignment file", options["output"]);
+		
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, polymorphisms_found, compare_mode, options, uout);
 		gd.write_phylip(output_file_name, gd, gd_list, ref_seq_info);
 	} else if (output_format == "TSV") {
 		
-		// Load the entire list and pass it to write_csv
+		// Load the entire list and pass it to write_tsv
 		for (vector<string>::iterator it=gd_path_names.begin(); it!=gd_path_names.end(); it++) {
 			uout("Reading/annotating input GD file",*it);
 
@@ -1216,11 +1238,12 @@ int do_annotate(int argc, char* argv[])
 				//this_gd.remove_group(cGenomeDiff::VALIDATION);
 			}
 			ref_seq_info.annotate_mutations(this_gd, false, options.count("ignore-pseudogenes"), compare_mode);
+			
 			gd_list.push_back(this_gd);
 		}
 		
 		uout("Writing output TSV file", options["output"]);
-		gd.write_tsv(output_file_name, gd_list);
+		cGenomeDiff::write_tsv(output_file_name, gd_list);
 		
 	} else if (output_format == "JSON") {
 		uout("Writing output JSON file", options["output"]);
@@ -1381,7 +1404,7 @@ int do_phylogeny(int argc, char* argv[])
 
 	// Then add frequency columns for all genome diffs
 	vector<string> dummy_title_list;
-	cGenomeDiff::tabulate_frequencies_from_multiple_gds(gd, gd_list, dummy_title_list, options.count("phylogeny-aware"));
+	cGenomeDiff::tabulate_mutation_frequencies_from_multiple_gds(gd, gd_list, dummy_title_list, options.count("phylogeny-aware"));
 
 	// Save merged GD file
 	string merged_gd_file_name =  output_base_name + ".merged.gd";

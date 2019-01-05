@@ -128,6 +128,7 @@ namespace breseq {
         case unknown_coding_base_substitution: return "unknown";
         case no_change_base_substitution: return "no_change";
     }
+    return "";
   }
   
   

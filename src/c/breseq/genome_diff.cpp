@@ -3841,7 +3841,7 @@ void cGenomeDiff::write_jc_score_table(cGenomeDiff& compare, string table_file_p
 
 // Used to add frequency_base-name columns to the master gd by
 // finding equivalent mutations in 
-void cGenomeDiff::tabulate_frequencies_from_multiple_gds(
+void cGenomeDiff::tabulate_mutation_frequencies_from_multiple_gds(
                                                          cGenomeDiff& master_gd, 
                                                          vector<cGenomeDiff>& gd_list, 
                                                          vector<string> &title_list,
@@ -3865,6 +3865,7 @@ void cGenomeDiff::tabulate_frequencies_from_multiple_gds(
     
     if (this_title != it->get_title()) {
       WARN("Duplicate title changed from '" + it->get_title() + "' to '" + this_title + "'\nFor genome diff file with path: " + it->get_file_path());
+      it->set_title(this_title);
     }
     
     title_list.push_back(this_title);
@@ -3877,6 +3878,7 @@ void cGenomeDiff::tabulate_frequencies_from_multiple_gds(
     mut_lists.push_back(it->mutation_list());
   }
 
+  
   diff_entry_list_t de_list = master_gd.mutation_list();
 
   if (verbose) cout << "Tabulating frequencies for mutation..." << endl;
@@ -3966,11 +3968,12 @@ void cGenomeDiff::write_tsv(
       
       (**de_it)["type"] = gd_entry_type_lookup_table[(*de_it)->_type];
       (**de_it)["title"] = gd_it->metadata.title;
+      // Set the title to the filename if it wasn't provided!
+      if ((**de_it)["title"]=="") (**de_it)["title"] = gd_it->get_file_name();
       (**de_it)["treatment"] = gd_it->metadata.treatment;
       (**de_it)["population"] = gd_it->metadata.population;
       (**de_it)["time"] = to_string<double>(gd_it->metadata.time);
       (**de_it)["clone"] = gd_it->metadata.clone;
-
       
       (**de_it)["mutator_status"] = (gd_it->metadata.breseq_data.find("MUTATOR_STATUS") != gd_it->metadata.breseq_data.end()) ? gd_it->metadata.breseq_data["MUTATOR_STATUS"] : "";
 
@@ -4582,9 +4585,23 @@ void cGenomeDiff::read_vcf(const string &file_name)
 }
  
 // Creates a PHYLIP input file from a master list of mutations (from merged file), a list of genome diffs, and reference sequences. 
-void cGenomeDiff::write_phylip(string& output_phylip_file_name, cGenomeDiff& master_gd, vector<cGenomeDiff>& gd_list, cReferenceSequences& ref_seq_info, bool missing_as_ancestral, bool verbose)
+  void cGenomeDiff::write_phylip(string& output_phylip_file_name, cGenomeDiff& master_gd, vector<cGenomeDiff>& gd_list,cReferenceSequences& ref_seq_info, bool missing_as_ancestral, bool verbose)
 {
   (void) verbose;
+  const uint32_t phylip_name_max_length = 10;
+
+  map<string,string> used_titles;
+  for (vector<cGenomeDiff>::iterator gd_it = gd_list.begin(); gd_it != gd_list.end(); gd_it++) {
+    
+    string full_title = gd_it->get_title();
+    string truncated_title = full_title.substr(0,phylip_name_max_length);
+
+    if ( used_titles.find(truncated_title) != used_titles.end() ) {
+      ERROR("PHYLIP output only accomodates ten-letter names for each sequence. Two of your input GenomeDiff sample files have the same title after truncation to ten letters:\n" + full_title + "\nAND\n" + used_titles[truncated_title]  + "\nChange the #=TITLE <title> metadata line of one file to something unique to proceed. If your input files do not have these metadata lines, change the name of one file.");
+    } else {
+      used_titles[truncated_title] = full_title;
+    }
+  }
   
   diff_entry_list_t mut_list = master_gd.mutation_list();
   
@@ -4594,7 +4611,6 @@ void cGenomeDiff::write_phylip(string& output_phylip_file_name, cGenomeDiff& mas
   for (vector<cGenomeDiff>::iterator gd_it = gd_list.begin(); gd_it != gd_list.end(); gd_it++) {
     
     string base_name = gd_it->get_title();
-    const uint32_t phylip_name_max_length = 10;
     string base_name_truncated;
     if (base_name.size() > phylip_name_max_length)
       base_name_truncated = base_name.substr(0,phylip_name_max_length);
@@ -5072,7 +5088,7 @@ void cGenomeDiff::GD2OLI(const vector<string> &gd_file_names,
   
   // Add frequency columns
   vector<string> title_list;
-  cGenomeDiff::tabulate_frequencies_from_multiple_gds(master_gd, gd_list, title_list, false);
+  cGenomeDiff::tabulate_mutation_frequencies_from_multiple_gds(master_gd, gd_list, title_list, false);
 
   vector<string> header_list(14, "");
   header_list[0] = "pop";

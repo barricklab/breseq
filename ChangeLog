@@ -1,3 +1,6 @@
+Version 0.33.3
+   * Fixed empty PHYLIP output from gdtools COMPARE and spurious COMPARE error.
+
 Version 0.33.2
    * Fixed sorting of columns in gdtool COMPARE based on GenomeDiff metadata.
    * Fixed extremely rare fatal error in constructing junction sequences with overlap

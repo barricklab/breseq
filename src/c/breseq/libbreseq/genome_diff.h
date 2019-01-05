@@ -279,7 +279,7 @@ public:
                                        bool verbose = false);
   static void write_jc_score_table(cGenomeDiff& compare, string table_file_path, bool verbose = false); 
 
-  static void tabulate_frequencies_from_multiple_gds(cGenomeDiff& master_gd, 
+  static void tabulate_mutation_frequencies_from_multiple_gds(cGenomeDiff& master_gd,
                                                      vector<cGenomeDiff>& gd_list,
                                                      vector<string> &title_list,
                                                      bool phylogeny_aware = false,
@@ -324,7 +324,7 @@ public:
   //! 
   static void write_phylip(string& output_phylip_file_name, 
                            cGenomeDiff& master_gd, 
-                           vector<cGenomeDiff>& gd_list, 
+                           vector<cGenomeDiff>& gd_list,
                            cReferenceSequences& ref_seq_info,
                            bool missing_as_ancestral = false,
                            bool verbose = false);
