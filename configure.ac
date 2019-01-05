@@ -19,7 +19,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.65])
-AC_INIT([breseq], [0.33.3], [jeffrey.e.barrick@gmail.com], [breseq], [http://barricklab.org/breseq])
+AC_INIT([breseq], [0.33.2], [jeffrey.e.barrick@gmail.com], [breseq], [http://barricklab.org/breseq])
 AC_CONFIG_AUX_DIR(aux_build)
 AC_CONFIG_MACRO_DIR([aux_build/m4])
 AC_CONFIG_HEADERS([aux_build/config.h])
