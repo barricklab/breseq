@@ -7,7 +7,7 @@ ARCHFLAGS=""
 BINARYNAME=${BINARYPLATFORM}-${BINARYARCH}
 if [ "$BINARYPLATFORM" == "Darwin" ]; then
 	BINARYARCH="universal"
-	ARCHFLAGS="-arch i386 -arch x86_64 -mmacosx-version-min=10.9"
+	ARCHFLAGS="-mmacosx-version-min=10.9"
 	BINARYNAME="MacOSX-10.9+"
 fi
 

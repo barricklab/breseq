@@ -106,7 +106,10 @@ install-exec-local :
 clean-local :: clean-tests
 	
 	## This saves the install path for the test script	
-	rm -f tests/test.config
+	rm -f $(abs_top_builddir)/tests/test.config
+	rm -rf $(DOCBUILDDIR);
+	find $(abs_top_builddir) -name '.DS_Store' -type f -delete
+	rm -rf $(abs_top_builddir)/src/c/breseq/*.dSYM
 
 
 ## These two targets are optional for Perl genomediff tools.
@@ -151,6 +154,7 @@ dist-hook: docs
 	
 	## Remove ._ files
 	rm -rf `find $(distdir) -name ".*"`
+	rm -rf ./src/c/breseq/gdtools.dSYM
 
 
 test:
@@ -177,8 +181,3 @@ clean-tests:
 	##echo "export TESTBINPREFIX=$(top_srcdir)/src/c/breseq" > $(top_srcdir)/tests/test.config;
 	$(top_srcdir)/tests/test.sh clean tests long
 
-distclean-local:
-	rm -rf $(DOCBUILDDIR);
-	find $(abs_top_builddir) -name '.DS_Store' -type f -delete
-
-	
