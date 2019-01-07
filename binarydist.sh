@@ -13,11 +13,12 @@ fi
 
 BINARYLOCALDIR=${BRESEQVERSIONSTRING}-${BINARYNAME}
 BINARYDIR=${PWD}/${BINARYLOCALDIR}
-rm -r ${BINARYDIR} ${BINARYDIR}.tgz
+rm -rf ${BINARYDIR} ${BINARYDIR}.tgz
 
 echo "${BINARYDIR}"
 echo "./configure --without-libunwind --prefix=\"${BINARYDIR}\" --enable-static CFLAGS=\"${ARCHFLAGS} ${CFLAGS}\" CXXFLAGS=\"${ARCHFLAGS} ${CXXFLAGS}\" LDFLAGS=\"${ARCHFLAGS} ${LDFLAGS}\""
 ./configure --without-libunwind --prefix="${BINARYDIR}" --enable-static CFLAGS="${ARCHFLAGS} ${CFLAGS}" CXXFLAGS="${ARCHFLAGS} ${CXXFLAGS}" LDFLAGS="${ARCHFLAGS} ${LDFLAGS}"
+
 
 make clean
 make -j 6
