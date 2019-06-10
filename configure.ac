@@ -9,8 +9,8 @@
 ##
 ## Copyright (c) 2010 Michigan State University
 ##
-## breseq is free software; you can redistribute it and/or modify it under the terms the 
-## GNU General Public License as published by the Free Software Foundation; either 
+## breseq is free software; you can redistribute it and/or modify it under the terms the
+## GNU General Public License as published by the Free Software Foundation; either
 ## version 1, or (at your option) any later version.
 ##
 ###
@@ -76,8 +76,8 @@ AS_HELP_STRING([--without-libunwind], [Disable preferring to use libunwind for d
 AS_IF([test "x$with_libunwind" != "xno"], [
   AC_CHECK_HEADER(libunwind.h, FOUND_LIBUNWIND_H=1, FOUND_LIBUNWIND_H=0)
   AC_SEARCH_LIBS([unw_getcontext], [unwind], FOUND_LIBUNWIND=1,  FOUND_LIBUNWIND=0)
-  
-  if [[ $FOUND_LIBUNWIND == 0 ]]; then
+
+  if [[ $FOUND_LIBUNWIND == 0 ]] && [[ $FOUND_LIBUNWIND_H == 1 ]]; then
     AC_MSG_CHECKING([libunwind])
     AC_MSG_CHECKING([for target architecture])
     case x"$target" in
@@ -103,14 +103,14 @@ AS_IF([test "x$with_libunwind" != "xno"], [
     esac
 
     AC_SEARCH_LIBS([_UL${TARGET_PLATFORM}_step], [unwind], FOUND_LIBUNWIND=1, [])
-  
+
     if [[ $FOUND_LIBUNWIND == 1 ]]; then
         UNWIND_LIBS="-lunwind-$TARGET_PLATFORM"
         AC_SUBST(UNWIND_LIBS)
     fi
   fi
 ],
-[ 
+[
   FOUND_LIBUNWIND_H=0
   FOUND_LIBUNWIND=0
 ])
@@ -139,12 +139,12 @@ AC_SUBST([BRESEQ], [src/c/breseq])
 AC_SUBST([GDTOOLS], [src/c/gdtools])
 
 
-AC_CHECK_FILE([.git/refs/heads/master], 
+AC_CHECK_FILE([.git/refs/heads/master],
 	AC_SUBST(HG_REVISION_STRING, [`eval head -n 1 .git/refs/heads/master | sed 's/^\(.\{12\}\).*/\1/'`]),
 	AC_SUBST(HG_REVISION_STRING, [])
 )
 
-AC_CHECK_FILE([.git/refs/heads/master], 
+AC_CHECK_FILE([.git/refs/heads/master],
 	AC_SUBST(HG_REVISION_PREFIX, "revision "),
 	AC_SUBST(HG_REVISION_PREFIX, [])
 )
