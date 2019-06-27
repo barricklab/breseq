@@ -3212,8 +3212,18 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
     // Add start and end position info and perform mutation classification
     if (mut.is_mutation()) {
       
-      mut["position_start"] = to_string<int32_t>(mut.get_reference_coordinate_start().get_position());
-      mut["position_end"] = to_string<int32_t>(mut.get_reference_coordinate_end().get_position());
+      int32_t ref_start_1 = mut.get_reference_coordinate_start().get_position();
+      int32_t ref_end_1 = mut.get_reference_coordinate_end().get_position();
+      
+      mut["position_start"] = to_string<int32_t>(ref_start_1);
+      mut["position_end"] = to_string<int32_t>(ref_end_1);
+      
+      // New 2019-06-26: Add reference sequence
+      if (ref_end_1 - ref_start_1 + 1 > 20) {
+        mut["ref_seq"] = to_string<int32_t>(ref_end_1 - ref_start_1 + 1) + "-bp";
+      } else {
+        mut["ref_seq"] = this->get_sequence_1(mut[SEQ_ID], ref_start_1, ref_end_1);
+      }
       
       categorize_1_mutation(mut, large_size_cutoff);
     }
@@ -3279,39 +3289,43 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
             if (i_codon_number != j_codon_number)
               continue;
             
-            
             int32_t i_codon_position = from_string<int32_t>(codon_position_list_i[ii]);
             int32_t j_codon_position = from_string<int32_t>(codon_position_list_j[jj]);
             
             if ((*this)[i_seq_id].get_circular_distance_1(i_position, j_position) != abs(i_codon_position-j_codon_position))
               continue;
             
-            // Don't do this for SNPs that are not 100% frequency
+            // Only do this for SNPs that are not 100% frequency
             if (   ((*snp_muts[on_key][i]).entry_exists(FREQUENCY) && ( from_string<double>((*snp_muts[on_key][i])[FREQUENCY]) != 1.0 ))
                 || ((*snp_muts[on_key][j]).entry_exists(FREQUENCY) && ( from_string<double>((*snp_muts[on_key][j])[FREQUENCY]) != 1.0 )) )
             {
               
-              
-              // Create or fill the field marking multiple SNPs in the same codon
+              // Create the field for marking multiple SNPs in the same codon if necessary
               if (!(*snp_muts[on_key][i]).entry_exists("multiple_polymorphic_SNPs_in_same_codon")) {
                 vector<string> empty(codon_number_list_i.size(), "0");
                 (*snp_muts[on_key][i])["multiple_polymorphic_SNPs_in_same_codon"] = join(empty, multiple_separator);
-              } else {
-                // split
+              }
+                
+              // Fill in this one as a multiple hit
+              {
                 vector<string> current = split((*snp_muts[on_key][i])["multiple_polymorphic_SNPs_in_same_codon"], multiple_separator);
                 current[ii] = "1";
                 (*snp_muts[on_key][i])["multiple_polymorphic_SNPs_in_same_codon"] = join(current, multiple_separator);
               }
               
+              // Create the field for marking multiple SNPs in the same codon if necessary
               if (!(*snp_muts[on_key][j]).entry_exists("multiple_polymorphic_SNPs_in_same_codon")) {
                 vector<string> empty(codon_number_list_j.size(), "0");
                 (*snp_muts[on_key][j])["multiple_polymorphic_SNPs_in_same_codon"] = join(empty, multiple_separator);
-              } else {
-                // split
+              }
+              
+              // Fill in this one as a multiple hit
+              {
                 vector<string> current = split((*snp_muts[on_key][j])["multiple_polymorphic_SNPs_in_same_codon"], multiple_separator);
                 current[jj] = "1";
                 (*snp_muts[on_key][j])["multiple_polymorphic_SNPs_in_same_codon"] = join(current, multiple_separator);
               }
+              
               continue;
             }
             

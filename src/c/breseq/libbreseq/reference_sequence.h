@@ -28,8 +28,11 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/anyoption.h"
 #include "libbreseq/summary.h"
 
+
 namespace breseq {
 
+
+  
   // Pre-declaration
 	class Settings;
   

@@ -506,13 +506,14 @@
 			};
 			buildConfigurationList = 421ACEBA1170DB9600C2EB85 /* Build configuration list for PBXProject "breseq" */;
 			compatibilityVersion = "Xcode 3.2";
-			developmentRegion = English;
+			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
-				English,
-				Japanese,
-				French,
-				German,
+				fr,
+				en,
+				ja,
+				Base,
+				de,
 			);
 			mainGroup = 421ACEB51170DB9600C2EB85;
 			productRefGroup = 421ACF301170DF1800C2EB85 /* Products */;
