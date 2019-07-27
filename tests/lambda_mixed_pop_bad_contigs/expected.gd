@@ -1,4 +1,15 @@
 #=GENOME_DIFF	1.0
+#=COMMAND	./src/c/breseq/breseq -j 4 -o tests/lambda_mixed_pop_bad_contigs -r tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda.gbk -r tests/lambda_mixed_pop_bad_contigs/../data/lambda/other.gbk -r tests/lambda_mixed_pop_bad_contigs/../data/REL606/REL606.fragment.gbk tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda_mixed_population.fastq
+#=REFSEQ	tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda.gbk
+#=REFSEQ	tests/lambda_mixed_pop_bad_contigs/../data/lambda/other.gbk
+#=REFSEQ	tests/lambda_mixed_pop_bad_contigs/../data/REL606/REL606.fragment.gbk
+#=READSEQ	tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda_mixed_population.fastq
+#=CONVERTED-BASES	6998495
+#=CONVERTED-READS	199957
+#=INPUT-BASES	7000144
+#=INPUT-READS	200010
+#=MAPPED-BASES	5152745
+#=MAPPED-READS	148224
 DEL	1	64	AF322221	1	687	gene_name=GFP	gene_position=coding (1-687/687 nt)	gene_product=green fluorescent protein asFP499	gene_strand=>	genes_inactivated=GFP	mutation_category=large_deletion	position_end=687	position_start=1	ref_seq=687-bp
 DEL	2	31	NC_001416	139	1	gene_name=–/nu1	gene_position=intergenic (–/-52)	gene_product=–/DNA packaging protein	gene_strand=–/>	locus_tag=–/lambdap01	mutation_category=small_indel	position_end=139	position_start=139	ref_seq=G
 INS	3	32	NC_001416	14266	G	gene_name=L/K	gene_position=intergenic (+139/-10)	gene_product=tail component/tail component	gene_strand=>/>	genes_promoter=K	locus_tag=lambdap18/lambdap19	locus_tags_promoter=lambdap19	mutation_category=small_indel	position_end=14266	position_start=14266	ref_seq=C

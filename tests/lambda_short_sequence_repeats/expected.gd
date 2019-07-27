@@ -1,4 +1,13 @@
 #=GENOME_DIFF	1.0
+#=COMMAND	./src/c/breseq/breseq -j 4 -b 0 -o tests/lambda_short_sequence_repeats -r tests/lambda_short_sequence_repeats/../data/lambda/lambda.5.gbk tests/lambda_short_sequence_repeats/../data/lambda/lambda.short_sequence_repeats.fastq
+#=REFSEQ	tests/lambda_short_sequence_repeats/../data/lambda/lambda.5.gbk
+#=READSEQ	tests/lambda_short_sequence_repeats/../data/lambda/lambda.short_sequence_repeats.fastq
+#=CONVERTED-BASES	250000
+#=CONVERTED-READS	5000
+#=INPUT-BASES	250000
+#=INPUT-READS	5000
+#=MAPPED-BASES	243031
+#=MAPPED-READS	4872
 INS	1	9	NC_001416-4	2604	GCGGCGGCG	gene_name=NinC	gene_position=coding (325/873 nt)	gene_product=NinC protein	gene_strand=>	genes_inactivated=NinC	locus_tag=lambdap64	locus_tags_inactivated=lambdap64	mutation_category=small_indel	position_end=2604	position_start=2604	ref_seq=G	repeat_length=3	repeat_new_copies=5	repeat_ref_copies=2	repeat_seq=GCG
 DEL	2	6,10	NC_001416-4	2800	3	gene_name=NinC	gene_position=coding (521-523/873 nt)	gene_product=NinC protein	gene_strand=>	genes_inactivated=NinC	locus_tag=lambdap64	locus_tags_inactivated=lambdap64	mutation_category=small_indel	position_end=2802	position_start=2800	ref_seq=AAC	repeat_length=3	repeat_new_copies=1	repeat_ref_copies=2	repeat_seq=AAC
 INS	3	11	NC_001416-4	2915	TTTT	gene_name=NinC	gene_position=coding (636/873 nt)	gene_product=NinC protein	gene_strand=>	genes_inactivated=NinC	locus_tag=lambdap64	locus_tags_inactivated=lambdap64	mutation_category=small_indel	position_end=2915	position_start=2915	ref_seq=T	repeat_length=1	repeat_new_copies=9	repeat_ref_copies=5	repeat_seq=T

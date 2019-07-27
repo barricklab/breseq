@@ -1,4 +1,17 @@
 #=GENOME_DIFF	1.0
+#=COMMAND	./src/c/breseq/breseq -j 4 -o tests/lambda_mult_ref_read -r tests/lambda_mult_ref_read/../data/lambda/lambda.1-2.gbk -r tests/lambda_mult_ref_read/../data/lambda/lambda.3.gbk -r tests/lambda_mult_ref_read/../data/lambda/lambda.4.gbk -r tests/lambda_mult_ref_read/../data/lambda/lambda.5.gbk -l 50 tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.1.fastq tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.2.fastq tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.3.fastq tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.4.fastq tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.5.fastq
+#=REFSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda.1-2.gbk
+#=REFSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda.3.gbk
+#=REFSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda.4.gbk
+#=REFSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda.5.gbk
+#=READSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.1.fastq
+#=READSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.2.fastq
+#=CONVERTED-BASES	2425115
+#=CONVERTED-READS	69289
+#=INPUT-BASES	2800000
+#=INPUT-READS	80000
+#=MAPPED-BASES	1783840
+#=MAPPED-READS	51266
 DEL	1	29	NC_001416-0	139	1	gene_name=–/nu1	gene_position=intergenic (–/-52)	gene_product=–/DNA packaging protein	gene_strand=–/>	locus_tag=–/lambdap01	mutation_category=small_indel	position_end=139	position_start=139	ref_seq=G
 INS	2	30	NC_001416-1	4566	G	gene_name=L/K	gene_position=intergenic (+139/-10)	gene_product=tail component/tail component	gene_strand=>/>	genes_promoter=K	locus_tag=lambdap18/lambdap19	locus_tags_promoter=lambdap19	mutation_category=small_indel	position_end=4566	position_start=4566	ref_seq=C
 SNP	3	31	NC_001416-2	1261	G	aa_new_seq=E|NA	aa_position=338|NA	aa_ref_seq=K|NA	codon_new_seq=GAA|NA	codon_number=338|NA	codon_position=1|NA	codon_ref_seq=AAA|NA	gene_name=orf-401|orf206b	gene_position=1012|noncoding (107/621 nt)	gene_product=Tail fiber protein|	gene_strand=>|<	genes_overlapping=orf-401,orf206b	locus_tag=lambdap27|lambdap90_made_noncoding	locus_tags_overlapping=lambdap27,lambdap90_made_noncoding	mutation_category=snp_nonsynonymous|noncoding	position_end=1261	position_start=1261	ref_seq=A	snp_type=nonsynonymous|noncoding	transl_table=11|NA

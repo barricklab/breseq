@@ -987,7 +987,7 @@ namespace breseq
 		this->evidence_path = this->output_path + "/" + this->local_evidence_path;
 		this->evidence_genome_diff_file_name = this->evidence_path + "/evidence.gd";
 		this->final_genome_diff_file_name = this->output_path + "/output.gd";
-		this->annotated_genome_diff_file_name = this->evidence_path + "/annotated.gd";
+    this->annotated_genome_diff_file_name = this->evidence_path + "/annotated.gd";
     
 		this->local_coverage_plot_path = "evidence";
 		this->coverage_plot_path = this->output_path + "/" + this->local_coverage_plot_path;
@@ -1012,6 +1012,7 @@ namespace breseq
 		this->unmatched_read_file_name = this->data_path + "/#.unmatched.fastq";
     this->output_vcf_file_name = this->data_path + "/output.vcf";
     this->output_genome_diff_file_name = this->data_path + "/output.gd";
+    this->output_annotated_genome_diff_file_name = this->data_path + "/annotated.gd";
     this->data_summary_file_name = this->data_path + "/summary.json";
 
 

@@ -1,4 +1,14 @@
 #=GENOME_DIFF	1.0
+#=COMMAND	./src/c/breseq/breseq -j 4 -b 0 -o tests/REL606_fragment_is_junction_only -r tests/REL606_fragment_is_junction_only/../data/REL606/REL606.fragment.gbk -s tests/REL606_fragment_is_junction_only/../data/REL606/REL606.is.gbk tests/REL606_fragment_is_junction_only/../data/REL606/REL606.junction_only.fastq
+#=REFSEQ	tests/REL606_fragment_is_junction_only/../data/REL606/REL606.fragment.gbk
+#=REFSEQ	tests/REL606_fragment_is_junction_only/../data/REL606/REL606.is.gbk
+#=READSEQ	tests/REL606_fragment_is_junction_only/../data/REL606/REL606.junction_only.fastq
+#=CONVERTED-BASES	1440000
+#=CONVERTED-READS	40000
+#=INPUT-BASES	1440000
+#=INPUT-READS	40000
+#=MAPPED-BASES	1414698
+#=MAPPED-READS	39388
 MOB	1	8,9	REL606-5	2345	IS150	1	3	gene_name=yafC/yafD	gene_position=intergenic (-30/-209)	gene_product=predicted DNA-binding transcriptional regulator/hypothetical protein	gene_strand=</>	genes_promoter=yafC	locus_tag=ECB_00201/ECB_00202	locus_tags_promoter=ECB_00201	mutation_category=mobile_element_insertion	position_end=2347	position_start=2345	ref_seq=ATT	repeat_size=1443
 MOB	2	10,11	REL606-5	4000	IS150	-1	3	gene_name=yafE/mltD	gene_position=intergenic (+17/+29)	gene_product=predicted S-adenosyl-L-methionine-dependent methyltransferase/predicted membrane-bound lytic murein transglycosylase D	gene_strand=>/<	genes_promoter=mltD	locus_tag=ECB_00203/ECB_00204	locus_tags_promoter=ECB_00204	mutation_category=mobile_element_insertion	position_end=4002	position_start=4000	ref_seq=GGG	repeat_size=1443
 MOB	3	12,13	REL606-5	4400	IS150	1	3	gene_name=mltD	gene_position=coding (988-990/1359 nt)	gene_product=predicted membrane-bound lytic murein transglycosylase D	gene_strand=<	genes_inactivated=mltD	locus_tag=ECB_00204	locus_tags_inactivated=ECB_00204	mutation_category=mobile_element_insertion	position_end=4402	position_start=4400	ref_seq=CGT	repeat_size=1443

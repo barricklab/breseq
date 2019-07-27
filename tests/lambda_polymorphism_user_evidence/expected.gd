@@ -1,4 +1,13 @@
 #=GENOME_DIFF	1.0
+#=COMMAND	./src/c/breseq/breseq -j 4 --polymorphism-prediction --user-evidence-gd tests/lambda_polymorphism_user_evidence/user_evidence.gd -o tests/lambda_polymorphism_user_evidence -r tests/lambda_polymorphism_user_evidence/../data/lambda/lambda.gbk tests/lambda_polymorphism_user_evidence/../data/lambda/lambda_mixed_population.fastq
+#=REFSEQ	tests/lambda_polymorphism_user_evidence/../data/lambda/lambda.gbk
+#=READSEQ	tests/lambda_polymorphism_user_evidence/../data/lambda/lambda_mixed_population.fastq
+#=CONVERTED-BASES	6998495
+#=CONVERTED-READS	199957
+#=INPUT-BASES	7000144
+#=INPUT-READS	200010
+#=MAPPED-BASES	5136112
+#=MAPPED-READS	147744
 SNP	1	73	NC_001416	54	A	frequency=9.29865837e-02	gene_name=–/nu1	gene_position=intergenic (–/-137)	gene_product=–/DNA packaging protein	gene_strand=–/>	locus_tag=–/lambdap01	mutation_category=snp_intergenic	position_end=54	position_start=54	ref_seq=G	snp_type=intergenic
 SNP	2	74	NC_001416	73	C	frequency=0.00000000e+00	gene_name=–/nu1	gene_position=intergenic (–/-118)	gene_product=–/DNA packaging protein	gene_strand=–/>	locus_tag=–/lambdap01	mutation_category=snp_intergenic	position_end=73	position_start=73	ref_seq=A	snp_type=intergenic
 SNP	3	75	NC_001416	73	G	frequency=7.51390457e-02	gene_name=–/nu1	gene_position=intergenic (–/-118)	gene_product=–/DNA packaging protein	gene_strand=–/>	locus_tag=–/lambdap01	mutation_category=snp_intergenic	position_end=73	position_start=73	ref_seq=A	snp_type=intergenic

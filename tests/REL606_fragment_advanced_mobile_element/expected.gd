@@ -1,4 +1,13 @@
 #=GENOME_DIFF	1.0
+#=COMMAND	./src/c/breseq/breseq -j 4 -b 0 -o tests/REL606_fragment_advanced_mobile_element -r tests/REL606_fragment_advanced_mobile_element/../data/REL606/REL606.fragment.gbk tests/REL606_fragment_advanced_mobile_element/../data/REL606/REL606.advanced_mobile_element.fastq
+#=REFSEQ	tests/REL606_fragment_advanced_mobile_element/../data/REL606/REL606.fragment.gbk
+#=READSEQ	tests/REL606_fragment_advanced_mobile_element/../data/REL606/REL606.advanced_mobile_element.fastq
+#=CONVERTED-BASES	1440000
+#=CONVERTED-READS	40000
+#=INPUT-BASES	1440000
+#=INPUT-READS	40000
+#=MAPPED-BASES	1382868
+#=MAPPED-READS	38502
 MOB	1	36,37	REL606-5	1000	IS1	-1	3	gene_name=dkgB	gene_position=coding (400-402/804 nt)	gene_product=2,5-diketo-D-gluconate reductase B	gene_strand=>	genes_inactivated=dkgB	locus_tag=ECB_00200	locus_tags_inactivated=ECB_00200	mutation_category=mobile_element_insertion	position_end=1002	position_start=1000	ref_seq=CCA	repeat_size=768
 MOB	2	38,39	REL606-5	2000	IS1	1	7	gene_name=yafC	gene_position=coding (310-316/915 nt)	gene_product=predicted DNA-binding transcriptional regulator	gene_strand=<	genes_inactivated=yafC	locus_tag=ECB_00201	locus_tags_inactivated=ECB_00201	mutation_category=mobile_element_insertion	position_end=2006	position_start=2000	ref_seq=GCAGCAC	repeat_size=768
 MOB	3	25,40,41	REL606-5	3000	IS1	-1	-3	gene_name=yafD	gene_position=coding (445-447/801 nt)	gene_product=hypothetical protein	gene_strand=>	genes_inactivated=yafD	locus_tag=ECB_00202	locus_tags_inactivated=ECB_00202	mutation_category=mobile_element_insertion	position_end=3002	position_start=3000	ref_seq=CTG	repeat_size=768

@@ -1,4 +1,13 @@
 #=GENOME_DIFF	1.0
+#=COMMAND	./src/c/breseq/breseq -j 4 -o tests/lambda_contig_ref -c tests/lambda_contig_ref/../data/lambda/lambda-contig.gbk tests/lambda_contig_ref/../data/lambda/lambda_mixed_population.fastq
+#=REFSEQ	tests/lambda_contig_ref/../data/lambda/lambda-contig.gbk
+#=READSEQ	tests/lambda_contig_ref/../data/lambda/lambda_mixed_population.fastq
+#=CONVERTED-BASES	6998495
+#=CONVERTED-READS	199957
+#=INPUT-BASES	7000144
+#=INPUT-READS	200010
+#=MAPPED-BASES	5119770
+#=MAPPED-READS	147273
 DEL	1	28	NC_001416-0	139	1	gene_name=–/nu1	gene_position=intergenic (–/-52)	gene_product=–/DNA packaging protein	gene_strand=–/>	locus_tag=–/lambdap01	mutation_category=small_indel	position_end=139	position_start=139	ref_seq=G
 INS	2	29	NC_001416-1	4566	G	gene_name=L/K	gene_position=intergenic (+139/-10)	gene_product=tail component/tail component	gene_strand=>/>	genes_promoter=K	locus_tag=lambdap18/lambdap19	locus_tags_promoter=lambdap19	mutation_category=small_indel	position_end=4566	position_start=4566	ref_seq=C
 SNP	3	30	NC_001416-2	1261	G	aa_new_seq=E|S	aa_position=338|36	aa_ref_seq=K|F	codon_new_seq=GAA|TCT	codon_number=338|36	codon_position=1|2	codon_ref_seq=AAA|TTT	gene_name=orf-401|orf206b	gene_position=1012|107	gene_product=Tail fiber protein|hypothetical protein	gene_strand=>|<	genes_overlapping=orf-401,orf206b	locus_tag=lambdap27|lambdap90	locus_tags_overlapping=lambdap27,lambdap90	mutation_category=snp_nonsynonymous|nonsynonymous	position_end=1261	position_start=1261	ref_seq=A	snp_type=nonsynonymous|nonsynonymous	transl_table=11|11

@@ -2358,16 +2358,15 @@ int breseq_default_action(int argc, char* argv[])
     cerr << "  Writing final GD file..." << endl;
     mpgd.write(settings.final_genome_diff_file_name);
     
-    // Make a copy in both output and data folders
-    SYSTEM("cp " + settings.final_genome_diff_file_name + " " + settings.output_genome_diff_file_name);
+    // Save a copy in the data folder as well
+    mpgd.write(settings.output_genome_diff_file_name);
+
+    // Faster, less compatible way...
+    // SYSTEM("cp " + settings.final_genome_diff_file_name + " " + settings.output_genome_diff_file_name);
     
     //Don't reload -- we lose invisible fields that we need
     //cGenomeDiff gd(settings.final_genome_diff_file_name);
     cGenomeDiff gd = mpgd;
-    
-    // Empty metadata... necessary to keep consistency tests
-    // when things like time are being added to output.gd
-    gd.metadata = cGenomeDiff::Metadata();
     
     // Write VCF conversion
     cerr << "  Writing final VCF file..." << endl;
@@ -2387,6 +2386,16 @@ int breseq_default_action(int argc, char* argv[])
 		//
 		cerr << "Annotating mutations..." << endl;
 		ref_seq_info.annotate_mutations(gd);
+    
+    // Annotated Genome Diff output #1 - public version
+    gd.write(settings.output_annotated_genome_diff_file_name);
+
+    // Annotated Genome Diff output #2 - used internally and for consistency tests
+    //
+    // Here we empty certain metadata items: CREATED time and PROGRAM breseq version
+    // that should be allowed to change without marking the output as failed!
+    gd.metadata.created="";
+    gd.metadata.program="";
     gd.write(settings.annotated_genome_diff_file_name);
     
 		//

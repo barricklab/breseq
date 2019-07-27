@@ -562,6 +562,7 @@ namespace breseq
     string unmatched_read_file_name;
     string output_vcf_file_name;
     string output_genome_diff_file_name;
+    string output_annotated_genome_diff_file_name;
     string data_summary_file_name;
     
     //! Paths: Experimental

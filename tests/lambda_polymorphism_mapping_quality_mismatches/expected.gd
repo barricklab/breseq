@@ -1,4 +1,13 @@
 #=GENOME_DIFF	1.0
+#=COMMAND	./src/c/breseq/breseq -j 4 --polymorphism-prediction --minimum-mapping-quality 40 --maximum-read-mismatches 1 -o tests/lambda_polymorphism_mapping_quality_mismatches -r tests/lambda_polymorphism_mapping_quality_mismatches/../data/lambda/lambda.gbk tests/lambda_polymorphism_mapping_quality_mismatches/../data/lambda/lambda_mixed_population.fastq
+#=REFSEQ	tests/lambda_polymorphism_mapping_quality_mismatches/../data/lambda/lambda.gbk
+#=READSEQ	tests/lambda_polymorphism_mapping_quality_mismatches/../data/lambda/lambda_mixed_population.fastq
+#=CONVERTED-BASES	6998495
+#=CONVERTED-READS	199957
+#=INPUT-BASES	7000144
+#=INPUT-READS	200010
+#=MAPPED-BASES	4397028
+#=MAPPED-READS	125762
 DEL	1	29	NC_001416	138	1	frequency=1	gene_name=–/nu1	gene_position=intergenic (–/-53)	gene_product=–/DNA packaging protein	gene_strand=–/>	locus_tag=–/lambdap01	mutation_category=small_indel	position_end=138	position_start=138	ref_seq=G
 INS	2	30	NC_001416	14266	G	frequency=1	gene_name=L/K	gene_position=intergenic (+139/-10)	gene_product=tail component/tail component	gene_strand=>/>	genes_promoter=K	insert_position=1	locus_tag=lambdap18/lambdap19	locus_tags_promoter=lambdap19	mutation_category=small_indel	position_end=14266	position_start=14266	ref_seq=C
 SNP	3	31	NC_001416	20661	G	aa_new_seq=E|S	aa_position=338|36	aa_ref_seq=?|?	codon_new_seq=GAA|TCT	codon_number=338|36	codon_position=1|2	codon_ref_seq=NAA|TNT	frequency=1	gene_name=orf-401|orf206b	gene_position=1012|107	gene_product=Tail fiber protein|hypothetical protein	gene_strand=>|<	genes_overlapping=orf-401,orf206b	locus_tag=lambdap27|lambdap90	locus_tags_overlapping=lambdap27,lambdap90	mutation_category=snp_nonsynonymous|nonsynonymous	position_end=20661	position_start=20661	ref_seq=N	snp_type=nonsynonymous|nonsynonymous	transl_table=11|11
