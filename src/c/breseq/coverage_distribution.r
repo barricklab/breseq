@@ -33,8 +33,6 @@
 ##     -1 if it was <1 after fitting (implying reference sequence is deleted)
 ##
 
-par(family="sans")
-
 plot_poisson = 0;
 pdf_output = 1;
 
@@ -396,7 +394,7 @@ if (pdf_output == 0) {
 } else {
 	pdf(plot_file, height=6, width=7)
 }
-
+par(family="sans")
 par(mar=c(5.5,7.5,3,1.5));
 
 max_y = 0

@@ -16,8 +16,6 @@
 ##
 
 ## Args should be in_file=/path/to/input/error_rates.tab out_file=/path/to/output
-par(family="sans")
-
 
 for (e in commandArgs()) {
   ta = strsplit(e,"=",fixed=TRUE)
@@ -62,6 +60,7 @@ min_error_rate = 10**log10_min_error_rate;
 
 
 pdf(out_file, height=6, width=9)
+par(family="sans")
 
 A_col = "green";
 A_pch = 15;
