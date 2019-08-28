@@ -185,7 +185,7 @@ namespace breseq {
 #ifdef DEBUG
     assert(false);
 #else
-    exit(0);
+    exit(1);
 #endif
     }
   }

@@ -532,7 +532,7 @@ bool test_RA_evidence_POLYMORPHISM_mode(
   //   either b/c the polymorphism score didn't originally pass
   //   or b/c the polymorphism was rejected by another test
   
-  // Drop back to a polymorphism if we don't pass consensus frequency criterion
+  // Drop back to a rejected polymorphism if we don't pass consensus frequency criterion
   if (variant_frequency < settings.consensus_frequency_cutoff - settings.polymorphism_precision_decimal) {
     ra.add_reject_reason("FREQUENCY_CUTOFF");
   }

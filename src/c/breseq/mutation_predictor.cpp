@@ -538,6 +538,100 @@ namespace breseq {
 			}
 		}
 
+    // DEL prediction (separate case):
+    // (4) the reference is circular, there is missing coverage at one or both ends,
+    //     AND there is junction connecting those ends
+    
+    for(diff_entry_list_t::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) //JC
+    {
+      cDiffEntry& jc_item = **jc_it;
+      
+      // They have to be for the same seq_id
+      if (jc_item["side_1_seq_id"] != jc_item["side_2_seq_id"] )  {
+        continue;
+      }
+      string& seq_id = jc_item["side_1_seq_id"];
+      int32_t seq_length = static_cast<int32_t>(ref_seq_info[seq_id].get_sequence_length());
+      
+      // This seq_id must be circular
+      if (!ref_seq_info[seq_id].is_circular())
+        continue;
+      
+      // They have to connect across the origin of the sequence
+      // ---> assumes position_1 is lower
+      
+      int32_t side_1_position = n(jc_item[SIDE_1_POSITION]);
+      int32_t side_2_position = n(jc_item[SIDE_2_POSITION]);
+      int32_t side_1_strand = n(jc_item[SIDE_1_STRAND]);
+      int32_t side_2_strand = n(jc_item[SIDE_2_STRAND]);
+      
+      ASSERT(side_1_position < side_2_position, "Junction has side_1_position > side_2_position\n" + jc_item.as_string());
+      
+      if (! ((side_1_strand == +1) &&  (side_2_strand == -1)) ) {
+        continue;
+      }
+      
+      // Now we have to find matching MC items
+      cDiffEntry* start_seq_mc(NULL);
+      cDiffEntry* end_seq_mc(NULL);
+      
+      for(diff_entry_list_t::iterator mc_it = mc.begin(); mc_it != mc.end(); mc_it++)
+      {
+        cDiffEntry& mc_item = **mc_it;
+        
+        if (verbose)
+          cout << mc_item << endl;
+        
+        if (mc_item.entry_exists("reject"))
+          continue;
+        
+        if (mc_item[SEQ_ID] != seq_id)
+          continue;
+        
+        if (n(mc_item[START]) - n(mc_item[START_RANGE]) <= 1)
+          start_seq_mc = &mc_item;
+        
+        if (n(mc_item[END]) + n(mc_item[END_RANGE]) >= seq_length)
+          end_seq_mc = &mc_item;
+      }
+      
+      // We have to have found MC on both ends unless the junctions are flush to the ends
+      // Note: some slop could be added here
+      if (!start_seq_mc && (side_1_position != 1))
+          continue;
+      if (!end_seq_mc && (side_2_position != seq_length))
+          continue;
+      
+      // Did we find both missing coverage pieces and they match up with the junction?
+      // Then we get to create a mutation! It will extend past the end of the fragment.
+
+      if ( (n((*start_seq_mc)[END]) + n((*start_seq_mc)[END_RANGE]) >= side_1_position )
+          && (n((*end_seq_mc)[START]) - n((*start_seq_mc)[START_RANGE]) <= side_2_position ) ) {
+      
+        cDiffEntry mut;
+        mut._type = DEL;
+        mut._evidence = make_vector<string>(jc_item._id);
+        
+        int32_t size = (side_1_position - 1) + (seq_length - side_2_position);
+        int32_t position = side_2_position+1;
+        
+        mut
+        ("seq_id", seq_id)
+        ("position", s(position))
+        ("size", s(size));
+        ;
+        
+        if (start_seq_mc) mut._evidence.push_back(start_seq_mc->_id);
+        if (end_seq_mc) mut._evidence.push_back(end_seq_mc->_id);
+        
+        gd.add(mut);
+        
+        // Not really necessary to delete
+        jc.erase(jc_it);
+        jc_it--;
+      }
+    }
+    
   }
   
   void MutationPredictor::predictJCplusJCtoMOB(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc)

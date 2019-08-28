@@ -233,7 +233,7 @@ namespace breseq {
     string as_string() {
       cString s;
       s = "start = " + to_string(m_start_1) + " end = " + to_string(m_end_1) + " strand " + to_string<int32_t>(m_strand);
-      return s;
+      return std::move(s);
     }
     
     bool is_valid() {
