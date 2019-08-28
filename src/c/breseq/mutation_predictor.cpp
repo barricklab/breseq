@@ -538,6 +538,7 @@ namespace breseq {
 			}
 		}
 
+    /*
     // DEL prediction (separate case):
     // (4) the reference is circular, there is missing coverage at one or both ends,
     //     AND there is junction connecting those ends
@@ -631,6 +632,7 @@ namespace breseq {
         jc_it--;
       }
     }
+     */
     
   }
   
