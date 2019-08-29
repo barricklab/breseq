@@ -187,9 +187,10 @@ double PosHashProbabilityTable::probability(string& seq_id, uint32_t pos_hash_sc
 
   // no coverage was fit for this fragment, allow it to pass for this fragment no matter what by passing high value
   // @JEB we may want to disallow these junctions instead, by passing a negative value here?
-  if (p.negative_binomial_size == 0)
+  if (p.negative_binomial_size == 0) {
+    if (verbose) cout << "No coverage fit for fragment: " << seq_id << endl;
     return 999999;
-  
+  }
   // Calculate this entry in the table -- 
   uint32_t max_coverage = static_cast<uint32_t>(round(10*p.average_coverage));
         
@@ -500,26 +501,40 @@ void resolve_alignments(
     bool failed = false;  
     bool record = true;
     
+    ///////////////////////////////////////////////////////////////
+    // Tests related to the pos hash score (coverage evenness)
+    
     // One can actually have a passing E-value score with a pos_hash score of zero under some circumstances...
-    failed = failed || (junction_test_info.pos_hash_score == 0);
+    if (junction_test_info.pos_hash_score == 0) {
+      junction_test_info.reject_reasons.push_back("COVERAGE_EVENNESS_SKEW");
+    }
     
     // Check that it met the minimum pos hash score criterion
-    failed = failed || (junction_test_info.pos_hash_score < settings.minimum_alignment_resolution_pos_hash_score);
-
-    // We don't even record junctions in the genome diff if they don't meet the minimum_alignment_resolution_pos_hash_score 
-    // criterion, or if they just have no matches, unless they are user-defined junctions
-    record = !failed || junction_info.user_defined;
+    if (junction_test_info.pos_hash_score < settings.minimum_alignment_resolution_pos_hash_score) {
+      junction_test_info.reject_reasons.push_back("COVERAGE_EVENNESS_SKEW");
+    }
     
-    // If both are on a junction-only sequence then don't count it
-    failed = failed || ( settings.junction_only_seq_id_set().count(junction_info.sides[0].seq_id) && settings.junction_only_seq_id_set().count(junction_info.sides[1].seq_id) );
+    // We don't even record junctions in the genome diff if they don't meet the minimum_alignment_resolution_pos_hash_score
+    // criterion, or if they just have no matches, unless they are user-defined junction
+    record = (junction_test_info.reject_reasons.size() == 0) || junction_info.user_defined;
+    
+    
+    // If both are on a junction-only sequence then don't count it -- EVEN IF USER DEFINED
+    // This is purposefull after re-accepting user_defined junctions
+    if ( settings.junction_only_seq_id_set().count(junction_info.sides[0].seq_id) && settings.junction_only_seq_id_set().count(junction_info.sides[1].seq_id) ) {
+      junction_test_info.reject_reasons.push_back("BETWEEN_TWO_JUNCTION_ONLY_SEQUENCES");
+    }
     
     // If no two reads have different start and end values from each other, regardless of strand, then fail (Chuck it!)
-    failed = failed || (!junction_test_info.has_reads_with_both_different_start_and_end);
+    if (!junction_test_info.has_reads_with_both_different_start_and_end) {
+      junction_test_info.reject_reasons.push_back("COVERAGE_EVENNESS_SKEW");
+    }
     
-    junction_test_info.neg_log10_pos_hash_p_value = -1;
-        
-    // Zero means calculating this p-value is off
-    if (settings.junction_pos_hash_neg_log10_p_value_cutoff) {
+      junction_test_info.neg_log10_pos_hash_p_value = -1;
+    
+    // In targeted mode it can be rejected for the reasons above, but we don't have a coverage distribution so we can't reject it on that basis
+    // Zero junction_pos_hash_neg_log10_p_value_cutoff means calculating this p-value is off
+    if (!settings.targeted_sequencing && settings.junction_pos_hash_neg_log10_p_value_cutoff) {
       
       double neg_log10_p_value_1 = pos_hash_p_value_calculator.probability(junction_info.sides[0].seq_id, junction_test_info.pos_hash_score, junction_test_info.max_pos_hash_score);
       double neg_log10_p_value_2 = pos_hash_p_value_calculator.probability(junction_info.sides[1].seq_id, junction_test_info.pos_hash_score, junction_test_info.max_pos_hash_score);
@@ -529,13 +544,15 @@ void resolve_alignments(
       // we don't want to penalize it with requiring coverage typical of the plasmid.
       junction_test_info.neg_log10_pos_hash_p_value = min(neg_log10_p_value_1, neg_log10_p_value_2);
       
-      failed = failed || (junction_test_info.neg_log10_pos_hash_p_value > settings.junction_pos_hash_neg_log10_p_value_cutoff);
+      if (junction_test_info.neg_log10_pos_hash_p_value > settings.junction_pos_hash_neg_log10_p_value_cutoff) {
+        junction_test_info.reject_reasons.push_back("COVERAGE_EVENNESS_SKEW");
+      }
     }
         
     if (verbose) 
     {
       cout << "Testing Junction: " << junction_id << endl;
-      cout << "  " << (failed ? "FAILED" : "SUCCESS") << endl;
+      cout << "  " << (junction_test_info.reject_reasons.size() ? "FAILED" : "SUCCESS") << endl;
       cout << "  Pos hash score: " << junction_test_info.pos_hash_score << endl;
       cout << "  Neg log10 pos hash p-value: " << junction_test_info.neg_log10_pos_hash_p_value
            << " [ " << settings.junction_pos_hash_neg_log10_p_value_cutoff << " ]" << endl;
@@ -557,13 +574,13 @@ void resolve_alignments(
                      repeat_junction_match_map,
                      resolved_reference_tam,
                      resolved_junction_tam,
-                     failed,
+                     junction_test_info.reject_reasons.size(),
                      junction_test_info.total_non_overlap_reads > 0
                      ); 
     
-    // However, we record only some junctions .
+    // However, we record only some junctions...
     if (record) {
-      if (!failed) 
+      if (!junction_test_info.reject_reasons.size())
         passed_junction_test_info_list.push_back(junction_test_info);
       else
         rejected_junction_test_info_list.push_back(junction_test_info);
@@ -639,7 +656,11 @@ void resolve_alignments(
     JunctionTestInfo& junction_test_info = *it;
 		string key = junction_test_info.junction_id;
 		cDiffEntry item = junction_to_diff_entry(key, ref_seq_info, junction_test_info);
-		item.add_reject_reason("COVERAGE_EVENNESS_SKEW");
+    
+    // Copy over the reject reasons
+    for (vector<string>::iterator itr = junction_test_info.reject_reasons.begin(); itr != junction_test_info.reject_reasons.end(); itr++) {
+      item.add_reject_reason(*itr);
+    }
 		gd.add(item);
 	}
 

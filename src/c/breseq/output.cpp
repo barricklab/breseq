@@ -1846,6 +1846,10 @@ string decode_reject_reason(const string& reject)
   {
     return "Coverage evenness skew score above cutoff.";
   }
+  else if (reject == "BETWEEN_TWO_JUNCTION_ONLY_SEQUENCES")
+  {
+    return "Between two junction-only reference sequences.";
+  }
   else if (reject == "SCORE_CUTOFF")
   {
     return "E-value score below prediction cutoff.";
@@ -1878,7 +1882,6 @@ string decode_reject_reason(const string& reject)
   {
     return "Genome position does not have required minimum number of aligned reads on each strand.";
   }
-  
   else if (reject == "INDEL_HOMOPOLYMER")
   {
     return "Polymorphic indel expands or contracts a homopolymer stretch.";

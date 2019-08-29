@@ -733,6 +733,17 @@ namespace breseq {
           }
         }
         
+        // If both are rejects, then don't keep (one _can_ be a reject!)
+        if (j1.is_rejected() && j2.is_rejected())
+        {
+          if (verbose)
+          {
+            cout << "Both are rejected junctions. No prediction." << endl;
+          }
+          continue;
+        }
+        
+        
 				// positive overlap should be resolved by now
 				assert(n(j1["overlap"]) <= 0);
 				assert(n(j2["overlap"]) <= 0);

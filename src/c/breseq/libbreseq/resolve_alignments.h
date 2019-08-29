@@ -80,6 +80,7 @@ namespace breseq {
     double neg_log10_pos_hash_p_value;
     uint32_t side_1_continuation;
     uint32_t side_2_continuation;
+    vector<string> reject_reasons;
     
     bool operator <(const JunctionTestInfo& _in) const
     {
