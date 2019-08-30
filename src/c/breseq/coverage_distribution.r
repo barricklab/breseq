@@ -389,12 +389,25 @@ my_col = "black";
 my_col_censored = "red";
 
 if (pdf_output == 0) {
-	## units = "px", taa=4, gaa=2 NOT compatible with earlier R versions!
-	bitmap(plot_file, height=6, width=7, type = "png16m", res = 72, pointsize=18)
+  
+  ## bitmap() requires ghostscript to be installed.
+  ## taa=4, gaa=2 options NOT compatible with earlier R versions!
+  ## units = "px" NOT compatible with even earlier R versions!
+  
+  if(!capabilities(what = "png"))
+  {
+    ## fallback to ghostscript
+    bitmap(plot_file, height=6, width=7, type = "png16m", res = 72, pointsize=18)
+  } else {
+    ## use X11 function, which gives better resolution
+    png(plot_file, height=6, width=7, units ="in", res = 72, pointsize=18)
+    par(family="sans")
+  }
 } else {
-	pdf(plot_file, height=6, width=7)
+  pdf(plot_file, height=6, width=7)
+  par(family="sans")
 }
-try(par(family="sans"))
+
 par(mar=c(5.5,7.5,3,1.5));
 
 max_y = 0

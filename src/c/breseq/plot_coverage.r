@@ -100,13 +100,14 @@ if (pdf_output == 0) {
 	} else {
 		## use X11 function, which gives better resolution
 		png(out_file, height=6, width=11, units ="in", res = 72, pointsize=16)
+    par(family="sans")
 	}
 } else {
 	pdf(out_file, height=6, width=11)
+  par(family="sans")
 }
 
 ### We use a blank graph for the legend!!
-try(par(family="sans"))
 par(mar=c(4.1,5.1,1.1,1.1))
 layout(matrix(c(1,2), 2, 1, byrow = TRUE), heights=c(5,0.65))
 
