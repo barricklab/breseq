@@ -60,7 +60,7 @@ min_error_rate = 10**log10_min_error_rate;
 
 
 pdf(out_file, height=6, width=9)
-par(family="sans")
+try(par(family="sans"))
 
 A_col = "green";
 A_pch = 15;

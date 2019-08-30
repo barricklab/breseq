@@ -32,7 +32,7 @@ x <- c(data$score)
 y <- c(data$TP / (data$TP + data$FP))
 
 png(precision_path, height = 600, width = 800, bg = "white")
-par(family="sans")
+try(par(family="sans"))
 
 if (cv_exe == "tophat") {
 	plot(x, y, col = "blue", ann = F, xlim = rev(range(x)), ylim = c(0,1))
@@ -54,7 +54,7 @@ x <- c(data$score)
 y <- c(data$TP / (data$TP + data$FN))
 
 png(sensitivity_path, height = 600, width = 800, bg = "white")
-par(family="sans")
+try(par(family="sans"))
 
 if (cv_exe == "tophat") {
 	plot(x, y, col = "blue", ann = F, xlim = rev(range(x)), ylim = c(0,1))

@@ -106,7 +106,7 @@ if (pdf_output == 0) {
 }
 
 ### We use a blank graph for the legend!!
-par(family="sans")
+try(par(family="sans"))
 par(mar=c(4.1,5.1,1.1,1.1))
 layout(matrix(c(1,2), 2, 1, byrow = TRUE), heights=c(5,0.65))
 
