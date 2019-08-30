@@ -14,9 +14,9 @@ Contents:
 
    Introduction <introduction>
    Installation <installation>
-   Usage Summary <usage>  
+   Usage Summary <usage>
    Test Drive <test_drive>
-   Methods <methods>   
+   Methods <methods>
    Output <output>
    References <references>
    Acknowledgments <acknowledgments>
@@ -25,7 +25,7 @@ Tutorials:
 
 .. toctree::
    :maxdepth: 1
-   
+
    Tutorial 1: Clonal Samples <tutorial_clones>
    Tutorial 2: Mixed Populations <tutorial_populations>
    Tutorial 3: Consensus Reads and Targeted Sequencing <tutorial_barcoded_targeted>
@@ -34,10 +34,11 @@ Appendices:
 
 .. toctree::
    :maxdepth: 1
-   
+
    Frequently Asked Questions (FAQ) <faq>
    gdtools Utility <gd_usage>
    Genome Diff Format <gd_format>
+   Reference Sequence Format <refseq_format>
 
 Documentation last updated |today|\ .
 
