@@ -157,7 +157,7 @@ namespace breseq {
     uint32_t average_read_length;
     map<string, map<uint32_t, map<uint32_t, double> > > probability_table;
     
-    PosHashProbabilityTable(Summary& summary);
+    PosHashProbabilityTable(Summary& summary, const Settings& settings);
     
     double probability(string& seq_id, uint32_t pos_hash_score, uint32_t overlap);
   };

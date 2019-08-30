@@ -241,6 +241,7 @@ namespace breseq
     ("junction-score-cutoff", "Maximum negative log10 probability of uneven coverage across a junction breakpoint to accept (0 = OFF)", 3.0, ADVANCED_OPTION)
     ("junction-minimum-pos-hash-score", "Minimum number of distinct spanning read start positions required to accept a junction (DEFAULT = consensus mode, 3; polymorphism mode, 3)", "", ADVANCED_OPTION)
     ("junction-minimum-side-match", "Minimum number of bases a read must extend past any overlap or read-only sequence at the breakpoint of a junction on each side to count as support for the junction (DEFAULT = consensus mode, 1; polymorphism mode, 6)", "", ADVANCED_OPTION)
+    ("junction-minimum-pr-no-read-start-per-position", "Minimum probablilty assigned that no mapped read will start at a given position and strand for junction prediction", 0.1, ADVANCED_OPTION)
     ;
     
     options.addUsage("", ADVANCED_OPTION);
@@ -524,6 +525,7 @@ namespace breseq
       this->junction_minimum_side_match = 1;
     }
     
+    
     // override the default settings
     
     if (options.count("minimum-mapping-quality")) {
@@ -596,6 +598,7 @@ namespace breseq
     // Junction options
     if (options.count("junction-minimum-pos-hash-score"))
       this->minimum_alignment_resolution_pos_hash_score = from_string<uint32_t>(options["junction-minimum-pos-hash-score"]);
+    
     if (options.count("junction-minimum-side-match"))
       this->junction_minimum_side_match = from_string<int32_t>(options["junction-minimum-side-match"]);
 
@@ -781,6 +784,7 @@ namespace breseq
     this->add_split_junction_sides = true;
     this->junction_pos_hash_neg_log10_p_value_cutoff = 3;
     this->minimum_alignment_resolution_pos_hash_score = 3;
+    this->minimum_pr_no_read_start_per_position = 0.1;
 
     //! Settings: Mutation Identification
     this->base_quality_cutoff = 3;

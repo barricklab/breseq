@@ -151,7 +151,7 @@ void calculate_continuation(
   
 }
   
-PosHashProbabilityTable::PosHashProbabilityTable(Summary& summary)
+PosHashProbabilityTable::PosHashProbabilityTable(Summary& summary, const Settings& settings)
 {
   average_read_length = static_cast<int32_t>(round(summary.sequence_conversion.read_length_avg));
   for (map<string,CoverageSummary>::iterator it=summary.preprocess_coverage.begin();
@@ -160,10 +160,15 @@ PosHashProbabilityTable::PosHashProbabilityTable(Summary& summary)
     string seq_id = it->first;
     CoverageSummary& cov = it->second;
     
+    double no_pos_hash_per_position_pr = summary.preprocess_error_count[seq_id].no_pos_hash_per_position_pr;
+    if (no_pos_hash_per_position_pr < settings.minimum_pr_no_read_start_per_position) {
+      no_pos_hash_per_position_pr = settings.minimum_pr_no_read_start_per_position;
+    }
+    
     Parameters p = {
           cov.nbinom_size_parameter,
           cov.nbinom_prob_parameter,
-          summary.preprocess_error_count[seq_id].no_pos_hash_per_position_pr,
+          no_pos_hash_per_position_pr,
           cov.nbinom_mean_parameter
     };
     
@@ -473,7 +478,7 @@ void resolve_alignments(
     }
   }
   
-  PosHashProbabilityTable pos_hash_p_value_calculator(summary);
+  PosHashProbabilityTable pos_hash_p_value_calculator(summary, settings);
   
   while(!junction_test_info_list.empty() ) {
     
