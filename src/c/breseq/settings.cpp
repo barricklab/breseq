@@ -247,7 +247,7 @@ namespace breseq
     options.addUsage("Consensus Read Alignment (RA) Evidence Options", ADVANCED_OPTION);
     options
     ("consensus-score-cutoff", "Log10 E-value cutoff for consensus base substitutions and small indels (DEFAULT = 10)", "", ADVANCED_OPTION)
-    ("consensus-frequency-cutoff", "Only predict consensus mutations when the variant allele frequency is above this value. (DEFAULT = consensus mode, 0.8; polymorphism mode, 0.0)", "", ADVANCED_OPTION)
+    ("consensus-frequency-cutoff", "Only predict consensus mutations when the variant allele frequency is above this value. (DEFAULT = consensus mode, 0.8; polymorphism mode, 0.8)", "", ADVANCED_OPTION)
     ("consensus-minimum-variant-coverage", "Only predict consensus mutations when at least this many reads support the mutation. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", ADVANCED_OPTION)
     ("consensus-minimum-total-coverage", "Only predict consensus mutations when at least this many reads total are aligned to a genome position. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", ADVANCED_OPTION)
     ("consensus-minimum-variant-coverage-each-strand", "Only predict consensus mutations when at least this many reads on each strand support the mutation. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", ADVANCED_OPTION)
