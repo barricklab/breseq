@@ -157,8 +157,13 @@ namespace breseq {
             );
   }
   
-  string cAnnotatedSequence::get_circular_sequence_1(int32_t start_1, uint32_t size) const
+  string cAnnotatedSequence::get_sequence_1_start_size(int32_t start_1, uint32_t size) const
   {
+    
+    if ( !is_circular() ) {
+      return get_sequence_1(start_1, start_1 + size - 1);
+    }
+    
     // This is meant to be robust to
     // (1) Choosing negative start_1 or values 
     //     greater than the sequence length

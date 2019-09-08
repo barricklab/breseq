@@ -4163,7 +4163,7 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
         // So, take first base before deletion or after if it is the first base
         
         const uint32_t& size = from_string<uint32_t>(mut[SIZE]);
-        ref = ref_seq_info.get_sequence_1(mut[SEQ_ID], pos, pos + size - 1);
+        ref = ref_seq_info.get_sequence_1_start_size(mut[SEQ_ID], pos, size);
         
         bool before_base = (pos != 1);
         alt = before_base ? ref_seq_info.get_sequence_1(mut[SEQ_ID], pos-1, pos-1) : ref_seq_info.get_sequence_1(mut[SEQ_ID], pos, pos);

@@ -538,7 +538,7 @@ namespace breseq {
 			}
 		}
 
-    /*
+    
     // DEL prediction (separate case):
     // (4) the reference is circular, there is missing coverage at one or both ends,
     //     AND there is junction connecting those ends
@@ -597,7 +597,6 @@ namespace breseq {
       }
       
       // We have to have found MC on both ends unless the junctions are flush to the ends
-      // Note: some slop could be added here
       if (!start_seq_mc && (side_1_position != 1))
           continue;
       if (!end_seq_mc && (side_2_position != seq_length))
@@ -606,21 +605,42 @@ namespace breseq {
       // Did we find both missing coverage pieces and they match up with the junction?
       // Then we get to create a mutation! It will extend past the end of the fragment.
 
-      if ( (n((*start_seq_mc)[END]) + n((*start_seq_mc)[END_RANGE]) >= side_1_position )
-          && (n((*end_seq_mc)[START]) - n((*start_seq_mc)[START_RANGE]) <= side_2_position ) ) {
+      // Note: some additional slop could be added here
+      int32_t start_seq_mc_end_start_range_1(0), start_seq_mc_end_end_range_1(0);
+      if (start_seq_mc) {
+        start_seq_mc_end_start_range_1 = n((*start_seq_mc)[END]);
+        start_seq_mc_end_end_range_1 = start_seq_mc_end_start_range_1 + n((*start_seq_mc)[END_RANGE]);
+      }
       
+      int32_t end_seq_mc_start_start_range_1(0), end_seq_mc_start_end_range_1(0);
+      if (end_seq_mc) {
+        end_seq_mc_start_end_range_1 = n((*end_seq_mc)[START]);
+        end_seq_mc_start_start_range_1 = end_seq_mc_start_end_range_1 - n((*end_seq_mc)[START_RANGE]);
+      }
+      
+      if (
+          (!start_seq_mc || ((side_1_position-1 >= start_seq_mc_end_start_range_1) && (side_1_position-1 <= start_seq_mc_end_end_range_1)) )
+       && (!end_seq_mc || ((side_2_position+1 >= end_seq_mc_start_start_range_1) && (side_2_position+1 <= end_seq_mc_start_end_range_1)) )
+          )
+      {
         cDiffEntry mut;
         mut._type = DEL;
         mut._evidence = make_vector<string>(jc_item._id);
         
         int32_t size = (side_1_position - 1) + (seq_length - side_2_position);
         int32_t position = side_2_position+1;
+        // Necessary for case where the deletion is only at the start
+        if (position > seq_length) position -= seq_length;
         
         mut
         ("seq_id", seq_id)
         ("position", s(position))
         ("size", s(size));
         ;
+        
+        if (settings.polymorphism_prediction) {
+          mut[FREQUENCY] = "1";
+        }
         
         if (start_seq_mc) mut._evidence.push_back(start_seq_mc->_id);
         if (end_seq_mc) mut._evidence.push_back(end_seq_mc->_id);
@@ -632,7 +652,6 @@ namespace breseq {
         jc_it--;
       }
     }
-     */
     
   }
   
@@ -1896,7 +1915,7 @@ namespace breseq {
         
         int32_t position = from_string<int32_t>(mut["position"]);
         
-        string mutation_sequence = ref_seq_info.get_sequence_1(mut["seq_id"], position, position + size - 1);
+        string mutation_sequence = ref_seq_info.get_sequence_1_start_size(mut["seq_id"], position, size);
         
         uint32_t repeat_unit_size;
         string repeat_unit_sequence;
@@ -2393,7 +2412,7 @@ namespace breseq {
       // Safety valve for overflowing sequence
       if (test_position <= 1) break;
       
-      string test_sequence = ref_seq.get_sequence_1(test_position, test_position + repeat_sequence.size() - 1);
+      string test_sequence = ref_seq.get_sequence_1_start_size(test_position, repeat_sequence.size());
       
       if (test_sequence != repeat_sequence) break;
       

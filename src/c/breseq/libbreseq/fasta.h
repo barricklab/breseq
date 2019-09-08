@@ -77,10 +77,9 @@ namespace breseq {
     // We some checking here to make sure we don't throw an out-of-bounds error.
     const string get_sequence_1(int64_t start_1, int64_t end_1) const
     {
-      
       // No error, this is sometimes intended
       if ((start_1==0) && (end_1==0)) return "";
-      
+
       correct_coordinate_bounds(start_1);
       correct_coordinate_bounds(end_1);
       correct_range_bounds(start_1, end_1);

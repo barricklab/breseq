@@ -1941,7 +1941,7 @@ void CoverageDistribution::analyze_coverage_bias (
       bam_alignment& a = *(it->get());
       
       int64_t start = (a.strand()==-1) ? a.reference_end_1() - _read_length + 1 : a.reference_start_1();
-      string read_string = ref_seq_info[a.reference_target_id()].get_circular_sequence_1(start, _read_length);
+      string read_string = ref_seq_info[a.reference_target_id()].get_sequence_1_start_size(start, _read_length);
       // Don't need to reverse complement for GC content
       
       gc += gc_percentage_string(read_string);
@@ -1958,7 +1958,7 @@ void CoverageDistribution::analyze_coverage_bias (
   for (cReferenceSequences::iterator it=ref_seq_info.begin(); it != ref_seq_info.end(); it++) {
 
     for (size_t i=1; i<= it->get_sequence_length(); i++) {
-      string read_string = it->get_circular_sequence_1(i, _read_length);
+      string read_string = it->get_sequence_1_start_size(i, _read_length);
       ref_out << gc_percentage_string(read_string) << endl;
     }
   }

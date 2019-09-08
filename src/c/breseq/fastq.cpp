@@ -888,7 +888,7 @@ namespace breseq {
 
     //! Algorithm Step 1:
     string ref_segment =
-        ref_sequence.get_circular_sequence_1(start_1, 2 * read_size);
+        ref_sequence.get_sequence_1_start_size(start_1, 2 * read_size);
 
     if (strand == -1) {
       ref_segment = reverse_complement(ref_segment);
@@ -982,7 +982,7 @@ namespace breseq {
                ret_val.m_name.c_str());
 
         const string &original =
-            ref_sequence.get_circular_sequence_1(start_1, 2 * read_size);
+            ref_sequence.get_sequence_1_start_size(start_1, 2 * read_size);
         printf("\tReference Segment(2 x Read Size)     :  %s\n",
                original.c_str());
 

@@ -667,7 +667,8 @@ namespace breseq {
     
       string get_stranded_sequence_1(int32_t strand, int32_t start_1, int32_t end_1) const;
       char get_stranded_sequence_1(int32_t strand, int32_t pos_1) const;
-      string get_circular_sequence_1(int32_t start_1, uint32_t size) const;
+  
+      string get_sequence_1_start_size(int32_t start_1, uint32_t size) const;
       int32_t get_circular_distance_1(int32_t pos_1, int32_t pos_2) const;
 
     
@@ -1003,14 +1004,14 @@ namespace breseq {
       return (*this)[tid].get_sequence_1(start_1, end_1);
     }
     
-    string get_circular_sequence_1(const string& seq_id, const size_t start_1, const size_t size)
+    string get_sequence_1_start_size(const string& seq_id, const size_t start_1, const size_t size)
     {
-      return (*this)[seq_id].get_circular_sequence_1(start_1, size);
+      return (*this)[seq_id].get_sequence_1_start_size(start_1, size);
     }
     
-    string get_circular_sequence_1(uint32_t tid, const size_t start_1, const size_t size) const
+    string get_sequence_1_start_size(uint32_t tid, const size_t start_1, const size_t size) const
     {
-      return (*this)[tid].get_circular_sequence_1(start_1, size);
+      return (*this)[tid].get_sequence_1_start_size(start_1, size);
     }
 
     void replace_sequence_1(const string& seq_id, int32_t start_1, int32_t end_1, const string& replacement_seq, string mut_type="", bool verbose=false)

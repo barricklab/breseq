@@ -1380,11 +1380,11 @@ namespace breseq {
           uint32_t seq2_end_1 = seq2_pos_1 + n - 1;
           
           const string &seq1 =
-          sequence.get_circular_sequence_1(seq1_pos_1, n);
+          sequence.get_sequence_1_start_size(seq1_pos_1, n);
           assert(seq1.size() == n);
           
           const string &seq2 =
-          sequence.get_circular_sequence_1(seq2_pos_1, n);
+          sequence.get_sequence_1_start_size(seq2_pos_1, n);
           assert(seq2.size() == n);
           
           
@@ -1418,11 +1418,11 @@ namespace breseq {
             cerr << "Sequence 2 [" << seq2_pos_1 << '-' << seq2_end_1 << "]: " << seq2 << endl;
             
             cerr << "Deleted Sequence [" << norm_pos_1 << '-' << norm_pos_1 + n - 1 << "]: ";
-            cerr << sequence.get_circular_sequence_1(norm_pos_1, n) << endl;
+            cerr << sequence.get_sequence_1_start_size(norm_pos_1, n) << endl;
             
-            string prev_seq = sequence.get_circular_sequence_1(norm_pos_1 - 10, 20);
-            string left_seq = sequence.get_circular_sequence_1(norm_pos_1 - 10, 10);
-            string right_seq = sequence.get_circular_sequence_1(norm_pos_1 + n , 10);
+            string prev_seq = sequence.get_sequence_1_start_size(norm_pos_1 - 10, 20);
+            string left_seq = sequence.get_sequence_1_start_size(norm_pos_1 - 10, 10);
+            string right_seq = sequence.get_sequence_1_start_size(norm_pos_1 + n , 10);
             
             cerr << "Previous Sequence:  " << prev_seq << endl;
             cerr << "Resulting Junction: " << left_seq << '\t' << right_seq << endl;
@@ -1511,7 +1511,7 @@ namespace breseq {
           
           for(;;i += n)
           {
-            const string second = sequence.get_circular_sequence_1(i + 1, n);
+            const string second = sequence.get_sequence_1_start_size(i + 1, n);
             assert(second.size());
             
             if (first != second)  {
@@ -1521,7 +1521,7 @@ namespace breseq {
           
           for(;;i += 1)
           {
-            const string second = sequence.get_circular_sequence_1(i + 1, n);
+            const string second = sequence.get_sequence_1_start_size(i + 1, n);
             assert(second.size());
             
             if (first[0] != second[0])  {
@@ -1538,7 +1538,7 @@ namespace breseq {
         }
         
         //! Step: Determine if this is actually an AMP.
-        if ((sequence.get_circular_sequence_1(i - (n - 1), n) == first)  && (n > 1)) {
+        if ((sequence.get_sequence_1_start_size(i - (n - 1), n) == first)  && (n > 1)) {
           this->_type = AMP;
           sprintf((*this)["size"], "%u", n);
           sprintf((*this)["new_copy_number"], "2");
@@ -1555,7 +1555,7 @@ namespace breseq {
         const base_char first = (*this)["new_seq"][0];
         
         //! Step: Compare bases.
-        const base_char second = sequence.get_circular_sequence_1(pos_1, 1)[0];
+        const base_char second = sequence.get_sequence_1_start_size(pos_1, 1)[0];
         
         //! Step: If bases are not equal then it's not a valid snp.
         bool is_base_not_equal = (first != second);
@@ -1575,8 +1575,8 @@ namespace breseq {
         const string first = (*this)["new_seq"];
         assert(first.size());
         
-        const string second = sequence.get_circular_sequence_1(pos_1, n);
-        const string third = sequence.get_circular_sequence_1(pos_1 + n, 1);
+        const string second = sequence.get_sequence_1_start_size(pos_1, n);
+        const string third = sequence.get_sequence_1_start_size(pos_1 + n, 1);
         
         if (first.find_first_of(second) != string::npos &&
             first.find_first_of(third) != string::npos ) {

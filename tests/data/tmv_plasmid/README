@@ -1,0 +1,3 @@
+These data files have two overlapping deletions, both with junctions.
+Currently the test only finds the majority one, but they could be used
+to test improved polymorphism prediction algorithms.
