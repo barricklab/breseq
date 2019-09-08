@@ -484,6 +484,7 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   //! Settings: Alignment Resolution
   add_split_junction_sides = t.add_split_junction_sides;
   minimum_alignment_resolution_pos_hash_score = t.minimum_alignment_resolution_pos_hash_score;
+  minimum_pr_no_read_start_per_position = t.minimum_pr_no_read_start_per_position;
   junction_minimum_side_match = t.junction_minimum_side_match;
   junction_pos_hash_neg_log10_p_value_cutoff = t.junction_pos_hash_neg_log10_p_value_cutoff;
   
@@ -787,6 +788,7 @@ void to_json(json& j, const PublicOptionsSummary& s)
     {"alignment_resolution", json{
       {"add_split_junction_sides", s.add_split_junction_sides},
       {"minimum_alignment_resolution_pos_hash_score", s.minimum_alignment_resolution_pos_hash_score},
+      {"minimum_pr_no_read_start_per_position", s.minimum_pr_no_read_start_per_position},
       {"junction_minimum_side_match", s.junction_minimum_side_match},
       {"junction_pos_hash_neg_log10_p_value_cutoff", s.junction_pos_hash_neg_log10_p_value_cutoff},
       }

@@ -523,6 +523,7 @@ namespace breseq{
     //! Settings: Alignment Resolution
     bool add_split_junction_sides;
     uint32_t minimum_alignment_resolution_pos_hash_score;
+    double minimum_pr_no_read_start_per_position;
     int32_t junction_minimum_side_match;
     double junction_pos_hash_neg_log10_p_value_cutoff;
     
