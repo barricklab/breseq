@@ -1,3 +1,14 @@
+Version 0.34.0
+   * Fixed bug where two rejected JC evidence items could predict a mutation.
+   * Added new option --junction-minimum-pr-no-read-start-per-position to prevent saturation
+     of coverage in high-coverage samples from leading to rejection of valid JC prediction.
+     Set this option to 0.0 if you want to use the behavior of previous versions.
+   * Changed default for --consensus-frequency-cutoff to be 0.8 in polymorphism mode,
+     instead of 0.0 to prevent accepting rejected polymorphism RA items as consensus predictions.
+   * Added the ability to predict DEL spanning the origin of a circular reference sequence.
+   * Changed plotting scripts to be more compatible with fonts available to different versions of R.
+   * Miscellaneous fixes to make gdtools commands more robust.
+
 Version 0.33.2
    * Fixed extremely rare fatal error in constructing junction sequences with overlap
      that ended at the boundaries of reference sequences.
@@ -5,7 +16,7 @@ Version 0.33.2
      restored sorting of columns in HTML output based on GenomeDiff metadata.
 
 Version 0.33.1
-   * CRITICAL bug fix for a crash during the final output step when there are 
+   * CRITICAL bug fix for a crash during the final output step when there are
      large deletions overlapping a single gene.
    * Positions of indel mutations are no longer normalized in polymorphism mode
      because this process can fail and lead to duplicate GD entries. Note: you *can*
@@ -18,8 +29,8 @@ Version 0.33.1
 Version 0.33.0
    * Changed behavior of gdtools SUBTRACT to ignore mutation frequencies by default;
      and fixed floating point error when frequencies are taken into account
-   * Separated output of normal annotation of mutations in a GD file and 
-     additional HTML-specific fields. gdtools ANNOTATE/COMPARE has a new option to 
+   * Separated output of normal annotation of mutations in a GD file and
+     additional HTML-specific fields. gdtools ANNOTATE/COMPARE has a new option to
      add the supplementary html_* and position_start/end fields if you need them.
    * Changed character separating annotation information about multiple overlapping
       genes to '|' from ';'.
@@ -35,11 +46,11 @@ Version 0.32.1
 
 Version 0.32.0
    * If a mutation overlaps multiple genes, its effect on each gene is now annotated.
-     (Previously only the first gene encountered was annotated.) The relevant Genome Diff 
+     (Previously only the first gene encountered was annotated.) The relevant Genome Diff
      fields use a semicolon to separate the information about each impacted gene.
    * New output of summary information and settings in JSON format in data directory file
      'summary.json.
-   * Corrected case in polymorphism mode where failing consensus mutations could be  
+   * Corrected case in polymorphism mode where failing consensus mutations could be
      incorrectly predicted if a polymorphism was rejected. More thorough and consistent
      output of rejection information for RA evidence.
    * Updates to VCF output.
@@ -63,36 +74,36 @@ Version 0.31.1
    * Fix for `gdtools SUBTRACT` when using both polymorphism and consensus inputs.
 
 Version 0.31.0
-   * Fixed critical error that could give negative positions for mutations when a reference sequence 
+   * Fixed critical error that could give negative positions for mutations when a reference sequence
      fragment was called as deleted.
    * Fixed several cases where fitting coverage distribution could fail or lead to a fatal error.
 
 Version 0.30.2
    * Improved robustness of fitting coverage distribution and added fallbacks if fitting fails.
-   * More information at the command line and on the HTML summary page about when insufficient 
-     coverage leads to an entire reference sequence being called as deleted and when predictions 
+   * More information at the command line and on the HTML summary page about when insufficient
+     coverage leads to an entire reference sequence being called as deleted and when predictions
      will be less reliable due to failure fitting the coverage distribution.
    * More detailed debugging information output for errors and crashes.
 
 Version 0.30.1
    * Reports an error if Bowtie2 version 2.3.1 is used. Upgrade to a newer Bowtie2 version.
    * Command line options added to allow control over how reads are filtered.
-   * Reads with length ≤18 are now ignored by default to avoid problematic memory usage associated 
-     with how they can ambiguously match many different junction sequences. 
+   * Reads with length ≤18 are now ignored by default to avoid problematic memory usage associated
+     with how they can ambiguously match many different junction sequences.
    * Fixed bugs related to duplicate INS/DEL mutations being predicted in polymorphism mode.
 
 Version 0.30.0
    * Options used in calls to bowtie2 were changed to be compatible with v2.3.0. These changes
      may result in (small) changes in how reads are aligned versus in older breseq versions.
    * Fixed bug in polymorphism mode option --polymorphism-reject-surrounding-homopolymer-length.
-     and its default setting. This filter had been operating differently, and more stringently than 
+     and its default setting. This filter had been operating differently, and more stringently than
      intended, resulting in the rejection of certain polymorphisms when the same base as the variant
      base was present in the reference genome at positions immediately before and after the mutation.
    * HTML and GD output now include a POLYMORPHISM_REJECT field describing why a putative polymorphism
      was reassigned as a consensus mutation with 100% frequency (i.e., rejected as a polymorphism).
-   * Fixed rare cases where certain GenomeDiff files output by breseq failed when they were used 
+   * Fixed rare cases where certain GenomeDiff files output by breseq failed when they were used
      with gdtools APPLY.
-   * Fixed various bugs related to reference files containing nonstandard bases, spliced genes, and 
+   * Fixed various bugs related to reference files containing nonstandard bases, spliced genes, and
      certain seq_id names.
 
 Version 0.29.0
@@ -103,19 +114,19 @@ Version 0.29.0
    * Other minor bug fixes and improvements.
 
 Version 0.28.1
-   * Fixed R out-of-range integer error encountered when one of the reference 
+   * Fixed R out-of-range integer error encountered when one of the reference
      sequences had very high read-depth coverage.
    * Extra validation steps for Genome Diff files with complex mutational series
-     (using 'within' and 'before' fields) may require updates (corrections) for 
+     (using 'within' and 'before' fields) may require updates (corrections) for
      manually edited Genome Diff files when they are used with certain gdtools commands.
 
 Version 0.28.0
    * Revamped how gene locations are handled internally to deal with complicated
-     cases: trans-spliced genes, internal frameshifts, indeterminate start/end 
+     cases: trans-spliced genes, internal frameshifts, indeterminate start/end
      coordinated found in incomplete genomes, genes that cross the origin of
      circular chromosomes, etc.
    * Optimizations to improve slow fitting of very high coverage reference sequences,
-     and for junction predictions involving these sequences (for example, in samples 
+     and for junction predictions involving these sequences (for example, in samples
      containing high copy number plasmids).
    * Various fixes for gdtools commands.
 
@@ -167,9 +178,9 @@ Version 0.25a
 
 Version 0.25
     * Release for publication describing consensus SV prediction:
-      Barrick, J.E., Colburn, G., Deatherage D.E., Traverse, C.C., 
-      Strand, M.D., Borges, J.J., Knoester, D.B., Reba, A., Meyer, A.G. (2014) 
-      Identifying structural variation in haploid microbial genomes from short-read 
+      Barrick, J.E., Colburn, G., Deatherage D.E., Traverse, C.C.,
+      Strand, M.D., Borges, J.J., Knoester, D.B., Reba, A., Meyer, A.G. (2014)
+      Identifying structural variation in haploid microbial genomes from short-read
       resequencing data using breseq. BMC Genomics. 15:1039.
 
 Version 0.24
@@ -195,7 +206,7 @@ Version 0.23
     * Added DEVELOPER instruction file for compiling the repository version of code.
 
 Version 0.22
-    * Fixed crash due to change in output format in newer bowtie2 versions (≥2.0.4). 
+    * Fixed crash due to change in output format in newer bowtie2 versions (≥2.0.4).
       breseq should now produce consistent results for all versions (≥2.0.0-beta7).
     * Added -s,--junction-only-reference option to include reference sequences
       that can be part of a new junction, but are not otherwise processed for calling
@@ -206,7 +217,7 @@ Version 0.22
     * Removed duplicate -j command line option definition.
     * Updated bundled SAMtools to version 0.18.
     * Command line now prints versions and locations of external programs used by breseq.
-    
+
 Version 0.21
     * Fixed improperly failure of check for bowtie2 versions 2.0.0+.
     * Adjusted bowtie2 seed parameters to regain some degradation in sensitivity in
@@ -217,9 +228,9 @@ Version 0.21
     * Fixed DESTDIR usage in automake files.
 
 Version 0.20
-    * Fixed merging results of first and second alignment stages when read numbers 
+    * Fixed merging results of first and second alignment stages when read numbers
       overflowed a counter used to rename reads.
-    * Fixed negative junction skew predictions when the number of bases in a dataset 
+    * Fixed negative junction skew predictions when the number of bases in a dataset
       overflowed uint32_t size.
     * Fixed the display of some statistics on the Summary output page.
     * Fixes to detecting required bowtie2 and R versions.
@@ -232,27 +243,27 @@ Version 0.19
       they are single-ended. Use the -j option to control how many processors bowtie2
       alignment uses.
     * Various improvements to junction prediction.
-    * Added option to run pipeline on SAM file of aligned reads (--aligned-sam) 
-      instead of unaligned FASTQ to enable users to map reads with their favorite 
-      program. In this mode only missing coverage and read alignment evidence are 
+    * Added option to run pipeline on SAM file of aligned reads (--aligned-sam)
+      instead of unaligned FASTQ to enable users to map reads with their favorite
+      program. In this mode only missing coverage and read alignment evidence are
       compiled and used to predict mutations. (There is no new junction evidence).
     * Read alignment evidence now uses mapping scores in its probability model, greatly
       reducing some kinds of false positives.
     * Mixed positions with predicted frequencies ≥10% are output by default on the
-      marginal evidence page even when running in normal (consensus) mode using a 
-      conservative version of --polymorphism-prediction in order to display variants 
-      in genes which may have duplicated or other errors caused by unknown divergence 
+      marginal evidence page even when running in normal (consensus) mode using a
+      conservative version of --polymorphism-prediction in order to display variants
+      in genes which may have duplicated or other errors caused by unknown divergence
       from the reference sequence.
-    
+
 2012-06-12 Version 0.18
-   * Fixed misnumbering and mistranslation of amino acid changes in genes on the 
-     reverse genomic strand: a huge bug introduced in breseq-0.17e. (Thanks to Tim 
+   * Fixed misnumbering and mistranslation of amino acid changes in genes on the
+     reverse genomic strand: a huge bug introduced in breseq-0.17e. (Thanks to Tim
      Cooper for reporting this problem.)
-   * Improved use of different genetic codes and translation of split protein reading 
-     frames. All NCBI translation table codes should be recognized correctly now in 
-     GenBank input files. Alternative initiation codons should be correctly interpreted. 
+   * Improved use of different genetic codes and translation of split protein reading
+     frames. All NCBI translation table codes should be recognized correctly now in
+     GenBank input files. Alternative initiation codons should be correctly interpreted.
      Internal frameshifts in genes should be correctly translated.
-   * Fixed crash using output step when no junctions were predicted. (Thanks Charles 
+   * Fixed crash using output step when no junctions were predicted. (Thanks Charles
      Traverse for reporting.)
 
 2012-05-19 Version 0.17e
@@ -261,7 +272,7 @@ Version 0.19
     * Reference sequences now show strands in HTML alignments.
 
 2012-05-03 Version 0.17d
-    * Added back access to polymorphism-* options at command line. (Use breseq -h to 
+    * Added back access to polymorphism-* options at command line. (Use breseq -h to
       see a list of all options, instead of just commonly used options.)
 
 2012-04-22 Version 0.17c
@@ -279,12 +290,12 @@ Version 0.19
     * Fixed bugs in HTML output.
     * Fixed bugs in mutation predictions.
     * Other numerous changes.
-    * Portions of the HTML documentation are out of date, especially those describing the 
+    * Portions of the HTML documentation are out of date, especially those describing the
       junction prediction scoring scheme and the genomediff utilities.
 
 2011-10-19 Version 0.16
     * Fixed fatal errors when predicting junction candidates.
-    * Changed how new candidate junctions are scored and accepted in preparation for 
+    * Changed how new candidate junctions are scored and accepted in preparation for
       calculating E-values.
     * Other bug fixes.
 
@@ -292,8 +303,8 @@ Version 0.19
 2011-10-04 Version 0.15
     * Better prediction of amplification mutations from junction evidence.
     * Fix for predictions involving junctions to nested repeat_regions.
-    * All reads required to match by 90% of their length by default, greatly reducing 
-      spurious junction predictions in data sets with adaptor contamination and when 
+    * All reads required to match by 90% of their length by default, greatly reducing
+      spurious junction predictions in data sets with adaptor contamination and when
       using a diverged reference genome.
 
 2011-09-10 Version 0.14
@@ -301,8 +312,8 @@ Version 0.19
         * Errors using some NCBI/SRA datasets.
         * Errors when using simulated read data.
         * Errors when some reference contigs have very little or no coverage.
-    * In addition, Perl is no longer required for installation. breseq has been 
-      completely ported to C++ with this version. If you encounter any issues we 
+    * In addition, Perl is no longer required for installation. breseq has been
+      completely ported to C++ with this version. If you encounter any issues we
       might have introduced during this transition, please let us know.
 
 2011-08-15 Version 0.13
@@ -310,6 +321,6 @@ Version 0.19
 
 2011-07-31 Version 0.12
     * Miscellaneous updates.
-    
+
 2011-07-14 Version 0.11
     * Removed BOOST dependency.
