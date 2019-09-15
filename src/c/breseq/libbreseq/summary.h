@@ -74,6 +74,9 @@ namespace breseq{
     : reads_mapped_to_reference(0)
     , bases_mapped_to_reference(0)
     {}
+    
+    virtual ~AlignmentResolutionReferenceSummary() {}
+
   };
   
   class AlignmentResolutionSummary : public JSONStorable<AlignmentResolutionSummary>

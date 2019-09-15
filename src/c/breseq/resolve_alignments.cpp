@@ -1389,7 +1389,8 @@ void score_junction(
     junction_id,
     999999999.99,
     side_1_continuation,
-    side_2_continuation
+    side_2_continuation,
+    vector<string>()
 	};
   
   junction_test_info = this_junction_test_info;

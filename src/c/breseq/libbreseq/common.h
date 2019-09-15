@@ -1246,7 +1246,7 @@ class cString : public string
 
 inline cString::cString(const char *format,...)
 {
-  char buffer[32000];
+  char buffer[64000];
 
   va_list p_args;
 
@@ -1254,9 +1254,10 @@ inline cString::cString(const char *format,...)
   va_start(p_args, format);
   vsnprintf(buffer, size, format, p_args);
   va_end(p_args);
-
   buffer[size] = '\0';
 
+  ASSERT(size < (sizeof(buffer)-1), "Formatting of string was truncated at 64000 characters.")
+  
   *this = buffer;
 }
 
@@ -1380,22 +1381,21 @@ inline cString cString::get_directory_path() const
 inline cString& cString::escape_shell_chars(void) {
   cString& value = *this;
   char escapees[] = {'<', '>', '|', '&', '\0', ';'};
-  char temp[1000];
+  cString temp;
 
-  uint32_t k = 0;
   for(uint32_t i = 0; i < value.size(); ++i) {
     char found = '\0';
     for(uint32_t j = 0; escapees[j]; ++j) {
       if (value[i] == escapees[j]) {
         found = escapees[j];
+        break;
       }
     }
     if (found) {
-      temp[k++] = '\\';
+      temp += '\\';
     }
-    temp[k++] = value[i];
+    temp += value[i];
   }
-  temp[k] = '\0'; 
 
   *this = temp;
 

@@ -47,6 +47,8 @@ namespace breseq
     // stores a list of files that need to be cleaned up after later steps
     storable_map<string,storable_vector<string> > _done_key_intermediate_files;
     
+    virtual ~ExecutionTime() {};
+    
     void serialize(ofstream& f)
     {
       write_to_file(f, _message);
