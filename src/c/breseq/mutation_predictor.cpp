@@ -1941,7 +1941,7 @@ namespace breseq {
           
           // Normalize may actually change the sequence used for the repeat... so call again here.
           position = from_string<int32_t>(mut["position"]);
-          mutation_sequence = ref_seq_info.get_sequence_1(mut["seq_id"], position, position + size - 1);
+          mutation_sequence = ref_seq_info.get_sequence_1_start_size(mut["seq_id"], position, size);
 
           find_repeat_unit(mutation_sequence, repeat_unit_size, repeat_unit_sequence);
           num_repeat_units = size / repeat_unit_size;
