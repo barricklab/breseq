@@ -14,6 +14,8 @@ TESTCMD="\
     -o ${SELF} \
     ${REFERENCE_ARG} \
     -l 50 \
+    ${DATADIR}/lambda/empty.fastq \
+    ${DATADIR}/lambda/only_bad.fastq \
     ${DATADIR}/lambda/lambda_mixed_population.1.fastq \
     ${DATADIR}/lambda/lambda_mixed_population.2.fastq \
     ${DATADIR}/lambda/lambda_mixed_population.3.fastq \

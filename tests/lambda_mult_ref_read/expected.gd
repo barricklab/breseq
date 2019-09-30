@@ -1,15 +1,17 @@
 #=GENOME_DIFF	1.0
-#=COMMAND	./src/c/breseq/breseq -j 4 -o tests/lambda_mult_ref_read -r tests/lambda_mult_ref_read/../data/lambda/lambda.1-2.gbk -r tests/lambda_mult_ref_read/../data/lambda/lambda.3.gbk -r tests/lambda_mult_ref_read/../data/lambda/lambda.4.gbk -r tests/lambda_mult_ref_read/../data/lambda/lambda.5.gbk -l 50 tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.1.fastq tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.2.fastq tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.3.fastq tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.4.fastq tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.5.fastq
+#=COMMAND	./src/c/breseq/breseq -j 4 -o tests/lambda_mult_ref_read -r tests/lambda_mult_ref_read/../data/lambda/lambda.1-2.gbk -r tests/lambda_mult_ref_read/../data/lambda/lambda.3.gbk -r tests/lambda_mult_ref_read/../data/lambda/lambda.4.gbk -r tests/lambda_mult_ref_read/../data/lambda/lambda.5.gbk -l 50 tests/lambda_mult_ref_read/../data/lambda/empty.fastq tests/lambda_mult_ref_read/../data/lambda/only_bad.fastq tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.1.fastq tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.2.fastq tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.3.fastq tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.4.fastq tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.5.fastq
 #=REFSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda.1-2.gbk
 #=REFSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda.3.gbk
 #=REFSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda.4.gbk
 #=REFSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda.5.gbk
+#=READSEQ	tests/lambda_mult_ref_read/../data/lambda/empty.fastq
+#=READSEQ	tests/lambda_mult_ref_read/../data/lambda/only_bad.fastq
 #=READSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.1.fastq
 #=READSEQ	tests/lambda_mult_ref_read/../data/lambda/lambda_mixed_population.2.fastq
 #=CONVERTED-BASES	2425115
 #=CONVERTED-READS	69289
-#=INPUT-BASES	2800000
-#=INPUT-READS	80000
+#=INPUT-BASES	2800140
+#=INPUT-READS	80004
 #=MAPPED-BASES	1783840
 #=MAPPED-READS	51266
 DEL	1	29	NC_001416-0	139	1	gene_name=–/nu1	gene_position=intergenic (–/-52)	gene_product=–/DNA packaging protein	gene_strand=–/>	locus_tag=–/lambdap01	mutation_category=small_indel	position_end=139	position_start=139	ref_seq=G

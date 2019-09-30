@@ -235,7 +235,7 @@ namespace breseq {
     cerr << "    Analyzed reads: " << setw(width_for_reads) << num_reads << " bases: " << setw(width_for_bases) << num_bases << endl;
 
     
-    double read_length_avg = static_cast<double>(num_bases) / static_cast<double>(num_reads);
+    double read_length_avg = (num_reads > 0) ? static_cast<double>(num_bases) / static_cast<double>(num_reads) : 0;
     
     AnalyzeFastqSummary retval(
                                  read_length_min,
