@@ -566,6 +566,10 @@ namespace breseq {
       int32_t side_1_strand = n(jc_item[SIDE_1_STRAND]);
       int32_t side_2_strand = n(jc_item[SIDE_2_STRAND]);
       
+      // There should not be any overlap
+      int32_t overlap = n(jc_item[OVERLAP]);
+      if (overlap > 0) continue;
+      
       ASSERT(side_1_position < side_2_position, "Junction has side_1_position > side_2_position\n" + jc_item.as_string());
       
       if (! ((side_1_strand == +1) &&  (side_2_strand == -1)) ) {
@@ -624,7 +628,6 @@ namespace breseq {
           )
       {
         cDiffEntry mut;
-        mut._type = DEL;
         mut._evidence = make_vector<string>(jc_item._id);
         
         int32_t size = (side_1_position - 1) + (seq_length - side_2_position);
@@ -632,11 +635,36 @@ namespace breseq {
         // Necessary for case where the deletion is only at the start
         if (position > seq_length) position -= seq_length;
         
-        mut
-        ("seq_id", seq_id)
-        ("position", s(position))
-        ("size", s(size));
-        ;
+        // If there is unique read sequence, then it is a substitution
+        if ( jc_item.entry_exists(UNIQUE_READ_SEQUENCE)) {
+          
+          mut._type = SUB;
+
+          // If the size is zero then it wil be marked as a normal circular read later,
+          // in predictJCtoINSorSUBorDEL
+          if (size == 0) continue;
+          
+          mut
+          (SEQ_ID, seq_id)
+          (POSITION, s(position))
+          (SIZE, s(size))
+          (NEW_SEQ, jc_item[UNIQUE_READ_SEQUENCE])
+          ;
+          
+        // Otherwise it is a deletion
+        } else {
+          mut._type = DEL;
+
+          // If the size is zero then it wil be marked as a normal circular read later,
+          // in predictJCtoINSorSUBorDEL
+          if (size == 0) continue;
+          
+          mut
+          (SEQ_ID, seq_id)
+          (POSITION, s(position))
+          (SIZE, s(size));
+          ;
+        }
         
         if (settings.polymorphism_prediction) {
           mut[FREQUENCY] = "1";
