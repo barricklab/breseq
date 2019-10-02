@@ -545,7 +545,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     double percent_pass_filters = 100 * (static_cast<double>(s.num_reads) / static_cast<double>(s.num_original_reads));
     HTML << td(ALIGN_RIGHT, to_string(percent_pass_filters, 1) + "%");
     HTML << td(ALIGN_RIGHT, to_string(read_length_avg, 1) + "&nbsp;bases");
-    HTML << td(ALIGN_RIGHT, to_string((s.read_length_max> 0) ? s.read_length_max : std::numeric_limits<double>::quiet_NaN()) + "&nbsp;bases");
+    HTML << td(ALIGN_RIGHT, to_string((s.read_length_max> 0) ? s.read_length_max : std::numeric_limits<double>::quiet_NaN(), 0) + "&nbsp;bases");
     double percent_mapped = 100 * (1.0 - static_cast<double>(rf.num_unmatched_reads) / static_cast<double>(rf.num_total_reads));
     HTML << td(ALIGN_RIGHT, to_string(percent_mapped, 1) + "%");
     HTML << end_tr();
