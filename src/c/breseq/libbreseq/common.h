@@ -1252,11 +1252,10 @@ inline cString::cString(const char *format,...)
 
   const size_t &size = sizeof(buffer) - 1;
   va_start(p_args, format);
-  vsnprintf(buffer, size, format, p_args);
+  size_t chars_written = vsnprintf(buffer, size, format, p_args);
   va_end(p_args);
-  buffer[size] = '\0';
 
-  ASSERT(size < (sizeof(buffer)-1), "Formatting of string was truncated at 64000 characters.")
+  ASSERT(chars_written < size, "Formatting string exceeded maximum of 64000 characters or had another error.")
   
   *this = buffer;
 }
