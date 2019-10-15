@@ -688,7 +688,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   // Junction evidence
   ////
   
-  if (!settings.skip_junction_prediction) {
+  if (!settings.skip_new_junction_prediction) {
     
     HTML << h2("New Junction Evidence") << endl;
     HTML << "<p>" << endl;

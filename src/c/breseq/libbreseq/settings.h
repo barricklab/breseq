@@ -213,9 +213,9 @@ namespace breseq
     string custom_run_name;          // Default = <none> COMMAND-LINE OPTION
     string print_custom_run_name;    // custom_run_name with '_' replaced by ' '
     bool skip_read_filtering;               // Default = false
-    bool skip_junction_prediction;          // Default = false COMMAND-LINE OPTION
-    bool skip_mutation_prediction;          // Default = false
-    bool skip_deletion_prediction;          // Default = false set to true if targeted_sequencing
+    bool skip_new_junction_prediction;          // Default = false COMMAND-LINE OPTION
+    bool skip_read_alignment_and_missing_coverage_prediction;          // Default = false
+    bool skip_missing_coverage_prediction;          // Default = false set to true if targeted_sequencing
     bool skip_alignment_or_plot_generation; // Default = false COMMAND-LINE OPTION
     bool do_copy_number_variation;        // Default = false COMMAND-LINE OPTION
     bool do_periodicity;                  // Default = false COMMAND-LINE OPTION

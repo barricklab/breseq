@@ -1608,7 +1608,7 @@ int breseq_default_action(int argc, char* argv[])
 	// * Identify candidate junctions from split read alignments
 	//
 	if (
-      !settings.skip_junction_prediction
+      !settings.skip_new_junction_prediction
       && !settings.aligned_sam_mode
       )
 	{
@@ -1761,7 +1761,7 @@ int breseq_default_action(int argc, char* argv[])
 	{
 		create_path(settings.alignment_resolution_path);
 
-    bool junction_prediction = !settings.skip_junction_prediction;
+    bool junction_prediction = !settings.skip_new_junction_prediction;
     if (junction_prediction && file_empty(settings.candidate_junction_fasta_file_name.c_str())) junction_prediction = false;
     
 		resolve_alignments(
@@ -1970,172 +1970,173 @@ int breseq_default_action(int argc, char* argv[])
 	//# }
 	//#
 
-	//
-	// Tabulate error counts and coverage distribution at unique only sites
-	//
-
-	if (settings.do_step(settings.error_counts_done_file_name, "Tabulating error counts"))
-	{
-    create_path(settings.error_calibration_path);
-
-		string reference_fasta_file_name = settings.reference_fasta_file_name;
-		string reference_bam_file_name = settings.reference_bam_file_name;
-
-		// deal with distribution or error count keys being undefined...
-
-		uint32_t num_read_files = settings.read_files.size();
-    uint32_t num_qual;
-    if (!settings.aligned_sam_mode) {
-      num_qual = summary.sequence_conversion.max_qual + 1; // only filled in when using FASTQ input
-    } else {
-      num_qual = summary.alignment_resolution.max_sam_base_quality_score + 1; // only filled in when using aligned_sam_mode
-    }
-
-		error_count(
-      settings,
-      summary,
-			reference_bam_file_name, // bam
-			reference_fasta_file_name, // fasta
-			settings.error_calibration_path, // output
-			settings.read_files.base_names(), // readfile
-			true, // coverage
-			true, // errors
-      false, //preprocess
-			settings.base_quality_cutoff, // minimum quality score
-			"read_set=" + to_string(num_read_files) + ",obs_base,ref_base,quality=" + to_string(num_qual) // covariates
-		);
-
-		settings.done_step(settings.error_counts_done_file_name);
-	}
-
-
-	//
-	// Calculate error rates
-	//
-
-	create_path(settings.output_path); //need output for plots
-  create_path(settings.output_calibration_path);
-  
-	if (settings.do_step(settings.error_rates_done_file_name, "Re-calibrating base error rates"))
-	{
-    if (!settings.skip_deletion_prediction) {
-      CoverageDistribution::analyze_unique_coverage_distributions(
-                                                                  settings,
-                                                                  summary, 
-                                                                  ref_seq_info,
-                                                                  settings.unique_only_coverage_plot_file_name, 
-                                                                  settings.unique_only_coverage_distribution_file_name,
-                                                                  "NULL" // means to never delete intermediates
-                                                                  );
-
-      
-      //Coverage distribution user option --deletion-coverage-propagation-cutoff
-      if (settings.deletion_coverage_propagation_cutoff) {
-        if (settings.deletion_coverage_propagation_cutoff < 1) {
-          for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
-            string seq_id = ref_seq_info[i].m_seq_id;
-            double average = summary.unique_coverage[seq_id].average;
-            double &deletion_coverage_propagation_cutoff = summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff;
-
-            deletion_coverage_propagation_cutoff = average * settings.deletion_coverage_propagation_cutoff;
-          }
-        } else if (settings.deletion_coverage_propagation_cutoff >= 1) {
-          for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
-            string seq_id = ref_seq_info[i].m_seq_id;
-            double &deletion_coverage_propagation_cutoff = summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff;
-
-            deletion_coverage_propagation_cutoff = settings.deletion_coverage_propagation_cutoff;
-          }
-        }
-      }
-      
-      
-      // If the fit failed or there was insufficient coverage for some reference sequences
-      //    deletion_coverage_propagation_cutoff == -1 for insufficient coverage
-      //    nbinom_mean_parameter == 0 for failed fit
-      vector<string> failed_fit_seq_ids;
-      vector<string> no_coverage_seq_ids;
-
-      for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
-        string seq_id = ref_seq_info[i].m_seq_id;
-        
-        // For junction-only sequences, don't provide these warnings
-        if (settings.call_mutations_seq_id_set().count(seq_id)) {
-          if (summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff <= 0) {
-            no_coverage_seq_ids.push_back(seq_id);
-          } else if (summary.unique_coverage[seq_id].nbinom_mean_parameter == 0) {
-            failed_fit_seq_ids.push_back(seq_id);
-          }
-        }
-      }
-      
-      if (failed_fit_seq_ids.size()) {
-        
-        string warning_string = "Failed to fit coverage distribution for some reference sequences. This may degrade the quality of predicting mutations from new sequence junctions (JC evidence).";
-        if (!settings.deletion_coverage_propagation_cutoff) {
-          warning_string += " You may want to set --deletion-coverage-propagation-cutoff to improve the quality of deletion prediction (MC evidence).";
-        }
-        warning_string += "\n\nFailed fit seq ids: " + join(failed_fit_seq_ids, ", ");
-        
-        WARN(warning_string);
-      }
-      
-      if (no_coverage_seq_ids.size()) {
-        
-        string warning_string = "Insufficient coverage to call mutations for some reference sequences. Set either the --targeted-sequencing or --contig-reference option if you want mutations called on these reference sequences.";
-        warning_string += "\n\nInsufficient coverage seq ids: " + join(no_coverage_seq_ids, ", ");
-        
-        WARN(warning_string);
-      }
+  if (!settings.skip_read_alignment_and_missing_coverage_prediction)
+  {
     
+    //
+    // Tabulate error counts and coverage distribution at unique only sites
+    //
 
-      //Coverage distribution user option --deletion-coverage-seed-cutoff
-      if (settings.deletion_coverage_seed_cutoff) {
-        if (settings.deletion_coverage_seed_cutoff < 1) {
-          for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
-            string seq_id = ref_seq_info[i].m_seq_id;
-            double average = summary.unique_coverage[seq_id].average;
-            double &deletion_coverage_seed_cutoff = summary.unique_coverage[seq_id].deletion_coverage_seed_cutoff;
+    if (settings.do_step(settings.error_counts_done_file_name, "Tabulating error counts"))
+    {
+      create_path(settings.error_calibration_path);
 
-            deletion_coverage_seed_cutoff = average * settings.deletion_coverage_seed_cutoff;
-          }
-      } else if (settings.deletion_coverage_seed_cutoff >= 1) {
-          for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
-            string seq_id = ref_seq_info[i].m_seq_id;
-            double &deletion_coverage_seed_cutoff = summary.unique_coverage[seq_id].deletion_coverage_seed_cutoff;
+      string reference_fasta_file_name = settings.reference_fasta_file_name;
+      string reference_bam_file_name = settings.reference_bam_file_name;
 
-            deletion_coverage_seed_cutoff = settings.deletion_coverage_seed_cutoff;
+      // deal with distribution or error count keys being undefined...
+
+      uint32_t num_read_files = settings.read_files.size();
+      uint32_t num_qual;
+      if (!settings.aligned_sam_mode) {
+        num_qual = summary.sequence_conversion.max_qual + 1; // only filled in when using FASTQ input
+      } else {
+        num_qual = summary.alignment_resolution.max_sam_base_quality_score + 1; // only filled in when using aligned_sam_mode
+      }
+
+      error_count(
+        settings,
+        summary,
+        reference_bam_file_name, // bam
+        reference_fasta_file_name, // fasta
+        settings.error_calibration_path, // output
+        settings.read_files.base_names(), // readfile
+        true, // coverage
+        true, // errors
+        false, //preprocess
+        settings.base_quality_cutoff, // minimum quality score
+        "read_set=" + to_string(num_read_files) + ",obs_base,ref_base,quality=" + to_string(num_qual) // covariates
+      );
+
+      settings.done_step(settings.error_counts_done_file_name);
+    }
+
+
+    //
+    // Calculate error rates
+    //
+
+    create_path(settings.output_path); //need output for plots
+    create_path(settings.output_calibration_path);
+    
+    if (settings.do_step(settings.error_rates_done_file_name, "Re-calibrating base error rates"))
+    {
+      if (!settings.skip_missing_coverage_prediction) {
+        CoverageDistribution::analyze_unique_coverage_distributions(
+                                                                    settings,
+                                                                    summary,
+                                                                    ref_seq_info,
+                                                                    settings.unique_only_coverage_plot_file_name,
+                                                                    settings.unique_only_coverage_distribution_file_name,
+                                                                    "NULL" // means to never delete intermediates
+                                                                    );
+
+        
+        //Coverage distribution user option --deletion-coverage-propagation-cutoff
+        if (settings.deletion_coverage_propagation_cutoff) {
+          if (settings.deletion_coverage_propagation_cutoff < 1) {
+            for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+              string seq_id = ref_seq_info[i].m_seq_id;
+              double average = summary.unique_coverage[seq_id].average;
+              double &deletion_coverage_propagation_cutoff = summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff;
+
+              deletion_coverage_propagation_cutoff = average * settings.deletion_coverage_propagation_cutoff;
+            }
+          } else if (settings.deletion_coverage_propagation_cutoff >= 1) {
+            for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+              string seq_id = ref_seq_info[i].m_seq_id;
+              double &deletion_coverage_propagation_cutoff = summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff;
+
+              deletion_coverage_propagation_cutoff = settings.deletion_coverage_propagation_cutoff;
+            }
           }
         }
-      }
+        
+        
+        // If the fit failed or there was insufficient coverage for some reference sequences
+        //    deletion_coverage_propagation_cutoff == -1 for insufficient coverage
+        //    nbinom_mean_parameter == 0 for failed fit
+        vector<string> failed_fit_seq_ids;
+        vector<string> no_coverage_seq_ids;
+
+        for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+          string seq_id = ref_seq_info[i].m_seq_id;
+          
+          // For junction-only sequences, don't provide these warnings
+          if (settings.call_mutations_seq_id_set().count(seq_id)) {
+            if (summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff <= 0) {
+              no_coverage_seq_ids.push_back(seq_id);
+            } else if (summary.unique_coverage[seq_id].nbinom_mean_parameter == 0) {
+              failed_fit_seq_ids.push_back(seq_id);
+            }
+          }
+        }
+        
+        if (failed_fit_seq_ids.size()) {
+          
+          string warning_string = "Failed to fit coverage distribution for some reference sequences. This may degrade the quality of predicting mutations from new sequence junctions (JC evidence).";
+          if (!settings.deletion_coverage_propagation_cutoff) {
+            warning_string += " You may want to set --deletion-coverage-propagation-cutoff to improve the quality of deletion prediction (MC evidence).";
+          }
+          warning_string += "\n\nFailed fit seq ids: " + join(failed_fit_seq_ids, ", ");
+          
+          WARN(warning_string);
+        }
+        
+        if (no_coverage_seq_ids.size()) {
+          
+          string warning_string = "Insufficient coverage to call mutations for some reference sequences. Set either the --targeted-sequencing or --contig-reference option if you want mutations called on these reference sequences.";
+          warning_string += "\n\nInsufficient coverage seq ids: " + join(no_coverage_seq_ids, ", ");
+          
+          WARN(warning_string);
+        }
       
+
+        //Coverage distribution user option --deletion-coverage-seed-cutoff
+        if (settings.deletion_coverage_seed_cutoff) {
+          if (settings.deletion_coverage_seed_cutoff < 1) {
+            for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+              string seq_id = ref_seq_info[i].m_seq_id;
+              double average = summary.unique_coverage[seq_id].average;
+              double &deletion_coverage_seed_cutoff = summary.unique_coverage[seq_id].deletion_coverage_seed_cutoff;
+
+              deletion_coverage_seed_cutoff = average * settings.deletion_coverage_seed_cutoff;
+            }
+        } else if (settings.deletion_coverage_seed_cutoff >= 1) {
+            for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+              string seq_id = ref_seq_info[i].m_seq_id;
+              double &deletion_coverage_seed_cutoff = summary.unique_coverage[seq_id].deletion_coverage_seed_cutoff;
+
+              deletion_coverage_seed_cutoff = settings.deletion_coverage_seed_cutoff;
+            }
+          }
+        }
+        
+      }
+      string command;
+      for (uint32_t i = 0; i<settings.read_files.size(); i++) {
+        string base_name = settings.read_files[i].base_name();
+        string error_rates_base_qual_error_prob_file_name = settings.file_name(settings.error_rates_base_qual_error_prob_file_name, "#", base_name);
+        string plot_error_rates_r_script_file_name = settings.plot_error_rates_r_script_file_name;
+        string plot_error_rates_r_script_log_file_name = settings.file_name(settings.plot_error_rates_r_script_log_file_name, "#", base_name);
+        string error_rates_plot_file_name = settings.file_name(settings.error_rates_plot_file_name, "#", base_name);
+        command = "R --vanilla in_file=" + cString(error_rates_base_qual_error_prob_file_name).escape_shell_chars() +
+          " out_file=" + cString(error_rates_plot_file_name).escape_shell_chars() +
+          " < "        + cString(plot_error_rates_r_script_file_name).escape_shell_chars() +
+          " > "        + cString(plot_error_rates_r_script_log_file_name).escape_shell_chars();
+        SYSTEM(command,false, false, false); //NOTE: Not escaping shell characters here.
+      }
+
+      summary.unique_coverage.store(settings.error_rates_summary_file_name);
+      settings.done_step(settings.error_rates_done_file_name);
     }
-		string command;
-		for (uint32_t i = 0; i<settings.read_files.size(); i++) {
-			string base_name = settings.read_files[i].base_name();
-			string error_rates_base_qual_error_prob_file_name = settings.file_name(settings.error_rates_base_qual_error_prob_file_name, "#", base_name);
-			string plot_error_rates_r_script_file_name = settings.plot_error_rates_r_script_file_name;
-			string plot_error_rates_r_script_log_file_name = settings.file_name(settings.plot_error_rates_r_script_log_file_name, "#", base_name);
-			string error_rates_plot_file_name = settings.file_name(settings.error_rates_plot_file_name, "#", base_name);
-			command = "R --vanilla in_file=" + cString(error_rates_base_qual_error_prob_file_name).escape_shell_chars() +
-        " out_file=" + cString(error_rates_plot_file_name).escape_shell_chars() +
-        " < "        + cString(plot_error_rates_r_script_file_name).escape_shell_chars() +
-        " > "        + cString(plot_error_rates_r_script_log_file_name).escape_shell_chars();
-			SYSTEM(command,false, false, false); //NOTE: Not escaping shell characters here.
-		}
+    summary.unique_coverage.retrieve(settings.error_rates_summary_file_name);
 
-		summary.unique_coverage.store(settings.error_rates_summary_file_name);
-		settings.done_step(settings.error_rates_done_file_name);
-	}
-	summary.unique_coverage.retrieve(settings.error_rates_summary_file_name);
+    //
+    // 08 Mutation Identification
+    // Make predictions of point mutations, small indels, and large deletions
+    //
 
-  //
-	// 08 Mutation Identification
-	// Make predictions of point mutations, small indels, and large deletions
-	//
-
-	if (!settings.skip_mutation_prediction)
-	{
 		create_path(settings.mutation_identification_path);
 
 		if (settings.do_step(settings.mutation_identification_done_file_name, "Examining read alignment evidence"))
@@ -2284,7 +2285,10 @@ int breseq_default_action(int argc, char* argv[])
     // merge all of the evidence GenomeDiff files into one...
     create_path(settings.evidence_path);
     
-    cGenomeDiff jc_gd(settings.jc_genome_diff_file_name);
+    cGenomeDiff jc_gd;
+    if (!settings.skip_new_junction_prediction) {
+      jc_gd.read(settings.jc_genome_diff_file_name);
+    }
          
     // Add read count information to the JC entries -- call fails if no predictions, because BAM does not exist
     MutationPredictor mpj(ref_seq_info);
@@ -2292,7 +2296,10 @@ int breseq_default_action(int argc, char* argv[])
     
     assign_junction_read_counts(settings, summary, jc_gd);
 
-    cGenomeDiff ra_mc_gd(settings.ra_mc_genome_diff_file_name);
+    cGenomeDiff ra_mc_gd;
+    if (!settings.skip_read_alignment_and_missing_coverage_prediction) {
+      ra_mc_gd.read(settings.ra_mc_genome_diff_file_name);
+    }
     test_RA_evidence(ra_mc_gd, ref_seq_info, settings);
     
     cGenomeDiff evidence_gd;

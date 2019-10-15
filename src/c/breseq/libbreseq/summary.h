@@ -479,9 +479,9 @@ namespace breseq{
     string custom_run_name;
     int32_t num_processors;
     bool skip_read_filtering;
-    bool skip_junction_prediction;
-    bool skip_mutation_prediction;
-    bool skip_deletion_prediction;
+    bool skip_new_junction_prediction;
+    bool skip_read_alignment_and_missing_coverage_prediction;
+    bool skip_missing_coverage_prediction;
     bool skip_alignment_or_plot_generation;
 
     //! Settings: Read File

@@ -205,7 +205,6 @@ namespace breseq
     ("user-evidence-gd","User supplied Genome Diff file of JC and/or RA evidence items. The breseq output will report the support for these sequence changes even if they do not pass the normal filters for calling mutations in this sample.", "", ADVANCED_OPTION)
     ;
     
-    
     options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Read Alignment Options", ADVANCED_OPTION);
     options
@@ -280,6 +279,14 @@ namespace breseq
     ("brief-html-output", "Don't create detailed output files for evidence (no read alignments or coverage plots)", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("header-genome-diff,g", "Include header information from this GenomeDiff file in output.gd", "", ADVANCED_OPTION)
     ("no-javascript", "Don't include javascript in the HTML output", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ;
+    
+    options.addUsage("", ADVANCED_OPTION);
+    options.addUsage("Pipeline Control Options", ADVANCED_OPTION);
+    options
+    ("skip-RA-MC-prediction", "Skip generating read alignment and missing coverage evidence.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("skip-JC-prediction", "Skip generating new junction evidence.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("skip-MC-prediction", "Skip generating missing coverage evidence.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
     
     options.addUsage("", ADVANCED_OPTION);
@@ -441,13 +448,18 @@ namespace breseq
     if (options.count("bowtie2-junction")) this->bowtie2_junction = options["bowtie2-junction"];
 
     //! Settings: Junction Prediction
-    this->skip_junction_prediction = options.count("no-junction-prediction");
+    this->skip_new_junction_prediction = options.count("no-junction-prediction");
     this->minimum_candidate_junctions = from_string<int32_t>(options["junction-minimum-candidates"]);
     this->maximum_candidate_junctions = from_string<int32_t>(options["junction-maximum-candidates"]);
     this->maximum_candidate_junction_length_factor = from_string<double>(options["junction-candidate-length-factor"]);    
     this->maximum_junction_sequence_passed_alignment_pairs_to_consider = from_string<uint64_t>(options["junction-alignment-pair-limit"]);
     this->junction_pos_hash_neg_log10_p_value_cutoff = from_string<double>(options["junction-score-cutoff"]);
         
+    //! Settings: Pipeline Control
+    this->skip_read_alignment_and_missing_coverage_prediction = options.count("skip-RA-MC-prediction");
+    this->skip_new_junction_prediction = options.count("skip-JC-prediction");
+    this->skip_missing_coverage_prediction = options.count("skip-MC-prediction");
+    
     //! Settings: Debugging
     this->keep_all_intermediates = options.count("keep-intermediates");
 
@@ -608,7 +620,7 @@ namespace breseq
     
     this->targeted_sequencing = options.count("targeted-sequencing");
     if (this->targeted_sequencing)
-      this->skip_deletion_prediction = true;
+      this->skip_missing_coverage_prediction = true;
     
     this->print_mutation_identification_per_position_file = options.count("per-position-file");
     
@@ -712,9 +724,9 @@ namespace breseq
     
     //! Options that control which parts of the pipeline to execute
     this->skip_read_filtering = false;
-    this->skip_junction_prediction = false;
-		this->skip_mutation_prediction = false;
-		this->skip_deletion_prediction = false;
+    this->skip_new_junction_prediction = false;
+		this->skip_read_alignment_and_missing_coverage_prediction = false;
+		this->skip_missing_coverage_prediction = false;
     this->skip_alignment_or_plot_generation = false;
 		this->do_copy_number_variation = false;
 		this->do_periodicity = false;

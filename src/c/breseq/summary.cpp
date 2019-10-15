@@ -437,9 +437,9 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   custom_run_name = t.custom_run_name;
   num_processors = t.num_processors;
   skip_read_filtering = t.skip_read_filtering;
-  skip_junction_prediction = t.skip_junction_prediction;
-  skip_mutation_prediction = t.skip_mutation_prediction;
-  skip_deletion_prediction = t.skip_deletion_prediction;
+  skip_new_junction_prediction = t.skip_new_junction_prediction;
+  skip_read_alignment_and_missing_coverage_prediction = t.skip_read_alignment_and_missing_coverage_prediction;
+  skip_missing_coverage_prediction = t.skip_missing_coverage_prediction;
   skip_alignment_or_plot_generation = t.skip_alignment_or_plot_generation;
   
   //! Settings: Read File
@@ -729,9 +729,9 @@ void to_json(json& j, const PublicOptionsSummary& s)
       {"custom_run_name", s.custom_run_name},
       {"num_processors", s.num_processors},
       {"skip_read_filtering", s.skip_read_filtering},
-      {"skip_junction_prediction", s.skip_junction_prediction},
-      {"skip_mutation_prediction", s.skip_mutation_prediction},
-      {"skip_deletion_prediction", s.skip_deletion_prediction},
+      {"skip_new_junction_prediction", s.skip_new_junction_prediction},
+      {"skip_read_alignment_and_missing_coverage_prediction", s.skip_read_alignment_and_missing_coverage_prediction},
+      {"skip_missing_coverage_prediction", s.skip_missing_coverage_prediction},
       {"skip_alignment_or_plot_generation", s.skip_alignment_or_plot_generation},
       }
     },

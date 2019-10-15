@@ -4938,10 +4938,13 @@ void cGenomeDiff::GD2Circos(const vector<string> &gd_file_names,
           cFeatureLocation* feat1 = cReferenceSequences::find_closest_repeat_region_boundary(n(diff["position"]) - 1, ref[diff["seq_id"]].m_repeats, max_distance_to_repeat_1,-1);
           cFeatureLocation* feat2 = cReferenceSequences::find_closest_repeat_region_boundary(n(diff["position"]) + n(diff["size"]) + 1 - 1, ref[diff["seq_id"]].m_repeats, max_distance_to_repeat_2,1);
           
+          
           if (!feat1 && !feat2) {
             cerr << diff << endl;
+            continue;
             ASSERT(false,"Could not find mediating repeat.");
-          }  
+          }
+           
           
           cFeatureLocation& repeat = feat1 ? *feat1: *feat2;
           cSequenceFeature& feature = *(repeat.get_feature());
