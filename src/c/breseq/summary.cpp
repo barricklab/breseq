@@ -423,7 +423,7 @@ PublicReferencesSummary::PublicReferencesSummary(
                             seq_id,
                             PublicReferenceSummary(
                                                    s.alignment_resolution.reference.at(i),
-                                                   s.unique_coverage.at(seq_id),
+                                                   s.unique_coverage.find(seq_id) != s.unique_coverage.end() ? s.unique_coverage.at(seq_id) : CoverageSummary(),
                                                    seq,
                                                    rss
                                                    )
