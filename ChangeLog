@@ -1,6 +1,7 @@
 Version 0.34.1
    * Fixed bug that predicted zero-length deletions in circular genomes.
    * Fixed bug that caused runs to fail when an empty read file was provided as input.
+   * Fixed predict mutations junction side_1_position > side_2_position bug.
    * Added pipeline control options (--skip-*-prediction). Implementation is still experimental.
 
 Version 0.34.0

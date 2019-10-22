@@ -570,7 +570,8 @@ namespace breseq {
       int32_t overlap = n(jc_item[OVERLAP]);
       if (overlap > 0) continue;
       
-      ASSERT(side_1_position < side_2_position, "Junction has side_1_position > side_2_position\n" + jc_item.as_string());
+      //This is not
+      //ASSERT(side_1_position <= side_2_position, "Junction has side_1_position > side_2_position\n" + jc_item.as_string());
       
       if (! ((side_1_strand == +1) &&  (side_2_strand == -1)) ) {
         continue;

@@ -7,7 +7,7 @@ Performs various functions on |Genome Diff| formatted files. Options depend on t
 For a full list of |gdtools| subcommands run it from the command line with no options::
 
   gdtools
-  
+
 Command: ANNOTATE (or COMPARE)
 -------------------------------
 
@@ -18,8 +18,8 @@ Usage::
 .. program:: gdtools ANNOTATE (or COMPARE)
 
 Annotate a |Genome Diff| file with information about mutations (what genes they affect, amino acid substitutions, etc.)
-Default output is to another |Genome Diff|, but an HTML table can be produced with a table of mutations in a single |Genome Diff| 
-file or to compare the mutations present in several |Genome Diff| files. This subcommand can be called as ANNOTATE or COMPARE. Both 
+Default output is to another |Genome Diff|, but an HTML table can be produced with a table of mutations in a single |Genome Diff|
+file or to compare the mutations present in several |Genome Diff| files. This subcommand can be called as ANNOTATE or COMPARE. Both
 have the same effect.
 
 .. option:: -r <file_path>, --reference=<file_path>
@@ -30,9 +30,19 @@ have the same effect.
 
    File name for the output|Genome Diff| or HTML. DEFAULT: "annotated.gd" or "annotated.html".
 
-.. option:: --html
+.. option:: -f <format>,--format <format>
 
-   Output an HTML table instead of a |Genome Diff| file.
+   Type of output file to generate. See options below (DEFAULT=HTML)
+
+   ======= =====================================================
+   Format  Description
+   ======= =====================================================
+   HTML    Descriptive table viewable in a web browser
+   GD      GenomeDiff with added annotation of mutations
+   TSV     Tab-separated values file suitable for input into R or Excel
+   PHYLIP  Alignment file suitable for input into PHYLIP
+   JSON    JavaScript object notation file suitable for parsing
+   ======= =====================================================
 
 input1.gd input2.gd ...
    Input |Genome Diff| file(s). This option may be entered multiple times to compare across files. REQUIRED
