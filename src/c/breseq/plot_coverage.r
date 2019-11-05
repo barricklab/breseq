@@ -91,9 +91,7 @@ if (pdf_output==1) {
   cat("Generating PDF")
   pdf(out_file, height=6, width=11)
   par(family="sans")
-}
-else if(!capabilities(what = "png")) {
-  
+} else if(!capabilities(what = "png")) {
   ## fallback to ghostscript
   cat("Generating bitmap PNG")
   ## bitmap() requires ghostscript to be installed.

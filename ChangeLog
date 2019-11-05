@@ -1,3 +1,7 @@
+Version 0.34.2
+   * Improved compatibility with versions of R compiled with limited graphics support
+   * Increased resolution of coverage plots
+
 Version 0.34.1
    * Fixed bug that predicted zero-length deletions in circular genomes.
    * Fixed bug that caused runs to fail when an empty read file was provided as input.
