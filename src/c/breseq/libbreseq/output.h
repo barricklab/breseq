@@ -132,6 +132,8 @@ extern const char* ALIGN_LEFT;
     {return "<div " + attributes + ">" + input + "</div>";}
   inline string img(const string& target)
     {return "<img src=\"" + target + "\" />";}
+  inline string img(const string& attributes, const string& target)
+    {return "<img src=\"" + target + "\" " + attributes + " />";}
   inline string h1(const string & input)
     {return "<h1>" + input + "</h1>";} 
   inline string h2(const string & input)

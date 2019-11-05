@@ -559,7 +559,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   double total_percent_pass_filters = 100 * (static_cast<double>(summary.sequence_conversion.num_reads) / static_cast<double>(summary.sequence_conversion.num_original_reads));
   HTML << td(ALIGN_RIGHT, to_string(total_percent_pass_filters, 1) + "%");
   HTML << td(ALIGN_RIGHT, to_string(summary.sequence_conversion.read_length_avg, 1) + "&nbsp;bases");
-  HTML << td(b(commify(to_string(summary.sequence_conversion.read_length_max))) + "&nbsp;bases");
+  HTML << td(ALIGN_RIGHT, b(commify(to_string(summary.sequence_conversion.read_length_max))) + "&nbsp;bases");
   double total_percent_mapped = 100 * (1.0 - static_cast<double>(summary.alignment_resolution.total_unmatched_reads) / static_cast<double>(summary.alignment_resolution.total_reads));
   HTML << td(ALIGN_RIGHT, to_string(total_percent_mapped, 1) + "%");
   HTML << end_tr();
@@ -618,11 +618,12 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
       }
       
       total_length += it->m_length;
-      HTML << td( a(Settings::relative_path( 
-                                            settings.file_name(settings.overview_coverage_plot_file_name, "@", it->m_seq_id), settings.output_path
-                                            ), 
+      HTML << td( file_exists(settings.file_name(settings.overview_coverage_plot_file_name, "@", it->m_seq_id).c_str()) ?
+                    a(Settings::relative_path(
+                                             settings.file_name(settings.overview_coverage_plot_file_name, "@", it->m_seq_id), settings.output_path
+                                              ),
                     "coverage" 
-                    )
+                    ) : "coverage"
                  );
       
       // There may be absolutely no coverage and no graph will exist...
@@ -2958,10 +2959,13 @@ cOutputEvidenceFiles::html_evidence_file (
     HTML << "<p>"; 
   }
   
-  if (item.entry_exists(PLOT) && !item[PLOT].empty())
-    HTML << div(ALIGN_CENTER, img(item[PLOT]));
-  else
-  {
+  if (item.entry_exists(PLOT) && !item[PLOT].empty()) {
+    if (file_exists(item[PLOT].c_str())) {
+      HTML << div(ALIGN_LEFT, img("width=800", item[PLOT]));
+    } else {
+      HTML << div(ALIGN_LEFT, "Failed to generate coverage plot.");
+    }
+  } else {
     stringstream ss;
     
     ss << item[SEQ_ID] << ":" << item[START];

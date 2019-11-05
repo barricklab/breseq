@@ -87,23 +87,37 @@ if (window_end == -1)
 	window_end = end_pos;
 }
 
-if (pdf_output == 0) {
-	
-	## bitmap() requires ghostscript to be installed. 
-	## taa=4, gaa=2 options NOT compatible with earlier R versions!
-	## units = "px" NOT compatible with even earlier R versions!
-	
-	if(!capabilities(what = "png"))
-	{
-		## fallback to ghostscript
-		bitmap(out_file, height=6, width=11, type = "png16m", res = 72, pointsize=16)
-	} else {
-		## use X11 function, which gives better resolution
-		png(out_file, height=6, width=11, units ="in", res = 72, pointsize=16)
-    par(family="sans")
-	}
+if (pdf_output==1) {
+  cat("Generating PDF")
+  pdf(out_file, height=6, width=11)
+  par(family="sans")
+}
+else if(!capabilities(what = "png")) {
+  
+  ## fallback to ghostscript
+  cat("Generating bitmap PNG")
+  ## bitmap() requires ghostscript to be installed.
+  ## taa=4, gaa=2 options NOT compatible with earlier R versions!
+  ## units = "px" NOT compatible with even earlier R versions!
+  bitmap(out_file, height=6, width=11, type = "png16m", res = 200, pointsize=16)
+} else if (length(capabilities(what = "aqua")) > 0 && capabilities(what = "aqua")) {
+  cat("Generating Quartz PNG")
+  png(out_file, height=6, width=11, units ="in", res = 200, pointsize=16, type="quartz")
+  par(family="sans")
+} else if (length(capabilities(what = "cairo")) > 0 && capabilities(what = "cairo")) {
+  cat("Generating Cairo PNG")
+  png(out_file, height=6, width=11, units ="in", res = 200, pointsize=16, type="cairo")
+  par(family="sans")
 } else {
-	pdf(out_file, height=6, width=11)
+  ## Don't check capabilities because it loads up X windows to do so (at least on Mac)
+  cat("Generating X11 PNG")
+  
+  result = tryCatch({
+    png(out_file, height=6, width=11, units ="in", res = 200, pointsize=16, type="Xlib")
+    }, error = function(e) {
+      print("This R installation does not have the ability to generate bitmap plots. Exiting.")
+      return(0)
+    })
   par(family="sans")
 }
 
