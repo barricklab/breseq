@@ -1,9 +1,22 @@
 Installation
 ==============
 
-|breseq| is a command line tool implemented in C++ and R. It is compatible with a variety of UNIX-like platforms, including Linux, MacOSX, and Cygwin. 
+|breseq| is a command line tool implemented in C++ and R. It is compatible with a variety of UNIX-like platforms, including Linux, MacOSX, and Cygwin.
 
 The most recent |breseq| binary distributions and source code packages are available for download from `GitHub <https://github.com/barricklab/breseq/releases>`_.
+The instructions in the following sections explain how to install |breseq| using these files.
+
+.. image:: https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat
+   :target: http://bioconda.github.io/recipes/breseq/README.html
+
+**New:** Another installation option is to use the `Conda package manager <https://docs.conda.io/en/latest/>`_ to install |breseq| and all of the programs it requires. Make sure you have
+`Bioconda <https://bioconda.github.io/user/install.html>`_ set up, then follow the directions for the `breseq package <http://bioconda.github.io/recipes/breseq/README.html>`_.
+
+
+.. image:: images/galaxy.png
+   :target: https://usegalaxy.org
+
+**New:** If you are not comfortable with running commands in a terminal, it is also possible to install and use |breseq| on the web-based `Galaxy platform <https://usegalaxy.org>`_ (see See `Installing on Galaxy`_).
 
 Install external dependencies
 ++++++++++++++++++++++++++++++
@@ -11,7 +24,7 @@ Install external dependencies
 |breseq| requires these software programs to be installed on your system:
 
 * `Bowtie2 <http://bowtie-bio.sourceforge.net/bowtie2>`_ (version 2.1.0 or higher) read mapping program
-* `R <http://www.r-project.org>`_ (version 2.1.4 or higher) statistical programming language 
+* `R <http://www.r-project.org>`_ (version 2.1.4 or higher) statistical programming language
 
 To install each dependency, visit the respective web pages linked above and follow the instructions for your platform. You must make sure that the executables for |Bowtie2| and :program:`R` are in your environment's ``$PATH`` for |breseq| to function.
 
@@ -48,11 +61,11 @@ In addition to the normal dependencies, you must also have a C++ compiler instal
 
 MacOSX does not have a C++ compiler installed by default. You must first download and install the `Apple Developer tools <http://developer.apple.com/tools/>`_ (available from the App store). Be sure that you also complete any additional steps that are necessary to install the "command-line tools".
 
-If you have admin privileges and want to install |breseq| in a standard location accessible to all users of a computer, then see :ref:`installing-in-a-system-wide-location`. If you do not have admin privileges on your computer, then see :ref:`installing-in-the-source-directory` or :ref:`installing-in-a-custom-location`. 
+If you have admin privileges and want to install |breseq| in a standard location accessible to all users of a computer, then see :ref:`installing-in-a-system-wide-location`. If you do not have admin privileges on your computer, then see :ref:`installing-in-the-source-directory` or :ref:`installing-in-a-custom-location`.
 
 The |breseq| source distribution relies on open-source code developed by others. This code is included in the |breseq| distribution under /extern:
 
-* `SAMtools <http://samtools.sourceforge.net>`_ 
+* `SAMtools <http://samtools.sourceforge.net>`_
 
 .. _installing-in-a-system-wide-location:
 
@@ -112,7 +125,7 @@ We'll assume that you've chosen to install |breseq| in ``/mnt/home/me/local``. O
    $ make test
    $ make install
 
-This will create a usual UNIX grouping of program directories (with sub-directories like ``bin``, ``lib``, ``man``, etc). 
+This will create a usual UNIX grouping of program directories (with sub-directories like ``bin``, ``lib``, ``man``, etc).
 
 After installation, if you want to be able to call |breseq| commands without specifying the entire path to them, you will need to add the newly created "bin" directory within the |breseq| source to your $PATH.
 
@@ -156,6 +169,43 @@ Now, compile and install |Bowtie2| from source code and use the :ref:`installing
 
 If the configure or make steps in either install fail, try to diagnose which dependencies are missing from the warnings and install further packages as necessary.
 
+Installing on Galaxy
++++++++++++++++++++++++++++++++++
+
+If you administer a Galaxy server, |breseq| is available to install from the `Main Tool Shed <https://toolshed.g2.bx.psu.edu/>`_. See also, the directions for `Installing Tools into Galaxy <https://galaxyproject.org/admin/tools/add-tool-from-toolshed-tutorial/>`_.
+
+If you would like to run |breseq| through the Galaxy web interface on your own computer, you can follow these steps:
+
+1. Install a local copy of Galaxy using `planemo <https://planemo.readthedocs.io/en/latest/installation.html>`_.
+
+2. Clone a copy of the Galaxy Toolshed (requires `git <https://git-scm.com/>`_).
+
+.. code-block:: bash
+
+   git clone https://github.com/galaxyproject/tools-iuc.git
+
+3. Start the local Galaxy server
+
+.. code-block:: bash
+
+   cd tools-iuc/tools/breseq
+   planemo serve
+
+.. |br| raw:: html
+
+   <br />
+
+.. warning::
+   In either case, you need to go to the settings of your Galaxy install and choose to "Whitelist" |breseq| so that it can return HTML output to the web browser. |br|
+
+   .. image:: images/galaxy_select_whitelist.png
+      :width: 300
+      :target: _images/galaxy_select_whitelist.png
+
+   .. image:: images/galaxy_select_breseq.png
+      :width: 300
+      :target: _images/galaxy_select_breseq.png
+
 Troubleshooting installation
 +++++++++++++++++++++++++++++++++
-If you have a problem installing |breseq|, please send a detailed report to jeffrey.e.barrick@gmail.com.
+If you have a problem installing |breseq|, please post a detailed report as an `issue on GitHub <https://github.com/barricklab/breseq/issues>`_.
