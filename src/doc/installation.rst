@@ -16,7 +16,7 @@ The instructions in the following sections explain how to install |breseq| using
 .. image:: images/galaxy.png
    :target: https://usegalaxy.org
 
-**New:** If you are not comfortable with running commands in a terminal, it is also possible to install and use |breseq| on the web-based `Galaxy platform <https://usegalaxy.org>`_ (see See `Installing on Galaxy`_).
+**New:** If you are not comfortable with running commands in a terminal, it is also possible to install and use |breseq| on the web-based `Galaxy platform <https://usegalaxy.org>`_ (See `Installing on Galaxy`_).
 
 Install external dependencies
 ++++++++++++++++++++++++++++++
