@@ -782,7 +782,7 @@ namespace breseq {
         }
         
         // If both are rejects, then don't keep (one _can_ be a reject!)
-        if (j1.is_rejected() && j2.is_rejected())
+        if (j1.is_rejected_and_not_user_defined() && j2.is_rejected_and_not_user_defined())
         {
           if (verbose)
           {
@@ -1027,77 +1027,74 @@ namespace breseq {
         
         
         bool j1_is_ambiguous = false;
-        if (!j1.entry_exists("user_defined")) {
           
-          // what are the actual sequences of this length at the end of the IS elements?
-          start_1 = n(j1["_" + j1["_is_interval"] + "_is_start"]);
-          end_1   = start_1 + j1_is_overlap_length - 1;
-          string j1_left_is_sequence;
-          if (end_1 >= start_1) {
-            j1_left_is_sequence = ref_seq_info.get_sequence_1 (
-                                                                    j1[j1["_is_interval"] + "_seq_id"],
-                                                                    start_1,
-                                                                    end_1
-                                                                    );
-          }
-          
-          end_1   = n(j1["_" + j1["_is_interval"] + "_is_end"]);
-          start_1 = end_1 - j1_is_overlap_length - 1;
-          string j1_right_is_sequence;
-          if (end_1 >= start_1) {
-            j1_right_is_sequence = ref_seq_info.get_sequence_1 (
-                                                                     j1[j1["_is_interval"] + "_seq_id"],
-                                                                     start_1,
-                                                                     end_1
-                                                                     );
-          }
-          j1_right_is_sequence = reverse_complement(j1_right_is_sequence);
-          
-          if (verbose) {
-            cout << "J1 LEFT : " << j1_left_is_sequence << endl;
-            cout << "J1 RIGHT: " << j1_right_is_sequence << endl;
-          }
-          
-          // believe the direction if the sequences are different
-          j1_is_ambiguous = (j1_left_is_sequence == j1_right_is_sequence);
+        // what are the actual sequences of this length at the end of the IS elements?
+        start_1 = n(j1["_" + j1["_is_interval"] + "_is_start"]);
+        end_1   = start_1 + j1_is_overlap_length - 1;
+        string j1_left_is_sequence;
+        if (end_1 >= start_1) {
+          j1_left_is_sequence = ref_seq_info.get_sequence_1 (
+                                                                  j1[j1["_is_interval"] + "_seq_id"],
+                                                                  start_1,
+                                                                  end_1
+                                                                  );
         }
         
+        end_1   = n(j1["_" + j1["_is_interval"] + "_is_end"]);
+        start_1 = end_1 - j1_is_overlap_length - 1;
+        string j1_right_is_sequence;
+        if (end_1 >= start_1) {
+          j1_right_is_sequence = ref_seq_info.get_sequence_1 (
+                                                                   j1[j1["_is_interval"] + "_seq_id"],
+                                                                   start_1,
+                                                                   end_1
+                                                                   );
+        }
+        j1_right_is_sequence = reverse_complement(j1_right_is_sequence);
+        
+        if (verbose) {
+          cout << "J1 LEFT : " << j1_left_is_sequence << endl;
+          cout << "J1 RIGHT: " << j1_right_is_sequence << endl;
+        }
+        
+        // believe the direction if the sequences are different
+        j1_is_ambiguous = (j1_left_is_sequence == j1_right_is_sequence);
+
+        
         bool j2_is_ambiguous = false;
-        if (!j2.entry_exists("user_defined")) {
           
-          start_1 = n(j2["_" + j2["_is_interval"] + "_is_start"]);
-          end_1   = start_1 +j2_is_overlap_length - 1;
-          string j2_left_is_sequence;
-          if (end_1 >= start_1) {
-            j2_left_is_sequence = ref_seq_info.get_sequence_1 (
-                                                                    j2[j2["_is_interval"] + "_seq_id"],
-                                                                    start_1,
-                                                                    end_1
-                                                                    );
-          }
+        start_1 = n(j2["_" + j2["_is_interval"] + "_is_start"]);
+        end_1   = start_1 +j2_is_overlap_length - 1;
+        string j2_left_is_sequence;
+        if (end_1 >= start_1) {
+          j2_left_is_sequence = ref_seq_info.get_sequence_1 (
+                                                                  j2[j2["_is_interval"] + "_seq_id"],
+                                                                  start_1,
+                                                                  end_1
+                                                                  );
+        }
+        
+        end_1   = n(j2["_" + j2["_is_interval"] + "_is_end"]);
+        start_1 = end_1 - j2_is_overlap_length - 1;
+        string j2_right_is_sequence;
+        if (end_1 >= start_1) {
+          j2_right_is_sequence = ref_seq_info.get_sequence_1 (
+                                                                   j2[j2["_is_interval"] + "_seq_id"],
+                                                                   start_1,
+                                                                   end_1
+                                                                   );
+        }
+        j2_right_is_sequence = reverse_complement(j2_right_is_sequence);
+        
+        // believe the direction if the sequences are different
+        j2_is_ambiguous = (j2_left_is_sequence == j2_right_is_sequence);
+        
+        if (verbose) {
+          cout << "J2 LEFT : " << j2_left_is_sequence << endl;
+          cout << "J2 RIGHT: " << j2_right_is_sequence << endl;
           
-          end_1   = n(j2["_" + j2["_is_interval"] + "_is_end"]);
-          start_1 = end_1 - j2_is_overlap_length - 1;
-          string j2_right_is_sequence;
-          if (end_1 >= start_1) {
-            j2_right_is_sequence = ref_seq_info.get_sequence_1 (
-                                                                     j2[j2["_is_interval"] + "_seq_id"],
-                                                                     start_1,
-                                                                     end_1
-                                                                     );
-          }
-          j2_right_is_sequence = reverse_complement(j2_right_is_sequence);
-          
-          // believe the direction if the sequences are different
-          j2_is_ambiguous = (j2_left_is_sequence == j2_right_is_sequence);
-          
-          if (verbose) {
-            cout << "J2 LEFT : " << j2_left_is_sequence << endl;
-            cout << "J2 RIGHT: " << j2_right_is_sequence << endl;
-            
-            //cout << "J1 IS matched length " << j1_is_overlap_length << ": " << j1_is_seq_matched << endl;
-            //cout << "J2 IS matched length " << j2_is_overlap_length << ": " << j2_is_seq_matched << endl;
-          }
+          //cout << "J1 IS matched length " << j1_is_overlap_length << ": " << j1_is_seq_matched << endl;
+          //cout << "J2 IS matched length " << j2_is_overlap_length << ": " << j2_is_seq_matched << endl;
         }
 				
 				// if the matched IS element sequences are the same then the direction is AMBIGUOUS
@@ -1546,7 +1543,7 @@ namespace breseq {
         bool next_ra = false;
         
         // don't remove these, no matter what!
-        if (ra_item.entry_exists("user_defined"))
+        if (ra_item.entry_exists(USER_DEFINED))
           continue;
         
         for(diff_entry_list_t::iterator del_it = del.begin(); del_it != del.end(); del_it++) //DEL
@@ -1613,7 +1610,7 @@ namespace breseq {
       
       // Sometimes a SNP might be called in a deleted area because the end was wrong,
 			// but it was corrected using a junction. (This catches this case.)
-			if ( (!item.entry_exists("user_defined")) && (item.entry_exists("reject") || item.entry_exists("deleted")) )
+			if ( (!item.entry_exists(USER_DEFINED)) && (item.entry_exists("reject") || item.entry_exists("deleted")) )
 			  continue;
       
       // If we are predicting mixed bases and not polymorphisms, then don't create

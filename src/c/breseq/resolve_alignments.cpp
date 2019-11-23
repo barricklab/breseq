@@ -1733,7 +1733,7 @@ cDiffEntry junction_to_diff_entry(
     ("unique_read_sequence", to_string(jc.unique_read_sequence))
 	;
   
-  if (jc.user_defined) item["user_defined"] = "1";
+  if (jc.user_defined) item[USER_DEFINED] = "1";
   
   //	## may want to take only selected of these fields in the future.
   

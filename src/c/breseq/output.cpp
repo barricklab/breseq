@@ -1415,7 +1415,7 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
       }
       
       /* User Defined Evidence */
-      if (c.entry_exists("user_defined"))
+      if (c.entry_exists(USER_DEFINED))
       {
         ss << tr("class=\"user_defined_table_row\"",
                  td("colspan=\"" + to_string(total_cols) + "\"",
@@ -1740,7 +1740,7 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
     }
 
     /* User Defined Evidence */
-    if (c.entry_exists("user_defined"))
+    if (c.entry_exists(USER_DEFINED))
     {
       ss << tr("class=\"user_defined_table_row\"",
                td("colspan=\"" + to_string(total_cols) + "\"",

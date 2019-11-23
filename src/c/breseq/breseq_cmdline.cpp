@@ -1816,7 +1816,7 @@ int breseq_default_action(int argc, char* argv[])
       samtools_import(candidate_junction_faidx_file_name, resolved_junction_sam_file_name, junction_bam_unsorted_file_name);
       samtools_sort(junction_bam_unsorted_file_name, junction_bam_file_name, settings.num_processors);
       if (!settings.keep_all_intermediates)
-        remove_file(junction_bam_unsorted_file_name.c_str());
+        remove_file(junction_bam_unsorted_file_name.c_str(), true);
       samtools_index(junction_bam_file_name);
       
 		}
@@ -1839,7 +1839,7 @@ int breseq_default_action(int argc, char* argv[])
     samtools_import(reference_faidx_file_name, resolved_reference_sam_file_name, reference_bam_unsorted_file_name);
     samtools_sort(reference_bam_unsorted_file_name, reference_bam_file_name, settings.num_processors);
     if (!settings.keep_all_intermediates)
-      remove_file(reference_bam_unsorted_file_name.c_str());
+      remove_file(reference_bam_unsorted_file_name.c_str(), true);
     samtools_index(reference_bam_file_name);
     
     settings.track_intermediate_file(settings.output_done_file_name, settings.junction_bam_file_name);

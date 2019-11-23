@@ -46,6 +46,7 @@ namespace breseq {
   extern const char* PHYLOGENY_ID;
   extern const char* FREQUENCY;
   extern const char* REJECT;
+  extern const char* USER_DEFINED;
   extern const char* POLYMORPHISM_REJECT;
   extern const char* CONSENSUS_REJECT;
   extern const char* MEDIATED;
@@ -344,6 +345,10 @@ namespace breseq {
     //! Removes all of the reject reasons
     void clear_reject_reasons(const string& field=REJECT)
     { this->erase(field); }
+    
+    bool is_rejected_and_not_user_defined()
+    { return entry_exists(REJECT) && !entry_exists(USER_DEFINED); }
+
     
     //!---- Simplifying entries ---- !//
     

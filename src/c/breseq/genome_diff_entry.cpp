@@ -34,6 +34,7 @@ namespace breseq {
   const char* PHYLOGENY_ID="phylogeny_id";
   const char* FREQUENCY="frequency";
   const char* REJECT="reject";
+  const char* USER_DEFINED="user_defined";
   const char* POLYMORPHISM_REJECT="polymorphism_reject";
   const char* CONSENSUS_REJECT="consensus_reject";
   const char* MEDIATED="mediated";

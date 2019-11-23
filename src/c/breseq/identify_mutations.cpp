@@ -465,7 +465,7 @@ bool test_RA_evidence_POLYMORPHISM_mode(
                                      const Settings& settings
                                      )
 {
-  bool user_defined = ra.entry_exists("user_defined"); // => Must always be polymorphism
+  bool user_defined = ra.entry_exists(USER_DEFINED); // => Must always be polymorphism
   
   double consensus_score = double_from_string(ra[CONSENSUS_SCORE]);
   double polymorphism_score = double_from_string(ra[POLYMORPHISM_SCORE]);
@@ -638,7 +638,7 @@ void test_RA_evidence(
   
     // User evidence items should be treated normally (to define polymorphism vs. consensus predictions)
     // but they should not be rejected, and they should not be deleted.
-    if (ra.entry_exists("user_defined")) {
+    if (ra.entry_exists(USER_DEFINED)) {
       delete_entry=false;
     }
 
@@ -1157,7 +1157,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         //  cout << "FOUND MATCH in user evidence. User evidence not added" << endl;
           
         // in this case we have already created a valid RA item
-        (*added_mut_p)["user_defined"] = "1";
+        (*added_mut_p)[USER_DEFINED] = "1";
           
         // do not mark it as user_defined or there will be problems:
         // (it will not show up in HTML and it will mess up polymorphism stats)
@@ -1170,7 +1170,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         // copy the input entry and fill in more information
         cDiffEntry mut = *(_user_evidence_ra_list.front().get());
         mut.to_spec(); //remove additional fields that might be left over!!
-        mut["user_defined"] = "1";
+        mut[USER_DEFINED] = "1";
         mut["user_defined_no_poly"] = "1"; // prevents doing stats on it
         
         // These are already assigned correctly by copy of RA
