@@ -1352,7 +1352,7 @@ namespace breseq
     // Delete intermediate files
     if (!this->keep_all_intermediates) {
       for (vector<string>::iterator it= done_key_intermediate_files[done_key].begin(); it != done_key_intermediate_files[done_key].end(); it++) {
-        remove_file(*it, true);
+        remove_file(*it, false, true);
       }
     }
     
