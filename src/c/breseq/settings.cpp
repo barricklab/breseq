@@ -237,12 +237,13 @@ namespace breseq
     ("junction-minimum-candidates", "Test at least this many of the top-scoring junction candidates, regardless of their length", 100, ADVANCED_OPTION)
     ("junction-maximum-candidates", "Test no more than this many of the top-scoring junction candidates (0 = DO NOT LIMIT)", 5000, ADVANCED_OPTION)
     ("junction-candidate-length-factor", "Accept top-scoring junction candidates to test until their cumulative length is this factor times the total reference sequence length (0 = DO NOT LIMIT)", 0.1, ADVANCED_OPTION)
+    ("junction-minimum-candidate-pos-hash-score", "Minimum number of distinct spanning read start positions required to create a junction candidate for further testing", 2, ADVANCED_OPTION)
     ("junction-score-cutoff", "Maximum negative log10 probability of uneven coverage across a junction breakpoint to accept (0 = OFF)", 3.0, ADVANCED_OPTION)
     ("junction-minimum-pos-hash-score", "Minimum number of distinct spanning read start positions required to accept a junction (DEFAULT = consensus mode, 3; polymorphism mode, 3)", "", ADVANCED_OPTION)
     ("junction-minimum-side-match", "Minimum number of bases a read must extend past any overlap or read-only sequence at the breakpoint of a junction on each side to count as support for the junction (DEFAULT = consensus mode, 1; polymorphism mode, 6)", "", ADVANCED_OPTION)
     ("junction-minimum-pr-no-read-start-per-position", "Minimum probablilty assigned that no mapped read will start at a given position and strand for junction prediction", 0.1, ADVANCED_OPTION)
     ;
-    
+        
     options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Consensus Read Alignment (RA) Evidence Options", ADVANCED_OPTION);
     options
@@ -451,10 +452,11 @@ namespace breseq
     this->skip_new_junction_prediction = options.count("no-junction-prediction");
     this->minimum_candidate_junctions = from_string<int32_t>(options["junction-minimum-candidates"]);
     this->maximum_candidate_junctions = from_string<int32_t>(options["junction-maximum-candidates"]);
-    this->maximum_candidate_junction_length_factor = from_string<double>(options["junction-candidate-length-factor"]);    
+    this->maximum_candidate_junction_length_factor = from_string<double>(options["junction-candidate-length-factor"]);
+    this->minimum_candidate_junction_pos_hash_score = from_string<double>(options["junction-minimum-candidate-pos-hash-score"]);
     this->maximum_junction_sequence_passed_alignment_pairs_to_consider = from_string<uint64_t>(options["junction-alignment-pair-limit"]);
     this->junction_pos_hash_neg_log10_p_value_cutoff = from_string<double>(options["junction-score-cutoff"]);
-        
+    
     //! Settings: Pipeline Control
     this->skip_read_alignment_and_missing_coverage_prediction = options.count("skip-RA-MC-prediction");
     this->skip_new_junction_prediction = options.count("skip-JC-prediction");
