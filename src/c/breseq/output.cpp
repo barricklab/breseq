@@ -2043,7 +2043,7 @@ void add_html_fields_to_mutation(cDiffEntry& mut, MutationTableOptions& options)
         //javascript version
         string id = "gene_hide_" + to_string(mut._type) + "_" + mut._id;
         string button_id = id + "_button";
-        html_gene_product = "<b>" + to_string(gene_names.size()) + " genes</b>"
+        html_gene_product = "<b>" + to_string(gene_names.size()) + " genes </b>"
         + "<noscript>" + sJoinedGeneList+ "</noscript>"
         + "<div id=\"" + id + "\" class=\"hidden\">"
         + sJoinedGeneList + "</div>"

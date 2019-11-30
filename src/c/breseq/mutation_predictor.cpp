@@ -1295,6 +1295,33 @@ namespace breseq {
       if (!jc1_erased) jc1_it++;
 		}
 
+    // @JEB 2019-11-29
+    // We need to assign "unique=X" tags when the same MOB mutations are predicted
+    // because two IS element copies can have the same name but different sequences
+    // and these two copies can insert in the exact same way!
+    
+    diff_entry_list_t mobs_to_add_ids;
+    diff_entry_list_t mobs = gd.get_list(make_vector<gd_entry_type>(MOB));
+    
+    diff_entry_list_t::iterator it2;
+    for (diff_entry_list_t::iterator it1 = mobs.begin(); it1 != mobs.end(); it1++) {
+      
+      it2 = it1;
+      it2++;
+      
+      if ((it2 != mobs.end()) && (**it1 == **it2)) {
+        mobs_to_add_ids.push_back(*it2);
+      }
+    }
+
+    // Now give them unique IDs that are numbered
+    uint32_t mob_id = 1;
+    for (diff_entry_list_t::iterator it = mobs_to_add_ids.begin(); it != mobs_to_add_ids.end(); it++) {
+      cDiffEntry & de = **it;
+      de["unique"] = "mob" + to_string(mob_id);
+      mob_id++;
+    }
+    
   }
   
   void MutationPredictor::predictJCtoINSorSUBorDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc)
