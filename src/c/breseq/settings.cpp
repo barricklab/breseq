@@ -359,6 +359,7 @@ namespace breseq
       cerr << "Input files are aligned SAM instead of FASTQ (--aligned-sam option)." << endl;
       cerr << "No junction prediction will take place." << endl;
       cerr << output_divider << endl;
+      this->skip_new_junction_prediction = true;
     }
     this->read_files.Init(read_file_names, this->aligned_sam_mode);
     
@@ -449,7 +450,7 @@ namespace breseq
     if (options.count("bowtie2-junction")) this->bowtie2_junction = options["bowtie2-junction"];
 
     //! Settings: Junction Prediction
-    this->skip_new_junction_prediction = options.count("no-junction-prediction");
+    this->skip_new_junction_prediction = this->skip_new_junction_prediction || options.count("no-junction-prediction");
     this->minimum_candidate_junctions = from_string<int32_t>(options["junction-minimum-candidates"]);
     this->maximum_candidate_junctions = from_string<int32_t>(options["junction-maximum-candidates"]);
     this->maximum_candidate_junction_length_factor = from_string<double>(options["junction-candidate-length-factor"]);
@@ -459,7 +460,7 @@ namespace breseq
     
     //! Settings: Pipeline Control
     this->skip_read_alignment_and_missing_coverage_prediction = options.count("skip-RA-MC-prediction");
-    this->skip_new_junction_prediction = options.count("skip-JC-prediction");
+    this->skip_new_junction_prediction = this->skip_new_junction_prediction || options.count("skip-JC-prediction");
     this->skip_missing_coverage_prediction = options.count("skip-MC-prediction");
     
     //! Settings: Debugging

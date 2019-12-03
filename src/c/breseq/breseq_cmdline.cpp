@@ -1603,15 +1603,21 @@ int breseq_default_action(int argc, char* argv[])
 		settings.done_step(settings.reference_alignment_done_file_name);
 	}
 
+  
+  //
+  // Only do steps 03 and 04 if we are performing new junction prediction
+  //
+  
+  if (
+      !settings.skip_new_junction_prediction
+      )
+  {
+  
   //
 	// 03_candidate_junctions
 	// * Identify candidate junctions from split read alignments
 	//
-	if (
-      !settings.skip_new_junction_prediction
-      && !settings.aligned_sam_mode
-      )
-	{
+
 		create_path(settings.candidate_junction_path);
 
     string preprocess_junction_done_file_name = settings.preprocess_junction_done_file_name;
@@ -1673,7 +1679,7 @@ int breseq_default_action(int argc, char* argv[])
       summary.unique_coverage.store(settings.coverage_junction_summary_file_name);
       summary.preprocess_error_count.store(settings.coverage_junction_error_count_summary_file_name);
       settings.done_step(settings.coverage_junction_done_file_name);
-		}
+    }
     summary.preprocess_coverage.retrieve(settings.coverage_junction_summary_file_name);
     summary.preprocess_error_count.retrieve(settings.coverage_junction_error_count_summary_file_name);
     
@@ -1706,7 +1712,6 @@ int breseq_default_action(int argc, char* argv[])
     //
 		if (
         settings.do_step(settings.candidate_junction_alignment_done_file_name, "Re-alignment to junction candidates")
-        && !settings.aligned_sam_mode
         )
 		{
 			create_path(settings.candidate_junction_alignment_path);
@@ -1720,36 +1725,36 @@ int breseq_default_action(int argc, char* argv[])
         string command = "bowtie2-build -q " + candidate_junction_fasta_file_name + " " + candidate_junction_hash_file_name;
         SYSTEM(command);
         settings.track_intermediate_file(settings.candidate_junction_alignment_done_file_name, candidate_junction_hash_file_name + "*");
-			}
 
-			/// align reads to candidate junction sequences
-			for (uint32_t i = 0; i < settings.read_files.size(); i++)
-			{
-				string base_read_file_name = settings.read_files[i].m_base_name;
-				string candidate_junction_sam_file_name = settings.file_name(settings.candidate_junction_sam_file_name, "#", base_read_file_name);
+        /// align reads to candidate junction sequences
+        for (uint32_t i = 0; i < settings.read_files.size(); i++)
+        {
+          string base_read_file_name = settings.read_files[i].m_base_name;
+          string candidate_junction_sam_file_name = settings.file_name(settings.candidate_junction_sam_file_name, "#", base_read_file_name);
 
-				string read_fastq_file = settings.base_name_to_read_file_name(base_read_file_name);
+          string read_fastq_file = settings.base_name_to_read_file_name(base_read_file_name);
 
-        string filename = candidate_junction_hash_file_name + ".1.bt2";
-        if (!file_exists(filename.c_str())) 
-          continue;
-    
-        /// NEW CODE mapping to junctions with somewhat relaxed parameters
-        uint32_t bowtie2_seed_substring_size_junction = trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.3);
-        // Check bounds
-        bowtie2_seed_substring_size_junction = max<uint32_t>(9, bowtie2_seed_substring_size_junction);
-        bowtie2_seed_substring_size_junction = min<uint32_t>(31, bowtie2_seed_substring_size_junction);
-        
-        string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local " + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_junction) + " "
-        + settings.bowtie2_scoring + " " + settings.bowtie2_junction + " --reorder -x " + candidate_junction_hash_file_name + " -U " + read_fastq_file + " -S " + candidate_junction_sam_file_name;
-        
-        SYSTEM(command);
-        
-        settings.track_intermediate_file(settings.alignment_correction_done_file_name, candidate_junction_sam_file_name + "*");
+          string filename = candidate_junction_hash_file_name + ".1.bt2";
+          if (!file_exists(filename.c_str()))
+            continue;
+      
+          /// NEW CODE mapping to junctions with somewhat relaxed parameters
+          uint32_t bowtie2_seed_substring_size_junction = trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.3);
+          // Check bounds
+          bowtie2_seed_substring_size_junction = max<uint32_t>(9, bowtie2_seed_substring_size_junction);
+          bowtie2_seed_substring_size_junction = min<uint32_t>(31, bowtie2_seed_substring_size_junction);
+          
+          string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local " + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_junction) + " "
+          + settings.bowtie2_scoring + " " + settings.bowtie2_junction + " --reorder -x " + candidate_junction_hash_file_name + " -U " + read_fastq_file + " -S " + candidate_junction_sam_file_name;
+          
+          SYSTEM(command);
+          
+          settings.track_intermediate_file(settings.alignment_correction_done_file_name, candidate_junction_sam_file_name + "*");
+        }
       }
-
+      
 			settings.done_step(settings.candidate_junction_alignment_done_file_name);
-		}
+    }
   }
 
 	
@@ -1762,8 +1767,10 @@ int breseq_default_action(int argc, char* argv[])
 		create_path(settings.alignment_resolution_path);
 
     bool junction_prediction = !settings.skip_new_junction_prediction;
-    if (junction_prediction && file_empty(settings.candidate_junction_fasta_file_name.c_str())) junction_prediction = false;
     
+    // Fail-safes to not try to resolve to junctions if none exist
+    if (file_empty(settings.candidate_junction_fasta_file_name.c_str())) junction_prediction = false;
+
 		resolve_alignments(
 			settings,
 			summary,
