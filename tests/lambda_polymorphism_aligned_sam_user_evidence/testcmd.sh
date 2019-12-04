@@ -10,11 +10,12 @@ REFERENCE_ARG="-r ${DATADIR}/lambda/lambda.gbk"
 TESTCMD="\
     ${BRESEQ} \
     ${BRESEQ_TEST_THREAD_ARG} \
-    --polymorphism-prediction \
+    -p \
+    --aligned-sam \
     --user-evidence-gd ${SELF}/user_evidence.gd \
     -o ${SELF} \
     ${REFERENCE_ARG} \
-    ${DATADIR}/lambda/lambda_mixed_population.fastq \
+    ${DATADIR}/lambda/lambda_mixed_population.sam \
     "
 
 do_test $1 ${SELF}

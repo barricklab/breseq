@@ -1768,7 +1768,7 @@ int breseq_default_action(int argc, char* argv[])
 
     bool junction_prediction = !settings.skip_new_junction_prediction;
     
-    // Fail-safes to not try to resolve to junctions if none exist
+    // Fail-safe to not try to resolve to junctions if none exist
     if (file_empty(settings.candidate_junction_fasta_file_name.c_str())) junction_prediction = false;
 
 		resolve_alignments(

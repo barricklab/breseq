@@ -513,11 +513,14 @@ namespace breseq {
 
   inline bool file_empty(const char *filename)
   {
+    if (!file_exists(filename))
+      return true;
+    
     struct stat filestatus;
     if (stat( filename, &filestatus ) == 0)
       return (filestatus.st_size == 0);
     
-    // error getting stat, file must not exist
+    // error getting stat, call it empty
     return true;
   }
   inline bool file_empty(const string& filename) 

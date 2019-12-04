@@ -366,11 +366,13 @@ void resolve_alignments(
   }
   
   // Be sure to add user defined junctions
-  if (settings.user_evidence_genome_diff_file_name != "") {
-    cFastaFile ff(settings.candidate_junction_fasta_file_name, ios::in);
-    cFastaSequence sequence;
-    while( ff.read_sequence(sequence) ) {
-      all_junction_ids[sequence.get_name()]++;
+  if (junction_prediction) {
+    if (settings.user_evidence_genome_diff_file_name != "") {
+      cFastaFile ff(settings.candidate_junction_fasta_file_name, ios::in);
+      cFastaSequence sequence;
+      while( ff.read_sequence(sequence) ) {
+        all_junction_ids[sequence.get_name()]++;
+      }
     }
   }
   
