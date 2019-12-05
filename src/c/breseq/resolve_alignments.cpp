@@ -599,7 +599,7 @@ void resolve_alignments(
     // to do this efficiently, we need a list of their junction id's to be passed back by resolve_junction
     // for now, we assume that this is unlikely to change the results of favoring one junction over another.
     
-    //junction_test_info_list.sort();
+    junction_test_info_list.sort();
   }
     
   PosHashScoreDistribution accepted_pos_hash_score_distribution;
@@ -767,35 +767,27 @@ void load_junction_alignments(
       alignment_list this_reference_alignments;
       if ((reference_alignments.size() > 0) && (seq.m_name == reference_alignments.front()->read_name()))
       {
-        
         this_reference_alignments = reference_alignments;
         reference_tam->read_alignments(reference_alignments, false);
-        
+
+        if (verbose) {
+          cerr << " Before Overlap Reference alignments = " << this_reference_alignments.size() << endl;
+        }
         best_reference_score = eligible_read_alignments(settings, ref_seq_info, this_reference_alignments);
-        
-        if (verbose)
-          cerr << " Best reference score: " << best_reference_score << endl;
       }
       
       // Does this read have eligible candidate junction matches?
       alignment_list this_junction_alignments;
-      
-      if (verbose)
-      {
-        cerr << " Before Overlap Reference alignments = " << reference_alignments.size() << endl;
-        cerr << " Before Overlap Junction alignments = " << junction_alignments.size() << endl;
-      }
-      
-      if (verbose && (junction_alignments.size() > 0))
-      {
-        cerr << " Junction SAM read name: " << junction_alignments.front()->read_name() <<endl;
-      }
       
       if ((junction_alignments.size() > 0) && (seq.m_name == junction_alignments.front()->read_name()))
       {
         
         this_junction_alignments = junction_alignments;
         junction_tam->read_alignments(junction_alignments, false);
+        
+        if (verbose) {
+          cerr << " Before Overlap Junction alignments = " << this_junction_alignments.size() << endl;
+        }
         
         ///
         // Matches to candidate junctions MUST overlap the junction.
@@ -816,16 +808,8 @@ void load_junction_alignments(
         }
         
         // The score is the number of matches
-        best_junction_score = eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments, true, best_reference_score);
+        best_junction_score = eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments, best_reference_score);
         
-        
-        if (verbose)
-          cerr << " Best junction score: " << best_junction_score << endl;
-      }
-      
-      if (verbose && (reference_alignments.size() > 0))
-      {
-        cerr << " Reference SAM read name: " << reference_alignments.front()->read_name() <<endl;
       }
       
       // Nothing to be done if there were no eligible matches to either

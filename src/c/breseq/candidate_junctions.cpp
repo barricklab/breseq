@@ -45,10 +45,13 @@ namespace breseq {
    *
    *  In junction_mode, negative overlap of the junction sequence is also subtracted from the score.
    *    and returns all alignments above the minimum.
+   *
+   *  @JEB: 2019-12-04 change to only return best-scoring junction alignments!
+   *
    *  Otherwise, returns only alignments tied for best.
    */
   
- uint32_t eligible_read_alignments(const Settings& settings, const cReferenceSequences& ref_seq_info, alignment_list& alignments, bool junction_mode, int32_t min_match_score)
+ uint32_t eligible_read_alignments(const Settings& settings, const cReferenceSequences& ref_seq_info, alignment_list& alignments, int32_t min_match_score)
   {
     bool verbose = false;
     
@@ -124,10 +127,8 @@ namespace breseq {
     uint32_t last_best(0);
     uint32_t best_score = alignment_score_map[alignments.front().get()];
     
-    // In non-junction mode we only return the best
-    // In junction mode we return all above or equal to the minimum score
-    //   (which is for the alignment to the reference genome).
-    // In BOTH modes this code must be executed to set kBreseqBestAlignmentScoreBAMTag
+    // Return only the best matches
+    // This code must be executed to set kBreseqBestAlignmentScoreBAMTag
     
     for (alignment_list::iterator it = alignments.begin()++; it != alignments.end(); it++)
     {
@@ -140,9 +141,8 @@ namespace breseq {
         last_best++;
     }
     
-    // Truncate only to ties for best if we are not in junction mode
-    if (!junction_mode)
-      alignments.resize(last_best);
+    // Truncate only to ties for best
+    alignments.resize(last_best);
     
     // Require a minimum length of the read to be mapped
     // Must be applied AFTER sorting and accepting based on score

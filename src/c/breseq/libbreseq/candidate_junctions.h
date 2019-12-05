@@ -311,7 +311,6 @@ namespace breseq {
                                     const Settings& settings, 
                                     const cReferenceSequences& ref_seq_info, 
                                     alignment_list& alignments, 
-                                    bool junction_mode = false,
                                     int32_t min_match_score = 0
                                     );
   

@@ -253,7 +253,7 @@ namespace breseq
     
     int32_t num_processors;       // Defaults = 2
 
-    // bowtie2 options. These are coceptually divided into
+    // bowtie2 options. These are conceptually divided into
     //  1) the scoring scheme for alignments, which MUST be the same for all calls to bowtie2!
     //  2) various mapping cutoffs, which are different for each stage and for junctions
     string bowtie2_scoring;         // COMMAND-LINE OPTION

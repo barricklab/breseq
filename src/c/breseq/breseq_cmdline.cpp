@@ -1537,7 +1537,7 @@ int breseq_default_action(int argc, char* argv[])
         bowtie2_seed_substring_size_stringent = max<uint32_t>(9, bowtie2_seed_substring_size_stringent);
         bowtie2_seed_substring_size_stringent = min<uint32_t>(31, bowtie2_seed_substring_size_stringent);
         
-        string command = "bowtie2 -t -p " + s(settings.num_processors) + " -L " +  to_string<uint32_t>(bowtie2_seed_substring_size_stringent) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage1 + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + (do_2_stage_alignment ? stage1_reference_sam_file_name + " --un " + stage1_unmatched_fastq_file_name : reference_sam_file_name);
+        string command = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " -L " +  to_string<uint32_t>(bowtie2_seed_substring_size_stringent) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage1 + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + (do_2_stage_alignment ? stage1_reference_sam_file_name + " --un " + stage1_unmatched_fastq_file_name : reference_sam_file_name);
         SYSTEM(command);
         
         if (do_2_stage_alignment) {
@@ -1566,7 +1566,7 @@ int breseq_default_action(int argc, char* argv[])
           bowtie2_seed_substring_size_relaxed = max<uint32_t>(9, bowtie2_seed_substring_size_relaxed);
           bowtie2_seed_substring_size_relaxed = min<uint32_t>(31, bowtie2_seed_substring_size_relaxed);
         
-          string command = "bowtie2 -t -p " + s(settings.num_processors) + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_relaxed) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage2 + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + stage2_reference_sam_file_name;
+          string command = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_relaxed) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage2 + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + stage2_reference_sam_file_name;
           SYSTEM(command);
           
           settings.track_intermediate_file(settings.reference_alignment_done_file_name, stage2_reference_sam_file_name);
@@ -1744,7 +1744,7 @@ int breseq_default_action(int argc, char* argv[])
           bowtie2_seed_substring_size_junction = max<uint32_t>(9, bowtie2_seed_substring_size_junction);
           bowtie2_seed_substring_size_junction = min<uint32_t>(31, bowtie2_seed_substring_size_junction);
           
-          string command = "bowtie2 -t -p " + s(settings.num_processors) + " --local " + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_junction) + " "
+          string command = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " --local " + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_junction) + " "
           + settings.bowtie2_scoring + " " + settings.bowtie2_junction + " --reorder -x " + candidate_junction_hash_file_name + " -U " + read_fastq_file + " -S " + candidate_junction_sam_file_name;
           
           SYSTEM(command);
