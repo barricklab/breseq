@@ -595,10 +595,7 @@ void resolve_alignments(
     
     junction_test_info_list.pop_back();
     
-    // @JEB Could re-score ones that might have changed due to removing repeat matches and re-sort
-    // to do this efficiently, we need a list of their junction id's to be passed back by resolve_junction
-    // for now, we assume that this is unlikely to change the results of favoring one junction over another.
-    
+    // @JEB 2019-06-12 List is now sorted after each one accepted to ensure best results
     junction_test_info_list.sort();
   }
     

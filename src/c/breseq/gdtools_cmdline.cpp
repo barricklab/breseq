@@ -180,7 +180,8 @@ int do_apply(int argc, char *argv[])
   options.addUsage("as you like.  Using the Genome Diff, this will apply all");
   options.addUsage("the mutations to the reference sequences, output is to");
   options.addUsage("a single file that includes all the references in the");
-  options.addUsage("requested format.");
+	options.addUsage("requested format. Input file is expected to only have");
+	options.addUsage("consensus mutations. Polymorphic mutations are ignored.");
 
 	if (options.count("help")) {
 		options.printUsage();
@@ -224,8 +225,7 @@ int do_apply(int argc, char *argv[])
 
   uout("Reading input GD file", options.getArgv(0));
   cGenomeDiff gd(options.getArgv(0));
-
-
+	
   //Check to see if every item in the loaded .gd is applicable to the reference file.
   gd.valid_with_reference_sequences(ref_seq_info);
   gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, options.count("verbose"));

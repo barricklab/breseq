@@ -265,6 +265,7 @@ typedef struct  {
 } dr_item;
   
 // Checks to see whether seq_ids and coordinates make sense
+// Overlaps and before/after consistence are only checked if polymorphism_mode=true
 cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences& ref_seq, bool suppress_errors)
 {
   // For now we do rather generic checking... nothing specific to certain kind of entries
@@ -312,7 +313,6 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
     } // end of seq_id
   }
   
-  
   // Test that specified mobile elements exist in reference when we will need their sequences
   // including (1) for MOBs and (2) for AMPs with 'mediated' specified.
   
@@ -348,6 +348,10 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
     for(diff_entry_list_t::iterator it=mut_list.begin(); it!=mut_list.end(); ++it) {
       diff_entry_ptr_t& de = *it;
       
+      // Only have this requirement for consensus mutations!
+      // ---> Polymorphic mutations can overlap with other mutations without 'before' or 'after' tags.
+      if (de->is_polymorphism()) continue;
+
        if ( (de->_type == MOB) || (de->_type == AMP) || (de->_type == DEL) || (de->_type == SUB) || (de->_type == CON) ) {
         
         dr_item new_dr_item;
@@ -361,12 +365,12 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
     }
   }
 
+  // Third pass -- check for specific requirements concerning 'before' and 'within' tags.
+  // some code may only be safe if all entries are properly there, which is why this does
+  // not happen in the generic main loop or if fatal errors have been encountered so far.
+  
   if (!parse_errors.fatal()) {
 
-    // Third pass -- check for specific requirements concerning 'before' and 'within' tags.
-    // some code may only be safe if all entries are properly there, which is why this does
-    // not happen in the generic main loop or if fatal errors have been encountered so far.
-    
     for(diff_entry_list_t::iterator it=mut_list.begin(); it!=mut_list.end(); ++it) {
       diff_entry_ptr_t& de = *it;      
 
@@ -505,6 +509,12 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
           } // end has 'within' attribute
         } else if (de->entry_exists("before")) {  
           
+          // Probably never a case we will see, but a polymorphic mutation can't be
+          // assigned to occur before any other mutation. That doesn't make sense.
+          if (de->is_polymorphism()) {
+            parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Polymorphic mutations cannot be assigned to occur 'before' another mutation.\n", true);
+          }
+          
           uint32_t position = from_string<uint32_t>((*de)[POSITION]);
           uint32_t size = de->entry_exists(SIZE) ? from_string<uint32_t>((*de)[SIZE]) : 0;
 
@@ -558,6 +568,11 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
         } else {
           // Check to see if we are in a spot that would be ambiguous without a 'within' or 'before' attribute!
           
+          // @JEB If this line is uncommented then we allow a polymorphic mutation to overlap
+          // a consensus mutation --> That won't make any sense in terms of an APPLY but
+          // could potentially be something that breseq predicts in polymorphism mode...
+          if (de->is_polymorphism()) continue;
+          
           vector<dr_item> check_ambiguous = disambiguate_requirements[(*de)[SEQ_ID]];
           cReferenceCoordinate position_start = de->get_reference_coordinate_start();
           cReferenceCoordinate position_end = de->get_reference_coordinate_end();
@@ -584,7 +599,8 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
         }
       }
     } // end third pass loop
-  } // end already hit fatal error
+    
+  } // end not polymorphism or already hit fatal error
   
   
   // Fourth pass loop -- check for bonehead sequence entries

@@ -271,6 +271,16 @@ namespace breseq {
     bool is_marked_deleted()
     { return (this->entry_exists("deleted") && ((from_string<int32_t>((*this)["deleted"]) != 0))); }
     
+    bool is_polymorphism()
+    {
+      return (
+              this->entry_exists("frequency")
+              && ((from_string<int32_t>((*this)["frequency"]) != 1))
+              && ((from_string<int32_t>((*this)["frequency"]) != 0))
+      );
+    }
+
+    
     //!---- Accessors to calculated properties ---- !//
     
     //! Common function for getting start or end of mutation or evidence
