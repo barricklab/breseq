@@ -351,8 +351,8 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
       // Only have this requirement for consensus mutations!
       // ---> Polymorphic mutations can overlap with other mutations without 'before' or 'after' tags.
       if (de->is_polymorphism()) continue;
-
-       if ( (de->_type == MOB) || (de->_type == AMP) || (de->_type == DEL) || (de->_type == SUB) || (de->_type == CON) ) {
+      
+      if ( (de->_type == MOB) || (de->_type == AMP) || (de->_type == DEL) || (de->_type == SUB) || (de->_type == CON) ) {
         
         dr_item new_dr_item;
         new_dr_item.mutation_id = de->_id;
@@ -593,7 +593,7 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
                   continue;
               }
               
-              parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Mutation requires 'before' or 'within' field to disambiguate when and how it occurs because it overlaps bases that are duplicated or deleted by another mutation.", true);
+              parse_errors.add_line_error(from_string<uint32_t>((*de)["_line_number"]), de->as_string(), "Mutation requires 'before' or 'within' field to disambiguate when and how it occurs because it overlaps bases that are duplicated or deleted by mutation  with id " + ita->mutation_id + ".", true);
             } 
           }
         }

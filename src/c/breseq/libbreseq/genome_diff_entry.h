@@ -275,8 +275,8 @@ namespace breseq {
     {
       return (
               this->entry_exists("frequency")
-              && ((from_string<int32_t>((*this)["frequency"]) != 1))
-              && ((from_string<int32_t>((*this)["frequency"]) != 0))
+              && ((from_string<double>((*this)["frequency"]) != 1))
+              && ((from_string<double>((*this)["frequency"]) != 0))
       );
     }
 
