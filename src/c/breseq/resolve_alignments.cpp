@@ -804,9 +804,7 @@ void load_junction_alignments(
             it++; 
         }
         
-        // The score is the number of matches
-        best_junction_score = eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments, best_reference_score);
-        
+        best_junction_score = eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments, settings.junction_allow_suboptimal_matches, best_reference_score);
       }
       
       // Nothing to be done if there were no eligible matches to either

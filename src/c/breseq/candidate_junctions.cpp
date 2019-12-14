@@ -51,13 +51,19 @@ namespace breseq {
    *  Otherwise, returns only alignments tied for best.
    */
   
- uint32_t eligible_read_alignments(const Settings& settings, const cReferenceSequences& ref_seq_info, alignment_list& alignments, int32_t min_match_score)
+ uint32_t eligible_read_alignments(
+                                   const Settings& settings,
+                                   const cReferenceSequences& ref_seq_info,
+                                   alignment_list& alignments,
+                                   bool keep_suboptimal_matches,
+                                   int32_t min_match_score
+                                   )
   {
     bool verbose = false;
     
     if (alignments.size() == 0) return 0;
     
-    // require read to be mapped! -- @JEB maybe this should be checked sooner?
+    // Require read to be mapped and get out of here if it is not!
     for (alignment_list::iterator it = alignments.begin(); it != alignments.end();)
     {
       if (it->get()->unmapped())
@@ -141,8 +147,9 @@ namespace breseq {
         last_best++;
     }
     
-    // Truncate only to ties for best
-    alignments.resize(last_best);
+    // Default is to truncate only to ties for best
+    if (!keep_suboptimal_matches)
+      alignments.resize(last_best);
     
     // Require a minimum length of the read to be mapped
     // Must be applied AFTER sorting and accepting based on score

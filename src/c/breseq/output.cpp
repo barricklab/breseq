@@ -763,6 +763,11 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     HTML << tr(td("Minimum probablilty assigned that no mapped read will start at a given position and strand for junction prediction")
                + td(ALIGN_CENTER, to_string<double>(settings.minimum_pr_no_read_start_per_position))
                );
+    
+    HTML << tr(td("Junction allow suboptimal matches")
+               + td(ALIGN_CENTER, settings.junction_allow_suboptimal_matches ? "TRUE" : "FALSE")
+               );
+    
     HTML << tr(td("Skew score of predicted junction (&minus;log10 probability of unusual coverage evenness) must be")
                + td(ALIGN_CENTER, "&le;&nbsp;" + to_string<double>(settings.junction_pos_hash_neg_log10_p_value_cutoff))
                );

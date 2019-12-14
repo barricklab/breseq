@@ -322,8 +322,10 @@ namespace breseq
 		bool add_split_junction_sides;                        // Default = true (possibly remove this option) 
     uint32_t minimum_alignment_resolution_pos_hash_score; // Default = 2
     double minimum_pr_no_read_start_per_position;         // Default = 0.1
-    int32_t junction_minimum_side_match;                 // Default = 1 or 6;
+    int32_t junction_minimum_side_match;                  // Default = 1 or 6;
     double junction_pos_hash_neg_log10_p_value_cutoff;    // Default = 2.0, 0 = means don't calculate (to implement)
+    bool junction_allow_suboptimal_matches;                       // Default = false
+    
     
     //! Settings: Mutation Identification
     

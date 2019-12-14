@@ -242,8 +242,9 @@ namespace breseq
     ("junction-minimum-pos-hash-score", "Minimum number of distinct spanning read start positions required to accept a junction (DEFAULT = consensus mode, 3; polymorphism mode, 3)", "", ADVANCED_OPTION)
     ("junction-minimum-side-match", "Minimum number of bases a read must extend past any overlap or read-only sequence at the breakpoint of a junction on each side to count as support for the junction (DEFAULT = consensus mode, 1; polymorphism mode, 6)", "", ADVANCED_OPTION)
     ("junction-minimum-pr-no-read-start-per-position", "Minimum probablilty assigned that no mapped read will start at a given position and strand for junction prediction", 0.1, ADVANCED_OPTION)
+    ("junction-allow-suboptimal-matches", "Assign a read to the junction candidate with the most overall support as long as its match to this junction is better than to any location in the reference sequence, even if it matches a different junction candidate better. This behavior was the default before v0.35.0. It will align more reads to junctions but risks misassigning some reads to the wrong junction candidates. It is only recommended that you use this option in CONSENSUS mode", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
-        
+    
     options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Consensus Read Alignment (RA) Evidence Options", ADVANCED_OPTION);
     options
@@ -457,6 +458,7 @@ namespace breseq
     this->minimum_candidate_junction_pos_hash_score = from_string<double>(options["junction-minimum-candidate-pos-hash-score"]);
     this->maximum_junction_sequence_passed_alignment_pairs_to_consider = from_string<uint64_t>(options["junction-alignment-pair-limit"]);
     this->junction_pos_hash_neg_log10_p_value_cutoff = from_string<double>(options["junction-score-cutoff"]);
+    this->junction_allow_suboptimal_matches = options.count("junction-allow-suboptimal-matches");
     
     //! Settings: Pipeline Control
     this->skip_read_alignment_and_missing_coverage_prediction = options.count("skip-RA-MC-prediction");
@@ -539,8 +541,7 @@ namespace breseq
       this->minimum_alignment_resolution_pos_hash_score = 3;
       this->junction_minimum_side_match = 1;
     }
-    
-    
+      
     // override the default settings
     
     if (options.count("minimum-mapping-quality")) {
@@ -800,6 +801,7 @@ namespace breseq
     this->junction_pos_hash_neg_log10_p_value_cutoff = 3;
     this->minimum_alignment_resolution_pos_hash_score = 3;
     this->minimum_pr_no_read_start_per_position = 0.1;
+    this->junction_allow_suboptimal_matches = false;
 
     //! Settings: Mutation Identification
     this->base_quality_cutoff = 3;

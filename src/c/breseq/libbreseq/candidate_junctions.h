@@ -310,8 +310,9 @@ namespace breseq {
   uint32_t eligible_read_alignments(
                                     const Settings& settings, 
                                     const cReferenceSequences& ref_seq_info, 
-                                    alignment_list& alignments, 
-                                    int32_t min_match_score = 0
+                                    alignment_list& alignments,
+                                    bool keep_suboptimal_matches = false,
+                                    int32_t min_match_score = -1 // OFF
                                     );
   
 	bool test_read_alignment_requirements(

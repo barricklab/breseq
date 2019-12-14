@@ -1,3 +1,12 @@
+Version 0.35.0
+   * Increased specificity of JC prediction. Reads are now only assigned to candidate
+     junctions that are their best matches. They are never assigned to other junctions,
+     even if they match them better than the reference. To get the earlier behavior
+     (which might be preferred for consensus mode or for predicting polymorphisms from
+     a population with little diversity use the --junction-allow-suboptimal-matches option.
+     This option can result in some reads being misassigned to the wrong junctions.
+   * Fixed various errors when using --user-evidence files and --aligned-sam input.
+
 Version 0.34.2
    * Improved compatibility with versions of R compiled with limited graphics support
    * Increased resolution of coverage plots
