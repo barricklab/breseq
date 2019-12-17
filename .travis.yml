@@ -2,3 +2,6 @@ language: cpp
 
 compiler:
   - gcc
+
+before_script:
+  - ./bootstrap.sh
