@@ -9,8 +9,8 @@
 ##
 ## Copyright (c) 2010 Michigan State University
 ##
-## breseq is free software; you can redistribute it and/or modify it under the terms the 
-## GNU General Public License as published by the Free Software Foundation; either 
+## breseq is free software; you can redistribute it and/or modify it under the terms the
+## GNU General Public License as published by the Free Software Foundation; either
 ## version 1, or (at your option) any later version.
 ##
 ###
@@ -134,68 +134,5 @@ EXTRA_DIST = \
 	synced_bcf_reader.c \
 	tabix.1 \
 	tabix.c \
-	test/aux\#aux_java.cram \
-	test/auxf\#values.sam \
-	test/auxf.fa \
-	test/auxf.fa.fai \
-	test/c1\#bounds.sam \
-	test/c1\#clip.sam \
-	test/c1\#noseq.sam \
-	test/c1\#pad1.sam \
-	test/c1\#pad2.sam \
-	test/c1\#pad3.sam \
-	test/c1\#unknown.sam \
-	test/c1.fa \
-	test/c1.fa.fai \
-	test/c2\#pad.sam \
-	test/c2.fa \
-	test/c2.fa.fai \
-	test/ce\#1.sam \
-	test/ce\#2.sam \
-	test/ce\#5.sam \
-	test/ce\#5b.sam \
-	test/ce\#5b_java.cram \
-	test/ce\#large_seq.sam \
-	test/ce\#supp.sam \
-	test/ce\#tag_depadded.sam \
-	test/ce\#tag_padded.sam \
-	test/ce\#unmap.sam \
-	test/ce\#unmap1.sam \
-	test/ce\#unmap2.sam \
-	test/ce.fa \
-	test/ce.fa.fai \
-	test/compare_sam.pl \
-	test/cross_validate.sh \
-	test/faidx.fa \
-	test/fieldarith.c \
-	test/fieldarith.sam \
-	test/formatcols.vcf \
-	test/hfile.c \
-	test/noroundtrip-out.vcf \
-	test/noroundtrip.vcf \
-	test/sam.c \
-	test/test-regidx.c \
-	test/test-vcf-api.c \
-	test/test-vcf-api.out \
-	test/test-vcf-hdr-in.vcf \
-	test/test-vcf-hdr.out \
-	test/test-vcf-sweep.c \
-	test/test-vcf-sweep.out \
-	test/test.pl \
-	test/test_view.c \
-	test/xx\#blank.sam \
-	test/xx\#large_aux.sam \
-	test/xx\#large_aux2.sam \
-	test/xx\#large_aux_java.cram \
-	test/xx\#minimal.sam \
-	test/xx\#pair.sam \
-	test/xx\#repeated.sam \
-	test/xx\#rg.sam \
-	test/xx\#tlen.sam \
-	test/xx\#tlen2.sam \
-	test/xx\#triplet.sam \
-	test/xx\#unsorted.sam \
-	test/xx.fa \
-	test/xx.fa.fai \
 	vcf.5 \
 	vcf_sweep.c
