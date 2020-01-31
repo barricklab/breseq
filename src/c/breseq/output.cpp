@@ -26,7 +26,7 @@ namespace breseq
 {
 
 /*-----------------------------------------------------------------------------
- *  Diff_Entry Keywords 
+ *  Diff_Entry Keywords
  *-----------------------------------------------------------------------------*/
 const char* ALIGNMENT_EMPTY_CHANGE_LINE="alignment_empty_change_line";
 const char* ALIGNMENT_OVERLAP="alignment_overlap";
@@ -80,7 +80,7 @@ namespace output
 /*
  * =====================================================================================
  *        Class:  HTML
- *  Description:  
+ *  Description:
  * =====================================================================================
  */
 /*-----------------------------------------------------------------------------
@@ -89,6 +89,13 @@ namespace output
 const char* ALIGN_CENTER="align=\"center\"";
 const char* ALIGN_RIGHT="align=\"right\"";
 const char* ALIGN_LEFT="align=\"left\"";
+const char* CLASS_EVIDENCE="class=\"evidence\"";
+const char* CLASS_POSITION="class=\"position\"";
+const char* CLASS_MUTATION="class=\"mutation\"";
+const char* CLASS_ANNONTATION="class=\"annotation\"";
+const char* CLASS_GENE="class=\"gene\"";
+const char* CLASS_DESCRIPTION="class=\"description\"";
+const char* CLASS_FREQ="class=\"freq\"";
 
 /*-----------------------------------------------------------------------------
  *  HTML Utility for printing numbers
@@ -115,7 +122,7 @@ string commify(const string& input)
  *  HTML Utility for Encoding HTML
  *-----------------------------------------------------------------------------*/
 string nonbreaking(const string& input)
-{   
+{
   string retval = input;
   
   /* substitute nonbreaking en dash */
@@ -132,7 +139,7 @@ string nonbreaking(const string& input)
 /*-----------------------------------------------------------------------------
  *  HTML Utility for Encoding HTML
  *-----------------------------------------------------------------------------*/
-string htmlize(const string& input) 
+string htmlize(const string& input)
 {
   string retval = input;
     
@@ -146,10 +153,10 @@ string htmlize(const string& input)
 }
 
 /*-----------------------------------------------------------------------------
- *  These style definitions are included between the HTML <head> 
+ *  These style definitions are included between the HTML <head>
  *  tags of every genereated .html page.
  *-----------------------------------------------------------------------------*/
-string header_style_string() 
+string header_style_string()
 {
   stringstream ss;
   ss << "body {font-family: sans-serif; font-size: 11pt;}"                 << endl;
@@ -187,9 +194,10 @@ return ss.str();
 /*-----------------------------------------------------------------------------
  *  Javascript to include inside the head.
  *-----------------------------------------------------------------------------*/
-string javascript_string() 
+string javascript_string()
 {
   stringstream ss;
+  ss << "<script src=\"./list.js\"></script>"                                   << endl;
   ss << "<script type=\"text/javascript\">"                                     << endl;
   ss << "  function hideTog(divID) {"                                           << endl;
   ss << "    var item = document.getElementById(divID);"                        << endl;
@@ -204,6 +212,19 @@ string javascript_string()
   ss << "    }"                                                                 << endl;
   ss << "  }"                                                                   << endl;
   ss << "</script>"                                                             << endl;
+  
+  return ss.str();
+}
+
+string javascript_end()
+{
+  stringstream ss;
+  ss << "<script type=\"text/javascript\">"                                                                 << endl;
+  ss << "  var options = {"                                                                                 << endl;
+  ss << "    valueNames: ['evidence', 'position', 'mutation', 'annotation', 'freq', 'gene', 'description']" << endl;
+  ss << "  };"                                                                                              << endl;
+  ss << "  var mutationList = new List('predictions', options);"                                            << endl;
+  ss << "</script>"                                                                                         << endl;
   
   return ss.str();
 }
@@ -259,11 +280,11 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   // Unassigned JC evidence
   /////////////////////////
   diff_entry_list_t jc = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(JC)));
-  jc.remove_if(cDiffEntry::rejected_and_not_user_defined()); 
+  jc.remove_if(cDiffEntry::rejected_and_not_user_defined());
 
   //Don't show junctions for circular chromosomes
   if (settings.hide_circular_genome_junctions) {
-    jc.remove_if(cDiffEntry::field_exists("circular_chromosome")); 
+    jc.remove_if(cDiffEntry::field_exists("circular_chromosome"));
   }
    
   if (jc.size() > 0) {
@@ -287,8 +308,10 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
     HTML << "<p>No mutations predicted." << endl;
   }
   
+  HTML << javascript_end();
   HTML << html_footer();
   HTML.close();
+  SYSTEM("cp " + settings.program_data_path + "/list.js " +  settings.output_path);
 }
 
 
@@ -357,7 +380,7 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   }
 
   // Build HTML Head
-  HTML << html_header("BRESEQ :: Marginal Predictions",settings); 
+  HTML << html_header("BRESEQ :: Marginal Predictions",settings);
   HTML << breseq_header_string(settings) << endl;
   HTML << "<p>" << endl;
   
@@ -371,7 +394,7 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   if (ref_seq_info.size() == 1)
     one_ref_seq = true;
   else
-    one_ref_seq = false; 
+    one_ref_seq = false;
 
   // ###
   // ## Marginal evidence
@@ -450,14 +473,14 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
 
 string html_header (const string& title, const Settings& settings)
 {
-  stringstream ss(ios_base::out | ios_base::app);  
+  stringstream ss(ios_base::out | ios_base::app);
   
   ss << "<!DOCTYPE html" << endl;
-	ss << "PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"" << endl;
+  ss << "PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\"" << endl;
   ss << "\"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">" << endl;
   ss << "<html xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"en\" xml:lang=\"en\">" << endl;
   
-  ss << "<html>" << endl;  
+  ss << "<html>" << endl;
   ss << "<head>" << endl;
   ss << "<title>";
   if (!settings.print_custom_run_name.empty()) {
@@ -475,6 +498,7 @@ string html_header (const string& title, const Settings& settings)
   }
   ss << "</head>" << endl;
   ss << "<body>" << endl;
+  ss << "<div id=\"predictions\">" << endl;
   return ss.str();
 }
 
@@ -482,8 +506,8 @@ string html_header (const string& title, const Settings& settings)
 
 void html_compare(
                   const Settings& settings,
-                  const string &file_name, 
-                  const string &title, 
+                  const string &file_name,
+                  const string &title,
                   cGenomeDiff& gd,
                   MutationTableOptions& mt_options
                   )
@@ -507,7 +531,7 @@ void html_compare(
   
 
 void html_summary(const string &file_name, const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info)
-{  
+{
   // Create stream and confirm it's open
   ofstream HTML(file_name.c_str());
   ASSERT(HTML.good(), "Could not open file: " + file_name);
@@ -524,17 +548,17 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   
   HTML << h2("Read File Information") << endl;
   HTML << start_table("border=\"0\" cellspace=\"1\" cellpadding=\"5\"") << endl;
-  HTML << start_tr() << th() << th("read file") << th("reads") << 
+  HTML << start_tr() << th() << th("read file") << th("reads") <<
                     th("bases") <<  th("passed&nbsp;filters") << th("average") << th("longest") << th("mapped") << "</tr>" << endl;
   for(cReadFiles::const_iterator it=settings.read_files.begin(); it!=settings.read_files.end(); it++)
   {
     const AnalyzeFastqSummary& s = summary.sequence_conversion.reads[it->m_base_name];
     const ReadFileSummary& rf = summary.alignment_resolution.read_file[it->m_base_name];
     HTML << start_tr();
-    HTML << td( a(Settings::relative_path( 
+    HTML << td( a(Settings::relative_path(
                       settings.file_name(settings.error_rates_plot_file_name, "#", it->m_base_name), settings.output_path
-                                          ), 
-                "errors" 
+                                          ),
+                "errors"
                 )
               );
     HTML << td(it->m_base_name);
@@ -553,7 +577,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   
   HTML << start_tr("class=\"highlight_table_row\"");
   HTML << td();
-  HTML << td(b("total"));  
+  HTML << td(b("total"));
   HTML << td(ALIGN_RIGHT , b(commify(to_string(summary.sequence_conversion.num_reads))) );
   HTML << td(ALIGN_RIGHT , b(commify(to_string(summary.sequence_conversion.num_bases))) );
   double total_percent_pass_filters = 100 * (static_cast<double>(summary.sequence_conversion.num_reads) / static_cast<double>(summary.sequence_conversion.num_original_reads));
@@ -572,9 +596,9 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << h2("Reference Sequence Information") << endl;
   HTML << "<p>" << endl;
   HTML << "<table border=\"0\" cellspacing=\"1\" cellpadding=\"5\" >" << endl;
-  HTML << "<tr>" << th() << 
-                    th() << 
-                    th("seq id") << 
+  HTML << "<tr>" << th() <<
+                    th() <<
+                    th("seq id") <<
                     th("length") <<
                     th(ALIGN_CENTER, "fit mean") <<
                     th(ALIGN_CENTER, "fit dispersion") <<
@@ -591,7 +615,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     uint32_t tid = ref_seq_info.seq_id_to_index(it->m_seq_id);
     double this_reference_mapped_reads = summary.alignment_resolution.reference[tid].reads_mapped_to_reference;
     uint64_t total_mapped_reads = summary.alignment_resolution.total_reads_mapped_to_references;
-    double this_reference_fraction_mapped_reads = 100 * this_reference_mapped_reads / total_mapped_reads; 
+    double this_reference_fraction_mapped_reads = 100 * this_reference_mapped_reads / total_mapped_reads;
     
     // Keep track of references that were special
     // If it had no coverage then it also failed fit, but track separately
@@ -618,10 +642,10 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
       }
       
       total_length += it->m_length;
-      HTML << td( a(Settings::relative_path( 
+      HTML << td( a(Settings::relative_path(
                                             settings.file_name(settings.overview_coverage_plot_file_name, "@", it->m_seq_id), settings.output_path
-                                            ), 
-                    "coverage" 
+                                            ),
+                    "coverage"
                     )
                  );
       
@@ -629,10 +653,10 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
       //if (!fragment_no_coverage) {
       HTML << td( a(Settings::relative_path(
                                             settings.file_name(settings.unique_only_coverage_plot_file_name, "@", to_string<uint32_t>(settings.seq_id_to_coverage_group(it->m_seq_id))), settings.output_path
-                                            ), 
-                    "distribution" 
+                                            ),
+                    "distribution"
                     )
-                 ); 
+                 );
       //}
       //else {
       //  HTML << td("");
@@ -661,7 +685,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     
     HTML << td(it->m_description);
     HTML << "</tr>";
-  }  
+  }
   
   HTML << "<tr class=\"highlight_table_row\">";
   HTML << td();
@@ -688,7 +712,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   // Junction evidence
   ////
   
-  if (!settings.skip_new_junction_prediction) {
+  if (!settings.skip_junction_prediction) {
     
     HTML << h2("New Junction Evidence") << endl;
     HTML << "<p>" << endl;
@@ -825,11 +849,11 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     HTML << tr(td("Polymorphism minimum total coverage")
                + td((settings.polymorphism_minimum_total_coverage == 0) ? "OFF" : to_string<int32_t>(settings.polymorphism_minimum_total_coverage))
                );
-    HTML << tr(td("Polymorphism bias cutoff") 
+    HTML << tr(td("Polymorphism bias cutoff")
                + td((settings.polymorphism_bias_p_value_cutoff == 0) ? "OFF" : to_string<double>(settings.polymorphism_bias_p_value_cutoff))
                );
     
-    HTML << tr(td("Predict indel polymorphisms") 
+    HTML << tr(td("Predict indel polymorphisms")
                + td((settings.no_indel_polymorphisms) ? "NO" : "YES")
                );
     // Rejects if >= this length
@@ -842,7 +866,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
                );
 
 
-    HTML << end_table();    
+    HTML << end_table();
   }
   
   ////
@@ -883,10 +907,10 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << "<p>"<< endl;
   HTML << h2("Execution Times") << endl;
   HTML << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"5\"") << endl;
-  HTML << "<tr>" << th("step") << th("start") << th("end") << th("elapsed") << "</tr>" << endl; 
-  double total_time_elapsed = 0; 
+  HTML << "<tr>" << th("step") << th("start") << th("end") << th("elapsed") << "</tr>" << endl;
+  double total_time_elapsed = 0;
 
-  for (vector<ExecutionTime>::const_iterator itr = times.begin(); itr != times.end(); itr ++) {  
+  for (vector<ExecutionTime>::const_iterator itr = times.begin(); itr != times.end(); itr ++) {
     const ExecutionTime& t = (*itr);
     
     if (t._message.empty()) continue;
@@ -896,9 +920,9 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     HTML << td(nonbreaking(t._formatted_time_start));
     HTML << td(nonbreaking(t._formatted_time_end));
     HTML << td(nonbreaking(t._formatted_time_elapsed));
-    HTML << "</tr>" << endl; 
+    HTML << "</tr>" << endl;
 
-    total_time_elapsed += t._time_elapsed;    
+    total_time_elapsed += t._time_elapsed;
   }
 
   HTML << "<tr class=\"highlight_table_row\">"<< endl;
@@ -993,9 +1017,9 @@ string breseq_header_string(const Settings& settings)
   ss << start_td("width=\"100%\"") << endl;
   ss << settings.byline << endl;
   ss << "<br>";
-  ss << a(Settings::relative_path(settings.index_html_file_name, settings.output_path), "mutation predictions"); 
+  ss << a(Settings::relative_path(settings.index_html_file_name, settings.output_path), "mutation predictions");
   ss << " | " << endl;
-  ss << a(Settings::relative_path(settings.marginal_html_file_name, settings.output_path), "marginal predictions"); 
+  ss << a(Settings::relative_path(settings.marginal_html_file_name, settings.output_path), "marginal predictions");
   ss << " | " << endl;
   ss << a(Settings::relative_path(settings.summary_html_file_name, settings.output_path), "summary statistics");
   ss << " | " << endl;
@@ -1018,7 +1042,7 @@ string html_genome_diff_item_table_string(const Settings& settings, cGenomeDiff&
   {
     MutationTableOptions mt_options(settings);
     mt_options.detailed=true;
-    return Html_Mutation_Table_String(settings, gd, list_ref, mt_options); 
+    return Html_Mutation_Table_String(settings, gd, list_ref, mt_options);
   }
   //evidence
   else
@@ -1039,7 +1063,7 @@ string html_genome_diff_item_table_string(const Settings& settings, cGenomeDiff&
     {
       return html_copy_number_table_string(list_ref,true);
     }
-  }  
+  }
   return "";
 }
 
@@ -1170,7 +1194,7 @@ string to_underline_red_codon(const string& _codon_ref_seq, const string& _codon
     if (i+1 == codon_position) {
       ss << font("class=\"mutation_in_codon\"", codon_ref_seq.substr(i,1));
     }
-    else 
+    else
     {
       ss << codon_ref_seq[i];
     }
@@ -1179,7 +1203,7 @@ string to_underline_red_codon(const string& _codon_ref_seq, const string& _codon
 }
 
 string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_details, const string& title, const string& relative_link)
-{  
+{
   if (list_ref.size()==0) return "";
   
   stringstream ss; //!< Main build object for function
@@ -1201,7 +1225,7 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
   //Create Column Titles
   //seq_id/position/change/freq/score/cov/annotation/genes/product
   if (title != "") {
-    ss << tr(th("colspan=\"" + to_string(total_cols) + 
+    ss << tr(th("colspan=\"" + to_string(total_cols) +
                 "\" align=\"left\" class=\"read_alignment_header_row\"", title)) << endl;
     ss << "<tr>" << endl;
   }
@@ -1224,7 +1248,7 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
   
   //Loop through list_ref to build table rows
   for (diff_entry_list_t::iterator itr = list_ref.begin();
-       itr != list_ref.end(); itr ++) {  
+       itr != list_ref.end(); itr ++) {
     cDiffEntry& c = **itr;
     
     bool is_polymorphism = false;
@@ -1246,7 +1270,7 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
 
     string fisher_p_value;
     if (c.entry_exists("fisher_strand_p_value") &&
-       (c["fisher_strand_p_value"] != "ND")) 
+       (c["fisher_strand_p_value"] != "ND"))
     {
       ssf.str("");
       ssf.clear();
@@ -1320,7 +1344,7 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
     vector<string> temp_cov = split(c[TOTAL_COV], "/");
     string top_cov = temp_cov[0];
     string bot_cov = temp_cov[1];
-    string total_cov = to_string(from_string<uint32_t>(top_cov) + 
+    string total_cov = to_string(from_string<uint32_t>(top_cov) +
                                  from_string<uint32_t>(bot_cov));
     ss << td(ALIGN_CENTER, total_cov);// "Cov" Column
     ss << td(ALIGN_CENTER, formatted_mutation_annotation(c)); //"Annotation" Column DON'T call nonbreaking on the whole thing
@@ -1328,14 +1352,14 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
     ss << td(ALIGN_LEFT, htmlize(substitute(c[GENE_PRODUCT], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator)));
     ss << "</tr>" << endl;
 
-    if (show_details) 
+    if (show_details)
     {
       
       // Show information about the strands supporting the change
       
       if ( (c[MAJOR_BASE] == c[REF_BASE]) || (c[MINOR_BASE] == c[REF_BASE]) || (c[MINOR_BASE] == "N") ) {
       
-      ss << tr("class=\"information_table_row\"", 
+      ss << tr("class=\"information_table_row\"",
                td("colspan=\"" + to_string(total_cols) + "\"",
                   "Reads supporting (aligned to +/- strand):&nbsp;&nbsp;" +
                   b("ref") + " base " + c[REF_BASE] + " (" + c[REF_COV] + ")" + ";&nbsp;&nbsp;" +
@@ -1355,7 +1379,7 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
       }
         
       /* Fisher Strand Test */
-      if (c.entry_exists("fisher_strand_p_value")) 
+      if (c.entry_exists("fisher_strand_p_value"))
       {
         ssf.clear();
         ssf.str("");
@@ -1363,7 +1387,7 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
         ssf << scientific << from_string<float>(c["fisher_strand_p_value"]);
         string fisher_strand_p_value = ssf.str();
 
-        ss << tr("class=\"information_table_row\"", 
+        ss << tr("class=\"information_table_row\"",
                  td("colspan=\"" + to_string(total_cols) + "\"",
                     "Fisher's exact test for biased strand distribution " +
                     i("p") + "-value = " +fisher_strand_p_value));
@@ -1374,12 +1398,12 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
         ssf.str("");
         ssf.clear();
         ssf.precision(2);
-        ssf << scientific << (c.entry_exists(KS_QUALITY_P_VALUE) ? 
+        ssf << scientific << (c.entry_exists(KS_QUALITY_P_VALUE) ?
           from_string<float>(c["ks_quality_p_value"]) :
           0);
         string ks_quality_p_value = ssf.str();
 
-        ss << tr("class=\"information_table_row\"", 
+        ss << tr("class=\"information_table_row\"",
                  td("colspan=\"" + to_string(total_cols) + "\"",
                     " Kolmogorov-Smirnov test that lower quality scores support variant " +
                     i("p") + "-value = " +ks_quality_p_value));
@@ -1438,21 +1462,21 @@ string html_missing_coverage_table_string(diff_entry_list_t& list_ref, bool show
   
   bool coverage_plots = list_ref.front()->entry_exists(_EVIDENCE_FILE_NAME);
     
-  bool link = ( list_ref.front()->entry_exists(_SIDE_1_EVIDENCE_FILE_NAME) && 
+  bool link = ( list_ref.front()->entry_exists(_SIDE_1_EVIDENCE_FILE_NAME) &&
                 list_ref.front()->entry_exists(_SIDE_2_EVIDENCE_FILE_NAME) );
   
   size_t total_cols = link ? 11 : 8;
 
   if (title != "") {
-    ss << "<tr>" << th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"missing_coverage_header_row\"", title) << "</tr>" << endl;   
+    ss << "<tr>" << th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"missing_coverage_header_row\"", title) << "</tr>" << endl;
   }
   
   ss << "<tr>";
     
-  if (link) 
+  if (link)
   {
     ss << th("&nbsp;") <<  th("&nbsp;");
-    if (coverage_plots) 
+    if (coverage_plots)
     {
       ss << th("&nbsp;");
     }
@@ -1469,31 +1493,31 @@ string html_missing_coverage_table_string(diff_entry_list_t& list_ref, bool show
   ss << th("width=\"100%\"", "description") << endl;
   ss << "</tr>" << endl;
 
-  for (diff_entry_list_t::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++) 
-  {  
+  for (diff_entry_list_t::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++)
+  {
     cDiffEntry& c =  **itr;
 
     ss << "<tr>" << endl;
-    if (link) 
+    if (link)
     {
       ss << td(a(relative_link + c[_SIDE_1_EVIDENCE_FILE_NAME], "*")) << endl;
-      ss << td(a(relative_link + c[_SIDE_2_EVIDENCE_FILE_NAME], "*")) << endl; 
+      ss << td(a(relative_link + c[_SIDE_2_EVIDENCE_FILE_NAME], "*")) << endl;
       
-      if (coverage_plots) 
+      if (coverage_plots)
         ss << td(a(relative_link + c[_EVIDENCE_FILE_NAME], "&divide;")) << endl;
     }
 
     string start = c[START];
-    if (from_string<uint32_t>(c[START_RANGE]) > 0) 
+    if (from_string<uint32_t>(c[START_RANGE]) > 0)
     {
-      start += "–" + 
-        to_string(from_string<uint32_t>(c[START]) + 
+      start += "–" +
+        to_string(from_string<uint32_t>(c[START]) +
                   from_string<uint32_t>(c[START_RANGE]));
     }
     string end = c[END];
-    if (from_string<uint32_t>(c[END_RANGE]) > 0) 
+    if (from_string<uint32_t>(c[END_RANGE]) > 0)
     {
-       end += "–" + 
+       end += "–" +
          to_string(from_string<uint32_t>(c[END]) -
                    from_string<uint32_t>(c[END_RANGE]));
     }
@@ -1501,18 +1525,18 @@ string html_missing_coverage_table_string(diff_entry_list_t& list_ref, bool show
     string size = to_string(from_string<uint32_t>(c[END]) - from_string<uint32_t>(c[START]) + 1);
       
     if (
-        (from_string<uint32_t>(c[END_RANGE]) > 0) 
+        (from_string<uint32_t>(c[END_RANGE]) > 0)
         || (from_string<uint32_t>(c[START_RANGE]) > 0)
-        ) 
+        )
     {
      
-      uint32_t size_value = 
-      from_string<uint32_t>(c[END]) - 
+      uint32_t size_value =
+      from_string<uint32_t>(c[END]) -
       from_string<uint32_t>(c[START]) + 1 -
       from_string<uint32_t>(c[END_RANGE]) -
       from_string<uint32_t>(c[START_RANGE]);
      
-      size = to_string(size_value) + "–" + size; 
+      size = to_string(size_value) + "–" + size;
     }
      
     ss << td(nonbreaking(c[SEQ_ID])) << endl;
@@ -1525,15 +1549,15 @@ string html_missing_coverage_table_string(diff_entry_list_t& list_ref, bool show
     ss << td(ALIGN_LEFT, htmlize(substitute(c[GENE_PRODUCT], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) << endl;
     ss << "</tr>" << endl;
 
-    if (show_details && c.entry_exists(REJECT)) 
+    if (show_details && c.entry_exists(REJECT))
     {
       vector<string> reject_reasons = c.get_reject_reasons();
-      for (vector<string>::iterator itr = reject_reasons.begin(); itr != reject_reasons.end(); itr ++) 
-      {  
+      for (vector<string>::iterator itr = reject_reasons.begin(); itr != reject_reasons.end(); itr ++)
+      {
         string& reject = (*itr);
-        ss << tr("class=\"reject_table_row\"", 
+        ss << tr("class=\"reject_table_row\"",
                  td("colspan=\"" + to_string(total_cols) + "\"",
-                    "Rejected: " + decode_reject_reason(reject)));  
+                    "Rejected: " + decode_reject_reason(reject)));
       }
     }
   }
@@ -1571,11 +1595,11 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
   if (title != "") {
     ss << tr(th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"new_junction_header_row\"", title)) << endl;
   }
-// #     
+// #
 // #   #####################
 // #   #### HEADER LINE ####
 // #   #####################
-  ss << "<!-- Header Lines for New Junction -->" << endl; 
+  ss << "<!-- Header Lines for New Junction -->" << endl;
   ss << "<tr>" << endl;
     
   if (link) {
@@ -1595,17 +1619,17 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
   ss << th("width=\"100%\"","product") << endl;
   ss << "</tr>" << endl;
   ss << endl;
-// #   
+// #
 // #   ####################
 // #   #### ITEM LINES ####
 // #   ####################
   ss << "<!-- Item Lines for New Junction -->" << endl;
-// #   
+// #
 // #   ## the rows in this table are linked (same background color for every two)
-  uint32_t row_bg_color_index = 0; 
+  uint32_t row_bg_color_index = 0;
   
-  for (diff_entry_list_t::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++) 
-  {  
+  for (diff_entry_list_t::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++)
+  {
     cDiffEntry& c = **itr;
 // #     ##############
 // #     ### Side 1 ###
@@ -1617,20 +1641,20 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
     ss << start_tr("class=\"mutation_table_row_" + to_string(row_bg_color_index) +"\"") << endl;
 
      if (link) {
-      ss << td("rowspan=\"2\"", 
+      ss << td("rowspan=\"2\"",
               a(relative_link + c[_NEW_JUNCTION_EVIDENCE_FILE_NAME], "*" )) << endl;
      }
 
      { // Begin hiding data for side 1
 
-      if (link) {   
-        ss << td("rowspan=\"1\"", 
+      if (link) {
+        ss << td("rowspan=\"1\"",
                 a(relative_link + c[_SIDE_1_EVIDENCE_FILE_NAME], "?")) << endl;
       }
       ss << td("rowspan=\"1\" class=\"" + annotate_key + "\"",
             nonbreaking(c[key + "_seq_id"])) << endl;
        
-      if (from_string<int32_t>(c[key + "_strand"]) == 1) { 
+      if (from_string<int32_t>(c[key + "_strand"]) == 1) {
         ss << td("align=\"center\" class=\"" + annotate_key +"\"",
                 c[key + "_position"] + "&nbsp;=");
       } else {
@@ -1654,18 +1678,18 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
           unique_read_sequence_string += "+" + to_string<uint32_t>(c["unique_read_sequence"].size()) + " bp";
         }
       }
-      ss << td("rowspan=\"2\" align=\"center\"", 
+      ss << td("rowspan=\"2\" align=\"center\"",
                c["new_junction_read_count"] + " (" + string_to_fixed_digit_string(c["new_junction_coverage"], 3) + ")" +
                unique_read_sequence_string  ) << endl;
-      ss << td("rowspan=\"2\" align=\"center\"", 
+      ss << td("rowspan=\"2\" align=\"center\"",
                c["pos_hash_score"] + "/" +  c["max_pos_hash_score"]) << endl;
-      ss << td("rowspan=\"2\" align=\"center\"", 
+      ss << td("rowspan=\"2\" align=\"center\"",
               c["neg_log10_pos_hash_p_value"]) << endl;
 
       ss << td("rowspan=\"2\" align=\"center\"", Html_Mutation_Table_String::freq_to_string(c[POLYMORPHISM_FREQUENCY])) << endl;
               
                //" (" + c["max_left"] + "/" + c["max_right"] + ")") << endl;
-      ss << td("align=\"center\" class=\"" + annotate_key + "\"", 
+      ss << td("align=\"center\" class=\"" + annotate_key + "\"",
               nonbreaking(substitute(c["_" + key + GENE_POSITION], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) << endl;
       ss << td("align=\"center\" class=\"" + annotate_key + "\"",
               i(nonbreaking(substitute(c["_" + key + GENE_NAME], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator)))) << endl;
@@ -1681,24 +1705,24 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
     ss << "<!-- Side 2 Item Lines for New Junction -->" << endl;
     key = "side_2";
     annotate_key = "junction_" + c[key + "_annotate_key"];
-    ss << start_tr("class=\"mutation_table_row_" + 
+    ss << start_tr("class=\"mutation_table_row_" +
                   to_string(row_bg_color_index) + "\"") << endl;
 
     { //Begin hiding data for side 2
       if (link) {
-        ss << td("rowspan=\"1\"", 
+        ss << td("rowspan=\"1\"",
                 a(relative_link +  c[_SIDE_2_EVIDENCE_FILE_NAME], "?"));
       }
       ss << td("rowspan=\"1\" class=\"" + annotate_key + "\"",
               nonbreaking(c[key + "_seq_id"])) << endl;
 
-      if (from_string<int32_t>(c[key + "_strand"]) == 1) { 
+      if (from_string<int32_t>(c[key + "_strand"]) == 1) {
         ss << td("align=\"center\" class=\"" + annotate_key +"\"",
                 c[key + "_position"] + "&nbsp;=") << endl;
       } else {
         ss << td("align=\"center\" class=\"" + annotate_key +"\"",
                 "=&nbsp;" + c[key + "_position"]) << endl;
-      } 
+      }
       
       ss << td("align=\"center\" class=\"" + annotate_key +"\"",
                c[key + "_read_count"] + " (" + string_to_fixed_digit_string(c[key + "_coverage"], 3) + ")" );
@@ -1794,8 +1818,8 @@ string html_copy_number_table_string(diff_entry_list_t& list_ref, bool show_deta
   // #   #### ITEM LINES ####
   // #   ####################
   
-  for (diff_entry_list_t::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++) 
-  {  
+  for (diff_entry_list_t::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++)
+  {
     cDiffEntry& c = **itr;
     
     ss << start_tr("class=\"normal_table_row\"") << endl;
@@ -1812,7 +1836,7 @@ string html_copy_number_table_string(diff_entry_list_t& list_ref, bool show_deta
     
     ss << td(ALIGN_CENTER, nonbreaking(c["p-value"])) << endl;
     
-    stringstream num; 
+    stringstream num;
     num << fixed << setprecision(2) << from_string<double>(c["relative_coverage"]);
     ss << td(ALIGN_CENTER, num.str()) << endl;
     
@@ -1896,7 +1920,7 @@ string decode_reject_reason(const string& reject)
   
   return "Unknown rejection reason.";
 }
-// # 
+// #
 
 
 
@@ -1905,11 +1929,11 @@ string decode_reject_reason(const string& reject)
  *-----------------------------------------------------------------------------*/
 
 void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenomeDiff& gd)
-{  
+{
   coverage_output co(
-                     settings.reference_bam_file_name, 
-                     settings.reference_fasta_file_name, 
-                     settings.coverage_plot_r_script_file_name, 
+                     settings.reference_bam_file_name,
+                     settings.reference_fasta_file_name,
+                     settings.coverage_plot_r_script_file_name,
                      settings.coverage_plot_path
                      );
   co.output_format("png");
@@ -1947,7 +1971,7 @@ void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenom
       string region = (*item)[SEQ_ID] + ":" + (*item)[START] + "-" + (*item)[END];
       string coverage_plot_file_name = settings.evidence_path + "/" + (*item)[SEQ_ID] + "_" + (*item)[START] + "-" + (*item)[END] + "." + co.output_format();
 
-      string link_coverage_plot_file_name = Settings::relative_path(coverage_plot_file_name, settings.evidence_path);    
+      string link_coverage_plot_file_name = Settings::relative_path(coverage_plot_file_name, settings.evidence_path);
       (*item)[_COVERAGE_PLOT_FILE_NAME] = link_coverage_plot_file_name;
       
       cerr << "Creating coverage plot for region: " << region << endl;
@@ -2268,7 +2292,7 @@ Html_Mutation_Table_String::Html_Mutation_Table_String(
  *--------------------------------------------------------------------------------------
  *       Class:  Html_Mutation_Table_String
  *      Method:  Html_Mutation_Table_String :: Header_Line
- * Description:  
+ * Description:
  *--------------------------------------------------------------------------------------
  */
 void Html_Mutation_Table_String::Header_Line(bool print_main_header)
@@ -2287,7 +2311,7 @@ void Html_Mutation_Table_String::Header_Line(bool print_main_header)
 
   if ( (options.gd_name_list_ref.size() > 1) || (options.force_show_sample_headers)) {
     freq_header_list = options.gd_name_list_ref;
-  } 
+  }
   else if(settings.polymorphism_prediction || options.force_frequencies_for_one_reference) {
     freq_header_list = make_vector<string>("freq");
   }
@@ -2297,26 +2321,26 @@ void Html_Mutation_Table_String::Header_Line(bool print_main_header)
     size_t header_rows = header_list.size() - 1; //!< -1 is necessary for C++
 
     total_cols = 7 + freq_header_list.size() ;
-    if(!options.one_ref_seq) total_cols += 1; 
+    if(!options.one_ref_seq) total_cols += 1;
     if(!settings.no_evidence) total_cols += 1;
 
     for (size_t i = 1; i <= header_rows; i++) {
      ss << "<!-- Header Line -->" << endl;
      ss << "<tr>" << endl;
       if(!settings.no_evidence)
-        ss << th("evidence") << endl;
+        ss << th(CLASS_EVIDENCE, "evidence") << endl;
       if(!options.one_ref_seq)
        ss << th(nonbreaking("seq id")) << endl;
 
-      ss << th( (header_rows == i) ? "position" : "") << endl;
-      ss << th( (header_rows == i) ? "mutation" : "") << endl;
-      ss << th( (header_rows == i) ? "annotation" : "") << endl;
-      ss << th( (header_rows == i) ? "gene" : "") << endl;
-      ss << th("width=\"100%\"", (header_rows == i) ? "description" : "") << endl;
+      ss << th( CLASS_POSITION, (header_rows == i) ? "position" : "") << endl;
+      ss << th( CLASS_MUTATION, (header_rows == i) ? "mutation" : "") << endl;
+      ss << th( CLASS_ANNONTATION, (header_rows == i) ? "annotation" : "") << endl;
+      ss << th( CLASS_GENE, (header_rows == i) ? "gene" : "") << endl;
+      ss << th(string(CLASS_DESCRIPTION)+string(" width=\"100%\""), (header_rows == i) ? "description" : "") << endl;
       for (vector<string>::iterator itr = freq_header_list.begin(); itr != freq_header_list.end(); itr++) {
-        string& freq_header_item(*itr);        
+        string& freq_header_item(*itr);
 
-        vector<string> header_list = split(freq_header_item, "|");        
+        vector<string> header_list = split(freq_header_item, "|");
         string this_header_string = header_list[i-1];
         while(this_header_string.find("_") != string::npos)
         {
@@ -2326,14 +2350,14 @@ void Html_Mutation_Table_String::Header_Line(bool print_main_header)
         string this_header_string_1 = header_list.front();
         string this_header_string_2 = header_list[1];
 
-        string color = "black";  
+        string color = "black";
   
         if( this_header_string_1 == "UC" )
         color = "gray";
         else if( this_header_string_1 == "clade_1" )
-        color = "green";  
+        color = "green";
         else if( this_header_string_1 == "clade_2" )
-          color = "blue";  
+          color = "blue";
         else if( this_header_string_1 == "clade_3" &&
                  (this_header_string_2 == "ZDB483" ||
                  this_header_string_2 == "ZDB30") )
@@ -2341,10 +2365,10 @@ void Html_Mutation_Table_String::Header_Line(bool print_main_header)
         else if( this_header_string_1 == "clade_3" )
           color = "red";
 
-        ss << th("style=\"background-color:" + color + "\"", this_header_string) << endl;  
+        ss << th("style=\"background-color:" + color + "\"", this_header_string) << endl;
         ss << th(this_header_string) << endl;
-      }    
-      ss << th(header_rows == i ? "position" : "") << endl;
+      }
+      ss << th(CLASS_POSITION , header_rows == i ? "position" : "") << endl;
       ss << "</tr>" << endl;
     }
   } else {
@@ -2358,38 +2382,39 @@ void Html_Mutation_Table_String::Header_Line(bool print_main_header)
 
     ss <<  "<tr>" << endl;
     if (!settings.no_evidence)
-      ss << th("evidence") << endl;
+      ss << th(CLASS_EVIDENCE ,"evidence") << endl;
 
     if(!options.one_ref_seq)
       ss << th(nonbreaking("seq id")) << endl;
 
-    ss << th("position") << endl;
-    ss << th("mutation") << endl;
+    ss << th(CLASS_POSITION, "position") << endl;
+    ss << th(CLASS_MUTATION, "mutation") << endl;
 
     if(freq_header_list.size() > 0) {
       for (vector<string>::iterator itr = freq_header_list.begin() ;
           itr != freq_header_list.end() ; itr++) {
         string& freq_header_item = *itr;
-        ss << th(freq_header_item) << endl;
+        ss << th(CLASS_FREQ, freq_header_item) << endl;
       }
     }
  
-    ss << th("annotation") << endl;
-    ss << th("gene") << endl;
-    ss << th("width=\"100%\"","description") << endl;
-    ss << "</tr>" << endl; 
+    ss << th(CLASS_ANNONTATION, "annotation") << endl;
+    ss << th(CLASS_GENE, "gene") << endl;
+    ss << th(string(CLASS_DESCRIPTION)+"width=\"100%\"","description") << endl;
+    ss << "</tr>" << endl;
   }
 
   if(print_main_header && (header_text != ""))
-    (*this) += tr(th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"mutation_header_row\"", header_text));
+    (*this) += tr(th("colspan=\"" + to_string(total_cols-2) + "\" align=\"left\" class=\"mutation_header_row\"", header_text)+
+                  th("colspan=\"2\" align=\"center\" class=\"mutation_header_row\"", "Search: <input type=\"text\" class=\"search\" placeholder=\"Search mutation\" />"));
   
   ss << endl;
-  (*this) += ss.str(); 
+  (*this) += ss.str();
 }
 //===============================================================================
 //       CLASS: Html_Mutation_Table_String
 //      METHOD: Item_Lines
-// DESCRIPTION: 
+// DESCRIPTION:
 //===============================================================================
 void Html_Mutation_Table_String::Item_Lines()
 {
@@ -2399,11 +2424,12 @@ void Html_Mutation_Table_String::Item_Lines()
 // #
   size_t row_num = 0;
 
-  stringstream ss; 
+  stringstream ss;
   ss << "<!-- Item Lines -->" << endl;
+  ss << "<tbody class=\"list\">" << endl;
   (*this) += ss.str();
   ss.str("");
-  for (diff_entry_list_t::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++) { 
+  for (diff_entry_list_t::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++) {
     cDiffEntry& mut = (**itr);
 
     if ((row_num != 0) && (options.repeat_header != 0) && (row_num % options.repeat_header == 0))
@@ -2419,13 +2445,13 @@ void Html_Mutation_Table_String::Item_Lines()
        
       diff_entry_list_t in_evidence_list = gd.in_evidence_list(mut);
       
-      for (diff_entry_list_t::iterator evitr = in_evidence_list.begin(); evitr != in_evidence_list.end(); evitr ++) {  
+      for (diff_entry_list_t::iterator evitr = in_evidence_list.begin(); evitr != in_evidence_list.end(); evitr ++) {
         cDiffEntry& evidence_item = **evitr;
 
         if (evidence_item._type == RA) {
-          if (already_added_RA) 
+          if (already_added_RA)
             continue;
-          else 
+          else
             already_added_RA = true;
         }
         
@@ -2446,7 +2472,7 @@ void Html_Mutation_Table_String::Item_Lines()
     }
     
     // There are three possibilities for the frequency column(s)
-    // (1) We don't want it at all. (Single genome no poly prediction)   
+    // (1) We don't want it at all. (Single genome no poly prediction)
     vector<string> freq_list;
    
     // (2) We are in compare mode and need a column for each file
@@ -2477,11 +2503,12 @@ void Html_Mutation_Table_String::Item_Lines()
     add_html_fields_to_mutation(mut, options);
     
     // ###### PRINT THE TABLE ROW ####
-    ss << endl << "<!-- Print The Table Row -->" << endl; 
+    ss << endl << "<!-- Print The Table Row -->" << endl;
     ss << start_tr("class=\"" + row_class + "\"") << endl;
 
     if (!settings.no_evidence) {
-      ss << td(ALIGN_CENTER, evidence_string) << "<!-- Evidence -->" << endl;
+      
+      ss << td(string(CLASS_EVIDENCE)+" "+string(ALIGN_CENTER), evidence_string) << "<!-- Evidence -->" << endl;
     }
     if (!options.one_ref_seq) {
       ss << td(ALIGN_CENTER, mut[HTML_SEQ_ID]) << "<!-- Seq_Id -->" << endl;
@@ -2494,7 +2521,7 @@ void Html_Mutation_Table_String::Item_Lines()
         position_str += nonbreaking(":" + mut[INSERT_POSITION]);
       }
     }
-    ss << td(ALIGN_RIGHT, position_str) << "<!-- Position -->" << endl;
+    ss << td(string(CLASS_POSITION)+" "+string(ALIGN_RIGHT), position_str) << "<!-- Position -->" << endl;
     
     string mutation_str = mut[HTML_MUTATION];
     if (mut.entry_exists(PHYLOGENY_ID)) {
@@ -2502,29 +2529,30 @@ void Html_Mutation_Table_String::Item_Lines()
         mutation_str += nonbreaking(" #" + mut[PHYLOGENY_ID]);
       }
     }
-    ss << td(ALIGN_CENTER, mutation_str) << "<!-- Cell Mutation -->" << endl;
+    ss << td(string(CLASS_MUTATION)+" "+string(ALIGN_CENTER), mutation_str) << "<!-- Cell Mutation -->" << endl;
           
     if (settings.lenski_format) {
       ss << "<!-- Lenski_Format -->" << endl;
-      ss << td(ALIGN_CENTER, mut[HTML_MUTATION_ANNOTATION]) << endl;
-      ss << td(ALIGN_CENTER, mut[HTML_GENE_NAME]) << endl;
-      ss << td(ALIGN_LEFT, mut[HTML_GENE_PRODUCT]) << endl;
+      ss << td(string(CLASS_ANNONTATION)+" "+string(ALIGN_CENTER), mut[HTML_MUTATION_ANNOTATION]) << endl;
+      ss << td(string(CLASS_GENE)+" "+string(ALIGN_CENTER), mut[HTML_GENE_NAME]) << endl;
+      ss << td(string(CLASS_DESCRIPTION)+" "+string(ALIGN_LEFT), mut[HTML_GENE_PRODUCT]) << endl;
     }
     
     //Need if statement for C++
     if (freq_list.size() >= 1 && !freq_list[0].empty()) {
       ss << freq_cols(freq_list) << endl;
-    } 
+    }
     if (settings.lenski_format) {
       ss << "<!-- Lenski Format -->" << endl;
-      ss << td(ALIGN_CENTER, mut[HTML_POSITION]) << endl;
+      ss << td(string(CLASS_POSITION)+" "+string(ALIGN_CENTER), mut[HTML_POSITION]) << endl;
     } else {
-      ss << td(ALIGN_CENTER, mut[HTML_MUTATION_ANNOTATION]) << endl;
-      ss << td(ALIGN_CENTER, mut[HTML_GENE_NAME]) << endl;
-      ss << td(ALIGN_LEFT, mut[HTML_GENE_PRODUCT]) << endl;
+      ss << td(string(CLASS_ANNONTATION)+" "+string(ALIGN_CENTER), mut[HTML_MUTATION_ANNOTATION]) << endl;
+      ss << td(string(CLASS_GENE)+" "+string(ALIGN_CENTER), mut[HTML_GENE_NAME]) << endl;
+      ss << td(string(CLASS_DESCRIPTION)+" "+string(ALIGN_LEFT), mut[HTML_GENE_PRODUCT]) << endl;
     }
     ss << end_tr() << endl;
-
+    
+    
     ss << "<!-- End Table Row -->" << endl;
     
     (*this) += ss.str();
@@ -2532,20 +2560,23 @@ void Html_Mutation_Table_String::Item_Lines()
     
   } //##### END TABLE ROW ####
   
+  ss << "</tbody>" << endl;
+  
   if (options.legend_row) {
     ss << "<tr>" << endl;
-    ss << td("colspan=\"" + to_string(total_cols) + "\"", 
+    ss << td("colspan=\"" + to_string(total_cols) + "\"",
                     b("Evidence codes: RA = read alignment, MC = missing coverage, JC = new junction"));
     ss << "</tr>" << endl;
   }
-  ss << "</table>";
+  ss << "</table>" << endl;
+  ss << "</div>";
   
   (*this) += ss.str();
 }
-// # 
+// #
 //===============================================================================
 //       CLASS: Html_Mutation_Table_String
-//      METHOD: freq_to_string  
+//      METHOD: freq_to_string
 // DESCRIPTION: Helper function used in Item_Lines
 //===============================================================================
 string Html_Mutation_Table_String::freq_to_string(const string& freq, bool multiple_columns)
@@ -2581,19 +2612,19 @@ string Html_Mutation_Table_String::freq_to_string(const string& freq, bool multi
     ss << conv_freq << "%";
       
   }
-  return ss.str(); 
+  return ss.str();
 }
 
 //===============================================================================
 //       CLASS: Html_Mutation_Table_String
-//      METHOD: freq_cols  
+//      METHOD: freq_cols
 // DESCRIPTION: Helper function used in Item_Lines
 //===============================================================================
 string Html_Mutation_Table_String::freq_cols(vector<string> freq_list)
 {
   stringstream ss;
   for (vector<string>::iterator itr = freq_list.begin();
-       itr != freq_list.end(); itr ++) {  
+       itr != freq_list.end(); itr ++) {
     string& freq = (*itr);
     if (options.shade_frequencies) {
       string bgcolor;
@@ -2602,26 +2633,26 @@ string Html_Mutation_Table_String::freq_cols(vector<string> freq_list)
       }
       if (!bgcolor.empty()) {
         ss << td("align=\"right\" bgcolor=\"" + bgcolor +"\"", "&nbsp;");
-      } 
+      }
       else {
         ss << td(ALIGN_RIGHT,"&nbsp;");
       }
     }
     else {
-      ss << td (ALIGN_RIGHT, freq_to_string(freq, freq_list.size() > 1));
+      ss << td (string(CLASS_FREQ)+" "+string(ALIGN_RIGHT), freq_to_string(freq, freq_list.size() > 1));
     }
   }
   return ss.str();
-}  
+}
   
 /*
  * =====================================================================================
  *        Class:  Evidence_Files
- *  Description:  
+ *  Description:
  * =====================================================================================
  */
 cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff& gd)
-{  
+{
   // Fasta and BAM files for making alignments.
   string reference_bam_file_name = settings.reference_bam_file_name;
   string reference_fasta_file_name = settings.reference_fasta_file_name;
@@ -2636,8 +2667,8 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
   //cerr << "Number of MC evidence items: " << items_MC.size() << endl;
   
   
-  for (diff_entry_list_t::iterator itr = items_MC.begin(); itr != items_MC.end(); itr ++) 
-  {  
+  for (diff_entry_list_t::iterator itr = items_MC.begin(); itr != items_MC.end(); itr ++)
+  {
     diff_entry_ptr_t item(*itr);
     
     diff_entry_ptr_t parent_item;
@@ -2655,7 +2686,7 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
                  (BAM_PATH, reference_bam_file_name)
                  (FASTA_PATH, reference_fasta_file_name)
                  (PREFIX, "MC_SIDE_1")
-                 (SEQ_ID, (*item)[SEQ_ID])            
+                 (SEQ_ID, (*item)[SEQ_ID])
                  (START, to_string(from_string<uint32_t>((*item)[START]) - 1))
                  (END,  to_string(from_string<uint32_t>((*item)[START]) - 1)));
     
@@ -2666,7 +2697,7 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
                  (BAM_PATH, reference_bam_file_name)
                  (FASTA_PATH, reference_fasta_file_name)
                  (PREFIX, "MC_SIDE_2")
-                 (SEQ_ID, (*item)[SEQ_ID])            
+                 (SEQ_ID, (*item)[SEQ_ID])
                  (START, to_string(from_string<uint32_t>((*item)[END]) + 1))
                  (END,  to_string(from_string<uint32_t>((*item)[END]) + 1)));
     
@@ -2677,7 +2708,7 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
                  (BAM_PATH, reference_bam_file_name)
                  (FASTA_PATH, reference_fasta_file_name)
                  (PREFIX, "MC_PLOT")
-                 (SEQ_ID, (*item)[SEQ_ID])            
+                 (SEQ_ID, (*item)[SEQ_ID])
                  (START, (*item)[START])
                  (END,  (*item)[END])
                  (PLOT, (*item)[_COVERAGE_PLOT_FILE_NAME])); // filled by draw_coverage
@@ -2689,21 +2720,21 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
   diff_entry_list_t items_SNP_INS_DEL_SUB = gd.show_list(make_vector<gd_entry_type>(SNP)(INS)(DEL)(SUB));
   //cerr << "Number of SNP_INS_DEL_SUB evidence items: " << items_SNP_INS_DEL_SUB.size() << endl;
   
-  for (diff_entry_list_t::iterator itr = items_SNP_INS_DEL_SUB.begin(); itr != items_SNP_INS_DEL_SUB.end(); itr ++) 
-  {  
+  for (diff_entry_list_t::iterator itr = items_SNP_INS_DEL_SUB.begin(); itr != items_SNP_INS_DEL_SUB.end(); itr ++)
+  {
     diff_entry_ptr_t item = *itr;
     diff_entry_list_t in_evidence_list = gd.in_evidence_list(*item);
     
     // #this reconstructs the proper columns to draw
     uint32_t start = from_string<uint32_t>((*item)[POSITION]);
     // This handled coordinates that were shifted in INS/DEL mutations
-    if (item->entry_exists("_original_aligned_position")) 
+    if (item->entry_exists("_original_aligned_position"))
       start = from_string<uint32_t>((*item)["_original_aligned_position"]);
     uint32_t end = start;
     uint32_t insert_start = 0;
     uint32_t insert_end = 0;
     
-    if (item->_type == INS) 
+    if (item->_type == INS)
     {
       diff_entry_list_t ins_evidence_list = gd.in_evidence_list(*item);
       ASSERT(ins_evidence_list.size() != 0, "Could not find evidence for INS entry:\n" + item->as_string());
@@ -2718,20 +2749,20 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
         ERROR("Unknown evidence type supporting INS entry:\n" + item->as_string());
       }
     }
-    else if (item->_type == DEL) 
+    else if (item->_type == DEL)
     {
       bool has_ra_evidence = false;
-      for (diff_entry_list_t::iterator itr = in_evidence_list.begin(); itr != in_evidence_list.end(); itr ++) 
-      {  
+      for (diff_entry_list_t::iterator itr = in_evidence_list.begin(); itr != in_evidence_list.end(); itr ++)
+      {
         cDiffEntry& evidence_item = **itr;
         if (evidence_item._type == RA) has_ra_evidence = true;
       }
-      if(!has_ra_evidence) continue;  
+      if(!has_ra_evidence) continue;
       
       end = start + from_string<uint32_t>((*item)[SIZE]) - 1;
     }
     
-    else if (item->_type == SUB ) 
+    else if (item->_type == SUB )
     {
       end = start + (*item)[NEW_SEQ].size() - 1;
     }
@@ -2742,7 +2773,7 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
                  make_map<string,string>
                  (BAM_PATH, reference_bam_file_name)
                  (FASTA_PATH, reference_fasta_file_name)
-                 (SEQ_ID, (*item)[SEQ_ID])            
+                 (SEQ_ID, (*item)[SEQ_ID])
                  (START, to_string(start))
                  (END,  to_string(end))
                  (INSERT_START, to_string(insert_start))
@@ -2751,11 +2782,11 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
     
     
     // Add evidence to RA items as well
-    for (diff_entry_list_t::iterator itr = in_evidence_list.begin(); itr != in_evidence_list.end(); itr ++) 
-    {  
+    for (diff_entry_list_t::iterator itr = in_evidence_list.begin(); itr != in_evidence_list.end(); itr ++)
+    {
       cDiffEntry& evidence_item = **itr;
       if (evidence_item._type != RA) continue;
-      evidence_item[_EVIDENCE_FILE_NAME] = (*item)[_EVIDENCE_FILE_NAME];  
+      evidence_item[_EVIDENCE_FILE_NAME] = (*item)[_EVIDENCE_FILE_NAME];
     }
   }
   
@@ -2766,8 +2797,8 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
   diff_entry_list_t items_RA = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(RA)));
   //cerr << "Number of RA evidence items: " << items_RA.size() << endl;
   
-  for (diff_entry_list_t::iterator itr = items_RA.begin(); itr != items_RA.end(); itr ++) 
-  {  
+  for (diff_entry_list_t::iterator itr = items_RA.begin(); itr != items_RA.end(); itr ++)
+  {
     diff_entry_ptr_t item = *itr;
     
     add_evidence(_EVIDENCE_FILE_NAME,
@@ -2776,7 +2807,7 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
                  make_map<string,string>
                  (BAM_PATH, reference_bam_file_name)
                  (FASTA_PATH, reference_fasta_file_name)
-                 (SEQ_ID, (*item)[SEQ_ID])            
+                 (SEQ_ID, (*item)[SEQ_ID])
                  (START, (*item)[POSITION])
                  (END, (*item)[POSITION])
                  (INSERT_START, (*item)[INSERT_POSITION])
@@ -2784,15 +2815,15 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
                  (PREFIX, to_string(item->_type)));
   }
   // This additional information is used for the complex reference line.
-  // Note that it is completely determined by the original candidate junction sequence 
+  // Note that it is completely determined by the original candidate junction sequence
   // positions and overlap: alignment_pos and alignment_overlap.
   
   
   diff_entry_list_t items_JC = gd.show_list(make_vector<gd_entry_type>(JC));
   //cerr << "Number of JC evidence items: " << items_JC.size() << endl;
   
-  for (diff_entry_list_t::iterator itr = items_JC.begin(); itr != items_JC.end(); itr ++) 
-  {  
+  for (diff_entry_list_t::iterator itr = items_JC.begin(); itr != items_JC.end(); itr ++)
+  {
     diff_entry_ptr_t item = *itr;
     
     diff_entry_ptr_t parent_item;
@@ -2815,7 +2846,7 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
     JunctionInfo juncInfo((*item)["key"]);
     juncInfo.sides[0].redundant = from_string<int32_t>((*item)[SIDE_1_REDUNDANT]);
     juncInfo.sides[0].position = from_string<int32_t>((*item)[SIDE_1_POSITION]);
-    juncInfo.sides[1].position = from_string<int32_t>((*item)[SIDE_2_POSITION]); 
+    juncInfo.sides[1].position = from_string<int32_t>((*item)[SIDE_2_POSITION]);
     
     add_evidence(_NEW_JUNCTION_EVIDENCE_FILE_NAME,
                  item,
@@ -2838,11 +2869,11 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
                  make_map<string,string>
                  (BAM_PATH, reference_bam_file_name)
                  (FASTA_PATH, reference_fasta_file_name)
-                 (SEQ_ID, (*item)[SIDE_1_SEQ_ID])            
+                 (SEQ_ID, (*item)[SIDE_1_SEQ_ID])
                  (START, (*item)[SIDE_1_POSITION])
                  (END, (*item)[SIDE_1_POSITION])
                  (PREFIX, "JC_SIDE_1")
-                 ); 
+                 );
     
     add_evidence(_SIDE_2_EVIDENCE_FILE_NAME,
                  item,
@@ -2850,7 +2881,7 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
                  make_map<string,string>
                  (BAM_PATH, reference_bam_file_name)
                  (FASTA_PATH, reference_fasta_file_name)
-                 (SEQ_ID, (*item)[SIDE_2_SEQ_ID])            
+                 (SEQ_ID, (*item)[SIDE_2_SEQ_ID])
                  (START, (*item)[SIDE_2_POSITION])
                  (END, (*item)[SIDE_2_POSITION])
                  (PREFIX, "JC_SIDE_2")
@@ -2860,8 +2891,8 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
   // Copy number evidence
   diff_entry_list_t items_CN = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(CN)));
   
-  for (diff_entry_list_t::iterator itr = items_CN.begin(); itr != items_CN.end(); itr ++) 
-  {  
+  for (diff_entry_list_t::iterator itr = items_CN.begin(); itr != items_CN.end(); itr ++)
+  {
     diff_entry_ptr_t item = *itr;
     
     add_evidence(_EVIDENCE_FILE_NAME,
@@ -2871,7 +2902,7 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
                  (BAM_PATH, reference_bam_file_name)
                  (FASTA_PATH, reference_fasta_file_name)
                  (PREFIX, "CN_PLOT")
-                 (SEQ_ID, (*item)[SEQ_ID])            
+                 (SEQ_ID, (*item)[SEQ_ID])
                  (START, (*item)[START])
                  (END,  (*item)[END])
                  (PLOT, (*item)[_COVERAGE_PLOT_FILE_NAME])); // filled by draw_coverage
@@ -2883,10 +2914,10 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
   create_path(settings.evidence_path);
   //cerr << "Total number of evidence items: " << evidence_list.size() << endl;
   
-  for (vector<cOutputEvidenceItem>::iterator itr = evidence_list.begin(); itr != evidence_list.end(); itr ++) 
-  {  
+  for (vector<cOutputEvidenceItem>::iterator itr = evidence_list.begin(); itr != evidence_list.end(); itr ++)
+  {
     cOutputEvidenceItem& e = (*itr);
-    //cerr << "Creating evidence file: " + e[FILE_NAME] << endl;   
+    //cerr << "Creating evidence file: " + e[FILE_NAME] << endl;
     html_evidence_file(settings, gd, e);
   }
 }
@@ -2911,15 +2942,15 @@ void cOutputEvidenceFiles::add_evidence(const string& evidence_file_name_key, di
 /*-----------------------------------------------------------------------------
  *  Create the HTML Evidence File
  *-----------------------------------------------------------------------------*/
-// # 
-// # 
-void 
+// #
+// #
+void
 cOutputEvidenceFiles::html_evidence_file (
-                                    const Settings& settings, 
-                                    cGenomeDiff& gd, 
+                                    const Settings& settings,
+                                    cGenomeDiff& gd,
                                     cOutputEvidenceItem& item
                                     )
-{  
+{
   string output_path = settings.evidence_path + "/" + item[FILE_NAME];
   
   // Create Stream and Confirm It's Open
@@ -2947,15 +2978,15 @@ cOutputEvidenceFiles::html_evidence_file (
   vector<gd_entry_type> types = make_vector<gd_entry_type>(RA)(MC)(JC);
   
   for (vector<gd_entry_type>::iterator itr = types.begin(); itr != types.end(); itr ++)
-  {  
+  {
     const gd_entry_type type = *itr;
     diff_entry_list_t this_evidence_list = evidence_list;
-    this_evidence_list.remove_if(cDiffEntry::is_not_type(type));   
+    this_evidence_list.remove_if(cDiffEntry::is_not_type(type));
     
     if(this_evidence_list.empty()) continue;
     
     HTML << html_genome_diff_item_table_string(settings, gd, this_evidence_list);
-    HTML << "<p>"; 
+    HTML << "<p>";
   }
   
   if (item.entry_exists(PLOT) && !item[PLOT].empty())
