@@ -1,3 +1,7 @@
+Version 0.35.1
+  * Fixed bug in gdtools ANNOTATE that caused it to fail with --preserve-evidence
+  * Miscellaneous improvements to other gdtools subcommands.
+
 Version 0.35.0
    * Increased specificity of JC prediction. Reads are now only assigned to candidate
      junctions that are their best matches. They are never assigned to other junctions,
