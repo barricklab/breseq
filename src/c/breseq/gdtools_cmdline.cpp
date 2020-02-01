@@ -1024,7 +1024,7 @@ void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list,
 		}
 		
 		// Safety for downstream operations - must strip_to_mutations_and_unknown if in compare mode
-		ASSERT(compare_mode || strip_to_mutations_and_unknown, "Unable to merge multiple GD files and preserve evidence entries.");
+		ASSERT(!compare_mode || strip_to_mutations_and_unknown, "Unable to merge multiple GD files and preserve evidence entries.");
 		
 		// Clean to the desired region here to avoid
 		if (options.count("region")) {
