@@ -188,6 +188,12 @@ int do_apply(int argc, char *argv[])
 		return -1;
 	}
 	
+  if (!options.count("reference")) {
+    options.addUsage("");
+    options.addUsage("No reference files provided.");
+    options.printUsage();
+  }
+	
 
 	string format = to_upper(options["format"]);
 	if (format == "GFF") format = "GFF3"; // allow synonym
