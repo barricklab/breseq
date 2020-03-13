@@ -750,7 +750,7 @@ namespace breseq {
   }
   
   // Load a complete collection of files and verify that sufficient information was loaded
-  void cReferenceSequences::LoadFiles(const vector<string>& file_names)
+  void cReferenceSequences::LoadFiles(const vector<string>& file_names, bool use_version_as_seq_id)
   {
     list<string> sorted_unique_file_names(file_names.begin(), file_names.end());
 
@@ -759,7 +759,7 @@ namespace breseq {
     
     for(list<string>::const_iterator it = sorted_unique_file_names.begin(); it != sorted_unique_file_names.end(); it++)
     {
-      this->PrivateLoadFile(*it);
+      this->PrivateLoadFile(*it, use_version_as_seq_id);
     }
     
     this->VerifySequenceFeatureMatch();
@@ -806,7 +806,7 @@ namespace breseq {
   }
   
   
-  void cReferenceSequences::PrivateLoadFile(const string& file_name)
+  void cReferenceSequences::PrivateLoadFile(const string& file_name, bool use_version_as_seq_id)
   {
     ifstream in(file_name.c_str());
     ASSERT(in.good(), "Could not open reference file: " +file_name);
@@ -863,7 +863,7 @@ namespace breseq {
         
         ASSERT(eof_found, file_name + "\nTHIS GENBANK FILE APPEARS TO BE INCOMPLETE.\nMAKE SURE YOU DOWNLOADED THE ENTIRE FILE.\nFILE NEEDS TO END WITH '//'.");
         
-        ReadGenBank(file_name);
+        ReadGenBank(file_name, use_version_as_seq_id);
       }break;
         
       case FASTA:
@@ -1388,12 +1388,12 @@ void cReferenceSequences::WriteCSV(const string &file_name) {
   }
 }
 
-void cReferenceSequences::ReadGenBank(const string& in_file_name) {
+void cReferenceSequences::ReadGenBank(const string& in_file_name, bool use_version_as_seq_id) {
 
   ifstream in(in_file_name.c_str(), ios_base::in);
   ASSERT(!in.fail(), "Could not open GenBank file: " + in_file_name);
 
-  while (ReadGenBankFileHeader(in, in_file_name)) {
+  while (ReadGenBankFileHeader(in, in_file_name, use_version_as_seq_id)) {
     
     cAnnotatedSequence& this_seq = this->back();
     
@@ -1422,12 +1422,23 @@ void cReferenceSequences::ReadGenBank(const string& in_file_name) {
   }
 }
 
-bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file_name) {
+bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file_name, bool use_version_as_seq_id) {
 
+  // All files have a LOCUS line
+  // Some files may not have a VERSION line (allow this to be missing)
+  
   //std::cout << "header" << std::endl;
   string line;
   bool found_LOCUS_line = false;
-  cAnnotatedSequence* s = NULL;
+  bool found_VERSION_line = false;
+  uint32_t sequence_length = 0;
+  bool sequence_is_circular = false;
+  string sequence_description;
+  
+  // We'll decide between using these two as the seq_id depending on option
+  string locus_seq_id;
+  string version_seq_id;
+  
   while (!in.eof()) {
     breseq::getline(in, line);
     string first_word = GetWord(line);
@@ -1441,34 +1452,57 @@ bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file
       
       string w;
       w = GetWord(line);
-      string seq_id = w;
-      seq_id = safe_seq_id_name(seq_id);
-      
-      this->add_new_seq(seq_id, file_name);
-      s = &((*this)[seq_id]);
+      locus_seq_id = safe_seq_id_name(w);
       
       w = GetWord(line);
-      s->m_length = atoi(w.c_str());
+      sequence_length = atoi(w.c_str());
       
       w = GetWord(line);
       w = GetWord(line);
       w = GetWord(line);
       if (to_lower(w) == "circular")
-        s->m_is_circular = true;
+        sequence_is_circular = true;
 
       // Should only be one line like this per record!
-      ASSERT(!found_LOCUS_line, "Multiple LOCUS lines found in single GenBank record."); 
+      ASSERT(!found_LOCUS_line, "Multiple LOCUS lines found in a single GenBank record.");
       found_LOCUS_line = true;
     }
+    
+    // This is a later line
+    if (first_word == "VERSION") {
+
+      // Example line
+      // VERSION     pDCAF3mut  GI:500229631
+      
+      string w;
+      w = GetWord(line);
+      version_seq_id = safe_seq_id_name(w);
+
+      // Should only be one line like this per record!
+      ASSERT(!found_VERSION_line, "Multiple VERSION lines found in a single GenBank record.");
+      found_VERSION_line = true;
+    }
+
 
     if (first_word == "DEFINITION") {
       ASSERT(s, "Missing LOCUS line before DEFINITION line in GenBank record.");
-      s->m_description = line;
+      sequence_description = line;
     }
 
     if (first_word == "FEATURES") break;
   }
 
+  // Set up the new sequence here
+  if (found_LOCUS_line) {
+    cAnnotatedSequence* s = NULL;
+    string seq_id = (found_VERSION_line && use_version_as_seq_id) ? version_seq_id : locus_seq_id;
+    this->add_new_seq(seq_id, file_name);
+    s = &((*this)[seq_id]);
+    s->m_length = sequence_length;
+    s->m_is_circular = sequence_is_circular;
+    s->m_description = sequence_description;
+  }
+  
   return (found_LOCUS_line);
 }
 

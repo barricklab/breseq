@@ -803,7 +803,7 @@ namespace breseq {
     {}
 
     //!< Load all reference files and verify - this is the only public load method!
-    void LoadFiles(const vector<string>& file_names);
+    void LoadFiles(const vector<string>& file_names, bool use_version_as_seq_id = false);
     
     //!: Convenience function to load just one file
     void LoadFile(const string& file_name)
@@ -834,7 +834,7 @@ namespace breseq {
     //!< Load reference file into object
     //!< Detect file type and load the information in it appropriately
     //!< Should not be called directly, only through LoadFiles!
-    void PrivateLoadFile(const string& file_name);
+    void PrivateLoadFile(const string& file_name, bool use_version_as_seq_id = false);
     
     //!< Verify that all seq_id have sequence and that features fit in sequence;
     void VerifySequenceFeatureMatch();
@@ -846,8 +846,8 @@ namespace breseq {
     void ReadBull(const string& file_name);
 
     //!< Read GenBank file
-    void ReadGenBank(const string& in_file_names);
-    bool ReadGenBankFileHeader(std::ifstream& in, const string& file_name);
+    void ReadGenBank(const string& in_file_names, bool use_version_as_seq_id = false);
+    bool ReadGenBankFileHeader(std::ifstream& in, const string& file_name, bool use_version_as_seq_id);
     //void ReadGenBankTag(std::string& tag, std::string& s, std::ifstream& in);
     void ReadGenBankFileSequenceFeatures(std::ifstream& in, cAnnotatedSequence& s);
     void ReadGenBankFileSequence(std::ifstream& in, cAnnotatedSequence& s);

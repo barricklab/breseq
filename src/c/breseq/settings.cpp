@@ -194,6 +194,7 @@ namespace breseq
     ("read-min-length", "Reads in the input FASTQ file that are shorter than this length will be ignored. (0 = OFF)", 18, ADVANCED_OPTION)
     ("read-max-same-base-fraction", "Reads in the input FASTQ file in which this fraction or more of the bases are the same will be ignored. (0 = OFF)", 0.9, ADVANCED_OPTION)
     ("read-max-N-fraction", "Reads in the input FASTQ file in which this fraction or more of the bases are uncalled as N will be ignored. (0 = OFF)", 0.5, ADVANCED_OPTION)
+    ("use-version-for-seq-id", "If present, use the full VERSION in an input GenBank file (e.g., NC_001416.1) as the sequence ID instead of the LOCUS (e.g., NC_001416). You will need to use the converted reference file (data/reference.gff) for further breseq and gdtools operations on breseq output generated using this option.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
     
     options.addUsage("", ADVANCED_OPTION);
@@ -371,6 +372,7 @@ namespace breseq
     this->read_file_read_length_min = from_string<double>(options["read-min-length"]);
     this->read_file_max_same_base_fraction = from_string<double>(options["read-max-same-base-fraction"]);
     this->read_file_max_N_fraction = from_string<double>(options["read-max-N-fraction"]);
+    this->use_version_for_seq_id = options.count("use-version-for-seq-id");
 
     
     // Reference sequence provided?

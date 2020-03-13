@@ -1,4 +1,9 @@
 Version 0.35.1
+  * Added --user-version-as-seq-id option to breseq. If present, it will use the full
+    VERSION in an input GenBank file (e.g., NC_001416.1) as the sequence ID instead of
+    the LOCUS (e.g., NC_001416). You will need to use the converted reference file
+    (data/reference.gff) for further breseq and gdtools operations on breseq output
+    generated using this option.
   * Fixed bug in gdtools ANNOTATE that caused it to fail with --preserve-evidence
   * Miscellaneous improvements to other gdtools subcommands.
 

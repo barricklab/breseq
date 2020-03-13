@@ -12,6 +12,7 @@ TESTCMD="\
     ${BRESEQ_TEST_THREAD_ARG} \
     -o ${SELF} \
     -g ${SELF}/header.gd \
+    --use-version-for-seq-id \
     ${REFERENCE_ARG} \
     ${DATADIR}/lambda/lambda_mixed_population.fastq \
     "

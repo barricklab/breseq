@@ -210,15 +210,16 @@ namespace breseq
     string base_output_path;              // Default = cwd COMMAND-LINE OPTION
     
     //! Options that control which parts of the pipeline to execute
-    string custom_run_name;          // Default = <none> COMMAND-LINE OPTION
-    string print_custom_run_name;    // custom_run_name with '_' replaced by ' '
+    string custom_run_name;                 // Default = <none> COMMAND-LINE OPTION
+    string print_custom_run_name;           // custom_run_name with '_' replaced by ' '
+    bool use_version_for_seq_id;            // Use Genbank VERSION instead of LOCUS as seq_id
     bool skip_read_filtering;               // Default = false
-    bool skip_new_junction_prediction;          // Default = false COMMAND-LINE OPTION
+    bool skip_new_junction_prediction;      // Default = false COMMAND-LINE OPTION
     bool skip_read_alignment_and_missing_coverage_prediction;          // Default = false
-    bool skip_missing_coverage_prediction;          // Default = false set to true if targeted_sequencing
+    bool skip_missing_coverage_prediction;  // Default = false set to true if targeted_sequencing
     bool skip_alignment_or_plot_generation; // Default = false COMMAND-LINE OPTION
-    bool do_copy_number_variation;        // Default = false COMMAND-LINE OPTION
-    bool do_periodicity;                  // Default = false COMMAND-LINE OPTION
+    bool do_copy_number_variation;          // Default = false COMMAND-LINE OPTION
+    bool do_periodicity;                    // Default = false COMMAND-LINE OPTION
     
     //! Settings: Read File Options
     vector<string> read_file_names;             // REQUIRED COMMAND-LINE OPTION
@@ -229,7 +230,7 @@ namespace breseq
     double read_file_max_N_fraction;            // Default = 0.5 COMMAND-LINE OPTION
     
     // Reference sequences
-    vector<string> all_reference_file_names;  // REQUIRED COMMAND-LINE OPTION (filled by below)    
+    vector<string> all_reference_file_names;    // REQUIRED COMMAND-LINE OPTION (filled by below)
     vector<string> normal_reference_file_names; // Default = EMPTY COMMAND-LINE OPTION
     vector<string> contig_reference_file_names; // Default = EMPTY COMMAND-LINE OPTION
     vector<string> junction_only_file_names;    // Default = EMPTY COMMAND-LINE OPTION
