@@ -874,8 +874,8 @@ namespace breseq
 		//// '#' replaced with read file name
 		//// '@' replaced by seq_id of reference sequence
 
-    // Do not allow the output path to have spaces. This will cause many invocations
-    ASSERT(this->base_output_path.find(" ") == string::npos, "Output path cannot contain spaces: \"" + this->base_output_path + "\".");
+    // Do not allow the output path to have spaces. This will cause many invocations we can't trust?
+    // ASSERT(this->base_output_path.find(" ") == string::npos, "Output path cannot contain spaces: \"" + this->base_output_path + "\".");
     
     //! Paths: Sequence conversion
 		this->sequence_conversion_path = "01_sequence_conversion";
