@@ -4601,40 +4601,63 @@ void cGenomeDiff::read_vcf(const string &file_name)
 }
  
 // Creates a PHYLIP input file from a master list of mutations (from merged file), a list of genome diffs, and reference sequences. 
-  void cGenomeDiff::write_phylip(string& output_phylip_file_name, cGenomeDiff& master_gd, vector<cGenomeDiff>& gd_list,cReferenceSequences& ref_seq_info, bool missing_as_ancestral, bool verbose)
+  void cGenomeDiff::write_genotype_sequence_file(
+                                                  const string& format,
+                                                  const string& output_file_name,
+                                                  cGenomeDiff& master_gd,
+                                                  vector<cGenomeDiff>& gd_list,cReferenceSequences& ref_seq_info,
+                                                  bool missing_as_ancestral,
+                                                  bool verbose
+                                                  )
 {
   (void) verbose;
   const uint32_t phylip_name_max_length = 10;
 
-  map<string,string> used_titles;
-  for (vector<cGenomeDiff>::iterator gd_it = gd_list.begin(); gd_it != gd_list.end(); gd_it++) {
-    
-    string full_title = gd_it->get_title();
-    string truncated_title = full_title.substr(0,phylip_name_max_length);
+  ASSERT( (format=="PHYLIP") || (format=="FASTA"), "Unknown format requested: " + format);
+  
+  // We have to check for uniqueness of truncated names for PHYLIP format
+  if (format=="PHYLIP") {
+    map<string,string> used_titles;
+    for (vector<cGenomeDiff>::iterator gd_it = gd_list.begin(); gd_it != gd_list.end(); gd_it++) {
+      
+      string full_title = gd_it->get_title();
+      string truncated_title = full_title.substr(0,phylip_name_max_length);
 
-    if ( used_titles.find(truncated_title) != used_titles.end() ) {
-      ERROR("PHYLIP output only accomodates ten-letter names for each sequence. Two of your input GenomeDiff sample files have the same title after truncation to ten letters:\n" + full_title + "\nAND\n" + used_titles[truncated_title]  + "\nChange the #=TITLE <title> metadata line of one file to something unique to proceed. If your input files do not have these metadata lines, change the name of one file.");
-    } else {
-      used_titles[truncated_title] = full_title;
+      if ( used_titles.find(truncated_title) != used_titles.end() ) {
+        ERROR("PHYLIP output only accomodates ten-letter names for each sequence. Two of your input GenomeDiff sample files have the same title after truncation to ten letters:\n" + full_title + "\nAND\n" + used_titles[truncated_title]  + "\nChange the #=TITLE <title> metadata line of one file to something unique to proceed. If your input files do not have these metadata lines, change the name of one file.");
+      } else {
+        used_titles[truncated_title] = full_title;
+      }
     }
   }
   
   diff_entry_list_t mut_list = master_gd.mutation_list();
   
-  ofstream out(output_phylip_file_name.c_str());
-  out << gd_list.size() << " " << mut_list.size() << endl;
+  ofstream out(output_file_name.c_str());
+  
+  // Special PHYLIP header giving the number of sequences and the alignment length
+  if (format=="PHYLIP") {
+    out << gd_list.size() << " " << mut_list.size() << endl;
+  }
   
   for (vector<cGenomeDiff>::iterator gd_it = gd_list.begin(); gd_it != gd_list.end(); gd_it++) {
     
     string base_name = gd_it->get_title();
-    string base_name_truncated;
-    if (base_name.size() > phylip_name_max_length)
-      base_name_truncated = base_name.substr(0,phylip_name_max_length);
-    else
-      base_name_truncated = base_name + repeat_char(' ', phylip_name_max_length - base_name.size());
-      
-    out << base_name_truncated; 
     
+    // Write the name of the sequence
+    if (format=="PHYLIP") {
+      string base_name_truncated;
+      if (base_name.size() > phylip_name_max_length)
+        base_name_truncated = base_name.substr(0,phylip_name_max_length);
+      else
+        base_name_truncated = base_name + repeat_char(' ', phylip_name_max_length - base_name.size());
+      out << base_name_truncated;
+    } else if (format=="FASTA") {
+      out << ">" << base_name << endl;
+    }
+    
+    // Write the genotype sequence
+    string alignment_string;
     for (diff_entry_list_t::iterator it=mut_list.begin(); it != mut_list.end(); it++) {
       cDiffEntry& mut = **it;
       string key = "frequency_" + base_name;
@@ -4645,38 +4668,39 @@ void cGenomeDiff::read_vcf(const string &file_name)
         if ((val == "?") || (val == "D")) {
           if (missing_as_ancestral) {
             uint32_t position_1 = from_string<uint32_t>(mut[POSITION]);
-            out << ref_seq_info.get_sequence_1(mut[SEQ_ID], position_1, position_1);
+            alignment_string += ref_seq_info.get_sequence_1(mut[SEQ_ID], position_1, position_1);
           } else {
-            out << "N";
+            alignment_string += "N";
           }
         } else {
           //ASSERT(is_double(val), )
           double freq = from_string<double>(val);
           if (freq == 0.0) {        
             uint32_t position_1 = from_string<uint32_t>(mut[POSITION]);
-            out << ref_seq_info.get_sequence_1(mut[SEQ_ID], position_1, position_1);
+            alignment_string +=  ref_seq_info.get_sequence_1(mut[SEQ_ID], position_1, position_1);
           }
-          else if (freq == 1.0) out << mut[NEW_SEQ];
-          else out << "N";
+          else if (freq == 1.0) alignment_string += mut[NEW_SEQ];
+          else alignment_string +=  "N";
         }        
       } else {
         if ((val == "?") || (val == "D")) {
           if (missing_as_ancestral) {
-            out << "A";
+            alignment_string += "A";
           } else {
-            out << "N";
+            alignment_string += "N";
           }
         } else {
           //ASSERT(is_double(val), )
           double freq = from_string<double>(val);
-          if (freq == 0.0) out << "A";
-          else if (freq == 1.0) out << "T";
-          else out << "N";
+          if (freq == 0.0) alignment_string += "A";
+          else if (freq == 1.0) alignment_string += "T";
+          else alignment_string += "N";
         }
       }
     }
     
-    out << endl;
+    // Write the rest of the line (or the new line for FASTA)
+    out << alignment_string << endl;
   }
 }
     

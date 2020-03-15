@@ -1,4 +1,8 @@
 Version 0.35.1
+  * Added FASTA output option to gdtools COMPARE/ANNOTATE. This will generate a
+    multi-FASTA file with a genotype alignment suitable for building phylogenetic
+    trees using parsimony methods. The content is equivalent to that of the PHYLIP
+    output option, but without the length limitation on the genome names.
   * Added --user-version-as-seq-id option to breseq. If present, it will use the full
     VERSION in an input GenBank file (e.g., NC_001416.1) as the sequence ID instead of
     the LOCUS (e.g., NC_001416). You will need to use the converted reference file

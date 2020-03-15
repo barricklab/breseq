@@ -1083,7 +1083,8 @@ int do_annotate(int argc, char* argv[])
   options.addUsage("  HTML    Descriptive table viewable in a web browser"); 
   options.addUsage("  GD      GenomeDiff with added annotation of mutations");
 	options.addUsage("  TSV     Tab-separated values file suitable for input into R or Excel");
-	options.addUsage("  PHYLIP  Alignment file suitable for input into PHYLIP");
+	options.addUsage("  PHYLIP  Alignment of genotypes in PHYLIP format for phylogenetic analysis");
+	options.addUsage("  FASTA   Multi-FASTA alignment of genotypes for phylogenetic analysis");
 	options.addUsage("  JSON  	JavaScript object notation file suitable for parsing");
 	options.addUsage("");
 	options.addUsage("When multiple GD files are provided, the #=TITLE metadata line in each file is used to name each sample/column. If that information is not present, then the GD file name is used (removing the *.gd suffix).");
@@ -1094,7 +1095,7 @@ int do_annotate(int argc, char* argv[])
 	options.addUsageSameLine("of '?' indicate that there were not enough aligned reads to call a mutation at this position");
 	options.addUsageSameLine("in the genome in question (either for or against the mutation).");
 	options.addUsage("");
-	options.addUsage("In PHYLIP output, each column in the mutation 'sequence' that is created corresponds to");
+	options.addUsage("In PHYLIP/FASTA output, each column in the genotype 'sequence' that is created corresponds to");
 	options.addUsageSameLine("a unique mutational event. For SNPs the base present at that position in each genome is shown.");
 	options.addUsageSameLine("For other types of mutations, 'A' is used for the ancestral allele (e.g., no transposon insertion),");
 	options.addUsageSameLine("and 'T' is used for the derived allele (e.g., new transposon copy inserted).");
@@ -1102,7 +1103,7 @@ int do_annotate(int argc, char* argv[])
 	options.addUsageSameLine("leading to this genome, either because the position is deleted or there are not sufficient");
 	options.addUsageSameLine("reads aligned to a position to call a mutation (i.e., is inside an UN region).");
 	options.addUsage("");
-	options.addUsage("PHYLIP output is designed to be input into the 'dnapars' program to create a phylogenetic tree.");
+	options.addUsage("PHYLIP/FASTA output is designed to be input into other programs to create a phylogenetic tree by parsimony methods. In these analyses, be sure that you use basic parsimony that weights all genotype sequence changes equally (e.g., same transition/transversion rates).");
 
   options.processCommandArgs(argc, argv);
 	
@@ -1121,13 +1122,15 @@ int do_annotate(int argc, char* argv[])
     output_file_name = "output.gd";
   } else if (output_format == "PHYLIP") {
     output_file_name = "output.phylip";
+	} else if (output_format == "FASTA") {
+			output_file_name = "output.fa";
 	} else if (output_format == "TSV") {
 		output_file_name = "output.tsv";
   } else if (output_format == "JSON") {
 		output_file_name = "JSON";
 	} else {
 		options.addUsage("");
-		options.addUsage("OPTION ERROR:\nUnknown output format (--format|-f) of " + output_format + " requested. Valid choices are HTML, GD, TSV, PHYLIP");
+		options.addUsage("OPTION ERROR:\nUnknown output format (--format|-f) of " + output_format + " requested. Valid choices are HTML, GD, TSV, PHYLIP, FASTA");
 		options.printUsage();
 		return -1;
 	}
@@ -1151,9 +1154,9 @@ int do_annotate(int argc, char* argv[])
   bool compare_mode = (gd_path_names.size() > 1);
 	
 	// Perform some pre-checks to keep things in scope
-	if ( (output_format == "PHYLIP") && !compare_mode) {
+	if ( ((output_format == "PHYLIP") || (output_format == "FASTA")) && !compare_mode) {
 		options.addUsage("");
-		options.addUsage("OPTION ERROR:\nYou must provide more than one input GD file in PHYLIP mode.");
+		options.addUsage("OPTION ERROR:\nYou must provide more than one input GD file in PHYLIP ot FASTA mode.");
 		options.printUsage();
 		return -1;
 	}
@@ -1165,8 +1168,8 @@ int do_annotate(int argc, char* argv[])
 	}
 	
 	// Give a warning if add-html-fields used when it isn't necessary
-	if (options.count("add-html-fields") && !((output_format == "GD") || (output_format == "JSON") || (output_format == "PHYLIP")) ) {
-		WARN("--add-html-fields option is not used for output format " + output_format);
+	if (options.count("add-html-fields") && !((output_format == "GD") || (output_format == "JSON") || (output_format == "PHYLIP") || (output_format == "FASTA")) ) {
+		WARN("--add-html-fields option is not used for the selected output format " + output_format);
 	}
 	
 	// Load reference files
@@ -1230,9 +1233,15 @@ int do_annotate(int argc, char* argv[])
 		uout("Writing output PHYLIP alignment file", options["output"]);
 		
 		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, polymorphisms_found, compare_mode, options, uout);
-		gd.write_phylip(output_file_name, gd, gd_list, ref_seq_info);
-	} else if (output_format == "TSV") {
+		gd.write_genotype_sequence_file("PHYLIP", output_file_name, gd, gd_list, ref_seq_info);
 		
+	} else if (output_format == "FASTA") {
+		uout("Writing output PHYLIP alignment file", options["output"]);
+	
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, polymorphisms_found, compare_mode, options, uout);
+		gd.write_genotype_sequence_file("FASTA", output_file_name, gd, gd_list, ref_seq_info);
+		
+	} else if (output_format == "TSV") {
 		// Load the entire list and pass it to write_tsv
 		for (vector<string>::iterator it=gd_path_names.begin(); it!=gd_path_names.end(); it++) {
 			uout("Reading/annotating input GD file",*it);
@@ -1426,7 +1435,7 @@ int do_phylogeny(int argc, char* argv[])
 	
 	string phylip_input_file_name = output_base_name + ".phylip";
 	uout("Writing output PHYLIP alignment file", phylip_input_file_name);
-	gd.write_phylip(phylip_input_file_name, gd, gd_list, ref_seq_info, options.count("missing-as-ancestral"));
+	gd.write_genotype_sequence_file("PHYLIP", phylip_input_file_name, gd, gd_list, ref_seq_info, options.count("missing-as-ancestral"));
 	string phylip_script_file_name = output_base_name + ".phylip.commands";
 	ofstream phylip_script(phylip_script_file_name.c_str());
 	phylip_script << phylip_input_file_name << endl;
