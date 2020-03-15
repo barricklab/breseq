@@ -8,6 +8,8 @@ Version 0.35.1
     the LOCUS (e.g., NC_001416). You will need to use the converted reference file
     (data/reference.gff) for further breseq and gdtools operations on breseq output
     generated using this option.
+  * While not generally recommended, using read and reference file names that contain
+    spaces should now work.
   * Fixed bug in gdtools ANNOTATE that caused it to fail with --preserve-evidence
   * Miscellaneous improvements to other gdtools subcommands.
 

@@ -67,9 +67,10 @@ void coverage_output::plot(const string& region, const string& output_file_name,
   double average_coverage = m_show_average ? m_summary.unique_coverage[seq_id].average : 0;
 	
   string log_file_name = m_intermediate_path + "/" + to_string(pid) + ".r.log";
-  string command = "R --vanilla";
-  command += " in_file=" + cString(tmp_coverage).escape_shell_chars();
-  command += " out_file=" + cString(_output_file_name).escape_shell_chars();
+  string command = "R --vanilla < " + double_quote(m_r_script_file_name)+ " > " + double_quote(log_file_name);
+  command += " --args";
+  command += " in_file=" + double_quote(tmp_coverage);
+  command += " out_file=" + double_quote(_output_file_name);
   command += " pdf_output=";
   command += ((m_output_format=="pdf") ? "1" : "0");
   command += " total_only=";
@@ -79,8 +80,7 @@ void coverage_output::plot(const string& region, const string& output_file_name,
   command += " avg_coverage=" + to_string(average_coverage);
   command += " fixed_coverage_scale=" + ( average_coverage ? to_string<double>(average_coverage * m_fixed_coverage_scale) : to_string<double>(m_fixed_coverage_scale) );
 
-  command += " < " + cString(m_r_script_file_name).escape_shell_chars();
-  command += " > " + cString(log_file_name).escape_shell_chars();
+
   
 	SYSTEM(command, true, false, false); //NOTE: Not escaping shell characters here.
 	

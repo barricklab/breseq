@@ -44,10 +44,11 @@ vector<string> CoverageDistribution::fit(
   pid_t pid = getpid();
   string log_file_name = distribution_file_name + ".r.log";
   
-  string command = "R --vanilla < " + cString(settings.program_data_path).escape_shell_chars() +
-  "/coverage_distribution.r" + " > " + cString(log_file_name).escape_shell_chars();
-  command += " distribution_file=" + cString(distribution_file_name).escape_shell_chars();
-  command += " plot_file=" + cString(plot_file).escape_shell_chars();
+  string command = "R --vanilla < " + double_quote(settings.program_data_path +
+  "/coverage_distribution.r") + " > " + double_quote(log_file_name);
+  command += " --args";
+  command += " distribution_file=" + double_quote(distribution_file_name);
+  command += " plot_file=" + double_quote(plot_file);
   command += " deletion_propagation_pr_cutoff=" + to_string<double>(deletion_propagation_pr_cutoff);
   
   SYSTEM(command, false, false, false); //NOTE: Not escaping shell characters here.

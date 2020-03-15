@@ -1238,6 +1238,7 @@ class cString : public string
     cString remove_starting(const string &prefix);
     cString trim_ends_of(const char val);
     cString& escape_shell_chars(void);
+    cString& escape_spaces(void);
 
     cString get_base_name() const;
     cString get_base_name_no_extension(bool remove_all_extensions = false, bool one_name_for_pair = false) const;
@@ -1382,7 +1383,7 @@ inline cString cString::get_directory_path() const
 
 inline cString& cString::escape_shell_chars(void) {
   cString& value = *this;
-  char escapees[] = {'<', '>', '|', '&', '\0', ';'};
+  char escapees[] = {'<', '>', '|', '&', ';', '\0'};
   cString temp;
 
   for(uint32_t i = 0; i < value.size(); ++i) {

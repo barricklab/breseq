@@ -654,7 +654,6 @@ namespace breseq
 			string s(_file_name_key);
       if (_substitute.size())
         s = substitute(s, _substitute, _with);
-
 			return s;
 		}
     
