@@ -1722,7 +1722,7 @@ int breseq_default_action(int argc, char* argv[])
 
 			if (!file_empty(candidate_junction_fasta_file_name.c_str()))
 			{
-        string command = "bowtie2-build -q " + candidate_junction_fasta_file_name + " " + candidate_junction_hash_file_name;
+        string command = "bowtie2-build -q " + double_quote(candidate_junction_fasta_file_name) + " " + double_quote(candidate_junction_hash_file_name);
         SYSTEM(command);
         settings.track_intermediate_file(settings.candidate_junction_alignment_done_file_name, candidate_junction_hash_file_name + "*");
 
@@ -1745,7 +1745,7 @@ int breseq_default_action(int argc, char* argv[])
           bowtie2_seed_substring_size_junction = min<uint32_t>(31, bowtie2_seed_substring_size_junction);
           
           string command = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " --local " + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_junction) + " "
-          + settings.bowtie2_scoring + " " + settings.bowtie2_junction + " --reorder -x " + candidate_junction_hash_file_name + " -U " + double_quote(read_fastq_file) + " -S " + double_quote(candidate_junction_sam_file_name);
+          + settings.bowtie2_scoring + " " + settings.bowtie2_junction + " --reorder -x " + double_quote(candidate_junction_hash_file_name) + " -U " + double_quote(read_fastq_file) + " -S " + double_quote(candidate_junction_sam_file_name);
           
           SYSTEM(command);
           

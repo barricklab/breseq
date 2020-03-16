@@ -1453,7 +1453,7 @@ inline int SYSTEM(string command, bool silent = false, bool ignore_errors = fals
 inline string remove_file(string path, bool silent = false, bool ignore_errors = false)
 {
   //remove(path.c_str()); // @JEB this does not work with wildcards
-  SYSTEM("rm -f " + path, silent, ignore_errors);
+  SYSTEM("rm -f " + double_quote(path), silent, ignore_errors);
   return path;
 }
 

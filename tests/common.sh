@@ -43,7 +43,7 @@ do_build() {
 #    done > ${EXPECTED}
 	for (( i=0; i<${#EXPECTED_OUTPUTS[@]}; i++ )); do
 		echo "cp ${CURRENT_OUTPUTS[$i]} ${EXPECTED_OUTPUTS[$i]}"
-    	cp ${CURRENT_OUTPUTS[$i]} ${EXPECTED_OUTPUTS[$i]}
+    	cp "${CURRENT_OUTPUTS[$i]}" "${EXPECTED_OUTPUTS[$i]}"
 	done
 }
 
@@ -61,7 +61,7 @@ do_show() {
 #
 do_check() {
 	NEEDS_UPDATING=0
-    for EXPECTED_OUTPUT in "${EXPECTED_OUTPUTS[@]}"; do  
+    for EXPECTED_OUTPUT in "${EXPECTED_OUTPUTS[@]}"; do
 		if [[ ! -e ${EXPECTED_OUTPUT} ]]; then
 			NEEDS_UPDATING=1
 		fi
@@ -74,7 +74,7 @@ do_check() {
 		echo "Built expected output"
 		echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
 	fi
-#We need to check to see if all the output files even exist 
+#We need to check to see if all the output files even exist
 #    for i in `find . ${FILE_PATTERN}`; do
 #   	echo "$i"
 #        if [[ ! -e $i ]]; then
@@ -82,7 +82,7 @@ do_check() {
 #			echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 #			echo "Failed check: $1"
 #        	echo "Did not find expected output file: $i"
-#			echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 
+#			echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 #			echo ""
 #       	exit -1
 #       fi
@@ -90,18 +90,18 @@ do_check() {
     echo ""
 #   CHK=`${HASH} -s --check ${EXPECTED} 2>&1`
 	for (( i=0; i<${#EXPECTED_OUTPUTS[@]}; i++ )); do
-		echo "Comparing files: ${CURRENT_OUTPUTS[$i]} ${EXPECTED_OUTPUTS[$i]}"  
-		CHK=`${DIFF_BIN} ${CURRENT_OUTPUTS[$i]} ${EXPECTED_OUTPUTS[$i]}`
+		echo "Comparing files: \"${CURRENT_OUTPUTS[$i]}\" \"${EXPECTED_OUTPUTS[$i]}\""
+		CHK=$(${DIFF_BIN} "${CURRENT_OUTPUTS[$i]}" "${EXPECTED_OUTPUTS[$i]}")
 		if [[ "$?" -ne 0 || $CHK ]]; then
 			echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 			echo "Failed check"
 			#${HASH} --check ${EXPECTED}
-			${DIFF_BIN} ${CURRENT_OUTPUTS[$i]} ${EXPECTED_OUTPUTS[$i]}
-			echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 
+			${DIFF_BIN} "${CURRENT_OUTPUTS[$i]}" "${EXPECTED_OUTPUTS[$i]}"
+			echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 			echo ""
 			if [[ -n "${REFERENCE_ARG+1}" ]]; then
-				echo ${GDTOOLS} COMPARE ${REFERENCE_ARG} -o ${SELF}/failed_compare.html ${CURRENT_OUTPUTS[$i]} ${EXPECTED_OUTPUTS[$i]}
-				${GDTOOLS} COMPARE ${REFERENCE_ARG} -o ${SELF}/failed_compare.html ${CURRENT_OUTPUTS[$i]} ${EXPECTED_OUTPUTS[$i]}
+				echo ${GDTOOLS} COMPARE ${REFERENCE_ARG} -o ${SELF}/failed_compare.html "${CURRENT_OUTPUTS[$i]}" "${EXPECTED_OUTPUTS[$i]}"
+				${GDTOOLS} COMPARE ${REFERENCE_ARG} -o ${SELF}/failed_compare.html "${CURRENT_OUTPUTS[$i]}" "${EXPECTED_OUTPUTS[$i]}"
 			fi
 		else
 			echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO"
@@ -116,14 +116,14 @@ do_check() {
 }
 
 do_breseq() {
-	echo "BRESEQ COMMAND:" 
+	echo "BRESEQ COMMAND:"
 	echo $TESTCMD
 	eval "${TESTCMD}"
 	if [[ "$?" -ne 0 ]]; then
         echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         echo "Failed check"
         echo "Non-zero error code returned."
-        echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" 
+        echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
         exit -1
 	fi
 }
@@ -152,7 +152,7 @@ do_clean() {
     for CURRENT_OUTPUT in "${CURRENT_OUTPUTS[@]}"; do
 		rm -f ${1}/${CURRENT_OUTPUT}
 	done
-	rm -Rf $1/0* $1/output $1/data $1/output.gff3 $1/failed_compare.html
+	rm -Rf $1/0* $1/output* $1/data $1/output.gff3 $1/failed_compare.html
 
 }
 

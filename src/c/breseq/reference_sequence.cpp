@@ -3476,9 +3476,9 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
     " > " + double_quote(polymorphism_statistics_r_script_log_file_name) +
     " --args" +
     " total_length=" + to_string<uint32_t>(total_reference_length) +
-    " in_file="   + cString(polymorphism_statistics_input_file_name).escape_shell_chars() +
-    " out_file="  + cString(polymorphism_statistics_output_file_name).escape_shell_chars() +
-    " qual_file=" + cString(genome_error_counts_file_name).escape_shell_chars();
+    " in_file="   + double_quote(polymorphism_statistics_input_file_name) +
+    " out_file="  + double_quote(polymorphism_statistics_output_file_name) +
+    " qual_file=" + double_quote(genome_error_counts_file_name);
 
   SYSTEM(command, false, false, false); //NOTE: Not escaping shell characters here.
 
