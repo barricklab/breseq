@@ -1,4 +1,7 @@
 Version 0.35.1
+  * Fixed bug introduced in v0.35.0 that resulted in displaying an error message that
+    "Coverage plot could not be generated" instead of the plot on MC evidence pages.
+  * Added missing input file 'empty.fastq' needed for ./run_tests.sh.
   * Added FASTA output option to gdtools COMPARE/ANNOTATE. This will generate a
     multi-FASTA file with a genotype alignment suitable for building phylogenetic
     trees using parsimony methods. The content is equivalent to that of the PHYLIP
