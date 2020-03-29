@@ -108,13 +108,19 @@ void coverage_output::table(const string& region, const string& output_file_name
   if (m_read_begin_output_file_name.length() > 0) m_read_begin_output.open(m_read_begin_output_file_name.c_str());
   if (m_gc_output_file_name.length() > 0) m_gc_output.open(m_gc_output_file_name.c_str());
   
-  m_output_table << "position" << "\t" << "ref_base" << "\t" 
-  << "unique_top_cov" << "\t" << "unique_bot_cov" << "\t" 
-  << "redundant_top_cov" << "\t" << "redundant_bot_cov" << "\t" 
-  << "raw_redundant_top_cov" << "\t" << "raw_redundant_bot_cov" << "\t"
-  << "unique_top_begin" << "\t" << "unique_bot_begin"    
-  << std::endl;
-  
+  if (m_total_only) {
+    m_output_table << "position" << "\t" << "ref_base" << "\t"
+      << "unique_cov" << "\t" << "redundant_cov" << "\t" "total_cov"
+      << std::endl;
+  } else {
+    m_output_table << "position" << "\t" << "ref_base" << "\t"
+      << "unique_top_cov" << "\t" << "unique_bot_cov" << "\t"
+      << "redundant_top_cov" << "\t" << "redundant_bot_cov" << "\t"
+      << "raw_redundant_top_cov" << "\t" << "raw_redundant_bot_cov" << "\t"
+      << "unique_top_begin" << "\t" << "unique_bot_begin"
+      << std::endl;
+  }
+    
   this->clear();
   
   // pileup handles everything else, including into file
@@ -148,9 +154,14 @@ void coverage_output::pileup_callback(const breseq::pileup& p) {
   if (pos==0) return;
   
   // print positions not called because there were no reads
-  for (uint32_t i=m_last_position_1+1; i<pos; i++) {    
-    m_output_table << i << "\t" << refseq[i-1] << "\t" << 0 << "\t" << 0 << "\t" 
-    << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << std::endl;
+  for (uint32_t i=m_last_position_1+1; i<pos; i++) {
+    if (m_total_only) {
+      m_output_table << i << "\t" << refseq[i-1] << "\t" << 0 << "\t" << 0 << "\t" << 0
+      << std::endl;
+    } else {
+      m_output_table << i << "\t" << refseq[i-1] << "\t" << 0 << "\t" << 0 << "\t"
+        << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << std::endl;
+    }
   }
   
   // catches this position
@@ -263,14 +274,21 @@ void coverage_output::pileup_callback(const breseq::pileup& p) {
   
   
   //output
-  m_output_table << pos << "\t" << ref_base << "\t" 
-  << unique_cov[0] << "\t" << unique_cov[1] << "\t" 
-  << redundant_cov[0] << "\t" << redundant_cov[1] << "\t" 
-  << raw_redundant_cov[0] << "\t" << raw_redundant_cov[1] << "\t"
-  << unique_begin_reads[0] << "\t" << unique_begin_reads[1] 
   
-  << std::endl;
-  
+  if (m_total_only) {
+    m_output_table << pos << "\t" << ref_base << "\t"
+      << (unique_cov[0] + unique_cov[1]) << "\t"
+      << (redundant_cov[0] + redundant_cov[1]) << "\t"
+      << (unique_cov[0] + unique_cov[1] + redundant_cov[0] + redundant_cov[1])
+      << std::endl;
+  } else {
+    m_output_table << pos << "\t" << ref_base << "\t"
+      << unique_cov[0] << "\t" << unique_cov[1] << "\t"
+      << redundant_cov[0] << "\t" << redundant_cov[1] << "\t"
+      << raw_redundant_cov[0] << "\t" << raw_redundant_cov[1] << "\t"
+      << unique_begin_reads[0] << "\t" << unique_begin_reads[1]
+      << std::endl;
+  }
 }
   
   

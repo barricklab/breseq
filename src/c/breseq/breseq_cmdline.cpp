@@ -2377,22 +2377,25 @@ int breseq_default_action(int argc, char* argv[])
     mpgd.write(settings.final_genome_diff_file_name);
     
     // Save a copy in the data folder as well
-    mpgd.write(settings.output_genome_diff_file_name);
+    mpgd.write(settings.data_genome_diff_file_name);
 
     // Faster, less compatible way...
-    // SYSTEM("cp " + settings.final_genome_diff_file_name + " " + settings.output_genome_diff_file_name);
+    // SYSTEM("cp " + settings.final_genome_diff_file_name + " " + settings.data_genome_diff_file_name);
     
     //Don't reload -- we lose invisible fields that we need
     //cGenomeDiff gd(settings.final_genome_diff_file_name);
     cGenomeDiff gd = mpgd;
     
-    // Write VCF conversion
+    // Write VCF conversion (to both data and output)
     cerr << "  Writing final VCF file..." << endl;
+    mpgd.write_vcf(settings.data_vcf_file_name, ref_seq_info);
     mpgd.write_vcf(settings.output_vcf_file_name, ref_seq_info);
-    
-    // Write a final JSON file with all summary information
+
+    // Write a final JSON file with all summary information (to both data and output)
     PublicSummary public_summary(summary, settings, ref_seq_info);
-    public_summary.store(settings.data_summary_file_name);
+    public_summary.store(settings.data_json_summary_file_name);
+    public_summary.store(settings.output_json_summary_file_name);
+
     
     //
     // Mark marginal items as no_show to prevent further processing
@@ -2406,7 +2409,7 @@ int breseq_default_action(int argc, char* argv[])
 		ref_seq_info.annotate_mutations(gd);
     
     // Annotated Genome Diff output #1 - public version
-    gd.write(settings.output_annotated_genome_diff_file_name);
+    gd.write(settings.data_annotated_genome_diff_file_name);
 
     // Annotated Genome Diff output #2 - used internally and for consistency tests
     //

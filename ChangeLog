@@ -1,3 +1,7 @@
+Version 0.35.2
+  * Added summary.json and output.vcf to the output directory (they are also present in the data directory).
+  * Fixed --total-only mode for breseq BAM2COV to give expected output in --table mode.
+
 Version 0.35.1
   * Fixed bug introduced in v0.35.0 that resulted in displaying an error message that
     "Coverage plot could not be generated" instead of the plot on MC evidence pages.
@@ -13,7 +17,7 @@ Version 0.35.1
     generated using this option.
   * While not generally recommended, using read and reference file names and output paths
     that contain spaces in them should now work.
-  * Fixed bug in gdtools ANNOTATE that caused it to fail with --preserve-evidence
+  * Fixed bug in gdtools ANNOTATE that caused it to fail with --preserve-evidence.
   * Miscellaneous improvements to other gdtools subcommands.
 
 Version 0.35.0

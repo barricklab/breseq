@@ -1000,6 +1000,8 @@ namespace breseq
 		this->output_path = "output";
 		if (this->base_output_path.size() > 0) this->output_path = this->base_output_path + "/" + this->output_path;
 		this->output_done_file_name = this->output_path + "/output.done";
+    this->output_json_summary_file_name = this->output_path + "/summary.json";
+    this->output_vcf_file_name = this->output_path + "/output.vcf";
 
 		this->log_file_name = this->output_path + "/log.txt";
 		this->index_html_file_name = this->output_path + "/index.html";
@@ -1033,10 +1035,12 @@ namespace breseq
 		this->reference_faidx_file_name = this->data_path + "/reference.fasta.fai";
 		this->reference_gff3_file_name = this->data_path + "/reference.gff3";
 		this->unmatched_read_file_name = this->data_path + "/#.unmatched.fastq";
-    this->output_vcf_file_name = this->data_path + "/output.vcf";
-    this->output_genome_diff_file_name = this->data_path + "/output.gd";
-    this->output_annotated_genome_diff_file_name = this->data_path + "/annotated.gd";
-    this->data_summary_file_name = this->data_path + "/summary.json";
+    this->data_vcf_file_name = this->data_path + "/output.vcf";
+    this->data_genome_diff_file_name = this->data_path + "/output.gd";
+    this->data_annotated_genome_diff_file_name = this->data_path + "/annotated.gd";
+    this->data_json_summary_file_name = this->data_path + "/summary.json";
+
+    //
 
 
     //! Paths: Experimental

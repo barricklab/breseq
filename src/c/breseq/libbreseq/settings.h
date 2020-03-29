@@ -534,6 +534,8 @@ namespace breseq
     //! Paths: Output
     string output_path;
 		string output_done_file_name;
+    string output_json_summary_file_name;
+    string output_vcf_file_name;
 
 		string log_file_name;
 		string index_html_file_name;
@@ -566,10 +568,10 @@ namespace breseq
 		string reference_faidx_file_name;
 		string reference_gff3_file_name;
     string unmatched_read_file_name;
-    string output_vcf_file_name;
-    string output_genome_diff_file_name;
-    string output_annotated_genome_diff_file_name;
-    string data_summary_file_name;
+    string data_vcf_file_name;
+    string data_genome_diff_file_name;
+    string data_annotated_genome_diff_file_name;
+    string data_json_summary_file_name;
     
     //! Paths: Experimental
 		string long_pairs_file_name;
