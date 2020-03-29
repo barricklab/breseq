@@ -1127,7 +1127,7 @@ int do_annotate(int argc, char* argv[])
 	} else if (output_format == "TSV") {
 		output_file_name = "output.tsv";
   } else if (output_format == "JSON") {
-		output_file_name = "JSON";
+		output_file_name = "output.json";
 	} else {
 		options.addUsage("");
 		options.addUsage("OPTION ERROR:\nUnknown output format (--format|-f) of " + output_format + " requested. Valid choices are HTML, GD, TSV, PHYLIP, FASTA");
