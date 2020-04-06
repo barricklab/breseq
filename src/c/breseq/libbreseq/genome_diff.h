@@ -154,7 +154,7 @@ public:
   
   //! Remove all mutations except for deletions of the entire sequence
   void remove_mutations_on_deleted_reference_sequence(const string& seq_id, const int32_t sequence_length);
-  
+
   
   //!---- Accessing Entries ---- !//
   
@@ -228,7 +228,11 @@ public:
   // Test if entry with first_id is applied before second_id using BEFORE entries
   bool applied_before_id(const string& first_id, const string& second_id);
   
+  bool still_duplicates_considering_within(const cDiffEntry& a, const cDiffEntry& b);
   void sort_and_check_for_duplicates(cFileParseErrors* file_parse_errors = NULL);
+  
+  //! Reconciles mutations that were predicted two different ways due to user evidence, leading to invalid GD
+  void reconcile_mutations_predicted_two_ways();
   
   //!---- Simulating and Applying Mutations ---- !//
   

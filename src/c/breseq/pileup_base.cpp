@@ -92,6 +92,7 @@ pileup_base::pileup_base(const string& bam, const string& fasta)
 pileup_base::~pileup_base() {
 	samclose(m_bam);
   bam_close(m_bam_file);
+  hts_idx_destroy(m_bam_index);
   bam_header_destroy(m_bam_header);
   fai_destroy(m_faidx);
   

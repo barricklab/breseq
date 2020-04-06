@@ -689,6 +689,18 @@ namespace breseq {
     (void)summary;
     bool verbose = false;
     
+    // Create read counters in a way that they will automatically be cleaned up
+    counted_ptr<junction_read_counter> reference_jrc(NULL);
+    if (file_exists(settings.reference_bam_file_name.c_str())) {
+      reference_jrc = counted_ptr<junction_read_counter>(new junction_read_counter(settings.reference_bam_file_name, settings.reference_fasta_file_name, settings.verbose));
+    }
+
+    counted_ptr<junction_read_counter> junction_jrc(NULL);
+    if (file_exists(settings.junction_bam_file_name.c_str()) && file_exists(settings.candidate_junction_fasta_file_name.c_str())) {
+      junction_jrc = counted_ptr<junction_read_counter>(new junction_read_counter(settings.junction_bam_file_name, settings.candidate_junction_fasta_file_name, settings.verbose));
+    }
+    
+    
     // Prepare the lists
     for(diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++) //JC
 		{
@@ -1175,12 +1187,12 @@ namespace breseq {
         int32_t require_overlap = n(mut["duplication_size"]);
         
         if (verbose) cerr << "Before 1:" << endl << j1 << endl;
-        assign_one_junction_read_counts(settings, summary, j1, require_overlap);
+        assign_one_junction_read_counts(settings, summary, j1, reference_jrc, junction_jrc, require_overlap);
         j1["read_count_offset"] = mut["duplication_size"];
         if (verbose) cerr << "After 1:" << endl << j1 << endl;
         
         if (verbose) cerr << "Before 2:" << endl << j2 << endl;
-        assign_one_junction_read_counts(settings, summary, j2, require_overlap);
+        assign_one_junction_read_counts(settings, summary, j2, reference_jrc, junction_jrc, require_overlap);
         j2["read_count_offset"] = mut["duplication_size"];
         if (verbose) cerr << "After 2:" << endl << j2 << endl;
         
@@ -1190,9 +1202,9 @@ namespace breseq {
           if ( (j1[PREDICTION]!="consensus") || (j1[PREDICTION]!="consensus") ) {
             
             // heartbreakingly, we have to undo the changes that we just did
-            assign_one_junction_read_counts(settings, summary, j1);
+            assign_one_junction_read_counts(settings, summary, j1, reference_jrc, junction_jrc);
             j1.erase("read_count_offset");
-            assign_one_junction_read_counts(settings, summary, j2);
+            assign_one_junction_read_counts(settings, summary, j2, reference_jrc, junction_jrc);
             j2.erase("read_count_offset");
             continue;
           }
@@ -1813,6 +1825,11 @@ namespace breseq {
 
     }
   }
+
+
+
+
+
   
   
   // Normalizes INS/DEL mutations by shifting them to the highest coordinates possible
@@ -2175,6 +2192,12 @@ namespace breseq {
     //        the deletion of the entire fragment and no other muts on that reference
     ///
     remove_mutations_on_deleted_reference_sequences(settings, summary, gd);
+    
+    ///
+    // Check for mutations predicted by a JC and by a combination of RA evidence
+    ///
+     cerr << "  Reconciling mutation predictions..." << endl;
+    gd.reconcile_mutations_predicted_two_ways();
     
     cerr << "  Making final adjustments to mutations..." << endl;
     normalize_and_annotate_tandem_repeat_mutations(settings, summary, gd);

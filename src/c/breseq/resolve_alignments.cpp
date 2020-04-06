@@ -1807,6 +1807,8 @@ void  assign_one_junction_read_counts(
                                   const Settings& settings,
                                   Summary& summary,
                                   cDiffEntry& j,
+                                  const counted_ptr<junction_read_counter>& reference_jrc,
+                                  const counted_ptr<junction_read_counter>& junction_jrc,
                                   int32_t extra_stranded_require_overlap
                                   )
 {
@@ -1825,16 +1827,6 @@ void  assign_one_junction_read_counts(
  
   map<string,bool> empty_read_names;
   map<string,bool> junction_read_names;
-  
-  junction_read_counter * reference_jrc(NULL);
-  if (file_exists(settings.reference_bam_file_name.c_str())) {
-    reference_jrc = new junction_read_counter(settings.reference_bam_file_name, settings.reference_fasta_file_name, settings.verbose);
-  }
-  junction_read_counter * junction_jrc(NULL);
-
-  if (file_exists(settings.junction_bam_file_name.c_str()) && file_exists(settings.candidate_junction_fasta_file_name.c_str())) {
-    junction_jrc = new junction_read_counter(settings.junction_bam_file_name, settings.candidate_junction_fasta_file_name, settings.verbose);
-  }
   
   int32_t start, end;
   
@@ -1905,7 +1897,7 @@ void  assign_one_junction_read_counts(
   if (settings.junction_debug) ofile << "JUNCTION: start " << start << " end " << end << endl;
   if (verbose) cerr << "JUNCTION: start " << start << " end " << end << endl;
 
-  j[NEW_JUNCTION_READ_COUNT] = junction_jrc ? to_string(junction_jrc->count(j["key"], start, end, empty_read_names, junction_read_names)) : "0";
+  j[NEW_JUNCTION_READ_COUNT] = (junction_jrc.get() != NULL) ? to_string(junction_jrc->count(j["key"], start, end, empty_read_names, junction_read_names)) : "0";
   
   if (settings.junction_debug) {
     ofile << "JUNCTION" << endl;
@@ -1948,7 +1940,7 @@ void  assign_one_junction_read_counts(
     
     j["side_1_possible_overlap_registers"] = to_string(read_length_avg - abs(end - start));
     
-    j[SIDE_1_READ_COUNT] = reference_jrc ? to_string(reference_jrc->count(j[SIDE_1_SEQ_ID], start, end, junction_read_names, empty_read_names)) : "0";
+    j[SIDE_1_READ_COUNT] = (reference_jrc.get() != NULL) ? to_string(reference_jrc->count(j[SIDE_1_SEQ_ID], start, end, junction_read_names, empty_read_names)) : "0";
     
     if (settings.junction_debug) {
       ofile << "SIDE_1" << endl;
@@ -1997,7 +1989,7 @@ void  assign_one_junction_read_counts(
     
     j["side_2_possible_overlap_registers"] = to_string(read_length_avg - abs(end - start));
 
-    j[SIDE_2_READ_COUNT] = reference_jrc ? to_string(reference_jrc->count(j[SIDE_2_SEQ_ID], start, end, junction_read_names, empty_read_names)) : "0";
+    j[SIDE_2_READ_COUNT] = (reference_jrc.get() != NULL) ? to_string(reference_jrc->count(j[SIDE_2_SEQ_ID], start, end, junction_read_names, empty_read_names)) : "0";
     
     if (settings.junction_debug) {
       ofile << "SIDE_2" << endl;
@@ -2123,11 +2115,6 @@ void  assign_one_junction_read_counts(
   double new_junction_average_read_count = (summary.unique_coverage[j[SIDE_1_SEQ_ID]].average + summary.unique_coverage[j[SIDE_2_SEQ_ID]].average) / 2;
   j[NEW_JUNCTION_COVERAGE] = to_string(from_string<double>(j[NEW_JUNCTION_READ_COUNT]) / new_junction_average_read_count / overlap_correction, 2);
 
-  
-  // Clean up
-  if (junction_jrc) delete junction_jrc;
-  if (reference_jrc) delete reference_jrc;
-
 }
   
   
@@ -2138,8 +2125,6 @@ void  assign_junction_read_counts(
                                   cGenomeDiff& gd
                                   )
 {
-  bool verbose = false;
-  
   // Could be added as a parameter to reduce problems due to one-base mismatches
   static int32_t require_overlap = 0;
   
@@ -2159,9 +2144,20 @@ void  assign_junction_read_counts(
   // Keep track of how well they match the reference versus the putative new junctions.
   // right now this is in terms of mismatches (adding unmatched read bases as mismatches)
   
+  // Create read counters in a way that they will automatically be cleaned up
+  counted_ptr<junction_read_counter> reference_jrc(NULL);
+  if (file_exists(settings.reference_bam_file_name.c_str())) {
+    reference_jrc = counted_ptr<junction_read_counter>(new junction_read_counter(settings.reference_bam_file_name, settings.reference_fasta_file_name, settings.verbose));
+  }
+
+  counted_ptr<junction_read_counter> junction_jrc(NULL);
+  if (file_exists(settings.junction_bam_file_name.c_str()) && file_exists(settings.candidate_junction_fasta_file_name.c_str())) {
+    junction_jrc = counted_ptr<junction_read_counter>(new junction_read_counter(settings.junction_bam_file_name, settings.candidate_junction_fasta_file_name, settings.verbose));
+  }
+  
   for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++) {
     cDiffEntry& j = **it;
-    assign_one_junction_read_counts(settings, summary, j);
+    assign_one_junction_read_counts(settings, summary, j, reference_jrc, junction_jrc);
   }
   
 }

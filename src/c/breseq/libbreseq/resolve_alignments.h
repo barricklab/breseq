@@ -32,6 +32,30 @@ using namespace std;
 
 namespace breseq {
 
+  // Pileup class for fetching reads that align across from start to end
+  class junction_read_counter : pileup_base {
+  public:
+    junction_read_counter(const string& bam, const string& fasta, bool verbose)
+      : pileup_base(bam, fasta), _verbose(verbose) {};
+    
+    uint32_t count(
+                   const string& seq_id,
+                   const int32_t start,
+                   const int32_t end,
+                   const map<string,bool> ignore_read_names,
+                   map<string,bool>& counted_read_names
+                   );
+    
+    virtual void fetch_callback ( const alignment_wrapper& a );
+    
+  protected:
+    uint32_t _count;
+    int32_t _start;
+    int32_t _end;
+    map<string,bool> _ignore_read_names, _counted_read_names;
+    bool _verbose;
+  };
+
   class ResolveJunctionInfo : public JunctionInfo
   {
   public:
@@ -290,6 +314,8 @@ namespace breseq {
                                         const Settings& settings,
                                         Summary& summary,
                                         cDiffEntry& j,
+                                        const counted_ptr<junction_read_counter>& reference_jrc,
+                                        const counted_ptr<junction_read_counter>& junction_jrc,
                                         int32_t require_overlap = 0
                                         );
   
@@ -305,30 +331,6 @@ namespace breseq {
                                       cGenomeDiff& gd
                                       );
 
-  
-  // Pileup class for fetching reads that align across from start to end
-  class junction_read_counter : pileup_base {
-  public:
-    junction_read_counter(const string& bam, const string& fasta, bool verbose)
-      : pileup_base(bam, fasta), _verbose(verbose) {};
-    
-    uint32_t count(
-                   const string& seq_id, 
-                   const int32_t start, 
-                   const int32_t end, 
-                   const map<string,bool> ignore_read_names, 
-                   map<string,bool>& counted_read_names
-                   );
-    
-    virtual void fetch_callback ( const alignment_wrapper& a );
-    
-  protected:
-    uint32_t _count;
-    int32_t _start;
-    int32_t _end;
-    map<string,bool> _ignore_read_names, _counted_read_names;
-    bool _verbose;
-  };
 
 }
 
