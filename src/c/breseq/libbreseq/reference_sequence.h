@@ -357,7 +357,18 @@ namespace breseq {
     
   };
   
-  typedef list<cFeatureLocation> cFeatureLocationList;
+class cFeatureLocationList: public list<cFeatureLocation> {
+  
+public:
+  string as_string(string sep=",") {
+    vector<string> ret;
+    for(list<cFeatureLocation>::iterator it=this->begin(); it!=this->end(); it++) {
+      ret.push_back(it->as_string());
+    }
+    return join(ret, sep);
+  }
+  
+};
   
   extern const vector<string> snp_types;
     

@@ -1,3 +1,12 @@
+Version 0.35.3
+  * Fixed multiple identical GD entry error related to --user-evidence leading to
+    double mutation predictions.
+  * Changed error from loading reference genome files with repeat regions annotated
+    with complex/multiple locations to a more informative warning.
+  * Fixed major memory leak during the output step related to assigning read counts to
+    JC evidence from BAM files. Rewrote to further improve performance by making access
+    to the required files for this step persistent.
+
 Version 0.35.2
   * Added summary.json and output.vcf to the output directory (they are also present in the data directory).
   * Fixed --total-only mode for breseq BAM2COV to give expected output in --table mode.

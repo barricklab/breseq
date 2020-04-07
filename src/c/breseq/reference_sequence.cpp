@@ -727,10 +727,16 @@ namespace breseq {
       
       if ( ((*feat_p)["type"] == "repeat_region") || ((*feat_p)["type"] == "mobile_element") )
       {
-        this->m_repeats.push_back(feat_p);
-        ASSERT(feat_p->m_locations.size() == 1, "Repeat feature must have only one location: " + (*feat_p)["accession"] + "\nPlease rename the duplicates so that they have unique locus_tags & names, e.g., gene_1 and gene_2" );
-        
-        this->m_repeat_locations.insert(this->m_repeat_locations.end(), feat_p->m_locations.begin(), feat_p->m_locations.end());
+        if (feat_p->m_locations.size() == 1) {
+          this->m_repeats.push_back(feat_p);
+          this->m_repeat_locations.insert(this->m_repeat_locations.end(), feat_p->m_locations.begin(), feat_p->m_locations.end());
+        } else {
+          WARN(
+               "Ignoring repeat feature that has complex/multiple locations.\nName: " +
+               ( ((*feat_p)["name"] == "repeat_region") ? "<Blank>" : (*feat_p)["name"] ) +
+               "\nPositions:\n" + feat_p->m_locations.as_string("\n")
+               );
+        }
       }
       else if ( ((*feat_p)["type"] == "CDS") || ((*feat_p)["type"] == "tRNA") || ((*feat_p)["type"] == "rRNA") || ((*feat_p)["type"] == "RNA") || ((*feat_p)["type"] == "ncRNA") )
       {
@@ -1870,17 +1876,16 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
 
     if (feature["type"] == "repeat_region" || feature["type"] == "mobile_element") {
 
-      // Give the repeat region a name if NOTHING else can be found
+      // Give the repeat region a default name if NOTHING else can be found
       feature["name"] = "repeat_region";
       
-      if (feature.SafeGet("label") != "")  // Benchling exports "label"
-        feature["name"] = feature.SafeGet("label");
-      else if (feature.SafeGet("note") != "")
-        feature["name"] = feature.SafeGet("note");
+      // Then look for various tags with an order of precedence...
       
       // E. coli case:
-      if (feature.count("mobile_element") || 
-          feature.count("mobile_element_type"))
+      if ( (feature["name"] == "repeat_region") &&
+             ( feature.count("mobile_element") ||
+               feature.count("mobile_element_type")
+         ) )
       {
         if (feature.count("mobile_element"))
           feature["name"] = feature["mobile_element"];
@@ -1905,10 +1910,19 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
       }      
 
       // S. cerevisiae case
-      if (feature.SafeGet("rpt_family") != "")
+      if ( (feature["name"] == "repeat_region") && (feature.SafeGet("rpt_family") != "") )
         feature["name"] = feature["rpt_family"];
 
+      // S. pombe case
+      if ( (feature["name"] == "repeat_region") && (feature.SafeGet("rpt_type") != "") )
+        feature["name"] = feature["rpt_type"];
+      
       // Benchling export only has label
+      if ( (feature["name"] == "repeat_region") && (feature.SafeGet("label") != "") )
+        feature["name"] = feature.SafeGet("label");
+      
+      else if ( (feature["name"] == "repeat_region") && feature.SafeGet("note") != "")
+        feature["name"] = feature.SafeGet("note");
       
       //std::cerr << (*it).SafeGet("mobile_element") << " " << (*it).SafeGet("name") << std::endl;
 
