@@ -65,7 +65,6 @@ cp tests/data/lambda/lambda.5.gbk ${BINARYDIR}/tests/data/lambda
 #options here need to match those in Makefile.am for test to pass
 echo "export TESTBINPREFIX=bin" > ${BINARYDIR}/tests/test.config;
 echo "export BRESEQ_DATA_PATH=share/breseq" >> ${BINARYDIR}/tests/test.config;
-echo "export BRESEQ_SAMTOOLS_PATH=bin" >> ${BINARYDIR}/tests/test.config;
 echo "export BRESEQ_TEST_THREAD_ARG=\"-j 4\"" >> ${BINARYDIR}/tests/test.config
 
 echo "tests/test.sh clean tests" > ${BINARYDIR}/run_tests.sh

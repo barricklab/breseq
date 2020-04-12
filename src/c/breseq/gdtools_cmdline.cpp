@@ -2638,6 +2638,12 @@ int do_runfile(int argc, char *argv[])
 	
 	bool preserve_paired = options.count("preserve-pairs");
 	
+  if ( preserve_paired && (options["mode"]!="breseq") && (options["mode"]!="trimmomatic-PE-unique") ) {
+    options.addUsage("\nERROR: The --preserve-pairs option can only be used with modes 'breseq' or 'trimmomatic-PE-unique'.");
+    options.printUsage();
+    return -1;
+  }
+	
   //! Check mode and alter defaults if needed
   string exe;
 	string runfile_path;
