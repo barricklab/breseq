@@ -3027,7 +3027,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         
         uint32_t replace_target_id, replace_start, replace_end;
         new_ref_seq_info.parse_region(mut["region"], replace_target_id, replace_start, replace_end);
-        ASSERT(replace_start != replace_end, "Cannot process CON mutation with end == start. ID:" + mut._id);
+        ASSERT(replace_start != replace_end, "Cannot process 1-bp CON mutation with end == start. Expand the substituted region. ID:" + mut._id);
         
         int8_t strand = (replace_start < replace_end) ?  +1 : -1;
         

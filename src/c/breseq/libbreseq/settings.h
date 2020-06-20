@@ -212,7 +212,7 @@ namespace breseq
     //! Options that control which parts of the pipeline to execute
     string custom_run_name;                 // Default = <none> COMMAND-LINE OPTION
     string print_custom_run_name;           // custom_run_name with '_' replaced by ' '
-    bool use_version_for_seq_id;            // Use Genbank VERSION instead of LOCUS as seq_id
+    string genbank_field_for_seq_id;        // Header fields to use for seq_id Default = VERSION, other valid values are LOCUS and ACCESSION
     bool skip_read_filtering;               // Default = false
     bool skip_new_junction_prediction;      // Default = false COMMAND-LINE OPTION
     bool skip_read_alignment_and_missing_coverage_prediction;          // Default = false

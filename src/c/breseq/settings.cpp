@@ -194,7 +194,7 @@ namespace breseq
     ("read-min-length", "Reads in the input FASTQ file that are shorter than this length will be ignored. (0 = OFF)", 18, ADVANCED_OPTION)
     ("read-max-same-base-fraction", "Reads in the input FASTQ file in which this fraction or more of the bases are the same will be ignored. (0 = OFF)", 0.9, ADVANCED_OPTION)
     ("read-max-N-fraction", "Reads in the input FASTQ file in which this fraction or more of the bases are uncalled as N will be ignored. (0 = OFF)", 0.5, ADVANCED_OPTION)
-    ("use-version-for-seq-id", "If present, use the full VERSION in an input GenBank file (e.g., NC_001416.1) as the sequence ID instead of the LOCUS (e.g., NC_001416). You will need to use the converted reference file (data/reference.gff) for further breseq and gdtools operations on breseq output generated using this option.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("genbank-field-for-seq-id", "Which GenBank header field will be used to assign sequence IDs. Valid choices are LOCUS, ACCESSION, and VERSION. The default is to check those fields, in that order, for the first one that exists. If you override the default, you will need to use the converted reference file (data/reference.gff) for further breseq and gdtools operations on breseq output!", "AUTOMATIC", ADVANCED_OPTION)
     ;
     
     options.addUsage("", ADVANCED_OPTION);
@@ -372,8 +372,22 @@ namespace breseq
     this->read_file_read_length_min = from_string<double>(options["read-min-length"]);
     this->read_file_max_same_base_fraction = from_string<double>(options["read-max-same-base-fraction"]);
     this->read_file_max_N_fraction = from_string<double>(options["read-max-N-fraction"]);
-    this->use_version_for_seq_id = options.count("use-version-for-seq-id");
-
+    
+    this->genbank_field_for_seq_id = options["genbank-field-for-seq-id"];
+    this->genbank_field_for_seq_id = to_upper(this->genbank_field_for_seq_id);
+    if (   (this->genbank_field_for_seq_id != "AUTOMATIC")
+        && (this->genbank_field_for_seq_id != "LOCUS")
+        && (this->genbank_field_for_seq_id != "VERSION")
+        && (this->genbank_field_for_seq_id != "ACCESSION")
+        ) {
+      options.addUsage("");
+      options.addUsage("Value of --genbank-field-for-seq-id must be one of the following: AUTOMATIC, LOCUS, VERSION, ACCESSION.");
+      options.addUsage("");
+      options.addUsage("Value provided was: " + this->genbank_field_for_seq_id);
+      options.printUsage();
+      exit(-1);
+    }
+    
     
     // Reference sequence provided?
 		if (options.count("reference") + options.count("contig-reference") + options.count("junction-only-reference") == 0)

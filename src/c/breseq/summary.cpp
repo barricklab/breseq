@@ -435,6 +435,7 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
 {
   //! Settings: Workflow
   custom_run_name = t.custom_run_name;
+  genbank_field_for_seq_id = t.genbank_field_for_seq_id;
   num_processors = t.num_processors;
   skip_read_filtering = t.skip_read_filtering;
   skip_new_junction_prediction = t.skip_new_junction_prediction;
@@ -728,6 +729,7 @@ void to_json(json& j, const PublicOptionsSummary& s)
     //! Settings: Workflow
     {"workflow", json{
       {"custom_run_name", s.custom_run_name},
+      {"genbank_field_for_seq_id", s.genbank_field_for_seq_id},
       {"num_processors", s.num_processors},
       {"skip_read_filtering", s.skip_read_filtering},
       {"skip_new_junction_prediction", s.skip_new_junction_prediction},

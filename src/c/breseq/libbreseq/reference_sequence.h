@@ -755,9 +755,9 @@ public:
       }
     
       // Read GenBank coords
-      list<cLocation> ReadGenBankCoords(const cSequenceFeature& in_feature, string& s, ifstream& in);
+      list<cLocation> ReadGenBankCoords(const cSequenceFeature& in_feature, string& s, ifstream& in, bool safe_create_feature_locations);
       //Parse portion of GenBank coords string
-      list<cLocation> ParseGenBankCoords(const cSequenceFeature& in_feature, string& s, int8_t in_strand = 1);
+      list<cLocation> ParseGenBankCoords(const cSequenceFeature& in_feature, string& s, bool safe_create_feature_locations, int8_t in_strand = 1);
     
       list<cLocation> SafeCreateFeatureLocations(
                                           const cSequenceFeature& in_feature,
@@ -765,7 +765,8 @@ public:
                                           int32_t in_end_1,
                                           int8_t in_strand,
                                           bool in_start_is_indeterminate,
-                                          bool in_end_is_indeterminate
+                                          bool in_end_is_indeterminate,
+                                          bool safe_create_feature_locations = true
                                           );
   };
   
@@ -814,7 +815,7 @@ public:
     {}
 
     //!< Load all reference files and verify - this is the only public load method!
-    void LoadFiles(const vector<string>& file_names, bool use_version_as_seq_id = false);
+    void LoadFiles(const vector<string>& file_names, const string& genbank_field_for_seq_id = "AUTOMATIC");
     
     //!: Convenience function to load just one file
     void LoadFile(const string& file_name)
@@ -845,7 +846,7 @@ public:
     //!< Load reference file into object
     //!< Detect file type and load the information in it appropriately
     //!< Should not be called directly, only through LoadFiles!
-    void PrivateLoadFile(const string& file_name, bool use_version_as_seq_id = false);
+    void PrivateLoadFile(const string& file_name, const string& genbank_field_for_seq_id = "AUTOMATIC");
     
     //!< Verify that all seq_id have sequence and that features fit in sequence;
     void VerifySequenceFeatureMatch();
@@ -857,8 +858,8 @@ public:
     void ReadBull(const string& file_name);
 
     //!< Read GenBank file
-    void ReadGenBank(const string& in_file_names, bool use_version_as_seq_id = false);
-    bool ReadGenBankFileHeader(std::ifstream& in, const string& file_name, bool use_version_as_seq_id);
+    void ReadGenBank(const string& in_file_names, const string& genbank_field_for_seq_id = "AUTOMATIC");
+    bool ReadGenBankFileHeader(std::ifstream& in, const string& file_name, const string& genbank_field_for_seq_id = "AUTOMATIC");
     //void ReadGenBankTag(std::string& tag, std::string& s, std::ifstream& in);
     void ReadGenBankFileSequenceFeatures(std::ifstream& in, cAnnotatedSequence& s);
     void ReadGenBankFileSequence(std::ifstream& in, cAnnotatedSequence& s);

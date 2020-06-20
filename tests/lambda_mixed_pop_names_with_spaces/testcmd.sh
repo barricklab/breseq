@@ -14,7 +14,7 @@ TESTCMD=" \
     ${BRESEQ_TEST_THREAD_ARG} \
     -o ${SELF}/output\ output \
     -g ${SELF}/header.gd \
-    --use-version-for-seq-id \
+    --genbank-field-for-seq-id version \
     -r \"${SELF}/lambda space.gbk\" \
     ${SELF}/lambda\ mixed\ population\ space.fastq ;\
     rm \"${SELF}/lambda space.gbk\"  ; \

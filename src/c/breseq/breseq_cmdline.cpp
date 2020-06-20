@@ -468,7 +468,7 @@ int do_convert_reference(int argc, char* argv[]) {
   options("format,f", "Output format. Valid options: FASTA, GFF3, CSV (Default = FASTA)", "FASTA");
   options("no-sequence,n", "Do not include the nucleotide sequence. The output file will only have features. (Not allowed with FASTA format.)", TAKES_NO_ARGUMENT);
   options("output,o", "Output reference file path (Default = output.*)");
-
+  options("genbank-field-for-seq-id", "Which GenBank header field will be used to assign sequence IDs. Valid choices are LOCUS, ACCESSION, and VERSION. The default is to check those fields, in that order, for the first one that exists. If you override the default, you will need to use the converted reference file (data/reference.gff) for further breseq and gdtools operations on breseq output!", "AUTOMATIC", ADVANCED_OPTION);
 	options.processCommandArgs(argc, argv);
 	
   if (options.count("help")) {
@@ -500,6 +500,21 @@ int do_convert_reference(int argc, char* argv[]) {
     return -1;
   }
   
+  string genbank_field_for_seq_id = options["genbank-field-for-seq-id"];
+  genbank_field_for_seq_id = to_upper(genbank_field_for_seq_id);
+  if (   (genbank_field_for_seq_id != "AUTOMATIC")
+      && (genbank_field_for_seq_id != "LOCUS")
+      && (genbank_field_for_seq_id != "VERSION")
+      && (genbank_field_for_seq_id != "ACCESSION")
+      ) {
+    options.addUsage("");
+    options.addUsage("Value of --genbank-field-for-seq-id must be one of the following: AUTOMATIC, LOCUS, VERSION, ACCESSION.");
+    options.addUsage("");
+    options.addUsage("Value provided was: " + genbank_field_for_seq_id);
+    options.printUsage();
+    exit(-1);
+  }
+  
   cerr << "COMMAND: CONVERT-REFERENCE" << endl;
   
   cerr << "+++   Loading reference files..." << endl;
@@ -510,7 +525,7 @@ int do_convert_reference(int argc, char* argv[]) {
   }
   
   cReferenceSequences refs;
-  refs.LoadFiles(reference_file_names);
+  refs.LoadFiles(reference_file_names, genbank_field_for_seq_id);
 
   cerr << "+++   Writing reference file..." << endl;
   
@@ -1337,7 +1352,7 @@ int breseq_default_action(int argc, char* argv[])
     cReferenceSequences conv_ref_seq_info;
     
     // Load all of the reference sequences and convert to FASTA and GFF3
-    conv_ref_seq_info.LoadFiles(settings.all_reference_file_names, settings.use_version_for_seq_id);
+    conv_ref_seq_info.LoadFiles(settings.all_reference_file_names, settings.genbank_field_for_seq_id);
     conv_ref_seq_info.WriteFASTA(settings.reference_fasta_file_name);
     conv_ref_seq_info.WriteGFF(settings.reference_gff3_file_name);
     s.total_reference_sequence_length = conv_ref_seq_info.get_total_length();
@@ -1447,7 +1462,7 @@ int breseq_default_action(int argc, char* argv[])
   // (re)load the reference sequences from our converted files
   // we must be sure to associate them with their original file names
   // so that contig and junction-only references are correctly flagged
-  ref_seq_info.LoadFiles(make_vector<string>(settings.reference_gff3_file_name), settings.use_version_for_seq_id);
+  ref_seq_info.LoadFiles(make_vector<string>(settings.reference_gff3_file_name), settings.genbank_field_for_seq_id);
   ref_seq_info.use_original_file_names();
   
   // update the normal versus junction-only lists

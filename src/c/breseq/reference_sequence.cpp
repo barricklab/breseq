@@ -317,7 +317,7 @@ namespace breseq {
           
         }
         
-        //Any feature the encompases the replaced sequence needs to be resized
+        //Any feature the encompasses the replaced sequence needs to be resized
         else if(region.get_start_1() <= start_1 && region.get_end_1() >= end_1)
         {                          
           //Is there anything to modify?
@@ -756,7 +756,7 @@ namespace breseq {
   }
   
   // Load a complete collection of files and verify that sufficient information was loaded
-  void cReferenceSequences::LoadFiles(const vector<string>& file_names, bool use_version_as_seq_id)
+  void cReferenceSequences::LoadFiles(const vector<string>& file_names, const string& genbank_field_for_seq_id)
   {
     list<string> sorted_unique_file_names(file_names.begin(), file_names.end());
 
@@ -765,7 +765,7 @@ namespace breseq {
     
     for(list<string>::const_iterator it = sorted_unique_file_names.begin(); it != sorted_unique_file_names.end(); it++)
     {
-      this->PrivateLoadFile(*it, use_version_as_seq_id);
+      this->PrivateLoadFile(*it, genbank_field_for_seq_id);
     }
     
     this->VerifySequenceFeatureMatch();
@@ -812,7 +812,7 @@ namespace breseq {
   }
   
   
-  void cReferenceSequences::PrivateLoadFile(const string& file_name, bool use_version_as_seq_id)
+  void cReferenceSequences::PrivateLoadFile(const string& file_name, const string& genbank_field_for_seq_id)
   {
     ifstream in(file_name.c_str());
     ASSERT(in.good(), "Could not open reference file: " +file_name);
@@ -869,7 +869,7 @@ namespace breseq {
         
         ASSERT(eof_found, file_name + "\nTHIS GENBANK FILE APPEARS TO BE INCOMPLETE.\nMAKE SURE YOU DOWNLOADED THE ENTIRE FILE.\nFILE NEEDS TO END WITH '//'.");
         
-        ReadGenBank(file_name, use_version_as_seq_id);
+        ReadGenBank(file_name, genbank_field_for_seq_id);
       }break;
         
       case FASTA:
@@ -1394,21 +1394,21 @@ void cReferenceSequences::WriteCSV(const string &file_name) {
   }
 }
 
-void cReferenceSequences::ReadGenBank(const string& in_file_name, bool use_version_as_seq_id) {
+void cReferenceSequences::ReadGenBank(const string& in_file_name, const string& genbank_field_for_seq_id) {
 
   ifstream in(in_file_name.c_str(), ios_base::in);
   ASSERT(!in.fail(), "Could not open GenBank file: " + in_file_name);
 
-  while (ReadGenBankFileHeader(in, in_file_name, use_version_as_seq_id)) {
+  while (ReadGenBankFileHeader(in, in_file_name, genbank_field_for_seq_id)) {
     
     cAnnotatedSequence& this_seq = this->back();
+    uint32_t sequence_length_LOCUS = this_seq.m_length;
     
     // add a 'region' feature for GFF3 output
     cSequenceFeaturePtr f(new cSequenceFeature);
     (*f)["type"] = "region";
     
-    ASSERT(this_seq.m_length != 0, "Did not find bp length in GenBank LOCUS Line for sequence: " + this_seq.m_seq_id);
-    f->add_location(cLocation(1, this_seq.m_length, 1));
+    //f->add_location(cLocation(1, this_seq.m_length, 1));
     
     if (this_seq.m_is_circular)
       f->m_gff_attributes["Is_circular"].push_back("true");
@@ -1425,53 +1425,103 @@ void cReferenceSequences::ReadGenBank(const string& in_file_name, bool use_versi
     this_seq.set_file_format("GenBank");
     this_seq.set_sequence_loaded_from_file(in_file_name);
     
+    // Check the sequence length here. Warn if we had disagreements between the LOCUS line value
+    uint32_t sequence_length_SOURCE = 0;
+    for(cSequenceFeatureList::iterator it = this_seq.m_features.begin(); it != this_seq.m_features.end(); it++) {
+      if ((**it)["type"] == "source") {
+        sequence_length_SOURCE = (**it).get_length();
+        break;
+      }
+    }
+    
+    uint32_t sequence_length_SEQUENCE = this_seq.m_fasta_sequence.get_sequence_length();
+    
+    // This  is checked for in a generic check outside of GenBank format
+    //if ( (sequence_length_LOCUS!=sequence_length_SOURCE) || (sequence_length_SOURCE!=sequence_length_SEQUENCE) || (sequence_length_LOCUS!=sequence_length_SEQUENCE) ) {
+    //  WARN("Contradictory or missing sequence lengths for " + this_seq.m_seq_id + " in GenBank file...\nLocus line        : " + to_string(sequence_length_LOCUS) + "\nsource feature    : " + to_string(sequence_length_SOURCE) + "\nnucleotide sequence: " + to_string(sequence_length_SEQUENCE) + "\nLength of nucleotide sequence will be used.");
+    //}
+    
+    // Re-add possibly corrected 'region' feature location
+    f->m_locations.clear();
+    f->add_location(cLocation(1, sequence_length_SEQUENCE, 1));
   }
 }
 
-bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file_name, bool use_version_as_seq_id) {
+bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file_name, const string& genbank_field_for_seq_id) {
 
   // All files have a LOCUS line
-  // Some files may not have a VERSION line (allow this to be missing)
+  // The sequence ID is assigned with this order of preference LOCUS > ACCESSION > VERSION
+  // Some files may not have a VERSION or ACCESSION line.
+  // The length may not correctly parse from the LOCUS line => allow fallback to 'source' annotation
   
   //std::cout << "header" << std::endl;
   string line;
+  string first_locus_line;
+  
   bool found_LOCUS_line = false;
+  bool found_ACCESSION_line = false;
   bool found_VERSION_line = false;
+  
+  // We'll decide between using these three as the seq_id depending on option
+  string locus_seq_id;
+  string accession_seq_id;
+  string version_seq_id;
+  
   uint32_t sequence_length = 0;
   bool sequence_is_circular = false;
   string sequence_description;
   
-  // We'll decide between using these two as the seq_id depending on option
-  string locus_seq_id;
-  string version_seq_id;
   
   while (!in.eof()) {
     breseq::getline(in, line);
+    string saved_line = line;
     string first_word = GetWord(line);
     RemoveLeadingTrailingWhitespace(line);
 
     // This is the first line
     if (first_word == "LOCUS") {
 
-      // Example line 
+      // Should only be one line like this per record!
+      ASSERT_NO_BACKTRACE(!found_LOCUS_line, "Multiple LOCUS lines found in a single GenBank record.\nFirst LOCUS line:" + first_locus_line + "\nSecond LOCUS line:\n" + saved_line + "\nReference File: " + file_name);
+      found_LOCUS_line = true;
+      first_locus_line = saved_line;
+      
+      // Example lines
+      //
+      // From Genbank download:
       // LOCUS       EB03                 4629813 bp    DNA     circular BCT 13-APR-2007
+      //
+      // From prokka:
+      // LOCUS gi_99999999_gb_AE000000.1_2150000 bp DNA linear 15-JUN-2020
       
       string w;
       w = GetWord(line);
       locus_seq_id = safe_seq_id_name(w);
       
-      w = GetWord(line);
-      sequence_length = atoi(w.c_str());
+      // Allow the circular/linear and "[length] bp" to be any of the remaining words
       
+      vector<string> word_list;
+      word_list.push_back(w);
       w = GetWord(line);
-      w = GetWord(line);
-      w = GetWord(line);
-      if (to_lower(w) == "circular")
-        sequence_is_circular = true;
+      while (w.length()>0) {
+        word_list.push_back(w);
+        w = GetWord(line);
+      }
+      
+      for(size_t i=0; i<word_list.size(); i++) {
+        if (to_lower(word_list[i]) == "circular") {
+          sequence_is_circular = true;
+        } else if (word_list[i] == "bp") {
+          int32_t temp_sequence_length(0);
+          if (is_integer(word_list[i-1], temp_sequence_length)) {
+            sequence_length = static_cast<uint32_t>(temp_sequence_length);
+          }
+        }
+      }
 
-      // Should only be one line like this per record!
-      ASSERT(!found_LOCUS_line, "Multiple LOCUS lines found in a single GenBank record.");
-      found_LOCUS_line = true;
+      if (sequence_length==0) {
+        WARN("Nonnumeric or missing sequence length in GenBank record LOCUS line:\n" + saved_line + "\nReference File: " + file_name + "\nLength from 'source' annotation will be used.");
+      }
     }
     
     // This is a later line
@@ -1485,13 +1535,32 @@ bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file
       version_seq_id = safe_seq_id_name(w);
 
       // Should only be one line like this per record!
-      ASSERT(!found_VERSION_line, "Multiple VERSION lines found in a single GenBank record.");
+      if (found_VERSION_line) {
+        WARN("Multiple VERSION lines found in a single GenBank record.\nVERSION sequence ID: " + version_seq_id + "\nReference File: " + file_name);
+      }
       found_VERSION_line = true;
+    }
+    
+    // This is a later line
+    if (first_word == "ACCESSION") {
+
+      // Example line
+      // VERSION     pDCAF3mut  GI:500229631
+      
+      string w;
+      w = GetWord(line);
+      accession_seq_id = safe_seq_id_name(w);
+
+      // Should only be one line like this per record!
+      if (found_ACCESSION_line) {
+        WARN("Multiple ACCESSION lines found in a single GenBank record.\nACCESSION sequence ID: " + accession_seq_id + "\nReference File: " + file_name);
+      }
+      found_ACCESSION_line = true;
     }
 
 
     if (first_word == "DEFINITION") {
-      ASSERT(s, "Missing LOCUS line before DEFINITION line in GenBank record.");
+      ASSERT_NO_BACKTRACE(s, "Missing LOCUS line before DEFINITION line in GenBank record.\nReference File: " + file_name);
       sequence_description = line;
     }
 
@@ -1501,7 +1570,40 @@ bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file
   // Set up the new sequence here
   if (found_LOCUS_line) {
     cAnnotatedSequence* s = NULL;
-    string seq_id = (found_VERSION_line && use_version_as_seq_id) ? version_seq_id : locus_seq_id;
+    string seq_id;
+    
+    // Logic for deciding on the sequence ID:
+    if (genbank_field_for_seq_id == "AUTOMATIC") {
+      if ( found_LOCUS_line && (locus_seq_id.length() > 0) ) {
+        seq_id = locus_seq_id;
+      } else if (found_ACCESSION_line && (accession_seq_id.length() > 0)) {
+        seq_id = accession_seq_id;
+      } else if (found_VERSION_line && (version_seq_id.length() > 0)) {
+        seq_id = version_seq_id;
+      } else {
+        ERROR_NO_BACKTRACE("Could not find valid sequence ID after checking LOCUS, ACCESSION, and VERSION in GenBank record\nReference File:" + file_name);
+      }
+      
+    } else if (genbank_field_for_seq_id == "LOCUS") {
+      if ( found_LOCUS_line && (locus_seq_id.length() > 0) ) {
+        seq_id = locus_seq_id;
+      } else {
+        ERROR_NO_BACKTRACE("Could not find valid sequence ID in requested LOCUS field in GenBank record\nReference File:" + file_name);
+      }
+    } else if (genbank_field_for_seq_id == "ACCESSION") {
+      if ( found_ACCESSION_line && (accession_seq_id.length() > 0) ) {
+        seq_id = accession_seq_id;
+      } else {
+        ERROR_NO_BACKTRACE("Could not find valid sequence ID in requested ACCESSION field in GenBank record\nReference File:" + file_name);
+      }
+    } else if (genbank_field_for_seq_id == "VERSION") {
+      if ( found_VERSION_line && (version_seq_id.length() > 0) ) {
+        seq_id = version_seq_id;
+      } else {
+        ERROR_NO_BACKTRACE("Could not find valid sequence ID in requested VERSION field in GenBank record\nReference File:" + file_name);
+      }
+    }
+
     this->add_new_seq(seq_id, file_name);
     s = &((*this)[seq_id]);
     s->m_length = sequence_length;
@@ -1517,7 +1619,7 @@ bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file
  *  The string may cover multiple lines. Currently we do not handle discontinuous features,
  *  and features that cross the origin of a circular chromosome are returned with end < start. 
  */
-list<cLocation> cAnnotatedSequence::ReadGenBankCoords(const cSequenceFeature& in_feature, string& s, ifstream& in) {
+list<cLocation> cAnnotatedSequence::ReadGenBankCoords(const cSequenceFeature& in_feature, string& s, ifstream& in, bool safe_create_feature_locations) {
 
 // Typical coordinate strings:
 //   1485..1928
@@ -1565,11 +1667,11 @@ list<cLocation> cAnnotatedSequence::ReadGenBankCoords(const cSequenceFeature& in
   s = substitute(s, "\t", "");
   
   // Parse and add locations
-  return ParseGenBankCoords(in_feature, s);
+  return ParseGenBankCoords(in_feature, s, safe_create_feature_locations);
 }
   
 // Parses a sub-part of the full location string
-list<cLocation> cAnnotatedSequence::ParseGenBankCoords(const cSequenceFeature& in_feature, string& s, int8_t in_strand)
+list<cLocation> cAnnotatedSequence::ParseGenBankCoords(const cSequenceFeature& in_feature, string& s, bool safe_create_feature_locations, int8_t in_strand)
 {
   list<cLocation> locs;
   
@@ -1578,7 +1680,7 @@ list<cLocation> cAnnotatedSequence::ParseGenBankCoords(const cSequenceFeature& i
   if (s.find("complement(") == 0) {
     uint32_t n = string("complement(").size();
     string value = s.substr(n, s.size() - n - 1);
-    list<cLocation> sub_locs = ParseGenBankCoords(in_feature, value, in_strand);
+    list<cLocation> sub_locs = ParseGenBankCoords(in_feature, value, safe_create_feature_locations, in_strand);
     // Set all strands to opposite and reverse order
     for(list<cLocation>::iterator it = sub_locs.begin(); it != sub_locs.end(); it++) {
       it->set_strand(-it->get_strand());
@@ -1593,7 +1695,7 @@ list<cLocation> cAnnotatedSequence::ParseGenBankCoords(const cSequenceFeature& i
     
     int8_t consensus_strand = 0;
     for (uint32_t i = 0; i < tokens.size(); ++i) {
-      list<cLocation> sub_locs = ParseGenBankCoords(in_feature, tokens[i], in_strand);
+      list<cLocation> sub_locs = ParseGenBankCoords(in_feature, tokens[i], safe_create_feature_locations, in_strand);
       locs.insert(locs.end(), sub_locs.begin(), sub_locs.end());
     }
     
@@ -1627,7 +1729,8 @@ list<cLocation> cAnnotatedSequence::ParseGenBankCoords(const cSequenceFeature& i
                                                          atoi(tokens.back().c_str()),
                                                          in_strand,
                                                          start_is_indeterminate,
-                                                         end_is_indeterminate
+                                                         end_is_indeterminate,
+                                                         safe_create_feature_locations
                                                          );
     locs.insert(locs.end(), new_locs.begin(), new_locs.end());
   }
@@ -1646,7 +1749,8 @@ list<cLocation> cAnnotatedSequence::SafeCreateFeatureLocations(
                                                         int32_t in_end_1,
                                                         int8_t in_strand,
                                                         bool in_start_is_indeterminate,
-                                                        bool in_end_is_indeterminate
+                                                        bool in_end_is_indeterminate,
+                                                        bool safe_create_feature_locations
   )
 {
   // Unfortunately, we cannot count on this being initialized with information that would help with debugging
@@ -1657,16 +1761,16 @@ list<cLocation> cAnnotatedSequence::SafeCreateFeatureLocations(
   // We need to check that the feature is not entirely outside of the reference
   if (m_is_circular) {
     if ((in_start_1 > this->m_length) && (in_end_1 > this->m_length) ) {
-      ERROR("Error in reference file. Feature on sequence " + this->m_seq_id + " has coordinates (" + to_string(in_start_1) + "-" + to_string(in_end_1) + ") that are both outside of the circular sequence bounds (1-" + to_string(this->m_length) + ").");
+      ASSERT(!safe_create_feature_locations, "Error in reference file. Feature on sequence " + this->m_seq_id + " has coordinates (" + to_string(in_start_1) + "-" + to_string(in_end_1) + ") that are both outside of the circular sequence bounds (1-" + to_string(this->m_length) + ").");
     }
   } else {
     if ((in_start_1 > this->m_length) || (in_end_1 > this->m_length) ) {
-      ERROR("Error in reference file. Feature on sequence " + this->m_seq_id + " has coordinates (" + to_string(in_start_1) + "-" + to_string(in_end_1) + ") that are outside of the sequence bounds (1-" + to_string(this->m_length) + ").");
+      ASSERT(!safe_create_feature_locations, "Error in reference file. Feature on sequence " + this->m_seq_id + " has coordinates (" + to_string(in_start_1) + "-" + to_string(in_end_1) + ") that are outside of the sequence bounds (1-" + to_string(this->m_length) + ").");
     }
   }
   
     
-  if (m_is_circular) {
+  if (m_is_circular && safe_create_feature_locations) {
     in_end_1 %= this->m_length;
     in_start_1 %= this->m_length;
     if (in_end_1 == 0) in_end_1 = this->m_length;
@@ -1716,7 +1820,7 @@ list<cLocation> cAnnotatedSequence::SafeCreateFeatureLocations(
     if (in_strand == 1) locs.reverse();
     
   } else {
-    ERROR("Start coordinate (" + to_string<int32_t>(in_start_1) + ") must be less than or equal to end coordinate (" + to_string<int32_t>(in_end_1) + ") for feature that is not on a circular sequence.")
+    ASSERT(!safe_create_feature_locations, "Start coordinate (" + to_string<int32_t>(in_start_1) + ") must be less than or equal to end coordinate (" + to_string<int32_t>(in_end_1) + ") for feature that is not on a circular sequence.")
   }
   return locs;
 }
@@ -1847,11 +1951,28 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
           continue;
         }
         
-        list<cLocation> locs = s.ReadGenBankCoords(*current_feature, coord_s, in);
+        list<cLocation> locs;
+        if (to_upper((*current_feature)["type"]) == "SOURCE") {
+          locs = s.ReadGenBankCoords(*current_feature, coord_s, in, false);
+        } else {
+          locs = s.ReadGenBankCoords(*current_feature, coord_s, in, true);
+        }
         for(list<cLocation>::iterator it=locs.begin(); it!=locs.end(); it++) {
           current_feature->add_location(*it);
         }
         
+        // Special checks to use length from source feature!
+        // Use it with no further message if LOCUS is missing a length
+        // Report a discrepancy if they both have lengths
+        if (to_upper((*current_feature)["type"]) == "SOURCE") {
+          int32_t source_end_position = current_feature->m_locations.front().get_end_1();
+          if (s.m_length==0) {
+            s.m_length = source_end_position;
+          } else if (source_end_position != s.m_length) {
+            WARN("Length assigned to sequence '" + s.m_seq_id + "' from LOCUS line (" + to_string(s.m_length) + ") does not match length from source feature (" + to_string(source_end_position) + "). Length of source feature will be used.")
+            s.m_length = source_end_position;
+          }
+        }
       }
     }
     // Minor tag = information about current feature

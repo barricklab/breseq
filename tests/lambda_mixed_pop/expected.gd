@@ -1,7 +1,7 @@
 #=GENOME_DIFF	1.0
 #=TITLE	my_favorite_phage_genome
 #=AUTHOR	Arthur C. T. Genome
-#=COMMAND	./src/c/breseq/breseq -j 4 -o tests/lambda_mixed_pop -g tests/lambda_mixed_pop/header.gd --use-version-for-seq-id -r tests/lambda_mixed_pop/../data/lambda/lambda.gbk tests/lambda_mixed_pop/../data/lambda/lambda_mixed_population.fastq
+#=COMMAND	./src/c/breseq/breseq -j 4 -o tests/lambda_mixed_pop -g tests/lambda_mixed_pop/header.gd --genbank-field-for-seq-id VERSION -r tests/lambda_mixed_pop/../data/lambda/lambda.gbk tests/lambda_mixed_pop/../data/lambda/lambda_mixed_population.fastq
 #=REFSEQ	location:lambda_mixed_population.fastq
 #=READSEQ	location:lambda_mixed_population.fastq
 #=CONVERTED-BASES	6998495

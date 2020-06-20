@@ -1,4 +1,11 @@
-Version 0.35.3
+Version 0.35.2
+  * Changed --use-version-as-seq-id option to --genbank-field-for-seq-id to give more control over
+    choosing which part of the header is used for the sequence ID. The default is to assign to the
+    first existing field with the preference: LOCUS > ACCESSION > VERSION.
+  * Fixed GenBank parsing to be more forgiving of different LOCUS lines output by other programs.
+    Now only gives a warning if the sequence length is missing and looks for the linear|circular
+    designation at different locations within the LOCUS line. Falls back to the source feature
+    length if the sequence length is missing from the LOCUS line.
   * Fixed multiple identical GD entry error related to --user-evidence leading to
     double mutation predictions.
   * Changed error from loading reference genome files with repeat regions annotated
@@ -6,8 +13,6 @@ Version 0.35.3
   * Fixed major memory leak during the output step related to assigning read counts to
     JC evidence from BAM files. Rewrote to further improve performance by making access
     to the required files for this step persistent.
-
-Version 0.35.2
   * Added summary.json and output.vcf to the output directory (they are also present in the data directory).
   * Fixed --total-only mode for breseq BAM2COV to give expected output in --table mode.
 
@@ -19,7 +24,7 @@ Version 0.35.1
     multi-FASTA file with a genotype alignment suitable for building phylogenetic
     trees using parsimony methods. The content is equivalent to that of the PHYLIP
     output option, but without the length limitation on the genome names.
-  * Added --user-version-as-seq-id option to breseq. If present, it will use the full
+  * Added --use-version-as-seq-id option to breseq. If present, it will use the full
     VERSION in an input GenBank file (e.g., NC_001416.1) as the sequence ID instead of
     the LOCUS (e.g., NC_001416). You will need to use the converted reference file
     (data/reference.gff) for further breseq and gdtools operations on breseq output

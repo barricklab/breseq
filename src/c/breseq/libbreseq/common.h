@@ -198,7 +198,10 @@ namespace breseq {
   
 // Fatal versions, always add backtrace
 #define ASSERT(condition, message) { my_error_handler( condition, true, true, __FILE__, __BASE_FILE__, __LINE__, message); }
+#define ASSERT_NO_BACKTRACE(condition, message) { my_error_handler( condition, true, false, NULL, NULL, 0, message); }
 #define ERROR(message) { my_error_handler( false, true, true, __FILE__, __BASE_FILE__, __LINE__, message); }
+#define ERROR_NO_BACKTRACE(message) { my_error_handler( false, true, false, NULL, NULL, 0, message); }
+
   
 // Nonfatal versions, add backtrace if requested
 #define CHECK(condition, message) { my_error_handler( condition, false, false, __FILE__, __BASE_FILE__, __LINE__, message); }
@@ -795,7 +798,7 @@ namespace breseq {
 		return t;
 	}
   
-  inline bool is_integer(string& s, int32_t& ret_value)
+  inline bool is_integer(const string& s, int32_t& ret_value)
   {
     char* p;
     ret_value = static_cast<int32_t>(strtol(s.c_str(), &p, 10));

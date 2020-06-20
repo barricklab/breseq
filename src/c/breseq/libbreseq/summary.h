@@ -477,6 +477,7 @@ namespace breseq{
     
     //! Settings: Workflow
     string custom_run_name;
+    string genbank_field_for_seq_id;
     int32_t num_processors;
     bool skip_read_filtering;
     bool skip_new_junction_prediction;
