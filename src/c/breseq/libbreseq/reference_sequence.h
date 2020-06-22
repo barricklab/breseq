@@ -408,6 +408,7 @@ public:
       bool m_end_is_indeterminate;
       bool m_pseudo;
       map<string, vector<string> > m_gff_attributes;
+      vector<string> m_original_genbank_tags;
     
       cSequenceFeature() : m_start_is_indeterminate(false), m_end_is_indeterminate(false), m_pseudo(false) {}
 
@@ -418,6 +419,7 @@ public:
         , m_end_is_indeterminate(copy.m_end_is_indeterminate)
         , m_pseudo(copy.m_pseudo)
         , m_gff_attributes(copy.m_gff_attributes)
+        , m_original_genbank_tags(copy.m_original_genbank_tags)
       {
         // need to update locations to point to this feature
         for (list<cFeatureLocation>::iterator it=m_locations.begin(); it!=m_locations.end(); it++) {
@@ -612,6 +614,8 @@ public:
 
       cFastaSequence m_fasta_sequence;            //!< Nucleotide sequence
     
+      vector<string> m_genbank_raw_header_lines;   //!< Raw GenBank header linex (except LOCUS and FEATURES)
+ 
       // Features are stored as counted pointers so that we can have ready-made lists
       // of different types of features. 
       cSequenceFeatureList m_features;    //!< Full list of sequence features
@@ -864,10 +868,16 @@ public:
     void ReadGenBankFileSequenceFeatures(std::ifstream& in, cAnnotatedSequence& s);
     void ReadGenBankFileSequence(std::ifstream& in, cAnnotatedSequence& s);
     
+    //!< Write GenBank file
+    void WriteGenBankFileHeader(std::ofstream& out, const cAnnotatedSequence& s);
+    void WriteGenBankFileSequenceFeatures(std::ofstream& out, const cAnnotatedSequence& s);
+    void WriteGenBankFileSequence(std::ofstream& out, const cAnnotatedSequence& s);
+    
   public:
     void WriteFASTA(const string &file_name);
     void WriteFASTA(cFastaFile& ff);
     void WriteGFF(const string &file_name, bool no_sequence = false);
+    void WriteGenBank(const string &file_name, bool no_sequence = false);
     void WriteCSV(const string &file_name);
     
     //!< Moves over original file names to the current names

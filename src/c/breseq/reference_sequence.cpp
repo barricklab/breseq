@@ -1447,6 +1447,7 @@ void cReferenceSequences::ReadGenBank(const string& in_file_name, const string& 
   }
 }
 
+
 bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file_name, const string& genbank_field_for_seq_id) {
 
   // All files have a LOCUS line
@@ -1471,13 +1472,19 @@ bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file
   bool sequence_is_circular = false;
   string sequence_description;
   
-  
+  vector<string> genbank_raw_header_lines;
   while (!in.eof()) {
     breseq::getline(in, line);
+    
     string saved_line = line;
     string first_word = GetWord(line);
     RemoveLeadingTrailingWhitespace(line);
 
+    // Save all lines as they appear verbatim to print back out...
+    if ( (first_word != "LOCUS") && (first_word != "FEATURES") ) {
+      genbank_raw_header_lines.push_back(saved_line);
+    }
+    
     // This is the first line
     if (first_word == "LOCUS") {
 
@@ -1609,6 +1616,7 @@ bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file
     s->m_length = sequence_length;
     s->m_is_circular = sequence_is_circular;
     s->m_description = sequence_description;
+    s->m_genbank_raw_header_lines = genbank_raw_header_lines;
   }
   
   return (found_LOCUS_line);
@@ -1839,6 +1847,9 @@ void cSequenceFeature::ReadGenBankTag(std::string& tag, std::string& s, std::ifs
 {
   // delete leading slash
   tag.erase(0,1);
+  
+  // Keep track of original GenBank tags for printing
+  this->m_original_genbank_tags.push_back(tag);
 
   // erase through the equals on this line
   int pos = s.find("=");
@@ -2122,6 +2133,158 @@ void cReferenceSequences::ReadGenBankFileSequence(std::ifstream& in, cAnnotatedS
   s.m_fasta_sequence.set_sequence(nucleotide_sequence);
   
   //cout << s.m_sequence << std::endl;
+}
+
+
+void cReferenceSequences::WriteGenBank(const string &file_name, bool no_sequence)
+{
+  ofstream out(file_name.c_str(), ios_base::out);
+
+  ASSERT(!out.fail(), "Failed to open file " + file_name);
+
+  for (vector<cAnnotatedSequence>::const_iterator it_as = this->begin(); it_as < this->end(); it_as++) {
+    WriteGenBankFileHeader(out, *it_as);
+    WriteGenBankFileSequenceFeatures(out, *it_as);
+    if (!no_sequence) {
+      WriteGenBankFileSequence(out, *it_as);
+    }
+    out << "//" << endl;
+  }
+}
+
+
+string GenBankMonthToAbbreviation(int32_t month_index) {
+  switch(month_index) {
+    case 1:  return "JAN";
+    case 2:  return "FEB";
+    case 3:  return "MAR";
+    case 4:  return "APR";
+    case 5:  return "MAY";
+    case 6:  return "JUN";
+    case 7:  return "JUL";
+    case 8:  return "AUG";
+    case 9:  return "SEP";
+    case 10: return "OCT";
+    case 11: return "NOV";
+    case 12: return "DEC";
+  }
+  
+  return "UNK";
+}
+
+void cReferenceSequences::WriteGenBankFileHeader(std::ofstream& out, const cAnnotatedSequence& s)
+{
+  time_t now = time(0);
+  tm *ltm = localtime(&now);
+  
+// LOCUS       KC619530                7721 bp    DNA     circular SYN 21-MAY-2013
+  out << "LOCUS       " << std::left << std::setw(18) << s.m_seq_id << " " << std::right << std::setw(9) << s.m_length << " bp    DNA     ";
+  out << (s.is_circular() ? "circular BSQ" : "linear   BSQ") << " " << std::setw(2) << std::setfill('0') << ltm->tm_mday << std::setfill(' ') << "-";
+  out << GenBankMonthToAbbreviation(ltm->tm_mon+1) << "-" << (ltm->tm_year+1900) << endl;
+  
+  for (vector<string>::const_iterator it = s.m_genbank_raw_header_lines.begin(); it != s.m_genbank_raw_header_lines.end(); it++) {
+    out << *it << endl;
+  }
+}
+
+// Indents all lines after reaching a given char_per_line
+void GenBankPrintAligned(std::ofstream& out, const string& s, const size_t num_left_padding_spaces, const size_t char_per_line, const size_t first_line_chars=0) {
+  
+  size_t i=0;
+  size_t end_i;
+  size_t c=first_line_chars;
+  size_t padding = static_cast<size_t>(max<int32_t>(num_left_padding_spaces-first_line_chars, 0));
+  while (i < s.length()) {
+    end_i = min<size_t>(i + char_per_line - padding - 1, s.length());
+    out << repeat_char(' ', padding) << s.substr(i, end_i - i + 1) << endl;
+    i=end_i+1;
+    padding = num_left_padding_spaces;
+  }
+}
+
+string GenBankCoordsString(const cFeatureLocationList& locs)
+{
+  vector<string> sl;
+  for(cFeatureLocationList::const_iterator it=locs.begin(); it != locs.end(); it++) {
+    const cFeatureLocation& loc = *it;
+    string s;
+    if (loc.get_strand() == 1) {
+      s = to_string(loc.get_start_1()) + ".." + to_string(loc.get_end_1());
+    } else {
+      s = "complement(" + to_string(loc.get_start_1()) + ".." + to_string(loc.get_end_1()) + ")";
+    }
+    sl.push_back(s);
+  }
+  if (sl.size() == 1) {
+    return sl[0];
+  } else {
+    return "join(" + join(sl, ",") + ")";
+  }
+}
+
+
+void cReferenceSequences::WriteGenBankFileSequenceFeatures(std::ofstream& out, const cAnnotatedSequence& s)
+{
+  // We need to skip an initial "region" tag that is created internally for GFF conversion
+  // Note: We assue that this will be the first feature
+  size_t feat_index=0;
+
+  out << "FEATURES             Location/Qualifiers" << endl;
+  for (cSequenceFeatureList::const_iterator it = s.m_features.begin(); it != s.m_features.end(); it++) {
+    feat_index++;
+    cSequenceFeature& feat = **it;
+
+    if ( (feat_index==1) && (feat["type"] == "region")) {
+      continue;
+    }
+    
+    out << "     " << left << setw(15) << feat["type"] << " " << GenBankCoordsString(feat.m_locations) << endl;
+
+    for (vector<string>::const_iterator tag_it = feat.m_original_genbank_tags.begin(); tag_it != feat.m_original_genbank_tags.end(); tag_it++) {
+        
+      if (feat.count(*tag_it) == 0) continue;
+      
+      int32_t value_int;
+      if (is_integer(feat[*tag_it], value_int)) {
+        GenBankPrintAligned(out, "/" + *tag_it + "=" + to_string(value_int), 21, 79);
+      } else {
+        GenBankPrintAligned(out, "/" + *tag_it + "=\"" + feat[*tag_it] + "\"", 21, 79);
+      }
+    }
+    
+
+/*
+   // Alternative version that prints all tags (will also print GFF generated ones)
+   for(sequence_feature_map_t::const_iterator tag_it = feat.cbegin(); tag_it != feat.cend(); tag_it++) {
+      int32_t second_int;
+      if (is_integer(tag_it->second, second_int)) {
+        out << "                     /" << tag_it->first << "=" << second_int << endl;
+      } else {
+        out << "                     /" << tag_it->first << "=\"" << tag_it->second << "\"" << endl;
+      }
+    }
+*/
+  }
+}
+
+void cReferenceSequences::WriteGenBankFileSequence(std::ofstream& out, const cAnnotatedSequence& s)
+{
+  uint64_t bp_counter = 1;
+  uint32_t chunk_counter = 0;
+  
+  out << "ORIGIN" << endl;
+  while (bp_counter <= s.get_sequence_length()) {
+    out << setw(9) << std::right << bp_counter << std::left << " ";
+    chunk_counter = 0;
+    vector<string> sl;
+    while ( (chunk_counter < 6) && (bp_counter <= s.m_fasta_sequence.get_sequence_length()) ) {
+      uint32_t sequence_chunk_size = std::min<uint32_t>(s.get_sequence_length() - bp_counter + 1, 10);
+      sl.push_back(to_lower(s.get_sequence_1_start_size(bp_counter, sequence_chunk_size)));
+      bp_counter += 10;
+      chunk_counter++;
+    }
+    out << join (sl," ") << endl;
+  }
 }
 
 void cReferenceSequences::ReadBull(const string& file_name) {

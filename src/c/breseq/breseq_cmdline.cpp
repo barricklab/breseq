@@ -465,7 +465,7 @@ int do_convert_reference(int argc, char* argv[]) {
   options.addUsage("");
   options.addUsage("Allowed Options");
   options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("format,f", "Output format. Valid options: FASTA, GFF3, CSV (Default = FASTA)", "FASTA");
+  options("format,f", "Output format. Valid options: FASTA, GFF3, GENBANK, CSV (Default = FASTA)", "FASTA");
   options("no-sequence,n", "Do not include the nucleotide sequence. The output file will only have features. (Not allowed with FASTA format.)", TAKES_NO_ARGUMENT);
   options("output,o", "Output reference file path (Default = output.*)");
   options("genbank-field-for-seq-id", "Which GenBank header field will be used to assign sequence IDs. Valid choices are LOCUS, ACCESSION, and VERSION. The default is to check those fields, in that order, for the first one that exists. If you override the default, you will need to use the converted reference file (data/reference.gff) for further breseq and gdtools operations on breseq output!", "AUTOMATIC", ADVANCED_OPTION);
@@ -486,7 +486,7 @@ int do_convert_reference(int argc, char* argv[]) {
   
   string output_format = to_upper(options["format"]);
   if (output_format=="GFF") output_format="GFF3";
-  if ((output_format != "FASTA") && (output_format != "GFF3") && (output_format != "CSV")) {
+  if ((output_format != "FASTA") && (output_format != "GENBANK") && (output_format != "GFF3") && (output_format != "CSV")) {
     options.addUsage("");
     options.addUsage("Unknown output file format requested: " + to_upper(options["format"]));
     options.printUsage();
@@ -533,6 +533,8 @@ int do_convert_reference(int argc, char* argv[]) {
   cerr << "  Format : " << output_format << endl;
   if (output_format == "FASTA") {
     refs.WriteFASTA(options.count("output") ? options["output"] : "output.fna");
+  } else if (output_format == "GENBANK") {
+    refs.WriteGenBank(options.count("output") ? options["output"] : "output.gbk", options.count("no-sequence"));
   } else if (output_format == "GFF3") {
     refs.WriteGFF(options.count("output") ? options["output"] : "output.gff", options.count("no-sequence"));
   } else if (output_format == "CSV") {
