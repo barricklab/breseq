@@ -12,7 +12,9 @@ TESTCMD="\
         -f GENBANK \
         -o ${SELF}/output.gbk \
         ${DATADIR}/pDCAF3/KC619530.gbk \
-        && sed -i '' '1s/[[:digit:]]\{2\}-.\{3\}-[[:digit:]]\{4\}/XX-XX-XXXX/' ${CURRENT_OUTPUTS[0]} \
+        && perl -i -pe 's/\d{2}-\w{3}-\d{4}/XX-XX-XXXX/g if 1 .. 1' ${CURRENT_OUTPUTS[0]} \
     "
 
 do_test $1 ${SELF}
+
+

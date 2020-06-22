@@ -13,7 +13,7 @@ TESTCMD="\
         -o ${SELF}/output.gbk \
         -r ${DATADIR}/REL606/REL606.fragment.gbk \
         ${SELF}/input.gd \
-        && sed -i '' '1s/[[:digit:]]\{2\}-.\{3\}-[[:digit:]]\{4\}/XX-XX-XXXX/' ${CURRENT_OUTPUTS[0]} \
+        && perl -i -pe 's/\d{2}-\w{3}-\d{4}/XX-XX-XXXX/g if 1 .. 1' ${CURRENT_OUTPUTS[0]} \
     "
 
 do_test $1 ${SELF}
