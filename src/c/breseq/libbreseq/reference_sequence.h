@@ -748,6 +748,7 @@ public:
         copy.m_description = in.m_description;
         copy.m_seq_id = in.m_seq_id;
         copy.m_fasta_sequence = in.m_fasta_sequence;
+        copy.m_genbank_raw_header_lines = in.m_genbank_raw_header_lines;
 
         //Features.
         for (cSequenceFeatureList::iterator it = in.m_features.begin(); it != in.m_features.end(); ++it) {

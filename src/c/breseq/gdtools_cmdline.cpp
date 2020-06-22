@@ -170,7 +170,7 @@ int do_apply(int argc, char *argv[])
   AnyOption options("gdtools APPLY [ -o output.gff3 -f GFF3 ] -r reference.gbk input.gd");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o",    "Output file name (DEFAULT=output.*)");
-  options("format,f",    "Output file format (Options: FASTA, GFF3)", "FASTA");
+  options("format,f",    "Output file format (Options: FASTA, GENBANK, GFF3)", "FASTA");
   options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
   options("verbose,v",   "Verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
@@ -197,7 +197,7 @@ int do_apply(int argc, char *argv[])
 
 	string format = to_upper(options["format"]);
 	if (format == "GFF") format = "GFF3"; // allow synonym
-  if ((format != "FASTA") && (format != "GFF3")) {
+  if ((format != "FASTA") && (format != "GENBANK") && (format != "GFF3")) {
     options.addUsage("");
     options.addUsage("Did not recognize format: " + options["format"]);
     options.printUsage();
@@ -210,7 +210,9 @@ int do_apply(int argc, char *argv[])
   }
   else {
     output = "output." + to_lower(format);
+		if (format=="FASTA") output = "output.fasta";
 		if (format=="GFF3") output = "output.gff";
+		if (format=="GENBANK") output = "output.gbk";
   }  
 
   if (!options.getArgc()) {
@@ -239,11 +241,12 @@ int do_apply(int argc, char *argv[])
   uout("Writing output file in " + format + " format");
 
   if (format == "FASTA") {
-    uout << options["fasta"] << endl;
     new_ref_seq_info.WriteFASTA(output);
   }
+  else if (format == "GENBANK") {
+    new_ref_seq_info.WriteGenBank(output);
+  }
   else if (format == "GFF3") {
-    uout << options["gff3"] << endl;
     new_ref_seq_info.WriteGFF(output);
   }
 

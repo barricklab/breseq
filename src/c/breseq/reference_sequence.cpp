@@ -1479,11 +1479,6 @@ bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file
     string saved_line = line;
     string first_word = GetWord(line);
     RemoveLeadingTrailingWhitespace(line);
-
-    // Save all lines as they appear verbatim to print back out...
-    if ( (first_word != "LOCUS") && (first_word != "FEATURES") ) {
-      genbank_raw_header_lines.push_back(saved_line);
-    }
     
     // This is the first line
     if (first_word == "LOCUS") {
@@ -1572,6 +1567,11 @@ bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file
     }
 
     if (first_word == "FEATURES") break;
+    
+    // Save all lines as they appear verbatim to print back out...
+    if ( (first_word != "LOCUS")) {
+      genbank_raw_header_lines.push_back(saved_line);
+    }
   }
 
   // Set up the new sequence here
@@ -2238,6 +2238,11 @@ void cReferenceSequences::WriteGenBankFileSequenceFeatures(std::ofstream& out, c
       continue;
     }
     
+    // We have our own handling of /pseudo
+    if ( (feat["type"] == "pseudo")) {
+      continue;
+    }
+    
     out << "     " << left << setw(15) << feat["type"] << " " << GenBankCoordsString(feat.m_locations) << endl;
 
     for (vector<string>::const_iterator tag_it = feat.m_original_genbank_tags.begin(); tag_it != feat.m_original_genbank_tags.end(); tag_it++) {
@@ -2252,7 +2257,11 @@ void cReferenceSequences::WriteGenBankFileSequenceFeatures(std::ofstream& out, c
       }
     }
     
-
+    
+    // Handle psuedo
+    if (feat.m_pseudo) {
+      GenBankPrintAligned(out, "/pseudo", 21, 79);
+    }
 /*
    // Alternative version that prints all tags (will also print GFF generated ones)
    for(sequence_feature_map_t::const_iterator tag_it = feat.cbegin(); tag_it != feat.cend(); tag_it++) {
