@@ -12,6 +12,7 @@ TESTCMD="\
         -f GENBANK \
         -o ${SELF}/output.gbk \
         -r ${DATADIR}/REL606/REL606.fragment.gbk \
+        -r ${DATADIR}/sfGFP/sfGFP.gbk \
         ${SELF}/input.gd \
         && perl -i -pe 's/\d{2}-\w{3}-\d{4}/XX-XX-XXXX/g if 1 .. 1' ${CURRENT_OUTPUTS[0]} \
     "

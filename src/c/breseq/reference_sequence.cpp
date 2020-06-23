@@ -222,7 +222,10 @@ namespace breseq {
     ASSERT(start_1 <= end_1, "start (" + to_string(start_1) + ") not less than or equal to end (" + to_string(end_1) + ")");
     m_fasta_sequence.replace_sequence_1(start_1, end_1, replacement_seq);
     
-    //Temporary variable for the amount to shift the start and end positions
+    // Temporary variable for the amount to shift the start and end positions
+    // The value of 'shift' gets *subtracted* from all positions
+    // so a negative shift occurs if the replacement is bigger than the replaced region
+    //
     // Example:
     //   If we're replacing positions 5 and 6, we need to potentially shift  
     //   position 7 down by 2 even though the difference between 5 and 6 is 1.
@@ -277,10 +280,6 @@ namespace breseq {
           
           //Mark it as pseudo
           feat.flag_pseudo(verbose);
-          
-          //Modify the notes for this feature
-          //If this feature is already pseudo or a region, do nothing.
-          //if(feat["type"] != "region" && feat["type"] != "source" && !feat.m_gff_attributes.count("Mutation from " + mut_type))feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
         }
         
         //Everything that starts after the replacement starts needs to be shifted          
@@ -300,9 +299,6 @@ namespace breseq {
             
             //Mark it as pseudo
             feat.flag_pseudo(verbose);
-            
-            //Modify the notes for this feature
-            //if(feat["type"] != "region" && feat["type"] != "source" && !feat.m_gff_attributes.count("Mutation from " + mut_type))feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
           }             
           
           //Is there any reason to shift?
@@ -334,9 +330,6 @@ namespace breseq {
             
             //Mark it as pseudo
             feat.flag_pseudo(verbose);
-            
-            //Modify the notes for this feature
-            //if(feat["type"] != "region" && feat["type"] != "source" && !feat.m_gff_attributes.count("Mutation from " + mut_type))feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
           }
         }
         
@@ -429,9 +422,6 @@ namespace breseq {
             
             //Mark it as pseudo
             feat.flag_pseudo(verbose);
-            
-            //Modify the notes for this feature
-            //if(feat["type"] != "region" && feat["type"] != "source" && !feat.m_gff_attributes.count("Mutation from " + mut_type))feat.m_gff_attributes["Note"].push_back("Mutation from " + mut_type);
           }            
         }
       }
@@ -575,7 +565,7 @@ namespace breseq {
   // starting at the specified position (not after it). The sequence 
   // for these features must already have been inserted.
   
-  void cAnnotatedSequence::repeat_feature_1(int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& repeated_ref_seq_info, string& repeated_seq_id, int8_t strand, cLocation &repeated_region, bool verbose)
+  void cAnnotatedSequence::repeat_feature_1(int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& repeated_ref_seq_info, string& repeated_seq_id, int8_t strand, const cLocation &repeated_region, bool verbose)
   {
     (void) verbose;
     // verbose = true;

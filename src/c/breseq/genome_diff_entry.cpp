@@ -70,8 +70,9 @@ namespace breseq {
   const char* NEW_COPY_NUMBER = "new_copy_number";
   const char* MEDIATED_STRAND = "mediated_strand";
   
-  // For CON
+  // For CON/INT
   const char* REGION = "region";
+  const char* REPLACE_SIZE = "replace_size";
   
   //For RA
   // old + new required field
@@ -139,9 +140,10 @@ namespace breseq {
   (DEL,make_vector<string> (SEQ_ID)(POSITION)(SIZE))
   (INS,make_vector<string> (SEQ_ID)(POSITION)(NEW_SEQ))
   (MOB,make_vector<string> (SEQ_ID)(POSITION)(REPEAT_NAME)(STRAND)(DUPLICATION_SIZE))
-  (INV,make_vector<string> (SEQ_ID)(POSITION)(SIZE))
   (AMP,make_vector<string> (SEQ_ID)(POSITION)(SIZE)(NEW_COPY_NUMBER))
-  (CON,make_vector<string> (SEQ_ID)(POSITION)(SIZE)(REGION))
+  (INV,make_vector<string> (SEQ_ID)(POSITION)(SIZE))
+  (CON,make_vector<string> (SEQ_ID)(POSITION)(REPLACE_SIZE)(REGION))
+  (INT,make_vector<string> (SEQ_ID)(POSITION)(REPLACE_SIZE)(REGION))
   
   //## evidence
   (RA,make_vector<string> (SEQ_ID)(POSITION)(INSERT_POSITION)(REF_BASE)(NEW_BASE))
@@ -177,6 +179,7 @@ namespace breseq {
   enum diff_entry_field_variable_t {
     kDiffEntryFieldVariableType_BaseSequence,
     kDiffEntryFieldVariableType_PositiveInteger,
+    kDiffEntryFieldVariableType_NonNegativeInteger,
     kDiffEntryFieldVariableType_Integer,
     kDiffEntryFieldVariableType_Strand, // must be -1 or +1
     kDiffEntryFieldVariableType_PositiveInteger_ReverseSort,
@@ -191,6 +194,7 @@ namespace breseq {
   (NEW_SEQ, kDiffEntryFieldVariableType_BaseSequence)
   (NEW_COPY_NUMBER, kDiffEntryFieldVariableType_PositiveInteger)
   (DUPLICATION_SIZE, kDiffEntryFieldVariableType_Integer)
+  (REPLACE_SIZE, kDiffEntryFieldVariableType_NonNegativeInteger)
   (DEL_START, kDiffEntryFieldVariableType_PositiveInteger)
   (DEL_END, kDiffEntryFieldVariableType_PositiveInteger)
   (INS_START, kDiffEntryFieldVariableType_BaseSequence)
@@ -207,7 +211,7 @@ namespace breseq {
   ;
   
   const vector<string>gd_entry_type_lookup_table =
-  make_vector<string>("UNKNOWN")("SNP")("SUB")("DEL")("INS")("MOB")("AMP")("INV")("CON")("RA")("MC")("JC")("CN")("UN")("CURA")("FPOS")("PHYL")("TSEQ")("PFLP")("RFLP")("PFGE")("NOTE")("MASK");
+  make_vector<string>("UNKNOWN")("SNP")("SUB")("DEL")("INS")("MOB")("AMP")("INV")("CON")("INT")("RA")("MC")("JC")("CN")("UN")("CURA")("FPOS")("PHYL")("TSEQ")("PFLP")("RFLP")("PFGE")("NOTE")("MASK");
   
   // Used when determining what fields need to be updated if ids are renumbered
   // accounts for key=mutation_id:copy_index notation.
@@ -226,6 +230,7 @@ namespace breseq {
   (AMP,  cDiffEntry::sort_fields_item(1, SEQ_ID, POSITION))
   (INV,  cDiffEntry::sort_fields_item(1, SEQ_ID, POSITION))
   (CON,  cDiffEntry::sort_fields_item(1, SEQ_ID, POSITION))
+  (INT,  cDiffEntry::sort_fields_item(1, SEQ_ID, POSITION))
   (NOTE, cDiffEntry::sort_fields_item(2, "note", "note"))
   (RA,   cDiffEntry::sort_fields_item(3, SEQ_ID, POSITION))
   (MC,   cDiffEntry::sort_fields_item(4, SEQ_ID, START))
@@ -251,20 +256,21 @@ namespace breseq {
   (AMP, 6)
   (INV, 7)
   (CON, 8)
-  (RA,  9)
-  (MC,  10)
-  (JC,  11)
-  (CN,  12)
-  (UN,  13)
-  (CURA, 14)
-  (FPOS, 15)
-  (PHYL, 16)
-  (TSEQ, 17)
-  (PFLP, 18)
-  (RFLP, 19)
-  (PFGE, 20)
-  (NOTE, 20)
-  (MASK, 20)
+  (INT, 9)
+  (RA,  10)
+  (MC,  11)
+  (JC,  12)
+  (CN,  13)
+  (UN,  14)
+  (CURA, 15)
+  (FPOS, 16)
+  (PHYL, 17)
+  (TSEQ, 18)
+  (PFLP, 19)
+  (RFLP, 20)
+  (PFGE, 21)
+  (NOTE, 21)
+  (MASK, 21)
   ;
   ////
   // End sorting variables
@@ -395,8 +401,8 @@ namespace breseq {
     
     // Certain keys are only valid with certain entries
     if ( de.entry_exists(APPLY_SIZE_ADJUST) ) {
-      if ( (de._type != AMP) && (de._type != DEL) && (de._type != SUB) && (de._type != CON) && (de._type != INV) ) {
-        if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'apply_size_adjust' is only allowed for AMP, CON, DEL, INV, and SUB mutations.", true);
+      if ( (de._type != AMP) && (de._type != DEL) && (de._type != SUB) && (de._type != CON) && (de._type != INT)  && (de._type != INV) ) {
+        if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Key 'apply_size_adjust' is only allowed for AMP, CON, INT, DEL, INV, and SUB mutations.", true);
       }
     }
     
@@ -468,7 +474,11 @@ namespace breseq {
           }
           break;
           
-          
+        case kDiffEntryFieldVariableType_NonNegativeInteger:
+          if (ret_val < 0) {
+            parse_errors.add_line_error(from_string<uint32_t>((*this)["_line_number"]), this->as_string(), "Expected zero or positive integral value for field " + to_string<uint32_t>(field_count) + ": [" + key + "] instead of [" + value + "]."  , true);
+          }
+          break;
           
         case kDiffEntryFieldVariableType_Strand:
           if ((ret_val != -1) && (ret_val != 1)) {
@@ -479,6 +489,7 @@ namespace breseq {
           // already tested
         case kDiffEntryFieldVariableType_BaseSequence:
         case kDiffEntryFieldVariableType_Integer:
+
           break;
       }
     }
@@ -571,7 +582,6 @@ namespace breseq {
         
         switch(diff_entry_field_variable_types[spec]) {
           case kDiffEntryFieldVariableType_PositiveInteger:
-          case kDiffEntryFieldVariableType_PositiveInteger_ReverseSort:
           {
             uint32_t a_val = from_string<uint32_t>(a.find(spec)->second);
             uint32_t b_val = from_string<uint32_t>(b.find(spec)->second);
@@ -583,7 +593,20 @@ namespace breseq {
             break;
           }
             
+          case kDiffEntryFieldVariableType_PositiveInteger_ReverseSort:
+          {
+            uint32_t a_val = from_string<uint32_t>(a.find(spec)->second);
+            uint32_t b_val = from_string<uint32_t>(b.find(spec)->second);
+            
+            if (a_val < b_val)
+              return +1;
+            else if (a_val > b_val)
+              return -1;
+            break;
+          }
+            
           case kDiffEntryFieldVariableType_Integer:
+          case kDiffEntryFieldVariableType_NonNegativeInteger:
           case kDiffEntryFieldVariableType_Strand:
           {
             int32_t a_val = from_string<int32_t>(a.find(spec)->second);
@@ -631,6 +654,7 @@ namespace breseq {
       case INV:
       case AMP:
       case CON:
+      case INT:
       case MASK:
         return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)));
       case INS:
@@ -664,9 +688,11 @@ namespace breseq {
       case DEL:
       case INV:
       case AMP:
-      case CON:
       case MASK:
         return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)) + from_string<uint32_t>(this->at(SIZE)) - 1);
+      case CON:
+      case INT:
+        return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)) + from_string<uint32_t>(this->at(REPLACE_SIZE)) - 1);
       case INS:
         return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)), this->entry_exists(INSERT_POSITION) ? from_string<uint32_t>(this->at(INSERT_POSITION)) : 1);
       case MOB:
@@ -782,12 +808,13 @@ namespace breseq {
           size_change += this->get("ins_end").length();
         break;
       }
-        
+      
       case CON:
+      case INT:
       {
         uint32_t replace_target_id, replace_start, replace_end;
         ref_seq_info.parse_region(this->get("region"), replace_target_id, replace_start, replace_end);
-        size_change = from_string<uint32_t>(this->get(SIZE));
+        size_change = from_string<uint32_t>(this->get(REPLACE_SIZE));
         
         if (this->entry_exists(APPLY_SIZE_ADJUST)) {
           size_change += from_string<int32_t>(this->get(APPLY_SIZE_ADJUST));
@@ -896,6 +923,7 @@ namespace breseq {
         break;
         
       case CON:
+      case INT:
       {
         // flip coordinates of region
         string seq_id;
@@ -1606,9 +1634,10 @@ namespace breseq {
       } break;
         
       case CON:
+      case INT:
       {
-        assert(this->entry_exists("size"));
-        assert(this->entry_exists("region"));
+        assert(this->entry_exists(REPLACE_SIZE));
+        assert(this->entry_exists(REGION));
       } break;
         
         

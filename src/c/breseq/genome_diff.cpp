@@ -352,7 +352,7 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
       // ---> Polymorphic mutations can overlap with other mutations without 'before' or 'after' tags.
       if (de->is_polymorphism()) continue;
       
-      if ( (de->_type == MOB) || (de->_type == AMP) || (de->_type == DEL) || (de->_type == SUB) || (de->_type == CON) ) {
+      if ( (de->_type == MOB) || (de->_type == AMP) || (de->_type == DEL) || (de->_type == SUB) || (de->_type == CON) || (de->_type == INT) ) {
         
         dr_item new_dr_item;
         new_dr_item.mutation_id = de->_id;
@@ -2575,7 +2575,7 @@ string cGenomeDiff::mob_replace_sequence(cReferenceSequences& ref_seq_info,
 //
 void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose, int32_t slop_distance, int32_t size_cutoff_AMP_becomes_INS_DEL_mutation)
 {    
-  uint32_t count_SNP = 0, count_SUB = 0, count_INS = 0, count_DEL = 0, count_AMP = 0, count_INV = 0, count_MOB = 0, count_CON = 0, count_MASK = 0;
+  uint32_t count_SNP = 0, count_SUB = 0, count_INS = 0, count_DEL = 0, count_AMP = 0, count_INV = 0, count_MOB = 0, count_CON = 0, count_INT = 0, count_MASK = 0;
   uint32_t bases_inserted(0), bases_deleted(0), bases_changed(0);
   
   // Sort the list into apply order ('within' and 'before' tags)
@@ -3016,10 +3016,15 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
       } break;
         
       case CON:
+      case INT:
       {
-        count_CON++;
+        if (mut._type == CON) {
+          count_CON++;
+        } else if (mut._type == INT) {
+          count_INT++;
+        }
         
-        int32_t size = from_string<int32_t>(mut[SIZE]);
+        int32_t size = from_string<int32_t>(mut[REPLACE_SIZE]);
         if (mut.entry_exists(APPLY_SIZE_ADJUST)) {
           size += from_string<int32_t>(mut[APPLY_SIZE_ADJUST]);
           ASSERT(size > 0, "Attempt to apply mutation with non-positive size.");
@@ -3027,7 +3032,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         
         uint32_t replace_target_id, replace_start, replace_end;
         new_ref_seq_info.parse_region(mut["region"], replace_target_id, replace_start, replace_end);
-        ASSERT(replace_start != replace_end, "Cannot process 1-bp CON mutation with end == start. Expand the substituted region. ID:" + mut._id);
+        ASSERT(replace_start != replace_end, "Cannot process 1-bp CON/INT mutation with end == start. Expand the substituted region. ID:" + mut._id);
         
         int8_t strand = (replace_start < replace_end) ?  +1 : -1;
         
@@ -3035,7 +3040,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
           swap(replace_start, replace_end);
         }
         
-        // @JEB: correct here to look for where the replacing_sequence is in the original ref_seq_info.
+        // @JEB: correct here to look for where the replacing_sequence is in the **original** ref_seq_info.
         // This saves us from possible looking at a shifted location...
         string replacing_sequence = ref_seq_info[replace_target_id].get_sequence_1(replace_start, replace_end);
         
@@ -3043,13 +3048,24 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
           replacing_sequence = reverse_complement(replacing_sequence);
         }
         
-        string displaced_sequence = new_ref_seq_info.get_sequence_1(mut[SEQ_ID], position, position + size - 1);
+        if (size > 0) {
+          new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, replacing_sequence, (to_string(mut._type) + " " + mut._id));
+        } else {
+          new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position, replacing_sequence, (to_string(mut._type) + " " + mut._id));
+        }
+        // INT's get special treatment => we copy over the gene annotations!
+                
+        if (mut._type == INT) {
+          // @JEB: correct here to look for where the replacing_sequence is in the **original** ref_seq_info.
+          // This saves us from possible looking at a shifted location...
+          new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position, 0, 0, ref_seq_info, ref_seq_info[replace_target_id].m_seq_id, +1, cLocation(replace_start, replace_end, strand));
+        }
         
         // Set up attributes
         replace_seq_id = mut[SEQ_ID];
         replace_start = position - 1;
         replace_end = position - 1;
-        replace_seq = new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end);
+        replace_seq = (size>0) ? new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end) : " ";
         replace_seq.insert(0,"(");
         replace_seq.insert(2,")");
         
@@ -3057,8 +3073,6 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         applied_start = position - 1;
         applied_end = position - 1 + replacing_sequence.size();
         applied_seq = replace_seq + replacing_sequence;
-        
-        new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, replacing_sequence, (to_string(mut._type) + " " + mut._id)); 
               
       } break;
         
@@ -3143,6 +3157,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
     cout << "\tINV: " << count_INV << endl;
     cout << "\tMOB: " << count_MOB << endl;
     cout << "\tCON: " << count_CON << endl;
+    cout << "\tINT: " << count_INT << endl;
     cout << "\tMASK: " << count_MASK << endl;
   }
   
@@ -4312,12 +4327,13 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
       } break;
         
       case CON:
+      case INT:
       {        
-        uint32_t size = from_string<uint32_t>(mut[SIZE]);
+        uint32_t size = from_string<uint32_t>(mut[REPLACE_SIZE]);
         
         uint32_t replace_target_id, replace_start, replace_end;
         ref_seq_info.parse_region(mut["region"], replace_target_id, replace_start, replace_end);
-        ASSERT(replace_start != replace_end, "Cannot process CON mutation with end == start. ID:" + mut._id);
+        ASSERT(replace_start != replace_end, "Cannot process CON/INT mutation with end == start. ID:" + mut._id);
         
         int8_t strand = (replace_start < replace_end) ?  +1 : -1;
         
@@ -4492,14 +4508,14 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
       gvf[2] = "inversion";
       gvf[4] = to_string(from_string(de[POSITION]) + from_string(de[SIZE]) - 1);
     }
-    else if( de._type == CON ){
+    else if(( de._type == CON ) || ( de._type == INT )){
       gvf[2] = "substitution";
       gvf[4] = gvf[3];
       
       uint32_t tid, start_pos, end_pos;
       ref_seq_info.parse_region(de["region"], tid, start_pos, end_pos);
       
-      gvf[8].append("Reference_seq=").append( ref_seq_info.get_sequence_1(de[SEQ_ID], from_string(de[POSITION]), from_string(de[POSITION]) + from_string(de[SIZE]) - 1) );
+      gvf[8].append("Reference_seq=").append( ref_seq_info.get_sequence_1(de[SEQ_ID], from_string(de[POSITION]), from_string(de[POSITION]) + from_string(de[REPLACE_SIZE]) - 1) );
       gvf[8].append(";Variant_seq=").append( ref_seq_info.get_sequence_1(tid, start_pos, end_pos ));
     }
     
@@ -5313,6 +5329,11 @@ void cGenomeDiff::GD2OLI(const vector<string> &gd_file_names,
       
       // skip gene conversion
       else if (mut._type == CON) {
+        continue;
+      }
+      
+      // skip integration
+      else if (mut._type == INT) {
         continue;
       }
       

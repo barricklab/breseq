@@ -83,6 +83,7 @@ namespace breseq {
   extern const char* MEDIATED_STRAND;
   
   // For CON
+  extern const char* REPLACE_SIZE;
   extern const char* REGION;
   
   //For RA
@@ -144,8 +145,8 @@ namespace breseq {
   extern const vector<string> gd_entry_type_lookup_table;
 
   // Types of diff entries:
-  enum gd_entry_type {UNKNOWN = 0, SNP, SUB, DEL, INS, MOB, AMP, INV, CON, RA,
-    MC, JC, CN, UN, CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE, NOTE, MASK};
+  enum gd_entry_type {UNKNOWN = 0, SNP, SUB, DEL, INS, MOB, AMP, INV, CON, INT,
+    RA, MC, JC, CN, UN, CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE, NOTE, MASK};
   
   extern const vector<string> gd_keys_with_ids;
   
