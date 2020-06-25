@@ -20,7 +20,6 @@
 #include "libbreseq/anyoption.h"
 #include "libbreseq/alignment_output.h"
 #include "libbreseq/coverage_output.h"
-#include "libbreseq/ctpl_stl.h"
 
 using namespace std;
 namespace breseq
@@ -1926,11 +1925,9 @@ void draw_coverage_thread_helper(int thread_id, const Settings& settings, const 
   co.plot(region, output_file_name);
 }
 
-void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenomeDiff& gd)
+void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenomeDiff& gd, ctpl::thread_pool * thread_pool)
 {  
   const string& _output_format("png");
-  
-  ctpl::thread_pool p(settings.num_processors);
 
   create_path(settings.coverage_plot_path);
   string coverage_plot_path = settings.coverage_plot_path;
@@ -1944,7 +1941,12 @@ void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenom
     
     cerr << "Creating coverage plot for region: " << region << endl;
     
-    p.push(draw_coverage_thread_helper, settings, region, this_complete_coverage_text_file_name, _output_format, -1);
+    if (thread_pool) {
+      thread_pool->push(draw_coverage_thread_helper, settings, region, this_complete_coverage_text_file_name, _output_format, -1);
+    } else {
+      draw_coverage_thread_helper(0, settings, region, this_complete_coverage_text_file_name, _output_format, -1);
+    }
+    
    }
   
   // Don't create other plots in --brief-html-mode
@@ -1970,11 +1972,13 @@ void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenom
       
       cerr << "Creating coverage plot for region: " << region << endl;
       
-      p.push(draw_coverage_thread_helper, settings, region, coverage_plot_file_name, _output_format, _shaded_flanking);
+      if (thread_pool) {
+        thread_pool->push(draw_coverage_thread_helper, settings, region, coverage_plot_file_name, _output_format, _shaded_flanking);
+      } else {
+        draw_coverage_thread_helper(0, settings, region, coverage_plot_file_name, _output_format, _shaded_flanking);
+      }
     }
   }
-  
-  p.stop(true);
 }
 
   
@@ -2641,7 +2645,7 @@ string Html_Mutation_Table_String::freq_cols(vector<string> freq_list)
  *  Description:  
  * =====================================================================================
  */
-cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff& gd)
+cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff& gd, ctpl::thread_pool * thread_pool)
 {  
   // Fasta and BAM files for making alignments.
   string reference_bam_file_name = settings.reference_bam_file_name;
@@ -2908,10 +2912,13 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
   for (vector<cOutputEvidenceItem>::iterator itr = evidence_list.begin(); itr != evidence_list.end(); itr ++) 
   {  
     cOutputEvidenceItem& e = (*itr);
-    //cerr << "Creating evidence file: " + e[FILE_NAME] << endl;   
-    p.push(cOutputEvidenceFiles::html_evidence_file_thread_helper, *this, settings, gd, e);
+    //cerr << "Creating evidence file: " + e[FILE_NAME] << endl;
+    if (thread_pool) {
+      thread_pool->push(cOutputEvidenceFiles::html_evidence_file_thread_helper, *this, settings, gd, e);
+    } else {
+      html_evidence_file_thread_helper(0,*this, settings, gd, e);
+    }
   }
-  p.stop(true);
 }
 
 
