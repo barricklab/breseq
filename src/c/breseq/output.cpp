@@ -20,6 +20,7 @@
 #include "libbreseq/anyoption.h"
 #include "libbreseq/alignment_output.h"
 #include "libbreseq/coverage_output.h"
+#include "libbreseq/ctpl_stl.h"
 
 using namespace std;
 namespace breseq
@@ -2889,13 +2890,16 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
   create_path(settings.evidence_path);
   //cerr << "Total number of evidence items: " << evidence_list.size() << endl;
   
+  ctpl::thread_pool p(settings.num_processors);
   for (vector<cOutputEvidenceItem>::iterator itr = evidence_list.begin(); itr != evidence_list.end(); itr ++) 
   {  
     cOutputEvidenceItem& e = (*itr);
     //cerr << "Creating evidence file: " + e[FILE_NAME] << endl;   
-    html_evidence_file(settings, gd, e);
+    p.push(cOutputEvidenceFiles::html_evidence_file_thread_helper, *this, settings, gd, e);
   }
+  p.stop(true);
 }
+
 
 
 void cOutputEvidenceFiles::add_evidence(const string& evidence_file_name_key, diff_entry_ptr_t item,
@@ -2924,7 +2928,7 @@ cOutputEvidenceFiles::html_evidence_file (
                                     const Settings& settings, 
                                     cGenomeDiff& gd, 
                                     cOutputEvidenceItem& item
-                                    )
+                                    ) const
 {  
   string output_path = settings.evidence_path + "/" + item[FILE_NAME];
   

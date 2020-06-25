@@ -9,8 +9,8 @@
 ##
 ## Copyright (c) 2010 Michigan State University
 ##
-## breseq is free software; you can redistribute it and/or modify it under the terms the 
-## GNU General Public License as published by the Free Software Foundation; either 
+## breseq is free software; you can redistribute it and/or modify it under the terms the
+## GNU General Public License as published by the Free Software Foundation; either
 ## version 1, or (at your option) any later version.
 ##
 ###
@@ -56,6 +56,7 @@ libbreseq_la_SOURCES = \
 	libbreseq/candidate_junctions.h \
 	libbreseq/chisquare.h \
 	libbreseq/common.h \
+	libbreseq/ctpl_stl.h \
 	libbreseq/contingency_loci.h \
 	libbreseq/coverage_distribution.h \
 	libbreseq/coverage_output.h \
@@ -79,12 +80,12 @@ libbreseq_la_SOURCES = \
 	libbreseq/samtools_commands.h \
 	libbreseq/settings.h \
 	libbreseq/storable.h \
-	libbreseq/summary.h 
+	libbreseq/summary.h
 libbreseq_la_LIBADD = $(UNWIND_LIBS) $(top_builddir)/$(HTSLIB)/libhts.la $(top_builddir)/$(LIBBAM)/libbam.la
 
 LDADD = libbreseq.la
 
-bin_PROGRAMS = breseq gdtools 
+bin_PROGRAMS = breseq gdtools
 breseq_SOURCES = breseq_cmdline.cpp
 gdtools_SOURCES = gdtools_cmdline.cpp
 

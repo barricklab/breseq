@@ -60,6 +60,7 @@
 		70B69DE61369B8700001B750 /* breseq_cmdline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B69DE51369B8700001B750 /* breseq_cmdline.cpp */; };
 		70B69DF41369D8B20001B750 /* calculate_trims.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B69DE91369D3510001B750 /* calculate_trims.cpp */; };
 		70B9320F1394008200885753 /* settings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B9320E1394008200885753 /* settings.cpp */; };
+		70C6B3A524A4140A00AFCC94 /* ctpl_stl.h in Headers */ = {isa = PBXBuildFile; fileRef = 70C6B3A424A4140A00AFCC94 /* ctpl_stl.h */; };
 		70D789D413C3CEB70036BEAB /* output.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70D789D313C3CEB70036BEAB /* output.cpp */; };
 		70E915D61B8BC2C000D941BF /* gzstream.h in Headers */ = {isa = PBXBuildFile; fileRef = 70E915D51B8BC2C000D941BF /* gzstream.h */; };
 		70E92F14151AB74200F86F2D /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 708FA5DA132578BE00864C40 /* libbreseq.a */; };
@@ -187,6 +188,7 @@
 		70B69E0A1369E51E0001B750 /* Release.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		70B69E0B1369E51E0001B750 /* Shared.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Shared.xcconfig; sourceTree = "<group>"; };
 		70B9320E1394008200885753 /* settings.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = settings.cpp; path = breseq/settings.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
+		70C6B3A424A4140A00AFCC94 /* ctpl_stl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ctpl_stl.h; sourceTree = "<group>"; };
 		70CB720F140FEB6400D578EB /* alignment.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = alignment.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		70CB7210140FEB6400D578EB /* alignment_output.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = alignment_output.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		70CB7212140FEB6400D578EB /* anyoption.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = anyoption.h; sourceTree = "<group>"; };
@@ -359,6 +361,7 @@
 				70CB7217140FEB6400D578EB /* contingency_loci.h */,
 				70CB7218140FEB6400D578EB /* coverage_distribution.h */,
 				70CB7219140FEB6400D578EB /* coverage_output.h */,
+				70C6B3A424A4140A00AFCC94 /* ctpl_stl.h */,
 				70CB721A140FEB6400D578EB /* error_count.h */,
 				70CB721B140FEB6400D578EB /* fasta.h */,
 				70CB721C140FEB6400D578EB /* fastq.h */,
@@ -395,6 +398,7 @@
 				702C41631FDD88D900D4B159 /* json.hpp in Headers */,
 				70160F17202BF3EE004FDA46 /* genome_diff_entry.h in Headers */,
 				700FD0781C0A68D4003D8459 /* samtools_commands.h in Headers */,
+				70C6B3A524A4140A00AFCC94 /* ctpl_stl.h in Headers */,
 				70160F1B202BF581004FDA46 /* file_parse_errors.h in Headers */,
 				70E915D61B8BC2C000D941BF /* gzstream.h in Headers */,
 				70B142F51D31F6220019D5A5 /* nw.h in Headers */,

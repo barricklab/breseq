@@ -287,7 +287,9 @@ void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenom
   
 // add "HTML_*" entries to mutation (except HTML_GENE which is added in cReferenceSequence)
 void add_html_fields_to_mutation(cDiffEntry& mut, MutationTableOptions& options);
-  
+
+
+
 /*-----------------------------------------------------------------------------
  *  Create_Evidence_Files
  *-----------------------------------------------------------------------------*/  
@@ -308,11 +310,16 @@ struct cOutputEvidenceFiles
   
   vector<cOutputEvidenceItem> evidence_list;
   
+  static void html_evidence_file_thread_helper(int id, const cOutputEvidenceFiles& oef, const Settings& settings, cGenomeDiff& gd, cOutputEvidenceItem& e) {
+    (void) id;
+    oef.html_evidence_file(settings, gd, e);
+  }
+  
   private:
   
     void add_evidence(const string& file_name, diff_entry_ptr_t item,
                       diff_entry_ptr_t parent_item, map<string,string>& fields);
-    void html_evidence_file(const Settings& settings, cGenomeDiff& gd, cOutputEvidenceItem& item);
+    void html_evidence_file(const Settings& settings, cGenomeDiff& gd, cOutputEvidenceItem& item) const;
 };
   
 }// end output namespace
