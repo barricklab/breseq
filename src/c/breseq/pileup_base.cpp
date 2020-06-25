@@ -35,7 +35,7 @@ namespace breseq {
 reference_sequence::reference_sequence(faidx_t* m_ref, const string& fasta_filename, const string& target)
 : m_seq(0), m_len(0) {
 
-  (void)fasta_filename; //TODO: unused??
+  (void)fasta_filename;
 	m_seq = fai_fetch(m_ref, target.c_str(), &m_len);  
   // need to close the file
   

@@ -1911,16 +1911,27 @@ string decode_reject_reason(const string& reject)
  *  //End Create_Evidence_Files
  *-----------------------------------------------------------------------------*/
 
-void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenomeDiff& gd)
-{  
+
+void draw_coverage_thread_helper(int thread_id, const Settings& settings, const string region, const string& output_file_name, const string& output_format, const int32_t shaded_flanking) {
+  
   coverage_output co(
-                     settings.reference_bam_file_name, 
-                     settings.reference_fasta_file_name, 
-                     settings.coverage_plot_r_script_file_name, 
+                     settings.reference_bam_file_name,
+                     settings.reference_fasta_file_name,
+                     settings.coverage_plot_r_script_file_name,
+                     thread_id,
                      settings.coverage_plot_path
                      );
-  co.output_format("png");
+  co.output_format(output_format);
+  if (shaded_flanking>=0) co.shaded_flanking(shaded_flanking);
+  co.plot(region, output_file_name);
+}
+
+void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenomeDiff& gd)
+{  
+  const string& _output_format("png");
   
+  ctpl::thread_pool p(settings.num_processors);
+
   create_path(settings.coverage_plot_path);
   string coverage_plot_path = settings.coverage_plot_path;
   
@@ -1932,7 +1943,8 @@ void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenom
     string this_complete_coverage_text_file_name = settings.file_name(settings.overview_coverage_plot_file_name, "@", seq.m_seq_id);
     
     cerr << "Creating coverage plot for region: " << region << endl;
-    co.plot(region, this_complete_coverage_text_file_name);
+    
+    p.push(draw_coverage_thread_helper, settings, region, this_complete_coverage_text_file_name, _output_format, -1);
    }
   
   // Don't create other plots in --brief-html-mode
@@ -1949,18 +1961,20 @@ void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenom
       
       uint32_t _shaded_flanking = static_cast<uint32_t>(floor(static_cast<double>(size) / 10.0));
       if (_shaded_flanking < 100) _shaded_flanking = 100;
-      co.shaded_flanking(_shaded_flanking);
       
       string region = (*item)[SEQ_ID] + ":" + (*item)[START] + "-" + (*item)[END];
-      string coverage_plot_file_name = settings.evidence_path + "/" + (*item)[SEQ_ID] + "_" + (*item)[START] + "-" + (*item)[END] + "." + co.output_format();
+      string coverage_plot_file_name = settings.evidence_path + "/" + (*item)[SEQ_ID] + "_" + (*item)[START] + "-" + (*item)[END] + "." + _output_format;
 
       string link_coverage_plot_file_name = Settings::relative_path(coverage_plot_file_name, settings.evidence_path);    
       (*item)[_COVERAGE_PLOT_FILE_NAME] = link_coverage_plot_file_name;
       
       cerr << "Creating coverage plot for region: " << region << endl;
-      co.plot(region, coverage_plot_file_name);
+      
+      p.push(draw_coverage_thread_helper, settings, region, coverage_plot_file_name, _output_format, _shaded_flanking);
     }
   }
+  
+  p.stop(true);
 }
 
   
