@@ -2440,18 +2440,17 @@ int breseq_default_action(int argc, char* argv[])
 		//
 		// Plot coverage of genome and large deletions
 		//
-    ctpl::thread_pool p(settings.num_processors);
     
     cerr << "Drawing coverage plots..." << endl;
-    output::draw_coverage(settings, ref_seq_info, gd, &p);
+    output::draw_coverage(settings, ref_seq_info, gd);
     
 		//
 		// Create evidence files containing alignments and coverage plots
 		// --- must occur after marking entries no_show
 		if (!settings.skip_alignment_or_plot_generation)
-			output::cOutputEvidenceFiles(settings, gd, &p);
+			output::cOutputEvidenceFiles(settings, gd);
 
-    p.stop(true);
+    settings.sync_threads();
     
 		///
 		// HTML output

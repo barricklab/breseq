@@ -1925,7 +1925,7 @@ void draw_coverage_thread_helper(int thread_id, const Settings& settings, const 
   co.plot(region, output_file_name);
 }
 
-void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenomeDiff& gd, ctpl::thread_pool * thread_pool)
+void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenomeDiff& gd)
 {  
   const string& _output_format("png");
 
@@ -1940,12 +1940,7 @@ void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenom
     string this_complete_coverage_text_file_name = settings.file_name(settings.overview_coverage_plot_file_name, "@", seq.m_seq_id);
     
     cerr << "Creating coverage plot for region: " << region << endl;
-    
-    if (thread_pool) {
-      thread_pool->push(draw_coverage_thread_helper, settings, region, this_complete_coverage_text_file_name, _output_format, -1);
-    } else {
-      draw_coverage_thread_helper(0, settings, region, this_complete_coverage_text_file_name, _output_format, -1);
-    }
+    settings.pool.push(draw_coverage_thread_helper, settings, region, this_complete_coverage_text_file_name, _output_format, -1);
     
    }
   
@@ -1972,11 +1967,7 @@ void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenom
       
       cerr << "Creating coverage plot for region: " << region << endl;
       
-      if (thread_pool) {
-        thread_pool->push(draw_coverage_thread_helper, settings, region, coverage_plot_file_name, _output_format, _shaded_flanking);
-      } else {
-        draw_coverage_thread_helper(0, settings, region, coverage_plot_file_name, _output_format, _shaded_flanking);
-      }
+      settings.pool.push(draw_coverage_thread_helper, settings, region, coverage_plot_file_name, _output_format, _shaded_flanking);
     }
   }
 }
@@ -2645,7 +2636,7 @@ string Html_Mutation_Table_String::freq_cols(vector<string> freq_list)
  *  Description:  
  * =====================================================================================
  */
-cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff& gd, ctpl::thread_pool * thread_pool)
+cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff& gd)
 {  
   // Fasta and BAM files for making alignments.
   string reference_bam_file_name = settings.reference_bam_file_name;
@@ -2913,11 +2904,7 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
   {  
     cOutputEvidenceItem& e = (*itr);
     //cerr << "Creating evidence file: " + e[FILE_NAME] << endl;
-    if (thread_pool) {
-      thread_pool->push(cOutputEvidenceFiles::html_evidence_file_thread_helper, *this, settings, gd, e);
-    } else {
-      html_evidence_file_thread_helper(0,*this, settings, gd, e);
-    }
+    settings.pool.push(cOutputEvidenceFiles::html_evidence_file_thread_helper, *this, settings, gd, e);
   }
 }
 

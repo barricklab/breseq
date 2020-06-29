@@ -23,6 +23,7 @@ LICENSE AND COPYRIGHT
 #include "common.h"
 #include "storable.h"
 #include "reference_sequence.h"
+#include "ctpl_stl.h"
 
 namespace breseq
 {
@@ -181,8 +182,12 @@ namespace breseq
     static string output_divider;
     static string global_bin_path;
     static string global_program_data_path;
-
+    
   public:
+    
+    //! Multithreading
+    static ctpl::thread_pool pool;
+    static std::mutex lock;
     
     ////////////////////
     //! Data
@@ -827,11 +832,18 @@ namespace breseq
     void track_intermediate_file(const string& done_key, const string& file_path);
     
     void log(const string& message);
+    
+    void sync_threads() { pool.stop(true); }
+    
+    ~Settings() { sync_threads(); }
+    
   private:
 
 		void pre_option_initialize(int argc = 0, char* argv[] = NULL);
 		void post_option_initialize();
     void init_installed();
+    
+
   };
 
 class UserOutput

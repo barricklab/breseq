@@ -22,7 +22,6 @@
 #include "libbreseq/settings.h"
 #include "libbreseq/reference_sequence.h"
 #include "libbreseq/genome_diff.h"
-#include "libbreseq/ctpl_stl.h"
 
 namespace breseq
 {
@@ -285,7 +284,7 @@ string decode_reject_reason(const string & reject);
  *-----------------------------------------------------------------------------*/
 
 // sub draw_coverage
-void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenomeDiff& gd, ctpl::thread_pool * thread_pool=NULL);
+void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenomeDiff& gd);
   
 // add "HTML_*" entries to mutation (except HTML_GENE which is added in cReferenceSequence)
 void add_html_fields_to_mutation(cDiffEntry& mut, MutationTableOptions& options);
@@ -308,7 +307,7 @@ public:
   
 struct cOutputEvidenceFiles
 {
-  cOutputEvidenceFiles(const Settings& settings, cGenomeDiff& gd, ctpl::thread_pool * thread_pool=NULL);
+  cOutputEvidenceFiles(const Settings& settings, cGenomeDiff& gd);
   
   vector<cOutputEvidenceItem> evidence_list;
   

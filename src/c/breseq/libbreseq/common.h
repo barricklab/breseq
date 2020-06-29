@@ -67,6 +67,7 @@ LICENSE AND COPYRIGHT
 #include <utility>
 #include <functional>
 #include <iterator>
+#include <mutex>
 
 #include "gzstream.h"
 
