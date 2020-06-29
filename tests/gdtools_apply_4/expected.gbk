@@ -1721,7 +1721,7 @@ ORIGIN
     47641 atcgccggag atggctcgtg acagattggc accaacagtg cgaatggtcc cttcatcaaa
     47701 ctgcttgcgt gctgacaggt ttgccatgg
 //
-LOCUS       sfGFP                    717 bp    DNA     linear   BSQ 23-JUN-2020
+LOCUS       sfGFP                    717 bp    DNA     linear   BSQ XX-XX-XXXX
 DEFINITION  Synthetic plasmid, complete sequence.
 ACCESSION   MF033069 REGION: 2956..3705
 VERSION     MF033069.1

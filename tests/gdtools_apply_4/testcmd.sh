@@ -14,7 +14,7 @@ TESTCMD="\
         -r ${DATADIR}/REL606/REL606.fragment.gbk \
         -r ${DATADIR}/sfGFP/sfGFP.gbk \
         ${SELF}/input.gd \
-        && perl -i -pe 's/\d{2}-\w{3}-\d{4}/XX-XX-XXXX/g if 1 .. 1' ${CURRENT_OUTPUTS[0]} \
+        && perl -i -pe 's/^(LOCUS.+)\d{2}-\w{3}-\d{4}$/\$1XX-XX-XXXX/g' ${CURRENT_OUTPUTS[0]} \
     "
 
 do_test $1 ${SELF}
