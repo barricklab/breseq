@@ -2333,13 +2333,13 @@ int do_download(int argc, char *argv[])
   ss << "Usage: gdtools DOWNLOAD -l <user:password> -d <download_dir> <file1.gd file2.gd file3.gd ...>\n";
 
   AnyOption options(ss.str());
-	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+	options("help,h",            "Display detailed help message", TAKES_NO_ARGUMENT);
   options("login,l",           "Login user:password information for private server access.");
   options("download-dir,d",    "Output directory to download file to.", "02_Downloads");
   options("genome-diff-dir,g", "Directory to search for genome diff files.", "01_Data");
   options("test"           ,   "Test urls in genome diff files, doesn't download the file", TAKES_NO_ARGUMENT);
   options("reference-only",    "Only downloads the reference sequence files for this file", TAKES_NO_ARGUMENT);
-	options("ungzip,z","Decompress gzipped read files", TAKES_NO_ARGUMENT);
+	options("ungzip,z",					 "Decompress gzipped read files", TAKES_NO_ARGUMENT);
 
 	options.addUsage("\nExamples:");
 	options.addUsage("  gdtools DOWNLOAD -l john:1234 -d downloads -g data");
@@ -2389,8 +2389,8 @@ int do_download(int argc, char *argv[])
   //Url formats.
     lookup_table["GENBANK"]
         ["url_format"] = "http://www.ncbi.nlm.nih.gov/sviewer/?db=nuccore&val=%s&report=gbwithparts&retmode=text";
-    lookup_table["SRA"]
-        ["url_format"] = "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/%s/%s/%s.fastq.gz";
+    lookup_table["NCBI-SRA"]
+        ["url_format"] = "%s";
     lookup_table["BARRICKLAB-PUBLIC"]
         ["url_format"] = "http://barricklab.org/%s";
 		lookup_table["NO-DOWNLOAD"]
@@ -2413,8 +2413,8 @@ int do_download(int argc, char *argv[])
   //File path formats.
     lookup_table["GENBANK"]
         ["file_path_format"] = download_dir + "/%s.gbk";
-    lookup_table["SRA"]
-        ["file_path_format"] = download_dir + "/%s.fastq.gz";
+    lookup_table["NCBI-SRA"]
+        ["file_path_format"] = download_dir + "/%s";;
     lookup_table["BARRICKLAB-PUBLIC"]
         ["file_path_format"] = download_dir + "/%s";
     lookup_table["BARRICKLAB-PRIVATE"]
@@ -2470,6 +2470,13 @@ int do_download(int argc, char *argv[])
       bool is_downloaded =
           ifstream(file_path.c_str()).good() && !file_empty(file_path.c_str());
 			
+			// Need to glob to check for matching filenames
+			if (key == "NCBI-SRA") {
+				glob_t glob_result;
+				glob((file_path + "*").c_str(),GLOB_TILDE,NULL,&glob_result);
+				is_downloaded = (glob_result.gl_pathc > 0);
+			}
+			
       bool is_gzip =
           cString(file_path).ends_with(".gz");
 			if (options.count("ungzip")) is_gzip = true;
@@ -2496,9 +2503,8 @@ int do_download(int argc, char *argv[])
       if (key == "GENBANK") {
         sprintf(url, url_format, value.c_str());
       }
-      else if (key == "SRA") {
-        const string &first  = value.substr(0,6), second = value.substr(0,9), third  = value;
-        sprintf(url, url_format, first.c_str(), second.c_str(), third.c_str());
+      else if (key == "NCBI-SRA") {
+        sprintf(url, url_format, value.c_str());
       }
       else if (key == "BARRICKLAB-PUBLIC") {
         sprintf(url, url_format, value.c_str());
@@ -2514,7 +2520,9 @@ int do_download(int argc, char *argv[])
 			if (key == "BARRICKLAB-PRIVATE") {
 				wget_cmd = url + " " + file_path;
 				cout << wget_cmd << endl;
-			} else {
+			} else if (key == "NCBI-SRA") {
+				wget_cmd = "fastq-dump --split-files --outdir " + download_dir + " " + url;
+		  } else {
 				wget_cmd = options.count("test") ?
 							cString("wget --spider \"%s\"", url.c_str()) :
 							cString("wget -O %s \"%s\"",file_path.c_str(), url.c_str());
@@ -2732,12 +2740,22 @@ int do_runfile(int argc, char *argv[])
 		}
 		
 		// Fix the read file names for certain keywords
-		for (vector<string>::iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {  
-			if (read_file_it->find("SRA:") == 0) {
-				*read_file_it = read_file_it->substr(4); // remove first four characters
-				*read_file_it += ".fastq";								 // add .fastq
+		// Here, we need to look in the folder and add those names
+		vector<string> updated_read_list;
+		for (vector<string>::iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {
+			const cKeyValuePair kvp(*read_file_it, ':');
+			if (to_upper(kvp.get_key()) == "NCBI-SRA") {
+				// Look in the folder and add all fastq files found
+				glob_t glob_result;
+				glob((download_dir + "/" + kvp.get_value() + "*").c_str(),GLOB_TILDE,NULL,&glob_result);
+				for(unsigned int i=0; i<glob_result.gl_pathc; ++i){
+					updated_read_list.push_back(glob_result.gl_pathv[i]);
+				}
+			} else {
+				updated_read_list.push_back(*read_file_it);
 			}
 		}
+		reads = updated_read_list;
 		
 		
     if (refs.size() == 0) {

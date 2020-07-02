@@ -39,6 +39,7 @@ LICENSE AND COPYRIGHT
 #include <string.h>
 #include <time.h>
 #include <limits.h>
+#include <glob.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
