@@ -2199,9 +2199,17 @@ string GenBankCoordsString(const cFeatureLocationList& locs)
     const cFeatureLocation& loc = *it;
     string s;
     if (loc.get_strand() == 1) {
-      s = to_string(loc.get_start_1()) + ".." + to_string(loc.get_end_1());
+      if (loc.get_start_1() == loc.get_end_1()) {
+        s = to_string(loc.get_start_1());
+      } else {
+        s = to_string(loc.get_start_1()) + ".." + to_string(loc.get_end_1());
+      }
     } else {
-      s = "complement(" + to_string(loc.get_start_1()) + ".." + to_string(loc.get_end_1()) + ")";
+      if (loc.get_start_1() == loc.get_end_1()) {
+        s = "complement(" + to_string(loc.get_start_1()) + ")";
+      } else {
+        s = "complement(" + to_string(loc.get_start_1()) + ".." + to_string(loc.get_end_1()) + ")";
+      }
     }
     sl.push_back(s);
   }
