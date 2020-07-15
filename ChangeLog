@@ -6,6 +6,7 @@ Version 0.35.2
     Now only gives a warning if the sequence length is missing and looks for the linear|circular
     designation at different locations within the LOCUS line. Falls back to the source feature
     length if the sequence length is missing from the LOCUS line.
+  * Changed priority of name used for features in GenBank files to name > gene > locus_tag > label > note.
   * Added mutation type INT for applying GenomeDiffs to insert a sequence with annotations.
   * Fixed multiple identical GD entry error related to --user-evidence leading to
     double mutation predictions.

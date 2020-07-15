@@ -1991,10 +1991,6 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
     if (feature.SafeGet("product") == "") {
       feature["product"] = feature.SafeGet("note");
     }
-    
-    if (feature.SafeGet("note") != "") {
-      feature["name"] = feature.SafeGet("note");
-    }
 
     if (feature["type"] == "repeat_region" || feature["type"] == "mobile_element") {
 
@@ -2053,17 +2049,20 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
     }
     else // genes (anything not a repeat region)
     {
-      feature["name"] = "unknown";
-      
       // Add name from these fields in order of preference
-      if (feature.SafeGet("gene") != "")
-        feature["name"] = feature["gene"];
-      else if (feature.SafeGet("locus_tag") != "")
-        feature["name"] = feature["locus_tag"];
-      else if (feature.SafeGet("label") != "")  // Benchling exports "label"
-        feature["name"] = feature.SafeGet("label");
-      else if (feature.SafeGet("note") != "")
-        feature["name"] = feature["note"];
+      // name > gene > locus_tag > label > note
+      if (feature.SafeGet("name") == "") {
+        if (feature.SafeGet("gene") != "")
+          feature["name"] = feature["gene"];
+        else if (feature.SafeGet("locus_tag") != "")
+          feature["name"] = feature["locus_tag"];
+        else if (feature.SafeGet("label") != "")  // Benchling exports "label"
+          feature["name"] = feature.SafeGet("label");
+        else if (feature.SafeGet("note") != "")
+          feature["name"] = feature["note"];
+        else
+          feature["name"] = "unknown";
+      }
       
       if (feature.SafeGet("transl_table") != "")
         feature["transl_table"] = feature["transl_table"];
