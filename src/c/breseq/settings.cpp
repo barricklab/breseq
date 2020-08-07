@@ -37,6 +37,10 @@ namespace breseq
   string Settings::global_bin_path;
   string Settings::global_program_data_path;
 
+  //! Multithreading
+  ctpl::thread_pool Settings::pool(1);
+  std::mutex Settings::lock;
+
   string Settings::output_divider("================================================================================");
   
 	void cReadFiles::Init(const vector<string>& read_file_names, bool sam_files)
@@ -1060,6 +1064,9 @@ namespace breseq
     //! Paths: Experimental
     this->long_pairs_file_name = this->output_path + "/long_pairs.tab";
 
+    
+    //! Multithreading
+    Settings::pool.resize(this->num_processors);
   }
 
 

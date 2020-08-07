@@ -39,6 +39,7 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/contingency_loci.h"
 #include "libbreseq/mutation_predictor.h"
 #include "libbreseq/output.h"
+#include "libbreseq/ctpl_stl.h"
 
 
 
@@ -2439,6 +2440,7 @@ int breseq_default_action(int argc, char* argv[])
 		//
 		// Plot coverage of genome and large deletions
 		//
+    
     cerr << "Drawing coverage plots..." << endl;
     output::draw_coverage(settings, ref_seq_info, gd);
     
@@ -2448,6 +2450,8 @@ int breseq_default_action(int argc, char* argv[])
 		if (!settings.skip_alignment_or_plot_generation)
 			output::cOutputEvidenceFiles(settings, gd);
 
+    settings.sync_threads();
+    
 		///
 		// HTML output
 		///

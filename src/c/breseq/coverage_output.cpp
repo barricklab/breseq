@@ -23,7 +23,7 @@ using namespace std;
 namespace breseq
 {
   
-void coverage_output::plot(const string& region, const string& output_file_name, uint32_t resolution)
+void coverage_output::plot(const string& region, const string& output_file_name, const uint32_t resolution)
 {
   
   uint32_t target_id, start_pos, end_pos, insert_start, insert_end;
@@ -59,7 +59,7 @@ void coverage_output::plot(const string& region, const string& output_file_name,
   }
 	
   pid_t pid = getpid();
-	string tmp_coverage = m_intermediate_path + "/" + to_string(pid) + ".coverage.tab";
+	string tmp_coverage = m_intermediate_path + "/" + to_string(pid) + "_" + to_string(m_thread_id) + ".coverage.tab";
 	
   this->table(extended_region, tmp_coverage, resolution);
   

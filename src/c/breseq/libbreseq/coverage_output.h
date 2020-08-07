@@ -33,6 +33,7 @@ namespace breseq
   class coverage_output : public pileup_base
   {
   protected:
+    
     string    m_output_format; 
     uint32_t  m_downsample;
     bool      m_total_only;
@@ -44,6 +45,8 @@ namespace breseq
     Summary   m_summary;
     
     string    m_r_script_file_name;
+    
+    int       m_thread_id;
     string    m_intermediate_path;
     string    m_read_begin_output_file_name; // extra output file set as option
     string    m_gc_output_file_name;         // extra output file set as option
@@ -71,9 +74,10 @@ namespace breseq
     
   public:
     
-    coverage_output( const string& bam, const string& fasta, const string& r_script_file_name, const string& intermediate_path = "/tmp" )
+    coverage_output( const string& bam, const string& fasta, const string& r_script_file_name, const int thread_id = 0, const string& intermediate_path = "/tmp" )
       : pileup_base(bam, fasta), m_output_format("png"), m_downsample(0), m_total_only(false)
       , m_shaded_flanking(0), m_show_average(false), m_fixed_coverage_scale(0.0), m_r_script_file_name(r_script_file_name)
+      , m_thread_id(thread_id)
       , m_intermediate_path(intermediate_path) {};
     
     // Get/Set Options
@@ -106,8 +110,8 @@ namespace breseq
     
     void fixed_coverage_scale(const double fixed_coverage_scale)
     { m_fixed_coverage_scale = fixed_coverage_scale; }
-     
-    void plot(const string& region, const string& output_file_name, uint32_t resolution = 600);
+    
+    void plot(const string& region, const string& output_file_name, const uint32_t resolution = 600);
     void table(const string& region, const string& output_file_name, uint32_t resolution = 0);
   };
   
