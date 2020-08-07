@@ -1,4 +1,5 @@
 Version 0.35.2
+  * Generation of output files is now multithreaded.
   * Changed --use-version-as-seq-id option to --genbank-field-for-seq-id to give more control over
     choosing which part of the header is used for the sequence ID. The default is to assign to the
     first existing field with the preference: LOCUS > ACCESSION > VERSION.
