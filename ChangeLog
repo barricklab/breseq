@@ -1,3 +1,8 @@
+Version 0.35.3
+  * Fixed overlap and annotation position problems applying INT mutations with length zero.
+  * Added -seq-id|-s option to gdtools APPLY so that one can remove extra reference sequences that
+    were only provided for INT, CON, MOB, etc. mutations before output.
+
 Version 0.35.2
   * Generation of output files is now multithreaded.
   * Changed --use-version-as-seq-id option to --genbank-field-for-seq-id to give more control over

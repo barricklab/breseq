@@ -359,7 +359,9 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
         new_dr_item.start = de->get_reference_coordinate_start();
         new_dr_item.end = de->get_reference_coordinate_end();
         // @JEB: Note this works properly with respect to negative duplication sizes -> they never overlap anything
-        disambiguate_requirements[(*de)[SEQ_ID]].push_back(new_dr_item);
+        if (new_dr_item.start<=new_dr_item.end) {
+          disambiguate_requirements[(*de)[SEQ_ID]].push_back(new_dr_item);
+        }
         
       }
     }
@@ -3058,7 +3060,12 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         if (mut._type == INT) {
           // @JEB: correct here to look for where the replacing_sequence is in the **original** ref_seq_info.
           // This saves us from possible looking at a shifted location...
-          new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position, 0, 0, ref_seq_info, ref_seq_info[replace_target_id].m_seq_id, +1, cLocation(replace_start, replace_end, strand));
+          // Note that the zero base inserted case leads to starting the annoations one base over!
+          if (size > 0) {
+            new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position, 0, 0, ref_seq_info, ref_seq_info[replace_target_id].m_seq_id, +1, cLocation(replace_start, replace_end, strand));
+          } else {
+            new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+1, 0, 0, ref_seq_info, ref_seq_info[replace_target_id].m_seq_id, +1, cLocation(replace_start, replace_end, strand));
+          }
         }
         
         // Set up attributes

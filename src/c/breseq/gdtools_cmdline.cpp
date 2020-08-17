@@ -167,11 +167,12 @@ int do_union(int argc, char *argv[])
 
 int do_apply(int argc, char *argv[])
 {
-  AnyOption options("gdtools APPLY [ -o output.gff3 -f GFF3 ] -r reference.gbk input.gd");
+  AnyOption options("gdtools APPLY [ -o output.gff3 -f GFF3 -s seq_id ] -r reference.gbk input.gd");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o",    "Output file name (DEFAULT=output.*)");
   options("format,f",    "Output file format (Options: FASTA, GENBANK, GFF3)", "FASTA");
   options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
+  options("seq-id,s",    "Sequence ID to keep in output. If this argument is provided, other sequences are deleted after the APPLY. May be provided multiple times.");
   options("verbose,v",   "Verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
@@ -238,6 +239,28 @@ int do_apply(int argc, char *argv[])
   gd.valid_with_reference_sequences(ref_seq_info);
   gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, options.count("verbose"));
 
+	// If seq-id is present keep only certain sequence ids
+	// Keep the order of the --seq-id|-s to allow user to specify this
+	if (options.count("seq-id")) {
+		const vector<string>& seq_ids = from_string<vector<string> >(options["seq-id"]);
+		cReferenceSequences kept_ref_seq_info;
+		set<string> used_ids_se;
+		
+		for (vector<string>::const_iterator i=seq_ids.begin(); i != seq_ids.end(); i++) {
+			if (used_ids_se.find(*i) == used_ids_se.end()) {
+				
+				if ( !new_ref_seq_info.seq_id_exists(*i) ) {
+					ERROR("Specified--seq-id|-s does not exist in loaded files: " + *i);
+				} else {
+					kept_ref_seq_info.push_back(new_ref_seq_info[*i]);
+				}
+			} else {
+				WARN("Duplicate --seq-id|-s encountered and ignored: " + *i);
+			}
+		}
+		new_ref_seq_info = kept_ref_seq_info;
+	}
+	
   uout("Writing output file in " + format + " format");
 
   if (format == "FASTA") {
