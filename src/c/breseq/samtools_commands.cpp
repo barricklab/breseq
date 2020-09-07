@@ -56,7 +56,7 @@ void samtools_index(const string& bam_file_name) {
   args.get_args(&argc,&argv);
   
   string command = "[samtools] " + args.as_string();
-  cout << command << endl;
+  cerr << command << endl;
   int return_code = bam_index(argc, argv);
   ASSERT(return_code == 0, "Error code returned by call to command: " + to_string(return_code));
   
@@ -80,7 +80,7 @@ void samtools_sort(const string& unsorted_bam_file_name, const string& sorted_ba
   args.get_args(&argc,&argv);
   
   string command = "[samtools] " + args.as_string();
-  cout << command << endl;
+  cerr << command << endl;
   int return_code = bam_sort(argc, argv);
   ASSERT(return_code == 0, "Error code returned by call to command: " + to_string(return_code));
   
@@ -100,7 +100,7 @@ void samtools_import(const string& faidx_file_name, const string& sam_file_name,
   args.get_args(&argc,&argv);
 
   string command = "[samtools] " + args.as_string();
-  cout << command << endl;
+  cerr << command << endl;
   int return_code = main_import(argc, argv);
   ASSERT(return_code == 0, "Error code returned by call to command: " + to_string(return_code));
   
@@ -117,7 +117,7 @@ void samtools_faidx(const string& fasta_file_name) {
   args.get_args(&argc,&argv);
   
   string command = "[samtools] " + args.as_string();
-  cout << command << endl;
+  cerr << command << endl;
   int return_code = faidx_main(argc, argv);
   ASSERT(return_code == 0, "Error code returned by call to command: " + to_string(return_code));
   

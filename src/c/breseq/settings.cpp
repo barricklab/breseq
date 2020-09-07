@@ -1229,7 +1229,7 @@ namespace breseq
       cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
     }
     else {
-      cout << "---> bowtie2  :: version " << this->installed["bowtie2_version_string"] << " [" << this->installed["bowtie2"] << "]" << endl;
+      cerr << "---> bowtie2  :: version " << this->installed["bowtie2_version_string"] << " [" << this->installed["bowtie2"] << "]" << endl;
     }
     
 		// R version 2.1 required
@@ -1254,7 +1254,7 @@ namespace breseq
       cerr << "---> See http://www.r-project.org" << endl;
     }
     else {
-      cout << "---> R        :: version " << this->installed["R_version_string"] << " [" << this->installed["R"] << "]" << endl;
+      cerr << "---> R        :: version " << this->installed["R_version_string"] << " [" << this->installed["R"] << "]" << endl;
     }
     
     /*
