@@ -168,6 +168,13 @@ namespace ctpl {
             this->threads.clear();
             this->flags.clear();
         }
+      
+        // stops threads and then restarts to accept more jobs
+        void sync(bool isWait = false) {
+          stop (isWait);
+          isDone = false;
+          isStop = false;
+        }
 
         template<typename F, typename... Rest>
         auto push(F && f, Rest&&... rest) ->std::future<decltype(f(0, rest...))> {

@@ -2450,7 +2450,7 @@ int breseq_default_action(int argc, char* argv[])
 		if (!settings.skip_alignment_or_plot_generation)
 			output::cOutputEvidenceFiles(settings, gd);
 
-    settings.sync_threads();
+    Settings::sync_threads();
     
 		///
 		// HTML output

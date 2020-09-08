@@ -313,6 +313,7 @@ struct cOutputEvidenceFiles
   
   static void html_evidence_file_thread_helper(int id, const cOutputEvidenceFiles& oef, const Settings& settings, cGenomeDiff& gd, cOutputEvidenceItem& e) {
     (void) id;
+    cerr << "Creating evidence file: " + e[FILE_NAME] << endl;
     oef.html_evidence_file(settings, gd, e);
   }
   

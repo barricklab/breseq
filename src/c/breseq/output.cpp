@@ -1913,6 +1913,7 @@ string decode_reject_reason(const string& reject)
 
 void draw_coverage_thread_helper(int thread_id, const Settings& settings, const string region, const string& output_file_name, const string& output_format, const int32_t shaded_flanking) {
   
+  cerr << "Creating coverage plot for region: " << region << endl;
   coverage_output co(
                      settings.reference_bam_file_name,
                      settings.reference_fasta_file_name,
@@ -1939,8 +1940,7 @@ void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenom
     string region = seq.m_seq_id + ":" + "1" + "-" + to_string(seq.m_length);
     string this_complete_coverage_text_file_name = settings.file_name(settings.overview_coverage_plot_file_name, "@", seq.m_seq_id);
     
-    cerr << "Creating coverage plot for region: " << region << endl;
-    settings.pool.push(draw_coverage_thread_helper, settings, region, this_complete_coverage_text_file_name, _output_format, -1);
+    Settings::pool.push(draw_coverage_thread_helper, settings, region, this_complete_coverage_text_file_name, _output_format, -1);
     
    }
   
@@ -1965,9 +1965,7 @@ void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenom
       string link_coverage_plot_file_name = Settings::relative_path(coverage_plot_file_name, settings.evidence_path);    
       (*item)[_COVERAGE_PLOT_FILE_NAME] = link_coverage_plot_file_name;
       
-      cerr << "Creating coverage plot for region: " << region << endl;
-      
-      settings.pool.push(draw_coverage_thread_helper, settings, region, coverage_plot_file_name, _output_format, _shaded_flanking);
+      Settings::pool.push(draw_coverage_thread_helper, settings, region, coverage_plot_file_name, _output_format, _shaded_flanking);
     }
   }
 }
@@ -2630,6 +2628,7 @@ string Html_Mutation_Table_String::freq_cols(vector<string> freq_list)
   return ss.str();
 }  
   
+
 /*
  * =====================================================================================
  *        Class:  Evidence_Files
@@ -2899,12 +2898,11 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
   create_path(settings.evidence_path);
   //cerr << "Total number of evidence items: " << evidence_list.size() << endl;
   
-  ctpl::thread_pool p(settings.num_processors);
+
   for (vector<cOutputEvidenceItem>::iterator itr = evidence_list.begin(); itr != evidence_list.end(); itr ++) 
   {  
     cOutputEvidenceItem& e = (*itr);
-    //cerr << "Creating evidence file: " + e[FILE_NAME] << endl;
-    settings.pool.push(cOutputEvidenceFiles::html_evidence_file_thread_helper, *this, settings, gd, e);
+    Settings::pool.push(cOutputEvidenceFiles::html_evidence_file_thread_helper, *this, settings, gd, e);
   }
 }
 

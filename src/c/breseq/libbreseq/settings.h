@@ -187,6 +187,8 @@ namespace breseq
     
     //! Multithreading
     static ctpl::thread_pool pool;
+    static void sync_threads() { pool.sync(true); }
+    
     static std::mutex lock;
     
     ////////////////////
@@ -832,10 +834,8 @@ namespace breseq
     void track_intermediate_file(const string& done_key, const string& file_path);
     
     void log(const string& message);
-    
-    void sync_threads() { pool.stop(true); }
-    
-    ~Settings() { sync_threads(); }
+        
+    ~Settings() { }
     
   private:
 
