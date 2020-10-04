@@ -10,4 +10,4 @@
 
 [ **Developers:** Please see information on the GitHub Wiki](https://github.com/barricklab/breseq/wiki)
 
-[![Build Status](https://travis-ci.org/barricklab/breseq.svg?branch=master)](https://travis-ci.org/barricklab/breseq)
+[![Build Status](https://travis-ci.com/barricklab/breseq.svg?branch=master)](https://travis-ci.com/barricklab/breseq)
