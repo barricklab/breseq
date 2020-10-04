@@ -92,7 +92,10 @@ Read alignment evidence (RA)
 
 .. warning::
 
-   Polymorphism prediction is still considered a somewhat experimental feature. It continues to be actively developed.
+   Polymorphism prediction is prone to false positives. There are many biases in NGS data. Since |breseq| only analyzes one sample at a time, it cannot fully account for all of these biases. After running |breseq| you will
+   need to leverage comparisons between multiple populations, time points sequenced from one population, and/or clonal control samples in order to better understand which predictions in
+   polymorphism mode are real. To some extent, you can reduce false positives by adjusting the |breseq| ``--polymorphism-*`` filtering options. In general, indels in homopolymer runs and low frequency base substitutions (<5%)
+   based on ``RA`` evidence are more likely to be false positives. Predictions of deletions and IS element insertions based on ``JC`` evidence can still be true positives at much lower frequencies.
 
 Read end trimming
 *****************
@@ -363,4 +366,3 @@ More information about the methods used by |breseq| is available in these public
 *  Deatherage, D.E., Barrick, J.E. (2014) Identification of mutations in laboratory-evolved microbes from next-generation sequencing data using *breseq*. *Methods Mol. Biol.* **1151**: 165–188. **Tutorial and practical guide to running breseq and interpreting the output.** `Link to Full Text <http://www.ncbi.nlm.nih.gov/pmc/articles/PMC4239701>`_
 *  Barrick, J.E., Colburn, G., Deatherage D.E., Traverse, C.C., Strand, M.D., Borges, J.J., Knoester, D.B., Reba, A., Meyer, A.G.(2014) Identifying structural variation in haploid microbial genomes from short-read resequencing data using *breseq*. *BMC Genomics* **15**:1039. **Detailed description of methods used to predict structural variation.** `Link to Full Text <http://www.biomedcentral.com/1471-2164/15/1039>`_
 *  Deatherage, D.E., Traverse, C.C., Wolf, L.N., Barrick, J.E. (2015) Detecting rare structural variation in evolving microbial populations from new sequence junctions using *breseq*. *Front. Genet.* **5**:468. **Detailed description of methods used to predict polymorphic structural variation.** `Link to Full Text <http://http://journal.frontiersin.org/article/10.3389/fgene.2014.00468>`_
-
