@@ -56,6 +56,7 @@ libbreseq_la_SOURCES = \
 	libbreseq/candidate_junctions.h \
 	libbreseq/chisquare.h \
 	libbreseq/common.h \
+	libbreseq/counted_ptr.h \
 	libbreseq/ctpl_stl.h \
 	libbreseq/contingency_loci.h \
 	libbreseq/coverage_distribution.h \

@@ -216,9 +216,9 @@ struct Html_Mutation_Table_String : public string
     //!Constructors
     Html_Mutation_Table_String(
                                const Settings& settings,
-                               cGenomeDiff& gd,
+                               const cGenomeDiff& gd,
                                diff_entry_list_t& list_ref,
-                               MutationTableOptions& options
+                               const MutationTableOptions& options
                                );
     
    
@@ -268,8 +268,7 @@ string html_copy_number_table_string(
                                      );
 
 
-string html_genome_diff_item_table_string(const Settings& settings, cGenomeDiff& gd, 
-                                        diff_entry_list_t& list_ref);
+string html_genome_diff_item_table_string(const Settings& settings, const cGenomeDiff& gd, diff_entry_list_t& list_ref);
 string html_deletion_coverage_values_table_string(const Settings& settings, cReferenceSequences& ref_seq_info, Summary& summary);
 /*-----------------------------------------------------------------------------
  * Helper Functions For Tables 
@@ -305,24 +304,27 @@ public:
   diff_entry_ptr_t parent_item;
 };  
   
-struct cOutputEvidenceFiles
+class cOutputEvidenceFiles
 {
-  cOutputEvidenceFiles(const Settings& settings, cGenomeDiff& gd);
+public:
+  cOutputEvidenceFiles(const Settings& settings, const cGenomeDiff& gd);
   
   vector<cOutputEvidenceItem> evidence_list;
   
-  static void html_evidence_file_thread_helper(int id, const cOutputEvidenceFiles& oef, const Settings& settings, cGenomeDiff& gd, cOutputEvidenceItem& e) {
+  static void html_evidence_file_thread_helper(int id, const cOutputEvidenceFiles& oef, const Settings& settings, const cGenomeDiff& gd, cOutputEvidenceItem& e) {
     (void) id;
     cerr << "Creating evidence file: " + e[FILE_NAME] << endl;
     oef.html_evidence_file(settings, gd, e);
   }
   
-  private:
+private:
   
     void add_evidence(const string& file_name, diff_entry_ptr_t item,
                       diff_entry_ptr_t parent_item, map<string,string>& fields);
-    void html_evidence_file(const Settings& settings, cGenomeDiff& gd, cOutputEvidenceItem& item) const;
+    void html_evidence_file(const Settings& settings, const cGenomeDiff& gd, cOutputEvidenceItem& item) const;
 };
+
+
   
 }// end output namespace
 }// end breseq namespace

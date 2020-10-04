@@ -162,20 +162,20 @@ public:
   
   //! Retrieve cDiffEntrys that match given type(s) 
   const diff_entry_list_t get_const_list() const { return _entry_list; }
-  diff_entry_list_t get_list(const vector<gd_entry_type>& types = vector<gd_entry_type>());
+  diff_entry_list_t get_list(const vector<gd_entry_type>& types = vector<gd_entry_type>()) const;
   
   void set_list(diff_entry_list_t& in_list) {  _entry_list = in_list; }
   
   //! retrieve cDiffEntrys that match given type(s) and do not have 'no_show' set
-  diff_entry_list_t show_list(const vector<gd_entry_type>& types = vector<gd_entry_type>());
+  diff_entry_list_t show_list(const vector<gd_entry_type>& types = vector<gd_entry_type>()) const;
   
   //! Gets parent of entry (entry using it as evidence), if there is one
   // @JEB: should return a list, there can be multiple inheritance
-  diff_entry_list_t using_evidence_list(const cDiffEntry& evidence);
+  diff_entry_list_t using_evidence_list(const cDiffEntry& evidence) const;
   
   //! Returns _entry_list with matching item._evidence
   //  (That is, any entries using 'item' as evidence)
-  diff_entry_list_t in_evidence_list(const cDiffEntry& item);
+  diff_entry_list_t in_evidence_list(const cDiffEntry& item) const;
   
   diff_entry_list_t mutation_list();
   diff_entry_list_t evidence_list();
@@ -185,7 +185,7 @@ public:
   void filter_not_used_as_evidence(bool verbose=false);
   
   //! Remove items used as evidence by any mutations out of input list
-  diff_entry_list_t filter_used_as_evidence(const diff_entry_list_t& list);
+  diff_entry_list_t filter_used_as_evidence(const diff_entry_list_t& list) const;
   
   //! Helper function for returning subsets below
   bool mutation_in_entry_of_type(cDiffEntry mut, const gd_entry_type type);

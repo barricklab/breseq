@@ -933,7 +933,7 @@ diff_entry_ptr_t cGenomeDiff::find_by_id(string _id)
 /*! Given a list of types, search and return the cDiffEntry's within diff_entry_list_t whose 
  * _type parameter matches one of those within input types. 
  */ 
-diff_entry_list_t cGenomeDiff::get_list(const vector<gd_entry_type>& types)
+diff_entry_list_t cGenomeDiff::get_list(const vector<gd_entry_type>& types) const
 {
   // default is to have no types
   if (types.size() == 0)
@@ -941,7 +941,7 @@ diff_entry_list_t cGenomeDiff::get_list(const vector<gd_entry_type>& types)
   
   diff_entry_list_t return_list;
   
-  for (diff_entry_list_t::iterator itr_diff_entry = _entry_list.begin();
+  for (diff_entry_list_t::const_iterator itr_diff_entry = _entry_list.begin();
        itr_diff_entry != _entry_list.end(); itr_diff_entry++)
   {
     for (vector<gd_entry_type>::const_iterator requested_type = types.begin();
@@ -956,7 +956,7 @@ diff_entry_list_t cGenomeDiff::get_list(const vector<gd_entry_type>& types)
 }
 
 
-diff_entry_list_t cGenomeDiff::show_list(const vector<gd_entry_type>& types)
+diff_entry_list_t cGenomeDiff::show_list(const vector<gd_entry_type>& types) const
 {
   diff_entry_list_t ret_list = get_list(types);
   ret_list.remove_if(cDiffEntry::fields_exist(make_vector<diff_entry_key_t>("deleted")));
@@ -967,11 +967,11 @@ diff_entry_list_t cGenomeDiff::show_list(const vector<gd_entry_type>& types)
   
 /*! Returns all entries using input as evidence
  */
-diff_entry_list_t cGenomeDiff::using_evidence_list(const cDiffEntry& evidence)
+diff_entry_list_t cGenomeDiff::using_evidence_list(const cDiffEntry& evidence) const
 {
   diff_entry_list_t return_list;
 
-  for(diff_entry_list_t::iterator itr_test_item = _entry_list.begin();
+  for(diff_entry_list_t::const_iterator itr_test_item = _entry_list.begin();
       itr_test_item != _entry_list.end(); itr_test_item ++) {
     
     cDiffEntry& test_item = **itr_test_item;
@@ -989,7 +989,7 @@ diff_entry_list_t cGenomeDiff::using_evidence_list(const cDiffEntry& evidence)
   
 /*! Return all entries that are evidence for item
  */ 
-diff_entry_list_t cGenomeDiff::in_evidence_list(const cDiffEntry& item)
+diff_entry_list_t cGenomeDiff::in_evidence_list(const cDiffEntry& item) const
 {
   diff_entry_list_t return_list;
   
@@ -998,7 +998,7 @@ diff_entry_list_t cGenomeDiff::in_evidence_list(const cDiffEntry& item)
   {  
     const string& evidence = *itr_i;
     
-    for (diff_entry_list_t::iterator itr_j = _entry_list.begin(); itr_j != _entry_list.end(); itr_j ++)
+    for (diff_entry_list_t::const_iterator itr_j = _entry_list.begin(); itr_j != _entry_list.end(); itr_j ++)
     {  
       cDiffEntry& entry = **itr_j;
       
@@ -1104,7 +1104,7 @@ void cGenomeDiff::filter_not_used_as_evidence(bool verbose)
 }
 
 // RETURNS entries NOT used as evidence by other entries.
-diff_entry_list_t cGenomeDiff::filter_used_as_evidence(const diff_entry_list_t& input)
+diff_entry_list_t cGenomeDiff::filter_used_as_evidence(const diff_entry_list_t& input) const
 {
   // first we make a map with everything used as evidence by any entry in the entire genome diff
   map<string,bool> used_as_evidence;

@@ -21,6 +21,7 @@
 
 #include "common.h"
 #include "file_parse_errors.h"
+#include "counted_ptr.h"
 
 using namespace std;
 
@@ -210,6 +211,7 @@ namespace breseq {
     cDiffEntry(const gd_entry_type type);
     cDiffEntry(const string &line, uint32_t line_number, cFileParseErrors* file_parse_errors = NULL); //For deserialization from gd file.
     cDiffEntry(diff_entry_map_t& de) : diff_entry_map_t(de) {};
+    
     
     //! Helper function
     static gd_entry_type type_to_enum(string type);

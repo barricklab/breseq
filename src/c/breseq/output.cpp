@@ -1014,7 +1014,7 @@ string breseq_header_string(const Settings& settings)
 }
 
 
-string html_genome_diff_item_table_string(const Settings& settings, cGenomeDiff& gd, diff_entry_list_t& list_ref)
+string html_genome_diff_item_table_string(const Settings& settings, const cGenomeDiff& gd, diff_entry_list_t& list_ref)
 {
   if(list_ref.empty()) return "";
 
@@ -2259,9 +2259,9 @@ void add_html_fields_to_mutation(cDiffEntry& mut, MutationTableOptions& options)
  */
 Html_Mutation_Table_String::Html_Mutation_Table_String(
                                                        const Settings& settings,
-                                                       cGenomeDiff& gd,
+                                                       const cGenomeDiff& gd,
                                                        diff_entry_list_t& list_ref,
-                                                       MutationTableOptions& options
+                                                       const MutationTableOptions& options
                                                        )
   : string()
   , total_cols(0)
@@ -2635,7 +2635,7 @@ string Html_Mutation_Table_String::freq_cols(vector<string> freq_list)
  *  Description:  
  * =====================================================================================
  */
-cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff& gd)
+cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, const cGenomeDiff& gd)
 {  
   // Fasta and BAM files for making alignments.
   string reference_bam_file_name = settings.reference_bam_file_name;
@@ -2907,7 +2907,6 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
 }
 
 
-
 void cOutputEvidenceFiles::add_evidence(const string& evidence_file_name_key, diff_entry_ptr_t item,
                                   diff_entry_ptr_t parent_item, diff_entry_map_t& fields)
 {
@@ -2932,10 +2931,10 @@ void cOutputEvidenceFiles::add_evidence(const string& evidence_file_name_key, di
 void 
 cOutputEvidenceFiles::html_evidence_file (
                                     const Settings& settings, 
-                                    cGenomeDiff& gd, 
+                                    const cGenomeDiff& gd, 
                                     cOutputEvidenceItem& item
                                     ) const
-{  
+{
   string output_path = settings.evidence_path + "/" + item[FILE_NAME];
   
   // Create Stream and Confirm It's Open
@@ -2949,8 +2948,11 @@ cOutputEvidenceFiles::html_evidence_file (
   // Build HTML Head
   HTML << html_header("BRESEQ :: Evidence", settings);
   
+  
   // print a table for the main item
   // followed by auxiliary tables for each piece of evidence
+  
+
   
   diff_entry_ptr_t parent_item = item.parent_item;
   diff_entry_list_t parent_list;
@@ -2973,7 +2975,7 @@ cOutputEvidenceFiles::html_evidence_file (
     HTML << html_genome_diff_item_table_string(settings, gd, this_evidence_list);
     HTML << "<p>"; 
   }
-  
+
   if (item.entry_exists(PLOT) && !item[PLOT].empty()) {
     if (file_exists( (settings.evidence_path + "/" + item[PLOT]).c_str() )) {
       HTML << div(ALIGN_LEFT, img("width=800", item[PLOT]));
@@ -3008,8 +3010,12 @@ cOutputEvidenceFiles::html_evidence_file (
     }
     
   }
+
+
+  
   HTML << html_footer();
   HTML.close();
+
 }
   
   

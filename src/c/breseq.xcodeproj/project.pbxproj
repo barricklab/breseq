@@ -148,6 +148,7 @@
 		702A20BB1A4F2399006DCA5F /* flagged_regions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = flagged_regions.h; sourceTree = "<group>"; };
 		702C41621FDD88D900D4B159 /* json.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = json.hpp; path = breseq/libbreseq/json.hpp; sourceTree = SOURCE_ROOT; };
 		702EABF613421A8400103019 /* fastq.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = fastq.cpp; path = breseq/fastq.cpp; sourceTree = SOURCE_ROOT; };
+		70319F132529146C006AE46F /* counted_ptr.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = counted_ptr.h; sourceTree = "<group>"; };
 		70367D2013EB232C000787CC /* coverage_distribution.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = coverage_distribution.cpp; path = breseq/coverage_distribution.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		70436D5713FF6D7D006448FB /* coverage_distribution.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = coverage_distribution.r; path = breseq/coverage_distribution.r; sourceTree = "<group>"; };
 		704A07CF1A3409EA00B3ACC7 /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = "/Users/jbarrick/Library/Developer/Xcode/DerivedData/breseq-canagyzpaxpsjgbtjxenmavcspzz/Build/Products/Debug/../../../../../../../../../../opt/local/lib/libz.a"; sourceTree = "<absolute>"; };
@@ -359,6 +360,7 @@
 				70CB7215140FEB6400D578EB /* chisquare.h */,
 				70CB7216140FEB6400D578EB /* common.h */,
 				70CB7217140FEB6400D578EB /* contingency_loci.h */,
+				70319F132529146C006AE46F /* counted_ptr.h */,
 				70CB7218140FEB6400D578EB /* coverage_distribution.h */,
 				70CB7219140FEB6400D578EB /* coverage_output.h */,
 				70C6B3A424A4140A00AFCC94 /* ctpl_stl.h */,
@@ -500,7 +502,7 @@
 		421ACEB71170DB9600C2EB85 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1110;
+				LastUpgradeCheck = 1200;
 				TargetAttributes = {
 					705977FD1DB99E7C001BBA6B = {
 						CreatedOnToolsVersion = 8.0;
@@ -636,6 +638,7 @@
 				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -677,6 +680,7 @@
 				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
