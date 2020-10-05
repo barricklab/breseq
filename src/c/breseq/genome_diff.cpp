@@ -4712,7 +4712,7 @@ void cGenomeDiff::read_vcf(const string &file_name)
       string truncated_title = full_title.substr(0,phylip_name_max_length);
 
       if ( used_titles.find(truncated_title) != used_titles.end() ) {
-        ERROR("PHYLIP output only accomodates ten-letter names for each sequence. Two of your input GenomeDiff sample files have the same title after truncation to ten letters:\n" + full_title + "\nAND\n" + used_titles[truncated_title]  + "\nChange the #=TITLE <title> metadata line of one file to something unique to proceed. If your input files do not have these metadata lines, change the name of one file.");
+        ERROR("PHYLIP output only accommodates ten-letter names for each sequence. Two of your input GenomeDiff sample files have the same title after truncation to ten letters:\n" + full_title + "\nAND\n" + used_titles[truncated_title]  + "\nChange the #=TITLE <title> metadata line of one file to something unique to proceed. If your input files do not have these metadata lines, change the name of one file.");
       } else {
         used_titles[truncated_title] = full_title;
       }
