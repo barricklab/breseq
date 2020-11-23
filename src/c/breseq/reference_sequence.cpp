@@ -1432,8 +1432,10 @@ void cReferenceSequences::ReadGenBank(const string& in_file_name, const string& 
     //}
     
     // Re-add possibly corrected 'region' feature location
-    f->m_locations.clear();
-    f->add_location(cLocation(1, sequence_length_SEQUENCE, 1));
+    if (sequence_length_SEQUENCE > 0) {
+      f->m_locations.clear();
+      f->add_location(cLocation(1, sequence_length_SEQUENCE, 1));
+    }
   }
 }
 
