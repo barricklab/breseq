@@ -177,7 +177,7 @@ namespace breseq
     options.addUsage("");
     options.addUsage("Run the breseq pipeline for predicting mutations from haploid microbial re-sequencing data.");
     options.addUsage("");
-    options.addUsage("FASTQ read files (which may be gzipped) are input as the last unamed argument(s).");
+    options.addUsage("FASTQ read files (which may be gzipped) are input as the last unnamed argument(s).");
     options.addUsage("");
     options.addUsage("Allowed Options");
     

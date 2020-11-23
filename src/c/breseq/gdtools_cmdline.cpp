@@ -35,7 +35,7 @@ int gdtools_usage()
   uout("Manipulate Genome Diff (*.gd) files using the following commands.");
 
   uout("General:");
-  uout << "VALIDATE               check formating of input files" << endl;
+  uout << "VALIDATE               check formatting of input files" << endl;
   uout << "APPLY                  apply mutations to a sequence" << endl;
   uout << "ANNOTATE (or COMPARE)  annotate the effects of mutations and compare multiple samples" << endl;
 	uout << "MUTATIONS              (re)predict mutations from evidence" << endl;
@@ -336,7 +336,7 @@ int do_weights(int argc, char* argv[])
   options.addUsage("");
   options.addUsage("\tCreates a GD file of mutations and associated evidence that exist in each input GD file.");
   options.addUsage("Duplicate mutations are merged into a single mutation with a 'weight' field added to the");
-  options.addUsage("entry. The 'weight' field is the inverse of the frequency of that mutation occuring accross");
+  options.addUsage("entry. The 'weight' field is the inverse of the frequency of that mutation occurring across");
   options.addUsage("all input GD files. Unique mutations will therefor have a 'weight' of 1");
 
 	if (options.count("help")) {
@@ -1542,7 +1542,7 @@ int do_count(int argc, char* argv[])
   options.addUsage("");
   options.addUsage("In the output \"small\" mutations are ≤ " + to_string<int32_t>(kBreseq_large_mutation_size_cutoff) + " bp. \"large\" mutations are >" + to_string<int32_t>(kBreseq_large_mutation_size_cutoff) + " bp");
 	
-	options.addUsage("For base substitutions overlapping multiple genes, the mutation is counted as the most signficant effect it has on any of the genes it overlaps with the precedence: nonsense > nonsynonymous > synonymous.");
+	options.addUsage("For base substitutions overlapping multiple genes, the mutation is counted as the most significant effect it has on any of the genes it overlaps with the precedence: nonsense > nonsynonymous > synonymous.");
 	
   options.processCommandArgs(argc, argv);
 	
@@ -1732,7 +1732,7 @@ int do_normalize_gd(int argc, char* argv[])
 		for (vector<string>::const_iterator it = seq_ids.begin(); it != seq_ids.end(); it++)
 		{
 			if (new_ref_seq_info[*it].m_fasta_sequence.get_sequence() != verify_ref_seq_info[*it].m_fasta_sequence.get_sequence()) {
-				WARN("Failed APPLY test. Discrepancies beween sequences produced before and after NORMALIZE. Check ordering of mutations.");
+				WARN("Failed APPLY test. Discrepancies between sequences produced before and after NORMALIZE. Check ordering of mutations.");
 			}
 		}
 	}
