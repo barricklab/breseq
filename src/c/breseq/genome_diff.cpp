@@ -1209,6 +1209,10 @@ void cGenomeDiff::set_subtract(cGenomeDiff& gd, bool phylogeny_id_aware, bool fr
   diff_entry_list_t::iterator it = this->_entry_list.begin();
 
   while ( (it_subtract != subtract_muts.end()) && (it != _entry_list.end()) ) {
+    
+    // Stop once we are past mutations
+    if ( !(*it)->is_mutation() ) break;
+    
     //cout << **it_subtract << endl;
     //cout << **it << endl << endl;
     if (**it_subtract < **it) {
@@ -1216,7 +1220,6 @@ void cGenomeDiff::set_subtract(cGenomeDiff& gd, bool phylogeny_id_aware, bool fr
     }
     else if (**it_subtract > **it) {
       it++;
-      if ( !(*it)->is_mutation() ) break;
     }
     else {
       
@@ -3975,7 +3978,7 @@ void cGenomeDiff::tabulate_mutation_frequencies_from_multiple_gds(
     used_titles.insert(this_title);
   }
   
-  
+  // Need to keep evidence lists that have MC and UN items around for assigning question marks
   vector<diff_entry_list_t> mut_lists;
   for (vector<cGenomeDiff>::iterator it = gd_list.begin(); it != gd_list.end(); it++) {
     mut_lists.push_back(it->mutation_list());
@@ -4039,7 +4042,7 @@ void cGenomeDiff::tabulate_mutation_frequencies_from_multiple_gds(
         continue;
       }
       
-      if (gd_list[i].mutation_unknown(*this_mut)) {
+      if (gd_list[i].mutation_unknown_or_missing_coverage(*this_mut)) {
         (*this_mut)[freq_key] = "?";
         continue;
       }

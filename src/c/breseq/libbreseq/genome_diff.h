@@ -189,9 +189,9 @@ public:
   
   //! Helper function for returning subsets below
   bool mutation_in_entry_of_type(cDiffEntry mut, const gd_entry_type type);
-  bool mutation_unknown(cDiffEntry mut) { return mutation_in_entry_of_type(mut, UN); }
   bool mutation_deleted(cDiffEntry mut) { return mutation_in_entry_of_type(mut, DEL); }
-  
+  bool mutation_unknown_or_missing_coverage(cDiffEntry mut) { return (mutation_in_entry_of_type(mut, UN) || mutation_in_entry_of_type(mut, MC)); }
+
   //! Removes all annotation and other information, leaving only specs
   void strip_to_spec(); // strips all items
   
