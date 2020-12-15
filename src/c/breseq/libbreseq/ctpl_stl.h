@@ -171,9 +171,13 @@ namespace ctpl {
       
         // stops threads and then restarts to accept more jobs
         void sync(bool isWait = false) {
+          int nThreads = threads.size();
           stop (isWait);
           isDone = false;
           isStop = false;
+          
+          // Threads have been cleared. Need to recreate them here.
+          this->resize(nThreads);
         }
 
         template<typename F, typename... Rest>

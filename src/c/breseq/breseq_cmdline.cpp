@@ -2444,6 +2444,10 @@ int breseq_default_action(int argc, char* argv[])
     cerr << "Drawing coverage plots..." << endl;
     output::draw_coverage(settings, ref_seq_info, gd);
     
+    // !!! Currently, we need to wait for the creation of coverage plots to finish
+    // b/c we check whether files exist in creating the HTML files next.
+    Settings::sync_threads();
+    
 		//
 		// Create evidence files containing alignments and coverage plots
 		// --- must occur after marking entries no_show
