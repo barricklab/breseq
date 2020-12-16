@@ -1440,14 +1440,8 @@ int breseq_default_action(int argc, char* argv[])
       cerr << "    Analyzed reads: " << setw(width_for_reads) << s.num_reads << " bases: " << setw(width_for_bases) << s.num_bases << endl;
       
     }
-    
       
 		// create SAM faidx
-    /*
-		string samtools = settings.ctool("samtools");
-		string command = samtools + " faidx " + settings.reference_fasta_file_name;
-		SYSTEM(command);
-    */
     samtools_faidx(settings.reference_fasta_file_name);
     
 		// calculate trim files
@@ -1706,12 +1700,6 @@ int breseq_default_action(int argc, char* argv[])
 		{
       CandidateJunctions::identify_candidate_junctions(settings, summary, ref_seq_info);
       
-      /*
-			string samtools = settings.ctool("samtools");
-			string faidx_command = samtools + " faidx " + settings.candidate_junction_fasta_file_name;
-			if (!file_empty(settings.candidate_junction_fasta_file_name.c_str()))
-				SYSTEM(faidx_command);
-      */
       if (!file_empty(settings.candidate_junction_fasta_file_name.c_str()))
         samtools_faidx(settings.candidate_junction_fasta_file_name);
       
@@ -1756,7 +1744,6 @@ int breseq_default_action(int argc, char* argv[])
           if (!file_exists(filename.c_str()))
             continue;
       
-          /// NEW CODE mapping to junctions with somewhat relaxed parameters
           uint32_t bowtie2_seed_substring_size_junction = trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.3);
           // Check bounds
           bowtie2_seed_substring_size_junction = max<uint32_t>(9, bowtie2_seed_substring_size_junction);
@@ -1820,46 +1807,20 @@ int breseq_default_action(int argc, char* argv[])
 		string junction_bam_unsorted_file_name = settings.junction_bam_unsorted_file_name;
 		string junction_bam_file_name = settings.junction_bam_file_name;
 
-    //string samtools = settings.ctool("samtools");
-    //string command;
-
     // only run samtools if we are predicting junctions and there were results in the sam file
     // first part of conditional really not necessary @JEB
 		if (!file_empty(resolved_junction_sam_file_name.c_str()))
 		{
-      /*
-			command = samtools + " import " + candidate_junction_faidx_file_name + " " + resolved_junction_sam_file_name + " " + junction_bam_unsorted_file_name;
-			SYSTEM(command);
-			command = samtools + " sort " + junction_bam_unsorted_file_name + " " + junction_bam_prefix;
-      SYSTEM(command);
-			if (!settings.keep_all_intermediates)
-				remove_file(junction_bam_unsorted_file_name.c_str());
-			command = samtools + " index " + junction_bam_file_name;
-			SYSTEM(command);
-       */
-      
       samtools_import(candidate_junction_faidx_file_name, resolved_junction_sam_file_name, junction_bam_unsorted_file_name);
       samtools_sort(junction_bam_unsorted_file_name, junction_bam_file_name, settings.num_processors);
       if (!settings.keep_all_intermediates)
         remove_file(junction_bam_unsorted_file_name.c_str(), false, true);
       samtools_index(junction_bam_file_name);
-      
 		}
 
 		string resolved_reference_sam_file_name = settings.resolved_reference_sam_file_name;
 		string reference_bam_unsorted_file_name = settings.reference_bam_unsorted_file_name;
 		string reference_bam_file_name = settings.reference_bam_file_name;
-
-    /*
-		command = samtools + " import " + reference_faidx_file_name + " " + resolved_reference_sam_file_name + " " + reference_bam_unsorted_file_name;
-    SYSTEM(command);
-		command = samtools + " sort " + reference_bam_unsorted_file_name + " " + reference_bam_prefix;
-    SYSTEM(command);
-		if (!settings.keep_all_intermediates)
-			remove_file(reference_bam_unsorted_file_name.c_str());
-		command = samtools + " index " + reference_bam_file_name;
-    SYSTEM(command);
-    */
     
     samtools_import(reference_faidx_file_name, resolved_reference_sam_file_name, reference_bam_unsorted_file_name);
     samtools_sort(reference_bam_unsorted_file_name, reference_bam_file_name, settings.num_processors);

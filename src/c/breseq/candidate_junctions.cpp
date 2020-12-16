@@ -1211,7 +1211,7 @@ namespace breseq {
 	{    
     bool verbose = false;
     
-    //if (ap.a1.read_name() == "1:379655") {
+    //if (ap.a1.read_name() == "1:2096442") {
     //   verbose = true;
     //}
   
@@ -1633,8 +1633,9 @@ namespace breseq {
     (void)summary;
 		bool verbose = false;
 
-    //if (alignments.front()->read_name() == "1:1610874")
+    //if (alignments.front()->read_name() == "1:2096442") {
     //  verbose = true;
+    //}
     
 		if (verbose)
 		{
