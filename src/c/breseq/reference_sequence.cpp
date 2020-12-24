@@ -2726,7 +2726,7 @@ char cReferenceSequences::translate_codon(string seq, uint32_t translation_table
     ? cReferenceSequences::initiation_codon_translation_tables[translation_table]
     : cReferenceSequences::translation_tables[translation_table]
   ;
-  ASSERT(tt.size() == 64, "Provided translation table #" + to_string(translation_table) + " does not have 64 codons." + (gene.size()>0 ? " for gene " + gene :"") + ".");
+  ASSERT(tt.size() == 64, "Provided translation table #" + to_string(translation_table) + " does not have 64 codons" + (gene.size()>0 ? " for gene " + gene :"") + ".");
   
   return (cReferenceSequences::codon_to_aa_index.count(seq) == 0) 
     ? '?' 
@@ -2736,7 +2736,7 @@ char cReferenceSequences::translate_codon(string seq, uint32_t translation_table
 char cReferenceSequences::translate_codon(string seq, string translation_table, string translation_table_1, uint32_t codon_number_1, const string& gene)
 {  
   ASSERT(seq.size()==3, "Attempt to translate codon without three bases" + (gene.size()>0 ? " in gene " + gene :"") + ".");
-  ASSERT(translation_table.size()==64, "Provided translation table #" + to_string(translation_table) + " does not have 64 codons." + (gene.size()>0 ? " for gene " + gene :"") + ".");
+  ASSERT(translation_table.size()==64, "Provided translation table #" + to_string(translation_table) + " does not have 64 codons" + (gene.size()>0 ? " for gene " + gene :"") + ".");
   const string& tt = (codon_number_1 == 1) ? translation_table_1 : translation_table;
   
   return (cReferenceSequences::codon_to_aa_index.count(seq) == 0) 
@@ -3683,12 +3683,19 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
             vector<string> codon_new_seq_list_j = split((*snp_muts[on_key][j])["codon_new_seq"], multiple_separator);
             vector<string> aa_new_seq_list_i = split((*snp_muts[on_key][i])["aa_new_seq"], multiple_separator);
             vector<string> aa_new_seq_list_j = split((*snp_muts[on_key][j])["aa_new_seq"], multiple_separator);
-
-            codon_new_seq_list_i[ii] = new_codon;
-            codon_new_seq_list_j[jj] = new_codon;
-            aa_new_seq_list_i[ii] =  translate_codon(new_codon, from_string((*snp_muts[on_key][i])["transl_table"]), from_string((*snp_muts[on_key][i])["aa_position"]));
-            aa_new_seq_list_j[jj] =  translate_codon(new_codon, from_string((*snp_muts[on_key][j])["transl_table"]), from_string((*snp_muts[on_key][j])["aa_position"]));
             
+            // If translation table is NA, then we don't translate for that gene!
+            vector<string> transl_table_list_i = split((*snp_muts[on_key][i])["transl_table"], multiple_separator);
+            vector<string> transl_table_list_j = split((*snp_muts[on_key][i])["transl_table"], multiple_separator);
+
+            if (transl_table_list_i[ii] != "NA") {
+              codon_new_seq_list_i[ii] = new_codon;
+              aa_new_seq_list_i[ii] =  translate_codon(new_codon, from_string(transl_table_list_i[ii]), from_string((*snp_muts[on_key][i])["aa_position"]));
+            }
+            if (transl_table_list_i[jj] != "NA") {
+              codon_new_seq_list_j[jj] = new_codon;
+              aa_new_seq_list_j[jj] =  translate_codon(new_codon, from_string(transl_table_list_i[jj]), from_string((*snp_muts[on_key][j])["aa_position"]));
+            }
             (*snp_muts[on_key][i])["codon_new_seq"] = join(codon_new_seq_list_i, multiple_separator);
             (*snp_muts[on_key][j])["codon_new_seq"] = join(codon_new_seq_list_j, multiple_separator);
             (*snp_muts[on_key][i])["aa_new_seq"] = join(aa_new_seq_list_i, multiple_separator);

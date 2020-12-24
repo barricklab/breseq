@@ -1,5 +1,10 @@
 Version 0.35.4
-  * Critical bug fix for crashes during output creation when -j is >1
+  * Bug fix for incorrect "Plots could not be created" message in HTML pages when -j is >1.
+  * Bug fix for #254: "Provided translation table #0 does not have 64 codons". This was a rare
+    case where two SNPs occur in the same codon of a CDS and also overlap a noncoding gene.
+
+Version 0.35.4
+  * Critical bug fix for crashes during output creation when -j is >1.
 
 Version 0.35.3
   * Fixed problem where HTML coverage and alignment files were not produced. (Bug introduced in v0.35.2)
