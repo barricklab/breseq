@@ -2260,7 +2260,7 @@ void add_html_fields_to_mutation(cDiffEntry& mut, MutationTableOptions& options)
 Html_Mutation_Table_String::Html_Mutation_Table_String(
                                                        const Settings& settings,
                                                        const cGenomeDiff& gd,
-                                                       diff_entry_list_t& list_ref,
+                                                       const diff_entry_list_t& list_ref,
                                                        const MutationTableOptions& options
                                                        )
   : string()
@@ -2417,8 +2417,9 @@ void Html_Mutation_Table_String::Item_Lines()
   ss << "<!-- Item Lines -->" << endl;
   (*this) += ss.str();
   ss.str("");
-  for (diff_entry_list_t::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++) { 
-    cDiffEntry& mut = (**itr);
+  for (diff_entry_list_t::const_iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++) {
+    // We must create a copy here and annotate it to be safe for multithreading!
+    cDiffEntry mut(**itr);
 
     if ((row_num != 0) && (options.repeat_header != 0) && (row_num % options.repeat_header == 0))
     {

@@ -217,7 +217,7 @@ struct Html_Mutation_Table_String : public string
     Html_Mutation_Table_String(
                                const Settings& settings,
                                const cGenomeDiff& gd,
-                               diff_entry_list_t& list_ref,
+                               const diff_entry_list_t& list_ref,
                                const MutationTableOptions& options
                                );
     
