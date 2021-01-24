@@ -126,6 +126,9 @@ namespace breseq {
     }
   };
   
+  // Pre-declaration
+  class cSequenceFeature;
+
   class cLocation {
     
   private:
@@ -148,6 +151,7 @@ namespace breseq {
              int32_t start_1,
              int32_t end_1,
              int8_t strand,
+             const cSequenceFeature* feature = NULL,
              bool start_is_indeterminate = false,
              bool end_is_indeterminate = false
              )
@@ -157,7 +161,7 @@ namespace breseq {
     , m_start_is_indeterminate(start_is_indeterminate)
     , m_end_is_indeterminate(end_is_indeterminate)
     {
-      this->check_valid();
+      this->check_valid(feature);
     }
     
     cLocation(const cLocation& in)
@@ -240,9 +244,7 @@ namespace breseq {
       return (m_start_1 <= m_end_1) && (m_strand >=-1) && (m_strand <=1);
     }
     
-    void check_valid() {
-      ASSERT(this->is_valid(), "Location has invalid start-end coordinates or strand:\n" + this->as_string());
-    }
+    void check_valid(const cSequenceFeature* feature = NULL);
     
     void set_start_1(int32_t start_1) {
       m_start_1 = start_1;
@@ -1189,7 +1191,7 @@ public:
       pos = s.find_last_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890.-");
       s.replace(pos+1, s.size()-pos+1, "");
       
-      ASSERT(s.find_first_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890.-") != string::npos, "Seq id " + input + " does not contain any valid alphanumeric characters.");
+      ASSERT(s.find_first_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890.-") != string::npos, "Seq id [" + input + "] does not contain any valid alphanumeric characters.");
       
       if (s != input) {
         WARN("Reference seq id converted from '" + input + "' to '" + s + "'.\nOnly alphanumeric characters, periods, dashes, and single underscores '_' are allowed in seq ids.");

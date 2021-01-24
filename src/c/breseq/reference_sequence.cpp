@@ -47,6 +47,14 @@ namespace breseq {
   const string BULL_DUMMY_SEQ_ID = "__BULL_DUMMY_SEQ_ID__";
   
   
+  void cLocation::check_valid(const cSequenceFeature* feature)
+  {
+    if (!this->is_valid()) {
+      string name = feature ? feature->SafeGet("name") : "<unknown>" ;
+      string type = feature ? feature->SafeGet("type") : "<unknown>" ;
+      ERROR("Location for feature named: " + name + " of type: " + type + "\nhas invalid start-end coordinates or strand:\n" + this->as_string());
+    }
+  }
   
   cFeatureLocation::cFeatureLocation(cSequenceFeature* feature, const cLocation& loc)
     : cLocation(loc)
@@ -74,7 +82,7 @@ namespace breseq {
                                      bool end_is_indeterminate
                                      )
   {
-    cFeatureLocation(feature, cLocation(start_1, end_1, strand, start_is_indeterminate, end_is_indeterminate));
+    cFeatureLocation(feature, cLocation(start_1, end_1, strand, feature, start_is_indeterminate, end_is_indeterminate));
   }
   
   string cSequenceFeature::get_nucleotide_sequence(const cAnnotatedSequence& seq) const
@@ -1526,6 +1534,10 @@ bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file
       
       string w;
       w = GetWord(line);
+      
+      // Prokka outputs empty VERSION lines, we don't want to use those!
+      if (w.length()==0) continue;
+      
       version_seq_id = safe_seq_id_name(w);
 
       // Should only be one line like this per record!
@@ -1543,6 +1555,10 @@ bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file
       
       string w;
       w = GetWord(line);
+      
+      // Prokka outputs empty ACCESSION lines, we don't want to use those!
+      if (w.length()==0) continue;
+      
       accession_seq_id = safe_seq_id_name(w);
 
       // Should only be one line like this per record!
@@ -1761,11 +1777,11 @@ list<cLocation> cAnnotatedSequence::SafeCreateFeatureLocations(
   // We need to check that the feature is not entirely outside of the reference
   if (m_is_circular) {
     if ((in_start_1 > this->m_length) && (in_end_1 > this->m_length) ) {
-      ASSERT(!safe_create_feature_locations, "Error in reference file. Feature on sequence " + this->m_seq_id + " has coordinates (" + to_string(in_start_1) + "-" + to_string(in_end_1) + ") that are both outside of the circular sequence bounds (1-" + to_string(this->m_length) + ").");
+      ASSERT(!safe_create_feature_locations, "Error in reference file. Feature of type [" + in_feature.SafeGet("type") + "] named [" + in_feature.SafeGet("name") + "] on sequence [" + this->m_seq_id + "] has coordinates (" + to_string(in_start_1) + "-" + to_string(in_end_1) + ") that are both outside of the circular sequence bounds (1-" + to_string(this->m_length) + ").");
     }
   } else {
     if ((in_start_1 > this->m_length) || (in_end_1 > this->m_length) ) {
-      ASSERT(!safe_create_feature_locations, "Error in reference file. Feature on sequence " + this->m_seq_id + " has coordinates (" + to_string(in_start_1) + "-" + to_string(in_end_1) + ") that are outside of the sequence bounds (1-" + to_string(this->m_length) + ").");
+      ASSERT(!safe_create_feature_locations, "Error in reference file. Feature of type [" + in_feature.SafeGet("type") + "] named [" + in_feature.SafeGet("name") + "] on sequence [" + this->m_seq_id + "] has coordinates (" + to_string(in_start_1) + "-" + to_string(in_end_1) + ") that are outside of the sequence bounds (1-" + to_string(this->m_length) + ").");
     }
   }
   
@@ -1786,6 +1802,7 @@ list<cLocation> cAnnotatedSequence::SafeCreateFeatureLocations(
                              in_start_1,
                              in_end_1,
                              in_strand,
+                             &in_feature,
                              in_start_is_indeterminate,
                              in_end_is_indeterminate
                              )
@@ -1801,6 +1818,7 @@ list<cLocation> cAnnotatedSequence::SafeCreateFeatureLocations(
                              1,
                              in_end_1,
                              in_strand,
+                             &in_feature,
                              false,
                              in_end_is_indeterminate
                              )
@@ -1811,6 +1829,7 @@ list<cLocation> cAnnotatedSequence::SafeCreateFeatureLocations(
                              in_start_1,
                              this->m_length,
                              in_strand,
+                             &in_feature,
                              in_start_is_indeterminate,
                              false
                             )
@@ -1820,7 +1839,7 @@ list<cLocation> cAnnotatedSequence::SafeCreateFeatureLocations(
     if (in_strand == 1) locs.reverse();
     
   } else {
-    ASSERT(!safe_create_feature_locations, "Start coordinate (" + to_string<int32_t>(in_start_1) + ") must be less than or equal to end coordinate (" + to_string<int32_t>(in_end_1) + ") for feature that is not on a circular sequence.")
+    ASSERT(!safe_create_feature_locations, "Error in reference file. Feature of type [" + in_feature.SafeGet("type") + "] named [" + in_feature.SafeGet("name") + "] on sequence [" + this->m_seq_id + "]: Start coordinate (" + to_string<int32_t>(in_start_1) + ") must be less than or equal to end coordinate (" + to_string<int32_t>(in_end_1) + ") for feature that is not on a circular sequence.")
   }
   return locs;
 }
@@ -4049,10 +4068,10 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
   {
     cout << a.read_name() << endl;
 
-    if (a.read_name() == "GW1ULQG02EIUY7")
-    {
-      cout << "debug" << endl;
-    }
+    //if (a.read_name() == "GW1ULQG02EIUY7")
+    //{
+    //  cout << "debug" << endl;
+    //}
     cout << a.cigar_string() << endl;
   }
 
