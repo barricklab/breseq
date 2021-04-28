@@ -1014,6 +1014,16 @@ namespace breseq {
           stringstream ls(line);
           string x, seq_id, start, end;
           ls >> x >> seq_id >> start >> end;
+          
+          // @JEB 2021-04-28 #262
+          // PGP files are apparently sometimes missing seqid
+          // Solution: bail if we did not find all three items
+          // (In this case 'end' will be empty)
+          // This is OK b/c sequence is created when features are encountered
+          // as long as the first feature is a
+          
+          if (end == "") continue;
+      
           seq_id = safe_seq_id_name(seq_id);
           this->add_new_seq(seq_id, file_name);
           (*this)[seq_id].m_length = from_string<uint32_t>(end);
@@ -1194,15 +1204,24 @@ namespace breseq {
         feature.m_gff_attributes.erase("indeterminate_coordinate");
       }
       
+      //! Step 4: Determine if sequence already exists (find or create if not found)
+      this->add_new_seq(seq_id, file_name);
+      
+      // It's possible we created an empty sequence, we need to update its length here based on features that have this info.
+      // Otherwise these features will be out of range in the next check...
+      // Use m_length here instead of get_sequence_length b/c the latter looks at the nucleotide sequence and we don't have it yet
+      if ((*this)[seq_id].m_length == 0) {
+        if ( (feature["type"] == "region") || (feature["type"] == "source") ) {
+          (*this)[seq_id].m_length = end;
+        }
+      }
+      
       list<cLocation> locs = ((*this)[seq_id]).SafeCreateFeatureLocations(feature, start, end, strand, start_is_indeterminate, end_is_indeterminate);
       
       for(list<cLocation>::iterator it=locs.begin(); it!=locs.end(); it++) {
         feature.add_location(*it);
       }
       
-      //! Step 4: Determine if sequence already exists (find or create if not found)
-      this->add_new_seq(seq_id, file_name);
-    
       // If this is a landmark "region" corresponding to the entire chromosome grab extra information
       if ((feature["type"] == "region") && (feature.m_locations.front().get_start_1() == 1) && (feature.m_locations.front().get_end_1() == (*this)[seq_id].m_length)) {
         if (feature.m_gff_attributes.count("Is_circular"))

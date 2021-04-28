@@ -1,4 +1,8 @@
-Version 0.35.4
+Version 0.35.6
+  * Should be compatible with GenBank reference files produced by Prokka and
+    NCBI PGAP, and with GFF3 files produced by PGAP.
+
+Version 0.35.5
   * Bug fix for incorrect "Plots could not be created" message in HTML pages when -j is >1.
   * Bug fix for #254: "Provided translation table #0 does not have 64 codons". This was a rare
     case where two SNPs occur in the same codon of a CDS and also overlap a noncoding gene.
