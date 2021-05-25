@@ -2270,138 +2270,173 @@ int breseq_default_action(int argc, char* argv[])
     // Output Genome Diff File
     ///
 
-    cerr << "Creating merged genome diff evidence file..." << endl;
+    cGenomeDiff mpgd;
+    if (settings.do_step(settings.output_mutation_prediction_done_file_name, "Output :: Mutation Prediction")) {
 
-    // merge all of the evidence GenomeDiff files into one...
-    create_path(settings.evidence_path);
-    
-    cGenomeDiff jc_gd;
-    if (!settings.skip_new_junction_prediction) {
-      jc_gd.read(settings.jc_genome_diff_file_name);
-    }
-         
-    // Add read count information to the JC entries -- call fails if no predictions, because BAM does not exist
-    MutationPredictor mpj(ref_seq_info);
-    mpj.prepare_junctions(settings, summary, jc_gd); // this step has to be done twice currently, which is a bit wasteful
-    
-    assign_junction_read_counts(settings, summary, jc_gd);
+      cerr << "Creating merged genome diff evidence file..." << endl;
 
-    cGenomeDiff ra_mc_gd;
-    if (!settings.skip_read_alignment_and_missing_coverage_prediction) {
-      ra_mc_gd.read(settings.ra_mc_genome_diff_file_name);
-    }
-    test_RA_evidence(ra_mc_gd, ref_seq_info, settings);
-    
-    cGenomeDiff evidence_gd;
-    evidence_gd.merge_preserving_duplicates(jc_gd);
-    evidence_gd.merge_preserving_duplicates(ra_mc_gd);
-    
-    // there is a copy number genome diff for each sequence separately
-    if (settings.do_copy_number_variation) {
-      for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it) {
-        cAnnotatedSequence& seq = *it;
-        string this_copy_number_variation_cn_genome_diff_file_name = settings.file_name(settings.copy_number_variation_cn_genome_diff_file_name, "@", seq.m_seq_id);
-        cGenomeDiff cn_gd(this_copy_number_variation_cn_genome_diff_file_name);
-        evidence_gd.merge_preserving_duplicates(cn_gd);
+      // merge all of the evidence GenomeDiff files into one...
+      create_path(settings.evidence_path);
+      
+      cGenomeDiff jc_gd;
+      if (!settings.skip_new_junction_prediction) {
+        jc_gd.read(settings.jc_genome_diff_file_name);
       }
+           
+      // Add read count information to the JC entries -- call fails if no predictions, because BAM does not exist
+      MutationPredictor mpj(ref_seq_info);
+      mpj.prepare_junctions(settings, summary, jc_gd); // this step has to be done twice currently, which is a bit wasteful
+      
+      assign_junction_read_counts(settings, summary, jc_gd);
+
+      cGenomeDiff ra_mc_gd;
+      if (!settings.skip_read_alignment_and_missing_coverage_prediction) {
+        ra_mc_gd.read(settings.ra_mc_genome_diff_file_name);
+      }
+      test_RA_evidence(ra_mc_gd, ref_seq_info, settings);
+      
+      cGenomeDiff evidence_gd;
+      evidence_gd.merge_preserving_duplicates(jc_gd);
+      evidence_gd.merge_preserving_duplicates(ra_mc_gd);
+      
+      // there is a copy number genome diff for each sequence separately
+      if (settings.do_copy_number_variation) {
+        for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it) {
+          cAnnotatedSequence& seq = *it;
+          string this_copy_number_variation_cn_genome_diff_file_name = settings.file_name(settings.copy_number_variation_cn_genome_diff_file_name, "@", seq.m_seq_id);
+          cGenomeDiff cn_gd(this_copy_number_variation_cn_genome_diff_file_name);
+          evidence_gd.merge_preserving_duplicates(cn_gd);
+        }
+      }
+      evidence_gd.write(settings.evidence_genome_diff_file_name);
+
+      // predict mutations from evidence in the GenomeDiff
+      cerr << "Predicting mutations from evidence..." << endl;
+
+      MutationPredictor mp(ref_seq_info);
+      mpgd.read(settings.evidence_genome_diff_file_name);
+      mp.predict(settings, summary, mpgd);
+      mpgd.reassign_unique_ids();
+
+      // Add metadata that will only be in the output.gd file
+      
+      //#=REFSEQ header lines.
+      mpgd.metadata.ref_seqs = settings.all_reference_file_names;
+      
+      //#=READSEQ header lines.
+      mpgd.metadata.read_seqs.resize(settings.read_files.size());
+      for (size_t i = 0; i < settings.read_files.size(); i++) {
+        mpgd.metadata.read_seqs[i] = settings.read_files[i].file_name();
+      }
+      
+      // These fields will be overwritten by any header GenomeDiff provided
+      mpgd.metadata.title = settings.custom_run_name;
+      
+      // Load metadata from existing header GenomeDiff file
+      // This is purposefully done AFTER the previous metadata defs
+      // in order to overwrite those (but not others)
+      if (settings.header_genome_diff_file_name.size() > 0) {
+        cGenomeDiff header_gd(settings.header_genome_diff_file_name);
+        mpgd.metadata = header_gd.metadata;
+      }
+      
+      // Fields here and below will write over any values in the header GenomeDiff file
+      mpgd.metadata.program = string(PACKAGE_STRING) + " " + string(HG_REVISION);
+      mpgd.metadata.command = settings.full_command_line;
+      mpgd.metadata.created = Settings::time2string(time(NULL));
+      
+      // Add additional SUMMARY metadata
+      
+      mpgd.add_breseq_data("INPUT-READS", to_string(summary.sequence_conversion.num_original_reads));
+      mpgd.add_breseq_data("INPUT-BASES", to_string(summary.sequence_conversion.num_original_bases));
+      mpgd.add_breseq_data("CONVERTED-READS", to_string(summary.alignment_resolution.total_reads));
+      mpgd.add_breseq_data("CONVERTED-BASES", to_string(summary.alignment_resolution.total_bases));
+      mpgd.add_breseq_data("MAPPED-READS", to_string(static_cast<int64_t>(summary.alignment_resolution.total_reads_mapped_to_references)));
+      mpgd.add_breseq_data("MAPPED-BASES", to_string(summary.alignment_resolution.total_bases_mapped_to_references));
+
+      // Write the output.gd file
+      cerr << "  Writing final GD file..." << endl;
+      mpgd.write(settings.final_genome_diff_file_name);
+      
+      // Save a copy in the data folder as well
+      mpgd.write(settings.data_genome_diff_file_name);
+      
+      // Faster, less compatible way...
+      // SYSTEM("cp " + settings.final_genome_diff_file_name + " " + settings.data_genome_diff_file_name);
+      
+      // Save a copy with invisible fields in the annotation folder (this is what true does)
+      // We reload this to begin annotation if needed
+      mpgd.write(settings.preannotated_genome_diff_file_name, true);
+      settings.track_intermediate_file(settings.output_mutation_annotation_done_file_name, settings.preannotated_genome_diff_file_name);
+      
+      // Write VCF conversion (to both data and output)
+      cerr << "  Writing final VCF file..." << endl;
+      mpgd.write_vcf(settings.data_vcf_file_name, ref_seq_info);
+      mpgd.write_vcf(settings.output_vcf_file_name, ref_seq_info);
+
+      // Write a final JSON file with all summary information (to both data and output)
+      PublicSummary public_summary(summary, settings, ref_seq_info);
+      public_summary.store(settings.data_json_summary_file_name);
+      public_summary.store(settings.output_json_summary_file_name);
+
+      
+      settings.done_step(settings.output_mutation_prediction_done_file_name);
+
     }
-    evidence_gd.write(settings.evidence_genome_diff_file_name);
-
-    // predict mutations from evidence in the GenomeDiff
-    cerr << "Predicting mutations from evidence..." << endl;
-
-    MutationPredictor mp(ref_seq_info);
-    cGenomeDiff mpgd(settings.evidence_genome_diff_file_name);
-    mp.predict(settings, summary, mpgd);
-    mpgd.reassign_unique_ids();
-
-    // Add metadata that will only be in the output.gd file
     
-    //#=REFSEQ header lines.
-    mpgd.metadata.ref_seqs = settings.all_reference_file_names;
-    
-    //#=READSEQ header lines.
-    mpgd.metadata.read_seqs.resize(settings.read_files.size());
-    for (size_t i = 0; i < settings.read_files.size(); i++) {
-      mpgd.metadata.read_seqs[i] = settings.read_files[i].file_name();
+    cGenomeDiff gd;
+    if (settings.do_step(settings.output_mutation_annotation_done_file_name, "Output :: Mutation Annotation")) {
+
+      // Might be faster to copy or use existing gd if already loaded?
+      
+      // Reload if necessary... (ex: interrupted in this step)
+//      gd = mpgd;
+//    (gd.get_list().size() == 0) {
+        gd.read(settings.preannotated_genome_diff_file_name);
+        // Blank this out of the title unless it has been reassigned, for consistency
+        if (gd.metadata.title == cString(settings.preannotated_genome_diff_file_name).get_base_name_no_extension()) {
+          gd.metadata.title = "";
+        }
+ //     }
+            
+      //
+      // Mark marginal items as no_show to prevent further processing
+      //
+      output::mark_gd_entries_no_show(settings, gd);
+
+      //
+      // Annotate mutations
+      //
+      cerr << "Annotating mutations..." << endl;
+      ref_seq_info.annotate_mutations(gd);
+      
+      // Annotated Genome Diff output #1 - public version
+      gd.write(settings.data_annotated_genome_diff_file_name);
+
+      // Annotated Genome Diff output #2 - used internally and for consistency tests
+      //
+      // Here we empty certain metadata items: CREATED time and PROGRAM breseq version
+      // that should be allowed to change without marking the output as failed!
+      gd.metadata.created="";
+      gd.metadata.program="";
+      gd.write(settings.annotated_genome_diff_file_name);
+      
+      settings.done_step(settings.output_mutation_annotation_done_file_name);
     }
-    
-    // These fields will be overwritten by any header GenomeDiff provided
-    mpgd.metadata.title = settings.custom_run_name;
-    
-    // Load metadata from existing header GenomeDiff file
-    // This is purposefully done AFTER the previous metadata defs
-    // in order to overwrite those (but not others)
-    if (settings.header_genome_diff_file_name.size() > 0) {
-      cGenomeDiff header_gd(settings.header_genome_diff_file_name);
-      mpgd.metadata = header_gd.metadata;
-    }
-    
-    // Fields here and below will write over any values in the header GenomeDiff file
-    mpgd.metadata.program = string(PACKAGE_STRING) + " " + string(HG_REVISION);
-    mpgd.metadata.command = settings.full_command_line;
-    mpgd.metadata.created = Settings::time2string(time(NULL));
-    
-    // Add additional SUMMARY metadata
-    
-    mpgd.add_breseq_data("INPUT-READS", to_string(summary.sequence_conversion.num_original_reads));
-    mpgd.add_breseq_data("INPUT-BASES", to_string(summary.sequence_conversion.num_original_bases));
-    mpgd.add_breseq_data("CONVERTED-READS", to_string(summary.alignment_resolution.total_reads));
-    mpgd.add_breseq_data("CONVERTED-BASES", to_string(summary.alignment_resolution.total_bases));
-    mpgd.add_breseq_data("MAPPED-READS", to_string(static_cast<int64_t>(summary.alignment_resolution.total_reads_mapped_to_references)));
-    mpgd.add_breseq_data("MAPPED-BASES", to_string(summary.alignment_resolution.total_bases_mapped_to_references));
-
-    // Write the output.gd file
-    cerr << "  Writing final GD file..." << endl;
-    mpgd.write(settings.final_genome_diff_file_name);
-    
-    // Save a copy in the data folder as well
-    mpgd.write(settings.data_genome_diff_file_name);
-
-    // Faster, less compatible way...
-    // SYSTEM("cp " + settings.final_genome_diff_file_name + " " + settings.data_genome_diff_file_name);
-    
-    //Don't reload -- we lose invisible fields that we need
-    //cGenomeDiff gd(settings.final_genome_diff_file_name);
-    cGenomeDiff gd = mpgd;
-    
-    // Write VCF conversion (to both data and output)
-    cerr << "  Writing final VCF file..." << endl;
-    mpgd.write_vcf(settings.data_vcf_file_name, ref_seq_info);
-    mpgd.write_vcf(settings.output_vcf_file_name, ref_seq_info);
-
-    // Write a final JSON file with all summary information (to both data and output)
-    PublicSummary public_summary(summary, settings, ref_seq_info);
-    public_summary.store(settings.data_json_summary_file_name);
-    public_summary.store(settings.output_json_summary_file_name);
-
-    
-    //
-    // Mark marginal items as no_show to prevent further processing
-    //
-    output::mark_gd_entries_no_show(settings, gd);
-
-    //
-		// Annotate mutations
-		//
-		cerr << "Annotating mutations..." << endl;
-		ref_seq_info.annotate_mutations(gd);
-    
-    // Annotated Genome Diff output #1 - public version
-    gd.write(settings.data_annotated_genome_diff_file_name);
-
-    // Annotated Genome Diff output #2 - used internally and for consistency tests
-    //
-    // Here we empty certain metadata items: CREATED time and PROGRAM breseq version
-    // that should be allowed to change without marking the output as failed!
-    gd.metadata.created="";
-    gd.metadata.program="";
-    gd.write(settings.annotated_genome_diff_file_name);
-    
+      
 		//
 		// Plot coverage of genome and large deletions
 		//
     
+    // Reload if necessary... (ex: interrupted in this step)
+    if (gd.get_list().size() == 0) {
+      gd.read(settings.annotated_genome_diff_file_name);
+      // Blank this out of the title unless it has been reassigned, for consistency
+      if (gd.metadata.title == cString(settings.annotated_genome_diff_file_name).get_base_name_no_extension()) {
+        gd.metadata.title = "";
+      }
+    }
+
     cerr << "Drawing coverage plots..." << endl;
     output::draw_coverage(settings, ref_seq_info, gd);
     

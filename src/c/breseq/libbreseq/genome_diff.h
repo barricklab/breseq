@@ -127,7 +127,7 @@ public:
   cFileParseErrors valid_with_reference_sequences(cReferenceSequences& ref_seq, bool suppress_errors = false);
     
   //! Write the genome diff to a file.
-  void write(const string& filename);
+  void write(const string& filename, bool include_unprintable_fields=false);
   
   
   //!---- Adding and Removing Entries ---- !//

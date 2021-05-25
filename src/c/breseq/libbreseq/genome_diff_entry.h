@@ -325,10 +325,10 @@ namespace breseq {
     //!---- Output ---- !//
     
     //! Marshal this diff entry into an ordered list of fields.
-    virtual void marshal(vector<string>& s) const;
+    virtual void marshal(vector<string>& s, bool include_unprintable_fields=false) const;
     
     //! Serialize this diff entry into a string for output.
-    virtual string as_string(void) const;
+    virtual string as_string(bool include_unprintable_fields=false) const;
     
     //! Output all keys and values
     string as_key_values() const {

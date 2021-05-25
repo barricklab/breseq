@@ -668,7 +668,7 @@ cFileParseErrors cGenomeDiff::valid_with_reference_sequences(cReferenceSequences
  1) If you want a diff entry to be commented out(prefix with '#') add the key
  "comment_out" to the diff entry.
  */
-void cGenomeDiff::write(const string& filename) {
+void cGenomeDiff::write(const string& filename, bool include_unprintable_fields) {
   string basename = cString(filename).get_base_name();
   string dir = cString(filename).remove_ending(basename);
   if (dir.size()) {
@@ -735,10 +735,10 @@ void cGenomeDiff::write(const string& filename) {
   
   for(diff_entry_list_t::iterator it=_entry_list.begin(); it!=_entry_list.end(); ++it) {
     if (!(*it)->entry_exists("comment_out")) {
-      fprintf(os, "%s\n", (**it).as_string().c_str());
+      fprintf(os, "%s\n", (**it).as_string(include_unprintable_fields).c_str());
     } else {
       (*it)->erase("comment_out");
-      fprintf(os, "#%s\n", (**it).as_string().c_str());
+      fprintf(os, "#%s\n", (**it).as_string(include_unprintable_fields).c_str());
     }
   }
   os.close();

@@ -1,3 +1,7 @@
+Version 0.35.7
+  * Speedup and fix of rare bug related to annotating mutations to properly account for cases
+    in which multiple base substitutions occur in the same codon.
+
 Version 0.35.6
   * Should be compatible with GenBank reference files produced by Prokka and
     NCBI PGAP, and with GFF3 files produced by PGAP.

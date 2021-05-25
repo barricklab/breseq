@@ -1185,7 +1185,7 @@ namespace breseq {
   
   /*! Marshal this diff entry into an ordered list of fields.
    */
-  void cDiffEntry::marshal(vector<string>& s) const {
+  void cDiffEntry::marshal(vector<string>& s, bool include_unprintable_fields) const {
     s.push_back(gd_entry_type_lookup_table[_type]);
     s.push_back(_id);
     
@@ -1221,7 +1221,7 @@ namespace breseq {
     for(diff_entry_map_t::iterator i=cp.begin(); i!=cp.end(); ++i) {
       
       assert(i->first.size());
-      if (is_unprintable_key(i->first)) continue;
+      if (!include_unprintable_fields && is_unprintable_key(i->first)) continue;
       if (i->second.empty()) continue;
       
       // Be sure the entry is non-empty! Would rather have this as a check.
@@ -1234,10 +1234,10 @@ namespace breseq {
   }
   
   // Created the line to be printed
-  string cDiffEntry::as_string(void) const
+  string cDiffEntry::as_string(bool include_unprintable_fields) const
   {
     vector<string> fields;
-    marshal(fields);
+    marshal(fields, include_unprintable_fields);
     return join(fields, "\t");
   }
   

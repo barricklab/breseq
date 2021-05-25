@@ -1257,8 +1257,8 @@ inline cString cString::get_base_name() const
 
 //! Returns file name with no extension, removes any directory path beforehand.
 //  input.1.gd
-//  remove_all_extensions = FALSE removes everything past the first period  => input 
-//  remove_all_extensions = TRUE removes only the last period and beyond   => input.1
+//  remove_all_extensions = TRUE removes everything past the first period  => input
+//  remove_all_extensions = FALSE removes only the last period and beyond   => input.1
 inline cString cString::get_base_name_no_extension(bool remove_all_extensions, bool one_name_for_pair) const
 {
   cString this_return = this->get_base_name();

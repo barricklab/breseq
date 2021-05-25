@@ -541,6 +541,10 @@ namespace breseq
     //! Paths: Output
     string output_path;
 		string output_done_file_name;
+    // subsets of output
+    string output_mutation_prediction_done_file_name;
+    string output_mutation_annotation_done_file_name;
+    
     string output_json_summary_file_name;
     string output_vcf_file_name;
 
@@ -553,6 +557,8 @@ namespace breseq
 		string evidence_path;
     string evidence_genome_diff_file_name;
     string final_genome_diff_file_name;
+    string preannotated_genome_diff_file_name;
+    
     string annotated_genome_diff_file_name;
 
 		string local_coverage_plot_path;
