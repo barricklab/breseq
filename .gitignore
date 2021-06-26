@@ -52,7 +52,6 @@ tags
 Makefile
 INSTALL
 
-breseq
 breseq-*
 
 tests/*/output*

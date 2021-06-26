@@ -149,7 +149,7 @@ do_vcheck() {
 # $1 == testdir
 #
 do_clean() {
-    for CURRENT_OUTPUT in "${CURRENT_OUTPUTS[@]}"; do
+  for CURRENT_OUTPUT in "${CURRENT_OUTPUTS[@]}"; do
 		rm -f ${1}/${CURRENT_OUTPUT}
 	done
 	rm -Rf $1/0* $1/output* $1/data $1/output.gff3 $1/failed_compare.html

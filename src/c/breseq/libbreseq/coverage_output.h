@@ -42,7 +42,7 @@ namespace breseq
     bool      m_show_average;
     double    m_fixed_coverage_scale; // either coverage number if m_show_average or factor times average coverage
     string    m_average_file_name;
-    Summary   m_summary;
+    PublicSummary   m_summary;
     
     string    m_r_script_file_name;
     
@@ -55,6 +55,12 @@ namespace breseq
     ofstream  m_output_table;
     ofstream  m_read_begin_output; 
     ofstream  m_gc_output;
+    
+    double    m_reference_average_coverage;
+    double    m_region_average_unique_coverage;
+    double    m_region_average_repeat_coverage;
+    double    m_region_average_coverage;
+    uint32_t  m_region_num_positions;
     
     map<string,uint32_t> m_read_begin_top_bins;
     map<string,uint32_t> m_read_begin_bot_bins;
@@ -78,7 +84,13 @@ namespace breseq
       : pileup_base(bam, fasta), m_output_format("png"), m_downsample(0), m_total_only(false)
       , m_shaded_flanking(0), m_show_average(false), m_fixed_coverage_scale(0.0), m_r_script_file_name(r_script_file_name)
       , m_thread_id(thread_id)
-      , m_intermediate_path(intermediate_path) {};
+      , m_intermediate_path(intermediate_path)
+      , m_reference_average_coverage(0.0)
+      , m_region_average_unique_coverage(0.0)
+      , m_region_average_repeat_coverage(0.0)
+      , m_region_average_coverage(0.0)
+      , m_region_num_positions(0)
+    {};
     
     // Get/Set Options
 

@@ -49,7 +49,7 @@ avg_coverage_scale = as.numeric(avg_coverage);
 fixed_coverage_scale = as.numeric(fixed_coverage_scale);
 
 
-X<-read.table(in_file, sep="\t", header=T)
+X<-read.table(in_file, sep="\t", header=T, comment.char = "#")
 X$unique_tot_cov = X$unique_bot_cov + X$unique_top_cov;
 X$redundant_tot_cov = X$redundant_bot_cov + X$redundant_top_cov;
 
@@ -164,9 +164,9 @@ if (avg_coverage == 0) {
   }
 } else {
   if (total_only == 0) {
-  legend( "bottom" , cex=0.70, c("average", "unique total", "unique top", "unique bottom ", "repeat total", "repeat top","repeat bottom"), pch=-1, horiz=T, col="black", fill=c("darkgrey", "blue", "cyan", "purple", "red", "yellow", "orange"), bty="n")
+  legend( "bottom" , cex=0.70, c("unique average", "unique total", "unique top", "unique bottom ", "repeat total", "repeat top","repeat bottom"), pch=-1, horiz=T, col="black", fill=c("darkgrey", "blue", "cyan", "purple", "red", "yellow", "orange"), bty="n")
   } else {
-  legend( "bottom" , cex=0.85, c("average", "total", "unique total", "repeat total"), pch=-1, horiz=T, col="black", fill=c("darkgrey", "green", "blue", "red"), bty="n")
+  legend( "bottom" , cex=0.85, c("unique average", "total", "unique total", "repeat total"), pch=-1, horiz=T, col="black", fill=c("darkgrey", "green", "blue", "red"), bty="n")
   }
 }
 

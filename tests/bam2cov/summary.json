@@ -1,0 +1,160 @@
+{
+  "options": {
+    "alignment_resolution": {
+      "add_split_junction_sides": true,
+      "junction_allow_suboptimal_matches": false,
+      "junction_minimum_side_match": 1,
+      "junction_pos_hash_neg_log10_p_value_cutoff": 3.0,
+      "minimum_alignment_resolution_pos_hash_score": 3,
+      "minimum_pr_no_read_start_per_position": 0.1
+    },
+    "candidate_junction": {
+      "highly_redundant_junction_ignore_passed_pair_limit": 200,
+      "maximum_candidate_junction_length_factor": 0.1,
+      "maximum_candidate_junctions": 5000,
+      "maximum_junction_sequence_insertion_length": 0,
+      "maximum_junction_sequence_negative_overlap_length_fraction": 0.4,
+      "maximum_junction_sequence_negative_overlap_length_minimum": 12,
+      "maximum_junction_sequence_overlap_length": 0,
+      "maximum_junction_sequence_passed_alignment_pairs_to_consider": 100000,
+      "maximum_junction_sequence_positive_overlap_length_fraction": 0.4,
+      "maximum_junction_sequence_positive_overlap_length_minimum": 12,
+      "minimum_candidate_junction_pos_hash_score": 2,
+      "minimum_candidate_junctions": 100,
+      "preprocess_junction_min_indel_split_length": 3,
+      "required_both_unique_length_per_side": 1,
+      "required_both_unique_length_per_side_fraction": 0.2,
+      "required_one_unique_length_per_side": 0,
+      "unmatched_end_length_factor": 0.1,
+      "unmatched_end_minimum_read_length": 50
+    },
+    "mutation_identification": {
+      "base_quality_cutoff": 3,
+      "consensus_frequency_cutoff": 0.8,
+      "consensus_minimum_total_coverage": 0,
+      "consensus_minimum_total_coverage_each_strand": 0,
+      "consensus_minimum_variant_coverage": 0,
+      "consensus_minimum_variant_coverage_each_strand": 0,
+      "consensus_reject_indel_homopolymer_length": 3,
+      "consensus_reject_surrounding_homopolymer_length": 0,
+      "deletion_coverage_propagation_cutoff": 0.0,
+      "deletion_coverage_seed_cutoff": 0.0,
+      "mixed_base_prediction": true,
+      "mutation_log10_e_value_cutoff": 10.0,
+      "no_indel_polymorphisms": false,
+      "polymorphism_bias_p_value_cutoff": 0.0,
+      "polymorphism_frequency_cutoff": 0.2,
+      "polymorphism_log10_e_value_cutoff": 10.0,
+      "polymorphism_minimum_total_coverage": 0,
+      "polymorphism_minimum_total_coverage_each_strand": 0,
+      "polymorphism_minimum_variant_coverage": 0,
+      "polymorphism_minimum_variant_coverage_each_strand": 0,
+      "polymorphism_prediction": false,
+      "polymorphism_reject_indel_homopolymer_length": 0,
+      "polymorphism_reject_surrounding_homopolymer_length": 0,
+      "print_mutation_identification_per_position_file": false,
+      "quality_score_trim": 0,
+      "targeted_sequencing": false,
+      "user_evidence_genome_diff_file_name": ""
+    },
+    "mutation_prediction": {
+      "size_cutoff_AMP_becomes_INS_DEL_mutation": 50
+    },
+    "output": {
+      "header_genome_diff_file_name": "",
+      "hide_circular_genome_junctions": true,
+      "max_displayed_reads": 100,
+      "max_nucleotides_to_show_in_tables": 20,
+      "max_rejected_junction_evidence_to_show": 10,
+      "max_rejected_read_alignment_evidence_to_show": 20,
+      "no_javascript": false
+    },
+    "read_alignment": {
+      "bowtie2_genome_maximum_alignments_to_consider_per_read": 2000,
+      "bowtie2_junction": "--local -i S,1,0.25 --score-min L,1,0.70 -k 2000",
+      "bowtie2_junction_maximum_alignments_to_consider_per_read": 2000,
+      "bowtie2_scoring": "--ma 1 --mp 3 --np 0 --rdg 2,3 --rfg 2,3 --ignore-quals",
+      "bowtie2_stage1": "--local -i S,1,0.25 --score-min L,1,0.9 -k 2000",
+      "bowtie2_stage2": "--local -i S,1,0.25 --score-min L,6,0.2 -k 2000",
+      "maximum_read_mismatches": -1,
+      "minimum_mapping_quality": 0,
+      "require_match_fraction": 0.9,
+      "require_match_length": 0
+    },
+    "read_file": {
+      "aligned_sam_mode": false,
+      "read_file_coverage_fold_limit": 0.0,
+      "read_file_max_N_fraction": 0.5,
+      "read_file_max_same_base_fraction": 0.9,
+      "read_file_read_length_min": 18
+    },
+    "workflow": {
+      "custom_run_name": "",
+      "genbank_field_for_seq_id": "AUTOMATIC",
+      "num_processors": 4,
+      "skip_alignment_or_plot_generation": false,
+      "skip_missing_coverage_prediction": false,
+      "skip_new_junction_prediction": false,
+      "skip_read_alignment_and_missing_coverage_prediction": false,
+      "skip_read_filtering": false
+    }
+  },
+  "reads": {
+    "read_file": {
+      "bull_1": {
+        "fraction_aligned_bases": 0.994670835669881,
+        "fraction_aligned_reads": 0.985694536274569,
+        "max_quality_score": 40,
+        "min_quality_score": 0,
+        "num_aligned_bases": 13547936,
+        "num_aligned_reads": 32798,
+        "num_bases": 13620522,
+        "num_filtered_same_base_reads": 0,
+        "num_filtered_too_many_N_reads": 0,
+        "num_filtered_too_short_reads": 0,
+        "num_original_bases": 13620522,
+        "num_original_reads": 33274,
+        "num_reads": 33274,
+        "quality_format": "SANGER",
+        "quality_format_original": "SANGER",
+        "read_length_avg": 409.344292841257,
+        "read_length_max": 589,
+        "read_length_min": 29
+      }
+    },
+    "total_aligned_bases": 13547936,
+    "total_aligned_reads": 32798,
+    "total_bases": 13620522,
+    "total_fraction_aligned_bases": 0.994670835669881,
+    "total_fraction_aligned_reads": 0.985694536274569,
+    "total_reads": 33274
+  },
+  "references": {
+    "reference": {
+      "rachael": {
+        "coverage_average": 333.0752,
+        "coverage_deletion_coverage_propagation_cutoff": 200.0,
+        "coverage_deletion_coverage_seed_cutoff": 0.0,
+        "coverage_dispersion": 6.646934,
+        "coverage_group": 0,
+        "coverage_nbinom_dispersion": 5.67192496185403,
+        "coverage_nbinom_mean_parameter": 331.7846,
+        "coverage_nbinom_prob_parameter": 0.176306986909277,
+        "coverage_nbinom_size_parameter": 71.01668,
+        "coverage_nbinom_variance": 1881.85735469876,
+        "coverage_variance": 2213.929,
+        "junction_only": false,
+        "length": 40529,
+        "num_bases_mapped_to_reference": 13397423.0,
+        "num_features": 1,
+        "num_genes": 0,
+        "num_reads_mapped_to_reference": 32509.0,
+        "num_repeats": 0
+      }
+    },
+    "total_features": 1,
+    "total_genes": 0,
+    "total_length": 40529,
+    "total_repeats": 0
+  }
+}

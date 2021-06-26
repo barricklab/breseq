@@ -35,7 +35,7 @@ void coverage_output::plot(const string& region, const string& output_file_name,
   // Load summary file of fitting coverage from breseq output
   if (m_show_average) {
     ASSERT(file_exists(m_average_file_name.c_str()), "Could not open file with fit coverage: " + m_average_file_name + "\n");
-    m_summary.unique_coverage.retrieve(m_average_file_name);
+    m_summary.retrieve(m_average_file_name);
   }
   
   // extend the region and re-check endpoints
@@ -64,7 +64,7 @@ void coverage_output::plot(const string& region, const string& output_file_name,
   this->table(extended_region, tmp_coverage, resolution);
   
   // default is zero
-  double average_coverage = m_show_average ? m_summary.unique_coverage[seq_id].average : 0;
+  m_reference_average_coverage = m_show_average ? m_summary.references.reference[seq_id].coverage_average : 0;
 	
   string log_file_name = m_intermediate_path + "/" + to_string(pid) + ".r.log";
   string command = "R --vanilla < " + double_quote(m_r_script_file_name)+ " > " + double_quote(log_file_name);
@@ -77,8 +77,8 @@ void coverage_output::plot(const string& region, const string& output_file_name,
   command += ((m_total_only) ? "1" : "0");
   command += " window_start=" + to_string(start_pos);
   command += " window_end=" + to_string(end_pos);
-  command += " avg_coverage=" + to_string(average_coverage);
-  command += " fixed_coverage_scale=" + ( average_coverage ? to_string<double>(average_coverage * m_fixed_coverage_scale) : to_string<double>(m_fixed_coverage_scale) );
+  command += " avg_coverage=" + to_string(m_reference_average_coverage);
+  command += " fixed_coverage_scale=" + ( m_reference_average_coverage ? to_string<double>(m_reference_average_coverage * m_fixed_coverage_scale) : to_string<double>(m_fixed_coverage_scale) );
 
 
   
@@ -93,6 +93,14 @@ void coverage_output::table(const string& region, const string& output_file_name
 {
   uint32_t target_id, start_pos, end_pos, insert_start, insert_end;
   this->parse_region(region, target_id, start_pos, end_pos, insert_start, insert_end);
+  string seq_id = this->target_name(target_id);
+  
+  // Load summary file of fitting coverage from breseq output
+  if (m_show_average) {
+    ASSERT(file_exists(m_average_file_name.c_str()), "Could not open file with fit coverage: " + m_average_file_name + "\n");
+    m_summary.retrieve(m_average_file_name);
+  }
+  
 	uint32_t size = end_pos - start_pos + 1;
 
   // Resolution of 0 implies no downsampling, otherwise adjust to get close to resolution # of pts
@@ -103,6 +111,8 @@ void coverage_output::table(const string& region, const string& output_file_name
     if (downsample < 1) downsample = 1;
   }
   
+  m_reference_average_coverage = m_show_average ? m_summary.references.reference[seq_id].coverage_average : 0;
+
   m_output_table.open(output_file_name.c_str());
   
   if (m_read_begin_output_file_name.length() > 0) m_read_begin_output.open(m_read_begin_output_file_name.c_str());
@@ -129,6 +139,16 @@ void coverage_output::table(const string& region, const string& output_file_name
   else
     this->do_pileup(region, true, downsample);
   
+  // Write the averages over the region and the reference average (if available) as a commented addendum at the end
+  if (m_show_average) {
+    m_output_table << "#\treference_unique_average_cov\t" << m_reference_average_coverage << std::endl;
+  }
+   
+  m_output_table << "#\tregion_unique_average_cov\t" << ( m_region_average_unique_coverage / m_region_num_positions) << std::endl;
+  m_output_table << "#\tregion_repeat_average_cov\t" << ( m_region_average_repeat_coverage / m_region_num_positions) << std::endl;
+  m_output_table << "#\tregion_average_cov\t" << ( m_region_average_coverage / m_region_num_positions) << std::endl;
+  m_output_table << "#\tnumber_of_positions\t" << m_region_num_positions << std::endl;
+  
   m_output_table.close();
 }
   
@@ -141,6 +161,10 @@ void coverage_output::clear()
   m_ref_begin_top_bins.clear();
   m_ref_begin_bot_bins.clear();
   m_gc_content_bins.clear();
+  m_region_average_unique_coverage = 0;
+  m_region_average_repeat_coverage = 0;
+  m_region_average_coverage = 0;
+  m_region_num_positions = 0;
 }
 
 /*! Called for each alignment.
@@ -162,6 +186,9 @@ void coverage_output::pileup_callback(const breseq::pileup& p) {
       m_output_table << i << "\t" << refseq[i-1] << "\t" << 0 << "\t" << 0 << "\t"
         << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << std::endl;
     }
+    
+    // Add to the positions, but don't add to the coverage
+    m_region_num_positions++;
   }
   
   // catches this position
@@ -274,6 +301,11 @@ void coverage_output::pileup_callback(const breseq::pileup& p) {
   
   
   //output
+  
+  m_region_num_positions++;
+  m_region_average_unique_coverage += unique_cov[0] + unique_cov[1];
+  m_region_average_repeat_coverage += redundant_cov[0] + redundant_cov[1];
+  m_region_average_coverage += unique_cov[0] + unique_cov[1] + redundant_cov[0] + redundant_cov[1];
   
   if (m_total_only) {
     m_output_table << pos << "\t" << ref_base << "\t"

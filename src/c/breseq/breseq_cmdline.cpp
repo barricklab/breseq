@@ -191,6 +191,10 @@ int do_bam2aln(int argc, char* argv[]) {
  Draw HTML coverage from BAM
  */
 int do_bam2cov(int argc, char* argv[]) {
+  
+  // create empty settings object to have R script name and default summary.json file name
+  Settings settings;
+  
   // setup and parse configuration options:
 	AnyOption options("Usage: breseq BAM2COV [-b reference.bam -f reference.fasta --format PNG -o output.png] region1 [region2 region3 ...]");
   options.addUsage("");
@@ -211,7 +215,8 @@ int do_bam2cov(int argc, char* argv[]) {
   options.addUsage("Advanced Output Options", ADVANCED_OPTION);
   options("total-only,1", "Only plot/tabulate the total coverage at a position. That is, do not not output the coverage on each genomic strand", TAKES_NO_ARGUMENT, ADVANCED_OPTION);
   options("resolution,p", "Number of positions to output coverage information for in interval (0=ALL)", 600, ADVANCED_OPTION);
-  options("show-average,a", "Show the average coverage across the reference sequence as a horizontal line. Only possible if used in the main output directory of breseq output", TAKES_NO_ARGUMENT, ADVANCED_OPTION);
+  options("show-average,a", "Show the average coverage across the reference sequence as a horizontal line", TAKES_NO_ARGUMENT, ADVANCED_OPTION);
+  options("summary-json-file,j", "Path to summary.json file containing the average coverage", settings.data_json_summary_file_name, ADVANCED_OPTION);
   options("fixed-coverage-scale,s", "Fix the maximum value on plots the coverage scale in plots. If the show-average option is provided, then this is a factor that will be multiplied times the average coverage (e.g., 1.5 x avg). Otherwise, this is a coverage value (e.g., 100-fold coverage)", "", ADVANCED_OPTION);
   
   options.addUsage("", ADVANCED_OPTION);
@@ -282,10 +287,7 @@ int do_bam2cov(int argc, char* argv[]) {
   } else {
     cerr << "Plotting coverage..." << endl;
   }
-  
-  // create empty settings object to have R script name
-  Settings settings;
-    
+      
   // generate coverage table/plot!
   coverage_output co(
                       options["bam"],
@@ -297,7 +299,7 @@ int do_bam2cov(int argc, char* argv[]) {
   co.total_only(options.count("total-only"));
   co.output_format( options["format"] );
   if (options.count("show-average")) {
-    co.show_average( options.count("show-average"), settings.error_rates_summary_file_name );
+    co.show_average( options.count("show-average"), options["summary-json-file"] );
   }
   if (options.count("fixed-coverage-scale")) {
     co.fixed_coverage_scale(from_string<double>(options["fixed-coverage-scale"]));

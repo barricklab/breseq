@@ -854,7 +854,8 @@ void from_json(const json& j, PublicOptionsSummary& s)
 {
   (void)j;
   (void)s;
-  ERROR("Not implemented");
+  // Allow this through for bam2cov to be able to use this file for other information
+  //ERROR("Not implemented");
 }
 
 
