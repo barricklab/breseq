@@ -1,7 +1,9 @@
 #=GENOME_DIFF	1.0
-#=COMMAND	./src/c/breseq/breseq -j 4 --polymorphism-prediction -o tests/lambda_polymorphism -r tests/lambda_polymorphism/../data/lambda/lambda.gbk tests/lambda_polymorphism/../data/lambda/lambda_mixed_population.fastq
-#=REFSEQ	tests/lambda_polymorphism/../data/lambda/lambda.gbk
-#=READSEQ	tests/lambda_polymorphism/../data/lambda/lambda_mixed_population.fastq
+#=TITLE	header
+#=AUTHOR	Jeffrey Barrick
+#=COMMAND	./src/c/breseq/breseq -j 4 --polymorphism-prediction --header-genome-diff tests/lambda_polymorphism/header.gd -o tests/lambda_polymorphism -r tests/lambda_polymorphism/../data/lambda/lambda.gbk tests/lambda_polymorphism/../data/lambda/lambda_mixed_population.fastq
+#=TIME	20
+#=CLONE	A
 #=CONVERTED-BASES	6998495
 #=CONVERTED-READS	199957
 #=INPUT-BASES	7000144

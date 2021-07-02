@@ -1341,6 +1341,12 @@ int breseq_default_action(int argc, char* argv[])
 	Settings settings(argc, argv);
 	settings.check_installed();
   
+  //Quick check that any provided header GD file is valid
+  cGenomeDiff header_gd;
+  if (settings.header_genome_diff_file_name.size() > 0) {
+    header_gd.read(settings.header_genome_diff_file_name);
+  }
+  
 	//
 	// 01_sequence_conversion 
   // * Convert the input reference into FASTA for alignment and GFF3 for reloading features
@@ -1362,7 +1368,7 @@ int breseq_default_action(int argc, char* argv[])
     conv_ref_seq_info.WriteGFF(settings.reference_gff3_file_name);
     s.total_reference_sequence_length = conv_ref_seq_info.get_total_length();
     
-    // Do a quick load of the file to detect formatting errors.
+    // Do a quick load of the user evidence file to detect formatting errors.
     if (settings.user_evidence_genome_diff_file_name != "") {
       cGenomeDiff gd(settings.user_evidence_genome_diff_file_name);
       gd.valid_with_reference_sequences(conv_ref_seq_info, false);
@@ -2338,7 +2344,6 @@ int breseq_default_action(int argc, char* argv[])
       // This is purposefully done AFTER the previous metadata defs
       // in order to overwrite those (but not others)
       if (settings.header_genome_diff_file_name.size() > 0) {
-        cGenomeDiff header_gd(settings.header_genome_diff_file_name);
         mpgd.metadata = header_gd.metadata;
       }
       
