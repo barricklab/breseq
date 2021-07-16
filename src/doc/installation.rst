@@ -1,7 +1,7 @@
 Installation
 ==============
 
-|breseq| is a command line tool implemented in C++ and R. It is compatible with a variety of UNIX-like platforms, including Linux, MacOSX, and Cygwin.
+|breseq| is a command line tool implemented in C++ and R. It is compatible with a variety of UNIX-like platforms, including Linux, MacOSX, and Windows Subsystem for Linux (WSL).
 
 The most recent |breseq| binary distributions and source code packages are available for download from `GitHub <https://github.com/barricklab/breseq/releases>`_.
 The instructions in the following sections explain how to install |breseq| using these files.
@@ -144,30 +144,10 @@ If you are working with a development version of |breseq| cloned from the `GitHu
 
 These requirements and commands are detailed in the DEVELOPER text file located in the main directory of the source code.
 
-Installing on Cygwin (Windows)
+Installing on Windows (using WSL)
 +++++++++++++++++++++++++++++++++
 
-It is possible to compile and install |breseq| and all of its dependencies in the Cygwin environment on a Windows computer. We do not currently provide a binary installer for Cygwin and are unable to help troubleshoot these installs, but here is what has worked for other users.
-
-Before you start, use the Cygwin package manager to install these packages (which provide libraries needed to compile |breseq| and |Bowtie2|). When prompted whether to install further dependencies of a package, answer yes.
-
-.. code-block:: bash
-
-   R                    libncurses-devel
-   gcc-core             zlib-devel
-   gcc-g++              byacc
-   gcc-objc++           bool
-   python               pkg-config
-   m4                   perl-File-Copy-Recursive
-   make                 perl-Config-AutoConf
-   automake             perl-ExtUtils-PkgConfig
-   autoconf             mingw-pthreads
-   diffutils            mingw64-x86_64-pthreads
-   libiconv             mingw64-x86_64-winpthreads
-
-Now, compile and install |Bowtie2| from source code and use the :ref:`installing-source-code-package` instructions to install |breseq|.
-
-If the configure or make steps in either install fail, try to diagnose which dependencies are missing from the warnings and install further packages as necessary.
+Download and install `Windows Subsystem for Linux (WSL) <https://docs.microsoft.com/en-us/windows/wsl/about>`_ on your machine. In the WSL terminal, you should be able to use any of the methods described above for installation. For example, you can install Conda and then use it to install the |breseq|.
 
 Installing on Galaxy
 +++++++++++++++++++++++++++++++++
