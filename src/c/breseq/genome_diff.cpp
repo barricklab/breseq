@@ -680,49 +680,48 @@ void cGenomeDiff::write(const string& filename, bool include_unprintable_fields)
   //! Step: Header lines.
   /*Always write version tag. It's how we identify it as a genome diff file
    in cGenomeDiff::read(). */
-  fprintf(os, "#=GENOME_DIFF\t%s\n", metadata.version.c_str());
+  os << "#=GENOME_DIFF\t" << metadata.version << endl;
   
   if (metadata.title != "") {
-    fprintf(os, "#=TITLE\t%s\n", this->get_title().c_str());
+    os << "#=TITLE\t" << this->get_title() << endl;
   }
   if (metadata.author != "") {
-    fprintf(os, "#=AUTHOR\t%s\n", metadata.author.c_str());
+    os << "#=AUTHOR\t" << metadata.author << endl;
   }
   if (metadata.created != "") {
-    fprintf(os, "#=CREATED\t%s\n", metadata.created.c_str());
+    os << "#=CREATED\t" << metadata.created << endl;
   }
   if (metadata.program != "") {
-    fprintf(os, "#=PROGRAM\t%s\n", metadata.program.c_str());
+    os << "#=PROGRAM\t" << metadata.program << endl;
   }
   if (metadata.command != "") {
-    fprintf(os, "#=COMMAND\t%s\n", metadata.command.c_str());
+    os << "#=COMMAND\t" << metadata.command << endl;
   }
   if (metadata.time != -1.0) {
-    fprintf(os, "#=TIME\t%s\n", to_string<double>(metadata.time).c_str());
+    os << "#=TIME\t" << to_string<double>(metadata.time) << endl;
   }
   if (metadata.population != "") {
-    fprintf(os, "#=POPULATION\t%s\n", metadata.population.c_str());
+    os << "#=POPULATION\t" << metadata.population << endl;
   }
   if (metadata.treatment != "") {
-    fprintf(os, "#=TREATMENT\t%s\n", metadata.treatment.c_str());
+    os << "#=TREATMENT\t" << metadata.treatment << endl;
   }
   if (metadata.clone != "") {
-    fprintf(os, "#=CLONE\t%s\n", metadata.clone.c_str());
+    os << "#=CLONE\t" << metadata.clone << endl;
   }
   for (vector<string>::iterator it=metadata.ref_seqs.begin(); it !=metadata.ref_seqs.end(); it++) {
-    fprintf(os, "#=REFSEQ\t%s\n", it->c_str());
+    os << "#=REFSEQ\t" << *it << endl;
   }
   for (vector<string>::iterator it=metadata.adapter_seqs.begin(); it !=metadata.adapter_seqs.end(); it++) {
-    fprintf(os, "#=ADAPTSEQ\t%s\n", it->c_str());
+    os << "#=ADAPTSEQ\t" << *it << endl;
   }
   for (vector<string>::iterator it=metadata.read_seqs.begin(); it !=metadata.read_seqs.end(); it++) {
-    fprintf(os, "#=READSEQ\t%s\n", it->c_str());
+    os << "#=READSEQ\t" << *it << endl;
   }
 
   if (!metadata.breseq_data.empty()) {
-    for (map<key_t,string>::iterator it = metadata.breseq_data.begin();
-         it != metadata.breseq_data.end(); it ++) {
-      fprintf(os, "#=%s\t%s\n", it->first.c_str(), it->second.c_str());
+    for (map<key_t,string>::iterator it = metadata.breseq_data.begin(); it != metadata.breseq_data.end(); it ++) {
+      os << "#=" << it->first << "\t" << it->second << endl;
     }
   }
   
@@ -735,10 +734,10 @@ void cGenomeDiff::write(const string& filename, bool include_unprintable_fields)
   
   for(diff_entry_list_t::iterator it=_entry_list.begin(); it!=_entry_list.end(); ++it) {
     if (!(*it)->entry_exists("comment_out")) {
-      fprintf(os, "%s\n", (**it).as_string(include_unprintable_fields).c_str());
+      os << (**it).as_string(include_unprintable_fields).c_str() << endl;
     } else {
       (*it)->erase("comment_out");
-      fprintf(os, "#%s\n", (**it).as_string(include_unprintable_fields).c_str());
+      os << "#" << (**it).as_string(include_unprintable_fields).c_str() << endl;
     }
   }
   os.close();
