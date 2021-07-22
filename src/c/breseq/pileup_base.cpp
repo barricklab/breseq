@@ -324,7 +324,7 @@ void pileup_base::do_pileup(const string& region, bool clip, uint32_t downsample
 void pileup_base::do_pileup(const set<string>& seq_ids) {
   
   for(set<string>::iterator it=seq_ids.begin(); it!=seq_ids.end(); it++) {
-    
+        
     // We need to find the target id from the name, this is a rather inefficient way to do it.
     const string& this_seq_id = *it;
     uint32_t this_tid=0;

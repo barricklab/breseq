@@ -1976,7 +1976,7 @@ void add_html_fields_to_mutation(cDiffEntry& mut, MutationTableOptions& options)
   
   //Preflight checks
   ASSERT(mut.entry_exists(GENE_NAME), "Could not find \"gene_name\" field for mutation.");
-  ASSERT(mut.entry_exists(GENE_STRAND), "Could not find \"gene_strand\" field for mutation.");
+  //ASSERT(mut.entry_exists(GENE_STRAND), "Could not find \"gene_strand\" field for mutation.");
 
   // Decide if we are intergenic or not and reformat appropriately
   //  * italics for gene names
@@ -2224,10 +2224,19 @@ void add_html_fields_to_mutation(cDiffEntry& mut, MutationTableOptions& options)
       
     case INV:{
       html_mutation = nonbreaking(commify(mut["size"]) + " bp inversion");
-      html_gene_name = i(nonbreaking(substitute(mut["gene_name_1"], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) + "&darr;" +
-      i(nonbreaking(substitute(mut["gene_name_2"], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator)));
-      html_gene_product = htmlize(substitute(mut["gene_product_1"], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator)) + "&darr;" +
-      htmlize(substitute(mut["gene_product_2"], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator));
+      
+      html_gene_name = substitute(html_gene_name, cReferenceSequences::html_multiple_separator, " &#8634; ");
+      html_gene_product = substitute(html_gene_product, cReferenceSequences::html_multiple_separator, " &#8634; ");
+
+      string annotation_str;
+      if (mut.entry_exists("between"))
+        annotation_str = "between " + html_format_repeat_name(mut["between"]);
+      // default
+      if(annotation_str.empty()) {
+        annotation_str = nonbreaking(mut["gene_position"]);
+      }
+      html_mutation_annotation =  nonbreaking(annotation_str);
+      
     } break;
       
     case AMP:{

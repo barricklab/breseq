@@ -2850,6 +2850,8 @@ bool cReferenceSequences::mutation_overlapping_gene_is_inactivating(const cDiffE
       }
     } else if (mut._type == MOB) {
       is_inactivating = true;
+    } else if (mut._type == INV) {
+      is_inactivating = true;
     }
   }
   
@@ -3379,14 +3381,19 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
         
       }
       
-      // Note difference for within is that we know these are inactivating
+      // Note difference for within is that we know these are inactivating for DEL and not for INV (or others?)
+      // Also, we don't count internal genes as overlapping for an INV
       for (vector<cFeatureLocation*>::iterator it = between_gene_locs.begin(); it != between_gene_locs.end(); it++) {
         
         cGeneFeature gene = (cGeneFeature)(*((*it)->get_feature()));
         
-        inactivated_gene_list.push_back(gene.name);
-        inactivated_locus_tag_list.push_back(gene.get_locus_tag());
-        
+        if (mut._type == DEL) {
+          inactivated_gene_list.push_back(gene.name);
+          inactivated_locus_tag_list.push_back(gene.get_locus_tag());
+        } else if (mut._type != INV) {
+          genes_overlapping_list.push_back(gene.name);
+          locus_tags_overlapping_list.push_back(gene.get_locus_tag());
+        }
       }
       
       for (vector<cFeatureLocation*>::iterator it = inside_right_gene_locs.begin(); it != inside_right_gene_locs.end(); it++) {
@@ -3541,19 +3548,9 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
       case INS:
       case CON:
       case MOB:
-      case AMP:{
+      case AMP:
+      case INV: {
         annotate_1_mutation(mut, mut.get_reference_coordinate_start().get_position(), mut.get_reference_coordinate_end().get_position());
-      } break;
-        
-      case INV:{
-        annotate_1_mutation(mut, from_string<int32_t>(mut["position"]), from_string<int32_t>(mut["position"]));
-        mut["gene_name_1"] = mut["gene_name"];
-        mut["gene_product_1"] = mut["gene_product"];
-        annotate_1_mutation(mut, from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"])-1, from_string<int32_t>(mut["position"]) + from_string<int32_t>(mut["size"])-1);
-        mut["gene_name_2"] = mut["gene_name"];
-        mut["gene_product_2"] = mut["gene_product"];
-        mut.erase("gene_name");
-        mut.erase("gene_product");
       } break;
         
       case JC:{

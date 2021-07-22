@@ -8,7 +8,7 @@
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
-        "29"
+        "30"
       ],
       "gene_name": "–/nu1",
       "gene_position": "intergenic (–/-52)",
@@ -38,8 +38,36 @@
       "codon_new_seq": "",
       "codon_position": "",
       "codon_ref_seq": "",
+      "gene_name": "[nu1]–[W]",
+      "gene_position": "",
+      "gene_product": "[nu1],A,[W]",
+      "gene_strand": "",
+      "genes_inactivated": "nu1,W",
+      "genes_overlapping": "",
+      "genes_promoter": "",
+      "id": "2",
+      "locus_tag": "[lambdap01]–[lambdap03]",
+      "locus_tags_inactivated": "lambdap01,lambdap03",
+      "locus_tags_overlapping": "",
+      "locus_tags_promoter": "",
+      "mutation_category": "inversion",
+      "position": "450",
+      "position_end": "2749",
+      "position_start": "450",
+      "ref_seq": "2300-bp",
+      "seq_id": "NC_001416-0",
+      "size": "2300",
+      "type": "INV"
+    },
+    {
+      "aa_new_seq": "",
+      "aa_position": "",
+      "aa_ref_seq": "",
+      "codon_new_seq": "",
+      "codon_position": "",
+      "codon_ref_seq": "",
       "evidence_ids": [
-        "30"
+        "31"
       ],
       "gene_name": "L/K",
       "gene_position": "intergenic (+139/-10)",
@@ -48,7 +76,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "K",
-      "id": "2",
+      "id": "3",
       "insert_position": "1",
       "locus_tag": "lambdap18/lambdap19",
       "locus_tags_inactivated": "",
@@ -73,7 +101,7 @@
       "codon_position_is_indeterminate": "",
       "codon_ref_seq": "AAA|NA",
       "evidence_ids": [
-        "31"
+        "32"
       ],
       "gene_name": "orf-401|orf206b",
       "gene_position": "1012|noncoding (107/621 nt)",
@@ -82,7 +110,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "orf-401,orf206b",
       "genes_promoter": "",
-      "id": "3",
+      "id": "4",
       "locus_tag": "lambdap27|lambdap90_made_noncoding",
       "locus_tags_inactivated": "",
       "locus_tags_overlapping": "lambdap27,lambdap90_made_noncoding",
@@ -108,7 +136,7 @@
       "codon_position_is_indeterminate": "",
       "codon_ref_seq": "",
       "evidence_ids": [
-        "32"
+        "33"
       ],
       "gene_name": "orf-401",
       "gene_position": "coding (1186/1206 nt)",
@@ -117,7 +145,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "orf-401",
       "genes_promoter": "",
-      "id": "4",
+      "id": "5",
       "insert_position": "1",
       "locus_tag": "lambdap27",
       "locus_tags_inactivated": "",
@@ -144,7 +172,7 @@
       "codon_position_is_indeterminate": "",
       "codon_ref_seq": "AGC",
       "evidence_ids": [
-        "33"
+        "34"
       ],
       "gene_name": "orf-314",
       "gene_position": "686",
@@ -153,7 +181,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "orf-314",
       "genes_promoter": "",
-      "id": "5",
+      "id": "6",
       "locus_tag": "lambdap28",
       "locus_tags_inactivated": "",
       "locus_tags_overlapping": "lambdap28",
@@ -177,8 +205,8 @@
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
-        "60",
-        "65"
+        "61",
+        "66"
       ],
       "gene_name": "[orf-314]–ea59",
       "gene_position": "",
@@ -187,7 +215,7 @@
       "genes_inactivated": "orf-314,orf-194,ea47,ea31,ea59",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "6",
+      "id": "7",
       "locus_tag": "[lambdap28]–[lambdap82]",
       "locus_tags_inactivated": "lambdap28,lambdap29,lambdap80,lambdap81,lambdap82",
       "locus_tags_overlapping": "",
@@ -211,7 +239,7 @@
       "codon_position_is_indeterminate": "",
       "codon_ref_seq": "",
       "evidence_ids": [
-        "34"
+        "35"
       ],
       "gene_name": "orf61|orf63",
       "gene_position": "pseudogene (9/186 nt)|noncoding (181/192 nt)",
@@ -220,7 +248,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "orf61,orf63",
       "genes_promoter": "",
-      "id": "7",
+      "id": "8",
       "locus_tag": "lambdap37_made_noncoding|lambdap38_made_noncoding",
       "locus_tags_inactivated": "",
       "locus_tags_overlapping": "lambdap37_made_noncoding,lambdap38_made_noncoding",
@@ -246,7 +274,7 @@
       "codon_position_is_indeterminate": "",
       "codon_ref_seq": "GGA",
       "evidence_ids": [
-        "35"
+        "36"
       ],
       "gene_name": "lambdap48",
       "gene_position": "453",
@@ -255,7 +283,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "lambdap48",
       "genes_promoter": "",
-      "id": "8",
+      "id": "9",
       "locus_tag": "lambdap48",
       "locus_tags_inactivated": "",
       "locus_tags_overlapping": "lambdap48",
@@ -281,7 +309,7 @@
       "codon_position_is_indeterminate": "",
       "codon_ref_seq": "",
       "evidence_ids": [
-        "36"
+        "37"
       ],
       "gene_name": "cI",
       "gene_position": "coding (123/714 nt)",
@@ -290,7 +318,7 @@
       "genes_inactivated": "cI",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "9",
+      "id": "10",
       "locus_tag": "lambdap88",
       "locus_tags_inactivated": "lambdap88",
       "locus_tags_overlapping": "",
@@ -316,7 +344,7 @@
       "codon_position_is_indeterminate": "",
       "codon_ref_seq": "TTT",
       "evidence_ids": [
-        "37"
+        "38"
       ],
       "gene_name": "R",
       "gene_position": "126",
@@ -325,7 +353,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "R",
       "genes_promoter": "",
-      "id": "10",
+      "id": "11",
       "locus_tag": "lambdap75",
       "locus_tags_inactivated": "",
       "locus_tags_overlapping": "lambdap75",
@@ -349,7 +377,7 @@
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
-        "39"
+        "40"
       ],
       "gene_name": "bor/lambdap78",
       "gene_position": "intergenic (-205/+85)",
@@ -358,7 +386,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "11",
+      "id": "12",
       "insert_position": "1",
       "locus_tag": "lambdap77/lambdap78",
       "locus_tags_inactivated": "",
@@ -381,7 +409,7 @@
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
-        "40"
+        "41"
       ],
       "gene_name": "bor/lambdap78",
       "gene_position": "intergenic (-233/+57)",
@@ -390,7 +418,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "12",
+      "id": "13",
       "locus_tag": "lambdap77/lambdap78",
       "locus_tags_inactivated": "",
       "locus_tags_overlapping": "",
@@ -413,7 +441,7 @@
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
-        "41"
+        "42"
       ],
       "gene_name": "bor/lambdap78",
       "gene_position": "intergenic (-240/+50)",
@@ -422,7 +450,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "13",
+      "id": "14",
       "locus_tag": "lambdap77/lambdap78",
       "locus_tags_inactivated": "",
       "locus_tags_overlapping": "",
@@ -445,7 +473,7 @@
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
-        "42"
+        "43"
       ],
       "gene_name": "bor/lambdap78",
       "gene_position": "intergenic (-252/+38)",
@@ -454,7 +482,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "14",
+      "id": "15",
       "locus_tag": "lambdap77/lambdap78",
       "locus_tags_inactivated": "",
       "locus_tags_overlapping": "",
@@ -479,7 +507,7 @@
       "codon_position_is_indeterminate": "",
       "codon_ref_seq": "CAT",
       "evidence_ids": [
-        "43"
+        "44"
       ],
       "gene_name": "lambdap78",
       "gene_position": "447",
@@ -488,7 +516,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "lambdap78",
       "genes_promoter": "",
-      "id": "15",
+      "id": "16",
       "locus_tag": "lambdap78",
       "locus_tags_inactivated": "",
       "locus_tags_overlapping": "lambdap78",
@@ -514,7 +542,7 @@
       "codon_position_is_indeterminate": "",
       "codon_ref_seq": "GTT",
       "evidence_ids": [
-        "44"
+        "45"
       ],
       "gene_name": "lambdap78",
       "gene_position": "433",
@@ -523,7 +551,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "lambdap78",
       "genes_promoter": "",
-      "id": "16",
+      "id": "17",
       "locus_tag": "lambdap78",
       "locus_tags_inactivated": "",
       "locus_tags_overlapping": "lambdap78",
@@ -549,7 +577,7 @@
       "codon_position_is_indeterminate": "",
       "codon_ref_seq": "AAC",
       "evidence_ids": [
-        "45"
+        "46"
       ],
       "gene_name": "lambdap78",
       "gene_position": "333",
@@ -558,7 +586,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "lambdap78",
       "genes_promoter": "",
-      "id": "17",
+      "id": "18",
       "locus_tag": "lambdap78",
       "locus_tags_inactivated": "",
       "locus_tags_overlapping": "lambdap78",
@@ -584,7 +612,7 @@
       "codon_position_is_indeterminate": "",
       "codon_ref_seq": "ATC",
       "evidence_ids": [
-        "46"
+        "47"
       ],
       "gene_name": "lambdap78",
       "gene_position": "261",
@@ -593,7 +621,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "lambdap78",
       "genes_promoter": "",
-      "id": "18",
+      "id": "19",
       "locus_tag": "lambdap78",
       "locus_tags_inactivated": "",
       "locus_tags_overlapping": "lambdap78",
@@ -619,7 +647,7 @@
       "codon_position_is_indeterminate": "",
       "codon_ref_seq": "AAC",
       "evidence_ids": [
-        "47"
+        "48"
       ],
       "gene_name": "lambdap78",
       "gene_position": "216",
@@ -628,7 +656,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "lambdap78",
       "genes_promoter": "",
-      "id": "19",
+      "id": "20",
       "locus_tag": "lambdap78",
       "locus_tags_inactivated": "",
       "locus_tags_overlapping": "lambdap78",
@@ -654,7 +682,7 @@
       "codon_position_is_indeterminate": "",
       "codon_ref_seq": "GAC",
       "evidence_ids": [
-        "48"
+        "49"
       ],
       "gene_name": "lambdap78",
       "gene_position": "178",
@@ -663,7 +691,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "lambdap78",
       "genes_promoter": "",
-      "id": "20",
+      "id": "21",
       "locus_tag": "lambdap78",
       "locus_tags_inactivated": "",
       "locus_tags_overlapping": "lambdap78",
@@ -689,7 +717,7 @@
       "codon_position_is_indeterminate": "",
       "codon_ref_seq": "ACG",
       "evidence_ids": [
-        "49"
+        "50"
       ],
       "gene_name": "lambdap78",
       "gene_position": "67",
@@ -698,7 +726,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "lambdap78",
       "genes_promoter": "",
-      "id": "21",
+      "id": "22",
       "locus_tag": "lambdap78",
       "locus_tags_inactivated": "",
       "locus_tags_overlapping": "lambdap78",
@@ -724,7 +752,7 @@
       "codon_position_is_indeterminate": "",
       "codon_ref_seq": "AGG",
       "evidence_ids": [
-        "50"
+        "51"
       ],
       "gene_name": "lambdap78",
       "gene_position": "47",
@@ -733,7 +761,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "lambdap78",
       "genes_promoter": "",
-      "id": "22",
+      "id": "23",
       "locus_tag": "lambdap78",
       "locus_tags_inactivated": "",
       "locus_tags_overlapping": "lambdap78",
@@ -759,7 +787,7 @@
       "codon_position_is_indeterminate": "",
       "codon_ref_seq": "GTG",
       "evidence_ids": [
-        "51"
+        "52"
       ],
       "gene_name": "lambdap78",
       "gene_position": "1",
@@ -768,7 +796,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "lambdap78",
       "genes_promoter": "",
-      "id": "23",
+      "id": "24",
       "locus_tag": "lambdap78",
       "locus_tags_inactivated": "",
       "locus_tags_overlapping": "lambdap78",
@@ -792,7 +820,7 @@
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
-        "52"
+        "53"
       ],
       "gene_name": "lambdap78/lambdap79",
       "gene_position": "intergenic (-94/-69)",
@@ -801,7 +829,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "lambdap78",
-      "id": "24",
+      "id": "25",
       "locus_tag": "lambdap78/lambdap79",
       "locus_tags_inactivated": "",
       "locus_tags_overlapping": "",
@@ -826,7 +854,7 @@
       "codon_position_is_indeterminate": "",
       "codon_ref_seq": "AGA",
       "evidence_ids": [
-        "53"
+        "54"
       ],
       "gene_name": "lambdap79",
       "gene_position": "141",
@@ -835,7 +863,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "lambdap79",
       "genes_promoter": "",
-      "id": "25",
+      "id": "26",
       "locus_tag": "lambdap79",
       "locus_tags_inactivated": "",
       "locus_tags_overlapping": "lambdap79",
@@ -859,7 +887,7 @@
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
-        "54"
+        "55"
       ],
       "gene_name": "lambdap79/–",
       "gene_position": "intergenic (+29/–)",
@@ -868,7 +896,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "26",
+      "id": "27",
       "locus_tag": "lambdap79/–",
       "locus_tags_inactivated": "",
       "locus_tags_overlapping": "",
@@ -891,8 +919,8 @@
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
-        "55",
-        "56"
+        "56",
+        "57"
       ],
       "gene_name": "lambdap79/–",
       "gene_position": "intergenic (+33/–)",
@@ -901,7 +929,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "27",
+      "id": "28",
       "locus_tag": "lambdap79/–",
       "locus_tags_inactivated": "",
       "locus_tags_overlapping": "",
@@ -924,7 +952,7 @@
       "codon_position": "",
       "codon_ref_seq": "",
       "evidence_ids": [
-        "57"
+        "58"
       ],
       "gene_name": "lambdap79/–",
       "gene_position": "intergenic (+216/–)",
@@ -933,7 +961,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "28",
+      "id": "29",
       "locus_tag": "lambdap79/–",
       "locus_tags_inactivated": "",
       "locus_tags_overlapping": "",
@@ -964,7 +992,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "29",
+      "id": "30",
       "insert_position": "0",
       "locus_tag": "–/lambdap01",
       "locus_tags_inactivated": "",
@@ -1004,7 +1032,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "30",
+      "id": "31",
       "insert_position": "1",
       "locus_tag": "lambdap18/lambdap19",
       "locus_tags_inactivated": "",
@@ -1046,7 +1074,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "31",
+      "id": "32",
       "insert_position": "0",
       "locus_tag": "lambdap27|lambdap90_made_noncoding",
       "locus_tags_inactivated": "",
@@ -1091,7 +1119,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "32",
+      "id": "33",
       "insert_position": "1",
       "locus_tag": "lambdap27",
       "locus_tags_inactivated": "",
@@ -1139,7 +1167,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "33",
+      "id": "34",
       "insert_position": "0",
       "ks_quality_p_value": "0.998219",
       "locus_tag": "lambdap28",
@@ -1188,7 +1216,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "34",
+      "id": "35",
       "insert_position": "0",
       "ks_quality_p_value": "1",
       "locus_tag": "lambdap37_made_noncoding|lambdap38_made_noncoding",
@@ -1232,7 +1260,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "35",
+      "id": "36",
       "insert_position": "0",
       "locus_tag": "lambdap48",
       "locus_tags_inactivated": "",
@@ -1277,7 +1305,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "36",
+      "id": "37",
       "insert_position": "0",
       "locus_tag": "lambdap88",
       "locus_tags_inactivated": "",
@@ -1323,7 +1351,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "37",
+      "id": "38",
       "insert_position": "0",
       "ks_quality_p_value": "0.649315",
       "locus_tag": "lambdap75",
@@ -1373,7 +1401,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "38",
+      "id": "39",
       "insert_position": "0",
       "ks_quality_p_value": "0.169261",
       "locus_tag": "lambdap77",
@@ -1420,7 +1448,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "39",
+      "id": "40",
       "insert_position": "1",
       "ks_quality_p_value": "0.772677",
       "locus_tag": "lambdap77/lambdap78",
@@ -1461,7 +1489,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "40",
+      "id": "41",
       "insert_position": "0",
       "locus_tag": "lambdap77/lambdap78",
       "locus_tags_inactivated": "",
@@ -1501,7 +1529,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "41",
+      "id": "42",
       "insert_position": "0",
       "locus_tag": "lambdap77/lambdap78",
       "locus_tags_inactivated": "",
@@ -1541,7 +1569,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "42",
+      "id": "43",
       "insert_position": "0",
       "locus_tag": "lambdap77/lambdap78",
       "locus_tags_inactivated": "",
@@ -1583,7 +1611,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "43",
+      "id": "44",
       "insert_position": "0",
       "locus_tag": "lambdap78",
       "locus_tags_inactivated": "",
@@ -1631,7 +1659,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "44",
+      "id": "45",
       "insert_position": "0",
       "ks_quality_p_value": "1",
       "locus_tag": "lambdap78",
@@ -1677,7 +1705,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "45",
+      "id": "46",
       "insert_position": "0",
       "locus_tag": "lambdap78",
       "locus_tags_inactivated": "",
@@ -1722,7 +1750,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "46",
+      "id": "47",
       "insert_position": "0",
       "locus_tag": "lambdap78",
       "locus_tags_inactivated": "",
@@ -1767,7 +1795,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "47",
+      "id": "48",
       "insert_position": "0",
       "locus_tag": "lambdap78",
       "locus_tags_inactivated": "",
@@ -1812,7 +1840,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "48",
+      "id": "49",
       "insert_position": "0",
       "locus_tag": "lambdap78",
       "locus_tags_inactivated": "",
@@ -1857,7 +1885,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "49",
+      "id": "50",
       "insert_position": "0",
       "locus_tag": "lambdap78",
       "locus_tags_inactivated": "",
@@ -1902,7 +1930,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "50",
+      "id": "51",
       "insert_position": "0",
       "locus_tag": "lambdap78",
       "locus_tags_inactivated": "",
@@ -1950,7 +1978,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "51",
+      "id": "52",
       "insert_position": "0",
       "ks_quality_p_value": "0.998108",
       "locus_tag": "lambdap78",
@@ -1994,7 +2022,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "52",
+      "id": "53",
       "insert_position": "0",
       "locus_tag": "lambdap78/lambdap79",
       "locus_tags_inactivated": "",
@@ -2036,7 +2064,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "53",
+      "id": "54",
       "insert_position": "0",
       "locus_tag": "lambdap79",
       "locus_tags_inactivated": "",
@@ -2079,7 +2107,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "54",
+      "id": "55",
       "insert_position": "0",
       "locus_tag": "lambdap79/–",
       "locus_tags_inactivated": "",
@@ -2119,7 +2147,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "55",
+      "id": "56",
       "insert_position": "0",
       "locus_tag": "lambdap79/–",
       "locus_tags_inactivated": "",
@@ -2162,7 +2190,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "56",
+      "id": "57",
       "insert_position": "0",
       "ks_quality_p_value": "1",
       "locus_tag": "lambdap79/–",
@@ -2206,7 +2234,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "57",
+      "id": "58",
       "insert_position": "0",
       "ks_quality_p_value": "0.869132",
       "locus_tag": "lambdap79/–",
@@ -2251,7 +2279,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "58",
+      "id": "59",
       "insert_position": "0",
       "ks_quality_p_value": "0.592988",
       "locus_tag": "lambdap79/–",
@@ -2292,7 +2320,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "59",
+      "id": "60",
       "left_inside_cov": "0",
       "left_outside_cov": "NA",
       "locus_tag": "–/lambdap01",
@@ -2322,7 +2350,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "60",
+      "id": "61",
       "left_inside_cov": "0",
       "left_outside_cov": "34",
       "locus_tag": "[lambdap28]–[lambdap82]",
@@ -2352,7 +2380,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "61",
+      "id": "62",
       "left_inside_cov": "0",
       "left_outside_cov": "NA",
       "locus_tag": "–/lambdap35",
@@ -2382,7 +2410,7 @@
       "genes_inactivated": "",
       "genes_overlapping": "",
       "genes_promoter": "",
-      "id": "62",
+      "id": "63",
       "left_inside_cov": "12",
       "left_outside_cov": "13",
       "locus_tag": "lambdap79/–",
@@ -2403,7 +2431,7 @@
       "flanking_left": "35",
       "flanking_right": "35",
       "frequency": "1",
-      "id": "63",
+      "id": "64",
       "junction_possible_overlap_registers": "34",
       "key": "NC_001416-0__9700__-1__NC_001416-1__1__1__0____35__35__0__0",
       "max_left": "34",
@@ -2456,7 +2484,7 @@
       "flanking_left": "35",
       "flanking_right": "35",
       "frequency": "1",
-      "id": "64",
+      "id": "65",
       "junction_possible_overlap_registers": "34",
       "key": "NC_001416-1__9700__-1__NC_001416-2__1__1__0____35__35__0__0",
       "max_left": "34",
@@ -2509,7 +2537,7 @@
       "flanking_left": "35",
       "flanking_right": "35",
       "frequency": "1",
-      "id": "65",
+      "id": "66",
       "junction_possible_overlap_registers": "29",
       "key": "NC_001416-2__2337__-1__NC_001416-2__8329__1__5____35__35__0__0",
       "max_left": "27",
@@ -2562,7 +2590,7 @@
       "flanking_left": "35",
       "flanking_right": "35",
       "frequency": "1",
-      "id": "66",
+      "id": "67",
       "junction_possible_overlap_registers": "34",
       "key": "NC_001416-3__9700__-1__NC_001416-4__1__1__0____35__35__0__0",
       "max_left": "34",
@@ -2610,84 +2638,84 @@
     },
     {
       "end": "8",
-      "id": "67",
+      "id": "68",
       "seq_id": "NC_001416-0",
       "start": "1",
       "type": "UN"
     },
     {
       "end": "37",
-      "id": "68",
+      "id": "69",
       "seq_id": "NC_001416-0",
       "start": "34",
       "type": "UN"
     },
     {
       "end": "8053",
-      "id": "69",
+      "id": "70",
       "seq_id": "NC_001416-0",
       "start": "8045",
       "type": "UN"
     },
     {
       "end": "4676",
-      "id": "70",
+      "id": "71",
       "seq_id": "NC_001416-1",
       "start": "4676",
       "type": "UN"
     },
     {
       "end": "5406",
-      "id": "71",
+      "id": "72",
       "seq_id": "NC_001416-1",
       "start": "5406",
       "type": "UN"
     },
     {
       "end": "7292",
-      "id": "72",
+      "id": "73",
       "seq_id": "NC_001416-1",
       "start": "7291",
       "type": "UN"
     },
     {
       "end": "7296",
-      "id": "73",
+      "id": "74",
       "seq_id": "NC_001416-1",
       "start": "7295",
       "type": "UN"
     },
     {
       "end": "8333",
-      "id": "74",
+      "id": "75",
       "seq_id": "NC_001416-2",
       "start": "2338",
       "type": "UN"
     },
     {
       "end": "9701",
-      "id": "75",
+      "id": "76",
       "seq_id": "NC_001416-2",
       "start": "9697",
       "type": "UN"
     },
     {
       "end": "10",
-      "id": "76",
+      "id": "77",
       "seq_id": "NC_001416-3",
       "start": "1",
       "type": "UN"
     },
     {
       "end": "9666",
-      "id": "77",
+      "id": "78",
       "seq_id": "NC_001416-4",
       "start": "9666",
       "type": "UN"
     },
     {
       "end": "9701",
-      "id": "78",
+      "id": "79",
       "seq_id": "NC_001416-4",
       "start": "9668",
       "type": "UN"
