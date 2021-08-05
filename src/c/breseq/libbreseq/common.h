@@ -681,6 +681,27 @@ namespace breseq {
 		return retval;
 	}
 
+inline string join(const list<string>& values, const string& separator)
+{
+  if(values.size() == 0)
+    return "";
+
+  string::size_type size = separator.length() * values.size();
+  for(list<string>::const_iterator it=values.begin(); it!=values.begin(); it++)
+    size += it->size();
+
+  string retval;
+  retval.reserve(size);
+  
+  list<string>::const_iterator it=values.begin();
+  retval = *it;
+  it++;
+  for(; it!=values.end(); it++) {
+    retval += separator + *it;
+  }
+  return retval;
+}
+
 	inline string chomp(const string& str)
 	{
 		return str.substr(0, str.find_last_not_of("\n \t")-1);

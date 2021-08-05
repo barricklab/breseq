@@ -5,7 +5,7 @@ SNP	3	75	NC_001416-2	1261	G	frequency=1
 INS	4	76	NC_001416-2	1435	C	frequency=1	insert_position=0
 SNP	5	77	NC_001416-2	2314	A	frequency=1
 SNP	205	77	NC_001416-2	2789	C	frequency=1
-SNP	7	94	NC_001416-3	1915	C	frequency=1
+SNP	7	94	NC_001416-3	1915	C	frequency=1	label=remove_me
 SNP	8	96	NC_001416-3	5833	G	frequency=1
 DEL	9	97	NC_001416-3	8717	1	frequency=1
 SNP	10	100	NC_001416-4	6817	C	frequency=1

@@ -10,19 +10,15 @@ SNP	8	96	NC_001416-3	5833	G	frequency=1
 DEL	9	97	NC_001416-3	8717	1	frequency=1
 SNP	10	100	NC_001416-4	6817	C	frequency=1
 SNP	11	101	NC_001416-4	7335	C	frequency=0.0790
-#SNP	12	102	NC_001416-4	7353	A	filtered=frequency < 1, label == remove_me	frequency=0.0840	label=remove_me
 SNP	13	103	NC_001416-4	7356	G	frequency=0.0660
 SNP	14	104	NC_001416-4	7361	A	frequency=0.0550
 SNP	15	105	NC_001416-4	7384	A	frequency=0.0870
-#SNP	16	106	NC_001416-4	7389	G	filtered=frequency < 1, label == remove_me	frequency=0.1100	label=remove_me
 SNP	17	107	NC_001416-4	7629	C	frequency=0.2390
-#SNP	18	108	NC_001416-4	7796	A	filtered=frequency < 1, label == remove_me	frequency=0.2630	label=remove_me
 SNP	19	109	NC_001416-4	7807	C	frequency=0.2100
 SNP	20	110	NC_001416-4	7811	T	frequency=0.2090
 SNP	21	111	NC_001416-4	7820	C	frequency=0.1730
 SNP	22	112	NC_001416-4	7832	G	frequency=0.1710
 SNP	23	113	NC_001416-4	7858	T	frequency=0.1380
-#SNP	24	114	NC_001416-4	7867	T	filtered=frequency < 1, label == remove_me	frequency=0.1110	label=remove_me
 SNP	25	115	NC_001416-4	7878	C	frequency=0.1090
 SNP	26	116	NC_001416-4	7879	C	frequency=0.1150
 SNP	27	117	NC_001416-4	7918	T	frequency=0.0680
@@ -59,6 +55,3 @@ SNP	57	152	NC_001416-4	9626	G	frequency=0.0880
 SNP	58	153	NC_001416-4	9628	A	frequency=0.0880
 SNP	59	154	NC_001416-4	9629	G	frequency=0.1120
 SNP	60	155	NC_001416-4	9631	T	frequency=0.1120
-UN	167	.	NC_001416-0	1	3000
-UN	168	.	NC_001416-2	2338	8333
-UN	169	.	NC_001416-4	9694	9701

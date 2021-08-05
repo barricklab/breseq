@@ -1,3 +1,20 @@
+Version 0.36.0
+  * Fixed an issue causing JC evidence to not save info in annotated GD files.
+  * Fixed a crash when annotating GD files containing INV mutations.
+  * Fixed empty line at the end of the FASTQ input causing an error.
+  * Major updates to gdtools commands.
+  * gdtools COMPARE/ANNOTATE
+    * New TABLE format that provides a text (CSV) version of HTML style compare table.
+    * TEXT_* output columns added if -b option provided.
+    * Changed HTML default to not repeat header lines for easier loading into Excel.
+      If you liked these, you can add them back as before with --repeat-header 10.
+  *gdtools FILTER/REMOVE
+    * Added the ability to preserve evidence entries.
+    * Added control over commenting/removing filtered lines, renumbering IDs, and verbose messages.
+    * Fixed (and explained) logic for matching the UNDEFINED value
+    * New ASSIGNED field for filtering on whether evidence is used.
+    * Added some examples of usage to the command line help.
+
 Version 0.35.7
   * Speedup and fix of rare bug related to annotating mutations to properly account for cases
     in which multiple base substitutions occur in the same codon.

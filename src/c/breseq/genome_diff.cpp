@@ -1057,7 +1057,7 @@ diff_entry_list_t cGenomeDiff::validation_list()
   return diff_entry_list_t(it.base(), _entry_list.end());
 }
 
-//! REMOVED all GD entries that aren't used as evidence from the current GD
+//! REMOVE all GD entries that aren't used as evidence from the current GD
 void cGenomeDiff::filter_not_used_as_evidence(bool verbose)
 {
   // Yes, I know the bool is useless.
@@ -1612,7 +1612,8 @@ void cGenomeDiff::reassign_unique_ids()
   
   for (diff_entry_list_t::iterator it=_entry_list.begin(); it!= _entry_list.end(); it++) {
     if (!(**it).is_mutation()) continue;
-    
+    if ((**it).count("comment_out")) continue;
+
     string old_id = (**it)._id;
     (**it)._id = to_string(++_unique_id_counter);
     mutation_id_reassignments[old_id] = (**it)._id;
@@ -1627,7 +1628,8 @@ void cGenomeDiff::reassign_unique_ids()
   //Handle the evidence and validation (any non-mutation)
   for (diff_entry_list_t::iterator it=_entry_list.begin(); it!= _entry_list.end(); it++) {
     if ((**it).is_mutation()) continue;
-    
+    if ((**it).count("comment_out")) continue;
+
     string new_id = to_string(++_unique_id_counter);
     
     if (id_table.count((**it)._id)) {
@@ -1645,7 +1647,8 @@ void cGenomeDiff::reassign_unique_ids()
   
   for (diff_entry_list_t::iterator it=_entry_list.begin(); it!= _entry_list.end(); it++) {
     if (!(**it).is_mutation()) continue;    
-    
+    if ((**it).count("comment_out")) continue;
+
     cDiffEntry& mut = **it;
     for (vector<string>::const_iterator key_it=gd_keys_with_ids.begin(); key_it!= gd_keys_with_ids.end(); key_it++) {
       if (mut.entry_exists(*key_it)) {
@@ -4053,13 +4056,17 @@ void cGenomeDiff::tabulate_mutation_frequencies_from_multiple_gds(
   
 // This output is meant to be a dump to be parsable in R
 // it includes extra metadata on every row to identify the file, population, time, clone, etc.
-void cGenomeDiff::write_tsv(
-                            string& output_csv_file_name,
+void cGenomeDiff::write_separated_values_file(
+                            string& output_file_name,
+                            const char* separator,
                             vector<cGenomeDiff>& gd_list,
                             bool verbose
                             )
 {
   (void)verbose;
+
+  // Need to quote for CSV
+  string quote = (string(separator) != "\t") ? "\"" : "";
   
   set<string> key_set;
   
@@ -4091,20 +4098,30 @@ void cGenomeDiff::write_tsv(
     }
   }
   
-  vector<string> key_list( key_set.begin(), key_set.end() );
+  vector<string> header_list( key_set.begin(), key_set.end() );
   
-  ofstream output_file(output_csv_file_name.c_str());
-  output_file <<  join(key_list, "\t") << endl;
+  // Output header line
+  ofstream output_file(output_file_name.c_str());
+  bool header_first_time = true;
+  for (vector<string>::iterator header_it = header_list.begin(); header_it != header_list.end(); header_it++)  {
+    if (!header_first_time) output_file << separator;
+    output_file << quote << *header_it << quote;
+    header_first_time = false;
+  }
+  output_file << endl;
 
+  // Output item lines
   for (vector<cGenomeDiff>::iterator gd_it = gd_list.begin(); gd_it != gd_list.end(); gd_it++)  {
   
     diff_entry_list_t de_list = gd_it->get_list();
     for (diff_entry_list_t::iterator de_it = de_list.begin(); de_it != de_list.end(); de_it++)  {
       
       bool first_time = true;
-      for (vector<string>::iterator it = key_list.begin(); it != key_list.end(); it++) {
-        if (!first_time) output_file << "\t";
-        output_file << ( (*de_it)->entry_exists(*it) ? (*de_it)->get(*it) : "");
+      for (vector<string>::iterator it = header_list.begin(); it != header_list.end(); it++) {
+        if (!first_time) output_file << separator;
+        string to_print = (*de_it)->entry_exists(*it) ? (*de_it)->get(*it) : "";
+        if (quote.size()) to_print = substitute(to_print, quote, quote + quote);
+        output_file << quote << to_print<< quote;
         first_time = false;
       }
       output_file << endl;
@@ -4112,6 +4129,78 @@ void cGenomeDiff::write_tsv(
   }
   
 }
+
+
+// Simple text file that looks like HTML output, with columns for each sample
+// Entries are quoted if the separator is not \t
+void cGenomeDiff::write_table_file(
+                string& output_file_name,
+                const char* separator,
+                cGenomeDiff& gd,
+                const vector<string>& gd_titles,
+                const MutationTableOptions& mutation_table_options
+                )
+
+{
+  string quote = (string(separator) != "\t") ? "\"" : "";
+  
+  diff_entry_list_t muts = gd.mutation_list();
+  for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr ++) {
+    cDiffEntry& mut = (**itr);
+    output::add_text_fields_to_mutation(mut, mutation_table_options);
+  }
+  
+  string field_prefix = "TEXT_";
+  
+  // Create a key list with columns for frequency
+  vector<string> key_list;
+    
+  key_list.push_back(field_prefix + "SEQ_ID");
+  key_list.push_back(field_prefix + "POSITION");
+  key_list.push_back(field_prefix + "MUTATION");
+  for(vector<string>::const_iterator it = gd_titles.begin(); it != gd_titles.end(); it++) {
+    key_list.push_back("frequency_" + *it);
+  }
+  key_list.push_back(field_prefix + "MUTATION_ANNOTATION");
+  key_list.push_back(field_prefix + "GENE_NAME");
+  key_list.push_back(field_prefix + "GENE_PRODUCT");
+
+  // Create a simplified header list that matches HTML
+  vector<string> header_list;
+  header_list.push_back("seq_id");
+  header_list.push_back("position");
+  header_list.push_back("mutation");
+  for(vector<string>::const_iterator it = gd_titles.begin(); it != gd_titles.end(); it++) {
+    header_list.push_back(*it);
+  }
+  header_list.push_back("annotation");
+  header_list.push_back("gene");
+  header_list.push_back("description");
+
+  // Output header line
+  ofstream output_file(output_file_name.c_str());
+  output_file << quote << "type" << quote << separator;
+  for (vector<string>::iterator header_it = header_list.begin(); header_it != header_list.end(); header_it++)  {
+    output_file << separator << quote << *header_it << quote;
+  }
+  output_file << endl;
+
+  // Output item lines
+  diff_entry_list_t de_list = gd.get_list();
+  for (diff_entry_list_t::iterator de_it = de_list.begin(); de_it != de_list.end(); de_it++)  {
+    
+    cDiffEntry& item = **de_it;
+        
+    output_file << quote << to_string( item._type ) << quote;
+    for (vector<string>::iterator it = key_list.begin(); it != key_list.end(); it++) {
+      string to_print = item.entry_exists(*it) ? item[*it] : "";
+      if (quote.size()) to_print = substitute(to_print, quote, quote + quote);
+      output_file << separator << quote << to_print  << quote;
+    }
+    output_file << endl;
+  }
+}
+
   
 // Convert GD file to VCF file
 //

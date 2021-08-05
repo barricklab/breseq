@@ -26,15 +26,21 @@ using namespace std;
 
 namespace breseq {
   
-  
   const string cReferenceSequences::intergenic_separator = "/";
+  const string cReferenceSequences::text_intergenic_separator = "/";
   const string cReferenceSequences::html_intergenic_separator = "/";
+
   const string cReferenceSequences::gene_list_separator = ",";
+  const string cReferenceSequences::text_gene_list_separator = ",";
   const string cReferenceSequences::html_gene_list_separator = ",";
+
   const string cReferenceSequences::no_gene_name = "–"; //en-dash
   const string cReferenceSequences::gene_range_separator = "–"; //en-dash
+
   const string cReferenceSequences::multiple_separator = "|";
   const string cReferenceSequences::html_multiple_separator = "<br>";
+  const string cReferenceSequences::text_multiple_separator = "|";
+
   const string cReferenceSequences::gene_strand_reverse_char = "<";
   const string cReferenceSequences::gene_strand_forward_char = ">";
   
@@ -47,6 +53,18 @@ namespace breseq {
   const string BULL_DUMMY_SEQ_ID = "__BULL_DUMMY_SEQ_ID__";
   
   
+  MutationTableOptions::MutationTableOptions(const Settings& _settings)
+  : repeat_header(0)
+  , legend_row(false)
+  , force_show_sample_headers(false)
+  , one_ref_seq(false)
+  , force_frequencies_for_one_reference(false)
+  , shade_frequencies(false)
+  , detailed(false)
+  , max_nucleotides_to_show_in_tables(_settings.max_nucleotides_to_show_in_tables)
+  , no_javascript(_settings.no_javascript)
+  {}
+
   void cLocation::check_valid(const cSequenceFeature* feature)
   {
     if (!this->is_valid()) {
@@ -3560,7 +3578,7 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
         //copy over entries with prefix
         for(diff_entry_map_t::iterator it=side_1.begin(); it!=side_1.end(); it++)
         {
-          mut["_side_1"+ it->first] = it->second;
+          mut["side_1_" + it->first] = it->second;
         }
         
         cDiffEntry side_2;
@@ -3569,8 +3587,9 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
         //copy over entries with prefix
         for(diff_entry_map_t::iterator it=side_2.begin(); it!=side_2.end(); it++)
         {
-          mut["_side_2"+ it->first] = it->second;
+          mut["side_2_"+ it->first] = it->second;
         }
+        
       } break;
         
       case RA:{

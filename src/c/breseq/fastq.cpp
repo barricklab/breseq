@@ -491,6 +491,9 @@ namespace breseq {
         }
       }
       
+      // Skip empty lines
+      if (line.size()==0) continue;
+      
       switch (count) {
         case 0:
           if( line[0] != '@' ) {

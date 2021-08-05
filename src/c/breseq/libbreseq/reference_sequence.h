@@ -32,10 +32,27 @@ LICENSE AND COPYRIGHT
 namespace breseq {
 
 
-  
   // Pre-declaration
 	class Settings;
   
+  // Convenience structure for passing many options
+  class MutationTableOptions {
+  public:
+    MutationTableOptions(const Settings& _settings);
+    
+    uint32_t repeat_header;
+    bool legend_row;
+    bool force_show_sample_headers;
+    bool one_ref_seq;
+    bool force_frequencies_for_one_reference;
+    bool shade_frequencies;
+    bool detailed;
+    vector<string> gd_name_list_ref;
+    string relative_link;
+    uint32_t max_nucleotides_to_show_in_tables;
+    bool no_javascript;
+  };
+
   /* Position for dealing with things that are relative to reference genom
     and the annoying issues of insert counts
   */
@@ -802,13 +819,20 @@ public:
     
     // Used for annotating mutations
     static const string intergenic_separator;
+    static const string text_intergenic_separator;
     static const string html_intergenic_separator;
+    
     static const string gene_list_separator;
+    static const string text_gene_list_separator;
     static const string html_gene_list_separator;
+    
     static const string no_gene_name;
     static const string gene_range_separator;
+    
     static const string multiple_separator;
+    static const string text_multiple_separator;
     static const string html_multiple_separator;
+    
     static const string gene_strand_reverse_char;
     static const string gene_strand_forward_char;
 

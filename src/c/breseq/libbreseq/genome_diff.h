@@ -30,7 +30,8 @@ namespace breseq {
 class cReferenceSequences;
 class Settings;
 class cFeatureLocation;
-  
+class MutationTableOptions;
+
 extern const int32_t kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation;
 extern const int32_t kBreseq_large_mutation_size_cutoff;
   
@@ -163,6 +164,9 @@ public:
   //! Retrieve cDiffEntrys that match given type(s) 
   const diff_entry_list_t get_const_list() const { return _entry_list; }
   diff_entry_list_t get_list(const vector<gd_entry_type>& types = vector<gd_entry_type>()) const;
+  
+  // Sometimes we need to remove entries outside of the class methods... use this for that.
+  diff_entry_list_t* get_mutable_list_ptr() {return &_entry_list; };
   
   void set_list(diff_entry_list_t& in_list) {  _entry_list = in_list; }
   
@@ -307,11 +311,22 @@ public:
 
   //! Convert GD to TSV input file
   //!
-  static void write_tsv(
-                        string& output_csv_file_name,
+  static void write_separated_values_file(
+                        string& output_file_name,
+                        const char* separator,
                         vector<cGenomeDiff>& gd_list,
                         bool verbose = false
                        );
+  
+  //! Write a text table
+  static void write_table_file(
+                      string& output_file_name,
+                      const char* separator,
+                      cGenomeDiff& gd,
+                      const vector<string>& gd_titles,
+                      const MutationTableOptions& mutation_table_options
+                      );
+
   
   //! Convert genome diff to GVF
   static void GD2GVF( const string& gdfile, const string& gvffile, cReferenceSequences& ref_seq_info, bool snv_only = false )

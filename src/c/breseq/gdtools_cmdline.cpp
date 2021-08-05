@@ -1096,8 +1096,9 @@ int do_annotate(int argc, char* argv[])
 	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
 	options("format,f", "Type of output file to generate. See options below", "HTML");
 	options("add-html-fields,a", "Add formatted fields that are used for generating HTML output. Only applicable to GD and JSON output formats", TAKES_NO_ARGUMENT);
+	options("add-text-fields,b", "Add formatted fields in UTF-8 encoded text that are similar to those used in HTML output. Only applicable to GD and JSON output formats", TAKES_NO_ARGUMENT);
 	options("ignore-pseudogenes", "Treat pseudogenes as valid ORFs for calling amino acid substitutions", TAKES_NO_ARGUMENT);
-  options("repeat-header", "In HTML mode, repeat the header line every this many rows (0=OFF)", "10");
+  options("repeat-header", "In HTML mode, repeat the header line every this many rows (0=OFF)", "0");
 	options("phylogeny-aware,p", "Check the optional 'phylogeny_id' field when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
 	options("region,g", "Only show mutations that overlap this reference sequence region (e.g., REL606:64722-65312)");
 	options("preserve-evidence,e", "By default evidence items with two-letter codes are removed (RA, JC, MC, ...). Supply this option to retain them. Only affects output in GD and JSON formats. This option can only be used with a single input GD file (i.e., not in COMPARE mode). ", TAKES_NO_ARGUMENT);
@@ -1106,12 +1107,15 @@ int do_annotate(int argc, char* argv[])
 	options.addUsage("ANNOTATE mutations in one or more GenomeDiff files. If multiple input files are provided, then also COMPARE the frequencies for identical mutations across samples.");
   options.addUsage("");
   options.addUsage("Valid output formats:");
-  options.addUsage("  HTML    Descriptive table viewable in a web browser"); 
-  options.addUsage("  GD      GenomeDiff with added annotation of mutations");
-	options.addUsage("  TSV     Tab-separated values file suitable for input into R or Excel");
-	options.addUsage("  PHYLIP  Alignment of genotypes in PHYLIP format for phylogenetic analysis");
-	options.addUsage("  FASTA   Multi-FASTA alignment of genotypes for phylogenetic analysis");
-	options.addUsage("  JSON  	JavaScript object notation file suitable for parsing");
+  options.addUsage("  HTML     Descriptive table viewable in a web browser");
+  options.addUsage("  GD       GenomeDiff with added annotation of mutations");
+	options.addUsage("  TABLE    Comma-separated values UTF-8 text file suitable for input into Excel or R");
+	options.addUsage("             Simplified output with the same content/format as HTML output.");
+	options.addUsage("  TSV/CSV  Tab- or comma-separated values file suitable for input into R");
+	options.addUsage("             Detailed output with all GD fields. One line per mutation per sample.");
+	options.addUsage("  PHYLIP   Alignment of genotypes in PHYLIP format for phylogenetic analysis");
+	options.addUsage("  FASTA    Multi-FASTA alignment of genotypes for phylogenetic analysis");
+	options.addUsage("  JSON     JavaScript object notation file suitable for parsing");
 	options.addUsage("");
 	options.addUsage("When multiple GD files are provided, the #=TITLE metadata line in each file is used to name each sample/column. If that information is not present, then the GD file name is used (removing the *.gd suffix).");
 	options.addUsage("");
@@ -1121,7 +1125,9 @@ int do_annotate(int argc, char* argv[])
 	options.addUsageSameLine("of '?' indicate that there were not enough aligned reads to call a mutation at this position");
 	options.addUsageSameLine("in the genome in question (either for or against the mutation).");
 	options.addUsage("");
-	options.addUsage("In PHYLIP/FASTA output, each column in the genotype 'sequence' that is created corresponds to");
+	options.addUsage("PHYLIP/FASTA FORMAT");
+	options.addUsage("");
+	options.addUsage("In this output format, each column in the genotype 'sequence' that is created corresponds to");
 	options.addUsageSameLine("a unique mutational event. For SNPs the base present at that position in each genome is shown.");
 	options.addUsageSameLine("For other types of mutations, 'A' is used for the ancestral allele (e.g., no transposon insertion),");
 	options.addUsageSameLine("and 'T' is used for the derived allele (e.g., new transposon copy inserted).");
@@ -1130,6 +1136,10 @@ int do_annotate(int argc, char* argv[])
 	options.addUsageSameLine("reads aligned to a position to call a mutation (i.e., is inside an UN region).");
 	options.addUsage("");
 	options.addUsage("PHYLIP/FASTA output is designed to be input into other programs to create a phylogenetic tree by parsimony methods. In these analyses, be sure that you use basic parsimony that weights all genotype sequence changes equally (e.g., same transition/transversion rates).");
+	options.addUsage("");
+	options.addUsage("INPUT INTO EXCEL");
+	options.addUsage("");
+	options.addUsage("You can load files output in the TABLE or HTML formats into Excel. For loading TABLE output, open an existing workbook and 'Import' as a Text file. You MUST choose Unicode (UTF-8) as the file origin and a comma as the delimiter. For loading HTML output, choose 'Import' as an HTML file." );
 
   options.processCommandArgs(argc, argv);
 	
@@ -1152,11 +1162,13 @@ int do_annotate(int argc, char* argv[])
 			output_file_name = "output.fa";
 	} else if (output_format == "TSV") {
 		output_file_name = "output.tsv";
+	} else if ( (output_format == "CSV") || (output_format == "TABLE") ) {
+		output_file_name = "output.csv";
   } else if (output_format == "JSON") {
 		output_file_name = "output.json";
 	} else {
 		options.addUsage("");
-		options.addUsage("OPTION ERROR:\nUnknown output format (--format|-f) of " + output_format + " requested. Valid choices are HTML, GD, TSV, PHYLIP, FASTA");
+		options.addUsage("OPTION ERROR:\nUnknown output format (--format|-f) of " + output_format + " requested. Valid choices are HTML, GD, TABLE, TSV, CSV, PHYLIP, FASTA, JSON");
 		options.printUsage();
 		return -1;
 	}
@@ -1194,8 +1206,13 @@ int do_annotate(int argc, char* argv[])
 	}
 	
 	// Give a warning if add-html-fields used when it isn't necessary
-	if (options.count("add-html-fields") && !((output_format == "GD") || (output_format == "JSON") || (output_format == "PHYLIP") || (output_format == "FASTA")) ) {
-		WARN("--add-html-fields option is not used for the selected output format " + output_format);
+	if (options.count("add-html-fields") && !((output_format == "GD") || (output_format == "JSON")) ) {
+		WARN("--add-html-fields option is ignored for the selected output format " + output_format);
+	}
+	
+	// Give a warning if add-html-fields used when it isn't necessary
+	if (options.count("add-text-fields") && !((output_format == "GD") || (output_format == "JSON")) ) {
+		WARN("--add-text-fields option is ignored for the selected output format " + output_format);
 	}
 	
 	// Load reference files
@@ -1254,6 +1271,18 @@ int do_annotate(int argc, char* argv[])
 			}
 		}
 		
+		// Add extra TEXT annotations
+		if (options.count("add-text-fields")) {
+			// Only defaults accessible - which include javascript output...
+			Settings settings;
+			MutationTableOptions mutation_table_options(settings);
+			diff_entry_list_t muts = gd.mutation_list();
+			for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr ++) {
+				cDiffEntry& mut = (**itr);
+				add_text_fields_to_mutation(mut, mutation_table_options);
+			}
+		}
+		
     gd.write(output_file_name);
   } else if (output_format == "PHYLIP") {
 		uout("Writing output PHYLIP alignment file", options["output"]);
@@ -1267,8 +1296,26 @@ int do_annotate(int argc, char* argv[])
 		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, polymorphisms_found, compare_mode, options, uout);
 		gd.write_genotype_sequence_file("FASTA", output_file_name, gd, gd_list, ref_seq_info);
 		
-	} else if (output_format == "TSV") {
-		// Load the entire list and pass it to write_tsv
+	} else if (output_format == "TABLE") {
+
+		// Force compare mode
+		compare_mode = true;
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, polymorphisms_found, compare_mode, options, uout);
+
+		// Remove evidence
+		gd.remove_group(cGenomeDiff::EVIDENCE);
+		
+		uout("Annotating mutations");
+		ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"), compare_mode);
+		
+		Settings settings;
+		MutationTableOptions mutation_table_options(settings);
+
+		uout("Writing output TABLE file", options["output"]);
+		cGenomeDiff::write_table_file(output_file_name, ",", gd, gd_titles, mutation_table_options);
+		
+	} else if ( (output_format == "TSV") || (output_format == "CSV") ) {
+		// Load the entire list and pass it to the writer
 		for (vector<string>::iterator it=gd_path_names.begin(); it!=gd_path_names.end(); it++) {
 			uout("Reading/annotating input GD file",*it);
 
@@ -1283,8 +1330,13 @@ int do_annotate(int argc, char* argv[])
 			gd_list.push_back(this_gd);
 		}
 		
-		uout("Writing output TSV file", options["output"]);
-		cGenomeDiff::write_tsv(output_file_name, gd_list);
+		if (output_format == "TSV") {
+			uout("Writing output TSV file", options["output"]);
+			cGenomeDiff::write_separated_values_file(output_file_name, "\t", gd_list);
+		} else if (output_format == "CSV") {
+			uout("Writing output CSV file", options["output"]);
+			cGenomeDiff::write_separated_values_file(output_file_name, ",", gd_list);
+		}
 		
 	} else if (output_format == "JSON") {
 		uout("Writing output JSON file", options["output"]);
@@ -1306,6 +1358,18 @@ int do_annotate(int argc, char* argv[])
 			for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr ++) {
 				cDiffEntry& mut = (**itr);
 				add_html_fields_to_mutation(mut, options);
+			}
+		}
+		
+		// Add extra TEXT annotations
+		if (options.count("add-text-fields")) {
+			// Only defaults accessible - which include javascript output...
+			Settings settings;
+			MutationTableOptions mutation_table_options(settings);
+			diff_entry_list_t muts = gd.mutation_list();
+			for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr ++) {
+				cDiffEntry& mut = (**itr);
+				add_text_fields_to_mutation(mut, mutation_table_options);
 			}
 		}
 		
@@ -1748,12 +1812,35 @@ int do_remove_gd(int argc, char* argv[])
   AnyOption options("gdtools FILTER/REMOVE [-o output.gd] -c condition1 [-c condition2] [-m SNP] input.gd");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o", "Output Genome Diff file.", "output.gd");
-  options("mut_type,m", "Only this mutation type will be removed.");
-	options("condition,c", "Condition for removing mutation entries from the input Genome Diff file. Enclose the value of this parameter in quotes if it includes spaces, e.g. -c \"frequency <= 0.05\". You may include multiple conditions on the same command line. Only entries that satisfy ALL conditions will be removed. Use the special value UNDEFINED to indicate a that this field does not exist for the given entry.");
+	options("condition,c", "Condition for removing entries from the input Genome Diff file. Enclose the value of this parameter in quotes if it includes spaces, e.g. -c \"frequency <= 0.05\". Both field names and field values are case-sensitive. You may include multiple conditions on the same command line. Only entries that satisfy ALL conditions will be removed.");
+	options("preserve-evidence,e", "By default evidence items with two-letter codes are removed (RA, JC, MC, ...). Supply this option to retain them. ", TAKES_NO_ARGUMENT);
+	options("renumber,n","Renumber IDs of entries that remain after performing filtering.", TAKES_NO_ARGUMENT);
+	options("comment,m","Instead of removing filtered entries, comment them out in the output GD file.", TAKES_NO_ARGUMENT);
+	options("verbose,v","Print information about why entries were removed to the console.", TAKES_NO_ARGUMENT);
+
   options.processCommandArgs(argc, argv);
 
   options.addUsage("");
-  options.addUsage("Removes mutations from a GD file for which ALL of the provided conditions evaluate to true.");
+  options.addUsage("Removes entries from a GD file for which ALL of the provided conditions evaluate to true.");
+	options.addUsage("");
+	options.addUsage("Operators recognized in conditions are: ==, >, >=, >, <=, !=.");
+	options.addUsage("");
+	options.addUsage("Use the special value UNDEFINED to match that a field does not exist for the given entry. UNDEFINED fields always evaluate to false in comparisons if any value exists.");
+	options.addUsage("");
+  options.addUsage("Use the special field ASSIGNED to filter evidence entries based on whether any mutation references them in the parent-id field. This field has a value of 0 (for false) or 1 (for true)");
+	options.addUsage("");
+	options.addUsage("USAGE EXAMPLES");
+	options.addUsage("");
+	options.addUsage("Remove all but insertion and deletion mutations");
+	options.addUsage("  gdtools REMOVE -c \"type != INS\" -c \"type != DEL\" ...");
+	options.addUsage("");
+	options.addUsage("Remove all but synonymous mutations (must run gd ANNOTATE first to add field)");
+	options.addUsage("  gdtools ANNOTATE -f GD -r reference.gbk -o annotated.gd input.gd");
+	options.addUsage("  gdtools REMOVE -c \"snp_type != synonymous\" -o final.gd annotated.gd");
+	options.addUsage("");
+	options.addUsage("Remove all but unassigned JC evidence (takes two commands). Needs -p option.");
+	options.addUsage("  gdtools REMOVE -p -c \"ASSIGNED=1\" -o intermediate.gd input.gd");
+	options.addUsage("  gdtools REMOVE -p -c \"type != JC\" -o final.gd intermediate.gd");
 	
 	if (options.count("help")) {
 		options.printUsage();
@@ -1779,78 +1866,119 @@ int do_remove_gd(int argc, char* argv[])
 
   assert(filters.size());
 
-  uout("Reading input GD file") << options.getArgv(0) << endl;
+  uout("Reading input GD file", options.getArgv(0));
   cGenomeDiff gd(options.getArgv(0));
 
-  diff_entry_list_t muts;
-  if (!options.count("mut_type")) {
-    muts = gd.mutation_list();
-  }
-  else {
-    vector<string> mut_strs= from_string<vector<string> >(options["mut_type"]);
-    assert (mut_strs.size());
-    vector<gd_entry_type> mut_types;
-    for (size_t i = 0; i < mut_strs.size(); ++i) {
-      for (size_t j = 0; j < gd_entry_type_lookup_table.size(); ++j) {
-        if (gd_entry_type_lookup_table[j] == mut_strs[i]) {
-          mut_types.push_back((gd_entry_type)j);
-          break;
-        }
-      }
-    }
-    muts = gd.get_list(mut_types);
-  }
-    
-  const vector<string> evals = make_vector<string>("==")("!=")("<=")(">=")("<")(">");
-  for (diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); ++it) {
-    cDiffEntry& mut = **it;
+	// Remove evidence unless requesting to keep it
+	if (!options.count("preserve-evidence")) {
+		gd.remove_group(cGenomeDiff::EVIDENCE);
+		//this_gd.remove_group(cGenomeDiff::VALIDATION);
+	}
+	
+	// Load the normal conditions
+	vector<string> filter_keys;
+	vector<size_t> filter_evals;
+	vector<string> filter_values;
+	
+	const vector<string> evals = make_vector<string>("==")("!=")("<=")(">=")("<")(">");
+	for (vector<string>:: const_iterator jt = filters.begin(); jt != filters.end(); ++jt) {
+			
+		// Parse filter string.
+		string filter = *jt;
+			
+		for (size_t i = 0; i < filter.size(); ++i) {
+			if (filter[i] == ' ') {
+				filter.erase(i,1);
+			}
+		}
+		
+		string key   = "";
+		size_t eval  = string::npos;
+		string value = "";
+		for (size_t i = 0; i < evals.size(); ++i) {
+			if (filter.find(evals[i]) != string::npos) {
+					
+				size_t pos = filter.find(evals[i]);
+				eval = i;
+				string segment = filter;
+				segment.erase(pos, evals[i].size());
+				key = segment.substr(0, pos);
+				value = segment.substr(pos);
+				
+				filter_keys.push_back(key);
+				filter_evals.push_back(eval);
+				filter_values.push_back(value);
+				
+				break;
+			}
+		}
+	
+		ASSERT(key.size() && value.size(), "Error in format of filter: " + filter);
+	}
+	
+	// Add the special "assigned" field
+	diff_entry_list_t entries = gd.get_list();
+
+	// Create a map of all used evidence
+	map<string,bool> used_as_evidence;
+	for (diff_entry_list_t::iterator it = entries.begin(); it != entries.end(); it++) {
+		cDiffEntry& de = **it;
+		for (vector<string>::iterator ev_it = de._evidence.begin(); ev_it != de._evidence.end(); ev_it++) {
+			used_as_evidence[*ev_it] = true;
+		}
+	}
+		
+	// Assign based on presence in map
+	for (diff_entry_list_t::iterator it = entries.begin(); it != entries.end(); it++) {
+		cDiffEntry& de = **it;
+		if (used_as_evidence.count(de._id)) {
+			de["ASSIGNED"] = "1";
+		} else {
+			de["ASSIGNED"] = "0";
+		}
+	}
+	
+	uout("Filtering GD entries");
+	
+	// Perform filtering
+	cGenomeDiff new_gd;
+	diff_entry_list_t* mutable_entry_list = gd.get_mutable_list_ptr();
+	diff_entry_list_t::iterator it = mutable_entry_list->begin();
+	bool advance_iterator;
+  while (it != mutable_entry_list->end()) {
+		advance_iterator = true;
+    cDiffEntry& de = **it;
 
     vector<string> reasons;
-    for (vector<string>:: const_iterator jt = filters.begin(); jt != filters.end(); ++jt) {
-        
-        
-      bool is_filtered = false;
-      // Parse filter string.
-      string filter = *jt;
-        
-      for (size_t i = 0; i < filter.size(); ++i) {
-        if (filter[i] == ' ') {
-          filter.erase(i,1);
-        }
-      }
-      string key   = "";
-      size_t eval  = string::npos;
-      string value = "";
-      for (size_t i = 0; i < evals.size(); ++i) {
-        if (filter.find(evals[i]) != string::npos) {
-            
-          size_t pos = filter.find(evals[i]);
-          eval = i;
-          string segment = filter;
-          segment.erase(pos, evals[i].size());
-          key = segment.substr(0, pos);
-          value = segment.substr(pos);
-          break;
-        }
-      }
-    
-      ASSERT(key.size() && value.size(), "Error in format of filter: " + filter);
-        
-      // special case of frequency missing if 100%
-      if ( (key==FREQUENCY) && (mut.count(key)==0) ) {
-          mut[key] = "1";
-      }  
-        
-			//Note special case for 'type'
-			string test_string = mut.count(key) ? mut[key] : "UNDEFINED";
+
+		for (size_t i=0; i<filter_evals.size(); i++) {
+		
+			bool is_filtered = false;
+			string& key = filter_keys[i];
+			size_t eval = filter_evals[i];
+			string& value = filter_values[i];
+			
+			//Note special case for matching UNDEFINED values
+			string test_string = de.count(key) ? de[key] : "UNDEFINED";
+			
+			// special case of frequency missing if 100%
+			if ( (key==FREQUENCY) && (test_string=="UNDEFINED") ) {
+					test_string = "1";
+			}
 			
 			// Special cases for non-map entries
 			if (key=="type") {
-				test_string = to_string(mut._type);
+				test_string = to_string(de._type);
 			}
 			
+			// Undefined only matches undefined
+			if (test_string == "UNDEFINED") {
+				if (value=="UNDEFINED") {
+						is_filtered = true;
+				}
+			}
 			// Numeric
-			if (value.find_first_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") == string::npos) {
+			else if (value.find_first_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") == string::npos) {
 				switch(eval)
 				{
 					case 0: if (from_string<float>(test_string) == from_string<float>(value)) is_filtered = true; break;
@@ -1879,12 +2007,41 @@ int do_remove_gd(int argc, char* argv[])
 			}
 				
     }
+		
     if (reasons.size() == filters.size()) {
-      printf("Removed [%s]: %s\n", join(reasons, ", ").c_str(), mut.as_string().c_str());
-      mut["filtered"] = join(reasons, ", ");
-      mut["comment_out"] = "true";
+			if (options.count("verbose")) {
+				cout << "Removed [" << join(reasons, ", ") << "]: " << de.as_string() << endl;
+			}
+      de["filtered"] = join(reasons, ", ");
+			
+			// Comment out or delete
+			if (options.count("comment")) {
+				de["comment_out"] = "true";
+			} else {
+				it = gd.remove(it);
+				advance_iterator = false;
+			}
     }
+		
+		if (advance_iterator) it++;
   }
+
+	// Remove the special fields
+	for (diff_entry_list_t::iterator it = entries.begin(); it != entries.end(); it++) {
+		cDiffEntry& de = **it;
+		de.erase("ASSIGNED");
+	}
+	
+	// Fix the ids - if requested
+	if(options.count("renumber"))
+	{
+		uout("Renumbering GD entries");
+
+		cGenomeDiff gd2;
+		gd2.merge(gd, true);
+		gd = gd2;
+	}
+	
   uout("Writing output GD file", options["output"]);
   gd.write(options["output"]);
   return 0;

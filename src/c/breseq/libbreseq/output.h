@@ -158,35 +158,7 @@ extern const char* ALIGN_LEFT;
 /*-----------------------------------------------------------------------------
  * HTML FILES 
  *-----------------------------------------------------------------------------*/
-// Convenience structure for passing many options
-struct MutationTableOptions {
-  
-  MutationTableOptions(const Settings& _settings)
-  : repeat_header(0)
-  , legend_row(false)
-  , force_show_sample_headers(false)
-  , one_ref_seq(false)
-  , force_frequencies_for_one_reference(false)
-  , shade_frequencies(false)
-  , detailed(false)
-  , max_nucleotides_to_show_in_tables(_settings.max_nucleotides_to_show_in_tables)
-  , no_javascript(_settings.no_javascript)
-  {}
-  
-  
-  
-  uint32_t repeat_header;
-  bool legend_row;
-  bool force_show_sample_headers;
-  bool one_ref_seq;
-  bool force_frequencies_for_one_reference;
-  bool shade_frequencies;
-  bool detailed;
-  vector<string> gd_name_list_ref;
-  string relative_link;
-  uint32_t max_nucleotides_to_show_in_tables;
-  bool no_javascript;
-};
+
   
 void html_index(const string& file_name, const Settings& settings, Summary& summary,
                 cReferenceSequences& ref_seq_info, cGenomeDiff& gd);
@@ -273,7 +245,8 @@ string html_deletion_coverage_values_table_string(const Settings& settings, cRef
 /*-----------------------------------------------------------------------------
  * Helper Functions For Tables 
  *-----------------------------------------------------------------------------*/
-string formatted_mutation_annotation(const cDiffEntry& mut);
+string text_formatted__mutation_annotation(const cDiffEntry& mut);
+string html_formatted_mutation_annotation(const cDiffEntry& mut);
 string html_format_repeat_name(const string& in_repeat_name);
 string to_underline_red_codon(const string& _codon_ref_seq, const string& _codon_position);
 string decode_reject_reason(const string & reject);
@@ -285,8 +258,11 @@ string decode_reject_reason(const string & reject);
 // sub draw_coverage
 void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenomeDiff& gd);
   
+// add "PRINTABLE_*" entries to mutation (except PRINTABLE_GENE which is added in cReferenceSequence)
+void add_text_fields_to_mutation(cDiffEntry& mut, const MutationTableOptions& options);
+
 // add "HTML_*" entries to mutation (except HTML_GENE which is added in cReferenceSequence)
-void add_html_fields_to_mutation(cDiffEntry& mut, MutationTableOptions& options);
+void add_html_fields_to_mutation(cDiffEntry& mut, const MutationTableOptions& options);
 
 
 

@@ -9,6 +9,8 @@ EXPECTED_OUTPUTS[0]="${SELF}/expected.gd"
 TESTCMD="\
     ${GDTOOLS} \
         REMOVE \
+        -e \
+        --comment \
         -c 'frequency<1' \
         -c label==remove_me \
         -o ${SELF}/output.gd \
