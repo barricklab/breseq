@@ -500,16 +500,23 @@ public:
         return it->second;
       }
   
-      bool is_repeat() {
-        return ((*this)["type"] == "mobile_element") || ((*this)["type"] == "repeat_region");
-      }
-    
       bool is_source() {
         return ((*this)["type"] == "region") || ((*this)["type"] == "source");
       }
     
+      bool is_repeat() {
+        return (   ((*this)["type"] == "mobile_element")
+                || ((*this)["type"] == "repeat_region")
+        );
+      }
+    
       bool is_gene() {
-        return ((*this)["type"] == "gene") || ((*this)["type"] == "CDS");
+        return (   ((*this)["type"] == "CDS")
+                || ((*this)["type"] == "rRNA")
+                || ((*this)["type"] == "tRNA")
+                || ((*this)["type"] == "ncRNA")
+                || ((*this)["type"] == "RNA")
+        );
       }
     
       string get_locus_tag() const {
