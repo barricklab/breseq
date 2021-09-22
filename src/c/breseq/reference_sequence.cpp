@@ -741,7 +741,7 @@ namespace breseq {
           ASSERT(itl->is_valid(), "Feature has invalid location: " + (*feat_p)["accession"] + "\n" + itl->as_string())
       }
       
-      if ( ((*feat_p)["type"] == "repeat_region") || ((*feat_p)["type"] == "mobile_element") )
+      if ( feat_p->is_repeat() )
       {
         if (feat_p->m_locations.size() == 1) {
           this->m_repeats.push_back(feat_p);
@@ -754,7 +754,7 @@ namespace breseq {
                );
         }
       }
-      else if ( ((*feat_p)["type"] == "CDS") || ((*feat_p)["type"] == "tRNA") || ((*feat_p)["type"] == "rRNA") || ((*feat_p)["type"] == "RNA") || ((*feat_p)["type"] == "ncRNA") )
+      else if ( feat_p->is_gene() )
       {
         this->m_genes.push_back(feat_p);
         this->m_gene_locations.insert(this->m_gene_locations.end(), feat_p->m_locations.begin(), feat_p->m_locations.end());
