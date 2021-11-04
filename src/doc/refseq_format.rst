@@ -16,4 +16,10 @@ For all sequence formats:
 Feature Annotations
 ----------------------------
 
-|breseq| is able to more accurately predict the locations of transposon insertions if these elements are annotated in the reference genome. They must have a feature type of ``repeat_region`` or ``mobile_element``.
+|breseq| is able to more accurately predict the locations of transposon insertions if these elements are annotated in the reference genome. They must have a feature type of ``repeat_region`` or ``mobile_element`` to be recognized.
+
+
+Gene Annotations
+----------------------------
+
+|breseq| recognizes the following types of features: ``CDS``, ``rRNA``, ``tRNA``, ``ncRNA``, and ``RNA``. Features marked only with a ``gene`` field are not used on their own because it cannot be determined whether they encode a protein or are noncoding. Any information they For ``CDS``
