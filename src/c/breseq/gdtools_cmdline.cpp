@@ -149,8 +149,8 @@ int do_union(int argc, char *argv[])
 
   uout("Reading input GD files") << endl;
 	
-	cGenomeDiff gd1;
-  for(int32_t i = 0; i < options.getArgc(); ++i) {
+	cGenomeDiff gd1(options.getArgv(0));
+  for(int32_t i = 1; i < options.getArgc(); ++i) {
     uout << options.getArgv(i) << endl;
     cGenomeDiff gd2(options.getArgv(i));
     gd1.set_union(gd2, options.count("evidence"), options.count("phylogeny-aware"), options.count("verbose"));
