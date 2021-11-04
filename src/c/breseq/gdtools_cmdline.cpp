@@ -1440,17 +1440,18 @@ int do_phylogeny(int argc, char* argv[])
 	
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
 	options("verbose,v", "produce output for each mutation counted.", TAKES_NO_ARGUMENT);
-	options("output,o", "path to output file with added mutation data.", ".");
+	options("output,o", "base name for output files.", "phylogeny");
 	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
 	//options("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT);
 	options("missing-as-ancestral,a", "Count missing data (mutations in UN regions) as the ancestral allele rather than as an unknown allele (N).", TAKES_NO_ARGUMENT);
 	options("phylogeny-aware,p", "Check the optional 'phylogeny_id' field when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
-	
+	options("dnapars-command,c", "Command to run for phylip 'dnapars' executable. It can include a path or just the command if the executable is located in your $PATH (Default: try 'phylip dnapars' and then 'dnapars')");
+
 	options.addUsage("");
 	options.addUsage("Uses PHYLIP to construct a phylogentic tree. If you are including an ancestor");
 	options.addUsageSameLine("to root the tree, you should include it as the very first Genome Diff file.");
 	options.addUsage("");
-	options.addUsage("You MUST have 'dnapars' from PHYLIP installed and in your path to use this commend.");
+	options.addUsage("You MUST have PHYLIP installed in your $PATH such that executing 'phylip dnapars' or 'dnapars' will run this command. If you have it installed in a different way, try using the --dnapars-command to specify the executable (and if necessary, also the dnapars subcommand).");
 
 	options.processCommandArgs(argc, argv);
 	
@@ -1523,10 +1524,10 @@ int do_phylogeny(int argc, char* argv[])
 	//uout("Annotating mutations");
 	//ref_seq_info.annotate_mutations(gd, true);
 	
-	string phylip_input_file_name = output_base_name + ".phylip";
+	string phylip_input_file_name = output_base_name + ".genotypes.txt";
 	uout("Writing output PHYLIP alignment file", phylip_input_file_name);
 	gd.write_genotype_sequence_file("PHYLIP", phylip_input_file_name, gd, gd_list, ref_seq_info, options.count("missing-as-ancestral"));
-	string phylip_script_file_name = output_base_name + ".phylip.commands";
+	string phylip_script_file_name = output_base_name + ".phylip.commands.txt";
 	ofstream phylip_script(phylip_script_file_name.c_str());
 	phylip_script << phylip_input_file_name << endl;
 	phylip_script << "V" << endl; // print only one tree!
@@ -1537,8 +1538,32 @@ int do_phylogeny(int argc, char* argv[])
 	if (file_exists("outtree")) remove_file("outtree");
 	if (file_exists("outfile")) remove_file("outfile");
 	
-	uout("Running DNAPARS from", phylip_input_file_name);
-	SYSTEM("dnapars < " + phylip_script_file_name, false, false, false);
+	// Figure out what executable works or is specified for dnapars
+	string dnapars_command;
+	if (options.count("dnapars-command")) {
+		dnapars_command = options["dnapars-command"];
+		uout("DNAPARS command specified as: ", dnapars_command);
+	} else {
+		// See if `phylip` is installed
+		dnapars_command = SYSTEM_CAPTURE("which phylip", true);
+		if (dnapars_command.size() > 0) {
+			// Need to add the subcommand here
+			dnapars_command += " dnapars";
+		}
+		else {
+			// See if `dnapars` is installed
+			dnapars_command = SYSTEM_CAPTURE("which dnapars", true);
+		}
+		// Didn't find one? Bail
+		if (dnapars_command.size() == 0) {
+			ERROR("Could not find 'phylip' or 'dnapars' command in $PATH");
+		}
+		
+		uout("DNAPARS command found as: ", dnapars_command);
+	}
+	
+	uout("Running DNAPARS on", phylip_input_file_name);
+	SYSTEM(dnapars_command + " < " + phylip_script_file_name, false, false, false);
 	
 	string phylip_original_tree_file_name = "outtree";
 	string phylip_renamed_tree_file_name = output_base_name + ".tre";
@@ -1560,15 +1585,20 @@ int do_phylogeny(int argc, char* argv[])
 	}
 	renamed_tree << slurped_file;
 	
-	string phylip_original_tree_save_file_name = output_base_name + ".original.phylip.tre";
-	string phylip_output_file_name = output_base_name + ".phylip.output";
-	SYSTEM("mv outtree " + phylip_original_tree_save_file_name);
+	string phylip_output_file_name = output_base_name + ".phylip.output.txt";
+	
+	// Changed to deleting the original tree with placeholder names
+	SYSTEM("rm outtree");
+	//string phylip_original_tree_save_file_name = output_base_name + ".original.phylip.tre";
+	//SYSTEM("mv outtree " + phylip_original_tree_save_file_name);
+	
+	// Keep the phylip output though
 	SYSTEM("mv outfile " + phylip_output_file_name);
 	
 	// Create mutation key file
 	uout("Creating mutation key file");
 
-	string mutation_key_file_name = phylip_input_file_name + ".mutation.key";
+	string mutation_key_file_name = output_base_name + ".mutation.key.txt";
 	ofstream mutation_key(mutation_key_file_name.c_str());
 	diff_entry_list_t mut_list = gd.mutation_list();
 	uint32_t i=0;
@@ -1578,11 +1608,18 @@ int do_phylogeny(int argc, char* argv[])
 	}
 	
 	// Create sample key file
-	string sample_key_file_name = phylip_input_file_name + ".sample.key";
+	string sample_key_file_name = output_base_name + ".sample.key.txt";
 	ofstream sample_key(sample_key_file_name.c_str());
 	i=1;
+	
+	set<string> used_names;
+	
 	for(vector<string>::iterator it = title_list.begin(); it != title_list.end(); it++) {
-			sample_key << "_" + to_string<uint32_t>(i++) + "_" << "\t" << *it << endl;
+		if (used_names.count(*it)) {
+			WARN("Tree will have duplicate taxon names due to repeated GD title: " + *it);
+		}
+		used_names.insert(*it);
+		sample_key << "_" + to_string<uint32_t>(i++) + "_" << "\t" << *it << endl;
 	}
 	
 	return 0;
