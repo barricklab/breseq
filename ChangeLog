@@ -1,3 +1,7 @@
+Version 0.36.1
+  * Fixed gdtools MERGE not preserving header information from first GD file.
+  * Fixed treatment of UNDEFINED by gdtools FILTER/REMOVE to allow matches to != UNDEFINED.
+
 Version 0.36.0
   * Fixed an issue causing JC evidence to not save info in annotated GD files.
   * Fixed a crash when annotating GD files containing INV mutations.

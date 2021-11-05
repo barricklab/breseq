@@ -1862,7 +1862,7 @@ int do_remove_gd(int argc, char* argv[])
 	options.addUsage("");
 	options.addUsage("Operators recognized in conditions are: ==, >, >=, >, <=, !=.");
 	options.addUsage("");
-	options.addUsage("Use the special value UNDEFINED to match that a field does not exist for the given entry. UNDEFINED fields always evaluate to false in comparisons if any value exists.");
+	options.addUsage("Use the special value UNDEFINED to match that a field does not exist for the given entry.");
 	options.addUsage("");
   options.addUsage("Use the special field ASSIGNED to filter evidence entries based on whether any mutation references them in the parent-id field. This field has a value of 0 (for false) or 1 (for true)");
 	options.addUsage("");
