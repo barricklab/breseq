@@ -2008,11 +2008,16 @@ int do_remove_gd(int argc, char* argv[])
 				test_string = to_string(de._type);
 			}
 			
-			// Undefined only matches undefined
+			// UNDEFINED only works with == and !=
 			if (test_string == "UNDEFINED") {
-				if (value=="UNDEFINED") {
-						is_filtered = true;
-				}
+				switch(eval)
+				{
+					case 0: if (test_string == value) is_filtered = true; break;
+					case 1: if (test_string != value) is_filtered = true; break;
+					
+					default:
+						ERROR("UNDEFINED can only be used with the == and !- comparison operators");
+				};
 			}
 			// Numeric
 			else if (value.find_first_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") == string::npos) {
