@@ -1,4 +1,6 @@
 Version 0.36.1
+  * breseq will no longer throw a fatal error if read files that have the same name
+    but are located at different paths are input.
   * Fixed gdtools MERGE not preserving header information from first GD file.
   * Fixed treatment of UNDEFINED by gdtools FILTER/REMOVE to allow matches to != UNDEFINED.
 

@@ -52,11 +52,23 @@ namespace breseq
 		uint32_t on_error_group = 0;
 		uint32_t on_paired_end_group = 0;
 
+    //keep track of duplicates
+    set<string> used_base_names;  // just filename base
+    set<string> used_original_names;  // complete path
+
 		for (vector<string>::const_iterator it = read_file_names.begin(); it < read_file_names.end(); it++)
 		{
 			cReadFile rf;
 			rf.m_original_file_name = *it;
-
+      
+      // Check for exact duplicate paths, all but the first will be skipped with errors.
+      if (used_original_names.find(rf.m_original_file_name) != used_original_names.end()) {
+        WARN("Duplicate read file path provided: " + rf.m_original_file_name + "\nThis file will only be used as input once.");
+        continue;
+      }
+        
+      used_original_names.insert(rf.m_original_file_name);
+      
 			rf.m_paired_end_group = on_paired_end_group++;
 			rf.m_error_group = on_error_group++;
 			rf.m_id = on_id++;
@@ -79,11 +91,24 @@ namespace breseq
         if ((pos != string::npos) && (pos == rf.m_base_name.size() - 4))
           rf.m_base_name.erase(pos, 4);
       }
+      
+      // This code gives a new base name when there are two files that have the exact same
+      // filename but are in different directories. Ex: path1/fastq1.gz and path2/fastq1.gz
+      string original_base_name = rf.m_base_name;
+      uint32_t duplicate_index = 0;
+      while ( used_base_names.find(rf.m_base_name) != used_base_names.end()) {
+        duplicate_index++;
+        rf.m_base_name = original_base_name + "_" + to_string(duplicate_index);
+      }
+      
+      // Warn if there is a duplicate so they know what the new name means.
+      if (rf.m_base_name != original_base_name) {
+        WARN("Duplicate read base file name will be renamed in breseq output as follows:\n" + original_base_name + " => " + rf.m_base_name);
+      }
+      
+      used_base_names.insert(rf.m_base_name);
 			
       // set up the map for converting base names to fastq file names to be used
-      // check to see whether this is a duplicate
-      ASSERT(read_file_to_fastq_file_name_map[rf.m_base_name].size() == 0, 
-              "The same read file was provided multiple times:\n1) " + read_file_to_fastq_file_name_map[rf.m_base_name] + "\n2) " + rf.m_original_file_name);
       read_file_to_fastq_file_name_map[rf.m_base_name] = rf.m_original_file_name;
       
 			this->push_back(rf);
