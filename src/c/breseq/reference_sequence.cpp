@@ -2022,14 +2022,15 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
         
         // Special checks to use length from source feature!
         // Use it with no further message if LOCUS is missing a length
-        // Report a discrepancy if they both have lengths
+        // Report a discrepancy if they both have lengths and use the LOCUS length
+        // Why? This is the one that is correct .
         if (to_upper((*current_feature)["type"]) == "SOURCE") {
           int32_t source_end_position = current_feature->m_locations.front().get_end_1();
           if (s.m_length==0) {
             s.m_length = source_end_position;
           } else if (source_end_position != s.m_length) {
-            WARN("Length assigned to sequence '" + s.m_seq_id + "' from LOCUS line (" + to_string(s.m_length) + ") does not match length from source feature (" + to_string(source_end_position) + "). Length of source feature will be used.")
-            s.m_length = source_end_position;
+            WARN("Length assigned to sequence '" + s.m_seq_id + "' from LOCUS line (" + to_string(s.m_length) + ") does not match length from source feature (" + to_string(source_end_position) + "). Length from LOCUS line will be used. If you encounter further errors, make sure this length matches the true length of your sequence.")
+            //s.m_length = source_end_position; <= old code that assigns source feature length
           }
         }
       }

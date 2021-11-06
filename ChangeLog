@@ -1,4 +1,7 @@
 Version 0.36.1
+  * When loading GenBank files that have a LOCUS line and source feature with different
+    lengths, the LOCUS line length is now used to improve compatibility with sequences
+    that have been edited in programs that do not update the source feature.
   * breseq will no longer throw a fatal error if read files that have the same name
     but are located at different paths are input.
   * Fixed gdtools MERGE not preserving header information from first GD file.
