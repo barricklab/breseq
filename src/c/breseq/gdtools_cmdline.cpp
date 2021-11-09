@@ -1027,19 +1027,28 @@ int do_not_evidence(int argc, char *argv[])
 }
 
 
-void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list, vector<string>& gd_path_names, vector<string>& gd_titles, cReferenceSequences& ref_seq_info, bool strip_to_mutations_and_unknown, bool& polymorphisms_found, bool compare_mode, AnyOption& options, UserOutput& uout)
+// How does polymorphism_search_found work?
+//   If it is NULL then nothing happens and compare_mode is honored
+//   If it is not null then it retursn TRUE/FALSE whether polymorphisms were found and swtiches the output to compare mode
+//      if there is only one file provided but it has polymorphisms. This is only needed for HTML output!
+void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list, vector<string>& gd_path_names, vector<string>& gd_titles, cReferenceSequences& ref_seq_info, bool strip_to_mutations_and_unknown, bool* polymorphism_search_found, bool compare_mode, AnyOption& options, UserOutput& uout)
 {
-	polymorphisms_found = false; // handled putting in the polymorphism column if only one file provided
+	
+	if (polymorphism_search_found != NULL) {
+		*polymorphism_search_found = false; // handles putting in the polymorphism column if only one file provided
+	}
+	
 	for (uint32_t i = 0; i < gd_path_names.size(); i++) {
 		uout("Reading input GD file",gd_path_names[i]);
 		cGenomeDiff single_gd(gd_path_names[i]);
 		
-		if (!compare_mode && (i==0)) {
+		// This allows a switch to compare mode so the correct columns are present if polymorphisms are found so they can be displayed properly in HTML
+		if ((polymorphism_search_found != NULL) && !compare_mode && (i==0)) {
 			diff_entry_list_t muts = single_gd.mutation_list();
 			for(diff_entry_list_t::iterator it=muts.begin(); it != muts.end(); it++) {
 				cDiffEntry de = **it;
 				if (de.count(FREQUENCY) && from_string<double>(de[FREQUENCY]) != 1.0) {
-					polymorphisms_found = true;
+					*polymorphism_search_found = true;
 					break;
 				}
 			}
@@ -1079,7 +1088,7 @@ void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list,
 	cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
 
 	// Then add frequency columns for all genome diffs
-	if (compare_mode || polymorphisms_found) {
+	if (compare_mode || ( (polymorphism_search_found != NULL) && (*polymorphism_search_found) ) ) {
 		uout("Tabulating frequencies of mutations across all files");
 		cGenomeDiff::tabulate_mutation_frequencies_from_multiple_gds(gd, gd_list, gd_titles, options.count("phylogeny-aware"));
 	}
@@ -1224,11 +1233,11 @@ int do_annotate(int argc, char* argv[])
 	cGenomeDiff gd;
 	vector<cGenomeDiff> gd_list;
 	vector<string> gd_titles;
-	bool polymorphisms_found(false);
+	bool polymorphism_search_found(false);
 	
   if (output_format == "HTML") {
 		
-		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, polymorphisms_found, compare_mode, options, uout);
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, &polymorphism_search_found, compare_mode, options, uout);
 
 		uout("Annotating mutations");
 		ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"), compare_mode);
@@ -1242,7 +1251,7 @@ int do_annotate(int argc, char* argv[])
     MutationTableOptions mt_options(settings);
     if (compare_mode)
       mt_options.repeat_header = true;
-    if (polymorphisms_found)
+    if (polymorphism_search_found)
       mt_options.force_frequencies_for_one_reference = true;
     mt_options.one_ref_seq = ref_seq_info.size() == 1;
     mt_options.gd_name_list_ref = gd_titles;
@@ -1252,8 +1261,8 @@ int do_annotate(int argc, char* argv[])
         
   } else if (output_format == "GD") {
 		
-		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, !options.count("preserve-evidence"), polymorphisms_found, compare_mode, options, uout);
-		
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, !options.count("preserve-evidence"), NULL, compare_mode, options, uout);
+				
 		uout("Annotating mutations");
 		ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"), compare_mode);
 		
@@ -1287,20 +1296,20 @@ int do_annotate(int argc, char* argv[])
   } else if (output_format == "PHYLIP") {
 		uout("Writing output PHYLIP alignment file", options["output"]);
 		
-		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, polymorphisms_found, compare_mode, options, uout);
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, NULL, compare_mode, options, uout);
 		gd.write_genotype_sequence_file("PHYLIP", output_file_name, gd, gd_list, ref_seq_info);
 		
 	} else if (output_format == "FASTA") {
 		uout("Writing output PHYLIP alignment file", options["output"]);
 	
-		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, polymorphisms_found, compare_mode, options, uout);
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, NULL, compare_mode, options, uout);
 		gd.write_genotype_sequence_file("FASTA", output_file_name, gd, gd_list, ref_seq_info);
 		
 	} else if (output_format == "TABLE") {
 
 		// Force compare mode
 		compare_mode = true;
-		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, polymorphisms_found, compare_mode, options, uout);
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, NULL, compare_mode, options, uout);
 
 		// Remove evidence
 		gd.remove_group(cGenomeDiff::EVIDENCE);
@@ -1341,7 +1350,7 @@ int do_annotate(int argc, char* argv[])
 	} else if (output_format == "JSON") {
 		uout("Writing output JSON file", options["output"]);
 		
-		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, !options.count("preserve-evidence"), polymorphisms_found, compare_mode, options, uout);
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, !options.count("preserve-evidence"), NULL, compare_mode, options, uout);
 		
 		uout("Annotating mutations");
 		ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"), compare_mode);
