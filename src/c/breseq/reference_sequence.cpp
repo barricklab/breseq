@@ -825,6 +825,9 @@ namespace breseq {
     
     // Finally, update feature lists
     this->update_feature_lists();
+    
+    // Check CDS lengths. Must be done after feature lists are updated
+    this->VerifyCDSLengthsAreValid();
   }
   
   
@@ -931,6 +934,31 @@ namespace breseq {
     }
     if (Error) ERROR(ss.str());
     if (this->empty()) ERROR("Reference files were not loaded");
+  }
+
+  // Warns about CDS features with out-of-frame lengths, consolidated into one message
+  void cReferenceSequences::VerifyCDSLengthsAreValid()
+  {
+    vector<string> invalid_CDS_names;
+    for (vector<cAnnotatedSequence>::iterator itr= this->begin(); itr != this->end(); itr++) {
+      cAnnotatedSequence& as = *itr;
+      
+      for (cSequenceFeatureList::iterator itg = as.m_genes.begin(); itg != as.m_genes.end(); itg++ ) {
+        cGeneFeature gf =  cGeneFeature(*(itg->get()));
+        
+        // Only check CDS features that do not have indeterminate ends
+        if ((gf.type == "CDS") && (!gf.m_start_is_indeterminate) && (!gf.m_end_is_indeterminate) ) {
+          string nt_seq = gf.get_nucleotide_sequence(as);
+          if (nt_seq.size() % 3 != 0) {
+            invalid_CDS_names.push_back(gf.get_locus_tag() + " (" + gf.name + ")");
+          }
+        }
+      }
+    }
+    
+    if (invalid_CDS_names.size()>0) {
+      WARN("CDS feature(s) found with nucleotide length that are not a multiple of 3:\n" + join(invalid_CDS_names, ", ") + "\n\nTranslations of mutations in these genes may be incorrect.\nIt is recommended that you fix these feature annotations in your reference file!");
+    }
   }
 
   void cReferenceSequences::ReadFASTA(const string &file_name) {
@@ -2991,7 +3019,7 @@ void cReferenceSequences::annotate_1_mutation_in_genes(cDiffEntry& mut, vector<c
       
     } else {
       
-      // These genes should be marked pseudo, so this should
+      // These genes should be marked pseudo, so this should never be triggered
       ASSERT(!(gene.start_is_indeterminate() && gene.end_is_indeterminate()), "Attempt to translate CDS with indeterminate start and end coordinates: " + gene["locus_tag"]);
       
       // Special additions for RA so that they can use the common code...
@@ -3045,22 +3073,28 @@ void cReferenceSequences::annotate_1_mutation_in_genes(cDiffEntry& mut, vector<c
       codon_number = to_string<int32_t>(mutated_codon_number_1);
       aa_position = to_string<int32_t>(mutated_codon_number_1);
       
-      aa_ref_seq = translate_codon(codon_ref_seq, gene.translation_table, ( gene.start_is_indeterminate() && (mutated_codon_number_1 == 1) ) ? 2 : mutated_codon_number_1, gene.get_locus_tag());
-      
-      // Generate mutated sequence
-      codon_new_seq = codon_ref_seq;
-      //#remember to revcom the change if gene is on opposite strand
-      codon_new_seq[mutated_codon_pos_1 - 1] = (mutated_strand == 1) ? mut[NEW_SEQ][0] : reverse_complement(mut[NEW_SEQ])[0];
-      aa_new_seq = translate_codon(codon_new_seq, gene.translation_table, ( gene.start_is_indeterminate() && (mutated_codon_number_1 == 1) ) ? 2 : mutated_codon_number_1, gene.get_locus_tag());
-      transl_table = to_string(gene.translation_table);
-      
-      if ((aa_ref_seq != "*") && (aa_new_seq == "*"))
-        snp_type = "nonsense";
-      else if (aa_ref_seq != aa_new_seq)
-        snp_type = "nonsynonymous";
-      else
-        snp_type = "synonymous";
-      
+      if (codon_ref_seq.size() != 3) {
+      //>> Deal with the edge case of a mutation happening in the broken part of a truncated reading frame!!
+        WARN("Mutation in last codon of CDS feature with nucleotide length that is not a multiple of 3: " + gene.get_locus_tag() + " (" + gene.name + ").\nMutation is given no snp_type and will appear as a generic coding mutation.\nIt is recommended that you fix this feature annotation in your reference file!");
+        gene_position = "coding (" + gene_position + "/" + gene_nt_size + " nt)";
+      } else {
+      //>> Case of normal codon!
+        aa_ref_seq = translate_codon(codon_ref_seq, gene.translation_table, ( gene.start_is_indeterminate() && (mutated_codon_number_1 == 1) ) ? 2 : mutated_codon_number_1, gene.get_locus_tag());
+        
+        // Generate mutated sequence
+        codon_new_seq = codon_ref_seq;
+        //#remember to revcom the change if gene is on opposite strand
+        codon_new_seq[mutated_codon_pos_1 - 1] = (mutated_strand == 1) ? mut[NEW_SEQ][0] : reverse_complement(mut[NEW_SEQ])[0];
+        aa_new_seq = translate_codon(codon_new_seq, gene.translation_table, ( gene.start_is_indeterminate() && (mutated_codon_number_1 == 1) ) ? 2 : mutated_codon_number_1, gene.get_locus_tag());
+        transl_table = to_string(gene.translation_table);
+        
+        if ((aa_ref_seq != "*") && (aa_new_seq == "*"))
+          snp_type = "nonsense";
+        else if (aa_ref_seq != aa_new_seq)
+          snp_type = "nonsynonymous";
+        else
+          snp_type = "synonymous";
+      }
     }
     
     codon_position_is_indeterminate_list.push_back(codon_position_is_indeterminate);

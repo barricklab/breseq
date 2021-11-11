@@ -888,6 +888,7 @@ public:
     
     //!< Verify that all seq_id have sequence and that features fit in sequence;
     void VerifySequenceFeatureMatch();
+    void VerifyCDSLengthsAreValid();
     bool Initialized() {return m_initialized;}
     
     void ReadFASTA(const std::string &file_name);
