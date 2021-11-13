@@ -1,7 +1,11 @@
 Version 0.36.1
+  * Added an appendix to the manual on how reference sequence files are loaded/used.
   * When loading GenBank files that have a LOCUS line and source feature with different
     lengths, the LOCUS line length is now used to improve compatibility with sequences
     that have been edited in programs that do not update the source feature.
+  * Added a warning when CDS features with lengths that are not a multiple of 3 are loaded
+    with a suggestion to change these to pseudogenes. Changed a fatal error when annotating a
+    mutation in an incomplete final codon in one of these CDS features to a warning and generic coding mutation.
   * breseq will no longer throw a fatal error if read files that have the same name
     but are located at different paths are input.
   * Fixed gdtools MERGE not preserving header information from first GD file.

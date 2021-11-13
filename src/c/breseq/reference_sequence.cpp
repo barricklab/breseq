@@ -947,7 +947,7 @@ namespace breseq {
         cGeneFeature gf =  cGeneFeature(*(itg->get()));
         
         // Only check CDS features that do not have indeterminate ends
-        if ((gf.type == "CDS") && (!gf.m_start_is_indeterminate) && (!gf.m_end_is_indeterminate) ) {
+        if ((gf.type == "CDS") && (!gf.pseudogene) && (!gf.m_start_is_indeterminate) && (!gf.m_end_is_indeterminate) ) {
           string nt_seq = gf.get_nucleotide_sequence(as);
           if (nt_seq.size() % 3 != 0) {
             invalid_CDS_names.push_back(gf.get_locus_tag() + " (" + gf.name + ")");
@@ -957,7 +957,7 @@ namespace breseq {
     }
     
     if (invalid_CDS_names.size()>0) {
-      WARN("CDS feature(s) found with nucleotide length that are not a multiple of 3:\n" + join(invalid_CDS_names, ", ") + "\n\nTranslations of mutations in these genes may be incorrect.\nIt is recommended that you fix these feature annotations in your reference file!");
+      WARN("CDS feature(s) found with nucleotide length(s) that are not a multiple of 3:\n" + join(invalid_CDS_names, ", ") + "\n\nTranslations of mutations in these genes may be incorrect.\nIt is recommended that you fix these feature annotations in your reference file!\nAnother solution is to mark them as pseudogenes:\n  GenBank: add as '/pseudo' as a new line within the CDS feature\n  GFF3: add 'Pseudo=true' to the semicolon-separated list at the end of the CDS line.");
     }
   }
 
