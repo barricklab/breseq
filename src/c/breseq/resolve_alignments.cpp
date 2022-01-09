@@ -1519,7 +1519,7 @@ void resolve_junction(
           alignments.read_base_quality_char_string_reversed = repeat_match.junction_alignments.read_base_quality_char_string_reversed;
 
           alignments.push_back(matched_alignment);
-          resolved_junction_tam.write_alignments(fastq_file_index, alignments, NULL, &ref_seq_info, true);
+          resolved_junction_tam.write_alignments(fastq_file_index, alignments, NULL, &junction_ref_seq_info, true);
         }
 			}
 		}

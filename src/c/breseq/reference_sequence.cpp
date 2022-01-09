@@ -4202,14 +4202,14 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
   uint32_t read_seq_index = 0;
   vector<pair<char,uint16_t> > cigar_pair_array = a.cigar_pair_char_op_array();
 
-  if (verbose)
-  {
+  // For debugging
+  //if (a.read_name() == "1:279916") {
+  //  cout << "debug" << endl;
+  //  verbose = true;
+  //}
+      
+  if (verbose) {
     cout << a.read_name() << endl;
-
-    //if (a.read_name() == "GW1ULQG02EIUY7")
-    //{
-    //  cout << "debug" << endl;
-    //}
     cout << a.cigar_string() << endl;
   }
 
@@ -4250,6 +4250,7 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
         }
 
         ref_seq_index += len + shift_amount;
+        read_seq_index += shift_amount;  //does not include the length of the deletion
       }
       else
       {
@@ -4288,6 +4289,7 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
         }
 
         read_seq_index += len + shift_amount;
+        ref_seq_index += shift_amount;  //does not include the length of the insertion
       }
       else
       {

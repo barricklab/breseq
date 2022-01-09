@@ -721,11 +721,11 @@ void tam_file::write_alignments(
 		string cigar_string;
     
     // Fix the cigar string by shifting gaps if asked for!
-    //if (ref_seq_info_ptr && shift_gaps) {
-    //  cigar_string =  shifted_cigar_string(a, *ref_seq_info_ptr);
-    //} else {
-    cigar_string = a.cigar_string();
-    //}
+    if (ref_seq_info_ptr && shift_gaps) {
+      cigar_string =  shifted_cigar_string(a, *ref_seq_info_ptr);
+    } else {
+      cigar_string = a.cigar_string();
+    }
     
 
 		vector<string> ll;
