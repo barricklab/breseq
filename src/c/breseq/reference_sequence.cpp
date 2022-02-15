@@ -4230,6 +4230,9 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
         uint16_t shift_amount = 0;
         while (ref_seq[ref_seq_index + len + shift_amount] == base)
           shift_amount++;
+        
+        // Cap amount at length of next CIGAR feature so we don't get a negative length after adjusting (zero length is OK)
+        shift_amount = min(shift_amount, (it + 1)->second);
 
         if (shift_amount > 0)
         {
@@ -4243,6 +4246,8 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
           else
             cigar_pair_array.insert(it, make_pair('M', shift_amount));
 
+          // Don't shift more than the length of the next CIGAR item!!
+          
           if (it != cigar_pair_array.end())
             (it + 1)->second -= shift_amount;
           else
@@ -4269,6 +4274,9 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
         uint16_t shift_amount = 0;
         while (read_seq[read_seq_index + len + shift_amount] == base)
           shift_amount++;
+        
+        // Cap amount at length of next CIGAR feature so we don't get a negative length after adjusting (zero length is OK)
+        shift_amount = min(shift_amount, (it + 1)->second);
 
         if (shift_amount > 0)
         {

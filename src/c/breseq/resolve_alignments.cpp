@@ -527,7 +527,7 @@ void resolve_alignments(
     
     
     // If both are on a junction-only sequence then don't count it -- EVEN IF USER DEFINED
-    // This is purposefull after re-accepting user_defined junctions
+    // This is purposeful after re-accepting user_defined junctions
     if ( settings.junction_only_seq_id_set().count(junction_info.sides[0].seq_id) && settings.junction_only_seq_id_set().count(junction_info.sides[1].seq_id) ) {
       junction_test_info.reject_reasons.push_back("BETWEEN_TWO_JUNCTION_ONLY_SEQUENCES");
     }
