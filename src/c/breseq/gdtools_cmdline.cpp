@@ -2825,7 +2825,7 @@ int do_runfile(int argc, char *argv[])
   ss << "Usage: gdtools RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> <file1.gd file2.gd file3.gd ...>";
   AnyOption options(ss.str());
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("mode,m",           "Type of command file to generate. Valid options are: breseq, breseq-apply, trimmomatic, trimmomatic-PE-unique, read-count.", "breseq");
+  options("mode,m",           "Type of command file to generate. Valid options are: breseq, breseq-merged, breseq-apply, trimmomatic, trimmomatic-PE-unique, fastp, fastp-PE-merge, read-count.", "breseq");
   options("executable,e",     "Alternative executable program to run.");
   options("options",          "Options to be passed to the executable. These will appear first in the command line.");
 	options("runfile,r",        "Name of the run file to be output.", "commands");
@@ -2887,12 +2887,22 @@ int do_runfile(int argc, char *argv[])
   }
 	
   //! Check mode and alter defaults if needed
+	//!
+	
+	// Used for breseq
+	bool merged_reads = false;
+	
+	if (options["mode"] == "breseq-merged") {
+		merged_reads = true;
+	}
+	
+	
   string exe;
 	string runfile_path;
 	string output_dir;
 	string log_dir;
 	string download_dir;
-	if (options["mode"] == "breseq") {
+	if ( (options["mode"] == "breseq") || (options["mode"] == "breseq-merged") ) {
     exe = "breseq";
 		runfile_path = "commands";
 		output_dir = "03_Output";
@@ -2915,6 +2925,16 @@ int do_runfile(int argc, char *argv[])
 	} else if (options["mode"] == "trimmomatic-PE-unique") {
 		exe = "trimmomatic";
 		runfile_path = "trimmomatic_commands";
+		output_dir = "02_Trimmed";
+		log_dir = "04_Trim_Logs";
+	} else if (options["mode"] == "fastp") {
+		exe = "fastp";
+		runfile_path = "fastp_commands";
+		output_dir = "02_Trimmed";
+		log_dir = "04_Trim_Logs";
+	} else if (options["mode"] == "fastp-PE-merge") {
+		exe = "fastp";
+		runfile_path = "fastp_commands";
 		output_dir = "02_Trimmed";
 		log_dir = "04_Trim_Logs";
   } else if (options["mode"] == "flexbar-paired") {
@@ -2999,8 +3019,7 @@ int do_runfile(int argc, char *argv[])
       continue;  
     }
   
-
-    if (options["mode"] == "breseq") {  
+    if ( (options["mode"] == "breseq") || (options["mode"] == "breseq-merged") ) {
 			
       //! Step: Begin building command line.
       stringstream ss;
@@ -3058,14 +3077,26 @@ int do_runfile(int argc, char *argv[])
 				
 			} else {
 			
-			// Normal case
-			for (vector<string>::const_iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {
-				
-					// Handles zipped or unzipped
-					if (file_exists( cString(download_dir + "/" + cString(*read_file_it).get_base_name_unzipped()).c_str() )) {
-						ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
-					} else {
-						ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name();
+				if (merged_reads) {
+					for (vector<vector<string> >::const_iterator read_pair_it=reads_by_pair.begin(); read_pair_it != reads_by_pair.end(); read_pair_it++) {
+						
+						if (file_exists( cString(download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped()).c_str() )) {
+							ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + ".fastq";
+						} else {
+							ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + ".fastq.gz";
+						}
+
+					}
+				} else {
+				// Normal case
+				for (vector<string>::const_iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {
+					
+						// Handles zipped or unzipped
+						if (file_exists( cString(download_dir + "/" + cString(*read_file_it).get_base_name_unzipped()).c_str() )) {
+							ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
+						} else {
+							ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name();
+						}
 					}
 				}
 			}
@@ -3289,6 +3320,95 @@ int do_runfile(int argc, char *argv[])
 					}
 				}
 				
+				
+				//! Step: Output to file.
+				cout << ss.str() << endl;
+				runfile << ss.str() << endl;
+				++n_cmds;
+			}
+		
+		}  else if (options["mode"] == "fastp") {
+			
+			// For each read file trim with requested adaptor...
+			for (vector<string>::const_iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {
+				//! Step: Begin building command line.
+				stringstream ss;
+				
+				//! Part 1: Executable and options to pass to it if given by user.
+				ss << exe;
+				
+				//! Part 2: Options
+				if (options.count("options")) {
+					ss << " " << options["options"];
+				}
+				
+				//! Part 3: Read file name --- handles zipped or unzipped!
+				//! Part 4: Output read base name
+				
+				if (file_exists( cString(download_dir + "/" + cString(*read_file_it).get_base_name_unzipped()).c_str() )) {
+					ss << " -i " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
+					ss << " -o " << output_dir + "/" + cString(*read_file_it).get_base_name_unzipped();
+				} else {
+					ss << " -i " << download_dir << "/" << cString(*read_file_it).get_base_name();
+					ss << " -o " << output_dir + "/" + cString(*read_file_it).get_base_name();
+				}
+				
+				//! Part 5: Trimming commands
+				
+				// Nothing needed for fastp
+				
+				//! Part 6: Error log path.
+				ss << " >& " << log_dir << "/" << cString(*read_file_it).get_base_name_no_extension(true) << ".log";
+				
+				//! Step: Output to file.
+				cout << ss.str() << endl;
+				runfile << ss.str() << endl;
+				++n_cmds;
+			}
+			
+		} else if (options["mode"] == "fastp-PE-merge") {
+			
+			// Uses paired end merging and puts all reads in a single file.
+			
+			for (vector<vector<string> >::const_iterator read_pair_it=reads_by_pair.begin(); read_pair_it != reads_by_pair.end(); read_pair_it++) {
+				
+				ASSERT(read_pair_it->size() <= 2, "Must have exactly two read files for paired mode: " + join(*read_pair_it, ", "));
+				
+				
+				//! Step: Begin building command line.
+				stringstream ss;
+				
+				//! Part 1: Executable and options to pass to it if given by user.
+				ss << exe;
+				ss << " --merge --include_unmerged";
+				
+				//! Part 2: Options
+				if (options.count("options")) {
+					ss << " " << options["options"];
+				}
+				
+				//! Part 3: Read file name --- handles zipped or unzipped!
+				//! Part 4: Output read base name
+				
+				if (file_exists( cString(download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped()).c_str() )) {
+					ss << " -i " << download_dir << "/" << cString((*read_pair_it)[0]).get_base_name_unzipped();
+					ss << " -I " << download_dir << "/" << cString((*read_pair_it)[1]).get_base_name_unzipped();
+					
+					ss << " --merged_out " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + ".fastq";
+					
+				} else {
+					ss << " -i " << download_dir << "/" << cString((*read_pair_it)[0]).get_base_name();
+					ss << " -I " << download_dir << "/" << cString((*read_pair_it)[1]).get_base_name();
+					
+					ss << " --merged_out " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + ".fastq.gz";
+				}
+				
+				//! Part 5: Trimming commands
+				
+				// Not needed for fastp
+				
+				//! Part 6: Error log path.
+				ss << " >& " << log_dir << "/" << cString(gd.get_title()).get_base_name_no_extension(true) << ".log";
 				
 				//! Step: Output to file.
 				cout << ss.str() << endl;
