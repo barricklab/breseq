@@ -61,6 +61,8 @@ Replacement of the reference T at position 70,867 with a C inside the *araA* gen
 
 Replacement of the reference T at position 1,298,712 with a G in the intergenic region between the *ychE* and *oppA* genes. The mutation is downstream of *ychE* by 674 bases (because this gene is before it in position and on the top strand of the reference) and upstream of *oppA* by 64 bases (because this gene is after it in position and also on the top strand of the genome).
 
+For some single-base substitutions, you may see a special symbol next to the annotated amino acid change. A dagger (†) indicates that the mutation is in a start codon, so a special codon translation table is being used to determine the amino acid change. (For example, TTG initiates translation with a Met rather than the Leu that it usually codes for in bacteria.) A double-dagger (‡) indicates that another single-base substitution affects the same codon. In this case, the amino acid change shown will reflect the effects of both mutations on the codon.
+
 Multiple-base substitution (SUB)
 """"""""""""""""""""""""""""""""
 
