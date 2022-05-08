@@ -36,7 +36,6 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_MKDIR_P
-AC_PROG_LIBTOOL
 
 AX_COMPUTE_RELATIVE_PATHS([bindir:datadir:bin_to_data])
 AC_MSG_NOTICE([Local path from bin to data...])
