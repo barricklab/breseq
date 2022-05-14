@@ -7,6 +7,8 @@ $ ./configure
 $ make
 $ make test
 
+NOTE: The output of the consistency tests varies depending on different versions of bowtie2. When you run breseq it will suggest the recommended bowtie2 version for your breseq version if you are not already using it.
+
 === Mac XCode Compilation Instructions ===
 
 These instructions should work for XCode 3 or XCode 4.
@@ -29,7 +31,7 @@ With those two steps taken care of, breseq should compile. Most errors occur whe
 
 *** For XCode 4.1+ or on MacOS 10.7+ ***
 
-Under targets >> samtools >> info you may need to change the Arguments line from: 
+Under targets >> samtools >> info you may need to change the Arguments line from:
 
 -f Makefile.xcode CFLAGS="-arch $(NATIVE_ARCH)" $(ACTION)
 
@@ -42,7 +44,7 @@ to
 
 To run breseq with the XCode debugger, you must set the environmental variable PATH, within the "executable" or "scheme" options, include the locations where you have R and bowtie2 installed.  You can find these with the 'which' shell command. Then set up a new Environment Variable within XCode like this:
 
-PATH     /Users/myusername/local/bin:$PATH 
+PATH     /Users/myusername/local/bin:$PATH
 
 You may also want to set the working directory, and will definitely want to set the command line options (which are the same as the command you would type in the shell, but omitting the initial "breseq")
 

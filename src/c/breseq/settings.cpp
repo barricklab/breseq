@@ -1237,14 +1237,14 @@ namespace breseq
     else if ((from_string<uint64_t>(this->installed["bowtie2_version"]) == 2000003000)
              ||  (from_string<uint64_t>(this->installed["bowtie2_version"]) == 2000004000)) {
       good_to_go = false;
-      cerr << "---> ERROR \"bowtie2\" versions 2.0.3 and 2.0.4 are known to have bugs in" << endl;
+      cerr << "---> ERROR bowtie2 versions 2.0.3 and 2.0.4 are known to have bugs in" << endl;
       cerr << "---> ERROR SAM output that can cause breseq to crash. Please upgrade." << endl;
       cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
       cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
     }
     else if (from_string<uint64_t>(this->installed["bowtie2_version"]) < 2001000000) {
       good_to_go = true;
-      cerr << "---> WARNING \"bowtie2\" versions before 2.1.0 may produce output that varies slightly" << endl;
+      cerr << "---> WARNING bowtie2 versions before 2.1.0 may produce output that varies slightly" << endl;
       cerr << "---> WARNING from later versions. This may cause consistency tests to fail." << endl;
       cerr << "---> WARNING We strongly suggest that you update to bowtie2 2.1.0+." << endl;
       cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
@@ -1252,13 +1252,24 @@ namespace breseq
     }
     else if (from_string<uint64_t>(this->installed["bowtie2_version"]) == 2003001000) {
       good_to_go = false;
-      cerr << "---> ERROR \"bowtie2\" version 2.3.1 is known to have a major bug in SAM" << endl;
+      cerr << "---> ERROR bowtie2 version 2.3.1 is known to have a major bug in SAM" << endl;
       cerr << "---> ERROR output that will cause breseq to crash. Please upgrade/downgrade." << endl;
       cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
       cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
     }
-    else {
+    else if (from_string<uint64_t>(this->installed["bowtie2_version"]) == 2004005000) {
+      good_to_go = false;
+      cerr << "---> ERROR bowtie2 version 2.4.5 may produce SAM output that will cause" << endl;
+      cerr << "---> ERROR breseq to crash. Please upgrade/downgrade." << endl;
+      cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
+      cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
+    }
+    else 
       cerr << "---> bowtie2  :: version " << this->installed["bowtie2_version_string"] << " [" << this->installed["bowtie2"] << "]" << endl;
+      // WARN if preferred version is not used
+      if (from_string<uint64_t>(this->installed["bowtie2_version"]) != 2004004000) {
+        cerr << "---> bowtie2  :: WARNING breseq output may vary slightly depending on your bowtie2 version." << endl;
+        cerr << "---> bowtie2  :: WARNING bowtie2 version 2.4.4 is recommended with this version of breseq for consistency." << endl;
     }
     
 		// R version 2.1 required

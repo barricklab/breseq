@@ -6,8 +6,8 @@
 #=CONVERTED-READS	27063
 #=INPUT-BASES	974268
 #=INPUT-READS	27063
-#=MAPPED-BASES	968979
-#=MAPPED-READS	26924
+#=MAPPED-BASES	968197
+#=MAPPED-READS	26904
 DEL	1	3,6	REL606-5	10535	15342	gene_name=[ECB_00212]–[yafP]	gene_product=[ECB_00212],yhhI,yafV,ykfE,fadE,lpcA,yafJ,yafK,yafQ,dinJ,yafL,yafM,fhiA,mbhA,dinB,yafN,yafO,[yafP]	genes_inactivated=ECB_00212,yhhI,yafV,ykfE,fadE,lpcA,yafJ,yafK,yafQ,dinJ,yafL,yafM,fhiA,mbhA,dinB,yafN,yafO,yafP	locus_tag=[ECB_00212]–[ECB_00229]	locus_tags_inactivated=ECB_00212,ECB_00213,ECB_00214,ECB_00215,ECB_00216,ECB_00217,ECB_00218,ECB_00219,ECB_00220,ECB_00221,ECB_00222,ECB_00223,ECB_00224,ECB_00225,ECB_00226,ECB_00227,ECB_00228,ECB_00229	mediated=IS1	mutation_category=large_deletion	position_end=25876	position_start=10535	ref_seq=15342-bp
 DEL	2	4,7	REL606-5	28183	3119	gene_name=[pepD]–crl	gene_product=[pepD],gpt,yafA,crl	genes_inactivated=pepD,gpt,yafA,crl	locus_tag=[ECB_00232]–[ECB_00235]	locus_tags_inactivated=ECB_00232,ECB_00233,ECB_00234,ECB_00235	mediated=IS1	mutation_category=large_deletion	position_end=31301	position_start=28183	ref_seq=3119-bp
 MC	3	.	REL606-5	10226	25876	308	0	gene_name=[insB-2]–[yafP]	gene_product=[insB-2],ECB_00212,yhhI,yafV,ykfE,fadE,lpcA,yafJ,yafK,yafQ,dinJ,yafL,yafM,fhiA,mbhA,dinB,yafN,yafO,[yafP]	left_inside_cov=16	left_outside_cov=18	locus_tag=[ECB_00211]–[ECB_00229]	right_inside_cov=0	right_outside_cov=52
