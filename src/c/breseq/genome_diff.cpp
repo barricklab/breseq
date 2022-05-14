@@ -2581,7 +2581,7 @@ string cGenomeDiff::mob_replace_sequence(cReferenceSequences& ref_seq_info,
 // Finally, it will set bases added, bases changed, bases deleted in the GD header
 //
 void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose, int32_t slop_distance, int32_t size_cutoff_AMP_becomes_INS_DEL_mutation)
-{    
+{
   uint32_t count_SNP = 0, count_SUB = 0, count_INS = 0, count_DEL = 0, count_AMP = 0, count_INV = 0, count_MOB = 0, count_CON = 0, count_INT = 0, count_MASK = 0;
   uint32_t bases_inserted(0), bases_deleted(0), bases_changed(0);
   
@@ -2924,7 +2924,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         int32_t iDelStart = 0;
         int32_t iDelEnd = 0;
         int32_t iInsStart = 0;
-        int32_t iInsEnd = 0;        
+        int32_t iInsEnd = 0;
         int32_t iDupLen = 0;
         int32_t iDupSeqLen = 0; // Size of any sequence inserted
         
@@ -3089,6 +3089,9 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
       } break;
         
       default:
+        applied_seq_id = "";
+        applied_start = 0;
+        applied_end = 0;
         ASSERT(false, "Can't handle mutation type: " + to_string(mut._type));
     }
     
@@ -3099,6 +3102,11 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
       cout << "With:      " << applied_seq_id << ":" << applied_start << "-" << applied_end << endl;
       cout << "(Sequence) " << applied_seq << endl;
     }
+    
+    // Add fields that track the applied_coords
+    mut["applied_seq_id"] = to_string(applied_seq_id);
+    mut["applied_start"] = to_string(applied_start);
+    mut["applied_end"] = to_string(applied_end);
     
     this->shift_positions(mut, new_ref_seq_info, verbose);
     

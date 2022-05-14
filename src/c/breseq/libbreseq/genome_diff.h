@@ -261,8 +261,12 @@ public:
                               );
   
   //! Call to apply Genome Diff to sequences
-  void apply_to_sequences(cReferenceSequences &ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose=false, 
-                          int32_t slop_distance=10, int32_t size_cutoff_AMP_becomes_INS_DEL_mutation =kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation);
+  void apply_to_sequences(cReferenceSequences &ref_seq_info,
+                          cReferenceSequences& new_ref_seq_info,
+                          bool verbose=false,
+                          int32_t slop_distance=10,
+                          int32_t size_cutoff_AMP_becomes_INS_DEL_mutation = kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation
+                          );
   
   //! Remove mutations that overlap MASK items in another GD
   void mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, bool verbose);

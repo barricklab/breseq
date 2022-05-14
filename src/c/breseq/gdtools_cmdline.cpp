@@ -173,17 +173,24 @@ int do_apply(int argc, char *argv[])
   options("format,f",    "Output file format (Options: FASTA, GENBANK, GFF3)", "FASTA");
   options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
   options("seq-id,s",    "Sequence ID to keep in output. If this argument is provided, other sequences are deleted after the APPLY. May be provided multiple times.");
+	options("applied-gd,a",  "Output file name for GD with mutations updated to coordinates in the output sequences.");
   options("verbose,v",   "Verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
-  options.addUsage("Input a single Genome Diff, and as many reference files");
-  options.addUsage("as you like.  Using the Genome Diff, this will apply all");
+  options.addUsage("Input a single GenomeDiff, and as many reference files");
+  options.addUsage("as you like.  Using the GenomeDiff, this will apply all");
   options.addUsage("the mutations to the reference sequences, output is to");
   options.addUsage("a single file that includes all the references in the");
 	options.addUsage("requested format. Input file is expected to only have");
 	options.addUsage("consensus mutations. Polymorphic mutations are ignored.");
-
+	options.addUsage("");
+	options.addUsage("The --apply-gd option causes a GenomeDiff file to be ");
+	options.addUsage("output that is the input GenomeDiff file with positions");
+	options.addUsage("of mutations shifted to where they occur in the output");
+	options.addUsage("sequence. It also has applied_seq_id, applied_start,");
+	options.addUsage("and applied_end fields defining the changed bases.");
+	
 	if (options.count("help")) {
 		options.printUsage();
 		return -1;
@@ -237,7 +244,7 @@ int do_apply(int argc, char *argv[])
 	
   //Check to see if every item in the loaded .gd is applicable to the reference file.
   gd.valid_with_reference_sequences(ref_seq_info);
-  gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, options.count("verbose"));
+	gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, options.count("verbose"));
 
 	// If seq-id is present keep only certain sequence ids
 	// Keep the order of the --seq-id|-s to allow user to specify this
@@ -273,6 +280,11 @@ int do_apply(int argc, char *argv[])
     new_ref_seq_info.WriteGFF(output);
   }
 
+	if (options.count("applied-gd")) {
+		uout("Writing applied GenomeDiff file:" + options["applied-gd"]);
+		gd.write(options["applied-gd"]);
+	}
+	
   return 0;
 }
 
@@ -2349,11 +2361,6 @@ int do_simulate_mutations(int argc, char *argv[])
   
   cReferenceSequences ref_seq_info;
   ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
-  
-  int ref_seq_id = 0;
-  if(options.count("seq"))  {
-    ref_seq_id = ref_seq_info.seq_id_to_index(options["seq"]);
-	}
   
   if (options.count("seed")) {
     cSimFastqSequence::SEED_VALUE = un(options["seed"]);
