@@ -209,6 +209,9 @@ namespace breseq {
 		// (2) there is no junction, but both ends of the deletion are in repeat sequences
 		// (3) there is a junction between unique sequence and a repeat element
     
+    if (verbose)
+      cout << "DEL PREDICTION" << endl;
+    
     for(diff_entry_list_t::iterator mc_it = mc.begin(); mc_it != mc.end(); mc_it++)
     {
       cDiffEntry& mc_item = **mc_it;
@@ -249,10 +252,17 @@ namespace breseq {
 			///
 			// (1) there is a junction that exactly crosses the deletion boundary 
 			///
+      ///
+      if (verbose)
+        cout << "(1) Checking for JC with same boundaries as MC." << endl;
+      
       bool done = false;
 			for(diff_entry_list_t::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) //JC
 			{
 				cDiffEntry& jc_item = **jc_it;
+        
+        if (verbose)
+          cout << "  " << jc_item << endl;
         
 				if (jc_item["side_1_seq_id"] != mut["seq_id"] || jc_item["side_2_seq_id"] != mut["seq_id"])  {
           continue;  
@@ -335,6 +345,9 @@ namespace breseq {
 			///
 			// (2) there is no junction, but both ends of the deletion are in different copies of the same repeat sequence
 			///
+      ///
+      if (verbose)
+        cout << "(2) Checking for MC between two repeats." << endl;
       
 			// Then we will adjust the coordinates to remove...
 			if  (
@@ -448,6 +461,10 @@ namespace breseq {
 			///
 			// (3) there is a junction between unique sequence and a repeat element
 			///
+      ///
+      if (verbose)
+        cout << "(3) Checking for MC between unique sequence and repeat." << endl;
+     
 			cFeatureLocation& r = (r1_pointer != NULL) ? *r1_pointer : *r2_pointer;
 			int32_t redundant_deletion_side = (r1_pointer != NULL) ? -1 : +1;
 			int32_t unique_deletion_strand = -redundant_deletion_side;
@@ -543,9 +560,15 @@ namespace breseq {
     // (4) the reference is circular, there is missing coverage at one or both ends,
     //     AND there is junction connecting those ends
     
+    if (verbose)
+      cout << "(4) Checking for MC crossing circular genome ends." << endl;
+    
     for(diff_entry_list_t::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) //JC
     {
       cDiffEntry& jc_item = **jc_it;
+      
+      if (verbose)
+        cout << jc_item << endl;
       
       // They have to be for the same seq_id
       if (jc_item["side_1_seq_id"] != jc_item["side_2_seq_id"] )  {
@@ -570,7 +593,7 @@ namespace breseq {
       int32_t overlap = n(jc_item[OVERLAP]);
       if (overlap > 0) continue;
       
-      //This is not
+      //This is not necessarily true
       //ASSERT(side_1_position <= side_2_position, "Junction has side_1_position > side_2_position\n" + jc_item.as_string());
       
       if (! ((side_1_strand == +1) &&  (side_2_strand == -1)) ) {
@@ -601,6 +624,14 @@ namespace breseq {
           end_seq_mc = &mc_item;
       }
       
+      
+      if (verbose) {
+        if (start_seq_mc)
+          cout << "START_SEQ_MC" << endl << *start_seq_mc << endl;
+        if (end_seq_mc)
+          cout << "END_SEQ_MC" << endl << *end_seq_mc << endl;
+      }
+      
       // We have to have found MC on both ends unless the junctions are flush to the ends
       if (!start_seq_mc && (side_1_position != 1))
           continue;
@@ -623,6 +654,9 @@ namespace breseq {
         end_seq_mc_start_start_range_1 = end_seq_mc_start_end_range_1 - n((*end_seq_mc)[START_RANGE]);
       }
       
+      if (verbose)
+        cout << "Passed Checks" << endl;
+      
       if (
           (!start_seq_mc || ((side_1_position-1 >= start_seq_mc_end_start_range_1) && (side_1_position-1 <= start_seq_mc_end_end_range_1)) )
        && (!end_seq_mc || ((side_2_position+1 >= end_seq_mc_start_start_range_1) && (side_2_position+1 <= end_seq_mc_start_end_range_1)) )
@@ -639,6 +673,9 @@ namespace breseq {
         // If there is unique read sequence, then it is a substitution
         if ( jc_item.entry_exists(UNIQUE_READ_SEQUENCE)) {
           
+          if (verbose)
+            cout << "Predicting SUB" << endl;
+          
           mut._type = SUB;
 
           // If the size is zero then it wil be marked as a normal circular read later,
@@ -654,6 +691,10 @@ namespace breseq {
           
         // Otherwise it is a deletion
         } else {
+          
+          if (verbose)
+            cout << "Predicting DEL" << endl;
+          
           mut._type = DEL;
 
           // If the size is zero then it wil be marked as a normal circular read later,
@@ -677,7 +718,11 @@ namespace breseq {
         gd.add(mut);
         
         // Not really necessary to delete
-        jc.erase(jc_it);
+        
+        if (verbose)
+          cout << "Deleting JC" << endl;
+        
+        jc_it = jc.erase(jc_it);
         jc_it--;
       }
     }
