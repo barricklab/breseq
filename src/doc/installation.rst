@@ -28,6 +28,11 @@ Install external dependencies
 
 To install each dependency, visit the respective web pages linked above and follow the instructions for your platform. You must make sure that the executables for |Bowtie2| and :program:`R` are in your environment's ``$PATH`` for |breseq| to function.
 
+.. warning::
+   Certain versions of |Bowtie2|, including 2.3.1 and 2.4.5, produce SAM output that can cause |breseq| to crash. If you are using one of these versions you will get an error message when you run |breseq|.
+
+   Output of |breseq| may vary slightly depending on your version of |Bowtie2|. When reporting |breseq| results in a publication you should always report the version of |breseq| you used and also the version of |Bowtie2|. Currently, we recommend using |Bowtie2| version 2.4.4. This is the version used by the consistency tests.
+
 Method 1. Binary download
 +++++++++++++++++++++++++++++
 
