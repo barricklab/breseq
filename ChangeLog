@@ -1,7 +1,11 @@
-Version 0.36.2
+Version 0.37.0
+  * Warn or error when bowtie2 versions that give inconsistent or problematic
+    output are used. Update conda recipe to install the recommended bowtie2
+    version 2.2.4 to try to enforce consistency.
+  * Added back code for shifting indels to improve mutation calling.
   * Added an option for gdtools APPLY to output a new GD file showing the
     positions of each mutation in the (mutated) output genome.
-  * Improved documentation related to explaining junction orientations.
+  * Updated documentation related to installation and explaining junction orientations.
   * Fixed crash that could occur if there was a deletion spanning the origin of a
     circular reference sequence.
 
