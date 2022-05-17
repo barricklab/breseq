@@ -1,3 +1,10 @@
+Version 0.36.2
+  * Added an option for gdtools APPLY to output a new GD file showing the
+    positions of each mutation in the (mutated) output genome.
+  * Improved documentation related to explaining junction orientations.
+  * Fixed crash that could occur if there was a deletion spanning the origin of a
+    circular reference sequence.
+
 Version 0.36.1
   * Added an appendix to the manual on how reference sequence files are loaded/used.
   * When loading GenBank files that have a LOCUS line and source feature with different
