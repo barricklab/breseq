@@ -1,7 +1,6 @@
 Version 0.37.0
-  * Warn or error when bowtie2 versions that give inconsistent or problematic
-    output are used. Update conda recipe to install the recommended bowtie2
-    version 2.2.4 to try to enforce consistency.
+  * Warns that breseq results can vary (usually only slightly) with different
+    bowtie2 versions and recommends a specific version for consistency.
   * Added back code for shifting indels to improve mutation calling.
   * Added an option for gdtools APPLY to output a new GD file showing the
     positions of each mutation in the (mutated) output genome.

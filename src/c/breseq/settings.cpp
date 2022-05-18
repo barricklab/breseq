@@ -8,7 +8,7 @@
  LICENSE AND COPYRIGHT
  
  Copyright (c) 2008-2010 Michigan State University
- Copyright (c) 2011-2017 The University of Texas at Austin
+ Copyright (c) 2011-2022 The University of Texas at Austin
  
  breseq is free software; you can redistribute it and/or modify it under the
  terms the GNU General Public License as published by the Free Software
@@ -714,7 +714,7 @@ namespace breseq
     fprintf(stderr, "Foundation; either version 2, or (at your option) any later version.\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "Copyright (c) 2008-2010 Michigan State University\n");
-    fprintf(stderr, "Copyright (c) 2011-2017 The University of Texas at Austin\n");
+    fprintf(stderr, "Copyright (c) 2011-2022 The University of Texas at Austin\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "If you use breseq in your research, please cite:\n");
     fprintf(stderr, "\n");
@@ -1257,21 +1257,15 @@ namespace breseq
       cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
       cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
     }
-    else if (from_string<uint64_t>(this->installed["bowtie2_version"]) == 2004005000) {
-      good_to_go = false;
-      cerr << "---> ERROR bowtie2 version 2.4.5 may produce SAM output that will cause" << endl;
-      cerr << "---> ERROR breseq to crash. Please upgrade/downgrade." << endl;
-      cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
-      cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
-    }
-    else 
+    else {
       cerr << "---> bowtie2  :: version " << this->installed["bowtie2_version_string"] << " [" << this->installed["bowtie2"] << "]" << endl;
       // WARN if preferred version is not used
-      if (from_string<uint64_t>(this->installed["bowtie2_version"]) != 2004004000) {
-        cerr << "---> bowtie2  :: WARNING breseq output may vary slightly depending on your bowtie2 version." << endl;
-        cerr << "---> bowtie2  :: WARNING bowtie2 version 2.4.4 is recommended with this version of breseq for consistency." << endl;
+      if (from_string<uint64_t>(this->installed["bowtie2_version"]) != 2004005000) {
+        cerr << "---> bowtie2  :: NOTE :: breseq output may vary slightly depending on your bowtie2 version" << endl;
+        cerr << "---> bowtie2  :: NOTE :: and occasionally bowtie2 versions may have bugs that cause crashes." << endl;
+        cerr << "---> bowtie2  :: NOTE :: bowtie2 version 2.4.5 is recommended with this breseq version." << endl;
+      }
     }
-    
 		// R version 2.1 required
 		if (this->installed["R"].size() == 0)
 		{
