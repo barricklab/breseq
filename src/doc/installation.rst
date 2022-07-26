@@ -9,10 +9,10 @@ Recommended Method: Install |breseq| using Conda
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 .. image:: https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat
-   :target: http://bioconda.github.io/recipes/breseq/README.html
+   :target: https://bioconda.github.io/recipes/breseq/README.html
 
 The recommended installation method is to use the `Conda package manager <https://docs.conda.io/en/latest/>`_ to install |breseq| and all of the programs it requires. Make sure you have
-`Bioconda <https://bioconda.github.io/user/install.html>`_ set up, then follow the directions for the `breseq package <http://bioconda.github.io/recipes/breseq/README.html>`_.
+`Bioconda <https://bioconda.github.io/user/install.html>`_ set up, then follow the directions for the `breseq package <https://bioconda.github.io/recipes/breseq/README.html>`_.
 
 .. NOTE::
    If you get an install error about the |Bowtie2| requirement not being satisfied, you need to create a Conda environment that uses Python 3.9 or earlier. These commands will do that and install |breseq|.
@@ -36,7 +36,7 @@ Install external dependencies
 |breseq| requires these software programs to be installed on your system:
 
 * `Bowtie2 <http://bowtie-bio.sourceforge.net/bowtie2>`_ (version 2.1.0 or higher) read mapping program
-* `R <http://www.r-project.org>`_ (version 2.1.4 or higher) statistical programming language
+* `R <https://www.r-project.org>`_ (version 2.1.4 or higher) statistical programming language
 
 To install each dependency, visit the respective web pages linked above and follow the instructions for your platform. You must make sure that the executables for |Bowtie2| and :program:`R` are in your environment's ``$PATH`` for |breseq| to function.
 
@@ -76,9 +76,9 @@ Method 2. Source code download
 
 |breseq| installation from the source code requires some basic familiarity with UNIX commands and environments.
 
-In addition to the normal dependencies, you must also have a C++ compiler installed on your system. For example: `GCC <http://gcc.gnu.org>`_.
+In addition to the normal dependencies, you must also have a C++ compiler installed on your system. For example: `GCC <https://gcc.gnu.org>`_.
 
-MacOSX does not have a C++ compiler installed by default. You must first download and install the `Apple Developer tools <http://developer.apple.com/tools/>`_ (available from the App store). Be sure that you also complete any additional steps that are necessary to install the "command-line tools".
+MacOSX does not have a C++ compiler installed by default. You must first download and install the `Apple Developer tools <https://developer.apple.com/tools/>`_ (available from the App store). Be sure that you also complete any additional steps that are necessary to install the "command-line tools".
 
 If you have admin privileges and want to install |breseq| in a standard location accessible to all users of a computer, then see :ref:`installing-in-a-system-wide-location`. If you do not have admin privileges on your computer, then see :ref:`installing-in-the-source-directory` or :ref:`installing-in-a-custom-location`.
 

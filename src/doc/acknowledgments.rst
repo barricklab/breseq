@@ -4,20 +4,20 @@ Acknowledgments
 Developers
 ------------
 
-* `Jeffrey E. Barrick <http://barricklab.org>`_
+* `Jeffrey E. Barrick <https://barricklab.org>`_
 * Jordan Borges
 * Geoffrey Colburn
 * Daniel E. Deatherage
 * Tyler Fields
-* `David B. Knoester <http://www.users.miamioh.edu/knoestdb/>`_
+* David B. Knoester`
 * Matt Strand
 * Aaron Reba
-* `Austin G. Meyer <http://www.meyerresearch.com>`_
+* Austin G. Meyer
 * Alex Hu
 
 |breseq| was initially developed at Michigan State University while Jeff was a postdoc with Richard Lenski and Charles Ofria, and while Dave was a graduate student in the lab of Philip McKinley. Dave, Jordan, Geoff, and Aaron were instrumental in the transition from a slow and nonportable Perl pipeline into the current C++ implementation.
 
-|breseq| is now developed in the Barrick lab in the Department of Molecular Biosciences at the University of Texas at Austin. `Lab Website <http://barricklab.org>`_ 
+|breseq| is now developed in the Barrick lab in the Department of Molecular Biosciences at the University of Texas at Austin. `Lab Website <http://barricklab.org>`_
 
 Testing
 ------------
@@ -36,6 +36,6 @@ The following grants have supported development of |breseq| and associated tutor
 #. National Science Foundation (2010). BEACON Center at Michigan State University [DBI-0939454 subcontract to J.E.B].
 #. Cancer Prevention & Research Institute of Texas (CPRIT) (2014-2015) [RP130124 to J.E.B.]
 #. University of Texas at Austin CPRIT Research Traineeship (2013-2015) [to D.E.D.]
-#. EMBO Practical Course `Measuring intra-species diversity using high-throughput sequencing <http://events.embo.org/15-htp-sequencing/>`_ held 27–31 July 2015 in Oeiras, Portugal
+#. EMBO Practical Course **Measuring intra-species diversity using high-throughput sequencing** held 27–31 July 2015 in Oeiras, Portugal
 
 .. figure:: images/oeiras_course.png

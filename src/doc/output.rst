@@ -269,7 +269,7 @@ Processed (Computer-Readable) Data
 Viewing Output / Aligned Reads in the IGV
 *****************************************
 
-You can visualize the "raw data" (how |breseq| aligned reads to the reference genome) using the `Integrative Genomics Viewer (IGV) <http://www.broadinstitute.org/igv/>`_ and files located in the :file:`data` folder created by |breseq|.
+You can visualize the "raw data" (how |breseq| aligned reads to the reference genome) using the `Integrative Genomics Viewer (IGV) <https://www.broadinstitute.org/igv/>`_ and files located in the :file:`data` folder created by |breseq|.
 
 1. Install and open IGV
 2. Import the reference genome sequence:

@@ -5,8 +5,8 @@ Tutorial: Ultra-rare variant detection using consensus reads and targeted sequen
 
 In this exercise, you will analyze targeted sequencing of the initial burst of genetic diversity in a short *E. coli* evolution experiment. This tutorial uses data prepared by a special library preparation technique that adds a "molecular index" to each initial DNA fragment. This enables one to sequence many amplification products from this initial read to achieve lower error rates. In addition pulldowns with biotinylated oligos were used to enrich for only certain genes in the E. coli genome to achieve deeper sequencing of regions that were expected to have beneficial mutations.
 
-.. note:: 
-   This tutorial was created for the EMBO Practical Course `Measuring intra-species diversity using high-throughput sequencing <http://events.embo.org/15-htp-sequencing/>`_ held 27–31 July 2015 in Oeras, Portugal.
+.. note::
+   This tutorial was created for the EMBO Practical Course **Measuring intra-species diversity using high-throughput sequencing** held 27–31 July 2015 in Oeras, Portugal.
 
 .. warning::
 
@@ -25,16 +25,16 @@ First, create a directory called **sscs_targeted**:
 Reference sequence
 ++++++++++++++++++++
 
-The samples sequenced were genomic DNA from populations evolved from a clonal isolate of *Escherichia coli* B strain REL606. We'll contrast some new ways of analyzing this data that require us to use different reference genome setups. 
+The samples sequenced were genomic DNA from populations evolved from a clonal isolate of *Escherichia coli* B strain REL606. We'll contrast some new ways of analyzing this data that require us to use different reference genome setups.
 
 First, download the entire reference genome.
 
-`Download REL606.gbk via this link <http://barricklab.org/release/breseq_tutorial/REL606.gbk.gz>`_
+`Download REL606.gbk via this link <https://barricklab.org/release/breseq_tutorial/REL606.gbk.gz>`_
 
 Then, download these two reference files:
 
-* `on-target.gff3 <http://barricklab.org/release/breseq_tutorial/on-target.gff3.gz>`_
-* `off-target.gff3 <http://barricklab.org/release/breseq_tutorial/off-target.gff3.gz>`_
+* `on-target.gff3 <https://barricklab.org/release/breseq_tutorial/on-target.gff3.gz>`_
+* `off-target.gff3 <https://barricklab.org/release/breseq_tutorial/off-target.gff3.gz>`_
 
 In the first of these (``on-target.gff3``), we've extracted just the 8 target genes with 1400 bp added on each side as three different reference fragments. Each of these reference sequences were created by using ``gdtools APPLY`` to delete the rest of the genome.
 
@@ -47,15 +47,15 @@ Read files
 
 Paired-end Illumina reads for one population sample taken at generation 139 from a time-course:
 
-* `DED234_GATCAG_L004_R1_001.fastq <http://barricklab.org/release/breseq_tutorial/DED234_GATCAG_L004_R1_001.fastq.gz>`_
-* `DED234_GATCAG_L004_R2_001.fastq <http://barricklab.org/release/breseq_tutorial/DED234_GATCAG_L004_R2_001.fastq>`_
+* `DED234_GATCAG_L004_R1_001.fastq <https://barricklab.org/release/breseq_tutorial/DED234_GATCAG_L004_R1_001.fastq.gz>`_
+* `DED234_GATCAG_L004_R2_001.fastq <https://barricklab.org/release/breseq_tutorial/DED234_GATCAG_L004_R2_001.fastq>`_
 
 2. Generate SSCS Reads
 -----------------------
 
 First, we need to pre-process the reads to construct single-strand consensus reads and remove the molecular barcodes. If you have numpy and other Python prerequisites installed, you can do this by downloading this script:
 
-* `Download SSCS_DCS.py <http://barricklab.org/release/breseq_tutorial/SSCS_DCS.py.gz>`_
+* `Download SSCS_DCS.py <https://barricklab.org/release/breseq_tutorial/SSCS_DCS.py.gz>`_
 
 And then running this command:
 

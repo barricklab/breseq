@@ -7,8 +7,8 @@ This tutorial expands on the :ref:`test-drive`. You will analyze mutations in th
 
 .. note::
 
-   This tutorial was created for the EMBO Practical Course `Measuring intra-species diversity using high-throughput sequencing <http://events.embo.org/15-htp-sequencing/>`_ held 27–31 July 2015 in Oeiras, Portugal.
-   
+   This tutorial was created for the EMBO Practical Course **Measuring intra-species diversity using high-throughput sequencing** held 27–31 July 2015 in Oeiras, Portugal.
+
 .. warning::
 
    If you encounter any |breseq| or |gdtools| errors or crashes in running this tutorial, please `report issues on GitHub <https://github.com/barricklab/breseq/issues>`_.
@@ -26,29 +26,29 @@ First, create a directory called ``tutorial_clonal``:
 Reference sequence
 ++++++++++++++++++++
 
-|breseq| prefers the reference sequence in `Genbank <http://www.ncbi.nlm.nih.gov/Sitemap/samplerecord.html>`_ or `GFF3 <http://gmod.org/wiki/GFF>`_ format. In this example, the reference sequence is *Escherichia coli* B strain REL606. The Genbank (Refseq) accession number is: **NC_012967**. For this tutorial, we are going to use an updated version of this file that contains richer gene annotation information than the version available from NCBI.
+|breseq| prefers the reference sequence in `Genbank <https://www.ncbi.nlm.nih.gov/Sitemap/samplerecord.html>`_ or `GFF3 <http://gmod.org/wiki/GFF>`_ format. In this example, the reference sequence is *Escherichia coli* B strain REL606. The Genbank (Refseq) accession number is: **NC_012967**. For this tutorial, we are going to use an updated version of this file that contains richer gene annotation information than the version available from NCBI.
 
-* `Download REL606.gbk via this link <http://barricklab.org/release/breseq_tutorial/REL606.gbk.gz>`_
+* `Download REL606.gbk via this link <https://barricklab.org/release/breseq_tutorial/REL606.gbk.gz>`_
 
 Read files
 ++++++++++++++
 
-In this tutorial, we're going to use Illumina genome re-sequencing data from *E. coli* strains that evolved for up to 40,000 generations in population Ara-3 from the Lenski long-term evolution experiment [Blount2011]_. This data is available in the European Nucleotide Archive (ENA). Go to http://www.ebi.ac.uk/ and search for one of the genomes in the table below (or click on the accession number to be taken directly to the download page for that clone).
+In this tutorial, we're going to use Illumina genome re-sequencing data from *E. coli* strains that evolved for up to 40,000 generations in population Ara-3 from the Lenski long-term evolution experiment [Blount2011]_. This data is available in the European Nucleotide Archive (ENA). Go to https://www.ebi.ac.uk/ and search for one of the genomes in the table below (or click on the accession number to be taken directly to the download page for that clone).
 
 .. csv-table::
    :header: "Accession", "Clone", "Description"
    :widths: 10, 10, 50
 
-   `SRR098289 <http://www.ebi.ac.uk/ena/data/view/SRR098289>`_ , "ZDB564", "Cit+ clone isolated at generation 31,500"
-   `SRR098042 <http://www.ebi.ac.uk/ena/data/view/SRR098042>`_ , "ZDB172", "Cit+ clone isolated at generation 32,000"
-   `SRR098040 <http://www.ebi.ac.uk/ena/data/view/SRR098040>`_ , "ZDB143", "Cit+ clone isolated at generation 32,500"
-   `SRR097977 <http://www.ebi.ac.uk/ena/data/view/SRR097977>`_ , "CZB152", "Cit+ clone isolated at generation 33,000"
-   `SRR098026 <http://www.ebi.ac.uk/ena/data/view/SRR098026>`_ , "CZB154", "Cit+ clone isolated at generation 33,000"
-   `SRR098034 <http://www.ebi.ac.uk/ena/data/view/SRR098034>`_ , "ZDB83", "Cit+ clone isolated at generation 34,000"
+   `SRR098289 <https://www.ebi.ac.uk/ena/data/view/SRR098289>`_ , "ZDB564", "Cit+ clone isolated at generation 31,500"
+   `SRR098042 <https://www.ebi.ac.uk/ena/data/view/SRR098042>`_ , "ZDB172", "Cit+ clone isolated at generation 32,000"
+   `SRR098040 <https://www.ebi.ac.uk/ena/data/view/SRR098040>`_ , "ZDB143", "Cit+ clone isolated at generation 32,500"
+   `SRR097977 <https://www.ebi.ac.uk/ena/data/view/SRR097977>`_ , "CZB152", "Cit+ clone isolated at generation 33,000"
+   `SRR098026 <https://www.ebi.ac.uk/ena/data/view/SRR098026>`_ , "CZB154", "Cit+ clone isolated at generation 33,000"
+   `SRR098034 <https://www.ebi.ac.uk/ena/data/view/SRR098034>`_ , "ZDB83", "Cit+ clone isolated at generation 34,000"
 
 Download the FASTQ files for your chosen sample into your **tutorial_clones** directory.
 
-These particular clonal isolates were chosen to illustrate particular aspects of interpreting `breseq` output. If you would like to investigate data corresponding to any of the 29 sequenced genomes from this population described in [Blount2011]_ check out `SRP004752 <http://www.ebi.ac.uk/ena/data/view/SRP004752>`_.
+These particular clonal isolates were chosen to illustrate particular aspects of interpreting `breseq` output. If you would like to investigate data corresponding to any of the 29 sequenced genomes from this population described in [Blount2011]_ check out `SRP004752 <https://www.ebi.ac.uk/ena/data/view/SRP004752>`_.
 
 
 2. Run |breseq|
@@ -76,7 +76,7 @@ What is the **-j** option doing?
 
    .. container:: text
 
-      You can show the most commonly used |breseq| options by calling it with no arguments, and you can show all options by adding the **-h** flag. 
+      You can show the most commonly used |breseq| options by calling it with no arguments, and you can show all options by adding the **-h** flag.
 
    .. code-block:: bash
 
@@ -90,7 +90,7 @@ Using a web browser, open the file ``index.html`` in the output directory. This 
 
 .. note::
 
-   If you run into problems generating the |breseq| output and would like to continue this tutorial, please `download pre-generated results for ZDB83 <http://barricklab.org/release/breseq_tutorial/ZDB83_output.tgz>`_ (created using `breseq` version 0.26.1).
+   If you run into problems generating the |breseq| output and would like to continue this tutorial, please `download pre-generated results for ZDB83 <https://barricklab.org/release/breseq_tutorial/ZDB83_output.tgz>`_ (created using `breseq` version 0.26.1).
 
 Now, browse the upper table in the results of **Mutation predictions**. Click on **RA**, **JC**, and **MC** links to view the evidence `breseq` used to predict these mutations. There should be a variety of base substitutions, indels, large deletions, and transposon (IS element) insertions in your results.
 
@@ -107,7 +107,7 @@ Consider these questions:
    .. container:: text
 
       .. figure:: images/ZDB83.waaT.IS-mediated-deletion.png
- 
+
 .. container:: toggle
 
    .. container:: header
@@ -118,7 +118,7 @@ Consider these questions:
 
       Blue lines are coverage from uniquely mapped reads.  Red lines indicate coverage from reads that map equally well to genomic repeat regions that also exist elsewhere in the genome. You should see red coverage on one or both sides of the deletion that correspond to the  IS elements because these transposons occur in mutliple identical copies around the genome. The read length is too short to tell which copy a read came from if it maps to the middle of these elements. They are hich have lengths of around 1000-1500 base pairs).
 
-Next, scroll down to the **Unnassigned...** tables that are near the bottom of the page. Click on a few of these evidence items and examine the read coverage depth or alignment of mapped reads. Can you tell which **MC** items are associated with **JC** items and what mutations may have happened in the evolved genome? This can take practice, so we'll work a few examples. 
+Next, scroll down to the **Unnassigned...** tables that are near the bottom of the page. Click on a few of these evidence items and examine the read coverage depth or alignment of mapped reads. Can you tell which **MC** items are associated with **JC** items and what mutations may have happened in the evolved genome? This can take practice, so we'll work a few examples.
 
 2. Find an **Unassigned missing coverage evidence** entry in an *rhs* or *rrl* gene. Examine the read coverage graph. What is the most likely mutation here?
 
@@ -248,7 +248,7 @@ Let's add an **AMP** line describing the *rnk-citG* amplification to our new ``Z
 
       **Try to do this yourself. Here's a hint to get you started**
 
-   .. container:: 
+   .. container::
 
       The line should start this way:
 
@@ -294,7 +294,7 @@ Now start a new `breseq` run using a command like this:
 
    breseq -j 4 -l 60 -o ZDB83_mutated_output -r ZDB83.gff3 SRR098034.fastq
 
-Wait for this to run and then examine the output (you probably want to continue this tutorial in another window while you wait for that command to complete). 
+Wait for this to run and then examine the output (you probably want to continue this tutorial in another window while you wait for that command to complete).
 
 You should see the all of the previously predicted mutations and the *rnk-citG* junction disappear in the new output! If you make a coverage plot of the *citT* gene and the surrounding region, the coverage will also now be in red, indicating that reads no longer uniquely map to it because there are now multiple copies.
 
@@ -308,7 +308,7 @@ Note that coordinates of genes are shifted in the mutated reference genome due t
 ---------------------------------------------------------------------
 At this point in the tutorial, you can branch off and explore multiple topics related to understanding genome evolution in this *E. coli* population. Normally, you would generate the "raw" |breseq| output for all of the genomes in this population and curate these |GenomeDiff| files to resolve unassigned evidence. This can be a very time-consuming process (the |breseq| runs themselves, but especially getting all of the details correct for resolving the unassigned evidence).
 
-So, to get the most out of this tutorial in the shortest amount of time, please continue by `downloading curated GenomeDiff files <http://barricklab.org/release/breseq_tutorial/curated_gd.tgz>`_ for the 29 clones from this population described in [Blount2011]_.
+So, to get the most out of this tutorial in the shortest amount of time, please continue by `downloading curated GenomeDiff files <https://barricklab.org/release/breseq_tutorial/curated_gd.tgz>`_ for the 29 clones from this population described in [Blount2011]_.
 
 Place this archive inside of your ``tutorial_clones`` directory. Decompress and change into the resulting directory, which is full of the curated |GenomeDiff| files.
 
@@ -458,7 +458,7 @@ Answer these questions by loading the **gdtools COMPARE** output into **R**. It'
       95 percent confidence interval:
        1.381119 2.975263
       sample estimates:
-      rate ratio 
+      rate ratio
         2.03125
 
    .. container:: text
@@ -560,8 +560,8 @@ Now, load ``unique.csv`` into **R** to answer these questions:
 
       Model 1: total ~ possible + 0
       Model 2: total ~ possible + type + 0
-        Resid. Df Resid. Dev Df Deviance  Pr(>Chi)    
-      1         5     42.182                          
+        Resid. Df Resid. Dev Df Deviance  Pr(>Chi)
+      1         5     42.182
       2         0      0.000  5   42.182 5.411e-08 ***
       ---
       Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
@@ -597,7 +597,7 @@ Now, load ``unique.csv`` into **R** to answer these questions:
 
    .. container::  text
 
-      However, you need to calculate the expected dN/dS ratio to see if this is elevated with respect to chance. This requires an assumption about the base change spectrum. Why? There is a much higher chance that a G:C to A:T mutation will be nonsynonymous than a G:C to T:A mutation, for example. So we need to sum over the number of possible synonymous and nonsynonymous mutations given a spectrum of base substitutions. For simplicity, let's assume a 2:1 transition:transition ratio. 
+      However, you need to calculate the expected dN/dS ratio to see if this is elevated with respect to chance. This requires an assumption about the base change spectrum. Why? There is a much higher chance that a G:C to A:T mutation will be nonsynonymous than a G:C to T:A mutation, for example. So we need to sum over the number of possible synonymous and nonsynonymous mutations given a spectrum of base substitutions. For simplicity, let's assume a 2:1 transition:transition ratio.
 
 .. container:: toggle
 
@@ -648,7 +648,7 @@ Now, load ``unique.csv`` into **R** to answer these questions:
       95 percent confidence interval:
        0.6991329 0.8866683
       sample estimates:
-      probability of success 
+      probability of success
                    0.8051948
 
    .. container:: text
@@ -682,7 +682,7 @@ Now, load ``unique.csv`` into **R** to answer these questions:
       [1] 2.676483
 
       > binom.test(c(dN, dS), p = dN.expect/(dN.expect + dS.expect))
-      
+
          Exact binomial test
 
       data:  c(dN, dS)
@@ -691,8 +691,8 @@ Now, load ``unique.csv`` into **R** to answer these questions:
       95 percent confidence interval:
        0.6991329 0.8866683
       sample estimates:
-      probability of success 
-                   0.8051948 
+      probability of success
+                   0.8051948
 
    .. container:: text
 
@@ -701,9 +701,9 @@ Now, load ``unique.csv`` into **R** to answer these questions:
 Example 4. Build a phylogenetic tree of population Ara-3
 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-You can use **gdtools COMPARE** and the `Phylip package <http://evolution.genetics.washington.edu/phylip.html>`_ program **dnapars** to create a maximum parsimony phylogenetic tree |GenomeDiff| files.
+You can use **gdtools COMPARE** and the `Phylip package <https://evolution.genetics.washington.edu/phylip.html>`_ program **dnapars** to create a maximum parsimony phylogenetic tree |GenomeDiff| files.
 
-At first, let's just use a subset of the genomes through 30,000 generations. Move the others out of the ``curated_gd`` folder. We'll keep the ancestral genome with no mutations (REL606) to use as the outgroup in rooting this tree. 
+At first, let's just use a subset of the genomes through 30,000 generations. Move the others out of the ``curated_gd`` folder. We'll keep the ancestral genome with no mutations (REL606) to use as the outgroup in rooting this tree.
 
 See if you can figure out how to make a Phylip format output file from **gdtools COMPARE**:
 
@@ -724,14 +724,14 @@ See if you can figure out how to make a Phylip format output file from **gdtools
 
 Examine the output file from **gdtools COMPARE** in a text editor. It consists of **phylip** input shown as nucleotides with a column for every unique mutation observed in the population. For SNPs, the actual nucleotides in the respective genome are shown in the column. For other mutations, an 'A' is used for  the ancestral state, and a 'T' is used for the derived state (e.g., with IS element inserted). You may also notice 'N' states, which can occur when a region with a mutation in one genome was deleted in another genome, making the the state of that allele ambiguous. This 'N' state can also occur when there were not enough reads in a sequencing sample to call mutations in this region.
 
-This file is suitable for use as an **infile** to the phylip **dnapars** command. You can run **dnapars** at the command-line using a locally installed version of Phylip or run it on the web `via Mobyle @Pasteur <http://mobyle.pasteur.fr/cgi-bin/portal.py#forms::dnapars>`_. Use the default **dnapars** program parameters.
+This file is suitable for use as an **infile** to the phylip **dnapars** command. You can run **dnapars** at the command-line using a locally installed version of Phylip or run it on the web `via Mobyle @Pasteur <https://mobyle.pasteur.fr/cgi-bin/portal.py#forms::dnapars>`_. Use the default **dnapars** program parameters.
 
 Now you can visualize the **outree** file (which is in `Newick format <https://en.wikipedia.org/wiki/Newick_format>`_) via many different tools. Here are a couple that enable online viewing within a web browser:
 
 * `Newick Viewer @ T-REX web server <http://www.trex.uqam.ca/index.php?action=newick>`_
 * `Tree Dyn @ Phylogeny.fr <http://www.phylogeny.fr/one_task.cgi?task_type=treedyn>`_
 
-You'll notice that the names in your tree are the file names truncated to 10 characters (a limitation of the file format Phylip uses). This isn't terribly useful for the way we have named the files. Here's a version with the full names substituted back in: `download Ara-3.tre <http://barricklab.org/release/breseq_tutorial/Ara-3.tre>`_
+You'll notice that the names in your tree are the file names truncated to 10 characters (a limitation of the file format Phylip uses). This isn't terribly useful for the way we have named the files. Here's a version with the full names substituted back in: `download Ara-3.tre <https://barricklab.org/release/breseq_tutorial/Ara-3.tre>`_
 
 .. figure:: images/Ara-3.tree.png
 
@@ -761,7 +761,7 @@ Use these commands:
    .. code-block:: bash
 
       $ cd curated_gd
-      $ gdtools INTERSECT -o ../intersection.gd Ara-3_30000gen_ZDB16.gd Ara-3_30000gen_ZDB357.gd 
+      $ gdtools INTERSECT -o ../intersection.gd Ara-3_30000gen_ZDB16.gd Ara-3_30000gen_ZDB357.gd
       $ gdtools SUBTRACT -o ../branch.gd ../intersection.gd Ara-3_10000gen_ZDB429.gd
       $ cd ..
       $ gdtools COMPARE -r REL606.gbk -o branch.html branch.gd
