@@ -2832,7 +2832,7 @@ int do_runfile(int argc, char *argv[])
   ss << "Usage: gdtools RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> <file1.gd file2.gd file3.gd ...>";
   AnyOption options(ss.str());
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("mode,m",           "Type of command file to generate. Valid options are: breseq, breseq-merged, breseq-apply, trimmomatic, trimmomatic-PE-unique, fastp, fastp-PE-merge, read-count.", "breseq");
+  options("mode,m",           "Type of command file to generate. Valid options are: breseq, breseq-merged, breseq-apply, trimmomatic, trimmomatic-PE-unique, fastp, fastp-PE, fastp-PE-merge, read-count.", "breseq");
   options("executable,e",     "Alternative executable program to run.");
   options("options",          "Options to be passed to the executable. These will appear first in the command line.");
 	options("runfile,r",        "Name of the run file to be output.", "commands");
@@ -2939,7 +2939,7 @@ int do_runfile(int argc, char *argv[])
 		runfile_path = "fastp_commands";
 		output_dir = "02_Trimmed";
 		log_dir = "04_Trim_Logs";
-	} else if (options["mode"] == "fastp-PE-merge") {
+	} else if ((options["mode"] == "fastp-PE") || (options["mode"] == "fastp-PE-merge")) {
 		exe = "fastp";
 		runfile_path = "fastp_commands";
 		output_dir = "02_Trimmed";
@@ -3222,7 +3222,7 @@ int do_runfile(int argc, char *argv[])
 			
 			for (vector<vector<string> >::const_iterator read_pair_it=reads_by_pair.begin(); read_pair_it != reads_by_pair.end(); read_pair_it++) {
 				
-				ASSERT(read_pair_it->size() <= 2, "Must have exactly two read files for paired mode: " + join(*read_pair_it, ", "));
+				ASSERT(read_pair_it->size() == 2, "Must have exactly two read files for paired mode: " + join(*read_pair_it, ", "));
 				
 				
 				//! Step: Begin building command line.
@@ -3352,7 +3352,7 @@ int do_runfile(int argc, char *argv[])
 				//! Part 3: Read file name --- handles zipped or unzipped!
 				//! Part 4: Output read base name
 				
-				if (file_exists( cString(download_dir + "/" + cString(*read_file_it).get_base_name_unzipped()).c_str() )) {
+				if ( file_exists( cString(download_dir + "/" + cString(*read_file_it).get_base_name_unzipped()).c_str() ) ) {
 					ss << " -i " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
 					ss << " -o " << output_dir + "/" + cString(*read_file_it).get_base_name_unzipped();
 				} else {
@@ -3365,7 +3365,14 @@ int do_runfile(int argc, char *argv[])
 				// Nothing needed for fastp
 				
 				//! Part 6: Error log path.
-				ss << " >& " << log_dir << "/" << cString(*read_file_it).get_base_name_no_extension(true) << ".log";
+				
+				// Additional output to log directory
+				cString log_base_name = gd.get_title() + "_" + cString(*read_file_it).get_base_name_no_extension(true);
+				
+				ss << " --json " << log_dir << "/" << log_base_name << ".json";
+				ss << " --html " << log_dir << "/" << log_base_name << ".html";
+				
+				ss << " >& " << log_dir << "/" << log_base_name << ".log";
 				
 				//! Step: Output to file.
 				cout << ss.str() << endl;
@@ -3373,13 +3380,13 @@ int do_runfile(int argc, char *argv[])
 				++n_cmds;
 			}
 			
-		} else if (options["mode"] == "fastp-PE-merge") {
+		} else if ( (options["mode"] == "fastp-PE") || (options["mode"] == "fastp-PE-merge") ) {
 			
 			// Uses paired end merging and puts all reads in a single file.
 			
 			for (vector<vector<string> >::const_iterator read_pair_it=reads_by_pair.begin(); read_pair_it != reads_by_pair.end(); read_pair_it++) {
 				
-				ASSERT(read_pair_it->size() <= 2, "Must have exactly two read files for paired mode: " + join(*read_pair_it, ", "));
+				ASSERT(read_pair_it->size() == 2, "Must have exactly two read files for paired mode: " + join(*read_pair_it, ", "));
 				
 				
 				//! Step: Begin building command line.
@@ -3387,7 +3394,10 @@ int do_runfile(int argc, char *argv[])
 				
 				//! Part 1: Executable and options to pass to it if given by user.
 				ss << exe;
-				ss << " --merge --include_unmerged";
+				
+				if (options["mode"] == "fastp-PE-merge") {
+					ss << " --merge --include_unmerged";
+				}
 				
 				//! Part 2: Options
 				if (options.count("options")) {
@@ -3401,21 +3411,50 @@ int do_runfile(int argc, char *argv[])
 					ss << " -i " << download_dir << "/" << cString((*read_pair_it)[0]).get_base_name_unzipped();
 					ss << " -I " << download_dir << "/" << cString((*read_pair_it)[1]).get_base_name_unzipped();
 					
-					ss << " --merged_out " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + ".fastq";
-					
+					if (options["mode"] == "fastp-PE") {
+						ss << " -o " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped();
+						ss << " -O " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name_unzipped();
+					} else {
+						ss << " --merged_out " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + ".fastq";
+					}
 				} else {
 					ss << " -i " << download_dir << "/" << cString((*read_pair_it)[0]).get_base_name();
 					ss << " -I " << download_dir << "/" << cString((*read_pair_it)[1]).get_base_name();
 					
-					ss << " --merged_out " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + ".fastq.gz";
+					if (options["mode"] == "fastp-PE") {
+						ss << " -o " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name();
+						ss << " -O " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name();
+					} else {
+						ss << " --merged_out " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + ".fastq.gz";
+					}
 				}
+				
 				
 				//! Part 5: Trimming commands
 				
 				// Not needed for fastp
 				
 				//! Part 6: Error log path.
-				ss << " >& " << log_dir << "/" << cString(gd.get_title()).get_base_name_no_extension(true) << ".log";
+				
+				// Additional output to log directory
+				cString log_base_name(cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) );
+				// eliminate _1 or _R1
+				size_t pos = log_base_name.find("_1");
+				if ( (pos != string::npos) && (pos == log_base_name.size()-2) ) {
+					log_base_name.resize(log_base_name.size()-2);
+				} else {
+					size_t pos = log_base_name.find("_R1");
+					if ( (pos != string::npos) && (pos == log_base_name.size()-3) ) {
+						log_base_name.resize(log_base_name.size()-3);
+					}
+				}
+				log_base_name = gd.get_title() + "_" + log_base_name;
+				
+				
+				ss << " --json " << log_dir << "/" << log_base_name << ".json";
+				ss << " --html " << log_dir << "/" << log_base_name << ".html";
+				
+				ss << " >& " << log_dir << "/" << log_base_name << ".log";
 				
 				//! Step: Output to file.
 				cout << ss.str() << endl;

@@ -119,15 +119,27 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
       }
       
       // Search for corresponding pair
+      // Allow _1./_2. or _R1./_R2.
       string pair_name = read_name;
-      size_t pos = pair_name.find("_R1");
+      size_t pos = pair_name.find("_R1.fastq");
       if (pos != string::npos) {
         pair_name = pair_name.replace(pos+2, 1, "2");
       }
       else {
-        pos = pair_name.find("_R2");
+        pos = pair_name.find("_R2.fastq");
         if (pos != string::npos) {
           pair_name = pair_name.replace(pos+2, 1, "1");
+        }
+      }
+      
+      pos = pair_name.find("_1.fastq");
+      if (pos != string::npos) {
+        pair_name = pair_name.replace(pos+1, 1, "2");
+      }
+      else {
+        pos = pair_name.find("_2.fastq");
+        if (pos != string::npos) {
+          pair_name = pair_name.replace(pos+1, 1, "1");
         }
       }
       

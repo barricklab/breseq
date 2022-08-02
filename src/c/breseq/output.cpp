@@ -367,7 +367,7 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
     relative_path += "/";
   
   //Determine if more than one reference sequence is used
-  bool one_ref_seq;
+  bool one_ref_seq(true);
   if (ref_seq_info.size() == 1)
     one_ref_seq = true;
   else

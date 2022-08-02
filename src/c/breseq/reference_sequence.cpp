@@ -771,6 +771,7 @@ namespace breseq {
     this->m_repeat_locations.sort();
   }
   
+
   // Load a complete collection of files and verify that sufficient information was loaded
   void cReferenceSequences::LoadFiles(const vector<string>& file_names, const string& genbank_field_for_seq_id)
   {
@@ -957,9 +958,139 @@ namespace breseq {
     }
     
     if (invalid_CDS_names.size()>0) {
-      WARN("CDS feature(s) found with nucleotide length(s) that are not a multiple of 3:\n" + join(invalid_CDS_names, ", ") + "\n\nTranslations of mutations in these genes may be incorrect.\nIt is recommended that you fix these feature annotations in your reference file!\nAnother solution is to mark them as pseudogenes:\n  GenBank: add as '/pseudo' as a new line within the CDS feature\n  GFF3: add 'Pseudo=true' to the semicolon-separated list at the end of the CDS line.");
+      WARN("CDS feature(s) found with nucleotide length(s) that are not a multiple of 3:\n" + join(invalid_CDS_names, ", ") + "\n\nTranslations of mutations in these genes may be incorrect.\nIt is recommended that you fix these feature annotations in your reference file!\nAnother solution is to mark them as pseudogenes:\n  GenBank: add '/pseudo' as a new line within the CDS feature\n  GFF3: add 'Pseudo=true' to the semicolon-separated list at the end of the CDS line.");
     }
   }
+
+  // Loads ISEScan CSV results file and adds mobile_element features named by family
+  // existing IS elements are removed
+  void cReferenceSequences::ReadISEScan(const string& isescan_csv_file_name)
+  {
+    // Remove existing repeat sequences
+    // We may want to differentiate mobile_element versus repeat_region copies in a future breseq version
+    size_t original_num_repeats = this->get_total_num_repeats();
+    for (vector<cAnnotatedSequence>::iterator it_seq = this->begin(); it_seq != this->end(); it_seq++) {
+    
+      bool it_feature_iterate;
+      
+      for (list<cSequenceFeaturePtr>::iterator it_feature = it_seq->m_features.begin(); it_feature != it_seq->m_features.end(); )
+      {
+        it_feature_iterate = true;
+        
+        //The current feature we're looking at
+        cSequenceFeature& feat = **it_feature;
+      
+        if (feat.is_repeat()) {
+          it_feature = it_seq->m_features.erase(it_feature);
+          it_feature_iterate = false;
+        }
+      
+      //We just removed the current feature, do not iterate.
+      if (it_feature_iterate) it_feature++;
+      }
+    }
+    
+    // We have to update feature lists for counting to work
+    this->update_feature_lists();
+    size_t removed_num_repeats = original_num_repeats - this->get_total_num_repeats();
+
+    
+    // Load and add new ones
+    ifstream infile(isescan_csv_file_name.c_str());
+    ASSERT(infile.good(), "Trouble opening file: " + isescan_csv_file_name);
+    
+    string header;
+    getline(infile, header);
+    ASSERT(header.size()>0, "Could not load CSV header line from: " + isescan_csv_file_name);
+    vector<string> header_list = split(chomp(header), ",");
+    
+    size_t seq_id_column_index(string::npos);
+    size_t family_column_index(string::npos);
+    size_t cluster_column_index(string::npos);
+    size_t start_1_column_index(string::npos);
+    size_t end_1_column_index(string::npos);
+    size_t strand_column_index(string::npos);
+    size_t type_column_index(string::npos);
+
+    for(size_t i=0; i<header_list.size(); i++) {
+      string header_item = header_list[i];
+      if (header_item == "seqID") {
+        seq_id_column_index = i;
+      } else if (header_item == "family") {
+        family_column_index = i;
+      } else if (header_item == "cluster") {
+        cluster_column_index = i;
+      } else if (header_item == "isBegin") {
+        start_1_column_index = i;
+      } else if (header_item == "isEnd") {
+        end_1_column_index = i;
+      } else if (header_item == "strand") {
+        strand_column_index = i;
+      } else if (header_item == "type") {
+        type_column_index = i;
+      }
+    }
+    
+    ASSERT(seq_id_column_index != string::npos, "Could not find column \"seqID\".");
+    ASSERT(family_column_index != string::npos, "Could not find column \"family\".");
+    ASSERT(cluster_column_index != string::npos, "Could not find column \"cluster\".");
+    ASSERT(start_1_column_index != string::npos, "Could not find column \"isBegin\".");
+    ASSERT(end_1_column_index != string::npos, "Could not find column \"seqID\".");
+    ASSERT(strand_column_index != string::npos, "Could not find column \"strand\".");
+    ASSERT(type_column_index != string::npos, "Could not find column \"type\".");
+    
+    string line;
+    while (getline(infile, line)) {
+      vector<string> line_list = split(chomp(line), ",");
+      
+      cSequenceFeaturePtr new_mobile_element(new cSequenceFeature);
+      
+      (*new_mobile_element)["type"] = "mobile_element";
+      (*new_mobile_element)["name"] = line_list[cluster_column_index];
+
+      // Mark partial as pseudo
+      if (line_list[type_column_index] == "c") {
+        (*new_mobile_element)["product"] = "Complete " + line_list[family_column_index] + "family IS element";
+      } else {
+        (*new_mobile_element)["product"] = "Partial " + line_list[family_column_index] + "family IS element";
+        (*new_mobile_element).flag_pseudo();
+      }
+      int32_t strand = line_list[strand_column_index] == "-" ? -1 : +1;
+      cLocation is_location(from_string<int32_t>(line_list[start_1_column_index]), from_string<int32_t>(line_list[end_1_column_index]), strand);
+      (*new_mobile_element).add_location(is_location);
+      
+      // transfer to GFF
+      (*new_mobile_element)["phase"] = "0";
+      (*new_mobile_element)["source"] = "isescan";
+      if ((*new_mobile_element).SafeGet("locus_tag") != "")
+        (*new_mobile_element).m_gff_attributes["ID"] = make_vector<string>((*new_mobile_element)["locus_tag"]);
+      if ((*new_mobile_element).SafeGet("product") != "")
+        (*new_mobile_element).m_gff_attributes["Note"] = make_vector<string>((*new_mobile_element)["product"]);
+      if ((*new_mobile_element).m_pseudo)
+        (*new_mobile_element).m_gff_attributes["Pseudo"] = make_vector<string>((*new_mobile_element)["Pseudo"]);
+      if ((*new_mobile_element).SafeGet("accession") != "")
+        (*new_mobile_element).m_gff_attributes["Alias"] = make_vector<string>((*new_mobile_element)["accession"]);
+      if ((*new_mobile_element).SafeGet("name") != "")
+        (*new_mobile_element).m_gff_attributes["Name"] = make_vector<string>((*new_mobile_element)["name"]);
+      
+      (*this)[line_list[seq_id_column_index]].m_features.push_back(new_mobile_element);
+    }
+    
+    // Do some post-processing for safety's sake
+    
+    // Make certain feature items safe for GenomeDiff and HTML output operations
+    // that divide them into lists, add intergenic, or multiple-item separators etc.
+    this->make_feature_strings_safe();
+    
+    // Finally, update feature lists
+    this->update_feature_lists();
+    
+    uint32_t added_num_repeats = this->get_total_num_repeats() - (original_num_repeats - removed_num_repeats);
+
+    cout << "Number of repeat_region and mobile_element features removed: " << to_string(removed_num_repeats) << endl;
+    cout << "Number of mobile_element features added:                     " << to_string(added_num_repeats) << endl;
+  }
+
 
   void cReferenceSequences::ReadFASTA(const string &file_name) {
     
@@ -2079,7 +2210,8 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
       feature["product"] = feature.SafeGet("note");
     }
 
-    if (feature["type"] == "repeat_region" || feature["type"] == "mobile_element") {
+    if (feature.is_repeat()) {
+    // if (feature["type"] == "repeat_region" || feature["type"] == "mobile_element") {
 
       // Give the repeat region a default name if NOTHING else can be found
       feature["name"] = "repeat_region";
@@ -2210,7 +2342,6 @@ void cReferenceSequences::ReadGenBankFileSequence(std::ifstream& in, cAnnotatedS
   
   //cout << s.m_sequence << std::endl;
 }
-
 
 void cReferenceSequences::WriteGenBank(const string &file_name, bool no_sequence)
 {

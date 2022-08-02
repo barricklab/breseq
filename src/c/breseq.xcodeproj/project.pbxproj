@@ -96,6 +96,13 @@
 			remoteGlobalIDString = 705977FD1DB99E7C001BBA6B;
 			remoteInfo = htslib;
 		};
+		70598036289578ED00A3CEB9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 705977FD1DB99E7C001BBA6B;
+			remoteInfo = htslib;
+		};
 		708FA5D4132578BD00864C40 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
@@ -419,6 +426,7 @@
 			buildToolPath = /usr/bin/make;
 			buildWorkingDirectory = "$(PROJECT_DIR)/../../extern/samtools-1.3.1";
 			dependencies = (
+				70598037289578ED00A3CEB9 /* PBXTargetDependency */,
 			);
 			name = samtools;
 			passBuildSettingsInEnvironment = 1;
@@ -426,7 +434,7 @@
 		};
 		705977FD1DB99E7C001BBA6B /* htslib */ = {
 			isa = PBXLegacyTarget;
-			buildArgumentsString = "-f Makefile.xcode CFLAGS=\"-arch $(ARCHS)\" $(ACTION)";
+			buildArgumentsString = "-f Makefile.xcode $(ACTION)";
 			buildConfigurationList = 705977FE1DB99E7C001BBA6B /* Build configuration list for PBXLegacyTarget "htslib" */;
 			buildPhases = (
 			);
@@ -608,6 +616,11 @@
 			isa = PBXTargetDependency;
 			target = 705977FD1DB99E7C001BBA6B /* htslib */;
 			targetProxy = 705978011DB99EB9001BBA6B /* PBXContainerItemProxy */;
+		};
+		70598037289578ED00A3CEB9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 705977FD1DB99E7C001BBA6B /* htslib */;
+			targetProxy = 70598036289578ED00A3CEB9 /* PBXContainerItemProxy */;
 		};
 		708FA5D5132578BD00864C40 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;

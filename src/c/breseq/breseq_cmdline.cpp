@@ -471,7 +471,9 @@ int do_convert_reference(int argc, char* argv[]) {
   options("format,f", "Output format. Valid options: FASTA, GFF3, GENBANK, CSV (Default = FASTA)", "FASTA");
   options("no-sequence,n", "Do not include the nucleotide sequence. The output file will only have features. (Not allowed with FASTA format.)", TAKES_NO_ARGUMENT);
   options("output,o", "Output reference file path (Default = output.*)");
+  options("isescan-results,s", "Path to CSV file output by isescan. Existing mobile_element, repeat_region, and transposon,  annotations will be replaced with these results.");
   options("genbank-field-for-seq-id", "Which GenBank header field will be used to assign sequence IDs. Valid choices are LOCUS, ACCESSION, and VERSION. The default is to check those fields, in that order, for the first one that exists. If you override the default, you will need to use the converted reference file (data/reference.gff) for further breseq and gdtools operations on breseq output!", "AUTOMATIC", ADVANCED_OPTION);
+
 	options.processCommandArgs(argc, argv);
 	
   if (options.count("help")) {
@@ -529,6 +531,12 @@ int do_convert_reference(int argc, char* argv[]) {
   
   cReferenceSequences refs;
   refs.LoadFiles(reference_file_names, genbank_field_for_seq_id);
+  
+  if (options.count("isescan-results")) {
+    cerr << "+++   Adding isescan results..." << endl;
+    cout << "  Input : " << options["isescan-results"] << endl;
+    refs.ReadISEScan(options["isescan-results"]);
+  }
 
   cerr << "+++   Writing reference file..." << endl;
   

@@ -875,6 +875,9 @@ public:
       }
     }
     
+    //!< Adds new IS_element entries
+    void ReadISEScan(const string& isescan_csv_file_name);
+    
   protected:
     
     //!< Read reference file - not safe to call on their own = private
