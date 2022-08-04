@@ -669,12 +669,12 @@ public:
         {} ;
     
       void set_features_loaded_from_file(const string& file_name, bool allow_reload = false) {
-        ASSERT(allow_reload || (m_features_loaded_from_file.size() == 0), "Duplicate seq id found in file '" + file_name + "'! Features for '" + m_seq_id + "' were already loaded from file '" + m_features_loaded_from_file + "'.")
+        ASSERT(allow_reload || (m_features_loaded_from_file.size() == 0), "Duplicate information for sequence found in file '" + file_name + "'!\nFeatures for sequence '" + m_seq_id + "' were already loaded from file '" + m_features_loaded_from_file + "'.")
         m_features_loaded_from_file = file_name;
       }
     
       void set_sequence_loaded_from_file(const string& file_name, bool allow_reload = false) {
-        ASSERT(allow_reload || (m_sequence_loaded_from_file.size() == 0), "Duplicate seq id found in file '" + file_name + "'! DNA sequence for '" + m_seq_id + "' was already loaded from file '" + m_sequence_loaded_from_file + "'.")
+        ASSERT(allow_reload || (m_sequence_loaded_from_file.size() == 0), "Duplicate information for sequence found in file '" + file_name + "'!\nDNA sequence for sequence '" + m_seq_id + "' was already loaded from file '" + m_sequence_loaded_from_file + "'.")
         m_sequence_loaded_from_file = file_name;
       }
     

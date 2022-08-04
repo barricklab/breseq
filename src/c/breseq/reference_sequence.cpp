@@ -1243,7 +1243,6 @@ namespace breseq {
           RemoveLeadingTrailingWhitespace(seq_id);
           if (!m_seq_id_to_index.count(seq_id))
             this->add_new_seq(seq_id, file_name);
-          //ASSERT(this->m_seq_id_to_index[seq_id], "Attempt to load sequence for non-existent seq_id with line:\n" + line);
                  
           cAnnotatedSequence& this_seq = (*this)[seq_id];
           this_seq.m_fasta_sequence.set_sequence("");
@@ -2188,7 +2187,9 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
           if (s.m_length==0) {
             s.m_length = source_end_position;
           } else if (source_end_position != s.m_length) {
-            WARN("Length assigned to sequence '" + s.m_seq_id + "' from LOCUS line (" + to_string(s.m_length) + ") does not match length from source feature (" + to_string(source_end_position) + "). Length from LOCUS line will be used. If you encounter further errors, make sure this length matches the true length of your sequence.")
+            WARN("Length assigned to sequence '" + s.m_seq_id + "' from LOCUS line (" + to_string(s.m_length) + ") does not match length previously assigned from source feature (" + to_string(source_end_position) + "). The larger of the two lengths will be used. If you encounter further errors, make sure LOCUS lengths match the true lengths of your DNA sequences.")
+            
+            s.m_length = max(s.m_length,source_end_position);
             //s.m_length = source_end_position; <= old code that assigns source feature length
           }
         }
