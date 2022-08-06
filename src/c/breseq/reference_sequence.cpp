@@ -1066,8 +1066,6 @@ namespace breseq {
         (*new_mobile_element).m_gff_attributes["ID"] = make_vector<string>((*new_mobile_element)["locus_tag"]);
       if ((*new_mobile_element).SafeGet("product") != "")
         (*new_mobile_element).m_gff_attributes["Note"] = make_vector<string>((*new_mobile_element)["product"]);
-      if ((*new_mobile_element).m_pseudo)
-        (*new_mobile_element).m_gff_attributes["Pseudo"] = make_vector<string>((*new_mobile_element)["Pseudo"]);
       if ((*new_mobile_element).SafeGet("accession") != "")
         (*new_mobile_element).m_gff_attributes["Alias"] = make_vector<string>((*new_mobile_element)["accession"]);
       if ((*new_mobile_element).SafeGet("name") != "")
