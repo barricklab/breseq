@@ -2832,14 +2832,14 @@ int do_runfile(int argc, char *argv[])
   ss << "Usage: gdtools RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> <file1.gd file2.gd file3.gd ...>";
   AnyOption options(ss.str());
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("mode,m",           "Type of command file to generate. Valid options are: breseq, breseq-merged, breseq-apply, trimmomatic, trimmomatic-PE-unique, fastp, fastp-PE, fastp-PE-merge, read-count.", "breseq");
+  options("mode,m",           "Type of command file to generate. Valid options are: breseq, breseq-merged, breseq-apply, trimmomatic, trimmomatic-PE-unique, fastp-single, fastp-paired, fastp-merged, read-count.", "breseq");
   options("executable,e",     "Alternative executable program to run.");
   options("options",          "Options to be passed to the executable. These will appear first in the command line.");
 	options("runfile,r",        "Name of the run file to be output.", "commands");
   options("data-dir,g",       "Directory to search for genome diff files.", "01_Data");
-  options("downloads-dir,d",  "Downloads directory where read and reference files are located. Defaults to 02_Trimmed for read files if #=ADAPTSEQ tags are present. (Default = 02_Downloads; 02_Trimmed for read files if #=ADAPTSEQ tags are present for breseq; 02_Apply for reference files for breseq-apply)");
-  options("output-dir,o",     "Output directory for commands within the runfile. (Default = 03_Output for breseq*; = 02_Trimmed for trimmomatic*)");
-  options("log-dir,l",        "Directory for error log file that captures the executable's stdout and sterr. (Default = 04_Logs for breseq; 04_Apply_Logs for breseq-apply; 04_Trim_Logs for trimmomatic*)");
+  options("downloads-dir,d",  "Path to downloads directory where read and reference files are located. (Default = 02_Downloads; <THIS_PATH>/../02_Trimmed for read files if this directory exists; <THIS_PATH>/../02_Apply for reference files for breseq-apply)");
+  options("output-dir,o",     "Output directory for commands within the runfile. (Default = 03_Output for breseq*; = 02_Trimmed for trimmomatic* or fastp*)");
+  options("log-dir,l",        "Directory for error log file that captures the executable's stdout and sterr. (Default = 04_Logs for breseq; 04_Apply_Logs for breseq-apply; 04_Trim_Logs for trimmomatic* or fastp*)");
 	options("preserve-pairs,p",  "Keep track of paired and unpaired reads for trimming and using trimmed reads.", TAKES_NO_ARGUMENT);
 
 	options.addUsage("\n");
@@ -2896,14 +2896,6 @@ int do_runfile(int argc, char *argv[])
   //! Check mode and alter defaults if needed
 	//!
 	
-	// Used for breseq
-	bool merged_reads = false;
-	
-	if (options["mode"] == "breseq-merged") {
-		merged_reads = true;
-	}
-	
-	
   string exe;
 	string runfile_path;
 	string output_dir;
@@ -2934,12 +2926,7 @@ int do_runfile(int argc, char *argv[])
 		runfile_path = "trimmomatic_commands";
 		output_dir = "02_Trimmed";
 		log_dir = "04_Trim_Logs";
-	} else if (options["mode"] == "fastp") {
-		exe = "fastp";
-		runfile_path = "fastp_commands";
-		output_dir = "02_Trimmed";
-		log_dir = "04_Trim_Logs";
-	} else if ((options["mode"] == "fastp-PE") || (options["mode"] == "fastp-PE-merge")) {
+	} else if ((options["mode"] == "fastp-single") || (options["mode"] == "fastp-paired") || (options["mode"] == "fastp-merged")) {
 		exe = "fastp";
 		runfile_path = "fastp_commands";
 		output_dir = "02_Trimmed";
@@ -3055,9 +3042,9 @@ int do_runfile(int argc, char *argv[])
 				ss << " -r " << download_dir << "/" << cString(*ref_file_it).get_base_name();
 			}
 			
-			// Change over to trimmed input at this point
-			if ( (adapters_for_reads.size() > 0) ) {
-					download_dir = "02_Trimmed";
+			// Should be relative to the download directory
+			if (directory_exists(cString(download_dir + "/../" + "02_Trimmed").c_str())) {
+				download_dir = download_dir + "/../" + "02_Trimmed";
 			}
 			
 			//! Part 4: Read argument path(s).
@@ -3084,7 +3071,7 @@ int do_runfile(int argc, char *argv[])
 				
 			} else {
 			
-				if (merged_reads) {
+				if (options["mode"] == "breseq-merged") {
 					for (vector<vector<string> >::const_iterator read_pair_it=reads_by_pair.begin(); read_pair_it != reads_by_pair.end(); read_pair_it++) {
 						
 						if (file_exists( cString(download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped()).c_str() )) {
@@ -3132,7 +3119,7 @@ int do_runfile(int argc, char *argv[])
 			
 			//! Part 3: Reference argument path(s).
 			for (vector<string>::const_iterator ref_file_it=refs.begin(); ref_file_it != refs.end(); ref_file_it++) {  
-				ss << " -r " << "02_Apply" << "/" << gd.get_title() << ".gff";
+				ss << " -r " << download_dir + "/../" + "02_Apply" << "/" << gd.get_title() << ".gff";
 			}
 			
 			//! Part 4: Read argument path(s).
@@ -3334,7 +3321,7 @@ int do_runfile(int argc, char *argv[])
 				++n_cmds;
 			}
 		
-		}  else if (options["mode"] == "fastp") {
+		}  else if (options["mode"] == "fastp-single") {
 			
 			// For each read file trim with requested adaptor...
 			for (vector<string>::const_iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {
@@ -3380,14 +3367,13 @@ int do_runfile(int argc, char *argv[])
 				++n_cmds;
 			}
 			
-		} else if ( (options["mode"] == "fastp-PE") || (options["mode"] == "fastp-PE-merge") ) {
+		} else if ( (options["mode"] == "fastp-paired") || (options["mode"] == "fastp-merged") ) {
 			
-			// Uses paired end merging and puts all reads in a single file.
 			
 			for (vector<vector<string> >::const_iterator read_pair_it=reads_by_pair.begin(); read_pair_it != reads_by_pair.end(); read_pair_it++) {
 				
-				ASSERT(read_pair_it->size() == 2, "Must have exactly two read files for paired mode: " + join(*read_pair_it, ", "));
-				
+				// New code will use a different command for unpaired reads
+				//ASSERT(read_pair_it->size() == 2, "Must have exactly two read files for paired mode: " + join(cString((*read_pair_it)[0])), ", "));
 				
 				//! Step: Begin building command line.
 				stringstream ss;
@@ -3395,37 +3381,55 @@ int do_runfile(int argc, char *argv[])
 				//! Part 1: Executable and options to pass to it if given by user.
 				ss << exe;
 				
-				if (options["mode"] == "fastp-PE-merge") {
-					ss << " --merge --include_unmerged";
-				}
-				
 				//! Part 2: Options
 				if (options.count("options")) {
 					ss << " " << options["options"];
 				}
-				
-				//! Part 3: Read file name --- handles zipped or unzipped!
-				//! Part 4: Output read base name
-				
-				if (file_exists( cString(download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped()).c_str() )) {
-					ss << " -i " << download_dir << "/" << cString((*read_pair_it)[0]).get_base_name_unzipped();
-					ss << " -I " << download_dir << "/" << cString((*read_pair_it)[1]).get_base_name_unzipped();
+
+				if (read_pair_it->size() == 2) {
+					////////
+					// Code specific to pairs
+					////////
 					
-					if (options["mode"] == "fastp-PE") {
-						ss << " -o " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped();
-						ss << " -O " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name_unzipped();
+					if (options["mode"] == "fastp-merged") {
+						ss << " --merge --include_unmerged";
+					}
+					
+					//! Part 3: Read file name --- handles zipped or unzipped!
+					//! Part 4: Output read base name
+					
+					if (file_exists( cString(download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped()).c_str() )) {
+						ss << " -i " << download_dir << "/" << cString((*read_pair_it)[0]).get_base_name_unzipped();
+						ss << " -I " << download_dir << "/" << cString((*read_pair_it)[1]).get_base_name_unzipped();
+						
+						if (options["mode"] == "fastp-paired") {
+							ss << " -o " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped();
+							ss << " -O " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name_unzipped();
+						} else {
+							ss << " --merged_out " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + ".fastq";
+						}
 					} else {
-						ss << " --merged_out " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + ".fastq";
+						ss << " -i " << download_dir << "/" << cString((*read_pair_it)[0]).get_base_name();
+						ss << " -I " << download_dir << "/" << cString((*read_pair_it)[1]).get_base_name();
+						
+						if (options["mode"] == "fastp-paired") {
+							ss << " -o " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name();
+							ss << " -O " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name();
+						} else {
+							ss << " --merged_out " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + ".fastq.gz";
+						}
 					}
 				} else {
-					ss << " -i " << download_dir << "/" << cString((*read_pair_it)[0]).get_base_name();
-					ss << " -I " << download_dir << "/" << cString((*read_pair_it)[1]).get_base_name();
+					////////
+					// Code for unpaired input files
+					////////
 					
-					if (options["mode"] == "fastp-PE") {
-						ss << " -o " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name();
-						ss << " -O " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name();
+					if ( file_exists( cString(download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped()).c_str() ) ) {
+						ss << " -i " << download_dir << "/" << cString((*read_pair_it)[0]).get_base_name_unzipped();
+						ss << " -o " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped();
 					} else {
-						ss << " --merged_out " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + ".fastq.gz";
+						ss << " -i " << download_dir << "/" << cString((*read_pair_it)[0]).get_base_name();
+						ss << " -o " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name();
 					}
 				}
 				
@@ -3436,7 +3440,7 @@ int do_runfile(int argc, char *argv[])
 				
 				//! Part 6: Error log path.
 				
-				// Additional output to log directory
+				
 				cString log_base_name(cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) );
 				// eliminate _1 or _R1
 				size_t pos = log_base_name.find("_1");
@@ -3449,7 +3453,6 @@ int do_runfile(int argc, char *argv[])
 					}
 				}
 				log_base_name = gd.get_title() + "_" + log_base_name;
-				
 				
 				ss << " --json " << log_dir << "/" << log_base_name << ".json";
 				ss << " --html " << log_dir << "/" << log_base_name << ".html";

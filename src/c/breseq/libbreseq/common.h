@@ -371,6 +371,12 @@ namespace breseq {
     ifstream ifile(filename);
     return !ifile.fail();
   }
+
+  inline bool directory_exists(const char *dirname)
+  {
+    struct stat buffer;
+    return (stat(dirname, &buffer) == 0);
+  }
   
   inline bool file_is_gzipped(const char * filename)
   {
