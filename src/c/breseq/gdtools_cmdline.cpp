@@ -2832,21 +2832,15 @@ int do_runfile(int argc, char *argv[])
   ss << "Usage: gdtools RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> <file1.gd file2.gd file3.gd ...>";
   AnyOption options(ss.str());
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("mode,m",           "Type of command file to generate. Valid options are: breseq, breseq-merged, breseq-apply, trimmomatic, trimmomatic-PE-unique, fastp-single, fastp-paired, fastp-merged, read-count.", "breseq");
+  options("mode,m",           "Type of command file to generate. Valid options are: breseq, breseq-merged, breseq-apply, fastp-single, fastp-paired, fastp-merged, read-count.", "breseq");
   options("executable,e",     "Alternative executable program to run.");
   options("options",          "Options to be passed to the executable. These will appear first in the command line.");
 	options("runfile,r",        "Name of the run file to be output.", "commands");
   options("data-dir,g",       "Directory to search for genome diff files.", "01_Data");
   options("downloads-dir,d",  "Path to downloads directory where read and reference files are located. (Default = 02_Downloads; <THIS_PATH>/../02_Trimmed for read files if this directory exists; <THIS_PATH>/../02_Apply for reference files for breseq-apply)");
-  options("output-dir,o",     "Output directory for commands within the runfile. (Default = 03_Output for breseq*; = 02_Trimmed for trimmomatic* or fastp*)");
-  options("log-dir,l",        "Directory for error log file that captures the executable's stdout and sterr. (Default = 04_Logs for breseq; 04_Apply_Logs for breseq-apply; 04_Trim_Logs for trimmomatic* or fastp*)");
+  options("output-dir,o",     "Output directory for commands within the runfile. (Default = 03_Output for breseq*; = 02_Trimmed for fastp*)");
+  options("log-dir,l",        "Directory for error log file that captures the executable's stdout and sterr. (Default = 04_Logs for breseq; 04_Apply_Logs for breseq-apply; 04_Trim_Logs for fastp*)");
 	options("preserve-pairs,p",  "Keep track of paired and unpaired reads for trimming and using trimmed reads.", TAKES_NO_ARGUMENT);
-
-	options.addUsage("\n");
-	options.addUsage("These GD header fields are used for trimmomatic modes");
-	options.addUsage("  #=ADAPTSEQ <path/to/fasta/file> [required]");
-	options.addUsage("  #=TRIM-START-BASES <int>        [optional]");
-	options.addUsage("  #=TRIM-END-BASES <int>          [optional]");
 	
   options.addUsage("\n");
   options.addUsage("Examples:");
@@ -2885,14 +2879,6 @@ int do_runfile(int argc, char *argv[])
     return -1;
   }
 	
-	bool preserve_paired = options.count("preserve-pairs");
-	
-  if ( preserve_paired && (options["mode"]!="breseq") && (options["mode"]!="trimmomatic-PE-unique") ) {
-    options.addUsage("\nERROR: The --preserve-pairs option can only be used with modes 'breseq' or 'trimmomatic-PE-unique'.");
-    options.printUsage();
-    return -1;
-  }
-	
   //! Check mode and alter defaults if needed
 	//!
 	
@@ -2915,16 +2901,6 @@ int do_runfile(int argc, char *argv[])
     exe = "flexbar";
 		runfile_path = "flexbar_commands";
     output_dir = "02_Trimmed";
-		log_dir = "04_Trim_Logs";
-	} else if (options["mode"] == "trimmomatic") {
-		exe = "trimmomatic";
-		runfile_path = "trimmomatic_commands";
-		output_dir = "02_Trimmed";
-		log_dir = "04_Trim_Logs";
-	} else if (options["mode"] == "trimmomatic-PE-unique") {
-		exe = "trimmomatic";
-		runfile_path = "trimmomatic_commands";
-		output_dir = "02_Trimmed";
 		log_dir = "04_Trim_Logs";
 	} else if ((options["mode"] == "fastp-single") || (options["mode"] == "fastp-paired") || (options["mode"] == "fastp-merged")) {
 		exe = "fastp";
@@ -3048,49 +3024,25 @@ int do_runfile(int argc, char *argv[])
 			}
 			
 			//! Part 4: Read argument path(s).
-
-			// This is a special case for input after Trimmomatic paired trimming
-			if (preserve_paired && (download_dir == "02_Trimmed")) {
-				
+			if (options["mode"] == "breseq-merged") {
 				for (vector<vector<string> >::const_iterator read_pair_it=reads_by_pair.begin(); read_pair_it != reads_by_pair.end(); read_pair_it++) {
 					
-					if (file_exists( cString(download_dir + "/" + cString(gd.get_title()).get_base_name_no_extension() + "_P1.fastq").c_str())) {
-						ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P1.fastq";
-						ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P2.fastq";
-						ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U1.fastq";
-						ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U2.fastq";
-						
+					if (file_exists( cString(download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped()).c_str() )) {
+						ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + ".fastq";
 					} else {
-						ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P1.fastq.gz";
-						ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P2.fastq.gz";
-						ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U1.fastq.gz";
-						ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U2.fastq.gz";
+						ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + ".fastq.gz";
 					}
-					
-				}
-				
-			} else {
-			
-				if (options["mode"] == "breseq-merged") {
-					for (vector<vector<string> >::const_iterator read_pair_it=reads_by_pair.begin(); read_pair_it != reads_by_pair.end(); read_pair_it++) {
-						
-						if (file_exists( cString(download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped()).c_str() )) {
-							ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + ".fastq";
-						} else {
-							ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + ".fastq.gz";
-						}
 
-					}
-				} else {
-				// Normal case
-				for (vector<string>::const_iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {
-					
-						// Handles zipped or unzipped
-						if (file_exists( cString(download_dir + "/" + cString(*read_file_it).get_base_name_unzipped()).c_str() )) {
-							ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
-						} else {
-							ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name();
-						}
+				}
+			} else {
+			// Normal case
+			for (vector<string>::const_iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {
+				
+					// Handles zipped or unzipped
+					if (file_exists( cString(download_dir + "/" + cString(*read_file_it).get_base_name_unzipped()).c_str() )) {
+						ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
+					} else {
+						ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name();
 					}
 				}
 			}
@@ -3141,185 +3093,6 @@ int do_runfile(int argc, char *argv[])
       cout << ss.str() << endl;
       runfile << ss.str() << endl;
       ++n_cmds;
-			
-    }  else if (options["mode"] == "trimmomatic") {
-			
-			// For each read file trim with requested adaptor...
-			for (vector<string>::const_iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {
-				//! Step: Begin building command line.
-				stringstream ss;
-				
-				//! Part 1: Executable and options to pass to it if given by user.
-				ss << exe;
-				ss << " SE";
-				
-				//! Part 2: Options
-				if (options.count("options")) {
-					ss << " " << options["options"];
-				}
-				
-				//! Part 3: Read file name --- handles zipped or unzipped!
-				//! Part 4: Output read base name
-				
-				if (file_exists( cString(download_dir + "/" + cString(*read_file_it).get_base_name_unzipped()).c_str() )) {
-					ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
-					ss << " " << output_dir + "/" + cString(*read_file_it).get_base_name_unzipped();
-				} else {
-					ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name();
-					ss << " " << output_dir + "/" + cString(*read_file_it).get_base_name();
-				}
-				
-				//! Part 5: Trimming commands
-				
-				// Start - Adapter clipping command
-				ss << " ILLUMINACLIP:";
-				
-				//! Part 4: Adaptor file name
-				ASSERT(adapters_for_reads.count(*read_file_it), "Required #=ADAPTSEQ line not found in GenomeDiff file. These lines must occur BEFORE the READSEQ lines to which they apply.");
-				
-				ss << download_dir << "/" << cString(adapters_for_reads[*read_file_it]).get_base_name();
-				
-				// Remaining match options (close to default values)
-				ss << ":4:30:10";
-				// End - Adapter clipping command
-				
-				// Cropping beginning / end
-				if (gd.get_breseq_data("TRIM-START-BASES").size() != 0) {
-					ss << " HEADCROP:" << gd.get_breseq_data("TRIM-START-BASES");
-				}
-				if (gd.get_breseq_data("TRIM-END-BASES").size() != 0) {
-					ss << " CROP:" << gd.get_breseq_data("TRIM-END-BASES");
-				}
-				
-				ss << " MINLEN:30";
-				
-				//! Part 6: Error log path.
-				ss << " >& " << log_dir << "/" << cString(*read_file_it).get_base_name_no_extension(true) << ".log";
-				
-				//! Step: Output to file.
-				cout << ss.str() << endl;
-				runfile << ss.str() << endl;
-				++n_cmds;
-			}
-			
-		} else if (options["mode"] == "trimmomatic-PE-unique") {
-			
-			// Uses palindrome trimming mode and creates R1 and R2 files that ARE NOT PAIRED
-			// but that do have only UNIQUE bases. Use for RNAseq and population sequencing.
-			
-			for (vector<vector<string> >::const_iterator read_pair_it=reads_by_pair.begin(); read_pair_it != reads_by_pair.end(); read_pair_it++) {
-				
-				ASSERT(read_pair_it->size() == 2, "Must have exactly two read files for paired mode: " + join(*read_pair_it, ", "));
-				
-				
-				//! Step: Begin building command line.
-				stringstream ss;
-				
-				//! Part 1: Executable and options to pass to it if given by user.
-				ss << exe;
-				ss << " PE";
-				
-				//! Part 2: Options
-				if (options.count("options")) {
-					ss << " " << options["options"];
-				}
-				
-				//! Part 3: Read file name --- handles zipped or unzipped!
-				//! Part 4: Output read base name
-				
-				if (file_exists( cString(download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped()).c_str() )) {
-					ss << " " << download_dir << "/" << cString((*read_pair_it)[0]).get_base_name_unzipped();
-					ss << " " << download_dir << "/" << cString((*read_pair_it)[1]).get_base_name_unzipped();
-					
-					ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P1.fastq";
-					ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U1.fastq";
-					ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P2.fastq";
-					ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U2.fastq";
-					
-				} else {
-					ss << " " << download_dir << "/" << cString((*read_pair_it)[0]).get_base_name();
-					ss << " " << download_dir << "/" << cString((*read_pair_it)[1]).get_base_name();
-					
-					ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P1.fastq.gz";
-					ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U1.fastq.gz";
-					ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true)+ "_P2.fastq.gz";
-					ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U2.fastq.gz";
-				}
-				
-				//! Part 5: Trimming commands
-				
-				// Start - Adapter clipping command
-				ss << " ILLUMINACLIP:";
-				
-				//! Part 4: Adaptor file name
-				ASSERT(adapters_for_reads.count((*read_pair_it)[0]), "Required #=ADAPTSEQ line not found in GenomeDiff file. These lines must occur BEFORE the READSEQ lines to which they apply.");
-				
-				ss << download_dir << "/" << cString(adapters_for_reads[(*read_pair_it)[0]]).get_base_name();
-				
-				// Remaining match options (close to default values)
-				ss << ":4:30:10";
-				// End - Adapter clipping command
-				
-				// Cropping beginning / end AFTER doing Illumina clip
-				if (gd.get_breseq_data("TRIM-START-BASES").size() != 0) {
-					ss << " HEADCROP:" << gd.get_breseq_data("TRIM-START-BASES");
-				}
-				if (gd.get_breseq_data("TRIM-END-BASES").size() != 0) {
-					ss << " CROP:" << gd.get_breseq_data("TRIM-END-BASES");
-				}
-				
-				ss << " MINLEN:30";
-				
-				//! Part 6: Error log path.
-				ss << " >& " << log_dir << "/" << cString(gd.get_title()).get_base_name_no_extension(true) << ".log";
-				
-				// Only concatenate if we are not preserving pairing information
-				if (!preserve_paired) {
-					//! Part 7: Concatenate output files to final names
-					if (file_exists( cString(download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped()).c_str() )) {
-						
-						ss << " && cat";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P1.fastq";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U1.fastq";
-						ss << " > " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped();
-						
-						ss << " && cat";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name_no_extension(true, true) + "_P2.fastq";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name_no_extension(true, true) + "_U2.fastq";
-						ss << " > " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name_unzipped();
-						
-						ss << " && rm";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P1.fastq";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U1.fastq";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P2.fastq";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U2.fastq";
-						
-					} else {
-						
-						ss << " && cat";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P1.fastq.gz";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U1.fastq.gz";
-						ss << " > " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name();
-						
-						ss << " && cat";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name_no_extension(true, true) + "_P2.fastq.gz";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name_no_extension(true, true) + "_U2.fastq.gz";
-						ss << " > " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name();
-						
-						ss << " && rm";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P1.fastq.gz";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U1.fastq.gz";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P2.fastq.gz";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U2.fastq.gz";
-					}
-				}
-				
-				
-				//! Step: Output to file.
-				cout << ss.str() << endl;
-				runfile << ss.str() << endl;
-				++n_cmds;
-			}
 		
 		}  else if (options["mode"] == "fastp-single") {
 			
@@ -3390,6 +3163,9 @@ int do_runfile(int argc, char *argv[])
 					////////
 					// Code specific to pairs
 					////////
+					
+					// Always use this option, though trimming still works well without it
+					ss << " --detect_adapter_for_pe";
 					
 					if (options["mode"] == "fastp-merged") {
 						ss << " --merge --include_unmerged";
