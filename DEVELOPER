@@ -7,7 +7,12 @@ $ ./configure
 $ make
 $ make test
 
-NOTE: The output of the consistency tests varies depending on different versions of bowtie2. When you run breseq it will suggest the recommended bowtie2 version for your breseq version if you are not already using it.
+=== Mac XCode Compilation Instructions ===
+
+The output of the consistency tests varies depending on different versions of bowtie2 and R. You can use conda with the included environment.yml file to install the current versions used for the consistency tests.
+
+$ conda create -f environment.yml
+$ conda activate breseq-compile
 
 === Mac XCode Compilation Instructions ===
 
