@@ -968,15 +968,16 @@ namespace breseq {
     for (uint32_t j = 0; j < combined_candidate_junctions.size(); j++)
 		{
 			JunctionCandidate& junction = combined_candidate_junctions[j];
-      string junction_key = junction.junction_key();
+      string junction_key = junction.junction_key(false); // false here is important for not including redundant tags
       if (user_defined_junctions.count(junction_key)) {
+        cout << "Found as user junction: " << junction.junction_key() << endl;
         junction.user_defined = true;
         user_defined_junctions.erase(junction_key);
       }
 		}
     for (map<string,cDiffEntry>::iterator it = user_defined_junctions.begin(); it != user_defined_junctions.end(); it++) {
       cDiffEntry& user_junction = it->second;
-      JunctionInfo user_junction_info(it->first);
+      JunctionInfo user_junction_info(user_junction);
       user_junction_info.user_defined = true;
       string junction_sequence = construct_junction_sequence(ref_seq_info, user_junction, read_length_max, false);
       JunctionCandidate new_jc(user_junction_info, junction_sequence);
@@ -1061,7 +1062,7 @@ namespace breseq {
       string throwaway_sequence = construct_junction_sequence(ref_seq_info, user_junction, read_length_max);
       
       JunctionInfo junction_info(user_junction);
-      user_defined_junctions[junction_info.junction_key()] = user_junction;
+      user_defined_junctions[junction_info.junction_key(false)] = user_junction;
       
       //cout << user_junction.as_string() << endl;
     }

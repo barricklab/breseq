@@ -110,9 +110,9 @@ int do_intersection(int argc, char *argv[])
   return 0;
 }
 
-int do_union(int argc, char *argv[])
+int do_merge(int argc, char *argv[])
 {
-  AnyOption options("gdtools UNION [-o output.gd] input1.gd input2.gd ...");
+  AnyOption options("gdtools MERGE/UNION [-o output.gd] input1.gd input2.gd ...");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o",  "output GD file name", "output.gd");
 	options("evidence,e",  "operate on evidence rather than mutation entries", TAKES_NO_ARGUMENT);
@@ -144,7 +144,7 @@ int do_union(int argc, char *argv[])
   }
 	 
 	 */
-  UserOutput uout("UNION");
+  UserOutput uout("MERGE");
 	cout << endl << "    Preserving: " << (!options.count("evidence") ? "Mutations (3-letter codes)" : "Evidence (2-letter codes)") << endl;
 
   uout("Reading input GD files") << endl;
@@ -3802,7 +3802,7 @@ int main(int argc, char* argv[]) {
     return do_validate(argc_new, argv_new);
   } else if (command == "APPLY") {
     return do_apply(argc_new, argv_new);    
-  } else if (command == "COMPARE") {
+  } else if ( (command == "COMPARE") || (command == "ANNOTATE") ) {
     return do_annotate(argc_new, argv_new);
   } else if (command == "CHECK") {
     return do_check(argc_new, argv_new);  
@@ -3810,8 +3810,6 @@ int main(int argc, char* argv[]) {
     return do_check_plot(argc_new, argv_new);
   } else if (command == "NOT-EVIDENCE") {        //TODO merge with FILTER
     return do_not_evidence(argc_new, argv_new);
-  } else if (command == "ANNOTATE") {
-    return do_annotate(argc_new, argv_new);
 	} else if (command == "MUTATIONS") {
 		return do_mutations(argc_new, argv_new);
   } else if (command == "PHYLOGENY"){
@@ -3826,10 +3824,8 @@ int main(int argc, char* argv[]) {
 		return do_remove_gd(argc_new, argv_new);
 	} else if (command == "INTERSECT") {
     return do_intersection(argc_new, argv_new);
-  } else if (command == "UNION") {
-    return do_union(argc_new, argv_new);
-	} else if (command == "MERGE") {
-		return do_union(argc_new, argv_new);
+	} else if ( (command == "MERGE") || (command == "UNION") ) {
+		return do_merge(argc_new, argv_new);
   } else if (command == "SUBTRACT") {
     return do_subtract(argc_new, argv_new);
   } else if (command == "WEIGHTS") {

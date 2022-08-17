@@ -168,7 +168,7 @@ namespace breseq {
     
     
     // Serializes a JunctionInfo to a string
-    string junction_key()
+    string junction_key(bool include_redundant_tags = true)
     {
       ASSERT( (sides[0].strand == +1) || (sides[0].strand == -1), "side 1 strand uninitialized or wrong: must be -1/+1");
       ASSERT( (sides[1].strand == +1) || (sides[1].strand == -1), "side 2 strand uninitialized or wrong: must be -1/+1");
@@ -189,9 +189,13 @@ namespace breseq {
       values[7] = to_string(unique_read_sequence);
       values[8] = to_string(flanking_left);
       values[9] = to_string(flanking_right);
+ 
+      //@JEB: Including these can lead to identical user candidate junctions having the same key
       
-      values[10] = to_string(sides[0].redundant);
-      values[11] = to_string(sides[1].redundant);
+      if (include_redundant_tags) {
+        values[10] = to_string(sides[0].redundant);
+        values[11] = to_string(sides[1].redundant);
+      }
       
       if (user_defined) values.push_back(junction_user_defined_tag);
       
