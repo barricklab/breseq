@@ -578,7 +578,7 @@ int do_check(int argc, char *argv[])
 	options("help,h", "display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o",         "output GD file", "comp.gd");
   options("reference,r",      "file containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
-  options("evidence",         "compare evidence", TAKES_NO_ARGUMENT);
+  options("evidence",         "compare evidence (only JC at present)", TAKES_NO_ARGUMENT);
   options("jc-buffer",        "when comparing JC evidence, length of sequence segment to compare for JC evidence", 50);
   options("jc-shorten",       "when comparing JC evidence, length to shorten control segments by when comparing JC evidence for overlap", 5);
   options("jc-only-accepted", "when comparing JC evidence, do not score/count rejected items", TAKES_NO_ARGUMENT);

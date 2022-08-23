@@ -1934,7 +1934,7 @@ namespace breseq {
     int32_t flanking_length,
     bool inclusive_overlap
     )
-  {    
+  {
     bool verbose = false;
     // set up local settings
     

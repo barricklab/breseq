@@ -3649,6 +3649,8 @@ cGenomeDiff cGenomeDiff::check_evidence(cReferenceSequences& sequence,
   cGenomeDiff ret_val;
   ret_val.metadata = test.metadata;
   
+  WARN("Currently only JC evidence is checked!");
+
   // START JC Evidence Block
   //
   // Conceptually we build up two sets containing equivalent junction sequences.
@@ -3722,18 +3724,13 @@ cGenomeDiff cGenomeDiff::check_evidence(cReferenceSequences& sequence,
       
       diff_entry_ptr_t prev_jc = test_jc[*its];
       
-      WARN("Duplicate junction sequence in test data set for entry:\n" + jc.as_string() + "\n" + ctrl_jc[jc_segment]->as_string());
+      WARN("Duplicate junction sequence in test data set for entry:\n" + jc.as_string() + "\n" + prev_jc->as_string());
       
       if (verbose) {
         cerr << "*** Merged two junctions:" << endl;
         cerr << jc << endl;
         cerr << "AND:" << endl;
         cerr << *(prev_jc) << endl;
-      }
-      
-      // Save the max score with the new item
-      if (n(jc["score"]) < n((*prev_jc)["score"])) {
-        jc["score"] = (*prev_jc)["score"];
       }
       
       if (verbose) {
@@ -3804,6 +3801,8 @@ cGenomeDiff cGenomeDiff::check_evidence(cReferenceSequences& sequence,
     ++n_fn;
     ret_val.add(new_item);
   }
+  
+  // END JC Evidence Block
   
   //Add TP|FN|FP header info.
   string value = "";
