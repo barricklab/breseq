@@ -1337,26 +1337,34 @@ int do_annotate(int argc, char* argv[])
 		
 	} else if ( (output_format == "TSV") || (output_format == "CSV") ) {
 		// Load the entire list and pass it to the writer
+		
+		vector<cGenomeDiff> ev_list;
+
 		for (vector<string>::iterator it=gd_path_names.begin(); it!=gd_path_names.end(); it++) {
 			uout("Reading/annotating input GD file",*it);
 
 			cGenomeDiff this_gd(*it);
+			
+			cGenomeDiff this_ev(*it);
+
 			//remove all but mutations
-			if (!options.count("preserve-evidence")) {
-				this_gd.remove_group(cGenomeDiff::EVIDENCE);
+			// handling preserve evidence now happens in the function
+			//if (!options.count("preserve-evidence")) {
+			//	this_gd.remove_group(cGenomeDiff::EVIDENCE);
 				//this_gd.remove_group(cGenomeDiff::VALIDATION);
-			}
+			//}
 			ref_seq_info.annotate_mutations(this_gd, false, options.count("ignore-pseudogenes"), compare_mode);
 			
 			gd_list.push_back(this_gd);
+			ev_list.push_back(this_ev);
 		}
 		
 		if (output_format == "TSV") {
 			uout("Writing output TSV file", options["output"]);
-			cGenomeDiff::write_separated_values_file(output_file_name, "\t", gd_list);
+			cGenomeDiff::write_separated_values_file(output_file_name, "\t", gd_list, options.count("preserve-evidence"));
 		} else if (output_format == "CSV") {
 			uout("Writing output CSV file", options["output"]);
-			cGenomeDiff::write_separated_values_file(output_file_name, ",", gd_list);
+			cGenomeDiff::write_separated_values_file(output_file_name, ",", gd_list, options.count("preserve-evidence"));
 		}
 		
 	} else if (output_format == "JSON") {

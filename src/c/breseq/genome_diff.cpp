@@ -4080,10 +4080,12 @@ void cGenomeDiff::write_separated_values_file(
                             string& output_file_name,
                             const char* separator,
                             vector<cGenomeDiff>& gd_list,
+                            bool preserve_evidence,
                             bool verbose
                             )
 {
   (void)verbose;
+  bool add_read_count = true;
 
   // Need to quote for CSV
   string quote = (string(separator) != "\t") ? "\"" : "";
@@ -4093,10 +4095,14 @@ void cGenomeDiff::write_separated_values_file(
   // Go through all entries and merge keys into one big map
   // Go through each row and write everything, with blanks for when keys are missing
   
+  uint32_t on_gd_index = -1;
   for (vector<cGenomeDiff>::iterator gd_it = gd_list.begin(); gd_it != gd_list.end(); gd_it++)  {
+    on_gd_index++;
     
     diff_entry_list_t de_list = gd_it->get_list();
     for (diff_entry_list_t::iterator de_it = de_list.begin(); de_it != de_list.end(); de_it++)  {
+      
+      if (!preserve_evidence && (**de_it).is_evidence()) continue;
       
       (**de_it)["type"] = gd_entry_type_lookup_table[(*de_it)->_type];
       (**de_it)["title"] = gd_it->metadata.title;
@@ -4110,11 +4116,72 @@ void cGenomeDiff::write_separated_values_file(
       (**de_it)["mutator_status"] = (gd_it->metadata.breseq_data.find("MUTATOR_STATUS") != gd_it->metadata.breseq_data.end()) ? gd_it->metadata.breseq_data["MUTATOR_STATUS"] : "";
 
       
+
+      
+      // Find the applicable evidence and add together read counts
+      // the 'basis' is the number of coverage values added together
+      //
+      // Keys added: new_read_count, ref_read_count, new_read_count_basis, ref_read_count_basis
+      //
+      // Ex1: for a two base pair insertion, there will be two RA items
+      //      and the ref and new bases will both be two
+      //
+      // Ex2: for an IS element insertion there will be two JC items
+      //      each has one side that is unique in the ref and can be counted
+      //      and each has one count of reads spanning the new junction
+      //      so the ref and new bases will both be two
+      if (add_read_count) {
+        
+        vector<string> ev = (**de_it)._evidence;
+        int32_t new_read_count(0), ref_read_count(0);
+        int32_t new_read_count_basis(0), ref_read_count_basis(0);
+        for(vector<string>::iterator ev_id_it = ev.begin(); ev_id_it != ev.end(); ev_id_it++) {
+          
+          diff_entry_ptr_t found_evidence = gd_it->find_by_id(*ev_id_it);
+          
+          if (found_evidence->_type == RA) {
+            
+            vector<string> split_cov;
+            split_cov = split((*found_evidence)[REF_COV], "/");
+            ref_read_count += from_string<int32_t>(split_cov[0]) + from_string<int32_t>(split_cov[1]);
+            ref_read_count_basis++;
+            
+            split_cov = split((*found_evidence)[NEW_COV], "/");
+            new_read_count += from_string<int32_t>(split_cov[0]) + from_string<int32_t>(split_cov[1]);
+            new_read_count_basis++;
+
+          } else if (found_evidence->_type == JC) {
+
+            if ((*found_evidence)[SIDE_1_REDUNDANT]!="1") {
+              ref_read_count += from_string<int32_t>((*found_evidence)[SIDE_1_READ_COUNT]);
+              ref_read_count_basis++;
+            }
+            
+            if ((*found_evidence)[SIDE_2_REDUNDANT]!="1") {
+              ref_read_count += from_string<int32_t>((*found_evidence)[SIDE_2_READ_COUNT]);
+              ref_read_count_basis++;
+            }
+              
+            new_read_count += from_string<int32_t>((*found_evidence)[NEW_JUNCTION_READ_COUNT]);
+            new_read_count_basis++;
+          }
+        }
+        
+        // Save results
+        (**de_it)["new_read_count"] = to_string(new_read_count);
+        (**de_it)["ref_read_count"] = to_string(ref_read_count);
+        
+        (**de_it)["new_read_count_basis"] = to_string(new_read_count_basis);
+        (**de_it)["ref_read_count_basis"] = to_string(ref_read_count_basis);
+      }
+      
+      // Add other keys
       for (diff_entry_map_t::iterator it = (*de_it)->begin(); it != (*de_it)->end(); it++) {
         if (it->first[0] != '_') {
           key_set.insert(it->first);
         }
       }
+      
     }
   }
   
@@ -4135,6 +4202,8 @@ void cGenomeDiff::write_separated_values_file(
   
     diff_entry_list_t de_list = gd_it->get_list();
     for (diff_entry_list_t::iterator de_it = de_list.begin(); de_it != de_list.end(); de_it++)  {
+      
+      if (!preserve_evidence && (**de_it).is_evidence()) continue;
       
       bool first_time = true;
       for (vector<string>::iterator it = header_list.begin(); it != header_list.end(); it++) {

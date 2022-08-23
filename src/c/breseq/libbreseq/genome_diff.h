@@ -319,6 +319,7 @@ public:
                         string& output_file_name,
                         const char* separator,
                         vector<cGenomeDiff>& gd_list,
+                        bool preserve_evidence,
                         bool verbose = false
                        );
   
