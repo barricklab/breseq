@@ -1344,15 +1344,8 @@ int do_annotate(int argc, char* argv[])
 			uout("Reading/annotating input GD file",*it);
 
 			cGenomeDiff this_gd(*it);
-			
 			cGenomeDiff this_ev(*it);
-
-			//remove all but mutations
-			// handling preserve evidence now happens in the function
-			//if (!options.count("preserve-evidence")) {
-			//	this_gd.remove_group(cGenomeDiff::EVIDENCE);
-				//this_gd.remove_group(cGenomeDiff::VALIDATION);
-			//}
+			
 			ref_seq_info.annotate_mutations(this_gd, false, options.count("ignore-pseudogenes"), compare_mode);
 			
 			gd_list.push_back(this_gd);

@@ -4138,6 +4138,9 @@ void cGenomeDiff::write_separated_values_file(
           
           diff_entry_ptr_t found_evidence = gd_it->find_by_id(*ev_id_it);
           
+          if (found_evidence.get() == NULL) continue;
+          
+          cout << found_evidence->as_string() << endl;
           if (found_evidence->_type == RA) {
             
             vector<string> split_cov;
