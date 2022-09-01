@@ -527,7 +527,7 @@ namespace breseq
       this->minimum_mapping_quality = 0;
       
       this->mutation_log10_e_value_cutoff = 10;
-      this->consensus_frequency_cutoff = 0; // zero is OFF - ensures any rejected poly with high freq move to consensus!
+      this->consensus_frequency_cutoff = 0.8; // zero is OFF - ensures any rejected poly with high freq move to consensus!
       this->consensus_minimum_variant_coverage = 0;
       this->consensus_minimum_total_coverage = 0;
       this->consensus_minimum_variant_coverage_each_strand = 0;
