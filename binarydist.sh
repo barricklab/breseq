@@ -26,15 +26,8 @@ make -j 6
 make install
 
 #Documentation and information
-if [ "$BINARYPLATFORM" == "Darwin" ]; then
-        make docs
-        cp -r src/doc/_build/html ${BINARYDIR}/documentation
-else
-        echo "=================================================="
-        echo "REMEMBER! HTML DOCUMENTATION ONLY BUILT ON DARWIN "
-        echo "--->  COPY THE DOCUMENTATION FOLDER INTO THIS DIST"
-        echo "=================================================="
-fi
+make docs
+cp -r src/doc/_build/html ${BINARYDIR}/documentation
 cp -r LICENSE ${BINARYDIR}
 cp -r README-BINARY ${BINARYDIR}/README
 
