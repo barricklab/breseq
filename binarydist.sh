@@ -22,7 +22,7 @@ echo "./configure --without-libunwind --prefix=\"${BINARYDIR}\" --enable-static 
 
 make clean
 make -j 6
-make test
+#make test
 make install
 
 #Documentation and information

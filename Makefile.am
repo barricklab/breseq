@@ -20,7 +20,13 @@ ACLOCAL_AMFLAGS = -I aux_build/m4
 SUBDIRS = $(LIBBAM) $(BRESEQ)
 
 ### Tests! -- only one test included for now in distribution.
+
+## Top level files included (and required) by default
+## AUTHORS, ChangeLog, COPYING, INSTALL, NEWS, README
 EXTRA_DIST = \
+	DEVELOPER \
+	dev-environment.yml \
+	test-environment.yml \
 	tests/common.sh \
 	tests/test.sh \
 	tests/lambda_mult_ref_read/expected.gd \
@@ -70,7 +76,6 @@ docs :
 	make -f Makefile BUILDDIR=$(DOCBUILDDIR) html ;
 
 dist-hook:
-
 	if [ -d "$(DOCSRCDIR)" ]; then \
 		make docs ; \
 		cp -r $(DOCBUILDDIR)/html $(distdir)/documentation ; \

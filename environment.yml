@@ -1,4 +1,0 @@
-name: breseq-compile
-dependencies:
-  - bowtie2=2.4.5
-  - r==4.1.3

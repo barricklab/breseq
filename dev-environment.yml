@@ -1,0 +1,13 @@
+name: breseq-dev
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - zlib
+  - autoconf
+  - automake
+  - libtool
+  - m4
+  - sphinx
+  - sphinxcontrib-jsmath

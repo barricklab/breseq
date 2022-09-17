@@ -7,12 +7,23 @@ $ ./configure
 $ make
 $ make test
 
-=== Mac XCode Compilation Instructions ===
+=== Compilation Instructions ===
 
-The output of the consistency tests varies depending on different versions of bowtie2 and R. You can use conda with the included environment.yml file to install the current versions used for the consistency tests.
+You can use conda with the included dev-environment.yml file to install packages needed for building breseq and its documentation at the command line.
 
-$ conda create -f environment.yml
-$ conda activate breseq-compile
+$ conda env create -f dev-environment.yml
+$ conda activate breseq-dev
+
+Note that this DOES NOT install a C/C++ compiler. Those must be installed outside of conda.
+
+=== Testing Instructions ===
+
+The output of the consistency tests varies depending on different versions of bowtie2 and R. You can use conda with the included test-environment.yml file to install the current versions used for the consistency tests.
+
+$ conda env create -f test-environment.yml
+$ conda activate breseq-test
+
+Note that conda installs a compiler in this environment that will interfere with building breseq in this environment, so only use it for the tests!
 
 === Mac XCode Compilation Instructions ===
 
