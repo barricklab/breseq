@@ -28,7 +28,7 @@ start_timer=$(date '+%s')
 if [[ -e ${TESTDIR}/$2/${TESTEXEC} ]]; then
 	${TESTDIR}/$2/${TESTEXEC} $1
 else
-	for i in `LC_ALL=POSIX && find $2 -name ${TESTEXEC} | sort`; do
+	for i in `export LC_ALL=POSIX; find $2 -name ${TESTEXEC} | sort`; do
 
 		# skip test directories that begin with an underscore!
 		if [[ (! $i =~ "/_") && (! $i =~ "^_") ]]; then
