@@ -106,6 +106,7 @@ namespace breseq {
   /*
 	 Title   : prepare_junctions
 	 Function: Adds fields to junction items in preparation for mutation prediction
+             And mark junctions that are near the ends of contigs
    */
   void MutationPredictor::prepare_junctions(Settings& settings, Summary& summary, cGenomeDiff& gd)
   {
@@ -195,6 +196,44 @@ namespace breseq {
       j["_unique_interval_strand"] = j[j["_unique_interval"] + "_strand"];
     }
     
+    // @JEB CONTIG IMPROVEMENTS
+    
+    /*
+    
+    // Mark junctions that are near the ends of contigs
+    int32_t contig_end_distance = 50;
+    for (diff_entry_list_t::iterator jc_it=jc.begin(); jc_it!=jc.end(); jc_it++)
+    {
+      cDiffEntry& j = **jc_it;
+      
+      if (!ref_seq_info[j[SIDE_1_SEQ_ID]].m_is_contig)
+        continue;
+      if (!ref_seq_info[j[SIDE_2_SEQ_ID]].m_is_contig)
+        continue;
+      
+      int32_t side_1_seq_length = ref_seq_info.get_sequence_length(j[SIDE_1_SEQ_ID]);
+      int32_t side_2_seq_length = ref_seq_info.get_sequence_length(j[SIDE_1_SEQ_ID]);
+
+      bool side_1_near_contig_end = false;
+      if (n(j[SIDE_1_POSITION]) <= contig_end_distance)
+        side_1_near_contig_end = true;
+          
+      if (n(j[SIDE_1_POSITION]) >= side_1_seq_length-contig_end_distance)
+        side_1_near_contig_end = true;
+
+      bool side_2_near_contig_end = false;
+      if (n(j[SIDE_2_POSITION]) <= contig_end_distance)
+        side_2_near_contig_end = true;
+          
+      if (n(j[SIDE_2_POSITION]) >= side_2_seq_length-contig_end_distance)
+        side_2_near_contig_end = true;
+      
+      if (side_1_near_contig_end && side_2_near_contig_end) {
+        j["contig_end"] = "1";
+      }
+      
+    }
+     */
   }
   
   void MutationPredictor::predictMCplusJCtoDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc)
@@ -1387,8 +1426,13 @@ namespace breseq {
     (void)mc;
     bool verbose = false;
     
-    // variables pulled from the settings
+    // variables pulled from the summary
     int32_t read_length_avg = static_cast<int32_t>(summary.sequence_conversion.read_length_avg);
+    
+    // check for junctions that are between the ends of contigs (with some slop)
+    
+    
+    
     
     // @JEB 03-09-2014 Changed this section to produce INS and DEL instead of AMP,
     //                 when the mutation size is less than or equal to threshold in settings. 
@@ -2185,7 +2229,12 @@ namespace breseq {
 		diff_entry_list_t mc = gd.get_list(mc_types);
     mc.remove_if(cDiffEntry::field_exists("reject"));
     
+    // Flag junctions that are both at or near contig ends so we don't use them
+    // to predict mutations and we don't show them in the final output
     
+    // @JEB CONTIG IMPROVEMENTS
+    //jc.remove_if(cDiffEntry::field_exists("contig_end"));
+
     ///
     // evidence JC + JC = MOB mutation
     ///

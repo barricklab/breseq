@@ -152,8 +152,9 @@ namespace breseq
         
     // For lookup and iterating certain sets
     set<string> m_junction_only_seq_id_set;     // All seq_ids in junction_only reference files
+    set<string> m_contig_seq_id_set;            // All seq_ids in the contig reference files
     set<string> m_call_mutations_seq_id_set;    // Has all NOT in junction_only, mutations called
-  
+    
     // For traversing groups that should have their coverage assigned together
     vector< vector<string> > m_seq_ids_by_coverage_group;
     // For looking up the coverage group id of a reference sequence

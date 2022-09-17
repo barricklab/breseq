@@ -633,10 +633,12 @@ public:
     public:      
       int32_t m_length;
       bool m_is_circular;
+      bool m_is_contig;
       string m_description; // GenBank (DEFINITION) | GFF (description), from main feature line
       string m_seq_id;      // GenBank (LOCUS)      | GFF (seqid), from ##sequence-region line
       string m_file_name;   // Name of file this sequence was loaded from
       string m_file_format; // Format of file used to load sequence
+
 
       cFastaSequence m_fasta_sequence;            //!< Nucleotide sequence
     
@@ -664,6 +666,7 @@ public:
       cAnnotatedSequence() : 
         m_length(0),
         m_is_circular(false),
+        m_is_contig(false),
         m_description("na"), 
         m_seq_id("na")
         {} ;
@@ -853,7 +856,11 @@ public:
     {}
 
     //!< Load all reference files and verify - this is the only public load method!
-    void LoadFiles(const vector<string>& file_names, const string& genbank_field_for_seq_id = "AUTOMATIC");
+    void LoadFiles(
+                   const vector<string>& file_names,
+                   const string& genbank_field_for_seq_id = "AUTOMATIC",
+                   const set<string>& contig_seq_ids = set<string>()
+                   );
     
     //!: Convenience function to load just one file
     void LoadFile(const string& file_name)

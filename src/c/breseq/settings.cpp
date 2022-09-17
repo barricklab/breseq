@@ -140,18 +140,22 @@ namespace breseq
     
     // Initialize the junction_only and other sets
     set<string> junction_only_file_name_set(m_junction_only_reference_file_names.begin(), m_junction_only_reference_file_names.end());
+    set<string> contig_file_name_set(m_contig_reference_file_names.begin(), m_contig_reference_file_names.end());
+
     for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++) {
       if ( junction_only_file_name_set.count(it->get_file_name()) ) {
         m_junction_only_seq_id_set.insert(it->m_seq_id);
       } else {
         m_call_mutations_seq_id_set.insert(it->m_seq_id);
+        if ( contig_file_name_set.count(it->get_file_name()) ) {
+          m_contig_seq_id_set.insert(it->m_seq_id);
+        }
       }
     }
     
     // Map by filename (only for contig_reference_file_names to id)
     map<string,uint32_t> contig_to_id_map;
     uint32_t on_coverage_group_index = 0; 
-    set<string> contig_file_name_set(m_contig_reference_file_names.begin(), m_contig_reference_file_names.end());
 
     for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++) {
     
