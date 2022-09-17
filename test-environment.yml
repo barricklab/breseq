@@ -6,3 +6,4 @@ channels:
 dependencies:
   - bowtie2=2.4.5
   - r-base=4.1.3
+  - phylip=3.697
