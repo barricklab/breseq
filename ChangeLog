@@ -1,3 +1,9 @@
+Version 0.37.1
+  * Fixed bug in the way that indels in homopolymers were realigned for consistency
+    that sporadically caused fatal "Covariate 'quality' exceeded enforced maximum" errors.
+  * Fixed fatal "Attempt to add duplicate of this existing entry" error that could arise when
+    using user evidence Genome Diff files merged from outputs of previous runs.
+
 Version 0.37.0
   * Warns that breseq results can vary (usually only slightly) with different
     bowtie2 versions and recommends a specific version for consistency.
