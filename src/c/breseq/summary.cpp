@@ -519,6 +519,7 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   
   //! Settings: Mutation Prediction
   size_cutoff_AMP_becomes_INS_DEL_mutation = t.size_cutoff_AMP_becomes_INS_DEL_mutation;
+  ignore_within_this_multiple_of_average_read_length_of_contig_end = t.ignore_within_this_multiple_of_average_read_length_of_contig_end;
   
   //! Settings: Output
   max_displayed_reads = t.max_displayed_reads;
@@ -833,6 +834,7 @@ void to_json(json& j, const PublicOptionsSummary& s)
     //! Settings: Mutation Prediction
     {"mutation_prediction", json{
       {"size_cutoff_AMP_becomes_INS_DEL_mutation", s.size_cutoff_AMP_becomes_INS_DEL_mutation},
+      {"ignore_within_this_multiple_of_average_read_length_of_contig_end", s.ignore_within_this_multiple_of_average_read_length_of_contig_end}
       }
     },
     

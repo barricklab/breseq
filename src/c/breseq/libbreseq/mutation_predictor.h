@@ -47,11 +47,15 @@ namespace breseq {
     void predictMCplusJCtoDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc);
     void predictJCplusJCtoMOB(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc);
     void predictJCtoINSorSUBorDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc);
-    void predictRAtoSNPorDELorINSorSUB(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc );
+    void predictRAtoSNPorDELorINSorSUB(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& ra, diff_entry_list_t& mc );
 
     // Be safe against having mutations on the same reference with a full deletion of that reference
     void remove_mutations_on_deleted_reference_sequences(Settings& settings, Summary& summary, cGenomeDiff& gd);
     
+    // Set ignore flag on evidence before we predict mutations
+    void ignore_evidence_near_contig_ends(Settings& settings, Summary& summary, cGenomeDiff& gd);
+    void remove_mutations_near_contig_ends(Settings& settings, Summary& summary, cGenomeDiff& gd);
+
     // Cleans up indel positions by shifting them and adds addition fiels for simple sequence repeats 
     void normalize_and_annotate_tandem_repeat_mutations(Settings& settings, Summary& summary, cGenomeDiff& gd);
     

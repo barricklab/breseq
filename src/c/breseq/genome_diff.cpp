@@ -3669,7 +3669,7 @@ cGenomeDiff cGenomeDiff::check_evidence(cReferenceSequences& sequence,
   jc_data_t ctrl_jc;
   
   diff_entry_list_t ctrl_list = ctrl.get_list(make_vector<gd_entry_type>(JC));
-  ctrl_list.remove_if(cDiffEntry::field_exists("circular_chromosome")); 
+  ctrl_list.remove_if(cDiffEntry::field_exists(IGNORE));
   
   ////////////////////////////
   //      CONTROL list      //
@@ -3706,7 +3706,7 @@ cGenomeDiff cGenomeDiff::check_evidence(cReferenceSequences& sequence,
   jc_data_t test_jc;
   
   diff_entry_list_t test_list = test.get_list(make_vector<gd_entry_type>(JC));
-  test_list.remove_if(cDiffEntry::field_exists("circular_chromosome")); 
+  test_list.remove_if(cDiffEntry::field_exists(IGNORE));
   if (jc_only_accepted) test_list.remove_if(cDiffEntry::field_exists("reject")); 
   
   int32_t i = 0;

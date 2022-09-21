@@ -564,6 +564,7 @@ namespace breseq{
 
     //! Settings: Mutation Prediction
     int32_t size_cutoff_AMP_becomes_INS_DEL_mutation;
+    int32_t ignore_within_this_multiple_of_average_read_length_of_contig_end;
     
     //! Settings: Output
     uint32_t max_displayed_reads;

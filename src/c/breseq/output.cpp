@@ -261,9 +261,9 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   diff_entry_list_t jc = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(JC)));
   jc.remove_if(cDiffEntry::rejected_and_not_user_defined()); 
 
-  //Don't show junctions for circular chromosomes
+  //Don't show junctions for circular chromosomes and contig ends
   if (settings.hide_circular_genome_junctions) {
-    jc.remove_if(cDiffEntry::field_exists("circular_chromosome")); 
+    jc.remove_if(cDiffEntry::field_exists(IGNORE));
   }
    
   if (jc.size() > 0) {

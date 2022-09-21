@@ -773,7 +773,7 @@ namespace breseq {
   
 
   // Load a complete collection of files and verify that sufficient information was loaded
-  void cReferenceSequences::LoadFiles(const vector<string>& file_names, const string& genbank_field_for_seq_id, const set<string>& contig_seq_ids)
+  void cReferenceSequences::LoadFiles(const vector<string>& file_names, const string& genbank_field_for_seq_id)
   {
     list<string> sorted_unique_file_names(file_names.begin(), file_names.end());
 
@@ -790,11 +790,6 @@ namespace breseq {
     
     // To uppercase and change nonstandard chars to 'N' in all sequences.
     for (size_t i=0; i<this->size(); i++) {
-      
-      // Set contig references
-      if ( contig_seq_ids.count((*this)[i].m_seq_id) ) {
-        (*this)[i].m_is_contig = true;
-      }
       
       // Uppercase
       string this_sequence = to_upper((*this)[i].m_fasta_sequence.get_sequence());

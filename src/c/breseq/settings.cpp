@@ -27,7 +27,8 @@ using namespace std;
 namespace breseq
 {
   const int32_t kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation = 50;
-  
+  const double kBreseq_ignore_within_this_multiple_of_average_read_length_of_contig_end = 2.0;
+
   // small mutation <= kBreseq_large_mutation_size_cutoff < large_mutation
   const int32_t kBreseq_large_mutation_size_cutoff = kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation;
   
@@ -149,6 +150,7 @@ namespace breseq
         m_call_mutations_seq_id_set.insert(it->m_seq_id);
         if ( contig_file_name_set.count(it->get_file_name()) ) {
           m_contig_seq_id_set.insert(it->m_seq_id);
+          it->m_is_contig = true;
         }
       }
     }
@@ -878,6 +880,7 @@ namespace breseq
     
     //! Settings: Mutation Prediction
     this->size_cutoff_AMP_becomes_INS_DEL_mutation = kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation;
+    this->ignore_within_this_multiple_of_average_read_length_of_contig_end = kBreseq_ignore_within_this_multiple_of_average_read_length_of_contig_end;
     
     //! Settings: Output
     this->max_displayed_reads = 100;

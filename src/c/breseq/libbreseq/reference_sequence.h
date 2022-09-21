@@ -858,8 +858,7 @@ public:
     //!< Load all reference files and verify - this is the only public load method!
     void LoadFiles(
                    const vector<string>& file_names,
-                   const string& genbank_field_for_seq_id = "AUTOMATIC",
-                   const set<string>& contig_seq_ids = set<string>()
+                   const string& genbank_field_for_seq_id = "AUTOMATIC"
                    );
     
     //!: Convenience function to load just one file

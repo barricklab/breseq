@@ -1373,8 +1373,7 @@ int breseq_default_action(int argc, char* argv[])
     // Load all of the reference sequences and convert to FASTA and GFF3
     conv_ref_seq_info.LoadFiles(
                                 settings.all_reference_file_names,
-                                settings.genbank_field_for_seq_id,
-                                settings.refseq_settings.m_contig_seq_id_set
+                                settings.genbank_field_for_seq_id
                                 );
     conv_ref_seq_info.WriteFASTA(settings.reference_fasta_file_name);
     conv_ref_seq_info.WriteGFF(settings.reference_gff3_file_name);
@@ -1481,8 +1480,7 @@ int breseq_default_action(int argc, char* argv[])
   // so that contig and junction-only references are correctly flagged
   ref_seq_info.LoadFiles(
                          make_vector<string>(settings.reference_gff3_file_name),
-                         settings.genbank_field_for_seq_id,
-                         settings.refseq_settings.m_contig_seq_id_set
+                         settings.genbank_field_for_seq_id
                          );
   ref_seq_info.use_original_file_names();
   

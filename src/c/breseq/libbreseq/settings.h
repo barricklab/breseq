@@ -30,6 +30,7 @@ namespace breseq
   // constants used more places than just settings
   extern const int32_t kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation;
   extern const int32_t kBreseq_large_mutation_size_cutoff;
+  extern const double kBreseq_ignore_within_this_multiple_of_average_read_length_of_contig_end;
   extern const char* kBreseqAlignmentScoreBAMTag;
   extern const char* kBreseqBestAlignmentScoreBAMTag;
 
@@ -89,7 +90,7 @@ namespace breseq
 	public:
 		string m_original_file_name;  // the original name provided at the command line
 		string m_base_name;           // the original name minus path and .fastq ending (if any)
-        string m_converted_file_name; // the name of the converted FASTQ file (if it exists)
+    string m_converted_file_name; // the name of the converted FASTQ file (if it exists)
 		uint32_t m_paired_end_group;  // indicates what file contains paired reads
 		uint32_t m_error_group;       // indicates what other read files have the same error rates
 		uint32_t m_id;                // index used to refer to this fastq file in BAM
@@ -392,8 +393,11 @@ namespace breseq
     uint32_t periodicity_step;
     
     //! Settings: Mutation Prediction
-    int32_t size_cutoff_AMP_becomes_INS_DEL_mutation;      // Default = kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation
-          
+    int32_t size_cutoff_AMP_becomes_INS_DEL_mutation;
+      // Default = kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation
+    double ignore_within_this_multiple_of_average_read_length_of_contig_end;
+      // Default = kBreseq_ignore_within_this_multiple_of_average_read_length_of_contig_end
+    
     //! Settings: Output
     uint32_t max_displayed_reads;                           // Default = 100   COMMAND-LINE OPTION
     //! don't include javascript in HTML output, for Galaxy integration

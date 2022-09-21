@@ -196,44 +196,6 @@ namespace breseq {
       j["_unique_interval_strand"] = j[j["_unique_interval"] + "_strand"];
     }
     
-    // @JEB CONTIG IMPROVEMENTS
-    
-    /*
-    
-    // Mark junctions that are near the ends of contigs
-    int32_t contig_end_distance = 50;
-    for (diff_entry_list_t::iterator jc_it=jc.begin(); jc_it!=jc.end(); jc_it++)
-    {
-      cDiffEntry& j = **jc_it;
-      
-      if (!ref_seq_info[j[SIDE_1_SEQ_ID]].m_is_contig)
-        continue;
-      if (!ref_seq_info[j[SIDE_2_SEQ_ID]].m_is_contig)
-        continue;
-      
-      int32_t side_1_seq_length = ref_seq_info.get_sequence_length(j[SIDE_1_SEQ_ID]);
-      int32_t side_2_seq_length = ref_seq_info.get_sequence_length(j[SIDE_1_SEQ_ID]);
-
-      bool side_1_near_contig_end = false;
-      if (n(j[SIDE_1_POSITION]) <= contig_end_distance)
-        side_1_near_contig_end = true;
-          
-      if (n(j[SIDE_1_POSITION]) >= side_1_seq_length-contig_end_distance)
-        side_1_near_contig_end = true;
-
-      bool side_2_near_contig_end = false;
-      if (n(j[SIDE_2_POSITION]) <= contig_end_distance)
-        side_2_near_contig_end = true;
-          
-      if (n(j[SIDE_2_POSITION]) >= side_2_seq_length-contig_end_distance)
-        side_2_near_contig_end = true;
-      
-      if (side_1_near_contig_end && side_2_near_contig_end) {
-        j["contig_end"] = "1";
-      }
-      
-    }
-     */
   }
   
   void MutationPredictor::predictMCplusJCtoDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc)
@@ -1472,7 +1434,7 @@ namespace breseq {
 			// Special case of circular chromosome
 			if ( (side_1_position == 1) && ( side_2_position== ref_seq_info[ref_seq_info.seq_id_to_index(j["side_2_seq_id"])].m_length ) )
 			{
-				j["circular_chromosome"] = "1";
+				j[IGNORE] = "circular_chromosome";
 				continue;
 			}
       
@@ -1642,16 +1604,11 @@ namespace breseq {
 
   }
   
-  void MutationPredictor::predictRAtoSNPorDELorINSorSUB(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc)
+  void MutationPredictor::predictRAtoSNPorDELorINSorSUB(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& ra, diff_entry_list_t& mc)
   {
     (void)summary;
     (void)mc;
-    (void)jc;
     bool verbose = false;
-    
-    // Pull settings variables    
-    vector<gd_entry_type> ra_types = make_vector<gd_entry_type>(RA);
-    diff_entry_list_t ra = gd.get_list(ra_types);
     
 		///
 		// Ignore RA that overlap DEL, MC unless they are user
@@ -1700,9 +1657,6 @@ namespace breseq {
         
       }
     }
-    
-    // Don't use rejected evidence
-    ra.remove_if(cDiffEntry::rejected_and_not_user_defined());
     
 		ra.sort(MutationPredictor::sort_by_pos);
     
@@ -1916,6 +1870,145 @@ namespace breseq {
   }
 
 
+  void MutationPredictor::ignore_evidence_near_contig_ends(Settings& settings, Summary& summary, cGenomeDiff& gd)
+  {
+    (void) summary;
+    
+    int32_t contig_end_distance = settings.ignore_within_this_multiple_of_average_read_length_of_contig_end
+      * static_cast<int32_t>(round(summary.sequence_conversion.read_length_avg));
+    
+    // RA evidence
+    vector<gd_entry_type> ra_types = make_vector<gd_entry_type>(RA);
+    diff_entry_list_t ra = gd.get_list(ra_types);
+    
+    for (diff_entry_list_t::iterator ra_it=ra.begin(); ra_it!=ra.end(); ra_it++)
+    {
+      cDiffEntry& ra = **ra_it;
+      
+      if (!ref_seq_info[ra[SEQ_ID]].m_is_contig)
+        continue;
+      
+      int32_t seq_length = ref_seq_info.get_sequence_length(ra[SEQ_ID]);
+
+      bool near_contig_end = false;
+      if (n(ra[POSITION]) <= contig_end_distance)
+        near_contig_end = true;
+          
+      if (n(ra[POSITION]) >= seq_length-contig_end_distance)
+        near_contig_end = true;
+      
+      if (near_contig_end) {
+        ra[IGNORE] = "contig_end";
+      }
+    }
+    
+    // MC evidence
+    vector<gd_entry_type> mc_types = make_vector<gd_entry_type>(MC);
+    diff_entry_list_t mc = gd.get_list(mc_types);
+    
+    for (diff_entry_list_t::iterator mc_it=mc.begin(); mc_it!=mc.end(); mc_it++)
+    {
+      cDiffEntry& mc = **mc_it;
+      
+      if (!ref_seq_info[mc[SEQ_ID]].m_is_contig)
+        continue;
+      
+      int32_t seq_length = ref_seq_info.get_sequence_length(mc[SEQ_ID]);
+
+      bool near_contig_end = false;
+      if (n(mc[START]) <= contig_end_distance)
+        near_contig_end = true;
+          
+      if (n(mc[END]) + n(mc[END_RANGE]) >= seq_length-contig_end_distance)
+        near_contig_end = true;
+      
+      if (near_contig_end) {
+        mc[IGNORE] = "contig_end";
+      }
+    }
+    
+    // JC evidence
+    vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
+    diff_entry_list_t jc = gd.get_list(jc_types);
+    
+    for (diff_entry_list_t::iterator jc_it=jc.begin(); jc_it!=jc.end(); jc_it++)
+    {
+      cDiffEntry& j = **jc_it;
+      //cout << j.as_string() << endl;
+      
+      if (!ref_seq_info[j[SIDE_1_SEQ_ID]].m_is_contig)
+        continue;
+      if (!ref_seq_info[j[SIDE_2_SEQ_ID]].m_is_contig)
+        continue;
+      
+      int32_t side_1_seq_length = ref_seq_info.get_sequence_length(j[SIDE_1_SEQ_ID]);
+      int32_t side_2_seq_length = ref_seq_info.get_sequence_length(j[SIDE_2_SEQ_ID]);
+
+      bool side_1_near_contig_end = false;
+      if (n(j[SIDE_1_POSITION]) <= contig_end_distance)
+        side_1_near_contig_end = true;
+          
+      if (n(j[SIDE_1_POSITION]) >= side_1_seq_length-contig_end_distance)
+        side_1_near_contig_end = true;
+
+      bool side_2_near_contig_end = false;
+      if (n(j[SIDE_2_POSITION]) <= contig_end_distance)
+        side_2_near_contig_end = true;
+          
+      if (n(j[SIDE_2_POSITION]) >= side_2_seq_length-contig_end_distance)
+        side_2_near_contig_end = true;
+      
+      if (side_1_near_contig_end && side_2_near_contig_end) {
+        j[IGNORE] = "contig_end";
+      }
+    }
+    
+  }
+
+
+  void MutationPredictor::remove_mutations_near_contig_ends(Settings& settings, Summary& summary, cGenomeDiff& gd)
+  {
+    
+    (void) summary;
+    
+    int32_t contig_end_distance = settings.ignore_within_this_multiple_of_average_read_length_of_contig_end
+      * static_cast<int32_t>(round(summary.sequence_conversion.read_length_avg));
+    
+    diff_entry_list_t* mutable_entry_list = gd.get_mutable_list_ptr();
+
+    diff_entry_list_t::iterator it=mutable_entry_list->begin();
+    bool advance_it = true;
+    
+    while (it != mutable_entry_list->end())
+    {
+      advance_it = true;
+
+      cDiffEntry& de = **it;
+      if (de.is_mutation()) {
+        
+        if (ref_seq_info[de[SEQ_ID]].m_is_contig) {
+          
+          int32_t seq_length = ref_seq_info.get_sequence_length(de[SEQ_ID]);
+          
+          bool near_contig_end = false;
+          if (de.get_reference_coordinate_start() <= contig_end_distance)
+            near_contig_end = true;
+          
+          if (de.get_reference_coordinate_end() >= seq_length-contig_end_distance)
+            near_contig_end = true;
+          
+          
+          if (near_contig_end) {
+            it = gd.remove(it);
+            advance_it = false;
+          }
+        }
+      }
+      
+      if (advance_it) ++it;
+    }
+    
+  }
 
 
 
@@ -2206,6 +2299,8 @@ namespace breseq {
     }
     
     
+    ignore_evidence_near_contig_ends(settings, summary, gd);
+    
 		///
 		//  Preprocessing of JC evidence
     //  NB: This call is likely redundant in the normal pipeline, but preserved here so that 
@@ -2223,17 +2318,13 @@ namespace breseq {
     // Do not use rejected junctions unless they are user-defined
     vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
 		diff_entry_list_t jc = gd.get_list(jc_types);
-    
+    jc.remove_if(cDiffEntry::ignored_and_not_user_defined());
+
     // Do not use rejected missing coverage evidence
     vector<gd_entry_type> mc_types = make_vector<gd_entry_type>(MC);
 		diff_entry_list_t mc = gd.get_list(mc_types);
-    mc.remove_if(cDiffEntry::field_exists("reject"));
-    
-    // Flag junctions that are both at or near contig ends so we don't use them
-    // to predict mutations and we don't show them in the final output
-    
-    // @JEB CONTIG IMPROVEMENTS
-    //jc.remove_if(cDiffEntry::field_exists("contig_end"));
+    mc.remove_if(cDiffEntry::ignored_and_not_user_defined());
+    mc.remove_if(cDiffEntry::rejected_and_not_user_defined());
 
     ///
     // evidence JC + JC = MOB mutation
@@ -2274,8 +2365,13 @@ namespace breseq {
 		///
 		// evidence RA => SNP, DEL, INS, SUB
 		///
+    vector<gd_entry_type> ra_types = make_vector<gd_entry_type>(RA);
+    diff_entry_list_t ra = gd.get_list(ra_types);
+    ra.remove_if(cDiffEntry::rejected_and_not_user_defined());
+    ra.remove_if(cDiffEntry::ignored_and_not_user_defined());
+    
     cerr << "  Predicting small indels and substitutions from alignments..." << endl;
-    predictRAtoSNPorDELorINSorSUB(settings, summary, gd, jc, mc);
+    predictRAtoSNPorDELorINSorSUB(settings, summary, gd, ra, mc);
     
     ///
     //  Check for completely deleted reference sequences
@@ -2331,8 +2427,13 @@ namespace breseq {
       }
     }
     
-    
+    // Need to remove any mutations that overlap contig ends
+    // This catches SUB from JC evidence.
+    remove_mutations_near_contig_ends(settings, summary, gd);
+    // 32  189  51 bp→32 bp  57.0%  intergenic (–/+224)  – / ← INEPCCPE_03363  –/tRNA‑Ala(tgc)
 
+    
+    
     // In consensus mode, polish up the insert_position fields of INS predictions
     // so that if there is only one, then insert_position=1 is removed.
     if (!settings.polymorphism_prediction) {

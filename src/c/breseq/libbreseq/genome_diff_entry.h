@@ -46,10 +46,19 @@ namespace breseq {
   extern const char* INSERT_POSITION;
   extern const char* PHYLOGENY_ID;
   extern const char* FREQUENCY;
+
+  // REJECT = comma delimited list of why evidence was rejected according to statistical criteria
+  // Evidence is not rejected but is masked because it should not be used to predict mutations
   extern const char* REJECT;
-  extern const char* USER_DEFINED;
   extern const char* POLYMORPHISM_REJECT;
   extern const char* CONSENSUS_REJECT;
+
+  // IGNORE = comma delimited list of why passing evidence was not used to predict mutations
+  // This can be b/c it is near a contig_end or is only evidence of a known circular_chromosome
+  extern const char* IGNORE;
+  extern const char* USER_DEFINED;
+
+  // For relationships to repeats and IS
   extern const char* MEDIATED;
   extern const char* BETWEEN;
   
@@ -362,6 +371,8 @@ namespace breseq {
     bool is_rejected_and_not_user_defined()
     { return entry_exists(REJECT) && !entry_exists(USER_DEFINED); }
 
+    bool is_ignored_and_not_user_defined()
+    { return entry_exists(IGNORE) && !entry_exists(USER_DEFINED); }
     
     //!---- Simplifying entries ---- !//
     
@@ -466,6 +477,13 @@ namespace breseq {
       virtual bool operator() (diff_entry_ptr_t cDiffEntry)
       {
         return cDiffEntry->entry_exists(REJECT) && !cDiffEntry->entry_exists("user_defined");
+      }
+    };
+    
+    struct ignored_and_not_user_defined:public unary_function<diff_entry_ptr_t,bool> {
+      virtual bool operator() (diff_entry_ptr_t cDiffEntry)
+      {
+        return cDiffEntry->entry_exists(IGNORE) && !cDiffEntry->entry_exists("user_defined");
       }
     };
     
