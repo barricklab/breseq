@@ -577,7 +577,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
                     th("seq id") << 
                     th("length") <<
                     th(ALIGN_CENTER, "fit mean") <<
-                    th(ALIGN_CENTER, "fit dispersion") <<
+                    th(ALIGN_CENTER, "fit relative_variance") <<
                     th(ALIGN_CENTER, "% mapped reads") <<
                     th(ALIGN_LEFT, "description") <<
           "</tr>" << endl;
@@ -652,10 +652,10 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
       HTML << td(ALIGN_CENTER, "NA");
     } else if (fragment_failed_fit) {
       HTML << td(ALIGN_CENTER, "[" + to_string(summary.unique_coverage[it->m_seq_id].average, 1) + "]");
-      HTML << td(ALIGN_CENTER, "[" + to_string(summary.unique_coverage[it->m_seq_id].dispersion, 1) + "]");
+      HTML << td(ALIGN_CENTER, "[" + to_string(summary.unique_coverage[it->m_seq_id].relative_variance, 1) + "]");
     } else {
       HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter, 1));
-      HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_dispersion));
+      HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_relative_variance));
     }
     
     HTML << td(ALIGN_CENTER, to_string(this_reference_fraction_mapped_reads) + "%");
@@ -676,7 +676,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << "</tr>" << endl;
   HTML << "</table>" << endl;
 
-  HTML << "<p>" << "<b>fit dispersion</b> is the ratio of the variance to the mean for the negative binomial fit. It is =1 for Poisson and >1 for over-dispersed data." << endl;
+  HTML << "<p>" << "<b>fit relative_variance</b> is the ratio of the variance to the mean for the negative binomial fit. It is =1 for Poisson and >1 for over-dispersed data." << endl;
   
   if (one_failed_fit) {
     HTML << "<p>" << "<span class=\"reject_table_row\">Fit failed</span> Negative binomial fit failed for this reference sequence. It may have an unusual coverage depth distribution. JC and MC predictions may be less accurate." << endl;

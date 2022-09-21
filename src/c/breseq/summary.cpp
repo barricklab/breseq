@@ -118,10 +118,10 @@ void to_json(json& j, const CoverageSummary& s)
     {"nbinom_mean_parameter", s.nbinom_mean_parameter},
     {"nbinom_prob_parameter", s.nbinom_prob_parameter},
     {"nbinom_variance", s.nbinom_variance},
-    {"nbinom_dispersion", s.nbinom_dispersion},
+    {"nbinom_relative_variance", s.nbinom_relative_variance},
     {"average", s.average},
     {"variance", s.variance},
-    {"dispersion", s.dispersion},
+    {"relative_variance", s.relative_variance},
   };
 }
 
@@ -133,10 +133,10 @@ void from_json(const json& j, CoverageSummary& s)
   s.nbinom_mean_parameter = j.at("nbinom_mean_parameter").get<double>();
   s.nbinom_prob_parameter = j.at("nbinom_prob_parameter").get<double>();
   s.nbinom_variance = j.at("nbinom_variance").get<double>();
-  s.nbinom_dispersion = j.at("nbinom_dispersion").get<double>();
+  s.nbinom_relative_variance = j.at("nbinom_relative_variance").get<double>();
   s.average = j.at("average").get<double>();
   s.variance = j.at("variance").get<double>();
-  s.dispersion = j.at("dispersion").get<double>();
+  s.relative_variance = j.at("relative_variance").get<double>();
 }
   
 // AnalyzeFastqSummary
@@ -391,10 +391,10 @@ PublicReferenceSummary::PublicReferenceSummary(
   coverage_nbinom_mean_parameter = cs.nbinom_mean_parameter;
   coverage_nbinom_prob_parameter = cs.nbinom_prob_parameter;
   coverage_nbinom_variance = cs.nbinom_variance;
-  coverage_nbinom_dispersion = cs.nbinom_dispersion;
+  coverage_nbinom_relative_variance = cs.nbinom_relative_variance;
   coverage_average = cs.average;
   coverage_variance = cs.variance;
-  coverage_dispersion = cs.dispersion;
+  coverage_relative_variance = cs.relative_variance;
   
   coverage_group = rss.m_seq_id_to_coverage_group_map.at(r.m_seq_id);
   junction_only = rss.m_junction_only_seq_id_set.count(r.m_seq_id);
@@ -646,10 +646,10 @@ void to_json(json& j, const PublicReferenceSummary& s)
     {"coverage_nbinom_mean_parameter", s.coverage_nbinom_mean_parameter},
     {"coverage_nbinom_prob_parameter", s.coverage_nbinom_prob_parameter},
     {"coverage_nbinom_variance", s.coverage_nbinom_variance},
-    {"coverage_nbinom_dispersion", s.coverage_nbinom_dispersion},
+    {"coverage_nbinom_relative_variance", s.coverage_nbinom_relative_variance},
     {"coverage_average", s.coverage_average},
     {"coverage_variance", s.coverage_variance},
-    {"coverage_dispersion", s.coverage_dispersion},
+    {"coverage_relative_variance", s.coverage_relative_variance},
     
     {"coverage_group", s.coverage_group},
     {"junction_only", s.junction_only},
@@ -672,10 +672,10 @@ void from_json(const json& j, PublicReferenceSummary& s)
   s.coverage_nbinom_mean_parameter = j.at("coverage_nbinom_mean_parameter").get<double>();
   s.coverage_nbinom_prob_parameter = j.at("coverage_nbinom_prob_parameter").get<double>();
   s.coverage_nbinom_variance = j.at("coverage_nbinom_variance").get<double>();
-  s.coverage_nbinom_dispersion = j.at("coverage_nbinom_dispersion").get<double>();
+  s.coverage_nbinom_relative_variance = j.at("coverage_nbinom_relative_variance").get<double>();
   s.coverage_average = j.at("coverage_average").get<double>();
   s.coverage_variance = j.at("coverage_variance").get<double>();
-  s.coverage_dispersion = j.at("coverage_dispersion").get<double>();
+  s.coverage_relative_variance = j.at("coverage_relative_variance").get<double>();
   
   
   s.coverage_group = j.at("coverage_group").get<int32_t>();

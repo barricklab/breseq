@@ -156,13 +156,13 @@ void CoverageDistribution::analyze_unique_coverage_distribution(
       // Calculated by formula variance = mu + mu ^ 2 / size
       summary.unique_coverage[seq_id].nbinom_variance = summary.unique_coverage[seq_id].nbinom_mean_parameter
       + pow(summary.unique_coverage[seq_id].nbinom_mean_parameter, 2) / summary.unique_coverage[seq_id].nbinom_size_parameter;
-      // Calculated by formula dispersion = variance / mu
-      summary.unique_coverage[seq_id].nbinom_dispersion = summary.unique_coverage[seq_id].nbinom_variance / summary.unique_coverage[seq_id].nbinom_mean_parameter;
+      // Calculated by formula relative_variance = variance / mu
+      summary.unique_coverage[seq_id].nbinom_relative_variance = summary.unique_coverage[seq_id].nbinom_variance / summary.unique_coverage[seq_id].nbinom_mean_parameter;
     }
     
     summary.unique_coverage[seq_id].average = from_string<double>(lines[2]);
     summary.unique_coverage[seq_id].variance = from_string<double>(lines[3]);
-    summary.unique_coverage[seq_id].dispersion = from_string<double>(lines[4]);
+    summary.unique_coverage[seq_id].relative_variance = from_string<double>(lines[4]);
     
     summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff = from_string<double>(lines[5]);
     
@@ -175,7 +175,7 @@ void CoverageDistribution::analyze_unique_coverage_distribution(
       cout << "nbinom_prob_parameter " << summary.unique_coverage[seq_id].nbinom_prob_parameter << endl;
       cout << "average " << summary.unique_coverage[seq_id].average << endl;
       cout << "variance " << summary.unique_coverage[seq_id].variance << endl;
-      cout << "dispersion " << summary.unique_coverage[seq_id].dispersion << endl;
+      cout << "relative_variance " << summary.unique_coverage[seq_id].relative_variance << endl;
       cout << "deletion_coverage_propagation_cutoff " << summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff << endl;
     }
   }
