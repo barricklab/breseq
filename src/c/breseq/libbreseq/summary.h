@@ -120,10 +120,10 @@ namespace breseq{
     double nbinom_mean_parameter;
     double nbinom_prob_parameter;
     double nbinom_variance;
-    double nbinom_dispersion;
+    double nbinom_relative_variance;
     double average;
     double variance;
-    double dispersion;
+    double relative_variance;
     
     CoverageSummary()
     : deletion_coverage_propagation_cutoff(0.0)
@@ -132,10 +132,10 @@ namespace breseq{
     , nbinom_mean_parameter(0.0)
     , nbinom_prob_parameter(0.0)
     , nbinom_variance(0.0)
-    , nbinom_dispersion(0.0)
+    , nbinom_relative_variance(0.0)
     , average(0.0)
     , variance(0.0)
-    , dispersion(0.0)
+    , relative_variance(0.0)
     {}
   };
   
@@ -436,10 +436,10 @@ namespace breseq{
     double coverage_nbinom_mean_parameter;
     double coverage_nbinom_prob_parameter;
     double coverage_nbinom_variance;
-    double coverage_nbinom_dispersion;
+    double coverage_nbinom_relative_variance;
     double coverage_average;
     double coverage_variance;
-    double coverage_dispersion;
+    double coverage_relative_variance;
     
     int32_t coverage_group;
     bool junction_only;
