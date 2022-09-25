@@ -274,10 +274,13 @@ namespace breseq {
     
     // Then report splitting because other filters happened on split reads
     if (file_has_split_reads) {
+      uint64_t total_split_reads = num_reads + num_filtered_same_base_reads + num_filtered_too_many_N_reads;
+      uint64_t total_split_bases = num_reads + num_filtered_same_base_bases + num_filtered_too_many_N_bases;
+
       cerr << "    >> Long reads split to " << (long_read_distribute_remainder ? "≤": "exactly ");
       cout << long_read_split_length << " bases" << (long_read_distribute_remainder ? "" : " (extra bases discarded)") << endl;
-      cerr << "    >> Split reads: " << setw(width_for_reads) << num_reads;
-      cerr << " bases: "<< setw(width_for_bases) << num_bases << endl;
+      cerr << "    >> Split reads: " << setw(width_for_reads) << total_split_reads;
+      cerr << " bases: "<< setw(width_for_bases) << total_split_bases << endl;
     }
     
     converted_fastq_name = convert_file_name;

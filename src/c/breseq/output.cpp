@@ -572,7 +572,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << end_table();
   
   if (show_read_split_legend) {
-    HTML << "<p><sup>&Dagger;</sup> Read and base numbers are after long reads in this file were split to " << (settings.read_file_long_read_distribute_remainder ? "≤": "exactly ");
+    HTML << "<p><sup>&Dagger;</sup> Read and base numbers are after long reads in this file were split to " << (settings.read_file_long_read_distribute_remainder ? "&le;": "exactly ");
     HTML << to_string(settings.read_file_long_read_split_length) << " bases" << (settings.read_file_long_read_distribute_remainder ? "" : " (extra bases discarded)") << endl;
   }
   

@@ -2289,7 +2289,14 @@ namespace breseq {
     {
       vector<gd_entry_type> ev_types = make_vector<gd_entry_type>(MC)(RA)(JC)(CN);
       diff_entry_list_t ev = gd.get_list(ev_types);
-      ev.remove_if(cDiffEntry::field_exists("reject"));
+      
+      ev.remove_if(cDiffEntry::field_exists(REJECT));
+      ev.remove_if(cDiffEntry::field_exists(IGNORE));
+
+      // Also remove consensus reject RA, which may be not rejected in CONSENSUS mode
+      // There are many of these for MinION data.
+      ev.remove_if(cDiffEntry::field_exists(CONSENSUS_REJECT));
+      
       uint64_t num_evidence_items = ev.size();
       uint64_t total_ref_seq_length = summary.sequence_conversion.total_reference_sequence_length;
       double maximum_sequence_divergence = static_cast<double>(num_evidence_items)*100/static_cast<double>(total_ref_seq_length);
