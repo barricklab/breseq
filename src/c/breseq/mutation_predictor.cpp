@@ -1434,7 +1434,7 @@ namespace breseq {
 			// Special case of circular chromosome
 			if ( (side_1_position == 1) && ( side_2_position== ref_seq_info[ref_seq_info.seq_id_to_index(j["side_2_seq_id"])].m_length ) )
 			{
-				j[IGNORE] = "circular_chromosome";
+				j[IGNORE] = "CIRCULAR_CHROMOSOME";
 				continue;
 			}
       
@@ -1898,7 +1898,7 @@ namespace breseq {
         near_contig_end = true;
       
       if (near_contig_end) {
-        ra[IGNORE] = "contig_end";
+        ra[IGNORE] = "CONTIG_END";
       }
     }
     
@@ -1923,7 +1923,7 @@ namespace breseq {
         near_contig_end = true;
       
       if (near_contig_end) {
-        mc[IGNORE] = "contig_end";
+        mc[IGNORE] = "CONTIG_END";
       }
     }
     
@@ -1959,7 +1959,7 @@ namespace breseq {
         side_2_near_contig_end = true;
       
       if (side_1_near_contig_end && side_2_near_contig_end) {
-        j[IGNORE] = "contig_end";
+        j[IGNORE] = "CONTIG_END";
       }
     }
     

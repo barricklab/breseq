@@ -152,7 +152,8 @@ namespace breseq {
       //sprintf(string_buffer, "%03u:%010u", file_index, on_read++);
       //on_sequence.m_name = string_buffer;
     
-      uint32_t num_split_read_pieces = 1 + original_sequence.m_sequence.length() / long_read_split_length;
+      // Always have at least one piece and only add new pieces if it is over the length (hence minus 1)
+      uint32_t num_split_read_pieces = 1 + (original_sequence.m_sequence.length()-1) / long_read_split_length;
       
 
       size_t chunk_start_0, chunk_end_0;
@@ -224,7 +225,7 @@ namespace breseq {
           if (_max_same_base_fraction) {
             for (uint8_t b=0; b<base_list_including_N_size; b++) {
               if ((_max_same_base_fraction * static_cast<double>(on_sequence.length())) <=
-                  static_cast<double>(on_sequence.m_base_counts[i] + on_sequence.m_base_counts[base_list_N_index]) ) {
+                  static_cast<double>(on_sequence.m_base_counts[b] + on_sequence.m_base_counts[base_list_N_index]) ) {
                 same_base_filtered = true;
                 break;
               }
@@ -333,7 +334,8 @@ namespace breseq {
                                  min_quality_score, 
                                  max_quality_score, 
                                  num_original_bases,
-                                 num_bases, 
+                                 num_bases,
+                                 file_has_split_reads,
                                  quality_format, 
                                  "SANGER", 
                                  converted_fastq_name

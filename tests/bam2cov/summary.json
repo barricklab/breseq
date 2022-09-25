@@ -35,8 +35,8 @@
       "consensus_minimum_total_coverage_each_strand": 0,
       "consensus_minimum_variant_coverage": 0,
       "consensus_minimum_variant_coverage_each_strand": 0,
-      "consensus_reject_indel_homopolymer_length": 1651152372,
-      "consensus_reject_surrounding_homopolymer_length": 2,
+      "consensus_reject_indel_homopolymer_length": 1861792448,
+      "consensus_reject_surrounding_homopolymer_length": 1,
       "deletion_coverage_propagation_cutoff": 0.0,
       "deletion_coverage_seed_cutoff": 0.0,
       "mixed_base_prediction": true,
@@ -58,6 +58,7 @@
       "user_evidence_genome_diff_file_name": ""
     },
     "mutation_prediction": {
+      "ignore_within_this_multiple_of_average_read_length_of_contig_end": 2,
       "size_cutoff_AMP_becomes_INS_DEL_mutation": 50
     },
     "output": {
@@ -84,6 +85,8 @@
     "read_file": {
       "aligned_sam_mode": false,
       "read_file_coverage_fold_limit": 0.0,
+      "read_file_long_read_distribute_remainder": false,
+      "read_file_long_read_split_length": 500,
       "read_file_max_N_fraction": 0.5,
       "read_file_max_same_base_fraction": 0.9,
       "read_file_read_length_min": 18
@@ -102,13 +105,13 @@
   "reads": {
     "read_file": {
       "bull_1": {
-        "fraction_aligned_bases": 0.994439713837693,
-        "fraction_aligned_reads": 0.984973252389253,
+        "fraction_aligned_bases": 0.994499071692931,
+        "fraction_aligned_reads": 0.985033359379696,
         "max_quality_score": 40,
         "min_quality_score": 0,
-        "num_aligned_bases": 13544788,
-        "num_aligned_reads": 32774,
-        "num_bases": 13620522,
+        "num_aligned_bases": 13449686,
+        "num_aligned_reads": 32776,
+        "num_bases": 13524081,
         "num_filtered_same_base_reads": 0,
         "num_filtered_too_many_N_reads": 0,
         "num_filtered_too_short_reads": 0,
@@ -117,38 +120,39 @@
         "num_reads": 33274,
         "quality_format": "SANGER",
         "quality_format_original": "SANGER",
-        "read_length_avg": 409.344292841257,
-        "read_length_max": 589,
-        "read_length_min": 29
+        "read_length_avg": 406.445903708601,
+        "read_length_max": 500,
+        "read_length_min": 29,
+        "reads_were_split": true
       }
     },
-    "total_aligned_bases": 13544788,
-    "total_aligned_reads": 32774,
-    "total_bases": 13620522,
-    "total_fraction_aligned_bases": 0.994439713837693,
-    "total_fraction_aligned_reads": 0.984973252389253,
+    "total_aligned_bases": 13449686,
+    "total_aligned_reads": 32776,
+    "total_bases": 13524081,
+    "total_fraction_aligned_bases": 0.994499071692931,
+    "total_fraction_aligned_reads": 0.985033359379696,
     "total_reads": 33274
   },
   "references": {
     "reference": {
       "rachael": {
-        "coverage_average": 332.9833,
-        "coverage_deletion_coverage_propagation_cutoff": 199.0,
+        "coverage_average": 330.7552,
+        "coverage_deletion_coverage_propagation_cutoff": 200.0,
         "coverage_deletion_coverage_seed_cutoff": 0.0,
         "coverage_group": 0,
-        "coverage_nbinom_mean_parameter": 331.6683,
-        "coverage_nbinom_prob_parameter": 0.175031474674304,
-        "coverage_nbinom_relative_variance": 5.71325815463068,
-        "coverage_nbinom_size_parameter": 70.36922,
-        "coverage_nbinom_variance": 1894.90661960749,
-        "coverage_relative_variance": 6.660541,
-        "coverage_variance": 2217.849,
+        "coverage_nbinom_mean_parameter": 329.5867,
+        "coverage_nbinom_prob_parameter": 0.182348929953973,
+        "coverage_nbinom_relative_variance": 5.48399159925102,
+        "coverage_nbinom_size_parameter": 73.50297,
+        "coverage_nbinom_variance": 1807.45069402487,
+        "coverage_relative_variance": 6.606626,
+        "coverage_variance": 2185.176,
         "junction_only": false,
         "length": 40529,
-        "num_bases_mapped_to_reference": 13393950.0,
+        "num_bases_mapped_to_reference": 13302029.0,
         "num_features": 1,
         "num_genes": 0,
-        "num_reads_mapped_to_reference": 32485.0,
+        "num_reads_mapped_to_reference": 32487.0,
         "num_repeats": 0
       }
     },

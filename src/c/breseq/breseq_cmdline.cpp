@@ -1432,8 +1432,8 @@ int breseq_default_action(int argc, char* argv[])
         settings.track_intermediate_file(settings.alignment_correction_done_file_name, convert_file_name);
         
         // Record statistics
-        if ((overall_read_length_min == UNDEFINED_UINT32) || (s_rf.read_length_min > overall_read_length_min))
-          overall_read_length_min = s_rf.read_length_max;
+        if ((overall_read_length_min == UNDEFINED_UINT32) || (s_rf.read_length_min < overall_read_length_min))
+          overall_read_length_min = s_rf.read_length_min;
         if ((overall_read_length_max == UNDEFINED_UINT32) || (s_rf.read_length_max > overall_read_length_max))
           overall_read_length_max = s_rf.read_length_max;
         if ((overall_max_qual == UNDEFINED_UINT32) || (s_rf.max_quality_score > overall_max_qual))

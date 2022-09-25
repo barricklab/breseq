@@ -156,6 +156,7 @@ namespace breseq{
     uint32_t max_quality_score;
     uint64_t num_original_bases;
     uint64_t num_bases;
+    bool reads_were_split;
     string quality_format_original;
     string quality_format;
     string converted_fastq_name;
@@ -174,6 +175,7 @@ namespace breseq{
     , max_quality_score(0)
     , num_original_bases(0)
     , num_bases(0)
+    , reads_were_split(false)
     { }
     
     AnalyzeFastqSummary(
@@ -190,6 +192,7 @@ namespace breseq{
                  uint32_t _max_quality_score,
                  uint64_t _num_original_bases,
                  uint64_t _num_bases,
+                 bool _reads_were_split,
                  const string& _quality_format_original,
                  const string& _quality_format,
                  const string& _converted_fastq_name
@@ -207,6 +210,7 @@ namespace breseq{
     , max_quality_score(_max_quality_score)
     , num_original_bases(_num_original_bases)
     , num_bases(_num_bases)
+    , reads_were_split(_reads_were_split)
     , quality_format_original(_quality_format_original)
     , quality_format(_quality_format)
     , converted_fastq_name(_converted_fastq_name)
@@ -386,6 +390,7 @@ namespace breseq{
     uint32_t max_quality_score;
     uint64_t num_original_bases;
     uint64_t num_bases;
+    bool reads_were_split;
     string quality_format_original;
     string quality_format;
     

@@ -156,6 +156,7 @@ void to_json(json& j, const AnalyzeFastqSummary& s)
     {"max_quality_score", s.max_quality_score},
     {"num_original_bases", s.num_original_bases},
     {"num_bases", s.num_bases},
+    {"reads_were_split", s.reads_were_split},
     {"quality_format_original", s.quality_format_original},
     {"quality_format", s.quality_format},
     {"converted_fastq_name", s.converted_fastq_name},
@@ -177,6 +178,7 @@ void from_json(const json& j, AnalyzeFastqSummary& s)
   s.max_quality_score = j.at("max_quality_score").get<uint32_t>();
   s.num_original_bases = j.at("num_original_bases").get<uint64_t>();
   s.num_bases = j.at("num_bases").get<uint64_t>();
+  s.reads_were_split = j.at("reads_were_split").get<bool>();
   s.quality_format_original = j.at("quality_format_original").get<string>();
   s.quality_format = j.at("quality_format").get<string>();
   s.converted_fastq_name = j.at("converted_fastq_name").get<string>();
@@ -341,6 +343,7 @@ PublicReadFileSummary::PublicReadFileSummary(const ReadFileSummary &rfs, const A
   max_quality_score = afs.max_quality_score;
   num_original_bases = afs.num_original_bases;
   num_bases = afs.num_bases;
+  reads_were_split = afs.reads_were_split;
   quality_format_original = afs.quality_format_original;
   quality_format = afs.quality_format;
   
@@ -530,7 +533,6 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   max_nucleotides_to_show_in_tables = t.max_nucleotides_to_show_in_tables;
   max_rejected_read_alignment_evidence_to_show = t.max_rejected_read_alignment_evidence_to_show;
   max_rejected_junction_evidence_to_show = t.max_rejected_junction_evidence_to_show;
-  hide_circular_genome_junctions = t.hide_circular_genome_junctions;
 }
   
   PublicSummary::PublicSummary(const Summary &s, const Settings &t, const cReferenceSequences &r)
@@ -556,6 +558,7 @@ void to_json(json& j, const PublicReadFileSummary& s)
     {"max_quality_score", s.max_quality_score},
     {"num_original_bases", s.num_original_bases},
     {"num_bases", s.num_bases},
+    {"reads_were_split", s.reads_were_split},
     {"quality_format_original", s.quality_format_original},
     {"quality_format", s.quality_format},
     
@@ -581,6 +584,7 @@ void from_json(const json& j, PublicReadFileSummary& s)
   s.max_quality_score = j.at("max_quality_score").get<uint32_t>();
   s.num_original_bases = j.at("num_original_bases").get<uint64_t>();
   s.num_bases = j.at("num_bases").get<uint64_t>();
+  s.reads_were_split = j.at("reads_were_split").get<bool>();
   s.quality_format_original = j.at("quality_format_original").get<string>();
   s.quality_format = j.at("quality_format").get<string>();
 

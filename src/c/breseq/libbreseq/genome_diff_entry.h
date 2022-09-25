@@ -54,7 +54,7 @@ namespace breseq {
   extern const char* CONSENSUS_REJECT;
 
   // IGNORE = comma delimited list of why passing evidence was not used to predict mutations
-  // This can be b/c it is near a contig_end or is only evidence of a known circular_chromosome
+  // This can be b/c it is near a contig_end or is only evidence of a known CIRCULAR_CHROMOSOME
   extern const char* IGNORE;
   extern const char* USER_DEFINED;
 
@@ -491,6 +491,16 @@ namespace breseq {
       virtual bool operator() (diff_entry_ptr_t cDiffEntry)
       {
         return from_string<double>((*cDiffEntry)[FREQUENCY]) != 1.0;
+      }
+    };
+    
+    struct ignored_but_not_circular:public unary_function<diff_entry_ptr_t,bool> {
+      virtual bool operator() (diff_entry_ptr_t cDiffEntry)
+      {
+        if ( (*cDiffEntry).entry_exists(IGNORE) ) {
+          return (*cDiffEntry)[IGNORE] != "CIRCULAR_CHROMOSOME";
+        }
+        return false;
       }
     };
     

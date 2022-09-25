@@ -249,7 +249,9 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   /////////////////////////
   
   diff_entry_list_t mc = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(MC)));
-  mc.remove_if(cDiffEntry::rejected());
+  mc.remove_if(cDiffEntry::rejected_and_not_user_defined());
+  mc.remove_if(cDiffEntry::field_exists(IGNORE));
+
 
   if (mc.size() > 0) {
     HTML << "<p>" << html_missing_coverage_table_string(mc, false, "Unassigned missing coverage evidence", relative_path);
@@ -259,11 +261,12 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   // Unassigned JC evidence
   /////////////////////////
   diff_entry_list_t jc = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(JC)));
-  jc.remove_if(cDiffEntry::rejected_and_not_user_defined()); 
-
-  //Don't show junctions for circular chromosomes and contig ends
+  jc.remove_if(cDiffEntry::rejected_and_not_user_defined());
+  
   if (settings.hide_circular_genome_junctions) {
     jc.remove_if(cDiffEntry::field_exists(IGNORE));
+  } else {
+    jc.remove_if(cDiffEntry::ignored_but_not_circular());
   }
    
   if (jc.size() > 0) {
@@ -276,8 +279,9 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   /////////////////////////
   
   diff_entry_list_t cn = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(CN)));
-  cn.remove_if(cDiffEntry::rejected());
-  
+  cn.remove_if(cDiffEntry::rejected_and_not_user_defined());
+  cn.remove_if(cDiffEntry::field_exists(IGNORE));
+
   if (cn.size() > 0) {
     HTML << "<p>" << html_copy_number_table_string(cn, false, "Unassigned copy number evidence", relative_path);
   }
@@ -521,6 +525,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   // Write read file information
   ////
   double overall_percent_reads_mapped = 0;
+  bool show_read_split_legend = false;
   
   HTML << h2("Read File Information") << endl;
   HTML << start_table("border=\"0\" cellspace=\"1\" cellpadding=\"5\"") << endl;
@@ -537,7 +542,8 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
                 "errors" 
                 )
               );
-    HTML << td(it->m_base_name);
+    show_read_split_legend = show_read_split_legend || s.reads_were_split;
+    HTML << td(it->m_base_name + (s.reads_were_split ? "<sup>&Dagger;</sup>" : "") );
     
     double read_length_avg = static_cast<double>(s.num_bases) / static_cast<double>(s.num_reads);
     HTML << td(ALIGN_RIGHT, commify(to_string(s.num_reads)));
@@ -556,7 +562,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << td(b("total"));  
   HTML << td(ALIGN_RIGHT , b(commify(to_string(summary.sequence_conversion.num_reads))) );
   HTML << td(ALIGN_RIGHT , b(commify(to_string(summary.sequence_conversion.num_bases))) );
-  double total_percent_pass_filters = 100 * (static_cast<double>(summary.sequence_conversion.num_reads) / static_cast<double>(summary.sequence_conversion.num_original_reads));
+  double total_percent_pass_filters = 100 * (static_cast<double>(summary.sequence_conversion.num_bases) / static_cast<double>(summary.sequence_conversion.num_original_bases));
   HTML << td(ALIGN_RIGHT, to_string(total_percent_pass_filters, 1) + "%");
   HTML << td(ALIGN_RIGHT, to_string(summary.sequence_conversion.read_length_avg, 1) + "&nbsp;bases");
   HTML << td(ALIGN_RIGHT, b(commify(to_string(summary.sequence_conversion.read_length_max))) + "&nbsp;bases");
@@ -564,6 +570,11 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << td(ALIGN_RIGHT, to_string(total_percent_mapped, 1) + "%");
   HTML << end_tr();
   HTML << end_table();
+  
+  if (show_read_split_legend) {
+    HTML << "<p><sup>&Dagger;</sup> Read and base numbers are after long reads in this file were split to " << (settings.read_file_long_read_distribute_remainder ? "≤": "exactly ");
+    HTML << to_string(settings.read_file_long_read_split_length) << " bases" << (settings.read_file_long_read_distribute_remainder ? "" : " (extra bases discarded)") << endl;
+  }
   
   ////
   // Write reference sequence information
