@@ -249,7 +249,7 @@ bool rejected_RA_indel_homopolymer(cDiffEntry& ra,
   //
   // First case,
   // 1) indel in what was originally a homopolymer adding a base that is the same
-  if (reject_indel_homopolymer_length && ((ra[MAJOR_BASE] == ".") || (ra[MINOR_BASE] == ".")))
+  if (reject_indel_homopolymer_length && ((ra[REF_BASE] == ".") || (ra[NEW_BASE] == ".")))
   {
     // Code needs to be robust to the mutation being at the beginning
     // OR end of the homopolymer tract
@@ -257,7 +257,7 @@ bool rejected_RA_indel_homopolymer(cDiffEntry& ra,
     string seq_id = ra["seq_id"];
     int32_t mut_pos = from_string<uint32_t>(ra["position"]);
     bool is_insertion = (from_string<int32_t>(ra[INSERT_POSITION]) > 0);
-    string mut_base = (ra[MAJOR_BASE] == ".") ? ra[MINOR_BASE] : ra[MAJOR_BASE];
+    string mut_base = (ra[REF_BASE] == ".") ? ra[NEW_BASE] : ra[REF_BASE];
     int32_t homopolymer_length = 0;
     
     // If we are an insertion, we need to start on the base before or the base after,
@@ -307,12 +307,12 @@ bool rejected_RA_indel_homopolymer(cDiffEntry& ra,
   // 2) A mutation in the middle of a stretch of one base to what is in the rest of that stretch
   //    TTTTTTATTTTTT
   //    TTTTTTTTTTTTT
-  if (reject_surrounding_homopolymer_length && (ra[MAJOR_BASE] != ".") && (ra[MINOR_BASE] != "."))    {
+  if (reject_surrounding_homopolymer_length && (ra[REF_BASE] != ".") && (ra[NEW_BASE] != "."))    {
     
     string seq_id = ra["seq_id"];
     int32_t mut_pos = from_string<int32_t>(ra["position"]);
-    string ref_base = ref_seq_info.get_sequence_1(seq_id, mut_pos, mut_pos);
-    string mut_base = (ra[MAJOR_BASE] != ref_base) ? ra[MAJOR_BASE] : ra[MINOR_BASE];
+    string ref_base = ra[REF_BASE];
+    string mut_base = ra[NEW_BASE];
     
     // determine the start and end of homopolymer created by substitution
     int32_t start_pos = mut_pos - 1;
@@ -343,7 +343,7 @@ bool rejected_RA_indel_homopolymer(cDiffEntry& ra,
   }
   ////// END checking on homopolymers
   
-  if (no_indel_polymorphisms && ((ra[MAJOR_BASE] == ".") || (ra[MINOR_BASE] == ".")))
+  if (no_indel_polymorphisms && ((ra[REF_BASE] == ".") || (ra[NEW_BASE] == ".")))
   {
     rejected = true;
     ra.add_reject_reason("INDEL");
