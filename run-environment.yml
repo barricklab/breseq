@@ -1,4 +1,4 @@
-name: breseq-test
+name: breseq-run
 channels:
   - bioconda
   - conda-forge
