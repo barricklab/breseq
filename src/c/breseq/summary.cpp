@@ -449,6 +449,8 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   read_file_read_length_min = t.read_file_read_length_min;
   read_file_max_same_base_fraction = t.read_file_max_same_base_fraction;
   read_file_max_N_fraction = t.read_file_max_N_fraction;
+  read_file_long_read_split_length = t.read_file_long_read_split_length;
+  read_file_long_read_distribute_remainder = t.read_file_long_read_distribute_remainder;
   
   //! Settings: Read Alignment
   bowtie2_scoring = t.bowtie2_scoring;
@@ -747,6 +749,8 @@ void to_json(json& j, const PublicOptionsSummary& s)
       {"read_file_read_length_min", s.read_file_read_length_min},
       {"read_file_max_same_base_fraction", s.read_file_max_same_base_fraction},
       {"read_file_max_N_fraction", s.read_file_max_N_fraction},
+      {"read_file_long_read_split_length", s.read_file_long_read_split_length},
+      {"read_file_long_read_distribute_remainder", s.read_file_long_read_distribute_remainder},
       }
     },
     

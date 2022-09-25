@@ -229,6 +229,8 @@ namespace breseq
     ("read-min-length", "Reads in the input FASTQ file that are shorter than this length will be ignored. (0 = OFF)", 18, ADVANCED_OPTION)
     ("read-max-same-base-fraction", "Reads in the input FASTQ file in which this fraction or more of the bases are the same will be ignored. (0 = OFF)", 0.9, ADVANCED_OPTION)
     ("read-max-N-fraction", "Reads in the input FASTQ file in which this fraction or more of the bases are uncalled as N will be ignored. (0 = OFF)", 0.5, ADVANCED_OPTION)
+    ("long-read-split-length", "Split input reads into pieces that are at most this many bases long. Using values larger than the default for this parameter will likely degrade the speed and accuracy of breseq because of how it performs mapping and analyzes split-read alignments. Filters such as --read-min-length are applied to split reads. (0 = OFF)", 500, ADVANCED_OPTION)
+    ("long-read-distribute-remainder", "When splitting long reads, divide them into equal pieces that are less than the split length. If this option is not chosen (the default), reads will be split into chunks with exactly the split length and any remaining bases after the last chunk will be ignored.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("genbank-field-for-seq-id", "Which GenBank header field will be used to assign sequence IDs. Valid choices are LOCUS, ACCESSION, and VERSION. The default is to check those fields, in that order, for the first one that exists. If you override the default, you will need to use the converted reference file (data/reference.gff) for further breseq and gdtools operations on breseq output!", "AUTOMATIC", ADVANCED_OPTION)
     ;
     
@@ -404,9 +406,14 @@ namespace breseq
       this->read_file_coverage_fold_limit = from_string<double>(options["limit-fold-coverage"]);
     }
     
-    this->read_file_read_length_min = from_string<double>(options["read-min-length"]);
     this->read_file_max_same_base_fraction = from_string<double>(options["read-max-same-base-fraction"]);
     this->read_file_max_N_fraction = from_string<double>(options["read-max-N-fraction"]);
+    this->read_file_long_read_split_length = from_string<uint32_t>(options["long-read-split-length"]);
+    this->read_file_long_read_distribute_remainder = options.count("long-read-distribute-remainder");
+
+    
+    bool long_read_include_remainder;           // Default = false COMMAND-LINE OPTION
+    uint32_t long_read_split_length;            // Default = 500 COMMAND-LINE OPTION
     
     this->genbank_field_for_seq_id = options["genbank-field-for-seq-id"];
     this->genbank_field_for_seq_id = to_upper(this->genbank_field_for_seq_id);
@@ -776,6 +783,8 @@ namespace breseq
     this->read_file_coverage_fold_limit = 0.0;
     this->read_file_max_same_base_fraction = 0.9;
     this->read_file_read_length_min = 18;
+    this->read_file_long_read_split_length = 500;
+    this->read_file_long_read_distribute_remainder = false;
     
     //! Options that control which parts of the pipeline to execute
     this->skip_read_filtering = false;

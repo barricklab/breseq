@@ -542,7 +542,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     double read_length_avg = static_cast<double>(s.num_bases) / static_cast<double>(s.num_reads);
     HTML << td(ALIGN_RIGHT, commify(to_string(s.num_reads)));
     HTML << td(ALIGN_RIGHT, commify(to_string(s.num_bases)));
-    double percent_pass_filters = 100 * (static_cast<double>(s.num_reads) / static_cast<double>(s.num_original_reads));
+    double percent_pass_filters = 100 * (static_cast<double>(s.num_bases) / static_cast<double>(s.num_original_bases));
     HTML << td(ALIGN_RIGHT, to_string(percent_pass_filters, 1) + "%");
     HTML << td(ALIGN_RIGHT, to_string(read_length_avg, 1) + "&nbsp;bases");
     HTML << td(ALIGN_RIGHT, to_string((s.read_length_max> 0) ? s.read_length_max : std::numeric_limits<double>::quiet_NaN(), 0) + "&nbsp;bases");

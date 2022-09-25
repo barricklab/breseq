@@ -246,10 +246,20 @@ namespace breseq {
     return;
   }
   
-  void line_to_read_index(string s, int64_t& index, bool& mapped) {
+  void line_to_read_index(string s, int64_t& index1, int64_t& index2, bool& mapped) {
     size_t start = s.find_first_of(":");
-    size_t end = s.find_first_of(" \t", start);
-    index = n(s.substr(start+1, end-(start+1)));
+    size_t end = s.find_first_of("S \t", start);
+    
+    index1 = n(s.substr(start+1, end-(start+1)));
+    
+    if (s[end] == 'S') {
+      start = end;
+      end = s.find_first_of("S \t", start);
+      index2 = n(s.substr(start+1, end-(start+1)));
+
+    } else {
+      index2 = 0;
+    }
     
     size_t next = s.find_first_not_of(" \t", end);
     next = s.find_first_of(" \t", next);
@@ -286,23 +296,22 @@ namespace breseq {
       not_done_2 = !getline(input_sam_file_2, line_2).eof();
     }
          
-    int64_t index_1 = -1; 
-    int64_t index_2 = -1; 
+    int64_t index_1a(-1), index_1b(-1), index_2a(-1), index_2b(-1);
     bool mapped_1 = false;
     bool mapped_2 = false;
     
     if (not_done_1) {
-      line_to_read_index(line_1, index_1, mapped_1);
+      line_to_read_index(line_1, index_1a, index_1b, mapped_1);
     }
     if (not_done_2) {
-      line_to_read_index(line_2, index_2, mapped_2);
+      line_to_read_index(line_2, index_2a, index_2b, mapped_2);
     }
     
     while (not_done_1 || not_done_2) {
       
       // If file 1 is not done AND
       //   the read index is smaller in file 1 than in file 2 OR file 2 is already done
-      if (not_done_1 && ((index_1 < index_2) || !not_done_2)) {
+      if (not_done_1 && ((index_1a < index_2a) || ((index_1a == index_2a) && (index_1b < index_2b) ) || !not_done_2)) {
         
         if (mapped_1)
           out_sam_file << line_1 << endl;
@@ -311,9 +320,10 @@ namespace breseq {
         not_done_1 = !getline(input_sam_file_1, line_1).eof();
         
         if (not_done_1) {
-          line_to_read_index(line_1, index_1, mapped_1);
+          line_to_read_index(line_1, index_1a, index_1b, mapped_1);
         } else {
-          index_1 = numeric_limits<int64_t>::max();
+          index_1a = numeric_limits<int64_t>::max();
+          index_1b = numeric_limits<int64_t>::max();
         }
       }
       else if (not_done_2) {
@@ -324,9 +334,10 @@ namespace breseq {
         not_done_2 = !getline(input_sam_file_2, line_2).eof();
 
         if (not_done_2) {
-          line_to_read_index(line_2, index_2, mapped_2);
+          line_to_read_index(line_2, index_2a, index_2b, mapped_2);
         } else {
-          index_2 = numeric_limits<int64_t>::max();
+          index_2a = numeric_limits<int64_t>::max();
+          index_2b = numeric_limits<int64_t>::max();
         }
       }
     }

@@ -491,6 +491,9 @@ namespace breseq{
     uint32_t read_file_read_length_min;
     double read_file_max_same_base_fraction;
     double read_file_max_N_fraction;
+    uint32_t read_file_long_read_split_length;
+    bool read_file_long_read_distribute_remainder;
+
     
     //! Settings: Read Alignment
     string bowtie2_scoring;

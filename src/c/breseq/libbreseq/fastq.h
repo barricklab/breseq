@@ -45,7 +45,9 @@ class cAnnotatedSequence;
                                         const uint64_t read_file_base_limit,
                                         const uint32_t read_length_min,
                                         const double max_same_base_fraction,
-                                        const double max_N_fraction
+                                        const double max_N_fraction,
+                                        const uint32_t _long_read_split_length,
+                                        const bool _long_read_distribute_remainder
                                         );
   
   // Utility function for converting FASTQ files between formats
@@ -66,7 +68,11 @@ class cAnnotatedSequence;
     
     cFastqSequence() 
     : m_numerical_qualities(false)
-    {}
+    {
+      for (uint8_t b=0; b<base_list_including_N_size; b++) {
+        m_base_counts[b] = 0;
+      }
+    }
     
     bool identical(cFastqSequence& seq);
     
