@@ -1,5 +1,11 @@
+Version 0.38.0
+  * Changed how reads that map equally to the reference and new junction get resolved to
+    eliminate junctions that could get assigned high frequencies due to very little evidence,
+    particularly in polymorphism mode. This approach is more conservative and may decrease the
+    predicted frequencies of junctions, but should only have minor effects in consensus mode.
+
 Version 0.37.1
-  * Fixed bug in the way that indels in homopolymers were realigned for consistency
+  * Fixed bug in the way that indels in homopolymers were realigned for consistency.
     that sporadically caused fatal "Covariate 'quality' exceeded enforced maximum" errors.
   * Fixed fatal "Attempt to add duplicate of this existing entry" error that could arise when
     using user evidence Genome Diff files merged from outputs of previous runs.

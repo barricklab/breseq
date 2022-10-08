@@ -857,7 +857,7 @@ void load_junction_alignments(
       ///
       
       // best match is to the reference, record in that SAM file.
-      if (mapping_quality_difference < 0)
+      if (mapping_quality_difference <= 0)
       {
         if (verbose)
           cout << "Best alignment to reference. MQD: " << mapping_quality_difference << endl;

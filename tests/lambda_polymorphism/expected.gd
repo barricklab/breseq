@@ -8,8 +8,8 @@
 #=CONVERTED-READS	199957
 #=INPUT-BASES	7000144
 #=INPUT-READS	200010
-#=MAPPED-BASES	4954413
-#=MAPPED-READS	142683
+#=MAPPED-BASES	4955561
+#=MAPPED-READS	142716
 DEL	1	50	NC_001416	139	1	frequency=1	gene_name=–/nu1	gene_position=intergenic (–/-52)	gene_product=–/DNA packaging protein	gene_strand=–/>	locus_tag=–/lambdap01	mutation_category=small_indel	position_end=139	position_start=139	ref_seq=G
 INS	2	51	NC_001416	14266	G	frequency=1	gene_name=L/K	gene_position=intergenic (+139/-10)	gene_product=tail component/tail component	gene_strand=>/>	genes_promoter=K	insert_position=1	locus_tag=lambdap18/lambdap19	locus_tags_promoter=lambdap19	mutation_category=small_indel	position_end=14266	position_start=14266	ref_seq=C
 SNP	3	52	NC_001416	20661	G	aa_new_seq=E|S	aa_position=338|36	aa_ref_seq=?|?	codon_new_seq=GAA|TCT	codon_number=338|36	codon_position=1|2	codon_ref_seq=NAA|TNT	frequency=1	gene_name=orf-401|orf206b	gene_position=1012|107	gene_product=Tail fiber protein|hypothetical protein	gene_strand=>|<	genes_overlapping=orf-401,orf206b	locus_tag=lambdap27|lambdap90	locus_tags_overlapping=lambdap27,lambdap90	mutation_category=snp_nonsynonymous|nonsynonymous	position_end=20661	position_start=20661	ref_seq=N	snp_type=nonsynonymous|nonsynonymous	transl_table=11|11
@@ -109,11 +109,11 @@ RA	96	.	NC_001416	47978	0	T	C	consensus_score=176.3	frequency=1	gene_name=lambda
 RA	97	.	NC_001416	48160	0	T	C	bias_e_value=42087.4	bias_p_value=0.867745	consensus_score=145.2	fisher_strand_p_value=0.577923	frequency=8.21691513e-01	gene_name=lambdap79/–	gene_position=intergenic (+216/–)	gene_product=hypothetical protein/–	gene_strand=>/–	ks_quality_p_value=0.920521	locus_tag=lambdap79/–	major_base=C	major_cov=34/35	major_frequency=8.21691513e-01	minor_base=T	minor_cov=6/9	new_cov=34/35	polymorphism_frequency=8.21691513e-01	polymorphism_score=26.8	prediction=polymorphism	ref_cov=6/9	snp_type=intergenic	total_cov=40/44
 RA	98	.	NC_001416	48295	0	C	A	bias_e_value=47788.3	bias_p_value=0.985285	consensus_score=288.6	fisher_strand_p_value=1	frequency=1.54507637e-01	gene_name=lambdap79/–	gene_position=intergenic (+351/–)	gene_product=hypothetical protein/–	gene_strand=>/–	ks_quality_p_value=0.833426	locus_tag=lambdap79/–	major_base=C	major_cov=55/51	major_frequency=8.45492363e-01	minor_base=A	minor_cov=10/10	new_cov=10/10	polymorphism_frequency=1.54507637e-01	polymorphism_score=37.2	prediction=polymorphism	ref_cov=55/51	snp_type=intergenic	total_cov=65/61
 MC	99	.	NC_001416	1	2	0	0	gene_name=–/nu1	gene_position=intergenic (–/-189)	gene_product=–/DNA packaging protein	gene_strand=–/>	left_inside_cov=0	left_outside_cov=NA	locus_tag=–/lambdap01	right_inside_cov=0	right_outside_cov=157
-MC	100	.	NC_001416	21738	27733	0	0	gene_name=[orf-314]–ea59	gene_product=[orf-314],orf-194,ea47,ea31,ea59	left_inside_cov=0	left_outside_cov=100	locus_tag=[lambdap28]–[lambdap82]	right_inside_cov=0	right_outside_cov=100
+MC	100	.	NC_001416	21738	27733	0	0	gene_name=[orf-314]–ea59	gene_product=[orf-314],orf-194,ea47,ea31,ea59	left_inside_cov=0	left_outside_cov=79	locus_tag=[lambdap28]–[lambdap82]	right_inside_cov=21	right_outside_cov=100
 MC	101	.	NC_001416	48468	48502	0	0	gene_name=lambdap79/–	gene_position=intergenic (+524/–)	gene_product=hypothetical protein/–	gene_strand=>/–	left_inside_cov=22	left_outside_cov=28	locus_tag=lambdap79/–	right_inside_cov=0	right_outside_cov=NA
 JC	102	.	NC_001416	21737	-1	NC_001416	27734	1	0	alignment_overlap=5	coverage_minus=17	coverage_plus=19	flanking_left=35	flanking_right=35	frequency=1	junction_possible_overlap_registers=19	key=NC_001416__21737__-1__NC_001416__27729__1__5____35__35__0__0	max_left=24	max_left_minus=18	max_left_plus=24	max_min_left=13	max_min_left_minus=13	max_min_left_plus=11	max_min_right=15	max_min_right_minus=15	max_min_right_plus=15	max_pos_hash_score=38	max_right=24	max_right_minus=24	max_right_plus=24	neg_log10_pos_hash_p_value=NT	new_junction_coverage=0.74	new_junction_read_count=47	polymorphism_frequency=1.00000000e+00	pos_hash_score=20	prediction=consensus	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.00	side_1_gene_name=orf-314	side_1_gene_position=coding (709/945 nt)	side_1_gene_product=Tail fiber	side_1_gene_strand=>	side_1_locus_tag=lambdap28	side_1_overlap=5	side_1_possible_overlap_registers=24	side_1_read_count=0	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.00	side_2_gene_name=ea59/int	side_2_gene_position=intergenic (-761/+78)	side_2_gene_product=ea59/integration protein	side_2_gene_strand=</<	side_2_locus_tag=lambdap82/lambdap33	side_2_overlap=0	side_2_possible_overlap_registers=19	side_2_read_count=0	side_2_redundant=0	total_non_overlap_reads=36
 UN	103	.	NC_001416	1	8
-UN	104	.	NC_001416	21738	27733
+UN	104	.	NC_001416	21738	27731
 UN	105	.	NC_001416	48486	48486
 UN	106	.	NC_001416	48490	48490
 UN	107	.	NC_001416	48492	48492
