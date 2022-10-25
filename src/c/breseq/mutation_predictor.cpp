@@ -3248,9 +3248,10 @@ namespace breseq {
       column_headers.push_back("changed_bp");
       column_headers.push_back("deleted_bp");
       column_headers.push_back("inserted_bp");
+      column_headers.push_back("final_size_bp");
     }
-    column_headers.push_back("called_bp");
-    column_headers.push_back("total_bp");
+    column_headers.push_back("reference_bp");
+    column_headers.push_back("called_reference_bp");
     
     vector<string> header_snp_types = prefix_each_in_vector(snp_types, "base_substitution.");
     column_headers.insert(column_headers.end(),header_snp_types.begin(), header_snp_types.end());
@@ -3521,9 +3522,10 @@ namespace breseq {
         this_columns.push_back(gd.get_breseq_data("BASES-CHANGED"));
         this_columns.push_back(gd.get_breseq_data("BASES-DELETED"));
         this_columns.push_back(gd.get_breseq_data("BASES-INSERTED"));
+        this_columns.push_back(gd.get_breseq_data("GENOME-SIZE-FINAL"));
       }
-      this_columns.push_back(to_string(called_bp));
       this_columns.push_back(to_string(total_bp));
+      this_columns.push_back(to_string(called_bp));
       
       vector<string> snp_type_counts = map_key_list_to_values_as_strings(count["type"], snp_types);
       this_columns.insert(this_columns.end(),snp_type_counts.begin(), snp_type_counts.end());
