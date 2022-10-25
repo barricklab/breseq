@@ -1905,6 +1905,20 @@ void  assign_one_junction_read_counts(
       ofile << it->first << endl;
     }
   }
+  
+  // @JEB 2022-10-25 +GGG JC mutation not assigned correct frequency
+  // Is this a junction that adds bases between two adjacent nucleotides?
+  // in this case we need to add the continuation on each side to the opposite side
+  // ---------|GGGGGG---------   +GGG at |
+  // ----------GGGGGG            side_1_continuation = 6   DON'T COUNT
+  //           GGGGGG---------   side_2_continuation = 0   DON'T COUNT
+  
+  bool adjacent_junction = false;
+  if (j[SIDE_1_SEQ_ID] == j[SIDE_2_SEQ_ID]) {
+    if (from_string<int32_t>(j[SIDE_1_POSITION]) + 1 == from_string<int32_t>(j[SIDE_2_POSITION])) {
+      adjacent_junction = true;
+    }
+  }
     
   // New side 1
   if ( (j[SIDE_1_REDUNDANT] != "1") && (j["side_1_annotate_key"] != "repeat") ) {
@@ -1920,7 +1934,10 @@ void  assign_one_junction_read_counts(
       end += extra_stranded_require_overlap;
       start -= minimum_side_match_correction;
       end += minimum_side_match_correction;
-      end += side_1_continuation;
+      start -= side_1_continuation;
+      if (adjacent_junction) {
+        end += side_2_continuation;
+      }
     } else {
       //start = start;
       end = start + 1;
@@ -1928,7 +1945,10 @@ void  assign_one_junction_read_counts(
       end += overlap_correction;
       start -= minimum_side_match_correction;
       end += minimum_side_match_correction;
-      start -= side_1_continuation;
+      end += side_1_continuation;
+      if (adjacent_junction) {
+        start -= side_2_continuation;
+      }
     }
     
     if (settings.junction_debug) ofile << "SIDE 1: start " << start << " end " << end << endl;       
@@ -1969,7 +1989,10 @@ void  assign_one_junction_read_counts(
       end += extra_stranded_require_overlap;
       start -= minimum_side_match_correction;
       end += minimum_side_match_correction;
-      end += side_2_continuation;
+      start -= side_2_continuation;
+      if (adjacent_junction) {
+        end += side_1_continuation;
+      }
     } else {
       //start = start;
       end = start + 1;
@@ -1977,7 +2000,10 @@ void  assign_one_junction_read_counts(
       end += overlap_correction;
       start -= minimum_side_match_correction;
       end += minimum_side_match_correction;
-      start -= side_2_continuation;
+      end += side_2_continuation;
+      if (adjacent_junction) {
+        start -= side_2_continuation;
+      }
     }
     
     if (settings.junction_debug) ofile << "SIDE 2: start " << start << " end " << end << endl;
