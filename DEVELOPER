@@ -9,9 +9,13 @@ $ make test
 
 === Compilation Instructions ===
 
-You can use conda with the included dev-environment.yml file to install packages needed for building breseq and its documentation at the command line.
+You can use conda (or mamba) with the included dev-environment.yml file to install packages needed for building breseq and its documentation at the command line.
 
 $ conda env create -f dev-environment.yml
+$ conda activate breseq-dev
+$ conda env config vars set CFLAGS="-I${CONDA_PREFIX}/include"
+$ conda env config vars set CPPFLAGS="-I${CONDA_PREFIX}/include"
+$ conda env config vars set LDFLAGS="-L${CONDA_PREFIX}/include"
 $ conda activate breseq-dev
 
 Note that this DOES NOT install a C/C++ compiler. Those must be installed outside of conda.
