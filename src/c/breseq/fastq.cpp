@@ -746,7 +746,7 @@ namespace breseq {
     map<uint32_t, uint32_t>::const_iterator it =
         qscore_cumulative_probability_table.begin();
 
-    //Iteterate through until random probability is greater then a cumulative
+    //Iterate through until random probability is greater then a cumulative
     //probability in the table.
     while (random_die >= it->second) {
       ++it;
@@ -1024,9 +1024,9 @@ namespace breseq {
                                                uint32_t read_size, 
                                                string file_name,
                                                bool verbose) 
-  {
+{
     cFastqFile out(file_name.c_str(), ios_base::out);
-
+    
     srand(cSimFastqSequence::SEED_VALUE);
     for (uint32_t i = 0; i < n_reads; ++i) {
       uint32_t start_1 = rand() % sequence.get_sequence_length() + 1;
@@ -1036,11 +1036,10 @@ namespace breseq {
                                                         read_size,
                                                         strand,
                                                         i + 1,
-                                                        verbose); 
+                                                        verbose);
       out.write_sequence(read);
     }
-
-    return;
+    
   }
 
   void cSimFastqSequence::simulate_paired_ends(const cAnnotatedSequence& sequence,
@@ -1092,9 +1091,42 @@ namespace breseq {
 
     }
 
-
-    return;
   }
+
+// Simulates perfectly tiled reads
+// one read on each strand for every start position, assuming a circular genome
+void cSimFastqSequence::simulate_tiled(const cAnnotatedSequence& sequence,
+                                             uint32_t read_size,
+                                             string file_name,
+                                             bool verbose)
+{
+  (void) verbose;
+  
+  cFastqFile out(file_name.c_str(), ios_base::out);
+  vector<int8_t>strands = make_vector<int8_t>(-1)(+1);
+  
+  uint32_t read_index = 1;
+  for (uint32_t start_1 = 1; start_1 <= sequence.get_sequence_length(); ++start_1) {
+    for (vector<int8_t>::iterator strand_it = strands.begin(); strand_it != strands.end(); strand_it++) {
+      int8_t strand = *strand_it;
+      
+      cFastqSequence read;
+      sprintf(read.m_name, "READ-%i", read_index++);
+      sprintf(read.m_name_plus, "[strand]:%i\t[start_1]:%u", strand, start_1);
+      
+      read.m_sequence = sequence.get_sequence_1_start_size(start_1, read_size);
+      if (strand == -1) {
+        read.m_sequence = reverse_complement(read.m_sequence);
+      }
+      
+      read.m_qualities = repeat_char(char(73), read_size);
+      
+      out.write_sequence(read);
+    }
+  }
+
+return;
+}
 
 // Reverse complement and also uppercase
 // Convert most characters to 'N'. Might want to give errors on non-printable characters

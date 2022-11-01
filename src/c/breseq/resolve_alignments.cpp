@@ -45,8 +45,22 @@ uint32_t qmissing (double tail_value, double pr_missing)
   
 // Continuation is how many bases match the exact same past where the junction is in the reference
 // We need to count this for cases of short duplications and deletions in tandem repeats to not
-// penalize them when we count the "evenness" score.
-  
+// penalize them when we count the "evenness" score and relative coverage.
+
+// Graphical Explanation of the Types of Continuation:
+//
+// Junction:    ++++++++++ &&&&&&&&&&  side_1_junction_seq        side_2_junction_seq
+// Reference 1: ++++++++++ ??????????  side_1_reference_left_seq  side_1_reference_right_seq
+// Reference 2: ^^^^^^^^^^ &&&&&&&&&&  side_2_reference_left_seq  side_2_reference_right_seq
+//
+// ++++++++++   left_junction_seq
+// &&&&&&&&&&   right_junction_seq
+// ^^^^^^^^^^   left_reference_sequence
+// ??????????   right_reference_sequence
+
+// side_1_continuation  +++ = ^^^ (left side)
+// side_2_continuation  &&& = ??? (right side)
+
 void calculate_continuation(
                             ResolveJunctionInfo& rji, 
                             cReferenceSequences& ref_seq_info, 
@@ -55,7 +69,7 @@ void calculate_continuation(
                             uint32_t& side_2_continuation
                             )
 {
-  bool verbose = false;
+  bool verbose = true;
   
   // At this point we are an object that has been initialized with junction information
   ASSERT(rji.sides[0].seq_id != "", "Uninitialized variable");
@@ -83,7 +97,7 @@ void calculate_continuation(
   if (rji.sides[0].strand == -1) {
   
     int32_t start_pos = min(seq_length_0, rji.sides[0].position + 1);
-    int32_t end_pos = min(seq_length_0, rji.sides[0].position  + right_compare_length);
+    int32_t end_pos = min(seq_length_0, rji.sides[0].position + right_compare_length);
     
     if (rji.sides[0].position + 1 <= seq_length_0) {
       right_reference_seq = ref_seq_info.get_sequence_1(rji.sides[0].seq_id, start_pos, end_pos);
@@ -1072,7 +1086,7 @@ void score_junction(
                     cReferenceSequences& junction_ref_seq_info
                   )
 {
-  bool verbose = false;
+  bool verbose = true;
   
 	if (verbose) cout << "Testing " << junction_id << endl;
   
@@ -1808,12 +1822,11 @@ void  assign_one_junction_read_counts(
                                   Summary& summary,
                                   cDiffEntry& j,
                                   const counted_ptr<junction_read_counter>& reference_jrc,
-                                  const counted_ptr<junction_read_counter>& junction_jrc,
-                                  int32_t extra_stranded_require_overlap
+                                  const counted_ptr<junction_read_counter>& junction_jrc
                                   )
 {
   
-  bool verbose = false;
+  bool verbose = true;
   bool debug_output = settings.junction_debug;
   
   uint32_t read_length_avg = summary.sequence_conversion.read_length_avg;
@@ -1832,6 +1845,12 @@ void  assign_one_junction_read_counts(
   
   uint32_t side_1_continuation = from_string<uint32_t>(j["side_1_continuation"]);
   uint32_t side_2_continuation = from_string<uint32_t>(j["side_2_continuation"]);
+  
+  // Must be positive
+  int32_t extra_stranded_require_overlap = 0;
+  if (j.entry_exists("read_count_offset")) {
+    extra_stranded_require_overlap = max(from_string<int32_t>(j["read_count_offset"]), 0);
+  }
   
   // This is for requiring a certain number of bases (at least one) to match past the normal point
   // where a read could be uniquely assigned to the junction (or a side)
@@ -1924,12 +1943,12 @@ void  assign_one_junction_read_counts(
   if ( (j[SIDE_1_REDUNDANT] != "1") && (j["side_1_annotate_key"] != "repeat") ) {
     int32_t side_1_strand = from_string<int32_t>(j[SIDE_1_STRAND]);
     start = from_string<uint32_t>(j[SIDE_1_POSITION]);
+    end = start;
     int32_t overlap_correction = non_negative_alignment_overlap - from_string<int32_t>(j[SIDE_1_OVERLAP]);
       
 
     if (side_1_strand == +1) {
-      start = start - 1;       
-      end = start + 1; 
+      start = start - 1;
       start -= overlap_correction;
       end += extra_stranded_require_overlap;
       start -= minimum_side_match_correction;
@@ -1939,8 +1958,7 @@ void  assign_one_junction_read_counts(
         end += side_2_continuation;
       }
     } else {
-      //start = start;
-      end = start + 1;
+      end = end + 1;
       start -= extra_stranded_require_overlap;
       end += overlap_correction;
       start -= minimum_side_match_correction;
@@ -1980,11 +1998,11 @@ void  assign_one_junction_read_counts(
     
     int32_t side_2_strand = from_string<int32_t>(j[SIDE_2_STRAND]);
     start = from_string<uint32_t>(j[SIDE_2_POSITION]);
+    end = start;
     int32_t overlap_correction = non_negative_alignment_overlap - from_string<int32_t>(j[SIDE_2_OVERLAP]);
     
     if (side_2_strand == +1) {
       start = start - 1;
-      end = start + 1; 
       start -= overlap_correction;
       end += extra_stranded_require_overlap;
       start -= minimum_side_match_correction;
@@ -1994,8 +2012,7 @@ void  assign_one_junction_read_counts(
         end += side_1_continuation;
       }
     } else {
-      //start = start;
-      end = start + 1;
+      end = end + 1;
       start -= extra_stranded_require_overlap;
       end += overlap_correction;
       start -= minimum_side_match_correction;
@@ -2240,7 +2257,7 @@ uint32_t junction_read_counter::count(
                                       map<string,bool>& counted_read_names
                                       )
 {
-  _verbose = false; //for checking
+  _verbose = true; //for checking
   _ignore_read_names = ignore_read_names;
   _counted_read_names.clear();
   

@@ -315,8 +315,7 @@ namespace breseq {
                                         Summary& summary,
                                         cDiffEntry& j,
                                         const counted_ptr<junction_read_counter>& reference_jrc,
-                                        const counted_ptr<junction_read_counter>& junction_jrc,
-                                        int32_t require_overlap = 0
+                                        const counted_ptr<junction_read_counter>& junction_jrc
                                         );
   
   void  assign_junction_read_counts(

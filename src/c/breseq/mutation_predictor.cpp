@@ -1266,18 +1266,18 @@ namespace breseq {
         // @JEB 08-06-13 
         // Reassign read counts with required overlap to avoid counting reads that go into the
         // target site duplication from counting against the IS element (giving a non-100% value).
-
+        // This value must be positive...
         
-        int32_t require_overlap = n(mut["duplication_size"]);
+        int32_t duplication_require_overlap = max(n(mut["duplication_size"]), 0);
         
         if (verbose) cerr << "Before 1:" << endl << j1 << endl;
-        assign_one_junction_read_counts(settings, summary, j1, reference_jrc, junction_jrc, require_overlap);
-        j1["read_count_offset"] = mut["duplication_size"];
+        j1["read_count_offset"] = to_string(duplication_require_overlap);
+        assign_one_junction_read_counts(settings, summary, j1, reference_jrc, junction_jrc);
         if (verbose) cerr << "After 1:" << endl << j1 << endl;
         
         if (verbose) cerr << "Before 2:" << endl << j2 << endl;
-        assign_one_junction_read_counts(settings, summary, j2, reference_jrc, junction_jrc, require_overlap);
-        j2["read_count_offset"] = mut["duplication_size"];
+        j2["read_count_offset"] = to_string(duplication_require_overlap);
+        assign_one_junction_read_counts(settings, summary, j2, reference_jrc, junction_jrc);
         if (verbose) cerr << "After 2:" << endl << j2 << endl;
         
         if (!settings.polymorphism_prediction) { // consensus mode
@@ -1286,10 +1286,10 @@ namespace breseq {
           if ( (j1[PREDICTION]!="consensus") || (j1[PREDICTION]!="consensus") ) {
             
             // heartbreakingly, we have to undo the changes that we just did
-            assign_one_junction_read_counts(settings, summary, j1, reference_jrc, junction_jrc);
             j1.erase("read_count_offset");
-            assign_one_junction_read_counts(settings, summary, j2, reference_jrc, junction_jrc);
+            assign_one_junction_read_counts(settings, summary, j1, reference_jrc, junction_jrc);
             j2.erase("read_count_offset");
+            assign_one_junction_read_counts(settings, summary, j2, reference_jrc, junction_jrc);
             continue;
           }
           

@@ -758,13 +758,14 @@ void tam_file::write_alignments(
 }
 
 // splits one alignment into multiple separate entries if it has indels
-void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignment_wrapper& a, const alignment_list& alignments)
+void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignment_wrapper& a, const alignment_list& alignments, const cReferenceSequences& ref_seq_info)
 {
-  // Debug
-  //if (a.read_name() == "3:234041") {
-  //  cout << "stop here << endl";
-  //}
+  bool debug = false;
   
+  if (a.read_name() == "1:911") {
+    debug = true;
+  }
+
 	uint32_t q_length = a.read_length();
 	string qseq_string = a.read_char_sequence();
 
@@ -781,6 +782,8 @@ void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
 	uint32_t qpos = a.query_start_1();
 
 	vector<pair<char,uint16_t> > cigar_list = a.cigar_pair_char_op_array();
+  vector<pair<char,uint16_t> > split_cigar_list;
+
 	char op;
 	uint32_t len;
 	uint32_t i = 0;
@@ -817,17 +820,38 @@ void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
       // @JEB we must skip over soft padding at the ends, it will be added back in one chunk
       if (op != 'S')
       {
-        cigar_string += to_string(len) + op;
+        split_cigar_list.push_back( make_pair(op, len) );
       }
       i++;
     }
     
 		if (qpos > qstart)
 		{
+      // Save old values and use these if we move things
+      uint32_t ins_updated_qpos = qpos;
+      uint32_t ins_updated_rpos = rpos;
+      
+      // Extend the match if the inserted bases match the reference genome!
+      // including past the inserted bases if necessary
+      if (op == 'I') {
+        if (debug) cout << "Testing insertion.." << endl;
+        uint32_t tid = a.reference_target_id();
+        while ( (ins_updated_qpos < a.query_end_1() )
+               && (qseq_string[ins_updated_qpos - 1] == ref_seq_info[tid].get_sequence_1(ins_updated_rpos))  )  {
+          ins_updated_qpos++;
+          ins_updated_rpos++;
+          ASSERT(split_cigar_list[split_cigar_list.size()-1].first =='M', "Attempt to modify nonmatch cigar operation.");
+          split_cigar_list[split_cigar_list.size()-1].second +=1;
+        }
+      }
+      
 			//add padding to the sides of the match
 			uint32_t left_padding = qstart - 1;
-			uint32_t right_padding = q_length - qpos + 1;
+			uint32_t right_padding = q_length - ins_updated_qpos + 1;
 
+      cigar_string = alignment_wrapper::cigar_op_array_to_cigar_string(split_cigar_list);
+      split_cigar_list.clear();
+      
 			cigar_string = ( left_padding > 0 ? to_string(left_padding) + "S" : "" ) + cigar_string + ( right_padding > 0 ? to_string(right_padding) + "S" : "" );
 
 			//#print "Q: $qstart to " . ($qpos-1) . "\n";

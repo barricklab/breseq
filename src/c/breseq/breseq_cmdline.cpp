@@ -937,55 +937,45 @@ int do_analyze_contingency_loci_significance( int argc, char* argv[]){
 }
 
 
-int do_simulate_read(int argc, char *argv[])
+int do_simulate_reads(int argc, char *argv[])
 {
-  AnyOption options("Usage: breseq SIMULATE-READ -g <genome diff> -r <reference file> -c <average coverage> -o <output file>");
+  AnyOption options("Usage: breseq SIMULATE-READS -g <genome diff> -r <reference file> -c <average coverage> -o <output file>");
 
   options
-  ("genome_diff,g", "Genome diff file.")
+  ("mode,m",        "Simulation mode: 'single', 'paired-end' or 'tiled'.", "single")
   ("reference,r",   "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
+  ("output,o",      "Output file name. Should be of the form *.fastq. Two output files (*_1.fastq and *_2.fastq) will be created for paired-end reads.", "simulated_reads.fastq")
   ("coverage,c",    "Average coverage value to simulate.", static_cast<uint32_t>(80))
   ("length,l",      "Read length to simulate.", static_cast<uint32_t>(50))
-  ("output,o",      "Output fastq file name.")
-  ("gff3,3",        "Output Applied GFF3 File. (Flag)", TAKES_NO_ARGUMENT)
-  ("verbose,v",     "Verbose Mode (Flag)", TAKES_NO_ARGUMENT)
-  ("paired-ends",   "Will create two read files *_1.fastq, *_2.fastq that are mate-paired.(Flag)", TAKES_NO_ARGUMENT)
   ("mean",          "Mean fragment size to use for pair ended reads.", static_cast<uint32_t>(200))
   ("stdev",         "Standard deviation of fragment size to use for pair ended reads.", static_cast<uint32_t>(20))
   ("seed",          "Seed value to use for random number generation.")
+  ("verbose,v",     "Verbose Mode (Flag)", TAKES_NO_ARGUMENT)
+
   ;
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
-  options.addUsage("Takes a genome diff file and applies the mutations to the reference.");
-  options.addUsage("Then using the applied reference, it simulates reads based on it.");
-  options.addUsage("Output is a .fastq that if run normally against the reference");
-  options.addUsage("should produce the same GenomeDiff file you entered.");
+  options.addUsage("Simulates reads based on the input reference file.");
+  options.addUsage("IMPORTANT: Only the first sequence in the reference file is used!");
+  options.addUsage("");
+  options.addUsage("Mode 'tiled' simulates reads with all possible start positions");
+  options.addUsage("and strands, ignoring the coverage option, and assuming the");
+  options.addUsage("reference sequence is circular.");
   
   if(argc == 1)  {
     options.printUsage();
     return -1;  }
   
-  if (!options.count("genome_diff")) {
-    options.addUsage("");
-    options.addUsage("You must supply the --genome_diff option for input.");
-    options.printUsage();
-    return -1;
-  }
-  
   if (!options.count("reference")) {
     options.addUsage("");
-    options.addUsage("You must supply the --reference option for input.");
+    options.addUsage("You must supply the --reference|r option for input.");
     options.printUsage();
     return -1;
   }
   
-  if (!options.count("output")) {
-    options.addUsage("");
-    options.addUsage("You must supply the --output option for output.");
-    options.printUsage();
-    return -1;
-  }
+  cerr << "COMMAND: CONVERT-REFERENCE" << endl;
+
 
   if (options.count("seed")) {
     cSimFastqSequence::SEED_VALUE = from_string<int32_t>(options["seed"]);
@@ -1000,24 +990,16 @@ int do_simulate_read(int argc, char *argv[])
   ref_seq_info.LoadFiles(make_vector<string>(ref_file_name));
   new_ref_seq_info.LoadFiles(make_vector<string>(ref_file_name));
 
-
-  //! Step: Apply genome diff mutations to reference sequence.
-  const string &gd_file_name = options["genome_diff"];
-  cGenomeDiff gd(gd_file_name);
-
-  gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, verbose);
-  
-  //! Write applied GFF3 file if requested.
-  if(options.count("gff3"))new_ref_seq_info.WriteGFF(options["output"] + ".gff3");
-
-
-  const cAnnotatedSequence &sequence = new_ref_seq_info[0];
+  cAnnotatedSequence &sequence = new_ref_seq_info[0];
   uint32_t coverage = from_string<uint32_t>(options["coverage"]);
   uint32_t read_size = from_string<uint32_t>(options["length"]);
 
   uint32_t n_reads = (sequence.get_sequence_length() / read_size) * coverage;
 
-  if (options.count("paired-ends")) {
+  string mode = to_upper(options["mode"]);
+  if ( (mode == "PAIRED") || (mode == "PAIRED-END") ) {
+    cerr << "+++   Simulating paired-end reads." << endl;
+
     cString output = options["output"];
 
     string extension = output.get_file_extension();
@@ -1038,14 +1020,30 @@ int do_simulate_read(int argc, char *argv[])
                                             pair_2_file_name,
                                             verbose);
 
-  } else {
+  } else if ( (mode == "SINGLE") || (mode == "SINGLE-END") ) {
+    cerr << "+++   Simulating single-end reads." << endl;
+
     cSimFastqSequence::simulate_single_ends(sequence,
                                             n_reads,
                                             read_size,
                                             options["output"],
                                             verbose);
-  }
+  } else if (mode == "TILED") {
+    cerr << "+++   Simulating tiled reads." << endl;
 
+    sequence.m_is_circular = true;
+    cSimFastqSequence::simulate_tiled(sequence,
+                                      read_size,
+                                      options["output"],
+                                      verbose);
+  } else {
+    options.addUsage("");
+    options.addUsage("Unrecognized mode: " + mode);
+    options.printUsage();
+    return -1;
+  }
+  
+  cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
   return 0;
 }
 
@@ -2568,7 +2566,7 @@ int main(int argc, char* argv[]) {
   // None of these commands are documented for use by others. 
   // They may change without warning.
   } else if ((command == "SIMULATE-READ") ||  (command == "SIMULATE-READS")) {
-    return do_simulate_read(argc_new, argv_new);
+    return do_simulate_reads(argc_new, argv_new);
   } else if (command == "CNV") {
     return do_copy_number_variation(argc_new, argv_new);
   } else if (command == "COVERAGE-BIAS"){

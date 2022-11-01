@@ -527,8 +527,9 @@ void alignment_output::create_alignment ( const string& region, cOutputEvidenceI
       
       
       int32_t extra_stranded_require_overlap = 0; 
-      if (jc_item.entry_exists("read_count_offset"))
-          extra_stranded_require_overlap = from_string<int32_t>(jc_item["read_count_offset"]);
+      if (jc_item.entry_exists("read_count_offset")) {
+        extra_stranded_require_overlap = max(from_string<int32_t>(jc_item["read_count_offset"]), 0);
+      }
       
       //if (output_evidence_item_ptr->parent_item->_type == MOB) {
       //extra_stranded_require_overlap = from_string<int32_t>((*(output_evidence_item_ptr->parent_item))["duplication_size"]);
@@ -549,6 +550,16 @@ void alignment_output::create_alignment ( const string& region, cOutputEvidenceI
       // ----------GGGGGG            side_1_continuation = 6   DON'T COUNT
       //           GGGGGG---------   side_2_continuation = 0   DON'T COUNT
       
+      // Junctions defining an IS element insertion
+      
+      // Positive duplication size
+      // ------------XXX++++++++++
+      // ++++++++++++XXX----------
+      
+      // Negative duplication size
+      // ------------...++++++++++
+      // ++++++++++++...----------
+      
       bool adjacent_junction = false;
       if (jc_item[SIDE_1_SEQ_ID] == jc_item[SIDE_2_SEQ_ID]) {
         if (from_string<int32_t>(jc_item[SIDE_1_POSITION]) + 1 == from_string<int32_t>(jc_item[SIDE_1_POSITION])) {
@@ -560,11 +571,11 @@ void alignment_output::create_alignment ( const string& region, cOutputEvidenceI
       if ( ((*output_evidence_item_ptr)[PREFIX] == "JC_SIDE_1") ) {
         int32_t side_1_strand = from_string<int32_t>(jc_item[SIDE_1_STRAND]);
         start = from_string<uint32_t>(jc_item[SIDE_1_POSITION]);
+        end = start;
         int32_t overlap_correction = non_negative_alignment_overlap - from_string<int32_t>(jc_item[SIDE_1_OVERLAP]);
         
         if (side_1_strand == +1) {
-          start = start - 1;       
-          end = start + 1; 
+          start = start - 1;
           start -= overlap_correction;
           end += extra_stranded_require_overlap;
           start -= minimum_side_match_correction;
@@ -578,8 +589,7 @@ void alignment_output::create_alignment ( const string& region, cOutputEvidenceI
           non_dup_start = start;
           non_dup_end = end - extra_stranded_require_overlap;
         } else {
-          //start = start;
-          end = start + 1;
+          end = end + 1;
           start -= extra_stranded_require_overlap;
           end += overlap_correction;
           start -= minimum_side_match_correction;
@@ -603,7 +613,6 @@ void alignment_output::create_alignment ( const string& region, cOutputEvidenceI
         
         if (side_2_strand == +1) {
           start = start - 1;
-          end = start + 1; 
           start -= overlap_correction;
           end += extra_stranded_require_overlap;
           start -= minimum_side_match_correction;
@@ -617,8 +626,7 @@ void alignment_output::create_alignment ( const string& region, cOutputEvidenceI
           non_dup_start = start;
           non_dup_end = end - extra_stranded_require_overlap;
         } else {
-          //start = start;
-          end = start + 1;
+          end = end + 1;
           start -= extra_stranded_require_overlap;
           end += overlap_correction;
           start -= minimum_side_match_correction;

@@ -63,8 +63,7 @@ class alignment_wrapper {
     //! Number of redundancies at this alignment.
     uint32_t redundancy() const;
 
-    //! Is the read aligned to the reverse strand?
-    //  Returns 1 if read aligned to bottom strand, 0 if aligned to top strand
+    //! Index of reference sequence matched
     inline uint32_t reference_target_id() const { return _a->core.tid; }
   
     //!Retrieve name of read.
@@ -254,6 +253,16 @@ class alignment_wrapper {
         cigar_pair_list.push_back(make_pair( op_to_char[op], len));
       }
       return cigar_pair_list;
+    }
+  
+    static inline string cigar_op_array_to_cigar_string( const vector<pair<char,uint16_t> >& _cigar_op_array )
+    {
+      string cigar_string;
+      for(vector<pair<char,uint16_t> >::const_iterator it=_cigar_op_array.begin(); it != _cigar_op_array.end(); it++) {
+        cigar_string += to_string(it->second);
+        cigar_string += it->first;
+      }
+      return cigar_string;
     }
   
     
@@ -519,7 +528,8 @@ public:
   void write_split_alignment(
                              uint32_t min_indel_split_len, 
                              const alignment_wrapper& a, 
-                             const alignment_list& alignments
+                             const alignment_list& alignments,
+                             const cReferenceSequences& ref_seq_info
                              );
 
   inline const char* target_name(const alignment_wrapper& a)

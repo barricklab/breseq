@@ -211,11 +211,11 @@ namespace breseq {
     // Build the return sequence, which may wrap around from the end to beginning of genome
     string ret_val = "";
     
-    while (size > ret_val.size()) {
+    while (size > 0) {
       
       uint32_t leftover_genome_size = this->get_sequence_length() - (start_1 - 1);
       int32_t chunk_size = leftover_genome_size < size ? leftover_genome_size : size;
-      
+    
       ret_val += this->get_sequence_1(start_1, start_1 + chunk_size - 1);
       size -= chunk_size;
       start_1 = 1;

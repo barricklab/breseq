@@ -447,7 +447,7 @@ namespace breseq {
 				// write split alignments
 				if (min_indel_split_len != -1)
         {
-					split_alignments_on_indels(settings, summary, PSAM, min_indel_split_len, alignments);
+					split_alignments_on_indels(settings, summary, ref_seq_info, PSAM, min_indel_split_len, alignments);
         }
         
 				// write best alignments
@@ -470,7 +470,7 @@ namespace breseq {
   /*! Split alignments interrupted by indels into their segments and write to a SAM file. 
 	 */
   
-  void PreprocessAlignments::split_alignments_on_indels(const Settings& settings, Summary& summary, tam_file& PSAM, int32_t min_indel_split_len, const alignment_list& alignments)
+  void PreprocessAlignments::split_alignments_on_indels(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info, tam_file& PSAM, int32_t min_indel_split_len, const alignment_list& alignments)
   {
     //##
     //## @JEB: Note that this may affect the order of alignments in the SAM file. This has 
@@ -520,7 +520,7 @@ namespace breseq {
     // it takes at least two to make a candidate junction.
 
     for(alignment_list::iterator it = split_alignments.begin(); it != split_alignments.end(); ++it) {
-      PSAM.write_split_alignment(min_indel_split_len, **it, alignments);
+      PSAM.write_split_alignment(min_indel_split_len, **it, alignments, ref_seq_info);
       alignments_written += 2;
     }
     
@@ -1553,7 +1553,10 @@ namespace breseq {
     //  Important: Here is where we choose the strand of the junction sequence
     ///
     
-		// want to be sure that lowest ref coord is always first for consistency
+    // At this point, we don't know whether a certain side is redundant.
+    //
+		// Rules...
+    // If they are both on the same
 		if ( hash_seq_id_1.compare(hash_seq_id_2) > 0 || ((hash_seq_id_1.compare(hash_seq_id_2) == 0) && (hash_coord_2 < hash_coord_1)) )
 		{
 			swap(hash_coord_1, hash_coord_2);
@@ -1634,9 +1637,13 @@ namespace breseq {
     (void)summary;
 		bool verbose = false;
 
-    //if (alignments.front()->read_name() == "1:2096442") {
-    //  verbose = true;
-    //}
+    if (alignments.front()->read_name() == "1:911") {
+      verbose = true;
+    }
+    
+    if (alignments.front()->read_name() == "1:912") {
+      verbose = true;
+    }
     
 		if (verbose)
 		{
