@@ -4,12 +4,13 @@ BRESEQVERSIONSTRING=`perl -ne 's/AC_INIT\(\[(.+?)\].+?\[(.+?)\].+/\1-\2/ && prin
 BINARYPLATFORM=`uname`
 BINARYARCH=`arch`
 ARCHFLAGS=""
-BINARYNAME=${BINARYPLATFORM}-${BINARYARCH}
 if [ "$BINARYPLATFORM" == "Darwin" ]; then
 	BINARYARCH="universal"
-	ARCHFLAGS="-mmacosx-version-min=10.9"
-	BINARYNAME="MacOSX-10.9+"
+	ARCHFLAGS="-mmacosx-version-min=10.13 -arch arm64 -arch x86_64"
+	BINARYNAME="MacOSX-10.13+"
 fi
+BINARYNAME=${BINARYPLATFORM}-${BINARYARCH}
+
 
 BINARYLOCALDIR=${BRESEQVERSIONSTRING}-${BINARYNAME}
 BINARYDIR=${PWD}/${BINARYLOCALDIR}
@@ -21,7 +22,7 @@ echo "./configure --without-libunwind --prefix=\"${BINARYDIR}\" --enable-static 
 
 
 make clean
-make -j 6
+make -j 12
 #make test
 make install
 

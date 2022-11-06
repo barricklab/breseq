@@ -2573,7 +2573,7 @@ int main(int argc, char* argv[]) {
     return do_copy_number_variation(argc_new, argv_new);
   } else if (command == "COVERAGE-BIAS"){
     return do_coverage_bias(argc_new, argv_new);
-  } else if (command == "ERROR_COUNT") {
+  } else if ( (command == "ERROR_COUNT") || (command == "ERROR-COUNT") ) {
     return do_error_count(argc_new, argv_new);
   } else if (command == "JUNCTION-POLYMORPHISM") {
     return do_junction_polymorphism(argc_new, argv_new);

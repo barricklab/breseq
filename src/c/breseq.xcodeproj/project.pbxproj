@@ -750,6 +750,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 70B69E091369E51E0001B750 /* Debug.xcconfig */;
 			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_IDENTITY = "-";
@@ -766,7 +767,7 @@
 				LIBRARY_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = breseq;
 				USER_HEADER_SEARCH_PATHS = "";
@@ -777,6 +778,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 70B69E0A1369E51E0001B750 /* Release.xcconfig */;
 			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_IDENTITY = "-";
@@ -792,7 +794,7 @@
 				LIBRARY_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_NAME = breseq;
 				USER_HEADER_SEARCH_PATHS = "";
@@ -804,6 +806,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 70B69E091369E51E0001B750 /* Debug.xcconfig */;
 			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -814,7 +817,7 @@
 					/opt/local/lib,
 					"$(PROJECT_DIR)/../../../../../../opt/local/lib",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = breseq;
 			};
@@ -824,6 +827,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 70B69E0A1369E51E0001B750 /* Release.xcconfig */;
 			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -838,7 +842,7 @@
 					/opt/local/lib,
 					"$(PROJECT_DIR)/../../../../../../opt/local/lib",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				PRODUCT_NAME = breseq;
 				ZERO_LINK = NO;
 			};
@@ -846,6 +850,7 @@
 		};
 		7056AE0214511F5D00890AB0 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 70B69E091369E51E0001B750 /* Debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_OBJC_WEAK = YES;
@@ -862,7 +867,7 @@
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
@@ -873,6 +878,7 @@
 		};
 		7056AE0314511F5D00890AB0 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 70B69E0A1369E51E0001B750 /* Release.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_OBJC_WEAK = YES;
@@ -884,7 +890,7 @@
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
@@ -895,6 +901,7 @@
 		};
 		705977FF1DB99E7C001BBA6B /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 70B69E091369E51E0001B750 /* Debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -920,6 +927,7 @@
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
@@ -929,6 +937,7 @@
 		};
 		705978001DB99E7C001BBA6B /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 70B69E0A1369E51E0001B750 /* Release.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -948,6 +957,7 @@
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
@@ -959,6 +969,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 70B69E091369E51E0001B750 /* Debug.xcconfig */;
 			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_IDENTITY = "-";
@@ -976,7 +987,7 @@
 				LIBRARY_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = gdtools;
 				USER_HEADER_SEARCH_PATHS = "";
@@ -987,6 +998,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 70B69E0A1369E51E0001B750 /* Release.xcconfig */;
 			buildSettings = {
+				ALLOW_TARGET_PLATFORM_SPECIALIZATION = YES;
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ENABLE_OBJC_WEAK = YES;
 				CODE_SIGN_IDENTITY = "-";
@@ -1003,7 +1015,7 @@
 				LIBRARY_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
-				MACOSX_DEPLOYMENT_TARGET = 10.9;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_NAME = gdtools;
 				USER_HEADER_SEARCH_PATHS = "";
