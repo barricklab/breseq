@@ -237,7 +237,7 @@ namespace breseq
     uint32_t read_file_read_length_min;         // Default = 18 COMMAND-LINE OPTION
     double read_file_max_same_base_fraction;    // Default = 0.9 COMMAND-LINE OPTION
     double read_file_max_N_fraction;            // Default = 0.5 COMMAND-LINE OPTION
-    uint32_t read_file_long_read_split_length;            // Default = 500 COMMAND-LINE OPTION
+    uint32_t read_file_long_read_split_length;            // Default = 200 COMMAND-LINE OPTION
     bool read_file_long_read_distribute_remainder;           // Default = false COMMAND-LINE OPTION
 
     // Reference sequences
