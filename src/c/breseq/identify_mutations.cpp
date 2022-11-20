@@ -346,7 +346,7 @@ bool rejected_RA_indel_homopolymer(cDiffEntry& ra,
   if (no_indel_polymorphisms && ((ra[REF_BASE] == ".") || (ra[NEW_BASE] == ".")))
   {
     rejected = true;
-    ra.add_reject_reason("INDEL");
+    ra.add_reject_reason("POLYMORPHIC_INDEL");
   }
   return rejected;
 }
@@ -438,7 +438,7 @@ bool test_RA_evidence_CONSENSUS_mode(
                                 ref_seq_info,
                                 settings.polymorphism_reject_indel_homopolymer_length,
                                 settings.polymorphism_reject_surrounding_homopolymer_length,
-                                settings.no_indel_polymorphisms
+                                settings.polymorphism_no_indels
                                 );
   
   // Succeed and bail now if still consensus prediction or keep as a failed consensus
@@ -496,7 +496,7 @@ bool test_RA_evidence_POLYMORPHISM_mode(
                                                                 ref_seq_info,
                                                                 settings.polymorphism_reject_indel_homopolymer_length,
                                                                 settings.polymorphism_reject_surrounding_homopolymer_length,
-                                                                settings.no_indel_polymorphisms
+                                                                settings.polymorphism_no_indels
                                                                 );
   
   // Copy reject reasons over to why we rejected a polymorphism

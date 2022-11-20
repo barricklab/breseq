@@ -1382,19 +1382,15 @@ namespace breseq {
     
   }
   
-  void MutationPredictor::predictJCtoINSorSUBorDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc)
+  void MutationPredictor::predictJCtoINSorSUBorDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc, bool use_redundant_sides)
   {
     (void)summary;
     (void)mc;
-    bool verbose = false;
+    bool verbose = true;
     
     // variables pulled from the summary
-    int32_t read_length_avg = static_cast<int32_t>(summary.sequence_conversion.read_length_avg);
-    
-    // check for junctions that are between the ends of contigs (with some slop)
-    
-    
-    
+    // JEB 2022-11-19 changed to use kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation below
+    // int32_t read_length_avg = static_cast<int32_t>(summary.sequence_conversion.read_length_avg);
     
     // @JEB 03-09-2014 Changed this section to produce INS and DEL instead of AMP,
     //                 when the mutation size is less than or equal to threshold in settings. 
@@ -1403,6 +1399,9 @@ namespace breseq {
 		{
 			cDiffEntry& j = **jc_it;
       
+      if (verbose) {
+        cout << j.as_string() << endl;
+      }
       //cout << j["side_1_seq_id"] << " " << j["side_2_seq_id"] << endl;
       //cout << j["side_1_strand"] << " " << j["side_2_strand"] << endl;
       
@@ -1414,9 +1413,12 @@ namespace breseq {
       int32_t side_1_strand = n(j["side_1_strand"]);
       int32_t side_2_strand = n(j["side_2_strand"]);
       
-      // to be safe about making predictions, neither can be ambiguous 
-      if ( (n(j["side_1_redundant"]) == 1) || (n(j["side_2_redundant"]) == 1) )
-        continue;
+      // to be safe about making predictions, neither can be ambiguous, unless we're in the pass
+      // when we check for ignoring indels
+      if (!use_redundant_sides) {
+        if ( (n(j["side_1_redundant"]) == 1) || (n(j["side_2_redundant"]) == 1) )
+          continue;
+      }
       
       if (side_1_strand == side_2_strand)
 				continue;
@@ -1458,9 +1460,9 @@ namespace breseq {
       if (side_1_strand == -1 )
         size = side_1_position - side_2_position + 1;
       
-      // Insertion or deletion must be smaller than read length to be predicted
-      // by this evidence alone.
-      if (abs(size) > read_length_avg) 
+      // Insertion or deletion must be smaller than this setting to be predicted by this evidence alone.
+      // @JEB 2022-11-19 changed from being dependent on read length to this constant
+      if (abs(size) > kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation)
         continue;
       
       // At this point, we have committed to adding a mutation...
@@ -1855,6 +1857,74 @@ namespace breseq {
 		}
 
   }
+
+  void MutationPredictor::filter_JC_indel_evidence(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc)
+  {
+    (void) summary;
+    
+    // Filter out JC that predict hompolymer indels and/or polymorphisms
+    // Also remove junctions that predicted for nanopore data
+    
+    cGenomeDiff junction_indel_gd;
+    predictJCtoINSorSUBorDEL(settings, summary, junction_indel_gd, jc, mc, true);
+    normalize_and_annotate_tandem_repeat_mutations(settings, summary, junction_indel_gd);
+
+      
+    vector<gd_entry_type> ins_del_types = make_vector<gd_entry_type>(INS)(DEL);
+    diff_entry_list_t jc_prediction = junction_indel_gd.get_list(ins_del_types);
+    for (diff_entry_list_t::iterator it=jc_prediction.begin(); it != jc_prediction.end(); it++) {
+      diff_entry_ptr_t& mut = *it;
+      
+      // There should be only one evidence item and it better be a JC
+      ASSERT(mut->_evidence.size() == 1, "Expected only one JC evidence item supporting INS/DEL mutation.");
+      diff_entry_ptr_t ev = gd.find_by_id(mut->_evidence[0]);
+      ASSERT(ev->_type == JC, "Expected only one JC evidence item supporting INS/DEL mutation.");
+      
+      // Figure out if it is a polymorphism or not...
+      //cout << mut->as_string() << endl;
+      //cout << ev->as_string() << endl;
+      
+      // Only check repeats of length one
+      if (settings.consensus_reject_indel_homopolymer_length || settings.polymorphism_reject_indel_homopolymer_length) {
+        
+        if (mut->entry_exists("repeat_length") && ((*mut)["repeat_length"] == "1")) {
+          
+          ASSERT(mut->entry_exists("repeat_ref_copies"), "Expected 'repeat_ref_copies' field for JC evidence for INS/DEL.");
+          uint32_t repeat_ref_copies = n((*mut)["repeat_ref_copies"]);
+          
+          ASSERT(ev->entry_exists("prediction"), "Expected 'prediction' field for JC evidence for INS/DEL.");
+          
+          bool reject = false;
+          if ((*ev)["prediction"] == "consensus") {
+            reject = (repeat_ref_copies >= settings.consensus_reject_indel_homopolymer_length);
+          } else if ((*ev)["prediction"] == "polymorphism") {
+            reject = (repeat_ref_copies >= settings.polymorphism_reject_indel_homopolymer_length);
+          } else {
+            ERROR("Expected 'prediction' field for JC evidence for INS/DEL to be 'consensus' or 'polymorphism'.");
+          }
+          
+          // Add reject reasons to the JC entries, so that they will not be used below to re-predict these mutations
+          if (reject) {
+            cout << "rejected!" << endl;
+            ev->add_reject_reason("INDEL_HOMOPOLYMER");
+          }
+        }
+      }
+      
+      // If the 'polymorphism_no_indels' option is set:
+      // also hide any polymorphic indels (prediction=polymorphism)
+      // and any with undetermined frequencies (prediction=unknown).
+      // It's possible we should add SUB mutation here?
+      
+      if (settings.polymorphism_no_indels) {
+        ASSERT(ev->entry_exists("prediction"), "Expected 'prediction' field for JC evidence for INS/DEL.");
+        if ( ((*ev)["prediction"] == "polymorphism") || ((*ev)["prediction"] == "unknown") )
+          ev->add_reject_reason("POLYMORPHIC_INDEL");
+      }
+    }
+  }
+
+
   
   void MutationPredictor::remove_mutations_on_deleted_reference_sequences(Settings& settings, Summary& summary, cGenomeDiff& gd)
   {
@@ -2285,6 +2355,11 @@ namespace breseq {
 	{
     bool verbose = false; // for debugging
     
+    // Setup
+    vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
+    vector<gd_entry_type> mc_types = make_vector<gd_entry_type>(MC);
+
+    
     // This checks for using a bad reference and warns
     {
       vector<gd_entry_type> ev_types = make_vector<gd_entry_type>(MC)(RA)(JC)(CN);
@@ -2305,6 +2380,18 @@ namespace breseq {
       }
     }
     
+
+    // Do some filtering if certain options are in play
+    if (settings.polymorphism_no_indels || settings.consensus_reject_indel_homopolymer_length || settings.polymorphism_reject_indel_homopolymer_length) {
+      cGenomeDiff junction_indel_gd;
+      diff_entry_list_t jc = gd.get_list(jc_types);
+      jc.remove_if(cDiffEntry::ignored_and_not_user_defined());
+
+      diff_entry_list_t mc = gd.get_list(mc_types);
+      mc.remove_if(cDiffEntry::ignored_and_not_user_defined());
+      
+      filter_JC_indel_evidence(settings, summary, gd, jc, mc);
+    }
     
     ignore_evidence_near_contig_ends(settings, summary, gd);
     
@@ -2323,12 +2410,10 @@ namespace breseq {
     ///
     
     // Do not use rejected junctions unless they are user-defined
-    vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
 		diff_entry_list_t jc = gd.get_list(jc_types);
     jc.remove_if(cDiffEntry::ignored_and_not_user_defined());
 
     // Do not use rejected missing coverage evidence
-    vector<gd_entry_type> mc_types = make_vector<gd_entry_type>(MC);
 		diff_entry_list_t mc = gd.get_list(mc_types);
     mc.remove_if(cDiffEntry::ignored_and_not_user_defined());
     mc.remove_if(cDiffEntry::rejected_and_not_user_defined());

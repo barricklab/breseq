@@ -219,7 +219,8 @@ namespace breseq
     ("num-processors,j", "Number of processors to use in multithreaded steps", 1)
     //("verbose,v","Produce verbose output",TAKES_NO_ARGUMENT, ADVANCED_OPTION) @JEB - not consistently implemented
 		("output,o", "Path to breseq output", ".")
-    ("polymorphism-prediction,p", "The sample is not clonal. Predict polymorphic (mixed) mutations. Setting this flag changes from CONSENSUS MODE (the default) to POLYMORPHISM MODE", TAKES_NO_ARGUMENT);
+    ("polymorphism-prediction,p", "The sample is not clonal. Predict polymorphic (mixed) mutations. Setting this flag changes from CONSENSUS MODE (the default) to POLYMORPHISM MODE", TAKES_NO_ARGUMENT)
+    ("nanopore,x", "Set options for nanopore data. Equivalent to --*-reject-indel-homopolymer-length 4 for both consensus/polymorphism and  --polymorphism-no-indel. If you provide any of these options on their own, then they will override these preset options.", TAKES_NO_ARGUMENT);
     
     options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Read File Options", ADVANCED_OPTION);
@@ -307,7 +308,7 @@ namespace breseq
     ("polymorphism-minimum-variant-coverage-each-strand", "Only predict polymorphisms when at least this many reads on each strand support each alternative allele. (DEFAULT = consensus mode, 0; polymorphism mode, 2)", "", ADVANCED_OPTION)
     ("polymorphism-minimum-total-coverage-each-strand", "Only predict polymorphisms when at least this many reads on each strand are aligned to a genome position. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", ADVANCED_OPTION)
     ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, OFF)", "", ADVANCED_OPTION)
-    ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms from read alignment evidence", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms ≤" + to_string(kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation) + " bp from read alignment or new junction evidence", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("polymorphism-reject-indel-homopolymer-length", "Reject insertion/deletion polymorphisms which could result from expansion/contraction of homopolymer repeats with this length or greater in the reference genome (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 3) ", "", ADVANCED_OPTION)
     ("polymorphism-reject-surrounding-homopolymer-length", "Reject polymorphic base substitutions that create a homopolymer with this many or more of one base in a row. The homopolymer must begin and end after the changed base. For example, TATTT->TTTTT would be rejected with a setting of 5, but ATTTT->TTTTT would not. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 5)", "", ADVANCED_OPTION)
     ;
@@ -559,7 +560,7 @@ namespace breseq
       this->polymorphism_reject_indel_homopolymer_length = 3; // zero is OFF!
       this->polymorphism_reject_surrounding_homopolymer_length = 5; // zero is OFF!
       this->polymorphism_bias_p_value_cutoff = 0;
-      this->no_indel_polymorphisms = false;
+      this->polymorphism_no_indels = false;
       this->polymorphism_precision_decimal = 0.000001;
       this->polymorphism_precision_places = 8;
       
@@ -592,12 +593,20 @@ namespace breseq
       this->polymorphism_reject_indel_homopolymer_length = 0; // zero is OFF!
       this->polymorphism_reject_surrounding_homopolymer_length = 0; // zero is OFF!
       this->polymorphism_bias_p_value_cutoff = 0;
-      this->no_indel_polymorphisms = false;
+      this->polymorphism_no_indels = false;
       this->polymorphism_precision_decimal = 0.000001;
       this->polymorphism_precision_places = 3;
       
       this->minimum_alignment_resolution_pos_hash_score = 3;
       this->junction_minimum_side_match = 1;
+    }
+    
+    // en masse overrides come before specific overrides
+    
+    if (options.count("nanopore")) {
+      this->consensus_reject_indel_homopolymer_length = 4;
+      this->polymorphism_reject_indel_homopolymer_length = 4;
+      this->polymorphism_no_indels = true;
     }
       
     // override the default settings
@@ -646,7 +655,7 @@ namespace breseq
       this->polymorphism_minimum_total_coverage_each_strand = from_string<uint32_t>(options["polymorphism-minimum-total-coverage-each-strand"]);
     
     if (options.count("polymorphism-no-indels"))
-      this->no_indel_polymorphisms = options.count("polymorphism-no-indels");
+      this->polymorphism_no_indels = options.count("polymorphism-no-indels");
     if (options.count("polymorphism-reject-indel-homopolymer-length"))
       this->polymorphism_reject_indel_homopolymer_length = from_string<int32_t>(options["polymorphism-reject-indel-homopolymer-length"]);
     if (options.count("polymorphism-reject-surrounding-homopolymer-length"))
@@ -885,7 +894,7 @@ namespace breseq
     this->polymorphism_minimum_total_coverage_each_strand = 0;
     this->polymorphism_reject_indel_homopolymer_length = 0;
     this->polymorphism_reject_surrounding_homopolymer_length = 0;
-		this->no_indel_polymorphisms = false;
+		this->polymorphism_no_indels = false;
     
     //! Settings: Mutation Prediction
     this->size_cutoff_AMP_becomes_INS_DEL_mutation = kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation;

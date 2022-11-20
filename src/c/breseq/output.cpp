@@ -847,7 +847,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
                );
     
     HTML << tr(td("Predict indel polymorphisms") 
-               + td((settings.no_indel_polymorphisms) ? "NO" : "YES")
+               + td((settings.polymorphism_no_indels) ? "NO" : "YES")
                );
     // Rejects if >= this length
     HTML << tr(td("Skip indel polymorphisms in homopolymers runs of")

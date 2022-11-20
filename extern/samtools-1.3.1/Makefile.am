@@ -19,6 +19,7 @@ SUBDIRS = htslib-1.3.1
 
 BUILT_SOURCES = version.h
 DISTCLEANFILES =  version.h
+CLEANFILES = libbam.a
 
 PACKAGE_VERSION  = 1.3.1
 

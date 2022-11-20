@@ -381,7 +381,7 @@ namespace breseq
 		uint32_t polymorphism_minimum_total_coverage_each_strand;     // Default = 0 for mixed base | 2 for polymorphism
 		uint32_t polymorphism_reject_indel_homopolymer_length;        // Default = 0 (OFF)
     uint32_t polymorphism_reject_surrounding_homopolymer_length;  // Default = 0 (OFF)
-		bool no_indel_polymorphisms;                                  // Default = false
+		bool polymorphism_no_indels;                                  // Default = false
     double polymorphism_precision_decimal;                        // Default = not used for mixed base | 0.0000000001 for polymorphism
     uint32_t polymorphism_precision_places;                       // Default = 3 for mixed base | 10 for polymorphism
 

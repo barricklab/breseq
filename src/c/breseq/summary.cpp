@@ -520,7 +520,7 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   polymorphism_minimum_total_coverage = t.polymorphism_minimum_total_coverage;
   polymorphism_reject_indel_homopolymer_length = t.polymorphism_reject_indel_homopolymer_length;
   polymorphism_reject_surrounding_homopolymer_length = t.polymorphism_reject_surrounding_homopolymer_length;
-  no_indel_polymorphisms = t.no_indel_polymorphisms;
+  no_indel_polymorphisms = t.polymorphism_no_indels;
   
   //! Settings: Mutation Prediction
   size_cutoff_AMP_becomes_INS_DEL_mutation = t.size_cutoff_AMP_becomes_INS_DEL_mutation;
