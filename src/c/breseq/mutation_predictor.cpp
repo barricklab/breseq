@@ -1228,18 +1228,18 @@ namespace breseq {
         // @JEB 08-06-13 
         // Reassign read counts with required overlap to avoid counting reads that go into the
         // target site duplication from counting against the IS element (giving a non-100% value).
-
+        // This value must be positive...
         
-        int32_t require_overlap = n(mut["duplication_size"]);
+        int32_t duplication_require_overlap = max(n(mut["duplication_size"]), 0);
         
         if (verbose) cerr << "Before 1:" << endl << j1 << endl;
-        assign_one_junction_read_counts(settings, summary, j1, reference_jrc, junction_jrc, require_overlap);
-        j1["read_count_offset"] = mut["duplication_size"];
+        j1["read_count_offset"] = to_string(duplication_require_overlap);
+        assign_one_junction_read_counts(settings, summary, j1, reference_jrc, junction_jrc);
         if (verbose) cerr << "After 1:" << endl << j1 << endl;
         
         if (verbose) cerr << "Before 2:" << endl << j2 << endl;
-        assign_one_junction_read_counts(settings, summary, j2, reference_jrc, junction_jrc, require_overlap);
-        j2["read_count_offset"] = mut["duplication_size"];
+        j2["read_count_offset"] = to_string(duplication_require_overlap);
+        assign_one_junction_read_counts(settings, summary, j2, reference_jrc, junction_jrc);
         if (verbose) cerr << "After 2:" << endl << j2 << endl;
         
         if (!settings.polymorphism_prediction) { // consensus mode
@@ -1248,10 +1248,10 @@ namespace breseq {
           if ( (j1[PREDICTION]!="consensus") || (j1[PREDICTION]!="consensus") ) {
             
             // heartbreakingly, we have to undo the changes that we just did
-            assign_one_junction_read_counts(settings, summary, j1, reference_jrc, junction_jrc);
             j1.erase("read_count_offset");
-            assign_one_junction_read_counts(settings, summary, j2, reference_jrc, junction_jrc);
+            assign_one_junction_read_counts(settings, summary, j1, reference_jrc, junction_jrc);
             j2.erase("read_count_offset");
+            assign_one_junction_read_counts(settings, summary, j2, reference_jrc, junction_jrc);
             continue;
           }
           
@@ -3441,9 +3441,10 @@ namespace breseq {
       column_headers.push_back("changed_bp");
       column_headers.push_back("deleted_bp");
       column_headers.push_back("inserted_bp");
+      column_headers.push_back("final_size_bp");
     }
-    column_headers.push_back("called_bp");
-    column_headers.push_back("total_bp");
+    column_headers.push_back("reference_bp");
+    column_headers.push_back("called_reference_bp");
     
     vector<string> header_snp_types = prefix_each_in_vector(snp_types, "base_substitution.");
     column_headers.insert(column_headers.end(),header_snp_types.begin(), header_snp_types.end());
@@ -3714,9 +3715,10 @@ namespace breseq {
         this_columns.push_back(gd.get_breseq_data("BASES-CHANGED"));
         this_columns.push_back(gd.get_breseq_data("BASES-DELETED"));
         this_columns.push_back(gd.get_breseq_data("BASES-INSERTED"));
+        this_columns.push_back(gd.get_breseq_data("GENOME-SIZE-FINAL"));
       }
-      this_columns.push_back(to_string(called_bp));
       this_columns.push_back(to_string(total_bp));
+      this_columns.push_back(to_string(called_bp));
       
       vector<string> snp_type_counts = map_key_list_to_values_as_strings(count["type"], snp_types);
       this_columns.insert(this_columns.end(),snp_type_counts.begin(), snp_type_counts.end());

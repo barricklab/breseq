@@ -45,8 +45,22 @@ uint32_t qmissing (double tail_value, double pr_missing)
   
 // Continuation is how many bases match the exact same past where the junction is in the reference
 // We need to count this for cases of short duplications and deletions in tandem repeats to not
-// penalize them when we count the "evenness" score.
-  
+// penalize them when we count the "evenness" score and relative coverage.
+
+// Graphical Explanation of the Types of Continuation:
+//
+// Junction:    ++++++++++ &&&&&&&&&&  side_1_junction_seq        side_2_junction_seq
+// Reference 1: ++++++++++ ??????????  side_1_reference_left_seq  side_1_reference_right_seq
+// Reference 2: ^^^^^^^^^^ &&&&&&&&&&  side_2_reference_left_seq  side_2_reference_right_seq
+//
+// ++++++++++   left_junction_seq
+// &&&&&&&&&&   right_junction_seq
+// ^^^^^^^^^^   left_reference_sequence
+// ??????????   right_reference_sequence
+
+// side_1_continuation  +++ = ^^^ (left side)
+// side_2_continuation  &&& = ??? (right side)
+
 void calculate_continuation(
                             ResolveJunctionInfo& rji, 
                             cReferenceSequences& ref_seq_info, 
@@ -83,7 +97,7 @@ void calculate_continuation(
   if (rji.sides[0].strand == -1) {
   
     int32_t start_pos = min(seq_length_0, rji.sides[0].position + 1);
-    int32_t end_pos = min(seq_length_0, rji.sides[0].position  + right_compare_length);
+    int32_t end_pos = min(seq_length_0, rji.sides[0].position + right_compare_length);
     
     if (rji.sides[0].position + 1 <= seq_length_0) {
       right_reference_seq = ref_seq_info.get_sequence_1(rji.sides[0].seq_id, start_pos, end_pos);
@@ -857,7 +871,7 @@ void load_junction_alignments(
       ///
       
       // best match is to the reference, record in that SAM file.
-      if (mapping_quality_difference < 0)
+      if (mapping_quality_difference <= 0)
       {
         if (verbose)
           cout << "Best alignment to reference. MQD: " << mapping_quality_difference << endl;
@@ -1808,8 +1822,7 @@ void  assign_one_junction_read_counts(
                                   Summary& summary,
                                   cDiffEntry& j,
                                   const counted_ptr<junction_read_counter>& reference_jrc,
-                                  const counted_ptr<junction_read_counter>& junction_jrc,
-                                  int32_t extra_stranded_require_overlap
+                                  const counted_ptr<junction_read_counter>& junction_jrc
                                   )
 {
   
@@ -1832,6 +1845,12 @@ void  assign_one_junction_read_counts(
   
   uint32_t side_1_continuation = from_string<uint32_t>(j["side_1_continuation"]);
   uint32_t side_2_continuation = from_string<uint32_t>(j["side_2_continuation"]);
+  
+  // Must be positive
+  int32_t extra_stranded_require_overlap = 0;
+  if (j.entry_exists("read_count_offset")) {
+    extra_stranded_require_overlap = max(from_string<int32_t>(j["read_count_offset"]), 0);
+  }
   
   // This is for requiring a certain number of bases (at least one) to match past the normal point
   // where a read could be uniquely assigned to the junction (or a side)
@@ -1905,30 +1924,49 @@ void  assign_one_junction_read_counts(
       ofile << it->first << endl;
     }
   }
+  
+  // @JEB 2022-10-25 +GGG JC mutation not assigned correct frequency
+  // Is this a junction that adds bases between two adjacent nucleotides?
+  // in this case we need to add the continuation on each side to the opposite side
+  // ---------|GGGGGG---------   +GGG at |
+  // ----------GGGGGG            side_1_continuation = 6   DON'T COUNT
+  //           GGGGGG---------   side_2_continuation = 0   DON'T COUNT
+  
+  bool adjacent_junction = false;
+  if (j[SIDE_1_SEQ_ID] == j[SIDE_2_SEQ_ID]) {
+    if (from_string<int32_t>(j[SIDE_1_POSITION]) + 1 == from_string<int32_t>(j[SIDE_2_POSITION])) {
+      adjacent_junction = true;
+    }
+  }
     
   // New side 1
   if ( (j[SIDE_1_REDUNDANT] != "1") && (j["side_1_annotate_key"] != "repeat") ) {
     int32_t side_1_strand = from_string<int32_t>(j[SIDE_1_STRAND]);
     start = from_string<uint32_t>(j[SIDE_1_POSITION]);
+    end = start;
     int32_t overlap_correction = non_negative_alignment_overlap - from_string<int32_t>(j[SIDE_1_OVERLAP]);
       
 
     if (side_1_strand == +1) {
-      start = start - 1;       
-      end = start + 1; 
+      start = start - 1;
       start -= overlap_correction;
       end += extra_stranded_require_overlap;
       start -= minimum_side_match_correction;
       end += minimum_side_match_correction;
-      end += side_1_continuation;
+      start -= side_1_continuation;
+      if (adjacent_junction) {
+        end += side_2_continuation;
+      }
     } else {
-      //start = start;
-      end = start + 1;
+      end = end + 1;
       start -= extra_stranded_require_overlap;
       end += overlap_correction;
       start -= minimum_side_match_correction;
       end += minimum_side_match_correction;
-      start -= side_1_continuation;
+      end += side_1_continuation;
+      if (adjacent_junction) {
+        start -= side_2_continuation;
+      }
     }
     
     if (settings.junction_debug) ofile << "SIDE 1: start " << start << " end " << end << endl;       
@@ -1960,24 +1998,29 @@ void  assign_one_junction_read_counts(
     
     int32_t side_2_strand = from_string<int32_t>(j[SIDE_2_STRAND]);
     start = from_string<uint32_t>(j[SIDE_2_POSITION]);
+    end = start;
     int32_t overlap_correction = non_negative_alignment_overlap - from_string<int32_t>(j[SIDE_2_OVERLAP]);
     
     if (side_2_strand == +1) {
       start = start - 1;
-      end = start + 1; 
       start -= overlap_correction;
       end += extra_stranded_require_overlap;
       start -= minimum_side_match_correction;
       end += minimum_side_match_correction;
-      end += side_2_continuation;
+      start -= side_2_continuation;
+      if (adjacent_junction) {
+        end += side_1_continuation;
+      }
     } else {
-      //start = start;
-      end = start + 1;
+      end = end + 1;
       start -= extra_stranded_require_overlap;
       end += overlap_correction;
       start -= minimum_side_match_correction;
       end += minimum_side_match_correction;
-      start -= side_2_continuation;
+      end += side_2_continuation;
+      if (adjacent_junction) {
+        start -= side_2_continuation;
+      }
     }
     
     if (settings.junction_debug) ofile << "SIDE 2: start " << start << " end " << end << endl;

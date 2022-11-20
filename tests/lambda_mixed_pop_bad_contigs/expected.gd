@@ -8,8 +8,8 @@
 #=CONVERTED-READS	199957
 #=INPUT-BASES	7000144
 #=INPUT-READS	200010
-#=MAPPED-BASES	4969859
-#=MAPPED-READS	143129
+#=MAPPED-BASES	4971007
+#=MAPPED-READS	143162
 DEL	1	64	AF322221	1	687	gene_name=GFP	gene_position=coding (1-687/687 nt)	gene_product=green fluorescent protein asFP499	gene_strand=>	genes_inactivated=GFP	mutation_category=large_deletion	position_end=687	position_start=1	ref_seq=687-bp
 DEL	2	32	NC_001416	139	1	gene_name=–/nu1	gene_position=intergenic (–/-52)	gene_product=–/DNA packaging protein	gene_strand=–/>	locus_tag=–/lambdap01	mutation_category=small_indel	position_end=139	position_start=139	ref_seq=G
 INS	3	33	NC_001416	14266	G	gene_name=L/K	gene_position=intergenic (+139/-10)	gene_product=tail component/tail component	gene_strand=>/>	genes_promoter=K	locus_tag=lambdap18/lambdap19	locus_tags_promoter=lambdap19	mutation_category=small_indel	position_end=14266	position_start=14266	ref_seq=C
@@ -75,12 +75,12 @@ RA	62	.	NC_001416	47978	0	T	C	consensus_score=175.9	frequency=1	gene_name=lambda
 RA	63	.	NC_001416	48160	0	T	C	bias_e_value=82858.4	bias_p_value=0.867745	consensus_score=144.0	fisher_strand_p_value=0.577923	frequency=1	gene_name=lambdap79/–	gene_position=intergenic (+216/–)	gene_product=hypothetical protein/–	gene_strand=>/–	ks_quality_p_value=0.920521	locus_tag=lambdap79/–	major_base=C	major_cov=34/35	major_frequency=8.214e-01	minor_base=T	minor_cov=6/9	new_cov=34/35	polymorphism_frequency=8.214e-01	polymorphism_score=26.4	prediction=consensus	ref_cov=6/9	snp_type=intergenic	total_cov=40/44
 MC	64	.	AF322221	1	687	0	0	gene_name=GFP	gene_position=coding (1-687/687 nt)	gene_product=green fluorescent protein asFP499	gene_strand=>	left_inside_cov=0	left_outside_cov=NA	right_inside_cov=0	right_outside_cov=NA
 MC	65	.	NC_001416	1	2	0	0	gene_name=–/nu1	gene_position=intergenic (–/-189)	gene_product=–/DNA packaging protein	gene_strand=–/>	left_inside_cov=0	left_outside_cov=NA	locus_tag=–/lambdap01	right_inside_cov=0	right_outside_cov=157
-MC	66	.	NC_001416	21738	27733	0	0	gene_name=[orf-314]–ea59	gene_product=[orf-314],orf-194,ea47,ea31,ea59	left_inside_cov=0	left_outside_cov=100	locus_tag=[lambdap28]–[lambdap82]	right_inside_cov=0	right_outside_cov=100
+MC	66	.	NC_001416	21738	27733	0	0	gene_name=[orf-314]–ea59	gene_product=[orf-314],orf-194,ea47,ea31,ea59	left_inside_cov=0	left_outside_cov=79	locus_tag=[lambdap28]–[lambdap82]	right_inside_cov=21	right_outside_cov=100
 MC	67	.	NC_001416	48468	48502	0	0	gene_name=lambdap79/–	gene_position=intergenic (+524/–)	gene_product=hypothetical protein/–	gene_strand=>/–	left_inside_cov=22	left_outside_cov=28	locus_tag=lambdap79/–	right_inside_cov=0	right_outside_cov=NA
 MC	68	.	REL606-5	1	46298	0	0	gene_name=rrfH–[yagX]	gene_product=rrfH,aspU,dkgB,yafC,yafD,yafE,mltD,gloB,yafS,rnhA,dnaQ,aspV,yafT,insA-2,insB-2,ECB_00212,yhhI,yafV,ykfE,fadE,lpcA,yafJ,yafK,yafQ,dinJ,yafL,yafM,fhiA,mbhA,dinB,yafN,yafO,yafP,ykfJ,prfH,pepD,gpt,yafA,crl,insA-3,insB-3,phoE,proB,proA,thrW,yagP,yagQ,yagR,yagS,yagT,yagU,ykgJ,yagV,yagW,[yagX]	left_inside_cov=0	left_outside_cov=NA	locus_tag=[ECB_r00003]–[ECB_00250]	right_inside_cov=0	right_outside_cov=NA
 JC	69	.	NC_001416	21737	-1	NC_001416	27734	1	0	alignment_overlap=5	coverage_minus=29	coverage_plus=32	flanking_left=35	flanking_right=35	frequency=1	junction_possible_overlap_registers=29	key=NC_001416__21737__-1__NC_001416__27729__1__5____35__35__0__0	max_left=29	max_left_minus=27	max_left_plus=29	max_min_left=13	max_min_left_minus=13	max_min_left_plus=11	max_min_right=15	max_min_right_minus=15	max_min_right_plus=15	max_pos_hash_score=58	max_right=29	max_right_minus=29	max_right_plus=28	neg_log10_pos_hash_p_value=0.2	new_junction_coverage=0.81	new_junction_read_count=78	polymorphism_frequency=1.000e+00	pos_hash_score=35	prediction=consensus	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.00	side_1_gene_name=orf-314	side_1_gene_position=coding (709/945 nt)	side_1_gene_product=Tail fiber	side_1_gene_strand=>	side_1_locus_tag=lambdap28	side_1_overlap=5	side_1_possible_overlap_registers=34	side_1_read_count=0	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.00	side_2_gene_name=ea59/int	side_2_gene_position=intergenic (-761/+78)	side_2_gene_product=ea59/integration protein	side_2_gene_strand=</<	side_2_locus_tag=lambdap82/lambdap33	side_2_overlap=0	side_2_possible_overlap_registers=29	side_2_read_count=0	side_2_redundant=0	total_non_overlap_reads=61
 UN	70	.	NC_001416	1	8
-UN	71	.	NC_001416	21738	27733
+UN	71	.	NC_001416	21738	27731
 UN	72	.	NC_001416	48486	48486
 UN	73	.	NC_001416	48490	48490
 UN	74	.	NC_001416	48492	48502

@@ -139,7 +139,11 @@ class cAnnotatedSequence;
                                        string pair_1_file_name,
                                        string pair_2_file_name,
                                        bool verbose = false);
-
+    
+      static void simulate_tiled(const cAnnotatedSequence& sequence,
+                                 uint32_t read_size,
+                                 string file_name,
+                                 bool verbose);
 
   };
 
