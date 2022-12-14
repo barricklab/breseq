@@ -1899,8 +1899,8 @@ namespace breseq {
             reject = (repeat_ref_copies >= settings.consensus_reject_indel_homopolymer_length);
           } else if ((*ev)["prediction"] == "polymorphism") {
             reject = (repeat_ref_copies >= settings.polymorphism_reject_indel_homopolymer_length);
-          } else {
-            ERROR("Expected 'prediction' field for JC evidence for INS/DEL to be 'consensus' or 'polymorphism'.");
+          } else if ((*ev)["prediction"] != "unknown") {
+            ERROR("Expected 'prediction' field for JC evidence for INS/DEL to be 'consensus', 'polymorphism', or 'unknown'\n"+ev->as_string());
           }
           
           // Add reject reasons to the JC entries, so that they will not be used below to re-predict these mutations
