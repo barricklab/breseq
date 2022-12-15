@@ -46,6 +46,7 @@ class cAnnotatedSequence;
                                         const uint32_t read_length_min,
                                         const double max_same_base_fraction,
                                         const double max_N_fraction,
+                                        const uint32_t _long_read_trigger_length,
                                         const uint32_t _long_read_split_length,
                                         const bool _long_read_distribute_remainder
                                         );

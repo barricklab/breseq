@@ -1424,6 +1424,7 @@ int breseq_default_action(int argc, char* argv[])
                                                      settings.read_file_read_length_min,
                                                      settings.read_file_max_same_base_fraction,
                                                      settings.read_file_max_N_fraction,
+                                                     settings.read_file_long_read_trigger_length,
                                                      settings.read_file_long_read_split_length,
                                                      settings.read_file_long_read_distribute_remainder
                                                      );

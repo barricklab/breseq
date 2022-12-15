@@ -26,7 +26,7 @@ SUBDIRS = $(LIBBAM) $(BRESEQ)
 EXTRA_DIST = \
 	DEVELOPER \
 	dev-environment.yml \
-	test-environment.yml \
+	run-environment.yml \
 	tests/common.sh \
 	tests/test.sh \
 	tests/lambda_mult_ref_read/expected.gd \

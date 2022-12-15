@@ -11,3 +11,4 @@ dependencies:
   - m4
   - sphinx
   - sphinxcontrib-jsmath
+  - texlive-core

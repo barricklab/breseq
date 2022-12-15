@@ -7,10 +7,6 @@ and its documentation at the command line.
 
 $ conda env create -f dev-environment.yml
 $ conda activate breseq-dev
-$ conda env config vars set CFLAGS="-I${CONDA_PREFIX}/include"
-$ conda env config vars set CPPFLAGS="-I${CONDA_PREFIX}/include"
-$ conda env config vars set LDFLAGS="-L${CONDA_PREFIX}/include"
-$ conda activate breseq-dev
 
 # These commands set things up so compilation can find the installed libraries
 $ conda env config vars set CFLAGS=-I${CONDA_PREFIX}/include

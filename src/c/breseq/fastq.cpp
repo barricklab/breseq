@@ -41,10 +41,11 @@ namespace breseq {
                                         const uint32_t _read_length_min,
                                         const double _max_same_base_fraction,
                                         const double _max_N_fraction,
+                                        const uint32_t _long_read_trigger_length,
                                         const uint32_t _long_read_split_length,
                                         const bool _long_read_distribute_remainder
                                         )
-  {
+{
     cerr << "    Converting/filtering FASTQ file..." << endl;
     
     // Set up maps between formats
@@ -52,13 +53,18 @@ namespace breseq {
     format_to_chr_offset["SANGER"] = 33;
     format_to_chr_offset["SOLEXA"] = 64;
     format_to_chr_offset["ILLUMINA_1.3+"] = 64;
-   
+    
     // Honor that zero means no splitting
+    uint32_t long_read_trigger_length = _long_read_trigger_length;
+    if (long_read_trigger_length == 0) {
+      long_read_trigger_length = numeric_limits<uint32_t>::max();
+    }
     uint32_t long_read_split_length = _long_read_split_length;
-    bool long_read_distribute_remainder = _long_read_distribute_remainder;
     if (long_read_split_length == 0) {
       long_read_split_length = numeric_limits<uint32_t>::max();
     }
+    bool long_read_distribute_remainder = _long_read_distribute_remainder;
+    
     
     // Summary information that will be printed at the end
     uint32_t read_length_max;
@@ -70,6 +76,14 @@ namespace breseq {
     
     // Predict the format (and count original stats)
     string quality_format = cFastqQualityConverter::predict_fastq_file_format(file_name, num_original_reads, num_original_bases, read_length_min, read_length_max, min_quality_score, max_quality_score);
+    
+    // Turn off splitting if no reads exceed the threshold
+    bool file_has_split_reads = false;
+    if (read_length_max < long_read_trigger_length) {
+      long_read_split_length = numeric_limits<uint32_t>::max();
+    } else {
+      file_has_split_reads = true;
+    }
     
     uint64_t num_bases = 0;
     uint64_t num_reads = 0;
@@ -84,7 +98,6 @@ namespace breseq {
     uint64_t num_filtered_too_many_N_bases = 0;
     uint64_t num_filtered_coverage_limit_bases = 0;
 
-    
     //debug
     //cerr << "min_quality_score "     << (int)min_quality_score  << endl;
     //cerr << "max_quality_score "     << (int)max_quality_score  << endl;
@@ -122,7 +135,6 @@ namespace breseq {
     uint64_t num_original_reads_before_splitting = 0;
     uint64_t num_original_bases_before_splitting = 0;
     
-    bool file_has_split_reads = false;
     while (input_fastq_file.read_sequence(original_sequence, fqc)) {
     
       num_original_reads_before_splitting++;
@@ -161,7 +173,6 @@ namespace breseq {
       bool read_was_split = num_split_read_pieces > 1;
       
       if (read_was_split) {
-        file_has_split_reads = true;
         if (!long_read_distribute_remainder) {
           // One fewer pieces because we ignore the last if not distributing the remainder
           num_split_read_pieces--;
