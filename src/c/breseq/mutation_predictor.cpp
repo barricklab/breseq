@@ -1386,7 +1386,7 @@ namespace breseq {
   {
     (void)summary;
     (void)mc;
-    bool verbose = true;
+    bool verbose = false;
     
     // variables pulled from the summary
     // JEB 2022-11-19 changed to use kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation below

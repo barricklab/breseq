@@ -2565,11 +2565,23 @@ string cGenomeDiff::mob_replace_sequence(cReferenceSequences& ref_seq_info,
   
   // Do we have deletes?  Go ahead and delete them from the repeat.
   // This happens before inserts -- deletes are always part of the repeat element.
-  if(iDelStart)
+
+  if(iDelStart) {
+    // Overflows happen if there are bad repeat annotations. See Issue #355
+    if (static_cast<size_t>(iDelStart) > new_seq_string.length()) {
+      WARN("Attempt to add element sequence with a length < 0. This can occur if you have mobile elements or repeat regions with very different sequences/lengths annotated in the reference sequence. The variant sequence for " + to_string(mut._type) + " " + to_string(mut._id) + "will be incorrect.");
+      iDelStart = new_seq_string.length();
+    }
     new_seq_string.replace(0,iDelStart,"");
-  if(iDelEnd)
+  }
+  if(iDelEnd) {
+    // Overflows happen if there are bad repeat annotations. See Issue #355
+    if (static_cast<size_t>(iDelEnd) > new_seq_string.length()) {
+      WARN("Attempt to add element sequence with a length < 0. This can occur if you have mobile elements or repeat regions with very different sequences/lengths annotated in the reference sequence. The variant sequence for " + to_string(mut._type) + " " + to_string(mut._id) + "will be incorrect.");
+      iDelEnd = new_seq_string.length();
+    }
     new_seq_string.resize(new_seq_string.size() - iDelEnd);
-  
+  }
   // If there are any inserts, put them in front of or behind the repeat sequence.
   if(mut.entry_exists("ins_start")) {
     new_seq_string = mut["ins_start"] + new_seq_string;

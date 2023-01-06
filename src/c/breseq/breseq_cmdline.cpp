@@ -1670,7 +1670,7 @@ int breseq_default_action(int argc, char* argv[])
       string preprocess_junction_best_sam_file_name = settings.preprocess_junction_best_sam_file_name;
       string coverage_junction_best_bam_file_name = settings.coverage_junction_best_bam_file_name;
       string coverage_junction_best_bam_unsorted_file_name = settings.coverage_junction_best_bam_unsorted_file_name;
-
+      
       samtools_import(reference_faidx_file_name, preprocess_junction_best_sam_file_name, coverage_junction_best_bam_unsorted_file_name);
       
       samtools_sort(coverage_junction_best_bam_unsorted_file_name, coverage_junction_best_bam_file_name, settings.num_processors);
