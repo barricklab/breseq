@@ -36,7 +36,46 @@ The first line of the file must define that this is a |GD| file and the version 
 Metadata lines
 +++++++++++++++
 
-Lines beginning with **#=<name> <value>** are interpreted as metadata. (Thus, the first line is assigning a metadata item named GENOME_DIFF a value of 1.0.) Names cannot include whitespace characters. Values may include whitespace characters. Lines with the same name are concatenated with single spaces added between them.
+Lines beginning with **#=<name> <value>** are interpreted as metadata. (Thus, the first line is assigning a metadata item named GENOME_DIFF a value of 1.0.) Names cannot include whitespace characters. Values may include whitespace characters. In most cases, the values for lines with the same name are concatenated with single spaces added between them or interpreted as a list.
+
+Common but optional metadata fields include:
+
+TITLE
+   The name of the sample. If this field is not provided, the name of the |GD| file (removing the .gd suffix) is used for this field.
+
+AUTHOR
+   Name of person who curated the |GD| file.
+
+PROGRAM
+   Name and version of software program that generated the |GD| file.
+
+CREATED
+  Date on which the |GD| file was created.
+
+TIME
+   Time point the sample is from, in days, generations, or any other unit of measurement. Ex: 1, 2, 15000
+
+POPULATION
+   Name/designation for the population the sample is from. Ex: Ara–3 / MA-1
+
+TREATMENT
+   Experimental treatment group for this population. Ex: LB medium / LTEE
+
+CLONE
+   Name/designation for a clonal isolate, Ex: A, B, REL10863
+
+REFSEQ
+   Location of the reference sequence file. Ex: /here/is/an/absolute/path/to/the/file.gb
+
+ADAPTSEQ
+   Location of the adaptor sequence file. Ex: relative/path/to/the/adaptors.fa
+
+READSEQ
+   Location of the read sequence file. Ex: \https://place.org/url/for/file/download.fastq
+
+REFSEQ, ADAPTSEQ, and READSEQ entries are interpreted as lists of multiple files to process/include if they appear multiple times. The location value for theese fields can be a URL or an absolute/relative file path.
+
+Some of these metadata fields are used to name and sort samples by |gdtools| COMPARE, to find relevant files by |gdtools| RUNFILE, and by other utilities.
 
 Comment lines
 ++++++++++++++
