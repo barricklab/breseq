@@ -1,13 +1,15 @@
 Introduction
 ==============
 
-|breseq| (pronounced: \\brēz-ˈsēk\\ or *breeze-seq*) is a computational pipeline for the analysis of short-read re-sequencing data (e.g. Illumina, 454, IonTorrent, etc.). It uses reference-based alignment approaches to predict mutations in a sample relative to an already sequenced genome. |breseq| is intended for microbial genomes (<10 Mb) and re-sequenced samples that are only slightly diverged from the reference sequence (<1 mutation per 1000 bp).
+|breseq| (pronounced: \\brēz-ˈsēk\\ or *breeze-seq*) is a computational pipeline specialized for the analysis of short-read re-sequencing data (e.g. Illumina, 454, IonTorrent, etc.). It uses reference-based alignment approaches to predict mutations in a sample relative to an already sequenced genome. |breseq| is intended for microbial genomes (<10 Mb) and re-sequenced samples that are only slightly diverged from the reference sequence (<1 mutation per 1000 bp).
 
 |breseq|'s primary advantages over other software programs are that it can:
 
 #. Accurately predict new sequence junctions, such as those associated with mobile element insertions.
 #. Integrate multiple sources of evidence for genetic changes into mutation predictions.
 #. Produce annotated output describing biologically relevant mutational events.
+
+|breseq| version 0.38+ can also be used with long-read sequencing data (e.g., Nanopore, PacBio). It analyzes long reads by automatically splitting them into shorter subsequences so that it can use its standard mapping and analysis methods. Be aware that this discards unique information in long reads that can be used to identify large-scale structural variation in a genome! We recommend that you perform de novo assembly and whole-genome comparisons with other software programs to analyze long-read data for structural variation.
 
 |breseq| was initially developed to analyze data from the Lenski long-term evolution experiment with *E. coli* `(Link to LTEE Website) <https://the-ltee.org>`_ [Barrick2009a]_ [Barrick2009b]_\ .
 
