@@ -1,4 +1,12 @@
 Version 0.38.0
+  * breseq can now analyze long-read sequencing data. It will split long reads into short subsequence
+    reads that are of a length that works for its read mapping parameters and new junction analysis.
+    Read splitting can be controlled with the --long-read-* options. If you are looking for structural
+    variation, you should be performing de novo assembly and genome comparisons using other tools!
+    breseq will not be able to identify or fully resolve large or complex structural variants.
+  * If you are using the current generation of Nanopore long read data, we recommend using the 
+    --nanopore option, which sets read mapping parameters that speed up the analysis and filters 
+    out predictions in error-prone homopolymer repeats of 4 or more bases.
   * Changed how reads that map equally to the reference and new junction get resolved to
     eliminate junctions that could get assigned high frequencies due to very little evidence,
     particularly in polymorphism mode. This approach is more conservative and may decrease the
