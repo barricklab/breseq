@@ -3206,8 +3206,8 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, const cGeno
     // will be operating with the correct positions for each side.  Search @MDS0001
     // to find out where we finally access this modified information.
     
-    cout << item->as_string() << endl;
-    cout << "***" << (*item)[SIDE_1_REDUNDANT] << endl;
+    //cout << item->as_string() << endl;
+    //cout << "***" << (*item)[SIDE_1_REDUNDANT] << endl;
 
     JunctionInfo juncInfo((*item)["key"]);
     

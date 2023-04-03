@@ -44,6 +44,10 @@ Commonly used options:
 
    Predict polymorphic (mixed) mutations.
 
+.. option:: -x, --nanopore
+
+   Set read alignment and mutation calling options for Nanopore sequencing data. Important: no indel mutations will be called in homopolymer repeats of 4 or more bases with this option.
+
 For a complete list of options, please see the command line help (by using the -h option).
 
 Command: bam2aln

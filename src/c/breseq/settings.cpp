@@ -220,7 +220,7 @@ namespace breseq
     //("verbose,v","Produce verbose output",TAKES_NO_ARGUMENT, ADVANCED_OPTION) @JEB - not consistently implemented
 		("output,o", "Path to breseq output", ".")
     ("polymorphism-prediction,p", "The sample is not clonal. Predict polymorphic (mixed) mutations. Setting this flag changes from CONSENSUS MODE (the default) to POLYMORPHISM MODE", TAKES_NO_ARGUMENT)
-    ("nanopore,x", "Set options for nanopore data. Equivalent to --*-reject-indel-homopolymer-length 4 for both consensus/polymorphism and  --polymorphism-no-indel. If you provide any of these options on their own, then they will override these preset options.", TAKES_NO_ARGUMENT);
+    ("nanopore,x", "Set options for nanopore data. Equivalent to --consensus-reject-indel-homopolymer-length 4 --polymorphism-reject-indel-homopolymer-length 4 consensus/polymorphism --polymorphism-no-indel --bowtie2-stage1 \"" + this->bowtie2_stage2 + "\" --bowtie2-stage2 \"\". If you provide any of these options on their own, then they will override these preset options.", TAKES_NO_ARGUMENT);
     
     options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Read File Options", ADVANCED_OPTION);
@@ -609,6 +609,10 @@ namespace breseq
       this->consensus_reject_indel_homopolymer_length = 4;
       this->polymorphism_reject_indel_homopolymer_length = 4;
       this->polymorphism_no_indels = true;
+      
+      // Just do that is normally stage 2 alignment
+      this->bowtie2_stage1 = this->bowtie2_stage2;
+      this->bowtie2_stage2 = "";
     }
       
     // override the default settings

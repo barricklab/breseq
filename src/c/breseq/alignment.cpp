@@ -762,9 +762,9 @@ void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
 {
   bool debug = false;
   
-  if (a.read_name() == "1:911") {
-    debug = true;
-  }
+// if (a.read_name() == "1:911") {
+//   debug = true;
+// }
 
 	uint32_t q_length = a.read_length();
 	string qseq_string = a.read_char_sequence();
