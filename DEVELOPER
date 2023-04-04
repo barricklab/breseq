@@ -26,8 +26,8 @@ $ make
 $ make install
 
 A special script exists for building a new breseq release package on the current system. If you are working
-on Linux, you can run this directly in this setup. If you are making a MacOSX release, you must also install
-universal versions of the libraries using the alternative MacPorts instructions below.
+on Linux, you can run this directly in this setup. If you are making a MacOSX release, you must use MacPorts
+to install universal versions of the libraries using the alternative instructions below.
 
 $./binarydist.sh
 
@@ -43,7 +43,29 @@ $ make test
 Note that conda installs a compiler in this environment that will interfere with building breseq
 in this environment, so only use it for the tests or running breseq on your samples!
 
-=== Developing with XCode on MacOSX or Building MacOSX Universal Binaries===
+===  Building MacOSX Universal Binaries and Documentation ===
+
+For compiling a universal binary, breseq needs a universal library (compiled for both arm64 and x86_64).
+XCode expects this to be installed in /opt/local/lib.
+
+Install MacPorts then use it to install this:
+$ sudo port install zlib +universal
+
+If you are building the documentation, you also need sphinx, latex, and some of their extras:
+$ sudo port install texlive texlive-latex-extra py311-sphinx py311-sphinxcontrib-jsmath
+(Note: installing these through conda doesn't seem to catch all the dependencies as of 2023-04-04.)
+
+Next, you will need to change your environment to find these library and header files by adding
+these lines to your shell config file (Example: ~/.zshrc)
+
+export CFLAGS="$CFLAGS -I/opt/local/include"
+export CPPFLAGS="$CPPFLAGS -I/opt/local/include"
+export LDFLAGS="$LDFLAGS -L/opt/local/lib"
+
+At this point, you can compile a release with MacOSX universal binaries.
+$./binarydist.sh
+
+=== Developing with XCode ===
 
 Open the included project file: src/c/breseq.xcodeproj
 
@@ -52,29 +74,11 @@ XCode expects this to be installed in /opt/local/lib. Install MacPorts then use 
 
 $ sudo port install zlib +universal
 
-You need to uninstall the architecture specific version installed by conda:
-$ conda activate breseq-dev
-$ conda uninstall zlib
-
-You will need to change your breseq-dev conda environment to find these files
-$ conda env create -f dev-environment.yml
-$ conda activate breseq-dev
-$ conda env config vars set CFLAGS="-I/opt/local/include -I${CONDA_PREFIX}/include"
-$ conda env config vars set CPPFLAGS="-I/opt/local/include -I${CONDA_PREFIX}/include"
-$ conda env config vars set LDFLAGS="-L/opt/local/lib -L${CONDA_PREFIX}/lib"
-$ conda activate breseq-dev
-$ conda env config vars list
-
-At this point, you can compile a release with MacOSX universal binaries.
-$./binarydist.sh
-
 Before compiling and debugging in in XCode, you need to run the first few commands of the command-line
 instructions to generate Makefiles for building samtools external libraries.
 
 $ ./bootstrap
 $ ./configure
-
-=== Debugging in XCode ===
 
 To run breseq with the XCode debugger, you must set the environmental variable PATH, within the
 "executable" or "scheme" options, include the locations where you have R and bowtie2 installed.

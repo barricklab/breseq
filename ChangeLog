@@ -7,6 +7,7 @@ Version 0.38.0
   * If you are using the current generation of Nanopore long read data, we recommend using the 
     --nanopore option, which sets read mapping parameters that speed up the analysis and filters 
     out predictions in error-prone homopolymer repeats of 4 or more bases.
+  * The MacOSX executable is now universal (should run on both Intel and M1 macs).
   * Changed how reads that map equally to the reference and new junction get resolved to
     eliminate junctions that could get assigned high frequencies due to very little evidence,
     particularly in polymorphism mode. This approach is more conservative and may decrease the

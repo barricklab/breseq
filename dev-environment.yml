@@ -9,6 +9,6 @@ dependencies:
   - automake
   - libtool
   - m4
-  - sphinx
-  - sphinxcontrib-jsmath
-  - texlive-core
+ # - sphinx
+ # - sphinxcontrib-jsmath
+ # - texlive-core
