@@ -1310,6 +1310,8 @@ namespace breseq {
         //Split attribute's key and value by "="
         for (vector<string>::iterator itr = attributes.begin(); itr != attributes.end(); itr++) {
           string& attribute = *itr;
+          // Remove whitespace that can exist after/before semicolon!
+          attribute = cString(attribute).trim_ends_of(' ');
           vector<string> key_value = split(attribute,"=");
           string& key = key_value.front();
           string& value = key_value.back();
@@ -1345,12 +1347,14 @@ namespace breseq {
         feature["name"] = feature["accession"];
 
       
-      // "product" loaded from fields with preference: (product > Note)
+      // "product" loaded from fields with preference: (product > Note > name)
       if (feature.m_gff_attributes.count("product"))
         feature["product"] = join(feature.m_gff_attributes["product"], ",");
       else if (feature.m_gff_attributes.count("Note"))
         feature["product"] = join(feature.m_gff_attributes["Note"], ",");
-    
+      else
+        feature["product"] = feature["name"];
+      
       // fCDS type indicates CDS that is pseudo => internally store as CDS with pseudo flag set
       if (feature["type"] == "fCDS") {
         //feature.m_pseudo = true; set by following code...
@@ -2459,34 +2463,37 @@ void cReferenceSequences::WriteGenBankFileSequenceFeatures(std::ofstream& out, c
     
     out << "     " << left << setw(15) << feat["type"] << " " << GenBankCoordsString(feat.m_locations) << endl;
 
-    for (vector<string>::const_iterator tag_it = feat.m_original_genbank_tags.begin(); tag_it != feat.m_original_genbank_tags.end(); tag_it++) {
+    if (s.m_file_format == "GENBANK") {
+      // If we were loaded as GenBank, this outputs as close as possible to the original!
+      for (vector<string>::const_iterator tag_it = feat.m_original_genbank_tags.begin(); tag_it != feat.m_original_genbank_tags.end(); tag_it++) {
         
-      if (feat.count(*tag_it) == 0) continue;
-      
-      int32_t value_int;
-      if (is_integer(feat[*tag_it], value_int)) {
-        GenBankPrintAligned(out, "/" + *tag_it + "=" + to_string(value_int), 21, 79);
-      } else {
-        GenBankPrintAligned(out, "/" + *tag_it + "=\"" + feat[*tag_it] + "\"", 21, 79);
+        if (feat.count(*tag_it) == 0) continue;
+        
+        int32_t value_int;
+        if (is_integer(feat[*tag_it], value_int)) {
+          GenBankPrintAligned(out, "/" + *tag_it + "=" + to_string(value_int), 21, 79);
+        } else {
+          GenBankPrintAligned(out, "/" + *tag_it + "=\"" + feat[*tag_it] + "\"", 21, 79);
+        }
+      }
+    } else {
+      // Alternative version that prints all tags (will also print GFF generated ones)
+      for(sequence_feature_map_t::const_iterator tag_it = feat.cbegin(); tag_it != feat.cend(); tag_it++) {
+        
+        int32_t value_int;
+        //if (is_integer(tag_it->second, value_int)) {
+        //  GenBankPrintAligned(out, "/" + tag_it->first + "=" + to_string(value_int), 21, 79);
+        //} else {
+          GenBankPrintAligned(out, "/" + tag_it->first + "=\"" + tag_it->second + "\"", 21, 79);
+        //}
       }
     }
-    
     
     // Handle psuedo
     if (feat.m_pseudo) {
       GenBankPrintAligned(out, "/pseudo", 21, 79);
     }
-/*
-   // Alternative version that prints all tags (will also print GFF generated ones)
-   for(sequence_feature_map_t::const_iterator tag_it = feat.cbegin(); tag_it != feat.cend(); tag_it++) {
-      int32_t second_int;
-      if (is_integer(tag_it->second, second_int)) {
-        out << "                     /" << tag_it->first << "=" << second_int << endl;
-      } else {
-        out << "                     /" << tag_it->first << "=\"" << tag_it->second << "\"" << endl;
-      }
-    }
-*/
+
   }
 }
 
