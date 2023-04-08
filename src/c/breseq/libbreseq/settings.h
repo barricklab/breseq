@@ -652,7 +652,7 @@ namespace breseq
         }
         
         string test_file = global_program_data_path + "/coverage_distribution.r";
-        ASSERT(file_exists(test_file.c_str()), "Could not find expected R scripts inside of data path set relative to executable: " + global_program_data_path + "\nPlease, see the installation instructions in the HTM documentation.");
+        ASSERT(file_exists(test_file.c_str()), "Could not find expected R scripts inside of data path set relative to executable: " + global_program_data_path + "\nPlease, see the installation instructions in the HTML documentation.");
       }
       
       //for debug

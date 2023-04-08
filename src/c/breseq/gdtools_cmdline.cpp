@@ -150,8 +150,9 @@ int do_merge(int argc, char *argv[])
   uout("Reading input GD files") << endl;
 	
 	cGenomeDiff gd1(options.getArgv(0));
+	uout << "    " << options.getArgv(0) << endl;
   for(int32_t i = 1; i < options.getArgc(); ++i) {
-    uout << options.getArgv(i) << endl;
+    uout << "    " << options.getArgv(i) << endl;
     cGenomeDiff gd2(options.getArgv(i));
     gd1.set_union(gd2, options.count("evidence"), options.count("phylogeny-aware"), options.count("verbose"));
   }
