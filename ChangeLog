@@ -1,3 +1,6 @@
+Version 0.38.1
+  * Fix for infinite loop triggered by help when terminal window was too narrow.
+  
 Version 0.38.0
   * breseq can now analyze long-read sequencing data. It will split long reads into short subsequence
     reads that are of a length that works for its read mapping parameters and new junction analysis.

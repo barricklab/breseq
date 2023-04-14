@@ -64,7 +64,12 @@ echo "export BRESEQ_TEST_THREAD_ARG=\"-j 4\"" >> ${BINARYDIR}/tests/test.config
 
 echo "tests/test.sh clean tests" > ${BINARYDIR}/run_tests.sh
 echo "tests/test.sh test tests" >> ${BINARYDIR}/run_tests.sh
+
+#Fix permssions to 644 and add back executables
+chmod 644 $(find ${BINARYDIR} -type f) 
 chmod a+x ${BINARYDIR}/run_tests.sh
+chmod a+x ${BINARYDIR}/bin/*
+chmod a+x ${BINARYDIR}/tests/*.sh
 
 tar -czf ${BINARYLOCALDIR}.tar.gz ${BINARYLOCALDIR}
 rm -r ${BINARYLOCALDIR}

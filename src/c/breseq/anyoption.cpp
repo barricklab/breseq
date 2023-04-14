@@ -1012,16 +1012,24 @@ namespace breseq {
 		string::iterator last_space = sentence.begin();
     
     int accumulated_width = 0;
+    int width_since_last_space = 0;
 		while (it != sentence.end())
 		{
       accumulated_width++;
-      if (*it == ' ') last_space = it;
-
+      width_since_last_space++;
+      if (*it == ' ') {
+        width_since_last_space = 0;
+        last_space = it;
+      }
 			if (accumulated_width > width)
 			{
 				// Go back to letter after space
-				it = last_space;
-				*last_space = '\n';
+        if (width_since_last_space < accumulated_width) {
+          it = last_space;
+          *last_space = '\n';
+        } else {
+          sentence.insert(it, '\n');
+        }
         accumulated_width = 0;
 			}
       it++;
