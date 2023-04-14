@@ -9,5 +9,3 @@
 [ **Users:** Please see the online _breseq_ documentation](http://barricklab.org/twiki/pub/Lab/ToolsBacterialGenomeResequencing/documentation)
 
 [ **Developers:** Please see information on the GitHub Wiki](https://github.com/barricklab/breseq/wiki)
-
-[![Build Status](https://travis-ci.com/barricklab/breseq.svg?branch=master)](https://travis-ci.com/barricklab/breseq)
