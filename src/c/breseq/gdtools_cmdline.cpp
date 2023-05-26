@@ -3076,6 +3076,11 @@ int do_runfile(int argc, char *argv[])
 				ss << " -r " << download_dir + "/../" + "02_Apply" << "/" << gd.get_title() << ".gff";
 			}
 			
+			// Should be relative to the download directory
+			if (directory_exists(cString(download_dir + "/../" + "02_Trimmed").c_str())) {
+				download_dir = download_dir + "/../" + "02_Trimmed";
+			}
+			
 			//! Part 4: Read argument path(s).
 			// Handles zipped or unzipped
 			for (vector<string>::const_iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {
