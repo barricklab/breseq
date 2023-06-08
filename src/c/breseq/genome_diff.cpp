@@ -3212,8 +3212,16 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
   this->add_breseq_data("GENOME-SIZE-FINAL", to_string(new_ref_seq_info.get_total_length()));
   
   //Cleanup.  If any of the sequences are of zero length, remove them.
+  vector<string> deleted_seq_ids;
+  
   for (vector<cAnnotatedSequence>::iterator it_as = new_ref_seq_info.begin(); it_as < new_ref_seq_info.end(); it_as++) {
-    if(!it_as->m_length){new_ref_seq_info.erase(it_as);it_as--;}
+    if(!it_as->m_length) {
+      deleted_seq_ids.push_back(it_as->m_seq_id);
+    }
+  }
+    
+  for (vector<string>::iterator it_seq_id = deleted_seq_ids.begin(); it_seq_id < deleted_seq_ids.end(); it_seq_id++) {
+    new_ref_seq_info.remove_seq(*it_seq_id);
   }
   
 }

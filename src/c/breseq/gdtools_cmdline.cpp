@@ -2711,7 +2711,7 @@ int do_download(int argc, char *argv[])
           ifstream(file_path.c_str()).good() && !file_empty(file_path.c_str());
 			
 			// Need to glob to check for matching filenames
-			if (key == "NCBI-SRA") {
+			if (key == "NCBI-SRANCBI-SRA") {
 				glob_t glob_result;
 				glob((file_path + "*").c_str(),GLOB_TILDE,NULL,&glob_result);
 				is_downloaded = (glob_result.gl_pathc > 0);
@@ -3071,10 +3071,26 @@ int do_runfile(int argc, char *argv[])
       //! Part 2: Pipeline's output path.
       ss << " -o " << output_dir + "/" + gd.get_title();  
 			
-			//! Part 3: Reference argument path(s).
-			for (vector<string>::const_iterator ref_file_it=refs.begin(); ref_file_it != refs.end(); ref_file_it++) {  
-				ss << " -r " << download_dir + "/../" + "02_Apply" << "/" << gd.get_title() << ".gff";
+			//! Part 3: Reference argument path(s). Just one.. check for some possible filenames
+								 
+			string reference_path_no_extension = download_dir + "/../" + "02_Apply" + "/" + gd.get_title();
+			vector<string> possible_reference_extensions = make_vector<string>("gff")("gff3")("gbk")("gb")("fna")("fa");
+			bool ending_found = false;
+			for (vector<string>::iterator ext_it = possible_reference_extensions.begin(); ext_it != possible_reference_extensions.end(); ext_it++) {
+				string test_file_name = reference_path_no_extension + "." + *ext_it;
+				if (file_exists( test_file_name.c_str() ) ) {
+					ss << " -r " << test_file_name;
+					ending_found = true;
+					break;
+				}
 			}
+			
+			// Default is "gff"
+			if (!ending_found) {
+				string test_file_name = reference_path_no_extension + "." + "gff";
+				ss << " -r " << test_file_name;
+			}
+			
 			
 			// Should be relative to the download directory
 			if (directory_exists(cString(download_dir + "/../" + "02_Trimmed").c_str())) {

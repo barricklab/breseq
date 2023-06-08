@@ -1113,7 +1113,7 @@ namespace breseq {
         m_seq_id_to_index[(*this)[seq_index].m_seq_id] = seq_index;       
       }
       else {
-        this->add_new_seq(on_seq.get_name(), file_name);
+        this->add_seq(on_seq.get_name(), file_name);
       }
             
       // copy the info over (could define an assignment operator...)
@@ -1135,7 +1135,7 @@ namespace breseq {
       
       on_seq.set_name(safe_seq_id_name(on_seq.get_name()));
 
-      this->add_new_seq(on_seq.get_name(), ff.m_file_name);
+      this->add_seq(on_seq.get_name(), ff.m_file_name);
       cAnnotatedSequence& this_seq = (*this)[on_seq.get_name()];
       this_seq.m_fasta_sequence = on_seq;
       this_seq.m_seq_id = on_seq.get_name();
@@ -1200,7 +1200,7 @@ namespace breseq {
           if (end == "") continue;
       
           seq_id = safe_seq_id_name(seq_id);
-          this->add_new_seq(seq_id, file_name);
+          this->add_seq(seq_id, file_name);
           (*this)[seq_id].m_length = from_string<uint32_t>(end);
           continue;
         }
@@ -1209,7 +1209,7 @@ namespace breseq {
           stringstream ls(line);
           string x, seq_id, original_file_name;
           ls >> x >> seq_id >> original_file_name;
-          this->add_new_seq(seq_id, file_name);
+          this->add_seq(seq_id, file_name);
           this->m_seq_id_to_original_file_name[seq_id] = original_file_name;
           continue;
         }
@@ -1240,7 +1240,7 @@ namespace breseq {
           string seq_id = line.substr(5);
           RemoveLeadingTrailingWhitespace(seq_id);
           if (!m_seq_id_to_index.count(seq_id))
-            this->add_new_seq(seq_id, file_name);
+            this->add_seq(seq_id, file_name);
                  
           cAnnotatedSequence& this_seq = (*this)[seq_id];
           this_seq.m_fasta_sequence.set_sequence("");
@@ -1383,7 +1383,7 @@ namespace breseq {
       }
       
       //! Step 4: Determine if sequence already exists (find or create if not found)
-      this->add_new_seq(seq_id, file_name);
+      this->add_seq(seq_id, file_name);
       
       // It's possible we created an empty sequence, we need to update its length here based on features that have this info.
       // Otherwise these features will be out of range in the next check...
@@ -1816,7 +1816,7 @@ bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file
       }
     }
 
-    this->add_new_seq(seq_id, file_name);
+    this->add_seq(seq_id, file_name);
     s = &((*this)[seq_id]);
     s->m_length = sequence_length;
     s->m_is_circular = sequence_is_circular;
@@ -2529,7 +2529,7 @@ void cReferenceSequences::ReadBull(const string& file_name) {
     // if one already exists, throw an error
     ASSERT(!this->m_seq_id_to_index.count(BULL_DUMMY_SEQ_ID), 
            "Two BULL formatted feature files loaded in a row. Ambiguous assignment to FASTA files.");
-    this->add_new_seq(BULL_DUMMY_SEQ_ID, file_name);
+    this->add_seq(BULL_DUMMY_SEQ_ID, file_name);
   }
     
   ifstream in(file_name.c_str());

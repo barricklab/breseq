@@ -1002,20 +1002,44 @@ public:
       return gc / len;
     }
 
-    void add_new_seq(const string& seq_id, const string& file_name)
+    void add_seq(const string& seq_id, const string& file_name)
     {
       m_seq_id_loaded[seq_id]++;
       if (m_seq_id_to_index.count(seq_id)) {
         return;
-      } else {
-        cAnnotatedSequence as;
-        as.m_seq_id = seq_id;
-        as.m_file_name = file_name;
-        this->push_back(as);
-        m_seq_id_to_index[seq_id] = m_index_id;
+      }
+      cAnnotatedSequence as;
+      as.m_seq_id = seq_id;
+      as.m_file_name = file_name;
+      this->push_back(as);
+      m_seq_id_to_index[seq_id] = m_index_id;
+      m_index_id++;
+    }
+    
+    void remove_seq(const string& seq_id)
+    {
+      if (!m_seq_id_to_index.count(seq_id)) {
+        return;
+      }
+      
+      // Find and erase
+      bool found = false;
+      for(vector<cAnnotatedSequence>::iterator it = this->begin(); it != this->end(); it++ ) {
+        if (it->m_seq_id == seq_id) {
+          found = true;
+          this->erase(it);
+          break;
+        }
+      }
+      ASSERT(found, "Attempt to erase non-existent sequence with seq_id: " + seq_id)
+      
+      // Reassign m_seq_id_to_index from scratch
+      m_seq_id_to_index.clear();
+      m_index_id = 0;
+      for(vector<cAnnotatedSequence>::iterator it = this->begin(); it != this->end(); it++ ) {
+        m_seq_id_to_index[it->m_seq_id] = m_index_id;
         m_index_id++;
       }
-      return;
     }
     
     vector<string> seq_ids() const
