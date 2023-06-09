@@ -3055,7 +3055,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
           count_INT++;
         }
         
-        int32_t size = from_string<int32_t>(mut[REPLACE_SIZE]);
+        int32_t size = from_string<int32_t>(mut[SIZE]);
         if (mut.entry_exists(APPLY_SIZE_ADJUST)) {
           size += from_string<int32_t>(mut[APPLY_SIZE_ADJUST]);
           ASSERT(size > 0, "Attempt to apply mutation with non-positive size.");
@@ -4538,7 +4538,7 @@ void cGenomeDiff::write_vcf(const string &vcffile, cReferenceSequences& ref_seq_
       case CON:
       case INT:
       {        
-        uint32_t size = from_string<uint32_t>(mut[REPLACE_SIZE]);
+        uint32_t size = from_string<uint32_t>(mut[SIZE]);
         
         uint32_t replace_target_id, replace_start, replace_end;
         ref_seq_info.parse_region(mut["region"], replace_target_id, replace_start, replace_end);
@@ -4724,7 +4724,7 @@ void cGenomeDiff::write_gvf(const string &gvffile, cReferenceSequences& ref_seq_
       uint32_t tid, start_pos, end_pos;
       ref_seq_info.parse_region(de["region"], tid, start_pos, end_pos);
       
-      gvf[8].append("Reference_seq=").append( ref_seq_info.get_sequence_1(de[SEQ_ID], from_string(de[POSITION]), from_string(de[POSITION]) + from_string(de[REPLACE_SIZE]) - 1) );
+      gvf[8].append("Reference_seq=").append( ref_seq_info.get_sequence_1(de[SEQ_ID], from_string(de[POSITION]), from_string(de[POSITION]) + from_string(de[SIZE]) - 1) );
       gvf[8].append(";Variant_seq=").append( ref_seq_info.get_sequence_1(tid, start_pos, end_pos ));
     }
     

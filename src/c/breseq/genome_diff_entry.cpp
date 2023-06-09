@@ -74,7 +74,6 @@ namespace breseq {
   
   // For CON/INT
   const char* REGION = "region";
-  const char* REPLACE_SIZE = "replace_size";
   
   //For RA
   // old + new required field
@@ -144,8 +143,8 @@ namespace breseq {
   (MOB,make_vector<string> (SEQ_ID)(POSITION)(REPEAT_NAME)(STRAND)(DUPLICATION_SIZE))
   (AMP,make_vector<string> (SEQ_ID)(POSITION)(SIZE)(NEW_COPY_NUMBER))
   (INV,make_vector<string> (SEQ_ID)(POSITION)(SIZE))
-  (CON,make_vector<string> (SEQ_ID)(POSITION)(REPLACE_SIZE)(REGION))
-  (INT,make_vector<string> (SEQ_ID)(POSITION)(REPLACE_SIZE)(REGION))
+  (CON,make_vector<string> (SEQ_ID)(POSITION)(SIZE)(REGION))
+  (INT,make_vector<string> (SEQ_ID)(POSITION)(SIZE)(REGION))
   
   //## evidence
   (RA,make_vector<string> (SEQ_ID)(POSITION)(INSERT_POSITION)(REF_BASE)(NEW_BASE))
@@ -196,7 +195,7 @@ namespace breseq {
   (NEW_SEQ, kDiffEntryFieldVariableType_BaseSequence)
   (NEW_COPY_NUMBER, kDiffEntryFieldVariableType_PositiveInteger)
   (DUPLICATION_SIZE, kDiffEntryFieldVariableType_Integer)
-  (REPLACE_SIZE, kDiffEntryFieldVariableType_NonNegativeInteger)
+  (SIZE, kDiffEntryFieldVariableType_NonNegativeInteger)
   (DEL_START, kDiffEntryFieldVariableType_PositiveInteger)
   (DEL_END, kDiffEntryFieldVariableType_PositiveInteger)
   (INS_START, kDiffEntryFieldVariableType_BaseSequence)
@@ -694,7 +693,7 @@ namespace breseq {
         return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)) + from_string<uint32_t>(this->at(SIZE)) - 1);
       case CON:
       case INT:
-        return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)) + from_string<uint32_t>(this->at(REPLACE_SIZE)) - 1);
+        return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)) + from_string<uint32_t>(this->at(SIZE)) - 1);
       case INS:
         return cReferenceCoordinate(from_string<uint32_t>(this->at(POSITION)), this->entry_exists(INSERT_POSITION) ? from_string<uint32_t>(this->at(INSERT_POSITION)) : 1);
       case MOB:
@@ -816,7 +815,7 @@ namespace breseq {
       {
         uint32_t replace_target_id, replace_start, replace_end;
         ref_seq_info.parse_region(this->get("region"), replace_target_id, replace_start, replace_end);
-        size_change = from_string<uint32_t>(this->get(REPLACE_SIZE));
+        size_change = from_string<uint32_t>(this->get(SIZE));
         
         if (this->entry_exists(APPLY_SIZE_ADJUST)) {
           size_change += from_string<int32_t>(this->get(APPLY_SIZE_ADJUST));
@@ -1638,7 +1637,7 @@ namespace breseq {
       case CON:
       case INT:
       {
-        assert(this->entry_exists(REPLACE_SIZE));
+        assert(this->entry_exists(SIZE));
         assert(this->entry_exists(REGION));
       } break;
         

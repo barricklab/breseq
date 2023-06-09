@@ -2537,7 +2537,8 @@ void add_html_fields_to_mutation(cDiffEntry& mut, const MutationTableOptions& op
       }
     } break;
       
-    case CON:{
+    case CON:
+    case INT: {
       html_mutation = nonbreaking(mut["size"] + " bp&rarr;" + mut["region"]);
     } break;
       

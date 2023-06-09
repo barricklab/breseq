@@ -92,8 +92,7 @@ namespace breseq {
   extern const char* NEW_COPY_NUMBER;
   extern const char* MEDIATED_STRAND;
   
-  // For CON
-  extern const char* REPLACE_SIZE;
+  // For CON and INT
   extern const char* REGION;
   
   //For RA

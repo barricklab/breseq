@@ -2489,7 +2489,7 @@ void cReferenceSequences::WriteGenBankFileSequenceFeatures(std::ofstream& out, c
       }
     }
     
-    // Handle psuedo
+    // Handle pseudo
     if (feat.m_pseudo) {
       GenBankPrintAligned(out, "/pseudo", 21, 79);
     }
