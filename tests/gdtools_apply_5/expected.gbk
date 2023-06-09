@@ -19,22 +19,33 @@ REFERENCE   2  (bases 1 to 717)
             Diego, 9500 Gilman Drive, La Jolla, CA 92093, USA
 FEATURES             Location/Qualifiers
      CDS             1..717
+                     /accession=0
                      /codon_start=1
-                     /transl_table=11
+                     /name="unknown"
+                     /phase=0
                      /product="sfGFP"
                      /protein_id="ASL68970.1"
+                     /transl_table=11
                      /translation="MSKGEELFTGVVPILVELDGDVNGHKFSVRGEGEGDATNGKLTL
                      KFICTTGKLPVPWPTLVTTLTYGVQCFSRYPDHMKRHDFFKSAMPEGYVQERTISFKD
                      DGTYKTRAEVKFEGDTLVNRIELKGIDFKEDGNILGHKLEYNFNSHNVYITADKQKNG
                      IKANFKIRHNVEDGSVQLADHYQQNTPIGDGPVLLPDNHYLSTQSVLSKDPNEKRDHM
                      VLLEFVTAAGITHGMDELYK"
+                     /type="CDS"
      region          1..717
+                     /accession=0
+                     /type="region"
      source          1..717
-                     /organism="Synthetic plasmid"
-                     /mol_type="other DNA"
+                     /accession=0
                      /db_xref="taxon:1440148"
                      /lab_host="Escherichia coli"
+                     /mol_type="other DNA"
+                     /name="activator plasmid"
                      /note="activator plasmid"
+                     /organism="Synthetic plasmid"
+                     /phase=0
+                     /product="activator plasmid"
+                     /type="source"
 ORIGIN
         1 atgagcaaag gagaagaact tttcactgga gttgtcccaa ttcttgttga attagatggt
        61 gatgttaatg ggcacaaatt ttctgtccgt ggagagggtg aaggtgatgc tacaaacgga
@@ -55,127 +66,215 @@ ACCESSION   REL606-5
 KEYWORDS    .
 FEATURES             Location/Qualifiers
      gene            190..309
-                     /locus_tag="ECB_r00003"
+                     /accession="ECB_r00003"
                      /gene="rrfH"
+                     /locus_tag="ECB_r00003"
+                     /name="rrfH"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      rRNA            190..309
-                     /locus_tag="ECB_r00003"
+                     /accession="ECB_r00003"
                      /gene="rrfH"
+                     /locus_tag="ECB_r00003"
+                     /name="rrfH"
+                     /phase=0
                      /product="5S ribosomal RNA"
+                     /type="rRNA"
      gene            362..438
-                     /locus_tag="ECB_t00003"
+                     /accession="ECB_t00003"
                      /gene="aspU"
+                     /locus_tag="ECB_t00003"
+                     /name="aspU"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      tRNA            362..438
-                     /locus_tag="ECB_t00003"
+                     /accession="ECB_t00003"
                      /gene="aspU"
+                     /locus_tag="ECB_t00003"
+                     /name="aspU"
+                     /phase=0
                      /product="tRNA-Asp"
+                     /type="tRNA"
      gene            join(601..949,complement(1535..2713))
-                     /locus_tag="ECB_00200"
+                     /accession="ECB_00200"
                      /gene="dkgB"
+                     /locus_tag="ECB_00200"
+                     /name="dkgB"
+                     /phase=0
+                     /product=0
+                     /type="gene"
                      /pseudo
      CDS             join(601..949,complement(1535..2713))
-                     /locus_tag="ECB_00200"
-                     /protein_id="kribb:ECB_00200"
-                     /gene="dkgB"
-                     /transl_table=11
-                     /note="b0207"
+                     /EC_number="1.1.1.274"
+                     /accession="ECB_00200"
                      /codon_start=1
+                     /gene="dkgB"
+                     /locus_tag="ECB_00200"
+                     /name="dkgB"
+                     /note="b0207"
+                     /phase=0
+                     /product="2,5-diketo-D-gluconate reductase B"
+                     /protein_id="kribb:ECB_00200"
+                     /transl_table=11
                      /translation="MAIPAFGLGTFRLKDDVVISSVKTALELGYRAIDTAQIYDNEAA
                      VGQAIAESGVPRHELYITTKIWIENLSKDKLIPSLKESLQKLRTDYVDLTLIHWPSPN
                      DEVSVEEFMQELLEAKKEGLTREIGISNFTIPLMEKAIAAVGAENIATNQIELSPYLQ
                      NRKVVAWAKQHGIHITSYMTLAYGKALKDEVIARIAAKHNATPAQVILAWAMGEGYSV
                      IPSSTKRKNLESNLKAQNLQLDAEDKKAIAALDCNDRLVSPEGLAPEWD"
-                     /product="2,5-diketo-D-gluconate reductase B"
-                     /EC_number="1.1.1.274"
+                     /type="CDS"
                      /pseudo
      gene            join(950..1538,complement(2714..3029))
-                     /locus_tag="ECB_00201"
+                     /accession="ECB_00201"
                      /gene="yafC"
+                     /locus_tag="ECB_00201"
+                     /name="yafC"
+                     /phase=0
+                     /product=0
+                     /type="gene"
                      /pseudo
      CDS             join(950..1538,complement(2714..3029))
-                     /locus_tag="ECB_00201"
-                     /protein_id="kribb:ECB_00201"
-                     /gene="yafC"
-                     /transl_table=11
-                     /note="b0208"
+                     /accession="ECB_00201"
                      /codon_start=1
+                     /gene="yafC"
+                     /locus_tag="ECB_00201"
+                     /name="yafC"
+                     /note="b0208"
+                     /phase=0
                      /product="predicted DNA-binding transcriptional regulator"
+                     /protein_id="kribb:ECB_00201"
+                     /transl_table=11
                      /translation="MKATSEELAIFVSVVESGSFSRAAEQLGQANSAVSRAVKKLEMK
                      LGVSLLNRTTRQLSLTEEGERYFRRVQSILQEMAAAESEIMETRNTPRGLLRIDAATP
                      VVLHFLMPLIKPFRERYPEVTLSLVSSETIINLIERKVDVAIRAGTLTDSSLRARPLF
                      NSYRKIIASPDYISRYGKPETIDDLKQHVCLGFTEPASLNTWPIACSDGQLHEVKYGL
                      SSNSGETLKQLCLSGNGIACLSDYMIDKEIARGELVELMADKVLPVEMPFSAVYYSDR
                      AVSTRIRAFIDFLSEHVKTAPGGAVREA"
+                     /type="CDS"
                      /pseudo
      repeat_region   1747..2507
+                     /accession=0
                      /mobile_element="insertion sequence:IS1"
+                     /name="IS1"
+                     /phase=0
+                     /product="repeat region"
+                     /type="repeat_region"
      gene            1799..2074
-                     /locus_tag="ECB_00210"
+                     /accession="ECB_00210_1"
                      /gene="insA-2"
+                     /locus_tag="ECB_00210"
+                     /name="insA-2"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             1799..2074
-                     /locus_tag="ECB_00210"
-                     /protein_id="kribb:ECB_00210"
-                     /gene="insA-2"
-                     /transl_table=11
+                     /accession="ECB_00210_1"
                      /codon_start=1
+                     /gene="insA-2"
+                     /locus_tag="ECB_00210"
+                     /name="insA-2"
+                     /phase=0
                      /product="IS1 protein InsA"
+                     /protein_id="kribb:ECB_00210"
+                     /transl_table=11
                      /translation="MASVSISCPSCSATDGVVRNGKSTAGHQRYLCSHCRKTWQLQFT
                      YTASQPGTHQKIIDMAMNGVGCRATARIMGVGLNTILRHLKNSGRSR"
+                     /type="CDS"
      gene            1993..2496
-                     /locus_tag="ECB_00211"
+                     /accession="ECB_00211_1"
                      /gene="insB-2"
+                     /locus_tag="ECB_00211"
+                     /name="insB-2"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             1993..2496
-                     /locus_tag="ECB_00211"
-                     /protein_id="kribb:ECB_00211"
-                     /gene="insB-2"
-                     /transl_table=11
+                     /accession="ECB_00211_1"
                      /codon_start=1
+                     /gene="insB-2"
+                     /locus_tag="ECB_00211"
+                     /name="insB-2"
+                     /phase=0
                      /product="IS1 protein InsB"
+                     /protein_id="kribb:ECB_00211"
+                     /transl_table=11
                      /translation="MPGNCPHYGRWPQHDFTSLKKLRPQSVTSRIQPGSDVIVCAEMD
                      EQWGYVGAKSRQRWLFYAYDSLRKTVVAHVFGERTMATLGRLMSLLSPFDVVIWMTDG
                      WPLYESRLKGKLHVISKRYTQRIERHNLNLRQHLARLGRKSLSFSKSVELHDKVIGHY
                      LNIKHYQ"
+                     /type="CDS"
      gene            3270..4070
-                     /locus_tag="ECB_00202"
+                     /accession="ECB_00202"
                      /gene="yafD"
+                     /locus_tag="ECB_00202"
+                     /name="yafD"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             3270..4070
-                     /locus_tag="ECB_00202"
-                     /protein_id="kribb:ECB_00202"
-                     /gene="yafD"
-                     /transl_table=11
-                     /note="b0209"
+                     /accession="ECB_00202"
                      /codon_start=1
+                     /gene="yafD"
+                     /locus_tag="ECB_00202"
+                     /name="yafD"
+                     /note="b0209"
+                     /phase=0
                      /product="hypothetical protein"
+                     /protein_id="kribb:ECB_00202"
+                     /transl_table=11
                      /translation="MRKNTYAMRYVAGQPAERILPPGSFASIGQALPPGEPLSTEERI
                      RILVWNIYKQQRAEWLSVLKNYGKDAHLVLLQEAQTTPELVQFATANYLAADQVPAFV
                      LPQHPSGVMTLSAAHPVYCCPLREREPILRLAKSALVTVYPLPDTRLLMVVNIHAVNF
                      SLGVDVYSKQLLPIGDQIAHHSGPVIMAGDFNAWSRRRMNALYRFAREMSLRQVRFTD
                      DQRRRAFGRPLDFVFYRGLNVSEASVLVTRASDHNPLLVEFSPGKPDK"
+                     /type="CDS"
      gene            4074..4697
-                     /locus_tag="ECB_00203"
+                     /accession="ECB_00203"
                      /gene="yafE"
+                     /locus_tag="ECB_00203"
+                     /name="yafE"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             4074..4697
-                     /locus_tag="ECB_00203"
-                     /protein_id="kribb:ECB_00203"
-                     /gene="yafE"
-                     /transl_table=11
-                     /note="b0210"
+                     /accession="ECB_00203"
                      /codon_start=1
+                     /gene="yafE"
+                     /locus_tag="ECB_00203"
+                     /name="yafE"
+                     /note="b0210"
+                     /phase=0
                      /product="predicted S-adenosyl-L-methionine-dependent meth
                      yltransferase"
+                     /protein_id="kribb:ECB_00203"
+                     /transl_table=11
                      /translation="MSGLPQGRPTFVAAQNVSTVVAYDLSAHMLDVVAQAAEVRQLKN
                      ITTRQGYAESLPFADNAFDIVISRYSAHHWHDVGAALREVSRILKPGGRLIVMDVMSP
                      GHPVRDIWLQTVEALRDTSHVRNYASGEWLTLINEANLIVDNLITDKLPLEFSSWVVR
                      MRTPEALVDAIRIYQQSASTEVRTYFSLQTDGSFTSDIIMVEAHKAA"
+                     /type="CDS"
      gene            complement(4745..6103)
-                     /locus_tag="ECB_00204"
+                     /accession="ECB_00204"
                      /gene="mltD"
+                     /locus_tag="ECB_00204"
+                     /name="mltD"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             complement(4745..6103)
-                     /locus_tag="ECB_00204"
-                     /protein_id="kribb:ECB_00204"
-                     /gene="mltD"
-                     /transl_table=11
-                     /note="b0211"
+                     /EC_number="3.2.1.-"
+                     /accession="ECB_00204"
                      /codon_start=1
+                     /gene="mltD"
+                     /locus_tag="ECB_00204"
+                     /name="mltD"
+                     /note="b0211"
+                     /phase=0
+                     /product="predicted membrane-bound lytic murein transglyco
+                     sylase D"
+                     /protein_id="kribb:ECB_00204"
+                     /transl_table=11
                      /translation="MKAKAILLASVLLVGCQSTGNVQQHAQSLSAAGQGEAAKFTSQA
                      RWMDDGTSIAPDGDLWAFIGDELKMGIPENDRIREQKQKYLRNKSYLHDVTLRAEPYM
                      YWIAGQVKKRNMPMELVLLPIVESAFDPHATSGANAAGIWQIIPSTGRNYGLKQTRNY
@@ -185,148 +284,240 @@ FEATURES             Location/Qualifiers
                      NTPLNSRVYTVRSGDTLSSIASRLGVSTKDLQQWNKLRGSKLKPGQSLTIGAGSSAQR
                      LANNSDSITYRVRKGDSLSSIAKRHGVNIKDVMRWNSDTANLQPGDKLTLFVKNNNMP
                      DS"
-                     /product="predicted membrane-bound lytic murein transglyco
-                     sylase D"
-                     /EC_number="3.2.1.-"
+                     /type="CDS"
      gene            complement(6175..6930)
-                     /locus_tag="ECB_00205"
+                     /accession="ECB_00205"
                      /gene="gloB"
+                     /locus_tag="ECB_00205"
+                     /name="gloB"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             complement(6175..6930)
-                     /locus_tag="ECB_00205"
-                     /protein_id="kribb:ECB_00205"
-                     /gene="gloB"
-                     /transl_table=11
-                     /note="b0212"
+                     /EC_number="3.1.2.6"
+                     /accession="ECB_00205"
                      /codon_start=1
+                     /gene="gloB"
+                     /locus_tag="ECB_00205"
+                     /name="gloB"
+                     /note="b0212"
+                     /phase=0
+                     /product="predicted hydroxyacylglutathione hydrolase"
+                     /protein_id="kribb:ECB_00205"
+                     /transl_table=11
                      /translation="MNLNSIPAFDDNYIWVLNDEAGRCLIVDPGDAEPVLNAIAANNW
                      QPEAIFLTHHHHDHVGGVKELVEKFPQIVVYGPQETQDKGTTQVVKDGETAFVLGHEF
                      SVIATPGHTLGHICYFSKPYLFCGDTLFSGGCGRLFEGTASQMYQSLKKLSVLPDDTL
                      VCCAHEYTLSNMKFALSILPHDLSINDYYRKVKELRAKNQITLPVILKNERQINVFLR
                      TEDIDLINVINEETLLQQPEERFAWLRSKKDRF"
-                     /product="predicted hydroxyacylglutathione hydrolase"
-                     /EC_number="3.1.2.6"
+                     /type="CDS"
      gene            6964..7686
-                     /locus_tag="ECB_00206"
+                     /accession="ECB_00206"
                      /gene="yafS"
+                     /locus_tag="ECB_00206"
+                     /name="yafS"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             6964..7686
-                     /locus_tag="ECB_00206"
-                     /protein_id="kribb:ECB_00206"
-                     /gene="yafS"
-                     /transl_table=11
-                     /note="b0213"
+                     /accession="ECB_00206"
                      /codon_start=1
+                     /gene="yafS"
+                     /locus_tag="ECB_00206"
+                     /name="yafS"
+                     /note="b0213"
+                     /phase=0
                      /product="predicted S-adenosyl-L-methionine-dependent meth
                      yltransferase"
+                     /protein_id="kribb:ECB_00206"
+                     /transl_table=11
                      /translation="MKPARVPQTVVAPDRWGDLPWGELYRKALERQLNPWFTKMYGFH
                      LLKIGNLSAEINCEACAVSHQVNVSAQGMPVQVQADPLHLPFADKSVDVCLLAHTLPW
                      CTDPHRLLRETDRVLIDDGWLVISGFNPISLMGLRKLVPVLRKTSPYNSRMFTLMRQL
                      DWLSLLNFEVLHASRFHVLPWNKHGGKLLNAHIPALGCLQLIVARKRTIPLTLNPMKQ
                      SKNKPRIRQAVGATRQCRKPQA"
+                     /type="CDS"
      gene            complement(7683..8150)
-                     /locus_tag="ECB_00207"
+                     /accession="ECB_00207"
                      /gene="rnhA"
+                     /locus_tag="ECB_00207"
+                     /name="rnhA"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             complement(7683..8150)
-                     /locus_tag="ECB_00207"
-                     /protein_id="kribb:ECB_00207"
-                     /gene="rnhA"
-                     /transl_table=11
-                     /note="b0214"
+                     /EC_number="3.1.26.4"
+                     /accession="ECB_00207"
                      /codon_start=1
+                     /gene="rnhA"
+                     /locus_tag="ECB_00207"
+                     /name="rnhA"
+                     /note="b0214"
+                     /phase=0
+                     /product="ribonuclease H"
+                     /protein_id="kribb:ECB_00207"
+                     /transl_table=11
                      /translation="MLKQVEIFTDGSCLGNPGPGGYGAILRYRGREKTFSAGYTRTTN
                      NRMELMAAIVALEALKEHCEVILSTDSQYVRQGITQWIHNWKKRGWKTADKKPVKNVD
                      LWQRLDAALGQHQIKWEWVKGHAGHPENERCDELARAAAMNPTLEDTGYQVEV"
-                     /product="ribonuclease H"
-                     /EC_number="3.1.26.4"
+                     /type="CDS"
      gene            8215..8946
-                     /locus_tag="ECB_00208"
+                     /accession="ECB_00208"
                      /gene="dnaQ"
+                     /locus_tag="ECB_00208"
+                     /name="dnaQ"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             8215..8946
-                     /locus_tag="ECB_00208"
-                     /protein_id="kribb:ECB_00208"
-                     /gene="dnaQ"
-                     /transl_table=11
-                     /note="b0215"
+                     /EC_number="2.7.7.7"
+                     /accession="ECB_00208"
                      /codon_start=1
+                     /gene="dnaQ"
+                     /locus_tag="ECB_00208"
+                     /name="dnaQ"
+                     /note="b0215"
+                     /phase=0
+                     /product="DNA polymerase III subunit epsilon"
+                     /protein_id="kribb:ECB_00208"
+                     /transl_table=11
                      /translation="MSTAITRQIVLDTETTGMNQIGAHYEGHKIIEIGAVEVVNRRLT
                      GNNFHVYLKPDRLVDPEAFGVHGIADEFLLDKPTFAEVADEFMDYIRGAELVIHNAAF
                      DIGFMDYEFSLLKRDIPKTNTFCKVTDSLAVARKMFPGKRNSLDALCARYEIDNSKRT
                      LHGALLDAQILAEVYLAMTGGQTSMAFAMEGETQQQQGEATIQRIVRQASKLRVVFAT
                      DDELAAHEARLDLVQKKGGSCLWRA"
-                     /product="DNA polymerase III subunit epsilon"
-                     /EC_number="2.7.7.7"
+                     /type="CDS"
      gene            9079..9155
-                     /locus_tag="ECB_t00004"
+                     /accession="ECB_t00004"
                      /gene="aspV"
+                     /locus_tag="ECB_t00004"
+                     /name="aspV"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      tRNA            9079..9155
-                     /locus_tag="ECB_t00004"
+                     /accession="ECB_t00004"
                      /gene="aspV"
+                     /locus_tag="ECB_t00004"
+                     /name="aspV"
+                     /phase=0
                      /product="tRNA-Asp"
+                     /type="tRNA"
      gene            9485..10270
-                     /locus_tag="ECB_00209"
+                     /accession="ECB_00209"
                      /gene="yafT"
+                     /locus_tag="ECB_00209"
+                     /name="yafT"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             9485..10270
-                     /locus_tag="ECB_00209"
-                     /protein_id="kribb:ECB_00209"
-                     /gene="yafT"
-                     /transl_table=11
-                     /note="b0217"
+                     /accession="ECB_00209"
                      /codon_start=1
+                     /gene="yafT"
+                     /locus_tag="ECB_00209"
+                     /name="yafT"
+                     /note="b0217"
+                     /phase=0
                      /product="predicted aminopeptidase"
+                     /protein_id="kribb:ECB_00209"
+                     /transl_table=11
                      /translation="MNLRRVCCICVLFSLLAGCASESSIDEKKKKAQVTQSNINKNTP
                      QQLTDKDLFGNETTLAVSEEDIQAALDGDEFRVPLNSPVILVQSGNRASETIMQEEMR
                      KYYTVSTFSGIPDRQKPLTCNKNKDKNENEDVASAENMNWMQALRFVAAKGHQKAIIV
                      YQDMLQTGKYDSALKSTVWSDYKNDKLTDAISLRYLVRFTLVDVATGEWATWSPVNYE
                      YKVLPPLPDKNEASTTDMTEQQIMQLKQKTYKAMVKDLVNRYQ"
+                     /type="CDS"
      repeat_region   10481..11248
+                     /accession=0
                      /mobile_element="insertion sequence:IS1"
+                     /name="IS1"
+                     /phase=0
+                     /product="repeat region"
+                     /type="repeat_region"
      gene            10536..10811
-                     /locus_tag="ECB_00210"
+                     /accession="ECB_00210_2"
                      /gene="insA-2"
+                     /locus_tag="ECB_00210"
+                     /name="insA-2"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             10536..10811
-                     /locus_tag="ECB_00210"
-                     /protein_id="kribb:ECB_00210"
-                     /gene="insA-2"
-                     /transl_table=11
+                     /accession="ECB_00210_2"
                      /codon_start=1
+                     /gene="insA-2"
+                     /locus_tag="ECB_00210"
+                     /name="insA-2"
+                     /phase=0
                      /product="IS1 protein InsA"
+                     /protein_id="kribb:ECB_00210"
+                     /transl_table=11
                      /translation="MASVSISCPSCSATDGVVRNGKSTAGHQRYLCSHCRKTWQLQFT
                      YTASQPGTHQKIIDMAMNGVGCRATARIMGVGLNTILRHLKNSGRSR"
+                     /type="CDS"
      gene            10730..11233
-                     /locus_tag="ECB_00211"
+                     /accession="ECB_00211_2"
                      /gene="insB-2"
+                     /locus_tag="ECB_00211"
+                     /name="insB-2"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             10730..11233
-                     /locus_tag="ECB_00211"
-                     /protein_id="kribb:ECB_00211"
-                     /gene="insB-2"
-                     /transl_table=11
+                     /accession="ECB_00211_2"
                      /codon_start=1
+                     /gene="insB-2"
+                     /locus_tag="ECB_00211"
+                     /name="insB-2"
+                     /phase=0
                      /product="IS1 protein InsB"
+                     /protein_id="kribb:ECB_00211"
+                     /transl_table=11
                      /translation="MPGNCPHYGRWPQHDFTSLKKLRPQSVTSRIQPGSDVIVCAEMD
                      EQWGYVGAKSRQRWLFYAYDSLRKTVVAHVFGERTMATLGRLMSLLSPFDVVIWMTDG
                      WPLYESRLKGKLHVISKRYTQRIERHNLNLRQHLARLGRKSLSFSKSVELHDKVIGHY
                      LNIKHYQ"
+                     /type="CDS"
      gene            11235..11606
+                     /accession="ECB_00212"
                      /locus_tag="ECB_00212"
+                     /name="ECB_00212"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             11235..11606
-                     /locus_tag="ECB_00212"
+                     /accession="ECB_00212"
                      /codon_start=1
+                     /locus_tag="ECB_00212"
+                     /name="ECB_00212"
+                     /phase=0
+                     /product="hypothetical protein"
                      /protein_id="kribb:ECB_00212"
+                     /transl_table=11
                      /translation="MESLPGVCILIWVIGCANAKVLKRCILPAPDGGVEKLSKPNLHG
                      VIKKVDLNTNEAEIKIKEGGAVSFIFNEETLYFTVFGGDFIMDYLKKVKNTEAWVWYK
                      NCDSKNKNVAVELLQIYELHQ"
-                     /product="hypothetical protein"
-                     /transl_table=11
+                     /type="CDS"
      gene            12037..13173
-                     /locus_tag="ECB_00213"
+                     /accession="ECB_00213"
                      /gene="yhhI"
+                     /locus_tag="ECB_00213"
+                     /name="yhhI"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             12037..13173
-                     /locus_tag="ECB_00213"
-                     /protein_id="kribb:ECB_00213"
-                     /gene="yhhI"
-                     /transl_table=11
-                     /note="b3484"
+                     /accession="ECB_00213"
                      /codon_start=1
+                     /gene="yhhI"
+                     /locus_tag="ECB_00213"
+                     /name="yhhI"
+                     /note="b3484"
+                     /phase=0
                      /product="predicted transposase"
+                     /protein_id="kribb:ECB_00213"
+                     /transl_table=11
                      /translation="MELKKLMEHISIIPDYRQAWKVEHKLSDILLLTICAVISGAEGW
                      EDIEDFGETHLDFLKQYGDFENGIPVHDTIARVVSCISPSKFHECFINWMRDCHTSDD
                      KDVIAIDGKTLRHSYDKSRRKGAIHVISAFSTMHSLVIGQIRTDEKSNEITAIPELLN
@@ -334,47 +525,76 @@ FEATURES             Location/Qualifiers
                      EHDSYAISEKSHGREEIRLHIVCDVPDELIDFTFEWKGLKKLCVAVSFRSIIAEQKKE
                      TEMTVRYYISSADLTAEKFATAIRNHWHVENKLHRRLDVVMNEDDYKIRRGNAAELFS
                      GIRHIAINILTNEKVFKAGLRRKMRKAAMDRNYLASVLAGSGLS"
+                     /type="CDS"
      gene            complement(13214..13984)
-                     /locus_tag="ECB_00214"
+                     /accession="ECB_00214"
                      /gene="yafV"
+                     /locus_tag="ECB_00214"
+                     /name="yafV"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             complement(13214..13984)
-                     /locus_tag="ECB_00214"
-                     /protein_id="kribb:ECB_00214"
-                     /gene="yafV"
-                     /transl_table=11
-                     /note="b0219"
+                     /accession="ECB_00214"
                      /codon_start=1
+                     /gene="yafV"
+                     /locus_tag="ECB_00214"
+                     /name="yafV"
+                     /note="b0219"
+                     /phase=0
                      /product="predicted C-N hydrolase family amidase, NAD(P)-b
                      inding"
+                     /protein_id="kribb:ECB_00214"
+                     /transl_table=11
                      /translation="MPGLKITLLQQPLVWMDGPANLRHFDRQLEGITGRDVIVLPEMF
                      TSGFAMEAAASSLAQDDVVNWMTAKAQQCNALIAGSVALQTESGSVNRFLLVEPGGTV
                      HFYDKRHLFRMVDEHLHYKAGNARVIVEWRGWRILPLVCYDLRFPVWSRNLNDYDLAL
                      YVANWPAPRSLHWQALLTARAIENQAYVAGCNRVGSDGNGCHYRGDSRVINPQGEIIA
                      TADAHQATRIDAELSMAALREYREKFPAWQDADEFRLW"
+                     /type="CDS"
      gene            14138..14611
-                     /locus_tag="ECB_00215"
+                     /accession="ECB_00215"
                      /gene="ykfE"
+                     /locus_tag="ECB_00215"
+                     /name="ykfE"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             14138..14611
-                     /locus_tag="ECB_00215"
-                     /protein_id="kribb:ECB_00215"
-                     /gene="ykfE"
-                     /transl_table=11
-                     /note="b0220"
+                     /accession="ECB_00215"
                      /codon_start=1
+                     /gene="ykfE"
+                     /locus_tag="ECB_00215"
+                     /name="ykfE"
+                     /note="b0220"
+                     /phase=0
                      /product="inhibitor of vertebrate C-lysozyme"
+                     /protein_id="kribb:ECB_00215"
+                     /transl_table=11
                      /translation="MGRISSGGMMFKAITTVAALVIATSAMAQDDLTISSLAKGETTK
                      AAFNQMVQGHKLPAWVMKGGTYTPAQTVTLGDETYQVMSACKPHDCGSQRIAVMWSEK
                      SNQMTGLFSTIDEKTSQEKLTWLNVNDALSIDGKTVLFAALTGSLENHPDGFNFK"
+                     /type="CDS"
      gene            complement(14654..17098)
-                     /locus_tag="ECB_00216"
+                     /accession="ECB_00216"
                      /gene="fadE"
+                     /locus_tag="ECB_00216"
+                     /name="fadE"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             complement(14654..17098)
-                     /locus_tag="ECB_00216"
-                     /protein_id="kribb:ECB_00216"
-                     /gene="fadE"
-                     /transl_table=11
-                     /note="b0221"
+                     /EC_number="1.3.99.3"
+                     /accession="ECB_00216"
                      /codon_start=1
+                     /gene="fadE"
+                     /locus_tag="ECB_00216"
+                     /name="fadE"
+                     /note="b0221"
+                     /phase=0
+                     /product="acyl-CoA dehydrogenase"
+                     /protein_id="kribb:ECB_00216"
+                     /transl_table=11
                      /translation="MMILSILATVVLLGALFYHRVSLFISSLILLAWTAALGVAGLWS
                      AWVLVPLAIILVPFNFAPMRKSMISAPVFRGFRKVMPPMSRTEKEAINAGTTWWEGDL
                      FQGKPDWKKLHNYPQPRLTAEEQAFLDGPVEEACRMANDFQITHELADLPPELWAYLK
@@ -390,153 +610,247 @@ FEATURES             Location/Qualifiers
                      YLAPSDKLDHKVAKILQVPNATRSRIGRGQYLTPSEHNPVGLLEEALVDVIAADPIHQ
                      RICKELGKNLPFTRLDELAHNALVKGLIDKDEAAILVKAEESRLRSINVDDFDPEELA
                      TKPVKLPEKVRKVEAA"
-                     /product="acyl-CoA dehydrogenase"
-                     /EC_number="1.3.99.3"
+                     /type="CDS"
      gene            17338..17916
-                     /locus_tag="ECB_00217"
+                     /accession="ECB_00217"
                      /gene="lpcA"
+                     /locus_tag="ECB_00217"
+                     /name="lpcA"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             17338..17916
-                     /locus_tag="ECB_00217"
-                     /protein_id="kribb:ECB_00217"
-                     /gene="lpcA"
-                     /transl_table=11
-                     /note="b0222"
+                     /EC_number="5.-.-.-"
+                     /accession="ECB_00217"
                      /codon_start=1
+                     /gene="lpcA"
+                     /locus_tag="ECB_00217"
+                     /name="lpcA"
+                     /note="b0222"
+                     /phase=0
+                     /product="phosphoheptose isomerase"
+                     /protein_id="kribb:ECB_00217"
+                     /transl_table=11
                      /translation="MYQDLIRNELNEAAETLANFLKDDANIHAIQRAAVLLADSFKAG
                      GKVLSCGNGGSHCDAMHFAEELTGRYRENRPGYPAIAISDVSHISCVGNDFGFNDIFS
                      RYVEAVGREGDVLLGISTSGNSANVIKAIAAAREKGMKVITLTGKDGGKMAGTADIEI
                      RVPHFGYADRIQEIHIKVIHILIQLIEKEMVK"
-                     /product="phosphoheptose isomerase"
-                     /EC_number="5.-.-.-"
+                     /type="CDS"
      gene            18122..18889
-                     /locus_tag="ECB_00218"
+                     /accession="ECB_00218"
                      /gene="yafJ"
+                     /locus_tag="ECB_00218"
+                     /name="yafJ"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             18122..18889
-                     /locus_tag="ECB_00218"
-                     /protein_id="kribb:ECB_00218"
-                     /gene="yafJ"
-                     /transl_table=11
-                     /note="b0223"
+                     /accession="ECB_00218"
                      /codon_start=1
+                     /gene="yafJ"
+                     /locus_tag="ECB_00218"
+                     /name="yafJ"
+                     /note="b0223"
+                     /phase=0
                      /product="predicted amidotransfease"
+                     /protein_id="kribb:ECB_00218"
+                     /transl_table=11
                      /translation="MCELLGMSANVPTDICFSFTGLVQRGGGTGPHKDGWGITFYEGK
                      GCRTFKDPQPSFNSPIAKLVQDYPIKSCSVVAHIRQANRGEVALENTHPFTRELWGRN
                      WTYAHNGQLTGYKSLETGNFRPVGETDSEKAFCWLLHKLTQRYPRTPGNMAAVFKYIA
                      SLADELRAKGVFNMLLSDGRYVMAYCSTNLHWITRRAPFGVATLLDQDVEIDFSSQTT
                      PNDVVTVIATQPLTGNETWQKIMPGEWRLFCLGERVV"
+                     /type="CDS"
      gene            complement(18860..19600)
-                     /locus_tag="ECB_00219"
+                     /accession="ECB_00219"
                      /gene="yafK"
+                     /locus_tag="ECB_00219"
+                     /name="yafK"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             complement(18860..19600)
-                     /locus_tag="ECB_00219"
-                     /protein_id="kribb:ECB_00219"
-                     /gene="yafK"
-                     /transl_table=11
-                     /note="b0224"
+                     /accession="ECB_00219"
                      /codon_start=1
+                     /gene="yafK"
+                     /locus_tag="ECB_00219"
+                     /name="yafK"
+                     /note="b0224"
+                     /phase=0
                      /product="hypothetical protein"
+                     /protein_id="kribb:ECB_00219"
+                     /transl_table=11
                      /translation="MRKIALILAMLLIPCVSFAGLLGSSSSTTPVSKEYKQQLMGSPV
                      YIQIFKEERTLDLYVKMGEQYQLLDSYKICKYSGGLGPKQRQGDFKSPEGFYSVQRNQ
                      LKPDSRYYKAINIGFPNAYDRAHGYEGKYLMIHGDCVSIGCYAMTNQGIDEIFQFVTG
                      ALVFGQPSVQVSIYPFRMTDANMKRHKYSNFKDFWEQLKPGYDYFEQTRKPPTVSVVN
                      GRYVVSKPLSHEVVQPQLASNYTLPEAK"
+                     /type="CDS"
      gene            complement(19756..20034)
-                     /locus_tag="ECB_00220"
+                     /accession="ECB_00220"
                      /gene="yafQ"
+                     /locus_tag="ECB_00220"
+                     /name="yafQ"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             complement(19756..20034)
-                     /locus_tag="ECB_00220"
-                     /protein_id="kribb:ECB_00220"
-                     /gene="yafQ"
-                     /transl_table=11
-                     /note="b0225"
+                     /accession="ECB_00220"
                      /codon_start=1
+                     /gene="yafQ"
+                     /locus_tag="ECB_00220"
+                     /name="yafQ"
+                     /note="b0225"
+                     /phase=0
                      /product="predicted toxin of the YafQ-DinJ toxin-antitoxin
                       system"
+                     /protein_id="kribb:ECB_00220"
+                     /transl_table=11
                      /translation="MIQRDIEYSGQFSKDVKLAQKRHKDMNKLKYLMTLLINNTLPLP
                      AVYKDHPLQSSWKGYRDAHVEPDWILIYKLTDKLLRFERTGTHAALFG"
+                     /type="CDS"
      gene            complement(20037..20297)
-                     /locus_tag="ECB_00221"
+                     /accession="ECB_00221"
                      /gene="dinJ"
+                     /locus_tag="ECB_00221"
+                     /name="dinJ"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             complement(20037..20297)
-                     /locus_tag="ECB_00221"
-                     /protein_id="kribb:ECB_00221"
-                     /gene="dinJ"
-                     /transl_table=11
-                     /note="b0226"
+                     /accession="ECB_00221"
                      /codon_start=1
+                     /gene="dinJ"
+                     /locus_tag="ECB_00221"
+                     /name="dinJ"
+                     /note="b0226"
+                     /phase=0
                      /product="predicted antitoxin of YafQ-DinJ toxin-antitoxin
                       system"
+                     /protein_id="kribb:ECB_00221"
+                     /transl_table=11
                      /translation="MAANAFVRARIDEDLKNQAADVLAGMGLTISDLVRITLTKVARE
                      KALPFDLREPNQLTIQSIKNSEAGVDVHKAKDADDLFDKLGI"
+                     /type="CDS"
      gene            20507..21256
-                     /locus_tag="ECB_00222"
+                     /accession="ECB_00222"
                      /gene="yafL"
+                     /locus_tag="ECB_00222"
+                     /name="yafL"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             20507..21256
-                     /locus_tag="ECB_00222"
-                     /protein_id="kribb:ECB_00222"
-                     /gene="yafL"
-                     /transl_table=11
-                     /note="b0227"
+                     /accession="ECB_00222"
                      /codon_start=1
+                     /gene="yafL"
+                     /locus_tag="ECB_00222"
+                     /name="yafL"
+                     /note="b0227"
+                     /phase=0
                      /product="predicted lipoprotein and C40 family peptidase"
+                     /protein_id="kribb:ECB_00222"
+                     /transl_table=11
                      /translation="MSLPSIPSFVLSGLLLLCLPFSSFASATTSHISFSYAARQRMQN
                      RARLLKQYQTHLKKQASYIVEGNAESRRALRQHNREQIKQHPEWFPAPLKASDRRWQA
                      LVENNHFLSSDHLHNITEVAIHRLEQQLGKPYVWGGTRPDQGFDCSGLVFYAYNKILE
                      AKLPRTANEMYHYRRATIVANNDLRRGDLLFFHIHSREIADHMGVYLGDGQFIESPRT
                      GETIRVSRLAEPFWQDHFLGARRILTEETIL"
+                     /type="CDS"
      gene            21432..21929
-                     /locus_tag="ECB_00223"
+                     /accession="ECB_00223"
                      /gene="yafM"
+                     /locus_tag="ECB_00223"
+                     /name="yafM"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             21432..21929
-                     /locus_tag="ECB_00223"
-                     /protein_id="kribb:ECB_00223"
-                     /gene="yafM"
-                     /transl_table=11
-                     /note="b0228"
+                     /accession="ECB_00223"
                      /codon_start=1
+                     /gene="yafM"
+                     /locus_tag="ECB_00223"
+                     /name="yafM"
+                     /note="b0228"
+                     /phase=0
                      /product="hypothetical protein"
+                     /protein_id="kribb:ECB_00223"
+                     /transl_table=11
                      /translation="MSEYRRYYIKGGTWFFTVNLRNRRSQLLTTQYQMLRNAIIKVKR
                      DRPFEINAWVVLPEHMHCIWTLPEGDDDFSSRWREIKKQFTHACGLKNIWQPRFWEHT
                      IRNTKDYRHHVDYIYINPVKHGWVKQVSDWPFSTFHRDVARGLYPIDWAGDVTDINAG
                      ERIIL"
+                     /type="CDS"
      gene            complement(22145..23854)
-                     /locus_tag="ECB_00224"
-                     /pseudo=0
+                     /accession="ECB_00224"
                      /gene="fhiA"
+                     /locus_tag="ECB_00224"
+                     /name="fhiA"
                      /note="promoterless fragment; also pseudo in K-12 MG1655"
+                     /phase=0
+                     /product="promoterless fragment; also pseudo in K-12 MG165
+                     5"
+                     /pseudo=0
+                     /type="gene"
                      /pseudo
      CDS             complement(22145..23854)
-                     /locus_tag="ECB_00224"
-                     /pseudo=0
+                     /accession="ECB_00224"
                      /codon_start=1
                      /gene="fhiA"
-                     /transl_table=11
+                     /locus_tag="ECB_00224"
+                     /name="fhiA"
                      /note="b0229; flagellar system protein"
+                     /phase=0
+                     /product="b0229; flagellar system protein"
+                     /pseudo=0
+                     /transl_table=11
+                     /type="CDS"
                      /pseudo
      gene            23844..24614
-                     /locus_tag="ECB_00225"
-                     /pseudo=0
+                     /accession="ECB_00225"
                      /gene="mbhA"
+                     /locus_tag="ECB_00225"
+                     /name="mbhA"
                      /note="promoterless fragment; also pseudo in K-12 MG1655"
+                     /phase=0
+                     /product="promoterless fragment; also pseudo in K-12 MG165
+                     5"
+                     /pseudo=0
+                     /type="gene"
                      /pseudo
      CDS             23844..24614
-                     /locus_tag="ECB_00225"
-                     /pseudo=0
+                     /accession="ECB_00225"
                      /codon_start=1
                      /gene="mbhA"
-                     /transl_table=11
+                     /locus_tag="ECB_00225"
+                     /name="mbhA"
                      /note="b0230; flagellar motor protein"
+                     /phase=0
+                     /product="b0230; flagellar motor protein"
+                     /pseudo=0
+                     /transl_table=11
+                     /type="CDS"
                      /pseudo
      gene            24685..25740
-                     /locus_tag="ECB_00226"
+                     /accession="ECB_00226"
                      /gene="dinB"
+                     /locus_tag="ECB_00226"
+                     /name="dinB"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             24685..25740
-                     /locus_tag="ECB_00226"
-                     /protein_id="kribb:ECB_00226"
-                     /gene="dinB"
-                     /transl_table=11
-                     /note="b0231"
+                     /EC_number="2.7.7.7"
+                     /accession="ECB_00226"
                      /codon_start=1
+                     /gene="dinB"
+                     /locus_tag="ECB_00226"
+                     /name="dinB"
+                     /note="b0231"
+                     /phase=0
+                     /product="DNA polymerase IV"
+                     /protein_id="kribb:ECB_00226"
+                     /transl_table=11
                      /translation="MRKIIHVDMDCFFAAVEMRDNPALRDIPIAIGGSRERRGVISTA
                      NYPARKFGVRSAMPTGMALKLCPHLTLLPGRFDAYKEASNHIREIFSRYTSRIEPLSL
                      DEAYLDVTDSVHCHGSATLIAQEIRQTIFNELQLTASAGVAPVKFLAKIASDMNKPNG
@@ -544,90 +858,144 @@ FEATURES             Location/Qualifiers
                      GRILWERSQGIDERDVNSERLRKSVGVERTMAEDIHHWSECEAIIERLYPELERRLAK
                      VKPDLLIARQGVKLKFDDFQQTTQEHVWPRLNKADLIATARKTWDERRGGRGVRLVGL
                      HVTLLDPQMERQLVLGL"
-                     /product="DNA polymerase IV"
-                     /EC_number="2.7.7.7"
+                     /type="CDS"
      gene            25792..26085
-                     /locus_tag="ECB_00227"
+                     /accession="ECB_00227"
                      /gene="yafN"
+                     /locus_tag="ECB_00227"
+                     /name="yafN"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             25792..26085
-                     /locus_tag="ECB_00227"
-                     /protein_id="kribb:ECB_00227"
-                     /gene="yafN"
-                     /transl_table=11
-                     /note="b0232"
+                     /accession="ECB_00227"
                      /codon_start=1
+                     /gene="yafN"
+                     /locus_tag="ECB_00227"
+                     /name="yafN"
+                     /note="b0232"
+                     /phase=0
                      /product="predicted antitoxin of the YafO-YafN toxin-antit
                      oxin system"
+                     /protein_id="kribb:ECB_00227"
+                     /transl_table=11
                      /translation="MHRILAEKSVNITELRKNPAKYFIDQPVAVLSNNRPAGYLLSAS
                      AFEALMDMLAEQEEKKPIKARFRPSAARLEEITRRAEKYLNDMTDDDFNDFKE"
+                     /type="CDS"
      gene            26088..26486
-                     /locus_tag="ECB_00228"
+                     /accession="ECB_00228"
                      /gene="yafO"
+                     /locus_tag="ECB_00228"
+                     /name="yafO"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             26088..26486
-                     /locus_tag="ECB_00228"
-                     /protein_id="kribb:ECB_00228"
-                     /gene="yafO"
-                     /transl_table=11
-                     /note="b0233"
+                     /accession="ECB_00228"
                      /codon_start=1
+                     /gene="yafO"
+                     /locus_tag="ECB_00228"
+                     /name="yafO"
+                     /note="b0233"
+                     /phase=0
                      /product="predicted toxin of the YafO-YafN toxin-antitoxin
                       system"
+                     /protein_id="kribb:ECB_00228"
+                     /transl_table=11
                      /translation="MRVFKTKLIRLQLTAEELDALTADFISYKRDGVLPDIFGRDALY
                      DDSFTWPLIKFERVAHIHLANVNNPFPPQLRQFSRTNDEAHLVYCQGAFDEQAWLLIA
                      ILKPEPHKQARDNNQMHKIGKMAEAFRMRF"
+                     /type="CDS"
      gene            26496..26948
-                     /locus_tag="ECB_00229"
+                     /accession="ECB_00229"
                      /gene="yafP"
+                     /locus_tag="ECB_00229"
+                     /name="yafP"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             26496..26948
-                     /locus_tag="ECB_00229"
-                     /protein_id="kribb:ECB_00229"
-                     /gene="yafP"
-                     /transl_table=11
-                     /note="b0234"
+                     /accession="ECB_00229"
                      /codon_start=1
+                     /gene="yafP"
+                     /locus_tag="ECB_00229"
+                     /name="yafP"
+                     /note="b0234"
+                     /phase=0
                      /product="predicted acyltransferase with acyl-CoA N-acyltr
                      ansferase domain"
+                     /protein_id="kribb:ECB_00229"
+                     /transl_table=11
                      /translation="MNNIQIRDYQPGDFQQLCAIFIRAVTMISSQHYSPQQIAAWAQI
                      DESRWKEKLAKSQVRVAVINAQPVGFITCVERYIDMLFVDPEYTRRGVACALLKPLIK
                      SESELTVDASITAKPFFERYGFQTVKQQRVECRGTWFTNFYMRYKPQY"
+                     /type="CDS"
      gene            27182..27448
-                     /locus_tag="ECB_00230"
+                     /accession="ECB_00230"
                      /gene="ykfJ"
+                     /locus_tag="ECB_00230"
+                     /name="ykfJ"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             27182..27448
-                     /locus_tag="ECB_00230"
-                     /protein_id="kribb:ECB_00230"
-                     /gene="ykfJ"
-                     /transl_table=11
-                     /note="b0235"
+                     /accession="ECB_00230"
                      /codon_start=1
+                     /gene="ykfJ"
+                     /locus_tag="ECB_00230"
+                     /name="ykfJ"
+                     /note="b0235"
+                     /phase=0
                      /product="hypothetical protein"
+                     /protein_id="kribb:ECB_00230"
+                     /transl_table=11
                      /translation="MEWYMGKYIRPLSDAVFTIASDDLWIESLAIQQLHTTANLPNMQ
                      RVVGMPDLHPGRGYPIGAAFFSVGRFYPTRRRCNGAGNRNGPLL"
+                     /type="CDS"
      gene            27417..27917
-                     /locus_tag="ECB_00231"
+                     /accession="ECB_00231"
                      /gene="prfH"
+                     /locus_tag="ECB_00231"
+                     /name="prfH"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             27417..27917
-                     /locus_tag="ECB_00231"
-                     /protein_id="kribb:ECB_00231"
-                     /gene="prfH"
-                     /transl_table=11
-                     /note="b0236"
+                     /accession="ECB_00231"
                      /codon_start=1
+                     /gene="prfH"
+                     /locus_tag="ECB_00231"
+                     /name="prfH"
+                     /note="b0236"
+                     /phase=0
                      /product="peptide chain release factor 2"
+                     /protein_id="kribb:ECB_00231"
+                     /transl_table=11
                      /translation="MLETETGRYSDTLRSALVSLDGDNAWALSESWCGTIQWICPSPY
                      RPHHGRKNWFLGIGRFTADEKEQSDAIRYETLRSSGPGGQHVNKTDSAVRATHLASGI
                      SVKVQSERSQHANKRLARLLIAWKLEQQQQENSAALKSQRRMFHHQIERGNPRRTFTG
                      MAFIEG"
+                     /type="CDS"
      gene            complement(27974..29431)
-                     /locus_tag="ECB_00232"
+                     /accession="ECB_00232"
                      /gene="pepD"
+                     /locus_tag="ECB_00232"
+                     /name="pepD"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             complement(27974..29431)
-                     /locus_tag="ECB_00232"
-                     /protein_id="kribb:ECB_00232"
-                     /gene="pepD"
-                     /transl_table=11
-                     /note="b0237"
+                     /EC_number="3.4.13.3"
+                     /accession="ECB_00232"
                      /codon_start=1
+                     /gene="pepD"
+                     /locus_tag="ECB_00232"
+                     /name="pepD"
+                     /note="b0237"
+                     /phase=0
+                     /product="aminoacyl-histidine dipeptidase (peptidase D)"
+                     /protein_id="kribb:ECB_00232"
+                     /transl_table=11
                      /translation="MSELSQLSPQPLWDIFAKICSIPHPSYHEEQLAEYIVGWAKEKG
                      FHVERDQVGNILIRKPATAGMENRKPVVLQAHLDMVPQKNNDTVHDFTKDPIQPYIDG
                      EWVKARGTTLGADNGIGMASALAVLADENVVHGPLEVLLTMTEEAGMDGAFGLQSNWL
@@ -637,34 +1005,50 @@ FEATURES             Location/Qualifiers
                      SDVAKGVVETSLNVGVVTMTDNNVEIHCLIRSLIDSGKDYVVSMLDSLGKLAGAKTEA
                      KGAYPGWQPDANSPVMHLVRETYQRLFNKTPNIQIIHAGLECGLFKKPYPEMDMVSIG
                      PTITGPHSPDEQVHIKSVGHYWTLLTELLKEIPAK"
-                     /product="aminoacyl-histidine dipeptidase (peptidase D)"
-                     /EC_number="3.4.13.3"
+                     /type="CDS"
      gene            29692..30150
-                     /locus_tag="ECB_00233"
+                     /accession="ECB_00233"
                      /gene="gpt"
+                     /locus_tag="ECB_00233"
+                     /name="gpt"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             29692..30150
-                     /locus_tag="ECB_00233"
-                     /protein_id="kribb:ECB_00233"
-                     /gene="gpt"
-                     /transl_table=11
-                     /note="b0238"
+                     /EC_number="2.4.2.22"
+                     /accession="ECB_00233"
                      /codon_start=1
+                     /gene="gpt"
+                     /locus_tag="ECB_00233"
+                     /name="gpt"
+                     /note="b0238"
+                     /phase=0
+                     /product="xanthine phosphoribosyltransferase"
+                     /protein_id="kribb:ECB_00233"
+                     /transl_table=11
                      /translation="MSEKYIVTWDMLQIHARKLASRLMPSEQWKGIIAVSRGGLVPGA
                      LLARELGIRHVDTVCISSYDHDNQRELKVLKRAEGDGEGFIVIDDLVDTGGTAVAIRE
                      MYPKAHFVTIFAKPAGRPLVDDYVVDIPQDTWIEQPWDMGVVFVPPISGR"
-                     /product="xanthine phosphoribosyltransferase"
-                     /EC_number="2.4.2.22"
+                     /type="CDS"
      gene            30242..31486
-                     /locus_tag="ECB_00234"
+                     /accession="ECB_00234"
                      /gene="yafA"
+                     /locus_tag="ECB_00234"
+                     /name="yafA"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             30242..31486
-                     /locus_tag="ECB_00234"
-                     /protein_id="kribb:ECB_00234"
-                     /gene="yafA"
-                     /transl_table=11
-                     /note="b0239"
+                     /accession="ECB_00234"
                      /codon_start=1
+                     /gene="yafA"
+                     /locus_tag="ECB_00234"
+                     /name="yafA"
+                     /note="b0239"
+                     /phase=0
                      /product="fermentation/respiration switch protein"
+                     /protein_id="kribb:ECB_00234"
+                     /transl_table=11
                      /translation="MTQANLSETLFKPRFKHPETSTLVRRFNHGAQPPVQSALDGKTI
                      PHWYRMINRLMWIWRGIDPREILDVQARIVMSDAERTDDDLYDTVIGYRGGNWIYEWA
                      TQAMVWQQKACAEEDPQLSGRHWLHAATLYNIAAYPHLKGDDLAEQAQALSNRAYEEA
@@ -673,59 +1057,100 @@ FEATURES             Location/Qualifiers
                      NVAVRLAYLESPRLKAVACLGPVVHTLLSDFKCQQQVPEMYLDVLASRLGMHDASDEA
                      LRVELNRYSLKVQGLLGRRCPTPMLSGYWKNDPFSPEEDSRLITSSSADGKLLEIPFN
                      PVYRNFDKGLQEITDWIEKRLC"
+                     /type="CDS"
      gene            31544..31945
-                     /locus_tag="ECB_00235"
+                     /accession="ECB_00235"
                      /gene="crl"
+                     /locus_tag="ECB_00235"
+                     /name="crl"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             31544..31945
-                     /locus_tag="ECB_00235"
-                     /protein_id="kribb:ECB_00235"
-                     /gene="crl"
-                     /transl_table=11
-                     /note="b0240"
+                     /accession="ECB_00235"
                      /codon_start=1
+                     /gene="crl"
+                     /locus_tag="ECB_00235"
+                     /name="crl"
+                     /note="b0240"
+                     /phase=0
                      /product="DNA-binding transcriptional regulator"
+                     /protein_id="kribb:ECB_00235"
+                     /transl_table=11
                      /translation="MTLPSGHPKSRLIKKFTALGPYIREGKCEDNRFFFDCLAVCVNV
                      KPAPEVREFWGWWMELEAQESRFTYSYQFGLFDKAGDWKSVPVKDTEVVERLEHTLRE
                      FHEKLRELLTTLNLKLEPADDFRDEPVKLTA"
+                     /type="CDS"
      repeat_region   32016..32783
+                     /accession=0
                      /mobile_element="insertion sequence:IS1"
+                     /name="IS1"
+                     /phase=0
+                     /product="repeat region"
+                     /type="repeat_region"
      gene            32071..32346
-                     /locus_tag="ECB_00236"
+                     /accession="ECB_00236"
                      /gene="insA-3"
+                     /locus_tag="ECB_00236"
+                     /name="insA-3"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             32071..32346
-                     /locus_tag="ECB_00236"
-                     /protein_id="kribb:ECB_00236"
-                     /gene="insA-3"
-                     /transl_table=11
+                     /accession="ECB_00236"
                      /codon_start=1
+                     /gene="insA-3"
+                     /locus_tag="ECB_00236"
+                     /name="insA-3"
+                     /phase=0
                      /product="IS1 protein InsA"
+                     /protein_id="kribb:ECB_00236"
+                     /transl_table=11
                      /translation="MASVSISCPSCSATDGVVRNGKSTAGHQRYLCSHCRKTWQLQFT
                      YTASQPGTHQKIIDMAMNGVGCRATARIMGVGLNTILRHLKNSGRSR"
+                     /type="CDS"
      gene            32265..32768
-                     /locus_tag="ECB_00237"
+                     /accession="ECB_00237"
                      /gene="insB-3"
+                     /locus_tag="ECB_00237"
+                     /name="insB-3"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             32265..32768
-                     /locus_tag="ECB_00237"
-                     /protein_id="kribb:ECB_00237"
-                     /gene="insB-3"
-                     /transl_table=11
+                     /accession="ECB_00237"
                      /codon_start=1
+                     /gene="insB-3"
+                     /locus_tag="ECB_00237"
+                     /name="insB-3"
+                     /phase=0
                      /product="IS1 protein InsB"
+                     /protein_id="kribb:ECB_00237"
+                     /transl_table=11
                      /translation="MPGNSPHYGRWPQHDFTSLKKLRPQSVTSRIQPGSDVIVCAEMD
                      EQWGYVGAKSRQRWLFYAYDRLRKTVVAHVFGERTMATLGRLMSLLSPFDVVIWMTDG
                      WPLYESRLKGKLHVISKRYTQRIERHNLNLRQHLARLGRKSLSFSKSVELHDKVIGHY
                      LNIKHYQ"
+                     /type="CDS"
      gene            complement(32779..33816)
-                     /locus_tag="ECB_00238"
+                     /accession="ECB_00238"
                      /gene="phoE"
+                     /locus_tag="ECB_00238"
+                     /name="phoE"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             complement(32779..33816)
-                     /locus_tag="ECB_00238"
-                     /protein_id="kribb:ECB_00238"
-                     /gene="phoE"
-                     /transl_table=11
-                     /note="b0241"
+                     /accession="ECB_00238"
                      /codon_start=1
+                     /gene="phoE"
+                     /locus_tag="ECB_00238"
+                     /name="phoE"
+                     /note="b0241"
+                     /phase=0
                      /product="outer membrane phosphoporin protein E"
+                     /protein_id="kribb:ECB_00238"
+                     /transl_table=11
                      /translation="MKKSTLALVVMGIVASASVQAAEIYNKDGNKLDVYGKVKAMHYM
                      SDNDSKDGDQSYIRFGFKGETQINDQLTGYGRWEAEFAGNKAESDTAQQKTRLAFAGL
                      KYKDLGSFDYGRNLGALYDVEAWTDMFPEFGGDSSAQTDNFMTKRASGLATYRNTDFF
@@ -733,16 +1158,27 @@ FEATURES             Location/Qualifiers
                      LQSRGTGKRAEAWATGLKYDANNIYLATFYSETRKMTPITGGFANKTQNFEAVAQYQF
                      DFGLRPSLGYVLSKGKDIEGIGDEDLVNYIDVGATYYFNKNMSAFVDYKINQLDSDNK
                      LNINNDDIVAG"
+                     /type="CDS"
      gene            34104..35207
-                     /locus_tag="ECB_00239"
+                     /accession="ECB_00239"
                      /gene="proB"
+                     /locus_tag="ECB_00239"
+                     /name="proB"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             34104..35207
-                     /locus_tag="ECB_00239"
-                     /protein_id="kribb:ECB_00239"
-                     /gene="proB"
-                     /transl_table=11
-                     /note="b0242"
+                     /EC_number="2.7.2.11"
+                     /accession="ECB_00239"
                      /codon_start=1
+                     /gene="proB"
+                     /locus_tag="ECB_00239"
+                     /name="proB"
+                     /note="b0242"
+                     /phase=0
+                     /product="gamma-glutamyl kinase"
+                     /protein_id="kribb:ECB_00239"
+                     /transl_table=11
                      /translation="MSDSQTLVVKLGTSVLTGGSRRLNRAHIVELVRQCAQLHAAGHR
                      IVIVTSGAIAAGREHLGYPELPATIASKQLLAAVGQSRLIQLWEQLFSIYGIHVGQML
                      LTRADMEDRERFLNARDTLRALLDNNIVPVINENDAVATAEIKVGDNDNLSALAAILA
@@ -750,18 +1186,27 @@ FEATURES             Location/Qualifiers
                      QAADVACRAGIDTIIAAGSKPGVIGDVMEGISVGTLFHAQATPLENRKRWIFGAPPAG
                      EITVDEGATAAILERGSSLLPKGIKSVTGNFSRGEVIRICNLEGRDIAHGVSRYNSDA
                      LRRIAGHHSQEIDAILGYEYGPVAVHRDDMITR"
-                     /product="gamma-glutamyl kinase"
-                     /EC_number="2.7.2.11"
+                     /type="CDS"
      gene            35219..36472
-                     /locus_tag="ECB_00240"
+                     /accession="ECB_00240"
                      /gene="proA"
+                     /locus_tag="ECB_00240"
+                     /name="proA"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             35219..36472
-                     /locus_tag="ECB_00240"
-                     /protein_id="kribb:ECB_00240"
-                     /gene="proA"
-                     /transl_table=11
-                     /note="b0243"
+                     /EC_number="1.2.1.41"
+                     /accession="ECB_00240"
                      /codon_start=1
+                     /gene="proA"
+                     /locus_tag="ECB_00240"
+                     /name="proA"
+                     /note="b0243"
+                     /phase=0
+                     /product="gamma-glutamyl phosphate reductase"
+                     /protein_id="kribb:ECB_00240"
+                     /transl_table=11
                      /translation="MLEQMGIAAKQASYKLAQLSSREKNRVLEKIADELEAQSEIILN
                      ANAQDVADARANGLSEAMLDRLALTPARLKGIADDVRQVCNLADPVGQVIDGGVLDSG
                      LRLERRRVPLGVIGVIYEARPNVTVDVASLCLKTGNAVILRGGKETCRTNAATVAVIQ
@@ -770,58 +1215,92 @@ FEATURES             Location/Qualifiers
                      MAESGVTLHADAAALTQLQAGPAKVVAVKAEEYDDEFLSLDLNVKIVSDLDDAIAHIR
                      EHGTQHSDAILTRDMRNAQRFVNEVDSSAVYVNASTRFTDGGQFGLGAEVAVSTQKLH
                      ARGPMGLEALTTYKWIGIGDYTIRA"
-                     /product="gamma-glutamyl phosphate reductase"
-                     /EC_number="1.2.1.41"
+                     /type="CDS"
      gene            36587..36662
-                     /locus_tag="ECB_t00005"
+                     /accession="ECB_t00005"
                      /gene="thrW"
+                     /locus_tag="ECB_t00005"
+                     /name="thrW"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      tRNA            36587..36662
-                     /locus_tag="ECB_t00005"
+                     /accession="ECB_t00005"
                      /gene="thrW"
+                     /locus_tag="ECB_t00005"
+                     /name="thrW"
+                     /phase=0
                      /product="tRNA-Thr"
+                     /type="tRNA"
      gene            complement(36789..37199)
-                     /locus_tag="ECB_00241"
+                     /accession="ECB_00241"
                      /gene="yagP"
+                     /locus_tag="ECB_00241"
+                     /name="yagP"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             complement(36789..37199)
-                     /locus_tag="ECB_00241"
-                     /protein_id="kribb:ECB_00241"
-                     /gene="yagP"
-                     /transl_table=11
-                     /note="b0282"
+                     /accession="ECB_00241"
                      /codon_start=1
+                     /gene="yagP"
+                     /locus_tag="ECB_00241"
+                     /name="yagP"
+                     /note="b0282"
+                     /phase=0
                      /product="predicted transcriptional regulator"
+                     /protein_id="kribb:ECB_00241"
+                     /transl_table=11
                      /translation="MPAPVVLILAAGRGKRFLTSGGNTHKCIGWRQSPEVAPYRWPFE
                      ENGRTFDLAIEPQITTNDLRLMLRLALAGGGITIATQETFRPYIESGRLVSLLDDFLP
                      QFPGFYLYFPQRRNIAPKLRALIDHVKEWRQQLA"
+                     /type="CDS"
      gene            complement(37178..38134)
-                     /locus_tag="ECB_00242"
+                     /accession="ECB_00242"
                      /gene="yagQ"
+                     /locus_tag="ECB_00242"
+                     /name="yagQ"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             complement(37178..38134)
-                     /locus_tag="ECB_00242"
-                     /protein_id="kribb:ECB_00242"
-                     /gene="yagQ"
-                     /transl_table=11
-                     /note="b0283"
+                     /accession="ECB_00242"
                      /codon_start=1
+                     /gene="yagQ"
+                     /locus_tag="ECB_00242"
+                     /name="yagQ"
+                     /note="b0283"
+                     /phase=0
                      /product="hypothetical protein"
+                     /protein_id="kribb:ECB_00242"
+                     /transl_table=11
                      /translation="MSYSLFDKDEHWHKPEQAFLTDDHRTILRFAVEALMSGKGAVLV
                      TLVEIRGGAARPLGAQMVVREDGRYCGFVSGGCVEAAAAFEALEMMGSGCDREIRYGE
                      GSPWFDIVLPCGGGITLTLHKLRSAQPLLAVLNRLEQRKPAGLRYDPQAQSLVCLPTQ
                      TRTGWNLNGFEVGFRPCVRLMIYGRSLEAQATASLAAATGYDSHIFDLFPASASAQID
                      TDTAVILLCHDLNRELPVLQAAREAKPFYLGALGSYRTHTLRLQKLHELGWSREETAQ
                      IRAPVGIFPKARDAHTLALSVLAEVASVRLHQEEDSCLPPSS"
+                     /type="CDS"
      gene            complement(38144..40342)
-                     /locus_tag="ECB_00243"
+                     /accession="ECB_00243"
                      /gene="yagR"
+                     /locus_tag="ECB_00243"
+                     /name="yagR"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             complement(38144..40342)
-                     /locus_tag="ECB_00243"
-                     /protein_id="kribb:ECB_00243"
-                     /gene="yagR"
-                     /transl_table=11
-                     /note="b0284"
+                     /accession="ECB_00243"
                      /codon_start=1
+                     /gene="yagR"
+                     /locus_tag="ECB_00243"
+                     /name="yagR"
+                     /note="b0284"
+                     /phase=0
                      /product="predicted oxidoreductase with molybdenum-binding
                       domain"
+                     /protein_id="kribb:ECB_00243"
+                     /transl_table=11
                      /translation="MKFDKPAGENPIDQLKVVGRPYDRIDGPLKTTGTARYAYEWHEE
                      SPNAAYGYIVGSAMAKGRLTALDTDAAQKAPGVLAVITASNAGALGKGDKNTARLLGG
                      PTIEHYHQAIALVVAETFEQARAAASLVQAHYRRNKGAYSLADEKQAVSQPPEDTPDK
@@ -835,92 +1314,141 @@ FEATURES             Location/Qualifiers
                      IAEESIEFGTLSKEYQQSTFAGHFVEVGVHSATGEVRVRRMLAVCAAGRILNPKTARS
                      QVIGAMTMGMGAALMEELAVDDRLGYFVNHDMAGYEVPVHADIPKQEVIFLDDTDPIS
                      SPMKAKGVGELGLCGVSAAIANAVYNATGIRVRDYPITLDKLLDKLPDVV"
+                     /type="CDS"
      gene            complement(40339..41930)
-                     /locus_tag="ECB_00244"
+                     /accession="ECB_00244"
                      /gene="yagS"
+                     /locus_tag="ECB_00244"
+                     /name="yagS"
+                     /phase=0
+                     /product=0
+                     /type="gene"
                      /pseudo
      CDS             complement(40339..41930)
-                     /locus_tag="ECB_00244"
-                     /protein_id="kribb:ECB_00244"
-                     /gene="yagS"
-                     /transl_table=11
-                     /note="b0285"
+                     /accession="ECB_00244"
                      /codon_start=1
+                     /gene="yagS"
+                     /locus_tag="ECB_00244"
+                     /name="yagS"
+                     /note="b0285"
+                     /phase=0
                      /product="predicted oxidoreductase with FAD-binding domain
                      "
+                     /protein_id="kribb:ECB_00244"
+                     /transl_table=11
                      /translation="MKAFTYERVNTPAEAALSAQRVPGAKFIAGGTNLLDLMKLEIET
                      PTHLIDVNGLGLDKIEVTDAGGLRIGALVRNTDLAAHERVRRDYAVLSRALLAGASGQ
                      LRNQATTAGNLLQRTRCPYFYDTNQPCNKRLPGSGCAALEGFSRQHAVVGVSEACIAT
                      HPSDMAVAMRLLDAVVETITPEGKTRSITLADFYHPPGKTPHIETALLPGELIIAVTL
                      PPPLGGKHIYRKVRDRASYAFALVSVAAIIQPDGSGRVALGGVAHKPWRIEAADAQLS
                      QGAQAVYDALFASAHPTAENTFKLLLAKRTLASVLAEARAQA"
+                     /type="CDS"
                      /pseudo
      CDS             40715..41431
+                     /accession=0
                      /codon_start=1
-                     /transl_table=11
+                     /name="unknown"
+                     /phase=0
                      /product="sfGFP"
                      /protein_id="ASL68970.1"
+                     /transl_table=11
                      /translation="MSKGEELFTGVVPILVELDGDVNGHKFSVRGEGEGDATNGKLTL
                      KFICTTGKLPVPWPTLVTTLTYGVQCFSRYPDHMKRHDFFKSAMPEGYVQERTISFKD
                      DGTYKTRAEVKFEGDTLVNRIELKGIDFKEDGNILGHKLEYNFNSHNVYITADKQKNG
                      IKANFKIRHNVEDGSVQLADHYQQNTPIGDGPVLLPDNHYLSTQSVLSKDPNEKRDHM
                      VLLEFVTAAGITHGMDELYK"
+                     /type="CDS"
      gene            43216..43830
-                     /locus_tag="ECB_00246"
+                     /accession="ECB_00246"
                      /gene="yagU"
+                     /locus_tag="ECB_00246"
+                     /name="yagU"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             43216..43830
-                     /locus_tag="ECB_00246"
-                     /protein_id="kribb:ECB_00246"
-                     /gene="yagU"
-                     /transl_table=11
-                     /note="b0287"
+                     /accession="ECB_00246"
                      /codon_start=1
+                     /gene="yagU"
+                     /locus_tag="ECB_00246"
+                     /name="yagU"
+                     /note="b0287"
+                     /phase=0
                      /product="conserved inner membrane protein"
+                     /protein_id="kribb:ECB_00246"
+                     /transl_table=11
                      /translation="MNIFEQTPPNRRRYGLAAFIGLIAGVVSAFVKWGAEVPLPPRSP
                      VDMFNAACGPESLIRAAGQIDCSRNFLNPPYIFLRDWLGLTDPNAAVYTFAGHVFNWV
                      GVTHIIFSIVFAVGYCVVAEVFPKIKLWQGLLAGALAQLFVHMISFPLMGLTPPLFDL
                      PWYENVSEIFGHLVWFWSIEIIRRDLRNRITHEPDPEIPLGSNR"
+                     /type="CDS"
      gene            complement(44077..44406)
-                     /locus_tag="ECB_00247"
+                     /accession="ECB_00247"
                      /gene="ykgJ"
+                     /locus_tag="ECB_00247"
+                     /name="ykgJ"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             complement(44077..44406)
-                     /locus_tag="ECB_00247"
-                     /protein_id="kribb:ECB_00247"
-                     /gene="ykgJ"
-                     /transl_table=11
-                     /note="b0288"
+                     /accession="ECB_00247"
                      /codon_start=1
+                     /gene="ykgJ"
+                     /locus_tag="ECB_00247"
+                     /name="ykgJ"
+                     /note="b0288"
+                     /phase=0
                      /product="predicted ferredoxin"
+                     /protein_id="kribb:ECB_00247"
+                     /transl_table=11
                      /translation="MSNLNPCMTCGACCAFFRVSFYWAEADDAGGTIPARLTEQISPF
                      HRCMSGTNQKNPRCIALAGTPGKNACCTIYKNRSSTCREFAMSGENGVVNEACNRARA
                      KYGLTPL"
+                     /type="CDS"
      gene            complement(44719..45429)
-                     /locus_tag="ECB_00248"
+                     /accession="ECB_00248"
                      /gene="yagV"
+                     /locus_tag="ECB_00248"
+                     /name="yagV"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             complement(44719..45429)
-                     /locus_tag="ECB_00248"
-                     /protein_id="kribb:ECB_00248"
-                     /gene="yagV"
-                     /transl_table=11
-                     /note="b0289"
+                     /accession="ECB_00248"
                      /codon_start=1
+                     /gene="yagV"
+                     /locus_tag="ECB_00248"
+                     /name="yagV"
+                     /note="b0289"
+                     /phase=0
                      /product="hypothetical protein"
+                     /protein_id="kribb:ECB_00248"
+                     /transl_table=11
                      /translation="MFRRRGVTLTKALLTAVCMLAAPLTQAISVGNLTFSLPSETDFV
                      SKRVVNNNKSARIYRIAISAIDSPGSSELRTRPVDGELLFAPRQLALQAGESEYFKFY
                      YHGPQDNRERYYRVSFREVPTRNQTRRSPTGGEVSTEPVVVMDTILVVRPRQVQFKWS
                      FDKVTGTVSNTGNTWFKLLIKPGCDSTEEEGDAWYLRPGDVVHQPELRQPGNHYLVYN
                      DKFIKISDSCPAKPPSAD"
+                     /type="CDS"
      gene            complement(45398..47041)
-                     /locus_tag="ECB_00249"
+                     /accession="ECB_00249"
                      /gene="yagW"
+                     /locus_tag="ECB_00249"
+                     /name="yagW"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             complement(45398..47041)
-                     /locus_tag="ECB_00249"
-                     /protein_id="kribb:ECB_00249"
-                     /gene="yagW"
-                     /transl_table=11
-                     /note="b0290"
+                     /accession="ECB_00249"
                      /codon_start=1
+                     /gene="yagW"
+                     /locus_tag="ECB_00249"
+                     /name="yagW"
+                     /note="b0290"
+                     /phase=0
                      /product="predicted receptor"
+                     /protein_id="kribb:ECB_00249"
+                     /transl_table=11
                      /translation="MRVNLLITMIIFALIWPVTALRAAVSKTTWADAPAREFVFVENN
                      SDDNFFVTPGGALDPRLTGANRWTGLKYTGSGTIYQQSLGYIDNGYNTGLYTNWKFDM
                      WLENSPVSSPLTGLRCINWYAGCNMTTSLILPQTTDASGFYGATVTSGGAKWMHGMLS
@@ -931,17 +1459,26 @@ FEATURES             Location/Qualifiers
                      QTPSREGYVGSGESALDFGYIVTTSGKTAADEVLIKVTGPAQVIGGRSYCVFSSDDGK
                      AKVPFPATLSFITRNGATKTYDAGCDDSWRDMTDALWLTTPWTDISGEVGQMDKTTVK
                      FSIPMDNAISLRTVDDNGWFGEVSASGEIHVQATWRNIN"
+                     /type="CDS"
      gene            complement(47031..47830)
-                     /locus_tag="ECB_00250"
+                     /accession="ECB_00250"
                      /gene="yagX"
+                     /locus_tag="ECB_00250"
+                     /name="yagX"
+                     /phase=0
+                     /product=0
+                     /type="gene"
      CDS             complement(47031..47830)
-                     /locus_tag="ECB_00250"
-                     /protein_id="kribb:ECB_00250"
-                     /gene="yagX"
-                     /transl_table=11
-                     /note="b0291"
+                     /accession="ECB_00250"
                      /codon_start=1
+                     /gene="yagX"
+                     /locus_tag="ECB_00250"
+                     /name="yagX"
+                     /note="b0291"
+                     /phase=0
                      /product="predicted aromatic compound dioxygenase"
+                     /protein_id="kribb:ECB_00250"
+                     /transl_table=11
                      /translation="MPLRRFSPGLKAQFAFGMVFLFVQPDASAADISAQQIGGVIIPQ
                      AFSQALQDGMSVPLYIHLAGSQGRQDDQRIGSAFIWLDDGQLRIRKIQLEESEDNASV
                      SEQTRQQLMALANAPFNEALTIPLTDNAQLDLSLRQLLLQLVVKREALGTVLRSRSED
@@ -957,6 +1494,7 @@ FEATURES             Location/Qualifiers
                      KINGRIFPLNGKRNYLPLSPYGRYEVELQNSKNSLDSYDIVSGRKSHLTLYPGNVAVI
                      EPEVKQMVTVSGRIRAEDGTLLANARINNHIGRTRTDENGEFVMDVDKKYPTIDFRYS
                      GNKTCEVALELNQARGAVWVGDVVCSGLSSWAAVTQTGEENES"
+                     /type="CDS"
 ORIGIN
         1 cttacaacgc cgaagatgtt ttggcggatt gagagaattt cagctttgat tcagagtccg
        61 aaggattttg cgctgagaca aggcggcaaa tgaagcgaag gaaggagcat actgaagtat

@@ -2446,6 +2446,15 @@ void cReferenceSequences::WriteGenBankFileSequenceFeatures(std::ofstream& out, c
   // We need to skip an initial "region" tag that is created internally for GFF conversion
   // Note: We assue that this will be the first feature
   size_t feat_index=0;
+  
+  // Always quote certain tags, like genes, even if they are integers
+  set<string> always_quote;
+  always_quote.insert("gene");
+  always_quote.insert("locus_tag");
+  always_quote.insert("function");
+  always_quote.insert("translation");
+  always_quote.insert("db_xref");
+  always_quote.insert("note");
 
   out << "FEATURES             Location/Qualifiers" << endl;
   for (cSequenceFeatureList::const_iterator it = s.m_features.begin(); it != s.m_features.end(); it++) {
@@ -2470,7 +2479,7 @@ void cReferenceSequences::WriteGenBankFileSequenceFeatures(std::ofstream& out, c
         if (feat.count(*tag_it) == 0) continue;
         
         int32_t value_int;
-        if (is_integer(feat[*tag_it], value_int)) {
+        if (is_integer(feat[*tag_it], value_int) && (always_quote.find(*tag_it) == always_quote.end()) ) {
           GenBankPrintAligned(out, "/" + *tag_it + "=" + to_string(value_int), 21, 79);
         } else {
           GenBankPrintAligned(out, "/" + *tag_it + "=\"" + feat[*tag_it] + "\"", 21, 79);
@@ -2481,15 +2490,15 @@ void cReferenceSequences::WriteGenBankFileSequenceFeatures(std::ofstream& out, c
       for(sequence_feature_map_t::const_iterator tag_it = feat.cbegin(); tag_it != feat.cend(); tag_it++) {
         
         int32_t value_int;
-        //if (is_integer(tag_it->second, value_int)) {
-        //  GenBankPrintAligned(out, "/" + tag_it->first + "=" + to_string(value_int), 21, 79);
-        //} else {
+        if (is_integer(tag_it->second, value_int) && (always_quote.find(tag_it->first) == always_quote.end()) ) {
+          GenBankPrintAligned(out, "/" + tag_it->first + "=" + to_string(value_int), 21, 79);
+        } else {
           GenBankPrintAligned(out, "/" + tag_it->first + "=\"" + tag_it->second + "\"", 21, 79);
-        //}
+        }
       }
     }
     
-    // Handle pseudo
+    // Handle pseudo separately, so it is always printed
     if (feat.m_pseudo) {
       GenBankPrintAligned(out, "/pseudo", 21, 79);
     }

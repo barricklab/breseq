@@ -683,7 +683,7 @@ public:
     
       void set_file_format(const string& file_format) {
         if (m_file_format.length() > 0) m_file_format += "+";
-        m_file_format += file_format;
+        m_file_format += to_upper(file_format);
       }
     
       void sort_features()
