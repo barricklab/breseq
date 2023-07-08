@@ -115,7 +115,7 @@ int do_merge(int argc, char *argv[])
   AnyOption options("gdtools MERGE/UNION [-o output.gd] input1.gd input2.gd ...");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o",  "output GD file name", "output.gd");
-	options("evidence,e",  "operate on evidence rather than mutation entries", TAKES_NO_ARGUMENT);
+	options("preserve-evidence,e", "By default evidence items with two-letter codes are removed (RA, JC, MC, ...). Supply this option to retain them. ", TAKES_NO_ARGUMENT);
 	options("phylogeny-aware,p", "Check the optional 'phylogeny_id' field when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
@@ -123,9 +123,6 @@ int do_merge(int argc, char *argv[])
   options.addUsage("");
   options.addUsage("Creates a GD file with entries that exist in any input GD file.");
 	options.addUsage("Duplicate entries are merged into a single entry.");
-	options.addUsage("");
-	options.addUsage("By default, operates on and preserves mutations (unless -e is specified).");
-	options.addUsage("All entries of other types (i.e., mutations, evidence, validation) are removed.");
 	options.addUsage("");
 	options.addUsage("Header information will be inherited from the first input file,");
 	options.addUsage("so this function can also be used to transfer metadata to a new file.");
@@ -154,7 +151,7 @@ int do_merge(int argc, char *argv[])
   for(int32_t i = 1; i < options.getArgc(); ++i) {
     uout << "    " << options.getArgv(i) << endl;
     cGenomeDiff gd2(options.getArgv(i));
-    gd1.set_union(gd2, options.count("evidence"), options.count("phylogeny-aware"), options.count("verbose"));
+    gd1.set_union(gd2, options.count("preserve-evidence"), options.count("phylogeny-aware"), options.count("verbose"));
   }
 
   uout("Assigning unique IDs");
@@ -1118,7 +1115,7 @@ int do_annotate(int argc, char* argv[])
 	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
 	options("format,f", "Type of output file to generate. See options below", "HTML");
 	options("add-html-fields,a", "Add formatted fields that are used for generating HTML output. Only applicable to GD and JSON output formats", TAKES_NO_ARGUMENT);
-	options("add-text-fields,b", "Add formatted fields in UTF-8 encoded text that are similar to those used in HTML output. Only applicable to GD and JSON output formats", TAKES_NO_ARGUMENT);
+	options("add-text-fields,b", "Add formatted fields in UTF-8 encoded text that are similar to those used in HTML output. Only applicable to GD, TSV, CSV, and JSON output formats", TAKES_NO_ARGUMENT);
 	options("ignore-pseudogenes", "Treat pseudogenes as valid ORFs for calling amino acid substitutions", TAKES_NO_ARGUMENT);
   options("repeat-header", "In HTML mode, repeat the header line every this many rows (0=OFF)", "0");
 	options("phylogeny-aware,p", "Check the optional 'phylogeny_id' field when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
@@ -1233,7 +1230,7 @@ int do_annotate(int argc, char* argv[])
 	}
 	
 	// Give a warning if add-html-fields used when it isn't necessary
-	if (options.count("add-text-fields") && !((output_format == "GD") || (output_format == "JSON")) ) {
+	if (options.count("add-text-fields") && !((output_format == "GD") || (output_format == "JSON") || (output_format == "TSV") || (output_format == "CSV")) ) {
 		WARN("--add-text-fields option is ignored for the selected output format " + output_format);
 	}
 	
@@ -1349,9 +1346,23 @@ int do_annotate(int argc, char* argv[])
 			
 			ref_seq_info.annotate_mutations(this_gd, false, options.count("ignore-pseudogenes"), compare_mode);
 			
+			// Add extra TEXT annotations
+			if (options.count("add-text-fields")) {
+				// Only defaults accessible - which include javascript output...
+				Settings settings;
+				MutationTableOptions mutation_table_options(settings);
+				diff_entry_list_t muts = this_gd.mutation_list();
+				for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr ++) {
+					cDiffEntry& mut = (**itr);
+					add_text_fields_to_mutation(mut, mutation_table_options);
+				}
+			}
+			
 			gd_list.push_back(this_gd);
 			ev_list.push_back(this_ev);
 		}
+		
+
 		
 		if (output_format == "TSV") {
 			uout("Writing output TSV file", options["output"]);
@@ -1898,9 +1909,9 @@ int do_remove_gd(int argc, char* argv[])
 	options.addUsage("  gdtools ANNOTATE -f GD -r reference.gbk -o annotated.gd input.gd");
 	options.addUsage("  gdtools REMOVE -c \"snp_type != synonymous\" -o final.gd annotated.gd");
 	options.addUsage("");
-	options.addUsage("Remove all but unassigned JC evidence (takes two commands). Needs -p option.");
-	options.addUsage("  gdtools REMOVE -p -c \"ASSIGNED=1\" -o intermediate.gd input.gd");
-	options.addUsage("  gdtools REMOVE -p -c \"type != JC\" -o final.gd intermediate.gd");
+	options.addUsage("Remove all but unassigned JC evidence (takes two commands). Needs -e option.");
+	options.addUsage("  gdtools REMOVE -e -c \"ASSIGNED=1\" -o intermediate.gd input.gd");
+	options.addUsage("  gdtools REMOVE -e -c \"type != JC\" -o final.gd intermediate.gd");
 	
 	if (options.count("help")) {
 		options.printUsage();
@@ -2103,6 +2114,7 @@ int do_remove_gd(int argc, char* argv[])
 		uout("Renumbering GD entries");
 
 		cGenomeDiff gd2;
+		gd2.metadata = gd.metadata;
 		gd2.merge(gd, true);
 		gd = gd2;
 	}

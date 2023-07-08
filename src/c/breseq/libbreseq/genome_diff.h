@@ -206,7 +206,7 @@ public:
 
   void set_intersect(cGenomeDiff& gd_ref, bool verbose=false);
   
-  void set_union(const cGenomeDiff& gd_ref, bool evidence_mode, bool phylogeny_aware, bool verbose=false);
+  void set_union(const cGenomeDiff& gd_ref, bool preserve_evidence, bool phylogeny_aware, bool verbose=false);
   
   //! Merge GenomeDiff information using gd_new as potential new info.
   void merge(const cGenomeDiff& merge_gd, bool reassign_ids=false, bool phylogeny_id_aware = false, bool verbose=false);

@@ -1312,24 +1312,17 @@ void cGenomeDiff::set_intersect(cGenomeDiff &gd, bool verbose)
 }
   
 // Merged mutations AND all non-mutation items
-void cGenomeDiff::set_union(const cGenomeDiff& gd, bool evidence_mode, bool phylogeny_aware, bool verbose)
+void cGenomeDiff::set_union(const cGenomeDiff& gd, bool preserve_evidence, bool phylogeny_aware, bool verbose)
 {
   (void)verbose; //unused
 
   // Optimization: make a copy so we can remove these items before doing merge
   cGenomeDiff merge_gd(gd);
   
-  
-  if (!evidence_mode) {
+  if (!preserve_evidence) {
     this->remove_group(cGenomeDiff::EVIDENCE);
     merge_gd.remove_group(cGenomeDiff::EVIDENCE);
-  } else {
-    this->remove_group(cGenomeDiff::MUTATIONS);
-    merge_gd.remove_group(cGenomeDiff::MUTATIONS);
   }
-  
-  this->remove_type(UN);
-  merge_gd.remove_type(UN);
   
   this->remove_group(cGenomeDiff::VALIDATION);
   merge_gd.remove_group(cGenomeDiff::VALIDATION);
