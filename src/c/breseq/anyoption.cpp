@@ -1008,6 +1008,8 @@ namespace breseq {
 
 	string AnyOption::word_wrap(string sentence, int width)
 	{
+    //cout << "Sentence:" << sentence << endl;
+    //cout << width << endl;
 		string::iterator it = sentence.begin();
 		string::iterator last_space = sentence.begin();
     
@@ -1021,20 +1023,29 @@ namespace breseq {
         width_since_last_space = 0;
         last_space = it;
       }
+      
+      //cout << "'" << *it << "'" << endl;
 			if (accumulated_width > width)
 			{
+        //cout << width_since_last_space << endl;
+        //cout << accumulated_width << endl;
 				// Go back to letter after space
         if (width_since_last_space < accumulated_width) {
+          //cout << "Here1" << endl;
           it = last_space;
-          *last_space = '\n';
+          *it = '\n';
         } else {
-          sentence.insert(it, '\n');
+          //cout << "Here2" << endl;
+          //cout << "  '" << *it << "'" << endl;
+          it = sentence.insert(it, '\n');
+          //cout << "  '" << *it << "'" << endl;
         }
+        width_since_last_space = 0;
         accumulated_width = 0;
 			}
       it++;
 		}
-
+    //cout << "DONE" << endl;
 		return sentence;
 	}
 
