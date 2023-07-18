@@ -249,7 +249,7 @@ Additional AMP named fields
 '''''''''''''''''''''''''''
 
 * **between=**\ *<repeat_family>*
-   This deletion appears to result from homologous recombination or polymerase slipping between two existing copies of the same genomic repeat (e.g. tRNA, IS element) in the genome. This repeat appears on the boundary of each copy of the specified region.
+   This amplification appears to result from homologous recombination or polymerase slipping between two existing copies of the same genomic repeat (e.g. tRNA, IS element) in the genome. This repeat appears on the boundary of each copy of the specified region.
 
 * **mediated=**\ *<repeat_family>*, *mediated_strand=**\ *<1/-1>*
    This amplification is mediated by a simultaneous new insertion of a mobile element (or other  repeat element). New copies of the inserted element are added in the specified strand orientation between each new copy of the amplified region. Both of these attributes must be specified for the mutation.
