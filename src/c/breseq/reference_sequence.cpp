@@ -2217,8 +2217,10 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
     // if (feature["type"] == "repeat_region" || feature["type"] == "mobile_element") {
 
       // Give the repeat region a default name if NOTHING else can be found
-      feature["name"] = "repeat_region";
-      
+      if (feature.count("name")==0) {
+        feature["name"] = "repeat_region";
+      }
+          
       // Then look for various tags with an order of precedence...
       
       // E. coli case:

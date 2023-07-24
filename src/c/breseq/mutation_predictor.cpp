@@ -1646,14 +1646,17 @@ namespace breseq {
         }
         if (next_ra) continue;
         
-        for(diff_entry_list_t::iterator mc_it = mc.begin(); mc_it != mc.end(); mc_it++) //MC
-        {
-          cDiffEntry& mc_item = **mc_it;
-          
-          if (ra_item.located_within(mc_item))
+        // @JEB Unless an option is supplied, mark anything that overlaps MC as 'deleted' so it will be ignored
+        if (!settings.call_mutations_overlapping_missing_coverage) {
+          for(diff_entry_list_t::iterator mc_it = mc.begin(); mc_it != mc.end(); mc_it++) //MC
           {
-            ra_item["deleted"] = "1";
-            break;
+            cDiffEntry& mc_item = **mc_it;
+            
+            if (ra_item.located_within(mc_item))
+            {
+              ra_item["deleted"] = "1";
+              break;
+            }
           }
         }
         

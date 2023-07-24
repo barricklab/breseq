@@ -254,8 +254,6 @@ namespace breseq
     ("require-match-length", "Only consider alignments that cover this many bases of a read", 0, ADVANCED_OPTION)
     ("require-match-fraction", "Only consider alignments that cover this fraction of a read", 0.9, ADVANCED_OPTION)
     ("maximum-read-mismatches", "Don't consider reads with this many or more bases or indels that are different from the reference sequence. Unaligned bases at the end of a read also count as mismatches. Unaligned bases at the beginning of the read do NOT count as mismatches. (DEFAULT=OFF)", "", ADVANCED_OPTION)
-    ("deletion-coverage-propagation-cutoff","Value for coverage above which deletions are cutoff. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
-    ("deletion-coverage-seed-cutoff","Value for coverage below which deletions are seeded", 0, ADVANCED_OPTION)
     ;
     
     options.addUsage("", ADVANCED_OPTION);
@@ -283,6 +281,14 @@ namespace breseq
     ("junction-minimum-side-match", "Minimum number of bases a read must extend past any overlap or read-only sequence at the breakpoint of a junction on each side to count as support for the junction (DEFAULT = consensus mode, 1; polymorphism mode, 6)", "", ADVANCED_OPTION)
     ("junction-minimum-pr-no-read-start-per-position", "Minimum probablilty assigned that no mapped read will start at a given position and strand for junction prediction", 0.1, ADVANCED_OPTION)
     ("junction-allow-suboptimal-matches", "Assign a read to the junction candidate with the most overall support as long as its match to this junction is better than to any location in the reference sequence, even if it matches a different junction candidate better. This behavior was the default before v0.35.0. It will align more reads to junctions but risks misassigning some reads to the wrong junction candidates. It is only recommended that you use this option in CONSENSUS mode", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ;
+    
+    options.addUsage("", ADVANCED_OPTION);
+    options.addUsage("Missing Coverage (MC) Evidence Options", ADVANCED_OPTION);
+    options
+    ("deletion-coverage-seed-cutoff","Value for coverage below which MC are seeded", 0, ADVANCED_OPTION)
+    ("deletion-coverage-propagation-cutoff","Value for coverage above which MC ends stop. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
+    ("call-mutations-overlapping-MC", "If provided, don't ignore mutations predicted from RA evidence that overlap MC evidence", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
     
     options.addUsage("", ADVANCED_OPTION);
@@ -503,6 +509,8 @@ namespace breseq
     ASSERT(this->deletion_coverage_propagation_cutoff >= 0, "Argument --deletion-coverage-propagation-cutoff must be >= 0")
     this->deletion_coverage_seed_cutoff = from_string<double>(options["deletion-coverage-seed-cutoff"]);
     ASSERT(this->deletion_coverage_propagation_cutoff >= 0, "Argument --deletion-coverage-seed-cutoff must be >= 0")
+    
+    this->call_mutations_overlapping_missing_coverage = options.count("call-mutations-overlapping-MC");
     
     //! Settings: bowtie2
     //  all have default that we only overwrite if present on command line
@@ -884,6 +892,8 @@ namespace breseq
     this->quality_score_trim = 0;
     this->deletion_coverage_propagation_cutoff = 0;
     this->deletion_coverage_seed_cutoff = 0;
+    this->call_mutations_overlapping_missing_coverage = false;
+      
     this->polymorphism_prediction = false;
     this->mixed_base_prediction = true;
     

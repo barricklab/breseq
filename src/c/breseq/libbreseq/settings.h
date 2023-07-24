@@ -352,6 +352,8 @@ namespace breseq
     double deletion_coverage_propagation_cutoff;          // Default = calculated COMMAND-LINE OPTION
     double deletion_coverage_seed_cutoff;                 // Default = 0;         COMMAND-LINE OPTION
     
+    bool call_mutations_overlapping_missing_coverage;     // Default = false      COMMAND-LINE OPTION
+    
     //! These are mutually exclusive settings (polymorphism prediction overrides mixed_base_prediction)
     bool polymorphism_prediction;                         // Default = false COMMAND-LINE OPTION
     //! Predict not only consensus genotype calls, but test mixed states between them.
