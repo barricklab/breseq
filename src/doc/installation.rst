@@ -12,7 +12,7 @@ Recommended Method: Install |breseq| using Conda
    :target: https://bioconda.github.io/recipes/breseq/README.html
 
 The recommended installation method is to use the `Conda package manager <https://docs.conda.io/en/latest/>`_ to install |breseq| and all of the programs it requires. Make sure you have
-`Bioconda <https://bioconda.github.io/user/install.html>`_ set up, then follow the directions for the `breseq package <https://bioconda.github.io/recipes/breseq/README.html>`_.
+`Bioconda <https://bioconda.github.io/>`_ set up, then follow the directions for the `breseq package <https://bioconda.github.io/recipes/breseq/README.html>`_.
 
 .. NOTE::
    If you get an install error about the |Bowtie2| requirement not being satisfied, you need to create a Conda environment that uses Python 3.9 or earlier. These commands will do that and install |breseq|.
