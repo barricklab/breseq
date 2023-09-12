@@ -44,7 +44,8 @@ namespace breseq {
   const string cReferenceSequences::gene_strand_reverse_char = "<";
   const string cReferenceSequences::gene_strand_forward_char = ">";
   
-  const double cReferenceSequences::k_inactivate_overlap_fraction = 0.8;
+  const double cReferenceSequences::k_inactivating_overlap_fraction = 0.8;
+  const int32_t cReferenceSequences::k_inactivating_size = 15;
   const int32_t cReferenceSequences::k_promoter_distance = 150;
 
   
@@ -3017,7 +3018,7 @@ string cReferenceSequences::translate_protein(cAnnotatedSequence& seq, cSequence
 
 // This only tests mutations that partially overlap a gene or are contained within it!
 // completely deleted genes are annotated outside of this function
-bool cReferenceSequences::mutation_overlapping_gene_is_inactivating(const cDiffEntry& mut, const string& snp_type, const uint32_t start, const uint32_t end, const cGeneFeature& gene, const double inactivate_overlap_fraction)
+bool cReferenceSequences::mutation_overlapping_gene_is_inactivating(const cDiffEntry& mut, const string& snp_type, const uint32_t start, const uint32_t end, const cGeneFeature& gene, const double inactivating_overlap_fraction, const int32_t frameshift_cutoff)
 {
 
   bool is_inactivating = false;
@@ -3027,7 +3028,7 @@ bool cReferenceSequences::mutation_overlapping_gene_is_inactivating(const cDiffE
   int8_t mutated_strand;
   gene.genomic_position_to_index_strand_1(start, mutated_gene_index_start_1, mutated_strand);
   gene.genomic_position_to_index_strand_1(end, mutated_gene_index_end_1, mutated_strand);
-  int32_t gene_inactivating_overlap_length = floor(inactivate_overlap_fraction * static_cast<double>(gene.get_length()));
+  int32_t gene_inactivating_overlap_length = floor(inactivating_overlap_fraction * static_cast<double>(gene.get_length()));
   
   // values of 0 mean that it was not within the gene
   if (   ((mutated_gene_index_start_1 != 0) && (mutated_gene_index_start_1 <= gene_inactivating_overlap_length))
@@ -3038,7 +3039,7 @@ bool cReferenceSequences::mutation_overlapping_gene_is_inactivating(const cDiffE
     }
     else if ( ((mut._type == INS) || (mut._type == DEL) || (mut._type == SUB)) ) {
       int32_t size_change = mut.mutation_size_change(*this);
-      if ((size_change <= 15) && (gene.type == "CDS")) {
+      if ((size_change <= frameshift_cutoff) && (gene.type == "CDS")) {
         is_inactivating = (size_change!=3);
       } else {
         is_inactivating = true;
@@ -3070,7 +3071,7 @@ string cReferenceSequences::list_to_entry(const vector<string>& _list, const str
 }
   
   
-void cReferenceSequences::annotate_1_mutation_in_genes(cDiffEntry& mut, vector<cFeatureLocation*>& within_gene_locs, uint32_t start, uint32_t end, bool ignore_pseudogenes)
+void cReferenceSequences::annotate_1_mutation_in_genes(cDiffEntry& mut, vector<cFeatureLocation*>& within_gene_locs, uint32_t start, uint32_t end, bool ignore_pseudogenes, double inactivating_overlap_fraction, int32_t inactivating_size, int32_t promoter_distance)
 {
   // Separated by semicolons (separate for each gene)
   vector<string> gene_name_list;
@@ -3259,7 +3260,7 @@ void cReferenceSequences::annotate_1_mutation_in_genes(cDiffEntry& mut, vector<c
     if (mut.is_mutation()) {
       
       // Can only be one of inactivating and overlapping
-      if (mutation_overlapping_gene_is_inactivating(mut, snp_type, start, end, gene, k_inactivate_overlap_fraction)) {
+      if (mutation_overlapping_gene_is_inactivating(mut, snp_type, start, end, gene, inactivating_overlap_fraction, inactivating_size)) {
         genes_inactivated_list.push_back(gene.name);
         locus_tags_inactivated_list.push_back(gene.get_locus_tag());
       } else {
@@ -3308,7 +3309,7 @@ void cReferenceSequences::annotate_1_mutation_in_genes(cDiffEntry& mut, vector<c
     mut["locus_tags_overlapping"] = join(locus_tags_overlapping_list, ",");
 }
   
-void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, uint32_t end, bool repeat_override, bool ignore_pseudogenes)
+void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, uint32_t end, bool repeat_override, bool ignore_pseudogenes, double inactivating_overlap_fraction, int32_t frameshift_cutoff, int32_t promoter_distance)
 {
   
   // Initialize everything, even though we don't always use it.
@@ -3336,17 +3337,17 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
 
   // This is a SUBSET of genes_overlapping
   // Must overlap just one gene
-  // For mutations within first 80% of a gene's length, includes:
+  // For mutations within first inactivating_overlap_fraaction of a gene's length, includes:
   //  SNP if it is a nonsense mutation AND gene is protein coding.
-  //  INS/DEL/SUB if it is inframe AND the size change is <=15 nt AND gene is protein coding.
-  //  INS/DEL/SUB if the size change is >15 nt for all genes
+  //  INS/DEL/SUB if it is inframe AND the size change is <= frameshift_cutoff nt AND gene is protein coding.
+  //  INS/DEL/SUB if the size change is >frameshift_cutoff nt for all genes
   //  MOB for all genes
   
   mut["genes_promoter"] = "";
   mut["locus_tags_promoter"] = "";
 
   // Does NOT overlap gene and occurs within an intergenic region
-  // within a region extending upstream of the start codon by k_promoter_distance
+  // within a region extending upstream of the start codon by promoter_distance
   // If two genes qualify due to divergent transcription (<-- -->), the closer one is chosen.
   
   
@@ -3419,11 +3420,11 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
       
       
       // ties go to prev_gene!
-      if ((prev_gene_distance <= k_promoter_distance) && (prev_gene_distance <= next_gene_distance)) {
+      if ((prev_gene_distance <= promoter_distance) && (prev_gene_distance <= next_gene_distance)) {
         mut["genes_promoter"] = prev_gene.name;
         mut["locus_tags_promoter"] = prev_gene.get_locus_tag();
 
-      } else if (next_gene_distance <= k_promoter_distance) {
+      } else if (next_gene_distance <= promoter_distance) {
         mut["genes_promoter"] = next_gene.name;
         mut["locus_tags_promoter"] = next_gene.get_locus_tag();
 
@@ -3456,12 +3457,12 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
       vector<string> genes_promoter_list;
       vector<string> locus_tags_promoter_list;
 
-      if ((prev_gene_distance <= k_promoter_distance)) {
+      if ((prev_gene_distance <= promoter_distance)) {
         
         genes_promoter_list.push_back(prev_gene.name);
         locus_tags_promoter_list.push_back(prev_gene.get_locus_tag());
         
-      } else if (next_gene_distance <= k_promoter_distance) {
+      } else if (next_gene_distance <= promoter_distance) {
         
         genes_promoter_list.push_back(next_gene.name);
         locus_tags_promoter_list.push_back(next_gene.get_locus_tag());
@@ -3518,7 +3519,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
   // Mutation is completely within one or more genes
   else if (within_gene_locs.size() > 0)
   {
-    annotate_1_mutation_in_genes(mut, within_gene_locs, start, end, ignore_pseudogenes);
+    annotate_1_mutation_in_genes(mut, within_gene_locs, start, end, ignore_pseudogenes, inactivating_overlap_fraction, frameshift_cutoff, promoter_distance);
   }
 
   //The mutation actually contains several genes or overlaps the ends of the gene
@@ -3572,7 +3573,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
         
         cGeneFeature gene = (cGeneFeature)(*((*it)->get_feature()));
         
-        if (mutation_overlapping_gene_is_inactivating(mut, "", start, end, gene, k_inactivate_overlap_fraction)) {
+        if (mutation_overlapping_gene_is_inactivating(mut, "", start, end, gene, inactivating_overlap_fraction, frameshift_cutoff)) {
           inactivated_gene_list.push_back(gene.name);
           inactivated_locus_tag_list.push_back(gene.get_locus_tag());
         } else {
@@ -3601,7 +3602,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
         
         cGeneFeature gene = (cGeneFeature)(*((*it)->get_feature()));
         
-        if (mutation_overlapping_gene_is_inactivating(mut, "", start, end, gene, k_inactivate_overlap_fraction)) {
+        if (mutation_overlapping_gene_is_inactivating(mut, "", start, end, gene, inactivating_overlap_fraction, frameshift_cutoff)) {
           inactivated_gene_list.push_back(gene.name);
           inactivated_locus_tag_list.push_back(gene.get_locus_tag());
         } else {
@@ -3699,7 +3700,7 @@ void cReferenceSequences::categorize_1_mutation(cDiffEntry& mut, int32_t large_s
 
 }
 
-void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bool ignore_pseudogenes, bool compare_mode, int32_t large_size_cutoff, bool verbose)
+void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bool ignore_pseudogenes, bool compare_mode, int32_t large_size_cutoff, bool verbose, double inactivating_overlap_fraction, int32_t inactivating_size, int32_t promoter_distance)
 {
   //keep track of other mutations that affect SNPs
   //because we may double-hit a codon
