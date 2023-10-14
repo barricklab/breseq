@@ -48,6 +48,7 @@ libbreseq_la_SOURCES = \
 	resolve_alignments.cpp \
 	samtools_commands.cpp \
 	settings.cpp \
+	soft_clipping.cpp \
 	summary.cpp \
 	libbreseq/alignment.h \
 	libbreseq/alignment_output.h \
@@ -80,6 +81,7 @@ libbreseq_la_SOURCES = \
 	libbreseq/resolve_alignments.h \
 	libbreseq/samtools_commands.h \
 	libbreseq/settings.h \
+	libbreseq/soft_clipping.h \
 	libbreseq/storable.h \
 	libbreseq/summary.h
 libbreseq_la_LIBADD = $(UNWIND_LIBS) $(top_builddir)/$(HTSLIB)/libhts.la $(top_builddir)/$(LIBBAM)/libbam.la

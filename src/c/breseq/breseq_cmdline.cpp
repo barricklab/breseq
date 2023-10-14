@@ -34,6 +34,7 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/identify_mutations.h"
 #include "libbreseq/resolve_alignments.h"
 #include "libbreseq/samtools_commands.h"
+#include "libbreseq/soft_clipping.h"
 #include "libbreseq/settings.h"
 #include "libbreseq/summary.h"
 #include "libbreseq/contingency_loci.h"
@@ -933,6 +934,60 @@ int do_analyze_contingency_loci_significance( int argc, char* argv[]){
                                        options["output"],
                                        strain_files
                                        );
+  return 0;
+}
+
+
+int do_analyze_soft_clipping( int argc, char* argv[]){
+  
+  // create empty settings object to have R script name and default summary.json file name
+  Settings settings;
+  
+  // setup and parse configuration options:
+  AnyOption options("Usage: breseq SOFT-CLIPPING [-b reference.bam -f reference.fasta -o output.csv]");
+  options.addUsage("");
+  options.addUsage("Output a CSV with information about where reads are soft-clipped (and there may be misassemblies or novel sequences inserted that are not present in the reference sequence.");
+  options.addUsage("");
+  options.addUsage("Allowed Options");
+
+  options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+  // required options
+  options("bam,b", "BAM database file of read alignments", "data/reference.bam");
+  options("fasta,f", "FASTA file of reference sequences", "data/reference.fasta");
+  // options controlling what files are output
+  options("output,o", "Output CSV path", "output.csv");
+  options("minimum-clipped-bases,c", "Minimum bases that can be soft-clipped for a read to be reported", "100");
+
+  options.processCommandArgs(argc, argv);
+
+  if (options.count("help"))
+  {
+    options.printAdvancedUsage();
+    exit(-1);
+  }
+  
+  if (!file_exists(options["fasta"].c_str())) {
+    options.addUsage("");
+    options.addUsage("Could not open input reference FASTA file (-f):\n  " + options["fasta"]);
+    options.printUsage();
+    return -1;
+  }
+  
+  if (!file_exists(options["bam"].c_str())) {
+    options.addUsage("");
+    options.addUsage("Could not open input BAM file of aligned reads (-b):\n  " + options["bam"]);
+    options.printUsage();
+    return -1;
+  }
+
+    
+  analyze_soft_clipping(
+                        options["bam"],
+                        options["fasta"],
+                        options["output"],
+                        from_string<uint32_t>(options["minimum-clipped-bases"])
+                        );
+  
   return 0;
 }
 
@@ -2578,6 +2633,8 @@ int main(int argc, char* argv[]) {
     return do_junction_polymorphism(argc_new, argv_new);
   } else if (command == "CL-TABULATE") {
     return do_tabulate_contingency_loci(argc_new, argv_new);
+  } else if (command == "SOFT-CLIPPING") {
+    return do_analyze_soft_clipping(argc_new, argv_new);
   } else if (command == "CL-SIGNIFICANCE") {
     return do_analyze_contingency_loci_significance( argc_new, argv_new);
   } else if (command == "ASSEMBLE-UNMATCHED") {
