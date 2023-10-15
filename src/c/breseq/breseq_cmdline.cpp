@@ -342,7 +342,7 @@ int do_bam2cov(int argc, char* argv[]) {
         if (offset_end > target_length) offset_end = target_length;
         
         string region = target_name;
-        region += ":" + to_string(offset_start) + "-" + to_string(offset_end);
+        region += ":" + to_string<int64_t>(offset_start) + "-" + to_string<int64_t>(offset_end);
         
         region_list.push_back(region);
         
