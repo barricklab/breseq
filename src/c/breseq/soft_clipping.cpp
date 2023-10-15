@@ -45,7 +45,7 @@ void analyze_soft_clipping(
                            )
 {
   ofstream out_file(output_file_name);
-  out_file << join(make_vector<string>("read_name")("seq_id")("position")("direction")("num_bases"), ",") << endl;
+  out_file << join(make_vector<string>("read_name")("seq_id")("position")("direction")("num_bases")("strand"), ",") << endl;
   
   bam_file final_bam_file(bam_file_name, fasta_file_name, ios::in);
   
