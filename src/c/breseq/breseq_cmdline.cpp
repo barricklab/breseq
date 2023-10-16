@@ -369,7 +369,7 @@ int do_bam2cov(int argc, char* argv[]) {
     cerr << "  Region : " << region << endl;
 
     string file_name;
-    if (region_list.size() == 1) {
+    if (!tiling_mode && (region_list.size() == 1)) {
       if (options["output"].empty()) {
         file_name = *it;
       } else {
