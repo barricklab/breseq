@@ -2,8 +2,8 @@
 [![Github All Releases](https://img.shields.io/github/downloads/barricklab/breseq/total.svg)](https://github.com/barricklab/breseq/releases)
 
 [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/breseq/README.html)
-![Anaconda Downloads](https://anaconda.org/bioconda/breseq/badges/downloads.svg)
-![Anaconda Platforms](https://anaconda.org/bioconda/breseq/badges/platforms.svg)
+[![Anaconda Downloads](https://anaconda.org/bioconda/breseq/badges/downloads.svg)](http://bioconda.github.io/recipes/breseq/README.html)
+[![Anaconda Platforms](https://anaconda.org/bioconda/breseq/badges/platforms.svg)](http://bioconda.github.io/recipes/breseq/README.html)
 
 ![Breseq Logo](https://github.com/barricklab/breseq/blob/master/src/doc/images/breseq.png)
 
