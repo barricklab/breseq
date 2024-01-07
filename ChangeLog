@@ -1,3 +1,8 @@
+Version 0.38.2
+  * Miscellanous bug files and updates to reference file handling.
+  * Updates to reference format documentation to describe how to get better IS prediction.
+  * Added experimental breseq SOFT-CLIPPING subcommand.
+
 Version 0.38.1
   * Fix for infinite loop triggered by help when terminal window was too narrow.
   

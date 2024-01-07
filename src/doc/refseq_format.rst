@@ -102,6 +102,37 @@ If multiple feature lines have identical accessions and types, then the location
 
 Pseudogenes are marked by adding ``Pseudo=true`` to the semicolon-delimited list of attributes at the end of the feature line line. Additionally, pseudogenes are reassigned a different feature type of ``fCDS``.
 
+Adding IS Element Annotations
+-------------------------------
+
+Many sequence files don't have IS elements annotated. To have |breseq| automatically predict IS elements as single events versus two JC evidence items that you have to figure out, we highly recommend adding these annotations. You can accomplish it using these steps:
+
+1. Install and run `ISEScan <https://github.com/xiezhq/ISEScan>`_ to generate a CSV file of IS predictions.
+
+  .. code-block:: bash
+
+    isescan.py --nthread 4 --seqfile reference.fasta --output output
+
+  .. note::
+
+    If you don't have a FASTA version of your reference, you can generate one using ```breseq CONVERT-REFERENCE``.
+
+  .. note::
+
+    The current version of ISEScan and its dependencies installed through Conda crashes on MacOSX due to a problem with FragGeneScan. If you really want to get it running on a Mac, you can install ISEScan via Conda and then install this fixed version inside of the same environment: `FragGeneScan with bug fix <https://github.com/barricklab/FragGeneScan>`_ .
+
+2. Merge these predictions into your reference file using ```breseq CONVERT-REFERENCE``.
+
+  .. code-block:: bash
+
+    breseq CONVERT-REFERENCE -f GENBANK -s output/reference.fasta.csv -o reference_with_IS.gbk reference.gbk
+
+  .. note::
+
+    You can also output as a GFF3 (substitute ``-f GFF3`` and ``-o reference_with_IS.gff``).
+
+3. Now run |breseq| with the updated reference file!
+
 Illegal Characters
 --------------------
 
