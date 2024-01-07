@@ -34,6 +34,7 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/identify_mutations.h"
 #include "libbreseq/resolve_alignments.h"
 #include "libbreseq/samtools_commands.h"
+#include "libbreseq/soft_clipping.h"
 #include "libbreseq/settings.h"
 #include "libbreseq/summary.h"
 #include "libbreseq/contingency_loci.h"
@@ -207,8 +208,8 @@ int do_bam2cov(int argc, char* argv[]) {
   options("bam,b", "BAM database file of read alignments", "data/reference.bam");
   options("fasta,f", "FASTA file of reference sequences", "data/reference.fasta");
   // options controlling what files are output
-  options("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=region1.*). If there are multiple regions, this argument must be a directory path, and all output files will be output here with names region1.*, region2.*, ... (DEFAULT=.)");
-  options("region,r", "Regions to create alignments for. Must be provided as sequence regions in the format ACCESSION:START-END, where ACCESSION is a valid identifier for one of the sequences in the FASTA file, and START and END are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments");
+  options("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=region1.*). If there are multiple regions or no region is provided, this argument must be a directory path, and all output files will be output here with names region1.*, region2.*, ... (DEFAULT=.)");
+  options("region,r", "Regions to create alignments for. Must be provided as sequence regions in the format ACCESSION:START-END, where ACCESSION is a valid identifier for one of the sequences in the FASTA file, and START and END are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments. If no regions are provided, then an output file will be created for each sequence in the FASTA file.");
   options("format", "Format of output plot(s): PNG or PDF", "PNG");
   options("table,t", "Create tab-delimited file of coverage instead of a plot", TAKES_NO_ARGUMENT);
   options.addUsage("", ADVANCED_OPTION);
@@ -265,11 +266,25 @@ int do_bam2cov(int argc, char* argv[]) {
   ASSERT(tiling_mode || (!options.count("tile-size") && !options.count("tile-overlap")),
          "--tile-size and --tile-overlap args must both be provided to activate tile mode");
   
+  int64_t tile_size = 0;
+  int64_t tile_overlap = 0;
+  if (tiling_mode)
+  {
+    tile_size = from_string<int64_t>(options["tile-size"]);
+    tile_overlap = from_string<int64_t>(options["tile-overlap"]);
+  }
+  
+  // We implement output of all regions by tricking the tiling code to make one tile...
   if (!tiling_mode && !region_list.size()) {
-    options.addUsage("");
-    options.addUsage("You must supply at least one genomic region (-r).");
-    options.printUsage();
-    return -1;
+    tiling_mode = true;
+    tile_size = 1000000000000; // 1 trillion...
+    tile_overlap = 0;
+
+    // Previous code when it was an error to provide no regions
+    // options.addUsage("");
+    // options.addUsage("You must supply at least one genomic region (-r).");
+    // options.printUsage();
+    //return -1;
   }
   
   if (tiling_mode && (region_list.size() > 0))
@@ -308,28 +323,26 @@ int do_bam2cov(int argc, char* argv[]) {
   // create regions that tile the genome
   if (tiling_mode)
   {
-    int32_t tile_size = from_string<int32_t>(options["tile-size"]);
-    int32_t tile_overlap = from_string<int32_t>(options["tile-overlap"]);
     tile_overlap = static_cast<int32_t>(floor( static_cast<double>(tile_overlap) / 2.0));
 
-    for(uint32_t target_id=0; target_id < co.num_targets(); target_id++)
+    for(int64_t target_id=0; target_id < co.num_targets(); target_id++)
     {
       const char* target_name = co.target_name(target_id);
-      int32_t target_length = co.target_length(target_id);
+      int64_t target_length = co.target_length(target_id);
       
-      int32_t start = 1;
+      int64_t start = 1;
       while (start < target_length)
       {
-        int32_t end = start + tile_size - 1;
+        int64_t end = start + tile_size - 1;
         
-        int32_t offset_start = start - tile_overlap;
+        int64_t offset_start = start - tile_overlap;
         if (offset_start < 1) offset_start = 1;
         
-        int32_t offset_end = end + tile_overlap;
+        int64_t offset_end = end + tile_overlap;
         if (offset_end > target_length) offset_end = target_length;
         
         string region = target_name;
-        region += ":" + to_string(offset_start) + "-" + to_string(offset_end);
+        region += ":" + to_string<int64_t>(offset_start) + "-" + to_string<int64_t>(offset_end);
         
         region_list.push_back(region);
         
@@ -356,7 +369,7 @@ int do_bam2cov(int argc, char* argv[]) {
     cerr << "  Region : " << region << endl;
 
     string file_name;
-    if (region_list.size() == 1) {
+    if (!tiling_mode && (region_list.size() == 1)) {
       if (options["output"].empty()) {
         file_name = *it;
       } else {
@@ -933,6 +946,60 @@ int do_analyze_contingency_loci_significance( int argc, char* argv[]){
                                        options["output"],
                                        strain_files
                                        );
+  return 0;
+}
+
+
+int do_analyze_soft_clipping( int argc, char* argv[]){
+  
+  // create empty settings object to have R script name and default summary.json file name
+  Settings settings;
+  
+  // setup and parse configuration options:
+  AnyOption options("Usage: breseq SOFT-CLIPPING [-b reference.bam -f reference.fasta -o output.csv]");
+  options.addUsage("");
+  options.addUsage("Output a CSV with information about where reads are soft-clipped (and there may be misassemblies or novel sequences inserted that are not present in the reference sequence.");
+  options.addUsage("");
+  options.addUsage("Allowed Options");
+
+  options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+  // required options
+  options("bam,b", "BAM database file of read alignments", "data/reference.bam");
+  options("fasta,f", "FASTA file of reference sequences", "data/reference.fasta");
+  // options controlling what files are output
+  options("output,o", "Output CSV path", "output.csv");
+  options("minimum-clipped-bases,c", "Minimum bases that can be soft-clipped for a read to be reported", "100");
+
+  options.processCommandArgs(argc, argv);
+
+  if (options.count("help"))
+  {
+    options.printAdvancedUsage();
+    exit(-1);
+  }
+  
+  if (!file_exists(options["fasta"].c_str())) {
+    options.addUsage("");
+    options.addUsage("Could not open input reference FASTA file (-f):\n  " + options["fasta"]);
+    options.printUsage();
+    return -1;
+  }
+  
+  if (!file_exists(options["bam"].c_str())) {
+    options.addUsage("");
+    options.addUsage("Could not open input BAM file of aligned reads (-b):\n  " + options["bam"]);
+    options.printUsage();
+    return -1;
+  }
+
+    
+  analyze_soft_clipping(
+                        options["bam"],
+                        options["fasta"],
+                        options["output"],
+                        from_string<uint32_t>(options["minimum-clipped-bases"])
+                        );
+  
   return 0;
 }
 
@@ -2578,6 +2645,8 @@ int main(int argc, char* argv[]) {
     return do_junction_polymorphism(argc_new, argv_new);
   } else if (command == "CL-TABULATE") {
     return do_tabulate_contingency_loci(argc_new, argv_new);
+  } else if (command == "SOFT-CLIPPING") {
+    return do_analyze_soft_clipping(argc_new, argv_new);
   } else if (command == "CL-SIGNIFICANCE") {
     return do_analyze_contingency_loci_significance( argc_new, argv_new);
   } else if (command == "ASSEMBLE-UNMATCHED") {
