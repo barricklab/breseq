@@ -171,23 +171,17 @@ int do_apply(int argc, char *argv[])
   options("format,f",    "Output file format (Options: FASTA, GENBANK, GFF3)", "FASTA");
   options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
   options("seq-id,s",    "Sequence ID to keep in output. If this argument is provided, other sequences are deleted after the APPLY. May be provided multiple times.");
+	options("polymorphism-mode,p",  "Apply all mutations in GD file regardless of their frequency. By default (without this option) only mutations with 100% frequency are applied.", TAKES_NO_ARGUMENT);
 	options("applied-gd,a",  "Output file name for GD with mutations updated to coordinates in the output sequences.");
   options("verbose,v",   "Verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
-  options.addUsage("Input a single GenomeDiff, and as many reference files");
-  options.addUsage("as you like.  Using the GenomeDiff, this will apply all");
-  options.addUsage("the mutations to the reference sequences, output is to");
-  options.addUsage("a single file that includes all the references in the");
-	options.addUsage("requested format. Input file is expected to only have");
-	options.addUsage("consensus mutations. Polymorphic mutations are ignored.");
+	options.addUsage("Input a single GenomeDiff, and as many reference files as you like.  Using the GenomeDiff, this will apply all the mutations to the reference sequences, output is to a single file that includes all the references in the requested format.");
 	options.addUsage("");
-	options.addUsage("The --apply-gd option causes a GenomeDiff file to be ");
-	options.addUsage("output that is the input GenomeDiff file with positions");
-	options.addUsage("of mutations shifted to where they occur in the output");
-	options.addUsage("sequence. It also has applied_seq_id, applied_start,");
-	options.addUsage("and applied_end fields defining the changed bases.");
+	options.addUsage("The input GenomeDiff file is expected to only have consensus mutations. Polymorphic mutations are ignored unless the --polymorphism-mode flag is supplied.");
+	options.addUsage("");
+	options.addUsage("The --apply-gd option causes a GenomeDiff file to be output that is the input GenomeDiff file with positions of mutations shifted to where they occur in the output sequence. It also has applied_seq_id, applied_start, and applied_end fields defining the changed bases.");
 	
 	if (options.count("help")) {
 		options.printUsage();
@@ -242,6 +236,19 @@ int do_apply(int argc, char *argv[])
 	
   //Check to see if every item in the loaded .gd is applicable to the reference file.
   gd.valid_with_reference_sequences(ref_seq_info);
+	
+	// Set all frequencies to one
+	if (options.count("polymorphism-mode")) {
+		diff_entry_list_t mutation_list = gd.mutation_list();
+		for (diff_entry_list_t::iterator itr_mut = mutation_list.begin(); itr_mut != mutation_list.end(); itr_mut++)
+		{
+			cDiffEntry& mut(**itr_mut);
+			
+			if ((mut.count(FREQUENCY)!=0) && (from_string<double>(mut[FREQUENCY]) != 1.0))
+				mut[FREQUENCY] = "1";
+		}
+	}
+	
 	gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, options.count("verbose"));
 
 	// If seq-id is present keep only certain sequence ids

@@ -1647,15 +1647,7 @@ namespace breseq {
 	{
     (void)summary;
 		bool verbose = false;
-/*
-    if (alignments.front()->read_name() == "1:911") {
-      verbose = true;
-    }
-    
-    if (alignments.front()->read_name() == "1:912") {
-      verbose = true;
-    }
-*/
+
 		if (verbose)
 		{
 			cout << endl << "###########################" << endl;

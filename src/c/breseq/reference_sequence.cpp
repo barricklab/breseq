@@ -1051,9 +1051,9 @@ namespace breseq {
 
       // Mark partial as pseudo
       if (line_list[type_column_index] == "c") {
-        (*new_mobile_element)["product"] = "Complete " + line_list[family_column_index] + "family IS element";
+        (*new_mobile_element)["product"] = "Complete " + line_list[family_column_index] + " family IS element";
       } else {
-        (*new_mobile_element)["product"] = "Partial " + line_list[family_column_index] + "family IS element";
+        (*new_mobile_element)["product"] = "Partial " + line_list[family_column_index] + " family IS element";
         (*new_mobile_element).flag_pseudo();
       }
       int32_t strand = line_list[strand_column_index] == "-" ? -1 : +1;
@@ -2475,8 +2475,10 @@ void cReferenceSequences::WriteGenBankFileSequenceFeatures(std::ofstream& out, c
     
     out << "     " << left << setw(15) << feat["type"] << " " << GenBankCoordsString(feat.m_locations) << endl;
 
-    if (s.m_file_format == "GENBANK") {
-      // If we were loaded as GenBank, this outputs as close as possible to the original!
+    // If we were loaded as GenBank, this uses the original tags so the file is as little changed as possible
+    //   If you DON'T want this to happen, clear the m_original_genbank_tags of the feature
+    //   (which is used when merging --isescan results, for example)
+    if ( (s.m_file_format == "GENBANK") && (feat.m_original_genbank_tags.size() > 0) ) {
       for (vector<string>::const_iterator tag_it = feat.m_original_genbank_tags.begin(); tag_it != feat.m_original_genbank_tags.end(); tag_it++) {
         
         if (feat.count(*tag_it) == 0) continue;
