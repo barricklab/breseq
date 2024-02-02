@@ -1668,7 +1668,7 @@ bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file
   
   uint32_t sequence_length = 0;
   bool sequence_is_circular = false;
-  string sequence_description;
+  string sequence_description("No description provided");
   
   vector<string> genbank_raw_header_lines;
   while (!in.eof()) {
