@@ -39,7 +39,7 @@ bool is_read_soft_clipped(
 
 
 void analyze_soft_clipping(
-                           const string& bam_file_name,
+                           const vector<string>& bam_file_names,
                            const string& fasta_file_name,
                            const string& output_file_name,
                            const uint32_t minimum_clipped_bases

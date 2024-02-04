@@ -1229,18 +1229,22 @@ public:
     void polymorphism_statistics(Settings& settings, Summary& summary);
     string repeat_family_sequence(const string& repeat_name, int8_t strand, string* repeat_region = NULL, string* picked_seq_id=NULL, cFeatureLocation* picked_sequence_feature=NULL, bool fatal_error=true);
     
+    static const string safe_seq_id_name_characters;
+
     string safe_seq_id_name(const string& input)
     {
+      //
+      
       // return if not using safe seq ids
       if (!m_use_safe_seq_ids) return input;
       
       string s(input);
       
-      size_t pos = s.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890._-");
+      size_t pos = s.find_first_not_of(safe_seq_id_name_characters);
       while(pos != string::npos) {
         //s.replace(pos, 1, ""); // remove
         s[pos] = '_'; pos++;// or replace with "safe" character
-        pos = s.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890._-", pos);
+        pos = s.find_first_not_of(safe_seq_id_name_characters, pos);
       }
       
       // Remove double underscores which conflict with junction dividers
@@ -1252,16 +1256,16 @@ public:
       s = new_s;
       
       // Also remove any leading or trailing underscores
-      pos = s.find_first_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890.-");
+      pos = s.find_first_of(safe_seq_id_name_characters);
       s.replace(0, pos, "");
 
-      pos = s.find_last_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890.-");
+      pos = s.find_last_of(safe_seq_id_name_characters);
       s.replace(pos+1, s.size()-pos+1, "");
       
-      ASSERT(s.find_first_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890.-") != string::npos, "Seq id [" + input + "] does not contain any valid alphanumeric characters.");
+      ASSERT(s.find_first_of(safe_seq_id_name_characters) != string::npos, "Seq id [" + input + "] does not contain any valid characters.");
       
       if (s != input) {
-        WARN("Reference seq id converted from '" + input + "' to '" + s + "'.\nOnly alphanumeric characters, periods, dashes, and single underscores '_' are allowed in seq ids.");
+        WARN("Reference seq id converted from '" + input + "' to '" + s + "'.\nOnly alphanumeric characters, periods (.), dashes(-), plus (+) and minus (−) signs, and single underscores (_) are allowed in seq ids.");
       }
       
       return s;

@@ -1,6 +1,9 @@
 Version 0.38.3
-  * Fixed problem adding --isescan-results with Genbank input to breseq CONVERT-REFERENCE
   * Miscellanous bug fixes related to nonstandard reference file loading.
+  * Fixed problem adding --isescan-results with Genbank input to breseq CONVERT-REFERENCE.
+  * Some commands (breseq BAM2ALN, breseq BAM2COV) will now create output directories if they don't already exist.
+  * Breseq now allows plus (+) and minus (−) signs to be used in reference seq ids, in addition to underscores and hyphens.
+  * Changed syntax for experimental breseq SOFT-CLIPPING command to allow multiple BAM inputs.
 
 Version 0.38.2
   * Miscellanous bug fixes and updates to reference file handling.

@@ -167,6 +167,10 @@ int do_bam2aln(int argc, char* argv[]) {
           file_name = (split(options["output"], "."))[0] + "_" + region_list[j] + ".html";  }
       }
       
+      // Create the output path if necessary
+      string path = path_to_dirname(file_name);
+      create_path(path);
+      
       ofstream myfile (file_name.c_str());
       cerr << "    File : " << file_name << endl;
       
@@ -197,9 +201,9 @@ int do_bam2cov(int argc, char* argv[]) {
   Settings settings;
   
   // setup and parse configuration options:
-	AnyOption options("Usage: breseq BAM2COV [-b reference.bam -f reference.fasta --format PNG -o output.png] region1 [region2 region3 ...]");
+	AnyOption options("Usage: breseq BAM2COV [-b reference.bam -f reference.fasta --format PNG -o output.png] [region1 region2 region3 ...]");
   options.addUsage("");
-  options.addUsage("Create a coverage plot or table for the specified region or regions.");
+  options.addUsage("Create a coverage plot(s) or table(s). These will be for a certain region or regions, if provided. If not, defaults to creating coverage plots for each reference sequence.");
   options.addUsage("");
   options.addUsage("Allowed Options");
 
@@ -209,6 +213,7 @@ int do_bam2cov(int argc, char* argv[]) {
   options("fasta,f", "FASTA file of reference sequences", "data/reference.fasta");
   // options controlling what files are output
   options("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=region1.*). If there are multiple regions or no region is provided, this argument must be a directory path, and all output files will be output here with names region1.*, region2.*, ... (DEFAULT=.)");
+  options("prefix,x", "Output prefix. If there are multiple regions or no region is provided, this will be used as a prefix in front of the automatically generated names.", "");
   options("region,r", "Regions to create alignments for. Must be provided as sequence regions in the format ACCESSION:START-END, where ACCESSION is a valid identifier for one of the sequences in the FASTA file, and START and END are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments. If no regions are provided, then an output file will be created for each sequence in the FASTA file.");
   options("format", "Format of output plot(s): PNG or PDF", "PNG");
   options("table,t", "Create tab-delimited file of coverage instead of a plot", TAKES_NO_ARGUMENT);
@@ -351,11 +356,6 @@ int do_bam2cov(int argc, char* argv[]) {
     }
   }
   
-  // Create output path if necessary
-  if ((region_list.size() > 1) && (!options["output"].empty())) {
-    create_path(options["output"]);
-  }
-  
   for(vector<string>::iterator it = region_list.begin(); it!= region_list.end(); it++)
   {
     string& region = *it;
@@ -379,9 +379,13 @@ int do_bam2cov(int argc, char* argv[]) {
       if (options["output"].empty()) {
         file_name = *it;
       } else {
-        file_name = options["output"] + "/" + region;
+        file_name = options["output"] + "/" + options["prefix"] + region;
       }
     }
+    
+    // Create the output path if necessary
+    string path = path_to_dirname(file_name);
+    create_path(path);
     
     if (options.count("table")) {
       file_name += ".tab";
@@ -956,15 +960,14 @@ int do_analyze_soft_clipping( int argc, char* argv[]){
   Settings settings;
   
   // setup and parse configuration options:
-  AnyOption options("Usage: breseq SOFT-CLIPPING [-b reference.bam -f reference.fasta -o output.csv]");
+  AnyOption options("Usage: breseq SOFT-CLIPPING -f reference.fasta -o output.csv input1.bam [input2.bam ...]");
   options.addUsage("");
-  options.addUsage("Output a CSV with information about where reads are soft-clipped (and there may be misassemblies or novel sequences inserted that are not present in the reference sequence.");
+  options.addUsage("Given one or more indexed BAM files, output a CSV with information about where reads are soft-clipped (and there may be misassemblies or novel sequences inserted that are not present in the reference sequence. If no BAM files are provided as unnamed args, defaults to looking for \"data/reference.bam\".");
   options.addUsage("");
   options.addUsage("Allowed Options");
 
   options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   // required options
-  options("bam,b", "BAM database file of read alignments", "data/reference.bam");
   options("fasta,f", "FASTA file of reference sequences", "data/reference.fasta");
   // options controlling what files are output
   options("output,o", "Output CSV path", "output.csv");
@@ -985,19 +988,34 @@ int do_analyze_soft_clipping( int argc, char* argv[]){
     return -1;
   }
   
-  if (!file_exists(options["bam"].c_str())) {
+  vector<string> bam_file_names;
+  if (options.getArgc() == 0)
+  {
     options.addUsage("");
-    options.addUsage("Could not open input BAM file of aligned reads (-b):\n  " + options["bam"]);
+    options.addUsage("No BAM files provided.");
     options.printUsage();
     return -1;
   }
-
-    
+  for (int32_t i = 0; i < options.getArgc(); i++)
+  {
+    string bam_file_name = options.getArgv(i);
+    bam_file_names.push_back(bam_file_name);
+  }
+  
+  uint32_t minimum_clipped_bases = from_string<uint32_t>(options["minimum-clipped-bases"]);
+                   
+  UserOutput uout("SOFT-CLIPPING");
+  uout("Output", options["output"]);
+  uout("Minimum clipped bases", to_string(minimum_clipped_bases));
+  uout("FASTA input", options["fasta"]);
+  uout("BAM input", to_string(bam_file_names));
+  cerr << endl;
+  
   analyze_soft_clipping(
-                        options["bam"],
+                        bam_file_names,
                         options["fasta"],
                         options["output"],
-                        from_string<uint32_t>(options["minimum-clipped-bases"])
+                        minimum_clipped_bases
                         );
   
   return 0;

@@ -48,7 +48,10 @@ namespace breseq {
   const int32_t cReferenceSequences::k_inactivating_size = 15;
   const int32_t cReferenceSequences::k_promoter_distance = 150;
 
-  
+
+  const string cReferenceSequences::safe_seq_id_name_characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890._-+−";
+
+
   const vector<string> snp_types = make_vector<string>("synonymous")("nonsynonymous")("nonsense")("noncoding")("pseudogene")("intergenic");
   
   const string BULL_DUMMY_SEQ_ID = "__BULL_DUMMY_SEQ_ID__";
