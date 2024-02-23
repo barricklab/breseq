@@ -1059,7 +1059,7 @@ int do_simulate_reads(int argc, char *argv[])
     return -1;
   }
   
-  cerr << "COMMAND: CONVERT-REFERENCE" << endl;
+  cerr << "COMMAND: SIMULATE-READS" << endl;
 
 
   if (options.count("seed")) {
@@ -1119,6 +1119,7 @@ int do_simulate_reads(int argc, char *argv[])
     sequence.m_is_circular = true;
     cSimFastqSequence::simulate_tiled(sequence,
                                       read_size,
+                                      coverage,
                                       options["output"],
                                       verbose);
   } else {

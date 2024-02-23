@@ -1192,10 +1192,18 @@ namespace breseq {
 
   }
 
-// Simulates perfectly tiled reads
-// one read on each strand for every start position, assuming a circular genome
+// Simulates perfectly tiled reads - assuming a circular genome
+//
+// If coverage is 2 x read length (or greater), then every possible read is simulated
+// on top and bottom strands.
+//
+// if it is less, then every ceiling(2 x length / coverage) bases, reads on both strands
+// are simulated on each strand for every start position.
+//
+// This assumes a circular genome
 void cSimFastqSequence::simulate_tiled(const cAnnotatedSequence& sequence,
                                              uint32_t read_size,
+                                             uint32_t coverage,
                                              string file_name,
                                              bool verbose)
 {
@@ -1204,8 +1212,14 @@ void cSimFastqSequence::simulate_tiled(const cAnnotatedSequence& sequence,
   cFastqFile out(file_name.c_str(), ios_base::out);
   vector<int8_t>strands = make_vector<int8_t>(-1)(+1);
   
+  uint32_t spacing = ceil( (2.0 * read_size) / coverage );
+  spacing = max<uint32_t>(spacing, 0);
+  cout << "Read length : " << read_size << endl;
+  cout << "Coverage    : " << coverage << endl;
+  cout << "Spacing     : " << spacing << endl;
+  
   uint32_t read_index = 1;
-  for (uint32_t start_1 = 1; start_1 <= sequence.get_sequence_length(); ++start_1) {
+  for (uint32_t start_1 = 1; start_1 <= sequence.get_sequence_length(); start_1+=spacing) {
     for (vector<int8_t>::iterator strand_it = strands.begin(); strand_it != strands.end(); strand_it++) {
       int8_t strand = *strand_it;
       

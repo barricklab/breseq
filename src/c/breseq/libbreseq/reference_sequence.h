@@ -168,7 +168,6 @@ namespace breseq {
              int32_t start_1,
              int32_t end_1,
              int8_t strand,
-             const cSequenceFeature* feature = NULL,
              bool start_is_indeterminate = false,
              bool end_is_indeterminate = false
              )
@@ -178,7 +177,6 @@ namespace breseq {
     , m_start_is_indeterminate(start_is_indeterminate)
     , m_end_is_indeterminate(end_is_indeterminate)
     {
-      this->check_valid(feature);
     }
     
     cLocation(const cLocation& in)
@@ -188,7 +186,6 @@ namespace breseq {
     , m_start_is_indeterminate(in.m_start_is_indeterminate)
     , m_end_is_indeterminate(in.m_end_is_indeterminate)
     {
-      this->check_valid();
     }
     
     //>! For sorting
@@ -261,15 +258,11 @@ namespace breseq {
       return (m_start_1 <= m_end_1) && (m_strand >=-1) && (m_strand <=1);
     }
     
-    void check_valid(const cSequenceFeature* feature = NULL);
-    
     void set_start_1(int32_t start_1) {
       m_start_1 = start_1;
-      this->check_valid();
     }
     void set_end_1(int32_t end_1) {
       m_end_1 = end_1;
-      this->check_valid();
     }
     
     void offset(int32_t shift) {
@@ -281,7 +274,6 @@ namespace breseq {
     void set_start_end_1(int32_t start_1, int32_t end_1) {
       m_start_1 = start_1;
       m_end_1 = end_1;
-      this->check_valid();
     }
     
     void set_start_is_indeterminate(bool start_is_indeterminate) {
@@ -793,15 +785,6 @@ public:
       //Parse portion of GenBank coords string
       list<cLocation> ParseGenBankCoords(const cSequenceFeature& in_feature, string& s, bool safe_create_feature_locations, int8_t in_strand = 1);
     
-      list<cLocation> SafeCreateFeatureLocations(
-                                          const cSequenceFeature& in_feature,
-                                          int32_t in_start_1,
-                                          int32_t in_end_1,
-                                          int8_t in_strand,
-                                          bool in_start_is_indeterminate,
-                                          bool in_end_is_indeterminate,
-                                          bool safe_create_feature_locations = true
-                                          );
   };
   
   /*! Reference Sequences
@@ -900,6 +883,7 @@ public:
     //!< Verify that all seq_id have sequence and that features fit in sequence;
     void VerifySequenceFeatureMatch();
     void VerifyCDSLengthsAreValid();
+    void VerifyFeatureLocations();
     bool Initialized() {return m_initialized;}
     
     void ReadFASTA(const std::string &file_name);

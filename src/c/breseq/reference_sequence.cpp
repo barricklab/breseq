@@ -68,15 +68,6 @@ namespace breseq {
   , max_nucleotides_to_show_in_tables(_settings.max_nucleotides_to_show_in_tables)
   , no_javascript(_settings.no_javascript)
   {}
-
-  void cLocation::check_valid(const cSequenceFeature* feature)
-  {
-    if (!this->is_valid()) {
-      string name = feature ? feature->SafeGet("name") : "<unknown>" ;
-      string type = feature ? feature->SafeGet("type") : "<unknown>" ;
-      ERROR("Location for feature named: " + name + " of type: " + type + "\nhas invalid start-end coordinates or strand:\n" + this->as_string());
-    }
-  }
   
   cFeatureLocation::cFeatureLocation(cSequenceFeature* feature, const cLocation& loc)
     : cLocation(loc)
@@ -104,7 +95,7 @@ namespace breseq {
                                      bool end_is_indeterminate
                                      )
   {
-    cFeatureLocation(feature, cLocation(start_1, end_1, strand, feature, start_is_indeterminate, end_is_indeterminate));
+    cFeatureLocation(feature, cLocation(start_1, end_1, strand, start_is_indeterminate, end_is_indeterminate));
   }
   
   string cSequenceFeature::get_nucleotide_sequence(const cAnnotatedSequence& seq) const
@@ -731,7 +722,7 @@ namespace breseq {
     this->m_gene_locations.clear();
     this->m_repeat_locations.clear();
     
-    for (cSequenceFeatureList::iterator itf = this->m_features.begin(); itf != this->m_features.end(); itf++ ) {
+    for (cSequenceFeatureList::iterator itf = this->m_features.begin(); itf != this->m_features.end();  ) {
       cSequenceFeaturePtr& feat_p = *itf;
       
       // This is a double-check that features with indeterminate starts and ends are marked
@@ -739,7 +730,12 @@ namespace breseq {
       if (feat_p->start_is_indeterminate() && feat_p->end_is_indeterminate())
         feat_p->flag_pseudo();
       
-      ASSERT(feat_p->m_locations.size() != 0, "Feature lacks location: " + (*feat_p)["accession"] );
+      if (feat_p->m_locations.size() == 0) {
+        
+        WARN("Error in reference file. Feature of type [" + feat_p->SafeGet("type") + "] with name [" + feat_p->SafeGet("name") + "] on sequence [" + this->m_seq_id + "] has no valid locations and will be ignored.");
+        itf = this->m_features.erase(itf);
+        continue;
+      }
       
       for (cFeatureLocationList::iterator itl = feat_p->m_locations.begin(); itl != feat_p->m_locations.end(); itl++ ) {
           ASSERT(itl->is_valid(), "Feature has invalid location: " + (*feat_p)["accession"] + "\n" + itl->as_string())
@@ -764,6 +760,7 @@ namespace breseq {
         this->m_gene_locations.insert(this->m_gene_locations.end(), feat_p->m_locations.begin(), feat_p->m_locations.end());
       }
       
+      itf++;
     }
     
     // Sort everything
@@ -790,6 +787,7 @@ namespace breseq {
     }
     
     this->VerifySequenceFeatureMatch();
+    this->VerifyFeatureLocations();
     this->m_initialized = true;
     
     // To uppercase and change nonstandard chars to 'N' in all sequences.
@@ -965,6 +963,123 @@ namespace breseq {
       WARN("CDS feature(s) found with nucleotide length(s) that are not a multiple of 3:\n" + join(invalid_CDS_names, ", ") + "\n\nTranslations of mutations in these genes may be incorrect.\nIt is recommended that you fix these feature annotations in your reference file!\nAnother solution is to mark them as pseudogenes:\n  GenBank: add '/pseudo' as a new line within the CDS feature\n  GFF3: add 'Pseudo=true' to the semicolon-separated list at the end of the CDS line.");
     }
   }
+
+
+// Fixes features that wrap around a circular genome and removes features that have invalid coords with a warning
+// By "safe" we mean for circular genomes with problem features that need to be split
+// 1) Considers locations that wrap around origin (when start > end)
+// 2) Considers locations that extend past the end of the numbering wrapping around
+
+void cReferenceSequences::VerifyFeatureLocations()
+{
+  // For every sequence
+  for (vector<cAnnotatedSequence>::iterator its= this->begin(); its != this->end(); its++) {
+    cAnnotatedSequence& as = *its;
+    int32_t sequence_length = static_cast<int32_t>(as.get_sequence_length());
+    
+    // For every feature
+    for (cSequenceFeatureList::iterator itf = as.m_features.begin(); itf != as.m_features.end(); ) {
+      cSequenceFeature &gf =  *itf->get();
+      
+      // For every location
+      list<cLocation> new_locations;
+      bool only_valid_locations_found = true;
+      bool locations_changed = false;
+      
+      for (cFeatureLocationList::iterator itl = gf.m_locations.begin(); itl != gf.m_locations.end(); itl++ ) {
+        cFeatureLocation &gl =  *itl;
+        
+        // We need to check that the feature is not outside of the reference
+        if (as.m_is_circular) {
+          if ((gl.get_start_1() > sequence_length) && (gl.get_end_1() > sequence_length) ) {
+            WARN("Invalid sequence feature ignored. Feature of type [" + gf.SafeGet("type") + "] with name [" + gf.SafeGet("name") + "] on sequence [" + as.m_seq_id + "] has coordinates (" + to_string(gl.get_start_1()) + "-" + to_string(gl.get_end_1()) + ") that are both outside of the circular sequence bounds (1-" + to_string(as.m_length) + ").");
+            only_valid_locations_found = false;
+            break;
+          }
+        } else {
+          if ((gl.get_start_1() > sequence_length) || (gl.get_end_1() > sequence_length) ) {
+            WARN("Invalid sequence feature ignored. Feature of type [" + gf.SafeGet("type") + "] with name [" + gf.SafeGet("name") + "] on sequence [" + as.m_seq_id + "] has coordinates (" + to_string(gl.get_start_1()) + "-" + to_string(gl.get_end_1()) + ") that extend outside of the sequence bounds on a reference that is not marked as circular (1-" + to_string(sequence_length) + ").");
+            only_valid_locations_found = false;
+            break;
+          }
+        }
+        
+        // Split locations that extend through the end of a circular chromosome
+        // Also - if the topology of the reference is unknown, infer that it is circular if these features exist?
+        if (gl.get_start_1() > gl.get_end_1()) {
+          
+          if (as.m_is_circular) {
+            // extends around origin, add as two features
+            // recall that end_1 < start_1
+            
+            list<cLocation> new_sub_locs;
+            
+            new_sub_locs.push_back(
+                                   cLocation(
+                                             1,
+                                             gl.get_end_1(),
+                                             gl.get_strand(),
+                                             false,
+                                             gl.end_is_indeterminate()
+                                             )
+                                   );
+            
+            
+            new_sub_locs.push_back(
+                                   cLocation(
+                                             gl.get_start_1(),
+                                             as.m_length,
+                                             gl.get_strand(),
+                                             gl.start_is_indeterminate(),
+                                             false
+                                             )
+                                   );
+            
+            // reverse order if on the top strand!
+            if (gl.get_strand() == 1) new_sub_locs.reverse();
+            
+            new_locations.insert( new_locations.end(), new_sub_locs.begin(), new_sub_locs.end() );
+            locations_changed = true;
+            continue;
+            
+          } else {
+            // Not circular
+            WARN("Invalid sequence feature ignored. Feature of type [" + gf.SafeGet("type") + "] with name [" + gf.SafeGet("name") + "] on sequence [" + as.m_seq_id + "]: Start coordinate (" + to_string<int32_t>(gl.get_start_1()) + ") must be less than or equal to end coordinate (" + to_string<int32_t>(gl.get_end_1()) + ") for feature that is not on a circular sequence.")
+            only_valid_locations_found = false;
+            break;
+          }
+          
+        }
+        
+        
+        // If we get here, we are just keeping the current location
+        new_locations.push_back(gl);
+      }
+      
+      // Deal with corrections/validating this feature's locations
+      
+      // Invalid locations found
+      //   Erase feature and skip iterating to next feature
+      if (!only_valid_locations_found) {
+        itf = as.m_features.erase(itf);
+        continue;
+      }
+      
+      // Locations changed....
+      if (locations_changed) {
+        // Add back all locations so they get proper numbering and pointers back to the feature
+        gf.m_locations.clear();
+        for (list<cLocation>::iterator itl=new_locations.begin(); itl!=new_locations.end(); itl++) {
+          gf.add_location(*itl);
+        }
+      }
+      
+      // Only increment if we get to here to allow for erasing the one we are on
+      itf++;
+      
+    }
+  }
+}
 
   // Loads ISEScan CSV results file and adds mobile_element features named by family
   // existing IS elements are removed
@@ -1398,11 +1513,8 @@ namespace breseq {
         }
       }
       
-      list<cLocation> locs = ((*this)[seq_id]).SafeCreateFeatureLocations(feature, start, end, strand, start_is_indeterminate, end_is_indeterminate);
+      feature.add_location(cLocation(start, end, strand, start_is_indeterminate, end_is_indeterminate));
       
-      for(list<cLocation>::iterator it=locs.begin(); it!=locs.end(); it++) {
-        feature.add_location(*it);
-      }
       
       // If this is a landmark "region" corresponding to the entire chromosome grab extra information
       if ((feature["type"] == "region") && (feature.m_locations.front().get_start_1() == 1) && (feature.m_locations.front().get_end_1() == (*this)[seq_id].m_length)) {
@@ -1512,7 +1624,6 @@ void cReferenceSequences::WriteGFF( const string &file_name, bool no_sequence) {
       }
       string attributes_column = join(attributes, ";");
 
-      int32_t location_index = 1;
       for (cFeatureLocationList::const_iterator it = feat.m_locations.begin(); it != feat.m_locations.end(); it++ ) {
         
         const cFeatureLocation& region = *it;
@@ -1534,7 +1645,6 @@ void cReferenceSequences::WriteGFF( const string &file_name, bool no_sequence) {
           columns[ATTRIBUTES] += "end";
         
         out << join(columns, "\t") << endl;
-        location_index++;
       }
 
 
@@ -1940,111 +2050,20 @@ list<cLocation> cAnnotatedSequence::ParseGenBankCoords(const cSequenceFeature& i
       tokens.back().replace(0,1,"");
     }
     
-    list<cLocation> new_locs = this->SafeCreateFeatureLocations(
-                                                         in_feature,
-                                                         atoi(tokens.front().c_str()),
-                                                         atoi(tokens.back().c_str()),
-                                                         in_strand,
-                                                         start_is_indeterminate,
-                                                         end_is_indeterminate,
-                                                         safe_create_feature_locations
-                                                         );
-    locs.insert(locs.end(), new_locs.begin(), new_locs.end());
+    cLocation new_loc(
+                      atoi(tokens.front().c_str()),
+                      atoi(tokens.back().c_str()),
+                      in_strand,
+                      start_is_indeterminate,
+                      end_is_indeterminate
+                      );
+    locs.push_back(new_loc);
   }
   
   //ASSERT(loc.get_start_1() <= loc.get_end_1(), "Start coordinate is greater than end coordinate. Error parsing corrdinates:\n" + s);
   
   return locs;
 }
-
-// By "safe" we mean for circular genomes with problem features that need to be split
-// 1) Considers locations that wrap around origin (when start > end)
-// 2) Considers locations that extend past the end of the numbering wrapping around
-list<cLocation> cAnnotatedSequence::SafeCreateFeatureLocations(
-                                                        const cSequenceFeature& in_feature,
-                                                        int32_t in_start_1,
-                                                        int32_t in_end_1,
-                                                        int8_t in_strand,
-                                                        bool in_start_is_indeterminate,
-                                                        bool in_end_is_indeterminate,
-                                                        bool safe_create_feature_locations
-  )
-{
-  // Unfortunately, we cannot count on this being initialized with information that would help with debugging
-  (void)in_feature;
-  
-  list<cLocation> locs;
-  
-  // We need to check that the feature is not entirely outside of the reference
-  if (m_is_circular) {
-    if ((in_start_1 > this->m_length) && (in_end_1 > this->m_length) ) {
-      ASSERT(!safe_create_feature_locations, "Error in reference file. Feature of type [" + in_feature.SafeGet("type") + "] named [" + in_feature.SafeGet("name") + "] on sequence [" + this->m_seq_id + "] has coordinates (" + to_string(in_start_1) + "-" + to_string(in_end_1) + ") that are both outside of the circular sequence bounds (1-" + to_string(this->m_length) + ").");
-    }
-  } else {
-    if ((in_start_1 > this->m_length) || (in_end_1 > this->m_length) ) {
-      ASSERT(!safe_create_feature_locations, "Error in reference file. Feature of type [" + in_feature.SafeGet("type") + "] named [" + in_feature.SafeGet("name") + "] on sequence [" + this->m_seq_id + "] has coordinates (" + to_string(in_start_1) + "-" + to_string(in_end_1) + ") that are outside of the sequence bounds (1-" + to_string(this->m_length) + ").");
-    }
-  }
-  
-    
-  if (m_is_circular && safe_create_feature_locations) {
-    in_end_1 %= this->m_length;
-    in_start_1 %= this->m_length;
-    if (in_end_1 == 0) in_end_1 = this->m_length;
-    if (in_start_1 == 0) in_start_1 = this->m_length;
-
-  }
-  
-  // Normal case
-  if (in_start_1 <= in_end_1) {
-  
-    locs.push_back(
-                   cLocation(
-                             in_start_1,
-                             in_end_1,
-                             in_strand,
-                             &in_feature,
-                             in_start_is_indeterminate,
-                             in_end_is_indeterminate
-                             )
-                   );
-
-    
-  } else if (m_is_circular) {
-    // extends around origin, add as two features
-    // recall that end_1 < start_1
-    
-    locs.push_back(
-                   cLocation(
-                             1,
-                             in_end_1,
-                             in_strand,
-                             &in_feature,
-                             false,
-                             in_end_is_indeterminate
-                             )
-                   );
-    
-    locs.push_back(
-                   cLocation(
-                             in_start_1,
-                             this->m_length,
-                             in_strand,
-                             &in_feature,
-                             in_start_is_indeterminate,
-                             false
-                            )
-                   );
-    
-    // reverse if on the top strand!
-    if (in_strand == 1) locs.reverse();
-    
-  } else {
-    ASSERT(!safe_create_feature_locations, "Error in reference file. Feature of type [" + in_feature.SafeGet("type") + "] named [" + in_feature.SafeGet("name") + "] on sequence [" + this->m_seq_id + "]: Start coordinate (" + to_string<int32_t>(in_start_1) + ") must be less than or equal to end coordinate (" + to_string<int32_t>(in_end_1) + ") for feature that is not on a circular sequence.")
-  }
-  return locs;
-}
-
   
 // Examples of lines
 //
@@ -2180,6 +2199,7 @@ void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAn
         } else {
           locs = s.ReadGenBankCoords(*current_feature, coord_s, in, true);
         }
+        
         for(list<cLocation>::iterator it=locs.begin(); it!=locs.end(); it++) {
           current_feature->add_location(*it);
         }

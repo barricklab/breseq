@@ -143,6 +143,7 @@ class cAnnotatedSequence;
     
       static void simulate_tiled(const cAnnotatedSequence& sequence,
                                  uint32_t read_size,
+                                 uint32_t coverage,
                                  string file_name,
                                  bool verbose);
 
