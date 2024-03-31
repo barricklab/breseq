@@ -1004,6 +1004,17 @@ void cReferenceSequences::VerifyFeatureLocations()
           }
         }
         
+        // This wraps around coords that are outside (past the end of) the sequence.
+        // It will make the start greater than the end, so it gets handled in the next part.
+        if (as.m_is_circular) {
+          gl.set_end_1(gl.get_end_1() % as.get_sequence_length());
+          gl.set_start_1(gl.get_start_1() % as.get_sequence_length());
+
+          // Zero really means the end of the sequence
+          if (gl.get_end_1() == 0) gl.set_end_1(as.get_sequence_length());
+          if (gl.get_start_1() == 0) gl.set_start_1(as.get_sequence_length());
+         }
+        
         // Split locations that extend through the end of a circular chromosome
         // Also - if the topology of the reference is unknown, infer that it is circular if these features exist?
         if (gl.get_start_1() > gl.get_end_1()) {
@@ -1174,7 +1185,17 @@ void cReferenceSequences::VerifyFeatureLocations()
         (*new_mobile_element)["product"] = "Partial " + line_list[family_column_index] + " family IS element";
         (*new_mobile_element).flag_pseudo();
       }
-      int32_t strand = line_list[strand_column_index] == "-" ? -1 : +1;
+      
+      // Added 2024-03-31
+      // Sometimes the strand is not given! - infer from genes contained in the IS element
+      int32_t strand = 0;
+      if ( line_list[strand_column_index] == "") {
+        
+      } else {
+        strand = line_list[strand_column_index] == "-" ? -1 : +1;
+      }
+        
+      
       cLocation is_location(from_string<int32_t>(line_list[start_1_column_index]), from_string<int32_t>(line_list[end_1_column_index]), strand);
       (*new_mobile_element).add_location(is_location);
       
@@ -2677,7 +2698,7 @@ string cReferenceSequences::repeat_family_sequence(
       if(rep.get_feature()->SafeGet("name") != repeat_name)
         continue;
       
-      // We accept either seq_id:start-end or seq_id:end_start (for complement features),
+      // We accept either seq_id:start-end or seq_id:end-start (for complement features),
       // but ignore which strand was provided and use the correct strand.
       if ((rep.get_start_1() == static_cast<int32_t>(start_pos_1)) && (rep.get_end_1() == static_cast<int32_t>(end_pos_1))) {
         picked_seq = &this_seq;
@@ -2708,7 +2729,7 @@ string cReferenceSequences::repeat_family_sequence(
         
         // Stores all the sequences of this family so we can compare them and pick the most "typical".
         string adjSeq = this_seq.get_sequence_1(rep.get_start_1(), rep.get_end_1());
-        if (strand != rep.get_strand())
+        if (rep.get_strand() == -1)
           adjSeq = reverse_complement(adjSeq);
         
         int32_t this_size = rep.get_end_1() - rep.get_start_1() + 1;
@@ -2733,6 +2754,9 @@ string cReferenceSequences::repeat_family_sequence(
         region_pos = repeat_sequence_pos[max_element(repeat_sequence_count.begin(), repeat_sequence_count.end(), map_comp_second<string, uint32_t>)->first];  }
       else  {
         region_pos = repeat_size_pos[max_element(repeat_size_count.begin(), repeat_size_count.end(), map_comp_second<uint32_t, uint32_t>)->first];  }
+    }
+    if (verbose) {
+      cout << "Maximum counts for element beginning at position: " + to_string(region_pos) << endl;
     }
     
     // Loop through all reference sequences
@@ -2762,7 +2786,7 @@ string cReferenceSequences::repeat_family_sequence(
     }
   }
   
-  
+
   string repeat_seq = picked_seq->get_sequence_1(picked_rep->get_start_1(), picked_rep->get_end_1());
   if (strand != picked_rep->get_strand())
     repeat_seq = reverse_complement(repeat_seq);
@@ -2774,7 +2798,9 @@ string cReferenceSequences::repeat_family_sequence(
     *picked_sequence_feature = *picked_rep;
   
   if (verbose) {
-    cout << "Picked repeat region: " << *picked_seq_id << ":" << picked_sequence_feature->get_start_1() << "-" << picked_sequence_feature->get_end_1() << endl;
+    if (picked_sequence_feature) {
+      cout << "Picked repeat region: " << *picked_seq_id << ":" << picked_sequence_feature->get_start_1() << "-" << picked_sequence_feature->get_end_1() << endl;
+    }
     cout << "Sequence: " << repeat_seq << endl;
   }
   
