@@ -1173,6 +1173,8 @@ void cReferenceSequences::VerifyFeatureLocations()
     while (getline(infile, line)) {
       vector<string> line_list = split(chomp(line), ",");
       
+      string seq_id = line_list[seq_id_column_index];
+
       cSequenceFeaturePtr new_mobile_element(new cSequenceFeature);
       
       (*new_mobile_element)["type"] = "mobile_element";
@@ -1186,18 +1188,83 @@ void cReferenceSequences::VerifyFeatureLocations()
         (*new_mobile_element).flag_pseudo();
       }
       
-      // Added 2024-03-31
-      // Sometimes the strand is not given! - infer from genes contained in the IS element
+
+      int32_t start_1 = from_string<int32_t>(line_list[start_1_column_index]);
+      int32_t end_1 = from_string<int32_t>(line_list[end_1_column_index]);
       int32_t strand = 0;
+      
+      // Added 2024-03-31
+      // Sometimes the strand is not given, but we should be able to figure it out
+      // from any transposase genes contained in the IS element
       if ( line_list[strand_column_index] == "") {
         
-      } else {
-        strand = line_list[strand_column_index] == "-" ? -1 : +1;
-      }
+        // Iterate through features and look for those entirely within the IS element.
+        int32_t feature_in_IS_strand = 0; // We set this to -1 or +1 when we find one
+        cAnnotatedSequence& this_seq = (*this)[seq_id];
+        for (list<cSequenceFeaturePtr>::iterator it_feature = this_seq.m_features.begin(); it_feature != this_seq.m_features.end(); it_feature++) {
+          cSequenceFeature& feat = **it_feature;
+          
+          // Is this a hypothetical gene. Ignore!
+          if (to_lower(feat.SafeGet("product")).find("hypothetical") != std::string::npos) {
+            continue;
+          }
+          
+          // Is the feature completely contained in the IS element?
+          bool completely_contained = true;
+          int8_t this_feature_strand = 0;
+          for (cFeatureLocationList::iterator it_loc = feat.m_locations.begin(); it_loc != feat.m_locations.end(); it_loc++) {
+            cFeatureLocation& loc = *it_loc;
+            
+            // Coords are within? We also add 50 bp on each side b/c sometimes it can extend outside a bit...
+            if (! ((loc.get_start_1() >= start_1-50) && (loc.get_end_1() <= end_1+50)) ) {
+              completely_contained = false;
+              break;
+            }
+            
+            // Grab strand
+            if (this_feature_strand == 0) {
+              this_feature_strand = loc.get_strand();
+            } else if (this_feature_strand != loc.get_strand()) {
+              // Feature has multiple strands... ignore it!
+              completely_contained = false;
+              break;
+            }
+            
+          }
+          
+          // OK, save this strand after comparing it to any other features
+          if (completely_contained) {
+            
+            if (feature_in_IS_strand == 0) {
+              feature_in_IS_strand = this_feature_strand;
+            } else if (feature_in_IS_strand != this_feature_strand) {
+              // We found conflicting strands!!
+              feature_in_IS_strand = 0;
+              break;
+            }
+            
+          }
+        }
         
+        // Did we find a strand from a feature? Use it.
+        if (feature_in_IS_strand != 0) {
+          strand = feature_in_IS_strand;
+        }
+        
+      } else if (line_list[strand_column_index] == "-") {
+        strand = -1;
+      } else if (line_list[strand_column_index] == "+") {
+        strand = +1;
+      }
       
-      cLocation is_location(from_string<int32_t>(line_list[start_1_column_index]), from_string<int32_t>(line_list[end_1_column_index]), strand);
+      cLocation is_location(start_1, end_1, strand);
       (*new_mobile_element).add_location(is_location);
+      
+      // We have a problem, no strand could be predicted.
+      if (strand == 0) {
+        WARN("Could not determine strand of ISEScan result line:\n" + line + "\nIt will not be added to the reference sequence.");
+        continue;
+      }
       
       // transfer to GFF
       (*new_mobile_element)["phase"] = "0";
@@ -1211,7 +1278,7 @@ void cReferenceSequences::VerifyFeatureLocations()
       if ((*new_mobile_element).SafeGet("name") != "")
         (*new_mobile_element).m_gff_attributes["Name"] = make_vector<string>((*new_mobile_element)["name"]);
       
-      (*this)[line_list[seq_id_column_index]].m_features.push_back(new_mobile_element);
+      (*this)[seq_id].m_features.push_back(new_mobile_element);
     }
     
     // Do some post-processing for safety's sake
@@ -2725,6 +2792,10 @@ string cReferenceSequences::repeat_family_sequence(
         
         // Not the right family...
         if(rep.get_feature()->SafeGet("name") != repeat_name)
+          continue;
+        
+        // We probably don't want pseudoelements...
+        if (rep.get_feature()->m_pseudo)
           continue;
         
         // Stores all the sequences of this family so we can compare them and pick the most "typical".
