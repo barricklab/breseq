@@ -1,4 +1,4 @@
-"type",,"seq_id","position","mutation","gd","gd_1","gd_2","annotation","gene","description"
+"type","seq_id","position","mutation","gd","gd_1","gd_2","annotation","gene","description"
 "DEL","NC_001416-0","139","Δ1 bp","?","1","1","intergenic (–/-52)","– / → nu1","–/DNA packaging protein"
 "INS","NC_001416-1","4566","​+G","1","1","1","intergenic (+139/-10)","L → / → K","tail component/tail component"
 "SNP","NC_001416-2","1261","A→G","1","1","1","K338E (AAA→GAA)|noncoding (107/621 nt)","orf-401 →|orf206b ←","Tail fiber protein|"

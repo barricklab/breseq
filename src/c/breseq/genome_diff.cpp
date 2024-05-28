@@ -4283,7 +4283,7 @@ void cGenomeDiff::write_table_file(
 
   // Output header line
   ofstream output_file(output_file_name.c_str());
-  output_file << quote << "type" << quote << separator;
+  output_file << quote << "type" << quote;
   for (vector<string>::iterator header_it = header_list.begin(); header_it != header_list.end(); header_it++)  {
     output_file << separator << quote << *header_it << quote;
   }
