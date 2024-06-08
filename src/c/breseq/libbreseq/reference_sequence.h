@@ -1126,34 +1126,18 @@ public:
     // This is a duplicate of a function in pileup.h for when
     // we don't have a BAM available.
     void parse_region(const string& region, uint32_t& target_id, uint32_t& start_pos_1, uint32_t& end_pos_1)
-    {      
-      vector<string> split_region = split(region, ":");
-      // Must check first split for second to not potentially crash
-      ASSERT(split_region.size() == 2, "Unrecognized region: " + region + "\nExpected format [seq_id:start-end]");
-      vector<string> split_positions = split(split_region[1], "-");
-      ASSERT(split_positions.size() == 2, "Unrecognized region: " + region + "\nExpected format [seq_id:start-end]");
-
-      target_id = seq_id_to_index(split_region[0]);
-      start_pos_1 = from_string<uint32_t>(split_positions[0]);
-      end_pos_1 = from_string<uint32_t>(split_positions[1]);
-    }
-
-    // This parses to a string for target
-    static void parse_region(const string& region, string& seq_id, uint32_t& start_pos_1, uint32_t& end_pos_1)
     {
-      vector<string> split_region = split(region, ":");
-      // Must check first split for second to not potentially crash
-      ASSERT(split_region.size() == 2, "Unrecognized region: " + region + "\nExpected format [seq_id:start-end]");
-      vector<string> split_positions = split(split_region[1], "-");
-      ASSERT(split_positions.size() == 2, "Unrecognized region: " + region + "\nExpected format [seq_id:start-end]");
-      
-      seq_id = split_region[0];
-      start_pos_1 = from_string<uint32_t>(split_positions[0]);
-      end_pos_1 = from_string<uint32_t>(split_positions[1]);
+      string target_name;
+      parse_region(region, target_name, start_pos_1, end_pos_1);
+      target_id = seq_id_to_index(target_name);
+    }
+    
+    static void parse_region(const string& region, string& target_name, uint32_t& start_pos_1, uint32_t& end_pos_1)
+    {
+      breseq::parse_region(region, target_name, start_pos_1, end_pos_1);
     }
     
     // normalize a region description
-    // * remove commas from numbers
     // * flip start and end so start is smaller (returning bool whether this was done)
     static bool normalize_region(string& region) {
       region = substitute(region, ",", "");
@@ -1162,7 +1146,7 @@ public:
       uint32_t start_pos_1;
       uint32_t end_pos_1;
       
-      parse_region(region, seq_id, start_pos_1, end_pos_1);
+      cReferenceSequences::parse_region(region, seq_id, start_pos_1, end_pos_1);
       bool reverse = false;
       
       if (start_pos_1>end_pos_1) {

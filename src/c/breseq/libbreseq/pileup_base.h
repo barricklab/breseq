@@ -161,68 +161,16 @@ class pileup_base {
     }
   
   
-    //! Special parsing for seq_id:start.insert_start-end.insert_end form.
     void parse_region(const string& region, uint32_t& target_id, uint32_t& start_pos_1, uint32_t& end_pos_1, uint32_t& insert_start, uint32_t& insert_end)
     {
-      insert_start = 0;
-      insert_end = 0;
-            
-      size_t start = 0;
-      size_t end = 0;
-      
-      end = region.find_first_of(':', start);
-      assert(end != string::npos);
-      string target_name = region.substr(start, end - start);
-      start = end+1;
-      
-      string start_pos_1_string;
-      string insert_start_string("0");
-      end = region.find_first_of('.', start);
-      if (end == string::npos) {
-        end = region.find_first_of('-', start);
-        assert(end != string::npos);
-        start_pos_1_string = region.substr(start, end - start);
-        start = end+1;
-      }
-      else
-      {
-        start_pos_1_string = region.substr(start, end - start);
-        start = end+1;
-        end = region.find_first_of('-', start);
-        assert(end != string::npos);
-        insert_start_string = region.substr(start, end - start);
-        start = end+1;
-      }
+      string target_name;
+      breseq::parse_region(region, target_name, start_pos_1, end_pos_1, insert_start, insert_end);
 
-      string end_pos_1_string;
-      string insert_end_string("0");
-      end = region.find_first_of('.', start);
-      if (end == string::npos) {
-        end = string::npos;
-        end_pos_1_string = region.substr(start, end - start);
-        start = end+1;
-      }
-      else
-      {
-        end_pos_1_string = region.substr(start, end - start);
-        start = end+1;
-        end = string::npos;
-        insert_end_string = region.substr(start, end - start);
-        start = end+1;
-      }
-
-      // Save target id
+      // Convert values to target ids and integers
       int32_t temp_target_id = seq_id_to_target_id(target_name);
       // Target was not found.
       ASSERT(temp_target_id != -1, "Target seq id was not found for region [" + target_name + "] using FASTA file [" + m_fasta_file_name + "].\n" + "Valid seq ids: " + join(this->valid_seq_ids(), ", ") );
       target_id = static_cast<uint32_t>(temp_target_id);
-      
-      //
-      start_pos_1 = from_string<uint32_t>(start_pos_1_string);
-      end_pos_1 = from_string<uint32_t>(end_pos_1_string);
-      
-      insert_start = from_string<uint32_t>(insert_start_string);
-      insert_end = from_string<uint32_t>(insert_end_string);
     }
   
     void parse_region(const string& region, uint32_t& target_id, uint32_t& start_pos_1, uint32_t& end_pos_1)

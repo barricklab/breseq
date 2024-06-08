@@ -1424,6 +1424,84 @@ template<uint32_t nth_place> double roundp(double value) {
   return floor(value * nth_place + 0.5f) / nth_place;
 }
 
+//! Most generic form of these functions used by both cReferenceSequence and pileup_base
+//!
+//! Handles complete parsing for seq_id:start.insert_start-end.insert_end form.
+//!
+//! This function also deals with some problem cases:
+//! * Removes commas from start and end (but not seq_id)
+//! * If there is only a start and no end, sets end to start
+//! * Substitutes different types of dashes to hyphens
+
+inline void parse_region(const string& region, string& target_name, uint32_t& start_pos_1, uint32_t& end_pos_1, uint32_t& insert_start, uint32_t& insert_end)
+{
+  insert_start = 0;
+  insert_end = 0;
+        
+  size_t start = 0;
+  size_t end = 0;
+  
+  string start_pos_1_string;
+  string insert_start_string("0");
+  string end_pos_1_string;
+  string insert_end_string("0");
+  
+  // Split on colon
+  vector<string> colon_split_list = split(region, ":");
+  ASSERT(colon_split_list.size() == 2, "Expected exactly one colon in region string:" + region);
+  
+  // Save region
+  target_name = colon_split_list[0];
+  
+  // Fix hyphen variants and remove commas
+  colon_split_list[1] = substitute(colon_split_list[1], "–", "-");
+  colon_split_list[1] = substitute(colon_split_list[1], ",", "");
+  
+  // Split on hyphen
+  vector<string> start_end_split_list = split(colon_split_list[1], "-");
+  ASSERT(start_end_split_list.size() <= 2, "Expected no more than one hyphen in start-end portion of region string:" + region);
+
+  // We always have a start
+  {
+    // Split start on periods
+    vector<string> start_split_list = split(start_end_split_list[0], ".");
+    ASSERT(start_split_list.size() <= 2, "Expected no more than one period in start of region string:" + region);
+    
+    // Save start and insert start
+    start_pos_1_string = start_split_list[0];
+    if (start_split_list.size() == 2) insert_start_string = start_split_list[1];
+  }
+  
+  // We may or may not have an end...
+  if (start_end_split_list.size()==1) {
+    // No end, copy start!
+    end_pos_1_string = start_pos_1_string;
+    insert_end_string = insert_start_string;
+  } else {
+    // Split end on periods
+    vector<string> end_split_list = split(start_end_split_list[1], ".");
+    ASSERT(end_split_list.size() <= 2, "Expected no more than one period in end of region string:" + region);
+    
+    // Save end and insert end
+    end_pos_1_string = end_split_list[0];
+    if (end_split_list.size() == 2) insert_end_string = end_split_list[1];
+  }
+    
+  start_pos_1 = from_string<uint32_t>(start_pos_1_string);
+  end_pos_1 = from_string<uint32_t>(end_pos_1_string);
+  
+  insert_start = from_string<uint32_t>(insert_start_string);
+  insert_end = from_string<uint32_t>(insert_end_string);
+}
+
+//! Short form for when there is no extended insert_start or insert_end
+inline void parse_region(const string& region, string& target_name, uint32_t& start_pos_1, uint32_t& end_pos_1)
+{
+  uint32_t temp_insert_start, temp_insert_end;
+  parse_region(region, target_name, start_pos_1, end_pos_1, temp_insert_start, temp_insert_end);
+}
+
+
 } // breseq
 
 #endif
