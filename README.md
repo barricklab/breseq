@@ -9,6 +9,6 @@
 
 [Download _breseq_](https://github.com/barricklab/breseq/releases)
 
-[ **Users:** Please see the online _breseq_ documentation](http://barricklab.org/twiki/pub/Lab/ToolsBacterialGenomeResequencing/documentation)
+**Users**: See the [online _breseq_ documentation](https://github.com/barricklab/breseq/wiki) for installation instructions, examples of using _breseq_, and tutorials that include interpreting _breseq_ results.
 
-[ **Developers:** Please see information on the GitHub Wiki](https://github.com/barricklab/breseq/wiki)
+**Developers:** Start on the [Developer page](https://github.com/barricklab/breseq/wiki/developer) page to learn how to get set up for contributing.
