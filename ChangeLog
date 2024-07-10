@@ -1,3 +1,13 @@
+Version 0.39.0 
+  * Fixed MAJOR ERRORS in assigning mutations to promoter regions of genes (#374)
+  * We are migrating the breseq documentation to the GitHub wiki. Please check there
+    for the most updated version. The docs packaged with breseq are sunsetting.
+  * Commands like breseq BAM2COV and BAM2ALN are now more forgiving in the ways regions can be specified.
+    * You can include commas in positions, which will be removed. REL606:627,165-627,185 instead of REL606:627,165-627,185
+    * You can provide just a single position REL606:627165 instead of REL606:627165-627165
+    * Hyphen-like characters (–) are automatically converted to hyphens (-).
+  * Removed an extra comma in gdtools COMPARE table output header (#368)
+
 Version 0.38.3
   * Miscellanous bug fixes related to nonstandard reference file loading.
   * Fixed problem adding --isescan-results with Genbank input to breseq CONVERT-REFERENCE.
