@@ -14,7 +14,7 @@ L	64	L		CTG	64	3		CTC	0.0660	Rz	192	cell lysis protein	>		Rz			lambdap76		lambda
 E	66	A		GAA	66	2		GCA	0.0550	Rz	197	cell lysis protein	>		Rz			lambdap76		lambdap76			snp_nonsynonymous		0	0	A		7361	7361	7361	0	0	C	NC_001416-4		nonsynonymous	-1	gd	11		SNP
 N	74	D		AAT	74	1		GAT	0.0870	Rz	220	cell lysis protein	>		Rz			lambdap76		lambdap76			snp_nonsynonymous		0	0	A		7384	7384	7384	0	0	G	NC_001416-4		nonsynonymous	-1	gd	11		SNP
 A|R	75|2	A|L		GCG|CGA	75|2	3|2		GCT|CTA	0.1100	Rz|Rz1	225|5	cell lysis protein|Rz1 protein	>|>		Rz,Rz1			lambdap76|lambdap91		lambdap76,lambdap91			snp_synonymous|nonsynonymous		0	0	G		7389	7389	7389	0	0	T	NC_001416-4		synonymous|nonsynonymous	-1	gd	11|11		SNP
-									0.2390	Rz/bor	intergenic (+3/+29)	cell lysis protein/Bor protein precursor	>/<			bor		lambdap76/lambdap77			lambdap77		snp_intergenic		0	0	C		7629	7629	7629	0	0	T	NC_001416-4		intergenic	-1	gd			SNP
+									0.2390	Rz/bor	intergenic (+3/+29)	cell lysis protein/Bor protein precursor	>/<					lambdap76/lambdap77					snp_intergenic		0	0	C		7629	7629	7629	0	0	T	NC_001416-4		intergenic	-1	gd			SNP
 V	52	V		GTT	52	3		GTC	0.2630	bor	156	Bor protein precursor	<		bor			lambdap77		lambdap77			snp_synonymous		0	0	A		7796	7796	7796	0	0	G	NC_001416-4		synonymous	-1	gd	11		SNP
 E	49	K		GAG	49	1		AAG	0.2100	bor	145	Bor protein precursor	<		bor			lambdap77		lambdap77			snp_nonsynonymous		0	0	C		7807	7807	7807	0	0	T	NC_001416-4		nonsynonymous	-1	gd	11		SNP
 G	47	G		GGA	47	3		GGG	0.2090	bor	141	Bor protein precursor	<		bor			lambdap77		lambdap77			snp_synonymous		0	0	T		7811	7811	7811	0	0	C	NC_001416-4		synonymous	-1	gd	11		SNP
@@ -43,7 +43,7 @@ N	60	D		AAC	60	1		GAC	1	lambdap78	178	putative envelope protein	<		lambdap78			l
 A	23	T		GCG	23	1		ACG	1	lambdap78	67	putative envelope protein	<		lambdap78			lambdap78		lambdap78			snp_nonsynonymous		0	0	C		8708	8708	8708	0	0	T	NC_001416-4		nonsynonymous	-1	gd	11		SNP
 K	16	R		AAG	16	2		AGG	1	lambdap78	47	putative envelope protein	<		lambdap78			lambdap78		lambdap78			snp_nonsynonymous		0	0	T		8728	8728	8728	0	0	C	NC_001416-4		nonsynonymous	-1	gd	11		SNP
 M	1	M		TTG	1	1		GTG	1	lambdap78	1	putative envelope protein	<		lambdap78			lambdap78		lambdap78			snp_synonymous		0	0	A		8774	8774	8774	0	0	C	NC_001416-4		synonymous	-1	gd	11		SNP
-									1	lambdap78/lambdap79	intergenic (-94/-69)	putative envelope protein/hypothetical protein	</>			lambdap78		lambdap78/lambdap79			lambdap78		snp_intergenic		0	0	C		8868	8868	8868	0	0	T	NC_001416-4		intergenic	-1	gd			SNP
+									1	lambdap78/lambdap79	intergenic (-94/-69)	putative envelope protein/hypothetical protein	</>			lambdap78,lambdap79		lambdap78/lambdap79			lambdap78,lambdap79		snp_intergenic		0	0	C		8868	8868	8868	0	0	T	NC_001416-4		intergenic	-1	gd			SNP
 R	47	R		AGG	47	3		AGA	1	lambdap79	141	hypothetical protein	>		lambdap79			lambdap79		lambdap79			snp_synonymous		0	0	G		9077	9077	9077	0	0	A	NC_001416-4		synonymous	-1	gd	11		SNP
 									1	lambdap79/–	intergenic (+29/–)	hypothetical protein/–	>/–					lambdap79/–					snp_intergenic		0	0	C		9172	9172	9172	0	0	T	NC_001416-4		intergenic	-1	gd			SNP
 									1	lambdap79/–	intergenic (+33/–)	hypothetical protein/–	>/–					lambdap79/–					small_indel		0	0	AC		9176	9177	9176	0	0	GT	NC_001416-4	2		-1	gd			SUB
@@ -58,7 +58,7 @@ R	47	R		AGG	47	3		AGA	1	lambdap79	141	hypothetical protein	>		lambdap79			lambda
 									0.0880	lambdap79/–	intergenic (+485/–)	hypothetical protein/–	>/–					lambdap79/–					snp_intergenic		0	0	A		9628	9628	9628	0	0	C	NC_001416-4		intergenic	-1	gd			SNP
 									0.1120	lambdap79/–	intergenic (+486/–)	hypothetical protein/–	>/–					lambdap79/–					snp_intergenic		0	0	G		9629	9629	9629	0	0	C	NC_001416-4		intergenic	-1	gd			SNP
 									0.1120	lambdap79/–	intergenic (+488/–)	hypothetical protein/–	>/–					lambdap79/–					snp_intergenic		0	0	T		9631	9631	9631	0	0	C	NC_001416-4		intergenic	-1	gd			SNP
-									1	–/nu1	intergenic (–/-52)	–/DNA packaging protein	–/>					–/lambdap01					small_indel		0	0			139	139	139	0	0	G	NC_001416-0	1		-1	gd			DEL
+									1	–/nu1	intergenic (–/-52)	–/DNA packaging protein	–/>			nu1		–/lambdap01			lambdap01		small_indel		0	0			139	139	139	0	0	G	NC_001416-0	1		-1	gd			DEL
 									1	L/K	intergenic (+139/-10)	tail component/tail component	>/>			K	0	lambdap18/lambdap19			lambdap19		small_indel		0	0	G		4566	4566	4566	0	0	C	NC_001416-1			-1	gd			INS
 E|NA	338|NA	K|NA		GAA|NA	338|NA	1|NA		AAA|NA	1	orf-401|orf206b	1012|noncoding (107/621 nt)	Tail fiber protein|	>|<		orf-401,orf206b			lambdap27|lambdap90_made_noncoding		lambdap27,lambdap90_made_noncoding			snp_nonsynonymous|noncoding		0	0	G		1261	1261	1261	0	0	A	NC_001416-2		nonsynonymous|noncoding	-1	gd	11|NA		SNP
 									1	orf-401	coding (1186/1206 nt)	Tail fiber protein	>		orf-401		0	lambdap27		lambdap27			small_indel		0	0	C		1435	1435	1435	0	0	C	NC_001416-2			-1	gd			INS
@@ -71,7 +71,7 @@ L	64	L		CTG	64	3		CTC	0.0660	Rz	192	cell lysis protein	>		Rz			lambdap76		lambda
 E	66	A		GAA	66	2		GCA	0.0550	Rz	197	cell lysis protein	>		Rz			lambdap76		lambdap76			snp_nonsynonymous		0	0	A		7361	7361	7361	0	0	C	NC_001416-4		nonsynonymous	-1	gd	11		SNP
 N	74	D		AAT	74	1		GAT	0.0870	Rz	220	cell lysis protein	>		Rz			lambdap76		lambdap76			snp_nonsynonymous		0	0	A		7384	7384	7384	0	0	G	NC_001416-4		nonsynonymous	-1	gd	11		SNP
 A|R	75|2	A|L		GCG|CGA	75|2	3|2		GCT|CTA	0.1100	Rz|Rz1	225|5	cell lysis protein|Rz1 protein	>|>		Rz,Rz1			lambdap76|lambdap91		lambdap76,lambdap91			snp_synonymous|nonsynonymous		0	0	G		7389	7389	7389	0	0	T	NC_001416-4		synonymous|nonsynonymous	-1	gd	11|11		SNP
-									0.2390	Rz/bor	intergenic (+3/+29)	cell lysis protein/Bor protein precursor	>/<			bor		lambdap76/lambdap77			lambdap77		snp_intergenic		0	0	C		7629	7629	7629	0	0	T	NC_001416-4		intergenic	-1	gd			SNP
+									0.2390	Rz/bor	intergenic (+3/+29)	cell lysis protein/Bor protein precursor	>/<					lambdap76/lambdap77					snp_intergenic		0	0	C		7629	7629	7629	0	0	T	NC_001416-4		intergenic	-1	gd			SNP
 V	52	V		GTT	52	3		GTC	0.2630	bor	156	Bor protein precursor	<		bor			lambdap77		lambdap77			snp_synonymous		0	0	A		7796	7796	7796	0	0	G	NC_001416-4		synonymous	-1	gd	11		SNP
 E	49	K		GAG	49	1		AAG	0.2100	bor	145	Bor protein precursor	<		bor			lambdap77		lambdap77			snp_nonsynonymous		0	0	C		7807	7807	7807	0	0	T	NC_001416-4		nonsynonymous	-1	gd	11		SNP
 G	47	G		GGA	47	3		GGG	0.2090	bor	141	Bor protein precursor	<		bor			lambdap77		lambdap77			snp_synonymous		0	0	T		7811	7811	7811	0	0	C	NC_001416-4		synonymous	-1	gd	11		SNP
@@ -90,7 +90,7 @@ A	11	A		GCA	11	3		GCC	0.0660	bor	33	Bor protein precursor	<		bor			lambdap77		la
 									1	bor/lambdap78	intergenic (-233/+57)	Bor protein precursor/putative envelope protein	</<					lambdap77/lambdap78					snp_intergenic		0	0	T		8184	8184	8184	0	0	C	NC_001416-4		intergenic	-1	gd			SNP
 									1	bor/lambdap78	intergenic (-240/+50)	Bor protein precursor/putative envelope protein	</<					lambdap77/lambdap78					snp_intergenic		0	0	T		8191	8191	8191	0	0	C	NC_001416-4		intergenic	-1	gd			SNP
 M	1	M		TTG	1	1		GTG	1	lambdap78	1	putative envelope protein	<		lambdap78			lambdap78		lambdap78			snp_synonymous		0	0	A		8774	8774	8774	0	0	C	NC_001416-4		synonymous	-1	gd	11		SNP
-									1	lambdap78/lambdap79	intergenic (-94/-69)	putative envelope protein/hypothetical protein	</>			lambdap78		lambdap78/lambdap79			lambdap78		snp_intergenic		0	0	C		8868	8868	8868	0	0	T	NC_001416-4		intergenic	-1	gd			SNP
+									1	lambdap78/lambdap79	intergenic (-94/-69)	putative envelope protein/hypothetical protein	</>			lambdap78,lambdap79		lambdap78/lambdap79			lambdap78,lambdap79		snp_intergenic		0	0	C		8868	8868	8868	0	0	T	NC_001416-4		intergenic	-1	gd			SNP
 R	47	R		AGG	47	3		AGA	1	lambdap79	141	hypothetical protein	>		lambdap79			lambdap79		lambdap79			snp_synonymous		0	0	G		9077	9077	9077	0	0	A	NC_001416-4		synonymous	-1	gd	11		SNP
 									1	lambdap79/–	intergenic (+29/–)	hypothetical protein/–	>/–					lambdap79/–					snp_intergenic		0	0	C		9172	9172	9172	0	0	T	NC_001416-4		intergenic	-1	gd			SNP
 									1	lambdap79/–	intergenic (+33/–)	hypothetical protein/–	>/–				0	lambdap79/–					small_indel		0	0	AC		9176	9176	9176	0	0	G	NC_001416-4			-1	gd			INS
@@ -105,7 +105,7 @@ R	47	R		AGG	47	3		AGA	1	lambdap79	141	hypothetical protein	>		lambdap79			lambda
 									0.0880	lambdap79/–	intergenic (+485/–)	hypothetical protein/–	>/–					lambdap79/–					snp_intergenic		0	0	A		9628	9628	9628	0	0	C	NC_001416-4		intergenic	-1	gd			SNP
 									0.1120	lambdap79/–	intergenic (+486/–)	hypothetical protein/–	>/–					lambdap79/–					snp_intergenic		0	0	G		9629	9629	9629	0	0	C	NC_001416-4		intergenic	-1	gd			SNP
 									0.1120	lambdap79/–	intergenic (+488/–)	hypothetical protein/–	>/–					lambdap79/–					snp_intergenic		0	0	T		9631	9631	9631	0	0	C	NC_001416-4		intergenic	-1	gd			SNP
-									1	–/nu1	intergenic (–/-52)	–/DNA packaging protein	–/>					–/lambdap01					small_indel		0	0			139	139	139	0	0	G	NC_001416-0	1		-1	gd			DEL
+									1	–/nu1	intergenic (–/-52)	–/DNA packaging protein	–/>			nu1		–/lambdap01			lambdap01		small_indel		0	0			139	139	139	0	0	G	NC_001416-0	1		-1	gd			DEL
 									1	L/K	intergenic (+139/-10)	tail component/tail component	>/>			K	0	lambdap18/lambdap19			lambdap19		small_indel		0	0	G		4566	4566	4566	0	0	C	NC_001416-1			-1	gd			INS
 E|NA	338|NA	K|NA		GAA|NA	338|NA	1|NA		AAA|NA	1	orf-401|orf206b	1012|noncoding (107/621 nt)	Tail fiber protein|	>|<		orf-401,orf206b			lambdap27|lambdap90_made_noncoding		lambdap27,lambdap90_made_noncoding			snp_nonsynonymous|noncoding		0	0	G		1261	1261	1261	0	0	A	NC_001416-2		nonsynonymous|noncoding	-1	gd	11|NA		SNP
 									1	orf-401	coding (1186/1206 nt)	Tail fiber protein	>		orf-401		0	lambdap27		lambdap27			small_indel		0	0	C		1435	1435	1435	0	0	C	NC_001416-2			-1	gd			INS
@@ -129,7 +129,7 @@ A	11	A		GCA	11	3		GCC	0.0660	bor	33	Bor protein precursor	<		bor			lambdap77		la
 									1	bor/lambdap78	intergenic (-233/+57)	Bor protein precursor/putative envelope protein	</<					lambdap77/lambdap78					snp_intergenic		0	0	T		8184	8184	8184	0	0	C	NC_001416-4		intergenic	-1	gd			SNP
 									1	bor/lambdap78	intergenic (-240/+50)	Bor protein precursor/putative envelope protein	</<					lambdap77/lambdap78					snp_intergenic		0	0	T		8191	8191	8191	0	0	C	NC_001416-4		intergenic	-1	gd			SNP
 M	1	M		TTG	1	1		GTG	1	lambdap78	1	putative envelope protein	<		lambdap78			lambdap78		lambdap78			snp_synonymous		0	0	A		8774	8774	8774	0	0	C	NC_001416-4		synonymous	-1	gd	11		SNP
-									1	lambdap78/lambdap79	intergenic (-94/-69)	putative envelope protein/hypothetical protein	</>			lambdap78		lambdap78/lambdap79			lambdap78		snp_intergenic		0	0	C		8868	8868	8868	0	0	T	NC_001416-4		intergenic	-1	gd			SNP
+									1	lambdap78/lambdap79	intergenic (-94/-69)	putative envelope protein/hypothetical protein	</>			lambdap78,lambdap79		lambdap78/lambdap79			lambdap78,lambdap79		snp_intergenic		0	0	C		8868	8868	8868	0	0	T	NC_001416-4		intergenic	-1	gd			SNP
 R	47	R		AGG	47	3		AGA	1	lambdap79	141	hypothetical protein	>		lambdap79			lambdap79		lambdap79			snp_synonymous		0	0	G		9077	9077	9077	0	0	A	NC_001416-4		synonymous	-1	gd	11		SNP
 									1	lambdap79/–	intergenic (+29/–)	hypothetical protein/–	>/–					lambdap79/–					snp_intergenic		0	0	C		9172	9172	9172	0	0	T	NC_001416-4		intergenic	-1	gd			SNP
 									1	lambdap79/–	intergenic (+33/–)	hypothetical protein/–	>/–				0	lambdap79/–					small_indel		0	0	AC		9176	9176	9176	0	0	G	NC_001416-4			-1	gd			INS

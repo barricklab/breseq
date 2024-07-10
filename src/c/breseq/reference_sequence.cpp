@@ -3515,46 +3515,10 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
     if (next_gene_loc) next_gene = (cGeneFeature)*(next_gene_loc->get_feature());
     
     // --------------  Begin "genes_promoter" field
-
-    
-    /* code for assigning only to closest one
-    if (mut.is_mutation()) {
-      // Decide on promoter mutations
-      int32_t prev_gene_distance(numeric_limits<int32_t>::max()), next_gene_distance(numeric_limits<int32_t>::max());
-      if (prev_gene.name.size() > 0) {
-        int32_t start_coord = mut.get_reference_coordinate_start().get_position();
-        for (cFeatureLocationList::iterator it = prev_gene.m_locations.begin(); it != prev_gene.m_locations.end(); it++) {
-          if (it->get_strand() == -1) {
-            int32_t dist = start - it->get_end_1();
-            prev_gene_distance = min(dist, prev_gene_distance);
-          }
-        }
-      }
-      if (next_gene.name.size() > 0) {
-        int32_t start_coord = mut.get_reference_coordinate_start().get_position();
-        for (cFeatureLocationList::iterator it = prev_gene.m_locations.begin(); it != prev_gene.m_locations.end(); it++) {
-          if (it->get_strand() == +1) {
-            int32_t dist = it->get_start_1() - end;
-            next_gene_distance = min(dist, next_gene_distance);
-          }
-        }
-      }
-      
-      
-      // ties go to prev_gene!
-      if ((prev_gene_distance <= promoter_distance) && (prev_gene_distance <= next_gene_distance)) {
-        mut["genes_promoter"] = prev_gene.name;
-        mut["locus_tags_promoter"] = prev_gene.get_locus_tag();
-
-      } else if (next_gene_distance <= promoter_distance) {
-        mut["genes_promoter"] = next_gene.name;
-        mut["locus_tags_promoter"] = next_gene.get_locus_tag();
-
-      }
-    }
-    */
     
     // Code for assigning to multiple promoters
+    //   * At most it will be the two closest genes on each side of the mutation
+    
     if (mut.is_mutation()) {
       int32_t prev_gene_distance(numeric_limits<int32_t>::max()), next_gene_distance(numeric_limits<int32_t>::max());
       if (prev_gene.name.size() > 0) {
@@ -3568,7 +3532,7 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
       }
       if (next_gene.name.size() > 0) {
         int32_t start_coord = mut.get_reference_coordinate_start().get_position();
-        for (cFeatureLocationList::iterator it = prev_gene.m_locations.begin(); it != prev_gene.m_locations.end(); it++) {
+        for (cFeatureLocationList::iterator it = next_gene.m_locations.begin(); it != next_gene.m_locations.end(); it++) {
           if (it->get_strand() == +1) {
             int32_t dist = it->get_start_1() - end;
             next_gene_distance = min(dist, next_gene_distance);
@@ -3579,16 +3543,14 @@ void cReferenceSequences::annotate_1_mutation(cDiffEntry& mut, uint32_t start, u
       vector<string> genes_promoter_list;
       vector<string> locus_tags_promoter_list;
 
-      if ((prev_gene_distance <= promoter_distance)) {
-        
+      if (prev_gene_distance <= promoter_distance) {
         genes_promoter_list.push_back(prev_gene.name);
         locus_tags_promoter_list.push_back(prev_gene.get_locus_tag());
-        
-      } else if (next_gene_distance <= promoter_distance) {
-        
+      }
+      
+      if (next_gene_distance <= promoter_distance) {
         genes_promoter_list.push_back(next_gene.name);
         locus_tags_promoter_list.push_back(next_gene.get_locus_tag());
-        
       }
       
       mut["genes_promoter"] = join(genes_promoter_list, ",");
