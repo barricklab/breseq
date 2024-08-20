@@ -3778,6 +3778,10 @@ void cReferenceSequences::categorize_1_mutation(cDiffEntry& mut, int32_t large_s
     
     mut["mutation_category"] = "inversion";
     
+  } else if (mut._type == INT) {
+    
+    mut["mutation_category"] = "integration";
+    
   } else {
     ERROR("Could not classify mutation:\n" + mut.as_string());
   }
@@ -3833,6 +3837,7 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
       case DEL:
       case INS:
       case CON:
+      case INT:
       case MOB:
       case AMP:
       case INV: {
@@ -4465,6 +4470,11 @@ void print_CIGAR_pieces(const string& ref_seq, const string& read_seq, const vec
       cout << "ref :: " << "." << endl;
       read_seq_index += len;
     }
+    else if (op == 'H')
+    {
+      cout << "read:: " << "" << endl;
+      cout << "ref :: " << "." << endl;
+    }
     else
     {
       ERROR("Unknown operation in CIGAR string: " + to_string(op));
@@ -4510,6 +4520,11 @@ uint32_t CIGAR_edit_distance(const string& ref_seq, const string& read_seq, cons
     {
       read_seq_index += len;
       edit_distance += len;
+    }
+    else if (op == 'H')
+    {
+      read_seq_index += 0;
+      edit_distance += 0;
     }
     else
     {
@@ -4654,6 +4669,10 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
     else if (op == 'S')
     {
       read_seq_index += len;
+    }
+    else if (op == 'H')
+    {
+      read_seq_index += 0;
     }
     else
     {

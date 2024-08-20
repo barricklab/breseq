@@ -2497,7 +2497,7 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
             diff_entry_ptr_t within_within_mutation = find_by_id(within_within_mutation_id);
 
             if (within_within_mutation.get() != NULL) {
-              ASSERT(!within_within_mutation->entry_exists("within"), "Too many nested withing mutations, starting with:\n" + mut.as_string());
+              ASSERT(!within_within_mutation->entry_exists("within"), "Too many nested within mutations, starting with:\n" + mut.as_string());
             }
             
             if (current_mut._id == within_within_mutation_id) {
