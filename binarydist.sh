@@ -4,22 +4,46 @@ BRESEQVERSIONSTRING=`perl -ne 's/AC_INIT\(\[(.+?)\].+?\[(.+?)\].+/\1-\2/ && prin
 BINARYPLATFORM=`uname`
 BINARYARCH=`arch`
 ARCHFLAGS=""
+CONFIGFLAGS=""
 if [ "$BINARYPLATFORM" == "Darwin" ]; then
 	BINARYARCH="universal"
 	ARCHFLAGS="-mmacosx-version-min=10.13 -arch arm64 -arch x86_64"
+	#ARCHFLAGS="-mmacosx-version-min=10.13 -arch x86_64"
+
 	BINARYPLATFORM="MacOSX-10.13+"
+	
+	#Libz scenarios
+	
+	# 1) Using macports
+	# You need to make sure this is a +universal build of libz for this to work
+  	# $ port install libz +univsersal
+	
+	#For static zlib installed with macports
+  	#CONFIGFLAGS="--with-static-libz=/opt/local"
+  	
+	# 2) Using own install
+  	
+  	# Even better is installing it from source with the same options used here
+  	#
+  	# From within the libz source code directory:
+  	# 
+  	# $ CFLAGS="-mmacosx-version-min=10.13" ./configure --static --prefix=$HOME/local --archs="-arch arm64 -arch x86_64" 
+  	# $ make install
+  	
+  	CONFIGFLAGS="--with-static-libz=$HOME/local"
+  	
 fi
 BINARYNAME=${BINARYPLATFORM}-${BINARYARCH}
 
 
 BINARYLOCALDIR=${BRESEQVERSIONSTRING}-${BINARYNAME}
 BINARYDIR=${PWD}/${BINARYLOCALDIR}
-rm -rf ${BINARYDIR} ${BINARYDIR}.tgz
+rm -rf ${BINARYDIR} ${BINARYDIR}.tar.gz ${BINARYDIR}.tgz
 
 echo "${BINARYLOCALDIR}"
 echo "${BINARYDIR}"
-echo "./configure --without-libunwind --prefix=\"${BINARYDIR}\" --enable-static CFLAGS=\"${ARCHFLAGS} ${CFLAGS}\" CXXFLAGS=\"${ARCHFLAGS} ${CXXFLAGS}\" LDFLAGS=\"${ARCHFLAGS} ${LDFLAGS}\""
-./configure --without-libunwind --prefix="${BINARYDIR}" --enable-static CFLAGS="${ARCHFLAGS} ${CFLAGS}" CXXFLAGS="${ARCHFLAGS} ${CXXFLAGS}" LDFLAGS="${ARCHFLAGS} ${LDFLAGS}"
+echo "./configure --without-libunwind --prefix=\"${BINARYDIR}\" --disable-shared --enable-static CFLAGS=\"${ARCHFLAGS} ${CFLAGS}\" CXXFLAGS=\"${ARCHFLAGS} ${CXXFLAGS}\" LDFLAGS=\"${ARCHFLAGS} ${LDFLAGS}\" $CONFIGFLAGS"
+./configure --without-libunwind --prefix="${BINARYDIR}" CFLAGS="${ARCHFLAGS} ${CFLAGS}" CXXFLAGS="${ARCHFLAGS} ${CXXFLAGS}" LDFLAGS="${ARCHFLAGS} ${LDFLAGS}" $CONFIGFLAGS
 
 
 make clean
@@ -72,4 +96,4 @@ chmod a+x ${BINARYDIR}/bin/*
 chmod a+x ${BINARYDIR}/tests/*.sh
 
 tar -czf ${BINARYLOCALDIR}.tar.gz ${BINARYLOCALDIR}
-rm -r ${BINARYLOCALDIR}
+#rm -r ${BINARYLOCALDIR}

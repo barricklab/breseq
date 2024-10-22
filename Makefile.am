@@ -17,7 +17,10 @@
 
 ACLOCAL_AMFLAGS = -I aux_build/m4
 
+
+#$(LIBZ)
 SUBDIRS = $(LIBBAM) $(BRESEQ)
+
 
 ### Tests! -- only one test included for now in distribution.
 
