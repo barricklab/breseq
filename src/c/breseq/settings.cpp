@@ -219,13 +219,13 @@ namespace breseq
     ("num-processors,j", "Number of processors to use in multithreaded steps", 1)
     //("verbose,v","Produce verbose output",TAKES_NO_ARGUMENT, ADVANCED_OPTION) @JEB - not consistently implemented
 		("output,o", "Path to breseq output", ".")
-    ("polymorphism-prediction,p", "The sample is not clonal. Predict polymorphic (mixed) mutations. Setting this flag changes from CONSENSUS MODE (the default) to POLYMORPHISM MODE", TAKES_NO_ARGUMENT)
-    ("nanopore,x", "Set options for nanopore data. Equivalent to --consensus-reject-indel-homopolymer-length 4 --polymorphism-reject-indel-homopolymer-length 4 consensus/polymorphism --polymorphism-no-indel --bowtie2-stage1 \"" + this->bowtie2_stage2 + "\" --bowtie2-stage2 \"\". If you provide any of these options on their own, then they will override these preset options.", TAKES_NO_ARGUMENT);
-    
+    ("polymorphism-prediction,p", "The sample is not clonal. Predict polymorphic (mixed) mutations. Setting this flag changes from CONSENSUS MODE (the default) to POLYMORPHISM MODE", TAKES_NO_ARGUMENT);
+
     options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Read File Options", ADVANCED_OPTION);
     options
     ("limit-fold-coverage,l", "Analyze a subset of the input FASTQ sequencing reads with enough bases to provide this theoretical coverage of the reference sequences. A value between 60 and 120 will usually speed up the analysis with no loss in sensitivity for clonal samples. The actual coverage achieved will be somewhat less because not all reads will map (DEFAULT=OFF)", "", ADVANCED_OPTION)
+    ("nanopore-fast-basecalling,x", "Set recommended options for nanopore data processed in fast basecalling mode to rule out false-positive mutations due to high homopolymer indel error rates. Equivalent to --consensus-reject-indel-homopolymer-length 4 --polymorphism-reject-indel-homopolymer-length 4 consensus/polymorphism --polymorphism-no-indel --bowtie2-stage1 \"" + this->bowtie2_stage2 + "\" --bowtie2-stage2 \"\". If you provide any of these options on their own, then they will override these preset options. NOTE: For data processed in high-accuracy basecalling mode, this option is not necessary.", TAKES_NO_ARGUMENT)
     ("aligned-sam", "Input files are aligned SAM files, rather than FASTQ files. Junction prediction steps will be skipped. Be aware that breseq assumes: (1) Your SAM file is sorted such that all alignments for a given read are on consecutive lines. You can use 'samtools sort -n' if you are not sure that this is true for the output of your alignment program. (2) You EITHER have alignment scores as additional SAM fields with the form 'AS:i:n', where n is a positive integer and higher values indicate a better alignment OR it defaults to calculating an alignment score that is equal to the number of bases in the read minus the number of inserted bases, deleted bases, and soft clipped bases in the alignment to the reference. The default highly penalizes split-read matches (with CIGAR strings such as M35D303M65).", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("read-min-length", "Reads in the input FASTQ file that are shorter than this length will be ignored. (0 = OFF)", 18, ADVANCED_OPTION)
     ("read-max-same-base-fraction", "Reads in the input FASTQ file in which this fraction or more of the bases are the same will be ignored. (0 = OFF)", 0.9, ADVANCED_OPTION)
@@ -619,7 +619,7 @@ namespace breseq
       this->polymorphism_reject_indel_homopolymer_length = 4;
       this->polymorphism_no_indels = true;
       
-      // Just do that is normally stage 2 alignment
+      // Just do what is normally stage 2 alignment
       this->bowtie2_stage1 = this->bowtie2_stage2;
       this->bowtie2_stage2 = "";
     }
