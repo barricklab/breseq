@@ -69,16 +69,17 @@ AC_SEARCH_LIBS([pthread_create], [pthread], [], [AC_MSG_ERROR(["libpthread is re
 
 
 #### libz
-
 # 1) static linking to libz if command line option used
-STATIC_LIBZ=""
+
+with_static_libz="$WITH_STATIC_LIBZ"
+
 AC_ARG_WITH([static-libz],
     [AS_HELP_STRING([--with-static-libz=<path>],
         [Prefix to static install of libz. Directory that has lib and include within it.])],
     [AS_IF([test -f "$with_static_libz/lib/libz.a"],
         [AC_MSG_NOTICE([Static linking to libz.a located in "$with_static_libz/lib"])],
-        [AC_MSG_ERROR([Could not find libz.a library for static linking in: "$with_static_libz/lib"])])],
-	)
+        [AC_MSG_ERROR([Could not find libz.a library for static linking in: "$with_static_libz/lib"])])]
+        )
 
 
 AS_IF([test -n "$with_static_libz"], [AC_SUBST([STATIC_LIBZ_LIB], "$with_static_libz/lib/libz.a" )])

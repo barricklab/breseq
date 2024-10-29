@@ -20,7 +20,7 @@ BRESEQDATADIR= $(DESTDIR)$(datadir)/$(PACKAGE_NAME)
 BRESEQRELATIVEDATADIR= $(BIN_TO_DATA_RELATIVE_PATH)/$(PACKAGE_NAME)
 
 # If configured for static libz linking, add include path here
-AM_CPPFLAGS = -O2 -std=c++11 $(STATIC_LIBZ_INC) -I$(top_srcdir)/$(LIBBAM) -I$(top_srcdir)/$(HTSLIB) -I$(top_srcdir)/aux_build -DDATADIR=\"$(BRESEQRELATIVEDATADIR)/\"
+AM_CPPFLAGS = -O3 -std=c++11 $(STATIC_LIBZ_INC) -I$(top_srcdir)/$(LIBBAM) -I$(top_srcdir)/$(HTSLIB) -I$(top_srcdir)/aux_build -DDATADIR=\"$(BRESEQRELATIVEDATADIR)/\"
 
 noinst_LTLIBRARIES = libbreseq.la
 libbreseq_la_SOURCES = \

@@ -9,8 +9,11 @@ $ conda env create -f dev-environment.yml
 $ conda activate breseq-dev
 
 # These commands set things up so compilation can find the installed libraries
+$ conda env config vars set CFLAGS=-I${CONDA_PREFIX}/include
 $ conda env config vars set CPPFLAGS=-I${CONDA_PREFIX}/include
 $ conda env config vars set LDFLAGS=-L${CONDA_PREFIX}/lib
+$ conda env config vars set WITH_STATIC_LIBZ=${CONDA_PREFIX}
+
 $ conda activate breseq-dev
 $ conda env config vars list
 
@@ -48,28 +51,6 @@ $ make test
 Note that conda installs a compiler in this environment that will interfere with building breseq
 in this environment, so only use it for the tests or running breseq on your samples!
 
-===  Building MacOSX Universal Binaries and Documentation ===
-
-For compiling a universal binary, breseq needs a universal library (compiled for both arm64 and x86_64).
-XCode expects this to be installed in /opt/local/lib.
-
-Install MacPorts then use it to install this:
-$ sudo port install zlib +universal
-
-If you are building the documentation, you also need sphinx, latex, and some of their extras:
-$ sudo port install texlive texlive-latex-extra py311-sphinx py311-sphinxcontrib-jsmath
-(Note: installing these through conda doesn't seem to catch all the dependencies as of 2023-04-04.)
-
-Next, you will need to change your environment to find these library and header files by adding
-these lines to your shell config file (Example: ~/.zshrc)
-
-export CFLAGS="$CFLAGS -I/opt/local/include"
-export CPPFLAGS="$CPPFLAGS -I/opt/local/include"
-export LDFLAGS="$LDFLAGS -L/opt/local/lib"
-
-At this point, you can compile a release with MacOSX universal binaries.
-$./binarydist.sh
-
 === Developing with XCode ===
 
 Open the included project file: src/c/breseq.xcodeproj
@@ -98,3 +79,8 @@ You may also want to set the working directory, and will definitely want to set 
 breseq -r reference.gbk reads.fastq
 becomes
 Arguments: -r reference.gbk reads.fastq
+
+===  Building Binaries ===
+
+See the directions inside of this file on how to install zlib
+$ ./binarydist.sh
