@@ -12,23 +12,24 @@ if [ "$BINARYPLATFORM" == "Darwin" ]; then
 
 	BINARYPLATFORM="MacOSX-10.13+"
 	
-	#Libz scenarios
-	
-	# 1) Using macports
-	# You need to make sure this is a +universal build of libz for this to work
-  	# $ port install libz +univsersal
-	
-	#For static zlib installed with macports
-  	#CONFIGFLAGS="--with-static-libz=/opt/local"
-  	
-	# 2) Using own install
-  	
-  	# Even better is installing it from source with the same options used here
+	# MacOSX Libz scenarios
+	#
+	# 1) Preferred method: Using libz you compiled
   	#
   	# From within the libz source code directory:
   	# 
   	# $ CFLAGS="-mmacosx-version-min=10.13" ./configure --static --prefix=$HOME/local --archs="-arch arm64 -arch x86_64" 
   	# $ make install
+	#
+	# 2) Older alternative: Using libz installed by MacPorts
+	#
+	# You need to make sure this is a +universal build of libz for this to work!
+  	# $ port install libz +universal
+	#
+	#For static zlib installed with macports
+  	#CONFIGFLAGS="--with-static-libz=/opt/local"
+	#
+	# This is not as good b/c you can't control the -mmacosx-version-min
   	
   	CONFIGFLAGS="--with-static-libz=$HOME/local"
   	
@@ -52,11 +53,11 @@ make -j 12
 make install
 
 #Documentation and information
-make docs
-cp -r src/doc/_build/html ${BINARYDIR}/documentation
+#make docs
+#cp -r src/doc/_build/html ${BINARYDIR}/documentation
+
 cp -r LICENSE ${BINARYDIR}
 cp -r README-BINARY ${BINARYDIR}/README
-
 
 #Test
 mkdir -p ${BINARYDIR}/tests/lambda_mult_ref_read
@@ -89,11 +90,11 @@ echo "export BRESEQ_TEST_THREAD_ARG=\"-j 4\"" >> ${BINARYDIR}/tests/test.config
 echo "tests/test.sh clean tests" > ${BINARYDIR}/run_tests.sh
 echo "tests/test.sh test tests" >> ${BINARYDIR}/run_tests.sh
 
-#Fix permssions to 644 and add back executables
+#Fix permissions to 644 and add back executables
 chmod 644 $(find ${BINARYDIR} -type f) 
 chmod a+x ${BINARYDIR}/run_tests.sh
 chmod a+x ${BINARYDIR}/bin/*
 chmod a+x ${BINARYDIR}/tests/*.sh
 
 tar -czf ${BINARYLOCALDIR}.tar.gz ${BINARYLOCALDIR}
-#rm -r ${BINARYLOCALDIR}
+rm -r ${BINARYLOCALDIR}

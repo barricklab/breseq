@@ -9,13 +9,18 @@ $ conda env create -f dev-environment.yml
 $ conda activate breseq-dev
 
 # These commands set things up so compilation can find the installed libraries
-$ conda env config vars set CFLAGS=-I${CONDA_PREFIX}/include
 $ conda env config vars set CPPFLAGS=-I${CONDA_PREFIX}/include
 $ conda env config vars set LDFLAGS=-L${CONDA_PREFIX}/lib
 $ conda activate breseq-dev
 $ conda env config vars list
 
 Note that this DOES NOT install a C/C++ compiler. One must be installed outside of conda.
+
+Also, be careful on MacOSX to install the architecture matching your system!
+
+If zlib is not found, you may need to create the environment this way:
+$ CONDA_SUBDIR=osx-`arch` conda env create -f dev-environment.yml
+
 
 Building requires running the ./bootstrap script when you have a fresh version from the repository or
 whenever the autoconf configuration files have changed, for example when a new source file has been added to the project.

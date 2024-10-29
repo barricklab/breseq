@@ -17,10 +17,7 @@
 
 ACLOCAL_AMFLAGS = -I aux_build/m4
 
-
-#$(LIBZ)
 SUBDIRS = $(LIBBAM) $(BRESEQ)
-
 
 ### Tests! -- only one test included for now in distribution.
 
@@ -45,10 +42,6 @@ EXTRA_DIST = \
 	tests/data/lambda/lambda.3.gbk \
 	tests/data/lambda/lambda.4.gbk \
 	tests/data/lambda/lambda.5.gbk
-
-## tests - does not work yet.
-##TESTS_ENVIRONMENT = PROGRAMDATAPATH=$(BRESEQ) SAMTOOLSPATH=$(SAMTOOLSDIR)
-##TESTS = tests/lambda_mult_ref_read/testcmd.sh
 
 DOCSRCDIR=$(top_srcdir)/src/doc
 DOCBUILDDIR=$(abs_top_builddir)/src/doc/_build

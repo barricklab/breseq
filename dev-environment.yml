@@ -9,6 +9,7 @@ dependencies:
   - automake
   - libtool
   - m4
+ # Old for making docs
  # - sphinx
  # - sphinxcontrib-jsmath
  # - texlive-core

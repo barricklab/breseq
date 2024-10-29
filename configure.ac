@@ -188,14 +188,11 @@ case $host_os in
 esac
 
 
-#	extern/zlib-1.3.1/Makefile
 AC_CONFIG_FILES([
     extern/samtools-1.3.1/htslib-1.3.1/Makefile
     extern/samtools-1.3.1/Makefile
     src/c/breseq/Makefile
     Makefile
 ])
-
-#AC_CONFIG_SUBDIRS([extern/zlib-1.3.1])
 
 AC_OUTPUT
