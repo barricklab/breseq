@@ -930,8 +930,9 @@ void cGenomeDiff::remove_mutations_on_deleted_reference_sequence(const string& s
 diff_entry_ptr_t cGenomeDiff::find_by_id(string _id)
 {
   for (diff_entry_list_t::iterator itr_diff_entry = _entry_list.begin();
-       itr_diff_entry != _entry_list.end(); itr_diff_entry++)
-  {    
+      itr_diff_entry != _entry_list.end(); itr_diff_entry++)
+  {
+    
     if ( (*itr_diff_entry)->_id == _id)
       return *itr_diff_entry;
   }
@@ -2423,15 +2424,19 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
     // Special case -- we are nested within current_mut so coord updates are more complicated
     bool was_nested = false;
     
-    if (mut.entry_exists("within")) {
+    // This is the entry we are testing to see if we reach the current mutation
+    // that is being tested by iterating through nesting
+    diff_entry_ptr_t test_nest_entry(*itr);
+        
+    while (!was_nested && test_nest_entry->entry_exists("within")) {
       
       //  Form is mutation_id:copy_index
       //  For MOB/INS, index can be blank, which implies the mutation is within the new sequence
       //  Note that the following code is not guaranteed safe unless validate_with_reference_sequence has been called
  
-      vector<string> split_within = split(mut["within"], ":");
+      vector<string> split_within = split((*test_nest_entry)["within"], ":");
       string within_mutation_id = split_within[0];
-      
+            
       // Mutation that we are CURRENTLY SHIFTING is within the mutation that we are shifting FOR
       if (current_mut._id == within_mutation_id) {
         was_nested = true; // handle offset here
@@ -2484,32 +2489,13 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
         
         // -1 used as offset to force update of position because we are within it...
         mut.mutation_shift_position(current_mut[SEQ_ID], cReferenceCoordinate(-1, 0), cReferenceCoordinate(-1, 0), special_delta);
-      }
-
-      // Mutation is within a mutation that is within the current mutation... do not update size
-      else {
-        diff_entry_ptr_t within_mutation = find_by_id(within_mutation_id);
         
-        if (within_mutation.get() != NULL) {
-          if (within_mutation->entry_exists("within")) {
-            vector<string> split_within_within = split((*within_mutation)["within"],":");
-            string within_within_mutation_id = split_within_within[0];
-            diff_entry_ptr_t within_within_mutation = find_by_id(within_within_mutation_id);
-
-            if (within_within_mutation.get() != NULL) {
-              ASSERT(!within_within_mutation->entry_exists("within"), "Too many nested within mutations, starting with:\n" + mut.as_string());
-            }
-            
-            if (current_mut._id == within_within_mutation_id) {
-              was_nested = true; // handle offset here
-              
-              // Same as a normal mutation but we don't change the size
-              mut.mutation_shift_position(current_mut[SEQ_ID], cReferenceCoordinate(-1, 0), cReferenceCoordinate(-1, 0), delta);
-            }
-          }
-        }
       }
-      
+
+      // Recurse outward
+      if (!was_nested) {
+        test_nest_entry = find_by_id(within_mutation_id);
+      }
     }
     
     // Normal behavior -- offset mutations later in same reference sequence

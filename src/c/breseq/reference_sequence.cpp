@@ -76,9 +76,9 @@ namespace breseq {
     m_index = feature->m_locations.size()+1;
     
     if (m_index == 1) {
-      m_offset = feature->m_locations.back().get_end_1() - feature->m_locations.back().get_start_1();
-    } else {
       m_offset = 1;
+    } else {
+      m_offset = feature->m_locations.back().get_end_1() - feature->m_locations.back().get_start_1();
     }
   }
 
