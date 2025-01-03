@@ -1568,8 +1568,11 @@ void cReferenceSequences::VerifyFeatureLocations()
         feature.m_gff_attributes["Pseudo"] = make_vector<string>("true");
         feature["type"] = "CDS";
       }
-      if (feature.m_gff_attributes.count("Pseudo"))
-        feature.m_pseudo = from_string<bool>(feature.m_gff_attributes["Pseudo"][0]);
+      if (feature.m_gff_attributes.count("Pseudo")) {
+         feature.m_pseudo = from_string<bool>(feature.m_gff_attributes["Pseudo"][0]);
+       } else if (feature.m_gff_attributes.count("pseudo")) {
+         feature.m_pseudo = from_string<bool>(feature.m_gff_attributes["pseudo"][0]);
+       }
       
       // Load translation table over to the gene
       if (feature.m_gff_attributes.count("transl_table"))
