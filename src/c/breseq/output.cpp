@@ -1,3 +1,8 @@
+>>>> Problems with merging this code:
+1) Copying over of list.js fails when output directory is not set for gdtools ANNOTATE
+2) It could filter multiple/all lists on the main output page
+https://stackoverflow.com/questions/46403095/how-to-search-from-two-or-more-lists-using-list-js
+
 /*****************************************************************************
  
  AUTHORS
