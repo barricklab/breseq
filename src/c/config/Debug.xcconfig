@@ -2,3 +2,5 @@
 
 WARNING_CFLAGS=-Wall -Wextra -Wno-unused-variable -Wuninitialized
 GCC_OPTIMIZATION_LEVEL=0
+
+SAMTOOLS_ADDITIONAL_CFLAGS = --target=$(ARCHS_STANDARD)

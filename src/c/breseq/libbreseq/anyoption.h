@@ -223,7 +223,7 @@ namespace breseq {
           + '\n' + string(abs(static_cast<int32_t>(USAGE_LEFT_COLUMN_WIDTH)), ' ');
         
       // Add the default option information
-      string default_value_description;
+      string default_value_description("");
       if (has_default_value)
 			{
 				if (default_value_string.size() > 0)

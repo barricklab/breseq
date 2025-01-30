@@ -8,7 +8,7 @@ AUTHORS
 LICENSE AND COPYRIGHT
 
   Copyright (c) 2008-2010 Michigan State University
-  Copyright (c) 2011-2017 The University of Texas at Austin
+  Copyright (c) 2011-2022 The University of Texas at Austin
 
   breseq is free software; you can redistribute it and/or modify it under the  
   terms the GNU General Public License as published by the Free Software 
@@ -168,7 +168,7 @@ namespace breseq {
     
     
     // Serializes a JunctionInfo to a string
-    string junction_key()
+    string junction_key(bool include_redundant_tags = true)
     {
       ASSERT( (sides[0].strand == +1) || (sides[0].strand == -1), "side 1 strand uninitialized or wrong: must be -1/+1");
       ASSERT( (sides[1].strand == +1) || (sides[1].strand == -1), "side 2 strand uninitialized or wrong: must be -1/+1");
@@ -189,9 +189,13 @@ namespace breseq {
       values[7] = to_string(unique_read_sequence);
       values[8] = to_string(flanking_left);
       values[9] = to_string(flanking_right);
+ 
+      //@JEB: Including these can lead to identical user candidate junctions having the same key
       
-      values[10] = to_string(sides[0].redundant);
-      values[11] = to_string(sides[1].redundant);
+      if (include_redundant_tags) {
+        values[10] = to_string(sides[0].redundant);
+        values[11] = to_string(sides[1].redundant);
+      }
       
       if (user_defined) values.push_back(junction_user_defined_tag);
       
@@ -327,7 +331,14 @@ namespace breseq {
     /*! Preprocesses alignments
 		 */
 		static void preprocess_alignments(Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info);
-    static void split_alignments_on_indels(const Settings& settings, Summary& summary, tam_file& PSAM, int32_t min_indel_split_len, const alignment_list& alignments);
+    
+    static void split_alignments_on_indels(const Settings& settings,
+                                           Summary& summary,
+                                           const cReferenceSequences& ref_seq_info,
+                                           tam_file& PSAM,
+                                           int32_t min_indel_split_len,
+                                           const alignment_list& alignments
+                                           );
 
     static void split_matched_and_unmatched_alignments(
                                                        uint32_t fastq_file_index,

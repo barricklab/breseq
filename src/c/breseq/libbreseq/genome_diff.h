@@ -8,7 +8,7 @@ AUTHORS
 LICENSE AND COPYRIGHT
 
   Copyright (c) 2008-2010 Michigan State University
-  Copyright (c) 2011-2017 The University of Texas at Austin
+  Copyright (c) 2011-2022 The University of Texas at Austin
 
   breseq is free software; you can redistribute it and/or modify it under the  
   terms the GNU General Public License as published by the Free Software 
@@ -30,7 +30,8 @@ namespace breseq {
 class cReferenceSequences;
 class Settings;
 class cFeatureLocation;
-  
+class MutationTableOptions;
+
 extern const int32_t kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation;
 extern const int32_t kBreseq_large_mutation_size_cutoff;
   
@@ -127,7 +128,7 @@ public:
   cFileParseErrors valid_with_reference_sequences(cReferenceSequences& ref_seq, bool suppress_errors = false);
     
   //! Write the genome diff to a file.
-  void write(const string& filename);
+  void write(const string& filename, bool include_unprintable_fields=false);
   
   
   //!---- Adding and Removing Entries ---- !//
@@ -154,7 +155,7 @@ public:
   
   //! Remove all mutations except for deletions of the entire sequence
   void remove_mutations_on_deleted_reference_sequence(const string& seq_id, const int32_t sequence_length);
-  
+
   
   //!---- Accessing Entries ---- !//
   
@@ -162,20 +163,23 @@ public:
   
   //! Retrieve cDiffEntrys that match given type(s) 
   const diff_entry_list_t get_const_list() const { return _entry_list; }
-  diff_entry_list_t get_list(const vector<gd_entry_type>& types = vector<gd_entry_type>());
+  diff_entry_list_t get_list(const vector<gd_entry_type>& types = vector<gd_entry_type>()) const;
+  
+  // Sometimes we need to remove entries outside of the class methods... use this for that.
+  diff_entry_list_t* get_mutable_list_ptr() {return &_entry_list; };
   
   void set_list(diff_entry_list_t& in_list) {  _entry_list = in_list; }
   
   //! retrieve cDiffEntrys that match given type(s) and do not have 'no_show' set
-  diff_entry_list_t show_list(const vector<gd_entry_type>& types = vector<gd_entry_type>());
+  diff_entry_list_t show_list(const vector<gd_entry_type>& types = vector<gd_entry_type>()) const;
   
   //! Gets parent of entry (entry using it as evidence), if there is one
   // @JEB: should return a list, there can be multiple inheritance
-  diff_entry_list_t using_evidence_list(const cDiffEntry& evidence);
+  diff_entry_list_t using_evidence_list(const cDiffEntry& evidence) const;
   
   //! Returns _entry_list with matching item._evidence
   //  (That is, any entries using 'item' as evidence)
-  diff_entry_list_t in_evidence_list(const cDiffEntry& item);
+  diff_entry_list_t in_evidence_list(const cDiffEntry& item) const;
   
   diff_entry_list_t mutation_list();
   diff_entry_list_t evidence_list();
@@ -185,13 +189,13 @@ public:
   void filter_not_used_as_evidence(bool verbose=false);
   
   //! Remove items used as evidence by any mutations out of input list
-  diff_entry_list_t filter_used_as_evidence(const diff_entry_list_t& list);
+  diff_entry_list_t filter_used_as_evidence(const diff_entry_list_t& list) const;
   
   //! Helper function for returning subsets below
   bool mutation_in_entry_of_type(cDiffEntry mut, const gd_entry_type type);
-  bool mutation_unknown(cDiffEntry mut) { return mutation_in_entry_of_type(mut, UN); }
   bool mutation_deleted(cDiffEntry mut) { return mutation_in_entry_of_type(mut, DEL); }
-  
+  bool mutation_unknown_or_missing_coverage(cDiffEntry mut) { return (mutation_in_entry_of_type(mut, UN) || mutation_in_entry_of_type(mut, MC)); }
+
   //! Removes all annotation and other information, leaving only specs
   void strip_to_spec(); // strips all items
   
@@ -202,7 +206,7 @@ public:
 
   void set_intersect(cGenomeDiff& gd_ref, bool verbose=false);
   
-  void set_union(const cGenomeDiff& gd_ref, bool evidence_mode, bool phylogeny_aware, bool verbose=false);
+  void set_union(const cGenomeDiff& gd_ref, bool preserve_evidence, bool phylogeny_aware, bool verbose=false);
   
   //! Merge GenomeDiff information using gd_new as potential new info.
   void merge(const cGenomeDiff& merge_gd, bool reassign_ids=false, bool phylogeny_id_aware = false, bool verbose=false);
@@ -228,7 +232,11 @@ public:
   // Test if entry with first_id is applied before second_id using BEFORE entries
   bool applied_before_id(const string& first_id, const string& second_id);
   
+  bool still_duplicates_considering_within(const cDiffEntry& a, const cDiffEntry& b);
   void sort_and_check_for_duplicates(cFileParseErrors* file_parse_errors = NULL);
+  
+  //! Reconciles mutations that were predicted two different ways due to user evidence, leading to invalid GD
+  void reconcile_mutations_predicted_two_ways();
   
   //!---- Simulating and Applying Mutations ---- !//
   
@@ -253,8 +261,12 @@ public:
                               );
   
   //! Call to apply Genome Diff to sequences
-  void apply_to_sequences(cReferenceSequences &ref_seq_info, cReferenceSequences& new_ref_seq_info, bool verbose=false, 
-                          int32_t slop_distance=10, int32_t size_cutoff_AMP_becomes_INS_DEL_mutation =kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation);
+  void apply_to_sequences(cReferenceSequences &ref_seq_info,
+                          cReferenceSequences& new_ref_seq_info,
+                          bool verbose=false,
+                          int32_t slop_distance=10,
+                          int32_t size_cutoff_AMP_becomes_INS_DEL_mutation = kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation
+                          );
   
   //! Remove mutations that overlap MASK items in another GD
   void mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, bool verbose);
@@ -303,11 +315,23 @@ public:
 
   //! Convert GD to TSV input file
   //!
-  static void write_tsv(
-                        string& output_csv_file_name,
+  static void write_separated_values_file(
+                        string& output_file_name,
+                        const char* separator,
                         vector<cGenomeDiff>& gd_list,
+                        bool preserve_evidence,
                         bool verbose = false
                        );
+  
+  //! Write a text table
+  static void write_table_file(
+                      string& output_file_name,
+                      const char* separator,
+                      cGenomeDiff& gd,
+                      const vector<string>& gd_titles,
+                      const MutationTableOptions& mutation_table_options
+                      );
+
   
   //! Convert genome diff to GVF
   static void GD2GVF( const string& gdfile, const string& gvffile, cReferenceSequences& ref_seq_info, bool snv_only = false )
@@ -320,16 +344,17 @@ public:
   static void VCF2GD( const string& vcffile, const string& gdfile )
   { cGenomeDiff gd; gd.read_vcf(vcffile); gd.write(gdfile); }
   
-  //! Convert GD to PHYLIP input file
+  //! Convert GD to PHYLIP/FASTA input file
+  //! format must be PHYLIP or FASTA
   //! 
-  static void write_phylip(string& output_phylip_file_name, 
+  static void write_genotype_sequence_file(
+                           const string& format,
+                           const string& output_file_name,
                            cGenomeDiff& master_gd, 
                            vector<cGenomeDiff>& gd_list,
                            cReferenceSequences& ref_seq_info,
                            bool missing_as_ancestral = false,
                            bool verbose = false);
-  
-
   
   
   //! Convert GD to Circos files

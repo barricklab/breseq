@@ -1,0 +1,9 @@
+name: breseq-run
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - bowtie2=2.4.5
+  - r-base=4.0.3
+  - phylip=3.697

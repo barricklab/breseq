@@ -7,7 +7,7 @@
 ## LICENSE AND COPYRIGHT
 ##
 ## Copyright (c) 2008-2010 Michigan State University
-## Copyright (c) 2011-2017 The University of Texas at Austin
+## Copyright (c) 2011-2022 The University of Texas at Austin
 ##
 ## breseq is free software; you can redistribute it and/or modify it under the
 ## terms the GNU General Public License as published by the Free Software
@@ -39,22 +39,15 @@ pdf_output = 1;
 this.print.level = 0
 #this.print.level = 2
 
-for (e in commandArgs()) {
-  ta = strsplit(e,"=",fixed=TRUE)
-  if(! is.na(ta[[1]][2])) {
-    temp = ta[[1]][2]
- #   temp = as.numeric(temp) #Im only inputting numbers so I added this to recognize scientific notation
-    if(substr(ta[[1]][1],nchar(ta[[1]][1]),nchar(ta[[1]][1])) == "I") {
-      temp = as.integer(temp)
-    }
-    if(substr(ta[[1]][1],nchar(ta[[1]][1]),nchar(ta[[1]][1])) == "N") {
-      temp = as.numeric(temp)
-    }
-    assign(ta[[1]][1],temp)
-    cat("assigned ",ta[[1]][1]," the value of |",temp,"|\n")
+for (e in commandArgs(TRUE)) {
+  ta = strsplit(e,"=",fixed=TRUE)[[1]]
+  if(length(ta)>1) {
+    temp = ta[2]
+    assign(ta[1],temp)
+    cat("assigned ",ta[1]," the value of |",temp,"|\n")
   } else {
     assign(ta[[1]][1],TRUE)
-    cat("assigned ",ta[[1]][1]," the value of TRUE\n")
+    cat("assigned ",ta[1]," the value of TRUE\n")
   }
 }
 

@@ -8,7 +8,7 @@ AUTHORS
 LICENSE AND COPYRIGHT
 
   Copyright (c) 2008-2010 Michigan State University
-  Copyright (c) 2011-2017 The University of Texas at Austin
+  Copyright (c) 2011-2022 The University of Texas at Austin
 
   breseq is free software; you can redistribute it and/or modify it under the  
   terms the GNU General Public License as published by the Free Software 
@@ -34,11 +34,13 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/identify_mutations.h"
 #include "libbreseq/resolve_alignments.h"
 #include "libbreseq/samtools_commands.h"
+#include "libbreseq/soft_clipping.h"
 #include "libbreseq/settings.h"
 #include "libbreseq/summary.h"
 #include "libbreseq/contingency_loci.h"
 #include "libbreseq/mutation_predictor.h"
 #include "libbreseq/output.h"
+#include "libbreseq/ctpl_stl.h"
 
 
 
@@ -165,6 +167,10 @@ int do_bam2aln(int argc, char* argv[]) {
           file_name = (split(options["output"], "."))[0] + "_" + region_list[j] + ".html";  }
       }
       
+      // Create the output path if necessary
+      string path = path_to_dirname(file_name);
+      create_path(path);
+      
       ofstream myfile (file_name.c_str());
       cerr << "    File : " << file_name << endl;
       
@@ -190,10 +196,14 @@ int do_bam2aln(int argc, char* argv[]) {
  Draw HTML coverage from BAM
  */
 int do_bam2cov(int argc, char* argv[]) {
+  
+  // create empty settings object to have R script name and default summary.json file name
+  Settings settings;
+  
   // setup and parse configuration options:
-	AnyOption options("Usage: breseq BAM2COV [-b reference.bam -f reference.fasta --format PNG -o output.png] region1 [region2 region3 ...]");
+	AnyOption options("Usage: breseq BAM2COV [-b reference.bam -f reference.fasta --format PNG -o output.png] [region1 region2 region3 ...]");
   options.addUsage("");
-  options.addUsage("Create a coverage plot or table for the specified region or regions.");
+  options.addUsage("Create a coverage plot(s) or table(s). These will be for a certain region or regions, if provided. If not, defaults to creating coverage plots for each reference sequence.");
   options.addUsage("");
   options.addUsage("Allowed Options");
 
@@ -202,15 +212,17 @@ int do_bam2cov(int argc, char* argv[]) {
   options("bam,b", "BAM database file of read alignments", "data/reference.bam");
   options("fasta,f", "FASTA file of reference sequences", "data/reference.fasta");
   // options controlling what files are output
-  options("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=region1.*). If there are multiple regions, this argument must be a directory path, and all output files will be output here with names region1.*, region2.*, ... (DEFAULT=.)");
-  options("region,r", "Regions to create alignments for. Must be provided as sequence regions in the format ACCESSION:START-END, where ACCESSION is a valid identifier for one of the sequences in the FASTA file, and START and END are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments");
+  options("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=region1.*). If there are multiple regions or no region is provided, this argument must be a directory path, and all output files will be output here with names region1.*, region2.*, ... (DEFAULT=.)");
+  options("prefix,x", "Output prefix. If there are multiple regions or no region is provided, this will be used as a prefix in front of the automatically generated names.", "");
+  options("region,r", "Regions to create alignments for. Must be provided as sequence regions in the format ACCESSION:START-END, where ACCESSION is a valid identifier for one of the sequences in the FASTA file, and START and END are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments. If no regions are provided, then an output file will be created for each sequence in the FASTA file.");
   options("format", "Format of output plot(s): PNG or PDF", "PNG");
   options("table,t", "Create tab-delimited file of coverage instead of a plot", TAKES_NO_ARGUMENT);
   options.addUsage("", ADVANCED_OPTION);
   options.addUsage("Advanced Output Options", ADVANCED_OPTION);
   options("total-only,1", "Only plot/tabulate the total coverage at a position. That is, do not not output the coverage on each genomic strand", TAKES_NO_ARGUMENT, ADVANCED_OPTION);
   options("resolution,p", "Number of positions to output coverage information for in interval (0=ALL)", 600, ADVANCED_OPTION);
-  options("show-average,a", "Show the average coverage across the reference sequence as a horizontal line. Only possible if used in the main output directory of breseq output", TAKES_NO_ARGUMENT, ADVANCED_OPTION);
+  options("show-average,a", "Show the average coverage across the reference sequence as a horizontal line", TAKES_NO_ARGUMENT, ADVANCED_OPTION);
+  options("summary-json-file,j", "Path to summary.json file containing the average coverage", settings.data_json_summary_file_name, ADVANCED_OPTION);
   options("fixed-coverage-scale,s", "Fix the maximum value on plots the coverage scale in plots. If the show-average option is provided, then this is a factor that will be multiplied times the average coverage (e.g., 1.5 x avg). Otherwise, this is a coverage value (e.g., 100-fold coverage)", "", ADVANCED_OPTION);
   
   options.addUsage("", ADVANCED_OPTION);
@@ -259,11 +271,25 @@ int do_bam2cov(int argc, char* argv[]) {
   ASSERT(tiling_mode || (!options.count("tile-size") && !options.count("tile-overlap")),
          "--tile-size and --tile-overlap args must both be provided to activate tile mode");
   
+  int64_t tile_size = 0;
+  int64_t tile_overlap = 0;
+  if (tiling_mode)
+  {
+    tile_size = from_string<int64_t>(options["tile-size"]);
+    tile_overlap = from_string<int64_t>(options["tile-overlap"]);
+  }
+  
+  // We implement output of all regions by tricking the tiling code to make one tile...
   if (!tiling_mode && !region_list.size()) {
-    options.addUsage("");
-    options.addUsage("You must supply at least one genomic region (-r).");
-    options.printUsage();
-    return -1;
+    tiling_mode = true;
+    tile_size = 1000000000000; // 1 trillion...
+    tile_overlap = 0;
+
+    // Previous code when it was an error to provide no regions
+    // options.addUsage("");
+    // options.addUsage("You must supply at least one genomic region (-r).");
+    // options.printUsage();
+    //return -1;
   }
   
   if (tiling_mode && (region_list.size() > 0))
@@ -281,10 +307,7 @@ int do_bam2cov(int argc, char* argv[]) {
   } else {
     cerr << "Plotting coverage..." << endl;
   }
-  
-  // create empty settings object to have R script name
-  Settings settings;
-    
+      
   // generate coverage table/plot!
   coverage_output co(
                       options["bam"],
@@ -296,7 +319,7 @@ int do_bam2cov(int argc, char* argv[]) {
   co.total_only(options.count("total-only"));
   co.output_format( options["format"] );
   if (options.count("show-average")) {
-    co.show_average( options.count("show-average"), settings.error_rates_summary_file_name );
+    co.show_average( options.count("show-average"), options["summary-json-file"] );
   }
   if (options.count("fixed-coverage-scale")) {
     co.fixed_coverage_scale(from_string<double>(options["fixed-coverage-scale"]));
@@ -305,39 +328,32 @@ int do_bam2cov(int argc, char* argv[]) {
   // create regions that tile the genome
   if (tiling_mode)
   {
-    int32_t tile_size = from_string<int32_t>(options["tile-size"]);
-    int32_t tile_overlap = from_string<int32_t>(options["tile-overlap"]);
     tile_overlap = static_cast<int32_t>(floor( static_cast<double>(tile_overlap) / 2.0));
 
-    for(uint32_t target_id=0; target_id < co.num_targets(); target_id++)
+    for(int64_t target_id=0; target_id < co.num_targets(); target_id++)
     {
       const char* target_name = co.target_name(target_id);
-      int32_t target_length = co.target_length(target_id);
+      int64_t target_length = co.target_length(target_id);
       
-      int32_t start = 1;
+      int64_t start = 1;
       while (start < target_length)
       {
-        int32_t end = start + tile_size - 1;
+        int64_t end = start + tile_size - 1;
         
-        int32_t offset_start = start - tile_overlap;
+        int64_t offset_start = start - tile_overlap;
         if (offset_start < 1) offset_start = 1;
         
-        int32_t offset_end = end + tile_overlap;
+        int64_t offset_end = end + tile_overlap;
         if (offset_end > target_length) offset_end = target_length;
         
         string region = target_name;
-        region += ":" + to_string(offset_start) + "-" + to_string(offset_end);
+        region += ":" + to_string<int64_t>(offset_start) + "-" + to_string<int64_t>(offset_end);
         
         region_list.push_back(region);
         
         start += tile_size;
       }
     }
-  }
-  
-  // Create output path if necessary
-  if ((region_list.size() > 1) && (!options["output"].empty())) {
-    create_path(options["output"]);
   }
   
   for(vector<string>::iterator it = region_list.begin(); it!= region_list.end(); it++)
@@ -353,7 +369,7 @@ int do_bam2cov(int argc, char* argv[]) {
     cerr << "  Region : " << region << endl;
 
     string file_name;
-    if (region_list.size() == 1) {
+    if (!tiling_mode && (region_list.size() == 1)) {
       if (options["output"].empty()) {
         file_name = *it;
       } else {
@@ -363,9 +379,13 @@ int do_bam2cov(int argc, char* argv[]) {
       if (options["output"].empty()) {
         file_name = *it;
       } else {
-        file_name = options["output"] + "/" + region;
+        file_name = options["output"] + "/" + options["prefix"] + region;
       }
     }
+    
+    // Create the output path if necessary
+    string path = path_to_dirname(file_name);
+    create_path(path);
     
     if (options.count("table")) {
       file_name += ".tab";
@@ -465,9 +485,11 @@ int do_convert_reference(int argc, char* argv[]) {
   options.addUsage("");
   options.addUsage("Allowed Options");
   options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("format,f", "Output format. Valid options: FASTA, GFF3, CSV (Default = FASTA)", "FASTA");
+  options("format,f", "Output format. Valid options: FASTA, GFF3, GENBANK, CSV (Default = FASTA)", "FASTA");
   options("no-sequence,n", "Do not include the nucleotide sequence. The output file will only have features. (Not allowed with FASTA format.)", TAKES_NO_ARGUMENT);
   options("output,o", "Output reference file path (Default = output.*)");
+  options("isescan-results,s", "Path to CSV file output by isescan. Existing mobile_element, repeat_region, and transposon,  annotations will be replaced with these results.");
+  options("genbank-field-for-seq-id", "Which GenBank header field will be used to assign sequence IDs. Valid choices are LOCUS, ACCESSION, and VERSION. The default is to check those fields, in that order, for the first one that exists. If you override the default, you will need to use the converted reference file (data/reference.gff) for further breseq and gdtools operations on breseq output!", "AUTOMATIC", ADVANCED_OPTION);
 
 	options.processCommandArgs(argc, argv);
 	
@@ -486,7 +508,7 @@ int do_convert_reference(int argc, char* argv[]) {
   
   string output_format = to_upper(options["format"]);
   if (output_format=="GFF") output_format="GFF3";
-  if ((output_format != "FASTA") && (output_format != "GFF3") && (output_format != "CSV")) {
+  if ((output_format != "FASTA") && (output_format != "GENBANK") && (output_format != "GFF3") && (output_format != "CSV")) {
     options.addUsage("");
     options.addUsage("Unknown output file format requested: " + to_upper(options["format"]));
     options.printUsage();
@@ -500,6 +522,21 @@ int do_convert_reference(int argc, char* argv[]) {
     return -1;
   }
   
+  string genbank_field_for_seq_id = options["genbank-field-for-seq-id"];
+  genbank_field_for_seq_id = to_upper(genbank_field_for_seq_id);
+  if (   (genbank_field_for_seq_id != "AUTOMATIC")
+      && (genbank_field_for_seq_id != "LOCUS")
+      && (genbank_field_for_seq_id != "VERSION")
+      && (genbank_field_for_seq_id != "ACCESSION")
+      ) {
+    options.addUsage("");
+    options.addUsage("Value of --genbank-field-for-seq-id must be one of the following: AUTOMATIC, LOCUS, VERSION, ACCESSION.");
+    options.addUsage("");
+    options.addUsage("Value provided was: " + genbank_field_for_seq_id);
+    options.printUsage();
+    exit(-1);
+  }
+  
   cerr << "COMMAND: CONVERT-REFERENCE" << endl;
   
   cerr << "+++   Loading reference files..." << endl;
@@ -510,7 +547,13 @@ int do_convert_reference(int argc, char* argv[]) {
   }
   
   cReferenceSequences refs;
-  refs.LoadFiles(reference_file_names);
+  refs.LoadFiles(reference_file_names, genbank_field_for_seq_id);
+  
+  if (options.count("isescan-results")) {
+    cerr << "+++   Adding isescan results..." << endl;
+    cout << "  Input : " << options["isescan-results"] << endl;
+    refs.ReadISEScan(options["isescan-results"]);
+  }
 
   cerr << "+++   Writing reference file..." << endl;
   
@@ -518,6 +561,8 @@ int do_convert_reference(int argc, char* argv[]) {
   cerr << "  Format : " << output_format << endl;
   if (output_format == "FASTA") {
     refs.WriteFASTA(options.count("output") ? options["output"] : "output.fna");
+  } else if (output_format == "GENBANK") {
+    refs.WriteGenBank(options.count("output") ? options["output"] : "output.gbk", options.count("no-sequence"));
   } else if (output_format == "GFF3") {
     refs.WriteGFF(options.count("output") ? options["output"] : "output.gff", options.count("no-sequence"));
   } else if (output_format == "CSV") {
@@ -746,7 +791,7 @@ int do_get_sequence(int argc, char *argv[])
     
     seq_name = ref_seq_info[replace_target_id].m_seq_id + ":" + to_string(replace_start) + "-" + to_string(replace_end);
     
-    new_seq_info.add_new_seq(seq_name, "");
+    new_seq_info.add_seq(seq_name, "");
     cAnnotatedSequence& new_seq = new_seq_info[seq_name];
     new_seq.m_fasta_sequence = ref_seq_info[replace_target_id].m_fasta_sequence;
     new_seq.m_fasta_sequence.set_name(seq_name);
@@ -909,55 +954,113 @@ int do_analyze_contingency_loci_significance( int argc, char* argv[]){
 }
 
 
-int do_simulate_read(int argc, char *argv[])
+int do_analyze_soft_clipping( int argc, char* argv[]){
+  
+  // create empty settings object to have R script name and default summary.json file name
+  Settings settings;
+  
+  // setup and parse configuration options:
+  AnyOption options("Usage: breseq SOFT-CLIPPING -f reference.fasta -o output.csv input1.bam [input2.bam ...]");
+  options.addUsage("");
+  options.addUsage("Given one or more indexed BAM files, output a CSV with information about where reads are soft-clipped (and there may be misassemblies or novel sequences inserted that are not present in the reference sequence. If no BAM files are provided as unnamed args, defaults to looking for \"data/reference.bam\".");
+  options.addUsage("");
+  options.addUsage("Allowed Options");
+
+  options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+  // required options
+  options("fasta,f", "FASTA file of reference sequences", "data/reference.fasta");
+  // options controlling what files are output
+  options("output,o", "Output CSV path", "output.csv");
+  options("minimum-clipped-bases,c", "Minimum bases that can be soft-clipped for a read to be reported", "100");
+
+  options.processCommandArgs(argc, argv);
+
+  if (options.count("help"))
+  {
+    options.printAdvancedUsage();
+    exit(-1);
+  }
+  
+  if (!file_exists(options["fasta"].c_str())) {
+    options.addUsage("");
+    options.addUsage("Could not open input reference FASTA file (-f):\n  " + options["fasta"]);
+    options.printUsage();
+    return -1;
+  }
+  
+  vector<string> bam_file_names;
+  if (options.getArgc() == 0)
+  {
+    options.addUsage("");
+    options.addUsage("No BAM files provided.");
+    options.printUsage();
+    return -1;
+  }
+  for (int32_t i = 0; i < options.getArgc(); i++)
+  {
+    string bam_file_name = options.getArgv(i);
+    bam_file_names.push_back(bam_file_name);
+  }
+  
+  uint32_t minimum_clipped_bases = from_string<uint32_t>(options["minimum-clipped-bases"]);
+                   
+  UserOutput uout("SOFT-CLIPPING");
+  uout("Output", options["output"]);
+  uout("Minimum clipped bases", to_string(minimum_clipped_bases));
+  uout("FASTA input", options["fasta"]);
+  uout("BAM input", to_string(bam_file_names));
+  cerr << endl;
+  
+  analyze_soft_clipping(
+                        bam_file_names,
+                        options["fasta"],
+                        options["output"],
+                        minimum_clipped_bases
+                        );
+  
+  return 0;
+}
+
+
+int do_simulate_reads(int argc, char *argv[])
 {
-  AnyOption options("Usage: breseq SIMULATE-READ -g <genome diff> -r <reference file> -c <average coverage> -o <output file>");
+  AnyOption options("Usage: breseq SIMULATE-READS -g <genome diff> -r <reference file> -c <average coverage> -o <output file>");
 
   options
-  ("genome_diff,g", "Genome diff file.")
+  ("mode,m",        "Simulation mode: 'single', 'paired-end' or 'tiled'.", "single")
   ("reference,r",   "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
+  ("output,o",      "Output file name. Should be of the form *.fastq. Two output files (*_1.fastq and *_2.fastq) will be created for paired-end reads.", "simulated_reads.fastq")
   ("coverage,c",    "Average coverage value to simulate.", static_cast<uint32_t>(80))
   ("length,l",      "Read length to simulate.", static_cast<uint32_t>(50))
-  ("output,o",      "Output fastq file name.")
-  ("gff3,3",        "Output Applied GFF3 File. (Flag)", TAKES_NO_ARGUMENT)
-  ("verbose,v",     "Verbose Mode (Flag)", TAKES_NO_ARGUMENT)
-  ("paired-ends",   "Will create two read files *_1.fastq, *_2.fastq that are mate-paired.(Flag)", TAKES_NO_ARGUMENT)
   ("mean",          "Mean fragment size to use for pair ended reads.", static_cast<uint32_t>(200))
   ("stdev",         "Standard deviation of fragment size to use for pair ended reads.", static_cast<uint32_t>(20))
   ("seed",          "Seed value to use for random number generation.")
+  ("verbose,v",     "Verbose Mode (Flag)", TAKES_NO_ARGUMENT)
+
   ;
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
-  options.addUsage("Takes a genome diff file and applies the mutations to the reference.");
-  options.addUsage("Then using the applied reference, it simulates reads based on it.");
-  options.addUsage("Output is a .fastq that if run normally against the reference");
-  options.addUsage("should produce the same GenomeDiff file you entered.");
+  options.addUsage("Simulates reads based on the input reference file.");
+  options.addUsage("IMPORTANT: Only the first sequence in the reference file is used!");
+  options.addUsage("");
+  options.addUsage("Mode 'tiled' simulates reads with all possible start positions");
+  options.addUsage("and strands, ignoring the coverage option, and assuming the");
+  options.addUsage("reference sequence is circular.");
   
   if(argc == 1)  {
     options.printUsage();
     return -1;  }
   
-  if (!options.count("genome_diff")) {
-    options.addUsage("");
-    options.addUsage("You must supply the --genome_diff option for input.");
-    options.printUsage();
-    return -1;
-  }
-  
   if (!options.count("reference")) {
     options.addUsage("");
-    options.addUsage("You must supply the --reference option for input.");
+    options.addUsage("You must supply the --reference|r option for input.");
     options.printUsage();
     return -1;
   }
   
-  if (!options.count("output")) {
-    options.addUsage("");
-    options.addUsage("You must supply the --output option for output.");
-    options.printUsage();
-    return -1;
-  }
+  cerr << "COMMAND: SIMULATE-READS" << endl;
+
 
   if (options.count("seed")) {
     cSimFastqSequence::SEED_VALUE = from_string<int32_t>(options["seed"]);
@@ -972,24 +1075,16 @@ int do_simulate_read(int argc, char *argv[])
   ref_seq_info.LoadFiles(make_vector<string>(ref_file_name));
   new_ref_seq_info.LoadFiles(make_vector<string>(ref_file_name));
 
-
-  //! Step: Apply genome diff mutations to reference sequence.
-  const string &gd_file_name = options["genome_diff"];
-  cGenomeDiff gd(gd_file_name);
-
-  gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, verbose);
-  
-  //! Write applied GFF3 file if requested.
-  if(options.count("gff3"))new_ref_seq_info.WriteGFF(options["output"] + ".gff3");
-
-
-  const cAnnotatedSequence &sequence = new_ref_seq_info[0];
+  cAnnotatedSequence &sequence = new_ref_seq_info[0];
   uint32_t coverage = from_string<uint32_t>(options["coverage"]);
   uint32_t read_size = from_string<uint32_t>(options["length"]);
 
   uint32_t n_reads = (sequence.get_sequence_length() / read_size) * coverage;
 
-  if (options.count("paired-ends")) {
+  string mode = to_upper(options["mode"]);
+  if ( (mode == "PAIRED") || (mode == "PAIRED-END") ) {
+    cerr << "+++   Simulating paired-end reads." << endl;
+
     cString output = options["output"];
 
     string extension = output.get_file_extension();
@@ -1010,14 +1105,31 @@ int do_simulate_read(int argc, char *argv[])
                                             pair_2_file_name,
                                             verbose);
 
-  } else {
+  } else if ( (mode == "SINGLE") || (mode == "SINGLE-END") ) {
+    cerr << "+++   Simulating single-end reads." << endl;
+
     cSimFastqSequence::simulate_single_ends(sequence,
                                             n_reads,
                                             read_size,
                                             options["output"],
                                             verbose);
-  }
+  } else if (mode == "TILED") {
+    cerr << "+++   Simulating tiled reads." << endl;
 
+    sequence.m_is_circular = true;
+    cSimFastqSequence::simulate_tiled(sequence,
+                                      read_size,
+                                      coverage,
+                                      options["output"],
+                                      verbose);
+  } else {
+    options.addUsage("");
+    options.addUsage("Unrecognized mode: " + mode);
+    options.printUsage();
+    return -1;
+  }
+  
+  cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
   return 0;
 }
 
@@ -1321,6 +1433,12 @@ int breseq_default_action(int argc, char* argv[])
 	Settings settings(argc, argv);
 	settings.check_installed();
   
+  //Quick check that any provided header GD file is valid
+  cGenomeDiff header_gd;
+  if (settings.header_genome_diff_file_name.size() > 0) {
+    header_gd.read(settings.header_genome_diff_file_name);
+  }
+  
 	//
 	// 01_sequence_conversion 
   // * Convert the input reference into FASTA for alignment and GFF3 for reloading features
@@ -1337,12 +1455,15 @@ int breseq_default_action(int argc, char* argv[])
     cReferenceSequences conv_ref_seq_info;
     
     // Load all of the reference sequences and convert to FASTA and GFF3
-    conv_ref_seq_info.LoadFiles(settings.all_reference_file_names);
+    conv_ref_seq_info.LoadFiles(
+                                settings.all_reference_file_names,
+                                settings.genbank_field_for_seq_id
+                                );
     conv_ref_seq_info.WriteFASTA(settings.reference_fasta_file_name);
     conv_ref_seq_info.WriteGFF(settings.reference_gff3_file_name);
     s.total_reference_sequence_length = conv_ref_seq_info.get_total_length();
     
-    // Do a quick load of the file to detect formatting errors.
+    // Do a quick load of the user evidence file to detect formatting errors.
     if (settings.user_evidence_genome_diff_file_name != "") {
       cGenomeDiff gd(settings.user_evidence_genome_diff_file_name);
       gd.valid_with_reference_sequences(conv_ref_seq_info, false);
@@ -1388,13 +1509,16 @@ int breseq_default_action(int argc, char* argv[])
                                                      read_file_base_limit,
                                                      settings.read_file_read_length_min,
                                                      settings.read_file_max_same_base_fraction,
-                                                     settings.read_file_max_N_fraction
+                                                     settings.read_file_max_N_fraction,
+                                                     settings.read_file_long_read_trigger_length,
+                                                     settings.read_file_long_read_split_length,
+                                                     settings.read_file_long_read_distribute_remainder
                                                      );
         settings.track_intermediate_file(settings.alignment_correction_done_file_name, convert_file_name);
         
         // Record statistics
-        if ((overall_read_length_min == UNDEFINED_UINT32) || (s_rf.read_length_min > overall_read_length_min))
-          overall_read_length_min = s_rf.read_length_max;
+        if ((overall_read_length_min == UNDEFINED_UINT32) || (s_rf.read_length_min < overall_read_length_min))
+          overall_read_length_min = s_rf.read_length_min;
         if ((overall_read_length_max == UNDEFINED_UINT32) || (s_rf.read_length_max > overall_read_length_max))
           overall_read_length_max = s_rf.read_length_max;
         if ((overall_max_qual == UNDEFINED_UINT32) || (s_rf.max_quality_score > overall_max_qual))
@@ -1422,14 +1546,8 @@ int breseq_default_action(int argc, char* argv[])
       cerr << "    Analyzed reads: " << setw(width_for_reads) << s.num_reads << " bases: " << setw(width_for_bases) << s.num_bases << endl;
       
     }
-    
       
 		// create SAM faidx
-    /*
-		string samtools = settings.ctool("samtools");
-		string command = samtools + " faidx " + settings.reference_fasta_file_name;
-		SYSTEM(command);
-    */
     samtools_faidx(settings.reference_fasta_file_name);
     
 		// calculate trim files
@@ -1447,7 +1565,10 @@ int breseq_default_action(int argc, char* argv[])
   // (re)load the reference sequences from our converted files
   // we must be sure to associate them with their original file names
   // so that contig and junction-only references are correctly flagged
-  ref_seq_info.LoadFiles(make_vector<string>(settings.reference_gff3_file_name));
+  ref_seq_info.LoadFiles(
+                         make_vector<string>(settings.reference_gff3_file_name),
+                         settings.genbank_field_for_seq_id
+                         );
   ref_seq_info.use_original_file_names();
   
   // update the normal versus junction-only lists
@@ -1506,7 +1627,7 @@ int breseq_default_action(int argc, char* argv[])
     
     string reference_hash_file_name = settings.reference_hash_file_name;
     string reference_fasta_file_name = settings.reference_fasta_file_name;
-    string command = "bowtie2-build -q " + settings.reference_fasta_file_name + " " + reference_hash_file_name;
+    string command = "bowtie2-build -q " + double_quote(settings.reference_fasta_file_name) + " " + double_quote(reference_hash_file_name);
     SYSTEM(command);
     settings.track_intermediate_file(settings.reference_alignment_done_file_name, settings.reference_hash_file_name + "*");
 
@@ -1537,7 +1658,7 @@ int breseq_default_action(int argc, char* argv[])
         bowtie2_seed_substring_size_stringent = max<uint32_t>(9, bowtie2_seed_substring_size_stringent);
         bowtie2_seed_substring_size_stringent = min<uint32_t>(31, bowtie2_seed_substring_size_stringent);
         
-        string command = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " -L " +  to_string<uint32_t>(bowtie2_seed_substring_size_stringent) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage1 + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + (do_2_stage_alignment ? stage1_reference_sam_file_name + " --un " + stage1_unmatched_fastq_file_name : reference_sam_file_name);
+        string command = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " -L " +  to_string<uint32_t>(bowtie2_seed_substring_size_stringent) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage1 + " --reorder -x " + double_quote(reference_hash_file_name) + " -U " + double_quote(read_fastq_file) + " -S " + (do_2_stage_alignment ? double_quote(stage1_reference_sam_file_name) + " --un " + double_quote(stage1_unmatched_fastq_file_name) : double_quote(reference_sam_file_name));
         SYSTEM(command);
         
         if (do_2_stage_alignment) {
@@ -1566,7 +1687,7 @@ int breseq_default_action(int argc, char* argv[])
           bowtie2_seed_substring_size_relaxed = max<uint32_t>(9, bowtie2_seed_substring_size_relaxed);
           bowtie2_seed_substring_size_relaxed = min<uint32_t>(31, bowtie2_seed_substring_size_relaxed);
         
-          string command = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_relaxed) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage2 + " --reorder -x " + reference_hash_file_name + " -U " + read_fastq_file + " -S " + stage2_reference_sam_file_name;
+          string command = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_relaxed) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage2 + " --reorder -x " + double_quote(reference_hash_file_name) + " -U " + double_quote(read_fastq_file) + " -S " + double_quote(stage2_reference_sam_file_name);
           SYSTEM(command);
           
           settings.track_intermediate_file(settings.reference_alignment_done_file_name, stage2_reference_sam_file_name);
@@ -1635,7 +1756,7 @@ int breseq_default_action(int argc, char* argv[])
       string preprocess_junction_best_sam_file_name = settings.preprocess_junction_best_sam_file_name;
       string coverage_junction_best_bam_file_name = settings.coverage_junction_best_bam_file_name;
       string coverage_junction_best_bam_unsorted_file_name = settings.coverage_junction_best_bam_unsorted_file_name;
-
+      
       samtools_import(reference_faidx_file_name, preprocess_junction_best_sam_file_name, coverage_junction_best_bam_unsorted_file_name);
       
       samtools_sort(coverage_junction_best_bam_unsorted_file_name, coverage_junction_best_bam_file_name, settings.num_processors);
@@ -1688,12 +1809,6 @@ int breseq_default_action(int argc, char* argv[])
 		{
       CandidateJunctions::identify_candidate_junctions(settings, summary, ref_seq_info);
       
-      /*
-			string samtools = settings.ctool("samtools");
-			string faidx_command = samtools + " faidx " + settings.candidate_junction_fasta_file_name;
-			if (!file_empty(settings.candidate_junction_fasta_file_name.c_str()))
-				SYSTEM(faidx_command);
-      */
       if (!file_empty(settings.candidate_junction_fasta_file_name.c_str()))
         samtools_faidx(settings.candidate_junction_fasta_file_name);
       
@@ -1722,7 +1837,7 @@ int breseq_default_action(int argc, char* argv[])
 
 			if (!file_empty(candidate_junction_fasta_file_name.c_str()))
 			{
-        string command = "bowtie2-build -q " + candidate_junction_fasta_file_name + " " + candidate_junction_hash_file_name;
+        string command = "bowtie2-build -q " + double_quote(candidate_junction_fasta_file_name) + " " + double_quote(candidate_junction_hash_file_name);
         SYSTEM(command);
         settings.track_intermediate_file(settings.candidate_junction_alignment_done_file_name, candidate_junction_hash_file_name + "*");
 
@@ -1738,14 +1853,13 @@ int breseq_default_action(int argc, char* argv[])
           if (!file_exists(filename.c_str()))
             continue;
       
-          /// NEW CODE mapping to junctions with somewhat relaxed parameters
           uint32_t bowtie2_seed_substring_size_junction = trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.3);
           // Check bounds
           bowtie2_seed_substring_size_junction = max<uint32_t>(9, bowtie2_seed_substring_size_junction);
           bowtie2_seed_substring_size_junction = min<uint32_t>(31, bowtie2_seed_substring_size_junction);
           
           string command = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " --local " + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_junction) + " "
-          + settings.bowtie2_scoring + " " + settings.bowtie2_junction + " --reorder -x " + candidate_junction_hash_file_name + " -U " + read_fastq_file + " -S " + candidate_junction_sam_file_name;
+          + settings.bowtie2_scoring + " " + settings.bowtie2_junction + " --reorder -x " + double_quote(candidate_junction_hash_file_name) + " -U " + double_quote(read_fastq_file) + " -S " + double_quote(candidate_junction_sam_file_name);
           
           SYSTEM(command);
           
@@ -1802,46 +1916,20 @@ int breseq_default_action(int argc, char* argv[])
 		string junction_bam_unsorted_file_name = settings.junction_bam_unsorted_file_name;
 		string junction_bam_file_name = settings.junction_bam_file_name;
 
-    //string samtools = settings.ctool("samtools");
-    //string command;
-
     // only run samtools if we are predicting junctions and there were results in the sam file
     // first part of conditional really not necessary @JEB
 		if (!file_empty(resolved_junction_sam_file_name.c_str()))
 		{
-      /*
-			command = samtools + " import " + candidate_junction_faidx_file_name + " " + resolved_junction_sam_file_name + " " + junction_bam_unsorted_file_name;
-			SYSTEM(command);
-			command = samtools + " sort " + junction_bam_unsorted_file_name + " " + junction_bam_prefix;
-      SYSTEM(command);
-			if (!settings.keep_all_intermediates)
-				remove_file(junction_bam_unsorted_file_name.c_str());
-			command = samtools + " index " + junction_bam_file_name;
-			SYSTEM(command);
-       */
-      
       samtools_import(candidate_junction_faidx_file_name, resolved_junction_sam_file_name, junction_bam_unsorted_file_name);
       samtools_sort(junction_bam_unsorted_file_name, junction_bam_file_name, settings.num_processors);
       if (!settings.keep_all_intermediates)
         remove_file(junction_bam_unsorted_file_name.c_str(), false, true);
       samtools_index(junction_bam_file_name);
-      
 		}
 
 		string resolved_reference_sam_file_name = settings.resolved_reference_sam_file_name;
 		string reference_bam_unsorted_file_name = settings.reference_bam_unsorted_file_name;
 		string reference_bam_file_name = settings.reference_bam_file_name;
-
-    /*
-		command = samtools + " import " + reference_faidx_file_name + " " + resolved_reference_sam_file_name + " " + reference_bam_unsorted_file_name;
-    SYSTEM(command);
-		command = samtools + " sort " + reference_bam_unsorted_file_name + " " + reference_bam_prefix;
-    SYSTEM(command);
-		if (!settings.keep_all_intermediates)
-			remove_file(reference_bam_unsorted_file_name.c_str());
-		command = samtools + " index " + reference_bam_file_name;
-    SYSTEM(command);
-    */
     
     samtools_import(reference_faidx_file_name, resolved_reference_sam_file_name, reference_bam_unsorted_file_name);
     samtools_sort(reference_bam_unsorted_file_name, reference_bam_file_name, settings.num_processors);
@@ -2127,10 +2215,14 @@ int breseq_default_action(int argc, char* argv[])
         string plot_error_rates_r_script_file_name = settings.plot_error_rates_r_script_file_name;
         string plot_error_rates_r_script_log_file_name = settings.file_name(settings.plot_error_rates_r_script_log_file_name, "#", base_name);
         string error_rates_plot_file_name = settings.file_name(settings.error_rates_plot_file_name, "#", base_name);
-        command = "R --vanilla in_file=" + cString(error_rates_base_qual_error_prob_file_name).escape_shell_chars() +
-          " out_file=" + cString(error_rates_plot_file_name).escape_shell_chars() +
-          " < "        + cString(plot_error_rates_r_script_file_name).escape_shell_chars() +
-          " > "        + cString(plot_error_rates_r_script_log_file_name).escape_shell_chars();
+        command = "R --vanilla < " + double_quote(plot_error_rates_r_script_file_name) +
+          " > " + double_quote(plot_error_rates_r_script_log_file_name) +
+          " --args" +
+          " in_file=" + double_quote(error_rates_base_qual_error_prob_file_name) +
+          " out_file=" + double_quote(error_rates_plot_file_name) +
+          " < " + double_quote(plot_error_rates_r_script_file_name) +
+          " > " + double_quote(plot_error_rates_r_script_log_file_name);
+        
         SYSTEM(command,false, false, false); //NOTE: Not escaping shell characters here.
       }
 
@@ -2287,136 +2379,178 @@ int breseq_default_action(int argc, char* argv[])
     // Output Genome Diff File
     ///
 
-    cerr << "Creating merged genome diff evidence file..." << endl;
+    cGenomeDiff mpgd;
+    if (settings.do_step(settings.output_mutation_prediction_done_file_name, "Output :: Mutation Prediction")) {
 
-    // merge all of the evidence GenomeDiff files into one...
-    create_path(settings.evidence_path);
-    
-    cGenomeDiff jc_gd;
-    if (!settings.skip_new_junction_prediction) {
-      jc_gd.read(settings.jc_genome_diff_file_name);
-    }
-         
-    // Add read count information to the JC entries -- call fails if no predictions, because BAM does not exist
-    MutationPredictor mpj(ref_seq_info);
-    mpj.prepare_junctions(settings, summary, jc_gd); // this step has to be done twice currently, which is a bit wasteful
-    
-    assign_junction_read_counts(settings, summary, jc_gd);
+      cerr << "Creating merged genome diff evidence file..." << endl;
 
-    cGenomeDiff ra_mc_gd;
-    if (!settings.skip_read_alignment_and_missing_coverage_prediction) {
-      ra_mc_gd.read(settings.ra_mc_genome_diff_file_name);
-    }
-    test_RA_evidence(ra_mc_gd, ref_seq_info, settings);
-    
-    cGenomeDiff evidence_gd;
-    evidence_gd.merge_preserving_duplicates(jc_gd);
-    evidence_gd.merge_preserving_duplicates(ra_mc_gd);
-    
-    // there is a copy number genome diff for each sequence separately
-    if (settings.do_copy_number_variation) {
-      for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it) {
-        cAnnotatedSequence& seq = *it;
-        string this_copy_number_variation_cn_genome_diff_file_name = settings.file_name(settings.copy_number_variation_cn_genome_diff_file_name, "@", seq.m_seq_id);
-        cGenomeDiff cn_gd(this_copy_number_variation_cn_genome_diff_file_name);
-        evidence_gd.merge_preserving_duplicates(cn_gd);
+      // merge all of the evidence GenomeDiff files into one...
+      create_path(settings.evidence_path);
+      
+      cGenomeDiff jc_gd;
+      if (!settings.skip_new_junction_prediction) {
+        jc_gd.read(settings.jc_genome_diff_file_name);
       }
+           
+      // Add read count information to the JC entries -- call fails if no predictions, because BAM does not exist
+      MutationPredictor mpj(ref_seq_info);
+      mpj.prepare_junctions(settings, summary, jc_gd); // this step has to be done twice currently, which is a bit wasteful
+      
+      assign_junction_read_counts(settings, summary, jc_gd);
+
+      cGenomeDiff ra_mc_gd;
+      if (!settings.skip_read_alignment_and_missing_coverage_prediction) {
+        ra_mc_gd.read(settings.ra_mc_genome_diff_file_name);
+      }
+      test_RA_evidence(ra_mc_gd, ref_seq_info, settings);
+      
+      cGenomeDiff evidence_gd;
+      evidence_gd.merge_preserving_duplicates(jc_gd);
+      evidence_gd.merge_preserving_duplicates(ra_mc_gd);
+      
+      // there is a copy number genome diff for each sequence separately
+      if (settings.do_copy_number_variation) {
+        for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it) {
+          cAnnotatedSequence& seq = *it;
+          string this_copy_number_variation_cn_genome_diff_file_name = settings.file_name(settings.copy_number_variation_cn_genome_diff_file_name, "@", seq.m_seq_id);
+          cGenomeDiff cn_gd(this_copy_number_variation_cn_genome_diff_file_name);
+          evidence_gd.merge_preserving_duplicates(cn_gd);
+        }
+      }
+      evidence_gd.write(settings.evidence_genome_diff_file_name);
+
+      // predict mutations from evidence in the GenomeDiff
+      cerr << "Predicting mutations from evidence..." << endl;
+
+      MutationPredictor mp(ref_seq_info);
+      mpgd.read(settings.evidence_genome_diff_file_name);
+      mp.predict(settings, summary, mpgd);
+      mpgd.reassign_unique_ids();
+
+      // Add metadata that will only be in the output.gd file
+      
+      //#=REFSEQ header lines.
+      mpgd.metadata.ref_seqs = settings.all_reference_file_names;
+      
+      //#=READSEQ header lines.
+      mpgd.metadata.read_seqs.resize(settings.read_files.size());
+      for (size_t i = 0; i < settings.read_files.size(); i++) {
+        mpgd.metadata.read_seqs[i] = settings.read_files[i].file_name();
+      }
+      
+      // These fields will be overwritten by any header GenomeDiff provided
+      mpgd.metadata.title = settings.custom_run_name;
+      
+      // Load metadata from existing header GenomeDiff file
+      // This is purposefully done AFTER the previous metadata defs
+      // in order to overwrite those (but not others)
+      if (settings.header_genome_diff_file_name.size() > 0) {
+        mpgd.metadata = header_gd.metadata;
+      }
+      
+      // Fields here and below will write over any values in the header GenomeDiff file
+      mpgd.metadata.program = string(PACKAGE_STRING) + " " + string(HG_REVISION);
+      mpgd.metadata.command = settings.full_command_line;
+      mpgd.metadata.created = Settings::time2string(time(NULL));
+      
+      // Add additional SUMMARY metadata
+      
+      mpgd.add_breseq_data("INPUT-READS", to_string(summary.sequence_conversion.num_original_reads));
+      mpgd.add_breseq_data("INPUT-BASES", to_string(summary.sequence_conversion.num_original_bases));
+      mpgd.add_breseq_data("CONVERTED-READS", to_string(summary.alignment_resolution.total_reads));
+      mpgd.add_breseq_data("CONVERTED-BASES", to_string(summary.alignment_resolution.total_bases));
+      mpgd.add_breseq_data("MAPPED-READS", to_string(static_cast<int64_t>(summary.alignment_resolution.total_reads_mapped_to_references)));
+      mpgd.add_breseq_data("MAPPED-BASES", to_string(summary.alignment_resolution.total_bases_mapped_to_references));
+
+      // Write the output.gd file
+      cerr << "  Writing final GD file..." << endl;
+      mpgd.write(settings.final_genome_diff_file_name);
+      
+      // Save a copy in the data folder as well
+      mpgd.write(settings.data_genome_diff_file_name);
+      
+      // Faster, less compatible way...
+      // SYSTEM("cp " + settings.final_genome_diff_file_name + " " + settings.data_genome_diff_file_name);
+      
+      // Save a copy with invisible fields in the annotation folder (this is what true does)
+      // We reload this to begin annotation if needed
+      mpgd.write(settings.preannotated_genome_diff_file_name, true);
+      settings.track_intermediate_file(settings.output_mutation_annotation_done_file_name, settings.preannotated_genome_diff_file_name);
+      
+      // Write VCF conversion (to both data and output)
+      cerr << "  Writing final VCF file..." << endl;
+      mpgd.write_vcf(settings.data_vcf_file_name, ref_seq_info);
+      mpgd.write_vcf(settings.output_vcf_file_name, ref_seq_info);
+
+      // Write a final JSON file with all summary information (to both data and output)
+      PublicSummary public_summary(summary, settings, ref_seq_info);
+      public_summary.store(settings.data_json_summary_file_name);
+      public_summary.store(settings.output_json_summary_file_name);
+
+      
+      settings.done_step(settings.output_mutation_prediction_done_file_name);
+
     }
-    evidence_gd.write(settings.evidence_genome_diff_file_name);
-
-    // predict mutations from evidence in the GenomeDiff
-    cerr << "Predicting mutations from evidence..." << endl;
-
-    MutationPredictor mp(ref_seq_info);
-    cGenomeDiff mpgd(settings.evidence_genome_diff_file_name);
-    mp.predict(settings, summary, mpgd);
-    mpgd.reassign_unique_ids();
-
-    // Add metadata that will only be in the output.gd file
     
-    //#=REFSEQ header lines.
-    mpgd.metadata.ref_seqs = settings.all_reference_file_names;
-    
-    //#=READSEQ header lines.
-    mpgd.metadata.read_seqs.resize(settings.read_files.size());
-    for (size_t i = 0; i < settings.read_files.size(); i++) {
-      mpgd.metadata.read_seqs[i] = settings.read_files[i].file_name();
+    cGenomeDiff gd;
+    if (settings.do_step(settings.output_mutation_annotation_done_file_name, "Output :: Mutation Annotation")) {
+
+      // Might be faster to copy or use existing gd if already loaded?
+      
+      // Reload if necessary... (ex: interrupted in this step)
+//      gd = mpgd;
+//    (gd.get_list().size() == 0) {
+        gd.read(settings.preannotated_genome_diff_file_name);
+        // Blank this out of the title unless it has been reassigned, for consistency
+        if (gd.metadata.title == cString(settings.preannotated_genome_diff_file_name).get_base_name_no_extension()) {
+          gd.metadata.title = "";
+        }
+ //     }
+            
+      //
+      // Mark marginal items as no_show to prevent further processing
+      //
+      output::mark_gd_entries_no_show(settings, gd);
+
+      //
+      // Annotate mutations
+      //
+      cerr << "Annotating mutations..." << endl;
+      ref_seq_info.annotate_mutations(gd);
+      
+      // Annotated Genome Diff output #1 - public version
+      gd.write(settings.data_annotated_genome_diff_file_name);
+
+      // Annotated Genome Diff output #2 - used internally and for consistency tests
+      //
+      // Here we empty certain metadata items: CREATED time and PROGRAM breseq version
+      // that should be allowed to change without marking the output as failed!
+      gd.metadata.created="";
+      gd.metadata.program="";
+      gd.write(settings.annotated_genome_diff_file_name);
+      
+      settings.done_step(settings.output_mutation_annotation_done_file_name);
     }
-    
-    // These fields will be overwritten by any header GenomeDiff provided
-    mpgd.metadata.title = settings.custom_run_name;
-    
-    // Load metadata from existing header GenomeDiff file
-    // This is purposefully done AFTER the previous metadata defs
-    // in order to overwrite those (but not others)
-    if (settings.header_genome_diff_file_name.size() > 0) {
-      cGenomeDiff header_gd(settings.header_genome_diff_file_name);
-      mpgd.metadata = header_gd.metadata;
-    }
-    
-    // Fields here and below will write over any values in the header GenomeDiff file
-    mpgd.metadata.program = string(PACKAGE_STRING) + " " + string(HG_REVISION);
-    mpgd.metadata.command = settings.full_command_line;
-    mpgd.metadata.created = Settings::time2string(time(NULL));
-    
-    // Add additional SUMMARY metadata
-    
-    mpgd.add_breseq_data("INPUT-READS", to_string(summary.sequence_conversion.num_original_reads));
-    mpgd.add_breseq_data("INPUT-BASES", to_string(summary.sequence_conversion.num_original_bases));
-    mpgd.add_breseq_data("CONVERTED-READS", to_string(summary.alignment_resolution.total_reads));
-    mpgd.add_breseq_data("CONVERTED-BASES", to_string(summary.alignment_resolution.total_bases));
-    mpgd.add_breseq_data("MAPPED-READS", to_string(static_cast<int64_t>(summary.alignment_resolution.total_reads_mapped_to_references)));
-    mpgd.add_breseq_data("MAPPED-BASES", to_string(summary.alignment_resolution.total_bases_mapped_to_references));
-
-    // Write the output.gd file
-    cerr << "  Writing final GD file..." << endl;
-    mpgd.write(settings.final_genome_diff_file_name);
-    
-    // Save a copy in the data folder as well
-    mpgd.write(settings.output_genome_diff_file_name);
-
-    // Faster, less compatible way...
-    // SYSTEM("cp " + settings.final_genome_diff_file_name + " " + settings.output_genome_diff_file_name);
-    
-    //Don't reload -- we lose invisible fields that we need
-    //cGenomeDiff gd(settings.final_genome_diff_file_name);
-    cGenomeDiff gd = mpgd;
-    
-    // Write VCF conversion
-    cerr << "  Writing final VCF file..." << endl;
-    mpgd.write_vcf(settings.output_vcf_file_name, ref_seq_info);
-    
-    // Write a final JSON file with all summary information
-    PublicSummary public_summary(summary, settings, ref_seq_info);
-    public_summary.store(settings.data_summary_file_name);
-    
-    //
-    // Mark marginal items as no_show to prevent further processing
-    //
-    output::mark_gd_entries_no_show(settings, gd);
-
-    //
-		// Annotate mutations
-		//
-		cerr << "Annotating mutations..." << endl;
-		ref_seq_info.annotate_mutations(gd);
-    
-    // Annotated Genome Diff output #1 - public version
-    gd.write(settings.output_annotated_genome_diff_file_name);
-
-    // Annotated Genome Diff output #2 - used internally and for consistency tests
-    //
-    // Here we empty certain metadata items: CREATED time and PROGRAM breseq version
-    // that should be allowed to change without marking the output as failed!
-    gd.metadata.created="";
-    gd.metadata.program="";
-    gd.write(settings.annotated_genome_diff_file_name);
-    
+      
 		//
 		// Plot coverage of genome and large deletions
 		//
+    
+    // Reload if necessary... (ex: interrupted in this step)
+    if (gd.get_list().size() == 0) {
+      gd.read(settings.annotated_genome_diff_file_name);
+      // Blank this out of the title unless it has been reassigned, for consistency
+      if (gd.metadata.title == cString(settings.annotated_genome_diff_file_name).get_base_name_no_extension()) {
+        gd.metadata.title = "";
+      }
+    }
+
     cerr << "Drawing coverage plots..." << endl;
     output::draw_coverage(settings, ref_seq_info, gd);
+    
+    // !!! Currently, we need to wait for the creation of coverage plots to finish
+    // b/c we check whether files exist in creating the HTML files next.
+    Settings::sync_threads();
     
 		//
 		// Create evidence files containing alignments and coverage plots
@@ -2424,6 +2558,8 @@ int breseq_default_action(int argc, char* argv[])
 		if (!settings.skip_alignment_or_plot_generation)
 			output::cOutputEvidenceFiles(settings, gd);
 
+    Settings::sync_threads();
+    
 		///
 		// HTML output
 		///
@@ -2517,17 +2653,19 @@ int main(int argc, char* argv[]) {
   // None of these commands are documented for use by others. 
   // They may change without warning.
   } else if ((command == "SIMULATE-READ") ||  (command == "SIMULATE-READS")) {
-    return do_simulate_read(argc_new, argv_new);
+    return do_simulate_reads(argc_new, argv_new);
   } else if (command == "CNV") {
     return do_copy_number_variation(argc_new, argv_new);
   } else if (command == "COVERAGE-BIAS"){
     return do_coverage_bias(argc_new, argv_new);
-  } else if (command == "ERROR_COUNT") {
+  } else if ( (command == "ERROR_COUNT") || (command == "ERROR-COUNT") ) {
     return do_error_count(argc_new, argv_new);
   } else if (command == "JUNCTION-POLYMORPHISM") {
     return do_junction_polymorphism(argc_new, argv_new);
   } else if (command == "CL-TABULATE") {
     return do_tabulate_contingency_loci(argc_new, argv_new);
+  } else if (command == "SOFT-CLIPPING") {
+    return do_analyze_soft_clipping(argc_new, argv_new);
   } else if (command == "CL-SIGNIFICANCE") {
     return do_analyze_contingency_loci_significance( argc_new, argv_new);
   } else if (command == "ASSEMBLE-UNMATCHED") {

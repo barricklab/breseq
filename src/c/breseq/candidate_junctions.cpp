@@ -9,7 +9,7 @@ AUTHORS
 LICENSE AND COPYRIGHT
 
   Copyright (c) 2008-2010 Michigan State University
-  Copyright (c) 2011-2017 The University of Texas at Austin
+  Copyright (c) 2011-2022 The University of Texas at Austin
 
   breseq is free software; you can redistribute it and/or modify it under the  
   terms the GNU General Public License as published by the Free Software 
@@ -246,10 +246,20 @@ namespace breseq {
     return;
   }
   
-  void line_to_read_index(string s, int64_t& index, bool& mapped) {
+  void line_to_read_index(string s, int64_t& index1, int64_t& index2, bool& mapped) {
     size_t start = s.find_first_of(":");
-    size_t end = s.find_first_of(" \t", start);
-    index = n(s.substr(start+1, end-(start+1)));
+    size_t end = s.find_first_of("S \t", start);
+    
+    index1 = n(s.substr(start+1, end-(start+1)));
+    
+    if (s[end] == 'S') {
+      start = end;
+      end = s.find_first_of("S \t", start);
+      index2 = n(s.substr(start+1, end-(start+1)));
+
+    } else {
+      index2 = 0;
+    }
     
     size_t next = s.find_first_not_of(" \t", end);
     next = s.find_first_of(" \t", next);
@@ -286,23 +296,22 @@ namespace breseq {
       not_done_2 = !getline(input_sam_file_2, line_2).eof();
     }
          
-    int64_t index_1 = -1; 
-    int64_t index_2 = -1; 
+    int64_t index_1a(-1), index_1b(-1), index_2a(-1), index_2b(-1);
     bool mapped_1 = false;
     bool mapped_2 = false;
     
     if (not_done_1) {
-      line_to_read_index(line_1, index_1, mapped_1);
+      line_to_read_index(line_1, index_1a, index_1b, mapped_1);
     }
     if (not_done_2) {
-      line_to_read_index(line_2, index_2, mapped_2);
+      line_to_read_index(line_2, index_2a, index_2b, mapped_2);
     }
     
     while (not_done_1 || not_done_2) {
       
       // If file 1 is not done AND
       //   the read index is smaller in file 1 than in file 2 OR file 2 is already done
-      if (not_done_1 && ((index_1 < index_2) || !not_done_2)) {
+      if (not_done_1 && ((index_1a < index_2a) || ((index_1a == index_2a) && (index_1b < index_2b) ) || !not_done_2)) {
         
         if (mapped_1)
           out_sam_file << line_1 << endl;
@@ -311,9 +320,10 @@ namespace breseq {
         not_done_1 = !getline(input_sam_file_1, line_1).eof();
         
         if (not_done_1) {
-          line_to_read_index(line_1, index_1, mapped_1);
+          line_to_read_index(line_1, index_1a, index_1b, mapped_1);
         } else {
-          index_1 = numeric_limits<int64_t>::max();
+          index_1a = numeric_limits<int64_t>::max();
+          index_1b = numeric_limits<int64_t>::max();
         }
       }
       else if (not_done_2) {
@@ -324,9 +334,10 @@ namespace breseq {
         not_done_2 = !getline(input_sam_file_2, line_2).eof();
 
         if (not_done_2) {
-          line_to_read_index(line_2, index_2, mapped_2);
+          line_to_read_index(line_2, index_2a, index_2b, mapped_2);
         } else {
-          index_2 = numeric_limits<int64_t>::max();
+          index_2a = numeric_limits<int64_t>::max();
+          index_2b = numeric_limits<int64_t>::max();
         }
       }
     }
@@ -447,7 +458,7 @@ namespace breseq {
 				// write split alignments
 				if (min_indel_split_len != -1)
         {
-					split_alignments_on_indels(settings, summary, PSAM, min_indel_split_len, alignments);
+					split_alignments_on_indels(settings, summary, ref_seq_info, PSAM, min_indel_split_len, alignments);
         }
         
 				// write best alignments
@@ -470,7 +481,7 @@ namespace breseq {
   /*! Split alignments interrupted by indels into their segments and write to a SAM file. 
 	 */
   
-  void PreprocessAlignments::split_alignments_on_indels(const Settings& settings, Summary& summary, tam_file& PSAM, int32_t min_indel_split_len, const alignment_list& alignments)
+  void PreprocessAlignments::split_alignments_on_indels(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info, tam_file& PSAM, int32_t min_indel_split_len, const alignment_list& alignments)
   {
     //##
     //## @JEB: Note that this may affect the order of alignments in the SAM file. This has 
@@ -520,7 +531,7 @@ namespace breseq {
     // it takes at least two to make a candidate junction.
 
     for(alignment_list::iterator it = split_alignments.begin(); it != split_alignments.end(); ++it) {
-      PSAM.write_split_alignment(min_indel_split_len, **it, alignments);
+      PSAM.write_split_alignment(min_indel_split_len, **it, alignments, ref_seq_info);
       alignments_written += 2;
     }
     
@@ -968,15 +979,16 @@ namespace breseq {
     for (uint32_t j = 0; j < combined_candidate_junctions.size(); j++)
 		{
 			JunctionCandidate& junction = combined_candidate_junctions[j];
-      string junction_key = junction.junction_key();
+      string junction_key = junction.junction_key(false); // false here is important for not including redundant tags
       if (user_defined_junctions.count(junction_key)) {
+        cout << "Found as user junction: " << junction.junction_key() << endl;
         junction.user_defined = true;
         user_defined_junctions.erase(junction_key);
       }
 		}
     for (map<string,cDiffEntry>::iterator it = user_defined_junctions.begin(); it != user_defined_junctions.end(); it++) {
       cDiffEntry& user_junction = it->second;
-      JunctionInfo user_junction_info(it->first);
+      JunctionInfo user_junction_info(user_junction);
       user_junction_info.user_defined = true;
       string junction_sequence = construct_junction_sequence(ref_seq_info, user_junction, read_length_max, false);
       JunctionCandidate new_jc(user_junction_info, junction_sequence);
@@ -1061,7 +1073,7 @@ namespace breseq {
       string throwaway_sequence = construct_junction_sequence(ref_seq_info, user_junction, read_length_max);
       
       JunctionInfo junction_info(user_junction);
-      user_defined_junctions[junction_info.junction_key()] = user_junction;
+      user_defined_junctions[junction_info.junction_key(false)] = user_junction;
       
       //cout << user_junction.as_string() << endl;
     }
@@ -1211,7 +1223,7 @@ namespace breseq {
 	{    
     bool verbose = false;
     
-    //if (ap.a1.read_name() == "1:379655") {
+    //if (ap.a1.read_name() == "1:2096442") {
     //   verbose = true;
     //}
   
@@ -1552,7 +1564,10 @@ namespace breseq {
     //  Important: Here is where we choose the strand of the junction sequence
     ///
     
-		// want to be sure that lowest ref coord is always first for consistency
+    // At this point, we don't know whether a certain side is redundant.
+    //
+		// Rules...
+    // If they are both on the same
 		if ( hash_seq_id_1.compare(hash_seq_id_2) > 0 || ((hash_seq_id_1.compare(hash_seq_id_2) == 0) && (hash_coord_2 < hash_coord_1)) )
 		{
 			swap(hash_coord_1, hash_coord_2);
@@ -1633,9 +1648,6 @@ namespace breseq {
     (void)summary;
 		bool verbose = false;
 
-    //if (alignments.front()->read_name() == "1:1610874")
-    //  verbose = true;
-    
 		if (verbose)
 		{
 			cout << endl << "###########################" << endl;
@@ -1932,7 +1944,7 @@ namespace breseq {
     int32_t flanking_length,
     bool inclusive_overlap
     )
-  {    
+  {
     bool verbose = false;
     // set up local settings
     

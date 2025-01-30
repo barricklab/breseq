@@ -8,7 +8,7 @@ AUTHORS
 LICENSE AND COPYRIGHT
 
   Copyright (c) 2008-2010 Michigan State University
-  Copyright (c) 2011-2017 The University of Texas at Austin
+  Copyright (c) 2011-2022 The University of Texas at Austin
 
   breseq is free software; you can redistribute it and/or modify it under the  
   terms the GNU General Public License as published by the Free Software 
@@ -35,7 +35,7 @@ namespace breseq {
 reference_sequence::reference_sequence(faidx_t* m_ref, const string& fasta_filename, const string& target)
 : m_seq(0), m_len(0) {
 
-  (void)fasta_filename; //TODO: unused??
+  (void)fasta_filename;
 	m_seq = fai_fetch(m_ref, target.c_str(), &m_len);  
   // need to close the file
   
@@ -92,6 +92,7 @@ pileup_base::pileup_base(const string& bam, const string& fasta)
 pileup_base::~pileup_base() {
 	samclose(m_bam);
   bam_close(m_bam_file);
+  hts_idx_destroy(m_bam_index);
   bam_header_destroy(m_bam_header);
   fai_destroy(m_faidx);
   
@@ -323,7 +324,7 @@ void pileup_base::do_pileup(const string& region, bool clip, uint32_t downsample
 void pileup_base::do_pileup(const set<string>& seq_ids) {
   
   for(set<string>::iterator it=seq_ids.begin(); it!=seq_ids.end(); it++) {
-    
+        
     // We need to find the target id from the name, this is a rather inefficient way to do it.
     const string& this_seq_id = *it;
     uint32_t this_tid=0;

@@ -8,7 +8,7 @@ AUTHORS
 LICENSE AND COPYRIGHT
 
   Copyright (c) 2008-2010 Michigan State University
-  Copyright (c) 2011-2017 The University of Texas at Austin
+  Copyright (c) 2011-2022 The University of Texas at Austin
 
   breseq is free software; you can redistribute it and/or modify it under the  
   terms the GNU General Public License as published by the Free Software 
@@ -45,7 +45,10 @@ class cAnnotatedSequence;
                                         const uint64_t read_file_base_limit,
                                         const uint32_t read_length_min,
                                         const double max_same_base_fraction,
-                                        const double max_N_fraction
+                                        const double max_N_fraction,
+                                        const uint32_t _long_read_trigger_length,
+                                        const uint32_t _long_read_split_length,
+                                        const bool _long_read_distribute_remainder
                                         );
   
   // Utility function for converting FASTQ files between formats
@@ -66,7 +69,11 @@ class cAnnotatedSequence;
     
     cFastqSequence() 
     : m_numerical_qualities(false)
-    {}
+    {
+      for (uint8_t b=0; b<base_list_including_N_size; b++) {
+        m_base_counts[b] = 0;
+      }
+    }
     
     bool identical(cFastqSequence& seq);
     
@@ -133,7 +140,12 @@ class cAnnotatedSequence;
                                        string pair_1_file_name,
                                        string pair_2_file_name,
                                        bool verbose = false);
-
+    
+      static void simulate_tiled(const cAnnotatedSequence& sequence,
+                                 uint32_t read_size,
+                                 uint32_t coverage,
+                                 string file_name,
+                                 bool verbose);
 
   };
 

@@ -7,7 +7,7 @@
 ## LICENSE AND COPYRIGHT
 ##
 ## Copyright (c) 2008-2010 Michigan State University
-## Copyright (c) 2011-2017 The University of Texas at Austin
+## Copyright (c) 2011-2022 The University of Texas at Austin
 ##
 ## breseq is free software; you can redistribute it and/or modify it under the
 ## terms the GNU General Public License as published by the Free Software
@@ -16,8 +16,8 @@
 ##
 
 ## Arguments:
-##   in_file=/path/to/input 
-##   out_file=/path/to/output 
+##   in_file=/path/to/input
+##   out_file=/path/to/output
 ##   window_start=int
 ##   window_end=int
 ##   end_pos=int
@@ -30,22 +30,15 @@ window_end = -1;
 pdf_output = 0;
 total_only = 0;
 
-for (e in commandArgs()) {
-  ta = strsplit(e,"=",fixed=TRUE)
-  if(! is.na(ta[[1]][2])) {
-    temp = ta[[1]][2]
- #   temp = as.numeric(temp) #Im only inputting numbers so I added this to recognize scientific notation
-    if(substr(ta[[1]][1],nchar(ta[[1]][1]),nchar(ta[[1]][1])) == "I") {
-      temp = as.integer(temp)
-    }
-    if(substr(ta[[1]][1],nchar(ta[[1]][1]),nchar(ta[[1]][1])) == "N") {
-      temp = as.numeric(temp)
-    }
-    assign(ta[[1]][1],temp)
-    cat("assigned ",ta[[1]][1]," the value of |",temp,"|\n")
+for (e in commandArgs(TRUE)) {
+  ta = strsplit(e,"=",fixed=TRUE)[[1]]
+  if(length(ta)>1) {
+    temp = ta[2]
+    assign(ta[1],temp)
+    cat("assigned ",ta[1]," the value of |",temp,"|\n")
   } else {
     assign(ta[[1]][1],TRUE)
-    cat("assigned ",ta[[1]][1]," the value of TRUE\n")
+    cat("assigned ",ta[1]," the value of TRUE\n")
   }
 }
 
@@ -56,16 +49,17 @@ avg_coverage_scale = as.numeric(avg_coverage);
 fixed_coverage_scale = as.numeric(fixed_coverage_scale);
 
 
-X<-read.table(in_file, sep="\t", header=T)
-X$unique_tot_cov = X$unique_bot_cov + X$unique_top_cov;
-X$redundant_tot_cov = X$redundant_bot_cov + X$redundant_top_cov;
+X<-read.table(in_file, sep="\t", header=T, comment.char = "#")
 
-maxy=max(X$unique_tot_cov, X$redundant_tot_cov) + 5;
-
-if (total_only ==1)
-{
-  maxy = max(X$unique_tot_cov + X$redundant_tot_cov) + 5;
+if (total_only ==1) {
+  X$unique_tot_cov = X$unique_cov
+  X$redundant_tot_cov = X$redundant_cov
+} else {
+  X$unique_tot_cov = X$unique_bot_cov + X$unique_top_cov
+  X$redundant_tot_cov = X$redundant_bot_cov + X$redundant_top_cov
 }
+
+maxy=max(X$unique_tot_cov, X$redundant_tot_cov) + 5
 
 ## Be sure to draw at least up to the average
 
@@ -109,7 +103,7 @@ if (pdf_output==1) {
 } else {
   ## Don't check capabilities because it loads up X windows to do so (at least on Mac)
   cat("Generating X11 PNG")
-  
+
   result = tryCatch({
     png(out_file, height=6, width=11, units ="in", res = 200, pointsize=16, type="Xlib")
     }, error = function(e) {
@@ -134,14 +128,14 @@ rect(window_end+1, 0, end_pos, maxy, col="grey85", lty=0)
 
 ## optional average line
 if (avg_coverage != 0)
-{ 
+{
   lines(c(start_pos, end_pos), c(avg_coverage, avg_coverage), type="s", col="darkgrey", lty="solid", lwd=4.0)
 }
 
 ##grand total
 if (total_only ==1)
 {
-  lines(X$position, X$redundant_top_cov + X$redundant_bot_cov + X$unique_top_cov + X$unique_bot_cov, type="s", col="green", lty="solid", lwd=4)
+  lines(X$position, X$unique_tot_cov + X$redundant_tot_cov, type="s", col="green", lty="solid", lwd=4)
 }
 
 lines(X$position, X$redundant_tot_cov, type="s", col="red", lty="solid", lwd=1.5 )
@@ -171,9 +165,9 @@ if (avg_coverage == 0) {
   }
 } else {
   if (total_only == 0) {
-  legend( "bottom" , cex=0.70, c("average", "unique total", "unique top", "unique bottom ", "repeat total", "repeat top","repeat bottom"), pch=-1, horiz=T, col="black", fill=c("darkgrey", "blue", "cyan", "purple", "red", "yellow", "orange"), bty="n")
+  legend( "bottom" , cex=0.70, c("unique average", "unique total", "unique top", "unique bottom ", "repeat total", "repeat top","repeat bottom"), pch=-1, horiz=T, col="black", fill=c("darkgrey", "blue", "cyan", "purple", "red", "yellow", "orange"), bty="n")
   } else {
-  legend( "bottom" , cex=0.85, c("average", "total", "unique total", "repeat total"), pch=-1, horiz=T, col="black", fill=c("darkgrey", "green", "blue", "red"), bty="n")
+  legend( "bottom" , cex=0.85, c("unique average", "total", "unique total", "repeat total"), pch=-1, horiz=T, col="black", fill=c("darkgrey", "green", "blue", "red"), bty="n")
   }
 }
 

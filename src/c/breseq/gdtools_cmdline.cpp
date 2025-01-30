@@ -8,7 +8,7 @@ AUTHORS
 LICENSE AND COPYRIGHT
 
   Copyright (c) 2008-2010 Michigan State University
-  Copyright (c) 2011-2017 The University of Texas at Austin
+  Copyright (c) 2011-2022 The University of Texas at Austin
 
   breseq is free software; you can redistribute it and/or modify it under the  
   terms the GNU General Public License as published by the Free Software 
@@ -35,7 +35,7 @@ int gdtools_usage()
   uout("Manipulate Genome Diff (*.gd) files using the following commands.");
 
   uout("General:");
-  uout << "VALIDATE               check formating of input files" << endl;
+  uout << "VALIDATE               check formatting of input files" << endl;
   uout << "APPLY                  apply mutations to a sequence" << endl;
   uout << "ANNOTATE (or COMPARE)  annotate the effects of mutations and compare multiple samples" << endl;
 	uout << "MUTATIONS              (re)predict mutations from evidence" << endl;
@@ -110,12 +110,12 @@ int do_intersection(int argc, char *argv[])
   return 0;
 }
 
-int do_union(int argc, char *argv[])
+int do_merge(int argc, char *argv[])
 {
-  AnyOption options("gdtools UNION [-o output.gd] input1.gd input2.gd ...");
+  AnyOption options("gdtools MERGE/UNION [-o output.gd] input1.gd input2.gd ...");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o",  "output GD file name", "output.gd");
-	options("evidence,e",  "operate on evidence rather than mutation entries", TAKES_NO_ARGUMENT);
+	options("preserve-evidence,e", "By default evidence items with two-letter codes are removed (RA, JC, MC, ...). Supply this option to retain them. ", TAKES_NO_ARGUMENT);
 	options("phylogeny-aware,p", "Check the optional 'phylogeny_id' field when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
@@ -123,9 +123,6 @@ int do_union(int argc, char *argv[])
   options.addUsage("");
   options.addUsage("Creates a GD file with entries that exist in any input GD file.");
 	options.addUsage("Duplicate entries are merged into a single entry.");
-	options.addUsage("");
-	options.addUsage("By default, operates on and preserves mutations (unless -e is specified).");
-	options.addUsage("All entries of other types (i.e., mutations, evidence, validation) are removed.");
 	options.addUsage("");
 	options.addUsage("Header information will be inherited from the first input file,");
 	options.addUsage("so this function can also be used to transfer metadata to a new file.");
@@ -144,16 +141,17 @@ int do_union(int argc, char *argv[])
   }
 	 
 	 */
-  UserOutput uout("UNION");
+  UserOutput uout("MERGE");
 	cout << endl << "    Preserving: " << (!options.count("evidence") ? "Mutations (3-letter codes)" : "Evidence (2-letter codes)") << endl;
 
   uout("Reading input GD files") << endl;
 	
-	cGenomeDiff gd1;
-  for(int32_t i = 0; i < options.getArgc(); ++i) {
-    uout << options.getArgv(i) << endl;
+	cGenomeDiff gd1(options.getArgv(0));
+	uout << "    " << options.getArgv(0) << endl;
+  for(int32_t i = 1; i < options.getArgc(); ++i) {
+    uout << "    " << options.getArgv(i) << endl;
     cGenomeDiff gd2(options.getArgv(i));
-    gd1.set_union(gd2, options.count("evidence"), options.count("phylogeny-aware"), options.count("verbose"));
+    gd1.set_union(gd2, options.count("preserve-evidence"), options.count("phylogeny-aware"), options.count("verbose"));
   }
 
   uout("Assigning unique IDs");
@@ -167,22 +165,24 @@ int do_union(int argc, char *argv[])
 
 int do_apply(int argc, char *argv[])
 {
-  AnyOption options("gdtools APPLY [ -o output.gff3 -f GFF3 ] -r reference.gbk input.gd");
+  AnyOption options("gdtools APPLY [ -o output.gff3 -f GFF3 -s seq_id ] -r reference.gbk input.gd");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o",    "Output file name (DEFAULT=output.*)");
-  options("format,f",    "Output file format (Options: FASTA, GFF3)", "FASTA");
+  options("format,f",    "Output file format (Options: FASTA, GENBANK, GFF3)", "FASTA");
   options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
+  options("seq-id,s",    "Sequence ID to keep in output. If this argument is provided, other sequences are deleted after the APPLY. May be provided multiple times.");
+	options("polymorphism-mode,p",  "Apply all mutations in GD file regardless of their frequency. By default (without this option) only mutations with 100% frequency are applied.", TAKES_NO_ARGUMENT);
+	options("applied-gd,a",  "Output file name for GD with mutations updated to coordinates in the output sequences.");
   options("verbose,v",   "Verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
   options.addUsage("");
-  options.addUsage("Input a single Genome Diff, and as many reference files");
-  options.addUsage("as you like.  Using the Genome Diff, this will apply all");
-  options.addUsage("the mutations to the reference sequences, output is to");
-  options.addUsage("a single file that includes all the references in the");
-	options.addUsage("requested format. Input file is expected to only have");
-	options.addUsage("consensus mutations. Polymorphic mutations are ignored.");
-
+	options.addUsage("Input a single GenomeDiff, and as many reference files as you like.  Using the GenomeDiff, this will apply all the mutations to the reference sequences, output is to a single file that includes all the references in the requested format.");
+	options.addUsage("");
+	options.addUsage("The input GenomeDiff file is expected to only have consensus mutations. Polymorphic mutations are ignored unless the --polymorphism-mode flag is supplied.");
+	options.addUsage("");
+	options.addUsage("The --apply-gd option causes a GenomeDiff file to be output that is the input GenomeDiff file with positions of mutations shifted to where they occur in the output sequence. It also has applied_seq_id, applied_start, and applied_end fields defining the changed bases.");
+	
 	if (options.count("help")) {
 		options.printUsage();
 		return -1;
@@ -197,7 +197,7 @@ int do_apply(int argc, char *argv[])
 
 	string format = to_upper(options["format"]);
 	if (format == "GFF") format = "GFF3"; // allow synonym
-  if ((format != "FASTA") && (format != "GFF3")) {
+  if ((format != "FASTA") && (format != "GENBANK") && (format != "GFF3")) {
     options.addUsage("");
     options.addUsage("Did not recognize format: " + options["format"]);
     options.printUsage();
@@ -210,7 +210,9 @@ int do_apply(int argc, char *argv[])
   }
   else {
     output = "output." + to_lower(format);
+		if (format=="FASTA") output = "output.fasta";
 		if (format=="GFF3") output = "output.gff";
+		if (format=="GENBANK") output = "output.gbk";
   }  
 
   if (!options.getArgc()) {
@@ -234,19 +236,60 @@ int do_apply(int argc, char *argv[])
 	
   //Check to see if every item in the loaded .gd is applicable to the reference file.
   gd.valid_with_reference_sequences(ref_seq_info);
-  gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, options.count("verbose"));
+	
+	// Set all frequencies to one
+	if (options.count("polymorphism-mode")) {
+		diff_entry_list_t mutation_list = gd.mutation_list();
+		for (diff_entry_list_t::iterator itr_mut = mutation_list.begin(); itr_mut != mutation_list.end(); itr_mut++)
+		{
+			cDiffEntry& mut(**itr_mut);
+			
+			if ((mut.count(FREQUENCY)!=0) && (from_string<double>(mut[FREQUENCY]) != 1.0))
+				mut[FREQUENCY] = "1";
+		}
+	}
+	
+	gd.apply_to_sequences(ref_seq_info, new_ref_seq_info, options.count("verbose"));
 
+	// If seq-id is present keep only certain sequence ids
+	// Keep the order of the --seq-id|-s to allow user to specify this
+	if (options.count("seq-id")) {
+		const vector<string>& seq_ids = from_string<vector<string> >(options["seq-id"]);
+		cReferenceSequences kept_ref_seq_info;
+		set<string> used_ids_se;
+		
+		for (vector<string>::const_iterator i=seq_ids.begin(); i != seq_ids.end(); i++) {
+			if (used_ids_se.find(*i) == used_ids_se.end()) {
+				
+				if ( !new_ref_seq_info.seq_id_exists(*i) ) {
+					ERROR("Specified--seq-id|-s does not exist in loaded files: " + *i);
+				} else {
+					kept_ref_seq_info.push_back(new_ref_seq_info[*i]);
+				}
+			} else {
+				WARN("Duplicate --seq-id|-s encountered and ignored: " + *i);
+			}
+		}
+		new_ref_seq_info = kept_ref_seq_info;
+	}
+	
   uout("Writing output file in " + format + " format");
 
   if (format == "FASTA") {
-    uout << options["fasta"] << endl;
     new_ref_seq_info.WriteFASTA(output);
   }
+  else if (format == "GENBANK") {
+    new_ref_seq_info.WriteGenBank(output);
+  }
   else if (format == "GFF3") {
-    uout << options["gff3"] << endl;
     new_ref_seq_info.WriteGFF(output);
   }
 
+	if (options.count("applied-gd")) {
+		uout("Writing applied GenomeDiff file:" + options["applied-gd"]);
+		gd.write(options["applied-gd"]);
+	}
+	
   return 0;
 }
 
@@ -310,7 +353,7 @@ int do_weights(int argc, char* argv[])
   options.addUsage("");
   options.addUsage("\tCreates a GD file of mutations and associated evidence that exist in each input GD file.");
   options.addUsage("Duplicate mutations are merged into a single mutation with a 'weight' field added to the");
-  options.addUsage("entry. The 'weight' field is the inverse of the frequency of that mutation occuring accross");
+  options.addUsage("entry. The 'weight' field is the inverse of the frequency of that mutation occurring across");
   options.addUsage("all input GD files. Unique mutations will therefor have a 'weight' of 1");
 
 	if (options.count("help")) {
@@ -540,7 +583,7 @@ int do_check(int argc, char *argv[])
 	options("help,h", "display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o",         "output GD file", "comp.gd");
   options("reference,r",      "file containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
-  options("evidence",         "compare evidence", TAKES_NO_ARGUMENT);
+  options("evidence",         "compare evidence (only JC at present)", TAKES_NO_ARGUMENT);
   options("jc-buffer",        "when comparing JC evidence, length of sequence segment to compare for JC evidence", 50);
   options("jc-shorten",       "when comparing JC evidence, length to shorten control segments by when comparing JC evidence for overlap", 5);
   options("jc-only-accepted", "when comparing JC evidence, do not score/count rejected items", TAKES_NO_ARGUMENT);
@@ -1001,19 +1044,28 @@ int do_not_evidence(int argc, char *argv[])
 }
 
 
-void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list, vector<string>& gd_path_names, vector<string>& gd_titles, cReferenceSequences& ref_seq_info, bool strip_to_mutations_and_unknown, bool& polymorphisms_found, bool compare_mode, AnyOption& options, UserOutput& uout)
+// How does polymorphism_search_found work?
+//   If it is NULL then nothing happens and compare_mode is honored
+//   If it is not null then it retursn TRUE/FALSE whether polymorphisms were found and swtiches the output to compare mode
+//      if there is only one file provided but it has polymorphisms. This is only needed for HTML output!
+void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list, vector<string>& gd_path_names, vector<string>& gd_titles, cReferenceSequences& ref_seq_info, bool strip_to_mutations_and_unknown, bool* polymorphism_search_found, bool compare_mode, AnyOption& options, UserOutput& uout)
 {
-	polymorphisms_found = false; // handled putting in the polymorphism column if only one file provided
+	
+	if (polymorphism_search_found != NULL) {
+		*polymorphism_search_found = false; // handles putting in the polymorphism column if only one file provided
+	}
+	
 	for (uint32_t i = 0; i < gd_path_names.size(); i++) {
 		uout("Reading input GD file",gd_path_names[i]);
 		cGenomeDiff single_gd(gd_path_names[i]);
 		
-		if (!compare_mode && (i==0)) {
+		// This allows a switch to compare mode so the correct columns are present if polymorphisms are found so they can be displayed properly in HTML
+		if ((polymorphism_search_found != NULL) && !compare_mode && (i==0)) {
 			diff_entry_list_t muts = single_gd.mutation_list();
 			for(diff_entry_list_t::iterator it=muts.begin(); it != muts.end(); it++) {
 				cDiffEntry de = **it;
 				if (de.count(FREQUENCY) && from_string<double>(de[FREQUENCY]) != 1.0) {
-					polymorphisms_found = true;
+					*polymorphism_search_found = true;
 					break;
 				}
 			}
@@ -1053,7 +1105,7 @@ void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list,
 	cGenomeDiff::sort_gd_list_by_treatment_population_time(gd_list);
 
 	// Then add frequency columns for all genome diffs
-	if (compare_mode || polymorphisms_found) {
+	if (compare_mode || ( (polymorphism_search_found != NULL) && (*polymorphism_search_found) ) ) {
 		uout("Tabulating frequencies of mutations across all files");
 		cGenomeDiff::tabulate_mutation_frequencies_from_multiple_gds(gd, gd_list, gd_titles, options.count("phylogeny-aware"));
 	}
@@ -1070,21 +1122,30 @@ int do_annotate(int argc, char* argv[])
 	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
 	options("format,f", "Type of output file to generate. See options below", "HTML");
 	options("add-html-fields,a", "Add formatted fields that are used for generating HTML output. Only applicable to GD and JSON output formats", TAKES_NO_ARGUMENT);
+	options("add-text-fields,b", "Add formatted fields in UTF-8 encoded text that are similar to those used in HTML output. Only applicable to GD, TSV, CSV, and JSON output formats", TAKES_NO_ARGUMENT);
 	options("ignore-pseudogenes", "Treat pseudogenes as valid ORFs for calling amino acid substitutions", TAKES_NO_ARGUMENT);
-  options("repeat-header", "In HTML mode, repeat the header line every this many rows (0=OFF)", "10");
+  options("repeat-header", "In HTML mode, repeat the header line every this many rows (0=OFF)", "0");
 	options("phylogeny-aware,p", "Check the optional 'phylogeny_id' field when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
 	options("region,g", "Only show mutations that overlap this reference sequence region (e.g., REL606:64722-65312)");
 	options("preserve-evidence,e", "By default evidence items with two-letter codes are removed (RA, JC, MC, ...). Supply this option to retain them. Only affects output in GD and JSON formats. This option can only be used with a single input GD file (i.e., not in COMPARE mode). ", TAKES_NO_ARGUMENT);
 	options("collapse,c", "Do not show samples (columns) unless they have at least one mutation", TAKES_NO_ARGUMENT);
+	options("inactivating-overlap-fraction", "Mutations within this fraction of the length of a gene from its beginning are assigned to the 'genes_inactivating' versus 'the genes_overlapping' list if they fulfill other criteria.", cReferenceSequences::k_inactivating_overlap_fraction);
+	options("inactivating-size", "INS, DEL, and SUB mutations in genes that are longer than this length cutoff are always assigned to the 'genes_inactivating' list, even if they are in-frame or noncoding genes.", cReferenceSequences::k_inactivating_size);
+	options("promoter-distance", "Mutations upstream and within this distance of the beginning of a gene have it added to their 'genes_promoter' list.", cReferenceSequences::k_promoter_distance);
+	
 	options.addUsage("");
 	options.addUsage("ANNOTATE mutations in one or more GenomeDiff files. If multiple input files are provided, then also COMPARE the frequencies for identical mutations across samples.");
   options.addUsage("");
   options.addUsage("Valid output formats:");
-  options.addUsage("  HTML    Descriptive table viewable in a web browser"); 
-  options.addUsage("  GD      GenomeDiff with added annotation of mutations");
-	options.addUsage("  TSV     Tab-separated values file suitable for input into R or Excel");
-	options.addUsage("  PHYLIP  Alignment file suitable for input into PHYLIP");
-	options.addUsage("  JSON  	JavaScript object notation file suitable for parsing");
+  options.addUsage("  HTML     Descriptive table viewable in a web browser");
+  options.addUsage("  GD       GenomeDiff with added annotation of mutations");
+	options.addUsage("  TABLE    Comma-separated values UTF-8 text file suitable for input into Excel or R");
+	options.addUsage("             Simplified output with the same content/format as HTML output.");
+	options.addUsage("  TSV/CSV  Tab- or comma-separated values file suitable for input into R");
+	options.addUsage("             Detailed output with all GD fields. One line per mutation per sample.");
+	options.addUsage("  PHYLIP   Alignment of genotypes in PHYLIP format for phylogenetic analysis");
+	options.addUsage("  FASTA    Multi-FASTA alignment of genotypes for phylogenetic analysis");
+	options.addUsage("  JSON     JavaScript object notation file suitable for parsing");
 	options.addUsage("");
 	options.addUsage("When multiple GD files are provided, the #=TITLE metadata line in each file is used to name each sample/column. If that information is not present, then the GD file name is used (removing the *.gd suffix).");
 	options.addUsage("");
@@ -1094,7 +1155,9 @@ int do_annotate(int argc, char* argv[])
 	options.addUsageSameLine("of '?' indicate that there were not enough aligned reads to call a mutation at this position");
 	options.addUsageSameLine("in the genome in question (either for or against the mutation).");
 	options.addUsage("");
-	options.addUsage("In PHYLIP output, each column in the mutation 'sequence' that is created corresponds to");
+	options.addUsage("PHYLIP/FASTA FORMAT");
+	options.addUsage("");
+	options.addUsage("In this output format, each column in the genotype 'sequence' that is created corresponds to");
 	options.addUsageSameLine("a unique mutational event. For SNPs the base present at that position in each genome is shown.");
 	options.addUsageSameLine("For other types of mutations, 'A' is used for the ancestral allele (e.g., no transposon insertion),");
 	options.addUsageSameLine("and 'T' is used for the derived allele (e.g., new transposon copy inserted).");
@@ -1102,7 +1165,15 @@ int do_annotate(int argc, char* argv[])
 	options.addUsageSameLine("leading to this genome, either because the position is deleted or there are not sufficient");
 	options.addUsageSameLine("reads aligned to a position to call a mutation (i.e., is inside an UN region).");
 	options.addUsage("");
-	options.addUsage("PHYLIP output is designed to be input into the 'dnapars' program to create a phylogenetic tree.");
+	options.addUsage("PHYLIP/FASTA output is designed to be input into other programs to create a phylogenetic tree by parsimony methods. In these analyses, be sure that you use basic parsimony that weights all genotype sequence changes equally (e.g., same transition/transversion rates).");
+	options.addUsage("");
+	options.addUsage("INPUT INTO EXCEL");
+	options.addUsage("");
+	options.addUsage("You can load files output in the TABLE or HTML formats into Excel. For loading TABLE output, open an existing workbook and 'Import' as a Text file. You MUST choose Unicode (UTF-8) as the file origin and a comma as the delimiter. For loading HTML output, choose 'Import' as an HTML file." );
+	options.addUsage("");
+	options.addUsage("MUTATION EFFECTS CLASSIFICATION");
+	options.addUsage("");
+	options.addUsage("Each mutation has a 'genes_overlapping' list assigned based on the genes it overlaps. If the mutation affects a position within --inactivating-overlap-fraction of the length of an overlapping gene from its start, the gene is moved to the 'genes_inactivated' list if it is also a MOB, SNP causing a nonsense mutation, or an INS, DEL, or SUB that results in a size change that is <= the --inactivating-size and results in a frameshift in a protein-coding gene or an INS, DEL, SUB with a size change > the --innactivating-size for any type of gene even if it is in-frame in a protein-coding gene. If there are no 'genes_overlapping' or 'genes_inactivated', a mutation has a 'genes_promoter' list assigned to all genes that are <= the --promoter_cutoff bp upstream of a gene. There can be multiple qualifying genes assigned to each list, but each gene will only be in one of the lists." );
 
   options.processCommandArgs(argc, argv);
 	
@@ -1121,13 +1192,17 @@ int do_annotate(int argc, char* argv[])
     output_file_name = "output.gd";
   } else if (output_format == "PHYLIP") {
     output_file_name = "output.phylip";
+	} else if (output_format == "FASTA") {
+			output_file_name = "output.fa";
 	} else if (output_format == "TSV") {
 		output_file_name = "output.tsv";
+	} else if ( (output_format == "CSV") || (output_format == "TABLE") ) {
+		output_file_name = "output.csv";
   } else if (output_format == "JSON") {
-		output_file_name = "JSON";
+		output_file_name = "output.json";
 	} else {
 		options.addUsage("");
-		options.addUsage("OPTION ERROR:\nUnknown output format (--format|-f) of " + output_format + " requested. Valid choices are HTML, GD, TSV, PHYLIP");
+		options.addUsage("OPTION ERROR:\nUnknown output format (--format|-f) of " + output_format + " requested. Valid choices are HTML, GD, TABLE, TSV, CSV, PHYLIP, FASTA, JSON");
 		options.printUsage();
 		return -1;
 	}
@@ -1151,9 +1226,9 @@ int do_annotate(int argc, char* argv[])
   bool compare_mode = (gd_path_names.size() > 1);
 	
 	// Perform some pre-checks to keep things in scope
-	if ( (output_format == "PHYLIP") && !compare_mode) {
+	if ( ((output_format == "PHYLIP") || (output_format == "FASTA")) && !compare_mode) {
 		options.addUsage("");
-		options.addUsage("OPTION ERROR:\nYou must provide more than one input GD file in PHYLIP mode.");
+		options.addUsage("OPTION ERROR:\nYou must provide more than one input GD file in PHYLIP ot FASTA mode.");
 		options.printUsage();
 		return -1;
 	}
@@ -1165,8 +1240,13 @@ int do_annotate(int argc, char* argv[])
 	}
 	
 	// Give a warning if add-html-fields used when it isn't necessary
-	if (options.count("add-html-fields") && !((output_format == "GD") || (output_format == "JSON") || (output_format == "PHYLIP")) ) {
-		WARN("--add-html-fields option is not used for output format " + output_format);
+	if (options.count("add-html-fields") && !((output_format == "GD") || (output_format == "JSON")) ) {
+		WARN("--add-html-fields option is ignored for the selected output format " + output_format);
+	}
+	
+	// Give a warning if add-html-fields used when it isn't necessary
+	if (options.count("add-text-fields") && !((output_format == "GD") || (output_format == "JSON") || (output_format == "TSV") || (output_format == "CSV")) ) {
+		WARN("--add-text-fields option is ignored for the selected output format " + output_format);
 	}
 	
 	// Load reference files
@@ -1178,14 +1258,15 @@ int do_annotate(int argc, char* argv[])
 	cGenomeDiff gd;
 	vector<cGenomeDiff> gd_list;
 	vector<string> gd_titles;
-	bool polymorphisms_found(false);
+	bool polymorphism_search_found(false);
 	
   if (output_format == "HTML") {
 		
-		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, polymorphisms_found, compare_mode, options, uout);
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, &polymorphism_search_found, compare_mode, options, uout);
 
 		uout("Annotating mutations");
-		ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"), compare_mode);
+		
+		ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"), compare_mode, kBreseq_large_mutation_size_cutoff, false, from_string<double>(options["inactivating-overlap-fraction"]), from_string<uint32_t>(options["inactivating-size"]), from_string<uint32_t>(options["promoter-distance"]) );
 		
     uout("Writing output HTML file", output_file_name);
 		
@@ -1196,7 +1277,7 @@ int do_annotate(int argc, char* argv[])
     MutationTableOptions mt_options(settings);
     if (compare_mode)
       mt_options.repeat_header = true;
-    if (polymorphisms_found)
+    if (polymorphism_search_found)
       mt_options.force_frequencies_for_one_reference = true;
     mt_options.one_ref_seq = ref_seq_info.size() == 1;
     mt_options.gd_name_list_ref = gd_titles;
@@ -1206,8 +1287,8 @@ int do_annotate(int argc, char* argv[])
         
   } else if (output_format == "GD") {
 		
-		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, !options.count("preserve-evidence"), polymorphisms_found, compare_mode, options, uout);
-		
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, !options.count("preserve-evidence"), NULL, compare_mode, options, uout);
+				
 		uout("Annotating mutations");
 		ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"), compare_mode);
 		
@@ -1225,36 +1306,92 @@ int do_annotate(int argc, char* argv[])
 			}
 		}
 		
+		// Add extra TEXT annotations
+		if (options.count("add-text-fields")) {
+			// Only defaults accessible - which include javascript output...
+			Settings settings;
+			MutationTableOptions mutation_table_options(settings);
+			diff_entry_list_t muts = gd.mutation_list();
+			for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr ++) {
+				cDiffEntry& mut = (**itr);
+				add_text_fields_to_mutation(mut, mutation_table_options);
+			}
+		}
+		
     gd.write(output_file_name);
   } else if (output_format == "PHYLIP") {
 		uout("Writing output PHYLIP alignment file", options["output"]);
 		
-		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, polymorphisms_found, compare_mode, options, uout);
-		gd.write_phylip(output_file_name, gd, gd_list, ref_seq_info);
-	} else if (output_format == "TSV") {
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, NULL, compare_mode, options, uout);
+		gd.write_genotype_sequence_file("PHYLIP", output_file_name, gd, gd_list, ref_seq_info);
 		
-		// Load the entire list and pass it to write_tsv
+	} else if (output_format == "FASTA") {
+		uout("Writing output PHYLIP alignment file", options["output"]);
+	
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, NULL, compare_mode, options, uout);
+		gd.write_genotype_sequence_file("FASTA", output_file_name, gd, gd_list, ref_seq_info);
+		
+	} else if (output_format == "TABLE") {
+
+		// Force compare mode
+		compare_mode = true;
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, NULL, compare_mode, options, uout);
+
+		// Remove evidence
+		gd.remove_group(cGenomeDiff::EVIDENCE);
+		
+		uout("Annotating mutations");
+		ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"), compare_mode);
+		
+		Settings settings;
+		MutationTableOptions mutation_table_options(settings);
+
+		uout("Writing output TABLE file", options["output"]);
+		cGenomeDiff::write_table_file(output_file_name, ",", gd, gd_titles, mutation_table_options);
+		
+	} else if ( (output_format == "TSV") || (output_format == "CSV") ) {
+		// Load the entire list and pass it to the writer
+		
+		vector<cGenomeDiff> ev_list;
+
 		for (vector<string>::iterator it=gd_path_names.begin(); it!=gd_path_names.end(); it++) {
 			uout("Reading/annotating input GD file",*it);
 
 			cGenomeDiff this_gd(*it);
-			//remove all but mutations
-			if (!options.count("preserve-evidence")) {
-				this_gd.remove_group(cGenomeDiff::EVIDENCE);
-				//this_gd.remove_group(cGenomeDiff::VALIDATION);
-			}
+			cGenomeDiff this_ev(*it);
+			
 			ref_seq_info.annotate_mutations(this_gd, false, options.count("ignore-pseudogenes"), compare_mode);
 			
+			// Add extra TEXT annotations
+			if (options.count("add-text-fields")) {
+				// Only defaults accessible - which include javascript output...
+				Settings settings;
+				MutationTableOptions mutation_table_options(settings);
+				diff_entry_list_t muts = this_gd.mutation_list();
+				for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr ++) {
+					cDiffEntry& mut = (**itr);
+					add_text_fields_to_mutation(mut, mutation_table_options);
+				}
+			}
+			
 			gd_list.push_back(this_gd);
+			ev_list.push_back(this_ev);
 		}
 		
-		uout("Writing output TSV file", options["output"]);
-		cGenomeDiff::write_tsv(output_file_name, gd_list);
+
+		
+		if (output_format == "TSV") {
+			uout("Writing output TSV file", options["output"]);
+			cGenomeDiff::write_separated_values_file(output_file_name, "\t", gd_list, options.count("preserve-evidence"));
+		} else if (output_format == "CSV") {
+			uout("Writing output CSV file", options["output"]);
+			cGenomeDiff::write_separated_values_file(output_file_name, ",", gd_list, options.count("preserve-evidence"));
+		}
 		
 	} else if (output_format == "JSON") {
 		uout("Writing output JSON file", options["output"]);
 		
-		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, !options.count("preserve-evidence"), polymorphisms_found, compare_mode, options, uout);
+		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, !options.count("preserve-evidence"), NULL, compare_mode, options, uout);
 		
 		uout("Annotating mutations");
 		ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"), compare_mode);
@@ -1271,6 +1408,18 @@ int do_annotate(int argc, char* argv[])
 			for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr ++) {
 				cDiffEntry& mut = (**itr);
 				add_html_fields_to_mutation(mut, options);
+			}
+		}
+		
+		// Add extra TEXT annotations
+		if (options.count("add-text-fields")) {
+			// Only defaults accessible - which include javascript output...
+			Settings settings;
+			MutationTableOptions mutation_table_options(settings);
+			diff_entry_list_t muts = gd.mutation_list();
+			for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr ++) {
+				cDiffEntry& mut = (**itr);
+				add_text_fields_to_mutation(mut, mutation_table_options);
 			}
 		}
 		
@@ -1341,17 +1490,18 @@ int do_phylogeny(int argc, char* argv[])
 	
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
 	options("verbose,v", "produce output for each mutation counted.", TAKES_NO_ARGUMENT);
-	options("output,o", "path to output file with added mutation data.", ".");
+	options("output,o", "base name for output files.", "phylogeny");
 	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
 	//options("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT);
 	options("missing-as-ancestral,a", "Count missing data (mutations in UN regions) as the ancestral allele rather than as an unknown allele (N).", TAKES_NO_ARGUMENT);
 	options("phylogeny-aware,p", "Check the optional 'phylogeny_id' field when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
-	
+	options("dnapars-command,c", "Command to run for phylip 'dnapars' executable. It can include a path or just the command if the executable is located in your $PATH (Default: try 'phylip dnapars' and then 'dnapars')");
+
 	options.addUsage("");
 	options.addUsage("Uses PHYLIP to construct a phylogentic tree. If you are including an ancestor");
 	options.addUsageSameLine("to root the tree, you should include it as the very first Genome Diff file.");
 	options.addUsage("");
-	options.addUsage("You MUST have 'dnapars' from PHYLIP installed and in your path to use this commend.");
+	options.addUsage("You MUST have PHYLIP installed in your $PATH such that executing 'phylip dnapars' or 'dnapars' will run this command. If you have it installed in a different way, try using the --dnapars-command to specify the executable (and if necessary, also the dnapars subcommand).");
 
 	options.processCommandArgs(argc, argv);
 	
@@ -1424,10 +1574,10 @@ int do_phylogeny(int argc, char* argv[])
 	//uout("Annotating mutations");
 	//ref_seq_info.annotate_mutations(gd, true);
 	
-	string phylip_input_file_name = output_base_name + ".phylip";
+	string phylip_input_file_name = output_base_name + ".genotypes.txt";
 	uout("Writing output PHYLIP alignment file", phylip_input_file_name);
-	gd.write_phylip(phylip_input_file_name, gd, gd_list, ref_seq_info, options.count("missing-as-ancestral"));
-	string phylip_script_file_name = output_base_name + ".phylip.commands";
+	gd.write_genotype_sequence_file("PHYLIP", phylip_input_file_name, gd, gd_list, ref_seq_info, options.count("missing-as-ancestral"));
+	string phylip_script_file_name = output_base_name + ".phylip.commands.txt";
 	ofstream phylip_script(phylip_script_file_name.c_str());
 	phylip_script << phylip_input_file_name << endl;
 	phylip_script << "V" << endl; // print only one tree!
@@ -1438,8 +1588,32 @@ int do_phylogeny(int argc, char* argv[])
 	if (file_exists("outtree")) remove_file("outtree");
 	if (file_exists("outfile")) remove_file("outfile");
 	
-	uout("Running DNAPARS from", phylip_input_file_name);
-	SYSTEM("dnapars < " + phylip_script_file_name, false, false, false);
+	// Figure out what executable works or is specified for dnapars
+	string dnapars_command;
+	if (options.count("dnapars-command")) {
+		dnapars_command = options["dnapars-command"];
+		uout("DNAPARS command specified as: ", dnapars_command);
+	} else {
+		// See if `phylip` is installed
+		dnapars_command = SYSTEM_CAPTURE("which phylip", true);
+		if (dnapars_command.size() > 0) {
+			// Need to add the subcommand here
+			dnapars_command += " dnapars";
+		}
+		else {
+			// See if `dnapars` is installed
+			dnapars_command = SYSTEM_CAPTURE("which dnapars", true);
+		}
+		// Didn't find one? Bail
+		if (dnapars_command.size() == 0) {
+			ERROR("Could not find 'phylip' or 'dnapars' command in $PATH");
+		}
+		
+		uout("DNAPARS command found as: ", dnapars_command);
+	}
+	
+	uout("Running DNAPARS on", phylip_input_file_name);
+	SYSTEM(dnapars_command + " < " + phylip_script_file_name, false, false, false);
 	
 	string phylip_original_tree_file_name = "outtree";
 	string phylip_renamed_tree_file_name = output_base_name + ".tre";
@@ -1461,15 +1635,20 @@ int do_phylogeny(int argc, char* argv[])
 	}
 	renamed_tree << slurped_file;
 	
-	string phylip_original_tree_save_file_name = output_base_name + ".original.phylip.tre";
-	string phylip_output_file_name = output_base_name + ".phylip.output";
-	SYSTEM("mv outtree " + phylip_original_tree_save_file_name);
+	string phylip_output_file_name = output_base_name + ".phylip.output.txt";
+	
+	// Changed to deleting the original tree with placeholder names
+	SYSTEM("rm outtree");
+	//string phylip_original_tree_save_file_name = output_base_name + ".original.phylip.tre";
+	//SYSTEM("mv outtree " + phylip_original_tree_save_file_name);
+	
+	// Keep the phylip output though
 	SYSTEM("mv outfile " + phylip_output_file_name);
 	
 	// Create mutation key file
 	uout("Creating mutation key file");
 
-	string mutation_key_file_name = phylip_input_file_name + ".mutation.key";
+	string mutation_key_file_name = output_base_name + ".mutation.key.txt";
 	ofstream mutation_key(mutation_key_file_name.c_str());
 	diff_entry_list_t mut_list = gd.mutation_list();
 	uint32_t i=0;
@@ -1479,11 +1658,18 @@ int do_phylogeny(int argc, char* argv[])
 	}
 	
 	// Create sample key file
-	string sample_key_file_name = phylip_input_file_name + ".sample.key";
+	string sample_key_file_name = output_base_name + ".sample.key.txt";
 	ofstream sample_key(sample_key_file_name.c_str());
 	i=1;
+	
+	set<string> used_names;
+	
 	for(vector<string>::iterator it = title_list.begin(); it != title_list.end(); it++) {
-			sample_key << "_" + to_string<uint32_t>(i++) + "_" << "\t" << *it << endl;
+		if (used_names.count(*it)) {
+			WARN("Tree will have duplicate taxon names due to repeated GD title: " + *it);
+		}
+		used_names.insert(*it);
+		sample_key << "_" + to_string<uint32_t>(i++) + "_" << "\t" << *it << endl;
 	}
 	
 	return 0;
@@ -1507,7 +1693,7 @@ int do_count(int argc, char* argv[])
   options.addUsage("");
   options.addUsage("In the output \"small\" mutations are ≤ " + to_string<int32_t>(kBreseq_large_mutation_size_cutoff) + " bp. \"large\" mutations are >" + to_string<int32_t>(kBreseq_large_mutation_size_cutoff) + " bp");
 	
-	options.addUsage("For base substitutions overlapping multiple genes, the mutation is counted as the most signficant effect it has on any of the genes it overlaps with the precedence: nonsense > nonsynonymous > synonymous.");
+	options.addUsage("For base substitutions overlapping multiple genes, the mutation is counted as the most significant effect it has on any of the genes it overlaps with the precedence: nonsense > nonsynonymous > synonymous.");
 	
   options.processCommandArgs(argc, argv);
 	
@@ -1697,7 +1883,7 @@ int do_normalize_gd(int argc, char* argv[])
 		for (vector<string>::const_iterator it = seq_ids.begin(); it != seq_ids.end(); it++)
 		{
 			if (new_ref_seq_info[*it].m_fasta_sequence.get_sequence() != verify_ref_seq_info[*it].m_fasta_sequence.get_sequence()) {
-				WARN("Failed APPLY test. Discrepancies beween sequences produced before and after NORMALIZE. Check ordering of mutations.");
+				WARN("Failed APPLY test. Discrepancies between sequences produced before and after NORMALIZE. Check ordering of mutations.");
 			}
 		}
 	}
@@ -1713,12 +1899,35 @@ int do_remove_gd(int argc, char* argv[])
   AnyOption options("gdtools FILTER/REMOVE [-o output.gd] -c condition1 [-c condition2] [-m SNP] input.gd");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o", "Output Genome Diff file.", "output.gd");
-  options("mut_type,m", "Only this mutation type will be removed.");
-	options("condition,c", "Condition for removing mutation entries from the input Genome Diff file. Enclose the value of this parameter in quotes if it includes spaces, e.g. -c \"frequency <= 0.05\". You may include multiple conditions on the same command line. Only entries that satisfy ALL conditions will be removed. Use the special value UNDEFINED to indicate a that this field does not exist for the given entry.");
+	options("condition,c", "Condition for removing entries from the input Genome Diff file. Enclose the value of this parameter in quotes if it includes spaces, e.g. -c \"frequency <= 0.05\". Both field names and field values are case-sensitive. You may include multiple conditions on the same command line. Only entries that satisfy ALL conditions will be removed.");
+	options("preserve-evidence,e", "By default evidence items with two-letter codes are removed (RA, JC, MC, ...). Supply this option to retain them. ", TAKES_NO_ARGUMENT);
+	options("renumber,n","Renumber IDs of entries that remain after performing filtering.", TAKES_NO_ARGUMENT);
+	options("comment,m","Instead of removing filtered entries, comment them out in the output GD file.", TAKES_NO_ARGUMENT);
+	options("verbose,v","Print information about why entries were removed to the console.", TAKES_NO_ARGUMENT);
+
   options.processCommandArgs(argc, argv);
 
   options.addUsage("");
-  options.addUsage("Removes mutations from a GD file for which ALL of the provided conditions evaluate to true.");
+  options.addUsage("Removes entries from a GD file for which ALL of the provided conditions evaluate to true.");
+	options.addUsage("");
+	options.addUsage("Operators recognized in conditions are: ==, >, >=, >, <=, !=.");
+	options.addUsage("");
+	options.addUsage("Use the special value UNDEFINED to match that a field does not exist for the given entry.");
+	options.addUsage("");
+  options.addUsage("Use the special field ASSIGNED to filter evidence entries based on whether any mutation references them in the parent-id field. This field has a value of 0 (for false) or 1 (for true)");
+	options.addUsage("");
+	options.addUsage("USAGE EXAMPLES");
+	options.addUsage("");
+	options.addUsage("Remove all but insertion and deletion mutations");
+	options.addUsage("  gdtools REMOVE -c \"type != INS\" -c \"type != DEL\" ...");
+	options.addUsage("");
+	options.addUsage("Remove all but synonymous mutations (must run gd ANNOTATE first to add field)");
+	options.addUsage("  gdtools ANNOTATE -f GD -r reference.gbk -o annotated.gd input.gd");
+	options.addUsage("  gdtools REMOVE -c \"snp_type != synonymous\" -o final.gd annotated.gd");
+	options.addUsage("");
+	options.addUsage("Remove all but unassigned JC evidence (takes two commands). Needs -e option.");
+	options.addUsage("  gdtools REMOVE -e -c \"ASSIGNED=1\" -o intermediate.gd input.gd");
+	options.addUsage("  gdtools REMOVE -e -c \"type != JC\" -o final.gd intermediate.gd");
 	
 	if (options.count("help")) {
 		options.printUsage();
@@ -1744,78 +1953,124 @@ int do_remove_gd(int argc, char* argv[])
 
   assert(filters.size());
 
-  uout("Reading input GD file") << options.getArgv(0) << endl;
+  uout("Reading input GD file", options.getArgv(0));
   cGenomeDiff gd(options.getArgv(0));
 
-  diff_entry_list_t muts;
-  if (!options.count("mut_type")) {
-    muts = gd.mutation_list();
-  }
-  else {
-    vector<string> mut_strs= from_string<vector<string> >(options["mut_type"]);
-    assert (mut_strs.size());
-    vector<gd_entry_type> mut_types;
-    for (size_t i = 0; i < mut_strs.size(); ++i) {
-      for (size_t j = 0; j < gd_entry_type_lookup_table.size(); ++j) {
-        if (gd_entry_type_lookup_table[j] == mut_strs[i]) {
-          mut_types.push_back((gd_entry_type)j);
-          break;
-        }
-      }
-    }
-    muts = gd.get_list(mut_types);
-  }
-    
-  const vector<string> evals = make_vector<string>("==")("!=")("<=")(">=")("<")(">");
-  for (diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); ++it) {
-    cDiffEntry& mut = **it;
+	// Remove evidence unless requesting to keep it
+	if (!options.count("preserve-evidence")) {
+		gd.remove_group(cGenomeDiff::EVIDENCE);
+		//this_gd.remove_group(cGenomeDiff::VALIDATION);
+	}
+	
+	// Load the normal conditions
+	vector<string> filter_keys;
+	vector<size_t> filter_evals;
+	vector<string> filter_values;
+	
+	const vector<string> evals = make_vector<string>("==")("!=")("<=")(">=")("<")(">");
+	for (vector<string>:: const_iterator jt = filters.begin(); jt != filters.end(); ++jt) {
+			
+		// Parse filter string.
+		string filter = *jt;
+			
+		for (size_t i = 0; i < filter.size(); ++i) {
+			if (filter[i] == ' ') {
+				filter.erase(i,1);
+			}
+		}
+		
+		string key   = "";
+		size_t eval  = string::npos;
+		string value = "";
+		for (size_t i = 0; i < evals.size(); ++i) {
+			if (filter.find(evals[i]) != string::npos) {
+					
+				size_t pos = filter.find(evals[i]);
+				eval = i;
+				string segment = filter;
+				segment.erase(pos, evals[i].size());
+				key = segment.substr(0, pos);
+				value = segment.substr(pos);
+				
+				filter_keys.push_back(key);
+				filter_evals.push_back(eval);
+				filter_values.push_back(value);
+				
+				break;
+			}
+		}
+	
+		ASSERT(key.size() && value.size(), "Error in format of filter: " + filter);
+	}
+	
+	// Add the special "assigned" field
+	diff_entry_list_t entries = gd.get_list();
+
+	// Create a map of all used evidence
+	map<string,bool> used_as_evidence;
+	for (diff_entry_list_t::iterator it = entries.begin(); it != entries.end(); it++) {
+		cDiffEntry& de = **it;
+		for (vector<string>::iterator ev_it = de._evidence.begin(); ev_it != de._evidence.end(); ev_it++) {
+			used_as_evidence[*ev_it] = true;
+		}
+	}
+		
+	// Assign based on presence in map
+	for (diff_entry_list_t::iterator it = entries.begin(); it != entries.end(); it++) {
+		cDiffEntry& de = **it;
+		if (used_as_evidence.count(de._id)) {
+			de["ASSIGNED"] = "1";
+		} else {
+			de["ASSIGNED"] = "0";
+		}
+	}
+	
+	uout("Filtering GD entries");
+	
+	// Perform filtering
+	cGenomeDiff new_gd;
+	diff_entry_list_t* mutable_entry_list = gd.get_mutable_list_ptr();
+	diff_entry_list_t::iterator it = mutable_entry_list->begin();
+	bool advance_iterator;
+  while (it != mutable_entry_list->end()) {
+		advance_iterator = true;
+    cDiffEntry& de = **it;
 
     vector<string> reasons;
-    for (vector<string>:: const_iterator jt = filters.begin(); jt != filters.end(); ++jt) {
-        
-        
-      bool is_filtered = false;
-      // Parse filter string.
-      string filter = *jt;
-        
-      for (size_t i = 0; i < filter.size(); ++i) {
-        if (filter[i] == ' ') {
-          filter.erase(i,1);
-        }
-      }
-      string key   = "";
-      size_t eval  = string::npos;
-      string value = "";
-      for (size_t i = 0; i < evals.size(); ++i) {
-        if (filter.find(evals[i]) != string::npos) {
-            
-          size_t pos = filter.find(evals[i]);
-          eval = i;
-          string segment = filter;
-          segment.erase(pos, evals[i].size());
-          key = segment.substr(0, pos);
-          value = segment.substr(pos);
-          break;
-        }
-      }
-    
-      ASSERT(key.size() && value.size(), "Error in format of filter: " + filter);
-        
-      // special case of frequency missing if 100%
-      if ( (key==FREQUENCY) && (mut.count(key)==0) ) {
-          mut[key] = "1";
-      }  
-        
-			//Note special case for 'type'
-			string test_string = mut.count(key) ? mut[key] : "UNDEFINED";
+
+		for (size_t i=0; i<filter_evals.size(); i++) {
+		
+			bool is_filtered = false;
+			string& key = filter_keys[i];
+			size_t eval = filter_evals[i];
+			string& value = filter_values[i];
+			
+			//Note special case for matching UNDEFINED values
+			string test_string = de.count(key) ? de[key] : "UNDEFINED";
+			
+			// special case of frequency missing if 100%
+			if ( (key==FREQUENCY) && (test_string=="UNDEFINED") ) {
+					test_string = "1";
+			}
 			
 			// Special cases for non-map entries
 			if (key=="type") {
-				test_string = to_string(mut._type);
+				test_string = to_string(de._type);
 			}
 			
+			// UNDEFINED only works with == and !=
+			if (test_string == "UNDEFINED") {
+				switch(eval)
+				{
+					case 0: if (test_string == value) is_filtered = true; break;
+					case 1: if (test_string != value) is_filtered = true; break;
+					
+					default:
+						ERROR("UNDEFINED can only be used with the == and !- comparison operators");
+				};
+			}
 			// Numeric
-			if (value.find_first_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") == string::npos) {
+			else if (value.find_first_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ") == string::npos) {
 				switch(eval)
 				{
 					case 0: if (from_string<float>(test_string) == from_string<float>(value)) is_filtered = true; break;
@@ -1844,12 +2099,42 @@ int do_remove_gd(int argc, char* argv[])
 			}
 				
     }
+		
     if (reasons.size() == filters.size()) {
-      printf("Removed [%s]: %s\n", join(reasons, ", ").c_str(), mut.as_string().c_str());
-      mut["filtered"] = join(reasons, ", ");
-      mut["comment_out"] = "true";
+			if (options.count("verbose")) {
+				cout << "Removed [" << join(reasons, ", ") << "]: " << de.as_string() << endl;
+			}
+      de["filtered"] = join(reasons, ", ");
+			
+			// Comment out or delete
+			if (options.count("comment")) {
+				de["comment_out"] = "true";
+			} else {
+				it = gd.remove(it);
+				advance_iterator = false;
+			}
     }
+		
+		if (advance_iterator) it++;
   }
+
+	// Remove the special fields
+	for (diff_entry_list_t::iterator it = entries.begin(); it != entries.end(); it++) {
+		cDiffEntry& de = **it;
+		de.erase("ASSIGNED");
+	}
+	
+	// Fix the ids - if requested
+	if(options.count("renumber"))
+	{
+		uout("Renumbering GD entries");
+
+		cGenomeDiff gd2;
+		gd2.metadata = gd.metadata;
+		gd2.merge(gd, true);
+		gd = gd2;
+	}
+	
   uout("Writing output GD file", options["output"]);
   gd.write(options["output"]);
   return 0;
@@ -2107,11 +2392,6 @@ int do_simulate_mutations(int argc, char *argv[])
   cReferenceSequences ref_seq_info;
   ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
   
-  int ref_seq_id = 0;
-  if(options.count("seq"))  {
-    ref_seq_id = ref_seq_info.seq_id_to_index(options["seq"]);
-	}
-  
   if (options.count("seed")) {
     cSimFastqSequence::SEED_VALUE = un(options["seed"]);
   }
@@ -2321,13 +2601,13 @@ int do_download(int argc, char *argv[])
   ss << "Usage: gdtools DOWNLOAD -l <user:password> -d <download_dir> <file1.gd file2.gd file3.gd ...>\n";
 
   AnyOption options(ss.str());
-	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+	options("help,h",            "Display detailed help message", TAKES_NO_ARGUMENT);
   options("login,l",           "Login user:password information for private server access.");
   options("download-dir,d",    "Output directory to download file to.", "02_Downloads");
   options("genome-diff-dir,g", "Directory to search for genome diff files.", "01_Data");
   options("test"           ,   "Test urls in genome diff files, doesn't download the file", TAKES_NO_ARGUMENT);
   options("reference-only",    "Only downloads the reference sequence files for this file", TAKES_NO_ARGUMENT);
-	options("ungzip,z","Decompress gzipped read files", TAKES_NO_ARGUMENT);
+	options("ungzip,z",					 "Decompress gzipped read files", TAKES_NO_ARGUMENT);
 
 	options.addUsage("\nExamples:");
 	options.addUsage("  gdtools DOWNLOAD -l john:1234 -d downloads -g data");
@@ -2377,8 +2657,8 @@ int do_download(int argc, char *argv[])
   //Url formats.
     lookup_table["GENBANK"]
         ["url_format"] = "http://www.ncbi.nlm.nih.gov/sviewer/?db=nuccore&val=%s&report=gbwithparts&retmode=text";
-    lookup_table["SRA"]
-        ["url_format"] = "ftp://ftp.sra.ebi.ac.uk/vol1/fastq/%s/%s/%s.fastq.gz";
+    lookup_table["NCBI-SRA"]
+        ["url_format"] = "%s";
     lookup_table["BARRICKLAB-PUBLIC"]
         ["url_format"] = "http://barricklab.org/%s";
 		lookup_table["NO-DOWNLOAD"]
@@ -2401,8 +2681,8 @@ int do_download(int argc, char *argv[])
   //File path formats.
     lookup_table["GENBANK"]
         ["file_path_format"] = download_dir + "/%s.gbk";
-    lookup_table["SRA"]
-        ["file_path_format"] = download_dir + "/%s.fastq.gz";
+    lookup_table["NCBI-SRA"]
+        ["file_path_format"] = download_dir + "/%s";;
     lookup_table["BARRICKLAB-PUBLIC"]
         ["file_path_format"] = download_dir + "/%s";
     lookup_table["BARRICKLAB-PRIVATE"]
@@ -2458,6 +2738,13 @@ int do_download(int argc, char *argv[])
       bool is_downloaded =
           ifstream(file_path.c_str()).good() && !file_empty(file_path.c_str());
 			
+			// Need to glob to check for matching filenames
+			if (key == "NCBI-SRANCBI-SRA") {
+				glob_t glob_result;
+				glob((file_path + "*").c_str(),GLOB_TILDE,NULL,&glob_result);
+				is_downloaded = (glob_result.gl_pathc > 0);
+			}
+			
       bool is_gzip =
           cString(file_path).ends_with(".gz");
 			if (options.count("ungzip")) is_gzip = true;
@@ -2484,9 +2771,8 @@ int do_download(int argc, char *argv[])
       if (key == "GENBANK") {
         sprintf(url, url_format, value.c_str());
       }
-      else if (key == "SRA") {
-        const string &first  = value.substr(0,6), second = value.substr(0,9), third  = value;
-        sprintf(url, url_format, first.c_str(), second.c_str(), third.c_str());
+      else if (key == "NCBI-SRA") {
+        sprintf(url, url_format, value.c_str());
       }
       else if (key == "BARRICKLAB-PUBLIC") {
         sprintf(url, url_format, value.c_str());
@@ -2502,7 +2788,9 @@ int do_download(int argc, char *argv[])
 			if (key == "BARRICKLAB-PRIVATE") {
 				wget_cmd = url + " " + file_path;
 				cout << wget_cmd << endl;
-			} else {
+			} else if (key == "NCBI-SRA") {
+				wget_cmd = "fastq-dump --split-files --outdir " + download_dir + " " + url;
+		  } else {
 				wget_cmd = options.count("test") ?
 							cString("wget --spider \"%s\"", url.c_str()) :
 							cString("wget -O %s \"%s\"",file_path.c_str(), url.c_str());
@@ -2574,21 +2862,15 @@ int do_runfile(int argc, char *argv[])
   ss << "Usage: gdtools RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> <file1.gd file2.gd file3.gd ...>";
   AnyOption options(ss.str());
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("mode,m",           "Type of command file to generate. Valid options are: breseq, breseq-apply, trimmomatic, trimmomatic-PE-unique, read-count.", "breseq");
+  options("mode,m",           "Type of command file to generate. Valid options are: breseq, breseq-merged, breseq-apply, fastp-single, fastp-paired, fastp-merged, read-count.", "breseq");
   options("executable,e",     "Alternative executable program to run.");
   options("options",          "Options to be passed to the executable. These will appear first in the command line.");
 	options("runfile,r",        "Name of the run file to be output.", "commands");
   options("data-dir,g",       "Directory to search for genome diff files.", "01_Data");
-  options("downloads-dir,d",  "Downloads directory where read and reference files are located. Defaults to 02_Trimmed for read files if #=ADAPTSEQ tags are present. (Default = 02_Downloads; 02_Trimmed for read files if #=ADAPTSEQ tags are present for breseq; 02_Apply for reference files for breseq-apply)");
-  options("output-dir,o",     "Output directory for commands within the runfile. (Default = 03_Output for breseq*; = 02_Trimmed for trimmomatic*)");
-  options("log-dir,l",        "Directory for error log file that captures the executable's stdout and sterr. (Default = 04_Logs for breseq; 04_Apply_Logs for breseq-apply; 04_Trim_Logs for trimmomatic*)");
+  options("downloads-dir,d",  "Path to downloads directory where read and reference files are located. (Default = 02_Downloads; <THIS_PATH>/../02_Trimmed for read files if this directory exists; <THIS_PATH>/../02_Apply for reference files for breseq-apply)");
+  options("output-dir,o",     "Output directory for commands within the runfile. (Default = 03_Output for breseq*; = 02_Trimmed for fastp*)");
+  options("log-dir,l",        "Directory for error log file that captures the executable's stdout and sterr. (Default = 04_Logs for breseq; 04_Apply_Logs for breseq-apply; 04_Trim_Logs for fastp*)");
 	options("preserve-pairs,p",  "Keep track of paired and unpaired reads for trimming and using trimmed reads.", TAKES_NO_ARGUMENT);
-
-	options.addUsage("\n");
-	options.addUsage("These GD header fields are used for trimmomatic modes");
-	options.addUsage("  #=ADAPTSEQ <path/to/fasta/file> [required]");
-	options.addUsage("  #=TRIM-START-BASES <int>        [optional]");
-	options.addUsage("  #=TRIM-END-BASES <int>          [optional]");
 	
   options.addUsage("\n");
   options.addUsage("Examples:");
@@ -2627,15 +2909,15 @@ int do_runfile(int argc, char *argv[])
     return -1;
   }
 	
-	bool preserve_paired = options.count("preserve-pairs");
-	
   //! Check mode and alter defaults if needed
+	//!
+	
   string exe;
 	string runfile_path;
 	string output_dir;
 	string log_dir;
 	string download_dir;
-	if (options["mode"] == "breseq") {
+	if ( (options["mode"] == "breseq") || (options["mode"] == "breseq-merged") ) {
     exe = "breseq";
 		runfile_path = "commands";
 		output_dir = "03_Output";
@@ -2650,14 +2932,9 @@ int do_runfile(int argc, char *argv[])
 		runfile_path = "flexbar_commands";
     output_dir = "02_Trimmed";
 		log_dir = "04_Trim_Logs";
-	} else if (options["mode"] == "trimmomatic") {
-		exe = "trimmomatic";
-		runfile_path = "trimmomatic_commands";
-		output_dir = "02_Trimmed";
-		log_dir = "04_Trim_Logs";
-	} else if (options["mode"] == "trimmomatic-PE-unique") {
-		exe = "trimmomatic";
-		runfile_path = "trimmomatic_commands";
+	} else if ((options["mode"] == "fastp-single") || (options["mode"] == "fastp-paired") || (options["mode"] == "fastp-merged")) {
+		exe = "fastp";
+		runfile_path = "fastp_commands";
 		output_dir = "02_Trimmed";
 		log_dir = "04_Trim_Logs";
   } else if (options["mode"] == "flexbar-paired") {
@@ -2714,12 +2991,22 @@ int do_runfile(int argc, char *argv[])
 		}
 		
 		// Fix the read file names for certain keywords
-		for (vector<string>::iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {  
-			if (read_file_it->find("SRA:") == 0) {
-				*read_file_it = read_file_it->substr(4); // remove first four characters
-				*read_file_it += ".fastq";								 // add .fastq
+		// Here, we need to look in the folder and add those names
+		vector<string> updated_read_list;
+		for (vector<string>::iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {
+			const cKeyValuePair kvp(*read_file_it, ':');
+			if (to_upper(kvp.get_key()) == "NCBI-SRA") {
+				// Look in the folder and add all fastq files found
+				glob_t glob_result;
+				glob((download_dir + "/" + kvp.get_value() + "*").c_str(),GLOB_TILDE,NULL,&glob_result);
+				for(unsigned int i=0; i<glob_result.gl_pathc; ++i){
+					updated_read_list.push_back(glob_result.gl_pathv[i]);
+				}
+			} else {
+				updated_read_list.push_back(*read_file_it);
 			}
 		}
+		reads = updated_read_list;
 		
 		
     if (refs.size() == 0) {
@@ -2732,8 +3019,7 @@ int do_runfile(int argc, char *argv[])
       continue;  
     }
   
-
-    if (options["mode"] == "breseq") {  
+    if ( (options["mode"] == "breseq") || (options["mode"] == "breseq-merged") ) {
 			
       //! Step: Begin building command line.
       stringstream ss;
@@ -2762,35 +3048,23 @@ int do_runfile(int argc, char *argv[])
 				ss << " -r " << download_dir << "/" << cString(*ref_file_it).get_base_name();
 			}
 			
-			// Change over to trimmed input at this point
-			if ( (adapters_for_reads.size() > 0) ) {
-					download_dir = "02_Trimmed";
+			// Should be relative to the download directory
+			if (directory_exists(cString(download_dir + "/../" + "02_Trimmed").c_str())) {
+				download_dir = download_dir + "/../" + "02_Trimmed";
 			}
 			
 			//! Part 4: Read argument path(s).
-
-			// This is a special case for input after Trimmomatic paired trimming
-			if (preserve_paired && (download_dir == "02_Trimmed")) {
-				
+			if (options["mode"] == "breseq-merged") {
 				for (vector<vector<string> >::const_iterator read_pair_it=reads_by_pair.begin(); read_pair_it != reads_by_pair.end(); read_pair_it++) {
 					
-					if (file_exists( cString(download_dir + "/" + cString(gd.get_title()).get_base_name_no_extension() + "_P1.fastq").c_str())) {
-						ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P1.fastq";
-						ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P2.fastq";
-						ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U1.fastq";
-						ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U2.fastq";
-						
+					if (file_exists( cString(download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped()).c_str() )) {
+						ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + ".fastq";
 					} else {
-						ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P1.fastq.gz";
-						ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P2.fastq.gz";
-						ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U1.fastq.gz";
-						ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U2.fastq.gz";
+						ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + ".fastq.gz";
 					}
-					
+
 				}
-				
 			} else {
-			
 			// Normal case
 			for (vector<string>::const_iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {
 				
@@ -2825,9 +3099,30 @@ int do_runfile(int argc, char *argv[])
       //! Part 2: Pipeline's output path.
       ss << " -o " << output_dir + "/" + gd.get_title();  
 			
-			//! Part 3: Reference argument path(s).
-			for (vector<string>::const_iterator ref_file_it=refs.begin(); ref_file_it != refs.end(); ref_file_it++) {  
-				ss << " -r " << "02_Apply" << "/" << gd.get_title() << ".gff";
+			//! Part 3: Reference argument path(s). Just one.. check for some possible filenames
+								 
+			string reference_path_no_extension = download_dir + "/../" + "02_Apply" + "/" + gd.get_title();
+			vector<string> possible_reference_extensions = make_vector<string>("gff")("gff3")("gbk")("gb")("fna")("fa");
+			bool ending_found = false;
+			for (vector<string>::iterator ext_it = possible_reference_extensions.begin(); ext_it != possible_reference_extensions.end(); ext_it++) {
+				string test_file_name = reference_path_no_extension + "." + *ext_it;
+				if (file_exists( test_file_name.c_str() ) ) {
+					ss << " -r " << test_file_name;
+					ending_found = true;
+					break;
+				}
+			}
+			
+			// Default is "gff"
+			if (!ending_found) {
+				string test_file_name = reference_path_no_extension + "." + "gff";
+				ss << " -r " << test_file_name;
+			}
+			
+			
+			// Should be relative to the download directory
+			if (directory_exists(cString(download_dir + "/../" + "02_Trimmed").c_str())) {
+				download_dir = download_dir + "/../" + "02_Trimmed";
 			}
 			
 			//! Part 4: Read argument path(s).
@@ -2849,8 +3144,8 @@ int do_runfile(int argc, char *argv[])
       cout << ss.str() << endl;
       runfile << ss.str() << endl;
       ++n_cmds;
-			
-    }  else if (options["mode"] == "trimmomatic") {
+		
+		}  else if (options["mode"] == "fastp-single") {
 			
 			// For each read file trim with requested adaptor...
 			for (vector<string>::const_iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {
@@ -2859,7 +3154,6 @@ int do_runfile(int argc, char *argv[])
 				
 				//! Part 1: Executable and options to pass to it if given by user.
 				ss << exe;
-				ss << " SE";
 				
 				//! Part 2: Options
 				if (options.count("options")) {
@@ -2869,40 +3163,27 @@ int do_runfile(int argc, char *argv[])
 				//! Part 3: Read file name --- handles zipped or unzipped!
 				//! Part 4: Output read base name
 				
-				if (file_exists( cString(download_dir + "/" + cString(*read_file_it).get_base_name_unzipped()).c_str() )) {
-					ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
-					ss << " " << output_dir + "/" + cString(*read_file_it).get_base_name_unzipped();
+				if ( file_exists( cString(download_dir + "/" + cString(*read_file_it).get_base_name_unzipped()).c_str() ) ) {
+					ss << " -i " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
+					ss << " -o " << output_dir + "/" + cString(*read_file_it).get_base_name_unzipped();
 				} else {
-					ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name();
-					ss << " " << output_dir + "/" + cString(*read_file_it).get_base_name();
+					ss << " -i " << download_dir << "/" << cString(*read_file_it).get_base_name();
+					ss << " -o " << output_dir + "/" + cString(*read_file_it).get_base_name();
 				}
 				
 				//! Part 5: Trimming commands
 				
-				// Start - Adapter clipping command
-				ss << " ILLUMINACLIP:";
-				
-				//! Part 4: Adaptor file name
-				ASSERT(adapters_for_reads.count(*read_file_it), "Required #=ADAPTSEQ line not found in GenomeDiff file. These lines must occur BEFORE the READSEQ lines to which they apply.");
-				
-				ss << download_dir << "/" << cString(adapters_for_reads[*read_file_it]).get_base_name();
-				
-				// Remaining match options (close to default values)
-				ss << ":4:30:10";
-				// End - Adapter clipping command
-				
-				// Cropping beginning / end
-				if (gd.get_breseq_data("TRIM-START-BASES").size() != 0) {
-					ss << " HEADCROP:" << gd.get_breseq_data("TRIM-START-BASES");
-				}
-				if (gd.get_breseq_data("TRIM-END-BASES").size() != 0) {
-					ss << " CROP:" << gd.get_breseq_data("TRIM-END-BASES");
-				}
-				
-				ss << " MINLEN:30";
+				// Nothing needed for fastp
 				
 				//! Part 6: Error log path.
-				ss << " >& " << log_dir << "/" << cString(*read_file_it).get_base_name_no_extension(true) << ".log";
+				
+				// Additional output to log directory
+				cString log_base_name = gd.get_title() + "_" + cString(*read_file_it).get_base_name_no_extension(true);
+				
+				ss << " --json " << log_dir << "/" << log_base_name << ".json";
+				ss << " --html " << log_dir << "/" << log_base_name << ".html";
+				
+				ss << " >& " << log_dir << "/" << log_base_name << ".log";
 				
 				//! Step: Output to file.
 				cout << ss.str() << endl;
@@ -2910,118 +3191,100 @@ int do_runfile(int argc, char *argv[])
 				++n_cmds;
 			}
 			
-		} else if (options["mode"] == "trimmomatic-PE-unique") {
+		} else if ( (options["mode"] == "fastp-paired") || (options["mode"] == "fastp-merged") ) {
 			
-			// Uses palindrome trimming mode and creates R1 and R2 files that ARE NOT PAIRED
-			// but that do have only UNIQUE bases. Use for RNAseq and population sequencing.
 			
 			for (vector<vector<string> >::const_iterator read_pair_it=reads_by_pair.begin(); read_pair_it != reads_by_pair.end(); read_pair_it++) {
 				
-				ASSERT(read_pair_it->size() <= 2, "Must have exactly two read files for paired mode: " + join(*read_pair_it, ", "));
-				
+				// New code will use a different command for unpaired reads
+				//ASSERT(read_pair_it->size() == 2, "Must have exactly two read files for paired mode: " + join(cString((*read_pair_it)[0])), ", "));
 				
 				//! Step: Begin building command line.
 				stringstream ss;
 				
 				//! Part 1: Executable and options to pass to it if given by user.
 				ss << exe;
-				ss << " PE";
 				
 				//! Part 2: Options
 				if (options.count("options")) {
 					ss << " " << options["options"];
 				}
-				
-				//! Part 3: Read file name --- handles zipped or unzipped!
-				//! Part 4: Output read base name
-				
-				if (file_exists( cString(download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped()).c_str() )) {
-					ss << " " << download_dir << "/" << cString((*read_pair_it)[0]).get_base_name_unzipped();
-					ss << " " << download_dir << "/" << cString((*read_pair_it)[1]).get_base_name_unzipped();
+
+				if (read_pair_it->size() == 2) {
+					////////
+					// Code specific to pairs
+					////////
 					
-					ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P1.fastq";
-					ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U1.fastq";
-					ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P2.fastq";
-					ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U2.fastq";
+					// Always use this option, though trimming still works well without it
+					ss << " --detect_adapter_for_pe";
 					
-				} else {
-					ss << " " << download_dir << "/" << cString((*read_pair_it)[0]).get_base_name();
-					ss << " " << download_dir << "/" << cString((*read_pair_it)[1]).get_base_name();
+					if (options["mode"] == "fastp-merged") {
+						ss << " --merge --include_unmerged";
+					}
 					
-					ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P1.fastq.gz";
-					ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U1.fastq.gz";
-					ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true)+ "_P2.fastq.gz";
-					ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U2.fastq.gz";
-				}
-				
-				//! Part 5: Trimming commands
-				
-				// Start - Adapter clipping command
-				ss << " ILLUMINACLIP:";
-				
-				//! Part 4: Adaptor file name
-				ASSERT(adapters_for_reads.count((*read_pair_it)[0]), "Required #=ADAPTSEQ line not found in GenomeDiff file. These lines must occur BEFORE the READSEQ lines to which they apply.");
-				
-				ss << download_dir << "/" << cString(adapters_for_reads[(*read_pair_it)[0]]).get_base_name();
-				
-				// Remaining match options (close to default values)
-				ss << ":4:30:10";
-				// End - Adapter clipping command
-				
-				// Cropping beginning / end AFTER doing Illumina clip
-				if (gd.get_breseq_data("TRIM-START-BASES").size() != 0) {
-					ss << " HEADCROP:" << gd.get_breseq_data("TRIM-START-BASES");
-				}
-				if (gd.get_breseq_data("TRIM-END-BASES").size() != 0) {
-					ss << " CROP:" << gd.get_breseq_data("TRIM-END-BASES");
-				}
-				
-				ss << " MINLEN:30";
-				
-				//! Part 6: Error log path.
-				ss << " >& " << log_dir << "/" << cString(gd.get_title()).get_base_name_no_extension(true) << ".log";
-				
-				// Only concatenate if we are not preserving pairing information
-				if (!preserve_paired) {
-					//! Part 7: Concatenate output files to final names
+					//! Part 3: Read file name --- handles zipped or unzipped!
+					//! Part 4: Output read base name
+					
 					if (file_exists( cString(download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped()).c_str() )) {
+						ss << " -i " << download_dir << "/" << cString((*read_pair_it)[0]).get_base_name_unzipped();
+						ss << " -I " << download_dir << "/" << cString((*read_pair_it)[1]).get_base_name_unzipped();
 						
-						ss << " && cat";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P1.fastq";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U1.fastq";
-						ss << " > " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped();
-						
-						ss << " && cat";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name_no_extension(true, true) + "_P2.fastq";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name_no_extension(true, true) + "_U2.fastq";
-						ss << " > " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name_unzipped();
-						
-						ss << " && rm";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P1.fastq";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U1.fastq";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P2.fastq";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U2.fastq";
-						
+						if (options["mode"] == "fastp-paired") {
+							ss << " -o " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped();
+							ss << " -O " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name_unzipped();
+						} else {
+							ss << " --merged_out " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + ".fastq";
+						}
 					} else {
+						ss << " -i " << download_dir << "/" << cString((*read_pair_it)[0]).get_base_name();
+						ss << " -I " << download_dir << "/" << cString((*read_pair_it)[1]).get_base_name();
 						
-						ss << " && cat";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P1.fastq.gz";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U1.fastq.gz";
-						ss << " > " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name();
-						
-						ss << " && cat";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name_no_extension(true, true) + "_P2.fastq.gz";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name_no_extension(true, true) + "_U2.fastq.gz";
-						ss << " > " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name();
-						
-						ss << " && rm";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P1.fastq.gz";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U1.fastq.gz";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_P2.fastq.gz";
-						ss << " " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + "_U2.fastq.gz";
+						if (options["mode"] == "fastp-paired") {
+							ss << " -o " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name();
+							ss << " -O " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name();
+						} else {
+							ss << " --merged_out " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + ".fastq.gz";
+						}
+					}
+				} else {
+					////////
+					// Code for unpaired input files
+					////////
+					
+					if ( file_exists( cString(download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped()).c_str() ) ) {
+						ss << " -i " << download_dir << "/" << cString((*read_pair_it)[0]).get_base_name_unzipped();
+						ss << " -o " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped();
+					} else {
+						ss << " -i " << download_dir << "/" << cString((*read_pair_it)[0]).get_base_name();
+						ss << " -o " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name();
 					}
 				}
 				
+				
+				//! Part 5: Trimming commands
+				
+				// Not needed for fastp
+				
+				//! Part 6: Error log path.
+				
+				
+				cString log_base_name(cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) );
+				// eliminate _1 or _R1
+				size_t pos = log_base_name.find("_1");
+				if ( (pos != string::npos) && (pos == log_base_name.size()-2) ) {
+					log_base_name.resize(log_base_name.size()-2);
+				} else {
+					size_t pos = log_base_name.find("_R1");
+					if ( (pos != string::npos) && (pos == log_base_name.size()-3) ) {
+						log_base_name.resize(log_base_name.size()-3);
+					}
+				}
+				log_base_name = gd.get_title() + "_" + log_base_name;
+				
+				ss << " --json " << log_dir << "/" << log_base_name << ".json";
+				ss << " --html " << log_dir << "/" << log_base_name << ".html";
+				
+				ss << " >& " << log_dir << "/" << log_base_name << ".log";
 				
 				//! Step: Output to file.
 				cout << ss.str() << endl;
@@ -3590,7 +3853,7 @@ int main(int argc, char* argv[]) {
     return do_validate(argc_new, argv_new);
   } else if (command == "APPLY") {
     return do_apply(argc_new, argv_new);    
-  } else if (command == "COMPARE") {
+  } else if ( (command == "COMPARE") || (command == "ANNOTATE") ) {
     return do_annotate(argc_new, argv_new);
   } else if (command == "CHECK") {
     return do_check(argc_new, argv_new);  
@@ -3598,8 +3861,6 @@ int main(int argc, char* argv[]) {
     return do_check_plot(argc_new, argv_new);
   } else if (command == "NOT-EVIDENCE") {        //TODO merge with FILTER
     return do_not_evidence(argc_new, argv_new);
-  } else if (command == "ANNOTATE") {
-    return do_annotate(argc_new, argv_new);
 	} else if (command == "MUTATIONS") {
 		return do_mutations(argc_new, argv_new);
   } else if (command == "PHYLOGENY"){
@@ -3614,10 +3875,8 @@ int main(int argc, char* argv[]) {
 		return do_remove_gd(argc_new, argv_new);
 	} else if (command == "INTERSECT") {
     return do_intersection(argc_new, argv_new);
-  } else if (command == "UNION") {
-    return do_union(argc_new, argv_new);
-	} else if (command == "MERGE") {
-		return do_union(argc_new, argv_new);
+	} else if ( (command == "MERGE") || (command == "UNION") ) {
+		return do_merge(argc_new, argv_new);
   } else if (command == "SUBTRACT") {
     return do_subtract(argc_new, argv_new);
   } else if (command == "WEIGHTS") {

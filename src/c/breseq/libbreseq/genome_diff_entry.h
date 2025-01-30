@@ -8,7 +8,7 @@
  LICENSE AND COPYRIGHT
  
  Copyright (c) 2008-2010 Michigan State University
- Copyright (c) 2011-2017 The University of Texas at Austin
+ Copyright (c) 2011-2022 The University of Texas at Austin
  
  breseq is free software; you can redistribute it and/or modify it under the
  terms the GNU General Public License as published by the Free Software
@@ -21,6 +21,7 @@
 
 #include "common.h"
 #include "file_parse_errors.h"
+#include "counted_ptr.h"
 
 using namespace std;
 
@@ -45,10 +46,19 @@ namespace breseq {
   extern const char* INSERT_POSITION;
   extern const char* PHYLOGENY_ID;
   extern const char* FREQUENCY;
+
+  // REJECT = comma delimited list of why evidence was rejected according to statistical criteria
+  // Evidence is not rejected but is masked because it should not be used to predict mutations
   extern const char* REJECT;
-  extern const char* USER_DEFINED;
   extern const char* POLYMORPHISM_REJECT;
   extern const char* CONSENSUS_REJECT;
+
+  // IGNORE = comma delimited list of why passing evidence was not used to predict mutations
+  // This can be b/c it is near a contig_end or is only evidence of a known CIRCULAR_CHROMOSOME
+  extern const char* IGNORE;
+  extern const char* USER_DEFINED;
+
+  // For relationships to repeats and IS
   extern const char* MEDIATED;
   extern const char* BETWEEN;
   
@@ -82,7 +92,7 @@ namespace breseq {
   extern const char* NEW_COPY_NUMBER;
   extern const char* MEDIATED_STRAND;
   
-  // For CON
+  // For CON and INT
   extern const char* REGION;
   
   //For RA
@@ -144,8 +154,8 @@ namespace breseq {
   extern const vector<string> gd_entry_type_lookup_table;
 
   // Types of diff entries:
-  enum gd_entry_type {UNKNOWN = 0, SNP, SUB, DEL, INS, MOB, AMP, INV, CON, RA,
-    MC, JC, CN, UN, CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE, NOTE, MASK};
+  enum gd_entry_type {UNKNOWN = 0, SNP, SUB, DEL, INS, MOB, AMP, INV, CON, INT,
+    RA, MC, JC, CN, UN, CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE, NOTE, MASK};
   
   extern const vector<string> gd_keys_with_ids;
   
@@ -209,6 +219,7 @@ namespace breseq {
     cDiffEntry(const gd_entry_type type);
     cDiffEntry(const string &line, uint32_t line_number, cFileParseErrors* file_parse_errors = NULL); //For deserialization from gd file.
     cDiffEntry(diff_entry_map_t& de) : diff_entry_map_t(de) {};
+    
     
     //! Helper function
     static gd_entry_type type_to_enum(string type);
@@ -322,10 +333,10 @@ namespace breseq {
     //!---- Output ---- !//
     
     //! Marshal this diff entry into an ordered list of fields.
-    virtual void marshal(vector<string>& s) const;
+    virtual void marshal(vector<string>& s, bool include_unprintable_fields=false) const;
     
     //! Serialize this diff entry into a string for output.
-    virtual string as_string(void) const;
+    virtual string as_string(bool include_unprintable_fields=false) const;
     
     //! Output all keys and values
     string as_key_values() const {
@@ -359,6 +370,8 @@ namespace breseq {
     bool is_rejected_and_not_user_defined()
     { return entry_exists(REJECT) && !entry_exists(USER_DEFINED); }
 
+    bool is_ignored_and_not_user_defined()
+    { return entry_exists(IGNORE) && !entry_exists(USER_DEFINED); }
     
     //!---- Simplifying entries ---- !//
     
@@ -466,10 +479,27 @@ namespace breseq {
       }
     };
     
+    struct ignored_and_not_user_defined:public unary_function<diff_entry_ptr_t,bool> {
+      virtual bool operator() (diff_entry_ptr_t cDiffEntry)
+      {
+        return cDiffEntry->entry_exists(IGNORE) && !cDiffEntry->entry_exists("user_defined");
+      }
+    };
+    
     struct is_not_consensus:public unary_function<diff_entry_ptr_t,bool> {
       virtual bool operator() (diff_entry_ptr_t cDiffEntry)
       {
         return from_string<double>((*cDiffEntry)[FREQUENCY]) != 1.0;
+      }
+    };
+    
+    struct ignored_but_not_circular:public unary_function<diff_entry_ptr_t,bool> {
+      virtual bool operator() (diff_entry_ptr_t cDiffEntry)
+      {
+        if ( (*cDiffEntry).entry_exists(IGNORE) ) {
+          return (*cDiffEntry)[IGNORE] != "CIRCULAR_CHROMOSOME";
+        }
+        return false;
       }
     };
     

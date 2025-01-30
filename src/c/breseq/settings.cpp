@@ -8,7 +8,7 @@
  LICENSE AND COPYRIGHT
  
  Copyright (c) 2008-2010 Michigan State University
- Copyright (c) 2011-2017 The University of Texas at Austin
+ Copyright (c) 2011-2022 The University of Texas at Austin
  
  breseq is free software; you can redistribute it and/or modify it under the
  terms the GNU General Public License as published by the Free Software
@@ -27,7 +27,8 @@ using namespace std;
 namespace breseq
 {
   const int32_t kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation = 50;
-  
+  const double kBreseq_ignore_within_this_multiple_of_average_read_length_of_contig_end = 2.0;
+
   // small mutation <= kBreseq_large_mutation_size_cutoff < large_mutation
   const int32_t kBreseq_large_mutation_size_cutoff = kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation;
   
@@ -36,6 +37,10 @@ namespace breseq
 
   string Settings::global_bin_path;
   string Settings::global_program_data_path;
+
+  //! Multithreading
+  ctpl::thread_pool Settings::pool(1);
+  std::mutex Settings::lock;
 
   string Settings::output_divider("================================================================================");
   
@@ -48,11 +53,23 @@ namespace breseq
 		uint32_t on_error_group = 0;
 		uint32_t on_paired_end_group = 0;
 
+    //keep track of duplicates
+    set<string> used_base_names;  // just filename base
+    set<string> used_original_names;  // complete path
+
 		for (vector<string>::const_iterator it = read_file_names.begin(); it < read_file_names.end(); it++)
 		{
 			cReadFile rf;
 			rf.m_original_file_name = *it;
-
+      
+      // Check for exact duplicate paths, all but the first will be skipped with errors.
+      if (used_original_names.find(rf.m_original_file_name) != used_original_names.end()) {
+        WARN("Duplicate read file path provided: " + rf.m_original_file_name + "\nThis file will only be used as input once.");
+        continue;
+      }
+        
+      used_original_names.insert(rf.m_original_file_name);
+      
 			rf.m_paired_end_group = on_paired_end_group++;
 			rf.m_error_group = on_error_group++;
 			rf.m_id = on_id++;
@@ -75,11 +92,24 @@ namespace breseq
         if ((pos != string::npos) && (pos == rf.m_base_name.size() - 4))
           rf.m_base_name.erase(pos, 4);
       }
+      
+      // This code gives a new base name when there are two files that have the exact same
+      // filename but are in different directories. Ex: path1/fastq1.gz and path2/fastq1.gz
+      string original_base_name = rf.m_base_name;
+      uint32_t duplicate_index = 0;
+      while ( used_base_names.find(rf.m_base_name) != used_base_names.end()) {
+        duplicate_index++;
+        rf.m_base_name = original_base_name + "_" + to_string(duplicate_index);
+      }
+      
+      // Warn if there is a duplicate so they know what the new name means.
+      if (rf.m_base_name != original_base_name) {
+        WARN("Duplicate read base file name will be renamed in breseq output as follows:\n" + original_base_name + " => " + rf.m_base_name);
+      }
+      
+      used_base_names.insert(rf.m_base_name);
 			
       // set up the map for converting base names to fastq file names to be used
-      // check to see whether this is a duplicate
-      ASSERT(read_file_to_fastq_file_name_map[rf.m_base_name].size() == 0, 
-              "The same read file was provided multiple times:\n1) " + read_file_to_fastq_file_name_map[rf.m_base_name] + "\n2) " + rf.m_original_file_name);
       read_file_to_fastq_file_name_map[rf.m_base_name] = rf.m_original_file_name;
       
 			this->push_back(rf);
@@ -111,18 +141,23 @@ namespace breseq
     
     // Initialize the junction_only and other sets
     set<string> junction_only_file_name_set(m_junction_only_reference_file_names.begin(), m_junction_only_reference_file_names.end());
+    set<string> contig_file_name_set(m_contig_reference_file_names.begin(), m_contig_reference_file_names.end());
+
     for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++) {
       if ( junction_only_file_name_set.count(it->get_file_name()) ) {
         m_junction_only_seq_id_set.insert(it->m_seq_id);
       } else {
         m_call_mutations_seq_id_set.insert(it->m_seq_id);
+        if ( contig_file_name_set.count(it->get_file_name()) ) {
+          m_contig_seq_id_set.insert(it->m_seq_id);
+          it->m_is_contig = true;
+        }
       }
     }
     
     // Map by filename (only for contig_reference_file_names to id)
     map<string,uint32_t> contig_to_id_map;
     uint32_t on_coverage_group_index = 0; 
-    set<string> contig_file_name_set(m_contig_reference_file_names.begin(), m_contig_reference_file_names.end());
 
     for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++) {
     
@@ -173,7 +208,7 @@ namespace breseq
     options.addUsage("");
     options.addUsage("Run the breseq pipeline for predicting mutations from haploid microbial re-sequencing data.");
     options.addUsage("");
-    options.addUsage("FASTQ read files (which may be gzipped) are input as the last unamed argument(s).");
+    options.addUsage("FASTQ read files (which may be gzipped) are input as the last unnamed argument(s).");
     options.addUsage("");
     options.addUsage("Allowed Options");
     
@@ -185,15 +220,20 @@ namespace breseq
     //("verbose,v","Produce verbose output",TAKES_NO_ARGUMENT, ADVANCED_OPTION) @JEB - not consistently implemented
 		("output,o", "Path to breseq output", ".")
     ("polymorphism-prediction,p", "The sample is not clonal. Predict polymorphic (mixed) mutations. Setting this flag changes from CONSENSUS MODE (the default) to POLYMORPHISM MODE", TAKES_NO_ARGUMENT);
-    
+
     options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Read File Options", ADVANCED_OPTION);
     options
     ("limit-fold-coverage,l", "Analyze a subset of the input FASTQ sequencing reads with enough bases to provide this theoretical coverage of the reference sequences. A value between 60 and 120 will usually speed up the analysis with no loss in sensitivity for clonal samples. The actual coverage achieved will be somewhat less because not all reads will map (DEFAULT=OFF)", "", ADVANCED_OPTION)
+    ("nanopore-fast-basecalling,x", "Set recommended options for nanopore data processed in fast basecalling mode to rule out false-positive mutations due to high homopolymer indel error rates. Equivalent to --consensus-reject-indel-homopolymer-length 4 --polymorphism-reject-indel-homopolymer-length 4 consensus/polymorphism --polymorphism-no-indel --bowtie2-stage1 \"" + this->bowtie2_stage2 + "\" --bowtie2-stage2 \"\". If you provide any of these options on their own, then they will override these preset options. NOTE: For data processed in high-accuracy basecalling mode, this option is not necessary.", TAKES_NO_ARGUMENT)
     ("aligned-sam", "Input files are aligned SAM files, rather than FASTQ files. Junction prediction steps will be skipped. Be aware that breseq assumes: (1) Your SAM file is sorted such that all alignments for a given read are on consecutive lines. You can use 'samtools sort -n' if you are not sure that this is true for the output of your alignment program. (2) You EITHER have alignment scores as additional SAM fields with the form 'AS:i:n', where n is a positive integer and higher values indicate a better alignment OR it defaults to calculating an alignment score that is equal to the number of bases in the read minus the number of inserted bases, deleted bases, and soft clipped bases in the alignment to the reference. The default highly penalizes split-read matches (with CIGAR strings such as M35D303M65).", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("read-min-length", "Reads in the input FASTQ file that are shorter than this length will be ignored. (0 = OFF)", 18, ADVANCED_OPTION)
     ("read-max-same-base-fraction", "Reads in the input FASTQ file in which this fraction or more of the bases are the same will be ignored. (0 = OFF)", 0.9, ADVANCED_OPTION)
     ("read-max-N-fraction", "Reads in the input FASTQ file in which this fraction or more of the bases are uncalled as N will be ignored. (0 = OFF)", 0.5, ADVANCED_OPTION)
+    ("long-read-trigger-length", "Mark a file as containing long reads and enable read splitting if the longest read has a length that is greater than or equal to this value. (0 = OFF)", 1000, ADVANCED_OPTION)
+    ("long-read-split-length", "Split input reads in a file marked as having long reads into pieces that are at most this many bases long. Using values much larger than the default for this parameter will likely degrade the speed and accuracy of breseq because of how it performs mapping and analyzes split-read alignments. Filters such as --read-min-length are applied to split reads. (0 = OFF)", 200, ADVANCED_OPTION)
+    ("long-read-distribute-remainder", "When splitting long reads, divide them into equal pieces that are less than the split length. If this option is not chosen (the default), reads will be split into chunks with exactly the split length and any remaining bases after the last chunk will be ignored.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("genbank-field-for-seq-id", "Which GenBank header field will be used to assign sequence IDs. Valid choices are LOCUS, ACCESSION, and VERSION. The default is to check those fields, in that order, for the first one that exists. If you override the default, you will need to use the converted reference file (data/reference.gff) for further breseq and gdtools operations on breseq output!", "AUTOMATIC", ADVANCED_OPTION)
     ;
     
     options.addUsage("", ADVANCED_OPTION);
@@ -214,8 +254,6 @@ namespace breseq
     ("require-match-length", "Only consider alignments that cover this many bases of a read", 0, ADVANCED_OPTION)
     ("require-match-fraction", "Only consider alignments that cover this fraction of a read", 0.9, ADVANCED_OPTION)
     ("maximum-read-mismatches", "Don't consider reads with this many or more bases or indels that are different from the reference sequence. Unaligned bases at the end of a read also count as mismatches. Unaligned bases at the beginning of the read do NOT count as mismatches. (DEFAULT=OFF)", "", ADVANCED_OPTION)
-    ("deletion-coverage-propagation-cutoff","Value for coverage above which deletions are cutoff. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
-    ("deletion-coverage-seed-cutoff","Value for coverage below which deletions are seeded", 0, ADVANCED_OPTION)
     ;
     
     options.addUsage("", ADVANCED_OPTION);
@@ -246,6 +284,14 @@ namespace breseq
     ;
     
     options.addUsage("", ADVANCED_OPTION);
+    options.addUsage("Missing Coverage (MC) Evidence Options", ADVANCED_OPTION);
+    options
+    ("deletion-coverage-seed-cutoff","Value for coverage below which MC are seeded", 0, ADVANCED_OPTION)
+    ("deletion-coverage-propagation-cutoff","Value for coverage above which MC ends stop. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
+    ("call-mutations-overlapping-MC", "If provided, don't ignore mutations predicted from RA evidence that overlap MC evidence", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ;
+    
+    options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Consensus Read Alignment (RA) Evidence Options", ADVANCED_OPTION);
     options
     ("consensus-score-cutoff", "Log10 E-value cutoff for consensus base substitutions and small indels (DEFAULT = 10)", "", ADVANCED_OPTION)
@@ -269,7 +315,7 @@ namespace breseq
     ("polymorphism-minimum-variant-coverage-each-strand", "Only predict polymorphisms when at least this many reads on each strand support each alternative allele. (DEFAULT = consensus mode, 0; polymorphism mode, 2)", "", ADVANCED_OPTION)
     ("polymorphism-minimum-total-coverage-each-strand", "Only predict polymorphisms when at least this many reads on each strand are aligned to a genome position. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", ADVANCED_OPTION)
     ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, OFF)", "", ADVANCED_OPTION)
-    ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms from read alignment evidence", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms ≤" + to_string(kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation) + " bp from read alignment or new junction evidence", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("polymorphism-reject-indel-homopolymer-length", "Reject insertion/deletion polymorphisms which could result from expansion/contraction of homopolymer repeats with this length or greater in the reference genome (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 3) ", "", ADVANCED_OPTION)
     ("polymorphism-reject-surrounding-homopolymer-length", "Reject polymorphic base substitutions that create a homopolymer with this many or more of one base in a row. The homopolymer must begin and end after the changed base. For example, TATTT->TTTTT would be rejected with a setting of 5, but ATTTT->TTTTT would not. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 5)", "", ADVANCED_OPTION)
     ;
@@ -313,6 +359,7 @@ namespace breseq
 		options.addUsage("Utility Command Usage: breseq [command] options ...");
     options.addUsage("  Sequence Utility Commands: CONVERT-FASTQ, CONVERT-REFERENCE, GET-SEQUENCE");
     options.addUsage("  Breseq Post-Run Commands: BAM2ALN, BAM2COV, CL-TABULATE");
+    options.addUsage("  Other Commands: SOFT-CLIPPING");
     options.addUsage("");
     options.addUsage("For help using a utility command, type: breseq [command] "); 
     options.addUsage("");
@@ -368,10 +415,31 @@ namespace breseq
       this->read_file_coverage_fold_limit = from_string<double>(options["limit-fold-coverage"]);
     }
     
-    this->read_file_read_length_min = from_string<double>(options["read-min-length"]);
     this->read_file_max_same_base_fraction = from_string<double>(options["read-max-same-base-fraction"]);
     this->read_file_max_N_fraction = from_string<double>(options["read-max-N-fraction"]);
+    this->read_file_long_read_trigger_length = from_string<uint32_t>(options["long-read-trigger-length"]);
+    this->read_file_long_read_split_length = from_string<uint32_t>(options["long-read-split-length"]);
+    this->read_file_long_read_distribute_remainder = options.count("long-read-distribute-remainder");
 
+    
+    bool long_read_include_remainder;           // Default = false COMMAND-LINE OPTION
+    uint32_t long_read_split_length;            // Default = 500 COMMAND-LINE OPTION
+    
+    this->genbank_field_for_seq_id = options["genbank-field-for-seq-id"];
+    this->genbank_field_for_seq_id = to_upper(this->genbank_field_for_seq_id);
+    if (   (this->genbank_field_for_seq_id != "AUTOMATIC")
+        && (this->genbank_field_for_seq_id != "LOCUS")
+        && (this->genbank_field_for_seq_id != "VERSION")
+        && (this->genbank_field_for_seq_id != "ACCESSION")
+        ) {
+      options.addUsage("");
+      options.addUsage("Value of --genbank-field-for-seq-id must be one of the following: AUTOMATIC, LOCUS, VERSION, ACCESSION.");
+      options.addUsage("");
+      options.addUsage("Value provided was: " + this->genbank_field_for_seq_id);
+      options.printUsage();
+      exit(-1);
+    }
+    
     
     // Reference sequence provided?
 		if (options.count("reference") + options.count("contig-reference") + options.count("junction-only-reference") == 0)
@@ -443,6 +511,8 @@ namespace breseq
     this->deletion_coverage_seed_cutoff = from_string<double>(options["deletion-coverage-seed-cutoff"]);
     ASSERT(this->deletion_coverage_propagation_cutoff >= 0, "Argument --deletion-coverage-seed-cutoff must be >= 0")
     
+    this->call_mutations_overlapping_missing_coverage = options.count("call-mutations-overlapping-MC");
+    
     //! Settings: bowtie2
     //  all have default that we only overwrite if present on command line
     if (options.count("bowtie2-scoring")) this->bowtie2_scoring = options["bowtie2-scoring"];
@@ -482,7 +552,7 @@ namespace breseq
       this->minimum_mapping_quality = 0;
       
       this->mutation_log10_e_value_cutoff = 10;
-      this->consensus_frequency_cutoff = 0; // zero is OFF - ensures any rejected poly with high freq move to consensus!
+      this->consensus_frequency_cutoff = 0.8; // zero is OFF - ensures any rejected poly with high freq move to consensus!
       this->consensus_minimum_variant_coverage = 0;
       this->consensus_minimum_total_coverage = 0;
       this->consensus_minimum_variant_coverage_each_strand = 0;
@@ -501,7 +571,7 @@ namespace breseq
       this->polymorphism_reject_indel_homopolymer_length = 3; // zero is OFF!
       this->polymorphism_reject_surrounding_homopolymer_length = 5; // zero is OFF!
       this->polymorphism_bias_p_value_cutoff = 0;
-      this->no_indel_polymorphisms = false;
+      this->polymorphism_no_indels = false;
       this->polymorphism_precision_decimal = 0.000001;
       this->polymorphism_precision_places = 8;
       
@@ -534,12 +604,24 @@ namespace breseq
       this->polymorphism_reject_indel_homopolymer_length = 0; // zero is OFF!
       this->polymorphism_reject_surrounding_homopolymer_length = 0; // zero is OFF!
       this->polymorphism_bias_p_value_cutoff = 0;
-      this->no_indel_polymorphisms = false;
+      this->polymorphism_no_indels = false;
       this->polymorphism_precision_decimal = 0.000001;
       this->polymorphism_precision_places = 3;
       
       this->minimum_alignment_resolution_pos_hash_score = 3;
       this->junction_minimum_side_match = 1;
+    }
+    
+    // en masse overrides come before specific overrides
+    
+    if (options.count("nanopore")) {
+      this->consensus_reject_indel_homopolymer_length = 4;
+      this->polymorphism_reject_indel_homopolymer_length = 4;
+      this->polymorphism_no_indels = true;
+      
+      // Just do what is normally stage 2 alignment
+      this->bowtie2_stage1 = this->bowtie2_stage2;
+      this->bowtie2_stage2 = "";
     }
       
     // override the default settings
@@ -588,7 +670,7 @@ namespace breseq
       this->polymorphism_minimum_total_coverage_each_strand = from_string<uint32_t>(options["polymorphism-minimum-total-coverage-each-strand"]);
     
     if (options.count("polymorphism-no-indels"))
-      this->no_indel_polymorphisms = options.count("polymorphism-no-indels");
+      this->polymorphism_no_indels = options.count("polymorphism-no-indels");
     if (options.count("polymorphism-reject-indel-homopolymer-length"))
       this->polymorphism_reject_indel_homopolymer_length = from_string<int32_t>(options["polymorphism-reject-indel-homopolymer-length"]);
     if (options.count("polymorphism-reject-surrounding-homopolymer-length"))
@@ -669,7 +751,7 @@ namespace breseq
     fprintf(stderr, "Foundation; either version 2, or (at your option) any later version.\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "Copyright (c) 2008-2010 Michigan State University\n");
-    fprintf(stderr, "Copyright (c) 2011-2017 The University of Texas at Austin\n");
+    fprintf(stderr, "Copyright (c) 2011-2022 The University of Texas at Austin\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "If you use breseq in your research, please cite:\n");
     fprintf(stderr, "\n");
@@ -725,6 +807,9 @@ namespace breseq
     this->read_file_coverage_fold_limit = 0.0;
     this->read_file_max_same_base_fraction = 0.9;
     this->read_file_read_length_min = 18;
+    this->read_file_long_read_trigger_length = 1000;
+    this->read_file_long_read_split_length = 200;
+    this->read_file_long_read_distribute_remainder = false;
     
     //! Options that control which parts of the pipeline to execute
     this->skip_read_filtering = false;
@@ -808,6 +893,8 @@ namespace breseq
     this->quality_score_trim = 0;
     this->deletion_coverage_propagation_cutoff = 0;
     this->deletion_coverage_seed_cutoff = 0;
+    this->call_mutations_overlapping_missing_coverage = false;
+      
     this->polymorphism_prediction = false;
     this->mixed_base_prediction = true;
     
@@ -825,10 +912,11 @@ namespace breseq
     this->polymorphism_minimum_total_coverage_each_strand = 0;
     this->polymorphism_reject_indel_homopolymer_length = 0;
     this->polymorphism_reject_surrounding_homopolymer_length = 0;
-		this->no_indel_polymorphisms = false;
+		this->polymorphism_no_indels = false;
     
     //! Settings: Mutation Prediction
     this->size_cutoff_AMP_becomes_INS_DEL_mutation = kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation;
+    this->ignore_within_this_multiple_of_average_read_length_of_contig_end = kBreseq_ignore_within_this_multiple_of_average_read_length_of_contig_end;
     
     //! Settings: Output
     this->max_displayed_reads = 100;
@@ -872,8 +960,8 @@ namespace breseq
 		//// '#' replaced with read file name
 		//// '@' replaced by seq_id of reference sequence
 
-    // Do not allow the output path to have spaces. This will cause many invocations
-    ASSERT(this->base_output_path.find(" ") == string::npos, "Output path cannot contain spaces: \"" + this->base_output_path + "\".");
+    // Do not allow the output path to have spaces. This will cause many invocations we can't trust?
+    // ASSERT(this->base_output_path.find(" ") == string::npos, "Output path cannot contain spaces: \"" + this->base_output_path + "\".");
     
     //! Paths: Sequence conversion
 		this->sequence_conversion_path = "01_sequence_conversion";
@@ -998,6 +1086,9 @@ namespace breseq
 		this->output_path = "output";
 		if (this->base_output_path.size() > 0) this->output_path = this->base_output_path + "/" + this->output_path;
 		this->output_done_file_name = this->output_path + "/output.done";
+    
+    this->output_json_summary_file_name = this->output_path + "/summary.json";
+    this->output_vcf_file_name = this->output_path + "/output.vcf";
 
 		this->log_file_name = this->output_path + "/log.txt";
 		this->index_html_file_name = this->output_path + "/index.html";
@@ -1008,8 +1099,11 @@ namespace breseq
 		this->evidence_path = this->output_path + "/" + this->local_evidence_path;
 		this->evidence_genome_diff_file_name = this->evidence_path + "/evidence.gd";
 		this->final_genome_diff_file_name = this->output_path + "/output.gd";
+    this->preannotated_genome_diff_file_name = this->evidence_path + "/preannotated.gd";
     this->annotated_genome_diff_file_name = this->evidence_path + "/annotated.gd";
-    
+    this->output_mutation_prediction_done_file_name = this->evidence_path + "/mutation_prediction.done";
+    this->output_mutation_annotation_done_file_name = this->evidence_path + "/mutation_annotation.done";
+
 		this->local_coverage_plot_path = "evidence";
 		this->coverage_plot_path = this->output_path + "/" + this->local_coverage_plot_path;
     this->coverage_plot_r_script_file_name = this->program_data_path + "/plot_coverage.r";    
@@ -1031,15 +1125,20 @@ namespace breseq
 		this->reference_faidx_file_name = this->data_path + "/reference.fasta.fai";
 		this->reference_gff3_file_name = this->data_path + "/reference.gff3";
 		this->unmatched_read_file_name = this->data_path + "/#.unmatched.fastq";
-    this->output_vcf_file_name = this->data_path + "/output.vcf";
-    this->output_genome_diff_file_name = this->data_path + "/output.gd";
-    this->output_annotated_genome_diff_file_name = this->data_path + "/annotated.gd";
-    this->data_summary_file_name = this->data_path + "/summary.json";
+    this->data_vcf_file_name = this->data_path + "/output.vcf";
+    this->data_genome_diff_file_name = this->data_path + "/output.gd";
+    this->data_annotated_genome_diff_file_name = this->data_path + "/annotated.gd";
+    this->data_json_summary_file_name = this->data_path + "/summary.json";
+
+    //
 
 
     //! Paths: Experimental
     this->long_pairs_file_name = this->output_path + "/long_pairs.tab";
 
+    
+    //! Multithreading
+    Settings::pool.resize(this->num_processors);
   }
 
 
@@ -1055,81 +1154,6 @@ namespace breseq
       this->installed["path"] = pPath;
     }
     
-    // For checking path in XCode etc...
-    //cerr << this->installed["path"] << endl;
-    
-    // SAMtools executables - look in the local bin path only
-    /*
-    string samtools_path = this->bin_path + "/samtools";
-    if (!file_empty(samtools_path)) {
-		  this->installed["samtools"] = samtools_path;
-    }
-    
-    // Unless we are in "make test" mode where this environental variable is defined.
-    char* breseq_samtools_path = getenv("BRESEQ_SAMTOOLS_PATH");
-    if (breseq_samtools_path !=NULL) {
-      if (!file_empty(string(breseq_samtools_path) + "/samtools")) {
-        this->installed["samtools"] = string(breseq_samtools_path) + "/samtools";
-      }
-      cerr << "In test mode. Samtools path: " << breseq_samtools_path << endl;
-    }
-    
-    // use 'which' as a fallback - bin_path does not work on all systems
-    if (this->installed["samtools"].size() == 0) {
-      this->installed["samtools"] = SYSTEM_CAPTURE("which samtools", true);
-      
-      // which may return nothing if it is not in the path or a message,
-      // make the output nothing in either case
-      if (this->installed["samtools"].find("no samtools in") != string::npos) {
-        this->installed["samtools"] = "";
-      }
-    }
-
-    
-    if (this->installed["samtools"].size() != 0) {
-      string version_string = SYSTEM_CAPTURE(this->installed["samtools"], true);
-      size_t start_version_pos = version_string.find("Version:");
-      if (start_version_pos != string::npos) {
-        start_version_pos = version_string.find_first_not_of(" \t\r\n", start_version_pos+8);
-        size_t end_version_pos = version_string.find_first_of("\r\n", start_version_pos+1);
-        // This would just get the short version number
-        //size_t end_version_pos = version_string.find_first_not_of("0123456789.", start_version_pos+1);
-        this->installed["samtools_version_string"] = version_string.substr(start_version_pos, end_version_pos - start_version_pos);
-      }
-      else {
-        this->installed["samtools_version_error_message"] = version_string;
-      }
-    }
-
-    
-    // which can return an error message    
-    // detect SSAHA2 system-wide install
-    this->installed["SSAHA2"] = SYSTEM_CAPTURE("which ssaha2", true);
-    this->installed["SSAHA2_version_string"] = "";
-        
-    // which may return nothing if it is not in the path or a message,
-    // make the output nothing in either case
-    if (this->installed["SSAHA2"].find("no ssaha2 in") != string::npos) {
-      this->installed["SSAHA2"] = "";
-    }
-    
-    if (this->installed["SSAHA2"].size() != 0) {
-      string version_string = SYSTEM_CAPTURE(this->installed["SSAHA2"] + " --version", true);
-      size_t start_version_pos = version_string.find("version");
-      if (start_version_pos != string::npos) {
-        start_version_pos = version_string.find_first_not_of(" \t\r\n", start_version_pos+7);
-        size_t end_version_pos = version_string.find_first_not_of("0123456789.", start_version_pos+1);
-        this->installed["SSAHA2_version_string"] = version_string.substr(start_version_pos, end_version_pos - start_version_pos);
-      }
-      else {
-        this->installed["SSAHA2_version_error_message"] = version_string;
-      }
-    }
-    
-    //cerr << "SSAHA2: " << this->installed["SSAHA2"] << " SSAHA2 version: " << this->installed["SSAHA2_version_string"] << endl;
-    
-    */
-     
     // detect bowtie2 and bowtie2-build system-wide install
     this->installed["bowtie2"] = SYSTEM_CAPTURE("which bowtie2", true);
     this->installed["bowtie2-build"] = SYSTEM_CAPTURE("which bowtie2-build", true);
@@ -1256,14 +1280,14 @@ namespace breseq
     else if ((from_string<uint64_t>(this->installed["bowtie2_version"]) == 2000003000)
              ||  (from_string<uint64_t>(this->installed["bowtie2_version"]) == 2000004000)) {
       good_to_go = false;
-      cerr << "---> ERROR \"bowtie2\" versions 2.0.3 and 2.0.4 are known to have bugs in" << endl;
+      cerr << "---> ERROR bowtie2 versions 2.0.3 and 2.0.4 are known to have bugs in" << endl;
       cerr << "---> ERROR SAM output that can cause breseq to crash. Please upgrade." << endl;
       cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
       cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
     }
     else if (from_string<uint64_t>(this->installed["bowtie2_version"]) < 2001000000) {
       good_to_go = true;
-      cerr << "---> WARNING \"bowtie2\" versions before 2.1.0 may produce output that varies slightly" << endl;
+      cerr << "---> WARNING bowtie2 versions before 2.1.0 may produce output that varies slightly" << endl;
       cerr << "---> WARNING from later versions. This may cause consistency tests to fail." << endl;
       cerr << "---> WARNING We strongly suggest that you update to bowtie2 2.1.0+." << endl;
       cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
@@ -1271,15 +1295,20 @@ namespace breseq
     }
     else if (from_string<uint64_t>(this->installed["bowtie2_version"]) == 2003001000) {
       good_to_go = false;
-      cerr << "---> ERROR \"bowtie2\" version 2.3.1 is known to have a major bug in SAM" << endl;
+      cerr << "---> ERROR bowtie2 version 2.3.1 is known to have a major bug in SAM" << endl;
       cerr << "---> ERROR output that will cause breseq to crash. Please upgrade/downgrade." << endl;
       cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
       cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
     }
     else {
-      cout << "---> bowtie2  :: version " << this->installed["bowtie2_version_string"] << " [" << this->installed["bowtie2"] << "]" << endl;
+      cerr << "---> bowtie2  :: version " << this->installed["bowtie2_version_string"] << " [" << this->installed["bowtie2"] << "]" << endl;
+      // WARN if preferred version is not used
+      if (from_string<uint64_t>(this->installed["bowtie2_version"]) != 2004005000) {
+        cerr << "---> bowtie2  :: NOTE :: breseq output may vary slightly depending on your bowtie2 version," << endl;
+        cerr << "---> bowtie2  :: NOTE :: and occasionally bowtie2 versions may have bugs that cause crashes." << endl;
+        cerr << "---> bowtie2  :: NOTE :: bowtie2 version 2.4.5 is recommended with this breseq version." << endl;
+      }
     }
-    
 		// R version 2.1 required
 		if (this->installed["R"].size() == 0)
 		{
@@ -1302,7 +1331,7 @@ namespace breseq
       cerr << "---> See http://www.r-project.org" << endl;
     }
     else {
-      cout << "---> R        :: version " << this->installed["R_version_string"] << " [" << this->installed["R"] << "]" << endl;
+      cerr << "---> R        :: version " << this->installed["R_version_string"] << " [" << this->installed["R"] << "]" << endl;
     }
     
     /*

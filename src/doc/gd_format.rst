@@ -8,13 +8,13 @@ The |GD| file format describes mutational differences between a reference DNA se
 An example of a portion of a |GD| file::
 
    #=GENOME_DIFF 1.0
-   DEL	61	11	NC_001416	139	1	
-   INS	62	12	NC_001416	14266	G	
-   SNP	63	13	NC_001416	20661	G	
-   INS	64	14	NC_001416	20835	C	
-   SNP	65	15	NC_001416	21714	A	
-   DEL	60	33,1	NC_001416	21738	5996	
-   SNP	66	35	NC_001416	31016	C	
+   DEL	61	11	NC_001416	139	1
+   INS	62	12	NC_001416	14266	G
+   SNP	63	13	NC_001416	20661	G
+   INS	64	14	NC_001416	20835	C
+   SNP	65	15	NC_001416	21714	A
+   DEL	60	33,1	NC_001416	21738	5996
+   SNP	66	35	NC_001416	31016	C
    ...
    MC	9		NC_001416	1	2	0	0	left_inside_cov=0	left_outside_cov=NA	right_inside_cov=0	right_outside_cov=169
    RA	11		NC_001416	139	0	G	.	frequency=1	new_cov=34/40	quality=309.0	ref_cov=0/0	tot_cov=34/40
@@ -30,13 +30,52 @@ Version line
 +++++++++++++++
 
 The first line of the file must define that this is a |GD| file and the version of the file specification used::
-   
+
    #=GENOME_DIFF 1.0
 
 Metadata lines
 +++++++++++++++
 
-Lines beginning with **#=<name> <value>** are interpreted as metadata. (Thus, the first line is assigning a metadata item named GENOME_DIFF a value of 1.0.) Names cannot include whitespace characters. Values may include whitespace characters. Lines with the same name are concatenated with single spaces added between them. 
+Lines beginning with **#=<name> <value>** are interpreted as metadata. (Thus, the first line is assigning a metadata item named GENOME_DIFF a value of 1.0.) Names cannot include whitespace characters. Values may include whitespace characters. In most cases, the values for lines with the same name are concatenated with single spaces added between them or interpreted as a list.
+
+Common but optional metadata fields include:
+
+TITLE
+   The name of the sample. If this field is not provided, the name of the |GD| file (removing the .gd suffix) is used for this field.
+
+AUTHOR
+   Name of person who curated the |GD| file.
+
+PROGRAM
+   Name and version of software program that generated the |GD| file.
+
+CREATED
+  Date on which the |GD| file was created.
+
+TIME
+   Time point the sample is from, in days, generations, or any other unit of measurement. Ex: 1, 2, 15000
+
+POPULATION
+   Name/designation for the population the sample is from. Ex: Ara–3 / MA-1
+
+TREATMENT
+   Experimental treatment group for this population. Ex: LB medium / LTEE
+
+CLONE
+   Name/designation for a clonal isolate, Ex: A, B, REL10863
+
+REFSEQ
+   Location of the reference sequence file. Ex: /here/is/an/absolute/path/to/the/file.gb
+
+ADAPTSEQ
+   Location of the adaptor sequence file. Ex: relative/path/to/the/adaptors.fa
+
+READSEQ
+   Location of the read sequence file. Ex: \https://place.org/url/for/file/download.fastq
+
+REFSEQ, ADAPTSEQ, and READSEQ entries are interpreted as lists of multiple files to process/include if they appear multiple times. The location value for theese fields can be a URL or an absolute/relative file path.
+
+Some of these metadata fields are used to name and sort samples by |gdtools| COMPARE, to find relevant files by |gdtools| RUNFILE, and by other utilities.
 
 Comment lines
 ++++++++++++++
@@ -57,7 +96,7 @@ Data lines describe either a mutation or evidence from an analysis that can pote
    For evidence and validation lines, the id of this item. For mutation lines, the ids of all evidence or validation items that support this mutation. May be set to '.' if a line was manually edited.
 
 3. **parent-ids** *<uint32>*
-   
+
    ids of evidence that support this mutation. May be set to '.' or left blank.
 
 *mutation* types are 3 letters: SNP, SUB, DEL, INS, MOB, AMP, CON, INV.
@@ -125,9 +164,9 @@ Additional DEL named fields
    This deletion appears to be mediated by a molecular event involving a mobile element such as a transposon. A copy of the mobile element is found on the boundary of the deleted region and a new junction at the opposite end of the deletion matches the end of the mobile element.
 
 * **between=**\ *<repeat_family>*
-   This deletion appears to result from homologous recombination or polymerase slipping between two existing copies of the same genomic repeat (e.g. tRNA, IS element) in the genome. One copy of the repeat is deleted by this event. 
+   This deletion appears to result from homologous recombination or polymerase slipping between two existing copies of the same genomic repeat (e.g. tRNA, IS element) in the genome. One copy of the repeat is deleted by this event.
 
-* **repeat_seq=**\ *<string>*, **repeat_length=**\ *<uint32>*, **repeat_ref_num=**\ *<uint32>*, **repeat_new_copies=**\ *<uint32>* 
+* **repeat_seq=**\ *<string>*, **repeat_length=**\ *<uint32>*, **repeat_ref_num=**\ *<uint32>*, **repeat_new_copies=**\ *<uint32>*
    This deletion is in a short sequence repeat consisting of tandem copies of **repeat_seq** repeated **repeat_ref_num** times in the ancestor and **repeat_new_copies** after a mutation.  To be annotated in this way the copy of the repeat in the reference genome must consist of at least two repeat copies and have a length of five of more total bases (**repeat_length** × **repeat_ref_num** ≥ 5).
 
 INS: Insertion mutation
@@ -147,11 +186,11 @@ INS: Insertion mutation
 
 Additional INS named fields
 '''''''''''''''''''''''''''
-* **repeat_seq=**\ *<string>*, **repeat_length=**\ *<uint32>*, **repeat_ref_num=**\ *<uint32>*, **repeat_new_copies=**\ *<uint32>* 
+* **repeat_seq=**\ *<string>*, **repeat_length=**\ *<uint32>*, **repeat_ref_num=**\ *<uint32>*, **repeat_new_copies=**\ *<uint32>*
    This insertion is in a short sequence repeat consisting of tandem copies of **repeat_seq** repeated **repeat_ref_num** times in the ancestor and **repeat_new_copies** after a mutation.  To be annotated in this way the copy of the repeat in the reference genome must consist of at least two repeat copies and have a length of five of more total bases (**repeat_length** × **repeat_ref_num** ≥ 5).
 
 * **insert_position=**\ *<uint32>*
-   Used when there are multiple insertion events after the same reference base to order the insertions. This typically happens in polymorphism mode and when manually breaking up an insertion of bases into distinct mutational events when this is supported by phylogenetic information. Numbering of insert positions begins with 1. 
+   Used when there are multiple insertion events after the same reference base to order the insertions. This typically happens in polymorphism mode and when manually breaking up an insertion of bases into distinct mutational events when this is supported by phylogenetic information. Numbering of insert positions begins with 1.
 
 MOB: Mobile element insertion mutation
 """"""""""""""""""""""""""""""""""""""
@@ -170,7 +209,7 @@ MOB: Mobile element insertion mutation
 
 7. **strand** *<1/-1>*
 
-   strand of mobile element insertion.  
+   strand of mobile element insertion.
 
 8. **duplication_size** *<uint32>*
 
@@ -204,13 +243,13 @@ AMP: Amplification mutation
 
 7. **new_copy_number** *<uint32>*
 
-   new number of copies of specified bases. 
+   new number of copies of specified bases.
 
 Additional AMP named fields
 '''''''''''''''''''''''''''
 
 * **between=**\ *<repeat_family>*
-   This deletion appears to result from homologous recombination or polymerase slipping between two existing copies of the same genomic repeat (e.g. tRNA, IS element) in the genome. This repeat appears on the boundary of each copy of the specified region.
+   This amplification appears to result from homologous recombination or polymerase slipping between two existing copies of the same genomic repeat (e.g. tRNA, IS element) in the genome. This repeat appears on the boundary of each copy of the specified region.
 
 * **mediated=**\ *<repeat_family>*, *mediated_strand=**\ *<1/-1>*
    This amplification is mediated by a simultaneous new insertion of a mobile element (or other  repeat element). New copies of the inserted element are added in the specified strand orientation between each new copy of the amplified region. Both of these attributes must be specified for the mutation.
@@ -238,6 +277,32 @@ CON: Gene conversion mutation
 
    Region in the reference genome to use as a replacement.
 
+INT: Integration mutation
+"""""""""""""""""""""""""""""
+
+4. **seq_id** *<string>*
+
+   id of reference sequence fragment containing mutation, evidence, or validation.
+
+5. **position** *<uint32>*
+
+   position in reference sequence fragment that was the target of integration from another genomic location.
+
+6. **size** *<uint32>*
+
+   number of bases to replace in the reference genome beginning at the specified position.
+
+7. **region** *<sequence:start-end>*
+
+   Region in the reference genome to use as a replacement.
+
+What is the difference between a CON and an INT?
+""""""""""""""""""""""""""""""""""""""""""""""""""""
+Gene conversions generally don't add or remove genes from a genome. They just exchange a few bases between homologous genes.
+Therefore, gene annotations are not changed by applying a CON mutation to a genome. On the other hand, integration implies
+that new genes are being added to a sequence. Thus, gene annotations are copied over to the inserted bases when applying an INT
+mutation to a genome.
+
 INV: Inversion mutation
 """""""""""""""""""""""
 
@@ -252,7 +317,7 @@ INV: Inversion mutation
 6. **size** *<uint32>*
 
    number of bases in inverted region beginning at the specified reference position.
-   
+
 Standard name=value pairs
 ++++++++++++++++++++++++++
 
@@ -278,7 +343,7 @@ These advanced attributes control how mutations are applied when using :program:
 * **before**\ =\ *<mutation_id>*
 
    Apply this mutation before another mutation. For example, did a base substitution occur after a region was duplicated, thus it is only in one copy or did it occur before the duplication, thus altering both copies? Did a base substitution happen before a deletion, hiding a mutation that should be included in any phylogenetic inference? When this attributes is present, mutations will be applied in order according to their genomic positions.
-   
+
 * **within**\ =\ *<mutation_id>*\ or **within**\ =\ *<mutation_id>:<insert_position>*\  or **within**\ =\ *<mutation_id>:<copy_index>*
 
    This mutation happens within a different mutation. These options can specify, for example, that a base substitution happens in the second copy of a duplicated region. If *<mutation_id>* refers to an AMP, then it must be of the form *<mutation_id>:<copy_index>* and the mutation is placed in the corresponding copy of the specified coordinates. If *<mutation_id>* refers to an INS, then it must be of the form *<mutation_id>:<insert_position>*, and the <insert_position> of the mutation will be interpreted as happening within the INS bases that are inserted, so that it can change those new bases. This coordinate is local to the new bases, so an <insert_position> of 1 refers to the first inserted base. In this case the main *<position>* of the  mutation must be the same as the *<position> of the INS that it is within. If *<mutation_id>* refers to a MOB with no *<copy_index>*, then the mutation is placed within the newly inserted sequence of the mobile element with the position of the mutation interpreted as happening on the new genome after the MOB bases are inserted. If it refers to a MOB and is of the form *<mutation_id>:<copy_index>*, then the mutation is placed within the specified copy of the target site duplication.
@@ -310,7 +375,7 @@ Line specification:
 7. **ref_base** *<char>*
 
    base in the reference genome.
-   
+
 8. **new_base** *<char>*
 
    new base supported by read alignment evidence.
@@ -331,15 +396,15 @@ Line specification:
 6. **end** *<uint32>*
 
    end position in reference sequence of region.
-   
+
 7. **start_range** *<uint32>*
 
    number of bases to offset *after* the **start position** to define the upper limit of the range where the start of a deletion could be.
-   
+
 8. **end_range** *<uint32>*
 
    number of bases to offset *before* the **end position** to define the lower limit of the range where the start of a deletion could be.
-   
+
 Essentially this is evidence of missing coverage between two positions in the ranges [start, start+start_range] [end-end_range, end].
 
 
@@ -353,7 +418,7 @@ JC: New junction evidence
 5. **side_1_position** *<uint32>*
 
    position of side 1 at the junction boundary.
-   
+
 6. **side_1_strand** *<1/-1>*
 
    direction that side 1 continues matching the reference sequence
@@ -361,7 +426,7 @@ JC: New junction evidence
 7. **side_2_seq_id** *<string>*
 
    id of reference sequence fragment containing side 2 of the junction.
-   
+
 8. **side_2_position** *<uint32>*
 
    position of side 2 at the junction boundary.
@@ -371,7 +436,7 @@ JC: New junction evidence
    direction that side 2 continues matching the reference sequence.
 
 9. **overlap** *<uint32>*
-   
+
    Number of bases that the two sides of the new junction have in common.
 
 
@@ -397,7 +462,7 @@ Validation Types
 
 These items indicate that mutations have been validated by further, targeted experiments.
 
-CURA: True-positive curated by an expert 
+CURA: True-positive curated by an expert
 """"""""""""""""""""""""""""""""""""""""""""""
 
 An expert has examined the data output from a prediction program and determined that this mutations is a true positive.
@@ -408,7 +473,7 @@ Line specification:
 
    Name or initials of the person who predicted the mutation.
 
-FPOS: False-positive curated by an expert 
+FPOS: False-positive curated by an expert
 """"""""""""""""""""""""""""""""""""""""""""""
 
 An expert has examined the raw read data and determined that this predicted mutation is a false positive.
@@ -450,11 +515,11 @@ Line specification:
 7. **primer2_start** *<uint32>*
 
    position in reference sequence of the 5' end of primer 2.
-   
+
 8. **primer2_end** *<uint32>*
 
    position in reference sequence of the 3' end of primer 2.
-   
+
 For primer 1, start < end. For primer 2, end < start.
 
 PFLP: PCR-fragment length polymorphism
@@ -477,11 +542,11 @@ Line specification:
 7. **primer2_start** *<uint32>*
 
    position in reference sequence of the 5' end of primer 2.
-   
+
 8. **primer2_end** *<uint32>*
 
    position in reference sequence of the 3' end of primer 2.
-   
+
 For primer 1, start < end. For primer 2, end < start.
 
 
@@ -505,7 +570,7 @@ Line specification:
 7. **primer2_start** *<uint32>*
 
    position in reference sequence of the 5' end of primer 2.
-   
+
 8. **primer2_end** *<uint32>*
 
    position in reference sequence of the 3' end of primer 2.
@@ -519,7 +584,7 @@ For primer 1, start < end. For primer 2, end < start.
 PFGE: Pulsed-field gel electrophoresis
 """"""""""""""""""""""""""""""""""""""
 
-Changes in fragment sizes of genomic DNA digested with restriction enzymes and separated by pulsed-field 
+Changes in fragment sizes of genomic DNA digested with restriction enzymes and separated by pulsed-field
 
 Line specification:
 
@@ -541,7 +606,7 @@ Line specification:
 4. **note** *<string>*
 
    Free text note.
-   
+
 MASK: Repeat mask a section
 """"""""""""""""""""""""""""""""""""""
 

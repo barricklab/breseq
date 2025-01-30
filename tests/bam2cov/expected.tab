@@ -755,3 +755,8 @@ position	ref_base	unique_top_cov	unique_bot_cov	redundant_top_cov	redundant_bot_
 2163	A	175	144	0	0	0	0	0	0
 2165	T	176	145	0	0	0	0	1	0
 2167	A	175	145	0	0	0	0	0	0
+#	reference_unique_average_cov	330.755
+#	region_unique_average_cov	333.224
+#	region_repeat_average_cov	0
+#	region_average_cov	333.224
+#	number_of_positions	756

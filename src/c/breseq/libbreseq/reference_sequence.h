@@ -8,7 +8,7 @@ AUTHORS
 LICENSE AND COPYRIGHT
 
   Copyright (c) 2008-2010 Michigan State University
-  Copyright (c) 2011-2017 The University of Texas at Austin
+  Copyright (c) 2011-2022 The University of Texas at Austin
 
   breseq is free software; you can redistribute it and/or modify it under the  
   terms the GNU General Public License as published by the Free Software 
@@ -32,10 +32,27 @@ LICENSE AND COPYRIGHT
 namespace breseq {
 
 
-  
   // Pre-declaration
 	class Settings;
   
+  // Convenience structure for passing many options
+  class MutationTableOptions {
+  public:
+    MutationTableOptions(const Settings& _settings);
+    
+    uint32_t repeat_header;
+    bool legend_row;
+    bool force_show_sample_headers;
+    bool one_ref_seq;
+    bool force_frequencies_for_one_reference;
+    bool shade_frequencies;
+    bool detailed;
+    vector<string> gd_name_list_ref;
+    string relative_link;
+    uint32_t max_nucleotides_to_show_in_tables;
+    bool no_javascript;
+  };
+
   /* Position for dealing with things that are relative to reference genom
     and the annoying issues of insert counts
   */
@@ -126,6 +143,9 @@ namespace breseq {
     }
   };
   
+  // Pre-declaration
+  class cSequenceFeature;
+
   class cLocation {
     
   private:
@@ -157,7 +177,6 @@ namespace breseq {
     , m_start_is_indeterminate(start_is_indeterminate)
     , m_end_is_indeterminate(end_is_indeterminate)
     {
-      this->check_valid();
     }
     
     cLocation(const cLocation& in)
@@ -167,7 +186,6 @@ namespace breseq {
     , m_start_is_indeterminate(in.m_start_is_indeterminate)
     , m_end_is_indeterminate(in.m_end_is_indeterminate)
     {
-      this->check_valid();
     }
     
     //>! For sorting
@@ -240,17 +258,11 @@ namespace breseq {
       return (m_start_1 <= m_end_1) && (m_strand >=-1) && (m_strand <=1);
     }
     
-    void check_valid() {
-      ASSERT(this->is_valid(), "Location has invalid start-end coordinates or strand:\n" + this->as_string());
-    }
-    
     void set_start_1(int32_t start_1) {
       m_start_1 = start_1;
-      this->check_valid();
     }
     void set_end_1(int32_t end_1) {
       m_end_1 = end_1;
-      this->check_valid();
     }
     
     void offset(int32_t shift) {
@@ -262,7 +274,6 @@ namespace breseq {
     void set_start_end_1(int32_t start_1, int32_t end_1) {
       m_start_1 = start_1;
       m_end_1 = end_1;
-      this->check_valid();
     }
     
     void set_start_is_indeterminate(bool start_is_indeterminate) {
@@ -357,7 +368,18 @@ namespace breseq {
     
   };
   
-  typedef list<cFeatureLocation> cFeatureLocationList;
+class cFeatureLocationList: public list<cFeatureLocation> {
+  
+public:
+  string as_string(string sep=",") {
+    vector<string> ret;
+    for(list<cFeatureLocation>::iterator it=this->begin(); it!=this->end(); it++) {
+      ret.push_back(it->as_string());
+    }
+    return join(ret, sep);
+  }
+  
+};
   
   extern const vector<string> snp_types;
     
@@ -397,6 +419,7 @@ namespace breseq {
       bool m_end_is_indeterminate;
       bool m_pseudo;
       map<string, vector<string> > m_gff_attributes;
+      vector<string> m_original_genbank_tags;
     
       cSequenceFeature() : m_start_is_indeterminate(false), m_end_is_indeterminate(false), m_pseudo(false) {}
 
@@ -407,6 +430,7 @@ namespace breseq {
         , m_end_is_indeterminate(copy.m_end_is_indeterminate)
         , m_pseudo(copy.m_pseudo)
         , m_gff_attributes(copy.m_gff_attributes)
+        , m_original_genbank_tags(copy.m_original_genbank_tags)
       {
         // need to update locations to point to this feature
         for (list<cFeatureLocation>::iterator it=m_locations.begin(); it!=m_locations.end(); it++) {
@@ -468,16 +492,23 @@ namespace breseq {
         return it->second;
       }
   
-      bool is_repeat() {
-        return ((*this)["type"] == "mobile_element") || ((*this)["type"] == "repeat_region");
-      }
-    
       bool is_source() {
         return ((*this)["type"] == "region") || ((*this)["type"] == "source");
       }
     
+      bool is_repeat() {
+        return (   ((*this)["type"] == "mobile_element")
+                || ((*this)["type"] == "repeat_region")
+        );
+      }
+    
       bool is_gene() {
-        return ((*this)["type"] == "gene") || ((*this)["type"] == "CDS");
+        return (   ((*this)["type"] == "CDS")
+                || ((*this)["type"] == "rRNA")
+                || ((*this)["type"] == "tRNA")
+                || ((*this)["type"] == "ncRNA")
+                || ((*this)["type"] == "RNA")
+        );
       }
     
       string get_locus_tag() const {
@@ -594,13 +625,17 @@ namespace breseq {
     public:      
       int32_t m_length;
       bool m_is_circular;
+      bool m_is_contig;
       string m_description; // GenBank (DEFINITION) | GFF (description), from main feature line
       string m_seq_id;      // GenBank (LOCUS)      | GFF (seqid), from ##sequence-region line
       string m_file_name;   // Name of file this sequence was loaded from
       string m_file_format; // Format of file used to load sequence
 
+
       cFastaSequence m_fasta_sequence;            //!< Nucleotide sequence
     
+      vector<string> m_genbank_raw_header_lines;   //!< Raw GenBank header linex (except LOCUS and FEATURES)
+ 
       // Features are stored as counted pointers so that we can have ready-made lists
       // of different types of features. 
       cSequenceFeatureList m_features;    //!< Full list of sequence features
@@ -623,23 +658,24 @@ namespace breseq {
       cAnnotatedSequence() : 
         m_length(0),
         m_is_circular(false),
+        m_is_contig(false),
         m_description("na"), 
         m_seq_id("na")
         {} ;
     
       void set_features_loaded_from_file(const string& file_name, bool allow_reload = false) {
-        ASSERT(allow_reload || (m_features_loaded_from_file.size() == 0), "Duplicate seq id found in file '" + file_name + "'! Features for '" + m_seq_id + "' were already loaded from file '" + m_features_loaded_from_file + "'.")
+        ASSERT(allow_reload || (m_features_loaded_from_file.size() == 0), "Duplicate information for sequence found in file '" + file_name + "'!\nFeatures for sequence '" + m_seq_id + "' were already loaded from file '" + m_features_loaded_from_file + "'.\nCheck that you do not have duplicate sequence names/IDs in your reference files.")
         m_features_loaded_from_file = file_name;
       }
     
       void set_sequence_loaded_from_file(const string& file_name, bool allow_reload = false) {
-        ASSERT(allow_reload || (m_sequence_loaded_from_file.size() == 0), "Duplicate seq id found in file '" + file_name + "'! DNA sequence for '" + m_seq_id + "' was already loaded from file '" + m_sequence_loaded_from_file + "'.")
+        ASSERT(allow_reload || (m_sequence_loaded_from_file.size() == 0), "Duplicate information for sequence found in file '" + file_name + "'!\nDNA sequence for sequence '" + m_seq_id + "' was already loaded from file '" + m_sequence_loaded_from_file + "'.\nCheck that you do not have duplicate sequence names/IDs in your reference files.")
         m_sequence_loaded_from_file = file_name;
       }
     
       void set_file_format(const string& file_format) {
         if (m_file_format.length() > 0) m_file_format += "+";
-        m_file_format += file_format;
+        m_file_format += to_upper(file_format);
       }
     
       void sort_features()
@@ -687,7 +723,7 @@ namespace breseq {
       void invert_sequence_1(int32_t start_1, int32_t end_1, string mut_type="", bool verbose=false);
     
       // Repeat Feature at Position
-      void repeat_feature_1(int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& orig_ref_seq_info, string& orig_seq_id, int8_t strand, cLocation &repeated_region, bool verbose = false);
+      void repeat_feature_1(int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& orig_ref_seq_info, string& orig_seq_id, int8_t strand, const cLocation &repeated_region, bool verbose = false);
       
       // Find Specific Feature
       // Given a cSequenceFeatureList feat_list, iterate through it until
@@ -733,6 +769,7 @@ namespace breseq {
         copy.m_description = in.m_description;
         copy.m_seq_id = in.m_seq_id;
         copy.m_fasta_sequence = in.m_fasta_sequence;
+        copy.m_genbank_raw_header_lines = in.m_genbank_raw_header_lines;
 
         //Features.
         for (cSequenceFeatureList::iterator it = in.m_features.begin(); it != in.m_features.end(); ++it) {
@@ -744,18 +781,10 @@ namespace breseq {
       }
     
       // Read GenBank coords
-      list<cLocation> ReadGenBankCoords(const cSequenceFeature& in_feature, string& s, ifstream& in);
+      list<cLocation> ReadGenBankCoords(const cSequenceFeature& in_feature, string& s, ifstream& in, bool safe_create_feature_locations);
       //Parse portion of GenBank coords string
-      list<cLocation> ParseGenBankCoords(const cSequenceFeature& in_feature, string& s, int8_t in_strand = 1);
+      list<cLocation> ParseGenBankCoords(const cSequenceFeature& in_feature, string& s, bool safe_create_feature_locations, int8_t in_strand = 1);
     
-      list<cLocation> SafeCreateFeatureLocations(
-                                          const cSequenceFeature& in_feature,
-                                          int32_t in_start_1,
-                                          int32_t in_end_1,
-                                          int8_t in_strand,
-                                          bool in_start_is_indeterminate,
-                                          bool in_end_is_indeterminate
-                                          );
   };
   
   /*! Reference Sequences
@@ -783,18 +812,27 @@ namespace breseq {
     
     // Used for annotating mutations
     static const string intergenic_separator;
+    static const string text_intergenic_separator;
     static const string html_intergenic_separator;
+    
     static const string gene_list_separator;
+    static const string text_gene_list_separator;
     static const string html_gene_list_separator;
+    
     static const string no_gene_name;
     static const string gene_range_separator;
+    
     static const string multiple_separator;
+    static const string text_multiple_separator;
     static const string html_multiple_separator;
+    
     static const string gene_strand_reverse_char;
     static const string gene_strand_forward_char;
 
-    static const double k_inactivate_overlap_fraction;
+    static const double k_inactivating_overlap_fraction;
+    static const int32_t k_inactivating_size;
     static const int32_t k_promoter_distance;
+
     
     cReferenceSequences(bool _use_safe_seq_ids = true)
       : m_index_id(0)
@@ -803,7 +841,10 @@ namespace breseq {
     {}
 
     //!< Load all reference files and verify - this is the only public load method!
-    void LoadFiles(const vector<string>& file_names);
+    void LoadFiles(
+                   const vector<string>& file_names,
+                   const string& genbank_field_for_seq_id = "AUTOMATIC"
+                   );
     
     //!: Convenience function to load just one file
     void LoadFile(const string& file_name)
@@ -825,6 +866,9 @@ namespace breseq {
       }
     }
     
+    //!< Adds new IS_element entries
+    void ReadISEScan(const string& isescan_csv_file_name);
+    
   protected:
     
     //!< Read reference file - not safe to call on their own = private
@@ -834,10 +878,12 @@ namespace breseq {
     //!< Load reference file into object
     //!< Detect file type and load the information in it appropriately
     //!< Should not be called directly, only through LoadFiles!
-    void PrivateLoadFile(const string& file_name);
+    void PrivateLoadFile(const string& file_name, const string& genbank_field_for_seq_id = "AUTOMATIC");
     
     //!< Verify that all seq_id have sequence and that features fit in sequence;
     void VerifySequenceFeatureMatch();
+    void VerifyCDSLengthsAreValid();
+    void VerifyFeatureLocations();
     bool Initialized() {return m_initialized;}
     
     void ReadFASTA(const std::string &file_name);
@@ -846,16 +892,22 @@ namespace breseq {
     void ReadBull(const string& file_name);
 
     //!< Read GenBank file
-    void ReadGenBank(const string& in_file_names);
-    bool ReadGenBankFileHeader(std::ifstream& in, const string& file_name);
+    void ReadGenBank(const string& in_file_names, const string& genbank_field_for_seq_id = "AUTOMATIC");
+    bool ReadGenBankFileHeader(std::ifstream& in, const string& file_name, const string& genbank_field_for_seq_id = "AUTOMATIC");
     //void ReadGenBankTag(std::string& tag, std::string& s, std::ifstream& in);
     void ReadGenBankFileSequenceFeatures(std::ifstream& in, cAnnotatedSequence& s);
     void ReadGenBankFileSequence(std::ifstream& in, cAnnotatedSequence& s);
+    
+    //!< Write GenBank file
+    void WriteGenBankFileHeader(std::ofstream& out, const cAnnotatedSequence& s);
+    void WriteGenBankFileSequenceFeatures(std::ofstream& out, const cAnnotatedSequence& s);
+    void WriteGenBankFileSequence(std::ofstream& out, const cAnnotatedSequence& s);
     
   public:
     void WriteFASTA(const string &file_name);
     void WriteFASTA(cFastaFile& ff);
     void WriteGFF(const string &file_name, bool no_sequence = false);
+    void WriteGenBank(const string &file_name, bool no_sequence = false);
     void WriteCSV(const string &file_name);
     
     //!< Moves over original file names to the current names
@@ -936,20 +988,44 @@ namespace breseq {
       return gc / len;
     }
 
-    void add_new_seq(const string& seq_id, const string& file_name)
+    void add_seq(const string& seq_id, const string& file_name)
     {
       m_seq_id_loaded[seq_id]++;
       if (m_seq_id_to_index.count(seq_id)) {
         return;
-      } else {
-        cAnnotatedSequence as;
-        as.m_seq_id = seq_id;
-        as.m_file_name = file_name;
-        this->push_back(as);
-        m_seq_id_to_index[seq_id] = m_index_id;
+      }
+      cAnnotatedSequence as;
+      as.m_seq_id = seq_id;
+      as.m_file_name = file_name;
+      this->push_back(as);
+      m_seq_id_to_index[seq_id] = m_index_id;
+      m_index_id++;
+    }
+    
+    void remove_seq(const string& seq_id)
+    {
+      if (!m_seq_id_to_index.count(seq_id)) {
+        return;
+      }
+      
+      // Find and erase
+      bool found = false;
+      for(vector<cAnnotatedSequence>::iterator it = this->begin(); it != this->end(); it++ ) {
+        if (it->m_seq_id == seq_id) {
+          found = true;
+          this->erase(it);
+          break;
+        }
+      }
+      ASSERT(found, "Attempt to erase non-existent sequence with seq_id: " + seq_id)
+      
+      // Reassign m_seq_id_to_index from scratch
+      m_seq_id_to_index.clear();
+      m_index_id = 0;
+      for(vector<cAnnotatedSequence>::iterator it = this->begin(); it != this->end(); it++ ) {
+        m_seq_id_to_index[it->m_seq_id] = m_index_id;
         m_index_id++;
       }
-      return;
     }
     
     vector<string> seq_ids() const
@@ -1029,7 +1105,7 @@ namespace breseq {
       (*this)[seq_id].invert_sequence_1(start_1, end_1, mut_type, verbose);
     }
     
-    void repeat_feature_1(const string& seq_id, int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& orig_ref_seq_info, string& orig_seq_id, int8_t strand, cLocation&repeated_region, bool verbose = false)
+    void repeat_feature_1(const string& seq_id, int32_t pos, int32_t start_del, int32_t end_del, cReferenceSequences& orig_ref_seq_info, string& orig_seq_id, int8_t strand, const cLocation&repeated_region, bool verbose = false)
     {
       (*this)[seq_id].repeat_feature_1(pos, start_del, end_del, orig_ref_seq_info, orig_seq_id, strand, repeated_region, verbose);
     }
@@ -1050,34 +1126,18 @@ namespace breseq {
     // This is a duplicate of a function in pileup.h for when
     // we don't have a BAM available.
     void parse_region(const string& region, uint32_t& target_id, uint32_t& start_pos_1, uint32_t& end_pos_1)
-    {      
-      vector<string> split_region = split(region, ":");
-      // Must check first split for second to not potentially crash
-      ASSERT(split_region.size() == 2, "Unrecognized region: " + region + "\nExpected format [seq_id:start-end]");
-      vector<string> split_positions = split(split_region[1], "-");
-      ASSERT(split_positions.size() == 2, "Unrecognized region: " + region + "\nExpected format [seq_id:start-end]");
-
-      target_id = seq_id_to_index(split_region[0]);
-      start_pos_1 = from_string<uint32_t>(split_positions[0]);
-      end_pos_1 = from_string<uint32_t>(split_positions[1]);
-    }
-
-    // This parses to a string for target
-    static void parse_region(const string& region, string& seq_id, uint32_t& start_pos_1, uint32_t& end_pos_1)
     {
-      vector<string> split_region = split(region, ":");
-      // Must check first split for second to not potentially crash
-      ASSERT(split_region.size() == 2, "Unrecognized region: " + region + "\nExpected format [seq_id:start-end]");
-      vector<string> split_positions = split(split_region[1], "-");
-      ASSERT(split_positions.size() == 2, "Unrecognized region: " + region + "\nExpected format [seq_id:start-end]");
-      
-      seq_id = split_region[0];
-      start_pos_1 = from_string<uint32_t>(split_positions[0]);
-      end_pos_1 = from_string<uint32_t>(split_positions[1]);
+      string target_name;
+      parse_region(region, target_name, start_pos_1, end_pos_1);
+      target_id = seq_id_to_index(target_name);
+    }
+    
+    static void parse_region(const string& region, string& target_name, uint32_t& start_pos_1, uint32_t& end_pos_1)
+    {
+      breseq::parse_region(region, target_name, start_pos_1, end_pos_1);
     }
     
     // normalize a region description
-    // * remove commas from numbers
     // * flip start and end so start is smaller (returning bool whether this was done)
     static bool normalize_region(string& region) {
       region = substitute(region, ",", "");
@@ -1086,7 +1146,7 @@ namespace breseq {
       uint32_t start_pos_1;
       uint32_t end_pos_1;
       
-      parse_region(region, seq_id, start_pos_1, end_pos_1);
+      cReferenceSequences::parse_region(region, seq_id, start_pos_1, end_pos_1);
       bool reverse = false;
       
       if (start_pos_1>end_pos_1) {
@@ -1122,7 +1182,7 @@ namespace breseq {
                                   cFeatureLocation*& prev_gene,
                                   cFeatureLocation*& next_gene);
     
-    bool mutation_overlapping_gene_is_inactivating(const cDiffEntry& mut, const string& snp_type, const uint32_t start, const uint32_t end, const cGeneFeature& gene, const double inactivate_overlap_fraction);
+    bool mutation_overlapping_gene_is_inactivating(const cDiffEntry& mut, const string& snp_type, const uint32_t start, const uint32_t end, const cGeneFeature& gene, const double inactivate_overlap_fraction, const int32_t frameshift_cutoff);
     
     static string list_to_entry(const vector<string>& _list, const string& _ignore);
     
@@ -1130,25 +1190,29 @@ namespace breseq {
     static string gene_strand_to_string(const bool forward)
     { return (forward ? gene_strand_forward_char : gene_strand_reverse_char); }
     
-    void annotate_1_mutation_in_genes(cDiffEntry& mut, vector<cFeatureLocation*>& within_gene_locs, uint32_t start, uint32_t end, bool ignore_pseudogenes);
-    void annotate_1_mutation(cDiffEntry& mut, uint32_t start, uint32_t end, bool repeat_override = false, bool ignore_pseudogenes = false);
+    void annotate_1_mutation_in_genes(cDiffEntry& mut, vector<cFeatureLocation*>& within_gene_locs, uint32_t start, uint32_t end, bool ignore_pseudogenes, double inactivating_overlap_fraction, int32_t inactivating_size, int32_t promoter_distance);
+    void annotate_1_mutation(cDiffEntry& mut, uint32_t start, uint32_t end, bool repeat_override = false, bool ignore_pseudogenes = false, double inactivating_overlap_fraction = k_inactivating_overlap_fraction, int32_t inactivating_size = k_inactivating_size, int32_t promoter_distance = k_promoter_distance);
     void categorize_1_mutation(cDiffEntry& mut, int32_t large_size_cutoff);
-    void annotate_mutations(cGenomeDiff& gd, bool only_muts = false, bool ignore_pseudogenes = false, bool compare_mode = false, int32_t large_size_cutoff=kBreseq_large_mutation_size_cutoff, bool verbose = false);
+    void annotate_mutations(cGenomeDiff& gd, bool only_muts = false, bool ignore_pseudogenes = false, bool compare_mode = false, int32_t large_size_cutoff=kBreseq_large_mutation_size_cutoff, bool verbose = false, double inactivating_overlap_fraction = k_inactivating_overlap_fraction, int32_t inactivating_size = k_inactivating_size, int32_t promoter_distance = k_promoter_distance);
     void polymorphism_statistics(Settings& settings, Summary& summary);
     string repeat_family_sequence(const string& repeat_name, int8_t strand, string* repeat_region = NULL, string* picked_seq_id=NULL, cFeatureLocation* picked_sequence_feature=NULL, bool fatal_error=true);
     
+    static const string safe_seq_id_name_characters;
+
     string safe_seq_id_name(const string& input)
     {
+      //
+      
       // return if not using safe seq ids
       if (!m_use_safe_seq_ids) return input;
       
       string s(input);
       
-      size_t pos = s.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890._-");
+      size_t pos = s.find_first_not_of(safe_seq_id_name_characters);
       while(pos != string::npos) {
         //s.replace(pos, 1, ""); // remove
         s[pos] = '_'; pos++;// or replace with "safe" character
-        pos = s.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890._-", pos);
+        pos = s.find_first_not_of(safe_seq_id_name_characters, pos);
       }
       
       // Remove double underscores which conflict with junction dividers
@@ -1160,16 +1224,16 @@ namespace breseq {
       s = new_s;
       
       // Also remove any leading or trailing underscores
-      pos = s.find_first_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890.-");
+      pos = s.find_first_of(safe_seq_id_name_characters);
       s.replace(0, pos, "");
 
-      pos = s.find_last_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890.-");
+      pos = s.find_last_of(safe_seq_id_name_characters);
       s.replace(pos+1, s.size()-pos+1, "");
       
-      ASSERT(s.find_first_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890.-") != string::npos, "Seq id " + input + " does not contain any valid alphanumeric characters.");
+      ASSERT(s.find_first_of(safe_seq_id_name_characters) != string::npos, "Seq id [" + input + "] does not contain any valid characters.");
       
       if (s != input) {
-        WARN("Reference seq id converted from '" + input + "' to '" + s + "'.\nOnly alphanumeric characters, periods, dashes, and single underscores '_' are allowed in seq ids.");
+        WARN("Reference seq id converted from '" + input + "' to '" + s + "'.\nOnly alphanumeric characters, periods (.), dashes(-), plus (+) and minus (−) signs, and single underscores (_) are allowed in seq ids.");
       }
       
       return s;

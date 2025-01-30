@@ -1,5 +1,154 @@
+Version 0.40.0
+  * Documentation is no longer packaged with the downloads. It's on the GitHub wiki.
+  * Discontinued building the Linux binary since it is unlikely to be portable.
+    If you were using this and would like us to keep generating it, let us know!
+
+
+Version 0.39.0 
+  * Fixed MAJOR ERRORS in assigning mutations to promoter regions of genes (#374)
+  * We are migrating the breseq documentation to the GitHub wiki. Please check there
+    for the most updated version. The docs packaged with breseq are sunsetting.
+  * Commands like breseq BAM2COV and BAM2ALN are now more forgiving in the ways regions can be specified.
+    * You can include commas in positions, which will be removed. REL606:627,165-627,185 or REL606:627165-627185
+    * You can provide just a single position REL606:627165 or REL606:627165-627165
+    * Hyphen-like characters (–) are automatically converted to hyphens (-).
+  * Removed an extra comma in gdtools COMPARE table output header (#368)
+
+Version 0.38.3
+  * Miscellanous bug fixes related to nonstandard reference file loading.
+  * Fixed problem adding --isescan-results with Genbank input to breseq CONVERT-REFERENCE.
+  * Some commands (breseq BAM2ALN, breseq BAM2COV) will now create output directories if they don't already exist.
+  * Breseq now allows plus (+) and minus (−) signs to be used in reference seq ids, in addition to underscores and hyphens.
+  * Changed syntax for experimental breseq SOFT-CLIPPING command to allow multiple BAM inputs.
+
+Version 0.38.2
+  * Miscellanous bug fixes and updates to reference file handling.
+  * Updates to reference format documentation to describe how to get better IS prediction.
+  * Added experimental breseq SOFT-CLIPPING subcommand.
+
+Version 0.38.1
+  * Fix for infinite loop triggered by help when terminal window was too narrow.
+  
+Version 0.38.0
+  * breseq can now analyze long-read sequencing data. It will split long reads into short subsequence
+    reads that are of a length that works for its read mapping parameters and new junction analysis.
+    Read splitting can be controlled with the --long-read-* options. If you are looking for structural
+    variation, you should be performing de novo assembly and genome comparisons using other tools!
+    breseq will not be able to identify or fully resolve large or complex structural variants.
+  * If you are using the current generation of Nanopore long read data, we recommend using the 
+    --nanopore option, which sets read mapping parameters that speed up the analysis and filters 
+    out predictions in error-prone homopolymer repeats of 4 or more bases.
+  * The MacOSX executable is now universal (should run on both Intel and M1 macs).
+  * Changed how reads that map equally to the reference and new junction get resolved to
+    eliminate junctions that could get assigned high frequencies due to very little evidence,
+    particularly in polymorphism mode. This approach is more conservative and may decrease the
+    predicted frequencies of junctions, but should only have minor effects in consensus mode.
+
+Version 0.37.1
+  * Fixed bug in the way that indels in homopolymers were realigned for consistency.
+    that sporadically caused fatal "Covariate 'quality' exceeded enforced maximum" errors.
+  * Fixed fatal "Attempt to add duplicate of this existing entry" error that could arise when
+    using user evidence Genome Diff files merged from outputs of previous runs.
+
+Version 0.37.0
+  * Warns that breseq results can vary (usually only slightly) with different
+    bowtie2 versions and recommends a specific version for consistency.
+  * Added back code for shifting indels to improve mutation calling.
+  * Added an option for gdtools APPLY to output a new GD file showing the
+    positions of each mutation in the (mutated) output genome.
+  * Updated documentation related to installation and explaining junction orientations.
+  * Fixed crash that could occur if there was a deletion spanning the origin of a
+    circular reference sequence.
+
+Version 0.36.1
+  * Added an appendix to the manual on how reference sequence files are loaded/used.
+  * When loading GenBank files that have a LOCUS line and source feature with different
+    lengths, the LOCUS line length is now used to improve compatibility with sequences
+    that have been edited in programs that do not update the source feature.
+  * Added a warning when CDS features with lengths that are not a multiple of 3 are loaded
+    with a suggestion to change these to pseudogenes. Changed a fatal error when annotating a
+    mutation in an incomplete final codon in one of these CDS features to a warning and generic coding mutation.
+  * breseq will no longer throw a fatal error if read files that have the same name
+    but are located at different paths are input.
+  * Fixed gdtools MERGE not preserving header information from first GD file.
+  * Fixed treatment of UNDEFINED by gdtools FILTER/REMOVE to allow matches to != UNDEFINED.
+
+Version 0.36.0
+  * Fixed an issue causing JC evidence to not save info in annotated GD files.
+  * Fixed a crash when annotating GD files containing INV mutations.
+  * Fixed empty line at the end of the FASTQ input causing an error.
+  * Major updates to gdtools commands.
+  * gdtools COMPARE/ANNOTATE
+    * New TABLE format that provides a text (CSV) version of HTML style compare table.
+    * TEXT_* output columns added if -b option provided.
+    * Changed HTML default to not repeat header lines for easier loading into Excel.
+      If you liked these, you can add them back as before with --repeat-header 10.
+  *gdtools FILTER/REMOVE
+    * Added the ability to preserve evidence entries.
+    * Added control over commenting/removing filtered lines, renumbering IDs, and verbose messages.
+    * Fixed (and explained) logic for matching the UNDEFINED value
+    * New ASSIGNED field for filtering on whether evidence is used.
+    * Added some examples of usage to the command line help.
+
+Version 0.35.7
+  * Speedup and fix of rare bug related to annotating mutations to properly account for cases
+    in which multiple base substitutions occur in the same codon.
+
+Version 0.35.6
+  * Should be compatible with GenBank reference files produced by Prokka and
+    NCBI PGAP, and with GFF3 files produced by PGAP.
+
+Version 0.35.5
+  * Bug fix for incorrect "Plots could not be created" message in HTML pages when -j is >1.
+  * Bug fix for #254: "Provided translation table #0 does not have 64 codons". This was a rare
+    case where two SNPs occur in the same codon of a CDS and also overlap a noncoding gene.
+
+Version 0.35.4
+  * Critical bug fix for crashes during output creation when -j is >1.
+
+Version 0.35.3
+  * Fixed problem where HTML coverage and alignment files were not produced. (Bug introduced in v0.35.2)
+  * Fixed overlap and annotation position problems applying INT mutations with length zero.
+  * Added -seq-id|-s option to gdtools APPLY so that one can remove extra reference sequences that
+    were only provided for INT, CON, MOB, etc. mutations before output.
+
+Version 0.35.2
+  * Generation of output files is now multithreaded.
+  * Changed --use-version-as-seq-id option to --genbank-field-for-seq-id to give more control over
+    choosing which part of the header is used for the sequence ID. The default is to assign to the
+    first existing field with the preference: LOCUS > ACCESSION > VERSION.
+  * Fixed GenBank parsing to be more forgiving of different LOCUS lines output by other programs.
+    Now only gives a warning if the sequence length is missing and looks for the linear|circular
+    designation at different locations within the LOCUS line. Falls back to the source feature
+    length if the sequence length is missing from the LOCUS line.
+  * Changed priority of name used for features in GenBank files to name > gene > locus_tag > label > note.
+  * Added mutation type INT for applying GenomeDiffs to insert a sequence with annotations.
+  * Fixed multiple identical GD entry error related to --user-evidence leading to
+    double mutation predictions.
+  * Changed error from loading reference genome files with repeat regions annotated
+    with complex/multiple locations to a more informative warning.
+  * Fixed major memory leak during the output step related to assigning read counts to
+    JC evidence from BAM files. Rewrote to further improve performance by making access
+    to the required files for this step persistent.
+  * Added summary.json and output.vcf to the output directory (they are also present in the data directory).
+  * Fixed --total-only mode for breseq BAM2COV to give expected output in --table mode.
+
 Version 0.35.1
-  * Fixed bug in gdtools ANNOTATE that caused it to fail with --preserve-evidence
+  * Fixed bug introduced in v0.35.0 that resulted in displaying an error message that
+    "Coverage plot could not be generated" instead of the plot on MC evidence pages.
+  * Added missing input file 'empty.fastq' needed for ./run_tests.sh.
+  * Added FASTA output option to gdtools COMPARE/ANNOTATE. This will generate a
+    multi-FASTA file with a genotype alignment suitable for building phylogenetic
+    trees using parsimony methods. The content is equivalent to that of the PHYLIP
+    output option, but without the length limitation on the genome names.
+  * Added --use-version-as-seq-id option to breseq. If present, it will use the full
+    VERSION in an input GenBank file (e.g., NC_001416.1) as the sequence ID instead of
+    the LOCUS (e.g., NC_001416). You will need to use the converted reference file
+    (data/reference.gff) for further breseq and gdtools operations on breseq output
+    generated using this option.
+  * While not generally recommended, using read and reference file names and output paths
+    that contain spaces in them should now work.
+  * Fixed bug in gdtools ANNOTATE that caused it to fail with --preserve-evidence.
   * Miscellaneous improvements to other gdtools subcommands.
 
 Version 0.35.0

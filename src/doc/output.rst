@@ -61,6 +61,8 @@ Replacement of the reference T at position 70,867 with a C inside the *araA* gen
 
 Replacement of the reference T at position 1,298,712 with a G in the intergenic region between the *ychE* and *oppA* genes. The mutation is downstream of *ychE* by 674 bases (because this gene is before it in position and on the top strand of the reference) and upstream of *oppA* by 64 bases (because this gene is after it in position and also on the top strand of the genome).
 
+For some single-base substitutions, you may see a special symbol next to the annotated amino acid change. A dagger (†) indicates that the mutation is in a start codon, so a special codon translation table is being used to determine the amino acid change. (For example, TTG initiates translation with a Met rather than the Leu that it usually codes for in bacteria.) A double-dagger (‡) indicates that another single-base substitution affects the same codon. In this case, the amino acid change shown will reflect the effects of both mutations on the codon.
+
 Multiple-base substitution (SUB)
 """"""""""""""""""""""""""""""""
 
@@ -152,8 +154,8 @@ Column descriptions:
 `seq id`
     Identifiers for the reference sequences involved in the new junction.
 `position`
-    Positions in the reference sequence of the two sides of the new junction. Each position has an equals sign (=) before or after it that represents how the junction was constructed. The reference sequence approaches that coordinate from the side with the equals sign. The displayed coordinates are juxtaposed with each other to make the new junction.
-.. `overlap`
+    Positions in the reference sequence of the two sides of the new junction. Each position has an equals sign (=) before or after it that represents how the junction was constructed. The joined pieces of the reference sequence approach the given coordinates from the sides with the equals signs. The displayed coordinates are juxtaposed with each other to make the new junction. See the figure below for an illustration of different junction orientations.
+`overlap`
   If positive, the number of bp in the junction that could map to either side in the reference sequence. Generally, positive overlap has been resolved to zero by assigning these base pairs to one side of the junction. If negative, the number of bp that are unique to reads mapping across the junction and represent insertions relative to the reference sequence.
 `reads`
     The total number of reads that map to this junction.
@@ -161,6 +163,13 @@ Column descriptions:
     The position-hash score for the junction in **<bold angle brackets>** and the minimum-overlap score on the next line.
 `annotation, gene, product`
     Description of the effects of this change on each side of the junction. The format of these columns is the same as in :ref:`mutation-display`.
+
+Explanation of New Junction Orientations
+
+.. figure:: images/jc_side_explanation.png
+   :width: 450px
+
+In the HTML output, equals signs next to the coordinates indicate how the two sides of split reads supporting a junction are oriented in relation to the reference coordinates that are joined together in the sample. In the GenomeDiff output, the strands of each side of the junction are given as –1 or +1 to indicate how the read leads up to the junction on the first side and continues after the junction on the second side. The most common type of junction has a side 1 strand of -1 and a side 2 strand of +1 and can indicate that there has been a deletion.
 
 Examples:
 
@@ -260,7 +269,7 @@ Processed (Computer-Readable) Data
 Viewing Output / Aligned Reads in the IGV
 *****************************************
 
-You can visualize the "raw data" (how |breseq| aligned reads to the reference genome) using the `Integrative Genomics Viewer (IGV) <http://www.broadinstitute.org/igv/>`_ and files located in the :file:`data` folder created by |breseq|.
+You can visualize the "raw data" (how |breseq| aligned reads to the reference genome) using the `Integrative Genomics Viewer (IGV) <https://www.broadinstitute.org/igv/>`_ and files located in the :file:`data` folder created by |breseq|.
 
 1. Install and open IGV
 2. Import the reference genome sequence:

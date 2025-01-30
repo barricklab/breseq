@@ -8,7 +8,7 @@ AUTHORS
 LICENSE AND COPYRIGHT
 
   Copyright (c) 2008-2010 Michigan State University
-  Copyright (c) 2011-2017 The University of Texas at Austin
+  Copyright (c) 2011-2022 The University of Texas at Austin
 
   breseq is free software; you can redistribute it and/or modify it under the  
   terms the GNU General Public License as published by the Free Software 
@@ -39,6 +39,7 @@ LICENSE AND COPYRIGHT
 #include <string.h>
 #include <time.h>
 #include <limits.h>
+#include <glob.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -67,6 +68,7 @@ LICENSE AND COPYRIGHT
 #include <utility>
 #include <functional>
 #include <iterator>
+#include <mutex>
 
 #include "gzstream.h"
 
@@ -198,7 +200,10 @@ namespace breseq {
   
 // Fatal versions, always add backtrace
 #define ASSERT(condition, message) { my_error_handler( condition, true, true, __FILE__, __BASE_FILE__, __LINE__, message); }
+#define ASSERT_NO_BACKTRACE(condition, message) { my_error_handler( condition, true, false, NULL, NULL, 0, message); }
 #define ERROR(message) { my_error_handler( false, true, true, __FILE__, __BASE_FILE__, __LINE__, message); }
+#define ERROR_NO_BACKTRACE(message) { my_error_handler( false, true, false, NULL, NULL, 0, message); }
+
   
 // Nonfatal versions, add backtrace if requested
 #define CHECK(condition, message) { my_error_handler( condition, false, false, __FILE__, __BASE_FILE__, __LINE__, message); }
@@ -365,6 +370,12 @@ namespace breseq {
   {
     ifstream ifile(filename);
     return !ifile.fail();
+  }
+
+  inline bool directory_exists(const char *dirname)
+  {
+    struct stat buffer;
+    return (stat(dirname, &buffer) == 0);
   }
   
   inline bool file_is_gzipped(const char * filename)
@@ -676,6 +687,27 @@ namespace breseq {
 		return retval;
 	}
 
+inline string join(const list<string>& values, const string& separator)
+{
+  if(values.size() == 0)
+    return "";
+
+  string::size_type size = separator.length() * values.size();
+  for(list<string>::const_iterator it=values.begin(); it!=values.begin(); it++)
+    size += it->size();
+
+  string retval;
+  retval.reserve(size);
+  
+  list<string>::const_iterator it=values.begin();
+  retval = *it;
+  it++;
+  for(; it!=values.end(); it++) {
+    retval += separator + *it;
+  }
+  return retval;
+}
+
 	inline string chomp(const string& str)
 	{
 		return str.substr(0, str.find_last_not_of("\n \t")-1);
@@ -795,7 +827,7 @@ namespace breseq {
 		return t;
 	}
   
-  inline bool is_integer(string& s, int32_t& ret_value)
+  inline bool is_integer(const string& s, int32_t& ret_value)
   {
     char* p;
     ret_value = static_cast<int32_t>(strtol(s.c_str(), &p, 10));
@@ -1032,75 +1064,6 @@ namespace breseq {
     }
     return currentout;
   }
-
-
-// counted_ptr keeps track of number of references 
-  
-  template <class X> class counted_ptr
-  {
-  public:
-    typedef X element_type;
-    
-    explicit counted_ptr(X* p = 0) // allocate a new counter
-    : itsCounter(0) {if (p) itsCounter = new counter(p);}
-    ~counted_ptr()
-    {release();}
-    counted_ptr(const counted_ptr& r) throw()
-    {acquire(r.itsCounter);}
-    counted_ptr& operator=(const counted_ptr& r)
-    {
-      if (this != &r) {
-        release();
-        acquire(r.itsCounter);
-      }
-      return *this;
-    }
-    
-    // Full suite of comparison operators defined for what we point to
-    friend bool operator== (const counted_ptr<X>& lhs, const counted_ptr<X>& rhs)
-      {return *(lhs.itsCounter->ptr) == *(rhs.itsCounter->ptr);}
-    friend bool operator!= (const counted_ptr<X>& lhs, const counted_ptr<X>& rhs)
-      {return !(lhs == rhs);}
-    friend bool operator< (const counted_ptr<X>& lhs, const counted_ptr<X>& rhs)
-      {return *(lhs.itsCounter->ptr) < *(rhs.itsCounter->ptr);}
-    friend bool operator> (const counted_ptr<X>& lhs, const counted_ptr<X>& rhs)
-      {return (rhs < lhs);}
-    friend bool operator<= (const counted_ptr<X>& lhs, const counted_ptr<X>& rhs)
-      {return !(lhs > rhs);}
-    friend bool operator>= (const counted_ptr<X>& lhs, const counted_ptr<X>& rhs)
-      {return !(lhs < rhs);}
-    
-    X& operator*()  const throw()   {return *itsCounter->ptr;}
-    X* operator->() const throw()   {return itsCounter->ptr;}
-    X* get()        const throw()   {return itsCounter ? itsCounter->ptr : 0;}
-    bool unique()   const throw()
-      {return (itsCounter ? itsCounter->count == 1 : true);}
-    
-  private:
-    
-    struct counter {
-      counter(X* p = 0, unsigned c = 1) : ptr(p), count(c) {}
-      X*          ptr;
-      unsigned    count;
-    }* itsCounter;
-    
-    void acquire(counter* c) throw()
-    { // increment the count
-      itsCounter = c;
-      if (c) ++c->count;
-    }
-    
-    void release()
-    { // decrement the count, delete if it is 0
-      if (itsCounter) {
-        if (--itsCounter->count == 0) {
-          delete itsCounter->ptr;
-          delete itsCounter;
-          itsCounter = 0;
-        }
-      }
-    }
-  };
   
   inline string SYSTEM_CAPTURE(string command, bool silent = false)
 	{
@@ -1238,6 +1201,7 @@ class cString : public string
     cString remove_starting(const string &prefix);
     cString trim_ends_of(const char val);
     cString& escape_shell_chars(void);
+    cString& escape_spaces(void);
 
     cString get_base_name() const;
     cString get_base_name_no_extension(bool remove_all_extensions = false, bool one_name_for_pair = false) const;
@@ -1320,8 +1284,8 @@ inline cString cString::get_base_name() const
 
 //! Returns file name with no extension, removes any directory path beforehand.
 //  input.1.gd
-//  remove_all_extensions = FALSE removes everything past the first period  => input 
-//  remove_all_extensions = TRUE removes only the last period and beyond   => input.1
+//  remove_all_extensions = TRUE removes everything past the first period  => input
+//  remove_all_extensions = FALSE removes only the last period and beyond   => input.1
 inline cString cString::get_base_name_no_extension(bool remove_all_extensions, bool one_name_for_pair) const
 {
   cString this_return = this->get_base_name();
@@ -1382,7 +1346,7 @@ inline cString cString::get_directory_path() const
 
 inline cString& cString::escape_shell_chars(void) {
   cString& value = *this;
-  char escapees[] = {'<', '>', '|', '&', '\0', ';'};
+  char escapees[] = {'<', '>', '|', '&', ';', '\0'};
   cString temp;
 
   for(uint32_t i = 0; i < value.size(); ++i) {
@@ -1452,13 +1416,91 @@ inline int SYSTEM(string command, bool silent = false, bool ignore_errors = fals
 inline string remove_file(string path, bool silent = false, bool ignore_errors = false)
 {
   //remove(path.c_str()); // @JEB this does not work with wildcards
-  SYSTEM("rm -f " + path, silent, ignore_errors);
+  SYSTEM("rm -f " + double_quote(path), silent, ignore_errors);
   return path;
 }
 
 template<uint32_t nth_place> double roundp(double value) {
   return floor(value * nth_place + 0.5f) / nth_place;
 }
+
+//! Most generic form of these functions used by both cReferenceSequence and pileup_base
+//!
+//! Handles complete parsing for seq_id:start.insert_start-end.insert_end form.
+//!
+//! This function also deals with some problem cases:
+//! * Removes commas from start and end (but not seq_id)
+//! * If there is only a start and no end, sets end to start
+//! * Substitutes different types of dashes to hyphens
+
+inline void parse_region(const string& region, string& target_name, uint32_t& start_pos_1, uint32_t& end_pos_1, uint32_t& insert_start, uint32_t& insert_end)
+{
+  insert_start = 0;
+  insert_end = 0;
+        
+  size_t start = 0;
+  size_t end = 0;
+  
+  string start_pos_1_string;
+  string insert_start_string("0");
+  string end_pos_1_string;
+  string insert_end_string("0");
+  
+  // Split on colon
+  vector<string> colon_split_list = split(region, ":");
+  ASSERT(colon_split_list.size() == 2, "Expected exactly one colon in region string:" + region);
+  
+  // Save region
+  target_name = colon_split_list[0];
+  
+  // Fix hyphen variants and remove commas
+  colon_split_list[1] = substitute(colon_split_list[1], "–", "-");
+  colon_split_list[1] = substitute(colon_split_list[1], ",", "");
+  
+  // Split on hyphen
+  vector<string> start_end_split_list = split(colon_split_list[1], "-");
+  ASSERT(start_end_split_list.size() <= 2, "Expected no more than one hyphen in start-end portion of region string:" + region);
+
+  // We always have a start
+  {
+    // Split start on periods
+    vector<string> start_split_list = split(start_end_split_list[0], ".");
+    ASSERT(start_split_list.size() <= 2, "Expected no more than one period in start of region string:" + region);
+    
+    // Save start and insert start
+    start_pos_1_string = start_split_list[0];
+    if (start_split_list.size() == 2) insert_start_string = start_split_list[1];
+  }
+  
+  // We may or may not have an end...
+  if (start_end_split_list.size()==1) {
+    // No end, copy start!
+    end_pos_1_string = start_pos_1_string;
+    insert_end_string = insert_start_string;
+  } else {
+    // Split end on periods
+    vector<string> end_split_list = split(start_end_split_list[1], ".");
+    ASSERT(end_split_list.size() <= 2, "Expected no more than one period in end of region string:" + region);
+    
+    // Save end and insert end
+    end_pos_1_string = end_split_list[0];
+    if (end_split_list.size() == 2) insert_end_string = end_split_list[1];
+  }
+    
+  start_pos_1 = from_string<uint32_t>(start_pos_1_string);
+  end_pos_1 = from_string<uint32_t>(end_pos_1_string);
+  
+  insert_start = from_string<uint32_t>(insert_start_string);
+  insert_end = from_string<uint32_t>(insert_end_string);
+}
+
+//! Short form for when there is no extended insert_start or insert_end
+inline void parse_region(const string& region, string& target_name, uint32_t& start_pos_1, uint32_t& end_pos_1)
+{
+  uint32_t temp_insert_start, temp_insert_end;
+  parse_region(region, target_name, start_pos_1, end_pos_1, temp_insert_start, temp_insert_end);
+}
+
 
 } // breseq
 

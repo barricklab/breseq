@@ -8,7 +8,7 @@ AUTHORS
 LICENSE AND COPYRIGHT
 
   Copyright (c) 2008-2010 Michigan State University
-  Copyright (c) 2011-2017 The University of Texas at Austin
+  Copyright (c) 2011-2022 The University of Texas at Austin
 
   breseq is free software; you can redistribute it and/or modify it under the  
   terms the GNU General Public License as published by the Free Software 
@@ -23,12 +23,14 @@ LICENSE AND COPYRIGHT
 #include "common.h"
 #include "storable.h"
 #include "reference_sequence.h"
+#include "ctpl_stl.h"
 
 namespace breseq
 {
   // constants used more places than just settings
   extern const int32_t kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation;
   extern const int32_t kBreseq_large_mutation_size_cutoff;
+  extern const double kBreseq_ignore_within_this_multiple_of_average_read_length_of_contig_end;
   extern const char* kBreseqAlignmentScoreBAMTag;
   extern const char* kBreseqBestAlignmentScoreBAMTag;
 
@@ -88,7 +90,7 @@ namespace breseq
 	public:
 		string m_original_file_name;  // the original name provided at the command line
 		string m_base_name;           // the original name minus path and .fastq ending (if any)
-        string m_converted_file_name; // the name of the converted FASTQ file (if it exists)
+    string m_converted_file_name; // the name of the converted FASTQ file (if it exists)
 		uint32_t m_paired_end_group;  // indicates what file contains paired reads
 		uint32_t m_error_group;       // indicates what other read files have the same error rates
 		uint32_t m_id;                // index used to refer to this fastq file in BAM
@@ -151,8 +153,9 @@ namespace breseq
         
     // For lookup and iterating certain sets
     set<string> m_junction_only_seq_id_set;     // All seq_ids in junction_only reference files
+    set<string> m_contig_seq_id_set;            // All seq_ids in the contig reference files
     set<string> m_call_mutations_seq_id_set;    // Has all NOT in junction_only, mutations called
-  
+    
     // For traversing groups that should have their coverage assigned together
     vector< vector<string> > m_seq_ids_by_coverage_group;
     // For looking up the coverage group id of a reference sequence
@@ -181,8 +184,14 @@ namespace breseq
     static string output_divider;
     static string global_bin_path;
     static string global_program_data_path;
-
+    
   public:
+    
+    //! Multithreading
+    static ctpl::thread_pool pool;
+    static void sync_threads() { pool.sync(true); }
+    
+    static std::mutex lock;
     
     ////////////////////
     //! Data
@@ -210,15 +219,16 @@ namespace breseq
     string base_output_path;              // Default = cwd COMMAND-LINE OPTION
     
     //! Options that control which parts of the pipeline to execute
-    string custom_run_name;          // Default = <none> COMMAND-LINE OPTION
-    string print_custom_run_name;    // custom_run_name with '_' replaced by ' '
+    string custom_run_name;                 // Default = <none> COMMAND-LINE OPTION
+    string print_custom_run_name;           // custom_run_name with '_' replaced by ' '
+    string genbank_field_for_seq_id;        // Header fields to use for seq_id Default = VERSION, other valid values are LOCUS and ACCESSION
     bool skip_read_filtering;               // Default = false
-    bool skip_new_junction_prediction;          // Default = false COMMAND-LINE OPTION
+    bool skip_new_junction_prediction;      // Default = false COMMAND-LINE OPTION
     bool skip_read_alignment_and_missing_coverage_prediction;          // Default = false
-    bool skip_missing_coverage_prediction;          // Default = false set to true if targeted_sequencing
+    bool skip_missing_coverage_prediction;  // Default = false set to true if targeted_sequencing
     bool skip_alignment_or_plot_generation; // Default = false COMMAND-LINE OPTION
-    bool do_copy_number_variation;        // Default = false COMMAND-LINE OPTION
-    bool do_periodicity;                  // Default = false COMMAND-LINE OPTION
+    bool do_copy_number_variation;          // Default = false COMMAND-LINE OPTION
+    bool do_periodicity;                    // Default = false COMMAND-LINE OPTION
     
     //! Settings: Read File Options
     vector<string> read_file_names;             // REQUIRED COMMAND-LINE OPTION
@@ -227,9 +237,12 @@ namespace breseq
     uint32_t read_file_read_length_min;         // Default = 18 COMMAND-LINE OPTION
     double read_file_max_same_base_fraction;    // Default = 0.9 COMMAND-LINE OPTION
     double read_file_max_N_fraction;            // Default = 0.5 COMMAND-LINE OPTION
-    
+    uint32_t read_file_long_read_trigger_length;// Default = 1000 COMMAND-LINE OPTION
+    uint32_t read_file_long_read_split_length;  // Default = 200 COMMAND-LINE OPTION
+    bool read_file_long_read_distribute_remainder;           // Default = false COMMAND-LINE OPTION
+
     // Reference sequences
-    vector<string> all_reference_file_names;  // REQUIRED COMMAND-LINE OPTION (filled by below)    
+    vector<string> all_reference_file_names;    // REQUIRED COMMAND-LINE OPTION (filled by below)
     vector<string> normal_reference_file_names; // Default = EMPTY COMMAND-LINE OPTION
     vector<string> contig_reference_file_names; // Default = EMPTY COMMAND-LINE OPTION
     vector<string> junction_only_file_names;    // Default = EMPTY COMMAND-LINE OPTION
@@ -339,6 +352,8 @@ namespace breseq
     double deletion_coverage_propagation_cutoff;          // Default = calculated COMMAND-LINE OPTION
     double deletion_coverage_seed_cutoff;                 // Default = 0;         COMMAND-LINE OPTION
     
+    bool call_mutations_overlapping_missing_coverage;     // Default = false      COMMAND-LINE OPTION
+    
     //! These are mutually exclusive settings (polymorphism prediction overrides mixed_base_prediction)
     bool polymorphism_prediction;                         // Default = false COMMAND-LINE OPTION
     //! Predict not only consensus genotype calls, but test mixed states between them.
@@ -369,7 +384,7 @@ namespace breseq
 		uint32_t polymorphism_minimum_total_coverage_each_strand;     // Default = 0 for mixed base | 2 for polymorphism
 		uint32_t polymorphism_reject_indel_homopolymer_length;        // Default = 0 (OFF)
     uint32_t polymorphism_reject_surrounding_homopolymer_length;  // Default = 0 (OFF)
-		bool no_indel_polymorphisms;                                  // Default = false
+		bool polymorphism_no_indels;                                  // Default = false
     double polymorphism_precision_decimal;                        // Default = not used for mixed base | 0.0000000001 for polymorphism
     uint32_t polymorphism_precision_places;                       // Default = 3 for mixed base | 10 for polymorphism
 
@@ -383,8 +398,11 @@ namespace breseq
     uint32_t periodicity_step;
     
     //! Settings: Mutation Prediction
-    int32_t size_cutoff_AMP_becomes_INS_DEL_mutation;      // Default = kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation
-          
+    int32_t size_cutoff_AMP_becomes_INS_DEL_mutation;
+      // Default = kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation
+    double ignore_within_this_multiple_of_average_read_length_of_contig_end;
+      // Default = kBreseq_ignore_within_this_multiple_of_average_read_length_of_contig_end
+    
     //! Settings: Output
     uint32_t max_displayed_reads;                           // Default = 100   COMMAND-LINE OPTION
     //! don't include javascript in HTML output, for Galaxy integration
@@ -533,6 +551,12 @@ namespace breseq
     //! Paths: Output
     string output_path;
 		string output_done_file_name;
+    // subsets of output
+    string output_mutation_prediction_done_file_name;
+    string output_mutation_annotation_done_file_name;
+    
+    string output_json_summary_file_name;
+    string output_vcf_file_name;
 
 		string log_file_name;
 		string index_html_file_name;
@@ -543,6 +567,8 @@ namespace breseq
 		string evidence_path;
     string evidence_genome_diff_file_name;
     string final_genome_diff_file_name;
+    string preannotated_genome_diff_file_name;
+    
     string annotated_genome_diff_file_name;
 
 		string local_coverage_plot_path;
@@ -565,10 +591,10 @@ namespace breseq
 		string reference_faidx_file_name;
 		string reference_gff3_file_name;
     string unmatched_read_file_name;
-    string output_vcf_file_name;
-    string output_genome_diff_file_name;
-    string output_annotated_genome_diff_file_name;
-    string data_summary_file_name;
+    string data_vcf_file_name;
+    string data_genome_diff_file_name;
+    string data_annotated_genome_diff_file_name;
+    string data_json_summary_file_name;
     
     //! Paths: Experimental
 		string long_pairs_file_name;
@@ -628,7 +654,7 @@ namespace breseq
         }
         
         string test_file = global_program_data_path + "/coverage_distribution.r";
-        ASSERT(file_exists(test_file.c_str()), "Could not find expected R scripts inside of data path set relative to executable: " + global_program_data_path + "\nPlease, see the installation instructions in the HTM documentation.");
+        ASSERT(file_exists(test_file.c_str()), "Could not find expected R scripts inside of data path set relative to executable: " + global_program_data_path + "\nPlease, see the installation instructions in the HTML documentation.");
       }
       
       //for debug
@@ -653,7 +679,6 @@ namespace breseq
 			string s(_file_name_key);
       if (_substitute.size())
         s = substitute(s, _substitute, _with);
-
 			return s;
 		}
     
@@ -825,11 +850,16 @@ namespace breseq
     void track_intermediate_file(const string& done_key, const string& file_path);
     
     void log(const string& message);
+        
+    ~Settings() { }
+    
   private:
 
 		void pre_option_initialize(int argc = 0, char* argv[] = NULL);
 		void post_option_initialize();
     void init_installed();
+    
+
   };
 
 class UserOutput

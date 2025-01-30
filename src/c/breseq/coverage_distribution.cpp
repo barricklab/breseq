@@ -9,7 +9,7 @@
  LICENSE AND COPYRIGHT
  
  Copyright (c) 2008-2010 Michigan State University
- Copyright (c) 2011-2017 The University of Texas at Austin
+ Copyright (c) 2011-2022 The University of Texas at Austin
  
  breseq is free software; you can redistribute it and/or modify it under the
  terms the GNU General Public License as published by the Free Software
@@ -44,10 +44,11 @@ vector<string> CoverageDistribution::fit(
   pid_t pid = getpid();
   string log_file_name = distribution_file_name + ".r.log";
   
-  string command = "R --vanilla < " + cString(settings.program_data_path).escape_shell_chars() +
-  "/coverage_distribution.r" + " > " + cString(log_file_name).escape_shell_chars();
-  command += " distribution_file=" + cString(distribution_file_name).escape_shell_chars();
-  command += " plot_file=" + cString(plot_file).escape_shell_chars();
+  string command = "R --vanilla < " + double_quote(settings.program_data_path +
+  "/coverage_distribution.r") + " > " + double_quote(log_file_name);
+  command += " --args";
+  command += " distribution_file=" + double_quote(distribution_file_name);
+  command += " plot_file=" + double_quote(plot_file);
   command += " deletion_propagation_pr_cutoff=" + to_string<double>(deletion_propagation_pr_cutoff);
   
   SYSTEM(command, false, false, false); //NOTE: Not escaping shell characters here.
@@ -155,13 +156,13 @@ void CoverageDistribution::analyze_unique_coverage_distribution(
       // Calculated by formula variance = mu + mu ^ 2 / size
       summary.unique_coverage[seq_id].nbinom_variance = summary.unique_coverage[seq_id].nbinom_mean_parameter
       + pow(summary.unique_coverage[seq_id].nbinom_mean_parameter, 2) / summary.unique_coverage[seq_id].nbinom_size_parameter;
-      // Calculated by formula dispersion = variance / mu
-      summary.unique_coverage[seq_id].nbinom_dispersion = summary.unique_coverage[seq_id].nbinom_variance / summary.unique_coverage[seq_id].nbinom_mean_parameter;
+      // Calculated by formula relative_variance = variance / mu
+      summary.unique_coverage[seq_id].nbinom_relative_variance = summary.unique_coverage[seq_id].nbinom_variance / summary.unique_coverage[seq_id].nbinom_mean_parameter;
     }
     
     summary.unique_coverage[seq_id].average = from_string<double>(lines[2]);
     summary.unique_coverage[seq_id].variance = from_string<double>(lines[3]);
-    summary.unique_coverage[seq_id].dispersion = from_string<double>(lines[4]);
+    summary.unique_coverage[seq_id].relative_variance = from_string<double>(lines[4]);
     
     summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff = from_string<double>(lines[5]);
     
@@ -174,7 +175,7 @@ void CoverageDistribution::analyze_unique_coverage_distribution(
       cout << "nbinom_prob_parameter " << summary.unique_coverage[seq_id].nbinom_prob_parameter << endl;
       cout << "average " << summary.unique_coverage[seq_id].average << endl;
       cout << "variance " << summary.unique_coverage[seq_id].variance << endl;
-      cout << "dispersion " << summary.unique_coverage[seq_id].dispersion << endl;
+      cout << "relative_variance " << summary.unique_coverage[seq_id].relative_variance << endl;
       cout << "deletion_coverage_propagation_cutoff " << summary.unique_coverage[seq_id].deletion_coverage_propagation_cutoff << endl;
     }
   }

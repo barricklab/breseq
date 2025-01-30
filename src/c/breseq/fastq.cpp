@@ -8,7 +8,7 @@
  LICENSE AND COPYRIGHT
  
  Copyright (c) 2008-2010 Michigan State University
- Copyright (c) 2011-2017 The University of Texas at Austin
+ Copyright (c) 2011-2022 The University of Texas at Austin
  
  breseq is free software; you can redistribute it and/or modify it under the
  terms the GNU General Public License as published by the Free Software
@@ -40,9 +40,12 @@ namespace breseq {
                                         const uint64_t read_file_base_limit,
                                         const uint32_t _read_length_min,
                                         const double _max_same_base_fraction,
-                                        const double _max_N_fraction
+                                        const double _max_N_fraction,
+                                        const uint32_t _long_read_trigger_length,
+                                        const uint32_t _long_read_split_length,
+                                        const bool _long_read_distribute_remainder
                                         )
-  {
+{
     cerr << "    Converting/filtering FASTQ file..." << endl;
     
     // Set up maps between formats
@@ -50,6 +53,18 @@ namespace breseq {
     format_to_chr_offset["SANGER"] = 33;
     format_to_chr_offset["SOLEXA"] = 64;
     format_to_chr_offset["ILLUMINA_1.3+"] = 64;
+    
+    // Honor that zero means no splitting
+    uint32_t long_read_trigger_length = _long_read_trigger_length;
+    if (long_read_trigger_length == 0) {
+      long_read_trigger_length = numeric_limits<uint32_t>::max();
+    }
+    uint32_t long_read_split_length = _long_read_split_length;
+    if (long_read_split_length == 0) {
+      long_read_split_length = numeric_limits<uint32_t>::max();
+    }
+    bool long_read_distribute_remainder = _long_read_distribute_remainder;
+    
     
     // Summary information that will be printed at the end
     uint32_t read_length_max;
@@ -61,6 +76,14 @@ namespace breseq {
     
     // Predict the format (and count original stats)
     string quality_format = cFastqQualityConverter::predict_fastq_file_format(file_name, num_original_reads, num_original_bases, read_length_min, read_length_max, min_quality_score, max_quality_score);
+    
+    // Turn off splitting if no reads exceed the threshold
+    bool file_has_split_reads = false;
+    if (read_length_max < long_read_trigger_length) {
+      long_read_split_length = numeric_limits<uint32_t>::max();
+    } else {
+      file_has_split_reads = true;
+    }
     
     uint64_t num_bases = 0;
     uint64_t num_reads = 0;
@@ -75,7 +98,6 @@ namespace breseq {
     uint64_t num_filtered_too_many_N_bases = 0;
     uint64_t num_filtered_coverage_limit_bases = 0;
 
-    
     //debug
     //cerr << "min_quality_score "     << (int)min_quality_score  << endl;
     //cerr << "max_quality_score "     << (int)max_quality_score  << endl;
@@ -91,7 +113,7 @@ namespace breseq {
     cerr << "    Original reads: " << num_original_reads << " bases: "<< num_original_bases << endl;
 
     cFastqQualityConverter fqc(quality_format, "SANGER");
-    cFastqSequence on_sequence;
+    cFastqSequence original_sequence;
     
     // re-open input for another pass
     cFastqFile input_fastq_file(file_name.c_str(), fstream::in);
@@ -107,79 +129,143 @@ namespace breseq {
     min_quality_score = (uint8_t)min_max_sequence.m_qualities[0];
     max_quality_score = (uint8_t)min_max_sequence.m_qualities[1];
     
-    // (much faster than looking through all qualities again)
-    
     uint32_t on_read = 1;
-    while (input_fastq_file.read_sequence(on_sequence, fqc)) {
-      
-      if ( filter_reads ) {
-
-        // Discard sequences that are too short
-        if ( _read_length_min && (on_sequence.length() < _read_length_min) ) {
-          num_filtered_too_short_reads++;
-          num_filtered_too_short_bases += on_sequence.length();
-          continue;
-        }
-        
-        // Discard sequences that are 50% or more N.
-        if ( _max_N_fraction && (_max_N_fraction * static_cast<double>(on_sequence.length()) <= static_cast<double>(on_sequence.m_base_counts[base_list_N_index]) )) {
-          num_filtered_too_many_N_reads++;
-          num_filtered_too_many_N_bases += on_sequence.length();
-          continue;
-        }
-        
-        // Ignore heavily homopolymer reads, as these are a common type of machine error
-        // Discard sequences that are 90% or more of a single base or N.
-        bool same_base_filtered = false;
-        for (uint8_t i=0; i<base_list_including_N_size; i++) {
-          if ( _max_same_base_fraction && (_max_same_base_fraction * static_cast<double>(on_sequence.length())) <=
-              static_cast<double>(on_sequence.m_base_counts[i] + on_sequence.m_base_counts[base_list_N_index]) ) {
-            same_base_filtered = true;
-            break;
-          }
-        }
-        
-        if (same_base_filtered)  {
-          num_filtered_same_base_reads++;
-          num_filtered_same_base_bases += on_sequence.length();
-          continue;
-        }
-        
-      } // end filter read block
+    read_length_min = numeric_limits<uint32_t>::max();
+    read_length_max = 0;
+    uint64_t num_original_reads_before_splitting = 0;
+    uint64_t num_original_bases_before_splitting = 0;
     
+    while (input_fastq_file.read_sequence(original_sequence, fqc)) {
+    
+      num_original_reads_before_splitting++;
+      num_original_bases_before_splitting+=original_sequence.length();
+      
       // truncate second name
-      on_sequence.m_name_plus = "";
+      original_sequence.m_name_plus = "";
       
       // fastq quality convert
-      fqc.convert_sequence(on_sequence);
+      fqc.convert_sequence(original_sequence);
       
-      // trim bad quality scores from the end and ignore if we have cut to half or less of the original length
+      // trim bad quality scores from the end
       if (trim_end_on_base_quality) {
-        double original_size = static_cast<double>(on_sequence.length());
-        fastq_sequence_trim_end_on_base_quality(on_sequence, trim_end_on_base_quality);
-        if ( 0.5 * original_size <= static_cast<double>(on_sequence.length()) )
-          continue;
+        double original_size = static_cast<double>(original_sequence.length());
+        fastq_sequence_trim_end_on_base_quality(original_sequence, trim_end_on_base_quality);
       }
       
-      // uniformly name, to prevent problems drawing alignments
-      // and allows us to know the input order
+      // New loop that enables us to split long reads
       
-      on_sequence.m_name = to_string(file_index) + ":" + to_string(on_read++);
+      // Uniformly name, to prevent problems drawing alignments
+      // and allows us to know the input order when merge sorting later
       
-      // Alternative method that keeps number of digits connstant
+      original_sequence.m_name = to_string(file_index) + ":" + to_string(on_read++);
+      
+      // Alternative method that keeps number of digits constant
       //char string_buffer[256];
       //sprintf(string_buffer, "%03u:%010u", file_index, on_read++);
       //on_sequence.m_name = string_buffer;
+    
+      // Always have at least one piece and only add new pieces if it is over the length (hence minus 1)
+      uint32_t num_split_read_pieces = 1 + (original_sequence.m_sequence.length()-1) / long_read_split_length;
       
-      num_reads++;
-      num_bases+= on_sequence.m_sequence.length();
+
+      size_t chunk_start_0, chunk_end_0;
+      double chunk_size = long_read_split_length;
+      bool read_was_split = num_split_read_pieces > 1;
       
-      // convert base qualities
-      output_fastq_file.write_sequence(on_sequence);
-      
+      if (read_was_split) {
+        if (!long_read_distribute_remainder) {
+          // One fewer pieces because we ignore the last if not distributing the remainder
+          num_split_read_pieces--;
+        } else {
+          // Update the chunk size (can be fractional) if we are distributing the remainder
+          chunk_size = static_cast<double>(original_sequence.m_sequence.length()) / static_cast<double>(num_split_read_pieces);
+        }
+      }
+
+      for (uint32_t i=0; i<num_split_read_pieces; i++) {
+        
+        cFastqSequence on_sequence;
+        chunk_start_0 = ceil(i * chunk_size);
+        chunk_end_0 = ceil((i+1) * chunk_size) - 1;
+        
+        // Suffix name with chunk number
+        on_sequence.m_name = original_sequence.m_name;
+        if (read_was_split) on_sequence.m_name+= "S" + to_string(i+1);
+        
+        // Find correct chunk of bases and quals
+        on_sequence.m_sequence = original_sequence.m_sequence.substr(chunk_start_0, chunk_end_0 - chunk_start_0 + 1);
+        on_sequence.m_qualities = original_sequence.m_qualities.substr(chunk_start_0, chunk_end_0 - chunk_start_0 + 1);
+        
+        if ( filter_reads ) {
+          
+          // Discard sequences that are too short
+          if ( _read_length_min && (on_sequence.length() < _read_length_min) ) {
+            num_filtered_too_short_reads++;
+            num_filtered_too_short_bases += on_sequence.length();
+            continue;
+          }
+          
+          // If doing tests that require, copy over info that is normally calculated on reading
+          if (_max_N_fraction || _max_same_base_fraction) {
+            
+            if (read_was_split) {
+              // Have to recalculate these since they are only done on reading the FASTQ right now
+              for(size_t j=0; j<on_sequence.length(); j++) {
+                on_sequence.m_base_counts[basechar2index(on_sequence.m_sequence[j])]++;
+              }
+            } else {
+              // Copy over if we didn't split the read
+              for (uint8_t b=0; b<base_list_including_N_size; b++) {
+                on_sequence.m_base_counts[b] = original_sequence.m_base_counts[b];
+              }
+            }
+          }
+          
+          // Discard sequences that are 50% or more N.
+          if ( _max_N_fraction ) {
+            if (_max_N_fraction * static_cast<double>(on_sequence.length()) <= on_sequence.m_base_counts[base_list_N_index]) {
+              num_filtered_too_many_N_reads++;
+              num_filtered_too_many_N_bases += on_sequence.length();
+              continue;
+            }
+          }
+          
+          // Ignore heavily homopolymer reads, as these are a common type of machine error
+          // Discard sequences that are 90% or more of a single base or N.
+          bool same_base_filtered = false;
+          if (_max_same_base_fraction) {
+            for (uint8_t b=0; b<base_list_including_N_size; b++) {
+              if ((_max_same_base_fraction * static_cast<double>(on_sequence.length())) <=
+                  static_cast<double>(on_sequence.m_base_counts[b] + on_sequence.m_base_counts[base_list_N_index]) ) {
+                same_base_filtered = true;
+                break;
+              }
+            }
+          }
+          
+          if (same_base_filtered)  {
+            num_filtered_same_base_reads++;
+            num_filtered_same_base_bases += on_sequence.length();
+            continue;
+          }
+          
+        } // end filter read block
+        num_reads++;
+        num_bases+= on_sequence.m_sequence.length();
+        
+        if (read_file_base_limit) {
+          current_read_file_bases += on_sequence.m_sequence.length();
+        }
+        
+        read_length_min = min<size_t>(on_sequence.length(), read_length_min);
+        read_length_max = max<size_t>(on_sequence.length(), read_length_max);
+        
+        output_fastq_file.write_sequence(on_sequence);
+      }
+
       // check to see if we've reached the limit
+      // outside of loop b/c we always process complete input reads
       if (read_file_base_limit) {
-        current_read_file_bases += on_sequence.m_sequence.length();
         if (current_read_file_bases > read_file_base_limit)
           break;
       }
@@ -187,8 +273,26 @@ namespace breseq {
     }
     
     // We figure out filtering over the coverage limit as what was not looked at
-    num_filtered_coverage_limit_reads = num_original_reads - num_reads - num_filtered_too_short_reads - num_filtered_same_base_reads -num_filtered_too_many_N_reads;
-    num_filtered_coverage_limit_bases = num_original_bases - num_bases - num_filtered_too_short_bases - num_filtered_same_base_bases - num_filtered_too_many_N_bases;
+    // in terms of reads before they were split
+    num_filtered_coverage_limit_reads = num_original_reads - num_original_reads_before_splitting;
+    num_filtered_coverage_limit_bases = num_original_bases - num_original_bases_before_splitting;
+    
+    if (num_filtered_coverage_limit_reads) {
+      cerr << "    Filtered reads: " << setw(width_for_reads) << num_filtered_coverage_limit_reads;
+      cerr << " bases: "<< setw(width_for_bases) << num_filtered_coverage_limit_bases;
+      cerr << " (coverage limit option)" << endl;
+    }
+    
+    // Then report splitting because other filters happened on split reads
+    if (file_has_split_reads) {
+      uint64_t total_split_reads = num_reads + num_filtered_same_base_reads + num_filtered_too_many_N_reads;
+      uint64_t total_split_bases = num_bases + num_filtered_same_base_bases + num_filtered_too_many_N_bases;
+
+      cerr << "    >> Long reads split to " << (long_read_distribute_remainder ? "≤": "exactly ");
+      cout << long_read_split_length << " bases" << (long_read_distribute_remainder ? "" : " (extra bases discarded)") << endl;
+      cerr << "    >> Split reads: " << setw(width_for_reads) << total_split_reads;
+      cerr << " bases: "<< setw(width_for_bases) << total_split_bases << endl;
+    }
     
     converted_fastq_name = convert_file_name;
     
@@ -224,12 +328,6 @@ namespace breseq {
           cerr << " bases: "<< setw(width_for_bases) << num_filtered_same_base_bases;
           cerr << " (≥" << percentage << "% same base)" << endl;
         }
-        
-        if (num_filtered_coverage_limit_reads) {
-          cerr << "    Filtered reads: " << setw(width_for_reads) << num_filtered_coverage_limit_reads;
-          cerr << " bases: "<< setw(width_for_bases) << num_filtered_coverage_limit_bases;
-          cerr << " (coverage limit option)" << endl;
-        }
       }
     }
     cerr << "    Analyzed reads: " << setw(width_for_reads) << num_reads << " bases: " << setw(width_for_bases) << num_bases << endl;
@@ -250,7 +348,8 @@ namespace breseq {
                                  min_quality_score, 
                                  max_quality_score, 
                                  num_original_bases,
-                                 num_bases, 
+                                 num_bases,
+                                 file_has_split_reads,
                                  quality_format, 
                                  "SANGER", 
                                  converted_fastq_name
@@ -490,6 +589,9 @@ namespace breseq {
           exit(-1);
         }
       }
+      
+      // Skip empty lines
+      if (line.size()==0) continue;
       
       switch (count) {
         case 0:
@@ -743,7 +845,7 @@ namespace breseq {
     map<uint32_t, uint32_t>::const_iterator it =
         qscore_cumulative_probability_table.begin();
 
-    //Iteterate through until random probability is greater then a cumulative
+    //Iterate through until random probability is greater then a cumulative
     //probability in the table.
     while (random_die >= it->second) {
       ++it;
@@ -1021,9 +1123,9 @@ namespace breseq {
                                                uint32_t read_size, 
                                                string file_name,
                                                bool verbose) 
-  {
+{
     cFastqFile out(file_name.c_str(), ios_base::out);
-
+    
     srand(cSimFastqSequence::SEED_VALUE);
     for (uint32_t i = 0; i < n_reads; ++i) {
       uint32_t start_1 = rand() % sequence.get_sequence_length() + 1;
@@ -1033,11 +1135,10 @@ namespace breseq {
                                                         read_size,
                                                         strand,
                                                         i + 1,
-                                                        verbose); 
+                                                        verbose);
       out.write_sequence(read);
     }
-
-    return;
+    
   }
 
   void cSimFastqSequence::simulate_paired_ends(const cAnnotatedSequence& sequence,
@@ -1089,9 +1190,56 @@ namespace breseq {
 
     }
 
-
-    return;
   }
+
+// Simulates perfectly tiled reads - assuming a circular genome
+//
+// If coverage is 2 x read length (or greater), then every possible read is simulated
+// on top and bottom strands.
+//
+// if it is less, then every ceiling(2 x length / coverage) bases, reads on both strands
+// are simulated on each strand for every start position.
+//
+// This assumes a circular genome
+void cSimFastqSequence::simulate_tiled(const cAnnotatedSequence& sequence,
+                                             uint32_t read_size,
+                                             uint32_t coverage,
+                                             string file_name,
+                                             bool verbose)
+{
+  (void) verbose;
+  
+  cFastqFile out(file_name.c_str(), ios_base::out);
+  vector<int8_t>strands = make_vector<int8_t>(-1)(+1);
+  
+  uint32_t spacing = ceil( (2.0 * read_size) / coverage );
+  spacing = max<uint32_t>(spacing, 0);
+  cout << "Read length : " << read_size << endl;
+  cout << "Coverage    : " << coverage << endl;
+  cout << "Spacing     : " << spacing << endl;
+  
+  uint32_t read_index = 1;
+  for (uint32_t start_1 = 1; start_1 <= sequence.get_sequence_length(); start_1+=spacing) {
+    for (vector<int8_t>::iterator strand_it = strands.begin(); strand_it != strands.end(); strand_it++) {
+      int8_t strand = *strand_it;
+      
+      cFastqSequence read;
+      sprintf(read.m_name, "READ-%i", read_index++);
+      sprintf(read.m_name_plus, "[strand]:%i\t[start_1]:%u", strand, start_1);
+      
+      read.m_sequence = sequence.get_sequence_1_start_size(start_1, read_size);
+      if (strand == -1) {
+        read.m_sequence = reverse_complement(read.m_sequence);
+      }
+      
+      read.m_qualities = repeat_char(char(73), read_size);
+      
+      out.write_sequence(read);
+    }
+  }
+
+return;
+}
 
 // Reverse complement and also uppercase
 // Convert most characters to 'N'. Might want to give errors on non-printable characters

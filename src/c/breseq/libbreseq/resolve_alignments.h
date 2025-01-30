@@ -8,7 +8,7 @@ AUTHORS
 LICENSE AND COPYRIGHT
 
   Copyright (c) 2008-2010 Michigan State University
-  Copyright (c) 2011-2017 The University of Texas at Austin
+  Copyright (c) 2011-2022 The University of Texas at Austin
 
   breseq is free software; you can redistribute it and/or modify it under the  
   terms the GNU General Public License as published by the Free Software 
@@ -31,6 +31,30 @@ LICENSE AND COPYRIGHT
 using namespace std;
 
 namespace breseq {
+
+  // Pileup class for fetching reads that align across from start to end
+  class junction_read_counter : pileup_base {
+  public:
+    junction_read_counter(const string& bam, const string& fasta, bool verbose)
+      : pileup_base(bam, fasta), _verbose(verbose) {};
+    
+    uint32_t count(
+                   const string& seq_id,
+                   const int32_t start,
+                   const int32_t end,
+                   const map<string,bool> ignore_read_names,
+                   map<string,bool>& counted_read_names
+                   );
+    
+    virtual void fetch_callback ( const alignment_wrapper& a );
+    
+  protected:
+    uint32_t _count;
+    int32_t _start;
+    int32_t _end;
+    map<string,bool> _ignore_read_names, _counted_read_names;
+    bool _verbose;
+  };
 
   class ResolveJunctionInfo : public JunctionInfo
   {
@@ -290,7 +314,8 @@ namespace breseq {
                                         const Settings& settings,
                                         Summary& summary,
                                         cDiffEntry& j,
-                                        int32_t require_overlap = 0
+                                        const counted_ptr<junction_read_counter>& reference_jrc,
+                                        const counted_ptr<junction_read_counter>& junction_jrc
                                         );
   
   void  assign_junction_read_counts(
@@ -305,30 +330,6 @@ namespace breseq {
                                       cGenomeDiff& gd
                                       );
 
-  
-  // Pileup class for fetching reads that align across from start to end
-  class junction_read_counter : pileup_base {
-  public:
-    junction_read_counter(const string& bam, const string& fasta, bool verbose)
-      : pileup_base(bam, fasta), _verbose(verbose) {};
-    
-    uint32_t count(
-                   const string& seq_id, 
-                   const int32_t start, 
-                   const int32_t end, 
-                   const map<string,bool> ignore_read_names, 
-                   map<string,bool>& counted_read_names
-                   );
-    
-    virtual void fetch_callback ( const alignment_wrapper& a );
-    
-  protected:
-    uint32_t _count;
-    int32_t _start;
-    int32_t _end;
-    map<string,bool> _ignore_read_names, _counted_read_names;
-    bool _verbose;
-  };
 
 }
 

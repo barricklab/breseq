@@ -8,7 +8,7 @@ AUTHORS
 LICENSE AND COPYRIGHT
 
   Copyright (c) 2008-2010 Michigan State University
-  Copyright (c) 2011-2017 The University of Texas at Austin
+  Copyright (c) 2011-2022 The University of Texas at Austin
 
   breseq is free software; you can redistribute it and/or modify it under the  
   terms the GNU General Public License as published by the Free Software 
@@ -120,10 +120,10 @@ namespace breseq{
     double nbinom_mean_parameter;
     double nbinom_prob_parameter;
     double nbinom_variance;
-    double nbinom_dispersion;
+    double nbinom_relative_variance;
     double average;
     double variance;
-    double dispersion;
+    double relative_variance;
     
     CoverageSummary()
     : deletion_coverage_propagation_cutoff(0.0)
@@ -132,10 +132,10 @@ namespace breseq{
     , nbinom_mean_parameter(0.0)
     , nbinom_prob_parameter(0.0)
     , nbinom_variance(0.0)
-    , nbinom_dispersion(0.0)
+    , nbinom_relative_variance(0.0)
     , average(0.0)
     , variance(0.0)
-    , dispersion(0.0)
+    , relative_variance(0.0)
     {}
   };
   
@@ -156,6 +156,7 @@ namespace breseq{
     uint32_t max_quality_score;
     uint64_t num_original_bases;
     uint64_t num_bases;
+    bool reads_were_split;
     string quality_format_original;
     string quality_format;
     string converted_fastq_name;
@@ -174,6 +175,7 @@ namespace breseq{
     , max_quality_score(0)
     , num_original_bases(0)
     , num_bases(0)
+    , reads_were_split(false)
     { }
     
     AnalyzeFastqSummary(
@@ -190,6 +192,7 @@ namespace breseq{
                  uint32_t _max_quality_score,
                  uint64_t _num_original_bases,
                  uint64_t _num_bases,
+                 bool _reads_were_split,
                  const string& _quality_format_original,
                  const string& _quality_format,
                  const string& _converted_fastq_name
@@ -207,6 +210,7 @@ namespace breseq{
     , max_quality_score(_max_quality_score)
     , num_original_bases(_num_original_bases)
     , num_bases(_num_bases)
+    , reads_were_split(_reads_were_split)
     , quality_format_original(_quality_format_original)
     , quality_format(_quality_format)
     , converted_fastq_name(_converted_fastq_name)
@@ -386,6 +390,7 @@ namespace breseq{
     uint32_t max_quality_score;
     uint64_t num_original_bases;
     uint64_t num_bases;
+    bool reads_were_split;
     string quality_format_original;
     string quality_format;
     
@@ -436,10 +441,10 @@ namespace breseq{
     double coverage_nbinom_mean_parameter;
     double coverage_nbinom_prob_parameter;
     double coverage_nbinom_variance;
-    double coverage_nbinom_dispersion;
+    double coverage_nbinom_relative_variance;
     double coverage_average;
     double coverage_variance;
-    double coverage_dispersion;
+    double coverage_relative_variance;
     
     int32_t coverage_group;
     bool junction_only;
@@ -477,6 +482,7 @@ namespace breseq{
     
     //! Settings: Workflow
     string custom_run_name;
+    string genbank_field_for_seq_id;
     int32_t num_processors;
     bool skip_read_filtering;
     bool skip_new_junction_prediction;
@@ -490,6 +496,10 @@ namespace breseq{
     uint32_t read_file_read_length_min;
     double read_file_max_same_base_fraction;
     double read_file_max_N_fraction;
+    uint32_t read_file_long_read_trigger_length;
+    uint32_t read_file_long_read_split_length;
+    bool read_file_long_read_distribute_remainder;
+
     
     //! Settings: Read Alignment
     string bowtie2_scoring;
@@ -563,6 +573,7 @@ namespace breseq{
 
     //! Settings: Mutation Prediction
     int32_t size_cutoff_AMP_becomes_INS_DEL_mutation;
+    int32_t ignore_within_this_multiple_of_average_read_length_of_contig_end;
     
     //! Settings: Output
     uint32_t max_displayed_reads;

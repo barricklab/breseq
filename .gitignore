@@ -9,7 +9,6 @@
 *.tgz
 *.tab
 *.txt
-*.csv
 *.out
 *.html
 *.tab
@@ -52,17 +51,17 @@ tags
 Makefile
 INSTALL
 
-breseq
 breseq-*
 
 tests/*/output*
 tests/*/0*
 tests/*/data
 tests/test.config
+tests/lambda_mixed_pop_cl_tabulate/contingency_loci.csv
 
 src/c/breseq/breseq/
-src/c/breseq/breseq$
-src/c/breseq/gdtools$
+src/c/breseq/breseq
+src/c/breseq/gdtools
 
 Rplots.pdf
 

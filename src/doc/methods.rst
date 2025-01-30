@@ -8,7 +8,7 @@ This section describes the algorithms used by |breseq|.
 Read mapping
 ----------------
 
-|breseq| uses `Bowtie2 <http://bowtie-bio.sourceforge.net/bowtie2>`_ to map reads to the reference genome sequence::
+|breseq| uses `Bowtie2 <http://bowtie-bio.sourceforge.net/bowtie2>`_ to map reads to the reference genome sequence.
 
 Currently, |breseq| does not use the distance contraints available in paired-end or mate-paired libraries during read alignment or as a source of evidence supporting mutations. These data sets are treated as single-end reads.
 
@@ -92,7 +92,10 @@ Read alignment evidence (RA)
 
 .. warning::
 
-   Polymorphism prediction is still considered a somewhat experimental feature. It continues to be actively developed.
+   Polymorphism prediction is prone to false positives. There are many biases in NGS data. Since |breseq| only analyzes one sample at a time, it cannot fully account for all of these biases. After running |breseq| you will
+   need to leverage comparisons between multiple populations, time points sequenced from one population, and/or clonal control samples in order to better understand which predictions in
+   polymorphism mode are real. To some extent, you can reduce false positives by adjusting the |breseq| ``--polymorphism-*`` filtering options. In general, indels in homopolymer runs and low frequency base substitutions (<5%)
+   based on ``RA`` evidence are more likely to be false positives. Predictions of deletions and IS element insertions based on ``JC`` evidence can still be true positives at much lower frequencies.
 
 Read end trimming
 *****************
@@ -143,7 +146,7 @@ In the FASTQ input files, each read base has been assigned a quality score by th
 
 This plot shows a typical empirical error model fit to Illumina Genome Analyzer data. Notice that the rate of single-base deletions is much lower than the rate of any base miscall. Base qualities normally do not give information about the rates of indel mutations, and this re-calibration step allows |breseq| to estimate the rates of these sequencing errors.
 
-Recall that |breseq| requires input in `Sanger FASTQ format <http://en.wikipedia.org/wiki/FASTQ_format>`_. Therefore the expected total error rate (`E`) at a given quality score (`Q`) before re-calibration is:
+Recall that |breseq| requires input in `Sanger FASTQ format <https://en.wikipedia.org/wiki/FASTQ_format>`_. Therefore the expected total error rate (`E`) at a given quality score (`Q`) before re-calibration is:
 
 :math:`E=10^{-\frac{Q}{10}}`
 
@@ -182,7 +185,7 @@ Next, |breseq| tests the hypothesis that reads aligned to each reference positio
 How this model is specified depends on the mode:
 
 #. In CONSENSUS mode, only the raw frequency predicted from the read counts of the major and variant allele is tested. So if there are
-#. IN POLYMORPHISM mode, the maximum likelihood allele frequency (taking into account bases observed in the pileup and their quality scores) is found with a precision (at :option:`--polymorphism-precision` resolution, DEFAULT = 0.000001).
+#. IN POLYMORPHISM mode, the maximum likelihood allele frequency (taking into account bases observed in the pileup and their quality scores) is found with a precision of 0.000001.
 
 |breseq| then tests the statistical support for the model having only one reference base in the sequenced sample versus the model with one additional free parameter consisting of mixture of two alleles using a likelihood-ratio test. That is, twice the natural logarithm of the probability of the mixture model divided by the probability of the one-base model is compared to a chi-squared distribution with 1 degree of freedom.
 
@@ -358,9 +361,8 @@ Annotated bibliography
 
 More information about the methods used by |breseq| is available in these publications:
 
-*  Barrick, J.E., Yu, D.S., Yoon, S.H., Jeong, H, Oh, T.K., Schneider, D., Lenski, R.E., and Kim, J.F. (2009) Genome evolution and adaptation in a long-term experiment with *Escherichia coli*. *Nature* **461**:1243-1247. **Methods used by an early version of breseq are described in the supplemental materials.** `Link to Pubmed <http://www.ncbi.nlm.nih.gov/pubmed/19838166>`_
-*  Barrick, J.E., Lenski, R.E. (2009) Genome-wide mutational diversity in an evolving population of *Escherichia coli*. *Cold Spring Harb. Symp. Quant. Biol.* **74**:119-129. **Early description of polymorphism mode for single-nucleotide variants and small indels.** `Link to Full Text <http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2890043>`_
-*  Deatherage, D.E., Barrick, J.E. (2014) Identification of mutations in laboratory-evolved microbes from next-generation sequencing data using *breseq*. *Methods Mol. Biol.* **1151**: 165–188. **Tutorial and practical guide to running breseq and interpreting the output.** `Link to Full Text <http://www.ncbi.nlm.nih.gov/pmc/articles/PMC4239701>`_
-*  Barrick, J.E., Colburn, G., Deatherage D.E., Traverse, C.C., Strand, M.D., Borges, J.J., Knoester, D.B., Reba, A., Meyer, A.G.(2014) Identifying structural variation in haploid microbial genomes from short-read resequencing data using *breseq*. *BMC Genomics* **15**:1039. **Detailed description of methods used to predict structural variation.** `Link to Full Text <http://www.biomedcentral.com/1471-2164/15/1039>`_
-*  Deatherage, D.E., Traverse, C.C., Wolf, L.N., Barrick, J.E. (2015) Detecting rare structural variation in evolving microbial populations from new sequence junctions using *breseq*. *Front. Genet.* **5**:468. **Detailed description of methods used to predict polymorphic structural variation.** `Link to Full Text <http://http://journal.frontiersin.org/article/10.3389/fgene.2014.00468>`_
-
+*  Barrick, J.E., Yu, D.S., Yoon, S.H., Jeong, H, Oh, T.K., Schneider, D., Lenski, R.E., and Kim, J.F. (2009) Genome evolution and adaptation in a long-term experiment with *Escherichia coli*. *Nature* **461**:1243-1247. **Methods used by an early version of breseq are described in the supplemental materials.** doi: `10.1038/nature08480 <https://doi.org/10.1038/nature08480>`_
+*  Barrick, J.E., Lenski, R.E. (2009) Genome-wide mutational diversity in an evolving population of *Escherichia coli*. *Cold Spring Harb. Symp. Quant. Biol.* **74**:119-129. **Early description of polymorphism mode for single-nucleotide variants and small indels.** doi: `10.1101%2Fsqb.2009.74.018 <https://doi.org/10.1101%2Fsqb.2009.74.018>`_
+*  Deatherage, D.E., Barrick, J.E. (2014) Identification of mutations in laboratory-evolved microbes from next-generation sequencing data using *breseq*. *Methods Mol. Biol.* **1151**: 165–188. **Tutorial and practical guide to running breseq and interpreting the output.** doi: `10.1007/978-1-4939-0554-6_12 <https://doi.org/10.1007/978-1-4939-0554-6_12>`_
+*  Barrick, J.E., Colburn, G., Deatherage D.E., Traverse, C.C., Strand, M.D., Borges, J.J., Knoester, D.B., Reba, A., Meyer, A.G.(2014) Identifying structural variation in haploid microbial genomes from short-read resequencing data using *breseq*. *BMC Genomics* **15**:1039. **Detailed description of methods used to predict structural variation.** doi: `10.1186/1471-2164-15-1039 <https://doi.org/10.1186/1471-2164-15-1039>`_
+*  Deatherage, D.E., Traverse, C.C., Wolf, L.N., Barrick, J.E. (2015) Detecting rare structural variation in evolving microbial populations from new sequence junctions using *breseq*. *Front. Genet.* **5**:468. **Detailed description of methods used to predict polymorphic structural variation.** doi: `doi.org/10.3389/fgene.2014.00468 <https://doi.org/10.3389/fgene.2014.00468>`_

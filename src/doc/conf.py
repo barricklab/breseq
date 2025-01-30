@@ -25,7 +25,7 @@ sys.path.insert(0, os.path.abspath('extensions'))
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['sphinx.ext.pngmath', 'hidden_code_block']
+extensions = ['sphinx.ext.imgmath']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -267,3 +267,6 @@ epub_copyright = u'2014, Jeffrey E. Barrick'
 
 # Allow duplicate toc entries.
 #epub_tocdup = True
+
+def setup(app):
+    app.add_css_file('custom.css')

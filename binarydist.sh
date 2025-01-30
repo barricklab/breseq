@@ -4,40 +4,60 @@ BRESEQVERSIONSTRING=`perl -ne 's/AC_INIT\(\[(.+?)\].+?\[(.+?)\].+/\1-\2/ && prin
 BINARYPLATFORM=`uname`
 BINARYARCH=`arch`
 ARCHFLAGS=""
-BINARYNAME=${BINARYPLATFORM}-${BINARYARCH}
+CONFIGFLAGS=""
 if [ "$BINARYPLATFORM" == "Darwin" ]; then
 	BINARYARCH="universal"
-	ARCHFLAGS="-mmacosx-version-min=10.9"
-	BINARYNAME="MacOSX-10.9+"
+	ARCHFLAGS="-mmacosx-version-min=10.13 -arch arm64 -arch x86_64"
+	#ARCHFLAGS="-mmacosx-version-min=10.13 -arch x86_64"
+
+	BINARYPLATFORM="MacOSX-10.13+"
+	
+	# MacOSX Libz scenarios
+	#
+	# 1) Preferred method: Using libz you compiled
+  	#
+  	# From within the libz source code directory:
+  	# 
+  	# $ CFLAGS="-mmacosx-version-min=10.13" ./configure --static --prefix=$HOME/local --archs="-arch arm64 -arch x86_64" 
+  	# $ make install
+	#
+	# 2) Older alternative: Using libz installed by MacPorts
+	#
+	# You need to make sure this is a +universal build of libz for this to work!
+  	# $ port install libz +universal
+	#
+	#For static zlib installed with macports
+  	#CONFIGFLAGS="--with-static-libz=/opt/local"
+	#
+	# This is not as good b/c you can't control the -mmacosx-version-min
+  	
+  	CONFIGFLAGS="--with-static-libz=$HOME/local"
+  	
 fi
+BINARYNAME=${BINARYPLATFORM}-${BINARYARCH}
+
 
 BINARYLOCALDIR=${BRESEQVERSIONSTRING}-${BINARYNAME}
 BINARYDIR=${PWD}/${BINARYLOCALDIR}
-rm -rf ${BINARYDIR} ${BINARYDIR}.tgz
+rm -rf ${BINARYDIR} ${BINARYDIR}.tar.gz ${BINARYDIR}.tgz
 
+echo "${BINARYLOCALDIR}"
 echo "${BINARYDIR}"
-echo "./configure --without-libunwind --prefix=\"${BINARYDIR}\" --enable-static CFLAGS=\"${ARCHFLAGS} ${CFLAGS}\" CXXFLAGS=\"${ARCHFLAGS} ${CXXFLAGS}\" LDFLAGS=\"${ARCHFLAGS} ${LDFLAGS}\""
-./configure --without-libunwind --prefix="${BINARYDIR}" --enable-static CFLAGS="${ARCHFLAGS} ${CFLAGS}" CXXFLAGS="${ARCHFLAGS} ${CXXFLAGS}" LDFLAGS="${ARCHFLAGS} ${LDFLAGS}"
+echo "./configure --without-libunwind --prefix=\"${BINARYDIR}\" --disable-shared --enable-static CFLAGS=\"${ARCHFLAGS} ${CFLAGS}\" CXXFLAGS=\"${ARCHFLAGS} ${CXXFLAGS}\" LDFLAGS=\"${ARCHFLAGS} ${LDFLAGS}\" $CONFIGFLAGS"
+./configure --without-libunwind --prefix="${BINARYDIR}" CFLAGS="${ARCHFLAGS} ${CFLAGS}" CXXFLAGS="${ARCHFLAGS} ${CXXFLAGS}" LDFLAGS="${ARCHFLAGS} ${LDFLAGS}" $CONFIGFLAGS
 
 
 make clean
-make -j 6
-make test
+make -j 12
+#make test
 make install
 
 #Documentation and information
-if [ "$BINARYPLATFORM" == "Darwin" ]; then
-        make docs
-        cp -r src/doc/_build/html ${BINARYDIR}/documentation
-else
-        echo "=================================================="
-        echo "REMEMBER! HTML DOCUMENTATION ONLY BUILT ON DARWIN "
-        echo "--->  COPY THE DOCUMENTATION FOLDER INTO THIS DIST"
-        echo "=================================================="
-fi
+#make docs
+#cp -r src/doc/_build/html ${BINARYDIR}/documentation
+
 cp -r LICENSE ${BINARYDIR}
 cp -r README-BINARY ${BINARYDIR}/README
-
 
 #Test
 mkdir -p ${BINARYDIR}/tests/lambda_mult_ref_read
@@ -65,12 +85,16 @@ cp tests/data/lambda/lambda.5.gbk ${BINARYDIR}/tests/data/lambda
 #options here need to match those in Makefile.am for test to pass
 echo "export TESTBINPREFIX=bin" > ${BINARYDIR}/tests/test.config;
 echo "export BRESEQ_DATA_PATH=share/breseq" >> ${BINARYDIR}/tests/test.config;
-echo "export BRESEQ_SAMTOOLS_PATH=bin" >> ${BINARYDIR}/tests/test.config;
 echo "export BRESEQ_TEST_THREAD_ARG=\"-j 4\"" >> ${BINARYDIR}/tests/test.config
 
 echo "tests/test.sh clean tests" > ${BINARYDIR}/run_tests.sh
 echo "tests/test.sh test tests" >> ${BINARYDIR}/run_tests.sh
+
+#Fix permissions to 644 and add back executables
+chmod 644 $(find ${BINARYDIR} -type f) 
 chmod a+x ${BINARYDIR}/run_tests.sh
+chmod a+x ${BINARYDIR}/bin/*
+chmod a+x ${BINARYDIR}/tests/*.sh
 
 tar -czf ${BINARYLOCALDIR}.tar.gz ${BINARYLOCALDIR}
 rm -r ${BINARYLOCALDIR}

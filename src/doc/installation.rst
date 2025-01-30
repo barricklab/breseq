@@ -1,35 +1,54 @@
 Installation
 ==============
 
-|breseq| is a command line tool implemented in C++ and R. It is compatible with a variety of UNIX-like platforms, including Linux, MacOSX, and Cygwin.
+|breseq| is a command line tool implemented in C++ and R. It is compatible with a variety of UNIX-like platforms, including Linux, MacOSX, and Windows Subsystem for Linux (WSL). There are several ways to install it described below.
 
-The most recent |breseq| binary distributions and source code packages are available for download from `GitHub <https://github.com/barricklab/breseq/releases>`_.
-The instructions in the following sections explain how to install |breseq| using these files.
+If you are not comfortable with running commands in a terminal, it is also possible to install and use |breseq| on the web-based `Galaxy platform <https://usegalaxy.org>`_ (See `Installing on Galaxy`_).
+
+Recommended Method: Install |breseq| using Conda
+++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 .. image:: https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat
-   :target: http://bioconda.github.io/recipes/breseq/README.html
+   :target: https://bioconda.github.io/recipes/breseq/README.html
 
-**New:** Another installation option is to use the `Conda package manager <https://docs.conda.io/en/latest/>`_ to install |breseq| and all of the programs it requires. Make sure you have
-`Bioconda <https://bioconda.github.io/user/install.html>`_ set up, then follow the directions for the `breseq package <http://bioconda.github.io/recipes/breseq/README.html>`_.
+The recommended installation method is to use the `Conda package manager <https://docs.conda.io/en/latest/>`_ to install |breseq| and all of the programs it requires. Make sure you have
+`Bioconda <https://bioconda.github.io/>`_ set up, then follow the directions for the `breseq package <https://bioconda.github.io/recipes/breseq/README.html>`_.
+
+.. NOTE::
+   If you get an install error about the |Bowtie2| requirement not being satisfied, you need to create a Conda environment that uses Python 3.9 or earlier. These commands will do that and install |breseq|.
+
+   .. code-block:: bash
+
+      $ conda create -n breseq python=3.9
+      $ conda activate breseq
+      $ conda install breseq
 
 
-.. image:: images/galaxy.png
-   :target: https://usegalaxy.org
+Normal Method: Install |breseq| on your own
++++++++++++++++++++++++++++++++++++++++++++++
 
-**New:** If you are not comfortable with running commands in a terminal, it is also possible to install and use |breseq| on the web-based `Galaxy platform <https://usegalaxy.org>`_ (See `Installing on Galaxy`_).
+The most recent |breseq| binary distributions and source code packages are available for download from `GitHub <https://github.com/barricklab/breseq/releases>`_.
+The instructions in the following sections explain how to first install the programs |breseq| needs to run and then |breseq| itself. You can use any of the three options shown for installing |breseq| executables.
 
 Install external dependencies
-++++++++++++++++++++++++++++++
+-------------------------------------
 
 |breseq| requires these software programs to be installed on your system:
 
 * `Bowtie2 <http://bowtie-bio.sourceforge.net/bowtie2>`_ (version 2.1.0 or higher) read mapping program
-* `R <http://www.r-project.org>`_ (version 2.1.4 or higher) statistical programming language
+* `R <https://www.r-project.org>`_ (version 2.1.4 or higher) statistical programming language
 
 To install each dependency, visit the respective web pages linked above and follow the instructions for your platform. You must make sure that the executables for |Bowtie2| and :program:`R` are in your environment's ``$PATH`` for |breseq| to function.
 
+.. warning::
+   Certain versions of |Bowtie2| have bugs and produce SAM output that can cause |breseq| to crash. If you are using one of these versions you will get an error message when you run |breseq| and it will exit.
+
+.. note::
+   The output of |breseq| may vary (usually only slightly) depending on your version of |Bowtie2|. When reporting |breseq| results in a publication you should always state the version of |breseq| AND the version of |Bowtie2| that you used to ensure reproducibility! The current recommended |Bowtie2| version is shown in a warning at the beginning of a |breseq| run if you are using a different one.
+
+
 Method 1. Binary download
-+++++++++++++++++++++++++++++
+-------------------------------------
 
 Linux and MacOSX packages with precompiled executables are available for download. Using these is the quickest and easiest install option that should be used by most users.
 
@@ -53,13 +72,13 @@ You may also run this command to test the |breseq| install:
 .. _installing-source-code-package:
 
 Method 2. Source code download
-++++++++++++++++++++++++++++++
+-------------------------------------
 
 |breseq| installation from the source code requires some basic familiarity with UNIX commands and environments.
 
-In addition to the normal dependencies, you must also have a C++ compiler installed on your system. For example: `GCC <http://gcc.gnu.org>`_.
+In addition to the normal dependencies, you must also have a C++ compiler installed on your system. For example: `GCC <https://gcc.gnu.org>`_.
 
-MacOSX does not have a C++ compiler installed by default. You must first download and install the `Apple Developer tools <http://developer.apple.com/tools/>`_ (available from the App store). Be sure that you also complete any additional steps that are necessary to install the "command-line tools".
+MacOSX does not have a C++ compiler installed by default. You must first download and install the `Apple Developer tools <https://developer.apple.com/tools/>`_ (available from the App store). Be sure that you also complete any additional steps that are necessary to install the "command-line tools".
 
 If you have admin privileges and want to install |breseq| in a standard location accessible to all users of a computer, then see :ref:`installing-in-a-system-wide-location`. If you do not have admin privileges on your computer, then see :ref:`installing-in-the-source-directory` or :ref:`installing-in-a-custom-location`.
 
@@ -138,39 +157,22 @@ For a :program:`bash` shell you can usually use a command like this:
 But the exact way to do this may depend on your system. You may also want to similarly update your $MANPATH, $CPPFLAGS, $LD_FLAGS, etc. Now you should be able to invoke |breseq| commands once you open a new terminal window.
 
 Method 3. GitHub source code
-+++++++++++++++++++++++++++++++++
+-------------------------------------
 
 If you are working with a development version of |breseq| cloned from the `GitHub code repository <https://github.com/barricklab/breseq>`_, then you will need to run some additional commands and have other tools installed on your system in order to get it to compile or work with the XCode project.
 
 These requirements and commands are detailed in the DEVELOPER text file located in the main directory of the source code.
 
-Installing on Cygwin (Windows)
-+++++++++++++++++++++++++++++++++
+Installing on Windows (using WSL)
++++++++++++++++++++++++++++++++++++++++++++
 
-It is possible to compile and install |breseq| and all of its dependencies in the Cygwin environment on a Windows computer. We do not currently provide a binary installer for Cygwin and are unable to help troubleshoot these installs, but here is what has worked for other users.
-
-Before you start, use the Cygwin package manager to install these packages (which provide libraries needed to compile |breseq| and |Bowtie2|). When prompted whether to install further dependencies of a package, answer yes.
-
-.. code-block:: bash
-
-   R                    libncurses-devel
-   gcc-core             zlib-devel
-   gcc-g++              byacc
-   gcc-objc++           bool
-   python               pkg-config
-   m4                   perl-File-Copy-Recursive
-   make                 perl-Config-AutoConf
-   automake             perl-ExtUtils-PkgConfig
-   autoconf             mingw-pthreads
-   diffutils            mingw64-x86_64-pthreads
-   libiconv             mingw64-x86_64-winpthreads
-
-Now, compile and install |Bowtie2| from source code and use the :ref:`installing-source-code-package` instructions to install |breseq|.
-
-If the configure or make steps in either install fail, try to diagnose which dependencies are missing from the warnings and install further packages as necessary.
+Download and install `Windows Subsystem for Linux (WSL) <https://docs.microsoft.com/en-us/windows/wsl/about>`_ on your machine. In the WSL terminal, you should be able to use any of the methods described above for installation. For example, you can install Conda and then use it to install the |breseq|.
 
 Installing on Galaxy
-+++++++++++++++++++++++++++++++++
+++++++++++++++++++++++++++++++
+
+.. image:: images/galaxy.png
+   :target: https://usegalaxy.org
 
 If you administer a Galaxy server, |breseq| is available to install from the `Main Tool Shed <https://toolshed.g2.bx.psu.edu/>`_. See also, the directions for `Installing Tools into Galaxy <https://galaxyproject.org/admin/tools/add-tool-from-toolshed-tutorial/>`_.
 

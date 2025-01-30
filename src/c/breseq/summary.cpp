@@ -8,7 +8,7 @@
  LICENSE AND COPYRIGHT
  
  Copyright (c) 2008-2010 Michigan State University
- Copyright (c) 2011-2017 The University of Texas at Austin
+ Copyright (c) 2011-2022 The University of Texas at Austin
  
  breseq is free software; you can redistribute it and/or modify it under the
  terms the GNU General Public License as published by the Free Software
@@ -118,10 +118,10 @@ void to_json(json& j, const CoverageSummary& s)
     {"nbinom_mean_parameter", s.nbinom_mean_parameter},
     {"nbinom_prob_parameter", s.nbinom_prob_parameter},
     {"nbinom_variance", s.nbinom_variance},
-    {"nbinom_dispersion", s.nbinom_dispersion},
+    {"nbinom_relative_variance", s.nbinom_relative_variance},
     {"average", s.average},
     {"variance", s.variance},
-    {"dispersion", s.dispersion},
+    {"relative_variance", s.relative_variance},
   };
 }
 
@@ -133,10 +133,10 @@ void from_json(const json& j, CoverageSummary& s)
   s.nbinom_mean_parameter = j.at("nbinom_mean_parameter").get<double>();
   s.nbinom_prob_parameter = j.at("nbinom_prob_parameter").get<double>();
   s.nbinom_variance = j.at("nbinom_variance").get<double>();
-  s.nbinom_dispersion = j.at("nbinom_dispersion").get<double>();
+  s.nbinom_relative_variance = j.at("nbinom_relative_variance").get<double>();
   s.average = j.at("average").get<double>();
   s.variance = j.at("variance").get<double>();
-  s.dispersion = j.at("dispersion").get<double>();
+  s.relative_variance = j.at("relative_variance").get<double>();
 }
   
 // AnalyzeFastqSummary
@@ -156,6 +156,7 @@ void to_json(json& j, const AnalyzeFastqSummary& s)
     {"max_quality_score", s.max_quality_score},
     {"num_original_bases", s.num_original_bases},
     {"num_bases", s.num_bases},
+    {"reads_were_split", s.reads_were_split},
     {"quality_format_original", s.quality_format_original},
     {"quality_format", s.quality_format},
     {"converted_fastq_name", s.converted_fastq_name},
@@ -177,6 +178,7 @@ void from_json(const json& j, AnalyzeFastqSummary& s)
   s.max_quality_score = j.at("max_quality_score").get<uint32_t>();
   s.num_original_bases = j.at("num_original_bases").get<uint64_t>();
   s.num_bases = j.at("num_bases").get<uint64_t>();
+  s.reads_were_split = j.at("reads_were_split").get<bool>();
   s.quality_format_original = j.at("quality_format_original").get<string>();
   s.quality_format = j.at("quality_format").get<string>();
   s.converted_fastq_name = j.at("converted_fastq_name").get<string>();
@@ -341,6 +343,7 @@ PublicReadFileSummary::PublicReadFileSummary(const ReadFileSummary &rfs, const A
   max_quality_score = afs.max_quality_score;
   num_original_bases = afs.num_original_bases;
   num_bases = afs.num_bases;
+  reads_were_split = afs.reads_were_split;
   quality_format_original = afs.quality_format_original;
   quality_format = afs.quality_format;
   
@@ -391,10 +394,10 @@ PublicReferenceSummary::PublicReferenceSummary(
   coverage_nbinom_mean_parameter = cs.nbinom_mean_parameter;
   coverage_nbinom_prob_parameter = cs.nbinom_prob_parameter;
   coverage_nbinom_variance = cs.nbinom_variance;
-  coverage_nbinom_dispersion = cs.nbinom_dispersion;
+  coverage_nbinom_relative_variance = cs.nbinom_relative_variance;
   coverage_average = cs.average;
   coverage_variance = cs.variance;
-  coverage_dispersion = cs.dispersion;
+  coverage_relative_variance = cs.relative_variance;
   
   coverage_group = rss.m_seq_id_to_coverage_group_map.at(r.m_seq_id);
   junction_only = rss.m_junction_only_seq_id_set.count(r.m_seq_id);
@@ -435,6 +438,7 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
 {
   //! Settings: Workflow
   custom_run_name = t.custom_run_name;
+  genbank_field_for_seq_id = t.genbank_field_for_seq_id;
   num_processors = t.num_processors;
   skip_read_filtering = t.skip_read_filtering;
   skip_new_junction_prediction = t.skip_new_junction_prediction;
@@ -448,6 +452,9 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   read_file_read_length_min = t.read_file_read_length_min;
   read_file_max_same_base_fraction = t.read_file_max_same_base_fraction;
   read_file_max_N_fraction = t.read_file_max_N_fraction;
+  read_file_long_read_trigger_length = t.read_file_long_read_trigger_length;
+  read_file_long_read_split_length = t.read_file_long_read_split_length;
+  read_file_long_read_distribute_remainder = t.read_file_long_read_distribute_remainder;
   
   //! Settings: Read Alignment
   bowtie2_scoring = t.bowtie2_scoring;
@@ -514,10 +521,11 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   polymorphism_minimum_total_coverage = t.polymorphism_minimum_total_coverage;
   polymorphism_reject_indel_homopolymer_length = t.polymorphism_reject_indel_homopolymer_length;
   polymorphism_reject_surrounding_homopolymer_length = t.polymorphism_reject_surrounding_homopolymer_length;
-  no_indel_polymorphisms = t.no_indel_polymorphisms;
+  no_indel_polymorphisms = t.polymorphism_no_indels;
   
   //! Settings: Mutation Prediction
   size_cutoff_AMP_becomes_INS_DEL_mutation = t.size_cutoff_AMP_becomes_INS_DEL_mutation;
+  ignore_within_this_multiple_of_average_read_length_of_contig_end = t.ignore_within_this_multiple_of_average_read_length_of_contig_end;
   
   //! Settings: Output
   max_displayed_reads = t.max_displayed_reads;
@@ -526,7 +534,6 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   max_nucleotides_to_show_in_tables = t.max_nucleotides_to_show_in_tables;
   max_rejected_read_alignment_evidence_to_show = t.max_rejected_read_alignment_evidence_to_show;
   max_rejected_junction_evidence_to_show = t.max_rejected_junction_evidence_to_show;
-  hide_circular_genome_junctions = t.hide_circular_genome_junctions;
 }
   
   PublicSummary::PublicSummary(const Summary &s, const Settings &t, const cReferenceSequences &r)
@@ -552,6 +559,7 @@ void to_json(json& j, const PublicReadFileSummary& s)
     {"max_quality_score", s.max_quality_score},
     {"num_original_bases", s.num_original_bases},
     {"num_bases", s.num_bases},
+    {"reads_were_split", s.reads_were_split},
     {"quality_format_original", s.quality_format_original},
     {"quality_format", s.quality_format},
     
@@ -577,6 +585,7 @@ void from_json(const json& j, PublicReadFileSummary& s)
   s.max_quality_score = j.at("max_quality_score").get<uint32_t>();
   s.num_original_bases = j.at("num_original_bases").get<uint64_t>();
   s.num_bases = j.at("num_bases").get<uint64_t>();
+  s.reads_were_split = j.at("reads_were_split").get<bool>();
   s.quality_format_original = j.at("quality_format_original").get<string>();
   s.quality_format = j.at("quality_format").get<string>();
 
@@ -645,10 +654,10 @@ void to_json(json& j, const PublicReferenceSummary& s)
     {"coverage_nbinom_mean_parameter", s.coverage_nbinom_mean_parameter},
     {"coverage_nbinom_prob_parameter", s.coverage_nbinom_prob_parameter},
     {"coverage_nbinom_variance", s.coverage_nbinom_variance},
-    {"coverage_nbinom_dispersion", s.coverage_nbinom_dispersion},
+    {"coverage_nbinom_relative_variance", s.coverage_nbinom_relative_variance},
     {"coverage_average", s.coverage_average},
     {"coverage_variance", s.coverage_variance},
-    {"coverage_dispersion", s.coverage_dispersion},
+    {"coverage_relative_variance", s.coverage_relative_variance},
     
     {"coverage_group", s.coverage_group},
     {"junction_only", s.junction_only},
@@ -671,10 +680,10 @@ void from_json(const json& j, PublicReferenceSummary& s)
   s.coverage_nbinom_mean_parameter = j.at("coverage_nbinom_mean_parameter").get<double>();
   s.coverage_nbinom_prob_parameter = j.at("coverage_nbinom_prob_parameter").get<double>();
   s.coverage_nbinom_variance = j.at("coverage_nbinom_variance").get<double>();
-  s.coverage_nbinom_dispersion = j.at("coverage_nbinom_dispersion").get<double>();
+  s.coverage_nbinom_relative_variance = j.at("coverage_nbinom_relative_variance").get<double>();
   s.coverage_average = j.at("coverage_average").get<double>();
   s.coverage_variance = j.at("coverage_variance").get<double>();
-  s.coverage_dispersion = j.at("coverage_dispersion").get<double>();
+  s.coverage_relative_variance = j.at("coverage_relative_variance").get<double>();
   
   
   s.coverage_group = j.at("coverage_group").get<int32_t>();
@@ -728,6 +737,7 @@ void to_json(json& j, const PublicOptionsSummary& s)
     //! Settings: Workflow
     {"workflow", json{
       {"custom_run_name", s.custom_run_name},
+      {"genbank_field_for_seq_id", s.genbank_field_for_seq_id},
       {"num_processors", s.num_processors},
       {"skip_read_filtering", s.skip_read_filtering},
       {"skip_new_junction_prediction", s.skip_new_junction_prediction},
@@ -744,6 +754,9 @@ void to_json(json& j, const PublicOptionsSummary& s)
       {"read_file_read_length_min", s.read_file_read_length_min},
       {"read_file_max_same_base_fraction", s.read_file_max_same_base_fraction},
       {"read_file_max_N_fraction", s.read_file_max_N_fraction},
+      {"read_file_long_read_trigger_length", s.read_file_long_read_trigger_length},
+      {"read_file_long_read_split_length", s.read_file_long_read_split_length},
+      {"read_file_long_read_distribute_remainder", s.read_file_long_read_distribute_remainder},
       }
     },
     
@@ -831,6 +844,7 @@ void to_json(json& j, const PublicOptionsSummary& s)
     //! Settings: Mutation Prediction
     {"mutation_prediction", json{
       {"size_cutoff_AMP_becomes_INS_DEL_mutation", s.size_cutoff_AMP_becomes_INS_DEL_mutation},
+      {"ignore_within_this_multiple_of_average_read_length_of_contig_end", s.ignore_within_this_multiple_of_average_read_length_of_contig_end}
       }
     },
     
@@ -852,7 +866,8 @@ void from_json(const json& j, PublicOptionsSummary& s)
 {
   (void)j;
   (void)s;
-  ERROR("Not implemented");
+  // Allow this through for bam2cov to be able to use this file for other information
+  //ERROR("Not implemented");
 }
 
 

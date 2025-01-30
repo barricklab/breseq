@@ -8,7 +8,7 @@ AUTHORS
 LICENSE AND COPYRIGHT
 
   Copyright (c) 2008-2010 Michigan State University
-  Copyright (c) 2011-2017 The University of Texas at Austin
+  Copyright (c) 2011-2022 The University of Texas at Austin
 
   breseq is free software; you can redistribute it and/or modify it under the  
   terms the GNU General Public License as published by the Free Software 
@@ -754,7 +754,8 @@ void cErrorTable::count_alignment_position(const pileup_wrapper& i, const pileup
 		int32_t q_pos_0 = i.query_position_0(); // 0-indexed
 		int32_t q_start_0 = i.query_start_0(); // 0-indexed
 		int32_t q_end_0 = i.query_end_0(); // 0-indexed
-
+    int32_t q_length = i.read_length();
+  
 		uint8_t* qscore = i.read_base_quality_bam_sequence(); // quality score array
 		int32_t fastq_file_index = i.fastq_file_index(); // sequencer-generated read file that this alignment belongs to
 
@@ -800,6 +801,8 @@ void cErrorTable::count_alignment_position(const pileup_wrapper& i, const pileup
       //## don't count past last match position
       if (q_pos_0 < q_end_0) {	
         int32_t mqpos = q_pos_0 + 1 - reversed;
+        ASSERT((mqpos >= 0) && (mqpos < q_length), "Attempt to retrieve quality score for nonexistent base for '..' state.");
+
         base_bam obs_base_bam = bam1_seqi(qseq,mqpos);
         
         int32_t mrpos = ref_pos + 1 - reversed;
@@ -822,8 +825,11 @@ void cErrorTable::count_alignment_position(const pileup_wrapper& i, const pileup
     else if (i.indel() == -1) {
       //## count the quality of this or next base depending on reversed, and make sure it is not an N
       int32_t mqpos = q_pos_0 + 1 - reversed;
+      string read_name = i.read_name();
+      ASSERT((mqpos >= 0) && (mqpos < q_length), "Attempt to retrieve quality score for nonexistent base for 'N.' state. For read " + read_name);
+
       base_char obs_base_bam = bam1_seqi(qseq,mqpos);   
-			
+			      
       //## the reference base opposite the deletion is really the NEXT base
       int32_t mrpos = ref_pos + 1;
       base_char ref_base_char = ref_seq[mrpos];      
@@ -847,7 +853,8 @@ void cErrorTable::count_alignment_position(const pileup_wrapper& i, const pileup
     //#     quality score is that of the observed inserted base
     else if (i.indel() == +1) {
       int32_t mqpos = q_pos_0 + 1;
-			
+      ASSERT((mqpos >= 0) && (mqpos < q_length), "Attempt to retrieve quality score for nonexistent base for '.N' state.");
+
       if ((mqpos <= q_end_0) && (mqpos >= q_start_0)) {
         base_bam obs_base_bam = bam1_seqi(qseq,mqpos);    
 				

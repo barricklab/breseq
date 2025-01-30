@@ -19,7 +19,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.65])
-AC_INIT([breseq], [0.35.0], [jeffrey.e.barrick@gmail.com], [breseq], [http://barricklab.org/breseq])
+AC_INIT([breseq], [0.39.0], [jeffrey.e.barrick@gmail.com], [breseq], [http://barricklab.org/breseq])
 AC_CONFIG_AUX_DIR(aux_build)
 AC_CONFIG_MACRO_DIR([aux_build/m4])
 AC_CONFIG_HEADERS([aux_build/config.h])
@@ -36,7 +36,6 @@ AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_MKDIR_P
-AC_PROG_LIBTOOL
 
 AX_COMPUTE_RELATIVE_PATHS([bindir:datadir:bin_to_data])
 AC_MSG_NOTICE([Local path from bin to data...])
@@ -65,13 +64,36 @@ AC_CHECK_FUNCS([bzero gethostbyaddr gethostbyname memmove memset pow select sock
 #AC_SEARCH_LIBS([wclear], [curses ncurses], [],
 #   [AC_MSG_ERROR(["lib(n)curses is required."])])
 
-AC_SEARCH_LIBS([deflateSetHeader], [z], [], [AC_MSG_ERROR(["libz >=1.2.2.1 is required."])])
 AC_SEARCH_LIBS([acosf], [m], [], [AC_MSG_ERROR(["libm is required."])])
 AC_SEARCH_LIBS([pthread_create], [pthread], [], [AC_MSG_ERROR(["libpthread is required."])])
 
+
+#### libz
+# 1) static linking to libz if command line option used
+
+with_static_libz="$WITH_STATIC_LIBZ"
+
+AC_ARG_WITH([static-libz],
+    [AS_HELP_STRING([--with-static-libz=<path>],
+        [Prefix to static install of libz. Directory that has lib and include within it.])],
+    [AS_IF([test -f "$with_static_libz/lib/libz.a"],
+        [AC_MSG_NOTICE([Static linking to libz.a located in "$with_static_libz/lib"])],
+        [AC_MSG_ERROR([Could not find libz.a library for static linking in: "$with_static_libz/lib"])])]
+        )
+
+
+AS_IF([test -n "$with_static_libz"], [AC_SUBST([STATIC_LIBZ_LIB], "$with_static_libz/lib/libz.a" )])
+AS_IF([test -n "$with_static_libz"], [AC_SUBST([STATIC_LIBZ_INC], "-I$with_static_libz/lib/include")])
+
+# 2) dynamic linking to libz otherwise
+AS_IF([test -z "$with_static_libz"], [
+	AC_SEARCH_LIBS([deflateSetHeader], [z], [], [AC_MSG_ERROR(["libz >=1.2.2.1 is required."])])
+])
+
+
 #Find libunwind
 AC_ARG_WITH([libunwind],
-AS_HELP_STRING([--without-libunwind], [Disable preferring to use libunwind for debug info]))
+	AS_HELP_STRING([--without-libunwind], [Disable preferring to use libunwind for debug info]))
 
 AS_IF([test "x$with_libunwind" != "xno"], [
   AC_CHECK_HEADER(libunwind.h, FOUND_LIBUNWIND_H=1, FOUND_LIBUNWIND_H=0)
@@ -133,6 +155,7 @@ fi
 #AC_SEARCH_LIBS([bam_fetch], [bam], [], [AC_MSG_ERROR(["libbam is required."])])
 
 
+AC_SUBST([LIBZ], [extern/zlib-1.3.1])
 AC_SUBST([HTSLIB], [extern/samtools-1.3.1/htslib-1.3.1])
 AC_SUBST([LIBBAM], [extern/samtools-1.3.1])
 AC_SUBST([BRESEQ], [src/c/breseq])
@@ -164,6 +187,7 @@ case $host_os in
     	AC_MSG_NOTICE([Detected host 'darwin'.])
         ;;
 esac
+
 
 AC_CONFIG_FILES([
     extern/samtools-1.3.1/htslib-1.3.1/Makefile

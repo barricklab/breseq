@@ -1,0 +1,51 @@
+LOCUS       sfGFP                 717 bp    DNA     linear   SYN 22-JUL-2017
+DEFINITION  Synthetic plasmid, complete sequence.
+ACCESSION   MF033069 REGION: 2956..3705
+VERSION     MF033069.1
+KEYWORDS    .
+SOURCE      Synthetic plasmid
+  ORGANISM  Synthetic plasmid
+            other sequences; artificial sequences; vectors.
+REFERENCE   1  (bases 1 to 717)
+  AUTHORS   Baumgart,L., Mather,W. and Hasty,J.
+  TITLE     Synchronized DNA cycling across a bacterial population
+  JOURNAL   Nat. Genet. (2017) In press
+   PUBMED   28692067
+  REMARK    Publication Status: Available-Online prior to print
+REFERENCE   2  (bases 1 to 717)
+  AUTHORS   Baumgart,L.
+  TITLE     Direct Submission
+  JOURNAL   Submitted (28-APR-2017) Biology, University of California, San
+            Diego, 9500 Gilman Drive, La Jolla, CA 92093, USA
+FEATURES             Location/Qualifiers
+     source          1..717
+                     /organism="Synthetic plasmid"
+                     /mol_type="other DNA"
+                     /db_xref="taxon:1440148"
+                     /lab_host="Escherichia coli"
+                     /note="activator plasmid"
+     CDS             1..717
+                     /codon_start=1
+                     /transl_table=11
+                     /product="sfGFP"
+                     /protein_id="ASL68970.1"
+                     /translation="MSKGEELFTGVVPILVELDGDVNGHKFSVRGEGEGDATNGKLTL
+                     KFICTTGKLPVPWPTLVTTLTYGVQCFSRYPDHMKRHDFFKSAMPEGYVQERTISFKD
+                     DGTYKTRAEVKFEGDTLVNRIELKGIDFKEDGNILGHKLEYNFNSHNVYITADKQKNG
+                     IKANFKIRHNVEDGSVQLADHYQQNTPIGDGPVLLPDNHYLSTQSVLSKDPNEKRDHM
+                     VLLEFVTAAGITHGMDELYK"
+ORIGIN
+        1 atgagcaaag gagaagaact tttcactgga gttgtcccaa ttcttgttga attagatggt
+       61 gatgttaatg ggcacaaatt ttctgtccgt ggagagggtg aaggtgatgc tacaaacgga
+      121 aaactcaccc ttaaatttat ttgcactact ggaaaactac ctgttccgtg gccaacactt
+      181 gtcactactc tgacctatgg tgttcaatgc ttttcccgtt atccggatca catgaaacgg
+      241 catgactttt tcaagagtgc catgcccgaa ggttatgtac aggaacgcac tatatctttc
+      301 aaagatgacg ggacctacaa gacgcgtgct gaagtcaagt ttgaaggtga tacccttgtt
+      361 aatcgtatcg agttaaaggg tattgatttt aaagaagatg gaaacattct tggacacaaa
+      421 ctcgagtaca actttaactc acacaatgta tacatcacgg cagacaaaca aaagaatgga
+      481 atcaaagcta acttcaaaat tcgccacaac gttgaagatg gttccgttca actagcagac
+      541 cattatcaac aaaatactcc aattggcgat ggccctgtcc ttttaccaga caaccattac
+      601 ctgtcgacac aatctgtcct ttcgaaagat cccaacgaaa agcgtgacca catggtcctt
+      661 cttgagtttg taactgctgc tgggattaca catggcatgg atgagctcta caaataa
+//
+

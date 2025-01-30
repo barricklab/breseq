@@ -8,7 +8,7 @@
  LICENSE AND COPYRIGHT
  
  Copyright (c) 2008-2010 Michigan State University
- Copyright (c) 2011-2017 The University of Texas at Austin
+ Copyright (c) 2011-2022 The University of Texas at Austin
  
  breseq is free software; you can redistribute it and/or modify it under the
  terms the GNU General Public License as published by the Free Software
@@ -22,6 +22,7 @@
 #include "libbreseq/settings.h"
 #include "libbreseq/reference_sequence.h"
 #include "libbreseq/genome_diff.h"
+
 namespace breseq
 {
 
@@ -157,35 +158,7 @@ extern const char* ALIGN_LEFT;
 /*-----------------------------------------------------------------------------
  * HTML FILES 
  *-----------------------------------------------------------------------------*/
-// Convenience structure for passing many options
-struct MutationTableOptions {
-  
-  MutationTableOptions(const Settings& _settings)
-  : repeat_header(0)
-  , legend_row(false)
-  , force_show_sample_headers(false)
-  , one_ref_seq(false)
-  , force_frequencies_for_one_reference(false)
-  , shade_frequencies(false)
-  , detailed(false)
-  , max_nucleotides_to_show_in_tables(_settings.max_nucleotides_to_show_in_tables)
-  , no_javascript(_settings.no_javascript)
-  {}
-  
-  
-  
-  uint32_t repeat_header;
-  bool legend_row;
-  bool force_show_sample_headers;
-  bool one_ref_seq;
-  bool force_frequencies_for_one_reference;
-  bool shade_frequencies;
-  bool detailed;
-  vector<string> gd_name_list_ref;
-  string relative_link;
-  uint32_t max_nucleotides_to_show_in_tables;
-  bool no_javascript;
-};
+
   
 void html_index(const string& file_name, const Settings& settings, Summary& summary,
                 cReferenceSequences& ref_seq_info, cGenomeDiff& gd);
@@ -215,9 +188,9 @@ struct Html_Mutation_Table_String : public string
     //!Constructors
     Html_Mutation_Table_String(
                                const Settings& settings,
-                               cGenomeDiff& gd,
-                               diff_entry_list_t& list_ref,
-                               MutationTableOptions& options
+                               const cGenomeDiff& gd,
+                               const diff_entry_list_t& list_ref,
+                               const MutationTableOptions& options
                                );
     
    
@@ -267,13 +240,13 @@ string html_copy_number_table_string(
                                      );
 
 
-string html_genome_diff_item_table_string(const Settings& settings, cGenomeDiff& gd, 
-                                        diff_entry_list_t& list_ref);
+string html_genome_diff_item_table_string(const Settings& settings, const cGenomeDiff& gd, diff_entry_list_t& list_ref);
 string html_deletion_coverage_values_table_string(const Settings& settings, cReferenceSequences& ref_seq_info, Summary& summary);
 /*-----------------------------------------------------------------------------
  * Helper Functions For Tables 
  *-----------------------------------------------------------------------------*/
-string formatted_mutation_annotation(const cDiffEntry& mut);
+string text_formatted__mutation_annotation(const cDiffEntry& mut);
+string html_formatted_mutation_annotation(const cDiffEntry& mut);
 string html_format_repeat_name(const string& in_repeat_name);
 string to_underline_red_codon(const string& _codon_ref_seq, const string& _codon_position);
 string decode_reject_reason(const string & reject);
@@ -285,9 +258,14 @@ string decode_reject_reason(const string & reject);
 // sub draw_coverage
 void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenomeDiff& gd);
   
+// add "PRINTABLE_*" entries to mutation (except PRINTABLE_GENE which is added in cReferenceSequence)
+void add_text_fields_to_mutation(cDiffEntry& mut, const MutationTableOptions& options);
+
 // add "HTML_*" entries to mutation (except HTML_GENE which is added in cReferenceSequence)
-void add_html_fields_to_mutation(cDiffEntry& mut, MutationTableOptions& options);
-  
+void add_html_fields_to_mutation(cDiffEntry& mut, const MutationTableOptions& options);
+
+
+
 /*-----------------------------------------------------------------------------
  *  Create_Evidence_Files
  *-----------------------------------------------------------------------------*/  
@@ -302,18 +280,27 @@ public:
   diff_entry_ptr_t parent_item;
 };  
   
-struct cOutputEvidenceFiles
+class cOutputEvidenceFiles
 {
-  cOutputEvidenceFiles(const Settings& settings, cGenomeDiff& gd);
+public:
+  cOutputEvidenceFiles(const Settings& settings, const cGenomeDiff& gd);
   
   vector<cOutputEvidenceItem> evidence_list;
   
-  private:
+  static void html_evidence_file_thread_helper(int id, const cOutputEvidenceFiles& oef, const Settings& settings, const cGenomeDiff& gd, cOutputEvidenceItem& e) {
+    (void) id;
+    cerr << "Creating evidence file: " + e[FILE_NAME] << endl;
+    oef.html_evidence_file(settings, gd, e);
+  }
+  
+private:
   
     void add_evidence(const string& file_name, diff_entry_ptr_t item,
                       diff_entry_ptr_t parent_item, map<string,string>& fields);
-    void html_evidence_file(const Settings& settings, cGenomeDiff& gd, cOutputEvidenceItem& item);
+    void html_evidence_file(const Settings& settings, const cGenomeDiff& gd, cOutputEvidenceItem& item) const;
 };
+
+
   
 }// end output namespace
 }// end breseq namespace

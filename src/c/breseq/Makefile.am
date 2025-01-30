@@ -9,8 +9,8 @@
 ##
 ## Copyright (c) 2010 Michigan State University
 ##
-## breseq is free software; you can redistribute it and/or modify it under the terms the 
-## GNU General Public License as published by the Free Software Foundation; either 
+## breseq is free software; you can redistribute it and/or modify it under the terms the
+## GNU General Public License as published by the Free Software Foundation; either
 ## version 1, or (at your option) any later version.
 ##
 ###
@@ -19,7 +19,8 @@
 BRESEQDATADIR= $(DESTDIR)$(datadir)/$(PACKAGE_NAME)
 BRESEQRELATIVEDATADIR= $(BIN_TO_DATA_RELATIVE_PATH)/$(PACKAGE_NAME)
 
-AM_CPPFLAGS = -O2 -std=c++11 -I$(top_srcdir)/$(LIBBAM) -I$(top_srcdir)/$(HTSLIB) -I$(top_srcdir)/aux_build -DDATADIR=\"$(BRESEQRELATIVEDATADIR)/\"
+# If configured for static libz linking, add include path here
+AM_CPPFLAGS = -O3 -std=c++11 $(STATIC_LIBZ_INC) -I$(top_srcdir)/$(LIBBAM) -I$(top_srcdir)/$(HTSLIB) -I$(top_srcdir)/aux_build -DDATADIR=\"$(BRESEQRELATIVEDATADIR)/\"
 
 noinst_LTLIBRARIES = libbreseq.la
 libbreseq_la_SOURCES = \
@@ -48,6 +49,7 @@ libbreseq_la_SOURCES = \
 	resolve_alignments.cpp \
 	samtools_commands.cpp \
 	settings.cpp \
+	soft_clipping.cpp \
 	summary.cpp \
 	libbreseq/alignment.h \
 	libbreseq/alignment_output.h \
@@ -56,6 +58,8 @@ libbreseq_la_SOURCES = \
 	libbreseq/candidate_junctions.h \
 	libbreseq/chisquare.h \
 	libbreseq/common.h \
+	libbreseq/counted_ptr.h \
+	libbreseq/ctpl_stl.h \
 	libbreseq/contingency_loci.h \
 	libbreseq/coverage_distribution.h \
 	libbreseq/coverage_output.h \
@@ -78,13 +82,15 @@ libbreseq_la_SOURCES = \
 	libbreseq/resolve_alignments.h \
 	libbreseq/samtools_commands.h \
 	libbreseq/settings.h \
+	libbreseq/soft_clipping.h \
 	libbreseq/storable.h \
-	libbreseq/summary.h 
+	libbreseq/summary.h
 libbreseq_la_LIBADD = $(UNWIND_LIBS) $(top_builddir)/$(HTSLIB)/libhts.la $(top_builddir)/$(LIBBAM)/libbam.la
 
-LDADD = libbreseq.la
+# If configured for static libz linking, add full path to libz.a to force static linking
+LDADD = libbreseq.la $(STATIC_LIBZ_LIB)
 
-bin_PROGRAMS = breseq gdtools 
+bin_PROGRAMS = breseq gdtools
 breseq_SOURCES = breseq_cmdline.cpp
 gdtools_SOURCES = gdtools_cmdline.cpp
 

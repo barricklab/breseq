@@ -8,7 +8,7 @@ AUTHORS
 LICENSE AND COPYRIGHT
 
   Copyright (c) 2008-2010 Michigan State University
-  Copyright (c) 2011-2017 The University of Texas at Austin
+  Copyright (c) 2011-2022 The University of Texas at Austin
 
   breseq is free software; you can redistribute it and/or modify it under the  
   terms the GNU General Public License as published by the Free Software 
@@ -106,6 +106,7 @@ namespace breseq {
   /*
 	 Title   : prepare_junctions
 	 Function: Adds fields to junction items in preparation for mutation prediction
+             And mark junctions that are near the ends of contigs
    */
   void MutationPredictor::prepare_junctions(Settings& settings, Summary& summary, cGenomeDiff& gd)
   {
@@ -209,6 +210,9 @@ namespace breseq {
 		// (2) there is no junction, but both ends of the deletion are in repeat sequences
 		// (3) there is a junction between unique sequence and a repeat element
     
+    if (verbose)
+      cout << "DEL PREDICTION" << endl;
+    
     for(diff_entry_list_t::iterator mc_it = mc.begin(); mc_it != mc.end(); mc_it++)
     {
       cDiffEntry& mc_item = **mc_it;
@@ -249,10 +253,17 @@ namespace breseq {
 			///
 			// (1) there is a junction that exactly crosses the deletion boundary 
 			///
+      ///
+      if (verbose)
+        cout << "(1) Checking for JC with same boundaries as MC." << endl;
+      
       bool done = false;
 			for(diff_entry_list_t::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) //JC
 			{
 				cDiffEntry& jc_item = **jc_it;
+        
+        if (verbose)
+          cout << "  " << jc_item << endl;
         
 				if (jc_item["side_1_seq_id"] != mut["seq_id"] || jc_item["side_2_seq_id"] != mut["seq_id"])  {
           continue;  
@@ -335,6 +346,9 @@ namespace breseq {
 			///
 			// (2) there is no junction, but both ends of the deletion are in different copies of the same repeat sequence
 			///
+      ///
+      if (verbose)
+        cout << "(2) Checking for MC between two repeats." << endl;
       
 			// Then we will adjust the coordinates to remove...
 			if  (
@@ -448,6 +462,10 @@ namespace breseq {
 			///
 			// (3) there is a junction between unique sequence and a repeat element
 			///
+      ///
+      if (verbose)
+        cout << "(3) Checking for MC between unique sequence and repeat." << endl;
+     
 			cFeatureLocation& r = (r1_pointer != NULL) ? *r1_pointer : *r2_pointer;
 			int32_t redundant_deletion_side = (r1_pointer != NULL) ? -1 : +1;
 			int32_t unique_deletion_strand = -redundant_deletion_side;
@@ -543,9 +561,15 @@ namespace breseq {
     // (4) the reference is circular, there is missing coverage at one or both ends,
     //     AND there is junction connecting those ends
     
+    if (verbose)
+      cout << "(4) Checking for MC crossing circular genome ends." << endl;
+    
     for(diff_entry_list_t::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) //JC
     {
       cDiffEntry& jc_item = **jc_it;
+      
+      if (verbose)
+        cout << jc_item << endl;
       
       // They have to be for the same seq_id
       if (jc_item["side_1_seq_id"] != jc_item["side_2_seq_id"] )  {
@@ -570,7 +594,7 @@ namespace breseq {
       int32_t overlap = n(jc_item[OVERLAP]);
       if (overlap > 0) continue;
       
-      //This is not
+      //This is not necessarily true
       //ASSERT(side_1_position <= side_2_position, "Junction has side_1_position > side_2_position\n" + jc_item.as_string());
       
       if (! ((side_1_strand == +1) &&  (side_2_strand == -1)) ) {
@@ -601,6 +625,14 @@ namespace breseq {
           end_seq_mc = &mc_item;
       }
       
+      
+      if (verbose) {
+        if (start_seq_mc)
+          cout << "START_SEQ_MC" << endl << *start_seq_mc << endl;
+        if (end_seq_mc)
+          cout << "END_SEQ_MC" << endl << *end_seq_mc << endl;
+      }
+      
       // We have to have found MC on both ends unless the junctions are flush to the ends
       if (!start_seq_mc && (side_1_position != 1))
           continue;
@@ -623,6 +655,9 @@ namespace breseq {
         end_seq_mc_start_start_range_1 = end_seq_mc_start_end_range_1 - n((*end_seq_mc)[START_RANGE]);
       }
       
+      if (verbose)
+        cout << "Passed Checks" << endl;
+      
       if (
           (!start_seq_mc || ((side_1_position-1 >= start_seq_mc_end_start_range_1) && (side_1_position-1 <= start_seq_mc_end_end_range_1)) )
        && (!end_seq_mc || ((side_2_position+1 >= end_seq_mc_start_start_range_1) && (side_2_position+1 <= end_seq_mc_start_end_range_1)) )
@@ -639,6 +674,9 @@ namespace breseq {
         // If there is unique read sequence, then it is a substitution
         if ( jc_item.entry_exists(UNIQUE_READ_SEQUENCE)) {
           
+          if (verbose)
+            cout << "Predicting SUB" << endl;
+          
           mut._type = SUB;
 
           // If the size is zero then it wil be marked as a normal circular read later,
@@ -654,6 +692,10 @@ namespace breseq {
           
         // Otherwise it is a deletion
         } else {
+          
+          if (verbose)
+            cout << "Predicting DEL" << endl;
+          
           mut._type = DEL;
 
           // If the size is zero then it wil be marked as a normal circular read later,
@@ -677,7 +719,11 @@ namespace breseq {
         gd.add(mut);
         
         // Not really necessary to delete
-        jc.erase(jc_it);
+        
+        if (verbose)
+          cout << "Deleting JC" << endl;
+        
+        jc_it = jc.erase(jc_it);
         jc_it--;
       }
     }
@@ -688,6 +734,18 @@ namespace breseq {
   {
     (void)summary;
     bool verbose = false;
+    
+    // Create read counters in a way that they will automatically be cleaned up
+    counted_ptr<junction_read_counter> reference_jrc(NULL);
+    if (file_exists(settings.reference_bam_file_name.c_str())) {
+      reference_jrc = counted_ptr<junction_read_counter>(new junction_read_counter(settings.reference_bam_file_name, settings.reference_fasta_file_name, settings.verbose));
+    }
+
+    counted_ptr<junction_read_counter> junction_jrc(NULL);
+    if (file_exists(settings.junction_bam_file_name.c_str()) && file_exists(settings.candidate_junction_fasta_file_name.c_str())) {
+      junction_jrc = counted_ptr<junction_read_counter>(new junction_read_counter(settings.junction_bam_file_name, settings.candidate_junction_fasta_file_name, settings.verbose));
+    }
+    
     
     // Prepare the lists
     for(diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++) //JC
@@ -1170,18 +1228,18 @@ namespace breseq {
         // @JEB 08-06-13 
         // Reassign read counts with required overlap to avoid counting reads that go into the
         // target site duplication from counting against the IS element (giving a non-100% value).
-
+        // This value must be positive...
         
-        int32_t require_overlap = n(mut["duplication_size"]);
+        int32_t duplication_require_overlap = max(n(mut["duplication_size"]), 0);
         
         if (verbose) cerr << "Before 1:" << endl << j1 << endl;
-        assign_one_junction_read_counts(settings, summary, j1, require_overlap);
-        j1["read_count_offset"] = mut["duplication_size"];
+        j1["read_count_offset"] = to_string(duplication_require_overlap);
+        assign_one_junction_read_counts(settings, summary, j1, reference_jrc, junction_jrc);
         if (verbose) cerr << "After 1:" << endl << j1 << endl;
         
         if (verbose) cerr << "Before 2:" << endl << j2 << endl;
-        assign_one_junction_read_counts(settings, summary, j2, require_overlap);
-        j2["read_count_offset"] = mut["duplication_size"];
+        j2["read_count_offset"] = to_string(duplication_require_overlap);
+        assign_one_junction_read_counts(settings, summary, j2, reference_jrc, junction_jrc);
         if (verbose) cerr << "After 2:" << endl << j2 << endl;
         
         if (!settings.polymorphism_prediction) { // consensus mode
@@ -1190,10 +1248,10 @@ namespace breseq {
           if ( (j1[PREDICTION]!="consensus") || (j1[PREDICTION]!="consensus") ) {
             
             // heartbreakingly, we have to undo the changes that we just did
-            assign_one_junction_read_counts(settings, summary, j1);
             j1.erase("read_count_offset");
-            assign_one_junction_read_counts(settings, summary, j2);
+            assign_one_junction_read_counts(settings, summary, j1, reference_jrc, junction_jrc);
             j2.erase("read_count_offset");
+            assign_one_junction_read_counts(settings, summary, j2, reference_jrc, junction_jrc);
             continue;
           }
           
@@ -1324,14 +1382,15 @@ namespace breseq {
     
   }
   
-  void MutationPredictor::predictJCtoINSorSUBorDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc)
+  void MutationPredictor::predictJCtoINSorSUBorDEL(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc, bool use_redundant_sides)
   {
     (void)summary;
     (void)mc;
     bool verbose = false;
     
-    // variables pulled from the settings
-    int32_t read_length_avg = static_cast<int32_t>(summary.sequence_conversion.read_length_avg);
+    // variables pulled from the summary
+    // JEB 2022-11-19 changed to use kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation below
+    // int32_t read_length_avg = static_cast<int32_t>(summary.sequence_conversion.read_length_avg);
     
     // @JEB 03-09-2014 Changed this section to produce INS and DEL instead of AMP,
     //                 when the mutation size is less than or equal to threshold in settings. 
@@ -1340,6 +1399,9 @@ namespace breseq {
 		{
 			cDiffEntry& j = **jc_it;
       
+      if (verbose) {
+        cout << j.as_string() << endl;
+      }
       //cout << j["side_1_seq_id"] << " " << j["side_2_seq_id"] << endl;
       //cout << j["side_1_strand"] << " " << j["side_2_strand"] << endl;
       
@@ -1351,9 +1413,12 @@ namespace breseq {
       int32_t side_1_strand = n(j["side_1_strand"]);
       int32_t side_2_strand = n(j["side_2_strand"]);
       
-      // to be safe about making predictions, neither can be ambiguous 
-      if ( (n(j["side_1_redundant"]) == 1) || (n(j["side_2_redundant"]) == 1) )
-        continue;
+      // to be safe about making predictions, neither can be ambiguous, unless we're in the pass
+      // when we check for ignoring indels
+      if (!use_redundant_sides) {
+        if ( (n(j["side_1_redundant"]) == 1) || (n(j["side_2_redundant"]) == 1) )
+          continue;
+      }
       
       if (side_1_strand == side_2_strand)
 				continue;
@@ -1371,7 +1436,7 @@ namespace breseq {
 			// Special case of circular chromosome
 			if ( (side_1_position == 1) && ( side_2_position== ref_seq_info[ref_seq_info.seq_id_to_index(j["side_2_seq_id"])].m_length ) )
 			{
-				j["circular_chromosome"] = "1";
+				j[IGNORE] = "CIRCULAR_CHROMOSOME";
 				continue;
 			}
       
@@ -1395,9 +1460,9 @@ namespace breseq {
       if (side_1_strand == -1 )
         size = side_1_position - side_2_position + 1;
       
-      // Insertion or deletion must be smaller than read length to be predicted
-      // by this evidence alone.
-      if (abs(size) > read_length_avg) 
+      // Insertion or deletion must be smaller than this setting to be predicted by this evidence alone.
+      // @JEB 2022-11-19 changed from being dependent on read length to this constant
+      if (abs(size) > kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation)
         continue;
       
       // At this point, we have committed to adding a mutation...
@@ -1541,16 +1606,11 @@ namespace breseq {
 
   }
   
-  void MutationPredictor::predictRAtoSNPorDELorINSorSUB(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc)
+  void MutationPredictor::predictRAtoSNPorDELorINSorSUB(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& ra, diff_entry_list_t& mc)
   {
     (void)summary;
     (void)mc;
-    (void)jc;
     bool verbose = false;
-    
-    // Pull settings variables    
-    vector<gd_entry_type> ra_types = make_vector<gd_entry_type>(RA);
-    diff_entry_list_t ra = gd.get_list(ra_types);
     
 		///
 		// Ignore RA that overlap DEL, MC unless they are user
@@ -1586,22 +1646,22 @@ namespace breseq {
         }
         if (next_ra) continue;
         
-        for(diff_entry_list_t::iterator mc_it = mc.begin(); mc_it != mc.end(); mc_it++) //MC
-        {
-          cDiffEntry& mc_item = **mc_it;
-          
-          if (ra_item.located_within(mc_item))
+        // @JEB Unless an option is supplied, mark anything that overlaps MC as 'deleted' so it will be ignored
+        if (!settings.call_mutations_overlapping_missing_coverage) {
+          for(diff_entry_list_t::iterator mc_it = mc.begin(); mc_it != mc.end(); mc_it++) //MC
           {
-            ra_item["deleted"] = "1";
-            break;
+            cDiffEntry& mc_item = **mc_it;
+            
+            if (ra_item.located_within(mc_item))
+            {
+              ra_item["deleted"] = "1";
+              break;
+            }
           }
         }
         
       }
     }
-    
-    // Don't use rejected evidence
-    ra.remove_if(cDiffEntry::rejected_and_not_user_defined());
     
 		ra.sort(MutationPredictor::sort_by_pos);
     
@@ -1800,6 +1860,74 @@ namespace breseq {
 		}
 
   }
+
+  void MutationPredictor::filter_JC_indel_evidence(Settings& settings, Summary& summary, cGenomeDiff& gd, diff_entry_list_t& jc, diff_entry_list_t& mc)
+  {
+    (void) summary;
+    
+    // Filter out JC that predict hompolymer indels and/or polymorphisms
+    // Also remove junctions that predicted for nanopore data
+    
+    cGenomeDiff junction_indel_gd;
+    predictJCtoINSorSUBorDEL(settings, summary, junction_indel_gd, jc, mc, true);
+    normalize_and_annotate_tandem_repeat_mutations(settings, summary, junction_indel_gd);
+
+      
+    vector<gd_entry_type> ins_del_types = make_vector<gd_entry_type>(INS)(DEL);
+    diff_entry_list_t jc_prediction = junction_indel_gd.get_list(ins_del_types);
+    for (diff_entry_list_t::iterator it=jc_prediction.begin(); it != jc_prediction.end(); it++) {
+      diff_entry_ptr_t& mut = *it;
+      
+      // There should be only one evidence item and it better be a JC
+      ASSERT(mut->_evidence.size() == 1, "Expected only one JC evidence item supporting INS/DEL mutation.");
+      diff_entry_ptr_t ev = gd.find_by_id(mut->_evidence[0]);
+      ASSERT(ev->_type == JC, "Expected only one JC evidence item supporting INS/DEL mutation.");
+      
+      // Figure out if it is a polymorphism or not...
+      //cout << mut->as_string() << endl;
+      //cout << ev->as_string() << endl;
+      
+      // Only check repeats of length one
+      if (settings.consensus_reject_indel_homopolymer_length || settings.polymorphism_reject_indel_homopolymer_length) {
+        
+        if (mut->entry_exists("repeat_length") && ((*mut)["repeat_length"] == "1")) {
+          
+          ASSERT(mut->entry_exists("repeat_ref_copies"), "Expected 'repeat_ref_copies' field for JC evidence for INS/DEL.");
+          uint32_t repeat_ref_copies = n((*mut)["repeat_ref_copies"]);
+          
+          ASSERT(ev->entry_exists("prediction"), "Expected 'prediction' field for JC evidence for INS/DEL.");
+          
+          bool reject = false;
+          if ((*ev)["prediction"] == "consensus") {
+            reject = (repeat_ref_copies >= settings.consensus_reject_indel_homopolymer_length);
+          } else if ((*ev)["prediction"] == "polymorphism") {
+            reject = (repeat_ref_copies >= settings.polymorphism_reject_indel_homopolymer_length);
+          } else if ((*ev)["prediction"] != "unknown") {
+            ERROR("Expected 'prediction' field for JC evidence for INS/DEL to be 'consensus', 'polymorphism', or 'unknown'\n"+ev->as_string());
+          }
+          
+          // Add reject reasons to the JC entries, so that they will not be used below to re-predict these mutations
+          if (reject) {
+            cout << "rejected!" << endl;
+            ev->add_reject_reason("INDEL_HOMOPOLYMER");
+          }
+        }
+      }
+      
+      // If the 'polymorphism_no_indels' option is set:
+      // also hide any polymorphic indels (prediction=polymorphism)
+      // and any with undetermined frequencies (prediction=unknown).
+      // It's possible we should add SUB mutation here?
+      
+      if (settings.polymorphism_no_indels) {
+        ASSERT(ev->entry_exists("prediction"), "Expected 'prediction' field for JC evidence for INS/DEL.");
+        if ( ((*ev)["prediction"] == "polymorphism") || ((*ev)["prediction"] == "unknown") )
+          ev->add_reject_reason("POLYMORPHIC_INDEL");
+      }
+    }
+  }
+
+
   
   void MutationPredictor::remove_mutations_on_deleted_reference_sequences(Settings& settings, Summary& summary, cGenomeDiff& gd)
   {
@@ -1813,6 +1941,150 @@ namespace breseq {
 
     }
   }
+
+
+  void MutationPredictor::ignore_evidence_near_contig_ends(Settings& settings, Summary& summary, cGenomeDiff& gd)
+  {
+    (void) summary;
+    
+    int32_t contig_end_distance = settings.ignore_within_this_multiple_of_average_read_length_of_contig_end
+      * static_cast<int32_t>(round(summary.sequence_conversion.read_length_avg));
+    
+    // RA evidence
+    vector<gd_entry_type> ra_types = make_vector<gd_entry_type>(RA);
+    diff_entry_list_t ra = gd.get_list(ra_types);
+    
+    for (diff_entry_list_t::iterator ra_it=ra.begin(); ra_it!=ra.end(); ra_it++)
+    {
+      cDiffEntry& ra = **ra_it;
+      
+      if (!ref_seq_info[ra[SEQ_ID]].m_is_contig)
+        continue;
+      
+      int32_t seq_length = ref_seq_info.get_sequence_length(ra[SEQ_ID]);
+
+      bool near_contig_end = false;
+      if (n(ra[POSITION]) <= contig_end_distance)
+        near_contig_end = true;
+          
+      if (n(ra[POSITION]) >= seq_length-contig_end_distance)
+        near_contig_end = true;
+      
+      if (near_contig_end) {
+        ra[IGNORE] = "CONTIG_END";
+      }
+    }
+    
+    // MC evidence
+    vector<gd_entry_type> mc_types = make_vector<gd_entry_type>(MC);
+    diff_entry_list_t mc = gd.get_list(mc_types);
+    
+    for (diff_entry_list_t::iterator mc_it=mc.begin(); mc_it!=mc.end(); mc_it++)
+    {
+      cDiffEntry& mc = **mc_it;
+      
+      if (!ref_seq_info[mc[SEQ_ID]].m_is_contig)
+        continue;
+      
+      int32_t seq_length = ref_seq_info.get_sequence_length(mc[SEQ_ID]);
+
+      bool near_contig_end = false;
+      if (n(mc[START]) <= contig_end_distance)
+        near_contig_end = true;
+          
+      if (n(mc[END]) + n(mc[END_RANGE]) >= seq_length-contig_end_distance)
+        near_contig_end = true;
+      
+      if (near_contig_end) {
+        mc[IGNORE] = "CONTIG_END";
+      }
+    }
+    
+    // JC evidence
+    vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
+    diff_entry_list_t jc = gd.get_list(jc_types);
+    
+    for (diff_entry_list_t::iterator jc_it=jc.begin(); jc_it!=jc.end(); jc_it++)
+    {
+      cDiffEntry& j = **jc_it;
+      //cout << j.as_string() << endl;
+      
+      if (!ref_seq_info[j[SIDE_1_SEQ_ID]].m_is_contig)
+        continue;
+      if (!ref_seq_info[j[SIDE_2_SEQ_ID]].m_is_contig)
+        continue;
+      
+      int32_t side_1_seq_length = ref_seq_info.get_sequence_length(j[SIDE_1_SEQ_ID]);
+      int32_t side_2_seq_length = ref_seq_info.get_sequence_length(j[SIDE_2_SEQ_ID]);
+
+      bool side_1_near_contig_end = false;
+      if (n(j[SIDE_1_POSITION]) <= contig_end_distance)
+        side_1_near_contig_end = true;
+          
+      if (n(j[SIDE_1_POSITION]) >= side_1_seq_length-contig_end_distance)
+        side_1_near_contig_end = true;
+
+      bool side_2_near_contig_end = false;
+      if (n(j[SIDE_2_POSITION]) <= contig_end_distance)
+        side_2_near_contig_end = true;
+          
+      if (n(j[SIDE_2_POSITION]) >= side_2_seq_length-contig_end_distance)
+        side_2_near_contig_end = true;
+      
+      if (side_1_near_contig_end && side_2_near_contig_end) {
+        j[IGNORE] = "CONTIG_END";
+      }
+    }
+    
+  }
+
+
+  void MutationPredictor::remove_mutations_near_contig_ends(Settings& settings, Summary& summary, cGenomeDiff& gd)
+  {
+    
+    (void) summary;
+    
+    int32_t contig_end_distance = settings.ignore_within_this_multiple_of_average_read_length_of_contig_end
+      * static_cast<int32_t>(round(summary.sequence_conversion.read_length_avg));
+    
+    diff_entry_list_t* mutable_entry_list = gd.get_mutable_list_ptr();
+
+    diff_entry_list_t::iterator it=mutable_entry_list->begin();
+    bool advance_it = true;
+    
+    while (it != mutable_entry_list->end())
+    {
+      advance_it = true;
+
+      cDiffEntry& de = **it;
+      if (de.is_mutation()) {
+        
+        if (ref_seq_info[de[SEQ_ID]].m_is_contig) {
+          
+          int32_t seq_length = ref_seq_info.get_sequence_length(de[SEQ_ID]);
+          
+          bool near_contig_end = false;
+          if (de.get_reference_coordinate_start() <= contig_end_distance)
+            near_contig_end = true;
+          
+          if (de.get_reference_coordinate_end() >= seq_length-contig_end_distance)
+            near_contig_end = true;
+          
+          
+          if (near_contig_end) {
+            it = gd.remove(it);
+            advance_it = false;
+          }
+        }
+      }
+      
+      if (advance_it) ++it;
+    }
+    
+  }
+
+
+
   
   
   // Normalizes INS/DEL mutations by shifting them to the highest coordinates possible
@@ -2086,11 +2358,23 @@ namespace breseq {
 	{
     bool verbose = false; // for debugging
     
+    // Setup
+    vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
+    vector<gd_entry_type> mc_types = make_vector<gd_entry_type>(MC);
+
+    
     // This checks for using a bad reference and warns
     {
       vector<gd_entry_type> ev_types = make_vector<gd_entry_type>(MC)(RA)(JC)(CN);
       diff_entry_list_t ev = gd.get_list(ev_types);
-      ev.remove_if(cDiffEntry::field_exists("reject"));
+      
+      ev.remove_if(cDiffEntry::field_exists(REJECT));
+      ev.remove_if(cDiffEntry::field_exists(IGNORE));
+
+      // Also remove consensus reject RA, which may be not rejected in CONSENSUS mode
+      // There are many of these for MinION data.
+      ev.remove_if(cDiffEntry::field_exists(CONSENSUS_REJECT));
+      
       uint64_t num_evidence_items = ev.size();
       uint64_t total_ref_seq_length = summary.sequence_conversion.total_reference_sequence_length;
       double maximum_sequence_divergence = static_cast<double>(num_evidence_items)*100/static_cast<double>(total_ref_seq_length);
@@ -2099,6 +2383,20 @@ namespace breseq {
       }
     }
     
+
+    // Do some filtering if certain options are in play
+    if (settings.polymorphism_no_indels || settings.consensus_reject_indel_homopolymer_length || settings.polymorphism_reject_indel_homopolymer_length) {
+      cGenomeDiff junction_indel_gd;
+      diff_entry_list_t jc = gd.get_list(jc_types);
+      jc.remove_if(cDiffEntry::ignored_and_not_user_defined());
+
+      diff_entry_list_t mc = gd.get_list(mc_types);
+      mc.remove_if(cDiffEntry::ignored_and_not_user_defined());
+      
+      filter_JC_indel_evidence(settings, summary, gd, jc, mc);
+    }
+    
+    ignore_evidence_near_contig_ends(settings, summary, gd);
     
 		///
 		//  Preprocessing of JC evidence
@@ -2115,15 +2413,14 @@ namespace breseq {
     ///
     
     // Do not use rejected junctions unless they are user-defined
-    vector<gd_entry_type> jc_types = make_vector<gd_entry_type>(JC);
 		diff_entry_list_t jc = gd.get_list(jc_types);
-    
+    jc.remove_if(cDiffEntry::ignored_and_not_user_defined());
+
     // Do not use rejected missing coverage evidence
-    vector<gd_entry_type> mc_types = make_vector<gd_entry_type>(MC);
 		diff_entry_list_t mc = gd.get_list(mc_types);
-    mc.remove_if(cDiffEntry::field_exists("reject"));
-    
-    
+    mc.remove_if(cDiffEntry::ignored_and_not_user_defined());
+    mc.remove_if(cDiffEntry::rejected_and_not_user_defined());
+
     ///
     // evidence JC + JC = MOB mutation
     ///
@@ -2163,8 +2460,13 @@ namespace breseq {
 		///
 		// evidence RA => SNP, DEL, INS, SUB
 		///
+    vector<gd_entry_type> ra_types = make_vector<gd_entry_type>(RA);
+    diff_entry_list_t ra = gd.get_list(ra_types);
+    ra.remove_if(cDiffEntry::rejected_and_not_user_defined());
+    ra.remove_if(cDiffEntry::ignored_and_not_user_defined());
+    
     cerr << "  Predicting small indels and substitutions from alignments..." << endl;
-    predictRAtoSNPorDELorINSorSUB(settings, summary, gd, jc, mc);
+    predictRAtoSNPorDELorINSorSUB(settings, summary, gd, ra, mc);
     
     ///
     //  Check for completely deleted reference sequences
@@ -2175,6 +2477,12 @@ namespace breseq {
     //        the deletion of the entire fragment and no other muts on that reference
     ///
     remove_mutations_on_deleted_reference_sequences(settings, summary, gd);
+    
+    ///
+    // Check for mutations predicted by a JC and by a combination of RA evidence
+    ///
+     cerr << "  Reconciling mutation predictions..." << endl;
+    gd.reconcile_mutations_predicted_two_ways();
     
     cerr << "  Making final adjustments to mutations..." << endl;
     normalize_and_annotate_tandem_repeat_mutations(settings, summary, gd);
@@ -2214,8 +2522,13 @@ namespace breseq {
       }
     }
     
-    
+    // Need to remove any mutations that overlap contig ends
+    // This catches SUB from JC evidence.
+    remove_mutations_near_contig_ends(settings, summary, gd);
+    // 32  189  51 bp→32 bp  57.0%  intergenic (–/+224)  – / ← INEPCCPE_03363  –/tRNA‑Ala(tgc)
 
+    
+    
     // In consensus mode, polish up the insert_position fields of INS predictions
     // so that if there is only one, then insert_position=1 is removed.
     if (!settings.polymorphism_prediction) {
@@ -3131,9 +3444,10 @@ namespace breseq {
       column_headers.push_back("changed_bp");
       column_headers.push_back("deleted_bp");
       column_headers.push_back("inserted_bp");
+      column_headers.push_back("final_size_bp");
     }
-    column_headers.push_back("called_bp");
-    column_headers.push_back("total_bp");
+    column_headers.push_back("reference_bp");
+    column_headers.push_back("called_reference_bp");
     
     vector<string> header_snp_types = prefix_each_in_vector(snp_types, "base_substitution.");
     column_headers.insert(column_headers.end(),header_snp_types.begin(), header_snp_types.end());
@@ -3404,9 +3718,10 @@ namespace breseq {
         this_columns.push_back(gd.get_breseq_data("BASES-CHANGED"));
         this_columns.push_back(gd.get_breseq_data("BASES-DELETED"));
         this_columns.push_back(gd.get_breseq_data("BASES-INSERTED"));
+        this_columns.push_back(gd.get_breseq_data("GENOME-SIZE-FINAL"));
       }
-      this_columns.push_back(to_string(called_bp));
       this_columns.push_back(to_string(total_bp));
+      this_columns.push_back(to_string(called_bp));
       
       vector<string> snp_type_counts = map_key_list_to_values_as_strings(count["type"], snp_types);
       this_columns.insert(this_columns.end(),snp_type_counts.begin(), snp_type_counts.end());

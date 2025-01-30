@@ -8,7 +8,7 @@
  * LICENSE AND COPYRIGHT
  *
  *    Copyright (c) 2008-2010 Michigan State University
- *    Copyright (c) 2011-2017 The University of Texas at Austin
+ *    Copyright (c) 2011-2022 The University of Texas at Austin
  *
  *    breseq is free software; you can redistribute it and/or modify it under the
  *    terms the GNU General Public License as published by the Free Software
@@ -23,7 +23,7 @@ using namespace std;
 namespace breseq
 {
   
-void coverage_output::plot(const string& region, const string& output_file_name, uint32_t resolution)
+void coverage_output::plot(const string& region, const string& output_file_name, const uint32_t resolution)
 {
   
   uint32_t target_id, start_pos, end_pos, insert_start, insert_end;
@@ -35,7 +35,7 @@ void coverage_output::plot(const string& region, const string& output_file_name,
   // Load summary file of fitting coverage from breseq output
   if (m_show_average) {
     ASSERT(file_exists(m_average_file_name.c_str()), "Could not open file with fit coverage: " + m_average_file_name + "\n");
-    m_summary.unique_coverage.retrieve(m_average_file_name);
+    m_summary.retrieve(m_average_file_name);
   }
   
   // extend the region and re-check endpoints
@@ -59,28 +59,28 @@ void coverage_output::plot(const string& region, const string& output_file_name,
   }
 	
   pid_t pid = getpid();
-	string tmp_coverage = m_intermediate_path + "/" + to_string(pid) + ".coverage.tab";
+	string tmp_coverage = m_intermediate_path + "/" + to_string(pid) + "_" + to_string(m_thread_id) + ".coverage.tab";
 	
   this->table(extended_region, tmp_coverage, resolution);
   
   // default is zero
-  double average_coverage = m_show_average ? m_summary.unique_coverage[seq_id].average : 0;
+  m_reference_average_coverage = m_show_average ? m_summary.references.reference[seq_id].coverage_average : 0;
 	
   string log_file_name = m_intermediate_path + "/" + to_string(pid) + ".r.log";
-  string command = "R --vanilla";
-  command += " in_file=" + cString(tmp_coverage).escape_shell_chars();
-  command += " out_file=" + cString(_output_file_name).escape_shell_chars();
+  string command = "R --vanilla < " + double_quote(m_r_script_file_name)+ " > " + double_quote(log_file_name);
+  command += " --args";
+  command += " in_file=" + double_quote(tmp_coverage);
+  command += " out_file=" + double_quote(_output_file_name);
   command += " pdf_output=";
   command += ((m_output_format=="pdf") ? "1" : "0");
   command += " total_only=";
   command += ((m_total_only) ? "1" : "0");
   command += " window_start=" + to_string(start_pos);
   command += " window_end=" + to_string(end_pos);
-  command += " avg_coverage=" + to_string(average_coverage);
-  command += " fixed_coverage_scale=" + ( average_coverage ? to_string<double>(average_coverage * m_fixed_coverage_scale) : to_string<double>(m_fixed_coverage_scale) );
+  command += " avg_coverage=" + to_string(m_reference_average_coverage);
+  command += " fixed_coverage_scale=" + ( m_reference_average_coverage ? to_string<double>(m_reference_average_coverage * m_fixed_coverage_scale) : to_string<double>(m_fixed_coverage_scale) );
 
-  command += " < " + cString(m_r_script_file_name).escape_shell_chars();
-  command += " > " + cString(log_file_name).escape_shell_chars();
+
   
 	SYSTEM(command, true, false, false); //NOTE: Not escaping shell characters here.
 	
@@ -93,6 +93,14 @@ void coverage_output::table(const string& region, const string& output_file_name
 {
   uint32_t target_id, start_pos, end_pos, insert_start, insert_end;
   this->parse_region(region, target_id, start_pos, end_pos, insert_start, insert_end);
+  string seq_id = this->target_name(target_id);
+  
+  // Load summary file of fitting coverage from breseq output
+  if (m_show_average) {
+    ASSERT(file_exists(m_average_file_name.c_str()), "Could not open file with fit coverage: " + m_average_file_name + "\n");
+    m_summary.retrieve(m_average_file_name);
+  }
+  
 	uint32_t size = end_pos - start_pos + 1;
 
   // Resolution of 0 implies no downsampling, otherwise adjust to get close to resolution # of pts
@@ -103,18 +111,26 @@ void coverage_output::table(const string& region, const string& output_file_name
     if (downsample < 1) downsample = 1;
   }
   
+  m_reference_average_coverage = m_show_average ? m_summary.references.reference[seq_id].coverage_average : 0;
+
   m_output_table.open(output_file_name.c_str());
   
   if (m_read_begin_output_file_name.length() > 0) m_read_begin_output.open(m_read_begin_output_file_name.c_str());
   if (m_gc_output_file_name.length() > 0) m_gc_output.open(m_gc_output_file_name.c_str());
   
-  m_output_table << "position" << "\t" << "ref_base" << "\t" 
-  << "unique_top_cov" << "\t" << "unique_bot_cov" << "\t" 
-  << "redundant_top_cov" << "\t" << "redundant_bot_cov" << "\t" 
-  << "raw_redundant_top_cov" << "\t" << "raw_redundant_bot_cov" << "\t"
-  << "unique_top_begin" << "\t" << "unique_bot_begin"    
-  << std::endl;
-  
+  if (m_total_only) {
+    m_output_table << "position" << "\t" << "ref_base" << "\t"
+      << "unique_cov" << "\t" << "redundant_cov" << "\t" "total_cov"
+      << std::endl;
+  } else {
+    m_output_table << "position" << "\t" << "ref_base" << "\t"
+      << "unique_top_cov" << "\t" << "unique_bot_cov" << "\t"
+      << "redundant_top_cov" << "\t" << "redundant_bot_cov" << "\t"
+      << "raw_redundant_top_cov" << "\t" << "raw_redundant_bot_cov" << "\t"
+      << "unique_top_begin" << "\t" << "unique_bot_begin"
+      << std::endl;
+  }
+    
   this->clear();
   
   // pileup handles everything else, including into file
@@ -122,6 +138,16 @@ void coverage_output::table(const string& region, const string& output_file_name
     this->do_pileup();
   else
     this->do_pileup(region, true, downsample);
+  
+  // Write the averages over the region and the reference average (if available) as a commented addendum at the end
+  if (m_show_average) {
+    m_output_table << "#\treference_unique_average_cov\t" << m_reference_average_coverage << std::endl;
+  }
+   
+  m_output_table << "#\tregion_unique_average_cov\t" << ( m_region_average_unique_coverage / m_region_num_positions) << std::endl;
+  m_output_table << "#\tregion_repeat_average_cov\t" << ( m_region_average_repeat_coverage / m_region_num_positions) << std::endl;
+  m_output_table << "#\tregion_average_cov\t" << ( m_region_average_coverage / m_region_num_positions) << std::endl;
+  m_output_table << "#\tnumber_of_positions\t" << m_region_num_positions << std::endl;
   
   m_output_table.close();
 }
@@ -135,6 +161,10 @@ void coverage_output::clear()
   m_ref_begin_top_bins.clear();
   m_ref_begin_bot_bins.clear();
   m_gc_content_bins.clear();
+  m_region_average_unique_coverage = 0;
+  m_region_average_repeat_coverage = 0;
+  m_region_average_coverage = 0;
+  m_region_num_positions = 0;
 }
 
 /*! Called for each alignment.
@@ -148,9 +178,17 @@ void coverage_output::pileup_callback(const breseq::pileup& p) {
   if (pos==0) return;
   
   // print positions not called because there were no reads
-  for (uint32_t i=m_last_position_1+1; i<pos; i++) {    
-    m_output_table << i << "\t" << refseq[i-1] << "\t" << 0 << "\t" << 0 << "\t" 
-    << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << std::endl;
+  for (uint32_t i=m_last_position_1+1; i<pos; i++) {
+    if (m_total_only) {
+      m_output_table << i << "\t" << refseq[i-1] << "\t" << 0 << "\t" << 0 << "\t" << 0
+      << std::endl;
+    } else {
+      m_output_table << i << "\t" << refseq[i-1] << "\t" << 0 << "\t" << 0 << "\t"
+        << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << std::endl;
+    }
+    
+    // Add to the positions, but don't add to the coverage
+    m_region_num_positions++;
   }
   
   // catches this position
@@ -263,14 +301,26 @@ void coverage_output::pileup_callback(const breseq::pileup& p) {
   
   
   //output
-  m_output_table << pos << "\t" << ref_base << "\t" 
-  << unique_cov[0] << "\t" << unique_cov[1] << "\t" 
-  << redundant_cov[0] << "\t" << redundant_cov[1] << "\t" 
-  << raw_redundant_cov[0] << "\t" << raw_redundant_cov[1] << "\t"
-  << unique_begin_reads[0] << "\t" << unique_begin_reads[1] 
   
-  << std::endl;
+  m_region_num_positions++;
+  m_region_average_unique_coverage += unique_cov[0] + unique_cov[1];
+  m_region_average_repeat_coverage += redundant_cov[0] + redundant_cov[1];
+  m_region_average_coverage += unique_cov[0] + unique_cov[1] + redundant_cov[0] + redundant_cov[1];
   
+  if (m_total_only) {
+    m_output_table << pos << "\t" << ref_base << "\t"
+      << (unique_cov[0] + unique_cov[1]) << "\t"
+      << (redundant_cov[0] + redundant_cov[1]) << "\t"
+      << (unique_cov[0] + unique_cov[1] + redundant_cov[0] + redundant_cov[1])
+      << std::endl;
+  } else {
+    m_output_table << pos << "\t" << ref_base << "\t"
+      << unique_cov[0] << "\t" << unique_cov[1] << "\t"
+      << redundant_cov[0] << "\t" << redundant_cov[1] << "\t"
+      << raw_redundant_cov[0] << "\t" << raw_redundant_cov[1] << "\t"
+      << unique_begin_reads[0] << "\t" << unique_begin_reads[1]
+      << std::endl;
+  }
 }
   
   
