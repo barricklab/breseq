@@ -8,7 +8,7 @@
  LICENSE AND COPYRIGHT
  
  Copyright (c) 2008-2010 Michigan State University
- Copyright (c) 2011-2017 The University of Texas at Austin
+ Copyright (c) 2011-2022 The University of Texas at Austin
  
  breseq is free software; you can redistribute it and/or modify it under the
  terms the GNU General Public License as published by the Free Software
@@ -92,7 +92,7 @@ const char* ALIGN_LEFT="align=\"left\"";
 const char* CLASS_EVIDENCE="class=\"evidence\"";
 const char* CLASS_POSITION="class=\"position\"";
 const char* CLASS_MUTATION="class=\"mutation\"";
-const char* CLASS_ANNONTATION="class=\"annotation\"";
+const char* CLASS_ANNOTATION="class=\"annotation\"";
 const char* CLASS_GENE="class=\"gene\"";
 const char* CLASS_DESCRIPTION="class=\"description\"";
 const char* CLASS_FREQ="class=\"freq\"";
@@ -224,6 +224,8 @@ string javascript_end()
   ss << "    valueNames: ['evidence', 'position', 'mutation', 'annotation', 'freq', 'gene', 'description']" << endl;
   ss << "  };"                                                                                              << endl;
   ss << "  var mutationList = new List('predictions', options);"                                            << endl;
+  ss << "  var mutationList = new List('junctions', options);"                                            << endl;
+  ss << "  var mutationList = new List('junctions', options);"                                            << endl;
   ss << "</script>"                                                                                         << endl;
   
   return ss.str();
@@ -248,7 +250,9 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   HTML << html_header("BRESEQ :: Mutation Predictions", settings);
   HTML << breseq_header_string(settings) << endl;
   HTML << "<p>" << endl;
-  
+  if (!settings.no_javascript) {
+    HTML << "<p>" << "Search: <input type=\"text\" class=\"search\" placeholder=\"Enter Text\" />";
+  }
   /////////////////////////
   //Build Mutation Predictions table
   /////////////////////////
@@ -270,7 +274,9 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   /////////////////////////
   
   diff_entry_list_t mc = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(MC)));
-  mc.remove_if(cDiffEntry::rejected());
+  mc.remove_if(cDiffEntry::rejected_and_not_user_defined());
+  mc.remove_if(cDiffEntry::field_exists(IGNORE));
+
 
   if (mc.size() > 0) {
     HTML << "<p>" << html_missing_coverage_table_string(mc, false, "Unassigned missing coverage evidence", relative_path);
@@ -281,10 +287,11 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   /////////////////////////
   diff_entry_list_t jc = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(JC)));
   jc.remove_if(cDiffEntry::rejected_and_not_user_defined());
-
-  //Don't show junctions for circular chromosomes
+  
   if (settings.hide_circular_genome_junctions) {
-    jc.remove_if(cDiffEntry::field_exists("circular_chromosome"));
+    jc.remove_if(cDiffEntry::field_exists(IGNORE));
+  } else {
+    jc.remove_if(cDiffEntry::ignored_but_not_circular());
   }
    
   if (jc.size() > 0) {
@@ -297,8 +304,9 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   /////////////////////////
   
   diff_entry_list_t cn = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(CN)));
-  cn.remove_if(cDiffEntry::rejected());
-  
+  cn.remove_if(cDiffEntry::rejected_and_not_user_defined());
+  cn.remove_if(cDiffEntry::field_exists(IGNORE));
+
   if (cn.size() > 0) {
     HTML << "<p>" << html_copy_number_table_string(cn, false, "Unassigned copy number evidence", relative_path);
   }
@@ -308,10 +316,14 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
     HTML << "<p>No mutations predicted." << endl;
   }
   
-  HTML << javascript_end();
+  if (!settings.no_javascript) {
+    HTML << javascript_end();
+  }
   HTML << html_footer();
   HTML.close();
-  SYSTEM("cp " + settings.program_data_path + "/list.js " +  settings.output_path);
+  if (!settings.no_javascript) {
+    SYSTEM("cp " + settings.program_data_path + "/list.js " +  settings.output_path);
+  }
 }
 
 
@@ -390,7 +402,7 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
     relative_path += "/";
   
   //Determine if more than one reference sequence is used
-  bool one_ref_seq;
+  bool one_ref_seq(true);
   if (ref_seq_info.size() == 1)
     one_ref_seq = true;
   else
@@ -545,6 +557,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   // Write read file information
   ////
   double overall_percent_reads_mapped = 0;
+  bool show_read_split_legend = false;
   
   HTML << h2("Read File Information") << endl;
   HTML << start_table("border=\"0\" cellspace=\"1\" cellpadding=\"5\"") << endl;
@@ -561,12 +574,13 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
                 "errors"
                 )
               );
-    HTML << td(it->m_base_name);
+    show_read_split_legend = show_read_split_legend || s.reads_were_split;
+    HTML << td(it->m_base_name + (s.reads_were_split ? "<sup>&Dagger;</sup>" : "") );
     
     double read_length_avg = static_cast<double>(s.num_bases) / static_cast<double>(s.num_reads);
     HTML << td(ALIGN_RIGHT, commify(to_string(s.num_reads)));
     HTML << td(ALIGN_RIGHT, commify(to_string(s.num_bases)));
-    double percent_pass_filters = 100 * (static_cast<double>(s.num_reads) / static_cast<double>(s.num_original_reads));
+    double percent_pass_filters = 100 * (static_cast<double>(s.num_bases) / static_cast<double>(s.num_original_bases));
     HTML << td(ALIGN_RIGHT, to_string(percent_pass_filters, 1) + "%");
     HTML << td(ALIGN_RIGHT, to_string(read_length_avg, 1) + "&nbsp;bases");
     HTML << td(ALIGN_RIGHT, to_string((s.read_length_max> 0) ? s.read_length_max : std::numeric_limits<double>::quiet_NaN(), 0) + "&nbsp;bases");
@@ -580,7 +594,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << td(b("total"));
   HTML << td(ALIGN_RIGHT , b(commify(to_string(summary.sequence_conversion.num_reads))) );
   HTML << td(ALIGN_RIGHT , b(commify(to_string(summary.sequence_conversion.num_bases))) );
-  double total_percent_pass_filters = 100 * (static_cast<double>(summary.sequence_conversion.num_reads) / static_cast<double>(summary.sequence_conversion.num_original_reads));
+  double total_percent_pass_filters = 100 * (static_cast<double>(summary.sequence_conversion.num_bases) / static_cast<double>(summary.sequence_conversion.num_original_bases));
   HTML << td(ALIGN_RIGHT, to_string(total_percent_pass_filters, 1) + "%");
   HTML << td(ALIGN_RIGHT, to_string(summary.sequence_conversion.read_length_avg, 1) + "&nbsp;bases");
   HTML << td(ALIGN_RIGHT, b(commify(to_string(summary.sequence_conversion.read_length_max))) + "&nbsp;bases");
@@ -588,6 +602,11 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << td(ALIGN_RIGHT, to_string(total_percent_mapped, 1) + "%");
   HTML << end_tr();
   HTML << end_table();
+  
+  if (show_read_split_legend) {
+    HTML << "<p><sup>&Dagger;</sup> Read and base numbers are after long reads in this file were split to " << (settings.read_file_long_read_distribute_remainder ? "&le;": "exactly ");
+    HTML << to_string(settings.read_file_long_read_split_length) << " bases" << (settings.read_file_long_read_distribute_remainder ? "" : " (extra bases discarded)") << endl;
+  }
   
   ////
   // Write reference sequence information
@@ -601,7 +620,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
                     th("seq id") <<
                     th("length") <<
                     th(ALIGN_CENTER, "fit mean") <<
-                    th(ALIGN_CENTER, "fit dispersion") <<
+                    th(ALIGN_CENTER, "fit relative_variance") <<
                     th(ALIGN_CENTER, "% mapped reads") <<
                     th(ALIGN_LEFT, "description") <<
           "</tr>" << endl;
@@ -676,10 +695,10 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
       HTML << td(ALIGN_CENTER, "NA");
     } else if (fragment_failed_fit) {
       HTML << td(ALIGN_CENTER, "[" + to_string(summary.unique_coverage[it->m_seq_id].average, 1) + "]");
-      HTML << td(ALIGN_CENTER, "[" + to_string(summary.unique_coverage[it->m_seq_id].dispersion, 1) + "]");
+      HTML << td(ALIGN_CENTER, "[" + to_string(summary.unique_coverage[it->m_seq_id].relative_variance, 1) + "]");
     } else {
       HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter, 1));
-      HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_dispersion));
+      HTML << td(ALIGN_CENTER, to_string(summary.unique_coverage[it->m_seq_id].nbinom_relative_variance));
     }
     
     HTML << td(ALIGN_CENTER, to_string(this_reference_fraction_mapped_reads) + "%");
@@ -700,7 +719,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << "</tr>" << endl;
   HTML << "</table>" << endl;
 
-  HTML << "<p>" << "<b>fit dispersion</b> is the ratio of the variance to the mean for the negative binomial fit. It is =1 for Poisson and >1 for over-dispersed data." << endl;
+  HTML << "<p>" << "<b>fit relative_variance</b> is the ratio of the variance to the mean for the negative binomial fit. It is =1 for Poisson and >1 for over-dispersed data." << endl;
   
   if (one_failed_fit) {
     HTML << "<p>" << "<span class=\"reject_table_row\">Fit failed</span> Negative binomial fit failed for this reference sequence. It may have an unusual coverage depth distribution. JC and MC predictions may be less accurate." << endl;
@@ -858,9 +877,8 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     HTML << tr(td("Polymorphism bias cutoff")
                + td((settings.polymorphism_bias_p_value_cutoff == 0) ? "OFF" : to_string<double>(settings.polymorphism_bias_p_value_cutoff))
                );
-    
-    HTML << tr(td("Predict indel polymorphisms")
-               + td((settings.no_indel_polymorphisms) ? "NO" : "YES")
+    HTML << tr(td("Predict indel polymorphisms") 
+               + td((settings.polymorphism_no_indels) ? "NO" : "YES")
                );
     // Rejects if >= this length
     HTML << tr(td("Skip indel polymorphisms in homopolymers runs of")
@@ -1038,7 +1056,7 @@ string breseq_header_string(const Settings& settings)
 }
 
 
-string html_genome_diff_item_table_string(const Settings& settings, cGenomeDiff& gd, diff_entry_list_t& list_ref)
+string html_genome_diff_item_table_string(const Settings& settings, const cGenomeDiff& gd, diff_entry_list_t& list_ref)
 {
   if(list_ref.empty()) return "";
 
@@ -1076,7 +1094,103 @@ string html_genome_diff_item_table_string(const Settings& settings, cGenomeDiff&
 /*-----------------------------------------------------------------------------
  *  FORMATTED_MUTATION_ANNOTATION
  *-----------------------------------------------------------------------------*/
-string formatted_mutation_annotation(const cDiffEntry& mut)
+
+// Builds the content of the annotation column in the output table.
+// => as unicode text
+string text_formatted_mutation_annotation(const cDiffEntry& mut)
+{
+  string s;
+
+  // Determine if it is coding SNP
+  bool coding_SNP = false;
+  
+  vector<string> snp_type_list;
+  if (mut.entry_exists("snp_type")) {
+    snp_type_list = split(mut.get("snp_type"), cReferenceSequences::multiple_separator);
+    for (vector<string>::iterator i=snp_type_list.begin(); i!=snp_type_list.end(); i++) {
+      coding_SNP = coding_SNP || (*i == "nonsynonymous") || (*i== "synonymous") || (*i== "nonsense");
+    }
+  }
+  
+  if (coding_SNP) {
+    
+    // These are guaranteed to exist - but double check
+    ASSERT(mut.entry_exists("codon_ref_seq"), "Missing codon_ref_seq");
+    vector<string> codon_ref_seq_list = split(mut.get("codon_ref_seq"), cReferenceSequences::multiple_separator);
+    ASSERT(mut.entry_exists("codon_new_seq"), "Missing codon_new_seq");
+    vector<string> codon_new_seq_list = split(mut.get("codon_new_seq"), cReferenceSequences::multiple_separator);
+    ASSERT(mut.entry_exists("aa_ref_seq"), "Missing aa_ref_seq");
+    vector<string> aa_ref_seq_list = split(mut.get("aa_ref_seq"), cReferenceSequences::multiple_separator);
+    ASSERT(mut.entry_exists("aa_new_seq"), "Missing aa_new_seq");
+    vector<string> aa_new_seq_list = split(mut.get("aa_new_seq"), cReferenceSequences::multiple_separator);
+    ASSERT(mut.entry_exists("aa_position"), "Missing aa_position");
+    vector<string> aa_position_list = split(mut.get("aa_position"), cReferenceSequences::multiple_separator);
+    ASSERT(mut.entry_exists("codon_number"), "Missing codon_number");
+    vector<string> codon_number_list = split(mut.get("codon_number"), cReferenceSequences::multiple_separator);
+    ASSERT(mut.entry_exists("codon_position"), "Missing codon_position");
+    vector<string> codon_position_list = split(mut.get("codon_position"), cReferenceSequences::multiple_separator);
+    ASSERT(mut.entry_exists("gene_position"), "Missing gene_position");
+    vector<string> gene_position_list = split(mut.get("gene_position"), cReferenceSequences::multiple_separator);
+    
+    // These may or may not exist... only added if there was a nonzero value
+    vector<string> multiple_polymorphic_SNPs_in_same_codon_list;
+    if(mut.entry_exists("multiple_polymorphic_SNPs_in_same_codon")) {
+      multiple_polymorphic_SNPs_in_same_codon_list = split(mut.get("multiple_polymorphic_SNPs_in_same_codon"), cReferenceSequences::multiple_separator);
+    }
+    
+    vector<string> codon_position_is_indeterminate_list;
+    if(mut.entry_exists("codon_position_is_indeterminate")) {
+      codon_position_is_indeterminate_list = split(mut.get("codon_position_is_indeterminate"), cReferenceSequences::multiple_separator);
+    }
+    
+    
+    // One among these can still be noncoding - we are just guaranteed that at least one is coding
+    for (size_t i=0; i<snp_type_list.size(); i++) {
+      
+      if (i>0) s+= cReferenceSequences::text_multiple_separator;
+      
+      if  ( (snp_type_list[i] == "nonsynonymous") || (snp_type_list[i] == "synonymous") || (snp_type_list[i] == "nonsense") ) {
+      
+      s += aa_ref_seq_list[i] + aa_position_list[i] + aa_new_seq_list[i];
+      
+      string codon_ref_seq = codon_ref_seq_list[i];
+      string codon_new_seq = codon_new_seq_list[i];
+      s+= " (" + codon_ref_seq + "\u2192" + codon_new_seq + ")";
+      
+      // Dagger for initiation codons
+      if (codon_number_list[i] == "1")
+        s+= "\u2020";
+      
+      // Double dagger for multiple SNPs in same codon
+      if (multiple_polymorphic_SNPs_in_same_codon_list.size() && (multiple_polymorphic_SNPs_in_same_codon_list[i] == "1"))
+        s+= "\u2021";
+      
+      if (codon_position_is_indeterminate_list.size() && (codon_position_is_indeterminate_list[i] == "1"))
+        s+= "\u0186";
+      } else {
+        // Noncoding
+        s+= gene_position_list[i];
+      }
+    }
+  }
+  else // other SNP/mutation types that don't give amino acid change or no snp change
+  {
+    if(mut.entry_exists(GENE_POSITION)){
+      
+      s += join(split(mut.get(GENE_POSITION), cReferenceSequences::multiple_separator), cReferenceSequences::text_multiple_separator);
+    }
+  }
+  
+  return s;
+}
+
+/*-----------------------------------------------------------------------------
+ *  FORMATTED_MUTATION_ANNOTATION
+ *-----------------------------------------------------------------------------*/
+
+// Builds the content of the annotation column in the output table.
+// => as HTML
+string html_formatted_mutation_annotation(const cDiffEntry& mut)
 {
   string s;
 
@@ -1353,7 +1467,7 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
     string total_cov = to_string(from_string<uint32_t>(top_cov) +
                                  from_string<uint32_t>(bot_cov));
     ss << td(ALIGN_CENTER, total_cov);// "Cov" Column
-    ss << td(ALIGN_CENTER, formatted_mutation_annotation(c)); //"Annotation" Column DON'T call nonbreaking on the whole thing
+    ss << td(ALIGN_CENTER, html_formatted_mutation_annotation(c)); //"Annotation" Column DON'T call nonbreaking on the whole thing
     ss << td(ALIGN_CENTER, i(nonbreaking(substitute(c[GENE_NAME], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))));
     ss << td(ALIGN_LEFT, htmlize(substitute(c[GENE_PRODUCT], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator)));
     ss << "</tr>" << endl;
@@ -1695,12 +1809,12 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
       ss << td("rowspan=\"2\" align=\"center\"", Html_Mutation_Table_String::freq_to_string(c[POLYMORPHISM_FREQUENCY])) << endl;
               
                //" (" + c["max_left"] + "/" + c["max_right"] + ")") << endl;
+      ss << td("align=\"center\" class=\"" + annotate_key + "\"", 
+              nonbreaking(substitute(c[key + "_" + GENE_POSITION], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) << endl;
       ss << td("align=\"center\" class=\"" + annotate_key + "\"",
-              nonbreaking(substitute(c["_" + key + GENE_POSITION], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) << endl;
-      ss << td("align=\"center\" class=\"" + annotate_key + "\"",
-              i(nonbreaking(substitute(c["_" + key + GENE_NAME], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator)))) << endl;
+              i(nonbreaking(substitute(c[key + "_" + GENE_NAME], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator)))) << endl;
       ss << td("class=\"" + annotate_key + "\"",
-              htmlize(substitute(c["_" + key + GENE_PRODUCT], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) << endl;
+              htmlize(substitute(c[key + "_" + GENE_PRODUCT], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) << endl;
     } // End hiding data for side 1
     ss << end_tr() << endl;
 
@@ -1734,11 +1848,11 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
                c[key + "_read_count"] + " (" + string_to_fixed_digit_string(c[key + "_coverage"], 3) + ")" );
       
       ss << td("align=\"center\" class=\"" + annotate_key + "\"",
-              nonbreaking(substitute(c["_" + key + GENE_POSITION], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) << endl;
+              nonbreaking(substitute(c[key + "_" + GENE_POSITION], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) << endl;
       ss << td("align=\"center\" class=\"" + annotate_key + "\"",
-              i(nonbreaking(substitute(c["_" + key + GENE_NAME], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator)))) << endl;
+              i(nonbreaking(substitute(c[key + "_" + GENE_NAME], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator)))) << endl;
       ss << td("class=\"" + annotate_key + "\"",
-              htmlize(substitute(c["_" + key + GENE_PRODUCT], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) << endl;
+              htmlize(substitute(c[key + "_" + GENE_PRODUCT], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) << endl;
     } //end hiding data for side 2
     
   ss << end_tr() << endl;
@@ -1934,16 +2048,25 @@ string decode_reject_reason(const string& reject)
  *  //End Create_Evidence_Files
  *-----------------------------------------------------------------------------*/
 
-void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenomeDiff& gd)
-{
+void draw_coverage_thread_helper(int thread_id, const Settings& settings, const string region, const string& output_file_name, const string& output_format, const int32_t shaded_flanking) {
+  
+  cerr << "Creating coverage plot for region: " << region << endl;
   coverage_output co(
                      settings.reference_bam_file_name,
                      settings.reference_fasta_file_name,
                      settings.coverage_plot_r_script_file_name,
+                     thread_id,
                      settings.coverage_plot_path
                      );
-  co.output_format("png");
-  
+  co.output_format(output_format);
+  if (shaded_flanking>=0) co.shaded_flanking(shaded_flanking);
+  co.plot(region, output_file_name);
+}
+
+void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenomeDiff& gd)
+{  
+  const string& _output_format("png");
+
   create_path(settings.coverage_plot_path);
   string coverage_plot_path = settings.coverage_plot_path;
   
@@ -1954,8 +2077,8 @@ void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenom
     string region = seq.m_seq_id + ":" + "1" + "-" + to_string(seq.m_length);
     string this_complete_coverage_text_file_name = settings.file_name(settings.overview_coverage_plot_file_name, "@", seq.m_seq_id);
     
-    cerr << "Creating coverage plot for region: " << region << endl;
-    co.plot(region, this_complete_coverage_text_file_name);
+    Settings::pool.push(draw_coverage_thread_helper, settings, region, this_complete_coverage_text_file_name, _output_format, -1);
+    
    }
   
   // Don't create other plots in --brief-html-mode
@@ -1972,27 +2095,286 @@ void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenom
       
       uint32_t _shaded_flanking = static_cast<uint32_t>(floor(static_cast<double>(size) / 10.0));
       if (_shaded_flanking < 100) _shaded_flanking = 100;
-      co.shaded_flanking(_shaded_flanking);
       
       string region = (*item)[SEQ_ID] + ":" + (*item)[START] + "-" + (*item)[END];
-      string coverage_plot_file_name = settings.evidence_path + "/" + (*item)[SEQ_ID] + "_" + (*item)[START] + "-" + (*item)[END] + "." + co.output_format();
+      string coverage_plot_file_name = settings.evidence_path + "/" + (*item)[SEQ_ID] + "_" + (*item)[START] + "-" + (*item)[END] + "." + _output_format;
 
       string link_coverage_plot_file_name = Settings::relative_path(coverage_plot_file_name, settings.evidence_path);
       (*item)[_COVERAGE_PLOT_FILE_NAME] = link_coverage_plot_file_name;
       
-      cerr << "Creating coverage plot for region: " << region << endl;
-      co.plot(region, coverage_plot_file_name);
+      Settings::pool.push(draw_coverage_thread_helper, settings, region, coverage_plot_file_name, _output_format, _shaded_flanking);
     }
   }
 }
 
+
+void add_text_fields_to_mutation(cDiffEntry& mut, const MutationTableOptions& options)
+{
+  //Preflight checks
+  ASSERT(mut.entry_exists(GENE_NAME), "Could not find \"gene_name\" field for mutation.");
+  //ASSERT(mut.entry_exists(GENE_STRAND), "Could not find \"gene_strand\" field for mutation.");
+
+  // Decide if we are intergenic or not and reformat appropriately
+  //  * italics for gene names
+  //  * javascript or concatenated gene names as when overlapping many genes
+  //  * annotate gene position
+  string html_gene_name;
+  string html_gene_product;
+    
+  if (mut[GENE_NAME].find(cReferenceSequences::intergenic_separator) != string::npos ) {
+    //
+    // Mutation is intergenic. There must be exactly two gene names and strands
+    //
+    
+    vector<string> gene_names = split(mut[GENE_NAME], cReferenceSequences::intergenic_separator);
+    vector<string> gene_strands = split(mut[GENE_STRAND], cReferenceSequences::intergenic_separator);
+    
+    ASSERT(gene_names.size() == 2, "Expected two gene names for intergenic mutation.");
+    ASSERT(gene_strands.size() == 2, "Expected two gene strands for intergenic mutation.");
+    
+    html_gene_name += gene_names[0];
+    if (gene_names[0] != cReferenceSequences::no_gene_name) {
+      html_gene_name += (gene_strands[0] == cReferenceSequences::gene_strand_reverse_char)
+        ? " \u2190"
+        : " \u2192";
+    }
+    html_gene_name += " " + cReferenceSequences::text_intergenic_separator + " ";
+    if (gene_names[1] != cReferenceSequences::no_gene_name) {
+      html_gene_name += (gene_strands[1] == cReferenceSequences::gene_strand_reverse_char)
+        ? "\u2190 "
+        : "\u2192 ";
+    }
+    html_gene_name += gene_names[1];
+    
+    html_gene_product = mut[GENE_PRODUCT];
+    
+  } else if ( (mut[GENE_NAME].find(cReferenceSequences::gene_range_separator) != string::npos )
+             || ((mut[GENE_NAME][0] == '[') && (mut[GENE_NAME][mut[GENE_NAME].size()-1] == ']')) )
+  {
+    //
+    // Mutation covers a range of genes, including a large deletion overlapping one gene in brackets
+    //
+    
+    // IMPORTANT: gene names are stored as a list in GENE_PRODUCT not GENE_NAME in this case
+    vector<string> gene_names = split(mut[GENE_PRODUCT], cReferenceSequences::gene_list_separator);
+    
+    if (mut[GENE_NAME].find(cReferenceSequences::gene_range_separator) != string::npos ) {
+      // multiple genes
+      html_gene_name = gene_names.front() + cReferenceSequences::gene_range_separator + gene_names.back();
+    } else {
+      // one gene in brackets
+      html_gene_name = gene_names.front();
+    }
+    
+    
+    string sJoinedGeneList = join(gene_names, cReferenceSequences::text_gene_list_separator + " ");
+    
+    // If the product contains more than a set number of genes, show the number of genes
+    // and, if javascript is enabled, hide the gene names until a button is pushed.
+    
+    if (gene_names.size() < 15) {
+      html_gene_product = sJoinedGeneList;
+    } else {
+        html_gene_product = to_string(gene_names.size()) + " genes; ";
+        html_gene_product += sJoinedGeneList;
+    }
+    
+  } else  {
+    //
+    // Mutation impacts one gene or a set of overlapping genes
+    //
+    
+    vector<string> gene_name_lists = split(mut[GENE_NAME], cReferenceSequences::multiple_separator);
+    vector<string> gene_strands = split(mut[GENE_STRAND], cReferenceSequences::multiple_separator);
+      
+    // add italics  and gene strands if there are true gene names
+    vector<string> html_gene_names;
+    
+    for(size_t i = 0; i<gene_name_lists.size(); i++) {
+      
+      string this_gene_name = gene_name_lists[i];
+      
+      if (this_gene_name != cReferenceSequences::no_gene_name) {
+        string this_html_gene_name = this_gene_name;
+        if (i < gene_strands.size()) {
+          this_html_gene_name += (gene_strands[i] == cReferenceSequences::gene_strand_reverse_char) ? " \u2190" : " \u2192";
+        }
+        html_gene_names.push_back(this_html_gene_name);
+
+      } else {
+        html_gene_names.push_back(this_gene_name);
+      }
+    }
+      
+    html_gene_name = join(html_gene_names, cReferenceSequences::text_multiple_separator);
+    html_gene_product = substitute(mut[GENE_PRODUCT], cReferenceSequences::multiple_separator, cReferenceSequences::text_multiple_separator);
+  }
   
-void add_html_fields_to_mutation(cDiffEntry& mut, MutationTableOptions& options)
+  // This four fields are filled by the code below
+  
+  string html_seq_id = mut[SEQ_ID];
+  string html_position = mut[POSITION];
+  
+  string html_mutation;
+  string html_mutation_annotation = text_formatted_mutation_annotation(mut); // Do NOT make nonbreaking
+  
+  // build 'mutation' column = description of the genetic change
+  switch (mut._type)
+  {
+    case SNP:{
+      html_mutation = mut["_ref_seq"] + "\u2192" + mut[NEW_SEQ];
+    } break;
+      
+    case INS:{
+      if (mut.entry_exists("repeat_seq")) {
+        // alternative way of depicting
+        html_mutation = "(" + mut["repeat_seq"] + ")" + mut["repeat_ref_copies"] + "\u2192" + mut["repeat_new_copies"];
+        //cell_mutation = mut["repeat_seq"] + "&times;" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"];
+      }
+      // If repeat seq is very long, it will not be present
+      else if (mut.entry_exists("repeat_length")) {
+        html_mutation = "(" + mut["repeat_length"] + " bp)" + mut["repeat_ref_copies"] + "\u2192" + mut["repeat_new_copies"];
+      }
+      else if (options.detailed || (mut["new_seq"].size() <= options.max_nucleotides_to_show_in_tables)) {
+        html_mutation = "\u200B+" + mut[NEW_SEQ];
+      } else {
+        html_mutation = "\u200B+" + s(mut[NEW_SEQ].size()) + " bp";
+      }
+    } break;
+      
+    case DEL:{
+      
+      if (mut.entry_exists("repeat_seq")) {
+        // alternative way of depicting
+        if (mut["repeat_seq"].size() > 12) {
+          html_mutation = "(" + to_string<int32_t>(mut["repeat_seq"].size()) + "-bp)" + mut["repeat_ref_copies"] + "\u2192" + mut["repeat_new_copies"];
+        } else {
+          html_mutation = "(" + mut["repeat_seq"] + ")" + mut["repeat_ref_copies"] + "\u2192" + mut["repeat_new_copies"];
+        }
+        //cell_mutation = mut["repeat_seq"] + "&times;" + mut["repeat_ref_copies"] + "&rarr;" + mut["repeat_new_copies"];
+      }
+      else {
+        html_mutation = "\u0394" + mut["size"] + " bp";
+        
+        string annotation_str;
+        
+        // special annotation for mediated- and between repeat elements
+        if (mut.entry_exists("mediated"))
+          annotation_str = html_format_repeat_name(mut["mediated"]) + "-mediated";
+        if (mut.entry_exists("between"))
+          annotation_str = "between " + html_format_repeat_name(mut["between"]);
+        // default
+        if(annotation_str.empty()) {
+          annotation_str = mut["gene_position"];
+        }
+        html_mutation_annotation =  annotation_str;
+      }
+    } break;
+      
+    case SUB:{
+      if (options.detailed || (mut["new_seq"].size() <= 4)) {
+        html_mutation = mut["size"] + " bp \u2192" + mut["new_seq"];
+      } else {
+        html_mutation = mut["size"] + " bp \u2192" + s(mut["new_seq"].size()) + " bp";
+      }
+    } break;
+      
+    case CON:{
+      html_mutation = mut["size"] + " bp" + mut["region"];
+    } break;
+      
+    case MOB:{
+      stringstream s;
+      
+      stringstream s_start;
+      if (mut.entry_exists("ins_start")) {
+        s_start << "+" << mut["ins_start"] << " ";
+      }
+      if (mut.entry_exists("del_start")) {
+        s_start << "\u0394" << mut["del_start"] << " bp ";
+      }
+      if (!(s_start.str()).empty()) {
+        s << s_start.str() << ":: ";
+      }
+      
+      s << html_format_repeat_name(mut["repeat_name"]) << " (";
+      switch (from_string<int32_t>(mut["strand"]))
+      {
+        case -1:
+          s << "–";
+          break;
+        case 0:
+          s << "?";
+          break;
+        case +1:
+          s << "+";
+          break;
+      }
+      s << ")";
+      
+      if (from_string<int32_t>(mut["duplication_size"]) > 0) {
+        s << " +" << mut["duplication_size"] << " bp";
+      } else if (from_string<int32_t>(mut["duplication_size"]) < 0) {
+        s << " \u0394" << abs(from_string<int32_t>(mut["duplication_size"])) << " bp";
+      }
+      
+      stringstream s_end;
+      if (mut.entry_exists("del_end")) {
+        s_end << " \u0394" << mut["del_end"] << " bp";
+      }
+      if (mut.entry_exists("ins_end")) {
+        s_end << " +" << mut["ins_end"];
+      }
+      if (!(s_end.str()).empty()) {
+        s << " ::" << s_end.str();
+      }
+      
+      html_mutation = s.str();
+    } break;
+      
+    case INV:{
+      html_mutation = mut["size"] + " bp inversion";
+      
+      html_gene_name = substitute(html_gene_name, cReferenceSequences::html_multiple_separator, " / ");
+      html_gene_product = substitute(html_gene_product, cReferenceSequences::html_multiple_separator, " / ; ");
+
+      string annotation_str;
+      if (mut.entry_exists("between"))
+        annotation_str = "between " + html_format_repeat_name(mut["between"]);
+      // default
+      if(annotation_str.empty()) {
+        annotation_str = mut["gene_position"];
+      }
+      html_mutation_annotation = annotation_str;
+      
+    } break;
+      
+    case AMP:{
+      html_mutation = mut["size"] + " bp x " + mut["new_copy_number"];
+      html_mutation_annotation =
+      from_string<uint32_t>(mut["new_copy_number"]) == 2 ?
+      "duplication" : "amplification";
+    } break;
+      
+    default:
+      break;
+  }
+
+  // This is the order of the columns shown in a results table
+  mut["TEXT_SEQ_ID"] = html_seq_id;
+  mut["TEXT_POSITION"] = html_position;
+  mut["TEXT_GENE_NAME"] = html_gene_name;
+  mut["TEXT_MUTATION"] = html_mutation;
+  mut["TEXT_MUTATION_ANNOTATION"] = html_mutation_annotation;
+  mut["TEXT_GENE_NAME"] = html_gene_name;
+  mut["TEXT_GENE_PRODUCT"] = html_gene_product;
+}
+void add_html_fields_to_mutation(cDiffEntry& mut, const MutationTableOptions& options)
 {
   
   //Preflight checks
   ASSERT(mut.entry_exists(GENE_NAME), "Could not find \"gene_name\" field for mutation.");
-  ASSERT(mut.entry_exists(GENE_STRAND), "Could not find \"gene_strand\" field for mutation.");
+  //ASSERT(mut.entry_exists(GENE_STRAND), "Could not find \"gene_strand\" field for mutation.");
 
   // Decide if we are intergenic or not and reformat appropriately
   //  * italics for gene names
@@ -2122,7 +2504,7 @@ void add_html_fields_to_mutation(cDiffEntry& mut, MutationTableOptions& options)
   string html_position = commify(mut[POSITION]);
   
   string html_mutation;
-  string html_mutation_annotation = formatted_mutation_annotation(mut); // Do NOT make nonbreaking
+  string html_mutation_annotation = html_formatted_mutation_annotation(mut); // Do NOT make nonbreaking
   
   // build 'mutation' column = description of the genetic change
   switch (mut._type)
@@ -2185,7 +2567,8 @@ void add_html_fields_to_mutation(cDiffEntry& mut, MutationTableOptions& options)
       }
     } break;
       
-    case CON:{
+    case CON:
+    case INT: {
       html_mutation = nonbreaking(mut["size"] + " bp&rarr;" + mut["region"]);
     } break;
       
@@ -2240,10 +2623,19 @@ void add_html_fields_to_mutation(cDiffEntry& mut, MutationTableOptions& options)
       
     case INV:{
       html_mutation = nonbreaking(commify(mut["size"]) + " bp inversion");
-      html_gene_name = i(nonbreaking(substitute(mut["gene_name_1"], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) + "&darr;" +
-      i(nonbreaking(substitute(mut["gene_name_2"], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator)));
-      html_gene_product = htmlize(substitute(mut["gene_product_1"], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator)) + "&darr;" +
-      htmlize(substitute(mut["gene_product_2"], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator));
+      
+      html_gene_name = substitute(html_gene_name, cReferenceSequences::html_multiple_separator, " &#8634; ");
+      html_gene_product = substitute(html_gene_product, cReferenceSequences::html_multiple_separator, " &#8634; ");
+
+      string annotation_str;
+      if (mut.entry_exists("between"))
+        annotation_str = "between " + html_format_repeat_name(mut["between"]);
+      // default
+      if(annotation_str.empty()) {
+        annotation_str = nonbreaking(mut["gene_position"]);
+      }
+      html_mutation_annotation =  nonbreaking(annotation_str);
+      
     } break;
       
     case AMP:{
@@ -2275,9 +2667,9 @@ void add_html_fields_to_mutation(cDiffEntry& mut, MutationTableOptions& options)
  */
 Html_Mutation_Table_String::Html_Mutation_Table_String(
                                                        const Settings& settings,
-                                                       cGenomeDiff& gd,
-                                                       diff_entry_list_t& list_ref,
-                                                       MutationTableOptions& options
+                                                       const cGenomeDiff& gd,
+                                                       const diff_entry_list_t& list_ref,
+                                                       const MutationTableOptions& options
                                                        )
   : string()
   , total_cols(0)
@@ -2340,7 +2732,7 @@ void Html_Mutation_Table_String::Header_Line(bool print_main_header)
 
       ss << th( CLASS_POSITION, (header_rows == i) ? "position" : "") << endl;
       ss << th( CLASS_MUTATION, (header_rows == i) ? "mutation" : "") << endl;
-      ss << th( CLASS_ANNONTATION, (header_rows == i) ? "annotation" : "") << endl;
+      ss << th( CLASS_ANNOTATION, (header_rows == i) ? "annotation" : "") << endl;
       ss << th( CLASS_GENE, (header_rows == i) ? "gene" : "") << endl;
       ss << th(string(CLASS_DESCRIPTION)+string(" width=\"100%\""), (header_rows == i) ? "description" : "") << endl;
       for (vector<string>::iterator itr = freq_header_list.begin(); itr != freq_header_list.end(); itr++) {
@@ -2404,15 +2796,14 @@ void Html_Mutation_Table_String::Header_Line(bool print_main_header)
       }
     }
  
-    ss << th(CLASS_ANNONTATION, "annotation") << endl;
+    ss << th(CLASS_ANNOTATION, "annotation") << endl;
     ss << th(CLASS_GENE, "gene") << endl;
     ss << th(string(CLASS_DESCRIPTION)+"width=\"100%\"","description") << endl;
     ss << "</tr>" << endl;
   }
 
   if(print_main_header && (header_text != ""))
-    (*this) += tr(th("colspan=\"" + to_string(total_cols-2) + "\" align=\"left\" class=\"mutation_header_row\"", header_text)+
-                  th("colspan=\"2\" align=\"center\" class=\"mutation_header_row\"", "Search: <input type=\"text\" class=\"search\" placeholder=\"Search mutation\" />"));
+    (*this) += tr(th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"mutation_header_row\"", header_text));
   
   ss << endl;
   (*this) += ss.str();
@@ -2435,8 +2826,9 @@ void Html_Mutation_Table_String::Item_Lines()
   ss << "<tbody class=\"list\">" << endl;
   (*this) += ss.str();
   ss.str("");
-  for (diff_entry_list_t::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++) {
-    cDiffEntry& mut = (**itr);
+  for (diff_entry_list_t::const_iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++) {
+    // We must create a copy here and annotate it to be safe for multithreading!
+    cDiffEntry mut(**itr);
 
     if ((row_num != 0) && (options.repeat_header != 0) && (row_num % options.repeat_header == 0))
     {
@@ -2539,7 +2931,7 @@ void Html_Mutation_Table_String::Item_Lines()
           
     if (settings.lenski_format) {
       ss << "<!-- Lenski_Format -->" << endl;
-      ss << td(string(CLASS_ANNONTATION)+" "+string(ALIGN_CENTER), mut[HTML_MUTATION_ANNOTATION]) << endl;
+      ss << td(string(CLASS_ANNOTATION)+" "+string(ALIGN_CENTER), mut[HTML_MUTATION_ANNOTATION]) << endl;
       ss << td(string(CLASS_GENE)+" "+string(ALIGN_CENTER), mut[HTML_GENE_NAME]) << endl;
       ss << td(string(CLASS_DESCRIPTION)+" "+string(ALIGN_LEFT), mut[HTML_GENE_PRODUCT]) << endl;
     }
@@ -2552,7 +2944,7 @@ void Html_Mutation_Table_String::Item_Lines()
       ss << "<!-- Lenski Format -->" << endl;
       ss << td(string(CLASS_POSITION)+" "+string(ALIGN_CENTER), mut[HTML_POSITION]) << endl;
     } else {
-      ss << td(string(CLASS_ANNONTATION)+" "+string(ALIGN_CENTER), mut[HTML_MUTATION_ANNOTATION]) << endl;
+      ss << td(string(CLASS_ANNOTATION)+" "+string(ALIGN_CENTER), mut[HTML_MUTATION_ANNOTATION]) << endl;
       ss << td(string(CLASS_GENE)+" "+string(ALIGN_CENTER), mut[HTML_GENE_NAME]) << endl;
       ss << td(string(CLASS_DESCRIPTION)+" "+string(ALIGN_LEFT), mut[HTML_GENE_PRODUCT]) << endl;
     }
@@ -2651,13 +3043,14 @@ string Html_Mutation_Table_String::freq_cols(vector<string> freq_list)
   return ss.str();
 }
   
+
 /*
  * =====================================================================================
  *        Class:  Evidence_Files
  *  Description:
  * =====================================================================================
  */
-cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff& gd)
+cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, const cGenomeDiff& gd)
 {
   // Fasta and BAM files for making alignments.
   string reference_bam_file_name = settings.reference_bam_file_name;
@@ -2849,7 +3242,13 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
     // values for each side.  This is a dirty fix so that the evidence files
     // will be operating with the correct positions for each side.  Search @MDS0001
     // to find out where we finally access this modified information.
+    
+    //cout << item->as_string() << endl;
+    //cout << "***" << (*item)[SIDE_1_REDUNDANT] << endl;
+
     JunctionInfo juncInfo((*item)["key"]);
+    
+    
     juncInfo.sides[0].redundant = from_string<int32_t>((*item)[SIDE_1_REDUNDANT]);
     juncInfo.sides[0].position = from_string<int32_t>((*item)[SIDE_1_POSITION]);
     juncInfo.sides[1].position = from_string<int32_t>((*item)[SIDE_2_POSITION]);
@@ -2919,12 +3318,11 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, cGenomeDiff
   // now create evidence files
   create_path(settings.evidence_path);
   //cerr << "Total number of evidence items: " << evidence_list.size() << endl;
-  
-  for (vector<cOutputEvidenceItem>::iterator itr = evidence_list.begin(); itr != evidence_list.end(); itr ++)
-  {
+
+  for (vector<cOutputEvidenceItem>::iterator itr = evidence_list.begin(); itr != evidence_list.end(); itr ++) 
+  {  
     cOutputEvidenceItem& e = (*itr);
-    //cerr << "Creating evidence file: " + e[FILE_NAME] << endl;
-    html_evidence_file(settings, gd, e);
+    Settings::pool.push(cOutputEvidenceFiles::html_evidence_file_thread_helper, *this, settings, gd, e);
   }
 }
 
@@ -2952,10 +3350,10 @@ void cOutputEvidenceFiles::add_evidence(const string& evidence_file_name_key, di
 // #
 void
 cOutputEvidenceFiles::html_evidence_file (
-                                    const Settings& settings,
-                                    cGenomeDiff& gd,
+                                    const Settings& settings, 
+                                    const cGenomeDiff& gd, 
                                     cOutputEvidenceItem& item
-                                    )
+                                    ) const
 {
   string output_path = settings.evidence_path + "/" + item[FILE_NAME];
   
@@ -2970,8 +3368,11 @@ cOutputEvidenceFiles::html_evidence_file (
   // Build HTML Head
   HTML << html_header("BRESEQ :: Evidence", settings);
   
+  
   // print a table for the main item
   // followed by auxiliary tables for each piece of evidence
+  
+
   
   diff_entry_ptr_t parent_item = item.parent_item;
   diff_entry_list_t parent_list;
@@ -2994,9 +3395,9 @@ cOutputEvidenceFiles::html_evidence_file (
     HTML << html_genome_diff_item_table_string(settings, gd, this_evidence_list);
     HTML << "<p>";
   }
-  
+
   if (item.entry_exists(PLOT) && !item[PLOT].empty()) {
-    if (file_exists(item[PLOT].c_str())) {
+    if (file_exists( (settings.evidence_path + "/" + item[PLOT]).c_str() )) {
       HTML << div(ALIGN_LEFT, img("width=800", item[PLOT]));
     } else {
       HTML << div(ALIGN_LEFT, "Failed to generate coverage plot.");
@@ -3029,8 +3430,12 @@ cOutputEvidenceFiles::html_evidence_file (
     }
     
   }
+
+
+  
   HTML << html_footer();
   HTML.close();
+
 }
   
   
