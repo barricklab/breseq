@@ -929,6 +929,7 @@ namespace breseq
 		this->lenski_format = false;
 		this->no_evidence = false;
     this->no_javascript = false;
+    this->no_list_js = false;
     this->add_metadata_to_gd = true;
     
     ////////////////////

@@ -101,6 +101,7 @@ EXTRA_DIST = breseq.png \
 	plot_error_rate.r \
 	plot_jc_scores.r \
 	polymorphism_statistics.r \
+	list.min.js \
 	run_circos.sh \
 	indels.conf \
 	mutations.conf \
@@ -118,6 +119,7 @@ install-data-local :
 	cp $(srcdir)/plot_error_rate.r $(BRESEQDATADIR)
 	cp $(srcdir)/plot_jc_scores.r $(BRESEQDATADIR)
 	cp $(srcdir)/polymorphism_statistics.r $(BRESEQDATADIR)
+	cp $(srcdir)/list.min.js $(BRESEQDATADIR)
 	cp $(srcdir)/run_circos.sh $(BRESEQDATADIR)
 	cp $(srcdir)/indels.conf $(BRESEQDATADIR)
 	cp $(srcdir)/mutations.conf $(BRESEQDATADIR)

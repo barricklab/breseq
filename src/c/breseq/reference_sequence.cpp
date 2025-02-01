@@ -58,8 +58,7 @@ namespace breseq {
   
   
   MutationTableOptions::MutationTableOptions(const Settings& _settings)
-  : repeat_header(0)
-  , legend_row(false)
+  : legend_row(false)
   , force_show_sample_headers(false)
   , one_ref_seq(false)
   , force_frequencies_for_one_reference(false)

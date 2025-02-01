@@ -40,7 +40,6 @@ namespace breseq {
   public:
     MutationTableOptions(const Settings& _settings);
     
-    uint32_t repeat_header;
     bool legend_row;
     bool force_show_sample_headers;
     bool one_ref_seq;
