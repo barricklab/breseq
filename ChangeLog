@@ -1,8 +1,11 @@
+Version 0.40.1
+  * Added search box for filtering mutation table rows to main output file.
+  * Removed option to repeat header line in gdtools COMPARE/ANNOTATE.
+
 Version 0.40.0
   * Documentation is no longer packaged with the downloads. It's on the GitHub wiki.
   * Discontinued building the Linux binary since it is unlikely to be portable.
     If you were using this and would like us to keep generating it, let us know!
-
 
 Version 0.39.0 
   * Fixed MAJOR ERRORS in assigning mutations to promoter regions of genes (#374)

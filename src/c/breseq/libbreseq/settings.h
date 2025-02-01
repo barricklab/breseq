@@ -407,6 +407,8 @@ namespace breseq
     uint32_t max_displayed_reads;                           // Default = 100   COMMAND-LINE OPTION
     //! don't include javascript in HTML output, for Galaxy integration
     bool no_javascript;                                     // Default = false COMMAND-LINE OPTION
+    bool no_list_js;                                        // Default = false (use list.js for filtering tables)
+
     string header_genome_diff_file_name;                    // Default = NONE  COMMAND-LINE OPTION
     uint32_t max_nucleotides_to_show_in_tables;      // Default = 8
     uint32_t max_rejected_read_alignment_evidence_to_show;  // Default = 20

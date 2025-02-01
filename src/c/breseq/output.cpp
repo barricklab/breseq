@@ -1,8 +1,3 @@
->>>> Problems with merging this code:
-1) Copying over of list.js fails when output directory is not set for gdtools ANNOTATE
-2) It could filter multiple/all lists on the main output page
-https://stackoverflow.com/questions/46403095/how-to-search-from-two-or-more-lists-using-list-js
-
 /*****************************************************************************
  
  AUTHORS
@@ -95,12 +90,14 @@ const char* ALIGN_CENTER="align=\"center\"";
 const char* ALIGN_RIGHT="align=\"right\"";
 const char* ALIGN_LEFT="align=\"left\"";
 const char* CLASS_EVIDENCE="class=\"evidence\"";
+const char* CLASS_SEQ_ID="class=\"seq_id\"";
 const char* CLASS_POSITION="class=\"position\"";
 const char* CLASS_MUTATION="class=\"mutation\"";
 const char* CLASS_ANNOTATION="class=\"annotation\"";
 const char* CLASS_GENE="class=\"gene\"";
 const char* CLASS_DESCRIPTION="class=\"description\"";
 const char* CLASS_FREQ="class=\"freq\"";
+const char* POSITION_ATTR="data-position";
 
 /*-----------------------------------------------------------------------------
  *  HTML Utility for printing numbers
@@ -121,7 +118,7 @@ string commify(const string& input)
     }
   }
   reverse(retval.begin(),retval.end());
-   return retval;
+  return retval;
 }
 /*-----------------------------------------------------------------------------
  *  HTML Utility for Encoding HTML
@@ -197,12 +194,12 @@ return ss.str();
 }
   
 /*-----------------------------------------------------------------------------
- *  Javascript to include inside the head.
+ *  Javascript to include inside the header
  *-----------------------------------------------------------------------------*/
 string javascript_string()
 {
   stringstream ss;
-  ss << "<script src=\"./list.js\"></script>"                                   << endl;
+
   ss << "<script type=\"text/javascript\">"                                     << endl;
   ss << "  function hideTog(divID) {"                                           << endl;
   ss << "    var item = document.getElementById(divID);"                        << endl;
@@ -221,18 +218,42 @@ string javascript_string()
   return ss.str();
 }
 
-string javascript_end()
+// Must be inserted before list within same div
+string start_list_js(const Settings& settings)
 {
   stringstream ss;
+  
+  ss << "<div id=\"list_container\">" << endl;
+
+  std::ifstream file(settings.program_data_path + "/list.min.js");
+  if (!file) {
+    throw std::runtime_error("Could not open file");
+  }
+  std::ostringstream buffer;
+  buffer << file.rdbuf();
+  ss << "<script>" << buffer.str() << "</script>" << endl;
+
+  ss << "<p>" << "Filter Mutations: <input type=\"text\" size=\"45\" class=\"search\" placeholder=\"Match seq_id, position (no commas), gene, or description\" />";
+  
+  return ss.str();
+}
+
+// Must be inserted after list within same div
+string end_list_js()
+{
+  stringstream ss;
+    
   ss << "<script type=\"text/javascript\">"                                                                 << endl;
   ss << "  var options = {"                                                                                 << endl;
-  ss << "    valueNames: ['evidence', 'position', 'mutation', 'annotation', 'freq', 'gene', 'description']" << endl;
+  ss << "    valueNames: ['seq_id', { name: 'position', attr: 'data-position' }, 'gene', 'description'],"   << endl;
+  ss << "    page: 10000000000" << endl;
   ss << "  };"                                                                                              << endl;
-  ss << "  var mutationList = new List('predictions', options);"                                            << endl;
-  ss << "  var mutationList = new List('junctions', options);"                                            << endl;
-  ss << "  var mutationList = new List('junctions', options);"                                            << endl;
-  ss << "</script>"                                                                                         << endl;
   
+  ss << "  var mutation_list = new List('list_container', options);"                                        << endl;
+  ss << "</script>"                                                                                         << endl;
+    
+  ss << "</div>" << endl;
+
   return ss.str();
 }
 
@@ -255,8 +276,11 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   HTML << html_header("BRESEQ :: Mutation Predictions", settings);
   HTML << breseq_header_string(settings) << endl;
   HTML << "<p>" << endl;
+    
   if (!settings.no_javascript) {
-    HTML << "<p>" << "Search: <input type=\"text\" class=\"search\" placeholder=\"Enter Text\" />";
+    if (!settings.no_list_js) {
+      HTML << start_list_js(settings);
+    }
   }
   /////////////////////////
   //Build Mutation Predictions table
@@ -322,13 +346,12 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   }
   
   if (!settings.no_javascript) {
-    HTML << javascript_end();
+    if (!settings.no_list_js) {
+      HTML << end_list_js();
+    }
   }
   HTML << html_footer();
   HTML.close();
-  if (!settings.no_javascript) {
-    SYSTEM("cp " + settings.program_data_path + "/list.js " +  settings.output_path);
-  }
 }
 
 
@@ -397,7 +420,7 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   }
 
   // Build HTML Head
-  HTML << html_header("BRESEQ :: Marginal Predictions",settings);
+  HTML << html_header("BRESEQ :: Marginal Predictions", settings);
   HTML << breseq_header_string(settings) << endl;
   HTML << "<p>" << endl;
   
@@ -405,13 +428,6 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   
   if (!relative_path.empty())
     relative_path += "/";
-  
-  //Determine if more than one reference sequence is used
-  bool one_ref_seq(true);
-  if (ref_seq_info.size() == 1)
-    one_ref_seq = true;
-  else
-    one_ref_seq = false;
 
   // ###
   // ## Marginal evidence
@@ -488,7 +504,7 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   HTML.close();
 }
 
-string html_header (const string& title, const Settings& settings)
+string html_header(const string& title, const Settings& settings)
 {
   stringstream ss(ios_base::out | ios_base::app);
   
@@ -515,7 +531,6 @@ string html_header (const string& title, const Settings& settings)
   }
   ss << "</head>" << endl;
   ss << "<body>" << endl;
-  ss << "<div id=\"predictions\">" << endl;
   return ss.str();
 }
 
@@ -541,7 +556,20 @@ void html_compare(
   
   //Build html head
   HTML << html_header(title, settings);
+  
+  if (!settings.no_javascript) {
+    if (!settings.no_list_js) {
+      HTML << start_list_js(settings);
+    }
+  }
+  
   HTML << Html_Mutation_Table_String(settings, gd, list_ref, mt_options);
+  
+  if (!settings.no_javascript) {
+    if (!settings.no_list_js) {
+      HTML << end_list_js();
+    }
+  }
   HTML << html_footer();
   HTML.close();
 }
@@ -1334,6 +1362,7 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
   stringstream ss; //!< Main build object for function
   stringstream ssf; //!< Used for formatting strings
   
+  ss << "<div id=\"read_alignment_list\">" << endl;
   ss << start_table("border=\"0\" cellspacing=\"1\", cellpadding=\"3\"") << endl;
   
   // Evidence hyperlinks will be the first column if they exist
@@ -1370,6 +1399,8 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
   
   ss << th("width=\"100%\"", "product") << endl;
   ss << "</tr>" << endl;
+  
+  ss << "<tbody class=\"list\">" << endl;
   
   //Loop through list_ref to build table rows
   for (diff_entry_list_t::iterator itr = list_ref.begin();
@@ -1572,7 +1603,9 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
     } // end show_details
   } // end list_ref loop
 
+  ss << "</tbody>" << endl;
   ss << "</table>" << endl;
+  ss << "</div>" << endl;
   return ss.str();
 }
 
@@ -1583,6 +1616,7 @@ string html_missing_coverage_table_string(diff_entry_list_t& list_ref, bool show
   stringstream ss; //!< Main Build Object in Function
   
   ss << endl;
+  ss << "<div id=\"missing_coverage_list\">" << endl;
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\" width=\"100%\"") << endl;
   
   bool coverage_plots = list_ref.front()->entry_exists(_EVIDENCE_FILE_NAME);
@@ -1617,6 +1651,7 @@ string html_missing_coverage_table_string(diff_entry_list_t& list_ref, bool show
   
   ss << th("width=\"100%\"", "description") << endl;
   ss << "</tr>" << endl;
+  ss << "<tbody class=\"list\">" << endl;
 
   for (diff_entry_list_t::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++)
   {
@@ -1686,7 +1721,9 @@ string html_missing_coverage_table_string(diff_entry_list_t& list_ref, bool show
       }
     }
   }
+  ss << "</tbody>" << endl;
   ss << "</table>" << endl;
+  ss << "</div>" << endl;
   return ss.str();
 }
   
@@ -1714,6 +1751,7 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
                test_item.entry_exists(_SIDE_2_EVIDENCE_FILE_NAME) &&
                test_item.entry_exists(_NEW_JUNCTION_EVIDENCE_FILE_NAME));
 
+  ss << "<div id=\"new_junction_list\">" << endl;
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
   size_t total_cols = link ? 12 : 10; //@ded 12/10 instead of 11/9 for frequency addition. SNPS set up to only do so if frequency is != 1 should this be done here as well?
   
@@ -1744,6 +1782,7 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
   ss << th("width=\"100%\"","product") << endl;
   ss << "</tr>" << endl;
   ss << endl;
+  ss << "<tbody class=\"list\">" << endl;
 // #
 // #   ####################
 // #   #### ITEM LINES ####
@@ -1901,7 +1940,10 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
   row_bg_color_index = (row_bg_color_index+1) % 2;//(row_bg_color_index) % 2;
 
   }// End list_ref Loop
+  ss << "</tbody>" << endl;
   ss << "</table>" << endl;
+  ss << "</div>" << endl;
+
   return ss.str();
 }
   
@@ -1914,6 +1956,7 @@ string html_copy_number_table_string(diff_entry_list_t& list_ref, bool show_deta
   
   bool link = test_item.entry_exists(_EVIDENCE_FILE_NAME);
   
+  ss << "<div id=\"copy_number_list\">" << endl;
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
   size_t total_cols = link ? 10 : 9;
   
@@ -1939,6 +1982,8 @@ string html_copy_number_table_string(diff_entry_list_t& list_ref, bool show_deta
   ss << th("width=\"100%\"","product") << endl;
   ss << "</tr>" << endl;
   ss << endl;
+  ss << "<tbody class=\"list\">" << endl;
+
   // #   ####################
   // #   #### ITEM LINES ####
   // #   ####################
@@ -1986,7 +2031,10 @@ string html_copy_number_table_string(diff_entry_list_t& list_ref, bool show_deta
     ss << end_tr();
   }// End list_ref Loop
   
+  ss << "</tbody>" << endl;
   ss << end_table() << endl;
+  ss << "</div>" << endl;
+
   return ss.str();
 }
 
@@ -2684,11 +2732,11 @@ Html_Mutation_Table_String::Html_Mutation_Table_String(
   , options(options)
 {
   (*this) += "<!--Output Html_Mutation_Table_String-->\n";
+  (*this) += "<div id=\"mutation_list\">\n";
   (*this) += "<table border=\"0\" cellspacing=\"1\" cellpadding=\"3\">\n";
-  
-  
   this->Header_Line();
   this->Item_Lines();
+  (*this) += "</table></div>\n";
 }
 
 /*
@@ -2733,7 +2781,7 @@ void Html_Mutation_Table_String::Header_Line(bool print_main_header)
       if(!settings.no_evidence)
         ss << th(CLASS_EVIDENCE, "evidence") << endl;
       if(!options.one_ref_seq)
-       ss << th(nonbreaking("seq id")) << endl;
+       ss << th(CLASS_SEQ_ID, nonbreaking("seq id")) << endl;
 
       ss << th( CLASS_POSITION, (header_rows == i) ? "position" : "") << endl;
       ss << th( CLASS_MUTATION, (header_rows == i) ? "mutation" : "") << endl;
@@ -2835,10 +2883,6 @@ void Html_Mutation_Table_String::Item_Lines()
     // We must create a copy here and annotate it to be safe for multithreading!
     cDiffEntry mut(**itr);
 
-    if ((row_num != 0) && (options.repeat_header != 0) && (row_num % options.repeat_header == 0))
-    {
-      Header_Line(false); // don't print main header again
-    }
     row_num++;
         
     // Build Evidence Column
@@ -2914,7 +2958,7 @@ void Html_Mutation_Table_String::Item_Lines()
       ss << td(string(CLASS_EVIDENCE)+" "+string(ALIGN_CENTER), evidence_string) << "<!-- Evidence -->" << endl;
     }
     if (!options.one_ref_seq) {
-      ss << td(ALIGN_CENTER, mut[HTML_SEQ_ID]) << "<!-- Seq_Id -->" << endl;
+      ss << td(string(CLASS_SEQ_ID)+" "+ALIGN_CENTER, mut[HTML_SEQ_ID]) << "<!-- Seq_Id -->" << endl;
     }
     
     // Embellish with insert position and phylogeny ID information.
@@ -2924,7 +2968,7 @@ void Html_Mutation_Table_String::Item_Lines()
         position_str += nonbreaking(":" + mut[INSERT_POSITION]);
       }
     }
-    ss << td(string(CLASS_POSITION)+" "+string(ALIGN_RIGHT), position_str) << "<!-- Position -->" << endl;
+    ss << td(string(CLASS_POSITION)+" "+string(ALIGN_RIGHT)+" "+string(POSITION_ATTR)+"=\""+mut[POSITION] + "\"", position_str) << "<!-- Position -->" << endl;
     
     string mutation_str = mut[HTML_MUTATION];
     if (mut.entry_exists(PHYLOGENY_ID)) {
@@ -2971,8 +3015,6 @@ void Html_Mutation_Table_String::Item_Lines()
                     b("Evidence codes: RA = read alignment, MC = missing coverage, JC = new junction"));
     ss << "</tr>" << endl;
   }
-  ss << "</table>" << endl;
-  ss << "</div>";
   
   (*this) += ss.str();
 }

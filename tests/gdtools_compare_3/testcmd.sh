@@ -9,7 +9,6 @@ EXPECTED_OUTPUTS[0]="${SELF}/expected.html"
 TESTCMD="\
     ${GDTOOLS} \
         COMPARE \
-        --repeat-header 10 \
         -f HTML \
         -o ${SELF}/output.html \
         -r ${DATADIR}/lambda/lambda.1-2.gbk \
