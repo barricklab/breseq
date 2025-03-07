@@ -1174,7 +1174,7 @@ int do_annotate(int argc, char* argv[])
 	options.addUsage("");
 	options.addUsage("Each mutation has a 'genes_overlapping' list assigned based on the genes it overlaps.");
 	options.addUsage("");
-	options.addUsage("If the mutation affects a position within --inactivating-overlap-fraction of the length of an overlapping gene from its start, the gene is moved to the 'genes_inactivated' list if it is also a MOB, SNP causing a nonsense mutation, or an INS, DEL, or SUB that results in a size change that is <= the --inactivating-size-cutoff and results in a frameshift or stop codon in a protein-coding gene or an INS, DEL, SUB with a size change > the --innactivating-size-cutoff for any type of gene, even if it is in-frame in a protein-coding gene.");
+	options.addUsage("If the mutation affects a position within --inactivating-overlap-fraction of the length of an overlapping gene from its start, the gene is moved to the 'genes_inactivated' list if it is also a MOB, INV, INT, SNP causing a nonsense mutation, or an INS, DEL, or SUB that results in a size change that is <= the --inactivating-size-cutoff and results in a frameshift or stop codon in a protein-coding gene or an INS, DEL, SUB with a size change > the --inactivating-size-cutoff for any type of gene, even if it is in-frame in a protein-coding gene.");
 	options.addUsage("");
 	options.addUsage("If there are no 'genes_overlapping' or 'genes_inactivated', a mutation has a 'genes_promoter' list assigned to all genes that are <= the --promoter_cutoff bp upstream of a gene. There can be multiple qualifying genes assigned to each list, but each gene will only be in one of the lists.");
 

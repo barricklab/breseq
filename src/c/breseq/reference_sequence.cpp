@@ -3143,9 +3143,9 @@ string cReferenceSequences::translate_protein(cAnnotatedSequence& seq, cSequence
 // completely deleted genes are annotated outside of this function
 bool cReferenceSequences::mutation_overlapping_gene_is_inactivating(const cDiffEntry& mut, const string& snp_type, const uint32_t start, const uint32_t end, const cGeneFeature& gene, const double inactivating_overlap_fraction, const int32_t inactivating_size_cutoff)
 {
-
+  
   bool is_inactivating = false;
-
+  
   // These coords are internal to the gene that was mutated (accounts for multiple sublocations)
   int32_t mutated_gene_index_start_1, mutated_gene_index_end_1;
   int8_t mutated_gene_strand;
@@ -3153,18 +3153,31 @@ bool cReferenceSequences::mutation_overlapping_gene_is_inactivating(const cDiffE
   gene.genomic_position_to_index_strand_1(end, mutated_gene_index_end_1, mutated_gene_strand);
   int32_t gene_inactivating_overlap_length = floor(inactivating_overlap_fraction * static_cast<double>(gene.get_length()));
   
-  //=== Needs logic for sizes spanning past end of gene for large deletions?
-  
-  // values of 0 mean that it was not within the gene
+  // Does the start or the end overlap the beginning portion of the gene that we consider at risk for inactivation?
   if (   ((mutated_gene_index_start_1 != 0) && (mutated_gene_index_start_1 <= gene_inactivating_overlap_length))
       || ((mutated_gene_index_end_1 != 0) && (mutated_gene_index_end_1 <= gene_inactivating_overlap_length)) ) {
-  
-    if ((gene.type == "CDS") && (mut._type == SNP)) {
+    
+    // Types of mutations that are always inactivating if they overlap this portion of the gene
+    if ( (mut._type == MOB) || (mut._type == INV) || (mut._type == INT) ) {
+      is_inactivating = true;
+    }
+    // Stop codons
+    else if ((gene.type == "CDS") && (mut._type == SNP)) {
       is_inactivating = (snp_type == "nonsense");
     }
+    // Indels
     else if ( ((mut._type == INS) || (mut._type == DEL) || (mut._type == SUB)) ) {
       int32_t size_change = mut.mutation_size_change(*this);
-      if ((abs(size_change) <= inactivating_size_cutoff) && (gene.type == "CDS")) {
+      
+      // We allow small indels in protein-coding genes, to not be inactivating
+      // if they are in-frame and don't create stop codons
+      
+      // It is too big or not in a protein-coding gene. We are done.
+      if ( (abs(size_change) > inactivating_size_cutoff) || (gene.type != "CDS") ) {
+        is_inactivating = true;
+      }
+      // Figure out if it is in-frame or introduces a stop codon
+      else {
         
         // If it changes the frame, then we are done
         is_inactivating = size_change % 3 != 0;
@@ -3217,13 +3230,7 @@ bool cReferenceSequences::mutation_overlapping_gene_is_inactivating(const cDiffE
           }
           
         }
-      } else {
-        is_inactivating = true;
       }
-    } else if (mut._type == MOB) {
-      is_inactivating = true;
-    } else if (mut._type == INV) {
-      is_inactivating = true;
     }
   }
   
