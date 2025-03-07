@@ -313,7 +313,7 @@ namespace breseq {
   
   class cSequenceFeature;
   
-  /*! We allow a feeature to consist of an ordered list of regions
+  /*! We allow a feature to consist of an ordered list of regions
    * For most features, there is only one location
    * this enables representing spliced and even trans spliced genes
    */
@@ -829,7 +829,7 @@ public:
     static const string gene_strand_forward_char;
 
     static const double k_inactivating_overlap_fraction;
-    static const int32_t k_inactivating_size;
+    static const int32_t k_inactivating_size_cutoff;
     static const int32_t k_promoter_distance;
 
     
@@ -1181,7 +1181,7 @@ public:
                                   cFeatureLocation*& prev_gene,
                                   cFeatureLocation*& next_gene);
     
-    bool mutation_overlapping_gene_is_inactivating(const cDiffEntry& mut, const string& snp_type, const uint32_t start, const uint32_t end, const cGeneFeature& gene, const double inactivate_overlap_fraction, const int32_t frameshift_cutoff);
+    bool mutation_overlapping_gene_is_inactivating(const cDiffEntry& mut, const string& snp_type, const uint32_t start, const uint32_t end, const cGeneFeature& gene, const double inactivating_overlap_fraction, const int32_t inactivating_size_cutoff);
     
     static string list_to_entry(const vector<string>& _list, const string& _ignore);
     
@@ -1189,10 +1189,10 @@ public:
     static string gene_strand_to_string(const bool forward)
     { return (forward ? gene_strand_forward_char : gene_strand_reverse_char); }
     
-    void annotate_1_mutation_in_genes(cDiffEntry& mut, vector<cFeatureLocation*>& within_gene_locs, uint32_t start, uint32_t end, bool ignore_pseudogenes, double inactivating_overlap_fraction, int32_t inactivating_size, int32_t promoter_distance);
-    void annotate_1_mutation(cDiffEntry& mut, uint32_t start, uint32_t end, bool repeat_override = false, bool ignore_pseudogenes = false, double inactivating_overlap_fraction = k_inactivating_overlap_fraction, int32_t inactivating_size = k_inactivating_size, int32_t promoter_distance = k_promoter_distance);
+    void annotate_1_mutation_in_genes(cDiffEntry& mut, vector<cFeatureLocation*>& within_gene_locs, uint32_t start, uint32_t end, bool ignore_pseudogenes, double inactivating_overlap_fraction, int32_t inactivating_size_cutoff, int32_t promoter_distance);
+    void annotate_1_mutation(cDiffEntry& mut, uint32_t start, uint32_t end, bool repeat_override = false, bool ignore_pseudogenes = false, double inactivating_overlap_fraction = k_inactivating_overlap_fraction, int32_t inactivating_size_cutoff = k_inactivating_size_cutoff, int32_t promoter_distance = k_promoter_distance);
     void categorize_1_mutation(cDiffEntry& mut, int32_t large_size_cutoff);
-    void annotate_mutations(cGenomeDiff& gd, bool only_muts = false, bool ignore_pseudogenes = false, bool compare_mode = false, int32_t large_size_cutoff=kBreseq_large_mutation_size_cutoff, bool verbose = false, double inactivating_overlap_fraction = k_inactivating_overlap_fraction, int32_t inactivating_size = k_inactivating_size, int32_t promoter_distance = k_promoter_distance);
+    void annotate_mutations(cGenomeDiff& gd, bool only_muts = false, bool ignore_pseudogenes = false, bool compare_mode = false, int32_t large_size_cutoff=kBreseq_large_mutation_size_cutoff, bool verbose = false, double inactivating_overlap_fraction = k_inactivating_overlap_fraction, int32_t inactivating_size_cutoff = k_inactivating_size_cutoff, int32_t promoter_distance = k_promoter_distance);
     void polymorphism_statistics(Settings& settings, Summary& summary);
     string repeat_family_sequence(const string& repeat_name, int8_t strand, string* repeat_region = NULL, string* picked_seq_id=NULL, cFeatureLocation* picked_sequence_feature=NULL, bool fatal_error=true);
     

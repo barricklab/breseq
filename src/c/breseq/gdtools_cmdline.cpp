@@ -1129,7 +1129,7 @@ int do_annotate(int argc, char* argv[])
 	options("preserve-evidence,e", "By default evidence items with two-letter codes are removed (RA, JC, MC, ...). Supply this option to retain them. Only affects output in GD and JSON formats. This option can only be used with a single input GD file (i.e., not in COMPARE mode). ", TAKES_NO_ARGUMENT);
 	options("collapse,c", "Do not show samples (columns) unless they have at least one mutation", TAKES_NO_ARGUMENT);
 	options("inactivating-overlap-fraction", "Mutations within this fraction of the length of a gene from its beginning are assigned to the 'genes_inactivating' versus 'the genes_overlapping' list if they fulfill other criteria.", cReferenceSequences::k_inactivating_overlap_fraction);
-	options("inactivating-size", "INS, DEL, and SUB mutations in genes that are longer than this length cutoff are always assigned to the 'genes_inactivating' list, even if they are in-frame or noncoding genes.", cReferenceSequences::k_inactivating_size);
+	options("inactivating-size-cutoff", "INS, DEL, and SUB mutations in genes that are longer than this length cutoff are always assigned to the 'genes_inactivating' list, even if they are in-frame or in noncoding genes.", cReferenceSequences::k_inactivating_size_cutoff);
 	options("promoter-distance", "Mutations upstream and within this distance of the beginning of a gene have it added to their 'genes_promoter' list.", cReferenceSequences::k_promoter_distance);
 	
 	options.addUsage("");
@@ -1172,7 +1172,11 @@ int do_annotate(int argc, char* argv[])
 	options.addUsage("");
 	options.addUsage("MUTATION EFFECTS CLASSIFICATION");
 	options.addUsage("");
-	options.addUsage("Each mutation has a 'genes_overlapping' list assigned based on the genes it overlaps. If the mutation affects a position within --inactivating-overlap-fraction of the length of an overlapping gene from its start, the gene is moved to the 'genes_inactivated' list if it is also a MOB, SNP causing a nonsense mutation, or an INS, DEL, or SUB that results in a size change that is <= the --inactivating-size and results in a frameshift in a protein-coding gene or an INS, DEL, SUB with a size change > the --innactivating-size for any type of gene even if it is in-frame in a protein-coding gene. If there are no 'genes_overlapping' or 'genes_inactivated', a mutation has a 'genes_promoter' list assigned to all genes that are <= the --promoter_cutoff bp upstream of a gene. There can be multiple qualifying genes assigned to each list, but each gene will only be in one of the lists." );
+	options.addUsage("Each mutation has a 'genes_overlapping' list assigned based on the genes it overlaps.");
+	options.addUsage("");
+	options.addUsage("If the mutation affects a position within --inactivating-overlap-fraction of the length of an overlapping gene from its start, the gene is moved to the 'genes_inactivated' list if it is also a MOB, SNP causing a nonsense mutation, or an INS, DEL, or SUB that results in a size change that is <= the --inactivating-size-cutoff and results in a frameshift or stop codon in a protein-coding gene or an INS, DEL, SUB with a size change > the --innactivating-size-cutoff for any type of gene, even if it is in-frame in a protein-coding gene.");
+	options.addUsage("");
+	options.addUsage("If there are no 'genes_overlapping' or 'genes_inactivated', a mutation has a 'genes_promoter' list assigned to all genes that are <= the --promoter_cutoff bp upstream of a gene. There can be multiple qualifying genes assigned to each list, but each gene will only be in one of the lists.");
 
   options.processCommandArgs(argc, argv);
 	
@@ -1265,7 +1269,7 @@ int do_annotate(int argc, char* argv[])
 
 		uout("Annotating mutations");
 		
-		ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"), compare_mode, kBreseq_large_mutation_size_cutoff, false, from_string<double>(options["inactivating-overlap-fraction"]), from_string<uint32_t>(options["inactivating-size"]), from_string<uint32_t>(options["promoter-distance"]) );
+		ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"), compare_mode, kBreseq_large_mutation_size_cutoff, false, from_string<double>(options["inactivating-overlap-fraction"]), from_string<uint32_t>(options["inactivating-size-cutoff"]), from_string<uint32_t>(options["promoter-distance"]) );
 		
     uout("Writing output HTML file", output_file_name);
 		
