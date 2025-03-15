@@ -150,6 +150,9 @@ namespace breseq {
   
   //For CN
   extern const char* COPY_NUMBER;
+
+  // For gdtools APPLY
+  extern const char* HAS_BEEN_APPLIED;
   
   extern const vector<string> gd_entry_type_lookup_table;
 
@@ -318,7 +321,7 @@ namespace breseq {
     bool is_small_mutation(uint32_t large_size_cutoff=kBreseq_large_mutation_size_cutoff);
     
     // Updates
-    void annotate_repeat_hotspots(cReferenceSequences& new_ref_seq_info, int32_t slop_distance, int32_t size_cutoff_AMP_becomes_INS_DEL_mutation, bool remove_old_tags, bool warn_mode = false);
+    void annotate_repeat_hotspots(cReferenceSequences& new_ref_seq_info, int32_t slop_distance, int32_t size_cutoff_AMP_becomes_INS_DEL_mutation, bool remove_old_tags, bool warn_mode = false, set<string>* already_warned_ids = NULL);
     
     //!---- Functions related to complex APPLY situations ---- !//
     

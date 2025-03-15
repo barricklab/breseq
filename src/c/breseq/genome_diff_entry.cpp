@@ -131,6 +131,9 @@ namespace breseq {
   //For CN
   const char* COPY_NUMBER = "copy_number";
   
+  // For gdtools APPLY
+  const char* HAS_BEEN_APPLIED = "_has_been_applied";
+
   const int32_t k_num_line_specification_common_prefix_columns = 3;
   
   const map<gd_entry_type, vector<string> > line_specification = make_map<gd_entry_type, vector<string> >
@@ -1068,7 +1071,8 @@ namespace breseq {
   /*! Add 'mediate', 'adjacent', and between tags to a mutation
    */
   
-  void cDiffEntry::annotate_repeat_hotspots(cReferenceSequences& new_ref_seq_info, int32_t slop_distance, int32_t size_cutoff_AMP_becomes_INS_DEL_mutation, bool remove_old_tags, bool warn_after_mode)
+  // already_warned_ids is a map of id => [tag]=[value] to prevent repeat warnings
+  void cDiffEntry::annotate_repeat_hotspots(cReferenceSequences& new_ref_seq_info, int32_t slop_distance, int32_t size_cutoff_AMP_becomes_INS_DEL_mutation, bool remove_old_tags, bool warn_after_mode, set<string>* already_warned_ids)
   {
     cDiffEntry& mut = *this;
     
@@ -1161,18 +1165,29 @@ namespace breseq {
       bool was_between = mut.entry_exists("between");
       bool was_mediated = mut.entry_exists("mediated");
       
+      
       if (mut["adjacent"] != nearby_tags["adjacent"]) {
-        WARN("Possible 'adjacent' tag should be added with value (" + nearby_tags["adjacent"] + ") due to later mutation:\n" + mut.as_string());
+        string warning_key = mut._id + "__adjacent__" + nearby_tags["adjacent"];
+        if ( (already_warned_ids == NULL) || (already_warned_ids->find(warning_key) == already_warned_ids->end()) ) {
+          already_warned_ids->insert(warning_key);
+          WARN("Possible 'adjacent' tag should be added with value (" + nearby_tags["adjacent"] + ") due to later mutation:\n" + mut.as_string());
+        }
       }
       
       // Why these checks? Deletion that is between two IS looks like mediated after it occurs...
       if (!mut.entry_exists("between") && !mut.entry_exists("mediated")) {
         
         if ((mut["between"] != nearby_tags["between"])) {
-          WARN("Possible 'between' tag should be added due to later mutation:\n" + mut.as_string());
+          string warning_key = mut._id + "__between__" + nearby_tags["between"];
+          if ( (already_warned_ids == NULL) || (already_warned_ids->find(warning_key) == already_warned_ids->end()) ) {
+            WARN("Possible 'between' tag should be added due to later mutation:\n" + mut.as_string());
+          }
         }
         if (mut["mediated"] != nearby_tags["mediated"]) {
-          WARN("Possible 'mediated' tag should be added due to later mutation:\n" + mut.as_string());
+          string warning_key = mut._id + "__mediated__" + nearby_tags["mediated"];
+          if ( (already_warned_ids == NULL) || (already_warned_ids->find(warning_key) == already_warned_ids->end()) ) {
+            WARN("Possible 'mediated' tag should be added due to later mutation:\n" + mut.as_string());
+          }
         }
         
       }

@@ -2413,8 +2413,11 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
   for (diff_entry_list_t::iterator itr = muts.begin(); itr != muts.end(); itr++) {
     cDiffEntry& mut = **itr;
   
-    // Mutations don't shift themselves
-    if (mut == current_mut) continue;
+    // Mutations don't shift themselves or already applied mutations
+    if (mut[HAS_BEEN_APPLIED] == "1") continue;
+    
+    // Not necessary with flagging of what has been applied
+    // if (mut == current_mut) continue;
     
     // the position to be updated
     int32_t position = from_string<uint32_t>(mut[POSITION]);
@@ -2591,6 +2594,8 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
   // Sort the list into apply order ('within' and 'before' tags)
   cGenomeDiff::sort_apply_order();
   
+  set<string> already_warned_ids;
+  
   // Handle all mutation types, plus MASK four-letter type.
   diff_entry_list_t mutation_list = this->mutation_list();
   diff_entry_list_t mask_list = this->get_list(make_vector<gd_entry_type>(MASK));
@@ -2600,6 +2605,10 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
   {
     cDiffEntry& mut(**itr_mut);
     uint32_t position = from_string<uint32_t>(mut[POSITION]);
+    
+    // Mark as applied so that we don't shift its coords later
+    mut[HAS_BEEN_APPLIED] = "1";
+
     
     // Look out! -- you should not apply things that don't have frequency=1 or other markers of polymorphism mode
     //ASSERT(!((mut._type == INS) && (mut.count(INSERT_POSITION))), "Attempt to apply insertion with \"insert_position\" field set, which indicates your Genome Diff represents polymorphic mutations.\n" + mut.as_string());
@@ -2611,7 +2620,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
     // Mark 'between', 'mediated', 'adjacent' to repeat_region mutations
     //   Must be done before we apply the current mutation to the sequence
     //   But previous mutations must be applied (because for example it may be mediated by a *new* IS copy).
-    mut.annotate_repeat_hotspots(new_ref_seq_info, slop_distance, size_cutoff_AMP_becomes_INS_DEL_mutation, false);
+    mut.annotate_repeat_hotspots(new_ref_seq_info, slop_distance, size_cutoff_AMP_becomes_INS_DEL_mutation, false, false, &already_warned_ids);
     
     // Attributes used for output of debug info
     string replace_seq_id;
@@ -3118,7 +3127,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
     diff_entry_list_t::iterator prev_it = itr_mut;
     if (prev_it != mutation_list.begin()) prev_it--;
     while ( (prev_it != mutation_list.begin()) && (i < 5) ) {
-      (*prev_it)->annotate_repeat_hotspots(new_ref_seq_info, slop_distance, size_cutoff_AMP_becomes_INS_DEL_mutation, false, true);
+      (*prev_it)->annotate_repeat_hotspots(new_ref_seq_info, slop_distance, size_cutoff_AMP_becomes_INS_DEL_mutation, false, true, &already_warned_ids);
       prev_it--;
       i++;
     }
