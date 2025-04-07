@@ -524,7 +524,7 @@ namespace breseq {
               
               // We can't add split repeat regions
               if (feat.is_repeat()) {
-                this->m_features.erase(it_feature);
+                it_feature = this->m_features.erase(it_feature);
                 advance_it_feature = false;
               } else {
                 feat.add_location(static_cast<cLocation>(*it_region));
@@ -539,7 +539,7 @@ namespace breseq {
               
               // We can't add split repeat regions
               if (feat.is_repeat()) {
-                this->m_features.erase(it_feature);
+                it_feature = this->m_features.erase(it_feature);
                 advance_it_feature = false;
               } else {
                 feat.add_location(static_cast<cLocation>(*it_region));
