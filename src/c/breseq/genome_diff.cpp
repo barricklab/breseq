@@ -2504,7 +2504,7 @@ void cGenomeDiff::shift_positions(cDiffEntry &current_mut, cReferenceSequences& 
     // Normal behavior -- offset mutations later in same reference sequence
     if (!was_nested) {
       if (current_mut._type == INV) {
-          mut.mutation_invert_position_sequence(current_mut);
+          mut.mutation_invert_position_sequence(current_mut, this);
       } else {
         mut.mutation_shift_position(current_mut[SEQ_ID], shift_start, shift_end, delta);
       }

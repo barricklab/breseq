@@ -17,6 +17,8 @@
  *****************************************************************************/
 
 #include "libbreseq/genome_diff_entry.h"
+
+#include "libbreseq/genome_diff.h"
 #include "libbreseq/reference_sequence.h"
 
 namespace breseq {
@@ -917,7 +919,15 @@ namespace breseq {
         // Nothing special for these cases
       case DEL:
       case INV:
+        break;
+        
       case AMP:
+        // If mediated_strand is defined, we need to flip its direction, so new IS elements have the right orientation
+        if (this->entry_exists(MEDIATED_STRAND)) {
+          int32_t mediated_strand_int = from_string<int32_t>((*this)[MEDIATED_STRAND]);
+          (*this)[MEDIATED_STRAND] = to_string(-1 * mediated_strand_int);
+        }
+        
         break;
         
       case SNP:
@@ -963,7 +973,7 @@ namespace breseq {
   }
   
   // Updates positions and reverse-complements
-  void cDiffEntry::mutation_invert_position_sequence(cDiffEntry& inverting_mutation) {
+  void cDiffEntry::mutation_invert_position_sequence(cDiffEntry& inverting_mutation, cGenomeDiff* gd) {
     ASSERT(this->is_mutation(), "Attempt to invert position of non-mutation cDiffEntry");
     
     // are we on the right sequence fragment?
@@ -988,12 +998,13 @@ namespace breseq {
     else if (position > end_inversion)
       return;
     
-    // Contained within, invert coordinates
+    // Contained within, reverse complement mutation, fix coordinates, fix within modifiers
     else if ((position >= start_inversion) && (position + ref_size - 1 <= end_inversion)) {
       
-      //Reverse complement the mutation
+      // 1) Reverse complement the mutation
       this->mutation_reverse_complement();
       
+      // 2) Fix the position
       if (this->_type==INS) {
         
         int32_t insert_pos;
@@ -1013,12 +1024,44 @@ namespace breseq {
         (*this)[POSITION] = to_string<int32_t>(end_inversion - (position + (ref_size - 1) - start_inversion));
         
       }
+      
+      // If we are within an AMP or a MOB
+      // then we need to flip certain within-mutation modifiers
+      string within_id = this->get_within_mutation_id();
+      if (within_id != "") {
+        diff_entry_ptr_t within_mut = gd->find_by_id(within_id);
+        string within_modifier_index = this->get_within_mutation_modifier_index();
+        if (within_modifier_index != "") {
+          if (within_mut->_type==AMP) {
+            
+            uint32_t within_mut_copy_number = from_string<uint32_t>((*within_mut)[NEW_COPY_NUMBER]);
+            uint32_t within_modifier_index_number = from_string<uint32_t>(within_modifier_index);
+            string new_modifier_index_string = to_string<uint32_t>(within_mut_copy_number - within_modifier_index_number + 1);
+            // If we are within then we need to flip the index to max - current + 1
+            string new_within_id = within_id + ":" + new_modifier_index_string;
+          }
+          // END AMP
+          
+          if (within_mut->_type==MOB) {
+            // If we are within then we need to flip the :1 and :2
+            string new_within_id = within_id;
+            if (within_modifier_index =="1" ) {
+              (*this)[WITHIN] = new_within_id + ":2";
+            } else if (new_within_id =="2" ) {
+              (*this)[WITHIN] = new_within_id + ":1";
+            }
+          }
+          // End MOB
+        }
+      }
+      // End within fixes
+        
       return;
     }
     
-    // Overlaps end
-    else {
-      WARN("This mutation:\n" + this->as_string() + "\nextends across an endpoint of inversion:\n" + inverting_mutation.as_string() + "\nWhen applying the inversion, its sequence will not be reverse complemented, and its coordinates will not be shifted.");
+    // Overlaps outside of ends - ignore if inversion
+    else if (this->_type != INV) {
+      WARN("This mutation:\n" + this->as_string() + "\nextends outside of the endpoints of the inversion:\n" + inverting_mutation.as_string() + "\nWhen applying the inversion, its applied sequence will not be reverse complemented, and its coordinates will not be shifted.");
     }
     
   }

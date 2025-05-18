@@ -27,6 +27,7 @@ using namespace std;
 
 namespace breseq {
 
+  class cGenomeDiff;
   class cDiffEntry;
   class cReferenceCoordinate;
   class cReferenceSequences;
@@ -316,7 +317,7 @@ namespace breseq {
     void mutation_reverse_complement();
     
     // Updates positions for inversion and reverse-complements mutation
-    void mutation_invert_position_sequence(cDiffEntry& inverting_mutation);
+    void mutation_invert_position_sequence(cDiffEntry& inverting_mutation, cGenomeDiff* gd);
     
     bool is_small_mutation(uint32_t large_size_cutoff=kBreseq_large_mutation_size_cutoff);
     
@@ -331,6 +332,17 @@ namespace breseq {
       if (!this->entry_exists(WITHIN)) return "";
       vector<string> split_within = split(this->get(WITHIN), ":");
       return split_within[0];
+    }
+    
+    //! Gets the part after the :. Returns empty string if none.
+    const string get_within_mutation_modifier_index() const
+    {
+      if (!this->entry_exists(WITHIN)) return "";
+      vector<string> split_within = split(this->get(WITHIN), ":");
+      if (split_within.size()==2) {
+        return split_within[1];
+      }
+      return "";
     }
     
     //!---- Output ---- !//
