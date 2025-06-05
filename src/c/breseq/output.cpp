@@ -2883,6 +2883,10 @@ void Html_Mutation_Table_String::Item_Lines()
     // We must create a copy here and annotate it to be safe for multithreading!
     cDiffEntry mut(**itr);
 
+    if ((row_num != 0) && (options.repeat_header != 0) && (row_num % options.repeat_header == 0)) {
+      Header_Line(false); // don't print main header again
+    }
+    
     row_num++;
         
     // Build Evidence Column

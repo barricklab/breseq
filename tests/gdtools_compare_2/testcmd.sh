@@ -10,6 +10,7 @@ TESTCMD="\
     ${GDTOOLS} \
         COMPARE \
         -f HTML \
+         --repeat-header 10 \
         -o ${SELF}/output.html \
         -r ${DATADIR}/pDCAF3/pDCAF3.gbk \
         ${SELF}/input.gd \

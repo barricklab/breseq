@@ -1124,6 +1124,7 @@ int do_annotate(int argc, char* argv[])
 	options("add-html-fields,a", "Add formatted fields that are used for generating HTML output. Only applicable to GD and JSON output formats", TAKES_NO_ARGUMENT);
 	options("add-text-fields,b", "Add formatted fields in UTF-8 encoded text that are similar to those used in HTML output. Only applicable to GD, TSV, CSV, and JSON output formats", TAKES_NO_ARGUMENT);
 	options("ignore-pseudogenes", "Treat pseudogenes as valid ORFs for calling amino acid substitutions", TAKES_NO_ARGUMENT);
+	options("repeat-header", "In HTML mode, repeat the header line every this many rows (0=OFF)", "0");
 	options("phylogeny-aware,p", "Check the optional 'phylogeny_id' field when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
 	options("region,g", "Only show mutations that overlap this reference sequence region (e.g., REL606:64722-65312)");
 	options("preserve-evidence,e", "By default evidence items with two-letter codes are removed (RA, JC, MC, ...). Supply this option to retain them. Only affects output in GD and JSON formats. This option can only be used with a single input GD file (i.e., not in COMPARE mode). ", TAKES_NO_ARGUMENT);
@@ -1278,6 +1279,8 @@ int do_annotate(int argc, char* argv[])
     settings.no_evidence = true;
     
     MutationTableOptions mt_options(settings);
+		mt_options.repeat_header = from_string<int32_t>(options["repeat-header"]);
+
     if (polymorphism_search_found)
       mt_options.force_frequencies_for_one_reference = true;
     mt_options.one_ref_seq = ref_seq_info.size() == 1;
