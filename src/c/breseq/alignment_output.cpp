@@ -30,7 +30,9 @@ namespace breseq
 
 
 // lowercase are clipped bases, also counted as gaps
-const string alignment_output::Alignment_Base::gap_string(" .-atcgn");
+const string alignment_output::Alignment_Base::gap_string(" .-");
+const string alignment_output::Alignment_Base::lowercase_base_string("atcgn");
+
 
 bool verbose = false; //TODO Options
 bool text = false; //TODO Options
@@ -812,7 +814,7 @@ void alignment_output::create_alignment ( const string& region, cOutputEvidenceI
     if ( aligned_read.start > 1 )
     {
       string add_seq = aligned_read.read_sequence.substr ( 0, ( aligned_read.start - 1 ) );
-      aligned_read.aligned_bases.replace ( ( left_pos - add_seq.length() ), add_seq.length(), to_lower ( add_seq ) ); //start,size, common.h function
+      aligned_read.aligned_bases.replace ( ( left_pos - add_seq.length() ), add_seq.length(), to_lower ( add_seq ) );
 
       add_seq = repeat_char(char(k_reserved_quality_dont_highlight), aligned_read.start -1);
       aligned_read.aligned_quals.replace ( ( left_pos - add_seq.length() ), add_seq.length(), add_seq );
@@ -878,8 +880,8 @@ void alignment_output::create_alignment ( const string& region, cOutputEvidenceI
     size_t first_truncation_position = m_aligned_annotation.aligned_bases.find_first_of('|');
     size_t last_truncation_position = m_aligned_annotation.aligned_bases.find_last_of('|');
         
-    last_truncation_position = min<size_t>(m_aligned_annotation.aligned_bases.length(), first_truncation_position+this->m_maximum_flanking_columns);
-    first_truncation_position = max<size_t>(0, first_truncation_position-this->m_maximum_flanking_columns);
+    last_truncation_position = min<int32_t>(m_aligned_annotation.aligned_bases.length(), first_truncation_position+this->m_maximum_flanking_columns);
+    first_truncation_position = max<int32_t>(0, first_truncation_position-this->m_maximum_flanking_columns);
     
     if ( (first_truncation_position != string::npos) && (last_truncation_position != m_aligned_annotation.aligned_bases.length()) ) {
       

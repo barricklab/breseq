@@ -70,12 +70,20 @@ namespace breseq
       string read_name_style;
       
       static const string gap_string;
+      static const string lowercase_base_string;
+
       
-      void truncate(size_t start_pos, size_t end_pos) {
+      void truncate(int32_t start_pos, int32_t end_pos) {
         size_t len = end_pos - start_pos + 1;
         
         string clipped_start = aligned_bases.substr(0, start_pos);
         string clipped_end = aligned_bases.substr(end_pos+1, aligned_bases.length()-end_pos);
+        
+        string clipped_start_quals, clipped_end_quals;
+        if (!aligned_quals.empty()) {
+          clipped_start_quals = aligned_quals.substr(0, start_pos);
+          clipped_end_quals = aligned_quals.substr(end_pos+1, aligned_bases.length()-end_pos);
+        }
         
         // Debug code
         /*
@@ -102,17 +110,27 @@ namespace breseq
         cout << unclipped << endl;
         cout << endl;
         */
+        
         // Count up how many bases and whether any bases were removed
+        // This is gaps and lowercase EXCEPT for lowercase that are trimmed, which don't have this quality.
         for (size_t i=0; i<clipped_start.length(); i++) {
-          
-          if (gap_string.find(clipped_start[i]) == std::string::npos) {
+          // It should NOT be a gap. If it is 'atcgn' then we require that it NOT have k_reserved_quality_dont_highlight which is for unaligned additions
+          if ( (gap_string.find(clipped_start[i]) == std::string::npos) &&
+              ( (lowercase_base_string.find(clipped_start[i]) == std::string::npos) ||
+               ((lowercase_base_string.find(clipped_start[i]) != std::string::npos) && !clipped_start_quals.empty() && (clipped_start_quals[i] != char(k_reserved_quality_dont_highlight)))
+               )
+              ) {
             start_is_clipped = true;
             start += strand;
           }
         }
         
         for (size_t i=0; i<clipped_end.length(); i++) {
-          if (gap_string.find(clipped_end[i]) == std::string::npos) {
+          if ( (gap_string.find(clipped_end[i]) == std::string::npos) &&
+              ( (lowercase_base_string.find(clipped_end[i]) == std::string::npos) ||
+               ((lowercase_base_string.find(clipped_end[i]) != std::string::npos) && !clipped_end_quals.empty() && (clipped_end_quals[i] != char(k_reserved_quality_dont_highlight)))
+               )
+            ) {
             end_is_clipped = true;
             end -= strand;
           }
@@ -122,7 +140,6 @@ namespace breseq
 
         // May be empty
         if (aligned_quals.length()) {
-          
           aligned_quals = aligned_quals.substr(start_pos, len);
         }
         
