@@ -65,7 +65,8 @@ int do_bam2aln(int argc, char* argv[]) {
   options("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=region1.*). If there are multiple regions, this argument must be a directory path, and all output files will be output here with names region1.*, region2.*, ... (DEFAULT=.)");
   options("region,r", "Regions to create alignments for. Must be provided as sequence regions in the format ACCESSION:START-END, where ACCESSION is a valid identifier for one of the sequences in the FASTA file, and START and END are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments");
   options("format", "Format of output alignment(s): HTML, TXT, or JSON", "HTML");
-  options("max-reads,n", "Maximum number of reads to show in alignment", 200);
+  options("max-flanking-columns,w", "Maximum number of bases in aligned reads to show flanking the region of interest (0=ALL)", 100);
+  options("max-displayed-reads,n", "Maximum number of reads to display in alignment (0=ALL)", 100);
   options("repeat", "Show reads with multiple best matches in reference", TAKES_NO_ARGUMENT, ADVANCED_OPTION);
   options("quality-score-cutoff,c", "Base quality score cutoff below which reads are highlighted as yellow", 0);
   options("minimum-mapping-quality,m", "Mapping quality (MQ) score cutoff below which reads are counted as repeat matches (0=OFF)", 0);
@@ -131,7 +132,8 @@ int do_bam2aln(int argc, char* argv[]) {
     alignment_output ao(
                         options["bam"],
                         options["fasta"],
-                        from_string<uint32_t>(options["max-reads"]),
+                        from_string<uint32_t>(options["max-flanking-columns"]),
+                        from_string<uint32_t>(options["max-displayed-reads"]),
                         from_string<uint32_t>(options["quality-score-cutoff"]),
                         1,
                         false,

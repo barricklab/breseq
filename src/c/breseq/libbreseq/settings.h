@@ -404,6 +404,7 @@ namespace breseq
       // Default = kBreseq_ignore_within_this_multiple_of_average_read_length_of_contig_end
     
     //! Settings: Output
+    uint32_t max_flanking_columns;                            // Default = 100   COMMAND-LINE OPTION
     uint32_t max_displayed_reads;                           // Default = 100   COMMAND-LINE OPTION
     //! don't include javascript in HTML output, for Galaxy integration
     bool no_javascript;                                     // Default = false COMMAND-LINE OPTION

@@ -45,9 +45,11 @@ namespace breseq
         : seq_id("")
         , start(0)
         , end(0)
+        , strand(0)
+        , start_is_clipped(false)
+        , end_is_clipped(false)
         , aligned_bases("")
         , aligned_quals("")
-        , strand(0)
         , is_redundant(false)
         , show_strand(true)
         , mapping_quality(-1)
@@ -57,13 +59,74 @@ namespace breseq
       string seq_id;
       uint32_t start;
       uint32_t end;
+      int8_t strand;
+      bool start_is_clipped;
+      bool end_is_clipped;
       string aligned_bases;
       string aligned_quals;
-      int8_t strand;
       bool is_redundant;
       bool show_strand;
       int32_t mapping_quality;
       string read_name_style;
+      
+      static const string gap_string;
+      
+      void truncate(size_t start_pos, size_t end_pos) {
+        size_t len = end_pos - start_pos + 1;
+        
+        string clipped_start = aligned_bases.substr(0, start_pos);
+        string clipped_end = aligned_bases.substr(end_pos+1, aligned_bases.length()-end_pos);
+        
+        // Debug code
+        /*
+        // Count up how many bases and whether any bases were removed
+        size_t actual_length = 0;
+        for (size_t i=0; i<aligned_bases.length(); i++) {
+          
+          if (gap_string.find(aligned_bases[i]) == std::string::npos) {
+            actual_length++;
+          }
+        }
+        
+        string unclipped = aligned_bases.substr(start_pos, len);
+        
+        cout << actual_length << endl;
+        cout << start << endl;
+        cout << end << endl;
+        cout << static_cast<int32_t>(strand) << endl;
+        cout << aligned_bases.length();
+        cout << clipped_start << endl;
+        cout << endl;
+        cout << clipped_end << endl;
+        cout << endl;
+        cout << unclipped << endl;
+        cout << endl;
+        */
+        // Count up how many bases and whether any bases were removed
+        for (size_t i=0; i<clipped_start.length(); i++) {
+          
+          if (gap_string.find(clipped_start[i]) == std::string::npos) {
+            start_is_clipped = true;
+            start += strand;
+          }
+        }
+        
+        for (size_t i=0; i<clipped_end.length(); i++) {
+          if (gap_string.find(clipped_end[i]) == std::string::npos) {
+            end_is_clipped = true;
+            end -= strand;
+          }
+        }
+        
+        aligned_bases = aligned_bases.substr(start_pos, len);
+
+        // May be empty
+        if (aligned_quals.length()) {
+          
+          aligned_quals = aligned_quals.substr(start_pos, len);
+        }
+        
+      }
       
     };
     //! returns more information about aligned reads given a sequence id string.
@@ -190,6 +253,7 @@ namespace breseq
     Quality_Range m_quality_range;
     uint32_t m_quality_score_cutoff;
     string m_error_message;
+    uint32_t m_maximum_flanking_columns;
     uint32_t m_maximum_to_align;
     int32_t m_junction_minimum_size_match;
     bool m_mask_ref_matches;    // Show matches to reference as '.' rather than base.
@@ -212,8 +276,9 @@ namespace breseq
     //! Constructor.
     alignment_output ( 
                       string bam, 
-                      string fasta, 
-                      uint32_t in_maximum_to_align = 0, 
+                      string fasta,
+                      uint32_t in_maximum_flanking_columns = 0,
+                      uint32_t in_maximum_to_align = 0,
                       const uint32_t quality_score_cutoff = 0,
                       const int32_t junction_minimum_size_match = 1,
                       const bool mask_ref_matches = false,
@@ -229,10 +294,10 @@ namespace breseq
   private:
     uint32_t no_color_index;
     string html_header_string();
-    string html_alignment_line(const Alignment_Base& a, Aligned_References* r, const bool coords, const bool use_quality_range);
+    string html_alignment_line(const Alignment_Base& a, Aligned_References* r, const bool coords, const bool use_quality_range, const bool show_coord_clipping);
     string html_alignment_strand(const int8_t &strand);
     string html_legend();
-    string text_alignment_line(const Alignment_Base& a, const bool coords);
+    string text_alignment_line(const Alignment_Base& a, const bool coors, const bool show_coord_clipping);
     string text_alignment_strand(const int8_t &strand);
     json json_alignment_line(const Alignment_Base& a);
 

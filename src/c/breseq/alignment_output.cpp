@@ -20,11 +20,17 @@
 
 #include "libbreseq/alignment_output.h"
 
+#include <algorithm>
+
 using namespace std;
 
 namespace breseq
 {
   using namespace breseq::output;
+
+
+// lowercase are clipped bases, also counted as gaps
+const string alignment_output::Alignment_Base::gap_string(" .-atcgn");
 
 bool verbose = false; //TODO Options
 bool text = false; //TODO Options
@@ -316,8 +322,9 @@ void alignment_output::Alignment_Output_Pileup::fetch_callback ( const alignment
 
   
 alignment_output::alignment_output ( string bam, 
-                                    string fasta, 
-                                    uint32_t maximum_to_align, 
+                                    string fasta,
+                                    uint32_t maximum_flanking_columns,
+                                    uint32_t maximum_to_align,
                                     const uint32_t quality_score_cutoff,
                                     const int32_t junction_minimum_size_match,
                                     const bool mask_ref_matches,
@@ -327,6 +334,7 @@ alignment_output::alignment_output ( string bam,
         : m_alignment_output_pileup ( bam, fasta, show_ambiguously_mapped, minimum_mapping_quality )
         , m_aligned_reads ( m_alignment_output_pileup.aligned_reads )
         , m_quality_score_cutoff ( quality_score_cutoff )
+        , m_maximum_flanking_columns ( maximum_flanking_columns )
         , m_maximum_to_align ( maximum_to_align )
         , m_junction_minimum_size_match ( junction_minimum_size_match )
         , m_mask_ref_matches (mask_ref_matches) 
@@ -859,11 +867,39 @@ void alignment_output::create_alignment ( const string& region, cOutputEvidenceI
         aligned_read.end = aligned_read.length - aligned_read.end + 1;
     }
   }
+  
+  // Do flanking truncation
+  //
+  // If the alignment is longer than this on either side from the annotation '|' then
+  // truncate it to avoid files becoming too massive
+  
+  // 0 means don't truncate at all
+  if (m_maximum_to_align != 0) {
+    size_t first_truncation_position = m_aligned_annotation.aligned_bases.find_first_of('|');
+    size_t last_truncation_position = m_aligned_annotation.aligned_bases.find_last_of('|');
+        
+    last_truncation_position = min<size_t>(m_aligned_annotation.aligned_bases.length(), first_truncation_position+this->m_maximum_flanking_columns);
+    first_truncation_position = max<size_t>(0, first_truncation_position-this->m_maximum_flanking_columns);
+    
+    if ( (first_truncation_position != string::npos) && (last_truncation_position != m_aligned_annotation.aligned_bases.length()) ) {
+      
+      m_aligned_annotation.truncate(first_truncation_position,last_truncation_position);
+      
+      for (Aligned_Reads::iterator itr_read = m_aligned_reads.begin(); itr_read != m_aligned_reads.end(); itr_read++) {
+        itr_read->second.truncate(first_truncation_position,last_truncation_position);
+      }
+      
+      for (Aligned_References::iterator itr_ref = m_aligned_references.begin(); itr_ref != m_aligned_references.end(); itr_ref++)  {
+        itr_ref->truncate(first_truncation_position,last_truncation_position);
+      }
+      
+    }
+  }
+  
 } //End create alignment
 
 string alignment_output::html_alignment( const string& region, output::cOutputEvidenceItem* output_evidence_item_ptr )
 {
-
   // this sets object values (not re-usable currently)
   create_alignment(region, output_evidence_item_ptr);
   
@@ -901,21 +937,21 @@ string alignment_output::html_alignment( const string& region, output::cOutputEv
   
   output += "\n\n<!-- Reference Begin -->";  
   for (uint32_t index = 0; index < m_aligned_references.size(); index++)  {
-    output += html_alignment_line( m_aligned_references[index], NULL, true, false) + "<BR>";  }
+    output += html_alignment_line( m_aligned_references[index], NULL, true, false, false) + "<BR>";  }
   output += "\n<!-- Reference End -->\n";
   
-  output += html_alignment_line( m_aligned_annotation, NULL, false, false ) + "<BR>";
+  output += html_alignment_line( m_aligned_annotation, NULL, false, false, false) + "<BR>";
 
   output += "\n\n<!-- Reads Begin -->";
   for (Sorted_Keys::iterator itr_key = sorted_keys.begin(); itr_key != sorted_keys.end(); itr_key ++)  {
-    output += html_alignment_line( m_aligned_reads[itr_key->seq_id], &m_aligned_references, true, true) + "<BR>";  }
+    output += html_alignment_line( m_aligned_reads[itr_key->seq_id], &m_aligned_references, true, true, true) + "<BR>";  }
   output += "\n<!-- Reads End -->\n";
   
-  output += html_alignment_line( m_aligned_annotation, NULL, false, false)  + "<BR>"; 
+  output += html_alignment_line( m_aligned_annotation, NULL, false, false, false)  + "<BR>";
   
   output += "\n\n<!-- Reference Begin -->";
   for (uint32_t index = 0; index < m_aligned_references.size(); index++)  {
-    output += html_alignment_line( m_aligned_references[index], NULL, true, false) + "<BR>";  }
+    output += html_alignment_line( m_aligned_references[index], NULL, true, false, false) + "<BR>";  }
   output += "\n<!-- Reference End -->\n\n";
     
   output += end_td() + end_tr() + end_table();
@@ -961,17 +997,17 @@ string alignment_output::text_alignment( const string& region, cOutputEvidenceIt
   
   
   for (uint32_t index = 0; index < m_aligned_references.size(); index++)  {
-    output += text_alignment_line( m_aligned_references[index] , true) + "\n";  }
+    output += text_alignment_line( m_aligned_references[index] , true, false) + "\n";  }
   
-  output += text_alignment_line( m_aligned_annotation, false ) + "\n";
+  output += text_alignment_line( m_aligned_annotation, false, false ) + "\n";
   
   for (Sorted_Keys::iterator itr_key = sorted_keys.begin(); itr_key != sorted_keys.end(); itr_key ++)  {
-    output += text_alignment_line( m_aligned_reads[itr_key->seq_id], true) + "\n";  }
+    output += text_alignment_line( m_aligned_reads[itr_key->seq_id], true, true) + "\n";  }
   
-  output += text_alignment_line( m_aligned_annotation, false)  + "\n"; 
+  output += text_alignment_line( m_aligned_annotation, false, false)  + "\n";
   
   for (uint32_t index = 0; index < m_aligned_references.size(); index++)  {
-    output += text_alignment_line( m_aligned_references[index], true) + "\n";  }
+    output += text_alignment_line( m_aligned_references[index], true, false) + "\n";  }
   
   output += "\n";
   
@@ -1229,7 +1265,7 @@ string alignment_output::html_header_string()
 
 
 
-string alignment_output::html_alignment_line(const Alignment_Base& a, Aligned_References* r, const bool coords, const bool use_quality_range)
+string alignment_output::html_alignment_line(const Alignment_Base& a, Aligned_References* r, const bool coords, const bool use_quality_range, const bool show_coord_clipping)
 {
   string output;
   output += "<CODE>";
@@ -1345,9 +1381,12 @@ string alignment_output::html_alignment_line(const Alignment_Base& a, Aligned_Re
     
     if(coords)
     {
-      seq_id += "/" + to_string<uint32_t>(a.start);
+      string start_clip_string(show_coord_clipping && a.start_is_clipped ? "&zwj;&lt;&zwj;" : "");
+      string end_clip_string(show_coord_clipping && a.end_is_clipped ? "&zwj;&gt;&zwj;" : "");
+
+      seq_id += "/" + start_clip_string + to_string<uint32_t>(a.start);
       seq_id += "&#8209;";
-      seq_id += to_string<uint32_t>(a.end);   
+      seq_id += to_string<uint32_t>(a.end) + end_clip_string;
     }
     
     output += "&nbsp;&nbsp;";
@@ -1405,7 +1444,7 @@ string alignment_output::html_legend()
   }
   aligned_r.push_back(temp_r);
   temp_a.show_strand = false;
-  output += html_alignment_line(temp_a, &aligned_r, false, true);
+  output += html_alignment_line(temp_a, &aligned_r, false, true, false);
   
   for (uint8_t index = 1; index < m_quality_range.qual_cutoffs.size(); index++)
   {
@@ -1420,7 +1459,7 @@ string alignment_output::html_legend()
     
     temp_a.show_strand = false;
     
-    output += html_alignment_line(temp_a, &aligned_r, false, true);
+    output += html_alignment_line(temp_a, &aligned_r, false, true, false);
   }
   
   output += end_td();
@@ -1438,19 +1477,19 @@ string alignment_output::html_legend()
     temp_a.aligned_bases = "atcg";
     temp_a.aligned_quals = repeat_char(static_cast<char>(k_reserved_quality_max), 4);
     aligned_r[0].aligned_bases = "ATCG"; 
-    output += nonbreaking("    Masked matching base: ") + html_alignment_line(temp_a, &aligned_r, false, true);
+    output += nonbreaking("    Masked matching base: ") + html_alignment_line(temp_a, &aligned_r, false, true, false);
   }
     
   aligned_r[0].aligned_bases = "-"; // Different from below so colors are shown, except last base
   temp_a.aligned_bases = "-";
   temp_a.aligned_quals = repeat_char('\0', 1);
-  output += nonbreaking("    Alignment gap: ") + html_alignment_line(temp_a, &aligned_r, false, true);
+  output += nonbreaking("    Alignment gap: ") + html_alignment_line(temp_a, &aligned_r, false, true, false);
 
   
   aligned_r[0].aligned_bases = "G"; // Different from below so colors are shown, except last base
   temp_a.aligned_bases = "-";
   temp_a.aligned_quals = repeat_char('\0', 1);
-  output += nonbreaking("    Deleted base: ") + html_alignment_line(temp_a, &aligned_r, false, true);
+  output += nonbreaking("    Deleted base: ") + html_alignment_line(temp_a, &aligned_r, false, true, false);
   
   output += end_td();
   output += end_tr();
@@ -1476,7 +1515,7 @@ string alignment_output::html_legend()
   return output;
 }
   
-string alignment_output::text_alignment_line(const alignment_output::Alignment_Base& a, const bool coords)
+string alignment_output::text_alignment_line(const alignment_output::Alignment_Base& a, const bool coords, const bool show_coord_clipping)
 {
   string output;
     
@@ -1495,9 +1534,11 @@ string alignment_output::text_alignment_line(const alignment_output::Alignment_B
     // substitute breaking hyphens
     if(coords)
     {
-      seq_id += "/" + to_string<uint32_t>(a.start);
+      string start_clip_string(show_coord_clipping && a.start_is_clipped ? "<" : "");
+      string end_clip_string(show_coord_clipping && a.end_is_clipped ? ">" : "");
+      seq_id += "/" + start_clip_string + to_string<uint32_t>(a.start);
       seq_id += "-";
-      seq_id += to_string<uint32_t>(a.end);   
+      seq_id += to_string<uint32_t>(a.end) + end_clip_string;;
     }
     
     output += "  ";

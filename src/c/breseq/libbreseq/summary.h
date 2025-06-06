@@ -576,6 +576,7 @@ namespace breseq{
     int32_t ignore_within_this_multiple_of_average_read_length_of_contig_end;
     
     //! Settings: Output
+    uint32_t max_flanking_bases;
     uint32_t max_displayed_reads;
     bool no_javascript;
     string header_genome_diff_file_name;

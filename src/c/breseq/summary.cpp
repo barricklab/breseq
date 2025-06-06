@@ -528,6 +528,7 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   ignore_within_this_multiple_of_average_read_length_of_contig_end = t.ignore_within_this_multiple_of_average_read_length_of_contig_end;
   
   //! Settings: Output
+  max_flanking_bases = t.max_flanking_columns;
   max_displayed_reads = t.max_displayed_reads;
   no_javascript = t.no_javascript;
   header_genome_diff_file_name = t.header_genome_diff_file_name;
@@ -850,6 +851,7 @@ void to_json(json& j, const PublicOptionsSummary& s)
     
     //! Settings: Output
     {"output", json{
+      {"max_flanking_bases", s.max_flanking_bases},
       {"max_displayed_reads", s.max_displayed_reads},
       {"no_javascript", s.no_javascript},
       {"header_genome_diff_file_name", s.header_genome_diff_file_name},

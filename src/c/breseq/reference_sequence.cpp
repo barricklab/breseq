@@ -4643,6 +4643,17 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
       cout << "Handling " << len << to_string(op) << endl;
     }
 
+    // We must be between two 'M' for shifting to work
+    bool valid_for_shift = false;
+    
+    if ( (it == cigar_pair_array.begin()) && (it != cigar_pair_array.end()) ) {
+      valid_for_shift = (it + 1)->first == 'M';
+    } else if ( (it == cigar_pair_array.end()) && (it != cigar_pair_array.begin()) ) {
+      valid_for_shift = (it - 1)->first == 'M';
+    } else if ( (it != cigar_pair_array.end()) && (it != cigar_pair_array.begin()) ) {
+      valid_for_shift = ((it - 1)->first == 'M') && ((it + 1)->first == 'M');
+    }
+        
     if (op == 'D')
     {
       char base = ref_seq[ref_seq_index];
@@ -4650,7 +4661,7 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
       for (uint32_t j = 1; j < len; j++)
         all_same_base = all_same_base && (ref_seq[ref_seq_index + j] == base);
 
-      if (all_same_base)
+      if (valid_for_shift && all_same_base)
       {
         uint16_t shift_amount = 0;
         while (ref_seq[ref_seq_index + len + shift_amount] == base)
@@ -4694,7 +4705,7 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
       for (uint32_t j = 1; j < len; j++)
         all_same_base = all_same_base && (read_seq[read_seq_index + j] == base);
 
-      if (all_same_base)
+      if (valid_for_shift && all_same_base)
       {
         uint16_t shift_amount = 0;
         while (read_seq[read_seq_index + len + shift_amount] == base)

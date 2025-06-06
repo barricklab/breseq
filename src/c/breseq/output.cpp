@@ -3475,7 +3475,7 @@ cOutputEvidenceFiles::html_evidence_file (
       item["base_quality_cutoff"] = to_string(settings.base_quality_cutoff);
     
     if ( file_exists(item[BAM_PATH].c_str()) && file_exists(item[FASTA_PATH].c_str()) ) {
-      alignment_output ao(item[BAM_PATH], item[FASTA_PATH], settings.max_displayed_reads, settings.base_quality_cutoff, settings.junction_minimum_side_match, settings.alignment_mask_ref_matches, false, settings.minimum_mapping_quality );
+      alignment_output ao(item[BAM_PATH], item[FASTA_PATH], settings.max_flanking_columns, settings.max_displayed_reads, settings.base_quality_cutoff, settings.junction_minimum_side_match, settings.alignment_mask_ref_matches, false, settings.minimum_mapping_quality );
     
       HTML << ao.html_alignment(ss.str(), &item);
     }

@@ -323,7 +323,8 @@ namespace breseq
     options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Output Options", ADVANCED_OPTION);
     options
-    ("max-displayed-reads", "Maximum number of reads to display in the HTML output for an evidence item", 100, ADVANCED_OPTION)
+    ("max-flanking-columns", "Maximum number of columns in aligned reads to show flanking the region of interest in the HTML output for an evidence item (0=ALL)", 100, ADVANCED_OPTION)
+    ("max-displayed-reads", "Maximum number of reads to display in the HTML output for an evidence item (0=ALL)", 100, ADVANCED_OPTION)
     ("brief-html-output", "Don't create detailed output files for evidence (no read alignments or coverage plots)", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("header-genome-diff,g", "Include header information from this GenomeDiff file in output.gd", "", ADVANCED_OPTION)
     ("no-javascript", "Don't include javascript in the HTML output", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
@@ -614,7 +615,7 @@ namespace breseq
     
     // en masse overrides come before specific overrides
     
-    if (options.count("nanopore")) {
+    if (options.count("nanopore-fast-basecalling")) {
       this->consensus_reject_indel_homopolymer_length = 4;
       this->polymorphism_reject_indel_homopolymer_length = 4;
       this->polymorphism_no_indels = true;
@@ -713,6 +714,7 @@ namespace breseq
     this->junction_debug = options.count("junction-debug");
     
     this->max_displayed_reads = from_string<int32_t>(options["max-displayed-reads"]);
+    this->max_flanking_columns = from_string<int32_t>(options["max-flanking-columns"]);
     this->skip_alignment_or_plot_generation = options.count("brief-html-output");
     this->no_javascript = options.count("no-javascript");
     if (options.count("header-genome-diff"))
@@ -919,6 +921,7 @@ namespace breseq
     this->ignore_within_this_multiple_of_average_read_length_of_contig_end = kBreseq_ignore_within_this_multiple_of_average_read_length_of_contig_end;
     
     //! Settings: Output
+    this->max_flanking_columns = 100;
     this->max_displayed_reads = 100;
     this->alignment_mask_ref_matches = false;
     this->max_nucleotides_to_show_in_tables = 20;
