@@ -3844,7 +3844,9 @@ int main(int argc, char* argv[]) {
 
 	// gnu standard return version string
 	if ( (argc_new == 1) && (command == "--VERSION") ) {
-		cout << "gdtools " << VERSION << endl;
+		string github_revision_string(GITHUB_REVISION_STRING);
+		if (github_revision_string.length() > 0) github_revision_string = " " + github_revision_string;
+		cout << "gdtools " << VERSION << github_revision_string << endl;
 		return 0;
 	}
 	

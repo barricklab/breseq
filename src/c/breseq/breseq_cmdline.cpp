@@ -2451,7 +2451,7 @@ int breseq_default_action(int argc, char* argv[])
       }
       
       // Fields here and below will write over any values in the header GenomeDiff file
-      mpgd.metadata.program = string(PACKAGE_STRING) + " " + string(HG_REVISION);
+      mpgd.metadata.program = string(PACKAGE_STRING) + " " + string(GITHUB_REVISION_STRING);
       mpgd.metadata.command = settings.full_command_line;
       mpgd.metadata.created = Settings::time2string(time(NULL));
       
@@ -2622,7 +2622,9 @@ int main(int argc, char* argv[]) {
   
   // gnu standard return version string
   if ( (argc_new == 1) && (command == "--VERSION") ) {
-    cout << "breseq " << VERSION << endl;
+    string github_revision_string(GITHUB_REVISION_STRING);
+    if (github_revision_string.length() > 0) github_revision_string = " " + github_revision_string;
+    cout << "breseq " << VERSION << github_revision_string << endl;
     return 0;
   }
   

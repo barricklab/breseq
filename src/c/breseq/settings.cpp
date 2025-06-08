@@ -743,14 +743,14 @@ namespace breseq
   void Settings::command_line_run_header()
   {
     cerr << output_divider << endl;
-    fprintf(stderr, "%s  %s   %s\n", PACKAGE_STRING, HG_REVISION, PACKAGE_URL);
+    fprintf(stderr, "%s  %s   %s\n", PACKAGE_STRING, GITHUB_REVISION_STRING, PACKAGE_URL);
     fprintf(stderr, "\n");
     fprintf(stderr, "Active Developers: Barrick JE, Deatherage DE\n");
     fprintf(stderr, "Contact:           <%s>\n", PACKAGE_BUGREPORT);
     fprintf(stderr, "\n");
-    fprintf(stderr, "%s is free software; you can redistribute it and/or modify it under the\n", PACKAGE_NAME);
-    fprintf(stderr, "terms the GNU General Public License as published by the Free Software \n");
-    fprintf(stderr, "Foundation; either version 2, or (at your option) any later version.\n");
+    fprintf(stderr, "License GPLv2+: GNU GPL version 2 or later <https://gnu.org/licenses/gpl.html>");
+    fprintf(stderr, "This is free software: you are free to change and redistribute it. \n");
+    fprintf(stderr, "There is NO WARRANTY, to the extent permitted by law.\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "Copyright (c) 2008-2010 Michigan State University\n");
     fprintf(stderr, "Copyright (c) 2011-2022 The University of Texas at Austin\n");
@@ -782,7 +782,7 @@ namespace breseq
     this->byline = "<b><i>breseq</i></b>&nbsp;&nbsp;version ";
     this->byline += PACKAGE_VERSION;
     this->byline += "&nbsp;&nbsp;";
-    this->byline += HG_REVISION;
+    this->byline += GITHUB_REVISION_STRING;
 
     this->website = PACKAGE_URL;
     

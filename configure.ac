@@ -163,16 +163,16 @@ AC_SUBST([GDTOOLS], [src/c/gdtools])
 
 
 AC_CHECK_FILE([.git/refs/heads/master],
-	AC_SUBST(HG_REVISION_STRING, [`eval head -n 1 .git/refs/heads/master | sed 's/^\(.\{12\}\).*/\1/'`]),
-	AC_SUBST(HG_REVISION_STRING, [])
+	AC_SUBST(GITHUB_REVISION_HASH, [`eval head -n 1 .git/refs/heads/master | sed 's/^\(.\{12\}\).*/\1/'`]),
+	AC_SUBST(GITHUB_REVISION_HASH, [])
 )
 
 AC_CHECK_FILE([.git/refs/heads/master],
-	AC_SUBST(HG_REVISION_PREFIX, "revision "),
-	AC_SUBST(HG_REVISION_PREFIX, [])
+	AC_SUBST(GITHUB_REVISION_PREFIX, "revision "),
+	AC_SUBST(GITHUB_REVISION_PREFIX, [])
 )
 
-AC_DEFINE_UNQUOTED([HG_REVISION], ["${HG_REVISION_PREFIX}${HG_REVISION_STRING}"], [Defining HG repository version])
+AC_DEFINE_UNQUOTED([GITHUB_REVISION_STRING], ["${GITHUB_REVISION_PREFIX}${GITHUB_REVISION_HASH}"], [Defining GitHub repository version])
 
 
 AC_CANONICAL_HOST
