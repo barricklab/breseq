@@ -4644,15 +4644,16 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
     }
 
     // We must be between two 'M' for shifting to work
-    bool valid_for_shift = false;
-    
-    if ( (it == cigar_pair_array.begin()) && (it != cigar_pair_array.end()) ) {
-      valid_for_shift = (it + 1)->first == 'M';
-    } else if ( (it == cigar_pair_array.end()) && (it != cigar_pair_array.begin()) ) {
-      valid_for_shift = (it - 1)->first == 'M';
-    } else if ( (it != cigar_pair_array.end()) && (it != cigar_pair_array.begin()) ) {
-      valid_for_shift = ((it - 1)->first == 'M') && ((it + 1)->first == 'M');
+    // This catches cases of I and D next to each other in minimap2 output with nanopore reads
+    char before_op = 'M';
+    if (it != cigar_pair_array.begin()) {
+      before_op = (it - 1)->first;
     }
+    char after_op = 'M';
+    if (it != cigar_pair_array.end()-1 ) {
+      after_op = (it + 1)->first;
+    }
+    bool valid_for_shift = (before_op == 'M') && (after_op == 'M');
         
     if (op == 'D')
     {
