@@ -877,9 +877,25 @@ void alignment_output::create_alignment ( const string& region, cOutputEvidenceI
   
   // 0 means don't truncate at all
   if (m_maximum_to_align != 0) {
+    
     size_t first_truncation_position = m_aligned_annotation.aligned_bases.find_first_of('|');
     size_t last_truncation_position = m_aligned_annotation.aligned_bases.find_last_of('|');
-        
+
+    // Junction case
+    if ( (first_truncation_position == string::npos) && (last_truncation_position == string::npos) && (m_aligned_references.size()==2) ) {
+      last_truncation_position = m_aligned_references[0].aligned_bases.find_last_not_of("-");
+      first_truncation_position = m_aligned_references[1].aligned_bases.find_first_not_of("-");
+      
+      // Could be reversed depending on whether there is overlap or inserted bases at junction
+      if (last_truncation_position < first_truncation_position) {
+        swap(first_truncation_position, last_truncation_position);
+      }
+    }
+    
+    if ( (first_truncation_position == string::npos) && (last_truncation_position == string::npos) ) {
+      WARN("Attempt to splice output alignment could not find '|' marking the position(s) of interest.")
+    }
+    
     last_truncation_position = min<int32_t>(m_aligned_annotation.aligned_bases.length(), first_truncation_position+this->m_maximum_flanking_columns);
     first_truncation_position = max<int32_t>(0, first_truncation_position-this->m_maximum_flanking_columns);
     

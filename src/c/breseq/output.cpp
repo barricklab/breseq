@@ -2275,7 +2275,7 @@ void add_text_fields_to_mutation(cDiffEntry& mut, const MutationTableOptions& op
   switch (mut._type)
   {
     case SNP:{
-      html_mutation = mut["_ref_seq"] + "\u2192" + mut[NEW_SEQ];
+      html_mutation = mut["ref_seq"] + "\u2192" + mut[NEW_SEQ];
     } break;
       
     case INS:{
@@ -2563,7 +2563,7 @@ void add_html_fields_to_mutation(cDiffEntry& mut, const MutationTableOptions& op
   switch (mut._type)
   {
     case SNP:{
-      html_mutation = mut["_ref_seq"] + "&rarr;" + mut[NEW_SEQ];
+      html_mutation = mut["ref_seq"] + "&rarr;" + mut[NEW_SEQ];
     } break;
       
     case INS:{
@@ -3166,6 +3166,7 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, const cGeno
   } // mc_item list
   
   
+  // This adds RA evidence
   
   diff_entry_list_t items_SNP_INS_DEL_SUB = gd.show_list(make_vector<gd_entry_type>(SNP)(INS)(DEL)(SUB));
   //cerr << "Number of SNP_INS_DEL_SUB evidence items: " << items_SNP_INS_DEL_SUB.size() << endl;
@@ -3174,6 +3175,14 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, const cGeno
   {
     diff_entry_ptr_t item = *itr;
     diff_entry_list_t in_evidence_list = gd.in_evidence_list(*item);
+    
+    bool has_ra_evidence = false;
+    for (diff_entry_list_t::iterator itr = in_evidence_list.begin(); itr != in_evidence_list.end(); itr ++)
+    {
+      cDiffEntry& evidence_item = **itr;
+      if (evidence_item._type == RA) has_ra_evidence = true;
+    }
+    if(!has_ra_evidence) continue;
     
     // #this reconstructs the proper columns to draw
     uint32_t start = from_string<uint32_t>((*item)[POSITION]);
@@ -3186,29 +3195,12 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, const cGeno
     
     if (item->_type == INS)
     {
-      diff_entry_list_t ins_evidence_list = gd.in_evidence_list(*item);
-      ASSERT(ins_evidence_list.size() != 0, "Could not find evidence for INS entry:\n" + item->as_string());
+      insert_start = n((*(in_evidence_list.front()))[INSERT_POSITION]);
+      insert_end = insert_start + (*item)[NEW_SEQ].size() - 1;
       
-      if (ins_evidence_list.front()->_type == RA) {
-        insert_start = n((*(ins_evidence_list.front()))[INSERT_POSITION]);
-        insert_end = insert_start + (*item)[NEW_SEQ].size() - 1;
-      } else if (ins_evidence_list.front()->_type == JC) {
-        insert_start = 1;
-        insert_end = insert_start + (*item)[NEW_SEQ].size() - 1;
-      } else {
-        ERROR("Unknown evidence type supporting INS entry:\n" + item->as_string());
-      }
     }
     else if (item->_type == DEL)
     {
-      bool has_ra_evidence = false;
-      for (diff_entry_list_t::iterator itr = in_evidence_list.begin(); itr != in_evidence_list.end(); itr ++)
-      {
-        cDiffEntry& evidence_item = **itr;
-        if (evidence_item._type == RA) has_ra_evidence = true;
-      }
-      if(!has_ra_evidence) continue;
-      
       end = start + from_string<uint32_t>((*item)[SIZE]) - 1;
     }
     
@@ -3228,10 +3220,11 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, const cGeno
                  (END,  to_string(end))
                  (INSERT_START, to_string(insert_start))
                  (INSERT_END, to_string(insert_end))
-                 (PREFIX, to_string((*item)._type)));
+                 (PREFIX,"RA")
+                 );
     
     
-    // Add evidence to RA items as well
+    // Add evidence to non-RA items as well
     for (diff_entry_list_t::iterator itr = in_evidence_list.begin(); itr != in_evidence_list.end(); itr ++)
     {
       cDiffEntry& evidence_item = **itr;

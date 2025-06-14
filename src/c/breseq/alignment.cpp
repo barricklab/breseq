@@ -997,7 +997,7 @@ void tam_file::write_moved_alignment(
 	string seq = a.read_char_sequence();
 
 	vector<pair<char,uint16_t> > cigar_list = a.cigar_pair_char_op_array();
-	uint16_t flags = a.flag();
+	//uint16_t flags = a.flag();
 
 	// Remove soft padding from CIGAR (since it does not correspond to the
 	// aligned positions we are dealing with. It is added back later.
@@ -1020,7 +1020,7 @@ void tam_file::write_moved_alignment(
 	{
 		seq = reverse_complement(seq);
 		reverse(qual_scores.begin(), qual_scores.end());
-		flags ^= 16; //bitwise XOR to flip strand
+		//flags ^= 16; //bitwise XOR to flip strand
 	}
 
 	// this isn't allowed!

@@ -128,7 +128,9 @@ namespace breseq {
         cerr << alignment_score_map[it->get()] << "\n";
       }
     }
-        
+      
+    if (alignments.size() == 0) return 0;
+   
     // how many reads share the best score?
     uint32_t last_best(0);
     uint32_t best_score = alignment_score_map[alignments.front().get()];

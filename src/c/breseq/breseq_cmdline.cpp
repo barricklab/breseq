@@ -2500,14 +2500,11 @@ int breseq_default_action(int argc, char* argv[])
       // Might be faster to copy or use existing gd if already loaded?
       
       // Reload if necessary... (ex: interrupted in this step)
-//      gd = mpgd;
-//    (gd.get_list().size() == 0) {
-        gd.read(settings.preannotated_genome_diff_file_name);
-        // Blank this out of the title unless it has been reassigned, for consistency
-        if (gd.metadata.title == cString(settings.preannotated_genome_diff_file_name).get_base_name_no_extension()) {
-          gd.metadata.title = "";
-        }
- //     }
+      gd.read(settings.preannotated_genome_diff_file_name);
+      // Blank this out of the title unless it has been reassigned, for consistency
+      if (gd.metadata.title == cString(settings.preannotated_genome_diff_file_name).get_base_name_no_extension()) {
+        gd.metadata.title = "";
+      }
             
       //
       // Mark marginal items as no_show to prevent further processing
