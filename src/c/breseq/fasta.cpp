@@ -69,13 +69,16 @@ namespace breseq {
       
       m_current_line = substitute(m_current_line, "\r", "");
       m_current_line = substitute(m_current_line, "\n", "");
-      
-      
       nucleotide_sequence += m_current_line;
 
       breseq::getline(*this, m_current_line);
       m_current_line_num++;
     }
+    
+    // add the last line (which may not have a return
+    m_current_line = substitute(m_current_line, "\r", "");
+    m_current_line = substitute(m_current_line, "\n", "");
+    nucleotide_sequence += m_current_line;
     
     assert(nucleotide_sequence.length() > 0);
     sequence.set_sequence(nucleotide_sequence);
