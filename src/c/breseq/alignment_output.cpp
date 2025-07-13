@@ -893,25 +893,26 @@ void alignment_output::create_alignment ( const string& region, cOutputEvidenceI
     }
     
     if ( (first_truncation_position == string::npos) && (last_truncation_position == string::npos) ) {
-      WARN("Attempt to splice output alignment could not find '|' marking the position(s) of interest.")
+      WARN("Attempt to splice output alignment could not find '|' marking the position(s) of interest or two partial reference sequences for junction.")
     }
     
+    
+    // Add flanking limits while staying in bounds
     last_truncation_position = min<int32_t>(m_aligned_annotation.aligned_bases.length(), first_truncation_position+this->m_maximum_flanking_columns);
     first_truncation_position = max<int32_t>(0, first_truncation_position-this->m_maximum_flanking_columns);
     
-    if ( (first_truncation_position != string::npos) && (last_truncation_position != m_aligned_annotation.aligned_bases.length()) ) {
+    // Truncate all parts of the alignment!
       
-      m_aligned_annotation.truncate(first_truncation_position,last_truncation_position);
-      
-      for (Aligned_Reads::iterator itr_read = m_aligned_reads.begin(); itr_read != m_aligned_reads.end(); itr_read++) {
-        itr_read->second.truncate(first_truncation_position,last_truncation_position);
-      }
-      
-      for (Aligned_References::iterator itr_ref = m_aligned_references.begin(); itr_ref != m_aligned_references.end(); itr_ref++)  {
-        itr_ref->truncate(first_truncation_position,last_truncation_position);
-      }
-      
+    m_aligned_annotation.truncate(first_truncation_position,last_truncation_position);
+    
+    for (Aligned_Reads::iterator itr_read = m_aligned_reads.begin(); itr_read != m_aligned_reads.end(); itr_read++) {
+      itr_read->second.truncate(first_truncation_position,last_truncation_position);
     }
+    
+    for (Aligned_References::iterator itr_ref = m_aligned_references.begin(); itr_ref != m_aligned_references.end(); itr_ref++)  {
+      itr_ref->truncate(first_truncation_position,last_truncation_position);
+    }
+      
   }
   
 } //End create alignment

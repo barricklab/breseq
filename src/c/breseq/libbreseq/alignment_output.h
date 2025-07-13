@@ -74,15 +74,24 @@ namespace breseq
 
       
       void truncate(int32_t start_pos, int32_t end_pos) {
+        //cout << "Aligned bases: " << this->aligned_bases << endl;
+        //cout << "Aligned bases length: " << this->aligned_bases.length() << endl;
         size_t len = end_pos - start_pos + 1;
         
-        string clipped_start = aligned_bases.substr(0, start_pos);
-        string clipped_end = aligned_bases.substr(end_pos+1, aligned_bases.length()-end_pos);
+        string clipped_start;
+        if (start_pos > 0 )
+          clipped_start = aligned_bases.substr(0, start_pos);
+        
+        string clipped_end;
+        if (aligned_bases.length()-end_pos >0 )
+          clipped_end = aligned_bases.substr(end_pos+1, aligned_bases.length()-end_pos);
         
         string clipped_start_quals, clipped_end_quals;
         if (!aligned_quals.empty()) {
-          clipped_start_quals = aligned_quals.substr(0, start_pos);
-          clipped_end_quals = aligned_quals.substr(end_pos+1, aligned_bases.length()-end_pos);
+          if (start_pos > 0 )
+            clipped_start_quals = aligned_quals.substr(0, start_pos);
+          if (aligned_bases.length()-end_pos >0 )
+            clipped_end_quals = aligned_quals.substr(end_pos+1, aligned_bases.length()-end_pos);
         }
         
         // Debug code
