@@ -75,10 +75,12 @@ namespace breseq {
       m_current_line_num++;
     }
     
-    // add the last line (which may not have a return
-    m_current_line = substitute(m_current_line, "\r", "");
-    m_current_line = substitute(m_current_line, "\n", "");
-    nucleotide_sequence += m_current_line;
+    // add the last line (which may not have a return), but only if we are at the eof and it is not marked as a sequence
+    if ( (m_current_line[0] != '>') && (this->eof()) ) {
+      m_current_line = substitute(m_current_line, "\r", "");
+      m_current_line = substitute(m_current_line, "\n", "");
+      nucleotide_sequence += m_current_line;
+    }
     
     assert(nucleotide_sequence.length() > 0);
     sequence.set_sequence(nucleotide_sequence);
