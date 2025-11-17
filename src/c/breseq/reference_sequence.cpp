@@ -1254,16 +1254,18 @@ void cReferenceSequences::VerifyFeatureLocations()
         strand = -1;
       } else if (line_list[strand_column_index] == "+") {
         strand = +1;
+      } else { // default to plus strand
+        strand = +1;
       }
       
       cLocation is_location(start_1, end_1, strand);
       (*new_mobile_element).add_location(is_location);
       
       // We have a problem, no strand could be predicted.
-      if (strand == 0) {
-        WARN("Could not determine strand of ISEScan result line:\n" + line + "\nIt will not be added to the reference sequence.");
-        continue;
-      }
+      //if (strand == 0) {
+      //  WARN("Could not determine strand of ISEScan result line:\n" + line + "\nIt will not be added to the reference sequence.");
+      //  continue;
+      //}
       
       // transfer to GFF
       (*new_mobile_element)["phase"] = "0";
