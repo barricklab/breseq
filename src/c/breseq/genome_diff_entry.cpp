@@ -1025,20 +1025,35 @@ namespace breseq {
         
       }
       
-      // If we are within an AMP or a MOB
+      // If we are within an INS, AMP, or MOB
       // then we need to flip certain within-mutation modifiers
       string within_id = this->get_within_mutation_id();
       if (within_id != "") {
         diff_entry_ptr_t within_mut = gd->find_by_id(within_id);
         string within_modifier_index = this->get_within_mutation_modifier_index();
         if (within_modifier_index != "") {
+          
+          if (within_mut->_type==INS) {
+            
+            // Size of the INS matters for inverting within-position AND the size of the mutation also matters
+            int32_t ins_size = (*within_mut)[NEW_SEQ].length();
+            
+            uint32_t within_position = from_string<uint32_t>(within_modifier_index);
+            string new_within_position= to_string<uint32_t>(ins_size - within_position - (ref_size - 1) + 1);
+            (*this)[WITHIN] = within_id + ":" + new_within_position;
+
+            // We also have to fix the position of this mutation to match the INS (as above)
+            (*this)[POSITION] = to_string<int32_t>(end_inversion - (position - start_inversion) - 1);
+          }
+          // END INS
+          
           if (within_mut->_type==AMP) {
             
             uint32_t within_mut_copy_number = from_string<uint32_t>((*within_mut)[NEW_COPY_NUMBER]);
             uint32_t within_modifier_index_number = from_string<uint32_t>(within_modifier_index);
             string new_modifier_index_string = to_string<uint32_t>(within_mut_copy_number - within_modifier_index_number + 1);
             // If we are within then we need to flip the index to max - current + 1
-            string new_within_id = within_id + ":" + new_modifier_index_string;
+            (*this)[WITHIN] = within_id + ":" + new_modifier_index_string;
           }
           // END AMP
           
