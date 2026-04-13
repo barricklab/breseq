@@ -1307,10 +1307,10 @@ namespace breseq
     else {
       cerr << "---> bowtie2  :: version " << this->installed["bowtie2_version_string"] << " [" << this->installed["bowtie2"] << "]" << endl;
       // WARN if preferred version is not used
-      if (from_string<uint64_t>(this->installed["bowtie2_version"]) != 2004005000) {
+      if (from_string<uint64_t>(this->installed["bowtie2_version"]) != 2005005000) {
         cerr << "---> bowtie2  :: NOTE :: breseq output may vary slightly depending on your bowtie2 version," << endl;
         cerr << "---> bowtie2  :: NOTE :: and occasionally bowtie2 versions may have bugs that cause crashes." << endl;
-        cerr << "---> bowtie2  :: NOTE :: bowtie2 version 2.4.5 is recommended with this breseq version." << endl;
+        cerr << "---> bowtie2  :: NOTE :: bowtie2 version 2.5.5 is recommended with this breseq version." << endl;
       }
     }
 		// R version 2.1 required
