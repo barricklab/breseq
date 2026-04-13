@@ -1171,7 +1171,7 @@ bool cGenomeDiff::mutation_in_entry_of_type(cDiffEntry mut, const gd_entry_type 
 
 //! Subtract mutations in the input gd file from this one
 //Note: Preserves all evidence in the file being subtracted from
-void cGenomeDiff::set_subtract(cGenomeDiff& gd, bool phylogeny_id_aware, bool frequency_aware, bool verbose)
+void cGenomeDiff::set_subtract(cGenomeDiff& gd, bool phylogeny_id_aware, bool population_id_aware, bool frequency_aware, bool verbose)
 {
   (void)verbose; //unused
   
@@ -1185,12 +1185,8 @@ void cGenomeDiff::set_subtract(cGenomeDiff& gd, bool phylogeny_id_aware, bool fr
       if ((*it)->entry_exists("phylogeny_id")) {
         (**it)["_phylogeny_id"] = (**it)["phylogeny_id"];
       }
-      if ((*it)->entry_exists("population_id")) {
-        (**it)["_population_id"] = (**it)["population_id"];
-      }
       
       (*it)->erase("phylogeny_id");
-      (*it)->erase("population_id");
     }
     
     // ... in this genome diff
@@ -1200,11 +1196,32 @@ void cGenomeDiff::set_subtract(cGenomeDiff& gd, bool phylogeny_id_aware, bool fr
       if ((*it)->entry_exists("phylogeny_id")) {
         (**it)["_phylogeny_id"] = (**it)["phylogeny_id"];
       }
+      
+      (*it)->erase("phylogeny_id");
+    }
+  }
+  
+  if (!population_id_aware) {
+    
+    // ... in the subtracted genome diff
+    for (diff_entry_list_t::iterator it = gd._entry_list.begin(); it != gd._entry_list.end(); it++) {
+      
+      // Save this info in field that won't affect comparisons
       if ((*it)->entry_exists("population_id")) {
         (**it)["_population_id"] = (**it)["population_id"];
       }
       
-      (*it)->erase("phylogeny_id");
+      (*it)->erase("population_id");
+    }
+    
+    // ... in this genome diff
+    for (diff_entry_list_t::iterator it = this->_entry_list.begin(); it != this->_entry_list.end(); it++) {
+      
+      // Save this info in field that won't affect comparisons
+      if ((*it)->entry_exists("population_id")) {
+        (**it)["_population_id"] = (**it)["population_id"];
+      }
+      
       (*it)->erase("population_id");
     }
   }
@@ -1260,10 +1277,14 @@ void cGenomeDiff::set_subtract(cGenomeDiff& gd, bool phylogeny_id_aware, bool fr
   // Restore fields that we hid if we are not phylogeny aware
   if (!phylogeny_id_aware) {
     for (diff_entry_list_t::iterator it_new = _entry_list.begin(); it_new != _entry_list.end(); it_new++) {
-      
       if ((*it_new)->entry_exists("_phylogeny_id")) {
         (**it_new)["phylogeny_id"] = (**it_new)["_phylogeny_id"];
       }
+    }
+  }
+  
+  if (!population_id_aware) {
+    for (diff_entry_list_t::iterator it_new = _entry_list.begin(); it_new != _entry_list.end(); it_new++) {
       if ((*it_new)->entry_exists("_population_id")) {
         (**it_new)["population_id"] = (**it_new)["_population_id"];
       }
@@ -1313,7 +1334,7 @@ void cGenomeDiff::set_intersect(cGenomeDiff &gd, bool verbose)
 }
   
 // Merged mutations AND all non-mutation items
-void cGenomeDiff::set_union(const cGenomeDiff& gd, bool preserve_evidence, bool phylogeny_aware, bool verbose)
+void cGenomeDiff::set_union(const cGenomeDiff& gd, bool preserve_evidence, bool phylogeny_aware, bool population_aware, bool verbose)
 {
   (void)verbose; //unused
 
@@ -1329,7 +1350,7 @@ void cGenomeDiff::set_union(const cGenomeDiff& gd, bool preserve_evidence, bool 
   merge_gd.remove_group(cGenomeDiff::VALIDATION);
 
   // Merge
-  merge(merge_gd, true, phylogeny_aware, verbose);
+  merge(merge_gd, true, phylogeny_aware, population_aware, verbose);
 }
 
 
@@ -1345,7 +1366,7 @@ void cGenomeDiff::set_union(const cGenomeDiff& gd, bool preserve_evidence, bool 
 // 1) The difference between a mutation happening before an AMP (thus in all copies)
 //    and after an AMP (thus in only one copy) at the same position.
 //
-void cGenomeDiff::merge(const cGenomeDiff& in_merge_gd, bool reassign_ids, bool phylogeny_id_aware, bool verbose)
+void cGenomeDiff::merge(const cGenomeDiff& in_merge_gd, bool reassign_ids, bool phylogeny_id_aware, bool population_id_aware, bool verbose)
 {
   verbose = false;
   
@@ -1371,7 +1392,7 @@ void cGenomeDiff::merge(const cGenomeDiff& in_merge_gd, bool reassign_ids, bool 
   // Add population info if we are phylogeny aware, we do this outside the
   // loop because changing it shouldn't be able to disambiguate any entries
   // unlike phylogeny_id and population_id when in !phylogeny_id_aware mode
-  if (phylogeny_id_aware) {
+  if (population_id_aware) {
     
     if (merge_gd.metadata.population.size()) {
       diff_entry_list_t mut_list = merge_gd.mutation_list();
@@ -1379,10 +1400,46 @@ void cGenomeDiff::merge(const cGenomeDiff& in_merge_gd, bool reassign_ids, bool 
         (**it_new)["population_id"] = merge_gd.metadata.population;
       }
     }
-  
+    
+  } else {
+    
+    // We want to iterate through all entries and strip this information
+    diff_entry_list_t mut_list = this->mutation_list();
+    diff_entry_list_t mut_list_merge = merge_gd.mutation_list();
+    mut_list.insert(mut_list.end(), mut_list_merge.begin(), mut_list_merge.end());
+    
+    for (diff_entry_list_t::iterator it_new = mut_list.begin(); it_new != mut_list.end(); it_new++) {
+      cDiffEntry& entry = **it_new;
+
+      if (entry.entry_exists("population_id")) {
+        entry["_population_id"] = entry["population_id"];
+      }
+      entry.erase("population_id");
+    }
+  }
+ 
   // If we are not phylogeny aware...
   // Save this info in field that won't affect comparisons - for current entry
-  } else {
+    
+  if (!phylogeny_id_aware) {
+
+    // We want to iterate through all entries and strip this information
+    diff_entry_list_t mut_list = this->mutation_list();
+    diff_entry_list_t mut_list_merge = merge_gd.mutation_list();
+    mut_list.insert(mut_list.end(), mut_list_merge.begin(), mut_list_merge.end());
+    
+    for (diff_entry_list_t::iterator it_new = mut_list.begin(); it_new != mut_list.end(); it_new++) {
+      cDiffEntry& entry = **it_new;
+
+      if (entry.entry_exists("phylogeny_id")) {
+        entry["_phylogeny_id"] = entry["phylogeny_id"];
+      }
+
+      entry.erase("phylogeny_id");
+    }
+  }
+  
+  else {
     
     // We want to iterate through all entries and strip this information
     diff_entry_list_t mut_list = this->mutation_list();
@@ -1573,6 +1630,10 @@ void cGenomeDiff::merge(const cGenomeDiff& in_merge_gd, bool reassign_ids, bool 
        if (entry.entry_exists("_phylogeny_id")) {
          entry["phylogeny_id"] = entry["_phylogeny_id"];
        }
+    }
+    
+    if (!population_id_aware) {
+
        if ((**it).entry_exists("_population_id")) {
          entry["population_id"] = entry["_population_id"];
        }
@@ -3981,9 +4042,10 @@ void cGenomeDiff::tabulate_mutation_frequencies_from_multiple_gds(
                                                          vector<cGenomeDiff>& gd_list, 
                                                          vector<string> &title_list,
                                                          bool phylogeny_id_aware,
+                                                         bool population_id_aware,
                                                          bool verbose
                                                          )
-{  
+{
   // Create a list of unique titles, which may require some renaming
   // so that every one has a unique key in the resulting Genome Diff entries
   set<string> used_titles; // for reassigning duplicate names
@@ -4024,6 +4086,8 @@ void cGenomeDiff::tabulate_mutation_frequencies_from_multiple_gds(
     
     if (!phylogeny_id_aware) {
       this_mut->erase("phylogeny_id");
+    }
+    if (!population_id_aware) {
       this_mut->erase("population_id");
     }
     
@@ -4048,8 +4112,10 @@ void cGenomeDiff::tabulate_mutation_frequencies_from_multiple_gds(
       
       // Prevent keeping things separate based on phylogeny id
       if (!phylogeny_id_aware) {
-        check_mut->erase("phylogeny_id");
-        check_mut->erase("population_id");
+        this_mut->erase("phylogeny_id");
+      }
+      if (!population_id_aware) {
+        this_mut->erase("population_id");
       }
       
       // we found the exact same mutation
