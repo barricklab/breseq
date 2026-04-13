@@ -212,7 +212,7 @@ namespace breseq
     {
       Sorted_Key() 
         : seq_id("")
-       , aligned_bases ("")
+       , aligned_bases("")
       { }
       
       Sorted_Key(const Sorted_Key& copy)
@@ -327,10 +327,15 @@ namespace breseq
     string text_alignment_strand(const int8_t &strand);
     json json_alignment_line(const Alignment_Base& a);
 
-    
-    static bool sort_by_aligned_bases_length ( const Sorted_Key& a, const Sorted_Key& b )
+    // First, sorts by the aligned bases to get tiling effect
+    // Then, sorts by read name to break ties in a consistent way for tests
+    static bool sort_by_aligned_bases_then_read_name ( const Sorted_Key& a, const Sorted_Key& b )
     {
-      return ( a.aligned_bases.compare(b.aligned_bases) > 0 );
+      int32_t aligned_bases_compare = a.aligned_bases.compare(b.aligned_bases);
+      if (aligned_bases_compare == 0 ) {
+        return (a.seq_id.compare(b.seq_id) > 0);
+      }
+      return (aligned_bases_compare > 0);
     }
   };
   

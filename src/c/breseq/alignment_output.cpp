@@ -945,7 +945,7 @@ string alignment_output::html_alignment( const string& region, output::cOutputEv
     sorted_key.aligned_bases = itr_read->second.aligned_bases;
     sorted_keys.push_back(sorted_key);
   }
-  std::sort(sorted_keys.begin(),sorted_keys.end(),alignment_output::sort_by_aligned_bases_length);
+  std::sort(sorted_keys.begin(),sorted_keys.end(),alignment_output::sort_by_aligned_bases_then_read_name);
   
   output += "\n<style>\n";
   output += html_header_string();
@@ -1012,7 +1012,7 @@ string alignment_output::text_alignment( const string& region, cOutputEvidenceIt
     sorted_key.aligned_bases = itr_read->second.aligned_bases;
     sorted_keys.push_back(sorted_key);
   }
-  std::sort(sorted_keys.begin(),sorted_keys.end(),alignment_output::sort_by_aligned_bases_length);
+  std::sort(sorted_keys.begin(),sorted_keys.end(),alignment_output::sort_by_aligned_bases_then_read_name);
   
   
   for (uint32_t index = 0; index < m_aligned_references.size(); index++)  {
@@ -1060,7 +1060,7 @@ string alignment_output::json_alignment( const string& region, cOutputEvidenceIt
     sorted_key.aligned_bases = itr_read->second.aligned_bases;
     sorted_keys.push_back(sorted_key);
   }
-  std::sort(sorted_keys.begin(),sorted_keys.end(),alignment_output::sort_by_aligned_bases_length);
+  std::sort(sorted_keys.begin(),sorted_keys.end(),alignment_output::sort_by_aligned_bases_then_read_name);
   
   
   for (uint32_t index = 0; index < m_aligned_references.size(); index++)  {
