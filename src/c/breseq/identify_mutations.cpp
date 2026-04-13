@@ -472,9 +472,7 @@ bool test_RA_evidence_POLYMORPHISM_mode(
   double consensus_score = double_from_string(ra[CONSENSUS_SCORE]);
   double polymorphism_score = double_from_string(ra[POLYMORPHISM_SCORE]);
   double variant_frequency = from_string<double>(ra[POLYMORPHISM_FREQUENCY]);
-  
-  bool failed_indel_homopolymer_test = false;
-  
+    
   /////////////////////////////////
   // Perform POLYMORPHISM checks
   /////////////////////////////////
@@ -492,7 +490,7 @@ bool test_RA_evidence_POLYMORPHISM_mode(
   
   rejected_RA_polymorphism_bias(ra, ref_seq_info, settings);
   rejected_RA_polymorphism_coverage(ra, ref_seq_info, settings);
-  failed_indel_homopolymer_test = rejected_RA_indel_homopolymer(ra,
+  bool failed_indel_homopolymer_test = rejected_RA_indel_homopolymer(ra,
                                                                 ref_seq_info,
                                                                 settings.polymorphism_reject_indel_homopolymer_length,
                                                                 settings.polymorphism_reject_surrounding_homopolymer_length,
@@ -570,20 +568,13 @@ bool test_RA_evidence_POLYMORPHISM_mode(
   //   keep as rejected POLYMORPHISM
   /////////////////////////////////////////////
   
-  // @JEB: removed this condition 11-27-2018 since it might be confusing for these to be missing entirely
-  // Mutation must pass this test in order to be retained as a marginal prediction...
-  // Saving previously calculated value prevents doing a computationally intensive test twice.
-  //if (!failed_indel_homopolymer_test) {
-  
   // We know POLYMORPHISM_REJECT exists from previous conditional
   ra[PREDICTION] = "polymorphism";
   ra[FREQUENCY] = ra[POLYMORPHISM_FREQUENCY];
   ra[REJECT] = ra[POLYMORPHISM_REJECT];
   ra.erase(POLYMORPHISM_REJECT);
-  
-  //}
 
-  return true;
+  return false;
 }
   
 void test_RA_evidence(

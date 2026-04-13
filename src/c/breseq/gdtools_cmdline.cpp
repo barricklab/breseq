@@ -116,7 +116,8 @@ int do_merge(int argc, char *argv[])
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o",  "output GD file name", "output.gd");
 	options("preserve-evidence,e", "By default evidence items with two-letter codes are removed (RA, JC, MC, ...). Supply this option to retain them. ", TAKES_NO_ARGUMENT);
-	options("phylogeny-aware,p", "Check the optional 'phylogeny_id' field when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
+	options("phylogeny-aware,p", "Do not consider mutations that differ in their 'phylogeny_id' fields equivalent.", TAKES_NO_ARGUMENT);
+	options("population-aware,q", "Do not consider mutations in GD files with different POPULATION metadata values equivalent.", TAKES_NO_ARGUMENT);
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 
@@ -151,7 +152,7 @@ int do_merge(int argc, char *argv[])
   for(int32_t i = 1; i < options.getArgc(); ++i) {
     uout << "    " << options.getArgv(i) << endl;
     cGenomeDiff gd2(options.getArgv(i));
-    gd1.set_union(gd2, options.count("preserve-evidence"), options.count("phylogeny-aware"), options.count("verbose"));
+    gd1.set_union(gd2, options.count("preserve-evidence"), options.count("phylogeny-aware"), options.count("population-aware"), options.count("verbose"));
   }
 
   uout("Assigning unique IDs");
@@ -298,7 +299,8 @@ int do_subtract(int argc, char *argv[])
   AnyOption options("gdtools SUBTRACT [-o output.gd] input.gd subtract1.gd [subtract2.gd ...]");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
   options("output,o",  "output GD file", "output.gd");
-	options("phylogeny-aware,p", "Check the optional 'phylogeny_id' field when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
+	options("phylogeny-aware,p", "Do not consider mutations that differ in their 'phylogeny_id' fields equivalent.", TAKES_NO_ARGUMENT);
+	options("population-aware,q", "Do not consider mutations in GD files with different POPULATION metadata values equivalent.", TAKES_NO_ARGUMENT);
 	options("frequency-aware,f", "Use the frequencies of mutations when performing the subtraction. Normally an input mutation is removed if it appears at any frequency in a subtracted file. In this mode its frequency is reduced by the frequency in each subtracted file. If the resulting frequency is zero or below, then the mutation is removed.", TAKES_NO_ARGUMENT);
 
   options("verbose,v", "verbose mode", TAKES_NO_ARGUMENT);
@@ -333,7 +335,7 @@ int do_subtract(int argc, char *argv[])
   for (int32_t i = 1; i < options.getArgc(); ++i) {
     uout << options.getArgv(i) << endl;
     cGenomeDiff gd2(options.getArgv(i));
-    gd1.set_subtract(gd2, options.count("phylogeny-aware"), options.count("frequency-aware"), verbose);
+    gd1.set_subtract(gd2, options.count("phylogeny-aware"), options.count("population-aware"), options.count("frequency-aware"), verbose);
   }
   
   uout("Writing output GD file", options["output"]);
@@ -1046,7 +1048,7 @@ int do_not_evidence(int argc, char *argv[])
 
 // How does polymorphism_search_found work?
 //   If it is NULL then nothing happens and compare_mode is honored
-//   If it is not null then it retursn TRUE/FALSE whether polymorphisms were found and swtiches the output to compare mode
+//   If it is not null then it returns TRUE/FALSE whether polymorphisms were found and swtiches the output to compare mode
 //      if there is only one file provided but it has polymorphisms. This is only needed for HTML output!
 void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list, vector<string>& gd_path_names, vector<string>& gd_titles, cReferenceSequences& ref_seq_info, bool strip_to_mutations_and_unknown, bool* polymorphism_search_found, bool compare_mode, AnyOption& options, UserOutput& uout)
 {
@@ -1085,7 +1087,7 @@ void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list,
 		
 		// Decide whether to merge in a new column
 		if ( (!options.count("collapse")) || (single_gd.mutation_list().size() > 0)) {
-			gd.merge(single_gd, false, options.count("phylogeny-aware"));
+			gd.merge(single_gd, false, options.count("phylogeny-aware"), options.count("population-aware"));
 			//cout << gd.get_list().size();
 			gd_list.push_back(single_gd); // it's important to add a copy that has UN items intact
 		}
@@ -1107,7 +1109,7 @@ void load_merge_multiple_gd_files(cGenomeDiff& gd, vector<cGenomeDiff>& gd_list,
 	// Then add frequency columns for all genome diffs
 	if (compare_mode || ( (polymorphism_search_found != NULL) && (*polymorphism_search_found) ) ) {
 		uout("Tabulating frequencies of mutations across all files");
-		cGenomeDiff::tabulate_mutation_frequencies_from_multiple_gds(gd, gd_list, gd_titles, options.count("phylogeny-aware"));
+		cGenomeDiff::tabulate_mutation_frequencies_from_multiple_gds(gd, gd_list, gd_titles, options.count("phylogeny-aware"), options.count("population-aware"));
 	}
 	
 }
@@ -1125,7 +1127,8 @@ int do_annotate(int argc, char* argv[])
 	options("add-text-fields,b", "Add formatted fields in UTF-8 encoded text that are similar to those used in HTML output. Only applicable to GD, TSV, CSV, and JSON output formats", TAKES_NO_ARGUMENT);
 	options("ignore-pseudogenes", "Treat pseudogenes as valid ORFs for calling amino acid substitutions", TAKES_NO_ARGUMENT);
 	options("repeat-header", "In HTML mode, repeat the header line every this many rows (0=OFF)", "0");
-	options("phylogeny-aware,p", "Check the optional 'phylogeny_id' field when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
+	options("phylogeny-aware,p", "Do not consider mutations that differ in their 'phylogeny_id' fields equivalent.", TAKES_NO_ARGUMENT);
+	options("population-aware,q", "Do not consider mutations in GD files with different POPULATION metadata values equivalent.", TAKES_NO_ARGUMENT);
 	options("region,g", "Only show mutations that overlap this reference sequence region (e.g., REL606:64722-65312)");
 	options("preserve-evidence,e", "By default evidence items with two-letter codes are removed (RA, JC, MC, ...). Supply this option to retain them. Only affects output in GD and JSON formats. This option can only be used with a single input GD file (i.e., not in COMPARE mode). ", TAKES_NO_ARGUMENT);
 	options("collapse,c", "Do not show samples (columns) unless they have at least one mutation", TAKES_NO_ARGUMENT);
@@ -1497,7 +1500,8 @@ int do_phylogeny(int argc, char* argv[])
 	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
 	//options("ignore-pseudogenes", "treats pseudogenes as normal genes for calling AA changes", TAKES_NO_ARGUMENT);
 	options("missing-as-ancestral,a", "Count missing data (mutations in UN regions) as the ancestral allele rather than as an unknown allele (N).", TAKES_NO_ARGUMENT);
-	options("phylogeny-aware,p", "Check the optional 'phylogeny_id' field when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
+	options("phylogeny-aware,p", "Do not consider mutations that differ in their 'phylogeny_id' fields equivalent.", TAKES_NO_ARGUMENT);
+	options("population-aware,q", "Do not consider mutations in GD files with different POPULATION metadata values equivalent.", TAKES_NO_ARGUMENT);
 	options("dnapars-command,c", "Command to run for phylip 'dnapars' executable. It can include a path or just the command if the executable is located in your $PATH (Default: try 'phylip dnapars' and then 'dnapars')");
 
 	options.addUsage("");
@@ -1552,7 +1556,7 @@ int do_phylogeny(int argc, char* argv[])
 	vector<string> title_list;
 	for (vector<cGenomeDiff>::iterator it=gd_list.begin(); it!= gd_list.end(); it++) {
 		cGenomeDiff& single_gd = *it;
-		gd.merge(single_gd, false, options.count("phylogeny-aware"));
+		gd.merge(single_gd, false, options.count("phylogeny-aware"), options.count("population-aware"));
 		title_list.push_back(single_gd.get_title());
 		single_gd.set_title("_" + to_string<uint32_t>(file_num++) + "_");
 	}
@@ -1563,7 +1567,7 @@ int do_phylogeny(int argc, char* argv[])
 
 	// Then add frequency columns for all genome diffs
 	vector<string> dummy_title_list;
-	cGenomeDiff::tabulate_mutation_frequencies_from_multiple_gds(gd, gd_list, dummy_title_list, options.count("phylogeny-aware"));
+	cGenomeDiff::tabulate_mutation_frequencies_from_multiple_gds(gd, gd_list, dummy_title_list, options.count("phylogeny-aware"), options.count("population-aware"));
 
 	// Save merged GD file
 	string merged_gd_file_name =  output_base_name + ".merged.gd";
@@ -3627,52 +3631,6 @@ int do_translate_proteome(int argc, char *argv[])
 	return 0;
 }
 
-int do_gd2oli( int argc, char* argv[])
-{
-	AnyOption options("gdtools GD2OLI [-o output.vcf -l 30] input.gd");
-    
-	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-	options("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
-	options("output,o","name of output file", "output.tab");
-	options("large-cutoff,l","large size mutation cutoff. Deletions, substitutions, and insertions changing genome size by more than this many bases are treated as 'large' in the output.", 20);
-	options("phylogeny-aware,p", "Check the 'phylogeny_id' and 'insert_position' fields when deciding if entries are equivalent", TAKES_NO_ARGUMENT);
-
-	options.processCommandArgs( argc,argv);
-	
-	if (options.count("help")) {
-		options.printUsage();
-		return -1;
-	}
-    
-	options.addUsage("");
-	options.addUsage("Creates an Oli file of mutations present in all the input Genome Diff files.");
-	
-	if( options.getArgc() == 0 ){
-			options.addUsage("");
-			options.addUsage("You must provide at least one input Genome Diff file.");
-			options.printUsage();
-			return -1;
-	}
-	
-	if (!options.count("reference")) {
-			options.addUsage("");
-			options.addUsage("You must provide a reference sequence file (-r).");
-			options.printUsage();
-			return -1;
-	}
-	
-	vector<string> gd_file_names;
-	for (int32_t i = 0; i < options.getArgc(); i++)
-	{
-			string file_name = options.getArgv(i);
-			gd_file_names.push_back(file_name);
-	}
-	cGenomeDiff::GD2OLI( gd_file_names, from_string<vector<string> >(options["reference"]), options["output"], from_string<uint32_t>(options["large-cutoff"]), options.count("phylogeny-aware") );
-	
-	return 0;
-}
-
-
 int do_gd2coverage(int argc, char* argv[])
 {
 	
@@ -3914,8 +3872,6 @@ int main(int argc, char* argv[]) {
     return do_mrna_stability(argc_new, argv_new);
   } else if (command == "PROTEOME") {
 		return do_translate_proteome(argc_new, argv_new);
-  } else if (command == "GD2OLI") {
-		return do_gd2oli(argc_new, argv_new);
 	} else if (command == "GD2COV") {
 		return do_gd2coverage(argc_new, argv_new);
 	} else if (command == "DELETED-GENES") {

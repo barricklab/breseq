@@ -202,14 +202,14 @@ public:
   //!---- Set Operations ---- !//
   
   //! Subtract mutations using gd_ref as reference.
-  void set_subtract(cGenomeDiff& gd_ref, bool phylogeny_id_aware, bool frequency_aware, bool verbose=false);
+  void set_subtract(cGenomeDiff& gd_ref, bool phylogeny_id_aware, bool population_id_aware, bool frequency_aware, bool verbose=false);
 
   void set_intersect(cGenomeDiff& gd_ref, bool verbose=false);
   
-  void set_union(const cGenomeDiff& gd_ref, bool preserve_evidence, bool phylogeny_aware, bool verbose=false);
+  void set_union(const cGenomeDiff& gd_ref, bool preserve_evidence, bool phylogeny_aware, bool population_id_aware, bool verbose=false);
   
   //! Merge GenomeDiff information using gd_new as potential new info.
-  void merge(const cGenomeDiff& merge_gd, bool reassign_ids=false, bool phylogeny_id_aware = false, bool verbose=false);
+  void merge(const cGenomeDiff& merge_gd, bool reassign_ids=false, bool phylogeny_id_aware = false, bool population_id_aware = false, bool verbose=false);
   
   //! fast merge, doesn't compare entries, but does renumber
   void merge_preserving_duplicates(const cGenomeDiff& gd);
@@ -295,6 +295,7 @@ public:
                                                      vector<cGenomeDiff>& gd_list,
                                                      vector<string> &title_list,
                                                      bool phylogeny_aware = false,
+                                                     bool population_aware = false,
                                                      bool verbose = false);
 
   
