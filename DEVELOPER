@@ -28,7 +28,7 @@ Building requires running the ./bootstrap script when you have a fresh version f
 whenever the autoconf configuration files have changed, for example when a new source file has been 
 added to the project.
 
-$ ./bootstrap
+$ ./bootstrap.sh
 $ ./configure
 $ make
 $ make install
