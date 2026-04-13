@@ -331,11 +331,10 @@ namespace breseq
     // Then, sorts by read name to break ties in a consistent way for tests
     static bool sort_by_aligned_bases_then_read_name ( const Sorted_Key& a, const Sorted_Key& b )
     {
-      int32_t aligned_bases_compare = a.aligned_bases.compare(b.aligned_bases);
-      if (aligned_bases_compare == 0 ) {
-        return (a.seq_id.compare(b.seq_id) > 0);
+      if (a.aligned_bases == b.aligned_bases) {
+        return b.seq_id < a.seq_id;
       }
-      return (aligned_bases_compare > 0);
+      return b.aligned_bases < a.aligned_bases;
     }
   };
   
