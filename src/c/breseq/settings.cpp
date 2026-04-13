@@ -1166,7 +1166,7 @@ namespace breseq
     
     if (this->installed["bowtie2"].size() != 0) {
       string version_string = SYSTEM_CAPTURE(this->installed["bowtie2"] + " --version", true);
-      size_t start_version_pos = version_string.find("version");
+      size_t start_version_pos = version_string.find("bowtie2-align-s version ");
       if (start_version_pos != string::npos) {
         start_version_pos = version_string.find_first_not_of(" \t\r\n", start_version_pos+7);
         size_t end_version_pos = version_string.find_first_not_of("0123456789", start_version_pos+1);
