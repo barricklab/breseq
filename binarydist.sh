@@ -18,7 +18,7 @@ if [ "$BINARYPLATFORM" == "Darwin" ]; then
   	#
   	# From within the libz source code directory:
   	# 
-  	# $ CFLAGS="-mmacosx-version-min=10.13" ./configure --static --prefix=$HOME/local --archs="-arch arm64 -arch x86_64" 
+  	# $ CFLAGS="-mmacosx-version-min=10.13" ./configure --static --prefix=$CONDA_PREFIX --archs="-arch arm64 -arch x86_64" 
   	# $ make install
 	#
 	# 2) Older alternative: Using libz installed by MacPorts
