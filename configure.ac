@@ -19,7 +19,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.65])
-AC_INIT([breseq], [0.40.0], [https://github.com/barricklab/breseq/issues], [breseq], [http://barricklab.org/breseq])
+AC_INIT([breseq], [0.40.1], [https://github.com/barricklab/breseq/issues], [breseq], [http://barricklab.org/breseq])
 AC_CONFIG_AUX_DIR(aux_build)
 AC_CONFIG_MACRO_DIR([aux_build/m4])
 AC_CONFIG_HEADERS([aux_build/config.h])
@@ -69,25 +69,30 @@ AC_SEARCH_LIBS([pthread_create], [pthread], [], [AC_MSG_ERROR(["libpthread is re
 
 
 #### libz
-# 1) static linking to libz if command line option used
 
-with_static_libz="$WITH_STATIC_LIBZ"
-
+# We have options for static linking (precompiled binaries) and dynamic linking (bioconda install)
+# Check for command line option and environmental variable versions of --with-static-lib and WITH_STATIC_LIBZ
 AC_ARG_WITH([static-libz],
-    [AS_HELP_STRING([--with-static-libz=<path>],
-        [Prefix to static install of libz. Directory that has lib and include within it.])],
-    [AS_IF([test -f "$with_static_libz/lib/libz.a"],
-        [AC_MSG_NOTICE([Static linking to libz.a located in "$with_static_libz/lib"])],
-        [AC_MSG_ERROR([Could not find libz.a library for static linking in: "$with_static_libz/lib"])])]
-        )
+  [AS_HELP_STRING([--with-static-libz=PATH], [Prefix to static install of libz. Directory that has lib and include within it.])],
+  [with_static_libz="$withval"],
+  [with_static_libz="${WITH_STATIC_LIBZ:-}"]
+)
+AC_MSG_NOTICE([with_static_libz = $with_static_libz])
 
-
-AS_IF([test -n "$with_static_libz"], [AC_SUBST([STATIC_LIBZ_LIB], "$with_static_libz/lib/libz.a" )])
-AS_IF([test -n "$with_static_libz"], [AC_SUBST([STATIC_LIBZ_INC], "-I$with_static_libz/lib/include")])
-
+# 1) static linking to libz if command line option / environmental variable provided and library is found
 # 2) dynamic linking to libz otherwise
-AS_IF([test -z "$with_static_libz"], [
-	AC_SEARCH_LIBS([deflateSetHeader], [z], [], [AC_MSG_ERROR(["libz >=1.2.2.1 is required."])])
+
+AS_IF([test "x$with_static_libz" != "x"], [
+  AS_IF([test -f "$with_static_libz/lib/libz.a"], [
+    AC_MSG_NOTICE([Static linking to libz.a located in "$with_static_libz/lib"])
+    AC_SUBST([STATIC_LIBZ_LIB], ["$with_static_libz/lib/libz.a"])
+    AC_SUBST([STATIC_LIBZ_INC], ["-I$with_static_libz/lib/include"])
+  ], [
+    AC_MSG_ERROR([Could not find libz.a library for static linking in specified path: "$with_static_libz/lib"])
+  ])
+], [
+  AC_SEARCH_LIBS([deflateSetHeader], [z], [],
+    [AC_MSG_ERROR([libz >=1.2.2.1 is required.])])
 ])
 
 
