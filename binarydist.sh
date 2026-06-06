@@ -42,7 +42,17 @@ if [ "$BINARYPLATFORM" == "Darwin" ]; then
 	#         -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13
 	#   cmake --build build && cmake --install build
 	#
-  	CONFIGFLAGS="--with-static-libz=$HOME/local --with-static-miniz=$HOME/local"
+	# MacOSX htslib scenario
+	#
+	# Build a static universal htslib from source before running binarydist.sh:
+	#
+	#   git clone https://github.com/samtools/htslib && cd htslib
+	#   autoreconf -i
+	#   CFLAGS="-mmacosx-version-min=10.13 -arch arm64 -arch x86_64" \
+	#   ./configure --disable-libcurl --prefix=$HOME/local
+	#   make && make install
+	#
+  	CONFIGFLAGS="--with-static-libz=$HOME/local --with-static-miniz=$HOME/local --with-static-htslib=$HOME/local"
 
 fi
 BINARYNAME=${BINARYPLATFORM}-${BINARYARCH}

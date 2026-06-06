@@ -4,15 +4,15 @@ To compile and test the repository version of the breseq source code, you must h
 autotools, autoconf, m4, and several other GNU tools installed on your system. You can use conda
 with the included dev-environment.yml file to install packages needed for building and running breseq.
 
-$ conda env create -f dev-environment.yml
-$ conda activate breseq-dev
+$ conda env create -f dev-environment.yml --prefix=$PWD/env
+$ conda activate $PWD/env
 
 This environment installs its own C/C++ compiler.
 
 NOTE: Be careful on MacOSX to create the environment using the correct architecture
       matching your system (osx-arm64 versus osx-64)! This command can be used to get it right.
 
-$ CONDA_SUBDIR=osx-`arch` conda env create -f dev-environment.yml
+$ CONDA_SUBDIR=osx-`arch` conda env create -f dev-environment.yml --prefix=$PWD/env
 
 Building requires running the ./bootstrap script when you have a fresh version from the repository or
 whenever the autoconf configuration files have changed, for example when a new source file has been 
@@ -63,12 +63,19 @@ breseq -r reference.gbk reads.fastq
 becomes
 Arguments: -r reference.gbk reads.fastq
 
+===  Creating the Source Archive for Distribution ===
+
+Firdt, be sure to update the breseq version in configure.ac
+
+Then, generate a source archive for a given release:
+$ make distcheck
+
 ===  Building Binaries for Distribution ===
 
 A special script exists for building a MacOSX universal binary:
 $ ./binarydist.sh
 
-See the directions inside of this file on how to install zlib correctly for MacOSX.
+See the directions inside of this file on how to install universal versions of the 
+libraries correctly for static linking on MacOSX.
 
-To generate a source archive for distribution:
-$ make distcheck
+

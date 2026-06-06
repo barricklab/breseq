@@ -65,11 +65,11 @@ class pileup_base {
     //! Retrieve the name of the given target.
     const char* target_name(uint32_t target) const {
       ASSERT(target < num_targets(), "Requested target_id [" + to_string(target) + "] was not found in FASTA file [" + m_fasta_file_name + "]");
-      return m_bam->header->target_name[target];
+      return m_bam_header->target_name[target];
     }
 
     uint32_t num_targets() const {
-      return m_bam->header->n_targets;
+      return m_bam_header->n_targets;
     }
   
     //! Retrieve the length of the given target.
@@ -128,8 +128,8 @@ class pileup_base {
 
     virtual void at_target_start_first_level_callback(const uint32_t tid) { 
       if (m_print_progress) {
-        cerr << "  REFERENCE: " << m_bam->header->target_name[tid] << endl;
-        cerr << "  LENGTH: " << m_bam->header->target_len[tid] << endl;
+        cerr << "  REFERENCE: " << m_bam_header->target_name[tid] << endl;
+        cerr << "  LENGTH: " << m_bam_header->target_len[tid] << endl;
       }
       at_target_start(tid);
     }
@@ -185,10 +185,9 @@ class pileup_base {
     friend int first_level_pileup_callback(uint32_t tid, uint32_t pos, int32_t n, const bam_pileup1_t *pile, void *data);
     friend int first_level_fetch_callback(const bam1_t *b, void *data);
 
-    samfile_t* m_bam; //!< BAM file handle.
-    bam_header_t* m_bam_header;
-    bam_index_t* m_bam_index;
-    bamFile m_bam_file;
+    samFile* m_bam; //!< BAM file handle.
+    bam_hdr_t* m_bam_header;
+    hts_idx_t* m_bam_index;
     faidx_t* m_faidx;
     string m_bam_file_name;
     string m_fasta_file_name;

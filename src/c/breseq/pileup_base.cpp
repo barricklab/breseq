@@ -57,31 +57,26 @@ reference_sequence::~reference_sequence() {
  instead of loading all sequences at once.
  */
 pileup_base::pileup_base(const string& bam, const string& fasta)
-: m_bam(0), m_bam_header(0), m_bam_index(0), m_bam_file(0), m_faidx(0), m_bam_file_name(bam), m_fasta_file_name(fasta), 
-  m_last_position_1(0), m_start_position_1(0), m_end_position_1(0), m_clip_start_position_1(0), m_clip_end_position_1(0), 
+: m_bam(0), m_bam_header(0), m_bam_index(0), m_faidx(0), m_bam_file_name(bam), m_fasta_file_name(fasta),
+  m_last_position_1(0), m_start_position_1(0), m_end_position_1(0), m_clip_start_position_1(0), m_clip_end_position_1(0),
   m_downsample(0), m_last_tid(static_cast<uint32_t>(-1)), m_print_progress(false)
 {
-	m_bam = samopen(bam.c_str(), "rb", 0);
+  m_bam = hts_open(bam.c_str(), "rb");
   ASSERT(m_bam, "Could not load bam file: " + bam + "\nCheck that file exists and is in right format!");
-  
-  //m_bam_file = m_bam->x.bam;
-  
-  m_bam_file = bam_open(bam.c_str(), "r");
-  ASSERT(m_bam_file, "Could not load bam file: " + bam + "\nCheck that file exists and is in right format!");
-  
-  m_bam_index = bam_index_load(bam.c_str());
+
+  m_bam_index = sam_index_load(m_bam, bam.c_str());
   ASSERT(m_bam_index, "Could not load bam index file: " + bam + "\nCheck to be sure " + bam + ".bai exists!");
 
-  m_bam_header = bam_header_read(m_bam_file);
+  m_bam_header = sam_hdr_read(m_bam);
   assert(m_bam_header);
-  
+
 	// load all the reference sequences:
   m_faidx = fai_load(fasta.c_str());
   assert(m_faidx);
-  
-  for(int i=0; i<m_bam->header->n_targets; ++i) {
-		reference_sequence* refseq = new reference_sequence(m_faidx, fasta, m_bam->header->target_name[i]);
-		assert(static_cast<unsigned int>(refseq->m_len) == m_bam->header->target_len[i]);
+
+  for(int i=0; i<m_bam_header->n_targets; ++i) {
+		reference_sequence* refseq = new reference_sequence(m_faidx, fasta, m_bam_header->target_name[i]);
+		assert(static_cast<unsigned int>(refseq->m_len) == m_bam_header->target_len[i]);
 		m_refs.push_back(refseq);
 	}
 }
@@ -90,10 +85,9 @@ pileup_base::pileup_base(const string& bam, const string& fasta)
 /*! Destructor.
  */
 pileup_base::~pileup_base() {
-	samclose(m_bam);
-  bam_close(m_bam_file);
+  hts_close(m_bam);
   hts_idx_destroy(m_bam_index);
-  bam_header_destroy(m_bam_header);
+  sam_hdr_destroy(m_bam_header);
   fai_destroy(m_faidx);
   
   // Clean up vector of pointers
@@ -217,11 +211,23 @@ int first_level_fetch_callback(const bam1_t *b, void *data)
 }
 
 
+/*! Helper struct and read function for whole-file pileup via bam_plp_init.
+ */
+struct PileupReadData {
+  samFile   *fp;
+  bam_hdr_t *hdr;
+};
+
+static int pileup_read_func(void *data, bam1_t *b) {
+  PileupReadData *d = reinterpret_cast<PileupReadData*>(data);
+  return sam_read1(d->fp, d->hdr, b);
+}
+
 /*! Run the pileup.
- */ 
+ */
 void pileup_base::do_pileup() {
-  
-  // Start the first target... 
+
+  // Start the first target...
   m_last_position_1 = 0;
   m_downsample = 0;
   m_start_position_1 = 0;
@@ -229,28 +235,39 @@ void pileup_base::do_pileup() {
   m_clip_start_position_1 = 0;
   m_clip_end_position_1 = 0;
   m_last_tid = UNDEFINED_UINT32;
-  
-  // Do the samtools pileup
-	sampileup(m_bam, BAM_DEF_MASK, first_level_pileup_callback, this);
-  
-  //Handle positions after the last one handled by the pileup.
-  // => This includes target id's that might not have been handled at all...
 
-  for (uint32_t tid = m_last_tid; tid < num_targets(); tid++) {
-    
+  // Rewind to the start of alignments so we read the whole file
+  // (hts_set_opt or re-open would be alternatives; sam_read1 reads sequentially)
+  PileupReadData rd = {m_bam, m_bam_header};
+  bam_plp_t plp = bam_plp_init(pileup_read_func, &rd);
+  // Set maxcnt to 1e9 to match the bundled modified samtools behaviour
+  // (original bundled code patched sam.c: iter->maxcnt = 1000000000)
+  bam_plp_set_maxcnt(plp, 1000000000);
+
+  int tid, pos, n;
+  const bam_pileup1_t *pile;
+  while ((pile = bam_plp_auto(plp, &tid, &pos, &n)) != NULL) {
+    first_level_pileup_callback((uint32_t)tid, (uint32_t)pos, n, pile, this);
+  }
+  bam_plp_destroy(plp);
+
+  // Handle positions after the last one handled by the pileup.
+  // => This includes target id's that might not have been handled at all...
+  for (uint32_t t = m_last_tid; t < num_targets(); t++) {
+
     // We need to start this target
     if (m_last_position_1 == 0) {
       at_target_start_first_level_callback(m_last_tid);
     }
-    
-    for (uint32_t on_pos_1 = m_last_position_1+1; on_pos_1 <= m_bam->header->target_len[tid]; on_pos_1++) {
+
+    for (uint32_t on_pos_1 = m_last_position_1+1; on_pos_1 <= m_bam_header->target_len[t]; on_pos_1++) {
       if ( handle_position(on_pos_1) ) {
-        pileup p(tid,on_pos_1,0,NULL,*this);
-        pileup_callback(p);        
+        pileup p(t, on_pos_1, 0, NULL, *this);
+        pileup_callback(p);
         m_last_position_1 = on_pos_1;
       }
     }
-    
+
     // We finished this target
     at_target_end_first_level_callback(m_last_tid);
     m_last_tid++;
@@ -259,58 +276,70 @@ void pileup_base::do_pileup() {
 }
 
 
-// Note: This code snippet copied from Perl Module XS Bio::Samtools
-// Original Author: Lincoln Stein
+/*! Helper struct and read function for region-based pileup via bam_plp_init.
+ */
+struct IterReadData {
+  samFile    *fp;
+  bam_hdr_t  *hdr;
+  hts_itr_t  *iter;
+};
 
-int add_pileup_line (const bam1_t *b, void *data) {
-  bam_plbuf_t *pileup = (bam_plbuf_t*) data;
-  bam_plbuf_push(b,pileup);
-  return 0;
-}  
-  
+static int iter_read_func(void *data, bam1_t *b) {
+  IterReadData *d = reinterpret_cast<IterReadData*>(data);
+  return sam_itr_next(d->fp, d->iter, b);
+}
+
 /*! Run the pileup.
 
     !clip means that we handle all alignment positions that reads overlapping this position overlap
     clip means we stop and end at the indicated alignment columns, even if reads extend past them
- */ 
+ */
 void pileup_base::do_pileup(const string& region, bool clip, uint32_t downsample) {
-  
+
   uint32_t target_id, start_pos_1, end_pos_1, insert_start, insert_end;
-  parse_region(region.c_str(), target_id, start_pos_1, end_pos_1, insert_start, insert_end);   
+  parse_region(region.c_str(), target_id, start_pos_1, end_pos_1, insert_start, insert_end);
 
   m_downsample = downsample; // init
   m_start_position_1 = start_pos_1;
   m_end_position_1 = end_pos_1;
   m_insert_start = insert_start;
   m_insert_end = insert_end;
-  
+
   m_last_tid = target_id;
   m_last_position_1 = 0; // reset
   m_clip_start_position_1 = 0; // reset
   m_clip_end_position_1 = 0; // reset
 
   at_target_start_first_level_callback(target_id);
-  
+
   if (clip) {
     m_clip_start_position_1 = start_pos_1;
     m_clip_end_position_1 = end_pos_1;
     assert(m_clip_start_position_1 > 0); // prevent underflow of unsigned
   }
-  
-  bam_plbuf_t        *pileup_buff;
-  pileup_buff = bam_plbuf_init(first_level_pileup_callback,this);
-  bam_fetch(m_bam_file,m_bam_index,target_id,start_pos_1-1,end_pos_1,(void*)pileup_buff,add_pileup_line);
-  // bam_fetch expected 0 indexed start_pos and 1 indexed end_pos
-  
-  bam_plbuf_push(NULL,pileup_buff); // This clears out the clipped right regions... call before at_end!
-  bam_plbuf_destroy(pileup_buff);
-  
+
+  // sam_itr_queryi uses 0-indexed half-open [start, end)
+  hts_itr_t *iter = sam_itr_queryi(m_bam_index, (int)target_id,
+                                    (int)(start_pos_1 - 1), (int)end_pos_1);
+  ASSERT(iter, "Could not create iterator for region: " + region);
+
+  IterReadData ird = {m_bam, m_bam_header, iter};
+  bam_plp_t plp = bam_plp_init(iter_read_func, &ird);
+  bam_plp_set_maxcnt(plp, 1000000000);
+
+  int tid2, pos2, n;
+  const bam_pileup1_t *pile;
+  while ((pile = bam_plp_auto(plp, &tid2, &pos2, &n)) != NULL) {
+    first_level_pileup_callback((uint32_t)tid2, (uint32_t)pos2, n, pile, this);
+  }
+  bam_plp_destroy(plp);
+  hts_itr_destroy(iter);
+
   // handle positions after the last one handled by the pileup
   // unlike the case above, we only need to finish this target
-  
   for (uint32_t on_pos_1 = m_last_position_1+1; on_pos_1 <= m_end_position_1; on_pos_1++) {
     if ( handle_position(on_pos_1) ) {
-      pileup p(m_last_tid,on_pos_1,0,NULL,*this);
+      pileup p(m_last_tid, on_pos_1, 0, NULL, *this);
       pileup_callback(p);
       m_last_position_1 = on_pos_1;
     }
@@ -346,15 +375,23 @@ void pileup_base::do_pileup(const set<string>& seq_ids) {
 
   
 void pileup_base::do_fetch(const string& region) {
-  
+
   uint32_t target_id, start_pos_1, end_pos_1, insert_start, insert_end;
   parse_region(region.c_str(), target_id, start_pos_1, end_pos_1, insert_start, insert_end);
   m_insert_start = insert_start;
   m_insert_end = insert_end;
-  
-  // should throw if target not found!
-  bam_fetch(m_bam_file,m_bam_index,target_id,start_pos_1-1,end_pos_1,this,first_level_fetch_callback);
-  // bam_fetch expected 0 indexed start_pos and 1 indexed end_pos
+
+  hts_itr_t *iter = sam_itr_queryi(m_bam_index, (int)target_id,
+                                    (int)(start_pos_1 - 1), (int)end_pos_1);
+  ASSERT(iter, "Could not create iterator for region: " + region);
+
+  bam1_t *b = bam_init1();
+  while (sam_itr_next(m_bam, iter, b) >= 0) {
+    alignment_wrapper a(b);
+    fetch_callback(a);
+  }
+  bam_destroy1(b);
+  hts_itr_destroy(iter);
 }
 
 } //end namespace breseq

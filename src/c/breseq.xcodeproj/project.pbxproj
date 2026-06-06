@@ -13,7 +13,6 @@
 			buildPhases = (
 			);
 			dependencies = (
-				708FA5D5132578BD00864C40 /* PBXTargetDependency */,
 				422D46241219DF08003FD94D /* PBXTargetDependency */,
 			);
 			name = all;
@@ -32,10 +31,6 @@
 		702C41631FDD88D900D4B159 /* json.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 702C41621FDD88D900D4B159 /* json.hpp */; };
 		702EABF713421A8400103019 /* fastq.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702EABF613421A8400103019 /* fastq.cpp */; };
 		70367D2113EB232C000787CC /* coverage_distribution.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70367D2013EB232C000787CC /* coverage_distribution.cpp */; };
-		705978081DB9A736001BBA6B /* libhts.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 705977FC1DB99E11001BBA6B /* libhts.a */; };
-		705978091DB9A736001BBA6B /* libhts.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 705977FC1DB99E11001BBA6B /* libhts.a */; };
-		7059780A1DB9A739001BBA6B /* libbam.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B69E051369E2440001B750 /* libbam.a */; };
-		7059780B1DB9A73A001BBA6B /* libbam.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70B69E051369E2440001B750 /* libbam.a */; };
 		7059780C1DB9A73D001BBA6B /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 704A07CF1A3409EA00B3ACC7 /* libz.a */; };
 		7059780D1DB9A73E001BBA6B /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 704A07CF1A3409EA00B3ACC7 /* libz.a */; };
 		707F211613478B7700ED2F3E /* candidate_junctions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 707F211513478B7700ED2F3E /* candidate_junctions.cpp */; };
@@ -82,27 +77,6 @@
 			proxyType = 1;
 			remoteGlobalIDString = 42BA690B1189B7FD000B00B1;
 			remoteInfo = breseq;
-		};
-		7056AE041451201100890AB0 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 7056AE0014511F5D00890AB0;
-			remoteInfo = samtools;
-		};
-		705978011DB99EB9001BBA6B /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 705977FD1DB99E7C001BBA6B;
-			remoteInfo = htslib;
-		};
-		70598036289578ED00A3CEB9 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 705977FD1DB99E7C001BBA6B;
-			remoteInfo = htslib;
 		};
 		708FA5D4132578BD00864C40 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -160,7 +134,6 @@
 		70367D2013EB232C000787CC /* coverage_distribution.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = coverage_distribution.cpp; path = breseq/coverage_distribution.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		70436D5713FF6D7D006448FB /* coverage_distribution.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = coverage_distribution.r; path = breseq/coverage_distribution.r; sourceTree = "<group>"; };
 		704A07CF1A3409EA00B3ACC7 /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = "/Users/jbarrick/Library/Developer/Xcode/DerivedData/breseq-canagyzpaxpsjgbtjxenmavcspzz/Build/Products/Debug/../../../../../../../../../../opt/local/lib/libz.a"; sourceTree = "<absolute>"; };
-		705977FC1DB99E11001BBA6B /* libhts.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libhts.a; path = "../../extern/samtools-1.3.1/htslib-1.3.1/libhts.a"; sourceTree = "<group>"; };
 		70616DCF1400A0C0006E7800 /* plot_coverage.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = plot_coverage.r; path = breseq/plot_coverage.r; sourceTree = "<group>"; };
 		70616DD01400A0C0006E7800 /* plot_error_rate.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = plot_error_rate.r; path = breseq/plot_error_rate.r; sourceTree = "<group>"; };
 		70616DD11400A0C0006E7800 /* polymorphism_statistics.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = polymorphism_statistics.r; path = breseq/polymorphism_statistics.r; sourceTree = "<group>"; };
@@ -192,7 +165,6 @@
 		70B4AEAF1391F72200B9638D /* fasta.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = fasta.cpp; path = breseq/fasta.cpp; sourceTree = SOURCE_ROOT; };
 		70B69DE51369B8700001B750 /* breseq_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = breseq_cmdline.cpp; path = breseq/breseq_cmdline.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		70B69DE91369D3510001B750 /* calculate_trims.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = calculate_trims.cpp; path = breseq/calculate_trims.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
-		70B69E051369E2440001B750 /* libbam.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libbam.a; path = "../../extern/samtools-1.3.1/libbam.a"; sourceTree = SOURCE_ROOT; };
 		70B69E091369E51E0001B750 /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		70B69E0A1369E51E0001B750 /* Release.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 		70B69E0B1369E51E0001B750 /* Shared.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; path = Shared.xcconfig; sourceTree = "<group>"; };
@@ -234,9 +206,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				708FA5FD13257A7D00864C40 /* libbreseq.a in Frameworks */,
-				7059780A1DB9A739001BBA6B /* libbam.a in Frameworks */,
 				7059780C1DB9A73D001BBA6B /* libz.a in Frameworks */,
-				705978081DB9A736001BBA6B /* libhts.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -252,9 +222,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				70E92F14151AB74200F86F2D /* libbreseq.a in Frameworks */,
-				7059780B1DB9A73A001BBA6B /* libbam.a in Frameworks */,
 				7059780D1DB9A73E001BBA6B /* libz.a in Frameworks */,
-				705978091DB9A736001BBA6B /* libhts.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -287,9 +255,7 @@
 		421ACF5F1170E06300C2EB85 /* lib */ = {
 			isa = PBXGroup;
 			children = (
-				705977FC1DB99E11001BBA6B /* libhts.a */,
-				70B69E051369E2440001B750 /* libbam.a */,
-				704A07CF1A3409EA00B3ACC7 /* libz.a */,
+								704A07CF1A3409EA00B3ACC7 /* libz.a */,
 			);
 			name = lib;
 			sourceTree = "<group>";
@@ -422,35 +388,6 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXLegacyTarget section */
-		7056AE0014511F5D00890AB0 /* samtools */ = {
-			isa = PBXLegacyTarget;
-			buildArgumentsString = "-f Makefile.xcode $(ACTION)";
-			buildConfigurationList = 7056AE0114511F5D00890AB0 /* Build configuration list for PBXLegacyTarget "samtools" */;
-			buildPhases = (
-			);
-			buildToolPath = /usr/bin/make;
-			buildWorkingDirectory = "$(PROJECT_DIR)/../../extern/samtools-1.3.1";
-			dependencies = (
-				70598037289578ED00A3CEB9 /* PBXTargetDependency */,
-			);
-			name = samtools;
-			passBuildSettingsInEnvironment = 1;
-			productName = samtools3;
-		};
-		705977FD1DB99E7C001BBA6B /* htslib */ = {
-			isa = PBXLegacyTarget;
-			buildArgumentsString = "-f Makefile.xcode $(ACTION)";
-			buildConfigurationList = 705977FE1DB99E7C001BBA6B /* Build configuration list for PBXLegacyTarget "htslib" */;
-			buildPhases = (
-			);
-			buildToolPath = /usr/bin/make;
-			buildWorkingDirectory = "$(PROJECT_DIR)/../../extern/samtools-1.3.1/htslib-1.3.1";
-			dependencies = (
-			);
-			name = htslib;
-			passBuildSettingsInEnvironment = 1;
-			productName = htslib;
-		};
 /* End PBXLegacyTarget section */
 
 /* Begin PBXNativeTarget section */
@@ -483,8 +420,6 @@
 			buildRules = (
 			);
 			dependencies = (
-				705978021DB99EB9001BBA6B /* PBXTargetDependency */,
-				7056AE051451201100890AB0 /* PBXTargetDependency */,
 			);
 			name = libbreseq;
 			productName = breseq;
@@ -517,10 +452,6 @@
 			attributes = {
 				LastUpgradeCheck = 1400;
 				TargetAttributes = {
-					705977FD1DB99E7C001BBA6B = {
-						CreatedOnToolsVersion = 8.0;
-						ProvisioningStyle = Automatic;
-					};
 				};
 			};
 			buildConfigurationList = 421ACEBA1170DB9600C2EB85 /* Build configuration list for PBXProject "breseq" */;
@@ -540,8 +471,6 @@
 			projectRoot = "";
 			targets = (
 				422D46201219DEFF003FD94D /* all */,
-				705977FD1DB99E7C001BBA6B /* htslib */,
-				7056AE0014511F5D00890AB0 /* samtools */,
 				42BA690B1189B7FD000B00B1 /* libbreseq */,
 				42B6EDB811C69CC70075F8A3 /* breseq */,
 				70E92F0E151AB74200F86F2D /* gdtools */,
@@ -612,21 +541,6 @@
 			isa = PBXTargetDependency;
 			target = 42BA690B1189B7FD000B00B1 /* libbreseq */;
 			targetProxy = 42B6EDBC11C69CC70075F8A3 /* PBXContainerItemProxy */;
-		};
-		7056AE051451201100890AB0 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 7056AE0014511F5D00890AB0 /* samtools */;
-			targetProxy = 7056AE041451201100890AB0 /* PBXContainerItemProxy */;
-		};
-		705978021DB99EB9001BBA6B /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 705977FD1DB99E7C001BBA6B /* htslib */;
-			targetProxy = 705978011DB99EB9001BBA6B /* PBXContainerItemProxy */;
-		};
-		70598037289578ED00A3CEB9 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 705977FD1DB99E7C001BBA6B /* htslib */;
-			targetProxy = 70598036289578ED00A3CEB9 /* PBXContainerItemProxy */;
 		};
 		708FA5D5132578BD00864C40 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -862,127 +776,6 @@
 			};
 			name = Release;
 		};
-		7056AE0214511F5D00890AB0 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 70B69E091369E51E0001B750 /* Debug.xcconfig */;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = YES;
-				DEBUGGING_SYMBOLS = YES;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = DEBUG;
-				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
-				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				ONLY_ACTIVE_ARCH = YES;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-			};
-			name = Debug;
-		};
-		7056AE0314511F5D00890AB0 /* Release */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 70B69E0A1369E51E0001B750 /* Release.xcconfig */;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				COPY_PHASE_STRIP = YES;
-				DEAD_CODE_STRIPPING = YES;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
-				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				ONLY_ACTIVE_ARCH = NO;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-			};
-			name = Release;
-		};
-		705977FF1DB99E7C001BBA6B /* Debug */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 70B69E091369E51E0001B750 /* Debug.xcconfig */;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_SUSPICIOUS_MOVES = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				DEAD_CODE_STRIPPING = YES;
-				DEBUGGING_SYMBOLS = YES;
-				DEBUG_INFORMATION_FORMAT = dwarf;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MTL_ENABLE_DEBUG_INFO = YES;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Debug;
-		};
-		705978001DB99E7C001BBA6B /* Release */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 70B69E0A1369E51E0001B750 /* Release.xcconfig */;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_SUSPICIOUS_MOVES = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				COPY_PHASE_STRIP = NO;
-				DEAD_CODE_STRIPPING = YES;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				ENABLE_NS_ASSERTIONS = NO;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = Release;
-		};
 		70E92F19151AB74200F86F2D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 70B69E091369E51E0001B750 /* Debug.xcconfig */;
@@ -1078,24 +871,6 @@
 			buildConfigurations = (
 				42BA690D1189B7FE000B00B1 /* Debug */,
 				42BA690E1189B7FE000B00B1 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		7056AE0114511F5D00890AB0 /* Build configuration list for PBXLegacyTarget "samtools" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				7056AE0214511F5D00890AB0 /* Debug */,
-				7056AE0314511F5D00890AB0 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		705977FE1DB99E7C001BBA6B /* Build configuration list for PBXLegacyTarget "htslib" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				705977FF1DB99E7C001BBA6B /* Debug */,
-				705978001DB99E7C001BBA6B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

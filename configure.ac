@@ -196,17 +196,57 @@ fi
 
 
 
-# This code could be used to check for an existing samtools/libbam.a
-# But unfortunately we have to compile them ourselves with a patch
-#AC_CHECK_PROG([samtools],[samtools],[yes],[no])
-#AM_CONDITIONAL([FOUND_SAMTOOLS], [test "x$samtools" = xyes])
-#AM_COND_IF([FOUND_SAMTOOLS],,[AC_MSG_ERROR([required program 'samtools' not found.])])
-#AC_SEARCH_LIBS([bam_fetch], [bam], [], [AC_MSG_ERROR(["libbam is required."])])
+#### htslib (required for BAM/SAM reading and pileup)
+
+# We have options for static linking (precompiled binaries) and dynamic linking (bioconda install)
+AC_ARG_WITH([static-htslib],
+  [AS_HELP_STRING([--with-static-htslib=PATH], [Prefix to static install of htslib. Directory that has lib/ and include/ within it.])],
+  [with_static_htslib="$withval"],
+  [with_static_htslib="${WITH_STATIC_HTSLIB:-}"]
+)
+AC_MSG_NOTICE([with_static_htslib = $with_static_htslib])
+
+# 1) static linking to libhts if command line option / environmental variable provided and library is found
+# 2) dynamic linking to libhts via prefix otherwise
+
+AS_IF([test "x$with_static_htslib" != "x"], [
+  AS_IF([test -f "$with_static_htslib/lib/libhts.a"], [
+    AC_MSG_NOTICE([Static linking to libhts.a located in "$with_static_htslib/lib"])
+    AC_SUBST([HTSLIB_INC],  ["-I$with_static_htslib/include"])
+    AC_SUBST([HTSLIB_LINK], ["$with_static_htslib/lib/libhts.a"])
+    # Check whether this htslib version has sam_hdr_destroy (added in 1.10)
+    save_CPPFLAGS="$CPPFLAGS"; save_LIBS="$LIBS"
+    CPPFLAGS="$CPPFLAGS -I$with_static_htslib/include"
+    LIBS="$LIBS $with_static_htslib/lib/libhts.a"
+    AC_CHECK_FUNC([sam_hdr_destroy],
+      [AC_DEFINE([HAVE_SAM_HDR_DESTROY], [1], [htslib has sam_hdr_destroy (>= 1.10)])])
+    CPPFLAGS="$save_CPPFLAGS"; LIBS="$save_LIBS"
+  ], [
+    AC_MSG_ERROR([Could not find libhts.a for static linking in: "$with_static_htslib/lib"])
+  ])
+], [
+  save_CPPFLAGS="$CPPFLAGS"
+  save_LDFLAGS="$LDFLAGS"
+  save_LIBS="$LIBS"
+  CPPFLAGS="$CPPFLAGS -I${prefix}/include"
+  LDFLAGS="$LDFLAGS -L${prefix}/lib"
+  AC_CHECK_HEADER([htslib/sam.h], [],
+    [AC_MSG_ERROR([htslib/sam.h not found at ${prefix}/include. Install: conda install -c bioconda htslib and configure with --prefix=\$CONDA_PREFIX])])
+  AC_CHECK_LIB([hts], [hts_open], [],
+    [AC_MSG_ERROR([libhts not found at ${prefix}/lib. Install: conda install -c bioconda htslib and configure with --prefix=\$CONDA_PREFIX])])
+  # Check whether this htslib version has sam_hdr_destroy (added in 1.10)
+  LIBS="$LIBS -lhts"
+  AC_CHECK_FUNC([sam_hdr_destroy],
+    [AC_DEFINE([HAVE_SAM_HDR_DESTROY], [1], [htslib has sam_hdr_destroy (>= 1.10)])])
+  CPPFLAGS="$save_CPPFLAGS"
+  LDFLAGS="$save_LDFLAGS"
+  LIBS="$save_LIBS"
+  AC_SUBST([HTSLIB_INC],  [""])
+  AC_SUBST([HTSLIB_LINK], ["-lhts"])
+])
 
 
 AC_SUBST([LIBZ], [extern/zlib-1.3.1])
-AC_SUBST([HTSLIB], [extern/samtools-1.3.1/htslib-1.3.1])
-AC_SUBST([LIBBAM], [extern/samtools-1.3.1])
 AC_SUBST([BRESEQ], [src/c/breseq])
 AC_SUBST([GDTOOLS], [src/c/gdtools])
 
@@ -239,8 +279,6 @@ esac
 
 
 AC_CONFIG_FILES([
-    extern/samtools-1.3.1/htslib-1.3.1/Makefile
-    extern/samtools-1.3.1/Makefile
     src/c/breseq/Makefile
     Makefile
 ])

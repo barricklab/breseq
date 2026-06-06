@@ -74,9 +74,31 @@ LICENSE AND COPYRIGHT
 
 // Begin breseq specific --->
 // Library specific headers
-#include "bam.h"
-#include "sam.h"
-#include "htslib/faidx.h"
+// htslib/hts.h declares a deprecated enum value named "json" in the global
+// namespace (htsExactFormat::json) which conflicts with nlohmann::json.
+// Define a macro to rename it during parsing so it doesn't pollute global scope.
+#define json _htslib_deprecated_json_enum_value_
+#include <htslib/sam.h>
+#include <htslib/faidx.h>
+#undef json
+
+// htslib compatibility: sam_hdr_destroy() is the canonical name from htslib 1.10+.
+// Older htslib (e.g. a static build from source) only exports bam_hdr_destroy().
+// Provide sam_hdr_destroy as an inline wrapper when it is not already declared.
+// We detect this by checking whether sam_hdr_t is a defined type: in htslib >= 1.10
+// the header defines "typedef struct sam_hdr_t sam_hdr_t;" before the function
+// declaration; in older htslib only bam_hdr_t exists.
+// Since we cannot #ifdef a typedef, we use a configure-time test via config.h.
+// Fall back to a simple inline wrapper when HAVE_SAM_HDR_DESTROY is not set.
+#ifndef HAVE_SAM_HDR_DESTROY
+// Old htslib (< 1.10): only bam_hdr_destroy() exists as a real function.
+// Provide sam_hdr_destroy() as a wrapper so the rest of breseq can use a
+// single consistent name regardless of htslib version.
+// bam_hdr_destroy is declared in htslib/sam.h in all versions.
+static inline void sam_hdr_destroy(bam_hdr_t *h) {
+  if (h) bam_hdr_destroy(h);
+}
+#endif
 
 #define _base_bam_is_A(x) (x == 0x01)
 #define _base_bam_is_C(x) (x == 0x02)

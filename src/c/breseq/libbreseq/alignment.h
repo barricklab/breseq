@@ -67,19 +67,19 @@ class alignment_wrapper {
     inline uint32_t reference_target_id() const { return _a->core.tid; }
   
     //!Retrieve name of read.
-    inline string read_name() const { return bam1_qname(_a);}
+    inline string read_name() const { return bam_get_qname(_a);}
 
     //! Is the read aligned to the reverse strand?
     //  Returns 1 if read aligned to bottom strand, 0 if aligned to top strand
-    inline bool reversed() const { return bam1_strand(_a); }
+    inline bool reversed() const { return bam_is_rev(_a); }
   
 		
     //! Which strand is the read aligned to?
     //  Returns -1 if read aligned to bottom strand, +1 if aligned to top strand
-    inline int32_t strand() const { return (bam1_strand(_a) ? -1 : +1); }
+    inline int32_t strand() const { return (bam_is_rev(_a) ? -1 : +1); }
     
     //! Retrieve the query sequence (always on top genome strand).
-    inline uint8_t* read_bam_sequence() const { return bam1_seq(_a); }
+    inline uint8_t* read_bam_sequence() const { return bam_get_seq(_a); }
 
     //! Retrieve the query sequence (always on top genome strand).
     string read_char_sequence() const { 
@@ -100,14 +100,14 @@ class alignment_wrapper {
   
     //! Retrieve the base at a specified position in the read (was 0-indexed)
     //  Methods available for 0-indexed and 1-indexed coordinates.
-    inline uint8_t read_base_bam_0(const uint32_t pos) const { assert(pos<read_length()); return bam1_seqi(read_bam_sequence(), pos); }
-    inline uint8_t read_base_bam_1(const uint32_t pos) const { assert(pos<=read_length()); return bam1_seqi(read_bam_sequence(), pos-1); }
+    inline uint8_t read_base_bam_0(const uint32_t pos) const { assert(pos<read_length()); return bam_seqi(read_bam_sequence(), pos); }
+    inline uint8_t read_base_bam_1(const uint32_t pos) const { assert(pos<=read_length()); return bam_seqi(read_bam_sequence(), pos-1); }
 
     inline char read_base_char_0(const uint32_t pos) const { return basebam2char(read_base_bam_0(pos)); }
     inline char read_base_char_1(const uint32_t pos) const { return basebam2char(read_base_bam_1(pos)); }
 	
     //! Retrieve the quality score array. Raw quality scores.
-    inline uint8_t* read_base_quality_bam_sequence() const { return bam1_qual(_a); }
+    inline uint8_t* read_base_quality_bam_sequence() const { return bam_get_qual(_a); }
   
     inline string  read_base_quality_bam_string() const
     {
@@ -135,8 +135,8 @@ class alignment_wrapper {
   
     //! Retrieve the quality score of a single base. (was 0-indexed)
     //  Methods available for 0-indexed and 1-indexed coordinates.
-    inline uint8_t read_base_quality_0(const uint32_t pos) const { assert(pos<read_length()); return bam1_qual(_a)[pos]; }
-    inline uint8_t read_base_quality_1(const uint32_t pos) const { assert(pos<=read_length()); return bam1_qual(_a)[pos-1]; }
+    inline uint8_t read_base_quality_0(const uint32_t pos) const { assert(pos<read_length()); return bam_get_qual(_a)[pos]; }
+    inline uint8_t read_base_quality_1(const uint32_t pos) const { assert(pos<=read_length()); return bam_get_qual(_a)[pos-1]; }
 
     //! Retrieve the index of the read file that contained this alignment.
     uint32_t fastq_file_index() const;
@@ -222,9 +222,9 @@ class alignment_wrapper {
     void num_matches_from_end(const cReferenceSequences& ref_seq_info, bool dir, int32_t overlap, int32_t& qry_mismatch_pos, int32_t& ref_mismatch_pos);
   
     //! Operations on CIGAR match string
-    inline uint32_t* cigar_array() const { return bam1_cigar(_a); }
+    inline uint32_t* cigar_array() const { return bam_get_cigar(_a); }
     inline uint32_t cigar_array_length() const { return _a->core.n_cigar; }
-    inline uint32_t cigar_query_length() const { return bam_cigar2qlen(&_a->core, cigar_array()); };
+    inline uint32_t cigar_query_length() const { return bam_cigar2qlen(_a->core.n_cigar, cigar_array()); };
 
     string cigar_string() const {
       uint32_t* cigar_list = cigar_array();
@@ -409,14 +409,14 @@ class bam_alignment : public bam1_t, public alignment_wrapper
 public:
   bam_alignment() : bam1_t(), alignment_wrapper(this)
   {
-    data_len = 0;
+    l_data = 0;
     m_data = 0;
     data = NULL;
   }
 
     bam_alignment(const bam1_t& _in) : alignment_wrapper(this)
   {
-    data_len = 0;
+    l_data = 0;
     m_data = 0;
     data = NULL;
     bam_copy1(this, &_in);
@@ -424,7 +424,7 @@ public:
     
   bam_alignment(const alignment_wrapper& _in)  : alignment_wrapper(this)
   {
-      data_len = 0;
+      l_data = 0;
       m_data = 0;
       data = NULL;
       bam_copy1(this, _in._a);
@@ -432,7 +432,7 @@ public:
   
   bam_alignment(const bam_alignment& _in) : alignment_wrapper(_in._a)
   {
-    data_len = 0;
+    l_data = 0;
     m_data = 0; 
     data = NULL;
     bam_copy1(this, &_in);
@@ -491,6 +491,12 @@ inline void print_alignment_list(const alignment_list& alignments)
 }
 
   
+/*! Build a bam_hdr_t from a FASTA file (or its .fai index).
+ *  Replaces the deprecated sam_header_read2() removed in modern htslib.
+ *  Declared here so any translation unit that includes alignment.h can use it.
+ */
+bam_hdr_t* make_bam_header_from_faidx(const string& fasta_file_name);
+
 class tam_file {
 
 public:
@@ -539,10 +545,10 @@ public:
     return bam_header->target_name[tid];
   }
   
-  bam_header_t* bam_header;
+  bam_hdr_t* bam_header;
   
 protected:
-  tamFile input_tam;                // used for input
+  samFile* input_tam;                // used for input
   ofstream output_tam;              // used for output
   bam_alignment_ptr last_alignment; // contains alignment* last_alignment
 };
@@ -568,10 +574,10 @@ public:
     return bam_header->target_name[tid];
   }
   
-  bam_header_t* bam_header;
+  bam_hdr_t* bam_header;
   
 protected:
-  bamFile m_bam_file;                // used for input
+  samFile* m_bam_file;                // used for input
   bam_alignment_ptr m_last_alignment; // contains alignment* last_alignment
 };
 	

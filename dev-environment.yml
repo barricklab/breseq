@@ -4,17 +4,21 @@ channels:
   - conda-forge
   - defaults
 dependencies:
+# Needed for compiling
+#  => Should be compatible with any versions
   - autoconf
   - automake
   - libtool
   - pkg-config
   - m4
-  - zlib
-  - miniz
+# Dynamically linked libraries. 
+#   => Need to lock versions for consistency
+  - zlib=1.3.2
+  - miniz=3.1.1
+  - htslib=1.23.1
+# Command line tools run by breseq
+#  => Need to lock versions for consistency
+  - samtools=1.23.1
   - bowtie2=2.5.5
   - r-base=4.5.3
   - phylip=3.697
- # Old for making docs
- # - sphinx
- # - sphinxcontrib-jsmath
- # - texlive-core

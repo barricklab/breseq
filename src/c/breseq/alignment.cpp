@@ -60,8 +60,8 @@ uint32_t alignment_wrapper::redundancy() const {
 
  Replaced with cigar_query_length()
 uint32_t alignment::query_length() const {
-	uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
-	uint32_t qlen = bam_cigar2qlen(&_a->core, cigar); // total length of the query
+	uint32_t* cigar = bam_get_cigar(_a); // cigar array for this alignment
+	uint32_t qlen = bam_cigar2qlen(_a->core.n_cigar, cigar); // total length of the query
 	return qlen;
 }
 */
@@ -115,8 +115,8 @@ void alignment_wrapper::query_bounds_0(uint32_t& start, uint32_t& end, uint32_t 
  *  returns {-1,-1} if the entire read has lower than min_qual
  */
 pair<uint32_t,uint32_t> alignment_wrapper::query_bounds_1(uint32_t min_qual) const {
-  uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
-	uint32_t start=1, end=bam_cigar2qlen(&_a->core,cigar);
+  uint32_t* cigar = bam_get_cigar(_a); // cigar array for this alignment
+	uint32_t start=1, end=bam_cigar2qlen(_a->core.n_cigar, cigar);
 	
   /*
   if (this->read_name()=="1:369") {
@@ -244,7 +244,7 @@ void alignment_wrapper::query_stranded_bounds_1(uint32_t& start, uint32_t& end) 
  */
 uint32_t alignment_wrapper::query_start_1() const {
   // traverse the cigar array
-  uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
+  uint32_t* cigar = bam_get_cigar(_a); // cigar array for this alignment
   int32_t pos = 1;
   
   for(uint32_t j=0; j<=_a->core.n_cigar; j++) {
@@ -265,8 +265,8 @@ uint32_t alignment_wrapper::query_start_1() const {
 
 uint32_t alignment_wrapper::query_end_1() const {
   // traverse the cigar array
-  uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
-  int32_t pos = bam_cigar2qlen(&_a->core, cigar); // total length of the query includes soft clipped nucleotides
+  uint32_t* cigar = bam_get_cigar(_a); // cigar array for this alignment
+  int32_t pos = bam_cigar2qlen(_a->core.n_cigar, cigar); // total length of the query includes soft clipped nucleotides
   
   uint32_t j;
   for(j=(_a->core.n_cigar-1); j>0; j--) {
@@ -290,7 +290,7 @@ uint32_t alignment_wrapper::reference_start_0(uint32_t min_qual) const
   
   if (min_qual) {
     
-    uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
+    uint32_t* cigar = bam_get_cigar(_a); // cigar array for this alignment
     
     // start:
     uint32_t i;
@@ -348,10 +348,10 @@ uint32_t alignment_wrapper::reference_end_0(uint32_t min_qual) const
 }
 uint32_t alignment_wrapper::reference_end_1(uint32_t min_qual ) const
 { 
-  uint32_t end = bam_calend(&_a->core, bam1_cigar(_a));
+  uint32_t end = bam_endpos(_a);
   
   if (min_qual) {
-    uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
+    uint32_t* cigar = bam_get_cigar(_a); // cigar array for this alignment
 
     uint32_t i;
     uint32_t op;
@@ -402,7 +402,7 @@ uint32_t alignment_wrapper::reference_end_1(uint32_t min_qual ) const
 
   uint32_t pos = reference_start_0();
   
-  uint32_t* cigar = bam1_cigar(_a); // cigar array for this alignment
+  uint32_t* cigar = bam_get_cigar(_a); // cigar array for this alignment
 	
   for(uint32_t j=0; j<_a->core.n_cigar; j++) {
     uint32_t op = cigar[j] & BAM_CIGAR_MASK;
@@ -590,7 +590,41 @@ void alignment_wrapper::num_matches_from_end(const cReferenceSequences& ref_seq_
   }
 }
   
-tam_file::tam_file(const string& tam_file_name, const string& fasta_file_name, ios_base::openmode mode) 
+/*! Build a BAM header from a FASTA index file.
+ *  Replaces the deprecated sam_header_read2() function removed in modern htslib.
+ *  Accepts either the FASTA file itself or the .fai index path.
+ */
+bam_hdr_t* make_bam_header_from_faidx(const string& fasta_file_name) {
+  // Strip .fai suffix to get base FASTA path for fai_load
+  string fasta = fasta_file_name;
+  if (fasta.size() > 4 && fasta.substr(fasta.size() - 4) == ".fai")
+    fasta = fasta.substr(0, fasta.size() - 4);
+
+  faidx_t *fai(NULL);
+  if (file_exists(fasta.c_str())) {
+    fai = fai_load(fasta.c_str());
+  }
+
+  // There is an instance where we call this with a non-existent FASTA file and
+  // it should not throw an error in resolve_alignments
+  string hdr_text = "@HD\tVN:1.6\tSO:unsorted\n";
+  if (fai) {
+    int n = faidx_nseq(fai);
+    for (int i = 0; i < n; i++) {
+      const char *name = faidx_iseq(fai, i);
+      int len = faidx_seq_len(fai, name);  // faidx_seq_len returns int (portable across htslib versions)
+      hdr_text += string("@SQ\tSN:") + name + "\tLN:" + to_string(len) + "\n";
+    }
+    fai_destroy(fai);
+  }
+  
+  bam_hdr_t *hdr = sam_hdr_parse(hdr_text.size(), hdr_text.c_str());
+  ASSERT(hdr, "Could not parse BAM header from FASTA index: " + fasta);
+  return hdr;
+}
+
+
+tam_file::tam_file(const string& tam_file_name, const string& fasta_file_name, ios_base::openmode mode)
   : bam_header(NULL), input_tam(NULL)
 {
   if (mode == ios_base::in)
@@ -605,38 +639,35 @@ tam_file::tam_file(const string& tam_file_name, const string& fasta_file_name, i
   
 tam_file::~tam_file()
 {
-  if (input_tam) { sam_close(input_tam); input_tam=NULL; }
-  if (bam_header) bam_header_destroy(bam_header);
+  if (input_tam) { hts_close(input_tam); input_tam=NULL; }
+  if (bam_header) sam_hdr_destroy(bam_header);
 }
-  
+
 void tam_file::open_read(const string& tam_file_name, const string& fasta_file_name)
 {
   string faidx_file_name(fasta_file_name);
   faidx_file_name += ".fai";
-  
+
   // Alternately, we could automatically generate the index.
-  ASSERT(file_exists(faidx_file_name.c_str()), "FAI file for FASTA file does not exist: " + faidx_file_name 
+  ASSERT(file_exists(faidx_file_name.c_str()), "FAI file for FASTA file does not exist: " + faidx_file_name
          + "\nTry running the command:\nsamtools faidx " + fasta_file_name);
-  
-  input_tam = sam_open(tam_file_name.c_str());
+
+  input_tam = hts_open(tam_file_name.c_str(), "r");
   ASSERT(input_tam, "Could not open tam file: " + tam_file_name);
-  
+
   // Read header from SAM file and discard (really should use it)
-  bam_header_t* bam_header_no_care = sam_header_read(input_tam);
-  if (bam_header_no_care) bam_header_destroy(bam_header_no_care);
-  
-  // but we keep a header
-  bam_header = sam_header_read2(faidx_file_name.c_str()); // or die("Error reading reference fasta index file: $reference_faidx_file_name");
+  bam_hdr_t* bam_header_no_care = sam_hdr_read(input_tam);
+  if (bam_header_no_care) sam_hdr_destroy(bam_header_no_care);
+
+  // but we keep a header built from the reference FASTA index
+  bam_header = make_bam_header_from_faidx(fasta_file_name);
 }
 
 void tam_file::open_write(const string& tam_file_name, const string& fasta_file_name)
 {
-  string faidx_file_name(fasta_file_name);
-  faidx_file_name += ".fai";
-
   output_tam.open(tam_file_name.c_str(), ios_base::out);
   assert(output_tam.is_open());
-  bam_header = sam_header_read2(faidx_file_name.c_str());
+  bam_header = make_bam_header_from_faidx(fasta_file_name);
 }
 
 bool tam_file::read_alignments(alignment_list& alignments, bool paired)
@@ -1334,36 +1365,31 @@ bam_file::bam_file(const string& bam_file_name, const string& fasta_file_name, i
 
 bam_file::~bam_file()
 {
-  if (bam) { bam_close(m_bam_file); m_bam_file=NULL; }
-  if (bam_header) bam_header_destroy(bam_header);
+  if (m_bam_file) { hts_close(m_bam_file); m_bam_file=NULL; }
+  if (bam_header) sam_hdr_destroy(bam_header);
 }
 
 void bam_file::open_read(const string& bam_file_name, const string& fasta_file_name)
 {
   string faidx_file_name(fasta_file_name);
   faidx_file_name += ".fai";
-  
+
   // Alternately, we could automatically generate the index.
   ASSERT(file_exists(faidx_file_name.c_str()), "FAI file for FASTA file does not exist: " + faidx_file_name
          + "\nTry running the command:\nsamtools faidx " + fasta_file_name);
-  
-  m_bam_file = bam_open(bam_file_name.c_str(), "r");
+
+  m_bam_file = hts_open(bam_file_name.c_str(), "rb");
   ASSERT(m_bam_file, "Could not open bam file: " + bam_file_name);
-  
-  // but we keep a header
-  bam_header = bam_header_read(m_bam_file);
+
+  bam_header = sam_hdr_read(m_bam_file);
 }
 
 void bam_file::open_write(const string& bam_file_name, const string& fasta_file_name)
 {
-  string faidx_file_name(fasta_file_name);
-  faidx_file_name += ".fai";
-  
-  m_bam_file = bam_open(bam_file_name.c_str(), "w");
+  m_bam_file = hts_open(bam_file_name.c_str(), "wb");
   ASSERT(m_bam_file, "Could not open bam file: " + bam_file_name);
-  bam_header = sam_header_read2(faidx_file_name.c_str());
-  
-  bam_header_write(m_bam_file, bam_header);
+  bam_header = make_bam_header_from_faidx(fasta_file_name);
+  sam_hdr_write(m_bam_file, bam_header);
 }
 
 bool bam_file::read_alignments(alignment_list& alignments, bool paired)
@@ -1385,7 +1411,7 @@ bool bam_file::read_alignments(alignment_list& alignments, bool paired)
     
     counted_ptr<bam_alignment> this_alignment(this_alignment_bam);
     
-    int32_t bytes = bam_read1(m_bam_file, this_alignment_bam);
+    int32_t bytes = sam_read1(m_bam_file, bam_header, this_alignment_bam);
     if (bytes < 0) break;
     
     m_last_alignment = this_alignment;

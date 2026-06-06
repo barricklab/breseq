@@ -236,7 +236,7 @@ void error_count_pileup::print_coverage() {
   
 		string filename = Settings::path_file_name(m_output_dir, m_settings.unique_only_coverage_distribution_file_name, "@", to_string<uint32_t>(i));
     
-    (m_output_dir + "/" + m_bam->header->target_name[i] + ".unique_only_coverage_distribution.tab");
+    (m_output_dir + "/" + m_bam_header->target_name[i] + ".unique_only_coverage_distribution.tab");
 		ofstream out(filename.c_str());
 		
 		out << "coverage\tn" << endl;
@@ -776,7 +776,7 @@ void cErrorTable::count_alignment_position(const pileup_wrapper& i, const pileup
       
     //We already skipped deletions of *this* base so we know we have a (mis)match
     {
-      uint8_t obs_base_bam = bam1_seqi(qseq,q_pos_0);    
+      uint8_t obs_base_bam = bam_seqi(qseq,q_pos_0);    
       uint8_t ref_base_char = ref_seq[ref_pos];
       
       if (!_base_bam_is_N(obs_base_bam) && !_base_char_is_N(ref_base_char)) {
@@ -803,7 +803,7 @@ void cErrorTable::count_alignment_position(const pileup_wrapper& i, const pileup
         int32_t mqpos = q_pos_0 + 1 - reversed;
         ASSERT((mqpos >= 0) && (mqpos < q_length), "Attempt to retrieve quality score for nonexistent base for '..' state.");
 
-        base_bam obs_base_bam = bam1_seqi(qseq,mqpos);
+        base_bam obs_base_bam = bam_seqi(qseq,mqpos);
         
         int32_t mrpos = ref_pos + 1 - reversed;
         base_char ref_base_char = ref_seq[mrpos];
@@ -828,7 +828,7 @@ void cErrorTable::count_alignment_position(const pileup_wrapper& i, const pileup
       string read_name = i.read_name();
       ASSERT((mqpos >= 0) && (mqpos < q_length), "Attempt to retrieve quality score for nonexistent base for 'N.' state. For read " + read_name);
 
-      base_char obs_base_bam = bam1_seqi(qseq,mqpos);   
+      base_char obs_base_bam = bam_seqi(qseq,mqpos);   
 			      
       //## the reference base opposite the deletion is really the NEXT base
       int32_t mrpos = ref_pos + 1;
@@ -856,7 +856,7 @@ void cErrorTable::count_alignment_position(const pileup_wrapper& i, const pileup
       ASSERT((mqpos >= 0) && (mqpos < q_length), "Attempt to retrieve quality score for nonexistent base for '.N' state.");
 
       if ((mqpos <= q_end_0) && (mqpos >= q_start_0)) {
-        base_bam obs_base_bam = bam1_seqi(qseq,mqpos);    
+        base_bam obs_base_bam = bam_seqi(qseq,mqpos);    
 				
         if (!_base_bam_is_N(obs_base_bam)) {
         

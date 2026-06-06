@@ -143,7 +143,7 @@ void calculate_trims( const string& in_fasta, const string& in_output_path) {
   
   //cerr << fai_filename << endl;
   
-  bam_header_t* bam_header = sam_header_read2(fai_filename.c_str());
+  bam_hdr_t* bam_header = make_bam_header_from_faidx(in_fasta);
   assert(bam_header);
   int nseq = bam_header->n_targets;
 
@@ -156,16 +156,16 @@ void calculate_trims( const string& in_fasta, const string& in_output_path) {
 
 		cerr << "  REFERENCE: " << bam_header->target_name[i] << endl;
 		cerr << "  LENGTH: " << bam_header->target_len[i] << endl;
-    
+
     int len;
     const char* cseq = fai_fetch(fasta_index, bam_header->target_name[i], &len);
-    
+
     assert(cseq);
     assert(len > 0);
     assert(static_cast<unsigned int>(len) == bam_header->target_len[i]);
-    
+
     const string seq(cseq);
-    
+
     string output_filename(in_output_path);
     output_filename += "/";
     output_filename += bam_header->target_name[i];
@@ -173,8 +173,8 @@ void calculate_trims( const string& in_fasta, const string& in_output_path) {
 
     calculate_trims_1(seq, output_filename);
 	}
-  
-  bam_header_destroy(bam_header);
+
+  sam_hdr_destroy(bam_header);
 }
 
   

@@ -20,16 +20,11 @@ BRESEQDATADIR= $(DESTDIR)$(datadir)/$(PACKAGE_NAME)
 BRESEQRELATIVEDATADIR= $(BIN_TO_DATA_RELATIVE_PATH)/$(PACKAGE_NAME)
 
 # $(STATIC_LIBZ_INC) and $(MINIZ_INC) add include paths for static builds.
-# -I${prefix}/include covers dynamic (conda) builds.
 # -DMINIZ_NO_ZLIB_COMPATIBLE_NAMES prevents miniz aliases clashing with libz.
-AM_CPPFLAGS = -O3 $(STATIC_LIBZ_INC) $(MINIZ_INC) -DMINIZ_NO_ZLIB_COMPATIBLE_NAMES \
-              -I${prefix}/include \
-              -I$(top_srcdir)/$(LIBBAM) -I$(top_srcdir)/$(HTSLIB) \
+AM_CPPFLAGS = -O3 $(STATIC_LIBZ_INC) $(MINIZ_INC) $(HTSLIB_INC) -DMINIZ_NO_ZLIB_COMPATIBLE_NAMES \
               -I$(top_srcdir)/aux_build -DDATADIR=\"$(BRESEQRELATIVEDATADIR)/\"
+
 AM_CXXFLAGS = -std=c++11
-# -L for link-time search; -Wl,-rpath embeds the prefix lib dir so the binary
-# finds shared libs at runtime (e.g. when running from the breseq-run conda env).
-AM_LDFLAGS  = -L${prefix}/lib -Wl,-rpath,${prefix}/lib
 
 noinst_LTLIBRARIES = libbreseq.la
 libbreseq_la_SOURCES = \
@@ -94,17 +89,17 @@ libbreseq_la_SOURCES = \
 	libbreseq/soft_clipping.h \
 	libbreseq/storable.h \
 	libbreseq/summary.h
-libbreseq_la_LIBADD = $(UNWIND_LIBS) $(top_builddir)/$(HTSLIB)/libhts.la $(top_builddir)/$(LIBBAM)/libbam.la
+libbreseq_la_LIBADD = $(UNWIND_LIBS)
 
 bin_PROGRAMS = breseq gdtools
 
 # $(MINIZ_LINK) and $(LIBZ_LINK) each hold either a full static .a path
 # (when --with-static-miniz/--with-static-libz is given) or -lfoo (dynamic).
 breseq_SOURCES = breseq_cmdline.cpp
-breseq_LDADD   = ./libbreseq.la $(MINIZ_LINK) $(LIBZ_LINK)
+breseq_LDADD   = ./libbreseq.la $(HTSLIB_LINK) $(MINIZ_LINK) $(LIBZ_LINK)
 
 gdtools_SOURCES = gdtools_cmdline.cpp
-gdtools_LDADD   = ./libbreseq.la $(MINIZ_LINK) $(LIBZ_LINK)
+gdtools_LDADD   = ./libbreseq.la $(HTSLIB_LINK) $(MINIZ_LINK) $(LIBZ_LINK)
 
 EXTRA_DIST = breseq.png \
 	breseq_icon.png \

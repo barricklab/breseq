@@ -17,7 +17,7 @@
 
 ACLOCAL_AMFLAGS = -I aux_build/m4
 
-SUBDIRS = $(LIBBAM) $(BRESEQ)
+SUBDIRS = $(BRESEQ)
 
 ### Tests! -- only one test included for now in distribution.
 
@@ -26,7 +26,6 @@ SUBDIRS = $(LIBBAM) $(BRESEQ)
 EXTRA_DIST = \
 	DEVELOPER \
 	dev-environment.yml \
-	run-environment.yml \
 	tests/common.sh \
 	tests/test.sh \
 	tests/lambda_mult_ref_read/expected.gd \
@@ -45,8 +44,6 @@ EXTRA_DIST = \
 
 DOCSRCDIR=$(top_srcdir)/src/doc
 DOCBUILDDIR=$(abs_top_builddir)/src/doc/_build
-
-SAMTOOLSDIR=$(top_srcdir)/$(LIBBAM)
 
 ## Main hooks called after normal make steps
 

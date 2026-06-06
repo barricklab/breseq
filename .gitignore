@@ -64,27 +64,7 @@ src/c/breseq/breseq
 src/c/breseq/gdtools
 
 Rplots.pdf
-
 package
-
-## samtools
-extern/samtools-*/samtools
-extern/samtools-*/bcftools/bcftools
-extern/samtools-*/razip
-extern/samtools-*/misc/md5fa
-extern/samtools-*/misc/md5sum-lite
-extern/samtools-*/misc/seqtk
-extern/samtools-*/misc/wgsim
-extern/samtools-*/.dirstamp
-extern/samtools-*/version.h
-extern/samtools-*/htslib-*/.dirstamp
-extern/samtools-*/htslib-*/version.h
-
-## Perl GenomeDiff
-src/perl/GenomeDiff/GenomeDiff-*
-src/perl/GenomeDiff/Build
-src/perl/GenomeDiff/GenomeDiff-
-src/perl/GenomeDiff/META.yml
 
 ## For Xcode
 
@@ -94,8 +74,10 @@ xcuserdata
 xcshareddata
 xcscheme
 
-
 ## For Various IDEs
 nbproject/*
 Debug/*
 Release/*
+
+## Conda environment
+env/*
