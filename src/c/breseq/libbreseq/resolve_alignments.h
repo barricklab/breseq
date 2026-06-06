@@ -243,7 +243,7 @@ namespace breseq {
                                 const vector<ResolveJunctionInfo>& junction_info_list,
                                 UniqueJunctionMatchMap& unique_junction_match_map,
                                 RepeatJunctionMatchMap& repeat_junction_match_map,
-                                tam_file& resolved_reference_tam
+                                bam_file& resolved_reference_tam
                                 );
   
   void load_sam_only_alignments(
@@ -252,7 +252,7 @@ namespace breseq {
                            cReadFiles& read_files, 
                            cReferenceSequences& ref_seq_info,
                            SequenceTrimsList& trims_list,
-                           tam_file& resolved_reference_tam
+                           bam_file& resolved_reference_tam
                                 );
   
   bool alignment_overlaps_junction(const vector<ResolveJunctionInfo>& junction_info_list, const alignment_wrapper& in_a);
@@ -264,7 +264,7 @@ namespace breseq {
                       const string& junction_id, 
                       UniqueJunctionMatchMap& matched_junction_ref, 
                       RepeatJunctionMatchMap& degenerate_matches_ref, 
-                      tam_file& junction_tam,
+                      bam_file& junction_tam,
                       JunctionTestInfo& junction_test_info, 
                       vector<ResolveJunctionInfo>& junction_info_list,
                       cReferenceSequences& ref_seq_info, 
@@ -280,8 +280,8 @@ namespace breseq {
                         const string& junction_id,
                         UniqueJunctionMatchMap& unique_junction_match_map,
                         RepeatJunctionMatchMap& repeat_junction_match_map,
-                        tam_file& reference_tam,
-                        tam_file& junction_tam,
+                        bam_file& reference_tam,
+                        bam_file& junction_tam,
                         bool failed,
                         bool has_non_overlap_alignment
                         );
@@ -292,7 +292,7 @@ namespace breseq {
                                 cReferenceSequences& ref_seq_info, 
                                 const SequenceTrimsList& trim_list, 
                                 alignment_list& reference_alignments, 
-                                tam_file& reference_tam, 
+                                bam_file& reference_tam, 
                                 uint32_t fastq_file_index
                                 );
                                 

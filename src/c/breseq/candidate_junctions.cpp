@@ -216,10 +216,10 @@ namespace breseq {
                                                                     ) 
   {
 
-    tam_file matched(matched_sam_file_name, fasta_file_name, ios::out);
+    bam_file matched(matched_sam_file_name, fasta_file_name, ios::out);
     ofstream unmatched(unmatched_fastq_file_name.c_str());
-    
-    tam_file in(input_sam_file_name, fasta_file_name, ios::in);
+
+    bam_file in(input_sam_file_name, fasta_file_name, ios::in);
 
     alignment_list al;
     while (in.read_alignments(al, false)) {
@@ -235,8 +235,8 @@ namespace breseq {
                                                       string input_sam_file_name,
                                                       string matched_sam_file_name) 
   {
-    tam_file in(input_sam_file_name, fasta_file_name, ios::in);
-    tam_file matched(matched_sam_file_name, fasta_file_name, ios::out);
+    bam_file in(input_sam_file_name, fasta_file_name, ios::in);
+    bam_file matched(matched_sam_file_name, fasta_file_name, ios::out);
 
     alignment_list al;
     while (in.read_alignments(al, false)) {
@@ -248,101 +248,73 @@ namespace breseq {
     return;
   }
   
-  void line_to_read_index(string s, int64_t& index1, int64_t& index2, bool& mapped) {
-    size_t start = s.find_first_of(":");
-    size_t end = s.find_first_of("S \t", start);
-    
-    index1 = n(s.substr(start+1, end-(start+1)));
-    
-    if (s[end] == 'S') {
-      start = end;
-      end = s.find_first_of("S \t", start);
-      index2 = n(s.substr(start+1, end-(start+1)));
-
-    } else {
-      index2 = 0;
-    }
-    
-    size_t next = s.find_first_not_of(" \t", end);
-    next = s.find_first_of(" \t", next);
-    next = s.find_first_not_of(" \t", next);
-
-    mapped = (s[next] != '*');
-    
+  static void bam_to_read_index(const char* qname, int64_t& index_a, int64_t& index_b) {
+    const char* colon = strchr(qname, ':');
+    ASSERT(colon, "Malformed qname (missing ':'): " + string(qname));
+    index_a = 0;
+    const char* p = colon + 1;
+    while (*p && *p != 'S') index_a = index_a * 10 + (*p++ - '0');
+    index_b = 0;
+    if (*p == 'S') { ++p; while (*p) index_b = index_b * 10 + (*p++ - '0'); }
   }
-  
-  // Takes two SAM files and re-sorts read order so that it matches the original FASTQ file.
-  // Requires reads to be renamed as we expect from 01_sequence_onversion: file_num/read_num.
+
+  // Takes two BAM files and re-sorts read order so that it matches the original FASTQ file.
+  // Requires reads to be renamed as we expect from 01_sequence_conversion: file_num:read_num.
   void PreprocessAlignments::merge_sort_sam_files(
                                                   string input_sam_file_name_1,
                                                   string input_sam_file_name_2,
                                                   string output_sam_file_name
                                                   )
   {
-    
-    // Beware of potential crash here on simulated data if 2nd stage alignment file is empty 
-    // (because all reads mapped in the first stage)
-    ifstream input_sam_file_1(input_sam_file_name_1.c_str());
-    ifstream input_sam_file_2(input_sam_file_name_2.c_str());
+    samFile* in1 = hts_open(input_sam_file_name_1.c_str(), "rb");
+    ASSERT(in1, "Could not open BAM file: " + input_sam_file_name_1);
+    samFile* in2 = hts_open(input_sam_file_name_2.c_str(), "rb");
+    ASSERT(in2, "Could not open BAM file: " + input_sam_file_name_2);
 
-    ofstream out_sam_file(output_sam_file_name.c_str());
-    
-    string line_1, line_2;
-    bool not_done_1 = !getline(input_sam_file_1, line_1).eof();
-    while (not_done_1 && (line_1[0] == '@')) {
-      not_done_1 = !getline(input_sam_file_1, line_1).eof();
-    }
-    
-    bool not_done_2 = !getline(input_sam_file_2, line_2).eof();
-    while (not_done_2 && (line_2[0] == '@')) {
-      not_done_2 = !getline(input_sam_file_2, line_2).eof();
-    }
-         
-    int64_t index_1a(-1), index_1b(-1), index_2a(-1), index_2b(-1);
-    bool mapped_1 = false;
-    bool mapped_2 = false;
-    
-    if (not_done_1) {
-      line_to_read_index(line_1, index_1a, index_1b, mapped_1);
-    }
-    if (not_done_2) {
-      line_to_read_index(line_2, index_2a, index_2b, mapped_2);
-    }
-    
+    bam_hdr_t* hdr1 = sam_hdr_read(in1);
+    ASSERT(hdr1, "Could not read header from: " + input_sam_file_name_1);
+    bam_hdr_t* hdr2 = sam_hdr_read(in2);
+    ASSERT(hdr2, "Could not read header from: " + input_sam_file_name_2);
+
+    samFile* out = hts_open(output_sam_file_name.c_str(), "wb");
+    ASSERT(out, "Could not open output BAM file: " + output_sam_file_name);
+    ASSERT(sam_hdr_write(out, hdr1) == 0, "Failed to write BAM header to: " + output_sam_file_name);
+
+    bam1_t* b1 = bam_init1();
+    bam1_t* b2 = bam_init1();
+
+    int64_t index_1a = -1, index_1b = -1, index_2a = -1, index_2b = -1;
+
+    bool not_done_1 = (sam_read1(in1, hdr1, b1) >= 0);
+    bool not_done_2 = (sam_read1(in2, hdr2, b2) >= 0);
+
+    if (not_done_1) bam_to_read_index(bam_get_qname(b1), index_1a, index_1b);
+    if (not_done_2) bam_to_read_index(bam_get_qname(b2), index_2a, index_2b);
+
     while (not_done_1 || not_done_2) {
-      
-      // If file 1 is not done AND
-      //   the read index is smaller in file 1 than in file 2 OR file 2 is already done
-      if (not_done_1 && ((index_1a < index_2a) || ((index_1a == index_2a) && (index_1b < index_2b) ) || !not_done_2)) {
-        
-        if (mapped_1)
-          out_sam_file << line_1 << endl;
-        
-        // read next line not beginning in @
-        not_done_1 = !getline(input_sam_file_1, line_1).eof();
-        
-        if (not_done_1) {
-          line_to_read_index(line_1, index_1a, index_1b, mapped_1);
-        } else {
-          index_1a = numeric_limits<int64_t>::max();
-          index_1b = numeric_limits<int64_t>::max();
-        }
-      }
-      else if (not_done_2) {
-        if (mapped_2)
-          out_sam_file << line_2 << endl;
-        
-        // read next line
-        not_done_2 = !getline(input_sam_file_2, line_2).eof();
+      bool take_1 = not_done_1 && (
+        (index_1a < index_2a) || (index_1a == index_2a && index_1b < index_2b) || !not_done_2);
 
-        if (not_done_2) {
-          line_to_read_index(line_2, index_2a, index_2b, mapped_2);
-        } else {
-          index_2a = numeric_limits<int64_t>::max();
-          index_2b = numeric_limits<int64_t>::max();
-        }
+      if (take_1) {
+        if (!(b1->core.flag & BAM_FUNMAP)) sam_write1(out, hdr1, b1);
+        not_done_1 = (sam_read1(in1, hdr1, b1) >= 0);
+        if (not_done_1) bam_to_read_index(bam_get_qname(b1), index_1a, index_1b);
+        else { index_1a = index_1b = numeric_limits<int64_t>::max(); }
+      } else {
+        if (!(b2->core.flag & BAM_FUNMAP)) sam_write1(out, hdr2, b2);
+        not_done_2 = (sam_read1(in2, hdr2, b2) >= 0);
+        if (not_done_2) bam_to_read_index(bam_get_qname(b2), index_2a, index_2b);
+        else { index_2a = index_2b = numeric_limits<int64_t>::max(); }
       }
     }
+
+    bam_destroy1(b1);
+    bam_destroy1(b2);
+    sam_hdr_destroy(hdr1);
+    sam_hdr_destroy(hdr2);
+    hts_close(in1);
+    hts_close(in2);
+    hts_close(out);
   }
   
   /*
@@ -427,7 +399,7 @@ namespace breseq {
 		// BSAM includes best matches as they are merged from all alignment files
 		string preprocess_junction_best_sam_file_name = settings.preprocess_junction_best_sam_file_name;
     string reference_fasta_file_name = settings.reference_fasta_file_name;
-    tam_file BSAM(preprocess_junction_best_sam_file_name, reference_fasta_file_name, ios_base::out);
+    bam_file BSAM(preprocess_junction_best_sam_file_name, reference_fasta_file_name, ios_base::out);
     
     uint32_t i = 0;
 		for (uint32_t index = 0; index < settings.read_files.size(); index++)
@@ -436,11 +408,11 @@ namespace breseq {
 			cerr << "  READ FILE::" << read_file.m_base_name << endl;
       
 			string reference_sam_file_name = Settings::file_name(settings.reference_sam_file_name, "#", read_file.m_base_name);
-      tam_file tam(reference_sam_file_name, reference_fasta_file_name, ios_base::in);
-      
+      bam_file tam(reference_sam_file_name, reference_fasta_file_name, ios_base::in);
+
 			// includes all matches, and splits long indels for this one read file
       string preprocess_junction_split_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", read_file.m_base_name);
-      tam_file PSAM(preprocess_junction_split_sam_file_name, reference_fasta_file_name, ios_base::out);
+      bam_file PSAM(preprocess_junction_split_sam_file_name, reference_fasta_file_name, ios_base::out);
       settings.track_intermediate_file(settings.candidate_junction_done_file_name, preprocess_junction_split_sam_file_name);
 
 			alignment_list alignments;
@@ -483,7 +455,7 @@ namespace breseq {
   /*! Split alignments interrupted by indels into their segments and write to a SAM file. 
 	 */
   
-  void PreprocessAlignments::split_alignments_on_indels(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info, tam_file& PSAM, int32_t min_indel_split_len, const alignment_list& alignments)
+  void PreprocessAlignments::split_alignments_on_indels(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info, bam_file& PSAM, int32_t min_indel_split_len, const alignment_list& alignments)
   {
     //##
     //## @JEB: Note that this may affect the order of alignments in the SAM file. This has 
@@ -582,9 +554,9 @@ namespace breseq {
       
       string reference_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", settings.read_files[j].m_base_name);
       
-      tam_file tam(reference_sam_file_name, settings.reference_fasta_file_name, ios_base::in);
+      bam_file tam(reference_sam_file_name, settings.reference_fasta_file_name, ios_base::in);
       alignment_list alignments;
-      
+
       while (tam.read_alignments(alignments, false))
       {
         if (alignments.size() == 0)
