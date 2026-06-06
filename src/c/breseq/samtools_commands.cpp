@@ -39,15 +39,6 @@ void samtools_sort(const string& unsorted_bam_file_name, const string& sorted_ba
   SYSTEM(cmd, false, false, false);
 }
 
-void samtools_import(const string& faidx_file_name, const string& sam_file_name, const string& output_bam_file_name) {
-  // "samtools import" is deprecated in modern samtools; use "samtools view -bt"
-  string cmd = "samtools view -bt " + double_quote(faidx_file_name)
-             + " " + double_quote(sam_file_name)
-             + " -o " + double_quote(output_bam_file_name);
-  cerr << "[samtools] " << cmd << endl;
-  SYSTEM(cmd, false, false, false);
-}
-
 void samtools_faidx(const string& fasta_file_name) {
   string cmd = "samtools faidx " + double_quote(fasta_file_name);
   cerr << "[samtools] " << cmd << endl;

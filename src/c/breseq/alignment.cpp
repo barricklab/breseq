@@ -1431,5 +1431,493 @@ bool bam_file::read_alignments(alignment_list& alignments, bool paired)
   return (!alignments.empty());
 }
 
-  
+void bam_file::write_alignments(
+                                int32_t fastq_file_index,
+                                const alignment_list& alignments,
+                                vector<Trims>* trims,
+                                const cReferenceSequences* ref_seq_info_ptr,
+                                bool shift_gaps
+                                )
+{
+  (void) ref_seq_info_ptr;
+  (void) shift_gaps;
+
+  uint32_t i=-1;
+  for (alignment_list::const_iterator it=alignments.begin(); it != alignments.end(); it++) {
+
+    i++;
+    bam_alignment& a = *(it->get());
+
+    stringstream aux_tags_ss;
+
+    uint32_t as;
+    bool AS_found = a.aux_get_i("AS", as);
+    ASSERT(AS_found, "Could not find required tag AS for alignment.");
+
+    aux_tags_ss << "AS:i:" << as << "\t" << "X1:i:" << alignments.size() << "\t" << "X2:i:" << fastq_file_index;
+
+    if ((trims != NULL) && (trims->size() > i)) {
+      Trims trim = (*trims)[i];
+      aux_tags_ss << "\t" << "XL:i:" << trim.L << "\t" << "XR:i:" << trim.R;
+    }
+
+    string aux_tags = aux_tags_ss.str();
+
+    string quality_score_string = a.read_base_quality_char_string();
+    if (quality_score_string[0] == ' ') {
+      quality_score_string = alignments.read_base_quality_char_string;
+      if (alignments.read_base_quality_char_string_reversed ^ a.reversed())
+        quality_score_string = reverse_string(quality_score_string);
+    }
+    ASSERT(quality_score_string.size() > 0, "Attempt to write read with no quality scores: " + a.read_name());
+
+    string cigar_string;
+
+    if (ref_seq_info_ptr && shift_gaps) {
+      cigar_string = shifted_cigar_string(a, *ref_seq_info_ptr);
+    } else {
+      cigar_string = a.cigar_string();
+    }
+
+    vector<string> ll;
+    ll.push_back(a.read_name());
+    ll.push_back(to_string(fix_flags(a.flag())));
+    ll.push_back(bam_header->target_name[a.reference_target_id()]);
+    ll.push_back(to_string(a.reference_start_1()));
+    ll.push_back(to_string<uint32_t>(a.mapping_quality()));
+    ll.push_back(cigar_string);
+
+    if ((a.flag() & BAM_FPROPER_PAIR) == 0) {
+      ll.push_back("*");
+      ll.push_back("0");
+      ll.push_back("0");
+    } else {
+      ll.push_back("=");
+      ll.push_back(to_string<int32_t>(a.mate_start_1()));
+      ll.push_back(to_string<int32_t>(a.insert_size()));
+    }
+
+    ll.push_back(a.read_char_sequence());
+    ll.push_back(quality_score_string);
+    ll.push_back(aux_tags);
+
+    {
+      string sam_line = join(ll, "\t");
+      kstring_t ks = KS_INITIALIZE;
+      kputs(sam_line.c_str(), &ks);
+      bam1_t* b = bam_init1();
+      ASSERT(sam_parse1(&ks, bam_header, b) >= 0, "sam_parse1 failed: " + sam_line);
+      ASSERT(sam_write1(m_bam_file, bam_header, b) >= 0, "sam_write1 failed");
+      bam_destroy1(b);
+      ks_free(&ks);
+    }
+  }
+}
+
+void bam_file::write_split_alignment(uint32_t min_indel_split_len, const alignment_wrapper& a, const alignment_list& alignments, const cReferenceSequences& ref_seq_info)
+{
+  bool debug = false;
+
+  uint32_t q_length = a.read_length();
+  string qseq_string = a.read_char_sequence();
+
+  string quality_score_string = a.read_base_quality_char_string();
+  if (quality_score_string[0] == ' ') {
+    quality_score_string = alignments.read_base_quality_char_string;
+    if (alignments.read_base_quality_char_string_reversed ^ a.reversed())
+      quality_score_string = reverse_string(quality_score_string);
+  }
+  ASSERT(quality_score_string.size() > 0, "Attempt to write read with no quality scores: " + a.read_name());
+
+  uint32_t rpos = a.reference_start_1();
+  uint32_t qpos = a.query_start_1();
+
+  vector<pair<char,uint16_t> > cigar_list = a.cigar_pair_char_op_array();
+  vector<pair<char,uint16_t> > split_cigar_list;
+
+  char op;
+  uint32_t len;
+  uint32_t i = 0;
+  while (i < cigar_list.size())
+  {
+    uint32_t rstart = rpos;
+    uint32_t qstart = qpos;
+
+    string cigar_string = "";
+    while (i < cigar_list.size())
+    {
+      op = cigar_list[i].first;
+      len = cigar_list[i].second;
+
+      if (op == 'I')
+      {
+        if (len >= min_indel_split_len) break;
+        qpos += len;
+      }
+      else if (op == 'D')
+      {
+        if (len >= min_indel_split_len) break;
+        rpos += len;
+      }
+      else if (op == 'M')
+      {
+        qpos += len;
+        rpos += len;
+      }
+
+      if (op != 'S')
+      {
+        split_cigar_list.push_back( make_pair(op, len) );
+      }
+      i++;
+    }
+
+    if (qpos > qstart)
+    {
+      uint32_t ins_updated_qpos = qpos;
+      uint32_t ins_updated_rpos = rpos;
+
+      if (op == 'I') {
+        if (debug) cout << "Testing insertion.." << endl;
+        uint32_t tid = a.reference_target_id();
+        while ( (ins_updated_qpos < a.query_end_1() )
+               && (qseq_string[ins_updated_qpos - 1] == ref_seq_info[tid].get_sequence_1(ins_updated_rpos))  )  {
+          ins_updated_qpos++;
+          ins_updated_rpos++;
+          ASSERT(split_cigar_list[split_cigar_list.size()-1].first =='M', "Attempt to modify nonmatch cigar operation.");
+          split_cigar_list[split_cigar_list.size()-1].second +=1;
+        }
+      }
+
+      uint32_t left_padding = qstart - 1;
+      uint32_t right_padding = q_length - ins_updated_qpos + 1;
+
+      cigar_string = alignment_wrapper::cigar_op_array_to_cigar_string(split_cigar_list);
+      split_cigar_list.clear();
+
+      cigar_string = ( left_padding > 0 ? to_string(left_padding) + "S" : "" ) + cigar_string + ( right_padding > 0 ? to_string(right_padding) + "S" : "" );
+
+      vector<string> ll = make_vector<string>
+        (a.read_name())
+        (to_string(a.flag()))
+        (to_string(this->bam_header->target_name[a.reference_target_id()]))
+        (to_string(rstart))
+        (to_string(a.mapping_quality()))
+        (cigar_string)
+        ("*")("0")("0")
+        (qseq_string)
+        (quality_score_string)
+      ;
+
+      {
+        string sam_line = join(ll, "\t");
+        kstring_t ks = KS_INITIALIZE;
+        kputs(sam_line.c_str(), &ks);
+        bam1_t* b = bam_init1();
+        ASSERT(sam_parse1(&ks, bam_header, b) >= 0, "sam_parse1 failed: " + sam_line);
+        ASSERT(sam_write1(m_bam_file, bam_header, b) >= 0, "sam_write1 failed");
+        bam_destroy1(b);
+        ks_free(&ks);
+      }
+    }
+
+    if ( (op == 'I') && (qpos - len >= 1) )
+    {
+      string previous_string = qseq_string.substr(qpos - len - 1, len);
+      string insert_string = qseq_string.substr(qpos - 1, len);
+      if (previous_string == insert_string)
+      {
+        rpos -= len;
+        i++;
+        ASSERT(cigar_list[i].first == 'M', "Expected match in cigar string when resolving repeat insert.");
+        cigar_list[i].second += len;
+      }
+    }
+
+    while (i < cigar_list.size())
+    {
+      op = cigar_list[i].first;
+      len = cigar_list[i].second;
+
+      if (op == 'I')
+      {
+        qpos += len;
+      }
+      else if (op == 'D')
+      {
+        rpos += len;
+      }
+      else if (op == 'M')
+      {
+        break;
+      }
+      i++;
+    }
+  }
+}
+
+void bam_file::write_moved_alignment(
+                                     const alignment_wrapper& a,
+                                     const string& junction_reference_name,
+                                     uint32_t fastq_file_index,
+                                     const string& seq_id,
+                                     int32_t reference_pos,
+                                     int32_t reference_strand,
+                                     int32_t reference_overlap,
+                                     uint32_t junction_side,
+                                     int32_t junction_flanking,
+                                     int32_t junction_overlap,
+                                     const alignment_list& alignments,
+                                     const Trims* trim
+                                     )
+{
+	bool verbose = false;
+
+	int8_t read_strand = ((junction_side == 1) ? -1 : +1) * reference_strand;
+
+	uint32_t a_read_start, a_read_end;
+	a.query_bounds_1(a_read_start, a_read_end);
+
+	uint32_t q_length = a.read_length();
+
+  vector<char> qual_scores;
+  {
+    string quality_score_string = a.read_base_quality_char_string();
+    if (quality_score_string[0] == ' ') {
+      quality_score_string = alignments.read_base_quality_char_string;
+      if (alignments.read_base_quality_char_string_reversed ^ a.reversed())
+        quality_score_string = reverse_string(quality_score_string);
+    }
+    ASSERT(quality_score_string.size() > 0, "Attempt to write read with no quality scores: " + a.read_name());
+
+    for (uint32_t i = 0; i < q_length; i++)
+    {
+      qual_scores.push_back(quality_score_string[i]);
+    }
+  }
+
+	string seq = a.read_char_sequence();
+
+	vector<pair<char,uint16_t> > cigar_list = a.cigar_pair_char_op_array();
+
+	uint16_t left_padding = 0;
+	uint16_t right_padding = 0;
+	if (cigar_list[0].first == 'S')
+	{
+		left_padding = cigar_list.front().second;
+		cigar_list.erase(cigar_list.begin());
+	}
+	if (cigar_list.back().first == 'S')
+	{
+		right_padding = cigar_list.back().second;
+		cigar_list.pop_back();
+	}
+
+	if (read_strand == -1)
+	{
+		seq = reverse_complement(seq);
+		reverse(qual_scores.begin(), qual_scores.end());
+	}
+
+	assert(reference_overlap >= 0);
+
+	uint32_t junction_pos = junction_flanking;
+	if (junction_side == 1)
+	{
+		junction_pos += reference_overlap;
+	}
+	else if (junction_side == 2)
+	{
+		junction_pos += abs(junction_overlap);
+		junction_pos -= reference_overlap;
+	}
+
+	vector<pair<char,uint16_t> > side_1_cigar_list, side_2_cigar_list;
+
+	uint32_t test_read_pos = a_read_start;
+	uint32_t test_junction_pos = a.reference_start_1();
+
+	if (test_junction_pos > junction_pos)
+	{
+		test_junction_pos = junction_pos;
+	}
+	else
+	{
+		while (cigar_list.size() > 0)
+		{
+			pair<char,uint16_t> c = cigar_list[0];
+			cigar_list.erase(cigar_list.begin());
+			uint8_t op = c.first;
+			uint16_t n = c.second;
+			if (op == 'I')
+			{
+				test_read_pos += n;
+			}
+			else
+			{
+				int32_t overshoot = test_junction_pos + n - junction_pos - 1;
+				if (overshoot > 0)
+				{
+					n -= overshoot;
+					pair<uint8_t,uint16_t> new_element(op, overshoot);
+					cigar_list.insert(cigar_list.begin(), new_element);
+				}
+				test_junction_pos += n;
+				if (op != 'D')
+					test_read_pos += n;
+			}
+
+			pair<uint8_t,uint16_t> new_element(op, n);
+			side_1_cigar_list.push_back(new_element);
+			if (test_junction_pos > junction_pos) break;
+		}
+	}
+
+  side_2_cigar_list = cigar_list;
+
+	int32_t total_read_match_length = a_read_end - a_read_start + 1;
+	int32_t side_1_read_match_length = test_read_pos - a_read_start;
+	int32_t side_2_read_match_length = total_read_match_length - side_1_read_match_length;
+	int32_t read_match_length = (junction_side == 1) ? side_1_read_match_length : side_2_read_match_length;
+  (void) read_match_length;
+
+	int32_t total_junction_match_length = a.reference_end_1() - a.reference_start_1() + 1;
+	int32_t side_1_junction_match_length = test_junction_pos - a.reference_start_1();
+	if (side_1_junction_match_length < 0) side_1_junction_match_length = 0;
+	int32_t side_2_junction_match_length = total_junction_match_length - side_1_junction_match_length;
+
+	int32_t junction_match_length = (junction_side == 1) ? side_1_junction_match_length : side_2_junction_match_length;
+
+	int32_t short_of_junction;
+	if (junction_side == 1)
+	{
+		short_of_junction =  junction_pos - (a.reference_start_1() + total_junction_match_length - 1);
+	}
+	else
+	{
+		short_of_junction =  a.reference_start_1() - junction_pos - 1;
+	}
+	if (short_of_junction < 0) short_of_junction = 0;
+
+	cigar_list = (junction_side == 1) ? side_1_cigar_list : side_2_cigar_list;
+
+	if (junction_side == 2)
+		left_padding += side_1_read_match_length;
+	else
+		right_padding += side_2_read_match_length;
+
+  if (cigar_list.size() >= 1) {
+    if (junction_side == 2)
+    {
+      pair<char,uint16_t> c = cigar_list.front();
+      char op = c.first;
+      uint16_t n = c.second;
+      if (op == 'I') {
+        left_padding += n;
+        cigar_list.erase(cigar_list.begin());
+      }
+    }
+    else
+    {
+      pair<char,uint16_t> c = cigar_list.back();
+      char op = c.first;
+      uint16_t n = c.second;
+      if (op == 'I') {
+        right_padding += n;
+        cigar_list.pop_back();
+      }
+    }
+  }
+
+	if (left_padding > 0)
+	{
+		pair<char,uint16_t> new_element = make_pair('S', left_padding);
+		cigar_list.insert(cigar_list.begin(), new_element);
+  }
+	if (right_padding > 0)
+	{
+		pair<char,uint16_t> new_element = make_pair('S', right_padding);
+		cigar_list.push_back(new_element);
+	}
+
+	if (read_strand == -1)
+		reverse(cigar_list.begin(), cigar_list.end());
+
+	int32_t reference_match_start = (reference_strand == 1) ? reference_pos + short_of_junction : reference_pos - (junction_match_length - 1) - short_of_junction;
+
+	stringstream cigar_string_ss;
+	uint32_t cigar_length = 0;
+  bool all_soft_padded = true;
+	for (uint32_t i = 0; i < cigar_list.size(); i++)
+	{
+		char op = cigar_list[i].first;
+		uint32_t len = static_cast<uint32_t>(cigar_list[i].second);
+
+		assert(len > 0);
+		cigar_string_ss << len << op;
+		if (op != 'D') cigar_length += len;
+    if (op != 'S') all_soft_padded = false;
+	}
+	string cigar_string = cigar_string_ss.str();
+
+  if (all_soft_padded) return;
+
+	stringstream quality_score_ss;
+	for (uint32_t i = 0; i < qual_scores.size(); i++)
+  {
+		quality_score_ss << static_cast<char>(qual_scores[i]);
+	}
+	string quality_score_string = quality_score_ss.str();
+
+	stringstream aux_tags_ss;
+
+  uint32_t as;
+  bool AS_found = a.aux_get_i("AS", as);
+  ASSERT(AS_found, "Could not find required tag AS for alignment.");
+
+	aux_tags_ss << "AS:i:" << as << "\t" << "X1:i:" << 1 << "\t" << "X2:i:" << fastq_file_index;
+
+	int32_t within_side = (reference_strand == 1) ? junction_side : (junction_side + 1) % 2;
+	aux_tags_ss << "\t" << "XJ:i:" << within_side;
+
+	if (trim != NULL)
+	{
+		string trim_left = (junction_side == 1) ? to_string(trim->L+left_padding) : "0";
+		string trim_right = (junction_side == 1) ? "0" : to_string(trim->R+right_padding);
+		if (read_strand == -1) swap(trim_left, trim_right);
+		aux_tags_ss << "\t" << "XL:i:" << trim_left << "\t" << "XR:i:" << trim_right;
+	}
+
+	string aux_tags = aux_tags_ss.str();
+
+  vector<string> ll = make_vector<string>
+		(a.read_name() + "-M" + to_string(junction_side))
+		(to_string(fix_flags(a.flag())))
+		(seq_id)
+		(to_string(reference_match_start))
+    ("255")
+		(cigar_string)
+		(a.proper_pair() ? "=" : "*")
+		(to_string(a.mate_start_1()))
+		(to_string(a.insert_size()))
+		(seq)
+		(quality_score_string)
+		(aux_tags)
+	;
+	string l = join(ll, "\t") + "\n";
+	if (verbose) cout << l;
+
+	assert(cigar_length == q_length);
+  {
+    kstring_t ks = KS_INITIALIZE;
+    kputs(l.c_str(), &ks);
+    bam1_t* b = bam_init1();
+    ASSERT(sam_parse1(&ks, bam_header, b) >= 0, "sam_parse1 failed: " + l);
+    ASSERT(sam_write1(m_bam_file, bam_header, b) >= 0, "sam_write1 failed");
+    bam_destroy1(b);
+    ks_free(&ks);
+  }
+}
+
+
 }

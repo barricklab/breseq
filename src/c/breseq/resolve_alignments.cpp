@@ -323,7 +323,7 @@ void resolve_alignments(
   if (junction_prediction) {
     junction_ref_seq_info.LoadFiles(make_vector<string>(settings.candidate_junction_fasta_file_name));
 		string junction_sam_file_name = settings.file_name(settings.candidate_junction_sam_file_name, "#", read_files[0].m_base_name);
-		tam_file junction_tam(junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::in);
+		bam_file junction_tam(junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::in);
 
     junction_info_list.resize(junction_tam.bam_header->n_targets);
     
@@ -339,8 +339,8 @@ void resolve_alignments(
 
 	cGenomeDiff gd;
     
-  tam_file resolved_reference_tam(settings.resolved_reference_sam_file_name, settings.reference_fasta_file_name, ios::out);
-  tam_file resolved_junction_tam(settings.resolved_junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::out);
+  bam_file resolved_reference_tam(settings.resolved_reference_sam_file_name, settings.reference_fasta_file_name, ios::out);
+  bam_file resolved_junction_tam(settings.resolved_junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::out);
   
   settings.track_intermediate_file(settings.bam_done_file_name, settings.resolved_reference_sam_file_name);
   settings.track_intermediate_file(settings.bam_done_file_name, settings.resolved_junction_sam_file_name);
@@ -703,14 +703,14 @@ void load_junction_alignments(
                               const vector<ResolveJunctionInfo>& junction_info_list,
                               UniqueJunctionMatchMap& unique_junction_match_map,
                               RepeatJunctionMatchMap& repeat_junction_match_map,
-                              tam_file& resolved_reference_tam
+                              bam_file& resolved_reference_tam
                               )
 {
   bool verbose = false;
   uint32_t reads_processed = 0;
   
-  tam_file* reference_tam = NULL;
-  tam_file* junction_tam = NULL;
+  bam_file* reference_tam = NULL;
+  bam_file* junction_tam = NULL;
   
   for (uint32_t fastq_file_index = 0; fastq_file_index < read_files.size(); fastq_file_index++)
   {    
@@ -733,12 +733,12 @@ void load_junction_alignments(
     string reference_sam_file_name = settings.file_name(settings.reference_sam_file_name, "#", rf.m_base_name);
     string reference_fasta = settings.reference_fasta_file_name;
     
-    reference_tam = new tam_file(reference_sam_file_name, settings.reference_fasta_file_name, ios::in); 
+    reference_tam = new bam_file(reference_sam_file_name, settings.reference_fasta_file_name, ios::in); 
     
     if (junction_prediction)
     {
       string junction_sam_file_name = settings.file_name(settings.candidate_junction_sam_file_name, "#", rf.m_base_name);
-      junction_tam = new tam_file(junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::in); 
+      junction_tam = new bam_file(junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::in); 
     }
     
     alignment_list junction_alignments;
@@ -947,14 +947,14 @@ void load_sam_only_alignments(
                               cReadFiles& read_files, 
                               cReferenceSequences& ref_seq_info,
                               SequenceTrimsList& trims_list,
-                              tam_file& resolved_reference_tam
+                              bam_file& resolved_reference_tam
                               )
 {
   
   uint32_t reads_processed = 0;
   summary.alignment_resolution.max_sam_base_quality_score = 0;
 
-  tam_file* reference_tam = NULL;
+  bam_file* reference_tam = NULL;
   
   for (uint32_t sam_file_index = 0; sam_file_index < read_files.size(); sam_file_index++)
   {    
@@ -969,7 +969,7 @@ void load_sam_only_alignments(
     cFastqFile out_unmatched_fastq(this_unmatched_file_name, ios::out);
     //assert(!out_unmatched_fastq.fail());
     
-    reference_tam = new tam_file(reference_sam_file_name, settings.reference_fasta_file_name, ios::in); 
+    reference_tam = new bam_file(reference_sam_file_name, settings.reference_fasta_file_name, ios::in); 
     
     
     ///
@@ -1049,7 +1049,7 @@ bool alignment_overlaps_junction(const vector<ResolveJunctionInfo>& junction_inf
 }
 
 
-void _write_reference_matches(const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info, const SequenceTrimsList& trims_list, alignment_list& reference_alignments, tam_file& reference_tam, uint32_t fastq_file_index)
+void _write_reference_matches(const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info, const SequenceTrimsList& trims_list, alignment_list& reference_alignments, bam_file& reference_tam, uint32_t fastq_file_index)
 {
   (void)settings;
 	// Nice try, no alignments
@@ -1079,7 +1079,7 @@ void score_junction(
                     const string& junction_id, 
                     UniqueJunctionMatchMap& unique_junction_match_map, 
                     RepeatJunctionMatchMap& repeat_junction_match_map, 
-                    tam_file& resolved_junction_tam, 
+                    bam_file& resolved_junction_tam, 
                     JunctionTestInfo& junction_test_info, 
                     vector<ResolveJunctionInfo>& junction_info_list,
                     cReferenceSequences& ref_seq_info,
@@ -1402,8 +1402,8 @@ void resolve_junction(
                       const string& junction_id,
                       UniqueJunctionMatchMap& unique_junction_match_map,
                       RepeatJunctionMatchMap& repeat_junction_match_map,
-                      tam_file& resolved_reference_tam,
-                      tam_file& resolved_junction_tam,
+                      bam_file& resolved_reference_tam,
+                      bam_file& resolved_junction_tam,
                       bool failed,
                       bool has_non_overlap_alignment
                       )

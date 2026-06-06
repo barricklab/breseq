@@ -1660,8 +1660,14 @@ int breseq_default_action(int argc, char* argv[])
         bowtie2_seed_substring_size_stringent = max<uint32_t>(9, bowtie2_seed_substring_size_stringent);
         bowtie2_seed_substring_size_stringent = min<uint32_t>(31, bowtie2_seed_substring_size_stringent);
         
-        string command = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " -L " +  to_string<uint32_t>(bowtie2_seed_substring_size_stringent) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage1 + " --reorder -x " + double_quote(reference_hash_file_name) + " -U " + double_quote(read_fastq_file) + " -S " + (do_2_stage_alignment ? double_quote(stage1_reference_sam_file_name) + " --un " + double_quote(stage1_unmatched_fastq_file_name) : double_quote(reference_sam_file_name));
-        SYSTEM(command);
+        string bowtie2_base = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_stringent) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage1 + " --reorder -x " + double_quote(reference_hash_file_name) + " -U " + double_quote(read_fastq_file);
+        string command;
+        if (do_2_stage_alignment) {
+          command = bowtie2_base + " --un " + double_quote(stage1_unmatched_fastq_file_name) + " -S - | samtools view -bS -t " + double_quote(settings.reference_faidx_file_name) + " -o " + double_quote(stage1_reference_sam_file_name);
+        } else {
+          command = bowtie2_base + " -S - | samtools view -bS -t " + double_quote(settings.reference_faidx_file_name) + " -o " + double_quote(reference_sam_file_name);
+        }
+        SYSTEM(command, false, false, false);
         
         if (do_2_stage_alignment) {
           settings.track_intermediate_file(settings.reference_alignment_done_file_name, stage1_unmatched_fastq_file_name);
@@ -1689,8 +1695,8 @@ int breseq_default_action(int argc, char* argv[])
           bowtie2_seed_substring_size_relaxed = max<uint32_t>(9, bowtie2_seed_substring_size_relaxed);
           bowtie2_seed_substring_size_relaxed = min<uint32_t>(31, bowtie2_seed_substring_size_relaxed);
         
-          string command = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_relaxed) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage2 + " --reorder -x " + double_quote(reference_hash_file_name) + " -U " + double_quote(read_fastq_file) + " -S " + double_quote(stage2_reference_sam_file_name);
-          SYSTEM(command);
+          string command = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_relaxed) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage2 + " --reorder -x " + double_quote(reference_hash_file_name) + " -U " + double_quote(read_fastq_file) + " -S - | samtools view -bS -t " + double_quote(settings.reference_faidx_file_name) + " -o " + double_quote(stage2_reference_sam_file_name);
+          SYSTEM(command, false, false, false);
           
           settings.track_intermediate_file(settings.reference_alignment_done_file_name, stage2_reference_sam_file_name);
         }
@@ -1754,18 +1760,14 @@ int breseq_default_action(int argc, char* argv[])
     
     if (settings.do_step(settings.coverage_junction_done_file_name, "Preliminary analysis of coverage distribution"))
     {
-      string reference_faidx_file_name = settings.reference_faidx_file_name;
       string preprocess_junction_best_sam_file_name = settings.preprocess_junction_best_sam_file_name;
       string coverage_junction_best_bam_file_name = settings.coverage_junction_best_bam_file_name;
-      string coverage_junction_best_bam_unsorted_file_name = settings.coverage_junction_best_bam_unsorted_file_name;
-      
-      samtools_import(reference_faidx_file_name, preprocess_junction_best_sam_file_name, coverage_junction_best_bam_unsorted_file_name);
-      
-      samtools_sort(coverage_junction_best_bam_unsorted_file_name, coverage_junction_best_bam_file_name, settings.num_processors);
-      
+
+      // preprocess_junction_best_sam_file_name is already BAM — sort directly
+      samtools_sort(preprocess_junction_best_sam_file_name, coverage_junction_best_bam_file_name, settings.num_processors);
+
       samtools_index(coverage_junction_best_bam_file_name);
-      
-      settings.track_intermediate_file(settings.coverage_junction_done_file_name, coverage_junction_best_bam_unsorted_file_name);
+
       settings.track_intermediate_file(settings.coverage_junction_done_file_name, preprocess_junction_best_sam_file_name);
 
       // Count errors
@@ -1861,9 +1863,9 @@ int breseq_default_action(int argc, char* argv[])
           bowtie2_seed_substring_size_junction = min<uint32_t>(31, bowtie2_seed_substring_size_junction);
           
           string command = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " --local " + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_junction) + " "
-          + settings.bowtie2_scoring + " " + settings.bowtie2_junction + " --reorder -x " + double_quote(candidate_junction_hash_file_name) + " -U " + double_quote(read_fastq_file) + " -S " + double_quote(candidate_junction_sam_file_name);
-          
-          SYSTEM(command);
+          + settings.bowtie2_scoring + " " + settings.bowtie2_junction + " --reorder -x " + double_quote(candidate_junction_hash_file_name) + " -U " + double_quote(read_fastq_file) + " -S - | samtools view -bS -t " + double_quote(settings.candidate_junction_faidx_file_name) + " -o " + double_quote(candidate_junction_sam_file_name);
+
+          SYSTEM(command, false, false, false);
           
           settings.track_intermediate_file(settings.alignment_correction_done_file_name, candidate_junction_sam_file_name + "*");
         }
@@ -1915,28 +1917,20 @@ int breseq_default_action(int argc, char* argv[])
 		string candidate_junction_faidx_file_name = settings.candidate_junction_faidx_file_name;
 
 		string resolved_junction_sam_file_name = settings.resolved_junction_sam_file_name;
-		string junction_bam_unsorted_file_name = settings.junction_bam_unsorted_file_name;
 		string junction_bam_file_name = settings.junction_bam_file_name;
 
-    // only run samtools if we are predicting junctions and there were results in the sam file
-    // first part of conditional really not necessary @JEB
-		if (!file_empty(resolved_junction_sam_file_name.c_str()))
+    // only run samtools if we are predicting junctions (resolved_junction BAM already in BAM format)
+		if (!settings.skip_new_junction_prediction && !file_empty(settings.candidate_junction_fasta_file_name.c_str()))
 		{
-      samtools_import(candidate_junction_faidx_file_name, resolved_junction_sam_file_name, junction_bam_unsorted_file_name);
-      samtools_sort(junction_bam_unsorted_file_name, junction_bam_file_name, settings.num_processors);
-      if (!settings.keep_all_intermediates)
-        remove_file(junction_bam_unsorted_file_name.c_str(), false, true);
+      samtools_sort(resolved_junction_sam_file_name, junction_bam_file_name, settings.num_processors);
       samtools_index(junction_bam_file_name);
 		}
 
 		string resolved_reference_sam_file_name = settings.resolved_reference_sam_file_name;
-		string reference_bam_unsorted_file_name = settings.reference_bam_unsorted_file_name;
 		string reference_bam_file_name = settings.reference_bam_file_name;
-    
-    samtools_import(reference_faidx_file_name, resolved_reference_sam_file_name, reference_bam_unsorted_file_name);
-    samtools_sort(reference_bam_unsorted_file_name, reference_bam_file_name, settings.num_processors);
-    if (!settings.keep_all_intermediates)
-      remove_file(reference_bam_unsorted_file_name.c_str(), false, true);
+
+    // resolved_reference BAM is already in BAM format — sort directly
+    samtools_sort(resolved_reference_sam_file_name, reference_bam_file_name, settings.num_processors);
     samtools_index(reference_bam_file_name);
     
     settings.track_intermediate_file(settings.output_done_file_name, settings.junction_bam_file_name);

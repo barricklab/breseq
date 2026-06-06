@@ -87,12 +87,6 @@ void samtools_sort(
                    const uint32_t num_threads
                    );
 
-void samtools_import(
-                     const string& faidx_file_name,
-                     const string& sam_file_name,
-                     const string& output_bam_file_name
-                     );
-
 void samtools_faidx(const string& fasta_file_name);
 
 }

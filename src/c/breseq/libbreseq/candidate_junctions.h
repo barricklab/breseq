@@ -335,7 +335,7 @@ namespace breseq {
     static void split_alignments_on_indels(const Settings& settings,
                                            Summary& summary,
                                            const cReferenceSequences& ref_seq_info,
-                                           tam_file& PSAM,
+                                           bam_file& PSAM,
                                            int32_t min_indel_split_len,
                                            const alignment_list& alignments
                                            );

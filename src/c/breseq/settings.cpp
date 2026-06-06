@@ -991,19 +991,19 @@ namespace breseq
 		this->reference_alignment_done_file_name = this->reference_alignment_path + "/alignment.done";
 
 		this->reference_hash_file_name = this->reference_alignment_path + "/reference";
-		this->reference_sam_file_name = this->reference_alignment_path + "/#.reference.sam";
+		this->reference_sam_file_name = this->reference_alignment_path + "/#.reference.bam";
 
-    this->stage1_reference_sam_file_name = this->reference_alignment_path + "/#.stage1.sam";
+    this->stage1_reference_sam_file_name = this->reference_alignment_path + "/#.stage1.bam";
     this->stage1_unmatched_fastq_file_name = this->reference_alignment_path + "/#.stage1.unmatched.fastq";
-    this->stage2_reference_sam_file_name = this->reference_alignment_path + "/#.stage2.matched.sam";
+    this->stage2_reference_sam_file_name = this->reference_alignment_path + "/#.stage2.matched.bam";
 
     //! Paths: Junction Prediction
 		this->candidate_junction_path = "03_candidate_junctions";
 		if (this->base_output_path.size() > 0) this->candidate_junction_path = this->base_output_path + "/" + this->candidate_junction_path;
 
 		this->preprocess_junction_done_file_name = this->candidate_junction_path + "/preprocess_junction_alignment.done";
-		this->preprocess_junction_best_sam_file_name = this->candidate_junction_path + "/best.sam";
-		this->preprocess_junction_split_sam_file_name = this->candidate_junction_path + "/#.split.sam";
+		this->preprocess_junction_best_sam_file_name = this->candidate_junction_path + "/best.bam";
+		this->preprocess_junction_split_sam_file_name = this->candidate_junction_path + "/#.split.bam";
     
     this->coverage_junction_done_file_name = this->candidate_junction_path + "/coverage_junction_alignment.done";
 		this->coverage_junction_best_bam_unsorted_file_name = this->candidate_junction_path + "/best.unsorted.bam";
@@ -1025,15 +1025,15 @@ namespace breseq
 		this->candidate_junction_alignment_done_file_name = this->candidate_junction_alignment_path + "/candidate_junction_alignment.done";
 
 		this->candidate_junction_hash_file_name = this->candidate_junction_alignment_path + "/candidate_junction";
-		this->candidate_junction_sam_file_name = this->candidate_junction_alignment_path + "/#.candidate_junction.sam";
+		this->candidate_junction_sam_file_name = this->candidate_junction_alignment_path + "/#.candidate_junction.bam";
 
     //! Paths: Alignment Resolution
 		this->alignment_resolution_path = "05_alignment_correction";
 		if (this->base_output_path.size() > 0) this->alignment_resolution_path = this->base_output_path + "/" + this->alignment_resolution_path;
 		this->alignment_correction_done_file_name = this->alignment_resolution_path + "/alignment_resolution.done";
 
-		this->resolved_reference_sam_file_name = this->alignment_resolution_path + "/reference.sam";
-		this->resolved_junction_sam_file_name = this->alignment_resolution_path + "/junction.sam";
+		this->resolved_reference_sam_file_name = this->alignment_resolution_path + "/reference.bam";
+		this->resolved_junction_sam_file_name = this->alignment_resolution_path + "/junction.bam";
 		this->alignment_resolution_summary_file_name = this->alignment_resolution_path + "/summary.json";
 		this->jc_genome_diff_file_name = this->alignment_resolution_path + "/jc_evidence.gd";
 
