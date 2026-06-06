@@ -34,45 +34,30 @@ $ make test
 
 Open the included project file: src/c/breseq.xcodeproj
 
-For compiling a universal binary, breseq needs the require libraries (currently libz and miniz) installed
-under the prefix /opt/local. This is the default install location for MacPorts, which you can 
-use to install them, or you can install them there yourself.
+This project is set up to use the shared libraries and command-line tools installed by the conda 
+environment. So, first create that environment as described above. Be sure the architecture type 
+matches what is specified in XCode, or you will get linking errors!
 
-If you do install with MacPorts, it you can install just for your architecture, or you can install
-a universal version of the library using the +universal flaglike this.
-
-$ sudo port install zlib +universal
-
-Before compiling and debugging in in XCode, you need to run the first few commands of the command-line
-instructions to generate Makefiles for building samtools external libraries.
-
-$ ./bootstrap
-$ ./configure
-
-To run breseq with the XCode debugger, you must set the environmental variable PATH, within the
-"executable" or "scheme" options, include the locations where you have R and bowtie2 installed.
-You can find these with the 'which' shell command. Then set up a new Environment Variable within XCode
-like this (it can be to where the breseq-run conda environment installed these tools):
-
-PATH     /Users/myusername/local/bin:$PATH
-
-You may also want to set the working directory, and will definitely want to set the command line options
-(which are the same as the command you would type in the shell, but omitting the initial "breseq")
+For debugging, you may also want to set the working directory, and will definitely want to set the 
+command line options (which are the same as the command you would type in the shell, but omitting
+the initial "breseq")
 
 breseq -r reference.gbk reads.fastq
 becomes
 Arguments: -r reference.gbk reads.fastq
 
+The MacOSX binary for distribution is created outside of XCode, as described below.
+
 ===  Creating the Source Archive for Distribution ===
 
-Firdt, be sure to update the breseq version in configure.ac
+First, be sure to update the breseq version in configure.ac
 
 Then, generate a source archive for a given release:
 $ make distcheck
 
-===  Building Binaries for Distribution ===
+===  Building MacOSX Binary for Distribution ===
 
-A special script exists for building a MacOSX universal binary:
+A special script exists for building a portable MacOSX universal binary:
 $ ./binarydist.sh
 
 See the directions inside of this file on how to install universal versions of the 

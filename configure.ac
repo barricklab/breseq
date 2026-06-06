@@ -218,8 +218,6 @@ AS_IF([test "x$with_static_htslib" != "x"], [
     save_CPPFLAGS="$CPPFLAGS"; save_LIBS="$LIBS"
     CPPFLAGS="$CPPFLAGS -I$with_static_htslib/include"
     LIBS="$LIBS $with_static_htslib/lib/libhts.a"
-    AC_CHECK_FUNC([sam_hdr_destroy],
-      [AC_DEFINE([HAVE_SAM_HDR_DESTROY], [1], [htslib has sam_hdr_destroy (>= 1.10)])])
     CPPFLAGS="$save_CPPFLAGS"; LIBS="$save_LIBS"
   ], [
     AC_MSG_ERROR([Could not find libhts.a for static linking in: "$with_static_htslib/lib"])

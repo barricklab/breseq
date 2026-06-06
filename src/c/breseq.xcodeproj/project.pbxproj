@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 46;
+	objectVersion = 54;
 	objects = {
 
 /* Begin PBXAggregateTarget section */
@@ -31,8 +31,6 @@
 		702C41631FDD88D900D4B159 /* json.hpp in Headers */ = {isa = PBXBuildFile; fileRef = 702C41621FDD88D900D4B159 /* json.hpp */; };
 		702EABF713421A8400103019 /* fastq.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 702EABF613421A8400103019 /* fastq.cpp */; };
 		70367D2113EB232C000787CC /* coverage_distribution.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70367D2013EB232C000787CC /* coverage_distribution.cpp */; };
-		7059780C1DB9A73D001BBA6B /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 704A07CF1A3409EA00B3ACC7 /* libz.a */; };
-		7059780D1DB9A73E001BBA6B /* libz.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 704A07CF1A3409EA00B3ACC7 /* libz.a */; };
 		707F211613478B7700ED2F3E /* candidate_junctions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 707F211513478B7700ED2F3E /* candidate_junctions.cpp */; };
 		707F349F155D970000F5C89F /* summary.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 707F349E155D970000F5C89F /* summary.cpp */; };
 		707F34A2155D97B900F5C89F /* reference_sequence.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 707F34A1155D97B900F5C89F /* reference_sequence.cpp */; };
@@ -77,13 +75,6 @@
 			proxyType = 1;
 			remoteGlobalIDString = 42BA690B1189B7FD000B00B1;
 			remoteInfo = breseq;
-		};
-		708FA5D4132578BD00864C40 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 421ACEB71170DB9600C2EB85 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 42B6EDB811C69CC70075F8A3;
-			remoteInfo = identify_mutations;
 		};
 		70E92F10151AB74200F86F2D /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -133,7 +124,6 @@
 		70319F132529146C006AE46F /* counted_ptr.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = counted_ptr.h; sourceTree = "<group>"; };
 		70367D2013EB232C000787CC /* coverage_distribution.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = coverage_distribution.cpp; path = breseq/coverage_distribution.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		70436D5713FF6D7D006448FB /* coverage_distribution.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = coverage_distribution.r; path = breseq/coverage_distribution.r; sourceTree = "<group>"; };
-		704A07CF1A3409EA00B3ACC7 /* libz.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libz.a; path = "/Users/jbarrick/Library/Developer/Xcode/DerivedData/breseq-canagyzpaxpsjgbtjxenmavcspzz/Build/Products/Debug/../../../../../../../../../../opt/local/lib/libz.a"; sourceTree = "<absolute>"; };
 		70616DCF1400A0C0006E7800 /* plot_coverage.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = plot_coverage.r; path = breseq/plot_coverage.r; sourceTree = "<group>"; };
 		70616DD01400A0C0006E7800 /* plot_error_rate.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = plot_error_rate.r; path = breseq/plot_error_rate.r; sourceTree = "<group>"; };
 		70616DD11400A0C0006E7800 /* polymorphism_statistics.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = polymorphism_statistics.r; path = breseq/polymorphism_statistics.r; sourceTree = "<group>"; };
@@ -206,7 +196,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				708FA5FD13257A7D00864C40 /* libbreseq.a in Frameworks */,
-				7059780C1DB9A73D001BBA6B /* libz.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -222,7 +211,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				70E92F14151AB74200F86F2D /* libbreseq.a in Frameworks */,
-				7059780D1DB9A73E001BBA6B /* libz.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -235,7 +223,6 @@
 				70A9AEA6135BA2DF006B6D79 /* config */,
 				70CB720E140FEB6400D578EB /* libbreseq */,
 				4247E77F1268E175006A6D78 /* breseq */,
-				421ACF5F1170E06300C2EB85 /* lib */,
 				70436D5613FF6D5C006448FB /* copied  */,
 				421ACF301170DF1800C2EB85 /* Products */,
 			);
@@ -250,14 +237,6 @@
 				70E92F1B151AB74200F86F2D /* gdtools */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		421ACF5F1170E06300C2EB85 /* lib */ = {
-			isa = PBXGroup;
-			children = (
-								704A07CF1A3409EA00B3ACC7 /* libz.a */,
-			);
-			name = lib;
 			sourceTree = "<group>";
 		};
 		4247E77F1268E175006A6D78 /* breseq */ = {
@@ -387,9 +366,6 @@
 		};
 /* End PBXHeadersBuildPhase section */
 
-/* Begin PBXLegacyTarget section */
-/* End PBXLegacyTarget section */
-
 /* Begin PBXNativeTarget section */
 		42B6EDB811C69CC70075F8A3 /* breseq */ = {
 			isa = PBXNativeTarget;
@@ -398,6 +374,7 @@
 				42B6EDBD11C69CC70075F8A3 /* Sources */,
 				42B6EDC011C69CC70075F8A3 /* Frameworks */,
 				70436D5913FF7659006448FB /* CopyFiles */,
+				70D801652FD4E8EA008F6FFD /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -433,6 +410,7 @@
 				70E92F11151AB74200F86F2D /* Sources */,
 				70E92F13151AB74200F86F2D /* Frameworks */,
 				70E92F16151AB74200F86F2D /* CopyFiles */,
+				70D801662FD4E9DD008F6FFD /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -450,9 +428,8 @@
 		421ACEB71170DB9600C2EB85 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1400;
-				TargetAttributes = {
-				};
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2630;
 			};
 			buildConfigurationList = 421ACEBA1170DB9600C2EB85 /* Build configuration list for PBXProject "breseq" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -477,6 +454,43 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		70D801652FD4E8EA008F6FFD /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "export PATH=\"${CONDA_BIN_PATH}:$PATH\"\n";
+		};
+		70D801662FD4E9DD008F6FFD /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "export PATH=\"${CONDA_BIN_PATH}:$PATH\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		42B6EDBD11C69CC70075F8A3 /* Sources */ = {
@@ -542,11 +556,6 @@
 			target = 42BA690B1189B7FD000B00B1 /* libbreseq */;
 			targetProxy = 42B6EDBC11C69CC70075F8A3 /* PBXContainerItemProxy */;
 		};
-		708FA5D5132578BD00864C40 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 42B6EDB811C69CC70075F8A3 /* breseq */;
-			targetProxy = 708FA5D4132578BD00864C40 /* PBXContainerItemProxy */;
-		};
 		70E92F0F151AB74200F86F2D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 42BA690B1189B7FD000B00B1 /* libbreseq */;
@@ -582,6 +591,7 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
 				GCC_VERSION = "";
@@ -595,6 +605,7 @@
 				LIBRARY_SEARCH_PATHS = "$(value)";
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				ONLY_ACTIVE_ARCH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 			};
 			name = Debug;
 		};
@@ -624,6 +635,7 @@
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_SYMBOLS_PRIVATE_EXTERN = YES;
 				GCC_VERSION = "";
@@ -637,6 +649,7 @@
 				LIBRARY_SEARCH_PATHS = "$(value)";
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				ONLY_ACTIVE_ARCH = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 			};
 			name = Release;
 		};
@@ -651,6 +664,7 @@
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				HEADER_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS = "";
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
 				PRODUCT_NAME = all;
 			};
 			name = Debug;
@@ -665,6 +679,7 @@
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				HEADER_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS = "";
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
 				PRODUCT_NAME = all;
 				ZERO_LINK = NO;
 			};
@@ -692,7 +707,7 @@
 				LIBRARY_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = breseq;
 				USER_HEADER_SEARCH_PATHS = "";
@@ -720,7 +735,7 @@
 				LIBRARY_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
 				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_NAME = breseq;
 				USER_HEADER_SEARCH_PATHS = "";
@@ -744,7 +759,7 @@
 					/opt/local/lib,
 					"$(PROJECT_DIR)/../../../../../../opt/local/lib",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = breseq;
 			};
@@ -770,7 +785,7 @@
 					/opt/local/lib,
 					"$(PROJECT_DIR)/../../../../../../opt/local/lib",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
 				PRODUCT_NAME = breseq;
 				ZERO_LINK = NO;
 			};
@@ -799,7 +814,7 @@
 				LIBRARY_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = gdtools;
 				USER_HEADER_SEARCH_PATHS = "";
@@ -828,7 +843,7 @@
 				LIBRARY_SEARCH_PATHS = "$(value)";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "";
 				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_2 = "";
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
 				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_NAME = gdtools;
 				USER_HEADER_SEARCH_PATHS = "";
