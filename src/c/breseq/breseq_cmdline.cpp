@@ -2558,7 +2558,14 @@ int breseq_default_action(int argc, char* argv[])
 			output::cOutputEvidenceFiles(settings, gd);
 
     Settings::sync_threads();
-    
+
+    if (settings.zip_html) {
+      cerr << "Creating evidence HTML archive..." << endl;
+      output::create_evidence_archive(settings);
+      cerr << "Creating evidence viewer page..." << endl;
+      output::create_evidence_page(settings);
+    }
+
 		///
 		// HTML output
 		///
@@ -2573,7 +2580,15 @@ int breseq_default_action(int argc, char* argv[])
 
 		output::html_summary(settings.summary_html_file_name, settings, summary, ref_seq_info);
 
+    // Remove the individual evidence files now that everything is archived.
+    if (settings.zip_html) {
+      cerr << "Removing evidence directory (files are archived in " << settings.local_html_archive_file_name << ")..." << endl;
+      remove_folder(settings.evidence_path, /*silent=*/false, /*ignore_errors=*/true);
+    }
+    
 		settings.done_step(settings.output_done_file_name);
+
+
 	}
   cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
 

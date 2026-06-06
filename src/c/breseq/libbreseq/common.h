@@ -1420,6 +1420,13 @@ inline string remove_file(string path, bool silent = false, bool ignore_errors =
   return path;
 }
 
+inline string remove_folder(string path, bool silent = false, bool ignore_errors = false)
+{
+  //remove(path.c_str()); // @JEB this does not work with wildcards
+  SYSTEM("rm -rf " + double_quote(path), silent, ignore_errors);
+  return path;
+}
+
 template<uint32_t nth_place> double roundp(double value) {
   return floor(value * nth_place + 0.5f) / nth_place;
 }

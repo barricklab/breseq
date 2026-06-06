@@ -3,7 +3,7 @@
 SELF=`dirname ${BASH_SOURCE}`
 . ${SELF}/../common.sh
 
-CURRENT_OUTPUTS[0]="${SELF}/output/evidence/annotated.gd"
+CURRENT_OUTPUTS[0]="${SELF}/output/annotated.gd"
 EXPECTED_OUTPUTS[0]="${SELF}/expected.gd"
 REFERENCE_ARG="-r ${DATADIR}/lambda/lambda.gbk"
 

@@ -4,11 +4,16 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - zlib
   - autoconf
   - automake
   - libtool
+  - pkg-config
   - m4
+  - zlib
+  - miniz
+  - bowtie2=2.5.5
+  - r-base=4.5.3
+  - phylip=3.697
  # Old for making docs
  # - sphinx
  # - sphinxcontrib-jsmath

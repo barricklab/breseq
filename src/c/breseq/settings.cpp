@@ -326,6 +326,7 @@ namespace breseq
     ("max-flanking-columns", "Maximum number of columns in aligned reads to show flanking the region of interest in the HTML output for an evidence item (0=ALL)", 100, ADVANCED_OPTION)
     ("max-displayed-reads", "Maximum number of reads to display in the HTML output for an evidence item (0=ALL)", 100, ADVANCED_OPTION)
     ("brief-html-output", "Don't create detailed output files for evidence (no read alignments or coverage plots)", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("zip-html", "Bundle evidence HTML and PNG files into a ZIP archive (evidence.zip) and add JavaScript to index.html and marginal.html that loads evidence pages directly from the archive", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("header-genome-diff,g", "Include header information from this GenomeDiff file in output.gd", "", ADVANCED_OPTION)
     ("no-javascript", "Don't include javascript in the HTML output", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
@@ -716,6 +717,7 @@ namespace breseq
     this->max_displayed_reads = from_string<int32_t>(options["max-displayed-reads"]);
     this->max_flanking_columns = from_string<int32_t>(options["max-flanking-columns"]);
     this->skip_alignment_or_plot_generation = options.count("brief-html-output");
+    this->zip_html = options.count("zip-html");
     this->no_javascript = options.count("no-javascript");
     if (options.count("header-genome-diff"))
       this->header_genome_diff_file_name = options["header-genome-diff"];
@@ -723,7 +725,12 @@ namespace breseq
 		this->post_option_initialize();
     
     //////// Check here for any conflicting options
-    
+
+    if (this->zip_html && this->no_javascript) {
+      cerr << "WARNING: --zip-html requires JavaScript and has been disabled because --no-javascript was also specified." << endl;
+      this->zip_html = false;
+    }
+
     /*
     if (this->user_evidence_genome_diff_file_name.size() && !this->polymorphism_prediction) {
       ERROR("You must run breseq in polymorphism mode (-p) when supplying --user-evidence-gd.");
@@ -932,6 +939,7 @@ namespace breseq
 		this->lenski_format = false;
 		this->no_evidence = false;
     this->no_javascript = false;
+    this->zip_html = false;
     this->no_list_js = false;
     this->add_metadata_to_gd = true;
     
@@ -1101,24 +1109,28 @@ namespace breseq
 
 		this->local_evidence_path = "evidence";
 		this->evidence_path = this->output_path + "/" + this->local_evidence_path;
+    this->local_html_archive_file_name = "evidence.zip";
+    this->html_archive_file_name = this->output_path + "/" + this->local_html_archive_file_name;
+    this->local_html_evidence_file_name = "evidence.html";
+    this->html_evidence_file_name = this->output_path + "/" + this->local_html_evidence_file_name;
 		this->evidence_genome_diff_file_name = this->evidence_path + "/evidence.gd";
 		this->final_genome_diff_file_name = this->output_path + "/output.gd";
     this->preannotated_genome_diff_file_name = this->evidence_path + "/preannotated.gd";
-    this->annotated_genome_diff_file_name = this->evidence_path + "/annotated.gd";
+    this->annotated_genome_diff_file_name = this->output_path + "/annotated.gd";
     this->output_mutation_prediction_done_file_name = this->evidence_path + "/mutation_prediction.done";
     this->output_mutation_annotation_done_file_name = this->evidence_path + "/mutation_annotation.done";
 
 		this->local_coverage_plot_path = "evidence";
 		this->coverage_plot_path = this->output_path + "/" + this->local_coverage_plot_path;
-    this->coverage_plot_r_script_file_name = this->program_data_path + "/plot_coverage.r";    
+    this->coverage_plot_r_script_file_name = this->program_data_path + "/plot_coverage.r";
 		this->overview_coverage_plot_file_name = this->coverage_plot_path + "/@.overview.png";
 
-		this->output_calibration_path = this->output_path + "/calibration";
+		this->output_calibration_path = this->evidence_path;
 		this->unique_only_coverage_plot_file_name = this->output_calibration_path + "/@.unique_coverage.pdf";
 		this->error_rates_plot_file_name = this->output_calibration_path + "/#.error_rates.pdf";
 
-		this->breseq_small_graphic_from_file_name = this->program_data_path + "/breseq_small.png";
-		this->breseq_small_graphic_to_file_name = this->output_path + "/" + this->local_evidence_path + "/breseq_small.png";
+		this->breseq_icon_graphic_from_file_name = this->program_data_path + "/breseq_icon.png";
+		this->breseq_icon_graphic_to_file_name = this->output_path + "/breseq_icon.png";
     
     //! Paths: Data
 		this->data_path = "data";

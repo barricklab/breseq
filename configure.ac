@@ -25,6 +25,8 @@ AC_CONFIG_MACRO_DIR([aux_build/m4])
 AC_CONFIG_HEADERS([aux_build/config.h])
 AC_CONFIG_SRCDIR([])
 
+AC_PREFIX_DEFAULT([$prefix])
+
 LT_INIT
 AM_INIT_AUTOMAKE([subdir-objects])
 
@@ -80,19 +82,61 @@ AC_ARG_WITH([static-libz],
 AC_MSG_NOTICE([with_static_libz = $with_static_libz])
 
 # 1) static linking to libz if command line option / environmental variable provided and library is found
-# 2) dynamic linking to libz otherwise
+# 2) dynamic linking to libz otherwise — verify at ${prefix}/lib and set LIBZ_LINK
 
 AS_IF([test "x$with_static_libz" != "x"], [
   AS_IF([test -f "$with_static_libz/lib/libz.a"], [
     AC_MSG_NOTICE([Static linking to libz.a located in "$with_static_libz/lib"])
-    AC_SUBST([STATIC_LIBZ_LIB], ["$with_static_libz/lib/libz.a"])
     AC_SUBST([STATIC_LIBZ_INC], ["-I$with_static_libz/lib/include"])
+    AC_SUBST([LIBZ_LINK], ["$with_static_libz/lib/libz.a"])
   ], [
     AC_MSG_ERROR([Could not find libz.a library for static linking in specified path: "$with_static_libz/lib"])
   ])
 ], [
-  AC_SEARCH_LIBS([deflateSetHeader], [z], [],
-    [AC_MSG_ERROR([libz >=1.2.2.1 is required.])])
+  save_LDFLAGS="$LDFLAGS"
+  LDFLAGS="$LDFLAGS -L${prefix}/lib"
+  AC_CHECK_LIB([z], [deflateSetHeader], [],
+    [AC_MSG_ERROR([libz >=1.2.2.1 not found at ${prefix}/lib. Install zlib or set --prefix=\$CONDA_PREFIX])])
+  LDFLAGS="$save_LDFLAGS"
+  AC_SUBST([LIBZ_LINK], ["-lz"])
+])
+
+
+#### miniz (required for --zip-html evidence ZIP archive support)
+
+# We have options for static linking (precompiled binaries) and dynamic linking (bioconda install)
+# Check for command line option and environmental variable versions of --with-static-miniz and WITH_STATIC_MINIZ
+AC_ARG_WITH([static-miniz],
+  [AS_HELP_STRING([--with-static-miniz=PATH], [Prefix to static install of miniz. Directory that has lib/ and include/ within it.])],
+  [with_static_miniz="$withval"],
+  [with_static_miniz="${WITH_STATIC_MINIZ:-}"]
+)
+AC_MSG_NOTICE([with_static_miniz = $with_static_miniz])
+
+# 1) static linking to libminiz if command line option / environmental variable provided and library is found
+# 2) dynamic linking to libminiz — verify at ${prefix} and set MINIZ_LINK/MINIZ_INC
+
+AS_IF([test "x$with_static_miniz" != "x"], [
+  AS_IF([test -f "$with_static_miniz/lib/libminiz.a"], [
+    AC_MSG_NOTICE([Static linking to libminiz.a located in "$with_static_miniz/lib"])
+    AC_SUBST([MINIZ_INC],  ["-I$with_static_miniz/include"])
+    AC_SUBST([MINIZ_LINK], ["$with_static_miniz/lib/libminiz.a"])
+  ], [
+    AC_MSG_ERROR([Could not find libminiz.a for static linking in: "$with_static_miniz/lib"])
+  ])
+], [
+  save_CPPFLAGS="$CPPFLAGS"
+  save_LDFLAGS="$LDFLAGS"
+  CPPFLAGS="$CPPFLAGS -I${prefix}/include"
+  LDFLAGS="$LDFLAGS -L${prefix}/lib"
+  AC_CHECK_HEADER([miniz/miniz.h], [],
+    [AC_MSG_ERROR([miniz/miniz.h not found at ${prefix}/include. Install: conda install -c conda-forge miniz and configure with --prefix=\$CONDA_PREFIX])])
+  AC_CHECK_LIB([miniz], [mz_zip_writer_init_file], [],
+    [AC_MSG_ERROR([libminiz not found at ${prefix}/lib. Install: conda install -c conda-forge miniz and configure with --prefix=\$CONDA_PREFIX])])
+  CPPFLAGS="$save_CPPFLAGS"
+  LDFLAGS="$save_LDFLAGS"
+  AC_SUBST([MINIZ_INC],  [""])
+  AC_SUBST([MINIZ_LINK], ["-lminiz"])
 ])
 
 

@@ -164,7 +164,7 @@
 		70616DCF1400A0C0006E7800 /* plot_coverage.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = plot_coverage.r; path = breseq/plot_coverage.r; sourceTree = "<group>"; };
 		70616DD01400A0C0006E7800 /* plot_error_rate.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = plot_error_rate.r; path = breseq/plot_error_rate.r; sourceTree = "<group>"; };
 		70616DD11400A0C0006E7800 /* polymorphism_statistics.r */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.rez; name = polymorphism_statistics.r; path = breseq/polymorphism_statistics.r; sourceTree = "<group>"; };
-		70616DD21400A0CE006E7800 /* breseq_small.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = breseq_small.png; path = breseq/breseq_small.png; sourceTree = "<group>"; };
+		70616DD21400A0CE006E7800 /* breseq_icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = breseq_icon.png; path = breseq/breseq_icon.png; sourceTree = "<group>"; };
 		70616DD31400A0CE006E7800 /* breseq.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = breseq.png; path = breseq/breseq.png; sourceTree = "<group>"; };
 		707F211513478B7700ED2F3E /* candidate_junctions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = candidate_junctions.cpp; path = breseq/candidate_junctions.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		707F349E155D970000F5C89F /* summary.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = summary.cpp; path = breseq/summary.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
@@ -343,7 +343,7 @@
 				7090A56715DDD997000010EE /* plot_jc_scores.r */,
 				70616DD11400A0C0006E7800 /* polymorphism_statistics.r */,
 				70436D5713FF6D7D006448FB /* coverage_distribution.r */,
-				70616DD21400A0CE006E7800 /* breseq_small.png */,
+				70616DD21400A0CE006E7800 /* breseq_icon.png */,
 				70616DD31400A0CE006E7800 /* breseq.png */,
 				707F34A0155D973500F5C89F /* run_circos.sh */,
 			);

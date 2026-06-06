@@ -31,8 +31,19 @@ if [ "$BINARYPLATFORM" == "Darwin" ]; then
 	#
 	# This is not as good b/c you can't control the -mmacosx-version-min
   	
-  	CONFIGFLAGS="--with-static-libz=$HOME/local"
-  	
+  	# MacOSX miniz scenario
+	#
+	# Build a static universal miniz from source before running binarydist.sh:
+	#
+	#   git clone https://github.com/richgel999/miniz && cd miniz
+	#   cmake -B build -DBUILD_SHARED_LIBS=OFF -DINSTALL_PROJECT=ON \
+	#         -DCMAKE_INSTALL_PREFIX=$HOME/local \
+	#         -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+	#         -DCMAKE_OSX_DEPLOYMENT_TARGET=10.13
+	#   cmake --build build && cmake --install build
+	#
+  	CONFIGFLAGS="--with-static-libz=$HOME/local --with-static-miniz=$HOME/local"
+
 fi
 BINARYNAME=${BINARYPLATFORM}-${BINARYARCH}
 

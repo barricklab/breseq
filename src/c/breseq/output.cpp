@@ -20,6 +20,10 @@
 #include "libbreseq/anyoption.h"
 #include "libbreseq/alignment_output.h"
 #include "libbreseq/coverage_output.h"
+// MINIZ_NO_ZLIB_COMPATIBLE_NAMES is set via MINIZ_CFLAGS in AM_CPPFLAGS
+// (configure.ac) to avoid clashing with the system libz that is also linked.
+#include <miniz/miniz.h>
+#include <miniz/miniz_zip.h>
 
 using namespace std;
 namespace breseq
@@ -218,6 +222,145 @@ string javascript_string()
   return ss.str();
 }
 
+/*-----------------------------------------------------------------------------
+ *  Simple base64 encoder used to embed the evidence zip into evidence.html
+ *  so JSZip can load it without a fetch() call (works for file:// URLs).
+ *-----------------------------------------------------------------------------*/
+static string base64_encode(const vector<unsigned char>& data)
+{
+  static const char table[] =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  string out;
+  out.reserve(((data.size() + 2) / 3) * 4);
+  size_t i = 0;
+  while (i + 2 < data.size()) {
+    uint32_t v = ((uint32_t)data[i] << 16) | ((uint32_t)data[i+1] << 8) | data[i+2];
+    out += table[(v >> 18) & 0x3F];
+    out += table[(v >> 12) & 0x3F];
+    out += table[(v >>  6) & 0x3F];
+    out += table[(v >>  0) & 0x3F];
+    i += 3;
+  }
+  if (i + 1 == data.size()) {
+    uint32_t v = (uint32_t)data[i] << 16;
+    out += table[(v >> 18) & 0x3F];
+    out += table[(v >> 12) & 0x3F];
+    out += "==";
+  } else if (i + 2 == data.size()) {
+    uint32_t v = ((uint32_t)data[i] << 16) | ((uint32_t)data[i+1] << 8);
+    out += table[(v >> 18) & 0x3F];
+    out += table[(v >> 12) & 0x3F];
+    out += table[(v >>  6) & 0x3F];
+    out += '=';
+  }
+  return out;
+}
+
+static string evidence_archive_viewer_string_UNUSED(const Settings& settings)
+{
+  (void)settings;
+  if (!settings.zip_html) return "";
+  if (settings.no_javascript) return "";
+
+  // Load jszip.min.js from program data directory
+  std::ifstream jszipfile(settings.program_data_path + "/jszip.min.js");
+  if (!jszipfile) return "";
+  std::ostringstream jszipbuf;
+  jszipbuf << jszipfile.rdbuf();
+
+  // Read the already-created zip archive and base64-encode it so it can be
+  // embedded directly in the page — no fetch() needed at runtime.
+  std::ifstream zf(settings.html_archive_file_name, std::ios::binary);
+  if (!zf) return ""; // archive not yet created or unavailable
+  vector<unsigned char> zip_bytes(
+    (std::istreambuf_iterator<char>(zf)),
+    std::istreambuf_iterator<char>());
+  string zip_b64 = base64_encode(zip_bytes);
+
+  stringstream ss;
+
+  // Inline JSZip library
+  ss << "<script type=\"text/javascript\">\n" << jszipbuf.str() << "\n</script>\n";
+
+  // Evidence archive viewer script
+  ss << "<script type=\"text/javascript\">\n";
+  ss << "(function() {\n";
+  // Embed the zip as a base64 literal — no network request required
+  ss << "  var ZIP_B64 = \"" << zip_b64 << "\";\n";
+  ss << "  var blobCache = {};\n";
+  ss << "  var zipPromise = null;\n";
+  ss << "\n";
+  ss << "  function loadZip() {\n";
+  ss << "    if (!zipPromise) {\n";
+  ss << "      var binary = atob(ZIP_B64);\n";
+  ss << "      var buf = new Uint8Array(binary.length);\n";
+  ss << "      for (var i = 0; i < binary.length; i++) buf[i] = binary.charCodeAt(i);\n";
+  ss << "      zipPromise = JSZip.loadAsync(buf.buffer);\n";
+  ss << "    }\n";
+  ss << "    return zipPromise;\n";
+  ss << "  }\n";
+  ss << "\n";
+  // Resolve <img src> references to inline data URIs from the zip
+  ss << "  function resolveImages(doc, zip) {\n";
+  ss << "    var imgs = doc.querySelectorAll('img[src]');\n";
+  ss << "    var promises = [];\n";
+  ss << "    imgs.forEach(function(img) {\n";
+  ss << "      var src = img.getAttribute('src');\n";
+  ss << "      if (!src || src.startsWith('data:')) return;\n";
+  ss << "      var fname = src.replace(/^.*\\//, '');\n";
+  ss << "      var entry = zip.file(fname);\n";
+  ss << "      if (!entry) return;\n";
+  ss << "      promises.push(entry.async('base64').then(function(b64) {\n";
+  ss << "        img.setAttribute('src', 'data:image/png;base64,' + b64);\n";
+  ss << "      }));\n";
+  ss << "    });\n";
+  ss << "    return Promise.all(promises);\n";
+  ss << "  }\n";
+  ss << "\n";
+  // Build a blob URL for one evidence HTML file (cached after first call)
+  ss << "  function buildBlobUrl(fname, zip) {\n";
+  ss << "    if (blobCache[fname]) return Promise.resolve(blobCache[fname]);\n";
+  ss << "    var entry = zip.file(fname);\n";
+  ss << "    if (!entry) return Promise.resolve(null);\n";
+  ss << "    return entry.async('string').then(function(html) {\n";
+  ss << "      var parser = new DOMParser();\n";
+  ss << "      var doc = parser.parseFromString(html, 'text/html');\n";
+  ss << "      return resolveImages(doc, zip).then(function() {\n";
+  ss << "        var serialised = '<!DOCTYPE html>\\n' + doc.documentElement.outerHTML;\n";
+  ss << "        var blob = new Blob([serialised], {type: 'text/html'});\n";
+  ss << "        var url = URL.createObjectURL(blob);\n";
+  ss << "        blobCache[fname] = url;\n";
+  ss << "        return url;\n";
+  ss << "      });\n";
+  ss << "    });\n";
+  ss << "  }\n";
+  ss << "\n";
+  // Rewrite all evidence link hrefs to blob URLs on page load
+  ss << "  document.addEventListener('DOMContentLoaded', function() {\n";
+  ss << "    loadZip().then(function(zip) {\n";
+  ss << "      var links = document.querySelectorAll('a[href]');\n";
+  ss << "      var promises = [];\n";
+  ss << "      links.forEach(function(a) {\n";
+  ss << "        var href = a.getAttribute('href');\n";
+  ss << "        if (!href || !href.endsWith('.html')) return;\n";
+  ss << "        if (href.indexOf('evidence/') === -1) return;\n";
+  ss << "        var fname = href.replace(/^.*\\//, '');\n";
+  ss << "        if (!zip.file(fname)) return;\n";
+  ss << "        promises.push(buildBlobUrl(fname, zip).then(function(url) {\n";
+  ss << "          if (url) a.setAttribute('href', url);\n";
+  ss << "        }));\n";
+  ss << "      });\n";
+  ss << "      return Promise.all(promises);\n";
+  ss << "    }).catch(function(e) {\n";
+  ss << "      console.warn('breseq: could not load evidence archive:', e);\n";
+  ss << "    });\n";
+  ss << "  });\n";
+  ss << "})();\n";
+  ss << "</script>\n";
+
+  return ss.str();
+}
+
 // Must be inserted before list within same div
 string start_list_js(const Settings& settings)
 {
@@ -276,7 +419,7 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   HTML << html_header("BRESEQ :: Mutation Predictions", settings);
   HTML << breseq_header_string(settings) << endl;
   HTML << "<p>" << endl;
-    
+
   if (!settings.no_javascript) {
     if (!settings.no_list_js) {
       HTML << start_list_js(settings);
@@ -285,13 +428,19 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   /////////////////////////
   //Build Mutation Predictions table
   /////////////////////////
-  
+
   HTML << "<!--Mutation Predictions -->" << endl;
   diff_entry_list_t muts = gd.show_list(make_vector<gd_entry_type>(SNP)(INS)(DEL)(SUB)(MOB)(AMP));
-  string relative_path = settings.local_evidence_path;
-  
-  if(!relative_path.empty())
-    relative_path += "/";
+
+  // When zip_html is active, point evidence links at the standalone viewer
+  // page (evidence.html#filename) instead of the raw files on disk.
+  string relative_path;
+  if (settings.zip_html) {
+    relative_path = settings.local_html_evidence_file_name + "#";
+  } else {
+    relative_path = settings.local_evidence_path;
+    if (!relative_path.empty()) relative_path += "/";
+  }
   HTML << "<p>" << endl;
   MutationTableOptions mt_options(settings);
   mt_options.relative_link = relative_path;
@@ -423,11 +572,15 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   HTML << html_header("BRESEQ :: Marginal Predictions", settings);
   HTML << breseq_header_string(settings) << endl;
   HTML << "<p>" << endl;
-  
-  string relative_path = settings.local_evidence_path;
-  
-  if (!relative_path.empty())
-    relative_path += "/";
+
+  // When zip_html is active, point evidence links at the standalone viewer page.
+  string relative_path;
+  if (settings.zip_html) {
+    relative_path = settings.local_html_evidence_file_name + "#";
+  } else {
+    relative_path = settings.local_evidence_path;
+    if (!relative_path.empty()) relative_path += "/";
+  }
 
   // ###
   // ## Marginal evidence
@@ -601,12 +754,14 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     const AnalyzeFastqSummary& s = summary.sequence_conversion.reads[it->m_base_name];
     const ReadFileSummary& rf = summary.alignment_resolution.read_file[it->m_base_name];
     HTML << start_tr();
-    HTML << td( a(Settings::relative_path(
-                      settings.file_name(settings.error_rates_plot_file_name, "#", it->m_base_name), settings.output_path
-                                          ),
-                "errors"
-                )
-              );
+    {
+      string err_plot = settings.file_name(settings.error_rates_plot_file_name, "#", it->m_base_name);
+      string err_basename = cString(err_plot).get_base_name();
+      string err_href = settings.zip_html
+        ? settings.local_html_evidence_file_name + "#" + err_basename
+        : Settings::relative_path(err_plot, settings.output_path);
+      HTML << td( a(err_href, "errors") );
+    }
     show_read_split_legend = show_read_split_legend || s.reads_were_split;
     HTML << td(it->m_base_name + (s.reads_were_split ? "<sup>&Dagger;</sup>" : "") );
     
@@ -694,22 +849,26 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
       }
       
       total_length += it->m_length;
-      HTML << td( file_exists(settings.file_name(settings.overview_coverage_plot_file_name, "@", it->m_seq_id).c_str()) ?
-                    a(Settings::relative_path(
-                                             settings.file_name(settings.overview_coverage_plot_file_name, "@", it->m_seq_id), settings.output_path
-                                              ),
-                    "coverage" 
-                    ) : "coverage"
-                 );
+      {
+        string overview_png = settings.file_name(settings.overview_coverage_plot_file_name, "@", it->m_seq_id);
+        string overview_basename = cString(overview_png).get_base_name();
+        string overview_href = settings.zip_html
+          ? settings.local_html_evidence_file_name + "#" + overview_basename
+          : Settings::relative_path(overview_png, settings.output_path);
+        HTML << td( file_exists(overview_png.c_str()) ?
+                      a(overview_href, "coverage") : "coverage" );
+      }
       
       // There may be absolutely no coverage and no graph will exist...
       //if (!fragment_no_coverage) {
-      HTML << td( a(Settings::relative_path(
-                                            settings.file_name(settings.unique_only_coverage_plot_file_name, "@", to_string<uint32_t>(settings.seq_id_to_coverage_group(it->m_seq_id))), settings.output_path
-                                            ),
-                    "distribution"
-                    )
-                 );
+      {
+        string dist_plot = settings.file_name(settings.unique_only_coverage_plot_file_name, "@", to_string<uint32_t>(settings.seq_id_to_coverage_group(it->m_seq_id)));
+        string dist_basename = cString(dist_plot).get_base_name();
+        string dist_href = settings.zip_html
+          ? settings.local_html_evidence_file_name + "#" + dist_basename
+          : Settings::relative_path(dist_plot, settings.output_path);
+        HTML << td( a(dist_href, "distribution") );
+      }
       //}
       //else {
       //  HTML << td("");
@@ -1063,13 +1222,13 @@ string breseq_header_string(const Settings& settings)
   stringstream ss(ios_base::out | ios_base::app);
   
   //copy over the breseq_graphic which we need if it doesn't exist - don't show command
-  if (!file_exists(settings.breseq_small_graphic_to_file_name.c_str())) {
-    copy_file(settings.breseq_small_graphic_from_file_name, settings.breseq_small_graphic_to_file_name);
+  if (!file_exists(settings.breseq_icon_graphic_to_file_name.c_str())) {
+    copy_file(settings.breseq_icon_graphic_from_file_name, settings.breseq_icon_graphic_to_file_name);
   }
   
   ss << "<table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"3\">" << endl;
   ss << "<tr>" << endl;
-  ss << td(a(settings.website, img(Settings::relative_path(settings.breseq_small_graphic_to_file_name, settings.output_path))));
+  ss << td(a(settings.website, img(Settings::relative_path(settings.breseq_icon_graphic_to_file_name, settings.output_path))));
   ss << endl;
   ss << start_td("width=\"100%\"") << endl;
   ss << settings.byline << endl;
@@ -3483,6 +3642,222 @@ cOutputEvidenceFiles::html_evidence_file (
 }
   
   
+void create_evidence_archive(const Settings& settings)
+{
+  // Bundle evidence HTML and PNG files into a zip archive using miniz so that
+  // index.html can load them in-browser via JSZip without needing a system
+  // zip command.  All files are stored at the archive root (no path prefix).
+  const string& zip_path     = settings.html_archive_file_name;
+  const string& evidence_dir = settings.evidence_path;
+
+  // Remove any stale archive before rebuilding
+  if (file_exists(zip_path.c_str()))
+    remove(zip_path.c_str());
+
+  mz_zip_archive zip;
+  memset(&zip, 0, sizeof(zip));
+
+  if (!mz_zip_writer_init_file(&zip, zip_path.c_str(), 0)) {
+    cerr << "WARNING: could not create evidence archive: " << zip_path << endl;
+    return;
+  }
+
+  // Enumerate *.html and *.png in the evidence directory
+  const char* exts[] = { ".html", ".png", ".pdf" };
+  bool any_added = false;
+
+  for (size_t ei = 0; ei < sizeof(exts) / sizeof(exts[0]); ei++) {
+    string pattern = evidence_dir + "/*" + exts[ei];
+    glob_t g;
+    memset(&g, 0, sizeof(g));
+    if (glob(pattern.c_str(), 0, NULL, &g) == 0) {
+      for (size_t i = 0; i < g.gl_pathc; i++) {
+        string full_path = g.gl_pathv[i];
+        // Store only the basename so there are no directory prefixes in the archive
+        string basename = full_path.substr(full_path.find_last_of('/') + 1);
+        if (!mz_zip_writer_add_file(&zip, basename.c_str(), full_path.c_str(),
+                                    NULL, 0, MZ_DEFAULT_COMPRESSION)) {
+          cerr << "WARNING: could not add to evidence archive: " << full_path << endl;
+        } else {
+          any_added = true;
+        }
+      }
+      globfree(&g);
+    }
+  }
+
+  if (!any_added)
+    cerr << "WARNING: no evidence files found to archive in: " << evidence_dir << endl;
+
+  if (!mz_zip_writer_finalize_archive(&zip))
+    cerr << "WARNING: could not finalize evidence archive: " << zip_path << endl;
+
+  mz_zip_writer_end(&zip);
+
+  if (any_added)
+    cerr << "Evidence archive created: " << zip_path << endl;
+}
+
+void create_evidence_page(const Settings& settings)
+{
+  // Generate a standalone evidence.html that embeds evidence.zip as a
+  // base64 literal.  Evidence links of the form:
+  //   evidence.html#RA_123.html
+  // are opened by this page: it extracts the named file from the zip, inlines
+  // all <img> references as data URIs, builds a Blob, and navigates to it so
+  // the user sees a fully self-contained, normal HTML page.  Because the zip
+  // is embedded (not fetched), this works when the file is opened directly
+  // from disk via a file:// URL.
+
+  // Load jszip.min.js
+  std::ifstream jszipfile(settings.program_data_path + "/jszip.min.js");
+  if (!jszipfile) {
+    cerr << "WARNING: could not find jszip.min.js — evidence.html not generated." << endl;
+    return;
+  }
+  std::ostringstream jszipbuf;
+  jszipbuf << jszipfile.rdbuf();
+
+  // Read and base64-encode the zip so it is embedded directly in the page —
+  // no fetch() required, works when opening from a file:// URL.
+  std::ifstream zf(settings.html_archive_file_name, std::ios::binary);
+  if (!zf) {
+    cerr << "WARNING: could not open " << settings.html_archive_file_name
+         << " — evidence.html not generated." << endl;
+    return;
+  }
+  vector<unsigned char> zip_bytes(
+    (std::istreambuf_iterator<char>(zf)),
+    std::istreambuf_iterator<char>());
+  string zip_b64 = base64_encode(zip_bytes);
+
+  ofstream out(settings.html_evidence_file_name.c_str());
+  if (!out) {
+    cerr << "WARNING: could not write " << settings.html_evidence_file_name << endl;
+    return;
+  }
+
+  out << "<!DOCTYPE html>\n<html><head>\n";
+  out << "<meta charset=\"utf-8\">\n";
+  out << "<title>BRESEQ :: Evidence</title>\n";
+  out << "<style>body{font-family:sans-serif;padding:2em;}</style>\n";
+
+  // Inline JSZip
+  out << "<script type=\"text/javascript\">\n" << jszipbuf.str() << "\n</script>\n";
+
+  out << "<script type=\"text/javascript\">\n";
+  out << "(function() {\n";
+  out << "  var ZIP_B64 = \"" << zip_b64 << "\";\n";
+  out << "\n";
+  out << "  function loadZip() {\n";
+  out << "    var binary = atob(ZIP_B64);\n";
+  out << "    var buf = new Uint8Array(binary.length);\n";
+  out << "    for (var i = 0; i < binary.length; i++) buf[i] = binary.charCodeAt(i);\n";
+  out << "    return JSZip.loadAsync(buf.buffer);\n";
+  out << "  }\n";
+  out << "\n";
+  // Replace img src="..." attributes in raw HTML text using regex so we never
+  // round-trip through DOMParser+outerHTML, which mangles non-ASCII characters.
+  out << "  function inlineImages(html, zip) {\n";
+  out << "    // Collect unique src values (PNG filenames)\n";
+  out << "    var seen = {};\n";
+  out << "    var pattern = /src=\"([^\"]*\\.png[^\"]*)\"/gi;\n";
+  out << "    var m;\n";
+  out << "    while ((m = pattern.exec(html)) !== null) seen[m[1]] = true;\n";
+  out << "    var srcs = Object.keys(seen);\n";
+  out << "    return Promise.all(srcs.map(function(src) {\n";
+  out << "      var fname = src.replace(/^.*\\//, '');\n";
+  out << "      var entry = zip.file(fname);\n";
+  out << "      if (!entry) return Promise.resolve(null);\n";
+  out << "      return entry.async('base64').then(function(b64) {\n";
+  out << "        return {src: src, uri: 'data:image/png;base64,' + b64};\n";
+  out << "      });\n";
+  out << "    })).then(function(results) {\n";
+  out << "      results.forEach(function(r) {\n";
+  out << "        if (r) html = html.split('\"' + r.src + '\"').join('\"' + r.uri + '\"');\n";
+  out << "      });\n";
+  out << "      return html;\n";
+  out << "    });\n";
+  out << "  }\n";
+  out << "\n";
+  out << "  function showError(msg) {\n";
+  out << "    document.getElementById('status').textContent = msg;\n";
+  out << "  }\n";
+  out << "\n";
+  out << "  window.addEventListener('load', function() {\n";
+  out << "    var fname = location.hash ? location.hash.slice(1) : '';\n";
+  out << "    if (!fname) { showError('No evidence file specified in URL hash.'); return; }\n";
+  out << "    document.getElementById('status').textContent = 'Loading ' + fname + '...';\n";
+  out << "    loadZip().then(function(zip) {\n";
+  out << "      var entry = zip.file(fname);\n";
+  out << "      if (!entry) { showError('File not found in archive: ' + fname); return; }\n";
+  out << "      var isPng = fname.match(/\\.png$/i);\n";
+  out << "      var isPdf = fname.match(/\\.pdf$/i);\n";
+  out << "      if (isPng) {\n";
+  out << "        // PNG: display in an img tag so the viewer URL stays meaningful.\n";
+  out << "        return entry.async('base64').then(function(b64) {\n";
+  out << "          document.title = fname;\n";
+  out << "          var img = document.createElement('img');\n";
+  out << "          img.src = 'data:image/png;base64,' + b64;\n";
+  out << "          img.style.cssText = 'max-width:100%;display:block;margin:auto;';\n";
+  out << "          document.getElementById('status').style.display = 'none';\n";
+  out << "          document.body.style.margin = '0';\n";
+  out << "          document.body.appendChild(img);\n";
+  out << "        });\n";
+  out << "      } else if (isPdf) {\n";
+  out << "        // PDF: render in a full-page iframe using a blob URL as the src.\n";
+  out << "        // The address bar stays at evidence.html#fname.pdf,\n";
+  out << "        // giving a descriptive URL while the browser PDF viewer fills the page.\n";
+  out << "        return entry.async('arraybuffer').then(function(buf) {\n";
+  out << "          document.title = fname;\n";
+  out << "          var blob = new Blob([buf], {type: 'application/pdf'});\n";
+  out << "          var iframe = document.createElement('iframe');\n";
+  out << "          iframe.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;border:none;margin:0;padding:0;';\n";
+  out << "          iframe.src = URL.createObjectURL(blob);\n";
+  out << "          document.body.style.margin = '0';\n";
+  out << "          document.getElementById('status').style.display = 'none';\n";
+  out << "          document.body.appendChild(iframe);\n";
+  out << "        });\n";
+  out << "      }\n";
+  out << "      // Use uint8array so JSZip preserves the original bytes exactly,\n";
+  out << "      // then decode as UTF-8 (the actual encoding used by breseq output).\n";
+  out << "      return entry.async('uint8array').then(function(bytes) {\n";
+  out << "        var html = new TextDecoder('utf-8').decode(bytes);\n";
+  out << "        // Rewrite charset declaration so the browser renders UTF-8 correctly.\n";
+  out << "        html = html.replace(/charset=iso-8859-1/gi, 'charset=utf-8');\n";
+  out << "        return inlineImages(html, zip);\n";
+  out << "      }).then(function(html) {\n";
+  out << "        // Display in a full-page iframe so the address bar keeps the\n";
+  out << "        // meaningful evidence.html#RA_123.html URL rather than\n";
+  out << "        // showing an opaque blob: URL.\n";
+  out << "        document.title = fname;\n";
+  out << "        var iframe = document.createElement('iframe');\n";
+  out << "        iframe.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;border:none;margin:0;padding:0;';\n";
+  out << "        iframe.srcdoc = html;\n";
+  out << "        document.body.style.margin = '0';\n";
+  out << "        document.getElementById('status').style.display = 'none';\n";
+  out << "        document.body.appendChild(iframe);\n";
+  out << "      });\n";
+  out << "    }).catch(function(e) {\n";
+  out << "      var msg = 'Could not load evidence archive: ' + e + '.';\n";
+  out << "      if (location.protocol === 'file:') {\n";
+  out << "        msg += ' This page must be served over HTTP. '\n";
+  out << "             + 'Run: python3 -m http.server  in the output directory '\n";
+  out << "             + 'and open http://localhost:8000/index.html';\n";
+  out << "      }\n";
+  out << "      showError(msg);\n";
+  out << "    });\n";
+  out << "  });\n";
+  out << "})();\n";
+  out << "</script>\n";
+  out << "</head>\n";
+  out << "<body><p id=\"status\">Loading evidence...</p></body>\n";
+  out << "</html>\n";
+  out.close();
+
+  cerr << "Evidence viewer page created: " << settings.html_evidence_file_name << endl;
+}
+
 }//end namespace output
 }//end namespace breseq
 

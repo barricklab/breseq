@@ -1,27 +1,17 @@
 === Developing with Command-Line Compilation ===
 
-To compile the repository version of the breseq source code, you must have a C/C++ compiler,
+To compile and test the repository version of the breseq source code, you must have a C/C++ compiler,
 autotools, autoconf, m4, and several other GNU tools installed on your system. You can use conda
-with the included dev-environment.yml file to install packages needed for building breseq.
+with the included dev-environment.yml file to install packages needed for building and running breseq.
 
 $ conda env create -f dev-environment.yml
 $ conda activate breseq-dev
 
-# These commands set things up so compilation can find the installed libraries
-$ conda env config vars set CFLAGS=-I${CONDA_PREFIX}/include
-$ conda env config vars set CPPFLAGS=-I${CONDA_PREFIX}/include
-$ conda env config vars set LDFLAGS=-L${CONDA_PREFIX}/lib
-$ conda env config vars set WITH_STATIC_LIBZ=${CONDA_PREFIX}
+This environment installs its own C/C++ compiler.
 
-$ conda activate breseq-dev
-$ conda env config vars list
+NOTE: Be careful on MacOSX to create the environment using the correct architecture
+      matching your system (osx-arm64 versus osx-64)! This command can be used to get it right.
 
-Note that this DOES NOT install a C/C++ compiler. One must be installed outside of conda.
-
-Also, be careful on MacOSX to install the architecture matching your system!
-
-If zlib is not found, you may need to create the environment this way,
-so that the architecture of the library matches that of your system:
 $ CONDA_SUBDIR=osx-`arch` conda env create -f dev-environment.yml
 
 Building requires running the ./bootstrap script when you have a fresh version from the repository or
@@ -36,20 +26,15 @@ $ make install
 === Consistency Test Instructions ===
 
 The output of the consistency tests varies depending on different versions of bowtie2 and R. You should
-use Conda with the included test-environment.yml file to install the current versions used for the consistency tests.
+use the exact versions of these tools specified in the dev-environment.yml Conda environment.
 
-$ conda env create -f test-environment.yml
-$ conda activate breseq-test
 $ make test
-
-Note that conda installs a compiler in this environment that will interfere with building breseq, so 
-only use it for the tests or running breseq on your samples!
 
 === Developing with XCode ===
 
 Open the included project file: src/c/breseq.xcodeproj
 
-For compiling a universal binary, breseq needs the require libaries (currentl libz) installed
+For compiling a universal binary, breseq needs the require libraries (currently libz and miniz) installed
 under the prefix /opt/local. This is the default install location for MacPorts, which you can 
 use to install them, or you can install them there yourself.
 

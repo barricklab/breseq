@@ -1,5 +1,7 @@
-HEADER_SEARCH_PATHS = $(SRCROOT)/../../aux_build $(SRCROOT)/breseq $(SRCROOT)/../../extern/samtools-1.3.1 $(SRCROOT)/../../extern/samtools-1.3.1/htslib-1.3.1 /opt/local/include
+HEADER_SEARCH_PATHS = $(SRCROOT)/../../aux_build $(SRCROOT)/breseq $(SRCROOT)/../../extern/samtools-1.3.1 $(SRCROOT)/../../extern/samtools-1.3.1/htslib-1.3.1 /opt/local/include $(CONDA_PREFIX)/include
 
-LIBRARY_SEARCH_PATHS = $(SRCROOT)/../../extern/samtools-1.3.1/htslib-1.3.1 $(SRCROOT)/../../extern/samtools-1.3.1 /opt/local/lib
+LIBRARY_SEARCH_PATHS = $(SRCROOT)/../../extern/samtools-1.3.1/htslib-1.3.1 $(SRCROOT)/../../extern/samtools-1.3.1 /opt/local/lib $(CONDA_PREFIX)/lib
 
-OTHER_CFLAGS = $(OTHER_CFLAGS) -std=c++11 -DDATADIR=\"$(SRCROOT)/breseq\"
+CLANG_CXX_LANGUAGE_STANDARD = c++11
+OTHER_CFLAGS = $(OTHER_CFLAGS) -DDATADIR=\"$(SRCROOT)/breseq\" -DMINIZ_NO_ZLIB_COMPATIBLE_NAMES
+OTHER_LDFLAGS = $(OTHER_LDFLAGS) -lminiz

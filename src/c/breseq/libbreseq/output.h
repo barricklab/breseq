@@ -170,12 +170,15 @@ void html_summary(const string& file_name, const Settings& settings, Summary& su
   
 void html_compare(
                   const Settings& settings,
-                  const string &file_name, 
-                  const string &title, 
+                  const string &file_name,
+                  const string &title,
                   cGenomeDiff& gd,
                   MutationTableOptions& mt_options
-                  ); 
-  
+                  );
+
+void create_evidence_archive(const Settings& settings);
+void create_evidence_page(const Settings& settings);
+
 /*-----------------------------------------------------------------------------
  * HTML TABLE STRINGS
  *-----------------------------------------------------------------------------*/
