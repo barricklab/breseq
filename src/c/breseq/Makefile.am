@@ -93,13 +93,17 @@ libbreseq_la_LIBADD =
 
 bin_PROGRAMS = breseq gdtools
 
-# $(MINIZ_LINK) and $(LIBZ_LINK) each hold either a full static .a path
-# (when --with-static-miniz/--with-static-libz is given) or -lfoo (dynamic).
+# $(CRAM_CODEC_LIBS) carries full .a paths to htslib's CRAM-codec
+# dependencies (bzip2/xz) when binarydist.sh links statically — kept out of
+# libbreseq_la_LIBADD/LIBS deliberately, since libtool warns "Linking the
+# shared library libbreseq.la against the static library ... is not portable"
+# whenever a noinst_LTLIBRARIES link sees a bare .a path; these are only
+# needed (and only valid) on the final program links, after libhts.a.
 breseq_SOURCES = breseq_cmdline.cpp
-breseq_LDADD   = ./libbreseq.la $(HTSLIB_LINK) $(MINIZ_LINK) $(LIBZ_LINK)
+breseq_LDADD   = ./libbreseq.la $(HTSLIB_LINK) $(MINIZ_LINK) $(LIBZ_LINK) $(CRAM_CODEC_LIBS)
 
 gdtools_SOURCES = gdtools_cmdline.cpp
-gdtools_LDADD   = ./libbreseq.la $(HTSLIB_LINK) $(MINIZ_LINK) $(LIBZ_LINK)
+gdtools_LDADD   = ./libbreseq.la $(HTSLIB_LINK) $(MINIZ_LINK) $(LIBZ_LINK) $(CRAM_CODEC_LIBS)
 
 EXTRA_DIST = breseq.png \
 	breseq_icon.png \

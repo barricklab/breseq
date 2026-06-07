@@ -72,72 +72,39 @@ AC_SEARCH_LIBS([pthread_create], [pthread], [], [AC_MSG_ERROR(["libpthread is re
 
 #### libz
 
-# We have options for static linking (precompiled binaries) and dynamic linking (bioconda install)
-# Check for command line option and environmental variable versions of --with-static-lib and WITH_STATIC_LIBZ
-AC_ARG_WITH([static-libz],
-  [AS_HELP_STRING([--with-static-libz=PATH], [Prefix to static install of libz. Directory that has lib and include within it.])],
-  [with_static_libz="$withval"],
-  [with_static_libz="${WITH_STATIC_LIBZ:-}"]
-)
-AC_MSG_NOTICE([with_static_libz = $with_static_libz])
+# Dynamic linking to libz (bioconda install) — verify at ${prefix}/lib and set
+# LIBZ_LINK/STATIC_LIBZ_INC. (binarydist.sh links statically against its own
+# universal build of zlib by passing -I/-L paths and LIBS directly to
+# ./configure, ahead of these -lfoo flags resolving against ${prefix}/lib.)
 
-# 1) static linking to libz if command line option / environmental variable provided and library is found
-# 2) dynamic linking to libz otherwise — verify at ${prefix}/lib and set LIBZ_LINK
-
-AS_IF([test "x$with_static_libz" != "x"], [
-  AS_IF([test -f "$with_static_libz/lib/libz.a"], [
-    AC_MSG_NOTICE([Static linking to libz.a located in "$with_static_libz/lib"])
-    AC_SUBST([STATIC_LIBZ_INC], ["-I$with_static_libz/lib/include"])
-    AC_SUBST([LIBZ_LINK], ["$with_static_libz/lib/libz.a"])
-  ], [
-    AC_MSG_ERROR([Could not find libz.a library for static linking in specified path: "$with_static_libz/lib"])
-  ])
-], [
-  save_LDFLAGS="$LDFLAGS"
-  LDFLAGS="$LDFLAGS -L${prefix}/lib"
-  AC_CHECK_LIB([z], [deflateSetHeader], [],
-    [AC_MSG_ERROR([libz >=1.2.2.1 not found at ${prefix}/lib. Install zlib or set --prefix=\$CONDA_PREFIX])])
-  LDFLAGS="$save_LDFLAGS"
-  AC_SUBST([LIBZ_LINK], ["-lz"])
-])
+save_LDFLAGS="$LDFLAGS"
+LDFLAGS="$LDFLAGS -L${prefix}/lib"
+AC_CHECK_LIB([z], [deflateSetHeader], [],
+  [AC_MSG_ERROR([libz >=1.2.2.1 not found at ${prefix}/lib. Install zlib or set --prefix=\$CONDA_PREFIX])])
+LDFLAGS="$save_LDFLAGS"
+AC_SUBST([LIBZ_LINK], ["-lz"])
+AC_SUBST([STATIC_LIBZ_INC], [""])
 
 
 #### miniz (required for --zip-html evidence ZIP archive support)
 
-# We have options for static linking (precompiled binaries) and dynamic linking (bioconda install)
-# Check for command line option and environmental variable versions of --with-static-miniz and WITH_STATIC_MINIZ
-AC_ARG_WITH([static-miniz],
-  [AS_HELP_STRING([--with-static-miniz=PATH], [Prefix to static install of miniz. Directory that has lib/ and include/ within it.])],
-  [with_static_miniz="$withval"],
-  [with_static_miniz="${WITH_STATIC_MINIZ:-}"]
-)
-AC_MSG_NOTICE([with_static_miniz = $with_static_miniz])
+# Dynamic linking to libminiz (bioconda install) — verify at ${prefix} and set
+# MINIZ_LINK/MINIZ_INC. (binarydist.sh links statically against its own
+# universal build of miniz by passing -I/-L paths and LIBS directly to
+# ./configure, ahead of these -lfoo flags resolving against ${prefix}/lib.)
 
-# 1) static linking to libminiz if command line option / environmental variable provided and library is found
-# 2) dynamic linking to libminiz — verify at ${prefix} and set MINIZ_LINK/MINIZ_INC
-
-AS_IF([test "x$with_static_miniz" != "x"], [
-  AS_IF([test -f "$with_static_miniz/lib/libminiz.a"], [
-    AC_MSG_NOTICE([Static linking to libminiz.a located in "$with_static_miniz/lib"])
-    AC_SUBST([MINIZ_INC],  ["-I$with_static_miniz/include"])
-    AC_SUBST([MINIZ_LINK], ["$with_static_miniz/lib/libminiz.a"])
-  ], [
-    AC_MSG_ERROR([Could not find libminiz.a for static linking in: "$with_static_miniz/lib"])
-  ])
-], [
-  save_CPPFLAGS="$CPPFLAGS"
-  save_LDFLAGS="$LDFLAGS"
-  CPPFLAGS="$CPPFLAGS -I${prefix}/include"
-  LDFLAGS="$LDFLAGS -L${prefix}/lib"
-  AC_CHECK_HEADER([miniz/miniz.h], [],
-    [AC_MSG_ERROR([miniz/miniz.h not found at ${prefix}/include. Install: conda install -c conda-forge miniz and configure with --prefix=\$CONDA_PREFIX])])
-  AC_CHECK_LIB([miniz], [mz_zip_writer_init_file], [],
-    [AC_MSG_ERROR([libminiz not found at ${prefix}/lib. Install: conda install -c conda-forge miniz and configure with --prefix=\$CONDA_PREFIX])])
-  CPPFLAGS="$save_CPPFLAGS"
-  LDFLAGS="$save_LDFLAGS"
-  AC_SUBST([MINIZ_INC],  [""])
-  AC_SUBST([MINIZ_LINK], ["-lminiz"])
-])
+save_CPPFLAGS="$CPPFLAGS"
+save_LDFLAGS="$LDFLAGS"
+CPPFLAGS="$CPPFLAGS -I${prefix}/include"
+LDFLAGS="$LDFLAGS -L${prefix}/lib"
+AC_CHECK_HEADER([miniz/miniz.h], [],
+  [AC_MSG_ERROR([miniz/miniz.h not found at ${prefix}/include. Install: conda install -c conda-forge miniz and configure with --prefix=\$CONDA_PREFIX])])
+AC_CHECK_LIB([miniz], [mz_zip_writer_init_file], [],
+  [AC_MSG_ERROR([libminiz not found at ${prefix}/lib. Install: conda install -c conda-forge miniz and configure with --prefix=\$CONDA_PREFIX])])
+CPPFLAGS="$save_CPPFLAGS"
+LDFLAGS="$save_LDFLAGS"
+AC_SUBST([MINIZ_INC],  [""])
+AC_SUBST([MINIZ_LINK], ["-lminiz"])
 
 
 # On Linux, export symbols so dladdr() can resolve names from the main binary
@@ -148,50 +115,44 @@ esac
 
 #### htslib (required for BAM/SAM reading and pileup)
 
-# We have options for static linking (precompiled binaries) and dynamic linking (bioconda install)
-AC_ARG_WITH([static-htslib],
-  [AS_HELP_STRING([--with-static-htslib=PATH], [Prefix to static install of htslib. Directory that has lib/ and include/ within it.])],
-  [with_static_htslib="$withval"],
-  [with_static_htslib="${WITH_STATIC_HTSLIB:-}"]
-)
-AC_MSG_NOTICE([with_static_htslib = $with_static_htslib])
+# Dynamic linking to libhts (bioconda install) — verify at ${prefix} and set
+# HTSLIB_LINK/HTSLIB_INC. (binarydist.sh links statically against its own
+# universal build of htslib by passing -I/-L paths and LIBS directly to
+# ./configure, ahead of these -lfoo flags resolving against ${prefix}/lib.)
 
-# 1) static linking to libhts if command line option / environmental variable provided and library is found
-# 2) dynamic linking to libhts via prefix otherwise
+save_CPPFLAGS="$CPPFLAGS"
+save_LDFLAGS="$LDFLAGS"
+save_LIBS="$LIBS"
+CPPFLAGS="$CPPFLAGS -I${prefix}/include"
+LDFLAGS="$LDFLAGS -L${prefix}/lib"
+# $CRAM_CODEC_LIBS (set by binarydist.sh to full .a paths for bzip2/xz) must be
+# present for this link check when statically linking: libhts.a has undefined
+# CRAM-codec symbols that only those archives resolve, and AC_CHECK_LIB's probe
+# program needs to link cleanly to detect -lhts. Dynamic/conda builds leave it
+# unset, so this is a no-op there (libhts.so resolves its own dependencies).
+LIBS="$LIBS $CRAM_CODEC_LIBS"
+AC_CHECK_HEADER([htslib/sam.h], [],
+  [AC_MSG_ERROR([htslib/sam.h not found at ${prefix}/include. Install: conda install -c bioconda htslib and configure with --prefix=\$CONDA_PREFIX])])
+AC_CHECK_LIB([hts], [hts_open], [],
+  [AC_MSG_ERROR([libhts not found at ${prefix}/lib. Install: conda install -c bioconda htslib and configure with --prefix=\$CONDA_PREFIX])])
+# Check whether this htslib version has sam_hdr_destroy (added in 1.10)
+LIBS="$LIBS -lhts"
+AC_CHECK_FUNC([sam_hdr_destroy],
+  [AC_DEFINE([HAVE_SAM_HDR_DESTROY], [1], [htslib has sam_hdr_destroy (>= 1.10)])])
+CPPFLAGS="$save_CPPFLAGS"
+LDFLAGS="$save_LDFLAGS"
+LIBS="$save_LIBS"
+AC_SUBST([HTSLIB_INC],  [""])
+AC_SUBST([HTSLIB_LINK], ["-lhts"])
 
-AS_IF([test "x$with_static_htslib" != "x"], [
-  AS_IF([test -f "$with_static_htslib/lib/libhts.a"], [
-    AC_MSG_NOTICE([Static linking to libhts.a located in "$with_static_htslib/lib"])
-    AC_SUBST([HTSLIB_INC],  ["-I$with_static_htslib/include"])
-    AC_SUBST([HTSLIB_LINK], ["$with_static_htslib/lib/libhts.a"])
-    # Check whether this htslib version has sam_hdr_destroy (added in 1.10)
-    save_CPPFLAGS="$CPPFLAGS"; save_LIBS="$LIBS"
-    CPPFLAGS="$CPPFLAGS -I$with_static_htslib/include"
-    LIBS="$LIBS $with_static_htslib/lib/libhts.a"
-    CPPFLAGS="$save_CPPFLAGS"; LIBS="$save_LIBS"
-  ], [
-    AC_MSG_ERROR([Could not find libhts.a for static linking in: "$with_static_htslib/lib"])
-  ])
-], [
-  save_CPPFLAGS="$CPPFLAGS"
-  save_LDFLAGS="$LDFLAGS"
-  save_LIBS="$LIBS"
-  CPPFLAGS="$CPPFLAGS -I${prefix}/include"
-  LDFLAGS="$LDFLAGS -L${prefix}/lib"
-  AC_CHECK_HEADER([htslib/sam.h], [],
-    [AC_MSG_ERROR([htslib/sam.h not found at ${prefix}/include. Install: conda install -c bioconda htslib and configure with --prefix=\$CONDA_PREFIX])])
-  AC_CHECK_LIB([hts], [hts_open], [],
-    [AC_MSG_ERROR([libhts not found at ${prefix}/lib. Install: conda install -c bioconda htslib and configure with --prefix=\$CONDA_PREFIX])])
-  # Check whether this htslib version has sam_hdr_destroy (added in 1.10)
-  LIBS="$LIBS -lhts"
-  AC_CHECK_FUNC([sam_hdr_destroy],
-    [AC_DEFINE([HAVE_SAM_HDR_DESTROY], [1], [htslib has sam_hdr_destroy (>= 1.10)])])
-  CPPFLAGS="$save_CPPFLAGS"
-  LDFLAGS="$save_LDFLAGS"
-  LIBS="$save_LIBS"
-  AC_SUBST([HTSLIB_INC],  [""])
-  AC_SUBST([HTSLIB_LINK], ["-lhts"])
-])
+# Lets binarydist.sh hand the final breseq/gdtools program links full .a paths
+# to htslib's CRAM-codec dependencies (bzip2/xz) — e.g.
+# ./configure CRAM_CODEC_LIBS="/path/to/libbz2.a /path/to/liblzma.a". Routed
+# through breseq_LDADD/gdtools_LDADD (not the global LIBS) so libtool doesn't
+# also see these static archives while linking the libbreseq.la convenience
+# library and emit "Linking the shared library ... against the static
+# library ... is not portable" warnings; conda/dynamic builds leave it unset.
+AC_ARG_VAR([CRAM_CODEC_LIBS], [Static libraries (e.g. full paths to libbz2.a and liblzma.a) to append to the breseq/gdtools link, after libhts, for CRAM codec support])
 
 
 AC_SUBST([LIBZ], [extern/zlib-1.3.1])

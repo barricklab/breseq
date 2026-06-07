@@ -46,6 +46,8 @@ INSTALL
 
 breseq-*
 
+binarydist_build
+
 .snakemake
 tests/*/output*
 tests/*/0*

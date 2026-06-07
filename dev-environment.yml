@@ -11,11 +11,16 @@ dependencies:
   - libtool
   - pkg-config
   - m4
-# Dynamically linked libraries. 
+  - cmake
+# Dynamically linked libraries.
 #   => Need to lock versions for consistency
   - zlib=1.3.2
   - miniz=3.1.1
   - htslib=1.23.1
+# Static-only prerequisites for binarydist.sh (CRAM codec support in htslib)
+#   => Need to lock versions for consistency
+  - bzip2=1.0.8
+  - xz=5.8.3
 # Command line tools run by breseq
 #  => Need to lock versions for consistency
   - samtools=1.23.1
