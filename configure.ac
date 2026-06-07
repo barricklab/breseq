@@ -140,61 +140,11 @@ AS_IF([test "x$with_static_miniz" != "x"], [
 ])
 
 
-#Find libunwind
-AC_ARG_WITH([libunwind],
-	AS_HELP_STRING([--without-libunwind], [Disable preferring to use libunwind for debug info]))
-
-AS_IF([test "x$with_libunwind" != "xno"], [
-  AC_CHECK_HEADER(libunwind.h, FOUND_LIBUNWIND_H=1, FOUND_LIBUNWIND_H=0)
-  AC_SEARCH_LIBS([unw_getcontext], [unwind], FOUND_LIBUNWIND=1,  FOUND_LIBUNWIND=0)
-
-  if [[ $FOUND_LIBUNWIND == 0 ]] && [[ $FOUND_LIBUNWIND_H == 1 ]]; then
-    AC_MSG_CHECKING([libunwind])
-    AC_MSG_CHECKING([for target architecture])
-    case x"$target" in
-    xNONE | x)
-    target_or_host="$host" ;;
-    *)
-    target_or_host="$target" ;;
-    esac
-    AC_MSG_RESULT([$target_or_host])
-
-    case "$target_or_host" in
-    i*86-*)
-    TARGET_PLATFORM="x86"
-    ;;
-
-    x86_64-*)
-    TARGET_PLATFORM="x86_64"
-    ;;
-
-    arm-*)
-    TARGET_PLATFORM="arm"
-    ;;
-    esac
-
-    AC_SEARCH_LIBS([_UL${TARGET_PLATFORM}_step], [unwind], FOUND_LIBUNWIND=1, [])
-
-    if [[ $FOUND_LIBUNWIND == 1 ]]; then
-        UNWIND_LIBS="-lunwind-$TARGET_PLATFORM"
-        AC_SUBST(UNWIND_LIBS)
-    fi
-  fi
-],
-[
-  FOUND_LIBUNWIND_H=0
-  FOUND_LIBUNWIND=0
-])
-
-
-if [[ $FOUND_LIBUNWIND == 1 ]] && [[ $FOUND_LIBUNWIND_H == 1 ]]; then
-    AC_MSG_RESULT([Using libunwind.h for backtrace.])
-    AC_DEFINE([HAVE_LIBUNWIND],[1],[Lib unwind])
-else
-    AC_MSG_RESULT([Using execinfo.h for backtrace.])
-fi
-
-
+# On Linux, export symbols so dladdr() can resolve names from the main binary
+case "$host_os" in
+  darwin*) ;;
+  *) LDFLAGS="$LDFLAGS -rdynamic" ;;
+esac
 
 #### htslib (required for BAM/SAM reading and pileup)
 

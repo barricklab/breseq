@@ -89,7 +89,7 @@ libbreseq_la_SOURCES = \
 	libbreseq/soft_clipping.h \
 	libbreseq/storable.h \
 	libbreseq/summary.h
-libbreseq_la_LIBADD = $(UNWIND_LIBS)
+libbreseq_la_LIBADD =
 
 bin_PROGRAMS = breseq gdtools
 

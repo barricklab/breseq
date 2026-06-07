@@ -43,9 +43,8 @@ LICENSE AND COPYRIGHT
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#if HAVE_LIBUNWIND
-  #include <libunwind.h>
-#endif
+#include <cxxabi.h>
+#include <dlfcn.h>
 
 // C++
 // Containers
@@ -123,7 +122,6 @@ namespace breseq {
       
     }
     
-#if HAVE_LIBUNWIND
     if (include_backtrace) {
 
       if (fatal) {
@@ -132,53 +130,25 @@ namespace breseq {
         cerr << "--------------------------------> STACK TRACE <---------------------------------" << endl;
       }
 
-      unw_cursor_t    cursor;
-      unw_context_t   context;
-      
-      unw_getcontext(&context);
-      unw_init_local(&cursor, &context);
-      
-      while (unw_step(&cursor) > 0)
-      {
-        unw_word_t  offset, pc;
-        char        fname[64];
-        
-        unw_get_reg(&cursor, UNW_REG_IP, &pc);
-        
-        fname[0] = '\0';
-        (void) unw_get_proc_name(&cursor, fname, sizeof(fname), &offset);
-        cerr << "0x" << hex << setw(16) << setfill('0') << pc << " " << fname << endl;
+      void *frames[50];
+      int nframes = backtrace(frames, 50);
+
+      for (int i = 1; i < nframes; i++) {
+        Dl_info info;
+        if (dladdr(frames[i], &info) && info.dli_sname) {
+          int status = 0;
+          char *demangled = abi::__cxa_demangle(info.dli_sname, nullptr, nullptr, &status);
+          const char *name = (status == 0 && demangled) ? demangled : info.dli_sname;
+          ptrdiff_t offset = (char*)frames[i] - (char*)info.dli_saddr;
+          cerr << "#" << dec << (i-1) << "  0x" << hex << setw(16) << setfill('0')
+               << (uintptr_t)frames[i] << "  " << name << " + " << dec << offset << endl;
+          free(demangled);
+        } else {
+          cerr << "#" << dec << (i-1) << "  0x" << hex << setw(16) << setfill('0')
+               << (uintptr_t)frames[i] << "  ???" << endl;
+        }
       }
     }
-    
-#else
-    //Alternative fallback version which uses backtrace_symbols
-    //This doesn't work with statically linked libraries.
-  
-    if (include_backtrace) {
-      
-      if (fatal) {
-        cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!> STACK TRACE <!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
-      } else {
-        cerr << "--------------------------------> STACK TRACE <---------------------------------" << endl;
-      }
-      
-      void *array[20];
-      size_t size;
-      char **strings;
-      size_t i;
-      
-      size = backtrace(array, 20);
-      strings = backtrace_symbols(array, size);
-      
-      printf ("Backtrace with %zd stack frames.\n", size);
-      
-      for (i = 0; i < size; i++)
-        cerr << strings[i] << endl;
-      
-      free (strings);
-    }
-#endif
     
     if (fatal) {
       cerr << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
