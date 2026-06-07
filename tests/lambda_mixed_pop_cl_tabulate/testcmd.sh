@@ -1,8 +1,12 @@
 #!/bin/bash
 
-#NOTE: This test must be run AFTER lambda_mixed_pop (which generates its input)
-
 SELF=`dirname ${BASH_SOURCE}`
+# This test must be run AFTER lambda_mixed_pop, which generates its input
+# (data/reference.bam, data/reference.fasta, data/reference.gff3). The
+# Snakefile parses TEST_DEPENDS to enforce this ordering when running tests
+# in parallel; common.sh ignores it (serial runners rely on sorted discovery
+# order, where lambda_mixed_pop already comes first).
+TEST_DEPENDS=lambda_mixed_pop
 . ${SELF}/../common.sh
 
 CURRENT_OUTPUTS[0]="${SELF}/contingency_loci.csv"
