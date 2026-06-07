@@ -45,11 +45,11 @@ EXTRA_DIST = \
 DOCSRCDIR=$(top_srcdir)/src/doc
 DOCBUILDDIR=$(abs_top_builddir)/src/doc/_build
 
-## Total core budget for parallel test execution. Override on the command
-## line, e.g. 'make test TEST_CORES=16'. Individual tests declare how many
-## of these cores they use via 'TEST_CORES=N' in their testcmd.sh (see
-## tests/common.sh and tests/Snakefile).
-TEST_CORES ?= 4
+## Total core budget for parallel test execution. Defaults to using all
+## available cores; override on the command line, e.g. 'make test TEST_CORES=16'.
+## Individual tests declare how many of these cores they use via 'TEST_CORES=N'
+## in their testcmd.sh (see tests/common.sh and tests/Snakefile).
+TEST_CORES ?= all
 
 ## Main hooks called after normal make steps
 
