@@ -1,0 +1,68 @@
+# Snakefile for running breseq's consistency tests in parallel.
+#
+# Each test lives in tests/<name>/testcmd.sh (see tests/common.sh for the
+# do_build/do_check/do_clean conventions those scripts follow -- this file
+# does not change those conventions, it just discovers and launches them).
+#
+# Usage (normally driven by 'make test' / 'make test-long' -- see Makefile.am):
+#   snakemake -s tests/Snakefile --cores N [--keep-going] [--config long=1]
+#
+# Each test declares how many cores it needs via a 'TEST_CORES=N' assignment
+# near the top of its testcmd.sh (see tests/common.sh). Snakemake schedules
+# tests in parallel so that the sum of cores in use never exceeds the total
+# budget passed via --cores.
+
+import glob
+import os
+import re
+
+SNAKEDIR = os.path.dirname(os.path.abspath(workflow.snakefile))
+workdir: SNAKEDIR
+
+RUN_LONG = bool(config.get("long", False))
+
+
+def discover_tests():
+    """Find test directories the same way tests/test.sh does: one level
+    below tests/, skipping '_'-prefixed directories, and skipping
+    directories with 'long' in the name unless long tests were requested."""
+    names = []
+    for path in sorted(glob.glob(os.path.join(SNAKEDIR, "*", "testcmd.sh"))):
+        name = os.path.basename(os.path.dirname(path))
+        if name.startswith("_"):
+            continue
+        if ("long" in name) and not RUN_LONG:
+            continue
+        names.append(name)
+    return names
+
+
+def parse_test_cores(name):
+    """Read the TEST_CORES=N declaration from a testcmd.sh, defaulting to 1
+    (matching the default set in tests/common.sh for tests that don't set it,
+    e.g. ones that only invoke gdtools)."""
+    with open(os.path.join(SNAKEDIR, name, "testcmd.sh")) as f:
+        for line in f:
+            m = re.match(r"^\s*TEST_CORES=(\d+)\s*$", line)
+            if m:
+                return int(m.group(1))
+    return 1
+
+
+TESTS = discover_tests()
+TEST_CORES = {name: parse_test_cores(name) for name in TESTS}
+
+
+rule all:
+    input:
+        [f"{test}/.test_done" for test in TESTS]
+
+
+rule run_test:
+    output:
+        touch("{test}/.test_done")
+    log:
+        "{test}/test.log"
+    threads: lambda wildcards: TEST_CORES.get(wildcards.test, 1)
+    shell:
+        "./run_logged_test.sh {wildcards.test} {log} {wildcards.test}/test.result"
