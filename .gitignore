@@ -1,3 +1,4 @@
+.claude
 .DS_Store
 .cproject
 .project
@@ -33,6 +34,7 @@ libtool
 aclocal.m4
 Makefile.in
 configure
+configure~
 
 autoscan.log
 configure.scan
