@@ -84,7 +84,7 @@ and launches `testcmd.sh test` for each test, it doesn't change those convention
   `./tests/run.sh`/`build.sh`/`rebuild.sh all` runners don't need it since their sorted discovery
   order already happens to run dependencies first.
 - **Logs**: each test's output is captured to `tests/<test_name>/test.log`; `make clean-tests`
-  removes these (along with `test.result`, `.test_done`, and Snakemake's `.snakemake/` directory).
+  removes these (along with `test.result`, `test_done`, and Snakemake's `.snakemake/` directory).
 - **Summary & CI**: after the run, `tests/print_test_summary.sh` prints a PASS/FAIL + timing table
   per test plus an overall total, and exits non-zero if any test failed — `make test`/`make
   test-long` propagate that status, so they're suitable for driving CI (e.g. GitHub Actions).

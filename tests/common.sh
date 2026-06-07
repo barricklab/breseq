@@ -165,7 +165,7 @@ do_clean() {
 	rm -Rf $1/0* $1/output* $1/data $1/output.gff3 $1/failed_compare.html
 
 	# Artifacts written by the parallel test runner (Snakefile / run_logged_test.sh)
-	rm -f $1/test.log $1/test.result $1/.test_done
+	rm -f $1/test.log $1/test.result $1/test_done
 
 }
 
