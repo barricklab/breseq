@@ -51,14 +51,17 @@ make test
 # Run all tests including long tests
 make test-long
 
-# Run a single test
-./tests/lambda_mixed_pop/testcmd.sh test
+# Run a single test (or 'all' for every test) directly, without Snakemake
+./tests/run.sh lambda_mixed_pop
 
 # Clean test outputs
 make clean-tests
 
-# Rebuild expected output after intentional changes
-./tests/lambda_mixed_pop/testcmd.sh rebuild
+# Rebuild expected output after intentional changes (re-runs the test; 'all' rebuilds everything)
+./tests/rebuild.sh lambda_mixed_pop
+
+# Promote a failed run's existing output to be the new expected output (no re-run)
+./tests/build.sh lambda_mixed_pop
 ```
 
 `make test`/`make test-long` write `tests/test.config` (sets `TESTBINPREFIX`, `BRESEQ_DATA_PATH`)
@@ -68,7 +71,7 @@ that every `testcmd.sh` dispatches into) lives in `tests/common.sh`; `Snakefile`
 and launches `testcmd.sh test` for each test, it doesn't change those conventions.
 
 - **Core budget**: control the total number of cores used across all parallel tests with
-  `make test TEST_CORES=16` (default 4). Each test declares how many of those cores *it* uses via
+  `make test TEST_CORES=16` (default: all available cores). Each test declares how many of those cores *it* uses via
   a `TEST_CORES=N` line near the top of its `testcmd.sh`, set *before* sourcing `common.sh` (see
   `tests/lambda_mixed_pop/testcmd.sh`); tests that don't set it (typically `gdtools`-only tests)
   default to `TEST_CORES=1`. `common.sh` derives `BRESEQ_TEST_THREAD_ARG="-j ${TEST_CORES}"` from
