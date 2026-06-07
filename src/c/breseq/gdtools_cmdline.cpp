@@ -3781,7 +3781,7 @@ int main(int argc, char* argv[]) {
 	
 	//Extract the sub-command argument.
 	string command;
-	char* argv_new[argc];
+	vector<char*> argv_new(argc);
 	int argc_new = argc - 1;
 
 	if (argc > 1) {
@@ -3813,75 +3813,75 @@ int main(int argc, char* argv[]) {
 	
   // Genome Diff Commands:
   if (command == "VALIDATE") {
-    return do_validate(argc_new, argv_new);
+    return do_validate(argc_new, argv_new.data());
   } else if (command == "APPLY") {
-    return do_apply(argc_new, argv_new);    
+    return do_apply(argc_new, argv_new.data());    
   } else if ( (command == "COMPARE") || (command == "ANNOTATE") ) {
-    return do_annotate(argc_new, argv_new);
+    return do_annotate(argc_new, argv_new.data());
   } else if (command == "CHECK") {
-    return do_check(argc_new, argv_new);  
+    return do_check(argc_new, argv_new.data());  
   } else if (command == "CHECK-PLOT") {
-    return do_check_plot(argc_new, argv_new);
+    return do_check_plot(argc_new, argv_new.data());
   } else if (command == "NOT-EVIDENCE") {        //TODO merge with FILTER
-    return do_not_evidence(argc_new, argv_new);
+    return do_not_evidence(argc_new, argv_new.data());
 	} else if (command == "MUTATIONS") {
-		return do_mutations(argc_new, argv_new);
+		return do_mutations(argc_new, argv_new.data());
   } else if (command == "PHYLOGENY"){
-    return do_phylogeny(argc_new, argv_new);
+    return do_phylogeny(argc_new, argv_new.data());
   } else if (command == "COUNT") {
-    return do_count(argc_new, argv_new);
+    return do_count(argc_new, argv_new.data());
   } else if (command == "NORMALIZE") {
-    return do_normalize_gd(argc_new, argv_new);
+    return do_normalize_gd(argc_new, argv_new.data());
   } else if (command == "FILTER") {
-		return do_remove_gd(argc_new, argv_new);
+		return do_remove_gd(argc_new, argv_new.data());
 	} else if (command == "REMOVE") {
-		return do_remove_gd(argc_new, argv_new);
+		return do_remove_gd(argc_new, argv_new.data());
 	} else if (command == "INTERSECT") {
-    return do_intersection(argc_new, argv_new);
+    return do_intersection(argc_new, argv_new.data());
 	} else if ( (command == "MERGE") || (command == "UNION") ) {
-		return do_merge(argc_new, argv_new);
+		return do_merge(argc_new, argv_new.data());
   } else if (command == "SUBTRACT") {
-    return do_subtract(argc_new, argv_new);
+    return do_subtract(argc_new, argv_new.data());
   } else if (command == "WEIGHTS") {
-    return do_weights(argc_new, argv_new);
+    return do_weights(argc_new, argv_new.data());
 	} else if (command == "CONVERT") {
-		return do_convert(argc_new, argv_new);
+		return do_convert(argc_new, argv_new.data());
   } else if (command == "GD2VCF") {             
-    return do_gd2vcf(argc_new, argv_new);
+    return do_gd2vcf(argc_new, argv_new.data());
   } else if (command == "VCF2GD") {             
-    return do_vcf2gd( argc_new, argv_new);
+    return do_vcf2gd( argc_new, argv_new.data());
   } else if (command == "GD2GVF") {             
-    return do_gd2gvf( argc_new, argv_new);
+    return do_gd2gvf( argc_new, argv_new.data());
   } else if (command == "GD2CIRCOS"){
-    return do_gd2circos(argc_new, argv_new);
+    return do_gd2circos(argc_new, argv_new.data());
   } else if(command == "MIRA2GD"){
-    return do_mira2gd(argc_new, argv_new);
+    return do_mira2gd(argc_new, argv_new.data());
   } else if(command == "HEADER"){
-    return do_header(argc_new, argv_new);
+    return do_header(argc_new, argv_new.data());
 	} else if(command == "REHEADER"){
-		return do_reheader(argc_new, argv_new);
+		return do_reheader(argc_new, argv_new.data());
   } else if ((command == "RANDOM-MUTATIONS") || (command == "SIMULATE-MUTATIONS")) {
-    return do_simulate_mutations(argc_new, argv_new);
+    return do_simulate_mutations(argc_new, argv_new.data());
   } else if (command == "MUTATIONS-TO-EVIDENCE") {
-    return do_mutations_to_evidence(argc_new, argv_new);
+    return do_mutations_to_evidence(argc_new, argv_new.data());
   } else if (command == "DOWNLOAD") {
-    return do_download(argc_new, argv_new);
+    return do_download(argc_new, argv_new.data());
   } else if (command == "RUNFILE") {
-    return do_runfile(argc_new, argv_new);
+    return do_runfile(argc_new, argv_new.data());
   } else if (command == "MRNA-STABILITY") {
-    return do_mrna_stability(argc_new, argv_new);
+    return do_mrna_stability(argc_new, argv_new.data());
   } else if (command == "PROTEOME") {
-		return do_translate_proteome(argc_new, argv_new);
+		return do_translate_proteome(argc_new, argv_new.data());
 	} else if (command == "GD2COV") {
-		return do_gd2coverage(argc_new, argv_new);
+		return do_gd2coverage(argc_new, argv_new.data());
 	} else if (command == "DELETED-GENES") {
-		return do_deleted_genes(argc_new, argv_new);
+		return do_deleted_genes(argc_new, argv_new.data());
 	} else if (command =="MUMMER2MASK") {
-		return do_mummer2mask(argc_new, argv_new);
+		return do_mummer2mask(argc_new, argv_new.data());
 	} else if (command =="MASK") {
-		return do_mask_gd(argc_new, argv_new);
+		return do_mask_gd(argc_new, argv_new.data());
 	} else if (command =="READ-COUNT") {
-		return do_read_count(argc_new, argv_new);
+		return do_read_count(argc_new, argv_new.data());
   } else {
     cout << "Unrecognized command: " << command << endl;
     gdtools_usage();

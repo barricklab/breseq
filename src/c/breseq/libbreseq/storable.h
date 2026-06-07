@@ -49,10 +49,10 @@ namespace breseq
 		{
 			uint32_t size;
 			infile.read(reinterpret_cast<char*>(&size), sizeof(uint32_t));
-			char input[size+1];
-			infile.read(input, size * sizeof(char));
+			vector<char> input(size+1);
+			infile.read(input.data(), size * sizeof(char));
       input[size] = '\0'; // need to null terminate
-			output = string(input);
+			output = string(input.data());
 		}
     
     static void write_to_file(ofstream& outfile, Storable& s)

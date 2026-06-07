@@ -946,7 +946,7 @@ inline string join(const list<string>& values, const string& separator)
   {
     bool debug = false;
     
-    uint32_t dest_len = 1024;
+    const uint32_t dest_len = 1024;
     char path[dest_len];
     
     /* the easiest case: we are in linux */

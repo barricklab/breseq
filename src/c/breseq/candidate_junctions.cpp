@@ -296,12 +296,12 @@ namespace breseq {
         (index_1a < index_2a) || (index_1a == index_2a && index_1b < index_2b) || !not_done_2);
 
       if (take_1) {
-        if (!(b1->core.flag & BAM_FUNMAP)) sam_write1(out, hdr1, b1);
+        if (!(b1->core.flag & BAM_FUNMAP)) (void) sam_write1(out, hdr1, b1);
         not_done_1 = (sam_read1(in1, hdr1, b1) >= 0);
         if (not_done_1) bam_to_read_index(bam_get_qname(b1), index_1a, index_1b);
         else { index_1a = index_1b = numeric_limits<int64_t>::max(); }
       } else {
-        if (!(b2->core.flag & BAM_FUNMAP)) sam_write1(out, hdr2, b2);
+        if (!(b2->core.flag & BAM_FUNMAP)) (void) sam_write1(out, hdr2, b2);
         not_done_2 = (sam_read1(in2, hdr2, b2) >= 0);
         if (not_done_2) bam_to_read_index(bam_get_qname(b2), index_2a, index_2b);
         else { index_2a = index_2b = numeric_limits<int64_t>::max(); }

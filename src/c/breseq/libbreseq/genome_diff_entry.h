@@ -402,8 +402,7 @@ namespace breseq {
     
     //! Functor. Sorts cDiffEntrys in descending order depending on given fields that
     //can be evaluated as an unsigned integer.
-    struct descending_by_scores : public binary_function
-    <diff_entry_ptr_t, diff_entry_ptr_t, bool>
+    struct descending_by_scores
     {
       
       //! Constructor
@@ -440,7 +439,7 @@ namespace breseq {
     
     //! Functors for selecting certain types of entries
     
-    struct is_type: unary_function <diff_entry_ptr_t, bool>
+    struct is_type
     {
       //! Constructor
       explicit is_type(const gd_entry_type type)
@@ -455,7 +454,7 @@ namespace breseq {
       gd_entry_type m_type;
     };
     
-    struct is_not_type: unary_function <diff_entry_ptr_t, bool>
+    struct is_not_type
     {
       //! Constructor
       explicit is_not_type(const gd_entry_type type)
@@ -470,7 +469,7 @@ namespace breseq {
       gd_entry_type m_type;
     };
     
-    struct no_show:public unary_function<diff_entry_ptr_t, bool>
+    struct no_show
     {
       virtual bool operator() (const diff_entry_ptr_t& cDiffEntry) const
       {
@@ -479,7 +478,7 @@ namespace breseq {
     };
     
     
-    struct rejected:public unary_function<diff_entry_ptr_t,bool>
+    struct rejected
     {
       virtual bool operator() (diff_entry_ptr_t cDiffEntry)
       {
@@ -487,28 +486,28 @@ namespace breseq {
       }
     };
     
-    struct rejected_and_not_user_defined:public unary_function<diff_entry_ptr_t,bool> {
+    struct rejected_and_not_user_defined {
       virtual bool operator() (diff_entry_ptr_t cDiffEntry)
       {
         return cDiffEntry->entry_exists(REJECT) && !cDiffEntry->entry_exists("user_defined");
       }
     };
     
-    struct ignored_and_not_user_defined:public unary_function<diff_entry_ptr_t,bool> {
+    struct ignored_and_not_user_defined {
       virtual bool operator() (diff_entry_ptr_t cDiffEntry)
       {
         return cDiffEntry->entry_exists(IGNORE) && !cDiffEntry->entry_exists("user_defined");
       }
     };
     
-    struct is_not_consensus:public unary_function<diff_entry_ptr_t,bool> {
+    struct is_not_consensus {
       virtual bool operator() (diff_entry_ptr_t cDiffEntry)
       {
         return from_string<double>((*cDiffEntry)[FREQUENCY]) != 1.0;
       }
     };
     
-    struct ignored_but_not_circular:public unary_function<diff_entry_ptr_t,bool> {
+    struct ignored_but_not_circular {
       virtual bool operator() (diff_entry_ptr_t cDiffEntry)
       {
         if ( (*cDiffEntry).entry_exists(IGNORE) ) {
@@ -520,8 +519,13 @@ namespace breseq {
     
     //! Functor. Wraps cDiffEntry.entry_exists() for use in STL algorithms.
     //Returns true if a cDiffEntry contains the given field_key.
-    struct field_exists : public unary_function <diff_entry_ptr_t, bool>
+    struct field_exists
     {
+      // Required by std::not1(), which needs argument_type/result_type
+      // (formerly supplied by the now-deprecated std::unary_function base).
+      typedef diff_entry_ptr_t argument_type;
+      typedef bool result_type;
+
       //! Constructor
       explicit field_exists (const diff_entry_key_t& field_key)
       : m_field_key(field_key) {}
@@ -536,7 +540,7 @@ namespace breseq {
     
     //! Functor. Wraps cDiffEntry.entry_exists() for use in STL algorithms.
     //Returns true if a cDiffEntry contains the given field_key.
-    struct field_equals : public unary_function <diff_entry_ptr_t, bool>
+    struct field_equals
     {
       //! Constructor
       explicit field_equals (const string& field_key, const string& field_value)
@@ -554,7 +558,7 @@ namespace breseq {
     //! Functor. Wraps cDiffEntry.entry_exists() for use in STL algorithms.
     //Returns true if a cDiffEntry contains all of the given field_keys.
     //ie:  cDiffEntry[field_key_1] && cDiffEntry[field_key_2]
-    struct fields_exist : public unary_function <diff_entry_ptr_t, bool>
+    struct fields_exist
     {
       //! Constructor
       explicit fields_exist (const vector<diff_entry_key_t>& field_keys)

@@ -105,12 +105,7 @@ namespace breseq {
 			redundant[0] = v; redundant[1] = v; redundant[2] = v;
 		}
 		
-		position_coverage& operator=(const position_coverage& that) {
-			if(this != &that) {
-				memcpy(this, &that, sizeof(that));
-			}
-			return *this;
-		}
+		position_coverage& operator=(const position_coverage& that) = default;
 		
 		//! Sum the position coverage fields.
 		void sum() {
