@@ -22,6 +22,14 @@ fi
 BRESEQ="${TESTBINPREFIX}/breseq"
 GDTOOLS="${TESTBINPREFIX}/gdtools"
 
+# Number of cores this test needs. testcmd.sh files that run breseq commands
+# in parallel should set TEST_CORES (e.g. TEST_CORES=4) *before* sourcing this
+# script. It is also used by the parallel test runner (Snakefile) to schedule
+# tests against a total core budget, so it must reflect what the test actually
+# uses. Tests that don't set it (e.g. ones that only call gdtools) default to 1.
+TEST_CORES=${TEST_CORES:-1}
+BRESEQ_TEST_THREAD_ARG="-j ${TEST_CORES}"
+
 # path to test data:
 DATADIR=${COMMONDIR}/data
 # this is a find-compatible list of files that we'll hash:
@@ -60,6 +68,7 @@ do_show() {
 # $1 == testdir
 #
 do_check() {
+	CHECK_FAILED=0
 	NEEDS_UPDATING=0
     for EXPECTED_OUTPUT in "${EXPECTED_OUTPUTS[@]}"; do
 		if [[ ! -e ${EXPECTED_OUTPUT} ]]; then
@@ -93,6 +102,7 @@ do_check() {
 		echo "Comparing files: \"${CURRENT_OUTPUTS[$i]}\" \"${EXPECTED_OUTPUTS[$i]}\""
 		CHK=$(${DIFF_BIN} "${CURRENT_OUTPUTS[$i]}" "${EXPECTED_OUTPUTS[$i]}")
 		if [[ "$?" -ne 0 || $CHK ]]; then
+			CHECK_FAILED=1
 			echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 			echo "Failed check"
 			#${HASH} --check ${EXPECTED}
@@ -154,6 +164,9 @@ do_clean() {
 	done
 	rm -Rf $1/0* $1/output* $1/data $1/output.gff3 $1/failed_compare.html
 
+	# Artifacts written by the parallel test runner (Snakefile / run_logged_test.sh)
+	rm -f $1/test.log $1/test.result $1/.test_done
+
 }
 
 
@@ -181,6 +194,8 @@ do_test() {
         ;;
         check)
             do_check $TESTDIR
+            [[ "${CHECK_FAILED}" -ne 0 ]] && exit 1
+            exit 0
         ;;
         clean)
             do_clean $TESTDIR
@@ -196,6 +211,8 @@ do_test() {
         test)
             do_breseq
             do_check $TESTDIR
+            [[ "${CHECK_FAILED}" -ne 0 ]] && exit 1
+            exit 0
         ;;
         vcheck)
             do_vcheck $TESTDIR

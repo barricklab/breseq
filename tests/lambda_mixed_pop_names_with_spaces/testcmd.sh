@@ -1,6 +1,7 @@
 #!/bin/bash
 
 SELF=`dirname ${BASH_SOURCE}`
+TEST_CORES=4
 . ${SELF}/../common.sh
 
 CURRENT_OUTPUTS[0]="${SELF}/output output/output/annotated.gd"

@@ -22,3 +22,7 @@ dependencies:
   - bowtie2=2.5.5
   - r-base=4.5.3
   - phylip=3.697
+# Used to run the consistency tests in parallel ('make test')
+#  => See tests/Snakefile
+  - python
+  - snakemake-minimal

@@ -45,6 +45,12 @@ EXTRA_DIST = \
 DOCSRCDIR=$(top_srcdir)/src/doc
 DOCBUILDDIR=$(abs_top_builddir)/src/doc/_build
 
+## Total core budget for parallel test execution. Override on the command
+## line, e.g. 'make test TEST_CORES=16'. Individual tests declare how many
+## of these cores they use via 'TEST_CORES=N' in their testcmd.sh (see
+## tests/common.sh and tests/Snakefile).
+TEST_CORES ?= 4
+
 ## Main hooks called after normal make steps
 
 all-local :
@@ -83,31 +89,49 @@ dist-hook:
 	## Set up run_tests.sh and environmental variables
 	echo "export TESTBINPREFIX=$(top_srcdir)/src/c/breseq" > $(distdir)/tests/test.config;
 	echo "export BRESEQ_DATA_PATH=$(top_srcdir)/src/c/breseq" >> $(distdir)/tests/test.config;
-	echo "export BRESEQ_TEST_THREAD_ARG=\"-j 4\"" >> $(distdir)/tests/test.config;
 
 	echo "tests/test.sh clean tests" > ${distdir}/run_tests.sh
 	echo "tests/test.sh test tests" >> ${distdir}/run_tests.sh
 	chmod a+x ${distdir}/run_tests.sh
 
+## 'make test'/'make test-long' run the consistency tests in parallel via
+## Snakemake (see tests/Snakefile), bounded by a total core budget
+## (TEST_CORES, default 4; override with e.g. 'make test TEST_CORES=16').
+## Each test writes its output to tests/<name>/test.log (removed by
+## 'make clean-tests') and a one-line tests/<name>/test.result that
+## tests/print_test_summary.sh aggregates into the final pass/fail + timing
+## summary. The overall exit status reflects whether every test passed, so
+## this is suitable for driving CI (e.g. GitHub Actions).
 test:
 	## NEW method: 'make test' after 'make'
 	## This must be located here so that it is run after EXTRA_DIST files are included
 	echo "export TESTBINPREFIX=$(top_srcdir)/src/c/breseq" > $(top_srcdir)/tests/test.config;
 	echo "export BRESEQ_DATA_PATH=$(top_srcdir)/src/c/breseq" >> $(top_srcdir)/tests/test.config;
-	echo "export BRESEQ_TEST_THREAD_ARG=\"-j 4\"" >> $(top_srcdir)/tests/test.config;
-	$(top_srcdir)/tests/test.sh test tests
+	START=$$(date '+%s'); \
+	snakemake -s $(top_srcdir)/tests/Snakefile --cores $(TEST_CORES) --keep-going; \
+	SNAKEMAKE_STATUS=$$?; \
+	END=$$(date '+%s'); \
+	$(top_srcdir)/tests/print_test_summary.sh $(top_srcdir)/tests $$((END - START)); \
+	SUMMARY_STATUS=$$?; \
+	test $$SNAKEMAKE_STATUS -eq 0 -a $$SUMMARY_STATUS -eq 0
 
 test-long:
 	## NEW method: 'make test' after 'make'
 	## This must be located here so that it is run after EXTRA_DIST files are included
 	echo "export TESTBINPREFIX=$(top_srcdir)/src/c/breseq" > $(top_srcdir)/tests/test.config;
 	echo "export BRESEQ_DATA_PATH=$(top_srcdir)/src/c/breseq" >> $(top_srcdir)/tests/test.config;
-	echo "export BRESEQ_TEST_THREAD_ARG=\"-j 4\"" >> $(top_srcdir)/tests/test.config;
-	$(top_srcdir)/tests/test.sh test tests long
+	START=$$(date '+%s'); \
+	snakemake -s $(top_srcdir)/tests/Snakefile --cores $(TEST_CORES) --keep-going --config long=1; \
+	SNAKEMAKE_STATUS=$$?; \
+	END=$$(date '+%s'); \
+	$(top_srcdir)/tests/print_test_summary.sh $(top_srcdir)/tests $$((END - START)); \
+	SUMMARY_STATUS=$$?; \
+	test $$SNAKEMAKE_STATUS -eq 0 -a $$SUMMARY_STATUS -eq 0
 
 
 clean-tests:
 	##This is commented out to not break make distcheck, which requires we not modify the source in this way?
 	##echo "export TESTBINPREFIX=$(top_srcdir)/src/c/breseq" > $(top_srcdir)/tests/test.config;
 	$(top_srcdir)/tests/test.sh clean tests long
+	rm -rf $(top_srcdir)/tests/.snakemake
 

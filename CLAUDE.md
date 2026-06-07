@@ -61,13 +61,29 @@ make clean-tests
 ./tests/lambda_mixed_pop/testcmd.sh rebuild
 ```
 
-`make test` writes `tests/test.config` (sets `TESTBINPREFIX`, `BRESEQ_DATA_PATH`, `BRESEQ_TEST_THREAD_ARG`) and then runs `tests/test.sh test tests`. The test infra lives in `tests/common.sh`.
+`make test`/`make test-long` write `tests/test.config` (sets `TESTBINPREFIX`, `BRESEQ_DATA_PATH`)
+and then run all discovered tests **in parallel** via Snakemake (`tests/Snakefile`), bounded by a
+total core budget. The shared test infra (the `do_build`/`do_check`/`do_clean`/... conventions
+that every `testcmd.sh` dispatches into) lives in `tests/common.sh`; `Snakefile` only discovers
+and launches `testcmd.sh test` for each test, it doesn't change those conventions.
 
-Test directories prefixed with `_` are skipped. Directories with `long` in their path are only run with `make test-long`.
+- **Core budget**: control the total number of cores used across all parallel tests with
+  `make test TEST_CORES=16` (default 4). Each test declares how many of those cores *it* uses via
+  a `TEST_CORES=N` line near the top of its `testcmd.sh`, set *before* sourcing `common.sh` (see
+  `tests/lambda_mixed_pop/testcmd.sh`); tests that don't set it (typically `gdtools`-only tests)
+  default to `TEST_CORES=1`. `common.sh` derives `BRESEQ_TEST_THREAD_ARG="-j ${TEST_CORES}"` from
+  this, so the same value drives both scheduling and the actual thread count passed to `breseq`.
+- **Logs**: each test's output is captured to `tests/<test_name>/test.log`; `make clean-tests`
+  removes these (along with `test.result`, `.test_done`, and Snakemake's `.snakemake/` directory).
+- **Summary & CI**: after the run, `tests/print_test_summary.sh` prints a PASS/FAIL + timing table
+  per test plus an overall total, and exits non-zero if any test failed — `make test`/`make
+  test-long` propagate that status, so they're suitable for driving CI (e.g. GitHub Actions).
+
+Test directories prefixed with `_` are skipped. Directories with `long` in their name are only run with `make test-long`.
 
 **Creating a new test:**
 1. Add data files under `tests/data/` (reuse existing data when possible; don't add large files to git).
-2. Create `tests/<test_name>/testcmd.sh` by copying an existing one and editing the `TESTCMD=` and `CURRENT_OUTPUTS`/`EXPECTED_OUTPUTS` lines.
+2. Create `tests/<test_name>/testcmd.sh` by copying an existing one and editing the `TESTCMD=` and `CURRENT_OUTPUTS`/`EXPECTED_OUTPUTS` lines. If the test runs `breseq` with multiple threads, set `TEST_CORES=N` (matching the `-j` value) before sourcing `common.sh`; otherwise leave it unset (defaults to 1).
 3. Run `./tests/<test_name>/testcmd.sh rebuild` to generate `expected.gd`.
 
 ## Code Architecture
