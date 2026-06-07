@@ -1389,7 +1389,7 @@ void bam_file::open_write(const string& bam_file_name, const string& fasta_file_
   m_bam_file = hts_open(bam_file_name.c_str(), "wb");
   ASSERT(m_bam_file, "Could not open bam file: " + bam_file_name);
   bam_header = make_bam_header_from_faidx(fasta_file_name);
-  sam_hdr_write(m_bam_file, bam_header);
+  (void) sam_hdr_write(m_bam_file, bam_header);
 }
 
 bool bam_file::read_alignments(alignment_list& alignments, bool paired)

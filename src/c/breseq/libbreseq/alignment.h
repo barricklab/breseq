@@ -419,23 +419,23 @@ public:
     l_data = 0;
     m_data = 0;
     data = NULL;
-    bam_copy1(this, &_in);
+    (void) bam_copy1(this, &_in);
   }
-    
+
   bam_alignment(const alignment_wrapper& _in)  : alignment_wrapper(this)
   {
       l_data = 0;
       m_data = 0;
       data = NULL;
-      bam_copy1(this, _in._a);
+      (void) bam_copy1(this, _in._a);
   }
-  
+
   bam_alignment(const bam_alignment& _in) : alignment_wrapper(_in._a)
   {
     l_data = 0;
-    m_data = 0; 
+    m_data = 0;
     data = NULL;
-    bam_copy1(this, &_in);
+    (void) bam_copy1(this, &_in);
   }
   
   ~bam_alignment()

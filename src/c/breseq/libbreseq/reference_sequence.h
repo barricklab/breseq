@@ -1298,7 +1298,7 @@ public:
   int32_t alignment_score(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info);
 
   string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info);
-  struct sort_by_file_name : public binary_function<string, string, bool> {
+  struct sort_by_file_name {
 
     explicit sort_by_file_name(const string& name)
       : m_name(name) {}

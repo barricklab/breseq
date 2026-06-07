@@ -2603,10 +2603,10 @@ int main(int argc, char* argv[]) {
   
 	// Extract the sub-command argument
 	string command;
-	char* argv_new[argc];
+	vector<char*> argv_new(argc);
 	int argc_new = argc - 1;
 
-  
+
 	if (argc > 1) {
 
 		command = argv[1];
@@ -2635,9 +2635,9 @@ int main(int argc, char* argv[]) {
   }
   
   if (command == "SUMMARIZE-FASTQ") {
-    return do_summarize_fastq(argc_new, argv_new);
+    return do_summarize_fastq(argc_new, argv_new.data());
   } else if (command == "SUMMARIZE-REFERENCE") {
-    return do_summarize_reference(argc_new, argv_new);
+    return do_summarize_reference(argc_new, argv_new.data());
   }
   
   // Print out our generic header
@@ -2645,17 +2645,17 @@ int main(int argc, char* argv[]) {
   
   // Sequence COMMANDs:
   if (command == "CONVERT-FASTQ") {
-		return do_convert_fastq(argc_new, argv_new);
+		return do_convert_fastq(argc_new, argv_new.data());
 	} else if (command == "CONVERT-REFERENCE") {
-		return do_convert_reference(argc_new, argv_new);
+		return do_convert_reference(argc_new, argv_new.data());
   } else if ((command == "GET-SEQUENCE") || (command == "SUBSEQUENCE")) {
-    return do_get_sequence(argc_new, argv_new);
+    return do_get_sequence(argc_new, argv_new.data());
     
   // Breseq Post-Run Commands:
   } else if (command == "BAM2ALN") {
-    return do_bam2aln( argc_new, argv_new);  
+    return do_bam2aln( argc_new, argv_new.data());  
   } else if (command == "BAM2COV") {
-    return do_bam2cov( argc_new, argv_new);
+    return do_bam2cov( argc_new, argv_new.data());
     
     
   // Experimental and Development Commands:
@@ -2663,23 +2663,23 @@ int main(int argc, char* argv[]) {
   // None of these commands are documented for use by others. 
   // They may change without warning.
   } else if ((command == "SIMULATE-READ") ||  (command == "SIMULATE-READS")) {
-    return do_simulate_reads(argc_new, argv_new);
+    return do_simulate_reads(argc_new, argv_new.data());
   } else if (command == "CNV") {
-    return do_copy_number_variation(argc_new, argv_new);
+    return do_copy_number_variation(argc_new, argv_new.data());
   } else if (command == "COVERAGE-BIAS"){
-    return do_coverage_bias(argc_new, argv_new);
+    return do_coverage_bias(argc_new, argv_new.data());
   } else if ( (command == "ERROR_COUNT") || (command == "ERROR-COUNT") ) {
-    return do_error_count(argc_new, argv_new);
+    return do_error_count(argc_new, argv_new.data());
   } else if (command == "JUNCTION-POLYMORPHISM") {
-    return do_junction_polymorphism(argc_new, argv_new);
+    return do_junction_polymorphism(argc_new, argv_new.data());
   } else if (command == "CL-TABULATE") {
-    return do_tabulate_contingency_loci(argc_new, argv_new);
+    return do_tabulate_contingency_loci(argc_new, argv_new.data());
   } else if (command == "SOFT-CLIPPING") {
-    return do_analyze_soft_clipping(argc_new, argv_new);
+    return do_analyze_soft_clipping(argc_new, argv_new.data());
   } else if (command == "CL-SIGNIFICANCE") {
-    return do_analyze_contingency_loci_significance( argc_new, argv_new);
+    return do_analyze_contingency_loci_significance( argc_new, argv_new.data());
   } else if (command == "ASSEMBLE-UNMATCHED") {
-    return do_assemble_unmatched( argc_new, argv_new);
+    return do_assemble_unmatched( argc_new, argv_new.data());
   }
   else {
     // Not a sub-command. Use original argument list.
