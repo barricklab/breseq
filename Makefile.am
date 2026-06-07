@@ -105,8 +105,11 @@ dist-hook:
 test:
 	## NEW method: 'make test' after 'make'
 	## This must be located here so that it is run after EXTRA_DIST files are included
-	echo "export TESTBINPREFIX=$(top_srcdir)/src/c/breseq" > $(top_srcdir)/tests/test.config;
-	echo "export BRESEQ_DATA_PATH=$(top_srcdir)/src/c/breseq" >> $(top_srcdir)/tests/test.config;
+	## NOTE: these must be absolute paths (abs_top_srcdir, not top_srcdir) -- the
+	## Snakefile changes the working directory to tests/ before running each test,
+	## so a relative TESTBINPREFIX/BRESEQ_DATA_PATH would no longer resolve correctly.
+	echo "export TESTBINPREFIX=$(abs_top_srcdir)/src/c/breseq" > $(top_srcdir)/tests/test.config;
+	echo "export BRESEQ_DATA_PATH=$(abs_top_srcdir)/src/c/breseq" >> $(top_srcdir)/tests/test.config;
 	START=$$(date '+%s'); \
 	snakemake -s $(top_srcdir)/tests/Snakefile --cores $(TEST_CORES) --keep-going; \
 	SNAKEMAKE_STATUS=$$?; \
@@ -118,8 +121,9 @@ test:
 test-long:
 	## NEW method: 'make test' after 'make'
 	## This must be located here so that it is run after EXTRA_DIST files are included
-	echo "export TESTBINPREFIX=$(top_srcdir)/src/c/breseq" > $(top_srcdir)/tests/test.config;
-	echo "export BRESEQ_DATA_PATH=$(top_srcdir)/src/c/breseq" >> $(top_srcdir)/tests/test.config;
+	## NOTE: these must be absolute paths -- see comment in the 'test' target above.
+	echo "export TESTBINPREFIX=$(abs_top_srcdir)/src/c/breseq" > $(top_srcdir)/tests/test.config;
+	echo "export BRESEQ_DATA_PATH=$(abs_top_srcdir)/src/c/breseq" >> $(top_srcdir)/tests/test.config;
 	START=$$(date '+%s'); \
 	snakemake -s $(top_srcdir)/tests/Snakefile --cores $(TEST_CORES) --keep-going --config long=1; \
 	SNAKEMAKE_STATUS=$$?; \
