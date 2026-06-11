@@ -7,6 +7,7 @@ TEST_CORES=4
 CURRENT_OUTPUTS[0]="${SELF}/output/annotated.gd"
 EXPECTED_OUTPUTS[0]="${SELF}/expected.gd"
 REFERENCE_ARG="-r ${DATADIR}/lambda/lambda.gbk"
+COMPARE_ARG="--genbank-field-for-seq-id VERSION"
 
 TESTCMD="\
     ${BRESEQ} \
