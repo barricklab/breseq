@@ -1390,7 +1390,21 @@ inline int SYSTEM(string command, bool silent = false, bool ignore_errors = fals
 inline string remove_file(string path, bool silent = false, bool ignore_errors = false)
 {
   //remove(path.c_str()); // @JEB this does not work with wildcards
-  SYSTEM("rm -f " + double_quote(path), silent, ignore_errors);
+  // If path contains a glob pattern, quote only the directory portion (so
+  // paths with spaces are handled correctly) and leave the filename pattern
+  // unquoted so the shell can expand it.
+  string command;
+  if (path.find_first_of("*?[") != string::npos) {
+    size_t slash_pos = path.find_last_of('/');
+    if (slash_pos != string::npos) {
+      command = "rm -f " + double_quote(path.substr(0, slash_pos)) + "/" + path.substr(slash_pos + 1);
+    } else {
+      command = "rm -f " + path;
+    }
+  } else {
+    command = "rm -f " + double_quote(path);
+  }
+  SYSTEM(command, silent, ignore_errors);
   return path;
 }
 

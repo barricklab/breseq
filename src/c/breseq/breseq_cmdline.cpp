@@ -1434,7 +1434,15 @@ int breseq_default_action(int argc, char* argv[])
   Summary summary;
 	Settings settings(argc, argv);
 	settings.check_installed();
-  
+
+  // If the pipeline has already completed successfully, don't redo any work
+  // (the numbered intermediate stage directories may have already been removed).
+  if (file_exists(settings.output_done_file_name.c_str())) {
+    cerr << "+++   ALREADY COMPLETE   Output" << endl;
+    cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
+    return 0;
+  }
+
   //Quick check that any provided header GD file is valid
   cGenomeDiff header_gd;
   if (settings.header_genome_diff_file_name.size() > 0) {
@@ -2582,6 +2590,21 @@ int breseq_default_action(int argc, char* argv[])
     
 		settings.done_step(settings.output_done_file_name);
 
+    // Remove the numbered intermediate stage directories now that the
+    // pipeline is complete -- everything needed going forward is in
+    // settings.data_path and settings.output_path.
+    if (!settings.keep_all_intermediates) {
+      cerr << "Removing intermediate files..." << endl;
+      remove_folder(settings.sequence_conversion_path, false, true);
+      remove_folder(settings.reference_alignment_path, false, true);
+      remove_folder(settings.candidate_junction_path, false, true);
+      remove_folder(settings.candidate_junction_alignment_path, false, true);
+      remove_folder(settings.alignment_resolution_path, false, true);
+      remove_folder(settings.bam_path, false, true);
+      remove_folder(settings.error_calibration_path, false, true);
+      remove_folder(settings.mutation_identification_path, false, true);
+      remove_folder(settings.copy_number_variation_path, false, true);
+    }
 
 	}
   cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
