@@ -1135,6 +1135,7 @@ int do_annotate(int argc, char* argv[])
 	options("inactivating-overlap-fraction", "Mutations within this fraction of the length of a gene from its beginning are assigned to the 'genes_inactivating' versus 'the genes_overlapping' list if they fulfill other criteria.", cReferenceSequences::k_inactivating_overlap_fraction);
 	options("inactivating-size-cutoff", "INS, DEL, and SUB mutations in genes that are longer than this length cutoff are always assigned to the 'genes_inactivating' list, even if they are in-frame or in noncoding genes.", cReferenceSequences::k_inactivating_size_cutoff);
 	options("promoter-distance", "Mutations upstream and within this distance of the beginning of a gene have it added to their 'genes_promoter' list.", cReferenceSequences::k_promoter_distance);
+	options("genbank-field-for-seq-id", "Which GenBank header field will be used to assign sequence IDs. Valid choices are LOCUS, ACCESSION, and VERSION. The default is to check those fields, in that order, for the first one that exists. This must match the field used when the input GD file(s) were created.", "AUTOMATIC", ADVANCED_OPTION);
 	
 	options.addUsage("");
 	options.addUsage("ANNOTATE mutations in one or more GenomeDiff files. If multiple input files are provided, then also COMPARE the frequencies for identical mutations across samples.");
@@ -1188,7 +1189,21 @@ int do_annotate(int argc, char* argv[])
 		options.printUsage();
 		return -1;
 	}
-  
+
+  string genbank_field_for_seq_id = to_upper(options["genbank-field-for-seq-id"]);
+  if (   (genbank_field_for_seq_id != "AUTOMATIC")
+      && (genbank_field_for_seq_id != "LOCUS")
+      && (genbank_field_for_seq_id != "VERSION")
+      && (genbank_field_for_seq_id != "ACCESSION")
+      ) {
+    options.addUsage("");
+    options.addUsage("Value of --genbank-field-for-seq-id must be one of the following: AUTOMATIC, LOCUS, VERSION, ACCESSION.");
+    options.addUsage("");
+    options.addUsage("Value provided was: " + genbank_field_for_seq_id);
+    options.printUsage();
+    return -1;
+  }
+
   UserOutput uout("ANNOTATE/COMPARE");
   
   string output_format = to_upper(options["format"]);
@@ -1260,8 +1275,8 @@ int do_annotate(int argc, char* argv[])
 	vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
 	uout("Reading input reference sequence files") << reference_file_names << endl;
 	cReferenceSequences ref_seq_info;
-	ref_seq_info.LoadFiles(reference_file_names);
-	
+	ref_seq_info.LoadFiles(reference_file_names, genbank_field_for_seq_id);
+
 	cGenomeDiff gd;
 	vector<cGenomeDiff> gd_list;
 	vector<string> gd_titles;
