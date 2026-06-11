@@ -36,14 +36,14 @@ namespace breseq{
   
   class ReadFileSummary : public JSONStorable<ReadFileSummary> {
   public:
-    uint64_t num_unmatched_reads;
-    uint64_t num_unmatched_bases;
+    uint64_t num_unmapped_reads;
+    uint64_t num_unmapped_read_bases;
     uint64_t num_total_reads;
     uint64_t num_total_bases;
     
     ReadFileSummary()
-    : num_unmatched_reads(0)
-    , num_unmatched_bases(0)
+    : num_unmapped_reads(0)
+    , num_unmapped_read_bases(0)
     , num_total_reads(0)
     , num_total_bases(0)
     {}
@@ -83,8 +83,8 @@ namespace breseq{
   {
   public:
     map<string,ReadFileSummary> read_file;
-    uint64_t total_unmatched_reads;
-    uint64_t total_unmatched_bases;
+    uint64_t total_unmapped_reads;
+    uint64_t total_unmapped_read_bases;
     uint64_t total_reads;
     uint64_t total_bases;
     int32_t max_sam_base_quality_score; // @JEB only filled in for aligned_sam_mode
@@ -99,8 +99,8 @@ namespace breseq{
     vector<AlignmentResolutionReferenceSummary> reference;
     
     AlignmentResolutionSummary()
-    : total_unmatched_reads(0)
-    , total_unmatched_bases(0)
+    : total_unmapped_reads(0)
+    , total_unmapped_read_bases(0)
     , total_reads(0)
     , total_bases(0)
     , max_sam_base_quality_score(0)
@@ -488,7 +488,7 @@ namespace breseq{
     bool skip_new_junction_prediction;
     bool skip_read_alignment_and_missing_coverage_prediction;
     bool skip_missing_coverage_prediction;
-    bool skip_alignment_or_plot_generation;
+    bool no_evidence_html;
 
     //! Settings: Read File
     bool aligned_sam_mode;

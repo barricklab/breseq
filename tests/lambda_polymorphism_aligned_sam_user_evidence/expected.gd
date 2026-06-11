@@ -2,8 +2,8 @@
 #=COMMAND	./src/c/breseq/breseq -j 4 -p --aligned-sam --user-evidence-gd tests/lambda_polymorphism_aligned_sam_user_evidence/user_evidence.gd -o tests/lambda_polymorphism_aligned_sam_user_evidence -r tests/lambda_polymorphism_aligned_sam_user_evidence/../data/lambda/lambda.gbk tests/lambda_polymorphism_aligned_sam_user_evidence/../data/lambda/lambda_mixed_population.sam
 #=REFSEQ	tests/lambda_polymorphism_aligned_sam_user_evidence/../data/lambda/lambda.gbk
 #=READSEQ	tests/lambda_polymorphism_aligned_sam_user_evidence/../data/lambda/lambda_mixed_population.sam
-#=CONVERTED-BASES	0
-#=CONVERTED-READS	0
+#=CONVERTED-BASES	3500000
+#=CONVERTED-READS	100000
 #=INPUT-BASES	0
 #=INPUT-READS	0
 #=MAPPED-BASES	2524732

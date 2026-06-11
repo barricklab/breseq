@@ -772,7 +772,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     HTML << td(ALIGN_RIGHT, to_string(percent_pass_filters, 1) + "%");
     HTML << td(ALIGN_RIGHT, to_string(read_length_avg, 1) + "&nbsp;bases");
     HTML << td(ALIGN_RIGHT, to_string((s.read_length_max> 0) ? s.read_length_max : std::numeric_limits<double>::quiet_NaN(), 0) + "&nbsp;bases");
-    double percent_mapped = 100 * (1.0 - static_cast<double>(rf.num_unmatched_reads) / static_cast<double>(rf.num_total_reads));
+    double percent_mapped = 100 * (1.0 - static_cast<double>(rf.num_unmapped_reads) / static_cast<double>(rf.num_total_reads));
     HTML << td(ALIGN_RIGHT, to_string(percent_mapped, 1) + "%");
     HTML << end_tr();
   }
@@ -786,7 +786,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << td(ALIGN_RIGHT, to_string(total_percent_pass_filters, 1) + "%");
   HTML << td(ALIGN_RIGHT, to_string(summary.sequence_conversion.read_length_avg, 1) + "&nbsp;bases");
   HTML << td(ALIGN_RIGHT, b(commify(to_string(summary.sequence_conversion.read_length_max))) + "&nbsp;bases");
-  double total_percent_mapped = 100 * (1.0 - static_cast<double>(summary.alignment_resolution.total_unmatched_reads) / static_cast<double>(summary.alignment_resolution.total_reads));
+  double total_percent_mapped = 100 * (1.0 - static_cast<double>(summary.alignment_resolution.total_unmapped_reads) / static_cast<double>(summary.alignment_resolution.total_reads));
   HTML << td(ALIGN_RIGHT, to_string(total_percent_mapped, 1) + "%");
   HTML << end_tr();
   HTML << end_table();
@@ -2294,7 +2294,7 @@ void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenom
    }
   
   // Don't create other plots in --brief-html-mode
-  if (!settings.skip_alignment_or_plot_generation) {
+  if (!settings.no_evidence_html) {
     // Zoom-in plots of individual deletions and copy number variation
     vector<gd_entry_type> mc_types = make_vector<gd_entry_type>(MC)(CN);
     diff_entry_list_t mc = gd.show_list(mc_types);

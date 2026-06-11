@@ -207,26 +207,26 @@ namespace breseq {
   }
 
   // Splits unaligned reads out of a SAM file
-  void PreprocessAlignments::split_matched_and_unmatched_alignments(
+  void PreprocessAlignments::split_mapped_and_unmapped_alignments(
                                                                     uint32_t fastq_file_index,
                                                                     string fasta_file_name, 
                                                                     string input_sam_file_name, 
-                                                                    string matched_sam_file_name, 
-                                                                    string unmatched_fastq_file_name
-                                                                    ) 
+                                                                    string mapped_sam_file_name,
+                                                                    string unmapped_fastq_file_name
+                                                                    )
   {
 
-    bam_file matched(matched_sam_file_name, fasta_file_name, ios::out);
-    ofstream unmatched(unmatched_fastq_file_name.c_str());
+    bam_file mapped(mapped_sam_file_name, fasta_file_name, ios::out);
+    ofstream unmapped(unmapped_fastq_file_name.c_str());
 
     bam_file in(input_sam_file_name, fasta_file_name, ios::in);
 
     alignment_list al;
     while (in.read_alignments(al, false)) {
       if (al.front()->unmapped()) {
-        unmatched << "@" << al.front()->read_name() << endl << al.front()->read_char_sequence() << endl << "+" << endl << al.front()->read_base_quality_char_string() << endl;
+        unmapped << "@" << al.front()->read_name() << endl << al.front()->read_char_sequence() << endl << "+" << endl << al.front()->read_base_quality_char_string() << endl;
       } else {
-        matched.write_alignments(fastq_file_index, al);
+        mapped.write_alignments(fastq_file_index, al);
       }
     }
   }

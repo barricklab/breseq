@@ -323,12 +323,13 @@ namespace breseq
     options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Output Options", ADVANCED_OPTION);
     options
+    ("header-genome-diff,g", "Include header information from this GenomeDiff file in output.gd", "", ADVANCED_OPTION)
+    ("output-unmapped-reads", "Output unmapped reads to file: " + this->unmapped_read_file_name, TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("no-evidence-html", "Don't create output files for evidence (e.g., read alignments and coverage plots)", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("zip-html", "Bundle evidence files into a ZIP archive (evidence.zip) and add JavaScript to load evidence pages directly from the archive to the main output files", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("no-javascript", "Don't include javascript in the HTML output", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("max-flanking-columns", "Maximum number of columns in aligned reads to show flanking the region of interest in the HTML output for an evidence item (0=ALL)", 100, ADVANCED_OPTION)
     ("max-displayed-reads", "Maximum number of reads to display in the HTML output for an evidence item (0=ALL)", 100, ADVANCED_OPTION)
-    ("brief-html-output", "Don't create detailed output files for evidence (no read alignments or coverage plots)", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("zip-html", "Bundle evidence HTML and PNG files into a ZIP archive (evidence.zip) and add JavaScript to index.html and marginal.html that loads evidence pages directly from the archive", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("header-genome-diff,g", "Include header information from this GenomeDiff file in output.gd", "", ADVANCED_OPTION)
-    ("no-javascript", "Don't include javascript in the HTML output", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
     
     options.addUsage("", ADVANCED_OPTION);
@@ -716,9 +717,11 @@ namespace breseq
     
     this->max_displayed_reads = from_string<int32_t>(options["max-displayed-reads"]);
     this->max_flanking_columns = from_string<int32_t>(options["max-flanking-columns"]);
-    this->skip_alignment_or_plot_generation = options.count("brief-html-output");
+    this->no_evidence_html = options.count("no-evidence-html");
     this->zip_html = options.count("zip-html");
     this->no_javascript = options.count("no-javascript");
+    this->output_unmapped_reads = options.count("output-unmapped-reads");
+    
     if (options.count("header-genome-diff"))
       this->header_genome_diff_file_name = options["header-genome-diff"];
   
@@ -825,7 +828,7 @@ namespace breseq
     this->skip_new_junction_prediction = false;
 		this->skip_read_alignment_and_missing_coverage_prediction = false;
 		this->skip_missing_coverage_prediction = false;
-    this->skip_alignment_or_plot_generation = false;
+    this->no_evidence_html = false;
 		this->do_copy_number_variation = false;
 		this->do_periodicity = false;
     
@@ -834,7 +837,7 @@ namespace breseq
 		this->alignment_read_limit = 0;         
 		this->resolve_alignment_read_limit = 0; 
     this->candidate_junction_read_limit = 0;
-    this->no_unmatched_reads = false;
+    this->output_unmapped_reads = false;
     this->keep_all_intermediates = false;
 
     //! Settings: Read Alignment and Candidate Junction Read Alignment
@@ -994,8 +997,8 @@ namespace breseq
 		this->reference_sam_file_name = this->reference_alignment_path + "/#.reference.bam";
 
     this->stage1_reference_sam_file_name = this->reference_alignment_path + "/#.stage1.bam";
-    this->stage1_unmatched_fastq_file_name = this->reference_alignment_path + "/#.stage1.unmatched.fastq";
-    this->stage2_reference_sam_file_name = this->reference_alignment_path + "/#.stage2.matched.bam";
+    this->stage1_unmapped_fastq_file_name = this->reference_alignment_path + "/#.stage1.unmapped.fastq";
+    this->stage2_reference_sam_file_name = this->reference_alignment_path + "/#.stage2.mapped.bam";
 
     //! Paths: Junction Prediction
 		this->candidate_junction_path = "03_candidate_junctions";
@@ -1140,7 +1143,7 @@ namespace breseq
 		this->reference_fasta_file_name = this->data_path + "/reference.fasta";
 		this->reference_faidx_file_name = this->data_path + "/reference.fasta.fai";
 		this->reference_gff3_file_name = this->data_path + "/reference.gff3";
-		this->unmatched_read_file_name = this->data_path + "/#.unmatched.fastq";
+		this->unmapped_read_file_name = this->data_path + "/unmapped_fastq.gz";
     this->data_vcf_file_name = this->data_path + "/output.vcf";
     this->data_genome_diff_file_name = this->data_path + "/output.gd";
     this->data_annotated_genome_diff_file_name = this->data_path + "/annotated.gd";

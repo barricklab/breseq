@@ -30,8 +30,8 @@ namespace breseq
 void to_json(json& j, const ReadFileSummary& s)
 {
   j = json{
-    {"num_unmatched_reads", s.num_unmatched_reads},
-    {"num_unmatched_bases", s.num_unmatched_bases},
+    {"num_unmatched_reads", s.num_unmapped_reads},
+    {"num_unmatched_bases", s.num_unmapped_read_bases},
     {"num_total_reads", s.num_total_reads},
     {"num_total_bases", s.num_total_bases},
   };
@@ -39,8 +39,8 @@ void to_json(json& j, const ReadFileSummary& s)
 
 void from_json(const json& j, ReadFileSummary& s)
 {
-  s.num_unmatched_reads = j.at("num_unmatched_reads").get<uint64_t>();
-  s.num_unmatched_bases = j.at("num_unmatched_bases").get<uint64_t>();
+  s.num_unmapped_reads = j.at("num_unmatched_reads").get<uint64_t>();
+  s.num_unmapped_read_bases = j.at("num_unmatched_bases").get<uint64_t>();
   s.num_total_reads = j.at("num_total_reads").get<uint64_t>();
   s.num_total_bases = j.at("num_total_bases").get<uint64_t>();
 }
@@ -80,8 +80,8 @@ void to_json(json& j, const AlignmentResolutionSummary& s)
 {
   j = json{
     {"read_file", s.read_file},
-    {"total_unmatched_reads", s.total_unmatched_reads},
-    {"total_unmatched_bases", s.total_unmatched_bases},
+    {"total_unmapped_reads", s.total_unmapped_reads},
+    {"total_unmapped_read_bases", s.total_unmapped_read_bases},
     {"total_reads", s.total_reads},
     {"total_bases", s.total_bases},
     {"max_sam_base_quality_score", s.max_sam_base_quality_score},
@@ -96,8 +96,8 @@ void to_json(json& j, const AlignmentResolutionSummary& s)
 void from_json(const json& j, AlignmentResolutionSummary& s)
 {
   s.read_file = j.at("read_file").get<map<string,ReadFileSummary> >();
-  s.total_unmatched_reads = j.at("total_unmatched_reads").get<uint64_t>();
-  s.total_unmatched_bases = j.at("total_unmatched_bases").get<uint64_t>();
+  s.total_unmapped_reads = j.at("total_unmapped_reads").get<uint64_t>();
+  s.total_unmapped_read_bases = j.at("total_unmapped_read_bases").get<uint64_t>();
   s.total_reads = j.at("total_reads").get<uint64_t>();
   s.total_bases = j.at("total_bases").get<uint64_t>();
   s.max_sam_base_quality_score = j.at("max_sam_base_quality_score").get<int32_t>();
@@ -347,8 +347,8 @@ PublicReadFileSummary::PublicReadFileSummary(const ReadFileSummary &rfs, const A
   quality_format_original = afs.quality_format_original;
   quality_format = afs.quality_format;
   
-  num_aligned_reads = rfs.num_total_reads - rfs.num_unmatched_reads;
-  num_aligned_bases = rfs.num_total_bases - rfs.num_unmatched_bases;
+  num_aligned_reads = rfs.num_total_reads - rfs.num_unmapped_reads;
+  num_aligned_bases = rfs.num_total_bases - rfs.num_unmapped_read_bases;
   fraction_aligned_reads = static_cast<double>(num_aligned_reads) / static_cast<double>(rfs.num_total_reads);
   fraction_aligned_bases = static_cast<double>(num_aligned_bases) / static_cast<double>(rfs.num_total_bases);
 }
@@ -366,8 +366,8 @@ PublicReadSummary::PublicReadSummary(const Summary &s)
   
   total_reads = s.alignment_resolution.total_reads;
   total_bases = s.alignment_resolution.total_bases;
-  total_aligned_reads = s.alignment_resolution.total_reads - s.alignment_resolution.total_unmatched_reads;
-  total_aligned_bases = s.alignment_resolution.total_bases - s.alignment_resolution.total_unmatched_bases;
+  total_aligned_reads = s.alignment_resolution.total_reads - s.alignment_resolution.total_unmapped_reads;
+  total_aligned_bases = s.alignment_resolution.total_bases - s.alignment_resolution.total_unmapped_read_bases;
   total_fraction_aligned_reads = static_cast<double>(total_aligned_reads) / static_cast<double>(s.alignment_resolution.total_reads);
   total_fraction_aligned_bases = static_cast<double>(total_aligned_bases) / static_cast<double>(s.alignment_resolution.total_bases);
 }
@@ -444,7 +444,7 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   skip_new_junction_prediction = t.skip_new_junction_prediction;
   skip_read_alignment_and_missing_coverage_prediction = t.skip_read_alignment_and_missing_coverage_prediction;
   skip_missing_coverage_prediction = t.skip_missing_coverage_prediction;
-  skip_alignment_or_plot_generation = t.skip_alignment_or_plot_generation;
+  no_evidence_html = t.no_evidence_html;
   
   //! Settings: Read File
   aligned_sam_mode = t.aligned_sam_mode;
@@ -744,7 +744,7 @@ void to_json(json& j, const PublicOptionsSummary& s)
       {"skip_new_junction_prediction", s.skip_new_junction_prediction},
       {"skip_read_alignment_and_missing_coverage_prediction", s.skip_read_alignment_and_missing_coverage_prediction},
       {"skip_missing_coverage_prediction", s.skip_missing_coverage_prediction},
-      {"skip_alignment_or_plot_generation", s.skip_alignment_or_plot_generation},
+      {"no_evidence_html", s.no_evidence_html},
       }
     },
     

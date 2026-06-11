@@ -712,6 +712,12 @@ void load_junction_alignments(
   bam_file* reference_tam = NULL;
   bam_file* junction_tam = NULL;
   
+  cFastqFile * unmapped_fastq = NULL;
+  if (settings.output_unmapped_reads) {
+    string unmapped_read_file_name = settings.unmapped_read_file_name;
+    unmapped_fastq = new cFastqFile(unmapped_read_file_name, ios::out);
+  }
+  
   for (uint32_t fastq_file_index = 0; fastq_file_index < read_files.size(); fastq_file_index++)
   {    
     const cReadFile& rf = read_files[fastq_file_index];
@@ -725,10 +731,6 @@ void load_junction_alignments(
     // b/c some matches may exist in only one or the other file
     
     cFastqFile in_fastq(fastq_file_name, ios::in);
-    
-    string this_unmatched_file_name = settings.file_name(settings.unmatched_read_file_name, "#", rf.m_base_name);
-    cFastqFile out_unmatched_fastq(this_unmatched_file_name, ios::out);
-    //assert(!out_unmatched_fastq.fail());
     
     string reference_sam_file_name = settings.file_name(settings.reference_sam_file_name, "#", rf.m_base_name);
     string reference_fasta = settings.reference_fasta_file_name;
@@ -825,9 +827,12 @@ void load_junction_alignments(
       // Record in the unmatched FASTQ data file
       if ((this_junction_alignments.size() == 0) && (this_reference_alignments.size() == 0))
       {
-        read_file_summary_info.num_unmatched_reads++;
-        read_file_summary_info.num_unmatched_bases+=seq.length();
-        out_unmatched_fastq.write_sequence(seq);
+        read_file_summary_info.num_unmapped_reads++;
+        read_file_summary_info.num_unmapped_read_bases+=seq.length();
+        
+        if (unmapped_fastq) {
+          unmapped_fastq->write_sequence(seq);
+        }
       }
       
       ///
@@ -926,14 +931,15 @@ void load_junction_alignments(
         
     // save statistics
     summary.alignment_resolution.read_file[read_files[fastq_file_index].m_base_name] = read_file_summary_info;
-    summary.alignment_resolution.total_unmatched_reads += read_file_summary_info.num_unmatched_reads;
-    summary.alignment_resolution.total_unmatched_bases += read_file_summary_info.num_unmatched_bases;
+    summary.alignment_resolution.total_unmapped_reads += read_file_summary_info.num_unmapped_reads;
+    summary.alignment_resolution.total_unmapped_read_bases += read_file_summary_info.num_unmapped_read_bases;
     
     summary.alignment_resolution.total_reads += read_file_summary_info.num_total_reads;
     summary.alignment_resolution.total_bases += read_file_summary_info.num_total_bases;
 
     
     // safe only because we know they are always or never used
+    if (unmapped_fastq != NULL) delete unmapped_fastq;
     if (junction_tam != NULL) delete junction_tam;
     if (reference_tam != NULL) delete reference_tam;
     
@@ -956,19 +962,23 @@ void load_sam_only_alignments(
 
   bam_file* reference_tam = NULL;
   
+  // One gzipped unmatched read file produced
+  cFastqFile * out_unmapped_fastq = NULL;
+  if (settings.output_unmapped_reads) {
+    string unmapped_read_file_name = settings.unmapped_read_file_name;
+    out_unmapped_fastq = new cFastqFile(unmapped_read_file_name, ios::out);
+  }
+  
   for (uint32_t sam_file_index = 0; sam_file_index < read_files.size(); sam_file_index++)
-  {    
+  {
+    
+    ReadFileSummary read_file_summary_info;
+    
     const cReadFile& rf = read_files[sam_file_index];
     string reference_sam_file_name = read_files.base_name_to_read_file_name(rf.m_base_name);
     
     cerr << "  READ FILE:" << rf.m_base_name << endl;
-    
-    ReadFileSummary summary_info;
-    
-    string this_unmatched_file_name = settings.data_path + "/unmatched." + rf.m_base_name + ".fastq";
-    cFastqFile out_unmatched_fastq(this_unmatched_file_name, ios::out);
-    //assert(!out_unmatched_fastq.fail());
-    
+        
     reference_tam = new bam_file(reference_sam_file_name, settings.reference_fasta_file_name, ios::in); 
     
     
@@ -978,7 +988,12 @@ void load_sam_only_alignments(
         
     alignment_list this_reference_alignments;
     while (reference_tam->read_alignments(this_reference_alignments, false)) {
+            
+      // Grab this value before eligible alignments may remove all alignments
+      uint32_t this_read_length = this_reference_alignments.front().get()->read_length();
       
+      read_file_summary_info.num_total_reads++;
+      read_file_summary_info.num_total_bases+=this_read_length;
       
       if ((settings.resolve_alignment_read_limit) && (reads_processed >= settings.resolve_alignment_read_limit))
         break; // to next file
@@ -986,14 +1001,26 @@ void load_sam_only_alignments(
       reads_processed++;
       if (reads_processed % 10000 == 0)
         cerr << "    READS:" << reads_processed << endl;
-                  
-      // Does this read have eligible reference sequence matches?
+      
+      // Does this read have eligible reference sequence matches? (junction matches are not possible)
       uint32_t best_reference_score = eligible_read_alignments(settings, ref_seq_info, this_reference_alignments);
       
       // if < 0, then the best match is to the reference
-      
-      if ( (!this_reference_alignments.size()) || (best_reference_score == 0) )
+      // if == 0, then it is unmapped
+      if ( (this_reference_alignments.size() == 0) || (best_reference_score == 0) ) {
+ 
+          read_file_summary_info.num_unmapped_reads++;
+          read_file_summary_info.num_unmapped_read_bases+=this_read_length;
+          
+        if (out_unmapped_fastq) {
+          cFastqSequence seq;
+          seq.m_sequence = this_reference_alignments.front().get()->read_char_sequence();
+          seq.m_qualities = this_reference_alignments.front().get()->read_base_quality_char_string();
+          out_unmapped_fastq->write_sequence(seq);
+        }
+        
         continue;
+      }
       
       uint8_t* base_qualities = this_reference_alignments.front()->read_base_quality_bam_sequence();
       for(uint32_t base_index=0; base_index<this_reference_alignments.front()->read_length(); base_index++) {
@@ -1002,11 +1029,16 @@ void load_sam_only_alignments(
       
       // best match is to the reference, record in that SAM file.
       _write_reference_matches(settings, summary, ref_seq_info, trims_list, this_reference_alignments, resolved_reference_tam, sam_file_index);
-            
+      
     } // End loop through every read in file
+     
+    summary.alignment_resolution.read_file[read_files[sam_file_index].m_base_name] = read_file_summary_info;
     
-    // save statistics
-    summary.alignment_resolution.read_file[read_files[sam_file_index].m_base_name] = summary_info;
+    summary.alignment_resolution.total_unmapped_reads += read_file_summary_info.num_unmapped_reads;
+    summary.alignment_resolution.total_unmapped_read_bases += read_file_summary_info.num_unmapped_read_bases;
+    
+    summary.alignment_resolution.total_reads += read_file_summary_info.num_total_reads;
+    summary.alignment_resolution.total_bases += read_file_summary_info.num_total_bases;
     
     // safe only because we know they are always or never used
     if (reference_tam != NULL) delete reference_tam;

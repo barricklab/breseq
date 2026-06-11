@@ -226,7 +226,6 @@ namespace breseq
     bool skip_new_junction_prediction;      // Default = false COMMAND-LINE OPTION
     bool skip_read_alignment_and_missing_coverage_prediction;          // Default = false
     bool skip_missing_coverage_prediction;  // Default = false set to true if targeted_sequencing
-    bool skip_alignment_or_plot_generation; // Default = false COMMAND-LINE OPTION
     bool do_copy_number_variation;          // Default = false COMMAND-LINE OPTION
     bool do_periodicity;                    // Default = false COMMAND-LINE OPTION
     
@@ -257,8 +256,7 @@ namespace breseq
 		uint32_t candidate_junction_read_limit;   // Default = 0 (OFF)
     uint32_t resolve_alignment_read_limit;    // Default = 0 (OFF)
     bool     alignment_mask_ref_matches;      // Default false
-    //! Output unmatched read file?
-		bool no_unmatched_reads;                  // Default = false
+
     //! Don't delete intermediate files
     bool keep_all_intermediates;              // Default = false
 
@@ -404,11 +402,17 @@ namespace breseq
       // Default = kBreseq_ignore_within_this_multiple_of_average_read_length_of_contig_end
     
     //! Settings: Output
-    uint32_t max_flanking_columns;                            // Default = 100   COMMAND-LINE OPTION
-    uint32_t max_displayed_reads;                           // Default = 100   COMMAND-LINE OPTION
-    //! don't include javascript in HTML output, for Galaxy integration
-    bool no_javascript;                                     // Default = false COMMAND-LINE OPTION
+    //!
+    bool output_unmapped_reads;                             // Default = false COMMAND-LINE OPTION
+    bool no_evidence_html;                                  // Default = false COMMAND-LINE OPTION
     bool zip_html;                                          // Default = false COMMAND-LINE OPTION
+    
+    //! Don't include javascript in HTML output (provided for Galaxy integration)
+    bool no_javascript;                                     // Default = false COMMAND-LINE OPTION
+
+    uint32_t max_flanking_columns;                          // Default = 100   COMMAND-LINE OPTION
+    uint32_t max_displayed_reads;                           // Default = 100   COMMAND-LINE OPTION
+
     bool no_list_js;                                        // Default = false (use list.js for filtering tables)
 
     string header_genome_diff_file_name;                    // Default = NONE  COMMAND-LINE OPTION
@@ -455,7 +459,7 @@ namespace breseq
 
     // Staged alignment to final reference SAM file
     string stage1_reference_sam_file_name;
-    string stage1_unmatched_fastq_file_name;
+    string stage1_unmapped_fastq_file_name;
     string stage2_reference_sam_file_name;
     string reference_sam_file_name;
     
@@ -598,7 +602,7 @@ namespace breseq
     string reference_fasta_file_name;
 		string reference_faidx_file_name;
 		string reference_gff3_file_name;
-    string unmatched_read_file_name;
+    string unmapped_read_file_name;
     string data_vcf_file_name;
     string data_genome_diff_file_name;
     string data_annotated_genome_diff_file_name;

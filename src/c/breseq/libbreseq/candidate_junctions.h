@@ -340,12 +340,12 @@ namespace breseq {
                                            const alignment_list& alignments
                                            );
 
-    static void split_matched_and_unmatched_alignments(
+    static void split_mapped_and_unmapped_alignments(
                                                        uint32_t fastq_file_index,
                                                        string fasta_file_name, 
                                                        string input_sam_file_name, 
                                                        string matched_sam_file_name, 
-                                                       string unmatched_fastq_file_name
+                                                       string unmapped_fastq_file_name
                                                        );
     static void split_matched_alignments(uint32_t fastq_file_index, 
                                          string fasta_file_name, 
