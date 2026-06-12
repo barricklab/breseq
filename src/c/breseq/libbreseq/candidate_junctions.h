@@ -345,7 +345,7 @@ namespace breseq {
                                                        string fasta_file_name, 
                                                        string input_sam_file_name, 
                                                        string matched_sam_file_name, 
-                                                       string unmapped_fastq_file_name
+                                                       string unmapped_reads_fastq_file_name
                                                        );
     static void split_matched_alignments(uint32_t fastq_file_index, 
                                          string fasta_file_name, 

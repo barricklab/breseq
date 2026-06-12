@@ -28,7 +28,21 @@ $ make install
 The output of the consistency tests varies depending on different versions of bowtie2 and R. You should
 use the exact versions of these tools specified in the dev-environment.yml Conda environment.
 
+Run all tests (using Snakemake wrapper)
 $ make test
+
+For working with single tests when updating them, these commands can be run from the main source directory.
+
+Command for running one test:
+$ tests/test.sh test <test-name>
+
+Clean existing test output:
+$ tests/test.sh clean <test-name>
+
+Same for building the output for a test (or rebuilding = combined run and build output)
+
+$ tests/test.sh test <test-name>
+$ tests/test.sh rebuild <test-name>
 
 === Developing with XCode ===
 

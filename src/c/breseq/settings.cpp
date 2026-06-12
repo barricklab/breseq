@@ -324,7 +324,7 @@ namespace breseq
     options.addUsage("Output Options", ADVANCED_OPTION);
     options
     ("header-genome-diff,g", "Include header information from this GenomeDiff file in output.gd", "", ADVANCED_OPTION)
-    ("output-unmapped-reads", "Output unmapped reads to file: " + this->unmapped_read_file_name, TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("output-unmapped-reads", "Output unmapped reads to file: " + this->unmapped_reads_fastq_file_name, TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("no-evidence-html", "Don't create output files for evidence (e.g., read alignments and coverage plots)", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("zip-html", "Bundle evidence files into a ZIP archive (evidence.zip) and add JavaScript to load evidence pages directly from the archive to the main output files", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("no-javascript", "Don't include javascript in the HTML output", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
@@ -997,7 +997,10 @@ namespace breseq
 		this->reference_sam_file_name = this->reference_alignment_path + "/#.reference.bam";
 
     this->stage1_reference_sam_file_name = this->reference_alignment_path + "/#.stage1.bam";
-    this->stage1_unmapped_fastq_file_name = this->reference_alignment_path + "/#.stage1.unmapped.fastq";
+    this->stage1_unmapped_reads_fastq_file_name = this->reference_alignment_path + "/#.stage1.unmapped.fastq";
+    // TODO: Enable when bowtie2 updated
+    //this->stage1_unmapped_reads_fastq_file_name = this->reference_alignment_path + "/#.stage1.unmapped.fastq.gz";
+
     this->stage2_reference_sam_file_name = this->reference_alignment_path + "/#.stage2.mapped.bam";
 
     //! Paths: Junction Prediction
@@ -1143,7 +1146,7 @@ namespace breseq
 		this->reference_fasta_file_name = this->data_path + "/reference.fasta";
 		this->reference_faidx_file_name = this->data_path + "/reference.fasta.fai";
 		this->reference_gff3_file_name = this->data_path + "/reference.gff3";
-		this->unmapped_read_file_name = this->data_path + "/unmapped_fastq.gz";
+		this->unmapped_reads_fastq_file_name = this->data_path + "/unmapped_reads.fastq.gz";
     this->data_vcf_file_name = this->data_path + "/output.vcf";
     this->data_genome_diff_file_name = this->data_path + "/output.gd";
     this->data_annotated_genome_diff_file_name = this->data_path + "/annotated.gd";

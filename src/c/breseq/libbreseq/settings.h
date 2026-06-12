@@ -459,7 +459,7 @@ namespace breseq
 
     // Staged alignment to final reference SAM file
     string stage1_reference_sam_file_name;
-    string stage1_unmapped_fastq_file_name;
+    string stage1_unmapped_reads_fastq_file_name;
     string stage2_reference_sam_file_name;
     string reference_sam_file_name;
     
@@ -602,7 +602,7 @@ namespace breseq
     string reference_fasta_file_name;
 		string reference_faidx_file_name;
 		string reference_gff3_file_name;
-    string unmapped_read_file_name;
+    string unmapped_reads_fastq_file_name;
     string data_vcf_file_name;
     string data_genome_diff_file_name;
     string data_annotated_genome_diff_file_name;

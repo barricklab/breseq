@@ -714,7 +714,7 @@ void load_junction_alignments(
   
   cFastqFile * unmapped_fastq = NULL;
   if (settings.output_unmapped_reads) {
-    string unmapped_read_file_name = settings.unmapped_read_file_name;
+    string unmapped_read_file_name = settings.unmapped_reads_fastq_file_name;
     unmapped_fastq = new cFastqFile(unmapped_read_file_name, ios::out);
   }
   
@@ -965,7 +965,7 @@ void load_sam_only_alignments(
   // One gzipped unmatched read file produced
   cFastqFile * out_unmapped_fastq = NULL;
   if (settings.output_unmapped_reads) {
-    string unmapped_read_file_name = settings.unmapped_read_file_name;
+    string unmapped_read_file_name = settings.unmapped_reads_fastq_file_name;
     out_unmapped_fastq = new cFastqFile(unmapped_read_file_name, ios::out);
   }
   

@@ -362,29 +362,6 @@ namespace breseq {
     char compare = static_cast<char>(0x1f);
     return ( magic[0] == static_cast<char>(0x1f) && magic[1] == static_cast<char>(0x8b));
   }
-  
-  // handles file that may or may not be
-  class flexgzfstream {
-  protected:
-    std::iostream* m_stream;
-    
-  public:
-    flexgzfstream() : m_stream(NULL) {}
-    
-    flexgzfstream(const char * file_name, std::ios::openmode mode)
-    {
-      if ( (mode & ios::in) && file_is_gzipped(file_name)) {
-        m_stream = new iogzstream(file_name, mode);
-      } else {
-        m_stream = new std::fstream(file_name, mode);
-      }
-      ASSERT(m_stream && !m_stream->fail(), "Could not open file: " +  std::string(file_name));
-    }
-    
-    std::iostream * get_stream() { return m_stream; }
-    
-    ~flexgzfstream() { if (m_stream) delete m_stream; }
-  };
  
   inline void copy_file(const string& in_fn, const string& out_fn)
   {
@@ -1297,7 +1274,7 @@ inline cString cString::get_file_extension() const
 {
   const size_t n = this->rfind('.');
   if (n != string::npos) {
-    return this->substr(n);
+    return this->substr(n+1);
   } else {
     return "";
   }
@@ -1341,6 +1318,31 @@ inline cString& cString::escape_shell_chars(void) {
 
   return *this;
 }
+
+// handles file that may or may not be gzipped
+class flexgzfstream {
+protected:
+  std::iostream* m_stream;
+  
+public:
+  flexgzfstream() : m_stream(NULL) {}
+  
+  flexgzfstream(const char * file_name, std::ios::openmode mode)
+  {
+    if ( (mode & ios::in) && file_is_gzipped(file_name)) {
+      m_stream = new iogzstream(file_name, mode);
+    } else if ( (mode & ios::out) && (cString(file_name).get_file_extension() == "gz")) {
+      m_stream = new iogzstream(file_name, mode);
+    } else {
+      m_stream = new std::fstream(file_name, mode);
+    }
+    ASSERT(m_stream && !m_stream->fail(), "Could not open file: " +  std::string(file_name));
+  }
+  
+  std::iostream * get_stream() { return m_stream; }
+  
+  ~flexgzfstream() { if (m_stream) delete m_stream; }
+};
 
 //! Used to add types that will print with a specified precision
 struct formatted_double {

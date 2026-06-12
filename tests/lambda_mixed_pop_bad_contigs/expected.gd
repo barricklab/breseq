@@ -1,5 +1,5 @@
 #=GENOME_DIFF	1.0
-#=COMMAND	./src/c/breseq/breseq -j 4 -o tests/lambda_mixed_pop_bad_contigs -r tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda.gbk -r tests/lambda_mixed_pop_bad_contigs/../data/lambda/other.gbk -r tests/lambda_mixed_pop_bad_contigs/../data/REL606/REL606.fragment.gbk tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda_mixed_population.fastq
+#=COMMAND	./src/c/breseq/breseq -j 4 --output-unmapped-reads -o tests/lambda_mixed_pop_bad_contigs -r tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda.gbk -r tests/lambda_mixed_pop_bad_contigs/../data/lambda/other.gbk -r tests/lambda_mixed_pop_bad_contigs/../data/REL606/REL606.fragment.gbk tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda_mixed_population.fastq
 #=REFSEQ	tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda.gbk
 #=REFSEQ	tests/lambda_mixed_pop_bad_contigs/../data/lambda/other.gbk
 #=REFSEQ	tests/lambda_mixed_pop_bad_contigs/../data/REL606/REL606.fragment.gbk

@@ -1360,8 +1360,8 @@ int do_assemble_unmatched(int argc, char* argv[])
     string read_file_name_1 = read_files.base_name_to_read_file_name(read_file_base_name_1);
     string read_file_name_2 = read_files.base_name_to_read_file_name(read_file_base_name_2);
     
-    string unmatched_read_file_name_1 = settings.file_name(settings.unmapped_read_file_name, "#", read_file_base_name_1);
-    string unmatched_read_file_name_2 = settings.file_name(settings.unmapped_read_file_name, "#", read_file_base_name_2);
+    string unmatched_read_file_name_1 = settings.file_name(settings.unmapped_reads_fastq_file_name, "#", read_file_base_name_1);
+    string unmatched_read_file_name_2 = settings.file_name(settings.unmapped_reads_fastq_file_name, "#", read_file_base_name_2);
 
     
     cFastqFile read_file_1(read_file_name_1, fstream::in);
@@ -1660,7 +1660,7 @@ int breseq_default_action(int argc, char* argv[])
         
         //Paths
         string stage1_reference_sam_file_name = settings.file_name(settings.stage1_reference_sam_file_name, "#", base_read_file_name);
-        string stage1_unmapped_fastq_file_name = settings.file_name(settings.stage1_unmapped_fastq_file_name, "#", base_read_file_name);
+        string stage1_unmapped_reads_fastq_file_name = settings.file_name(settings.stage1_unmapped_reads_fastq_file_name, "#", base_read_file_name);
         
         //Split alignment into unmatched and matched files.
         uint32_t bowtie2_seed_substring_size_stringent = trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.5);
@@ -1671,14 +1671,16 @@ int breseq_default_action(int argc, char* argv[])
         string bowtie2_base = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_stringent) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage1 + " --reorder -x " + double_quote(reference_hash_file_name) + " -U " + double_quote(read_fastq_file);
         string command;
         if (do_2_stage_alignment) {
-          command = bowtie2_base + " --un " + double_quote(stage1_unmapped_fastq_file_name) + " -S - | samtools view -bS -t " + double_quote(settings.reference_faidx_file_name) + " -o " + double_quote(stage1_reference_sam_file_name);
+          //TODO: Enable when bowtie2 updated
+          //command = bowtie2_base + " --un-gz " + double_quote(stage1_unmapped_reads_fastq_file_name) + " -S - | samtools view -bS -t " + double_quote(settings.reference_faidx_file_name) + " -o " + double_quote(stage1_reference_sam_file_name);
+          command = bowtie2_base + " --un " + double_quote(stage1_unmapped_reads_fastq_file_name) + " -S - | samtools view -bS -t " + double_quote(settings.reference_faidx_file_name) + " -o " + double_quote(stage1_reference_sam_file_name);
         } else {
           command = bowtie2_base + " -S - | samtools view -bS -t " + double_quote(settings.reference_faidx_file_name) + " -o " + double_quote(reference_sam_file_name);
         }
         SYSTEM(command, false, false, false);
         
         if (do_2_stage_alignment) {
-          settings.track_intermediate_file(settings.reference_alignment_done_file_name, stage1_unmapped_fastq_file_name);
+          settings.track_intermediate_file(settings.reference_alignment_done_file_name, stage1_unmapped_reads_fastq_file_name);
           settings.track_intermediate_file(settings.reference_alignment_done_file_name, stage1_reference_sam_file_name);
         }
       }
@@ -1695,7 +1697,7 @@ int breseq_default_action(int argc, char* argv[])
         { // local vars
         
           // If we are doing staged alignment -- only align the unmatched reads and save to different name initially
-          string read_fastq_file = settings.file_name(settings.stage1_unmapped_fastq_file_name, "#", base_read_file_name);
+          string read_fastq_file = settings.file_name(settings.stage1_unmapped_reads_fastq_file_name, "#", base_read_file_name);
           string stage2_reference_sam_file_name = settings.file_name(settings.stage2_reference_sam_file_name, "#", base_read_file_name);
           
           uint32_t bowtie2_seed_substring_size_relaxed = 5 + trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.1);

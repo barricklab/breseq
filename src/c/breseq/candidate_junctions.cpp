@@ -212,12 +212,12 @@ namespace breseq {
                                                                     string fasta_file_name, 
                                                                     string input_sam_file_name, 
                                                                     string mapped_sam_file_name,
-                                                                    string unmapped_fastq_file_name
+                                                                    string unmapped_reads_fastq_file_name
                                                                     )
   {
 
     bam_file mapped(mapped_sam_file_name, fasta_file_name, ios::out);
-    ofstream unmapped(unmapped_fastq_file_name.c_str());
+    ofstream unmapped(unmapped_reads_fastq_file_name.c_str());
 
     bam_file in(input_sam_file_name, fasta_file_name, ios::in);
 
