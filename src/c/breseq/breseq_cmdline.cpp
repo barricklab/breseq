@@ -2483,15 +2483,13 @@ int breseq_default_action(int argc, char* argv[])
       mpgd.write(settings.preannotated_genome_diff_file_name, true);
       settings.track_intermediate_file(settings.output_mutation_annotation_done_file_name, settings.preannotated_genome_diff_file_name);
       
-      // Write VCF conversion (to both data and output)
+      // Write VCF conversion (to just data)
       cerr << "  Writing final VCF file..." << endl;
       mpgd.write_vcf(settings.data_vcf_file_name, ref_seq_info);
-      mpgd.write_vcf(settings.output_vcf_file_name, ref_seq_info);
 
       // Write a final JSON file with all summary information (to both data and output)
       PublicSummary public_summary(summary, settings, ref_seq_info);
       public_summary.store(settings.data_json_summary_file_name);
-      public_summary.store(settings.output_json_summary_file_name);
 
       
       settings.done_step(settings.output_mutation_prediction_done_file_name);
@@ -2523,14 +2521,6 @@ int breseq_default_action(int argc, char* argv[])
       
       // Annotated Genome Diff output #1 - public version
       gd.write(settings.data_annotated_genome_diff_file_name);
-
-      // Annotated Genome Diff output #2 - used internally and for consistency tests
-      //
-      // Here we empty certain metadata items: CREATED time and PROGRAM breseq version
-      // that should be allowed to change without marking the output as failed!
-      gd.metadata.created="";
-      gd.metadata.program="";
-      gd.write(settings.annotated_genome_diff_file_name);
       
       settings.done_step(settings.output_mutation_annotation_done_file_name);
     }
@@ -2541,11 +2531,7 @@ int breseq_default_action(int argc, char* argv[])
     
     // Reload if necessary... (ex: interrupted in this step)
     if (gd.get_list().size() == 0) {
-      gd.read(settings.annotated_genome_diff_file_name);
-      // Blank this out of the title unless it has been reassigned, for consistency
-      if (gd.metadata.title == cString(settings.annotated_genome_diff_file_name).get_base_name_no_extension()) {
-        gd.metadata.title = "";
-      }
+      gd.read(settings.data_annotated_genome_diff_file_name);
     }
 
     cerr << "Drawing coverage plots..." << endl;

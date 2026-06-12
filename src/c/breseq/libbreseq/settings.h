@@ -563,9 +563,6 @@ namespace breseq
     string output_mutation_prediction_done_file_name;
     string output_mutation_annotation_done_file_name;
     
-    string output_json_summary_file_name;
-    string output_vcf_file_name;
-
 		string log_file_name;
 		string index_html_file_name;
 		string summary_html_file_name;
@@ -581,8 +578,6 @@ namespace breseq
     string final_genome_diff_file_name;
     string preannotated_genome_diff_file_name;
     
-    string annotated_genome_diff_file_name;
-
 		string local_coverage_plot_path;
 		string coverage_plot_path;
     string coverage_plot_r_script_file_name;

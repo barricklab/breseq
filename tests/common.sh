@@ -39,6 +39,8 @@ FILE_PATTERN='-name output.gd'
 HASH=`which sha1sum`
 # executable used to diff files
 DIFF_BIN=`which diff`
+DIFF_IGNORE='^(#=CREATED|#=PROGRAM)'
+
 # name of testexec file
 TESTEXEC=testcmd.sh
 
@@ -100,7 +102,7 @@ do_check() {
 #   CHK=`${HASH} -s --check ${EXPECTED} 2>&1`
 	for (( i=0; i<${#EXPECTED_OUTPUTS[@]}; i++ )); do
 		echo "Comparing files: \"${CURRENT_OUTPUTS[$i]}\" \"${EXPECTED_OUTPUTS[$i]}\""
-		CHK=$(${DIFF_BIN} "${CURRENT_OUTPUTS[$i]}" "${EXPECTED_OUTPUTS[$i]}")
+		CHK=$(${DIFF_BIN} <(grep -Ev "${DIFF_IGNORE}" "${CURRENT_OUTPUTS[$i]}" ) <(grep -Ev "${DIFF_IGNORE}" "${EXPECTED_OUTPUTS[$i]}" ))
 		if [[ "$?" -ne 0 || $CHK ]]; then
 			CHECK_FAILED=1
 			echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"

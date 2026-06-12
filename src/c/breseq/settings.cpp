@@ -1105,9 +1105,6 @@ namespace breseq
 		if (this->base_output_path.size() > 0) this->output_path = this->base_output_path + "/" + this->output_path;
 		this->output_done_file_name = this->output_path + "/output.done";
     
-    this->output_json_summary_file_name = this->output_path + "/summary.json";
-    this->output_vcf_file_name = this->output_path + "/output.vcf";
-
 		this->log_file_name = this->output_path + "/log.txt";
 		this->index_html_file_name = this->output_path + "/index.html";
 		this->summary_html_file_name = this->output_path + "/summary.html";
@@ -1122,7 +1119,6 @@ namespace breseq
 		this->evidence_genome_diff_file_name = this->evidence_path + "/evidence.gd";
 		this->final_genome_diff_file_name = this->output_path + "/output.gd";
     this->preannotated_genome_diff_file_name = this->evidence_path + "/preannotated.gd";
-    this->annotated_genome_diff_file_name = this->output_path + "/annotated.gd";
     this->output_mutation_prediction_done_file_name = this->evidence_path + "/mutation_prediction.done";
     this->output_mutation_annotation_done_file_name = this->evidence_path + "/mutation_annotation.done";
 

@@ -4,7 +4,7 @@ SELF=`dirname ${BASH_SOURCE}`
 TEST_CORES=4
 . ${SELF}/../common.sh
 
-CURRENT_OUTPUTS[0]="${SELF}/output/annotated.gd"
+CURRENT_OUTPUTS[0]="${SELF}/data/annotated.gd"
 EXPECTED_OUTPUTS[0]="${SELF}/expected.gd"
 REFERENCE_ARG="-r ${DATADIR}/REL606/REL606.fragment.gbk"
 
