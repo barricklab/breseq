@@ -69,7 +69,7 @@ LICENSE AND COPYRIGHT
 #include <iterator>
 #include <mutex>
 
-#include "gzstream.h"
+#include "pgzstream.h"
 
 // Begin breseq specific --->
 // Library specific headers
@@ -1326,13 +1326,13 @@ protected:
   
 public:
   flexgzfstream() : m_stream(NULL) {}
-  
-  flexgzfstream(const char * file_name, std::ios::openmode mode)
+
+  flexgzfstream(const char * file_name, std::ios::openmode mode, unsigned int num_threads = 1)
   {
     if ( (mode & ios::in) && file_is_gzipped(file_name)) {
-      m_stream = new iogzstream(file_name, mode);
+      m_stream = new iopgzstream(file_name, mode, num_threads);
     } else if ( (mode & ios::out) && (cString(file_name).get_file_extension() == "gz")) {
-      m_stream = new iogzstream(file_name, mode);
+      m_stream = new iopgzstream(file_name, mode, num_threads);
     } else {
       m_stream = new std::fstream(file_name, mode);
     }

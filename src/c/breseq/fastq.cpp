@@ -43,7 +43,8 @@ namespace breseq {
                                         const double _max_N_fraction,
                                         const uint32_t _long_read_trigger_length,
                                         const uint32_t _long_read_split_length,
-                                        const bool _long_read_distribute_remainder
+                                        const bool _long_read_distribute_remainder,
+                                        const uint32_t num_threads
                                         )
 {
     cerr << "    Converting/filtering FASTQ file..." << endl;
@@ -107,7 +108,7 @@ namespace breseq {
       AttemptResult r;
 
       cFastqQualityConverter fqc(pass_quality_format, "SANGER");
-      cFastqFile output_fastq_file(convert_file_name.c_str(), fstream::out);
+      cFastqFile output_fastq_file(convert_file_name.c_str(), fstream::out, num_threads);
 
       uint64_t local_current_read_file_bases = starting_read_file_bases;
       uint32_t on_read = 1;
@@ -265,7 +266,7 @@ namespace breseq {
     const size_t FASTQ_FORMAT_SNIFF_READS = 10000;
     const int32_t prelim_offset = 64;
 
-    cFastqFile input_fastq_file(file_name.c_str(), fstream::in);
+    cFastqFile input_fastq_file(file_name.c_str(), fstream::in, num_threads);
     cFastqQualityConverter prelim_fqc("ILLUMINA_1.3+", "SANGER");
 
     vector<cFastqSequence> buffered_reads;
@@ -325,7 +326,7 @@ namespace breseq {
 
       quality_format = corrected_quality_format;
 
-      fresh_input_fastq_file.reset(new cFastqFile(file_name.c_str(), fstream::in));
+      fresh_input_fastq_file.reset(new cFastqFile(file_name.c_str(), fstream::in, num_threads));
       cFastqQualityConverter fresh_read_fqc(quality_format, "SANGER");
 
       auto get_fresh = [&](cFastqSequence& seq) -> bool {
@@ -625,8 +626,8 @@ namespace breseq {
   }
  
   
-  cFastqFile::cFastqFile(const string &file_name, std::ios_base::openmode mode)
-    : flexgzfstream(file_name.c_str(), mode)
+  cFastqFile::cFastqFile(const string &file_name, std::ios_base::openmode mode, unsigned int num_threads)
+    : flexgzfstream(file_name.c_str(), mode, num_threads)
     , m_current_line(0)
     , m_file_name(file_name)
     , m_check_for_repeated_read_names(false)

@@ -983,7 +983,7 @@ namespace breseq
 		if (this->base_output_path.size() > 0) this->sequence_conversion_path = this->base_output_path + "/" + this->sequence_conversion_path;
 		this->sequence_conversion_done_file_name = this->sequence_conversion_path + "/sequence_conversion.done";
 
-		this->converted_fastq_file_name = this->sequence_conversion_path + "/#.converted.fastq";
+		this->converted_fastq_file_name = this->sequence_conversion_path + "/#.converted.fastq.gz";
 		this->unwanted_fasta_file_name = this->sequence_conversion_path + "/unwanted.fasta";
 		this->reference_trim_file_name = this->sequence_conversion_path + "/@.trims";
 		this->sequence_conversion_summary_file_name = this->sequence_conversion_path + "/summary.json";

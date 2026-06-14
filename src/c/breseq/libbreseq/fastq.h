@@ -48,7 +48,8 @@ class cAnnotatedSequence;
                                         const double max_N_fraction,
                                         const uint32_t _long_read_trigger_length,
                                         const uint32_t _long_read_split_length,
-                                        const bool _long_read_distribute_remainder
+                                        const bool _long_read_distribute_remainder,
+                                        const uint32_t num_threads = 1
                                         );
   
   // Utility function for converting FASTQ files between formats
@@ -189,7 +190,7 @@ class cAnnotatedSequence;
     
   
     cFastqFile();
-    cFastqFile(const string &file_name, ios_base::openmode mode);
+    cFastqFile(const string &file_name, ios_base::openmode mode, unsigned int num_threads = 1);
     ~cFastqFile() { };
       
     bool read_sequence(cFastqSequence &sequence, cFastqQualityConverter& fqc);

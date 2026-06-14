@@ -47,6 +47,7 @@ libbreseq_la_SOURCES = \
 	mutation_predictor.cpp \
 	nw.cpp \
 	output.cpp \
+	pgzstream.cpp \
 	pileup.cpp \
 	pileup_base.cpp \
 	reference_sequence.cpp \
@@ -74,12 +75,12 @@ libbreseq_la_SOURCES = \
 	libbreseq/flagged_regions.h \
 	libbreseq/genome_diff.h \
 	libbreseq/genome_diff_entry.h \
-	libbreseq/gzstream.h \
 	libbreseq/identify_mutations.h \
 	libbreseq/json.hpp \
 	libbreseq/mutation_predictor.h \
 	libbreseq/nw.h \
 	libbreseq/output.h \
+	libbreseq/pgzstream.h \
 	libbreseq/pileup.h \
 	libbreseq/pileup_base.h \
 	libbreseq/reference_sequence.h \

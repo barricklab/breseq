@@ -1522,7 +1522,8 @@ int breseq_default_action(int argc, char* argv[])
                                                      settings.read_file_max_N_fraction,
                                                      settings.read_file_long_read_trigger_length,
                                                      settings.read_file_long_read_split_length,
-                                                     settings.read_file_long_read_distribute_remainder
+                                                     settings.read_file_long_read_distribute_remainder,
+                                                     settings.num_processors
                                                      );
         settings.track_intermediate_file(settings.alignment_correction_done_file_name, convert_file_name);
         
