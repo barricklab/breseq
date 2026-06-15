@@ -258,201 +258,211 @@ namespace breseq {
     if (*p == 'S') { ++p; while (*p) index_b = index_b * 10 + (*p++ - '0'); }
   }
 
-  // Takes two BAM files and re-sorts read order so that it matches the original FASTQ file.
-  // Requires reads to be renamed as we expect from 01_sequence_conversion: file_num:read_num.
-  void PreprocessAlignments::merge_sort_sam_files(
-                                                  string input_sam_file_name_1,
-                                                  string input_sam_file_name_2,
-                                                  string output_sam_file_name
-                                                  )
+  //! Processes one read's worth of alignments (as grouped by bam_file::read_alignments)
+  //! for candidate junction preprocessing: splits long-indel alignments into PSAM and
+  //! writes the best-scoring alignments to BSAM, updating summary statistics.
+  //! Returns false if candidate_junction_read_limit was hit (caller should stop).
+  bool PreprocessAlignments::preprocess_alignment_list(
+                                                        const Settings& settings,
+                                                        Summary& summary,
+                                                        const cReferenceSequences& ref_seq_info,
+                                                        bam_file& BSAM,
+                                                        bam_file& PSAM,
+                                                        int32_t min_indel_split_len,
+                                                        alignment_list& alignments,
+                                                        uint32_t& i
+                                                        )
   {
-    samFile* in1 = hts_open(input_sam_file_name_1.c_str(), "rb");
-    ASSERT(in1, "Could not open BAM file: " + input_sam_file_name_1);
-    samFile* in2 = hts_open(input_sam_file_name_2.c_str(), "rb");
-    ASSERT(in2, "Could not open BAM file: " + input_sam_file_name_2);
+    if (++i % 100000 == 0)
+      cerr << "    ALIGNED READ:" << i << endl;
 
-    bam_hdr_t* hdr1 = sam_hdr_read(in1);
-    ASSERT(hdr1, "Could not read header from: " + input_sam_file_name_1);
-    bam_hdr_t* hdr2 = sam_hdr_read(in2);
-    ASSERT(hdr2, "Could not read header from: " + input_sam_file_name_2);
+    summary.preprocess_alignments.aligned_reads++;
+    summary.preprocess_alignments.alignments += alignments.size();
+
+    // for testing...
+    if (settings.candidate_junction_read_limit != 0 && i > settings.candidate_junction_read_limit) return false;
+
+    if (alignments.front()->unmapped()) return true;
+
+    // write split alignments
+    if (min_indel_split_len != -1)
+    {
+      split_alignments_on_indels(settings, summary, ref_seq_info, PSAM, min_indel_split_len, alignments);
+    }
+
+    // write best alignments
+    int32_t best_score = eligible_read_alignments(settings, ref_seq_info, alignments);
+    (void) best_score;
+    BSAM.write_alignments(0, alignments, NULL);
+
+    return true;
+  }
+
+  // Merges two BAM files (stage1 and stage2 alignments for one read file) so that
+  // read order matches the original FASTQ file, writing the result to
+  // output_sam_file_name. Requires reads to be renamed as we expect from
+  // 01_sequence_conversion: file_num:read_num. If do_preprocess is set, also feeds
+  // each mapped read's alignments to preprocess_alignment_list (writing BSAM/PSAM)
+  // as part of the same pass.
+  void PreprocessAlignments::merge_two_sam_files(
+                                                 Settings& settings,
+                                                 Summary& summary,
+                                                 const cReferenceSequences& ref_seq_info,
+                                                 const string& input_sam_file_name_1,
+                                                 const string& input_sam_file_name_2,
+                                                 const string& output_sam_file_name,
+                                                 bool do_preprocess,
+                                                 bam_file& BSAM,
+                                                 bam_file& PSAM,
+                                                 int32_t min_indel_split_len,
+                                                 uint32_t& i
+                                                 )
+  {
+    string reference_fasta_file_name = settings.reference_fasta_file_name;
+
+    bam_file in1(input_sam_file_name_1, reference_fasta_file_name, ios_base::in);
+    bam_file in2(input_sam_file_name_2, reference_fasta_file_name, ios_base::in);
 
     samFile* out = hts_open(output_sam_file_name.c_str(), "wb");
     ASSERT(out, "Could not open output BAM file: " + output_sam_file_name);
-    ASSERT(sam_hdr_write(out, hdr1) == 0, "Failed to write BAM header to: " + output_sam_file_name);
+    ASSERT(sam_hdr_write(out, in1.bam_header) == 0, "Failed to write BAM header to: " + output_sam_file_name);
 
-    bam1_t* b1 = bam_init1();
-    bam1_t* b2 = bam_init1();
+    alignment_list group1, group2;
+    bool not_done_1 = in1.read_alignments(group1, false);
+    bool not_done_2 = in2.read_alignments(group2, false);
 
     int64_t index_1a = -1, index_1b = -1, index_2a = -1, index_2b = -1;
 
-    bool not_done_1 = (sam_read1(in1, hdr1, b1) >= 0);
-    bool not_done_2 = (sam_read1(in2, hdr2, b2) >= 0);
+    if (not_done_1) bam_to_read_index(group1.front()->read_name().c_str(), index_1a, index_1b);
+    if (not_done_2) bam_to_read_index(group2.front()->read_name().c_str(), index_2a, index_2b);
 
-    if (not_done_1) bam_to_read_index(bam_get_qname(b1), index_1a, index_1b);
-    if (not_done_2) bam_to_read_index(bam_get_qname(b2), index_2a, index_2b);
-
-    while (not_done_1 || not_done_2) {
+    bool keep_going = true;
+    while (keep_going && (not_done_1 || not_done_2)) {
       bool take_1 = not_done_1 && (
         (index_1a < index_2a) || (index_1a == index_2a && index_1b < index_2b) || !not_done_2);
 
+      alignment_list& group = take_1 ? group1 : group2;
+      bam_hdr_t* hdr = take_1 ? in1.bam_header : in2.bam_header;
+
+      if (!group.front()->unmapped()) {
+        for (alignment_list::iterator it = group.begin(); it != group.end(); it++) {
+          ASSERT(sam_write1(out, hdr, it->get()) >= 0, "Failed to write alignment to: " + output_sam_file_name);
+        }
+        if (do_preprocess) {
+          keep_going = preprocess_alignment_list(settings, summary, ref_seq_info, BSAM, PSAM, min_indel_split_len, group, i);
+        }
+      }
+
       if (take_1) {
-        if (!(b1->core.flag & BAM_FUNMAP)) (void) sam_write1(out, hdr1, b1);
-        not_done_1 = (sam_read1(in1, hdr1, b1) >= 0);
-        if (not_done_1) bam_to_read_index(bam_get_qname(b1), index_1a, index_1b);
+        not_done_1 = in1.read_alignments(group1, false);
+        if (not_done_1) bam_to_read_index(group1.front()->read_name().c_str(), index_1a, index_1b);
         else { index_1a = index_1b = numeric_limits<int64_t>::max(); }
       } else {
-        if (!(b2->core.flag & BAM_FUNMAP)) (void) sam_write1(out, hdr2, b2);
-        not_done_2 = (sam_read1(in2, hdr2, b2) >= 0);
-        if (not_done_2) bam_to_read_index(bam_get_qname(b2), index_2a, index_2b);
+        not_done_2 = in2.read_alignments(group2, false);
+        if (not_done_2) bam_to_read_index(group2.front()->read_name().c_str(), index_2a, index_2b);
         else { index_2a = index_2b = numeric_limits<int64_t>::max(); }
       }
     }
 
-    bam_destroy1(b1);
-    bam_destroy1(b2);
-    sam_hdr_destroy(hdr1);
-    sam_hdr_destroy(hdr2);
-    hts_close(in1);
-    hts_close(in2);
     hts_close(out);
   }
-  
-  /*
-  // Takes two SAM files and re-sorts read order so that it matches the original FASTQ file.
-  // Requires reads to be renamed as we expect from 01_sequence_onversion: file_num/read_num.
-  void PreprocessAlignments::slow_merge_sort_sam_files(
-                                                  uint32_t fastq_file_index,
-                                                  string fasta_file_name,
-                                                  string input_sam_file_name_1,
-                                                  string input_sam_file_name_2,
-                                                  string output_sam_file_name
-                                                 )
+
+  // Reads an already-complete reference_sam_file_name (written directly by a single
+  // bowtie2 pass) and feeds each read's alignments to preprocess_alignment_list,
+  // writing BSAM/PSAM. Does not rewrite reference_sam_file_name.
+  void PreprocessAlignments::preprocess_one_sam_file(
+                                                     Settings& settings,
+                                                     Summary& summary,
+                                                     const cReferenceSequences& ref_seq_info,
+                                                     const string& reference_sam_file_name,
+                                                     bam_file& BSAM,
+                                                     bam_file& PSAM,
+                                                     int32_t min_indel_split_len,
+                                                     uint32_t& i
+                                                     )
   {
-    
-    tam_file input_sam_file_1(input_sam_file_name_1, fasta_file_name, ios::in);
-    tam_file input_sam_file_2(input_sam_file_name_2, fasta_file_name, ios::in);
-    
-    tam_file out_sam_file(output_sam_file_name, fasta_file_name, ios::out);
+    bam_file tam(reference_sam_file_name, settings.reference_fasta_file_name, ios_base::in);
 
-    alignment_list alignment_list_1;
-    alignment_list alignment_list_2;
-    
-    bool not_done_1 = input_sam_file_1.read_alignments(alignment_list_1, false);
-    bool not_done_2 = input_sam_file_2.read_alignments(alignment_list_2, false);
-    
-    int32_t index_1 = -1;
-    int32_t index_2 = -1;
-    
-    if (not_done_1) {
-      index_1 = n(split(alignment_list_1.front()->read_name(),":")[1]);
-    }
-    if (not_done_2) {
-      index_2 = n(split(alignment_list_2.front()->read_name(),":")[1]);
-
-    }
-    
-    while (not_done_1 || not_done_2) {
-      
-      if (not_done_1 && (index_1 < index_2)) {
-        
-        if (!alignment_list_1.front()->unmapped())
-          out_sam_file.write_alignments(fastq_file_index, alignment_list_1);
-
-        // read next line
-        not_done_1 = input_sam_file_1.read_alignments(alignment_list_1, false);
-        if (not_done_1) {
-          index_1 = n(split(alignment_list_1.front()->read_name(),":")[1]);
-        } else {
-          index_1 = numeric_limits<int32_t>::max();
-        }
-      }
-      else if (not_done_2) {
-        
-        if (!alignment_list_2.front()->unmapped())
-          out_sam_file.write_alignments(fastq_file_index, alignment_list_2);
-
-        // read next line
-        not_done_2 = input_sam_file_2.read_alignments(alignment_list_2, false);   
-        if (not_done_2) {
-          index_2 = n(split(alignment_list_2.front()->read_name(),":")[1]);
-        } else {
-          index_2 = numeric_limits<int32_t>::max();
-        }
-      }
+    alignment_list alignments;
+    while (tam.read_alignments(alignments, false))
+    {
+      if (!preprocess_alignment_list(settings, summary, ref_seq_info, BSAM, PSAM, min_indel_split_len, alignments, i))
+        break;
     }
   }
-  */
-  
-  /*! PreprocessAlignments::preprocess_alignments
+
+  /*! PreprocessAlignments::merge_sort_and_preprocess_alignments
    *
-   *  Writes one SAM file of partial read alignments that could support junctions
-   *  and another SAM file of the best read matches to the reference genome for
-   *  a preliminary analysis of coverage that is necessary for junction prediction.
-	 */
-	void PreprocessAlignments::preprocess_alignments(Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info)
-	{
-		cout << "Preprocessing alignments." << endl;
-    
-		// get the cutoff for splitting alignments with indels
-		int32_t min_indel_split_len = settings.preprocess_junction_min_indel_split_length;
-    
-		// BSAM includes best matches as they are merged from all alignment files
-		string preprocess_junction_best_sam_file_name = settings.preprocess_junction_best_sam_file_name;
+   *  For each read file, merges the stage1/stage2 alignment BAMs (if two-stage
+   *  alignment was used) so that read order matches the original FASTQ file,
+   *  writing reference_sam_file_name. If new junction prediction is enabled
+   *  (!settings.skip_new_junction_prediction), this is done in the same pass as
+   *  preprocessing for candidate junction identification: writing one SAM file
+   *  of partial read alignments that could support junctions
+   *  (preprocess_junction_split_sam_file_name) and another SAM file of the best
+   *  read matches to the reference genome for a preliminary analysis of coverage
+   *  (preprocess_junction_best_sam_file_name).
+   */
+  void PreprocessAlignments::merge_sort_and_preprocess_alignments(Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info)
+  {
+    bool do_preprocess = !settings.skip_new_junction_prediction;
+    int32_t min_indel_split_len = settings.preprocess_junction_min_indel_split_length;
     string reference_fasta_file_name = settings.reference_fasta_file_name;
-    bam_file BSAM(preprocess_junction_best_sam_file_name, reference_fasta_file_name, ios_base::out);
-    
-    uint32_t i = 0;
-		for (uint32_t index = 0; index < settings.read_files.size(); index++)
-		{
-			cReadFile read_file = settings.read_files[index];
-			cerr << "  READ FILE::" << read_file.m_base_name << endl;
-      
-			string reference_sam_file_name = Settings::file_name(settings.reference_sam_file_name, "#", read_file.m_base_name);
-      bam_file tam(reference_sam_file_name, reference_fasta_file_name, ios_base::in);
 
-			// includes all matches, and splits long indels for this one read file
-      string preprocess_junction_split_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", read_file.m_base_name);
-      bam_file PSAM(preprocess_junction_split_sam_file_name, reference_fasta_file_name, ios_base::out);
-      settings.track_intermediate_file(settings.candidate_junction_done_file_name, preprocess_junction_split_sam_file_name);
-
-			alignment_list alignments;
-			while (tam.read_alignments(alignments, false))
-			{
-				if (++i % 100000 == 0)
-					cerr << "    ALIGNED READ:" << i << endl;
-        
-        summary.preprocess_alignments.aligned_reads++;
-        summary.preprocess_alignments.alignments += alignments.size();
-        
-				// for testing...
-				if (settings.candidate_junction_read_limit != 0 && i > settings.candidate_junction_read_limit) break;
-        
-        if (alignments.front()->unmapped()) continue;
-        
-				// write split alignments
-				if (min_indel_split_len != -1)
-        {
-					split_alignments_on_indels(settings, summary, ref_seq_info, PSAM, min_indel_split_len, alignments);
-        }
-        
-				// write best alignments
-        int32_t best_score = eligible_read_alignments(settings, ref_seq_info, alignments);
-        BSAM.write_alignments(0, alignments, NULL);
-      }
+    if (do_preprocess) {
+      cout << "Preprocessing alignments." << endl;
+      create_path(settings.candidate_junction_path);
     }
-    
-    cerr << "  Summary... " << endl
-         << "  Aligned reads:                         " << setw(12) << right << summary.preprocess_alignments.aligned_reads << endl
-         << "  Read alignments:                       " << setw(12) << right << summary.preprocess_alignments.alignments << endl
-         << "  Alignments split on indels:            " << setw(12) << right << summary.preprocess_alignments.alignments_split_on_indels << endl
-         << "  Reads with alignments split on indels: " << setw(12) << right << summary.preprocess_alignments.reads_with_alignments_split_on_indels << endl
-         << "  Split alignments:                      " << setw(12) << right << summary.preprocess_alignments.split_alignments << endl
-         << "  Reads with split alignments:           " << setw(12) << right << summary.preprocess_alignments.reads_with_split_alignments << endl
-    ;
+
+    // BSAM includes best matches as they are merged from all alignment files
+    bam_file BSAM;
+    if (do_preprocess) {
+      BSAM.open_write(settings.preprocess_junction_best_sam_file_name, reference_fasta_file_name);
+    }
+
+    uint32_t i = 0;
+    for (uint32_t index = 0; index < settings.read_files.size(); index++)
+    {
+      cReadFile read_file = settings.read_files[index];
+      string reference_sam_file_name = Settings::file_name(settings.reference_sam_file_name, "#", read_file.m_base_name);
+
+      bam_file PSAM;
+      if (do_preprocess) {
+        cerr << "  READ FILE::" << read_file.m_base_name << endl;
+        string preprocess_junction_split_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", read_file.m_base_name);
+        PSAM.open_write(preprocess_junction_split_sam_file_name, reference_fasta_file_name);
+        settings.track_intermediate_file(settings.candidate_junction_done_file_name, preprocess_junction_split_sam_file_name);
+      }
+
+      if (settings.bowtie2_stage2.size() != 0) {
+        // Two-stage alignment: merge stage1 + stage2 BAMs into reference_sam_file_name
+        string stage1_reference_sam_file_name = Settings::file_name(settings.stage1_reference_sam_file_name, "#", read_file.m_base_name);
+        string stage2_reference_sam_file_name = Settings::file_name(settings.stage2_reference_sam_file_name, "#", read_file.m_base_name);
+
+        merge_two_sam_files(settings, summary, ref_seq_info, stage1_reference_sam_file_name, stage2_reference_sam_file_name,
+                             reference_sam_file_name, do_preprocess, BSAM, PSAM, min_indel_split_len, i);
+      } else if (do_preprocess) {
+        // Single-stage alignment: reference_sam_file_name was already written directly by bowtie2
+        preprocess_one_sam_file(settings, summary, ref_seq_info, reference_sam_file_name, BSAM, PSAM, min_indel_split_len, i);
+      }
+
+      settings.track_intermediate_file(settings.alignment_correction_done_file_name, reference_sam_file_name);
+    }
+
+    if (do_preprocess) {
+      cerr << "  Summary... " << endl
+           << "  Aligned reads:                         " << setw(12) << right << summary.preprocess_alignments.aligned_reads << endl
+           << "  Read alignments:                       " << setw(12) << right << summary.preprocess_alignments.alignments << endl
+           << "  Alignments split on indels:            " << setw(12) << right << summary.preprocess_alignments.alignments_split_on_indels << endl
+           << "  Reads with alignments split on indels: " << setw(12) << right << summary.preprocess_alignments.reads_with_alignments_split_on_indels << endl
+           << "  Split alignments:                      " << setw(12) << right << summary.preprocess_alignments.split_alignments << endl
+           << "  Reads with split alignments:           " << setw(12) << right << summary.preprocess_alignments.reads_with_split_alignments << endl
+      ;
+    }
   }
 
-  
-  /*! Split alignments interrupted by indels into their segments and write to a SAM file. 
+
+  /*! Split alignments interrupted by indels into their segments and write to a SAM file.
 	 */
   
   void PreprocessAlignments::split_alignments_on_indels(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info, bam_file& PSAM, int32_t min_indel_split_len, const alignment_list& alignments)
@@ -795,7 +805,6 @@ namespace breseq {
 			vector<JunctionCandidate> remaining_ids;
 			vector<JunctionCandidate> list_in_waiting;
 			int32_t add_cj_length = 0;
-			int32_t num_duplicates = 0;
       int32_t filtered_nw_similar = 0;
       
 			i = 0;
@@ -816,7 +825,6 @@ namespace breseq {
 				// Zero out what we will add
 				add_cj_length = 0;
 				list_in_waiting.clear();
-				num_duplicates = 0;
         filtered_nw_similar = 0;
         
 				// Check to make sure we haven't exhausted the list

@@ -1681,8 +1681,8 @@ int breseq_default_action(int argc, char* argv[])
         SYSTEM(command, false, false, false);
         
         if (do_2_stage_alignment) {
-          settings.track_intermediate_file(settings.reference_alignment_done_file_name, stage1_unmapped_reads_fastq_file_name);
-          settings.track_intermediate_file(settings.reference_alignment_done_file_name, stage1_reference_sam_file_name);
+          settings.track_intermediate_file(settings.preprocess_junction_done_file_name, stage1_unmapped_reads_fastq_file_name);
+          settings.track_intermediate_file(settings.preprocess_junction_done_file_name, stage1_reference_sam_file_name);
         }
       }
       
@@ -1709,48 +1709,42 @@ int breseq_default_action(int argc, char* argv[])
           string command = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_relaxed) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage2 + " --reorder -x " + double_quote(reference_hash_file_name) + " -U " + double_quote(read_fastq_file) + " -S - | samtools view -bS -t " + double_quote(settings.reference_faidx_file_name) + " -o " + double_quote(stage2_reference_sam_file_name);
           SYSTEM(command, false, false, false);
           
-          settings.track_intermediate_file(settings.reference_alignment_done_file_name, stage2_reference_sam_file_name);
-        }
-        
-        /////////////////////
-        // MERGE SAM FILES //
-        /////////////////////
-        
-        // Merge the stage1 and stage2 output files
-        { // local vars
-          
-          string stage1_reference_sam_file_name = settings.file_name(settings.stage1_reference_sam_file_name, "#", base_read_file_name);
-          string stage2_reference_sam_file_name = settings.file_name(settings.stage2_reference_sam_file_name, "#", base_read_file_name);
-          string reference_sam_file_name = settings.file_name(settings.reference_sam_file_name, "#", base_read_file_name);
-          string reference_fasta_file_name = settings.file_name(settings.reference_fasta_file_name, "#", base_read_file_name);
-          
-          PreprocessAlignments::merge_sort_sam_files(
-                                                     stage1_reference_sam_file_name,
-                                                     stage2_reference_sam_file_name,
-                                                     reference_sam_file_name
-                                                     );
-          
-          
+          settings.track_intermediate_file(settings.preprocess_junction_done_file_name, stage2_reference_sam_file_name);
         }
       } // end do_stage_2_alignment
-      
-      
-      // Not deleted until after resolving alignments
-      settings.track_intermediate_file(settings.alignment_correction_done_file_name, reference_sam_file_name);
-      
+
     }
 
 		settings.done_step(settings.reference_alignment_done_file_name);
 	}
 
+  // We need this path if preprocessing for junction prediction below
+  if ( !settings.skip_new_junction_prediction )
+  {
+    create_path(settings.candidate_junction_path);
+  }
+  
+  if ( !settings.aligned_sam_mode &&
+      settings.do_step(settings.preprocess_junction_done_file_name, settings.skip_new_junction_prediction ? "Preprocessing alignments: merging files" : "Preprocessing alignments: merging files and finding alignments for candidate junction identification"))
+  {
+    /////////////////////////////////////////////
+    // MERGE SAM FILES AND PREPROCESS ALIGNMENTS //
+    /////////////////////////////////////////////
+
+    // For each read file, merges the stage1/stage2 alignment BAMs (if two-stage
+    // alignment was used) into reference_sam_file_name. If new junction prediction
+    // is enabled, this is done in the same pass as preprocessing for candidate
+    // junction identification (writing preprocess_junction_best_sam_file_name and
+    // preprocess_junction_split_sam_file_name).
+    PreprocessAlignments::merge_sort_and_preprocess_alignments(settings, summary, ref_seq_info);
+    settings.done_step(settings.preprocess_junction_done_file_name);
+  }
   
   //
   // Only do steps 03 and 04 if we are performing new junction prediction
   //
   
-  if (
-      !settings.skip_new_junction_prediction
-      )
+  if ( !settings.skip_new_junction_prediction )
   {
   
   //
@@ -1759,22 +1753,12 @@ int breseq_default_action(int argc, char* argv[])
 	//
 
 		create_path(settings.candidate_junction_path);
-
-    string preprocess_junction_done_file_name = settings.preprocess_junction_done_file_name;
-
-    if (settings.do_step(settings.preprocess_junction_done_file_name, "Preprocessing alignments for candidate junction identification"))
-    {
-      PreprocessAlignments::preprocess_alignments(settings, summary, ref_seq_info);
-      settings.done_step(settings.preprocess_junction_done_file_name);
-    }
-
     
     if (settings.do_step(settings.coverage_junction_done_file_name, "Preliminary analysis of coverage distribution"))
     {
       string preprocess_junction_best_sam_file_name = settings.preprocess_junction_best_sam_file_name;
       string coverage_junction_best_bam_file_name = settings.coverage_junction_best_bam_file_name;
 
-      // preprocess_junction_best_sam_file_name is already BAM — sort directly
       samtools_sort(preprocess_junction_best_sam_file_name, coverage_junction_best_bam_file_name, settings.num_processors);
 
       samtools_index(coverage_junction_best_bam_file_name);
