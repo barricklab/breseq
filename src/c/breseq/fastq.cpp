@@ -1031,7 +1031,7 @@ namespace breseq {
     sprintf(ret_val.m_name, "READ-%i", id);
     sprintf(ret_val.m_name_plus, "[strand]:%i\t[start_1]:%u", strand, start_1);
     
-    if(verbose && !(id % 10000) && id){cout << "\tREAD: " << id << endl;}
+    if(verbose && !(id % 10000) && id){print_progress_line("\tREAD: " + to_string(id));}
 
     /*! Algorithm in use:
 

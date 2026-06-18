@@ -45,6 +45,7 @@ LICENSE AND COPYRIGHT
 
 #include <cxxabi.h>
 #include <dlfcn.h>
+#include <unistd.h>
 
 // C++
 // Containers
@@ -351,7 +352,73 @@ namespace breseq {
     struct stat buffer;
     return (stat(dirname, &buffer) == 0);
   }
-  
+
+  // Terminal capability detection and in-place progress-line printing.
+  // stderr_is_terminal() and terminal_color_enabled() are cached via
+  // function-local statics (construct-on-first-use), since this project
+  // builds with -std=c++11 and so can't use C++17 inline variables for
+  // shared state across translation units.
+  inline bool stderr_is_terminal()
+  {
+    static const bool is_tty = (isatty(STDERR_FILENO) != 0);
+    return is_tty;
+  }
+
+  inline bool terminal_color_enabled()
+  {
+    static const bool enabled = stderr_is_terminal() && !getenv("NO_COLOR");
+    return enabled;
+  }
+
+  inline string color_yellow(const string& message)
+  {
+    if (!terminal_color_enabled()) return message;
+    return "\033[33m" + message + "\033[0m";
+  }
+
+  inline string color_green(const string& message)
+  {
+    if (!terminal_color_enabled()) return message;
+    return "\033[32m" + message + "\033[0m";
+  }
+
+  inline string color_cyan(const string& message)
+  {
+    if (!terminal_color_enabled()) return message;
+    return "\033[96m" + message + "\033[0m";
+  }
+
+  // Tracks whether the last thing written to cerr was an in-place progress
+  // line (no trailing newline), so callers can cleanly end it before
+  // printing anything else. Function-local static + reference return gives
+  // a single process-wide instance under C++11.
+  inline bool& progress_line_is_active()
+  {
+    static bool active = false;
+    return active;
+  }
+
+  inline void end_progress_line()
+  {
+    if (progress_line_is_active()) {
+      cerr << endl;
+      progress_line_is_active() = false;
+    }
+  }
+
+  // Print a progress update. On an interactive terminal, this overwrites
+  // the previous update in place; otherwise (e.g. redirected to a log
+  // file) it falls back to one line per update, identical to before.
+  inline void print_progress_line(const string& message)
+  {
+    if (stderr_is_terminal()) {
+      cerr << "\r\033[K" << color_cyan(message);
+      progress_line_is_active() = true;
+    } else {
+      cerr << message << endl;
+    }
+  }
+
   inline bool file_is_gzipped(const char * filename)
   {
     ifstream in(filename, ios::binary);

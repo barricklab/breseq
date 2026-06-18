@@ -126,8 +126,9 @@ class pileup_base {
     //! Called before pileup starts a target.
     virtual void at_target_start(const uint32_t tid) { (void)tid; }
 
-    virtual void at_target_start_first_level_callback(const uint32_t tid) { 
+    virtual void at_target_start_first_level_callback(const uint32_t tid) {
       if (m_print_progress) {
+        end_progress_line();
         cerr << "  REFERENCE: " << m_bam_header->target_name[tid] << endl;
         cerr << "  LENGTH: " << m_bam_header->target_len[tid] << endl;
       }

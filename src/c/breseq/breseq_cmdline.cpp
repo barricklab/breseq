@@ -190,6 +190,7 @@ int do_bam2aln(int argc, char* argv[]) {
     }
   }
   
+  end_progress_line();
   cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
   return 0;
 }
@@ -400,6 +401,7 @@ int do_bam2cov(int argc, char* argv[]) {
     }
   }
   
+  end_progress_line();
   cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
   return 0;
 }
@@ -473,6 +475,7 @@ int do_convert_fastq(int argc, char* argv[])
   cerr << "+++   Converting FASTQ..." << endl;
   convert_fastq(input_file_name, output_file_name, input_format, output_format, options.count("reverse-complement"));
 
+  end_progress_line();
   cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
   return 0;
 }
@@ -571,6 +574,7 @@ int do_convert_reference(int argc, char* argv[]) {
     refs.WriteCSV(options.count("output") ? options["output"] : "output.csv");
   }
 	
+  end_progress_line();
   cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
 	return 0;
 }
@@ -815,6 +819,7 @@ int do_get_sequence(int argc, char *argv[])
     new_seq_info.WriteFASTA(options["output"]);
   }
   
+  end_progress_line();
   cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
   return 0;
 }
@@ -1131,6 +1136,7 @@ int do_simulate_reads(int argc, char *argv[])
     return -1;
   }
   
+  end_progress_line();
   cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
   return 0;
 }
@@ -2596,6 +2602,7 @@ int breseq_default_action(int argc, char* argv[])
     }
 
 	}
+  end_progress_line();
   cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
 
   

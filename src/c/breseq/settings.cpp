@@ -752,8 +752,8 @@ namespace breseq
   
   void Settings::command_line_run_header()
   {
-    cerr << output_divider << endl;
-    fprintf(stderr, "%s  %s   %s\n", PACKAGE_STRING, GITHUB_REVISION_STRING, PACKAGE_URL);
+    cerr << color_green(output_divider) << endl;
+    cerr << color_green(string(PACKAGE_STRING) + "  " + GITHUB_REVISION_STRING + "   " + PACKAGE_URL) << endl;
     fprintf(stderr, "\n");
     fprintf(stderr, "Active Developers: Barrick JE\n");
     fprintf(stderr, "Issues/Bugs: %s\n", PACKAGE_BUGREPORT);
@@ -777,7 +777,7 @@ namespace breseq
     fprintf(stderr, "  Strand, M.D., Borges, J.J., Knoester, D.B., Reba, A., Meyer, A.G. \n");
     fprintf(stderr, "  (2014) Identifying structural variation in haploid microbial genomes \n");
     fprintf(stderr, "  from short-read resequencing data using breseq. BMC Genomics 15:1039.\n");
-    cerr << output_divider << endl;
+    cerr << color_green(output_divider) << endl;
   }
 
   // Settings in here should be static (not set at the command line).
@@ -1382,12 +1382,14 @@ namespace breseq
     this->set_current_step_done_key(done_key);
 		if (!file_exists(done_file_name.c_str()))
 		{
-      cerr << "+++   NOW PROCESSING " << message << endl;
+      end_progress_line();
+      cerr << color_yellow("+++   NOW PROCESSING " + message) << endl;
       this->record_start_time(message);
       return true;
 		}
-    
-		cerr << "--- ALREADY COMPLETE " << message << endl;
+
+		end_progress_line();
+		cerr << color_yellow("--- ALREADY COMPLETE " + message) << endl;
 
 		ExecutionTime et;
     et.retrieve(done_file_name);

@@ -113,7 +113,7 @@ bool pileup_base::handle_position(uint32_t pos_1) {
 
   // Print progress (1-indexed position)
   if(m_print_progress && (pos_1 % 10000 == 0) ) {
-    cerr << "    POSITION:" << pos_1 << endl;
+    print_progress_line("    POSITION:" + to_string(pos_1));
   }
   
   if ( m_clip_start_position_1 && (pos_1 < m_clip_start_position_1) ) return false;
