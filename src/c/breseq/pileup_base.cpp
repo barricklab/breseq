@@ -112,8 +112,13 @@ char* pileup_base::get_refseq(uint32_t target) const {
 bool pileup_base::handle_position(uint32_t pos_1) {
 
   // Print progress (1-indexed position)
-  if(m_print_progress && (pos_1 % 10000 == 0) ) {
-    print_progress_line("    POSITION:" + to_string(pos_1));
+  if(m_print_progress) {
+    uint32_t target_total = target_length(m_last_tid);
+    if ((pos_1 % 10000 == 0) || (pos_1 == target_total)) {
+      ostringstream progress_message;
+      progress_message << "    POSITION:" << setw(12) << right << pos_1 << "/" << target_total;
+      print_progress_line(progress_message.str());
+    }
   }
   
   if ( m_clip_start_position_1 && (pos_1 < m_clip_start_position_1) ) return false;
