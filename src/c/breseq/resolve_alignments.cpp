@@ -768,8 +768,11 @@ void load_junction_alignments(
       read_file_summary_info.num_total_reads++;
       read_file_summary_info.num_total_bases+=seq.length();
       
-      if (reads_processed % 10000 == 0)
-        print_progress_line("    READS:" + to_string(reads_processed));
+      if (reads_processed % 10000 == 0) {
+        ostringstream progress_message;
+        progress_message << "    READS:" << setw(12) << right << reads_processed;
+        print_progress_line(progress_message.str());
+      }
       
       if (verbose)
         cerr << "===> Read: " << seq.m_name << endl;
@@ -929,7 +932,13 @@ void load_junction_alignments(
         }
       } // READ
     } // End loop through every $read_struct
-        
+
+    {
+      ostringstream progress_message;
+      progress_message << "    READS:" << setw(12) << right << reads_processed;
+      print_progress_line(progress_message.str());
+    }
+
     // save statistics
     summary.alignment_resolution.read_file[read_files[fastq_file_index].m_base_name] = read_file_summary_info;
     summary.alignment_resolution.total_unmapped_reads += read_file_summary_info.num_unmapped_reads;
@@ -1001,8 +1010,11 @@ void load_sam_only_alignments(
         break; // to next file
       
       reads_processed++;
-      if (reads_processed % 10000 == 0)
-        print_progress_line("    READS:" + to_string(reads_processed));
+      if (reads_processed % 10000 == 0) {
+        ostringstream progress_message;
+        progress_message << "    READS:" << setw(12) << right << reads_processed;
+        print_progress_line(progress_message.str());
+      }
       
       // Does this read have eligible reference sequence matches? (junction matches are not possible)
       uint32_t best_reference_score = eligible_read_alignments(settings, ref_seq_info, this_reference_alignments);
@@ -1033,7 +1045,13 @@ void load_sam_only_alignments(
       _write_reference_matches(settings, summary, ref_seq_info, trims_list, this_reference_alignments, resolved_reference_tam, sam_file_index);
       
     } // End loop through every read in file
-     
+
+    {
+      ostringstream progress_message;
+      progress_message << "    READS:" << setw(12) << right << reads_processed;
+      print_progress_line(progress_message.str());
+    }
+
     summary.alignment_resolution.read_file[read_files[sam_file_index].m_base_name] = read_file_summary_info;
     
     summary.alignment_resolution.total_unmapped_reads += read_file_summary_info.num_unmapped_reads;

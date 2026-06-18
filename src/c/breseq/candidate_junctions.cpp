@@ -273,8 +273,11 @@ namespace breseq {
                                                         uint32_t& i
                                                         )
   {
-    if (++i % 100000 == 0)
-      print_progress_line("    ALIGNED READ:" + to_string(i));
+    if (++i % 100000 == 0) {
+      ostringstream progress_message;
+      progress_message << "    ALIGNED READ:" << setw(12) << right << i;
+      print_progress_line(progress_message.str());
+    }
 
     summary.preprocess_alignments.aligned_reads++;
     summary.preprocess_alignments.alignments += alignments.size();
@@ -447,6 +450,12 @@ namespace breseq {
         preprocess_one_sam_file(settings, summary, ref_seq_info, reference_sam_file_name, BSAM, PSAM, min_indel_split_len, i);
       }
 
+      if (do_preprocess) {
+        ostringstream progress_message;
+        progress_message << "    ALIGNED READ:" << setw(12) << right << i;
+        print_progress_line(progress_message.str());
+      }
+
       settings.track_intermediate_file(settings.alignment_correction_done_file_name, reference_sam_file_name);
     }
 
@@ -575,8 +584,11 @@ namespace breseq {
         if (alignments.size() == 0)
           break;
         
-        if (++i % 10000 == 0)
-          print_progress_line("    ALIGNED READ:" + to_string(i) + " CANDIDATE JUNCTIONS:" + to_string(candidate_junctions.size()));
+        if (++i % 10000 == 0) {
+          ostringstream progress_message;
+          progress_message << "    ALIGNED READ:" << setw(12) << right << i << " CANDIDATE JUNCTIONS:" << setw(12) << right << candidate_junctions.size();
+          print_progress_line(progress_message.str());
+        }
         
         // for testing...
         if (settings.candidate_junction_read_limit != 0 && i > settings.candidate_junction_read_limit)
@@ -588,7 +600,13 @@ namespace breseq {
         if ((settings.maximum_junction_sequence_passed_alignment_pairs_to_consider != 0) && (passed_alignment_pairs_considered >= settings.maximum_junction_sequence_passed_alignment_pairs_to_consider))
           break;
       }
-      
+
+      {
+        ostringstream progress_message;
+        progress_message << "    ALIGNED READ:" << setw(12) << right << i << " CANDIDATE JUNCTIONS:" << setw(12) << right << candidate_junctions.size();
+        print_progress_line(progress_message.str());
+      }
+
       if ((settings.maximum_junction_sequence_passed_alignment_pairs_to_consider != 0) && (passed_alignment_pairs_considered >= settings.maximum_junction_sequence_passed_alignment_pairs_to_consider)) {
         break;
       }
