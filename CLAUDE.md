@@ -22,18 +22,11 @@ make
 make install
 ```
 
-**Dependencies for building** (use conda with `dev-environment.yml`):
+**Dependencies for building and running tests ** (use conda with `dev-environment.yml`):
 ```bash
-conda env create -f dev-environment.yml
-conda activate breseq-dev
-# Set env vars as shown in DEVELOPER file, then re-activate
+conda env create -f dev-environment.yml $PWD/env
+conda activate $PWD/env
 ./bootstrap.sh && ./configure && make
-```
-
-**Dependencies for running tests** (separate env — the run env installs a compiler that conflicts with building):
-```bash
-conda env create -f run-environment.yml
-conda activate breseq-run
 ```
 
 Runtime dependencies: `bowtie2`, `R`/`Rscript`, optionally `phylip`.
@@ -135,7 +128,7 @@ The central data structure is `cGenomeDiff` (`genome_diff.h`/`genome_diff.cpp`) 
 
 Mutation types (enum `gd_entry_type`): `SNP`, `SUB`, `DEL`, `INS`, `MOB`, `AMP`, `INV`, `CON`, `INT`
 
-Evidence types: `RA` (read alignment), `MC` (missing coverage), `JC` (junction candidate), `CN` (copy number), `UN` (unmatched)
+Evidence types: `RA` (read alignment), `MC` (missing coverage), `JC` (new junction), `CN` (copy number), `UN` (unknown)
 
 Validation/annotation types: `CURA`, `FPOS`, `PHYL`, `TSEQ`, `PFLP`, `RFLP`, `PFGE`, `NOTE`, `MASK`
 
@@ -148,11 +141,6 @@ Validation/annotation types: `CURA`, `FPOS`, `PHYL`, `TSEQ`, `PFLP`, `RFLP`, `PF
 - `coverage_distribution.h/cpp` — coverage analysis
 - `mutation_predictor.h/cpp` — final mutation prediction logic
 - `anyoption.h/cpp` — command-line option parsing (custom library)
-
-### Bundled dependencies
-
-- `extern/samtools-1.3.1` — modified samtools used as a library (see `extern/samtools_modifications.txt`)
-- `miniz*.{c,h}` — miniz zip library (split into multiple files; compiled with `-DMINIZ_NO_ZLIB_COMPATIBLE_NAMES` to avoid conflicts with system libz)
 
 ### R scripts
 
