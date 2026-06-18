@@ -294,6 +294,7 @@ namespace breseq
     options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Soft-Clipping (SC) Evidence Options", ADVANCED_OPTION);
     options
+    ("predict-soft-clipping", "Predict soft-clipping (SC) evidence: positions where reads are unexpectedly soft-clipped at their ends, which may indicate unannotated structural variation. This evidence type is experimental and disabled by default.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("soft-clipping-minimum-bases", "Minimum number of soft-clipped bases at a read end to count as a soft-clipping event", 8, ADVANCED_OPTION)
     ("soft-clipping-score-cutoff", "Log10 E-value cutoff for soft-clipping evidence (DEFAULT = 2)", 2.0, ADVANCED_OPTION)
     ;
@@ -523,6 +524,7 @@ namespace breseq
     
     this->call_mutations_overlapping_missing_coverage = options.count("call-mutations-overlapping-MC");
 
+    this->predict_soft_clipping = options.count("predict-soft-clipping");
     this->soft_clipping_minimum_bases = from_string<uint32_t>(options["soft-clipping-minimum-bases"]);
     this->soft_clipping_log10_e_value_cutoff = from_string<double>(options["soft-clipping-score-cutoff"]);
     
@@ -916,6 +918,7 @@ namespace breseq
     this->deletion_coverage_propagation_cutoff = 0;
     this->deletion_coverage_seed_cutoff = 0;
     this->call_mutations_overlapping_missing_coverage = false;
+    this->predict_soft_clipping = false;
     this->soft_clipping_minimum_bases = 8;
     this->soft_clipping_log10_e_value_cutoff = 2.0;
       

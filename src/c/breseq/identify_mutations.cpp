@@ -62,7 +62,7 @@ void identify_mutations(
 								print_per_position_file
 							);
 	imp.do_pileup(settings.call_mutations_seq_id_set());
-  imp.add_sc_evidence(summary, ref_seq_info);
+  if (settings.predict_soft_clipping) imp.add_sc_evidence(summary, ref_seq_info);
   imp.write_gd(gd_file);
 }
 

@@ -353,6 +353,7 @@ namespace breseq
     bool call_mutations_overlapping_missing_coverage;     // Default = false      COMMAND-LINE OPTION
 
     //! Settings: Soft-Clipping Evidence
+    bool     predict_soft_clipping;                       // Default = false     COMMAND-LINE OPTION
     uint32_t soft_clipping_minimum_bases;                 // Default = 8         COMMAND-LINE OPTION
     double   soft_clipping_log10_e_value_cutoff;          // Default = 2.0       COMMAND-LINE OPTION
     

@@ -1,5 +1,5 @@
 #=GENOME_DIFF	1.0
-#=CREATED	14:18:48 18 Jun 2026
+#=CREATED	16:40:34 18 Jun 2026
 #=PROGRAM	breseq 0.40.1
 #=COMMAND	./src/c/breseq/breseq -j 4 -o ./tests/tmv_plasmid_circular_deletion -r ./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/tmv-plasmid.gbk ./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_1P.fastq.gz ./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/D3-9_2P.fastq.gz
 #=REFSEQ	./tests/tmv_plasmid_circular_deletion/../data/tmv_plasmid/tmv-plasmid.gbk
@@ -163,9 +163,3 @@ UN	149	.	TMV-plasmid	6800	6800
 UN	150	.	TMV-plasmid	6802	6802
 UN	151	.	TMV-plasmid	6804	6888
 UN	152	.	TMV-plasmid	10254	10411
-SC	153	.	TMV-plasmid	812	1	frequency=0.5000	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	locus_tag=–/–	log10_e_value=2.1	read_count=2	total_count=4
-SC	154	.	TMV-plasmid	7657	-1	frequency=0.0069	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	locus_tag=–/–	log10_e_value=2.5	read_count=6	total_count=874
-SC	155	.	TMV-plasmid	7707	-1	frequency=0.0116	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	locus_tag=–/–	log10_e_value=8.8	read_count=10	total_count=860
-SC	156	.	TMV-plasmid	8260	-1	frequency=0.0096	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	locus_tag=–/–	log10_e_value=2.1	read_count=5	total_count=520
-SC	157	.	TMV-plasmid	9079	-1	frequency=0.0096	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	locus_tag=–/–	log10_e_value=5.7	read_count=8	total_count=835
-SC	158	.	TMV-plasmid	10217	1	frequency=0.2727	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	locus_tag=–/–	log10_e_value=4.2	read_count=3	total_count=11
