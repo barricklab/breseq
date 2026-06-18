@@ -2110,6 +2110,16 @@ int breseq_default_action(int argc, char* argv[])
         "read_set=" + to_string(num_read_files) + ",obs_base,ref_base,quality=" + to_string(num_qual) // covariates
       );
 
+      // Tabulate soft-clipping counts for SC evidence (run in same step as error_count)
+      tabulate_soft_clipping_counts(
+        settings,
+        summary,
+        make_vector<string>(reference_bam_file_name),
+        reference_fasta_file_name,
+        ref_seq_info
+      );
+      summary.soft_clipping.store(settings.soft_clipping_summary_file_name);
+
       settings.done_step(settings.error_counts_done_file_name);
     }
 
@@ -2237,6 +2247,7 @@ int breseq_default_action(int argc, char* argv[])
       settings.done_step(settings.error_rates_done_file_name);
     }
     summary.unique_coverage.retrieve(settings.error_rates_summary_file_name);
+    summary.soft_clipping.retrieve(settings.soft_clipping_summary_file_name);
 
     //
     // 08 Mutation Identification
@@ -2268,6 +2279,7 @@ int breseq_default_action(int argc, char* argv[])
 				reference_bam_file_name,
 				reference_fasta_file_name,
 				ra_mc_genome_diff_file_name,
+        ref_seq_info,
         deletion_propagation_cutoffs,
         deletion_seed_cutoffs,
 				settings.mutation_log10_e_value_cutoff, // mutation_cutoff

@@ -44,6 +44,14 @@ void analyze_soft_clipping(
                            const string& output_file_name,
                            const uint32_t minimum_clipped_bases
                            );
+
+void tabulate_soft_clipping_counts(
+                                   const Settings& settings,
+                                   Summary& summary,
+                                   const vector<string>& bam_file_names,
+                                   const string& fasta_file_name,
+                                   const cReferenceSequences& ref_seq_info
+                                   );
 }
 
 #endif

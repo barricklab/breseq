@@ -305,6 +305,23 @@ void from_json(const json& j, ErrorCountSummaries& s)
 }
 
 // Summary
+// SoftClippingSummary
+void to_json(json& j, const SoftClippingSummary& s)
+{
+  j = json{
+    {"total_spanning_read_bases", s.total_spanning_read_bases},
+    {"total_clipped_read_ends", s.total_clipped_read_ends},
+    {"soft_clipping_rate", s.soft_clipping_rate},
+  };
+}
+
+void from_json(const json& j, SoftClippingSummary& s)
+{
+  s.total_spanning_read_bases = j.at("total_spanning_read_bases").get<uint64_t>();
+  s.total_clipped_read_ends = j.at("total_clipped_read_ends").get<uint64_t>();
+  s.soft_clipping_rate = j.at("soft_clipping_rate").get<double>();
+}
+
 void to_json(json& j, const Summary& s)
 {
   j = json{
@@ -315,6 +332,7 @@ void to_json(json& j, const Summary& s)
     {"unique_coverage", s.unique_coverage},
     {"preprocess_error_count", s.preprocess_error_count},
     {"preprocess_alignments", s.preprocess_alignments},
+    {"soft_clipping", s.soft_clipping},
   };
 }
 
@@ -327,6 +345,8 @@ void from_json(const json& j, Summary& s)
   s.candidate_junction = j.at("candidate_junction").get<CandidateJunctionSummary>();
   s.sequence_conversion = j.at("sequence_conversion").get<SequenceConversionSummary>();
   s.preprocess_error_count = j.at("preprocess_error_count").get<ErrorCountSummaries>();
+  if (j.count("soft_clipping"))
+    s.soft_clipping = j.at("soft_clipping").get<SoftClippingSummary>();
 }
   
 PublicReadFileSummary::PublicReadFileSummary(const ReadFileSummary &rfs, const AnalyzeFastqSummary &afs)
@@ -541,6 +561,7 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   : reads(s)
   , references(s, r, t.refseq_settings)
   , options(t)
+  , soft_clipping(s.soft_clipping)
 { }
   
 // PublicReadFileSummary
@@ -880,15 +901,18 @@ void to_json(json& j, const PublicSummary& s)
     {"reads", s.reads},
     {"references", s.references},
     {"options", s.options},
+    {"soft_clipping", s.soft_clipping},
   };
 }
 
-  
+
 void from_json(const json& j, PublicSummary& s)
 {
   s.reads = j.at("reads").get<PublicReadSummary>();
   s.references = j.at("references").get<PublicReferencesSummary>();
   s.options = j.at("options").get<PublicOptionsSummary>();
+  if (j.count("soft_clipping"))
+    s.soft_clipping = j.at("soft_clipping").get<SoftClippingSummary>();
 }
 
   

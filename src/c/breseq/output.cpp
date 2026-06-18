@@ -181,6 +181,7 @@ string header_style_string()
   ss << ".missing_coverage_header_row {background-color: rgb(0,100,100);}" << endl;
   ss << ".new_junction_header_row {background-color: rgb(0,0,155);}"       << endl;
   ss << ".copy_number_header_row {background-color: rgb(153,102,0);}"      << endl;
+  ss << ".soft_clipping_header_row {background-color: rgb(128,0,128);}"   << endl;
   ss << ".alternate_table_row_0 {background-color: rgb(255,255,255);}"     << endl;
   ss << ".alternate_table_row_1 {background-color: rgb(235,235,235);}"     << endl;
   ss << ".gray_table_row {background-color: rgb(230,230,245);}"            << endl;
@@ -488,9 +489,21 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   if (cn.size() > 0) {
     HTML << "<p>" << html_copy_number_table_string(cn, false, "Unassigned copy number evidence", relative_path);
   }
-  
+
+  /////////////////////////
+  // Unassigned SC evidence
+  /////////////////////////
+
+  diff_entry_list_t sc = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(SC)));
+  sc.remove_if(cDiffEntry::rejected_and_not_user_defined());
+  sc.remove_if(cDiffEntry::field_exists(IGNORE));
+
+  if (sc.size() > 0) {
+    HTML << "<p>" << html_soft_clipping_table_string(sc, false, "Unassigned soft clipping evidence", relative_path);
+  }
+
   // This code prints out a message if there was nothing in the previous tables
-  if (muts.size() + cn.size() + mc.size() + jc.size() == 0) {
+  if (muts.size() + cn.size() + mc.size() + jc.size() + sc.size() == 0) {
     HTML << "<p>No mutations predicted." << endl;
   }
   
@@ -1278,6 +1291,10 @@ string html_genome_diff_item_table_string(const Settings& settings, const cGenom
     else if(first_item._type == CN)
     {
       return html_copy_number_table_string(list_ref,true);
+    }
+    else if(first_item._type == SC)
+    {
+      return html_soft_clipping_table_string(list_ref,true);
     }
   }
   return "";
@@ -2190,6 +2207,88 @@ string html_copy_number_table_string(diff_entry_list_t& list_ref, bool show_deta
     ss << end_tr();
   }// End list_ref Loop
   
+  ss << "</tbody>" << endl;
+  ss << end_table() << endl;
+  ss << "</div>" << endl;
+
+  return ss.str();
+}
+
+
+string html_soft_clipping_table_string(diff_entry_list_t& list_ref, bool show_details, const string& title, const string& relative_link)
+{
+  if (list_ref.size() == 0) return "";
+
+  stringstream ss;
+  cDiffEntry& test_item = *list_ref.front();
+
+  bool link = test_item.entry_exists(_EVIDENCE_FILE_NAME);
+
+  ss << "<div id=\"soft_clipping_list\">" << endl;
+  ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
+  size_t total_cols = link ? 11 : 10;
+
+  if (title != "") {
+    ss << tr(th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"soft_clipping_header_row\"", title)) << endl;
+  }
+
+  ss << "<tr>" << endl;
+  if (link) ss << th("&nbsp;") << endl;
+  ss << th(nonbreaking("seq id")) << endl;
+  ss << th("position") << endl;
+  ss << th("direction") << endl;
+  ss << th("clipped") << endl;
+  ss << th("total") << endl;
+  ss << th("freq") << endl;
+  ss << th("score") << endl;
+  ss << th("annotation") << endl;
+  ss << th("gene") << endl;
+  ss << th("width=\"100%\"", "product") << endl;
+  ss << "</tr>" << endl;
+  ss << "<tbody class=\"list\">" << endl;
+
+  for (diff_entry_list_t::iterator itr = list_ref.begin(); itr != list_ref.end(); itr++) {
+    cDiffEntry& c = **itr;
+
+    ss << start_tr("class=\"normal_table_row\"") << endl;
+
+    if (link)
+      ss << td(a(relative_link + c[_EVIDENCE_FILE_NAME], "*")) << endl;
+
+    ss << td(ALIGN_LEFT, nonbreaking(c[SEQ_ID])) << endl;
+    ss << td(ALIGN_RIGHT, nonbreaking(c[POSITION])) << endl;
+
+    string dir_str = (c[STRAND] == "-1") ? "&larr;" : "&rarr;";
+    ss << td(ALIGN_CENTER, dir_str) << endl;
+
+    ss << td(ALIGN_RIGHT, nonbreaking(c[SC_READ_COUNT])) << endl;
+    ss << td(ALIGN_RIGHT, nonbreaking(c[SC_TOTAL_COUNT])) << endl;
+    ss << td(string(CLASS_FREQ) + " " + string(ALIGN_RIGHT), Html_Mutation_Table_String::freq_to_string(c[FREQUENCY])) << endl;
+    ss << td(ALIGN_RIGHT, nonbreaking(c[SC_LOG10_E_VALUE])) << endl;
+
+    ss << td(ALIGN_CENTER, html_formatted_mutation_annotation(c)); // "Annotation" column; do NOT call nonbreaking on the whole thing
+
+    if (c.entry_exists(GENE_NAME))
+      ss << td(ALIGN_CENTER, i(nonbreaking(substitute(c[GENE_NAME], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))));
+    else
+      ss << td("&nbsp;");
+    if (c.entry_exists(GENE_PRODUCT))
+      ss << td(ALIGN_LEFT, htmlize(substitute(c[GENE_PRODUCT], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator)));
+    else
+      ss << td("&nbsp;");
+
+    ss << end_tr();
+
+    if (show_details && c.entry_exists(REJECT)) {
+      vector<string> reject_reasons = c.get_reject_reasons();
+      for (vector<string>::iterator it = reject_reasons.begin(); it != reject_reasons.end(); it++) {
+        ss << tr("class=\"reject_table_row\"",
+                 td("colspan=\"" + to_string(total_cols) + "\"",
+                    "Rejected: " + decode_reject_reason(*it)));
+      }
+    }
+  }
+
   ss << "</tbody>" << endl;
   ss << end_table() << endl;
   ss << "</div>" << endl;
@@ -3175,7 +3274,7 @@ void Html_Mutation_Table_String::Item_Lines()
   if (options.legend_row) {
     ss << "<tr>" << endl;
     ss << td("colspan=\"" + to_string(total_cols) + "\"",
-                    b("Evidence codes: RA = read alignment, MC = missing coverage, JC = new junction"));
+                    b("Evidence codes: RA = read alignment, MC = missing coverage, JC = new junction, SC = soft clipping"));
     ss << "</tr>" << endl;
   }
   
@@ -3518,6 +3617,25 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, const cGeno
   }
   
   
+  // Soft clipping evidence
+  diff_entry_list_t items_SC = gd.show_list(make_vector<gd_entry_type>(SC));
+
+  for (diff_entry_list_t::iterator itr = items_SC.begin(); itr != items_SC.end(); itr++) {
+    diff_entry_ptr_t item = *itr;
+    uint32_t pos = from_string<uint32_t>((*item)[POSITION]);
+
+    add_evidence(_EVIDENCE_FILE_NAME,
+                 item,
+                 item,
+                 make_map<string,string>
+                 (BAM_PATH, reference_bam_file_name)
+                 (FASTA_PATH, reference_fasta_file_name)
+                 (PREFIX, "SC")
+                 (SEQ_ID, (*item)[SEQ_ID])
+                 (START, to_string(pos))
+                 (END, to_string(pos)));
+  }
+
   // now create evidence files
   create_path(settings.evidence_path);
   //cerr << "Total number of evidence items: " << evidence_list.size() << endl;

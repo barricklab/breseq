@@ -1,7 +1,9 @@
 #=GENOME_DIFF	1.0
-#=COMMAND	./src/c/breseq/breseq -j 4 --polymorphism-prediction --minimum-mapping-quality 40 --maximum-read-mismatches 1 -o tests/lambda_polymorphism_mapping_quality_mismatches -r tests/lambda_polymorphism_mapping_quality_mismatches/../data/lambda/lambda.gbk tests/lambda_polymorphism_mapping_quality_mismatches/../data/lambda/lambda_mixed_population.fastq
-#=REFSEQ	tests/lambda_polymorphism_mapping_quality_mismatches/../data/lambda/lambda.gbk
-#=READSEQ	tests/lambda_polymorphism_mapping_quality_mismatches/../data/lambda/lambda_mixed_population.fastq
+#=CREATED	12:05:30 18 Jun 2026
+#=PROGRAM	breseq 0.40.1
+#=COMMAND	./src/c/breseq/breseq -j 4 --polymorphism-prediction --minimum-mapping-quality 40 --maximum-read-mismatches 1 -o /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/lambda_polymorphism_mapping_quality_mismatches -r /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/lambda_polymorphism_mapping_quality_mismatches/../data/lambda/lambda.gbk /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/lambda_polymorphism_mapping_quality_mismatches/../data/lambda/lambda_mixed_population.fastq
+#=REFSEQ	/Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/lambda_polymorphism_mapping_quality_mismatches/../data/lambda/lambda.gbk
+#=READSEQ	/Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/lambda_polymorphism_mapping_quality_mismatches/../data/lambda/lambda_mixed_population.fastq
 #=CONVERTED-BASES	6998495
 #=CONVERTED-READS	199957
 #=INPUT-BASES	7000144

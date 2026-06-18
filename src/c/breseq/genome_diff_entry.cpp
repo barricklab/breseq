@@ -130,6 +130,11 @@ namespace breseq {
   const char* SIDE_2_COVERAGE = "side_2_coverage";
   const char* NEW_JUNCTION_COVERAGE = "new_junction_coverage";
   
+  //For SC
+  const char* SC_READ_COUNT = "read_count";
+  const char* SC_TOTAL_COUNT = "total_count";
+  const char* SC_LOG10_E_VALUE = "log10_e_value";
+
   //For CN
   const char* COPY_NUMBER = "copy_number";
   
@@ -157,6 +162,7 @@ namespace breseq {
   (JC,make_vector<string> (SIDE_1_SEQ_ID)(SIDE_1_POSITION)(SIDE_1_STRAND)(SIDE_2_SEQ_ID)(SIDE_2_POSITION)(SIDE_2_STRAND)(OVERLAP))
   (CN,make_vector<string> (SEQ_ID)(START)(END)(COPY_NUMBER))
   (UN,make_vector<string> (SEQ_ID)(START)(END))
+  (SC,make_vector<string> (SEQ_ID)(POSITION)(STRAND))
   
   //## validation
   (CURA,make_vector<string> ("expert"))
@@ -217,7 +223,7 @@ namespace breseq {
   ;
   
   const vector<string>gd_entry_type_lookup_table =
-  make_vector<string>("UNKNOWN")("SNP")("SUB")("DEL")("INS")("MOB")("AMP")("INV")("CON")("INT")("RA")("MC")("JC")("CN")("UN")("CURA")("FPOS")("PHYL")("TSEQ")("PFLP")("RFLP")("PFGE")("NOTE")("MASK");
+  make_vector<string>("UNKNOWN")("SNP")("SUB")("DEL")("INS")("MOB")("AMP")("INV")("CON")("INT")("RA")("MC")("JC")("CN")("UN")("SC")("CURA")("FPOS")("PHYL")("TSEQ")("PFLP")("RFLP")("PFGE")("NOTE")("MASK");
   
   // Used when determining what fields need to be updated if ids are renumbered
   // accounts for key=mutation_id:copy_index notation.
@@ -243,14 +249,15 @@ namespace breseq {
   (JC,   cDiffEntry::sort_fields_item(5, SIDE_1_SEQ_ID, SIDE_1_POSITION))
   (CN,   cDiffEntry::sort_fields_item(6, SEQ_ID, START))
   (UN,   cDiffEntry::sort_fields_item(7, SEQ_ID, START))
-  (CURA, cDiffEntry::sort_fields_item(8, "expert", "expert"))
-  (FPOS, cDiffEntry::sort_fields_item(8, "expert", "expert"))
-  (PHYL, cDiffEntry::sort_fields_item(8, "gd", "gd"))
-  (TSEQ, cDiffEntry::sort_fields_item(8, "seq_id", "primer_1_start"))
-  (PFLP, cDiffEntry::sort_fields_item(8, "seq_id", "primer_1_start"))
-  (RFLP, cDiffEntry::sort_fields_item(8, "seq_id", "primer_1_start"))
-  (PFGE, cDiffEntry::sort_fields_item(8, "seq_id", "enzyme"))
-  (MASK, cDiffEntry::sort_fields_item(8, SEQ_ID, POSITION))
+  (SC,   cDiffEntry::sort_fields_item(8, SEQ_ID, POSITION))
+  (CURA, cDiffEntry::sort_fields_item(9, "expert", "expert"))
+  (FPOS, cDiffEntry::sort_fields_item(9, "expert", "expert"))
+  (PHYL, cDiffEntry::sort_fields_item(9, "gd", "gd"))
+  (TSEQ, cDiffEntry::sort_fields_item(9, "seq_id", "primer_1_start"))
+  (PFLP, cDiffEntry::sort_fields_item(9, "seq_id", "primer_1_start"))
+  (RFLP, cDiffEntry::sort_fields_item(9, "seq_id", "primer_1_start"))
+  (PFGE, cDiffEntry::sort_fields_item(9, "seq_id", "enzyme"))
+  (MASK, cDiffEntry::sort_fields_item(9, SEQ_ID, POSITION))
   ;
   
   map<gd_entry_type, uint8_t> sort_order = make_map<gd_entry_type, uint8_t>
@@ -268,15 +275,16 @@ namespace breseq {
   (JC,  12)
   (CN,  13)
   (UN,  14)
-  (CURA, 15)
-  (FPOS, 16)
-  (PHYL, 17)
-  (TSEQ, 18)
-  (PFLP, 19)
-  (RFLP, 20)
-  (PFGE, 21)
-  (NOTE, 21)
-  (MASK, 21)
+  (SC,  15)
+  (CURA, 16)
+  (FPOS, 17)
+  (PHYL, 18)
+  (TSEQ, 19)
+  (PFLP, 20)
+  (RFLP, 21)
+  (PFGE, 22)
+  (NOTE, 22)
+  (MASK, 22)
   ;
   ////
   // End sorting variables

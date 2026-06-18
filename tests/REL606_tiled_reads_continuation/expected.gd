@@ -1,14 +1,16 @@
 #=GENOME_DIFF	1.0
-#=COMMAND	./src/c/breseq/breseq -j 4 -p -o tests/REL606_tiled_reads_continuation -r tests/REL606_tiled_reads_continuation/../data/REL606/REL606.fragment.gbk -s tests/REL606_tiled_reads_continuation/../data/REL606/REL606.is.gbk tests/REL606_tiled_reads_continuation/../data/REL606/REL606.tiled_reads_continuation.fastq
-#=REFSEQ	tests/REL606_tiled_reads_continuation/../data/REL606/REL606.fragment.gbk
-#=REFSEQ	tests/REL606_tiled_reads_continuation/../data/REL606/REL606.is.gbk
-#=READSEQ	tests/REL606_tiled_reads_continuation/../data/REL606/REL606.tiled_reads_continuation.fastq
+#=CREATED	12:07:33 18 Jun 2026
+#=PROGRAM	breseq 0.40.1
+#=COMMAND	./src/c/breseq/breseq -j 4 -p -o /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_tiled_reads_continuation -r /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_tiled_reads_continuation/../data/REL606/REL606.fragment.gbk -s /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_tiled_reads_continuation/../data/REL606/REL606.is.gbk /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_tiled_reads_continuation/../data/REL606/REL606.tiled_reads_continuation.fastq
+#=REFSEQ	/Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_tiled_reads_continuation/../data/REL606/REL606.fragment.gbk
+#=REFSEQ	/Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_tiled_reads_continuation/../data/REL606/REL606.is.gbk
+#=READSEQ	/Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_tiled_reads_continuation/../data/REL606/REL606.tiled_reads_continuation.fastq
 #=CONVERTED-BASES	6473000
 #=CONVERTED-READS	129460
 #=INPUT-BASES	6473000
 #=INPUT-READS	129460
-#=MAPPED-BASES	6196540
-#=MAPPED-READS	123932
+#=MAPPED-BASES	6196888
+#=MAPPED-READS	123940
 INS	1	45	REL606-5	474	TTTT	frequency=1	gene_name=aspU/dkgB	gene_position=intergenic (+36/-127)	gene_product=tRNA-Asp/2,5-diketo-D-gluconate reductase B	gene_strand=>/>	genes_promoter=dkgB	locus_tag=ECB_t00003/ECB_00200	locus_tags_promoter=ECB_00200	mutation_category=small_indel	position_end=474	position_start=474	ref_seq=T
 MOB	2	47,48	REL606-5	1000	IS1	-1	3	frequency=1	gene_name=dkgB	gene_position=coding (400-402/804 nt)	gene_product=2,5-diketo-D-gluconate reductase B	gene_strand=>	genes_inactivated=dkgB	locus_tag=ECB_00200	locus_tags_inactivated=ECB_00200	mutation_category=mobile_element_insertion	position_end=1002	position_start=1000	ref_seq=CCA	repeat_size=768
 INS	3	49	REL606-5	1378	GAAGGG	frequency=1	gene_name=dkgB	gene_position=coding (778/804 nt)	gene_product=2,5-diketo-D-gluconate reductase B	gene_strand=>	genes_overlapping=dkgB	locus_tag=ECB_00200	locus_tags_overlapping=ECB_00200	mutation_category=small_indel	position_end=1378	position_start=1378	ref_seq=G
@@ -127,3 +129,5 @@ UN	115	.	REL606-5	28000	28000
 UN	116	.	REL606-5	31350	31516
 UN	117	.	REL606-5	31608	31697
 UN	118	.	REL606-5	31793	32021
+SC	119	.	REL606-5	34574	-1	log10_e_value=30.7	read_count=10	total_count=16
+SC	120	.	REL606-5	34576	1	log10_e_value=30.7	read_count=10	total_count=16

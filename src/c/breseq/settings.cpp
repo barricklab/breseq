@@ -252,7 +252,7 @@ namespace breseq
     ("base-quality-cutoff,b", "Ignore bases with quality scores lower than this value", 3, ADVANCED_OPTION)
     ("quality-score-trim", "Trim the ends of reads past any base with a quality score below --base-quality-score-cutoff.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("require-match-length", "Only consider alignments that cover this many bases of a read", 0, ADVANCED_OPTION)
-    ("require-match-fraction", "Only consider alignments that cover this fraction of a read", 0.9, ADVANCED_OPTION)
+    ("require-match-fraction", "Only consider alignments that cover this fraction of a read", 0.5, ADVANCED_OPTION)
     ("maximum-read-mismatches", "Don't consider reads with this many or more bases or indels that are different from the reference sequence. Unaligned bases at the end of a read also count as mismatches. Unaligned bases at the beginning of the read do NOT count as mismatches. (DEFAULT=OFF)", "", ADVANCED_OPTION)
     ;
     
@@ -289,6 +289,13 @@ namespace breseq
     ("deletion-coverage-seed-cutoff","Value for coverage below which MC are seeded", 0, ADVANCED_OPTION)
     ("deletion-coverage-propagation-cutoff","Value for coverage above which MC ends stop. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
     ("call-mutations-overlapping-MC", "If provided, don't ignore mutations predicted from RA evidence that overlap MC evidence", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ;
+
+    options.addUsage("", ADVANCED_OPTION);
+    options.addUsage("Soft-Clipping (SC) Evidence Options", ADVANCED_OPTION);
+    options
+    ("soft-clipping-minimum-bases", "Minimum number of soft-clipped bases at a read end to count as a soft-clipping event", 8, ADVANCED_OPTION)
+    ("soft-clipping-score-cutoff", "Log10 E-value cutoff for soft-clipping evidence (DEFAULT = 2)", 2.0, ADVANCED_OPTION)
     ;
     
     options.addUsage("", ADVANCED_OPTION);
@@ -515,6 +522,9 @@ namespace breseq
     ASSERT(this->deletion_coverage_propagation_cutoff >= 0, "Argument --deletion-coverage-seed-cutoff must be >= 0")
     
     this->call_mutations_overlapping_missing_coverage = options.count("call-mutations-overlapping-MC");
+
+    this->soft_clipping_minimum_bases = from_string<uint32_t>(options["soft-clipping-minimum-bases"]);
+    this->soft_clipping_log10_e_value_cutoff = from_string<double>(options["soft-clipping-score-cutoff"]);
     
     //! Settings: bowtie2
     //  all have default that we only overwrite if present on command line
@@ -842,7 +852,7 @@ namespace breseq
 
     //! Settings: Read Alignment and Candidate Junction Read Alignment
     this->require_match_length = 0;         
-    this->require_match_fraction = 0.9; // CL value overrides
+    this->require_match_fraction = 0.5; // CL value overrides
     this->maximum_read_mismatches = -1;
 
     this->bowtie2_junction_maximum_alignments_to_consider_per_read = 2000;
@@ -906,6 +916,8 @@ namespace breseq
     this->deletion_coverage_propagation_cutoff = 0;
     this->deletion_coverage_seed_cutoff = 0;
     this->call_mutations_overlapping_missing_coverage = false;
+    this->soft_clipping_minimum_bases = 8;
+    this->soft_clipping_log10_e_value_cutoff = 2.0;
       
     this->polymorphism_prediction = false;
     this->mixed_base_prediction = true;
@@ -1065,6 +1077,8 @@ namespace breseq
 		this->coverage_file_name = this->error_calibration_path + "/@.coverage.tab";
 		this->unique_only_coverage_distribution_file_name = this->error_calibration_path + "/@.unique_only_coverage_distribution.tab";
 		this->error_rates_summary_file_name = this->error_calibration_path + "/summary.json";
+		this->soft_clipping_counts_file_name = this->error_calibration_path + "/soft_clipping_counts.tab";
+		this->soft_clipping_summary_file_name = this->error_calibration_path + "/soft_clipping_summary.json";
 		this->error_rates_base_qual_error_prob_file_name = this->error_calibration_path + "/base_qual_error_prob.#.tab";
 		this->plot_error_rates_r_script_file_name = this->program_data_path + "/plot_error_rate.r";
 		this->plot_error_rates_fit_r_script_file_name = this->error_calibration_path + "/fit.#.r_script";

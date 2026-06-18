@@ -351,6 +351,10 @@ namespace breseq
     double deletion_coverage_seed_cutoff;                 // Default = 0;         COMMAND-LINE OPTION
     
     bool call_mutations_overlapping_missing_coverage;     // Default = false      COMMAND-LINE OPTION
+
+    //! Settings: Soft-Clipping Evidence
+    uint32_t soft_clipping_minimum_bases;                 // Default = 8         COMMAND-LINE OPTION
+    double   soft_clipping_log10_e_value_cutoff;          // Default = 2.0       COMMAND-LINE OPTION
     
     //! These are mutually exclusive settings (polymorphism prediction overrides mixed_base_prediction)
     bool polymorphism_prediction;                         // Default = false COMMAND-LINE OPTION
@@ -521,6 +525,8 @@ namespace breseq
 		string unique_only_coverage_distribution_file_name;
 		string error_rates_summary_file_name;
 		string error_rates_base_qual_error_prob_file_name;
+		string soft_clipping_counts_file_name;
+		string soft_clipping_summary_file_name;
 		string plot_error_rates_r_script_file_name;
 		string plot_error_rates_fit_r_script_file_name;
 		string plot_error_rates_r_script_log_file_name;
