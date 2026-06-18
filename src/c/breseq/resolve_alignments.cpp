@@ -722,7 +722,8 @@ void load_junction_alignments(
   {    
     const cReadFile& rf = read_files[fastq_file_index];
     string fastq_file_name = read_files.base_name_to_read_file_name(rf.m_base_name);
-    
+
+    end_progress_line();
     cerr << "  READ FILE:" << rf.m_base_name << endl;
     
     ReadFileSummary read_file_summary_info;
@@ -768,7 +769,7 @@ void load_junction_alignments(
       read_file_summary_info.num_total_bases+=seq.length();
       
       if (reads_processed % 10000 == 0)
-        cerr << "    READS:" << reads_processed << endl;
+        print_progress_line("    READS:" + to_string(reads_processed));
       
       if (verbose)
         cerr << "===> Read: " << seq.m_name << endl;
@@ -976,7 +977,8 @@ void load_sam_only_alignments(
     
     const cReadFile& rf = read_files[sam_file_index];
     string reference_sam_file_name = read_files.base_name_to_read_file_name(rf.m_base_name);
-    
+
+    end_progress_line();
     cerr << "  READ FILE:" << rf.m_base_name << endl;
         
     reference_tam = new bam_file(reference_sam_file_name, settings.reference_fasta_file_name, ios::in); 
@@ -1000,7 +1002,7 @@ void load_sam_only_alignments(
       
       reads_processed++;
       if (reads_processed % 10000 == 0)
-        cerr << "    READS:" << reads_processed << endl;
+        print_progress_line("    READS:" + to_string(reads_processed));
       
       // Does this read have eligible reference sequence matches? (junction matches are not possible)
       uint32_t best_reference_score = eligible_read_alignments(settings, ref_seq_info, this_reference_alignments);

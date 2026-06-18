@@ -274,7 +274,7 @@ namespace breseq {
                                                         )
   {
     if (++i % 100000 == 0)
-      cerr << "    ALIGNED READ:" << i << endl;
+      print_progress_line("    ALIGNED READ:" + to_string(i));
 
     summary.preprocess_alignments.aligned_reads++;
     summary.preprocess_alignments.alignments += alignments.size();
@@ -428,6 +428,7 @@ namespace breseq {
 
       bam_file PSAM;
       if (do_preprocess) {
+        end_progress_line();
         cerr << "  READ FILE::" << read_file.m_base_name << endl;
         string preprocess_junction_split_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", read_file.m_base_name);
         PSAM.open_write(preprocess_junction_split_sam_file_name, reference_fasta_file_name);
@@ -450,6 +451,7 @@ namespace breseq {
     }
 
     if (do_preprocess) {
+      end_progress_line();
       cerr << "  Summary... " << endl
            << "  Aligned reads:                         " << setw(12) << right << summary.preprocess_alignments.aligned_reads << endl
            << "  Read alignments:                       " << setw(12) << right << summary.preprocess_alignments.alignments << endl
@@ -558,6 +560,7 @@ namespace breseq {
       cReadFile read_file = settings.read_files[j];
       
       string read_file_name = read_file.m_base_name;
+      end_progress_line();
       cerr << "  READ FILE::" << read_file_name << endl;
       
       // Decide which input SAM file we are using...
@@ -573,7 +576,7 @@ namespace breseq {
           break;
         
         if (++i % 10000 == 0)
-          cerr << "    ALIGNED READ:" << i << " CANDIDATE JUNCTIONS:" << candidate_junctions.size() << endl;
+          print_progress_line("    ALIGNED READ:" + to_string(i) + " CANDIDATE JUNCTIONS:" + to_string(candidate_junctions.size()));
         
         // for testing...
         if (settings.candidate_junction_read_limit != 0 && i > settings.candidate_junction_read_limit)
@@ -593,6 +596,7 @@ namespace breseq {
     }
     
     summary.candidate_junction.passed_alignment_pairs_considered = passed_alignment_pairs_considered;
+    end_progress_line();
     cerr << "  Passed alignment pairs examined: " << passed_alignment_pairs_considered << endl;
     if ( (settings.maximum_junction_sequence_passed_alignment_pairs_to_consider != 0) && (passed_alignment_pairs_considered >= settings.maximum_junction_sequence_passed_alignment_pairs_to_consider) ) {
       cerr << "  WARNING: Reached limit of " << settings.maximum_junction_sequence_passed_alignment_pairs_to_consider << " passed alignment pairs." << endl;
