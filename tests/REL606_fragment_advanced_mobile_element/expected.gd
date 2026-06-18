@@ -1,9 +1,9 @@
 #=GENOME_DIFF	1.0
-#=CREATED	12:06:51 18 Jun 2026
+#=CREATED	14:13:56 18 Jun 2026
 #=PROGRAM	breseq 0.40.1
-#=COMMAND	./src/c/breseq/breseq -j 4 -b 0 -o /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_fragment_advanced_mobile_element -r /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_fragment_advanced_mobile_element/../data/REL606/REL606.fragment.gbk /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_fragment_advanced_mobile_element/../data/REL606/REL606.advanced_mobile_element.fastq
-#=REFSEQ	/Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_fragment_advanced_mobile_element/../data/REL606/REL606.fragment.gbk
-#=READSEQ	/Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_fragment_advanced_mobile_element/../data/REL606/REL606.advanced_mobile_element.fastq
+#=COMMAND	./src/c/breseq/breseq -j 4 -b 0 -o ./tests/REL606_fragment_advanced_mobile_element -r ./tests/REL606_fragment_advanced_mobile_element/../data/REL606/REL606.fragment.gbk ./tests/REL606_fragment_advanced_mobile_element/../data/REL606/REL606.advanced_mobile_element.fastq
+#=REFSEQ	./tests/REL606_fragment_advanced_mobile_element/../data/REL606/REL606.fragment.gbk
+#=READSEQ	./tests/REL606_fragment_advanced_mobile_element/../data/REL606/REL606.advanced_mobile_element.fastq
 #=CONVERTED-BASES	1440000
 #=CONVERTED-READS	40000
 #=INPUT-BASES	1440000

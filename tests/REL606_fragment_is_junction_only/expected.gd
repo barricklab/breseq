@@ -1,10 +1,10 @@
 #=GENOME_DIFF	1.0
-#=CREATED	12:07:11 18 Jun 2026
+#=CREATED	14:14:16 18 Jun 2026
 #=PROGRAM	breseq 0.40.1
-#=COMMAND	./src/c/breseq/breseq -j 4 -b 0 -o /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_fragment_is_junction_only -r /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_fragment_is_junction_only/../data/REL606/REL606.fragment.gbk -s /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_fragment_is_junction_only/../data/REL606/REL606.is.gbk /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_fragment_is_junction_only/../data/REL606/REL606.junction_only.fastq
-#=REFSEQ	/Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_fragment_is_junction_only/../data/REL606/REL606.fragment.gbk
-#=REFSEQ	/Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_fragment_is_junction_only/../data/REL606/REL606.is.gbk
-#=READSEQ	/Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_fragment_is_junction_only/../data/REL606/REL606.junction_only.fastq
+#=COMMAND	./src/c/breseq/breseq -j 4 -b 0 -o ./tests/REL606_fragment_is_junction_only -r ./tests/REL606_fragment_is_junction_only/../data/REL606/REL606.fragment.gbk -s ./tests/REL606_fragment_is_junction_only/../data/REL606/REL606.is.gbk ./tests/REL606_fragment_is_junction_only/../data/REL606/REL606.junction_only.fastq
+#=REFSEQ	./tests/REL606_fragment_is_junction_only/../data/REL606/REL606.fragment.gbk
+#=REFSEQ	./tests/REL606_fragment_is_junction_only/../data/REL606/REL606.is.gbk
+#=READSEQ	./tests/REL606_fragment_is_junction_only/../data/REL606/REL606.junction_only.fastq
 #=CONVERTED-BASES	1440000
 #=CONVERTED-READS	40000
 #=INPUT-BASES	1440000

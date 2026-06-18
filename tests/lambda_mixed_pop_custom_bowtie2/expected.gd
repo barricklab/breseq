@@ -1,9 +1,9 @@
 #=GENOME_DIFF	1.0
-#=CREATED	12:06:23 18 Jun 2026
+#=CREATED	14:15:51 18 Jun 2026
 #=PROGRAM	breseq 0.40.1
-#=COMMAND	./src/c/breseq/breseq -j 4 -o /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/lambda_mixed_pop_custom_bowtie2 --bowtie2-scoring --ma 1 --mp 2 --np 1 --rdg 4,1 --rfg 4,1 --bowtie2-stage1 --local --score-min L,10,0.4 -k 20 --bowtie2-stage2 --bowtie2-junction --local --score-min L,10,0.30 -k 20 -r /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/lambda_mixed_pop_custom_bowtie2/../data/lambda/lambda.gbk /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/lambda_mixed_pop_custom_bowtie2/../data/lambda/lambda_mixed_population.fastq
-#=REFSEQ	/Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/lambda_mixed_pop_custom_bowtie2/../data/lambda/lambda.gbk
-#=READSEQ	/Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/lambda_mixed_pop_custom_bowtie2/../data/lambda/lambda_mixed_population.fastq
+#=COMMAND	./src/c/breseq/breseq -j 4 -o ./tests/lambda_mixed_pop_custom_bowtie2 --bowtie2-scoring --ma 1 --mp 2 --np 1 --rdg 4,1 --rfg 4,1 --bowtie2-stage1 --local --score-min L,10,0.4 -k 20 --bowtie2-stage2 --bowtie2-junction --local --score-min L,10,0.30 -k 20 -r ./tests/lambda_mixed_pop_custom_bowtie2/../data/lambda/lambda.gbk ./tests/lambda_mixed_pop_custom_bowtie2/../data/lambda/lambda_mixed_population.fastq
+#=REFSEQ	./tests/lambda_mixed_pop_custom_bowtie2/../data/lambda/lambda.gbk
+#=READSEQ	./tests/lambda_mixed_pop_custom_bowtie2/../data/lambda/lambda_mixed_population.fastq
 #=CONVERTED-BASES	6998495
 #=CONVERTED-READS	199957
 #=INPUT-BASES	7000144
@@ -73,28 +73,25 @@ MC	60	.	NC_001416	21736	27728	0	0	gene_name=[orf-314]–ea59	gene_product=[orf-3
 UN	61	.	NC_001416	1	8
 UN	62	.	NC_001416	21730	27724
 UN	63	.	NC_001416	48502	48502
-SC	64	.	NC_001416	33	1	log10_e_value=13.0	read_count=13	total_count=13
-SC	65	.	NC_001416	34	1	log10_e_value=13.0	read_count=13	total_count=13
-SC	66	.	NC_001416	1900	-1	log10_e_value=13.6	read_count=16	total_count=20
-SC	67	.	NC_001416	8037	1	log10_e_value=4.7	read_count=10	total_count=17
-SC	68	.	NC_001416	9685	-1	log10_e_value=7.8	read_count=13	total_count=21
-SC	69	.	NC_001416	12543	1	log10_e_value=4.3	read_count=9	total_count=14
-SC	70	.	NC_001416	13993	1	log10_e_value=6.5	read_count=9	total_count=10
-SC	71	.	NC_001416	16686	-1	log10_e_value=2.7	read_count=8	total_count=14
-SC	72	.	NC_001416	17693	-1	log10_e_value=2.7	read_count=8	total_count=14
-SC	73	.	NC_001416	19656	1	log10_e_value=4.4	read_count=10	total_count=18
-SC	74	.	NC_001416	21737	1	log10_e_value=22.2	read_count=22	total_count=25
-SC	75	.	NC_001416	27724	-1	log10_e_value=3.0	read_count=10	total_count=23
-SC	76	.	NC_001416	28264	-1	log10_e_value=8.6	read_count=14	total_count=23
-SC	77	.	NC_001416	35596	-1	log10_e_value=3.8	read_count=7	total_count=8
-SC	78	.	NC_001416	38009	1	log10_e_value=2.7	read_count=7	total_count=10
-SC	79	.	NC_001416	40550	1	log10_e_value=10.7	read_count=15	total_count=22
-SC	80	.	NC_001416	41294	-1	log10_e_value=3.9	read_count=9	total_count=15
-SC	81	.	NC_001416	42115	-1	log10_e_value=11.7	read_count=19	total_count=36
-SC	82	.	NC_001416	42947	-1	log10_e_value=3.5	read_count=10	total_count=21
-SC	83	.	NC_001416	43519	1	log10_e_value=4.6	read_count=11	total_count=22
-SC	84	.	NC_001416	45301	1	log10_e_value=15.1	read_count=19	total_count=27
-SC	85	.	NC_001416	46285	-1	log10_e_value=2.4	read_count=9	total_count=20
-SC	86	.	NC_001416	46954	-1	log10_e_value=3.2	read_count=9	total_count=17
-SC	87	.	NC_001416	47244	-1	log10_e_value=2.3	read_count=7	total_count=11
-SC	88	.	NC_001416	47979	-1	log10_e_value=18.2	read_count=19	total_count=22
+SC	64	.	NC_001416	1900	-1	frequency=0.1667	gene_name=A	gene_position=coding (1190/1926 nt)	gene_product=DNA packaging protein	gene_strand=>	locus_tag=lambdap02	log10_e_value=19.0	read_count=8	total_count=48
+SC	65	.	NC_001416	2739	-1	frequency=0.0508	gene_name=W	gene_position=coding (107/207 nt)	gene_product=head-tail joining protein	gene_strand=>	locus_tag=lambdap03	log10_e_value=2.7	read_count=3	total_count=59
+SC	66	.	NC_001416	7341	-1	frequency=0.0714	gene_name=Fi	gene_position=coding (140/399 nt)	gene_product=DNA packaging protein	gene_strand=>	locus_tag=lambdap09	log10_e_value=5.7	read_count=4	total_count=56
+SC	67	.	NC_001416	8037	1	frequency=0.1739	gene_name=Z	gene_position=coding (61/579 nt)	gene_product=tail component	gene_strand=>	locus_tag=lambdap11	log10_e_value=7.4	read_count=4	total_count=23
+SC	68	.	NC_001416	12543	1	frequency=0.1129	gene_name=H	gene_position=coding (2002/2562 nt)	gene_product=tail component	gene_strand=>	locus_tag=lambdap16	log10_e_value=14.8	read_count=7	total_count=62
+SC	69	.	NC_001416	12917	-1	frequency=0.1034	gene_name=H	gene_position=coding (2376/2562 nt)	gene_product=tail component	gene_strand=>	locus_tag=lambdap16	log10_e_value=3.7	read_count=3	total_count=29
+SC	70	.	NC_001416	16996	1	frequency=0.1000	gene_name=J	gene_position=coding (1492/3399 nt)	gene_product=tail:host specificity protein	gene_strand=>	locus_tag=lambdap21	log10_e_value=3.6	read_count=3	total_count=30
+SC	71	.	NC_001416	17001	-1	frequency=0.2273	gene_name=J	gene_position=coding (1497/3399 nt)	gene_product=tail:host specificity protein	gene_strand=>	locus_tag=lambdap21	log10_e_value=11.0	read_count=5	total_count=22
+SC	72	.	NC_001416	19656	1	frequency=0.0789	gene_name=orf-401	gene_position=coding (7/1206 nt)	gene_product=Tail fiber protein	gene_strand=>	locus_tag=lambdap27	log10_e_value=3.3	read_count=3	total_count=38
+SC	73	.	NC_001416	27724	-1	frequency=1.0000	gene_name=ea59/int	gene_position=intergenic (-751/+88)	gene_product=ea59/integration protein	gene_strand=</<	locus_tag=lambdap82/lambdap33	log10_e_value=3.2	read_count=2	total_count=2
+SC	74	.	NC_001416	28264	-1	frequency=0.0417	gene_name=int	gene_position=coding (619/1071 nt)	gene_product=integration protein	gene_strand=<	locus_tag=lambdap33	log10_e_value=2.5	read_count=3	total_count=72
+SC	75	.	NC_001416	33309	-1	frequency=0.0405	gene_name=kil|cIII	gene_position=coding (22/144 nt)|coding (155/165 nt)	gene_product=host-killing protein|antitermination protein	gene_strand=<|<	locus_tag=lambdap85|lambdap86	log10_e_value=2.4	read_count=3	snp_type=|	total_count=74
+SC	76	.	NC_001416	35596	-1	frequency=0.0921	gene_name=N/rexb	gene_position=intergenic (-158/+229)	gene_product=early gene regulator/exclusion protein	gene_strand=</<	locus_tag=lambdap49/lambdap53	log10_e_value=14.2	read_count=7	total_count=76
+SC	77	.	NC_001416	39272	-1	frequency=0.0652	gene_name=O	gene_position=coding (587/900 nt)	gene_product=DNA replication protein	gene_strand=>	locus_tag=lambdap89	log10_e_value=3.1	read_count=3	total_count=46
+SC	78	.	NC_001416	40550	1	frequency=0.0492	gene_name=ren	gene_position=coding (271/291 nt)	gene_product=ren exclusion protein	gene_strand=>	locus_tag=lambdap62	log10_e_value=2.7	read_count=3	total_count=61
+SC	79	.	NC_001416	42115	-1	frequency=0.0382	gene_name=NinD|NinE	gene_position=coding (166/174 nt)|coding (26/183 nt)	gene_product=NinD protein|NinE protein	gene_strand=>|>	locus_tag=lambdap65|lambdap66	log10_e_value=6.9	read_count=5	snp_type=|	total_count=131
+SC	80	.	NC_001416	42947	-1	frequency=0.0508	gene_name=NinG	gene_position=coding (519/615 nt)	gene_product=NinG protein	gene_strand=>	locus_tag=lambdap68	log10_e_value=2.7	read_count=3	total_count=59
+SC	81	.	NC_001416	45301	1	frequency=0.1111	gene_name=S|S'	gene_position=coding (116/324 nt)|coding (110/318 nt)	gene_product=anti-holin|holin	gene_strand=>|>	locus_tag=lambdap74|lambdap92	log10_e_value=17.5	read_count=8	snp_type=|	total_count=72
+SC	82	.	NC_001416	46285	-1	frequency=0.0769	gene_name=Rz|Rz1	gene_position=coding (320/462 nt)|coding (100/183 nt)	gene_product=cell lysis protein|Rz1 protein	gene_strand=>|>	locus_tag=lambdap76|lambdap91	log10_e_value=3.3	read_count=3	snp_type=|	total_count=39
+SC	83	.	NC_001416	46574	-1	frequency=0.0469	gene_name=bor	gene_position=coding (179/294 nt)	gene_product=Bor protein precursor	gene_strand=<	locus_tag=lambdap77	log10_e_value=2.6	read_count=3	total_count=64
+SC	84	.	NC_001416	47979	-1	frequency=0.0577	gene_name=lambdap79/–	gene_position=intergenic (+35/–)	gene_product=hypothetical protein/–	gene_strand=>/–	locus_tag=lambdap79/–	log10_e_value=2.9	read_count=3	total_count=52
+SC	85	.	NC_001416	48128	-1	frequency=0.0312	gene_name=lambdap79/–	gene_position=intergenic (+184/–)	gene_product=hypothetical protein/–	gene_strand=>/–	locus_tag=lambdap79/–	log10_e_value=2.1	read_count=3	total_count=96

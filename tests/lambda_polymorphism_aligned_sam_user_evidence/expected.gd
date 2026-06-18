@@ -1,9 +1,9 @@
 #=GENOME_DIFF	1.0
-#=CREATED	12:05:00 18 Jun 2026
+#=CREATED	14:17:26 18 Jun 2026
 #=PROGRAM	breseq 0.40.1
-#=COMMAND	./src/c/breseq/breseq -j 4 -p --aligned-sam --user-evidence-gd /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/lambda_polymorphism_aligned_sam_user_evidence/user_evidence.gd -o /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/lambda_polymorphism_aligned_sam_user_evidence -r /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/lambda_polymorphism_aligned_sam_user_evidence/../data/lambda/lambda.gbk /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/lambda_polymorphism_aligned_sam_user_evidence/../data/lambda/lambda_mixed_population.sam
-#=REFSEQ	/Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/lambda_polymorphism_aligned_sam_user_evidence/../data/lambda/lambda.gbk
-#=READSEQ	/Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/lambda_polymorphism_aligned_sam_user_evidence/../data/lambda/lambda_mixed_population.sam
+#=COMMAND	./src/c/breseq/breseq -j 4 -p --aligned-sam --user-evidence-gd ./tests/lambda_polymorphism_aligned_sam_user_evidence/user_evidence.gd -o ./tests/lambda_polymorphism_aligned_sam_user_evidence -r ./tests/lambda_polymorphism_aligned_sam_user_evidence/../data/lambda/lambda.gbk ./tests/lambda_polymorphism_aligned_sam_user_evidence/../data/lambda/lambda_mixed_population.sam
+#=REFSEQ	./tests/lambda_polymorphism_aligned_sam_user_evidence/../data/lambda/lambda.gbk
+#=READSEQ	./tests/lambda_polymorphism_aligned_sam_user_evidence/../data/lambda/lambda_mixed_population.sam
 #=CONVERTED-BASES	3500000
 #=CONVERTED-READS	100000
 #=INPUT-BASES	0
@@ -119,14 +119,10 @@ UN	106	.	NC_001416	46998	46998
 UN	107	.	NC_001416	48471	48471
 UN	108	.	NC_001416	48473	48478
 UN	109	.	NC_001416	48502	48502
-SC	110	.	NC_001416	34	1	log10_e_value=5.4	read_count=6	total_count=6
-SC	111	.	NC_001416	1900	-1	log10_e_value=10.5	read_count=10	total_count=12
-SC	112	.	NC_001416	16686	-1	log10_e_value=4.0	read_count=6	total_count=8
-SC	113	.	NC_001416	21737	1	log10_e_value=14.0	read_count=11	total_count=11
-SC	114	.	NC_001416	28264	-1	log10_e_value=4.3	read_count=7	total_count=12
-SC	115	.	NC_001416	35596	-1	log10_e_value=2.9	read_count=5	total_count=6
-SC	116	.	NC_001416	42115	-1	log10_e_value=2.8	read_count=6	total_count=11
-SC	117	.	NC_001416	46954	-1	log10_e_value=2.5	read_count=6	total_count=12
-SC	118	.	NC_001416	47976	1	log10_e_value=4.3	read_count=8	total_count=18
-SC	119	.	NC_001416	47979	-1	log10_e_value=16.4	read_count=13	total_count=14
-SC	120	.	NC_001416	48482	-1	log10_e_value=7.1	read_count=7	total_count=7
+SC	110	.	NC_001416	1900	-1	frequency=0.1739	gene_name=A	gene_position=coding (1190/1926 nt)	gene_product=DNA packaging protein	gene_strand=>	locus_tag=lambdap02	log10_e_value=8.8	read_count=4	total_count=23
+SC	111	.	NC_001416	12886	1	frequency=0.1579	gene_name=H	gene_position=coding (2345/2562 nt)	gene_product=tail component	gene_strand=>	locus_tag=lambdap16	log10_e_value=5.3	read_count=3	total_count=19
+SC	112	.	NC_001416	12917	-1	frequency=0.1667	gene_name=H	gene_position=coding (2376/2562 nt)	gene_product=tail component	gene_strand=>	locus_tag=lambdap16	log10_e_value=2.0	read_count=2	total_count=12
+SC	113	.	NC_001416	21737	1	frequency=1.0000	gene_name=orf-314	gene_position=coding (709/945 nt)	gene_product=Tail fiber	gene_strand=>	locus_tag=lambdap28	log10_e_value=8.3	read_count=3	total_count=3
+SC	114	.	NC_001416	27724	-1	frequency=1.0000	gene_name=ea59/int	gene_position=intergenic (-751/+88)	gene_product=ea59/integration protein	gene_strand=</<	locus_tag=lambdap82/lambdap33	log10_e_value=3.9	read_count=2	total_count=2
+SC	115	.	NC_001416	35596	-1	frequency=0.1136	gene_name=N/rexb	gene_position=intergenic (-158/+229)	gene_product=early gene regulator/exclusion protein	gene_strand=</<	locus_tag=lambdap49/lambdap53	log10_e_value=11.1	read_count=5	total_count=44
+SC	116	.	NC_001416	47979	-1	frequency=0.1579	gene_name=lambdap79/–	gene_position=intergenic (+35/–)	gene_product=hypothetical protein/–	gene_strand=>/–	locus_tag=lambdap79/–	log10_e_value=5.3	read_count=3	total_count=19

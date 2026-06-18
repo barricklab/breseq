@@ -1,9 +1,9 @@
 #=GENOME_DIFF	1.0
-#=CREATED	12:05:57 18 Jun 2026
+#=CREATED	14:18:33 18 Jun 2026
 #=PROGRAM	breseq 0.40.1
-#=COMMAND	./src/c/breseq/breseq -j 4 -b 0 -o /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/lambda_short_sequence_repeats -r /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/lambda_short_sequence_repeats/../data/lambda/lambda.5.gbk /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/lambda_short_sequence_repeats/../data/lambda/lambda.short_sequence_repeats.fastq
-#=REFSEQ	/Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/lambda_short_sequence_repeats/../data/lambda/lambda.5.gbk
-#=READSEQ	/Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/lambda_short_sequence_repeats/../data/lambda/lambda.short_sequence_repeats.fastq
+#=COMMAND	./src/c/breseq/breseq -j 4 -b 0 -o ./tests/lambda_short_sequence_repeats -r ./tests/lambda_short_sequence_repeats/../data/lambda/lambda.5.gbk ./tests/lambda_short_sequence_repeats/../data/lambda/lambda.short_sequence_repeats.fastq
+#=REFSEQ	./tests/lambda_short_sequence_repeats/../data/lambda/lambda.5.gbk
+#=READSEQ	./tests/lambda_short_sequence_repeats/../data/lambda/lambda.short_sequence_repeats.fastq
 #=CONVERTED-BASES	250000
 #=CONVERTED-READS	5000
 #=INPUT-BASES	250000

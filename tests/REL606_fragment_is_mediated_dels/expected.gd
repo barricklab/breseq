@@ -1,9 +1,9 @@
 #=GENOME_DIFF	1.0
-#=CREATED	12:07:20 18 Jun 2026
+#=CREATED	14:14:24 18 Jun 2026
 #=PROGRAM	breseq 0.40.1
-#=COMMAND	./src/c/breseq/breseq -j 4 -b 0 -o /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_fragment_is_mediated_dels -r /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_fragment_is_mediated_dels/../data/REL606/REL606.fragment.gbk /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_fragment_is_mediated_dels/../data/REL606/REL606.fragment.3.fastq.gz
-#=REFSEQ	/Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_fragment_is_mediated_dels/../data/REL606/REL606.fragment.gbk
-#=READSEQ	/Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_fragment_is_mediated_dels/../data/REL606/REL606.fragment.3.fastq.gz
+#=COMMAND	./src/c/breseq/breseq -j 4 -b 0 -o ./tests/REL606_fragment_is_mediated_dels -r ./tests/REL606_fragment_is_mediated_dels/../data/REL606/REL606.fragment.gbk ./tests/REL606_fragment_is_mediated_dels/../data/REL606/REL606.fragment.3.fastq.gz
+#=REFSEQ	./tests/REL606_fragment_is_mediated_dels/../data/REL606/REL606.fragment.gbk
+#=READSEQ	./tests/REL606_fragment_is_mediated_dels/../data/REL606/REL606.fragment.3.fastq.gz
 #=CONVERTED-BASES	974268
 #=CONVERTED-READS	27063
 #=INPUT-BASES	974268

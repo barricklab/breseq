@@ -1,10 +1,10 @@
 #=GENOME_DIFF	1.0
-#=CREATED	12:07:33 18 Jun 2026
+#=CREATED	14:14:37 18 Jun 2026
 #=PROGRAM	breseq 0.40.1
-#=COMMAND	./src/c/breseq/breseq -j 4 -p -o /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_tiled_reads_continuation -r /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_tiled_reads_continuation/../data/REL606/REL606.fragment.gbk -s /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_tiled_reads_continuation/../data/REL606/REL606.is.gbk /Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_tiled_reads_continuation/../data/REL606/REL606.tiled_reads_continuation.fastq
-#=REFSEQ	/Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_tiled_reads_continuation/../data/REL606/REL606.fragment.gbk
-#=REFSEQ	/Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_tiled_reads_continuation/../data/REL606/REL606.is.gbk
-#=READSEQ	/Users/jbarrick/src/breseq/.claude/worktrees/soft-clipping-evidence/tests/REL606_tiled_reads_continuation/../data/REL606/REL606.tiled_reads_continuation.fastq
+#=COMMAND	./src/c/breseq/breseq -j 4 -p -o ./tests/REL606_tiled_reads_continuation -r ./tests/REL606_tiled_reads_continuation/../data/REL606/REL606.fragment.gbk -s ./tests/REL606_tiled_reads_continuation/../data/REL606/REL606.is.gbk ./tests/REL606_tiled_reads_continuation/../data/REL606/REL606.tiled_reads_continuation.fastq
+#=REFSEQ	./tests/REL606_tiled_reads_continuation/../data/REL606/REL606.fragment.gbk
+#=REFSEQ	./tests/REL606_tiled_reads_continuation/../data/REL606/REL606.is.gbk
+#=READSEQ	./tests/REL606_tiled_reads_continuation/../data/REL606/REL606.tiled_reads_continuation.fastq
 #=CONVERTED-BASES	6473000
 #=CONVERTED-READS	129460
 #=INPUT-BASES	6473000
@@ -129,5 +129,3 @@ UN	115	.	REL606-5	28000	28000
 UN	116	.	REL606-5	31350	31516
 UN	117	.	REL606-5	31608	31697
 UN	118	.	REL606-5	31793	32021
-SC	119	.	REL606-5	34574	-1	log10_e_value=30.7	read_count=10	total_count=16
-SC	120	.	REL606-5	34576	1	log10_e_value=30.7	read_count=10	total_count=16
