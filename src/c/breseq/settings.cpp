@@ -351,9 +351,7 @@ namespace breseq
     options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Experimental Options (Use at your own risk)", ADVANCED_OPTION);
     options
-    ("cnv","Do experimental copy number variation prediction",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("cnv-tile-size", "Tile size for copy number variation prediction", 500, ADVANCED_OPTION)
-    ("cnv-ignore-redundant", "Only consider non-redundant coverage when using cnv", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("cn-evidence","Predict copy number variation evidence using CNery",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
     
     options.processCommandArgs(argc, argv);
@@ -491,10 +489,8 @@ namespace breseq
     
     this->num_processors = from_string<int32_t>(options["num-processors"]);
     
-    this->do_copy_number_variation = options.count("cnv");
-    this->copy_number_variation_tile_size = from_string<uint32_t>(options["cnv-tile-size"]);
-    this->ignore_redundant_coverage = options.count("cnv-ignore-redundant");
-    
+    this->do_cn_evidence = options.count("cn-evidence");
+
     this->verbose = options.count("verbose");
     
     //! Settings: Read Alignment and Candidate Junction Read Alignment
@@ -829,7 +825,7 @@ namespace breseq
 		this->skip_read_alignment_and_missing_coverage_prediction = false;
 		this->skip_missing_coverage_prediction = false;
     this->no_evidence_html = false;
-		this->do_copy_number_variation = false;
+		this->do_cn_evidence = false;
 		this->do_periodicity = false;
     
     //! DEBUG options
@@ -1091,13 +1087,6 @@ namespace breseq
 		this->copy_number_variation_path = "09_copy_number_variation";
     if (this->base_output_path.size() > 0) this->copy_number_variation_path = this->base_output_path + "/" + this->copy_number_variation_path;
     this->copy_number_variation_done_file_name = this->copy_number_variation_path + "/copy_number_variation.done";
-    
-    this->tiled_complete_coverage_text_file_name = this->copy_number_variation_path + "/@.tiled.tab";
-    this->tiled_for_edging_text_file_name = this->copy_number_variation_path + "/@.tiled_for_edging.tab";
-    this->ranges_text_file_name = this->copy_number_variation_path + "/@.ranges.tab";
-    this->cnv_history_text_file_name = this->copy_number_variation_path + "/@.history.tab";
-    this->smoothed_ranges_text_file_name = this->copy_number_variation_path + "/@.smoothed_ranges.tab";
-    this->final_cnv_text_file_name = this->copy_number_variation_path + "/@.cnv_final.tab";
     this->copy_number_variation_cn_genome_diff_file_name = this->copy_number_variation_path + "/@.cn_evidence.gd";
     
     //! Paths: Output

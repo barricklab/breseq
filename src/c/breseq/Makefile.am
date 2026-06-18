@@ -34,6 +34,7 @@ libbreseq_la_SOURCES = \
 	calculate_trims.cpp \
 	candidate_junctions.cpp \
 	chisquare.cpp \
+	cn_evidence.cpp \
 	contingency_loci.cpp \
 	coverage_output.cpp \
 	coverage_distribution.cpp \
@@ -62,6 +63,7 @@ libbreseq_la_SOURCES = \
 	libbreseq/calculate_trims.h \
 	libbreseq/candidate_junctions.h \
 	libbreseq/chisquare.h \
+	libbreseq/cn_evidence.h \
 	libbreseq/common.h \
 	libbreseq/counted_ptr.h \
 	libbreseq/ctpl_stl.h \
