@@ -3110,54 +3110,55 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
           ASSERT(size > 0, "Attempt to apply mutation with non-positive size.");
         }
         
-        uint32_t replace_target_id, replace_start, replace_end;
-        new_ref_seq_info.parse_region(mut["region"], replace_target_id, replace_start, replace_end);
-        ASSERT(replace_start != replace_end, "Cannot process 1-bp CON/INT mutation with end == start. Expand the substituted region. ID:" + mut._id);
-        
-        int8_t strand = (replace_start < replace_end) ?  +1 : -1;
-        
+        uint32_t donor_target_id, donor_start, donor_end;
+        new_ref_seq_info.parse_region(mut["region"], donor_target_id, donor_start, donor_end);
+        ASSERT(donor_start != donor_end, "Cannot process 1-bp CON/INT mutation with end == start. Expand the substituted region. ID:" + mut._id);
+
+        int8_t strand = (donor_start < donor_end) ?  +1 : -1;
+
         if (strand == -1) {
-          swap(replace_start, replace_end);
+          swap(donor_start, donor_end);
         }
-        
+
         // @JEB: correct here to look for where the replacing_sequence is in the **original** ref_seq_info.
         // This saves us from possible looking at a shifted location...
-        string replacing_sequence = ref_seq_info[replace_target_id].get_sequence_1(replace_start, replace_end);
-        
+        string replacing_sequence = ref_seq_info[donor_target_id].get_sequence_1(donor_start, donor_end);
+
         if (strand == -1) {
           replacing_sequence = reverse_complement(replacing_sequence);
         }
-        
+
+        // Set up attributes -- must capture the target-side bases here, before
+        // they are overwritten below, so "Replacing:" reflects what was there.
+        replace_seq_id = mut[SEQ_ID];
+        replace_start = position - 1;
+        replace_end = position - 1 + size;
+        replace_seq = (size>0) ? new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end) : " ";
+        replace_seq.insert(0,"(");
+        replace_seq.insert(2,")");
+
         if (size > 0) {
           new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, replacing_sequence, (to_string(mut._type) + " " + mut._id));
         } else {
           new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position, replacing_sequence, (to_string(mut._type) + " " + mut._id));
         }
         // INT's get special treatment => we copy over the gene annotations!
-                
+
         if (mut._type == INT) {
           // @JEB: correct here to look for where the replacing_sequence is in the **original** ref_seq_info.
           // This saves us from possible looking at a shifted location...
           // Note that the zero base inserted case leads to starting the annoations one base over!
           if (size > 0) {
-            new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position, 0, 0, ref_seq_info, ref_seq_info[replace_target_id].m_seq_id, +1, cLocation(replace_start, replace_end, strand));
+            new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position, 0, 0, ref_seq_info, ref_seq_info[donor_target_id].m_seq_id, +1, cLocation(donor_start, donor_end, strand));
           } else {
-            new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+1, 0, 0, ref_seq_info, ref_seq_info[replace_target_id].m_seq_id, +1, cLocation(replace_start, replace_end, strand));
+            new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+1, 0, 0, ref_seq_info, ref_seq_info[donor_target_id].m_seq_id, +1, cLocation(donor_start, donor_end, strand));
           }
         }
-        
-        // Set up attributes
-        replace_seq_id = mut[SEQ_ID];
-        replace_start = position - 1;
-        replace_end = position - 1;
-        replace_seq = (size>0) ? new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end) : " ";
-        replace_seq.insert(0,"(");
-        replace_seq.insert(2,")");
-        
+
         applied_seq_id = mut[SEQ_ID];
         applied_start = position - 1;
         applied_end = position - 1 + replacing_sequence.size();
-        applied_seq = replace_seq + replacing_sequence;
+        applied_seq = replace_seq.substr(0,3) + replacing_sequence;
               
       } break;
         
