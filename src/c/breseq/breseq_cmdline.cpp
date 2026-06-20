@@ -1723,12 +1723,10 @@ int breseq_default_action(int argc, char* argv[])
 		settings.done_step(settings.reference_alignment_done_file_name);
 	}
 
-  // We need this path if preprocessing for junction prediction below
-  if ( !settings.skip_new_junction_prediction )
-  {
-    create_path(settings.candidate_junction_path);
-  }
-  
+  // Needed even when skipping junction prediction: done_step() below writes
+  // its done-file marker inside this directory regardless.
+  create_path(settings.candidate_junction_path);
+
   if ( !settings.aligned_sam_mode &&
       settings.do_step(settings.preprocess_junction_done_file_name, settings.skip_new_junction_prediction ? "Preprocessing alignments: merging files" : "Preprocessing alignments: merging files and finding alignments for candidate junction identification"))
   {
