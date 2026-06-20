@@ -6,6 +6,7 @@ channels:
 dependencies:
 # Needed for compiling
 #  => Should be compatible with any versions
+  - cxx-compiler
   - autoconf
   - automake
   - libtool
