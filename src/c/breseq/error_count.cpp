@@ -329,6 +329,7 @@ void plot_error_rates(const string& in_file, const string& out_file)
   s << "set terminal pdfcairo size 9in,6in font ',12'" << endl;
   s << "set output " << double_quote(out_file) << endl;
   s << "set tics out" << endl;
+  s << "set border lw 2" << endl;
   s << "set xlabel 'Base quality score'" << endl;
   s << "set ylabel 'Error rate'" << endl;
   s << "set xrange [" << quality_min << ":" << quality_max << "]" << endl;

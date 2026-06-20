@@ -396,6 +396,7 @@ CoverageDistributionFitResult CoverageDistribution::fit(
   s << "set terminal pdfcairo size 7in,6in font ',16'" << endl;
   s << "set output " << double_quote(plot_file) << endl;
   s << "set tics out" << endl;
+  s << "set border lw 2" << endl;
   s << "set title 'Coverage Distribution at Unique-Only Positions' font ',20'" << endl;
   s << "set xlabel 'Coverage depth (reads)'" << endl;
   s << "set ylabel 'Number of reference positions'" << endl;

@@ -85,6 +85,7 @@ void coverage_output::plot(const string& region, const string& output_file_name,
   }
   s << "set output " << double_quote(_output_file_name) << endl;
   s << "set tics out" << endl;
+  s << "set border lw 2" << endl;
   s << "set xlabel 'Coordinate in Reference Genome'" << endl;
   s << "set ylabel 'Read Coverage Depth'" << endl;
   s << "set format x '%.0f'" << endl;
