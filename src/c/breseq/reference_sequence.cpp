@@ -20,6 +20,7 @@
 
 #include "libbreseq/error_count.h"
 #include "libbreseq/genome_diff.h"
+#include "libbreseq/stats.h"
 
 
 using namespace std;
@@ -4173,98 +4174,60 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
   }//for
 }
 
+// Parses a comma-separated list of quality scores, e.g. "32,34,34,37".
+// Returns an empty vector for an empty input string (no reads of that allele).
+static vector<double> parse_comma_separated_quals(const string& quals_string)
+{
+  vector<double> quals;
+  if (quals_string.size() == 0) return quals;
+
+  vector<string> qual_strings = split(quals_string, ",");
+  for (vector<string>::iterator it = qual_strings.begin(); it != qual_strings.end(); it++) {
+    quals.push_back(from_string<double>(*it));
+  }
+  return quals;
+}
+
 void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& summary)
 {
-  string reference_fasta_file_name = settings.reference_fasta_file_name;
-  vector<string> seq_ids = this->seq_ids();
-
-  // some local variable lookups for convenience
-  double log10_ref_length = log(this->get_total_length()) / log(10);
-
-  string count_file_name = settings.error_counts_file_name;
-
-  ifstream COUNT(count_file_name.c_str());
-  assert(COUNT.is_open());
-  string count_header_line, count_covariate_line;
-  getline(COUNT, count_covariate_line); // ignore the first line
-
-  // we parse the covariates to know how many different qualities we are dealing with...
-  covariates_used_t         covariate_used;
-  covariates_max_t          covariate_max;
-  covariates_enforce_max_t  covariate_enforce_max;
-  covariates_offset_t       covariate_offset;
-  bool                      per_position;
-  cErrorTable::read_covariates(count_covariate_line, covariate_used, covariate_max, covariate_enforce_max, covariate_offset, per_position);
-
-  getline(COUNT, count_header_line); // second line is the header
-
-  vector<string> count_header_list = split(count_header_line, "\t");
-
-  uint32_t count_column = UNDEFINED_UINT32;
-  uint32_t quality_column = UNDEFINED_UINT32;
-  for (uint32_t i = 0; i < count_header_list.size(); i++)
-  {
-    if (count_header_list[i] == "quality")
-      quality_column = i;
-    else if (count_header_list[i] == "count")
-      count_column = i;
-  }
-
-  ASSERT( (quality_column != UNDEFINED_UINT32) && (count_column != UNDEFINED_UINT32),
-          "'quality' and 'count' columns not found in file: " + count_file_name);
-
-  vector<uint32_t> quality_count_list(covariate_max[k_quality]);
-  string line;
-  while (COUNT.good())
-  {
-    getline(COUNT, line);
-    vector<string> line_list = split(line,  "\t");
-    if (line_list.size() < 2) break; // empty line
-    uint32_t count = from_string<uint32_t>(line_list[count_column]);
-    uint32_t quality = from_string<uint32_t>(line_list[quality_column]);
-    quality_count_list[quality] += count;
-  }
-  COUNT.close();
-
-  string genome_error_counts_file_name = settings.genome_error_counts_file_name;
-
-  ofstream GEC(genome_error_counts_file_name.c_str());
-  assert(GEC.is_open());
-  for (uint32_t i = 1; i < quality_count_list.size(); i++)
-  {
-    uint32_t val = 0;
-    val = quality_count_list[i];
-    GEC << val << endl;
-  }
-  GEC.close();
-
-  string polymorphism_statistics_input_file_name = settings.polymorphism_statistics_input_file_name;
-  string polymorphism_statistics_output_file_name = settings.polymorphism_statistics_output_file_name;
+  uint64_t total_reference_length = summary.sequence_conversion.total_reference_sequence_length;
 
   /// Load the older GenomeDiff and add new fields
   string ra_mc_genome_diff_file_name = settings.ra_mc_genome_diff_file_name;
   cGenomeDiff gd(ra_mc_genome_diff_file_name);
 
-  string polymorphism_statistics_r_script_file_name = settings.polymorphism_statistics_r_script_file_name;
-  string polymorphism_statistics_r_script_log_file_name = settings.polymorphism_statistics_r_script_log_file_name;
-  uint64_t total_reference_length = summary.sequence_conversion.total_reference_sequence_length;
+  // Read the per-position quality scores and strand counts for each candidate
+  // polymorphism (written during mutation identification) and compute
+  // quality-score and strand-bias statistics natively -- this used to shell
+  // out to polymorphism_statistics.r for these calculations.
+  string polymorphism_statistics_input_file_name = settings.polymorphism_statistics_input_file_name;
+  ifstream POLY_IN(polymorphism_statistics_input_file_name.c_str());
+  assert(POLY_IN.is_open());
 
-  string command = "R --vanilla < " + double_quote(polymorphism_statistics_r_script_file_name) +
-    " > " + double_quote(polymorphism_statistics_r_script_log_file_name) +
-    " --args" +
-    " total_length=" + to_string<uint32_t>(total_reference_length) +
-    " in_file="   + double_quote(polymorphism_statistics_input_file_name) +
-    " out_file="  + double_quote(polymorphism_statistics_output_file_name) +
-    " qual_file=" + double_quote(genome_error_counts_file_name);
+  string poly_header_line;
+  getline(POLY_IN, poly_header_line);
+  vector<string> poly_header_list = split(poly_header_line, "\t");
 
-  SYSTEM(command, false, false, false); //NOTE: Not escaping shell characters here.
+  uint32_t major_top_strand_column = UNDEFINED_UINT32;
+  uint32_t major_bot_strand_column = UNDEFINED_UINT32;
+  uint32_t minor_top_strand_column = UNDEFINED_UINT32;
+  uint32_t minor_bot_strand_column = UNDEFINED_UINT32;
+  uint32_t major_quals_column = UNDEFINED_UINT32;
+  uint32_t minor_quals_column = UNDEFINED_UINT32;
+  for (uint32_t i = 0; i < poly_header_list.size(); i++)
+  {
+    if (poly_header_list[i] == "major_top_strand") major_top_strand_column = i;
+    else if (poly_header_list[i] == "major_bot_strand") major_bot_strand_column = i;
+    else if (poly_header_list[i] == "minor_top_strand") minor_top_strand_column = i;
+    else if (poly_header_list[i] == "minor_bot_strand") minor_bot_strand_column = i;
+    else if (poly_header_list[i] == "major_quals") major_quals_column = i;
+    else if (poly_header_list[i] == "minor_quals") minor_quals_column = i;
+  }
 
-  // Read R file and add new results corresponding to all columns
-  ifstream ROUT(polymorphism_statistics_output_file_name.c_str());
-  assert(ROUT.is_open()); // or die "Could not find file: $polymorphism_statistics_output_file_name";
-  string header;
-  getline(ROUT, header);
-  vector<string> header_list = split(header, "\t");
+  ASSERT( (major_top_strand_column != UNDEFINED_UINT32) && (major_bot_strand_column != UNDEFINED_UINT32)
+       && (minor_top_strand_column != UNDEFINED_UINT32) && (minor_bot_strand_column != UNDEFINED_UINT32)
+       && (major_quals_column != UNDEFINED_UINT32) && (minor_quals_column != UNDEFINED_UINT32),
+          "Expected columns not found in file: " + polymorphism_statistics_input_file_name);
 
   cGenomeDiff new_gd;
 
@@ -4280,36 +4243,60 @@ void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& s
       new_gd.add(mut);
       continue;
     }
-    
+
     // lines only exist for RA evidence
     if (mut._type != RA)
     {
       new_gd.add(mut);
       continue;
     }
-    
+
     // lines only exist for polymorphisms
     if (!mut.entry_exists(POLYMORPHISM_EXISTS)) {
       new_gd.add(mut);
       continue;
     }
     mut.erase(POLYMORPHISM_EXISTS);
-    
-    // Copy over the values from the R output file back to the RA item
-    string line;
-    getline(ROUT, line);
-    vector<string> line_list = split(line, "\t");
 
-    for (uint32_t j = 0; j < header_list.size(); j++)
-    {
-      assert(line_list.size() > j); // die "Incorrect number of items on line:\n$line"
-      mut[header_list[j]] = line_list[j];
+    // Read the next polymorphism candidate's data (written in the same order
+    // by write_polymorphism_input_file_line during mutation identification).
+    string poly_line;
+    getline(POLY_IN, poly_line);
+    vector<string> poly_line_list = split(poly_line, "\t");
+    assert(poly_line_list.size() > minor_quals_column); // die "Incorrect number of items on line:\n$poly_line"
+
+    uint32_t major_top_strand = from_string<uint32_t>(poly_line_list[major_top_strand_column]);
+    uint32_t major_bot_strand = from_string<uint32_t>(poly_line_list[major_bot_strand_column]);
+    uint32_t minor_top_strand = from_string<uint32_t>(poly_line_list[minor_top_strand_column]);
+    uint32_t minor_bot_strand = from_string<uint32_t>(poly_line_list[minor_bot_strand_column]);
+    vector<double> major_quals = parse_comma_separated_quals(poly_line_list[major_quals_column]);
+    vector<double> minor_quals = parse_comma_separated_quals(poly_line_list[minor_quals_column]);
+
+    // KS test for unusually low/high quality scores supporting the minor allele.
+    double ks_quality_p_value = 1.0;
+    if ((major_quals.size() > 0) && (minor_quals.size() > 0)) {
+      ks_quality_p_value = ks_test_two_sample_less(minor_quals, major_quals);
     }
+
+    // Fisher's exact test for biased strand distribution between the major and minor allele.
+    double fisher_strand_p_value = fisher_exact_test_2x2(minor_top_strand, minor_bot_strand, major_top_strand, major_bot_strand);
+
+    // Fisher's method for combining the two p-values into a single bias p-value (df = 2*2 = 4).
+    // Guard against the (rare) case of either p-value underflowing to exactly
+    // zero, which would otherwise pass +Inf into incompletegamma().
+    double combined_log = -2.0 * (log(ks_quality_p_value) + log(fisher_strand_p_value));
+    double bias_p_value = isinf(combined_log) ? 0.0 : incompletegamma(2.0, combined_log / 2.0, true);
+    double bias_e_value = bias_p_value * total_reference_length;
+
+    mut["ks_quality_p_value"] = formatted_double(ks_quality_p_value, 5, true).to_string();
+    mut["fisher_strand_p_value"] = formatted_double(fisher_strand_p_value, 5, true).to_string();
+    mut["bias_p_value"] = formatted_double(bias_p_value, 5, true).to_string();
+    mut["bias_e_value"] = formatted_double(bias_e_value, 5, true).to_string();
 
     new_gd.add(mut);
   }
 
-  ROUT.close();
+  POLY_IN.close();
 
   /// Write out the file which now has much more data
   string polymorphism_statistics_ra_mc_genome_diff_file_name = settings.polymorphism_statistics_ra_mc_genome_diff_file_name;

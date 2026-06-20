@@ -24,7 +24,7 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/alignment.h"
 #include "libbreseq/identify_mutations.h"
 #include "libbreseq/reference_sequence.h"
-#include "libbreseq/chisquare.h"
+#include "libbreseq/stats.h"
 #include "libbreseq/output.h"
 
 using namespace std;

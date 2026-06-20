@@ -33,7 +33,6 @@ libbreseq_la_SOURCES = \
 	anyoption.cpp \
 	calculate_trims.cpp \
 	candidate_junctions.cpp \
-	chisquare.cpp \
 	contingency_loci.cpp \
 	coverage_output.cpp \
 	coverage_distribution.cpp \
@@ -55,13 +54,13 @@ libbreseq_la_SOURCES = \
 	samtools_commands.cpp \
 	settings.cpp \
 	soft_clipping.cpp \
+	stats.cpp \
 	summary.cpp \
 	libbreseq/alignment.h \
 	libbreseq/alignment_output.h \
 	libbreseq/anyoption.h \
 	libbreseq/calculate_trims.h \
 	libbreseq/candidate_junctions.h \
-	libbreseq/chisquare.h \
 	libbreseq/common.h \
 	libbreseq/counted_ptr.h \
 	libbreseq/ctpl_stl.h \
@@ -88,6 +87,7 @@ libbreseq_la_SOURCES = \
 	libbreseq/samtools_commands.h \
 	libbreseq/settings.h \
 	libbreseq/soft_clipping.h \
+	libbreseq/stats.h \
 	libbreseq/storable.h \
 	libbreseq/summary.h
 libbreseq_la_LIBADD =
@@ -112,7 +112,6 @@ EXTRA_DIST = breseq.png \
 	plot_coverage.r \
 	plot_error_rate.r \
 	plot_jc_scores.r \
-	polymorphism_statistics.r \
 	list.min.js \
 	run_circos.sh \
 	indels.conf \
@@ -130,7 +129,6 @@ install-data-local :
 	cp $(srcdir)/plot_coverage.r $(BRESEQDATADIR)
 	cp $(srcdir)/plot_error_rate.r $(BRESEQDATADIR)
 	cp $(srcdir)/plot_jc_scores.r $(BRESEQDATADIR)
-	cp $(srcdir)/polymorphism_statistics.r $(BRESEQDATADIR)
 	cp $(srcdir)/list.min.js $(BRESEQDATADIR)
 	cp $(srcdir)/run_circos.sh $(BRESEQDATADIR)
 	cp $(srcdir)/indels.conf $(BRESEQDATADIR)

@@ -1077,14 +1077,10 @@ namespace breseq
     this->mutation_identification_done_file_name = this->mutation_identification_path + "/mutation_identification.done";
 		this->mutation_identification_per_position_file_name = this->mutation_identification_path + "/per_position_file.tab";
 		this->complete_coverage_text_file_name = this->mutation_identification_path + "/@.coverage.tab";
-		this->genome_error_counts_file_name = this->mutation_identification_path + "/error_counts.tab";
 		this->ra_mc_genome_diff_file_name = this->mutation_identification_path + "/ra_mc_evidence.gd";
 
     this->polymorphism_statistics_done_file_name = this->mutation_identification_path + "/polymorphism_statistics.done";
 		this->polymorphism_statistics_input_file_name = this->mutation_identification_path + "/polymorphism_statistics_input.tab";
-		this->polymorphism_statistics_output_file_name = this->mutation_identification_path + "/polymorphism_statistics_output.tab";
-		this->polymorphism_statistics_r_script_file_name = this->program_data_path + "/polymorphism_statistics.r";
-		this->polymorphism_statistics_r_script_log_file_name = this->mutation_identification_path + "/polymorphism_statistics_output.log";
 		this->polymorphism_statistics_ra_mc_genome_diff_file_name = this->mutation_identification_path + "/ra_mc_evidence_polymorphism_statistics.gd";
 
     //! Paths: Copy Number Variation

@@ -531,14 +531,10 @@ namespace breseq
 		string mutation_identification_done_file_name;    
 		string mutation_identification_per_position_file_name;
 		string complete_coverage_text_file_name;
-		string genome_error_counts_file_name;
     string ra_mc_genome_diff_file_name;
-    
+
     string polymorphism_statistics_done_file_name;
     string polymorphism_statistics_input_file_name;
-		string polymorphism_statistics_output_file_name;
-		string polymorphism_statistics_r_script_file_name;
-		string polymorphism_statistics_r_script_log_file_name;
 		string polymorphism_statistics_ra_mc_genome_diff_file_name;
     
 		//! Paths: Copy Number Variation

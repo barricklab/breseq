@@ -31,6 +31,18 @@ using namespace std;
 
 namespace breseq {
 
+  // Result of fitting a negative binomial distribution to a unique-only
+  // coverage histogram (see CoverageDistribution::fit).
+  struct CoverageDistributionFitResult
+  {
+    double nb_fit_size = 0;
+    double nb_fit_mu = 0;
+    double average = 0;
+    double variance = 0;
+    double relative_variance = 0;
+    double deletion_coverage_propagation_cutoff = -1;
+  };
+
 	class CoverageDistribution
 	{
 	public:
@@ -38,10 +50,10 @@ namespace breseq {
 		string path;
 		string r_script;
 
-		static vector<string> fit(
-                              Settings& settings, 
-                              string distribution_file_name, 
-                              string plot_file, 
+		static CoverageDistributionFitResult fit(
+                              Settings& settings,
+                              string distribution_file_name,
+                              string plot_file,
                               double deletion_propagation_pr_cutoff
                               );
     
