@@ -48,10 +48,8 @@ namespace breseq {
 	public:
 
 		string path;
-		string r_script;
 
 		static CoverageDistributionFitResult fit(
-                              Settings& settings,
                               string distribution_file_name,
                               string plot_file,
                               double deletion_propagation_pr_cutoff

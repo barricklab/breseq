@@ -2266,7 +2266,6 @@ void draw_coverage_thread_helper(int thread_id, const Settings& settings, const 
   coverage_output co(
                      settings.reference_bam_file_name,
                      settings.reference_fasta_file_name,
-                     settings.coverage_plot_r_script_file_name,
                      thread_id,
                      settings.coverage_plot_path
                      );

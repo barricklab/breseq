@@ -314,8 +314,7 @@ int do_bam2cov(int argc, char* argv[]) {
   // generate coverage table/plot!
   coverage_output co(
                       options["bam"],
-                      options["fasta"],
-                      settings.coverage_plot_r_script_file_name
+                      options["fasta"]
                       );
   
   // Set options
@@ -2205,22 +2204,11 @@ int breseq_default_action(int argc, char* argv[])
         }
         
       }
-      string command;
       for (uint32_t i = 0; i<settings.read_files.size(); i++) {
         string base_name = settings.read_files[i].base_name();
         string error_rates_base_qual_error_prob_file_name = settings.file_name(settings.error_rates_base_qual_error_prob_file_name, "#", base_name);
-        string plot_error_rates_r_script_file_name = settings.plot_error_rates_r_script_file_name;
-        string plot_error_rates_r_script_log_file_name = settings.file_name(settings.plot_error_rates_r_script_log_file_name, "#", base_name);
         string error_rates_plot_file_name = settings.file_name(settings.error_rates_plot_file_name, "#", base_name);
-        command = "R --vanilla < " + double_quote(plot_error_rates_r_script_file_name) +
-          " > " + double_quote(plot_error_rates_r_script_log_file_name) +
-          " --args" +
-          " in_file=" + double_quote(error_rates_base_qual_error_prob_file_name) +
-          " out_file=" + double_quote(error_rates_plot_file_name) +
-          " < " + double_quote(plot_error_rates_r_script_file_name) +
-          " > " + double_quote(plot_error_rates_r_script_log_file_name);
-        
-        SYSTEM(command,false, false, false); //NOTE: Not escaping shell characters here.
+        plot_error_rates(error_rates_base_qual_error_prob_file_name, error_rates_plot_file_name);
       }
 
       summary.unique_coverage.store(settings.error_rates_summary_file_name);

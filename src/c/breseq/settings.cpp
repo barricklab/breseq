@@ -1066,9 +1066,6 @@ namespace breseq
 		this->unique_only_coverage_distribution_file_name = this->error_calibration_path + "/@.unique_only_coverage_distribution.tab";
 		this->error_rates_summary_file_name = this->error_calibration_path + "/summary.json";
 		this->error_rates_base_qual_error_prob_file_name = this->error_calibration_path + "/base_qual_error_prob.#.tab";
-		this->plot_error_rates_r_script_file_name = this->program_data_path + "/plot_error_rate.r";
-		this->plot_error_rates_fit_r_script_file_name = this->error_calibration_path + "/fit.#.r_script";
-		this->plot_error_rates_r_script_log_file_name = this->error_calibration_path + "/#.plot_error_rate.log";
 
 		//! Paths: Mutation Identification
 		this->mutation_identification_path = "08_mutation_identification";
@@ -1120,7 +1117,6 @@ namespace breseq
 
 		this->local_coverage_plot_path = "evidence";
 		this->coverage_plot_path = this->output_path + "/" + this->local_coverage_plot_path;
-    this->coverage_plot_r_script_file_name = this->program_data_path + "/plot_coverage.r";
 		this->overview_coverage_plot_file_name = this->coverage_plot_path + "/@.overview.png";
 
 		this->output_calibration_path = this->evidence_path;

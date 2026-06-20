@@ -338,17 +338,14 @@ CoverageDistributionFitResult fit_coverage_distribution(
 
 /*! fit
  @abstract Fits a negative binomial to the unique-only coverage histogram
- natively (see fit_coverage_distribution above), then invokes
- coverage_distribution.r only to draw the diagnostic plot from the resulting
- parameters -- R no longer performs any of the statistical computation.
- @param settings Used for file_paths
+ natively (see fit_coverage_distribution above), then draws the diagnostic
+ plot from the resulting parameters using gnuplot.
  @param distribution_file_name Input histogram, created by error_count() and saved as *.unique_only_coverage_distribution.tab
- @param plot_file Output plot file, drawn by coverage_distribution.r
+ @param plot_file Output plot file (PDF).
  @return CoverageDistributionFitResult The fitted parameters and summary statistics.
  !*/
 
 CoverageDistributionFitResult CoverageDistribution::fit(
-                                         Settings& settings,
                                          string distribution_file_name,
                                          string plot_file,
                                          double deletion_propagation_pr_cutoff
@@ -360,29 +357,74 @@ CoverageDistributionFitResult CoverageDistribution::fit(
   double nb_fit_scale = 0;
   CoverageDistributionFitResult result = fit_coverage_distribution(hist, deletion_propagation_pr_cutoff, censor_start, censor_end, nb_fit_scale);
 
-  string log_file_name = distribution_file_name + ".r.log";
+  // Nothing to plot if there's no data or no fit window was found (degenerate distribution).
+  if (censor_start >= censor_end) return result;
 
-  string command = "R --vanilla < " + double_quote(settings.program_data_path +
-  "/coverage_distribution.r") + " > " + double_quote(log_file_name);
-  command += " --args";
-  command += " distribution_file=" + double_quote(distribution_file_name);
-  command += " plot_file=" + double_quote(plot_file);
-  command += " nb_fit_mu=" + to_string(result.nb_fit_mu, 6);
-  command += " nb_fit_size=" + to_string(result.nb_fit_size, 6);
-  command += " nb_fit_scale=" + to_string(nb_fit_scale, 6);
-  command += " censor_start=" + to_string<uint32_t>(censor_start);
-  command += " censor_end=" + to_string<uint32_t>(censor_end);
+  const vector<double>& n = hist.n;
+  const uint32_t N = hist.max_coverage;
 
-  SYSTEM(command, false, false, false); //NOTE: Not escaping shell characters here.
+  // Don't graph very high values with very little coverage.
+  uint32_t max_i = 1;
+  double max_n = 0;
+  for (uint32_t i = 1; i <= N; i++) {
+    if (n[i] > max_n) { max_n = n[i]; max_i = i; }
+  }
+  uint32_t graph_end_i = max_i;
+  while ((graph_end_i <= N) && (n[graph_end_i] > 0.01 * max_n)) graph_end_i++;
+  // Leaves enough room to the right of the peak for the legend.
+  graph_end_i = max(static_cast<uint32_t>(floor(2.2 * max_i)), graph_end_i);
+
+  double max_y = max_n;
+  for (uint32_t i = 1; i <= N; i++) max_y = max(max_y, n[i]);
+
+  // The negative binomial fit curve has no on-disk representation -- write
+  // it to its own small table so gnuplot can plot it like any other series.
+  string nb_fit_table_file_name = distribution_file_name + ".nbfit.tab";
+  if (result.nb_fit_mu > 0) {
+    vector<double> fit_nb(N + 1, 0.0);
+    for (uint32_t i = 0; i <= N; i++) {
+      fit_nb[i] = dnbinom_mu(static_cast<double>(i), result.nb_fit_size, result.nb_fit_mu) * nb_fit_scale;
+      max_y = max(max_y, fit_nb[i]);
+    }
+    ofstream nb_out(nb_fit_table_file_name.c_str());
+    ASSERT(nb_out.is_open(), "Could not write to file: " + nb_fit_table_file_name);
+    for (uint32_t i = 0; i <= N; i++) nb_out << i << "\t" << fit_nb[i] << endl;
+    nb_out.close();
+  }
+
+  ostringstream s;
+  s << "set terminal pdfcairo size 7in,6in" << endl;
+  s << "set output " << double_quote(plot_file) << endl;
+  s << "set title 'Coverage Distribution at Unique-Only Positions'" << endl;
+  s << "set xlabel 'Coverage depth (reads)'" << endl;
+  s << "set ylabel 'Number of reference positions'" << endl;
+  s << "set xrange [0:" << graph_end_i << "]" << endl;
+  s << "set yrange [0:" << to_string(max_y * 1.05, 6) << "]" << endl;
+  s << "set key top right" << endl;
+
+  vector<string> plot_clauses;
+  plot_clauses.push_back(double_quote(distribution_file_name) + " using ($1>=" + to_string(censor_start) + "&&$1<=" + to_string(censor_end) + "?$1:NaN):2 with points pt 6 lc rgb 'black' title 'Coverage distribution'");
+  plot_clauses.push_back(double_quote(distribution_file_name) + " using ($1<" + to_string(censor_start) + "||$1>" + to_string(censor_end) + "?$1:NaN):2 with points pt 6 lc rgb 'red' title 'Censored data'");
+  if (result.nb_fit_mu > 0) {
+    plot_clauses.push_back(double_quote(nb_fit_table_file_name) + " with lines lw 3 lc rgb 'black' title 'Negative binomial'");
+  }
+  s << "plot " << join(plot_clauses, string(", \\\n     ")) << endl;
+
+  string script_base_name = plot_file + "." + to_string(getpid());
+  string gnuplot_script_name = script_base_name + ".gp";
+  string log_file_name = script_base_name + ".gp.log";
+  run_gnuplot_script(s.str(), gnuplot_script_name, log_file_name);
+  remove(log_file_name.c_str());
+  if (result.nb_fit_mu > 0) remove(nb_fit_table_file_name.c_str());
 
   return result;
 }
 
 // helper functions
 /*! analyze_unique_coverage_distribution
- @abstract Assigns variables to be sent off to the R script coverage_distribution.r
- 
- 
+ @abstract Fits and plots the unique-only coverage distribution for one coverage group.
+
+
  @param settings
  @param summary
  @param ref_seq_info
@@ -437,14 +479,13 @@ void CoverageDistribution::analyze_unique_coverage_distribution(
   int32_t junction_max_score = int(2 * summary.sequence_conversion.read_length_avg);
   
   CoverageDistribution dist;
-  CoverageDistributionFitResult fit_result = dist.fit(settings,
+  CoverageDistributionFitResult fit_result = dist.fit(
                                   unique_only_coverage_distribution_file_name,
                                   unique_only_coverage_plot_file_name,
                                   deletion_propagation_pr_cutoff
                                   );
   settings.track_intermediate_file(step_key, unique_only_coverage_plot_file_name);
   settings.track_intermediate_file(step_key, unique_only_coverage_distribution_file_name);
-  settings.track_intermediate_file(step_key, unique_only_coverage_distribution_file_name + ".r.log");
 
   // Put these into summary
 

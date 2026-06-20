@@ -43,9 +43,7 @@ namespace breseq
     double    m_fixed_coverage_scale; // either coverage number if m_show_average or factor times average coverage
     string    m_average_file_name;
     PublicSummary   m_summary;
-    
-    string    m_r_script_file_name;
-    
+
     int       m_thread_id;
     string    m_intermediate_path;
     string    m_read_begin_output_file_name; // extra output file set as option
@@ -80,9 +78,9 @@ namespace breseq
     
   public:
     
-    coverage_output( const string& bam, const string& fasta, const string& r_script_file_name, const int thread_id = 0, const string& intermediate_path = "/tmp" )
+    coverage_output( const string& bam, const string& fasta, const int thread_id = 0, const string& intermediate_path = "/tmp" )
       : pileup_base(bam, fasta), m_output_format("png"), m_downsample(0), m_total_only(false)
-      , m_shaded_flanking(0), m_show_average(false), m_fixed_coverage_scale(0.0), m_r_script_file_name(r_script_file_name)
+      , m_shaded_flanking(0), m_show_average(false), m_fixed_coverage_scale(0.0)
       , m_thread_id(thread_id)
       , m_intermediate_path(intermediate_path)
       , m_reference_average_coverage(0.0)

@@ -266,6 +266,99 @@ void error_count_pileup::print_error(const vector<string>& readfiles) {
     }
 }
 
+/*! Plot per-quality-score error rates (one page per reference base) to a PDF using gnuplot.
+*/
+void plot_error_rates(const string& in_file, const string& out_file)
+{
+  ifstream in(in_file.c_str());
+  ASSERT(in.good(), "Could not open error rate table for plotting: " + in_file);
+
+  string header_line;
+  getline(in, header_line);
+  vector<string> col_names = split(header_line, "\t");
+
+  vector<vector<string> > rows;
+  string line;
+  while (getline(in, line)) {
+    if (line.size() == 0) continue;
+    rows.push_back(split(line, "\t"));
+  }
+  in.close();
+
+  if (rows.size() == 0) return;
+
+  // Find the global minimum non-NA error rate, to set the (shared, log-scale)
+  // y-axis range -- mirrors plot_error_rate.r's early exit (via q()) when
+  // every non-quality column is empty/NA. Same-base columns (e.g. "AA") hold
+  // the trivial "called what it was" probability rather than an error rate
+  // and are never plotted (see the ref_base==observed_base skip below), so
+  // they're excluded here too -- otherwise a table with real error data
+  // entirely absent (but a same-base value of exactly 1.0 present) would
+  // compute a degenerate yrange of [1:1] that gnuplot can't render.
+  double min_error_rate = numeric_limits<double>::max();
+  bool found_value = false;
+  for (size_t r = 0; r < rows.size(); r++) {
+    for (size_t c = 1; c < col_names.size(); c++) {
+      if (rows[r][c] == "NA") continue;
+      const string& col_name = col_names[c];
+      if ((col_name.size() == 2) && (col_name[0] == col_name[1])) continue;
+      double v = from_string<double>(rows[r][c]);
+      if (v < min_error_rate) min_error_rate = v;
+      found_value = true;
+    }
+  }
+  if (!found_value) return;
+
+  int log10_min_error_rate = static_cast<int>(floor(log10(min_error_rate)));
+  ostringstream y_min_oss;
+  y_min_oss << "1e" << log10_min_error_rate;
+
+  int quality_min = from_string<int32_t>(rows.front()[0]);
+  int quality_max = from_string<int32_t>(rows.back()[0]);
+
+  // Fixed color per observed base, matching plot_error_rate.r's *_col variables.
+  struct base_color { char base; string color; };
+  static const base_color base_colors[] = {
+    {'A', "green"}, {'C', "red"}, {'G', "black"}, {'T', "blue"}, {'.', "orange"}
+  };
+  static const size_t num_bases = 5;
+
+  ostringstream s;
+  s << "set datafile columnheaders" << endl;
+  s << "set datafile missing 'NA'" << endl;
+  s << "set terminal pdfcairo size 9in,6in font ',12'" << endl;
+  s << "set output " << double_quote(out_file) << endl;
+  s << "set xlabel 'Base quality score'" << endl;
+  s << "set ylabel 'Error rate'" << endl;
+  s << "set xrange [" << quality_min << ":" << quality_max << "]" << endl;
+  s << "set xtics " << quality_min << ", 5, " << quality_max << endl;
+  s << "set logscale y" << endl;
+  s << "set format y '10^{%T}'" << endl;
+  s << "set yrange [" << y_min_oss.str() << ":1]" << endl;
+  s << "set key top right title 'Observed Base:' horizontal" << endl;
+
+  for (size_t i = 0; i < num_bases; i++) {
+    char ref_base = base_colors[i].base;
+    string ref_title = (ref_base == '.') ? "Reference Base: Delta" : ("Reference Base: " + string(1, ref_base));
+    s << "set title " << double_quote(ref_title) << endl;
+
+    vector<string> plot_clauses;
+    for (size_t j = 0; j < num_bases; j++) {
+      if (base_colors[j].base == ref_base) continue;
+      string col_name; col_name += ref_base; col_name += base_colors[j].base;
+      string legend_label = (base_colors[j].base == '.') ? "Delta" : string(1, base_colors[j].base);
+      plot_clauses.push_back(double_quote(in_file) + " using \"quality\":\"" + col_name + "\" with linespoints pt 7 lc rgb '" + base_colors[j].color + "' title '" + legend_label + "'");
+    }
+    s << "plot " << join(plot_clauses, string(", \\\n     ")) << endl;
+  }
+
+  string script_base_name = out_file + "." + to_string(getpid());
+  string gnuplot_script_name = script_base_name + ".gp";
+  string log_file_name = script_base_name + ".gp.log";
+  run_gnuplot_script(s.str(), gnuplot_script_name, log_file_name);
+  remove(log_file_name.c_str());
+}
+
 
 /*  cErrorTable::cErrorTable()
 

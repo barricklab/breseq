@@ -1455,7 +1455,22 @@ inline int SYSTEM(string command, bool silent = false, bool ignore_errors = fals
   }
   return return_value;
 }
-  
+
+//! Writes a gnuplot script to a temp file and runs it via SYSTEM(), getting
+//! the same fail-loud (ASSERT on nonzero exit) behavior for free: gnuplot,
+//! given a script as a file argument, exits nonzero on a script error.
+inline void run_gnuplot_script(const string& script_text, const string& script_file_name, const string& log_file_name)
+{
+  ofstream script_file(script_file_name.c_str());
+  script_file << script_text;
+  script_file.close();
+
+  string command = "gnuplot " + double_quote(script_file_name) + " > " + double_quote(log_file_name) + " 2>&1";
+  SYSTEM(command, false, false, false);
+
+  remove(script_file_name.c_str());
+}
+
 inline string remove_file(string path, bool silent = false, bool ignore_errors = false)
 {
   //remove(path.c_str()); // @JEB this does not work with wildcards

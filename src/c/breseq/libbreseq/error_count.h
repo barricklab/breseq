@@ -38,7 +38,7 @@ namespace breseq {
 	 */
 	void error_count(const Settings& _settings,
                    Summary& summary,
-                   const string& bam, 
+                   const string& bam,
 									 const string& fasta,
                    const string& outputdir,
 									 const vector<string>& readfiles,
@@ -48,6 +48,13 @@ namespace breseq {
                    uint8_t min_qual_score,
                    const string& covariates
                     );
+
+	/*! Plot per-quality-score error rates (one page per reference base) to a PDF using gnuplot.
+
+	 \param in_file is a base_qual_error_prob.#.tab file written by cErrorTable::write_base_qual_only_prob_table().
+	 \param out_file is the PDF to create. No file is created if every non-quality column is empty/NA.
+	 */
+	void plot_error_rates(const string& in_file, const string& out_file);
 
 	/*! Error table class.
 

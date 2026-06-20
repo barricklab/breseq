@@ -108,10 +108,6 @@ gdtools_LDADD   = ./libbreseq.la $(HTSLIB_LINK) $(MINIZ_LINK) $(LIBZ_LINK) $(CRA
 
 EXTRA_DIST = breseq.png \
 	breseq_icon.png \
-	coverage_distribution.r \
-	plot_coverage.r \
-	plot_error_rate.r \
-	plot_jc_scores.r \
 	list.min.js \
 	run_circos.sh \
 	indels.conf \
@@ -125,10 +121,6 @@ install-data-local :
 	mkdir -p $(BRESEQDATADIR)
 	cp $(srcdir)/breseq.png $(BRESEQDATADIR)
 	cp $(srcdir)/breseq_icon.png $(BRESEQDATADIR)
-	cp $(srcdir)/coverage_distribution.r $(BRESEQDATADIR)
-	cp $(srcdir)/plot_coverage.r $(BRESEQDATADIR)
-	cp $(srcdir)/plot_error_rate.r $(BRESEQDATADIR)
-	cp $(srcdir)/plot_jc_scores.r $(BRESEQDATADIR)
 	cp $(srcdir)/list.min.js $(BRESEQDATADIR)
 	cp $(srcdir)/run_circos.sh $(BRESEQDATADIR)
 	cp $(srcdir)/indels.conf $(BRESEQDATADIR)

@@ -521,9 +521,6 @@ namespace breseq
 		string unique_only_coverage_distribution_file_name;
 		string error_rates_summary_file_name;
 		string error_rates_base_qual_error_prob_file_name;
-		string plot_error_rates_r_script_file_name;
-		string plot_error_rates_fit_r_script_file_name;
-		string plot_error_rates_r_script_log_file_name;
 
 		//! Paths: Mutation Identification
 		string mutation_identification_path;
@@ -576,7 +573,6 @@ namespace breseq
     
 		string local_coverage_plot_path;
 		string coverage_plot_path;
-    string coverage_plot_r_script_file_name;
 		string overview_coverage_plot_file_name;
     
 		string output_calibration_path;
@@ -627,8 +623,8 @@ namespace breseq
       // 1st choice: use *absolute* DATADIR (set by XCode)
       if (string(DATADIR).substr(0, 1) == "/") {
         global_program_data_path = DATADIR;
-        string test_file = global_program_data_path + "/coverage_distribution.r";
-        ASSERT(file_exists(test_file.c_str()), "Could not find expected R scripts inside of path set by development environment: " + global_program_data_path);
+        string test_file = global_program_data_path + "/breseq_icon.png";
+        ASSERT(file_exists(test_file.c_str()), "Could not find expected data files inside of path set by development environment: " + global_program_data_path);
       }
       
       // 2nd choice: use BRESEQ_DATA_PATH environmental variable
@@ -639,8 +635,8 @@ namespace breseq
         global_program_data_path = breseq_data_path;
         cerr << "Program data path set via BRESEQ_DATA_PATH: " << breseq_data_path << endl;
         
-        string test_file = global_program_data_path + "/coverage_distribution.r";
-        ASSERT(file_exists(test_file.c_str()), "Could not find expected R scripts inside of data path set by environmental variable BRESEQ_DATA_PATH: " + global_program_data_path + "\nPlease correct this setting.");
+        string test_file = global_program_data_path + "/breseq_icon.png";
+        ASSERT(file_exists(test_file.c_str()), "Could not find expected data files inside of data path set by environmental variable BRESEQ_DATA_PATH: " + global_program_data_path + "\nPlease correct this setting.");
       }
       
       // 3rd choice: Build it from the executable path, if we found one.
@@ -656,8 +652,8 @@ namespace breseq
           global_program_data_path.erase(global_program_data_path.length()-1, 1);
         }
         
-        string test_file = global_program_data_path + "/coverage_distribution.r";
-        ASSERT(file_exists(test_file.c_str()), "Could not find expected R scripts inside of data path set relative to executable: " + global_program_data_path + "\nPlease, see the installation instructions in the HTML documentation.");
+        string test_file = global_program_data_path + "/breseq_icon.png";
+        ASSERT(file_exists(test_file.c_str()), "Could not find expected data files inside of data path set relative to executable: " + global_program_data_path + "\nPlease, see the installation instructions in the HTML documentation.");
       }
       
       //for debug

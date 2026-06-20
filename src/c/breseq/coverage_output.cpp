@@ -62,31 +62,90 @@ void coverage_output::plot(const string& region, const string& output_file_name,
 	string tmp_coverage = m_intermediate_path + "/" + to_string(pid) + "_" + to_string(m_thread_id) + ".coverage.tab";
 	
   this->table(extended_region, tmp_coverage, resolution);
-  
+
   // default is zero
   m_reference_average_coverage = m_show_average ? m_summary.references.reference[seq_id].coverage_average : 0;
-	
-  string log_file_name = m_intermediate_path + "/" + to_string(pid) + ".r.log";
-  string command = "R --vanilla < " + double_quote(m_r_script_file_name)+ " > " + double_quote(log_file_name);
-  command += " --args";
-  command += " in_file=" + double_quote(tmp_coverage);
-  command += " out_file=" + double_quote(_output_file_name);
-  command += " pdf_output=";
-  command += ((m_output_format=="pdf") ? "1" : "0");
-  command += " total_only=";
-  command += ((m_total_only) ? "1" : "0");
-  command += " window_start=" + to_string(start_pos);
-  command += " window_end=" + to_string(end_pos);
-  command += " avg_coverage=" + to_string(m_reference_average_coverage);
-  command += " fixed_coverage_scale=" + ( m_reference_average_coverage ? to_string<double>(m_reference_average_coverage * m_fixed_coverage_scale) : to_string<double>(m_fixed_coverage_scale) );
 
+  double fixed_coverage_scale_value = m_reference_average_coverage
+    ? m_reference_average_coverage * m_fixed_coverage_scale
+    : m_fixed_coverage_scale;
 
-  
-	SYSTEM(command, true, false, false); //NOTE: Not escaping shell characters here.
-	
-	remove(tmp_coverage.c_str());
-	remove(log_file_name.c_str());
-  remove("Rplots.pdf");
+  // Expressions for the "total" series: a single raw column when the table
+  // only has totals (m_total_only), otherwise the sum of the top/bottom
+  // strand columns.
+  string unique_tot_expr    = m_total_only ? "(column(\"unique_cov\"))"     : "(column(\"unique_top_cov\")+column(\"unique_bot_cov\"))";
+  string redundant_tot_expr = m_total_only ? "(column(\"redundant_cov\"))" : "(column(\"redundant_top_cov\")+column(\"redundant_bot_cov\"))";
+
+  ostringstream s;
+  s << "set datafile columnheaders" << endl;
+  if (m_output_format == "pdf") {
+    s << "set terminal pdfcairo size 11in,6in font ',12'" << endl;
+  } else {
+    s << "set terminal pngcairo size 2200,1200 font ',28'" << endl;
+  }
+  s << "set output " << double_quote(_output_file_name) << endl;
+  s << "set xlabel 'Coordinate in Reference Genome'" << endl;
+  s << "set ylabel 'Read Coverage Depth'" << endl;
+  s << "set format x '%.0f'" << endl;
+  s << "set xrange [" << extended_start << ":" << extended_end << "]" << endl;
+
+  // Compute the y-axis maximum the same way plot_coverage.r did, but let
+  // gnuplot's own stats command find the peak instead of scanning the table
+  // in C++.
+  s << "stats " << double_quote(tmp_coverage) << " using (" << unique_tot_expr << " > " << redundant_tot_expr
+    << " ? " << unique_tot_expr << " : " << redundant_tot_expr << ") nooutput name 'COV'" << endl;
+  s << "maxy = COV_max + 5" << endl;
+  s << "if (" << to_string<double>(fixed_coverage_scale_value) << " != 0) {" << endl;
+  s << "  maxy = " << to_string<double>(fixed_coverage_scale_value) << endl;
+  s << "} else {" << endl;
+  s << "  if (" << to_string<double>(m_reference_average_coverage) << "*1.1 > maxy) {" << endl;
+  s << "    maxy = " << to_string<double>(m_reference_average_coverage) << "*1.1" << endl;
+  s << "  }" << endl;
+  s << "}" << endl;
+  s << "set yrange [0:maxy]" << endl;
+
+  // Grey out the flanking region outside the originally requested window,
+  // drawn behind all plotted data via gnuplot's "behind" layer.
+  int obj_id = 1;
+  if (extended_start < static_cast<int32_t>(start_pos)) {
+    s << "set object " << (obj_id++) << " rect from " << extended_start << ", graph 0 to " << start_pos
+      << ", graph 1 fc rgb 'grey85' fillstyle solid 1.0 noborder behind" << endl;
+  }
+  if (static_cast<int32_t>(end_pos) < extended_end) {
+    s << "set object " << (obj_id++) << " rect from " << (end_pos + 1) << ", graph 0 to " << extended_end
+      << ", graph 1 fc rgb 'grey85' fillstyle solid 1.0 noborder behind" << endl;
+  }
+
+  s << "set key below horizontal" << endl;
+
+  vector<string> plot_clauses;
+  string quoted_tmp_coverage = double_quote(tmp_coverage);
+
+  if (m_reference_average_coverage != 0) {
+    plot_clauses.push_back(to_string<double>(m_reference_average_coverage) + " with lines lc rgb 'dark-grey' lw 4 title 'unique average'");
+  }
+  if (m_total_only) {
+    plot_clauses.push_back(quoted_tmp_coverage + " using \"position\":\"total_cov\" with steps lc rgb 'green' lw 4 title 'total'");
+  }
+  plot_clauses.push_back(quoted_tmp_coverage + " using \"position\":" + redundant_tot_expr + " with steps lc rgb 'red' lw 1.5 title 'repeat total'");
+  if (!m_total_only) {
+    plot_clauses.push_back(quoted_tmp_coverage + " using \"position\":\"redundant_top_cov\" with steps lc rgb 'yellow' lw 0.7 title 'repeat top'");
+    plot_clauses.push_back(quoted_tmp_coverage + " using \"position\":\"redundant_bot_cov\" with steps lc rgb 'orange' lw 0.7 title 'repeat bottom'");
+  }
+  plot_clauses.push_back(quoted_tmp_coverage + " using \"position\":" + unique_tot_expr + " with steps lc rgb 'blue' lw 1.5 title 'unique total'");
+  if (!m_total_only) {
+    plot_clauses.push_back(quoted_tmp_coverage + " using \"position\":\"unique_top_cov\" with steps lc rgb 'cyan' lw 0.7 title 'unique top'");
+    plot_clauses.push_back(quoted_tmp_coverage + " using \"position\":\"unique_bot_cov\" with steps lc rgb 'purple' lw 0.7 title 'unique bottom'");
+  }
+
+  s << "plot " << join(plot_clauses, string(", \\\n     ")) << endl;
+
+  string gnuplot_script_name = m_intermediate_path + "/" + to_string(pid) + "_" + to_string(m_thread_id) + ".coverage.gp";
+  string log_file_name = m_intermediate_path + "/" + to_string(pid) + "_" + to_string(m_thread_id) + ".coverage.gp.log";
+  run_gnuplot_script(s.str(), gnuplot_script_name, log_file_name);
+
+  remove(tmp_coverage.c_str());
+  remove(log_file_name.c_str());
 }
 
 void coverage_output::table(const string& region, const string& output_file_name, uint32_t resolution)
