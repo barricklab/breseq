@@ -218,7 +218,7 @@ int do_bam2cov(int argc, char* argv[]) {
   options("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=region1.*). If there are multiple regions or no region is provided, this argument must be a directory path, and all output files will be output here with names region1.*, region2.*, ... (DEFAULT=.)");
   options("prefix,x", "Output prefix. If there are multiple regions or no region is provided, this will be used as a prefix in front of the automatically generated names.", "");
   options("region,r", "Regions to create alignments for. Must be provided as sequence regions in the format ACCESSION:START-END, where ACCESSION is a valid identifier for one of the sequences in the FASTA file, and START and END are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments. If no regions are provided, then an output file will be created for each sequence in the FASTA file.");
-  options("format", "Format of output plot(s): PNG or PDF", "PNG");
+  options("format", "Format of output plot(s): PNG, PDF, or SVG", "PNG");
   options("table,t", "Create tab-delimited file of coverage instead of a plot", TAKES_NO_ARGUMENT);
   options.addUsage("", ADVANCED_OPTION);
   options.addUsage("Advanced Output Options", ADVANCED_OPTION);

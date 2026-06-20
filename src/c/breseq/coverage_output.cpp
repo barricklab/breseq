@@ -80,6 +80,8 @@ void coverage_output::plot(const string& region, const string& output_file_name,
   s << "set datafile columnheaders" << endl;
   if (m_output_format == "pdf") {
     s << "set terminal pdfcairo size 11in,6in font ',12'" << endl;
+  } else if (m_output_format == "svg") {
+    s << "set terminal svg size 2200,1200 font ',28'" << endl;
   } else {
     s << "set terminal pngcairo size 2200,1200 font ',28'" << endl;
   }

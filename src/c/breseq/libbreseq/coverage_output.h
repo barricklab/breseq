@@ -97,8 +97,8 @@ namespace breseq
       if (_output_format.length() > 0)
       {
         m_output_format = to_lower(_output_format);
-        ASSERT( (m_output_format=="png") || (m_output_format=="pdf"), 
-                "Unrecognized coverage plot output format '" + m_output_format + "'.\nValid options are: png or pdf");
+        ASSERT( (m_output_format=="png") || (m_output_format=="pdf") || (m_output_format=="svg"),
+                "Unrecognized coverage plot output format '" + m_output_format + "'.\nValid options are: png, pdf, or svg");
       }
       return m_output_format; 
     }

@@ -1117,11 +1117,11 @@ namespace breseq
 
 		this->local_coverage_plot_path = "evidence";
 		this->coverage_plot_path = this->output_path + "/" + this->local_coverage_plot_path;
-		this->overview_coverage_plot_file_name = this->coverage_plot_path + "/@.overview.png";
+		this->overview_coverage_plot_file_name = this->coverage_plot_path + "/@.overview.svg";
 
 		this->output_calibration_path = this->evidence_path;
-		this->unique_only_coverage_plot_file_name = this->output_calibration_path + "/@.unique_coverage.pdf";
-		this->error_rates_plot_file_name = this->output_calibration_path + "/#.error_rates.pdf";
+		this->unique_only_coverage_plot_file_name = this->output_calibration_path + "/@.unique_coverage.svg";
+		this->error_rates_plot_file_name = this->output_calibration_path + "/#.error_rates.svg";
 
 		this->breseq_icon_graphic_from_file_name = this->program_data_path + "/breseq_icon.png";
 		this->breseq_icon_graphic_to_file_name = this->output_path + "/breseq_icon.png";

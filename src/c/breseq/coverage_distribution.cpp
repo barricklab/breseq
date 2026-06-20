@@ -393,7 +393,7 @@ CoverageDistributionFitResult CoverageDistribution::fit(
   }
 
   ostringstream s;
-  s << "set terminal pdfcairo size 7in,6in font ',16'" << endl;
+  s << "set terminal svg size 1050,900 font ',16'" << endl;
   s << "set output " << double_quote(plot_file) << endl;
   s << "set tics out" << endl;
   s << "set border lw 2" << endl;

@@ -326,7 +326,7 @@ void plot_error_rates(const string& in_file, const string& out_file)
   ostringstream s;
   s << "set datafile columnheaders" << endl;
   s << "set datafile missing 'NA'" << endl;
-  s << "set terminal pdfcairo size 9in,6in font ',12'" << endl;
+  s << "set terminal svg size 900,2200 font ',12'" << endl;
   s << "set output " << double_quote(out_file) << endl;
   s << "set tics out" << endl;
   s << "set border lw 2" << endl;
@@ -339,6 +339,7 @@ void plot_error_rates(const string& in_file, const string& out_file)
   s << "set yrange [" << y_min_oss.str() << ":1]" << endl;
   s << "set key top right title 'Observed Base:' horizontal" << endl;
 
+  s << "set multiplot layout 5,1 title 'Error Rates'" << endl;
   for (size_t i = 0; i < num_bases; i++) {
     char ref_base = base_colors[i].base;
     string ref_title = (ref_base == '.') ? "Reference Base: Delta" : ("Reference Base: " + string(1, ref_base));
@@ -353,6 +354,7 @@ void plot_error_rates(const string& in_file, const string& out_file)
     }
     s << "plot " << join(plot_clauses, string(", \\\n     ")) << endl;
   }
+  s << "unset multiplot" << endl;
 
   string script_base_name = out_file + "." + to_string(getpid());
   string gnuplot_script_name = script_base_name + ".gp";
