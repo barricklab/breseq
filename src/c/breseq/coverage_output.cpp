@@ -84,6 +84,7 @@ void coverage_output::plot(const string& region, const string& output_file_name,
     s << "set terminal pngcairo size 2200,1200 font ',28'" << endl;
   }
   s << "set output " << double_quote(_output_file_name) << endl;
+  s << "set tics out" << endl;
   s << "set xlabel 'Coordinate in Reference Genome'" << endl;
   s << "set ylabel 'Read Coverage Depth'" << endl;
   s << "set format x '%.0f'" << endl;
@@ -116,27 +117,54 @@ void coverage_output::plot(const string& region, const string& output_file_name,
       << ", graph 1 fc rgb 'grey85' fillstyle solid 1.0 noborder behind" << endl;
   }
 
-  s << "set key below horizontal" << endl;
+  // Spread out horizontally in a single row, with a filled square as the
+  // sample swatch placed to the left of each label ("reverse") instead of
+  // gnuplot's default of the swatch trailing the text (set below via dummy
+  // NaN "with boxes" plot clauses, since "with steps"/"with lines" series
+  // would otherwise show a line segment as their swatch). The slightly
+  // enlarged bottom margin gives the key a bit of its own space below the
+  // xlabel instead of crowding it (gnuplot's auto-sized margin otherwise
+  // places the two right next to each other).
+  string key_font = (m_output_format == "pdf") ? "',11'" : "',20'";
+  s << "set bmargin 6" << endl;
+  s << "set key below horizontal reverse Left font " << key_font << " width 4 samplen 1.5" << endl;
 
-  vector<string> plot_clauses;
+  // Legend swatch (filled square) clauses and the actual data clauses
+  // (notitle, since the swatch above already provides the key entry) are
+  // built in parallel and emitted as: all swatches, then all data -- this
+  // keeps the key in the same left-to-right order as before without
+  // affecting the draw order/z-stacking of the real data among itself.
+  vector<string> legend_clauses;
+  vector<string> data_clauses;
   string quoted_tmp_coverage = double_quote(tmp_coverage);
 
   if (m_reference_average_coverage != 0) {
-    plot_clauses.push_back(to_string<double>(m_reference_average_coverage) + " with lines lc rgb 'dark-grey' lw 4 title 'unique average'");
+    legend_clauses.push_back("NaN with boxes fc rgb 'dark-grey' fs solid title 'unique average'");
+    data_clauses.push_back(to_string<double>(m_reference_average_coverage) + " with lines lc rgb 'dark-grey' lw 8 notitle");
   }
   if (m_total_only) {
-    plot_clauses.push_back(quoted_tmp_coverage + " using \"position\":\"total_cov\" with steps lc rgb 'green' lw 4 title 'total'");
+    legend_clauses.push_back("NaN with boxes fc rgb 'green' fs solid title 'total'");
+    data_clauses.push_back(quoted_tmp_coverage + " using \"position\":\"total_cov\" with steps lc rgb 'green' lw 8 notitle");
   }
-  plot_clauses.push_back(quoted_tmp_coverage + " using \"position\":" + redundant_tot_expr + " with steps lc rgb 'red' lw 1.5 title 'repeat total'");
+  legend_clauses.push_back("NaN with boxes fc rgb 'red' fs solid title 'repeat total'");
+  data_clauses.push_back(quoted_tmp_coverage + " using \"position\":" + redundant_tot_expr + " with steps lc rgb 'red' lw 3 notitle");
   if (!m_total_only) {
-    plot_clauses.push_back(quoted_tmp_coverage + " using \"position\":\"redundant_top_cov\" with steps lc rgb 'yellow' lw 0.7 title 'repeat top'");
-    plot_clauses.push_back(quoted_tmp_coverage + " using \"position\":\"redundant_bot_cov\" with steps lc rgb 'orange' lw 0.7 title 'repeat bottom'");
+    legend_clauses.push_back("NaN with boxes fc rgb 'yellow' fs solid title 'repeat top'");
+    data_clauses.push_back(quoted_tmp_coverage + " using \"position\":\"redundant_top_cov\" with steps lc rgb 'yellow' lw 1.4 notitle");
+    legend_clauses.push_back("NaN with boxes fc rgb 'orange' fs solid title 'repeat bottom'");
+    data_clauses.push_back(quoted_tmp_coverage + " using \"position\":\"redundant_bot_cov\" with steps lc rgb 'orange' lw 1.4 notitle");
   }
-  plot_clauses.push_back(quoted_tmp_coverage + " using \"position\":" + unique_tot_expr + " with steps lc rgb 'blue' lw 1.5 title 'unique total'");
+  legend_clauses.push_back("NaN with boxes fc rgb 'blue' fs solid title 'unique total'");
+  data_clauses.push_back(quoted_tmp_coverage + " using \"position\":" + unique_tot_expr + " with steps lc rgb 'blue' lw 3 notitle");
   if (!m_total_only) {
-    plot_clauses.push_back(quoted_tmp_coverage + " using \"position\":\"unique_top_cov\" with steps lc rgb 'cyan' lw 0.7 title 'unique top'");
-    plot_clauses.push_back(quoted_tmp_coverage + " using \"position\":\"unique_bot_cov\" with steps lc rgb 'purple' lw 0.7 title 'unique bottom'");
+    legend_clauses.push_back("NaN with boxes fc rgb 'cyan' fs solid title 'unique top'");
+    data_clauses.push_back(quoted_tmp_coverage + " using \"position\":\"unique_top_cov\" with steps lc rgb 'cyan' lw 1.4 notitle");
+    legend_clauses.push_back("NaN with boxes fc rgb 'purple' fs solid title 'unique bottom'");
+    data_clauses.push_back(quoted_tmp_coverage + " using \"position\":\"unique_bot_cov\" with steps lc rgb 'purple' lw 1.4 notitle");
   }
+
+  vector<string> plot_clauses(legend_clauses);
+  plot_clauses.insert(plot_clauses.end(), data_clauses.begin(), data_clauses.end());
 
   s << "plot " << join(plot_clauses, string(", \\\n     ")) << endl;
 

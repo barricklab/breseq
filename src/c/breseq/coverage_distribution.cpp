@@ -393,14 +393,15 @@ CoverageDistributionFitResult CoverageDistribution::fit(
   }
 
   ostringstream s;
-  s << "set terminal pdfcairo size 7in,6in" << endl;
+  s << "set terminal pdfcairo size 7in,6in font ',16'" << endl;
   s << "set output " << double_quote(plot_file) << endl;
-  s << "set title 'Coverage Distribution at Unique-Only Positions'" << endl;
+  s << "set tics out" << endl;
+  s << "set title 'Coverage Distribution at Unique-Only Positions' font ',20'" << endl;
   s << "set xlabel 'Coverage depth (reads)'" << endl;
   s << "set ylabel 'Number of reference positions'" << endl;
   s << "set xrange [0:" << graph_end_i << "]" << endl;
   s << "set yrange [0:" << to_string(max_y * 1.05, 6) << "]" << endl;
-  s << "set key top right" << endl;
+  s << "set key top right font ',16' spacing 2" << endl;
 
   vector<string> plot_clauses;
   plot_clauses.push_back(double_quote(distribution_file_name) + " using ($1>=" + to_string(censor_start) + "&&$1<=" + to_string(censor_end) + "?$1:NaN):2 with points pt 6 lc rgb 'black' title 'Coverage distribution'");
