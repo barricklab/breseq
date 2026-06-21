@@ -380,10 +380,18 @@ public:
 
   //! Functions for dealing with lists of Genome Diffs
   static void sort_gd_list_by_treatment_population_time(vector<cGenomeDiff>& genome_diffs);
-  
+
 };
-  
-  
+
+/*! Plot JC precision and sensitivity versus score (from a table written by
+    cGenomeDiff::write_jc_score_table()) to two PNGs using gnuplot.
+
+ \param table_path is the table written by cGenomeDiff::write_jc_score_table().
+ \param prefix output files are written to <prefix>.precision.png and <prefix>.sensitivity.png
+ \param cutoff if nonzero, draws a vertical dashed red line marking this score cutoff
+ \param cv_exe "tophat" reverses the x-axis (higher scores are worse for tophat's scoring)
+ */
+void plot_jc_scores(const string& table_path, const string& prefix, uint32_t cutoff, const string& cv_exe);
 
 }
 #endif

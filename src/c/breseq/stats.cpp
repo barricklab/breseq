@@ -1,5 +1,5 @@
 #include "libbreseq/common.h"
-#include "libbreseq/chisquare.h"
+#include "libbreseq/stats.h"
 
 namespace breseq {
 
@@ -2034,6 +2034,309 @@ namespace breseq {
           }
     return( p );
   }
-  
+
+  /*
+   * Negative binomial quantile function in R's (size, mu) parametrization.
+   * Equivalent to R's qnbinom(target_pr, size=size, mu=mu).
+   *
+   * nbdtr(k, size, prob) is the negative binomial CDF and is monotonically
+   * increasing in k, so the quantile is found by bracketing the answer with
+   * a geometrically expanding search, then binary searching within the
+   * bracket.
+   */
+  uint32_t qnbinom_mu(double target_pr, double size, double mu)
+  {
+    ASSERT((target_pr >= 0.0) && (target_pr <= 1.0), "Probability out of range in qnbinom_mu");
+    ASSERT((size > 0) && (mu > 0), "Domain error in qnbinom_mu");
+
+    double p = size / (size + mu);
+
+    if (target_pr <= 0.0) return 0;
+
+    uint64_t hi = 1;
+    while (nbdtr(static_cast<double>(hi), size, p) < target_pr) {
+      hi *= 2;
+    }
+    uint64_t lo = hi / 2;
+
+    while (lo < hi) {
+      uint64_t mid = lo + (hi - lo) / 2;
+      if (nbdtr(static_cast<double>(mid), size, p) < target_pr)
+        lo = mid + 1;
+      else
+        hi = mid;
+    }
+
+    return static_cast<uint32_t>(lo);
+  }
+
+  // log(n choose k), via log-gamma, valid for non-integer n, k.
+  static double log_choose(double n, double k)
+  {
+    double sign;
+    return lngamma(n + 1, &sign) - lngamma(k + 1, &sign) - lngamma(n - k + 1, &sign);
+  }
+
+  /*
+   * Two-sided Fisher's exact test p-value for a 2x2 contingency table.
+   * Equivalent to R's fisher.test(matrix(c(a,c,b,d), nrow=2), alternative="two.sided")$p.value
+   *
+   * Sums the hypergeometric probabilities of every table sharing the same
+   * row/column margins that is no more probable than the observed table
+   * (within the same relative tolerance R uses, relErr = 1 + 1e-7). The
+   * two-sided p-value is invariant to transposing or permuting the rows or
+   * columns of the input table, so callers may pass the four cell counts in
+   * any consistent 2x2 layout.
+   */
+  double fisher_exact_test_2x2(uint32_t a, uint32_t b, uint32_t c, uint32_t d)
+  {
+    uint32_t row1 = a + b;
+    uint32_t row2 = c + d;
+    uint32_t col1 = a + c;
+    uint32_t col2 = b + d;
+    uint32_t n = row1 + row2;
+
+    uint32_t a_min = (row1 > col2) ? (row1 - col2) : 0;
+    uint32_t a_max = min(row1, col1);
+
+    double log_denom = log_choose(n, row1);
+    double log_p_observed = log_choose(col1, a) + log_choose(col2, row1 - a) - log_denom;
+
+    const double log_rel_err = log(1.0 + 1e-7);
+
+    double total_pr = 0.0;
+    for (uint32_t a_i = a_min; a_i <= a_max; a_i++) {
+      double log_p_i = log_choose(col1, a_i) + log_choose(col2, row1 - a_i) - log_denom;
+      if (log_p_i <= log_p_observed + log_rel_err) {
+        total_pr += exp(log_p_i);
+      }
+    }
+
+    return min(total_pr, 1.0);
+  }
+
+  /*
+   * Exact count of monotone lattice paths from (0,0) to (m,n) (m steps along
+   * the first axis, n along the second) that never reach a point (i,j) with
+   * i/m - j/n >= i_star/m - j_star/n (the observed statistic, expressed as
+   * the integer pair at which it was achieved) -- except at a cumulative
+   * step count i+j where boundary[i+j] is false, meaning that position falls
+   * in the interior of a run of tied values in the pooled sample, where the
+   * exceedance test is not evaluated (matches R's tie handling in its exact
+   * two-sample KS computation: the test is only ever checked at a genuine
+   * value boundary).
+   *
+   * The exceedance test is done in cross-multiplied integer form
+   * (i*n - j*m >= i_star*n - j_star*m) rather than as a floating-point
+   * comparison of i/m-j/n against the threshold: since the observed
+   * statistic is itself one of these same i/m-j/n values, a same-valued
+   * floating-point comparison computed via a different arithmetic path can
+   * differ by a single ULP and silently misclassify the boundary lattice
+   * point it was derived from.
+   */
+  static double ks_exact_allowed_paths(uint32_t m, uint32_t n, int64_t threshold_numerator, const vector<bool>& boundary)
+  {
+    vector<vector<double> > u(m + 1, vector<double>(n + 1, 0.0));
+    for (uint32_t i = 0; i <= m; i++) {
+      for (uint32_t j = 0; j <= n; j++) {
+        double value;
+        if ((i == 0) && (j == 0)) {
+          value = 1.0;
+        } else {
+          double from_first  = (i > 0) ? u[i - 1][j] : 0.0;
+          double from_second = (j > 0) ? u[i][j - 1] : 0.0;
+          value = from_first + from_second;
+        }
+        uint32_t k = i + j;
+        int64_t level_numerator = static_cast<int64_t>(i) * n - static_cast<int64_t>(j) * m;
+        if (boundary[k] && (level_numerator >= threshold_numerator)) value = 0.0;
+        u[i][j] = value;
+      }
+    }
+    return u[m][n];
+  }
+
+  /*
+   * One-sided two-sample Kolmogorov-Smirnov test p-value.
+   * Equivalent to R's ks.test(x, y, alternative="less")$p.value
+   *
+   * R computes this exactly via a lattice-path count whenever
+   * n.x*n.y < 10000 (true for essentially all realistic quality-score sample
+   * sizes), falling back to the asymptotic formula p = exp(-2*D^2*n) only
+   * for larger samples -- this mirrors that same exact/asymptotic split.
+   */
+  double ks_test_two_sample_less(const vector<double>& x, const vector<double>& y)
+  {
+    ASSERT((x.size() > 0) && (y.size() > 0), "Empty sample in ks_test_two_sample_less");
+
+    uint32_t n_x = static_cast<uint32_t>(x.size());
+    uint32_t n_y = static_cast<uint32_t>(y.size());
+
+    vector<pair<double, bool> > combined;
+    combined.reserve(x.size() + y.size());
+    for (size_t i = 0; i < x.size(); i++) combined.push_back(make_pair(x[i], true));
+    for (size_t i = 0; i < y.size(); i++) combined.push_back(make_pair(y[i], false));
+    sort(combined.begin(), combined.end());
+
+    uint32_t count_x = 0;
+    uint32_t count_y = 0;
+    double min_z = 0.0;
+    uint32_t best_count_x = 0;
+    uint32_t best_count_y = 0;
+    bool have_min = false;
+
+    // Boundary[k] marks whether cumulative pooled-rank position k (after k
+    // elements have been consumed in sorted order) is a genuine transition
+    // between distinct values, rather than the interior of a tie run.
+    vector<bool> boundary(x.size() + y.size() + 1, true);
+
+    size_t i = 0;
+    while (i < combined.size()) {
+      double current_value = combined[i].first;
+      size_t group_start = i;
+      while ((i < combined.size()) && (combined[i].first == current_value)) {
+        if (combined[i].second) count_x += 1; else count_y += 1;
+        i++;
+      }
+      // Every position in the interior of this tie group (other than its
+      // final boundary, already true by default) is not a checkpoint.
+      for (size_t k = group_start + 1; k < i; k++) boundary[k] = false;
+
+      // z is the empirical CDF difference Fx-Fy, evaluated once per distinct
+      // pooled value (after folding in every element tied at that value).
+      double z = static_cast<double>(count_x) / n_x - static_cast<double>(count_y) / n_y;
+      if (!have_min || (z < min_z)) { min_z = z; have_min = true; best_count_x = count_x; best_count_y = count_y; }
+    }
+
+    double statistic = -min_z;
+
+    if ((static_cast<double>(n_x) * n_y) < 10000) {
+      // Exact computation: treat y as the "first" sample (size m) and x as
+      // the "second" sample (size n), since the observed statistic is
+      // max(Fy - Fx); reject lattice points where that quantity reaches the
+      // observed value or beyond.
+      uint32_t m = n_y;
+      uint32_t n = n_x;
+      int64_t threshold_numerator = static_cast<int64_t>(best_count_y) * n - static_cast<int64_t>(best_count_x) * m;
+      double allowed_paths = ks_exact_allowed_paths(m, n, threshold_numerator, boundary);
+      double total_paths = exp(log_choose(m + n, m));
+      double p_value = 1.0 - allowed_paths / total_paths;
+      return min(max(p_value, 0.0), 1.0);
+    }
+
+    double n_eff = (static_cast<double>(n_x) * n_y) / (n_x + n_y);
+    return exp(-2.0 * statistic * statistic * n_eff);
+  }
+
+  /*
+   * Generic Nelder-Mead simplex minimizer (derivative-free). Replaces R's
+   * nlm() for the small, smooth, low-dimensional curve-fitting objectives
+   * used elsewhere in the codebase (e.g. the negative binomial coverage fit).
+   */
+  nelder_mead_result_t nelder_mead_minimize(
+                                             const function<double(const vector<double>&)>& objective_function,
+                                             const vector<double>& initial_guess,
+                                             uint32_t max_iterations,
+                                             double tolerance
+                                             )
+  {
+    const size_t n = initial_guess.size();
+    ASSERT(n > 0, "Empty initial guess in nelder_mead_minimize");
+
+    const double alpha = 1.0;  // reflection coefficient
+    const double gamma = 2.0;  // expansion coefficient
+    const double rho   = 0.5;  // contraction coefficient
+    const double sigma = 0.5;  // shrink coefficient
+
+    // Initial simplex: the initial guess, plus one perturbed point per dimension.
+    vector<vector<double> > simplex(n + 1, initial_guess);
+    for (size_t i = 0; i < n; i++) {
+      double step = (initial_guess[i] != 0.0) ? 0.05 * fabs(initial_guess[i]) : 0.00025;
+      simplex[i + 1][i] += step;
+    }
+
+    vector<double> values(n + 1);
+    for (size_t i = 0; i <= n; i++) values[i] = objective_function(simplex[i]);
+
+    bool converged = false;
+
+    for (uint32_t iter = 0; iter < max_iterations; iter++) {
+
+      // Sort simplex vertices by objective value, ascending (best first).
+      vector<size_t> order(n + 1);
+      for (size_t i = 0; i <= n; i++) order[i] = i;
+      sort(order.begin(), order.end(), [&values](size_t lhs, size_t rhs) { return values[lhs] < values[rhs]; });
+
+      vector<vector<double> > sorted_simplex(n + 1);
+      vector<double> sorted_values(n + 1);
+      for (size_t i = 0; i <= n; i++) {
+        sorted_simplex[i] = simplex[order[i]];
+        sorted_values[i] = values[order[i]];
+      }
+      simplex = sorted_simplex;
+      values = sorted_values;
+
+      if ((values[n] - values[0]) < tolerance) {
+        converged = true;
+        break;
+      }
+
+      // Centroid of all points except the worst (index n).
+      vector<double> centroid(n, 0.0);
+      for (size_t i = 0; i < n; i++) {
+        for (size_t j = 0; j < n; j++) centroid[j] += simplex[i][j];
+      }
+      for (size_t j = 0; j < n; j++) centroid[j] /= static_cast<double>(n);
+
+      vector<double> reflected(n);
+      for (size_t j = 0; j < n; j++) reflected[j] = centroid[j] + alpha * (centroid[j] - simplex[n][j]);
+      double f_reflected = objective_function(reflected);
+
+      if (f_reflected < values[0]) {
+        vector<double> expanded(n);
+        for (size_t j = 0; j < n; j++) expanded[j] = centroid[j] + gamma * (reflected[j] - centroid[j]);
+        double f_expanded = objective_function(expanded);
+        if (f_expanded < f_reflected) {
+          simplex[n] = expanded;
+          values[n] = f_expanded;
+        } else {
+          simplex[n] = reflected;
+          values[n] = f_reflected;
+        }
+      }
+      else if (f_reflected < values[n - 1]) {
+        simplex[n] = reflected;
+        values[n] = f_reflected;
+      }
+      else {
+        vector<double> contracted(n);
+        for (size_t j = 0; j < n; j++) contracted[j] = centroid[j] + rho * (simplex[n][j] - centroid[j]);
+        double f_contracted = objective_function(contracted);
+        if (f_contracted < values[n]) {
+          simplex[n] = contracted;
+          values[n] = f_contracted;
+        } else {
+          // Shrink the whole simplex toward the best point.
+          for (size_t i = 1; i <= n; i++) {
+            for (size_t j = 0; j < n; j++) {
+              simplex[i][j] = simplex[0][j] + sigma * (simplex[i][j] - simplex[0][j]);
+            }
+            values[i] = objective_function(simplex[i]);
+          }
+        }
+      }
+    }
+
+    size_t best_index = 0;
+    for (size_t i = 1; i <= n; i++) {
+      if (values[i] < values[best_index]) best_index = i;
+    }
+
+    nelder_mead_result_t result;
+    result.estimate = simplex[best_index];
+    result.converged = converged && isfinite(values[best_index]);
+    return result;
+  }
+
 } // namespace breseq
 

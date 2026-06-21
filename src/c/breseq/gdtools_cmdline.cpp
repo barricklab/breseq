@@ -486,13 +486,9 @@ int do_check_plot(int argc, char *argv[])
 	string cv_exe = merged_gd.metadata.author == "tophat" ? "tophat" : "breseq";
 	uint32_t cutoff = cv_exe == "tophat" ? 0 : 3;
 	
-	string plot_jc_score_script_name = "/plot_jc_scores.r";
-	string plot_jc_score_script_path = DATADIR + plot_jc_score_script_name;
-	
 	uout << "Creating plots: " + prefix + ".precision.png and " << prefix + ".sensitivity.png" << endl;
-	string cmd = plot_jc_score_script_path + " " + table_path + " " + prefix + " " + s(cutoff) + " " + cv_exe;
-	SYSTEM(cmd, true, false, true);
-	
+	plot_jc_scores(table_path, prefix, cutoff, cv_exe);
+
 	return 0;
 }
 
@@ -659,12 +655,8 @@ int do_check(int argc, char *argv[])
       string cv_exe = comp.metadata.author == "tophat" ? "tophat" : "breseq";
       uint32_t cutoff = cv_exe == "tophat" ? 0 : 3;
 
-      string plot_jc_score_script_name = "/plot_jc_scores.r";
-      string plot_jc_score_script_path = DATADIR + plot_jc_score_script_name;
-
       uout << "Creating plots: " + prefix + ".precision.png and " << prefix + ".sensitivity.png" << endl;
-      string cmd = plot_jc_score_script_path + " " + table_path + " " + prefix + " " + s(cutoff) + " " + cv_exe;
-      SYSTEM(cmd, true, false, true);
+      plot_jc_scores(table_path, prefix, cutoff, cv_exe);
     }
 
   } else {

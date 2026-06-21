@@ -218,7 +218,7 @@ int do_bam2cov(int argc, char* argv[]) {
   options("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=region1.*). If there are multiple regions or no region is provided, this argument must be a directory path, and all output files will be output here with names region1.*, region2.*, ... (DEFAULT=.)");
   options("prefix,x", "Output prefix. If there are multiple regions or no region is provided, this will be used as a prefix in front of the automatically generated names.", "");
   options("region,r", "Regions to create alignments for. Must be provided as sequence regions in the format ACCESSION:START-END, where ACCESSION is a valid identifier for one of the sequences in the FASTA file, and START and END are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments. If no regions are provided, then an output file will be created for each sequence in the FASTA file.");
-  options("format", "Format of output plot(s): PNG or PDF", "PNG");
+  options("format", "Format of output plot(s): PNG, PDF, or SVG", "PNG");
   options("table,t", "Create tab-delimited file of coverage instead of a plot", TAKES_NO_ARGUMENT);
   options.addUsage("", ADVANCED_OPTION);
   options.addUsage("Advanced Output Options", ADVANCED_OPTION);
@@ -314,8 +314,7 @@ int do_bam2cov(int argc, char* argv[]) {
   // generate coverage table/plot!
   coverage_output co(
                       options["bam"],
-                      options["fasta"],
-                      settings.coverage_plot_r_script_file_name
+                      options["fasta"]
                       );
   
   // Set options
@@ -1724,12 +1723,10 @@ int breseq_default_action(int argc, char* argv[])
 		settings.done_step(settings.reference_alignment_done_file_name);
 	}
 
-  // We need this path if preprocessing for junction prediction below
-  if ( !settings.skip_new_junction_prediction )
-  {
-    create_path(settings.candidate_junction_path);
-  }
-  
+  // Needed even when skipping junction prediction: done_step() below writes
+  // its done-file marker inside this directory regardless.
+  create_path(settings.candidate_junction_path);
+
   if ( !settings.aligned_sam_mode &&
       settings.do_step(settings.preprocess_junction_done_file_name, settings.skip_new_junction_prediction ? "Preprocessing alignments: merging files" : "Preprocessing alignments: merging files and finding alignments for candidate junction identification"))
   {
@@ -2205,22 +2202,11 @@ int breseq_default_action(int argc, char* argv[])
         }
         
       }
-      string command;
       for (uint32_t i = 0; i<settings.read_files.size(); i++) {
         string base_name = settings.read_files[i].base_name();
         string error_rates_base_qual_error_prob_file_name = settings.file_name(settings.error_rates_base_qual_error_prob_file_name, "#", base_name);
-        string plot_error_rates_r_script_file_name = settings.plot_error_rates_r_script_file_name;
-        string plot_error_rates_r_script_log_file_name = settings.file_name(settings.plot_error_rates_r_script_log_file_name, "#", base_name);
         string error_rates_plot_file_name = settings.file_name(settings.error_rates_plot_file_name, "#", base_name);
-        command = "R --vanilla < " + double_quote(plot_error_rates_r_script_file_name) +
-          " > " + double_quote(plot_error_rates_r_script_log_file_name) +
-          " --args" +
-          " in_file=" + double_quote(error_rates_base_qual_error_prob_file_name) +
-          " out_file=" + double_quote(error_rates_plot_file_name) +
-          " < " + double_quote(plot_error_rates_r_script_file_name) +
-          " > " + double_quote(plot_error_rates_r_script_log_file_name);
-        
-        SYSTEM(command,false, false, false); //NOTE: Not escaping shell characters here.
+        plot_error_rates(error_rates_base_qual_error_prob_file_name, error_rates_plot_file_name);
       }
 
       summary.unique_coverage.store(settings.error_rates_summary_file_name);

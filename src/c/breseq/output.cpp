@@ -2266,7 +2266,6 @@ void draw_coverage_thread_helper(int thread_id, const Settings& settings, const 
   coverage_output co(
                      settings.reference_bam_file_name,
                      settings.reference_fasta_file_name,
-                     settings.coverage_plot_r_script_file_name,
                      thread_id,
                      settings.coverage_plot_path
                      );
@@ -2277,7 +2276,7 @@ void draw_coverage_thread_helper(int thread_id, const Settings& settings, const 
 
 void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenomeDiff& gd)
 {  
-  const string& _output_format("png");
+  const string& _output_format("svg");
 
   create_path(settings.coverage_plot_path);
   string coverage_plot_path = settings.coverage_plot_path;
@@ -3601,7 +3600,7 @@ cOutputEvidenceFiles::html_evidence_file (
 
   if (item.entry_exists(PLOT) && !item[PLOT].empty()) {
     if (file_exists( (settings.evidence_path + "/" + item[PLOT]).c_str() )) {
-      HTML << div(ALIGN_LEFT, img("width=800", item[PLOT]));
+      HTML << div(ALIGN_LEFT, img("style=\"width:100%;max-width:1200px;height:auto;\"", item[PLOT]));
     } else {
       HTML << div(ALIGN_LEFT, "Failed to generate coverage plot.");
     }
@@ -3644,7 +3643,7 @@ cOutputEvidenceFiles::html_evidence_file (
   
 void create_evidence_archive(const Settings& settings)
 {
-  // Bundle evidence HTML and PNG files into a zip archive using miniz so that
+  // Bundle evidence HTML and image files into a zip archive using miniz so that
   // index.html can load them in-browser via JSZip without needing a system
   // zip command.  All files are stored at the archive root (no path prefix).
   const string& zip_path     = settings.html_archive_file_name;
@@ -3662,8 +3661,8 @@ void create_evidence_archive(const Settings& settings)
     return;
   }
 
-  // Enumerate *.html and *.png in the evidence directory
-  const char* exts[] = { ".html", ".png", ".pdf" };
+  // Enumerate *.html, *.png, *.svg, and *.pdf in the evidence directory
+  const char* exts[] = { ".html", ".png", ".svg", ".pdf" };
   bool any_added = false;
 
   for (size_t ei = 0; ei < sizeof(exts) / sizeof(exts[0]); ei++) {
@@ -3759,9 +3758,9 @@ void create_evidence_page(const Settings& settings)
   // Replace img src="..." attributes in raw HTML text using regex so we never
   // round-trip through DOMParser+outerHTML, which mangles non-ASCII characters.
   out << "  function inlineImages(html, zip) {\n";
-  out << "    // Collect unique src values (PNG filenames)\n";
+  out << "    // Collect unique src values (PNG/SVG filenames)\n";
   out << "    var seen = {};\n";
-  out << "    var pattern = /src=\"([^\"]*\\.png[^\"]*)\"/gi;\n";
+  out << "    var pattern = /src=\"([^\"]*\\.(?:png|svg)[^\"]*)\"/gi;\n";
   out << "    var m;\n";
   out << "    while ((m = pattern.exec(html)) !== null) seen[m[1]] = true;\n";
   out << "    var srcs = Object.keys(seen);\n";
@@ -3769,8 +3768,9 @@ void create_evidence_page(const Settings& settings)
   out << "      var fname = src.replace(/^.*\\//, '');\n";
   out << "      var entry = zip.file(fname);\n";
   out << "      if (!entry) return Promise.resolve(null);\n";
+  out << "      var mime = fname.match(/\\.svg$/i) ? 'image/svg+xml' : 'image/png';\n";
   out << "      return entry.async('base64').then(function(b64) {\n";
-  out << "        return {src: src, uri: 'data:image/png;base64,' + b64};\n";
+  out << "        return {src: src, uri: 'data:' + mime + ';base64,' + b64};\n";
   out << "      });\n";
   out << "    })).then(function(results) {\n";
   out << "      results.forEach(function(r) {\n";
@@ -3792,13 +3792,15 @@ void create_evidence_page(const Settings& settings)
   out << "      var entry = zip.file(fname);\n";
   out << "      if (!entry) { showError('File not found in archive: ' + fname); return; }\n";
   out << "      var isPng = fname.match(/\\.png$/i);\n";
+  out << "      var isSvg = fname.match(/\\.svg$/i);\n";
   out << "      var isPdf = fname.match(/\\.pdf$/i);\n";
-  out << "      if (isPng) {\n";
-  out << "        // PNG: display in an img tag so the viewer URL stays meaningful.\n";
+  out << "      if (isPng || isSvg) {\n";
+  out << "        // PNG/SVG: display in an img tag so the viewer URL stays meaningful.\n";
+  out << "        var mime = isSvg ? 'image/svg+xml' : 'image/png';\n";
   out << "        return entry.async('base64').then(function(b64) {\n";
   out << "          document.title = fname;\n";
   out << "          var img = document.createElement('img');\n";
-  out << "          img.src = 'data:image/png;base64,' + b64;\n";
+  out << "          img.src = 'data:' + mime + ';base64,' + b64;\n";
   out << "          img.style.cssText = 'max-width:100%;display:block;margin:auto;';\n";
   out << "          document.getElementById('status').style.display = 'none';\n";
   out << "          document.body.style.margin = '0';\n";

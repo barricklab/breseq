@@ -4035,6 +4035,72 @@ void cGenomeDiff::write_jc_score_table(cGenomeDiff& compare, string table_file_p
   out.close();
 }
 
+void plot_jc_scores(const string& table_path, const string& prefix, uint32_t cutoff, const string& cv_exe)
+{
+  // Skip plotting if there is no scored JC evidence to plot (e.g. no JC
+  // evidence was compared at all) -- matches the old R script's graceful
+  // degradation to an empty plot frame, just by not generating one.
+  {
+    ifstream in(table_path.c_str());
+    ASSERT(in.good(), "Could not open JC score table for plotting: " + table_path);
+    string header_line;
+    getline(in, header_line);
+    string first_data_line;
+    bool has_data = static_cast<bool>(getline(in, first_data_line));
+    if (!has_data) return;
+  }
+
+  bool reverse_x = (cv_exe == "tophat");
+
+  struct plot_spec { string out_path; string title; string ylabel; string ratio_expr; };
+  vector<plot_spec> specs(2);
+  specs[0].out_path = prefix + ".precision.png";
+  specs[0].title = "JC Precision versus Score";
+  specs[0].ylabel = "Precision";
+  specs[0].ratio_expr = "(column(\"TP\")/(column(\"TP\")+column(\"FP\")))";
+  specs[1].out_path = prefix + ".sensitivity.png";
+  specs[1].title = "JC Sensitivity versus Score";
+  specs[1].ylabel = "Sensitivity";
+  specs[1].ratio_expr = "(column(\"TP\")/(column(\"TP\")+column(\"FN\")))";
+
+  for (size_t i = 0; i < specs.size(); i++) {
+    ostringstream s;
+    s << "set datafile columnheaders" << endl;
+    // Must run stats before any 'set xrange'/'set yrange' -- stats applies
+    // the currently active ranges as a data filter when given a single-column
+    // 'using' expression (it treats the expression as Y vs. row-index X).
+    s << "stats " << double_quote(table_path) << " using (column(\"score\")) nooutput name 'SCORE'" << endl;
+    // Guard against a zero-width x range (e.g. only one distinct score
+    // value was observed), which gnuplot refuses to plot with.
+    s << "if (SCORE_min == SCORE_max) {" << endl;
+    s << "  SCORE_min = SCORE_min - 1" << endl;
+    s << "  SCORE_max = SCORE_max + 1" << endl;
+    s << "}" << endl;
+    s << "set terminal pngcairo size 800,600 background rgb 'white'" << endl;
+    s << "set output " << double_quote(specs[i].out_path) << endl;
+    s << "unset key" << endl;
+    s << "set title " << double_quote(specs[i].title) << endl;
+    s << "set xlabel 'Score'" << endl;
+    s << "set ylabel " << double_quote(specs[i].ylabel) << endl;
+    s << "set yrange [0:1]" << endl;
+    if (reverse_x) {
+      s << "set xrange [SCORE_max:SCORE_min]" << endl;
+    } else {
+      s << "set xrange [SCORE_min:SCORE_max]" << endl;
+    }
+    if (cutoff != 0) {
+      s << "set arrow from " << cutoff << ", 0 to " << cutoff << ", 1 nohead lc rgb 'red' dashtype 2" << endl;
+    }
+    s << "plot " << double_quote(table_path) << " using \"score\":" << specs[i].ratio_expr << " with lines lc rgb 'black' notitle, \\" << endl;
+    s << "     " << double_quote(table_path) << " using \"score\":" << specs[i].ratio_expr << " with points pt 6 lc rgb 'blue' notitle" << endl;
+
+    string script_base_name = specs[i].out_path + "." + to_string(getpid());
+    string gnuplot_script_name = script_base_name + ".gp";
+    string log_file_name = script_base_name + ".gp.log";
+    run_gnuplot_script(s.str(), gnuplot_script_name, log_file_name);
+    remove(log_file_name.c_str());
+  }
+}
 
 // Used to add frequency_base-name columns to the master gd by
 // finding equivalent mutations in 

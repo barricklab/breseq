@@ -1455,7 +1455,46 @@ inline int SYSTEM(string command, bool silent = false, bool ignore_errors = fals
   }
   return return_value;
 }
-  
+
+//! Writes a gnuplot script to a temp file and runs it via SYSTEM(), getting
+//! the same fail-loud (ASSERT on nonzero exit) behavior for free: gnuplot,
+//! given a script as a file argument, exits nonzero on a script error.
+inline void run_gnuplot_script(const string& script_text, const string& script_file_name, const string& log_file_name)
+{
+  ofstream script_file(script_file_name.c_str());
+  script_file << script_text;
+  script_file.close();
+
+  string command = "gnuplot " + double_quote(script_file_name) + " > " + double_quote(log_file_name) + " 2>&1";
+  SYSTEM(command, false, false, false);
+
+  remove(script_file_name.c_str());
+}
+
+//! Injects a CSS rule into a gnuplot-generated SVG file so it scales to fill
+//! its container width (preserving aspect ratio) instead of displaying at its
+//! native pixel size -- both when opened directly in a browser and when
+//! embedded via <img>. CSS width/height properties take precedence over the
+//! SVG's own width/height presentation attributes, so this works without
+//! needing to change how gnuplot sizes the canvas.
+inline void make_svg_responsive(const string& svg_file_name, uint32_t max_width_px = 1200)
+{
+  ifstream in(svg_file_name.c_str());
+  if (!in.good()) return;
+  stringstream buffer;
+  buffer << in.rdbuf();
+  in.close();
+  string content = buffer.str();
+
+  size_t pos = content.find("<title>Gnuplot</title>");
+  if (pos == string::npos) return;
+  content.insert(pos, "<style>:root{width:100%;max-width:" + to_string(max_width_px)
+                       + "px;height:auto;display:block;margin:0 auto;}</style>\n");
+
+  ofstream out(svg_file_name.c_str());
+  out << content;
+}
+
 inline string remove_file(string path, bool silent = false, bool ignore_errors = false)
 {
   //remove(path.c_str()); // @JEB this does not work with wildcards

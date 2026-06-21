@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What is breseq
 
-breseq is a computational pipeline for finding mutations in haploid microbial genomes by comparing short-read sequencing data to a reference sequence. It uses bowtie2 for alignment, samtools for BAM manipulation, and R for statistical steps. The companion tool `gdtools` manipulates Genome Diff (`.gd`) files produced by breseq.
+breseq is a computational pipeline for finding mutations in haploid microbial genomes by comparing short-read sequencing data to a reference sequence. It uses bowtie2 for alignment, samtools for BAM manipulation, and gnuplot for diagnostic plots. The companion tool `gdtools` manipulates Genome Diff (`.gd`) files produced by breseq.
 
 ## Build System
 
@@ -29,7 +29,7 @@ conda activate $PWD/env
 ./bootstrap.sh && ./configure && make
 ```
 
-Runtime dependencies: `bowtie2`, `R`/`Rscript`, optionally `phylip`.
+Runtime dependencies: `bowtie2`, `gnuplot`, optionally `phylip`.
 
 When adding a new `.cpp` source file, re-run `./bootstrap.sh` so autotools picks it up, then `./configure && make`.
 
@@ -108,15 +108,15 @@ The main `breseq` default action runs these stages sequentially, using done-file
 1. **Read and reference sequence file input** — parse FASTQ/FASTA inputs, convert reference GenBank → FASTA
 2. **Read alignment to reference genome** — runs `bowtie2-build` + `bowtie2` (optionally 2-stage: stringent then relaxed)
 3. **Preprocessing alignments for candidate junction identification**
-4. **Preliminary analysis of coverage distribution** — uses R scripts
+4. **Preliminary analysis of coverage distribution** — `coverage_distribution.cpp`
 5. **Identifying junction candidates** — `candidate_junctions.cpp`
 6. **Re-alignment to junction candidates** — second bowtie2 alignment pass
 7. **Resolving best read alignments** — `resolve_alignments.cpp`
 8. **Creating BAM files** — samtools sort/index
 9. **Tabulating error counts** — `error_count.cpp`
-10. **Re-calibrating base error rates** — R scripts
+10. **Re-calibrating base error rates** — `error_count.cpp`
 11. **Examining read alignment evidence** — `identify_mutations.cpp`
-12. **Polymorphism statistics** — R scripts
+12. **Polymorphism statistics** — `reference_sequence.cpp`
 13. **Predicting copy number variation**
 14. **Output** — mutation prediction, annotation, HTML report (`output.cpp`)
 
@@ -142,9 +142,9 @@ Validation/annotation types: `CURA`, `FPOS`, `PHYL`, `TSEQ`, `PFLP`, `RFLP`, `PF
 - `mutation_predictor.h/cpp` — final mutation prediction logic
 - `anyoption.h/cpp` — command-line option parsing (custom library)
 
-### R scripts
+### Plotting
 
-R scripts embedded in the binary's data directory: `coverage_distribution.r`, `plot_coverage.r`, `plot_error_rate.r`, `plot_jc_scores.r`, `polymorphism_statistics.r`. These are invoked as subprocesses via `Rscript`.
+All statistics and plotting are native C++; no R dependency remains. Diagnostic plots (coverage distribution, coverage overview, error rates, JC precision/sensitivity) are drawn by writing a gnuplot script to a temp file and invoking `gnuplot` as a subprocess via the `run_gnuplot_script()` helper in `libbreseq/common.h`.
 
 ## Output Structure
 

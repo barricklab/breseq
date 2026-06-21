@@ -1066,9 +1066,6 @@ namespace breseq
 		this->unique_only_coverage_distribution_file_name = this->error_calibration_path + "/@.unique_only_coverage_distribution.tab";
 		this->error_rates_summary_file_name = this->error_calibration_path + "/summary.json";
 		this->error_rates_base_qual_error_prob_file_name = this->error_calibration_path + "/base_qual_error_prob.#.tab";
-		this->plot_error_rates_r_script_file_name = this->program_data_path + "/plot_error_rate.r";
-		this->plot_error_rates_fit_r_script_file_name = this->error_calibration_path + "/fit.#.r_script";
-		this->plot_error_rates_r_script_log_file_name = this->error_calibration_path + "/#.plot_error_rate.log";
 
 		//! Paths: Mutation Identification
 		this->mutation_identification_path = "08_mutation_identification";
@@ -1077,14 +1074,10 @@ namespace breseq
     this->mutation_identification_done_file_name = this->mutation_identification_path + "/mutation_identification.done";
 		this->mutation_identification_per_position_file_name = this->mutation_identification_path + "/per_position_file.tab";
 		this->complete_coverage_text_file_name = this->mutation_identification_path + "/@.coverage.tab";
-		this->genome_error_counts_file_name = this->mutation_identification_path + "/error_counts.tab";
 		this->ra_mc_genome_diff_file_name = this->mutation_identification_path + "/ra_mc_evidence.gd";
 
     this->polymorphism_statistics_done_file_name = this->mutation_identification_path + "/polymorphism_statistics.done";
 		this->polymorphism_statistics_input_file_name = this->mutation_identification_path + "/polymorphism_statistics_input.tab";
-		this->polymorphism_statistics_output_file_name = this->mutation_identification_path + "/polymorphism_statistics_output.tab";
-		this->polymorphism_statistics_r_script_file_name = this->program_data_path + "/polymorphism_statistics.r";
-		this->polymorphism_statistics_r_script_log_file_name = this->mutation_identification_path + "/polymorphism_statistics_output.log";
 		this->polymorphism_statistics_ra_mc_genome_diff_file_name = this->mutation_identification_path + "/ra_mc_evidence_polymorphism_statistics.gd";
 
     //! Paths: Copy Number Variation
@@ -1124,12 +1117,11 @@ namespace breseq
 
 		this->local_coverage_plot_path = "evidence";
 		this->coverage_plot_path = this->output_path + "/" + this->local_coverage_plot_path;
-    this->coverage_plot_r_script_file_name = this->program_data_path + "/plot_coverage.r";
-		this->overview_coverage_plot_file_name = this->coverage_plot_path + "/@.overview.png";
+		this->overview_coverage_plot_file_name = this->coverage_plot_path + "/@.overview.svg";
 
 		this->output_calibration_path = this->evidence_path;
-		this->unique_only_coverage_plot_file_name = this->output_calibration_path + "/@.unique_coverage.pdf";
-		this->error_rates_plot_file_name = this->output_calibration_path + "/#.error_rates.pdf";
+		this->unique_only_coverage_plot_file_name = this->output_calibration_path + "/@.unique_coverage.svg";
+		this->error_rates_plot_file_name = this->output_calibration_path + "/#.error_rates.svg";
 
 		this->breseq_icon_graphic_from_file_name = this->program_data_path + "/breseq_icon.png";
 		this->breseq_icon_graphic_to_file_name = this->output_path + "/breseq_icon.png";
