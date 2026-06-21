@@ -863,12 +863,11 @@ namespace breseq
     // Note: this leaves off -L, since it is set based on read length
     
     // Set these defaults
-    this->bowtie2_stage1 = "--local -i S,1,0.25 --score-min L,1,0.9" + bowtie2_genome_alignment_reporting_parameters; // "-L 22 -i S,1,0.25 --score-min L,0,0.9";
+    this->bowtie2_stage1 = "--local -i S,1,0.25 --score-min L,0,0.8" + bowtie2_genome_alignment_reporting_parameters; // "-L 22 -i S,1,0.25 --score-min L,0,0.9";
     
     this->bowtie2_stage2 = "--local -i S,1,0.25 --score-min L,6,0.2" + bowtie2_genome_alignment_reporting_parameters; // "-L 9 -i C,1,0 --score-min L,6,0.2";
     
-    //JEB: Changed 2015-07-13 to not give too many alignments for longer (150 bp) reads, but to keep thresholds similar for short (36 bp) reads
-    this->bowtie2_junction = "--local -i S,1,0.25 --score-min L,1,0.70" + bowtie2_junction_alignment_reporting_parameters; // "-L 9 -i C,1,0 --score-min L,6,0.2";
+    this->bowtie2_junction = "--local -i S,1,0.25 --score-min L,1,0.6" + bowtie2_junction_alignment_reporting_parameters; // "-L 9 -i C,1,0 --score-min L,6,0.2";
 
     
     this->num_processors = 1;

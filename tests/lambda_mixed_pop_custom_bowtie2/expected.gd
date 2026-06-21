@@ -1,5 +1,5 @@
 #=GENOME_DIFF	1.0
-#=CREATED	08:00:44 20 Jun 2026
+#=CREATED	08:54:20 21 Jun 2026
 #=PROGRAM	breseq 0.40.1
 #=COMMAND	./src/c/breseq/breseq -j 4 -o tests/lambda_mixed_pop_custom_bowtie2 --bowtie2-scoring --ma 1 --mp 2 --np 1 --rdg 4,1 --rfg 4,1 --bowtie2-stage1 --local --score-min L,10,0.4 -k 20 --bowtie2-stage2 --bowtie2-junction --local --score-min L,10,0.30 -k 20 -r tests/lambda_mixed_pop_custom_bowtie2/../data/lambda/lambda.gbk tests/lambda_mixed_pop_custom_bowtie2/../data/lambda/lambda_mixed_population.fastq
 #=REFSEQ	tests/lambda_mixed_pop_custom_bowtie2/../data/lambda/lambda.gbk
