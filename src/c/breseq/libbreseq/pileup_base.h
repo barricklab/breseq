@@ -138,7 +138,8 @@ class pileup_base {
     //! Called after the pileup completed a target.
     virtual void at_target_end(const uint32_t tid) { (void)tid; }
   
-    virtual void at_target_end_first_level_callback(const uint32_t tid) { 
+    virtual void at_target_end_first_level_callback(const uint32_t tid) {
+      end_progress_line();
       at_target_end(tid);
     }
   

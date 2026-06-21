@@ -938,6 +938,7 @@ void load_junction_alignments(
       progress_message << "    READS:" << setw(12) << right << reads_processed;
       print_progress_line(progress_message.str());
     }
+    end_progress_line();
 
     // save statistics
     summary.alignment_resolution.read_file[read_files[fastq_file_index].m_base_name] = read_file_summary_info;
@@ -1051,6 +1052,7 @@ void load_sam_only_alignments(
       progress_message << "    READS:" << setw(12) << right << reads_processed;
       print_progress_line(progress_message.str());
     }
+    end_progress_line();
 
     summary.alignment_resolution.read_file[read_files[sam_file_index].m_base_name] = read_file_summary_info;
     
