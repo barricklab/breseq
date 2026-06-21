@@ -337,20 +337,21 @@ void plot_error_rates(const string& in_file, const string& out_file)
   s << "set logscale y" << endl;
   s << "set format y '10^{%T}'" << endl;
   s << "set yrange [" << y_min_oss.str() << ":1]" << endl;
-  s << "set key top right title 'Observed Base:' horizontal" << endl;
+  s << "set key top right title 'Observed Base:' horizontal reverse samplen 2" << endl;
+  s << "set rmargin 20" << endl;
 
-  s << "set multiplot layout 5,1 title 'Error Rates'" << endl;
+  s << "set multiplot layout 5,1 title 'Error Rates' font ',24' spacing 0.06,0.06" << endl;
   for (size_t i = 0; i < num_bases; i++) {
     char ref_base = base_colors[i].base;
-    string ref_title = (ref_base == '.') ? "Reference Base: Delta" : ("Reference Base: " + string(1, ref_base));
-    s << "set title " << double_quote(ref_title) << endl;
+    string ref_title = (ref_base == '.') ? "Reference Base: Δ" : ("Reference Base: " + string(1, ref_base));
+    s << "set label 1 " << double_quote(ref_title) << " at graph 1.05, 0.5 font ',14'" << endl;
 
     vector<string> plot_clauses;
     for (size_t j = 0; j < num_bases; j++) {
       if (base_colors[j].base == ref_base) continue;
       string col_name; col_name += ref_base; col_name += base_colors[j].base;
-      string legend_label = (base_colors[j].base == '.') ? "Delta" : string(1, base_colors[j].base);
-      plot_clauses.push_back(double_quote(in_file) + " using \"quality\":\"" + col_name + "\" with linespoints pt 7 lc rgb '" + base_colors[j].color + "' title '" + legend_label + "'");
+      string legend_label = (base_colors[j].base == '.') ? "Δ" : string(1, base_colors[j].base);
+      plot_clauses.push_back(double_quote(in_file) + " using \"quality\":\"" + col_name + "\" with linespoints pt 7 lw 1.5 lc rgb '" + base_colors[j].color + "' title '" + legend_label + "'");
     }
     s << "plot " << join(plot_clauses, string(", \\\n     ")) << endl;
   }
@@ -360,6 +361,7 @@ void plot_error_rates(const string& in_file, const string& out_file)
   string gnuplot_script_name = script_base_name + ".gp";
   string log_file_name = script_base_name + ".gp.log";
   run_gnuplot_script(s.str(), gnuplot_script_name, log_file_name);
+  make_svg_responsive(out_file);
   remove(log_file_name.c_str());
 }
 

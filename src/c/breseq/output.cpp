@@ -3600,7 +3600,7 @@ cOutputEvidenceFiles::html_evidence_file (
 
   if (item.entry_exists(PLOT) && !item[PLOT].empty()) {
     if (file_exists( (settings.evidence_path + "/" + item[PLOT]).c_str() )) {
-      HTML << div(ALIGN_LEFT, img("width=800", item[PLOT]));
+      HTML << div(ALIGN_LEFT, img("style=\"width:100%;max-width:1200px;height:auto;\"", item[PLOT]));
     } else {
       HTML << div(ALIGN_LEFT, "Failed to generate coverage plot.");
     }

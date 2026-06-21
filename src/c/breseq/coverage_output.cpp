@@ -175,6 +175,8 @@ void coverage_output::plot(const string& region, const string& output_file_name,
   string log_file_name = m_intermediate_path + "/" + to_string(pid) + "_" + to_string(m_thread_id) + ".coverage.gp.log";
   run_gnuplot_script(s.str(), gnuplot_script_name, log_file_name);
 
+  if (m_output_format == "svg") make_svg_responsive(_output_file_name);
+
   remove(tmp_coverage.c_str());
   remove(log_file_name.c_str());
 }

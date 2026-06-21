@@ -393,7 +393,7 @@ CoverageDistributionFitResult CoverageDistribution::fit(
   }
 
   ostringstream s;
-  s << "set terminal svg size 1050,900 font ',16'" << endl;
+  s << "set terminal svg size 1320,720 font ',16'" << endl;
   s << "set output " << double_quote(plot_file) << endl;
   s << "set tics out" << endl;
   s << "set border lw 2" << endl;
@@ -416,6 +416,7 @@ CoverageDistributionFitResult CoverageDistribution::fit(
   string gnuplot_script_name = script_base_name + ".gp";
   string log_file_name = script_base_name + ".gp.log";
   run_gnuplot_script(s.str(), gnuplot_script_name, log_file_name);
+  make_svg_responsive(plot_file);
   remove(log_file_name.c_str());
   if (result.nb_fit_mu > 0) remove(nb_fit_table_file_name.c_str());
 
