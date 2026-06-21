@@ -1,6 +1,6 @@
 #=GENOME_DIFF	1.0
-#=CREATED	08:54:16 21 Jun 2026
-#=PROGRAM	breseq 0.40.1
+#=CREATED	09:15:12 21 Jun 2026
+#=PROGRAM	breseq 0.40.1 revision 089d37780932
 #=COMMAND	./src/c/breseq/breseq -j 4 -p --no-junction-prediction -o tests/lambda_polymorphism_no_junction_bad_orfs -r tests/lambda_polymorphism_no_junction_bad_orfs/../data/lambda/lambda_bad_orfs.gbk tests/lambda_polymorphism_no_junction_bad_orfs/../data/lambda/lambda_mixed_population.fastq
 #=REFSEQ	tests/lambda_polymorphism_no_junction_bad_orfs/../data/lambda/lambda_bad_orfs.gbk
 #=READSEQ	tests/lambda_polymorphism_no_junction_bad_orfs/../data/lambda/lambda_mixed_population.fastq

@@ -1,6 +1,6 @@
 #=GENOME_DIFF	1.0
-#=CREATED	08:54:05 21 Jun 2026
-#=PROGRAM	breseq 0.40.1
+#=CREATED	09:15:12 21 Jun 2026
+#=PROGRAM	breseq 0.40.1 revision 089d37780932
 #=COMMAND	./src/c/breseq/breseq -j 4 -o tests/lambda_contig_ref -c tests/lambda_contig_ref/../data/lambda/lambda-contig.gbk tests/lambda_contig_ref/../data/lambda/lambda_mixed_population.fastq
 #=REFSEQ	tests/lambda_contig_ref/../data/lambda/lambda-contig.gbk
 #=READSEQ	tests/lambda_contig_ref/../data/lambda/lambda_mixed_population.fastq

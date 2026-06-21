@@ -1,6 +1,6 @@
 #=GENOME_DIFF	1.0
-#=CREATED	08:54:29 21 Jun 2026
-#=PROGRAM	breseq 0.40.1
+#=CREATED	09:14:49 21 Jun 2026
+#=PROGRAM	breseq 0.40.1 revision 089d37780932
 #=COMMAND	./src/c/breseq/breseq -j 4 -b 0 -o tests/REL606_fragment_advanced_mobile_element -r tests/REL606_fragment_advanced_mobile_element/../data/REL606/REL606.fragment.gbk tests/REL606_fragment_advanced_mobile_element/../data/REL606/REL606.advanced_mobile_element.fastq
 #=REFSEQ	tests/REL606_fragment_advanced_mobile_element/../data/REL606/REL606.fragment.gbk
 #=READSEQ	tests/REL606_fragment_advanced_mobile_element/../data/REL606/REL606.advanced_mobile_element.fastq

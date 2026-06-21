@@ -1,8 +1,8 @@
 #=GENOME_DIFF	1.0
 #=TITLE	header
 #=AUTHOR	Jeffrey Barrick
-#=CREATED	08:54:41 21 Jun 2026
-#=PROGRAM	breseq 0.40.1
+#=CREATED	09:14:24 21 Jun 2026
+#=PROGRAM	breseq 0.40.1 revision 089d37780932
 #=COMMAND	./src/c/breseq/breseq -j 4 --polymorphism-prediction --header-genome-diff tests/lambda_polymorphism/header.gd -o tests/lambda_polymorphism -r tests/lambda_polymorphism/../data/lambda/lambda.gbk tests/lambda_polymorphism/../data/lambda/lambda_mixed_population.fastq
 #=TIME	20
 #=CLONE	A
