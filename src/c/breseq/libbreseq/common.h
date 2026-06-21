@@ -382,6 +382,12 @@ namespace breseq {
     return "\033[32m" + message + "\033[0m";
   }
 
+  inline string color_red(const string& message)
+  {
+    if (!terminal_color_enabled()) return message;
+    return "\033[31m" + message + "\033[0m";
+  }
+
   inline string color_cyan(const string& message)
   {
     if (!terminal_color_enabled()) return message;
