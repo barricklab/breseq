@@ -428,67 +428,6 @@ int do_weights(int argc, char* argv[])
   return 0;
 }
 
-int do_check_plot(int argc, char *argv[])
-{
-	AnyOption options("gdtools CHECK-PLOT [-o output] test1.gd [test2.gd ...]");
-	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-	options("output,o",     "Prefix for output files prefix_ ", "output");
-	options("verbose,v",    "verbose mode", TAKES_NO_ARGUMENT);
-	options.processCommandArgs(argc, argv);
-	
-	options.addUsage("");
-	options.addUsage("Creates sensitivity and precision plots for Genome Diff files output by CHECK, ");
-	options.addUsage("which contain TP|FP|FN information and a score value for mutations or evidence.");
-
-	if (options.count("help")) {
-		options.printUsage();
-		return -1;
-	}
-	
-	if (options.getArgc() < 1) {
-			options.addUsage("");
-			options.addUsage("At least one input Genome Diff files must be provided.");
-			options.printUsage();
-			return -1;
-	}
-	
-	UserOutput uout("CHECK-PLOT");
-	
-	string gd_file_name = options.getArgv(0);
-	uout("Loading Genome Diff file:" + gd_file_name);
-	cGenomeDiff merged_gd(gd_file_name);
-	merged_gd.metadata.breseq_data.erase("TP|FN|FP");
-	
-	// Load and quick merge genome diff files (not removing duplicates)
-	for (int32_t i=1; i<options.getArgc(); i++) {
-			string gd_file_name = options.getArgv(i);
-			uout("Loading Genome Diff file:" + gd_file_name);
-			cGenomeDiff gd(gd_file_name);
-			
-			// Merge in a way that preserves duplicates
-			merged_gd.merge_preserving_duplicates(gd);
-	}
-	
-	
-	string prefix = options["output"];
-
-	// Write out the merged file
-	string merged_gd_path = prefix + ".gd";
-	uout << "Creating merged Genome Diff: " + merged_gd_path << endl;
-	merged_gd.write(merged_gd_path);
-	
-	string table_path = prefix + ".table.txt";
-	uout << "Creating table: " + table_path << endl;
-	cGenomeDiff::write_jc_score_table(merged_gd, table_path, options.count("verbose"));
-	string cv_exe = merged_gd.metadata.author == "tophat" ? "tophat" : "breseq";
-	uint32_t cutoff = cv_exe == "tophat" ? 0 : 3;
-	
-	uout << "Creating plots: " + prefix + ".precision.png and " << prefix + ".sensitivity.png" << endl;
-	plot_jc_scores(table_path, prefix, cutoff, cv_exe);
-
-	return 0;
-}
-
 // Check format of Genome Diff and report all format errors
 int do_validate(int argc, char *argv[])
 {
@@ -582,7 +521,6 @@ int do_check(int argc, char *argv[])
   options("jc-buffer",        "when comparing JC evidence, length of sequence segment to compare for JC evidence", 50);
   options("jc-shorten",       "when comparing JC evidence, length to shorten control segments by when comparing JC evidence for overlap", 5);
   options("jc-only-accepted", "when comparing JC evidence, do not score/count rejected items", TAKES_NO_ARGUMENT);
-  options("plot-jc",          "plot JC Precision versus Score, argument is a prefix for the file paths");
   options("verbose,v",        "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 
@@ -609,7 +547,7 @@ int do_check(int argc, char *argv[])
     return -1;
   }
 
-  if ((options.count("evidence") || options.count("plot-jc")) && !options.count("reference")) {
+  if (options.count("evidence") && !options.count("reference")) {
     options.addUsage("");
     options.addUsage("Reference file is needed to compare evidence.");
     options.printUsage();
@@ -628,33 +566,13 @@ int do_check(int argc, char *argv[])
 
   uout("Comparing control vs test GD file");
   cGenomeDiff comp;
-  if (options.count("evidence") || options.count("plot-jc")) {
+  if (options.count("evidence")) {
 
     cReferenceSequences ref;
     ref.LoadFiles(from_string<vector<string> >(options["reference"]));
 
     uout("Comparing evidence");
     comp = cGenomeDiff::check_evidence(ref, un(options["jc-buffer"]), un(options["jc-shorten"]), ctrl, test, options.count("jc-only-accepted"), options.count("verbose"));
-
-    if (options.count("plot-jc")) {
-      uout("Evaluating results to plot data.");
-      string prefix = options["plot-jc"];
-      if (prefix.rfind('/') != string::npos) {
-        size_t pos = prefix.rfind('/');
-        string dir_path = prefix.substr(0, pos);
-        uout << "Creating directory: " + dir_path << endl;
-        create_path(dir_path);
-      }
-
-      string table_path = prefix + ".table.txt";
-      uout << "Creating table: " + table_path << endl;
-      cGenomeDiff::write_jc_score_table(comp, table_path, options.count("verbose"));
-      string cv_exe = comp.metadata.author == "tophat" ? "tophat" : "breseq";
-      uint32_t cutoff = cv_exe == "tophat" ? 0 : 3;
-
-      uout << "Creating plots: " + prefix + ".precision.png and " << prefix + ".sensitivity.png" << endl;
-      plot_jc_scores(table_path, prefix, cutoff, cv_exe);
-    }
 
   } else {
     uout("Comparing mutations");
@@ -2854,9 +2772,7 @@ int main(int argc, char* argv[]) {
   } else if ( (command == "COMPARE") || (command == "ANNOTATE") ) {
     return do_annotate(argc_new, argv_new.data());
   } else if (command == "CHECK") {
-    return do_check(argc_new, argv_new.data());  
-  } else if (command == "CHECK-PLOT") {
-    return do_check_plot(argc_new, argv_new.data());
+    return do_check(argc_new, argv_new.data());
   } else if (command == "NOT-EVIDENCE") {        //TODO merge with FILTER
     return do_not_evidence(argc_new, argv_new.data());
 	} else if (command == "MUTATIONS") {
