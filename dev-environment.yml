@@ -1,7 +1,7 @@
 name: breseq-dev
 channels:
-  - bioconda
   - conda-forge
+  - bioconda
   - defaults
 dependencies:
 # Needed for compiling
