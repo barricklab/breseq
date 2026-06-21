@@ -1375,13 +1375,13 @@ namespace breseq
 		if (!file_exists(done_file_name.c_str()))
 		{
       end_progress_line();
-      cerr << color_yellow("+++   NOW PROCESSING " + message) << endl;
+      cerr << endl << color_yellow("+++   NOW PROCESSING " + message) << endl;
       this->record_start_time(message);
       return true;
 		}
 
 		end_progress_line();
-		cerr << color_yellow("--- ALREADY COMPLETE " + message) << endl;
+		cerr << endl << color_yellow("--- ALREADY COMPLETE " + message) << endl;
 
 		ExecutionTime et;
     et.retrieve(done_file_name);
