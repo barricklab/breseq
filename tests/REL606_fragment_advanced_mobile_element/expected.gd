@@ -1,4 +1,6 @@
 #=GENOME_DIFF	1.0
+#=CREATED	08:54:29 21 Jun 2026
+#=PROGRAM	breseq 0.40.1
 #=COMMAND	./src/c/breseq/breseq -j 4 -b 0 -o tests/REL606_fragment_advanced_mobile_element -r tests/REL606_fragment_advanced_mobile_element/../data/REL606/REL606.fragment.gbk tests/REL606_fragment_advanced_mobile_element/../data/REL606/REL606.advanced_mobile_element.fastq
 #=REFSEQ	tests/REL606_fragment_advanced_mobile_element/../data/REL606/REL606.fragment.gbk
 #=READSEQ	tests/REL606_fragment_advanced_mobile_element/../data/REL606/REL606.advanced_mobile_element.fastq
@@ -92,31 +94,29 @@ JC	81	.	REL606-5	32066	-1	REL606-5	37000	-1	-4	alignment_overlap=-4	coverage_min
 JC	82	.	REL606-5	32068	-1	REL606-5	35000	-1	-1	alignment_overlap=-1	coverage_minus=13	coverage_plus=11	flanking_left=36	flanking_right=36	frequency=1	junction_possible_overlap_registers=34	key=REL606-5__32068__-1__REL606-5__35000__-1__-1__A__36__36__1__0	max_left=32	max_left_minus=32	max_left_plus=31	max_min_left=15	max_min_left_minus=11	max_min_left_plus=15	max_min_right=17	max_min_right_minus=17	max_min_right_plus=17	max_pos_hash_score=68	max_right=32	max_right_minus=29	max_right_plus=32	neg_log10_pos_hash_p_value=0.1	new_junction_coverage=1.26	new_junction_read_count=26	polymorphism_frequency=1.000e+00	pos_hash_score=22	prediction=consensus	read_count_offset=0	side_1_annotate_key=repeat	side_1_continuation=0	side_1_coverage=NA	side_1_gene_name=IS1	side_1_gene_position=noncoding (767/768 nt)	side_1_gene_product=repeat region	side_1_gene_strand=>	side_1_overlap=0	side_1_read_count=NA	side_1_redundant=1	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.00	side_2_gene_name=proA	side_2_gene_position=coding (496/1254 nt)	side_2_gene_product=gamma-glutamyl phosphate reductase	side_2_gene_strand=>	side_2_locus_tag=ECB_00240	side_2_overlap=0	side_2_possible_overlap_registers=35	side_2_read_count=0	side_2_redundant=0	total_non_overlap_reads=24	unique_read_sequence=A
 UN	83	.	REL606-5	1	7
 UN	84	.	REL606-5	11	11
-UN	85	.	REL606-5	380	380
-UN	86	.	REL606-5	383	408
-UN	87	.	REL606-5	3000	3002
-UN	88	.	REL606-5	4000	4006
-UN	89	.	REL606-5	8168	8168
-UN	90	.	REL606-5	8171	8187
-UN	91	.	REL606-5	8391	8420
-UN	92	.	REL606-5	9793	9993
-UN	93	.	REL606-5	10060	10175
-UN	94	.	REL606-5	10245	10501
-UN	95	.	REL606-5	15000	15002
-UN	96	.	REL606-5	16000	16006
-UN	97	.	REL606-5	17000	17002
-UN	98	.	REL606-5	18000	18006
-UN	99	.	REL606-5	23000	23000
-UN	100	.	REL606-5	24000	24001
-UN	101	.	REL606-5	26026	26027
-UN	102	.	REL606-5	27000	27002
-UN	103	.	REL606-5	27668	27671
-UN	104	.	REL606-5	28000	28000
-UN	105	.	REL606-5	31328	31328
-UN	106	.	REL606-5	31331	31532
-UN	107	.	REL606-5	31584	31716
-UN	108	.	REL606-5	31774	31774
-UN	109	.	REL606-5	31776	32042
-UN	110	.	REL606-5	39570	39573
-UN	111	.	REL606-5	43166	43166
-UN	112	.	REL606-5	46293	46298
+UN	85	.	REL606-5	384	408
+UN	86	.	REL606-5	3000	3002
+UN	87	.	REL606-5	4000	4006
+UN	88	.	REL606-5	8168	8168
+UN	89	.	REL606-5	8171	8187
+UN	90	.	REL606-5	8391	8420
+UN	91	.	REL606-5	9793	9993
+UN	92	.	REL606-5	10060	10175
+UN	93	.	REL606-5	10245	10501
+UN	94	.	REL606-5	15000	15002
+UN	95	.	REL606-5	16000	16006
+UN	96	.	REL606-5	17000	17002
+UN	97	.	REL606-5	18000	18006
+UN	98	.	REL606-5	23000	23000
+UN	99	.	REL606-5	24000	24001
+UN	100	.	REL606-5	26026	26027
+UN	101	.	REL606-5	27000	27002
+UN	102	.	REL606-5	27668	27671
+UN	103	.	REL606-5	28000	28000
+UN	104	.	REL606-5	31331	31532
+UN	105	.	REL606-5	31584	31716
+UN	106	.	REL606-5	31774	31774
+UN	107	.	REL606-5	31776	32042
+UN	108	.	REL606-5	39570	39573
+UN	109	.	REL606-5	43166	43166
+UN	110	.	REL606-5	46293	46298
