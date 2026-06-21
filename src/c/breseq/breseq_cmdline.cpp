@@ -942,24 +942,6 @@ int do_tabulate_contingency_loci(int argc, char* argv[]) {
 	return 0;
 }
 
-int do_analyze_contingency_loci_significance( int argc, char* argv[]){
-    // setup and parse configuration options:
-	AnyOption options("Usage: breseq CL_SIGNIFICANCE --output <path> --loci <loci.txt> ");
-	options
-    ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-    ("output,o", "output file", "contingency_loci.tab")
-    ("loci,l", "Contingency loci files", "")
-	.processCommandArgs(argc, argv);
-    
-  vector<string> strain_files = from_string<vector<string> >(options["loci"]);
-  analyze_contingency_loci_significance(
-                                       options["output"],
-                                       strain_files
-                                       );
-  return 0;
-}
-
-
 int do_analyze_soft_clipping( int argc, char* argv[]){
   
   // create empty settings object to have R script name and default summary.json file name
@@ -2665,8 +2647,6 @@ int main(int argc, char* argv[]) {
     return do_tabulate_contingency_loci(argc_new, argv_new.data());
   } else if (command == "SOFT-CLIPPING") {
     return do_analyze_soft_clipping(argc_new, argv_new.data());
-  } else if (command == "CL-SIGNIFICANCE") {
-    return do_analyze_contingency_loci_significance( argc_new, argv_new.data());
   } else if (command == "ASSEMBLE-UNMATCHED") {
     return do_assemble_unmatched( argc_new, argv_new.data());
   }

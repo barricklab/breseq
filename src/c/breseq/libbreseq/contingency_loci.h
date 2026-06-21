@@ -40,10 +40,7 @@ namespace breseq {
                                 const uint32_t minimum_length,
                                 bool strict
                                 );
-	
-  void analyze_contingency_loci_significance(const string& output, const vector<string>& strainfiles);
 
-	
   // Structure to hold information about repeats
 	struct homopolymer_repeat {
 		
