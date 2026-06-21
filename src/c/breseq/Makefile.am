@@ -108,12 +108,7 @@ gdtools_LDADD   = ./libbreseq.la $(HTSLIB_LINK) $(MINIZ_LINK) $(LIBZ_LINK) $(CRA
 
 EXTRA_DIST = breseq.png \
 	breseq_icon.png \
-	list.min.js \
-	run_circos.sh \
-	indels.conf \
-	mutations.conf \
-	mobs.conf \
-	combined_circos.conf
+	list.min.js
 
 install-data-local :
 
@@ -122,11 +117,6 @@ install-data-local :
 	cp $(srcdir)/breseq.png $(BRESEQDATADIR)
 	cp $(srcdir)/breseq_icon.png $(BRESEQDATADIR)
 	cp $(srcdir)/list.min.js $(BRESEQDATADIR)
-	cp $(srcdir)/run_circos.sh $(BRESEQDATADIR)
-	cp $(srcdir)/indels.conf $(BRESEQDATADIR)
-	cp $(srcdir)/mutations.conf $(BRESEQDATADIR)
-	cp $(srcdir)/mobs.conf $(BRESEQDATADIR)
-	cp $(srcdir)/combined_circos.conf $(BRESEQDATADIR)
 
 uninstall-local :
 
