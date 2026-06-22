@@ -125,6 +125,7 @@ class cAnnotatedSequence;
                                      uint32_t read_size,
                                      int8_t strand,
                                      uint32_t id = 0,
+                                     uint32_t n_reads = 0,
                                      bool verbose = false);
 
       static void simulate_single_ends(const cAnnotatedSequence& sequence,

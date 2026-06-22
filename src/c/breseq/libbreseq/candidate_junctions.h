@@ -328,10 +328,6 @@ namespace breseq {
   class PreprocessAlignments
   {
   public:
-    /*! Preprocesses alignments
-		 */
-		static void preprocess_alignments(Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info);
-    
     static void split_alignments_on_indels(const Settings& settings,
                                            Summary& summary,
                                            const cReferenceSequences& ref_seq_info,
@@ -347,16 +343,59 @@ namespace breseq {
                                                        string matched_sam_file_name, 
                                                        string unmapped_reads_fastq_file_name
                                                        );
-    static void split_matched_alignments(uint32_t fastq_file_index, 
-                                         string fasta_file_name, 
+    static void split_matched_alignments(uint32_t fastq_file_index,
+                                         string fasta_file_name,
                                          string input_sam_file_name,
                                          string matched_sam_file_name);
-    
-    static void merge_sort_sam_files(
-                                     string input_sam_file_name_1,
-                                     string input_sam_file_name_2,
-                                     string output_sam_file_name
-                                     );
+
+    //! Merges stage1/stage2 alignment BAMs (if two-stage alignment was used) into
+    //! reference_sam_file_name for each read file, optionally preprocessing for
+    //! candidate junction identification in the same pass.
+    static void merge_sort_and_preprocess_alignments(Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info);
+
+  private:
+
+    //! Processes one read's worth of alignments for candidate junction preprocessing.
+    //! Returns false if candidate_junction_read_limit was hit (caller should stop).
+    static bool preprocess_alignment_list(
+                                          const Settings& settings,
+                                          Summary& summary,
+                                          const cReferenceSequences& ref_seq_info,
+                                          bam_file& BSAM,
+                                          bam_file& PSAM,
+                                          int32_t min_indel_split_len,
+                                          alignment_list& alignments,
+                                          uint32_t& i
+                                          );
+
+    //! Merges two BAM files (stage1 and stage2) for one read file into
+    //! output_sam_file_name, optionally preprocessing each group as it is merged.
+    static void merge_two_sam_files(
+                                    Settings& settings,
+                                    Summary& summary,
+                                    const cReferenceSequences& ref_seq_info,
+                                    const string& input_sam_file_name_1,
+                                    const string& input_sam_file_name_2,
+                                    const string& output_sam_file_name,
+                                    bool do_preprocess,
+                                    bam_file& BSAM,
+                                    bam_file& PSAM,
+                                    int32_t min_indel_split_len,
+                                    uint32_t& i
+                                    );
+
+    //! Reads an already-complete reference_sam_file_name and preprocesses each
+    //! read's alignments, without rewriting it.
+    static void preprocess_one_sam_file(
+                                        Settings& settings,
+                                        Summary& summary,
+                                        const cReferenceSequences& ref_seq_info,
+                                        const string& reference_sam_file_name,
+                                        bam_file& BSAM,
+                                        bam_file& PSAM,
+                                        int32_t min_indel_split_len,
+                                        uint32_t& i
+                                        );
   };
   
   /*! Structure for storing and testing whether alignment pairs support new junctions

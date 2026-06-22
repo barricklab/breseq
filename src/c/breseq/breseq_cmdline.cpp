@@ -191,6 +191,7 @@ int do_bam2aln(int argc, char* argv[]) {
     }
   }
   
+  end_progress_line();
   cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
   return 0;
 }
@@ -218,7 +219,7 @@ int do_bam2cov(int argc, char* argv[]) {
   options("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=region1.*). If there are multiple regions or no region is provided, this argument must be a directory path, and all output files will be output here with names region1.*, region2.*, ... (DEFAULT=.)");
   options("prefix,x", "Output prefix. If there are multiple regions or no region is provided, this will be used as a prefix in front of the automatically generated names.", "");
   options("region,r", "Regions to create alignments for. Must be provided as sequence regions in the format ACCESSION:START-END, where ACCESSION is a valid identifier for one of the sequences in the FASTA file, and START and END are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments. If no regions are provided, then an output file will be created for each sequence in the FASTA file.");
-  options("format", "Format of output plot(s): PNG or PDF", "PNG");
+  options("format", "Format of output plot(s): PNG, PDF, or SVG", "PNG");
   options("table,t", "Create tab-delimited file of coverage instead of a plot", TAKES_NO_ARGUMENT);
   options.addUsage("", ADVANCED_OPTION);
   options.addUsage("Advanced Output Options", ADVANCED_OPTION);
@@ -314,8 +315,7 @@ int do_bam2cov(int argc, char* argv[]) {
   // generate coverage table/plot!
   coverage_output co(
                       options["bam"],
-                      options["fasta"],
-                      settings.coverage_plot_r_script_file_name
+                      options["fasta"]
                       );
   
   // Set options
@@ -401,6 +401,7 @@ int do_bam2cov(int argc, char* argv[]) {
     }
   }
   
+  end_progress_line();
   cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
   return 0;
 }
@@ -474,6 +475,7 @@ int do_convert_fastq(int argc, char* argv[])
   cerr << "+++   Converting FASTQ..." << endl;
   convert_fastq(input_file_name, output_file_name, input_format, output_format, options.count("reverse-complement"));
 
+  end_progress_line();
   cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
   return 0;
 }
@@ -572,6 +574,7 @@ int do_convert_reference(int argc, char* argv[]) {
     refs.WriteCSV(options.count("output") ? options["output"] : "output.csv");
   }
 	
+  end_progress_line();
   cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
 	return 0;
 }
@@ -816,6 +819,7 @@ int do_get_sequence(int argc, char *argv[])
     new_seq_info.WriteFASTA(options["output"]);
   }
   
+  end_progress_line();
   cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
   return 0;
 }
@@ -938,24 +942,6 @@ int do_tabulate_contingency_loci(int argc, char* argv[]) {
 	
 	return 0;
 }
-
-int do_analyze_contingency_loci_significance( int argc, char* argv[]){
-    // setup and parse configuration options:
-	AnyOption options("Usage: breseq CL_SIGNIFICANCE --output <path> --loci <loci.txt> ");
-	options
-    ("help,h", "produce this help message", TAKES_NO_ARGUMENT)
-    ("output,o", "output file", "contingency_loci.tab")
-    ("loci,l", "Contingency loci files", "")
-	.processCommandArgs(argc, argv);
-    
-  vector<string> strain_files = from_string<vector<string> >(options["loci"]);
-  analyze_contingency_loci_significance(
-                                       options["output"],
-                                       strain_files
-                                       );
-  return 0;
-}
-
 
 int do_analyze_soft_clipping( int argc, char* argv[]){
   
@@ -1132,6 +1118,7 @@ int do_simulate_reads(int argc, char *argv[])
     return -1;
   }
   
+  end_progress_line();
   cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
   return 0;
 }
@@ -1570,7 +1557,7 @@ int breseq_default_action(int argc, char* argv[])
         uint32_t bowtie2_seed_substring_size_stringent = trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.5);
         // Check bounds
         bowtie2_seed_substring_size_stringent = max<uint32_t>(9, bowtie2_seed_substring_size_stringent);
-        bowtie2_seed_substring_size_stringent = min<uint32_t>(31, bowtie2_seed_substring_size_stringent);
+        bowtie2_seed_substring_size_stringent = min<uint32_t>(32, bowtie2_seed_substring_size_stringent);
         
         string bowtie2_base = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_stringent) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage1 + " --reorder -x " + double_quote(reference_hash_file_name) + " -U " + double_quote(read_fastq_file);
         string command;
@@ -1584,8 +1571,8 @@ int breseq_default_action(int argc, char* argv[])
         SYSTEM(command, false, false, false);
         
         if (do_2_stage_alignment) {
-          settings.track_intermediate_file(settings.reference_alignment_done_file_name, stage1_unmapped_reads_fastq_file_name);
-          settings.track_intermediate_file(settings.reference_alignment_done_file_name, stage1_reference_sam_file_name);
+          settings.track_intermediate_file(settings.preprocess_junction_done_file_name, stage1_unmapped_reads_fastq_file_name);
+          settings.track_intermediate_file(settings.preprocess_junction_done_file_name, stage1_reference_sam_file_name);
         }
       }
       
@@ -1604,56 +1591,48 @@ int breseq_default_action(int argc, char* argv[])
           string read_fastq_file = settings.file_name(settings.stage1_unmapped_reads_fastq_file_name, "#", base_read_file_name);
           string stage2_reference_sam_file_name = settings.file_name(settings.stage2_reference_sam_file_name, "#", base_read_file_name);
           
-          uint32_t bowtie2_seed_substring_size_relaxed = 5 + trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.1);
+          uint32_t bowtie2_seed_substring_size_relaxed = trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.25);
           // Check bounds
           bowtie2_seed_substring_size_relaxed = max<uint32_t>(9, bowtie2_seed_substring_size_relaxed);
-          bowtie2_seed_substring_size_relaxed = min<uint32_t>(31, bowtie2_seed_substring_size_relaxed);
+          bowtie2_seed_substring_size_relaxed = min<uint32_t>(32, bowtie2_seed_substring_size_relaxed);
         
           string command = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_relaxed) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage2 + " --reorder -x " + double_quote(reference_hash_file_name) + " -U " + double_quote(read_fastq_file) + " -S - | samtools view -bS -t " + double_quote(settings.reference_faidx_file_name) + " -o " + double_quote(stage2_reference_sam_file_name);
           SYSTEM(command, false, false, false);
           
-          settings.track_intermediate_file(settings.reference_alignment_done_file_name, stage2_reference_sam_file_name);
-        }
-        
-        /////////////////////
-        // MERGE SAM FILES //
-        /////////////////////
-        
-        // Merge the stage1 and stage2 output files
-        { // local vars
-          
-          string stage1_reference_sam_file_name = settings.file_name(settings.stage1_reference_sam_file_name, "#", base_read_file_name);
-          string stage2_reference_sam_file_name = settings.file_name(settings.stage2_reference_sam_file_name, "#", base_read_file_name);
-          string reference_sam_file_name = settings.file_name(settings.reference_sam_file_name, "#", base_read_file_name);
-          string reference_fasta_file_name = settings.file_name(settings.reference_fasta_file_name, "#", base_read_file_name);
-          
-          PreprocessAlignments::merge_sort_sam_files(
-                                                     stage1_reference_sam_file_name,
-                                                     stage2_reference_sam_file_name,
-                                                     reference_sam_file_name
-                                                     );
-          
-          
+          settings.track_intermediate_file(settings.preprocess_junction_done_file_name, stage2_reference_sam_file_name);
         }
       } // end do_stage_2_alignment
-      
-      
-      // Not deleted until after resolving alignments
-      settings.track_intermediate_file(settings.alignment_correction_done_file_name, reference_sam_file_name);
-      
+
     }
 
 		settings.done_step(settings.reference_alignment_done_file_name);
 	}
 
+  // Needed even when skipping junction prediction: done_step() below writes
+  // its done-file marker inside this directory regardless.
+  create_path(settings.candidate_junction_path);
+
+  if ( !settings.aligned_sam_mode &&
+      settings.do_step(settings.preprocess_junction_done_file_name, settings.skip_new_junction_prediction ? "Preprocessing alignments: merging files" : "Preprocessing alignments: merging files and finding alignments for candidate junction identification"))
+  {
+    /////////////////////////////////////////////
+    // MERGE SAM FILES AND PREPROCESS ALIGNMENTS //
+    /////////////////////////////////////////////
+
+    // For each read file, merges the stage1/stage2 alignment BAMs (if two-stage
+    // alignment was used) into reference_sam_file_name. If new junction prediction
+    // is enabled, this is done in the same pass as preprocessing for candidate
+    // junction identification (writing preprocess_junction_best_sam_file_name and
+    // preprocess_junction_split_sam_file_name).
+    PreprocessAlignments::merge_sort_and_preprocess_alignments(settings, summary, ref_seq_info);
+    settings.done_step(settings.preprocess_junction_done_file_name);
+  }
   
   //
   // Only do steps 03 and 04 if we are performing new junction prediction
   //
   
-  if (
-      !settings.skip_new_junction_prediction
-      )
+  if ( !settings.skip_new_junction_prediction )
   {
   
   //
@@ -1662,22 +1641,12 @@ int breseq_default_action(int argc, char* argv[])
 	//
 
 		create_path(settings.candidate_junction_path);
-
-    string preprocess_junction_done_file_name = settings.preprocess_junction_done_file_name;
-
-    if (settings.do_step(settings.preprocess_junction_done_file_name, "Preprocessing alignments for candidate junction identification"))
-    {
-      PreprocessAlignments::preprocess_alignments(settings, summary, ref_seq_info);
-      settings.done_step(settings.preprocess_junction_done_file_name);
-    }
-
     
     if (settings.do_step(settings.coverage_junction_done_file_name, "Preliminary analysis of coverage distribution"))
     {
       string preprocess_junction_best_sam_file_name = settings.preprocess_junction_best_sam_file_name;
       string coverage_junction_best_bam_file_name = settings.coverage_junction_best_bam_file_name;
 
-      // preprocess_junction_best_sam_file_name is already BAM — sort directly
       samtools_sort(preprocess_junction_best_sam_file_name, coverage_junction_best_bam_file_name, settings.num_processors);
 
       samtools_index(coverage_junction_best_bam_file_name);
@@ -1771,10 +1740,10 @@ int breseq_default_action(int argc, char* argv[])
           if (!file_exists(filename.c_str()))
             continue;
       
-          uint32_t bowtie2_seed_substring_size_junction = trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.3);
+          uint32_t bowtie2_seed_substring_size_junction = trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.25);
           // Check bounds
           bowtie2_seed_substring_size_junction = max<uint32_t>(9, bowtie2_seed_substring_size_junction);
-          bowtie2_seed_substring_size_junction = min<uint32_t>(31, bowtie2_seed_substring_size_junction);
+          bowtie2_seed_substring_size_junction = min<uint32_t>(32, bowtie2_seed_substring_size_junction);
           
           string command = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " --local " + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_junction) + " "
           + settings.bowtie2_scoring + " " + settings.bowtie2_junction + " --reorder -x " + double_quote(candidate_junction_hash_file_name) + " -U " + double_quote(read_fastq_file) + " -S - | samtools view -bS -t " + double_quote(settings.candidate_junction_faidx_file_name) + " -o " + double_quote(candidate_junction_sam_file_name);
@@ -2118,22 +2087,11 @@ int breseq_default_action(int argc, char* argv[])
         }
         
       }
-      string command;
       for (uint32_t i = 0; i<settings.read_files.size(); i++) {
         string base_name = settings.read_files[i].base_name();
         string error_rates_base_qual_error_prob_file_name = settings.file_name(settings.error_rates_base_qual_error_prob_file_name, "#", base_name);
-        string plot_error_rates_r_script_file_name = settings.plot_error_rates_r_script_file_name;
-        string plot_error_rates_r_script_log_file_name = settings.file_name(settings.plot_error_rates_r_script_log_file_name, "#", base_name);
         string error_rates_plot_file_name = settings.file_name(settings.error_rates_plot_file_name, "#", base_name);
-        command = "R --vanilla < " + double_quote(plot_error_rates_r_script_file_name) +
-          " > " + double_quote(plot_error_rates_r_script_log_file_name) +
-          " --args" +
-          " in_file=" + double_quote(error_rates_base_qual_error_prob_file_name) +
-          " out_file=" + double_quote(error_rates_plot_file_name) +
-          " < " + double_quote(plot_error_rates_r_script_file_name) +
-          " > " + double_quote(plot_error_rates_r_script_log_file_name);
-        
-        SYSTEM(command,false, false, false); //NOTE: Not escaping shell characters here.
+        plot_error_rates(error_rates_base_qual_error_prob_file_name, error_rates_plot_file_name);
       }
 
       summary.unique_coverage.store(settings.error_rates_summary_file_name);
@@ -2433,6 +2391,7 @@ int breseq_default_action(int argc, char* argv[])
     }
 
 	}
+  end_progress_line();
   cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
 
   
@@ -2523,8 +2482,6 @@ int main(int argc, char* argv[]) {
     return do_tabulate_contingency_loci(argc_new, argv_new.data());
   } else if (command == "SOFT-CLIPPING") {
     return do_analyze_soft_clipping(argc_new, argv_new.data());
-  } else if (command == "CL-SIGNIFICANCE") {
-    return do_analyze_contingency_loci_significance( argc_new, argv_new.data());
   } else if (command == "ASSEMBLE-UNMATCHED") {
     return do_assemble_unmatched( argc_new, argv_new.data());
   }

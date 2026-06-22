@@ -748,8 +748,8 @@ namespace breseq
   
   void Settings::command_line_run_header()
   {
-    cerr << output_divider << endl;
-    fprintf(stderr, "%s  %s   %s\n", PACKAGE_STRING, GITHUB_REVISION_STRING, PACKAGE_URL);
+    cerr << color_green(output_divider) << endl;
+    cerr << color_green(string(PACKAGE_STRING) + "  " + GITHUB_REVISION_STRING + "   " + PACKAGE_URL) << endl;
     fprintf(stderr, "\n");
     fprintf(stderr, "Active Developers: Barrick JE\n");
     fprintf(stderr, "Issues/Bugs: %s\n", PACKAGE_BUGREPORT);
@@ -773,7 +773,7 @@ namespace breseq
     fprintf(stderr, "  Strand, M.D., Borges, J.J., Knoester, D.B., Reba, A., Meyer, A.G. \n");
     fprintf(stderr, "  (2014) Identifying structural variation in haploid microbial genomes \n");
     fprintf(stderr, "  from short-read resequencing data using breseq. BMC Genomics 15:1039.\n");
-    cerr << output_divider << endl;
+    cerr << color_green(output_divider) << endl;
   }
 
   // Settings in here should be static (not set at the command line).
@@ -859,12 +859,11 @@ namespace breseq
     // Note: this leaves off -L, since it is set based on read length
     
     // Set these defaults
-    this->bowtie2_stage1 = "--local -i S,1,0.25 --score-min L,1,0.9" + bowtie2_genome_alignment_reporting_parameters; // "-L 22 -i S,1,0.25 --score-min L,0,0.9";
+    this->bowtie2_stage1 = "--local -i S,1,0.25 --score-min L,0,0.8" + bowtie2_genome_alignment_reporting_parameters; // "-L 22 -i S,1,0.25 --score-min L,0,0.9";
     
     this->bowtie2_stage2 = "--local -i S,1,0.25 --score-min L,6,0.2" + bowtie2_genome_alignment_reporting_parameters; // "-L 9 -i C,1,0 --score-min L,6,0.2";
     
-    //JEB: Changed 2015-07-13 to not give too many alignments for longer (150 bp) reads, but to keep thresholds similar for short (36 bp) reads
-    this->bowtie2_junction = "--local -i S,1,0.25 --score-min L,1,0.70" + bowtie2_junction_alignment_reporting_parameters; // "-L 9 -i C,1,0 --score-min L,6,0.2";
+    this->bowtie2_junction = "--local -i S,1,0.25 --score-min L,1,0.6" + bowtie2_junction_alignment_reporting_parameters; // "-L 9 -i C,1,0 --score-min L,6,0.2";
 
     
     this->num_processors = 1;
@@ -1062,9 +1061,6 @@ namespace breseq
 		this->unique_only_coverage_distribution_file_name = this->error_calibration_path + "/@.unique_only_coverage_distribution.tab";
 		this->error_rates_summary_file_name = this->error_calibration_path + "/summary.json";
 		this->error_rates_base_qual_error_prob_file_name = this->error_calibration_path + "/base_qual_error_prob.#.tab";
-		this->plot_error_rates_r_script_file_name = this->program_data_path + "/plot_error_rate.r";
-		this->plot_error_rates_fit_r_script_file_name = this->error_calibration_path + "/fit.#.r_script";
-		this->plot_error_rates_r_script_log_file_name = this->error_calibration_path + "/#.plot_error_rate.log";
 
 		//! Paths: Mutation Identification
 		this->mutation_identification_path = "08_mutation_identification";
@@ -1073,14 +1069,10 @@ namespace breseq
     this->mutation_identification_done_file_name = this->mutation_identification_path + "/mutation_identification.done";
 		this->mutation_identification_per_position_file_name = this->mutation_identification_path + "/per_position_file.tab";
 		this->complete_coverage_text_file_name = this->mutation_identification_path + "/@.coverage.tab";
-		this->genome_error_counts_file_name = this->mutation_identification_path + "/error_counts.tab";
 		this->ra_mc_genome_diff_file_name = this->mutation_identification_path + "/ra_mc_evidence.gd";
 
     this->polymorphism_statistics_done_file_name = this->mutation_identification_path + "/polymorphism_statistics.done";
 		this->polymorphism_statistics_input_file_name = this->mutation_identification_path + "/polymorphism_statistics_input.tab";
-		this->polymorphism_statistics_output_file_name = this->mutation_identification_path + "/polymorphism_statistics_output.tab";
-		this->polymorphism_statistics_r_script_file_name = this->program_data_path + "/polymorphism_statistics.r";
-		this->polymorphism_statistics_r_script_log_file_name = this->mutation_identification_path + "/polymorphism_statistics_output.log";
 		this->polymorphism_statistics_ra_mc_genome_diff_file_name = this->mutation_identification_path + "/ra_mc_evidence_polymorphism_statistics.gd";
 
     //! Paths: Copy Number Variation
@@ -1113,12 +1105,11 @@ namespace breseq
 
 		this->local_coverage_plot_path = "evidence";
 		this->coverage_plot_path = this->output_path + "/" + this->local_coverage_plot_path;
-    this->coverage_plot_r_script_file_name = this->program_data_path + "/plot_coverage.r";
-		this->overview_coverage_plot_file_name = this->coverage_plot_path + "/@.overview.png";
+		this->overview_coverage_plot_file_name = this->coverage_plot_path + "/@.overview.svg";
 
 		this->output_calibration_path = this->evidence_path;
-		this->unique_only_coverage_plot_file_name = this->output_calibration_path + "/@.unique_coverage.pdf";
-		this->error_rates_plot_file_name = this->output_calibration_path + "/#.error_rates.pdf";
+		this->unique_only_coverage_plot_file_name = this->output_calibration_path + "/@.unique_coverage.svg";
+		this->error_rates_plot_file_name = this->output_calibration_path + "/#.error_rates.svg";
 
 		this->breseq_icon_graphic_from_file_name = this->program_data_path + "/breseq_icon.png";
 		this->breseq_icon_graphic_to_file_name = this->output_path + "/breseq_icon.png";
@@ -1213,45 +1204,48 @@ namespace breseq
     
     //cerr << "Bowtie2: " << this->installed["bowtie2"] << " Bowtie2 version: " << this->installed["bowtie2_version_string"] << endl;
 
-    
-		this->installed["R"] = SYSTEM_CAPTURE("which R", true);
-    this->installed["R_version_string"] = "";
-    this->installed["R_version"] = "";
-    
-		if (this->installed["R"].size() > 0)
-		{
-			string R_version = SYSTEM_CAPTURE("R --version", true);
-      
+    // detect gnuplot, used to render all diagnostic plots
+    this->installed["gnuplot"] = SYSTEM_CAPTURE("which gnuplot", true);
+    this->installed["gnuplot_version_string"] = "";
+    this->installed["gnuplot_version"] = "";
+
+    if (this->installed["gnuplot"].size() > 0)
+    {
+      // version is reported as e.g. "gnuplot 5.4 patchlevel 1"
+      string gnuplot_version = SYSTEM_CAPTURE("gnuplot --version", true);
+
       // default if output does not match our pattern
-      this->installed["R_version"] = "0";
-      
-      size_t start_version_pos = R_version.find("R version ");
-      if (start_version_pos != string::npos)
+      this->installed["gnuplot_version"] = "0";
+
+      size_t start_version_pos = gnuplot_version.find("gnuplot ");
+      size_t patchlevel_pos = gnuplot_version.find("patchlevel ");
+      if ((start_version_pos != string::npos) && (patchlevel_pos != string::npos))
       {
-        start_version_pos+=10;
-        size_t end_version_pos = R_version.find(" ", start_version_pos);
-        
-        if (end_version_pos == string::npos)
-          end_version_pos = R_version.size();
-        end_version_pos--;
-        
-        string version_string = R_version.substr(start_version_pos, end_version_pos - start_version_pos + 1);
-        this->installed["R_version_string"] = version_string;
-        vector<string> split_version_string = split(version_string, ".");
-        if (split_version_string.size() == 3)
+        start_version_pos += 8;
+        size_t end_version_pos = gnuplot_version.find_first_of(" \t\r\n", start_version_pos);
+        string major_minor = gnuplot_version.substr(start_version_pos, end_version_pos - start_version_pos);
+
+        size_t patch_start_pos = patchlevel_pos + 11;
+        size_t patch_end_pos = gnuplot_version.find_first_not_of("0123456789", patch_start_pos);
+        if (patch_end_pos == string::npos) patch_end_pos = gnuplot_version.size();
+        string patch = gnuplot_version.substr(patch_start_pos, patch_end_pos - patch_start_pos);
+
+        vector<string> split_version_string = split(major_minor, ".");
+        if (split_version_string.size() == 2)
         {
-          uint32_t R_numerical_version = from_string<uint32_t>(split_version_string[0]) * 1000000 + from_string<uint32_t>(split_version_string[1]) * 1000 + from_string<uint32_t>(split_version_string[2]);
-          this->installed["R_version"] = to_string(R_numerical_version);
+          string version_string = major_minor + "." + patch;
+          this->installed["gnuplot_version_string"] = version_string;
+          uint32_t gnuplot_numerical_version = from_string<uint32_t>(split_version_string[0]) * 1000000 + from_string<uint32_t>(split_version_string[1]) * 1000 + from_string<uint32_t>(patch);
+          this->installed["gnuplot_version"] = to_string(gnuplot_numerical_version);
         }
       }
       else {
-        this->installed["R_version_error_message"] = R_version;
-        
+        this->installed["gnuplot_version_error_message"] = gnuplot_version;
       }
-		}
+    }
 
-    //cerr << "R: " << this->installed["R"] << " R version: " << this->installed["R_version_string"] << endl;
-    
+    //cerr << "gnuplot: " << this->installed["gnuplot"] << " gnuplot version: " << this->installed["gnuplot_version_string"] << endl;
+
 	}
 
 	void Settings::check_installed()
@@ -1263,34 +1257,35 @@ namespace breseq
     
 		bool good_to_go = true;
 
-    
+    cerr << endl << color_yellow("Checking for required executables") << endl;
+
     if (this->installed["bowtie2"].size() == 0)
     {
       good_to_go = false;
-      cerr << "---> ERROR Required executable \"bowtie2\" or \"bowtie2-build\" not found." << endl;
-      cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
+      cerr << color_red("---> ERROR Required executable \"bowtie2\" or \"bowtie2-build\" not found.") << endl;
+      cerr << color_red("---> See http://bowtie-bio.sourceforge.net/bowtie2") << endl;
     }
     else if (this->installed.count("bowtie2_version_error_message")) {
       good_to_go = false;
-      cerr << "---> ERROR Could not determine version of installed executable \"bowtie2\" or \"bowtie2-build\"." << endl;
-      cerr << "---> For found executable installed at [" << this->installed["bowtie2"] << "]" << endl;
-      cerr << "---> Commands \"bowtie2 --version\" or \"bowtie2-build --version\" returned:" << endl;
-      cerr << this->installed["bowtie2_version_error_message"] << endl;
+      cerr << color_red("---> ERROR Could not determine version of installed executable \"bowtie2\" or \"bowtie2-build\".") << endl;
+      cerr << color_red("---> For found executable installed at [" + this->installed["bowtie2"] + "]") << endl;
+      cerr << color_red("---> Commands \"bowtie2 --version\" or \"bowtie2-build --version\" returned:") << endl;
+      cerr << color_red(this->installed["bowtie2_version_error_message"]) << endl;
     }
     // version encoded in triplets of numbers
     else if (from_string<uint64_t>(this->installed["bowtie2_version"]) < 2000000007) {
       good_to_go = false;
-      cerr << "---> ERROR Required executable \"bowtie2\" version 2.0.0-beta7 or later not found." << endl;
-      cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
-      cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
+      cerr << color_red("---> ERROR Required executable \"bowtie2\" version 2.0.0-beta7 or later not found.") << endl;
+      cerr << color_red("---> Your version is " + this->installed["bowtie2_version_string"] + ".") << endl;
+      cerr << color_red("---> See http://bowtie-bio.sourceforge.net/bowtie2") << endl;
     }
     else if ((from_string<uint64_t>(this->installed["bowtie2_version"]) == 2000003000)
              ||  (from_string<uint64_t>(this->installed["bowtie2_version"]) == 2000004000)) {
       good_to_go = false;
-      cerr << "---> ERROR bowtie2 versions 2.0.3 and 2.0.4 are known to have bugs in" << endl;
-      cerr << "---> ERROR SAM output that can cause breseq to crash. Please upgrade." << endl;
-      cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
-      cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
+      cerr << color_red("---> ERROR bowtie2 versions 2.0.3 and 2.0.4 are known to have bugs in") << endl;
+      cerr << color_red("---> ERROR SAM output that can cause breseq to crash. Please upgrade.") << endl;
+      cerr << color_red("---> Your version is " + this->installed["bowtie2_version_string"] + ".") << endl;
+      cerr << color_red("---> See http://bowtie-bio.sourceforge.net/bowtie2") << endl;
     }
     else if (from_string<uint64_t>(this->installed["bowtie2_version"]) < 2001000000) {
       good_to_go = true;
@@ -1302,13 +1297,13 @@ namespace breseq
     }
     else if (from_string<uint64_t>(this->installed["bowtie2_version"]) == 2003001000) {
       good_to_go = false;
-      cerr << "---> ERROR bowtie2 version 2.3.1 is known to have a major bug in SAM" << endl;
-      cerr << "---> ERROR output that will cause breseq to crash. Please upgrade/downgrade." << endl;
-      cerr << "---> Your version is " << this->installed["bowtie2_version_string"] << "." << endl;
-      cerr << "---> See http://bowtie-bio.sourceforge.net/bowtie2" << endl;
+      cerr << color_red("---> ERROR bowtie2 version 2.3.1 is known to have a major bug in SAM") << endl;
+      cerr << color_red("---> ERROR output that will cause breseq to crash. Please upgrade/downgrade.") << endl;
+      cerr << color_red("---> Your version is " + this->installed["bowtie2_version_string"] + ".") << endl;
+      cerr << color_red("---> See http://bowtie-bio.sourceforge.net/bowtie2") << endl;
     }
     else {
-      cerr << "---> bowtie2  :: version " << this->installed["bowtie2_version_string"] << " [" << this->installed["bowtie2"] << "]" << endl;
+      cerr << color_green("---> bowtie2  :: version " + this->installed["bowtie2_version_string"] + " [" + this->installed["bowtie2"] + "]") << endl;
       // WARN if preferred version is not used
       if (from_string<uint64_t>(this->installed["bowtie2_version"]) != 2005005000) {
         cerr << "---> bowtie2  :: NOTE :: breseq output may vary slightly depending on your bowtie2 version," << endl;
@@ -1316,29 +1311,31 @@ namespace breseq
         cerr << "---> bowtie2  :: NOTE :: bowtie2 version 2.5.5 is recommended with this breseq version." << endl;
       }
     }
-		// R version 2.1 required
-		if (this->installed["R"].size() == 0)
+		// gnuplot version 5.4.0 required: 'set datafile columnheaders', used by every
+    // breseq-generated plot script, was not recognized by gnuplot until 5.4.0
+    // (confirmed by testing 4.6.0/5.2.7, which reject it, against 5.4.1+, which accept it).
+		if (this->installed["gnuplot"].size() == 0)
 		{
 			good_to_go = false;
-			cerr << "---> ERROR Required executable \"R\" not found." << endl;
-			cerr << "---> See http://www.r-project.org" << endl;
+			cerr << color_red("---> ERROR Required executable \"gnuplot\" not found.") << endl;
+			cerr << color_red("---> See http://www.gnuplot.info") << endl;
 		}
-    else if (this->installed.count("R_version_error_message")) {
+    else if (this->installed.count("gnuplot_version_error_message")) {
       good_to_go = false;
-      cerr << "---> ERROR Could not determine version of installed executable \"R\"." << endl;
-      cerr << "---> For found executable installed at [" << this->installed["R"] << "]" << endl;
-      cerr << "---> Command \"R --version\" returned:" << endl;
-      cerr << this->installed["R_version_error_message"] << endl;
+      cerr << color_red("---> ERROR Could not determine version of installed executable \"gnuplot\".") << endl;
+      cerr << color_red("---> For found executable installed at [" + this->installed["gnuplot"] + "]") << endl;
+      cerr << color_red("---> Command \"gnuplot --version\" returned:") << endl;
+      cerr << color_red(this->installed["gnuplot_version_error_message"]) << endl;
     }
-    else if (from_string<uint32_t>(this->installed["R_version"]) < 2001000)
+    else if (from_string<uint32_t>(this->installed["gnuplot_version"]) < 5004000)
 		{
       good_to_go = false;
-      cerr << "---> ERROR Required executable \"R version 2.1.0 or later\" not found." << endl;
-      cerr << "---> Your version is " << this->installed["R_version_string"] << "." << endl;
-      cerr << "---> See http://www.r-project.org" << endl;
+      cerr << color_red("---> ERROR Required executable \"gnuplot version 5.4.0 or later\" not found.") << endl;
+      cerr << color_red("---> Your version is " + this->installed["gnuplot_version_string"] + ".") << endl;
+      cerr << color_red("---> See http://www.gnuplot.info") << endl;
     }
     else {
-      cerr << "---> R        :: version " << this->installed["R_version_string"] << " [" << this->installed["R"] << "]" << endl;
+      cerr << color_green("---> gnuplot  :: version " + this->installed["gnuplot_version_string"] + " [" + this->installed["gnuplot"] + "]") << endl;
     }
     
     /*
@@ -1371,12 +1368,14 @@ namespace breseq
     this->set_current_step_done_key(done_key);
 		if (!file_exists(done_file_name.c_str()))
 		{
-      cerr << "+++   NOW PROCESSING " << message << endl;
+      end_progress_line();
+      cerr << endl << color_yellow("+++   NOW PROCESSING " + message) << endl;
       this->record_start_time(message);
       return true;
 		}
-    
-		cerr << "--- ALREADY COMPLETE " << message << endl;
+
+		end_progress_line();
+		cerr << endl << color_yellow("--- ALREADY COMPLETE " + message) << endl;
 
 		ExecutionTime et;
     et.retrieve(done_file_name);

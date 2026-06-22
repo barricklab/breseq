@@ -50,7 +50,10 @@ Open the included project file: src/c/breseq.xcodeproj
 
 This project is set up to use the shared libraries and command-line tools installed by the conda 
 environment. So, first create that environment as described above. Be sure the architecture type 
-matches what is specified in XCode, or you will get linking errors!
+matches what is specified in XCode, or you will get linking errors! 
+
+You must also run ./bootstrap and ./configure at the command line to create headers before XCode
+will be able to compile the code.
 
 For debugging, you may also want to set the working directory, and will definitely want to set the 
 command line options (which are the same as the command you would type in the shell, but omitting

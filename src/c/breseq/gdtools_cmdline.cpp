@@ -42,7 +42,6 @@ int gdtools_usage()
   uout << "CHECK                  compare control versus test mutations" << endl;
   uout << "NORMALIZE              normalize mutation positions and annotations" << endl;
   //uout << "header                 create or add header entries" << endl;
-  //uout << "mRNA-Stability         determine mRNA free energy difference of mutations" << endl;
 
   uout("Set and Filtering Operations:");
   uout << "SUBTRACT               remove mutations in one file from another" << endl;
@@ -56,7 +55,6 @@ int gdtools_usage()
   uout << "GD2VCF                 GD to Variant Call Format (VCF)" << endl;
 	uout << "VCF2GD                 Variant Call Format(VCF) to GD" << endl;
   uout << "GD2GVF                 GD to Genome Variation Format (GVF)" << endl;
-  uout << "GD2CIRCOS              GD to Circos Data" << endl;
 	uout << "MUMMER2MASK            Create a mask GD file from MUMmer output" << endl;
 
 	uout("Analysis:");
@@ -65,8 +63,7 @@ int gdtools_usage()
 	
   uout("TACC Utilities:");
   uout << "DOWNLOAD               download reference and read files from GD header info" << endl;
-  uout << "RUNFILE                create a commands file and launcher script for use on TACC" << endl;
-  
+
   return 0;
 }
 
@@ -431,71 +428,6 @@ int do_weights(int argc, char* argv[])
   return 0;
 }
 
-int do_check_plot(int argc, char *argv[])
-{
-	AnyOption options("gdtools CHECK-PLOT [-o output] test1.gd [test2.gd ...]");
-	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-	options("output,o",     "Prefix for output files prefix_ ", "output");
-	options("verbose,v",    "verbose mode", TAKES_NO_ARGUMENT);
-	options.processCommandArgs(argc, argv);
-	
-	options.addUsage("");
-	options.addUsage("Creates sensitivity and precision plots for Genome Diff files output by CHECK, ");
-	options.addUsage("which contain TP|FP|FN information and a score value for mutations or evidence.");
-
-	if (options.count("help")) {
-		options.printUsage();
-		return -1;
-	}
-	
-	if (options.getArgc() < 1) {
-			options.addUsage("");
-			options.addUsage("At least one input Genome Diff files must be provided.");
-			options.printUsage();
-			return -1;
-	}
-	
-	UserOutput uout("CHECK-PLOT");
-	
-	string gd_file_name = options.getArgv(0);
-	uout("Loading Genome Diff file:" + gd_file_name);
-	cGenomeDiff merged_gd(gd_file_name);
-	merged_gd.metadata.breseq_data.erase("TP|FN|FP");
-	
-	// Load and quick merge genome diff files (not removing duplicates)
-	for (int32_t i=1; i<options.getArgc(); i++) {
-			string gd_file_name = options.getArgv(i);
-			uout("Loading Genome Diff file:" + gd_file_name);
-			cGenomeDiff gd(gd_file_name);
-			
-			// Merge in a way that preserves duplicates
-			merged_gd.merge_preserving_duplicates(gd);
-	}
-	
-	
-	string prefix = options["output"];
-
-	// Write out the merged file
-	string merged_gd_path = prefix + ".gd";
-	uout << "Creating merged Genome Diff: " + merged_gd_path << endl;
-	merged_gd.write(merged_gd_path);
-	
-	string table_path = prefix + ".table.txt";
-	uout << "Creating table: " + table_path << endl;
-	cGenomeDiff::write_jc_score_table(merged_gd, table_path, options.count("verbose"));
-	string cv_exe = merged_gd.metadata.author == "tophat" ? "tophat" : "breseq";
-	uint32_t cutoff = cv_exe == "tophat" ? 0 : 3;
-	
-	string plot_jc_score_script_name = "/plot_jc_scores.r";
-	string plot_jc_score_script_path = DATADIR + plot_jc_score_script_name;
-	
-	uout << "Creating plots: " + prefix + ".precision.png and " << prefix + ".sensitivity.png" << endl;
-	string cmd = plot_jc_score_script_path + " " + table_path + " " + prefix + " " + s(cutoff) + " " + cv_exe;
-	SYSTEM(cmd, true, false, true);
-	
-	return 0;
-}
-
 // Check format of Genome Diff and report all format errors
 int do_validate(int argc, char *argv[])
 {
@@ -589,7 +521,6 @@ int do_check(int argc, char *argv[])
   options("jc-buffer",        "when comparing JC evidence, length of sequence segment to compare for JC evidence", 50);
   options("jc-shorten",       "when comparing JC evidence, length to shorten control segments by when comparing JC evidence for overlap", 5);
   options("jc-only-accepted", "when comparing JC evidence, do not score/count rejected items", TAKES_NO_ARGUMENT);
-  options("plot-jc",          "plot JC Precision versus Score, argument is a prefix for the file paths");
   options("verbose,v",        "verbose mode", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
 
@@ -616,7 +547,7 @@ int do_check(int argc, char *argv[])
     return -1;
   }
 
-  if ((options.count("evidence") || options.count("plot-jc")) && !options.count("reference")) {
+  if (options.count("evidence") && !options.count("reference")) {
     options.addUsage("");
     options.addUsage("Reference file is needed to compare evidence.");
     options.printUsage();
@@ -635,37 +566,13 @@ int do_check(int argc, char *argv[])
 
   uout("Comparing control vs test GD file");
   cGenomeDiff comp;
-  if (options.count("evidence") || options.count("plot-jc")) {
+  if (options.count("evidence")) {
 
     cReferenceSequences ref;
     ref.LoadFiles(from_string<vector<string> >(options["reference"]));
 
     uout("Comparing evidence");
     comp = cGenomeDiff::check_evidence(ref, un(options["jc-buffer"]), un(options["jc-shorten"]), ctrl, test, options.count("jc-only-accepted"), options.count("verbose"));
-
-    if (options.count("plot-jc")) {
-      uout("Evaluating results to plot data.");
-      string prefix = options["plot-jc"];
-      if (prefix.rfind('/') != string::npos) {
-        size_t pos = prefix.rfind('/');
-        string dir_path = prefix.substr(0, pos);
-        uout << "Creating directory: " + dir_path << endl;
-        create_path(dir_path);
-      }
-
-      string table_path = prefix + ".table.txt";
-      uout << "Creating table: " + table_path << endl;
-      cGenomeDiff::write_jc_score_table(comp, table_path, options.count("verbose"));
-      string cv_exe = comp.metadata.author == "tophat" ? "tophat" : "breseq";
-      uint32_t cutoff = cv_exe == "tophat" ? 0 : 3;
-
-      string plot_jc_score_script_name = "/plot_jc_scores.r";
-      string plot_jc_score_script_path = DATADIR + plot_jc_score_script_name;
-
-      uout << "Creating plots: " + prefix + ".precision.png and " << prefix + ".sensitivity.png" << endl;
-      string cmd = plot_jc_score_script_path + " " + table_path + " " + prefix + " " + s(cutoff) + " " + cv_exe;
-      SYSTEM(cmd, true, false, true);
-    }
 
   } else {
     uout("Comparing mutations");
@@ -681,39 +588,45 @@ int do_check(int argc, char *argv[])
   return 0;
 }
 
-int do_convert(int argc, char* argv[])
+int do_convert(int argc, char* argv[], string forced_format = "")
 {
-	AnyOption options("gdtools CONVERT -f <format> [-o <output_file> -r <refseq>] <input_file>");
+	string usage_command = forced_format.empty() ? "CONVERT -f <format>" : forced_format;
+	AnyOption options("gdtools " + usage_command + " [-o <output_file> -r <refseq>] <input_file>");
 
 	options("help,h", "display detailed help message", TAKES_NO_ARGUMENT);
-	options("format,f","file format to output: GD, VCF, GVF, or JSON (REQUIRED)");
+	if (forced_format.empty())
+		options("format,f","file format to output: GD, VCF, GVF, or JSON (REQUIRED)");
 	options("output,o","name of output file (DEFAULT = <input_file>.*)", "");
 		options("reference,r",  "file containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED for VCF input or with annotate option)");
 	options("annotate,a","annotate mutations and evidence in input file", TAKES_NO_ARGUMENT);
+	options("snv-only","only include SNP/SNV entries in GVF output", TAKES_NO_ARGUMENT);
 
 	options.processCommandArgs( argc,argv);
-	
+
 	options.addUsage("");
 	options.addUsage("Convert a single file from/to GenomeDiff format.");
 	options.addUsage("Allowed input formats: GD, VCF");
 	options.addUsage("");
-	
+
 	if (options.count("help")) {
 		options.printUsage();
 		return -1;
 	}
-	
-	UserOutput uout("CONVERT");
-	
-	if (!options.count("format")) {
+
+	UserOutput uout(usage_command);
+
+	string output_format;
+	if (!forced_format.empty()) {
+		output_format = to_upper(forced_format);
+	} else if (options.count("format")) {
+		output_format = to_upper(options["format"]);
+	} else {
 		options.addUsage("");
 		options.addUsage("You must supply the output file format option (--format,-f).");
 		options.printUsage();
 		return -1;
 	}
-	
-	string output_format = to_upper(options["format"]);
-	
+
 	if( options.getArgc() != 1 ){
 		options.addUsage("");
 		options.addUsage("You must provide exactly one input Genome Diff file.");
@@ -731,11 +644,13 @@ int do_convert(int argc, char* argv[])
 	}
 	
 	cReferenceSequences ref_seq_info;
-	if ( (output_format == "VCF") || options.count("annotate") ) {
+	if ( (output_format == "VCF") || (output_format == "GVF") || options.count("annotate") ) {
 		if (!options.count("reference")) {
 			options.addUsage("");
 			if (output_format == "VCF") {
-			options.addUsage("You must provide a reference sequence file (-r) for VCF output.");
+				options.addUsage("You must provide a reference sequence file (-r) for VCF output.");
+			} else if (output_format == "GVF") {
+				options.addUsage("You must provide a reference sequence file (-r) for GVF output.");
 			} else if (options.count("annotate")) {
 				options.addUsage("You must provide a reference sequence file (-r) with the annotate (-a) option.");
 			}
@@ -783,220 +698,12 @@ int do_convert(int argc, char* argv[])
 	} else if (output_format == "VCF") {
 		gd.write_vcf(output_file_name, ref_seq_info);
 	} else if (output_format == "GVF") {
-		gd.write_gvf(output_file_name, ref_seq_info);
+		gd.write_gvf(output_file_name, ref_seq_info, options.count("snv-only"));
 	} else if (output_format == "JSON") {
 		gd.write_json(output_file_name);
 	}
 	
 	return 0;
-}
-
-int do_gd2vcf(int argc, char* argv[])
-{
-	AnyOption options("gdtools GD2VCF [-o output.vcf] input.gd");
-
-	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-	options("reference,r",  "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
-	options("output,o","name of output file", "output.vcf");
-	options.processCommandArgs( argc,argv);
-	
-	options.addUsage("");
-	options.addUsage("Creates a Variant Call Format (VCF) file of mutations present in an input Genome Diff file.");
-	options.addUsage("VCF is a community format that can be loaded into viewers and used as input to other programs.");
-	
-	if (options.count("help")) {
-		options.printUsage();
-		return -1;
-	}
-	
-	if( options.getArgc() != 1 ){
-			options.addUsage("");
-			options.addUsage("You must provide exactly one input Genome Diff file.");
-			options.printUsage();
-			return -1;
-	}
-	
-	if (!options.count("reference")) {
-			options.addUsage("");
-			options.addUsage("You must provide a reference sequence file (-r).");
-			options.printUsage();
-			return -1;
-	}
-			
-	cReferenceSequences ref_seq_info;
-	ref_seq_info.LoadFiles(from_string<vector<string> >(options["reference"]));
-	
-	cGenomeDiff::GD2VCF( options.getArgv(0), options["output"], ref_seq_info );
-	
-	return 0;
-}
-
-
-int do_gd2gvf( int argc, char* argv[])
-{
-  AnyOption options("gdtools GD2GVF [-o output.gvf] input.gd"); 
-
-	options("help,h", "produce this help message", TAKES_NO_ARGUMENT);
-	options("reference,r","File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
-	options("output,o","name of output file", "output.gvf");
-	options("snv-only","only include SNP/SNV entries in output", TAKES_NO_ARGUMENT);
-	
-	
-	options.addUsage("");
-	options.addUsage("Creates a Genome Variation Format (GVF) file of mutations present in an input Genome Diff file.");
-	
-  options.processCommandArgs( argc,argv);
-
-	if (options.count("help")) {
-		options.printUsage();
-		return -1;
-	}
-	
-  if( options.getArgc() != 1 ){
-    options.addUsage("");
-    options.addUsage("Provide a single input Genome Diff file.");
-    options.printUsage();
-    return -1;
-  }
-    
-  vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
-  cReferenceSequences ref_seq_info;
-  ref_seq_info.LoadFiles(reference_file_names);
-    
-  cGenomeDiff::GD2GVF( options.getArgv(0), options["output"], ref_seq_info, options.count("snv-only") );
-  
-  return 0;
-}
-
-int do_vcf2gd( int argc, char* argv[])
-{
-  AnyOption options("VCF2GD [-o output.gd] input.vcf");
-	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("output,o","name of output Genome Diff file", "output.gd");
-  options.processCommandArgs( argc,argv);
-
-	if (options.count("help")) {
-		options.printUsage();
-		return -1;
-	}
-	
-  options.addUsage("");
-  options.addUsage("Creates a GD file of mutations present in an input Variant Call Format (VCF) file.");
-  
-  if( options.getArgc() != 1 ){
-    options.addUsage("");
-    options.addUsage("Provide a single input VCF file.");
-    options.printUsage();
-    return -1;
-  }
-  
-  cGenomeDiff::VCF2GD(options.getArgv(0), options["output"]);
-  
-  return 0;
-}
-
-int do_gd2circos(int argc, char *argv[])
-{
-  AnyOption options("gdtools GD2CIRCOS -r <reference> [-r <reference2> ...] -o <output_dir> input1.gd [input2.gd ...]");
-  
-  options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
-	options("output,o", "name of directory to save Circos configuration files and scripts", "circos_output");
-	options("distance,d", "the distance from the center the first axis will be in proportion to the default size", "1.0");
-	options("feature,f", "the scale of the features in proportion to the default size", "1.0");
-  options.processCommandArgs(argc, argv);
-  
-  options.addUsage("");
-  options.addUsage("Creates text Circos configuration files and scripts for producing a visual representation of mutations in a Genome Diff file");
-	options.addUsage("You must have Circos installed to produce images from these files. See http://circos.ca");
-
-	if (options.count("help")) {
-		options.printUsage();
-		return -1;
-	}
-	
-  if (!options.count("output")){
-    options.addUsage("");
-    options.addUsage("No output provided.");
-    options.printUsage();
-    return -1;
-  }
-  if (!options.count("reference")){
-    options.addUsage("");
-    options.addUsage("No reference provided.");
-    options.printUsage();
-    return -1;
-  }
-  
-  double distance_scale;
-  double feature_scale;
-  
-  distance_scale = from_string<double>(options["distance"]);
-  feature_scale = from_string<double>(options["feature"]);
-  
-  vector<string> gd_names;
-  for (int32_t i = 0; i < options.getArgc(); i++){
-    gd_names.push_back(options.getArgv(i));
-  }
-  
-  if (gd_names.size() == 0){
-    options.addUsage("");
-    options.addUsage("No input provided.");
-    options.printUsage();
-    return -1;
-  }
-  
-  cGenomeDiff::GD2Circos(gd_names, 
-             from_string<vector<string> >(options["reference"]),
-             options["output"],
-             distance_scale,
-             feature_scale);
-	
-	cout << "Circos configuration files produced in " << options["output"] << "." << endl;
-	
-	string circos_path = SYSTEM_CAPTURE("which ssaha2", true);
-	if (circos_path.find("no circos in") != string::npos) circos_path = "";
-	
-	if (circos_path.size() > 0) {
-		cout << endl << "Running Circos executable: " << circos_path << endl;
-		SYSTEM("cd " + options["output"] + "; bash run_circos.sh;");
-	} else {
-		cout << endl << "No Circos executable found. Configuration files have been written, but you must run Circos to generate images. ";
-		cout << "The script to execute Circos is: " << options["output"] << "/run_circos.sh" << endl;
-	}
-
-  return 0;
-}
-
-int do_mira2gd(int argc, char* argv[])
-{
-  //unsupported before it ever saw the light of day.
-  AnyOption options("gdtools MIRA2GD [-o output.gd] input.mira");
-	
-  options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-	options("output,o", "name of gd file to save", "output.gd");
-  options.addUsage("");
-  options.addUsage("Creates a GD file from a MIRA feature analysis file. Be sure to normalize the GD created afterward.");
-	
-	options.processCommandArgs(argc, argv);
-	
-	if (options.count("help")) {
-		options.printUsage();
-		return -1;
-	}
-	
-  if( options.getArgc() != 1 ){
-    options.addUsage("");
-    options.addUsage("Provide a single input MIRA file.");
-    options.printUsage();
-    return -1;
-  }
-  string input = options.getArgv(0);
-  
-  ERROR("Not implemented.");
-  //cGenomeDiff::MIRA2GD( input, options["output"]);
-  
-  return 0;
 }
 
 int do_not_evidence(int argc, char *argv[])
@@ -2877,775 +2584,6 @@ int do_download(int argc, char *argv[])
   return 0;
 }
 
-int do_runfile(int argc, char *argv[])
-{
-  stringstream ss;
-  ss << "Usage: gdtools RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> -g <genome diff data dir>\n";
-  ss << "Usage: gdtools RUNFILE -e <executable> -d <downloads dir> -o <output dir> -l <error log dir> -r <runfile name> <file1.gd file2.gd file3.gd ...>";
-  AnyOption options(ss.str());
-	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("mode,m",           "Type of command file to generate. Valid options are: breseq, breseq-merged, breseq-apply, fastp-single, fastp-paired, fastp-merged, read-count.", "breseq");
-  options("executable,e",     "Alternative executable program to run.");
-  options("options",          "Options to be passed to the executable. These will appear first in the command line.");
-	options("runfile,r",        "Name of the run file to be output.", "commands");
-  options("data-dir,g",       "Directory to search for genome diff files.", "01_Data");
-  options("downloads-dir,d",  "Path to downloads directory where read and reference files are located. (Default = 02_Downloads; <THIS_PATH>/../02_Trimmed for read files if this directory exists; <THIS_PATH>/../02_Apply for reference files for breseq-apply)");
-  options("output-dir,o",     "Output directory for commands within the runfile. (Default = 03_Output for breseq*; = 02_Trimmed for fastp*)");
-  options("log-dir,l",        "Directory for error log file that captures the executable's stdout and sterr. (Default = 04_Logs for breseq; 04_Apply_Logs for breseq-apply; 04_Trim_Logs for fastp*)");
-	options("preserve-pairs,p",  "Keep track of paired and unpaired reads for trimming and using trimmed reads.", TAKES_NO_ARGUMENT);
-	
-  options.addUsage("\n");
-  options.addUsage("Examples:");
-  options.addUsage("\tCommand: gdtools runfile -o 1B4_Mutated -l 1B4_Mutated_Errors 1B4.gd");
-  options.addUsage("\t Output: breseq -o 1B4_Mutated -r NC_012660.1.gbk SRR172993.fastq >& 1B4_Mutated_Errors/1B4.errors.txt");
-  options.addUsage("\n");
-  options.addUsage("\tCommand: gdtools runfile -d 02_Downloads -l 04_Errors -g 01_Data");
-  options.addUsage("\t Output: breseq -o 1B4 -r 02_Downloads/NC_012660.1.gbk 02_Downloads/SRR172993.fastq >& 04_Errors/1B4.errors.txt");
-  options.addUsage("\t Output: breseq -o ZDB111 -r 02_Downloads/REL606.5.gbk 02_Downloads/SRR098039.fastq >& 04_Errors/ZDB111.errors.txt");
-	
-  options.processCommandArgs(argc, argv);
-
-	if (options.count("help")) {
-		options.printUsage();
-		return -1;
-	}
-	
-  //! Step: Confirm genome diff files have been input.
-	// the names of these files include the entire path
-	string data_dir = cString(options["data-dir"]).trim_ends_of('/');
-  list<string> file_names;
-  if (options.getArgc()) {
-    const size_t n = options.getArgc();
-    for (size_t i = 0; i < n; ++i)
-    file_names.push_back(options.getArgv(i));
-  } else {
-    if (ifstream(data_dir.c_str()).good()) {
-      const string &cmd = cString("ls %s/*.gd", data_dir.c_str());
-      SYSTEM_CAPTURE(back_inserter(file_names), cmd, true);
-    }
-  }
-
-  if (file_names.empty()) {
-    options.addUsage("\nERROR: You must input genome diff files or a directory to search for genome diff files.");
-    options.printUsage();
-    return -1;
-  }
-	
-  //! Check mode and alter defaults if needed
-	//!
-	
-  string exe;
-	string runfile_path;
-	string output_dir;
-	string log_dir;
-	string download_dir;
-	if ( (options["mode"] == "breseq") || (options["mode"] == "breseq-merged") ) {
-    exe = "breseq";
-		runfile_path = "commands";
-		output_dir = "03_Output";
-		log_dir = "04_Logs";
-	} else if (options["mode"] == "breseq-apply") {
-    exe = "breseq";
-		runfile_path = "apply_commands";
-    output_dir = "03_Apply_Output";
-		log_dir = "04_Apply_Logs";
-  } else if (options["mode"] == "flexbar") {
-    exe = "flexbar";
-		runfile_path = "flexbar_commands";
-    output_dir = "02_Trimmed";
-		log_dir = "04_Trim_Logs";
-	} else if ((options["mode"] == "fastp-single") || (options["mode"] == "fastp-paired") || (options["mode"] == "fastp-merged")) {
-		exe = "fastp";
-		runfile_path = "fastp_commands";
-		output_dir = "02_Trimmed";
-		log_dir = "04_Trim_Logs";
-  } else if (options["mode"] == "flexbar-paired") {
-    exe = "flexbar";
-		runfile_path = "flexbar_commands";
-    output_dir = "02_Trimmed";
-		log_dir = "04_Trim_Logs";
-	} else if (options["mode"] == "read-count") {
-		exe = "gdtools READ-COUNT";
-		runfile_path = "read_count_commands";
-		output_dir = "03_Read_Count";
-		log_dir = "04_Read_Count_Logs";
-	} else {
-		options.addUsage("\nERROR: Unrecognized mode (-m) specified.");
-    options.printUsage();
-    return -1;
-  }
-
-
-  if (options.count("executable"))
-    exe = options["executable"];
-	
-	if (options.count("runfile"))
-    runfile_path = options["runfile"];
-	
-	if (options.count("output-dir"))
-    output_dir = options["output-dir"];
-	
-	if (options.count("log-dir"))
-    log_dir = options["log-dir"];
-
-  string name          = options["name"];
-
-	create_path(output_dir.c_str());
-  create_path(log_dir.c_str());
-
-  ofstream runfile(runfile_path.c_str());
-  size_t n_cmds = 0;
-  for (;file_names.size(); file_names.pop_front()) {
-    const string &file_name = file_names.front();
-    cout << endl << "Parsing file: " << file_name << endl;
-    cGenomeDiff gd(file_name);
-    vector<string> &refs  = gd.metadata.ref_seqs;
-    vector<string> &reads = gd.metadata.read_seqs;
-    vector<string> &adapters = gd.metadata.adapter_seqs;
-    map<string,string> &adapters_for_reads  = gd.metadata.adapters_for_reads;
-		vector<vector<string> > &reads_by_pair  = gd.metadata.reads_by_pair;
-		
-		
-		download_dir = "02_Downloads";
-		if (options.count("downloads-dir")) {
-			download_dir = options["downloads-dir"];
-			download_dir = cString(download_dir).trim_ends_of('/');
-		}
-		
-		// Fix the read file names for certain keywords
-		// Here, we need to look in the folder and add those names
-		vector<string> updated_read_list;
-		for (vector<string>::iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {
-			const cKeyValuePair kvp(*read_file_it, ':');
-			if (to_upper(kvp.get_key()) == "NCBI-SRA") {
-				// Look in the folder and add all fastq files found
-				glob_t glob_result;
-				glob((download_dir + "/" + kvp.get_value() + "*").c_str(),GLOB_TILDE,NULL,&glob_result);
-				for(unsigned int i=0; i<glob_result.gl_pathc; ++i){
-					updated_read_list.push_back(glob_result.gl_pathv[i]);
-				}
-			} else {
-				updated_read_list.push_back(*read_file_it);
-			}
-		}
-		reads = updated_read_list;
-		
-		
-    if (refs.size() == 0) {
-      cerr << ">> Skipping file because no #=REFSEQ header lines found." << endl ;
-      continue;  
-    }
-    
-    if (reads.size() == 0) {
-      cerr << ">> Skipping file because no #=READSEQ header lines found." << endl ;
-      continue;  
-    }
-  
-    if ( (options["mode"] == "breseq") || (options["mode"] == "breseq-merged") ) {
-			
-      //! Step: Begin building command line.
-      stringstream ss;
-    
-      //! Part 1: Executable and options to pass to it if given by user.
-      ss << exe;
-			
-			// Write options from the command line
-      if (options.count("options")) {
-        ss << " " << options["options"];
-      }
-			
-			// Write options in the GD file
-			if (gd.metadata.breseq_data.count("BRESEQ_OPTIONS")) {
-				ss << " " << gd.metadata.breseq_data["BRESEQ_OPTIONS"];
-			}
-			
-      //! Part 2: Pipeline's output path.
-      ss << " -o " << output_dir + "/" + gd.get_title();  
-			
-			//! Part 2b: input the genome_diff to keep the original meta info
-			ss << " -g " << file_name;
-			
-			//! Part 3: Reference argument path(s).
-			for (vector<string>::const_iterator ref_file_it=refs.begin(); ref_file_it != refs.end(); ref_file_it++) {  
-				ss << " -r " << download_dir << "/" << cString(*ref_file_it).get_base_name();
-			}
-			
-			// Should be relative to the download directory
-			if (directory_exists(cString(download_dir + "/../" + "02_Trimmed").c_str())) {
-				download_dir = download_dir + "/../" + "02_Trimmed";
-			}
-			
-			//! Part 4: Read argument path(s).
-			if (options["mode"] == "breseq-merged") {
-				for (vector<vector<string> >::const_iterator read_pair_it=reads_by_pair.begin(); read_pair_it != reads_by_pair.end(); read_pair_it++) {
-					
-					if (file_exists( cString(download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped()).c_str() )) {
-						ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + ".fastq";
-					} else {
-						ss << " " << download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + ".fastq.gz";
-					}
-
-				}
-			} else {
-			// Normal case
-			for (vector<string>::const_iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {
-				
-					// Handles zipped or unzipped
-					if (file_exists( cString(download_dir + "/" + cString(*read_file_it).get_base_name_unzipped()).c_str() )) {
-						ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
-					} else {
-						ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name();
-					}
-				}
-			}
-        
-      //! Part 5: Error log path.
-      ss << " >& " << log_dir << "/" << gd.get_title() << ".log";
-        
-      //! Step: Output to file.
-      cout << ss.str() << endl;
-      runfile << ss.str() << endl;
-      ++n_cmds;
-			
-		} else if (options["mode"] == "breseq-apply") {  
-			
-      //! Step: Begin building command line.
-      stringstream ss;
-			
-      //! Part 1: Executable and options to pass to it if given by user.
-      ss << exe;
-			
-      if (options.count("options")) {
-        ss << " " << options["options"];
-      }
-      //! Part 2: Pipeline's output path.
-      ss << " -o " << output_dir + "/" + gd.get_title();  
-			
-			//! Part 3: Reference argument path(s). Just one.. check for some possible filenames
-								 
-			string reference_path_no_extension = download_dir + "/../" + "02_Apply" + "/" + gd.get_title();
-			vector<string> possible_reference_extensions = make_vector<string>("gff")("gff3")("gbk")("gb")("fna")("fa");
-			bool ending_found = false;
-			for (vector<string>::iterator ext_it = possible_reference_extensions.begin(); ext_it != possible_reference_extensions.end(); ext_it++) {
-				string test_file_name = reference_path_no_extension + "." + *ext_it;
-				if (file_exists( test_file_name.c_str() ) ) {
-					ss << " -r " << test_file_name;
-					ending_found = true;
-					break;
-				}
-			}
-			
-			// Default is "gff"
-			if (!ending_found) {
-				string test_file_name = reference_path_no_extension + "." + "gff";
-				ss << " -r " << test_file_name;
-			}
-			
-			
-			// Should be relative to the download directory
-			if (directory_exists(cString(download_dir + "/../" + "02_Trimmed").c_str())) {
-				download_dir = download_dir + "/../" + "02_Trimmed";
-			}
-			
-			//! Part 4: Read argument path(s).
-			// Handles zipped or unzipped
-			for (vector<string>::const_iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {
-				
-				// Handles zipped or unzipped
-				if (file_exists( cString(download_dir + "/" + cString(*read_file_it).get_base_name_unzipped()).c_str() )) {
-					ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
-				} else {
-					ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name();
-				}
-			}
-			
-      //! Part 5: Error log path.
-      ss << " >& " << log_dir << "/" << gd.get_title() << ".log";
-			
-      //! Step: Output to file.
-      cout << ss.str() << endl;
-      runfile << ss.str() << endl;
-      ++n_cmds;
-		
-		}  else if (options["mode"] == "fastp-single") {
-			
-			// For each read file trim with requested adaptor...
-			for (vector<string>::const_iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {
-				//! Step: Begin building command line.
-				stringstream ss;
-				
-				//! Part 1: Executable and options to pass to it if given by user.
-				ss << exe;
-				
-				//! Part 2: Options
-				if (options.count("options")) {
-					ss << " " << options["options"];
-				}
-				
-				//! Part 3: Read file name --- handles zipped or unzipped!
-				//! Part 4: Output read base name
-				
-				if ( file_exists( cString(download_dir + "/" + cString(*read_file_it).get_base_name_unzipped()).c_str() ) ) {
-					ss << " -i " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
-					ss << " -o " << output_dir + "/" + cString(*read_file_it).get_base_name_unzipped();
-				} else {
-					ss << " -i " << download_dir << "/" << cString(*read_file_it).get_base_name();
-					ss << " -o " << output_dir + "/" + cString(*read_file_it).get_base_name();
-				}
-				
-				//! Part 5: Trimming commands
-				
-				// Nothing needed for fastp
-				
-				//! Part 6: Error log path.
-				
-				// Additional output to log directory
-				cString log_base_name = gd.get_title() + "_" + cString(*read_file_it).get_base_name_no_extension(true);
-				
-				ss << " --json " << log_dir << "/" << log_base_name << ".json";
-				ss << " --html " << log_dir << "/" << log_base_name << ".html";
-				
-				ss << " >& " << log_dir << "/" << log_base_name << ".log";
-				
-				//! Step: Output to file.
-				cout << ss.str() << endl;
-				runfile << ss.str() << endl;
-				++n_cmds;
-			}
-			
-		} else if ( (options["mode"] == "fastp-paired") || (options["mode"] == "fastp-merged") ) {
-			
-			
-			for (vector<vector<string> >::const_iterator read_pair_it=reads_by_pair.begin(); read_pair_it != reads_by_pair.end(); read_pair_it++) {
-				
-				// New code will use a different command for unpaired reads
-				//ASSERT(read_pair_it->size() == 2, "Must have exactly two read files for paired mode: " + join(cString((*read_pair_it)[0])), ", "));
-				
-				//! Step: Begin building command line.
-				stringstream ss;
-				
-				//! Part 1: Executable and options to pass to it if given by user.
-				ss << exe;
-				
-				//! Part 2: Options
-				if (options.count("options")) {
-					ss << " " << options["options"];
-				}
-
-				if (read_pair_it->size() == 2) {
-					////////
-					// Code specific to pairs
-					////////
-					
-					// Always use this option, though trimming still works well without it
-					ss << " --detect_adapter_for_pe";
-					
-					if (options["mode"] == "fastp-merged") {
-						ss << " --merge --include_unmerged";
-					}
-					
-					//! Part 3: Read file name --- handles zipped or unzipped!
-					//! Part 4: Output read base name
-					
-					if (file_exists( cString(download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped()).c_str() )) {
-						ss << " -i " << download_dir << "/" << cString((*read_pair_it)[0]).get_base_name_unzipped();
-						ss << " -I " << download_dir << "/" << cString((*read_pair_it)[1]).get_base_name_unzipped();
-						
-						if (options["mode"] == "fastp-paired") {
-							ss << " -o " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped();
-							ss << " -O " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name_unzipped();
-						} else {
-							ss << " --merged_out " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + ".fastq";
-						}
-					} else {
-						ss << " -i " << download_dir << "/" << cString((*read_pair_it)[0]).get_base_name();
-						ss << " -I " << download_dir << "/" << cString((*read_pair_it)[1]).get_base_name();
-						
-						if (options["mode"] == "fastp-paired") {
-							ss << " -o " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name();
-							ss << " -O " << output_dir + "/" + cString((*read_pair_it)[1]).get_base_name();
-						} else {
-							ss << " --merged_out " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) + ".fastq.gz";
-						}
-					}
-				} else {
-					////////
-					// Code for unpaired input files
-					////////
-					
-					if ( file_exists( cString(download_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped()).c_str() ) ) {
-						ss << " -i " << download_dir << "/" << cString((*read_pair_it)[0]).get_base_name_unzipped();
-						ss << " -o " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name_unzipped();
-					} else {
-						ss << " -i " << download_dir << "/" << cString((*read_pair_it)[0]).get_base_name();
-						ss << " -o " << output_dir + "/" + cString((*read_pair_it)[0]).get_base_name();
-					}
-				}
-				
-				
-				//! Part 5: Trimming commands
-				
-				// Not needed for fastp
-				
-				//! Part 6: Error log path.
-				
-				
-				cString log_base_name(cString((*read_pair_it)[0]).get_base_name_no_extension(true, true) );
-				// eliminate _1 or _R1
-				size_t pos = log_base_name.find("_1");
-				if ( (pos != string::npos) && (pos == log_base_name.size()-2) ) {
-					log_base_name.resize(log_base_name.size()-2);
-				} else {
-					size_t pos = log_base_name.find("_R1");
-					if ( (pos != string::npos) && (pos == log_base_name.size()-3) ) {
-						log_base_name.resize(log_base_name.size()-3);
-					}
-				}
-				log_base_name = gd.get_title() + "_" + log_base_name;
-				
-				ss << " --json " << log_dir << "/" << log_base_name << ".json";
-				ss << " --html " << log_dir << "/" << log_base_name << ".html";
-				
-				ss << " >& " << log_dir << "/" << log_base_name << ".log";
-				
-				//! Step: Output to file.
-				cout << ss.str() << endl;
-				runfile << ss.str() << endl;
-				++n_cmds;
-			}
-			
-		} else if (options["mode"] == "read-count") {
-			
-			//! Step: Begin building command line.
-			stringstream ss;
-			
-			//! Part 1: Executable and options to pass to it if given by user.
-			ss << exe;
-			if (options.count("options")) {
-				ss << " " << options["options"];
-			}
-			
-			// Part 2: input GD file
-			ss << " -i " << file_name;
-			
-			// Part 3: output GD file
-			ss << " -o " << output_dir << "/" << path_to_filename(file_name);
-			
-			// Part 4: each read file as unnamed arg
-			for (vector<string>::const_iterator read_file_it=reads.begin(); read_file_it != reads.end(); read_file_it++) {
-				
-				if (file_exists( cString(download_dir + "/" + cString(*read_file_it).get_base_name_unzipped()).c_str() )) {
-					ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name_unzipped();
-				} else {
-					ss << " " << download_dir << "/" << cString(*read_file_it).get_base_name();
-				}
-			}
-		
-			//! Part 5: Error log path.
-			ss << " >& " << log_dir << "/" << gd.get_title() << ".log" << endl;
-			
-			//! Step: Output to file.
-			cout << ss.str() << endl;
-			runfile << ss.str() << endl;
-			++n_cmds;
-		}
-	}
-	
-  cerr << endl << "Total commands: " << n_cmds << endl;
-	
-  return 0;
-}
-
-int do_mrna_stability(int argc, char *argv[])
-{
-  AnyOption options("gdtools mrna_stability [-o output.gd] [-r reference.gbk] input1.gd");
-	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-  options("output,o",  "Output fasta file for vienna RNA fold", "output.fa");
-  options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
-  options("flanking_sequence,f", "Number of bases on either side of synonymous SNP to consider for mRNA folding", "15");
-  options("verbose,v", "Verbose mode", TAKES_NO_ARGUMENT);
-
-  options.addUsage("");
-  options.addUsage("Creates a fasta file with posistion of Synonymous SNP,"); 
-  options.addUsage("base change, and mRNA sequence of location plus/minus given flanking sequence");
-  options.addUsage("To be used in vienna RNA fold");
-	
-	options.processCommandArgs(argc, argv);
-	
-	if (options.count("help")) {
-		options.printUsage();
-		return -1;
-	}
-	
-  if (options.getArgc() != 1) {//@ded any interest in allowing multiple inserts and merge with frequencies before calcuation?
-    options.addUsage("");
-    options.addUsage("Must provide exactly 1 input.gd.");
-    options.printUsage();
-    return -1;
-  }
-
-    UserOutput uout("ANNOTATE");
-//@ded html not an option, and annotated GD file is not a desired output.
-/*    
-    bool html_output_mode = options.count("html");
-    string output_file_name;
-    if (options.count("output")) 
-        output_file_name = options["output"];
-    else
-        output_file_name = /#(html_output_mode) ? "annotated.html" :@ded no html#/ "annotated.gd";
-*/    
-    vector<string> gd_path_names;
-    for (int32_t i = 0; i < options.getArgc(); ++i) {
-        gd_path_names.push_back(options.getArgv(i));
-    }
-
-//@ded uneeded for stability as only allowing 1 input file
-// checks that more than 1 input and at least 1 reference is given
-/*    if ( (gd_path_names.size() == 0) 
-        || !options.count("reference")){
-        options.printUsage();
-        return -1;
-    }
-    
-    // more than one file was provided as input
-    bool compare_mode = (gd_path_names.size() > 1);
-    vector<string> gd_base_names;
-    for (uint32_t i = 0; i < gd_path_names.size(); i++){    
-        cString s(gd_path_names[i]);
-        s = s.get_base_name_no_extension();
-        gd_base_names.push_back(s);
-    }
-*/     
-    // First use merge to produce a file with a line for each mutation
-    cGenomeDiff gd;
-    vector<diff_entry_list_t> mut_lists;
-    vector<cGenomeDiff> gd_list;
-    
-    for (uint32_t i = 0; i < gd_path_names.size(); i++){
-        uout("Reading input GD file",gd_path_names[i]);
-        cGenomeDiff single_gd(gd_path_names[i]);
-        //remove the evidence to speed up the merge
-        //single_gd.remove(cGenomeDiff::EVIDENCE);
-        //No, can't remove UN evidence!
-        gd_list.push_back(single_gd);
-        mut_lists.push_back(single_gd.mutation_list());
-        gd.merge(single_gd);
-    }
-    gd.sort();
-/*    
-    // Then add frequency columns for all genome diffs
-    if (compare_mode) {
-        
-        diff_entry_list_t de_list = gd.mutation_list();
-        bool found = false;
-        
-        for (diff_entry_list_t::iterator it = de_list.begin(); it != de_list.end(); it++) { 
-            
-            diff_entry_ptr_t& this_mut = *it;
-            
-            // for each genome diff compared
-            for (uint32_t i=0; i<mut_lists.size(); i++) { 
-                
-                string freq_key = "frequency_" + gd_base_names[i];
-                (*this_mut)[freq_key] = "0";
-                
-                diff_entry_list_t& mut_list = mut_lists[i];
-                if (mut_list.size() == 0) 
-                    continue; 
-                
-                bool found = false;
-                
-                // for top mutation in this genomedff (they are sorted by position)
-                diff_entry_ptr_t check_mut;
-                check_mut = mut_list.front();        
-                
-                // we found the exact same mutation
-                if ( (check_mut.get() != NULL) && (*check_mut == *this_mut) ) {
-                    
-                    if (check_mut->count(FREQUENCY))
-                        (*this_mut)[freq_key] = (*check_mut)[FREQUENCY];
-                    else
-                        (*this_mut)[freq_key] = "1";
-                    
-                    // remove the item
-                    mut_list.pop_front();
-                    continue;
-                }
-                
-                if (gd_list[i].mutation_deleted(*this_mut)) {
-                    (*this_mut)[freq_key] = "D";
-                    continue;
-                }
-                
-                if (gd_list[i].mutation_unknown(*this_mut)) {
-                    (*this_mut)[freq_key] = "?";
-                    continue;
-                }
-            }
-        }
-    }
-@ded not allowing for multiple inputs*/     
-    vector<string> reference_file_names = from_string<vector<string> >(options["reference"]);
-    uout("Reading input reference sequence files") << reference_file_names << endl;
-    cReferenceSequences ref_seq_info;
-    ref_seq_info.LoadFiles(reference_file_names);
-    
-    uout("Annotating mutations");
-    ref_seq_info.annotate_mutations(gd, true, options.count("ignore-pseudogenes"));
-//@ded end of used annotation commands
-    uout("Annotation complete. Writing synonymous SNP mRNA sequences.");
-    
-/*    if (html_output_mode) {
-        
-        uout("Writing output HTML file", output_file_name);
-        
-        Settings settings;
-        // No evidence needs to be transferred to options and initialized correctly within breseq
-        settings.no_evidence = true;
-        
-        MutationTableOptions mt_options;
-        if (compare_mode)
-            mt_options.repeat_header = true;
-        mt_options.one_ref_seq = ref_seq_info.size() == 1;
-        mt_options.gd_name_list_ref = gd_base_names;
-        mt_options.repeat_header = 10;
-        
-        html_compare(settings, output_file_name, "Mutation Comparison", gd, mt_options);
-        
-    } else {
-        uout("Writing output Genome Diff file", options["output"]);//not needed either
-//        gd.write(output_file_name);
-    //}*/    
-  diff_entry_list_t muts = gd.show_list();
-  stringstream ss; //fasta build file 
-  uint32_t flanking_sequence = from_string<uint32_t>(options["flanking_sequence"]);
-    
-  for (diff_entry_list_t::iterator it=muts.begin(); it!=muts.end(); it++)
-  { 
-    cDiffEntry& mut= **it;  
-    if (mut._type == SNP && mut["snp_type"] == "synonymous") {
-    // determine region to get sequence of
-      const uint32_t mutation_stability_start = from_string<uint32_t>(mut["position"]) - flanking_sequence;
-      const uint32_t mutation_stability_end = from_string<uint32_t>(mut["position"]) + flanking_sequence;
-      
-    // determine reference and mutation sequence
-      string syn_ref_seq, mut_ref_seq;
-      syn_ref_seq = mut["gene_strand"] == ">" 
-          ? ref_seq_info.get_sequence_1(mut["seq_id"], mutation_stability_start, mutation_stability_end)
-          : reverse_complement(ref_seq_info.get_sequence_1(mut["seq_id"], mutation_stability_start, mutation_stability_end));
-      mut_ref_seq = syn_ref_seq;
-      mut_ref_seq.replace (flanking_sequence,1,mut["gene_strand"] == ">" 
-          ? mut["new_seq"]
-          : reverse_complement(mut["new_seq"]));         
-
-    //construct fasta file
-      ss << ">" << mut["position"] << "_" << mut["codon_ref_seq"] << "-R" << endl;
-      ss << syn_ref_seq << endl;
-      ss << ">" << mut["position"] << "_" << mut["codon_new_seq"] << "-M" << endl;
-      ss << mut_ref_seq << endl;
-    }
-  }  
-    
-//write fasta file
-  ofstream myfile(options["output"].c_str());
-  myfile << ss.str();
-  return 0;                                            
-}
-
-int do_translate_proteome(int argc, char *argv[])
-{
-	AnyOption options("gdtools PROTEOME [-o output.fna] -r reference.gbk");
-	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-	options("output,o",  "Base name for FASTA file output", "output");
-	options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)");
-	options("verbose,v", "Verbose mode", TAKES_NO_ARGUMENT);
-	
-	options.addUsage("");
-	options.addUsage("Creates two FASTA files, one normal and one with protein translating amber stops as X,"); 
-
-	options.processCommandArgs(argc, argv);
-
-	if (options.count("help")) {
-		options.printUsage();
-		return -1;
-	}
-	
-	cString output_base_name = options["output"];
-	
-	if (!options.count("reference")) {
-			options.printUsage();
-			return -1;
-	}
-	
-	cReferenceSequences ref_seqs;
-	ref_seqs.LoadFiles(from_string<vector<string> >(options["reference"]));
-	
-	cString nfile_name(output_base_name + ".normal.fna");
-	ofstream nfile(nfile_name.c_str());
-	cString afile_name(output_base_name + ".amber.fna");
-	ofstream afile(afile_name.c_str());
-	cString ufile_name(output_base_name + ".unique.fna");
-	ofstream ufile(ufile_name.c_str());
-	cString bfile_name(output_base_name + ".amber.tab");
-	ofstream bfile(bfile_name.c_str());
-	
-	string n_translation_table = cReferenceSequences::translation_tables[11];    
-	string n_translation_table_1 = cReferenceSequences::initiation_codon_translation_tables[11];
-	
-	string a_translation_table = n_translation_table;
-	string a_translation_table_1 = n_translation_table_1;
-	a_translation_table[cReferenceSequences::codon_to_aa_index["TAG"]] = 'X';
-	a_translation_table_1[cReferenceSequences::codon_to_aa_index["TAG"]] = 'X';
-
-	
-	cSequenceFeaturePtr feature_ptr(NULL);
-	
-	uint32_t total_protein_count = 0;
-	uint32_t skipped_protein_count = 0;
-	uint32_t amber_terminated_protein_count = 0;
-	//list< pair<string,uint32_t> > protein_backup_codon_length_list;    
-	
-	for(vector<cAnnotatedSequence>::iterator its = ref_seqs.begin(); its !=ref_seqs.end(); its++) {
-	
-			cAnnotatedSequence& on_seq = *its;
-			cSequenceFeatureList& feature_list = on_seq.m_features;
-
-			for (cSequenceFeatureList::iterator it = feature_list.begin(); it != feature_list.end(); ++it) {
-					cSequenceFeature& on_feature = **it;
-					
-					if (on_feature["type"] == "CDS") {
-							
-							total_protein_count++;
-							
-							string n_protein = cReferenceSequences::translate_protein(on_seq, on_feature, n_translation_table, n_translation_table_1);
-							string a_protein = cReferenceSequences::translate_protein(on_seq, on_feature, a_translation_table, a_translation_table_1);
-							
-							int32_t length_diff = a_protein.size() - n_protein.size();
-							
-							nfile << ">" << on_feature["locus_tag"] << "|" << on_feature["name"] << endl << n_protein << endl;
-							afile << ">" << on_feature["locus_tag"] << "|" << on_feature["name"] << "|amber" << endl << a_protein << endl; //_" << length_diff << "_bp_to_new_stop" ;
-							
-							ufile << ">" << on_feature["locus_tag"] << "|" << on_feature["name"] << endl << n_protein << endl;
-							if (length_diff) {
-									amber_terminated_protein_count++;
-									ufile << ">" << on_feature["locus_tag"] << "|" << on_feature["name"] << "|amber" << endl << a_protein << endl; // _" << length_diff << "_bp_to_new_stop" 
-									bfile << on_feature["name"] << "\t" << length_diff << "\t" << on_feature["locus_tag"] <<  "\t" << on_feature["product"] << endl;
-						}
-						else {
-								skipped_protein_count++;
-						}
-							
-					}
-			}
-	}
-	
-	cout << "Amber terminated proteins: " << amber_terminated_protein_count << endl;
-	cout << "Skipped proteins: " << skipped_protein_count << endl;
-	cout << "Total proteins: " << total_protein_count << endl;
-	
-	return 0;
-}
-
 int do_gd2coverage(int argc, char* argv[])
 {
 	
@@ -3834,9 +2772,7 @@ int main(int argc, char* argv[]) {
   } else if ( (command == "COMPARE") || (command == "ANNOTATE") ) {
     return do_annotate(argc_new, argv_new.data());
   } else if (command == "CHECK") {
-    return do_check(argc_new, argv_new.data());  
-  } else if (command == "CHECK-PLOT") {
-    return do_check_plot(argc_new, argv_new.data());
+    return do_check(argc_new, argv_new.data());
   } else if (command == "NOT-EVIDENCE") {        //TODO merge with FILTER
     return do_not_evidence(argc_new, argv_new.data());
 	} else if (command == "MUTATIONS") {
@@ -3861,16 +2797,12 @@ int main(int argc, char* argv[]) {
     return do_weights(argc_new, argv_new.data());
 	} else if (command == "CONVERT") {
 		return do_convert(argc_new, argv_new.data());
-  } else if (command == "GD2VCF") {             
-    return do_gd2vcf(argc_new, argv_new.data());
-  } else if (command == "VCF2GD") {             
-    return do_vcf2gd( argc_new, argv_new.data());
-  } else if (command == "GD2GVF") {             
-    return do_gd2gvf( argc_new, argv_new.data());
-  } else if (command == "GD2CIRCOS"){
-    return do_gd2circos(argc_new, argv_new.data());
-  } else if(command == "MIRA2GD"){
-    return do_mira2gd(argc_new, argv_new.data());
+  } else if (command == "GD2VCF") {
+    return do_convert(argc_new, argv_new.data(), "VCF");
+  } else if (command == "VCF2GD") {
+    return do_convert(argc_new, argv_new.data(), "GD");
+  } else if (command == "GD2GVF") {
+    return do_convert(argc_new, argv_new.data(), "GVF");
   } else if(command == "HEADER"){
     return do_header(argc_new, argv_new.data());
 	} else if(command == "REHEADER"){
@@ -3881,12 +2813,6 @@ int main(int argc, char* argv[]) {
     return do_mutations_to_evidence(argc_new, argv_new.data());
   } else if (command == "DOWNLOAD") {
     return do_download(argc_new, argv_new.data());
-  } else if (command == "RUNFILE") {
-    return do_runfile(argc_new, argv_new.data());
-  } else if (command == "MRNA-STABILITY") {
-    return do_mrna_stability(argc_new, argv_new.data());
-  } else if (command == "PROTEOME") {
-		return do_translate_proteome(argc_new, argv_new.data());
 	} else if (command == "GD2COV") {
 		return do_gd2coverage(argc_new, argv_new.data());
 	} else if (command == "DELETED-GENES") {

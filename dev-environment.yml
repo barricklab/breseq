@@ -1,11 +1,12 @@
 name: breseq-dev
 channels:
-  - bioconda
   - conda-forge
+  - bioconda
   - defaults
 dependencies:
 # Needed for compiling
 #  => Should be compatible with any versions
+  - cxx-compiler
   - autoconf
   - automake
   - libtool
@@ -25,7 +26,7 @@ dependencies:
 #  => Need to lock versions for consistency
   - samtools=1.23.1
   - bowtie2=2.5.5
-  - r-base=4.5.3
+  - gnuplot=6.0.4
   - phylip=3.697
   - pip
   - pip:

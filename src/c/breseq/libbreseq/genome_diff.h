@@ -289,7 +289,6 @@ public:
                                        cGenomeDiff& test,
                                        bool jc_only_accepted,
                                        bool verbose = false);
-  static void write_jc_score_table(cGenomeDiff& compare, string table_file_path, bool verbose = false); 
 
   static void tabulate_mutation_frequencies_from_multiple_gds(cGenomeDiff& master_gd,
                                                      vector<cGenomeDiff>& gd_list,
@@ -323,7 +322,7 @@ public:
                         bool preserve_evidence,
                         bool verbose = false
                        );
-  
+
   //! Write a text table
   static void write_table_file(
                       string& output_file_name,
@@ -333,18 +332,6 @@ public:
                       const MutationTableOptions& mutation_table_options
                       );
 
-  
-  //! Convert genome diff to GVF
-  static void GD2GVF( const string& gdfile, const string& gvffile, cReferenceSequences& ref_seq_info, bool snv_only = false )
-    { cGenomeDiff gd(gdfile); gd.write_gvf(gvffile, ref_seq_info, snv_only); }
-  
-  //! Convert VCF to genome diff
-  static void GD2VCF( const string &gdfile, const string & vcffile, cReferenceSequences& ref_seq_info)
-    { cGenomeDiff gd(gdfile); gd.write_vcf(vcffile, ref_seq_info); }
-
-  static void VCF2GD( const string& vcffile, const string& gdfile )
-  { cGenomeDiff gd; gd.read_vcf(vcffile); gd.write(gdfile); }
-  
   //! Convert GD to PHYLIP/FASTA input file
   //! format must be PHYLIP or FASTA
   //! 
@@ -356,14 +343,7 @@ public:
                            cReferenceSequences& ref_seq_info,
                            bool missing_as_ancestral = false,
                            bool verbose = false);
-  
-  
-  //! Convert GD to Circos files
-  static void GD2Circos(const vector<string> &gd_file_names,
-                        const vector<string> &reference_file_names,
-                        const string &circos_directory,
-                        double distance_scale,
-                        double feature_scale);
+
 
   //! Convert genome diff to OLI format
   static void GD2OLI( const vector<string> &gd_file_names, 
@@ -380,10 +360,8 @@ public:
 
   //! Functions for dealing with lists of Genome Diffs
   static void sort_gd_list_by_treatment_population_time(vector<cGenomeDiff>& genome_diffs);
-  
+
 };
-  
-  
 
 }
 #endif

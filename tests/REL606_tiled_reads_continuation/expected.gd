@@ -1,4 +1,6 @@
 #=GENOME_DIFF	1.0
+#=CREATED	09:14:20 21 Jun 2026
+#=PROGRAM	breseq 0.40.1 revision 089d37780932
 #=COMMAND	./src/c/breseq/breseq -j 4 -p -o tests/REL606_tiled_reads_continuation -r tests/REL606_tiled_reads_continuation/../data/REL606/REL606.fragment.gbk -s tests/REL606_tiled_reads_continuation/../data/REL606/REL606.is.gbk tests/REL606_tiled_reads_continuation/../data/REL606/REL606.tiled_reads_continuation.fastq
 #=REFSEQ	tests/REL606_tiled_reads_continuation/../data/REL606/REL606.fragment.gbk
 #=REFSEQ	tests/REL606_tiled_reads_continuation/../data/REL606/REL606.is.gbk
@@ -113,7 +115,7 @@ UN	101	.	REL606-5	3000	3002
 UN	102	.	REL606-5	3249	3251
 UN	103	.	REL606-5	4000	4006
 UN	104	.	REL606-5	8494	8496
-UN	105	.	REL606-5	9815	9979
+UN	105	.	REL606-5	9813	9979
 UN	106	.	REL606-5	10073	10161
 UN	107	.	REL606-5	10259	10486
 UN	108	.	REL606-5	15000	15002
@@ -125,5 +127,5 @@ UN	113	.	REL606-5	24000	24001
 UN	114	.	REL606-5	27000	27002
 UN	115	.	REL606-5	28000	28000
 UN	116	.	REL606-5	31350	31516
-UN	117	.	REL606-5	31608	31697
-UN	118	.	REL606-5	31793	32021
+UN	117	.	REL606-5	31608	31698
+UN	118	.	REL606-5	31792	32024
