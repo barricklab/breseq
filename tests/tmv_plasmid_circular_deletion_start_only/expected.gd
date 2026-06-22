@@ -1,163 +1,188 @@
 #=GENOME_DIFF	1.0
-#=CREATED	16:41:00 18 Jun 2026
+#=CREATED	20:23:01 21 Jun 2026
 #=PROGRAM	breseq 0.40.1
-#=COMMAND	./src/c/breseq/breseq -j 4 -o ./tests/tmv_plasmid_circular_deletion_start_only -r ./tests/tmv_plasmid_circular_deletion_start_only/../data/tmv_plasmid/tmv-plasmid-truncate-end.gbk ./tests/tmv_plasmid_circular_deletion_start_only/../data/tmv_plasmid/D3-9_1P.fastq.gz ./tests/tmv_plasmid_circular_deletion_start_only/../data/tmv_plasmid/D3-9_2P.fastq.gz
-#=REFSEQ	./tests/tmv_plasmid_circular_deletion_start_only/../data/tmv_plasmid/tmv-plasmid-truncate-end.gbk
-#=READSEQ	./tests/tmv_plasmid_circular_deletion_start_only/../data/tmv_plasmid/D3-9_1P.fastq.gz
-#=READSEQ	./tests/tmv_plasmid_circular_deletion_start_only/../data/tmv_plasmid/D3-9_2P.fastq.gz
+#=COMMAND	./src/c/breseq/breseq -j 4 -o tests/tmv_plasmid_circular_deletion_start_only -r tests/tmv_plasmid_circular_deletion_start_only/../data/tmv_plasmid/tmv-plasmid-truncate-end.gbk tests/tmv_plasmid_circular_deletion_start_only/../data/tmv_plasmid/D3-9_1P.fastq.gz tests/tmv_plasmid_circular_deletion_start_only/../data/tmv_plasmid/D3-9_2P.fastq.gz
+#=REFSEQ	tests/tmv_plasmid_circular_deletion_start_only/../data/tmv_plasmid/tmv-plasmid-truncate-end.gbk
+#=READSEQ	tests/tmv_plasmid_circular_deletion_start_only/../data/tmv_plasmid/D3-9_1P.fastq.gz
+#=READSEQ	tests/tmv_plasmid_circular_deletion_start_only/../data/tmv_plasmid/D3-9_2P.fastq.gz
 #=CONVERTED-BASES	2735772
 #=CONVERTED-READS	18371
 #=INPUT-BASES	2738037
 #=INPUT-READS	18386
-#=MAPPED-BASES	2385959
-#=MAPPED-READS	16400
+#=MAPPED-BASES	2279230
+#=MAPPED-READS	15390
 DEL	1	4,6	TMV-plasmid-truncate-end	1	7137	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	locus_tag=–/–	mutation_category=large_deletion	position_end=7137	position_start=1	ref_seq=7137-bp
 RA	2	.	TMV-plasmid-truncate-end	1565	0	C	T	consensus_score=10.1	deleted=1	frequency=1	major_base=T	major_cov=1/3	major_frequency=1.000e+00	minor_base=N	minor_cov=0/0	new_cov=1/3	polymorphism_frequency=1.000e+00	polymorphism_score=NA	prediction=consensus	ref_cov=0/0	total_cov=1/3
-RA	3	.	TMV-plasmid-truncate-end	5198	0	A	G	consensus_score=18.1	deleted=1	frequency=1	major_base=G	major_cov=3/3	major_frequency=1.000e+00	minor_base=N	minor_cov=0/0	new_cov=3/3	polymorphism_frequency=1.000e+00	polymorphism_score=NA	prediction=consensus	ref_cov=0/0	total_cov=3/3
-MC	4	.	TMV-plasmid-truncate-end	1	7137	0	0	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	left_inside_cov=1	left_outside_cov=NA	locus_tag=–/–	right_inside_cov=41	right_outside_cov=876
-JC	5	.	TMV-plasmid-truncate-end	7033	1	TMV-plasmid-truncate-end	10204	-1	-49	alignment_overlap=-49	coverage_minus=19	coverage_plus=12	flanking_left=151	flanking_right=151	frequency=1	junction_possible_overlap_registers=98	key=TMV-plasmid-truncate-end__7033__1__TMV-plasmid-truncate-end__10204__-1__-49__CAACACCCGCTGACGCGCCCTGACGGGCTTGTCTGCTCCCGGCATCCGC__151__151__0__0	max_left=87	max_left_minus=86	max_left_plus=87	max_min_left=50	max_min_left_minus=33	max_min_left_plus=50	max_min_right=39	max_min_right_minus=34	max_min_right_plus=39	max_pos_hash_score=198	max_right=101	max_right_minus=101	max_right_plus=89	neg_log10_pos_hash_p_value=1.5	new_junction_coverage=0.17	new_junction_read_count=31	polymorphism_frequency=9.029e-01	pos_hash_score=20	prediction=consensus	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.04	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_overlap=0	side_1_possible_overlap_registers=147	side_1_read_count=10	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.00	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_overlap=0	side_2_possible_overlap_registers=147	side_2_read_count=0	side_2_redundant=0	total_non_overlap_reads=31	unique_read_sequence=CAACACCCGCTGACGCGCCCTGACGGGCTTGTCTGCTCCCGGCATCCGC
-JC	6	.	TMV-plasmid-truncate-end	7138	1	TMV-plasmid-truncate-end	10204	-1	0	alignment_overlap=0	coverage_minus=413	coverage_plus=400	flanking_left=151	flanking_right=151	frequency=1	junction_possible_overlap_registers=147	key=TMV-plasmid-truncate-end__7138__1__TMV-plasmid-truncate-end__10204__-1__0____151__151__0__0	max_left=150	max_left_minus=150	max_left_plus=150	max_min_left=75	max_min_left_minus=75	max_min_left_plus=74	max_min_right=75	max_min_right_minus=75	max_min_right_plus=75	max_pos_hash_score=296	max_right=149	max_right_minus=147	max_right_plus=149	neg_log10_pos_hash_p_value=-0.0	new_junction_coverage=3.06	new_junction_read_count=830	polymorphism_frequency=9.805e-01	pos_hash_score=215	prediction=consensus	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.12	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_overlap=0	side_1_possible_overlap_registers=147	side_1_read_count=33	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.00	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_overlap=0	side_2_possible_overlap_registers=147	side_2_read_count=0	side_2_redundant=0	total_non_overlap_reads=813
-JC	7	.	TMV-plasmid-truncate-end	7496	1	TMV-plasmid-truncate-end	7789	-1	0	alignment_overlap=0	coverage_minus=7	coverage_plus=7	flanking_left=151	flanking_right=151	frequency=1.512e-02	junction_possible_overlap_registers=147	key=TMV-plasmid-truncate-end__7496__1__TMV-plasmid-truncate-end__7789__-1__0____151__151__0__0	max_left=144	max_left_minus=144	max_left_plus=118	max_min_left=6	max_min_left_minus=3	max_min_left_plus=6	max_min_right=70	max_min_right_minus=70	max_min_right_plus=67	max_pos_hash_score=296	max_right=150	max_right_minus=149	max_right_plus=150	neg_log10_pos_hash_p_value=5.9	new_junction_coverage=0.05	new_junction_read_count=14	polymorphism_frequency=1.512e-02	pos_hash_score=9	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=3.45	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_overlap=0	side_1_possible_overlap_registers=147	side_1_read_count=936	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=3.27	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_overlap=0	side_2_possible_overlap_registers=147	side_2_read_count=888	side_2_redundant=0	total_non_overlap_reads=14
-JC	8	.	TMV-plasmid-truncate-end	9443	1	TMV-plasmid-truncate-end	9519	1	0	alignment_overlap=8	coverage_minus=1	coverage_plus=4	flanking_left=151	flanking_right=151	frequency=6.477e-03	junction_possible_overlap_registers=139	key=TMV-plasmid-truncate-end__9443__1__TMV-plasmid-truncate-end__9511__1__8____151__151__0__0	max_left=83	max_left_minus=71	max_left_plus=83	max_min_left=71	max_min_left_minus=71	max_min_left_plus=61	max_min_right=56	max_min_right_minus=0	max_min_right_plus=56	max_pos_hash_score=280	max_right=140	max_right_minus=72	max_right_plus=140	neg_log10_pos_hash_p_value=7.4	new_junction_coverage=0.02	new_junction_read_count=6	polymorphism_frequency=6.477e-03	pos_hash_score=5	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=3.47	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_overlap=8	side_1_possible_overlap_registers=147	side_1_read_count=943	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=3.70	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_overlap=0	side_2_possible_overlap_registers=139	side_2_read_count=949	side_2_redundant=0	total_non_overlap_reads=5
-UN	9	.	TMV-plasmid-truncate-end	1	185
-UN	10	.	TMV-plasmid-truncate-end	191	191
-UN	11	.	TMV-plasmid-truncate-end	204	204
-UN	12	.	TMV-plasmid-truncate-end	210	211
-UN	13	.	TMV-plasmid-truncate-end	213	213
-UN	14	.	TMV-plasmid-truncate-end	217	217
-UN	15	.	TMV-plasmid-truncate-end	219	219
-UN	16	.	TMV-plasmid-truncate-end	231	231
-UN	17	.	TMV-plasmid-truncate-end	238	238
-UN	18	.	TMV-plasmid-truncate-end	241	241
-UN	19	.	TMV-plasmid-truncate-end	268	268
-UN	20	.	TMV-plasmid-truncate-end	274	274
-UN	21	.	TMV-plasmid-truncate-end	283	283
-UN	22	.	TMV-plasmid-truncate-end	294	294
-UN	23	.	TMV-plasmid-truncate-end	298	298
-UN	24	.	TMV-plasmid-truncate-end	301	301
-UN	25	.	TMV-plasmid-truncate-end	304	304
-UN	26	.	TMV-plasmid-truncate-end	306	772
-UN	27	.	TMV-plasmid-truncate-end	804	1544
-UN	28	.	TMV-plasmid-truncate-end	1564	1564
-UN	29	.	TMV-plasmid-truncate-end	1566	1567
-UN	30	.	TMV-plasmid-truncate-end	1569	1571
-UN	31	.	TMV-plasmid-truncate-end	1576	1576
-UN	32	.	TMV-plasmid-truncate-end	1579	1579
-UN	33	.	TMV-plasmid-truncate-end	1582	1583
-UN	34	.	TMV-plasmid-truncate-end	1586	1586
-UN	35	.	TMV-plasmid-truncate-end	1590	1592
-UN	36	.	TMV-plasmid-truncate-end	1598	1598
-UN	37	.	TMV-plasmid-truncate-end	1600	1754
-UN	38	.	TMV-plasmid-truncate-end	1764	1764
-UN	39	.	TMV-plasmid-truncate-end	1774	1774
-UN	40	.	TMV-plasmid-truncate-end	1777	1777
-UN	41	.	TMV-plasmid-truncate-end	1779	1779
-UN	42	.	TMV-plasmid-truncate-end	1781	1781
-UN	43	.	TMV-plasmid-truncate-end	1785	1785
-UN	44	.	TMV-plasmid-truncate-end	1958	1958
-UN	45	.	TMV-plasmid-truncate-end	1964	1964
-UN	46	.	TMV-plasmid-truncate-end	1969	2427
-UN	47	.	TMV-plasmid-truncate-end	2430	2430
-UN	48	.	TMV-plasmid-truncate-end	2435	2435
-UN	49	.	TMV-plasmid-truncate-end	2441	2441
-UN	50	.	TMV-plasmid-truncate-end	2540	2540
-UN	51	.	TMV-plasmid-truncate-end	2547	2548
-UN	52	.	TMV-plasmid-truncate-end	2552	2552
-UN	53	.	TMV-plasmid-truncate-end	2563	2563
-UN	54	.	TMV-plasmid-truncate-end	2570	2879
-UN	55	.	TMV-plasmid-truncate-end	2882	2882
-UN	56	.	TMV-plasmid-truncate-end	2888	2888
-UN	57	.	TMV-plasmid-truncate-end	2935	2936
-UN	58	.	TMV-plasmid-truncate-end	2938	2938
-UN	59	.	TMV-plasmid-truncate-end	2944	2944
-UN	60	.	TMV-plasmid-truncate-end	2952	2956
-UN	61	.	TMV-plasmid-truncate-end	2989	2989
-UN	62	.	TMV-plasmid-truncate-end	3024	3031
-UN	63	.	TMV-plasmid-truncate-end	3037	3037
-UN	64	.	TMV-plasmid-truncate-end	3044	3044
-UN	65	.	TMV-plasmid-truncate-end	3056	3056
-UN	66	.	TMV-plasmid-truncate-end	3062	3062
-UN	67	.	TMV-plasmid-truncate-end	3070	3070
-UN	68	.	TMV-plasmid-truncate-end	3072	3072
-UN	69	.	TMV-plasmid-truncate-end	3076	3076
-UN	70	.	TMV-plasmid-truncate-end	3109	3109
-UN	71	.	TMV-plasmid-truncate-end	3181	3181
-UN	72	.	TMV-plasmid-truncate-end	3183	3189
-UN	73	.	TMV-plasmid-truncate-end	3194	3195
-UN	74	.	TMV-plasmid-truncate-end	3199	3199
-UN	75	.	TMV-plasmid-truncate-end	3202	3202
-UN	76	.	TMV-plasmid-truncate-end	3204	3204
-UN	77	.	TMV-plasmid-truncate-end	3206	3206
-UN	78	.	TMV-plasmid-truncate-end	3213	3214
-UN	79	.	TMV-plasmid-truncate-end	3216	3216
-UN	80	.	TMV-plasmid-truncate-end	3218	3219
-UN	81	.	TMV-plasmid-truncate-end	3222	3222
-UN	82	.	TMV-plasmid-truncate-end	3224	3225
-UN	83	.	TMV-plasmid-truncate-end	3228	3229
-UN	84	.	TMV-plasmid-truncate-end	3235	3235
-UN	85	.	TMV-plasmid-truncate-end	3239	3292
-UN	86	.	TMV-plasmid-truncate-end	3298	3322
-UN	87	.	TMV-plasmid-truncate-end	3408	3408
-UN	88	.	TMV-plasmid-truncate-end	3416	3416
-UN	89	.	TMV-plasmid-truncate-end	3438	3576
-UN	90	.	TMV-plasmid-truncate-end	3582	3582
-UN	91	.	TMV-plasmid-truncate-end	3739	3739
-UN	92	.	TMV-plasmid-truncate-end	3758	3758
-UN	93	.	TMV-plasmid-truncate-end	3763	3802
-UN	94	.	TMV-plasmid-truncate-end	3837	3837
-UN	95	.	TMV-plasmid-truncate-end	3842	3842
-UN	96	.	TMV-plasmid-truncate-end	3846	3846
-UN	97	.	TMV-plasmid-truncate-end	3864	3864
-UN	98	.	TMV-plasmid-truncate-end	3866	3877
-UN	99	.	TMV-plasmid-truncate-end	3879	3883
-UN	100	.	TMV-plasmid-truncate-end	3887	3887
-UN	101	.	TMV-plasmid-truncate-end	3891	3892
-UN	102	.	TMV-plasmid-truncate-end	3894	3894
-UN	103	.	TMV-plasmid-truncate-end	3896	3896
-UN	104	.	TMV-plasmid-truncate-end	3900	3900
-UN	105	.	TMV-plasmid-truncate-end	3903	3904
-UN	106	.	TMV-plasmid-truncate-end	3906	3907
-UN	107	.	TMV-plasmid-truncate-end	3909	3913
-UN	108	.	TMV-plasmid-truncate-end	3915	3915
-UN	109	.	TMV-plasmid-truncate-end	3917	3921
-UN	110	.	TMV-plasmid-truncate-end	3926	3927
-UN	111	.	TMV-plasmid-truncate-end	3929	3930
-UN	112	.	TMV-plasmid-truncate-end	3932	3932
-UN	113	.	TMV-plasmid-truncate-end	3934	3934
-UN	114	.	TMV-plasmid-truncate-end	3937	3938
-UN	115	.	TMV-plasmid-truncate-end	3940	4236
-UN	116	.	TMV-plasmid-truncate-end	4239	4241
-UN	117	.	TMV-plasmid-truncate-end	4393	4393
-UN	118	.	TMV-plasmid-truncate-end	4397	4398
-UN	119	.	TMV-plasmid-truncate-end	4401	4402
-UN	120	.	TMV-plasmid-truncate-end	4404	4407
-UN	121	.	TMV-plasmid-truncate-end	4416	4416
-UN	122	.	TMV-plasmid-truncate-end	4418	4432
-UN	123	.	TMV-plasmid-truncate-end	4434	4434
-UN	124	.	TMV-plasmid-truncate-end	4436	4682
-UN	125	.	TMV-plasmid-truncate-end	4686	4686
-UN	126	.	TMV-plasmid-truncate-end	4831	4831
-UN	127	.	TMV-plasmid-truncate-end	4846	4846
-UN	128	.	TMV-plasmid-truncate-end	4850	5173
-UN	129	.	TMV-plasmid-truncate-end	5299	5299
-UN	130	.	TMV-plasmid-truncate-end	5303	5400
-UN	131	.	TMV-plasmid-truncate-end	5406	5406
-UN	132	.	TMV-plasmid-truncate-end	5483	5483
-UN	133	.	TMV-plasmid-truncate-end	5493	5493
-UN	134	.	TMV-plasmid-truncate-end	5509	5542
-UN	135	.	TMV-plasmid-truncate-end	5545	5551
-UN	136	.	TMV-plasmid-truncate-end	5557	5558
-UN	137	.	TMV-plasmid-truncate-end	5562	5562
-UN	138	.	TMV-plasmid-truncate-end	5564	5564
-UN	139	.	TMV-plasmid-truncate-end	5586	5586
-UN	140	.	TMV-plasmid-truncate-end	5595	5595
-UN	141	.	TMV-plasmid-truncate-end	5598	5598
-UN	142	.	TMV-plasmid-truncate-end	5625	5625
-UN	143	.	TMV-plasmid-truncate-end	5634	5634
-UN	144	.	TMV-plasmid-truncate-end	5643	5643
-UN	145	.	TMV-plasmid-truncate-end	5673	5673
-UN	146	.	TMV-plasmid-truncate-end	5677	5677
-UN	147	.	TMV-plasmid-truncate-end	5688	6662
-UN	148	.	TMV-plasmid-truncate-end	6800	6800
-UN	149	.	TMV-plasmid-truncate-end	6802	6802
-UN	150	.	TMV-plasmid-truncate-end	6804	6888
+RA	3	.	TMV-plasmid-truncate-end	5198	0	A	G	consensus_score=18.2	deleted=1	frequency=1	major_base=G	major_cov=3/3	major_frequency=1.000e+00	minor_base=N	minor_cov=0/0	new_cov=3/3	polymorphism_frequency=1.000e+00	polymorphism_score=NA	prediction=consensus	ref_cov=0/0	total_cov=3/3
+MC	4	.	TMV-plasmid-truncate-end	1	7137	0	0	gene_name=–/–	gene_position=intergenic (–/–)	gene_product=–/–	gene_strand=–/–	left_inside_cov=0	left_outside_cov=NA	locus_tag=–/–	right_inside_cov=41	right_outside_cov=853
+JC	5	.	TMV-plasmid-truncate-end	7033	1	TMV-plasmid-truncate-end	10204	-1	-49	alignment_overlap=-49	coverage_minus=19	coverage_plus=12	flanking_left=151	flanking_right=151	frequency=1	junction_possible_overlap_registers=98	key=TMV-plasmid-truncate-end__7033__1__TMV-plasmid-truncate-end__10204__-1__-49__CAACACCCGCTGACGCGCCCTGACGGGCTTGTCTGCTCCCGGCATCCGC__151__151__0__0	max_left=87	max_left_minus=86	max_left_plus=87	max_min_left=50	max_min_left_minus=33	max_min_left_plus=50	max_min_right=39	max_min_right_minus=34	max_min_right_plus=39	max_pos_hash_score=198	max_right=101	max_right_minus=101	max_right_plus=89	neg_log10_pos_hash_p_value=1.4	new_junction_coverage=0.17	new_junction_read_count=31	polymorphism_frequency=9.029e-01	pos_hash_score=20	prediction=consensus	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.04	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_overlap=0	side_1_possible_overlap_registers=147	side_1_read_count=10	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.00	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_overlap=0	side_2_possible_overlap_registers=147	side_2_read_count=0	side_2_redundant=0	total_non_overlap_reads=31	unique_read_sequence=CAACACCCGCTGACGCGCCCTGACGGGCTTGTCTGCTCCCGGCATCCGC
+JC	6	.	TMV-plasmid-truncate-end	7138	1	TMV-plasmid-truncate-end	10204	-1	0	alignment_overlap=0	coverage_minus=405	coverage_plus=395	flanking_left=151	flanking_right=151	frequency=1	junction_possible_overlap_registers=147	key=TMV-plasmid-truncate-end__7138__1__TMV-plasmid-truncate-end__10204__-1__0____151__151__0__0	max_left=150	max_left_minus=150	max_left_plus=150	max_min_left=75	max_min_left_minus=75	max_min_left_plus=74	max_min_right=75	max_min_right_minus=75	max_min_right_plus=75	max_pos_hash_score=296	max_right=149	max_right_minus=147	max_right_plus=149	neg_log10_pos_hash_p_value=-0.0	new_junction_coverage=3.02	new_junction_read_count=810	polymorphism_frequency=9.800e-01	pos_hash_score=214	prediction=consensus	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.12	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_overlap=0	side_1_possible_overlap_registers=147	side_1_read_count=33	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.00	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_overlap=0	side_2_possible_overlap_registers=147	side_2_read_count=0	side_2_redundant=0	total_non_overlap_reads=800
+JC	7	.	TMV-plasmid-truncate-end	7503	1	TMV-plasmid-truncate-end	8682	-1	0	alignment_overlap=1	coverage_minus=2	coverage_plus=1	flanking_left=151	flanking_right=151	frequency=3.793e-03	junction_possible_overlap_registers=146	key=TMV-plasmid-truncate-end__7503__1__TMV-plasmid-truncate-end__8683__-1__1____151__151__0__0	max_left=148	max_left_minus=148	max_left_plus=78	max_min_left=0	max_min_left_minus=0	max_min_left_plus=0	max_min_right=72	max_min_right_minus=72	max_min_right_plus=70	max_pos_hash_score=294	max_right=72	max_right_minus=72	max_right_plus=70	neg_log10_pos_hash_p_value=8.5	new_junction_coverage=0.01	new_junction_read_count=3	no_show=1	polymorphism_frequency=3.793e-03	pos_hash_score=3	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=3.35	side_1_overlap=1	side_1_possible_overlap_registers=147	side_1_read_count=898	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=2.57	side_2_overlap=0	side_2_possible_overlap_registers=146	side_2_read_count=684	side_2_redundant=0	total_non_overlap_reads=3
+JC	8	.	TMV-plasmid-truncate-end	7508	-1	TMV-plasmid-truncate-end	7607	1	0	alignment_overlap=0	coverage_minus=3	coverage_plus=1	flanking_left=151	flanking_right=151	frequency=4.452e-03	junction_possible_overlap_registers=147	key=TMV-plasmid-truncate-end__7508__-1__TMV-plasmid-truncate-end__7607__1__0____151__151__0__0	max_left=150	max_left_minus=150	max_left_plus=82	max_min_left=0	max_min_left_minus=0	max_min_left_plus=0	max_min_right=70	max_min_right_minus=55	max_min_right_plus=70	max_pos_hash_score=296	max_right=70	max_right_minus=55	max_right_plus=70	neg_log10_pos_hash_p_value=8.5	new_junction_coverage=0.01	new_junction_read_count=4	no_show=1	polymorphism_frequency=4.452e-03	pos_hash_score=3	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=3.34	side_1_overlap=0	side_1_possible_overlap_registers=147	side_1_read_count=896	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=3.33	side_2_overlap=0	side_2_possible_overlap_registers=147	side_2_read_count=893	side_2_redundant=0	total_non_overlap_reads=4
+JC	9	.	TMV-plasmid-truncate-end	7512	1	TMV-plasmid-truncate-end	8986	-1	0	alignment_overlap=0	coverage_minus=2	coverage_plus=1	flanking_left=151	flanking_right=151	frequency=3.752e-03	junction_possible_overlap_registers=147	key=TMV-plasmid-truncate-end__7512__1__TMV-plasmid-truncate-end__8986__-1__0____151__151__0__0	max_left=95	max_left_minus=95	max_left_plus=46	max_min_left=46	max_min_left_minus=0	max_min_left_plus=46	max_min_right=75	max_min_right_minus=75	max_min_right_plus=0	max_pos_hash_score=296	max_right=105	max_right_minus=75	max_right_plus=105	neg_log10_pos_hash_p_value=8.5	new_junction_coverage=0.01	new_junction_read_count=3	no_show=1	polymorphism_frequency=3.752e-03	pos_hash_score=3	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=3.35	side_1_overlap=0	side_1_possible_overlap_registers=147	side_1_read_count=898	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=2.59	side_2_overlap=0	side_2_possible_overlap_registers=147	side_2_read_count=695	side_2_redundant=0	total_non_overlap_reads=3
+JC	10	.	TMV-plasmid-truncate-end	7526	1	TMV-plasmid-truncate-end	7778	1	0	alignment_overlap=0	coverage_minus=2	coverage_plus=2	flanking_left=151	flanking_right=151	frequency=4.632e-03	junction_possible_overlap_registers=147	key=TMV-plasmid-truncate-end__7526__1__TMV-plasmid-truncate-end__7778__1__0____151__151__0__0	max_left=150	max_left_minus=150	max_left_plus=69	max_min_left=69	max_min_left_minus=0	max_min_left_plus=69	max_min_right=53	max_min_right_minus=53	max_min_right_plus=0	max_pos_hash_score=296	max_right=146	max_right_minus=53	max_right_plus=146	neg_log10_pos_hash_p_value=7.9	new_junction_coverage=0.01	new_junction_read_count=4	polymorphism_frequency=4.632e-03	pos_hash_score=4	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=3.26	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_overlap=0	side_1_possible_overlap_registers=147	side_1_read_count=873	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=3.16	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_overlap=0	side_2_possible_overlap_registers=147	side_2_read_count=846	side_2_redundant=0	total_non_overlap_reads=4
+JC	11	.	TMV-plasmid-truncate-end	7579	1	TMV-plasmid-truncate-end	9496	1	0	alignment_overlap=0	coverage_minus=1	coverage_plus=6	flanking_left=151	flanking_right=151	frequency=7.812e-03	junction_possible_overlap_registers=147	key=TMV-plasmid-truncate-end__7579__1__TMV-plasmid-truncate-end__9496__1__0____151__151__0__0	max_left=68	max_left_minus=68	max_left_plus=48	max_min_left=68	max_min_left_minus=68	max_min_left_plus=48	max_min_right=0	max_min_right_minus=0	max_min_right_plus=0	max_pos_hash_score=296	max_right=149	max_right_minus=82	max_right_plus=149	neg_log10_pos_hash_p_value=7.3	new_junction_coverage=0.03	new_junction_read_count=7	polymorphism_frequency=7.812e-03	pos_hash_score=5	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=3.19	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_overlap=0	side_1_possible_overlap_registers=147	side_1_read_count=856	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=3.44	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_overlap=0	side_2_possible_overlap_registers=147	side_2_read_count=922	side_2_redundant=0	total_non_overlap_reads=7
+JC	12	.	TMV-plasmid-truncate-end	7616	1	TMV-plasmid-truncate-end	8679	-1	0	alignment_overlap=2	coverage_minus=2	coverage_plus=2	flanking_left=151	flanking_right=151	frequency=6.249e-03	junction_possible_overlap_registers=145	key=TMV-plasmid-truncate-end__7616__1__TMV-plasmid-truncate-end__8681__-1__2____151__151__0__0	max_left=148	max_left_minus=148	max_left_plus=75	max_min_left=0	max_min_left_minus=0	max_min_left_plus=0	max_min_right=74	max_min_right_minus=54	max_min_right_plus=74	max_pos_hash_score=292	max_right=74	max_right_minus=54	max_right_plus=74	neg_log10_pos_hash_p_value=8.4	new_junction_coverage=0.02	new_junction_read_count=5	no_show=1	polymorphism_frequency=6.249e-03	pos_hash_score=3	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=3.46	side_1_overlap=2	side_1_possible_overlap_registers=147	side_1_read_count=928	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=2.55	side_2_overlap=0	side_2_possible_overlap_registers=145	side_2_read_count=675	side_2_redundant=0	total_non_overlap_reads=4
+JC	13	.	TMV-plasmid-truncate-end	7657	1	TMV-plasmid-truncate-end	9272	1	0	alignment_overlap=2	coverage_minus=2	coverage_plus=1	flanking_left=151	flanking_right=151	frequency=3.585e-03	junction_possible_overlap_registers=145	key=TMV-plasmid-truncate-end__7657__1__TMV-plasmid-truncate-end__9270__1__2____151__151__0__0	max_left=148	max_left_minus=148	max_left_plus=77	max_min_left=0	max_min_left_minus=0	max_min_left_plus=0	max_min_right=72	max_min_right_minus=54	max_min_right_plus=72	max_pos_hash_score=292	max_right=72	max_right_minus=54	max_right_plus=72	neg_log10_pos_hash_p_value=8.4	new_junction_coverage=0.01	new_junction_read_count=3	polymorphism_frequency=3.585e-03	pos_hash_score=3	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=3.33	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_overlap=2	side_1_possible_overlap_registers=147	side_1_read_count=892	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=2.98	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_overlap=0	side_2_possible_overlap_registers=145	side_2_read_count=788	side_2_redundant=0	total_non_overlap_reads=3
+JC	14	.	TMV-plasmid-truncate-end	7707	1	TMV-plasmid-truncate-end	8742	1	0	alignment_overlap=0	coverage_minus=4	coverage_plus=2	flanking_left=151	flanking_right=151	frequency=9.217e-03	junction_possible_overlap_registers=147	key=TMV-plasmid-truncate-end__7707__1__TMV-plasmid-truncate-end__8742__1__0____151__151__0__0	max_left=150	max_left_minus=150	max_left_plus=59	max_min_left=59	max_min_left_minus=0	max_min_left_plus=59	max_min_right=57	max_min_right_minus=57	max_min_right_plus=0	max_pos_hash_score=296	max_right=92	max_right_minus=57	max_right_plus=92	neg_log10_pos_hash_p_value=7.9	new_junction_coverage=0.03	new_junction_read_count=7	polymorphism_frequency=9.217e-03	pos_hash_score=4	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=3.21	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_overlap=0	side_1_possible_overlap_registers=147	side_1_read_count=860	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=2.41	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_overlap=0	side_2_possible_overlap_registers=147	side_2_read_count=645	side_2_redundant=0	total_non_overlap_reads=6
+JC	15	.	TMV-plasmid-truncate-end	7709	1	TMV-plasmid-truncate-end	9354	1	0	alignment_overlap=0	coverage_minus=2	coverage_plus=3	flanking_left=151	flanking_right=151	frequency=5.750e-03	junction_possible_overlap_registers=147	key=TMV-plasmid-truncate-end__7709__1__TMV-plasmid-truncate-end__9354__1__0____151__151__0__0	max_left=87	max_left_minus=87	max_left_plus=46	max_min_left=46	max_min_left_minus=0	max_min_left_plus=46	max_min_right=64	max_min_right_minus=64	max_min_right_plus=0	max_pos_hash_score=296	max_right=150	max_right_minus=64	max_right_plus=150	neg_log10_pos_hash_p_value=8.5	new_junction_coverage=0.02	new_junction_read_count=5	no_show=1	polymorphism_frequency=5.750e-03	pos_hash_score=3	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=3.30	side_1_overlap=0	side_1_possible_overlap_registers=147	side_1_read_count=883	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=3.16	side_2_overlap=0	side_2_possible_overlap_registers=147	side_2_read_count=846	side_2_redundant=0	total_non_overlap_reads=5
+JC	16	.	TMV-plasmid-truncate-end	7729	1	TMV-plasmid-truncate-end	9723	1	0	alignment_overlap=1	coverage_minus=3	coverage_plus=1	flanking_left=151	flanking_right=151	frequency=4.695e-03	junction_possible_overlap_registers=146	key=TMV-plasmid-truncate-end__7729__1__TMV-plasmid-truncate-end__9722__1__1____151__151__0__0	max_left=149	max_left_minus=149	max_left_plus=60	max_min_left=61	max_min_left_minus=61	max_min_left_plus=60	max_min_right=1	max_min_right_minus=1	max_min_right_plus=0	max_pos_hash_score=294	max_right=90	max_right_minus=89	max_right_plus=90	neg_log10_pos_hash_p_value=8.5	new_junction_coverage=0.02	new_junction_read_count=4	no_show=1	polymorphism_frequency=4.695e-03	pos_hash_score=3	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=3.33	side_1_overlap=1	side_1_possible_overlap_registers=147	side_1_read_count=893	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=3.04	side_2_overlap=0	side_2_possible_overlap_registers=146	side_2_read_count=809	side_2_redundant=0	total_non_overlap_reads=4
+JC	17	.	TMV-plasmid-truncate-end	7846	-1	TMV-plasmid-truncate-end	9812	1	0	alignment_overlap=0	coverage_minus=1	coverage_plus=2	flanking_left=151	flanking_right=151	frequency=3.503e-03	junction_possible_overlap_registers=147	key=TMV-plasmid-truncate-end__7846__-1__TMV-plasmid-truncate-end__9812__1__0____151__151__0__0	max_left=89	max_left_minus=89	max_left_plus=36	max_min_left=36	max_min_left_minus=0	max_min_left_plus=36	max_min_right=62	max_min_right_minus=62	max_min_right_plus=0	max_pos_hash_score=296	max_right=150	max_right_minus=62	max_right_plus=150	neg_log10_pos_hash_p_value=8.5	new_junction_coverage=0.01	new_junction_read_count=3	no_show=1	polymorphism_frequency=3.503e-03	pos_hash_score=3	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=3.22	side_1_overlap=0	side_1_possible_overlap_registers=147	side_1_read_count=864	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=3.15	side_2_overlap=0	side_2_possible_overlap_registers=147	side_2_read_count=843	side_2_redundant=0	total_non_overlap_reads=3
+JC	18	.	TMV-plasmid-truncate-end	7847	1	TMV-plasmid-truncate-end	8069	-1	0	alignment_overlap=0	coverage_minus=1	coverage_plus=3	flanking_left=151	flanking_right=151	frequency=4.944e-03	junction_possible_overlap_registers=147	key=TMV-plasmid-truncate-end__7847__1__TMV-plasmid-truncate-end__8069__-1__0____151__151__0__0	max_left=109	max_left_minus=109	max_left_plus=51	max_min_left=51	max_min_left_minus=0	max_min_left_plus=51	max_min_right=42	max_min_right_minus=42	max_min_right_plus=0	max_pos_hash_score=296	max_right=150	max_right_minus=42	max_right_plus=150	neg_log10_pos_hash_p_value=8.5	new_junction_coverage=0.01	new_junction_read_count=4	no_show=1	polymorphism_frequency=4.944e-03	pos_hash_score=3	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=3.22	side_1_overlap=0	side_1_possible_overlap_registers=147	side_1_read_count=864	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=2.78	side_2_overlap=0	side_2_possible_overlap_registers=147	side_2_read_count=746	side_2_redundant=0	total_non_overlap_reads=4
+JC	19	.	TMV-plasmid-truncate-end	7958	1	TMV-plasmid-truncate-end	8183	-1	0	alignment_overlap=0	coverage_minus=1	coverage_plus=2	flanking_left=151	flanking_right=151	frequency=4.360e-03	junction_possible_overlap_registers=147	key=TMV-plasmid-truncate-end__7958__1__TMV-plasmid-truncate-end__8183__-1__0____151__151__0__0	max_left=65	max_left_minus=65	max_left_plus=39	max_min_left=65	max_min_left_minus=65	max_min_left_plus=39	max_min_right=0	max_min_right_minus=0	max_min_right_plus=0	max_pos_hash_score=296	max_right=149	max_right_minus=85	max_right_plus=149	neg_log10_pos_hash_p_value=8.5	new_junction_coverage=0.01	new_junction_read_count=3	no_show=1	polymorphism_frequency=4.360e-03	pos_hash_score=3	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=2.56	side_1_overlap=0	side_1_possible_overlap_registers=147	side_1_read_count=687	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=2.55	side_2_overlap=0	side_2_possible_overlap_registers=147	side_2_read_count=683	side_2_redundant=0	total_non_overlap_reads=3
+JC	20	.	TMV-plasmid-truncate-end	8013	1	TMV-plasmid-truncate-end	8947	-1	0	alignment_overlap=7	coverage_minus=2	coverage_plus=2	flanking_left=151	flanking_right=151	frequency=6.458e-03	junction_possible_overlap_registers=140	key=TMV-plasmid-truncate-end__8013__1__TMV-plasmid-truncate-end__8954__-1__7____151__151__0__0	max_left=143	max_left_minus=143	max_left_plus=43	max_min_left=43	max_min_left_minus=0	max_min_left_plus=43	max_min_right=50	max_min_right_minus=50	max_min_right_plus=0	max_pos_hash_score=282	max_right=141	max_right_minus=50	max_right_plus=141	neg_log10_pos_hash_p_value=7.6	new_junction_coverage=0.02	new_junction_read_count=4	polymorphism_frequency=6.458e-03	pos_hash_score=4	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=2.60	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_overlap=7	side_1_possible_overlap_registers=147	side_1_read_count=697	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=2.22	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_overlap=0	side_2_possible_overlap_registers=140	side_2_read_count=567	side_2_redundant=0	total_non_overlap_reads=4
+JC	21	.	TMV-plasmid-truncate-end	8112	-1	TMV-plasmid-truncate-end	9262	1	0	alignment_overlap=3	coverage_minus=2	coverage_plus=4	flanking_left=151	flanking_right=151	frequency=7.595e-03	junction_possible_overlap_registers=144	key=TMV-plasmid-truncate-end__8112__-1__TMV-plasmid-truncate-end__9259__1__3____151__151__0__0	max_left=101	max_left_minus=101	max_left_plus=86	max_min_left=1	max_min_left_minus=0	max_min_left_plus=1	max_min_right=61	max_min_right_minus=47	max_min_right_plus=61	max_pos_hash_score=290	max_right=147	max_right_minus=47	max_right_plus=147	neg_log10_pos_hash_p_value=8.4	new_junction_coverage=0.02	new_junction_read_count=6	polymorphism_frequency=7.595e-03	pos_hash_score=3	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=2.92	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_overlap=3	side_1_possible_overlap_registers=147	side_1_read_count=782	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=3.06	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_overlap=0	side_2_possible_overlap_registers=144	side_2_read_count=802	side_2_redundant=0	total_non_overlap_reads=6
+JC	22	.	TMV-plasmid-truncate-end	8127	1	TMV-plasmid-truncate-end	9785	-1	0	alignment_overlap=1	coverage_minus=2	coverage_plus=1	flanking_left=151	flanking_right=151	frequency=3.950e-03	junction_possible_overlap_registers=146	key=TMV-plasmid-truncate-end__8127__1__TMV-plasmid-truncate-end__9786__-1__1____151__151__0__0	max_left=149	max_left_minus=149	max_left_plus=101	max_min_left=0	max_min_left_minus=0	max_min_left_plus=0	max_min_right=49	max_min_right_minus=46	max_min_right_plus=49	max_pos_hash_score=294	max_right=49	max_right_minus=46	max_right_plus=49	neg_log10_pos_hash_p_value=8.5	new_junction_coverage=0.01	new_junction_read_count=3	no_show=1	polymorphism_frequency=3.950e-03	pos_hash_score=3	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=2.77	side_1_overlap=1	side_1_possible_overlap_registers=147	side_1_read_count=743	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=2.91	side_2_overlap=0	side_2_possible_overlap_registers=146	side_2_read_count=775	side_2_redundant=0	total_non_overlap_reads=3
+JC	23	.	TMV-plasmid-truncate-end	8626	1	TMV-plasmid-truncate-end	8784	1	0	alignment_overlap=0	coverage_minus=1	coverage_plus=2	flanking_left=151	flanking_right=151	frequency=4.781e-03	junction_possible_overlap_registers=147	key=TMV-plasmid-truncate-end__8626__1__TMV-plasmid-truncate-end__8784__1__0____151__151__0__0	max_left=102	max_left_minus=102	max_left_plus=102	max_min_left=1	max_min_left_minus=0	max_min_left_plus=1	max_min_right=46	max_min_right_minus=41	max_min_right_plus=46	max_pos_hash_score=296	max_right=150	max_right_minus=41	max_right_plus=150	neg_log10_pos_hash_p_value=8.5	new_junction_coverage=0.01	new_junction_read_count=3	no_show=1	polymorphism_frequency=4.781e-03	pos_hash_score=3	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=2.38	side_1_overlap=0	side_1_possible_overlap_registers=147	side_1_read_count=639	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=2.28	side_2_overlap=0	side_2_possible_overlap_registers=147	side_2_read_count=610	side_2_redundant=0	total_non_overlap_reads=3
+JC	24	.	TMV-plasmid-truncate-end	8658	1	TMV-plasmid-truncate-end	9800	1	0	alignment_overlap=2	coverage_minus=1	coverage_plus=2	flanking_left=151	flanking_right=151	frequency=4.104e-03	junction_possible_overlap_registers=145	key=TMV-plasmid-truncate-end__8658__1__TMV-plasmid-truncate-end__9798__1__2____151__151__0__0	max_left=89	max_left_minus=89	max_left_plus=35	max_min_left=35	max_min_left_minus=0	max_min_left_plus=35	max_min_right=60	max_min_right_minus=60	max_min_right_plus=0	max_pos_hash_score=292	max_right=143	max_right_minus=60	max_right_plus=143	neg_log10_pos_hash_p_value=8.4	new_junction_coverage=0.01	new_junction_read_count=3	polymorphism_frequency=4.104e-03	pos_hash_score=3	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=2.48	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_overlap=2	side_1_possible_overlap_registers=147	side_1_read_count=664	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=3.03	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_overlap=0	side_2_possible_overlap_registers=145	side_2_read_count=801	side_2_redundant=0	total_non_overlap_reads=3
+JC	25	.	TMV-plasmid-truncate-end	8694	1	TMV-plasmid-truncate-end	9377	1	0	alignment_overlap=1	coverage_minus=1	coverage_plus=3	flanking_left=151	flanking_right=151	frequency=5.197e-03	junction_possible_overlap_registers=146	key=TMV-plasmid-truncate-end__8694__1__TMV-plasmid-truncate-end__9376__1__1____151__151__0__0	max_left=60	max_left_minus=60	max_left_plus=53	max_min_left=60	max_min_left_minus=60	max_min_left_plus=53	max_min_right=0	max_min_right_minus=0	max_min_right_plus=0	max_pos_hash_score=294	max_right=149	max_right_minus=90	max_right_plus=149	neg_log10_pos_hash_p_value=8.5	new_junction_coverage=0.02	new_junction_read_count=4	no_show=1	polymorphism_frequency=5.197e-03	pos_hash_score=3	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=2.52	side_1_overlap=1	side_1_possible_overlap_registers=147	side_1_read_count=675	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=3.24	side_2_overlap=0	side_2_possible_overlap_registers=146	side_2_read_count=861	side_2_redundant=0	total_non_overlap_reads=4
+JC	26	.	TMV-plasmid-truncate-end	8991	1	TMV-plasmid-truncate-end	9092	-1	0	alignment_overlap=0	coverage_minus=2	coverage_plus=1	flanking_left=151	flanking_right=151	frequency=3.856e-03	junction_possible_overlap_registers=147	key=TMV-plasmid-truncate-end__8991__1__TMV-plasmid-truncate-end__9092__-1__0____151__151__0__0	max_left=148	max_left_minus=148	max_left_plus=77	max_min_left=0	max_min_left_minus=0	max_min_left_plus=0	max_min_right=73	max_min_right_minus=54	max_min_right_plus=73	max_pos_hash_score=296	max_right=73	max_right_minus=54	max_right_plus=73	neg_log10_pos_hash_p_value=8.5	new_junction_coverage=0.01	new_junction_read_count=3	no_show=1	polymorphism_frequency=3.856e-03	pos_hash_score=3	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=2.68	side_1_overlap=0	side_1_possible_overlap_registers=147	side_1_read_count=717	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=3.11	side_2_overlap=0	side_2_possible_overlap_registers=147	side_2_read_count=833	side_2_redundant=0	total_non_overlap_reads=3
+JC	27	.	TMV-plasmid-truncate-end	9280	-1	TMV-plasmid-truncate-end	9388	1	0	alignment_overlap=0	coverage_minus=3	coverage_plus=2	flanking_left=151	flanking_right=151	frequency=5.893e-03	junction_possible_overlap_registers=147	key=TMV-plasmid-truncate-end__9280__-1__TMV-plasmid-truncate-end__9388__1__0____151__151__0__0	max_left=146	max_left_minus=146	max_left_plus=37	max_min_left=37	max_min_left_minus=0	max_min_left_plus=37	max_min_right=57	max_min_right_minus=57	max_min_right_plus=0	max_pos_hash_score=296	max_right=113	max_right_minus=57	max_right_plus=113	neg_log10_pos_hash_p_value=8.5	new_junction_coverage=0.02	new_junction_read_count=5	no_show=1	polymorphism_frequency=5.893e-03	pos_hash_score=3	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=2.95	side_1_overlap=0	side_1_possible_overlap_registers=147	side_1_read_count=791	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=3.34	side_2_overlap=0	side_2_possible_overlap_registers=147	side_2_read_count=896	side_2_redundant=0	total_non_overlap_reads=5
+JC	28	.	TMV-plasmid-truncate-end	9443	1	TMV-plasmid-truncate-end	9519	1	0	alignment_overlap=8	coverage_minus=1	coverage_plus=4	flanking_left=151	flanking_right=151	frequency=6.759e-03	junction_possible_overlap_registers=139	key=TMV-plasmid-truncate-end__9443__1__TMV-plasmid-truncate-end__9511__1__8____151__151__0__0	max_left=83	max_left_minus=71	max_left_plus=83	max_min_left=71	max_min_left_minus=71	max_min_left_plus=61	max_min_right=56	max_min_right_minus=0	max_min_right_plus=56	max_pos_hash_score=280	max_right=140	max_right_minus=72	max_right_plus=140	neg_log10_pos_hash_p_value=7.0	new_junction_coverage=0.02	new_junction_read_count=6	polymorphism_frequency=6.759e-03	pos_hash_score=5	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=3.40	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_overlap=8	side_1_possible_overlap_registers=147	side_1_read_count=911	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=3.56	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_overlap=0	side_2_possible_overlap_registers=139	side_2_read_count=902	side_2_redundant=0	total_non_overlap_reads=5
+JC	29	.	TMV-plasmid-truncate-end	9544	-1	TMV-plasmid-truncate-end	9840	1	0	alignment_overlap=3	coverage_minus=2	coverage_plus=1	flanking_left=151	flanking_right=151	frequency=3.268e-03	junction_possible_overlap_registers=144	key=TMV-plasmid-truncate-end__9544__-1__TMV-plasmid-truncate-end__9837__1__3____151__151__0__0	max_left=84	max_left_minus=84	max_left_plus=43	max_min_left=51	max_min_left_minus=51	max_min_left_plus=43	max_min_right=71	max_min_right_minus=71	max_min_right_plus=0	max_pos_hash_score=290	max_right=105	max_right_minus=97	max_right_plus=105	neg_log10_pos_hash_p_value=8.4	new_junction_coverage=0.01	new_junction_read_count=3	polymorphism_frequency=3.268e-03	pos_hash_score=3	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=3.70	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_overlap=3	side_1_possible_overlap_registers=147	side_1_read_count=992	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=3.27	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_overlap=0	side_2_possible_overlap_registers=144	side_2_read_count=858	side_2_redundant=0	total_non_overlap_reads=3
+JC	30	.	TMV-plasmid-truncate-end	9676	1	TMV-plasmid-truncate-end	9753	1	0	alignment_overlap=2	coverage_minus=2	coverage_plus=1	flanking_left=151	flanking_right=151	frequency=3.734e-03	junction_possible_overlap_registers=145	key=TMV-plasmid-truncate-end__9676__1__TMV-plasmid-truncate-end__9751__1__2____151__151__0__0	max_left=148	max_left_minus=148	max_left_plus=65	max_min_left=65	max_min_left_minus=0	max_min_left_plus=65	max_min_right=61	max_min_right_minus=61	max_min_right_plus=0	max_pos_hash_score=292	max_right=84	max_right_minus=61	max_right_plus=84	neg_log10_pos_hash_p_value=8.4	new_junction_coverage=0.01	new_junction_read_count=3	polymorphism_frequency=3.734e-03	pos_hash_score=3	prediction=polymorphism	reject=COVERAGE_EVENNESS_SKEW,FREQUENCY_CUTOFF	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=3.05	side_1_gene_name=–/–	side_1_gene_position=intergenic (–/–)	side_1_gene_product=–/–	side_1_gene_strand=–/–	side_1_locus_tag=–/–	side_1_overlap=2	side_1_possible_overlap_registers=147	side_1_read_count=817	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=3.01	side_2_gene_name=–/–	side_2_gene_position=intergenic (–/–)	side_2_gene_product=–/–	side_2_gene_strand=–/–	side_2_locus_tag=–/–	side_2_overlap=0	side_2_possible_overlap_registers=145	side_2_read_count=795	side_2_redundant=0	total_non_overlap_reads=3
+UN	31	.	TMV-plasmid-truncate-end	1	185
+UN	32	.	TMV-plasmid-truncate-end	191	191
+UN	33	.	TMV-plasmid-truncate-end	204	204
+UN	34	.	TMV-plasmid-truncate-end	210	211
+UN	35	.	TMV-plasmid-truncate-end	213	213
+UN	36	.	TMV-plasmid-truncate-end	217	217
+UN	37	.	TMV-plasmid-truncate-end	219	219
+UN	38	.	TMV-plasmid-truncate-end	231	231
+UN	39	.	TMV-plasmid-truncate-end	238	238
+UN	40	.	TMV-plasmid-truncate-end	241	241
+UN	41	.	TMV-plasmid-truncate-end	268	268
+UN	42	.	TMV-plasmid-truncate-end	274	274
+UN	43	.	TMV-plasmid-truncate-end	283	283
+UN	44	.	TMV-plasmid-truncate-end	294	294
+UN	45	.	TMV-plasmid-truncate-end	298	298
+UN	46	.	TMV-plasmid-truncate-end	301	301
+UN	47	.	TMV-plasmid-truncate-end	304	304
+UN	48	.	TMV-plasmid-truncate-end	306	772
+UN	49	.	TMV-plasmid-truncate-end	779	1544
+UN	50	.	TMV-plasmid-truncate-end	1564	1564
+UN	51	.	TMV-plasmid-truncate-end	1566	1567
+UN	52	.	TMV-plasmid-truncate-end	1569	1571
+UN	53	.	TMV-plasmid-truncate-end	1576	1576
+UN	54	.	TMV-plasmid-truncate-end	1579	1579
+UN	55	.	TMV-plasmid-truncate-end	1582	1583
+UN	56	.	TMV-plasmid-truncate-end	1586	1586
+UN	57	.	TMV-plasmid-truncate-end	1590	1592
+UN	58	.	TMV-plasmid-truncate-end	1598	1598
+UN	59	.	TMV-plasmid-truncate-end	1600	1754
+UN	60	.	TMV-plasmid-truncate-end	1764	1764
+UN	61	.	TMV-plasmid-truncate-end	1774	1774
+UN	62	.	TMV-plasmid-truncate-end	1777	1777
+UN	63	.	TMV-plasmid-truncate-end	1779	1779
+UN	64	.	TMV-plasmid-truncate-end	1781	1781
+UN	65	.	TMV-plasmid-truncate-end	1785	1785
+UN	66	.	TMV-plasmid-truncate-end	1958	1958
+UN	67	.	TMV-plasmid-truncate-end	1964	1964
+UN	68	.	TMV-plasmid-truncate-end	1969	2427
+UN	69	.	TMV-plasmid-truncate-end	2430	2430
+UN	70	.	TMV-plasmid-truncate-end	2435	2435
+UN	71	.	TMV-plasmid-truncate-end	2441	2441
+UN	72	.	TMV-plasmid-truncate-end	2540	2540
+UN	73	.	TMV-plasmid-truncate-end	2547	2548
+UN	74	.	TMV-plasmid-truncate-end	2552	2552
+UN	75	.	TMV-plasmid-truncate-end	2563	2563
+UN	76	.	TMV-plasmid-truncate-end	2570	2879
+UN	77	.	TMV-plasmid-truncate-end	2882	2882
+UN	78	.	TMV-plasmid-truncate-end	2888	2888
+UN	79	.	TMV-plasmid-truncate-end	2935	2936
+UN	80	.	TMV-plasmid-truncate-end	2938	2938
+UN	81	.	TMV-plasmid-truncate-end	2944	2944
+UN	82	.	TMV-plasmid-truncate-end	2952	2956
+UN	83	.	TMV-plasmid-truncate-end	2989	2989
+UN	84	.	TMV-plasmid-truncate-end	3024	3031
+UN	85	.	TMV-plasmid-truncate-end	3037	3037
+UN	86	.	TMV-plasmid-truncate-end	3044	3044
+UN	87	.	TMV-plasmid-truncate-end	3056	3056
+UN	88	.	TMV-plasmid-truncate-end	3062	3062
+UN	89	.	TMV-plasmid-truncate-end	3070	3070
+UN	90	.	TMV-plasmid-truncate-end	3072	3072
+UN	91	.	TMV-plasmid-truncate-end	3076	3076
+UN	92	.	TMV-plasmid-truncate-end	3109	3109
+UN	93	.	TMV-plasmid-truncate-end	3181	3181
+UN	94	.	TMV-plasmid-truncate-end	3183	3189
+UN	95	.	TMV-plasmid-truncate-end	3194	3195
+UN	96	.	TMV-plasmid-truncate-end	3199	3199
+UN	97	.	TMV-plasmid-truncate-end	3202	3202
+UN	98	.	TMV-plasmid-truncate-end	3204	3204
+UN	99	.	TMV-plasmid-truncate-end	3206	3206
+UN	100	.	TMV-plasmid-truncate-end	3213	3214
+UN	101	.	TMV-plasmid-truncate-end	3216	3216
+UN	102	.	TMV-plasmid-truncate-end	3218	3219
+UN	103	.	TMV-plasmid-truncate-end	3222	3222
+UN	104	.	TMV-plasmid-truncate-end	3224	3225
+UN	105	.	TMV-plasmid-truncate-end	3228	3229
+UN	106	.	TMV-plasmid-truncate-end	3235	3235
+UN	107	.	TMV-plasmid-truncate-end	3239	3292
+UN	108	.	TMV-plasmid-truncate-end	3298	3322
+UN	109	.	TMV-plasmid-truncate-end	3408	3408
+UN	110	.	TMV-plasmid-truncate-end	3416	3416
+UN	111	.	TMV-plasmid-truncate-end	3438	3576
+UN	112	.	TMV-plasmid-truncate-end	3582	3582
+UN	113	.	TMV-plasmid-truncate-end	3739	3739
+UN	114	.	TMV-plasmid-truncate-end	3758	3758
+UN	115	.	TMV-plasmid-truncate-end	3763	3802
+UN	116	.	TMV-plasmid-truncate-end	3837	3837
+UN	117	.	TMV-plasmid-truncate-end	3842	3842
+UN	118	.	TMV-plasmid-truncate-end	3846	3846
+UN	119	.	TMV-plasmid-truncate-end	3864	3864
+UN	120	.	TMV-plasmid-truncate-end	3866	3877
+UN	121	.	TMV-plasmid-truncate-end	3879	3883
+UN	122	.	TMV-plasmid-truncate-end	3887	3887
+UN	123	.	TMV-plasmid-truncate-end	3891	3892
+UN	124	.	TMV-plasmid-truncate-end	3894	3894
+UN	125	.	TMV-plasmid-truncate-end	3896	3896
+UN	126	.	TMV-plasmid-truncate-end	3900	3900
+UN	127	.	TMV-plasmid-truncate-end	3903	3904
+UN	128	.	TMV-plasmid-truncate-end	3906	3907
+UN	129	.	TMV-plasmid-truncate-end	3909	3913
+UN	130	.	TMV-plasmid-truncate-end	3915	3915
+UN	131	.	TMV-plasmid-truncate-end	3917	3921
+UN	132	.	TMV-plasmid-truncate-end	3926	3927
+UN	133	.	TMV-plasmid-truncate-end	3929	3930
+UN	134	.	TMV-plasmid-truncate-end	3932	3932
+UN	135	.	TMV-plasmid-truncate-end	3934	3934
+UN	136	.	TMV-plasmid-truncate-end	3937	3938
+UN	137	.	TMV-plasmid-truncate-end	3940	4236
+UN	138	.	TMV-plasmid-truncate-end	4239	4241
+UN	139	.	TMV-plasmid-truncate-end	4391	4391
+UN	140	.	TMV-plasmid-truncate-end	4393	4393
+UN	141	.	TMV-plasmid-truncate-end	4395	4395
+UN	142	.	TMV-plasmid-truncate-end	4397	4398
+UN	143	.	TMV-plasmid-truncate-end	4401	4401
+UN	144	.	TMV-plasmid-truncate-end	4403	4407
+UN	145	.	TMV-plasmid-truncate-end	4409	4409
+UN	146	.	TMV-plasmid-truncate-end	4416	4416
+UN	147	.	TMV-plasmid-truncate-end	4418	4432
+UN	148	.	TMV-plasmid-truncate-end	4434	4434
+UN	149	.	TMV-plasmid-truncate-end	4436	4682
+UN	150	.	TMV-plasmid-truncate-end	4686	4686
+UN	151	.	TMV-plasmid-truncate-end	4831	4831
+UN	152	.	TMV-plasmid-truncate-end	4846	4846
+UN	153	.	TMV-plasmid-truncate-end	4850	5173
+UN	154	.	TMV-plasmid-truncate-end	5299	5299
+UN	155	.	TMV-plasmid-truncate-end	5303	5400
+UN	156	.	TMV-plasmid-truncate-end	5406	5406
+UN	157	.	TMV-plasmid-truncate-end	5483	5483
+UN	158	.	TMV-plasmid-truncate-end	5493	5493
+UN	159	.	TMV-plasmid-truncate-end	5509	5542
+UN	160	.	TMV-plasmid-truncate-end	5545	5551
+UN	161	.	TMV-plasmid-truncate-end	5557	5558
+UN	162	.	TMV-plasmid-truncate-end	5562	5562
+UN	163	.	TMV-plasmid-truncate-end	5564	5564
+UN	164	.	TMV-plasmid-truncate-end	5586	5586
+UN	165	.	TMV-plasmid-truncate-end	5595	5595
+UN	166	.	TMV-plasmid-truncate-end	5598	5598
+UN	167	.	TMV-plasmid-truncate-end	5625	5625
+UN	168	.	TMV-plasmid-truncate-end	5634	5634
+UN	169	.	TMV-plasmid-truncate-end	5643	5643
+UN	170	.	TMV-plasmid-truncate-end	5673	5673
+UN	171	.	TMV-plasmid-truncate-end	5677	5677
+UN	172	.	TMV-plasmid-truncate-end	5688	6662
+UN	173	.	TMV-plasmid-truncate-end	6800	6800
+UN	174	.	TMV-plasmid-truncate-end	6802	6802
+UN	175	.	TMV-plasmid-truncate-end	6804	6888

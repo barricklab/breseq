@@ -20,7 +20,7 @@ LICENSE AND COPYRIGHT
 #define _BRESEQ_IDENTIFY_MUTATIONS_H_
 
 #include "common.h"
-#include "chisquare.h"
+#include "stats.h"
 #include "error_count.h"
 #include "genome_diff.h"
 #include "pileup_base.h"

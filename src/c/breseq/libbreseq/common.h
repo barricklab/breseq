@@ -45,6 +45,7 @@ LICENSE AND COPYRIGHT
 
 #include <cxxabi.h>
 #include <dlfcn.h>
+#include <unistd.h>
 
 // C++
 // Containers
@@ -351,7 +352,79 @@ namespace breseq {
     struct stat buffer;
     return (stat(dirname, &buffer) == 0);
   }
-  
+
+  // Terminal capability detection and in-place progress-line printing.
+  // stderr_is_terminal() and terminal_color_enabled() are cached via
+  // function-local statics (construct-on-first-use), since this project
+  // builds with -std=c++11 and so can't use C++17 inline variables for
+  // shared state across translation units.
+  inline bool stderr_is_terminal()
+  {
+    static const bool is_tty = (isatty(STDERR_FILENO) != 0);
+    return is_tty;
+  }
+
+  inline bool terminal_color_enabled()
+  {
+    static const bool enabled = stderr_is_terminal() && !getenv("NO_COLOR");
+    return enabled;
+  }
+
+  inline string color_yellow(const string& message)
+  {
+    if (!terminal_color_enabled()) return message;
+    return "\033[33m" + message + "\033[0m";
+  }
+
+  inline string color_green(const string& message)
+  {
+    if (!terminal_color_enabled()) return message;
+    return "\033[32m" + message + "\033[0m";
+  }
+
+  inline string color_red(const string& message)
+  {
+    if (!terminal_color_enabled()) return message;
+    return "\033[31m" + message + "\033[0m";
+  }
+
+  inline string color_cyan(const string& message)
+  {
+    if (!terminal_color_enabled()) return message;
+    return "\033[96m" + message + "\033[0m";
+  }
+
+  // Tracks whether the last thing written to cerr was an in-place progress
+  // line (no trailing newline), so callers can cleanly end it before
+  // printing anything else. Function-local static + reference return gives
+  // a single process-wide instance under C++11.
+  inline bool& progress_line_is_active()
+  {
+    static bool active = false;
+    return active;
+  }
+
+  inline void end_progress_line()
+  {
+    if (progress_line_is_active()) {
+      cerr << endl;
+      progress_line_is_active() = false;
+    }
+  }
+
+  // Print a progress update. On an interactive terminal, this overwrites
+  // the previous update in place; otherwise (e.g. redirected to a log
+  // file) it falls back to one line per update, identical to before.
+  inline void print_progress_line(const string& message)
+  {
+    if (stderr_is_terminal()) {
+      cerr << "\r\033[K" << color_cyan(message);
+      progress_line_is_active() = true;
+    } else {
+      cerr << message << endl;
+    }
+  }
+
   inline bool file_is_gzipped(const char * filename)
   {
     ifstream in(filename, ios::binary);
@@ -1388,7 +1461,46 @@ inline int SYSTEM(string command, bool silent = false, bool ignore_errors = fals
   }
   return return_value;
 }
-  
+
+//! Writes a gnuplot script to a temp file and runs it via SYSTEM(), getting
+//! the same fail-loud (ASSERT on nonzero exit) behavior for free: gnuplot,
+//! given a script as a file argument, exits nonzero on a script error.
+inline void run_gnuplot_script(const string& script_text, const string& script_file_name, const string& log_file_name)
+{
+  ofstream script_file(script_file_name.c_str());
+  script_file << script_text;
+  script_file.close();
+
+  string command = "gnuplot " + double_quote(script_file_name) + " > " + double_quote(log_file_name) + " 2>&1";
+  SYSTEM(command, false, false, false);
+
+  remove(script_file_name.c_str());
+}
+
+//! Injects a CSS rule into a gnuplot-generated SVG file so it scales to fill
+//! its container width (preserving aspect ratio) instead of displaying at its
+//! native pixel size -- both when opened directly in a browser and when
+//! embedded via <img>. CSS width/height properties take precedence over the
+//! SVG's own width/height presentation attributes, so this works without
+//! needing to change how gnuplot sizes the canvas.
+inline void make_svg_responsive(const string& svg_file_name, uint32_t max_width_px = 1200)
+{
+  ifstream in(svg_file_name.c_str());
+  if (!in.good()) return;
+  stringstream buffer;
+  buffer << in.rdbuf();
+  in.close();
+  string content = buffer.str();
+
+  size_t pos = content.find("<title>Gnuplot</title>");
+  if (pos == string::npos) return;
+  content.insert(pos, "<style>:root{width:100%;max-width:" + to_string(max_width_px)
+                       + "px;height:auto;display:block;margin:0 auto;}</style>\n");
+
+  ofstream out(svg_file_name.c_str());
+  out << content;
+}
+
 inline string remove_file(string path, bool silent = false, bool ignore_errors = false)
 {
   //remove(path.c_str()); // @JEB this does not work with wildcards

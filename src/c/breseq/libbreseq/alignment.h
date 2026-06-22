@@ -558,7 +558,7 @@ protected:
 class bam_file {
   
 public:
-  bam_file() : m_bam_file(NULL) {}
+  bam_file() : bam_header(NULL), m_bam_file(NULL) {}
   bam_file(const string& bam_file_name, const string& fasta_file_name, ios_base::openmode mode);
   ~bam_file();
   

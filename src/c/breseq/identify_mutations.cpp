@@ -1151,14 +1151,9 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       }
       mut[POLYMORPHISM_FREQUENCY] = formatted_double(variant_frequency, _polymorphism_precision_places, true).to_string();
 
-      
-      // Add line to R input file if we are only a polymorphism
-      
-      // @JEB TO_DO: deprecate going to R here
-      // and in the main PIPELINE. We can now do
-      // Fisher's exact test in C++ and the KS
-      // test is probably not necessary
-      
+
+      // Add line to the polymorphism statistics input file if we are only a polymorphism
+
       if (ppred.frequency != 1) {
         mut[POLYMORPHISM_EXISTS] = "1";
         write_polymorphism_input_file_line(p, insert_count, ref_base_char, best_base_char, second_best_base_char, ppred, pos_info, pdata );
@@ -1310,7 +1305,7 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
 		_coverage_data << "unique_top_cov" << "\t" << "unique_bot_cov" << "\t" << "redundant_top_cov" << "\t" << "redundant_bot_cov" << "\t" << "raw_redundant_top_cov" << "\t" << "raw_redundant_bot_cov" << "\t" << "e_value" << "\t" << "position" << endl;
 	}	
   
-  // Polymorphism file used as input to R
+  // Polymorphism statistics input file (quality/strand data per candidate polymorphism)
   // Only one file for all reference sequences
   if((_settings.polymorphism_prediction || _settings.mixed_base_prediction) && !_polymorphism_r_input_file.is_open()) {
 		string filename = _settings.polymorphism_statistics_input_file_name;

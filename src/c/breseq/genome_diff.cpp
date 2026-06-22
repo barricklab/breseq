@@ -3110,54 +3110,55 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
           ASSERT(size > 0, "Attempt to apply mutation with non-positive size.");
         }
         
-        uint32_t replace_target_id, replace_start, replace_end;
-        new_ref_seq_info.parse_region(mut["region"], replace_target_id, replace_start, replace_end);
-        ASSERT(replace_start != replace_end, "Cannot process 1-bp CON/INT mutation with end == start. Expand the substituted region. ID:" + mut._id);
-        
-        int8_t strand = (replace_start < replace_end) ?  +1 : -1;
-        
+        uint32_t donor_target_id, donor_start, donor_end;
+        new_ref_seq_info.parse_region(mut["region"], donor_target_id, donor_start, donor_end);
+        ASSERT(donor_start != donor_end, "Cannot process 1-bp CON/INT mutation with end == start. Expand the substituted region. ID:" + mut._id);
+
+        int8_t strand = (donor_start < donor_end) ?  +1 : -1;
+
         if (strand == -1) {
-          swap(replace_start, replace_end);
+          swap(donor_start, donor_end);
         }
-        
+
         // @JEB: correct here to look for where the replacing_sequence is in the **original** ref_seq_info.
         // This saves us from possible looking at a shifted location...
-        string replacing_sequence = ref_seq_info[replace_target_id].get_sequence_1(replace_start, replace_end);
-        
+        string replacing_sequence = ref_seq_info[donor_target_id].get_sequence_1(donor_start, donor_end);
+
         if (strand == -1) {
           replacing_sequence = reverse_complement(replacing_sequence);
         }
-        
+
+        // Set up attributes -- must capture the target-side bases here, before
+        // they are overwritten below, so "Replacing:" reflects what was there.
+        replace_seq_id = mut[SEQ_ID];
+        replace_start = position - 1;
+        replace_end = position - 1 + size;
+        replace_seq = (size>0) ? new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end) : " ";
+        replace_seq.insert(0,"(");
+        replace_seq.insert(2,")");
+
         if (size > 0) {
           new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, replacing_sequence, (to_string(mut._type) + " " + mut._id));
         } else {
           new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position, replacing_sequence, (to_string(mut._type) + " " + mut._id));
         }
         // INT's get special treatment => we copy over the gene annotations!
-                
+
         if (mut._type == INT) {
           // @JEB: correct here to look for where the replacing_sequence is in the **original** ref_seq_info.
           // This saves us from possible looking at a shifted location...
           // Note that the zero base inserted case leads to starting the annoations one base over!
           if (size > 0) {
-            new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position, 0, 0, ref_seq_info, ref_seq_info[replace_target_id].m_seq_id, +1, cLocation(replace_start, replace_end, strand));
+            new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position, 0, 0, ref_seq_info, ref_seq_info[donor_target_id].m_seq_id, +1, cLocation(donor_start, donor_end, strand));
           } else {
-            new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+1, 0, 0, ref_seq_info, ref_seq_info[replace_target_id].m_seq_id, +1, cLocation(replace_start, replace_end, strand));
+            new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+1, 0, 0, ref_seq_info, ref_seq_info[donor_target_id].m_seq_id, +1, cLocation(donor_start, donor_end, strand));
           }
         }
-        
-        // Set up attributes
-        replace_seq_id = mut[SEQ_ID];
-        replace_start = position - 1;
-        replace_end = position - 1;
-        replace_seq = (size>0) ? new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end) : " ";
-        replace_seq.insert(0,"(");
-        replace_seq.insert(2,")");
-        
+
         applied_seq_id = mut[SEQ_ID];
         applied_start = position - 1;
         applied_end = position - 1 + replacing_sequence.size();
-        applied_seq = replace_seq + replacing_sequence;
+        applied_seq = replace_seq.substr(0,3) + replacing_sequence;
               
       } break;
         
@@ -3944,96 +3945,6 @@ void cGenomeDiff::mutations_to_evidence(cReferenceSequences &ref_seq, bool remov
   }
 }
   
-
-void cGenomeDiff::write_jc_score_table(cGenomeDiff& compare, string table_file_path, bool verbose) {
-  //assert(compare.metadata.breseq_data.count("TP|FN|FP"));
-
-  typedef map<float, map<string, uint32_t> > table_t;
-  table_t table;
-  
-  diff_entry_list_t jc = compare.get_list(make_vector<gd_entry_type>(JC));
-  double max_score = 0;
-  uint32_t total_gold_standard_predictions = 0;
-  for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); ++it) {
-    if (!(*it)->count("score")) {
-      cerr << "No score value for: " + (*it)->as_string() << endl;
-      continue;
-    }
-    double score = from_string<double>((**it)["score"]);
-    //score = roundp<10>(score);
-    max_score = max(max_score, score);
-
-    assert((*it)->count("compare"));
-    string compare = (**it)["compare"];
-
-    if ( (compare == "TP") || (compare == "FN") ) {
-      total_gold_standard_predictions++; 
-    }
-    if (compare == "FN") continue;
-    
-    if (!table.count(score)) {
-      table[score]["TP"] = 0;
-      table[score]["FN"] = 0;
-      table[score]["FP"] = 0;
-    }
-  
-    table[score][compare]++;
-  }
-
-
-  ofstream out(table_file_path.c_str());
-  ASSERT(out.is_open(), "Could not write to file: " + table_file_path);
-  
-  out << "score" << '\t' << "TP" << '\t' << "FN" << '\t' << "FP" << endl;
-  if (verbose) {
-    cerr << "\t\tscore" << '\t' << "TP" << '\t' << "FN" << '\t' << "FP" << endl;
-  }
-  uint32_t n_tp = 0, n_fn = 0, n_fp = 0;
-  
-  //TODO @GRC for sorting tophat scoring parameters, remove if/when needed.
-  bool is_tophat_scoring = compare.metadata.author == "tophat" ? true : false;
-  if (is_tophat_scoring) {
-    for (table_t::reverse_iterator it = table.rbegin(); it != table.rend(); it++) {
-      double i = it->first;
-      //double i = 0; i <= max_score; i += .1f) {
-      
-      if (table.count(i)) {
-        n_tp += table[i]["TP"];
-        // The total number of TP and FN at a given score is equal to the total minus the number of TP up to that point.
-        n_fn =  total_gold_standard_predictions - n_tp;
-        n_fp += table[i]["FP"];
-
-        out << i << '\t' << n_tp << '\t' << n_fn << '\t' << n_fp << endl;
-        if (verbose) {
-          cerr << "\t\t" << i << '\t' << n_tp << '\t' << n_fn << '\t' << n_fp << endl;
-        }
-
-      }
-
-    }
-  } else {
-    for (table_t::iterator it = table.begin(); it != table.end(); it++) {
-      double i = it->first;
-      //double i = 0; i <= max_score; i += .1f) {
-      
-      if (table.count(i)) {
-        n_tp += table[i]["TP"];
-        // The total number of TP and FN at a given score is equal to the total minus the number of TP up to that point.
-        n_fn =  total_gold_standard_predictions - n_tp;
-        n_fp += table[i]["FP"];
-
-        out << i << '\t' << n_tp << '\t' << n_fn << '\t' << n_fp << endl;
-        if (verbose) {
-          cerr << "\t\t" << i << '\t' << n_tp << '\t' << n_fn << '\t' << n_fp << endl;
-        }
-
-      }
-
-    }
-  }
-  out.close();
-}
-
 
 // Used to add frequency_base-name columns to the master gd by
 // finding equivalent mutations in 
@@ -5049,372 +4960,6 @@ void cGenomeDiff::read_vcf(const string &file_name)
 }
     
  
-// Unlike other conversion functions, takes a list of gd files
-void cGenomeDiff::GD2Circos(const vector<string> &gd_file_names, 
-                            const vector<string> &reference_file_names,
-                            const string &circos_directory,
-                            double distance_scale,
-                            double feature_scale){
-  
-  cGenomeDiff combined_gd;
-  
-  string program_data_path = Settings::get_program_data_path();
-  
-  int32_t number_of_mutations = 0;
-  
-  for (size_t i = 0; i < gd_file_names.size(); i++){
-    cGenomeDiff single_gd(gd_file_names[i]);
-    combined_gd.merge(single_gd);
-    number_of_mutations += single_gd.mutation_list().size();
-  }
-  
-  cReferenceSequences ref;
-  ref.LoadFiles(reference_file_names);
-  ref.annotate_mutations(combined_gd, true);
-  const vector<string> seq_ids(ref.seq_ids());
-  
-  string make_me;
-  
-  create_path(circos_directory);
-  create_path(circos_directory + "/data");
-  create_path(circos_directory + "/etc");
-  
-  //copy run script
-  copy_file(program_data_path + "/run_circos.sh", circos_directory + "/run_circos.sh");
-  
-  //filling circos_dir/etc
-  
-  vector<string> conf_names = make_vector<string>
-  ("indels.conf")
-  ("mobs.conf")
-  ("mutations.conf")
-  ("combined_circos.conf")
-  ;
-  
-  for (size_t i = 0; i < conf_names.size(); i++){
-    copy_file(program_data_path + "/" + conf_names[i], circos_directory + "/etc/" + conf_names[i]);
-  }
-  
-  //modifying circos_dir/etc with scale values
-  double distance_value = 0.4 * distance_scale;
-  double space_value = 0.25 * distance_value;
-  double feature_value = 5 * feature_scale;
-  
-  map<string, string> replacement_map = make_map<string, string>
-  (" = inner_distance_value_1", " = " + to_string(distance_value, 10) + "r")
-  (" = inner_distance_value_2", " = " + to_string(distance_value + .01, 10) + "r")
-  (" = inner_ticks", " = " + to_string(distance_value, 10) + "r")
-  (" = syn_axis_value_1", " = " + to_string(distance_value + (2 * space_value), 10) + "r")
-  (" = syn_axis_value_2", " = " + to_string(distance_value + (2 * space_value) + .01, 10) + "r")
-  (" = nonsyn_axis_value_1", " = " + to_string(distance_value + (3 * space_value), 10) + "r")
-  (" = nonsyn_axis_value_2", " = " + to_string(distance_value + (3 * space_value) + .01, 10) + "r")
-  (" = npi_axis_value_1", " = " + to_string(distance_value + (4 * space_value), 10) + "r")
-  (" = npi_axis_value_2", " = " + to_string(distance_value + (4 * space_value) + .01, 10) + "r")
-  (" = mob_1_axis_value_1", " = " + to_string(distance_value + (5 * space_value), 10) + "r")
-  (" = mob_1_axis_value_2", " = " + to_string(distance_value + (5 * space_value) + .01, 10) + "r")
-  (" = mob_2_axis_value_1", " = " + to_string(distance_value + (6 * space_value), 10) + "r")
-  (" = mob_2_axis_value_2", " = " + to_string(distance_value + (6 * space_value) + .01, 10) + "r")
-  (" = outer_axis_value_1", " = " + to_string(distance_value + (7 * space_value), 10) + "r")
-  (" = outer_axis_value_2", " = " + to_string(distance_value + (7 * space_value) + .01, 10) + "r")
-  (" = outer_ticks", " = " + to_string(distance_value + (7 * space_value), 10) + "r")
-  (" = indel_distance", " = " + to_string(distance_value + (7 * space_value) + .01, 10) + "r")
-  (" = mob_distance", " = " + to_string(distance_value + (5.5 * space_value), 10) + "r - " + to_string(feature_value * 2.5) + "p")
-  //(" = mob_distance", " = " + to_string(distance_value + (5 * space_value), 10) + "r + " + to_string((400 * .7 * space_value * .5) - (feature_value * 2.5), 10) + "p")
-  (" = syn_distance", " = " + to_string(distance_value + (2 * space_value), 10) + "r - " + to_string(feature_value * 1.5, 10) + "p")
-  (" = nonsyn_distance", " = " + to_string(distance_value + (3 * space_value), 10) + "r - " + to_string(feature_value * 1.5, 10) + "p")
-  (" = npi_distance", " = " + to_string(distance_value + (4 * space_value), 10) + "r - " + to_string(feature_value * 1.5, 10) + "p")
-  (" = indel_value", " = " + to_string(feature_value * 4, 10) + "p")
-  (" = mob_value", " = " + to_string(feature_value * 5, 10) + "p")
-  (" = snp_value", " = " + to_string(feature_value * 3, 10) + "p")
-  (" = ind_syn_axis_value_1", " = " + to_string(1 + (1 * space_value), 10) + "r")
-  (" = ind_syn_axis_value_2", " = " + to_string(1 + (1 * space_value) + .01, 10) + "r")
-  (" = ind_nonsyn_axis_value_1", " = " + to_string(1 + (2 * space_value), 10) + "r")
-  (" = ind_nonsyn_axis_value_2", " = " + to_string(1 + (2 * space_value) + .01, 10) + "r")
-  (" = ind_npi_axis_value_1", " = " + to_string(1 + (3 * space_value), 10) + "r")
-  (" = ind_npi_axis_value_2", " = " + to_string(1 + (3 * space_value) + .01, 10) + "r")
-  (" = ind_syn_distance", " = " + to_string(1 + (1 * space_value), 10) + "r - " + to_string(feature_value * 1.5, 10) + "p")
-  (" = ind_nonsyn_distance", " = " + to_string(1 + (2 * space_value), 10) + "r - " + to_string(feature_value * 1.5, 10) + "p")
-  (" = ind_npi_distance", " = " + to_string(1 + (3 * space_value), 10) + "r - " + to_string(feature_value * 1.5, 10) + "p")
-  (" = space_value_in_pixels", " = " + to_string((300 * space_value), 10) + "p")
-  (" = ind_scale", " = " + to_string((.7 * distance_scale), 10) + "r")
-  (" = label_size_value", " = " + to_string((16 * distance_scale), 10) + "p")
-  (" = label_offset_value", " = " + to_string((-7.5 * distance_scale), 10) + "r")
-  ;
-  
-  for (size_t i = 0; i < conf_names.size(); i++){
-    replace_file_contents_using_map(circos_directory + "/etc/" + conf_names[i],
-                                    circos_directory + "/etc/circos_temp.conf",
-                                    replacement_map);
-    copy_file(circos_directory + "/etc/circos_temp.conf",
-              circos_directory + "/etc/" + conf_names[i]);
-  }
-  
-  //filling circos_dir/data
-  
-  ofstream karyotype_file;
-  ofstream empty_plot_file;
-  
-  make_me = circos_directory + "/data/karyotype.txt";
-  karyotype_file.open(make_me.c_str());
-  make_me = circos_directory + "/data/empty_data.txt";
-  empty_plot_file.open(make_me.c_str());
-  
-  //keeps track of current position when examining sequence sizes of genomes
-  int32_t current_position = 0;
-  
-  int32_t half_ref_length;
-  half_ref_length = int32_t(ref.get_total_length() / 2) + 1;
-  
-  for (uint32_t i = 0; i < seq_ids.size(); i++){
-    uint32_t seq_size;
-    seq_size = ref[seq_ids[i]].get_sequence_length();
-    
-    karyotype_file << "chr - " << seq_ids[i] << " 1 1 " <<
-    seq_size << " black" << endl;
-    empty_plot_file << seq_ids[i] << " 1 2 1" << endl;
-    
-    //if seq_size goes past halfway point of total length of genomes,
-    //add this sequence and its bounds to the left_side vector.
-    current_position += seq_size;
-  }
-  
-  karyotype_file.close();
-  empty_plot_file.close();
-  
-  //minimum tile size width for indel graph
-  const int32_t MIN_WIDTH = static_cast<int32_t>(floor(static_cast<double>(ref.get_total_length()) * 0.000));
-  const int32_t MIN_DISPLAY_LENGTH = 51; //inclusive
-  
-  ofstream indel_file;
-  ofstream mob_file;
-  
-  ofstream synonymous_mutation_file;
-  ofstream nonsynonymous_mutation_file;
-  ofstream npi_mutation_file;
-  
-  make_me = circos_directory + "/data/indels_data.txt";
-  indel_file.open(make_me.c_str());
-  make_me = circos_directory + "/data/mobs_data.txt";
-  mob_file.open(make_me.c_str());
-  
-  make_me = circos_directory + "/data/syn_data.txt";
-  synonymous_mutation_file.open(make_me.c_str());
-  make_me = circos_directory + "/data/nonsyn_data.txt";
-  nonsynonymous_mutation_file.open(make_me.c_str());
-  make_me = circos_directory + "/data/npi_data.txt";
-  npi_mutation_file.open(make_me.c_str());
-  
-  map <string, string> mob_colors;
-  
-  //colors for mobs
-  const char* c_colors[] = {"vvdred", "vvdgreen", "vvdblue", "vvdorange", "vvdpurple",
-    "dred", "dgreen", "dblue", "dorange", "dpurple",
-    "red", "green", "blue", "orange", "purple",
-    "lred", "lgreen", "lblue", "lorange", "lpurple",
-    "vvlred", "vvlgreen", "vvlblue",  "vvlorange", "vvlpurple"};
-  
-  map<string,bool> pre_assigned_mob_colors = make_map<string,bool>
-  ("is1"  , true )("is186", true )("is3"  , true  )
-  ("is150", true )("is911", true )("is4"  , true  )
-  ("is2"  , true )("is30" , true )("is600", true  )
-  ;
-  
-  vector<string> colors(c_colors, c_colors + 25);
-  string color;
-  int32_t next_color = 0;
-  
-  //reference sequence MOBs
-  for(size_t i = 0; i < ref.size(); i++){
-    cAnnotatedSequence& ref_seq = ref[i];
-    
-    for(cFeatureLocationList::iterator it = ref_seq.m_repeat_locations.begin(); it != ref_seq.m_repeat_locations.end(); it++){
-      cFeatureLocation& repeat = *it;
-      cSequenceFeature& feature = *repeat.get_feature();
-      int32_t middle = int32_t(repeat.get_start_1() + repeat.get_end_1()) / 2;
-      
-      string color;
-      
-      // Color assignment -- prefer preassigned, then grab next from list
-      // and assign that color permanently to copies of this repeat
-      if (pre_assigned_mob_colors.count(feature["name"])){
-        color = feature["name"];
-        mob_colors[feature["name"]] = color;
-      }
-      else if (mob_colors.count(feature["name"]) == 0){
-        if (next_color >=25 ) next_color = 0; // this is how many colors are available above!
-        color = colors[next_color];
-        mob_colors[feature["name"]] = color;
-        next_color++;
-      }
-      else{
-        color = mob_colors[feature["name"]];
-      }
-      
-      mob_file << ref_seq.m_seq_id << " " <<
-      middle << " " <<
-      middle << " " <<
-      "i" << ((repeat.get_strand() == 1)? "right" : "left" ) << " " <<
-      "color=" << color << endl;
-    }
-  }
-  
-  
-  
-  diff_entry_list_t gd_data = combined_gd.mutation_list();
-  
-  for (diff_entry_list_t::iterator it = gd_data.begin(); it != gd_data.end(); it++){
-    
-    cDiffEntry diff = **it;
-    
-    int32_t width;
-    string direction;
-    
-    
-    if (diff._type == INS){
-      width = diff["new_seq"].size();
-      if (width < MIN_DISPLAY_LENGTH){
-        continue;
-      }
-      if (width < MIN_WIDTH){
-        width = MIN_WIDTH;
-      }
-      
-      indel_file << diff["seq_id"] << " " <<
-      diff["position"] << " " <<
-      from_string<int32_t>(diff["position"]) + width << " " <<
-      "color=green" << endl;
-    }
-    else if (diff._type == AMP){
-      width = from_string<int32_t>(diff["size"]);
-      if (width < MIN_DISPLAY_LENGTH){
-        continue;
-      }
-      if (width < MIN_WIDTH){
-        width = MIN_WIDTH;
-      }
-      
-      indel_file << diff["seq_id"] << " " <<
-      diff["position"] << " " <<
-      from_string<int32_t>(diff["position"]) + width << " " <<
-      "color=green" << endl;
-    }
-    else if (diff._type == DEL){
-      width = from_string<int32_t>(diff["size"]);
-      if (width < MIN_DISPLAY_LENGTH){
-        continue;
-      }
-      if (width < MIN_WIDTH){
-        width = MIN_WIDTH;
-      }
-      indel_file << diff["seq_id"] << " " <<
-      diff["position"] << " " <<
-      from_string<int32_t>(diff["position"]) + width << " " <<
-      "color=red" << endl;
-      
-      // Show new IS for IS mediated deletions
-      if (diff.count("mediated")) {
-        
-        if (mob_colors.count(diff["mediated"])) { 
-          // either the end or the beginning is in an IS element
-          
-          int32_t max_distance_to_repeat_1 = 0;
-          int32_t max_distance_to_repeat_2 = 0;
-          cFeatureLocation* feat1 = cReferenceSequences::find_closest_repeat_region_boundary(n(diff["position"]) - 1, ref[diff["seq_id"]].m_repeats, max_distance_to_repeat_1,-1);
-          cFeatureLocation* feat2 = cReferenceSequences::find_closest_repeat_region_boundary(n(diff["position"]) + n(diff["size"]) + 1 - 1, ref[diff["seq_id"]].m_repeats, max_distance_to_repeat_2,1);
-          
-          
-          if (!feat1 && !feat2) {
-            cerr << diff << endl;
-            continue;
-            ASSERT(false,"Could not find mediating repeat.");
-          }
-           
-          
-          cFeatureLocation& repeat = feat1 ? *feat1: *feat2;
-          cSequenceFeature& feature = *(repeat.get_feature());
-          cAnnotatedSequence& ref_seq = ref[diff["seq_id"]];
-          
-          int32_t middle = feat1 ? n(diff["position"]) + n(diff["size"]) - 1 : n(diff["position"]);
-          
-          string color;
-          
-          // Color assignment -- prefer preassigned, then grab next from list
-          // and assign that color permanently to copies of this repeat
-          if (pre_assigned_mob_colors.count(feature["name"])){
-            color = feature["name"];
-          }
-          else if (mob_colors.count(feature["name"]) == 0){
-            color = colors[next_color];
-            mob_colors[feature["name"]] = color;
-            next_color++;
-          }
-          else{
-            color = mob_colors[feature["name"]];
-          }
-          
-          mob_file << ref_seq.m_seq_id << " " <<
-          middle << " " <<
-          middle << " " <<
-          "o" << ((repeat.get_strand() == 1)? "right" : "left" ) << " " <<
-          "color=" << color << endl;
-        }
-      }
-    }
-    else if(diff._type == SNP || diff._type == SUB){
-      if (diff["snp_type"] == "synonymous"){
-        synonymous_mutation_file << diff["seq_id"] << " " <<
-        diff["position"] << " " <<
-        diff["position"] << endl;
-      }
-      // Should split out nonsense @JEB
-      else if ((diff["snp_type"] == "nonsynonymous") || (diff["snp_type"] == "nonsense")){
-        nonsynonymous_mutation_file << diff["seq_id"] << " " <<
-        diff["position"] << " " <<
-        diff["position"] << endl;
-      }
-      else{
-        npi_mutation_file << diff["seq_id"] << " " <<
-        diff["position"] << " " <<
-        diff["position"] << endl;
-      }
-      
-    }
-    
-    else if(diff._type == MOB){
-      
-      // Color assignment -- prefer preassigned, then grab next from list
-      // and assign that color permanently to copies of this repeat
-      if (pre_assigned_mob_colors.count(diff["repeat_name"])){
-        color = diff["repeat_name"];
-      }
-      else if (mob_colors.count(diff["repeat_name"]) == 0){
-        color = colors[next_color];
-        mob_colors[diff["repeat_name"]] = color;
-        next_color++;
-      }
-      else{
-        color = mob_colors[diff["repeat_name"]];
-      }
-      
-      mob_file << diff["seq_id"] << " " <<
-      diff["position"] << " " <<
-      diff["position"] << " " <<
-      "o" << ((n(diff["strand"]) == 1)? "right" : "left" ) << " " <<
-      "color=" << color << endl;
-    }
-  }
-  
-  
-  indel_file.close();
-  mob_file.close();
-  synonymous_mutation_file.close();
-  nonsynonymous_mutation_file.close();
-  npi_mutation_file.close();
-  
-
-  SYSTEM("cp " + Settings::get_program_data_path() + "/run_circos.sh " + circos_directory);
-  
-} 
   
 /*
 Temporary format for exchange with Olivier Tenaillon to analyze parallelism

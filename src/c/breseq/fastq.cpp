@@ -1026,12 +1026,18 @@ namespace breseq {
                                              uint32_t read_size,
                                              int8_t   strand,
                                              uint32_t  id,
+                                             uint32_t  n_reads,
                                              bool     verbose) {
     cFastqSequence ret_val;
     sprintf(ret_val.m_name, "READ-%i", id);
     sprintf(ret_val.m_name_plus, "[strand]:%i\t[start_1]:%u", strand, start_1);
-    
-    if(verbose && !(id % 10000) && id){cout << "\tREAD: " << id << endl;}
+
+    if(verbose && id && (!(id % 10000) || (id == n_reads))){
+      ostringstream progress_message;
+      progress_message << "\tREAD: " << setw(12) << right << id;
+      if (n_reads) progress_message << "/" << n_reads;
+      print_progress_line(progress_message.str());
+    }
 
     /*! Algorithm in use:
 
@@ -1214,6 +1220,7 @@ namespace breseq {
                                                         read_size,
                                                         strand,
                                                         i + 1,
+                                                        n_reads,
                                                         verbose);
       out.write_sequence(read);
     }
@@ -1244,7 +1251,8 @@ namespace breseq {
                                                           read_size,
                                                           strand,
                                                           i + 1,
-                                                          verbose); 
+                                                          n_reads,
+                                                          verbose);
 
       //Pair 2
       start_1 = (start_1 + random_size.sample() - (read_size * 2)) % sequence.get_sequence_length();
@@ -1254,7 +1262,8 @@ namespace breseq {
                                                           read_size,
                                                           strand,
                                                           i + 1,
-                                                          verbose); 
+                                                          n_reads,
+                                                          verbose);
       if (rand() % 100 < 50) {
         pair_1.m_name += "/1";
         pair_2.m_name += "/2";
