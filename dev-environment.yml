@@ -28,6 +28,7 @@ dependencies:
   - bowtie2=2.5.5
   - gnuplot=6.0.4
   - phylip=3.697
+  - mummer4=4.0.0rc1
 # Used to run the consistency tests in parallel ('make test')
 #  => See tests/Snakefile
   - python

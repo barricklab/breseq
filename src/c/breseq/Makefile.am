@@ -43,6 +43,7 @@ libbreseq_la_SOURCES = \
 	genome_diff.cpp \
 	genome_diff_entry.cpp \
 	identify_mutations.cpp \
+	identify_repeats.cpp \
 	mutation_predictor.cpp \
 	nw.cpp \
 	output.cpp \
@@ -75,6 +76,7 @@ libbreseq_la_SOURCES = \
 	libbreseq/genome_diff.h \
 	libbreseq/genome_diff_entry.h \
 	libbreseq/identify_mutations.h \
+	libbreseq/identify_repeats.h \
 	libbreseq/json.hpp \
 	libbreseq/mutation_predictor.h \
 	libbreseq/nw.h \

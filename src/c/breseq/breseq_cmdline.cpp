@@ -32,6 +32,7 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/fastq.h"
 #include "libbreseq/genome_diff.h"
 #include "libbreseq/identify_mutations.h"
+#include "libbreseq/identify_repeats.h"
 #include "libbreseq/resolve_alignments.h"
 #include "libbreseq/samtools_commands.h"
 #include "libbreseq/soft_clipping.h"
@@ -818,6 +819,67 @@ int do_get_sequence(int argc, char *argv[])
     new_seq_info.WriteFASTA(options["output"]);
   }
   
+  end_progress_line();
+  cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
+  return 0;
+}
+
+
+int do_identify_repeats(int argc, char* argv[])
+{
+  AnyOption options("Usage: breseq IDENTIFY-REPEATS [-r data/reference.fasta -o output.csv -l 500 -i 98]");
+  options.addUsage("");
+  options.addUsage("Finds approximate repeated regions within one or more reference sequences");
+  options.addUsage("by running a self-vs-self MUMmer nucmer alignment, thresholded by length");
+  options.addUsage("and percent identity. Regions are condensed into groups (given a shared");
+  options.addUsage("group ID) when every pair of members was found to match each other; groups");
+  options.addUsage("are not formed for connected sets of regions that do not all match each");
+  options.addUsage("other. Writes a CSV of regions and group IDs, suitable for reloading later");
+  options.addUsage("(e.g. for masking these regions).");
+  options.addUsage("");
+  options.addUsage("Requires nucmer and show-coords (from the MUMmer package) to be installed.");
+  options.addUsage("");
+  options.addUsage("Allowed Options");
+  options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+  options("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files", "data/reference.fasta");
+  options("output,o", "Output CSV path", "identify_repeats.csv");
+  options("minimum-length,l", "Minimum length (bp) of a match on each side to be reported", "500");
+  options("minimum-identity,i", "Minimum percent identity (0-100) of a match to be reported", "98");
+  options.processCommandArgs(argc, argv);
+
+  if (options.count("help")) {
+    options.printAdvancedUsage();
+    return -1;
+  }
+
+  vector<string> reference_file_names;
+  if (options.count("reference") == 0) {
+    reference_file_names.push_back("data/reference.fasta");
+  } else {
+    reference_file_names = from_string<vector<string> >(options["reference"]);
+  }
+
+  for (size_t i = 0; i < reference_file_names.size(); i++) {
+    if (!file_exists(reference_file_names[i].c_str())) {
+      options.addUsage("");
+      options.addUsage("Could not open input reference file (-r):\n  " + reference_file_names[i]);
+      options.printUsage();
+      return -1;
+    }
+  }
+
+  uint32_t minimum_length   = from_string<uint32_t>(options["minimum-length"]);
+  double   minimum_identity = from_string<double>(options["minimum-identity"]);
+
+  UserOutput uout("IDENTIFY-REPEATS");
+  uout("Output", options["output"]);
+  uout("Minimum length", to_string(minimum_length));
+  uout("Minimum identity", to_string(minimum_identity, 2));
+  uout("Reference input", to_string(reference_file_names));
+  cerr << endl;
+
+  identify_repeats(reference_file_names, options["output"], minimum_length, minimum_identity);
+
   end_progress_line();
   cerr << "+++   SUCCESSFULLY COMPLETED" << endl;
   return 0;
@@ -2621,7 +2683,9 @@ int main(int argc, char* argv[]) {
 		return do_convert_reference(argc_new, argv_new.data());
   } else if ((command == "GET-SEQUENCE") || (command == "SUBSEQUENCE")) {
     return do_get_sequence(argc_new, argv_new.data());
-    
+  } else if (command == "IDENTIFY-REPEATS") {
+    return do_identify_repeats(argc_new, argv_new.data());
+
   // Breseq Post-Run Commands:
   } else if (command == "BAM2ALN") {
     return do_bam2aln( argc_new, argv_new.data());  
