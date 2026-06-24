@@ -12,3 +12,4 @@ SNP	22	.	REL606-5	3000	G	within=21:1
 MOB	23	.	REL606-5	4000	IS1	-1	3	frequency=0
 MOB	24	.	REL606-5	4001	IS1	-1	3	frequency=0.78
 AMP	30	.	REL606-5	5000	20	3	mediated=IS1	mediated_strand=1
+MOB	31	.	REL606-5	6000	IS1	1	-5

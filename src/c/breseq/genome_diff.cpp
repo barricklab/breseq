@@ -2702,6 +2702,14 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
     uint32_t with_start = 0;
     uint32_t with_end = 0;
 
+    // Self-check: every case below must set these to the exact number of bases
+    // it inserts/deletes, so that the ASSERT after the switch (which compares
+    // them against the actual change in new_ref_seq_info's length) catches any
+    // case whose bookkeeping doesn't match what it actually did to the sequence.
+    uint64_t sequence_length_before_apply = new_ref_seq_info.get_total_length();
+    uint32_t mutation_bases_inserted = 0;
+    uint32_t mutation_bases_deleted = 0;
+
     if (verbose) cout << endl << "APPLYING MUTATION:" << endl << mut << endl;
 
     switch (mut._type)
@@ -2753,9 +2761,9 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
 
         new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id));
 
-        bases_changed  += min(size, static_cast<int32_t>(mut[NEW_SEQ].size()));
-        bases_deleted  += max(0, size - static_cast<int32_t>(mut[NEW_SEQ].size()));
-        bases_inserted += max(0, static_cast<int32_t>(mut[NEW_SEQ].size()) - size);
+        bases_changed += min(size, static_cast<int32_t>(mut[NEW_SEQ].size()));
+        mutation_bases_deleted  = max(0, size - static_cast<int32_t>(mut[NEW_SEQ].size()));
+        mutation_bases_inserted = max(0, static_cast<int32_t>(mut[NEW_SEQ].size()) - size);
 
       } break;
 
@@ -2778,7 +2786,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         
         new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id));
 
-        bases_inserted += mut[NEW_SEQ].size();
+        mutation_bases_inserted = mut[NEW_SEQ].size();
 
       } break;
 
@@ -2844,7 +2852,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         ASSERT(size >= 1, "Attempt to apply DEL mutation with size ≤ 0:\n" + mut.as_string());
         new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size -1, "", (to_string(mut._type) + " " + mut._id));
 
-        bases_deleted += size;
+        mutation_bases_deleted = size;
 
       } break;
 
@@ -2975,7 +2983,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         result_end = position + duplicated_sequence_full_addition_size + replace_seq.size() - 1;
         result_seq = duplicated_sequence_full_addition + replace_seq;
 
-        bases_inserted += duplicated_sequence_full_addition_size;
+        mutation_bases_inserted = duplicated_sequence_full_addition_size;
 
       } break;
 
@@ -3064,6 +3072,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
           // original genome starting at the specified base. Note that is does not affect the later insert
           // which occurs prior to this location.
           new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + abs(iDupLen)-1, "");
+          mutation_bases_deleted = abs(iDupLen);
         }
         
         // If there are any inserts, put them in front of or behind the
@@ -3129,7 +3138,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         // inside of and including the repeat region.
         new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+iInsStart+iDupSeqLen, iDelStart, iDelEnd, ref_seq_info, seq_id_picked, from_string<int16_t>(mut["strand"]), repeat_feature_picked);
 
-        bases_inserted += new_seq_string.size();
+        mutation_bases_inserted = new_seq_string.size();
 
       } break;
 
@@ -3206,6 +3215,18 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         result_end = position - 1 + replacing_sequence.size();
         result_seq = replace_seq.substr(0,3) + replacing_sequence;
 
+        if (mut._type == INT) {
+          // INT tracks the target span removed and donor span inserted as two
+          // separate quantities, even if they happen to be the same size.
+          mutation_bases_deleted = size;
+          mutation_bases_inserted = replacing_sequence.size();
+        } else {
+          // CON only tracks the net size change, in one direction or the other.
+          int32_t net_change = static_cast<int32_t>(replacing_sequence.size()) - size;
+          if (net_change > 0) mutation_bases_inserted = net_change;
+          else if (net_change < 0) mutation_bases_deleted = -net_change;
+        }
+
       } break;
 
       default:
@@ -3225,6 +3246,20 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
       cout << "Result:    " << result_seq_id << ":" << result_start << "-" << result_end << endl;
       cout << "(Sequence) " << result_seq << endl;
     }
+
+    // Check that the case above reported the exact number of bases it inserted/deleted.
+    int64_t observed_length_change = static_cast<int64_t>(new_ref_seq_info.get_total_length())
+                                    - static_cast<int64_t>(sequence_length_before_apply);
+    int64_t expected_length_change = static_cast<int64_t>(mutation_bases_inserted)
+                                    - static_cast<int64_t>(mutation_bases_deleted);
+    ASSERT(observed_length_change == expected_length_change,
+           "Recorded bases inserted/deleted do not match the actual genome size change ("
+           + to_string(observed_length_change) + " observed vs. " + to_string(expected_length_change)
+           + " expected from " + to_string(mutation_bases_inserted) + " inserted / "
+           + to_string(mutation_bases_deleted) + " deleted) for mutation:\n" + mut.as_string());
+
+    bases_inserted += mutation_bases_inserted;
+    bases_deleted  += mutation_bases_deleted;
 
     this->shift_positions(mut, new_ref_seq_info, verbose);
     
