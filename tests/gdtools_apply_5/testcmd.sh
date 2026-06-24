@@ -6,6 +6,9 @@ SELF=`dirname ${BASH_SOURCE}`
 CURRENT_OUTPUTS[0]="${SELF}/output.gbk"
 EXPECTED_OUTPUTS[0]="${SELF}/expected.gbk"
 
+CURRENT_OUTPUTS[1]="${SELF}/output.gd"
+EXPECTED_OUTPUTS[1]="${SELF}/expected.gd"
+
 TESTCMD="\
     ${GDTOOLS} \
         APPLY \
@@ -16,6 +19,7 @@ TESTCMD="\
         -r ${DATADIR}/lambda/lambda.gbk \
         -r ${DATADIR}/REL606/REL606.fragment.gbk \
         -r ${DATADIR}/sfGFP/sfGFP.gbk \
+        --applied-gd ${SELF}/output.gd \
         ${SELF}/input.gd \
         && perl -i -pe 's/^(LOCUS.+)\d{2}-\w{3}-\d{4}$/\$1XX-XX-XXXX/g' ${CURRENT_OUTPUTS[0]} \
     "
