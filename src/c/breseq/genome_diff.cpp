@@ -2683,19 +2683,28 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
     //   But previous mutations must be applied (because for example it may be mediated by a *new* IS copy).
     mut.annotate_repeat_hotspots(new_ref_seq_info, slop_distance, size_cutoff_AMP_becomes_INS_DEL_mutation, false, false, &already_warned_ids);
     
-    // Attributes used for output of debug info
+    // Attributes used for the verbose -v output below.
     string replace_seq_id;
     uint32_t replace_start;
     uint32_t replace_end;
-    string applied_seq_id;
-    uint32_t applied_start;
-    uint32_t applied_end;
+    string result_seq_id;
+    uint32_t result_start;
+    uint32_t result_end;
     string replace_seq;
-    string applied_seq;
-    
+    string result_seq;
+
+    // For mutation types where the new sequence is sourced from elsewhere in the
+    // genome -- or, for INV, the same locus read in reverse -- the verbose output
+    // gets an extra "With:" line showing that source location, between "Replacing:"
+    // and "Result:".
+    bool has_with = false;
+    string with_seq_id;
+    uint32_t with_start = 0;
+    uint32_t with_end = 0;
+
     if (verbose) cout << endl << "APPLYING MUTATION:" << endl << mut << endl;
-    
-    switch (mut._type) 
+
+    switch (mut._type)
     {
       case SNP :
       {
@@ -2707,18 +2716,18 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         replace_end = position;
         replace_seq = new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end);
         
-        applied_seq_id = mut[SEQ_ID];
-        applied_start = position;
-        applied_end = position;
-        applied_seq = mut[NEW_SEQ];
+        result_seq_id = mut[SEQ_ID];
+        result_start = position;
+        result_end = position;
+        result_seq = mut[NEW_SEQ];
         
         // Replace sequence
         new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id));
-        
+
         bases_changed++;
-        
+
       } break;
-        
+
       case SUB:
       {
         count_SUB++;
@@ -2737,19 +2746,19 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         replace_seq.insert(0,"(");
         replace_seq.insert(2,")");
         
-        applied_seq_id = mut[SEQ_ID];
-        applied_start = position - 1;
-        applied_end = position - 1 + mut[NEW_SEQ].size();
-        applied_seq = replace_seq.substr(0,3) + mut[NEW_SEQ];
-        
+        result_seq_id = mut[SEQ_ID];
+        result_start = position - 1;
+        result_end = position - 1 + mut[NEW_SEQ].size();
+        result_seq = replace_seq.substr(0,3) + mut[NEW_SEQ];
+
         new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id));
-        
+
         bases_changed  += min(size, static_cast<int32_t>(mut[NEW_SEQ].size()));
         bases_deleted  += max(0, size - static_cast<int32_t>(mut[NEW_SEQ].size()));
         bases_inserted += max(0, static_cast<int32_t>(mut[NEW_SEQ].size()) - size);
-        
+
       } break;
-        
+
       case INS:
       {          
         count_INS++;
@@ -2762,17 +2771,17 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         replace_seq.insert(0,"(");
         replace_seq.insert(replace_seq.size(),")");
         
-        applied_seq_id = mut[SEQ_ID];
-        applied_start = position;
-        applied_end = position + mut[NEW_SEQ].size();
-        applied_seq = replace_seq + mut[NEW_SEQ];
+        result_seq_id = mut[SEQ_ID];
+        result_start = position;
+        result_end = position + mut[NEW_SEQ].size();
+        result_seq = replace_seq + mut[NEW_SEQ];
         
         new_ref_seq_info.insert_sequence_1(mut[SEQ_ID], position, mut[NEW_SEQ], (to_string(mut._type) + " " + mut._id));
-        
+
         bases_inserted += mut[NEW_SEQ].size();
-        
+
       } break;
-        
+
       case DEL:
       {
         count_DEL++;
@@ -2815,30 +2824,30 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
           replace_seq.insert(0, "(.)");
         }
         
-        applied_seq_id = mut[SEQ_ID];
+        result_seq_id = mut[SEQ_ID];
         if (remaining_base_start_shown) {
-          applied_start = position - 1;
-          applied_end = position - 1;
-          applied_seq = new_ref_seq_info.get_sequence_1(applied_seq_id, applied_start, applied_end);
+          result_start = position - 1;
+          result_end = position - 1;
+          result_seq = new_ref_seq_info.get_sequence_1(result_seq_id, result_start, result_end);
         } else if (remaining_base_end_shown) {
-          applied_start = position - 1 + size + remaining_base_end_shown;
-          applied_end = position - 1 + size + remaining_base_end_shown;
-          applied_seq = new_ref_seq_info.get_sequence_1(applied_seq_id, applied_start, applied_end);
+          result_start = position - 1 + size + remaining_base_end_shown;
+          result_end = position - 1 + size + remaining_base_end_shown;
+          result_seq = new_ref_seq_info.get_sequence_1(result_seq_id, result_start, result_end);
         } else {
-          applied_start = 0;
-          applied_end = 0;
-          applied_seq = ".";
+          result_start = 0;
+          result_end = 0;
+          result_seq = ".";
         }
-        applied_seq.insert(0,"(");
-        applied_seq.insert(2,")");
+        result_seq.insert(0,"(");
+        result_seq.insert(2,")");
 
         ASSERT(size >= 1, "Attempt to apply DEL mutation with size ≤ 0:\n" + mut.as_string());
         new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size -1, "", (to_string(mut._type) + " " + mut._id));
-        
+
         bases_deleted += size;
-        
+
       } break;
-        
+
       case MASK:
       {
         count_MASK++;
@@ -2851,10 +2860,10 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         replace_end = position + size - 1;
         replace_seq = new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end);
         
-        applied_seq_id = mut[SEQ_ID];
-        applied_start = position;
-        applied_end = position + size - 1;
-        applied_seq = mask_string;
+        result_seq_id = mut[SEQ_ID];
+        result_start = position;
+        result_end = position + size - 1;
+        result_seq = mask_string;
         
         new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + size - 1, mask_string, (to_string(mut._type) + " " + mut._id));
         
@@ -2898,6 +2907,8 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         
         //Also build full duplicated sequence (strictly for debugging output)
         string duplicated_sequence_full_addition;
+        // Real inserted-base count, excluding the "[" "]" debug-display brackets above.
+        uint32_t duplicated_sequence_full_addition_size = 0;
 
         // Loop executed new_copy_number - 1 times.
         for (uint32_t i = 1; i < from_string<uint32_t>(mut["new_copy_number"]); i++) {
@@ -2924,6 +2935,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
             
             // This is constructed *only* for debugging output!
             duplicated_sequence_full_addition = "[" + mediated_string + "]" + duplicated_sequence_full_addition;
+            duplicated_sequence_full_addition_size += mediated_string.size();
           }
           
           
@@ -2946,24 +2958,27 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
           
           // This is constructed *only* for debugging output!
           duplicated_sequence_full_addition = duplicated_sequence_one_copy + duplicated_sequence_full_addition;
+          duplicated_sequence_full_addition_size += duplicated_sequence_one_copy.size();
         }
         ASSERT(!duplicated_sequence_full_addition.empty(), "Duplicate sequence is empty. You may have specified an AMP with a new copy number of 1.");
-        
+
         // Set up attributes
         replace_seq_id = mut[SEQ_ID];
         replace_start = position;
         replace_end = position + size - 1;
         replace_seq = new_ref_seq_info.get_sequence_1(replace_seq_id, replace_start, replace_end);
-        
-        applied_seq_id = mut[SEQ_ID];
-        applied_start = position;
-        applied_end = position + duplicated_sequence_full_addition.size() - 1;
-        applied_seq = duplicated_sequence_full_addition + replace_seq;
-        
-        bases_inserted += duplicated_sequence_full_addition.size();
-        
+
+        result_seq_id = mut[SEQ_ID];
+        result_start = position;
+        // Covers the newly-added copies *and* the trailing original copy
+        // (replace_seq) appended below, so the range matches result_seq fully.
+        result_end = position + duplicated_sequence_full_addition_size + replace_seq.size() - 1;
+        result_seq = duplicated_sequence_full_addition + replace_seq;
+
+        bases_inserted += duplicated_sequence_full_addition_size;
+
       } break;
-        
+
       case INV:
       {
         int32_t size = from_string<int32_t>(mut[SIZE]);
@@ -2979,11 +2994,18 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         
         string inv_seq = reverse_complement(replace_seq);
 
-        applied_seq_id = mut[SEQ_ID];
-        applied_start = position + inv_seq.size() - 1;
-        applied_end = position;
-        applied_seq = inv_seq;
-        
+        result_seq_id = mut[SEQ_ID];
+        result_start = position;
+        result_end = position + inv_seq.size() - 1;
+        result_seq = inv_seq;
+
+        // The verbose "With:" line shows the span in reverse (start>end) since the
+        // applied sequence is the reverse complement of what's being replaced.
+        has_with = true;
+        with_seq_id = result_seq_id;
+        with_start = result_end;
+        with_end = result_start;
+
         count_INV++;
         new_ref_seq_info.invert_sequence_1(mut[SEQ_ID], position, position + size - 1, (to_string(mut._type) + " " + mut._id));
         
@@ -3028,17 +3050,17 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
           replace_seq.insert(4 + abs(iDupLen), ">");
         }
           
-        applied_seq_id = mut[SEQ_ID];
-        applied_start = position - 1;
-        applied_end = position - 1;
-        applied_seq = new_ref_seq_info.get_sequence_1(applied_seq_id, applied_start, applied_end);
-        applied_seq.insert(0,"(");
-        applied_seq.insert(2,")");
+        result_seq_id = mut[SEQ_ID];
+        result_start = position - 1;
+        result_end = position - 1;
+        result_seq = new_ref_seq_info.get_sequence_1(result_seq_id, result_start, result_end);
+        result_seq.insert(0,"(");
+        result_seq.insert(2,")");
 
         if (iDupLen > 0) {
           iDupSeqLen = iDupLen;
         } else if (iDupLen < 0) {
-          // A negative duplication length indicates that this many bases were deleted from the 
+          // A negative duplication length indicates that this many bases were deleted from the
           // original genome starting at the specified base. Note that is does not affect the later insert
           // which occurs prior to this location.
           new_ref_seq_info.replace_sequence_1(mut[SEQ_ID], position, position + abs(iDupLen)-1, "");
@@ -3064,16 +3086,32 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         string seq_id_picked;
         new_seq_string += mob_replace_sequence(ref_seq_info, mut, &seq_id_picked, &repeat_feature_picked);
 
+        // The verbose "With:" line shows the donor repeat copy that was picked,
+        // in the direction it was actually read (reverse-complemented if needed
+        // to match the requested strand) to build the inserted sequence above.
+        has_with = true;
+        with_seq_id = seq_id_picked;
+        if (from_string<int16_t>(mut["strand"]) == -1) {
+          with_start = repeat_feature_picked.get_end_1();
+          with_end = repeat_feature_picked.get_start_1();
+        } else {
+          with_start = repeat_feature_picked.get_start_1();
+          with_end = repeat_feature_picked.get_end_1();
+        }
+
         //if (verbose) cout << new_seq_string << endl;
         
-        applied_end = position - 1 + new_seq_string.size();
-        applied_seq += new_seq_string;
+        result_end = position - 1 + new_seq_string.size();
+        result_seq += new_seq_string;
         if (iDupLen > 0) {
-          applied_seq.insert(3, "[");
-          applied_seq.insert(4 + iDupLen, "]");
-          applied_seq += "[" + new_ref_seq_info.get_sequence_1(replace_seq_id, position, position + iDupLen - 1) + "]";
+          result_seq.insert(3, "[");
+          result_seq.insert(4 + iDupLen, "]");
+          // The duplicated target site also leaves a second, original copy right
+          // after the inserted repeat -- extend the range to cover it too.
+          result_seq += "[" + new_ref_seq_info.get_sequence_1(replace_seq_id, position, position + iDupLen - 1) + "]";
+          result_end += iDupLen;
         }
-        
+
         // @JEB 2014-01-05
         // Special case for target site duplication of size zero so that
         // we always insert AFTER the specified position. Without this correction
@@ -3090,11 +3128,11 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         // We've repeated the sequence, now it's time to repeat all the features
         // inside of and including the repeat region.
         new_ref_seq_info.repeat_feature_1(mut[SEQ_ID], position+iInsStart+iDupSeqLen, iDelStart, iDelEnd, ref_seq_info, seq_id_picked, from_string<int16_t>(mut["strand"]), repeat_feature_picked);
-        
+
         bases_inserted += new_seq_string.size();
-        
+
       } break;
-        
+
       case CON:
       case INT:
       {
@@ -3115,6 +3153,14 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
         ASSERT(donor_start != donor_end, "Cannot process 1-bp CON/INT mutation with end == start. Expand the substituted region. ID:" + mut._id);
 
         int8_t strand = (donor_start < donor_end) ?  +1 : -1;
+
+        // Capture the donor region in its original (region attribute) order -- descending
+        // when the donor is on the reverse strand -- for the verbose "With:" line, before
+        // donor_start/donor_end are normalized to ascending order below for sequence lookup.
+        has_with = true;
+        with_seq_id = ref_seq_info[donor_target_id].m_seq_id;
+        with_start = donor_start;
+        with_end = donor_end;
 
         if (strand == -1) {
           swap(donor_start, donor_end);
@@ -3155,17 +3201,17 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
           }
         }
 
-        applied_seq_id = mut[SEQ_ID];
-        applied_start = position - 1;
-        applied_end = position - 1 + replacing_sequence.size();
-        applied_seq = replace_seq.substr(0,3) + replacing_sequence;
-              
+        result_seq_id = mut[SEQ_ID];
+        result_start = position - 1;
+        result_end = position - 1 + replacing_sequence.size();
+        result_seq = replace_seq.substr(0,3) + replacing_sequence;
+
       } break;
-        
+
       default:
-        applied_seq_id = "";
-        applied_start = 0;
-        applied_end = 0;
+        result_seq_id = "";
+        result_start = 0;
+        result_end = 0;
         ASSERT(false, "Can't handle mutation type: " + to_string(mut._type));
     }
     
@@ -3173,15 +3219,13 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
     {
       cout << "Replacing: " << replace_seq_id << ":" << replace_start << "-" << replace_end << endl;
       cout << "(Sequence) " << replace_seq << endl;
-      cout << "With:      " << applied_seq_id << ":" << applied_start << "-" << applied_end << endl;
-      cout << "(Sequence) " << applied_seq << endl;
+      if (has_with) {
+        cout << "With:      " << with_seq_id << ":" << with_start << "-" << with_end << endl;
+      }
+      cout << "Result:    " << result_seq_id << ":" << result_start << "-" << result_end << endl;
+      cout << "(Sequence) " << result_seq << endl;
     }
-    
-    // Add fields that track the applied_coords
-    mut["applied_seq_id"] = to_string(applied_seq_id);
-    mut["applied_start"] = to_string(applied_start);
-    mut["applied_end"] = to_string(applied_end);
-    
+
     this->shift_positions(mut, new_ref_seq_info, verbose);
     
     // TEMPORARY! Check earlier mutations

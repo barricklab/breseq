@@ -179,7 +179,7 @@ int do_apply(int argc, char *argv[])
 	options.addUsage("");
 	options.addUsage("The input GenomeDiff file is expected to only have consensus mutations. Polymorphic mutations are ignored unless the --polymorphism-mode flag is supplied.");
 	options.addUsage("");
-	options.addUsage("The --apply-gd option causes a GenomeDiff file to be output that is the input GenomeDiff file with positions of mutations shifted to where they occur in the output sequence. It also has applied_seq_id, applied_start, and applied_end fields defining the changed bases.");
+	options.addUsage("The --apply-gd option causes a GenomeDiff file to be output that is the input GenomeDiff file with positions of mutations shifted to where they occur in the output sequence.");
 	
 	if (options.count("help")) {
 		options.printUsage();
