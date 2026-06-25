@@ -193,7 +193,7 @@ string header_style_string()
   ss << ".information_table_row {background-color: rgb(200,255,255);}"     << endl;
   ss << ".junction_repeat {background-color: rgb(255,165,0)}"              << endl;
   ss << ".junction_gene {}"                                                << endl;
-  ss << ".new_junction_entry_sep td {background-color: rgb(0,0,100); height: 3px; padding: 0; line-height: 0; font-size: 0;}" << endl;
+  ss << ".new_junction_entry_sep td {height: 0px; padding: 0; line-height: 0; font-size: 0;}" << endl;
   ss << ".hidden { display: none; }"                                       << endl;
   ss << ".unhidden { display: block; }"                                    << endl;
   
