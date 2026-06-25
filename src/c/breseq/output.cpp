@@ -193,6 +193,7 @@ string header_style_string()
   ss << ".information_table_row {background-color: rgb(200,255,255);}"     << endl;
   ss << ".junction_repeat {background-color: rgb(255,165,0)}"              << endl;
   ss << ".junction_gene {}"                                                << endl;
+  ss << ".new_junction_entry_sep {border-top: 3px solid rgb(0,0,100);}"   << endl;
   ss << ".hidden { display: none; }"                                       << endl;
   ss << ".unhidden { display: block; }"                                    << endl;
   
@@ -1960,10 +1961,12 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
 // #     ### Side 1 ###
 // #     ##############
     ss << "<!-- Side 1 Item Lines for New Junction -->" << endl;
-    
+
     string key = "side_1";
     string annotate_key = "junction_" + c[key + "_annotate_key"];
-    ss << start_tr("class=\"mutation_table_row_" + to_string(row_bg_color_index) +"\"") << endl;
+    bool is_first_entry = (itr == list_ref.begin());
+    string sep_class = is_first_entry ? "" : " new_junction_entry_sep";
+    ss << start_tr("class=\"mutation_table_row_" + to_string(row_bg_color_index) + sep_class + "\"") << endl;
 
      if (link) {
       ss << td("rowspan=\"2\"",
