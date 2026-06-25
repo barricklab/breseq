@@ -734,6 +734,11 @@ namespace breseq
       this->zip_html = false;
     }
 
+    if (this->zip_html && !file_exists((this->program_data_path + "/jszip.min.js").c_str())) {
+      cerr << "WARNING: --zip-html has been disabled because a required data file (jszip.min.js) is missing from this breseq installation's data path: " << this->program_data_path << endl;
+      this->zip_html = false;
+    }
+
     /*
     if (this->user_evidence_genome_diff_file_name.size() && !this->polymorphism_prediction) {
       ERROR("You must run breseq in polymorphism mode (-p) when supplying --user-evidence-gd.");

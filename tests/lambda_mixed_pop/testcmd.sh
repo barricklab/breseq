@@ -15,6 +15,7 @@ TESTCMD="\
     -o ${SELF} \
     -g ${SELF}/header.gd \
     --genbank-field-for-seq-id VERSION \
+    --zip-html \
     ${REFERENCE_ARG} \
     ${DATADIR}/lambda/lambda_mixed_population.fastq \
     "
