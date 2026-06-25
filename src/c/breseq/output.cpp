@@ -1111,7 +1111,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"5\"") << endl;
   HTML << "<tr>" << th("program") << th("version") << "</tr>" << endl;
   HTML << "<tr>" << td("bowtie2") << td(settings.installed.find("bowtie2_version_string")->second) << "</tr>" << endl;
-  HTML << "<tr>" << td("R") << td(settings.installed.find("R_version_string")->second) << "</tr>" << endl;
+  HTML << "<tr>" << td("gnuplot") << td(settings.installed.find("gnuplot_version_string")->second) << "</tr>" << endl;
   HTML << "</table>";
   
   ////
