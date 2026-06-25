@@ -457,10 +457,89 @@ namespace breseq {
         }
 			}
       
-			// Both sides were unique or redundant, nothing more we can do...
-			if ( (r1_pointer == NULL && r2_pointer == NULL) || (r1_pointer != NULL && r2_pointer != NULL) )
-				continue; // to next mc_item
-      
+      // Both MC ends inside IS elements but case (2) did not match
+      if (r1_pointer != NULL && r2_pointer != NULL)
+        continue; // to next mc_item
+
+      ///
+      // (2b) Both boundaries are in unique sequence, but each is connected by a JC to the
+      //      same IS element — predict a MOB (IS insertion, duplication_size=0) at the left
+      //      boundary, plus an IS-mediated DEL for the MC region.
+      ///
+      if (r1_pointer == NULL && r2_pointer == NULL) {
+        if (verbose)
+          cout << "(2b) Checking for MC flanked by two IS-element junctions." << endl;
+
+        int32_t needed_left  = n(mut["position"]) - 1;              // MC.start - 1
+        int32_t needed_right = n(mut["position"]) + n(mut["size"]); // MC.end   + 1
+
+        cDiffEntry* jc_left  = NULL;
+        cDiffEntry* jc_right = NULL;
+        diff_entry_list_t::iterator jc_left_it, jc_right_it;
+
+        for (diff_entry_list_t::iterator jc_it = jc.begin(); jc_it != jc.end(); jc_it++) {
+          cDiffEntry& j = **jc_it;
+          if (!j.entry_exists("_is_interval")) continue;
+          if (j[j["_unique_interval"] + "_seq_id"] != mut["seq_id"]) continue;
+
+          int32_t uniq_pos    = n(j[j["_unique_interval"] + "_position"]);
+          int32_t uniq_strand = n(j[j["_unique_interval"] + "_strand"]);
+
+          if (jc_left == NULL && uniq_pos == needed_left && uniq_strand == -1) {
+            jc_left    = &j;
+            jc_left_it = jc_it;
+          } else if (jc_right == NULL && uniq_pos == needed_right && uniq_strand == +1) {
+            jc_right    = &j;
+            jc_right_it = jc_it;
+          }
+          if (jc_left != NULL && jc_right != NULL) break;
+        }
+
+        if (jc_left != NULL && jc_right != NULL) {
+          string is_name  = (*jc_left) ["_" + (*jc_left) ["_is_interval"] + "_is_name"];
+          string is_name2 = (*jc_right)["_" + (*jc_right)["_is_interval"] + "_is_name"];
+
+          if (is_name == is_name2) {
+            // MOB strand from JC_left (unique_interval_strand == -1)
+            int32_t is_strand = -(
+              n((*jc_left)[(*jc_left)["_is_interval"] + "_strand"])
+              * n((*jc_left)["_" + (*jc_left)["_is_interval"] + "_is_strand"])
+              * n((*jc_left)[(*jc_left)["_unique_interval"] + "_strand"])
+            );
+
+            // MOB: IS inserted at left boundary with no TSD; evidence = JC_left only
+            cDiffEntry mut_mob;
+            mut_mob._type = MOB;
+            mut_mob._evidence.push_back(jc_left->_id);
+            mut_mob
+              ("seq_id",           mut["seq_id"])
+              ("repeat_name",      is_name)
+              ("strand",           s(is_strand))
+              ("duplication_size", "0")
+              ("position",         s(n(mut["position"]) - 1));
+
+            // DEL: evidence = MC (already in mut._evidence) + JC_right
+            mut["mediated"] = is_name;
+            mut._evidence.push_back(jc_right->_id);
+
+            // Erase later iterator first to keep earlier one valid (std::list guarantee)
+            jc.erase(jc_right_it);
+            jc.erase(jc_left_it);
+
+            gd.add(mut_mob);
+            gd.add(mut);
+
+            mc_it = mc.erase(mc_it);
+            mc_it--;
+
+            if (verbose)
+              cout << "**** Double IS-mediated deletion: MOB + DEL predicted ****\n";
+            continue;
+          }
+        }
+        continue; // case (3) requires exactly one non-NULL r-pointer
+      }
+
 			///
 			// (3) there is a junction between unique sequence and a repeat element
 			///
