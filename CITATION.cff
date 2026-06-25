@@ -1,0 +1,61 @@
+cff-version: 1.2.0
+message: "If you use breseq in your research, please cite the preferred-citation below."
+title: breseq
+version: 0.40.1
+license: GPL-2.0-or-later
+repository-code: "https://github.com/barricklab/breseq"
+url: "http://barricklab.org/breseq"
+authors:
+  - given-names: Jeffrey E.
+    family-names: Barrick
+  - given-names: Jordan
+    family-names: Borges
+  - given-names: Geoffrey
+    family-names: Colburn
+  - given-names: Daniel
+    family-names: Deatherage
+  - given-names: Alex
+    family-names: Hu
+  - given-names: David
+    family-names: Knoester
+  - given-names: Austin
+    family-names: Meyer
+preferred-citation:
+  type: article
+  title: "Identification of mutations in laboratory-evolved microbes from next-generation sequencing data using breseq"
+  authors:
+    - given-names: Daniel E.
+      family-names: Deatherage
+    - given-names: Jeffrey E.
+      family-names: Barrick
+  journal: "Methods in Molecular Biology"
+  volume: 1151
+  start: 165
+  end: 188
+  year: 2014
+references:
+  - type: article
+    title: "Identifying structural variation in haploid microbial genomes from short-read resequencing data using breseq"
+    authors:
+      - given-names: Jeffrey E.
+        family-names: Barrick
+      - given-names: Geoffrey
+        family-names: Colburn
+      - given-names: Daniel E.
+        family-names: Deatherage
+      - given-names: C. Conover
+        family-names: Traverse
+      - given-names: Matthew D.
+        family-names: Strand
+      - given-names: Jordan J.
+        family-names: Borges
+      - given-names: David B.
+        family-names: Knoester
+      - given-names: Aaron
+        family-names: Reba
+      - given-names: Austin G.
+        family-names: Meyer
+    journal: "BMC Genomics"
+    volume: 15
+    start: 1039
+    year: 2014
