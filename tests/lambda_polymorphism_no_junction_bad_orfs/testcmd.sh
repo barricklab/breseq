@@ -15,7 +15,7 @@ TESTCMD="\
     --no-junction-prediction \
     -o ${SELF} \
     ${REFERENCE_ARG} \
-    ${DATADIR}/lambda/lambda_mixed_population.fastq \
+    ${DATADIR}/lambda/lambda_mixed_population.fastq.gz \
     "
 
 do_test $1 ${SELF}

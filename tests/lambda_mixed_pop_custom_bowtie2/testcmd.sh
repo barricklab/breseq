@@ -17,7 +17,7 @@ TESTCMD="\
     --bowtie2-stage2 '' \
     --bowtie2-junction '--local --score-min L,10,0.30  -k 20' \
     ${REFERENCE_ARG} \
-    ${DATADIR}/lambda/lambda_mixed_population.fastq \
+    ${DATADIR}/lambda/lambda_mixed_population.fastq.gz \
     "
 
 do_test $1 ${SELF}

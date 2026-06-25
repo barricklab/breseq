@@ -16,7 +16,7 @@ TESTCMD=" \
     -o ${SELF} \
     ${REFERENCE_ARG} \
     -s ${DATADIR}/REL606/REL606.is.gbk \
-    ${DATADIR}/REL606/REL606.junction_only.fastq
+    ${DATADIR}/REL606/REL606.junction_only.fastq.gz
 	"
 
 do_test $1 ${SELF}

@@ -39,7 +39,7 @@ FILE_PATTERN='-name output.gd'
 HASH=`which sha1sum`
 # executable used to diff files
 DIFF_BIN=`which diff`
-DIFF_IGNORE='^(#=COMMAND|#=CREATED|#=PROGRAM)'
+DIFF_IGNORE='^(#=COMMAND|#=CREATED|#=PROGRAM|#=READSEQ|#=REFSEQ)'
 
 # name of testexec file
 TESTEXEC=testcmd.sh

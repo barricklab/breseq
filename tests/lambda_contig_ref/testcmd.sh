@@ -13,7 +13,7 @@ TESTCMD="\
     ${BRESEQ_TEST_THREAD_ARG} \
     -o ${SELF} \
     -c ${DATADIR}/lambda/lambda-contig.gbk \
-    ${DATADIR}/lambda/lambda_mixed_population.fastq \
+    ${DATADIR}/lambda/lambda_mixed_population.fastq.gz \
     "
 
 do_test $1 ${SELF}
