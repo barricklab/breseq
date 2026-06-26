@@ -2530,12 +2530,14 @@ void add_text_fields_to_mutation(cDiffEntry& mut, const MutationTableOptions& op
       }
       s << ")";
       
-      if (from_string<int32_t>(mut["duplication_size"]) > 0) {
+      if (mut.entry_exists("indeterminate_duplication_size")) {
+        s << " ? bp";
+      } else if (from_string<int32_t>(mut["duplication_size"]) > 0) {
         s << " +" << mut["duplication_size"] << " bp";
       } else if (from_string<int32_t>(mut["duplication_size"]) < 0) {
         s << " \u0394" << abs(from_string<int32_t>(mut["duplication_size"])) << " bp";
       }
-      
+
       stringstream s_end;
       if (mut.entry_exists("del_end")) {
         s_end << " \u0394" << mut["del_end"] << " bp";
@@ -2546,7 +2548,7 @@ void add_text_fields_to_mutation(cDiffEntry& mut, const MutationTableOptions& op
       if (!(s_end.str()).empty()) {
         s << " ::" << s_end.str();
       }
-      
+
       html_mutation = s.str();
     } break;
       
@@ -2819,12 +2821,14 @@ void add_html_fields_to_mutation(cDiffEntry& mut, const MutationTableOptions& op
       }
       s << ")";
       
-      if (from_string<int32_t>(mut["duplication_size"]) > 0) {
+      if (mut.entry_exists("indeterminate_duplication_size")) {
+        s << " ? bp";
+      } else if (from_string<int32_t>(mut["duplication_size"]) > 0) {
         s << " +" << mut["duplication_size"] << " bp";
       } else if (from_string<int32_t>(mut["duplication_size"]) < 0) {
         s << " &Delta;" << abs(from_string<int32_t>(mut["duplication_size"])) << " bp";
       }
-      
+
       stringstream s_end;
       if (mut.entry_exists("del_end")) {
         s_end << " &Delta;" << mut["del_end"] << " bp";
@@ -2835,7 +2839,7 @@ void add_html_fields_to_mutation(cDiffEntry& mut, const MutationTableOptions& op
       if (!(s_end.str()).empty()) {
         s << " ::" << s_end.str();
       }
-      
+
       html_mutation = nonbreaking(s.str());
     } break;
       

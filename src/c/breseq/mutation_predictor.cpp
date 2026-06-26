@@ -512,11 +512,12 @@ namespace breseq {
             mut_mob._type = MOB;
             mut_mob._evidence.push_back(jc_left->_id);
             mut_mob
-              ("seq_id",           mut["seq_id"])
-              ("repeat_name",      is_name)
-              ("strand",           s(is_strand))
-              ("duplication_size", "0")
-              ("position",         s(n(mut["position"]) - 1));
+              ("seq_id",                         mut["seq_id"])
+              ("repeat_name",                    is_name)
+              ("strand",                         s(is_strand))
+              ("duplication_size",               "0")
+              ("indeterminate_duplication_size", "1")
+              ("position",                       s(n(mut["position"]) - 1));
 
             // DEL: evidence = MC (already in mut._evidence) + JC_right
             mut["mediated"] = is_name;
