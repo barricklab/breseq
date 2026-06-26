@@ -28,7 +28,6 @@ namespace breseq {
 void samtools_index(const string& bam_file_name) {
   string cmd = "samtools index " + double_quote(bam_file_name)
              + " " + double_quote(bam_file_name + ".bai");
-  cerr << "[samtools] " << cmd << endl;
   SYSTEM(cmd, false, false, false);
 }
 
@@ -37,13 +36,26 @@ void samtools_sort(const string& unsorted_bam_file_name, const string& sorted_ba
              + " -o " + double_quote(sorted_bam_file_name)
              + " -T " + double_quote(sorted_bam_file_name)
              + " " + double_quote(unsorted_bam_file_name);
-  cerr << "[samtools] " << cmd << endl;
-  SYSTEM(cmd, false, false, false);
+  cerr << "[system] " << cmd << endl;
+
+  string stderr_tmp = sorted_bam_file_name + ".stderr.tmp";
+  int ret = system((cmd + " 2>" + double_quote(stderr_tmp)).c_str());
+
+  ifstream err_file(stderr_tmp.c_str());
+  string line;
+  while (getline(err_file, line)) {
+    if (ret != 0 || line.find("[bam_sort_core]") == string::npos) {
+      cerr << line << "\n";
+    }
+  }
+  err_file.close();
+  remove(stderr_tmp.c_str());
+
+  ASSERT(ret == 0, "Error running command:\n[system] " + cmd + "\nResult code: " + to_string(ret));
 }
 
 void samtools_faidx(const string& fasta_file_name) {
   string cmd = "samtools faidx " + double_quote(fasta_file_name);
-  cerr << "[samtools] " << cmd << endl;
   SYSTEM(cmd, false, false, false);
 }
 
