@@ -532,8 +532,6 @@ namespace breseq
 		string complete_coverage_text_file_name;
     string ra_mc_genome_diff_file_name;
 
-    string polymorphism_statistics_done_file_name;
-		string polymorphism_statistics_ra_mc_genome_diff_file_name;
     
 		//! Paths: Copy Number Variation
     string copy_number_variation_path;

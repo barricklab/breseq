@@ -118,8 +118,6 @@ namespace breseq {
   extern const char* POLYMORPHISM_SCORE;
   extern const char* POLYMORPHISM_FREQUENCY;
   extern const char* MAJOR_FREQUENCY;
-  extern const char* POLYMORPHISM_EXISTS;
-  
   //For MC
   extern const char* START_RANGE;
   extern const char* END_RANGE;

@@ -22,7 +22,6 @@
 
 #include "libbreseq/error_count.h"
 #include "libbreseq/genome_diff.h"
-#include "libbreseq/stats.h"
 
 
 using namespace std;
@@ -4176,27 +4175,6 @@ void cReferenceSequences::annotate_mutations(cGenomeDiff& gd, bool only_muts, bo
   }//for
 }
 
-// Parses a comma-separated list of quality scores, e.g. "32,34,34,37".
-// Returns an empty vector for an empty input string (no reads of that allele).
-void cReferenceSequences::polymorphism_statistics(Settings& settings, Summary& summary)
-{
-  // Statistics were already computed inline during mutation identification (annotate_polymorphism_statistics).
-  // This step just strips the POLYMORPHISM_EXISTS marker and writes the annotated genome diff.
-  cGenomeDiff gd(settings.ra_mc_genome_diff_file_name);
-  cGenomeDiff new_gd;
-
-  diff_entry_list_t muts = gd.evidence_list();
-  for (diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); it++) {
-    cDiffEntry& mut = **it;
-    if (mut.entry_exists("user_defined_no_poly"))
-      mut.erase("user_defined_no_poly");
-    if (mut.entry_exists(POLYMORPHISM_EXISTS))
-      mut.erase(POLYMORPHISM_EXISTS);
-    new_gd.add(mut);
-  }
-
-  new_gd.write(settings.polymorphism_statistics_ra_mc_genome_diff_file_name);
-}
 
 std::string GetWord(std::string &s) {
   RemoveLeadingWhitespace(s);

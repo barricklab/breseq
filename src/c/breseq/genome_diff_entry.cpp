@@ -99,8 +99,6 @@ namespace breseq {
   const char* POLYMORPHISM_SCORE="polymorphism_score";
   const char* POLYMORPHISM_FREQUENCY="polymorphism_frequency";
   const char* MAJOR_FREQUENCY="major_frequency";            // frequency of major allele
-  const char* POLYMORPHISM_EXISTS="polymorphism_exists";    // internal flag for running R script
-  
   //For MC
   const char* START_RANGE="start_range";
   const char* END_RANGE="end_range";

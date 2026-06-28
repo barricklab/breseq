@@ -1100,7 +1100,6 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       // Add line to the polymorphism statistics input file if we are only a polymorphism
 
       if (ppred.frequency != 1) {
-        mut[POLYMORPHISM_EXISTS] = "1";
         annotate_polymorphism_statistics(mut, best_base_char, second_best_base_char, pos_info, pdata);
       }
 
@@ -1161,7 +1160,6 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         cDiffEntry mut = *(_user_evidence_ra_list.front().get());
         mut.to_spec(); //remove additional fields that might be left over!!
         mut[USER_DEFINED] = "1";
-        mut["user_defined_no_poly"] = "1"; // prevents doing stats on it
         
         // These are already assigned correctly by copy of RA
         //mut[SEQ_ID] = p.target_name();
