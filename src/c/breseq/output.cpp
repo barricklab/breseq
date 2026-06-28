@@ -498,12 +498,16 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   }
 
   HTML << "<p>Jump to: <a href=\"#mutation_list\">Predicted mutations</a>";
+  if (mc.size() + jc.size() + cn.size() > 0)
+    HTML << " | Unassigned evidence: ";
+  vector<string> jump_link_list;
   if (mc.size() > 0)
-    HTML << " | <a href=\"#missing_coverage_list\">Unassigned missing coverage evidence</a>";
+    jump_link_list.push_back("<a href=\"#missing_coverage_list\">missing coverage</a>");
   if (jc.size() > 0)
-    HTML << " | <a href=\"#new_junction_list\">Unassigned new junction evidence</a>";
+    jump_link_list.push_back("<a href=\"#new_junction_list\">new junction</a>");
   if (cn.size() > 0)
-    HTML << " | <a href=\"#copy_number_list\">Unassigned copy number evidence</a>";
+    jump_link_list.push_back("<a href=\"#copy_number_list\">copy number</a>");
+  HTML << join(jump_link_list, ", ");
   HTML << endl;
 
   HTML << "</div>" << endl;
@@ -703,15 +707,17 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
 
   if (ra_list.size() > 0 || jc_list.size() > 0) {
     bool first_link = true;
-    HTML << "<p>Jump to:";
+    vector<string> jump_link_list;
+
+    HTML << "<p>Jump to Marginal evidence: ";
     if (ra_list.size() > 0) {
-      HTML << " <a href=\"#read_alignment_list\">Marginal read alignment evidence</a>";
-      first_link = false;
+      jump_link_list.push_back("<a href=\"#read_alignment_list\">read alignment</a>");
     }
     if (jc_list.size() > 0) {
-      if (!first_link) HTML << " |";
-      HTML << " <a href=\"#new_junction_list\">Marginal new junction evidence</a>";
+      jump_link_list.push_back("<a href=\"#new_junction_list\">new junction</a>");
     }
+    HTML << join(jump_link_list, ", ");
+
     HTML << endl;
   }
 
