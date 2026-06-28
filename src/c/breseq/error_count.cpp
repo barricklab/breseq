@@ -237,8 +237,6 @@ void error_count_pileup::print_coverage() {
 	for(size_t i=0; i<m_coverage_group_info.size(); ++i) {
   
 		string filename = Settings::path_file_name(m_output_dir, m_settings.unique_only_coverage_distribution_file_name, "@", to_string<uint32_t>(i));
-    
-    (m_output_dir + "/" + m_bam_header->target_name[i] + ".unique_only_coverage_distribution.tab");
 		ofstream out(filename.c_str());
 		
 		out << "coverage\tn" << endl;
@@ -257,13 +255,16 @@ void error_count_pileup::print_error(const vector<string>& readfiles) {
     // It will be printed during pileup if !m_per_position
     // and we don't want the additional processing.
     
-    if (!m_error_table.m_per_position) 
+    if (!m_error_table.m_per_position)
     {
-      m_error_table.write_count_table( Settings::path_file_name(m_output_dir, m_settings.error_counts_file_name));
-            
+      const bool print_error_counts_file = false; // set true to write pre-conversion count table for debugging
+      if (print_error_counts_file) {
+        m_error_table.write_count_table( Settings::path_file_name(m_output_dir, m_settings.error_counts_file_name));
+      }
+
       m_error_table.counts_to_log10_prob();
       m_error_table.write_log10_prob_table(m_settings.error_rates_file_name);
-  
+
       m_error_table.write_base_qual_only_prob_table( Settings::path_file_name(m_output_dir, m_settings.error_rates_base_qual_error_prob_file_name), readfiles);
     }
 }

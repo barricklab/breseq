@@ -1196,7 +1196,6 @@ public:
     void annotate_1_mutation(cDiffEntry& mut, uint32_t start, uint32_t end, bool repeat_override = false, bool ignore_pseudogenes = false, double inactivating_overlap_fraction = k_inactivating_overlap_fraction, int32_t inactivating_size_cutoff = k_inactivating_size_cutoff, int32_t promoter_distance = k_promoter_distance);
     void categorize_1_mutation(cDiffEntry& mut, int32_t large_size_cutoff);
     void annotate_mutations(cGenomeDiff& gd, bool only_muts = false, bool ignore_pseudogenes = false, bool compare_mode = false, int32_t large_size_cutoff=kBreseq_large_mutation_size_cutoff, bool verbose = false, double inactivating_overlap_fraction = k_inactivating_overlap_fraction, int32_t inactivating_size_cutoff = k_inactivating_size_cutoff, int32_t promoter_distance = k_promoter_distance);
-    void polymorphism_statistics(Settings& settings, Summary& summary);
     string repeat_family_sequence(const string& repeat_name, int8_t strand, string* repeat_region = NULL, string* picked_seq_id=NULL, cFeatureLocation* picked_sequence_feature=NULL, bool fatal_error=true);
     
     static const string safe_seq_id_name_characters;
