@@ -25,9 +25,9 @@ ELAPSED=$((END - START))
 # a Snakemake 'output:' so it survives Snakemake's cleanup of failed jobs'
 # outputs.
 if [[ ${STATUS} -eq 0 ]]; then
-	echo "PASS ${TESTNAME} ${ELAPSED}" > "${RESULT}"
+	echo "  PASS   ${TESTNAME} ${ELAPSED}" > "${RESULT}"
 else
-	echo "FAIL ${TESTNAME} ${ELAPSED}" > "${RESULT}"
+	echo ">>FAIL<< ${TESTNAME} ${ELAPSED}" > "${RESULT}"
 fi
 
 exit ${STATUS}
