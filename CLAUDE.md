@@ -22,11 +22,19 @@ make
 make install
 ```
 
-**Dependencies for building and running tests ** (use conda with `dev-environment.yml`):
+**Dependencies for building and running tests** (use conda with `dev-environment.yml`):
+
+When working in a worktree, reuse the pre-built conda env in the main repo (`breseq/env`, which is at `../../../env` relative to a worktree). Use `conda run` to invoke commands inside it without activating:
 ```bash
-conda env create -f dev-environment.yml $PWD/env
-conda activate $PWD/env
-./bootstrap.sh && ./configure && make
+conda run -p ../../../env ./bootstrap.sh
+conda run -p ../../../env ./configure
+conda run -p ../../../env make
+```
+
+If that env doesn't exist yet (e.g., fresh clone or working directly in the main repo), create it first as described in `DEVELOPER`:
+```bash
+conda env create -f dev-environment.yml --prefix=$PWD/env
+# then use: conda run -p $PWD/env <command>
 ```
 
 Runtime dependencies: `bowtie2`, `gnuplot`, optionally `phylip`.
@@ -162,7 +170,7 @@ breseq writes to `-o <output_dir>` (default: current directory):
 
 - **Always ask before committing, merging, or pushing** — never do these automatically.
 - **Work in the current worktree** — all edits and builds happen here. Do not modify files in the main repository except:
-  1. You may use the conda environment at `../../../env` (i.e., `breseq/env` in the main repo) for compiling and running tests.
+  1. When running inside a git worktree, use the shared conda env at `../../../env` (i.e., `breseq/env` in the main repo) via `conda run -p ../../../env <command>`. If that env is absent, fall back to creating one locally as described in `DEVELOPER`.
   2. When explicitly told to, you may merge changes back to the `master` branch in the main repo.
 - **Run `make test` as part of the development cycle** — run the full test suite before considering a feature or fix complete.
 

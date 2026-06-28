@@ -841,7 +841,7 @@ int do_annotate(int argc, char* argv[])
 	options("add-html-fields,a", "Add formatted fields that are used for generating HTML output. Only applicable to GD and JSON output formats", TAKES_NO_ARGUMENT);
 	options("add-text-fields,b", "Add formatted fields in UTF-8 encoded text that are similar to those used in HTML output. Only applicable to GD, TSV, CSV, and JSON output formats", TAKES_NO_ARGUMENT);
 	options("ignore-pseudogenes", "Treat pseudogenes as valid ORFs for calling amino acid substitutions", TAKES_NO_ARGUMENT);
-	options("repeat-header", "In HTML mode, repeat the header line every this many rows (0=OFF)", "0");
+	options("no-javascript", "Do not include JavaScript in the HTML output", TAKES_NO_ARGUMENT);
 	options("phylogeny-aware,p", "Do not consider mutations that differ in their 'phylogeny_id' fields equivalent.", TAKES_NO_ARGUMENT);
 	options("population-aware,q", "Do not consider mutations in GD files with different POPULATION metadata values equivalent.", TAKES_NO_ARGUMENT);
 	options("region,g", "Only show mutations that overlap this reference sequence region (e.g., REL606:64722-65312)");
@@ -1010,9 +1010,9 @@ int do_annotate(int argc, char* argv[])
     Settings settings;
     // No evidence needs to be transferred to options and initialized correctly within breseq
     settings.no_evidence = true;
-    
+    settings.no_javascript = options.count("no-javascript");
+
     MutationTableOptions mt_options(settings);
-		mt_options.repeat_header = from_string<int32_t>(options["repeat-header"]);
 
     if (polymorphism_search_found)
       mt_options.force_frequencies_for_one_reference = true;
