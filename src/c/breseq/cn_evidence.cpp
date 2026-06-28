@@ -54,7 +54,9 @@ void CNEvidence::predict(Settings& settings, cReferenceSequences& ref_seq_info)
 
 void CNEvidence::run_cnery(Settings& settings, const string& cnery_output_prefix)
 {
-  string command = double_quote(settings.installed["cnery"]);
+  // Prepend breseq's own directory to PATH so CNery can call "breseq bam2cov"
+  string command = "PATH=" + double_quote(Settings::get_bin_path() + ":$PATH") + " ";
+  command += double_quote(settings.installed["cnery"]);
   command += " -i " + double_quote(settings.base_output_path.size() ? settings.base_output_path : string("."));
   command += " -ref " + double_quote(settings.reference_fasta_file_name);
   command += " -o " + double_quote(cnery_output_prefix);
