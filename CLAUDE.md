@@ -158,6 +158,14 @@ breseq writes to `-o <output_dir>` (default: current directory):
 
 `VALIDATE`, `APPLY`, `ANNOTATE`/`COMPARE`, `MUTATIONS`, `CHECK`, `NORMALIZE`, `SUBTRACT`, `INTERSECT`, `UNION`/`MERGE`, `FILTER`/`REMOVE`, `MASK`, `NOT-EVIDENCE`, `GD2VCF`, `VCF2GD`, `GD2GVF`, `GD2CIRCOS`, `MUMMER2MASK`, `COUNT`, `PHYLOGENY`
 
+## Claude Code Workflow Rules
+
+- **Always ask before committing, merging, or pushing** — never do these automatically.
+- **Work in the current worktree** — all edits and builds happen here. Do not modify files in the main repository except:
+  1. You may use the conda environment at `../../../env` (i.e., `breseq/env` in the main repo) for compiling and running tests.
+  2. When explicitly told to, you may merge changes back to the `master` branch in the main repo.
+- **Run `make test` as part of the development cycle** — run the full test suite before considering a feature or fix complete.
+
 ## Distribution
 
 ```bash
