@@ -710,8 +710,8 @@ identify_mutations_pileup::identify_mutations_pileup(
 	assert(_log10_ref_length != 0);
 	_log10_ref_length = log10(_log10_ref_length);
   
-  // are we printing detailed coverage information? (only needed when --cnv reads it back)
-  _print_coverage_data = _settings.do_copy_number_variation;
+  // are we printing detailed coverage information? (only needed when --cn-evidence reads it back)
+  _print_coverage_data = _settings.do_cn_evidence;
   
   // load the error table file and convert back to probabilities
   _error_table.read_log10_prob_table(settings.error_rates_file_name);
