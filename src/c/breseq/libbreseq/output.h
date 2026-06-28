@@ -1,20 +1,22 @@
 /*****************************************************************************
- 
+
  AUTHORS
- 
- Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
- David B. Knoester
- 
+
+   Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com> and other contributors
+
  LICENSE AND COPYRIGHT
- 
- Copyright (c) 2008-2010 Michigan State University
- Copyright (c) 2011-2022 The University of Texas at Austin
- 
- breseq is free software; you can redistribute it and/or modify it under the
- terms the GNU General Public License as published by the Free Software
- Foundation; either version 1, or (at your option) any later version.
- 
- *****************************************************************************/
+
+   Copyright (c) 2008-2010 Michigan State University
+   Copyright (c) 2011-2025 The University of Texas at Austin
+   Copyright (c) 2025-     Michigan State University
+
+   breseq is free software; you can redistribute it and/or modify it under the
+   terms of the GNU General Public License as published by the Free Software
+   Foundation; either version 2, or (at your option) any later version.
+
+   SPDX-License-Identifier: GPL-2.0-or-later
+
+*****************************************************************************/
 
 #ifndef _BRESEQ_OUTPUT_H_
 #define _BRESEQ_OUTPUT_H_
@@ -153,6 +155,7 @@ extern const char* ALIGN_LEFT;
   //Specific to Breseq HTML Files
   string html_header(const string& title, const Settings& settings);
   string breseq_header_string(const Settings& settings);
+  string mutation_filter_input_string();
 
   
 /*-----------------------------------------------------------------------------
@@ -236,12 +239,18 @@ string html_new_junction_table_string(diff_entry_list_t& jc,
                                       );
   
 string html_copy_number_table_string(
-                                     diff_entry_list_t& list_ref, 
-                                     bool show_details, 
-                                     const string& title = "Copy number evidence", 
+                                     diff_entry_list_t& list_ref,
+                                     bool show_details,
+                                     const string& title = "Copy number evidence",
                                      const string& relative_link = ""
                                      );
 
+string html_soft_clipping_table_string(
+                                       diff_entry_list_t& list_ref,
+                                       bool show_details,
+                                       const string& title = "Soft clipping evidence",
+                                       const string& relative_link = ""
+                                       );
 
 string html_genome_diff_item_table_string(const Settings& settings, const cGenomeDiff& gd, diff_entry_list_t& list_ref);
 string html_deletion_coverage_values_table_string(const Settings& settings, cReferenceSequences& ref_seq_info, Summary& summary);

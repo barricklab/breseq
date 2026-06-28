@@ -14,7 +14,7 @@ TESTCMD="\
     --output-unmapped-reads \
     -o ${SELF} \
     ${REFERENCE_ARG} \
-    ${DATADIR}/lambda/lambda_mixed_population.fastq ; \
+    ${DATADIR}/lambda/lambda_mixed_population.fastq.gz ; \
     if [ ! -f "${SELF}/data/unmapped_reads.fastq.gz" ]; then \
         echo 'Unmapped read fastq file not created!'; \
         exit 1; \

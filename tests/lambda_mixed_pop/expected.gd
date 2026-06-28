@@ -1,8 +1,8 @@
 #=GENOME_DIFF	1.0
 #=TITLE	my_favorite_phage_genome
 #=AUTHOR	Arthur C. T. Genome
-#=CREATED	09:14:24 21 Jun 2026
-#=PROGRAM	breseq 0.40.1 revision 089d37780932
+#=CREATED	20:21:18 21 Jun 2026
+#=PROGRAM	breseq 0.40.1
 #=COMMAND	./src/c/breseq/breseq -j 4 -o tests/lambda_mixed_pop -g tests/lambda_mixed_pop/header.gd --genbank-field-for-seq-id VERSION -r tests/lambda_mixed_pop/../data/lambda/lambda.gbk tests/lambda_mixed_pop/../data/lambda/lambda_mixed_population.fastq
 #=REFSEQ	location:lambda_mixed_population.fastq
 #=READSEQ	location:lambda_mixed_population.fastq

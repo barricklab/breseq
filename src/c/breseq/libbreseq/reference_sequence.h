@@ -1,18 +1,20 @@
 /*****************************************************************************
 
-AUTHORS
+ AUTHORS
 
-  Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
-  David B. Knoester
+   Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com> and other contributors
 
-LICENSE AND COPYRIGHT
+ LICENSE AND COPYRIGHT
 
-  Copyright (c) 2008-2010 Michigan State University
-  Copyright (c) 2011-2022 The University of Texas at Austin
+   Copyright (c) 2008-2010 Michigan State University
+   Copyright (c) 2011-2025 The University of Texas at Austin
+   Copyright (c) 2025-     Michigan State University
 
-  breseq is free software; you can redistribute it and/or modify it under the  
-  terms the GNU General Public License as published by the Free Software 
-  Foundation; either version 1, or (at your option) any later version.
+   breseq is free software; you can redistribute it and/or modify it under the
+   terms of the GNU General Public License as published by the Free Software
+   Foundation; either version 2, or (at your option) any later version.
+
+   SPDX-License-Identifier: GPL-2.0-or-later
 
 *****************************************************************************/
 
@@ -1194,7 +1196,6 @@ public:
     void annotate_1_mutation(cDiffEntry& mut, uint32_t start, uint32_t end, bool repeat_override = false, bool ignore_pseudogenes = false, double inactivating_overlap_fraction = k_inactivating_overlap_fraction, int32_t inactivating_size_cutoff = k_inactivating_size_cutoff, int32_t promoter_distance = k_promoter_distance);
     void categorize_1_mutation(cDiffEntry& mut, int32_t large_size_cutoff);
     void annotate_mutations(cGenomeDiff& gd, bool only_muts = false, bool ignore_pseudogenes = false, bool compare_mode = false, int32_t large_size_cutoff=kBreseq_large_mutation_size_cutoff, bool verbose = false, double inactivating_overlap_fraction = k_inactivating_overlap_fraction, int32_t inactivating_size_cutoff = k_inactivating_size_cutoff, int32_t promoter_distance = k_promoter_distance);
-    void polymorphism_statistics(Settings& settings, Summary& summary);
     string repeat_family_sequence(const string& repeat_name, int8_t strand, string* repeat_region = NULL, string* picked_seq_id=NULL, cFeatureLocation* picked_sequence_feature=NULL, bool fatal_error=true);
     
     static const string safe_seq_id_name_characters;

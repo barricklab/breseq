@@ -1,20 +1,22 @@
 /*****************************************************************************
- 
+
  AUTHORS
- 
- Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
- David B. Knoester
- 
+
+   Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com> and other contributors
+
  LICENSE AND COPYRIGHT
- 
- Copyright (c) 2008-2010 Michigan State University
- Copyright (c) 2011-2022 The University of Texas at Austin
- 
- breseq is free software; you can redistribute it and/or modify it under the
- terms the GNU General Public License as published by the Free Software
- Foundation; either version 1, or (at your option) any later version.
- 
- *****************************************************************************/
+
+   Copyright (c) 2008-2010 Michigan State University
+   Copyright (c) 2011-2025 The University of Texas at Austin
+   Copyright (c) 2025-     Michigan State University
+
+   breseq is free software; you can redistribute it and/or modify it under the
+   terms of the GNU General Public License as published by the Free Software
+   Foundation; either version 2, or (at your option) any later version.
+
+   SPDX-License-Identifier: GPL-2.0-or-later
+
+*****************************************************************************/
 
 
 #include "libbreseq/settings.h"
@@ -252,7 +254,7 @@ namespace breseq
     ("base-quality-cutoff,b", "Ignore bases with quality scores lower than this value", 3, ADVANCED_OPTION)
     ("quality-score-trim", "Trim the ends of reads past any base with a quality score below --base-quality-score-cutoff.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("require-match-length", "Only consider alignments that cover this many bases of a read", 0, ADVANCED_OPTION)
-    ("require-match-fraction", "Only consider alignments that cover this fraction of a read", 0.9, ADVANCED_OPTION)
+    ("require-match-fraction", "Only consider alignments that cover this fraction of a read (automatically lowered to 0.5 when --predict-soft-clipping is used, unless set explicitly)", 0.9, ADVANCED_OPTION)
     ("maximum-read-mismatches", "Don't consider reads with this many or more bases or indels that are different from the reference sequence. Unaligned bases at the end of a read also count as mismatches. Unaligned bases at the beginning of the read do NOT count as mismatches. (DEFAULT=OFF)", "", ADVANCED_OPTION)
     ;
     
@@ -289,6 +291,14 @@ namespace breseq
     ("deletion-coverage-seed-cutoff","Value for coverage below which MC are seeded", 0, ADVANCED_OPTION)
     ("deletion-coverage-propagation-cutoff","Value for coverage above which MC ends stop. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
     ("call-mutations-overlapping-MC", "If provided, don't ignore mutations predicted from RA evidence that overlap MC evidence", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ;
+
+    options.addUsage("", ADVANCED_OPTION);
+    options.addUsage("Soft-Clipping (SC) Evidence Options", ADVANCED_OPTION);
+    options
+    ("predict-soft-clipping", "Predict soft-clipping (SC) evidence: positions where reads are unexpectedly soft-clipped at their ends, which may indicate unannotated structural variation. This evidence type is experimental and disabled by default.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("soft-clipping-minimum-bases", "Minimum number of soft-clipped bases at a read end to count as a soft-clipping event", 8, ADVANCED_OPTION)
+    ("soft-clipping-score-cutoff", "Log10 E-value cutoff for soft-clipping evidence (DEFAULT = 2)", 2.0, ADVANCED_OPTION)
     ;
     
     options.addUsage("", ADVANCED_OPTION);
@@ -511,7 +521,18 @@ namespace breseq
     ASSERT(this->deletion_coverage_propagation_cutoff >= 0, "Argument --deletion-coverage-seed-cutoff must be >= 0")
     
     this->call_mutations_overlapping_missing_coverage = options.count("call-mutations-overlapping-MC");
-    
+
+    this->predict_soft_clipping = options.count("predict-soft-clipping");
+    this->soft_clipping_minimum_bases = from_string<uint32_t>(options["soft-clipping-minimum-bases"]);
+    this->soft_clipping_log10_e_value_cutoff = from_string<double>(options["soft-clipping-score-cutoff"]);
+
+    // Soft-clipping evidence needs partially-aligned reads to be kept so their clipped
+    // ends are visible for tabulation, so loosen the match-fraction requirement when
+    // enabled, unless the user explicitly set their own value.
+    if (this->predict_soft_clipping && !options.count("require-match-fraction")) {
+      this->require_match_fraction = 0.5;
+    }
+
     //! Settings: bowtie2
     //  all have default that we only overwrite if present on command line
     if (options.count("bowtie2-scoring")) this->bowtie2_scoring = options["bowtie2-scoring"];
@@ -730,6 +751,11 @@ namespace breseq
       this->zip_html = false;
     }
 
+    if (this->zip_html && !file_exists((this->program_data_path + "/jszip.min.js").c_str())) {
+      cerr << "WARNING: --zip-html has been disabled because a required data file (jszip.min.js) is missing from this breseq installation's data path: " << this->program_data_path << endl;
+      this->zip_html = false;
+    }
+
     /*
     if (this->user_evidence_genome_diff_file_name.size() && !this->polymorphism_prediction) {
       ERROR("You must run breseq in polymorphism mode (-p) when supplying --user-evidence-gd.");
@@ -760,6 +786,7 @@ namespace breseq
     fprintf(stderr, "\n");
     fprintf(stderr, "Copyright (c) 2008-2010 Michigan State University\n");
     fprintf(stderr, "Copyright (c) 2011-2025 The University of Texas at Austin\n");
+    fprintf(stderr, "Copyright (c) 2025-     Michigan State University\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "If you use breseq in your research, please cite:\n");
     fprintf(stderr, "\n");
@@ -901,6 +928,9 @@ namespace breseq
     this->deletion_coverage_propagation_cutoff = 0;
     this->deletion_coverage_seed_cutoff = 0;
     this->call_mutations_overlapping_missing_coverage = false;
+    this->predict_soft_clipping = false;
+    this->soft_clipping_minimum_bases = 8;
+    this->soft_clipping_log10_e_value_cutoff = 2.0;
       
     this->polymorphism_prediction = false;
     this->mixed_base_prediction = true;
@@ -1060,6 +1090,8 @@ namespace breseq
 		this->coverage_file_name = this->error_calibration_path + "/@.coverage.tab";
 		this->unique_only_coverage_distribution_file_name = this->error_calibration_path + "/@.unique_only_coverage_distribution.tab";
 		this->error_rates_summary_file_name = this->error_calibration_path + "/summary.json";
+		this->soft_clipping_counts_file_name = this->error_calibration_path + "/soft_clipping_counts.tab";
+		this->soft_clipping_summary_file_name = this->error_calibration_path + "/soft_clipping_summary.json";
 		this->error_rates_base_qual_error_prob_file_name = this->error_calibration_path + "/base_qual_error_prob.#.tab";
 
 		//! Paths: Mutation Identification
@@ -1071,9 +1103,6 @@ namespace breseq
 		this->complete_coverage_text_file_name = this->mutation_identification_path + "/@.coverage.tab";
 		this->ra_mc_genome_diff_file_name = this->mutation_identification_path + "/ra_mc_evidence.gd";
 
-    this->polymorphism_statistics_done_file_name = this->mutation_identification_path + "/polymorphism_statistics.done";
-		this->polymorphism_statistics_input_file_name = this->mutation_identification_path + "/polymorphism_statistics_input.tab";
-		this->polymorphism_statistics_ra_mc_genome_diff_file_name = this->mutation_identification_path + "/ra_mc_evidence_polymorphism_statistics.gd";
 
     //! Paths: Copy Number Variation
 		this->copy_number_variation_path = "09_copy_number_variation";

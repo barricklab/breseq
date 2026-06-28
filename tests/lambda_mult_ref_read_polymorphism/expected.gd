@@ -1,6 +1,6 @@
 #=GENOME_DIFF	1.0
-#=CREATED	09:14:49 21 Jun 2026
-#=PROGRAM	breseq 0.40.1 revision 089d37780932
+#=CREATED	20:21:54 21 Jun 2026
+#=PROGRAM	breseq 0.40.1
 #=COMMAND	./src/c/breseq/breseq -j 4 --polymorphism-prediction -o tests/lambda_mult_ref_read_polymorphism -r tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.1-2.gbk -r tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.3.gbk -r tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.4.gbk -r tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.5.gbk tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.1.fastq tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.2.fastq tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.3.fastq tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.4.fastq tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.5.fastq
 #=REFSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.1-2.gbk
 #=REFSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.3.gbk

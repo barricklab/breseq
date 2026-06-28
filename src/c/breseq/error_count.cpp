@@ -1,18 +1,20 @@
 /*****************************************************************************
 
-AUTHORS
+ AUTHORS
 
-  Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
-  David B. Knoester
+   Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com> and other contributors
 
-LICENSE AND COPYRIGHT
+ LICENSE AND COPYRIGHT
 
-  Copyright (c) 2008-2010 Michigan State University
-  Copyright (c) 2011-2022 The University of Texas at Austin
+   Copyright (c) 2008-2010 Michigan State University
+   Copyright (c) 2011-2025 The University of Texas at Austin
+   Copyright (c) 2025-     Michigan State University
 
-  breseq is free software; you can redistribute it and/or modify it under the  
-  terms the GNU General Public License as published by the Free Software 
-  Foundation; either version 1, or (at your option) any later version.
+   breseq is free software; you can redistribute it and/or modify it under the
+   terms of the GNU General Public License as published by the Free Software
+   Foundation; either version 2, or (at your option) any later version.
+
+   SPDX-License-Identifier: GPL-2.0-or-later
 
 *****************************************************************************/
 
@@ -235,8 +237,6 @@ void error_count_pileup::print_coverage() {
 	for(size_t i=0; i<m_coverage_group_info.size(); ++i) {
   
 		string filename = Settings::path_file_name(m_output_dir, m_settings.unique_only_coverage_distribution_file_name, "@", to_string<uint32_t>(i));
-    
-    (m_output_dir + "/" + m_bam_header->target_name[i] + ".unique_only_coverage_distribution.tab");
 		ofstream out(filename.c_str());
 		
 		out << "coverage\tn" << endl;
@@ -255,13 +255,16 @@ void error_count_pileup::print_error(const vector<string>& readfiles) {
     // It will be printed during pileup if !m_per_position
     // and we don't want the additional processing.
     
-    if (!m_error_table.m_per_position) 
+    if (!m_error_table.m_per_position)
     {
-      m_error_table.write_count_table( Settings::path_file_name(m_output_dir, m_settings.error_counts_file_name));
-            
+      const bool print_error_counts_file = false; // set true to write pre-conversion count table for debugging
+      if (print_error_counts_file) {
+        m_error_table.write_count_table( Settings::path_file_name(m_output_dir, m_settings.error_counts_file_name));
+      }
+
       m_error_table.counts_to_log10_prob();
       m_error_table.write_log10_prob_table(m_settings.error_rates_file_name);
-  
+
       m_error_table.write_base_qual_only_prob_table( Settings::path_file_name(m_output_dir, m_settings.error_rates_base_qual_error_prob_file_name), readfiles);
     }
 }

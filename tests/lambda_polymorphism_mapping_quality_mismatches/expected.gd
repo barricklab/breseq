@@ -1,6 +1,6 @@
 #=GENOME_DIFF	1.0
-#=CREATED	09:14:30 21 Jun 2026
-#=PROGRAM	breseq 0.40.1 revision 089d37780932
+#=CREATED	20:22:25 21 Jun 2026
+#=PROGRAM	breseq 0.40.1
 #=COMMAND	./src/c/breseq/breseq -j 4 --polymorphism-prediction --minimum-mapping-quality 40 --maximum-read-mismatches 1 -o tests/lambda_polymorphism_mapping_quality_mismatches -r tests/lambda_polymorphism_mapping_quality_mismatches/../data/lambda/lambda.gbk tests/lambda_polymorphism_mapping_quality_mismatches/../data/lambda/lambda_mixed_population.fastq
 #=REFSEQ	tests/lambda_polymorphism_mapping_quality_mismatches/../data/lambda/lambda.gbk
 #=READSEQ	tests/lambda_polymorphism_mapping_quality_mismatches/../data/lambda/lambda_mixed_population.fastq

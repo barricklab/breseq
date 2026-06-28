@@ -15,7 +15,7 @@ TESTCMD="\
     -b 0 \
     -o ${SELF} \
     ${REFERENCE_ARG} \
-    ${DATADIR}/REL606/REL606.fragment.2.fastq \
+    ${DATADIR}/REL606/REL606.fragment.2.fastq.gz \
     "
 
 do_test $1 ${SELF}

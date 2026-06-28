@@ -1,18 +1,20 @@
 /*****************************************************************************
 
-AUTHORS
+ AUTHORS
 
-  Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
-  David B. Knoester
+   Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com> and other contributors
 
-LICENSE AND COPYRIGHT
+ LICENSE AND COPYRIGHT
 
-  Copyright (c) 2008-2010 Michigan State University
-  Copyright (c) 2011-2022 The University of Texas at Austin
+   Copyright (c) 2008-2010 Michigan State University
+   Copyright (c) 2011-2025 The University of Texas at Austin
+   Copyright (c) 2025-     Michigan State University
 
-  breseq is free software; you can redistribute it and/or modify it under the  
-  terms the GNU General Public License as published by the Free Software 
-  Foundation; either version 1, or (at your option) any later version.
+   breseq is free software; you can redistribute it and/or modify it under the
+   terms of the GNU General Public License as published by the Free Software
+   Foundation; either version 2, or (at your option) any later version.
+
+   SPDX-License-Identifier: GPL-2.0-or-later
 
 *****************************************************************************/
 
@@ -45,6 +47,7 @@ namespace breseq {
                           const string& bam,
 													const string& fasta,
 													const string& gd_file,
+                          const cReferenceSequences& ref_seq_info,
                           const vector<double>& deletion_propagation_cutoff,
                           const vector<double>& deletion_seed_cutoff,
 													double mutation_cutoff,
@@ -266,6 +269,9 @@ namespace breseq {
     //! Write the genome diff
     void write_gd(const string& filename)
       { _gd.write(filename); }
+
+    //! Add SC (soft-clipping) evidence entries to the genome diff
+    void add_sc_evidence(const Summary& summary, const cReferenceSequences& ref_seq_info);
     
     
 	protected:
@@ -275,8 +281,8 @@ namespace breseq {
 		//! Helper method to track unknowns.
 		void update_unknown_intervals(uint32_t position, uint32_t seq_id, bool base_predicted, bool this_position_unique_only_coverage);
 
-    //! Helper function for writing a line to the polymorphism file.
-    void write_polymorphism_input_file_line(const pileup& p, const uint32_t insert_count, char ref_base_char, char best_base_char, char second_best_base_char, const polymorphism_prediction& ppred, position_base_info& pos_info, const vector<polymorphism_data>& pdata );
+    //! Compute and annotate polymorphism bias statistics directly on the diff entry.
+    void annotate_polymorphism_statistics(cDiffEntry& mut, char best_base_char, char second_best_base_char, position_base_info& pos_info, const vector<polymorphism_data>& pdata);
     
 		//! Predict whether there is a significant polymorphism.
     polymorphism_prediction predict_polymorphism (base_char best_base_char, base_char second_best_base_char, vector<polymorphism_data>& pdata );
@@ -308,6 +314,7 @@ namespace breseq {
     
     //! Settings calculated during initialization
 		double _log10_ref_length; //!< log10 of the total reference sequence.
+    uint64_t _total_reference_length; //!< total reference sequence length (for bias e-value).
     
     //! Initialized once per pileup
     cErrorTable _error_table;
@@ -321,9 +328,6 @@ namespace breseq {
 		bool _print_coverage_data; //!< whether or not to print
 		ofstream _coverage_data;
 
-		// this is used to output strand and quality information for R to process:
-		ofstream _polymorphism_r_input_file;
-		
 		// these are state variables used by the deletion-prediction method.
     double _this_deletion_propagation_cutoff;
     double _this_deletion_seed_cutoff;

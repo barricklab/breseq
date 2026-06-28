@@ -1,18 +1,20 @@
 /*****************************************************************************
 
-AUTHORS
+ AUTHORS
 
-  Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
-  David B. Knoester
+   Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com> and other contributors
 
-LICENSE AND COPYRIGHT
+ LICENSE AND COPYRIGHT
 
-  Copyright (c) 2008-2010 Michigan State University
-  Copyright (c) 2011-2022 The University of Texas at Austin
+   Copyright (c) 2008-2010 Michigan State University
+   Copyright (c) 2011-2025 The University of Texas at Austin
+   Copyright (c) 2025-     Michigan State University
 
-  breseq is free software; you can redistribute it and/or modify it under the  
-  terms the GNU General Public License as published by the Free Software 
-  Foundation; either version 1, or (at your option) any later version.
+   breseq is free software; you can redistribute it and/or modify it under the
+   terms of the GNU General Public License as published by the Free Software
+   Foundation; either version 2, or (at your option) any later version.
+
+   SPDX-License-Identifier: GPL-2.0-or-later
 
 *****************************************************************************/
 
@@ -20,6 +22,7 @@ LICENSE AND COPYRIGHT
 #include "libbreseq/pileup.h"
 #include "libbreseq/identify_mutations.h"
 #include "libbreseq/error_count.h"
+#include "libbreseq/reference_sequence.h"
 
 using namespace std;
 
@@ -34,6 +37,7 @@ void identify_mutations(
 								const string& bam,
 								const string& fasta,
 								const string& gd_file,
+                const cReferenceSequences& ref_seq_info,
                 const vector<double>& deletion_propagation_cutoff,
                 const vector<double>& deletion_seed_cutoffs,
 								double mutation_cutoff,
@@ -43,7 +47,7 @@ void identify_mutations(
                 uint32_t polymorphism_precision_places,
 								bool print_per_position_file
  ) {
-                                                                                            
+
 	// do the mutation identification:
 	identify_mutations_pileup imp(
                 settings,
@@ -60,6 +64,7 @@ void identify_mutations(
 								print_per_position_file
 							);
 	imp.do_pileup(settings.call_mutations_seq_id_set());
+  if (settings.predict_soft_clipping) imp.add_sc_evidence(summary, ref_seq_info);
   imp.write_gd(gd_file);
 }
 
@@ -673,6 +678,7 @@ identify_mutations_pileup::identify_mutations_pileup(
 , _polymorphism_precision_decimal(polymorphism_precision_decimal)
 , _polymorphism_precision_places(polymorphism_precision_places)
 , _log10_ref_length(0)
+, _total_reference_length(summary.sequence_conversion.total_reference_sequence_length)
 , _snp_caller("haploid", summary.sequence_conversion.total_reference_sequence_length)
 , _this_deletion_reaches_seed_value(false)
 , _this_deletion_redundant_reached_zero(false)
@@ -704,8 +710,8 @@ identify_mutations_pileup::identify_mutations_pileup(
 	assert(_log10_ref_length != 0);
 	_log10_ref_length = log10(_log10_ref_length);
   
-  // are we printing detailed coverage information?
-  _print_coverage_data = true;
+  // are we printing detailed coverage information? (only needed when --cnv reads it back)
+  _print_coverage_data = _settings.do_copy_number_variation;
   
   // load the error table file and convert back to probabilities
   _error_table.read_log10_prob_table(settings.error_rates_file_name);
@@ -732,6 +738,62 @@ void identify_mutations_pileup::load_user_ra_evidence_from_gd()
   
   // Return just RA entries
   _user_evidence_ra_list = gd.get_list(make_vector<gd_entry_type>(RA));
+}
+
+void identify_mutations_pileup::add_sc_evidence(const Summary& summary, const cReferenceSequences& ref_seq_info)
+{
+  if (!file_exists(_settings.soft_clipping_counts_file_name.c_str())) return;
+
+  double p0 = summary.soft_clipping.soft_clipping_rate;
+  if (p0 <= 0.0) return;
+
+  // Bonferroni: 2 directions × total genome length positions
+  uint64_t total_genome_length = 0;
+  for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+    total_genome_length += ref_seq_info[i].m_length;
+  }
+  double log10_n_tests = log10(2.0 * static_cast<double>(total_genome_length));
+
+  ifstream in(_settings.soft_clipping_counts_file_name.c_str());
+  if (!in.is_open()) return;
+
+  string line;
+  getline(in, line); // skip header
+
+  while (getline(in, line)) {
+    vector<string> fields = split(line, "\t");
+    if (fields.size() < 5) continue;
+
+    string seq_id = fields[0];
+    uint32_t position = from_string<uint32_t>(fields[1]);
+    int32_t direction = from_string<int32_t>(fields[2]);
+    uint32_t clipped_count = from_string<uint32_t>(fields[3]);
+    uint32_t total_count = from_string<uint32_t>(fields[4]);
+
+    if (clipped_count == 0 || total_count == 0) continue;
+
+    // P(X >= clipped_count | Binomial(total_count, p0))
+    double p_value = bdtrc(static_cast<double>(clipped_count - 1),
+                           static_cast<double>(total_count),
+                           p0);
+    double log10_p_value = (p_value > 0.0) ? log10(p_value) : -300.0;
+    double score = -(log10_p_value + log10_n_tests);
+
+    if (score >= _settings.soft_clipping_log10_e_value_cutoff) {
+      cDiffEntry sc_entry(SC);
+      sc_entry[SEQ_ID]           = seq_id;
+      sc_entry[POSITION]         = to_string(position);
+      sc_entry[STRAND]           = to_string(direction);
+      sc_entry[SC_READ_COUNT]    = to_string(clipped_count);
+      sc_entry[SC_TOTAL_COUNT]   = to_string(total_count);
+      // Soft-clipping frequency = clipped reads / (clipped reads + spanning reads).
+      // total_count already equals clipped_count + spanning (read-through) reads.
+      double sc_frequency = static_cast<double>(clipped_count) / static_cast<double>(total_count);
+      sc_entry[FREQUENCY]        = formatted_double(sc_frequency, 4).to_string();
+      sc_entry[SC_LOG10_E_VALUE] = formatted_double(score, kMutationScorePrecision).to_string();
+      _gd.add(sc_entry);
+    }
+  }
 }
 
 /*! Destructor.
@@ -1096,8 +1158,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
       // Add line to the polymorphism statistics input file if we are only a polymorphism
 
       if (ppred.frequency != 1) {
-        mut[POLYMORPHISM_EXISTS] = "1";
-        write_polymorphism_input_file_line(p, insert_count, ref_base_char, best_base_char, second_best_base_char, ppred, pos_info, pdata );
+        annotate_polymorphism_statistics(mut, best_base_char, second_best_base_char, pos_info, pdata);
       }
 
       //## More fields common to consensus mutations and polymorphisms
@@ -1157,7 +1218,6 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
         cDiffEntry mut = *(_user_evidence_ra_list.front().get());
         mut.to_spec(); //remove additional fields that might be left over!!
         mut[USER_DEFINED] = "1";
-        mut["user_defined_no_poly"] = "1"; // prevents doing stats on it
         
         // These are already assigned correctly by copy of RA
         //mut[SEQ_ID] = p.target_name();
@@ -1245,29 +1305,6 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
     ASSERT(!_coverage_data.fail(), "Could not open output file:" + filename);
 		_coverage_data << "unique_top_cov" << "\t" << "unique_bot_cov" << "\t" << "redundant_top_cov" << "\t" << "redundant_bot_cov" << "\t" << "raw_redundant_top_cov" << "\t" << "raw_redundant_bot_cov" << "\t" << "e_value" << "\t" << "position" << endl;
 	}	
-  
-  // Polymorphism statistics input file (quality/strand data per candidate polymorphism)
-  // Only one file for all reference sequences
-  if((_settings.polymorphism_prediction || _settings.mixed_base_prediction) && !_polymorphism_r_input_file.is_open()) {
-		string filename = _settings.polymorphism_statistics_input_file_name;
-		_polymorphism_r_input_file.open(filename.c_str());
-    ASSERT(!_polymorphism_r_input_file.fail(), "Could not open output file:" + filename);
-		_polymorphism_r_input_file 
-    << "seq_id" << "\t"
-    << "position" << "\t" 
-    << "insert_position" << "\t"
-    << "reference_base" << "\t"
-    << "major_base" << "\t"
-    << "minor_base" << "\t"
-    << "major_frequency" << "\t"
-    << "major_top_strand" << "\t"
-    << "major_bot_strand" << "\t"
-    << "minor_top_strand" << "\t"
-    << "minor_bot_strand" << "\t"
-    << "major_quals" << "\t"
-    << "minor_quals" << "\t"
-    << endl;
-  }
   
   // Reset the Missing Coverage evidence variables
   _last_deletion_start_position = UNDEFINED_UINT32;
@@ -1461,53 +1498,36 @@ void identify_mutations_pileup::update_unknown_intervals(uint32_t position, uint
 	}
 }
   
-void identify_mutations_pileup::write_polymorphism_input_file_line(const pileup& p, const uint32_t insert_count, char ref_base_char, char best_base_char, char second_best_base_char, const polymorphism_prediction& ppred, position_base_info& pos_info, const vector<polymorphism_data>& pdata )
+void identify_mutations_pileup::annotate_polymorphism_statistics(cDiffEntry& mut, char best_base_char, char second_best_base_char, position_base_info& pos_info, const vector<polymorphism_data>& pdata)
 {
-  
-  _polymorphism_r_input_file
-  << p.target_name() << "\t"
-  << p.position_1() << "\t"
-  << insert_count << "\t"
-  << ref_base_char << "\t"
-  << best_base_char << "\t"
-  << second_best_base_char << "\t"
-  << ppred.frequency << "\t"
-  << pos_info[best_base_char][2] << "\t"
-  << pos_info[best_base_char][0] << "\t"
-  << pos_info[second_best_base_char][2] << "\t"
-  << pos_info[second_best_base_char][0] << "\t"
-  ;
-  
-  
-  string best_base_qualities;
-  string second_best_base_qualities;
-  
-  for(vector<polymorphism_data>::const_iterator it=pdata.begin(); it<pdata.end(); ++it) {
-    
-    if (it->_base_char == best_base_char) {
-      if (best_base_qualities.length() > 0) {
-        best_base_qualities += ",";
-      }
-      stringstream convert_quality;
-      convert_quality << (unsigned int)it->_quality;
-      best_base_qualities += convert_quality.str();
-    }
-    
-    if (it->_base_char == second_best_base_char) {
-      if (second_best_base_qualities.length() > 0) {
-        second_best_base_qualities += ",";
-      }
-      stringstream convert_quality;
-      convert_quality << (unsigned int)it->_quality;
-      second_best_base_qualities += convert_quality.str();
-    }
+  uint32_t major_top_strand = pos_info[best_base_char][2];
+  uint32_t major_bot_strand = pos_info[best_base_char][0];
+  uint32_t minor_top_strand = pos_info[second_best_base_char][2];
+  uint32_t minor_bot_strand = pos_info[second_best_base_char][0];
+
+  vector<double> major_quals;
+  vector<double> minor_quals;
+  for (vector<polymorphism_data>::const_iterator it = pdata.begin(); it != pdata.end(); ++it) {
+    if (it->_base_char == best_base_char)
+      major_quals.push_back(static_cast<double>(it->_quality));
+    if (it->_base_char == second_best_base_char)
+      minor_quals.push_back(static_cast<double>(it->_quality));
   }
-  
-  _polymorphism_r_input_file << best_base_qualities << "\t";
-  _polymorphism_r_input_file << second_best_base_qualities << "\t";
-  
-  _polymorphism_r_input_file << endl;
-  
+
+  double ks_quality_p_value = 1.0;
+  if (!major_quals.empty() && !minor_quals.empty())
+    ks_quality_p_value = ks_test_two_sample_less(minor_quals, major_quals);
+
+  double fisher_strand_p_value = fisher_exact_test_2x2(minor_top_strand, minor_bot_strand, major_top_strand, major_bot_strand);
+
+  double combined_log = -2.0 * (log(ks_quality_p_value) + log(fisher_strand_p_value));
+  double bias_p_value = isinf(combined_log) ? 0.0 : incompletegamma(2.0, combined_log / 2.0, true);
+  double bias_e_value = bias_p_value * static_cast<double>(_total_reference_length);
+
+  mut["ks_quality_p_value"]    = formatted_double(ks_quality_p_value,    5, true).to_string();
+  mut["fisher_strand_p_value"] = formatted_double(fisher_strand_p_value, 5, true).to_string();
+  mut["bias_p_value"]          = formatted_double(bias_p_value,          5, true).to_string();
+  mut["bias_e_value"]          = formatted_double(bias_e_value,          5, true).to_string();
 }
 
 

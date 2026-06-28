@@ -1,0 +1,235 @@
+/*****************************************************************************
+
+ AUTHORS
+
+   Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com> and other contributors
+
+ LICENSE AND COPYRIGHT
+
+   Copyright (c) 2008-2010 Michigan State University
+   Copyright (c) 2011-2025 The University of Texas at Austin
+   Copyright (c) 2025-     Michigan State University
+
+   breseq is free software; you can redistribute it and/or modify it under the
+   terms of the GNU General Public License as published by the Free Software
+   Foundation; either version 2, or (at your option) any later version.
+
+   SPDX-License-Identifier: GPL-2.0-or-later
+
+ THIRD-PARTY NOTICES
+
+   This product includes the following third-party software components. Their
+   license terms are reproduced below.
+
+*****************************************************************************/
+
+================================================================================
+BUNDLED SOURCE CODE
+================================================================================
+
+AnyOption 1.3
+  src/c/breseq/anyoption.cpp
+  src/c/breseq/libbreseq/anyoption.h
+
+  Copyright (c) 2001 Kishan Bhagat (kishan@hackorama.com)
+  https://github.com/hackorama/AnyOption/
+
+  Licensed under the MIT License:
+
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+JSON for Modern C++ 2.1.1
+  src/c/breseq/libbreseq/json.hpp
+
+  Copyright (c) 2013-2017 Niels Lohmann <http://nlohmann.me>
+  https://github.com/nlohmann/json
+
+  Licensed under the MIT License:
+
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
+
+--------------------------------------------------------------------------------
+
+CTPL - C++ Thread Pool Library
+  src/c/breseq/libbreseq/ctpl_stl.h
+
+  Copyright (C) 2014 by Vitaliy Vitsentiy
+  https://github.com/vit-vit/CTPL
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+--------------------------------------------------------------------------------
+
+Cephes Math Library
+  src/c/breseq/stats.cpp (selected functions)
+
+  Copyright 1984, 1987, 1988, 1989, 1992, 1995, 1996, 2000 by Stephen L. Moshier
+  http://www.netlib.org/cephes/
+
+  The Cephes Math Library functions incorporated in this file (gamma, lgamma,
+  incomplete gamma, incomplete beta, and negative binomial distribution
+  functions) are freely redistributable. Stephen L. Moshier has stated that
+  these routines may be used and distributed freely.
+
+--------------------------------------------------------------------------------
+
+JSZip 3.10.1
+  src/c/breseq/jszip.min.js
+
+  Copyright (c) 2009-2016 Stuart Knightley <stuart@stuartk.com>
+  https://github.com/Stuk/jszip
+
+  Dual licensed under the MIT License or GPLv3.
+  This distribution uses the MIT License:
+
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
+
+  JSZip bundles pako (https://github.com/nodeca/pako), also released under
+  the MIT License. Copyright (C) 2014-2017 by Vitaly Puzrin and Andrei
+  Tuputcyn.
+
+--------------------------------------------------------------------------------
+
+List.js
+  src/c/breseq/list.min.js
+
+  Copyright (c) Jonny Strömberg (https://jonnyburger.se/)
+  https://listjs.com / https://github.com/javve/list.js
+
+  Licensed under the MIT License:
+
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
+
+  This bundle also includes the string-natural-compare npm package, released
+  under the MIT License.
+
+================================================================================
+RUNTIME DEPENDENCIES
+================================================================================
+
+Bowtie2
+  https://bowtie-bio.sourceforge.net/bowtie2/
+
+  Copyright (C) 2011-2012 Langmead Lab
+  Licensed under the GNU General Public License, version 2 or later.
+
+--------------------------------------------------------------------------------
+
+SAMtools / HTSlib
+  https://www.htslib.org/
+
+  Copyright (C) 2009-2024 Genome Research Ltd.
+  Licensed under the MIT License.
+
+--------------------------------------------------------------------------------
+
+miniz
+  https://github.com/richgel999/miniz
+
+  Copyright 2013-2014 RAD Game Tools and Valve Software
+  Copyright 2010-2014 Rich Geldreich and Tenacious Software LLC
+  Licensed under the MIT License.
+
+--------------------------------------------------------------------------------
+
+zlib
+  https://zlib.net/
+
+  Copyright (C) 1995-2024 Jean-loup Gailly and Mark Adler
+  Licensed under the zlib License.
+
+--------------------------------------------------------------------------------
+
+gnuplot
+  http://www.gnuplot.info/
+
+  Copyright (C) 1986-1993, 1998, 2004 Thomas Williams and Colin Kelley
+  Licensed under the gnuplot License (a permissive license; see
+  http://www.gnuplot.info/faq/faq.html#x1-70001.4).
+
+--------------------------------------------------------------------------------
+
+PHYLIP (optional)
+  https://phylipweb.github.io/phylip/
+
+  Copyright (c) 1980-2013 University of Washington, Department of Genome Sciences
+  Freely available for non-commercial use. See
+  https://phylipweb.github.io/phylip/getme-new1.html for license terms.
+
+================================================================================

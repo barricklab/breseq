@@ -1,20 +1,22 @@
 /*****************************************************************************
- 
+
  AUTHORS
- 
- Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
- David B. Knoester
- 
+
+   Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com> and other contributors
+
  LICENSE AND COPYRIGHT
- 
- Copyright (c) 2008-2010 Michigan State University
- Copyright (c) 2011-2022 The University of Texas at Austin
- 
- breseq is free software; you can redistribute it and/or modify it under the
- terms the GNU General Public License as published by the Free Software
- Foundation; either version 1, or (at your option) any later version.
- 
- *****************************************************************************/
+
+   Copyright (c) 2008-2010 Michigan State University
+   Copyright (c) 2011-2025 The University of Texas at Austin
+   Copyright (c) 2025-     Michigan State University
+
+   breseq is free software; you can redistribute it and/or modify it under the
+   terms of the GNU General Public License as published by the Free Software
+   Foundation; either version 2, or (at your option) any later version.
+
+   SPDX-License-Identifier: GPL-2.0-or-later
+
+*****************************************************************************/
 
 #ifndef _BRESEQ_GENOME_DIFF_ENTRY_H_
 #define _BRESEQ_GENOME_DIFF_ENTRY_H_
@@ -116,8 +118,6 @@ namespace breseq {
   extern const char* POLYMORPHISM_SCORE;
   extern const char* POLYMORPHISM_FREQUENCY;
   extern const char* MAJOR_FREQUENCY;
-  extern const char* POLYMORPHISM_EXISTS;
-  
   //For MC
   extern const char* START_RANGE;
   extern const char* END_RANGE;
@@ -149,6 +149,11 @@ namespace breseq {
   extern const char* SIDE_2_COVERAGE;
   extern const char* NEW_JUNCTION_COVERAGE;
   
+  //For SC
+  extern const char* SC_READ_COUNT;
+  extern const char* SC_TOTAL_COUNT;
+  extern const char* SC_LOG10_E_VALUE;
+
   //For CN
   extern const char* COPY_NUMBER;
 
@@ -159,7 +164,7 @@ namespace breseq {
 
   // Types of diff entries:
   enum gd_entry_type {UNKNOWN = 0, SNP, SUB, DEL, INS, MOB, AMP, INV, CON, INT,
-    RA, MC, JC, CN, UN, CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE, NOTE, MASK};
+    RA, MC, JC, CN, UN, SC, CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE, NOTE, MASK};
   
   extern const vector<string> gd_keys_with_ids;
   

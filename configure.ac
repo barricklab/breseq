@@ -2,16 +2,19 @@
 ##
 ## AUTHORS
 ##
-## Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
-## David B. Knoester
+##   Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com> and other contributors
 ##
 ## LICENSE AND COPYRIGHT
 ##
-## Copyright (c) 2010 Michigan State University
+##   Copyright (c) 2008-2010 Michigan State University
+##   Copyright (c) 2011-2025 The University of Texas at Austin
+##   Copyright (c) 2025-     Michigan State University
 ##
-## breseq is free software; you can redistribute it and/or modify it under the terms the
-## GNU General Public License as published by the Free Software Foundation; either
-## version 1, or (at your option) any later version.
+##   breseq is free software; you can redistribute it and/or modify it under the
+##   terms of the GNU General Public License as published by the Free Software
+##   Foundation; either version 2, or (at your option) any later version.
+##
+##   SPDX-License-Identifier: GPL-2.0-or-later
 ##
 ###
 
@@ -19,7 +22,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 AC_PREREQ([2.65])
-AC_INIT([breseq], [0.40.1], [https://github.com/barricklab/breseq/issues], [breseq], [http://barricklab.org/breseq])
+AC_INIT([breseq], [0.50.0], [https://github.com/barricklab/breseq/issues], [breseq], [http://barricklab.org/breseq])
 AC_CONFIG_AUX_DIR(aux_build)
 AC_CONFIG_MACRO_DIR([aux_build/m4])
 AC_CONFIG_HEADERS([aux_build/config.h])

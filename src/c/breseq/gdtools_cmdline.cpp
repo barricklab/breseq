@@ -1,18 +1,20 @@
 /*****************************************************************************
 
-AUTHORS
+ AUTHORS
 
-  Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
-  David B. Knoester
+   Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com> and other contributors
 
-LICENSE AND COPYRIGHT
+ LICENSE AND COPYRIGHT
 
-  Copyright (c) 2008-2010 Michigan State University
-  Copyright (c) 2011-2022 The University of Texas at Austin
+   Copyright (c) 2008-2010 Michigan State University
+   Copyright (c) 2011-2025 The University of Texas at Austin
+   Copyright (c) 2025-     Michigan State University
 
-  breseq is free software; you can redistribute it and/or modify it under the  
-  terms the GNU General Public License as published by the Free Software 
-  Foundation; either version 1, or (at your option) any later version.
+   breseq is free software; you can redistribute it and/or modify it under the
+   terms of the GNU General Public License as published by the Free Software
+   Foundation; either version 2, or (at your option) any later version.
+
+   SPDX-License-Identifier: GPL-2.0-or-later
 
 *****************************************************************************/
 
@@ -52,9 +54,7 @@ int gdtools_usage()
   uout << "NOT-EVIDENCE           remove evidence not used by any mutations" << endl;
 	
   uout("Format Conversions:");
-  uout << "GD2VCF                 GD to Variant Call Format (VCF)" << endl;
-	uout << "VCF2GD                 Variant Call Format(VCF) to GD" << endl;
-  uout << "GD2GVF                 GD to Genome Variation Format (GVF)" << endl;
+  uout << "CONVERT                convert between GD, VCF, GVF, and JSON formats" << endl;
 	uout << "MUMMER2MASK            Create a mask GD file from MUMmer output" << endl;
 
 	uout("Analysis:");
@@ -179,7 +179,7 @@ int do_apply(int argc, char *argv[])
 	options.addUsage("");
 	options.addUsage("The input GenomeDiff file is expected to only have consensus mutations. Polymorphic mutations are ignored unless the --polymorphism-mode flag is supplied.");
 	options.addUsage("");
-	options.addUsage("The --apply-gd option causes a GenomeDiff file to be output that is the input GenomeDiff file with positions of mutations shifted to where they occur in the output sequence. It also has applied_seq_id, applied_start, and applied_end fields defining the changed bases.");
+	options.addUsage("The --apply-gd option causes a GenomeDiff file to be output that is the input GenomeDiff file with positions of mutations shifted to where they occur in the output sequence.");
 	
 	if (options.count("help")) {
 		options.printUsage();
@@ -704,6 +704,14 @@ int do_convert(int argc, char* argv[], string forced_format = "")
 	}
 	
 	return 0;
+}
+
+void print_convert_shortcut_deprecation_warning(const string& old_command, const string& new_format, int argc_new, char* argv_new[])
+{
+	vector<string> args(argv_new + 1, argv_new + argc_new);
+	WARN("The '" + old_command + "' command is deprecated and will be removed in a future version of gdtools.\n"
+	     "Use the equivalent CONVERT command instead:\n"
+	     "  gdtools CONVERT -f " + new_format + " " + join(args, " "));
 }
 
 int do_not_evidence(int argc, char *argv[])
@@ -2798,10 +2806,13 @@ int main(int argc, char* argv[]) {
 	} else if (command == "CONVERT") {
 		return do_convert(argc_new, argv_new.data());
   } else if (command == "GD2VCF") {
+    print_convert_shortcut_deprecation_warning(command, "VCF", argc_new, argv_new.data());
     return do_convert(argc_new, argv_new.data(), "VCF");
   } else if (command == "VCF2GD") {
+    print_convert_shortcut_deprecation_warning(command, "GD", argc_new, argv_new.data());
     return do_convert(argc_new, argv_new.data(), "GD");
   } else if (command == "GD2GVF") {
+    print_convert_shortcut_deprecation_warning(command, "GVF", argc_new, argv_new.data());
     return do_convert(argc_new, argv_new.data(), "GVF");
   } else if(command == "HEADER"){
     return do_header(argc_new, argv_new.data());

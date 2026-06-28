@@ -1,20 +1,22 @@
 /*****************************************************************************
 
-AUTHORS
+ AUTHORS
 
-  Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
-  David B. Knoester
+   Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com> and other contributors
 
-LICENSE AND COPYRIGHT
+ LICENSE AND COPYRIGHT
 
-  Copyright (c) 2008-2010 Michigan State University
-  Copyright (c) 2011-2022 The University of Texas at Austin
+   Copyright (c) 2008-2010 Michigan State University
+   Copyright (c) 2011-2025 The University of Texas at Austin
+   Copyright (c) 2025-     Michigan State University
 
-  breseq is free software; you can redistribute it and/or modify it under the  
-  terms the GNU General Public License as published by the Free Software 
-  Foundation; either version 1, or (at your option) any later version.
+   breseq is free software; you can redistribute it and/or modify it under the
+   terms of the GNU General Public License as published by the Free Software
+   Foundation; either version 2, or (at your option) any later version.
 
- *****************************************************************************/
+   SPDX-License-Identifier: GPL-2.0-or-later
+
+*****************************************************************************/
 
 
 #ifndef _BRESEQ_SETTINGS_H_
@@ -351,6 +353,11 @@ namespace breseq
     double deletion_coverage_seed_cutoff;                 // Default = 0;         COMMAND-LINE OPTION
     
     bool call_mutations_overlapping_missing_coverage;     // Default = false      COMMAND-LINE OPTION
+
+    //! Settings: Soft-Clipping Evidence
+    bool     predict_soft_clipping;                       // Default = false     COMMAND-LINE OPTION
+    uint32_t soft_clipping_minimum_bases;                 // Default = 8         COMMAND-LINE OPTION
+    double   soft_clipping_log10_e_value_cutoff;          // Default = 2.0       COMMAND-LINE OPTION
     
     //! These are mutually exclusive settings (polymorphism prediction overrides mixed_base_prediction)
     bool polymorphism_prediction;                         // Default = false COMMAND-LINE OPTION
@@ -519,6 +526,8 @@ namespace breseq
 		string unique_only_coverage_distribution_file_name;
 		string error_rates_summary_file_name;
 		string error_rates_base_qual_error_prob_file_name;
+		string soft_clipping_counts_file_name;
+		string soft_clipping_summary_file_name;
 
 		//! Paths: Mutation Identification
 		string mutation_identification_path;
@@ -528,9 +537,6 @@ namespace breseq
 		string complete_coverage_text_file_name;
     string ra_mc_genome_diff_file_name;
 
-    string polymorphism_statistics_done_file_name;
-    string polymorphism_statistics_input_file_name;
-		string polymorphism_statistics_ra_mc_genome_diff_file_name;
     
 		//! Paths: Copy Number Variation
     string copy_number_variation_path;

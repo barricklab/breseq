@@ -10,16 +10,16 @@ EXPECTED_OUTPUTS[0]="${SELF}/expected.gd"
 
 TESTCMD=" \
     ln -s \"$(cd ${DATADIR}/lambda && pwd)/lambda.gbk\" \"${SELF}/lambda space.gbk\"  ; \
-    ln -s \"$(cd ${DATADIR}/lambda && pwd)/lambda_mixed_population.fastq\" \"${SELF}/lambda mixed population space.fastq\" ; \
+    ln -s \"$(cd ${DATADIR}/lambda && pwd)/lambda_mixed_population.fastq.gz\" \"${SELF}/lambda mixed population space.fastq.gz\" ; \
     ${BRESEQ} \
     ${BRESEQ_TEST_THREAD_ARG} \
     -o ${SELF}/output\ output \
     -g ${SELF}/header.gd \
     --genbank-field-for-seq-id version \
     -r \"${SELF}/lambda space.gbk\" \
-    ${SELF}/lambda\ mixed\ population\ space.fastq ;\
+    ${SELF}/lambda\ mixed\ population\ space.fastq.gz ;\
     rm \"${SELF}/lambda space.gbk\"  ; \
-    rm \"${SELF}/lambda mixed population space.fastq\" ; \
+    rm \"${SELF}/lambda mixed population space.fastq.gz\" ; \
     if ls -d \"${SELF}/output output\"/0[1-9]_* >/dev/null 2>&1; then \
         echo 'Intermediate stage directories were not cleaned up!'; \
         exit 1; \
