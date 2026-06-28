@@ -22,6 +22,7 @@
 #include "libbreseq/pileup.h"
 #include "libbreseq/identify_mutations.h"
 #include "libbreseq/error_count.h"
+#include "libbreseq/stats.h"
 
 using namespace std;
 
@@ -675,6 +676,7 @@ identify_mutations_pileup::identify_mutations_pileup(
 , _polymorphism_precision_decimal(polymorphism_precision_decimal)
 , _polymorphism_precision_places(polymorphism_precision_places)
 , _log10_ref_length(0)
+, _total_reference_length(summary.sequence_conversion.total_reference_sequence_length)
 , _snp_caller("haploid", summary.sequence_conversion.total_reference_sequence_length)
 , _this_deletion_reaches_seed_value(false)
 , _this_deletion_redundant_reached_zero(false)
@@ -1099,7 +1101,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 
       if (ppred.frequency != 1) {
         mut[POLYMORPHISM_EXISTS] = "1";
-        write_polymorphism_input_file_line(p, insert_count, ref_base_char, best_base_char, second_best_base_char, ppred, pos_info, pdata );
+        annotate_polymorphism_statistics(mut, best_base_char, second_best_base_char, pos_info, pdata);
       }
 
       //## More fields common to consensus mutations and polymorphisms
@@ -1247,29 +1249,6 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
     ASSERT(!_coverage_data.fail(), "Could not open output file:" + filename);
 		_coverage_data << "unique_top_cov" << "\t" << "unique_bot_cov" << "\t" << "redundant_top_cov" << "\t" << "redundant_bot_cov" << "\t" << "raw_redundant_top_cov" << "\t" << "raw_redundant_bot_cov" << "\t" << "e_value" << "\t" << "position" << endl;
 	}	
-  
-  // Polymorphism statistics input file (quality/strand data per candidate polymorphism)
-  // Only one file for all reference sequences
-  if((_settings.polymorphism_prediction || _settings.mixed_base_prediction) && !_polymorphism_r_input_file.is_open()) {
-		string filename = _settings.polymorphism_statistics_input_file_name;
-		_polymorphism_r_input_file.open(filename.c_str());
-    ASSERT(!_polymorphism_r_input_file.fail(), "Could not open output file:" + filename);
-		_polymorphism_r_input_file 
-    << "seq_id" << "\t"
-    << "position" << "\t" 
-    << "insert_position" << "\t"
-    << "reference_base" << "\t"
-    << "major_base" << "\t"
-    << "minor_base" << "\t"
-    << "major_frequency" << "\t"
-    << "major_top_strand" << "\t"
-    << "major_bot_strand" << "\t"
-    << "minor_top_strand" << "\t"
-    << "minor_bot_strand" << "\t"
-    << "major_quals" << "\t"
-    << "minor_quals" << "\t"
-    << endl;
-  }
   
   // Reset the Missing Coverage evidence variables
   _last_deletion_start_position = UNDEFINED_UINT32;
@@ -1463,53 +1442,36 @@ void identify_mutations_pileup::update_unknown_intervals(uint32_t position, uint
 	}
 }
   
-void identify_mutations_pileup::write_polymorphism_input_file_line(const pileup& p, const uint32_t insert_count, char ref_base_char, char best_base_char, char second_best_base_char, const polymorphism_prediction& ppred, position_base_info& pos_info, const vector<polymorphism_data>& pdata )
+void identify_mutations_pileup::annotate_polymorphism_statistics(cDiffEntry& mut, char best_base_char, char second_best_base_char, position_base_info& pos_info, const vector<polymorphism_data>& pdata)
 {
-  
-  _polymorphism_r_input_file
-  << p.target_name() << "\t"
-  << p.position_1() << "\t"
-  << insert_count << "\t"
-  << ref_base_char << "\t"
-  << best_base_char << "\t"
-  << second_best_base_char << "\t"
-  << ppred.frequency << "\t"
-  << pos_info[best_base_char][2] << "\t"
-  << pos_info[best_base_char][0] << "\t"
-  << pos_info[second_best_base_char][2] << "\t"
-  << pos_info[second_best_base_char][0] << "\t"
-  ;
-  
-  
-  string best_base_qualities;
-  string second_best_base_qualities;
-  
-  for(vector<polymorphism_data>::const_iterator it=pdata.begin(); it<pdata.end(); ++it) {
-    
-    if (it->_base_char == best_base_char) {
-      if (best_base_qualities.length() > 0) {
-        best_base_qualities += ",";
-      }
-      stringstream convert_quality;
-      convert_quality << (unsigned int)it->_quality;
-      best_base_qualities += convert_quality.str();
-    }
-    
-    if (it->_base_char == second_best_base_char) {
-      if (second_best_base_qualities.length() > 0) {
-        second_best_base_qualities += ",";
-      }
-      stringstream convert_quality;
-      convert_quality << (unsigned int)it->_quality;
-      second_best_base_qualities += convert_quality.str();
-    }
+  uint32_t major_top_strand = pos_info[best_base_char][2];
+  uint32_t major_bot_strand = pos_info[best_base_char][0];
+  uint32_t minor_top_strand = pos_info[second_best_base_char][2];
+  uint32_t minor_bot_strand = pos_info[second_best_base_char][0];
+
+  vector<double> major_quals;
+  vector<double> minor_quals;
+  for (vector<polymorphism_data>::const_iterator it = pdata.begin(); it != pdata.end(); ++it) {
+    if (it->_base_char == best_base_char)
+      major_quals.push_back(static_cast<double>(it->_quality));
+    if (it->_base_char == second_best_base_char)
+      minor_quals.push_back(static_cast<double>(it->_quality));
   }
-  
-  _polymorphism_r_input_file << best_base_qualities << "\t";
-  _polymorphism_r_input_file << second_best_base_qualities << "\t";
-  
-  _polymorphism_r_input_file << endl;
-  
+
+  double ks_quality_p_value = 1.0;
+  if (!major_quals.empty() && !minor_quals.empty())
+    ks_quality_p_value = ks_test_two_sample_less(minor_quals, major_quals);
+
+  double fisher_strand_p_value = fisher_exact_test_2x2(minor_top_strand, minor_bot_strand, major_top_strand, major_bot_strand);
+
+  double combined_log = -2.0 * (log(ks_quality_p_value) + log(fisher_strand_p_value));
+  double bias_p_value = isinf(combined_log) ? 0.0 : incompletegamma(2.0, combined_log / 2.0, true);
+  double bias_e_value = bias_p_value * static_cast<double>(_total_reference_length);
+
+  mut["ks_quality_p_value"]    = formatted_double(ks_quality_p_value,    5, true).to_string();
+  mut["fisher_strand_p_value"] = formatted_double(fisher_strand_p_value, 5, true).to_string();
+  mut["bias_p_value"]          = formatted_double(bias_p_value,          5, true).to_string();
+  mut["bias_e_value"]          = formatted_double(bias_e_value,          5, true).to_string();
 }
 
 
