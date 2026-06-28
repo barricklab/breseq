@@ -14,7 +14,7 @@ TESTCMD=" \
     -b 0 \
     -o ${SELF} \
     ${REFERENCE_ARG} \
-    ${DATADIR}/REL606/REL606.advanced_mobile_element.fastq
+    ${DATADIR}/REL606/REL606.advanced_mobile_element.fastq.gz
 	"
 
 do_test $1 ${SELF}
