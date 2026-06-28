@@ -27,6 +27,7 @@
 #include "libbreseq/reference_sequence.h"
 #include "libbreseq/calculate_trims.h"
 #include "libbreseq/candidate_junctions.h"
+#include "libbreseq/cn_evidence.h"
 #include "libbreseq/contingency_loci.h"
 #include "libbreseq/coverage_distribution.h"
 #include "libbreseq/coverage_output.h"
@@ -1125,104 +1126,6 @@ int do_simulate_reads(int argc, char *argv[])
 }
 
 
-/*
- * Function: do_copy_number_variation
- * --------------------------------
- * Called if "CNV" is passed as argument when invoking breseq on command line.
- * Ex: breseq CNV -r lambda.gbk lambda.fastq
- * NOTE: "breseq CNV" just runs the copy number variation part of the pipeline by itself (for testing), 
- * whereas "breseq --cnv" runs the whole pipeline including copy number variation.
- * BUG: Running "CNV" might not produce a .done file (i.e. copy_number_variation.done) in
- * the relevant output directory (i.e. .../09_copy_number_variation/).
- * BUG: Running "CNV" might not update the html output in the relevant directory,
- * (i.e. .../output/).
- */
-int do_copy_number_variation(int argc, char *argv[])
-{
-    Settings settings(argc, argv);
-
-    //(re)load the reference sequences from our converted files
-    cReferenceSequences ref_seq_info;
-    ref_seq_info.LoadFiles(make_vector<string>(settings.reference_gff3_file_name));
-
-    // Where error rate summary data will be output
-    Summary summary;
-    summary.unique_coverage.retrieve(settings.error_rates_summary_file_name);
-  
-    // Create copy_number_variation directory
-    create_path( settings.copy_number_variation_path );
-
-    for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it) {
-        
-        // Sequence iterator, one sequence at a time from .fastq file
-        cAnnotatedSequence& seq = *it;
-
-        // Create filename: [genome].coverage.txt, this is LONG file where the coverage data is coming from
-        string this_complete_coverage_text_file_name = settings.file_name(settings.complete_coverage_text_file_name, "@", seq.m_seq_id);
-
-        // Create filename: [genome].tiled.tab, this is LONG file where the tiled coverage data will be output
-        string this_tiled_complete_coverage_text_file_name = settings.file_name(settings.tiled_complete_coverage_text_file_name, "@", seq.m_seq_id);
-
-        // Create filename: [genome].tiled_for_edging.tab, this is where the tiled
-        // coverage data at a smaller tile_size will be output for use in improved
-        // edge detection (aka "edging")
-        string this_tiled_for_edging_text_file_name = settings.file_name(settings.tiled_for_edging_text_file_name, "@", seq.m_seq_id);
-        
-        // Generates [genome].tiled.tab, one line at a time with each for-loop,
-        // where the avg coverage of each tile is calculated.
-        CoverageDistribution::tile(settings.ignore_redundant_coverage,
-                                   this_complete_coverage_text_file_name, // in_file_name
-                                   this_tiled_complete_coverage_text_file_name, // out_file_name
-                                   this_tiled_for_edging_text_file_name,
-                                   settings.copy_number_variation_tile_size);
-
-        // Create filename: [genome].ranges.tab, this is SHORT file used for ???
-        // (contains: Start_Position, End_Position, T_Score, P_Value)
-        string this_ranges_text_file_name = settings.file_name(settings.ranges_text_file_name, "@", seq.m_seq_id);
-
-        // Get filename: [genome].history.tab, this is SHORT file used for ???
-        // (contains: Start_Search, End_Search, Start_Position, End_Position, Start_Segment, End_Segment... 16 values total)
-        string this_cnv_history_text_file_name = settings.file_name(settings.cnv_history_text_file_name, "@", seq.m_seq_id);
-
-        // Generates [genome].ranges.tab & [genome].history.tab, one line at a time with each for-loop,
-        CoverageDistribution::find_segments(settings,
-                                            summary.unique_coverage[seq.m_seq_id].nbinom_mean_parameter,
-                                            this_tiled_complete_coverage_text_file_name,
-                                            this_tiled_for_edging_text_file_name, // tiled_for_edging_file_name (tiled_for_edging.tab)
-                                            this_ranges_text_file_name,
-                                            this_cnv_history_text_file_name
-                                            );
-
-        // Create filename: [genome].smoothed_ranges.tab, this is LONG file used for ???
-        // (contains: Position, Smooth_Coverage)
-        string this_smoothed_ranges_text_file_name = settings.file_name(settings.smoothed_ranges_text_file_name, "@", seq.m_seq_id);
-
-        // Create filename: [genome].cnv_final.tab, this is SHORT file used for ???
-        // (contains: Start_Position, End_Position, Z_Score, Greater_Than, Copy_Number)
-        string this_final_cnv_file_name = settings.file_name(settings.final_cnv_text_file_name, "@", seq.m_seq_id);
-
-        // Create filename: [genome].cn_evidence.gd, this is SHORT file used for ???
-        // (contains no labels)
-        string this_copy_number_variation_cn_genome_diff_file_name = settings.file_name(settings.copy_number_variation_cn_genome_diff_file_name, "@", seq.m_seq_id);
-
-        // Generates [genome].smoothed_ranges.tab & [genome].cnv_final.tab & [genome].cn_evidence.gd,
-        // one line at a time with each for-loop,
-        CoverageDistribution::smooth_segments(settings,
-                                              seq.m_seq_id,
-                                              summary.unique_coverage[seq.m_seq_id].nbinom_mean_parameter, 
-                                              this_tiled_for_edging_text_file_name, 
-                                              this_ranges_text_file_name, 
-                                              this_smoothed_ranges_text_file_name,
-                                              this_final_cnv_file_name,
-                                              this_copy_number_variation_cn_genome_diff_file_name
-                                              );
-
-    } // End of for loop
-
-    return 0;
-}
-
-
 // Analyze biases in the coverage - must be done after a breseq run
 int do_coverage_bias(int argc, char *argv[])
 {
@@ -2261,87 +2164,21 @@ int breseq_default_action(int argc, char* argv[])
     /*
      * 09 Copy number variation
      * --------------------------------
-     * This conditional is run if "--cnv" is passed as argument when invoking breseq on command line.
+     * This conditional is run if "--cn-evidence" is passed as argument when invoking breseq on command line.
      */
-  if (settings.do_copy_number_variation) {
-        
+  if (settings.do_cn_evidence) {
+
     // Create copy_number_variation directory
     create_path( settings.copy_number_variation_path );
 
-    if (settings.do_step(settings.copy_number_variation_done_file_name, "Predicting copy number variation")) { 
+    if (settings.do_step(settings.copy_number_variation_done_file_name, "Predicting copy number variation evidence")) {
 
-      for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it) {
+      CNEvidence::predict(settings, ref_seq_info);
 
-        // Sequence iterator, one sequence at a time from .fastq file
-        cAnnotatedSequence& seq = *it;
-
-        // Create filename: [genome].coverage.txt, this is LONG file where the coverage data is coming from
-        string this_complete_coverage_text_file_name = settings.file_name(settings.complete_coverage_text_file_name, "@", seq.m_seq_id);
-
-        // Create filename: [genome].tiled.tab, this is LONG file where the tiled coverage data will be output
-        string this_tiled_complete_coverage_text_file_name = settings.file_name(settings.tiled_complete_coverage_text_file_name, "@", seq.m_seq_id);
-
-        // Create filename: [genome].tiled_for_edging.tab, this is where the tiled
-        // coverage data at a smaller tile_size will be output for use in improved
-        // edge detection (aka "edging")
-        string this_tiled_for_edging_text_file_name = settings.file_name(settings.tiled_for_edging_text_file_name, "@", seq.m_seq_id);
-
-        // Generates [genome].tiled.tab, one line at a time with each for-loop,
-        // where the avg coverage of each tile is calculated.
-        CoverageDistribution::tile(settings.ignore_redundant_coverage,
-                                   this_complete_coverage_text_file_name, // in_file_name
-                                   this_tiled_complete_coverage_text_file_name, // out_file_name
-                                   this_tiled_for_edging_text_file_name,
-                                   settings.copy_number_variation_tile_size);
-
-        // Create filename: [genome].ranges.tab, this is SHORT file used for ???
-        // (contains: Start_Position, End_Position, T_Score, P_Value)
-        string this_ranges_text_file_name = settings.file_name(settings.ranges_text_file_name, "@", seq.m_seq_id);
-
-        // Get filename: [genome].history.tab, this is SHORT file used for ???
-        // (contains: Start_Search, End_Search, Start_Position, End_Position, Start_Segment, End_Segment... 16 values total)
-        string this_cnv_history_text_file_name = settings.file_name(settings.cnv_history_text_file_name, "@", seq.m_seq_id);
-
-        // Generates [genome].ranges.tab & [genome].history.tab, one line at a time with each for-loop,
-        CoverageDistribution::find_segments(settings,
-                                            summary.unique_coverage[seq.m_seq_id].nbinom_mean_parameter,
-                                            this_tiled_complete_coverage_text_file_name,
-                                            this_tiled_for_edging_text_file_name, // tiled_for_edging_file_name (tiled_for_edging.tab)
-                                            this_ranges_text_file_name,
-                                            this_cnv_history_text_file_name
-                                            );
-        
-        // Create filename: [genome].smoothed_ranges.tab, this is LONG file used for ???
-        // (contains: Position, Smooth_Coverage)
-        string this_smoothed_ranges_text_file_name = settings.file_name(settings.smoothed_ranges_text_file_name, "@", seq.m_seq_id);
-
-        // Create filename: [genome].cnv_final.tab, this is SHORT file used for ???
-        // (contains: Start_Position, End_Position, Z_Score, Greater_Than, Copy_Number)
-        string this_final_cnv_file_name = settings.file_name(settings.final_cnv_text_file_name, "@", seq.m_seq_id);
-
-        // Create filename: [genome].cn_evidence.gd, this is SHORT file used for ???
-        // (contains no labels)
-        string this_copy_number_variation_cn_genome_diff_file_name = settings.file_name(settings.copy_number_variation_cn_genome_diff_file_name, "@", seq.m_seq_id);
-
-        // Generates [genome].smoothed_ranges.tab & [genome].cnv_final.tab & [genome].cn_evidence.gd,
-        // one line at a time with each for-loop,
-        CoverageDistribution::smooth_segments(settings,
-                                              seq.m_seq_id,
-                                              summary.unique_coverage[seq.m_seq_id].nbinom_mean_parameter, 
-                                              this_tiled_for_edging_text_file_name, 
-                                              this_ranges_text_file_name, 
-                                              this_smoothed_ranges_text_file_name,
-                                              this_final_cnv_file_name,
-                                              this_copy_number_variation_cn_genome_diff_file_name
-                                              );
-
-      } // End of foreach reference loop
-      
-      
       settings.done_step(settings.copy_number_variation_done_file_name);
-                       
+
     } // End of if cnv done file
-  
+
   } // End of if do_cnv
 
    
@@ -2382,7 +2219,7 @@ int breseq_default_action(int argc, char* argv[])
       evidence_gd.merge_preserving_duplicates(ra_mc_gd);
       
       // there is a copy number genome diff for each sequence separately
-      if (settings.do_copy_number_variation) {
+      if (settings.do_cn_evidence) {
         for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it) {
           cAnnotatedSequence& seq = *it;
           string this_copy_number_variation_cn_genome_diff_file_name = settings.file_name(settings.copy_number_variation_cn_genome_diff_file_name, "@", seq.m_seq_id);
@@ -2643,8 +2480,6 @@ int main(int argc, char* argv[]) {
   // They may change without warning.
   } else if ((command == "SIMULATE-READ") ||  (command == "SIMULATE-READS")) {
     return do_simulate_reads(argc_new, argv_new.data());
-  } else if (command == "CNV") {
-    return do_copy_number_variation(argc_new, argv_new.data());
   } else if (command == "COVERAGE-BIAS"){
     return do_coverage_bias(argc_new, argv_new.data());
   } else if ( (command == "ERROR_COUNT") || (command == "ERROR-COUNT") ) {

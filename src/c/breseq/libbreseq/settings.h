@@ -228,7 +228,7 @@ namespace breseq
     bool skip_new_junction_prediction;      // Default = false COMMAND-LINE OPTION
     bool skip_read_alignment_and_missing_coverage_prediction;          // Default = false
     bool skip_missing_coverage_prediction;  // Default = false set to true if targeted_sequencing
-    bool do_copy_number_variation;          // Default = false COMMAND-LINE OPTION
+    bool do_cn_evidence;                    // Default = false COMMAND-LINE OPTION
     bool do_periodicity;                    // Default = false COMMAND-LINE OPTION
     
     //! Settings: Read File Options
@@ -395,8 +395,6 @@ namespace breseq
 
 		
 		//! Settings: Copy Number Variation
-    uint32_t copy_number_variation_tile_size;
-    bool ignore_redundant_coverage;
     uint32_t periodicity_method;
     uint32_t periodicity_start;
     uint32_t periodicity_end;
@@ -543,13 +541,6 @@ namespace breseq
 		//! Paths: Copy Number Variation
     string copy_number_variation_path;
     string copy_number_variation_done_file_name;
-    
-    string tiled_complete_coverage_text_file_name;
-    string tiled_for_edging_text_file_name;
-    string ranges_text_file_name;
-    string cnv_history_text_file_name;
-    string smoothed_ranges_text_file_name;
-    string final_cnv_text_file_name;
     string copy_number_variation_cn_genome_diff_file_name;
     
     string periodicity_table_file_name;

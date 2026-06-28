@@ -28,6 +28,13 @@ dependencies:
   - bowtie2=2.5.5
   - gnuplot=6.0.4
   - phylip=3.697
+  - pip
+  - pip:
+    # CNery doesn't pin an upper bound on pandas; pip otherwise resolves the
+    # newest pandas (3.x), which dropped the private DataFrame._append that
+    # CNery's HMM code still calls, crashing at runtime.
+    - pandas>=2.2.0,<3
+    - CNery
 # Used to run the consistency tests in parallel ('make test')
 #  => See tests/Snakefile
   - python
