@@ -711,7 +711,7 @@ identify_mutations_pileup::identify_mutations_pileup(
 	_log10_ref_length = log10(_log10_ref_length);
   
   // are we printing detailed coverage information? (only needed when --cn-evidence reads it back)
-  _print_coverage_data = _settings.do_cn_evidence;
+  _print_coverage_data = _settings.predict_copy_number;
   
   // load the error table file and convert back to probabilities
   _error_table.read_log10_prob_table(settings.error_rates_file_name);

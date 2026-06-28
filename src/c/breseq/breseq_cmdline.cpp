@@ -2166,7 +2166,7 @@ int breseq_default_action(int argc, char* argv[])
      * --------------------------------
      * This conditional is run if "--cn-evidence" is passed as argument when invoking breseq on command line.
      */
-  if (settings.do_cn_evidence) {
+  if (settings.predict_copy_number) {
 
     // Create copy_number_variation directory
     create_path( settings.copy_number_variation_path );
@@ -2219,7 +2219,7 @@ int breseq_default_action(int argc, char* argv[])
       evidence_gd.merge_preserving_duplicates(ra_mc_gd);
       
       // there is a copy number genome diff for each sequence separately
-      if (settings.do_cn_evidence) {
+      if (settings.predict_copy_number) {
         for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it) {
           cAnnotatedSequence& seq = *it;
           string this_copy_number_variation_cn_genome_diff_file_name = settings.file_name(settings.copy_number_variation_cn_genome_diff_file_name, "@", seq.m_seq_id);

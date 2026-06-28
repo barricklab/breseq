@@ -228,7 +228,7 @@ namespace breseq
     bool skip_new_junction_prediction;      // Default = false COMMAND-LINE OPTION
     bool skip_read_alignment_and_missing_coverage_prediction;          // Default = false
     bool skip_missing_coverage_prediction;  // Default = false set to true if targeted_sequencing
-    bool do_cn_evidence;                    // Default = false COMMAND-LINE OPTION
+    bool predict_copy_number;                    // Default = false COMMAND-LINE OPTION
     bool do_periodicity;                    // Default = false COMMAND-LINE OPTION
     
     //! Settings: Read File Options

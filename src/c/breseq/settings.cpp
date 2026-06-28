@@ -292,14 +292,6 @@ namespace breseq
     ("deletion-coverage-propagation-cutoff","Value for coverage above which MC ends stop. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
     ("call-mutations-overlapping-MC", "If provided, don't ignore mutations predicted from RA evidence that overlap MC evidence", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
-
-    options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("Soft-Clipping (SC) Evidence Options", ADVANCED_OPTION);
-    options
-    ("predict-soft-clipping", "Predict soft-clipping (SC) evidence: positions where reads are unexpectedly soft-clipped at their ends, which may indicate unannotated structural variation. This evidence type is experimental and disabled by default.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("soft-clipping-minimum-bases", "Minimum number of soft-clipped bases at a read end to count as a soft-clipping event", 8, ADVANCED_OPTION)
-    ("soft-clipping-score-cutoff", "Log10 E-value cutoff for soft-clipping evidence (DEFAULT = 2)", 2.0, ADVANCED_OPTION)
-    ;
     
     options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Consensus Read Alignment (RA) Evidence Options", ADVANCED_OPTION);
@@ -312,6 +304,20 @@ namespace breseq
     ("consensus-minimum-total-coverage-each-strand", "Only predict consensus mutations when at least this many reads on each strand are aligned to a genome position. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", ADVANCED_OPTION)
     ("consensus-reject-indel-homopolymer-length", "Reject insertion/deletion polymorphisms which could result from expansion/contraction of homopolymer repeats with this length or greater in the reference genome (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, OFF) ", "", ADVANCED_OPTION)
     ("consensus-reject-surrounding-homopolymer-length", "Reject polymorphic base substitutions that create a homopolymer with this many or more of one base in a row. The homopolymer must begin and end after the changed base. For example, TATTT->TTTTT would be rejected with a setting of 5, but ATTTT->TTTTT would not. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, OFF)", "", ADVANCED_OPTION)
+    ;
+    
+    options.addUsage("", ADVANCED_OPTION);
+    options.addUsage("Soft Clipping (SC) Evidence Options (HIGHLY EXPERIMENTAL)", ADVANCED_OPTION);
+    options
+    ("predict-soft-clipping", "Predict soft clipping (SC) evidence: positions where reads are unexpectedly soft clipped at their ends, which may indicate unannotated structural variation. This evidence type is experimental and disabled by default.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("soft-clipping-minimum-bases", "Minimum number of soft-clipped bases at a read end to count as a soft-clipping event", 8, ADVANCED_OPTION)
+    ("soft-clipping-score-cutoff", "Log10 E-value cutoff for soft-clipping evidence (DEFAULT = 2)", 2.0, ADVANCED_OPTION)
+    ;
+    
+    options.addUsage("", ADVANCED_OPTION);
+    options.addUsage("Copy numnber (CN) Evidence Options (HIGHLY EXPERIMENTAL)", ADVANCED_OPTION);
+    options
+    ("predict-copy-number","Predict copy number variation evidence using CNery",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
 
     options.addUsage("", ADVANCED_OPTION);
@@ -356,12 +362,6 @@ namespace breseq
     ("keep-intermediates,k","Do not delete intermediate files.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("per-position-file", "Create additional file of per-position aligned bases", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("junction-debug", "Output additional junction debugging files", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ;
-    
-    options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("Experimental Options (Use at your own risk)", ADVANCED_OPTION);
-    options
-    ("cn-evidence","Predict copy number variation evidence using CNery",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
     
     options.processCommandArgs(argc, argv);
@@ -499,7 +499,7 @@ namespace breseq
     
     this->num_processors = from_string<int32_t>(options["num-processors"]);
     
-    this->do_cn_evidence = options.count("cn-evidence");
+    this->predict_copy_number = options.count("predict-copy-number");
 
     this->verbose = options.count("verbose");
     
@@ -852,7 +852,7 @@ namespace breseq
 		this->skip_read_alignment_and_missing_coverage_prediction = false;
 		this->skip_missing_coverage_prediction = false;
     this->no_evidence_html = false;
-		this->do_cn_evidence = false;
+		this->predict_copy_number = false;
 		this->do_periodicity = false;
     
     //! DEBUG options
