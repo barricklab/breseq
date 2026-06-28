@@ -34,7 +34,7 @@ dependencies:
     # newest pandas (3.x), which dropped the private DataFrame._append that
     # CNery's HMM code still calls, crashing at runtime.
     - pandas>=2.2.0,<3
-    - CNery
+    - git+https://github.com/barricklab/CNery.git
 # Used to run the consistency tests in parallel ('make test')
 #  => See tests/Snakefile
   - python
