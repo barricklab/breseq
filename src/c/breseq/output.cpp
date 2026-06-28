@@ -196,7 +196,9 @@ string header_style_string()
   ss << ".new_junction_entry_sep td {height: 0px; padding: 0; line-height: 0; font-size: 0;}" << endl;
   ss << ".hidden { display: none; }"                                       << endl;
   ss << ".unhidden { display: block; }"                                    << endl;
-  
+  ss << ".breseq-sticky-header { position: sticky; top: 0; z-index: 100; background-color: white; border-bottom: 1px solid #ccc; padding-bottom: 4px; }" << endl;
+  ss << "thead th { position: sticky; top: 0; z-index: 50; }"                  << endl;
+
 return ss.str();
 }
   
@@ -220,6 +222,20 @@ string javascript_string()
   ss << "      button.value=(button.value=='Show')?'Hide':'Show';"              << endl;
   ss << "    }"                                                                 << endl;
   ss << "  }"                                                                   << endl;
+  ss << "  document.addEventListener('DOMContentLoaded', function() {"         << endl;
+  ss << "    var pageHeader = document.querySelector('.breseq-sticky-header');" << endl;
+  ss << "    var baseTop = pageHeader ? pageHeader.offsetHeight : 0;"          << endl;
+  ss << "    document.querySelectorAll('thead').forEach(function(thead) {"     << endl;
+  ss << "      var rows = thead.querySelectorAll('tr');"                       << endl;
+  ss << "      var top = baseTop;"                                             << endl;
+  ss << "      rows.forEach(function(row) {"                                   << endl;
+  ss << "        row.querySelectorAll('th').forEach(function(th) {"            << endl;
+  ss << "          th.style.top = top + 'px';"                                << endl;
+  ss << "        });"                                                          << endl;
+  ss << "        top += row.offsetHeight;"                                     << endl;
+  ss << "      });"                                                            << endl;
+  ss << "    });"                                                              << endl;
+  ss << "  });"                                                                << endl;
   ss << "</script>"                                                             << endl;
   
   return ss.str();
@@ -379,8 +395,6 @@ string start_list_js(const Settings& settings)
   buffer << file.rdbuf();
   ss << "<script>" << buffer.str() << "</script>" << endl;
 
-  ss << "<p>" << "Filter Mutations: <input type=\"text\" size=\"45\" class=\"search\" placeholder=\"Match seq_id, position (no commas), gene, or description\" />";
-  
   return ss.str();
 }
 
@@ -403,13 +417,25 @@ string end_list_js()
   return ss.str();
 }
 
+string mutation_filter_input_string()
+{
+  stringstream ss;
+  ss << "Filter Mutations: "
+     << "<input type=\"text\" size=\"45\" class=\"search\" "
+     << "placeholder=\"Match seq_id, position (no commas), gene, or description\" />"
+     << "&nbsp;<button onclick=\""
+     << "document.querySelector('#list_container .search').value='';"
+     << "mutation_list.search();"
+     << "\">Clear</button>";
+  return ss.str();
+}
 
 
 void html_index(const string& file_name, const Settings& settings, Summary& summary,
                 cReferenceSequences& ref_seq_info, cGenomeDiff& gd)
 {
   (void)summary;
-  
+
   // Create Stream and Confirm It's Open
   ofstream HTML(file_name.c_str());
 
@@ -417,23 +443,9 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
     cerr << "Could not open file: " << file_name << endl;
     assert(HTML.good());
   }
-  
+
   // Build HTML Head
   HTML << html_header("BRESEQ :: Mutation Predictions", settings);
-  HTML << breseq_header_string(settings) << endl;
-  HTML << "<p>" << endl;
-
-  if (!settings.no_javascript) {
-    if (!settings.no_list_js) {
-      HTML << start_list_js(settings);
-    }
-  }
-  /////////////////////////
-  //Build Mutation Predictions table
-  /////////////////////////
-
-  HTML << "<!--Mutation Predictions -->" << endl;
-  diff_entry_list_t muts = gd.show_list(make_vector<gd_entry_type>(SNP)(INS)(DEL)(SUB)(MOB)(AMP));
 
   // When zip_html is active, point evidence links at the standalone viewer
   // page (evidence.html#filename) instead of the raw files on disk.
@@ -444,59 +456,99 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
     relative_path = settings.local_evidence_path;
     if (!relative_path.empty()) relative_path += "/";
   }
-  HTML << "<p>" << endl;
-  MutationTableOptions mt_options(settings);
-  mt_options.relative_link = relative_path;
-  mt_options.one_ref_seq = (ref_seq_info.size() == 1);
-  HTML << Html_Mutation_Table_String(settings, gd, muts, mt_options) << endl;
-  
+
   /////////////////////////
-  // Unassigned MC evidence
+  // Compute all lists before emitting any HTML so jump links can be built
   /////////////////////////
-  
+
+  diff_entry_list_t muts = gd.show_list(make_vector<gd_entry_type>(SNP)(INS)(DEL)(SUB)(MOB)(AMP));
+
   diff_entry_list_t mc = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(MC)));
   mc.remove_if(cDiffEntry::rejected_and_not_user_defined());
   mc.remove_if(cDiffEntry::field_exists(IGNORE));
 
-
-  if (mc.size() > 0) {
-    HTML << "<p>" << html_missing_coverage_table_string(mc, false, "Unassigned missing coverage evidence", relative_path);
-  }
-  
-  /////////////////////////
-  // Unassigned JC evidence
-  /////////////////////////
   diff_entry_list_t jc = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(JC)));
   jc.remove_if(cDiffEntry::rejected_and_not_user_defined());
-  
   if (settings.hide_circular_genome_junctions) {
     jc.remove_if(cDiffEntry::field_exists(IGNORE));
   } else {
     jc.remove_if(cDiffEntry::ignored_but_not_circular());
   }
-   
-  if (jc.size() > 0) {
-    HTML << "<p>" << endl;
-    HTML << html_new_junction_table_string(jc, settings, false, "Unassigned new junction evidence", relative_path);
-  }
-  
-  /////////////////////////
-  // Unassigned CN evidence
-  /////////////////////////
-  
+
   diff_entry_list_t cn = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(CN)));
   cn.remove_if(cDiffEntry::rejected_and_not_user_defined());
   cn.remove_if(cDiffEntry::field_exists(IGNORE));
 
+  // Open list container before sticky header so the .search input is inside it
+  if (!settings.no_javascript) {
+    if (!settings.no_list_js) {
+      HTML << start_list_js(settings);
+    }
+  }
+
+  /////////////////////////
+  // Sticky header: breseq nav + filter + jump links
+  /////////////////////////
+
+  HTML << "<div class=\"breseq-sticky-header\">" << endl;
+  HTML << breseq_header_string(settings) << endl;
+
+  if (!settings.no_javascript && !settings.no_list_js) {
+    HTML << "<p>" << mutation_filter_input_string() << endl;
+  }
+
+  HTML << "<p>Jump to: <a href=\"#mutation_list\">Predicted mutations</a>";
+  if (mc.size() > 0)
+    HTML << " | <a href=\"#missing_coverage_list\">Unassigned missing coverage evidence</a>";
+  if (jc.size() > 0)
+    HTML << " | <a href=\"#new_junction_list\">Unassigned new junction evidence</a>";
+  if (cn.size() > 0)
+    HTML << " | <a href=\"#copy_number_list\">Unassigned copy number evidence</a>";
+  HTML << endl;
+
+  HTML << "</div>" << endl;
+
+  /////////////////////////
+  // Mutation Predictions table
+  /////////////////////////
+
+  HTML << "<!--Mutation Predictions -->" << endl;
+  HTML << "<p>" << endl;
+  MutationTableOptions mt_options(settings);
+  mt_options.relative_link = relative_path;
+  mt_options.one_ref_seq = (ref_seq_info.size() == 1);
+  HTML << Html_Mutation_Table_String(settings, gd, muts, mt_options) << endl;
+
+  /////////////////////////
+  // Unassigned MC evidence
+  /////////////////////////
+
+  if (mc.size() > 0) {
+    HTML << "<p>" << html_missing_coverage_table_string(mc, false, "Unassigned missing coverage evidence", relative_path);
+  }
+
+  /////////////////////////
+  // Unassigned JC evidence
+  /////////////////////////
+
+  if (jc.size() > 0) {
+    HTML << "<p>" << endl;
+    HTML << html_new_junction_table_string(jc, settings, false, "Unassigned new junction evidence", relative_path);
+  }
+
+  /////////////////////////
+  // Unassigned CN evidence
+  /////////////////////////
+
   if (cn.size() > 0) {
     HTML << "<p>" << html_copy_number_table_string(cn, false, "Unassigned copy number evidence", relative_path);
   }
-  
+
   // This code prints out a message if there was nothing in the previous tables
   if (muts.size() + cn.size() + mc.size() + jc.size() == 0) {
     HTML << "<p>No mutations predicted." << endl;
   }
-  
+
   if (!settings.no_javascript) {
     if (!settings.no_list_js) {
       HTML << end_list_js();
@@ -562,10 +614,11 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
                                cReferenceSequences& ref_seq_info, cGenomeDiff& gd)
 {
   (void)summary;
-  
+  (void)ref_seq_info;
+
   // Create Stream and Confirm It's Open
   ofstream HTML(file_name.c_str());
-  
+
   if(!HTML.good()) {
     cerr << "Could not open file: " <<  file_name << endl;
     assert(HTML.good());
@@ -573,8 +626,6 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
 
   // Build HTML Head
   HTML << html_header("BRESEQ :: Marginal Predictions", settings);
-  HTML << breseq_header_string(settings) << endl;
-  HTML << "<p>" << endl;
 
   // When zip_html is active, point evidence links at the standalone viewer page.
   string relative_path;
@@ -586,13 +637,13 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   }
 
   // ###
-  // ## Marginal evidence
+  // ## Compute all lists and titles before emitting HTML so jump links can be built
   // ###
-  
+
   ////////////////////////////////////
-  // Marginal  RA evidence
+  // Marginal RA evidence
   ///////////////////////////////////
-  
+
   // CONSENSUS mode: this list includes only 'polymorphism' RA entries that do not have a 'reject' reason
   // POLYMORPHISM mode: this list includes only 'polymorphism' RA entries with a 'reject' reason
   list<counted_ptr<cDiffEntry> > ra_list = gd.filter_used_as_evidence(gd.get_list(make_vector<gd_entry_type>(RA)));
@@ -605,16 +656,14 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   size_t full_marginal_ra_list_size = ra_list.size();
   ra_list.remove_if(cDiffEntry::field_exists(NO_SHOW));
 
+  string marginal_ra_title = "Marginal read alignment evidence";
   if (ra_list.size() > 0) {
-    
     // sort by frequency, rather than position in consensus mode
     if (!settings.polymorphism_prediction) {
       ra_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(FREQUENCY)));
     } else {
       ra_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(POLYMORPHISM_SCORE)));
     }
-    
-    string marginal_ra_title = "Marginal read alignment evidence";
     if (full_marginal_ra_list_size > ra_list.size()) {
       if (!settings.polymorphism_prediction) {
         marginal_ra_title += " (highest frequency " + to_string(settings.max_rejected_read_alignment_evidence_to_show) + " of " + to_string(full_marginal_ra_list_size) + " shown, sorted by frequency from high to low)";
@@ -622,35 +671,67 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
         marginal_ra_title += " (highest polymorphism score " + to_string(settings.max_rejected_read_alignment_evidence_to_show) + " of " + to_string(full_marginal_ra_list_size) + " shown, sorted by polymorphism_score from high to low)";
       }
     }
-    HTML << "<p>" << endl;
-    HTML << html_read_alignment_table_string(ra_list, false, marginal_ra_title, relative_path) << endl;
   }
-  
+
   /////////////////////////
   // Marginal JC evidence
   /////////////////////////
-  
+
   diff_entry_list_t jc_list = gd.filter_used_as_evidence(gd.get_list(make_vector<gd_entry_type>(JC)));
   jc_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
   size_t full_marginal_jc_list_size = jc_list.size();
   jc_list.remove_if(cDiffEntry::field_exists(NO_SHOW));
 
-  if (jc_list.size()) {
+  string marginal_jc_title = "Marginal new junction evidence";
+  if (jc_list.size() > 0) {
     //Sort by score, not by position or frequency (the default order)...
     jc_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>("neg_log10_pos_hash_p_value")));
     jc_list.reverse();
-    //jc_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(FREQUENCY)));
-    
-    string marginal_jc_title = "Marginal new junction evidence";
     if (full_marginal_jc_list_size > jc_list.size()) {
       marginal_jc_title += " (lowest skew " + to_string(settings.max_rejected_junction_evidence_to_show) + " of " + to_string(full_marginal_jc_list_size) + " shown)";
     } else {
       marginal_jc_title += " (sorted from low to high skew)";
     }
+  }
+
+  /////////////////////////
+  // Sticky header: breseq nav + jump links
+  /////////////////////////
+
+  HTML << "<div class=\"breseq-sticky-header\">" << endl;
+  HTML << breseq_header_string(settings) << endl;
+
+  if (ra_list.size() > 0 || jc_list.size() > 0) {
+    bool first_link = true;
+    HTML << "<p>Jump to:";
+    if (ra_list.size() > 0) {
+      HTML << " <a href=\"#read_alignment_list\">Marginal read alignment evidence</a>";
+      first_link = false;
+    }
+    if (jc_list.size() > 0) {
+      if (!first_link) HTML << " |";
+      HTML << " <a href=\"#new_junction_list\">Marginal new junction evidence</a>";
+    }
+    HTML << endl;
+  }
+
+  HTML << "</div>" << endl;
+  HTML << "<p>" << endl;
+
+  /////////////////////////
+  // Emit tables
+  /////////////////////////
+
+  if (ra_list.size() > 0) {
+    HTML << "<p>" << endl;
+    HTML << html_read_alignment_table_string(ra_list, false, marginal_ra_title, relative_path) << endl;
+  }
+
+  if (jc_list.size() > 0) {
     HTML << "<p>" << endl;
     HTML << html_new_junction_table_string(jc_list, settings, false, marginal_jc_title, relative_path);
   }
-  
+
   // This code prints out a message if there was nothing in the previous tables
   if (ra_list.size() + jc_list.size() == 0) {
     HTML << "<p>No marginal predictions." << endl;
@@ -712,13 +793,20 @@ void html_compare(
   
   //Build html head
   HTML << html_header(title, settings);
-  
+
   if (!settings.no_javascript) {
     if (!settings.no_list_js) {
       HTML << start_list_js(settings);
     }
   }
-  
+
+  HTML << "<div class=\"breseq-sticky-header\">" << endl;
+  if (!settings.no_javascript && !settings.no_list_js) {
+    HTML << "<p>" << mutation_filter_input_string() << endl;
+  }
+  HTML << "<p>Jump to: <a href=\"#mutation_list\">Predicted mutations</a>" << endl;
+  HTML << "</div>" << endl;
+
   HTML << Html_Mutation_Table_String(settings, gd, list_ref, mt_options);
   
   if (!settings.no_javascript) {
@@ -739,15 +827,19 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
 
   //Build html head
   HTML << html_header("BRESEQ :: Summary Statistics", settings);
+
+  // Sticky header with navigation
+  HTML << "<div class=\"breseq-sticky-header\">" << endl;
   HTML << breseq_header_string(settings) << endl;
+  HTML << "</div>" << endl;
   HTML << "<p>" << endl;
-  
+
   ////
   // Write read file information
   ////
   double overall_percent_reads_mapped = 0;
   bool show_read_split_legend = false;
-  
+
   HTML << h2("Read File Information") << endl;
   HTML << start_table("border=\"0\" cellspace=\"1\" cellpadding=\"5\"") << endl;
   HTML << start_tr() << th() << th("read file") << th("reads") <<
@@ -802,7 +894,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   ////
   // Write reference sequence information
   ////
-    
+
   HTML << h2("Reference Sequence Information") << endl;
   HTML << "<p>" << endl;
   HTML << "<table border=\"0\" cellspacing=\"1\" cellpadding=\"5\" >" << endl;
@@ -928,7 +1020,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   ////
   
   if (!settings.skip_new_junction_prediction) {
-    
+
     HTML << h2("New Junction Evidence") << endl;
     HTML << "<p>" << endl;
     HTML << h3("Junction Candidates Tested") << endl;
@@ -1019,7 +1111,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   //
   // Read alignment evidence options
   //
-  
+
   {
     HTML << h2("Read Alignment Evidence") << endl;
     HTML << "<p>" << endl;
@@ -1540,12 +1632,13 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
   
   //Create Column Titles
   //seq_id/position/change/freq/score/cov/annotation/genes/product
+  ss << "<thead>" << endl;
   if (title != "") {
     ss << tr(th("colspan=\"" + to_string(total_cols) +
                 "\" align=\"left\" class=\"read_alignment_header_row\"", title)) << endl;
     ss << "<tr>" << endl;
   }
-  
+
   if (link) {
     ss << th("&nbsp;") << endl;
   }
@@ -1558,10 +1651,11 @@ string html_read_alignment_table_string(diff_entry_list_t& list_ref, bool show_d
         th("reads")      << endl <<
         th("annotation") << endl <<
         th("genes")      << endl;
-  
+
   ss << th("width=\"100%\"", "product") << endl;
   ss << "</tr>" << endl;
-  
+  ss << "</thead>" << endl;
+
   ss << "<tbody class=\"list\">" << endl;
   
   //Loop through list_ref to build table rows
@@ -1788,12 +1882,13 @@ string html_missing_coverage_table_string(diff_entry_list_t& list_ref, bool show
   
   size_t total_cols = link ? 11 : 8;
 
+  ss << "<thead>" << endl;
   if (title != "") {
     ss << "<tr>" << th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"missing_coverage_header_row\"", title) << "</tr>" << endl;
   }
-  
+
   ss << "<tr>";
-    
+
   if (link)
   {
     ss << th("&nbsp;") <<  th("&nbsp;");
@@ -1810,9 +1905,10 @@ string html_missing_coverage_table_string(diff_entry_list_t& list_ref, bool show
         th("&larr;reads")   << endl <<
         th("reads&rarr;")   << endl <<
         th("gene")        << endl;
-  
+
   ss << th("width=\"100%\"", "description") << endl;
   ss << "</tr>" << endl;
+  ss << "</thead>" << endl;
   ss << "<tbody class=\"list\">" << endl;
 
   for (diff_entry_list_t::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++)
@@ -1917,6 +2013,7 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
   size_t total_cols = link ? 12 : 10; //@ded 12/10 instead of 11/9 for frequency addition. SNPS set up to only do so if frequency is != 1 should this be done here as well?
   
+  ss << "<thead>" << endl;
   if (title != "") {
     ss << tr(th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"new_junction_header_row\"", title)) << endl;
   }
@@ -1926,11 +2023,11 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
 // #   #####################
   ss << "<!-- Header Lines for New Junction -->" << endl;
   ss << "<tr>" << endl;
-    
+
   if (link) {
     ss << th("colspan=\"2\"", "&nbsp;") << endl;
   }
-  
+
   ss << th("seq&nbsp;id") << endl <<
         th("position")    << endl <<
         th("reads&nbsp;(cov)") << endl <<
@@ -1940,9 +2037,10 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
         th("freq")        << endl <<//@ded frequency added as 9th column.
         th("annotation")  << endl <<
         th("gene")        << endl;
-  
+
   ss << th("width=\"100%\"","product") << endl;
   ss << "</tr>" << endl;
+  ss << "</thead>" << endl;
   ss << endl;
   ss << "<tbody class=\"list\">" << endl;
 // #
@@ -2126,6 +2224,7 @@ string html_copy_number_table_string(diff_entry_list_t& list_ref, bool show_deta
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
   size_t total_cols = link ? 10 : 9;
   
+  ss << "<thead>" << endl;
   if (title != "") {
     ss << tr(th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"copy_number_header_row\"", title)) << endl;
   }
@@ -2133,7 +2232,7 @@ string html_copy_number_table_string(diff_entry_list_t& list_ref, bool show_deta
   // #   #### HEADER LINE ####
   // #   #####################
   ss << "<tr>" << endl;
-  
+
   if (link) {
     ss << th("&nbsp;") << endl;
   }
@@ -2147,6 +2246,7 @@ string html_copy_number_table_string(diff_entry_list_t& list_ref, bool show_deta
   ss << th("gene") << endl;
   ss << th("width=\"100%\"","product") << endl;
   ss << "</tr>" << endl;
+  ss << "</thead>" << endl;
   ss << endl;
   ss << "<tbody class=\"list\">" << endl;
 
@@ -3024,11 +3124,13 @@ void Html_Mutation_Table_String::Header_Line(bool print_main_header)
     ss << "</tr>" << endl;
   }
 
+  if (print_main_header) (*this) += "<thead>\n";
   if(print_main_header && (header_text != ""))
     (*this) += tr(th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"mutation_header_row\"", header_text));
-  
+
   ss << endl;
   (*this) += ss.str();
+  if (print_main_header) (*this) += "</thead>\n";
 }
 //===============================================================================
 //       CLASS: Html_Mutation_Table_String
