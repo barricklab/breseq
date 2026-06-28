@@ -14,11 +14,11 @@ TESTCMD="\
     --polymorphism-prediction \
     -o ${SELF} \
     ${REFERENCE_ARG} \
-    ${DATADIR}/lambda/lambda_mixed_population.1.fastq \
-    ${DATADIR}/lambda/lambda_mixed_population.2.fastq \
-    ${DATADIR}/lambda/lambda_mixed_population.3.fastq \
-    ${DATADIR}/lambda/lambda_mixed_population.4.fastq \
-    ${DATADIR}/lambda/lambda_mixed_population.5.fastq \
+    ${DATADIR}/lambda/lambda_mixed_population.1.fastq.gz \
+    ${DATADIR}/lambda/lambda_mixed_population.2.fastq.gz \
+    ${DATADIR}/lambda/lambda_mixed_population.3.fastq.gz \
+    ${DATADIR}/lambda/lambda_mixed_population.4.fastq.gz \
+    ${DATADIR}/lambda/lambda_mixed_population.5.fastq.gz \
     "
 
 do_test $1 ${SELF}

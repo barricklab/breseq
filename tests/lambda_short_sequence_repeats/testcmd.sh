@@ -15,7 +15,7 @@ TESTCMD=" \
     -b 0 \
     -o ${SELF} \
     ${REFERENCE_ARG} \
-    ${DATADIR}/lambda/lambda.short_sequence_repeats.fastq
+    ${DATADIR}/lambda/lambda.short_sequence_repeats.fastq.gz
 	"
 
 do_test $1 ${SELF}

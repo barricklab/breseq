@@ -1,18 +1,20 @@
- /*****************************************************************************
+/*****************************************************************************
 
-AUTHORS
+ AUTHORS
 
-  Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
-  David B. Knoester
+   Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com> and other contributors
 
-LICENSE AND COPYRIGHT
+ LICENSE AND COPYRIGHT
 
-  Copyright (c) 2008-2010 Michigan State University
-  Copyright (c) 2011-2022 The University of Texas at Austin
+   Copyright (c) 2008-2010 Michigan State University
+   Copyright (c) 2011-2025 The University of Texas at Austin
+   Copyright (c) 2025-     Michigan State University
 
-  breseq is free software; you can redistribute it and/or modify it under the  
-  terms the GNU General Public License as published by the Free Software 
-  Foundation; either version 1, or (at your option) any later version.
+   breseq is free software; you can redistribute it and/or modify it under the
+   terms of the GNU General Public License as published by the Free Software
+   Foundation; either version 2, or (at your option) any later version.
+
+   SPDX-License-Identifier: GPL-2.0-or-later
 
 *****************************************************************************/
 
@@ -2254,17 +2256,7 @@ int breseq_default_action(int argc, char* argv[])
 
 			settings.done_step(settings.mutation_identification_done_file_name);
 		}
-    // extra processing for polymorphisms / mixed-base prediction
-		if ( (settings.polymorphism_prediction || settings.mixed_base_prediction) && settings.do_step(settings.polymorphism_statistics_done_file_name, "Polymorphism statistics"))
-		{
-			ref_seq_info.polymorphism_statistics(settings, summary);
-			settings.done_step(settings.polymorphism_statistics_done_file_name);
-		}
 	}
-
-	//rewire which GenomeDiff we get data from if we have the elaborated polymorphism_statistics version
-  if (settings.polymorphism_prediction || settings.mixed_base_prediction)
-    settings.ra_mc_genome_diff_file_name = settings.polymorphism_statistics_ra_mc_genome_diff_file_name;
 
     /*
      * 09 Copy number variation

@@ -1,20 +1,22 @@
 /*****************************************************************************
- 
+
  AUTHORS
- 
- Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com>
- David B. Knoester
- 
+
+   Jeffrey E. Barrick <jeffrey.e.barrick@gmail.com> and other contributors
+
  LICENSE AND COPYRIGHT
- 
- Copyright (c) 2008-2010 Michigan State University
- Copyright (c) 2011-2022 The University of Texas at Austin
- 
- breseq is free software; you can redistribute it and/or modify it under the
- terms the GNU General Public License as published by the Free Software
- Foundation; either version 1, or (at your option) any later version.
- 
- *****************************************************************************/
+
+   Copyright (c) 2008-2010 Michigan State University
+   Copyright (c) 2011-2025 The University of Texas at Austin
+   Copyright (c) 2025-     Michigan State University
+
+   breseq is free software; you can redistribute it and/or modify it under the
+   terms of the GNU General Public License as published by the Free Software
+   Foundation; either version 2, or (at your option) any later version.
+
+   SPDX-License-Identifier: GPL-2.0-or-later
+
+*****************************************************************************/
 
 
 #include "libbreseq/settings.h"
@@ -753,6 +755,11 @@ namespace breseq
       this->zip_html = false;
     }
 
+    if (this->zip_html && !file_exists((this->program_data_path + "/jszip.min.js").c_str())) {
+      cerr << "WARNING: --zip-html has been disabled because a required data file (jszip.min.js) is missing from this breseq installation's data path: " << this->program_data_path << endl;
+      this->zip_html = false;
+    }
+
     /*
     if (this->user_evidence_genome_diff_file_name.size() && !this->polymorphism_prediction) {
       ERROR("You must run breseq in polymorphism mode (-p) when supplying --user-evidence-gd.");
@@ -783,6 +790,7 @@ namespace breseq
     fprintf(stderr, "\n");
     fprintf(stderr, "Copyright (c) 2008-2010 Michigan State University\n");
     fprintf(stderr, "Copyright (c) 2011-2025 The University of Texas at Austin\n");
+    fprintf(stderr, "Copyright (c) 2025-     Michigan State University\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "If you use breseq in your research, please cite:\n");
     fprintf(stderr, "\n");
@@ -1099,9 +1107,6 @@ namespace breseq
 		this->complete_coverage_text_file_name = this->mutation_identification_path + "/@.coverage.tab";
 		this->ra_mc_genome_diff_file_name = this->mutation_identification_path + "/ra_mc_evidence.gd";
 
-    this->polymorphism_statistics_done_file_name = this->mutation_identification_path + "/polymorphism_statistics.done";
-		this->polymorphism_statistics_input_file_name = this->mutation_identification_path + "/polymorphism_statistics_input.tab";
-		this->polymorphism_statistics_ra_mc_genome_diff_file_name = this->mutation_identification_path + "/ra_mc_evidence_polymorphism_statistics.gd";
 
     //! Paths: Copy Number Variation
 		this->copy_number_variation_path = "09_copy_number_variation";

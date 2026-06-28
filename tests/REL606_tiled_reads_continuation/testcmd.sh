@@ -16,7 +16,7 @@ TESTCMD=" \
     -o ${SELF} \
     ${REFERENCE_ARG} \
     -s ${DATADIR}/REL606/REL606.is.gbk \
-    ${DATADIR}/REL606/REL606.tiled_reads_continuation.fastq
+    ${DATADIR}/REL606/REL606.tiled_reads_continuation.fastq.gz
 	"
 
 do_test $1 ${SELF}
