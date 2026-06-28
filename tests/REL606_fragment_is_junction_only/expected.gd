@@ -1,6 +1,6 @@
 #=GENOME_DIFF	1.0
-#=CREATED	09:14:17 21 Jun 2026
-#=PROGRAM	breseq 0.40.1 revision 089d37780932
+#=CREATED	20:21:03 21 Jun 2026
+#=PROGRAM	breseq 0.40.1
 #=COMMAND	./src/c/breseq/breseq -j 4 -b 0 -o tests/REL606_fragment_is_junction_only -r tests/REL606_fragment_is_junction_only/../data/REL606/REL606.fragment.gbk -s tests/REL606_fragment_is_junction_only/../data/REL606/REL606.is.gbk tests/REL606_fragment_is_junction_only/../data/REL606/REL606.junction_only.fastq
 #=REFSEQ	tests/REL606_fragment_is_junction_only/../data/REL606/REL606.fragment.gbk
 #=REFSEQ	tests/REL606_fragment_is_junction_only/../data/REL606/REL606.is.gbk

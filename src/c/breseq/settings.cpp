@@ -254,7 +254,7 @@ namespace breseq
     ("base-quality-cutoff,b", "Ignore bases with quality scores lower than this value", 3, ADVANCED_OPTION)
     ("quality-score-trim", "Trim the ends of reads past any base with a quality score below --base-quality-score-cutoff.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("require-match-length", "Only consider alignments that cover this many bases of a read", 0, ADVANCED_OPTION)
-    ("require-match-fraction", "Only consider alignments that cover this fraction of a read", 0.9, ADVANCED_OPTION)
+    ("require-match-fraction", "Only consider alignments that cover this fraction of a read (automatically lowered to 0.5 when --predict-soft-clipping is used, unless set explicitly)", 0.9, ADVANCED_OPTION)
     ("maximum-read-mismatches", "Don't consider reads with this many or more bases or indels that are different from the reference sequence. Unaligned bases at the end of a read also count as mismatches. Unaligned bases at the beginning of the read do NOT count as mismatches. (DEFAULT=OFF)", "", ADVANCED_OPTION)
     ;
     
@@ -291,6 +291,14 @@ namespace breseq
     ("deletion-coverage-seed-cutoff","Value for coverage below which MC are seeded", 0, ADVANCED_OPTION)
     ("deletion-coverage-propagation-cutoff","Value for coverage above which MC ends stop. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
     ("call-mutations-overlapping-MC", "If provided, don't ignore mutations predicted from RA evidence that overlap MC evidence", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ;
+
+    options.addUsage("", ADVANCED_OPTION);
+    options.addUsage("Soft-Clipping (SC) Evidence Options", ADVANCED_OPTION);
+    options
+    ("predict-soft-clipping", "Predict soft-clipping (SC) evidence: positions where reads are unexpectedly soft-clipped at their ends, which may indicate unannotated structural variation. This evidence type is experimental and disabled by default.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("soft-clipping-minimum-bases", "Minimum number of soft-clipped bases at a read end to count as a soft-clipping event", 8, ADVANCED_OPTION)
+    ("soft-clipping-score-cutoff", "Log10 E-value cutoff for soft-clipping evidence (DEFAULT = 2)", 2.0, ADVANCED_OPTION)
     ;
     
     options.addUsage("", ADVANCED_OPTION);
@@ -517,7 +525,18 @@ namespace breseq
     ASSERT(this->deletion_coverage_propagation_cutoff >= 0, "Argument --deletion-coverage-seed-cutoff must be >= 0")
     
     this->call_mutations_overlapping_missing_coverage = options.count("call-mutations-overlapping-MC");
-    
+
+    this->predict_soft_clipping = options.count("predict-soft-clipping");
+    this->soft_clipping_minimum_bases = from_string<uint32_t>(options["soft-clipping-minimum-bases"]);
+    this->soft_clipping_log10_e_value_cutoff = from_string<double>(options["soft-clipping-score-cutoff"]);
+
+    // Soft-clipping evidence needs partially-aligned reads to be kept so their clipped
+    // ends are visible for tabulation, so loosen the match-fraction requirement when
+    // enabled, unless the user explicitly set their own value.
+    if (this->predict_soft_clipping && !options.count("require-match-fraction")) {
+      this->require_match_fraction = 0.5;
+    }
+
     //! Settings: bowtie2
     //  all have default that we only overwrite if present on command line
     if (options.count("bowtie2-scoring")) this->bowtie2_scoring = options["bowtie2-scoring"];
@@ -913,6 +932,9 @@ namespace breseq
     this->deletion_coverage_propagation_cutoff = 0;
     this->deletion_coverage_seed_cutoff = 0;
     this->call_mutations_overlapping_missing_coverage = false;
+    this->predict_soft_clipping = false;
+    this->soft_clipping_minimum_bases = 8;
+    this->soft_clipping_log10_e_value_cutoff = 2.0;
       
     this->polymorphism_prediction = false;
     this->mixed_base_prediction = true;
@@ -1072,6 +1094,8 @@ namespace breseq
 		this->coverage_file_name = this->error_calibration_path + "/@.coverage.tab";
 		this->unique_only_coverage_distribution_file_name = this->error_calibration_path + "/@.unique_only_coverage_distribution.tab";
 		this->error_rates_summary_file_name = this->error_calibration_path + "/summary.json";
+		this->soft_clipping_counts_file_name = this->error_calibration_path + "/soft_clipping_counts.tab";
+		this->soft_clipping_summary_file_name = this->error_calibration_path + "/soft_clipping_summary.json";
 		this->error_rates_base_qual_error_prob_file_name = this->error_calibration_path + "/base_qual_error_prob.#.tab";
 
 		//! Paths: Mutation Identification

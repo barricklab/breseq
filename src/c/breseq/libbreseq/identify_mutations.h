@@ -47,6 +47,7 @@ namespace breseq {
                           const string& bam,
 													const string& fasta,
 													const string& gd_file,
+                          const cReferenceSequences& ref_seq_info,
                           const vector<double>& deletion_propagation_cutoff,
                           const vector<double>& deletion_seed_cutoff,
 													double mutation_cutoff,
@@ -268,6 +269,9 @@ namespace breseq {
     //! Write the genome diff
     void write_gd(const string& filename)
       { _gd.write(filename); }
+
+    //! Add SC (soft-clipping) evidence entries to the genome diff
+    void add_sc_evidence(const Summary& summary, const cReferenceSequences& ref_seq_info);
     
     
 	protected:

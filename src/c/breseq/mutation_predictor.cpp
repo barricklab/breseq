@@ -2117,7 +2117,30 @@ namespace breseq {
         j[IGNORE] = "CONTIG_END";
       }
     }
-    
+
+    // SC evidence
+    diff_entry_list_t sc = gd.get_list(make_vector<gd_entry_type>(SC));
+
+    for (diff_entry_list_t::iterator sc_it = sc.begin(); sc_it != sc.end(); sc_it++) {
+      cDiffEntry& s = **sc_it;
+
+      if (!ref_seq_info[s[SEQ_ID]].m_is_contig)
+        continue;
+
+      int32_t seq_length = ref_seq_info.get_sequence_length(s[SEQ_ID]);
+
+      bool near_contig_end = false;
+      if (n(s[POSITION]) <= contig_end_distance)
+        near_contig_end = true;
+
+      if (n(s[POSITION]) >= seq_length - contig_end_distance)
+        near_contig_end = true;
+
+      if (near_contig_end) {
+        s[IGNORE] = "CONTIG_END";
+      }
+    }
+
   }
 
 

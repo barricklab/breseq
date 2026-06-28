@@ -239,12 +239,18 @@ string html_new_junction_table_string(diff_entry_list_t& jc,
                                       );
   
 string html_copy_number_table_string(
-                                     diff_entry_list_t& list_ref, 
-                                     bool show_details, 
-                                     const string& title = "Copy number evidence", 
+                                     diff_entry_list_t& list_ref,
+                                     bool show_details,
+                                     const string& title = "Copy number evidence",
                                      const string& relative_link = ""
                                      );
 
+string html_soft_clipping_table_string(
+                                       diff_entry_list_t& list_ref,
+                                       bool show_details,
+                                       const string& title = "Soft clipping evidence",
+                                       const string& relative_link = ""
+                                       );
 
 string html_genome_diff_item_table_string(const Settings& settings, const cGenomeDiff& gd, diff_entry_list_t& list_ref);
 string html_deletion_coverage_values_table_string(const Settings& settings, cReferenceSequences& ref_seq_info, Summary& summary);

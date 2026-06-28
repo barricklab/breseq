@@ -149,6 +149,11 @@ namespace breseq {
   extern const char* SIDE_2_COVERAGE;
   extern const char* NEW_JUNCTION_COVERAGE;
   
+  //For SC
+  extern const char* SC_READ_COUNT;
+  extern const char* SC_TOTAL_COUNT;
+  extern const char* SC_LOG10_E_VALUE;
+
   //For CN
   extern const char* COPY_NUMBER;
 
@@ -159,7 +164,7 @@ namespace breseq {
 
   // Types of diff entries:
   enum gd_entry_type {UNKNOWN = 0, SNP, SUB, DEL, INS, MOB, AMP, INV, CON, INT,
-    RA, MC, JC, CN, UN, CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE, NOTE, MASK};
+    RA, MC, JC, CN, UN, SC, CURA, FPOS, PHYL, TSEQ, PFLP, RFLP, PFGE, NOTE, MASK};
   
   extern const vector<string> gd_keys_with_ids;
   

@@ -22,7 +22,7 @@
 #include "libbreseq/pileup.h"
 #include "libbreseq/identify_mutations.h"
 #include "libbreseq/error_count.h"
-#include "libbreseq/stats.h"
+#include "libbreseq/reference_sequence.h"
 
 using namespace std;
 
@@ -37,6 +37,7 @@ void identify_mutations(
 								const string& bam,
 								const string& fasta,
 								const string& gd_file,
+                const cReferenceSequences& ref_seq_info,
                 const vector<double>& deletion_propagation_cutoff,
                 const vector<double>& deletion_seed_cutoffs,
 								double mutation_cutoff,
@@ -46,7 +47,7 @@ void identify_mutations(
                 uint32_t polymorphism_precision_places,
 								bool print_per_position_file
  ) {
-                                                                                            
+
 	// do the mutation identification:
 	identify_mutations_pileup imp(
                 settings,
@@ -63,6 +64,7 @@ void identify_mutations(
 								print_per_position_file
 							);
 	imp.do_pileup(settings.call_mutations_seq_id_set());
+  if (settings.predict_soft_clipping) imp.add_sc_evidence(summary, ref_seq_info);
   imp.write_gd(gd_file);
 }
 
@@ -736,6 +738,62 @@ void identify_mutations_pileup::load_user_ra_evidence_from_gd()
   
   // Return just RA entries
   _user_evidence_ra_list = gd.get_list(make_vector<gd_entry_type>(RA));
+}
+
+void identify_mutations_pileup::add_sc_evidence(const Summary& summary, const cReferenceSequences& ref_seq_info)
+{
+  if (!file_exists(_settings.soft_clipping_counts_file_name.c_str())) return;
+
+  double p0 = summary.soft_clipping.soft_clipping_rate;
+  if (p0 <= 0.0) return;
+
+  // Bonferroni: 2 directions × total genome length positions
+  uint64_t total_genome_length = 0;
+  for (uint32_t i = 0; i < ref_seq_info.size(); i++) {
+    total_genome_length += ref_seq_info[i].m_length;
+  }
+  double log10_n_tests = log10(2.0 * static_cast<double>(total_genome_length));
+
+  ifstream in(_settings.soft_clipping_counts_file_name.c_str());
+  if (!in.is_open()) return;
+
+  string line;
+  getline(in, line); // skip header
+
+  while (getline(in, line)) {
+    vector<string> fields = split(line, "\t");
+    if (fields.size() < 5) continue;
+
+    string seq_id = fields[0];
+    uint32_t position = from_string<uint32_t>(fields[1]);
+    int32_t direction = from_string<int32_t>(fields[2]);
+    uint32_t clipped_count = from_string<uint32_t>(fields[3]);
+    uint32_t total_count = from_string<uint32_t>(fields[4]);
+
+    if (clipped_count == 0 || total_count == 0) continue;
+
+    // P(X >= clipped_count | Binomial(total_count, p0))
+    double p_value = bdtrc(static_cast<double>(clipped_count - 1),
+                           static_cast<double>(total_count),
+                           p0);
+    double log10_p_value = (p_value > 0.0) ? log10(p_value) : -300.0;
+    double score = -(log10_p_value + log10_n_tests);
+
+    if (score >= _settings.soft_clipping_log10_e_value_cutoff) {
+      cDiffEntry sc_entry(SC);
+      sc_entry[SEQ_ID]           = seq_id;
+      sc_entry[POSITION]         = to_string(position);
+      sc_entry[STRAND]           = to_string(direction);
+      sc_entry[SC_READ_COUNT]    = to_string(clipped_count);
+      sc_entry[SC_TOTAL_COUNT]   = to_string(total_count);
+      // Soft-clipping frequency = clipped reads / (clipped reads + spanning reads).
+      // total_count already equals clipped_count + spanning (read-through) reads.
+      double sc_frequency = static_cast<double>(clipped_count) / static_cast<double>(total_count);
+      sc_entry[FREQUENCY]        = formatted_double(sc_frequency, 4).to_string();
+      sc_entry[SC_LOG10_E_VALUE] = formatted_double(score, kMutationScorePrecision).to_string();
+      _gd.add(sc_entry);
+    }
+  }
 }
 
 /*! Destructor.

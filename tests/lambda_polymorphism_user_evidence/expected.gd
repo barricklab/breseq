@@ -1,6 +1,6 @@
 #=GENOME_DIFF	1.0
-#=CREATED	09:15:02 21 Jun 2026
-#=PROGRAM	breseq 0.40.1 revision 089d37780932
+#=CREATED	20:22:44 21 Jun 2026
+#=PROGRAM	breseq 0.40.1
 #=COMMAND	./src/c/breseq/breseq -j 4 --polymorphism-prediction --user-evidence-gd tests/lambda_polymorphism_user_evidence/user_evidence.gd -o tests/lambda_polymorphism_user_evidence -r tests/lambda_polymorphism_user_evidence/../data/lambda/lambda.gbk tests/lambda_polymorphism_user_evidence/../data/lambda/lambda_mixed_population.fastq
 #=REFSEQ	tests/lambda_polymorphism_user_evidence/../data/lambda/lambda.gbk
 #=READSEQ	tests/lambda_polymorphism_user_evidence/../data/lambda/lambda_mixed_population.fastq

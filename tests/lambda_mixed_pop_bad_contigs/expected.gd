@@ -1,6 +1,6 @@
 #=GENOME_DIFF	1.0
-#=CREATED	09:15:04 21 Jun 2026
-#=PROGRAM	breseq 0.40.1 revision 089d37780932
+#=CREATED	20:21:25 21 Jun 2026
+#=PROGRAM	breseq 0.40.1
 #=COMMAND	./src/c/breseq/breseq -j 4 --output-unmapped-reads -o tests/lambda_mixed_pop_bad_contigs -r tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda.gbk -r tests/lambda_mixed_pop_bad_contigs/../data/lambda/other.gbk -r tests/lambda_mixed_pop_bad_contigs/../data/REL606/REL606.fragment.gbk tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda_mixed_population.fastq
 #=REFSEQ	tests/lambda_mixed_pop_bad_contigs/../data/lambda/lambda.gbk
 #=REFSEQ	tests/lambda_mixed_pop_bad_contigs/../data/lambda/other.gbk

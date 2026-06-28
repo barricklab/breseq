@@ -1,6 +1,6 @@
 #=GENOME_DIFF	1.0
-#=CREATED	09:14:42 21 Jun 2026
-#=PROGRAM	breseq 0.40.1 revision 089d37780932
+#=CREATED	20:22:07 21 Jun 2026
+#=PROGRAM	breseq 0.40.1
 #=COMMAND	./src/c/breseq/breseq -j 4 -p --aligned-sam -o tests/lambda_polymorphism_aligned_sam -r tests/lambda_polymorphism_aligned_sam/../data/lambda/lambda.gbk tests/lambda_polymorphism_aligned_sam/../data/lambda/lambda_mixed_population.sam
 #=REFSEQ	tests/lambda_polymorphism_aligned_sam/../data/lambda/lambda.gbk
 #=READSEQ	tests/lambda_polymorphism_aligned_sam/../data/lambda/lambda_mixed_population.sam
