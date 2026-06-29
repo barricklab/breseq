@@ -48,11 +48,20 @@ EXTRA_DIST = \
 DOCSRCDIR=$(top_srcdir)/src/doc
 DOCBUILDDIR=$(abs_top_builddir)/src/doc/_build
 
-## Total core budget for parallel test execution. Defaults to using all
-## available cores; override on the command line, e.g. 'make test TEST_CORES=16'.
+## Total core budget for parallel test execution.
+## When possible, auto-detected from make's -j flag so that
+## 'make -j8 test' automatically passes --cores 8 to Snakemake.
+## GNU Make 4.x+ exposes the count via --jobs=N in MAKEFLAGS; older make
+## (e.g. macOS's bundled 3.81) only stores a jobserver fd, so the count is
+## not recoverable and TEST_CORES falls back to 'all' (all available cores).
+## Override explicitly on the command line: 'make test TEST_CORES=16'.
 ## Individual tests declare how many of these cores they use via 'TEST_CORES=N'
 ## in their testcmd.sh (see tests/common.sh and tests/Snakefile).
-TEST_CORES ?= all
+_MAKE_JOBS := $(patsubst --jobs=%,%,$(filter --jobs=%,$(MAKEFLAGS)))
+ifeq ($(_MAKE_JOBS),)
+_MAKE_JOBS := $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS)))
+endif
+TEST_CORES ?= $(if $(_MAKE_JOBS),$(_MAKE_JOBS),all)
 
 ## Main hooks called after normal make steps
 
@@ -99,7 +108,8 @@ dist-hook:
 
 ## 'make test'/'make test-long' run the consistency tests in parallel via
 ## Snakemake (see tests/Snakefile), bounded by a total core budget
-## (TEST_CORES, default 4; override with e.g. 'make test TEST_CORES=16').
+## (TEST_CORES, auto-detected from make -j or 'all' if unset;
+## override with e.g. 'make test TEST_CORES=16').
 ## Each test writes its output to tests/<name>/test.log (removed by
 ## 'make clean-tests') and a one-line tests/<name>/test.result that
 ## tests/print_test_summary.sh aggregates into the final pass/fail + timing
