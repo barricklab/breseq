@@ -1954,43 +1954,54 @@ int do_mummer2mask(int argc, char* argv[])
 
 int do_mask_gd(int argc, char* argv[])
 {
-	AnyOption options("gdtools MASK  [-o output.gd] input.gd mask.gd");
+	AnyOption options("gdtools MASK  [-o output.gd] [--mask-mode ALL|SMALL] [--mark] input.gd mask.gd");
 	options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
-	options("small,s", "Mask only 'small' mutations defined as: all SNP mutations; INS, DEL, and SUB mutations with sizes ≤ 20 bp; and all INS and DEL mutations causing expansion or contraction of simple sequence repeats (SSRs) with at least two repeats of the same unit of one to several bp and a total length of 5 bp in the reference genome. If these mutations are marked as 'mediated' or 'between' repeats, then they are NOT removed.", TAKES_NO_ARGUMENT);
+	options("mask-mode", "Masking mode: 'ALL' masks all mutations in masked regions; 'SMALL' masks only small mutations (SNP; INS, DEL, and SUB mutations with sizes ≤ 50 bp; and all INS and DEL mutations causing expansion or contraction of simple sequence repeats (SSRs)). If these mutations are marked as 'mediated' or 'between' repeats, then they are NOT masked. In SMALL mode, RA evidence is always masked; MC and CN evidence ≤ 50 bp are masked; SC and JC evidence are never masked.", "ALL");
+	options("mark,m", "Mark masked mutations and their orphaned evidence with ignore=masked instead of deleting them. Masked regions are converted to UN evidence in the default (delete) mode.", TAKES_NO_ARGUMENT);
 	options("output,o", "Output Genome Diff file.", "output.gd");
 	options("verbose,v","Verbose mode", TAKES_NO_ARGUMENT);
 
 	options.addUsage("");
-	options.addUsage("Creates a GD file where mutations in the input GD that are located within certain regions of the reference genome are removed. These regions are defined as MASK entries in the mask GD file. Mutations that overlap only masked reference bases (and therefore do not overlap any unmasked bases) are removed.");
-	
+	options.addUsage("Creates a GD file where mutations in the input GD that are located within certain regions of the reference genome are masked. These regions are defined as MASK entries in the mask GD file. Mutations that are completely contained within masked reference bases are affected. By default, masked mutations are deleted and masked regions are merged into UN evidence entries. With --mark, mutations instead receive ignore=masked and their orphaned evidence is similarly marked.");
+
 	options.processCommandArgs(argc, argv);
-	
+
 	if (options.count("help")) {
 		options.printUsage();
 		return -1;
 	}
-	
+
 	UserOutput uout("MASK");
-	
+
 	if (options.getArgc() != 2) {
 		options.addUsage("");
 		options.addUsage("Provide two Genome Diff input files as input.");
 		options.printUsage();
 		return -1;
 	}
-	
+
+	string mask_mode = to_upper(options["mask-mode"]);
+	if (mask_mode != "ALL" && mask_mode != "SMALL") {
+		options.addUsage("");
+		options.addUsage("--mask-mode must be ALL or SMALL");
+		options.printUsage();
+		return -1;
+	}
+	bool mask_only_small = (mask_mode == "SMALL");
+	bool mark = options.count("mark");
+
 	uout("Reading input GD file") << options.getArgv(0) << endl;
 	cGenomeDiff gd(options.getArgv(0));
-	
+
 	uout("Reading mask GD file") << options.getArgv(1) << endl;
 	cGenomeDiff mask_gd(options.getArgv(1));
-	
+
 	cGenomeDiff new_gd(gd);
 	new_gd.metadata = gd.metadata; // copy all of the important information
-	
+
 	// Mask mutations
-	new_gd.mask_mutations(mask_gd, options.count("small"), options.count("verbose"));
-	
+	new_gd.mask_mutations(mask_gd, mask_only_small, options.count("verbose"), mark);
+
 	uout("Writing output GD file", options["output"]);
 	new_gd.write(options["output"]);
 	return 0;

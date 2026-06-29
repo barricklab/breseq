@@ -3357,68 +3357,68 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
   
 }
   
-void cGenomeDiff::mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, bool verbose, bool mark_instead_of_delete)
+void cGenomeDiff::mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, bool verbose,
+                                  bool mark_instead_of_delete)
 {
   diff_entry_list_t masks = mask_gd.get_list(make_vector<gd_entry_type>(MASK));
-  
+
   // Create all of the flagged regions
   cFlaggedRegions flagged_regions;
   for (diff_entry_list_t::iterator mask_it = masks.begin(); mask_it != masks.end(); mask_it++) {
     diff_entry_ptr_t& mask = *mask_it;
     flagged_regions.flag_region(mask->at(SEQ_ID), from_string<uint32_t>(mask->at(POSITION)), from_string<uint32_t>(mask->at(POSITION)) + from_string<uint32_t>(mask->at(SIZE)) - 1);
   }
-  
-  // Mask mutations by removing entries from the current GD file
+
+  // Mask mutations by removing or marking entries in the current GD file
   diff_entry_list_t::iterator mut_it = this->_entry_list.begin();
-  
+
   bool advance_it(true);
   while (mut_it != this->_entry_list.end()) {
-    
+
     diff_entry_ptr_t& mut = *mut_it;
-    
+
     // ONLY mutations
     if (!mut->is_mutation()) {
       ++mut_it;
       continue;
     }
-    
+
     // Bail if we are not a small mutation
     bool is_small = false;
     if (mask_only_small) {
-      
+
       // Use default definition of small mutation size
-      // Could build an --option passthrough if needed
       is_small = mut->is_small_mutation();
-      
+
       // Don't remove these...
       if ( mut->entry_exists(MEDIATED) || mut->entry_exists(BETWEEN) ) {
         is_small = false;
       }
-      
+
       if (!is_small) {
         ++mut_it;
         continue;
       }
     }
-    
+
     cReferenceCoordinate start_coord = mut->get_reference_coordinate_start();
     cReferenceCoordinate end_coord = mut->get_reference_coordinate_end();
-    
+
     cFlaggedRegions::regions_t contained_within = flagged_regions.regions_that_contain(mut->at(SEQ_ID), start_coord, end_coord);
-    
+
     advance_it = true;
-    
+
     if (contained_within.size() != 0) {
-      
+
       if (verbose) {
-        cout << endl << "Removing mutation:" << endl << "  " << *mut << endl;
+        cout << endl << (mark_instead_of_delete ? "Marking" : "Removing") << " mutation:" << endl << "  " << *mut << endl;
         cout << "  Contained within MASK region(s):";
         for (cFlaggedRegions::regions_t::iterator region_it = contained_within.begin(); region_it != contained_within.end(); region_it++) {
           cout << " " << mut->at(SEQ_ID) << ":" << region_it->first << "-" << region_it->second;
         }
         cout << endl;
       }
-      
+
       if (mark_instead_of_delete) {
         (*mut)[IGNORE] = "masked";
         ++mut_it;
@@ -3493,10 +3493,10 @@ void cGenomeDiff::mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, boo
     diff_entry_ptr_t& un = *un_it;
     flagged_regions.flag_region(un->at(SEQ_ID), from_string<uint32_t>(un->at(START)), from_string<uint32_t>(un->at(END)));
   }
-  
+
   // Delete all evidence (including old UN entries)
   remove_group(EVIDENCE);
-  
+
   // Add back UN evidence that includes original UN and MASKS
   std::list<std::string> seq_ids = flagged_regions.get_seq_ids();
   for (std::list<std::string>::iterator its=seq_ids.begin(); its != seq_ids.end(); its++) {
@@ -3509,7 +3509,7 @@ void cGenomeDiff::mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, boo
       this->add(mask_entry);
     }
   }
-  
+
   // Let's fix the IDs to be in order
   this->reassign_unique_ids();
 }
