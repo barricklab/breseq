@@ -16,6 +16,8 @@ TESTCMD="\
     --polymorphism-reject-indel-homopolymer-length 0 \
     --polymorphism-reject-surrounding-homopolymer-length 2 \
     -b 20 \
+    --mask-gd ${SELF}/mask.gd \
+    --mask-mode ALL \
     -o ${SELF} \
     ${REFERENCE_ARG} \
     ${DATADIR}/lambda/lambda_mixed_population.fastq.gz \

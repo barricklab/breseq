@@ -3357,10 +3357,8 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
   
 }
   
-void cGenomeDiff::mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, bool verbose)
+void cGenomeDiff::mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, bool verbose, bool mark_instead_of_delete)
 {
-  const int32_t mask_small_max_size_limit = 20;
-  
   diff_entry_list_t masks = mask_gd.get_list(make_vector<gd_entry_type>(MASK));
   
   // Create all of the flagged regions
@@ -3388,7 +3386,9 @@ void cGenomeDiff::mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, boo
     bool is_small = false;
     if (mask_only_small) {
       
-      is_small = mut->is_small_mutation(mask_small_max_size_limit);
+      // Use default definition of small mutation size
+      // Could build an --option passthrough if needed
+      is_small = mut->is_small_mutation();
       
       // Don't remove these...
       if ( mut->entry_exists(MEDIATED) || mut->entry_exists(BETWEEN) ) {
@@ -3419,14 +3419,67 @@ void cGenomeDiff::mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, boo
         cout << endl;
       }
       
-      mut_it = this->remove(mut_it);
-      advance_it = false;
+      if (mark_instead_of_delete) {
+        (*mut)[IGNORE] = "masked";
+        ++mut_it;
+        advance_it = false;
+      } else {
+        mut_it = this->remove(mut_it);
+        advance_it = false;
+      }
     }
-    
+
     if (advance_it) ++mut_it;
   }
-  
-  
+
+  if (mark_instead_of_delete) {
+    // Build set of evidence IDs used by mutations that were NOT masked.
+    // We must never hide evidence that supports a non-masked mutation.
+    set<string> evidence_ids_of_unmasked_mutations;
+    for (diff_entry_list_t::iterator it = _entry_list.begin(); it != _entry_list.end(); it++) {
+      diff_entry_ptr_t& entry = *it;
+      if (!entry->is_mutation()) continue;
+      if (entry->entry_exists(IGNORE)) continue; // this mutation was masked
+      for (vector<string>::iterator ev_it = entry->_evidence.begin(); ev_it != entry->_evidence.end(); ev_it++) {
+        evidence_ids_of_unmasked_mutations.insert(*ev_it);
+      }
+    }
+
+    // Mark evidence entries that fall within masked regions,
+    // unless they are used as evidence by an unmasked mutation.
+    for (diff_entry_list_t::iterator it = _entry_list.begin(); it != _entry_list.end(); it++) {
+      diff_entry_ptr_t& ev = *it;
+      if (!ev->is_evidence()) continue;
+      if (evidence_ids_of_unmasked_mutations.count(ev->_id)) continue;
+
+      bool in_masked_region = false;
+      gd_entry_type type = ev->_type;
+
+      if (type == RA) {
+        cReferenceCoordinate coord(from_string<int32_t>(ev->at(POSITION)), from_string<int32_t>(ev->at(INSERT_POSITION)));
+        in_masked_region = (flagged_regions.regions_that_contain(ev->at(SEQ_ID), coord, coord).size() != 0);
+      } else if (type == MC || type == CN) {
+        cReferenceCoordinate start_coord(from_string<int32_t>(ev->at(START)));
+        cReferenceCoordinate end_coord(from_string<int32_t>(ev->at(END)));
+        in_masked_region = (flagged_regions.regions_that_contain(ev->at(SEQ_ID), start_coord, end_coord).size() != 0);
+      } else if (type == SC) {
+        cReferenceCoordinate coord(from_string<int32_t>(ev->at(POSITION)));
+        in_masked_region = (flagged_regions.regions_that_contain(ev->at(SEQ_ID), coord, coord).size() != 0);
+      } else if (type == JC) {
+        uint32_t side1_pos = from_string<uint32_t>(ev->at(SIDE_1_POSITION));
+        uint32_t side2_pos = from_string<uint32_t>(ev->at(SIDE_2_POSITION));
+        in_masked_region = flagged_regions.is_flagged(ev->at(SIDE_1_SEQ_ID), side1_pos, side1_pos)
+                        || flagged_regions.is_flagged(ev->at(SIDE_2_SEQ_ID), side2_pos, side2_pos);
+      }
+
+      if (in_masked_region) {
+        (*ev)[IGNORE] = "masked";
+      }
+    }
+
+    return;
+  }
+
   // Merge UN evidence into flagged regions
   diff_entry_list_t uns = get_list(make_vector<gd_entry_type>(UN));
   for (diff_entry_list_t::iterator un_it = uns.begin(); un_it != uns.end(); un_it++) {

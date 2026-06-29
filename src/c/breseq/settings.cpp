@@ -22,6 +22,7 @@
 #include "libbreseq/settings.h"
 
 #include "libbreseq/anyoption.h"
+#include "libbreseq/genome_diff.h"
 
 
 using namespace std;
@@ -348,6 +349,13 @@ namespace breseq
     ("max-displayed-reads", "Maximum number of reads to display in the HTML output for an evidence item (0=ALL)", 100, ADVANCED_OPTION)
     ;
     
+    options.addUsage("", ADVANCED_OPTION);
+    options.addUsage("Masking Options", ADVANCED_OPTION);
+    options
+    ("mask-gd", "Mask predicted mutations that overlap MASK entries in this GenomeDiff file (mutations are marked ignore=masked, not deleted)", "", ADVANCED_OPTION)
+    ("mask-mode", "Mode for masking mutations: 'ALL' masks all mutation types, 'SMALL' masks only small mutations (SNP,DEL,INS,SUB <=" + to_string(kBreseq_large_mutation_size_cutoff) +" bp)", "ALL", ADVANCED_OPTION)
+    ;
+
     options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Pipeline Control Options", ADVANCED_OPTION);
     options
@@ -741,7 +749,25 @@ namespace breseq
     
     if (options.count("header-genome-diff"))
       this->header_genome_diff_file_name = options["header-genome-diff"];
-  
+
+    if (options.count("mask-gd"))
+      this->mask_genome_diff_file_name = options["mask-gd"];
+
+    if (this->mask_genome_diff_file_name.empty()) {
+      this->mask_mode = "NONE";
+    } else {
+      this->mask_mode = to_upper(options["mask-mode"]);
+      if (this->mask_mode != "ALL" && this->mask_mode != "SMALL") {
+        options.addUsage("");
+        options.addUsage("Invalid --mask-mode value '" + options["mask-mode"] + "'. Valid choices are 'all' and 'small'.");
+        options.printUsage();
+        exit(-1);
+      }
+      // Fail fast: validate the mask GD file is readable before the pipeline starts
+      cGenomeDiff mask_gd;
+      mask_gd.read(this->mask_genome_diff_file_name);
+    }
+
 		this->post_option_initialize();
     
     //////// Check here for any conflicting options
