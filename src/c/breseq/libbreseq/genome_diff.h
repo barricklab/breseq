@@ -270,8 +270,9 @@ public:
                           int32_t size_cutoff_AMP_becomes_INS_DEL_mutation = kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation
                           );
   
-  //! Remove mutations that overlap MASK items in another GD
-  void mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, bool verbose);
+  //! Remove or mark mutations that overlap MASK items in another GD
+  void mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, bool verbose,
+                      bool mark_instead_of_delete = false);
 
   void filter_to_within_region(cReferenceSequences& ref_seq_info, const string& region);
   
