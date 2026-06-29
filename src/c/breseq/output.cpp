@@ -2268,7 +2268,6 @@ string html_copy_number_table_string(diff_entry_list_t& list_ref, bool show_deta
   ss << th("end") << endl;
   ss << th(nonbreaking("tile size")) << endl;
   ss << th(nonbreaking("copy number")) << endl;
-  ss << th(nonbreaking("p-value")) << endl;
   ss << th(nonbreaking("rel cov")) << endl;
   ss << th("gene") << endl;
   ss << th("width=\"100%\"","product") << endl;
@@ -2296,9 +2295,7 @@ string html_copy_number_table_string(diff_entry_list_t& list_ref, bool show_deta
 
     ss << td(ALIGN_CENTER, nonbreaking(c["tile_size"])) << endl;
     ss << td(ALIGN_CENTER, nonbreaking(c["copy_number"])) << endl;
-    
-    ss << td(ALIGN_CENTER, nonbreaking(c["p-value"])) << endl;
-    
+        
     stringstream num;
     num << fixed << setprecision(2) << from_string<double>(c["relative_coverage"]);
     ss << td(ALIGN_CENTER, num.str()) << endl;

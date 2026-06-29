@@ -146,7 +146,6 @@ void CNEvidence::ingest_csv_for_seq_id(
     item["tile_size"] = to_string<uint32_t>(window_size);
     item["copy_number"] = to_string<int32_t>(copy_number);
     item["relative_coverage"] = to_string<double>((coverage_n > 0) ? (coverage_sum / coverage_n) : 0.0);
-    item["p-value"] = "NA"; // CNery's HMM calls don't carry a per-segment p-value.
 
     gd.add(item);
   }
