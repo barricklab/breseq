@@ -3359,8 +3359,6 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
   
 void cGenomeDiff::mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, bool verbose, bool mark_instead_of_delete)
 {
-  const int32_t mask_small_max_size_limit = 20;
-  
   diff_entry_list_t masks = mask_gd.get_list(make_vector<gd_entry_type>(MASK));
   
   // Create all of the flagged regions
@@ -3388,7 +3386,9 @@ void cGenomeDiff::mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, boo
     bool is_small = false;
     if (mask_only_small) {
       
-      is_small = mut->is_small_mutation(mask_small_max_size_limit);
+      // Use default definition of small mutation size
+      // Could build an --option passthrough if needed
+      is_small = mut->is_small_mutation();
       
       // Don't remove these...
       if ( mut->entry_exists(MEDIATED) || mut->entry_exists(BETWEEN) ) {

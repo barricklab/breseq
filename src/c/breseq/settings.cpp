@@ -350,10 +350,10 @@ namespace breseq
     ;
     
     options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("Masking Predictions", ADVANCED_OPTION);
+    options.addUsage("Masking Options", ADVANCED_OPTION);
     options
     ("mask-gd", "Mask predicted mutations that overlap MASK entries in this GenomeDiff file (mutations are marked ignore=masked, not deleted)", "", ADVANCED_OPTION)
-    ("mask-mode", "Mode for masking mutations: 'all' masks all mutation types, 'small' masks only small mutations (SNPs, indels <=20 bp) - not mobile-element-mediated mutations", "all", ADVANCED_OPTION)
+    ("mask-mode", "Mode for masking mutations: 'ALL' masks all mutation types, 'SMALL' masks only small mutations (SNP,DEL,INS,SUB <=" + to_string(kBreseq_large_mutation_size_cutoff) +" bp)", "ALL", ADVANCED_OPTION)
     ;
 
     options.addUsage("", ADVANCED_OPTION);
