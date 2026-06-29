@@ -3357,7 +3357,7 @@ void cGenomeDiff::apply_to_sequences(cReferenceSequences& ref_seq_info, cReferen
   
 }
   
-void cGenomeDiff::mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, bool verbose)
+void cGenomeDiff::mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, bool verbose, bool mark_instead_of_delete)
 {
   const int32_t mask_small_max_size_limit = 20;
   
@@ -3419,14 +3419,21 @@ void cGenomeDiff::mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, boo
         cout << endl;
       }
       
-      mut_it = this->remove(mut_it);
-      advance_it = false;
+      if (mark_instead_of_delete) {
+        (*mut)[IGNORE] = "masked";
+        ++mut_it;
+        advance_it = false;
+      } else {
+        mut_it = this->remove(mut_it);
+        advance_it = false;
+      }
     }
-    
+
     if (advance_it) ++mut_it;
   }
-  
-  
+
+  if (mark_instead_of_delete) return;
+
   // Merge UN evidence into flagged regions
   diff_entry_list_t uns = get_list(make_vector<gd_entry_type>(UN));
   for (diff_entry_list_t::iterator un_it = uns.begin(); un_it != uns.end(); un_it++) {

@@ -2237,6 +2237,15 @@ int breseq_default_action(int argc, char* argv[])
       mp.predict(settings, summary, mpgd);
       mpgd.reassign_unique_ids();
 
+      // Apply mutation masking if a mask GD file was provided
+      if (settings.mask_mode != "NONE") {
+        cGenomeDiff mask_gd;
+        mask_gd.read(settings.mask_genome_diff_file_name);
+        bool mask_only_small = (settings.mask_mode == "SMALL");
+        mpgd.mask_mutations(mask_gd, mask_only_small, settings.verbose, true);
+        mpgd.reassign_unique_ids();
+      }
+
       // Add metadata that will only be in the output.gd file
       
       //#=REFSEQ header lines.

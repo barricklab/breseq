@@ -421,6 +421,8 @@ namespace breseq
     bool no_list_js;                                        // Default = false (use list.js for filtering tables)
 
     string header_genome_diff_file_name;                    // Default = NONE  COMMAND-LINE OPTION
+    string mask_genome_diff_file_name;                      // Default = ""    COMMAND-LINE OPTION
+    string mask_mode;                                       // Default = "NONE" COMMAND-LINE OPTION
     uint32_t max_nucleotides_to_show_in_tables;      // Default = 8
     uint32_t max_rejected_read_alignment_evidence_to_show;  // Default = 20
 		uint32_t max_rejected_junction_evidence_to_show;        // Default = 10

@@ -13,6 +13,8 @@ TESTCMD=" \
     ln -s \"$(cd ${DATADIR}/lambda && pwd)/lambda_mixed_population.fastq.gz\" \"${SELF}/lambda mixed population space.fastq.gz\" ; \
     ${BRESEQ} \
     ${BRESEQ_TEST_THREAD_ARG} \
+    --mask-gd ${SELF}/mask.gd \
+    --mask-mode SMALL \
     -o ${SELF}/output\ output \
     -g ${SELF}/header.gd \
     --genbank-field-for-seq-id version \

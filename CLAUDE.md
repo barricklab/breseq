@@ -173,6 +173,7 @@ breseq writes to `-o <output_dir>` (default: current directory):
   1. When running inside a git worktree, use the shared conda env at `../../../env` (i.e., `breseq/env` in the main repo) via `conda run -p ../../../env <command>`. If that env is absent, fall back to creating one locally as described in `DEVELOPER`.
   2. When explicitly told to, you may merge changes back to the `master` branch in the main repo.
 - **Run `make test` as part of the development cycle** — run the full test suite before considering a feature or fix complete.
+- **Run tests and rebuild scripts from the worktree root** — `./tests/run.sh`, `./tests/rebuild.sh`, and `make test` must be invoked from the top of the worktree (not from a subdirectory). A worktree needs its own `tests/test.config` (set `TESTBINPREFIX` and `BRESEQ_DATA_PATH` to `<worktree>/src/c/breseq`); if it is missing, `make test` creates it automatically, but if you need it before running `make test` you can write it by hand or copy from the main repo.
 
 ## Distribution
 

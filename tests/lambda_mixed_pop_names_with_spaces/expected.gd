@@ -1,9 +1,9 @@
 #=GENOME_DIFF	1.0
 #=TITLE	my_favorite_phage_genome
 #=AUTHOR	Arthur C. T. Genome
-#=CREATED	07:28:39 29 Jun 2026
+#=CREATED	12:12:51 29 Jun 2026
 #=PROGRAM	breseq 0.50.0
-#=COMMAND	./src/c/breseq/breseq -j 4 -o tests/lambda_mixed_pop_names_with_spaces/output output -g tests/lambda_mixed_pop_names_with_spaces/header.gd --genbank-field-for-seq-id version -r tests/lambda_mixed_pop_names_with_spaces/lambda space.gbk tests/lambda_mixed_pop_names_with_spaces/lambda mixed population space.fastq.gz
+#=COMMAND	./src/c/breseq/breseq -j 4 --mask-gd ./tests/lambda_mixed_pop_names_with_spaces/mask.gd --mask-mode SMALL -o ./tests/lambda_mixed_pop_names_with_spaces/output output -g ./tests/lambda_mixed_pop_names_with_spaces/header.gd --genbank-field-for-seq-id version -r ./tests/lambda_mixed_pop_names_with_spaces/lambda space.gbk ./tests/lambda_mixed_pop_names_with_spaces/lambda mixed population space.fastq.gz
 #=REFSEQ	location:lambda_mixed_population.fastq
 #=READSEQ	location:lambda_mixed_population.fastq
 #=CONVERTED-BASES	6998495
@@ -14,11 +14,11 @@
 #=MAPPED-READS	143168
 #=ORIGINAL-BASES	536
 #=ORIGINAL-READS	100
-DEL	1	30	NC_001416.1	139	1	gene_name=–/nu1	gene_position=intergenic (–/-52)	gene_product=–/DNA packaging protein	gene_strand=–/>	genes_promoter=nu1	locus_tag=–/lambdap01	locus_tags_promoter=lambdap01	mutation_category=small_indel	position_end=139	position_start=139	ref_seq=G
+DEL	1	30	NC_001416.1	139	1	gene_name=–/nu1	gene_position=intergenic (–/-52)	gene_product=–/DNA packaging protein	gene_strand=–/>	genes_promoter=nu1	ignore=masked	locus_tag=–/lambdap01	locus_tags_promoter=lambdap01	mutation_category=small_indel	position_end=139	position_start=139	ref_seq=G
 INS	2	31	NC_001416.1	14266	G	gene_name=L/K	gene_position=intergenic (+139/-10)	gene_product=tail component/tail component	gene_strand=>/>	genes_promoter=K	locus_tag=lambdap18/lambdap19	locus_tags_promoter=lambdap19	mutation_category=small_indel	position_end=14266	position_start=14266	ref_seq=C
 SNP	3	32	NC_001416.1	20661	G	aa_new_seq=E|S	aa_position=338|36	aa_ref_seq=?|?	codon_new_seq=GAA|TCT	codon_number=338|36	codon_position=1|2	codon_ref_seq=NAA|TNT	gene_name=orf-401|orf206b	gene_position=1012|107	gene_product=Tail fiber protein|hypothetical protein	gene_strand=>|<	genes_overlapping=orf-401,orf206b	locus_tag=lambdap27|lambdap90	locus_tags_overlapping=lambdap27,lambdap90	mutation_category=snp_nonsynonymous|nonsynonymous	position_end=20661	position_start=20661	ref_seq=N	snp_type=nonsynonymous|nonsynonymous	transl_table=11|11
 INS	4	33	NC_001416.1	20835	C	gene_name=orf-401	gene_position=coding (1186/1206 nt)	gene_product=Tail fiber protein	gene_strand=>	genes_overlapping=orf-401	locus_tag=lambdap27	locus_tags_overlapping=lambdap27	mutation_category=small_indel	position_end=20835	position_start=20835	ref_seq=C
-SNP	5	34	NC_001416.1	21714	A	aa_new_seq=N	aa_position=229	aa_ref_seq=S	codon_new_seq=AAC	codon_number=229	codon_position=2	codon_ref_seq=AGC	gene_name=orf-314	gene_position=686	gene_product=Tail fiber	gene_strand=>	genes_overlapping=orf-314	locus_tag=lambdap28	locus_tags_overlapping=lambdap28	mutation_category=snp_nonsynonymous	position_end=21714	position_start=21714	ref_seq=G	snp_type=nonsynonymous	transl_table=11
+SNP	5	34	NC_001416.1	21714	A	aa_new_seq=N	aa_position=229	aa_ref_seq=S	codon_new_seq=AAC	codon_number=229	codon_position=2	codon_ref_seq=AGC	gene_name=orf-314	gene_position=686	gene_product=Tail fiber	gene_strand=>	genes_overlapping=orf-314	ignore=masked	locus_tag=lambdap28	locus_tags_overlapping=lambdap28	mutation_category=snp_nonsynonymous	position_end=21714	position_start=21714	ref_seq=G	snp_type=nonsynonymous	transl_table=11
 DEL	6	63,64	NC_001416.1	21738	5996	gene_name=[orf-314]–ea59	gene_product=[orf-314],orf-194,ea47,ea31,ea59	genes_inactivated=orf-314,orf-194,ea47,ea31,ea59	locus_tag=[lambdap28]–[lambdap82]	locus_tags_inactivated=lambdap28,lambdap29,lambdap80,lambdap81,lambdap82	mutation_category=large_deletion	position_end=27733	position_start=21738	ref_seq=5996-bp
 SNP	7	35	NC_001416.1	31016	C	aa_new_seq=E|D	aa_position=3|61	aa_ref_seq=E|N	codon_new_seq=GAG|GAC	codon_number=3|61	codon_position=3|1	codon_ref_seq=GAA|AAC	gene_name=orf61|orf63	gene_position=9|181	gene_product=hypothetical protein|hypothetical protein	gene_strand=<|<	genes_overlapping=orf61,orf63	locus_tag=lambdap37|lambdap38	locus_tags_overlapping=lambdap37,lambdap38	mutation_category=snp_synonymous|nonsynonymous	position_end=31016	position_start=31016	ref_seq=T	snp_type=synonymous|nonsynonymous	transl_table=11|11
 SNP	8	36	NC_001416.1	34934	G	aa_new_seq=G	aa_position=151	aa_ref_seq=G	codon_new_seq=GGG	codon_number=151	codon_position=3	codon_ref_seq=GGA	gene_name=lambdap48	gene_position=453	gene_product=Superinfection exclusion protein B	gene_strand=>	genes_overlapping=lambdap48	locus_tag=lambdap48	locus_tags_overlapping=lambdap48	mutation_category=snp_synonymous	position_end=34934	position_start=34934	ref_seq=A	snp_type=synonymous	transl_table=11

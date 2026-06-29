@@ -463,6 +463,7 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   /////////////////////////
 
   diff_entry_list_t muts = gd.show_list(make_vector<gd_entry_type>(SNP)(INS)(DEL)(SUB)(MOB)(AMP));
+  muts.remove_if(cDiffEntry::field_exists(IGNORE));
 
   diff_entry_list_t mc = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(MC)));
   mc.remove_if(cDiffEntry::rejected_and_not_user_defined());
