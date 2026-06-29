@@ -23,7 +23,7 @@ using namespace std;
 
 namespace breseq {
 
-void CNEvidence::predict(Settings& settings, cReferenceSequences& ref_seq_info)
+void CNEvidence::predict(Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info)
 {
   if (settings.installed.count("cnery") == 0) {
     settings.installed["cnery"] = SYSTEM_CAPTURE("which CNery", true);
@@ -35,7 +35,7 @@ void CNEvidence::predict(Settings& settings, cReferenceSequences& ref_seq_info)
   }
 
   string cnery_output_prefix = settings.copy_number_variation_path + "/cnery_out";
-  run_cnery(settings, cnery_output_prefix);
+  run_cnery(settings, summary, cnery_output_prefix);
 
   string cnery_basename = path_to_filename(cnery_output_prefix);
   string csv_path = cnery_output_prefix + "/CNV_csv";
@@ -52,15 +52,30 @@ void CNEvidence::predict(Settings& settings, cReferenceSequences& ref_seq_info)
   }
 }
 
-void CNEvidence::run_cnery(Settings& settings, const string& cnery_output_prefix)
+void CNEvidence::run_cnery(Settings& settings, Summary& summary, const string& cnery_output_prefix)
 {
+  (void)summary;
+  // Example of how to use read length as the fragment length – but this is not appropriate
+  // Use
+  //uint32_t fragment_length(0);
+  //float total_bases(0);
+  //float total_reads(0);
+  //for(cReadFiles::const_iterator it=settings.read_files.begin(); it!=settings.read_files.end(); it++)
+  //{
+  //  const AnalyzeFastqSummary& s = summary.sequence_conversion.reads[it->m_base_name];
+  //  total_bases += static_cast<double>(s.num_bases);
+  //  total_reads += static_cast<double>(s.num_reads);
+  //}
+  //fragment_length = trunc(total_bases/total_reads);
+  
   // Prepend breseq's own directory to PATH so CNery can call "breseq bam2cov"
   string command = "PATH=" + double_quote(Settings::get_bin_path() + ":$PATH") + " ";
   command += double_quote(settings.installed["cnery"]);
   command += " -i " + double_quote(settings.base_output_path.size() ? settings.base_output_path : string("."));
   command += " -ref " + double_quote(settings.reference_fasta_file_name);
   command += " -o " + double_quote(cnery_output_prefix);
-
+  //command += " -f " + to_string<uint32_t>(fragment_length);
+  
   SYSTEM(command, false, false, false);
 }
 

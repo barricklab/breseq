@@ -2173,7 +2173,7 @@ int breseq_default_action(int argc, char* argv[])
 
     if (settings.do_step(settings.copy_number_variation_done_file_name, "Predicting copy number variation evidence")) {
 
-      CNEvidence::predict(settings, ref_seq_info);
+      CNEvidence::predict(settings, summary, ref_seq_info);
 
       settings.done_step(settings.copy_number_variation_done_file_name);
 
@@ -2243,7 +2243,6 @@ int breseq_default_action(int argc, char* argv[])
         mask_gd.read(settings.mask_genome_diff_file_name);
         bool mask_only_small = (settings.mask_mode == "SMALL");
         mpgd.mask_mutations(mask_gd, mask_only_small, settings.verbose, true);
-        mpgd.reassign_unique_ids();
       }
 
       // Add metadata that will only be in the output.gd file

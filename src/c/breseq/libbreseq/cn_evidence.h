@@ -35,12 +35,13 @@ namespace breseq {
 
     static void predict(
                         Settings& settings,
+                        Summary& summary,
                         cReferenceSequences& ref_seq_info
                         );
 
   private:
 
-    static void run_cnery(Settings& settings, const string& cnery_output_prefix);
+    static void run_cnery(Settings& settings, Summary& summary, const string& cnery_output_prefix);
 
     static void ingest_csv_for_seq_id(
                                       const string& seq_id,
