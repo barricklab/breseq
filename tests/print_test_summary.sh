@@ -26,11 +26,12 @@ echo "========================================================================="
 
 for RESULT in $(find "${TESTSDIR}" -mindepth 2 -maxdepth 2 -name test.result | sort); do
 	read STATUS NAME ELAPSED < "${RESULT}"
-	printf "  %-6s %-50s %s\n" "${STATUS}" "${NAME}" "$(format_time ${ELAPSED})"
 	if [[ "${STATUS}" == "PASS" ]]; then
 		PASS_COUNT=$((PASS_COUNT + 1))
+		printf "  %-6s %-50s %s\n" "${STATUS}" "${NAME}" "$(format_time ${ELAPSED})"
 	else
 		FAIL_COUNT=$((FAIL_COUNT + 1))
+		printf " >>%-6s %-50s %s\n" "${STATUS}" "${NAME}" "$(format_time ${ELAPSED})"
 	fi
 done
 
