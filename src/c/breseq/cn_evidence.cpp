@@ -46,7 +46,7 @@ void CNEvidence::predict(Settings& settings, cReferenceSequences& ref_seq_info)
 
     string cnv_file_name = csv_path + "/" + cnery_basename + seq.m_seq_id + "_CNV.csv";
     string break_pts_file_name = csv_path + "/" + cnery_basename + seq.m_seq_id + "_break_pts.csv";
-    string gd_file_name = settings.file_name(settings.copy_number_variation_cn_genome_diff_file_name, "@", seq.m_seq_id);
+    string gd_file_name = settings.file_name(settings.copy_number_evidence_genome_diff_file_name, "@", seq.m_seq_id);
 
     ingest_csv_for_seq_id(seq.m_seq_id, cnv_file_name, break_pts_file_name, gd_file_name);
   }

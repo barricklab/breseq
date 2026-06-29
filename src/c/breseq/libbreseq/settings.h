@@ -541,7 +541,7 @@ namespace breseq
 		//! Paths: Copy Number Variation
     string copy_number_variation_path;
     string copy_number_variation_done_file_name;
-    string copy_number_variation_cn_genome_diff_file_name;
+    string copy_number_evidence_genome_diff_file_name;
     
     string periodicity_table_file_name;
     string periodicity_done_file_name;

@@ -710,7 +710,7 @@ identify_mutations_pileup::identify_mutations_pileup(
 	assert(_log10_ref_length != 0);
 	_log10_ref_length = log10(_log10_ref_length);
   
-  // are we printing detailed coverage information? (only needed when --cn-evidence reads it back)
+  // are we printing detailed coverage information? (only needed when --predict_copy_number reads it back)
   _print_coverage_data = _settings.predict_copy_number;
   
   // load the error table file and convert back to probabilities
@@ -1034,7 +1034,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		//###
 		
     if(!_settings.skip_missing_coverage_prediction && (insert_count == 0))
-      check_deletion_completion(position, p.target(), this_position_coverage, consensus_bonferroni_score);
+      check_deletion_completion(p.target(), position, ref_base_char, this_position_coverage, consensus_bonferroni_score);
 		
 		//###
 		//## POLYMORPHISM POLYMORPHISM POLYMORPHISM
@@ -1303,8 +1303,15 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
 		string filename = _settings.file_name(_settings.complete_coverage_text_file_name, "@", target_name(tid));
 		_coverage_data.open(filename.c_str());
     ASSERT(!_coverage_data.fail(), "Could not open output file:" + filename);
-		_coverage_data << "unique_top_cov" << "\t" << "unique_bot_cov" << "\t" << "redundant_top_cov" << "\t" << "redundant_bot_cov" << "\t" << "raw_redundant_top_cov" << "\t" << "raw_redundant_bot_cov" << "\t" << "e_value" << "\t" << "position" << endl;
-	}	
+    _coverage_data << "position" << "\t";
+    _coverage_data << "ref_base" << "\t";
+    _coverage_data << "unique_top_cov" << "\t";
+    _coverage_data << "unique_bot_cov" << "\t";
+    _coverage_data << "redundant_top_cov" << "\t";
+    _coverage_data << "redundant_bot_cov" << "\t";
+    _coverage_data << "raw_redundant_top_cov" << "\t";
+    _coverage_data << "raw_redundant_bot_cov" << endl;
+	}
   
   // Reset the Missing Coverage evidence variables
   _last_deletion_start_position = UNDEFINED_UINT32;
@@ -1322,7 +1329,7 @@ void identify_mutations_pileup::at_target_end(const uint32_t tid) {
 
   // end "open" Missing Coverahge and Unknown intervals
   if (!_settings.skip_missing_coverage_prediction) {
-    check_deletion_completion(target_length(tid)+1, tid, position_coverage(numeric_limits<double>::quiet_NaN()), numeric_limits<double>::quiet_NaN());
+    check_deletion_completion(tid, target_length(tid)+1, '.', position_coverage(numeric_limits<double>::quiet_NaN()), numeric_limits<double>::quiet_NaN());
   }
   update_unknown_intervals(target_length(tid)+1, tid, true, false);
 
@@ -1362,7 +1369,7 @@ void identify_mutations_pileup::at_target_end(const uint32_t tid) {
  @JEB This function expects 1-indexed positions!!!
  
  */
-void identify_mutations_pileup::check_deletion_completion(uint32_t position, uint32_t seq_id, const position_coverage& this_position_coverage, double e_value_call) {
+void identify_mutations_pileup::check_deletion_completion(uint32_t seq_id, uint32_t position, char ref_base_char, const position_coverage& this_position_coverage, double e_value_call) {
 
 	//cerr << position << " " << e_value_call << endl;
 	
@@ -1372,13 +1379,14 @@ void identify_mutations_pileup::check_deletion_completion(uint32_t position, uin
   
   // print to optional output file
   if (!std::isnan(this_position_coverage.unique[1]) && _coverage_data.is_open()) {
-    _coverage_data << this_position_coverage.unique[0] << "\t"
-    << this_position_coverage.unique[2] << "\t"
-    << this_position_coverage.redundant[0] << "\t"
-    << this_position_coverage.redundant[2] << "\t"
-    << this_position_coverage.raw_redundant[0] << "\t"
-    << this_position_coverage.raw_redundant[2] << "\t"
-    << e_value_call << "\t" << position << endl;
+    _coverage_data << position << "\t";
+    _coverage_data << ref_base_char << "\t";
+    _coverage_data << this_position_coverage.unique[2] << "\t"; // top
+    _coverage_data << this_position_coverage.unique[0] << "\t"; // bottom
+    _coverage_data << this_position_coverage.redundant[2] << "\t"; // top
+    _coverage_data << this_position_coverage.redundant[0] << "\t"; // bottom
+    _coverage_data << this_position_coverage.raw_redundant[2] << "\t"; // top
+    _coverage_data  << this_position_coverage.raw_redundant[0] << endl; // bottom
   }
   
   

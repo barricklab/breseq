@@ -2222,8 +2222,8 @@ int breseq_default_action(int argc, char* argv[])
       if (settings.predict_copy_number) {
         for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it) {
           cAnnotatedSequence& seq = *it;
-          string this_copy_number_variation_cn_genome_diff_file_name = settings.file_name(settings.copy_number_variation_cn_genome_diff_file_name, "@", seq.m_seq_id);
-          cGenomeDiff cn_gd(this_copy_number_variation_cn_genome_diff_file_name);
+          string this_copy_number_evidence_genome_diff_file_name = settings.file_name(settings.copy_number_evidence_genome_diff_file_name, "@", seq.m_seq_id);
+          cGenomeDiff cn_gd(this_copy_number_evidence_genome_diff_file_name);
           evidence_gd.merge_preserving_duplicates(cn_gd);
         }
       }

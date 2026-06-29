@@ -1,9 +1,9 @@
 #=GENOME_DIFF	1.0
 #=TITLE	my_favorite_phage_genome
 #=AUTHOR	Arthur C. T. Genome
-#=CREATED	20:55:37 21 Jun 2026
-#=PROGRAM	breseq 0.40.1
-#=COMMAND	./src/c/breseq/breseq -j 4 -o ./tests/lambda_mixed_pop_cn_evidence -g ./tests/lambda_mixed_pop_cn_evidence/header.gd --genbank-field-for-seq-id VERSION --cn-evidence -r ./tests/lambda_mixed_pop_cn_evidence/../data/lambda/lambda.gbk ./tests/lambda_mixed_pop_cn_evidence/../data/lambda/lambda_mixed_population.fastq
+#=CREATED	20:04:12 28 Jun 2026
+#=PROGRAM	breseq 0.50.0 revision 20c22db2373e
+#=COMMAND	./src/c/breseq/breseq -k -j 4 -o ./tests/lambda_mixed_pop_cn_evidence -g ./tests/lambda_mixed_pop_cn_evidence/header.gd --genbank-field-for-seq-id VERSION --predict-copy-number -r ./tests/lambda_mixed_pop_cn_evidence/../data/lambda/lambda.gbk ./tests/lambda_mixed_pop_cn_evidence/../data/lambda/lambda_mixed_population.fastq.gz
 #=REFSEQ	location:lambda_mixed_population.fastq
 #=READSEQ	location:lambda_mixed_population.fastq
 #=CONVERTED-BASES	6998495
@@ -79,11 +79,13 @@ MC	62	.	NC_001416.1	1	2	0	0	gene_name=–/nu1	gene_position=intergenic (–/-189
 MC	63	.	NC_001416.1	21738	27733	0	0	gene_name=[orf-314]–ea59	gene_product=[orf-314],orf-194,ea47,ea31,ea59	left_inside_cov=0	left_outside_cov=79	locus_tag=[lambdap28]–[lambdap82]	right_inside_cov=21	right_outside_cov=100
 MC	64	.	NC_001416.1	48468	48502	0	0	gene_name=lambdap79/–	gene_position=intergenic (+524/–)	gene_product=hypothetical protein/–	gene_strand=>/–	left_inside_cov=22	left_outside_cov=28	locus_tag=lambdap79/–	right_inside_cov=0	right_outside_cov=NA
 JC	65	.	NC_001416.1	21737	-1	NC_001416.1	27734	1	0	alignment_overlap=5	coverage_minus=29	coverage_plus=32	flanking_left=35	flanking_right=35	frequency=1	junction_possible_overlap_registers=29	key=NC_001416.1__21737__-1__NC_001416.1__27729__1__5____35__35__0__0	max_left=29	max_left_minus=27	max_left_plus=29	max_min_left=13	max_min_left_minus=13	max_min_left_plus=11	max_min_right=15	max_min_right_minus=15	max_min_right_plus=15	max_pos_hash_score=58	max_right=29	max_right_minus=29	max_right_plus=28	neg_log10_pos_hash_p_value=0.2	new_junction_coverage=0.81	new_junction_read_count=78	polymorphism_frequency=1.000e+00	pos_hash_score=35	prediction=consensus	side_1_annotate_key=gene	side_1_continuation=0	side_1_coverage=0.00	side_1_gene_name=orf-314	side_1_gene_position=coding (709/945 nt)	side_1_gene_product=Tail fiber	side_1_gene_strand=>	side_1_locus_tag=lambdap28	side_1_overlap=5	side_1_possible_overlap_registers=34	side_1_read_count=0	side_1_redundant=0	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.00	side_2_gene_name=ea59/int	side_2_gene_position=intergenic (-761/+78)	side_2_gene_product=ea59/integration protein	side_2_gene_strand=</<	side_2_locus_tag=lambdap82/lambdap33	side_2_overlap=0	side_2_possible_overlap_registers=29	side_2_read_count=0	side_2_redundant=0	total_non_overlap_reads=61
-CN	66	.	NC_001416.1	10302	23101	2	gene_name=[T]–[ea47]	gene_product=[T],H,M,L,K,I,J,lom,orf-401,orf206b,orf-314,orf-194,[ea47]	locus_tag=[lambdap15]–[lambdap80]	p-value=NA	relative_coverage=0.882379	tile_size=200
-CN	67	.	NC_001416.1	35902	48501	2	gene_name=[rexb]–lambdap79	gene_product=[rexb],rexa,cI,cro,cII,O,P,ren,NinB,NinC,NinD,NinE,NinF,NinG,NinH,NinI,Q,orf-64,S,S',R,Rz,Rz1,bor,lambdap78,lambdap79	locus_tag=[lambdap53]–[lambdap79]	p-value=NA	relative_coverage=1.03657	tile_size=200
-UN	68	.	NC_001416.1	1	8
-UN	69	.	NC_001416.1	21738	27731
-UN	70	.	NC_001416.1	48486	48486
-UN	71	.	NC_001416.1	48490	48490
-UN	72	.	NC_001416.1	48492	48492
-UN	73	.	NC_001416.1	48494	48502
+CN	66	.	NC_001416.1	18602	21801	2	gene_name=[J]–[orf-314]	gene_product=[J],lom,orf-401,orf206b,[orf-314]	locus_tag=[lambdap21]–[lambdap28]	p-value=NA	relative_coverage=1.6108	tile_size=200
+CN	67	.	NC_001416.1	21702	27801	0	gene_name=[orf-314]–ea59	gene_product=[orf-314],orf-194,ea47,ea31,ea59	locus_tag=[lambdap28]–[lambdap82]	p-value=NA	relative_coverage=0.0507754	tile_size=200
+CN	68	.	NC_001416.1	27702	28801	2	gene_name=[int]	gene_product=[int]	locus_tag=[lambdap33]	p-value=NA	relative_coverage=1.35958	tile_size=200
+CN	69	.	NC_001416.1	29802	30701	2	gene_name=ea22	gene_product=ea22	locus_tag=[lambdap83]	p-value=NA	relative_coverage=1.36247	tile_size=200
+UN	70	.	NC_001416.1	1	8
+UN	71	.	NC_001416.1	21738	27731
+UN	72	.	NC_001416.1	48486	48486
+UN	73	.	NC_001416.1	48490	48490
+UN	74	.	NC_001416.1	48492	48492
+UN	75	.	NC_001416.1	48494	48502

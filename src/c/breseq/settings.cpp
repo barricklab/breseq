@@ -1108,7 +1108,7 @@ namespace breseq
 		this->copy_number_variation_path = "09_copy_number_variation";
     if (this->base_output_path.size() > 0) this->copy_number_variation_path = this->base_output_path + "/" + this->copy_number_variation_path;
     this->copy_number_variation_done_file_name = this->copy_number_variation_path + "/copy_number_variation.done";
-    this->copy_number_variation_cn_genome_diff_file_name = this->copy_number_variation_path + "/@.cn_evidence.gd";
+    this->copy_number_evidence_genome_diff_file_name = this->copy_number_variation_path + "/@.cn_evidence.gd";
     
     //! Paths: Output
 		this->output_path = "output";

@@ -11,6 +11,7 @@ COMPARE_ARG="--genbank-field-for-seq-id VERSION"
 
 TESTCMD="\
     ${BRESEQ} \
+    -k \
     ${BRESEQ_TEST_THREAD_ARG} \
     -o ${SELF} \
     -g ${SELF}/header.gd \
