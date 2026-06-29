@@ -3456,20 +3456,27 @@ void cGenomeDiff::mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, boo
       gd_entry_type type = ev->_type;
 
       if (type == RA) {
+        // RA is always a single base — always treated as small
         cReferenceCoordinate coord(from_string<int32_t>(ev->at(POSITION)), from_string<int32_t>(ev->at(INSERT_POSITION)));
         in_masked_region = (flagged_regions.regions_that_contain(ev->at(SEQ_ID), coord, coord).size() != 0);
       } else if (type == MC || type == CN) {
+        int32_t size = from_string<int32_t>(ev->at(END)) - from_string<int32_t>(ev->at(START)) + 1;
+        if (mask_only_small && size > kBreseq_large_mutation_size_cutoff) continue;
         cReferenceCoordinate start_coord(from_string<int32_t>(ev->at(START)));
         cReferenceCoordinate end_coord(from_string<int32_t>(ev->at(END)));
         in_masked_region = (flagged_regions.regions_that_contain(ev->at(SEQ_ID), start_coord, end_coord).size() != 0);
-      } else if (type == SC) {
-        cReferenceCoordinate coord(from_string<int32_t>(ev->at(POSITION)));
-        in_masked_region = (flagged_regions.regions_that_contain(ev->at(SEQ_ID), coord, coord).size() != 0);
-      } else if (type == JC) {
-        uint32_t side1_pos = from_string<uint32_t>(ev->at(SIDE_1_POSITION));
-        uint32_t side2_pos = from_string<uint32_t>(ev->at(SIDE_2_POSITION));
-        in_masked_region = flagged_regions.is_flagged(ev->at(SIDE_1_SEQ_ID), side1_pos, side1_pos)
-                        || flagged_regions.is_flagged(ev->at(SIDE_2_SEQ_ID), side2_pos, side2_pos);
+      } else if (type == SC || type == JC) {
+        // SC and JC are always treated as large — skip in SMALL mode
+        if (mask_only_small) continue;
+        if (type == SC) {
+          cReferenceCoordinate coord(from_string<int32_t>(ev->at(POSITION)));
+          in_masked_region = (flagged_regions.regions_that_contain(ev->at(SEQ_ID), coord, coord).size() != 0);
+        } else { // JC
+          uint32_t side1_pos = from_string<uint32_t>(ev->at(SIDE_1_POSITION));
+          uint32_t side2_pos = from_string<uint32_t>(ev->at(SIDE_2_POSITION));
+          in_masked_region = flagged_regions.is_flagged(ev->at(SIDE_1_SEQ_ID), side1_pos, side1_pos)
+                          || flagged_regions.is_flagged(ev->at(SIDE_2_SEQ_ID), side2_pos, side2_pos);
+        }
       }
 
       if (in_masked_region) {

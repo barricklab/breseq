@@ -1,5 +1,5 @@
 #=GENOME_DIFF	1.0
-#=CREATED	12:34:56 29 Jun 2026
+#=CREATED	12:46:42 29 Jun 2026
 #=PROGRAM	breseq 0.50.0
 #=COMMAND	./src/c/breseq/breseq -j 4 --polymorphism-prediction --polymorphism-frequency-cutoff 0.2 --polymorphism-reject-indel-homopolymer-length 0 --polymorphism-reject-surrounding-homopolymer-length 2 -b 20 --mask-gd ./tests/lambda_polymorphism_ignore_low_quality/mask.gd --mask-mode ALL -o ./tests/lambda_polymorphism_ignore_low_quality -r ./tests/lambda_polymorphism_ignore_low_quality/../data/lambda/lambda.gbk ./tests/lambda_polymorphism_ignore_low_quality/../data/lambda/lambda_mixed_population.fastq.gz
 #=REFSEQ	./tests/lambda_polymorphism_ignore_low_quality/../data/lambda/lambda.gbk
