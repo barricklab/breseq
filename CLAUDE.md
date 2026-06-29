@@ -72,9 +72,8 @@ that every `testcmd.sh` dispatches into) lives in `tests/common.sh`; `Snakefile`
 and launches `testcmd.sh test` for each test, it doesn't change those conventions.
 
 - **Core budget**: control the total number of cores used across all parallel tests with
-  `make test TEST_CORES=16` (explicit override; default: all available cores). On GNU Make 4.x+,
-  the count is auto-detected from `make -j8 test`; on macOS's bundled Make 3.81 the jobserver
-  hides the count, so `TEST_CORES` falls back to `all`. Each test declares how many of those cores *it* uses via
+  `make -j8 test` (auto-detected) or `make test TEST_CORES=16` (explicit override; default: all
+  available cores when no `-j` is given). Each test declares how many of those cores *it* uses via
   a `TEST_CORES=N` line near the top of its `testcmd.sh`, set *before* sourcing `common.sh` (see
   `tests/lambda_mixed_pop/testcmd.sh`); tests that don't set it (typically `gdtools`-only tests)
   default to `TEST_CORES=1`. `common.sh` derives `BRESEQ_TEST_THREAD_ARG="-j ${TEST_CORES}"` from

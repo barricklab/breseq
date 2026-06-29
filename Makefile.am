@@ -49,15 +49,14 @@ DOCSRCDIR=$(top_srcdir)/src/doc
 DOCBUILDDIR=$(abs_top_builddir)/src/doc/_build
 
 ## Total core budget for parallel test execution.
-## When possible, auto-detected from make's -j flag so that
-## 'make -j8 test' automatically passes --cores 8 to Snakemake.
-## GNU Make 4.x+ exposes the count via --jobs=N in MAKEFLAGS; older make
-## (e.g. macOS's bundled 3.81) only stores a jobserver fd, so the count is
-## not recoverable and TEST_CORES falls back to 'all' (all available cores).
+## Auto-detected from make's -j flag by inspecting make's own command line via
+## ps (works with all make versions, including macOS's bundled GNU Make 3.81
+## which does not expose the job count via MAKEFLAGS). Falls back to 'all'
+## (all available cores) when no -j was given or ps is unavailable.
 ## Override explicitly on the command line: 'make test TEST_CORES=16'.
 ## Individual tests declare how many of these cores they use via 'TEST_CORES=N'
 ## in their testcmd.sh (see tests/common.sh and tests/Snakefile).
-TEST_CORES ?= $(or $(patsubst --jobs=%,%,$(filter --jobs=%,$(MAKEFLAGS))),$(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS))),all)
+TEST_CORES ?= $(or $(shell ps -p $$PPID -o args= 2>/dev/null | grep -oE -- '(-j *[0-9]+|--jobs=[0-9]+)' | grep -oE '[0-9]+' | head -1),all)
 
 ## Main hooks called after normal make steps
 
