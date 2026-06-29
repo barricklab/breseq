@@ -120,8 +120,8 @@ void CNEvidence::ingest_csv_for_seq_id(
     vector<string> fields = split(line, ",");
     ASSERT(fields.size() == 3, "Unexpected number of columns in CNery output file: " + break_pts_file_name);
 
-    // CNery reports a 0-based start position for each merged segment.
-    int32_t start_pos = from_string<int32_t>(fields[0]) + 1;
+    // CNery reports a 1-based start position for each merged segment.
+    int32_t start_pos = from_string<int32_t>(fields[0]);
     int32_t copy_number = from_string<int32_t>(fields[1]);
     int32_t segment_size = from_string<int32_t>(fields[2]);
     int32_t end_pos = start_pos + segment_size - 1;
