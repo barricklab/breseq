@@ -3432,7 +3432,53 @@ void cGenomeDiff::mask_mutations(cGenomeDiff& mask_gd, bool mask_only_small, boo
     if (advance_it) ++mut_it;
   }
 
-  if (mark_instead_of_delete) return;
+  if (mark_instead_of_delete) {
+    // Build set of evidence IDs used by mutations that were NOT masked.
+    // We must never hide evidence that supports a non-masked mutation.
+    set<string> evidence_ids_of_unmasked_mutations;
+    for (diff_entry_list_t::iterator it = _entry_list.begin(); it != _entry_list.end(); it++) {
+      diff_entry_ptr_t& entry = *it;
+      if (!entry->is_mutation()) continue;
+      if (entry->entry_exists(IGNORE)) continue; // this mutation was masked
+      for (vector<string>::iterator ev_it = entry->_evidence.begin(); ev_it != entry->_evidence.end(); ev_it++) {
+        evidence_ids_of_unmasked_mutations.insert(*ev_it);
+      }
+    }
+
+    // Mark evidence entries that fall within masked regions,
+    // unless they are used as evidence by an unmasked mutation.
+    for (diff_entry_list_t::iterator it = _entry_list.begin(); it != _entry_list.end(); it++) {
+      diff_entry_ptr_t& ev = *it;
+      if (!ev->is_evidence()) continue;
+      if (evidence_ids_of_unmasked_mutations.count(ev->_id)) continue;
+
+      bool in_masked_region = false;
+      gd_entry_type type = ev->_type;
+
+      if (type == RA) {
+        cReferenceCoordinate coord(from_string<int32_t>(ev->at(POSITION)), from_string<int32_t>(ev->at(INSERT_POSITION)));
+        in_masked_region = (flagged_regions.regions_that_contain(ev->at(SEQ_ID), coord, coord).size() != 0);
+      } else if (type == MC || type == CN) {
+        cReferenceCoordinate start_coord(from_string<int32_t>(ev->at(START)));
+        cReferenceCoordinate end_coord(from_string<int32_t>(ev->at(END)));
+        in_masked_region = (flagged_regions.regions_that_contain(ev->at(SEQ_ID), start_coord, end_coord).size() != 0);
+      } else if (type == SC) {
+        cReferenceCoordinate coord(from_string<int32_t>(ev->at(POSITION)));
+        in_masked_region = (flagged_regions.regions_that_contain(ev->at(SEQ_ID), coord, coord).size() != 0);
+      } else if (type == JC) {
+        uint32_t side1_pos = from_string<uint32_t>(ev->at(SIDE_1_POSITION));
+        uint32_t side2_pos = from_string<uint32_t>(ev->at(SIDE_2_POSITION));
+        in_masked_region = flagged_regions.is_flagged(ev->at(SIDE_1_SEQ_ID), side1_pos, side1_pos)
+                        || flagged_regions.is_flagged(ev->at(SIDE_2_SEQ_ID), side2_pos, side2_pos);
+      }
+
+      if (in_masked_region) {
+        (*ev)[IGNORE] = "masked";
+      }
+    }
+
+    return;
+  }
 
   // Merge UN evidence into flagged regions
   diff_entry_list_t uns = get_list(make_vector<gd_entry_type>(UN));
