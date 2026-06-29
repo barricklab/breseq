@@ -57,11 +57,7 @@ DOCBUILDDIR=$(abs_top_builddir)/src/doc/_build
 ## Override explicitly on the command line: 'make test TEST_CORES=16'.
 ## Individual tests declare how many of these cores they use via 'TEST_CORES=N'
 ## in their testcmd.sh (see tests/common.sh and tests/Snakefile).
-_MAKE_JOBS := $(patsubst --jobs=%,%,$(filter --jobs=%,$(MAKEFLAGS)))
-ifeq ($(_MAKE_JOBS),)
-_MAKE_JOBS := $(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS)))
-endif
-TEST_CORES ?= $(if $(_MAKE_JOBS),$(_MAKE_JOBS),all)
+TEST_CORES ?= $(or $(patsubst --jobs=%,%,$(filter --jobs=%,$(MAKEFLAGS))),$(patsubst -j%,%,$(filter -j%,$(MAKEFLAGS))),all)
 
 ## Main hooks called after normal make steps
 
