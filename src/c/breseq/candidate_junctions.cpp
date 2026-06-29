@@ -183,27 +183,35 @@ namespace breseq {
    */
   bool test_read_alignment_requirements(const Settings& settings, const cReferenceSequences& ref_seq_info, const alignment_wrapper& a)
   {
-    bool accept = true;
-    
     if (a.unmapped()) return false;
-    
-    if (a.query_match_length() < settings.require_match_length)
+
+    // Credit soft-clipped bases that extend past a reference boundary:
+    // they couldn't align because the reference ran out, not because
+    // the read is a poor match.
+    uint32_t effective_match_length = a.query_match_length();
+    uint32_t seq_length = ref_seq_info[a.reference_target_id()].m_length;
+    if (a.reference_start_1() <= 1)
+      effective_match_length += a.query_start_1() - 1;
+    if (a.reference_end_1() >= seq_length)
+      effective_match_length += a.read_length() - a.query_end_1();
+
+    if (effective_match_length < settings.require_match_length)
       return false;
-    
+
     // Later: Move to being a guard during mutation identification and not here.
     if (a.mapping_quality() < settings.minimum_mapping_quality)
       return false;
-    
-    if (a.query_match_length() < settings.require_match_fraction * static_cast<double>(a.read_length()) )
+
+    if (effective_match_length < settings.require_match_fraction * static_cast<double>(a.read_length()))
       return false;
-    
+
     if (settings.maximum_read_mismatches >= 0)
     {
       int32_t mismatches = alignment_mismatches(a, ref_seq_info);
       if (mismatches > settings.maximum_read_mismatches)
-        return false; 
+        return false;
     }
-    
+
     return true;
   }
 
