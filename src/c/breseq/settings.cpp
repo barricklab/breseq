@@ -353,7 +353,7 @@ namespace breseq
     options.addUsage("Masking Options", ADVANCED_OPTION);
     options
     ("mask-gd", "Mask predicted mutations that overlap MASK entries in this GenomeDiff file (mutations are marked ignore=masked, not deleted)", "", ADVANCED_OPTION)
-    ("mask-mode", "Mode for masking mutations: 'ALL' masks all mutation types, 'SMALL' masks only small mutations (SNP,DEL,INS,SUB <=" + to_string(kBreseq_large_mutation_size_cutoff) +" bp)", "ALL", ADVANCED_OPTION)
+    ("mask-mode", "Mode for masking mutations and evidence: 'ALL' masks all mutation and evidence types in masked regions; 'SMALL' masks only small mutations (SNP,DEL,INS,SUB <=" + to_string(kBreseq_large_mutation_size_cutoff) + " bp) and small evidence (RA,MC,CN <=" + to_string(kBreseq_large_mutation_size_cutoff) + " bp); JC and SC evidence are always treated as large and are never masked in SMALL mode", "ALL", ADVANCED_OPTION)
     ;
 
     options.addUsage("", ADVANCED_OPTION);
