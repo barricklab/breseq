@@ -3946,6 +3946,8 @@ void create_evidence_page(const Settings& settings)
   // is embedded (not fetched), this works when the file is opened directly
   // from disk via a file:// URL.
 
+  const string& zip_path     = settings.html_archive_file_name;
+  
   // Load jszip.min.js
   std::ifstream jszipfile(settings.program_data_path + "/jszip.min.js");
   if (!jszipfile) {
@@ -3957,7 +3959,7 @@ void create_evidence_page(const Settings& settings)
 
   // Read and base64-encode the zip so it is embedded directly in the page —
   // no fetch() required, works when opening from a file:// URL.
-  std::ifstream zf(settings.html_archive_file_name, std::ios::binary);
+  std::ifstream zf(zip_path, std::ios::binary);
   if (!zf) {
     cerr << "WARNING: could not open " << settings.html_archive_file_name
          << " — evidence.html not generated." << endl;
@@ -4096,6 +4098,10 @@ void create_evidence_page(const Settings& settings)
   out.close();
 
   cerr << "Evidence viewer page created: " << settings.html_evidence_file_name << endl;
+  
+  // Remove the zip archive
+  if (file_exists(zip_path.c_str()))
+    remove(zip_path.c_str());
 }
 
 }//end namespace output
