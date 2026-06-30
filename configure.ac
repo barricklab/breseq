@@ -115,6 +115,8 @@ case "$host_os" in
   darwin*) ;;
   *) LDFLAGS="$LDFLAGS -rdynamic" ;;
 esac
+# On older Linux glibc (< 2.34), dladdr() is in libdl; newer glibc and macOS have it in libc
+AC_SEARCH_LIBS([dladdr], [dl], [], [AC_MSG_ERROR(["libdl is required."])])
 
 #### htslib (required for BAM/SAM reading and pileup)
 
