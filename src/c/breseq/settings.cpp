@@ -47,42 +47,40 @@ namespace breseq
 
   string Settings::output_divider("================================================================================");
   
-	void cReadFiles::Init(const vector<string>& read_file_names, bool sam_files)
-	{
-		//clear any existing info
-		this->clear();
+  void cReadFileSets::Init(const vector<string>& read_file_names, bool sam_files)
+  {
+    this->clear();
+    read_file_to_fastq_file_name_map.clear();
+    read_file_to_converted_fastq_file_name_map.clear();
 
-		uint32_t on_id = 0;
-		uint32_t on_error_group = 0;
-		uint32_t on_paired_end_group = 0;
+    uint32_t on_id = 0;
+    uint32_t on_error_group = 0;
+    uint32_t on_paired_end_group = 0;
 
-    //keep track of duplicates
-    set<string> used_base_names;  // just filename base
-    set<string> used_original_names;  // complete path
+    set<string> used_base_names;
+    set<string> used_original_names;
 
-		for (vector<string>::const_iterator it = read_file_names.begin(); it < read_file_names.end(); it++)
-		{
-			cReadFile rf;
-			rf.m_original_file_name = *it;
-      
-      // Check for exact duplicate paths, all but the first will be skipped with errors.
+    // Step 1: build a flat list of cReadFile objects with stripped base names.
+    vector<cReadFile> all_files;
+
+    for (vector<string>::const_iterator it = read_file_names.begin(); it < read_file_names.end(); it++)
+    {
+      cReadFile rf;
+      rf.m_original_file_name = *it;
+
       if (used_original_names.find(rf.m_original_file_name) != used_original_names.end()) {
         WARN("Duplicate read file path provided: " + rf.m_original_file_name + "\nThis file will only be used as input once.");
         continue;
       }
-        
       used_original_names.insert(rf.m_original_file_name);
-      
-			rf.m_paired_end_group = on_paired_end_group++;
-			rf.m_error_group = on_error_group++;
-			rf.m_id = on_id++;
 
-			// create base name
-			rf.m_base_name = rf.m_original_file_name;
-			// - beginning path
-			size_t pos = rf.m_base_name.rfind("/");
-			if (pos != string::npos) rf.m_base_name.erase(0, pos + 1);
-			// - trailing .fastq, must be at the end of the sequence
+      rf.m_paired_end_group = on_paired_end_group++;
+      rf.m_error_group = on_error_group++;
+      rf.m_id = on_id++;
+
+      rf.m_base_name = rf.m_original_file_name;
+      size_t pos = rf.m_base_name.rfind("/");
+      if (pos != string::npos) rf.m_base_name.erase(0, pos + 1);
       if (!sam_files) {
         pos = rf.m_base_name.rfind(".gz");
         if ((pos != string::npos) && (pos == rf.m_base_name.size() - 3))
@@ -95,39 +93,85 @@ namespace breseq
         if ((pos != string::npos) && (pos == rf.m_base_name.size() - 4))
           rf.m_base_name.erase(pos, 4);
       }
-      
-      // This code gives a new base name when there are two files that have the exact same
-      // filename but are in different directories. Ex: path1/fastq1.gz and path2/fastq1.gz
+
       string original_base_name = rf.m_base_name;
       uint32_t duplicate_index = 0;
-      while ( used_base_names.find(rf.m_base_name) != used_base_names.end()) {
+      while (used_base_names.find(rf.m_base_name) != used_base_names.end()) {
         duplicate_index++;
         rf.m_base_name = original_base_name + "_" + to_string(duplicate_index);
       }
-      
-      // Warn if there is a duplicate so they know what the new name means.
       if (rf.m_base_name != original_base_name) {
         WARN("Duplicate read base file name will be renamed in breseq output as follows:\n" + original_base_name + " => " + rf.m_base_name);
       }
-      
       used_base_names.insert(rf.m_base_name);
-			
-      // set up the map for converting base names to fastq file names to be used
-      read_file_to_fastq_file_name_map[rf.m_base_name] = rf.m_original_file_name;
-      
-			this->push_back(rf);
-		}
-	}
-  
-  string cReadFiles::base_name_to_read_file_name(const string& base_name)
-  {    
-    if (read_file_to_converted_fastq_file_name_map.count(base_name)) 
-    {
-      return read_file_to_converted_fastq_file_name_map[base_name];
+
+      all_files.push_back(rf);
     }
-    
+
+    // Step 2: detect paired files.
+    // Two files form a pair when their base names have equal length and differ in exactly
+    // one position where one has '1' and the other has '2'.
+    map<string, size_t> base_name_to_index;
+    for (size_t i = 0; i < all_files.size(); i++)
+      base_name_to_index[all_files[i].m_base_name] = i;
+
+    vector<bool> used(all_files.size(), false);
+
+    for (size_t i = 0; i < all_files.size(); i++) {
+      if (used[i]) continue;
+
+      const string& name_a = all_files[i].m_base_name;
+      vector<pair<size_t,size_t>> pair_candidates;  // (position_in_name, index_of_partner)
+
+      for (size_t k = 0; k < name_a.size(); k++) {
+        if (name_a[k] != '1' && name_a[k] != '2') continue;
+        char other_digit = (name_a[k] == '1') ? '2' : '1';
+        string candidate = name_a;
+        candidate[k] = other_digit;
+        auto it = base_name_to_index.find(candidate);
+        if (it != base_name_to_index.end() && !used[it->second])
+          pair_candidates.push_back({k, it->second});
+      }
+
+      if (pair_candidates.size() > 1) {
+        WARN("Read file \"" + name_a + "\" could be paired with multiple other read files.\nIt will be treated as unpaired.");
+      }
+
+      cReadFileSet rfs;
+      if (pair_candidates.size() == 1) {
+        size_t k = pair_candidates[0].first;
+        size_t j = pair_candidates[0].second;
+        string canonical = name_a;
+        canonical[k] = 'X';
+        rfs.m_base_name = canonical;
+        if (name_a[k] == '1') {
+          rfs.m_files.push_back(all_files[i]);  // R1
+          rfs.m_files.push_back(all_files[j]);  // R2
+        } else {
+          rfs.m_files.push_back(all_files[j]);  // R1
+          rfs.m_files.push_back(all_files[i]);  // R2
+        }
+        used[i] = true;
+        used[j] = true;
+      } else {
+        rfs.m_base_name = name_a;
+        rfs.m_files.push_back(all_files[i]);
+        used[i] = true;
+      }
+
+      // Populate the base-name → original file map for each individual file in this set.
+      for (auto& rf : rfs.m_files)
+        read_file_to_fastq_file_name_map[rf.m_base_name] = rf.m_original_file_name;
+
+      this->push_back(rfs);
+    }
+  }
+
+  string cReadFileSets::base_name_to_read_file_name(const string& base_name)
+  {
+    if (read_file_to_converted_fastq_file_name_map.count(base_name))
+      return read_file_to_converted_fastq_file_name_map[base_name];
     assert(read_file_to_fastq_file_name_map.count(base_name));
-    
     return read_file_to_fastq_file_name_map[base_name];
   }
   
@@ -428,7 +472,7 @@ namespace breseq
       cerr << output_divider << endl;
       this->skip_new_junction_prediction = true;
     }
-    this->read_files.Init(read_file_names, this->aligned_sam_mode);
+    this->read_file_sets.Init(read_file_names, this->aligned_sam_mode);
     
     if (options.count("limit-fold-coverage")) {
       this->read_file_coverage_fold_limit = from_string<double>(options["limit-fold-coverage"]);

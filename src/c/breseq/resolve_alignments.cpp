@@ -273,7 +273,7 @@ void resolve_alignments(
                         Summary& summary,
                         cReferenceSequences& ref_seq_info,
                         bool junction_prediction,
-                        cReadFiles& read_files
+                        cReadFileSets& read_files
                         ) 
 {    
 	bool verbose = false;
@@ -324,7 +324,7 @@ void resolve_alignments(
   
   if (junction_prediction) {
     junction_ref_seq_info.LoadFiles(make_vector<string>(settings.candidate_junction_fasta_file_name));
-		string junction_sam_file_name = settings.file_name(settings.candidate_junction_sam_file_name, "#", read_files[0].m_base_name);
+		string junction_sam_file_name = settings.file_name(settings.candidate_junction_sam_file_name, "#", read_files[0].m_files[0].m_base_name);
 		bam_file junction_tam(junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::in);
 
     junction_info_list.resize(junction_tam.bam_header->n_targets);
@@ -696,7 +696,7 @@ void resolve_alignments(
 void load_junction_alignments(
                               const Settings& settings, 
                               Summary& summary, 
-                              cReadFiles& read_files, 
+                              cReadFileSets& read_files, 
                               cReferenceSequences& ref_seq_info,
                               cReferenceSequences& junction_ref_seq_info,
                               SequenceTrimsList& trims_list,
@@ -720,9 +720,10 @@ void load_junction_alignments(
     unmapped_fastq = new cFastqFile(unmapped_read_file_name, ios::out);
   }
   
-  for (uint32_t fastq_file_index = 0; fastq_file_index < read_files.size(); fastq_file_index++)
-  {    
-    const cReadFile& rf = read_files[fastq_file_index];
+  vector<cReadFile> flat_junction_read_files = read_files.flat_files();
+  for (uint32_t fastq_file_index = 0; fastq_file_index < flat_junction_read_files.size(); fastq_file_index++)
+  {
+    const cReadFile& rf = flat_junction_read_files[fastq_file_index];
     string fastq_file_name = read_files.base_name_to_read_file_name(rf.m_base_name);
 
     end_progress_line();
@@ -943,7 +944,7 @@ void load_junction_alignments(
     end_progress_line();
 
     // save statistics
-    summary.alignment_resolution.read_file[read_files[fastq_file_index].m_base_name] = read_file_summary_info;
+    summary.alignment_resolution.read_file[flat_junction_read_files[fastq_file_index].m_base_name] = read_file_summary_info;
     summary.alignment_resolution.total_unmapped_reads += read_file_summary_info.num_unmapped_reads;
     summary.alignment_resolution.total_unmapped_read_bases += read_file_summary_info.num_unmapped_read_bases;
     
@@ -963,7 +964,7 @@ void load_junction_alignments(
 void load_sam_only_alignments(
                               const Settings& settings, 
                               Summary& summary, 
-                              cReadFiles& read_files, 
+                              cReadFileSets& read_files, 
                               cReferenceSequences& ref_seq_info,
                               SequenceTrimsList& trims_list,
                               bam_file& resolved_reference_tam
@@ -982,12 +983,13 @@ void load_sam_only_alignments(
     out_unmapped_fastq = new cFastqFile(unmapped_read_file_name, ios::out);
   }
   
-  for (uint32_t sam_file_index = 0; sam_file_index < read_files.size(); sam_file_index++)
+  vector<cReadFile> flat_sam_read_files = read_files.flat_files();
+  for (uint32_t sam_file_index = 0; sam_file_index < flat_sam_read_files.size(); sam_file_index++)
   {
-    
+
     ReadFileSummary read_file_summary_info;
-    
-    const cReadFile& rf = read_files[sam_file_index];
+
+    const cReadFile& rf = flat_sam_read_files[sam_file_index];
     string reference_sam_file_name = read_files.base_name_to_read_file_name(rf.m_base_name);
 
     end_progress_line();
@@ -1056,7 +1058,7 @@ void load_sam_only_alignments(
     }
     end_progress_line();
 
-    summary.alignment_resolution.read_file[read_files[sam_file_index].m_base_name] = read_file_summary_info;
+    summary.alignment_resolution.read_file[flat_sam_read_files[sam_file_index].m_base_name] = read_file_summary_info;
     
     summary.alignment_resolution.total_unmapped_reads += read_file_summary_info.num_unmapped_reads;
     summary.alignment_resolution.total_unmapped_read_bases += read_file_summary_info.num_unmapped_read_bases;

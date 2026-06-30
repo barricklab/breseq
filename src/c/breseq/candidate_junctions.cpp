@@ -433,9 +433,10 @@ namespace breseq {
     }
 
     uint32_t i = 0;
-    for (uint32_t index = 0; index < settings.read_files.size(); index++)
+    vector<cReadFile> flat_read_files_cj1 = settings.read_file_sets.flat_files();
+    for (uint32_t index = 0; index < flat_read_files_cj1.size(); index++)
     {
-      cReadFile read_file = settings.read_files[index];
+      cReadFile read_file = flat_read_files_cj1[index];
       string reference_sam_file_name = Settings::file_name(settings.reference_sam_file_name, "#", read_file.m_base_name);
 
       bam_file PSAM;
@@ -573,17 +574,18 @@ namespace breseq {
     uint32_t i = 0;
     uint64_t passed_alignment_pairs_considered = 0;
     uint64_t total_reads_examined = 0;
-    for (uint32_t j = 0; j < settings.read_files.size(); j++)
+    vector<cReadFile> flat_read_files_cj2 = settings.read_file_sets.flat_files();
+    for (uint32_t j = 0; j < flat_read_files_cj2.size(); j++)
     {
-      cReadFile read_file = settings.read_files[j];
-      
+      cReadFile read_file = flat_read_files_cj2[j];
+
       string read_file_name = read_file.m_base_name;
       end_progress_line();
       cerr << "  READ FILE::" << read_file_name << endl;
-      
+
       // Decide which input SAM file we are using...
-      
-      string reference_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", settings.read_files[j].m_base_name);
+
+      string reference_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", flat_read_files_cj2[j].m_base_name);
       
       bam_file tam(reference_sam_file_name, settings.reference_fasta_file_name, ios_base::in);
       alignment_list alignments;

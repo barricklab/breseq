@@ -867,7 +867,8 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << start_table("border=\"0\" cellspace=\"1\" cellpadding=\"5\"") << endl;
   HTML << start_tr() << th() << th("read file") << th("reads") <<
                     th("bases") <<  th("passed&nbsp;filters") << th("average") << th("longest") << th("mapped") << "</tr>" << endl;
-  for(cReadFiles::const_iterator it=settings.read_files.begin(); it!=settings.read_files.end(); it++)
+  vector<cReadFile> flat_output_read_files = settings.read_file_sets.flat_files();
+  for(vector<cReadFile>::const_iterator it=flat_output_read_files.begin(); it!=flat_output_read_files.end(); it++)
   {
     const AnalyzeFastqSummary& s = summary.sequence_conversion.reads[it->m_base_name];
     const ReadFileSummary& rf = summary.alignment_resolution.read_file[it->m_base_name];

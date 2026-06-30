@@ -96,46 +96,68 @@ namespace breseq
 		uint32_t m_paired_end_group;  // indicates what file contains paired reads
 		uint32_t m_error_group;       // indicates what other read files have the same error rates
 		uint32_t m_id;                // index used to refer to this fastq file in BAM
-    
+
     cReadFile()
     {
       m_paired_end_group = UINT_MAX;
       m_error_group = UINT_MAX;
       m_id = UINT_MAX;
     }
-    
+
     string file_name()
     {
-      if (m_converted_file_name != "") return m_converted_file_name; 
+      if (m_converted_file_name != "") return m_converted_file_name;
       return m_original_file_name;
     }
-    
-    string base_name() { return m_base_name; }
+
+    string base_name() const { return m_base_name; }
 	};
 
-	class cReadFiles : public vector<cReadFile>
+  // A set of one (unpaired) or two (paired) read files that are mapped together.
+  // Two files are paired when their base names are identical length and differ in
+  // exactly one character position where one has '1' and the other has '2'.
+  // The collective name substitutes 'X' at that differing position.
+  struct cReadFileSet
+  {
+  public:
+    vector<cReadFile> m_files;  // 1 file (unpaired) or 2 files (paired, R1 at [0], R2 at [1])
+    string m_base_name;         // collective name (X-substituted for paired, or individual base name)
+
+    bool is_paired() const { return m_files.size() == 2; }
+  };
+
+	class cReadFileSets : public vector<cReadFileSet>
 	{
 	public:
     map<string,string> read_file_to_fastq_file_name_map;
     map<string,string> read_file_to_converted_fastq_file_name_map;
 
-    
-    cReadFiles() { };
-    cReadFiles(const vector<string>& read_file_names, bool sam_files) { Init(read_file_names, sam_files); };
-    ~cReadFiles() { };
+    cReadFileSets() { };
+    cReadFileSets(const vector<string>& read_file_names, bool sam_files) { Init(read_file_names, sam_files); };
+    ~cReadFileSets() { };
 
     void Init(const vector<string>& read_file_names, bool sam_files);
     string base_name_to_read_file_name(const string& base_name);
-    vector<string> base_names()
+
+    // Returns base names of all individual files (flat, across all sets).
+    vector<string> base_names() const
     {
       vector<string> return_value;
-      for(vector<cReadFile>::iterator it=this->begin(); it!=this->end(); it++)
-      {
-        return_value.push_back(it->base_name());
-      }
+      for (const auto& rfs : *this)
+        for (const auto& rf : rfs.m_files)
+          return_value.push_back(rf.base_name());
       return return_value;
     }
-    
+
+    // Returns all individual cReadFile objects in a flat list (preserves set order, R1 before R2).
+    vector<cReadFile> flat_files() const
+    {
+      vector<cReadFile> return_value;
+      for (const auto& rfs : *this)
+        for (const auto& rf : rfs.m_files)
+          return_value.push_back(rf);
+      return return_value;
+    }
 	};
 
   //
@@ -211,7 +233,7 @@ namespace breseq
     storable_map<string,storable_vector<string> > done_key_intermediate_files;
     
     //! Read files
-    cReadFiles read_files;
+    cReadFileSets read_file_sets;
     
     ////////////////////
     //! Settings
@@ -836,7 +858,7 @@ namespace breseq
      
 		string base_name_to_read_file_name(string base_name)
 		{
-      return this->read_files.base_name_to_read_file_name(base_name);
+      return this->read_file_sets.base_name_to_read_file_name(base_name);
 		}
 
 		void check_installed();

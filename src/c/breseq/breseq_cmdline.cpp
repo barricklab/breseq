@@ -1255,7 +1255,7 @@ int do_assemble_unmatched(int argc, char* argv[])
   cFastqFile unmatched_paired_read_file_1(unmatched_paired_read_file_name_1, fstream::out);
   cFastqFile unmatched_paired_read_file_2(unmatched_paired_read_file_name_2, fstream::out);
   
-  cReadFiles read_files;
+  cReadFileSets read_files;
   vector<string> read_file_names;
   for (int32_t i = 0; i < options.getArgc(); i++)
   {
@@ -1397,7 +1397,18 @@ int breseq_default_action(int argc, char* argv[])
     
     // No conversion if already is sam mode
     if (!settings.aligned_sam_mode) {
-      
+
+      // Print detected read file sets.
+      for (const auto& rfs : settings.read_file_sets) {
+        if (rfs.is_paired()) {
+          cerr << "  READ FILE SET::PAIRED::" << rfs.m_base_name << endl;
+          cerr << "    R1::" << rfs.m_files[0].m_base_name << endl;
+          cerr << "    R2::" << rfs.m_files[1].m_base_name << endl;
+        } else {
+          cerr << "  READ FILE SET::UNPAIRED::" << rfs.m_base_name << endl;
+        }
+      }
+
       //Check the FASTQ format and collect some information about the input read files at the same time
       uint32_t overall_read_length_min = UNDEFINED_UINT32;
       uint32_t overall_read_length_max = UNDEFINED_UINT32;
@@ -1405,13 +1416,14 @@ int breseq_default_action(int argc, char* argv[])
 
       s.num_reads = 0;
       s.num_bases = 0;
-      
-      
-      uint64_t read_file_base_limit = floor(settings.read_file_coverage_fold_limit * static_cast<double>(conv_ref_seq_info.get_total_length())); 
-      
-      for (uint32_t i = 0; i < settings.read_files.size(); i++)
+
+
+      uint64_t read_file_base_limit = floor(settings.read_file_coverage_fold_limit * static_cast<double>(conv_ref_seq_info.get_total_length()));
+
+      vector<cReadFile> flat_seq_conv_files = settings.read_file_sets.flat_files();
+      for (uint32_t i = 0; i < flat_seq_conv_files.size(); i++)
       {
-        string base_name = settings.read_files[i].m_base_name;
+        string base_name = flat_seq_conv_files[i].m_base_name;
         
         cerr << "  READ FILE::" << base_name << endl;
         
@@ -1519,20 +1531,32 @@ int breseq_default_action(int argc, char* argv[])
       read_files_surviving_conversion[base_name] = (it->second.num_reads != 0);
 
       if (it->second.converted_fastq_name.size() > 0) {
-        settings.read_files.read_file_to_converted_fastq_file_name_map[base_name] = it->second.converted_fastq_name;
+        settings.read_file_sets.read_file_to_converted_fastq_file_name_map[base_name] = it->second.converted_fastq_name;
       }
     }
-    
-    // --> remove any read files that were not used due to coverage limits
-    for (cReadFiles::iterator it=settings.read_files.begin(); it != settings.read_files.end(); ) {
-      if (read_files_surviving_conversion.count(it->base_name())) {
-        it++;
-      } else {
-        settings.read_files.read_file_to_fastq_file_name_map.erase(it->file_name());
-        settings.read_files.read_file_to_converted_fastq_file_name_map.erase(it->file_name());
-        it = settings.read_files.erase(it);
+
+    // --> remove any read files that were not used due to coverage limits; rebuild sets
+    cReadFileSets surviving_sets;
+    surviving_sets.read_file_to_fastq_file_name_map = settings.read_file_sets.read_file_to_fastq_file_name_map;
+    surviving_sets.read_file_to_converted_fastq_file_name_map = settings.read_file_sets.read_file_to_converted_fastq_file_name_map;
+    for (auto& rfs : settings.read_file_sets) {
+      cReadFileSet new_rfs;
+      new_rfs.m_base_name = rfs.m_base_name;
+      for (auto& rf : rfs.m_files) {
+        if (read_files_surviving_conversion.count(rf.base_name())) {
+          new_rfs.m_files.push_back(rf);
+        } else {
+          surviving_sets.read_file_to_fastq_file_name_map.erase(rf.base_name());
+          surviving_sets.read_file_to_converted_fastq_file_name_map.erase(rf.base_name());
+        }
+      }
+      if (!new_rfs.m_files.empty()) {
+        if (new_rfs.m_files.size() == 1 && rfs.is_paired())
+          new_rfs.m_base_name = new_rfs.m_files[0].m_base_name;
+        surviving_sets.push_back(new_rfs);
       }
     }
+    settings.read_file_sets = surviving_sets;
   }
 
 	//
@@ -1559,28 +1583,29 @@ int breseq_default_action(int argc, char* argv[])
     settings.track_intermediate_file(settings.reference_alignment_done_file_name, settings.reference_hash_file_name + "*");
 
     ////// For each read_file
-    for (uint32_t i = 0; i < settings.read_files.size(); i++)
+    vector<cReadFile> flat_ref_align_files = settings.read_file_sets.flat_files();
+    for (uint32_t i = 0; i < flat_ref_align_files.size(); i++)
     {
       ///////////////////////
       // STAGE 1 ALIGNMENT //
       ///////////////////////
-      
+
       bool do_2_stage_alignment = settings.bowtie2_stage2.size() != 0;
-      
-      cReadFile read_file = settings.read_files[i];
+
+      cReadFile read_file = flat_ref_align_files[i];
       string base_read_file_name = read_file.base_name();
       string reference_sam_file_name = settings.file_name(settings.reference_sam_file_name, "#", base_read_file_name);
-      
+
       { // local vars
 
         string read_fastq_file = settings.base_name_to_read_file_name(base_read_file_name);
-        
+
         //Paths
         string stage1_reference_sam_file_name = settings.file_name(settings.stage1_reference_sam_file_name, "#", base_read_file_name);
         string stage1_unmapped_reads_fastq_file_name = settings.file_name(settings.stage1_unmapped_reads_fastq_file_name, "#", base_read_file_name);
-        
+
         //Split alignment into unmatched and matched files.
-        uint32_t bowtie2_seed_substring_size_stringent = trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.5);
+        uint32_t bowtie2_seed_substring_size_stringent = trunc(summary.sequence_conversion.reads[flat_ref_align_files[i].base_name()].read_length_avg * 0.5);
         // Check bounds
         bowtie2_seed_substring_size_stringent = max<uint32_t>(9, bowtie2_seed_substring_size_stringent);
         bowtie2_seed_substring_size_stringent = min<uint32_t>(32, bowtie2_seed_substring_size_stringent);
@@ -1617,7 +1642,7 @@ int breseq_default_action(int argc, char* argv[])
           string read_fastq_file = settings.file_name(settings.stage1_unmapped_reads_fastq_file_name, "#", base_read_file_name);
           string stage2_reference_sam_file_name = settings.file_name(settings.stage2_reference_sam_file_name, "#", base_read_file_name);
           
-          uint32_t bowtie2_seed_substring_size_relaxed = trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.25);
+          uint32_t bowtie2_seed_substring_size_relaxed = trunc(summary.sequence_conversion.reads[flat_ref_align_files[i].base_name()].read_length_avg * 0.25);
           // Check bounds
           bowtie2_seed_substring_size_relaxed = max<uint32_t>(9, bowtie2_seed_substring_size_relaxed);
           bowtie2_seed_substring_size_relaxed = min<uint32_t>(32, bowtie2_seed_substring_size_relaxed);
@@ -1755,9 +1780,10 @@ int breseq_default_action(int argc, char* argv[])
         settings.track_intermediate_file(settings.candidate_junction_alignment_done_file_name, candidate_junction_hash_file_name + "*");
 
         /// align reads to candidate junction sequences
-        for (uint32_t i = 0; i < settings.read_files.size(); i++)
+        vector<cReadFile> flat_junc_align_files = settings.read_file_sets.flat_files();
+        for (uint32_t i = 0; i < flat_junc_align_files.size(); i++)
         {
-          string base_read_file_name = settings.read_files[i].m_base_name;
+          string base_read_file_name = flat_junc_align_files[i].m_base_name;
           string candidate_junction_sam_file_name = settings.file_name(settings.candidate_junction_sam_file_name, "#", base_read_file_name);
 
           string read_fastq_file = settings.base_name_to_read_file_name(base_read_file_name);
@@ -1765,8 +1791,8 @@ int breseq_default_action(int argc, char* argv[])
           string filename = candidate_junction_hash_file_name + ".1.bt2";
           if (!file_exists(filename.c_str()))
             continue;
-      
-          uint32_t bowtie2_seed_substring_size_junction = trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.25);
+
+          uint32_t bowtie2_seed_substring_size_junction = trunc(summary.sequence_conversion.reads[flat_junc_align_files[i].base_name()].read_length_avg * 0.25);
           // Check bounds
           bowtie2_seed_substring_size_junction = max<uint32_t>(9, bowtie2_seed_substring_size_junction);
           bowtie2_seed_substring_size_junction = min<uint32_t>(32, bowtie2_seed_substring_size_junction);
@@ -1803,7 +1829,7 @@ int breseq_default_action(int argc, char* argv[])
 			summary,
 			ref_seq_info,
       junction_prediction,
-			settings.read_files
+			settings.read_file_sets
 		);
 
 		summary.alignment_resolution.store(settings.alignment_resolution_summary_file_name);
@@ -1986,7 +2012,7 @@ int breseq_default_action(int argc, char* argv[])
 
       // deal with distribution or error count keys being undefined...
 
-      uint32_t num_read_files = settings.read_files.size();
+      uint32_t num_read_files = settings.read_file_sets.flat_files().size();
       uint32_t num_qual;
       if (!settings.aligned_sam_mode) {
         num_qual = summary.sequence_conversion.max_qual + 1; // only filled in when using FASTQ input
@@ -2000,7 +2026,7 @@ int breseq_default_action(int argc, char* argv[])
         reference_bam_file_name, // bam
         reference_fasta_file_name, // fasta
         settings.error_calibration_path, // output
-        settings.read_files.base_names(), // readfile
+        settings.read_file_sets.base_names(), // readfile
         true, // coverage
         true, // errors
         false, //preprocess
@@ -2125,8 +2151,8 @@ int breseq_default_action(int argc, char* argv[])
         }
         
       }
-      for (uint32_t i = 0; i<settings.read_files.size(); i++) {
-        string base_name = settings.read_files[i].base_name();
+      for (const auto& rf : settings.read_file_sets.flat_files()) {
+        string base_name = rf.base_name();
         string error_rates_base_qual_error_prob_file_name = settings.file_name(settings.error_rates_base_qual_error_prob_file_name, "#", base_name);
         string error_rates_plot_file_name = settings.file_name(settings.error_rates_plot_file_name, "#", base_name);
         plot_error_rates(error_rates_base_qual_error_prob_file_name, error_rates_plot_file_name);
@@ -2275,9 +2301,10 @@ int breseq_default_action(int argc, char* argv[])
       mpgd.metadata.ref_seqs = settings.all_reference_file_names;
       
       //#=READSEQ header lines.
-      mpgd.metadata.read_seqs.resize(settings.read_files.size());
-      for (size_t i = 0; i < settings.read_files.size(); i++) {
-        mpgd.metadata.read_seqs[i] = settings.read_files[i].file_name();
+      vector<cReadFile> flat_gd_files = settings.read_file_sets.flat_files();
+      mpgd.metadata.read_seqs.resize(flat_gd_files.size());
+      for (size_t i = 0; i < flat_gd_files.size(); i++) {
+        mpgd.metadata.read_seqs[i] = flat_gd_files[i].file_name();
       }
       
       // These fields will be overwritten by any header GenomeDiff provided

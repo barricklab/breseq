@@ -230,13 +230,13 @@ namespace breseq {
                           Summary& summary,
                           cReferenceSequences& ref_seq_info,
                           const bool junction_prediction,
-                          cReadFiles &read_files
+                          cReadFileSets &read_files
                           );
   
   void load_junction_alignments(
                                 const Settings& settings, 
                                 Summary& summary, 
-                                cReadFiles& read_files, 
+                                cReadFileSets& read_files, 
                                 cReferenceSequences& ref_seq_info,
                                 cReferenceSequences& junction_ref_seq_info,
                                 SequenceTrimsList& trims_list,
@@ -251,7 +251,7 @@ namespace breseq {
   void load_sam_only_alignments(
                            const Settings& settings, 
                            Summary& summary, 
-                           cReadFiles& read_files, 
+                           cReadFileSets& read_files, 
                            cReferenceSequences& ref_seq_info,
                            SequenceTrimsList& trims_list,
                            bam_file& resolved_reference_tam
