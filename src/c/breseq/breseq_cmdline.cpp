@@ -74,6 +74,7 @@ int do_bam2aln(int argc, char* argv[]) {
   options("quality-score-cutoff,c", "Base quality score cutoff below which reads are highlighted as yellow", 0);
   options("minimum-mapping-quality,m", "Mapping quality (MQ) score cutoff below which reads are counted as repeat matches (0=OFF)", 0);
   options("stdout", "Write output to stdout", TAKES_NO_ARGUMENT, ADVANCED_OPTION);
+  options("allow-large-regions", "Allow regions larger than 200 bases to be displayed without truncation", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
 	// make sure that the config options are good:
@@ -128,6 +129,29 @@ int do_bam2aln(int argc, char* argv[]) {
   for(uint32_t j = 0; j < region_list.size(); j++) {
     
     cReferenceSequences::normalize_region(region_list[j]);
+
+    {
+      const uint32_t max_region_size = 200;
+      string seq_id;
+      uint32_t start_pos_1, end_pos_1;
+      cReferenceSequences::parse_region(region_list[j], seq_id, start_pos_1, end_pos_1);
+      uint32_t region_size = end_pos_1 - start_pos_1 + 1;
+
+      if (region_size > max_region_size && !options.count("allow-large-regions")) {
+        uint32_t center = (start_pos_1 + end_pos_1) / 2;
+        uint32_t half = max_region_size / 2;
+        uint32_t new_start = (center > half) ? (center - half) : 1;
+        uint32_t new_end = new_start + max_region_size - 1;
+
+        WARN("Requested region '" + region_list[j] + "' spans " + to_string<uint32_t>(region_size) +
+             " bases, which exceeds the maximum of " + to_string<uint32_t>(max_region_size) + " bases.\n"
+             "Displaying a centered " + to_string<uint32_t>(max_region_size) +
+             "-base window instead. Use --allow-large-regions to display the entire requested region.");
+
+        region_list[j] = seq_id + ":" + to_string<int32_t>(new_start) + "-" + to_string<int32_t>(new_end);
+      }
+    }
+
     cerr << "  Region : " << region_list[j] << endl;
     
     
