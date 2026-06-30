@@ -1420,54 +1420,111 @@ int breseq_default_action(int argc, char* argv[])
 
       uint64_t read_file_base_limit = floor(settings.read_file_coverage_fold_limit * static_cast<double>(conv_ref_seq_info.get_total_length()));
 
-      vector<cReadFile> flat_seq_conv_files = settings.read_file_sets.flat_files();
-      for (uint32_t i = 0; i < flat_seq_conv_files.size(); i++)
+      // Iterate over read file sets (not flat files) so coverage-limit skips
+      // always apply to complete paired sets, never splitting a pair.
+      uint32_t set_index = 0;
+      uint32_t flat_file_counter = 0;  // monotonically increasing per-file index for read naming
+      for (const auto& rfs : settings.read_file_sets)
       {
-        string base_name = flat_seq_conv_files[i].m_base_name;
-        
-        cerr << "  READ FILE::" << base_name << endl;
-        
-        // If we have reached the read limit or within some number of it -- delete further read files 
-        // The 1000, is so that we have enough bases counted in a read file to fit the error rates.
-        if ((settings.read_file_coverage_fold_limit) && (i!= 0) && (s.num_bases + 1000 >= read_file_base_limit)) {
+        // If we have reached the read limit or are within 1000 bases of it, skip this entire set.
+        // The 1000 buffer ensures enough reads were counted for error-rate calibration.
+        if ((settings.read_file_coverage_fold_limit) && (set_index != 0) && (s.num_bases + 1000 >= read_file_base_limit)) {
           cerr << "  ::SKIPPED DUE TO REACHING COVERAGE LIMIT::" << endl;
+          set_index++;
+          flat_file_counter += rfs.m_files.size();
           continue;
         }
-        
-        string fastq_file_name = settings.base_name_to_read_file_name(base_name);
-        string convert_file_name =  settings.file_name(settings.converted_fastq_file_name, "#", base_name);
 
-        // Parse output
-        AnalyzeFastqSummary s_rf = normalize_fastq(fastq_file_name,
-                                                     convert_file_name,
-                                                     i+1,
-                                                     settings.quality_score_trim,
-                                                     !settings.skip_read_filtering,
-                                                     s.num_bases,
-                                                     read_file_base_limit,
-                                                     settings.read_file_read_length_min,
-                                                     settings.read_file_max_same_base_fraction,
-                                                     settings.read_file_max_N_fraction,
-                                                     settings.read_file_long_read_trigger_length,
-                                                     settings.read_file_long_read_split_length,
-                                                     settings.read_file_long_read_distribute_remainder,
-                                                     settings.num_processors
-                                                     );
-        settings.track_intermediate_file(settings.alignment_correction_done_file_name, convert_file_name);
-        
-        // Record statistics
-        if ((overall_read_length_min == UNDEFINED_UINT32) || (s_rf.read_length_min < overall_read_length_min))
-          overall_read_length_min = s_rf.read_length_min;
-        if ((overall_read_length_max == UNDEFINED_UINT32) || (s_rf.read_length_max > overall_read_length_max))
-          overall_read_length_max = s_rf.read_length_max;
-        if ((overall_max_qual == UNDEFINED_UINT32) || (s_rf.max_quality_score > overall_max_qual))
-          overall_max_qual = s_rf.max_quality_score;
-        s.num_reads += s_rf.num_reads;
-        s.num_original_reads += s_rf.num_original_reads;
-        s.num_bases += s_rf.num_bases;
-        s.num_original_bases += s_rf.num_original_bases;        
+        if (rfs.is_paired()) {
+          const cReadFile& rf_r1 = rfs.m_files[0];
+          const cReadFile& rf_r2 = rfs.m_files[1];
 
-        s.reads[base_name] = s_rf;
+          string r1_fastq = settings.base_name_to_read_file_name(rf_r1.m_base_name);
+          string r2_fastq = settings.base_name_to_read_file_name(rf_r2.m_base_name);
+          string r1_conv = settings.file_name(settings.converted_fastq_file_name, "#", rf_r1.m_base_name);
+          string r2_conv = settings.file_name(settings.converted_fastq_file_name, "#", rf_r2.m_base_name);
+
+          pair<AnalyzeFastqSummary, AnalyzeFastqSummary> paired_result = normalize_fastq_paired(
+              r1_fastq, r1_conv,
+              r2_fastq, r2_conv,
+              flat_file_counter + 1,
+              flat_file_counter + 2,
+              settings.quality_score_trim,
+              !settings.skip_read_filtering,
+              s.num_bases,
+              read_file_base_limit,
+              settings.read_file_read_length_min,
+              settings.read_file_max_same_base_fraction,
+              settings.read_file_max_N_fraction,
+              settings.read_file_long_read_trigger_length,
+              settings.read_file_long_read_split_length,
+              settings.read_file_long_read_distribute_remainder,
+              settings.num_processors
+          );
+          AnalyzeFastqSummary& s_r1 = paired_result.first;
+          AnalyzeFastqSummary& s_r2 = paired_result.second;
+          settings.track_intermediate_file(settings.alignment_correction_done_file_name, r1_conv);
+          settings.track_intermediate_file(settings.alignment_correction_done_file_name, r2_conv);
+
+          for (const auto& s_rf : {s_r1, s_r2}) {
+            if ((overall_read_length_min == UNDEFINED_UINT32) || (s_rf.read_length_min < overall_read_length_min))
+              overall_read_length_min = s_rf.read_length_min;
+            if ((overall_read_length_max == UNDEFINED_UINT32) || (s_rf.read_length_max > overall_read_length_max))
+              overall_read_length_max = s_rf.read_length_max;
+            if ((overall_max_qual == UNDEFINED_UINT32) || (s_rf.max_quality_score > overall_max_qual))
+              overall_max_qual = s_rf.max_quality_score;
+            s.num_reads += s_rf.num_reads;
+            s.num_original_reads += s_rf.num_original_reads;
+            s.num_bases += s_rf.num_bases;
+            s.num_original_bases += s_rf.num_original_bases;
+          }
+          s.reads[rf_r1.m_base_name] = s_r1;
+          s.reads[rf_r2.m_base_name] = s_r2;
+
+          flat_file_counter += 2;
+
+        } else {
+          const cReadFile& rf = rfs.m_files[0];
+          string base_name = rf.m_base_name;
+
+          cerr << "  READ FILE::" << base_name << endl;
+
+          string fastq_file_name = settings.base_name_to_read_file_name(base_name);
+          string convert_file_name = settings.file_name(settings.converted_fastq_file_name, "#", base_name);
+
+          AnalyzeFastqSummary s_rf = normalize_fastq(fastq_file_name,
+                                                       convert_file_name,
+                                                       flat_file_counter + 1,
+                                                       settings.quality_score_trim,
+                                                       !settings.skip_read_filtering,
+                                                       s.num_bases,
+                                                       read_file_base_limit,
+                                                       settings.read_file_read_length_min,
+                                                       settings.read_file_max_same_base_fraction,
+                                                       settings.read_file_max_N_fraction,
+                                                       settings.read_file_long_read_trigger_length,
+                                                       settings.read_file_long_read_split_length,
+                                                       settings.read_file_long_read_distribute_remainder,
+                                                       settings.num_processors
+                                                       );
+          settings.track_intermediate_file(settings.alignment_correction_done_file_name, convert_file_name);
+
+          if ((overall_read_length_min == UNDEFINED_UINT32) || (s_rf.read_length_min < overall_read_length_min))
+            overall_read_length_min = s_rf.read_length_min;
+          if ((overall_read_length_max == UNDEFINED_UINT32) || (s_rf.read_length_max > overall_read_length_max))
+            overall_read_length_max = s_rf.read_length_max;
+          if ((overall_max_qual == UNDEFINED_UINT32) || (s_rf.max_quality_score > overall_max_qual))
+            overall_max_qual = s_rf.max_quality_score;
+          s.num_reads += s_rf.num_reads;
+          s.num_original_reads += s_rf.num_original_reads;
+          s.num_bases += s_rf.num_bases;
+          s.num_original_bases += s_rf.num_original_bases;
+
+          s.reads[base_name] = s_rf;
+          flat_file_counter++;
+        }
+
+        set_index++;
       }
       
       s.read_length_avg = static_cast<double>(s.num_bases) / static_cast<double>(s.num_reads);
