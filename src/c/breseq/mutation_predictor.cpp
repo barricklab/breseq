@@ -1990,7 +1990,6 @@ namespace breseq {
           
           // Add reject reasons to the JC entries, so that they will not be used below to re-predict these mutations
           if (reject) {
-            cout << "rejected!" << endl;
             ev->add_reject_reason("INDEL_HOMOPOLYMER");
           }
         }
