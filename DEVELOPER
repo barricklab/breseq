@@ -21,7 +21,6 @@ added to the project.
 $ ./bootstrap.sh
 $ ./configure
 $ make
-$ make install
 
 === Consistency Test Instructions ===
 
@@ -55,13 +54,22 @@ matches what is specified in XCode, or you will get linking errors!
 You must also run ./bootstrap and ./configure at the command line to create headers before XCode
 will be able to compile the code.
 
-For debugging, you may also want to set the working directory, and will definitely want to set the 
-command line options (which are the same as the command you would type in the shell, but omitting
-the initial "breseq")
+For debugging within XCode, you need to go to "Product > Scheme > Edit Scheme..." after 
+setting breseq/gdtools as the target and set/add three things.
 
-breseq -r reference.gbk reads.fastq
-becomes
-Arguments: -r reference.gbk reads.fastq
+1. Make sure that the environmental variable Name: PATH is set to Value: $CONDA_BIN_PATH:$PATH 
+   in the Arguments tab so that bowtie2 and other runtime dependencies ar found when running 
+   within XCode.
+   
+2. Set the command line options in the Arguments tab. These are the same as the command you 
+   would type in the shell, except they omit the initial "breseq".
+
+   breseq -r reference.gbk reads.fastq
+   becomes
+   Arguments: -r reference.gbk reads.fastq
+
+3. Set the working directory in the Options tab, so that breseq will correctly find your
+   input files at any relative paths you specify.
 
 The MacOSX binary for distribution is created outside of XCode, as described below.
 
