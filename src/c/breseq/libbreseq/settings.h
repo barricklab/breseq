@@ -133,10 +133,10 @@ namespace breseq
     map<string,string> read_file_to_converted_fastq_file_name_map;
 
     cReadFileSets() { };
-    cReadFileSets(const vector<string>& read_file_names, bool sam_files) { Init(read_file_names, sam_files); };
+    cReadFileSets(const vector<string>& read_file_names, bool sam_files, bool allow_paired = false) { Init(read_file_names, sam_files, allow_paired); };
     ~cReadFileSets() { };
 
-    void Init(const vector<string>& read_file_names, bool sam_files);
+    void Init(const vector<string>& read_file_names, bool sam_files, bool allow_paired = false);
     string base_name_to_read_file_name(const string& base_name);
 
     // Returns base names of all individual files (flat, across all sets).
@@ -264,6 +264,7 @@ namespace breseq
     uint32_t read_file_long_read_split_length;  // Default = 200 COMMAND-LINE OPTION
     bool read_file_long_read_distribute_remainder;           // Default = false COMMAND-LINE OPTION
     uint32_t read_file_max_insert_size;                      // Default = 1200 COMMAND-LINE OPTION
+    bool paired_mapping;                                     // Default = false COMMAND-LINE OPTION
 
     // Reference sequences
     vector<string> all_reference_file_names;    // REQUIRED COMMAND-LINE OPTION (filled by below)

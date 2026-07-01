@@ -47,7 +47,7 @@ namespace breseq
 
   string Settings::output_divider("================================================================================");
   
-  void cReadFileSets::Init(const vector<string>& read_file_names, bool sam_files)
+  void cReadFileSets::Init(const vector<string>& read_file_names, bool sam_files, bool allow_paired)
   {
     this->clear();
     read_file_to_fastq_file_name_map.clear();
@@ -108,62 +108,73 @@ namespace breseq
       all_files.push_back(rf);
     }
 
-    // Step 2: detect paired files.
-    // Two files form a pair when their base names have equal length and differ in exactly
-    // one position where one has '1' and the other has '2'.
-    map<string, size_t> base_name_to_index;
-    for (size_t i = 0; i < all_files.size(); i++)
-      base_name_to_index[all_files[i].m_base_name] = i;
+    // Step 2: detect paired files (only when --paired-mapping is active).
+    if (allow_paired) {
+      // Two files form a pair when their base names have equal length and differ in exactly
+      // one position where one has '1' and the other has '2'.
+      map<string, size_t> base_name_to_index;
+      for (size_t i = 0; i < all_files.size(); i++)
+        base_name_to_index[all_files[i].m_base_name] = i;
 
-    vector<bool> used(all_files.size(), false);
+      vector<bool> used(all_files.size(), false);
 
-    for (size_t i = 0; i < all_files.size(); i++) {
-      if (used[i]) continue;
+      for (size_t i = 0; i < all_files.size(); i++) {
+        if (used[i]) continue;
 
-      const string& name_a = all_files[i].m_base_name;
-      vector<pair<size_t,size_t>> pair_candidates;  // (position_in_name, index_of_partner)
+        const string& name_a = all_files[i].m_base_name;
+        vector<pair<size_t,size_t>> pair_candidates;  // (position_in_name, index_of_partner)
 
-      for (size_t k = 0; k < name_a.size(); k++) {
-        if (name_a[k] != '1' && name_a[k] != '2') continue;
-        char other_digit = (name_a[k] == '1') ? '2' : '1';
-        string candidate = name_a;
-        candidate[k] = other_digit;
-        auto it = base_name_to_index.find(candidate);
-        if (it != base_name_to_index.end() && !used[it->second])
-          pair_candidates.push_back({k, it->second});
-      }
-
-      if (pair_candidates.size() > 1) {
-        WARN("Read file \"" + name_a + "\" could be paired with multiple other read files.\nIt will be treated as unpaired.");
-      }
-
-      cReadFileSet rfs;
-      if (pair_candidates.size() == 1) {
-        size_t k = pair_candidates[0].first;
-        size_t j = pair_candidates[0].second;
-        string canonical = name_a;
-        canonical[k] = 'X';
-        rfs.m_base_name = canonical;
-        if (name_a[k] == '1') {
-          rfs.m_files.push_back(all_files[i]);  // R1
-          rfs.m_files.push_back(all_files[j]);  // R2
-        } else {
-          rfs.m_files.push_back(all_files[j]);  // R1
-          rfs.m_files.push_back(all_files[i]);  // R2
+        for (size_t k = 0; k < name_a.size(); k++) {
+          if (name_a[k] != '1' && name_a[k] != '2') continue;
+          char other_digit = (name_a[k] == '1') ? '2' : '1';
+          string candidate = name_a;
+          candidate[k] = other_digit;
+          auto it = base_name_to_index.find(candidate);
+          if (it != base_name_to_index.end() && !used[it->second])
+            pair_candidates.push_back({k, it->second});
         }
-        used[i] = true;
-        used[j] = true;
-      } else {
-        rfs.m_base_name = name_a;
-        rfs.m_files.push_back(all_files[i]);
-        used[i] = true;
+
+        if (pair_candidates.size() > 1) {
+          WARN("Read file \"" + name_a + "\" could be paired with multiple other read files.\nIt will be treated as unpaired.");
+        }
+
+        cReadFileSet rfs;
+        if (pair_candidates.size() == 1) {
+          size_t k = pair_candidates[0].first;
+          size_t j = pair_candidates[0].second;
+          string canonical = name_a;
+          canonical[k] = 'X';
+          rfs.m_base_name = canonical;
+          if (name_a[k] == '1') {
+            rfs.m_files.push_back(all_files[i]);  // R1
+            rfs.m_files.push_back(all_files[j]);  // R2
+          } else {
+            rfs.m_files.push_back(all_files[j]);  // R1
+            rfs.m_files.push_back(all_files[i]);  // R2
+          }
+          used[i] = true;
+          used[j] = true;
+        } else {
+          rfs.m_base_name = name_a;
+          rfs.m_files.push_back(all_files[i]);
+          used[i] = true;
+        }
+
+        // Populate the base-name → original file map for each individual file in this set.
+        for (auto& rf : rfs.m_files)
+          read_file_to_fastq_file_name_map[rf.m_base_name] = rf.m_original_file_name;
+
+        this->push_back(rfs);
       }
-
-      // Populate the base-name → original file map for each individual file in this set.
-      for (auto& rf : rfs.m_files)
+    } else {
+      // Without --paired-mapping, every file is its own single-file set.
+      for (auto& rf : all_files) {
+        cReadFileSet rfs;
+        rfs.m_base_name = rf.m_base_name;
+        rfs.m_files.push_back(rf);
         read_file_to_fastq_file_name_map[rf.m_base_name] = rf.m_original_file_name;
-
-      this->push_back(rfs);
+        this->push_back(rfs);
+      }
     }
   }
 
@@ -280,6 +291,7 @@ namespace breseq
     ("long-read-trigger-length", "Mark a file as containing long reads and enable read splitting if the longest read has a length that is greater than or equal to this value. (0 = OFF)", 1000, ADVANCED_OPTION)
     ("long-read-split-length", "Split input reads in a file marked as having long reads into pieces that are at most this many bases long. Using values much larger than the default for this parameter will likely degrade the speed and accuracy of breseq because of how it performs mapping and analyzes split-read alignments. Filters such as --read-min-length are applied to split reads. (0 = OFF)", 200, ADVANCED_OPTION)
     ("long-read-distribute-remainder", "When splitting long reads, divide them into equal pieces that are less than the split length. If this option is not chosen (the default), reads will be split into chunks with exactly the split length and any remaining bases after the last chunk will be ignored.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("paired-mapping", "Detect read files whose names differ only in a '1'/'2' character as a paired-end set and align them with bowtie2 in paired-end mode (-1/-2). Without this flag all reads are aligned independently in single-end mode. (DEFAULT=OFF)", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("max-insert-size", "Maximum insert size for paired-end read alignment. Read pairs with an inferred insert size greater than this value will not be aligned as concordant pairs. (DEFAULT=1200)", 1200, ADVANCED_OPTION)
     ("genbank-field-for-seq-id", "Which GenBank header field will be used to assign sequence IDs. Valid choices are LOCUS, ACCESSION, and VERSION. The default is to check those fields, in that order, for the first one that exists. If you override the default, you will need to use the converted reference file (data/reference.gff) for further breseq and gdtools operations on breseq output!", "AUTOMATIC", ADVANCED_OPTION)
     ;
@@ -473,7 +485,8 @@ namespace breseq
       cerr << output_divider << endl;
       this->skip_new_junction_prediction = true;
     }
-    this->read_file_sets.Init(read_file_names, this->aligned_sam_mode);
+    this->paired_mapping = options.count("paired-mapping");
+    this->read_file_sets.Init(read_file_names, this->aligned_sam_mode, this->paired_mapping);
     
     if (options.count("limit-fold-coverage")) {
       this->read_file_coverage_fold_limit = from_string<double>(options["limit-fold-coverage"]);
@@ -918,6 +931,7 @@ namespace breseq
     this->read_file_long_read_split_length = 200;
     this->read_file_long_read_distribute_remainder = false;
     this->read_file_max_insert_size = 1200;
+    this->paired_mapping = false;
 
     //! Options that control which parts of the pipeline to execute
     this->skip_read_filtering = false;
