@@ -280,6 +280,7 @@ namespace breseq
     ("long-read-trigger-length", "Mark a file as containing long reads and enable read splitting if the longest read has a length that is greater than or equal to this value. (0 = OFF)", 1000, ADVANCED_OPTION)
     ("long-read-split-length", "Split input reads in a file marked as having long reads into pieces that are at most this many bases long. Using values much larger than the default for this parameter will likely degrade the speed and accuracy of breseq because of how it performs mapping and analyzes split-read alignments. Filters such as --read-min-length are applied to split reads. (0 = OFF)", 200, ADVANCED_OPTION)
     ("long-read-distribute-remainder", "When splitting long reads, divide them into equal pieces that are less than the split length. If this option is not chosen (the default), reads will be split into chunks with exactly the split length and any remaining bases after the last chunk will be ignored.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("max-insert-size", "Maximum insert size for paired-end read alignment. Read pairs with an inferred insert size greater than this value will not be aligned as concordant pairs. (DEFAULT=1200)", 1200, ADVANCED_OPTION)
     ("genbank-field-for-seq-id", "Which GenBank header field will be used to assign sequence IDs. Valid choices are LOCUS, ACCESSION, and VERSION. The default is to check those fields, in that order, for the first one that exists. If you override the default, you will need to use the converted reference file (data/reference.gff) for further breseq and gdtools operations on breseq output!", "AUTOMATIC", ADVANCED_OPTION)
     ;
     
@@ -483,8 +484,9 @@ namespace breseq
     this->read_file_long_read_trigger_length = from_string<uint32_t>(options["long-read-trigger-length"]);
     this->read_file_long_read_split_length = from_string<uint32_t>(options["long-read-split-length"]);
     this->read_file_long_read_distribute_remainder = options.count("long-read-distribute-remainder");
+    this->read_file_max_insert_size = from_string<uint32_t>(options["max-insert-size"]);
 
-    
+
     bool long_read_include_remainder;           // Default = false COMMAND-LINE OPTION
     uint32_t long_read_split_length;            // Default = 500 COMMAND-LINE OPTION
     
@@ -915,7 +917,8 @@ namespace breseq
     this->read_file_long_read_trigger_length = 1000;
     this->read_file_long_read_split_length = 200;
     this->read_file_long_read_distribute_remainder = false;
-    
+    this->read_file_max_insert_size = 1200;
+
     //! Options that control which parts of the pipeline to execute
     this->skip_read_filtering = false;
     this->skip_new_junction_prediction = false;

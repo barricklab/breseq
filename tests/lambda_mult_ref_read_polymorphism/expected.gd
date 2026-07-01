@@ -1,13 +1,13 @@
 #=GENOME_DIFF	1.0
 #=CREATED	07:27:54 29 Jun 2026
 #=PROGRAM	breseq 0.50.0
-#=COMMAND	./src/c/breseq/breseq -j 4 --polymorphism-prediction -o tests/lambda_mult_ref_read_polymorphism -r tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.1-2.gbk -r tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.3.gbk -r tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.4.gbk -r tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.5.gbk tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.1.fastq.gz tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.2.fastq.gz tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.3.fastq.gz tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.4.fastq.gz tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.5.fastq.gz
+#=COMMAND	./src/c/breseq/breseq -j 4 --polymorphism-prediction -o tests/lambda_mult_ref_read_polymorphism -r tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.1-2.gbk -r tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.3.gbk -r tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.4.gbk -r tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.5.gbk tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.A.fastq.gz tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.B.fastq.gz tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.3.fastq.gz tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.4.fastq.gz tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.5.fastq.gz
 #=REFSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.1-2.gbk
 #=REFSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.3.gbk
 #=REFSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.4.gbk
 #=REFSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda.5.gbk
-#=READSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.1.fastq.gz
-#=READSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.2.fastq.gz
+#=READSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.A.fastq.gz
+#=READSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.B.fastq.gz
 #=READSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.3.fastq.gz
 #=READSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.4.fastq.gz
 #=READSEQ	tests/lambda_mult_ref_read_polymorphism/../data/lambda/lambda_mixed_population.5.fastq.gz
