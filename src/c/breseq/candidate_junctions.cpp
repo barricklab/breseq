@@ -403,6 +403,288 @@ namespace breseq {
     }
   }
 
+  // For a matched read pair (R1's and R2's alignment summaries for the same read number),
+  // finds the (R1 alignment, R2 alignment) combination sharing a reference sequence (tid)
+  // with the smallest outermost-coordinate distance. Orientation letters are assigned by
+  // genomic coordinate order (lower-coordinate alignment first), not by R1/R2 identity;
+  // "RR" is folded to "FF" since they represent the same relative orientation. Reference
+  // sequence circularity is ignored (always a simple linear distance). Returns false if no
+  // alignment combination shares a tid (caller should not add a row for this read pair).
+  static bool best_pair_orientation_and_distance(
+                                                 const vector<AlignmentSummary>& r1_alignments,
+                                                 const vector<AlignmentSummary>& r2_alignments,
+                                                 string& orientation_out,
+                                                 int64_t& distance_out
+                                                 )
+  {
+    bool found = false;
+    int64_t best_distance = 0;
+    string best_orientation;
+
+    for (vector<AlignmentSummary>::const_iterator a = r1_alignments.begin(); a != r1_alignments.end(); a++) {
+      for (vector<AlignmentSummary>::const_iterator b = r2_alignments.begin(); b != r2_alignments.end(); b++) {
+        if (a->tid != b->tid) continue;
+
+        const AlignmentSummary& lower = (a->start_1 <= b->start_1) ? *a : *b;
+        const AlignmentSummary& higher = (a->start_1 <= b->start_1) ? *b : *a;
+
+        string orientation;
+        orientation += lower.reversed ? 'R' : 'F';
+        orientation += higher.reversed ? 'R' : 'F';
+        if (orientation == "RR") orientation = "FF";
+
+        int64_t distance = static_cast<int64_t>(max(a->end_1, b->end_1)) - static_cast<int64_t>(min(a->start_1, b->start_1));
+
+        if (!found || distance < best_distance) {
+          found = true;
+          best_distance = distance;
+          best_orientation = orientation;
+        }
+      }
+    }
+
+    if (found) {
+      orientation_out = best_orientation;
+      distance_out = best_distance;
+    }
+    return found;
+  }
+
+  // A single logical read-alignment source, in increasing read-number order, backed by
+  // either one already-complete BAM file or a 2-way merge of two BAM files (stage1 and
+  // stage2 of the same read file) by read number -- i.e. the same take_1 bookkeeping as
+  // merge_two_sam_files, but exposed as a step-able cursor so two of these (one per mate)
+  // can be advanced in lockstep by a caller without buffering either file in memory.
+  class MergedReadStream {
+  public:
+    // Two-stage: merge file1 (stage1) and file2 (stage2) by read number.
+    MergedReadStream(const string& file1, const string& file2, const string& reference_fasta_file_name)
+      : in1(file1, reference_fasta_file_name, ios_base::in),
+        in2(file2, reference_fasta_file_name, ios_base::in)
+    {
+      not_done_1 = in1.read_alignments(group1, false);
+      not_done_2 = in2.read_alignments(group2, false);
+      if (not_done_1) bam_to_read_index(group1.front()->read_name().c_str(), index_1a, index_1b);
+      if (not_done_2) bam_to_read_index(group2.front()->read_name().c_str(), index_2a, index_2b);
+    }
+
+    // Single-stage: one already-complete file; in2 stays default-constructed/unopened and
+    // not_done_2 stays permanently false, so take_1() always resolves to stream 1.
+    MergedReadStream(const string& file1, const string& reference_fasta_file_name)
+      : in1(file1, reference_fasta_file_name, ios_base::in)
+    {
+      not_done_1 = in1.read_alignments(group1, false);
+      not_done_2 = false;
+      if (not_done_1) bam_to_read_index(group1.front()->read_name().c_str(), index_1a, index_1b);
+    }
+
+    bool has_current() const { return not_done_1 || not_done_2; }
+    int64_t current_read_number() const { return take_1() ? index_1a : index_2a; }
+    alignment_list& current_group() { return take_1() ? group1 : group2; }
+    bam_hdr_t* header() { return in1.bam_header; }
+
+    void advance() {
+      if (take_1()) {
+        not_done_1 = in1.read_alignments(group1, false);
+        if (not_done_1) bam_to_read_index(group1.front()->read_name().c_str(), index_1a, index_1b);
+        else { index_1a = index_1b = numeric_limits<int64_t>::max(); }
+      } else {
+        not_done_2 = in2.read_alignments(group2, false);
+        if (not_done_2) bam_to_read_index(group2.front()->read_name().c_str(), index_2a, index_2b);
+        else { index_2a = index_2b = numeric_limits<int64_t>::max(); }
+      }
+    }
+
+  private:
+    bool take_1() const {
+      return not_done_1 && ((index_1a < index_2a) || (index_1a == index_2a && index_1b < index_2b) || !not_done_2);
+    }
+
+    bam_file in1, in2; // in2 default-constructed (unopened) in the 1-file ctor -- never read
+    alignment_list group1, group2;
+    bool not_done_1, not_done_2;
+    int64_t index_1a = -1, index_1b = -1, index_2a = -1, index_2b = -1;
+  };
+
+  // Extracts one read group's alignment summaries -- used to snapshot the group BEFORE it
+  // is handed to preprocess_alignment_list, which can erase entries from (or fully empty)
+  // the list via eligible_read_alignments.
+  static vector<AlignmentSummary> summarize_alignment_group(const alignment_list& group)
+  {
+    vector<AlignmentSummary> summaries;
+    summaries.reserve(group.size());
+    for (alignment_list::const_iterator it = group.begin(); it != group.end(); it++) {
+      summaries.push_back(AlignmentSummary{ (*it)->reference_target_id(), (*it)->reference_start_1(), (*it)->reference_end_1(), (*it)->reversed() });
+    }
+    return summaries;
+  }
+
+  // Synchronously traverses two MergedReadStreams (one per mate) by read number, always
+  // advancing whichever side is behind. Writes each mate's current group to its own output
+  // BAM (if out1/out2 non-NULL) and preprocesses it into its own PSAM (sharing BSAM and i),
+  // then -- for every read number seen as mapped in both mates at the same time -- writes
+  // one row to csv with the best (smallest-distance) orientation/distance for that pair.
+  void PreprocessAlignments::merge_join_paired_read_streams(
+                                             Settings& settings,
+                                             Summary& summary,
+                                             const cReferenceSequences& ref_seq_info,
+                                             MergedReadStream& r1_stream,
+                                             MergedReadStream& r2_stream,
+                                             samFile* out1,
+                                             samFile* out2,
+                                             const string& output_sam_file_name_r1,
+                                             const string& output_sam_file_name_r2,
+                                             ofstream& csv,
+                                             bool do_preprocess,
+                                             bam_file& BSAM,
+                                             bam_file& PSAM1,
+                                             bam_file& PSAM2,
+                                             int32_t min_indel_split_len,
+                                             uint32_t& i
+                                             )
+  {
+    bool keep_going = true;
+    while (keep_going && (r1_stream.has_current() || r2_stream.has_current())) {
+      bool r1_avail = r1_stream.has_current();
+      bool r2_avail = r2_stream.has_current();
+      bool matched = r1_avail && r2_avail && (r1_stream.current_read_number() == r2_stream.current_read_number());
+      bool process_r1 = r1_avail && (matched || !r2_avail || r1_stream.current_read_number() < r2_stream.current_read_number());
+      bool process_r2 = r2_avail && (matched || !r1_avail || r2_stream.current_read_number() < r1_stream.current_read_number());
+
+      bool r1_mapped = false, r2_mapped = false;
+      vector<AlignmentSummary> r1_summary, r2_summary;
+
+      if (process_r1) {
+        alignment_list& group = r1_stream.current_group();
+        r1_mapped = !group.front()->unmapped();
+        if (r1_mapped) {
+          if (out1) {
+            for (alignment_list::iterator it = group.begin(); it != group.end(); it++) {
+              ASSERT(sam_write1(out1, r1_stream.header(), it->get()) >= 0, "Failed to write alignment to: " + output_sam_file_name_r1);
+            }
+          }
+          if (matched) r1_summary = summarize_alignment_group(group);
+          if (do_preprocess) {
+            keep_going = preprocess_alignment_list(settings, summary, ref_seq_info, BSAM, PSAM1, min_indel_split_len, group, i) && keep_going;
+          }
+        }
+      }
+
+      if (process_r2) {
+        alignment_list& group = r2_stream.current_group();
+        r2_mapped = !group.front()->unmapped();
+        if (r2_mapped) {
+          if (out2) {
+            for (alignment_list::iterator it = group.begin(); it != group.end(); it++) {
+              ASSERT(sam_write1(out2, r2_stream.header(), it->get()) >= 0, "Failed to write alignment to: " + output_sam_file_name_r2);
+            }
+          }
+          if (matched) r2_summary = summarize_alignment_group(group);
+          if (do_preprocess) {
+            keep_going = preprocess_alignment_list(settings, summary, ref_seq_info, BSAM, PSAM2, min_indel_split_len, group, i) && keep_going;
+          }
+        }
+      }
+
+      if (matched && r1_mapped && r2_mapped) {
+        string orientation;
+        int64_t distance;
+        if (best_pair_orientation_and_distance(r1_summary, r2_summary, orientation, distance)) {
+          csv << orientation << "," << distance << endl;
+        }
+      }
+
+      if (process_r1) r1_stream.advance();
+      if (process_r2) r2_stream.advance();
+    }
+  }
+
+  // Paired analogue of merge_two_sam_files: synchronously traverses R1's and R2's
+  // stage1+stage2 merges by read number, writing each mate's own output BAM exactly as
+  // merge_two_sam_files would (sharing BSAM and i), and additionally writes read-pair
+  // mapping statistics (orientation, distance) for every read pair where both mates
+  // mapped, to a CSV named after the read file set's collective base name in
+  // settings.data_path (so it survives the run).
+  void PreprocessAlignments::merge_two_sets_of_paired_sam_files(
+                                                 Settings& settings,
+                                                 Summary& summary,
+                                                 const cReferenceSequences& ref_seq_info,
+                                                 const cReadFileSet& read_file_set,
+                                                 const string& input_sam_file_name_1_r1,
+                                                 const string& input_sam_file_name_2_r1,
+                                                 const string& output_sam_file_name_r1,
+                                                 const string& input_sam_file_name_1_r2,
+                                                 const string& input_sam_file_name_2_r2,
+                                                 const string& output_sam_file_name_r2,
+                                                 bool do_preprocess,
+                                                 bam_file& BSAM,
+                                                 bam_file& PSAM1,
+                                                 bam_file& PSAM2,
+                                                 int32_t min_indel_split_len,
+                                                 uint32_t& i
+                                                 )
+  {
+    MergedReadStream r1_stream(input_sam_file_name_1_r1, input_sam_file_name_2_r1, settings.reference_fasta_file_name);
+    MergedReadStream r2_stream(input_sam_file_name_1_r2, input_sam_file_name_2_r2, settings.reference_fasta_file_name);
+
+    samFile* out1 = hts_open(output_sam_file_name_r1.c_str(), "wb");
+    ASSERT(out1, "Could not open output BAM file: " + output_sam_file_name_r1);
+    ASSERT(sam_hdr_write(out1, r1_stream.header()) == 0, "Failed to write BAM header to: " + output_sam_file_name_r1);
+
+    samFile* out2 = hts_open(output_sam_file_name_r2.c_str(), "wb");
+    ASSERT(out2, "Could not open output BAM file: " + output_sam_file_name_r2);
+    ASSERT(sam_hdr_write(out2, r2_stream.header()) == 0, "Failed to write BAM header to: " + output_sam_file_name_r2);
+
+    string csv_file_name = settings.data_path + "/" + read_file_set.m_base_name + ".pair_stats.csv";
+    ofstream csv(csv_file_name.c_str());
+    ASSERT(csv.good(), "Could not open file for writing read-pair mapping statistics: " + csv_file_name);
+    csv << "orientation,distance" << endl;
+
+    merge_join_paired_read_streams(settings, summary, ref_seq_info, r1_stream, r2_stream,
+                                    out1, out2, output_sam_file_name_r1, output_sam_file_name_r2,
+                                    csv, do_preprocess, BSAM, PSAM1, PSAM2, min_indel_split_len, i);
+
+    csv.close();
+    hts_close(out1);
+    hts_close(out2);
+  }
+
+  // Paired analogue of preprocess_one_sam_file: synchronously traverses R1's and R2's
+  // already-complete reference_sam_file_name by read number (sharing BSAM and i, writing
+  // nothing new -- single-stage mode never rewrites reference_sam_file_name), and
+  // additionally writes the same read-pair mapping statistics CSV as
+  // merge_two_sets_of_paired_sam_files. Only called when do_preprocess is true (matching
+  // preprocess_one_sam_file's existing guard).
+  void PreprocessAlignments::preprocess_one_set_of_paired_sam_files(
+                                                 Settings& settings,
+                                                 Summary& summary,
+                                                 const cReferenceSequences& ref_seq_info,
+                                                 const cReadFileSet& read_file_set,
+                                                 const string& reference_sam_file_name_r1,
+                                                 const string& reference_sam_file_name_r2,
+                                                 bam_file& BSAM,
+                                                 bam_file& PSAM1,
+                                                 bam_file& PSAM2,
+                                                 int32_t min_indel_split_len,
+                                                 uint32_t& i
+                                                 )
+  {
+    MergedReadStream r1_stream(reference_sam_file_name_r1, settings.reference_fasta_file_name);
+    MergedReadStream r2_stream(reference_sam_file_name_r2, settings.reference_fasta_file_name);
+
+    string csv_file_name = settings.data_path + "/" + read_file_set.m_base_name + ".pair_stats.csv";
+    ofstream csv(csv_file_name.c_str());
+    ASSERT(csv.good(), "Could not open file for writing read-pair mapping statistics: " + csv_file_name);
+    csv << "orientation,distance" << endl;
+
+    merge_join_paired_read_streams(settings, summary, ref_seq_info, r1_stream, r2_stream,
+                                    NULL, NULL, reference_sam_file_name_r1, reference_sam_file_name_r2,
+                                    csv, true /* only called when do_preprocess is true */,
+                                    BSAM, PSAM1, PSAM2, min_indel_split_len, i);
+
+    csv.close();
+  }
+
   /*! PreprocessAlignments::merge_sort_and_preprocess_alignments
    *
    *  For each read file, merges the stage1/stage2 alignment BAMs (if two-stage
@@ -433,40 +715,94 @@ namespace breseq {
     }
 
     uint32_t i = 0;
-    vector<cReadFile> flat_read_files_cj1 = settings.read_file_sets.flat_files();
-    for (uint32_t index = 0; index < flat_read_files_cj1.size(); index++)
+    for (const auto& rfs : settings.read_file_sets)
     {
-      cReadFile read_file = flat_read_files_cj1[index];
-      string reference_sam_file_name = Settings::file_name(settings.reference_sam_file_name, "#", read_file.m_base_name);
+      if (!rfs.is_paired())
+      {
+        // ---- UNPAIRED: unchanged from before, just nested under the set loop ----
+        for (const auto& read_file : rfs.m_files)   // always exactly 1 file here
+        {
+          string reference_sam_file_name = Settings::file_name(settings.reference_sam_file_name, "#", read_file.m_base_name);
 
-      bam_file PSAM;
-      if (do_preprocess) {
-        end_progress_line();
-        cerr << "  READ FILE::" << read_file.m_base_name << endl;
-        string preprocess_junction_split_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", read_file.m_base_name);
-        PSAM.open_write(preprocess_junction_split_sam_file_name, reference_fasta_file_name);
-        settings.track_intermediate_file(settings.candidate_junction_done_file_name, preprocess_junction_split_sam_file_name);
+          bam_file PSAM;
+          if (do_preprocess) {
+            end_progress_line();
+            cerr << "  READ FILE::" << read_file.m_base_name << endl;
+            string preprocess_junction_split_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", read_file.m_base_name);
+            PSAM.open_write(preprocess_junction_split_sam_file_name, reference_fasta_file_name);
+            settings.track_intermediate_file(settings.candidate_junction_done_file_name, preprocess_junction_split_sam_file_name);
+          }
+
+          if (settings.bowtie2_stage2.size() != 0) {
+            // Two-stage alignment: merge stage1 + stage2 BAMs into reference_sam_file_name
+            string stage1_reference_sam_file_name = Settings::file_name(settings.stage1_reference_sam_file_name, "#", read_file.m_base_name);
+            string stage2_reference_sam_file_name = Settings::file_name(settings.stage2_reference_sam_file_name, "#", read_file.m_base_name);
+
+            merge_two_sam_files(settings, summary, ref_seq_info, stage1_reference_sam_file_name, stage2_reference_sam_file_name,
+                                 reference_sam_file_name, do_preprocess, BSAM, PSAM, min_indel_split_len, i);
+          } else if (do_preprocess) {
+            // Single-stage alignment: reference_sam_file_name was already written directly by bowtie2
+            preprocess_one_sam_file(settings, summary, ref_seq_info, reference_sam_file_name, BSAM, PSAM, min_indel_split_len, i);
+          }
+
+          if (do_preprocess) {
+            ostringstream progress_message;
+            progress_message << "    ALIGNED READ:" << setw(12) << right << i;
+            print_progress_line(progress_message.str());
+          }
+
+          settings.track_intermediate_file(settings.alignment_correction_done_file_name, reference_sam_file_name);
+        }
       }
+      else
+      {
+        // ---- PAIRED: process R1 then R2 (same order/effects as two flat-loop iterations
+        // would have had), plus compute/write the read-pair mapping statistics CSV ----
+        const cReadFile& read_file_r1 = rfs.m_files[0];
+        const cReadFile& read_file_r2 = rfs.m_files[1];
 
-      if (settings.bowtie2_stage2.size() != 0) {
-        // Two-stage alignment: merge stage1 + stage2 BAMs into reference_sam_file_name
-        string stage1_reference_sam_file_name = Settings::file_name(settings.stage1_reference_sam_file_name, "#", read_file.m_base_name);
-        string stage2_reference_sam_file_name = Settings::file_name(settings.stage2_reference_sam_file_name, "#", read_file.m_base_name);
+        string reference_sam_file_name_r1 = Settings::file_name(settings.reference_sam_file_name, "#", read_file_r1.m_base_name);
+        string reference_sam_file_name_r2 = Settings::file_name(settings.reference_sam_file_name, "#", read_file_r2.m_base_name);
 
-        merge_two_sam_files(settings, summary, ref_seq_info, stage1_reference_sam_file_name, stage2_reference_sam_file_name,
-                             reference_sam_file_name, do_preprocess, BSAM, PSAM, min_indel_split_len, i);
-      } else if (do_preprocess) {
-        // Single-stage alignment: reference_sam_file_name was already written directly by bowtie2
-        preprocess_one_sam_file(settings, summary, ref_seq_info, reference_sam_file_name, BSAM, PSAM, min_indel_split_len, i);
+        bam_file PSAM1, PSAM2;
+        if (do_preprocess) {
+          end_progress_line();
+          cerr << "  READ FILE::" << read_file_r1.m_base_name << endl;
+          string split1 = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", read_file_r1.m_base_name);
+          PSAM1.open_write(split1, reference_fasta_file_name);
+          settings.track_intermediate_file(settings.candidate_junction_done_file_name, split1);
+
+          cerr << "  READ FILE::" << read_file_r2.m_base_name << endl;
+          string split2 = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", read_file_r2.m_base_name);
+          PSAM2.open_write(split2, reference_fasta_file_name);
+          settings.track_intermediate_file(settings.candidate_junction_done_file_name, split2);
+        }
+
+        if (settings.bowtie2_stage2.size() != 0) {
+          string stage1_r1 = Settings::file_name(settings.stage1_reference_sam_file_name, "#", read_file_r1.m_base_name);
+          string stage2_r1 = Settings::file_name(settings.stage2_reference_sam_file_name, "#", read_file_r1.m_base_name);
+          string stage1_r2 = Settings::file_name(settings.stage1_reference_sam_file_name, "#", read_file_r2.m_base_name);
+          string stage2_r2 = Settings::file_name(settings.stage2_reference_sam_file_name, "#", read_file_r2.m_base_name);
+
+          merge_two_sets_of_paired_sam_files(settings, summary, ref_seq_info, rfs,
+                                              stage1_r1, stage2_r1, reference_sam_file_name_r1,
+                                              stage1_r2, stage2_r2, reference_sam_file_name_r2,
+                                              do_preprocess, BSAM, PSAM1, PSAM2, min_indel_split_len, i);
+        } else if (do_preprocess) {
+          preprocess_one_set_of_paired_sam_files(settings, summary, ref_seq_info, rfs,
+                                                  reference_sam_file_name_r1, reference_sam_file_name_r2,
+                                                  BSAM, PSAM1, PSAM2, min_indel_split_len, i);
+        }
+
+        if (do_preprocess) {
+          ostringstream progress_message;
+          progress_message << "    ALIGNED READ:" << setw(12) << right << i;
+          print_progress_line(progress_message.str());
+        }
+
+        settings.track_intermediate_file(settings.alignment_correction_done_file_name, reference_sam_file_name_r1);
+        settings.track_intermediate_file(settings.alignment_correction_done_file_name, reference_sam_file_name_r2);
       }
-
-      if (do_preprocess) {
-        ostringstream progress_message;
-        progress_message << "    ALIGNED READ:" << setw(12) << right << i;
-        print_progress_line(progress_message.str());
-      }
-
-      settings.track_intermediate_file(settings.alignment_correction_done_file_name, reference_sam_file_name);
     }
 
     if (do_preprocess) {

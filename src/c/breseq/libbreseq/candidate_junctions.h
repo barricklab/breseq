@@ -30,6 +30,8 @@ using namespace std;
 
 namespace breseq {
 
+  struct cReadFileSet;
+
   const string junction_name_separator = "__";
   const string junction_user_defined_tag = "UD";
   
@@ -327,6 +329,17 @@ namespace breseq {
                                         const alignment_wrapper& a
                                         );
   
+  //! Minimal per-alignment info needed for read-pair mapping statistics, extracted so
+  //! callbacks don't need to hold onto (or copy) a whole alignment_list/bam_alignment_ptr.
+  struct AlignmentSummary {
+    uint32_t tid;
+    uint32_t start_1;
+    uint32_t end_1;
+    bool reversed;
+  };
+
+  class MergedReadStream;
+
   class PreprocessAlignments
   {
   public:
@@ -395,6 +408,75 @@ namespace breseq {
                                         const string& reference_sam_file_name,
                                         bam_file& BSAM,
                                         bam_file& PSAM,
+                                        int32_t min_indel_split_len,
+                                        uint32_t& i
+                                        );
+
+    //! Synchronously traverses two MergedReadStreams (one per mate) by read number, always
+    //! advancing whichever side is behind. Writes each mate's current group to its own
+    //! output BAM (if out1/out2 non-NULL) and preprocesses it into its own PSAM (sharing
+    //! BSAM and i), then -- for every read number seen as mapped in both mates at the same
+    //! time -- writes one row to csv with the best (smallest-distance) orientation/distance.
+    static void merge_join_paired_read_streams(
+                                    Settings& settings,
+                                    Summary& summary,
+                                    const cReferenceSequences& ref_seq_info,
+                                    MergedReadStream& r1_stream,
+                                    MergedReadStream& r2_stream,
+                                    samFile* out1,
+                                    samFile* out2,
+                                    const string& output_sam_file_name_r1,
+                                    const string& output_sam_file_name_r2,
+                                    ofstream& csv,
+                                    bool do_preprocess,
+                                    bam_file& BSAM,
+                                    bam_file& PSAM1,
+                                    bam_file& PSAM2,
+                                    int32_t min_indel_split_len,
+                                    uint32_t& i
+                                    );
+
+    //! Paired analogue of merge_two_sam_files: synchronously traverses R1's and R2's
+    //! stage1+stage2 merges by read number (always advancing whichever side is behind),
+    //! writing each mate's own output BAM exactly as merge_two_sam_files would, sharing
+    //! BSAM and i, and additionally computing/writing read-pair mapping statistics
+    //! (orientation/distance) to a CSV in settings.data_path for every read number seen
+    //! as mapped in both mates at the same time.
+    static void merge_two_sets_of_paired_sam_files(
+                                    Settings& settings,
+                                    Summary& summary,
+                                    const cReferenceSequences& ref_seq_info,
+                                    const cReadFileSet& read_file_set,
+                                    const string& input_sam_file_name_1_r1,
+                                    const string& input_sam_file_name_2_r1,
+                                    const string& output_sam_file_name_r1,
+                                    const string& input_sam_file_name_1_r2,
+                                    const string& input_sam_file_name_2_r2,
+                                    const string& output_sam_file_name_r2,
+                                    bool do_preprocess,
+                                    bam_file& BSAM,
+                                    bam_file& PSAM1,
+                                    bam_file& PSAM2,
+                                    int32_t min_indel_split_len,
+                                    uint32_t& i
+                                    );
+
+    //! Paired analogue of preprocess_one_sam_file: synchronously traverses R1's and R2's
+    //! already-complete reference_sam_file_name by read number (always advancing whichever
+    //! side is behind), sharing BSAM and i, and additionally computing/writing read-pair
+    //! mapping statistics (orientation/distance) to a CSV in settings.data_path for every
+    //! read number seen as mapped in both mates at the same time. Only called when
+    //! do_preprocess is true (matching preprocess_one_sam_file).
+    static void preprocess_one_set_of_paired_sam_files(
+                                        Settings& settings,
+                                        Summary& summary,
+                                        const cReferenceSequences& ref_seq_info,
+                                        const cReadFileSet& read_file_set,
+                                        const string& reference_sam_file_name_r1,
+                                        const string& reference_sam_file_name_r2,
+                                        bam_file& BSAM,
+                                        bam_file& PSAM1,
+                                        bam_file& PSAM2,
                                         int32_t min_indel_split_len,
                                         uint32_t& i
                                         );
