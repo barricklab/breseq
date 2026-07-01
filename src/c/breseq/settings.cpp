@@ -317,8 +317,7 @@ namespace breseq
     options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Bowtie2 Mapping/Alignment Options", ADVANCED_OPTION);
     options
-    ("paired-mapping", "Detect read files whose names differ only in a '1'/'2' character as a paired-end set and align them with bowtie2 in paired-end mode (-1/-2) in stage 1. Without this flag all reads are aligned independently in single-end mode. (DEFAULT=OFF)", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("max-insert-size", "Maximum insert size for paired-end read alignment. Read pairs with an inferred insert size greater than this value will not be aligned as concordant pairs. (DEFAULT=1200)", 1200, ADVANCED_OPTION)
+    ("paired-mapping", "Detect read files whose names differ only in a '1'/'2' character as a paired-end set, for reporting and paired-aware FASTQ normalization. Reads are still aligned independently in single-end mode. (DEFAULT=OFF)", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("bowtie2-scoring", "All calls to bowtie2 must use the same commands for assigning scores to read alignments. Larger scores are assumed to be better by breseq. Each call to bowtie2 has this option added to its command line. (DEFAULT=\"" + this->bowtie2_scoring + "\")", "", ADVANCED_OPTION)
     ("bowtie2-stage1", "Settings for mapping criteria used for the stage 1 alignment. This step is normally meant for quickly aligning near-perfect matches. (DEFAULT=\"" + this->bowtie2_stage1 + "\")", "", ADVANCED_OPTION)
     ("bowtie2-stage2", "Settings for mapping criteria used for the stage 2 alignment. If set to the empty string \"\", then stage 2 alignment is skipped. This step is normally meant for exhaustively mapping reads that were unmapped by stage 1. (DEFAULT=\"" + this->bowtie2_stage2 + "\")", "", ADVANCED_OPTION)
@@ -497,7 +496,6 @@ namespace breseq
     this->read_file_long_read_trigger_length = from_string<uint32_t>(options["long-read-trigger-length"]);
     this->read_file_long_read_split_length = from_string<uint32_t>(options["long-read-split-length"]);
     this->read_file_long_read_distribute_remainder = options.count("long-read-distribute-remainder");
-    this->read_file_max_insert_size = from_string<uint32_t>(options["max-insert-size"]);
 
 
     bool long_read_include_remainder;           // Default = false COMMAND-LINE OPTION
@@ -930,7 +928,6 @@ namespace breseq
     this->read_file_long_read_trigger_length = 1000;
     this->read_file_long_read_split_length = 200;
     this->read_file_long_read_distribute_remainder = false;
-    this->read_file_max_insert_size = 1200;
     this->paired_mapping = false;
 
     //! Options that control which parts of the pipeline to execute

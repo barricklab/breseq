@@ -263,7 +263,6 @@ namespace breseq
     uint32_t read_file_long_read_trigger_length;// Default = 1000 COMMAND-LINE OPTION
     uint32_t read_file_long_read_split_length;  // Default = 200 COMMAND-LINE OPTION
     bool read_file_long_read_distribute_remainder;           // Default = false COMMAND-LINE OPTION
-    uint32_t read_file_max_insert_size;                      // Default = 1200 COMMAND-LINE OPTION
     bool paired_mapping;                                     // Default = false COMMAND-LINE OPTION
 
     // Reference sequences

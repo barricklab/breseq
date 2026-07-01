@@ -1642,123 +1642,18 @@ int breseq_default_action(int argc, char* argv[])
     ////// For each read file set (paired or unpaired)
     bool do_2_stage_alignment = settings.bowtie2_stage2.size() != 0;
 
+    // Every read file is aligned independently in single-end mode, whether or not it belongs
+    // to a detected paired set (settings.read_file_sets / rfs.is_paired() is only used for
+    // reporting and paired-aware FASTQ normalization, not for bowtie2 alignment mode).
     for (const auto& rfs : settings.read_file_sets)
     {
-      if (rfs.is_paired()) {
+      for (const auto& read_file : rfs.m_files)
+      {
 
         ///////////////////////////////////////////////////////
-        // STAGE 1 ALIGNMENT — PAIRED-END bowtie2            //
+        // STAGE 1 ALIGNMENT — UNPAIRED                      //
         ///////////////////////////////////////////////////////
 
-        const cReadFile& r1_file = rfs.m_files[0];
-        const cReadFile& r2_file = rfs.m_files[1];
-        string r1_base_name = r1_file.base_name();
-        string r2_base_name = r2_file.base_name();
-
-        string r1_fastq = settings.base_name_to_read_file_name(r1_base_name);
-        string r2_fastq = settings.base_name_to_read_file_name(r2_base_name);
-
-        // Combined paired BAM (all reads, including unmapped) uses the set's collective base name.
-        // After stage1 alignment, filter_and_split_paired_bam applies a per-read AS threshold
-        // (matching --score-min L,0,0.8) to separate well-mapped reads (→ per-file stage1 BAMs)
-        // from poorly-mapped/unmapped reads (→ per-file stage2 FASTQ.gz for re-alignment).
-        string paired_stage1_bam = settings.reference_alignment_path + "/" + rfs.m_base_name + ".paired.stage1.bam";
-        string r1_stage2_fastq   = settings.reference_alignment_path + "/" + rfs.m_base_name + ".R1.stage2.fastq.gz";
-        string r2_stage2_fastq   = settings.reference_alignment_path + "/" + rfs.m_base_name + ".R2.stage2.fastq.gz";
-
-        // Per-file stage1 BAMs (produced by splitting the paired BAM)
-        string r1_stage1_bam = settings.file_name(settings.stage1_reference_sam_file_name, "#", r1_base_name);
-        string r2_stage1_bam = settings.file_name(settings.stage1_reference_sam_file_name, "#", r2_base_name);
-        // Per-file reference BAMs (single-stage mode: bowtie2 writes directly here)
-        string r1_reference_sam = settings.file_name(settings.reference_sam_file_name, "#", r1_base_name);
-        string r2_reference_sam = settings.file_name(settings.reference_sam_file_name, "#", r2_base_name);
-
-        // Seed size from R1 average read length
-        uint32_t bowtie2_seed_stringent = trunc(summary.sequence_conversion.reads[r1_base_name].read_length_avg * 0.5);
-        bowtie2_seed_stringent = max<uint32_t>(9, bowtie2_seed_stringent);
-        bowtie2_seed_stringent = min<uint32_t>(32, bowtie2_seed_stringent);
-
-        {
-          // No --no-unal: we need unmapped reads in the BAM so filter_and_split can route them
-          // to the stage2 FASTQ. The per-read AS filter (0.8 * read_length) is applied in C++.
-          // Use --bam (bowtie2 wrapper flag) so the wrapper enters passthru mode and converts
-          // SAM → BAM internally via "samtools view -b". Without --no-unal or --bam, the
-          // bowtie2 wrapper passes -S - raw to bowtie2-align-s, which creates a file named -.
-          string cmd = "bowtie2 -t -p " + s(settings.num_processors)
-                     + " -L " + to_string<uint32_t>(bowtie2_seed_stringent)
-                     + " " + settings.bowtie2_scoring
-                     + " " + settings.bowtie2_stage1
-                     + " --reorder"
-                     + " --dovetail --maxins " + to_string(settings.read_file_max_insert_size);
-          cmd += " -x " + double_quote(reference_hash_file_name)
-              +  " -1 " + double_quote(r1_fastq)
-              +  " -2 " + double_quote(r2_fastq)
-              +  " --bam -S " + double_quote(paired_stage1_bam);
-          SYSTEM(cmd, false, false, false);
-        }
-
-        // Filter stage1 BAM by per-read AS threshold and split into per-file BAMs + stage2 FASTQs.
-        // Reads that pass (AS >= 0.8 * read_length) → per-file stage1 BAMs.
-        // Reads that fail (unmapped or low AS) → per-file stage2 FASTQ.gz for re-alignment.
-        {
-          string r1_out_bam = do_2_stage_alignment ? r1_stage1_bam : r1_reference_sam;
-          string r2_out_bam = do_2_stage_alignment ? r2_stage1_bam : r2_reference_sam;
-          string r1_fq_out  = do_2_stage_alignment ? r1_stage2_fastq : "";
-          string r2_fq_out  = do_2_stage_alignment ? r2_stage2_fastq : "";
-          filter_and_split_paired_bam(paired_stage1_bam,
-                                      r1_file.m_id + 1, r1_out_bam, r1_fq_out,
-                                      r2_file.m_id + 1, r2_out_bam, r2_fq_out);
-        }
-        settings.track_intermediate_file(settings.preprocess_junction_done_file_name, paired_stage1_bam);
-
-        if (do_2_stage_alignment) {
-          settings.track_intermediate_file(settings.preprocess_junction_done_file_name, r1_stage1_bam);
-          settings.track_intermediate_file(settings.preprocess_junction_done_file_name, r2_stage1_bam);
-
-          ///////////////////////////////////////////////////////
-          // STAGE 2 ALIGNMENT — UNPAIRED, per R1 and R2       //
-          ///////////////////////////////////////////////////////
-
-          string r1_stage2_bam = settings.file_name(settings.stage2_reference_sam_file_name, "#", r1_base_name);
-          string r2_stage2_bam = settings.file_name(settings.stage2_reference_sam_file_name, "#", r2_base_name);
-
-          uint32_t r1_seed2 = trunc(summary.sequence_conversion.reads[r1_base_name].read_length_avg * 0.25);
-          r1_seed2 = max<uint32_t>(9, r1_seed2); r1_seed2 = min<uint32_t>(32, r1_seed2);
-
-          string r1_stage2_cmd = "bowtie2 -t --no-unal -p " + s(settings.num_processors)
-                               + " -L " + to_string<uint32_t>(r1_seed2)
-                               + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage2
-                               + " --reorder -x " + double_quote(reference_hash_file_name)
-                               + " -U " + double_quote(r1_stage2_fastq)
-                               + " -S - | samtools view -bS -t " + double_quote(settings.reference_faidx_file_name)
-                               + " -o " + double_quote(r1_stage2_bam);
-          SYSTEM(r1_stage2_cmd, false, false, false);
-
-          uint32_t r2_seed2 = trunc(summary.sequence_conversion.reads[r2_base_name].read_length_avg * 0.25);
-          r2_seed2 = max<uint32_t>(9, r2_seed2); r2_seed2 = min<uint32_t>(32, r2_seed2);
-
-          string r2_stage2_cmd = "bowtie2 -t --no-unal -p " + s(settings.num_processors)
-                               + " -L " + to_string<uint32_t>(r2_seed2)
-                               + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage2
-                               + " --reorder -x " + double_quote(reference_hash_file_name)
-                               + " -U " + double_quote(r2_stage2_fastq)
-                               + " -S - | samtools view -bS -t " + double_quote(settings.reference_faidx_file_name)
-                               + " -o " + double_quote(r2_stage2_bam);
-          SYSTEM(r2_stage2_cmd, false, false, false);
-
-          settings.track_intermediate_file(settings.preprocess_junction_done_file_name, r1_stage2_fastq);
-          settings.track_intermediate_file(settings.preprocess_junction_done_file_name, r2_stage2_fastq);
-          settings.track_intermediate_file(settings.preprocess_junction_done_file_name, r1_stage2_bam);
-          settings.track_intermediate_file(settings.preprocess_junction_done_file_name, r2_stage2_bam);
-        }
-
-      } else {
-
-        ///////////////////////////////////////////////////////
-        // STAGE 1 ALIGNMENT — UNPAIRED (unchanged)          //
-        ///////////////////////////////////////////////////////
-
-        cReadFile read_file = rfs.m_files[0];
         string base_read_file_name = read_file.base_name();
         string reference_sam_file_name = settings.file_name(settings.reference_sam_file_name, "#", base_read_file_name);
 
@@ -1789,7 +1684,7 @@ int breseq_default_action(int argc, char* argv[])
         }
 
         ///////////////////////////////////////////////////////
-        // STAGE 2 ALIGNMENT — UNPAIRED (unchanged)          //
+        // STAGE 2 ALIGNMENT — UNPAIRED                       //
         ///////////////////////////////////////////////////////
 
         if (do_2_stage_alignment) {
@@ -1810,7 +1705,7 @@ int breseq_default_action(int argc, char* argv[])
           }
         } // end do_stage_2_alignment
 
-      } // end unpaired branch
+      } // end for each file in the read file set
 
     } // end for each read file set
 
