@@ -499,7 +499,12 @@ namespace breseq
     string preprocess_junction_done_file_name;
     string preprocess_junction_best_sam_file_name;
 		string preprocess_junction_split_sam_file_name;
-    
+
+    string paired_mapping_distance_done_file_name;
+    string paired_mapping_distance_distribution_file_name;
+    string paired_mapping_distance_plot_file_name;
+    string paired_mapping_distance_summary_file_name;
+
     string candidate_junction_done_file_name;
 		string coverage_junction_best_bam_unsorted_file_name;
 		string coverage_junction_best_bam_file_name;

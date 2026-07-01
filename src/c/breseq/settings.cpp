@@ -1119,7 +1119,10 @@ namespace breseq
 		this->preprocess_junction_done_file_name = this->candidate_junction_path + "/preprocess_junction_alignment.done";
 		this->preprocess_junction_best_sam_file_name = this->candidate_junction_path + "/best.bam";
 		this->preprocess_junction_split_sam_file_name = this->candidate_junction_path + "/#.split.bam";
-    
+
+    this->paired_mapping_distance_done_file_name = this->candidate_junction_path + "/paired_mapping_distance.done";
+    this->paired_mapping_distance_summary_file_name = this->candidate_junction_path + "/paired_mapping_distance.summary.json";
+
     this->coverage_junction_done_file_name = this->candidate_junction_path + "/coverage_junction_alignment.done";
 		this->coverage_junction_best_bam_unsorted_file_name = this->candidate_junction_path + "/best.unsorted.bam";
 		this->coverage_junction_best_bam_file_name = this->candidate_junction_path + "/best.bam";
@@ -1223,6 +1226,7 @@ namespace breseq
 		this->output_calibration_path = this->evidence_path;
 		this->unique_only_coverage_plot_file_name = this->output_calibration_path + "/@.unique_coverage.svg";
 		this->error_rates_plot_file_name = this->output_calibration_path + "/#.error_rates.svg";
+		this->paired_mapping_distance_plot_file_name = this->output_calibration_path + "/#.pair_distance.svg";
 
 		this->breseq_icon_graphic_from_file_name = this->program_data_path + "/breseq_icon.png";
 		this->breseq_icon_graphic_to_file_name = this->output_path + "/breseq_icon.png";
@@ -1235,6 +1239,7 @@ namespace breseq
 		this->reference_fasta_file_name = this->data_path + "/reference.fasta";
 		this->reference_faidx_file_name = this->data_path + "/reference.fasta.fai";
 		this->reference_gff3_file_name = this->data_path + "/reference.gff3";
+		this->paired_mapping_distance_distribution_file_name = this->data_path + "/#.pair_stats.csv";
 		this->unmapped_reads_fastq_file_name = this->data_path + "/unmapped_reads.fastq.gz";
     this->data_vcf_file_name = this->data_path + "/output.vcf";
     this->data_genome_diff_file_name = this->data_path + "/output.gd";

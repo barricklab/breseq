@@ -1731,7 +1731,26 @@ int breseq_default_action(int argc, char* argv[])
     PreprocessAlignments::merge_sort_and_preprocess_alignments(settings, summary, ref_seq_info);
     settings.done_step(settings.preprocess_junction_done_file_name);
   }
-  
+
+  if ( !settings.aligned_sam_mode &&
+      settings.do_step(settings.paired_mapping_distance_done_file_name, "Fitting paired-end mapping distance distributions"))
+  {
+    ////////////////////////////////////////////////
+    // FIT PAIRED-END MAPPING DISTANCE DISTRIBUTIONS //
+    ////////////////////////////////////////////////
+
+    create_path(settings.evidence_path); // need output for plots
+
+    // For each paired read file set, fits a censored negative binomial to the majority-orientation
+    // distance histogram written by merge_sort_and_preprocess_alignments above, and draws a
+    // diagnostic plot (analogous to the unique-coverage distribution fit/plot).
+    PairedMappingDistanceDistribution::fit_paired_mapping_distance_distributions(settings, summary);
+    summary.paired_mapping_distance_distribution.store(settings.paired_mapping_distance_summary_file_name);
+    settings.done_step(settings.paired_mapping_distance_done_file_name);
+  }
+  if (!settings.aligned_sam_mode)
+    summary.paired_mapping_distance_distribution.retrieve(settings.paired_mapping_distance_summary_file_name);
+
   //
   // Only do steps 03 and 04 if we are performing new junction prediction
   //

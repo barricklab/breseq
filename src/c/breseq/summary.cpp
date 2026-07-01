@@ -306,6 +306,35 @@ void from_json(const json& j, ErrorCountSummaries& s)
   }
 }
 
+// PairedMappingDistanceDistributionSummary
+void to_json(json& j, const PairedMappingDistanceDistributionSummary& s)
+{
+  j = json{
+    {"nb_fit_mu", s.nb_fit_mu},
+    {"nb_fit_size", s.nb_fit_size},
+  };
+}
+
+void from_json(const json& j, PairedMappingDistanceDistributionSummary& s)
+{
+  s.nb_fit_mu = j.at("nb_fit_mu").get<double>();
+  s.nb_fit_size = j.at("nb_fit_size").get<double>();
+}
+
+void to_json(json& j, const PairedMappingDistanceDistributionSummaries& s)
+{
+  for (PairedMappingDistanceDistributionSummaries::const_iterator it = s.begin(); it != s.end(); it++) {
+    j[it->first] = it->second;
+  }
+}
+
+void from_json(const json& j, PairedMappingDistanceDistributionSummaries& s)
+{
+  for (json::const_iterator it = j.begin(); it != j.end(); ++it) {
+    s[it.key()] = it.value();
+  }
+}
+
 // Summary
 // SoftClippingSummary
 void to_json(json& j, const SoftClippingSummary& s)
@@ -335,6 +364,7 @@ void to_json(json& j, const Summary& s)
     {"preprocess_error_count", s.preprocess_error_count},
     {"preprocess_alignments", s.preprocess_alignments},
     {"soft_clipping", s.soft_clipping},
+    {"paired_mapping_distance_distribution", s.paired_mapping_distance_distribution},
   };
 }
 
@@ -349,6 +379,8 @@ void from_json(const json& j, Summary& s)
   s.preprocess_error_count = j.at("preprocess_error_count").get<ErrorCountSummaries>();
   if (j.count("soft_clipping"))
     s.soft_clipping = j.at("soft_clipping").get<SoftClippingSummary>();
+  if (j.count("paired_mapping_distance_distribution"))
+    s.paired_mapping_distance_distribution = j.at("paired_mapping_distance_distribution").get<PairedMappingDistanceDistributionSummaries>();
 }
   
 PublicReadFileSummary::PublicReadFileSummary(const ReadFileSummary &rfs, const AnalyzeFastqSummary &afs)
@@ -564,6 +596,7 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   , references(s, r, t.refseq_settings)
   , options(t)
   , soft_clipping(s.soft_clipping)
+  , paired_mapping_distance_distribution(s.paired_mapping_distance_distribution)
 { }
   
 // PublicReadFileSummary
@@ -904,6 +937,7 @@ void to_json(json& j, const PublicSummary& s)
     {"references", s.references},
     {"options", s.options},
     {"soft_clipping", s.soft_clipping},
+    {"paired_mapping_distance_distribution", s.paired_mapping_distance_distribution},
   };
 }
 
@@ -915,6 +949,8 @@ void from_json(const json& j, PublicSummary& s)
   s.options = j.at("options").get<PublicOptionsSummary>();
   if (j.count("soft_clipping"))
     s.soft_clipping = j.at("soft_clipping").get<SoftClippingSummary>();
+  if (j.count("paired_mapping_distance_distribution"))
+    s.paired_mapping_distance_distribution = j.at("paired_mapping_distance_distribution").get<PairedMappingDistanceDistributionSummaries>();
 }
 
   

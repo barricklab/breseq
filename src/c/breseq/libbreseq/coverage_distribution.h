@@ -86,6 +86,47 @@ namespace breseq {
 
 	}; // class CoverageDistribution
 
+  // Result of fitting a negative binomial distribution to a paired-mapping distance
+  // histogram (see PairedMappingDistanceDistribution::fit).
+  struct PairedMappingDistanceDistributionFitResult
+  {
+    double nb_fit_size = 0;
+    double nb_fit_mu = 0;
+  };
+
+  class PairedMappingDistanceDistribution
+  {
+  public:
+
+    // Reads the condensed (orientation,distance,count) CSV written by
+    // PreprocessAlignments::merge_two_sets_of_paired_sam_files/preprocess_one_set_of_paired_sam_files,
+    // determines the majority orientation by total observation count, fits a censored
+    // negative binomial to the majority-orientation distance histogram (ignoring rows for
+    // other orientations), and draws a diagnostic plot analogous to CoverageDistribution::fit.
+    static PairedMappingDistanceDistributionFitResult fit(
+                                                          string distribution_file_name,
+                                                          string plot_file
+                                                          );
+
+    // Fits and plots the paired-mapping distance distribution for one paired read file set,
+    // storing the result into summary.paired_mapping_distance_distribution[read_file_set.m_base_name].
+    // The CSV/plot are not registered as deletable intermediates -- like the final coverage
+    // distribution plot, they must survive to the end of the run for the HTML report.
+    static void fit_paired_mapping_distance_distribution(
+                                                         Settings& settings,
+                                                         Summary& summary,
+                                                         const cReadFileSet& read_file_set
+                                                         );
+
+    // Entry point called from the pipeline. Loops over settings.read_file_sets, calling
+    // fit_paired_mapping_distance_distribution for every paired set (unpaired sets have no CSV).
+    static void fit_paired_mapping_distance_distributions(
+                                                          Settings& settings,
+                                                          Summary& summary
+                                                          );
+
+  }; // class PairedMappingDistanceDistribution
+
 } // namespace breseq
 
 #endif

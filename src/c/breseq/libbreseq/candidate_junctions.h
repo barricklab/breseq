@@ -416,7 +416,9 @@ namespace breseq {
     //! advancing whichever side is behind. Writes each mate's current group to its own
     //! output BAM (if out1/out2 non-NULL) and preprocesses it into its own PSAM (sharing
     //! BSAM and i), then -- for every read number seen as mapped in both mates at the same
-    //! time -- writes one row to csv with the best (smallest-distance) orientation/distance.
+    //! time -- increments distance_counts[{orientation, distance}] for the best
+    //! (smallest-distance) orientation/distance found for that pair. The caller is
+    //! responsible for writing this aggregated histogram out to a CSV.
     static void merge_join_paired_read_streams(
                                     Settings& settings,
                                     Summary& summary,
@@ -427,7 +429,7 @@ namespace breseq {
                                     samFile* out2,
                                     const string& output_sam_file_name_r1,
                                     const string& output_sam_file_name_r2,
-                                    ofstream& csv,
+                                    map<pair<string, int64_t>, uint32_t>& distance_counts,
                                     bool do_preprocess,
                                     bam_file& BSAM,
                                     bam_file& PSAM1,
@@ -439,9 +441,9 @@ namespace breseq {
     //! Paired analogue of merge_two_sam_files: synchronously traverses R1's and R2's
     //! stage1+stage2 merges by read number (always advancing whichever side is behind),
     //! writing each mate's own output BAM exactly as merge_two_sam_files would, sharing
-    //! BSAM and i, and additionally computing/writing read-pair mapping statistics
-    //! (orientation/distance) to a CSV in settings.data_path for every read number seen
-    //! as mapped in both mates at the same time.
+    //! BSAM and i, and additionally writes a condensed (orientation,distance,count)
+    //! histogram CSV in settings.data_path summarizing read-pair mapping statistics for
+    //! every read number seen as mapped in both mates at the same time.
     static void merge_two_sets_of_paired_sam_files(
                                     Settings& settings,
                                     Summary& summary,
@@ -463,10 +465,10 @@ namespace breseq {
 
     //! Paired analogue of preprocess_one_sam_file: synchronously traverses R1's and R2's
     //! already-complete reference_sam_file_name by read number (always advancing whichever
-    //! side is behind), sharing BSAM and i, and additionally computing/writing read-pair
-    //! mapping statistics (orientation/distance) to a CSV in settings.data_path for every
-    //! read number seen as mapped in both mates at the same time. Only called when
-    //! do_preprocess is true (matching preprocess_one_sam_file).
+    //! side is behind), sharing BSAM and i, and additionally writes a condensed
+    //! (orientation,distance,count) histogram CSV in settings.data_path summarizing
+    //! read-pair mapping statistics for every read number seen as mapped in both mates at
+    //! the same time. Only called when do_preprocess is true (matching preprocess_one_sam_file).
     static void preprocess_one_set_of_paired_sam_files(
                                         Settings& settings,
                                         Summary& summary,

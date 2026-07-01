@@ -534,7 +534,7 @@ namespace breseq {
                                              samFile* out2,
                                              const string& output_sam_file_name_r1,
                                              const string& output_sam_file_name_r2,
-                                             ofstream& csv,
+                                             map<pair<string, int64_t>, uint32_t>& distance_counts,
                                              bool do_preprocess,
                                              bam_file& BSAM,
                                              bam_file& PSAM1,
@@ -590,7 +590,7 @@ namespace breseq {
         string orientation;
         int64_t distance;
         if (best_pair_orientation_and_distance(r1_summary, r2_summary, orientation, distance)) {
-          csv << orientation << "," << distance << endl;
+          distance_counts[make_pair(orientation, distance)]++;
         }
       }
 
@@ -601,9 +601,9 @@ namespace breseq {
 
   // Paired analogue of merge_two_sam_files: synchronously traverses R1's and R2's
   // stage1+stage2 merges by read number, writing each mate's own output BAM exactly as
-  // merge_two_sam_files would (sharing BSAM and i), and additionally writes read-pair
-  // mapping statistics (orientation, distance) for every read pair where both mates
-  // mapped, to a CSV named after the read file set's collective base name in
+  // merge_two_sam_files would (sharing BSAM and i), and additionally writes a condensed
+  // (orientation,distance,count) histogram CSV -- one row per distinct combination, not
+  // per read pair -- named after the read file set's collective base name in
   // settings.data_path (so it survives the run).
   void PreprocessAlignments::merge_two_sets_of_paired_sam_files(
                                                  Settings& settings,
@@ -635,18 +635,22 @@ namespace breseq {
     ASSERT(out2, "Could not open output BAM file: " + output_sam_file_name_r2);
     ASSERT(sam_hdr_write(out2, r2_stream.header()) == 0, "Failed to write BAM header to: " + output_sam_file_name_r2);
 
-    string csv_file_name = settings.data_path + "/" + read_file_set.m_base_name + ".pair_stats.csv";
-    ofstream csv(csv_file_name.c_str());
-    ASSERT(csv.good(), "Could not open file for writing read-pair mapping statistics: " + csv_file_name);
-    csv << "orientation,distance" << endl;
-
+    map<pair<string, int64_t>, uint32_t> distance_counts;
     merge_join_paired_read_streams(settings, summary, ref_seq_info, r1_stream, r2_stream,
                                     out1, out2, output_sam_file_name_r1, output_sam_file_name_r2,
-                                    csv, do_preprocess, BSAM, PSAM1, PSAM2, min_indel_split_len, i);
+                                    distance_counts, do_preprocess, BSAM, PSAM1, PSAM2, min_indel_split_len, i);
 
-    csv.close();
     hts_close(out1);
     hts_close(out2);
+
+    string csv_file_name = Settings::file_name(settings.paired_mapping_distance_distribution_file_name, "#", read_file_set.m_base_name);
+    ofstream csv(csv_file_name.c_str());
+    ASSERT(csv.good(), "Could not open file for writing read-pair mapping statistics: " + csv_file_name);
+    csv << "orientation,distance,count" << endl;
+    for (map<pair<string, int64_t>, uint32_t>::const_iterator it = distance_counts.begin(); it != distance_counts.end(); it++) {
+      csv << it->first.first << "," << it->first.second << "," << it->second << endl;
+    }
+    csv.close();
   }
 
   // Paired analogue of preprocess_one_sam_file: synchronously traverses R1's and R2's
@@ -672,16 +676,19 @@ namespace breseq {
     MergedReadStream r1_stream(reference_sam_file_name_r1, settings.reference_fasta_file_name);
     MergedReadStream r2_stream(reference_sam_file_name_r2, settings.reference_fasta_file_name);
 
-    string csv_file_name = settings.data_path + "/" + read_file_set.m_base_name + ".pair_stats.csv";
-    ofstream csv(csv_file_name.c_str());
-    ASSERT(csv.good(), "Could not open file for writing read-pair mapping statistics: " + csv_file_name);
-    csv << "orientation,distance" << endl;
-
+    map<pair<string, int64_t>, uint32_t> distance_counts;
     merge_join_paired_read_streams(settings, summary, ref_seq_info, r1_stream, r2_stream,
                                     NULL, NULL, reference_sam_file_name_r1, reference_sam_file_name_r2,
-                                    csv, true /* only called when do_preprocess is true */,
+                                    distance_counts, true /* only called when do_preprocess is true */,
                                     BSAM, PSAM1, PSAM2, min_indel_split_len, i);
 
+    string csv_file_name = Settings::file_name(settings.paired_mapping_distance_distribution_file_name, "#", read_file_set.m_base_name);
+    ofstream csv(csv_file_name.c_str());
+    ASSERT(csv.good(), "Could not open file for writing read-pair mapping statistics: " + csv_file_name);
+    csv << "orientation,distance,count" << endl;
+    for (map<pair<string, int64_t>, uint32_t>::const_iterator it = distance_counts.begin(); it != distance_counts.end(); it++) {
+      csv << it->first.first << "," << it->first.second << "," << it->second << endl;
+    }
     csv.close();
   }
 

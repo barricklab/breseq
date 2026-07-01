@@ -927,7 +927,34 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     HTML << "<p><sup>&Dagger;</sup> Read and base numbers are after long reads in this file were split to " << (settings.read_file_long_read_distribute_remainder ? "&le;": "exactly ");
     HTML << to_string(settings.read_file_long_read_split_length) << " bases" << (settings.read_file_long_read_distribute_remainder ? "" : " (extra bases discarded)") << endl;
   }
-  
+
+  ////
+  // Write paired-end mapping distance information
+  ////
+
+  bool any_paired_read_file_sets = false;
+  for (const auto& rfs : settings.read_file_sets) if (rfs.is_paired()) any_paired_read_file_sets = true;
+
+  if (any_paired_read_file_sets) {
+    HTML << h2("Paired-End Mapping Distance Information") << endl;
+    HTML << start_table("border=\"0\" cellspace=\"1\" cellpadding=\"5\"") << endl;
+    HTML << start_tr() << th() << th(ALIGN_CENTER, "fit mean distance") << "</tr>" << endl;
+    for (const auto& rfs : settings.read_file_sets) {
+      if (!rfs.is_paired()) continue;
+      HTML << start_tr();
+      string distance_plot = Settings::file_name(settings.paired_mapping_distance_plot_file_name, "#", rfs.m_base_name);
+      string distance_basename = cString(distance_plot).get_base_name();
+      string distance_href = settings.zip_html
+        ? settings.local_html_evidence_file_name + "#" + distance_basename
+        : Settings::relative_path(distance_plot, settings.output_path);
+      HTML << td( file_exists(distance_plot.c_str()) ? a(distance_href, rfs.m_base_name + ": distance") : rfs.m_base_name );
+      double nb_fit_mu = summary.paired_mapping_distance_distribution[rfs.m_base_name].nb_fit_mu;
+      HTML << td(ALIGN_CENTER, (nb_fit_mu > 0) ? to_string(nb_fit_mu, 1) : "NA");
+      HTML << end_tr();
+    }
+    HTML << end_table() << endl;
+  }
+
   ////
   // Write reference sequence information
   ////

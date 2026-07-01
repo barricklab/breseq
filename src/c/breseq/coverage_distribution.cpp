@@ -73,37 +73,35 @@ coverage_histogram_t read_coverage_histogram(const string& distribution_file_nam
   return hist;
 }
 
-/*! fit_coverage_distribution
- @abstract Fits a negative binomial distribution to a unique-only coverage
- histogram and derives a deletion-propagation coverage threshold. Ports the
- statistical computation that used to be performed by coverage_distribution.r
- (which is now used only to draw the diagnostic plot, using the parameters
- this function returns -- see CoverageDistribution::fit).
- @param hist The coverage histogram.
- @param deletion_propagation_pr_cutoff Probability cutoff for the returned
- deletion_coverage_propagation_cutoff.
- @param censor_start_out,censor_end_out The fitting window [start,end] used
- to censor the histogram around its peak, passed through to the plotting
- script so it doesn't have to recompute the same peak-finding logic.
- @param nb_fit_scale_out The factor (inner_total/included_fract) that scales
- a raw dnbinom(...) curve to match the histogram's actual counts, passed
- through to the plotting script for the same reason.
- !*/
-CoverageDistributionFitResult fit_coverage_distribution(
-                                                          const coverage_histogram_t& hist,
-                                                          double deletion_propagation_pr_cutoff,
-                                                          uint32_t& censor_start_out,
-                                                          uint32_t& censor_end_out,
-                                                          double& nb_fit_scale_out
-                                                          )
-{
-  CoverageDistributionFitResult result;
-  censor_start_out = 0;
-  censor_end_out = 0;
-  nb_fit_scale_out = 0;
+// Result of fitting a negative binomial distribution to a censored count histogram via
+// fit_censored_negative_binomial. Distribution-agnostic -- reused by both coverage and
+// paired-mapping-distance fitting.
+struct CensoredNegativeBinomialFitResult {
+  double nb_fit_size = 0;
+  double nb_fit_mu = 0;
+  double average = 0;
+  double variance = 0;
+  double relative_variance = 0;
+  uint32_t censor_start = 0;
+  uint32_t censor_end = 0;
+  double nb_fit_scale = 0;   // scales a raw dnbinom(...) curve to match the histogram's counts
+};
 
-  const uint32_t N = hist.max_coverage;
-  const vector<double>& n = hist.n;
+/*! fit_censored_negative_binomial
+ @abstract Fits a negative binomial (mu, size) to histogram n (n[i] = count of observations
+ with value i, i in [0,N]) via censored least-squares: finds the peak of a 5-point moving
+ average, censors the histogram to a window [0.5*peak, 1.5*peak], coarse-grains to ~1000-2000
+ bins if larger, and optimizes a log-space-parametrized sum-of-squared-proportions objective
+ via multi-restart Nelder-Mead. This is the statistical computation that used to be performed
+ by coverage_distribution.r (which is now used only to draw the diagnostic plot, using the
+ parameters this function returns -- see CoverageDistribution::fit), extracted here so it can
+ be reused for other count histograms (e.g. paired-mapping distance distributions).
+ @param n The histogram (n[i] = count of observations with value i); n[0] is ignored.
+ @param N The histogram's highest index (n must have at least N+1 elements).
+ !*/
+CensoredNegativeBinomialFitResult fit_censored_negative_binomial(const vector<double>& n, uint32_t N)
+{
+  CensoredNegativeBinomialFitResult result;
 
   double total_positions = 0;
   for (uint32_t i = 1; i <= N; i++) total_positions += n[i];
@@ -150,8 +148,8 @@ CoverageDistributionFitResult fit_coverage_distribution(
   uint32_t end_i = min(static_cast<uint32_t>(ceil(max_i * 1.5)), N);
   if (start_i == end_i) return result;
 
-  censor_start_out = start_i;
-  censor_end_out = end_i;
+  result.censor_start = start_i;
+  result.censor_end = end_i;
 
   // Coarse-grain so that we are only fitting a number of bins that is
   // 1000-2000. The means of the negative binomial fit are adjusted
@@ -303,7 +301,53 @@ CoverageDistributionFitResult fit_coverage_distribution(
 
   result.nb_fit_mu = nb_fit_mu;
   result.nb_fit_size = nb_fit_size;
-  if (nb_fit_mu > 0) nb_fit_scale_out = inner_total / included_fract;
+  if (nb_fit_mu > 0) result.nb_fit_scale = inner_total / included_fract;
+
+  return result;
+}
+
+/*! fit_coverage_distribution
+ @abstract Fits a negative binomial distribution to a unique-only coverage
+ histogram (via fit_censored_negative_binomial) and derives a
+ deletion-propagation coverage threshold. Ports the statistical computation
+ that used to be performed by coverage_distribution.r (which is now used
+ only to draw the diagnostic plot, using the parameters this function
+ returns -- see CoverageDistribution::fit).
+ @param hist The coverage histogram.
+ @param deletion_propagation_pr_cutoff Probability cutoff for the returned
+ deletion_coverage_propagation_cutoff.
+ @param censor_start_out,censor_end_out The fitting window [start,end] used
+ to censor the histogram around its peak, passed through to the plotting
+ script so it doesn't have to recompute the same peak-finding logic.
+ @param nb_fit_scale_out The factor (inner_total/included_fract) that scales
+ a raw dnbinom(...) curve to match the histogram's actual counts, passed
+ through to the plotting script for the same reason.
+ !*/
+CoverageDistributionFitResult fit_coverage_distribution(
+                                                          const coverage_histogram_t& hist,
+                                                          double deletion_propagation_pr_cutoff,
+                                                          uint32_t& censor_start_out,
+                                                          uint32_t& censor_end_out,
+                                                          double& nb_fit_scale_out
+                                                          )
+{
+  CoverageDistributionFitResult result;
+
+  CensoredNegativeBinomialFitResult fit = fit_censored_negative_binomial(hist.n, hist.max_coverage);
+
+  result.average = fit.average;
+  result.variance = fit.variance;
+  result.relative_variance = fit.relative_variance;
+  result.nb_fit_mu = fit.nb_fit_mu;
+  result.nb_fit_size = fit.nb_fit_size;
+  censor_start_out = fit.censor_start;
+  censor_end_out = fit.censor_end;
+  nb_fit_scale_out = fit.nb_fit_scale;
+
+  double m = fit.average;
+  double v = fit.variance;
+  double nb_fit_mu = fit.nb_fit_mu;
+  double nb_fit_size = fit.nb_fit_size;
 
   // Fit the marginal value used for propagating deletions.
   double deletion_propagation_coverage;
@@ -541,10 +585,10 @@ void CoverageDistribution::analyze_unique_coverage_distributions(
                                                                  )
 {
   vector<vector<string> > seq_ids_by_coverage_group = settings.seq_ids_by_coverage_group();
-  
+
   for (uint32_t i=0; i< settings.seq_ids_by_coverage_group().size(); i++) {
-    
-    
+
+
     analyze_unique_coverage_distribution(
                                          settings,
                                          summary,
@@ -554,12 +598,187 @@ void CoverageDistribution::analyze_unique_coverage_distributions(
                                          distribution_file_name,
                                          step_key
                                          );
-    
+
     //Warning
   }
 }
 
+/*! fit
+ @abstract Reads the condensed (orientation,distance,count) CSV written by
+ PreprocessAlignments::merge_two_sets_of_paired_sam_files/preprocess_one_set_of_paired_sam_files,
+ determines the majority orientation by total observation count, fits a censored negative
+ binomial (via fit_censored_negative_binomial) to the majority-orientation distance histogram
+ (ignoring rows for other orientations), then draws a diagnostic plot analogous to
+ CoverageDistribution::fit.
+ @param distribution_file_name Input CSV.
+ @param plot_file Output plot file (SVG).
+ @return PairedMappingDistanceDistributionFitResult The fitted parameters.
+ !*/
+PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fit(
+                                         string distribution_file_name,
+                                         string plot_file
+                                         )
+{
+  PairedMappingDistanceDistributionFitResult result;
 
+  ifstream in(distribution_file_name.c_str());
+  ASSERT(in.is_open(), "Could not open paired mapping distance distribution file: " + distribution_file_name);
+  string header_line;
+  getline(in, header_line);
+
+  vector<string> row_orientation;
+  vector<int64_t> row_distance;
+  vector<uint32_t> row_count;
+  map<string, uint64_t> orientation_totals;
+
+  string line;
+  while (getline(in, line)) {
+    if (line.empty()) continue;
+    istringstream iss(line);
+    string orientation, distance_str, count_str;
+    getline(iss, orientation, ',');
+    getline(iss, distance_str, ',');
+    getline(iss, count_str, ',');
+    int64_t distance = from_string<int64_t>(distance_str);
+    uint32_t count = from_string<uint32_t>(count_str);
+
+    row_orientation.push_back(orientation);
+    row_distance.push_back(distance);
+    row_count.push_back(count);
+    orientation_totals[orientation] += count;
+  }
+
+  if (orientation_totals.empty()) return result;
+
+  // Majority rule: the orientation with the largest total observation count.
+  string majority_orientation;
+  uint64_t best_total = 0;
+  for (map<string, uint64_t>::iterator it = orientation_totals.begin(); it != orientation_totals.end(); it++) {
+    if (it->second > best_total) {
+      best_total = it->second;
+      majority_orientation = it->first;
+    }
+  }
+
+  // Build a dense distance->count histogram from only the majority-orientation rows.
+  int64_t max_distance = 0;
+  for (size_t i = 0; i < row_orientation.size(); i++) {
+    if (row_orientation[i] == majority_orientation) max_distance = max(max_distance, row_distance[i]);
+  }
+  if (max_distance <= 0) return result;
+
+  uint32_t N = static_cast<uint32_t>(max_distance);
+  vector<double> n(N + 1, 0.0);
+  for (size_t i = 0; i < row_orientation.size(); i++) {
+    if (row_orientation[i] == majority_orientation) n[static_cast<uint32_t>(row_distance[i])] += row_count[i];
+  }
+
+  CensoredNegativeBinomialFitResult fit = fit_censored_negative_binomial(n, N);
+  result.nb_fit_mu = fit.nb_fit_mu;
+  result.nb_fit_size = fit.nb_fit_size;
+
+  // Nothing to plot if there's no data or no fit window was found (degenerate distribution).
+  if (fit.censor_start >= fit.censor_end) return result;
+
+  // Don't graph very high values with very little support.
+  uint32_t max_i = 1;
+  double max_n = 0;
+  for (uint32_t i = 1; i <= N; i++) {
+    if (n[i] > max_n) { max_n = n[i]; max_i = i; }
+  }
+  uint32_t graph_end_i = max_i;
+  while ((graph_end_i <= N) && (n[graph_end_i] > 0.01 * max_n)) graph_end_i++;
+  // Leaves enough room to the right of the peak for the legend.
+  graph_end_i = max(static_cast<uint32_t>(floor(2.2 * max_i)), graph_end_i);
+
+  double max_y = max_n;
+  for (uint32_t i = 1; i <= N; i++) max_y = max(max_y, n[i]);
+
+  // The condensed CSV covers all orientations and isn't directly plot-ready (3 comma-separated
+  // columns) -- write the majority-orientation histogram to its own small 2-column table so
+  // gnuplot can plot it directly, exactly like the fitted curve's sidecar table below.
+  string hist_table_file_name = distribution_file_name + ".majority_hist.tab";
+  {
+    ofstream hist_out(hist_table_file_name.c_str());
+    ASSERT(hist_out.is_open(), "Could not write to file: " + hist_table_file_name);
+    for (uint32_t i = 0; i <= N; i++) hist_out << i << "\t" << n[i] << endl;
+    hist_out.close();
+  }
+
+  string nb_fit_table_file_name = distribution_file_name + ".nbfit.tab";
+  if (result.nb_fit_mu > 0) {
+    vector<double> fit_nb(N + 1, 0.0);
+    for (uint32_t i = 0; i <= N; i++) {
+      fit_nb[i] = dnbinom_mu(static_cast<double>(i), result.nb_fit_size, result.nb_fit_mu) * fit.nb_fit_scale;
+      max_y = max(max_y, fit_nb[i]);
+    }
+    ofstream nb_out(nb_fit_table_file_name.c_str());
+    ASSERT(nb_out.is_open(), "Could not write to file: " + nb_fit_table_file_name);
+    for (uint32_t i = 0; i <= N; i++) nb_out << i << "\t" << fit_nb[i] << endl;
+    nb_out.close();
+  }
+
+  ostringstream s;
+  s << "set terminal svg size 1320,720 font ',16'" << endl;
+  s << "set output " << double_quote(plot_file) << endl;
+  s << "set tics out" << endl;
+  s << "set border lw 2" << endl;
+  s << "set title 'Paired-End Mapping Distance Distribution (" << majority_orientation << ")' font ',20'" << endl;
+  s << "set xlabel 'Distance between outermost read coordinates (bp)'" << endl;
+  s << "set ylabel 'Number of read pairs'" << endl;
+  s << "set xrange [0:" << graph_end_i << "]" << endl;
+  s << "set yrange [0:" << to_string(max_y * 1.05, 6) << "]" << endl;
+  s << "set key top right font ',16' spacing 2" << endl;
+
+  vector<string> plot_clauses;
+  plot_clauses.push_back(double_quote(hist_table_file_name) + " using ($1>=" + to_string(fit.censor_start) + "&&$1<=" + to_string(fit.censor_end) + "?$1:NaN):2 with points pt 6 lc rgb 'black' title 'Distance distribution'");
+  plot_clauses.push_back(double_quote(hist_table_file_name) + " using ($1<" + to_string(fit.censor_start) + "||$1>" + to_string(fit.censor_end) + "?$1:NaN):2 with points pt 6 lc rgb 'red' title 'Censored data'");
+  if (result.nb_fit_mu > 0) {
+    plot_clauses.push_back(double_quote(nb_fit_table_file_name) + " with lines lw 3 lc rgb 'black' title 'Negative binomial'");
+  }
+  s << "plot " << join(plot_clauses, string(", \\\n     ")) << endl;
+
+  string script_base_name = plot_file + "." + to_string(getpid());
+  string gnuplot_script_name = script_base_name + ".gp";
+  string log_file_name = script_base_name + ".gp.log";
+  run_gnuplot_script(s.str(), gnuplot_script_name, log_file_name);
+  make_svg_responsive(plot_file);
+  remove(log_file_name.c_str());
+  remove(hist_table_file_name.c_str());
+  if (result.nb_fit_mu > 0) remove(nb_fit_table_file_name.c_str());
+
+  return result;
+}
+
+/*! fit_paired_mapping_distance_distribution
+ @abstract Fits and plots the paired-mapping distance distribution for one paired read file set.
+ !*/
+void PairedMappingDistanceDistribution::fit_paired_mapping_distance_distribution(
+                                                                                 Settings& settings,
+                                                                                 Summary& summary,
+                                                                                 const cReadFileSet& read_file_set
+                                                                                 )
+{
+  string distribution_file_name = Settings::file_name(settings.paired_mapping_distance_distribution_file_name, "#", read_file_set.m_base_name);
+  string plot_file_name = Settings::file_name(settings.paired_mapping_distance_plot_file_name, "#", read_file_set.m_base_name);
+
+  PairedMappingDistanceDistribution dist;
+  PairedMappingDistanceDistributionFitResult fit_result = dist.fit(distribution_file_name, plot_file_name);
+
+  summary.paired_mapping_distance_distribution[read_file_set.m_base_name].nb_fit_mu = fit_result.nb_fit_mu;
+  summary.paired_mapping_distance_distribution[read_file_set.m_base_name].nb_fit_size = fit_result.nb_fit_size;
+}
+
+void PairedMappingDistanceDistribution::fit_paired_mapping_distance_distributions(
+                                                                                  Settings& settings,
+                                                                                  Summary& summary
+                                                                                  )
+{
+  for (const auto& rfs : settings.read_file_sets) {
+    if (!rfs.is_paired()) continue;
+    fit_paired_mapping_distance_distribution(settings, summary, rfs);
+  }
+}
 
 
 /*

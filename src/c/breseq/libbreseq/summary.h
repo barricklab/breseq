@@ -297,11 +297,29 @@ namespace breseq{
   public:
     CoverageSummaries() {}
   };
-  
+
   class ErrorCountSummaries : public map<string, ErrorCountSummary>, public JSONStorable<ErrorCountSummaries>
   {
   public:
     ErrorCountSummaries() {}
+  };
+
+  class PairedMappingDistanceDistributionSummary : public JSONStorable<PairedMappingDistanceDistributionSummary>
+  {
+  public:
+    double nb_fit_mu;
+    double nb_fit_size;
+
+    PairedMappingDistanceDistributionSummary()
+    : nb_fit_mu(0.0)
+    , nb_fit_size(0.0)
+    {}
+  };
+
+  class PairedMappingDistanceDistributionSummaries : public map<string, PairedMappingDistanceDistributionSummary>, public JSONStorable<PairedMappingDistanceDistributionSummaries>
+  {
+  public:
+    PairedMappingDistanceDistributionSummaries() {}
   };
 
   class SoftClippingSummary : public JSONStorable<SoftClippingSummary>
@@ -329,6 +347,7 @@ namespace breseq{
     SequenceConversionSummary sequence_conversion;
     ErrorCountSummaries preprocess_error_count;
     SoftClippingSummary soft_clipping;
+    PairedMappingDistanceDistributionSummaries paired_mapping_distance_distribution;
 
     Summary() {}
 	};
@@ -380,6 +399,14 @@ namespace breseq{
   // ErrorCountSummaries
   void to_json(json& j, const ErrorCountSummaries& s);
   void from_json(const json& j, ErrorCountSummaries& s);
+
+  // PairedMappingDistanceDistributionSummary
+  void to_json(json& j, const PairedMappingDistanceDistributionSummary& s);
+  void from_json(const json& j, PairedMappingDistanceDistributionSummary& s);
+
+  // PairedMappingDistanceDistributionSummaries
+  void to_json(json& j, const PairedMappingDistanceDistributionSummaries& s);
+  void from_json(const json& j, PairedMappingDistanceDistributionSummaries& s);
 
   // SoftClippingSummary
   void to_json(json& j, const SoftClippingSummary& s);
@@ -617,6 +644,7 @@ namespace breseq{
     PublicReferencesSummary references;
     PublicOptionsSummary options;
     SoftClippingSummary soft_clipping;
+    PairedMappingDistanceDistributionSummaries paired_mapping_distance_distribution;
 
     PublicSummary() {}
     PublicSummary(const Summary &s, const Settings &t, const cReferenceSequences &r);
