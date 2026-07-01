@@ -938,7 +938,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   if (any_paired_read_file_sets) {
     HTML << h2("Paired-End Mapping Distance Information") << endl;
     HTML << start_table("border=\"0\" cellspace=\"1\" cellpadding=\"5\"") << endl;
-    HTML << start_tr() << th() << th(ALIGN_CENTER, "fit mean distance") << "</tr>" << endl;
+    HTML << start_tr() << th() << th(ALIGN_LEFT, "paired read set") << th(ALIGN_CENTER, "fit mean") << "</tr>" << endl;
     for (const auto& rfs : settings.read_file_sets) {
       if (!rfs.is_paired()) continue;
       HTML << start_tr();
@@ -947,7 +947,8 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
       string distance_href = settings.zip_html
         ? settings.local_html_evidence_file_name + "#" + distance_basename
         : Settings::relative_path(distance_plot, settings.output_path);
-      HTML << td( file_exists(distance_plot.c_str()) ? a(distance_href, rfs.m_base_name + ": distance") : rfs.m_base_name );
+      HTML << td( file_exists(distance_plot.c_str()) ? a(distance_href, "distribution") : "");
+      HTML << td(rfs.m_base_name);
       double nb_fit_mu = summary.paired_mapping_distance_distribution[rfs.m_base_name].nb_fit_mu;
       HTML << td(ALIGN_CENTER, (nb_fit_mu > 0) ? to_string(nb_fit_mu, 1) : "NA");
       HTML << end_tr();
