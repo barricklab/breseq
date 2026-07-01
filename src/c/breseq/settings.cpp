@@ -291,8 +291,6 @@ namespace breseq
     ("long-read-trigger-length", "Mark a file as containing long reads and enable read splitting if the longest read has a length that is greater than or equal to this value. (0 = OFF)", 1000, ADVANCED_OPTION)
     ("long-read-split-length", "Split input reads in a file marked as having long reads into pieces that are at most this many bases long. Using values much larger than the default for this parameter will likely degrade the speed and accuracy of breseq because of how it performs mapping and analyzes split-read alignments. Filters such as --read-min-length are applied to split reads. (0 = OFF)", 200, ADVANCED_OPTION)
     ("long-read-distribute-remainder", "When splitting long reads, divide them into equal pieces that are less than the split length. If this option is not chosen (the default), reads will be split into chunks with exactly the split length and any remaining bases after the last chunk will be ignored.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("paired-mapping", "Detect read files whose names differ only in a '1'/'2' character as a paired-end set and align them with bowtie2 in paired-end mode (-1/-2). Without this flag all reads are aligned independently in single-end mode. (DEFAULT=OFF)", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("max-insert-size", "Maximum insert size for paired-end read alignment. Read pairs with an inferred insert size greater than this value will not be aligned as concordant pairs. (DEFAULT=1200)", 1200, ADVANCED_OPTION)
     ("genbank-field-for-seq-id", "Which GenBank header field will be used to assign sequence IDs. Valid choices are LOCUS, ACCESSION, and VERSION. The default is to check those fields, in that order, for the first one that exists. If you override the default, you will need to use the converted reference file (data/reference.gff) for further breseq and gdtools operations on breseq output!", "AUTOMATIC", ADVANCED_OPTION)
     ;
     
@@ -319,6 +317,8 @@ namespace breseq
     options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Bowtie2 Mapping/Alignment Options", ADVANCED_OPTION);
     options
+    ("paired-mapping", "Detect read files whose names differ only in a '1'/'2' character as a paired-end set and align them with bowtie2 in paired-end mode (-1/-2) in stage 1. Without this flag all reads are aligned independently in single-end mode. (DEFAULT=OFF)", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("max-insert-size", "Maximum insert size for paired-end read alignment. Read pairs with an inferred insert size greater than this value will not be aligned as concordant pairs. (DEFAULT=1200)", 1200, ADVANCED_OPTION)
     ("bowtie2-scoring", "All calls to bowtie2 must use the same commands for assigning scores to read alignments. Larger scores are assumed to be better by breseq. Each call to bowtie2 has this option added to its command line. (DEFAULT=\"" + this->bowtie2_scoring + "\")", "", ADVANCED_OPTION)
     ("bowtie2-stage1", "Settings for mapping criteria used for the stage 1 alignment. This step is normally meant for quickly aligning near-perfect matches. (DEFAULT=\"" + this->bowtie2_stage1 + "\")", "", ADVANCED_OPTION)
     ("bowtie2-stage2", "Settings for mapping criteria used for the stage 2 alignment. If set to the empty string \"\", then stage 2 alignment is skipped. This step is normally meant for exhaustively mapping reads that were unmapped by stage 1. (DEFAULT=\"" + this->bowtie2_stage2 + "\")", "", ADVANCED_OPTION)
@@ -365,20 +365,6 @@ namespace breseq
     ;
     
     options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("Soft Clipping (SC) Evidence Options (HIGHLY EXPERIMENTAL)", ADVANCED_OPTION);
-    options
-    ("predict-soft-clipping", "Predict soft clipping (SC) evidence: positions where reads are unexpectedly soft clipped at their ends, which may indicate unannotated structural variation. This evidence type is experimental and disabled by default.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("soft-clipping-minimum-bases", "Minimum number of soft-clipped bases at a read end to count as a soft-clipping event", 8, ADVANCED_OPTION)
-    ("soft-clipping-score-cutoff", "Log10 E-value cutoff for soft-clipping evidence (DEFAULT = 2)", 2.0, ADVANCED_OPTION)
-    ;
-    
-    options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("Copy numnber (CN) Evidence Options (HIGHLY EXPERIMENTAL)", ADVANCED_OPTION);
-    options
-    ("predict-copy-number","Predict copy number variation evidence using CNery",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ;
-
-    options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Polymorphism Read Alignment (RA) Evidence Options", ADVANCED_OPTION);
     options
 
@@ -392,6 +378,20 @@ namespace breseq
     ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms ≤" + to_string(kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation) + " bp from read alignment or new junction evidence", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ("polymorphism-reject-indel-homopolymer-length", "Reject insertion/deletion polymorphisms which could result from expansion/contraction of homopolymer repeats with this length or greater in the reference genome (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 3) ", "", ADVANCED_OPTION)
     ("polymorphism-reject-surrounding-homopolymer-length", "Reject polymorphic base substitutions that create a homopolymer with this many or more of one base in a row. The homopolymer must begin and end after the changed base. For example, TATTT->TTTTT would be rejected with a setting of 5, but ATTTT->TTTTT would not. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 5)", "", ADVANCED_OPTION)
+    ;
+    
+    options.addUsage("", ADVANCED_OPTION);
+    options.addUsage("Soft Clipping (SC) Evidence Options (HIGHLY EXPERIMENTAL)", ADVANCED_OPTION);
+    options
+    ("predict-soft-clipping", "Predict soft clipping (SC) evidence: positions where reads are unexpectedly soft clipped at their ends, which may indicate unannotated structural variation. This evidence type is experimental and disabled by default.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("soft-clipping-minimum-bases", "Minimum number of soft-clipped bases at a read end to count as a soft-clipping event", 8, ADVANCED_OPTION)
+    ("soft-clipping-score-cutoff", "Log10 E-value cutoff for soft-clipping evidence (DEFAULT = 2)", 2.0, ADVANCED_OPTION)
+    ;
+    
+    options.addUsage("", ADVANCED_OPTION);
+    options.addUsage("Copy numnber (CN) Evidence Options (HIGHLY EXPERIMENTAL)", ADVANCED_OPTION);
+    options
+    ("predict-copy-number","Predict copy number variation evidence using CNery",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
     
     options.addUsage("", ADVANCED_OPTION);
