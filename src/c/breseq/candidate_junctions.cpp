@@ -483,6 +483,11 @@ namespace breseq {
     alignment_list& current_group() { return take_1() ? group1 : group2; }
     bam_hdr_t* header() { return in1.bam_header; }
 
+    // Two-stage: true when the current group came from the stage1 file (in1); false = stage2
+    // (in2). Single-stage: always true (there is no separate stage2 file; not_done_2 is
+    // permanently false, so take_1() always resolves to stream 1).
+    bool current_is_stage1() const { return take_1(); }
+
     void advance() {
       if (take_1()) {
         not_done_1 = in1.read_alignments(group1, false);
@@ -552,10 +557,12 @@ namespace breseq {
       bool process_r2 = r2_avail && (matched || !r1_avail || r2_stream.current_read_number() < r1_stream.current_read_number());
 
       bool r1_mapped = false, r2_mapped = false;
+      bool r1_is_stage1 = false, r2_is_stage1 = false;
       vector<AlignmentSummary> r1_summary, r2_summary;
 
       if (process_r1) {
         alignment_list& group = r1_stream.current_group();
+        r1_is_stage1 = r1_stream.current_is_stage1();
         r1_mapped = !group.front()->unmapped();
         if (r1_mapped) {
           if (out1) {
@@ -572,6 +579,7 @@ namespace breseq {
 
       if (process_r2) {
         alignment_list& group = r2_stream.current_group();
+        r2_is_stage1 = r2_stream.current_is_stage1();
         r2_mapped = !group.front()->unmapped();
         if (r2_mapped) {
           if (out2) {
@@ -586,7 +594,11 @@ namespace breseq {
         }
       }
 
-      if (matched && r1_mapped && r2_mapped) {
+      // Only tabulate distance/orientation stats for pairs where both mates' alignments came
+      // from stage1 -- stage1's stringent --score-min threshold means a heavily soft-clipped
+      // (e.g. junction-spanning) read fails it outright and is only recovered by stage2's
+      // relaxed pass, so restricting to stage1 excludes that contamination from the distribution.
+      if (matched && r1_mapped && r2_mapped && r1_is_stage1 && r2_is_stage1) {
         string orientation;
         int64_t distance;
         if (best_pair_orientation_and_distance(r1_summary, r2_summary, orientation, distance)) {
