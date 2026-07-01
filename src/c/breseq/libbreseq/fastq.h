@@ -38,10 +38,10 @@ class cAnnotatedSequence;
       about fastq and converts file to SANGER format if necessary.
    */  
   AnalyzeFastqSummary normalize_fastq(
-                                        const string &file_name, 
-                                        const string &convert_file_name, 
-                                        const uint32_t file_index, 
-                                        const int32_t trim_end_on_base_quality, 
+                                        const string &file_name,
+                                        const string &convert_file_name,
+                                        const uint32_t file_index,
+                                        const int32_t trim_end_on_base_quality,
                                         const bool filter_reads,
                                         uint64_t current_read_file_bases,
                                         const uint64_t read_file_base_limit,
@@ -51,6 +51,26 @@ class cAnnotatedSequence;
                                         const uint32_t _long_read_trigger_length,
                                         const uint32_t _long_read_split_length,
                                         const bool _long_read_distribute_remainder,
+                                        const uint32_t num_threads = 1
+                                        );
+
+  pair<AnalyzeFastqSummary, AnalyzeFastqSummary> normalize_fastq_paired(
+                                        const string &r1_file_name,
+                                        const string &r1_convert_file_name,
+                                        const string &r2_file_name,
+                                        const string &r2_convert_file_name,
+                                        const uint32_t r1_file_index,
+                                        const uint32_t r2_file_index,
+                                        const int32_t trim_end_on_base_quality,
+                                        const bool filter_reads,
+                                        uint64_t current_read_file_bases,
+                                        const uint64_t read_file_base_limit,
+                                        const uint32_t read_length_min,
+                                        const double max_same_base_fraction,
+                                        const double max_N_fraction,
+                                        const uint32_t long_read_trigger_length,
+                                        const uint32_t long_read_split_length,
+                                        const bool long_read_distribute_remainder,
                                         const uint32_t num_threads = 1
                                         );
   

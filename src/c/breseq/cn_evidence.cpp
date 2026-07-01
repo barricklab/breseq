@@ -60,7 +60,7 @@ void CNEvidence::run_cnery(Settings& settings, Summary& summary, const string& c
   //uint32_t fragment_length(0);
   //float total_bases(0);
   //float total_reads(0);
-  //for(cReadFiles::const_iterator it=settings.read_files.begin(); it!=settings.read_files.end(); it++)
+  //for(auto& rf : settings.read_file_sets.flat_files())
   //{
   //  const AnalyzeFastqSummary& s = summary.sequence_conversion.reads[it->m_base_name];
   //  total_bases += static_cast<double>(s.num_bases);

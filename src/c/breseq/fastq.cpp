@@ -438,6 +438,424 @@ namespace breseq {
     return retval;
   }
   
+  pair<AnalyzeFastqSummary, AnalyzeFastqSummary> normalize_fastq_paired(
+                                        const string &r1_file_name,
+                                        const string &r1_convert_file_name,
+                                        const string &r2_file_name,
+                                        const string &r2_convert_file_name,
+                                        const uint32_t r1_file_index,
+                                        const uint32_t r2_file_index,
+                                        const int32_t trim_end_on_base_quality,
+                                        const bool filter_reads,
+                                        uint64_t current_read_file_bases,
+                                        const uint64_t read_file_base_limit,
+                                        const uint32_t _read_length_min,
+                                        const double _max_same_base_fraction,
+                                        const double _max_N_fraction,
+                                        const uint32_t _long_read_trigger_length,
+                                        const uint32_t _long_read_split_length,
+                                        const bool _long_read_distribute_remainder,
+                                        const uint32_t num_threads
+                                        )
+  {
+    (void)_long_read_split_length;
+    (void)_long_read_distribute_remainder;
+
+    cerr << "    Converting/filtering paired FASTQ files..." << endl;
+
+    map<string,uint8_t> format_to_chr_offset;
+    format_to_chr_offset["SANGER"] = 33;
+    format_to_chr_offset["SOLEXA"] = 64;
+    format_to_chr_offset["ILLUMINA_1.3+"] = 64;
+
+    const uint64_t initial_current_read_file_bases = current_read_file_bases;
+
+    auto predict_format_from_min_quality_score = [&](uint8_t min_q) -> string {
+      string fmt = "SANGER";
+      if (min_q >= format_to_chr_offset["SOLEXA"] - 5) fmt = "SOLEXA";
+      if (min_q >= format_to_chr_offset["ILLUMINA_1.3+"]) fmt = "ILLUMINA_1.3+";
+      return fmt;
+    };
+
+    // Per-file stats accumulated inside run_pass_paired
+    struct FileResult {
+      uint64_t num_original_reads = 0;
+      uint64_t num_original_bases = 0;
+      uint8_t  overall_min_quality_score = 255;
+      uint8_t  overall_max_quality_score = 0;
+      uint64_t num_reads = 0;
+      uint64_t num_bases = 0;
+      uint64_t num_filtered_too_short_reads = 0;
+      uint64_t num_filtered_too_short_bases = 0;
+      uint64_t num_filtered_same_base_reads = 0;
+      uint64_t num_filtered_same_base_bases = 0;
+      uint64_t num_filtered_too_many_N_reads = 0;
+      uint64_t num_filtered_too_many_N_bases = 0;
+      uint32_t read_length_min = numeric_limits<uint32_t>::max();
+      uint32_t read_length_max = 0;
+    };
+
+    struct PairResult {
+      FileResult r1, r2;
+      bool reached_eof = true;
+    };
+
+    auto run_pass_paired = [&](
+        const string& pass_quality_format,
+        std::function<bool(cFastqSequence&)> get_next_r1,
+        std::function<bool(cFastqSequence&)> get_next_r2,
+        uint64_t starting_read_file_bases) -> PairResult
+    {
+      PairResult pr;
+
+      cFastqQualityConverter fqc(pass_quality_format, "SANGER");
+      cFastqFile out_r1(r1_convert_file_name.c_str(), fstream::out, num_threads);
+      cFastqFile out_r2(r2_convert_file_name.c_str(), fstream::out, num_threads);
+
+      uint64_t local_current_bases = starting_read_file_bases;
+      uint32_t on_read = 1;
+      bool warned_long_reads = false;
+      uint32_t long_read_trigger = (_long_read_trigger_length == 0) ? numeric_limits<uint32_t>::max() : _long_read_trigger_length;
+
+      cFastqSequence orig_r1, orig_r2;
+
+      while (get_next_r1(orig_r1)) {
+        if (!get_next_r2(orig_r2)) {
+          cerr << "  Warning: R2 file ended before R1 in paired FASTQ processing. Files may have different read counts." << endl;
+          break;
+        }
+
+        // Count originals
+        pr.r1.num_original_reads++;
+        pr.r1.num_original_bases += orig_r1.length();
+        pr.r2.num_original_reads++;
+        pr.r2.num_original_bases += orig_r2.length();
+
+        // Track raw quality scores (pre-conversion) for format detection
+        for (uint32_t i = 0; i < orig_r1.m_qualities.size(); i++) {
+          uint8_t q = static_cast<uint8_t>(orig_r1.m_qualities[i]);
+          pr.r1.overall_min_quality_score = min(pr.r1.overall_min_quality_score, q);
+          pr.r1.overall_max_quality_score = max(pr.r1.overall_max_quality_score, q);
+        }
+        for (uint32_t i = 0; i < orig_r2.m_qualities.size(); i++) {
+          uint8_t q = static_cast<uint8_t>(orig_r2.m_qualities[i]);
+          pr.r2.overall_min_quality_score = min(pr.r2.overall_min_quality_score, q);
+          pr.r2.overall_max_quality_score = max(pr.r2.overall_max_quality_score, q);
+        }
+
+        orig_r1.m_name_plus = "";
+        orig_r2.m_name_plus = "";
+
+        fqc.convert_sequence(orig_r1);
+        fqc.convert_sequence(orig_r2);
+
+        if (trim_end_on_base_quality) {
+          fastq_sequence_trim_end_on_base_quality(orig_r1, trim_end_on_base_quality);
+          fastq_sequence_trim_end_on_base_quality(orig_r2, trim_end_on_base_quality);
+        }
+
+        // Name reads with their respective file indices so names remain unique
+        orig_r1.m_name = to_string(r1_file_index) + ":" + to_string(on_read);
+        orig_r2.m_name = to_string(r2_file_index) + ":" + to_string(on_read);
+        on_read++;
+
+        if (!warned_long_reads && (orig_r1.length() >= long_read_trigger || orig_r2.length() >= long_read_trigger)) {
+          cerr << "    Warning: Long read(s) detected in paired FASTQ files. Long-read splitting is not supported in paired mode; reads will be processed without splitting." << endl;
+          warned_long_reads = true;
+        }
+
+        // Filter: check R1 first, then R2. If either fails, skip both and
+        // increment the triggered filter count in both R1 and R2 stats.
+        if (filter_reads) {
+
+          if (_read_length_min && (orig_r1.length() < _read_length_min)) {
+            pr.r1.num_filtered_too_short_reads++;
+            pr.r1.num_filtered_too_short_bases += orig_r1.length();
+            pr.r2.num_filtered_too_short_reads++;
+            pr.r2.num_filtered_too_short_bases += orig_r2.length();
+            continue;
+          }
+          if (_read_length_min && (orig_r2.length() < _read_length_min)) {
+            pr.r1.num_filtered_too_short_reads++;
+            pr.r1.num_filtered_too_short_bases += orig_r1.length();
+            pr.r2.num_filtered_too_short_reads++;
+            pr.r2.num_filtered_too_short_bases += orig_r2.length();
+            continue;
+          }
+
+          if (_max_N_fraction) {
+            if (_max_N_fraction * static_cast<double>(orig_r1.length()) <= orig_r1.m_base_counts[base_list_N_index]) {
+              pr.r1.num_filtered_too_many_N_reads++;
+              pr.r1.num_filtered_too_many_N_bases += orig_r1.length();
+              pr.r2.num_filtered_too_many_N_reads++;
+              pr.r2.num_filtered_too_many_N_bases += orig_r2.length();
+              continue;
+            }
+            if (_max_N_fraction * static_cast<double>(orig_r2.length()) <= orig_r2.m_base_counts[base_list_N_index]) {
+              pr.r1.num_filtered_too_many_N_reads++;
+              pr.r1.num_filtered_too_many_N_bases += orig_r1.length();
+              pr.r2.num_filtered_too_many_N_reads++;
+              pr.r2.num_filtered_too_many_N_bases += orig_r2.length();
+              continue;
+            }
+          }
+
+          if (_max_same_base_fraction) {
+            bool r1_same_base = false;
+            for (uint8_t b = 0; b < base_list_including_N_size; b++) {
+              if (_max_same_base_fraction * static_cast<double>(orig_r1.length()) <=
+                  static_cast<double>(orig_r1.m_base_counts[b] + orig_r1.m_base_counts[base_list_N_index])) {
+                r1_same_base = true;
+                break;
+              }
+            }
+            if (r1_same_base) {
+              pr.r1.num_filtered_same_base_reads++;
+              pr.r1.num_filtered_same_base_bases += orig_r1.length();
+              pr.r2.num_filtered_same_base_reads++;
+              pr.r2.num_filtered_same_base_bases += orig_r2.length();
+              continue;
+            }
+
+            bool r2_same_base = false;
+            for (uint8_t b = 0; b < base_list_including_N_size; b++) {
+              if (_max_same_base_fraction * static_cast<double>(orig_r2.length()) <=
+                  static_cast<double>(orig_r2.m_base_counts[b] + orig_r2.m_base_counts[base_list_N_index])) {
+                r2_same_base = true;
+                break;
+              }
+            }
+            if (r2_same_base) {
+              pr.r1.num_filtered_same_base_reads++;
+              pr.r1.num_filtered_same_base_bases += orig_r1.length();
+              pr.r2.num_filtered_same_base_reads++;
+              pr.r2.num_filtered_same_base_bases += orig_r2.length();
+              continue;
+            }
+          }
+
+        } // end filter block
+
+        // Both reads pass all filters; write them
+        pr.r1.num_reads++;
+        pr.r1.num_bases += orig_r1.length();
+        pr.r2.num_reads++;
+        pr.r2.num_bases += orig_r2.length();
+
+        pr.r1.read_length_min = min<size_t>(orig_r1.length(), pr.r1.read_length_min);
+        pr.r1.read_length_max = max<size_t>(orig_r1.length(), pr.r1.read_length_max);
+        pr.r2.read_length_min = min<size_t>(orig_r2.length(), pr.r2.read_length_min);
+        pr.r2.read_length_max = max<size_t>(orig_r2.length(), pr.r2.read_length_max);
+
+        out_r1.write_sequence(orig_r1);
+        out_r2.write_sequence(orig_r2);
+
+        if (read_file_base_limit) {
+          local_current_bases += orig_r1.length() + orig_r2.length();
+          if (local_current_bases > read_file_base_limit) {
+            pr.reached_eof = false;
+            break;
+          }
+        }
+      }
+
+      return pr;
+    };
+
+    // ---- Sniff up to FASTQ_FORMAT_SNIFF_READS reads from R1 to predict the quality format ----
+    const size_t FASTQ_FORMAT_SNIFF_READS = 10000;
+    const int32_t prelim_offset = 64;
+
+    cFastqFile r1_input(r1_file_name.c_str(), fstream::in, num_threads);
+    cFastqQualityConverter prelim_fqc("ILLUMINA_1.3+", "SANGER");
+
+    vector<cFastqSequence> buffered_reads;
+    buffered_reads.reserve(FASTQ_FORMAT_SNIFF_READS);
+
+    uint8_t sniffed_min_quality_score = 255;
+
+    {
+      cFastqSequence seq;
+      while ((buffered_reads.size() < FASTQ_FORMAT_SNIFF_READS) && r1_input.read_sequence(seq, prelim_fqc)) {
+        for (uint32_t i = 0; i < seq.m_qualities.size(); i++) {
+          uint8_t q = static_cast<uint8_t>(seq.m_qualities[i]);
+          sniffed_min_quality_score = min(sniffed_min_quality_score, q);
+        }
+        buffered_reads.push_back(seq);
+        seq = cFastqSequence();
+      }
+    }
+
+    string quality_format = predict_format_from_min_quality_score(sniffed_min_quality_score);
+
+    int32_t numerical_quality_offset_adjustment = prelim_offset - static_cast<int32_t>(format_to_chr_offset[quality_format]);
+
+    size_t buffered_idx = 0;
+    auto get_buffered_then_stream_r1 = [&](cFastqSequence& seq) -> bool {
+      if (buffered_idx < buffered_reads.size()) {
+        seq = std::move(buffered_reads[buffered_idx++]);
+        if (seq.m_numerical_qualities && numerical_quality_offset_adjustment != 0) {
+          for (uint32_t i = 0; i < seq.m_qualities.size(); i++) {
+            seq.m_qualities[i] = static_cast<char>(static_cast<int32_t>(static_cast<uint8_t>(seq.m_qualities[i])) - numerical_quality_offset_adjustment);
+          }
+        }
+        return true;
+      }
+      cFastqQualityConverter fqc_for_offset(quality_format, "SANGER");
+      return r1_input.read_sequence(seq, fqc_for_offset);
+    };
+
+    cFastqFile r2_input(r2_file_name.c_str(), fstream::in, num_threads);
+    cFastqQualityConverter r2_initial_fqc(quality_format, "SANGER");
+    auto get_r2_stream = [&](cFastqSequence& seq) -> bool {
+      return r2_input.read_sequence(seq, r2_initial_fqc);
+    };
+
+    PairResult result = run_pass_paired(quality_format, get_buffered_then_stream_r1, get_r2_stream, current_read_file_bases);
+
+    // ---- Check format from R1's actual min quality score (same logic as normalize_fastq) ----
+    string corrected_quality_format = predict_format_from_min_quality_score(result.r1.overall_min_quality_score);
+
+    cFastqFile* tail_count_r1_stream = &r1_input;
+    cFastqFile* tail_count_r2_stream = &r2_input;
+    unique_ptr<cFastqFile> fresh_r1, fresh_r2;
+
+    if (corrected_quality_format != quality_format) {
+      cerr << "    Warning: Quality score format predicted from the first " << FASTQ_FORMAT_SNIFF_READS << " reads (" << quality_format
+           << ") did not match the format determined from the entire file (" << corrected_quality_format << ")." << endl;
+      cerr << "    Re-converting FASTQ files using corrected quality score format..." << endl;
+
+      quality_format = corrected_quality_format;
+
+      fresh_r1.reset(new cFastqFile(r1_file_name.c_str(), fstream::in, num_threads));
+      fresh_r2.reset(new cFastqFile(r2_file_name.c_str(), fstream::in, num_threads));
+
+      cFastqQualityConverter fresh_r1_fqc(quality_format, "SANGER");
+      cFastqQualityConverter fresh_r2_fqc(quality_format, "SANGER");
+
+      auto get_fresh_r1 = [&](cFastqSequence& seq) -> bool {
+        return fresh_r1->read_sequence(seq, fresh_r1_fqc);
+      };
+      auto get_fresh_r2 = [&](cFastqSequence& seq) -> bool {
+        return fresh_r2->read_sequence(seq, fresh_r2_fqc);
+      };
+
+      result = run_pass_paired(quality_format, get_fresh_r1, get_fresh_r2, initial_current_read_file_bases);
+      tail_count_r1_stream = fresh_r1.get();
+      tail_count_r2_stream = fresh_r2.get();
+    }
+
+    // If stopped early, count remaining reads in both files for stats accuracy
+    uint64_t num_filtered_coverage_limit_reads_r1 = 0;
+    uint64_t num_filtered_coverage_limit_bases_r1 = 0;
+    uint64_t num_filtered_coverage_limit_reads_r2 = 0;
+    uint64_t num_filtered_coverage_limit_bases_r2 = 0;
+
+    if (!result.reached_eof) {
+      cFastqQualityConverter tail_fqc("ILLUMINA_1.3+", "SANGER");
+      cFastqSequence seq;
+      while (tail_count_r1_stream->read_sequence(seq, tail_fqc)) {
+        num_filtered_coverage_limit_reads_r1++;
+        num_filtered_coverage_limit_bases_r1 += seq.length();
+      }
+      while (tail_count_r2_stream->read_sequence(seq, tail_fqc)) {
+        num_filtered_coverage_limit_reads_r2++;
+        num_filtered_coverage_limit_bases_r2 += seq.length();
+      }
+    }
+
+    // Convert raw min/max quality scores to SANGER for reporting
+    cFastqQualityConverter final_fqc(quality_format, "SANGER");
+
+    auto build_summary = [&](const FileResult& fr,
+                              uint64_t ncov_reads, uint64_t ncov_bases,
+                              const string& convert_name) -> AnalyzeFastqSummary {
+      cFastqSequence mm_seq;
+      mm_seq.m_qualities.append(1, (char)fr.overall_min_quality_score);
+      mm_seq.m_qualities.append(1, (char)fr.overall_max_quality_score);
+      final_fqc.convert_sequence(mm_seq);
+      uint8_t min_q = (uint8_t)mm_seq.m_qualities[0] - format_to_chr_offset["SANGER"];
+      uint8_t max_q = (uint8_t)mm_seq.m_qualities[1] - format_to_chr_offset["SANGER"];
+
+      uint64_t num_orig_reads = fr.num_original_reads + ncov_reads;
+      uint64_t num_orig_bases = fr.num_original_bases + ncov_bases;
+      double avg = (fr.num_reads > 0) ? static_cast<double>(fr.num_bases) / static_cast<double>(fr.num_reads) : 0.0;
+
+      return AnalyzeFastqSummary(
+          fr.read_length_min,
+          fr.read_length_max,
+          avg,
+          num_orig_reads,
+          fr.num_filtered_too_short_reads,
+          fr.num_filtered_same_base_reads,
+          fr.num_filtered_too_many_N_reads,
+          ncov_reads,
+          fr.num_reads,
+          min_q,
+          max_q,
+          num_orig_bases,
+          fr.num_bases,
+          false,   // reads_were_split: not supported in paired mode
+          quality_format,
+          "SANGER",
+          convert_name
+      );
+    };
+
+    AnalyzeFastqSummary s_r1 = build_summary(result.r1, num_filtered_coverage_limit_reads_r1, num_filtered_coverage_limit_bases_r1, r1_convert_file_name);
+    AnalyzeFastqSummary s_r2 = build_summary(result.r2, num_filtered_coverage_limit_reads_r2, num_filtered_coverage_limit_bases_r2, r2_convert_file_name);
+
+    // Print combined summary for paired files
+    uint64_t total_orig_reads = s_r1.num_original_reads + s_r2.num_original_reads;
+    uint64_t total_orig_bases = s_r1.num_original_bases + s_r2.num_original_bases;
+    uint64_t total_reads = s_r1.num_reads + s_r2.num_reads;
+    uint64_t total_bases = s_r1.num_bases + s_r2.num_bases;
+
+    uint32_t width_for_reads = to_string(total_orig_reads).size();
+    uint32_t width_for_bases = to_string(total_orig_bases).size();
+
+    cerr << "    Original base quality format: " << quality_format << " New format: SANGER" << endl;
+    cerr << "    Original reads: " << total_orig_reads << " bases: " << total_orig_bases << endl;
+
+    uint64_t total_cov_filtered = num_filtered_coverage_limit_reads_r1 + num_filtered_coverage_limit_reads_r2;
+    if (total_cov_filtered) {
+      cerr << "    Filtered reads: " << setw(width_for_reads) << total_cov_filtered;
+      cerr << " bases: " << setw(width_for_bases) << (num_filtered_coverage_limit_bases_r1 + num_filtered_coverage_limit_bases_r2);
+      cerr << " (coverage limit option)" << endl;
+    }
+
+    if (filter_reads) {
+      uint64_t total_short = result.r1.num_filtered_too_short_reads + result.r2.num_filtered_too_short_reads;
+      uint64_t total_N = result.r1.num_filtered_too_many_N_reads + result.r2.num_filtered_too_many_N_reads;
+      uint64_t total_same = result.r1.num_filtered_same_base_reads + result.r2.num_filtered_same_base_reads;
+
+      if (total_short + total_N + total_same + total_cov_filtered == 0) {
+        cerr << "    Filtered reads: none" << endl;
+      } else {
+        if (total_short) {
+          cerr << "    Filtered reads: " << setw(width_for_reads) << total_short;
+          cerr << " bases: " << setw(width_for_bases) << (result.r1.num_filtered_too_short_bases + result.r2.num_filtered_too_short_bases);
+          cerr << " (<" << _read_length_min << " bases long)" << endl;
+        }
+        if (total_N) {
+          string percentage = formatted_double(100 * _max_N_fraction, 1).to_string();
+          cerr << "    Filtered reads: " << setw(width_for_reads) << total_N;
+          cerr << " bases: " << setw(width_for_bases) << (result.r1.num_filtered_too_many_N_bases + result.r2.num_filtered_too_many_N_bases);
+          cerr << " (≥" << percentage << "% bases N)" << endl;
+        }
+        if (total_same) {
+          string percentage = formatted_double(100 * _max_same_base_fraction, 1).to_string();
+          cerr << "    Filtered reads: " << setw(width_for_reads) << total_same;
+          cerr << " bases: " << setw(width_for_bases) << (result.r1.num_filtered_same_base_bases + result.r2.num_filtered_same_base_bases);
+          cerr << " (≥" << percentage << "% same base)" << endl;
+        }
+      }
+    }
+    cerr << "    Analyzed reads: " << setw(width_for_reads) << total_reads << " bases: " << setw(width_for_bases) << total_bases << endl;
+
+    return {s_r1, s_r2};
+  }
+
   // converts a sequence file
   void convert_fastq(const string &from_file_name, const string &to_file_name, const string &from_format, const string &to_format, bool _reverse_complement)
   {

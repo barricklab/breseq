@@ -91,6 +91,36 @@ void samtools_sort(
 
 void samtools_faidx(const string& fasta_file_name);
 
+// Split a BAM produced by paired-end bowtie2 into two per-file BAMs.
+// Records whose read name begins with "<r1_file_index>:" go to r1_output_bam;
+// those beginning with "<r2_file_index>:" go to r2_output_bam.
+// Records appear in the output in the same order as in the input (no sort needed
+// when bowtie2 was run with --reorder).
+void split_bam_by_file_index(
+    const string& input_bam,
+    uint32_t r1_file_index, const string& r1_output_bam,
+    uint32_t r2_file_index, const string& r2_output_bam
+);
+
+// Filter a paired-end BAM by per-read alignment score and split into per-file BAMs and FASTQs.
+// For each record, the file_index is parsed from the QNAME prefix before ':'.
+// A read passes if it is mapped (FLAG & 0x4 == 0) AND its AS:i tag value >=
+//   score_intercept + score_slope * seq_length  (default 0.8*len, matching --score-min L,0,0.8).
+// Passing reads are written to the appropriate per-file BAM (paired flags preserved).
+// Failing reads (unmapped or low AS) are written as FASTQ to the appropriate .fastq.gz file.
+// Pass an empty string for r1_output_fastq / r2_output_fastq to discard failing reads.
+void filter_and_split_paired_bam(
+    const string& input_bam,
+    uint32_t r1_file_index,
+    const string& r1_output_bam,
+    const string& r1_output_fastq,
+    uint32_t r2_file_index,
+    const string& r2_output_bam,
+    const string& r2_output_fastq,
+    double score_slope = 0.8,
+    double score_intercept = 0.0
+);
+
 }
 
 

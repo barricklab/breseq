@@ -1255,7 +1255,7 @@ int do_assemble_unmatched(int argc, char* argv[])
   cFastqFile unmatched_paired_read_file_1(unmatched_paired_read_file_name_1, fstream::out);
   cFastqFile unmatched_paired_read_file_2(unmatched_paired_read_file_name_2, fstream::out);
   
-  cReadFiles read_files;
+  cReadFileSets read_files;
   vector<string> read_file_names;
   for (int32_t i = 0; i < options.getArgc(); i++)
   {
@@ -1397,7 +1397,18 @@ int breseq_default_action(int argc, char* argv[])
     
     // No conversion if already is sam mode
     if (!settings.aligned_sam_mode) {
-      
+
+      // Print detected read file sets.
+      for (const auto& rfs : settings.read_file_sets) {
+        if (rfs.is_paired()) {
+          cerr << "  READ FILE SET::PAIRED::" << rfs.m_base_name << endl;
+          cerr << "    R1::" << rfs.m_files[0].m_base_name << endl;
+          cerr << "    R2::" << rfs.m_files[1].m_base_name << endl;
+        } else {
+          cerr << "  READ FILE SET::UNPAIRED::" << rfs.m_base_name << endl;
+        }
+      }
+
       //Check the FASTQ format and collect some information about the input read files at the same time
       uint32_t overall_read_length_min = UNDEFINED_UINT32;
       uint32_t overall_read_length_max = UNDEFINED_UINT32;
@@ -1405,57 +1416,115 @@ int breseq_default_action(int argc, char* argv[])
 
       s.num_reads = 0;
       s.num_bases = 0;
-      
-      
-      uint64_t read_file_base_limit = floor(settings.read_file_coverage_fold_limit * static_cast<double>(conv_ref_seq_info.get_total_length())); 
-      
-      for (uint32_t i = 0; i < settings.read_files.size(); i++)
+
+
+      uint64_t read_file_base_limit = floor(settings.read_file_coverage_fold_limit * static_cast<double>(conv_ref_seq_info.get_total_length()));
+
+      // Iterate over read file sets (not flat files) so coverage-limit skips
+      // always apply to complete paired sets, never splitting a pair.
+      uint32_t set_index = 0;
+      uint32_t flat_file_counter = 0;  // monotonically increasing per-file index for read naming
+      for (const auto& rfs : settings.read_file_sets)
       {
-        string base_name = settings.read_files[i].m_base_name;
-        
-        cerr << "  READ FILE::" << base_name << endl;
-        
-        // If we have reached the read limit or within some number of it -- delete further read files 
-        // The 1000, is so that we have enough bases counted in a read file to fit the error rates.
-        if ((settings.read_file_coverage_fold_limit) && (i!= 0) && (s.num_bases + 1000 >= read_file_base_limit)) {
+        // If we have reached the read limit or are within 1000 bases of it, skip this entire set.
+        // The 1000 buffer ensures enough reads were counted for error-rate calibration.
+        if ((settings.read_file_coverage_fold_limit) && (set_index != 0) && (s.num_bases + 1000 >= read_file_base_limit)) {
           cerr << "  ::SKIPPED DUE TO REACHING COVERAGE LIMIT::" << endl;
+          set_index++;
+          flat_file_counter += rfs.m_files.size();
           continue;
         }
-        
-        string fastq_file_name = settings.base_name_to_read_file_name(base_name);
-        string convert_file_name =  settings.file_name(settings.converted_fastq_file_name, "#", base_name);
 
-        // Parse output
-        AnalyzeFastqSummary s_rf = normalize_fastq(fastq_file_name,
-                                                     convert_file_name,
-                                                     i+1,
-                                                     settings.quality_score_trim,
-                                                     !settings.skip_read_filtering,
-                                                     s.num_bases,
-                                                     read_file_base_limit,
-                                                     settings.read_file_read_length_min,
-                                                     settings.read_file_max_same_base_fraction,
-                                                     settings.read_file_max_N_fraction,
-                                                     settings.read_file_long_read_trigger_length,
-                                                     settings.read_file_long_read_split_length,
-                                                     settings.read_file_long_read_distribute_remainder,
-                                                     settings.num_processors
-                                                     );
-        settings.track_intermediate_file(settings.alignment_correction_done_file_name, convert_file_name);
-        
-        // Record statistics
-        if ((overall_read_length_min == UNDEFINED_UINT32) || (s_rf.read_length_min < overall_read_length_min))
-          overall_read_length_min = s_rf.read_length_min;
-        if ((overall_read_length_max == UNDEFINED_UINT32) || (s_rf.read_length_max > overall_read_length_max))
-          overall_read_length_max = s_rf.read_length_max;
-        if ((overall_max_qual == UNDEFINED_UINT32) || (s_rf.max_quality_score > overall_max_qual))
-          overall_max_qual = s_rf.max_quality_score;
-        s.num_reads += s_rf.num_reads;
-        s.num_original_reads += s_rf.num_original_reads;
-        s.num_bases += s_rf.num_bases;
-        s.num_original_bases += s_rf.num_original_bases;        
+        if (rfs.is_paired()) {
+          const cReadFile& rf_r1 = rfs.m_files[0];
+          const cReadFile& rf_r2 = rfs.m_files[1];
 
-        s.reads[base_name] = s_rf;
+          string r1_fastq = settings.base_name_to_read_file_name(rf_r1.m_base_name);
+          string r2_fastq = settings.base_name_to_read_file_name(rf_r2.m_base_name);
+          string r1_conv = settings.file_name(settings.converted_fastq_file_name, "#", rf_r1.m_base_name);
+          string r2_conv = settings.file_name(settings.converted_fastq_file_name, "#", rf_r2.m_base_name);
+
+          pair<AnalyzeFastqSummary, AnalyzeFastqSummary> paired_result = normalize_fastq_paired(
+              r1_fastq, r1_conv,
+              r2_fastq, r2_conv,
+              flat_file_counter + 1,
+              flat_file_counter + 2,
+              settings.quality_score_trim,
+              !settings.skip_read_filtering,
+              s.num_bases,
+              read_file_base_limit,
+              settings.read_file_read_length_min,
+              settings.read_file_max_same_base_fraction,
+              settings.read_file_max_N_fraction,
+              settings.read_file_long_read_trigger_length,
+              settings.read_file_long_read_split_length,
+              settings.read_file_long_read_distribute_remainder,
+              settings.num_processors
+          );
+          AnalyzeFastqSummary& s_r1 = paired_result.first;
+          AnalyzeFastqSummary& s_r2 = paired_result.second;
+          settings.track_intermediate_file(settings.alignment_correction_done_file_name, r1_conv);
+          settings.track_intermediate_file(settings.alignment_correction_done_file_name, r2_conv);
+
+          for (const auto& s_rf : {s_r1, s_r2}) {
+            if ((overall_read_length_min == UNDEFINED_UINT32) || (s_rf.read_length_min < overall_read_length_min))
+              overall_read_length_min = s_rf.read_length_min;
+            if ((overall_read_length_max == UNDEFINED_UINT32) || (s_rf.read_length_max > overall_read_length_max))
+              overall_read_length_max = s_rf.read_length_max;
+            if ((overall_max_qual == UNDEFINED_UINT32) || (s_rf.max_quality_score > overall_max_qual))
+              overall_max_qual = s_rf.max_quality_score;
+            s.num_reads += s_rf.num_reads;
+            s.num_original_reads += s_rf.num_original_reads;
+            s.num_bases += s_rf.num_bases;
+            s.num_original_bases += s_rf.num_original_bases;
+          }
+          s.reads[rf_r1.m_base_name] = s_r1;
+          s.reads[rf_r2.m_base_name] = s_r2;
+
+          flat_file_counter += 2;
+
+        } else {
+          const cReadFile& rf = rfs.m_files[0];
+          string base_name = rf.m_base_name;
+
+          cerr << "  READ FILE::" << base_name << endl;
+
+          string fastq_file_name = settings.base_name_to_read_file_name(base_name);
+          string convert_file_name = settings.file_name(settings.converted_fastq_file_name, "#", base_name);
+
+          AnalyzeFastqSummary s_rf = normalize_fastq(fastq_file_name,
+                                                       convert_file_name,
+                                                       flat_file_counter + 1,
+                                                       settings.quality_score_trim,
+                                                       !settings.skip_read_filtering,
+                                                       s.num_bases,
+                                                       read_file_base_limit,
+                                                       settings.read_file_read_length_min,
+                                                       settings.read_file_max_same_base_fraction,
+                                                       settings.read_file_max_N_fraction,
+                                                       settings.read_file_long_read_trigger_length,
+                                                       settings.read_file_long_read_split_length,
+                                                       settings.read_file_long_read_distribute_remainder,
+                                                       settings.num_processors
+                                                       );
+          settings.track_intermediate_file(settings.alignment_correction_done_file_name, convert_file_name);
+
+          if ((overall_read_length_min == UNDEFINED_UINT32) || (s_rf.read_length_min < overall_read_length_min))
+            overall_read_length_min = s_rf.read_length_min;
+          if ((overall_read_length_max == UNDEFINED_UINT32) || (s_rf.read_length_max > overall_read_length_max))
+            overall_read_length_max = s_rf.read_length_max;
+          if ((overall_max_qual == UNDEFINED_UINT32) || (s_rf.max_quality_score > overall_max_qual))
+            overall_max_qual = s_rf.max_quality_score;
+          s.num_reads += s_rf.num_reads;
+          s.num_original_reads += s_rf.num_original_reads;
+          s.num_bases += s_rf.num_bases;
+          s.num_original_bases += s_rf.num_original_bases;
+
+          s.reads[base_name] = s_rf;
+          flat_file_counter++;
+        }
+
+        set_index++;
       }
       
       s.read_length_avg = static_cast<double>(s.num_bases) / static_cast<double>(s.num_reads);
@@ -1519,20 +1588,32 @@ int breseq_default_action(int argc, char* argv[])
       read_files_surviving_conversion[base_name] = (it->second.num_reads != 0);
 
       if (it->second.converted_fastq_name.size() > 0) {
-        settings.read_files.read_file_to_converted_fastq_file_name_map[base_name] = it->second.converted_fastq_name;
+        settings.read_file_sets.read_file_to_converted_fastq_file_name_map[base_name] = it->second.converted_fastq_name;
       }
     }
-    
-    // --> remove any read files that were not used due to coverage limits
-    for (cReadFiles::iterator it=settings.read_files.begin(); it != settings.read_files.end(); ) {
-      if (read_files_surviving_conversion.count(it->base_name())) {
-        it++;
-      } else {
-        settings.read_files.read_file_to_fastq_file_name_map.erase(it->file_name());
-        settings.read_files.read_file_to_converted_fastq_file_name_map.erase(it->file_name());
-        it = settings.read_files.erase(it);
+
+    // --> remove any read files that were not used due to coverage limits; rebuild sets
+    cReadFileSets surviving_sets;
+    surviving_sets.read_file_to_fastq_file_name_map = settings.read_file_sets.read_file_to_fastq_file_name_map;
+    surviving_sets.read_file_to_converted_fastq_file_name_map = settings.read_file_sets.read_file_to_converted_fastq_file_name_map;
+    for (auto& rfs : settings.read_file_sets) {
+      cReadFileSet new_rfs;
+      new_rfs.m_base_name = rfs.m_base_name;
+      for (auto& rf : rfs.m_files) {
+        if (read_files_surviving_conversion.count(rf.base_name())) {
+          new_rfs.m_files.push_back(rf);
+        } else {
+          surviving_sets.read_file_to_fastq_file_name_map.erase(rf.base_name());
+          surviving_sets.read_file_to_converted_fastq_file_name_map.erase(rf.base_name());
+        }
+      }
+      if (!new_rfs.m_files.empty()) {
+        if (new_rfs.m_files.size() == 1 && rfs.is_paired())
+          new_rfs.m_base_name = new_rfs.m_files[0].m_base_name;
+        surviving_sets.push_back(new_rfs);
       }
     }
+    settings.read_file_sets = surviving_sets;
   }
 
 	//
@@ -1558,78 +1639,180 @@ int breseq_default_action(int argc, char* argv[])
     SYSTEM(command);
     settings.track_intermediate_file(settings.reference_alignment_done_file_name, settings.reference_hash_file_name + "*");
 
-    ////// For each read_file
-    for (uint32_t i = 0; i < settings.read_files.size(); i++)
+    ////// For each read file set (paired or unpaired)
+    bool do_2_stage_alignment = settings.bowtie2_stage2.size() != 0;
+
+    for (const auto& rfs : settings.read_file_sets)
     {
-      ///////////////////////
-      // STAGE 1 ALIGNMENT //
-      ///////////////////////
-      
-      bool do_2_stage_alignment = settings.bowtie2_stage2.size() != 0;
-      
-      cReadFile read_file = settings.read_files[i];
-      string base_read_file_name = read_file.base_name();
-      string reference_sam_file_name = settings.file_name(settings.reference_sam_file_name, "#", base_read_file_name);
-      
-      { // local vars
+      if (rfs.is_paired()) {
 
-        string read_fastq_file = settings.base_name_to_read_file_name(base_read_file_name);
-        
-        //Paths
-        string stage1_reference_sam_file_name = settings.file_name(settings.stage1_reference_sam_file_name, "#", base_read_file_name);
-        string stage1_unmapped_reads_fastq_file_name = settings.file_name(settings.stage1_unmapped_reads_fastq_file_name, "#", base_read_file_name);
-        
-        //Split alignment into unmatched and matched files.
-        uint32_t bowtie2_seed_substring_size_stringent = trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.5);
-        // Check bounds
-        bowtie2_seed_substring_size_stringent = max<uint32_t>(9, bowtie2_seed_substring_size_stringent);
-        bowtie2_seed_substring_size_stringent = min<uint32_t>(32, bowtie2_seed_substring_size_stringent);
-        
-        string bowtie2_base = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_stringent) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage1 + " --reorder -x " + double_quote(reference_hash_file_name) + " -U " + double_quote(read_fastq_file);
-        string command;
-        if (do_2_stage_alignment) {
-          //TODO: Enable when bowtie2 updated
-          //command = bowtie2_base + " --un-gz " + double_quote(stage1_unmapped_reads_fastq_file_name) + " -S - | samtools view -bS -t " + double_quote(settings.reference_faidx_file_name) + " -o " + double_quote(stage1_reference_sam_file_name);
-          command = bowtie2_base + " --un " + double_quote(stage1_unmapped_reads_fastq_file_name) + " -S - | samtools view -bS -t " + double_quote(settings.reference_faidx_file_name) + " -o " + double_quote(stage1_reference_sam_file_name);
-        } else {
-          command = bowtie2_base + " -S - | samtools view -bS -t " + double_quote(settings.reference_faidx_file_name) + " -o " + double_quote(reference_sam_file_name);
-        }
-        SYSTEM(command, false, false, false);
-        
-        if (do_2_stage_alignment) {
-          settings.track_intermediate_file(settings.preprocess_junction_done_file_name, stage1_unmapped_reads_fastq_file_name);
-          settings.track_intermediate_file(settings.preprocess_junction_done_file_name, stage1_reference_sam_file_name);
-        }
-      }
-      
+        ///////////////////////////////////////////////////////
+        // STAGE 1 ALIGNMENT — PAIRED-END bowtie2            //
+        ///////////////////////////////////////////////////////
 
-      
-      ///////////////////////
-      // STAGE 2 ALIGNMENT //
-      ///////////////////////
-      
-      /// align reads to reference sequences
-      if (do_2_stage_alignment) {
-        
+        const cReadFile& r1_file = rfs.m_files[0];
+        const cReadFile& r2_file = rfs.m_files[1];
+        string r1_base_name = r1_file.base_name();
+        string r2_base_name = r2_file.base_name();
+
+        string r1_fastq = settings.base_name_to_read_file_name(r1_base_name);
+        string r2_fastq = settings.base_name_to_read_file_name(r2_base_name);
+
+        // Combined paired BAM (all reads, including unmapped) uses the set's collective base name.
+        // After stage1 alignment, filter_and_split_paired_bam applies a per-read AS threshold
+        // (matching --score-min L,0,0.8) to separate well-mapped reads (→ per-file stage1 BAMs)
+        // from poorly-mapped/unmapped reads (→ per-file stage2 FASTQ.gz for re-alignment).
+        string paired_stage1_bam = settings.reference_alignment_path + "/" + rfs.m_base_name + ".paired.stage1.bam";
+        string r1_stage2_fastq   = settings.reference_alignment_path + "/" + rfs.m_base_name + ".R1.stage2.fastq.gz";
+        string r2_stage2_fastq   = settings.reference_alignment_path + "/" + rfs.m_base_name + ".R2.stage2.fastq.gz";
+
+        // Per-file stage1 BAMs (produced by splitting the paired BAM)
+        string r1_stage1_bam = settings.file_name(settings.stage1_reference_sam_file_name, "#", r1_base_name);
+        string r2_stage1_bam = settings.file_name(settings.stage1_reference_sam_file_name, "#", r2_base_name);
+        // Per-file reference BAMs (single-stage mode: bowtie2 writes directly here)
+        string r1_reference_sam = settings.file_name(settings.reference_sam_file_name, "#", r1_base_name);
+        string r2_reference_sam = settings.file_name(settings.reference_sam_file_name, "#", r2_base_name);
+
+        // Seed size from R1 average read length
+        uint32_t bowtie2_seed_stringent = trunc(summary.sequence_conversion.reads[r1_base_name].read_length_avg * 0.5);
+        bowtie2_seed_stringent = max<uint32_t>(9, bowtie2_seed_stringent);
+        bowtie2_seed_stringent = min<uint32_t>(32, bowtie2_seed_stringent);
+
+        {
+          // No --no-unal: we need unmapped reads in the BAM so filter_and_split can route them
+          // to the stage2 FASTQ. The per-read AS filter (0.8 * read_length) is applied in C++.
+          // Use --bam (bowtie2 wrapper flag) so the wrapper enters passthru mode and converts
+          // SAM → BAM internally via "samtools view -b". Without --no-unal or --bam, the
+          // bowtie2 wrapper passes -S - raw to bowtie2-align-s, which creates a file named -.
+          string cmd = "bowtie2 -t -p " + s(settings.num_processors)
+                     + " -L " + to_string<uint32_t>(bowtie2_seed_stringent)
+                     + " " + settings.bowtie2_scoring
+                     + " " + settings.bowtie2_stage1
+                     + " --reorder"
+                     + " --dovetail --maxins " + to_string(settings.read_file_max_insert_size);
+          cmd += " -x " + double_quote(reference_hash_file_name)
+              +  " -1 " + double_quote(r1_fastq)
+              +  " -2 " + double_quote(r2_fastq)
+              +  " --bam -S " + double_quote(paired_stage1_bam);
+          SYSTEM(cmd, false, false, false);
+        }
+
+        // Filter stage1 BAM by per-read AS threshold and split into per-file BAMs + stage2 FASTQs.
+        // Reads that pass (AS >= 0.8 * read_length) → per-file stage1 BAMs.
+        // Reads that fail (unmapped or low AS) → per-file stage2 FASTQ.gz for re-alignment.
+        {
+          string r1_out_bam = do_2_stage_alignment ? r1_stage1_bam : r1_reference_sam;
+          string r2_out_bam = do_2_stage_alignment ? r2_stage1_bam : r2_reference_sam;
+          string r1_fq_out  = do_2_stage_alignment ? r1_stage2_fastq : "";
+          string r2_fq_out  = do_2_stage_alignment ? r2_stage2_fastq : "";
+          filter_and_split_paired_bam(paired_stage1_bam,
+                                      r1_file.m_id + 1, r1_out_bam, r1_fq_out,
+                                      r2_file.m_id + 1, r2_out_bam, r2_fq_out);
+        }
+        settings.track_intermediate_file(settings.preprocess_junction_done_file_name, paired_stage1_bam);
+
+        if (do_2_stage_alignment) {
+          settings.track_intermediate_file(settings.preprocess_junction_done_file_name, r1_stage1_bam);
+          settings.track_intermediate_file(settings.preprocess_junction_done_file_name, r2_stage1_bam);
+
+          ///////////////////////////////////////////////////////
+          // STAGE 2 ALIGNMENT — UNPAIRED, per R1 and R2       //
+          ///////////////////////////////////////////////////////
+
+          string r1_stage2_bam = settings.file_name(settings.stage2_reference_sam_file_name, "#", r1_base_name);
+          string r2_stage2_bam = settings.file_name(settings.stage2_reference_sam_file_name, "#", r2_base_name);
+
+          uint32_t r1_seed2 = trunc(summary.sequence_conversion.reads[r1_base_name].read_length_avg * 0.25);
+          r1_seed2 = max<uint32_t>(9, r1_seed2); r1_seed2 = min<uint32_t>(32, r1_seed2);
+
+          string r1_stage2_cmd = "bowtie2 -t --no-unal -p " + s(settings.num_processors)
+                               + " -L " + to_string<uint32_t>(r1_seed2)
+                               + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage2
+                               + " --reorder -x " + double_quote(reference_hash_file_name)
+                               + " -U " + double_quote(r1_stage2_fastq)
+                               + " -S - | samtools view -bS -t " + double_quote(settings.reference_faidx_file_name)
+                               + " -o " + double_quote(r1_stage2_bam);
+          SYSTEM(r1_stage2_cmd, false, false, false);
+
+          uint32_t r2_seed2 = trunc(summary.sequence_conversion.reads[r2_base_name].read_length_avg * 0.25);
+          r2_seed2 = max<uint32_t>(9, r2_seed2); r2_seed2 = min<uint32_t>(32, r2_seed2);
+
+          string r2_stage2_cmd = "bowtie2 -t --no-unal -p " + s(settings.num_processors)
+                               + " -L " + to_string<uint32_t>(r2_seed2)
+                               + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage2
+                               + " --reorder -x " + double_quote(reference_hash_file_name)
+                               + " -U " + double_quote(r2_stage2_fastq)
+                               + " -S - | samtools view -bS -t " + double_quote(settings.reference_faidx_file_name)
+                               + " -o " + double_quote(r2_stage2_bam);
+          SYSTEM(r2_stage2_cmd, false, false, false);
+
+          settings.track_intermediate_file(settings.preprocess_junction_done_file_name, r1_stage2_fastq);
+          settings.track_intermediate_file(settings.preprocess_junction_done_file_name, r2_stage2_fastq);
+          settings.track_intermediate_file(settings.preprocess_junction_done_file_name, r1_stage2_bam);
+          settings.track_intermediate_file(settings.preprocess_junction_done_file_name, r2_stage2_bam);
+        }
+
+      } else {
+
+        ///////////////////////////////////////////////////////
+        // STAGE 1 ALIGNMENT — UNPAIRED (unchanged)          //
+        ///////////////////////////////////////////////////////
+
+        cReadFile read_file = rfs.m_files[0];
+        string base_read_file_name = read_file.base_name();
+        string reference_sam_file_name = settings.file_name(settings.reference_sam_file_name, "#", base_read_file_name);
+
         { // local vars
-        
-          // If we are doing staged alignment -- only align the unmatched reads and save to different name initially
-          string read_fastq_file = settings.file_name(settings.stage1_unmapped_reads_fastq_file_name, "#", base_read_file_name);
-          string stage2_reference_sam_file_name = settings.file_name(settings.stage2_reference_sam_file_name, "#", base_read_file_name);
-          
-          uint32_t bowtie2_seed_substring_size_relaxed = trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.25);
-          // Check bounds
-          bowtie2_seed_substring_size_relaxed = max<uint32_t>(9, bowtie2_seed_substring_size_relaxed);
-          bowtie2_seed_substring_size_relaxed = min<uint32_t>(32, bowtie2_seed_substring_size_relaxed);
-        
-          string command = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_relaxed) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage2 + " --reorder -x " + double_quote(reference_hash_file_name) + " -U " + double_quote(read_fastq_file) + " -S - | samtools view -bS -t " + double_quote(settings.reference_faidx_file_name) + " -o " + double_quote(stage2_reference_sam_file_name);
-          SYSTEM(command, false, false, false);
-          
-          settings.track_intermediate_file(settings.preprocess_junction_done_file_name, stage2_reference_sam_file_name);
-        }
-      } // end do_stage_2_alignment
 
-    }
+          string read_fastq_file = settings.base_name_to_read_file_name(base_read_file_name);
+
+          string stage1_reference_sam_file_name = settings.file_name(settings.stage1_reference_sam_file_name, "#", base_read_file_name);
+          string stage1_unmapped_reads_fastq_file_name = settings.file_name(settings.stage1_unmapped_reads_fastq_file_name, "#", base_read_file_name);
+
+          uint32_t bowtie2_seed_substring_size_stringent = trunc(summary.sequence_conversion.reads[base_read_file_name].read_length_avg * 0.5);
+          bowtie2_seed_substring_size_stringent = max<uint32_t>(9, bowtie2_seed_substring_size_stringent);
+          bowtie2_seed_substring_size_stringent = min<uint32_t>(32, bowtie2_seed_substring_size_stringent);
+
+          string bowtie2_base = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_stringent) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage1 + " --reorder -x " + double_quote(reference_hash_file_name) + " -U " + double_quote(read_fastq_file);
+          string command;
+          if (do_2_stage_alignment) {
+            command = bowtie2_base + " --un " + double_quote(stage1_unmapped_reads_fastq_file_name) + " -S - | samtools view -bS -t " + double_quote(settings.reference_faidx_file_name) + " -o " + double_quote(stage1_reference_sam_file_name);
+          } else {
+            command = bowtie2_base + " -S - | samtools view -bS -t " + double_quote(settings.reference_faidx_file_name) + " -o " + double_quote(reference_sam_file_name);
+          }
+          SYSTEM(command, false, false, false);
+
+          if (do_2_stage_alignment) {
+            settings.track_intermediate_file(settings.preprocess_junction_done_file_name, stage1_unmapped_reads_fastq_file_name);
+            settings.track_intermediate_file(settings.preprocess_junction_done_file_name, stage1_reference_sam_file_name);
+          }
+        }
+
+        ///////////////////////////////////////////////////////
+        // STAGE 2 ALIGNMENT — UNPAIRED (unchanged)          //
+        ///////////////////////////////////////////////////////
+
+        if (do_2_stage_alignment) {
+
+          { // local vars
+
+            string read_fastq_file = settings.file_name(settings.stage1_unmapped_reads_fastq_file_name, "#", base_read_file_name);
+            string stage2_reference_sam_file_name = settings.file_name(settings.stage2_reference_sam_file_name, "#", base_read_file_name);
+
+            uint32_t bowtie2_seed_substring_size_relaxed = trunc(summary.sequence_conversion.reads[base_read_file_name].read_length_avg * 0.25);
+            bowtie2_seed_substring_size_relaxed = max<uint32_t>(9, bowtie2_seed_substring_size_relaxed);
+            bowtie2_seed_substring_size_relaxed = min<uint32_t>(32, bowtie2_seed_substring_size_relaxed);
+
+            string command = "bowtie2 -t --no-unal -p " + s(settings.num_processors) + " -L " + to_string<uint32_t>(bowtie2_seed_substring_size_relaxed) + " " + settings.bowtie2_scoring + " " + settings.bowtie2_stage2 + " --reorder -x " + double_quote(reference_hash_file_name) + " -U " + double_quote(read_fastq_file) + " -S - | samtools view -bS -t " + double_quote(settings.reference_faidx_file_name) + " -o " + double_quote(stage2_reference_sam_file_name);
+            SYSTEM(command, false, false, false);
+
+            settings.track_intermediate_file(settings.preprocess_junction_done_file_name, stage2_reference_sam_file_name);
+          }
+        } // end do_stage_2_alignment
+
+      } // end unpaired branch
+
+    } // end for each read file set
 
 		settings.done_step(settings.reference_alignment_done_file_name);
 	}
@@ -1755,9 +1938,10 @@ int breseq_default_action(int argc, char* argv[])
         settings.track_intermediate_file(settings.candidate_junction_alignment_done_file_name, candidate_junction_hash_file_name + "*");
 
         /// align reads to candidate junction sequences
-        for (uint32_t i = 0; i < settings.read_files.size(); i++)
+        vector<cReadFile> flat_junc_align_files = settings.read_file_sets.flat_files();
+        for (uint32_t i = 0; i < flat_junc_align_files.size(); i++)
         {
-          string base_read_file_name = settings.read_files[i].m_base_name;
+          string base_read_file_name = flat_junc_align_files[i].m_base_name;
           string candidate_junction_sam_file_name = settings.file_name(settings.candidate_junction_sam_file_name, "#", base_read_file_name);
 
           string read_fastq_file = settings.base_name_to_read_file_name(base_read_file_name);
@@ -1765,8 +1949,8 @@ int breseq_default_action(int argc, char* argv[])
           string filename = candidate_junction_hash_file_name + ".1.bt2";
           if (!file_exists(filename.c_str()))
             continue;
-      
-          uint32_t bowtie2_seed_substring_size_junction = trunc(summary.sequence_conversion.reads[settings.read_files[i].base_name()].read_length_avg * 0.25);
+
+          uint32_t bowtie2_seed_substring_size_junction = trunc(summary.sequence_conversion.reads[flat_junc_align_files[i].base_name()].read_length_avg * 0.25);
           // Check bounds
           bowtie2_seed_substring_size_junction = max<uint32_t>(9, bowtie2_seed_substring_size_junction);
           bowtie2_seed_substring_size_junction = min<uint32_t>(32, bowtie2_seed_substring_size_junction);
@@ -1803,7 +1987,7 @@ int breseq_default_action(int argc, char* argv[])
 			summary,
 			ref_seq_info,
       junction_prediction,
-			settings.read_files
+			settings.read_file_sets
 		);
 
 		summary.alignment_resolution.store(settings.alignment_resolution_summary_file_name);
@@ -1986,7 +2170,7 @@ int breseq_default_action(int argc, char* argv[])
 
       // deal with distribution or error count keys being undefined...
 
-      uint32_t num_read_files = settings.read_files.size();
+      uint32_t num_read_files = settings.read_file_sets.flat_files().size();
       uint32_t num_qual;
       if (!settings.aligned_sam_mode) {
         num_qual = summary.sequence_conversion.max_qual + 1; // only filled in when using FASTQ input
@@ -2000,7 +2184,7 @@ int breseq_default_action(int argc, char* argv[])
         reference_bam_file_name, // bam
         reference_fasta_file_name, // fasta
         settings.error_calibration_path, // output
-        settings.read_files.base_names(), // readfile
+        settings.read_file_sets.base_names(), // readfile
         true, // coverage
         true, // errors
         false, //preprocess
@@ -2125,8 +2309,8 @@ int breseq_default_action(int argc, char* argv[])
         }
         
       }
-      for (uint32_t i = 0; i<settings.read_files.size(); i++) {
-        string base_name = settings.read_files[i].base_name();
+      for (const auto& rf : settings.read_file_sets.flat_files()) {
+        string base_name = rf.base_name();
         string error_rates_base_qual_error_prob_file_name = settings.file_name(settings.error_rates_base_qual_error_prob_file_name, "#", base_name);
         string error_rates_plot_file_name = settings.file_name(settings.error_rates_plot_file_name, "#", base_name);
         plot_error_rates(error_rates_base_qual_error_prob_file_name, error_rates_plot_file_name);
@@ -2275,9 +2459,10 @@ int breseq_default_action(int argc, char* argv[])
       mpgd.metadata.ref_seqs = settings.all_reference_file_names;
       
       //#=READSEQ header lines.
-      mpgd.metadata.read_seqs.resize(settings.read_files.size());
-      for (size_t i = 0; i < settings.read_files.size(); i++) {
-        mpgd.metadata.read_seqs[i] = settings.read_files[i].file_name();
+      vector<cReadFile> flat_gd_files = settings.read_file_sets.flat_files();
+      mpgd.metadata.read_seqs.resize(flat_gd_files.size());
+      for (size_t i = 0; i < flat_gd_files.size(); i++) {
+        mpgd.metadata.read_seqs[i] = flat_gd_files[i].file_name();
       }
       
       // These fields will be overwritten by any header GenomeDiff provided

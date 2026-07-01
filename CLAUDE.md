@@ -55,7 +55,7 @@ make test-long
 # Run a single test (or 'all' for every test) directly, without Snakemake
 ./tests/run.sh lambda_mixed_pop
 
-# Clean test outputs
+# Clean test outputs (always run this between testing cycles to clear stale results)
 make clean-tests
 
 # Rebuild expected output after intentional changes (re-runs the test; 'all' rebuilds everything)

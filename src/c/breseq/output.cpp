@@ -867,32 +867,46 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << start_table("border=\"0\" cellspace=\"1\" cellpadding=\"5\"") << endl;
   HTML << start_tr() << th() << th("read file") << th("reads") <<
                     th("bases") <<  th("passed&nbsp;filters") << th("average") << th("longest") << th("mapped") << "</tr>" << endl;
-  for(cReadFiles::const_iterator it=settings.read_files.begin(); it!=settings.read_files.end(); it++)
+  for (const auto& rfs : settings.read_file_sets)
   {
-    const AnalyzeFastqSummary& s = summary.sequence_conversion.reads[it->m_base_name];
-    const ReadFileSummary& rf = summary.alignment_resolution.read_file[it->m_base_name];
-    HTML << start_tr();
-    {
-      string err_plot = settings.file_name(settings.error_rates_plot_file_name, "#", it->m_base_name);
-      string err_basename = cString(err_plot).get_base_name();
-      string err_href = settings.zip_html
-        ? settings.local_html_evidence_file_name + "#" + err_basename
-        : Settings::relative_path(err_plot, settings.output_path);
-      HTML << td( a(err_href, "errors") );
+    if (rfs.is_paired()) {
+      // Group header row identifying the paired set
+      HTML << start_tr("class=\"highlight_table_row\"");
+      HTML << td();
+      HTML << td(b("[paired] " + rfs.m_base_name));
+      HTML << td() << td() << td() << td() << td() << td();
+      HTML << end_tr();
     }
-    show_read_split_legend = show_read_split_legend || s.reads_were_split;
-    HTML << td(it->m_base_name + (s.reads_were_split ? "<sup>&Dagger;</sup>" : "") );
-    
-    double read_length_avg = static_cast<double>(s.num_bases) / static_cast<double>(s.num_reads);
-    HTML << td(ALIGN_RIGHT, commify(to_string(s.num_reads)));
-    HTML << td(ALIGN_RIGHT, commify(to_string(s.num_bases)));
-    double percent_pass_filters = 100 * (static_cast<double>(s.num_bases) / static_cast<double>(s.num_original_bases));
-    HTML << td(ALIGN_RIGHT, to_string(percent_pass_filters, 1) + "%");
-    HTML << td(ALIGN_RIGHT, to_string(read_length_avg, 1) + "&nbsp;bases");
-    HTML << td(ALIGN_RIGHT, to_string((s.read_length_max> 0) ? s.read_length_max : std::numeric_limits<double>::quiet_NaN(), 0) + "&nbsp;bases");
-    double percent_mapped = 100 * (1.0 - static_cast<double>(rf.num_unmapped_reads) / static_cast<double>(rf.num_total_reads));
-    HTML << td(ALIGN_RIGHT, to_string(percent_mapped, 1) + "%");
-    HTML << end_tr();
+
+    for (size_t fi = 0; fi < rfs.m_files.size(); fi++) {
+      const cReadFile& rf_file = rfs.m_files[fi];
+      const string& base_name = rf_file.m_base_name;
+      const AnalyzeFastqSummary& s = summary.sequence_conversion.reads[base_name];
+      const ReadFileSummary& rf = summary.alignment_resolution.read_file[base_name];
+      HTML << start_tr();
+      {
+        string err_plot = settings.file_name(settings.error_rates_plot_file_name, "#", base_name);
+        string err_basename = cString(err_plot).get_base_name();
+        string err_href = settings.zip_html
+          ? settings.local_html_evidence_file_name + "#" + err_basename
+          : Settings::relative_path(err_plot, settings.output_path);
+        HTML << td( a(err_href, "errors") );
+      }
+      show_read_split_legend = show_read_split_legend || s.reads_were_split;
+      string name_label = rfs.is_paired() ? (fi == 0 ? "R1:&nbsp;" : "R2:&nbsp;") : "";
+      HTML << td(name_label + base_name + (s.reads_were_split ? "<sup>&Dagger;</sup>" : ""));
+
+      double read_length_avg = static_cast<double>(s.num_bases) / static_cast<double>(s.num_reads);
+      HTML << td(ALIGN_RIGHT, commify(to_string(s.num_reads)));
+      HTML << td(ALIGN_RIGHT, commify(to_string(s.num_bases)));
+      double percent_pass_filters = 100 * (static_cast<double>(s.num_bases) / static_cast<double>(s.num_original_bases));
+      HTML << td(ALIGN_RIGHT, to_string(percent_pass_filters, 1) + "%");
+      HTML << td(ALIGN_RIGHT, to_string(read_length_avg, 1) + "&nbsp;bases");
+      HTML << td(ALIGN_RIGHT, to_string((s.read_length_max > 0) ? s.read_length_max : std::numeric_limits<double>::quiet_NaN(), 0) + "&nbsp;bases");
+      double percent_mapped = 100 * (1.0 - static_cast<double>(rf.num_unmapped_reads) / static_cast<double>(rf.num_total_reads));
+      HTML << td(ALIGN_RIGHT, to_string(percent_mapped, 1) + "%");
+      HTML << end_tr();
+    }
   }
   
   HTML << start_tr("class=\"highlight_table_row\"");
