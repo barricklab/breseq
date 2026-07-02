@@ -35,11 +35,11 @@ EXTRA_DIST = \
 	tests/lambda_mult_ref_read/testcmd.sh \
 	tests/data/lambda/empty.fastq \
 	tests/data/lambda/only_bad.fastq \
-	tests/data/lambda/lambda_mixed_population.1.fastq \
-	tests/data/lambda/lambda_mixed_population.2.fastq \
-	tests/data/lambda/lambda_mixed_population.3.fastq \
-	tests/data/lambda/lambda_mixed_population.4.fastq \
-	tests/data/lambda/lambda_mixed_population.5.fastq \
+	tests/data/lambda/lambda_mixed_population.A.fastq.gz \
+	tests/data/lambda/lambda_mixed_population.B.fastq.gz \
+	tests/data/lambda/lambda_mixed_population.3.fastq.gz \
+	tests/data/lambda/lambda_mixed_population.4.fastq.gz \
+	tests/data/lambda/lambda_mixed_population.5.fastq.gz \
 	tests/data/lambda/lambda.1-2.gbk \
 	tests/data/lambda/lambda.3.gbk \
 	tests/data/lambda/lambda.4.gbk \
@@ -58,9 +58,29 @@ DOCBUILDDIR=$(abs_top_builddir)/src/doc/_build
 ## in their testcmd.sh (see tests/common.sh and tests/Snakefile).
 TEST_CORES ?= $(or $(shell ps -p $$PPID -o args= 2>/dev/null | grep -oE -- '(-j *[0-9]+|--jobs=[0-9]+)' | grep -oE '[0-9]+' | head -1),all)
 
+## Writes the TESTBINPREFIX/BRESEQ_DATA_PATH exports that tests/common.sh
+## sources, at the destination path passed as $(1). Shared by all-local,
+## test, test-long, and dist-hook so there's a single place to edit.
+## NOTE: kept as a single printf (not multiple echo lines) because GNU
+## Make treats embedded newlines from macro expansion as separate recipe
+## lines / shell invocations, which breaks callers that embed this inside
+## a larger shell construct (e.g. all-local's 'if ... fi' guard below).
+define write_test_config
+	printf 'export TESTBINPREFIX=$(top_srcdir)/src/c/breseq\nexport BRESEQ_DATA_PATH=$(top_srcdir)/src/c/share/breseq\n' > $(1);
+endef
+
 ## Main hooks called after normal make steps
 
+## Regenerates tests/test.config after a plain 'make'/'make all' so that
+## running a single test directly (./tests/run.sh, build.sh, rebuild.sh)
+## doesn't require having run 'make test' first. Guarded by a writability
+## check because this also runs during 'make distcheck', which builds from
+## a read-only copy of the source tree -- distcheck never invokes
+## 'test'/'test-long', so skipping generation there is harmless.
 all-local :
+	@if [ -w "$(top_srcdir)/tests" ]; then \
+		$(call write_test_config,$(top_srcdir)/tests/test.config) \
+	fi
 
 
 install-exec-local :
@@ -94,8 +114,7 @@ dist-hook:
 	rm -rf ./src/c/breseq/gdtools.dSYM
 
 	## Set up run_tests.sh and environmental variables
-	echo "export TESTBINPREFIX=$(top_srcdir)/src/c/breseq" > $(distdir)/tests/test.config;
-	echo "export BRESEQ_DATA_PATH=$(top_srcdir)/src/c/breseq" >> $(distdir)/tests/test.config;
+	$(call write_test_config,$(distdir)/tests/test.config)
 
 	echo "tests/test.sh clean tests" > ${distdir}/run_tests.sh
 	echo "tests/test.sh test tests" >> ${distdir}/run_tests.sh
@@ -118,8 +137,7 @@ test:
 	## '#=COMMAND' line in each test's output .gd file, and expected.gd files
 	## were generated this way. The Snakefile runs tests from this directory
 	## (it does not change the working directory), so the paths still resolve.
-	echo "export TESTBINPREFIX=$(top_srcdir)/src/c/breseq" > $(top_srcdir)/tests/test.config;
-	echo "export BRESEQ_DATA_PATH=$(top_srcdir)/src/c/breseq" >> $(top_srcdir)/tests/test.config;
+	$(call write_test_config,$(top_srcdir)/tests/test.config)
 	START=$$(date '+%s'); \
 	snakemake -s $(top_srcdir)/tests/Snakefile --cores $(TEST_CORES) --keep-going; \
 	SNAKEMAKE_STATUS=$$?; \
@@ -132,8 +150,7 @@ test-long:
 	## NEW method: 'make test' after 'make'
 	## This must be located here so that it is run after EXTRA_DIST files are included
 	## NOTE: see comment in the 'test' target above about why these paths are relative.
-	echo "export TESTBINPREFIX=$(top_srcdir)/src/c/breseq" > $(top_srcdir)/tests/test.config;
-	echo "export BRESEQ_DATA_PATH=$(top_srcdir)/src/c/breseq" >> $(top_srcdir)/tests/test.config;
+	$(call write_test_config,$(top_srcdir)/tests/test.config)
 	START=$$(date '+%s'); \
 	snakemake -s $(top_srcdir)/tests/Snakefile --cores $(TEST_CORES) --keep-going --config long=1; \
 	SNAKEMAKE_STATUS=$$?; \
@@ -144,8 +161,6 @@ test-long:
 
 
 clean-tests:
-	##This is commented out to not break make distcheck, which requires we not modify the source in this way?
-	##echo "export TESTBINPREFIX=$(top_srcdir)/src/c/breseq" > $(top_srcdir)/tests/test.config;
 	$(top_srcdir)/tests/test.sh clean tests long
 	rm -rf $(top_srcdir)/tests/.snakemake
 

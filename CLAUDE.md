@@ -65,11 +65,13 @@ make clean-tests
 ./tests/build.sh lambda_mixed_pop
 ```
 
-`make test`/`make test-long` write `tests/test.config` (sets `TESTBINPREFIX`, `BRESEQ_DATA_PATH`)
-and then run all discovered tests **in parallel** via Snakemake (`tests/Snakefile`), bounded by a
-total core budget. The shared test infra (the `do_build`/`do_check`/`do_clean`/... conventions
-that every `testcmd.sh` dispatches into) lives in `tests/common.sh`; `Snakefile` only discovers
-and launches `testcmd.sh test` for each test, it doesn't change those conventions.
+A plain `make`/`make all` writes `tests/test.config` (sets `TESTBINPREFIX`, `BRESEQ_DATA_PATH`) as
+part of `all-local`, so running a single test directly (`./tests/run.sh`, `build.sh`, `rebuild.sh`)
+never requires a prior `make test`. `make test`/`make test-long` also (re)write it before running
+all discovered tests **in parallel** via Snakemake (`tests/Snakefile`), bounded by a total core
+budget. The shared test infra (the `do_build`/`do_check`/`do_clean`/... conventions that every
+`testcmd.sh` dispatches into) lives in `tests/common.sh`; `Snakefile` only discovers and launches
+`testcmd.sh test` for each test, it doesn't change those conventions.
 
 - **Core budget**: control the total number of cores used across all parallel tests with
   `make -j8 test` (auto-detected) or `make test TEST_CORES=16` (explicit override; default: all
@@ -174,7 +176,8 @@ breseq writes to `-o <output_dir>` (default: current directory):
   1. When running inside a git worktree, use the shared conda env at `../../../env` (i.e., `breseq/env` in the main repo) via `conda run -p ../../../env <command>`. If that env is absent, fall back to creating one locally as described in `DEVELOPER`.
   2. When explicitly told to, you may merge changes back to the `master` branch in the main repo.
 - **Run `make test` as part of the development cycle** — run the full test suite before considering a feature or fix complete.
-- **Run tests and rebuild scripts from the worktree root** — `./tests/run.sh`, `./tests/rebuild.sh`, and `make test` must be invoked from the top of the worktree (not from a subdirectory). A worktree needs its own `tests/test.config` (set `TESTBINPREFIX` and `BRESEQ_DATA_PATH` to `<worktree>/src/c/breseq`); if it is missing, `make test` creates it automatically, but if you need it before running `make test` you can write it by hand or copy from the main repo.
+- **Run tests and rebuild scripts from the worktree root** — `./tests/run.sh`, `./tests/rebuild.sh`, and `make test` must be invoked from the top of the worktree (not from a subdirectory). A worktree needs its own `tests/test.config` (set `TESTBINPREFIX` and `BRESEQ_DATA_PATH` to `<worktree>/src/c/breseq`); a plain `make` now generates it automatically as part of `all-local`, so it's normally already there by the time you run a test directly.
+- **A freshly built `breseq`/`gdtools` runs standalone with no env vars needed** — the runtime data files (`breseq_icon.png`, `jszip.min.js`, etc.) live in `src/c/share/breseq/`, a sibling of `src/c/breseq/` where the binaries are built, matching the relative `bin/`↔`share/<pkg>/` layout autotools already computes between `--bindir`/`--datadir`. `BRESEQ_DATA_PATH` is only needed to override this (e.g. a relocated/custom install).
 
 ## Distribution
 

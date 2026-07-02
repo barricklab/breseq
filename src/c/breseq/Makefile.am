@@ -111,19 +111,24 @@ breseq_LDADD   = ./libbreseq.la $(HTSLIB_LINK) $(MINIZ_LINK) $(LIBZ_LINK) $(CRAM
 gdtools_SOURCES = gdtools_cmdline.cpp
 gdtools_LDADD   = ./libbreseq.la $(HTSLIB_LINK) $(MINIZ_LINK) $(LIBZ_LINK) $(CRAM_CODEC_LIBS)
 
-EXTRA_DIST = breseq.png \
-	breseq_icon.png \
-	list.min.js \
-	jszip.min.js
+## These live in ../share/breseq/ (a sibling of this directory) so that
+## Settings::set_global_paths()'s DATADIR-relative fallback -- which assumes
+## a bin/ and share/breseq/ laid out side by side, matching the offset
+## between --bindir and --datadir -- finds them automatically for an
+## uninstalled in-tree build, not just an installed one.
+EXTRA_DIST = ../share/breseq/breseq.png \
+	../share/breseq/breseq_icon.png \
+	../share/breseq/list.min.js \
+	../share/breseq/jszip.min.js
 
 install-data-local :
 
 	##copy our data files
 	mkdir -p $(BRESEQDATADIR)
-	cp $(srcdir)/breseq.png $(BRESEQDATADIR)
-	cp $(srcdir)/breseq_icon.png $(BRESEQDATADIR)
-	cp $(srcdir)/list.min.js $(BRESEQDATADIR)
-	cp $(srcdir)/jszip.min.js $(BRESEQDATADIR)
+	cp $(srcdir)/../share/breseq/breseq.png $(BRESEQDATADIR)
+	cp $(srcdir)/../share/breseq/breseq_icon.png $(BRESEQDATADIR)
+	cp $(srcdir)/../share/breseq/list.min.js $(BRESEQDATADIR)
+	cp $(srcdir)/../share/breseq/jszip.min.js $(BRESEQDATADIR)
 
 uninstall-local :
 
