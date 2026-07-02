@@ -313,6 +313,7 @@ void to_json(json& j, const PairedMappingDistanceDistributionSummary& s)
     {"median", s.median},
     {"mad", s.mad},
     {"distance_cutoff", s.distance_cutoff},
+    {"majority_orientation", s.majority_orientation},
   };
 }
 
@@ -321,6 +322,7 @@ void from_json(const json& j, PairedMappingDistanceDistributionSummary& s)
   s.median = j.at("median").get<double>();
   s.mad = j.at("mad").get<double>();
   s.distance_cutoff = j.at("distance_cutoff").get<double>();
+  s.majority_orientation = j.at("majority_orientation").get<string>();
 }
 
 void to_json(json& j, const PairedMappingDistanceDistributionSummaries& s)

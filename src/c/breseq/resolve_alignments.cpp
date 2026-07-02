@@ -693,10 +693,276 @@ void resolve_alignments(
 
 }
     
+// Per-mate result of resolving one read's alignments against the reference and (optionally)
+// candidate junctions -- lifted out of the old single-file loop body so it can be called once
+// per mate when processing a paired read file set in lockstep.
+struct MateResolution
+{
+  bool mapped_anywhere = false;
+  alignment_list this_reference_alignments;
+  alignment_list this_junction_alignments;
+  uint32_t best_reference_score = 0;
+  uint32_t best_junction_score = 0;
+  int32_t mapping_quality_difference = 0; // best_junction_score - best_reference_score
+};
+
+static MateResolution resolve_one_mate(
+                                       const Settings& settings,
+                                       cReferenceSequences& ref_seq_info,
+                                       cReferenceSequences& junction_ref_seq_info,
+                                       const vector<ResolveJunctionInfo>& junction_info_list,
+                                       bool junction_prediction,
+                                       cFastqSequence& seq,
+                                       alignment_list& reference_alignments, // peek buffer, mutated
+                                       alignment_list& junction_alignments,  // peek buffer, mutated
+                                       bam_file& reference_tam,
+                                       bam_file* junction_tam,
+                                       ReadFileSummary& read_file_summary_info,
+                                       cFastqFile* unmapped_fastq
+                                       )
+{
+  MateResolution m;
+
+  read_file_summary_info.num_total_reads++;
+  read_file_summary_info.num_total_bases += seq.length();
+
+  // Does this read have eligible reference sequence matches?
+  if ((reference_alignments.size() > 0) && (seq.m_name == reference_alignments.front()->read_name()))
+  {
+    m.this_reference_alignments = reference_alignments;
+    reference_tam.read_alignments(reference_alignments, false);
+    m.best_reference_score = eligible_read_alignments(settings, ref_seq_info, m.this_reference_alignments);
+  }
+
+  // Does this read have eligible candidate junction matches?
+  if (junction_prediction && (junction_alignments.size() > 0) && (seq.m_name == junction_alignments.front()->read_name()))
+  {
+    m.this_junction_alignments = junction_alignments;
+    junction_tam->read_alignments(junction_alignments, false);
+
+    ///
+    // Matches to candidate junctions MUST overlap the junction.
+    //
+    // Reduce this list to those that overlap ANY PART of the junction.
+    // Alignments that extend only into the overlap region, are only additional
+    //  evidence for predicted junctions and NOT support for a new junction on
+    // their own. (They will also match the original reference genome equally well).
+    // ... but this last point only if overlap >=0 for the junction
+    ///
+
+    for (alignment_list::iterator it = m.this_junction_alignments.begin(); it != m.this_junction_alignments.end(); )
+    {
+      if (!alignment_overlaps_junction(junction_info_list, it->get()))
+        it = m.this_junction_alignments.erase(it);
+      else
+        it++;
+    }
+
+    m.best_junction_score = eligible_read_alignments(settings, junction_ref_seq_info, m.this_junction_alignments, settings.junction_allow_suboptimal_matches, m.best_reference_score);
+  }
+
+  // Nothing to be done if there were no eligible matches to either
+  // Record in the unmatched FASTQ data file
+  if ((m.this_junction_alignments.size() == 0) && (m.this_reference_alignments.size() == 0))
+  {
+    read_file_summary_info.num_unmapped_reads++;
+    read_file_summary_info.num_unmapped_read_bases += seq.length();
+
+    if (unmapped_fastq) {
+      unmapped_fastq->write_sequence(seq);
+    }
+    m.mapped_anywhere = false;
+  }
+  else
+  {
+    m.mapped_anywhere = true;
+  }
+
+  // if < 0, then the best match is to the reference
+  m.mapping_quality_difference = static_cast<int32_t>(m.best_junction_score) - static_cast<int32_t>(m.best_reference_score);
+
+  return m;
+}
+
+// Dispatches one mate's already-resolved alignments exactly as the original single-file loop
+// did: best match to reference is written immediately; best match to a candidate junction is
+// deferred into the unique/repeat junction match maps for later adjudication. No-op if the mate
+// had no alignments anywhere.
+static void dispatch_mate_result(
+                                 const Settings& settings,
+                                 Summary& summary,
+                                 cReferenceSequences& ref_seq_info,
+                                 const SequenceTrimsList& trims_list,
+                                 bam_file& resolved_reference_tam,
+                                 bam_file* junction_tam,
+                                 uint32_t fastq_file_index,
+                                 const string& read_name,
+                                 MateResolution& m,
+                                 map<string,uint32_t>& all_junction_ids,
+                                 UniqueJunctionMatchMap& unique_junction_match_map,
+                                 RepeatJunctionMatchMap& repeat_junction_match_map
+                                 )
+{
+  if (!m.mapped_anywhere) return;
+
+  // best match is to the reference, record in that SAM file.
+  if (m.mapping_quality_difference <= 0)
+  {
+    _write_reference_matches(settings, summary, ref_seq_info, trims_list, m.this_reference_alignments, resolved_reference_tam, fastq_file_index);
+  }
+  else
+  {
+    JunctionMatchPtr junction_match_ptr(
+                                        new JunctionMatch(
+                                                          m.this_reference_alignments,   // reference sequence alignments
+                                                          m.this_junction_alignments,    // the BEST candidate junction alignments
+                                                          fastq_file_index,              // index of the fastq file this read came from
+                                                          m.mapping_quality_difference,  // difference between reference junction alignments (in # mismatches)
+                                                          0                              //
+                                                          )
+                                        );
+
+    ////
+    // Just one best hit to candidate junctions, that is better than every match to the reference
+    ////
+    if ((m.this_junction_alignments.size() == 1) && (m.mapping_quality_difference > 0))
+    {
+      bam_alignment& a = *(m.this_junction_alignments.front().get());
+      string junction_id = junction_tam->bam_header->target_name[a.reference_target_id()];
+      unique_junction_match_map[junction_id].push_back( junction_match_ptr );
+      all_junction_ids[junction_id]++;
+    }
+    ////
+    // Multiple equivalent matches to junctions and reference, ones with most hits later will win these repeat matches
+    // If mapping_quality_difference > 0, then they will count for scoring
+    ////
+    else
+    {
+      junction_match_ptr->degenerate_count = m.this_junction_alignments.size(); // mark as degenerate
+      for(alignment_list::iterator it=m.this_junction_alignments.begin(); it!=m.this_junction_alignments.end(); it++)
+      {
+        bam_alignment& a = *(it->get());
+        string junction_id = junction_tam->bam_header->target_name[a.reference_target_id()];
+        repeat_junction_match_map[junction_id][read_name] = junction_match_ptr;
+        all_junction_ids[junction_id]++;
+      }
+    }
+  }
+}
+
+// Result of classifying a read pair's reference alignments against the expected majority
+// orientation/distance cutoff -- generalizes best_pair_orientation_and_distance
+// (candidate_junctions.cpp) to track ALL same-tid combinations (not just the smallest-distance
+// one), so multi-mapped mates can be downselected to just the alignments that participate in at
+// least one concordant combination with the other mate.
+struct ConcordancePairing
+{
+  bool any_same_tid_combo_exists = false;
+  bool any_concordant_combo_exists = false;
+  bam_alignment* best_a = NULL;  // smallest-distance same-tid combo's mate-1 alignment
+  bam_alignment* best_b = NULL;  // ...and mate-2 alignment
+  string best_orientation;
+  int64_t best_distance = -1;
+  set<bam_alignment*> keep_mate1; // alignments participating in >=1 concordant combo
+  set<bam_alignment*> keep_mate2;
+};
+
+static ConcordancePairing classify_pair(
+                                        alignment_list& mate1_alignments,
+                                        alignment_list& mate2_alignments,
+                                        const string& majority_orientation,
+                                        double distance_cutoff
+                                        )
+{
+  ConcordancePairing result;
+  int64_t best_dist_seen = -1;
+
+  for (alignment_list::iterator ita = mate1_alignments.begin(); ita != mate1_alignments.end(); ita++)
+  {
+    bam_alignment* pa = ita->get();
+    for (alignment_list::iterator itb = mate2_alignments.begin(); itb != mate2_alignments.end(); itb++)
+    {
+      bam_alignment* pb = itb->get();
+      if (pa->reference_target_id() != pb->reference_target_id()) continue;
+
+      result.any_same_tid_combo_exists = true;
+
+      uint32_t a_start = pa->reference_start_1();
+      uint32_t a_end = pa->reference_end_1();
+      uint32_t b_start = pb->reference_start_1();
+      uint32_t b_end = pb->reference_end_1();
+
+      bool a_is_lower = (a_start <= b_start);
+      bam_alignment* lower_alignment = a_is_lower ? pa : pb;
+      bam_alignment* higher_alignment = a_is_lower ? pb : pa;
+
+      string orientation;
+      orientation += lower_alignment->reversed() ? 'R' : 'F';
+      orientation += higher_alignment->reversed() ? 'R' : 'F';
+      if (orientation == "RR") orientation = "FF";
+
+      int64_t distance = static_cast<int64_t>(max(a_end, b_end)) - static_cast<int64_t>(min(a_start, b_start));
+
+      if ((best_dist_seen < 0) || (distance < best_dist_seen))
+      {
+        best_dist_seen = distance;
+        result.best_a = pa;
+        result.best_b = pb;
+        result.best_orientation = orientation;
+        result.best_distance = distance;
+      }
+
+      if ((orientation == majority_orientation) && (distance <= distance_cutoff))
+      {
+        result.any_concordant_combo_exists = true;
+        result.keep_mate1.insert(pa);
+        result.keep_mate2.insert(pb);
+      }
+    }
+  }
+
+  return result;
+}
+
+// Erases every alignment from the list whose pointer isn't in keep -- same erase-in-list-loop
+// idiom as eligible_read_alignments (candidate_junctions.cpp).
+static void downselect_to_kept(alignment_list& alignments, const set<bam_alignment*>& keep)
+{
+  for (alignment_list::iterator it = alignments.begin(); it != alignments.end(); )
+  {
+    if (keep.count(it->get()) == 0)
+      it = alignments.erase(it);
+    else
+      it++;
+  }
+}
+
+// Strand-aware 5' anchor position of an alignment: reference_start_1() if forward,
+// reference_end_1() if reversed (reference_stranded_bounds_1 already computes exactly this).
+static uint32_t stranded_anchor_position(bam_alignment* a)
+{
+  uint32_t start, end;
+  a->reference_stranded_bounds_1(start, end);
+  return start;
+}
+
+static void write_discordant_pair_row(
+                                      ofstream& out,
+                                      const string& read_number,
+                                      const string& orientation,
+                                      const string& seq_id,
+                                      const string& start_1,
+                                      const string& start_2,
+                                      int64_t distance
+                                      )
+{
+  out << read_number << "," << orientation << "," << seq_id << "," << start_1 << "," << start_2 << "," << distance << endl;
+}
+
 void load_junction_alignments(
-                              const Settings& settings, 
-                              Summary& summary, 
-                              cReadFileSets& read_files, 
+                              const Settings& settings,
+                              Summary& summary,
+                              cReadFileSets& read_files,
                               cReferenceSequences& ref_seq_info,
                               cReferenceSequences& junction_ref_seq_info,
                               SequenceTrimsList& trims_list,
@@ -710,231 +976,413 @@ void load_junction_alignments(
 {
   bool verbose = false;
   uint32_t reads_processed = 0;
-  
-  bam_file* reference_tam = NULL;
-  bam_file* junction_tam = NULL;
-  
+
   cFastqFile * unmapped_fastq = NULL;
   if (settings.output_unmapped_reads) {
     string unmapped_read_file_name = settings.unmapped_reads_fastq_file_name;
     unmapped_fastq = new cFastqFile(unmapped_read_file_name, ios::out);
   }
-  
-  vector<cReadFile> flat_junction_read_files = read_files.flat_files();
-  for (uint32_t fastq_file_index = 0; fastq_file_index < flat_junction_read_files.size(); fastq_file_index++)
+
+  cFastqQualityConverter fqc("SANGER", "SANGER");
+  uint32_t fastq_file_index = 0;
+
+  for (cReadFileSets::iterator rfs_it = read_files.begin(); rfs_it != read_files.end(); rfs_it++)
   {
-    const cReadFile& rf = flat_junction_read_files[fastq_file_index];
-    string fastq_file_name = read_files.base_name_to_read_file_name(rf.m_base_name);
+    const cReadFileSet& rfs = *rfs_it;
+
+    if (!rfs.is_paired())
+    {
+      ///
+      //  UNPAIRED: the exact original single-file logic, now scoped to one read file set.
+      ///
+      bam_file* reference_tam = NULL;
+      bam_file* junction_tam = NULL;
+
+      const cReadFile& rf = rfs.m_files[0];
+      string fastq_file_name = read_files.base_name_to_read_file_name(rf.m_base_name);
+
+      end_progress_line();
+      cerr << "  READ FILE:" << rf.m_base_name << endl;
+
+      ReadFileSummary read_file_summary_info;
+
+      // Traverse the original fastq files to keep track of order
+      // b/c some matches may exist in only one or the other file
+
+      cFastqFile in_fastq(fastq_file_name, ios::in);
+
+      string reference_sam_file_name = settings.file_name(settings.reference_sam_file_name, "#", rf.m_base_name);
+      string reference_fasta = settings.reference_fasta_file_name;
+
+      reference_tam = new bam_file(reference_sam_file_name, settings.reference_fasta_file_name, ios::in);
+
+      if (junction_prediction)
+      {
+        string junction_sam_file_name = settings.file_name(settings.candidate_junction_sam_file_name, "#", rf.m_base_name);
+        junction_tam = new bam_file(junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::in);
+      }
+
+      alignment_list junction_alignments;
+
+      //proceed through all of the alignments
+      if (junction_prediction)
+        junction_tam->read_alignments(junction_alignments, false);
+
+      alignment_list reference_alignments;
+      reference_tam->read_alignments(reference_alignments, false);
+
+      ///
+      //  Test each read for its matches to the reference and candidate junctions
+      ///
+
+      cFastqSequence seq;
+      while (in_fastq.read_sequence(seq, fqc)) // READ
+      {
+        if ((settings.resolve_alignment_read_limit) && (reads_processed >= settings.resolve_alignment_read_limit))
+          break; // to next file
+
+        reads_processed++;
+        read_file_summary_info.num_total_reads++;
+        read_file_summary_info.num_total_bases+=seq.length();
+
+        if (reads_processed % 10000 == 0) {
+          ostringstream progress_message;
+          progress_message << "    READS:" << setw(12) << right << reads_processed;
+          print_progress_line(progress_message.str());
+        }
+
+        if (verbose)
+          cerr << "===> Read: " << seq.m_name << endl;
+
+        uint32_t best_junction_score = 0;
+        uint32_t best_reference_score = 0;
+
+        // Does this read have eligible reference sequence matches?
+        alignment_list this_reference_alignments;
+        if ((reference_alignments.size() > 0) && (seq.m_name == reference_alignments.front()->read_name()))
+        {
+          this_reference_alignments = reference_alignments;
+          reference_tam->read_alignments(reference_alignments, false);
+
+          if (verbose) {
+            cerr << " Before Overlap Reference alignments = " << this_reference_alignments.size() << endl;
+          }
+          best_reference_score = eligible_read_alignments(settings, ref_seq_info, this_reference_alignments);
+        }
+
+        // Does this read have eligible candidate junction matches?
+        alignment_list this_junction_alignments;
+
+        if ((junction_alignments.size() > 0) && (seq.m_name == junction_alignments.front()->read_name()))
+        {
+
+          this_junction_alignments = junction_alignments;
+          junction_tam->read_alignments(junction_alignments, false);
+
+          if (verbose) {
+            cerr << " Before Overlap Junction alignments = " << this_junction_alignments.size() << endl;
+          }
+
+          ///
+          // Matches to candidate junctions MUST overlap the junction.
+          //
+          // Reduce this list to those that overlap ANY PART of the junction.
+          // Alignments that extend only into the overlap region, are only additional
+          //  evidence for predicted junctions and NOT support for a new junction on
+          // their own. (They will also match the original reference genome equally well).
+          // ... but this last point only if overlap >=0 for the junction
+          ///
+
+          for (alignment_list::iterator it = this_junction_alignments.begin(); it != this_junction_alignments.end(); )
+          {
+            if (!alignment_overlaps_junction(junction_info_list, it->get()))
+              it = this_junction_alignments.erase(it);
+            else
+              it++;
+          }
+
+          best_junction_score = eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments, settings.junction_allow_suboptimal_matches, best_reference_score);
+        }
+
+        // Nothing to be done if there were no eligible matches to either
+        // Record in the unmatched FASTQ data file
+        if ((this_junction_alignments.size() == 0) && (this_reference_alignments.size() == 0))
+        {
+          read_file_summary_info.num_unmapped_reads++;
+          read_file_summary_info.num_unmapped_read_bases+=seq.length();
+
+          if (unmapped_fastq) {
+            unmapped_fastq->write_sequence(seq);
+          }
+        }
+
+        ///
+        // Determine if the read has a better match to a candidate junction
+        // or to the reference sequence.
+        ///
+
+        /// There are three possible kinds of reads at this point
+        //
+        // 1: Read has a best match to the reference genome
+        // --> Write this match and we are done
+        // 2: Read has a best match (or multiple best matches) to junctions
+        // --> Keep an item that describes these matches
+        // 3: Read has an equivalent match to the reference genome
+        //      and goes into the overlap part of a junction condidate
+        // --> Keep an item that is not used during scoring
+        ///
+
+        // if < 0, then the best match is to the reference
+        int32_t mapping_quality_difference = best_junction_score - best_reference_score;
+
+        if (verbose)
+        {
+          cerr << " Best junction score: " << best_junction_score << endl;
+          cerr << " Best reference score: " << best_reference_score << endl;
+          cerr << " Mapping quality difference: " << mapping_quality_difference << endl;
+          cerr << " Final Reference alignments = " << this_reference_alignments.size() << endl;
+          cerr << " Final Candidate junction alignments = " << this_junction_alignments.size() << endl;
+        }
+
+        if ((this_junction_alignments.size() == 0) && (this_reference_alignments.size() == 0))
+          continue;
+
+        ///
+        // The best match we found to the reference was no better than the best to the
+        // candidate junction. This read potentially supports the candidate junction.
+        //
+        // ONLY allow EQUAL matches through if they match the overlap only, otherwise
+        // you can get predictions of new junctions with all reads supporting them
+        // actually mapping perfectly to the reference.
+        ///
+
+        // best match is to the reference, record in that SAM file.
+        if (mapping_quality_difference <= 0)
+        {
+          if (verbose)
+            cout << "Best alignment to reference. MQD: " << mapping_quality_difference << endl;
+
+          _write_reference_matches(settings, summary, ref_seq_info, trims_list, this_reference_alignments, resolved_reference_tam, fastq_file_index);
+        }
+        else
+        {
+          if (verbose)
+            cout << "Best alignment is to candidate junction. MQD: " << mapping_quality_difference << endl;
+
+          JunctionMatchPtr junction_match_ptr(
+                                              new JunctionMatch(
+                                                                this_reference_alignments,    // reference sequence alignments
+                                                                this_junction_alignments,     // the BEST candidate junction alignments
+                                                                fastq_file_index,             // index of the fastq file this read came from
+                                                                mapping_quality_difference,   // difference between reference junction alignments (in # mismatches)
+                                                                0                             //
+                                                                )
+                                              );
+
+          ////
+          // Just one best hit to candidate junctions, that is better than every match to the reference
+          ////
+          if ((this_junction_alignments.size() == 1) && (mapping_quality_difference > 0))
+          {
+            bam_alignment& a = *(this_junction_alignments.front().get());
+            string junction_id = junction_tam->bam_header->target_name[a.reference_target_id()];
+            unique_junction_match_map[junction_id].push_back( junction_match_ptr );
+            all_junction_ids[junction_id]++;
+          }
+          ////
+          // Multiple equivalent matches to junctions and reference, ones with most hits later will win these repeat matches
+          // If mapping_quality_difference > 0, then they will count for scoring
+          ////
+          else
+          {
+            if (verbose)
+              cout << "this_junction_alignments: " << this_junction_alignments.size() << endl;
+
+            junction_match_ptr->degenerate_count = this_junction_alignments.size(); // mark as degenerate
+            for(alignment_list::iterator it=this_junction_alignments.begin(); it!=this_junction_alignments.end(); it++)
+            {
+              bam_alignment& a = *(it->get());
+              string junction_id = junction_tam->bam_header->target_name[a.reference_target_id()];
+              repeat_junction_match_map[junction_id][seq.m_name] = junction_match_ptr;
+              all_junction_ids[junction_id]++;
+            }
+          }
+        } // READ
+      } // End loop through every $read_struct
+
+      {
+        ostringstream progress_message;
+        progress_message << "    READS:" << setw(12) << right << reads_processed;
+        print_progress_line(progress_message.str());
+      }
+      end_progress_line();
+
+      // save statistics
+      summary.alignment_resolution.read_file[rf.m_base_name] = read_file_summary_info;
+      summary.alignment_resolution.total_unmapped_reads += read_file_summary_info.num_unmapped_reads;
+      summary.alignment_resolution.total_unmapped_read_bases += read_file_summary_info.num_unmapped_read_bases;
+
+      summary.alignment_resolution.total_reads += read_file_summary_info.num_total_reads;
+      summary.alignment_resolution.total_bases += read_file_summary_info.num_total_bases;
+
+      if (junction_tam != NULL) delete junction_tam;
+      if (reference_tam != NULL) delete reference_tam;
+
+      fastq_file_index++;
+      continue;
+    }
+
+    ///
+    //  PAIRED: stream both mates in lockstep so we can classify each read pair's orientation
+    //  and distance against this read file set's majority orientation/distance cutoff.
+    ///
+
+    const cReadFile& rf1 = rfs.m_files[0];
+    const cReadFile& rf2 = rfs.m_files[1];
+    uint32_t fastq_file_index_1 = fastq_file_index;
+    uint32_t fastq_file_index_2 = fastq_file_index + 1;
+    fastq_file_index += 2;
 
     end_progress_line();
-    cerr << "  READ FILE:" << rf.m_base_name << endl;
-    
-    ReadFileSummary read_file_summary_info;
-    
-    // Traverse the original fastq files to keep track of order
-    // b/c some matches may exist in only one or the other file
-    
-    cFastqFile in_fastq(fastq_file_name, ios::in);
-    
-    string reference_sam_file_name = settings.file_name(settings.reference_sam_file_name, "#", rf.m_base_name);
-    string reference_fasta = settings.reference_fasta_file_name;
-    
-    reference_tam = new bam_file(reference_sam_file_name, settings.reference_fasta_file_name, ios::in); 
-    
+    cerr << "  READ FILE SET:" << rfs.m_base_name << endl;
+
+    ReadFileSummary read_file_summary_info_1;
+    ReadFileSummary read_file_summary_info_2;
+
+    string fastq_file_name_1 = read_files.base_name_to_read_file_name(rf1.m_base_name);
+    string fastq_file_name_2 = read_files.base_name_to_read_file_name(rf2.m_base_name);
+
+    cFastqFile in_fastq_1(fastq_file_name_1, ios::in);
+    cFastqFile in_fastq_2(fastq_file_name_2, ios::in);
+
+    string reference_sam_file_name_1 = settings.file_name(settings.reference_sam_file_name, "#", rf1.m_base_name);
+    string reference_sam_file_name_2 = settings.file_name(settings.reference_sam_file_name, "#", rf2.m_base_name);
+
+    bam_file* reference_tam_1 = new bam_file(reference_sam_file_name_1, settings.reference_fasta_file_name, ios::in);
+    bam_file* reference_tam_2 = new bam_file(reference_sam_file_name_2, settings.reference_fasta_file_name, ios::in);
+
+    bam_file* junction_tam_1 = NULL;
+    bam_file* junction_tam_2 = NULL;
     if (junction_prediction)
     {
-      string junction_sam_file_name = settings.file_name(settings.candidate_junction_sam_file_name, "#", rf.m_base_name);
-      junction_tam = new bam_file(junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::in); 
+      string junction_sam_file_name_1 = settings.file_name(settings.candidate_junction_sam_file_name, "#", rf1.m_base_name);
+      string junction_sam_file_name_2 = settings.file_name(settings.candidate_junction_sam_file_name, "#", rf2.m_base_name);
+      junction_tam_1 = new bam_file(junction_sam_file_name_1, settings.candidate_junction_fasta_file_name, ios::in);
+      junction_tam_2 = new bam_file(junction_sam_file_name_2, settings.candidate_junction_fasta_file_name, ios::in);
     }
-    
-    alignment_list junction_alignments;
-    
-    //proceed through all of the alignments
+
+    alignment_list junction_alignments_1, junction_alignments_2;
     if (junction_prediction)
-      junction_tam->read_alignments(junction_alignments, false);
-    
-    alignment_list reference_alignments;
-    reference_tam->read_alignments(reference_alignments, false);
-    
-    ///
-    //  Test each read for its matches to the reference and candidate junctions
-    ///
-    
-    cFastqSequence seq;
-    cFastqQualityConverter fqc("SANGER", "SANGER");
-    while (in_fastq.read_sequence(seq, fqc)) // READ
     {
+      junction_tam_1->read_alignments(junction_alignments_1, false);
+      junction_tam_2->read_alignments(junction_alignments_2, false);
+    }
+
+    alignment_list reference_alignments_1, reference_alignments_2;
+    reference_tam_1->read_alignments(reference_alignments_1, false);
+    reference_tam_2->read_alignments(reference_alignments_2, false);
+
+    // Majority orientation / distance cutoff computed earlier in the pipeline (candidate-junction
+    // preprocessing) for this read file set.
+    const string majority_orientation = summary.paired_mapping_distance_distribution[rfs.m_base_name].majority_orientation;
+    const double distance_cutoff = summary.paired_mapping_distance_distribution[rfs.m_base_name].distance_cutoff;
+
+    string discordant_pairs_file_name = Settings::file_name(settings.discordant_pairs_file_name, "#", rfs.m_base_name);
+    ofstream discordant_csv_out(discordant_pairs_file_name.c_str());
+    ASSERT(discordant_csv_out.is_open(), "Could not write to file: " + discordant_pairs_file_name);
+    discordant_csv_out << "read_number,orientation,seq_id,start_1,start_2,distance" << endl;
+
+    cFastqSequence seq1, seq2;
+    while (in_fastq_1.read_sequence(seq1, fqc) && in_fastq_2.read_sequence(seq2, fqc)) // READ PAIR
+    {
+      // Checked once per PAIR (not per mate) so a limit hit can't truncate one mate but not
+      // the other.
       if ((settings.resolve_alignment_read_limit) && (reads_processed >= settings.resolve_alignment_read_limit))
-        break; // to next file
-      
-      reads_processed++;
-      read_file_summary_info.num_total_reads++;
-      read_file_summary_info.num_total_bases+=seq.length();
-      
+        break; // to next read file set
+
+      reads_processed += 2;
+
       if (reads_processed % 10000 == 0) {
         ostringstream progress_message;
         progress_message << "    READS:" << setw(12) << right << reads_processed;
         print_progress_line(progress_message.str());
       }
-      
-      if (verbose)
-        cerr << "===> Read: " << seq.m_name << endl;
-      
-      uint32_t best_junction_score = 0;
-      uint32_t best_reference_score = 0;
-      
-      // Does this read have eligible reference sequence matches?
-      alignment_list this_reference_alignments;
-      if ((reference_alignments.size() > 0) && (seq.m_name == reference_alignments.front()->read_name()))
-      {
-        this_reference_alignments = reference_alignments;
-        reference_tam->read_alignments(reference_alignments, false);
 
-        if (verbose) {
-          cerr << " Before Overlap Reference alignments = " << this_reference_alignments.size() << endl;
-        }
-        best_reference_score = eligible_read_alignments(settings, ref_seq_info, this_reference_alignments);
-      }
-      
-      // Does this read have eligible candidate junction matches?
-      alignment_list this_junction_alignments;
-      
-      if ((junction_alignments.size() > 0) && (seq.m_name == junction_alignments.front()->read_name()))
+      MateResolution m1 = resolve_one_mate(settings, ref_seq_info, junction_ref_seq_info, junction_info_list, junction_prediction,
+                                            seq1, reference_alignments_1, junction_alignments_1,
+                                            *reference_tam_1, junction_tam_1, read_file_summary_info_1, unmapped_fastq);
+      MateResolution m2 = resolve_one_mate(settings, ref_seq_info, junction_ref_seq_info, junction_info_list, junction_prediction,
+                                            seq2, reference_alignments_2, junction_alignments_2,
+                                            *reference_tam_2, junction_tam_2, read_file_summary_info_2, unmapped_fastq);
+
+      bool both_reference_best = m1.mapped_anywhere && m2.mapped_anywhere
+                                 && (m1.mapping_quality_difference <= 0)
+                                 && (m2.mapping_quality_difference <= 0);
+
+      if (both_reference_best)
       {
-        
-        this_junction_alignments = junction_alignments;
-        junction_tam->read_alignments(junction_alignments, false);
-        
-        if (verbose) {
-          cerr << " Before Overlap Junction alignments = " << this_junction_alignments.size() << endl;
-        }
-        
-        ///
-        // Matches to candidate junctions MUST overlap the junction.
-        //
-        // Reduce this list to those that overlap ANY PART of the junction.
-        // Alignments that extend only into the overlap region, are only additional
-        //  evidence for predicted junctions and NOT support for a new junction on
-        // their own. (They will also match the original reference genome equally well).
-        // ... but this last point only if overlap >=0 for the junction
-        ///
-        
-        for (alignment_list::iterator it = this_junction_alignments.begin(); it != this_junction_alignments.end(); )
+        ConcordancePairing pairing = classify_pair(m1.this_reference_alignments, m2.this_reference_alignments,
+                                                    majority_orientation, distance_cutoff);
+
+        if (pairing.any_concordant_combo_exists)
         {
-          if (!alignment_overlaps_junction(junction_info_list, it->get()))
-            it = this_junction_alignments.erase(it);
-          else
-            it++; 
+          // Concordant: downselect each mate's alignments to just the ones participating in a
+          // concordant combination (a no-op if the mate was already unique/already concordant).
+          downselect_to_kept(m1.this_reference_alignments, pairing.keep_mate1);
+          downselect_to_kept(m2.this_reference_alignments, pairing.keep_mate2);
         }
-        
-        best_junction_score = eligible_read_alignments(settings, junction_ref_seq_info, this_junction_alignments, settings.junction_allow_suboptimal_matches, best_reference_score);
-      }
-      
-      // Nothing to be done if there were no eligible matches to either
-      // Record in the unmatched FASTQ data file
-      if ((this_junction_alignments.size() == 0) && (this_reference_alignments.size() == 0))
-      {
-        read_file_summary_info.num_unmapped_reads++;
-        read_file_summary_info.num_unmapped_read_bases+=seq.length();
-        
-        if (unmapped_fastq) {
-          unmapped_fastq->write_sequence(seq);
+        else if (pairing.any_same_tid_combo_exists)
+        {
+          // Discordant: closest same-tid combination still fails the orientation/cutoff test.
+          // Both mates are still written to resolved_reference_sam_file_name below (with their
+          // original, non-downselected alignment lists) -- only the CSV logging differs here.
+          string seq_id = reference_tam_1->bam_header->target_name[pairing.best_a->reference_target_id()];
+          write_discordant_pair_row(discordant_csv_out, seq1.m_name, pairing.best_orientation, seq_id,
+                                     to_string(stranded_anchor_position(pairing.best_a)),
+                                     to_string(stranded_anchor_position(pairing.best_b)),
+                                     pairing.best_distance);
         }
-      }
-      
-      ///
-      // Determine if the read has a better match to a candidate junction
-      // or to the reference sequence.
-      ///
-      
-      /// There are three possible kinds of reads at this point
-      //
-      // 1: Read has a best match to the reference genome
-      // --> Write this match and we are done
-      // 2: Read has a best match (or multiple best matches) to junctions
-      // --> Keep an item that describes these matches
-      // 3: Read has an equivalent match to the reference genome
-      //      and goes into the overlap part of a junction condidate
-      // --> Keep an item that is not used during scoring
-      ///
-      
-      // if < 0, then the best match is to the reference
-      int32_t mapping_quality_difference = best_junction_score - best_reference_score;
-      
-      if (verbose)
-      {
-        cerr << " Best junction score: " << best_junction_score << endl;
-        cerr << " Best reference score: " << best_reference_score << endl;
-        cerr << " Mapping quality difference: " << mapping_quality_difference << endl;
-        cerr << " Final Reference alignments = " << this_reference_alignments.size() << endl;
-        cerr << " Final Candidate junction alignments = " << this_junction_alignments.size() << endl;
-      }
-      
-      if ((this_junction_alignments.size() == 0) && (this_reference_alignments.size() == 0))
-        continue;
-      
-      ///
-      // The best match we found to the reference was no better than the best to the
-      // candidate junction. This read potentially supports the candidate junction.
-      //
-      // ONLY allow EQUAL matches through if they match the overlap only, otherwise
-      // you can get predictions of new junctions with all reads supporting them
-      // actually mapping perfectly to the reference.
-      ///
-      
-      // best match is to the reference, record in that SAM file.
-      if (mapping_quality_difference <= 0)
-      {
-        if (verbose)
-          cout << "Best alignment to reference. MQD: " << mapping_quality_difference << endl;
-        
-        _write_reference_matches(settings, summary, ref_seq_info, trims_list, this_reference_alignments, resolved_reference_tam, fastq_file_index);
+        else
+        {
+          // Discordant: mates map to different reference sequences entirely -- no orientation
+          // or distance is meaningful, use each mate's own primary alignment for diagnostics.
+          // Both mates are still written to resolved_reference_sam_file_name below.
+          bam_alignment* a1 = m1.this_reference_alignments.front().get();
+          bam_alignment* a2 = m2.this_reference_alignments.front().get();
+          string seq_id = reference_tam_1->bam_header->target_name[a1->reference_target_id()];
+          write_discordant_pair_row(discordant_csv_out, seq1.m_name, "NA", seq_id,
+                                     to_string(stranded_anchor_position(a1)),
+                                     to_string(stranded_anchor_position(a2)),
+                                     -1);
+        }
+
+        _write_reference_matches(settings, summary, ref_seq_info, trims_list, m1.this_reference_alignments, resolved_reference_tam, fastq_file_index_1);
+        _write_reference_matches(settings, summary, ref_seq_info, trims_list, m2.this_reference_alignments, resolved_reference_tam, fastq_file_index_2);
       }
       else
       {
-        if (verbose)
-          cout << "Best alignment is to candidate junction. MQD: " << mapping_quality_difference << endl;
-        
-        JunctionMatchPtr junction_match_ptr( 
-                                            new JunctionMatch(
-                                                              this_reference_alignments,    // reference sequence alignments
-                                                              this_junction_alignments,     // the BEST candidate junction alignments
-                                                              fastq_file_index,             // index of the fastq file this read came from
-                                                              mapping_quality_difference,   // difference between reference junction alignments (in # mismatches)
-                                                              0                             //
-                                                              )
-                                            );
-        
-        ////
-        // Just one best hit to candidate junctions, that is better than every match to the reference
-        ////
-        if ((this_junction_alignments.size() == 1) && (mapping_quality_difference > 0))
+        // Either mate is junction-best, or one/both mates are fully unmapped -- these fall
+        // through to the existing, unmodified per-mate handling. A singleton mapping (one mate
+        // reference-best, the other fully unmapped) is still logged as discordant for
+        // visibility, but the mapped mate's alignment is still written normally.
+        bool m1_singleton_reference = m1.mapped_anywhere && (m1.mapping_quality_difference <= 0) && !m2.mapped_anywhere;
+        bool m2_singleton_reference = m2.mapped_anywhere && (m2.mapping_quality_difference <= 0) && !m1.mapped_anywhere;
+
+        if (m1_singleton_reference || m2_singleton_reference)
         {
-          bam_alignment& a = *(this_junction_alignments.front().get());
-          string junction_id = junction_tam->bam_header->target_name[a.reference_target_id()];
-          unique_junction_match_map[junction_id].push_back( junction_match_ptr );
-          all_junction_ids[junction_id]++;
+          bam_alignment* mapped_alignment = m1_singleton_reference
+            ? m1.this_reference_alignments.front().get()
+            : m2.this_reference_alignments.front().get();
+          string seq_id = reference_tam_1->bam_header->target_name[mapped_alignment->reference_target_id()];
+          string start_1 = m1_singleton_reference ? to_string(stranded_anchor_position(mapped_alignment)) : "";
+          string start_2 = m2_singleton_reference ? to_string(stranded_anchor_position(mapped_alignment)) : "";
+          write_discordant_pair_row(discordant_csv_out, seq1.m_name, "NA", seq_id, start_1, start_2, -1);
         }
-        ////
-        // Multiple equivalent matches to junctions and reference, ones with most hits later will win these repeat matches
-        // If mapping_quality_difference > 0, then they will count for scoring
-        ////
-        else
-        {
-          if (verbose)
-            cout << "this_junction_alignments: " << this_junction_alignments.size() << endl;
-          
-          junction_match_ptr->degenerate_count = this_junction_alignments.size(); // mark as degenerate
-          for(alignment_list::iterator it=this_junction_alignments.begin(); it!=this_junction_alignments.end(); it++)
-          {
-            bam_alignment& a = *(it->get());
-            string junction_id = junction_tam->bam_header->target_name[a.reference_target_id()];
-            repeat_junction_match_map[junction_id][seq.m_name] = junction_match_ptr;
-            all_junction_ids[junction_id]++;
-          }
-        }
-      } // READ
-    } // End loop through every $read_struct
+
+        dispatch_mate_result(settings, summary, ref_seq_info, trims_list, resolved_reference_tam, junction_tam_1, fastq_file_index_1, seq1.m_name, m1, all_junction_ids, unique_junction_match_map, repeat_junction_match_map);
+        dispatch_mate_result(settings, summary, ref_seq_info, trims_list, resolved_reference_tam, junction_tam_2, fastq_file_index_2, seq2.m_name, m2, all_junction_ids, unique_junction_match_map, repeat_junction_match_map);
+      }
+    } // End loop through every read pair
 
     {
       ostringstream progress_message;
@@ -944,20 +1392,25 @@ void load_junction_alignments(
     end_progress_line();
 
     // save statistics
-    summary.alignment_resolution.read_file[flat_junction_read_files[fastq_file_index].m_base_name] = read_file_summary_info;
-    summary.alignment_resolution.total_unmapped_reads += read_file_summary_info.num_unmapped_reads;
-    summary.alignment_resolution.total_unmapped_read_bases += read_file_summary_info.num_unmapped_read_bases;
-    
-    summary.alignment_resolution.total_reads += read_file_summary_info.num_total_reads;
-    summary.alignment_resolution.total_bases += read_file_summary_info.num_total_bases;
+    summary.alignment_resolution.read_file[rf1.m_base_name] = read_file_summary_info_1;
+    summary.alignment_resolution.read_file[rf2.m_base_name] = read_file_summary_info_2;
 
-    
-    // safe only because we know they are always or never used
-    if (unmapped_fastq != NULL) delete unmapped_fastq;
-    if (junction_tam != NULL) delete junction_tam;
-    if (reference_tam != NULL) delete reference_tam;
-    
-  } // End of Read File loop
+    summary.alignment_resolution.total_unmapped_reads += read_file_summary_info_1.num_unmapped_reads + read_file_summary_info_2.num_unmapped_reads;
+    summary.alignment_resolution.total_unmapped_read_bases += read_file_summary_info_1.num_unmapped_read_bases + read_file_summary_info_2.num_unmapped_read_bases;
+
+    summary.alignment_resolution.total_reads += read_file_summary_info_1.num_total_reads + read_file_summary_info_2.num_total_reads;
+    summary.alignment_resolution.total_bases += read_file_summary_info_1.num_total_bases + read_file_summary_info_2.num_total_bases;
+
+    discordant_csv_out.close();
+
+    if (junction_tam_1 != NULL) delete junction_tam_1;
+    if (junction_tam_2 != NULL) delete junction_tam_2;
+    delete reference_tam_1;
+    delete reference_tam_2;
+
+  } // End of Read File Set loop
+
+  if (unmapped_fastq != NULL) delete unmapped_fastq;
 }
   
   
@@ -975,14 +1428,21 @@ void load_sam_only_alignments(
   summary.alignment_resolution.max_sam_base_quality_score = 0;
 
   bam_file* reference_tam = NULL;
-  
+
   // One gzipped unmatched read file produced
   cFastqFile * out_unmapped_fastq = NULL;
   if (settings.output_unmapped_reads) {
     string unmapped_read_file_name = settings.unmapped_reads_fastq_file_name;
     out_unmapped_fastq = new cFastqFile(unmapped_read_file_name, ios::out);
   }
-  
+
+  for (cReadFileSets::iterator rfs_it = read_files.begin(); rfs_it != read_files.end(); rfs_it++) {
+    if (rfs_it->is_paired()) {
+      cerr << "  NOTE: Pairing-aware alignment resolution (discordant-pair detection and downselection)" << endl;
+      cerr << "        is not applied in --aligned-sam mode. Read file set: " << rfs_it->m_base_name << endl;
+    }
+  }
+
   vector<cReadFile> flat_sam_read_files = read_files.flat_files();
   for (uint32_t sam_file_index = 0; sam_file_index < flat_sam_read_files.size(); sam_file_index++)
   {

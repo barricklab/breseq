@@ -1240,6 +1240,7 @@ namespace breseq
 		this->reference_faidx_file_name = this->data_path + "/reference.fasta.fai";
 		this->reference_gff3_file_name = this->data_path + "/reference.gff3";
 		this->paired_mapping_distance_distribution_file_name = this->data_path + "/#.pair_stats.csv";
+		this->discordant_pairs_file_name = this->data_path + "/#.discordant_pairs.csv";
 		this->unmapped_reads_fastq_file_name = this->data_path + "/unmapped_reads.fastq.gz";
     this->data_vcf_file_name = this->data_path + "/output.vcf";
     this->data_genome_diff_file_name = this->data_path + "/output.gd";

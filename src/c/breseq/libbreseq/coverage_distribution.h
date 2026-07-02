@@ -93,7 +93,8 @@ namespace breseq {
   {
     double median = 0;
     double mad = 0;             // median absolute deviation
-    double distance_cutoff = 0; // median + 3.5*mad/0.6745
+    double distance_cutoff = 0; // median + z*mad/0.6745
+    string majority_orientation; // most common of FF/FR/RF by total observation count
   };
 
   class PairedMappingDistanceDistribution

@@ -673,6 +673,7 @@ PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fi
       majority_orientation = it->first;
     }
   }
+  result.majority_orientation = majority_orientation;
 
   // Build a dense distance->count histogram from only the majority-orientation rows.
   int64_t max_distance = 0;
@@ -793,6 +794,7 @@ void PairedMappingDistanceDistribution::fit_paired_mapping_distance_distribution
   summary.paired_mapping_distance_distribution[read_file_set.m_base_name].median = fit_result.median;
   summary.paired_mapping_distance_distribution[read_file_set.m_base_name].mad = fit_result.mad;
   summary.paired_mapping_distance_distribution[read_file_set.m_base_name].distance_cutoff = fit_result.distance_cutoff;
+  summary.paired_mapping_distance_distribution[read_file_set.m_base_name].majority_orientation = fit_result.majority_orientation;
 }
 
 void PairedMappingDistanceDistribution::fit_paired_mapping_distance_distributions(

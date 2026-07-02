@@ -309,12 +309,14 @@ namespace breseq{
   public:
     double median;
     double mad;              // median absolute deviation
-    double distance_cutoff;  // median + 3.5*mad/0.6745 (Iglewicz & Hoaglin modified z-score rule)
+    double distance_cutoff;  // median + z*mad/0.6745 (Iglewicz & Hoaglin modified z-score rule)
+    string majority_orientation; // most common of FF/FR/RF by total observation count
 
     PairedMappingDistanceDistributionSummary()
     : median(0.0)
     , mad(0.0)
     , distance_cutoff(0.0)
+    , majority_orientation("")
     {}
   };
 
