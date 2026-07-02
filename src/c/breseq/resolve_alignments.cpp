@@ -867,6 +867,58 @@ struct ConcordancePairing
   set<bam_alignment*> keep_mate2;
 };
 
+// Coordinate-order orientation (F/R per mate, RR folded to FF) + outer-span distance for a
+// specific pair of alignments -- shared by classify_pair's combination search and by the final
+// BAM pair-info marking step (which must recompute fresh from the actual surviving alignments,
+// not reuse classify_pair's "best" combo -- see mark_pair_info call site for why).
+struct OrientationDistance { string orientation; int64_t distance; };
+
+static OrientationDistance compute_orientation_and_distance(bam_alignment* a, bam_alignment* b)
+{
+  uint32_t a_start = a->reference_start_1();
+  uint32_t a_end = a->reference_end_1();
+  uint32_t b_start = b->reference_start_1();
+  uint32_t b_end = b->reference_end_1();
+
+  bool a_is_lower = (a_start <= b_start);
+  bam_alignment* lower_alignment = a_is_lower ? a : b;
+  bam_alignment* higher_alignment = a_is_lower ? b : a;
+
+  string orientation;
+  orientation += lower_alignment->reversed() ? 'R' : 'F';
+  orientation += higher_alignment->reversed() ? 'R' : 'F';
+  if (orientation == "RR") orientation = "FF";
+
+  int64_t distance = static_cast<int64_t>(max(a_end, b_end)) - static_cast<int64_t>(min(a_start, b_start));
+
+  return OrientationDistance{orientation, distance};
+}
+
+// Sets standard BAM pairing fields (BAM_FPAIRED, RNEXT/PNEXT/TLEN via mtid/mpos/isize,
+// BAM_FMREVERSE) on both mates of an unambiguously-resolved pair, plus BAM_FPROPER_PAIR when
+// breseq called the pair concordant (readable back later via that flag -- no separate custom
+// concordance tag needed) and an XO:Z: orientation tag (no standard-field equivalent).
+static void mark_pair_info(bam_alignment* a1, bam_alignment* a2, bool same_tid,
+                            const string& orientation, int64_t distance, bool is_concordant)
+{
+  bam_alignment* mates[2] = {a1, a2};
+  for (int i = 0; i < 2; i++)
+  {
+    bam_alignment* self = mates[i];
+    bam_alignment* mate = mates[1 - i];
+    bool self_is_leftmost = self->reference_start_1() <= mate->reference_start_1();
+
+    self->core.flag |= BAM_FPAIRED;
+    if (is_concordant) self->core.flag |= BAM_FPROPER_PAIR;
+    if (mate->reversed()) self->core.flag |= BAM_FMREVERSE;
+    self->core.mtid = mate->reference_target_id();
+    self->core.mpos = mate->core.pos; // 0-based, matches core.mpos convention
+    self->core.isize = same_tid ? (self_is_leftmost ? distance : -distance) : 0; // 0: undefined across references
+
+    self->aux_set("XP", 'Z', orientation.size() + 1, (void*)orientation.c_str()); // 'Z' length includes null terminator; XO is already used by bowtie2 (gap opens)
+  }
+}
+
 static ConcordancePairing classify_pair(
                                         alignment_list& mate1_alignments,
                                         alignment_list& mate2_alignments,
@@ -887,21 +939,9 @@ static ConcordancePairing classify_pair(
 
       result.any_same_tid_combo_exists = true;
 
-      uint32_t a_start = pa->reference_start_1();
-      uint32_t a_end = pa->reference_end_1();
-      uint32_t b_start = pb->reference_start_1();
-      uint32_t b_end = pb->reference_end_1();
-
-      bool a_is_lower = (a_start <= b_start);
-      bam_alignment* lower_alignment = a_is_lower ? pa : pb;
-      bam_alignment* higher_alignment = a_is_lower ? pb : pa;
-
-      string orientation;
-      orientation += lower_alignment->reversed() ? 'R' : 'F';
-      orientation += higher_alignment->reversed() ? 'R' : 'F';
-      if (orientation == "RR") orientation = "FF";
-
-      int64_t distance = static_cast<int64_t>(max(a_end, b_end)) - static_cast<int64_t>(min(a_start, b_start));
+      OrientationDistance od = compute_orientation_and_distance(pa, pb);
+      const string& orientation = od.orientation;
+      int64_t distance = od.distance;
 
       if ((best_dist_seen < 0) || (distance < best_dist_seen))
       {
@@ -1360,6 +1400,20 @@ void load_junction_alignments(
                                      to_string(stranded_anchor_position(a1)),
                                      to_string(stranded_anchor_position(a2)),
                                      -1);
+        }
+
+        // Whenever both mates end up with exactly one alignment (whether concordant or
+        // discordant), mark them as paired in the BAM using standard fields. Recompute
+        // orientation/distance fresh from these specific surviving alignments rather than
+        // reusing pairing.best_a/best_b, which can point at a different alignment than the one
+        // that survived downselection.
+        if ((m1.this_reference_alignments.size() == 1) && (m2.this_reference_alignments.size() == 1))
+        {
+          bam_alignment* a1 = m1.this_reference_alignments.front().get();
+          bam_alignment* a2 = m2.this_reference_alignments.front().get();
+          bool same_tid = (a1->reference_target_id() == a2->reference_target_id());
+          OrientationDistance od = same_tid ? compute_orientation_and_distance(a1, a2) : OrientationDistance{"NA", 0};
+          mark_pair_info(a1, a2, same_tid, od.orientation, od.distance, pairing.any_concordant_combo_exists);
         }
 
         _write_reference_matches(settings, summary, ref_seq_info, trims_list, m1.this_reference_alignments, resolved_reference_tam, fastq_file_index_1);

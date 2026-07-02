@@ -1463,6 +1463,11 @@ void bam_file::write_alignments(
       aux_tags_ss << "\t" << "XL:i:" << trim.L << "\t" << "XR:i:" << trim.R;
     }
 
+    string xp;
+    if (a.aux_get_Z("XP", xp)) {
+      aux_tags_ss << "\t" << "XP:Z:" << xp;
+    }
+
     string aux_tags = aux_tags_ss.str();
 
     string quality_score_string = a.read_base_quality_char_string();
@@ -1489,14 +1494,18 @@ void bam_file::write_alignments(
     ll.push_back(to_string<uint32_t>(a.mapping_quality()));
     ll.push_back(cigar_string);
 
-    if ((a.flag() & BAM_FPROPER_PAIR) == 0) {
+    if ((a.flag() & BAM_FPAIRED) == 0) {
       ll.push_back("*");
       ll.push_back("0");
       ll.push_back("0");
-    } else {
+    } else if (a.mate_reference_target_id() == a.reference_target_id()) {
       ll.push_back("=");
       ll.push_back(to_string<int32_t>(a.mate_start_1()));
       ll.push_back(to_string<int32_t>(a.insert_size()));
+    } else {
+      ll.push_back(bam_header->target_name[a.mate_reference_target_id()]);
+      ll.push_back(to_string<int32_t>(a.mate_start_1()));
+      ll.push_back("0"); // TLEN is undefined when mates are on different reference sequences
     }
 
     ll.push_back(a.read_char_sequence());
