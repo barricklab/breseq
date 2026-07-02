@@ -305,6 +305,13 @@ void alignment_output::Alignment_Output_Pileup::fetch_callback ( const alignment
   
   aligned_read.reference_start = a.reference_start_1();
   aligned_read.reference_end = a.reference_end_1();
+
+  aligned_read.pair_is_paired = a.is_paired();
+  if (aligned_read.pair_is_paired) {
+    aligned_read.pair_is_proper = a.proper_pair();
+    a.aux_get_Z("XP", aligned_read.pair_orientation);
+    aligned_read.pair_distance = llabs(static_cast<long long>(a.insert_size()));
+  }
   
   aligned_reads[aligned_read.seq_id] = aligned_read;
   
@@ -1242,6 +1249,8 @@ string alignment_output::html_header_string()
   header_style_string += ".AM {color: rgb(0,0,0); background-color: rgb(210,210,210)}\n";         // ambiguously mapped
   header_style_string += ".AO {color: rgb(0,0,0); background-color: rgb(255,205,204)}\n";         // ambiguous overlap (junctions)
   header_style_string += ".AP {color: rgb(0,0,0); background-color: rgb(255,229,204)}\n";         // ambiguous overlap (junctions) - but only due to target site duplication
+  header_style_string += ".PC {color: rgb(0,0,0); background-color: rgb(224,255,255)}\n";         // paired, concordant (light cyan)
+  header_style_string += ".PD {color: rgb(0,0,0); background-color: rgb(255,224,178)}\n";         // paired, discordant (light orange)
 
   
   // Colors used by characters in alignments
@@ -1414,12 +1423,17 @@ string alignment_output::html_alignment_line(const Alignment_Base& a, Aligned_Re
     
     output += "<font class=\"" + a.read_name_style + "\">";
     output += seq_id;
-    output += "</font>"; 
-  }   
-  
+    output += "</font>";
+  }
+
   // write the mapping quality - it would be nice to justify this
   if (!m_is_junction_junction && (a.mapping_quality != -1)) {
     output += "&nbsp;(MQ=" + to_string(a.mapping_quality) + ")";
+  }
+
+  if (a.pair_is_paired) {
+    string pairing_class = a.pair_is_proper ? "PC" : "PD";
+    output += "&nbsp;<font class=\"" + pairing_class + "\">{" + a.pair_orientation + ":" + to_string(a.pair_distance) + "}</font>";
   }
   
   

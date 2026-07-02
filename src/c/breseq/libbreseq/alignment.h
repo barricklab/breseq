@@ -304,6 +304,11 @@ class alignment_wrapper {
 		return ((_a->core.flag & BAM_FPROPER_PAIR) != 0);
 	}
 
+	inline bool is_paired() const
+	{
+		return ((_a->core.flag & BAM_FPAIRED) != 0);
+	}
+
 	static const char op_to_char[10];
 
   protected:
