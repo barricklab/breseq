@@ -1315,9 +1315,15 @@ void load_junction_alignments(
                                             seq2, reference_alignments_2, junction_alignments_2,
                                             *reference_tam_2, junction_tam_2, read_file_summary_info_2, unmapped_fastq);
 
-      bool both_reference_best = m1.mapped_anywhere && m2.mapped_anywhere
-                                 && (m1.mapping_quality_difference <= 0)
-                                 && (m2.mapping_quality_difference <= 0);
+      // A mate counts as "a reference match" only if it actually has reference alignments to
+      // use -- mapping_quality_difference <= 0 alone isn't sufficient, since both scores can be
+      // tied at 0 (e.g. no reference alignments at all, but some junction alignments survive
+      // eligible_read_alignments with their score clamped to 0), which would otherwise leave
+      // this_reference_alignments empty despite passing the "reference is best" check.
+      bool m1_is_reference_match = m1.mapped_anywhere && (m1.mapping_quality_difference <= 0) && (m1.this_reference_alignments.size() > 0);
+      bool m2_is_reference_match = m2.mapped_anywhere && (m2.mapping_quality_difference <= 0) && (m2.this_reference_alignments.size() > 0);
+
+      bool both_reference_best = m1_is_reference_match && m2_is_reference_match;
 
       if (both_reference_best)
       {
@@ -1365,8 +1371,8 @@ void load_junction_alignments(
         // through to the existing, unmodified per-mate handling. A singleton mapping (one mate
         // reference-best, the other fully unmapped) is still logged as discordant for
         // visibility, but the mapped mate's alignment is still written normally.
-        bool m1_singleton_reference = m1.mapped_anywhere && (m1.mapping_quality_difference <= 0) && !m2.mapped_anywhere;
-        bool m2_singleton_reference = m2.mapped_anywhere && (m2.mapping_quality_difference <= 0) && !m1.mapped_anywhere;
+        bool m1_singleton_reference = m1_is_reference_match && !m2.mapped_anywhere;
+        bool m2_singleton_reference = m2_is_reference_match && !m1.mapped_anywhere;
 
         if (m1_singleton_reference || m2_singleton_reference)
         {
