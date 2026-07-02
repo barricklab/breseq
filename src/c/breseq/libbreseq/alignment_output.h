@@ -43,7 +43,7 @@ namespace breseq
     //! returns more information about aligned reads given a sequence id string.
     struct Alignment_Base
     {
-      Alignment_Base() 
+      Alignment_Base()
         : seq_id("")
         , start(0)
         , end(0)
@@ -56,8 +56,12 @@ namespace breseq
         , show_strand(true)
         , mapping_quality(-1)
         , read_name_style("NC")
+        , pair_is_paired(false)
+        , pair_is_proper(false)
+        , pair_orientation("")
+        , pair_distance(0)
         {}
-      
+
       string seq_id;
       uint32_t start;
       uint32_t end;
@@ -70,6 +74,10 @@ namespace breseq
       bool show_strand;
       int32_t mapping_quality;
       string read_name_style;
+      bool pair_is_paired;
+      bool pair_is_proper;
+      string pair_orientation;
+      int64_t pair_distance;
       
       static const string gap_string;
       static const string lowercase_base_string;

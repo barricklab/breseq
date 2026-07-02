@@ -67,7 +67,10 @@ class alignment_wrapper {
 
     //! Index of reference sequence matched
     inline uint32_t reference_target_id() const { return _a->core.tid; }
-  
+
+    //! Index of reference sequence matched by this read's mate
+    inline uint32_t mate_reference_target_id() const { return _a->core.mtid; }
+
     //!Retrieve name of read.
     inline string read_name() const { return bam_get_qname(_a);}
 
@@ -280,16 +283,30 @@ class alignment_wrapper {
   
     // Returns whether tag was found
     inline bool aux_get_i(const char tag[2], uint32_t &value) const
-    { 
+    {
       uint8_t *auxl = bam_aux_get(_a, tag);
       if (auxl == NULL) return false;
       value = bam_aux2i(auxl);
       return true;
     }
 
+    // Returns whether a 'Z' (string) tag was found
+    inline bool aux_get_Z(const char tag[2], string &value) const
+    {
+      uint8_t *auxl = bam_aux_get(_a, tag);
+      if (auxl == NULL) return false;
+      value = bam_aux2Z(auxl);
+      return true;
+    }
+
 	inline bool proper_pair() const
 	{
 		return ((_a->core.flag & BAM_FPROPER_PAIR) != 0);
+	}
+
+	inline bool is_paired() const
+	{
+		return ((_a->core.flag & BAM_FPAIRED) != 0);
 	}
 
 	static const char op_to_char[10];
