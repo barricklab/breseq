@@ -86,12 +86,14 @@ namespace breseq {
 
 	}; // class CoverageDistribution
 
-  // Result of fitting a negative binomial distribution to a paired-mapping distance
-  // histogram (see PairedMappingDistanceDistribution::fit).
+  // Result of computing a robust outlier cutoff for a paired-mapping distance histogram (see
+  // PairedMappingDistanceDistribution::fit) via the median absolute deviation (MAD) and the
+  // Iglewicz & Hoaglin modified z-score rule.
   struct PairedMappingDistanceDistributionFitResult
   {
-    double nb_fit_size = 0;
-    double nb_fit_mu = 0;
+    double median = 0;
+    double mad = 0;             // median absolute deviation
+    double distance_cutoff = 0; // median + 3.5*mad/0.6745
   };
 
   class PairedMappingDistanceDistribution
@@ -100,9 +102,9 @@ namespace breseq {
 
     // Reads the condensed (orientation,distance,count) CSV written by
     // PreprocessAlignments::merge_two_sets_of_paired_sam_files/preprocess_one_set_of_paired_sam_files,
-    // determines the majority orientation by total observation count, fits a censored
-    // negative binomial to the majority-orientation distance histogram (ignoring rows for
-    // other orientations), and draws a diagnostic plot analogous to CoverageDistribution::fit.
+    // determines the majority orientation by total observation count, computes the median,
+    // MAD, and a modified-z-score outlier cutoff for the majority-orientation distance
+    // histogram (ignoring rows for other orientations), and draws a diagnostic plot.
     static PairedMappingDistanceDistributionFitResult fit(
                                                           string distribution_file_name,
                                                           string plot_file

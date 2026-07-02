@@ -310,15 +310,17 @@ void from_json(const json& j, ErrorCountSummaries& s)
 void to_json(json& j, const PairedMappingDistanceDistributionSummary& s)
 {
   j = json{
-    {"nb_fit_mu", s.nb_fit_mu},
-    {"nb_fit_size", s.nb_fit_size},
+    {"median", s.median},
+    {"mad", s.mad},
+    {"distance_cutoff", s.distance_cutoff},
   };
 }
 
 void from_json(const json& j, PairedMappingDistanceDistributionSummary& s)
 {
-  s.nb_fit_mu = j.at("nb_fit_mu").get<double>();
-  s.nb_fit_size = j.at("nb_fit_size").get<double>();
+  s.median = j.at("median").get<double>();
+  s.mad = j.at("mad").get<double>();
+  s.distance_cutoff = j.at("distance_cutoff").get<double>();
 }
 
 void to_json(json& j, const PairedMappingDistanceDistributionSummaries& s)

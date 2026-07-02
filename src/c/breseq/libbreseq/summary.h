@@ -307,12 +307,14 @@ namespace breseq{
   class PairedMappingDistanceDistributionSummary : public JSONStorable<PairedMappingDistanceDistributionSummary>
   {
   public:
-    double nb_fit_mu;
-    double nb_fit_size;
+    double median;
+    double mad;              // median absolute deviation
+    double distance_cutoff;  // median + 3.5*mad/0.6745 (Iglewicz & Hoaglin modified z-score rule)
 
     PairedMappingDistanceDistributionSummary()
-    : nb_fit_mu(0.0)
-    , nb_fit_size(0.0)
+    : median(0.0)
+    , mad(0.0)
+    , distance_cutoff(0.0)
     {}
   };
 

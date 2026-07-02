@@ -603,16 +603,28 @@ void CoverageDistribution::analyze_unique_coverage_distributions(
   }
 }
 
+// Smallest index i such that the cumulative histogram count through i reaches half of total --
+// a standard "lower median" for grouped/discrete count data.
+static uint32_t weighted_median(const vector<double>& n, uint32_t N, double total)
+{
+  double half = total / 2.0;
+  double cumulative = 0;
+  for (uint32_t i = 0; i <= N; i++) {
+    cumulative += n[i];
+    if (cumulative >= half) return i;
+  }
+  return N;
+}
+
 /*! fit
  @abstract Reads the condensed (orientation,distance,count) CSV written by
  PreprocessAlignments::merge_two_sets_of_paired_sam_files/preprocess_one_set_of_paired_sam_files,
- determines the majority orientation by total observation count, fits a censored negative
- binomial (via fit_censored_negative_binomial) to the majority-orientation distance histogram
- (ignoring rows for other orientations), then draws a diagnostic plot analogous to
- CoverageDistribution::fit.
+ determines the majority orientation by total observation count, computes the median, MAD, and
+ a modified-z-score outlier cutoff (Iglewicz & Hoaglin) for the majority-orientation distance
+ histogram (ignoring rows for other orientations), then draws a diagnostic plot.
  @param distribution_file_name Input CSV.
  @param plot_file Output plot file (SVG).
- @return PairedMappingDistanceDistributionFitResult The fitted parameters.
+ @return PairedMappingDistanceDistributionFitResult The computed statistics.
  !*/
 PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fit(
                                          string distribution_file_name,
@@ -630,6 +642,7 @@ PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fi
   vector<int64_t> row_distance;
   vector<uint32_t> row_count;
   map<string, uint64_t> orientation_totals;
+  uint64_t total_all_orientations = 0;
 
   string line;
   while (getline(in, line)) {
@@ -646,6 +659,7 @@ PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fi
     row_distance.push_back(distance);
     row_count.push_back(count);
     orientation_totals[orientation] += count;
+    total_all_orientations += count;
   }
 
   if (orientation_totals.empty()) return result;
@@ -673,30 +687,45 @@ PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fi
     if (row_orientation[i] == majority_orientation) n[static_cast<uint32_t>(row_distance[i])] += row_count[i];
   }
 
-  CensoredNegativeBinomialFitResult fit = fit_censored_negative_binomial(n, N);
-  result.nb_fit_mu = fit.nb_fit_mu;
-  result.nb_fit_size = fit.nb_fit_size;
+  double total = 0;
+  for (uint32_t i = 0; i <= N; i++) total += n[i];
+  if (total == 0) return result;
 
-  // Nothing to plot if there's no data or no fit window was found (degenerate distribution).
-  if (fit.censor_start >= fit.censor_end) return result;
+  uint32_t median_i = weighted_median(n, N, total);
+  result.median = median_i;
 
-  // Don't graph very high values with very little support.
-  uint32_t max_i = 1;
-  double max_n = 0;
-  for (uint32_t i = 1; i <= N; i++) {
-    if (n[i] > max_n) { max_n = n[i]; max_i = i; }
+  // MAD: the weighted median of |i - median_i|, folding both sides of the median into one
+  // deviation histogram (dev_n[d] = count of observations exactly d away from the median).
+  uint32_t max_dev = max(median_i, N - median_i);
+  vector<double> dev_n(max_dev + 1, 0.0);
+  for (uint32_t i = 0; i <= N; i++) {
+    if (n[i] == 0) continue;
+    uint32_t d = (i > median_i) ? (i - median_i) : (median_i - i);
+    dev_n[d] += n[i];
   }
-  uint32_t graph_end_i = max_i;
-  while ((graph_end_i <= N) && (n[graph_end_i] > 0.01 * max_n)) graph_end_i++;
-  // Leaves enough room to the right of the peak for the legend.
-  graph_end_i = max(static_cast<uint32_t>(floor(2.2 * max_i)), graph_end_i);
+  uint32_t mad_i = weighted_median(dev_n, max_dev, total);
+  result.mad = mad_i;
 
-  double max_y = max_n;
-  for (uint32_t i = 1; i <= N; i++) max_y = max(max_y, n[i]);
+  // Modified z-score rule (0.6745*(x-median)/MAD, per Iglewicz & Hoaglin), but with a
+  // Bonferroni-corrected threshold instead of the conventional fixed 3.5: target a family-wise
+  // false-positive rate of 0.01 across all total_all_orientations tested pairs, giving
+  // alpha = 0.01/N per pair, and take the one-sided standard-normal quantile at that alpha as
+  // the z threshold. Flag as an outlier when 0.6745*(x-median)/MAD > z*  =>  x > median + z*MAD/0.6745.
+  double alpha = 0.01 / static_cast<double>(total_all_orientations);
+  double z_multiplier = ndtri(1.0 - alpha);
+  result.distance_cutoff = (result.mad > 0) ? (result.median + z_multiplier * result.mad / 0.6745) : result.median;
+
+  // Display window: [0, 2*cutoff], falling back to the full histogram range if the cutoff
+  // collapsed to 0 (e.g. a degenerate all-identical-value histogram with MAD == 0).
+  uint32_t graph_end_i = (result.distance_cutoff > 0) ? static_cast<uint32_t>(ceil(2 * result.distance_cutoff)) : N;
+  graph_end_i = min(graph_end_i, N);
+
+  double max_y = 0;
+  for (uint32_t i = 0; i <= graph_end_i; i++) max_y = max(max_y, n[i]);
 
   // The condensed CSV covers all orientations and isn't directly plot-ready (3 comma-separated
   // columns) -- write the majority-orientation histogram to its own small 2-column table so
-  // gnuplot can plot it directly, exactly like the fitted curve's sidecar table below.
+  // gnuplot can plot it directly, exactly like the cutoff-line sidecar table below.
   string hist_table_file_name = distribution_file_name + ".majority_hist.tab";
   {
     ofstream hist_out(hist_table_file_name.c_str());
@@ -705,17 +734,16 @@ PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fi
     hist_out.close();
   }
 
-  string nb_fit_table_file_name = distribution_file_name + ".nbfit.tab";
-  if (result.nb_fit_mu > 0) {
-    vector<double> fit_nb(N + 1, 0.0);
-    for (uint32_t i = 0; i <= N; i++) {
-      fit_nb[i] = dnbinom_mu(static_cast<double>(i), result.nb_fit_size, result.nb_fit_mu) * fit.nb_fit_scale;
-      max_y = max(max_y, fit_nb[i]);
-    }
-    ofstream nb_out(nb_fit_table_file_name.c_str());
-    ASSERT(nb_out.is_open(), "Could not write to file: " + nb_fit_table_file_name);
-    for (uint32_t i = 0; i <= N; i++) nb_out << i << "\t" << fit_nb[i] << endl;
-    nb_out.close();
+  // The cutoff line has no on-disk representation -- write it to its own small table (a single
+  // vertical segment at x=distance_cutoff spanning y=0 to y=max_y) so gnuplot can plot it like
+  // any other series.
+  string cutoff_table_file_name = distribution_file_name + ".cutoff.tab";
+  {
+    ofstream cutoff_out(cutoff_table_file_name.c_str());
+    ASSERT(cutoff_out.is_open(), "Could not write to file: " + cutoff_table_file_name);
+    cutoff_out << to_string(result.distance_cutoff, 6) << "\t0" << endl;
+    cutoff_out << to_string(result.distance_cutoff, 6) << "\t" << to_string(max_y, 6) << endl;
+    cutoff_out.close();
   }
 
   ostringstream s;
@@ -731,11 +759,8 @@ PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fi
   s << "set key top right font ',16' spacing 2" << endl;
 
   vector<string> plot_clauses;
-  plot_clauses.push_back(double_quote(hist_table_file_name) + " using ($1>=" + to_string(fit.censor_start) + "&&$1<=" + to_string(fit.censor_end) + "?$1:NaN):2 with points pt 6 lc rgb 'black' title 'Distance distribution'");
-  plot_clauses.push_back(double_quote(hist_table_file_name) + " using ($1<" + to_string(fit.censor_start) + "||$1>" + to_string(fit.censor_end) + "?$1:NaN):2 with points pt 6 lc rgb 'red' title 'Censored data'");
-  if (result.nb_fit_mu > 0) {
-    plot_clauses.push_back(double_quote(nb_fit_table_file_name) + " with lines lw 3 lc rgb 'black' title 'Negative binomial'");
-  }
+  plot_clauses.push_back(double_quote(hist_table_file_name) + " using 1:2 with points pt 6 lc rgb 'black' title 'Distance distribution'");
+  plot_clauses.push_back(double_quote(cutoff_table_file_name) + " with lines lw 2 lc rgb 'red' title 'Distance cutoff'");
   s << "plot " << join(plot_clauses, string(", \\\n     ")) << endl;
 
   string script_base_name = plot_file + "." + to_string(getpid());
@@ -745,7 +770,7 @@ PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fi
   make_svg_responsive(plot_file);
   remove(log_file_name.c_str());
   remove(hist_table_file_name.c_str());
-  if (result.nb_fit_mu > 0) remove(nb_fit_table_file_name.c_str());
+  remove(cutoff_table_file_name.c_str());
 
   return result;
 }
@@ -765,8 +790,9 @@ void PairedMappingDistanceDistribution::fit_paired_mapping_distance_distribution
   PairedMappingDistanceDistribution dist;
   PairedMappingDistanceDistributionFitResult fit_result = dist.fit(distribution_file_name, plot_file_name);
 
-  summary.paired_mapping_distance_distribution[read_file_set.m_base_name].nb_fit_mu = fit_result.nb_fit_mu;
-  summary.paired_mapping_distance_distribution[read_file_set.m_base_name].nb_fit_size = fit_result.nb_fit_size;
+  summary.paired_mapping_distance_distribution[read_file_set.m_base_name].median = fit_result.median;
+  summary.paired_mapping_distance_distribution[read_file_set.m_base_name].mad = fit_result.mad;
+  summary.paired_mapping_distance_distribution[read_file_set.m_base_name].distance_cutoff = fit_result.distance_cutoff;
 }
 
 void PairedMappingDistanceDistribution::fit_paired_mapping_distance_distributions(
