@@ -747,6 +747,16 @@ PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fi
     cutoff_out.close();
   }
 
+  // Same sidecar-table convention for a vertical line at the median.
+  string median_table_file_name = distribution_file_name + ".median.tab";
+  {
+    ofstream median_out(median_table_file_name.c_str());
+    ASSERT(median_out.is_open(), "Could not write to file: " + median_table_file_name);
+    median_out << to_string(result.median, 6) << "\t0" << endl;
+    median_out << to_string(result.median, 6) << "\t" << to_string(max_y, 6) << endl;
+    median_out.close();
+  }
+
   ostringstream s;
   s << "set terminal svg size 1320,720 font ',16'" << endl;
   s << "set output " << double_quote(plot_file) << endl;
@@ -759,8 +769,13 @@ PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fi
   s << "set yrange [0:" << to_string(max_y * 1.05, 6) << "]" << endl;
   s << "set key top right font ',16' spacing 2" << endl;
 
+  // Light grey band spanning [median-MAD, median+MAD], full plot height, drawn behind the data.
+  s << "set object 1 rectangle from " << to_string(result.median - result.mad, 6) << ", graph 0 to "
+    << to_string(result.median + result.mad, 6) << ", graph 1 fc rgb 'grey90' fillstyle solid 1.0 noborder behind" << endl;
+
   vector<string> plot_clauses;
   plot_clauses.push_back(double_quote(hist_table_file_name) + " using 1:2 with points pt 6 lc rgb 'black' title 'Distance distribution'");
+  plot_clauses.push_back(double_quote(median_table_file_name) + " with lines lw 2 lc rgb 'black' title 'Median'");
   plot_clauses.push_back(double_quote(cutoff_table_file_name) + " with lines lw 2 lc rgb 'red' title 'Distance cutoff'");
   s << "plot " << join(plot_clauses, string(", \\\n     ")) << endl;
 
@@ -772,6 +787,7 @@ PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fi
   remove(log_file_name.c_str());
   remove(hist_table_file_name.c_str());
   remove(cutoff_table_file_name.c_str());
+  remove(median_table_file_name.c_str());
 
   return result;
 }
