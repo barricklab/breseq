@@ -550,22 +550,15 @@ public:
                              const Trims* trim = NULL
                              );
   
-  void write_split_alignment(
-                             uint32_t min_indel_split_len, 
-                             const alignment_wrapper& a, 
-                             const alignment_list& alignments,
-                             const cReferenceSequences& ref_seq_info
-                             );
-
   inline const char* target_name(const alignment_wrapper& a)
   {
     int32_t tid = a.reference_target_id();
     assert (tid < bam_header->n_targets);
     return bam_header->target_name[tid];
   }
-  
+
   bam_hdr_t* bam_header;
-  
+
 protected:
   samFile* input_tam;                // used for input
   ofstream output_tam;              // used for output
@@ -607,13 +600,6 @@ public:
                              int32_t junction_overlap,
                              const alignment_list& alignments,
                              const Trims* trim = NULL
-                             );
-
-  void write_split_alignment(
-                             uint32_t min_indel_split_len,
-                             const alignment_wrapper& a,
-                             const alignment_list& alignments,
-                             const cReferenceSequences& ref_seq_info
                              );
 
   inline const char* target_name(const alignment_wrapper& a)

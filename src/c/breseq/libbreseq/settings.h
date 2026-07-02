@@ -307,7 +307,12 @@ namespace breseq
     int32_t  maximum_read_mismatches;     // Default = -1 (OFF)
     
     //! Settings: Candidate Junction Prediction
-    int32_t  preprocess_junction_min_indel_split_length;    // Default = 3
+
+    //! When a read produces two naturally-split partial alignments explainable by a single
+    //! small indel below this length, they are stitched into one alignment (indel called via
+    //! RA evidence) instead of being offered as a JC candidate.
+    //! Default = -1 (auto: ceil(read_length/10) computed per read)
+    int32_t  junction_indel_stitch_length;
 		int32_t required_both_unique_length_per_side;           // Set = junction_minimum_side_match
     double   required_both_unique_length_per_side_fraction; // Default = 0.2 
 		int32_t required_one_unique_length_per_side;            // Default = 0 (OFF)
