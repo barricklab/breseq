@@ -35,11 +35,11 @@ EXTRA_DIST = \
 	tests/lambda_mult_ref_read/testcmd.sh \
 	tests/data/lambda/empty.fastq \
 	tests/data/lambda/only_bad.fastq \
-	tests/data/lambda/lambda_mixed_population.1.fastq \
-	tests/data/lambda/lambda_mixed_population.2.fastq \
-	tests/data/lambda/lambda_mixed_population.3.fastq \
-	tests/data/lambda/lambda_mixed_population.4.fastq \
-	tests/data/lambda/lambda_mixed_population.5.fastq \
+	tests/data/lambda/lambda_mixed_population.A.fastq.gz \
+	tests/data/lambda/lambda_mixed_population.B.fastq.gz \
+	tests/data/lambda/lambda_mixed_population.3.fastq.gz \
+	tests/data/lambda/lambda_mixed_population.4.fastq.gz \
+	tests/data/lambda/lambda_mixed_population.5.fastq.gz \
 	tests/data/lambda/lambda.1-2.gbk \
 	tests/data/lambda/lambda.3.gbk \
 	tests/data/lambda/lambda.4.gbk \
