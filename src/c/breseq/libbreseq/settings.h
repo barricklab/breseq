@@ -311,21 +311,12 @@ namespace breseq
     //! Threshold (in bases) governing two different treatments of an indel found during
     //! candidate-junction preprocessing: an indel already present in a single alignment's own
     //! CIGAR that is this length or longer is split into separate junction-candidate-
-    //! supporting alignment records (JC evidence); two of a read's separate, naturally split
-    //! (soft-clipped/chimeric) partial alignments explainable by a single indel shorter than
-    //! this length are instead joined into one alignment with the indel in its CIGAR (RA
-    //! evidence). Default = 5. A negative value instead auto-scales this cutoff to
-    //! ceil(read_length/10), computed per read -- see indel_split_stitch_cutoff_for_read_length.
+    //! supporting alignment records (JC evidence), unless it is entirely a length-change to a
+    //! reference homopolymer that was already this long or longer; two of a read's separate,
+    //! naturally split (soft-clipped/chimeric) partial alignments explainable by a single
+    //! indel shorter than this length are instead joined into one alignment with the indel in
+    //! its CIGAR (RA evidence). Default = 5.
     int32_t  indel_split_stitch_cutoff;
-
-    //! Resolves the effective indel-split/stitch cutoff for a read of this length: the
-    //! configured indel_split_stitch_cutoff if non-negative, otherwise auto-scaled to
-    //! ceil(read_length/10), computed per read.
-    int32_t indel_split_stitch_cutoff_for_read_length(uint32_t read_length) const {
-      return (indel_split_stitch_cutoff >= 0)
-          ? indel_split_stitch_cutoff
-          : static_cast<int32_t>(ceil(static_cast<double>(read_length) / 10.0));
-    }
 		int32_t required_both_unique_length_per_side;           // Set = junction_minimum_side_match
     double   required_both_unique_length_per_side_fraction; // Default = 0.2 
 		int32_t required_one_unique_length_per_side;            // Default = 0 (OFF)

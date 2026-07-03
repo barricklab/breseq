@@ -365,7 +365,7 @@ namespace breseq {
           // Split alignments with their own large indel into JC-candidate-supporting pieces
           // before stitching -- splitting reads an alignment's own CIGAR and never mutates
           // group, so it doesn't interact with what stitching considers.
-          int32_t split_cutoff = settings.indel_split_stitch_cutoff_for_read_length(group.front()->read_length());
+          int32_t split_cutoff = settings.indel_split_stitch_cutoff;
           split_alignments_on_indels(settings, summary, ref_seq_info, PSAM, split_cutoff, group);
           // Stitch before writing, so output_sam_file_name (the merged reference-alignment
           // stream resolve_alignments.cpp reads) reflects the same joined alignment that
@@ -415,7 +415,7 @@ namespace breseq {
     while (tam.read_alignments(alignments, false))
     {
       if (!alignments.front()->unmapped()) {
-        int32_t split_cutoff = settings.indel_split_stitch_cutoff_for_read_length(alignments.front()->read_length());
+        int32_t split_cutoff = settings.indel_split_stitch_cutoff;
         split_alignments_on_indels(settings, summary, ref_seq_info, PSAM, split_cutoff, alignments);
         stitch_naturally_split_alignments(settings, summary, ref_seq_info, tam.bam_header, PRE_STITCH_SAM, POST_STITCH_SAM, alignments);
       }
@@ -588,7 +588,7 @@ namespace breseq {
         r1_mapped = !group.front()->unmapped();
         if (r1_mapped) {
           if (do_preprocess) {
-            int32_t split_cutoff = settings.indel_split_stitch_cutoff_for_read_length(group.front()->read_length());
+            int32_t split_cutoff = settings.indel_split_stitch_cutoff;
             split_alignments_on_indels(settings, summary, ref_seq_info, PSAM1, split_cutoff, group);
             stitch_naturally_split_alignments(settings, summary, ref_seq_info, r1_stream.header(), PRE_STITCH_SAM, POST_STITCH_SAM, group);
           }
@@ -610,7 +610,7 @@ namespace breseq {
         r2_mapped = !group.front()->unmapped();
         if (r2_mapped) {
           if (do_preprocess) {
-            int32_t split_cutoff = settings.indel_split_stitch_cutoff_for_read_length(group.front()->read_length());
+            int32_t split_cutoff = settings.indel_split_stitch_cutoff;
             split_alignments_on_indels(settings, summary, ref_seq_info, PSAM2, split_cutoff, group);
             stitch_naturally_split_alignments(settings, summary, ref_seq_info, r2_stream.header(), PRE_STITCH_SAM, POST_STITCH_SAM, group);
           }
@@ -960,6 +960,40 @@ namespace breseq {
     }
   }
 
+  //! Returns true if a D/I op of the given length at ref_pos, with the given actual content
+  //! (deleted reference bases for a D, inserted read bases for an I), is a pure length-change
+  //! to a reference homopolymer that was already min_homopolymer_length bases or longer: the
+  //! indel's own content must be entirely one repeated base, and the existing reference
+  //! homopolymer run of that base -- for a deletion, including the deleted span itself, since
+  //! those bases are genuinely present in the reference; for an insertion, counting only the
+  //! flanking reference bases, since the inserted content isn't reference at all -- must meet
+  //! the threshold.
+  static bool indel_is_pure_homopolymer_change(
+                                                const cAnnotatedSequence& ref_seq,
+                                                bool is_deletion,
+                                                int32_t ref_pos,
+                                                int32_t len,
+                                                const string& indel_bases,
+                                                int32_t min_homopolymer_length
+                                                )
+  {
+    char c = indel_bases[0];
+    for (size_t k = 1; k < indel_bases.size(); k++) {
+      if (indel_bases[k] != c) return false;
+    }
+
+    int32_t left_pos = ref_pos - 1;
+    int32_t left_run = 0;
+    while ((left_pos >= 1) && (ref_seq.get_sequence_1(left_pos) == c)) { left_run++; left_pos--; }
+
+    int32_t right_pos = is_deletion ? (ref_pos + len) : ref_pos;
+    int32_t right_run = 0;
+    while ((right_pos <= static_cast<int32_t>(ref_seq.get_sequence_length())) && (ref_seq.get_sequence_1(right_pos) == c)) { right_run++; right_pos++; }
+
+    int32_t existing_homopolymer_length = left_run + right_run + (is_deletion ? len : 0);
+    return existing_homopolymer_length >= min_homopolymer_length;
+  }
+
   //! Attempts to build one in-memory alignment record spanning geom's pair, bridging the gap
   //! between them with a single D (if the reference sides don't meet), a single I (if the
   //! read has extra or ambiguous-overlap bases at the junction), or both (a combined indel).
@@ -1164,15 +1198,32 @@ namespace breseq {
 
     for(alignment_list::const_iterator it = alignments.begin(); it != alignments.end(); it++) {
 
-      uint32_t* cigar_list = (*it)->cigar_array();
-      bool do_split = false;
+      const bam_alignment& a = **it;
+      vector<pair<char,uint16_t> > cigar_list = a.cigar_pair_char_op_array();
+      const cAnnotatedSequence& ref_seq = ref_seq_info[a.reference_target_id()];
+      string read_seq = a.read_char_sequence();
 
-      for(uint32_t i=0; i<(*it)->cigar_array_length(); i++) {
-        uint32_t op = cigar_list[i] & BAM_CIGAR_MASK;
-        uint32_t len = cigar_list[i] >> BAM_CIGAR_SHIFT;
-        if (((op == BAM_CINS) || (op == BAM_CDEL)) && (len >= static_cast<uint32_t>(min_indel_split_len))) {
-          do_split = true;
+      bool do_split = false;
+      int32_t ref_pos = static_cast<int32_t>(a.reference_start_1());
+      uint32_t query_pos = a.query_start_1();
+
+      for (size_t i = 0; i < cigar_list.size(); i++) {
+        char op = cigar_list[i].first;
+        uint16_t len = cigar_list[i].second;
+        if (op == 'S') continue;
+
+        if (((op == 'D') || (op == 'I')) && (len >= static_cast<uint16_t>(min_indel_split_len))) {
+          bool is_deletion = (op == 'D');
+          string indel_bases = is_deletion
+              ? ref_seq.get_sequence_1(ref_pos, ref_pos + len - 1)
+              : read_seq.substr(query_pos - 1, len);
+          if (!indel_is_pure_homopolymer_change(ref_seq, is_deletion, ref_pos, len, indel_bases, min_indel_split_len)) {
+            do_split = true;
+          }
         }
+
+        if ((op == 'M') || (op == 'D')) ref_pos += len;
+        if ((op == 'M') || (op == 'I')) query_pos += len;
       }
 
       if (do_split) {
@@ -1271,7 +1322,7 @@ namespace breseq {
           int32_t union_length = static_cast<int32_t>(b_end) - static_cast<int32_t>(a_start) + 1;
           if ((overlap > 0) && (2 * overlap >= union_length)) continue;
 
-          int32_t cutoff = settings.indel_split_stitch_cutoff_for_read_length(ordered[i]->read_length());
+          int32_t cutoff = settings.indel_split_stitch_cutoff;
 
           AlignmentPairGeometry geom(ref_seq_info, *ordered[i], *ordered[j]);
           bam_alignment_ptr joined = build_joined_alignment(bam_header, ref_seq_info, geom, alignments, cutoff);

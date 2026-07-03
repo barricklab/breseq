@@ -312,6 +312,7 @@ namespace breseq
     ("require-match-length", "Only consider alignments that cover this many bases of a read", 0, ADVANCED_OPTION)
     ("require-match-fraction", "Only consider alignments that cover this fraction of a read (automatically lowered to 0.5 when --predict-soft-clipping is used, unless set explicitly)", 0.9, ADVANCED_OPTION)
     ("maximum-read-mismatches", "Don't consider reads with this many or more bases or indels that are different from the reference sequence. Unaligned bases at the end of a read also count as mismatches. Unaligned bases at the beginning of the read do NOT count as mismatches. (DEFAULT=OFF)", "", ADVANCED_OPTION)
+    ("indel-split-stitch-cutoff", "Threshold (in bases) governing two different treatments of an indel found during candidate-junction preprocessing: an indel already present in a single alignment's own CIGAR that is this length or longer is split into separate junction-candidate-supporting alignment records (JC evidence), unless it is entirely a length-change to a reference homopolymer that was already this long or longer; two of a read's separate, naturally split (soft-clipped/chimeric) partial alignments explainable by a single indel shorter than this length are instead joined into one alignment with the indel represented in its CIGAR (RA evidence). (DEFAULT = 5)", "", ADVANCED_OPTION)
     ;
     
     options.addUsage("", ADVANCED_OPTION);
@@ -329,7 +330,6 @@ namespace breseq
     options.addUsage("Junction (JC) Evidence Options", ADVANCED_OPTION);
     options
     ("no-junction-prediction", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
-    ("indel-split-stitch-cutoff", "Threshold (in bases) governing two different treatments of an indel found during candidate-junction preprocessing: an indel already present in a single alignment's own CIGAR that is this length or longer is split into separate junction-candidate-supporting alignment records (JC evidence); two of a read's separate, naturally split (soft-clipped/chimeric) partial alignments explainable by a single indel shorter than this length are instead joined into one alignment with the indel represented in its CIGAR (RA evidence). A negative value instead auto-scales this cutoff to read length / 10, computed per read. (DEFAULT = 5)", "", ADVANCED_OPTION)
     ("junction-alignment-pair-limit", "Only consider this many passed alignment pairs when creating candidate junction sequences (0 = DO NOT LIMIT)", 100000, ADVANCED_OPTION)
     ("junction-minimum-candidates", "Test at least this many of the top-scoring junction candidates, regardless of their length", 100, ADVANCED_OPTION)
     ("junction-maximum-candidates", "Test no more than this many of the top-scoring junction candidates (0 = DO NOT LIMIT)", 5000, ADVANCED_OPTION)
