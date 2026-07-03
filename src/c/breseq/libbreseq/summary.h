@@ -229,9 +229,6 @@ namespace breseq{
     int64_t reads_with_alignments_split_on_indels;
     int64_t split_alignments;
     int64_t reads_with_split_alignments;
-    int64_t reads_considered_for_stitching;
-    int64_t alignments_stitched_on_indels;
-    int64_t reads_with_alignments_stitched_on_indels;
 
     PreprocessAlignmentsSummary()
     : aligned_reads(0)
@@ -240,9 +237,6 @@ namespace breseq{
     , reads_with_alignments_split_on_indels(0)
     , split_alignments(0)
     , reads_with_split_alignments(0)
-    , reads_considered_for_stitching(0)
-    , alignments_stitched_on_indels(0)
-    , reads_with_alignments_stitched_on_indels(0)
     {}
   };
   
@@ -571,7 +565,7 @@ namespace breseq{
     int32_t  maximum_read_mismatches;
     
     //! Settings: Candidate Junction
-    int32_t  indel_split_stitch_cutoff;
+    int32_t  junction_indel_split_length;
     int32_t required_both_unique_length_per_side;
     double   required_both_unique_length_per_side_fraction;
     int32_t required_one_unique_length_per_side;

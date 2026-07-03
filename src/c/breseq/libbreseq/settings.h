@@ -318,22 +318,13 @@ namespace breseq
     
     //! Settings: Candidate Junction Prediction
 
-    //! Threshold (in bases) governing two different treatments of an indel found during
-    //! candidate-junction preprocessing: an indel already present in a single alignment's own
-    //! CIGAR that is this length or longer is split into separate junction-candidate-
-    //! supporting alignment records (JC evidence), unless it is entirely a length-change to a
-    //! reference homopolymer that was already this long or longer; two of a read's separate,
-    //! naturally split (soft-clipped/chimeric) partial alignments explainable by a single
-    //! indel shorter than this length are instead joined into one alignment with the indel in
-    //! its CIGAR (RA evidence). Default = 5.
-    int32_t  indel_split_stitch_cutoff;
-    //! Whether stitching (see indel_split_stitch_cutoff above) is attempted at all. Default =
-    //! false: in practice, stitching rarely finds anything on typical (non-very-short) reads --
-    //! most small indels either get natively embedded in one bowtie2 alignment (handled by
-    //! splitting/homopolymer-guarding instead) or the two natural-split pieces are too far
-    //! apart in reference space to be a genuine small indel. Kept as an option rather than
-    //! removed outright.
-    bool     stitch_reads;
+    //! Threshold (in bases) for splitting an indel found during candidate-junction
+    //! preprocessing: an indel already present in a single alignment's own CIGAR that is this
+    //! length or longer is split into separate junction-candidate-supporting alignment
+    //! records (JC evidence), unless it is entirely a length-change to a reference homopolymer
+    //! that was already this long or longer (in which case it is left as RA evidence).
+    //! Default = 5.
+    int32_t  junction_indel_split_length;
 		int32_t required_both_unique_length_per_side;           // Set = junction_minimum_side_match
     double   required_both_unique_length_per_side_fraction; // Default = 0.2 
 		int32_t required_one_unique_length_per_side;            // Default = 0 (OFF)
@@ -644,18 +635,6 @@ namespace breseq
 		string reference_faidx_file_name;
 		string reference_gff3_file_name;
     string unmapped_reads_fastq_file_name;
-
-    //! Debugging: dumps of every read's alignments that were examined for natural-split
-    //! indel stitching, before and after PreprocessAlignments::stitch_naturally_split_alignments
-    //! ran on them. Only reads that had more than one alignment (stitching candidates) appear.
-    //! Gated on debug_dump_stitching_sam below -- there is deliberately no command-line option
-    //! for this, flip the constant and rebuild to use it during development.
-    string pre_stitching_sam_file_name;
-    string post_stitching_sam_file_name;
-
-    //! Compile-time-only switch for the pre/post stitching SAM dumps above -- not exposed as a
-    //! command-line option, so it is not user-accessible. Flip to true and rebuild to enable.
-    static const bool debug_dump_stitching_sam = false;
 
     string data_vcf_file_name;
     string data_genome_diff_file_name;

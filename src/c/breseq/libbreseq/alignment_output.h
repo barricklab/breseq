@@ -60,8 +60,6 @@ namespace breseq
         , pair_is_proper(false)
         , pair_orientation("")
         , pair_distance(0)
-        , is_stitched(false)
-        , stitched_max_indel_length(0)
         {}
 
       string seq_id;
@@ -80,9 +78,7 @@ namespace breseq
       bool pair_is_proper;
       string pair_orientation;
       int64_t pair_distance;
-      bool is_stitched;
-      int32_t stitched_max_indel_length;
-      
+
       static const string gap_string;
       static const string lowercase_base_string;
 

@@ -516,65 +516,6 @@ inline void print_alignment_list(const alignment_list& alignments)
  */
 bam_hdr_t* make_bam_header_from_faidx(const string& fasta_file_name);
 
-class tam_file {
-
-public:
-  tam_file() : bam_header(NULL), input_tam(NULL) {}
-  tam_file(const string& tam_file_name, const string& fasta_file_name, ios_base::openmode mode);
-  ~tam_file();
-  
-  void open_read(const string& tam_file_name, const string& fasta_file_name);
-  void open_write(const string& tam_file_name, const string& fasta_file_name);
-  
-  bool read_alignments(alignment_list& alignments, bool paired = false);
-  void write_alignments(
-                        int32_t fastq_file_index, 
-                        const alignment_list& alignments, 
-                        vector<Trims>* trims = NULL,
-                        const cReferenceSequences* ref_seq_info = NULL,
-                        bool shift_gaps = false
-                        );
-  
-  void write_moved_alignment(
-                             const alignment_wrapper& a,
-                             const string& rname,
-                             uint32_t fastq_file_index,
-                             const string& seq_id,
-                             int32_t reference_pos,
-                             int32_t reference_strand,
-                             int32_t reference_overlap,
-                             const uint32_t junction_side,
-                             int32_t junction_flanking,
-                             int32_t junction_overlap,
-                             const alignment_list& alignments,
-                             const Trims* trim = NULL,
-                             const cReferenceSequences* ref_seq_info_ptr = NULL,
-                             bool shift_gaps = false
-                             );
-
-  void write_split_alignment(
-                             uint32_t min_indel_split_len,
-                             const alignment_wrapper& a,
-                             const alignment_list& alignments,
-                             const cReferenceSequences& ref_seq_info
-                             );
-
-  inline const char* target_name(const alignment_wrapper& a)
-  {
-    int32_t tid = a.reference_target_id();
-    assert (tid < bam_header->n_targets);
-    return bam_header->target_name[tid];
-  }
-
-  bam_hdr_t* bam_header;
-
-protected:
-  samFile* input_tam;                // used for input
-  ofstream output_tam;              // used for output
-  bam_alignment_ptr last_alignment; // contains alignment* last_alignment
-};
-  
-  
 // Class to read in bam format output by breseq
 class bam_file {
   

@@ -196,9 +196,6 @@ void to_json(json& j, const PreprocessAlignmentsSummary& s)
     {"reads_with_alignments_split_on_indels", s.reads_with_alignments_split_on_indels},
     {"split_alignments", s.split_alignments},
     {"reads_with_split_alignments", s.reads_with_split_alignments},
-    {"reads_considered_for_stitching", s.reads_considered_for_stitching},
-    {"alignments_stitched_on_indels", s.alignments_stitched_on_indels},
-    {"reads_with_alignments_stitched_on_indels", s.reads_with_alignments_stitched_on_indels},
   };
 }
 
@@ -210,9 +207,6 @@ void from_json(const json& j, PreprocessAlignmentsSummary& s)
   s.reads_with_alignments_split_on_indels = j.at("reads_with_alignments_split_on_indels").get<uint64_t>();
   s.split_alignments = j.at("split_alignments").get<uint64_t>();
   s.reads_with_split_alignments = j.at("reads_with_split_alignments").get<uint64_t>();
-  s.reads_considered_for_stitching = j.at("reads_considered_for_stitching").get<uint64_t>();
-  s.alignments_stitched_on_indels = j.at("alignments_stitched_on_indels").get<uint64_t>();
-  s.reads_with_alignments_stitched_on_indels = j.at("reads_with_alignments_stitched_on_indels").get<uint64_t>();
 }
 
 // CandidateJunctionSummary
@@ -532,7 +526,7 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   maximum_read_mismatches = t.maximum_read_mismatches;
   
   //! Settings: Candidate Junction
-  indel_split_stitch_cutoff = t.indel_split_stitch_cutoff;
+  junction_indel_split_length = t.junction_indel_split_length;
   required_both_unique_length_per_side = t.required_both_unique_length_per_side;
   required_both_unique_length_per_side_fraction = t.required_both_unique_length_per_side_fraction;
   required_one_unique_length_per_side = t.required_one_unique_length_per_side;
@@ -842,7 +836,7 @@ void to_json(json& j, const PublicOptionsSummary& s)
     
     //! Settings: Candidate Junction
     {"candidate_junction", json{
-      {"indel_split_stitch_cutoff", s.indel_split_stitch_cutoff},
+      {"junction_indel_split_length", s.junction_indel_split_length},
       {"required_both_unique_length_per_side", s.required_both_unique_length_per_side},
       {"required_both_unique_length_per_side_fraction", s.required_both_unique_length_per_side_fraction},
       {"required_one_unique_length_per_side", s.required_one_unique_length_per_side},
