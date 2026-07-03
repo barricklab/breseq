@@ -560,7 +560,6 @@ namespace breseq{
 
     
     //! Settings: Read Alignment
-    string bowtie2_scoring;
     string bowtie2_stage1;
     string bowtie2_stage2;
     string bowtie2_junction;

@@ -813,18 +813,20 @@ void tam_file::write_alignments(
 	trim					                # List with two items, indicating what the trim on each end is
 */
 void tam_file::write_moved_alignment(
-                                     const alignment_wrapper& a, 
+                                     const alignment_wrapper& a,
                                      const string& junction_reference_name,
-                                     uint32_t fastq_file_index, 
-                                     const string& seq_id, 
-                                     int32_t reference_pos, 
-                                     int32_t reference_strand, 
-                                     int32_t reference_overlap, 
-                                     uint32_t junction_side, 
-                                     int32_t junction_flanking, 
-                                     int32_t junction_overlap, 
+                                     uint32_t fastq_file_index,
+                                     const string& seq_id,
+                                     int32_t reference_pos,
+                                     int32_t reference_strand,
+                                     int32_t reference_overlap,
+                                     uint32_t junction_side,
+                                     int32_t junction_flanking,
+                                     int32_t junction_overlap,
                                      const alignment_list& alignments,
-                                     const Trims* trim
+                                     const Trims* trim,
+                                     const cReferenceSequences* ref_seq_info_ptr,
+                                     bool shift_gaps
                                      )
 {
 	bool verbose = false;
@@ -1045,7 +1047,7 @@ void tam_file::write_moved_alignment(
 
 	if (verbose) {
 		cerr << "Short of junction = " << short_of_junction << endl;
-		
+
 		// Lots of debug output to make sure the CIGAR list is proper...
 		//cerr << "CIGAR for each side:<< endl . Dumper(\@side_1_cigar_list, \@side_2_cigar_list) if ($verbose);
 		//cerr << "CIGAR for this junction side:<< endl .Dumper($cigar_list) if ($verbose);
@@ -1053,6 +1055,20 @@ void tam_file::write_moved_alignment(
 		// Add original padding to one end and padding to the other side representing
 		// the piece that was not used (is aligned to the other side of the junction)
 		cerr << "Left Padding = " << left_padding << ", Right Padding = " << right_padding << endl;
+	}
+
+	// Shift homopolymer-length indels in this half's CIGAR as far right as the real genome
+	// (seq_id, NOT the candidate junction sequence a is aligned to) allows -- same normalization
+	// shifted_cigar_string() does for the resolved reference BAM, applied here before padding/
+	// strand-reversal while cigar_list is still bam-native (real M/I/D content only, matching
+	// the reference-forward slice below).
+	if (ref_seq_info_ptr && shift_gaps && (junction_match_length > 0))
+	{
+		int32_t reference_match_start_for_shift = (reference_strand == 1) ? reference_pos + short_of_junction : reference_pos - (junction_match_length - 1) - short_of_junction;
+		uint32_t read_start_for_shift = (junction_side == 1) ? a_read_start : (a_read_start + side_1_read_match_length);
+		const string junction_side_ref_seq = (*ref_seq_info_ptr)[seq_id].get_sequence_1(reference_match_start_for_shift, reference_match_start_for_shift + junction_match_length - 1);
+		const string junction_side_read_seq = a.read_char_sequence().substr(read_start_for_shift - 1, read_match_length);
+		shift_indels_in_cigar_array(cigar_list, junction_side_ref_seq, junction_side_read_seq);
 	}
 
 	//additional padding on the end that is blocked
@@ -1536,7 +1552,9 @@ void bam_file::write_moved_alignment(
                                      int32_t junction_flanking,
                                      int32_t junction_overlap,
                                      const alignment_list& alignments,
-                                     const Trims* trim
+                                     const Trims* trim,
+                                     const cReferenceSequences* ref_seq_info_ptr,
+                                     bool shift_gaps
                                      )
 {
 	bool verbose = false;
@@ -1647,7 +1665,6 @@ void bam_file::write_moved_alignment(
 	int32_t side_1_read_match_length = test_read_pos - a_read_start;
 	int32_t side_2_read_match_length = total_read_match_length - side_1_read_match_length;
 	int32_t read_match_length = (junction_side == 1) ? side_1_read_match_length : side_2_read_match_length;
-  (void) read_match_length;
 
 	int32_t total_junction_match_length = a.reference_end_1() - a.reference_start_1() + 1;
 	int32_t side_1_junction_match_length = test_junction_pos - a.reference_start_1();
@@ -1668,6 +1685,20 @@ void bam_file::write_moved_alignment(
 	if (short_of_junction < 0) short_of_junction = 0;
 
 	cigar_list = (junction_side == 1) ? side_1_cigar_list : side_2_cigar_list;
+
+	// Shift homopolymer-length indels in this half's CIGAR as far right as the real genome
+	// (seq_id, NOT the candidate junction sequence a is aligned to) allows -- same normalization
+	// shifted_cigar_string() does for the resolved reference BAM, applied here before padding/
+	// strand-reversal while cigar_list is still bam-native (real M/I/D content only, matching
+	// the reference-forward slice below).
+	if (ref_seq_info_ptr && shift_gaps && (junction_match_length > 0))
+	{
+		int32_t reference_match_start_for_shift = (reference_strand == 1) ? reference_pos + short_of_junction : reference_pos - (junction_match_length - 1) - short_of_junction;
+		uint32_t read_start_for_shift = (junction_side == 1) ? a_read_start : (a_read_start + side_1_read_match_length);
+		const string junction_side_ref_seq = (*ref_seq_info_ptr)[seq_id].get_sequence_1(reference_match_start_for_shift, reference_match_start_for_shift + junction_match_length - 1);
+		const string junction_side_read_seq = a.read_char_sequence().substr(read_start_for_shift - 1, read_match_length);
+		shift_indels_in_cigar_array(cigar_list, junction_side_ref_seq, junction_side_read_seq);
+	}
 
 	if (junction_side == 2)
 		left_padding += side_1_read_match_length;

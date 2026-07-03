@@ -1392,9 +1392,14 @@ namespace breseq {
     (void) summary;
 
     for(alignment_list::const_iterator it = alignments.begin(); it != alignments.end(); it++) {
-      // Guard showing that a main alignment is already good, so there's nothing left to
-      // usefully pair for junction detection.
-      if ( (*it)->query_match_length() >= alignments.front()->read_length() - settings.required_both_unique_length_per_side)
+      // Guard showing that a main alignment is already good - it covers so much of the match that it should
+      // be considered definitive and not used for junction candidates, so there's nothing left to do.
+      // NOTE: The read will still be re-aligned to candidate junctions and could match them better later
+      // but it shouldn't help those alternative junctions get seeded => this can lead to odd candidates.
+      if (
+          ( (*it)->query_match_length() >= alignments.front()->read_length() - settings.required_both_unique_length_per_side) ||
+          ( (*it)->query_match_length() >= alignments.front()->read_length() * ( 1 - settings.required_both_unique_length_per_side_fraction) )
+         )
         return;
     }
 
@@ -1739,7 +1744,7 @@ namespace breseq {
 //       If coding on this restarts, then nw.cpp needs to be adjusted
 //       to not count mismatches at the ends against an alignment
 //       (I believe this would be in the setup step.)
-#define NW_FILTER
+//#define NW_FILTER
 #ifdef NW_FILTER
           
           int32_t score(0);

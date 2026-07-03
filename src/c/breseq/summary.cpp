@@ -521,7 +521,6 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   read_file_long_read_distribute_remainder = t.read_file_long_read_distribute_remainder;
   
   //! Settings: Read Alignment
-  bowtie2_scoring = t.bowtie2_scoring;
   bowtie2_stage1 = t.bowtie2_stage1;
   bowtie2_stage2 = t.bowtie2_stage2;
   bowtie2_junction = t.bowtie2_junction;
@@ -829,7 +828,6 @@ void to_json(json& j, const PublicOptionsSummary& s)
     
     //! Settings: Read Alignment
     {"read_alignment", json{
-      {"bowtie2_scoring", s.bowtie2_scoring},
       {"bowtie2_stage1", s.bowtie2_stage1},
       {"bowtie2_stage2", s.bowtie2_stage2},
       {"bowtie2_junction", s.bowtie2_junction},

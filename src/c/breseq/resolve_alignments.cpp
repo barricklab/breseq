@@ -665,7 +665,9 @@ void resolve_alignments(
 					from_string<int32_t>(item["flanking_left"]),
 					from_string<int32_t>(item["alignment_overlap"]),
           match.junction_alignments,
-					&trims
+					&trims,
+          &ref_seq_info,
+          true
 				);
 			}
 		}

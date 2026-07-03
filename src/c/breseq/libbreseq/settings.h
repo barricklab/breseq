@@ -289,13 +289,23 @@ namespace breseq
     
     int32_t num_processors;       // Defaults = 2
 
-    // bowtie2 options. These are conceptually divided into
-    //  1) the scoring scheme for alignments, which MUST be the same for all calls to bowtie2!
-    //  2) various mapping cutoffs, which are different for each stage and for junctions
-    string bowtie2_scoring;         // COMMAND-LINE OPTION
+    // bowtie2 options. Each of bowtie2_stage1/stage2/junction is a complete, independent
+    // command-line string -- match/mismatch/gap scoring, alignment mode, and mapping cutoffs
+    // are all bundled together per stage rather than sharing one scoring string across all
+    // three, since stage 2/junction can use different scoring/alignment modes than stage 1
+    // (see end_to_end below).
     string bowtie2_stage1;          // COMMAND-LINE OPTION
     string bowtie2_stage2;          // COMMAND-LINE OPTION (can be blank to skip step)
     string bowtie2_junction;        // COMMAND-LINE OPTION
+    //! Use --end-to-end (instead of --local) for the stage 1 bowtie2 alignment and the
+    //! candidate-junction realignment pass. Default = false. When set, swaps in complete,
+    //! independent defaults for bowtie2_stage1/bowtie2_junction (translated to --end-to-end's
+    //! scoring scale, including --ma 0 -- bowtie2 rejects a nonzero --ma whenever --score-min
+    //! can go negative) rather than patching the --local-oriented defaults at the point
+    //! bowtie2 is actually invoked. bowtie2_stage2 is unaffected (always --local, --ma 1). An
+    //! explicit --bowtie2-stage1/--bowtie2-junction always wins over the corresponding
+    //! --end-to-end default, exactly as it would with --end-to-end absent.
+    bool     end_to_end;            // COMMAND-LINE OPTION
     uint64_t bowtie2_junction_maximum_alignments_to_consider_per_read;       // Default = 2000
     uint64_t bowtie2_genome_maximum_alignments_to_consider_per_read;         // Default = 2000
 
