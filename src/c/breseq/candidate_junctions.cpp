@@ -951,11 +951,14 @@ namespace breseq {
   //! Any reference-side overlap (ambiguous/repeat-driven placement, e.g. a homopolymer
   //! expansion) is credited to the reference-earlier side and folded into the I length
   //! instead, so the construction is uniform regardless of how the ambiguity would otherwise
-  //! have been resolved. Returns a null bam_alignment_ptr if the pair isn't on the same
-  //! reference sequence and physical strand, if the geometry is internally inconsistent, or
-  //! if the total implied indel length is >= cutoff.
+  //! have been resolved. When exactly one of the D/I is used, its position is then
+  //! left-normalized to bowtie2's own leftmost-placement convention. Returns a null
+  //! bam_alignment_ptr if the pair isn't on the same reference sequence and physical strand,
+  //! if the geometry is internally inconsistent, or if the total implied indel length is
+  //! >= cutoff.
   bam_alignment_ptr PreprocessAlignments::build_joined_alignment(
                                                                   bam_hdr_t* bam_header,
+                                                                  const cReferenceSequences& ref_seq_info,
                                                                   const AlignmentPairGeometry& geom,
                                                                   const alignment_list& alignments,
                                                                   int32_t cutoff
@@ -998,6 +1001,47 @@ namespace breseq {
 
     int32_t indel_length = deletion_length + insertion_length;
     if (indel_length >= cutoff) return bam_alignment_ptr();
+
+    // Left-normalize the bridging D/I to bowtie2's own leftmost-placement convention: when its
+    // position is ambiguous (a repeat, or a mismatch-for-mismatch tie), shift it left through
+    // every 1-base step that swaps one boundary base-pair for another of the same match status
+    // (so total score is unchanged), so that reads spanning the same real indel at different
+    // read offsets always stitch to the identical breakpoint. Skip combined indels (both
+    // nonzero) -- shifting there would need to reconcile two independent boundaries at once.
+    if ((deletion_length > 0) != (insertion_length > 0))
+    {
+      const cAnnotatedSequence& ref_seq = ref_seq_info[ref_left->reference_target_id()];
+      string read_seq = ref_left->read_char_sequence();
+
+      while ( (left_end > static_cast<int32_t>(ref_left->reference_start_1()))
+           && (adj_right_start > static_cast<int32_t>(ref_right->reference_start_1()))
+           && (left_query_next >= 2) )
+      {
+        bool old_match, new_match;
+        if (deletion_length > 0)
+        {
+          char boundary_read_base = read_seq[left_query_next - 2];
+          old_match = (boundary_read_base == ref_seq.get_sequence_1(left_end));
+          new_match = (boundary_read_base == ref_seq.get_sequence_1(adj_right_start - 1));
+        }
+        else
+        {
+          char old_read_base = read_seq[left_query_next - 2];
+          char new_read_base = read_seq[left_query_next + insertion_length - 2];
+          old_match = (old_read_base == ref_seq.get_sequence_1(left_end));
+          new_match = (new_read_base == ref_seq.get_sequence_1(left_end));
+        }
+        if (old_match != new_match) break;
+
+        left_end--;
+        adj_right_start--;
+        left_query_next--;
+        right_query_start--;
+      }
+
+      split_cigar_at_reference_position(*ref_left, left_end + 1, left_before, left_after_unused, left_query_next);
+      split_cigar_at_reference_position(*ref_right, adj_right_start, right_before_unused, right_after, right_query_start);
+    }
 
     // Assemble the merged CIGAR: ref_left's kept ops, the bridging D/I (if any -- if both are
     // zero, coalesce the abutting M runs into one), then ref_right's kept ops.
@@ -1127,7 +1171,7 @@ namespace breseq {
               : static_cast<int32_t>(ceil(static_cast<double>(ordered[i]->read_length()) / 10.0));
 
           AlignmentPairGeometry geom(ref_seq_info, *ordered[i], *ordered[j]);
-          bam_alignment_ptr joined = build_joined_alignment(bam_header, geom, alignments, cutoff);
+          bam_alignment_ptr joined = build_joined_alignment(bam_header, ref_seq_info, geom, alignments, cutoff);
           if (!joined.get()) continue;
 
           int32_t score = alignment_score(*joined, ref_seq_info);

@@ -402,11 +402,15 @@ namespace breseq {
     //! Attempts to build one in-memory alignment record spanning geom's pair, bridging the
     //! gap between them with a single D (if the reference sides don't meet), a single I (if
     //! the read has extra/ambiguous-overlap bases at the junction), or both (a combined
-    //! indel). Returns a null bam_alignment_ptr if the pair isn't on the same reference
-    //! sequence and physical strand, or if the total implied indel length is >= cutoff.
-    //! Does not write anything to a file.
+    //! indel). When exactly one of the D/I is used, left-normalizes its position to bowtie2's
+    //! own leftmost-placement convention (shifting through repeat/mismatch-for-mismatch ties
+    //! that don't change alignment score) so that reads spanning the same real indel at
+    //! different read offsets stitch to the same breakpoint. Returns a null bam_alignment_ptr
+    //! if the pair isn't on the same reference sequence and physical strand, or if the total
+    //! implied indel length is >= cutoff. Does not write anything to a file.
     static bam_alignment_ptr build_joined_alignment(
                                                      bam_hdr_t* bam_header,
+                                                     const cReferenceSequences& ref_seq_info,
                                                      const AlignmentPairGeometry& geom,
                                                      const alignment_list& alignments,
                                                      int32_t cutoff
