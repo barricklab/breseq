@@ -268,9 +268,8 @@ namespace breseq {
   }
 
   //! Processes one read's worth of alignments (as grouped by bam_file::read_alignments)
-  //! for candidate junction preprocessing: stitches naturally split alignments explainable
-  //! by a small indel, writes remaining split-supporting alignments to PSAM, and writes the
-  //! best-scoring alignments to BSAM, updating summary statistics.
+  //! for candidate junction preprocessing: writes split-supporting alignments to PSAM, and
+  //! writes the best-scoring alignments to BSAM, updating summary statistics.
   //! Returns false if candidate_junction_read_limit was hit (caller should stop).
   bool PreprocessAlignments::preprocess_alignment_list(
                                                         const Settings& settings,
@@ -295,12 +294,6 @@ namespace breseq {
     if (settings.candidate_junction_read_limit != 0 && i > settings.candidate_junction_read_limit) return false;
 
     if (alignments.front()->unmapped()) return true;
-
-    // Note: naturally split (soft-clipped/chimeric) alignment pairs explainable by a small
-    // indel must already have been stitched into one alignment by the caller (via
-    // stitch_naturally_split_alignments), before this function ever sees them, so that PSAM
-    // and BSAM below reflect the same joined alignment written to the merged reference
-    // alignment stream.
 
     // write remaining split-supporting alignments for candidate junction identification
     write_junction_candidate_alignments(settings, summary, PSAM, alignments);
@@ -329,8 +322,6 @@ namespace breseq {
                                                  bool do_preprocess,
                                                  bam_file& BSAM,
                                                  bam_file& PSAM,
-                                                 tam_file& PRE_STITCH_SAM,
-                                                 tam_file& POST_STITCH_SAM,
                                                  uint32_t& i
                                                  )
   {
@@ -362,10 +353,10 @@ namespace breseq {
 
       if (!group.front()->unmapped()) {
         if (do_preprocess) {
-          // Stitch before writing, so output_sam_file_name (the merged reference-alignment
-          // stream resolve_alignments.cpp reads) reflects the same joined alignment that
-          // PSAM/BSAM will see below, instead of the original, now-stale split pieces.
-          stitch_naturally_split_alignments(settings, summary, ref_seq_info, hdr, PRE_STITCH_SAM, POST_STITCH_SAM, group);
+          // Split alignments with their own large indel into JC-candidate-supporting pieces.
+          // Splitting reads an alignment's own CIGAR and never mutates group.
+          int32_t split_cutoff = settings.junction_indel_split_length;
+          split_alignments_on_indels(settings, summary, ref_seq_info, PSAM, split_cutoff, group);
         }
         for (alignment_list::iterator it = group.begin(); it != group.end(); it++) {
           ASSERT(sam_write1(out, hdr, it->get()) >= 0, "Failed to write alignment to: " + output_sam_file_name);
@@ -399,8 +390,6 @@ namespace breseq {
                                                      const string& reference_sam_file_name,
                                                      bam_file& BSAM,
                                                      bam_file& PSAM,
-                                                     tam_file& PRE_STITCH_SAM,
-                                                     tam_file& POST_STITCH_SAM,
                                                      uint32_t& i
                                                      )
   {
@@ -410,7 +399,8 @@ namespace breseq {
     while (tam.read_alignments(alignments, false))
     {
       if (!alignments.front()->unmapped()) {
-        stitch_naturally_split_alignments(settings, summary, ref_seq_info, tam.bam_header, PRE_STITCH_SAM, POST_STITCH_SAM, alignments);
+        int32_t split_cutoff = settings.junction_indel_split_length;
+        split_alignments_on_indels(settings, summary, ref_seq_info, PSAM, split_cutoff, alignments);
       }
       if (!preprocess_alignment_list(settings, summary, ref_seq_info, BSAM, PSAM, alignments, i))
         break;
@@ -558,8 +548,6 @@ namespace breseq {
                                              bam_file& BSAM,
                                              bam_file& PSAM1,
                                              bam_file& PSAM2,
-                                             tam_file& PRE_STITCH_SAM,
-                                             tam_file& POST_STITCH_SAM,
                                              uint32_t& i
                                              )
   {
@@ -581,7 +569,8 @@ namespace breseq {
         r1_mapped = !group.front()->unmapped();
         if (r1_mapped) {
           if (do_preprocess) {
-            stitch_naturally_split_alignments(settings, summary, ref_seq_info, r1_stream.header(), PRE_STITCH_SAM, POST_STITCH_SAM, group);
+            int32_t split_cutoff = settings.junction_indel_split_length;
+            split_alignments_on_indels(settings, summary, ref_seq_info, PSAM1, split_cutoff, group);
           }
           if (out1) {
             for (alignment_list::iterator it = group.begin(); it != group.end(); it++) {
@@ -601,7 +590,8 @@ namespace breseq {
         r2_mapped = !group.front()->unmapped();
         if (r2_mapped) {
           if (do_preprocess) {
-            stitch_naturally_split_alignments(settings, summary, ref_seq_info, r2_stream.header(), PRE_STITCH_SAM, POST_STITCH_SAM, group);
+            int32_t split_cutoff = settings.junction_indel_split_length;
+            split_alignments_on_indels(settings, summary, ref_seq_info, PSAM2, split_cutoff, group);
           }
           if (out2) {
             for (alignment_list::iterator it = group.begin(); it != group.end(); it++) {
@@ -653,8 +643,6 @@ namespace breseq {
                                                  bam_file& BSAM,
                                                  bam_file& PSAM1,
                                                  bam_file& PSAM2,
-                                                 tam_file& PRE_STITCH_SAM,
-                                                 tam_file& POST_STITCH_SAM,
                                                  uint32_t& i
                                                  )
   {
@@ -672,7 +660,7 @@ namespace breseq {
     map<pair<string, int64_t>, uint32_t> distance_counts;
     merge_join_paired_read_streams(settings, summary, ref_seq_info, r1_stream, r2_stream,
                                     out1, out2, output_sam_file_name_r1, output_sam_file_name_r2,
-                                    distance_counts, do_preprocess, BSAM, PSAM1, PSAM2, PRE_STITCH_SAM, POST_STITCH_SAM, i);
+                                    distance_counts, do_preprocess, BSAM, PSAM1, PSAM2, i);
 
     hts_close(out1);
     hts_close(out2);
@@ -703,8 +691,6 @@ namespace breseq {
                                                  bam_file& BSAM,
                                                  bam_file& PSAM1,
                                                  bam_file& PSAM2,
-                                                 tam_file& PRE_STITCH_SAM,
-                                                 tam_file& POST_STITCH_SAM,
                                                  uint32_t& i
                                                  )
   {
@@ -715,7 +701,7 @@ namespace breseq {
     merge_join_paired_read_streams(settings, summary, ref_seq_info, r1_stream, r2_stream,
                                     NULL, NULL, reference_sam_file_name_r1, reference_sam_file_name_r2,
                                     distance_counts, true /* only called when do_preprocess is true */,
-                                    BSAM, PSAM1, PSAM2, PRE_STITCH_SAM, POST_STITCH_SAM, i);
+                                    BSAM, PSAM1, PSAM2, i);
 
     string csv_file_name = Settings::file_name(settings.paired_mapping_distance_distribution_file_name, "#", read_file_set.m_base_name);
     ofstream csv(csv_file_name.c_str());
@@ -755,15 +741,6 @@ namespace breseq {
       BSAM.open_write(settings.preprocess_junction_best_sam_file_name, reference_fasta_file_name);
     }
 
-    // Debugging dumps of every read examined for natural-split indel stitching (i.e. every
-    // read with more than one alignment), before and after stitching -- see
-    // stitch_naturally_split_alignments.
-    tam_file PRE_STITCH_SAM, POST_STITCH_SAM;
-    if (do_preprocess) {
-      PRE_STITCH_SAM.open_write(settings.pre_stitching_sam_file_name, reference_fasta_file_name);
-      POST_STITCH_SAM.open_write(settings.post_stitching_sam_file_name, reference_fasta_file_name);
-    }
-
     uint32_t i = 0;
     for (const auto& rfs : settings.read_file_sets)
     {
@@ -789,10 +766,10 @@ namespace breseq {
             string stage2_reference_sam_file_name = Settings::file_name(settings.stage2_reference_sam_file_name, "#", read_file.m_base_name);
 
             merge_two_sam_files(settings, summary, ref_seq_info, stage1_reference_sam_file_name, stage2_reference_sam_file_name,
-                                 reference_sam_file_name, do_preprocess, BSAM, PSAM, PRE_STITCH_SAM, POST_STITCH_SAM, i);
+                                 reference_sam_file_name, do_preprocess, BSAM, PSAM, i);
           } else if (do_preprocess) {
             // Single-stage alignment: reference_sam_file_name was already written directly by bowtie2
-            preprocess_one_sam_file(settings, summary, ref_seq_info, reference_sam_file_name, BSAM, PSAM, PRE_STITCH_SAM, POST_STITCH_SAM, i);
+            preprocess_one_sam_file(settings, summary, ref_seq_info, reference_sam_file_name, BSAM, PSAM, i);
           }
 
           if (do_preprocess) {
@@ -837,11 +814,11 @@ namespace breseq {
           merge_two_sets_of_paired_sam_files(settings, summary, ref_seq_info, rfs,
                                               stage1_r1, stage2_r1, reference_sam_file_name_r1,
                                               stage1_r2, stage2_r2, reference_sam_file_name_r2,
-                                              do_preprocess, BSAM, PSAM1, PSAM2, PRE_STITCH_SAM, POST_STITCH_SAM, i);
+                                              do_preprocess, BSAM, PSAM1, PSAM2, i);
         } else if (do_preprocess) {
           preprocess_one_set_of_paired_sam_files(settings, summary, ref_seq_info, rfs,
                                                   reference_sam_file_name_r1, reference_sam_file_name_r2,
-                                                  BSAM, PSAM1, PSAM2, PRE_STITCH_SAM, POST_STITCH_SAM, i);
+                                                  BSAM, PSAM1, PSAM2, i);
         }
 
         if (do_preprocess) {
@@ -860,361 +837,133 @@ namespace breseq {
       cerr << "  Summary... " << endl
            << "  Aligned reads:                          " << setw(12) << right << summary.preprocess_alignments.aligned_reads << endl
            << "  Read alignments:                        " << setw(12) << right << summary.preprocess_alignments.alignments << endl
-           << "  Alignments stitched across indels:      " << setw(12) << right << summary.preprocess_alignments.alignments_stitched_on_indels << endl
-           << "  Reads with alignments stitched:         " << setw(12) << right << summary.preprocess_alignments.reads_with_alignments_stitched_on_indels << endl
+           << "  Alignments split on indels:             " << setw(12) << right << summary.preprocess_alignments.alignments_split_on_indels << endl
+           << "  Reads with alignments split on indels:  " << setw(12) << right << summary.preprocess_alignments.reads_with_alignments_split_on_indels << endl
+           << "  Split alignments:                       " << setw(12) << right << summary.preprocess_alignments.split_alignments << endl
+           << "  Reads with split alignments:            " << setw(12) << right << summary.preprocess_alignments.reads_with_split_alignments << endl
       ;
     }
   }
 
-  //! Walks a's own CIGAR (bam-native, always reference-forward order regardless of strand),
-  //! splitting it at the point where the reference position reaches ref_split_1: ops (or the
-  //! portion of an op) covering reference positions < ref_split_1 go to before_ops, ops (or
-  //! the portion) covering >= ref_split_1 go to after_ops. Leading/trailing S ops are
-  //! dropped (callers recompute soft-clip lengths from query_start_1()/query_end_1() of
-  //! whichever end they keep). query_pos_at_split is set to the 1-indexed query position
-  //! that corresponds to ref_split_1 (i.e., where after_ops begins, in query coordinates).
-  static void split_cigar_at_reference_position(
-                                                 const bam_alignment& a,
-                                                 int32_t ref_split_1,
-                                                 vector<pair<char,uint16_t> >& before_ops,
-                                                 vector<pair<char,uint16_t> >& after_ops,
-                                                 uint32_t& query_pos_at_split
-                                                 )
+  //! Returns true if a D/I op of the given length at ref_pos, with the given actual content
+  //! (deleted reference bases for a D, inserted read bases for an I), is a pure length-change
+  //! to a reference homopolymer that was already min_homopolymer_length bases or longer: the
+  //! indel's own content must be entirely one repeated base, and the existing reference
+  //! homopolymer run of that base -- for a deletion, including the deleted span itself, since
+  //! those bases are genuinely present in the reference; for an insertion, counting only the
+  //! flanking reference bases, since the inserted content isn't reference at all -- must meet
+  //! the threshold.
+  static bool indel_is_pure_homopolymer_change(
+                                                const cAnnotatedSequence& ref_seq,
+                                                bool is_deletion,
+                                                int32_t ref_pos,
+                                                int32_t len,
+                                                const string& indel_bases,
+                                                int32_t min_homopolymer_length
+                                                )
   {
-    before_ops.clear();
-    after_ops.clear();
-
-    vector<pair<char,uint16_t> > cigar_list = a.cigar_pair_char_op_array();
-    int32_t ref_pos = static_cast<int32_t>(a.reference_start_1());
-    uint32_t query_pos = a.query_start_1();
-    bool before_split = true;
-    query_pos_at_split = query_pos;
-
-    for (size_t i = 0; i < cigar_list.size(); i++)
-    {
-      char op = cigar_list[i].first;
-      uint16_t len = cigar_list[i].second;
-      if (op == 'S') continue;
-
-      if (op == 'I')
-      {
-        if (before_split) before_ops.push_back(make_pair(op, len));
-        else after_ops.push_back(make_pair(op, len));
-        query_pos += len;
-        continue;
-      }
-
-      // op is 'M' or 'D': consumes reference (and, if 'M', query too)
-      if (before_split)
-      {
-        if (ref_split_1 <= ref_pos)
-        {
-          // boundary is at (or, if geometry is sound, never before) the start of this op
-          query_pos_at_split = query_pos;
-          before_split = false;
-          after_ops.push_back(make_pair(op, len));
-        }
-        else if (ref_split_1 > ref_pos + static_cast<int32_t>(len) - 1)
-        {
-          // boundary strictly after this op
-          before_ops.push_back(make_pair(op, len));
-        }
-        else
-        {
-          // boundary splits this op
-          uint16_t before_len = static_cast<uint16_t>(ref_split_1 - ref_pos);
-          uint16_t after_len = static_cast<uint16_t>(len - before_len);
-          if (before_len > 0) before_ops.push_back(make_pair(op, before_len));
-          query_pos_at_split = query_pos + (op == 'M' ? before_len : 0);
-          before_split = false;
-          if (after_len > 0) after_ops.push_back(make_pair(op, after_len));
-        }
-      }
-      else
-      {
-        after_ops.push_back(make_pair(op, len));
-      }
-
-      ref_pos += len;
-      if (op == 'M') query_pos += len;
+    char c = indel_bases[0];
+    for (size_t k = 1; k < indel_bases.size(); k++) {
+      if (indel_bases[k] != c) return false;
     }
 
-    if (before_split) {
-      // ref_split_1 was never reached (>= one past this alignment's own reference end)
-      query_pos_at_split = query_pos;
-    }
+    int32_t left_pos = ref_pos - 1;
+    int32_t left_run = 0;
+    while ((left_pos >= 1) && (ref_seq.get_sequence_1(left_pos) == c)) { left_run++; left_pos--; }
+
+    int32_t right_pos = is_deletion ? (ref_pos + len) : ref_pos;
+    int32_t right_run = 0;
+    while ((right_pos <= static_cast<int32_t>(ref_seq.get_sequence_length())) && (ref_seq.get_sequence_1(right_pos) == c)) { right_run++; right_pos++; }
+
+    int32_t existing_homopolymer_length = left_run + right_run + (is_deletion ? len : 0);
+    return existing_homopolymer_length >= min_homopolymer_length;
   }
 
-  //! Attempts to build one in-memory alignment record spanning geom's pair, bridging the gap
-  //! between them with a single D (if the reference sides don't meet), a single I (if the
-  //! read has extra or ambiguous-overlap bases at the junction), or both (a combined indel).
-  //! Any reference-side overlap (ambiguous/repeat-driven placement, e.g. a homopolymer
-  //! expansion) is credited to the reference-earlier side and folded into the I length
-  //! instead, so the construction is uniform regardless of how the ambiguity would otherwise
-  //! have been resolved. When exactly one of the D/I is used, its position is then
-  //! left-normalized to bowtie2's own leftmost-placement convention. Returns a null
-  //! bam_alignment_ptr if the pair isn't on the same reference sequence and physical strand,
-  //! if the geometry is internally inconsistent, or if the total implied indel length is
-  //! >= cutoff.
-  bam_alignment_ptr PreprocessAlignments::build_joined_alignment(
-                                                                  bam_hdr_t* bam_header,
-                                                                  const cReferenceSequences& ref_seq_info,
-                                                                  const AlignmentPairGeometry& geom,
-                                                                  const alignment_list& alignments,
-                                                                  int32_t cutoff
-                                                                  )
+  /*! Split alignments interrupted by indels into their segments and write to a SAM file.
+	 */
+
+  void PreprocessAlignments::split_alignments_on_indels(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info, bam_file& PSAM, int32_t min_indel_split_len, const alignment_list& alignments)
   {
-    if (geom.hash_seq_id_1 != geom.hash_seq_id_2) return bam_alignment_ptr();
-    if (geom.q1->strand() != geom.q2->strand()) return bam_alignment_ptr();
+    //##
+    //## @JEB: Note that this may affect the order of alignments in the SAM file. This has
+    //## consequences for the AlignmentCorrection step, which may assume highest scoring
+    //## alignments are first in the TAM file.
+    //##
+    //## So only USE the split alignment file for creating a list of candidate junctions.
+    //##
 
-    // Determine which of the pair is reference-left/-right from their own (mismatch-corrected)
-    // reference bounds -- NOT hash_coord_1/hash_coord_2. hash_coord_1/hash_coord_2 mark the
-    // outer edges of an ambiguous/repeat-driven overlap region (candidate-junction sequence
-    // construction's own convention) rather than complementary "resume here" cut points for a
-    // single spliced CIGAR: using them here as left_end/right_start silently discarded almost
-    // all of both alignments' real matched content for an overlapping pair, inflating a clean
-    // small insertion into a much larger spurious combined indel that then failed the cutoff.
-    bool q1_is_ref_left = (geom.r1_start <= geom.r2_start);
-    bam_alignment* ref_left  = q1_is_ref_left ? geom.q1 : geom.q2;
-    bam_alignment* ref_right = q1_is_ref_left ? geom.q2 : geom.q1;
-    int32_t left_end    = q1_is_ref_left ? geom.r1_end   : geom.r2_end;
-    int32_t right_start = q1_is_ref_left ? geom.r2_start : geom.r1_start;
+    assert(min_indel_split_len >= 0);
 
-    // Clamp away any reference-side overlap (ambiguous/repeat-driven placement) by crediting
-    // it to ref_left; the corresponding read bases become part of the inserted content
-    // derived from query positions below.
-    int32_t adj_right_start = max(right_start, left_end + 1);
+    // Keeps track of which to split
+    alignment_list untouched_alignments;
+    alignment_list split_alignments;
 
-    vector<pair<char,uint16_t> > left_before, left_after_unused;
-    uint32_t left_query_next;
-    split_cigar_at_reference_position(*ref_left, left_end + 1, left_before, left_after_unused, left_query_next);
+    untouched_alignments.read_base_quality_char_string = alignments.read_base_quality_char_string;
+    untouched_alignments.read_base_quality_char_string_reversed = alignments.read_base_quality_char_string_reversed;
+    uint32_t alignments_written = 0;
 
-    vector<pair<char,uint16_t> > right_before_unused, right_after;
-    uint32_t right_query_start;
-    split_cigar_at_reference_position(*ref_right, adj_right_start, right_before_unused, right_after, right_query_start);
+    for(alignment_list::const_iterator it = alignments.begin(); it != alignments.end(); it++) {
 
-    int32_t deletion_length = adj_right_start - left_end - 1;
-    int32_t insertion_length = static_cast<int32_t>(right_query_start) - static_cast<int32_t>(left_query_next);
+      const bam_alignment& a = **it;
+      vector<pair<char,uint16_t> > cigar_list = a.cigar_pair_char_op_array();
+      const cAnnotatedSequence& ref_seq = ref_seq_info[a.reference_target_id()];
+      string read_seq = a.read_char_sequence();
 
-    if (deletion_length < 0) deletion_length = 0;          // shouldn't happen given the clamp above
-    if (insertion_length < 0) return bam_alignment_ptr();  // inconsistent geometry -- decline to stitch
+      bool do_split = false;
+      int32_t ref_pos = static_cast<int32_t>(a.reference_start_1());
+      uint32_t query_pos = a.query_start_1();
 
-    int32_t indel_length = deletion_length + insertion_length;
-    if (indel_length >= cutoff) return bam_alignment_ptr();
+      for (size_t i = 0; i < cigar_list.size(); i++) {
+        char op = cigar_list[i].first;
+        uint16_t len = cigar_list[i].second;
+        if (op == 'S') continue;
 
-    // Left-normalize the bridging D/I to bowtie2's own leftmost-placement convention: when its
-    // position is ambiguous (a repeat, or a mismatch-for-mismatch tie), shift it left through
-    // every 1-base step that swaps one boundary base-pair for another of the same match status
-    // (so total score is unchanged), so that reads spanning the same real indel at different
-    // read offsets always stitch to the identical breakpoint. Skip combined indels (both
-    // nonzero) -- shifting there would need to reconcile two independent boundaries at once.
-    if ((deletion_length > 0) != (insertion_length > 0))
-    {
-      const cAnnotatedSequence& ref_seq = ref_seq_info[ref_left->reference_target_id()];
-      string read_seq = ref_left->read_char_sequence();
-
-      while ( (left_end > static_cast<int32_t>(ref_left->reference_start_1()))
-           && (adj_right_start > static_cast<int32_t>(ref_right->reference_start_1()))
-           && (left_query_next >= 2) )
-      {
-        bool old_match, new_match;
-        if (deletion_length > 0)
-        {
-          char boundary_read_base = read_seq[left_query_next - 2];
-          old_match = (boundary_read_base == ref_seq.get_sequence_1(left_end));
-          new_match = (boundary_read_base == ref_seq.get_sequence_1(adj_right_start - 1));
-        }
-        else
-        {
-          char old_read_base = read_seq[left_query_next - 2];
-          char new_read_base = read_seq[left_query_next + insertion_length - 2];
-          old_match = (old_read_base == ref_seq.get_sequence_1(left_end));
-          new_match = (new_read_base == ref_seq.get_sequence_1(left_end));
-        }
-        if (old_match != new_match) break;
-
-        left_end--;
-        adj_right_start--;
-        left_query_next--;
-        right_query_start--;
-      }
-
-      split_cigar_at_reference_position(*ref_left, left_end + 1, left_before, left_after_unused, left_query_next);
-      split_cigar_at_reference_position(*ref_right, adj_right_start, right_before_unused, right_after, right_query_start);
-    }
-
-    // Assemble the merged CIGAR: ref_left's kept ops, the bridging D/I (if any -- if both are
-    // zero, coalesce the abutting M runs into one), then ref_right's kept ops.
-    vector<pair<char,uint16_t> > merged_ops = left_before;
-
-    if (deletion_length > 0) merged_ops.push_back(make_pair('D', static_cast<uint16_t>(deletion_length)));
-    if (insertion_length > 0) merged_ops.push_back(make_pair('I', static_cast<uint16_t>(insertion_length)));
-
-    if ((deletion_length == 0) && (insertion_length == 0)
-        && !merged_ops.empty() && !right_after.empty()
-        && (merged_ops.back().first == 'M') && (right_after.front().first == 'M'))
-    {
-      merged_ops.back().second += right_after.front().second;
-      merged_ops.insert(merged_ops.end(), right_after.begin() + 1, right_after.end());
-    }
-    else
-    {
-      merged_ops.insert(merged_ops.end(), right_after.begin(), right_after.end());
-    }
-
-    if (merged_ops.empty()) return bam_alignment_ptr();
-
-    uint32_t read_length = ref_left->read_length();
-    uint32_t left_padding = ref_left->query_start_1() - 1;
-    uint32_t right_padding = read_length - ref_right->query_end_1();
-
-    string cigar_string = alignment_wrapper::cigar_op_array_to_cigar_string(merged_ops);
-    if (left_padding > 0) cigar_string = to_string(left_padding) + "S" + cigar_string;
-    if (right_padding > 0) cigar_string = cigar_string + to_string(right_padding) + "S";
-
-    string qseq_string = ref_left->read_char_sequence();
-    string quality_score_string = ref_left->read_base_quality_char_string();
-    if (quality_score_string[0] == ' ') {
-      quality_score_string = alignments.read_base_quality_char_string;
-      if (alignments.read_base_quality_char_string_reversed ^ ref_left->reversed())
-        quality_score_string = reverse_string(quality_score_string);
-    }
-
-    vector<string> ll = make_vector<string>
-      (ref_left->read_name())
-      (to_string(ref_left->flag()))
-      (string(bam_header->target_name[ref_left->reference_target_id()]))
-      (to_string(ref_left->reference_start_1()))
-      (to_string(min(ref_left->mapping_quality(), ref_right->mapping_quality())))
-      (cigar_string)
-      ("*")("0")("0")
-      (qseq_string)
-      (quality_score_string)
-    ;
-
-    string sam_line = join(ll, "\t");
-    kstring_t ks = KS_INITIALIZE;
-    kputs(sam_line.c_str(), &ks);
-    bam1_t* b = bam_init1();
-    ASSERT(sam_parse1(&ks, bam_header, b) >= 0, "sam_parse1 failed: " + sam_line);
-    bam_alignment_ptr result(new bam_alignment(*b));
-    bam_destroy1(b);
-    ks_free(&ks);
-
-    return result;
-  }
-
-  //! Orders alignments by stranded read start, so that adjacent elements directly correspond
-  //! to a read chimeric across two (or more) pieces.
-  static bool compare_by_stranded_read_start(const bam_alignment_ptr& a, const bam_alignment_ptr& b)
-  {
-    uint32_t a_start, a_end, b_start, b_end;
-    a->query_stranded_bounds_1(a_start, a_end);
-    b->query_stranded_bounds_1(b_start, b_end);
-    return a_start < b_start;
-  }
-
-  //! Joins pairs of a read's naturally split (soft-clipped/chimeric) alignments that are
-  //! explainable by a single small indel below settings.junction_indel_stitch_length (or, if
-  //! not set, ceil(read_length/10)) into one alignment with the indel represented in its
-  //! CIGAR, mutating alignments in place. Considers every adjacent pair by stranded read
-  //! position (not just pairs that would already pass the JC-pairing quality gates), so even
-  //! very lopsided natural splits get a chance to be correctly represented as RA evidence.
-  //! When several qualifying stitchings are possible, keeps the best-scoring one and repeats
-  //! until no more qualifying pairs remain. Returns the number of stitch operations
-  //! performed.
-  uint32_t PreprocessAlignments::stitch_naturally_split_alignments(
-                                                                    const Settings& settings,
-                                                                    Summary& summary,
-                                                                    const cReferenceSequences& ref_seq_info,
-                                                                    bam_hdr_t* bam_header,
-                                                                    tam_file& PRE_STITCH_SAM,
-                                                                    tam_file& POST_STITCH_SAM,
-                                                                    alignment_list& alignments
-                                                                    )
-  {
-    bool is_candidate = (alignments.size() > 1);
-    if (is_candidate) PRE_STITCH_SAM.write_alignments(0, alignments);
-
-    uint32_t stitches_performed = 0;
-
-    bool stitched_again = true;
-    while (stitched_again && (alignments.size() > 1))
-    {
-      stitched_again = false;
-
-      // Order by stranded read start purely for readability of the (i,j) scan and the debug
-      // dumps below -- every pair is tried, not just adjacent ones. With bowtie2 run in -k
-      // mode, a read's alignment list often also contains several unrelated, nearly
-      // full-length alternative-location alignments interleaved (by start position) between
-      // the two pieces of a genuine natural split; restricting the scan to adjacent pairs
-      // after sorting let those decoys hide the real pairing from ever being tested.
-      vector<bam_alignment_ptr> ordered(alignments.begin(), alignments.end());
-      sort(ordered.begin(), ordered.end(), compare_by_stranded_read_start);
-
-      bool found = false;
-      size_t best_i = 0, best_j = 0;
-      int32_t best_score = 0;
-      bam_alignment_ptr best_joined;
-
-      for (size_t i = 0; i < ordered.size(); i++)
-      {
-        for (size_t j = i + 1; j < ordered.size(); j++)
-        {
-          uint32_t a_start, a_end, b_start, b_end;
-          ordered[i]->query_stranded_bounds_1(a_start, a_end);
-          ordered[j]->query_stranded_bounds_1(b_start, b_end);
-          if (b_end <= a_end) continue; // ordered[j]'s read span is contained in ordered[i]'s
-
-          int32_t cutoff = (settings.junction_indel_stitch_length >= 0)
-              ? settings.junction_indel_stitch_length
-              : static_cast<int32_t>(ceil(static_cast<double>(ordered[i]->read_length()) / 10.0));
-
-          AlignmentPairGeometry geom(ref_seq_info, *ordered[i], *ordered[j]);
-          bam_alignment_ptr joined = build_joined_alignment(bam_header, ref_seq_info, geom, alignments, cutoff);
-          if (!joined.get()) continue;
-
-          int32_t score = alignment_score(*joined, ref_seq_info);
-          if (!found || (score > best_score)) {
-            found = true;
-            best_i = i;
-            best_j = j;
-            best_score = score;
-            best_joined = joined;
+        if (((op == 'D') || (op == 'I')) && (len >= static_cast<uint16_t>(min_indel_split_len))) {
+          bool is_deletion = (op == 'D');
+          string indel_bases = is_deletion
+              ? ref_seq.get_sequence_1(ref_pos, ref_pos + len - 1)
+              : read_seq.substr(query_pos - 1, len);
+          if (!indel_is_pure_homopolymer_change(ref_seq, is_deletion, ref_pos, len, indel_bases, min_indel_split_len)) {
+            do_split = true;
           }
         }
+
+        if ((op == 'M') || (op == 'D')) ref_pos += len;
+        if ((op == 'M') || (op == 'I')) query_pos += len;
       }
 
-      if (found)
-      {
-        // Set the AS tag now: write_junction_candidate_alignments may write this alignment
-        // to PSAM before eligible_read_alignments (which normally sets AS) ever runs.
-        int32_t as = (best_score < 0) ? 0 : best_score;
-        best_joined->aux_set("AS", 'I', sizeof(int32_t), (uint8_t*)&as);
+      if (do_split) {
+        split_alignments.push_back( *it );
 
-        alignment_list new_alignments;
-        new_alignments.read_base_quality_char_string = alignments.read_base_quality_char_string;
-        new_alignments.read_base_quality_char_string_reversed = alignments.read_base_quality_char_string_reversed;
-        for (size_t k = 0; k < ordered.size(); k++) {
-          if (k == best_i) new_alignments.push_back(best_joined);
-          else if (k == best_j) continue;
-          else new_alignments.push_back(ordered[k]);
-        }
-        alignments = new_alignments;
+      }
+      else {
+        // Check guard showing that the main alignment is good and thus we don't look at other alignments
+        if ( (*it)->query_match_length() >= alignments.front()->read_length() - settings.required_both_unique_length_per_side)
+          return;
 
-        stitches_performed++;
-        summary.preprocess_alignments.alignments_stitched_on_indels++;
-        stitched_again = true;
+        untouched_alignments.push_back( *it );
       }
     }
+    (void) untouched_alignments;
 
-    if (stitches_performed > 0) summary.preprocess_alignments.reads_with_alignments_stitched_on_indels++;
-    if (is_candidate) POST_STITCH_SAM.write_alignments(0, alignments);
+    // Untouched alignments are deliberately NOT written here (unlike the original version of
+    // this function): write_junction_candidate_alignments, called later on this same
+    // alignments list, is solely responsible for those, so writing them here too would just
+    // duplicate them as JC candidates.
+    for(alignment_list::iterator it = split_alignments.begin(); it != split_alignments.end(); ++it) {
+      PSAM.write_split_alignment(min_indel_split_len, **it, alignments, ref_seq_info);
+      alignments_written += 2;
+    }
 
-    return stitches_performed;
+    // record statistics
+    if (split_alignments.size()>0) summary.preprocess_alignments.reads_with_alignments_split_on_indels++;
+    summary.preprocess_alignments.alignments_split_on_indels +=split_alignments.size() ;
+
+    if (alignments_written > 0) summary.preprocess_alignments.reads_with_split_alignments++;
+    summary.preprocess_alignments.split_alignments += alignments_written;
   }
 
-  //! Writes a read's (post-stitching) alignments that could support a junction candidate to
+  //! Writes a read's alignments that could support a junction candidate to
   //! PSAM: skipped entirely if one alignment already covers nearly the whole read (nothing
   //! left to usefully pair), otherwise all remaining alignments are written as long as there
   //! is more than one (it takes at least two to make a candidate junction).
@@ -1223,9 +972,14 @@ namespace breseq {
     (void) summary;
 
     for(alignment_list::const_iterator it = alignments.begin(); it != alignments.end(); it++) {
-      // Guard showing that a main alignment is already good, so there's nothing left to
-      // usefully pair for junction detection.
-      if ( (*it)->query_match_length() >= alignments.front()->read_length() - settings.required_both_unique_length_per_side)
+      // Guard showing that a main alignment is already good - it covers so much of the match that it should
+      // be considered definitive and not used for junction candidates, so there's nothing left to do.
+      // NOTE: The read will still be re-aligned to candidate junctions and could match them better later
+      // but it shouldn't help those alternative junctions get seeded => this can lead to odd candidates.
+      if (
+          ( (*it)->query_match_length() >= alignments.front()->read_length() - settings.required_both_unique_length_per_side) ||
+          ( (*it)->query_match_length() >= alignments.front()->read_length() * ( 1 - settings.required_both_unique_length_per_side_fraction) )
+         )
         return;
     }
 
@@ -1570,7 +1324,7 @@ namespace breseq {
 //       If coding on this restarts, then nw.cpp needs to be adjusted
 //       to not count mismatches at the ends against an alignment
 //       (I believe this would be in the setup step.)
-#define NW_FILTER
+//#define NW_FILTER
 #ifdef NW_FILTER
           
           int32_t score(0);
@@ -1912,9 +1666,8 @@ namespace breseq {
 
 
   /*! Computes reference-side breakpoint geometry for a pair of partial alignments of the
-   *  same read, correcting for mismatches near the junction. Shared by candidate-junction
-   *  construction (CandidateJunctions::alignment_pair_to_candidate_junction) and natural
-   *  split-pair indel stitching (PreprocessAlignments::stitch_naturally_split_alignments).
+   *  same read, correcting for mismatches near the junction, for use by candidate-junction
+   *  construction (CandidateJunctions::alignment_pair_to_candidate_junction).
    *
    *  a1/a2 are reordered internally (via the q1/q2 pointer members, not by copying or
    *  swapping the alignment objects) so that q1 is read-earlier; the caller's a1/a2
@@ -2141,9 +1894,9 @@ namespace breseq {
 		//                    1 means this is lowest coord of alignment, junction seq continues to higher coord
 
     // Reference-side geometry (breakpoint coordinates, corrected for mismatches near the
-    // junction) is shared with PreprocessAlignments::stitch_naturally_split_alignments; see
-    // AlignmentPairGeometry. Copy into local mutable variables, since the rest of this
-    // function adjusts them further (overlap normalization, strand canonicalization).
+    // junction) is computed by AlignmentPairGeometry. Copy into local mutable variables,
+    // since the rest of this function adjusts them further (overlap normalization, strand
+    // canonicalization).
     AlignmentPairGeometry geom(ref_seq_info, a1, a2);
 
     bool hash_strand_1 = geom.hash_strand_1;
@@ -2259,11 +2012,6 @@ namespace breseq {
 
     // set the return value (which takes control of the allocated pointer)
     returned_junction_candidate = JunctionCandidatePtr(candidate_junction_ptr);
-
-    // Pairs explainable by a small indel are no longer offered as junction candidates at
-    // all -- PreprocessAlignments::stitch_naturally_split_alignments intercepts and joins
-    // them into one alignment (RA evidence) before candidate junction identification ever
-    // sees them, so there is no narrow reject block needed here any more.
 
 		if (verbose)
 		{

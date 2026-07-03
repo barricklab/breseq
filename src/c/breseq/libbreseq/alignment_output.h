@@ -78,7 +78,7 @@ namespace breseq
       bool pair_is_proper;
       string pair_orientation;
       int64_t pair_distance;
-      
+
       static const string gap_string;
       static const string lowercase_base_string;
 

@@ -192,8 +192,10 @@ void to_json(json& j, const PreprocessAlignmentsSummary& s)
   j = json{
     {"aligned_reads", s.aligned_reads},
     {"alignments", s.alignments},
-    {"alignments_stitched_on_indels", s.alignments_stitched_on_indels},
-    {"reads_with_alignments_stitched_on_indels", s.reads_with_alignments_stitched_on_indels},
+    {"alignments_split_on_indels", s.alignments_split_on_indels},
+    {"reads_with_alignments_split_on_indels", s.reads_with_alignments_split_on_indels},
+    {"split_alignments", s.split_alignments},
+    {"reads_with_split_alignments", s.reads_with_split_alignments},
   };
 }
 
@@ -201,8 +203,10 @@ void from_json(const json& j, PreprocessAlignmentsSummary& s)
 {
   s.aligned_reads = j.at("aligned_reads").get<uint64_t>();
   s.alignments = j.at("alignments").get<uint64_t>();
-  s.alignments_stitched_on_indels = j.at("alignments_stitched_on_indels").get<uint64_t>();
-  s.reads_with_alignments_stitched_on_indels = j.at("reads_with_alignments_stitched_on_indels").get<uint64_t>();
+  s.alignments_split_on_indels = j.at("alignments_split_on_indels").get<uint64_t>();
+  s.reads_with_alignments_split_on_indels = j.at("reads_with_alignments_split_on_indels").get<uint64_t>();
+  s.split_alignments = j.at("split_alignments").get<uint64_t>();
+  s.reads_with_split_alignments = j.at("reads_with_split_alignments").get<uint64_t>();
 }
 
 // CandidateJunctionSummary
@@ -511,7 +515,6 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   read_file_long_read_distribute_remainder = t.read_file_long_read_distribute_remainder;
   
   //! Settings: Read Alignment
-  bowtie2_scoring = t.bowtie2_scoring;
   bowtie2_stage1 = t.bowtie2_stage1;
   bowtie2_stage2 = t.bowtie2_stage2;
   bowtie2_junction = t.bowtie2_junction;
@@ -523,7 +526,7 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   maximum_read_mismatches = t.maximum_read_mismatches;
   
   //! Settings: Candidate Junction
-  junction_indel_stitch_length = t.junction_indel_stitch_length;
+  junction_indel_split_length = t.junction_indel_split_length;
   required_both_unique_length_per_side = t.required_both_unique_length_per_side;
   required_both_unique_length_per_side_fraction = t.required_both_unique_length_per_side_fraction;
   required_one_unique_length_per_side = t.required_one_unique_length_per_side;
@@ -819,7 +822,6 @@ void to_json(json& j, const PublicOptionsSummary& s)
     
     //! Settings: Read Alignment
     {"read_alignment", json{
-      {"bowtie2_scoring", s.bowtie2_scoring},
       {"bowtie2_stage1", s.bowtie2_stage1},
       {"bowtie2_stage2", s.bowtie2_stage2},
       {"bowtie2_junction", s.bowtie2_junction},
@@ -834,7 +836,7 @@ void to_json(json& j, const PublicOptionsSummary& s)
     
     //! Settings: Candidate Junction
     {"candidate_junction", json{
-      {"junction_indel_stitch_length", s.junction_indel_stitch_length},
+      {"junction_indel_split_length", s.junction_indel_split_length},
       {"required_both_unique_length_per_side", s.required_both_unique_length_per_side},
       {"required_both_unique_length_per_side_fraction", s.required_both_unique_length_per_side_fraction},
       {"required_one_unique_length_per_side", s.required_one_unique_length_per_side},

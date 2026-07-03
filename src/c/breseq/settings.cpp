@@ -312,16 +312,17 @@ namespace breseq
     ("require-match-length", "Only consider alignments that cover this many bases of a read", 0, ADVANCED_OPTION)
     ("require-match-fraction", "Only consider alignments that cover this fraction of a read (automatically lowered to 0.5 when --predict-soft-clipping is used, unless set explicitly)", 0.9, ADVANCED_OPTION)
     ("maximum-read-mismatches", "Don't consider reads with this many or more bases or indels that are different from the reference sequence. Unaligned bases at the end of a read also count as mismatches. Unaligned bases at the beginning of the read do NOT count as mismatches. (DEFAULT=OFF)", "", ADVANCED_OPTION)
+    ("junction-indel-split-length", "Threshold (in bases) for splitting an indel found during candidate-junction preprocessing: an indel already present in a single alignment's own CIGAR that is this length or longer is split into separate junction-candidate-supporting alignment records (JC evidence), unless it is entirely a length-change to a reference homopolymer that was already this long or longer (in which case it is left as RA evidence). (DEFAULT = 5)", "", ADVANCED_OPTION)
     ;
     
     options.addUsage("", ADVANCED_OPTION);
     options.addUsage("Bowtie2 Mapping/Alignment Options", ADVANCED_OPTION);
     options
     ("paired-mapping", "Detect read files whose names differ only in a '1'/'2' character as a paired-end set, for reporting and paired-aware FASTQ normalization. Reads are still aligned independently in single-end mode. (DEFAULT=OFF)", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("bowtie2-scoring", "All calls to bowtie2 must use the same commands for assigning scores to read alignments. Larger scores are assumed to be better by breseq. Each call to bowtie2 has this option added to its command line. (DEFAULT=\"" + this->bowtie2_scoring + "\")", "", ADVANCED_OPTION)
-    ("bowtie2-stage1", "Settings for mapping criteria used for the stage 1 alignment. This step is normally meant for quickly aligning near-perfect matches. (DEFAULT=\"" + this->bowtie2_stage1 + "\")", "", ADVANCED_OPTION)
-    ("bowtie2-stage2", "Settings for mapping criteria used for the stage 2 alignment. If set to the empty string \"\", then stage 2 alignment is skipped. This step is normally meant for exhaustively mapping reads that were unmapped by stage 1. (DEFAULT=\"" + this->bowtie2_stage2 + "\")", "", ADVANCED_OPTION)
-    ("bowtie2-junction", "Settings for mapping criteria used in aligning reads to candidate junctions. (DEFAULT=\"" + this->bowtie2_junction + "\")", "", ADVANCED_OPTION)
+    ("bowtie2-stage1", "Complete settings (scoring scheme, alignment mode, and mapping criteria) used for the stage 1 alignment. This step is normally meant for quickly aligning near-perfect matches. (DEFAULT=\"" + this->bowtie2_stage1 + "\")", "", ADVANCED_OPTION)
+    ("bowtie2-stage2", "Complete settings (scoring scheme, alignment mode, and mapping criteria) used for the stage 2 alignment. If set to the empty string \"\", then stage 2 alignment is skipped. This step is normally meant for exhaustively mapping reads that were unmapped by stage 1. (DEFAULT=\"" + this->bowtie2_stage2 + "\")", "", ADVANCED_OPTION)
+    ("bowtie2-junction", "Complete settings (scoring scheme, alignment mode, and mapping criteria) used in aligning reads to candidate junctions. (DEFAULT=\"" + this->bowtie2_junction + "\")", "", ADVANCED_OPTION)
+    ("end-to-end", "Use --end-to-end (instead of --local) alignment mode for the stage 1 bowtie2 alignment and the candidate-junction realignment pass, swapping in complete defaults for --bowtie2-stage1/--bowtie2-junction translated to that mode's scoring scale (including --ma 0, since bowtie2 rejects a nonzero --ma whenever --score-min can go negative). --bowtie2-stage2 is unaffected (always --local, --ma 1). Has no effect on either setting for which the corresponding --bowtie2-* option is also given explicitly, which always takes precedence. Speculative/experimental option for testing. (DEFAULT=OFF)", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
     options.addUsage("In addition to these values, breseq automatically sets the seed size for bowtie2 read mapping (-L option) to a value that is scaled to the read length (r). This value is 0.5 * r for stage 1, 5 + 0.1 * r for stage 2, and 0.3 * r for junction mapping. In each case, it is bounded to the range [4,31] as required by bowtie2. Be warned that breseq internally rescores alignments with a scoring scheme setting +1 for match, -3 for mismatch, -2 for gap open, and -3 for gap extend for consistency when comparing alternative alignments present in the bowtie2 output.", ADVANCED_OPTION);
     
@@ -329,7 +330,6 @@ namespace breseq
     options.addUsage("Junction (JC) Evidence Options", ADVANCED_OPTION);
     options
     ("no-junction-prediction", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
-    ("junction-indel-stitch-length", "When a read produces two separate partial (soft-clipped) alignments to the reference that are explainable by a single small indel below this length, join them into one alignment with the indel represented in its CIGAR, so it is called via RA evidence instead of becoming a JC candidate. A negative value instead auto-scales this cutoff to read length / 10, computed per read. (DEFAULT = 8)", "", ADVANCED_OPTION)
     ("junction-alignment-pair-limit", "Only consider this many passed alignment pairs when creating candidate junction sequences (0 = DO NOT LIMIT)", 100000, ADVANCED_OPTION)
     ("junction-minimum-candidates", "Test at least this many of the top-scoring junction candidates, regardless of their length", 100, ADVANCED_OPTION)
     ("junction-maximum-candidates", "Test no more than this many of the top-scoring junction candidates (0 = DO NOT LIMIT)", 5000, ADVANCED_OPTION)
@@ -600,10 +600,33 @@ namespace breseq
 
     //! Settings: bowtie2
     //  all have default that we only overwrite if present on command line
-    if (options.count("bowtie2-scoring")) this->bowtie2_scoring = options["bowtie2-scoring"];
-    if (options.count("bowtie2-stage1")) this->bowtie2_stage1 = options["bowtie2-stage1"];
+    //
+    //  --end-to-end swaps in a different, complete default for bowtie2-stage1/bowtie2-junction
+    //  (translated to --end-to-end's scoring scale, including --ma 0 since bowtie2 rejects a
+    //  nonzero --ma whenever --score-min can go negative) rather than patching the
+    //  --local-oriented defaults at the point bowtie2 is actually invoked -- an explicit
+    //  --bowtie2-stage1/--bowtie2-junction always wins over this, checked first, exactly like
+    //  it would with --end-to-end absent. bowtie2-stage2 is never affected (always --local,
+    //  --ma 1).
+    this->end_to_end = options.count("end-to-end");
+
+    if (options.count("bowtie2-stage1")) {
+      this->bowtie2_stage1 = options["bowtie2-stage1"];
+    } else if (this->end_to_end) {
+      string bowtie2_genome_alignment_reporting_parameters = (bowtie2_genome_maximum_alignments_to_consider_per_read > 0)
+          ? " -k " + to_string(this->bowtie2_genome_maximum_alignments_to_consider_per_read) : " -a";
+      this->bowtie2_stage1 = "--ma 0 --mp 3 --np 0 --rdg 2,3 --rfg 2,3 --ignore-quals --end-to-end -i S,1,0.25 --score-min L,0,-0.2" + bowtie2_genome_alignment_reporting_parameters;
+    }
+
     if (options.count("bowtie2-stage2")) this->bowtie2_stage2 = options["bowtie2-stage2"];
-    if (options.count("bowtie2-junction")) this->bowtie2_junction = options["bowtie2-junction"];
+
+    if (options.count("bowtie2-junction")) {
+      this->bowtie2_junction = options["bowtie2-junction"];
+    } else if (this->end_to_end) {
+      string bowtie2_junction_alignment_reporting_parameters = (bowtie2_junction_maximum_alignments_to_consider_per_read > 0)
+          ? " -k " + to_string(this->bowtie2_junction_maximum_alignments_to_consider_per_read) : " -a";
+      this->bowtie2_junction = "--ma 0 --mp 3 --np 0 --rdg 2,3 --rfg 2,3 --ignore-quals --end-to-end -i S,1,0.25 --score-min L,1,-0.4" + bowtie2_junction_alignment_reporting_parameters;
+    }
 
     //! Settings: Junction Prediction
     this->skip_new_junction_prediction = this->skip_new_junction_prediction || options.count("no-junction-prediction");
@@ -715,8 +738,8 @@ namespace breseq
       this->minimum_mapping_quality = from_string<int32_t>(options["minimum-mapping-quality"]);
     }
     
-    if (options.count("junction-indel-stitch-length") && (options["junction-indel-stitch-length"] != ""))
-      this->junction_indel_stitch_length = from_string<int32_t>(options["junction-indel-stitch-length"]);
+    if (options.count("junction-indel-split-length") && (options["junction-indel-split-length"] != ""))
+      this->junction_indel_split_length = from_string<int32_t>(options["junction-indel-split-length"]);
 
     if (options.count("consensus-score-cutoff"))
       this->mutation_log10_e_value_cutoff = from_string<double>(options["consensus-score-cutoff"]);
@@ -955,33 +978,34 @@ namespace breseq
     this->bowtie2_junction_maximum_alignments_to_consider_per_read = 2000;
     this->bowtie2_genome_maximum_alignments_to_consider_per_read = 2000;
 
-    this->bowtie2_scoring = "--ma 1 --mp 3 --np 0 --rdg 2,3 --rfg 2,3 --ignore-quals";
-    //this->bowtie2_score_parameters = "--ma 1 --mp 3 --np 0 --rdg 2,3 --rfg 2,3";
-    
     // Different values for these:
     // We report ALL alignments for junctions
     string bowtie2_junction_alignment_reporting_parameters = (bowtie2_junction_maximum_alignments_to_consider_per_read > 0)
     ? " -k " + to_string(this->bowtie2_junction_maximum_alignments_to_consider_per_read) : " -a";
-    
+
     // Need to report all matches for proper handling of
     string bowtie2_genome_alignment_reporting_parameters = (bowtie2_genome_maximum_alignments_to_consider_per_read > 0)
     ? " -k " + to_string(this->bowtie2_genome_maximum_alignments_to_consider_per_read) : " -a";
-        
+
     // Note: this leaves off -L, since it is set based on read length
-    
-    // Set these defaults
-    this->bowtie2_stage1 = "--local -i S,1,0.25 --score-min L,0,0.8" + bowtie2_genome_alignment_reporting_parameters; // "-L 22 -i S,1,0.25 --score-min L,0,0.9";
-    
-    this->bowtie2_stage2 = "--local -i S,1,0.25 --score-min L,6,0.2" + bowtie2_genome_alignment_reporting_parameters; // "-L 9 -i C,1,0 --score-min L,6,0.2";
-    
-    this->bowtie2_junction = "--local -i S,1,0.25 --score-min L,1,0.6" + bowtie2_junction_alignment_reporting_parameters; // "-L 9 -i C,1,0 --score-min L,6,0.2";
+
+    // Set these defaults. Each is a complete, independent command-line string -- scoring
+    // scheme bundled with alignment mode and mapping cutoffs -- rather than sharing one
+    // scoring string across all three, since stage 2/junction always stay --local (--ma 1)
+    // even when --end-to-end switches stage 1/junction's own scoring (see end_to_end below).
+    this->bowtie2_stage1 = "--ma 1 --mp 3 --np 0 --rdg 2,3 --rfg 2,3 --ignore-quals --local -i S,1,0.25 --score-min L,0,0.8" + bowtie2_genome_alignment_reporting_parameters; // "-L 22 -i S,1,0.25 --score-min L,0,0.9";
+    this->end_to_end = false;
+
+    this->bowtie2_stage2 = "--ma 1 --mp 3 --np 0 --rdg 2,3 --rfg 2,3 --ignore-quals --local -i S,1,0.25 --score-min L,6,0.2" + bowtie2_genome_alignment_reporting_parameters; // "-L 9 -i C,1,0 --score-min L,6,0.2";
+
+    this->bowtie2_junction = "--ma 1 --mp 3 --np 0 --rdg 2,3 --rfg 2,3 --ignore-quals --local -i S,1,0.25 --score-min L,1,0.6" + bowtie2_junction_alignment_reporting_parameters; // "-L 9 -i C,1,0 --score-min L,6,0.2";
 
     
     this->num_processors = 1;
     
     //! Settings: Candidate Junction Prediction
-		this->junction_indel_stitch_length = 8;
-    this->required_both_unique_length_per_side_fraction = 0.2; 
+		this->junction_indel_split_length = 5;
+    this->required_both_unique_length_per_side_fraction = 0.2;
     this->unmatched_end_length_factor =  1 - this->require_match_fraction;
     this->unmatched_end_minimum_read_length = 50;
     this->maximum_junction_sequence_negative_overlap_length_fraction = 0.4;
@@ -1242,8 +1266,6 @@ namespace breseq
 		this->paired_mapping_distance_distribution_file_name = this->data_path + "/#.pair_stats.csv";
 		this->discordant_pairs_file_name = this->data_path + "/#.discordant_pairs.csv";
 		this->unmapped_reads_fastq_file_name = this->data_path + "/unmapped_reads.fastq.gz";
-    this->pre_stitching_sam_file_name = this->data_path + "/pre_stitching.sam";
-    this->post_stitching_sam_file_name = this->data_path + "/post_stitching.sam";
     this->data_vcf_file_name = this->data_path + "/output.vcf";
     this->data_genome_diff_file_name = this->data_path + "/output.gd";
     this->data_annotated_genome_diff_file_name = this->data_path + "/annotated.gd";

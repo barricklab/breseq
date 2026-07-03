@@ -289,13 +289,23 @@ namespace breseq
     
     int32_t num_processors;       // Defaults = 2
 
-    // bowtie2 options. These are conceptually divided into
-    //  1) the scoring scheme for alignments, which MUST be the same for all calls to bowtie2!
-    //  2) various mapping cutoffs, which are different for each stage and for junctions
-    string bowtie2_scoring;         // COMMAND-LINE OPTION
+    // bowtie2 options. Each of bowtie2_stage1/stage2/junction is a complete, independent
+    // command-line string -- match/mismatch/gap scoring, alignment mode, and mapping cutoffs
+    // are all bundled together per stage rather than sharing one scoring string across all
+    // three, since stage 2/junction can use different scoring/alignment modes than stage 1
+    // (see end_to_end below).
     string bowtie2_stage1;          // COMMAND-LINE OPTION
     string bowtie2_stage2;          // COMMAND-LINE OPTION (can be blank to skip step)
     string bowtie2_junction;        // COMMAND-LINE OPTION
+    //! Use --end-to-end (instead of --local) for the stage 1 bowtie2 alignment and the
+    //! candidate-junction realignment pass. Default = false. When set, swaps in complete,
+    //! independent defaults for bowtie2_stage1/bowtie2_junction (translated to --end-to-end's
+    //! scoring scale, including --ma 0 -- bowtie2 rejects a nonzero --ma whenever --score-min
+    //! can go negative) rather than patching the --local-oriented defaults at the point
+    //! bowtie2 is actually invoked. bowtie2_stage2 is unaffected (always --local, --ma 1). An
+    //! explicit --bowtie2-stage1/--bowtie2-junction always wins over the corresponding
+    //! --end-to-end default, exactly as it would with --end-to-end absent.
+    bool     end_to_end;            // COMMAND-LINE OPTION
     uint64_t bowtie2_junction_maximum_alignments_to_consider_per_read;       // Default = 2000
     uint64_t bowtie2_genome_maximum_alignments_to_consider_per_read;         // Default = 2000
 
@@ -308,11 +318,13 @@ namespace breseq
     
     //! Settings: Candidate Junction Prediction
 
-    //! When a read produces two naturally-split partial alignments explainable by a single
-    //! small indel below this length, they are stitched into one alignment (indel called via
-    //! RA evidence) instead of being offered as a JC candidate.
-    //! Default = 8. A negative value instead auto-scales to ceil(read_length/10) per read.
-    int32_t  junction_indel_stitch_length;
+    //! Threshold (in bases) for splitting an indel found during candidate-junction
+    //! preprocessing: an indel already present in a single alignment's own CIGAR that is this
+    //! length or longer is split into separate junction-candidate-supporting alignment
+    //! records (JC evidence), unless it is entirely a length-change to a reference homopolymer
+    //! that was already this long or longer (in which case it is left as RA evidence).
+    //! Default = 5.
+    int32_t  junction_indel_split_length;
 		int32_t required_both_unique_length_per_side;           // Set = junction_minimum_side_match
     double   required_both_unique_length_per_side_fraction; // Default = 0.2 
 		int32_t required_one_unique_length_per_side;            // Default = 0 (OFF)
@@ -623,12 +635,6 @@ namespace breseq
 		string reference_faidx_file_name;
 		string reference_gff3_file_name;
     string unmapped_reads_fastq_file_name;
-
-    //! Debugging: dumps of every read's alignments that were examined for natural-split
-    //! indel stitching, before and after PreprocessAlignments::stitch_naturally_split_alignments
-    //! ran on them. Only reads that had more than one alignment (stitching candidates) appear.
-    string pre_stitching_sam_file_name;
-    string post_stitching_sam_file_name;
 
     string data_vcf_file_name;
     string data_genome_diff_file_name;

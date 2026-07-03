@@ -4471,40 +4471,22 @@ uint32_t CIGAR_edit_distance(const string& ref_seq, const string& read_seq, cons
 
 // This currently normalizes (by pushing left) bases in homopolymers
 // It *does not* deal with repeats of more than one base
-string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info)
+// Slides homopolymer-length D/I ops as far right as the surrounding repeat allows, in place.
+// ref_seq/read_seq must start exactly at cigar_pair_array's own first reference/query position
+// (e.g. the full alignment's matched span, or an arbitrary sub-span of it -- the shift logic
+// only ever looks at ref_seq_index/read_seq_index relative to that start).
+void shift_indels_in_cigar_array(vector<pair<char,uint16_t> >& cigar_pair_array, const string& ref_seq, const string& read_seq)
 {
   bool verbose = false;
-  
-  // Slow, so we only calculate this when debugging
-  bool edit_distance_check = false;
 
-  const string ref_seq = ref_seq_info[a.reference_target_id()].get_sequence_1(a.reference_start_1(), a.reference_end_1());
   uint32_t ref_seq_index = 0;
-  string read_seq = a.read_char_sequence();
   uint32_t read_seq_index = 0;
-  vector<pair<char,uint16_t> > cigar_pair_array = a.cigar_pair_char_op_array();
-  uint32_t original_edit_distance = 0;
-  if (edit_distance_check) {
-    original_edit_distance = CIGAR_edit_distance(ref_seq, read_seq, cigar_pair_array);
-  }
-
-  // For debugging
-  //if (a.read_name() == "1:3943") {
-  //  verbose = true;
-  //}
-      
-  if (verbose) {
-    cout << endl << a.read_name() << endl;
-    cout << a.cigar_string() << endl;
-    print_CIGAR_pieces(ref_seq, read_seq, cigar_pair_array);
-    cout << "Original Edit distance: " << original_edit_distance << endl;
-  }
 
   for (vector<pair<char,uint16_t> >::iterator it = cigar_pair_array.begin(); it != cigar_pair_array.end(); it++)
   {
     char op = it->first;
     uint16_t len = it->second;
-    
+
     if (verbose) {
       cout << "Handling " << len << to_string(op) << endl;
     }
@@ -4520,7 +4502,7 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
       after_op = (it + 1)->first;
     }
     bool valid_for_shift = (before_op == 'M') && (after_op == 'M');
-        
+
     if (op == 'D')
     {
       char base = ref_seq[ref_seq_index];
@@ -4533,7 +4515,7 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
         uint16_t shift_amount = 0;
         while (ref_seq[ref_seq_index + len + shift_amount] == base)
           shift_amount++;
-        
+
         // Cap amount at length of next CIGAR feature so we don't get a negative length after adjusting (zero length is OK)
         shift_amount = min(shift_amount, (it + 1)->second);
 
@@ -4550,7 +4532,7 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
             cigar_pair_array.insert(it, make_pair('M', shift_amount));
 
           // Don't shift more than the length of the next CIGAR item!!
-          
+
           if (it != cigar_pair_array.end())
             (it + 1)->second -= shift_amount;
           else
@@ -4577,7 +4559,7 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
         uint16_t shift_amount = 0;
         while (read_seq[read_seq_index + len + shift_amount] == base)
           shift_amount++;
-        
+
         // Cap amount at length of next CIGAR feature so we don't get a negative length after adjusting (zero length is OK)
         shift_amount = min(shift_amount, (it + 1)->second);
 
@@ -4625,6 +4607,46 @@ string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequence
       ERROR("Unknown operation in CIGAR string: " + to_string(op));
     }
   }
+
+  // A shift can consume an adjacent M op's entire length, leaving a zero-length entry --
+  // remove these so every caller gets a normal, directly-serializable CIGAR back.
+  for (vector<pair<char,uint16_t> >::iterator it = cigar_pair_array.begin(); it != cigar_pair_array.end(); )
+  {
+    if (it->second == 0)
+      it = cigar_pair_array.erase(it);
+    else
+      it++;
+  }
+}
+
+string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info)
+{
+  bool verbose = false;
+
+  // Slow, so we only calculate this when debugging
+  bool edit_distance_check = false;
+
+  const string ref_seq = ref_seq_info[a.reference_target_id()].get_sequence_1(a.reference_start_1(), a.reference_end_1());
+  string read_seq = a.read_char_sequence();
+  vector<pair<char,uint16_t> > cigar_pair_array = a.cigar_pair_char_op_array();
+  uint32_t original_edit_distance = 0;
+  if (edit_distance_check) {
+    original_edit_distance = CIGAR_edit_distance(ref_seq, read_seq, cigar_pair_array);
+  }
+
+  // For debugging
+  //if (a.read_name() == "1:3943") {
+  //  verbose = true;
+  //}
+
+  if (verbose) {
+    cout << endl << a.read_name() << endl;
+    cout << a.cigar_string() << endl;
+    print_CIGAR_pieces(ref_seq, read_seq, cigar_pair_array);
+    cout << "Original Edit distance: " << original_edit_distance << endl;
+  }
+
+  shift_indels_in_cigar_array(cigar_pair_array, ref_seq, read_seq);
 
   stringstream shifted_cigar_string_ss;
   for (vector<pair<char,uint16_t> >::iterator it = cigar_pair_array.begin(); it != cigar_pair_array.end(); it++) {

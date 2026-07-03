@@ -1299,6 +1299,7 @@ public:
   int32_t alignment_score(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info);
 
   string shifted_cigar_string(const alignment_wrapper& a, const cReferenceSequences& ref_seq_info);
+  void shift_indels_in_cigar_array(vector<pair<char,uint16_t> >& cigar_pair_array, const string& ref_seq, const string& read_seq);
   struct sort_by_file_name {
 
     explicit sort_by_file_name(const string& name)

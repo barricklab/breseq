@@ -225,14 +225,18 @@ namespace breseq{
   public:
     int64_t aligned_reads;
     int64_t alignments;
-    int64_t alignments_stitched_on_indels;
-    int64_t reads_with_alignments_stitched_on_indels;
+    int64_t alignments_split_on_indels;
+    int64_t reads_with_alignments_split_on_indels;
+    int64_t split_alignments;
+    int64_t reads_with_split_alignments;
 
     PreprocessAlignmentsSummary()
     : aligned_reads(0)
     , alignments(0)
-    , alignments_stitched_on_indels(0)
-    , reads_with_alignments_stitched_on_indels(0)
+    , alignments_split_on_indels(0)
+    , reads_with_alignments_split_on_indels(0)
+    , split_alignments(0)
+    , reads_with_split_alignments(0)
     {}
   };
   
@@ -550,7 +554,6 @@ namespace breseq{
 
     
     //! Settings: Read Alignment
-    string bowtie2_scoring;
     string bowtie2_stage1;
     string bowtie2_stage2;
     string bowtie2_junction;
@@ -562,7 +565,7 @@ namespace breseq{
     int32_t  maximum_read_mismatches;
     
     //! Settings: Candidate Junction
-    int32_t  junction_indel_stitch_length;
+    int32_t  junction_indel_split_length;
     int32_t required_both_unique_length_per_side;
     double   required_both_unique_length_per_side_fraction;
     int32_t required_one_unique_length_per_side;

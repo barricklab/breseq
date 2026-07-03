@@ -312,7 +312,7 @@ void alignment_output::Alignment_Output_Pileup::fetch_callback ( const alignment
     a.aux_get_Z("XP", aligned_read.pair_orientation);
     aligned_read.pair_distance = llabs(static_cast<long long>(a.insert_size()));
   }
-  
+
   aligned_reads[aligned_read.seq_id] = aligned_read;
   
   if (verbose)
@@ -1435,8 +1435,7 @@ string alignment_output::html_alignment_line(const Alignment_Base& a, Aligned_Re
     string pairing_class = a.pair_is_proper ? "PC" : "PD";
     output += "&nbsp;<font class=\"" + pairing_class + "\">{" + a.pair_orientation + ":" + to_string(a.pair_distance) + "}</font>";
   }
-  
-  
+
   output += "</CODE>";
   
   return output;
