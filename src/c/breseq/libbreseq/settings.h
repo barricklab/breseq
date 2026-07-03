@@ -311,7 +311,7 @@ namespace breseq
     //! When a read produces two naturally-split partial alignments explainable by a single
     //! small indel below this length, they are stitched into one alignment (indel called via
     //! RA evidence) instead of being offered as a JC candidate.
-    //! Default = -1 (auto: ceil(read_length/10) computed per read)
+    //! Default = 8. A negative value instead auto-scales to ceil(read_length/10) per read.
     int32_t  junction_indel_stitch_length;
 		int32_t required_both_unique_length_per_side;           // Set = junction_minimum_side_match
     double   required_both_unique_length_per_side_fraction; // Default = 0.2 

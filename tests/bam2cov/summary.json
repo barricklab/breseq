@@ -10,7 +10,7 @@
     },
     "candidate_junction": {
       "highly_redundant_junction_ignore_passed_pair_limit": 200,
-      "junction_indel_stitch_length": -1,
+      "junction_indel_stitch_length": 8,
       "maximum_candidate_junction_length_factor": 0.1,
       "maximum_candidate_junctions": 5000,
       "maximum_junction_sequence_insertion_length": 0,

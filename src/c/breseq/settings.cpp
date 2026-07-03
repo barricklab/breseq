@@ -329,7 +329,7 @@ namespace breseq
     options.addUsage("Junction (JC) Evidence Options", ADVANCED_OPTION);
     options
     ("no-junction-prediction", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
-    ("junction-indel-stitch-length", "When a read produces two separate partial (soft-clipped) alignments to the reference that are explainable by a single small indel below this length, join them into one alignment with the indel represented in its CIGAR, so it is called via RA evidence instead of becoming a JC candidate. (DEFAULT = read length / 10, computed per read)", "", ADVANCED_OPTION)
+    ("junction-indel-stitch-length", "When a read produces two separate partial (soft-clipped) alignments to the reference that are explainable by a single small indel below this length, join them into one alignment with the indel represented in its CIGAR, so it is called via RA evidence instead of becoming a JC candidate. A negative value instead auto-scales this cutoff to read length / 10, computed per read. (DEFAULT = 8)", "", ADVANCED_OPTION)
     ("junction-alignment-pair-limit", "Only consider this many passed alignment pairs when creating candidate junction sequences (0 = DO NOT LIMIT)", 100000, ADVANCED_OPTION)
     ("junction-minimum-candidates", "Test at least this many of the top-scoring junction candidates, regardless of their length", 100, ADVANCED_OPTION)
     ("junction-maximum-candidates", "Test no more than this many of the top-scoring junction candidates (0 = DO NOT LIMIT)", 5000, ADVANCED_OPTION)
@@ -980,7 +980,7 @@ namespace breseq
     this->num_processors = 1;
     
     //! Settings: Candidate Junction Prediction
-		this->junction_indel_stitch_length = -1;
+		this->junction_indel_stitch_length = 8;
     this->required_both_unique_length_per_side_fraction = 0.2; 
     this->unmatched_end_length_factor =  1 - this->require_match_fraction;
     this->unmatched_end_minimum_read_length = 50;
