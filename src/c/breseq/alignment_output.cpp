@@ -312,7 +312,11 @@ void alignment_output::Alignment_Output_Pileup::fetch_callback ( const alignment
     a.aux_get_Z("XP", aligned_read.pair_orientation);
     aligned_read.pair_distance = llabs(static_cast<long long>(a.insert_size()));
   }
-  
+
+  uint32_t xx_value = 0;
+  aligned_read.is_stitched = a.aux_get_i("XX", xx_value);
+  aligned_read.stitched_max_indel_length = static_cast<int32_t>(xx_value);
+
   aligned_reads[aligned_read.seq_id] = aligned_read;
   
   if (verbose)
@@ -1435,8 +1439,12 @@ string alignment_output::html_alignment_line(const Alignment_Base& a, Aligned_Re
     string pairing_class = a.pair_is_proper ? "PC" : "PD";
     output += "&nbsp;<font class=\"" + pairing_class + "\">{" + a.pair_orientation + ":" + to_string(a.pair_distance) + "}</font>";
   }
-  
-  
+
+  if (a.is_stitched) {
+    output += "&nbsp;&gt;" + to_string(a.stitched_max_indel_length) + "&gt;";
+  }
+
+
   output += "</CODE>";
   
   return output;

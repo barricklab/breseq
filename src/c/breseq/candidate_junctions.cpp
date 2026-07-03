@@ -1116,6 +1116,16 @@ namespace breseq {
     bam_destroy1(b);
     ks_free(&ks);
 
+    // Track the largest indel crossed by any stitch that contributed to this alignment. Aux
+    // tags aren't carried over by the sam_parse1 reconstruction above, so an XX already on
+    // ref_left/ref_right (from an earlier stitch round on a read with 3+ original pieces)
+    // has to be folded in explicitly rather than just using this stitch's own indel_length.
+    uint32_t existing_xx = 0;
+    uint32_t max_xx = static_cast<uint32_t>(indel_length);
+    if (ref_left->aux_get_i("XX", existing_xx)) max_xx = max(max_xx, existing_xx);
+    if (ref_right->aux_get_i("XX", existing_xx)) max_xx = max(max_xx, existing_xx);
+    result->aux_set("XX", 'I', sizeof(uint32_t), (uint8_t*)&max_xx);
+
     return result;
   }
 

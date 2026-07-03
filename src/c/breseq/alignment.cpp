@@ -741,6 +741,11 @@ void tam_file::write_alignments(
 			aux_tags_ss << "\t" << "XL:i:" << trim.L << "\t" << "XR:i:" << trim.R;
 		}
 
+    uint32_t xx;
+    if (a.aux_get_i("XX", xx)) {
+      aux_tags_ss << "\t" << "XX:i:" << xx;
+    }
+
 		string aux_tags = aux_tags_ss.str();
 
 		string quality_score_string = a.read_base_quality_char_string();
@@ -1455,6 +1460,11 @@ void bam_file::write_alignments(
     string xp;
     if (a.aux_get_Z("XP", xp)) {
       aux_tags_ss << "\t" << "XP:Z:" << xp;
+    }
+
+    uint32_t xx;
+    if (a.aux_get_i("XX", xx)) {
+      aux_tags_ss << "\t" << "XX:i:" << xx;
     }
 
     string aux_tags = aux_tags_ss.str();
