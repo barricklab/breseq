@@ -1199,6 +1199,148 @@ void tam_file::write_moved_alignment(
 	output_tam << l;
 }
 
+// splits one alignment into multiple separate entries if it has indels
+void tam_file::write_split_alignment(uint32_t min_indel_split_len, const alignment_wrapper& a, const alignment_list& alignments, const cReferenceSequences& ref_seq_info)
+{
+  bool debug = false;
+
+	uint32_t q_length = a.read_length();
+	string qseq_string = a.read_char_sequence();
+
+  string quality_score_string = a.read_base_quality_char_string();
+  if (quality_score_string[0] == ' ') {
+    quality_score_string = alignments.read_base_quality_char_string;
+    if (alignments.read_base_quality_char_string_reversed ^ a.reversed())
+      quality_score_string = reverse_string(quality_score_string);
+  }
+  ASSERT(quality_score_string.size() > 0, "Attempt to write read with no quality scores: " + a.read_name());
+
+
+	uint32_t rpos = a.reference_start_1();
+	uint32_t qpos = a.query_start_1();
+
+	vector<pair<char,uint16_t> > cigar_list = a.cigar_pair_char_op_array();
+  vector<pair<char,uint16_t> > split_cigar_list;
+
+	char op;
+	uint32_t len;
+	uint32_t i = 0;
+	while (i < cigar_list.size())
+	{
+		uint32_t rstart = rpos;
+		uint32_t qstart = qpos;
+
+		string cigar_string = "";
+		while (i < cigar_list.size()) //CIGAR
+		{
+			op = cigar_list[i].first;
+			len = cigar_list[i].second;
+
+      if (op == 'I')
+			{
+				if (len >= min_indel_split_len) break;
+				qpos += len;
+			}
+			else if (op == 'D')
+			{
+				if (len >= min_indel_split_len) break;
+				rpos += len;
+			}
+			else if (op == 'M')
+			{
+				qpos += len;
+				rpos += len;
+			}
+
+      // @JEB we must skip over soft padding at the ends, it will be added back in one chunk
+      if (op != 'S')
+      {
+        split_cigar_list.push_back( make_pair(op, len) );
+      }
+      i++;
+    }
+
+		if (qpos > qstart)
+		{
+      // Save old values and use these if we move things
+      uint32_t ins_updated_qpos = qpos;
+      uint32_t ins_updated_rpos = rpos;
+
+      // Extend the match if the inserted bases match the reference genome!
+      // including past the inserted bases if necessary
+      if (op == 'I') {
+        if (debug) cout << "Testing insertion.." << endl;
+        uint32_t tid = a.reference_target_id();
+        while ( (ins_updated_qpos < a.query_end_1() )
+               && (qseq_string[ins_updated_qpos - 1] == ref_seq_info[tid].get_sequence_1(ins_updated_rpos))  )  {
+          ins_updated_qpos++;
+          ins_updated_rpos++;
+          ASSERT(split_cigar_list[split_cigar_list.size()-1].first =='M', "Attempt to modify nonmatch cigar operation.");
+          split_cigar_list[split_cigar_list.size()-1].second +=1;
+        }
+      }
+
+			//add padding to the sides of the match
+			uint32_t left_padding = qstart - 1;
+			uint32_t right_padding = q_length - ins_updated_qpos + 1;
+
+      cigar_string = alignment_wrapper::cigar_op_array_to_cigar_string(split_cigar_list);
+      split_cigar_list.clear();
+
+			cigar_string = ( left_padding > 0 ? to_string(left_padding) + "S" : "" ) + cigar_string + ( right_padding > 0 ? to_string(right_padding) + "S" : "" );
+
+      vector<string> ll = make_vector<string>
+				(a.read_name())
+				(to_string(a.flag()))
+				(to_string(this->bam_header->target_name[a.reference_target_id()]))
+				(to_string(rstart))
+				(to_string(a.mapping_quality()))
+				(cigar_string)
+				("*")("0")("0") //mate info
+				(qseq_string)
+				(quality_score_string)
+			;
+			output_tam << join(ll, "\t") << endl;
+		}
+
+    // If the inserted region matches to the next part of the match, then we want to adjust where that begins
+    if ( (op == 'I') && (qpos - len >= 1) )
+    {
+      string previous_string = qseq_string.substr(qpos - len - 1, len);
+      string insert_string = qseq_string.substr(qpos - 1, len);
+      if (previous_string == insert_string)
+      {
+        rpos -= len;
+        i++;
+        ASSERT(cigar_list[i].first == 'M', "Expected match in cigar string when resolving repeat insert.");
+        cigar_list[i].second += len;
+      }
+    }
+
+		//move up to the next match position
+		while (i < cigar_list.size()) //CIGAR
+		{
+			op = cigar_list[i].first;
+			len = cigar_list[i].second;
+
+			if (op == 'I')
+			{
+				qpos += len;
+			}
+			else if (op == 'D')
+			{
+				rpos += len;
+			}
+			else if (op == 'M')
+			{
+				break;
+			}
+      i++;
+		}
+	}
+
+}
+
 bam_file::bam_file(const string& bam_file_name, const string& fasta_file_name, ios_base::openmode mode)
 : bam_header(NULL), m_bam_file(NULL)
 {
@@ -1632,6 +1774,148 @@ void bam_file::write_moved_alignment(
     ASSERT(sam_write1(m_bam_file, bam_header, b) >= 0, "sam_write1 failed");
     bam_destroy1(b);
     ks_free(&ks);
+  }
+}
+
+void bam_file::write_split_alignment(uint32_t min_indel_split_len, const alignment_wrapper& a, const alignment_list& alignments, const cReferenceSequences& ref_seq_info)
+{
+  bool debug = false;
+
+  uint32_t q_length = a.read_length();
+  string qseq_string = a.read_char_sequence();
+
+  string quality_score_string = a.read_base_quality_char_string();
+  if (quality_score_string[0] == ' ') {
+    quality_score_string = alignments.read_base_quality_char_string;
+    if (alignments.read_base_quality_char_string_reversed ^ a.reversed())
+      quality_score_string = reverse_string(quality_score_string);
+  }
+  ASSERT(quality_score_string.size() > 0, "Attempt to write read with no quality scores: " + a.read_name());
+
+  uint32_t rpos = a.reference_start_1();
+  uint32_t qpos = a.query_start_1();
+
+  vector<pair<char,uint16_t> > cigar_list = a.cigar_pair_char_op_array();
+  vector<pair<char,uint16_t> > split_cigar_list;
+
+  char op;
+  uint32_t len;
+  uint32_t i = 0;
+  while (i < cigar_list.size())
+  {
+    uint32_t rstart = rpos;
+    uint32_t qstart = qpos;
+
+    string cigar_string = "";
+    while (i < cigar_list.size())
+    {
+      op = cigar_list[i].first;
+      len = cigar_list[i].second;
+
+      if (op == 'I')
+      {
+        if (len >= min_indel_split_len) break;
+        qpos += len;
+      }
+      else if (op == 'D')
+      {
+        if (len >= min_indel_split_len) break;
+        rpos += len;
+      }
+      else if (op == 'M')
+      {
+        qpos += len;
+        rpos += len;
+      }
+
+      if (op != 'S')
+      {
+        split_cigar_list.push_back( make_pair(op, len) );
+      }
+      i++;
+    }
+
+    if (qpos > qstart)
+    {
+      uint32_t ins_updated_qpos = qpos;
+      uint32_t ins_updated_rpos = rpos;
+
+      if (op == 'I') {
+        if (debug) cout << "Testing insertion.." << endl;
+        uint32_t tid = a.reference_target_id();
+        while ( (ins_updated_qpos < a.query_end_1() )
+               && (qseq_string[ins_updated_qpos - 1] == ref_seq_info[tid].get_sequence_1(ins_updated_rpos))  )  {
+          ins_updated_qpos++;
+          ins_updated_rpos++;
+          ASSERT(split_cigar_list[split_cigar_list.size()-1].first =='M', "Attempt to modify nonmatch cigar operation.");
+          split_cigar_list[split_cigar_list.size()-1].second +=1;
+        }
+      }
+
+      uint32_t left_padding = qstart - 1;
+      uint32_t right_padding = q_length - ins_updated_qpos + 1;
+
+      cigar_string = alignment_wrapper::cigar_op_array_to_cigar_string(split_cigar_list);
+      split_cigar_list.clear();
+
+      cigar_string = ( left_padding > 0 ? to_string(left_padding) + "S" : "" ) + cigar_string + ( right_padding > 0 ? to_string(right_padding) + "S" : "" );
+
+      vector<string> ll = make_vector<string>
+        (a.read_name())
+        (to_string(a.flag()))
+        (to_string(this->bam_header->target_name[a.reference_target_id()]))
+        (to_string(rstart))
+        (to_string(a.mapping_quality()))
+        (cigar_string)
+        ("*")("0")("0")
+        (qseq_string)
+        (quality_score_string)
+      ;
+
+      {
+        string sam_line = join(ll, "\t");
+        kstring_t ks = KS_INITIALIZE;
+        kputs(sam_line.c_str(), &ks);
+        bam1_t* b = bam_init1();
+        ASSERT(sam_parse1(&ks, bam_header, b) >= 0, "sam_parse1 failed: " + sam_line);
+        ASSERT(sam_write1(m_bam_file, bam_header, b) >= 0, "sam_write1 failed");
+        bam_destroy1(b);
+        ks_free(&ks);
+      }
+    }
+
+    if ( (op == 'I') && (qpos - len >= 1) )
+    {
+      string previous_string = qseq_string.substr(qpos - len - 1, len);
+      string insert_string = qseq_string.substr(qpos - 1, len);
+      if (previous_string == insert_string)
+      {
+        rpos -= len;
+        i++;
+        ASSERT(cigar_list[i].first == 'M', "Expected match in cigar string when resolving repeat insert.");
+        cigar_list[i].second += len;
+      }
+    }
+
+    while (i < cigar_list.size())
+    {
+      op = cigar_list[i].first;
+      len = cigar_list[i].second;
+
+      if (op == 'I')
+      {
+        qpos += len;
+      }
+      else if (op == 'D')
+      {
+        rpos += len;
+      }
+      else if (op == 'M')
+      {
+        break;
+      }
+      i++;
+    }
   }
 }
 

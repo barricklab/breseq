@@ -362,6 +362,11 @@ namespace breseq {
 
       if (!group.front()->unmapped()) {
         if (do_preprocess) {
+          // Split alignments with their own large indel into JC-candidate-supporting pieces
+          // before stitching -- splitting reads an alignment's own CIGAR and never mutates
+          // group, so it doesn't interact with what stitching considers.
+          int32_t split_cutoff = settings.indel_split_stitch_cutoff_for_read_length(group.front()->read_length());
+          split_alignments_on_indels(settings, summary, ref_seq_info, PSAM, split_cutoff, group);
           // Stitch before writing, so output_sam_file_name (the merged reference-alignment
           // stream resolve_alignments.cpp reads) reflects the same joined alignment that
           // PSAM/BSAM will see below, instead of the original, now-stale split pieces.
@@ -410,6 +415,8 @@ namespace breseq {
     while (tam.read_alignments(alignments, false))
     {
       if (!alignments.front()->unmapped()) {
+        int32_t split_cutoff = settings.indel_split_stitch_cutoff_for_read_length(alignments.front()->read_length());
+        split_alignments_on_indels(settings, summary, ref_seq_info, PSAM, split_cutoff, alignments);
         stitch_naturally_split_alignments(settings, summary, ref_seq_info, tam.bam_header, PRE_STITCH_SAM, POST_STITCH_SAM, alignments);
       }
       if (!preprocess_alignment_list(settings, summary, ref_seq_info, BSAM, PSAM, alignments, i))
@@ -581,6 +588,8 @@ namespace breseq {
         r1_mapped = !group.front()->unmapped();
         if (r1_mapped) {
           if (do_preprocess) {
+            int32_t split_cutoff = settings.indel_split_stitch_cutoff_for_read_length(group.front()->read_length());
+            split_alignments_on_indels(settings, summary, ref_seq_info, PSAM1, split_cutoff, group);
             stitch_naturally_split_alignments(settings, summary, ref_seq_info, r1_stream.header(), PRE_STITCH_SAM, POST_STITCH_SAM, group);
           }
           if (out1) {
@@ -601,6 +610,8 @@ namespace breseq {
         r2_mapped = !group.front()->unmapped();
         if (r2_mapped) {
           if (do_preprocess) {
+            int32_t split_cutoff = settings.indel_split_stitch_cutoff_for_read_length(group.front()->read_length());
+            split_alignments_on_indels(settings, summary, ref_seq_info, PSAM2, split_cutoff, group);
             stitch_naturally_split_alignments(settings, summary, ref_seq_info, r2_stream.header(), PRE_STITCH_SAM, POST_STITCH_SAM, group);
           }
           if (out2) {
@@ -860,6 +871,10 @@ namespace breseq {
       cerr << "  Summary... " << endl
            << "  Aligned reads:                          " << setw(12) << right << summary.preprocess_alignments.aligned_reads << endl
            << "  Read alignments:                        " << setw(12) << right << summary.preprocess_alignments.alignments << endl
+           << "  Alignments split on indels:             " << setw(12) << right << summary.preprocess_alignments.alignments_split_on_indels << endl
+           << "  Reads with alignments split on indels:  " << setw(12) << right << summary.preprocess_alignments.reads_with_alignments_split_on_indels << endl
+           << "  Split alignments:                       " << setw(12) << right << summary.preprocess_alignments.split_alignments << endl
+           << "  Reads with split alignments:            " << setw(12) << right << summary.preprocess_alignments.reads_with_split_alignments << endl
            << "  Alignments stitched across indels:      " << setw(12) << right << summary.preprocess_alignments.alignments_stitched_on_indels << endl
            << "  Reads with alignments stitched:         " << setw(12) << right << summary.preprocess_alignments.reads_with_alignments_stitched_on_indels << endl
       ;
@@ -1114,8 +1129,77 @@ namespace breseq {
     return a_start < b_start;
   }
 
+  /*! Split alignments interrupted by indels into their segments and write to a SAM file.
+	 */
+
+  void PreprocessAlignments::split_alignments_on_indels(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info, bam_file& PSAM, int32_t min_indel_split_len, const alignment_list& alignments)
+  {
+    //##
+    //## @JEB: Note that this may affect the order of alignments in the SAM file. This has
+    //## consequences for the AlignmentCorrection step, which may assume highest scoring
+    //## alignments are first in the TAM file.
+    //##
+    //## So only USE the split alignment file for creating a list of candidate junctions.
+    //##
+
+    assert(min_indel_split_len >= 0);
+
+    // Keeps track of which to split
+    alignment_list untouched_alignments;
+    alignment_list split_alignments;
+
+    untouched_alignments.read_base_quality_char_string = alignments.read_base_quality_char_string;
+    untouched_alignments.read_base_quality_char_string_reversed = alignments.read_base_quality_char_string_reversed;
+    uint32_t alignments_written = 0;
+
+    for(alignment_list::const_iterator it = alignments.begin(); it != alignments.end(); it++) {
+
+      uint32_t* cigar_list = (*it)->cigar_array();
+      bool do_split = false;
+
+      for(uint32_t i=0; i<(*it)->cigar_array_length(); i++) {
+        uint32_t op = cigar_list[i] & BAM_CIGAR_MASK;
+        uint32_t len = cigar_list[i] >> BAM_CIGAR_SHIFT;
+        if (((op == BAM_CINS) || (op == BAM_CDEL)) && (len >= static_cast<uint32_t>(min_indel_split_len))) {
+          do_split = true;
+        }
+      }
+
+      if (do_split) {
+        split_alignments.push_back( *it );
+
+      }
+      else {
+        // Check guard showing that the main alignment is good and thus we don't look at other alignments
+        if ( (*it)->query_match_length() >= alignments.front()->read_length() - settings.required_both_unique_length_per_side)
+          return;
+
+        untouched_alignments.push_back( *it );
+      }
+    }
+    (void) untouched_alignments;
+
+    // Untouched alignments are deliberately NOT written here (unlike the original version of
+    // this function): write_junction_candidate_alignments, called later on the post-stitch
+    // alignments list, is solely responsible for those now. Writing them here too, before
+    // stitch_naturally_split_alignments runs, fed PSAM the stale pre-stitch pieces of every
+    // naturally-split pair -- including ones with a small indel that stitches cleanly -- and
+    // produced spurious extra JC candidates alongside the correct RA call.
+    for(alignment_list::iterator it = split_alignments.begin(); it != split_alignments.end(); ++it) {
+      PSAM.write_split_alignment(min_indel_split_len, **it, alignments, ref_seq_info);
+      alignments_written += 2;
+    }
+
+    // record statistics
+    if (split_alignments.size()>0) summary.preprocess_alignments.reads_with_alignments_split_on_indels++;
+    summary.preprocess_alignments.alignments_split_on_indels +=split_alignments.size() ;
+
+    if (alignments_written > 0) summary.preprocess_alignments.reads_with_split_alignments++;
+    summary.preprocess_alignments.split_alignments += alignments_written;
+  }
+
   //! Joins pairs of a read's naturally split (soft-clipped/chimeric) alignments that are
-  //! explainable by a single small indel below settings.junction_indel_stitch_length (or, if
+  //! explainable by a single small indel below settings.indel_split_stitch_cutoff (or, if
   //! not set, ceil(read_length/10)) into one alignment with the indel represented in its
   //! CIGAR, mutating alignments in place. Considers every adjacent pair by stranded read
   //! position (not just pairs that would already pass the JC-pairing quality gates), so even
@@ -1177,9 +1261,7 @@ namespace breseq {
           int32_t union_length = static_cast<int32_t>(b_end) - static_cast<int32_t>(a_start) + 1;
           if ((overlap > 0) && (2 * overlap >= union_length)) continue;
 
-          int32_t cutoff = (settings.junction_indel_stitch_length >= 0)
-              ? settings.junction_indel_stitch_length
-              : static_cast<int32_t>(ceil(static_cast<double>(ordered[i]->read_length()) / 10.0));
+          int32_t cutoff = settings.indel_split_stitch_cutoff_for_read_length(ordered[i]->read_length());
 
           AlignmentPairGeometry geom(ref_seq_info, *ordered[i], *ordered[j]);
           bam_alignment_ptr joined = build_joined_alignment(bam_header, ref_seq_info, geom, alignments, cutoff);

@@ -381,8 +381,21 @@ namespace breseq {
 
   private:
 
+    //! Splits any alignment whose own CIGAR contains a D or I of min_indel_split_len or more
+    //! into separate segments (JC-candidate-supporting records) written to PSAM. Does not
+    //! modify alignments itself -- the original, unsplit alignment(s) are left in place for
+    //! BSAM/the main reference-alignment stream and for stitch_naturally_split_alignments,
+    //! which runs next.
+    static void split_alignments_on_indels(const Settings& settings,
+                                           Summary& summary,
+                                           const cReferenceSequences& ref_seq_info,
+                                           bam_file& PSAM,
+                                           int32_t min_indel_split_len,
+                                           const alignment_list& alignments
+                                           );
+
     //! Joins pairs of a read's naturally split (soft-clipped/chimeric) alignments that are
-    //! explainable by a single small indel below settings.junction_indel_stitch_length into
+    //! explainable by a single small indel below settings.indel_split_stitch_cutoff into
     //! one alignment with the indel represented in its CIGAR, mutating alignments in place.
     //! When several qualifying stitchings are possible at one junction point, keeps the
     //! best-scoring one. If alignments.size() > 1 on entry (i.e. this read is a stitching

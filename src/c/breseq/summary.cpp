@@ -192,6 +192,10 @@ void to_json(json& j, const PreprocessAlignmentsSummary& s)
   j = json{
     {"aligned_reads", s.aligned_reads},
     {"alignments", s.alignments},
+    {"alignments_split_on_indels", s.alignments_split_on_indels},
+    {"reads_with_alignments_split_on_indels", s.reads_with_alignments_split_on_indels},
+    {"split_alignments", s.split_alignments},
+    {"reads_with_split_alignments", s.reads_with_split_alignments},
     {"alignments_stitched_on_indels", s.alignments_stitched_on_indels},
     {"reads_with_alignments_stitched_on_indels", s.reads_with_alignments_stitched_on_indels},
   };
@@ -201,6 +205,10 @@ void from_json(const json& j, PreprocessAlignmentsSummary& s)
 {
   s.aligned_reads = j.at("aligned_reads").get<uint64_t>();
   s.alignments = j.at("alignments").get<uint64_t>();
+  s.alignments_split_on_indels = j.at("alignments_split_on_indels").get<uint64_t>();
+  s.reads_with_alignments_split_on_indels = j.at("reads_with_alignments_split_on_indels").get<uint64_t>();
+  s.split_alignments = j.at("split_alignments").get<uint64_t>();
+  s.reads_with_split_alignments = j.at("reads_with_split_alignments").get<uint64_t>();
   s.alignments_stitched_on_indels = j.at("alignments_stitched_on_indels").get<uint64_t>();
   s.reads_with_alignments_stitched_on_indels = j.at("reads_with_alignments_stitched_on_indels").get<uint64_t>();
 }
@@ -523,7 +531,7 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   maximum_read_mismatches = t.maximum_read_mismatches;
   
   //! Settings: Candidate Junction
-  junction_indel_stitch_length = t.junction_indel_stitch_length;
+  indel_split_stitch_cutoff = t.indel_split_stitch_cutoff;
   required_both_unique_length_per_side = t.required_both_unique_length_per_side;
   required_both_unique_length_per_side_fraction = t.required_both_unique_length_per_side_fraction;
   required_one_unique_length_per_side = t.required_one_unique_length_per_side;
@@ -834,7 +842,7 @@ void to_json(json& j, const PublicOptionsSummary& s)
     
     //! Settings: Candidate Junction
     {"candidate_junction", json{
-      {"junction_indel_stitch_length", s.junction_indel_stitch_length},
+      {"indel_split_stitch_cutoff", s.indel_split_stitch_cutoff},
       {"required_both_unique_length_per_side", s.required_both_unique_length_per_side},
       {"required_both_unique_length_per_side_fraction", s.required_both_unique_length_per_side_fraction},
       {"required_one_unique_length_per_side", s.required_one_unique_length_per_side},

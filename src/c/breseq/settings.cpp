@@ -329,7 +329,7 @@ namespace breseq
     options.addUsage("Junction (JC) Evidence Options", ADVANCED_OPTION);
     options
     ("no-junction-prediction", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
-    ("junction-indel-stitch-length", "When a read produces two separate partial (soft-clipped) alignments to the reference that are explainable by a single small indel below this length, join them into one alignment with the indel represented in its CIGAR, so it is called via RA evidence instead of becoming a JC candidate. A negative value instead auto-scales this cutoff to read length / 10, computed per read. (DEFAULT = 8)", "", ADVANCED_OPTION)
+    ("indel-split-stitch-cutoff", "Threshold (in bases) governing two different treatments of an indel found during candidate-junction preprocessing: an indel already present in a single alignment's own CIGAR that is this length or longer is split into separate junction-candidate-supporting alignment records (JC evidence); two of a read's separate, naturally split (soft-clipped/chimeric) partial alignments explainable by a single indel shorter than this length are instead joined into one alignment with the indel represented in its CIGAR (RA evidence). A negative value instead auto-scales this cutoff to read length / 10, computed per read. (DEFAULT = 5)", "", ADVANCED_OPTION)
     ("junction-alignment-pair-limit", "Only consider this many passed alignment pairs when creating candidate junction sequences (0 = DO NOT LIMIT)", 100000, ADVANCED_OPTION)
     ("junction-minimum-candidates", "Test at least this many of the top-scoring junction candidates, regardless of their length", 100, ADVANCED_OPTION)
     ("junction-maximum-candidates", "Test no more than this many of the top-scoring junction candidates (0 = DO NOT LIMIT)", 5000, ADVANCED_OPTION)
@@ -715,8 +715,8 @@ namespace breseq
       this->minimum_mapping_quality = from_string<int32_t>(options["minimum-mapping-quality"]);
     }
     
-    if (options.count("junction-indel-stitch-length") && (options["junction-indel-stitch-length"] != ""))
-      this->junction_indel_stitch_length = from_string<int32_t>(options["junction-indel-stitch-length"]);
+    if (options.count("indel-split-stitch-cutoff") && (options["indel-split-stitch-cutoff"] != ""))
+      this->indel_split_stitch_cutoff = from_string<int32_t>(options["indel-split-stitch-cutoff"]);
 
     if (options.count("consensus-score-cutoff"))
       this->mutation_log10_e_value_cutoff = from_string<double>(options["consensus-score-cutoff"]);
@@ -980,7 +980,7 @@ namespace breseq
     this->num_processors = 1;
     
     //! Settings: Candidate Junction Prediction
-		this->junction_indel_stitch_length = 8;
+		this->indel_split_stitch_cutoff = 5;
     this->required_both_unique_length_per_side_fraction = 0.2; 
     this->unmatched_end_length_factor =  1 - this->require_match_fraction;
     this->unmatched_end_minimum_read_length = 50;
