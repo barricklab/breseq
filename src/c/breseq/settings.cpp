@@ -1242,6 +1242,8 @@ namespace breseq
 		this->paired_mapping_distance_distribution_file_name = this->data_path + "/#.pair_stats.csv";
 		this->discordant_pairs_file_name = this->data_path + "/#.discordant_pairs.csv";
 		this->unmapped_reads_fastq_file_name = this->data_path + "/unmapped_reads.fastq.gz";
+    this->pre_stitching_sam_file_name = this->data_path + "/pre_stitching.sam";
+    this->post_stitching_sam_file_name = this->data_path + "/post_stitching.sam";
     this->data_vcf_file_name = this->data_path + "/output.vcf";
     this->data_genome_diff_file_name = this->data_path + "/output.gd";
     this->data_annotated_genome_diff_file_name = this->data_path + "/annotated.gd";

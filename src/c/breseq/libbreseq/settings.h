@@ -623,6 +623,13 @@ namespace breseq
 		string reference_faidx_file_name;
 		string reference_gff3_file_name;
     string unmapped_reads_fastq_file_name;
+
+    //! Debugging: dumps of every read's alignments that were examined for natural-split
+    //! indel stitching, before and after PreprocessAlignments::stitch_naturally_split_alignments
+    //! ran on them. Only reads that had more than one alignment (stitching candidates) appear.
+    string pre_stitching_sam_file_name;
+    string post_stitching_sam_file_name;
+
     string data_vcf_file_name;
     string data_genome_diff_file_name;
     string data_annotated_genome_diff_file_name;

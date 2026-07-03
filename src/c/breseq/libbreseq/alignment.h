@@ -519,7 +519,7 @@ bam_hdr_t* make_bam_header_from_faidx(const string& fasta_file_name);
 class tam_file {
 
 public:
-  tam_file() : input_tam(NULL) {}
+  tam_file() : bam_header(NULL), input_tam(NULL) {}
   tam_file(const string& tam_file_name, const string& fasta_file_name, ios_base::openmode mode);
   ~tam_file();
   

@@ -296,9 +296,11 @@ namespace breseq {
 
     if (alignments.front()->unmapped()) return true;
 
-    // join naturally split (soft-clipped/chimeric) alignment pairs explainable by a small
-    // indel into one alignment, so the indel is called via RA evidence instead of JC
-    stitch_naturally_split_alignments(settings, summary, ref_seq_info, BSAM.bam_header, alignments);
+    // Note: naturally split (soft-clipped/chimeric) alignment pairs explainable by a small
+    // indel must already have been stitched into one alignment by the caller (via
+    // stitch_naturally_split_alignments), before this function ever sees them, so that PSAM
+    // and BSAM below reflect the same joined alignment written to the merged reference
+    // alignment stream.
 
     // write remaining split-supporting alignments for candidate junction identification
     write_junction_candidate_alignments(settings, summary, PSAM, alignments);
@@ -327,6 +329,8 @@ namespace breseq {
                                                  bool do_preprocess,
                                                  bam_file& BSAM,
                                                  bam_file& PSAM,
+                                                 tam_file& PRE_STITCH_SAM,
+                                                 tam_file& POST_STITCH_SAM,
                                                  uint32_t& i
                                                  )
   {
@@ -357,6 +361,12 @@ namespace breseq {
       bam_hdr_t* hdr = take_1 ? in1.bam_header : in2.bam_header;
 
       if (!group.front()->unmapped()) {
+        if (do_preprocess) {
+          // Stitch before writing, so output_sam_file_name (the merged reference-alignment
+          // stream resolve_alignments.cpp reads) reflects the same joined alignment that
+          // PSAM/BSAM will see below, instead of the original, now-stale split pieces.
+          stitch_naturally_split_alignments(settings, summary, ref_seq_info, hdr, PRE_STITCH_SAM, POST_STITCH_SAM, group);
+        }
         for (alignment_list::iterator it = group.begin(); it != group.end(); it++) {
           ASSERT(sam_write1(out, hdr, it->get()) >= 0, "Failed to write alignment to: " + output_sam_file_name);
         }
@@ -389,6 +399,8 @@ namespace breseq {
                                                      const string& reference_sam_file_name,
                                                      bam_file& BSAM,
                                                      bam_file& PSAM,
+                                                     tam_file& PRE_STITCH_SAM,
+                                                     tam_file& POST_STITCH_SAM,
                                                      uint32_t& i
                                                      )
   {
@@ -397,6 +409,9 @@ namespace breseq {
     alignment_list alignments;
     while (tam.read_alignments(alignments, false))
     {
+      if (!alignments.front()->unmapped()) {
+        stitch_naturally_split_alignments(settings, summary, ref_seq_info, tam.bam_header, PRE_STITCH_SAM, POST_STITCH_SAM, alignments);
+      }
       if (!preprocess_alignment_list(settings, summary, ref_seq_info, BSAM, PSAM, alignments, i))
         break;
     }
@@ -543,6 +558,8 @@ namespace breseq {
                                              bam_file& BSAM,
                                              bam_file& PSAM1,
                                              bam_file& PSAM2,
+                                             tam_file& PRE_STITCH_SAM,
+                                             tam_file& POST_STITCH_SAM,
                                              uint32_t& i
                                              )
   {
@@ -563,6 +580,9 @@ namespace breseq {
         r1_is_stage1 = r1_stream.current_is_stage1();
         r1_mapped = !group.front()->unmapped();
         if (r1_mapped) {
+          if (do_preprocess) {
+            stitch_naturally_split_alignments(settings, summary, ref_seq_info, r1_stream.header(), PRE_STITCH_SAM, POST_STITCH_SAM, group);
+          }
           if (out1) {
             for (alignment_list::iterator it = group.begin(); it != group.end(); it++) {
               ASSERT(sam_write1(out1, r1_stream.header(), it->get()) >= 0, "Failed to write alignment to: " + output_sam_file_name_r1);
@@ -580,6 +600,9 @@ namespace breseq {
         r2_is_stage1 = r2_stream.current_is_stage1();
         r2_mapped = !group.front()->unmapped();
         if (r2_mapped) {
+          if (do_preprocess) {
+            stitch_naturally_split_alignments(settings, summary, ref_seq_info, r2_stream.header(), PRE_STITCH_SAM, POST_STITCH_SAM, group);
+          }
           if (out2) {
             for (alignment_list::iterator it = group.begin(); it != group.end(); it++) {
               ASSERT(sam_write1(out2, r2_stream.header(), it->get()) >= 0, "Failed to write alignment to: " + output_sam_file_name_r2);
@@ -630,6 +653,8 @@ namespace breseq {
                                                  bam_file& BSAM,
                                                  bam_file& PSAM1,
                                                  bam_file& PSAM2,
+                                                 tam_file& PRE_STITCH_SAM,
+                                                 tam_file& POST_STITCH_SAM,
                                                  uint32_t& i
                                                  )
   {
@@ -647,7 +672,7 @@ namespace breseq {
     map<pair<string, int64_t>, uint32_t> distance_counts;
     merge_join_paired_read_streams(settings, summary, ref_seq_info, r1_stream, r2_stream,
                                     out1, out2, output_sam_file_name_r1, output_sam_file_name_r2,
-                                    distance_counts, do_preprocess, BSAM, PSAM1, PSAM2, i);
+                                    distance_counts, do_preprocess, BSAM, PSAM1, PSAM2, PRE_STITCH_SAM, POST_STITCH_SAM, i);
 
     hts_close(out1);
     hts_close(out2);
@@ -678,6 +703,8 @@ namespace breseq {
                                                  bam_file& BSAM,
                                                  bam_file& PSAM1,
                                                  bam_file& PSAM2,
+                                                 tam_file& PRE_STITCH_SAM,
+                                                 tam_file& POST_STITCH_SAM,
                                                  uint32_t& i
                                                  )
   {
@@ -688,7 +715,7 @@ namespace breseq {
     merge_join_paired_read_streams(settings, summary, ref_seq_info, r1_stream, r2_stream,
                                     NULL, NULL, reference_sam_file_name_r1, reference_sam_file_name_r2,
                                     distance_counts, true /* only called when do_preprocess is true */,
-                                    BSAM, PSAM1, PSAM2, i);
+                                    BSAM, PSAM1, PSAM2, PRE_STITCH_SAM, POST_STITCH_SAM, i);
 
     string csv_file_name = Settings::file_name(settings.paired_mapping_distance_distribution_file_name, "#", read_file_set.m_base_name);
     ofstream csv(csv_file_name.c_str());
@@ -728,6 +755,15 @@ namespace breseq {
       BSAM.open_write(settings.preprocess_junction_best_sam_file_name, reference_fasta_file_name);
     }
 
+    // Debugging dumps of every read examined for natural-split indel stitching (i.e. every
+    // read with more than one alignment), before and after stitching -- see
+    // stitch_naturally_split_alignments.
+    tam_file PRE_STITCH_SAM, POST_STITCH_SAM;
+    if (do_preprocess) {
+      PRE_STITCH_SAM.open_write(settings.pre_stitching_sam_file_name, reference_fasta_file_name);
+      POST_STITCH_SAM.open_write(settings.post_stitching_sam_file_name, reference_fasta_file_name);
+    }
+
     uint32_t i = 0;
     for (const auto& rfs : settings.read_file_sets)
     {
@@ -753,10 +789,10 @@ namespace breseq {
             string stage2_reference_sam_file_name = Settings::file_name(settings.stage2_reference_sam_file_name, "#", read_file.m_base_name);
 
             merge_two_sam_files(settings, summary, ref_seq_info, stage1_reference_sam_file_name, stage2_reference_sam_file_name,
-                                 reference_sam_file_name, do_preprocess, BSAM, PSAM, i);
+                                 reference_sam_file_name, do_preprocess, BSAM, PSAM, PRE_STITCH_SAM, POST_STITCH_SAM, i);
           } else if (do_preprocess) {
             // Single-stage alignment: reference_sam_file_name was already written directly by bowtie2
-            preprocess_one_sam_file(settings, summary, ref_seq_info, reference_sam_file_name, BSAM, PSAM, i);
+            preprocess_one_sam_file(settings, summary, ref_seq_info, reference_sam_file_name, BSAM, PSAM, PRE_STITCH_SAM, POST_STITCH_SAM, i);
           }
 
           if (do_preprocess) {
@@ -801,11 +837,11 @@ namespace breseq {
           merge_two_sets_of_paired_sam_files(settings, summary, ref_seq_info, rfs,
                                               stage1_r1, stage2_r1, reference_sam_file_name_r1,
                                               stage1_r2, stage2_r2, reference_sam_file_name_r2,
-                                              do_preprocess, BSAM, PSAM1, PSAM2, i);
+                                              do_preprocess, BSAM, PSAM1, PSAM2, PRE_STITCH_SAM, POST_STITCH_SAM, i);
         } else if (do_preprocess) {
           preprocess_one_set_of_paired_sam_files(settings, summary, ref_seq_info, rfs,
                                                   reference_sam_file_name_r1, reference_sam_file_name_r2,
-                                                  BSAM, PSAM1, PSAM2, i);
+                                                  BSAM, PSAM1, PSAM2, PRE_STITCH_SAM, POST_STITCH_SAM, i);
         }
 
         if (do_preprocess) {
@@ -928,20 +964,22 @@ namespace breseq {
     if (geom.hash_seq_id_1 != geom.hash_seq_id_2) return bam_alignment_ptr();
     if (geom.q1->strand() != geom.q2->strand()) return bam_alignment_ptr();
 
-    // Use hash_coord_1/hash_coord_2 (not the pre-canonicalization r1_end/r2_start) as the
-    // breakpoint: these are the same, already mismatch-corrected and (for ambiguous/repeat
-    // regions) shifted-to-canonical-position coordinates that candidate junction construction
-    // itself uses, so an indel placed within a homopolymer/repeat run lands at the same
-    // position a natural single-alignment CIGAR (or the old JC pathway) would have reported.
-    bool q1_is_ref_left = (geom.hash_coord_1 <= geom.hash_coord_2);
+    // Determine which of the pair is reference-left/-right from their own (mismatch-corrected)
+    // reference bounds -- NOT hash_coord_1/hash_coord_2. hash_coord_1/hash_coord_2 mark the
+    // outer edges of an ambiguous/repeat-driven overlap region (candidate-junction sequence
+    // construction's own convention) rather than complementary "resume here" cut points for a
+    // single spliced CIGAR: using them here as left_end/right_start silently discarded almost
+    // all of both alignments' real matched content for an overlapping pair, inflating a clean
+    // small insertion into a much larger spurious combined indel that then failed the cutoff.
+    bool q1_is_ref_left = (geom.r1_start <= geom.r2_start);
     bam_alignment* ref_left  = q1_is_ref_left ? geom.q1 : geom.q2;
     bam_alignment* ref_right = q1_is_ref_left ? geom.q2 : geom.q1;
-    int32_t left_end    = q1_is_ref_left ? geom.hash_coord_1 : geom.hash_coord_2;
-    int32_t right_start = q1_is_ref_left ? geom.hash_coord_2 : geom.hash_coord_1;
+    int32_t left_end    = q1_is_ref_left ? geom.r1_end   : geom.r2_end;
+    int32_t right_start = q1_is_ref_left ? geom.r2_start : geom.r1_start;
 
-    // Clamp away any remaining reference-side overlap (should be rare once the canonical
-    // hash_coord placement above is used) by crediting it to ref_left; the corresponding
-    // read bases become part of the inserted content derived from query positions below.
+    // Clamp away any reference-side overlap (ambiguous/repeat-driven placement) by crediting
+    // it to ref_left; the corresponding read bases become part of the inserted content
+    // derived from query positions below.
     int32_t adj_right_start = max(right_start, left_end + 1);
 
     vector<pair<char,uint16_t> > left_before, left_after_unused;
@@ -1046,9 +1084,14 @@ namespace breseq {
                                                                     Summary& summary,
                                                                     const cReferenceSequences& ref_seq_info,
                                                                     bam_hdr_t* bam_header,
+                                                                    tam_file& PRE_STITCH_SAM,
+                                                                    tam_file& POST_STITCH_SAM,
                                                                     alignment_list& alignments
                                                                     )
   {
+    bool is_candidate = (alignments.size() > 1);
+    if (is_candidate) PRE_STITCH_SAM.write_alignments(0, alignments);
+
     uint32_t stitches_performed = 0;
 
     bool stitched_again = true;
@@ -1056,35 +1099,45 @@ namespace breseq {
     {
       stitched_again = false;
 
+      // Order by stranded read start purely for readability of the (i,j) scan and the debug
+      // dumps below -- every pair is tried, not just adjacent ones. With bowtie2 run in -k
+      // mode, a read's alignment list often also contains several unrelated, nearly
+      // full-length alternative-location alignments interleaved (by start position) between
+      // the two pieces of a genuine natural split; restricting the scan to adjacent pairs
+      // after sorting let those decoys hide the real pairing from ever being tested.
       vector<bam_alignment_ptr> ordered(alignments.begin(), alignments.end());
       sort(ordered.begin(), ordered.end(), compare_by_stranded_read_start);
 
       bool found = false;
-      size_t best_i = 0;
+      size_t best_i = 0, best_j = 0;
       int32_t best_score = 0;
       bam_alignment_ptr best_joined;
 
-      for (size_t i = 0; i + 1 < ordered.size(); i++)
+      for (size_t i = 0; i < ordered.size(); i++)
       {
-        uint32_t a_start, a_end, b_start, b_end;
-        ordered[i]->query_stranded_bounds_1(a_start, a_end);
-        ordered[i+1]->query_stranded_bounds_1(b_start, b_end);
-        if (b_end <= a_end) continue; // ordered[i+1]'s read span is contained in ordered[i]'s
+        for (size_t j = i + 1; j < ordered.size(); j++)
+        {
+          uint32_t a_start, a_end, b_start, b_end;
+          ordered[i]->query_stranded_bounds_1(a_start, a_end);
+          ordered[j]->query_stranded_bounds_1(b_start, b_end);
+          if (b_end <= a_end) continue; // ordered[j]'s read span is contained in ordered[i]'s
 
-        int32_t cutoff = (settings.junction_indel_stitch_length >= 0)
-            ? settings.junction_indel_stitch_length
-            : static_cast<int32_t>(ceil(static_cast<double>(ordered[i]->read_length()) / 10.0));
+          int32_t cutoff = (settings.junction_indel_stitch_length >= 0)
+              ? settings.junction_indel_stitch_length
+              : static_cast<int32_t>(ceil(static_cast<double>(ordered[i]->read_length()) / 10.0));
 
-        AlignmentPairGeometry geom(ref_seq_info, *ordered[i], *ordered[i+1]);
-        bam_alignment_ptr joined = build_joined_alignment(bam_header, geom, alignments, cutoff);
-        if (!joined.get()) continue;
+          AlignmentPairGeometry geom(ref_seq_info, *ordered[i], *ordered[j]);
+          bam_alignment_ptr joined = build_joined_alignment(bam_header, geom, alignments, cutoff);
+          if (!joined.get()) continue;
 
-        int32_t score = alignment_score(*joined, ref_seq_info);
-        if (!found || (score > best_score)) {
-          found = true;
-          best_i = i;
-          best_score = score;
-          best_joined = joined;
+          int32_t score = alignment_score(*joined, ref_seq_info);
+          if (!found || (score > best_score)) {
+            found = true;
+            best_i = i;
+            best_j = j;
+            best_score = score;
+            best_joined = joined;
+          }
         }
       }
 
@@ -1098,10 +1151,10 @@ namespace breseq {
         alignment_list new_alignments;
         new_alignments.read_base_quality_char_string = alignments.read_base_quality_char_string;
         new_alignments.read_base_quality_char_string_reversed = alignments.read_base_quality_char_string_reversed;
-        for (size_t i = 0; i < ordered.size(); i++) {
-          if (i == best_i) new_alignments.push_back(best_joined);
-          else if (i == best_i + 1) continue;
-          else new_alignments.push_back(ordered[i]);
+        for (size_t k = 0; k < ordered.size(); k++) {
+          if (k == best_i) new_alignments.push_back(best_joined);
+          else if (k == best_j) continue;
+          else new_alignments.push_back(ordered[k]);
         }
         alignments = new_alignments;
 
@@ -1112,6 +1165,7 @@ namespace breseq {
     }
 
     if (stitches_performed > 0) summary.preprocess_alignments.reads_with_alignments_stitched_on_indels++;
+    if (is_candidate) POST_STITCH_SAM.write_alignments(0, alignments);
 
     return stitches_performed;
   }

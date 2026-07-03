@@ -385,12 +385,17 @@ namespace breseq {
     //! explainable by a single small indel below settings.junction_indel_stitch_length into
     //! one alignment with the indel represented in its CIGAR, mutating alignments in place.
     //! When several qualifying stitchings are possible at one junction point, keeps the
-    //! best-scoring one. Returns the number of reads whose alignments were stitched.
+    //! best-scoring one. If alignments.size() > 1 on entry (i.e. this read is a stitching
+    //! candidate at all), writes its alignments to PRE_STITCH_SAM before and
+    //! POST_STITCH_SAM after, for debugging. Returns the number of reads whose alignments
+    //! were stitched.
     static uint32_t stitch_naturally_split_alignments(
                                                        const Settings& settings,
                                                        Summary& summary,
                                                        const cReferenceSequences& ref_seq_info,
                                                        bam_hdr_t* bam_header,
+                                                       tam_file& PRE_STITCH_SAM,
+                                                       tam_file& POST_STITCH_SAM,
                                                        alignment_list& alignments
                                                        );
 
@@ -419,7 +424,10 @@ namespace breseq {
                                                      );
 
     //! Processes one read's worth of alignments for candidate junction preprocessing.
-    //! Returns false if candidate_junction_read_limit was hit (caller should stop).
+    //! Callers are responsible for stitching naturally split alignments (via
+    //! stitch_naturally_split_alignments) before calling this, so that PSAM/BSAM see the
+    //! post-stitch alignment set. Returns false if candidate_junction_read_limit was hit
+    //! (caller should stop).
     static bool preprocess_alignment_list(
                                           const Settings& settings,
                                           Summary& summary,
@@ -442,6 +450,8 @@ namespace breseq {
                                     bool do_preprocess,
                                     bam_file& BSAM,
                                     bam_file& PSAM,
+                                    tam_file& PRE_STITCH_SAM,
+                                    tam_file& POST_STITCH_SAM,
                                     uint32_t& i
                                     );
 
@@ -454,6 +464,8 @@ namespace breseq {
                                         const string& reference_sam_file_name,
                                         bam_file& BSAM,
                                         bam_file& PSAM,
+                                        tam_file& PRE_STITCH_SAM,
+                                        tam_file& POST_STITCH_SAM,
                                         uint32_t& i
                                         );
 
@@ -479,6 +491,8 @@ namespace breseq {
                                     bam_file& BSAM,
                                     bam_file& PSAM1,
                                     bam_file& PSAM2,
+                                    tam_file& PRE_STITCH_SAM,
+                                    tam_file& POST_STITCH_SAM,
                                     uint32_t& i
                                     );
 
@@ -503,6 +517,8 @@ namespace breseq {
                                     bam_file& BSAM,
                                     bam_file& PSAM1,
                                     bam_file& PSAM2,
+                                    tam_file& PRE_STITCH_SAM,
+                                    tam_file& POST_STITCH_SAM,
                                     uint32_t& i
                                     );
 
@@ -522,6 +538,8 @@ namespace breseq {
                                         bam_file& BSAM,
                                         bam_file& PSAM1,
                                         bam_file& PSAM2,
+                                        tam_file& PRE_STITCH_SAM,
+                                        tam_file& POST_STITCH_SAM,
                                         uint32_t& i
                                         );
   };
