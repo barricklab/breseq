@@ -627,8 +627,14 @@ namespace breseq
     //! Debugging: dumps of every read's alignments that were examined for natural-split
     //! indel stitching, before and after PreprocessAlignments::stitch_naturally_split_alignments
     //! ran on them. Only reads that had more than one alignment (stitching candidates) appear.
+    //! Gated on debug_dump_stitching_sam below -- there is deliberately no command-line option
+    //! for this, flip the constant and rebuild to use it during development.
     string pre_stitching_sam_file_name;
     string post_stitching_sam_file_name;
+
+    //! Compile-time-only switch for the pre/post stitching SAM dumps above -- not exposed as a
+    //! command-line option, so it is not user-accessible. Flip to true and rebuild to enable.
+    static const bool debug_dump_stitching_sam = false;
 
     string data_vcf_file_name;
     string data_genome_diff_file_name;

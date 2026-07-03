@@ -759,7 +759,7 @@ namespace breseq {
     // read with more than one alignment), before and after stitching -- see
     // stitch_naturally_split_alignments.
     tam_file PRE_STITCH_SAM, POST_STITCH_SAM;
-    if (do_preprocess) {
+    if (do_preprocess && Settings::debug_dump_stitching_sam) {
       PRE_STITCH_SAM.open_write(settings.pre_stitching_sam_file_name, reference_fasta_file_name);
       POST_STITCH_SAM.open_write(settings.post_stitching_sam_file_name, reference_fasta_file_name);
     }
@@ -1134,7 +1134,7 @@ namespace breseq {
                                                                     )
   {
     bool is_candidate = (alignments.size() > 1);
-    if (is_candidate) PRE_STITCH_SAM.write_alignments(0, alignments);
+    if (is_candidate && Settings::debug_dump_stitching_sam) PRE_STITCH_SAM.write_alignments(0, alignments);
 
     uint32_t stitches_performed = 0;
 
@@ -1220,7 +1220,7 @@ namespace breseq {
     }
 
     if (stitches_performed > 0) summary.preprocess_alignments.reads_with_alignments_stitched_on_indels++;
-    if (is_candidate) POST_STITCH_SAM.write_alignments(0, alignments);
+    if (is_candidate && Settings::debug_dump_stitching_sam) POST_STITCH_SAM.write_alignments(0, alignments);
 
     return stitches_performed;
   }
