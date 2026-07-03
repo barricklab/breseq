@@ -1166,6 +1166,18 @@ namespace breseq {
           ordered[j]->query_stranded_bounds_1(b_start, b_end);
           if (b_end <= a_end) continue; // ordered[j]'s read span is contained in ordered[i]'s
 
+          // Each side must contribute its own required_both_unique_length_per_side of query
+          // length beyond what the other side already covers -- otherwise this isn't two
+          // complementary pieces of one natural split, it's (at least) one decoy alignment
+          // that's almost entirely redundant with the other, e.g. two near-full-length
+          // placements of the same read against different copies of a repeat. Without this,
+          // such a pair can reach the mismatch-correction geometry math below and produce an
+          // internally inconsistent breakpoint.
+          int32_t a_unique = static_cast<int32_t>(b_start) - static_cast<int32_t>(a_start);
+          int32_t b_unique = static_cast<int32_t>(b_end) - static_cast<int32_t>(a_end);
+          if (a_unique < settings.required_both_unique_length_per_side) continue;
+          if (b_unique < settings.required_both_unique_length_per_side) continue;
+
           int32_t cutoff = (settings.junction_indel_stitch_length >= 0)
               ? settings.junction_indel_stitch_length
               : static_cast<int32_t>(ceil(static_cast<double>(ordered[i]->read_length()) / 10.0));
