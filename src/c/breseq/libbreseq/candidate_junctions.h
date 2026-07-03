@@ -394,7 +394,8 @@ namespace breseq {
                                            const alignment_list& alignments
                                            );
 
-    //! Joins pairs of a read's naturally split (soft-clipped/chimeric) alignments that are
+    //! If settings.stitch_reads is not set, does nothing and returns 0 immediately. Otherwise,
+    //! joins pairs of a read's naturally split (soft-clipped/chimeric) alignments that are
     //! explainable by a single small indel below settings.indel_split_stitch_cutoff into
     //! one alignment with the indel represented in its CIGAR, mutating alignments in place.
     //! When several qualifying stitchings are possible at one junction point, keeps the

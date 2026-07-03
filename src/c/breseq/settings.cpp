@@ -312,7 +312,8 @@ namespace breseq
     ("require-match-length", "Only consider alignments that cover this many bases of a read", 0, ADVANCED_OPTION)
     ("require-match-fraction", "Only consider alignments that cover this fraction of a read (automatically lowered to 0.5 when --predict-soft-clipping is used, unless set explicitly)", 0.9, ADVANCED_OPTION)
     ("maximum-read-mismatches", "Don't consider reads with this many or more bases or indels that are different from the reference sequence. Unaligned bases at the end of a read also count as mismatches. Unaligned bases at the beginning of the read do NOT count as mismatches. (DEFAULT=OFF)", "", ADVANCED_OPTION)
-    ("indel-split-stitch-cutoff", "Threshold (in bases) governing two different treatments of an indel found during candidate-junction preprocessing: an indel already present in a single alignment's own CIGAR that is this length or longer is split into separate junction-candidate-supporting alignment records (JC evidence), unless it is entirely a length-change to a reference homopolymer that was already this long or longer; two of a read's separate, naturally split (soft-clipped/chimeric) partial alignments explainable by a single indel shorter than this length are instead joined into one alignment with the indel represented in its CIGAR (RA evidence). (DEFAULT = 5)", "", ADVANCED_OPTION)
+    ("indel-split-stitch-cutoff", "Threshold (in bases) governing two different treatments of an indel found during candidate-junction preprocessing: an indel already present in a single alignment's own CIGAR that is this length or longer is split into separate junction-candidate-supporting alignment records (JC evidence), unless it is entirely a length-change to a reference homopolymer that was already this long or longer; two of a read's separate, naturally split (soft-clipped/chimeric) partial alignments explainable by a single indel shorter than this length are instead joined into one alignment with the indel represented in its CIGAR (RA evidence). Only the split half of this behavior is active unless --stitch-reads is also set. (DEFAULT = 5)", "", ADVANCED_OPTION)
+    ("stitch-reads", "Attempt to join a read's separate, naturally split (soft-clipped/chimeric) partial alignments explainable by a single small indel below --indel-split-stitch-cutoff back into one alignment (see that option). In practice this rarely finds anything except on very short reads: most small indels are either natively embedded in one bowtie2 alignment already, or the two natural-split pieces are too far apart in reference space to be a genuine small indel. (DEFAULT = OFF)", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
     ;
     
     options.addUsage("", ADVANCED_OPTION);
@@ -717,6 +718,7 @@ namespace breseq
     
     if (options.count("indel-split-stitch-cutoff") && (options["indel-split-stitch-cutoff"] != ""))
       this->indel_split_stitch_cutoff = from_string<int32_t>(options["indel-split-stitch-cutoff"]);
+    this->stitch_reads = this->stitch_reads || options.count("stitch-reads");
 
     if (options.count("consensus-score-cutoff"))
       this->mutation_log10_e_value_cutoff = from_string<double>(options["consensus-score-cutoff"]);
@@ -981,6 +983,7 @@ namespace breseq
     
     //! Settings: Candidate Junction Prediction
 		this->indel_split_stitch_cutoff = 5;
+		this->stitch_reads = false;
     this->required_both_unique_length_per_side_fraction = 0.2; 
     this->unmatched_end_length_factor =  1 - this->require_match_fraction;
     this->unmatched_end_minimum_read_length = 50;

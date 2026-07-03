@@ -317,6 +317,13 @@ namespace breseq
     //! indel shorter than this length are instead joined into one alignment with the indel in
     //! its CIGAR (RA evidence). Default = 5.
     int32_t  indel_split_stitch_cutoff;
+    //! Whether stitching (see indel_split_stitch_cutoff above) is attempted at all. Default =
+    //! false: in practice, stitching rarely finds anything on typical (non-very-short) reads --
+    //! most small indels either get natively embedded in one bowtie2 alignment (handled by
+    //! splitting/homopolymer-guarding instead) or the two natural-split pieces are too far
+    //! apart in reference space to be a genuine small indel. Kept as an option rather than
+    //! removed outright.
+    bool     stitch_reads;
 		int32_t required_both_unique_length_per_side;           // Set = junction_minimum_side_match
     double   required_both_unique_length_per_side_fraction; // Default = 0.2 
 		int32_t required_one_unique_length_per_side;            // Default = 0 (OFF)

@@ -229,6 +229,7 @@ namespace breseq{
     int64_t reads_with_alignments_split_on_indels;
     int64_t split_alignments;
     int64_t reads_with_split_alignments;
+    int64_t reads_considered_for_stitching;
     int64_t alignments_stitched_on_indels;
     int64_t reads_with_alignments_stitched_on_indels;
 
@@ -239,6 +240,7 @@ namespace breseq{
     , reads_with_alignments_split_on_indels(0)
     , split_alignments(0)
     , reads_with_split_alignments(0)
+    , reads_considered_for_stitching(0)
     , alignments_stitched_on_indels(0)
     , reads_with_alignments_stitched_on_indels(0)
     {}

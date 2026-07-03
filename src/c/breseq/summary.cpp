@@ -196,6 +196,7 @@ void to_json(json& j, const PreprocessAlignmentsSummary& s)
     {"reads_with_alignments_split_on_indels", s.reads_with_alignments_split_on_indels},
     {"split_alignments", s.split_alignments},
     {"reads_with_split_alignments", s.reads_with_split_alignments},
+    {"reads_considered_for_stitching", s.reads_considered_for_stitching},
     {"alignments_stitched_on_indels", s.alignments_stitched_on_indels},
     {"reads_with_alignments_stitched_on_indels", s.reads_with_alignments_stitched_on_indels},
   };
@@ -209,6 +210,7 @@ void from_json(const json& j, PreprocessAlignmentsSummary& s)
   s.reads_with_alignments_split_on_indels = j.at("reads_with_alignments_split_on_indels").get<uint64_t>();
   s.split_alignments = j.at("split_alignments").get<uint64_t>();
   s.reads_with_split_alignments = j.at("reads_with_split_alignments").get<uint64_t>();
+  s.reads_considered_for_stitching = j.at("reads_considered_for_stitching").get<uint64_t>();
   s.alignments_stitched_on_indels = j.at("alignments_stitched_on_indels").get<uint64_t>();
   s.reads_with_alignments_stitched_on_indels = j.at("reads_with_alignments_stitched_on_indels").get<uint64_t>();
 }

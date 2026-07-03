@@ -875,6 +875,7 @@ namespace breseq {
            << "  Reads with alignments split on indels:  " << setw(12) << right << summary.preprocess_alignments.reads_with_alignments_split_on_indels << endl
            << "  Split alignments:                       " << setw(12) << right << summary.preprocess_alignments.split_alignments << endl
            << "  Reads with split alignments:            " << setw(12) << right << summary.preprocess_alignments.reads_with_split_alignments << endl
+           << "  Reads considered for stitching:         " << setw(12) << right << summary.preprocess_alignments.reads_considered_for_stitching << endl
            << "  Alignments stitched across indels:      " << setw(12) << right << summary.preprocess_alignments.alignments_stitched_on_indels << endl
            << "  Reads with alignments stitched:         " << setw(12) << right << summary.preprocess_alignments.reads_with_alignments_stitched_on_indels << endl
       ;
@@ -1016,18 +1017,29 @@ namespace breseq {
     if (geom.hash_seq_id_1 != geom.hash_seq_id_2) return bam_alignment_ptr();
     if (geom.q1->strand() != geom.q2->strand()) return bam_alignment_ptr();
 
-    // Determine which of the pair is reference-left/-right from their own (mismatch-corrected)
-    // reference bounds -- NOT hash_coord_1/hash_coord_2. hash_coord_1/hash_coord_2 mark the
-    // outer edges of an ambiguous/repeat-driven overlap region (candidate-junction sequence
-    // construction's own convention) rather than complementary "resume here" cut points for a
-    // single spliced CIGAR: using them here as left_end/right_start silently discarded almost
-    // all of both alignments' real matched content for an overlapping pair, inflating a clean
-    // small insertion into a much larger spurious combined indel that then failed the cutoff.
-    bool q1_is_ref_left = (geom.r1_start <= geom.r2_start);
-    bam_alignment* ref_left  = q1_is_ref_left ? geom.q1 : geom.q2;
-    bam_alignment* ref_right = q1_is_ref_left ? geom.q2 : geom.q1;
-    int32_t left_end    = q1_is_ref_left ? geom.r1_end   : geom.r2_end;
-    int32_t right_start = q1_is_ref_left ? geom.r2_start : geom.r1_start;
+    // Determine which of the pair is reference-left/-right from bam-native (reference-forward,
+    // i.e. "top strand") query order -- NOT geom.q1/q2's own *stranded* order (the read's own
+    // 5'->3' direction, which geom.q1/q2 are sorted by) and NOT hash_coord_1/hash_coord_2.
+    // hash_coord_1/hash_coord_2 mark the outer edges of an ambiguous/repeat-driven overlap
+    // region (candidate-junction sequence construction's own convention) rather than
+    // complementary "resume here" cut points for a single spliced CIGAR: using them here as
+    // left_end/right_start silently discarded almost all of both alignments' real matched
+    // content for an overlapping pair, inflating a clean small insertion into a much larger
+    // spurious combined indel that then failed the cutoff.
+    bool q1_is_bam_native_earlier = (geom.q1->query_start_1() <= geom.q2->query_start_1());
+    bam_alignment* ref_left  = q1_is_bam_native_earlier ? geom.q1 : geom.q2;
+    bam_alignment* ref_right = q1_is_bam_native_earlier ? geom.q2 : geom.q1;
+
+    // For any genuine natural split, whichever piece comes first in bam-native query order
+    // must also have the lower reference position -- CIGARs are inherently reference-forward.
+    // But ref_left/ref_right are two independently-placed alignment records, not one
+    // continuous CIGAR, so that doesn't hold automatically: in an ambiguous/repeat-driven
+    // region, bowtie2 can place each piece's own boundary independently and end up with them
+    // crossed. Declining outright here avoids nonsensical (e.g. negative) geometry below.
+    if (ref_left->reference_start_1() > ref_right->reference_start_1()) return bam_alignment_ptr();
+
+    int32_t left_end    = q1_is_bam_native_earlier ? geom.r1_end   : geom.r2_end;
+    int32_t right_start = q1_is_bam_native_earlier ? geom.r2_start : geom.r1_start;
 
     // Clamp away any reference-side overlap (ambiguous/repeat-driven placement) by crediting
     // it to ref_left; the corresponding read bases become part of the inserted content
@@ -1278,7 +1290,10 @@ namespace breseq {
                                                                     alignment_list& alignments
                                                                     )
   {
+    if (!settings.stitch_reads) return 0;
+
     bool is_candidate = (alignments.size() > 1);
+    if (is_candidate) summary.preprocess_alignments.reads_considered_for_stitching++;
     if (is_candidate && Settings::debug_dump_stitching_sam) PRE_STITCH_SAM.write_alignments(0, alignments);
 
     uint32_t stitches_performed = 0;
