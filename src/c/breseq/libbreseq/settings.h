@@ -307,7 +307,12 @@ namespace breseq
     int32_t  maximum_read_mismatches;     // Default = -1 (OFF)
     
     //! Settings: Candidate Junction Prediction
-    int32_t  preprocess_junction_min_indel_split_length;    // Default = 3
+
+    //! When a read produces two naturally-split partial alignments explainable by a single
+    //! small indel below this length, they are stitched into one alignment (indel called via
+    //! RA evidence) instead of being offered as a JC candidate.
+    //! Default = 8. A negative value instead auto-scales to ceil(read_length/10) per read.
+    int32_t  junction_indel_stitch_length;
 		int32_t required_both_unique_length_per_side;           // Set = junction_minimum_side_match
     double   required_both_unique_length_per_side_fraction; // Default = 0.2 
 		int32_t required_one_unique_length_per_side;            // Default = 0 (OFF)
@@ -618,6 +623,13 @@ namespace breseq
 		string reference_faidx_file_name;
 		string reference_gff3_file_name;
     string unmapped_reads_fastq_file_name;
+
+    //! Debugging: dumps of every read's alignments that were examined for natural-split
+    //! indel stitching, before and after PreprocessAlignments::stitch_naturally_split_alignments
+    //! ran on them. Only reads that had more than one alignment (stitching candidates) appear.
+    string pre_stitching_sam_file_name;
+    string post_stitching_sam_file_name;
+
     string data_vcf_file_name;
     string data_genome_diff_file_name;
     string data_annotated_genome_diff_file_name;

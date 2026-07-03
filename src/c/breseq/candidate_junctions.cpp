@@ -268,8 +268,9 @@ namespace breseq {
   }
 
   //! Processes one read's worth of alignments (as grouped by bam_file::read_alignments)
-  //! for candidate junction preprocessing: splits long-indel alignments into PSAM and
-  //! writes the best-scoring alignments to BSAM, updating summary statistics.
+  //! for candidate junction preprocessing: stitches naturally split alignments explainable
+  //! by a small indel, writes remaining split-supporting alignments to PSAM, and writes the
+  //! best-scoring alignments to BSAM, updating summary statistics.
   //! Returns false if candidate_junction_read_limit was hit (caller should stop).
   bool PreprocessAlignments::preprocess_alignment_list(
                                                         const Settings& settings,
@@ -277,7 +278,6 @@ namespace breseq {
                                                         const cReferenceSequences& ref_seq_info,
                                                         bam_file& BSAM,
                                                         bam_file& PSAM,
-                                                        int32_t min_indel_split_len,
                                                         alignment_list& alignments,
                                                         uint32_t& i
                                                         )
@@ -296,11 +296,14 @@ namespace breseq {
 
     if (alignments.front()->unmapped()) return true;
 
-    // write split alignments
-    if (min_indel_split_len != -1)
-    {
-      split_alignments_on_indels(settings, summary, ref_seq_info, PSAM, min_indel_split_len, alignments);
-    }
+    // Note: naturally split (soft-clipped/chimeric) alignment pairs explainable by a small
+    // indel must already have been stitched into one alignment by the caller (via
+    // stitch_naturally_split_alignments), before this function ever sees them, so that PSAM
+    // and BSAM below reflect the same joined alignment written to the merged reference
+    // alignment stream.
+
+    // write remaining split-supporting alignments for candidate junction identification
+    write_junction_candidate_alignments(settings, summary, PSAM, alignments);
 
     // write best alignments
     int32_t best_score = eligible_read_alignments(settings, ref_seq_info, alignments);
@@ -326,7 +329,8 @@ namespace breseq {
                                                  bool do_preprocess,
                                                  bam_file& BSAM,
                                                  bam_file& PSAM,
-                                                 int32_t min_indel_split_len,
+                                                 tam_file& PRE_STITCH_SAM,
+                                                 tam_file& POST_STITCH_SAM,
                                                  uint32_t& i
                                                  )
   {
@@ -357,11 +361,17 @@ namespace breseq {
       bam_hdr_t* hdr = take_1 ? in1.bam_header : in2.bam_header;
 
       if (!group.front()->unmapped()) {
+        if (do_preprocess) {
+          // Stitch before writing, so output_sam_file_name (the merged reference-alignment
+          // stream resolve_alignments.cpp reads) reflects the same joined alignment that
+          // PSAM/BSAM will see below, instead of the original, now-stale split pieces.
+          stitch_naturally_split_alignments(settings, summary, ref_seq_info, hdr, PRE_STITCH_SAM, POST_STITCH_SAM, group);
+        }
         for (alignment_list::iterator it = group.begin(); it != group.end(); it++) {
           ASSERT(sam_write1(out, hdr, it->get()) >= 0, "Failed to write alignment to: " + output_sam_file_name);
         }
         if (do_preprocess) {
-          keep_going = preprocess_alignment_list(settings, summary, ref_seq_info, BSAM, PSAM, min_indel_split_len, group, i);
+          keep_going = preprocess_alignment_list(settings, summary, ref_seq_info, BSAM, PSAM, group, i);
         }
       }
 
@@ -389,7 +399,8 @@ namespace breseq {
                                                      const string& reference_sam_file_name,
                                                      bam_file& BSAM,
                                                      bam_file& PSAM,
-                                                     int32_t min_indel_split_len,
+                                                     tam_file& PRE_STITCH_SAM,
+                                                     tam_file& POST_STITCH_SAM,
                                                      uint32_t& i
                                                      )
   {
@@ -398,7 +409,10 @@ namespace breseq {
     alignment_list alignments;
     while (tam.read_alignments(alignments, false))
     {
-      if (!preprocess_alignment_list(settings, summary, ref_seq_info, BSAM, PSAM, min_indel_split_len, alignments, i))
+      if (!alignments.front()->unmapped()) {
+        stitch_naturally_split_alignments(settings, summary, ref_seq_info, tam.bam_header, PRE_STITCH_SAM, POST_STITCH_SAM, alignments);
+      }
+      if (!preprocess_alignment_list(settings, summary, ref_seq_info, BSAM, PSAM, alignments, i))
         break;
     }
   }
@@ -544,7 +558,8 @@ namespace breseq {
                                              bam_file& BSAM,
                                              bam_file& PSAM1,
                                              bam_file& PSAM2,
-                                             int32_t min_indel_split_len,
+                                             tam_file& PRE_STITCH_SAM,
+                                             tam_file& POST_STITCH_SAM,
                                              uint32_t& i
                                              )
   {
@@ -565,6 +580,9 @@ namespace breseq {
         r1_is_stage1 = r1_stream.current_is_stage1();
         r1_mapped = !group.front()->unmapped();
         if (r1_mapped) {
+          if (do_preprocess) {
+            stitch_naturally_split_alignments(settings, summary, ref_seq_info, r1_stream.header(), PRE_STITCH_SAM, POST_STITCH_SAM, group);
+          }
           if (out1) {
             for (alignment_list::iterator it = group.begin(); it != group.end(); it++) {
               ASSERT(sam_write1(out1, r1_stream.header(), it->get()) >= 0, "Failed to write alignment to: " + output_sam_file_name_r1);
@@ -572,7 +590,7 @@ namespace breseq {
           }
           if (matched) r1_summary = summarize_alignment_group(group);
           if (do_preprocess) {
-            keep_going = preprocess_alignment_list(settings, summary, ref_seq_info, BSAM, PSAM1, min_indel_split_len, group, i) && keep_going;
+            keep_going = preprocess_alignment_list(settings, summary, ref_seq_info, BSAM, PSAM1, group, i) && keep_going;
           }
         }
       }
@@ -582,6 +600,9 @@ namespace breseq {
         r2_is_stage1 = r2_stream.current_is_stage1();
         r2_mapped = !group.front()->unmapped();
         if (r2_mapped) {
+          if (do_preprocess) {
+            stitch_naturally_split_alignments(settings, summary, ref_seq_info, r2_stream.header(), PRE_STITCH_SAM, POST_STITCH_SAM, group);
+          }
           if (out2) {
             for (alignment_list::iterator it = group.begin(); it != group.end(); it++) {
               ASSERT(sam_write1(out2, r2_stream.header(), it->get()) >= 0, "Failed to write alignment to: " + output_sam_file_name_r2);
@@ -589,7 +610,7 @@ namespace breseq {
           }
           if (matched) r2_summary = summarize_alignment_group(group);
           if (do_preprocess) {
-            keep_going = preprocess_alignment_list(settings, summary, ref_seq_info, BSAM, PSAM2, min_indel_split_len, group, i) && keep_going;
+            keep_going = preprocess_alignment_list(settings, summary, ref_seq_info, BSAM, PSAM2, group, i) && keep_going;
           }
         }
       }
@@ -632,7 +653,8 @@ namespace breseq {
                                                  bam_file& BSAM,
                                                  bam_file& PSAM1,
                                                  bam_file& PSAM2,
-                                                 int32_t min_indel_split_len,
+                                                 tam_file& PRE_STITCH_SAM,
+                                                 tam_file& POST_STITCH_SAM,
                                                  uint32_t& i
                                                  )
   {
@@ -650,7 +672,7 @@ namespace breseq {
     map<pair<string, int64_t>, uint32_t> distance_counts;
     merge_join_paired_read_streams(settings, summary, ref_seq_info, r1_stream, r2_stream,
                                     out1, out2, output_sam_file_name_r1, output_sam_file_name_r2,
-                                    distance_counts, do_preprocess, BSAM, PSAM1, PSAM2, min_indel_split_len, i);
+                                    distance_counts, do_preprocess, BSAM, PSAM1, PSAM2, PRE_STITCH_SAM, POST_STITCH_SAM, i);
 
     hts_close(out1);
     hts_close(out2);
@@ -681,7 +703,8 @@ namespace breseq {
                                                  bam_file& BSAM,
                                                  bam_file& PSAM1,
                                                  bam_file& PSAM2,
-                                                 int32_t min_indel_split_len,
+                                                 tam_file& PRE_STITCH_SAM,
+                                                 tam_file& POST_STITCH_SAM,
                                                  uint32_t& i
                                                  )
   {
@@ -692,7 +715,7 @@ namespace breseq {
     merge_join_paired_read_streams(settings, summary, ref_seq_info, r1_stream, r2_stream,
                                     NULL, NULL, reference_sam_file_name_r1, reference_sam_file_name_r2,
                                     distance_counts, true /* only called when do_preprocess is true */,
-                                    BSAM, PSAM1, PSAM2, min_indel_split_len, i);
+                                    BSAM, PSAM1, PSAM2, PRE_STITCH_SAM, POST_STITCH_SAM, i);
 
     string csv_file_name = Settings::file_name(settings.paired_mapping_distance_distribution_file_name, "#", read_file_set.m_base_name);
     ofstream csv(csv_file_name.c_str());
@@ -719,7 +742,6 @@ namespace breseq {
   void PreprocessAlignments::merge_sort_and_preprocess_alignments(Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info)
   {
     bool do_preprocess = !settings.skip_new_junction_prediction;
-    int32_t min_indel_split_len = settings.preprocess_junction_min_indel_split_length;
     string reference_fasta_file_name = settings.reference_fasta_file_name;
 
     if (do_preprocess) {
@@ -731,6 +753,15 @@ namespace breseq {
     bam_file BSAM;
     if (do_preprocess) {
       BSAM.open_write(settings.preprocess_junction_best_sam_file_name, reference_fasta_file_name);
+    }
+
+    // Debugging dumps of every read examined for natural-split indel stitching (i.e. every
+    // read with more than one alignment), before and after stitching -- see
+    // stitch_naturally_split_alignments.
+    tam_file PRE_STITCH_SAM, POST_STITCH_SAM;
+    if (do_preprocess) {
+      PRE_STITCH_SAM.open_write(settings.pre_stitching_sam_file_name, reference_fasta_file_name);
+      POST_STITCH_SAM.open_write(settings.post_stitching_sam_file_name, reference_fasta_file_name);
     }
 
     uint32_t i = 0;
@@ -758,10 +789,10 @@ namespace breseq {
             string stage2_reference_sam_file_name = Settings::file_name(settings.stage2_reference_sam_file_name, "#", read_file.m_base_name);
 
             merge_two_sam_files(settings, summary, ref_seq_info, stage1_reference_sam_file_name, stage2_reference_sam_file_name,
-                                 reference_sam_file_name, do_preprocess, BSAM, PSAM, min_indel_split_len, i);
+                                 reference_sam_file_name, do_preprocess, BSAM, PSAM, PRE_STITCH_SAM, POST_STITCH_SAM, i);
           } else if (do_preprocess) {
             // Single-stage alignment: reference_sam_file_name was already written directly by bowtie2
-            preprocess_one_sam_file(settings, summary, ref_seq_info, reference_sam_file_name, BSAM, PSAM, min_indel_split_len, i);
+            preprocess_one_sam_file(settings, summary, ref_seq_info, reference_sam_file_name, BSAM, PSAM, PRE_STITCH_SAM, POST_STITCH_SAM, i);
           }
 
           if (do_preprocess) {
@@ -806,11 +837,11 @@ namespace breseq {
           merge_two_sets_of_paired_sam_files(settings, summary, ref_seq_info, rfs,
                                               stage1_r1, stage2_r1, reference_sam_file_name_r1,
                                               stage1_r2, stage2_r2, reference_sam_file_name_r2,
-                                              do_preprocess, BSAM, PSAM1, PSAM2, min_indel_split_len, i);
+                                              do_preprocess, BSAM, PSAM1, PSAM2, PRE_STITCH_SAM, POST_STITCH_SAM, i);
         } else if (do_preprocess) {
           preprocess_one_set_of_paired_sam_files(settings, summary, ref_seq_info, rfs,
                                                   reference_sam_file_name_r1, reference_sam_file_name_r2,
-                                                  BSAM, PSAM1, PSAM2, min_indel_split_len, i);
+                                                  BSAM, PSAM1, PSAM2, PRE_STITCH_SAM, POST_STITCH_SAM, i);
         }
 
         if (do_preprocess) {
@@ -827,87 +858,384 @@ namespace breseq {
     if (do_preprocess) {
       end_progress_line();
       cerr << "  Summary... " << endl
-           << "  Aligned reads:                         " << setw(12) << right << summary.preprocess_alignments.aligned_reads << endl
-           << "  Read alignments:                       " << setw(12) << right << summary.preprocess_alignments.alignments << endl
-           << "  Alignments split on indels:            " << setw(12) << right << summary.preprocess_alignments.alignments_split_on_indels << endl
-           << "  Reads with alignments split on indels: " << setw(12) << right << summary.preprocess_alignments.reads_with_alignments_split_on_indels << endl
-           << "  Split alignments:                      " << setw(12) << right << summary.preprocess_alignments.split_alignments << endl
-           << "  Reads with split alignments:           " << setw(12) << right << summary.preprocess_alignments.reads_with_split_alignments << endl
+           << "  Aligned reads:                          " << setw(12) << right << summary.preprocess_alignments.aligned_reads << endl
+           << "  Read alignments:                        " << setw(12) << right << summary.preprocess_alignments.alignments << endl
+           << "  Alignments stitched across indels:      " << setw(12) << right << summary.preprocess_alignments.alignments_stitched_on_indels << endl
+           << "  Reads with alignments stitched:         " << setw(12) << right << summary.preprocess_alignments.reads_with_alignments_stitched_on_indels << endl
       ;
     }
   }
 
-
-  /*! Split alignments interrupted by indels into their segments and write to a SAM file.
-	 */
-  
-  void PreprocessAlignments::split_alignments_on_indels(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info, bam_file& PSAM, int32_t min_indel_split_len, const alignment_list& alignments)
+  //! Walks a's own CIGAR (bam-native, always reference-forward order regardless of strand),
+  //! splitting it at the point where the reference position reaches ref_split_1: ops (or the
+  //! portion of an op) covering reference positions < ref_split_1 go to before_ops, ops (or
+  //! the portion) covering >= ref_split_1 go to after_ops. Leading/trailing S ops are
+  //! dropped (callers recompute soft-clip lengths from query_start_1()/query_end_1() of
+  //! whichever end they keep). query_pos_at_split is set to the 1-indexed query position
+  //! that corresponds to ref_split_1 (i.e., where after_ops begins, in query coordinates).
+  static void split_cigar_at_reference_position(
+                                                 const bam_alignment& a,
+                                                 int32_t ref_split_1,
+                                                 vector<pair<char,uint16_t> >& before_ops,
+                                                 vector<pair<char,uint16_t> >& after_ops,
+                                                 uint32_t& query_pos_at_split
+                                                 )
   {
-    //##
-    //## @JEB: Note that this may affect the order of alignments in the SAM file. This has 
-    //## consequences for the AlignmentCorrection step, which may assume highest scoring
-    //## alignments are first in the TAM file.
-    //##
-    //## So only USE the split alignment file for creating a list of candidate junctions.
-    //##
-    
-    assert(min_indel_split_len >= 0);
-    
-    // Keeps track of which to split
-    alignment_list untouched_alignments;
-    alignment_list split_alignments;
-    
-    untouched_alignments.read_base_quality_char_string = alignments.read_base_quality_char_string;
-    untouched_alignments.read_base_quality_char_string_reversed = alignments.read_base_quality_char_string_reversed;
-    uint32_t alignments_written = 0;      
-    
-    for(alignment_list::const_iterator it = alignments.begin(); it != alignments.end(); it++) {
-      
-      uint32_t* cigar_list = (*it)->cigar_array();
-      bool do_split = false;
-      
-      for(uint32_t i=0; i<(*it)->cigar_array_length(); i++) {
-        uint32_t op = cigar_list[i] & BAM_CIGAR_MASK;
-        uint32_t len = cigar_list[i] >> BAM_CIGAR_SHIFT;
-        if (((op == BAM_CINS) || (op == BAM_CDEL)) && (len >= static_cast<uint32_t>(min_indel_split_len))) {
-          do_split = true;
+    before_ops.clear();
+    after_ops.clear();
+
+    vector<pair<char,uint16_t> > cigar_list = a.cigar_pair_char_op_array();
+    int32_t ref_pos = static_cast<int32_t>(a.reference_start_1());
+    uint32_t query_pos = a.query_start_1();
+    bool before_split = true;
+    query_pos_at_split = query_pos;
+
+    for (size_t i = 0; i < cigar_list.size(); i++)
+    {
+      char op = cigar_list[i].first;
+      uint16_t len = cigar_list[i].second;
+      if (op == 'S') continue;
+
+      if (op == 'I')
+      {
+        if (before_split) before_ops.push_back(make_pair(op, len));
+        else after_ops.push_back(make_pair(op, len));
+        query_pos += len;
+        continue;
+      }
+
+      // op is 'M' or 'D': consumes reference (and, if 'M', query too)
+      if (before_split)
+      {
+        if (ref_split_1 <= ref_pos)
+        {
+          // boundary is at (or, if geometry is sound, never before) the start of this op
+          query_pos_at_split = query_pos;
+          before_split = false;
+          after_ops.push_back(make_pair(op, len));
+        }
+        else if (ref_split_1 > ref_pos + static_cast<int32_t>(len) - 1)
+        {
+          // boundary strictly after this op
+          before_ops.push_back(make_pair(op, len));
+        }
+        else
+        {
+          // boundary splits this op
+          uint16_t before_len = static_cast<uint16_t>(ref_split_1 - ref_pos);
+          uint16_t after_len = static_cast<uint16_t>(len - before_len);
+          if (before_len > 0) before_ops.push_back(make_pair(op, before_len));
+          query_pos_at_split = query_pos + (op == 'M' ? before_len : 0);
+          before_split = false;
+          if (after_len > 0) after_ops.push_back(make_pair(op, after_len));
         }
       }
-      
-      if (do_split) {
-        split_alignments.push_back( *it );
-        
+      else
+      {
+        after_ops.push_back(make_pair(op, len));
       }
-      else {
-        // Check guard showing that the main alignment is good and thus we don't look at other alignments
-        if ( (*it)->query_match_length() >= alignments.front()->read_length() - settings.required_both_unique_length_per_side)
-          return;
-        
-        untouched_alignments.push_back( *it );
-      }      
+
+      ref_pos += len;
+      if (op == 'M') query_pos += len;
     }
-        
+
+    if (before_split) {
+      // ref_split_1 was never reached (>= one past this alignment's own reference end)
+      query_pos_at_split = query_pos;
+    }
+  }
+
+  //! Attempts to build one in-memory alignment record spanning geom's pair, bridging the gap
+  //! between them with a single D (if the reference sides don't meet), a single I (if the
+  //! read has extra or ambiguous-overlap bases at the junction), or both (a combined indel).
+  //! Any reference-side overlap (ambiguous/repeat-driven placement, e.g. a homopolymer
+  //! expansion) is credited to the reference-earlier side and folded into the I length
+  //! instead, so the construction is uniform regardless of how the ambiguity would otherwise
+  //! have been resolved. When exactly one of the D/I is used, its position is then
+  //! left-normalized to bowtie2's own leftmost-placement convention. Returns a null
+  //! bam_alignment_ptr if the pair isn't on the same reference sequence and physical strand,
+  //! if the geometry is internally inconsistent, or if the total implied indel length is
+  //! >= cutoff.
+  bam_alignment_ptr PreprocessAlignments::build_joined_alignment(
+                                                                  bam_hdr_t* bam_header,
+                                                                  const cReferenceSequences& ref_seq_info,
+                                                                  const AlignmentPairGeometry& geom,
+                                                                  const alignment_list& alignments,
+                                                                  int32_t cutoff
+                                                                  )
+  {
+    if (geom.hash_seq_id_1 != geom.hash_seq_id_2) return bam_alignment_ptr();
+    if (geom.q1->strand() != geom.q2->strand()) return bam_alignment_ptr();
+
+    // Determine which of the pair is reference-left/-right from their own (mismatch-corrected)
+    // reference bounds -- NOT hash_coord_1/hash_coord_2. hash_coord_1/hash_coord_2 mark the
+    // outer edges of an ambiguous/repeat-driven overlap region (candidate-junction sequence
+    // construction's own convention) rather than complementary "resume here" cut points for a
+    // single spliced CIGAR: using them here as left_end/right_start silently discarded almost
+    // all of both alignments' real matched content for an overlapping pair, inflating a clean
+    // small insertion into a much larger spurious combined indel that then failed the cutoff.
+    bool q1_is_ref_left = (geom.r1_start <= geom.r2_start);
+    bam_alignment* ref_left  = q1_is_ref_left ? geom.q1 : geom.q2;
+    bam_alignment* ref_right = q1_is_ref_left ? geom.q2 : geom.q1;
+    int32_t left_end    = q1_is_ref_left ? geom.r1_end   : geom.r2_end;
+    int32_t right_start = q1_is_ref_left ? geom.r2_start : geom.r1_start;
+
+    // Clamp away any reference-side overlap (ambiguous/repeat-driven placement) by crediting
+    // it to ref_left; the corresponding read bases become part of the inserted content
+    // derived from query positions below.
+    int32_t adj_right_start = max(right_start, left_end + 1);
+
+    vector<pair<char,uint16_t> > left_before, left_after_unused;
+    uint32_t left_query_next;
+    split_cigar_at_reference_position(*ref_left, left_end + 1, left_before, left_after_unused, left_query_next);
+
+    vector<pair<char,uint16_t> > right_before_unused, right_after;
+    uint32_t right_query_start;
+    split_cigar_at_reference_position(*ref_right, adj_right_start, right_before_unused, right_after, right_query_start);
+
+    int32_t deletion_length = adj_right_start - left_end - 1;
+    int32_t insertion_length = static_cast<int32_t>(right_query_start) - static_cast<int32_t>(left_query_next);
+
+    if (deletion_length < 0) deletion_length = 0;          // shouldn't happen given the clamp above
+    if (insertion_length < 0) return bam_alignment_ptr();  // inconsistent geometry -- decline to stitch
+
+    int32_t indel_length = deletion_length + insertion_length;
+    if (indel_length >= cutoff) return bam_alignment_ptr();
+
+    // Left-normalize the bridging D/I to bowtie2's own leftmost-placement convention: when its
+    // position is ambiguous (a repeat, or a mismatch-for-mismatch tie), shift it left through
+    // every 1-base step that swaps one boundary base-pair for another of the same match status
+    // (so total score is unchanged), so that reads spanning the same real indel at different
+    // read offsets always stitch to the identical breakpoint. Skip combined indels (both
+    // nonzero) -- shifting there would need to reconcile two independent boundaries at once.
+    if ((deletion_length > 0) != (insertion_length > 0))
+    {
+      const cAnnotatedSequence& ref_seq = ref_seq_info[ref_left->reference_target_id()];
+      string read_seq = ref_left->read_char_sequence();
+
+      while ( (left_end > static_cast<int32_t>(ref_left->reference_start_1()))
+           && (adj_right_start > static_cast<int32_t>(ref_right->reference_start_1()))
+           && (left_query_next >= 2) )
+      {
+        bool old_match, new_match;
+        if (deletion_length > 0)
+        {
+          char boundary_read_base = read_seq[left_query_next - 2];
+          old_match = (boundary_read_base == ref_seq.get_sequence_1(left_end));
+          new_match = (boundary_read_base == ref_seq.get_sequence_1(adj_right_start - 1));
+        }
+        else
+        {
+          char old_read_base = read_seq[left_query_next - 2];
+          char new_read_base = read_seq[left_query_next + insertion_length - 2];
+          old_match = (old_read_base == ref_seq.get_sequence_1(left_end));
+          new_match = (new_read_base == ref_seq.get_sequence_1(left_end));
+        }
+        if (old_match != new_match) break;
+
+        left_end--;
+        adj_right_start--;
+        left_query_next--;
+        right_query_start--;
+      }
+
+      split_cigar_at_reference_position(*ref_left, left_end + 1, left_before, left_after_unused, left_query_next);
+      split_cigar_at_reference_position(*ref_right, adj_right_start, right_before_unused, right_after, right_query_start);
+    }
+
+    // Assemble the merged CIGAR: ref_left's kept ops, the bridging D/I (if any -- if both are
+    // zero, coalesce the abutting M runs into one), then ref_right's kept ops.
+    vector<pair<char,uint16_t> > merged_ops = left_before;
+
+    if (deletion_length > 0) merged_ops.push_back(make_pair('D', static_cast<uint16_t>(deletion_length)));
+    if (insertion_length > 0) merged_ops.push_back(make_pair('I', static_cast<uint16_t>(insertion_length)));
+
+    if ((deletion_length == 0) && (insertion_length == 0)
+        && !merged_ops.empty() && !right_after.empty()
+        && (merged_ops.back().first == 'M') && (right_after.front().first == 'M'))
+    {
+      merged_ops.back().second += right_after.front().second;
+      merged_ops.insert(merged_ops.end(), right_after.begin() + 1, right_after.end());
+    }
+    else
+    {
+      merged_ops.insert(merged_ops.end(), right_after.begin(), right_after.end());
+    }
+
+    if (merged_ops.empty()) return bam_alignment_ptr();
+
+    uint32_t read_length = ref_left->read_length();
+    uint32_t left_padding = ref_left->query_start_1() - 1;
+    uint32_t right_padding = read_length - ref_right->query_end_1();
+
+    string cigar_string = alignment_wrapper::cigar_op_array_to_cigar_string(merged_ops);
+    if (left_padding > 0) cigar_string = to_string(left_padding) + "S" + cigar_string;
+    if (right_padding > 0) cigar_string = cigar_string + to_string(right_padding) + "S";
+
+    string qseq_string = ref_left->read_char_sequence();
+    string quality_score_string = ref_left->read_base_quality_char_string();
+    if (quality_score_string[0] == ' ') {
+      quality_score_string = alignments.read_base_quality_char_string;
+      if (alignments.read_base_quality_char_string_reversed ^ ref_left->reversed())
+        quality_score_string = reverse_string(quality_score_string);
+    }
+
+    vector<string> ll = make_vector<string>
+      (ref_left->read_name())
+      (to_string(ref_left->flag()))
+      (string(bam_header->target_name[ref_left->reference_target_id()]))
+      (to_string(ref_left->reference_start_1()))
+      (to_string(min(ref_left->mapping_quality(), ref_right->mapping_quality())))
+      (cigar_string)
+      ("*")("0")("0")
+      (qseq_string)
+      (quality_score_string)
+    ;
+
+    string sam_line = join(ll, "\t");
+    kstring_t ks = KS_INITIALIZE;
+    kputs(sam_line.c_str(), &ks);
+    bam1_t* b = bam_init1();
+    ASSERT(sam_parse1(&ks, bam_header, b) >= 0, "sam_parse1 failed: " + sam_line);
+    bam_alignment_ptr result(new bam_alignment(*b));
+    bam_destroy1(b);
+    ks_free(&ks);
+
+    return result;
+  }
+
+  //! Orders alignments by stranded read start, so that adjacent elements directly correspond
+  //! to a read chimeric across two (or more) pieces.
+  static bool compare_by_stranded_read_start(const bam_alignment_ptr& a, const bam_alignment_ptr& b)
+  {
+    uint32_t a_start, a_end, b_start, b_end;
+    a->query_stranded_bounds_1(a_start, a_end);
+    b->query_stranded_bounds_1(b_start, b_end);
+    return a_start < b_start;
+  }
+
+  //! Joins pairs of a read's naturally split (soft-clipped/chimeric) alignments that are
+  //! explainable by a single small indel below settings.junction_indel_stitch_length (or, if
+  //! not set, ceil(read_length/10)) into one alignment with the indel represented in its
+  //! CIGAR, mutating alignments in place. Considers every adjacent pair by stranded read
+  //! position (not just pairs that would already pass the JC-pairing quality gates), so even
+  //! very lopsided natural splits get a chance to be correctly represented as RA evidence.
+  //! When several qualifying stitchings are possible, keeps the best-scoring one and repeats
+  //! until no more qualifying pairs remain. Returns the number of stitch operations
+  //! performed.
+  uint32_t PreprocessAlignments::stitch_naturally_split_alignments(
+                                                                    const Settings& settings,
+                                                                    Summary& summary,
+                                                                    const cReferenceSequences& ref_seq_info,
+                                                                    bam_hdr_t* bam_header,
+                                                                    tam_file& PRE_STITCH_SAM,
+                                                                    tam_file& POST_STITCH_SAM,
+                                                                    alignment_list& alignments
+                                                                    )
+  {
+    bool is_candidate = (alignments.size() > 1);
+    if (is_candidate) PRE_STITCH_SAM.write_alignments(0, alignments);
+
+    uint32_t stitches_performed = 0;
+
+    bool stitched_again = true;
+    while (stitched_again && (alignments.size() > 1))
+    {
+      stitched_again = false;
+
+      // Order by stranded read start purely for readability of the (i,j) scan and the debug
+      // dumps below -- every pair is tried, not just adjacent ones. With bowtie2 run in -k
+      // mode, a read's alignment list often also contains several unrelated, nearly
+      // full-length alternative-location alignments interleaved (by start position) between
+      // the two pieces of a genuine natural split; restricting the scan to adjacent pairs
+      // after sorting let those decoys hide the real pairing from ever being tested.
+      vector<bam_alignment_ptr> ordered(alignments.begin(), alignments.end());
+      sort(ordered.begin(), ordered.end(), compare_by_stranded_read_start);
+
+      bool found = false;
+      size_t best_i = 0, best_j = 0;
+      int32_t best_score = 0;
+      bam_alignment_ptr best_joined;
+
+      for (size_t i = 0; i < ordered.size(); i++)
+      {
+        for (size_t j = i + 1; j < ordered.size(); j++)
+        {
+          uint32_t a_start, a_end, b_start, b_end;
+          ordered[i]->query_stranded_bounds_1(a_start, a_end);
+          ordered[j]->query_stranded_bounds_1(b_start, b_end);
+          if (b_end <= a_end) continue; // ordered[j]'s read span is contained in ordered[i]'s
+
+          int32_t cutoff = (settings.junction_indel_stitch_length >= 0)
+              ? settings.junction_indel_stitch_length
+              : static_cast<int32_t>(ceil(static_cast<double>(ordered[i]->read_length()) / 10.0));
+
+          AlignmentPairGeometry geom(ref_seq_info, *ordered[i], *ordered[j]);
+          bam_alignment_ptr joined = build_joined_alignment(bam_header, ref_seq_info, geom, alignments, cutoff);
+          if (!joined.get()) continue;
+
+          int32_t score = alignment_score(*joined, ref_seq_info);
+          if (!found || (score > best_score)) {
+            found = true;
+            best_i = i;
+            best_j = j;
+            best_score = score;
+            best_joined = joined;
+          }
+        }
+      }
+
+      if (found)
+      {
+        // Set the AS tag now: write_junction_candidate_alignments may write this alignment
+        // to PSAM before eligible_read_alignments (which normally sets AS) ever runs.
+        int32_t as = (best_score < 0) ? 0 : best_score;
+        best_joined->aux_set("AS", 'I', sizeof(int32_t), (uint8_t*)&as);
+
+        alignment_list new_alignments;
+        new_alignments.read_base_quality_char_string = alignments.read_base_quality_char_string;
+        new_alignments.read_base_quality_char_string_reversed = alignments.read_base_quality_char_string_reversed;
+        for (size_t k = 0; k < ordered.size(); k++) {
+          if (k == best_i) new_alignments.push_back(best_joined);
+          else if (k == best_j) continue;
+          else new_alignments.push_back(ordered[k]);
+        }
+        alignments = new_alignments;
+
+        stitches_performed++;
+        summary.preprocess_alignments.alignments_stitched_on_indels++;
+        stitched_again = true;
+      }
+    }
+
+    if (stitches_performed > 0) summary.preprocess_alignments.reads_with_alignments_stitched_on_indels++;
+    if (is_candidate) POST_STITCH_SAM.write_alignments(0, alignments);
+
+    return stitches_performed;
+  }
+
+  //! Writes a read's (post-stitching) alignments that could support a junction candidate to
+  //! PSAM: skipped entirely if one alignment already covers nearly the whole read (nothing
+  //! left to usefully pair), otherwise all remaining alignments are written as long as there
+  //! is more than one (it takes at least two to make a candidate junction).
+  void PreprocessAlignments::write_junction_candidate_alignments(const Settings& settings, Summary& summary, bam_file& PSAM, const alignment_list& alignments)
+  {
+    (void) summary;
+
+    for(alignment_list::const_iterator it = alignments.begin(); it != alignments.end(); it++) {
+      // Guard showing that a main alignment is already good, so there's nothing left to
+      // usefully pair for junction detection.
+      if ( (*it)->query_match_length() >= alignments.front()->read_length() - settings.required_both_unique_length_per_side)
+        return;
+    }
+
     // Don't write if there is only one alignment to be written,
     // it takes at least two to make a candidate junction.
-
-    for(alignment_list::iterator it = split_alignments.begin(); it != split_alignments.end(); ++it) {
-      PSAM.write_split_alignment(min_indel_split_len, **it, alignments, ref_seq_info);
-      alignments_written += 2;
+    if (alignments.size() > 1) {
+      PSAM.write_alignments(0, alignments);
     }
-    
-    if (untouched_alignments.size() + alignments_written > 1) {
-      PSAM.write_alignments(0, untouched_alignments);
-      alignments_written += untouched_alignments.size();
-    }
-
-    // record statistics
-    if (split_alignments.size()>0) summary.preprocess_alignments.reads_with_alignments_split_on_indels++; 
-    summary.preprocess_alignments.alignments_split_on_indels +=split_alignments.size() ;
-    
-    if (alignments_written > 0) summary.preprocess_alignments.reads_with_split_alignments++;
-    summary.preprocess_alignments.split_alignments += alignments_written;
   }
-    
+
 	/*! Predicts candidate junctions
 	 */
 	void CandidateJunctions::identify_candidate_junctions(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info)
@@ -1583,6 +1911,196 @@ namespace breseq {
   }
 
 
+  /*! Computes reference-side breakpoint geometry for a pair of partial alignments of the
+   *  same read, correcting for mismatches near the junction. Shared by candidate-junction
+   *  construction (CandidateJunctions::alignment_pair_to_candidate_junction) and natural
+   *  split-pair indel stitching (PreprocessAlignments::stitch_naturally_split_alignments).
+   *
+   *  a1/a2 are reordered internally (via the q1/q2 pointer members, not by copying or
+   *  swapping the alignment objects) so that q1 is read-earlier; the caller's a1/a2
+   *  themselves are never modified.
+   */
+  AlignmentPairGeometry::AlignmentPairGeometry(const cReferenceSequences& ref_seq_info, bam_alignment& a1, bam_alignment& a2)
+  {
+    // First, sort matches by their order in the query
+    q1 = &a1;
+    q2 = &a2;
+    q1->query_stranded_bounds_1(q1_start, q1_end);
+    q2->query_stranded_bounds_1(q2_start, q2_end);
+
+    // Reverse the coordinates to be consistently such that 1 refers to lowest...
+    if (q2_start < q1_start)
+    {
+      swap(q1_start, q2_start);
+      swap(q1_end, q2_end);
+      swap(q1, q2);
+    }
+
+    // create hash key and store information about the location of this hit
+    hash_strand_1 = q1->reversed();
+    hash_seq_id_1 = ref_seq_info[q1->reference_target_id()].m_seq_id;
+    const cAnnotatedSequence * ref_seq_1(&ref_seq_info[q1->reference_target_id()]);
+
+    hash_strand_2 = !q2->reversed();
+    hash_seq_id_2 = ref_seq_info[q2->reference_target_id()].m_seq_id;
+    const cAnnotatedSequence * ref_seq_2(&ref_seq_info[q2->reference_target_id()]);
+
+    // how much overlap is there between the two matches?
+    // positive if the middle sequence can match either side of the read
+    // negative if there is sequence in the read NOT matched on either side
+    overlap = -1 * (q2_start - q1_end - 1);
+
+    //
+    // OVERLAP MISMATCH CORRECTION
+    //
+    // If there are mismatches in one or the other read in the overlap region
+    // then we need to adjust the coordinates. Why? All sequences that we
+    // retrieve are from the reference sequence and there are two choices
+    // for where to extract this non-necessarily identical sequence!
+
+    // save these as variables, because we may have to adjust them
+    r1_start = q1->reference_start_1();
+    r1_end = q1->reference_end_1();
+    r2_start = q2->reference_start_1();
+    r2_end = q2->reference_end_1();
+
+    // Adjust the overlap in cases where there is a mismatch within the overlap region
+    int32_t overlap_in_reference = 0;
+
+    if (q1->strand() == q2->strand()) {
+
+      if ((r2_start >=  r1_start) && (r2_start <=  r1_end)) {
+        if (q1->strand() == +1)
+          overlap_in_reference = r1_end - r2_start + 1;
+        else
+          overlap_in_reference = r2_end - r1_start + 1;
+      }
+    }
+
+    if ((overlap > 0) || (overlap_in_reference > 0))
+    {
+      overlap = max(overlap, overlap_in_reference);
+
+      int32_t q1_move, q2_move, r1_move, r2_move;
+      q1->num_matches_from_end(ref_seq_info, false, overlap, q1_move, r1_move);
+      q2->num_matches_from_end(ref_seq_info, true, overlap, q2_move, r2_move);
+
+      if (q1_move >= 0)
+      {
+        // change where it ENDS
+        q1_end -= q1_move;
+        if (q1->reversed())
+          r1_start += r1_move;
+        else
+          r1_end -= r1_move;
+      }
+
+      if (q2_move >= 0)
+      {
+        // change where it STARTS
+        q2_start += q2_move;
+        if (!q2->reversed())
+          r2_start += r2_move;
+        else
+          r2_end -= r2_move;
+      }
+
+      // JEB 2013-10-12
+      // We might re-check that they still have the required amount of unique length if they moved.
+      // For now this is checked only on the original alignments that have not had their overlap corrected.
+
+      //re-calculate the overlap
+      overlap = -1 * (q2_start - q1_end - 1);
+    }
+
+    //Recalculate the overlap in the reference
+    if (q1->strand() == q2->strand()) {
+
+      if ((r2_start >=  r1_start) && (r2_start <=  r1_end)) {
+        if (q1->strand() == +1)
+          overlap_in_reference = r1_end - r2_start + 1;
+        else
+          overlap_in_reference = r2_end - r1_start + 1;
+      }
+    }
+
+    // create hash coords AFTER overlap adjustment
+    hash_coord_1 = (hash_strand_1) ? r1_start : r1_end;
+    hash_coord_2 = (hash_strand_2) ? r2_start : r2_end;
+
+    // Further correction for zero overlap.
+    //
+    // If there are multiple ways the two sides could have been aligned...shift them
+    // over so as much is included in the lower reference coordinate side as possible
+    //
+    // This case can arise for reads matching the same reference bases in SSAHA2
+    // or after correcting for mismatches in the overlap (?)
+
+    if (overlap == 0)
+    {
+      int32_t lower_coord_side = (hash_coord_1 < hash_coord_2) ? -1 : +1;
+      int32_t move_r1_pos = (hash_strand_1) ? -1 : +1;
+      int32_t move_r2_pos = (!hash_strand_2) ? -1 : +1;
+      move_r1_pos *= lower_coord_side;
+      move_r2_pos *= lower_coord_side;
+
+      uint32_t test_r1_pos = (hash_strand_1) ? r1_start : r1_end;
+      uint32_t test_r2_pos = (hash_strand_2) ? r2_start : r2_end;
+
+      if (lower_coord_side == -1)
+        test_r2_pos += move_r2_pos;
+      else
+        test_r1_pos += move_r1_pos;
+
+      if ( (test_r1_pos >= 1) && (test_r1_pos <= ref_seq_1->get_sequence_length() )
+        && (test_r2_pos >= 1) && (test_r2_pos <= ref_seq_2->get_sequence_length() ) )
+      {
+        string test_r1_char;
+        string test_r2_char;
+
+        test_r1_char = ref_seq_1->get_sequence_1(test_r1_pos);
+        if (hash_strand_1) test_r1_char = reverse_complement(test_r1_char);
+        test_r2_char = ref_seq_2->get_sequence_1(test_r2_pos);
+        if (!hash_strand_2) test_r2_char = reverse_complement(test_r2_char);
+
+        while (test_r1_char == test_r2_char)
+        {
+          test_r1_pos += move_r1_pos;
+          test_r2_pos += move_r2_pos;
+
+          if (! (
+                 (test_r1_pos >= 1) && (test_r1_pos <= ref_seq_1->get_sequence_length())
+                 && (test_r2_pos >= 1) && (test_r2_pos <= ref_seq_2->get_sequence_length())
+                 ) )
+          {
+            test_r1_pos -= move_r1_pos;
+            test_r2_pos -= move_r2_pos;
+            break;
+          }
+
+          test_r1_char = ref_seq_1->get_sequence_1(test_r1_pos);
+          if (hash_strand_1) test_r1_char = reverse_complement(test_r1_char);
+          test_r2_char = ref_seq_2->get_sequence_1(test_r2_pos);
+          if (!hash_strand_2) test_r2_char = reverse_complement(test_r2_char);
+        }
+
+        // backtrack by one
+        if (lower_coord_side == -1)
+          test_r2_pos -= move_r2_pos;
+        else
+          test_r1_pos -= move_r1_pos;
+
+        hash_coord_1 = test_r1_pos;
+        hash_coord_2 = test_r2_pos;
+      }
+    }
+
+    // these are the positions of the beginning and end of the read, across the junction
+    // query 1 is the start of the read, which is why we hash by this coordinate
+    // (it is less likely to be shifted by a nucleotide or two by base errors)
+    read_begin_coord = (hash_strand_1) ? r1_end : r1_start;
+  }
+
 	bool CandidateJunctions::alignment_pair_to_candidate_junction(
                                                             const Settings& settings, 
                                                             Summary& summary, 
@@ -1590,13 +2108,14 @@ namespace breseq {
                                                             AlignmentPair& ap,
                                                             JunctionCandidatePtr& returned_junction_candidate
                                                             )
-	{    
+	{
+    (void) settings;
     bool verbose = false;
-    
+
     //if (ap.a1.read_name() == "1:2096442") {
     //   verbose = true;
     //}
-  
+
     // clear the return value
     returned_junction_candidate = JunctionCandidatePtr(NULL);
     
@@ -1606,7 +2125,7 @@ namespace breseq {
 
     bam_alignment& a1 = ap.a1;
     bam_alignment& a2 = ap.a2;
-    
+
 		// Method
 		//
 		// Hash junctions by a key showing the inner coordinate of the read.
@@ -1621,250 +2140,25 @@ namespace breseq {
 		// On the RIGHT side:-1 means this is highest coord of alignment, junction seq continues to lower coord
 		//                    1 means this is lowest coord of alignment, junction seq continues to higher coord
 
-		int32_t i = 0;
+    // Reference-side geometry (breakpoint coordinates, corrected for mismatches near the
+    // junction) is shared with PreprocessAlignments::stitch_naturally_split_alignments; see
+    // AlignmentPairGeometry. Copy into local mutable variables, since the rest of this
+    // function adjusts them further (overlap normalization, strand canonicalization).
+    AlignmentPairGeometry geom(ref_seq_info, a1, a2);
 
-		string read_id = a1.read_name();
-    
-		// First, sort matches by their order in the query
-		bam_alignment& q1 = a1;
-		bam_alignment& q2 = a2;
-		uint32_t q1_start, q1_end;
-		uint32_t q2_start, q2_end;
-		q1.query_stranded_bounds_1(q1_start, q1_end);
-		q2.query_stranded_bounds_1(q2_start, q2_end);
+    bool hash_strand_1 = geom.hash_strand_1;
+    bool hash_strand_2 = geom.hash_strand_2;
+    string hash_seq_id_1 = geom.hash_seq_id_1;
+    string hash_seq_id_2 = geom.hash_seq_id_2;
+    int32_t hash_coord_1 = geom.hash_coord_1;
+    int32_t hash_coord_2 = geom.hash_coord_2;
+    int32_t overlap = geom.overlap;
+    int32_t r1_start = geom.r1_start, r1_end = geom.r1_end;
+    int32_t r2_start = geom.r2_start, r2_end = geom.r2_end;
+    int32_t read_begin_coord = geom.read_begin_coord;
+    bam_alignment& q1 = *geom.q1;
+    uint32_t q1_end = geom.q1_end;
 
-    if (verbose)
-      cout << q1.read_name() << endl;
-		
-    if (verbose)
-			cout << q1_start << ", " << q1_end << ", " << q2_start << ", " << q2_end << endl;
-
-		// Reverse the coordinates to be consistently such that 1 refers to lowest...
-		if (q2_start < q1_start)
-		{
-			swap(q1_start, q2_start);
-			swap(q1_end, q2_end);
-			swap(q1, q2);
-		}
-    
-		// create hash key and store information about the location of this hit
-		bool hash_strand_1 = q1.reversed();
-		string hash_seq_id_1 = ref_seq_info[q1.reference_target_id()].m_seq_id;
-		const cAnnotatedSequence * ref_seq_1(&ref_seq_info[q1.reference_target_id()]);
-		
-		bool hash_strand_2 = !q2.reversed();
-		string hash_seq_id_2 = ref_seq_info[q2.reference_target_id()].m_seq_id;
-		const cAnnotatedSequence * ref_seq_2(&ref_seq_info[q2.reference_target_id()]);
-    
-		// how much overlap is there between the two matches?
-		// positive if the middle sequence can match either side of the read
-		// negative if there is sequence in the read NOT matched on either side
-		int32_t overlap = -1 * (q2_start - q1_end - 1);
-    
-		//
-		// OVERLAP MISMATCH CORRECTION
-		//
-		// If there are mismatches in one or the other read in the overlap region
-		// then we need to adjust the coordinates. Why? All sequences that we
-		// retrieve are from the reference sequence and there are two choices
-		// for where to extract this non-necessarily identical sequence!
-
-		// save these as variables, because we may have to adjust them
-		int32_t r1_start = a1.reference_start_1();
-		int32_t r1_end = a1.reference_end_1();
-		int32_t r2_start = a2.reference_start_1();
-		int32_t r2_end = a2.reference_end_1();
-
-		if (verbose)
-		{
-			string ref_seq_matched_1 = ref_seq_1->get_sequence_1(r1_start, r1_end);
-			string ref_seq_matched_2 = ref_seq_2->get_sequence_1(r2_start, r2_end);
-
-			cout << "==============> Initial Matches" << endl;
-			cout << "Alignment #1" << endl;
-			cout << "qpos: " << q1_start << "-" << q1_end << " rpos: " << r1_start << "-" << r1_end << " reversed: " << q1.reversed() << endl;
-			cout << q1.read_char_sequence() << endl << ref_seq_matched_1 << endl;
-
-			cout << "Alignment #2" << endl;
-			cout << "qpos: " << q2_start << "-" << q2_end << " rpos: " << r2_start << "-" << r2_end << " reversed: " << q2.reversed() << endl;
-			cout << q2.read_char_sequence() << endl << ref_seq_matched_2 << endl;
-			cout << "<==============" << endl;
-
-			// debug print information
-			cout << "=== overlap: " << overlap << endl;
-		}
-
-		// Adjust the overlap in cases where there is a mismatch within the overlap region
-    int32_t overlap_in_reference = 0;
-    
-    if (q1.strand() == q2.strand()) {
-      
-      if ((r2_start >=  r1_start) && (r2_start <=  r1_end)) {
-        if (q1.strand() == +1)
-          overlap_in_reference = r1_end - r2_start + 1;
-        else
-          overlap_in_reference = r2_end - r1_start + 1;      
-      }
-    }
-
-    if (verbose)
-      cout << "=== overlap in reference: " << overlap_in_reference << endl;
-    
-		if ((overlap > 0) || (overlap_in_reference > 0))
-		{
-      overlap = max(overlap, overlap_in_reference);
-      
-      if (verbose)
-        cout << "=== overlap: " << overlap << endl;
-      
-			int32_t q1_move, q2_move, r1_move, r2_move;
-			q1.num_matches_from_end(ref_seq_info, false, overlap, q1_move, r1_move);
-			q2.num_matches_from_end(ref_seq_info, true, overlap, q2_move, r2_move);
-
-			if (q1_move >= 0)
-			{
-				if (verbose)
-					cout << "ALIGNMENT #1 OVERLAP MISMATCH: " << q1_move << ", " << r1_move << endl;
-				// change where it ENDS
-				q1_end -= q1_move;
-				if (q1.reversed())
-					r1_start += r1_move;
-				else
-					r1_end -= r1_move;
-			}
-
-			if (q2_move >= 0)
-			{
-				if (verbose)
-					cout << "ALIGNMENT #2 OVERLAP MISMATCH: " << q2_move << ", " << r2_move << endl;
-				// change where it STARTS
-				q2_start += q2_move;
-				if (!q2.reversed())
-					r2_start += r2_move;
-				else
-					r2_end -= r2_move;
-			}
-      
-      // JEB 2013-10-12      
-			// We might re-check that they still have the required amount of unique length if they moved.
-      // For now this is checked only on the original alignments that have not had their overlap corrected.
-
-			//re-calculate the overlap
-			overlap = -1 * (q2_start - q1_end - 1);
-			if (verbose)
-				cout << "=== overlap corrected for mismatches " << overlap << endl;
-		}
-        
-    //Recalculate the overlap in the reference
-    if (q1.strand() == q2.strand()) {
-      
-      if ((r2_start >=  r1_start) && (r2_start <=  r1_end)) {
-        if (q1.strand() == +1)
-          overlap_in_reference = r1_end - r2_start + 1;
-        else
-          overlap_in_reference = r2_end - r1_start + 1;      
-      }
-    }
-    
-    // create hash coords AFTER overlap adjustment
-		int32_t hash_coord_1 = (hash_strand_1) ? r1_start : r1_end;
-		int32_t hash_coord_2 = (hash_strand_2) ? r2_start : r2_end;
-
-    // Further correction for zero overlap.
-    //
-    // If there are multiple ways the two sides could have been aligned...shift them
-    // over so as much is included in the lower reference coordinate side as possible
-    // 
-    // This case can arise for reads matching the same reference bases in SSAHA2
-    // or after correcting for mismatches in the overlap (?)
-    
-    if (overlap == 0)
-    {
-      
-      int32_t lower_coord_side = (hash_coord_1 < hash_coord_2) ? -1 : +1;
-      int32_t move_r1_pos = (hash_strand_1) ? -1 : +1;
-      int32_t move_r2_pos = (!hash_strand_2) ? -1 : +1;
-      move_r1_pos *= lower_coord_side;
-      move_r2_pos *= lower_coord_side;
-
-      if (verbose) cout << "ZERO OVERLAP SHIFT TEST" << endl;
-      if (verbose) cout << "hash coord 1:" << hash_coord_1 << " hash coord 2: " << hash_coord_2 << endl;
-      uint32_t test_r1_pos = (hash_strand_1) ? r1_start : r1_end;
-      uint32_t test_r2_pos = (hash_strand_2) ? r2_start : r2_end;
-      
-      if (lower_coord_side == -1)
-        test_r2_pos += move_r2_pos;
-      else
-        test_r1_pos += move_r1_pos;
-      
-      if ( (test_r1_pos >= 1) && (test_r1_pos <= ref_seq_1->get_sequence_length() )
-        && (test_r2_pos >= 1) && (test_r2_pos <= ref_seq_2->get_sequence_length() ) )
-      {
-        string test_r1_char;
-        string test_r2_char;
-
-        test_r1_char = ref_seq_1->get_sequence_1(test_r1_pos);
-        if (hash_strand_1) test_r1_char = reverse_complement(test_r1_char);
-        test_r2_char = ref_seq_2->get_sequence_1(test_r2_pos);
-        if (!hash_strand_2) test_r2_char = reverse_complement(test_r2_char);
-        
-        while (test_r1_char == test_r2_char)
-        {          
-          test_r1_pos += move_r1_pos;
-          test_r2_pos += move_r2_pos;
-          
-          if (! (
-                 (test_r1_pos >= 1) && (test_r1_pos <= ref_seq_1->get_sequence_length())
-                 && (test_r2_pos >= 1) && (test_r2_pos <= ref_seq_2->get_sequence_length())
-                 ) )
-          {
-            test_r1_pos -= move_r1_pos;
-            test_r2_pos -= move_r2_pos;
-            break;
-          }
-
-          
-          test_r1_char = ref_seq_1->get_sequence_1(test_r1_pos);
-          if (hash_strand_1) test_r1_char = reverse_complement(test_r1_char);
-          test_r2_char = ref_seq_2->get_sequence_1(test_r2_pos);
-          if (!hash_strand_2) test_r2_char = reverse_complement(test_r2_char);
-        }
-        
-        // backtrack by one
-        if (lower_coord_side == -1)
-          test_r2_pos -= move_r2_pos;
-        else
-          test_r1_pos -= move_r1_pos;
-        
-        hash_coord_1 = test_r1_pos;
-        hash_coord_2 = test_r2_pos;
-        if (verbose) cout << "hash coord 1:" << hash_coord_1 << " hash coord 2: " << hash_coord_2 << endl;
-        
-      }
-    }
-
-		// these are the positions of the beginning and end of the read, across the junction
-		// query 1 is the start of the read, which is why we hash by this coordinate
-		// (it is less likely to be shifted by a nucleotide or two by base errors)
-		int32_t read_begin_coord = (hash_strand_1) ? r1_end : r1_start;
-
-		if (verbose)
-		{
-			string ref_seq_matched_1 = ref_seq_1->get_sequence_1(r1_start, r1_end);
-			string ref_seq_matched_2 = ref_seq_2->get_sequence_1(r2_start, r2_end);
-
-			cout << "==============> Final Matches" << endl;
-			cout << "Alignment #1" << endl;
-			cout << "qpos: " << q1_start << "-" << q1_end << " rpos: " << r1_start << "-" << r1_end << " reversed: " << q1.reversed() << endl;
-			cout << q1.read_char_sequence() << endl << ref_seq_matched_1 << endl;
-
-			cout << "Alignment #2" << endl;
-			cout << "qpos: " << q2_start << "-" << q2_end << " rpos: " << r2_start << "-" << r2_end << " reversed: " << q2.reversed() << endl;
-			cout << q2.read_char_sequence() << endl << ref_seq_matched_2 << endl;
-			cout << "<==============" << endl;
-		}
-
-    
 		// Calculate an offset that only applies if the overlap is positive (sequence is shared between the two ends)
 		int32_t overlap_offset = (overlap > 0) ? overlap : 0;
 		if (verbose)
@@ -1966,33 +2260,11 @@ namespace breseq {
     // set the return value (which takes control of the allocated pointer)
     returned_junction_candidate = JunctionCandidatePtr(candidate_junction_ptr);
 
-    
-    // Bowtie2 specific code: (Not needed for SSAHA2) -->
-    // need to rule out short indels that we want to fit by RA methods.
-    // would be better to get rid of these at an earlier stage.
-    // This code may not get rid of all possible SUB conditions.
+    // Pairs explainable by a small indel are no longer offered as junction candidates at
+    // all -- PreprocessAlignments::stitch_naturally_split_alignments intercepts and joins
+    // them into one alignment (RA evidence) before candidate junction identification ever
+    // sees them, so there is no narrow reject block needed here any more.
 
-    if ( hash_seq_id_1.compare(hash_seq_id_2) == 0 ) {
-      
-      // Insertion of the same base
-      //    ------>
-      // ----> 
-      if ((overlap > 0) && (hash_strand_1 ==1) && (hash_strand_2 != 1) && (hash_coord_2 - hash_coord_1 <= overlap) && ( hash_coord_1 + overlap - hash_coord_2 + 1  < settings.preprocess_junction_min_indel_split_length)) {
-        //cerr << "Rejected/Insertion of same base(s):" << candidate_junction_ptr->junction_key() << endl;
-        return false;
-      }
-      
-      // Insertion of unique bases at an existing junction
-      if ((overlap < 0) && (hash_strand_1 !=1) && (hash_strand_2 == 1) && ( hash_coord_1 + 1 == hash_coord_2) && (-overlap < settings.preprocess_junction_min_indel_split_length)) {
-        //cerr << "Rejected/Insertion of unique base(s):" << candidate_junction_ptr->junction_key() << endl;
-        return false;
-      }
-    }
-    
-    //
-    // <-- End Bowtie2 specific code
-    //
-    
 		if (verbose)
 		{
       string junction_id = candidate_junction_ptr->junction_key();

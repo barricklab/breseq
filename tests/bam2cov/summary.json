@@ -10,6 +10,7 @@
     },
     "candidate_junction": {
       "highly_redundant_junction_ignore_passed_pair_limit": 200,
+      "junction_indel_stitch_length": 8,
       "maximum_candidate_junction_length_factor": 0.1,
       "maximum_candidate_junctions": 5000,
       "maximum_junction_sequence_insertion_length": 0,
@@ -21,7 +22,6 @@
       "maximum_junction_sequence_positive_overlap_length_minimum": 12,
       "minimum_candidate_junction_pos_hash_score": 2,
       "minimum_candidate_junctions": 100,
-      "preprocess_junction_min_indel_split_length": 3,
       "required_both_unique_length_per_side": 1,
       "required_both_unique_length_per_side_fraction": 0.2,
       "required_one_unique_length_per_side": 0,

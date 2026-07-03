@@ -340,17 +340,28 @@ namespace breseq {
 
   class MergedReadStream;
 
+  //! Reference-side geometry of a pair of partial alignments for the same read (breakpoint
+  //! coordinates, corrected for mismatches near the junction), computed once and shared by
+  //! both candidate-junction construction and natural-split-pair indel stitching.
+  struct AlignmentPairGeometry {
+    bam_alignment* q1;   // read-earlier alignment (stranded read coords), NOT owned
+    bam_alignment* q2;   // read-later alignment, NOT owned
+    bool     hash_strand_1, hash_strand_2;
+    string   hash_seq_id_1, hash_seq_id_2;
+    int32_t  hash_coord_1, hash_coord_2;         // breakpoint coords, fully corrected
+    int32_t  overlap;                            // read-space overlap, corrected
+    int32_t  r1_start, r1_end, r2_start, r2_end; // corrected reference bounds (q1's, q2's)
+    uint32_t q1_start, q1_end, q2_start, q2_end; // corrected stranded read bounds
+    int32_t  read_begin_coord;
+
+    //! a1/a2 need not be in any particular order; the constructor determines which is
+    //! read-earlier (q1) without copying or swapping the alignment objects themselves.
+    AlignmentPairGeometry(const cReferenceSequences& ref_seq_info, bam_alignment& a1, bam_alignment& a2);
+  };
+
   class PreprocessAlignments
   {
   public:
-    static void split_alignments_on_indels(const Settings& settings,
-                                           Summary& summary,
-                                           const cReferenceSequences& ref_seq_info,
-                                           bam_file& PSAM,
-                                           int32_t min_indel_split_len,
-                                           const alignment_list& alignments
-                                           );
-
     static void split_mapped_and_unmapped_alignments(
                                                        uint32_t fastq_file_index,
                                                        string fasta_file_name, 
@@ -370,15 +381,63 @@ namespace breseq {
 
   private:
 
+    //! Joins pairs of a read's naturally split (soft-clipped/chimeric) alignments that are
+    //! explainable by a single small indel below settings.junction_indel_stitch_length into
+    //! one alignment with the indel represented in its CIGAR, mutating alignments in place.
+    //! When several qualifying stitchings are possible at one junction point, keeps the
+    //! best-scoring one. If alignments.size() > 1 on entry (i.e. this read is a stitching
+    //! candidate at all), writes its alignments to PRE_STITCH_SAM before and
+    //! POST_STITCH_SAM after, for debugging. Returns the number of reads whose alignments
+    //! were stitched.
+    static uint32_t stitch_naturally_split_alignments(
+                                                       const Settings& settings,
+                                                       Summary& summary,
+                                                       const cReferenceSequences& ref_seq_info,
+                                                       bam_hdr_t* bam_header,
+                                                       tam_file& PRE_STITCH_SAM,
+                                                       tam_file& POST_STITCH_SAM,
+                                                       alignment_list& alignments
+                                                       );
+
+    //! Attempts to build one in-memory alignment record spanning geom's pair, bridging the
+    //! gap between them with a single D (if the reference sides don't meet), a single I (if
+    //! the read has extra/ambiguous-overlap bases at the junction), or both (a combined
+    //! indel). When exactly one of the D/I is used, left-normalizes its position to bowtie2's
+    //! own leftmost-placement convention (shifting through repeat/mismatch-for-mismatch ties
+    //! that don't change alignment score) so that reads spanning the same real indel at
+    //! different read offsets stitch to the same breakpoint. Returns a null bam_alignment_ptr
+    //! if the pair isn't on the same reference sequence and physical strand, or if the total
+    //! implied indel length is >= cutoff. Does not write anything to a file.
+    static bam_alignment_ptr build_joined_alignment(
+                                                     bam_hdr_t* bam_header,
+                                                     const cReferenceSequences& ref_seq_info,
+                                                     const AlignmentPairGeometry& geom,
+                                                     const alignment_list& alignments,
+                                                     int32_t cutoff
+                                                     );
+
+    //! Writes a read's (post-stitching) alignments that could support a junction candidate to
+    //! PSAM: skipped entirely if one alignment already covers nearly the whole read (nothing
+    //! left to usefully pair), otherwise all remaining alignments are written as long as
+    //! there is more than one (it takes at least two to make a candidate junction).
+    static void write_junction_candidate_alignments(
+                                                     const Settings& settings,
+                                                     Summary& summary,
+                                                     bam_file& PSAM,
+                                                     const alignment_list& alignments
+                                                     );
+
     //! Processes one read's worth of alignments for candidate junction preprocessing.
-    //! Returns false if candidate_junction_read_limit was hit (caller should stop).
+    //! Callers are responsible for stitching naturally split alignments (via
+    //! stitch_naturally_split_alignments) before calling this, so that PSAM/BSAM see the
+    //! post-stitch alignment set. Returns false if candidate_junction_read_limit was hit
+    //! (caller should stop).
     static bool preprocess_alignment_list(
                                           const Settings& settings,
                                           Summary& summary,
                                           const cReferenceSequences& ref_seq_info,
                                           bam_file& BSAM,
                                           bam_file& PSAM,
-                                          int32_t min_indel_split_len,
                                           alignment_list& alignments,
                                           uint32_t& i
                                           );
@@ -395,7 +454,8 @@ namespace breseq {
                                     bool do_preprocess,
                                     bam_file& BSAM,
                                     bam_file& PSAM,
-                                    int32_t min_indel_split_len,
+                                    tam_file& PRE_STITCH_SAM,
+                                    tam_file& POST_STITCH_SAM,
                                     uint32_t& i
                                     );
 
@@ -408,7 +468,8 @@ namespace breseq {
                                         const string& reference_sam_file_name,
                                         bam_file& BSAM,
                                         bam_file& PSAM,
-                                        int32_t min_indel_split_len,
+                                        tam_file& PRE_STITCH_SAM,
+                                        tam_file& POST_STITCH_SAM,
                                         uint32_t& i
                                         );
 
@@ -434,7 +495,8 @@ namespace breseq {
                                     bam_file& BSAM,
                                     bam_file& PSAM1,
                                     bam_file& PSAM2,
-                                    int32_t min_indel_split_len,
+                                    tam_file& PRE_STITCH_SAM,
+                                    tam_file& POST_STITCH_SAM,
                                     uint32_t& i
                                     );
 
@@ -459,7 +521,8 @@ namespace breseq {
                                     bam_file& BSAM,
                                     bam_file& PSAM1,
                                     bam_file& PSAM2,
-                                    int32_t min_indel_split_len,
+                                    tam_file& PRE_STITCH_SAM,
+                                    tam_file& POST_STITCH_SAM,
                                     uint32_t& i
                                     );
 
@@ -479,7 +542,8 @@ namespace breseq {
                                         bam_file& BSAM,
                                         bam_file& PSAM1,
                                         bam_file& PSAM2,
-                                        int32_t min_indel_split_len,
+                                        tam_file& PRE_STITCH_SAM,
+                                        tam_file& POST_STITCH_SAM,
                                         uint32_t& i
                                         );
   };
