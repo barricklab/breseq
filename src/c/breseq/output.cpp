@@ -1416,12 +1416,22 @@ string html_genome_diff_item_table_string(const Settings& settings, const cGenom
 {
   if(list_ref.empty()) return "";
 
+  // When zip_html is active, point evidence links at the standalone viewer
+  // page (evidence.html#filename) instead of bare sibling filenames -- these
+  // pages are only ever displayed via evidence.html's iframe once the loose
+  // evidence/ directory has been archived and removed.
+  string relative_link;
+  if (settings.zip_html) {
+    relative_link = settings.local_html_evidence_file_name + "#";
+  }
+
   cDiffEntry& first_item = *list_ref.front();
   //mutation
   if(first_item.is_mutation())
   {
     MutationTableOptions mt_options(settings);
     mt_options.detailed=true;
+    mt_options.relative_link = relative_link;
     return Html_Mutation_Table_String(settings, gd, list_ref, mt_options);
   }
   //evidence
@@ -1429,23 +1439,23 @@ string html_genome_diff_item_table_string(const Settings& settings, const cGenom
   {
     if(first_item._type == MC)
     {
-      return html_missing_coverage_table_string(list_ref, true);
+      return html_missing_coverage_table_string(list_ref, true, "Missing coverage evidence...", relative_link);
     }
     else if(first_item._type == RA)
     {
-      return html_read_alignment_table_string(list_ref, true);
+      return html_read_alignment_table_string(list_ref, true, "Read alignment evidence...", relative_link);
     }
     else if(first_item._type == JC)
     {
-      return html_new_junction_table_string(list_ref,settings,true);
+      return html_new_junction_table_string(list_ref,settings,true, "New junction evidence", relative_link);
     }
     else if(first_item._type == CN)
     {
-      return html_copy_number_table_string(list_ref,true);
+      return html_copy_number_table_string(list_ref,true, "Copy number evidence", relative_link);
     }
     else if(first_item._type == SC)
     {
-      return html_soft_clipping_table_string(list_ref,true);
+      return html_soft_clipping_table_string(list_ref,true, "Soft clipping evidence", relative_link);
     }
   }
   return "";
@@ -3853,8 +3863,17 @@ cOutputEvidenceFiles::html_evidence_file (
   
   // Build HTML Head
   HTML << html_header("BRESEQ :: Evidence", settings);
-  
-  
+
+  if (settings.zip_html) {
+    // This page is only ever displayed inside evidence.html's own full-page
+    // iframe. Force links to navigate the top-level browsing context so
+    // clicking through to another evidence.html#... page updates the address
+    // bar and replaces the current view, instead of nesting another copy of
+    // evidence.html inside the iframe.
+    HTML << "<base target=\"_top\">" << endl;
+  }
+
+
   // print a table for the main item
   // followed by auxiliary tables for each piece of evidence
   
