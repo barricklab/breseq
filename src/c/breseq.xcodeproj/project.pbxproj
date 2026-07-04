@@ -49,8 +49,6 @@
 		708FA5FD13257A7D00864C40 /* libbreseq.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 708FA5DA132578BE00864C40 /* libbreseq.a */; };
 		7092FAF2140AC70200DDECA2 /* coverage_output.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7092FAF1140AC70200DDECA2 /* coverage_output.cpp */; };
 		70A8364D13477AAE0037F8DE /* alignment_output.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70A8364C13477AAE0037F8DE /* alignment_output.cpp */; };
-		70B142F31D31F6130019D5A5 /* nw.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B142F21D31F6130019D5A5 /* nw.cpp */; };
-		70B142F51D31F6220019D5A5 /* nw.h in Headers */ = {isa = PBXBuildFile; fileRef = 70B142F41D31F6220019D5A5 /* nw.h */; };
 		70B48C4B13A9918E00BF2BF0 /* anyoption.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B48C4A13A9918E00BF2BF0 /* anyoption.cpp */; };
 		70B4AEB01391F72200B9638D /* fasta.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B4AEAF1391F72200B9638D /* fasta.cpp */; };
 		70B69DE61369B8700001B750 /* breseq_cmdline.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 70B69DE51369B8700001B750 /* breseq_cmdline.cpp */; };
@@ -145,8 +143,6 @@
 		708FA5DA132578BE00864C40 /* libbreseq.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libbreseq.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		7092FAF1140AC70200DDECA2 /* coverage_output.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = coverage_output.cpp; path = breseq/coverage_output.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		70A8364C13477AAE0037F8DE /* alignment_output.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = alignment_output.cpp; path = breseq/alignment_output.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
-		70B142F21D31F6130019D5A5 /* nw.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = nw.cpp; path = breseq/nw.cpp; sourceTree = SOURCE_ROOT; };
-		70B142F41D31F6220019D5A5 /* nw.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = nw.h; sourceTree = "<group>"; };
 		70B48C4A13A9918E00BF2BF0 /* anyoption.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = anyoption.cpp; path = breseq/anyoption.cpp; sourceTree = SOURCE_ROOT; };
 		70B4AEAF1391F72200B9638D /* fasta.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = fasta.cpp; path = breseq/fasta.cpp; sourceTree = SOURCE_ROOT; };
 		70B69DE51369B8700001B750 /* breseq_cmdline.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = breseq_cmdline.cpp; path = breseq/breseq_cmdline.cpp; sourceTree = SOURCE_ROOT; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
@@ -257,7 +253,6 @@
 				70160F14202BF3DD004FDA46 /* genome_diff_entry.cpp */,
 				7087728B12BC169C000F9B57 /* identify_mutations.cpp */,
 				7084E56613CFD471005B57D1 /* mutation_predictor.cpp */,
-				70B142F21D31F6130019D5A5 /* nw.cpp */,
 				70D789D313C3CEB70036BEAB /* output.cpp */,
 				D8C7B5DA3D71C657685BB753 /* pgzstream.cpp */,
 				7087728D12BC169C000F9B57 /* pileup.cpp */,
@@ -318,7 +313,6 @@
 				70CB721E140FEB6400D578EB /* identify_mutations.h */,
 				702C41621FDD88D900D4B159 /* json.hpp */,
 				70CB721F140FEB6400D578EB /* mutation_predictor.h */,
-				70B142F41D31F6220019D5A5 /* nw.h */,
 				70CB7220140FEB6400D578EB /* output.h */,
 				70CB7221140FEB6400D578EB /* pileup.h */,
 				70CB7222140FEB6400D578EB /* pileup_base.h */,
@@ -350,7 +344,6 @@
 				70160F1B202BF581004FDA46 /* file_parse_errors.h in Headers */,
 				7031630A2FE43151007E731D /* pgzstream.h in Headers */,
 				70576A912FF1CD7F00D7A49D /* cn_evidence.h in Headers */,
-				70B142F51D31F6220019D5A5 /* nw.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -507,7 +500,6 @@
 				70B69DF41369D8B20001B750 /* calculate_trims.cpp in Sources */,
 				70160F15202BF3DD004FDA46 /* genome_diff_entry.cpp in Sources */,
 				70D64E932ACE3DA600BB9EF1 /* soft_clipping.cpp in Sources */,
-				70B142F31D31F6130019D5A5 /* nw.cpp in Sources */,
 				708D62441390B1D5007FF13C /* resolve_alignments.cpp in Sources */,
 				70B4AEB01391F72200B9638D /* fasta.cpp in Sources */,
 				70B9320F1394008200885753 /* settings.cpp in Sources */,
