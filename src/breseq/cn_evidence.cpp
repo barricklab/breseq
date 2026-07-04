@@ -15,9 +15,9 @@ LICENSE AND COPYRIGHT
 
 *****************************************************************************/
 
-#include "libbreseq/cn_evidence.h"
+#include "cn_evidence.h"
 
-#include "libbreseq/genome_diff.h"
+#include "genome_diff.h"
 
 using namespace std;
 

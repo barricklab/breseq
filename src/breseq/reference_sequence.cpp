@@ -18,10 +18,10 @@
 
 *****************************************************************************/
 
-#include "libbreseq/reference_sequence.h"
+#include "reference_sequence.h"
 
-#include "libbreseq/error_count.h"
-#include "libbreseq/genome_diff.h"
+#include "error_count.h"
+#include "genome_diff.h"
 
 
 using namespace std;

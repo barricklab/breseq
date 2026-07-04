@@ -18,9 +18,9 @@
 
 *****************************************************************************/
 
-#include "libbreseq/summary.h"
-#include "libbreseq/settings.h"
-#include "libbreseq/reference_sequence.h"
+#include "summary.h"
+#include "settings.h"
+#include "reference_sequence.h"
 
 using namespace std;
 using nlohmann::json;

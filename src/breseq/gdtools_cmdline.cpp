@@ -18,14 +18,14 @@
 
 *****************************************************************************/
 
-#include "libbreseq/common.h"
-#include "libbreseq/settings.h"
-#include "libbreseq/anyoption.h"
-#include "libbreseq/mutation_predictor.h"
-#include "libbreseq/flagged_regions.h"
-#include "libbreseq/genome_diff.h"
-#include "libbreseq/reference_sequence.h"
-#include "libbreseq/output.h"
+#include "common.h"
+#include "settings.h"
+#include "anyoption.h"
+#include "mutation_predictor.h"
+#include "flagged_regions.h"
+#include "genome_diff.h"
+#include "reference_sequence.h"
+#include "output.h"
 
 using namespace breseq;
 using namespace output;

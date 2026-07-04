@@ -95,6 +95,8 @@ budget. The shared test infra (the `do_build`/`do_check`/`do_clean`/... conventi
 
 Test directories prefixed with `_` are skipped. Directories with `long` in their name are only run with `make test-long`.
 
+A test directory named `tests/<name>-local` is gitignored (via the `tests/*-local/` pattern) and understood to be an intentionally untracked, personal/in-progress test — it's still discovered and run normally by `make test`/`make test-long`, since test discovery is filesystem-based (`tests/Snakefile`'s glob over `tests/*/testcmd.sh`, and equivalently `tests/test.sh`) and doesn't care about git tracking status.
+
 **Creating a new test:**
 1. Add data files under `tests/data/` (reuse existing data when possible; don't add large files to git).
 2. Create `tests/<test_name>/testcmd.sh` by copying an existing one and editing the `TESTCMD=` and `CURRENT_OUTPUTS`/`EXPECTED_OUTPUTS` lines. If the test runs `breseq` with multiple threads, set `TEST_CORES=N` (matching the `-j` value) before sourcing `common.sh`; otherwise leave it unset (defaults to 1).
@@ -108,7 +110,7 @@ Test directories prefixed with `_` are skipped. Directories with `long` in their
 - `src/breseq/gdtools` — genome diff manipulation tool
 - `src/breseq/libbreseq.la` — static library shared by both
 
-All headers live in `src/breseq/libbreseq/`. Implementation files are in `src/breseq/`.
+Headers and implementation files both live directly in `src/breseq/`.
 
 Entry points: `breseq_cmdline.cpp` (dispatches breseq subcommands) and `gdtools_cmdline.cpp` (dispatches gdtools subcommands).
 
@@ -155,7 +157,7 @@ Validation/annotation types: `CURA`, `FPOS`, `PHYL`, `TSEQ`, `PFLP`, `RFLP`, `PF
 
 ### Plotting
 
-All statistics and plotting are native C++; no R dependency remains. Diagnostic plots (coverage distribution, coverage overview, error rates, JC precision/sensitivity) are drawn by writing a gnuplot script to a temp file and invoking `gnuplot` as a subprocess via the `run_gnuplot_script()` helper in `libbreseq/common.h`.
+All statistics and plotting are native C++; no R dependency remains. Diagnostic plots (coverage distribution, coverage overview, error rates, JC precision/sensitivity) are drawn by writing a gnuplot script to a temp file and invoking `gnuplot` as a subprocess via the `run_gnuplot_script()` helper in `common.h`.
 
 ## Output Structure
 

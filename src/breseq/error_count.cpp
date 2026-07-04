@@ -18,9 +18,9 @@
 
 *****************************************************************************/
 
-#include "libbreseq/common.h"
-#include "libbreseq/pileup.h"
-#include "libbreseq/error_count.h"
+#include "common.h"
+#include "pileup.h"
+#include "error_count.h"
 
 using namespace std;
 

@@ -19,10 +19,10 @@
 *****************************************************************************/
 
 
-#include "libbreseq/calculate_trims.h"
+#include "calculate_trims.h"
 
-#include "libbreseq/reference_sequence.h"
-#include "libbreseq/alignment.h"
+#include "reference_sequence.h"
+#include "alignment.h"
 
 using namespace std;
 

@@ -18,16 +18,16 @@
 
 *****************************************************************************/
 
-#include "libbreseq/resolve_alignments.h"
+#include "resolve_alignments.h"
 
-#include "libbreseq/genome_diff.h"
-#include "libbreseq/fastq.h"
-#include "libbreseq/fasta.h"
-#include "libbreseq/alignment.h"
-#include "libbreseq/identify_mutations.h"
-#include "libbreseq/reference_sequence.h"
-#include "libbreseq/stats.h"
-#include "libbreseq/output.h"
+#include "genome_diff.h"
+#include "fastq.h"
+#include "fasta.h"
+#include "alignment.h"
+#include "identify_mutations.h"
+#include "reference_sequence.h"
+#include "stats.h"
+#include "output.h"
 
 using namespace std;
 

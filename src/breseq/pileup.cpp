@@ -19,7 +19,7 @@
 *****************************************************************************/
 
 
-#include "libbreseq/pileup.h"
+#include "pileup.h"
 
 namespace breseq {
 

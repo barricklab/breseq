@@ -18,9 +18,9 @@
 
 *****************************************************************************/
 
-#include "libbreseq/output.h"
+#include "output.h"
 
-#include "libbreseq/alignment_output.h"
+#include "alignment_output.h"
 
 #include <algorithm>
 

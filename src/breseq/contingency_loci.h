@@ -21,9 +21,9 @@
 #ifndef _BRESEQ_CONTINGENCY_LOCI_H_
 #define _BRESEQ_CONTINGENCY_LOCI_H_
 
-#include "libbreseq/common.h"
-#include "libbreseq/pileup_base.h"
-#include "libbreseq/reference_sequence.h"
+#include "common.h"
+#include "pileup_base.h"
+#include "reference_sequence.h"
 
 using namespace std;
 

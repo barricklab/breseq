@@ -1,5 +1,5 @@
-#include "libbreseq/common.h"
-#include "libbreseq/stats.h"
+#include "common.h"
+#include "stats.h"
 
 namespace breseq {
 

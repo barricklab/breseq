@@ -21,14 +21,14 @@
 #ifndef _BRESEQ_REFERENCE_SEQUENCE_H_
 #define _BRESEQ_REFERENCE_SEQUENCE_H_
 
-#include "libbreseq/common.h"
+#include "common.h"
 
-#include "libbreseq/genome_diff.h"
-#include "libbreseq/fasta.h"
-#include "libbreseq/fastq.h"
-#include "libbreseq/alignment.h"
-#include "libbreseq/anyoption.h"
-#include "libbreseq/summary.h"
+#include "genome_diff.h"
+#include "fasta.h"
+#include "fastq.h"
+#include "alignment.h"
+#include "anyoption.h"
+#include "summary.h"
 
 
 namespace breseq {

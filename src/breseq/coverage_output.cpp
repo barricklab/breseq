@@ -18,7 +18,7 @@
 
 *****************************************************************************/
 
-#include "libbreseq/coverage_output.h"
+#include "coverage_output.h"
 
 using namespace std;
 

@@ -18,10 +18,10 @@
 
 *****************************************************************************/
 
-#include "libbreseq/alignment.h"
+#include "alignment.h"
 
-#include "libbreseq/fastq.h"
-#include "libbreseq/reference_sequence.h"
+#include "fastq.h"
+#include "reference_sequence.h"
 
 using namespace std;
 

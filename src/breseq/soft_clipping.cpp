@@ -18,14 +18,14 @@
 
 *****************************************************************************/
 
-#include "libbreseq/soft_clipping.h"
+#include "soft_clipping.h"
 
-#include "libbreseq/alignment.h"
-#include "libbreseq/identify_mutations.h"
-#include "libbreseq/reference_sequence.h"
-#include "libbreseq/output.h"
-#include "libbreseq/settings.h"
-#include "libbreseq/summary.h"
+#include "alignment.h"
+#include "identify_mutations.h"
+#include "reference_sequence.h"
+#include "output.h"
+#include "settings.h"
+#include "summary.h"
 
 using namespace std;
 

@@ -3,7 +3,7 @@
 // library. See pgzstream.h for an overview.
 // ============================================================================
 
-#include "libbreseq/pgzstream.h"
+#include "pgzstream.h"
 
 #include <cstring>
 

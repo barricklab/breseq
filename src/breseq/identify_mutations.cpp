@@ -18,11 +18,11 @@
 
 *****************************************************************************/
 
-#include "libbreseq/common.h"
-#include "libbreseq/pileup.h"
-#include "libbreseq/identify_mutations.h"
-#include "libbreseq/error_count.h"
-#include "libbreseq/reference_sequence.h"
+#include "common.h"
+#include "pileup.h"
+#include "identify_mutations.h"
+#include "error_count.h"
+#include "reference_sequence.h"
 
 using namespace std;
 

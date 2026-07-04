@@ -18,11 +18,11 @@
 
 *****************************************************************************/
 
-#include "libbreseq/mutation_predictor.h"
+#include "mutation_predictor.h"
 
-#include "libbreseq/output.h"
-#include "libbreseq/identify_mutations.h"
-#include "libbreseq/resolve_alignments.h"
+#include "output.h"
+#include "identify_mutations.h"
+#include "resolve_alignments.h"
 
 using namespace std;
 

@@ -20,10 +20,10 @@
 
 // @DTF: VERSION: BINARY EDGE SEARCH 9
 
-#include "libbreseq/coverage_distribution.h"
+#include "coverage_distribution.h"
 
-#include "libbreseq/genome_diff.h"
-#include "libbreseq/stats.h"
+#include "genome_diff.h"
+#include "stats.h"
 
 using namespace std;
 

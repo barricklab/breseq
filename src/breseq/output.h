@@ -20,10 +20,10 @@
 
 #ifndef _BRESEQ_OUTPUT_H_
 #define _BRESEQ_OUTPUT_H_
-#include "libbreseq/common.h"
-#include "libbreseq/settings.h"
-#include "libbreseq/reference_sequence.h"
-#include "libbreseq/genome_diff.h"
+#include "common.h"
+#include "settings.h"
+#include "reference_sequence.h"
+#include "genome_diff.h"
 
 namespace breseq
 {

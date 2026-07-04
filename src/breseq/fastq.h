@@ -21,9 +21,9 @@
 #ifndef _BRESEQ_FASTQ_H_
 #define _BRESEQ_FASTQ_H_
 
-#include "libbreseq/common.h"
-#include "libbreseq/settings.h"
-#include "libbreseq/summary.h"
+#include "common.h"
+#include "settings.h"
+#include "summary.h"
 
 namespace breseq {
 

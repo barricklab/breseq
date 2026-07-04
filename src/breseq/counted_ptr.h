@@ -21,7 +21,7 @@
 #ifndef _BRESEQ_COUNTED_PTR_H_
 #define _BRESEQ_COUNTED_PTR_H_
 
-#include "libbreseq/common.h"
+#include "common.h"
 
 using namespace std;
 

@@ -18,13 +18,13 @@
 
 *****************************************************************************/
 
-#include "libbreseq/genome_diff.h"
+#include "genome_diff.h"
 
-#include "libbreseq/flagged_regions.h"
-#include "libbreseq/reference_sequence.h"
-#include "libbreseq/candidate_junctions.h"
-#include "libbreseq/mutation_predictor.h"
-#include "libbreseq/output.h"
+#include "flagged_regions.h"
+#include "reference_sequence.h"
+#include "candidate_junctions.h"
+#include "mutation_predictor.h"
+#include "output.h"
 
 namespace breseq {
 

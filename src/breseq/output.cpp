@@ -18,10 +18,10 @@
 
 *****************************************************************************/
 
-#include "libbreseq/output.h"
-#include "libbreseq/anyoption.h"
-#include "libbreseq/alignment_output.h"
-#include "libbreseq/coverage_output.h"
+#include "output.h"
+#include "anyoption.h"
+#include "alignment_output.h"
+#include "coverage_output.h"
 // MINIZ_NO_ZLIB_COMPATIBLE_NAMES is set via MINIZ_CFLAGS in AM_CPPFLAGS
 // (configure.ac) to avoid clashing with the system libz that is also linked.
 #include <miniz/miniz.h>

@@ -236,11 +236,11 @@ sed -i -e 's/.\/src\/breseq/bin/g' ${BINARYDIR}/tests/*/expected.gd
 mkdir -p ${BINARYDIR}/tests/data/lambda
 cp tests/data/lambda/empty.fastq ${BINARYDIR}/tests/data/lambda
 cp tests/data/lambda/only_bad.fastq ${BINARYDIR}/tests/data/lambda
-cp tests/data/lambda/lambda_mixed_population.1.fastq ${BINARYDIR}/tests/data/lambda
-cp tests/data/lambda/lambda_mixed_population.2.fastq ${BINARYDIR}/tests/data/lambda
-cp tests/data/lambda/lambda_mixed_population.3.fastq ${BINARYDIR}/tests/data/lambda
-cp tests/data/lambda/lambda_mixed_population.4.fastq ${BINARYDIR}/tests/data/lambda
-cp tests/data/lambda/lambda_mixed_population.5.fastq ${BINARYDIR}/tests/data/lambda
+cp tests/data/lambda/lambda_mixed_population.A.fastq.gz ${BINARYDIR}/tests/data/lambda
+cp tests/data/lambda/lambda_mixed_population.B.fastq.gz ${BINARYDIR}/tests/data/lambda
+cp tests/data/lambda/lambda_mixed_population.3.fastq.gz ${BINARYDIR}/tests/data/lambda
+cp tests/data/lambda/lambda_mixed_population.4.fastq.gz ${BINARYDIR}/tests/data/lambda
+cp tests/data/lambda/lambda_mixed_population.5.fastq.gz ${BINARYDIR}/tests/data/lambda
 cp tests/data/lambda/lambda.1-2.gbk ${BINARYDIR}/tests/data/lambda
 cp tests/data/lambda/lambda.3.gbk ${BINARYDIR}/tests/data/lambda
 cp tests/data/lambda/lambda.4.gbk ${BINARYDIR}/tests/data/lambda

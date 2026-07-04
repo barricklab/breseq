@@ -18,7 +18,7 @@
 
 *****************************************************************************/
 
-#include "libbreseq/samtools_commands.h"
+#include "samtools_commands.h"
 
 using namespace std;
 

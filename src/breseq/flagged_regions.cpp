@@ -18,11 +18,11 @@
 
 *****************************************************************************/
 
-#include "libbreseq/flagged_regions.h"
-#include "libbreseq/file_parse_errors.h"
+#include "flagged_regions.h"
+#include "file_parse_errors.h"
 
 
-#include "libbreseq/reference_sequence.h"
+#include "reference_sequence.h"
 
 namespace breseq {
   

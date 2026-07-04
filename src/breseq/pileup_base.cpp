@@ -19,8 +19,8 @@
 *****************************************************************************/
 
 
-#include "libbreseq/pileup_base.h"
-#include "libbreseq/pileup.h"
+#include "pileup_base.h"
+#include "pileup.h"
 
 using namespace std;
 

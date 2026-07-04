@@ -19,10 +19,10 @@
 *****************************************************************************/
 
 
-#include "libbreseq/candidate_junctions.h"
+#include "candidate_junctions.h"
 
-#include "libbreseq/calculate_trims.h"
-#include "libbreseq/fastq.h"
+#include "calculate_trims.h"
+#include "fastq.h"
 
 using namespace std;
 

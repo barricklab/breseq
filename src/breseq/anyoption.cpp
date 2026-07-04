@@ -61,9 +61,9 @@
 
 #include <sys/ioctl.h>
 
-#include "libbreseq/common.h"
+#include "common.h"
 
-#include "libbreseq/anyoption.h"
+#include "anyoption.h"
 
 namespace breseq {
 

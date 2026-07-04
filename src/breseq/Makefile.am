@@ -59,40 +59,40 @@ libbreseq_la_SOURCES = \
 	soft_clipping.cpp \
 	stats.cpp \
 	summary.cpp \
-	libbreseq/alignment.h \
-	libbreseq/alignment_output.h \
-	libbreseq/anyoption.h \
-	libbreseq/calculate_trims.h \
-	libbreseq/candidate_junctions.h \
-	libbreseq/cn_evidence.h \
-	libbreseq/common.h \
-	libbreseq/counted_ptr.h \
-	libbreseq/ctpl_stl.h \
-	libbreseq/contingency_loci.h \
-	libbreseq/coverage_distribution.h \
-	libbreseq/coverage_output.h \
-	libbreseq/error_count.h \
-	libbreseq/fasta.h \
-	libbreseq/fastq.h \
-	libbreseq/file_parse_errors.h \
-	libbreseq/flagged_regions.h \
-	libbreseq/genome_diff.h \
-	libbreseq/genome_diff_entry.h \
-	libbreseq/identify_mutations.h \
-	libbreseq/json.hpp \
-	libbreseq/mutation_predictor.h \
-	libbreseq/output.h \
-	libbreseq/pgzstream.h \
-	libbreseq/pileup.h \
-	libbreseq/pileup_base.h \
-	libbreseq/reference_sequence.h \
-	libbreseq/resolve_alignments.h \
-	libbreseq/samtools_commands.h \
-	libbreseq/settings.h \
-	libbreseq/soft_clipping.h \
-	libbreseq/stats.h \
-	libbreseq/storable.h \
-	libbreseq/summary.h
+	alignment.h \
+	alignment_output.h \
+	anyoption.h \
+	calculate_trims.h \
+	candidate_junctions.h \
+	cn_evidence.h \
+	common.h \
+	counted_ptr.h \
+	ctpl_stl.h \
+	contingency_loci.h \
+	coverage_distribution.h \
+	coverage_output.h \
+	error_count.h \
+	fasta.h \
+	fastq.h \
+	file_parse_errors.h \
+	flagged_regions.h \
+	genome_diff.h \
+	genome_diff_entry.h \
+	identify_mutations.h \
+	json.hpp \
+	mutation_predictor.h \
+	output.h \
+	pgzstream.h \
+	pileup.h \
+	pileup_base.h \
+	reference_sequence.h \
+	resolve_alignments.h \
+	samtools_commands.h \
+	settings.h \
+	soft_clipping.h \
+	stats.h \
+	storable.h \
+	summary.h
 libbreseq_la_LIBADD =
 
 bin_PROGRAMS = breseq gdtools

@@ -19,10 +19,10 @@
 *****************************************************************************/
 
 
-#include "libbreseq/settings.h"
+#include "settings.h"
 
-#include "libbreseq/anyoption.h"
-#include "libbreseq/genome_diff.h"
+#include "anyoption.h"
+#include "genome_diff.h"
 
 
 using namespace std;

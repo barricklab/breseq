@@ -18,10 +18,10 @@
 
 *****************************************************************************/
 
-#include "libbreseq/genome_diff_entry.h"
+#include "genome_diff_entry.h"
 
-#include "libbreseq/genome_diff.h"
-#include "libbreseq/reference_sequence.h"
+#include "genome_diff.h"
+#include "reference_sequence.h"
 
 namespace breseq {
   // Common keywords used for diff entries:
