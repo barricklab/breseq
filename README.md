@@ -5,7 +5,7 @@
 [![Anaconda Downloads](https://anaconda.org/bioconda/breseq/badges/downloads.svg)](http://bioconda.github.io/recipes/breseq/README.html)
 [![Anaconda Platforms](https://anaconda.org/bioconda/breseq/badges/platforms.svg)](http://bioconda.github.io/recipes/breseq/README.html)
 
-![Breseq Logo](https://github.com/barricklab/breseq/blob/master/src/doc/images/breseq.png)
+![Breseq Logo](https://github.com/barricklab/breseq/blob/master/src/c/share/breseq/breseq.png)
 
 [Download _breseq_](https://github.com/barricklab/breseq/releases)
 

@@ -45,9 +45,6 @@ EXTRA_DIST = \
 	tests/data/lambda/lambda.4.gbk \
 	tests/data/lambda/lambda.5.gbk
 
-DOCSRCDIR=$(top_srcdir)/src/doc
-DOCBUILDDIR=$(abs_top_builddir)/src/doc/_build
-
 ## Total core budget for parallel test execution.
 ## Auto-detected from make's -j flag by inspecting make's own command line via
 ## ps (works with all make versions, including macOS's bundled GNU Make 3.81
@@ -90,23 +87,10 @@ clean-local :: clean-tests
 
 	## This saves the install path for the test script
 	rm -f $(abs_top_builddir)/tests/test.config
-	rm -rf $(DOCBUILDDIR);
 	find $(abs_top_builddir) -name '.DS_Store' -type f -delete
 	rm -rf $(abs_top_builddir)/src/c/breseq/*.dSYM
 
-docs :
-## This environmental variable is used by python Sphinx
-	echo $(PACKAGE_VERSION); \
-	export BRESEQ_VERSION=$(PACKAGE_VERSION); \
-	cd $(DOCSRCDIR) ; \
-	make -f Makefile BUILDDIR=$(DOCBUILDDIR) html ;
-
 dist-hook:
-	if [ -d "$(DOCSRCDIR)" ]; then \
-		make docs ; \
-		cp -r $(DOCBUILDDIR)/html $(distdir)/documentation ; \
-	fi ;
-
 	find $(distdir) -name '.DS_Store' -type f -delete
 
 	## Remove ._ files

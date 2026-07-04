@@ -220,10 +220,6 @@ make -j 12
 #make test
 make install
 
-#Documentation and information
-#make docs
-#cp -r src/doc/_build/html ${BINARYDIR}/documentation
-
 cp -r LICENSE ${BINARYDIR}
 cp -r README-BINARY ${BINARYDIR}/README
 

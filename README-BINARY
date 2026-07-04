@@ -1,6 +1,6 @@
 === QUICK START ===
 
-You must have bowtie2 and R installed on your
+You must have bowtie2 installed on your
 system for breseq to function!
 
 Run this command to get breseq help
@@ -15,8 +15,8 @@ same location relative to the binaries (../share/breseq).
 
 === FOR MORE INFORMATION ===
 
-Please see the HTML documentation:
-documentation/index.html
+Please see the online documentation:
+https://github.com/barricklab/breseq/wiki
 
 And the breseq website:
 http://barricklab.org/breseq
