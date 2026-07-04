@@ -1819,11 +1819,14 @@ int breseq_default_action(int argc, char* argv[])
 		{
       CandidateJunctions::identify_candidate_junctions(settings, summary, ref_seq_info);
       
-      if (!file_empty(settings.candidate_junction_fasta_file_name.c_str()))
+      if (!file_empty(settings.candidate_junction_fasta_file_name.c_str())) {
         samtools_faidx(settings.candidate_junction_fasta_file_name);
-      
+        calculate_trims(settings.candidate_junction_fasta_file_name, settings.candidate_junction_path);
+      }
+
       settings.track_intermediate_file(settings.output_done_file_name, settings.candidate_junction_fasta_file_name);
       settings.track_intermediate_file(settings.output_done_file_name, settings.candidate_junction_fasta_file_name + ".fai");
+      settings.track_intermediate_file(settings.output_done_file_name, settings.candidate_junction_path + "/*.trims");
 
 			summary.candidate_junction.store(candidate_junction_summary_file_name);
 			settings.done_step(settings.candidate_junction_done_file_name);

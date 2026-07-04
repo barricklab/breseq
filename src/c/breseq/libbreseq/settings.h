@@ -535,6 +535,7 @@ namespace breseq
     string candidate_junction_fasta_file_name;
     string candidate_junction_detailed_file_name;
     string candidate_junction_faidx_file_name;
+    string candidate_junction_trim_file_name;
 		string candidate_junction_summary_file_name;
     
     //! Paths: Junction Alignment

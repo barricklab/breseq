@@ -37,9 +37,8 @@ namespace breseq {
   // Pileup class for fetching reads that align across from start to end
   class junction_read_counter : pileup_base {
   public:
-    junction_read_counter(const string& bam, const string& fasta, bool verbose)
-      : pileup_base(bam, fasta), _verbose(verbose) {};
-    
+    junction_read_counter(const string& bam, const string& fasta, bool verbose, const string& trim_file_name);
+
     uint32_t count(
                    const string& seq_id,
                    const int32_t start,
@@ -47,15 +46,26 @@ namespace breseq {
                    const map<string,bool> ignore_read_names,
                    map<string,bool>& counted_read_names
                    );
-    
+
+    // Counts how many of the candidate reference start positions for a hypothetical,
+    // gapless, average-length read spanning [window_start, window_end] would still
+    // span it after being shrunk by the trims at that position (see fetch_callback).
+    uint32_t count_confident_overlap_registers(
+                   const string& seq_id,
+                   const int32_t window_start,
+                   const int32_t window_end,
+                   const uint32_t read_length_avg
+                   ) const;
+
     virtual void fetch_callback ( const alignment_wrapper& a );
-    
+
   protected:
     uint32_t _count;
     int32_t _start;
     int32_t _end;
     map<string,bool> _ignore_read_names, _counted_read_names;
     bool _verbose;
+    SequenceTrimsList _trims_list;
   };
 
   class ResolveJunctionInfo : public JunctionInfo
@@ -279,6 +289,7 @@ namespace breseq {
                         cReferenceSequences& ref_seq_info,
                         cReferenceSequences& junction_ref_seq_info,
                         const SequenceTrimsList& trims_list,
+                        const SequenceTrimsList& junction_trims_list,
                         const string& junction_id,
                         UniqueJunctionMatchMap& unique_junction_match_map,
                         RepeatJunctionMatchMap& repeat_junction_match_map,

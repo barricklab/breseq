@@ -21,6 +21,7 @@
 
 #include "libbreseq/candidate_junctions.h"
 
+#include "libbreseq/calculate_trims.h"
 #include "libbreseq/fastq.h"
 #include "libbreseq/nw.h"
 
@@ -1452,19 +1453,79 @@ namespace breseq {
 		///
     
 		sort(combined_candidate_junctions.begin(), combined_candidate_junctions.end(), JunctionCandidate::sort_by_ref_seq_coord);
-    
+
+    // Load reference genome trims, so we can reject candidate junctions whose non-redundant
+    // side(s) or own junction sequence are guaranteed to have zero confidently-matched register
+    // positions once trimmed -- these would otherwise cause a division by zero later, when
+    // assign_one_junction_read_counts() normalizes read counts by possible_overlap_registers.
+    // See junction_read_counter::count_confident_overlap_registers() in resolve_alignments.cpp
+    // for the same math applied to real reads later in the pipeline.
+    map<string, SequenceTrims> reference_trims_by_seq_id;
+    for (cReferenceSequences::const_iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); it++) {
+      string this_file_name = Settings::file_name(settings.reference_trim_file_name, "@", it->m_seq_id);
+      reference_trims_by_seq_id[it->m_seq_id].ReadFile(this_file_name, it->m_length);
+    }
+    uint32_t read_length_avg = static_cast<uint32_t>(round(summary.sequence_conversion.read_length_avg));
+    uint32_t num_junctions_rejected_zero_registers = 0;
+
     cFastaFile out(settings.candidate_junction_fasta_file_name, ios_base::out);
     ofstream detailed;
     if (settings.junction_debug) {
       detailed.open(settings.candidate_junction_detailed_file_name.c_str());
     }
-    
+
 		for (uint32_t j = 0; j < combined_candidate_junctions.size(); j++) {
-      
+
 			JunctionCandidate& junction = combined_candidate_junctions[j];
+
+      // Would a non-redundant side, or the junction itself, have zero confidently-matched
+      // register positions after trimming? If so, this junction is guaranteed to produce a
+      // zero possible_overlap_registers denominator downstream -- reject it now, before any
+      // reads get remapped to it. The single-point window used per side (rather than the full
+      // corrected window resolve_alignments.cpp computes later, which isn't determinable this
+      // early) is a safe upper bound: every later correction (overlap-split, continuation,
+      // minimum-side-match) only widens that window, so if even this narrower check is already
+      // zero, the real one downstream is mathematically guaranteed to be zero too.
+      bool reject_zero_registers = false;
+      for (int32_t side_index = 0; (side_index < 2) && !reject_zero_registers; side_index++) {
+        JunctionSide& side = junction.sides[side_index];
+        if (side.redundant) continue; // redundant sides don't factor into the denominator
+        const cAnnotatedSequence& ref_seq = ref_seq_info[side.seq_id];
+        uint32_t seq_length = static_cast<uint32_t>(ref_seq.m_length);
+
+        // For a circular replicon, a read can wrap around the origin -- our (linear) trim
+        // model has no way to represent that, so near either end it would underestimate the
+        // register count (potentially to zero) even though real reads can and do land there.
+        // Skip the check rather than risk a false rejection in that region.
+        bool near_circular_boundary = ref_seq.is_circular()
+          && ((static_cast<uint32_t>(side.position) <= read_length_avg)
+              || (static_cast<uint32_t>(side.position) > seq_length - read_length_avg));
+        if (near_circular_boundary) continue;
+
+        if (count_confident_overlap_registers(reference_trims_by_seq_id[side.seq_id], seq_length, side.position, side.position, read_length_avg) == 0) {
+          reject_zero_registers = true;
+        }
+      }
+      if (!reject_zero_registers) {
+        SequenceTrims junction_trims(junction.sequence);
+        int32_t junction_window_start = junction.flanking_left;
+        int32_t junction_window_end = junction.flanking_left + abs(junction.alignment_overlap) + 1;
+        if (count_confident_overlap_registers(junction_trims, static_cast<uint32_t>(junction.sequence.size()), junction_window_start, junction_window_end, read_length_avg) == 0) {
+          reject_zero_registers = true;
+        }
+      }
+
+      if (reject_zero_registers) {
+        num_junctions_rejected_zero_registers++;
+        if (settings.junction_debug) {
+          detailed << junction.junction_key() << "\tREJECTED: zero possible overlap registers after trimming" << endl;
+        }
+        continue;
+      }
+
       cFastaSequence seq(junction.junction_key(), "", junction.sequence); //= { junction.junction_key(), "", junction.sequence };
 			out.write_sequence(seq);
-      
+
       // write to detailed file
       if (settings.junction_debug) {
       detailed << seq;
@@ -1476,7 +1537,11 @@ namespace breseq {
       }
 		}
 		out.close();
-    
+
+    if (num_junctions_rejected_zero_registers > 0) {
+      cerr << "  Rejected " << num_junctions_rejected_zero_registers << " candidate junction(s) with zero possible overlap registers after trimming (would cause division by zero in frequency calculation)." << endl;
+    }
+
 		summary.candidate_junction = hcs;
 	}
   

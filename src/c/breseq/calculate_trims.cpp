@@ -282,13 +282,40 @@ Trims get_alignment_trims(const alignment_wrapper& a, const SequenceTrimsList& t
   return t;
 }
 
-void read_trims(SequenceTrimsList& trims, const cReferenceSequences& ref_seqs, const string &in_trims_file_name ) 
+void read_trims(SequenceTrimsList& trims, const cReferenceSequences& ref_seqs, const string &in_trims_file_name )
 {
   trims.resize(ref_seqs.size());
   for(uint32_t i = 0; i < ref_seqs.size(); i++) {
     string this_file_name = Settings::file_name(in_trims_file_name, "@", ref_seqs[i].m_seq_id);
     trims[i].ReadFile(this_file_name, ref_seqs[i].m_length);
   }
+}
+
+uint32_t count_confident_overlap_registers(const SequenceTrims& trims, uint32_t seq_length, int32_t window_start, int32_t window_end, uint32_t read_length_avg)
+{
+  int32_t leftmost_start = window_end - static_cast<int32_t>(read_length_avg) + 1;
+  int32_t rightmost_start = window_start;
+
+  uint32_t count = 0;
+  for (int32_t read_start_1 = leftmost_start; read_start_1 <= rightmost_start; read_start_1++) {
+    int32_t read_end_1 = read_start_1 + static_cast<int32_t>(read_length_avg) - 1;
+
+    // A hypothetical read can't be placed off either end of the sequence
+    if (read_start_1 < 1) continue;
+    if (static_cast<uint32_t>(read_end_1) > seq_length) continue;
+
+    uint8_t left_trim = trims.left_trim_0(static_cast<uint32_t>(read_start_1 - 1));
+    uint8_t right_trim = trims.right_trim_0(static_cast<uint32_t>(read_end_1 - 1));
+
+    int32_t confident_start_1 = read_start_1 + left_trim;
+    int32_t confident_end_1 = read_end_1 - right_trim;
+
+    if ((confident_start_1 <= window_start) && (confident_end_1 >= window_end)) {
+      count++;
+    }
+  }
+
+  return count;
 }
 
 
