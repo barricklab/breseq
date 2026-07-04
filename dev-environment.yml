@@ -39,3 +39,8 @@ dependencies:
 #  => See tests/Snakefile
   - python
   - snakemake-minimal
+# Used to build the documentation website (mkdocs) -- 'make docs'/./binarydist.sh
+#  => Unpinned: pure build tooling, doesn't affect breseq's own output reproducibility
+  - mkdocs
+  - mkdocs-material
+  - mike

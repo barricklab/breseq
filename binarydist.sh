@@ -223,6 +223,13 @@ make install
 cp -r LICENSE ${BINARYDIR}
 cp -r README-BINARY ${BINARYDIR}/README
 
+if command -v mkdocs >/dev/null 2>&1; then
+	mkdocs build --site-dir "${PWD}/docs_site"
+	cp -r "${PWD}/docs_site" "${BINARYDIR}/documentation"
+else
+	echo "mkdocs not found -- skipping documentation bundling in binary distribution"
+fi
+
 #Test
 mkdir -p ${BINARYDIR}/tests/lambda_mult_ref_read
 cp tests/common.sh ${BINARYDIR}/tests

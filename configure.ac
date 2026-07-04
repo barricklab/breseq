@@ -164,6 +164,13 @@ AC_SUBST([LIBZ], [extern/zlib-1.3.1])
 AC_SUBST([BRESEQ], [src/breseq])
 
 
+# Optional: used to build docs/ into a browsable site ('make docs', included
+# automatically in 'make dist'/'./binarydist.sh'). Soft dependency -- absence
+# only skips the documentation build (with a warning), it never fails the
+# main breseq/gdtools build.
+AC_PATH_PROG([MKDOCS], [mkdocs])
+AM_CONDITIONAL([HAVE_MKDOCS], [test -n "$MKDOCS"])
+
 # Reading .git/refs/heads/master directly only worked for an in-place checkout
 # of the master branch with unpacked refs. Ask git itself instead, so this
 # also works from a worktree (where .git is a file, not a directory), on any

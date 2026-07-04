@@ -66,6 +66,24 @@ define write_test_config
 	printf 'export TESTBINPREFIX=$(top_srcdir)/src/breseq\nexport BRESEQ_DATA_PATH=$(top_srcdir)/src/share/breseq\n' > $(1);
 endef
 
+## Documentation (docs/, built with mkdocs into DOCBUILDDIR -- kept outside
+## docs/ itself so generated HTML never mixes with the committed Markdown
+## source). Soft/optional: skipped with a warning (not a failure) if mkdocs
+## isn't installed, so contributors without it aren't blocked from building
+## or from 'make dist'/'./binarydist.sh'.
+DOCBUILDDIR = $(abs_top_builddir)/docs_site
+
+## Without this, make treats the 'docs' target as satisfied by the existing
+## docs/ source directory of the same name and never runs the recipe.
+.PHONY: docs
+
+docs:
+if HAVE_MKDOCS
+	cd $(top_srcdir) && $(MKDOCS) build --site-dir $(DOCBUILDDIR)
+else
+	@echo "mkdocs not found -- skipping documentation build (see dev-environment.yml)"
+endif
+
 ## Main hooks called after normal make steps
 
 ## Regenerates tests/test.config after a plain 'make'/'make all' so that
@@ -89,6 +107,7 @@ clean-local :: clean-tests
 	rm -f $(abs_top_builddir)/tests/test.config
 	find $(abs_top_builddir) -name '.DS_Store' -type f -delete
 	rm -rf $(abs_top_builddir)/src/breseq/*.dSYM
+	rm -rf $(DOCBUILDDIR)
 
 dist-hook:
 	find $(distdir) -name '.DS_Store' -type f -delete
@@ -103,6 +122,18 @@ dist-hook:
 	echo "tests/test.sh clean tests" > ${distdir}/run_tests.sh
 	echo "tests/test.sh test tests" >> ${distdir}/run_tests.sh
 	chmod a+x ${distdir}/run_tests.sh
+
+	## Ship the raw docs/ Markdown source (not auto-included by automake --
+	## nothing under docs/ is declared in a _SOURCES/EXTRA_DIST variable) so a
+	## source tarball remains a complete, editable source tree.
+	cp -r $(top_srcdir)/docs $(distdir)/
+	cp $(top_srcdir)/mkdocs.yml $(distdir)/
+if HAVE_MKDOCS
+	$(MAKE) docs
+	cp -r $(DOCBUILDDIR) $(distdir)/documentation
+else
+	@echo "mkdocs not found -- distribution tarball will not include built documentation HTML"
+endif
 
 ## 'make test'/'make test-long' run the consistency tests in parallel via
 ## Snakemake (see tests/Snakefile), bounded by a total core budget

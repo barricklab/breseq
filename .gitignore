@@ -49,6 +49,10 @@ breseq-*
 
 binarydist_build
 
+## mkdocs build output (see Makefile.am's 'docs' target / binarydist.sh)
+docs_site
+site
+
 .snakemake
 tests/*/output*
 tests/*/0*

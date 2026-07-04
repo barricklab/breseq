@@ -9,6 +9,6 @@
 
 [Download _breseq_](https://github.com/barricklab/breseq/releases)
 
-**Users**: See the [online _breseq_ documentation](https://github.com/barricklab/breseq/wiki) for installation instructions, examples of using _breseq_, and tutorials that include interpreting _breseq_ results.
+**Users**: See the [online _breseq_ documentation](https://breseq.barricklab.org/) for installation instructions, examples of using _breseq_, and tutorials that include interpreting _breseq_ results.
 
-**Developers:** Start on the [Developer page](https://github.com/barricklab/breseq/wiki/developer) page to learn how to get set up for contributing.
+**Developers:** Start with [CONTRIBUTING.md](CONTRIBUTING.md) to learn how to get set up for contributing.

@@ -80,6 +80,37 @@ First, be sure to update the breseq version in configure.ac
 Then, generate a source archive for a given release:
 $ make distcheck
 
+=== Maintaining the Documentation ===
+
+The user documentation lives in docs/ as mkdocs-flavored Markdown, built with the
+mkdocs-material theme. mkdocs, mkdocs-material, and mike are included in the
+breseq-dev conda environment (dev-environment.yml).
+
+To preview your changes locally while editing:
+
+$ mkdocs serve
+
+This starts a local server (usually http://127.0.0.1:8000) that live-reloads as you
+edit files under docs/.
+
+Both `make dist`/`make distcheck` and `./binarydist.sh` automatically build the
+documentation with mkdocs and bundle it into the distribution (as
+distdir/documentation or BINARYDIR/documentation, respectively). If mkdocs is not
+installed, these steps are skipped with a warning rather than failing the build.
+
+Published versions of the documentation are built and deployed automatically to
+https://breseq.barricklab.org/ whenever a new vX.Y.Z release tag is pushed (see
+.github/workflows/docs.yml). No manual publishing step is required for a normal
+release.
+
+You can also publish or replace a specific version on demand: go to the repository's
+Actions tab, select the "docs" workflow, click "Run workflow", and enter a version
+label (e.g. 0.40.1). This builds docs from whatever branch you run it against but
+publishes them under the version label you typed, so you can publish current docs
+under an already-released version number without cutting a new tag. Re-running with
+the same version label overwrites/replaces that published version -- useful for
+testing the pipeline or fixing a docs mistake.
+
 ===  Building MacOSX Binary for Distribution ===
 
 A special script exists for building a portable MacOSX universal binary:

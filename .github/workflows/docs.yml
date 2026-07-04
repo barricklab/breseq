@@ -1,0 +1,67 @@
+name: docs
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version label to publish docs under (e.g. 0.40.1). Re-running with the same value replaces that version.'
+        required: true
+      set_default:
+        description: 'Also make this the default/"latest" version shown at the site root'
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - run: pip install mkdocs mkdocs-material mike
+
+      - name: Determine version and default-alias setting
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            RAW_VERSION="${{ inputs.version }}"
+            SET_DEFAULT="${{ inputs.set_default }}"
+          else
+            RAW_VERSION="${GITHUB_REF_NAME}"
+            SET_DEFAULT="true"
+          fi
+          echo "VERSION=${RAW_VERSION#v}" >> "$GITHUB_ENV"
+          echo "SET_DEFAULT=$SET_DEFAULT" >> "$GITHUB_ENV"
+
+      - run: git config user.name github-actions[bot]
+      - run: git config user.email github-actions[bot]@users.noreply.github.com
+
+      - name: Deploy docs for this version
+        run: |
+          if [ "$SET_DEFAULT" = "true" ]; then
+            mike deploy --push --update-aliases "$VERSION" latest
+            mike set-default --push latest
+          else
+            mike deploy --push "$VERSION"
+          fi
+
+      - name: Ensure custom domain CNAME on gh-pages
+        run: |
+          git fetch origin gh-pages
+          git worktree add -B gh-pages /tmp/gh-pages-worktree origin/gh-pages
+          echo "breseq.barricklab.org" > /tmp/gh-pages-worktree/CNAME
+          cd /tmp/gh-pages-worktree
+          git add CNAME
+          git diff --cached --quiet || git commit -m "Set custom domain CNAME"
+          git push origin HEAD:gh-pages

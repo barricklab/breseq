@@ -1,0 +1,63 @@
+site_name: breseq
+site_url: https://breseq.barricklab.org/
+repo_url: https://github.com/barricklab/breseq
+repo_name: barricklab/breseq
+edit_uri: edit/master/docs/
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - toc.follow
+    - search.suggest
+    - content.code.copy
+    - content.action.edit
+
+markdown_extensions:
+  - tables
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+  - mike:
+      version_selector: true
+
+nav:
+  - Introduction: introduction.md
+  - Quick Start:
+      - Installation: installation.md
+      - Test Drive: test-drive.md
+  - More Options:
+      - "Usage: breseq": usage-breseq.md
+      - "Usage: gdtools": usage-gdtools.md
+  - More Information:
+      - Reference Sequence File Formats: reference-sequence-file-formats.md
+      - Output: output.md
+      - Methods: methods.md
+      - GenomeDiff File Format: genomediff-file-format.md
+      - Bibliography: bibliography.md
+      - FAQ: faq.md
+  - More Examples:
+      - "Tutorial: Clones": tutorial-clones.md
+      - "Tutorial: Populations": tutorial-populations.md
+      - "Tutorial: Barcoded/Targeted": tutorial-barcoded-targeted.md
+      - "Tutorial: Curation":
+          - Overview: tutorial-curation.md
+          - Running breseq: tutorial-curation-running-breseq.md
+          - Editing GenomeDiff Files: tutorial-curation-editing-genomediff-files.md
+          - Validating Predictions: tutorial-curation-validation.md
+          - Exploring Aligned Reads: tutorial-curation-exploring-aligned-reads.md
+          - Automating with brefito: tutorial-curation-automating.md
+          - Common Curation Cases: tutorial-curation-common-cases.md
+          - "Curating E. coli LTEE Genomes": tutorial-curation-ecoli-ltee.md
+  - About:
+      - Acknowledgments: acknowledgments.md
