@@ -165,15 +165,19 @@ AC_SUBST([BRESEQ], [src/c/breseq])
 AC_SUBST([GDTOOLS], [src/c/gdtools])
 
 
-AC_CHECK_FILE([.git/refs/heads/master],
-	AC_SUBST(GITHUB_REVISION_HASH, [`eval head -n 1 .git/refs/heads/master | sed 's/^\(.\{12\}\).*/\1/'`]),
-	AC_SUBST(GITHUB_REVISION_HASH, [])
-)
-
-AC_CHECK_FILE([.git/refs/heads/master],
-	AC_SUBST(GITHUB_REVISION_PREFIX, "revision "),
-	AC_SUBST(GITHUB_REVISION_PREFIX, [])
-)
+# Reading .git/refs/heads/master directly only worked for an in-place checkout
+# of the master branch with unpacked refs. Ask git itself instead, so this
+# also works from a worktree (where .git is a file, not a directory), on any
+# branch/detached HEAD, and after `git gc` has packed the refs.
+AC_PATH_PROG([GIT], [git])
+GITHUB_REVISION_HASH=
+GITHUB_REVISION_PREFIX=
+if test -n "$GIT" && $GIT -C "$srcdir" rev-parse --git-dir >/dev/null 2>&1; then
+	GITHUB_REVISION_HASH=`$GIT -C "$srcdir" rev-parse --short=12 HEAD 2>/dev/null`
+	test -n "$GITHUB_REVISION_HASH" && GITHUB_REVISION_PREFIX="revision "
+fi
+AC_SUBST(GITHUB_REVISION_HASH)
+AC_SUBST(GITHUB_REVISION_PREFIX)
 
 AC_DEFINE_UNQUOTED([GITHUB_REVISION_STRING], ["${GITHUB_REVISION_PREFIX}${GITHUB_REVISION_HASH}"], [Defining GitHub repository version])
 
