@@ -820,12 +820,12 @@ namespace breseq {
     // Create read counters in a way that they will automatically be cleaned up
     counted_ptr<junction_read_counter> reference_jrc(NULL);
     if (file_exists(settings.reference_bam_file_name.c_str())) {
-      reference_jrc = counted_ptr<junction_read_counter>(new junction_read_counter(settings.reference_bam_file_name, settings.reference_fasta_file_name, settings.verbose));
+      reference_jrc = counted_ptr<junction_read_counter>(new junction_read_counter(settings.reference_bam_file_name, settings.reference_fasta_file_name, settings.verbose, settings.reference_trim_file_name));
     }
 
     counted_ptr<junction_read_counter> junction_jrc(NULL);
     if (file_exists(settings.junction_bam_file_name.c_str()) && file_exists(settings.candidate_junction_fasta_file_name.c_str())) {
-      junction_jrc = counted_ptr<junction_read_counter>(new junction_read_counter(settings.junction_bam_file_name, settings.candidate_junction_fasta_file_name, settings.verbose));
+      junction_jrc = counted_ptr<junction_read_counter>(new junction_read_counter(settings.junction_bam_file_name, settings.candidate_junction_fasta_file_name, settings.verbose, settings.candidate_junction_trim_file_name));
     }
     
     

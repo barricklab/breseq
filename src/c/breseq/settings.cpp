@@ -1160,6 +1160,7 @@ namespace breseq
 		this->candidate_junction_fasta_file_name = this->candidate_junction_path + "/candidate_junction.fasta";
     this->candidate_junction_detailed_file_name = this->candidate_junction_path + "/candidate_junction.detailed.txt";
 		this->candidate_junction_faidx_file_name = this->candidate_junction_path + "/candidate_junction.fasta.fai";
+    this->candidate_junction_trim_file_name = this->candidate_junction_path + "/@.trims";
 
     //! Paths: Junction Alignment
 		this->candidate_junction_alignment_path = "04_candidate_junction_alignment";

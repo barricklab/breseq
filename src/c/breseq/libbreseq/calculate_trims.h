@@ -119,6 +119,13 @@ namespace breseq {
   Trims get_alignment_trims(const alignment_wrapper& a, const SequenceTrimsList& trims);
   void read_trims(SequenceTrimsList& trims, const cReferenceSequences& ref_seqs, const string &in_trims_file_name);
 
+  // Counts how many of the candidate reference start positions for a hypothetical, gapless,
+  // average-length read spanning [window_start, window_end] would still confidently span it
+  // (i.e. survive trimming) -- see junction_read_counter::count_confident_overlap_registers()
+  // in resolve_alignments.cpp for the BAM-backed caller, and the candidate-junction pre-filter
+  // in candidate_junctions.cpp for the trims-only caller.
+  uint32_t count_confident_overlap_registers(const SequenceTrims& trims, uint32_t seq_length, int32_t window_start, int32_t window_end, uint32_t read_length_avg);
+
   
 } // breseq
 

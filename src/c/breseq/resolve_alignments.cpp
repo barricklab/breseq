@@ -288,20 +288,9 @@ void resolve_alignments(
   SequenceTrimsList trims_list;
   read_trims(trims_list, ref_seq_info, settings.reference_trim_file_name);
   
-  // Create junction trims directly from FASTA
+  // Junction sequence trims are loaded below, once junction_ref_seq_info is available
   SequenceTrimsList junction_trims_list;
-  
-  if (junction_prediction)
-  {  
-    cFastaFile ff(settings.candidate_junction_fasta_file_name, ios::in);
-    cFastaSequence fs;
-    while (ff.read_sequence(fs))
-    {
-      SequenceTrims st(fs.get_sequence());
-      junction_trims_list.push_back(st);
-    }
-  }
-    
+
 	// ####
 	// ##	Junction sequences
 	// ####
@@ -324,6 +313,10 @@ void resolve_alignments(
   
   if (junction_prediction) {
     junction_ref_seq_info.LoadFiles(make_vector<string>(settings.candidate_junction_fasta_file_name));
+
+    // Load the candidate junction sequence trims, for writing resolved alignments
+    read_trims(junction_trims_list, junction_ref_seq_info, settings.candidate_junction_trim_file_name);
+
 		string junction_sam_file_name = settings.file_name(settings.candidate_junction_sam_file_name, "#", read_files[0].m_files[0].m_base_name);
 		bam_file junction_tam(junction_sam_file_name, settings.candidate_junction_fasta_file_name, ios::in);
 
@@ -450,6 +443,7 @@ void resolve_alignments(
                        ref_seq_info,
                        junction_ref_seq_info,
                        trims_list,
+                       junction_trims_list,
                        test_info.junction_id,
                        unique_junction_match_map,
                        repeat_junction_match_map,
@@ -592,6 +586,7 @@ void resolve_alignments(
                      ref_seq_info,
                      junction_ref_seq_info,
                      trims_list,
+                     junction_trims_list,
                      junction_test_info.junction_id,
                      unique_junction_match_map,
                      repeat_junction_match_map,
@@ -1979,6 +1974,7 @@ void resolve_junction(
                       cReferenceSequences& ref_seq_info,
                       cReferenceSequences& junction_ref_seq_info,
                       const SequenceTrimsList& trims_list,
+                      const SequenceTrimsList& junction_trims_list,
                       const string& junction_id,
                       UniqueJunctionMatchMap& unique_junction_match_map,
                       RepeatJunctionMatchMap& repeat_junction_match_map,
@@ -2113,7 +2109,9 @@ void resolve_junction(
           alignments.read_base_quality_char_string_reversed = repeat_match.junction_alignments.read_base_quality_char_string_reversed;
 
           alignments.push_back(matched_alignment);
-          resolved_junction_tam.write_alignments(fastq_file_index, alignments, NULL, &junction_ref_seq_info, true);
+          vector<Trims> trims;
+          trims.push_back(get_alignment_trims(*matched_alignment, junction_trims_list));
+          resolved_junction_tam.write_alignments(fastq_file_index, alignments, &trims, &junction_ref_seq_info, true);
         }
 			}
 		}
@@ -2147,7 +2145,11 @@ void resolve_junction(
       }
       
       // REGARDLESS of success: write matches to the candidate junction SAM file
-      resolved_junction_tam.write_alignments(fastq_file_index, item.junction_alignments, NULL, &junction_ref_seq_info, true);
+      vector<Trims> junction_alignment_trims;
+      for (alignment_list::iterator it2=item.junction_alignments.begin(); it2 != item.junction_alignments.end(); it2++) {
+        junction_alignment_trims.push_back(get_alignment_trims(**it2, junction_trims_list));
+      }
+      resolved_junction_tam.write_alignments(fastq_file_index, item.junction_alignments, &junction_alignment_trims, &junction_ref_seq_info, true);
     }
   }
 
@@ -2491,7 +2493,8 @@ void  assign_one_junction_read_counts(
     j["junction_start_pos_for_counting"] = to_string(start);
     j["junction_end_pos_for_counting"] = to_string(end);
   }
-  j["junction_possible_overlap_registers"] = to_string(read_length_avg - abs(end - start));
+  j["junction_possible_overlap_registers_before_trimming"] = to_string(read_length_avg - abs(end - start));
+  j["junction_possible_overlap_registers"] = (junction_jrc.get() != NULL) ? to_string(junction_jrc->count_confident_overlap_registers(j["key"], start, end, read_length_avg)) : "0";
 
   if (settings.junction_debug) ofile << "JUNCTION: start " << start << " end " << end << endl;
   if (verbose) cerr << "JUNCTION: start " << start << " end " << end << endl;
@@ -2556,8 +2559,9 @@ void  assign_one_junction_read_counts(
       j["side_1_end_pos_for_counting"] = to_string(end);
     }
     
-    j["side_1_possible_overlap_registers"] = to_string(read_length_avg - abs(end - start));
-    
+    j["side_1_possible_overlap_registers_before_trimming"] = to_string(read_length_avg - abs(end - start));
+    j["side_1_possible_overlap_registers"] = (reference_jrc.get() != NULL) ? to_string(reference_jrc->count_confident_overlap_registers(j[SIDE_1_SEQ_ID], start, end, read_length_avg)) : "0";
+
     j[SIDE_1_READ_COUNT] = (reference_jrc.get() != NULL) ? to_string(reference_jrc->count(j[SIDE_1_SEQ_ID], start, end, junction_read_names, empty_read_names)) : "0";
     
     if (settings.junction_debug) {
@@ -2569,8 +2573,10 @@ void  assign_one_junction_read_counts(
   
   } else {
     j[SIDE_1_READ_COUNT] = "NA";
+    j["side_1_possible_overlap_registers"] = "NA";
+    j["side_1_possible_overlap_registers_before_trimming"] = "NA";
   }
-  
+
   // New side 2
   int32_t side_2_possibilities = 0;
 
@@ -2610,20 +2616,22 @@ void  assign_one_junction_read_counts(
       j["side_2_end_pos_for_counting"] = to_string(end);
     }
     
-    j["side_2_possible_overlap_registers"] = to_string(read_length_avg - abs(end - start));
+    j["side_2_possible_overlap_registers_before_trimming"] = to_string(read_length_avg - abs(end - start));
+    j["side_2_possible_overlap_registers"] = (reference_jrc.get() != NULL) ? to_string(reference_jrc->count_confident_overlap_registers(j[SIDE_2_SEQ_ID], start, end, read_length_avg)) : "0";
 
     j[SIDE_2_READ_COUNT] = (reference_jrc.get() != NULL) ? to_string(reference_jrc->count(j[SIDE_2_SEQ_ID], start, end, junction_read_names, empty_read_names)) : "0";
-    
+
     if (settings.junction_debug) {
       ofile << "SIDE_2" << endl;
       for (map<string,bool>::iterator it = empty_read_names.begin(); it != empty_read_names.end(); it++) {
         ofile << it->first << endl;
       }
     }
-    
+
   } else {
     j[SIDE_2_READ_COUNT] = "NA";
     j["side_2_possible_overlap_registers"] = "NA";
+    j["side_2_possible_overlap_registers_before_trimming"] = "NA";
   }
   
   if (verbose) {
@@ -2642,30 +2650,42 @@ void  assign_one_junction_read_counts(
   //@ded calculate frequency of each junction. //
   double a, b;
 
-  double c = from_string<uint32_t>(j[NEW_JUNCTION_READ_COUNT]);
-  c /= static_cast<double>(from_string<uint32_t>(j["junction_possible_overlap_registers"]));
-  
+  // A possible_overlap_registers of zero (the candidate-junction pre-filter in
+  // candidate_junctions.cpp should normally have already rejected these, but this is a
+  // defensive backstop) means there is no valid denominator to normalize by -- treat it the
+  // same as a read count of "NA" (no information), rather than dividing by zero.
+  uint32_t junction_possible_overlap_registers = from_string<uint32_t>(j["junction_possible_overlap_registers"]);
+  uint32_t side_1_possible_overlap_registers = (j[SIDE_1_READ_COUNT] != "NA") ? from_string<uint32_t>(j["side_1_possible_overlap_registers"]) : 0;
+  uint32_t side_2_possible_overlap_registers = (j[SIDE_2_READ_COUNT] != "NA") ? from_string<uint32_t>(j["side_2_possible_overlap_registers"]) : 0;
+
+  double c = 0;
+  bool have_c = (junction_possible_overlap_registers != 0);
+  if (have_c) {
+    c = from_string<uint32_t>(j[NEW_JUNCTION_READ_COUNT]);
+    c /= static_cast<double>(junction_possible_overlap_registers);
+  }
+
   // @JEB: divide the side X counts by 2, if both were counted
   // or by 1 if that side of the alignment was ambiguous (for edges of IS-elements)
   double d = 2;
-  if (j[SIDE_1_READ_COUNT] == "NA") {
+  if ((j[SIDE_1_READ_COUNT] == "NA") || (side_1_possible_overlap_registers == 0)) {
     a = 0; //"NA" in read count sets value to 1 not 0
     d--;
   } else {
     a = from_string<uint32_t>(j[SIDE_1_READ_COUNT]);
-    a /= static_cast<double>(from_string<uint32_t>(j["side_1_possible_overlap_registers"]));
+    a /= static_cast<double>(side_1_possible_overlap_registers);
   }
-  
-  if (j[SIDE_2_READ_COUNT] == "NA") {
+
+  if ((j[SIDE_2_READ_COUNT] == "NA") || (side_2_possible_overlap_registers == 0)) {
     b = 0;
     d--;
   } else {
     b = from_string<uint32_t>(j[SIDE_2_READ_COUNT]);
-    b /= static_cast<double>(from_string<uint32_t>(j["side_2_possible_overlap_registers"]));
+    b /= static_cast<double>(side_2_possible_overlap_registers);
   }
-  
+
   // We cannot assign a frequency if the denominator is zero
-  if (d == 0) {
+  if ((d == 0) || !have_c) {
     j[POLYMORPHISM_FREQUENCY] = "NA";
     j[FREQUENCY] = j[POLYMORPHISM_FREQUENCY];
 
@@ -2716,27 +2736,31 @@ void  assign_one_junction_read_counts(
   }
   
   // Finally assign average coverages based on fragments
-  
-  if (j[SIDE_1_READ_COUNT] == "NA") {
+
+  if ((j[SIDE_1_READ_COUNT] == "NA") || (side_1_possible_overlap_registers == 0)) {
       j[SIDE_1_COVERAGE] = "NA";
   }
   else {
-    double side_1_correction = static_cast<double>(from_string<uint32_t>(j["side_1_possible_overlap_registers"])) / read_length_avg;
+    double side_1_correction = static_cast<double>(side_1_possible_overlap_registers) / read_length_avg;
     j[SIDE_1_COVERAGE] = to_string(from_string<double>(j[SIDE_1_READ_COUNT]) / summary.unique_coverage[j[SIDE_1_SEQ_ID]].average / side_1_correction, 2);
   }
-  
-  if (j[SIDE_2_READ_COUNT] == "NA") {
+
+  if ((j[SIDE_2_READ_COUNT] == "NA") || (side_2_possible_overlap_registers == 0)) {
     j[SIDE_2_COVERAGE] = "NA";
   }
   else {
-    double side_2_correction = static_cast<double>(from_string<uint32_t>(j["side_2_possible_overlap_registers"])) / read_length_avg;
+    double side_2_correction = static_cast<double>(side_2_possible_overlap_registers) / read_length_avg;
     j[SIDE_2_COVERAGE] = to_string(from_string<double>(j[SIDE_2_READ_COUNT]) / summary.unique_coverage[j[SIDE_2_SEQ_ID]].average / side_2_correction, 2);
   }
-  
+
   //corrects for overlap making it less likely for a read to span
-  double overlap_correction = static_cast<double>(from_string<uint32_t>(j["junction_possible_overlap_registers"])) / read_length_avg;
-  double new_junction_average_read_count = (summary.unique_coverage[j[SIDE_1_SEQ_ID]].average + summary.unique_coverage[j[SIDE_2_SEQ_ID]].average) / 2;
-  j[NEW_JUNCTION_COVERAGE] = to_string(from_string<double>(j[NEW_JUNCTION_READ_COUNT]) / new_junction_average_read_count / overlap_correction, 2);
+  if (!have_c) {
+    j[NEW_JUNCTION_COVERAGE] = "NA";
+  } else {
+    double overlap_correction = static_cast<double>(junction_possible_overlap_registers) / read_length_avg;
+    double new_junction_average_read_count = (summary.unique_coverage[j[SIDE_1_SEQ_ID]].average + summary.unique_coverage[j[SIDE_2_SEQ_ID]].average) / 2;
+    j[NEW_JUNCTION_COVERAGE] = to_string(from_string<double>(j[NEW_JUNCTION_READ_COUNT]) / new_junction_average_read_count / overlap_correction, 2);
+  }
 
 }
   
@@ -2770,12 +2794,12 @@ void  assign_junction_read_counts(
   // Create read counters in a way that they will automatically be cleaned up
   counted_ptr<junction_read_counter> reference_jrc(NULL);
   if (file_exists(settings.reference_bam_file_name.c_str())) {
-    reference_jrc = counted_ptr<junction_read_counter>(new junction_read_counter(settings.reference_bam_file_name, settings.reference_fasta_file_name, settings.verbose));
+    reference_jrc = counted_ptr<junction_read_counter>(new junction_read_counter(settings.reference_bam_file_name, settings.reference_fasta_file_name, settings.verbose, settings.reference_trim_file_name));
   }
 
   counted_ptr<junction_read_counter> junction_jrc(NULL);
   if (file_exists(settings.junction_bam_file_name.c_str()) && file_exists(settings.candidate_junction_fasta_file_name.c_str())) {
-    junction_jrc = counted_ptr<junction_read_counter>(new junction_read_counter(settings.junction_bam_file_name, settings.candidate_junction_fasta_file_name, settings.verbose));
+    junction_jrc = counted_ptr<junction_read_counter>(new junction_read_counter(settings.junction_bam_file_name, settings.candidate_junction_fasta_file_name, settings.verbose, settings.candidate_junction_trim_file_name));
   }
   
   for (diff_entry_list_t::iterator it = jc.begin(); it != jc.end(); it++) {
@@ -2829,11 +2853,34 @@ void  assign_junction_read_coverage(
 }
   
   
+junction_read_counter::junction_read_counter(const string& bam, const string& fasta, bool verbose, const string& trim_file_name)
+  : pileup_base(bam, fasta), _verbose(verbose)
+{
+  _trims_list.resize(num_targets());
+  for (uint32_t tid = 0; tid < num_targets(); tid++) {
+    string this_file_name = Settings::file_name(trim_file_name, "@", target_name(tid));
+    _trims_list[tid].ReadFile(this_file_name, target_length(tid));
+  }
+}
+
+uint32_t junction_read_counter::count_confident_overlap_registers(
+                                      const string& seq_id,
+                                      const int32_t window_start,
+                                      const int32_t window_end,
+                                      const uint32_t read_length_avg
+                                      ) const
+{
+  int32_t tid = seq_id_to_target_id(seq_id);
+  if (tid < 0) return 0;
+
+  return breseq::count_confident_overlap_registers(_trims_list[tid], target_length(static_cast<uint32_t>(tid)), window_start, window_end, read_length_avg);
+}
+
 uint32_t junction_read_counter::count(
-                                      const string& seq_id, 
-                                      const int32_t start, 
-                                      const int32_t end, 
-                                      const map<string,bool> ignore_read_names, 
+                                      const string& seq_id,
+                                      const int32_t start,
+                                      const int32_t end,
+                                      const map<string,bool> ignore_read_names,
                                       map<string,bool>& counted_read_names
                                       )
 {
@@ -2901,8 +2948,26 @@ void junction_read_counter::fetch_callback ( const alignment_wrapper& a )
   uint32_t q_start, q_end;
   a.reference_bounds_1(q_start, q_end);
 
+  // Shrink the reference span inward by any trimmed (untrustworthy, e.g. repeat-ambiguous)
+  // bases at the ends of the read, so a read that only *appears* to reach a coordinate
+  // because of a repeat isn't counted as confidently spanning it. trim_left()/trim_right()
+  // read the XL/XR tags (see get_alignment_trims() in calculate_trims.cpp), which are counted
+  // from the absolute ends of the read and already include any existing soft-clip offset.
+  uint32_t left_extra = a.trim_left();
+  left_extra = (left_extra > a.query_start_0()) ? (left_extra - a.query_start_0()) : 0;
+  uint32_t right_extra = a.trim_right();
+  right_extra = (right_extra > (a.read_length() - a.query_end_1())) ? (right_extra - (a.read_length() - a.query_end_1())) : 0;
+
+  q_start += left_extra;
+  q_end = (right_extra < q_end) ? q_end - right_extra : 0;
+
+  if (q_start > q_end) {
+    if (_verbose) cout << "  TRIMMED AWAY" << endl;
+    return;
+  }
+
   if (_verbose) cout << "  " << q_start << "-" << q_end << "  " << _start << "-" << _end;
-  
+
   if ((static_cast<int32_t>(q_start) <= _start) && (static_cast<int32_t>(q_end) >= _end)) {
     if (_verbose) cout << "  COUNTED" << endl;
     _count++;
