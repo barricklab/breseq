@@ -461,7 +461,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "export PATH=\"${CONDA_BIN_PATH}:$PATH\"\n";
+			shellScript = "export PATH=\"${CONDA_BIN_PATH}:$PATH\"\n\nGIT_HASH=\"\"\nif git -C \"${SRCROOT}/../..\" rev-parse --git-dir >/dev/null 2>&1; then\n    GIT_HASH=\"$(git -C \"${SRCROOT}/../..\" rev-parse --short=12 HEAD 2>/dev/null)\"\nfi\nREVISION_STRING=\"\"\nif [ -n \"${GIT_HASH}\" ]; then\n    REVISION_STRING=\"revision ${GIT_HASH}\"\nfi\n\nCONFIG_H=\"${SRCROOT}/../../aux_build/config.h\"\nif [ -f \"${CONFIG_H}\" ]; then\n    sed -i '' -E \"s|^#define GITHUB_REVISION_STRING .*|#define GITHUB_REVISION_STRING \\\"${REVISION_STRING}\\\"|\" \"${CONFIG_H}\"\nelse\n    echo \"warning: ${CONFIG_H} not found — run ./configure once from the command line first\" >&2\nfi\n";
 		};
 		70D801662FD4E9DD008F6FFD /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -478,7 +478,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "export PATH=\"${CONDA_BIN_PATH}:$PATH\"\n";
+			shellScript = "export PATH=\"${CONDA_BIN_PATH}:$PATH\"\n\nGIT_HASH=\"\"\nif git -C \"${SRCROOT}/../..\" rev-parse --git-dir >/dev/null 2>&1; then\n    GIT_HASH=\"$(git -C \"${SRCROOT}/../..\" rev-parse --short=12 HEAD 2>/dev/null)\"\nfi\nREVISION_STRING=\"\"\nif [ -n \"${GIT_HASH}\" ]; then\n    REVISION_STRING=\"revision ${GIT_HASH}\"\nfi\n\nCONFIG_H=\"${SRCROOT}/../../aux_build/config.h\"\nif [ -f \"${CONFIG_H}\" ]; then\n    sed -i '' -E \"s|^#define GITHUB_REVISION_STRING .*|#define GITHUB_REVISION_STRING \\\"${REVISION_STRING}\\\"|\" \"${CONFIG_H}\"\nelse\n    echo \"warning: ${CONFIG_H} not found — run ./configure once from the command line first\" >&2\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
