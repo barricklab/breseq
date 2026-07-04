@@ -1262,7 +1262,10 @@ void bam_file::write_split_alignment(uint32_t min_indel_split_len, const alignme
     }
 
     // If the inserted region matches to the next part of the match, then we want to adjust where that begins
-    if ( (op == 'I') && (qpos - len >= 1) )
+    // (written as qpos > len, not qpos - len >= 1, since qpos/len are unsigned and the insertion can be
+    // as long as or longer than the read prefix before it -- qpos - len would then wrap around instead of
+    // going negative, defeating the check and sending a huge position into substr() below)
+    if ( (op == 'I') && (qpos > len) )
     {
       string previous_string = qseq_string.substr(qpos - len - 1, len);
       string insert_string = qseq_string.substr(qpos - 1, len);
