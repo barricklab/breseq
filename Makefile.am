@@ -53,7 +53,7 @@ EXTRA_DIST = \
 ## Override explicitly on the command line: 'make test TEST_CORES=16'.
 ## Individual tests declare how many of these cores they use via 'TEST_CORES=N'
 ## in their testcmd.sh (see tests/common.sh and tests/Snakefile).
-TEST_CORES ?= $(or $(shell ps -p $$PPID -o args= 2>/dev/null | grep -oE -- '(-j *[0-9]+|--jobs=[0-9]+)' | grep -oE '[0-9]+' | head -1),all)
+TEST_CORES ?= $(or $(shell ps -p $$PPID -o args= 2>/dev/null | grep -oE -- '-j *[0-9]+|--jobs=[0-9]+' | grep -oE '[0-9]+' | head -1),all)
 
 ## Writes the TESTBINPREFIX/BRESEQ_DATA_PATH exports that tests/common.sh
 ## sources, at the destination path passed as $(1). Shared by all-local,

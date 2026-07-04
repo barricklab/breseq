@@ -31,7 +31,7 @@ AC_CONFIG_SRCDIR([])
 AC_PREFIX_DEFAULT([$prefix])
 
 LT_INIT
-AM_INIT_AUTOMAKE([subdir-objects])
+AM_INIT_AUTOMAKE([subdir-objects -Wno-portability])
 
 AM_PROG_CC_C_O
 AC_PROG_CXX
