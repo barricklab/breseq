@@ -1,0 +1,2765 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://breseq.barricklab.org/0.40.1/tutorial-clones/">
+      
+      
+        <link rel="prev" href="../faq/">
+      
+      
+        <link rel="next" href="../tutorial-populations/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Tutorial: Clones - breseq</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#tutorial-clonal-samples-consensus-mode" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="breseq" class="md-header__button md-logo" aria-label="breseq" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            breseq
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Tutorial: Clones
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/barricklab/breseq" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    barricklab/breseq
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../introduction/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Introduction
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../installation/" class="md-tabs__link">
+          
+  
+  
+  Quick Start
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../usage-breseq/" class="md-tabs__link">
+          
+  
+  
+  More Options
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../reference-sequence-file-formats/" class="md-tabs__link">
+          
+  
+  
+  More Information
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
+  
+  
+  More Examples
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../acknowledgments/" class="md-tabs__link">
+          
+  
+  
+  About
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="breseq" class="md-nav__button md-logo" aria-label="breseq" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    breseq
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/barricklab/breseq" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    barricklab/breseq
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Quick Start
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../test-drive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test Drive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    More Options
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    More Options
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage-breseq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage: breseq
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage-gdtools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage: gdtools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    More Information
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    More Information
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference-sequence-file-formats/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference Sequence File Formats
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../output/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../methods/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Methods
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../genomediff-file-format/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GenomeDiff File Format
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bibliography/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bibliography
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    More Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    More Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Clones
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Clones
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-download-data-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Download data files
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Download data files">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reference-sequence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reference sequence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#read-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Read files
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-run-breseq" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Run breseq
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-open-breseq-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Open breseq output
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-resolving-the-cit-mutation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Resolving the Cit+ mutation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Resolving the Cit+ mutation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-rnk-citg-junction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A. rnk-citG junction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-zoomed-in-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B. Zoomed-in coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-add-the-amplification-to-the-genomediff-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        C. Add the amplification to the GenomeDiff file
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-generating-a-mutated-reference-sequence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Generating a mutated reference sequence
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-characterizing-genetic-diversity-and-genome-evolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Characterizing genetic diversity and genome evolution
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Characterizing genetic diversity and genome evolution">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-1-compare-mutations-in-different-genomes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 1. Compare mutations in different genomes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-2-analyze-rates-and-nature-of-genome-evolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 2. Analyze rates and nature of genome evolution
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-3-analyze-unique-mutations-for-evidence-of-bias-and-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 3. Analyze unique mutations for evidence of bias and selection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-4-build-a-phylogenetic-tree-of-population-ara-3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 4. Build a phylogenetic tree of population Ara-3
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-populations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Populations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-barcoded-targeted/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Barcoded/Targeted
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Curation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorial: Curation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-running-breseq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running breseq
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-editing-genomediff-files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Editing GenomeDiff Files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validating Predictions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-exploring-aligned-reads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exploring Aligned Reads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-automating/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Automating with brefito
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-common-cases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Curation Cases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-ecoli-ltee/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Curating E. coli LTEE Genomes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    About
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../acknowledgments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Acknowledgments
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-download-data-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Download data files
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Download data files">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#reference-sequence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reference sequence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#read-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Read files
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-run-breseq" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Run breseq
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-open-breseq-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Open breseq output
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-resolving-the-cit-mutation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Resolving the Cit+ mutation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Resolving the Cit+ mutation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-rnk-citg-junction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A. rnk-citG junction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-zoomed-in-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B. Zoomed-in coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-add-the-amplification-to-the-genomediff-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        C. Add the amplification to the GenomeDiff file
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-generating-a-mutated-reference-sequence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Generating a mutated reference sequence
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-characterizing-genetic-diversity-and-genome-evolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Characterizing genetic diversity and genome evolution
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="6. Characterizing genetic diversity and genome evolution">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#example-1-compare-mutations-in-different-genomes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 1. Compare mutations in different genomes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-2-analyze-rates-and-nature-of-genome-evolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 2. Analyze rates and nature of genome evolution
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-3-analyze-unique-mutations-for-evidence-of-bias-and-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 3. Analyze unique mutations for evidence of bias and selection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#example-4-build-a-phylogenetic-tree-of-population-ara-3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Example 4. Build a phylogenetic tree of population Ara-3
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/barricklab/breseq/edit/master/docs/tutorial-clones.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="tutorial-clonal-samples-consensus-mode">Tutorial: Clonal Samples (Consensus Mode)<a class="headerlink" href="#tutorial-clonal-samples-consensus-mode" title="Permanent link">&para;</a></h1>
+<p>This tutorial expands on the <a href="../test-drive/">Test Drive</a>. You will analyze mutations in
+the genomes of multiple clones isolated from population Ara-3 of the
+Lenski long-term evolution experiment (LTEE). A complex mutation is
+present in these samples that was necessary for evolution of the aerobic
+citrate utilization trait (Cit+). In addition to some tips on
+<em>breseq</em> usage and examples of interpreting more complex mutations
+in the output, this tutorial also introduces functionality in the
+<em>gdtools</em> utility command that can be used to compare and analyze
+mutations in an entire set of evolved genomes.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This tutorial was originally created for the EMBO Practical Course <strong>Measuring
+intra-species diversity using high-throughput sequencing</strong> held 27–31
+July 2015 in Oeiras, Portugal.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If you encounter any <em>breseq</em> or <em>gdtools</em> errors or crashes in
+running this tutorial, please <a href="https://github.com/barricklab/breseq/issues">report issues on
+GitHub</a>.</p>
+</div>
+<h2 id="1-download-data-files">1. Download data files<a class="headerlink" href="#1-download-data-files" title="Permanent link">&para;</a></h2>
+<p>First, create a directory called <code>tutorial_clonal</code> and navigate into it:</p>
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>mkdir<span class="w"> </span>tutorial_clones
+$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>tutorial_clones
+</code></pre></div>
+<h3 id="reference-sequence">Reference sequence<a class="headerlink" href="#reference-sequence" title="Permanent link">&para;</a></h3>
+<p><em>breseq</em> prefers the reference sequence in
+<a href="https://www.ncbi.nlm.nih.gov/Sitemap/samplerecord.html">Genbank</a> or
+<a href="http://gmod.org/wiki/GFF">GFF3</a> format. In this example, the reference
+sequence is <em>Escherichia coli</em> B strain REL606. The Genbank (Refseq)
+accession number is: <code>NC_012967</code>. For this tutorial, we are going to
+use an updated version of this file that contains richer gene annotation
+information than the version available from NCBI.</p>
+<ul>
+<li><a href="https://barricklab.org/release/breseq_tutorial/REL606.gbk.gz">Download REL606.gbk via this
+    link</a></li>
+</ul>
+<h3 id="read-files">Read files<a class="headerlink" href="#read-files" title="Permanent link">&para;</a></h3>
+<p>In this tutorial, we're going to use Illumina genome re-sequencing data
+from <em>E. coli</em> strains that evolved for up to 40,000 generations in
+population Ara-3 from the Lenski long-term evolution experiment
+<a href="">[Blount2011]</a>. This data is available in the European Nucleotide
+Archive (ENA). Go to <a href="https://www.ebi.ac.uk/">https://www.ebi.ac.uk/</a> and search for one of the
+genomes in the table below (or click on the accession number to be taken
+directly to the download page for that clone).</p>
+<table>
+<thead>
+<tr>
+<th>Accession</th>
+<th>Clone</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://www.ebi.ac.uk/ena/data/view/SRR098289">SRR098289</a></td>
+<td>ZDB564</td>
+<td>Cit+ clone isolated at generation 31,500</td>
+</tr>
+<tr>
+<td><a href="https://www.ebi.ac.uk/ena/data/view/SRR098042">SRR098042</a></td>
+<td>ZDB172</td>
+<td>Cit+ clone isolated at generation 32,000</td>
+</tr>
+<tr>
+<td><a href="https://www.ebi.ac.uk/ena/data/view/SRR098040">SRR098040</a></td>
+<td>ZDB143</td>
+<td>Cit+ clone isolated at generation 32,500</td>
+</tr>
+<tr>
+<td><a href="https://www.ebi.ac.uk/ena/data/view/SRR097977">SRR097977</a></td>
+<td>CZB152</td>
+<td>Cit+ clone isolated at generation 33,000</td>
+</tr>
+<tr>
+<td><a href="https://www.ebi.ac.uk/ena/data/view/SRR098026">SRR098026</a></td>
+<td>CZB154</td>
+<td>Cit+ clone isolated at generation 33,000</td>
+</tr>
+<tr>
+<td><a href="https://www.ebi.ac.uk/ena/data/view/SRR098034">SRR098034</a></td>
+<td>ZDB83</td>
+<td>Cit+ clone isolated at generation 34,000</td>
+</tr>
+</tbody>
+</table>
+<p>Download the FASTQ files for your chosen sample into your
+<code>tutorial_clones</code> directory.</p>
+<p>These particular clonal isolates were chosen to illustrate particular
+aspects of interpreting <em>breseq</em> output. If
+you would like to investigate data corresponding to any of the 29
+sequenced genomes from this population described in <a href="">[Blount2011]</a>
+check out <a href="https://www.ebi.ac.uk/ena/data/view/SRP004752">SRP004752</a>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Be careful to download the reads in FASTQ format (circled link in this image). Do not use SRA format!
+<figure><img src="images/ENA_correct_download_link.png" width="500"></figure></p>
+</div>
+<h2 id="2-run-breseq">2. Run <em>breseq</em><a class="headerlink" href="#2-run-breseq" title="Permanent link">&para;</a></h2>
+<p>Check to be sure that you have changed into the <code>tutorial_clones</code>
+directory, that you have all of the input files, and that you have
+decompressed these files.</p>
+<p>Now, run breseq using a command of this form (replacing strain numbers
+and FASTQ file names as appropriate):</p>
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>breseq<span class="w"> </span>-l<span class="w"> </span><span class="m">60</span><span class="w"> </span>-j<span class="w"> </span><span class="m">8</span><span class="w"> </span>-o<span class="w"> </span>ZDB83_output<span class="w"> </span>-r<span class="w"> </span>REL606.gbk<span class="w"> </span>SRR098034.fastq
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>We are using the <code>-l 60</code> option to limit the amount of read data that
+we use to a nominal coverage of 60-fold to speed up this <em>breseq</em>
+run. Generally, setting this option to somewhere in the range of 80 to
+120 is recommended. In our experience, using more read data than that is
+usually not helpful for analyzing clonal samples. It just slows down the
+analysis!</p>
+</div>
+<p>What is the <code>-j</code> option doing?</p>
+<details>
+  <summary>Click on the triangle to reveal the answer</summary>
+
+You can show the most commonly used _breseq_ options by calling it
+with no arguments, and you can show all options by adding the `-h`
+flag.
+
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>breseq
+$<span class="w"> </span>breseq<span class="w"> </span>-h
+</code></pre></div>
+</details>
+
+<h2 id="3-open-breseq-output">3. Open <em>breseq</em> output<a class="headerlink" href="#3-open-breseq-output" title="Permanent link">&para;</a></h2>
+<p>Using a web browser, open the file <code>index.html</code> in the output directory.
+This file contains tables describing the predicted mutations and also
+evidence that may indicate that there are other mutations that
+<em>breseq</em> could not resolve into precise genetic changes that you
+should further examine. The tables in this HTML file are more fully
+described in the <code>output-format</code> section of the <em>breseq</em> manual.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If you run into problems generating the <em>breseq</em> output and would
+like to continue this tutorial, please <a href="https://barricklab.org/release/breseq_tutorial/ZDB83_output.tgz">download pre-generated results
+for ZDB83</a>
+(created using <em>breseq</em> version 0.26.1).</p>
+</div>
+<p>Now, browse the upper table in the results of <strong>Mutation predictions</strong>.
+Click on <strong>RA</strong>, <strong>JC</strong>, and <strong>MC</strong> links to view the evidence <span
+class="title-ref">breseq</span> used to predict these mutations. There
+should be a variety of base substitutions, indels, large deletions, and
+transposon (IS element) insertions in your results.</p>
+<p>Consider these questions:</p>
+<ol>
+<li>Click on the <strong>MC</strong> link on the line for a large deletion that is
+    mediated by an IS element or between IS elements (look in the
+    <strong>annotation</strong> column). What are the red and blue lines on the
+    coverage graphs?</li>
+</ol>
+<details>
+  <summary>Click for an example of an IS-mediated MC evidence item</summary>
+<figure>
+<img src="images/ZDB83.waaT.IS-mediated-deletion.png" width="989" />
+</figure>
+</details>
+
+<details>
+<summary>Click to reveal the answers</summary>
+Blue lines are coverage from uniquely mapped reads. Red lines indicate
+coverage from reads that map equally well to genomic repeat regions that
+also exist elsewhere in the genome. You should see red coverage on one
+or both sides of the deletion that correspond to the IS elements because
+these transposons occur in mutliple identical copies around the genome.
+The read length is too short to tell which copy a read came from if it
+maps to the middle of these elements. They are hich have lengths of
+around 1000-1500 base pairs).
+</details>
+
+<p>Next, scroll down to the <strong>Unnassigned...</strong> tables that are near the
+bottom of the page. Click on a few of these evidence items and examine
+the read coverage depth or alignment of mapped reads. Can you tell which
+<strong>MC</strong> items are associated with <strong>JC</strong> items and what mutations may
+have happened in the evolved genome? This can take practice, so we'll
+work a few examples.</p>
+<ol>
+<li>Find an <strong>Unassigned missing coverage evidence</strong> entry in an <em>rhs</em>
+    or <em>rrl</em> gene. Examine the read coverage graph. What is the most
+    likely mutation here?</li>
+</ol>
+<details>
+<summary>Click for an example rrlA MC image</summary>
+<figure>
+<img src="images/ZDB83.rrlA.MC.png" width="797" />
+</figure>
+</details>
+
+<details>
+<summary>Click to reveal possible answers</summary>
+These variants apparently missing small segments of uniquely mapped
+reads in a mostly repetitive region are most likely explained by
+non-allelic gene conversions. Recombination converts one copy of the
+near-repeat to have the exacts sequence of another copy of the
+near-repeat. Since we are mapping reads to the reference genome, this
+makes it appear that the sequence here was deleted, when it was just
+changed to mirror the other copy exactly. If you looked at the coverage
+of the other copy, then you would likely see correspondingly higher
+coverage at any unique segments.
+</details>
+
+<ol>
+<li>Can you find a situation where an observed <strong>Unassigned missing
+    coverage evidence</strong> item also has junctions to new IS elements on
+    each of its boundaries? What mutation event or events could explain
+    this genetic variant?</li>
+</ol>
+<details>
+<summary>Click for an example of an unassigned MC image of this kind</summary>
+<figure>
+<img src="images/ZDB83.ECB02816-ECB02836.MC.png" width="1005" \>
+</figure>
+</details>
+
+<details>
+<summary>Click to reveal possible answers</summary>
+In general, if you see sharp drops to zero of blue (unique) coverage on
+both margins of the deletion, then there will be two junctions to a
+transposable IS element, one for each side of the deletion. Thus, in the
+sequenced genome there is one copy of the IS element bridging between
+the ends of the deleted region. The two mutations that led to this final
+genome are likely first an insertion of one copy of the IS element, then
+an insertion of another IS element copy in the same orientation,
+followed by a deletion between them that also removes one IS copy by
+homologous recombination between; or, alternatively, an IS mediated
+deletion adjacent to the new IS copy. By examining other clones in the
+population, it may sometimes be possible to find out the location of the
+first IS element insertion if it is ever observed separately before the
+deletion.
+
+In this case, these two JC evidence items in the unassigned table are
+the ones that correspond to two sides of a transposable element
+(IS\*150\* copy).
+
+<figure>
+<img src="images/ZDB83.ECB02816-ECB02836.JC.png" width="1105" />
+</figure>
+</details>
+
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If you'd like to explore the mapped reads in more detail than is
+possible by looking at the alignments and coverage graphs that
+<em>breseq</em> automatically generates, read the section of the manual on
+<code>viewing-in-IGV</code>.</p>
+</div>
+<h2 id="4-resolving-the-cit-mutation">4. Resolving the Cit+ mutation<a class="headerlink" href="#4-resolving-the-cit-mutation" title="Permanent link">&para;</a></h2>
+<p>The mutation that caused the Cit+ phenotype encompasses the <em>citT</em> gene
+(which encodes a citrate:succinate antiporter). It is detected as an
+<strong>unassigned JC</strong> evidence item in the <em>breseq</em> results (found in a
+table lower on the results page). It also leads to a change in coverage
+in this region of the genome. Your task now is to figure out what
+mutation or mutations gave rise to the evolved genome architecture.</p>
+<p>The steps that can be used to find the answer are illustrated using
+ZDB83 as an example, but details of the evolved <em>citT</em> arrangement are
+different in each of the example genomes. Be sure to pay attention to
+what is actually happening in your results!</p>
+<h3 id="a-rnk-citg-junction">A. <em>rnk-citG</em> junction<a class="headerlink" href="#a-rnk-citg-junction" title="Permanent link">&para;</a></h3>
+<p>Find the junction annotated as <em>rnk-citG</em> in the <strong>Unassigned Junction</strong>
+table. It should look something like this.</p>
+<figure>
+<img src="images/ZDB83.rnk-citG.JC.png" width="991" \>
+</figure>
+
+<p>What does this junction mean? What regions of the genome are juxtaposed
+in a way that they were not in the reference genome?</p>
+<details>
+<summary>Click to see the answer</summary>
+
+The junction means that reads connect position 625889 (extending to
+higher coordinates) to position 628821 (extending to lower coordinates).
+Don't get what this means? Click on the \* link and it will show the two
+snippets of reference genome and how they are joined by split-read
+alignments across the junction. The image below also shows what the new
+arrangement would look like. It's evidence for a tandem head-to-tail
+amplification.
+
+<figure>
+<img src="images/ZDB83.rnk-citG.JC.schematic.png" width="800" />
+</figure>
+
+</details>
+
+<h3 id="b-zoomed-in-coverage">B. Zoomed-in coverage<a class="headerlink" href="#b-zoomed-in-coverage" title="Permanent link">&para;</a></h3>
+<p>If the region is duplicated (or amplified to even more copies) then
+there should also be an increase in the genomic coverage of this region.
+Use the <code>breseq BAM2COV</code> subcommand to create a zoomed-in view of this
+region to try to better discern its boundaries and copy number.
+Alternatively, you can navigate to this region of the genome by loading
+the <em>breseq</em> output in IGV (as described above).</p>
+<p>You can get the help by running this command:</p>
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>breseq<span class="w"> </span>BAM2COV<span class="w"> </span>-h
+</code></pre></div>
+<p>Here's an example of applying <code>BAM2COV</code> to one of these genomes (In
+this case, by running it from inside the <em>breseq</em> output directory,
+we can use a simpler version of the command that leaves off some options
+and has extra information available about the average coverage across
+the genome):</p>
+<p><div class="highlight"><pre><span></span><code>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>ZDB83_output
+$<span class="w"> </span>breseq<span class="w"> </span>BAM2COV<span class="w"> </span>-a<span class="w"> </span>REL606:624500-630500
+</code></pre></div>
+Replace <code>REL606</code> with the header of the reference file, if it happens to be different from <code>REL606</code>.</p>
+<p>Here's an example of the corresponding output:</p>
+<figure>
+<img src="images/ZDB83.rnk-citG.zoom-in.png" width="792" />
+</figure>
+
+<h3 id="c-add-the-amplification-to-the-genomediff-file">C. Add the amplification to the <span class="title-ref">GenomeDiff</span> file<a class="headerlink" href="#c-add-the-amplification-to-the-genomediff-file" title="Permanent link">&para;</a></h3>
+<p>files are text files output by <em>breseq</em> that describe all of the
+mutations detected in a sample. (They're like "diff" files for code,
+describing just the small number of changes needed to "patch" a text
+file to create an updated version.) files contain similar information to
+VCF files describing genetic variants, but they are more focused on
+describing mutational events. They make it possible to (1) easily
+annotate structural variants such as transposon insertions and
+amplifications, (2) include gene annotation information, and (3) set the
+order with which to apply mutations, which is sometimes necessary to
+fully describe evolutionary data. The <em>gdtools</em> command exists to
+perform various functions on files, as we'll see in the next few
+sections (much like the <code>vcftools</code> command) .</p>
+<p>Since <em>breseq</em> could not resolve the <em>rnk-citG</em> amplification, this
+very important mutation is not present in the output file, so it won't
+be included in downstream analysis steps unless you edit this file and
+add a description of the event to the output.</p>
+<p>To illustrate how to do this, make a copy of the file <code>output/output.gd</code>
+from the <em>breseq</em> output directory for your run. Name it something
+like <code>ZDB83.gd</code> and keep it outside of the <em>breseq</em> output folder.
+If you change your working directory back to <code>tutorial_clones</code>, then a
+command like this will manage that:</p>
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>cp<span class="w"> </span>ZDB83_output/output/output.gd<span class="w"> </span>ZDB83.gd
+</code></pre></div>
+<p>Open this file in a text editor to see how it represents mutations and
+other information that is in the HTML output files in a parsable format.
+Refer to <code>genomediff-usage</code> for a full description of the appendix of
+the <em>breseq</em> manual for a full description of the file format.</p>
+<p>Let's add an <code>AMP</code> line describing the <em>rnk-citG</em> amplification to our
+new <code>ZDB83.gd</code> file. You can add this line anywhere in the file.</p>
+<details>
+<summary>Try to do this yourself. Here's a hint to get you started</summary>
+
+The line should start this way:
+
+<div class="highlight"><pre><span></span><code>AMP   .   .   REL606  &lt;insert additional columns here!&gt;
+</code></pre></div>
+
+The *1st column* defines the type of mutation as an `AMP`. The *2nd
+and 3rd columns* are IDs that don't have to be set for manually added
+mutations. They enable one to link mutations and evidence items that
+support them. Using a dot or period (`.`) just signifies that you are
+leaving them blank. The *4th column* is the **seq_id** identifying the
+reference sequence fragment on which the mutation is located. There's
+only one choice for this _E. coli_ with a single chromosome: `REL606`.
+</details>
+
+<details>
+<summary>Here's the answer for ZDB83</summary>
+
+<div class="highlight"><pre><span></span><code>AMP   .   .   REL606  625889  2933    4
+</code></pre></div>
+
+The *5th column* is the starting coordinate of the amplification
+(straight from the **JC** evidence). The *6th column* is the size of the
+amplification (calculated as 628821 - 625889 + 1 = 2933 in this case).
+The *7th column* is the new copy number of this region in the mutated
+genome (4 copies in this case).
+</details>
+
+<p>You can run <code>gdtools VALIDATE</code> to check your syntax for errors. For
+example, using the command:</p>
+<div class="highlight"><pre><span></span><code>gdtools<span class="w"> </span>VALIDATE<span class="w"> </span>-r<span class="w"> </span>REL606.gbk<span class="w"> </span>ZDB83.gd
+</code></pre></div>
+<h2 id="5-generating-a-mutated-reference-sequence">5. Generating a mutated reference sequence<a class="headerlink" href="#5-generating-a-mutated-reference-sequence" title="Permanent link">&para;</a></h2>
+<p>If you manually edit files to resolve evidence into new mutations, it's
+best to check that you've described the mutations correctly in your
+curated file (with the right start positions, size, variant bases, etc).
+You can do this by simulating the mutant genome that you have described
+in the file and then re-querying the sequencing read data against it in
+a second <em>breseq</em> pass. Ideally, no variants will be detected when
+you do this if your list of mutations is complete! It's also possible
+that mapping to this mutated reference genome will enable you to detect
+new variants – because reads that did not match the original genome
+sufficiently well now map to the mutated reference sequence.</p>
+<p>Use a command like this to generate the mutant genome sequence:</p>
+<div class="highlight"><pre><span></span><code>gdtools<span class="w"> </span>APPLY<span class="w"> </span>-f<span class="w"> </span>GFF3<span class="w"> </span>-o<span class="w"> </span>ZDB83.gff3<span class="w"> </span>-r<span class="w"> </span>REL606.gbk<span class="w"> </span>ZDB83.gd
+</code></pre></div>
+<p>Now start a new <span class="title-ref">breseq</span> run using a
+command like this:</p>
+<div class="highlight"><pre><span></span><code>breseq<span class="w"> </span>-j<span class="w"> </span><span class="m">4</span><span class="w"> </span>-l<span class="w"> </span><span class="m">60</span><span class="w"> </span>-o<span class="w"> </span>ZDB83_mutated_output<span class="w"> </span>-r<span class="w"> </span>ZDB83.gff3<span class="w"> </span>SRR098034.fastq
+</code></pre></div>
+<p>Wait for this to run and then examine the output (you probably want to
+continue this tutorial in another window while you wait for that command
+to complete).</p>
+<p>You should see the all of the previously predicted mutations and the
+<em>rnk-citG</em> junction disappear in the new output! If you make a coverage
+plot of the <em>citT</em> gene and the surrounding region, the coverage will
+also now be in red, indicating that reads no longer uniquely map to it
+because there are now multiple copies.</p>
+<p>Note that coordinates of genes are shifted in the mutated reference
+genome due to mutations! If you want to find out where the <em>citT</em> gene
+copies are located to use <code>gdtools BAM2COV</code>, you can use this command
+to show the relevant lines of the GFF3 reference file:</p>
+<div class="highlight"><pre><span></span><code>grep<span class="w"> </span>citT<span class="w"> </span>ZDB83.gff3
+</code></pre></div>
+<h2 id="6-characterizing-genetic-diversity-and-genome-evolution">6. Characterizing genetic diversity and genome evolution<a class="headerlink" href="#6-characterizing-genetic-diversity-and-genome-evolution" title="Permanent link">&para;</a></h2>
+<p>At this point in the tutorial, you can branch off and explore multiple
+topics related to understanding genome evolution in this <em>E. coli</em>
+population. Normally, you would generate the "raw" <em>breseq</em> output
+for all of the genomes in this population and curate these files to
+resolve unassigned evidence. This can be a very time-consuming process
+(the <em>breseq</em> runs themselves, but especially getting all of the
+details correct for resolving the unassigned evidence).</p>
+<p>So, to get the most out of this tutorial in the shortest amount of time,
+please continue by <a href="https://barricklab.org/release/breseq_tutorial/curated_gd.tgz">downloading curated GenomeDiff
+files</a>
+for the 29 clones from this population described in <a href="">[Blount2011]</a>.</p>
+<p>Place this archive inside of your <code>tutorial_clones</code> directory.
+Decompress and change into the resulting directory, which is full of the
+curated files.</p>
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>tar<span class="w"> </span>-xvzf<span class="w"> </span>curated_gd.tgz
+$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>curated_gd
+</code></pre></div>
+<p>Note that these files have been edited in two ways from the raw <span
+class="title-ref">breseq</span> output. First, unassigned evidence has
+been resolved into mutations by manually editing the <span
+class="title-ref">GenomeDiff</span> files. Second, additional metadata
+has been added in the header sections. This data can be used by the
+<em>gdtools</em> utilities that will be demonstrated in these examples.</p>
+<p>For example, the header of the file <code>Ara-3_34000gen_ZDB83.gd</code> looks like
+this:</p>
+<div class="highlight"><pre><span></span><code>#=GENOME_DIFF 1.0
+#=TIME   34000
+#=POPULATION Ara-3
+#=TREATMENT  LTEE
+#=CLONE  ZDB83
+</code></pre></div>
+<h3 id="example-1-compare-mutations-in-different-genomes">Example 1. Compare mutations in different genomes<a class="headerlink" href="#example-1-compare-mutations-in-different-genomes" title="Permanent link">&para;</a></h3>
+<p>You can generate a table that enables you to compare the
+presence/absence of the mutations in multiple genomes using the
+<code>gdtools COMPARE</code> command. Let's generate a comparison table including
+the 4 the genomes from generations 15,000 and earlier. Try to figure out
+how to do this from the help:</p>
+<div class="highlight"><pre><span></span><code>gdtools<span class="w"> </span>COMPARE<span class="w"> </span>-h
+</code></pre></div>
+<details>
+<summary>Here's an example command</summary>
+
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>gdtools<span class="w"> </span>COMPARE<span class="w"> </span>-o<span class="w"> </span>../compare.html<span class="w"> </span>-r<span class="w"> </span>../REL606.gbk<span class="w"> </span>Ara-3_2000gen_REL1166A.gd<span class="w"> </span>Ara-3_5000gen_ZDB409.gd<span class="w"> </span>Ara-3_10000gen_ZDB429.gd<span class="w"> </span>Ara-3_15000gen_ZDB446.gd
+</code></pre></div>
+</details>
+
+<p>Answer these questions from the <code>gdtools COMPARE</code> output:</p>
+<ol>
+<li>In what order did mutations in these four genes occur in the
+    population: <em>fis</em>, <em>hslU</em>, <em>mrdB</em>, <em>ybaL</em>?</li>
+</ol>
+<details>
+<summary>Show the answer</summary>
+
+*mrdB* (2000+ generations) \< *hslU* and *fis* (5000+ generations) \<
+*ybaL* (10000+ generations)
+</details>
+
+<ol>
+<li>Do you see any mutations that are off the main line of descent?
+    (That is, they only appear in one or more early clones from a
+    lineage that appears to have later gone extinct, like from 2,000 or
+    5,000 generations.)</li>
+</ol>
+<details>
+<summary>Show me some examples</summary>
+For example, mutations in the genes *eaeH*, *infB*, and *fadL*.
+</details>
+
+<h3 id="example-2-analyze-rates-and-nature-of-genome-evolution">Example 2. Analyze rates and nature of genome evolution<a class="headerlink" href="#example-2-analyze-rates-and-nature-of-genome-evolution" title="Permanent link">&para;</a></h3>
+<p>You can count the number of mutations in each genome using the <code>gdtools
+COUNT</code> command. Try to figure out how to run it from the help:</p>
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>gdtools<span class="w"> </span>COUNT<span class="w"> </span>-h
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Save yourself some typing by putting <code>`ls *.gd`</code> in your command line for the GenomeDiff
+arguments! The backticks run the enclosed command and insert the output
+into your command line. This requires that you run the command from
+inside the <code>curated_gd</code> folder.</p>
+</div>
+<details>
+<summary>Here's an example command</summary>
+
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>gdtools<span class="w"> </span>COUNT<span class="w"> </span>-o<span class="w"> </span>../count.csv<span class="w"> </span>-r<span class="w"> </span>../REL606.gbk<span class="w"> </span><span class="sb">`</span>ls<span class="w"> </span>*.gd<span class="sb">`</span>
+</code></pre></div>
+</details>
+
+<p>Open the comma-separated values (CSV) output file <code>count.csv</code> in a
+<em>spreadsheet program</em> or in <em>R</em>.</p>
+<p>Answer these questions by loading the <code>gdtools COMPARE</code> output into
+<em>R</em>. It's easiest if you change back into your main <code>tutorial_clones</code>
+directory first.</p>
+<div class="highlight"><pre><span></span><code><span class="o">&gt;</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">read.csv</span><span class="p">(</span><span class="s">&quot;count.csv&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">header</span><span class="o">=</span><span class="bp">T</span><span class="p">)</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="nf">head</span><span class="p">(</span><span class="n">count</span><span class="p">)</span>
+</code></pre></div>
+<ol>
+<li>Is the rate at which mutations accumulate in these genomes constant
+    over time in this population? Graph the total number of mutations in
+    each genome (<strong>total</strong> column) versus the generation when it was
+    isolated (<strong>time</strong> column).</li>
+</ol>
+<details>
+<summary>Show R commands</summary>
+<div class="highlight"><pre><span></span><code><span class="o">&gt;</span><span class="w"> </span><span class="nf">plot</span><span class="p">(</span><span class="n">total</span><span class="w"> </span><span class="o">~</span><span class="w"> </span><span class="n">time</span><span class="p">,</span><span class="w"> </span><span class="n">count</span><span class="p">)</span>
+</code></pre></div>
+</details>
+
+<details>
+<summary>Here's the key thing to notice in the graph</summary>
+
+Some of the genomes from 36,000+ generations appear to have evolved an
+elevated mutation rate! They fall way above a line fit to the rest of
+the points.
+</details>
+
+<ol>
+<li>There are 52 mutations in ZDB464, a clone isolated at 20,000
+    generations. If we did a separate evolution experiment under
+    conditions of relaxed selection so that we were observing the
+    spontaneous rate of mutations (i.e., a mutation accumulation
+    experiment) and observed 47 mutations over 50,000 generations of
+    evolution, could we conclude that the rate of genome evolution along
+    the lineages leading to ZDB64 was faster or slower than the
+    spontaneous mutation rate? What is the P-value for rejecting the
+    null hypothesis of the same rate?</li>
+</ol>
+<details>
+<summary>Show a hint</summary>
+
+This is count data, so you'll want to use a Poisson test. That's the
+`poisson.test` function in _R_.
+</details>
+
+<details>
+<summary>Show the R commands</summary>
+
+<div class="highlight"><pre><span></span><code><span class="o">&gt;</span><span class="w"> </span><span class="nf">poisson.test</span><span class="p">(</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="m">52</span><span class="p">,</span><span class="w"> </span><span class="m">47</span><span class="p">),</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="m">20000</span><span class="p">,</span><span class="w"> </span><span class="m">50000</span><span class="p">))</span>
+
+<span class="n">Comparison</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">Poisson</span><span class="w"> </span><span class="n">rates</span>
+
+<span class="n">data</span><span class="o">:</span><span class="w">  </span><span class="nf">c</span><span class="p">(</span><span class="m">52</span><span class="p">,</span><span class="w"> </span><span class="m">64</span><span class="p">)</span><span class="w"> </span><span class="n">time</span><span class="w"> </span><span class="n">base</span><span class="o">:</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="m">20000</span><span class="p">,</span><span class="w"> </span><span class="m">50000</span><span class="p">)</span>
+<span class="n">count1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">52</span><span class="p">,</span><span class="w"> </span><span class="n">expected</span><span class="w"> </span><span class="n">count1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">33.143</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="o">-</span><span class="n">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.0001932</span>
+<span class="n">alternative</span><span class="w"> </span><span class="n">hypothesis</span><span class="o">:</span><span class="w"> </span><span class="n">true</span><span class="w"> </span><span class="n">rate</span><span class="w"> </span><span class="n">ratio</span><span class="w"> </span><span class="n">is</span><span class="w"> </span><span class="n">not</span><span class="w"> </span><span class="n">equal</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="m">1</span>
+<span class="m">95</span><span class="w"> </span><span class="n">percent</span><span class="w"> </span><span class="n">confidence</span><span class="w"> </span><span class="n">interval</span><span class="o">:</span>
+<span class="w"> </span><span class="m">1.381119</span><span class="w"> </span><span class="m">2.975263</span>
+<span class="n">sample</span><span class="w"> </span><span class="n">estimates</span><span class="o">:</span>
+<span class="n">rate</span><span class="w"> </span><span class="n">ratio</span>
+<span class="w">  </span><span class="m">2.03125</span>
+</code></pre></div>
+
+So, yes the rates differ significantly (P = 0.00019).
+</details>
+
+<h3 id="example-3-analyze-unique-mutations-for-evidence-of-bias-and-selection">Example 3. Analyze unique mutations for evidence of bias and selection<a class="headerlink" href="#example-3-analyze-unique-mutations-for-evidence-of-bias-and-selection" title="Permanent link">&para;</a></h3>
+<p>Often, we only want to examine unique mutations within a population.
+Many of the mutations observed in the 5,000 generation clone are also
+found in the 20,000 generation clone, so just adding up the counts of
+mutations in each genome and then analyzing them for bias or selection
+would have a problem with pseudoreplication. Said another way, we don't
+want to count these mutations, which most likely only happened once in
+the population, as two independent observation supporting a hypothesis.
+One mutational event should count as one observation, no matter how many
+genomes it appears in.</p>
+<p>To define the set of unique mutations, we can use the <code>gdtools UNION</code>
+command:</p>
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>gdtools<span class="w"> </span>UNION<span class="w"> </span>-h
+</code></pre></div>
+<p>You'll want to exclude those outlier genomes for this analysis (the ones
+which have evolved a high mutation rate). It's probably easiest to move
+or delete these three genomes from the <code>curated_gd</code> folder:
+<code>Ara-3_36000gen_ZDB96.gd</code>, <code>Ara-3_38000gen_ZDB107.gd</code>, and
+<code>Ara-3_40000gen_REL10979.gd</code>.</p>
+<details>
+<summary>Show the gdtools command</summary>
+
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>curated_gd
+$<span class="w"> </span>gdtools<span class="w"> </span>UNION<span class="w"> </span>-o<span class="w"> </span>../unique.gd<span class="w"> </span><span class="sb">`</span>ls<span class="w"> </span>*.gd<span class="sb">`</span>
+</code></pre></div>
+</details>
+
+<p>This time, run the <code>gdtools COUNT</code> on just the one resulting
+<code>unique.gd</code> file. <strong>Important:</strong> Include the <code>-b</code> option. This
+provides additional output of the total number of synonymous and
+nonsynonymous mutations possible in the genome.</p>
+<details>
+<summary>Show the answer</summary>
+
+<div class="highlight"><pre><span></span><code><span class="o">$</span><span class="w"> </span><span class="n">cd</span><span class="w"> </span><span class="n">..</span>
+<span class="o">$</span><span class="w"> </span><span class="n">gdtools</span><span class="w"> </span><span class="n">COUNT</span><span class="w"> </span><span class="o">-</span><span class="n">b</span><span class="w"> </span><span class="o">-</span><span class="n">o</span><span class="w"> </span><span class="n">unique.csv</span><span class="w"> </span><span class="o">-</span><span class="n">r</span><span class="w"> </span><span class="n">REL606.gbk</span><span class="w"> </span><span class="n">unique.gd</span>
+</code></pre></div>
+</details>
+
+<p>Now, load <code>unique.csv</code> into <em>R</em> to answer these questions:</p>
+<ol>
+<li>Is the spectrum of base substitutions observed (A:T to G:C, A:T to
+    C:G, A:T to T:A, etc.) different from a null hypothesis that these
+    rates are uniform (that all six possible changes are equally
+    likely)?</li>
+</ol>
+<details>
+<summary>Show a hint</summary>
+We need to compare two models, one with the same rate for all six types
+of base substitutions and one in which there are different rates allowed
+for each base substitution. This is a hard one. Here are some of the
+tools you'll need to accomplish this in _R_:
+</details>
+
+<div class="highlight"><pre><span></span><code><span class="o">&gt;</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">read.csv</span><span class="p">(</span><span class="s">&quot;unique.csv&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">header</span><span class="o">=</span><span class="bp">T</span><span class="p">)</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="nf">head</span><span class="p">(</span><span class="n">count</span><span class="p">)</span>
+
+<span class="c1"># Define the categories and columns with the numbers that we will be using</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">base.substitutions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="s">&quot;AT.GC&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;AT.CG&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;AT.TA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;CG.TA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;CG.AT&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;CG.GC&quot;</span><span class="p">)</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">possible.columns</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">paste</span><span class="p">(</span><span class="s">&quot;POSSIBLE.TOTAL&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">base.substitutions</span><span class="p">,</span><span class="w">  </span><span class="n">sep</span><span class="o">=</span><span class="s">&quot;.&quot;</span><span class="p">)</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">total.columns</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">paste</span><span class="p">(</span><span class="s">&quot;OBSERVED.TOTAL&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">base.substitutions</span><span class="p">,</span><span class="w">  </span><span class="n">sep</span><span class="o">=</span><span class="s">&quot;.&quot;</span><span class="p">)</span>
+
+<span class="c1"># Create a data frame</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">base.sub</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">data.frame</span><span class="p">(</span><span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">as.factor</span><span class="p">(</span><span class="n">base.substitutions</span><span class="p">),</span><span class="w"> </span><span class="n">possible</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">as.numeric</span><span class="p">(</span><span class="n">count</span><span class="p">[</span><span class="n">possible.columns</span><span class="p">]),</span><span class="w"> </span><span class="n">total</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">as.numeric</span><span class="p">(</span><span class="n">count</span><span class="p">[</span><span class="n">total.columns</span><span class="p">]))</span>
+
+<span class="c1"># Now we have the data organized like this:</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">base.sub</span>
+<span class="w">   </span><span class="n">type</span><span class="w"> </span><span class="n">possible</span><span class="w"> </span><span class="n">total</span>
+<span class="m">1</span><span class="w"> </span><span class="n">AT.GC</span><span class="w">  </span><span class="m">2279284</span><span class="w">    </span><span class="m">14</span>
+<span class="m">2</span><span class="w"> </span><span class="n">AT.CG</span><span class="w">  </span><span class="m">2279284</span><span class="w">    </span><span class="m">23</span>
+<span class="m">3</span><span class="w"> </span><span class="n">AT.TA</span><span class="w">  </span><span class="m">2279284</span><span class="w">     </span><span class="m">9</span>
+<span class="m">4</span><span class="w"> </span><span class="n">CG.TA</span><span class="w">  </span><span class="m">2350528</span><span class="w">    </span><span class="m">37</span>
+<span class="m">5</span><span class="w"> </span><span class="n">CG.AT</span><span class="w">  </span><span class="m">2350528</span><span class="w">    </span><span class="m">14</span>
+<span class="m">6</span><span class="w"> </span><span class="n">CG.GC</span><span class="w">  </span><span class="m">2350528</span><span class="w">     </span><span class="m">3</span>
+
+<span class="c1"># To fit the single rate model (with no intercept), use glm()</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">one.rate</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">glm</span><span class="p">(</span><span class="n">total</span><span class="w"> </span><span class="o">~</span><span class="w"> </span><span class="n">possible</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="m">0</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="o">=</span><span class="n">base.sub</span><span class="p">,</span><span class="w"> </span><span class="n">family</span><span class="o">=</span><span class="nf">poisson</span><span class="p">())</span>
+</code></pre></div>
+<details>
+<summary>Show the rest of the answer</summary>
+<div class="highlight"><pre><span></span><code><span class="c1"># Fit the six rate model, use glm()</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">six.rate</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">glm</span><span class="p">(</span><span class="n">total</span><span class="w"> </span><span class="o">~</span><span class="w"> </span><span class="n">possible</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">type</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="m">0</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="o">=</span><span class="n">base.sub</span><span class="p">,</span><span class="w"> </span><span class="n">family</span><span class="o">=</span><span class="nf">poisson</span><span class="p">())</span>
+
+<span class="c1"># Perform a likelihood ratio test to compare the model fits</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="nf">anova</span><span class="p">(</span><span class="n">one.rate</span><span class="p">,</span><span class="w"> </span><span class="n">six.rate</span><span class="p">,</span><span class="w"> </span><span class="n">test</span><span class="o">=</span><span class="s">&quot;LRT&quot;</span><span class="p">)</span>
+
+<span class="n">Analysis</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">Deviance</span><span class="w"> </span><span class="n">Table</span>
+
+<span class="n">Model</span><span class="w"> </span><span class="m">1</span><span class="o">:</span><span class="w"> </span><span class="n">total</span><span class="w"> </span><span class="o">~</span><span class="w"> </span><span class="n">possible</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="m">0</span>
+<span class="n">Model</span><span class="w"> </span><span class="m">2</span><span class="o">:</span><span class="w"> </span><span class="n">total</span><span class="w"> </span><span class="o">~</span><span class="w"> </span><span class="n">possible</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">type</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="m">0</span>
+<span class="w">  </span><span class="n">Resid.</span><span class="w"> </span><span class="n">Df</span><span class="w"> </span><span class="n">Resid.</span><span class="w"> </span><span class="n">Dev</span><span class="w"> </span><span class="n">Df</span><span class="w"> </span><span class="n">Deviance</span><span class="w">  </span><span class="nf">Pr</span><span class="p">(</span><span class="o">&gt;</span><span class="n">Chi</span><span class="p">)</span>
+<span class="m">1</span><span class="w">         </span><span class="m">5</span><span class="w">     </span><span class="m">42.182</span>
+<span class="m">2</span><span class="w">         </span><span class="m">0</span><span class="w">      </span><span class="m">0.000</span><span class="w">  </span><span class="m">5</span><span class="w">   </span><span class="m">42.182</span><span class="w"> </span><span class="m">5.411e-08</span><span class="w"> </span><span class="o">***</span>
+<span class="o">---</span>
+<span class="n">Signif.</span><span class="w"> </span><span class="n">codes</span><span class="o">:</span><span class="w">  </span><span class="m">0</span><span class="w"> </span>‘<span class="o">***</span>’<span class="w"> </span><span class="m">0.001</span><span class="w"> </span>‘<span class="o">**</span>’<span class="w"> </span><span class="m">0.01</span><span class="w"> </span>‘<span class="o">*</span>’<span class="w"> </span><span class="m">0.05</span><span class="w"> </span>‘<span class="n">.</span>’<span class="w"> </span><span class="m">0.1</span><span class="w"> </span>‘<span class="w"> </span>’<span class="w"> </span><span class="m">1</span>
+</code></pre></div>
+
+
+Therefore, the six rate model fits significantly better (P = 5.4E-8) ,
+so we can reject the hypothesis that the rates of all six types of base
+pair substitutions are the same in this data set.
+</details>
+
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Be careful how you interpret these results! These are the rates at which
+mutations accumulate in the genomes <em>after they are filtered by
+selection</em>. They almost certainly do not represent the underlying rates
+at which new spontaneous mutations appear in the genomes of new cells in
+the population, which could be higher or lower.</p>
+</div>
+<ol>
+<li>Is there evidence of positive selection in the base substitutions
+    that are observed in the evolving population (dN/dS &gt; 1)?</li>
+</ol>
+<details>
+<summary>Show a hint</summary>
+
+The observed dN/dS ratio can be calculated as:
+
+<div class="highlight"><pre><span></span><code><span class="o">&gt;</span><span class="w"> </span><span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">read.csv</span><span class="p">(</span><span class="s">&quot;unique.csv&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">header</span><span class="o">=</span><span class="bp">T</span><span class="p">)</span>
+
+<span class="o">&gt;</span><span class="w"> </span><span class="n">dN</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">count</span><span class="o">$</span><span class="n">OBSERVED.NONSYNONYMOUS.TOTAL</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">dS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">count</span><span class="o">$</span><span class="n">OBSERVED.SYNONYMOUS.TOTAL</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">dN</span><span class="o">/</span><span class="n">dS</span>
+<span class="p">[</span><span class="m">1</span><span class="p">]</span><span class="w"> </span><span class="m">4.133333</span>
+</code></pre></div>
+
+However, you need to calculate the expected dN/dS ratio to see if this
+is elevated with respect to chance. This requires an assumption about
+the base change spectrum. Why? There is a much higher chance that a G:C
+to A:T mutation will be nonsynonymous than a G:C to T:A mutation, for
+example. So we need to sum over the number of possible synonymous and
+nonsynonymous mutations given a spectrum of base substitutions. For
+simplicity, let's assume a 2:1 transition:transition ratio.
+</details>
+
+<details>
+<summary>Show the next hint</summary>
+
+Here's one way to calculate the expectation for dN/dS:
+
+<div class="highlight"><pre><span></span><code><span class="o">&gt;</span><span class="w"> </span><span class="n">base.substitutions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="s">&quot;AT.GC&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;AT.CG&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;AT.TA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;CG.TA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;CG.AT&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;CG.GC&quot;</span><span class="p">)</span>
+
+<span class="c1"># This is a 2:1 transition to transversion ratio</span>
+<span class="c1"># because there are two transversion categories for each transition</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">rate.spectrum</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="m">4</span><span class="p">,</span><span class="m">1</span><span class="p">,</span><span class="m">1</span><span class="p">,</span><span class="m">4</span><span class="p">,</span><span class="m">1</span><span class="p">,</span><span class="m">1</span><span class="p">)</span>
+
+<span class="o">&gt;</span><span class="w"> </span><span class="n">possible.dN.columns</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">paste</span><span class="p">(</span><span class="s">&quot;POSSIBLE.NONSYNONYMOUS&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">base.substitutions</span><span class="p">,</span><span class="w">  </span><span class="n">sep</span><span class="o">=</span><span class="s">&quot;.&quot;</span><span class="p">)</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">possible.dS.columns</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">paste</span><span class="p">(</span><span class="s">&quot;POSSIBLE.SYNONYMOUS&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">base.substitutions</span><span class="p">,</span><span class="w">  </span><span class="n">sep</span><span class="o">=</span><span class="s">&quot;.&quot;</span><span class="p">)</span>
+
+<span class="o">&gt;</span><span class="w"> </span><span class="n">dN.expect</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">sum</span><span class="p">(</span><span class="n">count</span><span class="p">[</span><span class="n">possible.dN.columns</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">rate.spectrum</span><span class="p">)</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">dS.expect</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">sum</span><span class="p">(</span><span class="n">count</span><span class="p">[</span><span class="n">possible.dS.columns</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">rate.spectrum</span><span class="p">)</span>
+
+<span class="o">&gt;</span><span class="w"> </span><span class="n">dN.expect</span><span class="o">/</span><span class="n">dS.expect</span>
+<span class="p">[</span><span class="m">1</span><span class="p">]</span><span class="w"> </span><span class="m">2.320187</span>
+</code></pre></div>
+
+You still need to calculate whether the observed dN/dS ratio (4.13) is
+significantly greater than the expected ratio (2.32). To do this, use
+`binom.test()`.
+
+</details>
+
+<details>
+<summary>Show the answer</summary>
+
+<div class="highlight"><pre><span></span><code><span class="o">&gt;</span><span class="w"> </span><span class="nf">binom.test</span><span class="p">(</span><span class="nf">c</span><span class="p">(</span><span class="n">dN</span><span class="p">,</span><span class="w"> </span><span class="n">dS</span><span class="p">),</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dN.expect</span><span class="o">/</span><span class="p">(</span><span class="n">dN.expect</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">dS.expect</span><span class="p">))</span>
+
+<span class="n">Exact</span><span class="w"> </span><span class="n">binomial</span><span class="w"> </span><span class="n">test</span>
+
+<span class="n">data</span><span class="o">:</span><span class="w">  </span><span class="nf">c</span><span class="p">(</span><span class="n">dN</span><span class="p">,</span><span class="w"> </span><span class="n">dS</span><span class="p">)</span>
+<span class="n">number</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">successes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">62</span><span class="p">,</span><span class="w"> </span><span class="n">number</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">trials</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">77</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="o">-</span><span class="n">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.04629</span>
+<span class="n">alternative</span><span class="w"> </span><span class="n">hypothesis</span><span class="o">:</span><span class="w"> </span><span class="n">true</span><span class="w"> </span><span class="n">probability</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">success</span><span class="w"> </span><span class="n">is</span><span class="w"> </span><span class="n">not</span><span class="w"> </span><span class="n">equal</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="m">0.6988121</span>
+<span class="m">95</span><span class="w"> </span><span class="n">percent</span><span class="w"> </span><span class="n">confidence</span><span class="w"> </span><span class="n">interval</span><span class="o">:</span>
+<span class="w"> </span><span class="m">0.6991329</span><span class="w"> </span><span class="m">0.8866683</span>
+<span class="n">sample</span><span class="w"> </span><span class="n">estimates</span><span class="o">:</span>
+<span class="n">probability</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">success</span>
+<span class="w">             </span><span class="m">0.8051948</span>
+</code></pre></div>
+
+So the dN/dS ratio is marginally significantly different from expected
+with our assumed base mutation spectrum (P = 0.046).
+
+For a (much) more conservative test, we can assume that the underlying
+base change spectrum is represented by the observed base changes
+(essentially a randomization test that keeps the base changes equal and
+shuffles them to random protein-coding positons in the genome). The code
+to do this is as follows:
+
+<div class="highlight"><pre><span></span><code><span class="o">&gt;</span><span class="w"> </span><span class="n">base.substitutions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="s">&quot;AT.GC&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;AT.CG&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;AT.TA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;CG.TA&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;CG.AT&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;CG.GC&quot;</span><span class="p">)</span>
+
+<span class="o">&gt;</span><span class="w"> </span><span class="n">possible.dN.columns</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">paste</span><span class="p">(</span><span class="s">&quot;POSSIBLE.NONSYNONYMOUS&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">base.substitutions</span><span class="p">,</span><span class="w">  </span><span class="n">sep</span><span class="o">=</span><span class="s">&quot;.&quot;</span><span class="p">)</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">possible.dS.columns</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">paste</span><span class="p">(</span><span class="s">&quot;POSSIBLE.SYNONYMOUS&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">base.substitutions</span><span class="p">,</span><span class="w">  </span><span class="n">sep</span><span class="o">=</span><span class="s">&quot;.&quot;</span><span class="p">)</span>
+
+<span class="o">&gt;</span><span class="w"> </span><span class="n">observed.dN.columns</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">paste</span><span class="p">(</span><span class="s">&quot;OBSERVED.NONSYNONYMOUS&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">base.substitutions</span><span class="p">,</span><span class="w">  </span><span class="n">sep</span><span class="o">=</span><span class="s">&quot;.&quot;</span><span class="p">)</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">observed.dS.columns</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">paste</span><span class="p">(</span><span class="s">&quot;OBSERVED.SYNONYMOUS&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">base.substitutions</span><span class="p">,</span><span class="w">  </span><span class="n">sep</span><span class="o">=</span><span class="s">&quot;.&quot;</span><span class="p">)</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">total.dN.dS</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">count</span><span class="p">[</span><span class="n">observed.dN.columns</span><span class="p">]</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">count</span><span class="p">[</span><span class="n">observed.dS.columns</span><span class="p">]</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">total.dN.dS</span>
+<span class="w">  </span><span class="n">OBSERVED.NONSYNONYMOUS.AT.GC</span><span class="w"> </span><span class="n">OBSERVED.NONSYNONYMOUS.AT.CG</span>
+<span class="m">1</span><span class="w">                           </span><span class="m">10</span><span class="w">                           </span><span class="m">19</span>
+<span class="w">  </span><span class="n">OBSERVED.NONSYNONYMOUS.AT.TA</span><span class="w"> </span><span class="n">OBSERVED.NONSYNONYMOUS.CG.TA</span>
+<span class="m">1</span><span class="w">                            </span><span class="m">7</span><span class="w">                           </span><span class="m">27</span>
+<span class="w">  </span><span class="n">OBSERVED.NONSYNONYMOUS.CG.AT</span><span class="w"> </span><span class="n">OBSERVED.NONSYNONYMOUS.CG.GC</span>
+<span class="m">1</span><span class="w">                           </span><span class="m">11</span><span class="w">                            </span><span class="m">3</span>
+
+<span class="o">&gt;</span><span class="w"> </span><span class="n">dN.expect</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">sum</span><span class="p">(</span><span class="n">count</span><span class="p">[</span><span class="n">possible.dN.columns</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">total.dN.dS</span><span class="p">)</span>
+<span class="o">&gt;</span><span class="w"> </span><span class="n">dS.expect</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nf">sum</span><span class="p">(</span><span class="n">count</span><span class="p">[</span><span class="n">possible.dS.columns</span><span class="p">]</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">total.dN.dS</span><span class="p">)</span>
+
+<span class="o">&gt;</span><span class="w"> </span><span class="n">dN.expect</span><span class="o">/</span><span class="n">dS.expect</span>
+<span class="p">[</span><span class="m">1</span><span class="p">]</span><span class="w"> </span><span class="m">2.676483</span>
+
+<span class="o">&gt;</span><span class="w"> </span><span class="nf">binom.test</span><span class="p">(</span><span class="nf">c</span><span class="p">(</span><span class="n">dN</span><span class="p">,</span><span class="w"> </span><span class="n">dS</span><span class="p">),</span><span class="w"> </span><span class="n">p</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dN.expect</span><span class="o">/</span><span class="p">(</span><span class="n">dN.expect</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">dS.expect</span><span class="p">))</span>
+
+<span class="w">   </span><span class="n">Exact</span><span class="w"> </span><span class="n">binomial</span><span class="w"> </span><span class="n">test</span>
+
+<span class="n">data</span><span class="o">:</span><span class="w">  </span><span class="nf">c</span><span class="p">(</span><span class="n">dN</span><span class="p">,</span><span class="w"> </span><span class="n">dS</span><span class="p">)</span>
+<span class="n">number</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">successes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">62</span><span class="p">,</span><span class="w"> </span><span class="n">number</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">trials</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">77</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="o">-</span><span class="n">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">0.1581</span>
+<span class="n">alternative</span><span class="w"> </span><span class="n">hypothesis</span><span class="o">:</span><span class="w"> </span><span class="n">true</span><span class="w"> </span><span class="n">probability</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">success</span><span class="w"> </span><span class="n">is</span><span class="w"> </span><span class="n">not</span><span class="w"> </span><span class="n">equal</span><span class="w"> </span><span class="n">to</span><span class="w"> </span><span class="m">0.7280009</span>
+<span class="m">95</span><span class="w"> </span><span class="n">percent</span><span class="w"> </span><span class="n">confidence</span><span class="w"> </span><span class="n">interval</span><span class="o">:</span>
+<span class="w"> </span><span class="m">0.6991329</span><span class="w"> </span><span class="m">0.8866683</span>
+<span class="n">sample</span><span class="w"> </span><span class="n">estimates</span><span class="o">:</span>
+<span class="n">probability</span><span class="w"> </span><span class="n">of</span><span class="w"> </span><span class="n">success</span>
+<span class="w">             </span><span class="m">0.8051948</span>
+</code></pre></div>
+
+As you can see, the dN/dS ratio is not significantly different from
+expected by this test. This is a very stringent test because positive
+selection (favoring an elevated dN/dS ratio) should actually alter the
+observed base spectrum from the underlying mutational spectrum. It will
+tend to favor transversions over transitions, because they are more
+likely to change the encoded amino acid.
+</details>
+
+<h3 id="example-4-build-a-phylogenetic-tree-of-population-ara-3">Example 4. Build a phylogenetic tree of population Ara-3<a class="headerlink" href="#example-4-build-a-phylogenetic-tree-of-population-ara-3" title="Permanent link">&para;</a></h3>
+<p>You can use <code>gdtools COMPARE</code> and the <a href="https://evolution.genetics.washington.edu/phylip.html">Phylip
+package</a> program
+<code>dnapars</code> to create a maximum parsimony phylogenetic tree files.</p>
+<p>At first, let's just use a subset of the genomes through 30,000
+generations. Move the others out of the <code>curated_gd</code> folder. We'll keep
+the ancestral genome with no mutations (REL606) to use as the outgroup
+in rooting this tree.</p>
+<p>See if you can figure out how to make a Phylip format output file from
+<code>gdtools COMPARE</code>:</p>
+<div class="highlight"><pre><span></span><code>gdtools<span class="w"> </span>COMPARE<span class="w"> </span>-h
+</code></pre></div>
+<details>
+<summary>Show example code</summary>
+
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>curated_gd
+$<span class="w"> </span>gdtools<span class="w"> </span>COMPARE<span class="w"> </span>-f<span class="w"> </span>phylip<span class="w"> </span>-o<span class="w"> </span>../infile<span class="w"> </span>-r<span class="w"> </span>../REL606.gbk<span class="w"> </span><span class="sb">`</span>ls<span class="w"> </span>*.gd<span class="sb">`</span>
+</code></pre></div>
+</details>
+
+<p>Examine the output file from <code>gdtools COMPARE</code> in a text editor. It
+consists of <em>phylip</em> input shown as nucleotides with a column for
+every unique mutation observed in the population. For SNPs, the actual
+nucleotides in the respective genome are shown in the column. For other
+mutations, an 'A' is used for the ancestral state, and a 'T' is used for
+the derived state (e.g., with IS element inserted). You may also notice
+'N' states, which can occur when a region with a mutation in one genome
+was deleted in another genome, making the the state of that allele
+ambiguous. This 'N' state can also occur when there were not enough
+reads in a sequencing sample to call mutations in this region.</p>
+<p>This file is suitable for use as an <code>infile</code> to the <em>phylip</em> <code>dnapars</code>
+command. You can run <code>dnapars</code> at the command-line using a locally
+installed version of <em>phylip</em> or run it on the web <a href="https://mobyle.pasteur.fr/cgi-bin/portal.py#forms::dnapars">via Mobyle
+@Pasteur</a>.
+Use the default <em>dnapars</em> program parameters.</p>
+<p>Now you can visualize the <code>outree</code> file (which is in <a href="https://en.wikipedia.org/wiki/Newick_format">Newick
+format</a>) via many different
+tools. Here are a couple that enable online viewing within a web
+browser:</p>
+<ul>
+<li><a href="http://www.trex.uqam.ca/index.php?action=newick">Newick Viewer @ T-REX web
+    server</a></li>
+<li><a href="http://www.phylogeny.fr/one_task.cgi?task_type=treedyn">Tree Dyn @
+    Phylogeny.fr</a></li>
+</ul>
+<p>You'll notice that the names in your tree are the file names truncated
+to 10 characters (a limitation of the file format Phylip uses). This
+isn't terribly useful for the way we have named the files. Here's a
+version with the full names substituted back in: <a href="https://barricklab.org/release/breseq_tutorial/Ara-3.tre">download
+Ara-3.tre</a></p>
+<figure>
+<img src="images/Ara-3.tree.png" width="647" />
+</figure>
+
+<p>As a further exercise, you can try constructing a tree using all of the
+genomes from this population.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If you have <em>phylip</em> installed at the command line, you can also
+experiment with using <code>gdtools PHYLOGENY</code> to directly create a tree
+with the full names of each sample included.</p>
+</div>
+<p>What if we wanted to find the mutations that happened on a particular
+branch in the phylogenetic tree? We might want to know candidate
+mutations that could be responsible for a change in the phenotype, for
+example.</p>
+<p>To do this, we can use our phylogenetic tree as a guide for
+<em>gdtools</em> set operations. For example, let's find out what mutations
+occurred on the branch highlighted in the figure above in red.</p>
+<p>Use these commands:</p>
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span>gdtools<span class="w"> </span>SUBTRACT<span class="w"> </span>-h
+$<span class="w"> </span>gdtools<span class="w"> </span>INTERSECT<span class="w"> </span>-h
+</code></pre></div>
+<details>
+<summary>Here's an example of how</summary>
+
+<div class="highlight"><pre><span></span><code>$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>curated_gd
+$<span class="w"> </span>gdtools<span class="w"> </span>INTERSECT<span class="w"> </span>-o<span class="w"> </span>../intersection.gd<span class="w"> </span>Ara-3_30000gen_ZDB16.gd<span class="w"> </span>Ara-3_30000gen_ZDB357.gd
+$<span class="w"> </span>gdtools<span class="w"> </span>SUBTRACT<span class="w"> </span>-o<span class="w"> </span>../branch.gd<span class="w"> </span>../intersection.gd<span class="w"> </span>Ara-3_10000gen_ZDB429.gd
+$<span class="w"> </span><span class="nb">cd</span><span class="w"> </span>..
+$<span class="w"> </span>gdtools<span class="w"> </span>COMPARE<span class="w"> </span>-r<span class="w"> </span>REL606.gbk<span class="w"> </span>-o<span class="w"> </span>branch.html<span class="w"> </span>branch.gd
+</code></pre></div>
+
+You can open `branch.html` in a web browser to see an annotated list
+of the 10 mutations along this branch.
+</details>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "toc.follow", "search.suggest", "content.code.copy", "content.action.edit"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

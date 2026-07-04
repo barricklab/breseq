@@ -1,0 +1,1809 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://breseq.barricklab.org/0.40.1/tutorial-curation-automating/">
+      
+      
+        <link rel="prev" href="../tutorial-curation-exploring-aligned-reads/">
+      
+      
+        <link rel="next" href="../tutorial-curation-common-cases/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Automating with brefito - breseq</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#installing-brefito" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="breseq" class="md-header__button md-logo" aria-label="breseq" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            breseq
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Automating with brefito
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/barricklab/breseq" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    barricklab/breseq
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../introduction/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Introduction
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../installation/" class="md-tabs__link">
+          
+  
+  
+  Quick Start
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../usage-breseq/" class="md-tabs__link">
+          
+  
+  
+  More Options
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../reference-sequence-file-formats/" class="md-tabs__link">
+          
+  
+  
+  More Information
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../tutorial-clones/" class="md-tabs__link">
+          
+  
+  
+  More Examples
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../acknowledgments/" class="md-tabs__link">
+          
+  
+  
+  About
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="breseq" class="md-nav__button md-logo" aria-label="breseq" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    breseq
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/barricklab/breseq" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    barricklab/breseq
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Quick Start
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../test-drive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test Drive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    More Options
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    More Options
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage-breseq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage: breseq
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage-gdtools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage: gdtools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    More Information
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    More Information
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference-sequence-file-formats/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference Sequence File Formats
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../output/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../methods/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Methods
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../genomediff-file-format/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GenomeDiff File Format
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bibliography/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bibliography
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    More Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    More Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-clones/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Clones
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-populations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Populations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-barcoded-targeted/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Barcoded/Targeted
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Curation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorial: Curation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-running-breseq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running breseq
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-editing-genomediff-files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Editing GenomeDiff Files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validating Predictions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-exploring-aligned-reads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exploring Aligned Reads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Automating with brefito
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Automating with brefito
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#installing-brefito" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installing brefito
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#setting-up-the-data-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setting up the data file
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-breseq-on-all-of-the-samples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running breseq on all of the samples
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#additional-analysis-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Additional analysis examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#curating-the-genomediff-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Curating the GenomeDiff files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#other-brefito-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Other brefito Functions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Other brefito Functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#blast-searches-against-the-reference-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BLAST searches against the reference files
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-common-cases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Curation Cases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-ecoli-ltee/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Curating E. coli LTEE Genomes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    About
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../acknowledgments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Acknowledgments
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#installing-brefito" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installing brefito
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#setting-up-the-data-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setting up the data file
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running-breseq-on-all-of-the-samples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Running breseq on all of the samples
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#additional-analysis-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Additional analysis examples
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#curating-the-genomediff-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Curating the GenomeDiff files
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#other-brefito-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Other brefito Functions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Other brefito Functions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#blast-searches-against-the-reference-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        BLAST searches against the reference files
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/barricklab/breseq/edit/master/docs/tutorial-curation-automating.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+  <h1>Automating with brefito</h1>
+
+<p><a href="../tutorial-curation/">Back to the Main Curation Tutorial Page</a></p>
+<p>In this part of the tutorial, we will automate running the curation cycle on many genomes at once using <a href="https://github.com/barricklab/brefito"><em>brefito</em></a>. </p>
+<p><strong>What's happening?</strong> </p>
+<p><em>brefito</em> is a helper script and set of snakemake workflows that make it easier to run these steps on many samples in parallel. Once you set up a control file telling it what to do, it generates and runs all of the commands that you need!</p>
+<h2 id="installing-brefito">Installing <em>brefito</em><a class="headerlink" href="#installing-brefito" title="Permanent link">&para;</a></h2>
+<p>Follow the <a href="https://github.com/barricklab/brefito/wiki/Installation">directions for installing <em>brefito</em></a>.</p>
+<p>Since <em>brefito</em> is actively updated (and we might even fix bugs while doing this tutorial), consider using the <strong>editable install</strong> instructions. This will make it quicker to update your code to the newest version.</p>
+<h2 id="setting-up-the-data-file">Setting up the data file<a class="headerlink" href="#setting-up-the-data-file" title="Permanent link">&para;</a></h2>
+<p>To use <em>brefito</em> you will specify a set of samples and the references files and read files that are associated with each sample. This is accomplished by creating a <code>data.csv</code> file in the main directory in which you will perform the analysis. For everything in this part of the tutorial we will be describing what you put inside this main directory.</p>
+<p>First, read the <a href="https://github.com/barricklab/brefito/wiki/Overview"><em>brefito</em> overview</a> to learn a bit about the main command and the format of the <code>data.csv</code> file. </p>
+<p>A simple template for this file would look like this:
+<div class="highlight"><pre><span></span><code>sample,type,setting
+SAMPLENAME1,illumina-PE,READPATH1
+SAMPLENAME2,illumina-PE,READPATH2
+...
+SAMPLENAMEX,illumina-PE,READPATHX
+*,reference,REFERENCEPATH
+</code></pre></div>
+But, we need to change the entries in ALL-CAPS!</p>
+<p>The <code>data.csv</code> file is in a comma-separated values format. You can edit it in either a text editor or in a spreadsheet program. Be careful to export as a CSV with UTF-8 encoding if you use a spreadsheet program.</p>
+<p>For example, here's how we would set up a run of the 75K-generation A and B clones from LTEE population A-1. You can run an analysis on many more than two samples at once using what you will learn here, but at least this example will start to show you how using <em>brefito</em> can simplify your life.</p>
+<p>For purposes of this tutorial, we are going to put all of the input <strong>read files</strong> we need in an <code>input</code> subdirectory and tell <em>brefito</em> to use these files. If your reads are accessible online (for example, in the SRA or stored on a fileserver that can be accessed publicly or privately through <code>lftp</code>) there are other ways to set this up described in the documentation that will save you the step of manually having to copy the files to this location.</p>
+<p>Since all of our samples are LTEE genomes and the <em>E. coli</em> REL606 <strong>reference file</strong> is available online, we will give <em>brefito</em> a URL to download that from. (The URL is complex because it is for a specific version from the <a href="https://github.com/barricklab/LTEE-Ecoli">LTEE-Ecoli repository</a>.)</p>
+<p>One trick for paired-end Illumina reads is that putting the special wildcard string <code>{1|2}</code> inside of the <code>READPATH</code> makes it match both files with either a 1 or a 2 there, so you can easily specify both FASTQ files for paired-end reads in one line. It's also possible to put two lines, one with the name of each file, and as long as they have a 1 and corresponding 2 in the filenames and match otherwise, <em>brefito</em> should be able to figure out that they belong together.</p>
+<p>So your <code>data.csv</code> file might end up looking something like this:
+<div class="highlight"><pre><span></span><code>sample,type,setting
+A-1_75K_clone_A,illumina-PE,input/75K-1A_LTC-0000001_S.R{1|2}.fastq.gz
+A-1_75K_clone_B,illumina-PE,input/75K-1B_LTC-0000002_S.R{1|2}.fastq.gz
+*,reference,https://raw.githubusercontent.com/barricklab/LTEE/7da91974eafac0c5a8f903ae57275795d4395af2/reference/REL606.gbk
+</code></pre></div></p>
+<p>To get this to work, you MUST download/copy/move these four files into a new <code>input</code> directory that you create within your main directory:
+<div class="highlight"><pre><span></span><code>75K-1A_LTC-0000001_S.R1.fastq.gz
+75K-1A_LTC-0000001_S.R2.fastq.gz
+75K-1B_LTC-0000002_S.R1.fastq.gz
+75K-1B_LTC-0000002_S.R2.fastq.gz
+</code></pre></div></p>
+<p>If you had single-end reads, you would specify just <code>illumina</code> or <code>illumina-SE</code> in place of <code>illumina-PE</code>. If you want to combine analyzing FASTQ files from multiple instrument runs (perhaps you didn't get enough coverage the first time), just add extra lines for that sample. You can also specify <code>nanopore</code> reads and use these as input. </p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p><em>brefito</em> takes care of running the right programs to trim different types of reads and setting <em>breseq</em> options to be appropriate. Usually, its default settings should work, but if you want more control, see the <a href="https://github.com/barricklab/brefito/wiki/Workflows"><em>brefito</em> workflow descriptions</a> for how you can pass setting to specific programs that are run as part of a pipeline.</p>
+</div>
+<p>You could test whether your <code>data.csv</code> is set up correctly by running the <em>brefito</em> command that downloads and copies the input files to its particular locations (Remember to activate your <em>brefito</em> conda environment to run this command!)
+<div class="highlight"><pre><span></span><code>brefito<span class="w"> </span>download-data<span class="w"> </span>--resources<span class="w"> </span><span class="nv">connections</span><span class="o">=</span><span class="m">4</span>
+</code></pre></div></p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The <code>--resources connections=4</code> part is optional. It tells <em>brefito</em> how many downloads it is allowed to initiate simultaneously. By default, it is 1. Don't set this too high if you are on a shared machine! Something in the range 4-8 can often speed up the downloads by quite a bit, but at some point there are diminishing returns because you only have so much bandwidth in your connection to the internet. If you are following the previous steps, it actually doesn't help to have multiple downloads, because there is just the one reference file that will be downloaded and the read files are already on your machine.</p>
+</div>
+<p>If everything worked, you should now have <code>reference</code> and <code>illumina-reads</code> subdirectories.</p>
+<p>If you get an error, most likely there is something wrong with your paths! Check that the FASTQ files have the right names and are in the <code>input</code> directory within the main directory where you are running <em>brefito</em> and have your <code>data.csv</code> file.</p>
+<h2 id="running-breseq-on-all-of-the-samples">Running <em>breseq</em> on all of the samples<a class="headerlink" href="#running-breseq-on-all-of-the-samples" title="Permanent link">&para;</a></h2>
+<p>Now, running <em>breseq</em> on all samples is as simple as running this command:</p>
+<p><div class="highlight"><pre><span></span><code>brefito<span class="w"> </span>predict-mutations-breseq<span class="w"> </span>--config<span class="w"> </span><span class="nv">BRESEQ_OPTIONS</span><span class="o">=</span><span class="s2">&quot;-l 80&quot;</span>
+</code></pre></div>
+The part after <code>BRESEQ_OPTIONS</code> gets sent to every <em>breseq</em> command, so this limits the nominal coverage read-depth to 80x. (We have a lot of reads for these samples, so it will take a long time to run and a lot of disk space if you don't do this without any real gain in detecting mutations.) If you wanted to also use polymorphism mode, you could add <code>-p</code> inside of the double quotes.</p>
+<div class="admonition caution">
+<p class="admonition-title">Caution</p>
+<p>You should not pass the <code>-j</code> option for controlling how many threads <em>breseq</em> uses in this way. The number of threads to use is specified by the Snakemake workflow in a different way.</p>
+</div>
+<p>The final output will be in <code>breseq-references</code> (<em>breseq</em> run against the files in the <code>references</code> directory). </p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Notice that a new directory called <code>illumina-reads-trimmed</code> is also created because this workflow first trims the reads. If you ever want to <em>just</em> trim the reads, there are different <em>brefito</em> sub-workflows you can use called <code>trim-illumina-reads</code> and <code>trim-nanopore-reads</code>. You can see all of the workflows by running <code>brefito --help</code>.</p>
+</div>
+<p><em>brefito</em> divides up the <em>breseq</em> output into <code>data</code>, <code>gd</code>, and <code>html</code> subdirectories by sample, so that it is easy to grab just the pieces you need. One thing that is nice about the <code>gd</code> output directory is that instead of having to rename the <code>output.gd</code> from each <em>breseq</em> run to <code>SAMPLE.gd</code> when you are curating them, <em>brefito</em> already does this for you.</p>
+<p>If something goes wrong, check the logs in the <code>log</code> subdirectory. This is where the output you would normally see going to the terminal is piped (because it would get confusing to have it jumbled together from many <em>breseq</em> runs happening simultaneously).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In the future, we plan to add a say of changing <em>breseq</em> options on a per-sample basis. For now, you should set up different <em>brefito</em> analysis folders for using different options.</p>
+</div>
+<h2 id="additional-analysis-examples">Additional analysis examples<a class="headerlink" href="#additional-analysis-examples" title="Permanent link">&para;</a></h2>
+<p>Some common analysis steps can also be automated by <em>brefito</em>! </p>
+<p>For example, this 
+<div class="highlight"><pre><span></span><code>brefito<span class="w"> </span>compare-mutations-breseq
+</code></pre></div>
+This creates a file <code>breseq-references/compare_1.html</code> with the output. If you had sets of samples with different reference sequences, you would have more output files with names ending 2, 3, 4, etc., for each set of samples that shared the same reference sequences.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If you know you want this final output, you can actually run this command FIRST, and <em>brefito</em> will also run all of the required <em>breseq</em> , read trimming, downloading, etc., steps it needs to get to this output!</p>
+</div>
+<p>This command will generate tiled and summary coverage plots for all samples.
+<div class="highlight"><pre><span></span><code>brefito<span class="w"> </span>coverage-plots-breseq
+</code></pre></div>
+The output for each sample is under <code>breseq-references/cov</code>.</p>
+<h2 id="curating-the-genomediff-files">Curating the GenomeDiff files<a class="headerlink" href="#curating-the-genomediff-files" title="Permanent link">&para;</a></h2>
+<p>Copy the <code>breseq-references/gd</code> directory to a new <code>genome-diffs</code>.
+<div class="highlight"><pre><span></span><code>cp<span class="w"> </span>-r<span class="w"> </span>breseq-references/gd<span class="w"> </span>genome-diffs
+</code></pre></div></p>
+<p>Edit these GenomeDiff files as described in other parts of this tutorial to curate their mutation lists.</p>
+<p>When you are ready to check the mutation lists you annotated in your curated GenomeDiff files, it's always good to first quickly check their syntax with this command.</p>
+<p><div class="highlight"><pre><span></span><code>brefito<span class="w"> </span>validate-genome-diff-gdtools
+</code></pre></div>
+The output will be placed in <code>genome-diffs-validate</code>. </p>
+<p>You can open each individual text file, or view them all at once by typing this command:
+<div class="highlight"><pre><span></span><code>cat<span class="w"> </span>genome-diffs-validate/*
+</code></pre></div></p>
+<p>Then, you can generate the mutated genomes with this command.</p>
+<p><div class="highlight"><pre><span></span><code>brefito<span class="w"> </span>mutate-genomes-gdtools
+</code></pre></div>
+This will create an output directory called <code>mutants</code> with the mutated reference genomes.</p>
+<p>Then, re-run <em>breseq</em> against these mutant genomes using this command.</p>
+<div class="highlight"><pre><span></span><code>brefito<span class="w"> </span>predict-mutations-breseq-mutants<span class="w"> </span>--config<span class="w"> </span><span class="nv">BRESEQ_OPTIONS</span><span class="o">=</span><span class="s2">&quot;-l 80&quot;</span>
+</code></pre></div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p><code>predict-mutations-breseq</code> and some other workflows that use reference sequences in the <code>references</code> directory by default can be switched over to using other directories of reference files with this <code>predict-mutations-breseq-*</code> syntax. Here <code>*</code> is <code>mutants</code>, but you could create your own directory called whatever and substitute it here.</p>
+</div>
+<h2 id="other-brefito-functions">Other <em>brefito</em> Functions<a class="headerlink" href="#other-brefito-functions" title="Permanent link">&para;</a></h2>
+<h3 id="blast-searches-against-the-reference-files">BLAST searches against the reference files<a class="headerlink" href="#blast-searches-against-the-reference-files" title="Permanent link">&para;</a></h3>
+<p>Repeat or near-repeat sequences in your reference genome can make interpreting certain parts of the <em>breseq</em> output difficult (such as <strong>JC</strong> evidence items) when a sequence matches multiple places in the genome.</p>
+<div class="highlight"><pre><span></span><code>brefito search-blast CACCAAAACGTGCCGAGATGATCCTGTAACCATCATCAGTTGTGAAGTAGTGATTCACGACTTCAAGGCGCTTTTCAAAAGGGTATTTTGGCTTTGACATATTAGGGGCTATTCCATTTCATCGTCCAACAAAATGGGTGCAGTAC A-1_75K_clone_A
+</code></pre></div>
+<p>This creates a long HTML BLAST output file output file ending in <code>*.html</code> and a short tabular BLAST output file ending in <code>*.tsv</code> inside of the <code>blast-references</code> directory. The output of the short tabular file is also output directly so you can look at that immediately.</p>
+<p>Instead of providing a DNA sequence at the command line, you can replace that argument with the path to a FASTA file:
+<div class="highlight"><pre><span></span><code>brefito search-blast input.fasta A-1_75K_clone_A
+</code></pre></div></p>
+<p>The contents of the file <code>input.fasta</code> should be in FASTA format. So, it should look something like this:
+<div class="highlight"><pre><span></span><code>&gt;input
+CACCAAAACGTGCCGAGATGATCCTGTAACCATCATCAGTTGTGAAGTAGTGATTCACGA
+CTTCAAGGCGCTTTTCAAAAGGGTATTTTGGCTTTGACATATTAGGGGCTATTCCATTTC
+ATCGTCCAACAAAATGGGTGCAGTAC
+</code></pre></div>
+You can include multiple sequences in this FASTA file.</p>
+<p>You can also use the workflow <code>search-blast-mutants</code> to BLAST against one of the mutant genomes you generated versus the default of using the references.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>If you leave off the last sample argument (<code>A-1_75K_clone_A</code> in the examples above) <em>brefito</em> will perform individual BLAST runs against ALL of your reference sequences. Usually this will be redundant if they all have the same references! If you do want to BLAST against multiple references, but only specific ones, you can continue the command line by adding additional sample names (e.g., <code>A-1_75K_clone_B</code>)</p>
+</div>
+<p><strong>Next:</strong> <a href="../tutorial-curation-common-cases/">Common curation cases</a></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "toc.follow", "search.suggest", "content.code.copy", "content.action.edit"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

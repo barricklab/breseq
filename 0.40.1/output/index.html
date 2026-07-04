@@ -1,0 +1,2198 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://breseq.barricklab.org/0.40.1/output/">
+      
+      
+        <link rel="prev" href="../reference-sequence-file-formats/">
+      
+      
+        <link rel="next" href="../methods/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Output - breseq</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#html-output-human-perusable" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="breseq" class="md-header__button md-logo" aria-label="breseq" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            breseq
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Output
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/barricklab/breseq" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    barricklab/breseq
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../introduction/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Introduction
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../installation/" class="md-tabs__link">
+          
+  
+  
+  Quick Start
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../usage-breseq/" class="md-tabs__link">
+          
+  
+  
+  More Options
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../reference-sequence-file-formats/" class="md-tabs__link">
+          
+  
+  
+  More Information
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../tutorial-clones/" class="md-tabs__link">
+          
+  
+  
+  More Examples
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../acknowledgments/" class="md-tabs__link">
+          
+  
+  
+  About
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="breseq" class="md-nav__button md-logo" aria-label="breseq" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    breseq
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/barricklab/breseq" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    barricklab/breseq
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Quick Start
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../test-drive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test Drive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    More Options
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    More Options
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage-breseq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage: breseq
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage-gdtools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage: gdtools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    More Information
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    More Information
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference-sequence-file-formats/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference Sequence File Formats
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#mutation-display" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mutation Display
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mutation Display">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#single-base-substitution-snp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Single-base substitution (SNP)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multiple-base-substitution-sub" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multiple-base substitution (SUB)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#insertion-ins" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Insertion (INS)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deletion-del" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deletion (DEL)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mobile-element-insertion-mob" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mobile element insertion (MOB)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sequence-amplification-amp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sequence amplification (AMP)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#evidence-display" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evidence Display
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Evidence Display">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#new-junction-jc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New Junction (JC)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#read-alignment-ra" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Read alignment (RA)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#missing-coverage-mc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Missing coverage (MC)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../methods/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Methods
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../genomediff-file-format/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GenomeDiff File Format
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bibliography/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bibliography
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    More Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    More Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-clones/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Clones
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-populations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Populations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-barcoded-targeted/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Barcoded/Targeted
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Curation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorial: Curation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-running-breseq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running breseq
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-editing-genomediff-files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Editing GenomeDiff Files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validating Predictions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-exploring-aligned-reads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exploring Aligned Reads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-automating/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Automating with brefito
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-common-cases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Curation Cases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-ecoli-ltee/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Curating E. coli LTEE Genomes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    About
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../acknowledgments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Acknowledgments
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#mutation-display" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mutation Display
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mutation Display">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#single-base-substitution-snp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Single-base substitution (SNP)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multiple-base-substitution-sub" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multiple-base substitution (SUB)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#insertion-ins" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Insertion (INS)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deletion-del" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deletion (DEL)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mobile-element-insertion-mob" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mobile element insertion (MOB)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sequence-amplification-amp" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sequence amplification (AMP)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#evidence-display" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evidence Display
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Evidence Display">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#new-junction-jc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New Junction (JC)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#read-alignment-ra" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Read alignment (RA)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#missing-coverage-mc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Missing coverage (MC)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/barricklab/breseq/edit/master/docs/output.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<p><em>breseq</em> produces two types of output: </p>
+<ol>
+<li>HTML Output (<code>&lt;output&gt;/output</code> subdirectory)</li>
+</ol>
+<p>This is the main output most users will interact with! This output is formatted to make it easy for you to peruse mutation lists and click on links to check the evidence that was used to make these predictions.</p>
+<ol>
+<li>Data Files (<code>&lt;output&gt;/data</code> subdirectory)</li>
+</ol>
+<p>additional output files are meant to be machine-readable so they can be used as input into other analysis commands or programs, including the <em>gdtools</em> utility that is .</p>
+<h1 id="html-output-human-perusable">HTML Output (Human-Perusable)<a class="headerlink" href="#html-output-human-perusable" title="Permanent link">&para;</a></h1>
+<p><em>breseq</em> produces a stand-alone HTML archive in the <code>output</code> subdirectory of the main output directory that you specified at the command line. </p>
+<p>You can load these files directly in a browser to examine the results, or copy the directory to a server to allow access via the web. Be sure you keep all of the subdirectories when you copy or move the <code>output</code> directory or the links will break!</p>
+<p>Key files include:</p>
+<p><code>output/index.html</code> \
+The main results page. It consists of an upper table showing predicted mutational events and possibly several other tables showing high-quality "orphan" evidence that <em>breseq</em> was unable to assign to mutational events. The format of each row varies depending on the type of mutation, as described in <code>mutation-display</code> and <code>evidence-display</code>.</p>
+<p><code>output/marginal.html</code>\
+Result page showing evidence for mutations with marginal support. Specifically: (1) RA evidence that supports a mutated base or indel more than the reference sequence, but without sufficient support to pass the cutoff threshold, and (2) JC evidence for a set number of the highest scoring junctions that do not pass all test criteria. The format of these tables is described in <code>evidence-display</code>.</p>
+<p><code>output/summary.html</code>\
+Additional information about the read files, reference sequences, analysis settings, and results. Links to plots showing the re-calibrated base error model, coverage distribution for each reference sequence, and coverage across each reference sequence.
+https://utexas.zoom.us/j/5110250268https://utexas.zoom.us/j/5110250268</p>
+<p><code>output/log.txt</code>\
+The original command line used to invoke <em>breseq</em>.</p>
+<h2 id="mutation-display">Mutation Display<a class="headerlink" href="#mutation-display" title="Permanent link">&para;</a></h2>
+<p>Each row displays a predicted mutation in the re-sequenced sample relative to the reference. Examples showing how the format varies depending on the type of mutation are provided in the following sections.</p>
+<p>Column descriptions:</p>
+<p><code>evidence</code>\
+Links to the types of evidence that support this particular prediction.
+See <code>evidence-display</code>.</p>
+<p><code>seq id</code>\
+The identifier for the reference sequence with the mutation. This column
+will not be shown for mutations if there is only one reference sequence.</p>
+<p><code>position</code>\
+Position in the reference sequence of the mutation. Generally this is
+where the mutation begins when the mutation affects a range of
+positions.</p>
+<p><code>mutation</code>\
+Description of the mutation. Typically describes how nucleotides are
+added, substituted, or deleted. May also refer to a mobile element in
+the genome and how it is inserted at the specified position.</p>
+<p><code>annotation</code>\
+Description of the mutation. For base substitutions inside genes, shows
+the resulting amino acid and codon changes. For other mutations inside
+genes, gives the local coordinates of the nucleotides affected. For
+mutations in intergenic regions, gives two relative positions (e.g.,
++150/-119) where the numbers are the distances from the mutation to the
+nearest neighboring genes before and after it in the genome, and the +/-
+signs indicate whether the mutation is oriented upstream or downstream
+with respect to each of these genes.</p>
+<p><code>gene</code>\
+Gene or genes affected by the mutation. May be a single gene, multiple overlapping genes
+(gene1|gene2), an intergenic region (gene1/gene2), or a range that covers several genes
+(gene1–geneN). Brackets around a [gene] in a range mean that the
+mutation begins or ends within that gene.</p>
+<p><code>description</code>\
+Descriptions of the genes affected by the mutation. Generally these
+correspond to the genes in the gene column, but if many genes are
+affected, this field is abbreviated to a list of all affected gene
+names.</p>
+<p>All gene information is taken from input GenBank files. How informative
+descriptions are about the effects of mutations is entirely dependent on
+the quality of annotation in the reference sequence files.</p>
+<h3 id="single-base-substitution-snp">Single-base substitution (SNP)<a class="headerlink" href="#single-base-substitution-snp" title="Permanent link">&para;</a></h3>
+<figure>
+<img src="images/snp_1.png" width="750" />
+</figure>
+
+<p>Replacement of the reference T at position 70,867 with a C inside the
+<em>araA</em> gene. This mutation changes the 92nd codon of <em>araA</em> from GAC to
+GGC, causing an aspartic acid (D) to glycine (G) substitution in the
+encoded protein. The base change in the codon is the reverse-complement
+of the base change in the genome because this gene is encoded on the
+bottom strand of the reference sequence.</p>
+<figure>
+<img src="images/snp_2.png" width="750" />
+</figure>
+
+<p>Replacement of the reference T at position 1,298,712 with a G in the
+intergenic region between the <em>ychE</em> and <em>oppA</em> genes. The mutation is
+downstream of the <em>ychE</em> stop codon by 674 bases (because this gene is before it in
+position and on the top strand of the reference) and upstream of thestart codon <em>oppA</em>
+by 64 bases (because this gene is after it in position and also on the
+top strand of the genome).</p>
+<p>For some single-base substitutions, you may see a special symbol next to
+the annotated amino acid change. A dagger (†) indicates that the
+mutation is in a start codon, so a special codon translation table is
+being used to determine the amino acid change. (For example, TTG
+initiates translation with a Met rather than the Leu that it usually
+codes for in bacteria.) A double-dagger (‡) indicates that another
+single-base substitution mutation affects the same codon. In this case, the amino
+acid change shown will reflect the effects of both mutations on the
+codon.</p>
+<h3 id="multiple-base-substitution-sub">Multiple-base substitution (SUB)<a class="headerlink" href="#multiple-base-substitution-sub" title="Permanent link">&para;</a></h3>
+<figure>
+<img src="images/sub_1.png" width="750" />
+</figure>
+
+<p>Replacement of two adjacent reference bases at positions 47,977 and
+47,978 with AC in an intergenic region. This mutation is near the end of
+the genome, so there is no gene after it. It is downstream of
+<em>lambdap79</em> by 33 bases (because this gene is before it in position and
+on the top reference strand).</p>
+<h3 id="insertion-ins">Insertion (INS)<a class="headerlink" href="#insertion-ins" title="Permanent link">&para;</a></h3>
+<p>For insertion mutations, new bases are added after the specified
+<em>position</em>.</p>
+<figure>
+<img src="images/ins_1.png" width="750" />
+</figure>
+
+<p>Insertion of a G after reference position 3,893,551. This mutation is 6
+nucleotides downstream of <em>kup</em> and 50 nucleotides upstream of <em>insJ-5</em>.</p>
+<figure>
+<img src="images/ins_2.png" width="750" />
+</figure>
+
+<p>Insertion of CC after reference position 3,290,071 inside the <em>gltB</em>
+gene. This mutation occurs after the 205th base of the 4554-base open
+reading frame of this gene.</p>
+<h3 id="deletion-del">Deletion (DEL)<a class="headerlink" href="#deletion-del" title="Permanent link">&para;</a></h3>
+<p>For deletion rows, the <em>position</em> column gives the first missing
+reference base and the <em>mutation</em> column gives the size of the deletion.
+Thus, the deleted reference region extends from <em>position</em> to
+<em>position</em> + <em>size</em> -1.</p>
+<figure>
+<img src="images/del_1.png" width="750" />
+</figure>
+
+<p>A 6,934-base deletion starting at position 3,894,997. The <em>annotation</em>
+column reports that it is IS150-mediated, because this repetitive
+element occurs on one margin of the deletion. This deletion begins
+before the <em>rbsD</em> gene and ends within the <em>yieO</em> gene. This mutation is
+supported by <code>new-junction-display</code> and <code>missing-coverage-display</code>
+evidence.</p>
+<figure>
+<img src="images/del_2.png" width="750" />
+</figure>
+
+<p>A single-base deletion at position 1,332,148 in an intergenic region.
+The deleted nucleotide is located 131 bp downstream of the <em>topA</em> gene
+and 79 bp upstream of the <em>cysB</em> gene. This mutation is supported by
+<code>read-alignment-display</code>.</p>
+<h3 id="mobile-element-insertion-mob">Mobile element insertion (MOB)<a class="headerlink" href="#mobile-element-insertion-mob" title="Permanent link">&para;</a></h3>
+<p>Mobile element insertions can result in duplications of the target site.
+The provided <em>position</em> is the first of such possibly duplicated bases.
+The number of bases in parentheses in the <em>annotation</em>, e.g. (+7) bp,
+are duplicated, starting with the indicated <em>position</em>, so that they now
+occur before and after the new copy of the mobile element. Additional
+bases may be added or deleted as a result of the mobile element
+insertion at either end. These are indicated outside of double colons
+(::) on the affected side of the mobile element name in the <em>annotation</em>
+column. The strand of the newly inserted mobile element is indicated in
+parentheses after its name.</p>
+<figure>
+<img src="images/mob_1.png" width="750" />
+</figure>
+
+<p>Insertion of an IS<em>3</em> element in the reverse orientation. Bases
+3,571,196 through 3,571,198 are duplicated, so that they now occur on
+each margin of the newly inserted element. In addition, the sequence TCA
+was added directly after the IS<em>3</em> element on the right margin. The
+duplicated bases are positions 397 through 399 of the 435-base <em>uspA</em>
+reading frame.</p>
+<figure>
+<img src="images/mob_2.png" width="750" />
+</figure>
+
+<p>Insertion of an IS<em>186</em> element in the forward orientation. Bases
+4,524,522 through 4,524,527 are duplicated, so that they now occur on
+each margin of the newly inserted element. These bases are 494 through
+499 of the 549-base <em>fimA</em> reading frame.</p>
+<figure>
+<img src="images/mob_3.png" width="750" />
+</figure>
+
+<p>Insertion of an IS<em>186</em> element in the forward orientation. Bases
+2,736,667 through 2,736,675 are duplicated, so that they now occur on
+each margin of the newly inserted element. Two bases of the mobile
+element on the left margin were lost, apparently during insertion. The
+duplicated bases are 818 through 826 of the 1425-base <em>ascB</em> reading
+frame.</p>
+<h3 id="sequence-amplification-amp">Sequence amplification (AMP)<a class="headerlink" href="#sequence-amplification-amp" title="Permanent link">&para;</a></h3>
+<p>For duplications and other tandem amplifications, <em>position</em> indicates
+the first repeated base.</p>
+<figure>
+<img src="images/amp_1.png" width="750" />
+</figure>
+
+<p>Duplication of 8 bp inside the <em>pykF</em> gene. The bases 1,733,290 to
+1,733,297 now appear twice at this location. This mutation would cause a
+frameshift.</p>
+<h2 id="evidence-display">Evidence Display<a class="headerlink" href="#evidence-display" title="Permanent link">&para;</a></h2>
+<p>Evidence is shown in tables with different fields from mutation
+predictions, that provide more detailed information about support for
+genomic changes. Clicking on any evidence link for a mutation prediction
+will also bring up pages with tables showing all items of evidence that
+<em>breseq</em> used to predict the mutational event.</p>
+<h3 id="new-junction-jc">New Junction (JC)<a class="headerlink" href="#new-junction-jc" title="Permanent link">&para;</a></h3>
+<p>Each JC row consists of two sub-rows, one describing one side of the
+junction in the reference sequence. If a sub-row is highlighted in
+orange, it means that side of the junction ambiguously maps to more than
+one place in the reference. In this case, the coordinate shown is an
+example of one site.</p>
+<p>Column descriptions:</p>
+<p><code>* link</code>\
+Links to a results page showing the sequence of the new junction as the
+reference and all reads aligned to the junction.</p>
+<p><code>? links</code>\
+Links to a results pages for each side of the juncton, that show the
+reference sequence at that site and any reads that aligned better to
+this original sequence than to the new junction. Note that in some cases
+(such as tandem duplications), it is possible for both the new and old
+junction sequences to exist in the sample. You can check for this by
+examining these read alignments. Sequences where the read name has a -M1
+or -M2 appended are reads that mapped better to the new junction.</p>
+<p><code>seq id</code>\
+Identifiers for the reference sequences involved in the new junction.</p>
+<p><code>position</code>\
+Positions in the reference sequence of the two sides of the new
+junction. Each position has an equals sign (=) before or after it that
+represents how the junction was constructed. The joined pieces of the
+reference sequence approach the given coordinates from the sides with
+the equals signs. The displayed coordinates are juxtaposed with each
+other to make the new junction. See the figure below for an illustration
+of different junction orientations.</p>
+<p><code>overlap</code>\<br />
+If positive, the number of bp in the junction that could map to either
+side in the reference sequence. Generally, positive overlap has been
+resolved to zero by assigning these base pairs to one side of the
+junction. If negative, the number of bp that are unique to reads mapping
+across the junction and represent insertions relative to the reference
+sequence.</p>
+<p><code>reads</code>\
+The total number of reads that map to this junction.</p>
+<p><code>score</code>\
+The position-hash score for the junction in <strong>\<bold angle brackets></strong>
+and the minimum-overlap score on the next line.</p>
+<p><code>annotation, gene, product</code>\
+Description of the effects of this change on each side of the junction.
+The format of these columns is the same as in <code>mutation-display</code>.</p>
+<p><strong>Explanation of New Junction Orientations</strong></p>
+<figure>
+<img src="images/jc_side_explanation.png" width="600" />
+</figure>
+
+<p><em>Figure Credit: Jeff Barrick with additions by Emily Layton</em></p>
+<p>In the HTML output, equals signs next to the coordinates indicate how
+the two sides of split reads supporting a junction are oriented in
+relation to the reference coordinates that are joined together in the
+sample. In the GenomeDiff output, the strands of each side of the
+junction are given as –1 or +1 to indicate how the read leads up to the
+junction on the first side and continues after the junction on the
+second side. The most common type of junction has a side 1 strand of -1
+and a side 2 strand of +1 and can indicate that there has been a
+deletion.</p>
+<p>Examples:</p>
+<figure>
+<img src="images/jc_1.png" width="750" />
+</figure>
+
+<p>This image shows the page from clicking on the * link for this
+junction. A partial alignment of reads to the new junction is shown.
+Notice the two joined pieces of the reference sequence at the top that
+they align to. This sequence is on the bottom strand of the reference if
+start is greater than end. The end of the junction in yellow indicates that end maps to a repetitive region of the reference.</p>
+<figure>
+<img src="images/jc_2.png" width="750" />
+</figure>
+
+<p>This image shows the page from clicking on one of the ? links for this
+junction. Notice that only a piece of the reads maps to this region and
+that it ends where these reads begin matching a disjoint region in the
+reference genome. Clearly the old junction is not supported by any reads
+in this sample and must no longer exist. Once again, only a partial
+alignment is shown.</p>
+<h3 id="read-alignment-ra">Read alignment (RA)<a class="headerlink" href="#read-alignment-ra" title="Permanent link">&para;</a></h3>
+<p>Column descriptions:</p>
+<p><code>* link</code>\
+Links to a results page showing the alignment of reads to this position.</p>
+<p><code>seq id</code>\
+Identifier for the reference sequence where the change is located.</p>
+<p><code>position</code>\
+Position in the reference sequence of the single base substitution,
+insertion, or deletion. It consists of two parts. The first is the
+reference position, the second is an "insert count" that - if greater
+than zero - indicates this is in a column of the alignment that does not
+exist in the reference sequence (i.e., it is an insertion relative to
+the reference and is this many columns past the specified reference
+position.).</p>
+<p><code>change</code>\
+The base change, deletion, or insertion.</p>
+<p><code>freq</code>\
+Frequency of this base change in the sample. <em>breseq</em> currently only
+predicts mutations of 0% or 100% frequency.</p>
+<p><code>score</code>\
+The base-10 logarithm ratio of the posterior probability that this
+position in the sample is the called base to the probability that it is
+any other base, minus the base-10 logarithm of the total number of
+positions in all reference sequences. The higher the score, the more
+evidence for the mutation.</p>
+<p><code>cov</code>\
+The number of reads overlapping the mutation. Note that portions of
+reads that are not aligned (lowercase bases with a white background),
+ends of reads that have been trimmed because alignments their may be
+ambiguous (lowercase bases with a colored background), and read
+positions with very low base quality scores that typically indicate
+sequencing errors (highlighted in yellow) are not counted in this
+coverage number.</p>
+<p><code>annotation, gene, product</code>\ 
+Description of the change's effects for each side of the junction. The
+format of these columns is the same as in <code>mutation-display</code>.</p>
+<p>Example:</p>
+<figure>
+<img src="images/ra_1.png" width="750" />
+</figure>
+
+<p>Partial alignment of reads showing that most support a base
+substitution. The <code>&gt;</code> and <code>&lt;</code> for each named read indicate the strand of
+the reference sequence that it matched (top and bottom, respectively).</p>
+<h3 id="missing-coverage-mc">Missing coverage (MC)<a class="headerlink" href="#missing-coverage-mc" title="Permanent link">&para;</a></h3>
+<p>Column descriptions:</p>
+<p><code>* links</code>\
+Links to results pages showing the alignment of reads to the left and
+right margins of the region with missing coverage.</p>
+<p><code>÷ link</code>\
+Link to the results page showing a plot of the read coverage in the
+region of the msising coverage.</p>
+<p><code>seq id</code>\
+Identifier for the reference sequence where the change is located.</p>
+<p><code>start, end, size</code>\
+The start and end reference positions and size of the missing coverage.
+May indicate a range of positions when one end of the missing coverage
+is in a repeat region.</p>
+<p><code>← cov</code>\
+Unique read coverage depth on the left margin of the region of missing
+coverage. Coverage at the last position outside the region is shown
+followed by coverage at the first position inside the region of missing
+coverage in brackets.</p>
+<p><code>→ cov</code>\
+Unique read coverage depth on the right margin of the region of missing
+coverage. Coverage at the last position inside the region is shown
+followed by coverage at the first position outside the region.</p>
+<p><code>gene, description</code>\
+Description of the change's effects for each side of the junction. The
+format of these columns is the same as in <code>mutation-display</code>.</p>
+<p>Example:</p>
+<figure>
+<img src="images/mc_1.png" width="750" />
+</figure>
+
+<p>Read coverage depth around the missing coverage. The white area shows
+the maximal boundaries of the predicted range.</p>
+<p>The graphed lines are labeled "unique" for reads with only one best
+match to the reference genome and "repeat" for multiple equally good
+matches to repeat sequences (which are down-weighted by how many matches
+they have, i.e. a read matching three places contributes 1/3 to the
+coverage depth at each matched site). Within each type coverage is
+graphed separately for reads mapping to the "top" and "bottom" strands
+of the reference sequence (i.e., forward and reverse complement matches)
+to aid in detecting artifacts, and these sum to the "total" coverage
+value.</p>
+<h1 id="data-output-computer-readable">Data Output (Computer-Readable)<a class="headerlink" href="#data-output-computer-readable" title="Permanent link">&para;</a></h1>
+<p><em>breseq</em> outputs several types of data files to the <code>data</code> subdirectory of the main output directory that you specified at the command line (<code>output</code> by default). These files can be
+used by other software programs to further analyze the final processed reference, read, and run data.</p>
+<p><code>data/output.gd</code>\
+Text file of evidence and mutation predictions in computer-readable
+GenomeDiff format. This file can be used as input to certain analysis
+programs to compare mutations found in different samples.</p>
+<p><code>data/annotated.gd</code>\
+Additional text file of evidence and mutation predictions in
+GenomeDiff format. This file includes more information about how
+mutations affect genes than <code>output.gd</code>. It is provided for convenience,
+but can also be (re)generated from <code>output.gd</code> using the
+<code>gdtools ANNOTATE</code> command.</p>
+<p><code>data/reference.bam, data/reference.bam.bai</code>\
+The BAM (Binary SAM) formatted database of read alignments to the
+reference and its index. Along with the <code>reference.fasta</code> files, it can be
+used with any <em>samtools</em> compatible program.</p>
+<p><code>data/reference.fasta, data/reference.fasta.fai</code>\
+File of all reference sequences and the corresponding index. These files
+can be used with any <code>SAMtools</code> compatible program.</p>
+<p><code>data/&lt;read_file&gt;.unmatched.fastq</code>\
+These files contain reads from each original file that were not mapped
+to the reference sequences. Often these are just low quality reads, but this file could be also potentially be used for <em>de novo</em> assembly if there are "novel" sequences in your that would cause reads to not align to the input reference sequences.</p>
+<p><code>data/summary.json</code>\
+JSON format file containing a full summary of all <em>breseq</em> settings
+and calculated values shown in <code>output/summary.html</code>, such as the
+numbers of reads mapping and the coverage of reference sequences.</p>
+<h1 id="viewing-output-aligned-reads-in-the-igv">Viewing Output / Aligned Reads in the IGV<a class="headerlink" href="#viewing-output-aligned-reads-in-the-igv" title="Permanent link">&para;</a></h1>
+<p>You can visualize the "raw data" (how <em>breseq</em> aligned reads to the reference genome) using the <a href="https://www.broadinstitute.org/igv/">Integrative Genomics Viewer (IGV)</a> and files located in the <code>data</code> folder created by <em>breseq</em>.</p>
+<p>Here's how...</p>
+<ol>
+<li>Install and open IGV</li>
+<li>Import the reference genome sequence:</li>
+</ol>
+<blockquote>
+<ul>
+<li>Click 'File', and then 'Import Genome...'</li>
+<li>Fill out the requested information: 'ID', 'Name'</li>
+<li>Choose the FASTA file: <code>data/reference.fasta</code>.</li>
+<li>The other fields are optional.</li>
+</ul>
+</blockquote>
+<ol>
+<li>(OPTIONAL) Import the reference genome feature information:</li>
+</ol>
+<blockquote>
+<ul>
+<li>Click 'File', and then 'Load from File..."</li>
+<li>Choose the GFF3 file: <code>data/reference.gff3</code>.</li>
+</ul>
+</blockquote>
+<ol>
+<li>Import the read alignments to the reference genome:</li>
+</ol>
+<blockquote>
+<ul>
+<li>Click 'File', and then 'Load from File..."</li>
+<li>Choose the BAM file: <code>data/reference.bam</code>.</li>
+</ul>
+</blockquote>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "toc.follow", "search.suggest", "content.code.copy", "content.action.edit"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

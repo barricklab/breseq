@@ -1,0 +1,3161 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://breseq.barricklab.org/0.40.1/genomediff-file-format/">
+      
+      
+        <link rel="prev" href="../methods/">
+      
+      
+        <link rel="next" href="../bibliography/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>GenomeDiff File Format - breseq</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#format-specification" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="breseq" class="md-header__button md-logo" aria-label="breseq" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            breseq
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              GenomeDiff File Format
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/barricklab/breseq" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    barricklab/breseq
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../introduction/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Introduction
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../installation/" class="md-tabs__link">
+          
+  
+  
+  Quick Start
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../usage-breseq/" class="md-tabs__link">
+          
+  
+  
+  More Options
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../reference-sequence-file-formats/" class="md-tabs__link">
+          
+  
+  
+  More Information
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../tutorial-clones/" class="md-tabs__link">
+          
+  
+  
+  More Examples
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../acknowledgments/" class="md-tabs__link">
+          
+  
+  
+  About
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="breseq" class="md-nav__button md-logo" aria-label="breseq" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    breseq
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/barricklab/breseq" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    barricklab/breseq
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../introduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Introduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Quick Start
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../test-drive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Test Drive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    More Options
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    More Options
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage-breseq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage: breseq
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage-gdtools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage: gdtools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    More Information
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    More Information
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reference-sequence-file-formats/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference Sequence File Formats
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../output/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../methods/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Methods
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GenomeDiff File Format
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GenomeDiff File Format
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#version-line" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Version line
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metadata-lines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metadata lines
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#comment-lines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comment lines
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-lines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data lines
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mutational-event-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mutational Event Types
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mutational Event Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#snp-base-substitution-mutation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SNP: Base substitution mutation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sub-multiple-base-substitution-mutation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SUB: Multiple base substitution mutation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#del-deletion-mutation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DEL: Deletion mutation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="DEL: Deletion mutation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#additional-del-named-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Additional DEL named fields
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ins-insertion-mutation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        INS: Insertion mutation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="INS: Insertion mutation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#additional-ins-named-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Additional INS named fields
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mob-mobile-element-insertion-mutation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MOB: Mobile element insertion mutation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MOB: Mobile element insertion mutation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#additional-mob-named-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Additional MOB named fields
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#amp-amplification-mutation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AMP: Amplification mutation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="AMP: Amplification mutation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#additional-amp-named-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Additional AMP named fields
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#con-gene-conversion-mutation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CON: Gene conversion mutation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#int-integration-mutation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        INT: Integration mutation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-is-the-difference-between-a-con-and-an-int" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is the difference between a CON and an INT?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inv-inversion-mutation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        INV: Inversion mutation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#standard-namevalue-pairs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Standard name=value pairs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Standard name=value pairs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#counting-mutations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Counting Mutations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#applying-mutations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Applying Mutations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#evidence-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evidence Types
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Evidence Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ra-read-alignment-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RA: Read alignment evidence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mc-missing-coverage-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MC: Missing coverage evidence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#jc-new-junction-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JC: New junction evidence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#un-unknown-base-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UN: Unknown base evidence
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validation-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation Types
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Validation Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cura-true-positive-curated-by-an-expert" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CURA: True-positive curated by an expert
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fpos-false-positive-curated-by-an-expert" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FPOS: False-positive curated by an expert
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phyl-phylogenetic-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PHYL: Phylogenetic comparison
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tseq-targeted-re-sequencing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TSEQ: Targeted re-sequencing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pflp-pcr-fragment-length-polymorphism" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PFLP: PCR-fragment length polymorphism
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rflp-restriction-fragment-length-polymorphism" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RFLP: Restriction fragment length polymorphism
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pfge-pulsed-field-gel-electrophoresis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PFGE: Pulsed-field gel electrophoresis
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#note-note" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NOTE: Note
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mask-repeat-mask-a-section" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MASK: Repeat mask a section
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bibliography/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bibliography
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    More Examples
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    More Examples
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-clones/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Clones
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-populations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Populations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-barcoded-targeted/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Barcoded/Targeted
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_5_4" id="__nav_5_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Curation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_5_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorial: Curation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-running-breseq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Running breseq
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-editing-genomediff-files/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Editing GenomeDiff Files
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-validation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validating Predictions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-exploring-aligned-reads/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Exploring Aligned Reads
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-automating/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Automating with brefito
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-common-cases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Curation Cases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial-curation-ecoli-ltee/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Curating E. coli LTEE Genomes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    About
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    About
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../acknowledgments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Acknowledgments
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#version-line" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Version line
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#metadata-lines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Metadata lines
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#comment-lines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Comment lines
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-lines" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data lines
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mutational-event-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mutational Event Types
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Mutational Event Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#snp-base-substitution-mutation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SNP: Base substitution mutation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sub-multiple-base-substitution-mutation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SUB: Multiple base substitution mutation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#del-deletion-mutation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DEL: Deletion mutation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="DEL: Deletion mutation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#additional-del-named-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Additional DEL named fields
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ins-insertion-mutation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        INS: Insertion mutation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="INS: Insertion mutation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#additional-ins-named-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Additional INS named fields
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mob-mobile-element-insertion-mutation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MOB: Mobile element insertion mutation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="MOB: Mobile element insertion mutation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#additional-mob-named-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Additional MOB named fields
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#amp-amplification-mutation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AMP: Amplification mutation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="AMP: Amplification mutation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#additional-amp-named-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Additional AMP named fields
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#con-gene-conversion-mutation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CON: Gene conversion mutation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#int-integration-mutation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        INT: Integration mutation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-is-the-difference-between-a-con-and-an-int" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is the difference between a CON and an INT?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inv-inversion-mutation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        INV: Inversion mutation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#standard-namevalue-pairs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Standard name=value pairs
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Standard name=value pairs">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#counting-mutations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Counting Mutations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#applying-mutations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Applying Mutations
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#evidence-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Evidence Types
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Evidence Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ra-read-alignment-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RA: Read alignment evidence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mc-missing-coverage-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MC: Missing coverage evidence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#jc-new-junction-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JC: New junction evidence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#un-unknown-base-evidence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UN: Unknown base evidence
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validation-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation Types
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Validation Types">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cura-true-positive-curated-by-an-expert" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CURA: True-positive curated by an expert
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fpos-false-positive-curated-by-an-expert" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        FPOS: False-positive curated by an expert
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#phyl-phylogenetic-comparison" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PHYL: Phylogenetic comparison
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#tseq-targeted-re-sequencing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TSEQ: Targeted re-sequencing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pflp-pcr-fragment-length-polymorphism" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PFLP: PCR-fragment length polymorphism
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rflp-restriction-fragment-length-polymorphism" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RFLP: Restriction fragment length polymorphism
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pfge-pulsed-field-gel-electrophoresis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PFGE: Pulsed-field gel electrophoresis
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#note-note" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NOTE: Note
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mask-repeat-mask-a-section" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MASK: Repeat mask a section
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/barricklab/breseq/edit/master/docs/genomediff-file-format.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<p>The GenomeDiff file format describes mutational differences between a reference DNA
+sequence and a sample. It may also include evidence from computational
+analysis or experiments that supports mutations.</p>
+<p>An example of a portion of a file:</p>
+<div class="highlight"><pre><span></span><code>#=GENOME_DIFF 1.0
+DEL  61  11  NC_001416   139 1
+INS  62  12  NC_001416   14266   G
+SNP  63  13  NC_001416   20661   G
+INS  64  14  NC_001416   20835   C
+SNP  65  15  NC_001416   21714   A
+DEL  60  33,1    NC_001416   21738   5996
+SNP  66  35  NC_001416   31016   C
+...
+MC   9       NC_001416   1   2   0   0   left_inside_cov=0   left_outside_cov=NA right_inside_cov=0  right_outside_cov=169
+RA   11      NC_001416   139 0   G   .   frequency=1 new_cov=34/40   quality=309.0   ref_cov=0/0 tot_cov=34/40
+JC   2       NC_001416   5491    1   NC_001416   30255   1   0   alignment_overlap=4 coverage_minus=8    coverage_plus=0 flanking_left=35    flanking_right=35   key=NC_001416__5491__1__NC_001416__30251__1__4____35__35__0__0  max_left=30 max_left_minus=30   max_left_plus=0 max_min_left=0  max_min_left_minus=0    max_min_left_plus=0 max_min_right=11    max_min_right_minus=11  max_min_right_plus=0    max_right=11    max_right_minus=11  max_right_plus=0    min_overlap_score=44    pos_hash_score=7    reject=NJ,COV   side_1_annotate_key=gene    side_1_overlap=4    side_1_redundant=0  side_2_annotate_key=gene    side_2_overlap=0    side_2_redundant=0  total_non_overlap_reads=8   total_reads=8
+JC   3       NC_001416   13180   1   NC_001416   13218   1   0   alignment_overlap=4 coverage_minus=1    coverage_plus=0 flanking_left=35    flanking_right=35   key=NC_001416__13180__1__NC_001416__13214__1__4____35__35__0__0 max_left=17 max_left_minus=17   max_left_plus=0 max_min_left=0  max_min_left_minus=0    max_min_left_plus=0 max_min_right=14    max_min_right_minus=14  max_min_right_plus=0    max_right=14    max_right_minus=14  max_right_plus=0    min_overlap_score=14    pos_hash_score=1    reject=NJ,COV   side_1_annotate_key=gene    side_1_overlap=4    side_1_redundant=0  side_2_annotate_key=gene    side_2_overlap=0    side_2_redundant=0  total_non_overlap_reads=1   total_reads=1
+RA   12      NC_001416   14266   1   .   G   frequency=1 new_cov=44/31   quality=186.3   ref_cov=0/0 tot_cov=44/31
+JC   5       NC_001416   14869   -1  NC_001416   15609   -1  0   alignment_overlap=7 coverage_minus=1    coverage_plus=0 flanking_left=35    flanking_right=35   key=NC_001416__14869__0__NC_001416__15616__0__7____35__35__0__0 max_left=21 max_left_minus=21   max_left_plus=0 max_min_left=0  max_min_left_minus=0    max_min_left_plus=0 max_min_right=7 max_min_right_minus=7   max_min_right_plus=0    max_right=7 max_right_minus=7   max_right_plus=0    min_overlap_score=7 pos_hash_score=1    reject=NJ,COV   side_1_annotate_key=gene    side_1_overlap=7    side_1_redundant=0  side_2_annotate_key=gene    side_2_overlap=0    side_2_redundant=0  total_non_overlap_reads=1   total_reads=1
+</code></pre></div>
+<h1 id="format-specification">Format specification<a class="headerlink" href="#format-specification" title="Permanent link">&para;</a></h1>
+<h2 id="version-line">Version line<a class="headerlink" href="#version-line" title="Permanent link">&para;</a></h2>
+<p>The first line of the file must define that this is a file and the
+version of the file specification used:</p>
+<div class="highlight"><pre><span></span><code>#=GENOME_DIFF 1.0
+</code></pre></div>
+<p>Only version 1.0 is defined.</p>
+<h2 id="metadata-lines">Metadata lines<a class="headerlink" href="#metadata-lines" title="Permanent link">&para;</a></h2>
+<p>Lines beginning with <code>#=&lt;name&gt; &lt;value&gt;</code> are interpreted as metadata.
+(Thus, the first line is assigning a metadata item named GENOME_DIFF a
+value of 1.0.) Names cannot include whitespace characters. Values may
+include whitespace characters. In most cases, the values for lines with
+the same name are concatenated with single spaces added between them or
+interpreted as a list.</p>
+<p>Common but optional metadata fields include:</p>
+<p><code>TITLE</code>
+The name of the sample. If this field is not provided, the name of the
+file (removing the .gd suffix) is used for this field.</p>
+<p><code>AUTHOR</code>
+Name of person who curated the file.</p>
+<p><code>PROGRAM</code><br />
+Name and version of software program that generated the file.</p>
+<p><code>CREATED</code><br />
+Date on which the file was created.</p>
+<p><code>TIME</code><br />
+Time point the sample is from, in days, generations, or any other unit
+of measurement. Ex: 1, 2, 15000</p>
+<p><code>POPULATION</code><br />
+Name/designation for the population the sample is from. Ex: Ara–3 / MA-1</p>
+<p><code>TREATMENT</code><br />
+Experimental treatment group for this population. Ex: LB medium / LTEE</p>
+<p><code>CLONE</code><br />
+Name/designation for a clonal isolate, Ex: A, B, REL10863</p>
+<p><code>REFSEQ</code><br />
+Location of the reference sequence file. Ex:
+/here/is/an/absolute/path/to/the/file.gb</p>
+<p><code>ADAPTSEQ</code><br />
+Location of the adaptor sequence file. Ex:
+relative/path/to/the/adaptors.fa</p>
+<p><code>READSEQ</code><br />
+Location of the read sequence file. Ex:
+https://place.org/url/for/file/download.fastq</p>
+<p>REFSEQ, ADAPTSEQ, and READSEQ entries are interpreted as lists of
+multiple files to process/include if they appear multiple times. The
+location value for theese fields can be a URL or an absolute/relative
+file path.</p>
+<p>Some of these metadata fields are used to name and sort samples by
+<code>gdtools COMPARE</code> and by other utilities.</p>
+<h2 id="comment-lines">Comment lines<a class="headerlink" href="#comment-lines" title="Permanent link">&para;</a></h2>
+<p>Lines beginning with whitespace and # are comments. Comments may not
+occur at the end of a data or metadata line. They must be on a line by themselves.</p>
+<h2 id="data-lines">Data lines<a class="headerlink" href="#data-lines" title="Permanent link">&para;</a></h2>
+<p>Data lines describe either a mutation or evidence from an analysis that
+can potentially support a mutational event. Data fields are
+<em>tab-delimited</em>. Each line begins with several fields containing
+information common to all types, continues with a fixed number of
+type-specific fields, and ends with an arbitrary number of <code>name=value</code>
+pairs that store optional information.</p>
+<ol>
+<li>
+<p><strong>type</strong> <em>\<string></em></p>
+<p>type of the entry on this line.</p>
+</li>
+<li>
+<p><strong>id or evidence-id</strong> <em>\<uint32></em></p>
+<p>For evidence and validation lines, the id of this item. For mutation
+lines, the ids of all evidence or validation items that support this
+mutation. May be set to '.' if a line was manually edited.</p>
+</li>
+<li>
+<p><strong>parent-ids</strong> <em>\<uint32></em></p>
+<p>ids of evidence that support this mutation. May be set to '.' or
+left blank.</p>
+</li>
+</ol>
+<p><em>mutation</em> types are 3 letters: SNP, SUB, DEL, INS, MOB, AMP, CON, INV.</p>
+<p><em>evidence</em> types are 2 letters: RA, MC, JC, UN.</p>
+<p><em>validation</em> types are 4 letters: TSEQ, PFLP, RFLP, PFGE, PHYL, CURA.</p>
+<h2 id="mutational-event-types">Mutational Event Types<a class="headerlink" href="#mutational-event-types" title="Permanent link">&para;</a></h2>
+<h3 id="snp-base-substitution-mutation">SNP: Base substitution mutation<a class="headerlink" href="#snp-base-substitution-mutation" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>seq_id</strong> <em>\<string></em></p>
+<p>id of reference sequence fragment containing mutation, evidence, or
+validation.</p>
+</li>
+<li>
+<p><strong>position</strong> <em>\<uint32></em></p>
+<p>position in reference sequence fragment of base to replace.</p>
+</li>
+<li>
+<p><strong>new_seq</strong> <em>\<char></em></p>
+<p>new base at position.</p>
+</li>
+</ol>
+<h3 id="sub-multiple-base-substitution-mutation">SUB: Multiple base substitution mutation<a class="headerlink" href="#sub-multiple-base-substitution-mutation" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>seq_id</strong> <em>\<string></em></p>
+<p>id of reference sequence fragment containing mutation, evidence, or
+validation.</p>
+</li>
+<li>
+<p><strong>position</strong> <em>\<uint32></em></p>
+<p>position in the reference sequence of the first base that will be
+replaced.</p>
+</li>
+<li>
+<p><strong>size</strong> <em>\<uint32></em></p>
+<p>number of bases <em>after</em> the specified reference position to replace
+with <strong>new_seq</strong>.</p>
+</li>
+<li>
+<p><strong>new_seq</strong> <em>\<string></em></p>
+<p>new bases to substitute.</p>
+</li>
+</ol>
+<h3 id="del-deletion-mutation">DEL: Deletion mutation<a class="headerlink" href="#del-deletion-mutation" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>seq_id</strong> <em>\<string></em></p>
+<p>id of reference sequence fragment containing mutation, evidence, or
+validation.</p>
+</li>
+<li>
+<p><strong>position</strong> <em>\<uint32></em></p>
+<p>position in reference sequence fragment of first deleted base.</p>
+</li>
+<li>
+<p><strong>size</strong> <em>\<uint32></em></p>
+<p>number of bases deleted in reference.</p>
+</li>
+</ol>
+<h4 id="additional-del-named-fields">Additional DEL named fields<a class="headerlink" href="#additional-del-named-fields" title="Permanent link">&para;</a></h4>
+<ul>
+<li>
+<p><strong>mediated=</strong><em>\<mobile_element_family></em><br />
+    This deletion appears to be mediated by a molecular event involving
+    a mobile element such as a transposon. A copy of the mobile element
+    is found on the boundary of the deleted region and a new junction at
+    the opposite end of the deletion matches the end of the mobile
+    element.</p>
+</li>
+<li>
+<p><strong>between=</strong><em>\<repeat_family></em><br />
+    This deletion appears to result from homologous recombination or
+    polymerase slipping between two existing copies of the same genomic
+    repeat (e.g. tRNA, IS element) in the genome. One copy of the repeat
+    is deleted by this event.</p>
+</li>
+<li>
+<p><strong>repeat_seq=</strong><em>\<string></em>, <strong>repeat_length=</strong><em>\<uint32></em>, <strong>repeat_ref_num=</strong><em>\<uint32></em>, <strong>repeat_new_copies=</strong><em>\<uint32></em><br />
+    This deletion is in a short sequence repeat consisting of tandem
+    copies of <strong>repeat_seq</strong> repeated <strong>repeat_ref_num</strong> times in the
+    ancestor and <strong>repeat_new_copies</strong> after a mutation. To be annotated
+    in this way the copy of the repeat in the reference genome must
+    consist of at least two repeat copies and have a length of five of
+    more total bases (<strong>repeat_length</strong> × <strong>repeat_ref_num</strong> ≥ 5).</p>
+</li>
+</ul>
+<h3 id="ins-insertion-mutation">INS: Insertion mutation<a class="headerlink" href="#ins-insertion-mutation" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>seq_id</strong> <em>\<string></em></p>
+<p>id of reference sequence fragment containing mutation, evidence, or
+validation.</p>
+</li>
+<li>
+<p><strong>position</strong> <em>\<uint32></em></p>
+<p>position in reference sequence fragment. New bases are inserted
+<em>after</em> this position.</p>
+</li>
+<li>
+<p><strong>new_seq</strong> <em>\<string></em></p>
+<p>new bases to be inserted in the reference.</p>
+</li>
+</ol>
+<h4 id="additional-ins-named-fields">Additional INS named fields<a class="headerlink" href="#additional-ins-named-fields" title="Permanent link">&para;</a></h4>
+<ul>
+<li>
+<p><strong>repeat_seq=</strong><em>\<string></em>, <strong>repeat_length=</strong><em>\<uint32></em>, <strong>repeat_ref_num=</strong><em>\<uint32></em>, <strong>repeat_new_copies=</strong><em>\<uint32></em><br />
+    This insertion is in a short sequence repeat consisting of tandem
+    copies of <strong>repeat_seq</strong> repeated <strong>repeat_ref_num</strong> times in the
+    ancestor and <strong>repeat_new_copies</strong> after a mutation. To be annotated
+    in this way the copy of the repeat in the reference genome must
+    consist of at least two repeat copies and have a length of five of
+    more total bases (<strong>repeat_length</strong> × <strong>repeat_ref_num</strong> ≥ 5).</p>
+</li>
+<li>
+<p><strong>insert_position=</strong><em>\<uint32></em><br />
+    Used when there are multiple insertion events after the same
+    reference base to order the insertions. This typically happens in
+    polymorphism mode and when manually breaking up an insertion of
+    bases into distinct mutational events when this is supported by
+    phylogenetic information. Numbering of insert positions begins with
+    1.</p>
+</li>
+</ul>
+<h3 id="mob-mobile-element-insertion-mutation">MOB: Mobile element insertion mutation<a class="headerlink" href="#mob-mobile-element-insertion-mutation" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>seq_id</strong> <em>\<string></em></p>
+<p>id of reference sequence fragment containing mutation, evidence, or
+validation.</p>
+</li>
+<li>
+<p><strong>position</strong> <em>\<uint32></em></p>
+<p>position in reference sequence fragment of the first duplicated base
+at the target site.</p>
+</li>
+<li>
+<p><strong>repeat_name</strong> <em>\<string></em></p>
+<p>name of the mobile element. Should correspond to an annotated
+<strong>repeat_region</strong> or <strong>mobile_element</strong> feature in the reference
+sequence.</p>
+</li>
+<li>
+<p><strong>strand</strong> <em>\&lt;1/-1&gt;</em></p>
+<p>strand of mobile element insertion.</p>
+</li>
+<li>
+<p><strong>duplication_size</strong> <em>\<uint32></em></p>
+<p>number of target site bases duplicated during insertion of the
+mobile element, beginning with the specified reference position. If
+the value of this field is negative, then it indicates that the
+absolute value of this number of bases were deleted at the target
+site beginning with the specified position. If the value of this
+field is zero, then the there were no duplicated bases, and the
+mobile element was inserted after the specified base position.</p>
+</li>
+</ol>
+<h4 id="additional-mob-named-fields">Additional MOB named fields<a class="headerlink" href="#additional-mob-named-fields" title="Permanent link">&para;</a></h4>
+<ul>
+<li>
+<p><strong>del_start=</strong><em>\<uint32></em>, <strong>del_end=</strong><em>\<uint32></em><br />
+    Delete this many bases from the start or end of the inserted mobile
+    element. This deletion occurs with respect to the top strand of the
+    genome after the element is flipped to the orientation with which it
+    will be inserted.</p>
+</li>
+<li>
+<p><strong>ins_start=</strong><em>\<string></em>, <strong>ins_end=</strong><em>\<string></em><br />
+    Append the specified bases to the start or end of the inserted
+    mobile element. These insertions occur after any deletions and will
+    be inside of any duplicated target site bases.</p>
+</li>
+<li>
+<p><strong>mob_region</strong>=<em>\&lt;seq_id:start-end &gt;</em><br />
+    Use the existing copy of the mobile element specified as a
+    seq_id:start-end region to apply this mutation. Useful when
+    different annotated members of a mobile element family have slightly
+    different sequences.</p>
+</li>
+</ul>
+<h3 id="amp-amplification-mutation">AMP: Amplification mutation<a class="headerlink" href="#amp-amplification-mutation" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>seq_id</strong> <em>\<string></em></p>
+<p>id of reference sequence fragment containing mutation, evidence, or
+validation.</p>
+</li>
+<li>
+<p><strong>position</strong> <em>\<uint32></em></p>
+<p>position in reference sequence fragment.</p>
+</li>
+<li>
+<p><strong>size</strong> <em>\<uint32></em></p>
+<p>number of bases duplicated starting with the specified reference
+position.</p>
+</li>
+<li>
+<p><strong>new_copy_number</strong> <em>\<uint32></em></p>
+<p>new number of copies of specified bases.</p>
+</li>
+</ol>
+<h4 id="additional-amp-named-fields">Additional AMP named fields<a class="headerlink" href="#additional-amp-named-fields" title="Permanent link">&para;</a></h4>
+<ul>
+<li>
+<p><strong>between=</strong><em>\<repeat_family></em><br />
+    This amplification appears to result from homologous recombination
+    or polymerase slipping between two existing copies of the same
+    genomic repeat (e.g. tRNA, IS element) in the genome. This repeat
+    appears on the boundary of each copy of the specified region.</p>
+</li>
+<li>
+<p><strong>mediated=</strong><em>\<repeat_family></em>, <em>mediated_strand=</em>\&lt;1/-1&gt;*<br />
+    This amplification is mediated by a simultaneous new insertion of a
+    mobile element (or other repeat element). New copies of the inserted
+    element are added in the specified strand orientation between each
+    new copy of the amplified region. Both of these attributes must be
+    specified for the mutation.</p>
+</li>
+<li>
+<p><strong>mob_region</strong>=<em>\&lt;seq_id:start-end &gt;</em><br />
+    Only valid for 'mediated' amplifications. Use the existing copy of
+    the mobile element specified as a seq_id:start-end region to apply
+    this mutation. Useful when different annotated members of a mobile
+    element family have slightly different sequences.</p>
+</li>
+</ul>
+<h3 id="con-gene-conversion-mutation">CON: Gene conversion mutation<a class="headerlink" href="#con-gene-conversion-mutation" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>seq_id</strong> <em>\<string></em></p>
+<p>id of reference sequence fragment containing mutation, evidence, or
+validation.</p>
+</li>
+<li>
+<p><strong>position</strong> <em>\<uint32></em></p>
+<p>position in reference sequence fragment that was the target of gene
+conversion from another genomic location.</p>
+</li>
+<li>
+<p><strong>size</strong> <em>\<uint32></em></p>
+<p>number of bases to replace in the reference genome beginning at the
+specified position.</p>
+</li>
+<li>
+<p><strong>region</strong> <em>\<sequence:start-end></em></p>
+<p>Region in the reference genome to use as a replacement.</p>
+</li>
+</ol>
+<h3 id="int-integration-mutation">INT: Integration mutation<a class="headerlink" href="#int-integration-mutation" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>seq_id</strong> <em>\<string></em></p>
+<p>id of reference sequence fragment containing mutation, evidence, or
+validation.</p>
+</li>
+<li>
+<p><strong>position</strong> <em>\<uint32></em></p>
+<p>position in reference sequence fragment that was the target of
+integration from another genomic location.</p>
+</li>
+<li>
+<p><strong>size</strong> <em>\<uint32></em></p>
+<p>number of bases to replace in the reference genome beginning at the
+specified position.</p>
+</li>
+<li>
+<p><strong>region</strong> <em>\<sequence:start-end></em></p>
+<p>Region in the reference genome to use as a replacement.</p>
+</li>
+</ol>
+<h3 id="what-is-the-difference-between-a-con-and-an-int">What is the difference between a CON and an INT?<a class="headerlink" href="#what-is-the-difference-between-a-con-and-an-int" title="Permanent link">&para;</a></h3>
+<p>Gene conversions generally don't add or remove genes from a genome. They
+just exchange a few bases between homologous genes. Therefore, gene
+annotations are not changed by applying a CON mutation to a genome. On
+the other hand, integration implies that new genes are being added to a
+sequence. Thus, gene annotations are copied over to the inserted bases
+when applying an INT mutation to a genome.</p>
+<h3 id="inv-inversion-mutation">INV: Inversion mutation<a class="headerlink" href="#inv-inversion-mutation" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>seq_id</strong> <em>\<string></em></p>
+<p>id of reference sequence fragment containing mutation, evidence, or
+validation.</p>
+</li>
+<li>
+<p><strong>position</strong> <em>\<uint32></em></p>
+<p>position in reference sequence fragment.</p>
+</li>
+<li>
+<p><strong>size</strong> <em>\<uint32></em></p>
+<p>number of bases in inverted region beginning at the specified
+reference position.</p>
+</li>
+</ol>
+<h2 id="standard-namevalue-pairs">Standard name=value pairs<a class="headerlink" href="#standard-namevalue-pairs" title="Permanent link">&para;</a></h2>
+<h3 id="counting-mutations">Counting Mutations<a class="headerlink" href="#counting-mutations" title="Permanent link">&para;</a></h3>
+<p>These attributes affect how molecular events in a <code>GenomeDiff</code> are
+counted for summary purposes. They can be properties of any mutation
+entry.</p>
+<ul>
+<li>
+<p><strong>adjacent</strong>=<em>\<repeat_family></em></p>
+<blockquote>
+<p>This mutation is adjacent to the specified element. For example,
+it may be an insertion of a base next to a mobile element. One may
+want to ignore mutations in this category for certain analyses
+because they may represent hotspots with atypical mutation rates.</p>
+</blockquote>
+</li>
+<li>
+<p><strong>with</strong>=<em>\<mutation_id></em></p>
+<blockquote>
+<p>This mutation should not be counted separately. It should be
+counted as a <strong>single</strong> molecular event with the other specified
+mutation (which does not need a with tag)</p>
+</blockquote>
+</li>
+</ul>
+<h3 id="applying-mutations">Applying Mutations<a class="headerlink" href="#applying-mutations" title="Permanent link">&para;</a></h3>
+<p>These advanced attributes control how mutations are applied when using
+<code>gdtools APPLY</code> to build a new reference genome from the original
+reference genome and a <code>GenomeDiff</code> and when building phylogenetic trees
+from multiple samples. They are not generated automatically by
+<em>breseq</em>.</p>
+<ul>
+<li>
+<p><strong>before</strong>=<em>\<mutation_id></em></p>
+<p>Apply this mutation before another mutation. For example, did a
+base substitution occur after a region was duplicated, thus it is
+only in one copy or did it occur before the duplication, thus
+altering both copies? Did a base substitution happen before a
+deletion, hiding a mutation that should be included in any
+phylogenetic inference? When this attributes is present, mutations
+will be applied in order according to their genomic positions.</p>
+</li>
+<li>
+<p><strong>within</strong>=<em>\<mutation_id></em>or
+    <strong>within</strong>=<em>\<mutation_id>:\<insert_position></em> or
+    <strong>within</strong>=<em>\<mutation_id>:\<copy_index></em></p>
+<p>This mutation happens within a different mutation. These options
+can specify, for example, that a base substitution happens in the
+second copy of a duplicated region. If <em>\<mutation_id></em> refers to
+an AMP, then it must be of the form <em>\<mutation_id>:\<copy_index></em>
+and the mutation is placed in the corresponding copy of the
+specified coordinates. If <em>\<mutation_id></em> refers to an INS, then
+it must be of the form <em>\<mutation_id>:\<insert_position></em>, and
+the \<insert_position> of the mutation will be interpreted as
+happening within the INS bases that are inserted, so that it can
+change those new bases. This coordinate is local to the new bases,
+so an \<insert_position> of 1 refers to the first inserted base.
+In this case, the main <em>\<position></em> of the mutation must be the
+same as the <em>\<position> of the INS that it is within.
+If </em>\<mutation_id>* refers to a MOB with no <em>\<copy_index></em>, then
+the mutation is placed within the newly inserted sequence of the
+mobile element with the position of the mutation interpreted as
+happening on the new genome after the MOB bases are inserted. If
+it refers to a MOB and is of the form
+<em>\<mutation_id>:\<copy_index></em>, then the mutation is placed within
+the specified copy of the target site duplication.</p>
+</li>
+<li>
+<p><strong>deleted</strong>=<em>1</em></p>
+<p>The sequence change caused by this mutation was made irrelevant by
+subsequent mutations that deleted or further changed the affected
+region. Annotation of this mutation in the given genome was
+inferred based on phylogeny. It will not be applied when
+generating the mutated genome.</p>
+</li>
+<li>
+<p><strong>apply_size_adjust</strong>=<em>\&lt;int32&gt;</em></p>
+<p>When applying the mutation change its size by this number. Usually used for DEL mutations
+and complicated cases. See the <a href="../tutorial-curation-common-cases/">Common Curation Cases</a>
+tutorial for an example.</p>
+</li>
+</ul>
+<h2 id="evidence-types">Evidence Types<a class="headerlink" href="#evidence-types" title="Permanent link">&para;</a></h2>
+<h3 id="ra-read-alignment-evidence">RA: Read alignment evidence<a class="headerlink" href="#ra-read-alignment-evidence" title="Permanent link">&para;</a></h3>
+<p>Line specification:</p>
+<ol>
+<li>
+<p><strong>seq_id</strong> <em>\<string></em></p>
+<p>id of reference sequence fragment containing mutation, evidence, or
+validation.</p>
+</li>
+<li>
+<p><strong>position</strong> <em>\<uint32></em></p>
+<p>position in reference sequence fragment.</p>
+</li>
+<li>
+<p><strong>insert_position</strong> <em>\<uint32></em></p>
+<p>number of bases inserted after the reference position to get to this
+base. An value of zero refers to the base. A value of 5 means that
+this evidence if for the fifth newly inserted column after the
+reference position.</p>
+</li>
+<li>
+<p><strong>ref_base</strong> <em>\<char></em></p>
+<p>base in the reference genome.</p>
+</li>
+<li>
+<p><strong>new_base</strong> <em>\<char></em></p>
+<p>new base supported by read alignment evidence.</p>
+</li>
+</ol>
+<h3 id="mc-missing-coverage-evidence">MC: Missing coverage evidence<a class="headerlink" href="#mc-missing-coverage-evidence" title="Permanent link">&para;</a></h3>
+<p>Line specification:</p>
+<ol>
+<li>
+<p><strong>seq_id</strong> <em>\<string></em></p>
+<p>id of reference sequence fragment containing mutation, evidence, or
+validation.</p>
+</li>
+<li>
+<p><strong>start</strong> <em>\<uint32></em></p>
+<p>start position in reference sequence fragment.</p>
+</li>
+<li>
+<p><strong>end</strong> <em>\<uint32></em></p>
+<p>end position in reference sequence of region.</p>
+</li>
+<li>
+<p><strong>start_range</strong> <em>\<uint32></em></p>
+<p>number of bases to offset <em>after</em> the <strong>start position</strong> to define
+the upper limit of the range where the start of a deletion could be.</p>
+</li>
+<li>
+<p><strong>end_range</strong> <em>\<uint32></em></p>
+<p>number of bases to offset <em>before</em> the <strong>end position</strong> to define
+the lower limit of the range where the start of a deletion could be.</p>
+</li>
+</ol>
+<p>Essentially this is evidence of missing coverage between two positions
+in the ranges [start, start+start_range] [end-end_range, end].</p>
+<h3 id="jc-new-junction-evidence">JC: New junction evidence<a class="headerlink" href="#jc-new-junction-evidence" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>side_1_seq_id</strong> <em>\<string></em></p>
+<p>id of reference sequence fragment containing side 1 of the junction.</p>
+</li>
+<li>
+<p><strong>side_1_position</strong> <em>\<uint32></em></p>
+<p>position of side 1 at the junction boundary.</p>
+</li>
+<li>
+<p><strong>side_1_strand</strong> <em>\&lt;1/-1&gt;</em></p>
+<p>direction that side 1 continues matching the reference sequence</p>
+</li>
+<li>
+<p><strong>side_2_seq_id</strong> <em>\<string></em></p>
+<p>id of reference sequence fragment containing side 2 of the junction.</p>
+</li>
+<li>
+<p><strong>side_2_position</strong> <em>\<uint32></em></p>
+<p>position of side 2 at the junction boundary.</p>
+</li>
+<li>
+<p><strong>side_2_strand</strong> <em>\&lt;1/-1&gt;</em></p>
+<p>direction that side 2 continues matching the reference sequence.</p>
+</li>
+<li>
+<p><strong>overlap</strong> <em>\<uint32></em></p>
+<p>Number of bases that the two sides of the new junction have in
+common.</p>
+</li>
+</ol>
+<h3 id="un-unknown-base-evidence">UN: Unknown base evidence<a class="headerlink" href="#un-unknown-base-evidence" title="Permanent link">&para;</a></h3>
+<p>Line specification:</p>
+<ol>
+<li>
+<p><strong>seq_id</strong> <em>\<string></em></p>
+<p>id of reference sequence fragment containing mutation, evidence, or
+validation.</p>
+</li>
+<li>
+<p><strong>start</strong> <em>\<uint32></em></p>
+<p>start position in reference sequence of region.</p>
+</li>
+<li>
+<p><strong>end</strong> <em>\<uint32></em></p>
+<p>end position in reference sequence of region.</p>
+</li>
+</ol>
+<h2 id="validation-types">Validation Types<a class="headerlink" href="#validation-types" title="Permanent link">&para;</a></h2>
+<p>These items indicate that mutations have been validated by further,
+targeted experiments.</p>
+<h3 id="cura-true-positive-curated-by-an-expert">CURA: True-positive curated by an expert<a class="headerlink" href="#cura-true-positive-curated-by-an-expert" title="Permanent link">&para;</a></h3>
+<p>An expert has examined the data output from a prediction program and
+determined that this mutations is a true positive.</p>
+<p>Line specification:</p>
+<ol>
+<li>
+<p><strong>expert</strong> <em>\<string></em></p>
+<p>Name or initials of the person who predicted the mutation.</p>
+</li>
+</ol>
+<h3 id="fpos-false-positive-curated-by-an-expert">FPOS: False-positive curated by an expert<a class="headerlink" href="#fpos-false-positive-curated-by-an-expert" title="Permanent link">&para;</a></h3>
+<p>An expert has examined the raw read data and determined that this
+predicted mutation is a false positive.</p>
+<p>Line specification:</p>
+<ol>
+<li>
+<p><strong>expert</strong> <em>\<string></em></p>
+<p>Name or initials of the person who predicted the mutation.</p>
+</li>
+</ol>
+<h3 id="phyl-phylogenetic-comparison">PHYL: Phylogenetic comparison<a class="headerlink" href="#phyl-phylogenetic-comparison" title="Permanent link">&para;</a></h3>
+<p>This validation was transferred from validation in another, related
+genome.</p>
+<p>Line specification:</p>
+<ol>
+<li>
+<p><strong>gd</strong> <em>\<string></em></p>
+<p>Name of the genome_diff file containing the evidence.</p>
+</li>
+</ol>
+<h3 id="tseq-targeted-re-sequencing">TSEQ: Targeted re-sequencing<a class="headerlink" href="#tseq-targeted-re-sequencing" title="Permanent link">&para;</a></h3>
+<p>Line specification:</p>
+<ol>
+<li>
+<p><strong>seq_id</strong> <em>\<string></em></p>
+<p>id of reference sequence fragment containing mutation, evidence, or
+validation.</p>
+</li>
+<li>
+<p><strong>primer1_start</strong> <em>\<uint32></em></p>
+<p>position in reference sequence of the 5' end of primer 1.</p>
+</li>
+<li>
+<p><strong>primer1_end</strong> <em>\<uint32></em></p>
+<p>position in reference sequence of the 3' end of primer 1.</p>
+</li>
+<li>
+<p><strong>primer2_start</strong> <em>\<uint32></em></p>
+<p>position in reference sequence of the 5' end of primer 2.</p>
+</li>
+<li>
+<p><strong>primer2_end</strong> <em>\<uint32></em></p>
+<p>position in reference sequence of the 3' end of primer 2.</p>
+</li>
+</ol>
+<p>For primer 1, start \&lt; end. For primer 2, end \&lt; start.</p>
+<h3 id="pflp-pcr-fragment-length-polymorphism">PFLP: PCR-fragment length polymorphism<a class="headerlink" href="#pflp-pcr-fragment-length-polymorphism" title="Permanent link">&para;</a></h3>
+<p>Line specification:</p>
+<ol>
+<li>
+<p><strong>seq_id</strong> <em>\<string></em></p>
+<p>id of reference sequence fragment containing mutation, evidence, or
+validation.</p>
+</li>
+<li>
+<p><strong>primer1_start</strong> <em>\<uint32></em></p>
+<p>position in reference sequence of the 5' end of primer 1.</p>
+</li>
+<li>
+<p><strong>primer1_end</strong> <em>\<uint32></em></p>
+<p>position in reference sequence of the 3' end of primer 1.</p>
+</li>
+<li>
+<p><strong>primer2_start</strong> <em>\<uint32></em></p>
+<p>position in reference sequence of the 5' end of primer 2.</p>
+</li>
+<li>
+<p><strong>primer2_end</strong> <em>\<uint32></em></p>
+<p>position in reference sequence of the 3' end of primer 2.</p>
+</li>
+</ol>
+<p>For primer 1, start \&lt; end. For primer 2, end \&lt; start.</p>
+<h3 id="rflp-restriction-fragment-length-polymorphism">RFLP: Restriction fragment length polymorphism<a class="headerlink" href="#rflp-restriction-fragment-length-polymorphism" title="Permanent link">&para;</a></h3>
+<p>Line specification:</p>
+<ol>
+<li>
+<p><strong>seq_id</strong> <em>\<string></em></p>
+<p>id of reference sequence fragment containing mutation, evidence, or
+validation.</p>
+</li>
+<li>
+<p><strong>primer1_start</strong> <em>\<uint32></em></p>
+<p>position in reference sequence of the 5' end of primer 1.</p>
+</li>
+<li>
+<p><strong>primer1_end</strong> <em>\<uint32></em></p>
+<p>position in reference sequence of the 3' end of primer 1.</p>
+</li>
+<li>
+<p><strong>primer2_start</strong> <em>\<uint32></em></p>
+<p>position in reference sequence of the 5' end of primer 2.</p>
+</li>
+<li>
+<p><strong>primer2_end</strong> <em>\<uint32></em></p>
+<p>position in reference sequence of the 3' end of primer 2.</p>
+</li>
+<li>
+<p><strong>enzyme</strong> <em>\<string></em></p>
+<p>Restriction enzyme used to distinguish reference from mutated
+allele.</p>
+</li>
+</ol>
+<p>For primer 1, start \&lt; end. For primer 2, end \&lt; start.</p>
+<h3 id="pfge-pulsed-field-gel-electrophoresis">PFGE: Pulsed-field gel electrophoresis<a class="headerlink" href="#pfge-pulsed-field-gel-electrophoresis" title="Permanent link">&para;</a></h3>
+<p>Changes in fragment sizes of genomic DNA digested with restriction
+enzymes and separated by pulsed-field</p>
+<p>Line specification:</p>
+<ol>
+<li>
+<p><strong>seq_id</strong> <em>\<string></em></p>
+<p>id of reference sequence fragment containing mutation, evidence, or
+validation.</p>
+</li>
+<li>
+<p><strong>restriction enzyme</strong> <em>\<string></em></p>
+</li>
+</ol>
+<blockquote>
+<p>Restriction enzyme used to digest genomic DNA and observe fragments.</p>
+</blockquote>
+<h3 id="note-note">NOTE: Note<a class="headerlink" href="#note-note" title="Permanent link">&para;</a></h3>
+<p>Generic container for a note about a mutation prediction</p>
+<p>Line specification:</p>
+<ol>
+<li>
+<p><strong>note</strong> <em>\<string></em></p>
+<p>Free text note.</p>
+</li>
+</ol>
+<h3 id="mask-repeat-mask-a-section">MASK: Repeat mask a section<a class="headerlink" href="#mask-repeat-mask-a-section" title="Permanent link">&para;</a></h3>
+<p>Artificially mask a section of DNA as "N"s. This is useful for creating
+modified reference sequences, particularly for targeted sequencing
+approaches. Line specification:</p>
+<ol>
+<li>
+<p><strong>seq_id</strong> <em>\<string></em></p>
+<p>id of reference sequence fragment containing mutation, evidence, or
+validation.</p>
+</li>
+<li>
+<p><strong>position</strong> <em>\<uint32></em></p>
+<p>position in reference sequence fragment.</p>
+</li>
+<li>
+<p><strong>size</strong> <em>\<uint32></em></p>
+<p>number of bases masked to "N" in reference, including reference
+position.</p>
+</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "toc.follow", "search.suggest", "content.code.copy", "content.action.edit"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
