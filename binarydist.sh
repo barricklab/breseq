@@ -231,7 +231,7 @@ cp tests/lambda_mult_ref_read/expected.gd ${BINARYDIR}/tests/lambda_mult_ref_rea
 cp tests/lambda_mult_ref_read/testcmd.sh ${BINARYDIR}/tests/lambda_mult_ref_read
 
 #need to update the #COMMAND line of the expected GenomeDiff to match path this is run from
-sed -i -e 's/.\/src\/c\/breseq/bin/g' ${BINARYDIR}/tests/*/expected.gd
+sed -i -e 's/.\/src\/breseq/bin/g' ${BINARYDIR}/tests/*/expected.gd
 
 mkdir -p ${BINARYDIR}/tests/data/lambda
 cp tests/data/lambda/empty.fastq ${BINARYDIR}/tests/data/lambda

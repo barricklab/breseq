@@ -63,7 +63,7 @@ TEST_CORES ?= $(or $(shell ps -p $$PPID -o args= 2>/dev/null | grep -oE -- '(-j 
 ## lines / shell invocations, which breaks callers that embed this inside
 ## a larger shell construct (e.g. all-local's 'if ... fi' guard below).
 define write_test_config
-	printf 'export TESTBINPREFIX=$(top_srcdir)/src/c/breseq\nexport BRESEQ_DATA_PATH=$(top_srcdir)/src/c/share/breseq\n' > $(1);
+	printf 'export TESTBINPREFIX=$(top_srcdir)/src/breseq\nexport BRESEQ_DATA_PATH=$(top_srcdir)/src/share/breseq\n' > $(1);
 endef
 
 ## Main hooks called after normal make steps
@@ -88,14 +88,14 @@ clean-local :: clean-tests
 	## This saves the install path for the test script
 	rm -f $(abs_top_builddir)/tests/test.config
 	find $(abs_top_builddir) -name '.DS_Store' -type f -delete
-	rm -rf $(abs_top_builddir)/src/c/breseq/*.dSYM
+	rm -rf $(abs_top_builddir)/src/breseq/*.dSYM
 
 dist-hook:
 	find $(distdir) -name '.DS_Store' -type f -delete
 
 	## Remove ._ files
 	rm -rf `find $(distdir) -name ".*"`
-	rm -rf ./src/c/breseq/gdtools.dSYM
+	rm -rf ./src/breseq/gdtools.dSYM
 
 	## Set up run_tests.sh and environmental variables
 	$(call write_test_config,$(distdir)/tests/test.config)

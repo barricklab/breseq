@@ -104,11 +104,11 @@ Test directories prefixed with `_` are skipped. Directories with `long` in their
 
 ### Two binaries, one library
 
-- `src/c/breseq/breseq` — the main pipeline binary
-- `src/c/breseq/gdtools` — genome diff manipulation tool
-- `src/c/breseq/libbreseq.la` — static library shared by both
+- `src/breseq/breseq` — the main pipeline binary
+- `src/breseq/gdtools` — genome diff manipulation tool
+- `src/breseq/libbreseq.la` — static library shared by both
 
-All headers live in `src/c/breseq/libbreseq/`. Implementation files are in `src/c/breseq/`.
+All headers live in `src/breseq/libbreseq/`. Implementation files are in `src/breseq/`.
 
 Entry points: `breseq_cmdline.cpp` (dispatches breseq subcommands) and `gdtools_cmdline.cpp` (dispatches gdtools subcommands).
 
@@ -176,8 +176,8 @@ breseq writes to `-o <output_dir>` (default: current directory):
   1. When running inside a git worktree, use the shared conda env at `../../../env` (i.e., `breseq/env` in the main repo) via `conda run -p ../../../env <command>`. If that env is absent, fall back to creating one locally as described in `DEVELOPER`.
   2. When explicitly told to, you may merge changes back to the `master` branch in the main repo.
 - **Run `make test` as part of the development cycle** — run the full test suite before considering a feature or fix complete.
-- **Run tests and rebuild scripts from the worktree root** — `./tests/run.sh`, `./tests/rebuild.sh`, and `make test` must be invoked from the top of the worktree (not from a subdirectory). A worktree needs its own `tests/test.config` (set `TESTBINPREFIX` and `BRESEQ_DATA_PATH` to `<worktree>/src/c/breseq`); a plain `make` now generates it automatically as part of `all-local`, so it's normally already there by the time you run a test directly.
-- **A freshly built `breseq`/`gdtools` runs standalone with no env vars needed** — the runtime data files (`breseq_icon.png`, `jszip.min.js`, etc.) live in `src/c/share/breseq/`, a sibling of `src/c/breseq/` where the binaries are built, matching the relative `bin/`↔`share/<pkg>/` layout autotools already computes between `--bindir`/`--datadir`. `BRESEQ_DATA_PATH` is only needed to override this (e.g. a relocated/custom install).
+- **Run tests and rebuild scripts from the worktree root** — `./tests/run.sh`, `./tests/rebuild.sh`, and `make test` must be invoked from the top of the worktree (not from a subdirectory). A worktree needs its own `tests/test.config` (set `TESTBINPREFIX` to `<worktree>/src/breseq` and `BRESEQ_DATA_PATH` to `<worktree>/src/share/breseq`); a plain `make` now generates it automatically as part of `all-local`, so it's normally already there by the time you run a test directly.
+- **A freshly built `breseq`/`gdtools` runs standalone with no env vars needed** — the runtime data files (`breseq_icon.png`, `jszip.min.js`, etc.) live in `src/share/breseq/`, a sibling of `src/breseq/` where the binaries are built, matching the relative `bin/`↔`share/<pkg>/` layout autotools already computes between `--bindir`/`--datadir`. `BRESEQ_DATA_PATH` is only needed to override this (e.g. a relocated/custom install).
 
 ## Distribution
 

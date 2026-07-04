@@ -45,7 +45,7 @@ $ tests/test.sh rebuild <test-name>
 
 === Developing with XCode ===
 
-Open the included project file: src/c/breseq.xcodeproj
+Open the included project file: src/breseq.xcodeproj
 
 This project is set up to use the shared libraries and command-line tools installed by the conda 
 environment. So, first create that environment as described above. Be sure the architecture type 

@@ -161,8 +161,7 @@ AC_ARG_VAR([CRAM_CODEC_LIBS], [Static libraries (e.g. full paths to libbz2.a and
 
 
 AC_SUBST([LIBZ], [extern/zlib-1.3.1])
-AC_SUBST([BRESEQ], [src/c/breseq])
-AC_SUBST([GDTOOLS], [src/c/gdtools])
+AC_SUBST([BRESEQ], [src/breseq])
 
 
 # Reading .git/refs/heads/master directly only worked for an in-place checkout
@@ -197,7 +196,7 @@ esac
 
 
 AC_CONFIG_FILES([
-    src/c/breseq/Makefile
+    src/breseq/Makefile
     Makefile
 ])
 

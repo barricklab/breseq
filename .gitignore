@@ -61,15 +61,15 @@ tests/*/test.log
 tests/*/test.result
 tests/lambda_mixed_pop_cl_tabulate/contingency_loci.csv
 
-src/c/breseq/breseq/
-src/c/breseq/breseq
-src/c/breseq/gdtools
+src/breseq/breseq/
+src/breseq/breseq
+src/breseq/gdtools
 
 package
 
 ## For Xcode
 
-src/c/build
+src/Build
 xcworkspace
 xcuserdata
 xcshareddata
