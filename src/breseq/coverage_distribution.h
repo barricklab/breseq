@@ -92,9 +92,11 @@ namespace breseq {
   struct PairedMappingDistanceDistributionFitResult
   {
     double median = 0;
-    double mad = 0;             // median absolute deviation
+    double mad = 0;             // upper (one-sided) median absolute deviation
     double distance_cutoff = 0; // median + z*mad/0.6745
     string majority_orientation; // most common of FF/FR/RF by total observation count
+    double mapped_pairs = 0;     // total same-reference mapped pairs (all orientations) in the preprocessing tabulation
+    double concordant_pairs = 0; // majority-orientation pairs within the cutoff
   };
 
   class PairedMappingDistanceDistribution

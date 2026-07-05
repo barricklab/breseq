@@ -314,6 +314,8 @@ void to_json(json& j, const PairedMappingDistanceDistributionSummary& s)
     {"mad", s.mad},
     {"distance_cutoff", s.distance_cutoff},
     {"majority_orientation", s.majority_orientation},
+    {"mapped_pairs", s.mapped_pairs},
+    {"concordant_pairs", s.concordant_pairs},
   };
 }
 
@@ -323,6 +325,8 @@ void from_json(const json& j, PairedMappingDistanceDistributionSummary& s)
   s.mad = j.at("mad").get<double>();
   s.distance_cutoff = j.at("distance_cutoff").get<double>();
   s.majority_orientation = j.at("majority_orientation").get<string>();
+  s.mapped_pairs = j.value("mapped_pairs", 0.0);
+  s.concordant_pairs = j.value("concordant_pairs", 0.0);
 }
 
 void to_json(json& j, const PairedMappingDistanceDistributionSummaries& s)
@@ -368,6 +372,7 @@ void to_json(json& j, const Summary& s)
     {"preprocess_error_count", s.preprocess_error_count},
     {"preprocess_alignments", s.preprocess_alignments},
     {"soft_clipping", s.soft_clipping},
+    {"preliminary_paired_mapping_distance_distribution", s.preliminary_paired_mapping_distance_distribution},
     {"paired_mapping_distance_distribution", s.paired_mapping_distance_distribution},
   };
 }
@@ -383,10 +388,12 @@ void from_json(const json& j, Summary& s)
   s.preprocess_error_count = j.at("preprocess_error_count").get<ErrorCountSummaries>();
   if (j.count("soft_clipping"))
     s.soft_clipping = j.at("soft_clipping").get<SoftClippingSummary>();
+  if (j.count("preliminary_paired_mapping_distance_distribution"))
+    s.preliminary_paired_mapping_distance_distribution = j.at("preliminary_paired_mapping_distance_distribution").get<PairedMappingDistanceDistributionSummaries>();
   if (j.count("paired_mapping_distance_distribution"))
     s.paired_mapping_distance_distribution = j.at("paired_mapping_distance_distribution").get<PairedMappingDistanceDistributionSummaries>();
 }
-  
+
 PublicReadFileSummary::PublicReadFileSummary(const ReadFileSummary &rfs, const AnalyzeFastqSummary &afs)
 {
   read_length_min = afs.read_length_min;
@@ -599,6 +606,7 @@ PublicOptionsSummary::PublicOptionsSummary(const Settings &t)
   , references(s, r, t.refseq_settings)
   , options(t)
   , soft_clipping(s.soft_clipping)
+  , preliminary_paired_mapping_distance_distribution(s.preliminary_paired_mapping_distance_distribution)
   , paired_mapping_distance_distribution(s.paired_mapping_distance_distribution)
 { }
   
@@ -939,6 +947,7 @@ void to_json(json& j, const PublicSummary& s)
     {"references", s.references},
     {"options", s.options},
     {"soft_clipping", s.soft_clipping},
+    {"preliminary_paired_mapping_distance_distribution", s.preliminary_paired_mapping_distance_distribution},
     {"paired_mapping_distance_distribution", s.paired_mapping_distance_distribution},
   };
 }
@@ -951,6 +960,8 @@ void from_json(const json& j, PublicSummary& s)
   s.options = j.at("options").get<PublicOptionsSummary>();
   if (j.count("soft_clipping"))
     s.soft_clipping = j.at("soft_clipping").get<SoftClippingSummary>();
+  if (j.count("preliminary_paired_mapping_distance_distribution"))
+    s.preliminary_paired_mapping_distance_distribution = j.at("preliminary_paired_mapping_distance_distribution").get<PairedMappingDistanceDistributionSummaries>();
   if (j.count("paired_mapping_distance_distribution"))
     s.paired_mapping_distance_distribution = j.at("paired_mapping_distance_distribution").get<PairedMappingDistanceDistributionSummaries>();
 }

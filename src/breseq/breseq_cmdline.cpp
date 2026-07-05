@@ -225,8 +225,68 @@ int do_bam2aln(int argc, char* argv[]) {
 /*! bam2cov
  Draw HTML coverage from BAM
  */
+int do_bam2drp(int argc, char* argv[]) {
+
+  // setup and parse configuration options:
+  AnyOption options("Usage: breseq BAM2DRP [-b reference.bam -f reference.fasta -o output.svg] [region1] [region2]");
+  options.addUsage("");
+  options.addUsage("Create a discordant read-pair plot: a 2D dot plot of the two mapped ends of every");
+  options.addUsage("discordant read pair. A pair is discordant if it mapped as a pair but breseq did not");
+  options.addUsage("call it concordant (proper pair). Each point is colored by strand (F=blue, R=red).");
+  options.addUsage("");
+  options.addUsage("Zero, one, or two regions may be given as unnamed arguments (format ACCESSION:START-END):");
+  options.addUsage("  no region  : X and Y axes both span all reference sequences.");
+  options.addUsage("  one region : Y axis spans that region, X axis spans all reference sequences.");
+  options.addUsage("  two regions: Y axis spans region 1, X axis spans region 2 (only reads overlapping");
+  options.addUsage("               region 2 whose mate falls in region 1 are shown).");
+  options.addUsage("");
+  options.addUsage("Allowed Options");
+  options("help,h", "Display detailed help message", TAKES_NO_ARGUMENT);
+  options("bam,b", "BAM database file of read alignments", "data/reference.bam");
+  options("fasta,f", "FASTA file of reference sequences", "data/reference.fasta");
+  options("output,o", "Output SVG plot file name", "discordant_pairs.svg");
+
+  options.processCommandArgs(argc, argv);
+
+  if (options.count("help")) {
+    options.printUsage();
+    return -1;
+  }
+
+  if (!file_exists(options["fasta"].c_str())) {
+    options.addUsage("");
+    options.addUsage("Could not open input reference FASTA file (-f):\n  " + options["fasta"]);
+    options.printUsage();
+    return -1;
+  }
+  if (!file_exists(options["bam"].c_str())) {
+    options.addUsage("");
+    options.addUsage("Could not open input BAM file of aligned reads (-b):\n  " + options["bam"]);
+    options.printUsage();
+    return -1;
+  }
+
+  // 0, 1, or 2 regions as unnamed command-line arguments.
+  vector<string> region_list;
+  for (int32_t i = 0; i < options.getArgc(); i++)
+    region_list.push_back(options.getArgv(i));
+
+  if (region_list.size() > 2) {
+    options.addUsage("");
+    options.addUsage("At most two regions may be provided.");
+    options.printUsage();
+    return -1;
+  }
+
+  string output_file_name = options["output"];
+  string dir = path_to_dirname(output_file_name);
+  if (dir.size()) create_path(dir);
+
+  return output::draw_discordant_pairs_plot_from_bam(options["bam"], options["fasta"], region_list, output_file_name);
+}
+
 int do_bam2cov(int argc, char* argv[]) {
-  
+
   // create empty settings object to have R script name and default summary.json file name
   Settings settings;
   
@@ -1745,11 +1805,11 @@ int breseq_default_action(int argc, char* argv[])
     // distance histogram written by merge_sort_and_preprocess_alignments above, and draws a
     // diagnostic plot (analogous to the unique-coverage distribution fit/plot).
     PairedMappingDistanceDistribution::fit_paired_mapping_distance_distributions(settings, summary);
-    summary.paired_mapping_distance_distribution.store(settings.paired_mapping_distance_summary_file_name);
+    summary.preliminary_paired_mapping_distance_distribution.store(settings.paired_mapping_distance_summary_file_name);
     settings.done_step(settings.paired_mapping_distance_done_file_name);
   }
   if (!settings.aligned_sam_mode)
-    summary.paired_mapping_distance_distribution.retrieve(settings.paired_mapping_distance_summary_file_name);
+    summary.preliminary_paired_mapping_distance_distribution.retrieve(settings.paired_mapping_distance_summary_file_name);
 
   //
   // Only do steps 03 and 04 if we are performing new junction prediction
@@ -1908,11 +1968,14 @@ int breseq_default_action(int argc, char* argv[])
 		);
 
 		summary.alignment_resolution.store(settings.alignment_resolution_summary_file_name);
+		summary.paired_mapping_distance_distribution.store(settings.resolved_paired_mapping_distance_summary_file_name);
 		settings.done_step(settings.alignment_correction_done_file_name);
 	}
-  
+
 	if (file_exists(settings.alignment_resolution_summary_file_name.c_str()))
     summary.alignment_resolution.retrieve(settings.alignment_resolution_summary_file_name);
+	if (file_exists(settings.resolved_paired_mapping_distance_summary_file_name.c_str()))
+    summary.paired_mapping_distance_distribution.retrieve(settings.resolved_paired_mapping_distance_summary_file_name);
   
 	//
   // 05 bam
@@ -2474,7 +2537,8 @@ int breseq_default_action(int argc, char* argv[])
 
     cerr << "Drawing coverage plots..." << endl;
     output::draw_coverage(settings, ref_seq_info, gd);
-    
+    output::draw_discordant_pairs_plot(settings, ref_seq_info);
+
     // !!! Currently, we need to wait for the creation of coverage plots to finish
     // b/c we check whether files exist in creating the HTML files next.
     Settings::sync_threads();
@@ -2606,8 +2670,10 @@ int main(int argc, char* argv[]) {
     return do_bam2aln( argc_new, argv_new.data());  
   } else if (command == "BAM2COV") {
     return do_bam2cov( argc_new, argv_new.data());
-    
-    
+  } else if (command == "BAM2DRP") {
+    return do_bam2drp( argc_new, argv_new.data());
+
+
   // Experimental and Development Commands:
   //
   // None of these commands are documented for use by others. 
