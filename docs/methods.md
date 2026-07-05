@@ -236,7 +236,7 @@ unambiguously know if another copy of that base was inserted by a
 mutation.
 
 <figure>
-<img src="images/end_trimming_example.png" class="align-center" width="450" alt="Example of alignment end trimming." /><figcaption aria-hidden="true"><strong>Example of alignment end trimming.</strong></figcaption>
+<img src="../images/end_trimming_example.png" class="align-center" width="450" alt="Example of alignment end trimming." /><figcaption aria-hidden="true"><strong>Example of alignment end trimming.</strong></figcaption>
 </figure>
 
 This example shows the number of bases that will be trimmed from the
@@ -262,7 +262,7 @@ For example, consider this mutation, which involves insertion of a new
 AGC at a site where there are already two AGC copies:
 
 <figure>
-<img src="images/missed_mutation_no_trimming.png" class="align-center" width="600" alt="Indel mutation prediction aided by end trimming." /><figcaption aria-hidden="true"><strong>Indel mutation prediction aided by end trimming.</strong></figcaption>
+<img src="../images/missed_mutation_no_trimming.png" class="align-center" width="600" alt="Indel mutation prediction aided by end trimming." /><figcaption aria-hidden="true"><strong>Indel mutation prediction aided by end trimming.</strong></figcaption>
 </figure>
 
 This image shows reads 1-6 aligned to the reference genome with and
@@ -297,7 +297,7 @@ counts are converted to error rates by dividing the count in each cell
 by the sum across that base quality score.
 
 <figure>
-<img src="images/error_rates.png" class="align-center" width="600" height="400" alt="Example of re-calibrated error rates." /><figcaption aria-hidden="true"><strong>Example of re-calibrated error rates.</strong></figcaption>
+<img src="../images/error_rates.png" class="align-center" width="600" height="400" alt="Example of re-calibrated error rates." /><figcaption aria-hidden="true"><strong>Example of re-calibrated error rates.</strong></figcaption>
 </figure>
 
 This plot shows a typical empirical error model fit to Illumina Genome
@@ -473,15 +473,15 @@ also have extremely low frequencies (\<2%) for the minor indel variants.
 ## RA prediction options and flowcharts
 
 <figure>
-<img src="images/mutation_calling_settings.png" class="align-center" width="800" height="448" />
+<img src="../images/mutation_calling_settings.png" class="align-center" width="800" height="448" />
 </figure>
 
 <figure>
-<img src="images/consensus_mode_RA_flowchart.png" class="align-center" width="600" height="572" />
+<img src="../images/consensus_mode_RA_flowchart.png" class="align-center" width="600" height="572" />
 </figure>
 
 <figure>
-<img src="images/polymorphism_mode_RA_flowchart.png" class="align-center" width="800" height="525" />
+<img src="../images/polymorphism_mode_RA_flowchart.png" class="align-center" width="800" height="525" />
 </figure>
 
 # Unknown base evidence (UN)
@@ -538,7 +538,7 @@ a moving average window size of 5 bases. Positions with coverage less
 than half this maximal read depth are ignored during fitting.
 
 <figure>
-<img src="images/coverage_distribution.png" class="align-center" width="500" height="428" alt="Example of coverage distributon fit." /><figcaption aria-hidden="true"><strong>Example of coverage distributon fit.</strong></figcaption>
+<img src="../images/coverage_distribution.png" class="align-center" width="500" height="428" alt="Example of coverage distributon fit." /><figcaption aria-hidden="true"><strong>Example of coverage distributon fit.</strong></figcaption>
 </figure>
 
 In this example of real data, circles represent the number of positions
@@ -602,7 +602,7 @@ counts as coverage of one divided by the total number of locations in
 the reference sequence that it matches.
 
 <figure>
-<img src="images/region_coverage_example.png" class="align-center" width="600" height="333" alt="Coverage in a deleted reference region." /><figcaption aria-hidden="true"><strong>Coverage in a deleted reference region.</strong></figcaption>
+<img src="../images/region_coverage_example.png" class="align-center" width="600" height="333" alt="Coverage in a deleted reference region." /><figcaption aria-hidden="true"><strong>Coverage in a deleted reference region.</strong></figcaption>
 </figure>
 
 This example shows a region of missing coverage (white background) that

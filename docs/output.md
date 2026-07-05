@@ -82,7 +82,7 @@ the quality of annotation in the reference sequence files.
 ### Single-base substitution (SNP)
 
 <figure>
-<img src="images/snp_1.png" width="750" />
+<img src="../images/snp_1.png" width="750" />
 </figure>
 
 Replacement of the reference T at position 70,867 with a C inside the
@@ -93,7 +93,7 @@ of the base change in the genome because this gene is encoded on the
 bottom strand of the reference sequence.
 
 <figure>
-<img src="images/snp_2.png" width="750" />
+<img src="../images/snp_2.png" width="750" />
 </figure>
 
 Replacement of the reference T at position 1,298,712 with a G in the
@@ -116,7 +116,7 @@ codon.
 ### Multiple-base substitution (SUB)
 
 <figure>
-<img src="images/sub_1.png" width="750" />
+<img src="../images/sub_1.png" width="750" />
 </figure>
 
 Replacement of two adjacent reference bases at positions 47,977 and
@@ -131,14 +131,14 @@ For insertion mutations, new bases are added after the specified
 *position*.
 
 <figure>
-<img src="images/ins_1.png" width="750" />
+<img src="../images/ins_1.png" width="750" />
 </figure>
 
 Insertion of a G after reference position 3,893,551. This mutation is 6
 nucleotides downstream of *kup* and 50 nucleotides upstream of *insJ-5*.
 
 <figure>
-<img src="images/ins_2.png" width="750" />
+<img src="../images/ins_2.png" width="750" />
 </figure>
 
 Insertion of CC after reference position 3,290,071 inside the *gltB*
@@ -153,7 +153,7 @@ Thus, the deleted reference region extends from *position* to
 *position* + *size* -1.
 
 <figure>
-<img src="images/del_1.png" width="750" />
+<img src="../images/del_1.png" width="750" />
 </figure>
 
 A 6,934-base deletion starting at position 3,894,997. The *annotation*
@@ -164,7 +164,7 @@ supported by `new-junction-display` and `missing-coverage-display`
 evidence.
 
 <figure>
-<img src="images/del_2.png" width="750" />
+<img src="../images/del_2.png" width="750" />
 </figure>
 
 A single-base deletion at position 1,332,148 in an intergenic region.
@@ -186,7 +186,7 @@ column. The strand of the newly inserted mobile element is indicated in
 parentheses after its name.
 
 <figure>
-<img src="images/mob_1.png" width="750" />
+<img src="../images/mob_1.png" width="750" />
 </figure>
 
 Insertion of an IS*3* element in the reverse orientation. Bases
@@ -197,7 +197,7 @@ duplicated bases are positions 397 through 399 of the 435-base *uspA*
 reading frame.
 
 <figure>
-<img src="images/mob_2.png" width="750" />
+<img src="../images/mob_2.png" width="750" />
 </figure>
 
 Insertion of an IS*186* element in the forward orientation. Bases
@@ -206,7 +206,7 @@ each margin of the newly inserted element. These bases are 494 through
 499 of the 549-base *fimA* reading frame.
 
 <figure>
-<img src="images/mob_3.png" width="750" />
+<img src="../images/mob_3.png" width="750" />
 </figure>
 
 Insertion of an IS*186* element in the forward orientation. Bases
@@ -222,7 +222,7 @@ For duplications and other tandem amplifications, *position* indicates
 the first repeated base.
 
 <figure>
-<img src="images/amp_1.png" width="750" />
+<img src="../images/amp_1.png" width="750" />
 </figure>
 
 Duplication of 8 bp inside the *pykF* gene. The bases 1,733,290 to
@@ -294,7 +294,7 @@ The format of these columns is the same as in `mutation-display`.
 **Explanation of New Junction Orientations**
 
 <figure>
-<img src="images/jc_side_explanation.png" width="600" />
+<img src="../images/jc_side_explanation.png" width="600" />
 </figure>
 
 *Figure Credit: Jeff Barrick with additions by Emily Layton*
@@ -312,7 +312,7 @@ deletion.
 Examples:
 
 <figure>
-<img src="images/jc_1.png" width="750" />
+<img src="../images/jc_1.png" width="750" />
 </figure>
 
 This image shows the page from clicking on the \* link for this
@@ -322,7 +322,7 @@ they align to. This sequence is on the bottom strand of the reference if
 start is greater than end. The end of the junction in yellow indicates that end maps to a repetitive region of the reference.
 
 <figure>
-<img src="images/jc_2.png" width="750" />
+<img src="../images/jc_2.png" width="750" />
 </figure>
 
 This image shows the page from clicking on one of the ? links for this
@@ -381,7 +381,7 @@ format of these columns is the same as in `mutation-display`.
 Example:
 
 <figure>
-<img src="images/ra_1.png" width="750" />
+<img src="../images/ra_1.png" width="750" />
 </figure>
 
 Partial alignment of reads showing that most support a base
@@ -426,7 +426,7 @@ format of these columns is the same as in `mutation-display`.
 Example:
 
 <figure>
-<img src="images/mc_1.png" width="750" />
+<img src="../images/mc_1.png" width="750" />
 </figure>
 
 Read coverage depth around the missing coverage. The white area shows

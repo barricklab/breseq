@@ -33,7 +33,7 @@ Three different cases are possible.
 ### Case 1: First IS element insertion is on the left side of the deletion
 
 This situation looks like this:
-<figure><img src="images/IS_plus_IS_mediated_deletion_right_side.png" width="750"></figure>
+<figure><img src="../images/IS_plus_IS_mediated_deletion_right_side.png" width="750"></figure>
 
 The parentheses around Intermediate 2 indicate that this may be a short-lived
 intermediate. That is, the second IS element insertion and the deletion may
@@ -50,15 +50,15 @@ A–5 from the _E. coli_ LTEE.
 First, we sequenced an earlier genome (A–5 50000-generation Clone REL11340) and see this IS element insertion predicted by _breseq_:
 
 **MOB Mutation (A–5 50000-generation Clone REL11340)**
-<figure><img src="images/Example_IS_plus_IS_mediated_deletion_initial_MOB.png" width="750"></figure>
+<figure><img src="../images/Example_IS_plus_IS_mediated_deletion_initial_MOB.png" width="750"></figure>
 
 Second, we sequenced a later genome (A–5 75000-generation Clone B). In the _breseq_ results, we don't see the IS element insertion anymore. Instead, we see the **MC** and matching **JC** unassigned evidence items indicative of an IS element insertion followed by an IS-mediated deletion.
 
 **Unassigned MC Evidence (A–5 75000-generation Clone B)**
-<figure><img src="images/Example_IS_plus_IS_mediated_deletion_MC_evidence.png" width="750"></figure>
+<figure><img src="../images/Example_IS_plus_IS_mediated_deletion_MC_evidence.png" width="750"></figure>
 
 **Unassigned JC Evidence (A–5 75000-generation Clone B)**
-<figure><img src="images/Example_IS_plus_IS_mediated_deletion_JC_evidence.png" width="750"></figure>
+<figure><img src="../images/Example_IS_plus_IS_mediated_deletion_JC_evidence.png" width="750"></figure>
 
 Notice how the **JC** connect the nucleotides before and after the boundaries of the **MC** to opposite
 sides of the IS<i>1</i> element.
@@ -103,7 +103,7 @@ First, we added the `before=1002` tag to make sure the second **MOB** occurs bef
 What if the IS element insertion on the right had occurred first?
 
 The situation would look like this:
-<figure><img src="images/IS_plus_IS_mediated_deletion_right_side.png" width="750"></figure>
+<figure><img src="../images/IS_plus_IS_mediated_deletion_right_side.png" width="750"></figure>
 
 We would annotate this event with two lines in the GenomeDiff file.
 ```text

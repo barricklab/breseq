@@ -72,7 +72,7 @@ check out [SRP004752](https://www.ebi.ac.uk/ena/data/view/SRP004752).
 
 !!! warning
     Be careful to download the reads in FASTQ format (circled link in this image). Do not use SRA format!
-    <figure><img src="images/ENA_correct_download_link.png" width="500"></figure>
+    <figure><img src="../images/ENA_correct_download_link.png" width="500"></figure>
 
 ## 2. Run _breseq_
 
@@ -141,7 +141,7 @@ Consider these questions:
 <details>
   <summary>Click for an example of an IS-mediated MC evidence item</summary>
 <figure>
-<img src="images/ZDB83.waaT.IS-mediated-deletion.png" width="989" />
+<img src="../images/ZDB83.waaT.IS-mediated-deletion.png" width="989" />
 </figure>
 </details>
 
@@ -171,7 +171,7 @@ work a few examples.
 <details>
 <summary>Click for an example rrlA MC image</summary>
 <figure>
-<img src="images/ZDB83.rrlA.MC.png" width="797" />
+<img src="../images/ZDB83.rrlA.MC.png" width="797" />
 </figure>
 </details>
 
@@ -196,7 +196,7 @@ coverage at any unique segments.
 <details>
 <summary>Click for an example of an unassigned MC image of this kind</summary>
 <figure>
-<img src="images/ZDB83.ECB02816-ECB02836.MC.png" width="1005" \>
+<img src="../images/ZDB83.ECB02816-ECB02836.MC.png" width="1005" \>
 </figure>
 </details>
 
@@ -221,7 +221,7 @@ the ones that correspond to two sides of a transposable element
 (IS\*150\* copy).
 
 <figure>
-<img src="images/ZDB83.ECB02816-ECB02836.JC.png" width="1105" />
+<img src="../images/ZDB83.ECB02816-ECB02836.JC.png" width="1105" />
 </figure>
 </details>
 
@@ -251,7 +251,7 @@ Find the junction annotated as *rnk-citG* in the **Unassigned Junction**
 table. It should look something like this.
 
 <figure>
-<img src="images/ZDB83.rnk-citG.JC.png" width="991" \>
+<img src="../images/ZDB83.rnk-citG.JC.png" width="991" \>
 </figure>
 
 What does this junction mean? What regions of the genome are juxtaposed
@@ -269,7 +269,7 @@ arrangement would look like. It's evidence for a tandem head-to-tail
 amplification.
 
 <figure>
-<img src="images/ZDB83.rnk-citG.JC.schematic.png" width="800" />
+<img src="../images/ZDB83.rnk-citG.JC.schematic.png" width="800" />
 </figure>
 
 </details>
@@ -304,7 +304,7 @@ Replace `REL606` with the header of the reference file, if it happens to be diff
 Here's an example of the corresponding output:
 
 <figure>
-<img src="images/ZDB83.rnk-citG.zoom-in.png" width="792" />
+<img src="../images/ZDB83.rnk-citG.zoom-in.png" width="792" />
 </figure>
 
 ### C. Add the amplification to the <span class="title-ref">GenomeDiff</span> file
@@ -916,7 +916,7 @@ version with the full names substituted back in: [download
 Ara-3.tre](https://barricklab.org/release/breseq_tutorial/Ara-3.tre)
 
 <figure>
-<img src="images/Ara-3.tree.png" width="647" />
+<img src="../images/Ara-3.tree.png" width="647" />
 </figure>
 
 As a further exercise, you can try constructing a tree using all of the

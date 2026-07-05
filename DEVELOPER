@@ -93,6 +93,14 @@ $ mkdocs serve
 This starts a local server (usually http://127.0.0.1:8000) that live-reloads as you
 edit files under docs/.
 
+Always use Markdown image syntax (`![alt text](images/foo.png)`), not raw HTML
+`<img src="images/foo.png">` tags, when adding images. mkdocs only rewrites relative
+paths correctly for Markdown-syntax images; raw HTML `<img>` src paths are passed
+through untouched and will 404 once built, since every page builds one directory
+level below the site root. `mkdocs build --strict` will NOT catch this mistake (it
+only validates paths reachable through Markdown-syntax links/images), so check
+rendered images manually with `mkdocs serve` before publishing.
+
 Both `make dist`/`make distcheck` and `./binarydist.sh` automatically build the
 documentation with mkdocs and bundle it into the distribution (as
 distdir/documentation or BINARYDIR/documentation, respectively). If mkdocs is not

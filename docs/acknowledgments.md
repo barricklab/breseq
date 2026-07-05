@@ -53,5 +53,5 @@ associated tutorial materials:
     high-throughput sequencing** held 27–31 July 2015 in Oeiras,
     Portugal
 
-    <img src="images/oeiras_course.png" width="250" />
+    <img src="../images/oeiras_course.png" width="250" />
 1.  National Science Foundation (2020-2025) \[DEB-1951307 to J.E.B.\]

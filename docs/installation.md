@@ -170,8 +170,8 @@ planemo serve
 
 !!! note
     In either case, you need to go to the settings of your Galaxy install and choose to "Whitelist" so that it can return HTML output to the web browser. 
-    [<img src="images/galaxy_select_whitelist.png" width="300" alt="image" />](images/galaxy_select_whitelist.png) 
-    [<img src="images/galaxy_select_breseq.png" width="300" alt="image" />](images/galaxy_select_breseq.png)
+    [<img src="../images/galaxy_select_whitelist.png" width="300" alt="image" />](images/galaxy_select_whitelist.png) 
+    [<img src="../images/galaxy_select_breseq.png" width="300" alt="image" />](images/galaxy_select_breseq.png)
 
 # Running in the cloud using Modal
 
