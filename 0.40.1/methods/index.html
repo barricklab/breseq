@@ -1611,7 +1611,7 @@ trimmed at each end of any read is 1, because one can never
 unambiguously know if another copy of that base was inserted by a
 mutation.</p>
 <figure>
-<img src="images/end_trimming_example.png" class="align-center" width="450" alt="Example of alignment end trimming." /><figcaption aria-hidden="true"><strong>Example of alignment end trimming.</strong></figcaption>
+<img src="../images/end_trimming_example.png" class="align-center" width="450" alt="Example of alignment end trimming." /><figcaption aria-hidden="true"><strong>Example of alignment end trimming.</strong></figcaption>
 </figure>
 
 <p>This example shows the number of bases that will be trimmed from the
@@ -1633,7 +1633,7 @@ completely crossing them, could otherwise be misinterpreted as evidence
 <p>For example, consider this mutation, which involves insertion of a new
 AGC at a site where there are already two AGC copies:</p>
 <figure>
-<img src="images/missed_mutation_no_trimming.png" class="align-center" width="600" alt="Indel mutation prediction aided by end trimming." /><figcaption aria-hidden="true"><strong>Indel mutation prediction aided by end trimming.</strong></figcaption>
+<img src="../images/missed_mutation_no_trimming.png" class="align-center" width="600" alt="Indel mutation prediction aided by end trimming." /><figcaption aria-hidden="true"><strong>Indel mutation prediction aided by end trimming.</strong></figcaption>
 </figure>
 
 <p>This image shows reads 1-6 aligned to the reference genome with and
@@ -1663,7 +1663,7 @@ pseudocount of one is added to counts in all categories, and these error
 counts are converted to error rates by dividing the count in each cell
 by the sum across that base quality score.</p>
 <figure>
-<img src="images/error_rates.png" class="align-center" width="600" height="400" alt="Example of re-calibrated error rates." /><figcaption aria-hidden="true"><strong>Example of re-calibrated error rates.</strong></figcaption>
+<img src="../images/error_rates.png" class="align-center" width="600" height="400" alt="Example of re-calibrated error rates." /><figcaption aria-hidden="true"><strong>Example of re-calibrated error rates.</strong></figcaption>
 </figure>
 
 <p>This plot shows a typical empirical error model fit to Illumina Genome
@@ -1811,15 +1811,15 @@ reasonable results for <em>E. coli</em>. Generally, these false predictions
 also have extremely low frequencies (\&lt;2%) for the minor indel variants.</p>
 <h2 id="ra-prediction-options-and-flowcharts">RA prediction options and flowcharts<a class="headerlink" href="#ra-prediction-options-and-flowcharts" title="Permanent link">&para;</a></h2>
 <figure>
-<img src="images/mutation_calling_settings.png" class="align-center" width="800" height="448" />
+<img src="../images/mutation_calling_settings.png" class="align-center" width="800" height="448" />
 </figure>
 
 <figure>
-<img src="images/consensus_mode_RA_flowchart.png" class="align-center" width="600" height="572" />
+<img src="../images/consensus_mode_RA_flowchart.png" class="align-center" width="600" height="572" />
 </figure>
 
 <figure>
-<img src="images/polymorphism_mode_RA_flowchart.png" class="align-center" width="800" height="525" />
+<img src="../images/polymorphism_mode_RA_flowchart.png" class="align-center" width="800" height="525" />
 </figure>
 
 <h1 id="unknown-base-evidence-un">Unknown base evidence (UN)<a class="headerlink" href="#unknown-base-evidence-un" title="Permanent link">&para;</a></h1>
@@ -1867,7 +1867,7 @@ with the maximum representaton in the distribution after smoothing using
 a moving average window size of 5 bases. Positions with coverage less
 than half this maximal read depth are ignored during fitting.</p>
 <figure>
-<img src="images/coverage_distribution.png" class="align-center" width="500" height="428" alt="Example of coverage distributon fit." /><figcaption aria-hidden="true"><strong>Example of coverage distributon fit.</strong></figcaption>
+<img src="../images/coverage_distribution.png" class="align-center" width="500" height="428" alt="Example of coverage distributon fit." /><figcaption aria-hidden="true"><strong>Example of coverage distributon fit.</strong></figcaption>
 </figure>
 
 <p>In this example of real data, circles represent the number of positions
@@ -1922,7 +1922,7 @@ repeat coverage depth, where normalization means that a repeat match
 counts as coverage of one divided by the total number of locations in
 the reference sequence that it matches.</p>
 <figure>
-<img src="images/region_coverage_example.png" class="align-center" width="600" height="333" alt="Coverage in a deleted reference region." /><figcaption aria-hidden="true"><strong>Coverage in a deleted reference region.</strong></figcaption>
+<img src="../images/region_coverage_example.png" class="align-center" width="600" height="333" alt="Coverage in a deleted reference region." /><figcaption aria-hidden="true"><strong>Coverage in a deleted reference region.</strong></figcaption>
 </figure>
 
 <p>This example shows a region of missing coverage (white background) that
