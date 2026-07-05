@@ -522,6 +522,7 @@ namespace breseq
     string paired_mapping_distance_plot_file_name;
     string paired_mapping_distance_summary_file_name;
     string discordant_pairs_file_name;
+    string discordant_pairs_plot_file_name;
 
     string candidate_junction_done_file_name;
 		string coverage_junction_best_bam_unsorted_file_name;

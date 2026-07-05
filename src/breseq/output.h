@@ -269,6 +269,16 @@ string decode_reject_reason(const string & reject);
 
 // sub draw_coverage
 void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenomeDiff& gd);
+
+// Whole-genome "discordant read pairs" density dotplot for summary.html, built by traversing the
+// final data/reference.bam (a read pair is discordant iff paired + mapped + not proper-pair).
+void draw_discordant_pairs_plot(Settings& settings, cReferenceSequences& ref_seq_info);
+
+// Core discordant-plot builder used by both the pipeline and the bam2drp subcommand. Given 0, 1,
+// or 2 "seq_id:start-end" regions: 0 -> X=Y=all refs; 1 -> Y=region, X=all; 2 -> Y=region1,
+// X=region2. Returns 0 on success.
+int draw_discordant_pairs_plot_from_bam(const string& bam_file_name, const string& fasta_file_name,
+                                        const vector<string>& regions, const string& output_svg);
   
 // add "PRINTABLE_*" entries to mutation (except PRINTABLE_GENE which is added in cReferenceSequence)
 void add_text_fields_to_mutation(cDiffEntry& mut, const MutationTableOptions& options);

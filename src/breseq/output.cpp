@@ -22,6 +22,7 @@
 #include "anyoption.h"
 #include "alignment_output.h"
 #include "coverage_output.h"
+#include "pileup_base.h"
 // MINIZ_NO_ZLIB_COMPATIBLE_NAMES is set via MINIZ_CFLAGS in AM_CPPFLAGS
 // (configure.ac) to avoid clashing with the system libz that is also linked.
 #include <miniz/miniz.h>
@@ -2585,6 +2586,348 @@ void draw_coverage(Settings& settings, cReferenceSequences& ref_seq_info, cGenom
       Settings::pool.push(draw_coverage_thread_helper, settings, region, coverage_plot_file_name, _output_format, _shaded_flanking);
     }
   }
+}
+
+
+// ---------------------------------------------------------------------------------------------
+// Discordant read-pair plots (built by traversing the final data/reference.bam)
+//
+// A read is part of a discordant pair iff it is paired, mapped, and NOT flagged proper-pair
+// (mark_pair_info sets BAM_FPROPER_PAIR only for concordant pairs). Each such record carries its
+// own seq_id/pos/strand and the mate's seq_id (mtid) / pos (mpos) / strand (BAM_FMREVERSE), which
+// is all we need to place a point. The X and Y axes are built independently as "axis layouts":
+// either all reference sequences ("exploded" into boxed bands separated by whitespace gaps) or a
+// single zoomed region.
+// ---------------------------------------------------------------------------------------------
+
+// One contiguous stretch of one reference sequence occupying part of an axis.
+struct axis_band {
+  string  seq_id;
+  int64_t lo_local;   // first local (reference) coordinate shown in this band
+  int64_t hi_local;   // last local coordinate shown
+  int64_t global_lo;  // global axis coordinate of lo_local
+};
+
+struct axis_layout {
+  vector<axis_band> bands;
+  int64_t axis_max;
+
+  // Map a (seq_id, local reference position) to a global axis coordinate; false if outside.
+  bool to_global(const string& seq_id, int64_t local_pos, int64_t& out) const {
+    for (const axis_band& b : bands) {
+      if (b.seq_id == seq_id && local_pos >= b.lo_local && local_pos <= b.hi_local) {
+        out = b.global_lo + (local_pos - b.lo_local);
+        return true;
+      }
+    }
+    return false;
+  }
+};
+
+// Single region occupying a whole axis (no gaps).
+static axis_layout make_region_layout(const string& seq_id, int64_t start, int64_t end) {
+  axis_layout L;
+  axis_band b; b.seq_id = seq_id; b.lo_local = start; b.hi_local = end; b.global_lo = 0;
+  L.bands.push_back(b);
+  L.axis_max = end - start;
+  return L;
+}
+
+// Uniform tic formatting for one axis: an interval snapped to one significant figure giving ~15
+// tics across the axis span, plus a single unit (M/k/bp) and precision shared by every label.
+struct tic_format { int64_t interval; string suffix; int precision; double divisor; };
+
+static tic_format compute_tic_format(int64_t total_span, int64_t max_coord) {
+  tic_format tf; tf.interval = 1;
+  double best = 1e18; int64_t mag = 1;
+  for (int k = 0; k <= 15; k++) {
+    for (int d = 1; d <= 9; d++) {
+      int64_t cand = static_cast<int64_t>(d) * mag;
+      double count = static_cast<double>(total_span) / static_cast<double>(cand);
+      double score = fabs(count - 15.0) + ((count < 10.0 || count > 20.0) ? 1000.0 : 0.0);
+      if (score < best) { best = score; tf.interval = cand; }
+    }
+    mag *= 10;
+  }
+  int unit_exp;
+  if (max_coord >= 1000000)   { unit_exp = 6; tf.suffix = "M"; }
+  else if (max_coord >= 1000) { unit_exp = 3; tf.suffix = "k"; }
+  else                        { unit_exp = 0; tf.suffix = "";  }
+  int interval_exp = static_cast<int>(floor(log10(static_cast<double>(tf.interval))));
+  tf.precision = max(0, unit_exp - interval_exp);
+  tf.divisor = pow(10.0, static_cast<double>(unit_exp));
+  return tf;
+}
+
+// Build a gnuplot "set (x|y)tics (...)" list for one axis: within each band, a tic at the band
+// start then at multiples of the interval, labeled with the LOCAL reference coordinate in the
+// shared unit/precision.
+static string build_axis_tics(const axis_layout& L) {
+  int64_t total_span = 0, max_coord = 0;
+  for (const axis_band& b : L.bands) { total_span += (b.hi_local - b.lo_local + 1); max_coord = max(max_coord, b.hi_local); }
+  tic_format tf = compute_tic_format(total_span, max_coord);
+  ostringstream tics; bool first = true;
+  for (const axis_band& b : L.bands) {
+    vector<int64_t> coords; coords.push_back(b.lo_local);
+    int64_t first_mult = ((b.lo_local / tf.interval) + 1) * tf.interval;   // smallest multiple > lo_local
+    for (int64_t c = first_mult; c <= b.hi_local; c += tf.interval) coords.push_back(c);
+    for (int64_t coord : coords) {
+      int64_t g = b.global_lo + (coord - b.lo_local);
+      ostringstream lbl; lbl << fixed << setprecision(tf.precision) << (static_cast<double>(coord) / tf.divisor) << tf.suffix;
+      if (!first) tics << ", ";
+      first = false;
+      tics << double_quote(lbl.str()) << " " << g;
+    }
+  }
+  return tics.str();
+}
+
+// Traverses a BAM and writes one temp-CSV row (x_seq,x_pos,y_seq,y_pos,strand) per discordant-read
+// endpoint that falls inside both axis layouts. The read's OWN end maps to the "fetch axis"
+// (whichever axis we fetched over); its mate maps to the other axis and is span-filtered.
+class discordant_read_finder : public pileup_base {
+public:
+  discordant_read_finder(const string& bam, const string& fasta)
+    : pileup_base(bam, fasta), m_X(NULL), m_Y(NULL), m_fetch_on_x(true), m_out(NULL) { set_print_progress(false); }
+
+  void configure(const axis_layout* X, const axis_layout* Y, bool fetch_on_x, ostream* out) {
+    m_X = X; m_Y = Y; m_fetch_on_x = fetch_on_x; m_out = out;
+  }
+
+  // Exploded layout of every reference sequence in BAM-header (== reference) order.
+  axis_layout all_targets_layout() const {
+    int64_t total = 0;
+    for (uint32_t t = 0; t < num_targets(); t++) total += target_length(t);
+    int64_t gap = static_cast<int64_t>(0.02 * static_cast<double>(total));
+    if (gap < 200) gap = 200;
+    axis_layout L; int64_t running = 0;
+    for (uint32_t t = 0; t < num_targets(); t++) {
+      axis_band b; b.seq_id = target_name(t); b.lo_local = 1;
+      b.hi_local = target_length(t); b.global_lo = running;
+      L.bands.push_back(b);
+      running += static_cast<int64_t>(target_length(t)) + gap;
+    }
+    L.axis_max = (running > gap) ? (running - gap) : total;
+    return L;
+  }
+
+  void gather_whole_bam() {
+    for (uint32_t t = 0; t < num_targets(); t++)
+      do_fetch(string(target_name(t)) + ":1-" + to_string(target_length(t)));
+  }
+  void gather_region(const string& region) { do_fetch(region); }
+
+  void fetch_callback(const alignment_wrapper& a) {
+    // Discordant = paired, this read mapped, mate mapped, but breseq did not call it concordant.
+    if (!a.is_paired() || a.unmapped() || a.proper_pair()) return;
+    if (a.flag() & (BAM_FSECONDARY | BAM_FSUPPLEMENTARY | BAM_FMUNMAP)) return;
+    uint32_t mtid = a.mate_reference_target_id();
+    if (mtid >= num_targets()) return;
+
+    string  own_seq    = target_name(a.reference_target_id());
+    int64_t own_pos    = a.reference_start_1();
+    char    own_strand = a.reversed() ? 'R' : 'F';
+    string  mate_seq   = target_name(mtid);
+    int64_t mate_pos   = a.mate_start_1();
+    char    mate_strand = (a.flag() & BAM_FMREVERSE) ? 'R' : 'F';
+
+    // Own end -> the axis we fetched over; mate -> the other axis.
+    string x_seq, y_seq; int64_t x_pos, y_pos; char color;
+    if (m_fetch_on_x) { x_seq = own_seq; x_pos = own_pos; color = own_strand;  y_seq = mate_seq; y_pos = mate_pos; }
+    else              { y_seq = own_seq; y_pos = own_pos; color = mate_strand; x_seq = mate_seq; x_pos = mate_pos; }
+
+    int64_t gx, gy;
+    if (!m_X->to_global(x_seq, x_pos, gx)) return;
+    if (!m_Y->to_global(y_seq, y_pos, gy)) return;
+    (*m_out) << x_seq << "," << x_pos << "," << y_seq << "," << y_pos << "," << color << "\n";
+  }
+
+private:
+  const axis_layout* m_X;
+  const axis_layout* m_Y;
+  bool m_fetch_on_x;
+  ostream* m_out;
+};
+
+// Render a discordant plot SVG from a temp CSV (x_seq,x_pos,y_seq,y_pos,strand) + the two axis
+// layouts. X and Y may differ (whole genome vs a zoomed region).
+static void render_discordant_plot(const string& csv_file_name, const axis_layout& X,
+                                   const axis_layout& Y, const string& output_svg, const string& title) {
+  string blue_table = output_svg + ".blue.tab";
+  string red_table  = output_svg + ".red.tab";
+  ofstream blue_out(blue_table.c_str());
+  ofstream red_out(red_table.c_str());
+  size_t blue_count = 0, red_count = 0;
+  {
+    ifstream in(csv_file_name.c_str());
+    string line;
+    while (getline(in, line)) {
+      if (line.empty()) continue;
+      vector<string> f = split(line, ",");
+      if (f.size() < 5) continue;
+      int64_t gx, gy;
+      if (!X.to_global(f[0], from_string<int64_t>(f[1]), gx)) continue;
+      if (!Y.to_global(f[2], from_string<int64_t>(f[3]), gy)) continue;
+      if (f[4] == "R") { red_out  << gx << "\t" << gy << "\n"; ++red_count; }
+      else             { blue_out << gx << "\t" << gy << "\n"; ++blue_count; }
+    }
+  }
+  blue_out.close();
+  red_out.close();
+
+  // 'noenhanced' so '_'/'^' in seq_ids render literally instead of as subscripts/superscripts.
+  ostringstream s;
+  s << "set terminal svg size 2000,2000 font ',20' noenhanced" << endl;
+  s << "set output " << double_quote(output_svg) << endl;
+  s << "set size square" << endl;
+  s << "set border lw 2" << endl;
+  s << "set tics out" << endl;
+  s << "set title " << double_quote(title) << " font ',28'" << endl;
+  s << "set xlabel 'Reference position (bp)'" << endl;
+  s << "set ylabel 'Reference position (bp)'" << endl;
+  s << "set xrange [0:" << X.axis_max << "]" << endl;
+  s << "set yrange [0:" << Y.axis_max << "]" << endl;
+  s << "set xtics (" << build_axis_tics(X) << ") rotate by -45 font ',14'" << endl;
+  s << "set ytics (" << build_axis_tics(Y) << ") font ',14'" << endl;
+  s << "set grid xtics ytics lc rgb 'gray85' lw 1 back" << endl;
+
+  // seq_id labels: X-bands along the top edge, Y-bands along the left edge (inside the plot).
+  int label_id = 1;
+  for (const axis_band& bx : X.bands) {
+    int64_t xc = bx.global_lo + (bx.hi_local - bx.lo_local) / 2;
+    s << "set label " << label_id++ << " " << double_quote(bx.seq_id)
+      << " at first " << xc << ", first " << static_cast<int64_t>(Y.axis_max * 0.985)
+      << " center font ',14' tc rgb 'gray40' front" << endl;
+  }
+  for (const axis_band& by : Y.bands) {
+    int64_t yc = by.global_lo + (by.hi_local - by.lo_local) / 2;
+    s << "set label " << label_id++ << " " << double_quote(by.seq_id)
+      << " at first " << static_cast<int64_t>(X.axis_max * 0.015) << ", first " << yc
+      << " left font ',14' tc rgb 'gray40' front" << endl;
+  }
+
+  // Empty boxes for every (X-band x Y-band) cell; the whitespace gaps stay white ("exploded").
+  int obj_id = 1;
+  for (const axis_band& bx : X.bands) {
+    for (const axis_band& by : Y.bands) {
+      int64_t x0 = bx.global_lo, x1 = bx.global_lo + (bx.hi_local - bx.lo_local);
+      int64_t y0 = by.global_lo, y1 = by.global_lo + (by.hi_local - by.lo_local);
+      s << "set object " << obj_id++ << " rectangle from " << x0 << "," << y0 << " to " << x1 << "," << y1
+        << " fs empty border lc rgb 'gray60' lw 1 front" << endl;
+    }
+  }
+  // Light y=x diagonal only in cells whose X-band and Y-band are the same sequence, over the
+  // overlapping coordinate range.
+  int arrow_id = 1;
+  for (const axis_band& bx : X.bands) {
+    for (const axis_band& by : Y.bands) {
+      if (bx.seq_id != by.seq_id) continue;
+      int64_t lo = max(bx.lo_local, by.lo_local), hi = min(bx.hi_local, by.hi_local);
+      if (lo > hi) continue;
+      int64_t gx0 = bx.global_lo + (lo - bx.lo_local), gy0 = by.global_lo + (lo - by.lo_local);
+      int64_t gx1 = bx.global_lo + (hi - bx.lo_local), gy1 = by.global_lo + (hi - by.lo_local);
+      s << "set arrow " << arrow_id++ << " from " << gx0 << "," << gy0 << " to " << gx1 << "," << gy1
+        << " nohead lc rgb 'gray80' lw 1 dt 2 back" << endl;
+    }
+  }
+
+  // Transparent open circles (pt 6); ARGB alpha 0xC0 ~= 75% transparent so density builds up.
+  vector<string> plot_clauses;
+  if (red_count)  plot_clauses.push_back(double_quote(red_table)  + " using 1:2 with points pt 6 ps 0.4 lc rgb '#C0ff0000' notitle");
+  if (blue_count) plot_clauses.push_back(double_quote(blue_table) + " using 1:2 with points pt 6 ps 0.4 lc rgb '#C00000ff' notitle");
+  if (plot_clauses.empty()) plot_clauses.push_back("-1 notitle");
+  s << "plot " << join(plot_clauses, string(", \\\n     ")) << endl;
+
+  string script_name = output_svg + ".gp";
+  string log_name    = output_svg + ".gp.log";
+  run_gnuplot_script(s.str(), script_name, log_name);
+  remove(log_name.c_str());
+  remove(blue_table.c_str());
+  remove(red_table.c_str());
+}
+
+// Parse+validate a "seq_id[:start-end]" region against the finder's targets into (seq,lo,hi),
+// clamping to the sequence bounds. Region without a colon means the whole sequence.
+static bool parse_validated_region(const discordant_read_finder& finder, const string& region,
+                                   string& seq, int64_t& lo, int64_t& hi) {
+  string sname; uint32_t ustart = 1, uend = 0;
+  if (region.find(':') == string::npos) {
+    sname = region;
+  } else {
+    breseq::parse_region(region, sname, ustart, uend);
+  }
+  int32_t tid = finder.seq_id_to_target_id(sname);
+  if (tid < 0) { cerr << "Unknown reference sequence in region: " << region << endl; return false; }
+  int64_t len = finder.target_length(static_cast<uint32_t>(tid));
+  lo = (ustart < 1) ? 1 : static_cast<int64_t>(ustart);
+  hi = (uend == 0 || static_cast<int64_t>(uend) > len) ? len : static_cast<int64_t>(uend);
+  if (lo > hi) { int64_t t = lo; lo = hi; hi = t; }
+  seq = sname;
+  return true;
+}
+
+// Core: build a discordant plot from a BAM given 0, 1, or 2 regions.
+//   0 regions -> X = Y = all references
+//   1 region  -> Y = region, X = all references
+//   2 regions -> Y = region1, X = region2
+int draw_discordant_pairs_plot_from_bam(const string& bam_file_name, const string& fasta_file_name,
+                                        const vector<string>& regions, const string& output_svg) {
+  if (!file_exists(bam_file_name.c_str())) { cerr << "BAM file not found: " << bam_file_name << endl; return -1; }
+  if (!file_exists(fasta_file_name.c_str())) { cerr << "FASTA file not found: " << fasta_file_name << endl; return -1; }
+
+  discordant_read_finder finder(bam_file_name, fasta_file_name);
+
+  axis_layout X, Y;
+  bool fetch_on_x = true;
+  string fetch_region;   // empty => whole BAM
+  string title = "Discordant Read Pairs";
+
+  if (regions.empty()) {
+    X = finder.all_targets_layout();
+    Y = X;
+    fetch_on_x = true;
+    fetch_region = "";
+  } else if (regions.size() == 1) {
+    string seq; int64_t lo, hi;
+    if (!parse_validated_region(finder, regions[0], seq, lo, hi)) return -1;
+    Y = make_region_layout(seq, lo, hi);
+    X = finder.all_targets_layout();
+    fetch_on_x = false;                                     // fetched over the Y region
+    fetch_region = seq + ":" + to_string(lo) + "-" + to_string(hi);
+    title += " (Y: " + fetch_region + ")";
+  } else {
+    string seqY, seqX; int64_t loY, hiY, loX, hiX;
+    if (!parse_validated_region(finder, regions[0], seqY, loY, hiY)) return -1;
+    if (!parse_validated_region(finder, regions[1], seqX, loX, hiX)) return -1;
+    Y = make_region_layout(seqY, loY, hiY);
+    X = make_region_layout(seqX, loX, hiX);
+    fetch_on_x = true;                                      // fetched over the X region, mate filtered to Y
+    fetch_region = seqX + ":" + to_string(loX) + "-" + to_string(hiX);
+    title += " (Y: " + seqY + ":" + to_string(loY) + "-" + to_string(hiY) + ", X: " + fetch_region + ")";
+  }
+
+  string tmp_csv = output_svg + ".discordant.tmp.csv";
+  {
+    ofstream out(tmp_csv.c_str());
+    ASSERT(out.is_open(), "Could not write to file: " + tmp_csv);
+    finder.configure(&X, &Y, fetch_on_x, &out);
+    if (fetch_region.empty()) finder.gather_whole_bam();
+    else                      finder.gather_region(fetch_region);
+  }
+  render_discordant_plot(tmp_csv, X, Y, output_svg, title);
+  remove(tmp_csv.c_str());
+  return 0;
+}
+
+// Pipeline entry: whole-genome discordant plot from data/reference.bam for summary.html.
+void draw_discordant_pairs_plot(Settings& settings, cReferenceSequences& ref_seq_info) {
+  (void)ref_seq_info;   // axis layout is taken from the BAM header (== reference order)
+  if (!file_exists(settings.reference_bam_file_name.c_str())) return;
+  create_path(settings.evidence_path);
+  draw_discordant_pairs_plot_from_bam(settings.reference_bam_file_name,
+                                      settings.reference_fasta_file_name,
+                                      vector<string>(),
+                                      settings.discordant_pairs_plot_file_name);
 }
 
 
