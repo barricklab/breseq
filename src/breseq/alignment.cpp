@@ -713,12 +713,15 @@ bool soft_clip_alignment_ends(
                               const cReferenceSequences& ref_seq_info,
                               const string& seq_id,
                               bool protect_left,
-                              bool protect_right
+                              bool protect_right,
+                              uint32_t left_trim_reads,
+                              uint32_t right_trim_reads
                               )
 {
   // Minimum fraction of a chewed-back terminal run that must be mismatches for it to be
   // soft-clipped. Tunable; higher = more conservative (clips only denser mismatch runs).
-  const double kMinEndMismatchFraction = 0.5;
+  // At 0.33 the walk always examines (at least) the first 3 non-trimmed bases at each end.
+  const double kMinEndMismatchFraction = 0.33;
 
   if (cigar_list.empty()) return false;
 
@@ -740,7 +743,7 @@ bool soft_clip_alignment_ends(
   // Expand the (non-soft-clip) core of the CIGAR into per-column records. Each column advances
   // the read and/or the reference and is flagged as a mismatch (a substituted M base, or any
   // inserted/deleted base -- each indel base counts as one mismatch column).
-  struct Col { char op; bool mismatch; bool read_adv; bool ref_adv; };
+  struct Col { char op; bool mismatch; bool read_adv; bool ref_adv; uint32_t read_pos; };
   vector<Col> cols;
   uint32_t read_i = 0; // 0-based into read_seq_top_strand
   uint32_t ref_i = 0;  // 0-based into ref_seq
@@ -749,7 +752,7 @@ bool soft_clip_alignment_ends(
     uint16_t n = cigar_list[c].second;
     if (op == 'S' || op == 'H') { if (op == 'S') read_i += n; continue; }
     for (uint16_t k = 0; k < n; k++) {
-      Col col; col.op = op;
+      Col col; col.op = op; col.read_pos = read_i; // read base this column consumes (D: boundary)
       if (op == 'I') {
         col.mismatch = true;  col.read_adv = true;  col.ref_adv = false; read_i++;
       } else if (op == 'D' || op == 'N') {
@@ -766,25 +769,36 @@ bool soft_clip_alignment_ends(
   if (cols.empty()) return false;
 
   // Walk inward from one end, returning how many columns to chew back into a soft-clip.
-  // Examine column j only if a mismatch there could keep the mismatch fraction >= threshold
-  // ((m_before + 1)/j >= T); record the deepest mismatch whose fraction (m/j) is >= T.
+  // A base within the pre-clip trimmed tip that merely *matches* the reference is "unknown" -- in a
+  // low-complexity / indel-adjacent region a match does not prove correct alignment -- so it is
+  // skipped (counts toward neither the examined total n nor the mismatch total m), though a clip may
+  // still extend physically through it. A trimmed base that *mismatches* is a real mismatch and
+  // counts normally. Examine the next counted column only if a mismatch there could keep the
+  // mismatch fraction >= threshold ((m+1)/(n+1) >= T); record the deepest mismatch whose fraction
+  // (m/n) is >= T -- returned as a physical column depth.
   struct Walk {
-    static uint32_t clip_columns(const vector<Col>& cols, bool from_left, double T) {
-      uint32_t m = 0, clip = 0;
-      for (uint32_t j = 1; j <= cols.size(); j++) {
-        if (static_cast<double>(m + 1) < T * j) break; // (m+1)/j < T -> stop looking
-        size_t idx = from_left ? (j - 1) : (cols.size() - j);
+    static uint32_t clip_columns(const vector<Col>& cols, bool from_left, double T,
+                                 uint32_t trim_reads, uint32_t read_length) {
+      uint32_t n = 0, m = 0, clip = 0;
+      for (uint32_t p = 1; p <= cols.size(); p++) {
+        size_t idx = from_left ? (p - 1) : (cols.size() - p);
+        bool trimmed = from_left ? (cols[idx].read_pos < trim_reads)
+                                 : (cols[idx].read_pos + trim_reads >= read_length);
+        if (trimmed && !cols[idx].mismatch) continue; // trimmed match = unknown; clip may pass through
+        if (static_cast<double>(m + 1) < T * (n + 1)) break; // even a mismatch here can't reach T
+        n++;
         if (cols[idx].mismatch) {
           m++;
-          if (static_cast<double>(m) >= T * j) clip = j;
+          if (static_cast<double>(m) >= T * n) clip = p;
         }
       }
       return clip;
     }
   };
 
-  uint32_t left_clip = protect_left  ? 0 : Walk::clip_columns(cols, true,  kMinEndMismatchFraction);
-  uint32_t right_clip = protect_right ? 0 : Walk::clip_columns(cols, false, kMinEndMismatchFraction);
+  const uint32_t read_length = static_cast<uint32_t>(read_seq_top_strand.size());
+  uint32_t left_clip = protect_left  ? 0 : Walk::clip_columns(cols, true,  kMinEndMismatchFraction, left_trim_reads, read_length);
+  uint32_t right_clip = protect_right ? 0 : Walk::clip_columns(cols, false, kMinEndMismatchFraction, right_trim_reads, read_length);
 
   // A soft-clip must not be left adjacent to a deletion (leading/trailing 'D' is invalid), so
   // absorb any deletion columns exposed at the new boundary into the clip.
@@ -851,8 +865,12 @@ void bam_file::write_alignments(
         const string ref_region = (*ref_seq_info_ptr)[a.reference_target_id()].get_sequence_1(a.reference_start_1(), a.reference_end_1());
         shift_indels_in_cigar_array(cigar_pair, ref_region, read_seq);
       }
+      // Pre-clip trims: their trimmed tip bases are "unknown" to the end-clipping heuristic.
+      Trims pre_trim; pre_trim.L = 0; pre_trim.R = 0;
+      if (trims_list != NULL) pre_trim = get_alignment_trims(a, *trims_list);
       soft_clipped = soft_clip_alignment_ends(cigar_pair, reference_start_1, read_seq, *ref_seq_info_ptr,
-                                              bam_header->target_name[a.reference_target_id()], false, false);
+                                              bam_header->target_name[a.reference_target_id()], false, false,
+                                              pre_trim.L, pre_trim.R);
       cigar_string = alignment_wrapper::cigar_op_array_to_cigar_string(cigar_pair);
     } else if (ref_seq_info_ptr && shift_gaps) {
       cigar_string = shifted_cigar_string(a, *ref_seq_info_ptr);
@@ -1207,9 +1225,28 @@ void bam_file::write_moved_alignment(
 	// also always carries padding 'S', which soft_clip_alignment_ends() leaves alone anyway).
 	if (ref_seq_info_ptr) {
 		bool junction_on_left = ((junction_side == 2) == (read_strand == 1));
+		// Pre-clip trim on the outer (non-junction) end -- its trimmed tip bases are "unknown" to
+		// the end-clipping heuristic. The junction side is protected, so its trim value is unused.
+		uint32_t left_trim = 0, right_trim = 0;
+		if ((trims_list != NULL) && (reference_match_start >= 1)) {
+			uint32_t tid = ref_seq_info_ptr->seq_id_to_index(seq_id);
+			uint32_t seq_len = ref_seq_info_ptr->get_sequence_length(seq_id);
+			uint32_t pre_ref_span = 0;
+			for (size_t c = 0; c < cigar_list.size(); c++) {
+				char op = cigar_list[c].first;
+				if (op=='M'||op=='D'||op=='N'||op=='='||op=='X') pre_ref_span += cigar_list[c].second;
+			}
+			uint32_t pre_start_0 = static_cast<uint32_t>(reference_match_start) - 1;
+			uint32_t pre_end_0 = pre_start_0 + pre_ref_span - 1;
+			// This runs before the all-soft-padded early return, so a degenerate side can have
+			// out-of-range (e.g. circular-wrapped) coordinates; fall back to 0 (unused) trim then.
+			if (!junction_on_left && pre_start_0 < seq_len) left_trim  = (*trims_list)[tid].left_trim_0(pre_start_0);
+			if ( junction_on_left && pre_end_0  < seq_len) right_trim = (*trims_list)[tid].right_trim_0(pre_end_0);
+		}
 		uint32_t rms = static_cast<uint32_t>(reference_match_start);
 		soft_clip_alignment_ends(cigar_list, rms, seq, *ref_seq_info_ptr, seq_id,
-		                         /*protect_left=*/junction_on_left, /*protect_right=*/!junction_on_left);
+		                         /*protect_left=*/junction_on_left, /*protect_right=*/!junction_on_left,
+		                         left_trim, right_trim);
 		reference_match_start = static_cast<int32_t>(rms);
 	}
 

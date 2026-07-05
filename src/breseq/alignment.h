@@ -527,7 +527,11 @@ bam_hdr_t* make_bam_header_from_faidx(const string& fasta_file_name);
  *  reference_start_1 (1-based POS) are modified in place; read_seq_top_strand must match the
  *  cigar orientation. An end is left untouched if it already begins/ends with 'S' or if the
  *  corresponding protect flag is set (used to protect the junction/middle side of -M1/-M2
- *  split reads). Returns true if the alignment was modified.
+ *  split reads). left_trim_reads/right_trim_reads are the read's trims *before* clipping (in
+ *  read bases from each top-strand tip); those tip bases are treated as "unknown" -- excluded
+ *  from the mismatch-fraction denominator -- since a low-complexity/indel-adjacent base cannot
+ *  be trusted to be correctly aligned just because it matches. Returns true if the alignment
+ *  was modified.
  */
 bool soft_clip_alignment_ends(
                               vector<pair<char,uint16_t> >& cigar_list,
@@ -536,7 +540,9 @@ bool soft_clip_alignment_ends(
                               const cReferenceSequences& ref_seq_info,
                               const string& seq_id,
                               bool protect_left,
-                              bool protect_right
+                              bool protect_right,
+                              uint32_t left_trim_reads = 0,
+                              uint32_t right_trim_reads = 0
                               );
 
 // Class to read in bam format output by breseq
