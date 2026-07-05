@@ -1044,10 +1044,11 @@ public:
     void set_seq_id_to_index(const string& seq_id, int id)
       { m_seq_id_to_index[seq_id] = id; }
     
-    uint32_t seq_id_to_index(const string& seq_id)
-    { 
-        ASSERT(m_seq_id_to_index.count(seq_id), "Reference seq id not found: " + seq_id + "\nValid seq ids: " + join(seq_ids(), ", ")); 
-        return m_seq_id_to_index[seq_id]; 
+    uint32_t seq_id_to_index(const string& seq_id) const
+    {
+        map<string,int>::const_iterator it = m_seq_id_to_index.find(seq_id);
+        ASSERT(it != m_seq_id_to_index.end(), "Reference seq id not found: " + seq_id + "\nValid seq ids: " + join(seq_ids(), ", "));
+        return it->second;
     };
 
     cAnnotatedSequence& operator[](const size_t target_id)

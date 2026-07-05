@@ -706,22 +706,159 @@ bool bam_file::read_alignments(alignment_list& alignments, bool paired)
   return (!alignments.empty());
 }
 
+bool soft_clip_alignment_ends(
+                              vector<pair<char,uint16_t> >& cigar_list,
+                              uint32_t& reference_start_1,
+                              const string& read_seq_top_strand,
+                              const cReferenceSequences& ref_seq_info,
+                              const string& seq_id,
+                              bool protect_left,
+                              bool protect_right
+                              )
+{
+  // Minimum fraction of a chewed-back terminal run that must be mismatches for it to be
+  // soft-clipped. Tunable; higher = more conservative (clips only denser mismatch runs).
+  const double kMinEndMismatchFraction = 0.5;
+
+  if (cigar_list.empty()) return false;
+
+  // An end already carrying a soft-clip is left alone (this also protects the junction/middle
+  // side of -M1/-M2 split reads, which always carries padding 'S').
+  if (cigar_list.front().first == 'S') protect_left = true;
+  if (cigar_list.back().first == 'S') protect_right = true;
+  if (protect_left && protect_right) return false;
+
+  // Reference span (M/D consume reference) needed to fetch the aligned reference region.
+  uint32_t ref_span = 0;
+  for (size_t i = 0; i < cigar_list.size(); i++) {
+    char op = cigar_list[i].first;
+    if (op == 'M' || op == 'D' || op == 'N' || op == '=' || op == 'X') ref_span += cigar_list[i].second;
+  }
+  if (ref_span == 0) return false;
+  const string ref_seq = ref_seq_info[seq_id].get_sequence_1(reference_start_1, reference_start_1 + ref_span - 1);
+
+  // Expand the (non-soft-clip) core of the CIGAR into per-column records. Each column advances
+  // the read and/or the reference and is flagged as a mismatch (a substituted M base, or any
+  // inserted/deleted base -- each indel base counts as one mismatch column).
+  struct Col { char op; bool mismatch; bool read_adv; bool ref_adv; };
+  vector<Col> cols;
+  uint32_t read_i = 0; // 0-based into read_seq_top_strand
+  uint32_t ref_i = 0;  // 0-based into ref_seq
+  for (size_t c = 0; c < cigar_list.size(); c++) {
+    char op = cigar_list[c].first;
+    uint16_t n = cigar_list[c].second;
+    if (op == 'S' || op == 'H') { if (op == 'S') read_i += n; continue; }
+    for (uint16_t k = 0; k < n; k++) {
+      Col col; col.op = op;
+      if (op == 'I') {
+        col.mismatch = true;  col.read_adv = true;  col.ref_adv = false; read_i++;
+      } else if (op == 'D' || op == 'N') {
+        col.mismatch = true;  col.read_adv = false; col.ref_adv = true;  ref_i++;
+      } else { // M / = / X
+        bool differs = (op == 'X') ? true
+                     : (op == '=') ? false
+                     : (read_seq_top_strand[read_i] != ref_seq[ref_i]);
+        col.mismatch = differs; col.read_adv = true; col.ref_adv = true; read_i++; ref_i++;
+      }
+      cols.push_back(col);
+    }
+  }
+  if (cols.empty()) return false;
+
+  // Walk inward from one end, returning how many columns to chew back into a soft-clip.
+  // Examine column j only if a mismatch there could keep the mismatch fraction >= threshold
+  // ((m_before + 1)/j >= T); record the deepest mismatch whose fraction (m/j) is >= T.
+  struct Walk {
+    static uint32_t clip_columns(const vector<Col>& cols, bool from_left, double T) {
+      uint32_t m = 0, clip = 0;
+      for (uint32_t j = 1; j <= cols.size(); j++) {
+        if (static_cast<double>(m + 1) < T * j) break; // (m+1)/j < T -> stop looking
+        size_t idx = from_left ? (j - 1) : (cols.size() - j);
+        if (cols[idx].mismatch) {
+          m++;
+          if (static_cast<double>(m) >= T * j) clip = j;
+        }
+      }
+      return clip;
+    }
+  };
+
+  uint32_t left_clip = protect_left  ? 0 : Walk::clip_columns(cols, true,  kMinEndMismatchFraction);
+  uint32_t right_clip = protect_right ? 0 : Walk::clip_columns(cols, false, kMinEndMismatchFraction);
+
+  // A soft-clip must not be left adjacent to a deletion (leading/trailing 'D' is invalid), so
+  // absorb any deletion columns exposed at the new boundary into the clip.
+  while (left_clip > 0 && left_clip < cols.size() && cols[left_clip].op == 'D') left_clip++;
+  while (right_clip > 0 && right_clip < cols.size() && cols[cols.size() - 1 - right_clip].op == 'D') right_clip++;
+
+  if (left_clip == 0 && right_clip == 0) return false;
+
+  // Degenerate case: the two clips would consume the whole alignment -- leave it unchanged.
+  if (left_clip + right_clip >= cols.size()) return false;
+
+  // Tally read/reference bases removed at each end.
+  uint32_t lead_S = (cigar_list.front().first == 'S') ? cigar_list.front().second : 0;
+  uint32_t trail_S = (cigar_list.back().first == 'S') ? cigar_list.back().second : 0;
+  uint32_t left_read = 0, left_ref = 0, right_read = 0, right_ref = 0;
+  for (uint32_t j = 0; j < left_clip; j++) { if (cols[j].read_adv) left_read++; if (cols[j].ref_adv) left_ref++; }
+  for (uint32_t j = 0; j < right_clip; j++) { size_t idx = cols.size() - 1 - j; if (cols[idx].read_adv) right_read++; if (cols[idx].ref_adv) right_ref++; }
+
+  // Rebuild the CIGAR: soft-clip + surviving middle columns (run-length encoded) + soft-clip.
+  vector<pair<char,uint16_t> > out;
+  uint32_t new_lead_S = lead_S + left_read;
+  uint32_t new_trail_S = trail_S + right_read;
+  if (new_lead_S > 0) out.push_back(make_pair('S', static_cast<uint16_t>(new_lead_S)));
+  for (uint32_t j = left_clip; j < cols.size() - right_clip; j++) {
+    char op = cols[j].op;
+    if (!out.empty() && out.back().first == op && op != 'S') out.back().second += 1;
+    else out.push_back(make_pair(op, static_cast<uint16_t>(1)));
+  }
+  if (new_trail_S > 0) out.push_back(make_pair('S', static_cast<uint16_t>(new_trail_S)));
+
+  cigar_list = out;
+  reference_start_1 += left_ref; // clipping the left end shifts the alignment start rightward
+  return true;
+}
+
 void bam_file::write_alignments(
                                 int32_t fastq_file_index,
                                 const alignment_list& alignments,
-                                vector<Trims>* trims,
+                                const SequenceTrimsList* trims_list,
                                 const cReferenceSequences* ref_seq_info_ptr,
-                                bool shift_gaps
+                                bool shift_gaps,
+                                bool soft_clip_ends
                                 )
 {
-  (void) ref_seq_info_ptr;
-  (void) shift_gaps;
 
   uint32_t i=-1;
   for (alignment_list::const_iterator it=alignments.begin(); it != alignments.end(); it++) {
 
     i++;
     bam_alignment& a = *(it->get());
+
+    // --- CIGAR + POS (done first so a soft-clipped alignment's new coordinates are available
+    //     when we (re)compute the XL/XR trims below) ---
+    string cigar_string;
+    uint32_t reference_start_1 = a.reference_start_1();
+    bool soft_clipped = false;
+    vector<pair<char,uint16_t> > cigar_pair; // populated only on the soft-clip path
+
+    if (soft_clip_ends && ref_seq_info_ptr) {
+      // Gap-shift (matching shifted_cigar_string) then chew back mis-mapped ends into soft-clips.
+      cigar_pair = a.cigar_pair_char_op_array();
+      string read_seq = a.read_char_sequence();
+      if (shift_gaps) {
+        const string ref_region = (*ref_seq_info_ptr)[a.reference_target_id()].get_sequence_1(a.reference_start_1(), a.reference_end_1());
+        shift_indels_in_cigar_array(cigar_pair, ref_region, read_seq);
+      }
+      soft_clipped = soft_clip_alignment_ends(cigar_pair, reference_start_1, read_seq, *ref_seq_info_ptr,
+                                              bam_header->target_name[a.reference_target_id()], false, false);
+      cigar_string = alignment_wrapper::cigar_op_array_to_cigar_string(cigar_pair);
+    } else if (ref_seq_info_ptr && shift_gaps) {
+      cigar_string = shifted_cigar_string(a, *ref_seq_info_ptr);
+    } else {
+      cigar_string = a.cigar_string();
+    }
 
     stringstream aux_tags_ss;
 
@@ -731,8 +868,27 @@ void bam_file::write_alignments(
 
     aux_tags_ss << "AS:i:" << as << "\t" << "X1:i:" << alignments.size() << "\t" << "X2:i:" << fastq_file_index;
 
-    if ((trims != NULL) && (trims->size() > i)) {
-      Trims trim = (*trims)[i];
+    if (trims_list != NULL) {
+      Trims trim;
+      if (soft_clipped) {
+        // A soft-clipped read ends at a different reference position and has a larger soft-clip
+        // offset, so compute its trims from the new coordinates (mirrors get_alignment_trims():
+        // genomic trim at the mapped end + the bases lying outside the match, i.e. the soft-clip).
+        uint32_t tid = a.reference_target_id();
+        uint32_t ref_span = 0;
+        for (size_t c = 0; c < cigar_pair.size(); c++) {
+          char op = cigar_pair[c].first;
+          if (op=='M'||op=='D'||op=='N'||op=='='||op=='X') ref_span += cigar_pair[c].second;
+        }
+        uint32_t new_ref_start_0 = reference_start_1 - 1;
+        uint32_t new_ref_end_0 = new_ref_start_0 + ref_span - 1;
+        uint32_t lead_S = (cigar_pair.front().first == 'S') ? cigar_pair.front().second : 0;
+        uint32_t trail_S = (cigar_pair.back().first == 'S') ? cigar_pair.back().second : 0;
+        trim.L = (*trims_list)[tid].left_trim_0(new_ref_start_0) + lead_S;
+        trim.R = (*trims_list)[tid].right_trim_0(new_ref_end_0) + trail_S;
+      } else {
+        trim = get_alignment_trims(a, *trims_list);
+      }
       aux_tags_ss << "\t" << "XL:i:" << trim.L << "\t" << "XR:i:" << trim.R;
     }
 
@@ -751,19 +907,11 @@ void bam_file::write_alignments(
     }
     ASSERT(quality_score_string.size() > 0, "Attempt to write read with no quality scores: " + a.read_name());
 
-    string cigar_string;
-
-    if (ref_seq_info_ptr && shift_gaps) {
-      cigar_string = shifted_cigar_string(a, *ref_seq_info_ptr);
-    } else {
-      cigar_string = a.cigar_string();
-    }
-
     vector<string> ll;
     ll.push_back(a.read_name());
     ll.push_back(to_string(fix_flags(a.flag())));
     ll.push_back(bam_header->target_name[a.reference_target_id()]);
-    ll.push_back(to_string(a.reference_start_1()));
+    ll.push_back(to_string(reference_start_1));
     ll.push_back(to_string<uint32_t>(a.mapping_quality()));
     ll.push_back(cigar_string);
 
@@ -810,7 +958,7 @@ void bam_file::write_moved_alignment(
                                      int32_t junction_flanking,
                                      int32_t junction_overlap,
                                      const alignment_list& alignments,
-                                     const Trims* trim,
+                                     const SequenceTrimsList* trims_list,
                                      const cReferenceSequences* ref_seq_info_ptr,
                                      bool shift_gaps
                                      )
@@ -1053,6 +1201,18 @@ void bam_file::write_moved_alignment(
 	//  strand == 0 means this is the highest coordinate
 	int32_t reference_match_start = (reference_strand == 1) ? reference_pos + short_of_junction : reference_pos - (junction_match_length - 1) - short_of_junction;
 
+	// Chew back mis-mapped bases at the OUTER end of this split read into soft-clipping, the
+	// same as regular reference alignments. The junction (split) side is the middle of the
+	// original read across the junction and must never be clipped; protect it explicitly (it
+	// also always carries padding 'S', which soft_clip_alignment_ends() leaves alone anyway).
+	if (ref_seq_info_ptr) {
+		bool junction_on_left = ((junction_side == 2) == (read_strand == 1));
+		uint32_t rms = static_cast<uint32_t>(reference_match_start);
+		soft_clip_alignment_ends(cigar_list, rms, seq, *ref_seq_info_ptr, seq_id,
+		                         /*protect_left=*/junction_on_left, /*protect_right=*/!junction_on_left);
+		reference_match_start = static_cast<int32_t>(rms);
+	}
+
 	////
 	//// Convert the CIGAR list back to a CIGAR string
 	////
@@ -1104,14 +1264,26 @@ void bam_file::write_moved_alignment(
 	int32_t within_side = (reference_strand == 1) ? junction_side : (junction_side + 1) % 2;
 	aux_tags_ss << "\t" << "XJ:i:" << within_side;
 
-	//handle putting the trims in the right places
-	//need to be aware if read is trimmed out of existence??
-	if (trim != NULL)
+	// XL/XR trims for this split read. The junction (middle-of-read) side is never trimmed --
+	// it is a trustworthy boundary, not a read end -- so it gets 0. The outer genomic side is
+	// trimmed from the real-genome trims_list at this read's final (post soft-clip) coordinates,
+	// exactly as write_alignments() does for a whole read (genomic trim + soft-clip offset).
+	if ((trims_list != NULL) && (ref_seq_info_ptr != NULL) && (reference_match_start >= 1))
 	{
-		string trim_left = (junction_side == 1) ? to_string(trim->L+left_padding) : "0";
-		string trim_right = (junction_side == 1) ? "0" : to_string(trim->R+right_padding);
-		if (read_strand == -1) swap(trim_left, trim_right);
-		aux_tags_ss << "\t" << "XL:i:" << trim_left << "\t" << "XR:i:" << trim_right;
+		bool junction_on_left = ((junction_side == 2) == (read_strand == 1));
+		uint32_t tid = ref_seq_info_ptr->seq_id_to_index(seq_id);
+		uint32_t ref_span = 0;
+		for (size_t c = 0; c < cigar_list.size(); c++) {
+			char op = cigar_list[c].first;
+			if (op=='M'||op=='D'||op=='N'||op=='='||op=='X') ref_span += cigar_list[c].second;
+		}
+		uint32_t new_ref_start_0 = static_cast<uint32_t>(reference_match_start) - 1;
+		uint32_t new_ref_end_0 = new_ref_start_0 + ref_span - 1;
+		uint32_t lead_S = (cigar_list.front().first == 'S') ? cigar_list.front().second : 0;
+		uint32_t trail_S = (cigar_list.back().first == 'S') ? cigar_list.back().second : 0;
+		uint32_t xl = junction_on_left ? 0 : ((*trims_list)[tid].left_trim_0(new_ref_start_0) + lead_S);
+		uint32_t xr = junction_on_left ? ((*trims_list)[tid].right_trim_0(new_ref_end_0) + trail_S) : 0;
+		aux_tags_ss << "\t" << "XL:i:" << xl << "\t" << "XR:i:" << xr;
 	}
 
 	string aux_tags = aux_tags_ss.str();

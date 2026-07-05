@@ -516,6 +516,29 @@ inline void print_alignment_list(const alignment_list& alignments)
  */
 bam_hdr_t* make_bam_header_from_faidx(const string& fasta_file_name);
 
+/*! Soft-clip mis-mapped bases at the ends of an alignment.
+ *
+ *  Now that --end-to-end is the default mapping mode, bowtie2 forces the whole read to align,
+ *  so a few genuinely non-reference bases at a read's end appear as terminal mismatches/indels
+ *  rather than being soft-clipped. This walks inward from each end and chews back a densely
+ *  mis-matched terminal run into soft-clipping ('S').
+ *
+ *  Operates on the top-genome-strand SAM representation: cigar_list (char-op form) and
+ *  reference_start_1 (1-based POS) are modified in place; read_seq_top_strand must match the
+ *  cigar orientation. An end is left untouched if it already begins/ends with 'S' or if the
+ *  corresponding protect flag is set (used to protect the junction/middle side of -M1/-M2
+ *  split reads). Returns true if the alignment was modified.
+ */
+bool soft_clip_alignment_ends(
+                              vector<pair<char,uint16_t> >& cigar_list,
+                              uint32_t& reference_start_1,
+                              const string& read_seq_top_strand,
+                              const cReferenceSequences& ref_seq_info,
+                              const string& seq_id,
+                              bool protect_left,
+                              bool protect_right
+                              );
+
 // Class to read in bam format output by breseq
 class bam_file {
   
@@ -532,9 +555,10 @@ public:
   void write_alignments(
                         int32_t fastq_file_index,
                         const alignment_list& alignments,
-                        vector<Trims>* trims = NULL,
+                        const SequenceTrimsList* trims_list = NULL,
                         const cReferenceSequences* ref_seq_info = NULL,
-                        bool shift_gaps = false
+                        bool shift_gaps = false,
+                        bool soft_clip_ends = false
                         );
 
   void write_moved_alignment(
@@ -549,7 +573,7 @@ public:
                              int32_t junction_flanking,
                              int32_t junction_overlap,
                              const alignment_list& alignments,
-                             const Trims* trim = NULL,
+                             const SequenceTrimsList* trims_list = NULL,
                              const cReferenceSequences* ref_seq_info_ptr = NULL,
                              bool shift_gaps = false
                              );

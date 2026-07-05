@@ -1,7 +1,7 @@
 #=GENOME_DIFF	1.0
-#=CREATED	21:10:20 03 Jul 2026
-#=PROGRAM	breseq 0.50.0
-#=COMMAND	./src/c/breseq/breseq -j 4 -b 0 -o ./tests/REL606_fragment_is_mediated_dels -r ./tests/REL606_fragment_is_mediated_dels/../data/REL606/REL606.fragment.gbk ./tests/REL606_fragment_is_mediated_dels/../data/REL606/REL606.fragment.3.fastq.gz
+#=CREATED	15:43:10 05 Jul 2026
+#=PROGRAM	breseq 0.50.0 revision 5251a64e0d3d
+#=COMMAND	./src/breseq/breseq -j 4 -b 0 -o ./tests/REL606_fragment_is_mediated_dels -r ./tests/REL606_fragment_is_mediated_dels/../data/REL606/REL606.fragment.gbk ./tests/REL606_fragment_is_mediated_dels/../data/REL606/REL606.fragment.3.fastq.gz
 #=REFSEQ	./tests/REL606_fragment_is_mediated_dels/../data/REL606/REL606.fragment.gbk
 #=READSEQ	./tests/REL606_fragment_is_mediated_dels/../data/REL606/REL606.fragment.3.fastq.gz
 #=CONVERTED-BASES	825984
@@ -23,12 +23,12 @@ JC	10	.	REL606-5	28182	-1	REL606-5	31302	1	0	alignment_overlap=0	coverage_minus=
 JC	11	.	REL606-5	31302	1	REL606-5	34999	-1	0	alignment_overlap=0	coverage_minus=12	coverage_plus=14	flanking_left=36	flanking_right=36	frequency=1	junction_possible_overlap_registers=31	junction_possible_overlap_registers_before_trimming=35	key=REL606-5__31302__1__REL606-5__34999__-1__0____36__36__1__0	max_left=33	max_left_minus=33	max_left_plus=31	max_min_left=17	max_min_left_minus=14	max_min_left_plus=17	max_min_right=17	max_min_right_minus=17	max_min_right_plus=17	max_pos_hash_score=70	max_right=35	max_right_minus=35	max_right_plus=35	neg_log10_pos_hash_p_value=0.0	new_junction_coverage=0.80	new_junction_read_count=24	polymorphism_frequency=1.000e+00	pos_hash_score=22	prediction=consensus	side_1_annotate_key=repeat	side_1_continuation=0	side_1_coverage=NA	side_1_gene_name=IS1	side_1_gene_position=noncoding (1/768 nt)	side_1_gene_product=repeat region	side_1_gene_strand=>	side_1_overlap=0	side_1_possible_overlap_registers=NA	side_1_possible_overlap_registers_before_trimming=NA	side_1_read_count=NA	side_1_redundant=1	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.00	side_2_gene_name=proA	side_2_gene_position=coding (495/1254 nt)	side_2_gene_product=gamma-glutamyl phosphate reductase	side_2_gene_strand=>	side_2_locus_tag=ECB_00240	side_2_overlap=0	side_2_possible_overlap_registers=32	side_2_possible_overlap_registers_before_trimming=35	side_2_read_count=0	side_2_redundant=0	total_non_overlap_reads=26
 JC	12	.	REL606-5	32069	-1	REL606-5	40000	1	0	alignment_overlap=0	coverage_minus=17	coverage_plus=15	flanking_left=36	flanking_right=36	frequency=1	junction_possible_overlap_registers=32	junction_possible_overlap_registers_before_trimming=35	key=REL606-5__32069__-1__REL606-5__40000__1__0____36__36__1__0	max_left=35	max_left_minus=31	max_left_plus=35	max_min_left=17	max_min_left_minus=17	max_min_left_plus=16	max_min_right=18	max_min_right_minus=18	max_min_right_plus=18	max_pos_hash_score=70	max_right=33	max_right_minus=33	max_right_plus=25	neg_log10_pos_hash_p_value=0.0	new_junction_coverage=1.00	new_junction_read_count=31	polymorphism_frequency=1.000e+00	pos_hash_score=27	prediction=consensus	side_1_annotate_key=repeat	side_1_continuation=0	side_1_coverage=NA	side_1_gene_name=IS1	side_1_gene_position=noncoding (768/768 nt)	side_1_gene_product=repeat region	side_1_gene_strand=>	side_1_overlap=0	side_1_possible_overlap_registers=NA	side_1_possible_overlap_registers_before_trimming=NA	side_1_read_count=NA	side_1_redundant=1	side_2_annotate_key=gene	side_2_continuation=0	side_2_coverage=0.00	side_2_gene_name=yagS	side_2_gene_position=coding (582/957 nt)	side_2_gene_product=predicted oxidoreductase with FAD-binding domain	side_2_gene_strand=<	side_2_locus_tag=ECB_00244	side_2_overlap=0	side_2_possible_overlap_registers=26	side_2_possible_overlap_registers_before_trimming=35	side_2_read_count=0	side_2_redundant=0	total_non_overlap_reads=32
 UN	13	.	REL606-5	1	4
-UN	14	.	REL606-5	389	413
+UN	14	.	REL606-5	389	409
 UN	15	.	REL606-5	8392	8411
 UN	16	.	REL606-5	9793	9997
 UN	17	.	REL606-5	10059	10179
 UN	18	.	REL606-5	10241	25876
-UN	19	.	REL606-5	28183	31532
+UN	19	.	REL606-5	28183	31528
 UN	20	.	REL606-5	31595	31715
 UN	21	.	REL606-5	31776	32038
 UN	22	.	REL606-5	35000	39999

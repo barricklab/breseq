@@ -643,11 +643,9 @@ void resolve_alignments(
 				// Do not count for coverage or write it out if it is redundant!!
 				if (from_string<int32_t>(item[side_key + "_redundant"])) continue;
         
-				// Write out match corresponding to this part to SAM file
-				// By trimming in the candidate junctions sequence, rather than on each half,
-				// this is done properly.
-				Trims trims = get_alignment_trims(a, junction_trims_list);
-        
+				// Write out match corresponding to this part to SAM file. write_moved_alignment()
+				// computes the split read's XL/XR trims from the real-genome trims_list at its final
+				// (post soft-clip) coordinates -- leaving the junction/middle side untrimmed.
 				resolved_reference_tam.write_moved_alignment(
 					a,
           resolved_junction_tam.target_name(a),
@@ -660,7 +658,7 @@ void resolve_alignments(
 					from_string<int32_t>(item["flanking_left"]),
 					from_string<int32_t>(item["alignment_overlap"]),
           match.junction_alignments,
-					&trims,
+					&trims_list,
           &ref_seq_info,
           true
 				);
@@ -1630,20 +1628,18 @@ void _write_reference_matches(const Settings& settings, Summary& summary, cRefer
 	// Nice try, no alignments
 	if (reference_alignments.size() == 0) return;
 
-	vector<Trims> trims;
-
   double redundancy_corrected_count = 1.0 / static_cast<double>(reference_alignments.size());
   for(alignment_list::iterator it=reference_alignments.begin(); it!=reference_alignments.end(); it++)
   {
-    Trims t = get_alignment_trims(**it, trims_list);
-		trims.push_back(t);
     summary.alignment_resolution.reference[(*it)->reference_target_id()].reads_mapped_to_reference  +=redundancy_corrected_count;
     summary.alignment_resolution.reference[(*it)->reference_target_id()].bases_mapped_to_reference  +=redundancy_corrected_count * (*it)->query_match_length();
   }
   summary.alignment_resolution.total_reads_mapped_to_references+=1;
   summary.alignment_resolution.total_bases_mapped_to_references+=reference_alignments.front()->query_match_length();
-  
-	reference_tam.write_alignments((int32_t)fastq_file_index, reference_alignments, &trims, &ref_seq_info, true);
+
+  // write_alignments() computes the XL/XR trims itself from trims_list (recomputing them for
+  // any read whose ends it soft-clips), so we no longer precompute a Trims vector here.
+	reference_tam.write_alignments((int32_t)fastq_file_index, reference_alignments, &trims_list, &ref_seq_info, true, true);
 }
   
 /*! Calculates various statistics about reads overlapping a junction
@@ -2109,9 +2105,7 @@ void resolve_junction(
           alignments.read_base_quality_char_string_reversed = repeat_match.junction_alignments.read_base_quality_char_string_reversed;
 
           alignments.push_back(matched_alignment);
-          vector<Trims> trims;
-          trims.push_back(get_alignment_trims(*matched_alignment, junction_trims_list));
-          resolved_junction_tam.write_alignments(fastq_file_index, alignments, &trims, &junction_ref_seq_info, true);
+          resolved_junction_tam.write_alignments(fastq_file_index, alignments, &junction_trims_list, &junction_ref_seq_info, true);
         }
 			}
 		}
@@ -2145,11 +2139,7 @@ void resolve_junction(
       }
       
       // REGARDLESS of success: write matches to the candidate junction SAM file
-      vector<Trims> junction_alignment_trims;
-      for (alignment_list::iterator it2=item.junction_alignments.begin(); it2 != item.junction_alignments.end(); it2++) {
-        junction_alignment_trims.push_back(get_alignment_trims(**it2, junction_trims_list));
-      }
-      resolved_junction_tam.write_alignments(fastq_file_index, item.junction_alignments, &junction_alignment_trims, &junction_ref_seq_info, true);
+      resolved_junction_tam.write_alignments(fastq_file_index, item.junction_alignments, &junction_trims_list, &junction_ref_seq_info, true);
     }
   }
 
