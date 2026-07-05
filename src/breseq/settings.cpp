@@ -283,7 +283,6 @@ namespace breseq
     options.addUsage("Read File Options", NORMAL_OPTION);
     options
     ("limit-fold-coverage,l", "Analyze a subset of the input FASTQ sequencing reads with enough bases to provide this theoretical coverage of the reference sequences. A value between 60 and 120 will usually speed up the analysis with no loss in sensitivity for clonal samples. The actual coverage achieved will be somewhat less because not all reads will map (DEFAULT=OFF)", "", NORMAL_OPTION)
-    ("nanopore-fast-basecalling,x", "Set recommended options for nanopore data processed in fast basecalling mode to rule out false-positive mutations due to high homopolymer indel error rates. Equivalent to --consensus-reject-indel-homopolymer-length 4 --polymorphism-reject-indel-homopolymer-length 4 consensus/polymorphism --polymorphism-no-indel --bowtie2-stage1 \"" + this->bowtie2_stage2 + "\" --bowtie2-stage2 \"\". If you provide any of these options on their own, then they will override these preset options. NOTE: For data processed in high-accuracy basecalling mode, this option is not necessary.", TAKES_NO_ARGUMENT)
     ("aligned-sam", "Input files are aligned SAM files, rather than FASTQ files. Junction prediction steps will be skipped. Be aware that breseq assumes: (1) Your SAM file is sorted such that all alignments for a given read are on consecutive lines. You can use 'samtools sort -n' if you are not sure that this is true for the output of your alignment program. (2) You EITHER have alignment scores as additional SAM fields with the form 'AS:i:n', where n is a positive integer and higher values indicate a better alignment OR it defaults to calculating an alignment score that is equal to the number of bases in the read minus the number of inserted bases, deleted bases, and soft clipped bases in the alignment to the reference. The default highly penalizes split-read matches (with CIGAR strings such as M35D303M65).", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("read-min-length", "Reads in the input FASTQ file that are shorter than this length will be ignored. (0 = OFF)", 18, NORMAL_OPTION)
     ("read-max-same-base-fraction", "Reads in the input FASTQ file in which this fraction or more of the bases are the same will be ignored. (0 = OFF)", 0.9, NORMAL_OPTION)
@@ -322,7 +321,7 @@ namespace breseq
     ("bowtie2-stage1", "Complete settings (scoring scheme, alignment mode, and mapping criteria) used for the stage 1 alignment. This step is normally meant for quickly aligning near-perfect matches. (DEFAULT=\"" + this->bowtie2_stage1 + "\")", "", EXPERT_OPTION)
     ("bowtie2-stage2", "Complete settings (scoring scheme, alignment mode, and mapping criteria) used for the stage 2 alignment. If set to the empty string \"\", then stage 2 alignment is skipped. This step is normally meant for exhaustively mapping reads that were unmapped by stage 1. (DEFAULT=\"" + this->bowtie2_stage2 + "\")", "", EXPERT_OPTION)
     ("bowtie2-junction", "Complete settings (scoring scheme, alignment mode, and mapping criteria) used in aligning reads to candidate junctions. (DEFAULT=\"" + this->bowtie2_junction + "\")", "", EXPERT_OPTION)
-    ("end-to-end", "Use --end-to-end (instead of --local) alignment mode for the stage 1 bowtie2 alignment and the candidate-junction realignment pass, swapping in complete defaults for --bowtie2-stage1/--bowtie2-junction translated to that mode's scoring scale (including --ma 0, since bowtie2 rejects a nonzero --ma whenever --score-min can go negative). --bowtie2-stage2 is unaffected (always --local, --ma 1). Has no effect on either setting for which the corresponding --bowtie2-* option is also given explicitly, which always takes precedence. Speculative/experimental option for testing. (DEFAULT=OFF)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("local-mapping", "Use --local (instead of the default --end-to-end) alignment mode for the stage 1 bowtie2 alignment and the candidate-junction realignment pass, restoring the complete --local defaults for --bowtie2-stage1/--bowtie2-junction (--ma 1, with --score-min bounded at 0). --bowtie2-stage2 always uses --local regardless of this option. Has no effect on either setting for which the corresponding --bowtie2-* option is also given explicitly, which always takes precedence. (DEFAULT=OFF, i.e. --end-to-end mapping)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ;
     options.addUsage("In addition to these values, breseq automatically sets the seed size for bowtie2 read mapping (-L option) to a value that is scaled to the read length (r). This value is 0.5 * r for stage 1, 5 + 0.1 * r for stage 2, and 0.3 * r for junction mapping. In each case, it is bounded to the range [4,31] as required by bowtie2. Be warned that breseq internally rescores alignments with a scoring scheme setting +1 for match, -3 for mismatch, -2 for gap open, and -3 for gap extend for consistency when comparing alternative alignments present in the bowtie2 output.", EXPERT_OPTION);
     
@@ -611,14 +610,14 @@ namespace breseq
     //! Settings: bowtie2
     //  all have default that we only overwrite if present on command line
     //
-    //  --end-to-end swaps in a different, complete default for bowtie2-stage1/bowtie2-junction
-    //  (translated to --end-to-end's scoring scale, including --ma 0 since bowtie2 rejects a
-    //  nonzero --ma whenever --score-min can go negative) rather than patching the
-    //  --local-oriented defaults at the point bowtie2 is actually invoked -- an explicit
-    //  --bowtie2-stage1/--bowtie2-junction always wins over this, checked first, exactly like
-    //  it would with --end-to-end absent. bowtie2-stage2 is never affected (always --local,
-    //  --ma 1).
-    this->end_to_end = options.count("end-to-end");
+    //  end-to-end is the default mapping mode: it swaps in a different, complete default for
+    //  bowtie2-stage1/bowtie2-junction (using end-to-end scoring, including --ma 0 since bowtie2
+    //  rejects a nonzero --ma whenever --score-min can go negative) rather than patching the
+    //  --local-oriented pristine defaults at the point bowtie2 is actually invoked. The
+    //  --local-mapping option disables this and keeps the --local defaults instead. An explicit
+    //  --bowtie2-stage1/--bowtie2-junction always wins over either, checked first. bowtie2-stage2
+    //  is never affected (always --local, --ma 1).
+    this->end_to_end = !options.count("local-mapping");
 
     if (options.count("bowtie2-stage1")) {
       this->bowtie2_stage1 = options["bowtie2-stage1"];
@@ -730,18 +729,6 @@ namespace breseq
       this->junction_minimum_side_match = 1;
     }
     
-    // en masse overrides come before specific overrides
-    
-    if (options.count("nanopore-fast-basecalling")) {
-      this->consensus_reject_indel_homopolymer_length = 4;
-      this->polymorphism_reject_indel_homopolymer_length = 4;
-      this->polymorphism_no_indels = true;
-      
-      // Just do what is normally stage 2 alignment
-      this->bowtie2_stage1 = this->bowtie2_stage2;
-      this->bowtie2_stage2 = "";
-    }
-      
     // override the default settings
     
     if (options.count("minimum-mapping-quality")) {
@@ -1002,7 +989,9 @@ namespace breseq
     // Set these defaults. Each is a complete, independent command-line string -- scoring
     // scheme bundled with alignment mode and mapping cutoffs -- rather than sharing one
     // scoring string across all three, since stage 2/junction always stay --local (--ma 1)
-    // even when --end-to-end switches stage 1/junction's own scoring (see end_to_end below).
+    // even when the default end-to-end mode switches stage 1/junction's own scoring during
+    // command-line processing (see end_to_end above). These are the pristine --local baseline
+    // defaults, kept as-is when --local-mapping is given.
     this->bowtie2_stage1 = "--ma 1 --mp 3 --np 0 --rdg 2,3 --rfg 2,3 --ignore-quals --local -i S,1,0.25 --score-min L,0,0.8" + bowtie2_genome_alignment_reporting_parameters; // "-L 22 -i S,1,0.25 --score-min L,0,0.9";
     this->end_to_end = false;
 

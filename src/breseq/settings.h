@@ -298,14 +298,15 @@ namespace breseq
     string bowtie2_stage2;          // COMMAND-LINE OPTION (can be blank to skip step)
     string bowtie2_junction;        // COMMAND-LINE OPTION
     //! Use --end-to-end (instead of --local) for the stage 1 bowtie2 alignment and the
-    //! candidate-junction realignment pass. Default = false. When set, swaps in complete,
-    //! independent defaults for bowtie2_stage1/bowtie2_junction (translated to --end-to-end's
-    //! scoring scale, including --ma 0 -- bowtie2 rejects a nonzero --ma whenever --score-min
-    //! can go negative) rather than patching the --local-oriented defaults at the point
-    //! bowtie2 is actually invoked. bowtie2_stage2 is unaffected (always --local, --ma 1). An
-    //! explicit --bowtie2-stage1/--bowtie2-junction always wins over the corresponding
-    //! --end-to-end default, exactly as it would with --end-to-end absent.
-    bool     end_to_end;            // COMMAND-LINE OPTION
+    //! candidate-junction realignment pass. This is now the DEFAULT (Default = true); the
+    //! --local-mapping command-line option sets it false to restore --local behavior. When
+    //! true, swaps in complete, independent defaults for bowtie2_stage1/bowtie2_junction
+    //! (translated to --end-to-end's scoring scale, including --ma 0 -- bowtie2 rejects a
+    //! nonzero --ma whenever --score-min can go negative) rather than patching the
+    //! --local-oriented pristine defaults at the point bowtie2 is actually invoked.
+    //! bowtie2_stage2 is unaffected (always --local, --ma 1). An explicit
+    //! --bowtie2-stage1/--bowtie2-junction always wins over the corresponding default.
+    bool     end_to_end;            // COMMAND-LINE OPTION (disabled by --local-mapping)
     uint64_t bowtie2_junction_maximum_alignments_to_consider_per_read;       // Default = 2000
     uint64_t bowtie2_genome_maximum_alignments_to_consider_per_read;         // Default = 2000
 
