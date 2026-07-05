@@ -102,9 +102,9 @@ only validates paths reachable through Markdown-syntax links/images), so check
 rendered images manually with `mkdocs serve` before publishing.
 
 Both `make dist`/`make distcheck` and `./binarydist.sh` automatically build the
-documentation with mkdocs and bundle it into the distribution (as
-distdir/documentation or BINARYDIR/documentation, respectively). If mkdocs is not
-installed, these steps are skipped with a warning rather than failing the build.
+documentation with mkdocs and bundle the built site (not the raw Markdown source)
+into the distribution (as distdir/docs or BINARYDIR/docs, respectively). If mkdocs is
+not installed, these steps are skipped with a warning rather than failing the build.
 
 Published versions of the documentation are built and deployed automatically to
 https://breseq.barricklab.org/ whenever a new vX.Y.Z release tag is pushed (see
@@ -113,7 +113,7 @@ release.
 
 You can also publish or replace a specific version on demand: go to the repository's
 Actions tab, select the "docs" workflow, click "Run workflow", and enter a version
-label (e.g. 0.40.1). This builds docs from whatever branch you run it against but
+label (e.g. v0.40.1, matching the git tag). This builds docs from whatever branch you run it against but
 publishes them under the version label you typed, so you can publish current docs
 under an already-released version number without cutting a new tag. Re-running with
 the same version label overwrites/replaces that published version -- useful for

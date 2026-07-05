@@ -875,7 +875,12 @@ static OrientationDistance compute_orientation_and_distance(bam_alignment* a, ba
   uint32_t b_start = b->reference_start_1();
   uint32_t b_end = b->reference_end_1();
 
-  bool a_is_lower = (a_start <= b_start);
+  // Order by each mate's 5' end (forward -> start, reverse -> end), NOT by leftmost mapped
+  // coordinate. Leftmost coordinate ties for short/overlapping fragments and would mislabel
+  // normal FR fragments as RF; the 5' end gives the correct read geometry regardless of overlap.
+  uint32_t a_5p = a->reversed() ? a_end : a_start;
+  uint32_t b_5p = b->reversed() ? b_end : b_start;
+  bool a_is_lower = (a_5p <= b_5p);
   bam_alignment* lower_alignment = a_is_lower ? a : b;
   bam_alignment* higher_alignment = a_is_lower ? b : a;
 
@@ -972,6 +977,7 @@ static void downselect_to_kept(alignment_list& alignments, const set<bam_alignme
   }
 }
 
+#ifdef BRESEQ_WRITE_DISCORDANT_PAIRS_CSV
 // Strand-aware 5' anchor position of an alignment: reference_start_1() if forward,
 // reference_end_1() if reversed (reference_stranded_bounds_1 already computes exactly this).
 static uint32_t stranded_anchor_position(bam_alignment* a)
@@ -980,19 +986,26 @@ static uint32_t stranded_anchor_position(bam_alignment* a)
   a->reference_stranded_bounds_1(start, end);
   return start;
 }
+#endif
+
+#ifdef BRESEQ_WRITE_DISCORDANT_PAIRS_CSV
+// Single-character strand code used by the legacy discordant-pairs CSV: forward -> 'F', reverse -> 'R'.
+static inline char strand_char(const bam_alignment* a) { return a->reversed() ? 'R' : 'F'; }
 
 static void write_discordant_pair_row(
                                       ofstream& out,
                                       const string& read_number,
                                       const string& orientation,
-                                      const string& seq_id,
+                                      const string& seq_id_1,
                                       const string& start_1,
+                                      const string& seq_id_2,
                                       const string& start_2,
                                       int64_t distance
                                       )
 {
-  out << read_number << "," << orientation << "," << seq_id << "," << start_1 << "," << start_2 << "," << distance << endl;
+  out << read_number << "," << orientation << "," << seq_id_1 << "," << start_1 << "," << seq_id_2 << "," << start_2 << "," << distance << endl;
 }
+#endif
 
 void load_junction_alignments(
                               const Settings& settings,
@@ -1318,14 +1331,21 @@ void load_junction_alignments(
     reference_tam_2->read_alignments(reference_alignments_2, false);
 
     // Majority orientation / distance cutoff computed earlier in the pipeline (candidate-junction
-    // preprocessing) for this read file set.
-    const string majority_orientation = summary.paired_mapping_distance_distribution[rfs.m_base_name].majority_orientation;
-    const double distance_cutoff = summary.paired_mapping_distance_distribution[rfs.m_base_name].distance_cutoff;
+    // preprocessing = the PRELIMINARY fit) for this read file set. This is what we use to assign the
+    // concordant/discordant BAM flags below.
+    const string majority_orientation = summary.preliminary_paired_mapping_distance_distribution[rfs.m_base_name].majority_orientation;
+    const double distance_cutoff = summary.preliminary_paired_mapping_distance_distribution[rfs.m_base_name].distance_cutoff;
 
+    // Count read pairs that receive BAM pair flags here (the FINAL pass), split concordant/discordant.
+    uint64_t mapped_pairs = 0;
+    uint64_t concordant_pairs = 0;
+
+#ifdef BRESEQ_WRITE_DISCORDANT_PAIRS_CSV
     string discordant_pairs_file_name = Settings::file_name(settings.discordant_pairs_file_name, "#", rfs.m_base_name);
     ofstream discordant_csv_out(discordant_pairs_file_name.c_str());
     ASSERT(discordant_csv_out.is_open(), "Could not write to file: " + discordant_pairs_file_name);
-    discordant_csv_out << "read_number,orientation,seq_id,start_1,start_2,distance" << endl;
+    discordant_csv_out << "read_number,orientation,seq_id_1,start_1,seq_id_2,start_2,distance" << endl;
+#endif
 
     cFastqSequence seq1, seq2;
     while (in_fastq_1.read_sequence(seq1, fqc) && in_fastq_2.read_sequence(seq2, fqc)) // READ PAIR
@@ -1372,14 +1392,19 @@ void load_junction_alignments(
           downselect_to_kept(m1.this_reference_alignments, pairing.keep_mate1);
           downselect_to_kept(m2.this_reference_alignments, pairing.keep_mate2);
         }
+#ifdef BRESEQ_WRITE_DISCORDANT_PAIRS_CSV
         else if (pairing.any_same_tid_combo_exists)
         {
           // Discordant: closest same-tid combination still fails the orientation/cutoff test.
           // Both mates are still written to resolved_reference_sam_file_name below (with their
           // original, non-downselected alignment lists) -- only the CSV logging differs here.
+          // Orientation letters are written per-mate in start_1/start_2 order (not folded) so
+          // the discordant-pairs plot can color each point by its own mate's true strand.
           string seq_id = reference_tam_1->bam_header->target_name[pairing.best_a->reference_target_id()];
-          write_discordant_pair_row(discordant_csv_out, seq1.m_name, pairing.best_orientation, seq_id,
+          string orientation = string() + strand_char(pairing.best_a) + strand_char(pairing.best_b);
+          write_discordant_pair_row(discordant_csv_out, seq1.m_name, orientation, seq_id,
                                      to_string(stranded_anchor_position(pairing.best_a)),
+                                     seq_id,
                                      to_string(stranded_anchor_position(pairing.best_b)),
                                      pairing.best_distance);
         }
@@ -1390,12 +1415,16 @@ void load_junction_alignments(
           // Both mates are still written to resolved_reference_sam_file_name below.
           bam_alignment* a1 = m1.this_reference_alignments.front().get();
           bam_alignment* a2 = m2.this_reference_alignments.front().get();
-          string seq_id = reference_tam_1->bam_header->target_name[a1->reference_target_id()];
-          write_discordant_pair_row(discordant_csv_out, seq1.m_name, "NA", seq_id,
+          string seq_id_1 = reference_tam_1->bam_header->target_name[a1->reference_target_id()];
+          string seq_id_2 = reference_tam_1->bam_header->target_name[a2->reference_target_id()];
+          string orientation = string() + strand_char(a1) + strand_char(a2);
+          write_discordant_pair_row(discordant_csv_out, seq1.m_name, orientation, seq_id_1,
                                      to_string(stranded_anchor_position(a1)),
+                                     seq_id_2,
                                      to_string(stranded_anchor_position(a2)),
                                      -1);
         }
+#endif
 
         // Whenever both mates end up with exactly one alignment (whether concordant or
         // discordant), mark them as paired in the BAM using standard fields. Recompute
@@ -1409,6 +1438,10 @@ void load_junction_alignments(
           bool same_tid = (a1->reference_target_id() == a2->reference_target_id());
           OrientationDistance od = same_tid ? compute_orientation_and_distance(a1, a2) : OrientationDistance{"NA", 0};
           mark_pair_info(a1, a2, same_tid, od.orientation, od.distance, pairing.any_concordant_combo_exists);
+
+          // Count this flag-assigned pair for the final summary (concordant vs discordant).
+          ++mapped_pairs;
+          if (pairing.any_concordant_combo_exists) ++concordant_pairs;
         }
 
         _write_reference_matches(settings, summary, ref_seq_info, trims_list, m1.this_reference_alignments, resolved_reference_tam, fastq_file_index_1);
@@ -1420,6 +1453,7 @@ void load_junction_alignments(
         // through to the existing, unmodified per-mate handling. A singleton mapping (one mate
         // reference-best, the other fully unmapped) is still logged as discordant for
         // visibility, but the mapped mate's alignment is still written normally.
+#ifdef BRESEQ_WRITE_DISCORDANT_PAIRS_CSV
         bool m1_singleton_reference = m1_is_reference_match && !m2.mapped_anywhere;
         bool m2_singleton_reference = m2_is_reference_match && !m1.mapped_anywhere;
 
@@ -1429,10 +1463,14 @@ void load_junction_alignments(
             ? m1.this_reference_alignments.front().get()
             : m2.this_reference_alignments.front().get();
           string seq_id = reference_tam_1->bam_header->target_name[mapped_alignment->reference_target_id()];
-          string start_1 = m1_singleton_reference ? to_string(stranded_anchor_position(mapped_alignment)) : "";
-          string start_2 = m2_singleton_reference ? to_string(stranded_anchor_position(mapped_alignment)) : "";
-          write_discordant_pair_row(discordant_csv_out, seq1.m_name, "NA", seq_id, start_1, start_2, -1);
+          // Singleton: only one mate maps. Write its single strand letter and put its position in
+          // the first (seq_id_1/start_1) slot; the second slot is left empty.
+          string orientation = string(1, strand_char(mapped_alignment));
+          write_discordant_pair_row(discordant_csv_out, seq1.m_name, orientation, seq_id,
+                                     to_string(stranded_anchor_position(mapped_alignment)),
+                                     "", "", -1);
         }
+#endif
 
         dispatch_mate_result(settings, summary, ref_seq_info, trims_list, resolved_reference_tam, junction_tam_1, fastq_file_index_1, seq1.m_name, m1, all_junction_ids, unique_junction_match_map, repeat_junction_match_map);
         dispatch_mate_result(settings, summary, ref_seq_info, trims_list, resolved_reference_tam, junction_tam_2, fastq_file_index_2, seq2.m_name, m2, all_junction_ids, unique_junction_match_map, repeat_junction_match_map);
@@ -1446,6 +1484,15 @@ void load_junction_alignments(
     }
     end_progress_line();
 
+    // Final paired-mapping-distance record: carry the fit fields from the preliminary (stage-03)
+    // record and attach the actual concordant/mapped pair counts from this flag-assignment pass.
+    {
+      PairedMappingDistanceDistributionSummary final_pmdd = summary.preliminary_paired_mapping_distance_distribution[rfs.m_base_name];
+      final_pmdd.mapped_pairs = static_cast<double>(mapped_pairs);
+      final_pmdd.concordant_pairs = static_cast<double>(concordant_pairs);
+      summary.paired_mapping_distance_distribution[rfs.m_base_name] = final_pmdd;
+    }
+
     // save statistics
     summary.alignment_resolution.read_file[rf1.m_base_name] = read_file_summary_info_1;
     summary.alignment_resolution.read_file[rf2.m_base_name] = read_file_summary_info_2;
@@ -1456,7 +1503,9 @@ void load_junction_alignments(
     summary.alignment_resolution.total_reads += read_file_summary_info_1.num_total_reads + read_file_summary_info_2.num_total_reads;
     summary.alignment_resolution.total_bases += read_file_summary_info_1.num_total_bases + read_file_summary_info_2.num_total_bases;
 
+#ifdef BRESEQ_WRITE_DISCORDANT_PAIRS_CSV
     discordant_csv_out.close();
+#endif
 
     if (junction_tam_1 != NULL) delete junction_tam_1;
     if (junction_tam_2 != NULL) delete junction_tam_2;

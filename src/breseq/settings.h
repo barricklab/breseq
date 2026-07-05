@@ -523,6 +523,7 @@ namespace breseq
     string paired_mapping_distance_plot_file_name;
     string paired_mapping_distance_summary_file_name;
     string discordant_pairs_file_name;
+    string discordant_pairs_plot_file_name;
 
     string candidate_junction_done_file_name;
 		string coverage_junction_best_bam_unsorted_file_name;
@@ -553,6 +554,7 @@ namespace breseq
 		string resolved_reference_sam_file_name;
 		string resolved_junction_sam_file_name;
 		string alignment_resolution_summary_file_name;
+		string resolved_paired_mapping_distance_summary_file_name;
     string jc_genome_diff_file_name;
     
     string junction_debug_file_name;

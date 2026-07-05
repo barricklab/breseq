@@ -225,7 +225,7 @@ cp -r README-BINARY ${BINARYDIR}/README
 
 if command -v mkdocs >/dev/null 2>&1; then
 	mkdocs build --site-dir "${PWD}/docs_site"
-	cp -r "${PWD}/docs_site" "${BINARYDIR}/documentation"
+	cp -r "${PWD}/docs_site" "${BINARYDIR}/docs"
 else
 	echo "mkdocs not found -- skipping documentation bundling in binary distribution"
 fi

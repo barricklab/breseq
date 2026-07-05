@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version label to publish docs under (e.g. 0.40.1). Re-running with the same value replaces that version.'
+        description: 'Version label to publish docs under (e.g. v0.40.1, matching the git tag). Re-running with the same value replaces that version.'
         required: true
       set_default:
         description: 'Also make this the default/"latest" version shown at the site root'
@@ -41,7 +41,7 @@ jobs:
             RAW_VERSION="${GITHUB_REF_NAME}"
             SET_DEFAULT="true"
           fi
-          echo "VERSION=${RAW_VERSION#v}" >> "$GITHUB_ENV"
+          echo "VERSION=${RAW_VERSION}" >> "$GITHUB_ENV"
           echo "SET_DEFAULT=$SET_DEFAULT" >> "$GITHUB_ENV"
 
       - run: git config user.name github-actions[bot]

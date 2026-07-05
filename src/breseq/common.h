@@ -21,6 +21,12 @@
 #ifndef _BRESEQ_COMMON_H_
 #define _BRESEQ_COMMON_H_
 
+// Optional/debug compile-time features:
+// Define to also emit the legacy per-read-set discordant-pairs CSV (data/#.discordant_pairs.csv)
+// from resolve_alignments. It is NOT used for plotting anymore (the discordant read-pair plot is
+// now built by traversing the final data/reference.bam); this is kept only as a debugging artifact.
+// #define BRESEQ_WRITE_DISCORDANT_PAIRS_CSV
+
 // System headers
 
 #include <config.h>
