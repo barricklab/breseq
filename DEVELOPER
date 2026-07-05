@@ -113,7 +113,7 @@ release.
 
 You can also publish or replace a specific version on demand: go to the repository's
 Actions tab, select the "docs" workflow, click "Run workflow", and enter a version
-label (e.g. 0.40.1). This builds docs from whatever branch you run it against but
+label (e.g. v0.40.1, matching the git tag). This builds docs from whatever branch you run it against but
 publishes them under the version label you typed, so you can publish current docs
 under an already-released version number without cutting a new tag. Re-running with
 the same version label overwrites/replaces that published version -- useful for
