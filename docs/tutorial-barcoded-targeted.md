@@ -13,33 +13,15 @@ biotinylated oligos were used to enrich for only certain genes in the E.
 coli genome to achieve deeper sequencing of regions that were expected
 to have beneficial mutations.
 
-<div class="note">
+!!! note
+    This tutorial was created for the EMBO Practical Course **Measuring
+    intra-species diversity using high-throughput sequencing** held 27–31
+    July 2015 in Oeras, Portugal.
 
-<div class="title">
-
-Note
-
-</div>
-
-This tutorial was created for the EMBO Practical Course **Measuring
-intra-species diversity using high-throughput sequencing** held 27–31
-July 2015 in Oeras, Portugal.
-
-</div>
-
-<div class="warning">
-
-<div class="title">
-
-Warning
-
-</div>
-
-If you encounter any \_[breseq]() or \_[gdtools]() errors or crashes in
-running this tutorial, please [report issues on
-GitHub](https://github.com/barricklab/breseq/issues).
-
-</div>
+!!! warning
+    If you encounter any _breseq_ or _gdtools_ errors or crashes in
+    running this tutorial, please [report issues on
+    GitHub](https://github.com/barricklab/breseq/issues).
 
 # 1. Download data files
 
@@ -108,19 +90,10 @@ python SSCS_DCS.py -f1 DED234_GATCAG_L004_R1_001.fastq -f2 DED234_GATCAG_L004_R2
 
 This script will take about 30 minutes to run.
 
-<div class="warning">
+!!! warning
+    This script is memory intensive! (16 GB RAM required)
 
-<div class="title">
-
-Warning
-
-</div>
-
-This script is memory intensive! (16 GB RAM required)
-
-</div>
-
-# 3. Run \_[breseq]() on the consensus reads
+# 3. Run _breseq_ on the consensus reads
 
 Use this command to analyze the consensus reads.
 
@@ -131,12 +104,12 @@ $ breseq -t -j 8 -o consensus_reads -p --polymorphism-minimum-coverage-each-stra
 Notice the new **-t** and **-s** options. What are these doing? Look in
 the help under **Reference File Options**.
 
-Take a look at the \_[breseq]() output. In particular, examine the
+Take a look at the _breseq_ output. In particular, examine the
 **summary statistics** to look at the distribution of coverage across
 the different reference sequence fragments that were used. How effective
 was the enrichment step at favoring reads from those regions?
 
-# 4. Run \_[breseq]() on the original reads
+# 4. Run _breseq_ on the original reads
 
 Your next task is to compare the performance of the consensus reads to
 the original reads. To make this comparison fair, you need to include
@@ -144,32 +117,19 @@ the same numbers of original reads and consensus reads. Do this by
 extracting the same number of lines from the R1 file as exist in the new
 `DED234_SSCS.fastq` file.
 
-<div class="container toggle">
-
-<div class="container header">
-
-**How? I need a hint**
-
-</div>
-
-<div class="container text">
-
-Check out the **wc -l** and **head** unix commands.
-
-</div>
-
-</div>
+??? note "How? I need a hint"
+    Check out the **wc -l** and **head** unix commands.
 
 You also need to trim the molecular barcodes from these reads (this was
 done automatically by the `SSCS_DCS.py` script for us before).
 
-Then, run a similar \_[breseq]() command to the one above to generate an
+Then, run a similar _breseq_ command to the one above to generate an
 `original_reads` output directory.
 
-Compare the overall \_[breseq]() predictions on each data set (possibly
+Compare the overall _breseq_ predictions on each data set (possibly
 by making a comparison table, as we have in the previous tutorials).
 
-Also, take a look at a part of the \_[breseq]() output that you may not
+Also, take a look at a part of the _breseq_ output that you may not
 have examined yet. On the **summary statistics** page, click on the link
 named **errors** in the **Read File Information** table at the top. This
 graph shows the sequencing error rates in the input reads. Compare the

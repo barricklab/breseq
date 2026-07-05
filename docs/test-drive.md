@@ -49,7 +49,7 @@ ORIGIN
 
 We're going to use Illumina genome resequencing data from a strain that
 evolved for 20,000 generations in the Lenski long-term evolution experiment
-[\[Barrick2009a\]](). This data is available in the European Nucleotide
+(Barrick et al. 2009). This data is available in the European Nucleotide
 Archive (ENA). Go to <https://www.ebi.ac.uk/> and search for the
 accession number: `SRR030257`. Then click on the accession number to
 open the record and download the two data files using the links in the

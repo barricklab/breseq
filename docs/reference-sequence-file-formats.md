@@ -4,7 +4,7 @@ different types of feature annotations are used to improve mutation
 predictions.
 
 Each reference sequence file (the `-r` option to _breseq_ and many
-\_[gdtools]() subcommands) can contain **sequence** information (the
+_gdtools_ subcommands) can contain **sequence** information (the
 nucleotide sequences of chromosomes or plasmids) and/or **annotations**
 (the locations and identities of features such as genes on those DNA
 sequences).

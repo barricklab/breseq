@@ -19,7 +19,7 @@ The remaining arguments at the command line are the FASTQ input files of
 reads. FASTQ files with base quality scores that are not in [SANGER
 format](https://en.wikipedia.org/wiki/FASTQ_format) will be converted.
 In addition, reads with \>50% N bases will be removed from the converted
-FASTQ file by default. \_[breseq](#breseq-usage) re-calibrates the error rates
+FASTQ file by default. _breseq_ re-calibrates the error rates
 for each FASTQ file separately, so data sets that were generated
 independently should be stored in different input files.
 

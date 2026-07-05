@@ -47,7 +47,7 @@ information than the version available from NCBI.
 In this tutorial, we're going to use Illumina genome re-sequencing data
 from *E. coli* strains that evolved for up to 40,000 generations in
 population Ara-3 from the Lenski long-term evolution experiment
-[\[Blount2011\]](). This data is available in the European Nucleotide
+(Blount et al. 2011). This data is available in the European Nucleotide
 Archive (ENA). Go to <https://www.ebi.ac.uk/> and search for one of the
 genomes in the table below (or click on the accession number to be taken
 directly to the download page for that clone).
@@ -67,7 +67,7 @@ Download the FASTQ files for your chosen sample into your
 These particular clonal isolates were chosen to illustrate particular
 aspects of interpreting _breseq_ output. If
 you would like to investigate data corresponding to any of the 29
-sequenced genomes from this population described in [\[Blount2011\]]()
+sequenced genomes from this population described in Blount et al. (2011),
 check out [SRP004752](https://www.ebi.ac.uk/ena/data/view/SRP004752).
 
 !!! warning
@@ -442,7 +442,7 @@ details correct for resolving the unassigned evidence).
 So, to get the most out of this tutorial in the shortest amount of time,
 please continue by [downloading curated GenomeDiff
 files](https://barricklab.org/release/breseq_tutorial/curated_gd.tgz)
-for the 29 clones from this population described in [\[Blount2011\]]().
+for the 29 clones from this population described in Blount et al. (2011).
 
 Place this archive inside of your `tutorial_clones` directory.
 Decompress and change into the resulting directory, which is full of the
