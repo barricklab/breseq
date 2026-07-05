@@ -6,6 +6,8 @@ edit_uri: edit/master/docs/
 
 theme:
   name: material
+  palette:
+    primary: custom
   features:
     - navigation.tabs
     - navigation.sections
@@ -14,6 +16,9 @@ theme:
     - search.suggest
     - content.code.copy
     - content.action.edit
+
+extra_css:
+  - stylesheets/extra.css
 
 markdown_extensions:
   - tables

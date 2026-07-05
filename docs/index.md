@@ -1,6 +1,6 @@
-# breseq
+![breseq](images/breseq.png){: style="display:block;" }
 
-Welcome to the _breseq_ user manual!
+# Welcome to the _breseq_ user manual!
 
 _breseq_ is a computational pipeline for finding mutations in haploid microbial
 genomes by comparing short-read re-sequencing data to an already sequenced

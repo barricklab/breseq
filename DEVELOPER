@@ -102,9 +102,9 @@ only validates paths reachable through Markdown-syntax links/images), so check
 rendered images manually with `mkdocs serve` before publishing.
 
 Both `make dist`/`make distcheck` and `./binarydist.sh` automatically build the
-documentation with mkdocs and bundle it into the distribution (as
-distdir/documentation or BINARYDIR/documentation, respectively). If mkdocs is not
-installed, these steps are skipped with a warning rather than failing the build.
+documentation with mkdocs and bundle the built site (not the raw Markdown source)
+into the distribution (as distdir/docs or BINARYDIR/docs, respectively). If mkdocs is
+not installed, these steps are skipped with a warning rather than failing the build.
 
 Published versions of the documentation are built and deployed automatically to
 https://breseq.barricklab.org/ whenever a new vX.Y.Z release tag is pushed (see

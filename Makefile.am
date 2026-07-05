@@ -123,14 +123,11 @@ dist-hook:
 	echo "tests/test.sh test tests" >> ${distdir}/run_tests.sh
 	chmod a+x ${distdir}/run_tests.sh
 
-	## Ship the raw docs/ Markdown source (not auto-included by automake --
-	## nothing under docs/ is declared in a _SOURCES/EXTRA_DIST variable) so a
-	## source tarball remains a complete, editable source tree.
-	cp -r $(top_srcdir)/docs $(distdir)/
-	cp $(top_srcdir)/mkdocs.yml $(distdir)/
+	## Ship the built documentation site (not the raw Markdown source -- anyone
+	## wanting to edit docs/ should clone the git repo instead).
 if HAVE_MKDOCS
 	$(MAKE) docs
-	cp -r $(DOCBUILDDIR) $(distdir)/documentation
+	cp -r $(DOCBUILDDIR) $(distdir)/docs
 else
 	@echo "mkdocs not found -- distribution tarball will not include built documentation HTML"
 endif

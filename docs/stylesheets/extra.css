@@ -1,0 +1,10 @@
+:root {
+  --md-primary-fg-color: #14453B;
+  --md-primary-fg-color--light: #14453B;
+  --md-primary-fg-color--dark: #14453B;
+  --md-typeset-a-color: #0B9A6D;
+}
+
+.md-typeset a {
+  text-decoration: underline;
+}
