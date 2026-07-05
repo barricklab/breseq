@@ -877,7 +877,12 @@ static OrientationDistance compute_orientation_and_distance(bam_alignment* a, ba
   uint32_t b_start = b->reference_start_1();
   uint32_t b_end = b->reference_end_1();
 
-  bool a_is_lower = (a_start <= b_start);
+  // Order by each mate's 5' end (forward -> start, reverse -> end), NOT by leftmost mapped
+  // coordinate. Leftmost coordinate ties for short/overlapping fragments and would mislabel
+  // normal FR fragments as RF; the 5' end gives the correct read geometry regardless of overlap.
+  uint32_t a_5p = a->reversed() ? a_end : a_start;
+  uint32_t b_5p = b->reversed() ? b_end : b_start;
+  bool a_is_lower = (a_5p <= b_5p);
   bam_alignment* lower_alignment = a_is_lower ? a : b;
   bam_alignment* higher_alignment = a_is_lower ? b : a;
 

@@ -410,8 +410,8 @@ namespace breseq {
   // For a matched read pair (R1's and R2's alignment summaries for the same read number),
   // finds the (R1 alignment, R2 alignment) combination sharing a reference sequence (tid)
   // with the smallest outermost-coordinate distance. Orientation letters are assigned by
-  // genomic coordinate order (lower-coordinate alignment first), not by R1/R2 identity;
-  // "RR" is folded to "FF" since they represent the same relative orientation. Reference
+  // 5'-end order (the mate whose 5' end is lower first), not by R1/R2 identity or leftmost
+  // mapped coordinate; "RR" is folded to "FF" since they represent the same relative orientation. Reference
   // sequence circularity is ignored (always a simple linear distance). Returns false if no
   // alignment combination shares a tid (caller should not add a row for this read pair).
   static bool best_pair_orientation_and_distance(
@@ -429,8 +429,14 @@ namespace breseq {
       for (vector<AlignmentSummary>::const_iterator b = r2_alignments.begin(); b != r2_alignments.end(); b++) {
         if (a->tid != b->tid) continue;
 
-        const AlignmentSummary& lower = (a->start_1 <= b->start_1) ? *a : *b;
-        const AlignmentSummary& higher = (a->start_1 <= b->start_1) ? *b : *a;
+        // Order by each mate's 5' end (forward -> start_1, reverse -> end_1), NOT by leftmost
+        // mapped coordinate. Leftmost coordinate ties for short/overlapping fragments and would
+        // mislabel normal FR fragments as RF; the 5' end gives the correct read geometry regardless
+        // of overlap.
+        const uint32_t a_5p = a->reversed ? a->end_1 : a->start_1;
+        const uint32_t b_5p = b->reversed ? b->end_1 : b->start_1;
+        const AlignmentSummary& lower = (a_5p <= b_5p) ? *a : *b;
+        const AlignmentSummary& higher = (a_5p <= b_5p) ? *b : *a;
 
         string orientation;
         orientation += lower.reversed ? 'R' : 'F';

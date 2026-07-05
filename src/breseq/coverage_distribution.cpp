@@ -695,16 +695,21 @@ PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fi
   uint32_t median_i = weighted_median(n, N, total);
   result.median = median_i;
 
-  // MAD: the weighted median of |i - median_i|, folding both sides of the median into one
-  // deviation histogram (dev_n[d] = count of observations exactly d away from the median).
-  uint32_t max_dev = max(median_i, N - median_i);
+  // MAD (upper, one-sided): the weighted median of (i - median_i) over ONLY the observations
+  // ABOVE the median. The distance distribution is right-skewed (a tight lower bound near the
+  // read length, a long tail of larger fragments), so a symmetric MAD is dominated by the narrow
+  // lower side and yields an artificially tight cutoff that flags many normal right-tail fragments
+  // as discordant. Using only the upper deviations makes the spread estimate reflect the tail that
+  // the cutoff actually needs to accommodate.
+  uint32_t max_dev = N - median_i;
   vector<double> dev_n(max_dev + 1, 0.0);
-  for (uint32_t i = 0; i <= N; i++) {
+  double upper_total = 0;
+  for (uint32_t i = median_i + 1; i <= N; i++) {
     if (n[i] == 0) continue;
-    uint32_t d = (i > median_i) ? (i - median_i) : (median_i - i);
-    dev_n[d] += n[i];
+    dev_n[i - median_i] += n[i];
+    upper_total += n[i];
   }
-  uint32_t mad_i = weighted_median(dev_n, max_dev, total);
+  uint32_t mad_i = (upper_total > 0) ? weighted_median(dev_n, max_dev, upper_total) : 0;
   result.mad = mad_i;
 
   // Modified z-score rule (0.6745*(x-median)/MAD, per Iglewicz & Hoaglin), but with a
