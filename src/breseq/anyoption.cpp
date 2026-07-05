@@ -938,40 +938,59 @@ namespace breseq {
 	}
 
 	void
-	AnyOption::addUsage( string line , bool advanced)
+	AnyOption::addUsage( string line , OptionLevel level)
 	{
-    if(!advanced){
-      usage_lines.push_back(line);
-    }
-    advanced_lines.push_back(line);
+    // Cumulative: a line appears in its own tier and every higher tier.
+    if (level <= BASIC_OPTION)  usage_lines.push_back(line);
+    if (level <= NORMAL_OPTION) normal_lines.push_back(line);
+    expert_lines.push_back(line);
 	}
-  
-  void
-  AnyOption::addUsageSameLine( string line , bool advanced)
-  {
-    assert(usage_lines.size() > 0);
-    assert(advanced_lines.size() > 0);
 
-    if(!advanced){
+  void
+  AnyOption::addUsageSameLine( string line , OptionLevel level)
+  {
+    assert(expert_lines.size() > 0);
+
+    if (level <= BASIC_OPTION) {
+      assert(usage_lines.size() > 0);
       // add space if needed...
       if ( usage_lines.back()[usage_lines.back().size()-1] != ' ')
         usage_lines.back() += " ";
       usage_lines.back() += line;
     }
-    
-    if ( advanced_lines.back()[advanced_lines.back().size()-1] != ' ')
-      advanced_lines.back() += " ";
-    advanced_lines.back() += line;
+
+    if (level <= NORMAL_OPTION) {
+      assert(normal_lines.size() > 0);
+      if ( normal_lines.back()[normal_lines.back().size()-1] != ' ')
+        normal_lines.back() += " ";
+      normal_lines.back() += line;
+    }
+
+    if ( expert_lines.back()[expert_lines.back().size()-1] != ' ')
+      expert_lines.back() += " ";
+    expert_lines.back() += line;
   }
-  
+
   void
-	AnyOption::printAdvancedUsage()
+	AnyOption::printNormalUsage()
 	{
     if( once ) {
 			once = false ;
       cout << endl ;
-      for( size_t i = 0 ; i < advanced_lines.size() ; i++ )
-        cout << advanced_lines[i] << endl ;
+      for( size_t i = 0 ; i < normal_lines.size() ; i++ )
+        cout << normal_lines[i] << endl ;
+      cout << endl ;
+    }
+	}
+
+  void
+	AnyOption::printExpertUsage()
+	{
+    if( once ) {
+			once = false ;
+      cout << endl ;
+      for( size_t i = 0 ; i < expert_lines.size() ; i++ )
+        cout << expert_lines[i] << endl ;
       cout << endl ;
     }
 	}

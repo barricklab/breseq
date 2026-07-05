@@ -21,7 +21,13 @@
 #define DEFAULT_MAXHELP         10
 
 #define TRUE_FLAG "true"
-#define ADVANCED_OPTION true
+
+// Option visibility tiers. Each higher level is cumulative: printing a level
+// shows all lower levels too (BASIC only; NORMAL = BASIC+NORMAL via -h;
+// EXPERT = everything via --expert-help). An unscoped enum (not int) is used
+// deliberately so that integer default values passed to operator() bind to the
+// template's default-value parameter rather than being mistaken for a tier.
+enum OptionLevel { BASIC_OPTION = 0, NORMAL_OPTION = 1, EXPERT_OPTION = 2 };
 
 #define TAKES_NO_ARGUMENT	((void*)NULL)
 #define USAGE_LEFT_COLUMN_WIDTH	35
@@ -153,9 +159,10 @@ namespace breseq {
 		 */
 		void printUsage();
 		void printAutoUsage();
-		void addUsage( string line , bool advanced=false);
-    void addUsageSameLine( string line , bool advanced=false);
-		void printAdvancedUsage();
+		void addUsage( string line , OptionLevel level=BASIC_OPTION);
+    void addUsageSameLine( string line , OptionLevel level=BASIC_OPTION);
+		void printNormalUsage();
+		void printExpertUsage();
 			/* print auto usage printing for unknown options or flag */
 		void autoUsagePrint(bool flag);
 
@@ -178,7 +185,7 @@ namespace breseq {
 
 	private:
 		string word_wrap(string sentence, int width);
-		template<class T> void addOptionOrFlag(const string& option_name, const string& option_description, const T& option_default_value, bool has_argument, bool has_default_value, bool advanced)
+		template<class T> void addOptionOrFlag(const string& option_name, const string& option_description, const T& option_default_value, bool has_argument, bool has_default_value, OptionLevel level)
 		{
       // split the name first 
       vector<string> option_name_split = split(option_name, ",");
@@ -242,30 +249,30 @@ namespace breseq {
 			}
 			usage += wrapped_description;
 
-			addUsage(usage, advanced);
+			addUsage(usage, level);
 		}
 
 	public:
-		AnyOption& operator()(const string& option_name, const string& option_description, bool advanced=false)
+		AnyOption& operator()(const string& option_name, const string& option_description, OptionLevel level=BASIC_OPTION)
 		{
-			addOptionOrFlag(option_name, option_description, "", true, false, advanced);
+			addOptionOrFlag(option_name, option_description, "", true, false, level);
 			return *this;
 		}
-		AnyOption& operator()(const string& option_name, const string& option_description, void* pass_null_if_option_takes_no_argument, bool advanced=false)
+		AnyOption& operator()(const string& option_name, const string& option_description, void* pass_null_if_option_takes_no_argument, OptionLevel level=BASIC_OPTION)
 		{
 			assert(pass_null_if_option_takes_no_argument == NULL);
-			addOptionOrFlag(option_name, option_description, "", false, false, advanced);
+			addOptionOrFlag(option_name, option_description, "", false, false, level);
 			return *this;
 		}
-    AnyOption& operator()(const string& option_name, const string& option_description, const char* option_default_value, bool advanced=false)
+    AnyOption& operator()(const string& option_name, const string& option_description, const char* option_default_value, OptionLevel level=BASIC_OPTION)
 		{
-			addOptionOrFlag(option_name, option_description, string(option_default_value), true, true, advanced);
+			addOptionOrFlag(option_name, option_description, string(option_default_value), true, true, level);
 			return *this;
 		}
-    
-		template<class T> AnyOption& operator()(const string& option_name, const string& option_description, const T& option_default_value, bool advanced=false)
+
+		template<class T> AnyOption& operator()(const string& option_name, const string& option_description, const T& option_default_value, OptionLevel level=BASIC_OPTION)
 		{
-			addOptionOrFlag(option_name, option_description, option_default_value, true, true, advanced);
+			addOptionOrFlag(option_name, option_description, option_default_value, true, true, level);
 			return *this;
 		}
 
@@ -298,8 +305,9 @@ namespace breseq {
 		int g_value_counter; 	/* globally updated value index LAME! */
 
 		/* help and usage */
-		vector<string> usage_lines; 	/* usage */
-    vector<string> advanced_lines; 	/* advanced usage */
+		vector<string> usage_lines; 	/* basic usage (printUsage) */
+    vector<string> normal_lines; 	/* basic + normal usage (printNormalUsage, -h) */
+    vector<string> expert_lines; 	/* basic + normal + expert usage (printExpertUsage, --expert-help) */
 
 		bool command_set;	/* if argc/argv were provided */
 		bool file_set;		/* if a filename was provided */

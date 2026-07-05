@@ -850,7 +850,7 @@ int do_annotate(int argc, char* argv[])
 	options("inactivating-overlap-fraction", "Mutations within this fraction of the length of a gene from its beginning are assigned to the 'genes_inactivating' versus 'the genes_overlapping' list if they fulfill other criteria.", cReferenceSequences::k_inactivating_overlap_fraction);
 	options("inactivating-size-cutoff", "INS, DEL, and SUB mutations in genes that are longer than this length cutoff are always assigned to the 'genes_inactivating' list, even if they are in-frame or in noncoding genes.", cReferenceSequences::k_inactivating_size_cutoff);
 	options("promoter-distance", "Mutations upstream and within this distance of the beginning of a gene have it added to their 'genes_promoter' list.", cReferenceSequences::k_promoter_distance);
-	options("genbank-field-for-seq-id", "Which GenBank header field will be used to assign sequence IDs. Valid choices are LOCUS, ACCESSION, and VERSION. The default is to check those fields, in that order, for the first one that exists. This must match the field used when the input GD file(s) were created.", "AUTOMATIC", ADVANCED_OPTION);
+	options("genbank-field-for-seq-id", "Which GenBank header field will be used to assign sequence IDs. Valid choices are LOCUS, ACCESSION, and VERSION. The default is to check those fields, in that order, for the first one that exists. This must match the field used when the input GD file(s) were created.", "AUTOMATIC", NORMAL_OPTION);
 	
 	options.addUsage("");
 	options.addUsage("ANNOTATE mutations in one or more GenomeDiff files. If multiple input files are provided, then also COMPARE the frequencies for identical mutations across samples.");
@@ -2020,7 +2020,7 @@ int do_read_count(int argc, char* argv[])
 	options.processCommandArgs( argc,argv);
 	
 	if (options.count("help")) {
-		options.printAdvancedUsage();
+		options.printNormalUsage();
 		return -1;
 	}
 	

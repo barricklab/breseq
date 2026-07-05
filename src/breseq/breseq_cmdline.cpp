@@ -70,16 +70,16 @@ int do_bam2aln(int argc, char* argv[]) {
   options("format", "Format of output alignment(s): HTML, TXT, or JSON", "HTML");
   options("max-flanking-columns,w", "Maximum number of bases in aligned reads to show flanking the region of interest (0=ALL)", 100);
   options("max-displayed-reads,n", "Maximum number of reads to display in alignment (0=ALL)", 100);
-  options("repeat", "Show reads with multiple best matches in reference", TAKES_NO_ARGUMENT, ADVANCED_OPTION);
+  options("repeat", "Show reads with multiple best matches in reference", TAKES_NO_ARGUMENT, NORMAL_OPTION);
   options("quality-score-cutoff,c", "Base quality score cutoff below which reads are highlighted as yellow", 0);
   options("minimum-mapping-quality,m", "Mapping quality (MQ) score cutoff below which reads are counted as repeat matches (0=OFF)", 0);
-  options("stdout", "Write output to stdout", TAKES_NO_ARGUMENT, ADVANCED_OPTION);
+  options("stdout", "Write output to stdout", TAKES_NO_ARGUMENT, NORMAL_OPTION);
   options("allow-large-regions", "Allow regions larger than 200 bases to be displayed without truncation", TAKES_NO_ARGUMENT);
   options.processCommandArgs(argc, argv);
   
 	// make sure that the config options are good:
   if(options.count("help")) {
-		options.printAdvancedUsage();
+		options.printNormalUsage();
 		return -1;
 	}
   
@@ -247,19 +247,19 @@ int do_bam2cov(int argc, char* argv[]) {
   options("region,r", "Regions to create alignments for. Must be provided as sequence regions in the format ACCESSION:START-END, where ACCESSION is a valid identifier for one of the sequences in the FASTA file, and START and END are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments. If no regions are provided, then an output file will be created for each sequence in the FASTA file.");
   options("format", "Format of output plot(s): PNG, PDF, or SVG", "PNG");
   options("table,t", "Create tab-delimited file of coverage instead of a plot", TAKES_NO_ARGUMENT);
-  options.addUsage("", ADVANCED_OPTION);
-  options.addUsage("Advanced Output Options", ADVANCED_OPTION);
-  options("total-only,1", "Only plot/tabulate the total coverage at a position. That is, do not not output the coverage on each genomic strand", TAKES_NO_ARGUMENT, ADVANCED_OPTION);
-  options("resolution,p", "Number of positions to output coverage information for in interval (0=ALL)", 600, ADVANCED_OPTION);
-  options("show-average,a", "Show the average coverage across the reference sequence as a horizontal line", TAKES_NO_ARGUMENT, ADVANCED_OPTION);
-  options("summary-json-file,j", "Path to summary.json file containing the average coverage", settings.data_json_summary_file_name, ADVANCED_OPTION);
-  options("fixed-coverage-scale,s", "Fix the maximum value on plots the coverage scale in plots. If the show-average option is provided, then this is a factor that will be multiplied times the average coverage (e.g., 1.5 x avg). Otherwise, this is a coverage value (e.g., 100-fold coverage)", "", ADVANCED_OPTION);
+  options.addUsage("", NORMAL_OPTION);
+  options.addUsage("Advanced Output Options", NORMAL_OPTION);
+  options("total-only,1", "Only plot/tabulate the total coverage at a position. That is, do not not output the coverage on each genomic strand", TAKES_NO_ARGUMENT, NORMAL_OPTION);
+  options("resolution,p", "Number of positions to output coverage information for in interval (0=ALL)", 600, NORMAL_OPTION);
+  options("show-average,a", "Show the average coverage across the reference sequence as a horizontal line", TAKES_NO_ARGUMENT, NORMAL_OPTION);
+  options("summary-json-file,j", "Path to summary.json file containing the average coverage", settings.data_json_summary_file_name, NORMAL_OPTION);
+  options("fixed-coverage-scale,s", "Fix the maximum value on plots the coverage scale in plots. If the show-average option is provided, then this is a factor that will be multiplied times the average coverage (e.g., 1.5 x avg). Otherwise, this is a coverage value (e.g., 100-fold coverage)", "", NORMAL_OPTION);
   
-  options.addUsage("", ADVANCED_OPTION);
-  options.addUsage("Tiling Mode (produce plots that span reference sequences from end to end)", ADVANCED_OPTION);
+  options.addUsage("", NORMAL_OPTION);
+  options.addUsage("Tiling Mode (produce plots that span reference sequences from end to end)", NORMAL_OPTION);
   options
-  ("tile-size", "In tiling mode, the size of each tile that will be output as a separate file", "", ADVANCED_OPTION)
-  ("tile-overlap", "In tiling mode, overlap between adjacent tiles (1/2 of this is added to each side of every tile)", "", ADVANCED_OPTION)
+  ("tile-size", "In tiling mode, the size of each tile that will be output as a separate file", "", NORMAL_OPTION)
+  ("tile-overlap", "In tiling mode, overlap between adjacent tiles (1/2 of this is added to each side of every tile)", "", NORMAL_OPTION)
   ;
 //  ("read_start_output,r", "file name for table file binned by read start bases (DEFAULT: OFF)")
 //  ("gc_output,g", "create additional table file binned by GC content of reads (DEFAULT: OFF)")
@@ -268,7 +268,7 @@ int do_bam2cov(int argc, char* argv[]) {
 
   if (options.count("help"))
   {
-    options.printAdvancedUsage();
+    options.printNormalUsage();
     exit(-1);
   }
   
@@ -453,7 +453,7 @@ int do_convert_fastq(int argc, char* argv[])
   
 	// handle help
   if (options.count("help")) {
-		options.printAdvancedUsage();
+		options.printNormalUsage();
 		return -1;
 	}
      
@@ -520,7 +520,7 @@ int do_convert_reference(int argc, char* argv[]) {
   options("no-sequence,n", "Do not include the nucleotide sequence. The output file will only have features. (Not allowed with FASTA format.)", TAKES_NO_ARGUMENT);
   options("output,o", "Output reference file path (Default = output.*)");
   options("isescan-results,s", "Path to CSV file output by isescan. Existing mobile_element, repeat_region, and transposon,  annotations will be replaced with these results.");
-  options("genbank-field-for-seq-id", "Which GenBank header field will be used to assign sequence IDs. Valid choices are LOCUS, ACCESSION, and VERSION. The default is to check those fields, in that order, for the first one that exists. If you override the default, you will need to use the converted reference file (data/reference.gff) for further breseq and gdtools operations on breseq output!", "AUTOMATIC", ADVANCED_OPTION);
+  options("genbank-field-for-seq-id", "Which GenBank header field will be used to assign sequence IDs. Valid choices are LOCUS, ACCESSION, and VERSION. The default is to check those fields, in that order, for the first one that exists. If you override the default, you will need to use the converted reference file (data/reference.gff) for further breseq and gdtools operations on breseq output!", "AUTOMATIC", NORMAL_OPTION);
 
 	options.processCommandArgs(argc, argv);
 	
@@ -621,7 +621,7 @@ int do_summarize_fastq(int argc, char* argv[])
   
   // handle help
   if (options.count("help")) {
-    options.printAdvancedUsage();
+    options.printNormalUsage();
     return -1;
   }
   
@@ -748,7 +748,7 @@ int do_get_sequence(int argc, char *argv[])
   
   // Handle help
   if (options.count("help")) {
-    options.printAdvancedUsage();
+    options.printNormalUsage();
     return -1;
   }
   
@@ -944,7 +944,7 @@ int do_tabulate_contingency_loci(int argc, char* argv[]) {
   
 	if(options.count("help")
 		 ) {
-		options.printAdvancedUsage();
+		options.printNormalUsage();
 		return -1;
 	}
   
@@ -992,7 +992,7 @@ int do_analyze_soft_clipping( int argc, char* argv[]){
 
   if (options.count("help"))
   {
-    options.printAdvancedUsage();
+    options.printNormalUsage();
     exit(-1);
   }
   
@@ -1167,7 +1167,7 @@ int do_coverage_bias(int argc, char *argv[])
   options.processCommandArgs(argc, argv);
   
   if(options.count("help")) {
-    options.printAdvancedUsage();
+    options.printNormalUsage();
     return -1;
   }
   

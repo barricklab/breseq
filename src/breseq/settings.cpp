@@ -271,163 +271,168 @@ namespace breseq
     options.addUsage("Allowed Options");
     
     options
-		("help,h", "Produce help message showing advanced options", TAKES_NO_ARGUMENT)
+		("help,h", "Produce help message showing advanced options (use --expert-help to also show expert options)", TAKES_NO_ARGUMENT)
     ("reference,r", "File containing reference sequences in GenBank, GFF3, or FASTA format. Option may be provided multiple times for multiple files (REQUIRED)")
     ("name,n", "Human-readable name of the analysis run for output (DEFAULT=<none>)", "")
     ("num-processors,j", "Number of processors to use in multithreaded steps", 1)
-    //("verbose,v","Produce verbose output",TAKES_NO_ARGUMENT, ADVANCED_OPTION) @JEB - not consistently implemented
+    //("verbose,v","Produce verbose output",TAKES_NO_ARGUMENT, NORMAL_OPTION) @JEB - not consistently implemented
 		("output,o", "Path to breseq output", ".")
     ("polymorphism-prediction,p", "The sample is not clonal. Predict polymorphic (mixed) mutations. Setting this flag changes from CONSENSUS MODE (the default) to POLYMORPHISM MODE", TAKES_NO_ARGUMENT);
 
-    options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("Read File Options", ADVANCED_OPTION);
+    options.addUsage("", NORMAL_OPTION);
+    options.addUsage("Read File Options", NORMAL_OPTION);
     options
-    ("limit-fold-coverage,l", "Analyze a subset of the input FASTQ sequencing reads with enough bases to provide this theoretical coverage of the reference sequences. A value between 60 and 120 will usually speed up the analysis with no loss in sensitivity for clonal samples. The actual coverage achieved will be somewhat less because not all reads will map (DEFAULT=OFF)", "", ADVANCED_OPTION)
+    ("limit-fold-coverage,l", "Analyze a subset of the input FASTQ sequencing reads with enough bases to provide this theoretical coverage of the reference sequences. A value between 60 and 120 will usually speed up the analysis with no loss in sensitivity for clonal samples. The actual coverage achieved will be somewhat less because not all reads will map (DEFAULT=OFF)", "", NORMAL_OPTION)
     ("nanopore-fast-basecalling,x", "Set recommended options for nanopore data processed in fast basecalling mode to rule out false-positive mutations due to high homopolymer indel error rates. Equivalent to --consensus-reject-indel-homopolymer-length 4 --polymorphism-reject-indel-homopolymer-length 4 consensus/polymorphism --polymorphism-no-indel --bowtie2-stage1 \"" + this->bowtie2_stage2 + "\" --bowtie2-stage2 \"\". If you provide any of these options on their own, then they will override these preset options. NOTE: For data processed in high-accuracy basecalling mode, this option is not necessary.", TAKES_NO_ARGUMENT)
-    ("aligned-sam", "Input files are aligned SAM files, rather than FASTQ files. Junction prediction steps will be skipped. Be aware that breseq assumes: (1) Your SAM file is sorted such that all alignments for a given read are on consecutive lines. You can use 'samtools sort -n' if you are not sure that this is true for the output of your alignment program. (2) You EITHER have alignment scores as additional SAM fields with the form 'AS:i:n', where n is a positive integer and higher values indicate a better alignment OR it defaults to calculating an alignment score that is equal to the number of bases in the read minus the number of inserted bases, deleted bases, and soft clipped bases in the alignment to the reference. The default highly penalizes split-read matches (with CIGAR strings such as M35D303M65).", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("read-min-length", "Reads in the input FASTQ file that are shorter than this length will be ignored. (0 = OFF)", 18, ADVANCED_OPTION)
-    ("read-max-same-base-fraction", "Reads in the input FASTQ file in which this fraction or more of the bases are the same will be ignored. (0 = OFF)", 0.9, ADVANCED_OPTION)
-    ("read-max-N-fraction", "Reads in the input FASTQ file in which this fraction or more of the bases are uncalled as N will be ignored. (0 = OFF)", 0.5, ADVANCED_OPTION)
-    ("long-read-trigger-length", "Mark a file as containing long reads and enable read splitting if the longest read has a length that is greater than or equal to this value. (0 = OFF)", 1000, ADVANCED_OPTION)
-    ("long-read-split-length", "Split input reads in a file marked as having long reads into pieces that are at most this many bases long. Using values much larger than the default for this parameter will likely degrade the speed and accuracy of breseq because of how it performs mapping and analyzes split-read alignments. Filters such as --read-min-length are applied to split reads. (0 = OFF)", 200, ADVANCED_OPTION)
-    ("long-read-distribute-remainder", "When splitting long reads, divide them into equal pieces that are less than the split length. If this option is not chosen (the default), reads will be split into chunks with exactly the split length and any remaining bases after the last chunk will be ignored.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("genbank-field-for-seq-id", "Which GenBank header field will be used to assign sequence IDs. Valid choices are LOCUS, ACCESSION, and VERSION. The default is to check those fields, in that order, for the first one that exists. If you override the default, you will need to use the converted reference file (data/reference.gff) for further breseq and gdtools operations on breseq output!", "AUTOMATIC", ADVANCED_OPTION)
+    ("aligned-sam", "Input files are aligned SAM files, rather than FASTQ files. Junction prediction steps will be skipped. Be aware that breseq assumes: (1) Your SAM file is sorted such that all alignments for a given read are on consecutive lines. You can use 'samtools sort -n' if you are not sure that this is true for the output of your alignment program. (2) You EITHER have alignment scores as additional SAM fields with the form 'AS:i:n', where n is a positive integer and higher values indicate a better alignment OR it defaults to calculating an alignment score that is equal to the number of bases in the read minus the number of inserted bases, deleted bases, and soft clipped bases in the alignment to the reference. The default highly penalizes split-read matches (with CIGAR strings such as M35D303M65).", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("read-min-length", "Reads in the input FASTQ file that are shorter than this length will be ignored. (0 = OFF)", 18, NORMAL_OPTION)
+    ("read-max-same-base-fraction", "Reads in the input FASTQ file in which this fraction or more of the bases are the same will be ignored. (0 = OFF)", 0.9, NORMAL_OPTION)
+    ("read-max-N-fraction", "Reads in the input FASTQ file in which this fraction or more of the bases are uncalled as N will be ignored. (0 = OFF)", 0.5, NORMAL_OPTION)
+    ("long-read-trigger-length", "Mark a file as containing long reads and enable read splitting if the longest read has a length that is greater than or equal to this value. (0 = OFF)", 1000, NORMAL_OPTION)
+    ("long-read-split-length", "Split input reads in a file marked as having long reads into pieces that are at most this many bases long. Using values much larger than the default for this parameter will likely degrade the speed and accuracy of breseq because of how it performs mapping and analyzes split-read alignments. Filters such as --read-min-length are applied to split reads. (0 = OFF)", 200, NORMAL_OPTION)
+    ("long-read-distribute-remainder", "When splitting long reads, divide them into equal pieces that are less than the split length. If this option is not chosen (the default), reads will be split into chunks with exactly the split length and any remaining bases after the last chunk will be ignored.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("genbank-field-for-seq-id", "Which GenBank header field will be used to assign sequence IDs. Valid choices are LOCUS, ACCESSION, and VERSION. The default is to check those fields, in that order, for the first one that exists. If you override the default, you will need to use the converted reference file (data/reference.gff) for further breseq and gdtools operations on breseq output!", "AUTOMATIC", NORMAL_OPTION)
     ;
     
-    options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("Reference File Options", ADVANCED_OPTION);
+    options.addUsage("", NORMAL_OPTION);
+    options.addUsage("Reference File Options", NORMAL_OPTION);
     options
-    ("contig-reference,c", "File containing reference sequences in GenBank, GFF3, or FASTA format. The same coverage distribution will be fit to all of the reference sequences in this file simultaneously. This is appropriate when they are all contigs from a genome that should be present with the same copy number. Use of this option will improve performance when there are many contigs and especially when some are very short (≤1,000 bases).", NULL, ADVANCED_OPTION)
-    ("junction-only-reference,s", "File containing reference sequences in GenBank, GFF3, or FASTA format. These references are only used for calling junctions with other reference sequences. An example of appropriate usage is including a transposon sequence not present in a reference genome. Option may be provided multiple times for multiple files.", NULL, ADVANCED_OPTION)
-    ("targeted-sequencing,t", "Reference sequences were targeted for ultra-deep sequencing (using pull-downs or amplicons). Do not fit coverage distribution.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("user-evidence-gd","User supplied Genome Diff file of JC and/or RA evidence items. The breseq output will report the support for these sequence changes even if they do not pass the normal filters for calling mutations in this sample.", "", ADVANCED_OPTION)
+    ("contig-reference,c", "File containing reference sequences in GenBank, GFF3, or FASTA format. The same coverage distribution will be fit to all of the reference sequences in this file simultaneously. This is appropriate when they are all contigs from a genome that should be present with the same copy number. Use of this option will improve performance when there are many contigs and especially when some are very short (≤1,000 bases).", NULL, NORMAL_OPTION)
+    ("junction-only-reference,s", "File containing reference sequences in GenBank, GFF3, or FASTA format. These references are only used for calling junctions with other reference sequences. An example of appropriate usage is including a transposon sequence not present in a reference genome. Option may be provided multiple times for multiple files.", NULL, NORMAL_OPTION)
+    ("targeted-sequencing,t", "Reference sequences were targeted for ultra-deep sequencing (using pull-downs or amplicons). Do not fit coverage distribution.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("user-evidence-gd","User supplied Genome Diff file of JC and/or RA evidence items. The breseq output will report the support for these sequence changes even if they do not pass the normal filters for calling mutations in this sample.", "", NORMAL_OPTION)
     ;
     
-    options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("Read Alignment Options", ADVANCED_OPTION);
+    options.addUsage("", NORMAL_OPTION);
+    options.addUsage("Read Alignment Options", NORMAL_OPTION);
     options
-    ("minimum-mapping-quality,m", "Ignore alignments with less than this mapping quality (MQ) when calling mutations. MQ scores are equal to -10log10(P), where P is the probability that the best alignment is not to the correct location in the reference genome. The range of MQ scores returned by bowtie2 is 0 to 255.", 0, ADVANCED_OPTION)
-    ("base-quality-cutoff,b", "Ignore bases with quality scores lower than this value", 3, ADVANCED_OPTION)
-    ("quality-score-trim", "Trim the ends of reads past any base with a quality score below --base-quality-score-cutoff.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("require-match-length", "Only consider alignments that cover this many bases of a read", 0, ADVANCED_OPTION)
-    ("require-match-fraction", "Only consider alignments that cover this fraction of a read (automatically lowered to 0.5 when --predict-soft-clipping is used, unless set explicitly)", 0.9, ADVANCED_OPTION)
-    ("maximum-read-mismatches", "Don't consider reads with this many or more bases or indels that are different from the reference sequence. Unaligned bases at the end of a read also count as mismatches. Unaligned bases at the beginning of the read do NOT count as mismatches. (DEFAULT=OFF)", "", ADVANCED_OPTION)
-    ("junction-indel-split-length", "Threshold (in bases) for splitting an indel found during candidate-junction preprocessing: an indel already present in a single alignment's own CIGAR that is this length or longer is split into separate junction-candidate-supporting alignment records (JC evidence), unless it is entirely a length-change to a reference homopolymer that was already this long or longer (in which case it is left as RA evidence). (DEFAULT = 5)", "", ADVANCED_OPTION)
+    ("minimum-mapping-quality,m", "Ignore alignments with less than this mapping quality (MQ) when calling mutations. MQ scores are equal to -10log10(P), where P is the probability that the best alignment is not to the correct location in the reference genome. The range of MQ scores returned by bowtie2 is 0 to 255.", 0, NORMAL_OPTION)
+    ("base-quality-cutoff,b", "Ignore bases with quality scores lower than this value", 3, NORMAL_OPTION)
+    ("quality-score-trim", "Trim the ends of reads past any base with a quality score below --base-quality-score-cutoff.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("require-match-length", "Only consider alignments that cover this many bases of a read", 0, NORMAL_OPTION)
+    ("require-match-fraction", "Only consider alignments that cover this fraction of a read (automatically lowered to 0.5 when --predict-soft-clipping is used, unless set explicitly)", 0.9, NORMAL_OPTION)
+    ("maximum-read-mismatches", "Don't consider reads with this many or more bases or indels that are different from the reference sequence. Unaligned bases at the end of a read also count as mismatches. Unaligned bases at the beginning of the read do NOT count as mismatches. (DEFAULT=OFF)", "", NORMAL_OPTION)
+    ("junction-indel-split-length", "Threshold (in bases) for splitting an indel found during candidate-junction preprocessing: an indel already present in a single alignment's own CIGAR that is this length or longer is split into separate junction-candidate-supporting alignment records (JC evidence), unless it is entirely a length-change to a reference homopolymer that was already this long or longer (in which case it is left as RA evidence). (DEFAULT = 5)", "", NORMAL_OPTION)
     ;
     
-    options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("Bowtie2 Mapping/Alignment Options", ADVANCED_OPTION);
+    options.addUsage("", NORMAL_OPTION);
+    options.addUsage("Bowtie2 Mapping/Alignment Options", NORMAL_OPTION);
     options
-    ("paired-mapping", "Detect read files whose names differ only in a '1'/'2' character as a paired-end set, for reporting and paired-aware FASTQ normalization. Reads are still aligned independently in single-end mode. (DEFAULT=OFF)", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("bowtie2-stage1", "Complete settings (scoring scheme, alignment mode, and mapping criteria) used for the stage 1 alignment. This step is normally meant for quickly aligning near-perfect matches. (DEFAULT=\"" + this->bowtie2_stage1 + "\")", "", ADVANCED_OPTION)
-    ("bowtie2-stage2", "Complete settings (scoring scheme, alignment mode, and mapping criteria) used for the stage 2 alignment. If set to the empty string \"\", then stage 2 alignment is skipped. This step is normally meant for exhaustively mapping reads that were unmapped by stage 1. (DEFAULT=\"" + this->bowtie2_stage2 + "\")", "", ADVANCED_OPTION)
-    ("bowtie2-junction", "Complete settings (scoring scheme, alignment mode, and mapping criteria) used in aligning reads to candidate junctions. (DEFAULT=\"" + this->bowtie2_junction + "\")", "", ADVANCED_OPTION)
-    ("end-to-end", "Use --end-to-end (instead of --local) alignment mode for the stage 1 bowtie2 alignment and the candidate-junction realignment pass, swapping in complete defaults for --bowtie2-stage1/--bowtie2-junction translated to that mode's scoring scale (including --ma 0, since bowtie2 rejects a nonzero --ma whenever --score-min can go negative). --bowtie2-stage2 is unaffected (always --local, --ma 1). Has no effect on either setting for which the corresponding --bowtie2-* option is also given explicitly, which always takes precedence. Speculative/experimental option for testing. (DEFAULT=OFF)", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("paired-mapping", "Detect read files whose names differ only in a '1'/'2' character as a paired-end set, for reporting and paired-aware FASTQ normalization. Reads are still aligned independently in single-end mode. (DEFAULT=OFF)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("bowtie2-stage1", "Complete settings (scoring scheme, alignment mode, and mapping criteria) used for the stage 1 alignment. This step is normally meant for quickly aligning near-perfect matches. (DEFAULT=\"" + this->bowtie2_stage1 + "\")", "", EXPERT_OPTION)
+    ("bowtie2-stage2", "Complete settings (scoring scheme, alignment mode, and mapping criteria) used for the stage 2 alignment. If set to the empty string \"\", then stage 2 alignment is skipped. This step is normally meant for exhaustively mapping reads that were unmapped by stage 1. (DEFAULT=\"" + this->bowtie2_stage2 + "\")", "", EXPERT_OPTION)
+    ("bowtie2-junction", "Complete settings (scoring scheme, alignment mode, and mapping criteria) used in aligning reads to candidate junctions. (DEFAULT=\"" + this->bowtie2_junction + "\")", "", EXPERT_OPTION)
+    ("end-to-end", "Use --end-to-end (instead of --local) alignment mode for the stage 1 bowtie2 alignment and the candidate-junction realignment pass, swapping in complete defaults for --bowtie2-stage1/--bowtie2-junction translated to that mode's scoring scale (including --ma 0, since bowtie2 rejects a nonzero --ma whenever --score-min can go negative). --bowtie2-stage2 is unaffected (always --local, --ma 1). Has no effect on either setting for which the corresponding --bowtie2-* option is also given explicitly, which always takes precedence. Speculative/experimental option for testing. (DEFAULT=OFF)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ;
-    options.addUsage("In addition to these values, breseq automatically sets the seed size for bowtie2 read mapping (-L option) to a value that is scaled to the read length (r). This value is 0.5 * r for stage 1, 5 + 0.1 * r for stage 2, and 0.3 * r for junction mapping. In each case, it is bounded to the range [4,31] as required by bowtie2. Be warned that breseq internally rescores alignments with a scoring scheme setting +1 for match, -3 for mismatch, -2 for gap open, and -3 for gap extend for consistency when comparing alternative alignments present in the bowtie2 output.", ADVANCED_OPTION);
+    options.addUsage("In addition to these values, breseq automatically sets the seed size for bowtie2 read mapping (-L option) to a value that is scaled to the read length (r). This value is 0.5 * r for stage 1, 5 + 0.1 * r for stage 2, and 0.3 * r for junction mapping. In each case, it is bounded to the range [4,31] as required by bowtie2. Be warned that breseq internally rescores alignments with a scoring scheme setting +1 for match, -3 for mismatch, -2 for gap open, and -3 for gap extend for consistency when comparing alternative alignments present in the bowtie2 output.", EXPERT_OPTION);
     
-    options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("Junction (JC) Evidence Options", ADVANCED_OPTION);
+    options.addUsage("", NORMAL_OPTION);
+    options.addUsage("Junction (JC) Evidence Options", NORMAL_OPTION);
     options
     ("no-junction-prediction", "Do not predict new sequence junctions", TAKES_NO_ARGUMENT)
-    ("junction-alignment-pair-limit", "Only consider this many passed alignment pairs when creating candidate junction sequences (0 = DO NOT LIMIT)", 100000, ADVANCED_OPTION)
-    ("junction-minimum-candidates", "Test at least this many of the top-scoring junction candidates, regardless of their length", 100, ADVANCED_OPTION)
-    ("junction-maximum-candidates", "Test no more than this many of the top-scoring junction candidates (0 = DO NOT LIMIT)", 5000, ADVANCED_OPTION)
-    ("junction-candidate-length-factor", "Accept top-scoring junction candidates to test until their cumulative length is this factor times the total reference sequence length (0 = DO NOT LIMIT)", 0.1, ADVANCED_OPTION)
-    ("junction-minimum-candidate-pos-hash-score", "Minimum number of distinct spanning read start positions required to create a junction candidate for further testing", 2, ADVANCED_OPTION)
-    ("junction-score-cutoff", "Maximum negative log10 probability of uneven coverage across a junction breakpoint to accept (0 = OFF)", 3.0, ADVANCED_OPTION)
-    ("junction-minimum-pos-hash-score", "Minimum number of distinct spanning read start positions required to accept a junction (DEFAULT = consensus mode, 3; polymorphism mode, 3)", "", ADVANCED_OPTION)
-    ("junction-minimum-side-match", "Minimum number of bases a read must extend past any overlap or read-only sequence at the breakpoint of a junction on each side to count as support for the junction (DEFAULT = consensus mode, 1; polymorphism mode, 6)", "", ADVANCED_OPTION)
-    ("junction-minimum-pr-no-read-start-per-position", "Minimum probablilty assigned that no mapped read will start at a given position and strand for junction prediction", 0.1, ADVANCED_OPTION)
-    ("junction-allow-suboptimal-matches", "Assign a read to the junction candidate with the most overall support as long as its match to this junction is better than to any location in the reference sequence, even if it matches a different junction candidate better. This behavior was the default before v0.35.0. It will align more reads to junctions but risks misassigning some reads to the wrong junction candidates. It is only recommended that you use this option in CONSENSUS mode", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("junction-alignment-pair-limit", "Only consider this many passed alignment pairs when creating candidate junction sequences (0 = DO NOT LIMIT)", 100000, NORMAL_OPTION)
+    ("junction-minimum-candidates", "Test at least this many of the top-scoring junction candidates, regardless of their length", 100, NORMAL_OPTION)
+    ("junction-maximum-candidates", "Test no more than this many of the top-scoring junction candidates (0 = DO NOT LIMIT)", 5000, NORMAL_OPTION)
+    ("junction-candidate-length-factor", "Accept top-scoring junction candidates to test until their cumulative length is this factor times the total reference sequence length (0 = DO NOT LIMIT)", 0.1, NORMAL_OPTION)
+    ("junction-minimum-candidate-pos-hash-score", "Minimum number of distinct spanning read start positions required to create a junction candidate for further testing", 2, NORMAL_OPTION)
+    ("junction-score-cutoff", "Maximum negative log10 probability of uneven coverage across a junction breakpoint to accept (0 = OFF)", 3.0, NORMAL_OPTION)
+    ("junction-minimum-pos-hash-score", "Minimum number of distinct spanning read start positions required to accept a junction (DEFAULT = consensus mode, 3; polymorphism mode, 3)", "", NORMAL_OPTION)
+    ("junction-minimum-side-match", "Minimum number of bases a read must extend past any overlap or read-only sequence at the breakpoint of a junction on each side to count as support for the junction (DEFAULT = consensus mode, 1; polymorphism mode, 6)", "", NORMAL_OPTION)
+    ("junction-minimum-pr-no-read-start-per-position", "Minimum probablilty assigned that no mapped read will start at a given position and strand for junction prediction", 0.1, NORMAL_OPTION)
+    ("junction-allow-suboptimal-matches", "Assign a read to the junction candidate with the most overall support as long as its match to this junction is better than to any location in the reference sequence, even if it matches a different junction candidate better. This behavior was the default before v0.35.0. It will align more reads to junctions but risks misassigning some reads to the wrong junction candidates. It is only recommended that you use this option in CONSENSUS mode", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ;
     
-    options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("Missing Coverage (MC) Evidence Options", ADVANCED_OPTION);
+    options.addUsage("", NORMAL_OPTION);
+    options.addUsage("Missing Coverage (MC) Evidence Options", NORMAL_OPTION);
     options
-    ("deletion-coverage-seed-cutoff","Value for coverage below which MC are seeded", 0, ADVANCED_OPTION)
-    ("deletion-coverage-propagation-cutoff","Value for coverage above which MC ends stop. 0 = calculated from coverage distribution", 0, ADVANCED_OPTION)
-    ("call-mutations-overlapping-MC", "If provided, don't ignore mutations predicted from RA evidence that overlap MC evidence", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("deletion-coverage-seed-cutoff","Value for coverage below which MC are seeded", 0, NORMAL_OPTION)
+    ("deletion-coverage-propagation-cutoff","Value for coverage above which MC ends stop. 0 = calculated from coverage distribution", 0, NORMAL_OPTION)
+    ("call-mutations-overlapping-MC", "If provided, don't ignore mutations predicted from RA evidence that overlap MC evidence", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ;
     
-    options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("Consensus Read Alignment (RA) Evidence Options", ADVANCED_OPTION);
+    options.addUsage("", NORMAL_OPTION);
+    options.addUsage("Consensus Read Alignment (RA) Evidence Options", NORMAL_OPTION);
     options
-    ("consensus-score-cutoff", "Log10 E-value cutoff for consensus base substitutions and small indels (DEFAULT = 10)", "", ADVANCED_OPTION)
-    ("consensus-frequency-cutoff", "Only predict consensus mutations when the variant allele frequency is above this value. (DEFAULT = consensus mode, 0.8; polymorphism mode, 0.8)", "", ADVANCED_OPTION)
-    ("consensus-minimum-variant-coverage", "Only predict consensus mutations when at least this many reads support the mutation. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", ADVANCED_OPTION)
-    ("consensus-minimum-total-coverage", "Only predict consensus mutations when at least this many reads total are aligned to a genome position. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", ADVANCED_OPTION)
-    ("consensus-minimum-variant-coverage-each-strand", "Only predict consensus mutations when at least this many reads on each strand support the mutation. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", ADVANCED_OPTION)
-    ("consensus-minimum-total-coverage-each-strand", "Only predict consensus mutations when at least this many reads on each strand are aligned to a genome position. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", ADVANCED_OPTION)
-    ("consensus-reject-indel-homopolymer-length", "Reject insertion/deletion polymorphisms which could result from expansion/contraction of homopolymer repeats with this length or greater in the reference genome (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, OFF) ", "", ADVANCED_OPTION)
-    ("consensus-reject-surrounding-homopolymer-length", "Reject polymorphic base substitutions that create a homopolymer with this many or more of one base in a row. The homopolymer must begin and end after the changed base. For example, TATTT->TTTTT would be rejected with a setting of 5, but ATTTT->TTTTT would not. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, OFF)", "", ADVANCED_OPTION)
+    ("consensus-score-cutoff", "Log10 E-value cutoff for consensus base substitutions and small indels (DEFAULT = 10)", "", NORMAL_OPTION)
+    ("consensus-frequency-cutoff", "Only predict consensus mutations when the variant allele frequency is above this value. (DEFAULT = consensus mode, 0.8; polymorphism mode, 0.8)", "", NORMAL_OPTION)
+    ("consensus-minimum-variant-coverage", "Only predict consensus mutations when at least this many reads support the mutation. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", NORMAL_OPTION)
+    ("consensus-minimum-total-coverage", "Only predict consensus mutations when at least this many reads total are aligned to a genome position. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", NORMAL_OPTION)
+    ("consensus-minimum-variant-coverage-each-strand", "Only predict consensus mutations when at least this many reads on each strand support the mutation. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", NORMAL_OPTION)
+    ("consensus-minimum-total-coverage-each-strand", "Only predict consensus mutations when at least this many reads on each strand are aligned to a genome position. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", NORMAL_OPTION)
+    ("consensus-reject-indel-homopolymer-length", "Reject insertion/deletion polymorphisms which could result from expansion/contraction of homopolymer repeats with this length or greater in the reference genome (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, OFF) ", "", NORMAL_OPTION)
+    ("consensus-reject-surrounding-homopolymer-length", "Reject polymorphic base substitutions that create a homopolymer with this many or more of one base in a row. The homopolymer must begin and end after the changed base. For example, TATTT->TTTTT would be rejected with a setting of 5, but ATTTT->TTTTT would not. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, OFF)", "", NORMAL_OPTION)
     ;
     
-    options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("Polymorphism Read Alignment (RA) Evidence Options", ADVANCED_OPTION);
+    options.addUsage("", NORMAL_OPTION);
+    options.addUsage("Polymorphism Read Alignment (RA) Evidence Options", NORMAL_OPTION);
     options
 
-    ("polymorphism-score-cutoff", "Log10 E-value cutoff for test of polymorphism vs no polymorphism (DEFAULT = consensus mode, 10; polymorphism mode, 2)", "", ADVANCED_OPTION)
-    ("polymorphism-frequency-cutoff", "Only predict polymorphisms when the minor variant allele frequency is greater than this value. For example, a setting of 0.05 will reject all polymorphisms with a non-reference frequency of <0.05, and any variants with a non-reference frequency of ≥ 0.95 (which is 1 - 0.05) will be rejected as polymorphisms and instead predicted to be consensus mutations (DEFAULT = consensus mode, 0.2; polymorphism mode, 0.05)", "", ADVANCED_OPTION)
-    ("polymorphism-minimum-variant-coverage", "Only predict polymorphisms when at least this many reads support each alternative allele. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", ADVANCED_OPTION)
-    ("polymorphism-minimum-total-coverage", "Only predict polymorphisms when at least this many reads total are aligned to a genome position. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", ADVANCED_OPTION)
-    ("polymorphism-minimum-variant-coverage-each-strand", "Only predict polymorphisms when at least this many reads on each strand support each alternative allele. (DEFAULT = consensus mode, 0; polymorphism mode, 2)", "", ADVANCED_OPTION)
-    ("polymorphism-minimum-total-coverage-each-strand", "Only predict polymorphisms when at least this many reads on each strand are aligned to a genome position. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", ADVANCED_OPTION)
-    ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, OFF)", "", ADVANCED_OPTION)
-    ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms ≤" + to_string(kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation) + " bp from read alignment or new junction evidence", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("polymorphism-reject-indel-homopolymer-length", "Reject insertion/deletion polymorphisms which could result from expansion/contraction of homopolymer repeats with this length or greater in the reference genome (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 3) ", "", ADVANCED_OPTION)
-    ("polymorphism-reject-surrounding-homopolymer-length", "Reject polymorphic base substitutions that create a homopolymer with this many or more of one base in a row. The homopolymer must begin and end after the changed base. For example, TATTT->TTTTT would be rejected with a setting of 5, but ATTTT->TTTTT would not. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 5)", "", ADVANCED_OPTION)
+    ("polymorphism-score-cutoff", "Log10 E-value cutoff for test of polymorphism vs no polymorphism (DEFAULT = consensus mode, 10; polymorphism mode, 2)", "", NORMAL_OPTION)
+    ("polymorphism-frequency-cutoff", "Only predict polymorphisms when the minor variant allele frequency is greater than this value. For example, a setting of 0.05 will reject all polymorphisms with a non-reference frequency of <0.05, and any variants with a non-reference frequency of ≥ 0.95 (which is 1 - 0.05) will be rejected as polymorphisms and instead predicted to be consensus mutations (DEFAULT = consensus mode, 0.2; polymorphism mode, 0.05)", "", NORMAL_OPTION)
+    ("polymorphism-minimum-variant-coverage", "Only predict polymorphisms when at least this many reads support each alternative allele. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", NORMAL_OPTION)
+    ("polymorphism-minimum-total-coverage", "Only predict polymorphisms when at least this many reads total are aligned to a genome position. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", NORMAL_OPTION)
+    ("polymorphism-minimum-variant-coverage-each-strand", "Only predict polymorphisms when at least this many reads on each strand support each alternative allele. (DEFAULT = consensus mode, 0; polymorphism mode, 2)", "", NORMAL_OPTION)
+    ("polymorphism-minimum-total-coverage-each-strand", "Only predict polymorphisms when at least this many reads on each strand are aligned to a genome position. (DEFAULT = consensus mode, 0; polymorphism mode, 0)", "", NORMAL_OPTION)
+    ("polymorphism-bias-cutoff", "P-value criterion for Fisher's exact test for strand bias AND K-S test for quality score bias. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, OFF)", "", NORMAL_OPTION)
+    ("polymorphism-no-indels", "Do not predict insertion/deletion polymorphisms ≤" + to_string(kBreseq_size_cutoff_AMP_becomes_INS_DEL_mutation) + " bp from read alignment or new junction evidence", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("polymorphism-reject-indel-homopolymer-length", "Reject insertion/deletion polymorphisms which could result from expansion/contraction of homopolymer repeats with this length or greater in the reference genome (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 3) ", "", NORMAL_OPTION)
+    ("polymorphism-reject-surrounding-homopolymer-length", "Reject polymorphic base substitutions that create a homopolymer with this many or more of one base in a row. The homopolymer must begin and end after the changed base. For example, TATTT->TTTTT would be rejected with a setting of 5, but ATTTT->TTTTT would not. (0 = OFF) (DEFAULT = consensus mode, OFF; polymorphism mode, 5)", "", NORMAL_OPTION)
     ;
     
-    options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("Soft Clipping (SC) Evidence Options (HIGHLY EXPERIMENTAL)", ADVANCED_OPTION);
+    options.addUsage("", NORMAL_OPTION);
+    options.addUsage("Soft Clipping (SC) Evidence Options (HIGHLY EXPERIMENTAL)", NORMAL_OPTION);
     options
-    ("predict-soft-clipping", "Predict soft clipping (SC) evidence: positions where reads are unexpectedly soft clipped at their ends, which may indicate unannotated structural variation. This evidence type is experimental and disabled by default.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("soft-clipping-minimum-bases", "Minimum number of soft-clipped bases at a read end to count as a soft-clipping event", 8, ADVANCED_OPTION)
-    ("soft-clipping-score-cutoff", "Log10 E-value cutoff for soft-clipping evidence (DEFAULT = 2)", 2.0, ADVANCED_OPTION)
+    ("predict-soft-clipping", "Predict soft clipping (SC) evidence: positions where reads are unexpectedly soft clipped at their ends, which may indicate unannotated structural variation. This evidence type is experimental and disabled by default.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("soft-clipping-minimum-bases", "Minimum number of soft-clipped bases at a read end to count as a soft-clipping event", 8, NORMAL_OPTION)
+    ("soft-clipping-score-cutoff", "Log10 E-value cutoff for soft-clipping evidence (DEFAULT = 2)", 2.0, NORMAL_OPTION)
     ;
     
-    options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("Copy numnber (CN) Evidence Options (HIGHLY EXPERIMENTAL)", ADVANCED_OPTION);
+    options.addUsage("", NORMAL_OPTION);
+    options.addUsage("Copy numnber (CN) Evidence Options (HIGHLY EXPERIMENTAL)", NORMAL_OPTION);
     options
-    ("predict-copy-number","Predict copy number variation evidence using CNery",TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("predict-copy-number","Predict copy number variation evidence using CNery",TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ;
     
-    options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("Output Options", ADVANCED_OPTION);
+    options.addUsage("", NORMAL_OPTION);
+    options.addUsage("Output Options", NORMAL_OPTION);
     options
-    ("header-genome-diff,g", "Include header information from this GenomeDiff file in output.gd", "", ADVANCED_OPTION)
-    ("output-unmapped-reads", "Output unmapped reads to file: " + this->unmapped_reads_fastq_file_name, TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("no-evidence-html", "Don't create output files for evidence (e.g., read alignments and coverage plots)", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("zip-html", "Bundle evidence files into a ZIP archive (evidence.zip) and add JavaScript to load evidence pages directly from the archive to the main output files", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("no-javascript", "Don't include javascript in the HTML output", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("max-flanking-columns", "Maximum number of columns in aligned reads to show flanking the region of interest in the HTML output for an evidence item (0=ALL)", 100, ADVANCED_OPTION)
-    ("max-displayed-reads", "Maximum number of reads to display in the HTML output for an evidence item (0=ALL)", 100, ADVANCED_OPTION)
+    ("header-genome-diff,g", "Include header information from this GenomeDiff file in output.gd", "", NORMAL_OPTION)
+    ("output-unmapped-reads", "Output unmapped reads to file: " + this->unmapped_reads_fastq_file_name, TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("no-evidence-html", "Don't create output files for evidence (e.g., read alignments and coverage plots)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("zip-html", "Bundle evidence files into a ZIP archive (evidence.zip) and add JavaScript to load evidence pages directly from the archive to the main output files", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("no-javascript", "Don't include javascript in the HTML output", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("max-flanking-columns", "Maximum number of columns in aligned reads to show flanking the region of interest in the HTML output for an evidence item (0=ALL)", 100, NORMAL_OPTION)
+    ("max-displayed-reads", "Maximum number of reads to display in the HTML output for an evidence item (0=ALL)", 100, NORMAL_OPTION)
     ;
     
-    options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("Masking Options", ADVANCED_OPTION);
+    options.addUsage("", NORMAL_OPTION);
+    options.addUsage("Masking Options", NORMAL_OPTION);
     options
-    ("mask-gd", "Mask predicted mutations that overlap MASK entries in this GenomeDiff file (mutations are marked ignore=masked, not deleted)", "", ADVANCED_OPTION)
-    ("mask-mode", "Mode for masking mutations and evidence: 'ALL' masks all mutation and evidence types in masked regions; 'SMALL' masks only small mutations (SNP,DEL,INS,SUB <=" + to_string(kBreseq_large_mutation_size_cutoff) + " bp) and small evidence (RA,MC,CN <=" + to_string(kBreseq_large_mutation_size_cutoff) + " bp); JC and SC evidence are always treated as large and are never masked in SMALL mode", "ALL", ADVANCED_OPTION)
+    ("mask-gd", "Mask predicted mutations that overlap MASK entries in this GenomeDiff file (mutations are marked ignore=masked, not deleted)", "", NORMAL_OPTION)
+    ("mask-mode", "Mode for masking mutations and evidence: 'ALL' masks all mutation and evidence types in masked regions; 'SMALL' masks only small mutations (SNP,DEL,INS,SUB <=" + to_string(kBreseq_large_mutation_size_cutoff) + " bp) and small evidence (RA,MC,CN <=" + to_string(kBreseq_large_mutation_size_cutoff) + " bp); JC and SC evidence are always treated as large and are never masked in SMALL mode", "ALL", NORMAL_OPTION)
     ;
 
-    options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("Pipeline Control Options", ADVANCED_OPTION);
+    options.addUsage("", NORMAL_OPTION);
+    options.addUsage("Pipeline Control Options", NORMAL_OPTION);
     options
-    ("skip-RA-MC-prediction", "Skip generating read alignment and missing coverage evidence.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("skip-JC-prediction", "Skip generating new junction evidence.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("skip-MC-prediction", "Skip generating missing coverage evidence.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("skip-RA-MC-prediction", "Skip generating read alignment and missing coverage evidence.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("skip-JC-prediction", "Skip generating new junction evidence.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("skip-MC-prediction", "Skip generating missing coverage evidence.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ;
     
-    options.addUsage("", ADVANCED_OPTION);
-    options.addUsage("Debugging Options", ADVANCED_OPTION);
+    options.addUsage("", NORMAL_OPTION);
+    options.addUsage("Debugging Options", NORMAL_OPTION);
     options
-    ("keep-intermediates,k","Do not delete intermediate files.", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("per-position-file", "Create additional file of per-position aligned bases", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
-    ("junction-debug", "Output additional junction debugging files", TAKES_NO_ARGUMENT, ADVANCED_OPTION)
+    ("keep-intermediates,k","Do not delete intermediate files.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("per-position-file", "Create additional file of per-position aligned bases", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("junction-debug", "Output additional junction debugging files", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ;
-    
+
+    // Basic option, deliberately listed last: shows the expert-level help tier.
+    options
+    ("expert-help,$", "Show the full help message, including expert-level options such as the raw bowtie2 command settings (--bowtie2-stage1/-stage2/-junction)", TAKES_NO_ARGUMENT)
+    ;
+
     options.processCommandArgs(argc, argv);
     
     options.addUsage("");
@@ -441,9 +446,14 @@ namespace breseq
     options.addUsage(output_divider);
     
     // make sure that the other config options are good:
+    if (options.count("expert-help"))
+    {
+      options.printExpertUsage();
+      exit(-1);
+    }
     if (options.count("help"))
     {
-      options.printAdvancedUsage();
+      options.printNormalUsage();
       exit(-1);
     }
     
