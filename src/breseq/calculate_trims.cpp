@@ -156,10 +156,6 @@ void calculate_trims( const string& in_fasta, const string& in_output_path) {
 	// load all the reference sequences:
 	for(int32_t i=0; i<nseq; ++i) {
 
-		end_progress_line();
-		cerr << "  REFERENCE: " << bam_header->target_name[i] << endl;
-		cerr << "  LENGTH: " << bam_header->target_len[i] << endl;
-
     int len;
     const char* cseq = fai_fetch(fasta_index, bam_header->target_name[i], &len);
 
