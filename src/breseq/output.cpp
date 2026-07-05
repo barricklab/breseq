@@ -939,7 +939,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   if (any_paired_read_file_sets) {
     HTML << h2("Paired-End Mapping Distance Information") << endl;
     HTML << start_table("border=\"0\" cellspace=\"1\" cellpadding=\"5\"") << endl;
-    HTML << start_tr() << th() << th(ALIGN_LEFT, "paired read set") << th(ALIGN_CENTER, "median") << th(ALIGN_CENTER, "MAD") << th(ALIGN_CENTER, "distance cutoff") << "</tr>" << endl;
+    HTML << start_tr() << th() << th(ALIGN_LEFT, "paired read set") << th(ALIGN_CENTER, "mapped") << th(ALIGN_CENTER, "orientation") << th(ALIGN_CENTER, "median") << th(ALIGN_CENTER, "upper MAD") << th(ALIGN_CENTER, "distance cutoff") << th(ALIGN_CENTER, "concordant") << "</tr>" << endl;
     for (const auto& rfs : settings.read_file_sets) {
       if (!rfs.is_paired()) continue;
       HTML << start_tr();
@@ -950,15 +950,31 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
         : Settings::relative_path(distance_plot, settings.output_path);
       HTML << td( file_exists(distance_plot.c_str()) ? a(distance_href, "distribution") : "");
       HTML << td(rfs.m_base_name);
-      double median = summary.paired_mapping_distance_distribution[rfs.m_base_name].median;
-      double mad = summary.paired_mapping_distance_distribution[rfs.m_base_name].mad;
-      double distance_cutoff = summary.paired_mapping_distance_distribution[rfs.m_base_name].distance_cutoff;
-      HTML << td(ALIGN_CENTER, to_string(median, 1));
-      HTML << td(ALIGN_CENTER, to_string(mad, 1));
-      HTML << td(ALIGN_CENTER, to_string(distance_cutoff, 1));
+      // Final-pass (data/reference.bam flag-assignment) pair counts + preliminary fit stats.
+      const PairedMappingDistanceDistributionSummary& pmdd = summary.paired_mapping_distance_distribution[rfs.m_base_name];
+      double mapped_pairs = pmdd.mapped_pairs;
+      double concordant_pairs = pmdd.concordant_pairs;
+      HTML << td(ALIGN_CENTER, to_string(static_cast<uint64_t>(mapped_pairs)));
+      HTML << td(ALIGN_CENTER, pmdd.majority_orientation);   // breseq's chosen concordant orientation (FR/RF/FF)
+      HTML << td(ALIGN_CENTER, to_string(pmdd.median, 1));
+      HTML << td(ALIGN_CENTER, to_string(pmdd.mad, 1));       // upper (one-sided) MAD
+      HTML << td(ALIGN_CENTER, to_string(pmdd.distance_cutoff, 1));
+      double concordant_pct = (mapped_pairs > 0) ? (100.0 * concordant_pairs / mapped_pairs) : 0.0;
+      HTML << td(ALIGN_CENTER, to_string(concordant_pct, 1) + "%");
       HTML << end_tr();
     }
     HTML << end_table() << endl;
+
+    // Single combined, whole-genome discordant read-pair plot (built from the merged
+    // data/reference.bam, so it spans all read sets and all reference sequences).
+    string discordant_plot = settings.discordant_pairs_plot_file_name;
+    if (file_exists(discordant_plot.c_str())) {
+      string discordant_basename = cString(discordant_plot).get_base_name();
+      string discordant_href = settings.zip_html
+        ? settings.local_html_evidence_file_name + "#" + discordant_basename
+        : Settings::relative_path(discordant_plot, settings.output_path);
+      HTML << "<p>" << a(discordant_href, "Discordant read-pair plot") << "</p>" << endl;
+    }
   }
 
   ////

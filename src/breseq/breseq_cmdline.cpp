@@ -1805,11 +1805,11 @@ int breseq_default_action(int argc, char* argv[])
     // distance histogram written by merge_sort_and_preprocess_alignments above, and draws a
     // diagnostic plot (analogous to the unique-coverage distribution fit/plot).
     PairedMappingDistanceDistribution::fit_paired_mapping_distance_distributions(settings, summary);
-    summary.paired_mapping_distance_distribution.store(settings.paired_mapping_distance_summary_file_name);
+    summary.preliminary_paired_mapping_distance_distribution.store(settings.paired_mapping_distance_summary_file_name);
     settings.done_step(settings.paired_mapping_distance_done_file_name);
   }
   if (!settings.aligned_sam_mode)
-    summary.paired_mapping_distance_distribution.retrieve(settings.paired_mapping_distance_summary_file_name);
+    summary.preliminary_paired_mapping_distance_distribution.retrieve(settings.paired_mapping_distance_summary_file_name);
 
   //
   // Only do steps 03 and 04 if we are performing new junction prediction
@@ -1968,11 +1968,14 @@ int breseq_default_action(int argc, char* argv[])
 		);
 
 		summary.alignment_resolution.store(settings.alignment_resolution_summary_file_name);
+		summary.paired_mapping_distance_distribution.store(settings.resolved_paired_mapping_distance_summary_file_name);
 		settings.done_step(settings.alignment_correction_done_file_name);
 	}
-  
+
 	if (file_exists(settings.alignment_resolution_summary_file_name.c_str()))
     summary.alignment_resolution.retrieve(settings.alignment_resolution_summary_file_name);
+	if (file_exists(settings.resolved_paired_mapping_distance_summary_file_name.c_str()))
+    summary.paired_mapping_distance_distribution.retrieve(settings.resolved_paired_mapping_distance_summary_file_name);
   
 	//
   // 05 bam

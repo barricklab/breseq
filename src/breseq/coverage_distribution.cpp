@@ -721,6 +721,14 @@ PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fi
   double z_multiplier = ndtri(1.0 - alpha);
   result.distance_cutoff = (result.mad > 0) ? (result.median + z_multiplier * result.mad / 0.6745) : result.median;
 
+  // Preliminary (preprocessing) pair counts: all same-reference mapped pairs, and the concordant
+  // subset (majority orientation with distance within the cutoff).
+  result.mapped_pairs = static_cast<double>(total_all_orientations);
+  double concordant = 0;
+  uint32_t cutoff_i = static_cast<uint32_t>(min<double>(result.distance_cutoff, static_cast<double>(N)));
+  for (uint32_t i = 0; i <= cutoff_i; i++) concordant += n[i];
+  result.concordant_pairs = concordant;
+
   // Display window: [0, 2*cutoff], falling back to the full histogram range if the cutoff
   // collapsed to 0 (e.g. a degenerate all-identical-value histogram with MAD == 0).
   uint32_t graph_end_i = (result.distance_cutoff > 0) ? static_cast<uint32_t>(ceil(2 * result.distance_cutoff)) : N;
@@ -812,10 +820,19 @@ void PairedMappingDistanceDistribution::fit_paired_mapping_distance_distribution
   PairedMappingDistanceDistribution dist;
   PairedMappingDistanceDistributionFitResult fit_result = dist.fit(distribution_file_name, plot_file_name);
 
-  summary.paired_mapping_distance_distribution[read_file_set.m_base_name].median = fit_result.median;
-  summary.paired_mapping_distance_distribution[read_file_set.m_base_name].mad = fit_result.mad;
-  summary.paired_mapping_distance_distribution[read_file_set.m_base_name].distance_cutoff = fit_result.distance_cutoff;
-  summary.paired_mapping_distance_distribution[read_file_set.m_base_name].majority_orientation = fit_result.majority_orientation;
+  // The pair_stats CSV is a transient intermediate: now that the plot is drawn and the stats are
+  // extracted, mark it for deletion when this step completes (done_step honors keep-all-intermediates).
+  settings.track_intermediate_file(settings.paired_mapping_distance_done_file_name, distribution_file_name);
+
+  // Stage-03 fit is the PRELIMINARY record. The final paired_mapping_distance_distribution is filled
+  // later from the BAM pair-flag assignment in resolve_alignments (which reads the cutoff from here).
+  PairedMappingDistanceDistributionSummary& prelim = summary.preliminary_paired_mapping_distance_distribution[read_file_set.m_base_name];
+  prelim.median = fit_result.median;
+  prelim.mad = fit_result.mad;
+  prelim.distance_cutoff = fit_result.distance_cutoff;
+  prelim.majority_orientation = fit_result.majority_orientation;
+  prelim.mapped_pairs = fit_result.mapped_pairs;
+  prelim.concordant_pairs = fit_result.concordant_pairs;
 }
 
 void PairedMappingDistanceDistribution::fit_paired_mapping_distance_distributions(

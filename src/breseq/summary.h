@@ -308,15 +308,19 @@ namespace breseq{
   {
   public:
     double median;
-    double mad;              // median absolute deviation
+    double mad;              // upper (one-sided) median absolute deviation
     double distance_cutoff;  // median + z*mad/0.6745 (Iglewicz & Hoaglin modified z-score rule)
     string majority_orientation; // most common of FF/FR/RF by total observation count
+    double mapped_pairs;     // number of read pairs (both mates mapped, concordant or discordant)
+    double concordant_pairs; // number of those pairs called concordant
 
     PairedMappingDistanceDistributionSummary()
     : median(0.0)
     , mad(0.0)
     , distance_cutoff(0.0)
     , majority_orientation("")
+    , mapped_pairs(0.0)
+    , concordant_pairs(0.0)
     {}
   };
 
@@ -351,6 +355,9 @@ namespace breseq{
     SequenceConversionSummary sequence_conversion;
     ErrorCountSummaries preprocess_error_count;
     SoftClippingSummary soft_clipping;
+    // Stage-03 preprocessing fit (median/upper-MAD/cutoff/orientation + preprocessing-tabulated counts).
+    PairedMappingDistanceDistributionSummaries preliminary_paired_mapping_distance_distribution;
+    // Final pass: same fit fields, plus mapped/concordant counts from BAM pair-flag assignment.
     PairedMappingDistanceDistributionSummaries paired_mapping_distance_distribution;
 
     Summary() {}
@@ -647,6 +654,7 @@ namespace breseq{
     PublicReferencesSummary references;
     PublicOptionsSummary options;
     SoftClippingSummary soft_clipping;
+    PairedMappingDistanceDistributionSummaries preliminary_paired_mapping_distance_distribution;
     PairedMappingDistanceDistributionSummaries paired_mapping_distance_distribution;
 
     PublicSummary() {}

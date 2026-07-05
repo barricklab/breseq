@@ -1146,6 +1146,9 @@ namespace breseq
 
     this->paired_mapping_distance_done_file_name = this->candidate_junction_path + "/paired_mapping_distance.done";
     this->paired_mapping_distance_summary_file_name = this->candidate_junction_path + "/paired_mapping_distance.summary.json";
+    // Transient intermediate: written during preprocessing, consumed by the distance-distribution
+    // fit/plot, then deleted (tracked under paired_mapping_distance_done_file_name).
+    this->paired_mapping_distance_distribution_file_name = this->candidate_junction_path + "/#.pair_stats.csv";
 
     this->coverage_junction_done_file_name = this->candidate_junction_path + "/coverage_junction_alignment.done";
 		this->coverage_junction_best_bam_unsorted_file_name = this->candidate_junction_path + "/best.unsorted.bam";
@@ -1178,6 +1181,7 @@ namespace breseq
 		this->resolved_reference_sam_file_name = this->alignment_resolution_path + "/reference.bam";
 		this->resolved_junction_sam_file_name = this->alignment_resolution_path + "/junction.bam";
 		this->alignment_resolution_summary_file_name = this->alignment_resolution_path + "/summary.json";
+		this->resolved_paired_mapping_distance_summary_file_name = this->alignment_resolution_path + "/paired_mapping_distance.summary.json";
 		this->jc_genome_diff_file_name = this->alignment_resolution_path + "/jc_evidence.gd";
 
     this->junction_debug_file_name = this->alignment_resolution_path + "/junction_debug.txt";
@@ -1265,7 +1269,6 @@ namespace breseq
 		this->reference_fasta_file_name = this->data_path + "/reference.fasta";
 		this->reference_faidx_file_name = this->data_path + "/reference.fasta.fai";
 		this->reference_gff3_file_name = this->data_path + "/reference.gff3";
-		this->paired_mapping_distance_distribution_file_name = this->data_path + "/#.pair_stats.csv";
 		this->discordant_pairs_file_name = this->data_path + "/#.discordant_pairs.csv";
 		this->unmapped_reads_fastq_file_name = this->data_path + "/unmapped_reads.fastq.gz";
     this->data_vcf_file_name = this->data_path + "/output.vcf";

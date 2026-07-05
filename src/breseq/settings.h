@@ -553,6 +553,7 @@ namespace breseq
 		string resolved_reference_sam_file_name;
 		string resolved_junction_sam_file_name;
 		string alignment_resolution_summary_file_name;
+		string resolved_paired_mapping_distance_summary_file_name;
     string jc_genome_diff_file_name;
     
     string junction_debug_file_name;
