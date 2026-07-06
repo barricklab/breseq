@@ -1,3 +1,5 @@
+[![build and test](https://github.com/barricklab/breseq/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/barricklab/breseq/actions/workflows/build-and-test.yml)
+
 [![GitHub release](https://img.shields.io/github/release/barricklab/breseq.svg)](https://github.com/barricklab/breseq/releases/latest)
 [![Github All Releases](https://img.shields.io/github/downloads/barricklab/breseq/total.svg)](https://github.com/barricklab/breseq/releases)
 

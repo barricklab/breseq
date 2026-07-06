@@ -19,14 +19,14 @@ jobs:
       run:
         shell: bash -el {0}      # login shell: activates conda env + compiler vars
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up conda environment
         uses: conda-incubator/setup-miniconda@v3
         with:
           environment-file: dev-environment.yml
           activate-environment: breseq-dev
-          auto-activate-base: false
+          auto-activate: false
 
       - name: Build
         run: |
