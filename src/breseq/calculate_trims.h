@@ -117,6 +117,8 @@ namespace breseq {
   typedef vector<SequenceTrims> SequenceTrimsList;
   
   Trims get_alignment_trims(const alignment_wrapper& a, const SequenceTrimsList& trims);
+  // Read-based edge trims: length of a repeat/homopolymer at each end of the given sequence.
+  Trims edge_trims_for_sequence(const string& _in_seq);
   void read_trims(SequenceTrimsList& trims, const cReferenceSequences& ref_seqs, const string &in_trims_file_name);
 
   // Counts how many of the candidate reference start positions for a hypothetical, gapless,

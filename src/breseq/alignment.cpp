@@ -854,23 +854,30 @@ void bam_file::write_alignments(
     //     when we (re)compute the XL/XR trims below) ---
     string cigar_string;
     uint32_t reference_start_1 = a.reference_start_1();
-    bool soft_clipped = false;
+    bool soft_clip_path = false;             // took the soft-clip branch (recompute trims below)
     vector<pair<char,uint16_t> > cigar_pair; // populated only on the soft-clip path
+    string read_seq;                         // full top-strand read, populated on the soft-clip path
 
     if (soft_clip_ends && ref_seq_info_ptr) {
+      soft_clip_path = true;
       // Gap-shift (matching shifted_cigar_string) then chew back mis-mapped ends into soft-clips.
       cigar_pair = a.cigar_pair_char_op_array();
-      string read_seq = a.read_char_sequence();
+      read_seq = a.read_char_sequence();
       if (shift_gaps) {
         const string ref_region = (*ref_seq_info_ptr)[a.reference_target_id()].get_sequence_1(a.reference_start_1(), a.reference_end_1());
         shift_indels_in_cigar_array(cigar_pair, ref_region, read_seq);
       }
-      // Pre-clip trims: their trimmed tip bases are "unknown" to the end-clipping heuristic.
-      Trims pre_trim; pre_trim.L = 0; pre_trim.R = 0;
-      if (trims_list != NULL) pre_trim = get_alignment_trims(a, *trims_list);
-      soft_clipped = soft_clip_alignment_ends(cigar_pair, reference_start_1, read_seq, *ref_seq_info_ptr,
-                                              bam_header->target_name[a.reference_target_id()], false, false,
-                                              pre_trim.L, pre_trim.R);
+      // Pre-clip tip trims fed to the "unknown-tip" heuristic: genomic-only (the read-based edge
+      // trim is applied once, post-clip, in the trim block below).
+      uint32_t ltr = 0, rtr = 0;
+      if (trims_list != NULL) {
+        uint32_t tid = a.reference_target_id();
+        ltr = (*trims_list)[tid].left_trim_0(a.reference_start_0())  + a.query_start_0();
+        rtr = (*trims_list)[tid].right_trim_0(a.reference_end_0())   + (a.read_length() - a.query_end_1());
+      }
+      soft_clip_alignment_ends(cigar_pair, reference_start_1, read_seq, *ref_seq_info_ptr,
+                               bam_header->target_name[a.reference_target_id()], false, false,
+                               ltr, rtr);
       cigar_string = alignment_wrapper::cigar_op_array_to_cigar_string(cigar_pair);
     } else if (ref_seq_info_ptr && shift_gaps) {
       cigar_string = shifted_cigar_string(a, *ref_seq_info_ptr);
@@ -888,10 +895,12 @@ void bam_file::write_alignments(
 
     if (trims_list != NULL) {
       Trims trim;
-      if (soft_clipped) {
-        // A soft-clipped read ends at a different reference position and has a larger soft-clip
-        // offset, so compute its trims from the new coordinates (mirrors get_alignment_trims():
-        // genomic trim at the mapped end + the bases lying outside the match, i.e. the soft-clip).
+      if (soft_clip_path) {
+        // The read may have been chewed back to new coordinates and a larger soft-clip offset, so
+        // (re)compute its trims here -- the single place the read-based edge trim is applied. This
+        // mirrors get_alignment_trims(): max(genomic trim at the mapped end, read-edge trim of the
+        // aligned sequence) + the bases lying outside the match (the soft-clip). Done on both sides
+        // for every soft-clip-path read, whether or not anything was actually clipped.
         uint32_t tid = a.reference_target_id();
         uint32_t ref_span = 0;
         for (size_t c = 0; c < cigar_pair.size(); c++) {
@@ -902,8 +911,11 @@ void bam_file::write_alignments(
         uint32_t new_ref_end_0 = new_ref_start_0 + ref_span - 1;
         uint32_t lead_S = (cigar_pair.front().first == 'S') ? cigar_pair.front().second : 0;
         uint32_t trail_S = (cigar_pair.back().first == 'S') ? cigar_pair.back().second : 0;
-        trim.L = (*trims_list)[tid].left_trim_0(new_ref_start_0) + lead_S;
-        trim.R = (*trims_list)[tid].right_trim_0(new_ref_end_0) + trail_S;
+        Trims et = edge_trims_for_sequence(read_seq.substr(lead_S, read_seq.size() - lead_S - trail_S));
+        uint32_t gtL = (*trims_list)[tid].left_trim_0(new_ref_start_0);
+        uint32_t gtR = (*trims_list)[tid].right_trim_0(new_ref_end_0);
+        trim.L = max(gtL, static_cast<uint32_t>(et.L)) + lead_S;
+        trim.R = max(gtR, static_cast<uint32_t>(et.R)) + trail_S;
       } else {
         trim = get_alignment_trims(a, *trims_list);
       }
@@ -1303,8 +1315,8 @@ void bam_file::write_moved_alignment(
 
 	// XL/XR trims for this split read. The junction (middle-of-read) side is never trimmed --
 	// it is a trustworthy boundary, not a read end -- so it gets 0. The outer genomic side is
-	// trimmed from the real-genome trims_list at this read's final (post soft-clip) coordinates,
-	// exactly as write_alignments() does for a whole read (genomic trim + soft-clip offset).
+	// max(genomic trim at this read's final post-soft-clip coordinate, read-edge trim of the
+	// aligned sequence) + soft-clip offset, exactly as write_alignments() does for a whole read.
 	if ((trims_list != NULL) && (ref_seq_info_ptr != NULL) && (reference_match_start >= 1))
 	{
 		bool junction_on_left = ((junction_side == 2) == (read_strand == 1));
@@ -1318,8 +1330,11 @@ void bam_file::write_moved_alignment(
 		uint32_t new_ref_end_0 = new_ref_start_0 + ref_span - 1;
 		uint32_t lead_S = (cigar_list.front().first == 'S') ? cigar_list.front().second : 0;
 		uint32_t trail_S = (cigar_list.back().first == 'S') ? cigar_list.back().second : 0;
-		uint32_t xl = junction_on_left ? 0 : ((*trims_list)[tid].left_trim_0(new_ref_start_0) + lead_S);
-		uint32_t xr = junction_on_left ? ((*trims_list)[tid].right_trim_0(new_ref_end_0) + trail_S) : 0;
+		Trims et = edge_trims_for_sequence(seq.substr(lead_S, seq.size() - lead_S - trail_S));
+		uint32_t gtL = (*trims_list)[tid].left_trim_0(new_ref_start_0);
+		uint32_t gtR = (*trims_list)[tid].right_trim_0(new_ref_end_0);
+		uint32_t xl = junction_on_left ? 0 : (max(gtL, static_cast<uint32_t>(et.L)) + lead_S);
+		uint32_t xr = junction_on_left ? (max(gtR, static_cast<uint32_t>(et.R)) + trail_S) : 0;
 		aux_tags_ss << "\t" << "XL:i:" << xl << "\t" << "XR:i:" << xr;
 	}
 

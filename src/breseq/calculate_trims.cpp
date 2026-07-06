@@ -193,11 +193,14 @@ Trims edge_trims_for_sequence(const string &_in_seq)
     while (repeat_match(_in_seq, pos_0, repeat_size, repeat_num)) {
       repeat_num++;
     }
-    
+
     //cerr << (pos+1) << " " << repeat_size << " " << repeat_num << endl;
-    
+
     if (repeat_num > 1) {
-      this_trims.L = repeat_num * repeat_size;
+      // Take the max over repeat sizes (matching calculate_trims_1), not the last -- otherwise a
+      // homopolymer of length N (repeat_size 1) is overwritten by a shorter multi-base tiling.
+      uint32_t v = repeat_num * repeat_size;
+      if (v > this_trims.L) this_trims.L = v;
     }
   }
   
@@ -216,10 +219,11 @@ Trims edge_trims_for_sequence(const string &_in_seq)
     //cerr << (pos+1) << " " << repeat_size << " " << repeat_num << endl;
     
     if (repeat_num > 1) {
-      this_trims.R = repeat_num * repeat_size;
+      uint32_t v = repeat_num * repeat_size;
+      if (v > this_trims.R) this_trims.R = v;
     }
   }
-  
+
   return this_trims;
 }
 
