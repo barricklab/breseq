@@ -21,6 +21,7 @@ if [[ "${TESTNAME}" == "all" ]]; then
 	for TESTCMD in `export LC_ALL=POSIX; find ${SELF} -mindepth 2 -maxdepth 2 -name testcmd.sh | sort`; do
 		NAME=`basename $(dirname ${TESTCMD})`
 		[[ "${NAME}" == _* ]] && continue
+		[[ "${NAME}" == *_disabled ]] && continue
 		echo "=== ${ACTION}: ${NAME} ==="
 		"${TESTCMD}" ${ACTION}
 	done

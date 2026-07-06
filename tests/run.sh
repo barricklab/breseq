@@ -20,6 +20,7 @@ if [[ "${TESTNAME}" == "all" ]]; then
 		TESTDIR=`dirname ${TESTCMD}`
 		NAME=`basename ${TESTDIR}`
 		[[ "${NAME}" == _* ]] && continue
+		[[ "${NAME}" == *_disabled ]] && continue
 		echo "=== run: ${NAME} ==="
 		${SELF}/run_logged_test.sh ${TESTDIR} ${TESTDIR}/test.log ${TESTDIR}/test.result
 	done

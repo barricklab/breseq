@@ -5,16 +5,22 @@
 #
 # $1 == test action
 # $2 == testdir ('tests' is an alias for all tests)
-# $3 == long
+# $3 == '' | long | all   (which extra categories to include)
 #
+# Batch discovery always skips '_'-prefixed directories. Two extra categories
+# are opt-in via $3:
+#   ''     -> skip both 'long'-named and '*_disabled' directories (normal set)
+#   long   -> also include 'long'-named directories
+#   all    -> include everything: 'long'-named AND '*_disabled' directories.
+#             This is a clean-time escalation (used by 'make clean-tests' to
+#             wipe every test dir's output); there is no equivalent 'make'
+#             target that RUNS '*_disabled' tests -- run those by name instead.
 #
 # Example commands:   ./test.sh test tests            #Run normal tests
-#                     ./test.sh build tests long      #Run all tests, including long tests
 #                     ./test.sh test tests long       #Run normal tests and long tests
+#                     ./test.sh clean tests all       #Clean every test dir (incl. disabled)
 #
 # load the common testing tools (relative to this script):
-
-echo "3 " $3
 
 TESTDIR=`dirname ${BASH_SOURCE}`
 . ${TESTDIR}/common.sh
@@ -30,14 +36,21 @@ if [[ -e ${TESTDIR}/$2/${TESTEXEC} ]]; then
 else
 	for i in `export LC_ALL=POSIX; find $2 -name ${TESTEXEC} | sort`; do
 
+		NAME=`basename $(dirname $i)`
+
 		# skip test directories that begin with an underscore!
-		if [[ (! $i =~ "/_") && (! $i =~ "^_") ]]; then
-			#Only do long tests if requested
-			if [[ ($3 = "long") ]] || [[ (! $i =~ "/long") && (! $i =~ "^long") ]];  then
-				echo "TEST:" $i $1
-				$i $1
-			fi
+		[[ "${NAME}" == _* ]] && continue
+
+		# skip '*_disabled' directories unless running the 'all' category
+		[[ "${NAME}" == *_disabled && "$3" != "all" ]] && continue
+
+		# only do 'long' tests when requested ('long' or 'all')
+		if [[ "${NAME}" == *long* && "$3" != "long" && "$3" != "all" ]]; then
+			continue
 		fi
+
+		echo "TEST:" $i $1
+		$i $1
 
 	done
 fi

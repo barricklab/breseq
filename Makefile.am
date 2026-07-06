@@ -173,6 +173,10 @@ test-long:
 
 
 clean-tests:
-	$(top_srcdir)/tests/test.sh clean tests long
+	## 'all' cleans every test dir's output, including 'long'-named and
+	## '*_disabled' ones (a disabled test can still leave output behind when
+	## run by name). It is a clean-only escalation -- there is no 'make'
+	## target that RUNS disabled tests.
+	$(top_srcdir)/tests/test.sh clean tests all
 	rm -rf $(top_srcdir)/tests/.snakemake
 

@@ -40,14 +40,21 @@ RUN_LONG = bool(config.get("long", False))
 
 def discover_tests():
     """Find test directories the same way tests/test.sh does: one level
-    below tests/, skipping '_'-prefixed directories, and skipping
-    directories with 'long' in the name unless long tests were requested.
+    below tests/, skipping '_'-prefixed directories, skipping directories
+    whose name ends in '_disabled', and skipping directories with 'long' in
+    the name unless long tests were requested.
     Paths are relative to the working directory (the top-level source
     directory), matching how 'make test' invokes this Snakefile."""
     names = []
     for path in sorted(glob.glob(os.path.join("tests", "*", "testcmd.sh"))):
         name = os.path.basename(os.path.dirname(path))
         if name.startswith("_"):
+            continue
+        # Directories whose name ends in '_disabled' are never run by
+        # 'make test'/'make test-long' -- they only run when invoked by name
+        # (e.g. ./tests/run.sh <name>). There is deliberately no flag to
+        # include them here.
+        if name.endswith("_disabled"):
             continue
         if ("long" in name) and not RUN_LONG:
             continue

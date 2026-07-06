@@ -95,7 +95,9 @@ budget. The shared test infra (the `do_build`/`do_check`/`do_clean`/... conventi
 
 Test directories prefixed with `_` are skipped. Directories with `long` in their name are only run with `make test-long`.
 
-A test directory named `tests/<name>-local` is gitignored (via the `tests/*-local/` pattern) and understood to be an intentionally untracked, personal/in-progress test — it's still discovered and run normally by `make test`/`make test-long`, since test discovery is filesystem-based (`tests/Snakefile`'s glob over `tests/*/testcmd.sh`, and equivalently `tests/test.sh`) and doesn't care about git tracking status.
+A test directory whose name ends in `_disabled` is skipped by both `make test` and `make test-long` — it runs *only* when invoked explicitly by name (e.g. `./tests/run.sh <name>_disabled`, `./tests/rebuild.sh <name>_disabled`). There is deliberately no `make` target that runs disabled tests in bulk (the serial `all` runners skip them too). Use this to park a temporarily-broken test in the tree without failing CI. `make clean-tests` still cleans disabled dirs' output.
+
+A test directory whose name matches `tests/*_local*/` (e.g. `tests/<name>_local`) is gitignored and understood to be an intentionally untracked, personal/in-progress test — it's still discovered and run normally by `make test`/`make test-long`, since test discovery is filesystem-based (`tests/Snakefile`'s glob over `tests/*/testcmd.sh`, and equivalently `tests/test.sh`) and doesn't care about git tracking status. The suffixes compose: a `tests/<name>_local_disabled` directory is both untracked (matches `*_local*`) and disabled (ends in `_disabled`), i.e. an uncommitted test that only runs when named explicitly. The matching gitignore patterns for untracked data are `tests/*_local*/` and `tests/data/*_local*/`.
 
 **Creating a new test:**
 1. Add data files under `tests/data/` (reuse existing data when possible; don't add large files to git).
