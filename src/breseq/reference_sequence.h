@@ -895,9 +895,9 @@ public:
 
     //!< Read GenBank file
     void ReadGenBank(const string& in_file_names, const string& genbank_field_for_seq_id = "AUTOMATIC");
-    bool ReadGenBankFileHeader(std::ifstream& in, const string& file_name, const string& genbank_field_for_seq_id = "AUTOMATIC");
+    bool ReadGenBankFileHeader(std::ifstream& in, const string& file_name, const string& genbank_field_for_seq_id, string& out_header_terminator);
     //void ReadGenBankTag(std::string& tag, std::string& s, std::ifstream& in);
-    void ReadGenBankFileSequenceFeatures(std::ifstream& in, cAnnotatedSequence& s);
+    void ReadGenBankFileSequenceFeatures(std::ifstream& in, cAnnotatedSequence& s, string& out_terminator);
     void ReadGenBankFileSequence(std::ifstream& in, cAnnotatedSequence& s);
     
     //!< Write GenBank file

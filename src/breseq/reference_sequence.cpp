@@ -1797,53 +1797,81 @@ void cReferenceSequences::WriteCSV(const string &file_name) {
   }
 }
 
+// Consume input lines up to and including the GenBank record terminator "//"
+// (or until EOF). Used when a record has no ORIGIN nucleotide-sequence block
+// (e.g. a CONTIG assembly record) so that any following records stay aligned.
+static void skip_to_record_end(ifstream& in) {
+  string line;
+  while (!in.eof()) {
+    breseq::getline(in, line);
+    if (GetWord(line) == "//") break;
+  }
+}
+
 void cReferenceSequences::ReadGenBank(const string& in_file_name, const string& genbank_field_for_seq_id) {
 
   ifstream in(in_file_name.c_str(), ios_base::in);
   ASSERT(!in.fail(), "Could not open GenBank file: " + in_file_name);
 
-  while (ReadGenBankFileHeader(in, in_file_name, genbank_field_for_seq_id)) {
-    
+  string header_terminator;
+  while (ReadGenBankFileHeader(in, in_file_name, genbank_field_for_seq_id, header_terminator)) {
+
     cAnnotatedSequence& this_seq = this->back();
-    uint32_t sequence_length_LOCUS = this_seq.m_length;
-    
-    // add a 'region' feature for GFF3 output
-    cSequenceFeaturePtr f(new cSequenceFeature);
-    (*f)["type"] = "region";
-    
-    //f->add_location(cLocation(1, this_seq.m_length, 1));
-    
-    if (this_seq.m_is_circular)
-      f->m_gff_attributes["Is_circular"].push_back("true");
-    else
-      f->m_gff_attributes["Is_circular"].push_back("false");
-    
-    f->m_gff_attributes["Note"].push_back(this_seq.m_description);
-    this_seq.m_features.push_back(f);
-    
-    ReadGenBankFileSequenceFeatures(in, this_seq);
-    this_seq.set_features_loaded_from_file(in_file_name);
-    
-    ReadGenBankFileSequence(in, this_seq);
-    this_seq.set_file_format("GenBank");
-    this_seq.set_sequence_loaded_from_file(in_file_name);
-    
-    // Check the sequence length here. Warn if we had disagreements between the LOCUS line value
-    uint32_t sequence_length_SOURCE = 0;
+
+    // Add a 'region' feature for GFF3 output. Only add it once per sequence:
+    // when a sequence-donor GenBank is merged into a seq_id already annotated
+    // from a separate features file, we must not append a duplicate 'region'.
+    cSequenceFeaturePtr f;
     for(cSequenceFeatureList::iterator it = this_seq.m_features.begin(); it != this_seq.m_features.end(); it++) {
-      if ((**it)["type"] == "source") {
-        sequence_length_SOURCE = (**it).get_length();
-        break;
-      }
+      if ((**it)["type"] == "region") { f = *it; break; }
     }
-    
+    if (f.get() == NULL) {
+      f = cSequenceFeaturePtr(new cSequenceFeature);
+      (*f)["type"] = "region";
+
+      //f->add_location(cLocation(1, this_seq.m_length, 1));
+
+      if (this_seq.m_is_circular)
+        f->m_gff_attributes["Is_circular"].push_back("true");
+      else
+        f->m_gff_attributes["Is_circular"].push_back("false");
+
+      f->m_gff_attributes["Note"].push_back(this_seq.m_description);
+      this_seq.m_features.push_back(f);
+    }
+
+    // FEATURES and ORIGIN are both optional in the GenBank flat-file grammar.
+    // Route the section readers based on which top-level keyword ended the header,
+    // then on which keyword ended the FEATURES table (if present). Each reader
+    // consumes its own terminator line, so the stream is left positioned just after it.
+    string section_terminator = header_terminator;
+    if (header_terminator == "FEATURES") {
+      string features_terminator;
+      ReadGenBankFileSequenceFeatures(in, this_seq, features_terminator);
+      // Only this file supplied features -> mark the features flag for it.
+      this_seq.set_features_loaded_from_file(in_file_name);
+      section_terminator = features_terminator;
+    }
+
+    if (section_terminator == "ORIGIN") {
+      ReadGenBankFileSequence(in, this_seq);
+    } else if (section_terminator == "CONTIG") {
+      // No nucleotide sequence in this record. Skip to the record terminator.
+      skip_to_record_end(in);
+    }
+    // section_terminator == "//" or "" (EOF): no sequence; terminator already consumed.
+
+    this_seq.set_file_format("GenBank");
+
     uint32_t sequence_length_SEQUENCE = this_seq.m_fasta_sequence.get_sequence_length();
-    
-    // This  is checked for in a generic check outside of GenBank format
-    //if ( (sequence_length_LOCUS!=sequence_length_SOURCE) || (sequence_length_SOURCE!=sequence_length_SEQUENCE) || (sequence_length_LOCUS!=sequence_length_SEQUENCE) ) {
-    //  WARN("Contradictory or missing sequence lengths for " + this_seq.m_seq_id + " in GenBank file...\nLocus line        : " + to_string(sequence_length_LOCUS) + "\nsource feature    : " + to_string(sequence_length_SOURCE) + "\nnucleotide sequence: " + to_string(sequence_length_SEQUENCE) + "\nLength of nucleotide sequence will be used.");
-    //}
-    
+
+    // Only mark the sequence as loaded from this file if this record actually
+    // supplied it. This lets a features-only GenBank and a sequence-only GenBank
+    // (matching seq_id) be merged, matching the GenBank-features + FASTA-sequence mode.
+    if (sequence_length_SEQUENCE > 0) {
+      this_seq.set_sequence_loaded_from_file(in_file_name);
+    }
+
     // Re-add possibly corrected 'region' feature location
     if (sequence_length_SEQUENCE > 0) {
       f->m_locations.clear();
@@ -1853,13 +1881,18 @@ void cReferenceSequences::ReadGenBank(const string& in_file_name, const string& 
 }
 
 
-bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file_name, const string& genbank_field_for_seq_id) {
+bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file_name, const string& genbank_field_for_seq_id, string& out_header_terminator) {
 
   // All files have a LOCUS line
   // The sequence ID is assigned with this order of preference LOCUS > ACCESSION > VERSION
   // Some files may not have a VERSION or ACCESSION line.
   // The length may not correctly parse from the LOCUS line => allow fallback to 'source' annotation
-  
+
+  // Which top-level keyword ended the header. FEATURES and ORIGIN are both optional,
+  // so the header ends at whichever of FEATURES/ORIGIN/CONTIG/"//" appears first.
+  // An empty string means the loop reached EOF without any of these.
+  out_header_terminator = "";
+
   //std::cout << "header" << std::endl;
   string line;
   string first_locus_line;
@@ -1975,12 +2008,18 @@ bool cReferenceSequences::ReadGenBankFileHeader(ifstream& in, const string& file
 
 
     if (first_word == "DEFINITION") {
-      ASSERT_NO_BACKTRACE(s, "Missing LOCUS line before DEFINITION line in GenBank record.\nReference File: " + file_name);
+      ASSERT_NO_BACKTRACE(found_LOCUS_line, "Missing LOCUS line before DEFINITION line in GenBank record.\nReference File: " + file_name);
       sequence_description = line;
     }
 
-    if (first_word == "FEATURES") break;
-    
+    // End of the header: the next section is the FEATURES table, the ORIGIN
+    // nucleotide sequence, a CONTIG join, or the "//" record terminator. All but
+    // FEATURES are handled by the caller; FEATURES and ORIGIN are both optional.
+    if ( (first_word == "FEATURES") || (first_word == "ORIGIN") || (first_word == "CONTIG") || (first_word == "//") ) {
+      out_header_terminator = first_word;
+      break;
+    }
+
     // Save all lines as they appear verbatim to print back out...
     if ( (first_word != "LOCUS")) {
       genbank_raw_header_lines.push_back(saved_line);
@@ -2253,24 +2292,35 @@ void cSequenceFeature::ReadGenBankTag(std::string& tag, std::string& s, std::ifs
   
 }
 
-void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAnnotatedSequence& s) {
+void cReferenceSequences::ReadGenBankFileSequenceFeatures(std::ifstream& in, cAnnotatedSequence& s, string& out_terminator) {
   //std::cout << "features" << std::endl;
+
+  // Which top-level keyword ended the FEATURES table. Normally ORIGIN (the
+  // nucleotide sequence follows), but a record may instead have a CONTIG join
+  // or go straight to the "//" record terminator when it carries no sequence.
+  // An empty string means the loop reached EOF.
+  out_terminator = "";
+
   cSequenceFeature* current_feature(NULL);
   cSequenceFeatureList all_features; // make preliminary list then add once entries are complete
   string line;
   while (!in.eof()) {
     getline(in, line);
-    
+
     //cout << line << endl;
     string first_word = GetWord(line);
-    
+
     // Line was all whitespace. Code below requires skipping now.
     if (first_word.size() == 0) continue;
-    
+
     //std::cout << first_word << "::" << line << std::endl;
 
-    // Done with this section...
-    if (first_word == "ORIGIN") break;
+    // Done with this section. The FEATURES table ends at ORIGIN (sequence follows),
+    // CONTIG (assembly join, no sequence), or the "//" record terminator.
+    if ( (first_word == "ORIGIN") || (first_word == "CONTIG") || (first_word == "//") ) {
+      out_terminator = first_word;
+      break;
+    }
 
     // Major tag = new feature or information block
     if (first_word[0] != '/') {
