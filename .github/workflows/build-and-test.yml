@@ -1,0 +1,38 @@
+name: build-and-test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  build-test:
+    name: build & test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false          # let both OS jobs finish independently
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    defaults:
+      run:
+        shell: bash -el {0}      # login shell: activates conda env + compiler vars
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up conda environment
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          environment-file: dev-environment.yml
+          activate-environment: breseq-dev
+          auto-activate-base: false
+
+      - name: Build
+        run: |
+          ./bootstrap.sh
+          ./configure
+          make -j$(getconf _NPROCESSORS_ONLN)
+
+      - name: Run tests
+        run: make test          # exits non-zero if any of the 66 tests fail
