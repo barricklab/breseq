@@ -52,7 +52,17 @@ namespace breseq {
     
     int32_t overlap;    // This is the amount of junction overlap that was given
                         // to this side when assigning it to each side. Must be >0.
-    
+
+    // --paired-mapping disambiguation (transient; not serialized into junction_key()).
+    // When a split read's mate maps concordantly next to exactly one repeat copy, that copy's
+    // coordinate is pinned here. pair_unique_count accumulates how many concordant read pairs agree;
+    // a threshold pass (>= settings.concordant_pairs_to_make_unique) then sets pair_unique, so
+    // merge_candidate_junctions keeps this side non-redundant instead of collapsing it. Default off
+    // => no effect without the feature (count stays 0, pair_unique stays false).
+    bool pair_unique;
+    int32_t pair_unique_count;         // number of concordant read pairs supporting this pin
+    int32_t pair_confirmed_position;   // 1-indexed reference position this side was pinned to
+
     JunctionSide()
     : is(NULL)
     {
@@ -60,6 +70,9 @@ namespace breseq {
       strand = 0;
       redundant = 0;
       overlap = 0;
+      pair_unique = false;
+      pair_unique_count = 0;
+      pair_confirmed_position = 0;
     }
     
     JunctionSide(const string& _seq_id, int32_t _position, int32_t _strand, int32_t _redundant = false)
@@ -70,6 +83,9 @@ namespace breseq {
       strand = _strand;
       redundant = _redundant;
       overlap = 0;
+      pair_unique = false;
+      pair_unique_count = 0;
+      pair_confirmed_position = 0;
     }
     
     bool operator ==(const JunctionSide& side) const
@@ -338,6 +354,16 @@ namespace breseq {
     bool reversed;
   };
 
+  //! One alignment of a split read's (not-split) mate, as loaded from the
+  //! #.split_pair_positions.csv sidecar. Used at candidate-junction identification to test
+  //! whether a candidate side's placement is concordant with the mate (--paired-mapping).
+  struct MateAln {
+    string seq_id;
+    int32_t start_1;
+    int32_t end_1;
+    bool reversed;
+  };
+
   class MergedReadStream;
 
   //! Reference-side geometry of a pair of partial alignments for the same read (breakpoint
@@ -385,7 +411,8 @@ namespace breseq {
     //! into separate segments (JC-candidate-supporting records) written to PSAM. Does not
     //! modify alignments itself -- the original, unsplit alignment(s) are left in place for
     //! BSAM/the main reference-alignment stream.
-    static void split_alignments_on_indels(const Settings& settings,
+    //! Returns the number of alignment records written to PSAM (0 if none / bailed early).
+    static uint32_t split_alignments_on_indels(const Settings& settings,
                                            Summary& summary,
                                            const cReferenceSequences& ref_seq_info,
                                            bam_file& PSAM,
@@ -397,7 +424,8 @@ namespace breseq {
     //! PSAM: skipped entirely if one alignment already covers nearly the whole read (nothing
     //! left to usefully pair), otherwise all remaining alignments are written as long as
     //! there is more than one (it takes at least two to make a candidate junction).
-    static void write_junction_candidate_alignments(
+    //! Returns true if any alignment records were written to PSAM.
+    static bool write_junction_candidate_alignments(
                                                      const Settings& settings,
                                                      Summary& summary,
                                                      bam_file& PSAM,
@@ -406,6 +434,8 @@ namespace breseq {
 
     //! Processes one read's worth of alignments for candidate junction preprocessing.
     //! Returns false if candidate_junction_read_limit was hit (caller should stop).
+    //! wrote_to_split is set to whether write_junction_candidate_alignments wrote any records
+    //! for this read (used to decide whether to emit a paired-mapping sidecar row for it).
     static bool preprocess_alignment_list(
                                           const Settings& settings,
                                           Summary& summary,
@@ -413,7 +443,8 @@ namespace breseq {
                                           bam_file& BSAM,
                                           bam_file& PSAM,
                                           alignment_list& alignments,
-                                          uint32_t& i
+                                          uint32_t& i,
+                                          bool& wrote_to_split
                                           );
 
     //! Merges two BAM files (stage1 and stage2) for one read file into
@@ -465,7 +496,9 @@ namespace breseq {
                                     bam_file& BSAM,
                                     bam_file& PSAM1,
                                     bam_file& PSAM2,
-                                    uint32_t& i
+                                    uint32_t& i,
+                                    ofstream* pair_pos_csv_r1 = NULL,
+                                    ofstream* pair_pos_csv_r2 = NULL
                                     );
 
     //! Paired analogue of merge_two_sam_files: synchronously traverses R1's and R2's
@@ -597,19 +630,25 @@ namespace breseq {
     static bool merge_candidate_junctions(JunctionCandidatePtr*& jcp1, JunctionCandidatePtr*& jcp2);
     
     static 	bool alignment_pair_to_candidate_junction(
-                                                  const Settings& settings, 
-                                                  Summary& summary, 
-                                                  const cReferenceSequences& ref_seq_info, 
+                                                  const Settings& settings,
+                                                  Summary& summary,
+                                                  const cReferenceSequences& ref_seq_info,
                                                   AlignmentPair& ap,
-                                                  JunctionCandidatePtr& returned_junction_candidate
+                                                  JunctionCandidatePtr& returned_junction_candidate,
+                                                  const vector<MateAln>* mate_positions = NULL,
+                                                  const string& majority_orientation = "",
+                                                  double distance_cutoff = 0.0
                                                   );
-    
+
 		static uint64_t alignments_to_candidate_junctions(
-                                                  const Settings& settings, 
-                                                  Summary& summary,  
-                                                  const cReferenceSequences& ref_seq_info, 
-                                                  SequenceToKeyToJunctionCandidateMap& candidate_junctions, 
-                                                  alignment_list& alignments
+                                                  const Settings& settings,
+                                                  Summary& summary,
+                                                  const cReferenceSequences& ref_seq_info,
+                                                  SequenceToKeyToJunctionCandidateMap& candidate_junctions,
+                                                  alignment_list& alignments,
+                                                  const vector<MateAln>* mate_positions = NULL,
+                                                  const string& majority_orientation = "",
+                                                  double distance_cutoff = 0.0
                                                   );
     
     

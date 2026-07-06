@@ -133,6 +133,24 @@ The main `breseq` default action runs these stages sequentially, using done-file
 13. **Predicting copy number variation**
 14. **Output** — mutation prediction, annotation, HTML report (`output.cpp`)
 
+### Intermediate files and cleanup
+
+Each stage writes a done-file when it completes; on restart, `Settings::do_step()` skips a stage whose
+done-file already exists. Large intermediate files (BAMs, per-read sidecars, etc.) are deleted once they
+are no longer needed — unless the user passes `-k`/`--keep-intermediates` (`settings.keep_all_intermediates`).
+
+**When you add a new file that only some stages need, register it for cleanup** with
+`settings.track_intermediate_file(done_key, file_path)` (`settings.cpp`). The `done_key` is the
+**done-file of the last stage that consumes the file** — cleanup happens inside `Settings::done_step(done_key)`,
+which deletes every file tracked under that key (respecting `keep_all_intermediates`). A file may be
+*written* during an earlier stage than the one it is keyed to; e.g. the candidate-junction split BAMs
+(`#.split.bam`) and their paired-mapping sidecars (`#.split_pair_positions.csv`) are written during
+preprocessing (stage 3) but keyed to `candidate_junction_done_file_name` because stage 5
+(`identify_candidate_junctions`) is the last consumer. The tracking map is serialized into the done-file
+and restored on restart, so cleanup still happens even when the producing stage was skipped. Match this
+pattern (same `done_key`, same `do_preprocess`/gating guards) whenever you emit a companion file next to
+an existing tracked one, so it shares that file's lifecycle instead of leaking.
+
 ### Genome Diff (`.gd`) format
 
 The central data structure is `cGenomeDiff` (`genome_diff.h`/`genome_diff.cpp`) containing a list of `cDiffEntry` objects (`genome_diff_entry.h`/`genome_diff_entry.cpp`).

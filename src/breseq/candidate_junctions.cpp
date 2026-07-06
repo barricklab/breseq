@@ -278,9 +278,12 @@ namespace breseq {
                                                         bam_file& BSAM,
                                                         bam_file& PSAM,
                                                         alignment_list& alignments,
-                                                        uint32_t& i
+                                                        uint32_t& i,
+                                                        bool& wrote_to_split
                                                         )
   {
+    wrote_to_split = false;
+
     if (++i % 100000 == 0) {
       ostringstream progress_message;
       progress_message << "    ALIGNED READ:" << setw(12) << right << i;
@@ -296,7 +299,7 @@ namespace breseq {
     if (alignments.front()->unmapped()) return true;
 
     // write remaining split-supporting alignments for candidate junction identification
-    write_junction_candidate_alignments(settings, summary, PSAM, alignments);
+    wrote_to_split = write_junction_candidate_alignments(settings, summary, PSAM, alignments);
 
     // write best alignments
     int32_t best_score = eligible_read_alignments(settings, ref_seq_info, alignments);
@@ -362,7 +365,8 @@ namespace breseq {
           ASSERT(sam_write1(out, hdr, it->get()) >= 0, "Failed to write alignment to: " + output_sam_file_name);
         }
         if (do_preprocess) {
-          keep_going = preprocess_alignment_list(settings, summary, ref_seq_info, BSAM, PSAM, group, i);
+          bool wrote_to_split_unused = false;
+          keep_going = preprocess_alignment_list(settings, summary, ref_seq_info, BSAM, PSAM, group, i, wrote_to_split_unused);
         }
       }
 
@@ -402,7 +406,8 @@ namespace breseq {
         int32_t split_cutoff = settings.junction_indel_split_length;
         split_alignments_on_indels(settings, summary, ref_seq_info, PSAM, split_cutoff, alignments);
       }
-      if (!preprocess_alignment_list(settings, summary, ref_seq_info, BSAM, PSAM, alignments, i))
+      bool wrote_to_split_unused = false;
+      if (!preprocess_alignment_list(settings, summary, ref_seq_info, BSAM, PSAM, alignments, i, wrote_to_split_unused))
         break;
     }
   }
@@ -554,9 +559,27 @@ namespace breseq {
                                              bam_file& BSAM,
                                              bam_file& PSAM1,
                                              bam_file& PSAM2,
-                                             uint32_t& i
+                                             uint32_t& i,
+                                             ofstream* pair_pos_csv_r1,
+                                             ofstream* pair_pos_csv_r2
                                              )
   {
+    // Writes one sidecar row: the split read's name, then a 4-tuple (seq_id,F/R,start_1,end_1)
+    // per alignment of its (not-split) mate. Consumed by identify_candidate_junctions to pin a
+    // redundant junction side to the copy the mate maps concordantly next to.
+    auto write_pair_positions_row = [](ofstream* csv, const string& read_name,
+                                       const vector<AlignmentSummary>& mate, bam_hdr_t* mate_header) {
+      if (!csv) return;
+      *csv << read_name;
+      for (vector<AlignmentSummary>::const_iterator it = mate.begin(); it != mate.end(); it++) {
+        *csv << "," << mate_header->target_name[it->tid]
+             << "," << (it->reversed ? 'R' : 'F')
+             << "," << it->start_1
+             << "," << it->end_1;
+      }
+      *csv << endl;
+    };
+
     bool keep_going = true;
     while (keep_going && (r1_stream.has_current() || r2_stream.has_current())) {
       bool r1_avail = r1_stream.has_current();
@@ -568,15 +591,19 @@ namespace breseq {
       bool r1_mapped = false, r2_mapped = false;
       bool r1_is_stage1 = false, r2_is_stage1 = false;
       vector<AlignmentSummary> r1_summary, r2_summary;
+      bool r1_wrote_split = false, r2_wrote_split = false;
+      string r1_read_name, r2_read_name;
 
       if (process_r1) {
         alignment_list& group = r1_stream.current_group();
         r1_is_stage1 = r1_stream.current_is_stage1();
         r1_mapped = !group.front()->unmapped();
         if (r1_mapped) {
+          r1_read_name = group.front()->read_name();
           if (do_preprocess) {
             int32_t split_cutoff = settings.junction_indel_split_length;
-            split_alignments_on_indels(settings, summary, ref_seq_info, PSAM1, split_cutoff, group);
+            if (split_alignments_on_indels(settings, summary, ref_seq_info, PSAM1, split_cutoff, group) > 0)
+              r1_wrote_split = true;
           }
           if (out1) {
             for (alignment_list::iterator it = group.begin(); it != group.end(); it++) {
@@ -585,7 +612,9 @@ namespace breseq {
           }
           if (matched) r1_summary = summarize_alignment_group(group);
           if (do_preprocess) {
-            keep_going = preprocess_alignment_list(settings, summary, ref_seq_info, BSAM, PSAM1, group, i) && keep_going;
+            bool wrote_to_split = false;
+            keep_going = preprocess_alignment_list(settings, summary, ref_seq_info, BSAM, PSAM1, group, i, wrote_to_split) && keep_going;
+            if (wrote_to_split) r1_wrote_split = true;
           }
         }
       }
@@ -595,9 +624,11 @@ namespace breseq {
         r2_is_stage1 = r2_stream.current_is_stage1();
         r2_mapped = !group.front()->unmapped();
         if (r2_mapped) {
+          r2_read_name = group.front()->read_name();
           if (do_preprocess) {
             int32_t split_cutoff = settings.junction_indel_split_length;
-            split_alignments_on_indels(settings, summary, ref_seq_info, PSAM2, split_cutoff, group);
+            if (split_alignments_on_indels(settings, summary, ref_seq_info, PSAM2, split_cutoff, group) > 0)
+              r2_wrote_split = true;
           }
           if (out2) {
             for (alignment_list::iterator it = group.begin(); it != group.end(); it++) {
@@ -606,9 +637,21 @@ namespace breseq {
           }
           if (matched) r2_summary = summarize_alignment_group(group);
           if (do_preprocess) {
-            keep_going = preprocess_alignment_list(settings, summary, ref_seq_info, BSAM, PSAM2, group, i) && keep_going;
+            bool wrote_to_split = false;
+            keep_going = preprocess_alignment_list(settings, summary, ref_seq_info, BSAM, PSAM2, group, i, wrote_to_split) && keep_going;
+            if (wrote_to_split) r2_wrote_split = true;
           }
         }
+      }
+
+      // Paired-mapping sidecar: for a matched pair where exactly one mate is a split read, record
+      // the OTHER (not-split, but possibly multiply-mapped) mate's positions, keyed by the split
+      // read's own name so identify_candidate_junctions can look them up when building candidates.
+      if (matched) {
+        if (r1_wrote_split && !r2_wrote_split && !r2_summary.empty())
+          write_pair_positions_row(pair_pos_csv_r1, r1_read_name, r2_summary, r2_stream.header());
+        if (r2_wrote_split && !r1_wrote_split && !r1_summary.empty())
+          write_pair_positions_row(pair_pos_csv_r2, r2_read_name, r1_summary, r1_stream.header());
       }
 
       // Only tabulate distance/orientation stats for pairs where both mates' alignments came
@@ -663,10 +706,22 @@ namespace breseq {
     ASSERT(out2, "Could not open output BAM file: " + output_sam_file_name_r2);
     ASSERT(sam_hdr_write(out2, r2_stream.header()) == 0, "Failed to write BAM header to: " + output_sam_file_name_r2);
 
+    ofstream pair_pos_csv_r1, pair_pos_csv_r2;
+    if (do_preprocess && settings.paired_mapping) {
+      string pp1 = Settings::file_name(settings.preprocess_junction_split_pair_positions_file_name, "#", read_file_set.m_files[0].m_base_name);
+      string pp2 = Settings::file_name(settings.preprocess_junction_split_pair_positions_file_name, "#", read_file_set.m_files[1].m_base_name);
+      pair_pos_csv_r1.open(pp1.c_str());
+      pair_pos_csv_r2.open(pp2.c_str());
+      settings.track_intermediate_file(settings.candidate_junction_done_file_name, pp1);
+      settings.track_intermediate_file(settings.candidate_junction_done_file_name, pp2);
+    }
+
     map<pair<string, int64_t>, uint32_t> distance_counts;
     merge_join_paired_read_streams(settings, summary, ref_seq_info, r1_stream, r2_stream,
                                     out1, out2, output_sam_file_name_r1, output_sam_file_name_r2,
-                                    distance_counts, do_preprocess, BSAM, PSAM1, PSAM2, i);
+                                    distance_counts, do_preprocess, BSAM, PSAM1, PSAM2, i,
+                                    pair_pos_csv_r1.is_open() ? &pair_pos_csv_r1 : NULL,
+                                    pair_pos_csv_r2.is_open() ? &pair_pos_csv_r2 : NULL);
 
     hts_close(out1);
     hts_close(out2);
@@ -703,11 +758,23 @@ namespace breseq {
     MergedReadStream r1_stream(reference_sam_file_name_r1, settings.reference_fasta_file_name);
     MergedReadStream r2_stream(reference_sam_file_name_r2, settings.reference_fasta_file_name);
 
+    ofstream pair_pos_csv_r1, pair_pos_csv_r2;
+    if (settings.paired_mapping) {
+      string pp1 = Settings::file_name(settings.preprocess_junction_split_pair_positions_file_name, "#", read_file_set.m_files[0].m_base_name);
+      string pp2 = Settings::file_name(settings.preprocess_junction_split_pair_positions_file_name, "#", read_file_set.m_files[1].m_base_name);
+      pair_pos_csv_r1.open(pp1.c_str());
+      pair_pos_csv_r2.open(pp2.c_str());
+      settings.track_intermediate_file(settings.candidate_junction_done_file_name, pp1);
+      settings.track_intermediate_file(settings.candidate_junction_done_file_name, pp2);
+    }
+
     map<pair<string, int64_t>, uint32_t> distance_counts;
     merge_join_paired_read_streams(settings, summary, ref_seq_info, r1_stream, r2_stream,
                                     NULL, NULL, reference_sam_file_name_r1, reference_sam_file_name_r2,
                                     distance_counts, true /* only called when do_preprocess is true */,
-                                    BSAM, PSAM1, PSAM2, i);
+                                    BSAM, PSAM1, PSAM2, i,
+                                    pair_pos_csv_r1.is_open() ? &pair_pos_csv_r1 : NULL,
+                                    pair_pos_csv_r2.is_open() ? &pair_pos_csv_r2 : NULL);
 
     string csv_file_name = Settings::file_name(settings.paired_mapping_distance_distribution_file_name, "#", read_file_set.m_base_name);
     ofstream csv(csv_file_name.c_str());
@@ -888,7 +955,7 @@ namespace breseq {
   /*! Split alignments interrupted by indels into their segments and write to a SAM file.
 	 */
 
-  void PreprocessAlignments::split_alignments_on_indels(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info, bam_file& PSAM, int32_t min_indel_split_len, const alignment_list& alignments)
+  uint32_t PreprocessAlignments::split_alignments_on_indels(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info, bam_file& PSAM, int32_t min_indel_split_len, const alignment_list& alignments)
   {
     //##
     //## @JEB: Note that this may affect the order of alignments in the SAM file. This has
@@ -945,7 +1012,7 @@ namespace breseq {
       else {
         // Check guard showing that the main alignment is good and thus we don't look at other alignments
         if ( (*it)->query_match_length() >= alignments.front()->read_length() - settings.required_both_unique_length_per_side)
-          return;
+          return 0;
 
         untouched_alignments.push_back( *it );
       }
@@ -967,13 +1034,15 @@ namespace breseq {
 
     if (alignments_written > 0) summary.preprocess_alignments.reads_with_split_alignments++;
     summary.preprocess_alignments.split_alignments += alignments_written;
+
+    return alignments_written;
   }
 
   //! Writes a read's alignments that could support a junction candidate to
   //! PSAM: skipped entirely if one alignment already covers nearly the whole read (nothing
   //! left to usefully pair), otherwise all remaining alignments are written as long as there
   //! is more than one (it takes at least two to make a candidate junction).
-  void PreprocessAlignments::write_junction_candidate_alignments(const Settings& settings, Summary& summary, bam_file& PSAM, const alignment_list& alignments)
+  bool PreprocessAlignments::write_junction_candidate_alignments(const Settings& settings, Summary& summary, bam_file& PSAM, const alignment_list& alignments)
   {
     (void) summary;
 
@@ -986,18 +1055,93 @@ namespace breseq {
           ( (*it)->query_match_length() >= alignments.front()->read_length() - settings.required_both_unique_length_per_side) ||
           ( (*it)->query_match_length() >= alignments.front()->read_length() * ( 1 - settings.required_both_unique_length_per_side_fraction) )
          )
-        return;
+        return false;
     }
 
     // Don't write if there is only one alignment to be written,
     // it takes at least two to make a candidate junction.
     if (alignments.size() > 1) {
       PSAM.write_alignments(0, alignments);
+      return true;
     }
+    return false;
   }
 
 	/*! Predicts candidate junctions
 	 */
+  // Parses one #.split_pair_positions.csv line into the split read's name + its mate's alignments.
+  // Each line: read_name,seq_id,F|R,start_1,end_1[,seq_id,F|R,start_1,end_1]...
+  // Returns false for an empty/malformed line (no complete 4-tuple).
+  static bool parse_split_pair_positions_line(const string& line, string& read_name, vector<MateAln>& mates)
+  {
+    mates.clear();
+    if (line.empty()) return false;
+    vector<string> f = split(line, ",");
+    if (f.size() < 5) return false; // need name + at least one 4-tuple
+    read_name = f[0];
+    for (size_t k = 1; k + 3 < f.size(); k += 4) {
+      MateAln m;
+      m.seq_id = f[k];
+      m.reversed = (f[k+1] == "R");
+      m.start_1 = from_string<int32_t>(f[k+2]);
+      m.end_1 = from_string<int32_t>(f[k+3]);
+      mates.push_back(m);
+    }
+    return true;
+  }
+
+  // Tests whether the read whose junction-flanking piece is `piece` would form a concordant
+  // pair with ANY of its mate's alignments (--paired-mapping). The piece's reference position
+  // is projected back to the read's imagined 5' start (extending along the read direction by the
+  // read bases 5' of the piece), so the mate distance is a full-fragment length directly
+  // comparable to the fitted distance_cutoff -- not a junction-truncated partial. The orientation
+  // and distance convention exactly mirrors best_pair_orientation_and_distance().
+  static bool mate_concordant_with_piece(bam_alignment& piece,
+                                         const cReferenceSequences& ref_seq_info,
+                                         const vector<MateAln>& mate_positions,
+                                         const string& majority_orientation,
+                                         double distance_cutoff)
+  {
+    uint32_t qs, qe;
+    piece.query_stranded_bounds_1(qs, qe);
+    int32_t offset_5p = static_cast<int32_t>(qs) - 1; // read bases 5' of this piece on its strand
+    int32_t read_len = static_cast<int32_t>(piece.read_length());
+    bool rev = piece.reversed();
+
+    // Virtual full-read alignment anchored at the read's imagined 5' start in this locus.
+    int32_t v_start, v_end;
+    if (!rev) {
+      v_start = static_cast<int32_t>(piece.reference_start_1()) - offset_5p;
+      v_end = v_start + read_len - 1;
+    } else {
+      v_end = static_cast<int32_t>(piece.reference_end_1()) + offset_5p;
+      v_start = v_end - read_len + 1;
+    }
+
+    const string& piece_seq_id = ref_seq_info[piece.reference_target_id()].m_seq_id;
+
+    for (vector<MateAln>::const_iterator m = mate_positions.begin(); m != mate_positions.end(); m++) {
+      if (m->seq_id != piece_seq_id) continue;
+
+      int32_t a_5p = rev ? v_end : v_start;
+      int32_t b_5p = m->reversed ? m->end_1 : m->start_1;
+      bool a_lower = (a_5p <= b_5p);
+      bool lower_rev = a_lower ? rev : m->reversed;
+      bool higher_rev = a_lower ? m->reversed : rev;
+
+      string orientation;
+      orientation += lower_rev ? 'R' : 'F';
+      orientation += higher_rev ? 'R' : 'F';
+      if (orientation == "RR") orientation = "FF";
+
+      int64_t distance = static_cast<int64_t>(max(v_end, m->end_1)) - static_cast<int64_t>(min(v_start, m->start_1));
+
+      if ((orientation == majority_orientation) && (distance <= static_cast<int64_t>(distance_cutoff)))
+        return true;
+    }
+    return false;
+  }
+
 	void CandidateJunctions::identify_candidate_junctions(const Settings& settings, Summary& summary, const cReferenceSequences& ref_seq_info)
 	{
 		(void)summary; // TO DO: save statistics
@@ -1029,27 +1173,83 @@ namespace breseq {
       // Decide which input SAM file we are using...
 
       string reference_sam_file_name = Settings::file_name(settings.preprocess_junction_split_sam_file_name, "#", flat_read_files_cj2[j].m_base_name);
-      
+
       bam_file tam(reference_sam_file_name, settings.reference_fasta_file_name, ios_base::in);
       alignment_list alignments;
+
+      // --paired-mapping: stream this read file's mate-position sidecar in lockstep with the split
+      // BAM (both are emitted in the same read-number order; the sidecar is a subset holding only
+      // reads whose mate was not itself split), and resolve the fitted majority orientation /
+      // concordant-distance cutoff for its read-file set, so we can pin a redundant junction side to
+      // the copy its mate maps concordantly next to.
+      ifstream sidecar_in;
+      string pending_name;
+      vector<MateAln> pending_mates;
+      bool has_pending = false;
+      int64_t pending_a = -1, pending_b = -1;
+      string majority_orientation;
+      double distance_cutoff = 0.0;
+      if (settings.paired_mapping) {
+        string pp_file = Settings::file_name(settings.preprocess_junction_split_pair_positions_file_name, "#", read_file.m_base_name);
+        sidecar_in.open(pp_file.c_str());
+        for (const auto& rfs : settings.read_file_sets) {
+          if (!rfs.is_paired()) continue;
+          bool contains = false;
+          for (const auto& rf : rfs.m_files) if (rf.m_base_name == read_file.m_base_name) contains = true;
+          if (!contains) continue;
+          PairedMappingDistanceDistributionSummaries::const_iterator pit = summary.preliminary_paired_mapping_distance_distribution.find(rfs.m_base_name);
+          if (pit != summary.preliminary_paired_mapping_distance_distribution.end()) {
+            majority_orientation = pit->second.majority_orientation;
+            distance_cutoff = pit->second.distance_cutoff;
+          }
+          break;
+        }
+      }
+
+      // Advance the sidecar cursor to the next parseable line (sets has_pending / pending_*).
+      auto advance_pending = [&]() {
+        string line;
+        has_pending = false;
+        while (getline(sidecar_in, line)) {
+          if (parse_split_pair_positions_line(line, pending_name, pending_mates)) {
+            bam_to_read_index(pending_name.c_str(), pending_a, pending_b);
+            has_pending = true;
+            return;
+          }
+        }
+      };
+      if (sidecar_in.is_open()) advance_pending(); // prime the first line
 
       while (tam.read_alignments(alignments, false))
       {
         if (alignments.size() == 0)
           break;
-        
+
         if (++i % 10000 == 0) {
           ostringstream progress_message;
           progress_message << "    ALIGNED READ:" << setw(12) << right << i << " CANDIDATE JUNCTIONS:" << setw(12) << right << candidate_junctions.size();
           print_progress_line(progress_message.str());
         }
-        
+
         // for testing...
         if (settings.candidate_junction_read_limit != 0 && i > settings.candidate_junction_read_limit)
           break;
-        
+
+        // Advance the sidecar cursor in lockstep and look up this split read's mate positions
+        // (present only when its mate was not itself split, so the sidecar is a subset of these
+        // reads). Advance past any sidecar reads that precede the current one, then match by name.
+        const vector<MateAln>* mate_positions = NULL;
+        if (settings.paired_mapping && !majority_orientation.empty() && (distance_cutoff > 0.0) && has_pending) {
+          int64_t cur_a, cur_b;
+          bam_to_read_index(alignments.front()->read_name().c_str(), cur_a, cur_b);
+          while (has_pending && ((pending_a < cur_a) || ((pending_a == cur_a) && (pending_b < cur_b))))
+            advance_pending();
+          if (has_pending && (pending_name == alignments.front()->read_name()))
+            mate_positions = &pending_mates;
+        }
+
         // pass back how many were considered
-        passed_alignment_pairs_considered += alignments_to_candidate_junctions(settings, summary, ref_seq_info, candidate_junctions, alignments);
+        passed_alignment_pairs_considered += alignments_to_candidate_junctions(settings, summary, ref_seq_info, candidate_junctions, alignments, mate_positions, majority_orientation, distance_cutoff);
         
         if ((settings.maximum_junction_sequence_passed_alignment_pairs_to_consider != 0) && (passed_alignment_pairs_considered >= settings.maximum_junction_sequence_passed_alignment_pairs_to_consider))
           break;
@@ -1075,10 +1275,24 @@ namespace breseq {
       cerr << "  Specify a greater value for --junction-alignment-pair-limit for more thorough junction prediction." << endl;
     }
     ///
-		// Merge all junctions with the same exact sequence 
+    // --paired-mapping: a junction side is reassigned to a specific repeat copy (marked unique)
+    // only if at least settings.concordant_pairs_to_make_unique concordant read pairs agree on it.
+    // Convert the accumulated per-side tally into the pair_unique flag the merge below acts on.
+    // (With the feature off every count is 0, so pair_unique stays false and merging is unchanged.)
+    ///
+    if (settings.paired_mapping) {
+      for (SequenceToKeyToJunctionCandidateMap::iterator seq_it = candidate_junctions.begin(); seq_it != candidate_junctions.end(); seq_it++)
+        for (KeyToJunctionCandidateMap::iterator key_it = seq_it->second.begin(); key_it != seq_it->second.end(); key_it++)
+          for (int32_t s = 0; s < 2; s++)
+            key_it->second->sides[s].pair_unique =
+              (static_cast<uint32_t>(key_it->second->sides[s].pair_unique_count) >= settings.concordant_pairs_to_make_unique);
+    }
+
+    ///
+		// Merge all junctions with the same exact sequence
     //   * They are hashed together for speed in this comparison
 		////
-    
+
     // New list consisting of merged junction candidates
     list<JunctionCandidatePtr> junction_candidate_list;
     
@@ -1552,16 +1766,28 @@ namespace breseq {
     JunctionCandidatePtr* merge_from_p = NULL;
     
     // this is a rather complicated compare function to favor shorter sequences and those with close coords
-  
+
     // This < comparison of junctions favors...
-    //   1) the shorter sequence 
-    //   2) both sides on the same reference sequence 
+    //   1) the shorter sequence
+    //   2) both sides on the same reference sequence
     //   3) the smallest coordinate on side 1
-    
-    if ( jc2 < jc1 )
+
+    // --paired-mapping: if exactly one candidate has a pair-confirmed (pinned) side, make it the
+    // representative so its pinned coordinate -- not the arbitrary smallest-coord tie-break --
+    // becomes the junction's name/coordinate. pair_unique is only ever set under --paired-mapping,
+    // so with the feature off both flags are false and this reduces to the original jc2 < jc1.
+    bool jc1_pinned = jc1.sides[0].pair_unique || jc1.sides[1].pair_unique;
+    bool jc2_pinned = jc2.sides[0].pair_unique || jc2.sides[1].pair_unique;
+
+    if (jc1_pinned != jc2_pinned)
+    {
+      if (jc1_pinned) { merge_into_p = jcp1; merge_from_p = jcp2; }
+      else            { merge_into_p = jcp2; merge_from_p = jcp1; }
+    }
+    else if ( jc2 < jc1 )
     {
       merge_into_p = jcp1;
-      merge_from_p = jcp2; 
+      merge_from_p = jcp2;
     }
     else
     {
@@ -1630,8 +1856,27 @@ namespace breseq {
       // we did not find an equivalent side, meaning this side must have multiple descriptions == redundant
       if (!found)
       {
-        merge_into.sides[into_side].redundant = true;
-        if (verbose) cout << "Marking side " << into_side << " as redundant." << endl;
+        // --paired-mapping: a pair-confirmed side is pinned to a specific copy, so keep it unique
+        // instead of marking it redundant -- UNLESS the merge_from candidate's corresponding side
+        // is ALSO pinned but to a different coordinate (two reads disagree on the copy), in which
+        // case the evidence is contradictory and we fall back to redundant. pair_unique is only set
+        // under --paired-mapping, so this whole guard is inert with the feature off.
+        bool keep_unique = merge_into.sides[into_side].pair_unique;
+        if (keep_unique)
+        {
+          uint32_t corresponding_from_side = (merged_strand == 2) ? (1 - into_side) : into_side;
+          if (merge_from.sides[corresponding_from_side].pair_unique &&
+              (merge_from.sides[corresponding_from_side].pair_confirmed_position != merge_into.sides[into_side].pair_confirmed_position))
+            keep_unique = false;
+        }
+
+        if (!keep_unique)
+        {
+          merge_into.sides[into_side].redundant = true;
+          merge_into.sides[into_side].pair_unique = false;
+          merge_into.sides[into_side].pair_confirmed_position = 0;
+          if (verbose) cout << "Marking side " << into_side << " as redundant." << endl;
+        }
       }
     }
     
@@ -1832,11 +2077,14 @@ namespace breseq {
   }
 
 	bool CandidateJunctions::alignment_pair_to_candidate_junction(
-                                                            const Settings& settings, 
-                                                            Summary& summary, 
-                                                            const cReferenceSequences& ref_seq_info, 
+                                                            const Settings& settings,
+                                                            Summary& summary,
+                                                            const cReferenceSequences& ref_seq_info,
                                                             AlignmentPair& ap,
-                                                            JunctionCandidatePtr& returned_junction_candidate
+                                                            JunctionCandidatePtr& returned_junction_candidate,
+                                                            const vector<MateAln>* mate_positions,
+                                                            const string& majority_orientation,
+                                                            double distance_cutoff
                                                             )
 	{
     (void) settings;
@@ -1888,6 +2136,17 @@ namespace breseq {
     int32_t read_begin_coord = geom.read_begin_coord;
     bam_alignment& q1 = *geom.q1;
     uint32_t q1_end = geom.q1_end;
+
+    // --paired-mapping: is each side's flanking piece concordant with the (not-split) mate?
+    // pin_c1/pin_c2 track side-1 (geom.q1) / side-2 (geom.q2) BEFORE the strand-canonicalization
+    // swap below; they are swapped in lockstep with the coords so they stay attached to the
+    // right final side. The read-start piece is geometrically across the junction from the mate
+    // and won't be concordant; the read-end piece pins its side to the copy the mate sits next to.
+    bool pin_c1 = false, pin_c2 = false;
+    if (mate_positions && !majority_orientation.empty() && (distance_cutoff > 0.0)) {
+      pin_c1 = mate_concordant_with_piece(*geom.q1, ref_seq_info, *mate_positions, majority_orientation, distance_cutoff);
+      pin_c2 = mate_concordant_with_piece(*geom.q2, ref_seq_info, *mate_positions, majority_orientation, distance_cutoff);
+    }
 
 		// Calculate an offset that only applies if the overlap is positive (sequence is shared between the two ends)
 		int32_t overlap_offset = (overlap > 0) ? overlap : 0;
@@ -1968,6 +2227,7 @@ namespace breseq {
 			swap(hash_strand_1, hash_strand_2);
 			swap(hash_seq_id_1, hash_seq_id_2);
 			swap(flanking_left, flanking_right);
+			swap(pin_c1, pin_c2); // keep pair-concordance attached to its (now swapped) side
 
 			junction_seq_string = reverse_complement(junction_seq_string);
 			unique_read_seq_string = reverse_complement(unique_read_seq_string);
@@ -1987,6 +2247,16 @@ namespace breseq {
     );
     candidate_junction_ptr->read_begin_hash[read_begin_coord]++;
 
+    // Provisionally pin the side whose flanking piece is concordant with the mate. Only when
+    // EXACTLY ONE side is concordant (the other piece is across the junction on a different
+    // locus); if both or neither pass, this read gives no unambiguous placement. The "exactly one
+    // candidate per read" filter is applied by the caller (alignments_to_candidate_junctions).
+    if (pin_c1 != pin_c2) {
+      int32_t s = pin_c1 ? 0 : 1;
+      candidate_junction_ptr->sides[s].pair_unique_count = 1;   // this read = one concordant pair
+      candidate_junction_ptr->sides[s].pair_confirmed_position = candidate_junction_ptr->sides[s].position;
+    }
+
     // set the return value (which takes control of the allocated pointer)
     returned_junction_candidate = JunctionCandidatePtr(candidate_junction_ptr);
 
@@ -2005,11 +2275,14 @@ namespace breseq {
 	}
 
 	uint64_t CandidateJunctions::alignments_to_candidate_junctions(
-                                                             const Settings& settings, 
-                                                             Summary& summary, const 
-                                                             cReferenceSequences& ref_seq_info, 
-                                                             SequenceToKeyToJunctionCandidateMap& candidate_junctions, 
-                                                             alignment_list& alignments
+                                                             const Settings& settings,
+                                                             Summary& summary, const
+                                                             cReferenceSequences& ref_seq_info,
+                                                             SequenceToKeyToJunctionCandidateMap& candidate_junctions,
+                                                             alignment_list& alignments,
+                                                             const vector<MateAln>* mate_positions,
+                                                             const string& majority_orientation,
+                                                             double distance_cutoff
                                                              )
 	{
     (void)summary;
@@ -2116,18 +2389,50 @@ namespace breseq {
     if (passed_pair_list.size() > settings.highly_redundant_junction_ignore_passed_pair_limit)
       return 0;
     
-    // see if the junction sequence is unique (not contained in or containing any other sequences)    
+    // Build all of this read's candidates first, so the --paired-mapping "exactly one
+    // pair-concordant candidate disambiguates" rule can be applied across the whole set before
+    // any are stored (each passing pair may pin a side via mate concordance).
+    vector<JunctionCandidatePtr> this_read_candidates;
 		for (uint32_t i = 0; i < passed_pair_list.size(); i++)
 		{
 			AlignmentPair& ap = passed_pair_list[i];
-      
+
       JunctionCandidatePtr new_junction_ptr;
-			bool passed = alignment_pair_to_candidate_junction(settings, summary, ref_seq_info, ap, new_junction_ptr);
+			bool passed = alignment_pair_to_candidate_junction(settings, summary, ref_seq_info, ap, new_junction_ptr,
+                                                         mate_positions, majority_orientation, distance_cutoff);
 			if (!passed) continue;
-      
+      this_read_candidates.push_back(new_junction_ptr);
+    }
+
+    // Exactly-one rule: the mate disambiguates only if it pins a SINGLE reference coordinate.
+    // When both junction sides are repeats, one spanning read produces several candidates that all
+    // pin the same side to the same coordinate (they differ only in the other, still-ambiguous
+    // side) -- that is ONE distinct pin and must promote. But if the mate is concordant with two
+    // DIFFERENT copies (different coordinates), the placement is genuinely ambiguous and no pin
+    // survives. So key the decision on the set of distinct pinned positions, not the candidate count.
+    if (mate_positions) {
+      set<int32_t> pinned_positions;
+      for (uint32_t k = 0; k < this_read_candidates.size(); k++)
+        for (int32_t s = 0; s < 2; s++)
+          if (this_read_candidates[k]->sides[s].pair_unique_count > 0)
+            pinned_positions.insert(this_read_candidates[k]->sides[s].pair_confirmed_position);
+      if (pinned_positions.size() != 1) {
+        for (uint32_t k = 0; k < this_read_candidates.size(); k++) {
+          for (int32_t s = 0; s < 2; s++) {
+            this_read_candidates[k]->sides[s].pair_unique_count = 0;
+            this_read_candidates[k]->sides[s].pair_confirmed_position = 0;
+          }
+        }
+      }
+    }
+
+    // Store / update the candidates.
+    for (uint32_t k = 0; k < this_read_candidates.size(); k++)
+		{
+      JunctionCandidatePtr new_junction_ptr = this_read_candidates[k];
       JunctionCandidate& new_junction = *new_junction_ptr;
       if (verbose) cout << "Testing junction: " << new_junction_ptr->junction_key() << endl << new_junction_ptr->sequence << endl;
-      
+
 			string junction_id = new_junction.junction_key();
       if (verbose) cout << junction_id << endl;
 
@@ -2141,12 +2446,21 @@ namespace breseq {
         // update score of existing junction
         JunctionCandidate& cj = *candidate_junctions[new_junction.sequence][junction_id];
         cj.read_begin_hash[new_junction.read_begin_hash.begin()->first]++;
-        if (verbose) cout << "Updating score of existing " << new_junction.sequence << " " << junction_id << endl 
+        // Same key => identical coordinates, so accumulate this read's concordant-pair count onto
+        // the stored candidate (each supporting read contributes +1). A later threshold pass in
+        // identify_candidate_junctions converts the tally into the pair_unique flag.
+        for (int32_t s = 0; s < 2; s++) {
+          if (new_junction.sides[s].pair_unique_count > 0) {
+            cj.sides[s].pair_unique_count += new_junction.sides[s].pair_unique_count;
+            cj.sides[s].pair_confirmed_position = new_junction.sides[s].pair_confirmed_position;
+          }
+        }
+        if (verbose) cout << "Updating score of existing " << new_junction.sequence << " " << junction_id << endl
           << "Pos: " << new_junction.read_begin_hash.begin()->first << " Score: " << cj.pos_hash_score()  << endl;
       }
 
     } // end passed pair list
-    
+
     return passed_pair_list.size();
 	}
 

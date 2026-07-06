@@ -339,6 +339,7 @@ namespace breseq
     ("junction-minimum-side-match", "Minimum number of bases a read must extend past any overlap or read-only sequence at the breakpoint of a junction on each side to count as support for the junction (DEFAULT = consensus mode, 1; polymorphism mode, 6)", "", NORMAL_OPTION)
     ("junction-minimum-pr-no-read-start-per-position", "Minimum probablilty assigned that no mapped read will start at a given position and strand for junction prediction", 0.1, NORMAL_OPTION)
     ("junction-allow-suboptimal-matches", "Assign a read to the junction candidate with the most overall support as long as its match to this junction is better than to any location in the reference sequence, even if it matches a different junction candidate better. This behavior was the default before v0.35.0. It will align more reads to junctions but risks misassigning some reads to the wrong junction candidates. It is only recommended that you use this option in CONSENSUS mode", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("concordant-pairs-to-make-unique", "With --paired-mapping, minimum number of concordant read pairs that must agree before a redundant junction side is reassigned to the specific repeat copy their mates map next to (and marked unique). Higher values make false disambiguations rarer. (DEFAULT = 3)", 3, EXPERT_OPTION)
     ;
     
     options.addUsage("", NORMAL_OPTION);
@@ -643,6 +644,7 @@ namespace breseq
     this->maximum_candidate_junctions = from_string<int32_t>(options["junction-maximum-candidates"]);
     this->maximum_candidate_junction_length_factor = from_string<double>(options["junction-candidate-length-factor"]);
     this->minimum_candidate_junction_pos_hash_score = from_string<double>(options["junction-minimum-candidate-pos-hash-score"]);
+    this->concordant_pairs_to_make_unique = from_string<uint32_t>(options["concordant-pairs-to-make-unique"]);
     this->maximum_junction_sequence_passed_alignment_pairs_to_consider = from_string<uint64_t>(options["junction-alignment-pair-limit"]);
     this->junction_pos_hash_neg_log10_p_value_cutoff = from_string<double>(options["junction-score-cutoff"]);
     this->junction_allow_suboptimal_matches = options.count("junction-allow-suboptimal-matches");
@@ -1020,6 +1022,7 @@ namespace breseq
     this->required_one_unique_length_per_side = 0;
     
     this->minimum_candidate_junction_pos_hash_score = 2;
+    this->concordant_pairs_to_make_unique = 3;
     this->penalize_negative_junction_overlap = true;
 
     //! Settings: Alignment Resolution
@@ -1142,6 +1145,10 @@ namespace breseq
 		this->preprocess_junction_done_file_name = this->candidate_junction_path + "/preprocess_junction_alignment.done";
 		this->preprocess_junction_best_sam_file_name = this->candidate_junction_path + "/best.bam";
 		this->preprocess_junction_split_sam_file_name = this->candidate_junction_path + "/#.split.bam";
+		// Sidecar for --paired-mapping: for each split read whose mate is NOT split, records the mate's
+		// alignment positions so candidate-junction identification can pin a redundant side to the copy
+		// its mate maps concordantly next to. One per read file, matching the two split.bam files.
+		this->preprocess_junction_split_pair_positions_file_name = this->candidate_junction_path + "/#.split_pair_positions.csv";
 
     this->paired_mapping_distance_done_file_name = this->candidate_junction_path + "/paired_mapping_distance.done";
     this->paired_mapping_distance_summary_file_name = this->candidate_junction_path + "/paired_mapping_distance.summary.json";

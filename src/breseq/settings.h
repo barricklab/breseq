@@ -366,6 +366,7 @@ namespace breseq
     
     // Which candidate junctions do we test?
 		uint32_t minimum_candidate_junction_pos_hash_score;   // Default = 2
+		uint32_t concordant_pairs_to_make_unique;             // Default = 3 (--paired-mapping side disambiguation)
 		uint32_t minimum_candidate_junctions;                 // Default = 10
 		uint32_t maximum_candidate_junctions;                 // Default = 5000, 0 = DO NOT LIMIT
     double maximum_candidate_junction_length_factor;      // Default = 0.1, 0 = DO NOT LIMIT
@@ -517,6 +518,7 @@ namespace breseq
     string preprocess_junction_done_file_name;
     string preprocess_junction_best_sam_file_name;
 		string preprocess_junction_split_sam_file_name;
+		string preprocess_junction_split_pair_positions_file_name;
 
     string paired_mapping_distance_done_file_name;
     string paired_mapping_distance_distribution_file_name;
