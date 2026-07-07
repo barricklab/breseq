@@ -168,7 +168,7 @@ string htmlize(const string& input)
 string header_style_string()
 {
   stringstream ss;
-  ss << "body {font-family: sans-serif; font-size: 11pt;}"                 << endl;
+  ss << "body {font-family: sans-serif; font-size: 11pt; margin: 0; padding: 8px;}" << endl;
   ss << "th {background-color: rgb(0,0,0); color: rgb(255,255,255);}"      << endl;
   ss << "table {background-color: rgb(1,0,0); color: rgb(0,0,0);}"         << endl;
   ss << "tr {background-color: rgb(255,255,255);}"                         << endl;
@@ -198,7 +198,8 @@ string header_style_string()
   ss << ".new_junction_entry_sep td {height: 0px; padding: 0; line-height: 0; font-size: 0;}" << endl;
   ss << ".hidden { display: none; }"                                       << endl;
   ss << ".unhidden { display: block; }"                                    << endl;
-  ss << ".breseq-sticky-header { position: sticky; top: 0; z-index: 100; background-color: white; border-bottom: 1px solid #ccc; padding-bottom: 4px; }" << endl;
+  ss << ".breseq-sticky-header { position: sticky; top: 0; z-index: 100; background-color: white; border-bottom: 1px solid #ccc; padding: 4px 0; margin: 0; }" << endl;
+  ss << ".breseq-sticky-header p { margin: 0.3em 0; }"                         << endl;
   ss << "thead th { position: sticky; top: 0; z-index: 50; }"                  << endl;
 
 return ss.str();
@@ -224,7 +225,7 @@ string javascript_string()
   ss << "      button.value=(button.value=='Show')?'Hide':'Show';"              << endl;
   ss << "    }"                                                                 << endl;
   ss << "  }"                                                                   << endl;
-  ss << "  document.addEventListener('DOMContentLoaded', function() {"         << endl;
+  ss << "  function alignStickyHeaders() {"                                    << endl;
   ss << "    var pageHeader = document.querySelector('.breseq-sticky-header');" << endl;
   ss << "    var baseTop = pageHeader ? pageHeader.offsetHeight : 0;"          << endl;
   ss << "    document.querySelectorAll('thead').forEach(function(thead) {"     << endl;
@@ -237,7 +238,10 @@ string javascript_string()
   ss << "        top += row.offsetHeight;"                                     << endl;
   ss << "      });"                                                            << endl;
   ss << "    });"                                                              << endl;
-  ss << "  });"                                                                << endl;
+  ss << "  }"                                                                   << endl;
+  ss << "  document.addEventListener('DOMContentLoaded', alignStickyHeaders);" << endl;
+  ss << "  window.addEventListener('load', alignStickyHeaders);"              << endl;
+  ss << "  window.addEventListener('resize', alignStickyHeaders);"           << endl;
   ss << "</script>"                                                             << endl;
   
   return ss.str();
@@ -504,20 +508,21 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
     HTML << "<p>" << mutation_filter_input_string() << endl;
   }
 
-  HTML << "<p>Jump to: <a href=\"#mutation_list\">Predicted mutations</a>";
-  if (mc.size() + jc.size() + cn.size() + sc.size() > 0)
+  if (mc.size() + jc.size() + cn.size() + sc.size() > 0) {
+    HTML << "<p>Jump to: <a href=\"#mutation_list\">Predicted mutations</a>";
     HTML << " | Unassigned evidence: ";
-  vector<string> jump_link_list;
-  if (mc.size() > 0)
-    jump_link_list.push_back("<a href=\"#missing_coverage_list\">missing coverage</a>");
-  if (jc.size() > 0)
-    jump_link_list.push_back("<a href=\"#new_junction_list\">new junction</a>");
-  if (cn.size() > 0)
-    jump_link_list.push_back("<a href=\"#copy_number_list\">copy number</a>");
-  if (sc.size() > 0)
-    jump_link_list.push_back("<a href=\"#soft_clipping_list\">soft clipping</a>");
-  HTML << join(jump_link_list, ", ");
-  HTML << endl;
+    vector<string> jump_link_list;
+    if (mc.size() > 0)
+      jump_link_list.push_back("<a href=\"#missing_coverage_list\">missing coverage</a>");
+    if (jc.size() > 0)
+      jump_link_list.push_back("<a href=\"#new_junction_list\">new junction</a>");
+    if (cn.size() > 0)
+      jump_link_list.push_back("<a href=\"#copy_number_list\">copy number</a>");
+    if (sc.size() > 0)
+      jump_link_list.push_back("<a href=\"#soft_clipping_list\">soft clipping</a>");
+    HTML << join(jump_link_list, ", ");
+    HTML << endl;
+  }
 
   HTML << "</div>" << endl;
 
@@ -824,12 +829,11 @@ void html_compare(
     }
   }
 
-  HTML << "<div class=\"breseq-sticky-header\">" << endl;
   if (!settings.no_javascript && !settings.no_list_js) {
+    HTML << "<div class=\"breseq-sticky-header\">" << endl;
     HTML << "<p>" << mutation_filter_input_string() << endl;
+    HTML << "</div>" << endl;
   }
-  HTML << "<p>Jump to: <a href=\"#mutation_list\">Predicted mutations</a>" << endl;
-  HTML << "</div>" << endl;
 
   HTML << Html_Mutation_Table_String(settings, gd, list_ref, mt_options);
   

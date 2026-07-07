@@ -6,7 +6,7 @@ PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 <head>
 <title>Mutation Comparison</title>
 <style type = "text/css">
-body {font-family: sans-serif; font-size: 11pt;}
+body {font-family: sans-serif; font-size: 11pt; margin: 0; padding: 8px;}
 th {background-color: rgb(0,0,0); color: rgb(255,255,255);}
 table {background-color: rgb(1,0,0); color: rgb(0,0,0);}
 tr {background-color: rgb(255,255,255);}
@@ -33,7 +33,8 @@ tr {background-color: rgb(255,255,255);}
 .new_junction_entry_sep td {height: 0px; padding: 0; line-height: 0; font-size: 0;}
 .hidden { display: none; }
 .unhidden { display: block; }
-.breseq-sticky-header { position: sticky; top: 0; z-index: 100; background-color: white; border-bottom: 1px solid #ccc; padding-bottom: 4px; }
+.breseq-sticky-header { position: sticky; top: 0; z-index: 100; background-color: white; border-bottom: 1px solid #ccc; padding: 4px 0; margin: 0; }
+.breseq-sticky-header p { margin: 0.3em 0; }
 thead th { position: sticky; top: 0; z-index: 50; }
 
 </style>
@@ -51,7 +52,7 @@ thead th { position: sticky; top: 0; z-index: 50; }
       button.value=(button.value=='Show')?'Hide':'Show';
     }
   }
-  document.addEventListener('DOMContentLoaded', function() {
+  function alignStickyHeaders() {
     var pageHeader = document.querySelector('.breseq-sticky-header');
     var baseTop = pageHeader ? pageHeader.offsetHeight : 0;
     document.querySelectorAll('thead').forEach(function(thead) {
@@ -64,7 +65,10 @@ thead th { position: sticky; top: 0; z-index: 50; }
         top += row.offsetHeight;
       });
     });
-  });
+  }
+  document.addEventListener('DOMContentLoaded', alignStickyHeaders);
+  window.addEventListener('load', alignStickyHeaders);
+  window.addEventListener('resize', alignStickyHeaders);
 </script>
 
 </head>
@@ -74,7 +78,6 @@ thead th { position: sticky; top: 0; z-index: 50; }
 //# sourceMappingURL=list.min.js.map</script>
 <div class="breseq-sticky-header">
 <p>Filter Mutations: <input type="text" size="45" class="search" placeholder="Match seq_id, position (no commas), gene, or description" />&nbsp;<button onclick="document.querySelector('#list_container .search').value='';mutation_list.search();">Clear</button>
-<p>Jump to: <a href="#mutation_list">Predicted mutations</a>
 </div>
 <!--Output Html_Mutation_Table_String-->
 <div id="mutation_list">
