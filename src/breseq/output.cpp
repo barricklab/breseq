@@ -201,6 +201,29 @@ string header_style_string()
   ss << ".breseq-sticky-header { position: sticky; top: 0; z-index: 100; background-color: white; border-bottom: 1px solid #ccc; padding: 4px 0; margin: 0; }" << endl;
   ss << ".breseq-sticky-header p { margin: 0.3em 0; }"                         << endl;
   ss << "thead th { position: sticky; top: 0; z-index: 50; }"                  << endl;
+  // Sticky left columns for gdtools COMPARE/ANNOTATE multi-sample tables:
+  // freeze every column up to and including "mutation" (evidence/seq id are optional).
+  // Per-column left offsets are assigned at runtime by alignStickyColumns().
+  ss << "#mutation_list.compare_table td.evidence, #mutation_list.compare_table td.seq_id, #mutation_list.compare_table td.position, #mutation_list.compare_table td.mutation { position: sticky; z-index: 5; background-color: inherit; }" << endl;
+  ss << "#mutation_list.compare_table thead th.evidence, #mutation_list.compare_table thead th.seq_id, #mutation_list.compare_table thead th.position, #mutation_list.compare_table thead th.mutation { z-index: 60; }" << endl;
+  // Grid line on the right of every frozen column. The table's own column separators are
+  // just the 1px cellspacing gap showing the (near-black) table background; once a column
+  // is pinned, scrolling cells slide underneath and show through that gap, so the line
+  // vanishes. Painting it as an outset shadow on the pinned cell keeps it always visible.
+  // A grid line on BOTH sides of every frozen column. The right line is the separator from
+  // the scrolling columns; the leftmost column's left line becomes the table's own left
+  // boundary (the 1px cell-spacing edge), pinned so it survives scrolling. On inner columns
+  // the left line simply coincides with the previous column's right line (harmless).
+  ss << "#mutation_list.compare_table .evidence, #mutation_list.compare_table .seq_id, #mutation_list.compare_table .position, #mutation_list.compare_table .mutation { box-shadow: -1px 0 0 0 rgb(1,0,0), 1px 0 0 0 rgb(1,0,0); }" << endl;
+  // White mask over the page's left margin (body padding). Fixed, and above BOTH the
+  // scrolling body cells and the sticky header cells (z-index 50/60) so neither leaks into
+  // the margin -- but below the sticky page header (z-index 100). It stops at the table edge,
+  // leaving the boundary line visible. Width is refined by alignStickyColumns().
+  ss << "#mutation_list.compare_table .sticky_left_mask { position: fixed; top: 0; bottom: 0; left: 0; width: 8px; background-color: #fff; z-index: 70; pointer-events: none; }" << endl;
+  // White mask over the top band (the search-header height). Fixed and full width, above the
+  // scrolling cells but below the search header (z-index 100), so nothing bleeds in above the
+  // frozen block or to the right of the header when scrolling. Height set by alignStickyHeaders().
+  ss << "#mutation_list.compare_table .sticky_top_mask { position: fixed; top: 0; left: 0; right: 0; height: 0; background-color: #fff; z-index: 90; pointer-events: none; }" << endl;
 
 return ss.str();
 }
@@ -228,6 +251,8 @@ string javascript_string()
   ss << "  function alignStickyHeaders() {"                                    << endl;
   ss << "    var pageHeader = document.querySelector('.breseq-sticky-header');" << endl;
   ss << "    var baseTop = pageHeader ? pageHeader.offsetHeight : 0;"          << endl;
+  ss << "    var topMask = document.querySelector('.sticky_top_mask');"       << endl;
+  ss << "    if (topMask) topMask.style.height = baseTop + 'px';"             << endl;
   ss << "    document.querySelectorAll('thead').forEach(function(thead) {"     << endl;
   ss << "      var rows = thead.querySelectorAll('tr');"                       << endl;
   ss << "      var top = baseTop;"                                             << endl;
@@ -242,6 +267,31 @@ string javascript_string()
   ss << "  document.addEventListener('DOMContentLoaded', alignStickyHeaders);" << endl;
   ss << "  window.addEventListener('load', alignStickyHeaders);"              << endl;
   ss << "  window.addEventListener('resize', alignStickyHeaders);"           << endl;
+  // Assign the sticky "left" offset for each frozen column. We accumulate stable column
+  // WIDTHS (offsetWidth is unaffected by sticky positioning), starting from the page's
+  // left padding, rather than reading the cells' offsetLeft -- a stuck sticky cell reports
+  // offsetLeft relative to the scrolled table (natural + scroll), which would feed back on
+  // itself every resize and march the columns across the page.
+  ss << "  function alignStickyColumns() {"                                    << endl;
+  ss << "    var frozen = ['evidence', 'seq_id', 'position', 'mutation'];"     << endl;
+  ss << "    var pad = parseFloat(getComputedStyle(document.body).paddingLeft) || 0;" << endl;
+  ss << "    document.querySelectorAll('#mutation_list.compare_table table').forEach(function(table) {" << endl;
+  ss << "      var sp = parseFloat(getComputedStyle(table).borderSpacing) || 0;" << endl;
+  ss << "      var mask = table.parentNode.querySelector('.sticky_left_mask');" << endl;
+  ss << "      if (mask) mask.style.width = pad + 'px';"                       << endl;
+  ss << "      var left = pad + sp;"                                           << endl;
+  ss << "      frozen.forEach(function(cls) {"                                 << endl;
+  ss << "        var h = table.querySelector('thead th.' + cls);"             << endl;
+  ss << "        if (!h) return;"                                              << endl;
+  ss << "        var l = Math.round(left);"                                    << endl;
+  ss << "        table.querySelectorAll('th.' + cls + ', td.' + cls).forEach(function(c) { c.style.left = l + 'px'; });" << endl;
+  ss << "        left += h.offsetWidth + sp;"                                  << endl;
+  ss << "      });"                                                            << endl;
+  ss << "    });"                                                              << endl;
+  ss << "  }"                                                                   << endl;
+  ss << "  document.addEventListener('DOMContentLoaded', alignStickyColumns);" << endl;
+  ss << "  window.addEventListener('load', alignStickyColumns);"              << endl;
+  ss << "  window.addEventListener('resize', alignStickyColumns);"           << endl;
   ss << "</script>"                                                             << endl;
   
   return ss.str();
@@ -3526,7 +3576,21 @@ Html_Mutation_Table_String::Html_Mutation_Table_String(
   , options(options)
 {
   (*this) += "<!--Output Html_Mutation_Table_String-->\n";
-  (*this) += "<div id=\"mutation_list\">\n";
+  // Freeze the position/mutation columns only for the multi-sample gdtools
+  // COMPARE/ANNOTATE table (one frequency column per sample), which can get very wide.
+  bool sticky_left_cols =
+      (options.gd_name_list_ref.size() > 1) || options.force_show_sample_headers;
+  (*this) += "<div id=\"mutation_list\"";
+  if (sticky_left_cols) (*this) += " class=\"compare_table\"";
+  (*this) += ">\n";
+  // Opaque strips over the page's left and top margins so cells scrolling under the frozen
+  // block / sticky header don't peek through the gaps at the viewport edges. The top strip
+  // also covers the band to the right of the (viewport-width, horizontally scrolling) search
+  // header. Their sizes are set at runtime by the alignSticky* functions.
+  if (sticky_left_cols) {
+    (*this) += "<div class=\"sticky_left_mask\"></div>\n";
+    (*this) += "<div class=\"sticky_top_mask\"></div>\n";
+  }
   (*this) += "<table border=\"0\" cellspacing=\"1\" cellpadding=\"3\">\n";
   this->Header_Line();
   this->Item_Lines();
@@ -3630,7 +3694,7 @@ void Html_Mutation_Table_String::Header_Line(bool print_main_header)
       ss << th(CLASS_EVIDENCE ,"evidence") << endl;
 
     if(!options.one_ref_seq)
-      ss << th(nonbreaking("seq id")) << endl;
+      ss << th(CLASS_SEQ_ID, nonbreaking("seq id")) << endl;
 
     ss << th(CLASS_POSITION, "position") << endl;
     ss << th(CLASS_MUTATION, "mutation") << endl;

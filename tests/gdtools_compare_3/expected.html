@@ -36,6 +36,11 @@ tr {background-color: rgb(255,255,255);}
 .breseq-sticky-header { position: sticky; top: 0; z-index: 100; background-color: white; border-bottom: 1px solid #ccc; padding: 4px 0; margin: 0; }
 .breseq-sticky-header p { margin: 0.3em 0; }
 thead th { position: sticky; top: 0; z-index: 50; }
+#mutation_list.compare_table td.evidence, #mutation_list.compare_table td.seq_id, #mutation_list.compare_table td.position, #mutation_list.compare_table td.mutation { position: sticky; z-index: 5; background-color: inherit; }
+#mutation_list.compare_table thead th.evidence, #mutation_list.compare_table thead th.seq_id, #mutation_list.compare_table thead th.position, #mutation_list.compare_table thead th.mutation { z-index: 60; }
+#mutation_list.compare_table .evidence, #mutation_list.compare_table .seq_id, #mutation_list.compare_table .position, #mutation_list.compare_table .mutation { box-shadow: -1px 0 0 0 rgb(1,0,0), 1px 0 0 0 rgb(1,0,0); }
+#mutation_list.compare_table .sticky_left_mask { position: fixed; top: 0; bottom: 0; left: 0; width: 8px; background-color: #fff; z-index: 70; pointer-events: none; }
+#mutation_list.compare_table .sticky_top_mask { position: fixed; top: 0; left: 0; right: 0; height: 0; background-color: #fff; z-index: 90; pointer-events: none; }
 
 </style>
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
@@ -55,6 +60,8 @@ thead th { position: sticky; top: 0; z-index: 50; }
   function alignStickyHeaders() {
     var pageHeader = document.querySelector('.breseq-sticky-header');
     var baseTop = pageHeader ? pageHeader.offsetHeight : 0;
+    var topMask = document.querySelector('.sticky_top_mask');
+    if (topMask) topMask.style.height = baseTop + 'px';
     document.querySelectorAll('thead').forEach(function(thead) {
       var rows = thead.querySelectorAll('tr');
       var top = baseTop;
@@ -69,6 +76,26 @@ thead th { position: sticky; top: 0; z-index: 50; }
   document.addEventListener('DOMContentLoaded', alignStickyHeaders);
   window.addEventListener('load', alignStickyHeaders);
   window.addEventListener('resize', alignStickyHeaders);
+  function alignStickyColumns() {
+    var frozen = ['evidence', 'seq_id', 'position', 'mutation'];
+    var pad = parseFloat(getComputedStyle(document.body).paddingLeft) || 0;
+    document.querySelectorAll('#mutation_list.compare_table table').forEach(function(table) {
+      var sp = parseFloat(getComputedStyle(table).borderSpacing) || 0;
+      var mask = table.parentNode.querySelector('.sticky_left_mask');
+      if (mask) mask.style.width = pad + 'px';
+      var left = pad + sp;
+      frozen.forEach(function(cls) {
+        var h = table.querySelector('thead th.' + cls);
+        if (!h) return;
+        var l = Math.round(left);
+        table.querySelectorAll('th.' + cls + ', td.' + cls).forEach(function(c) { c.style.left = l + 'px'; });
+        left += h.offsetWidth + sp;
+      });
+    });
+  }
+  document.addEventListener('DOMContentLoaded', alignStickyColumns);
+  window.addEventListener('load', alignStickyColumns);
+  window.addEventListener('resize', alignStickyColumns);
 </script>
 
 </head>
@@ -80,11 +107,13 @@ thead th { position: sticky; top: 0; z-index: 50; }
 <p>Filter Mutations: <input type="text" size="45" class="search" placeholder="Match seq_id, position (no commas), gene, or description" />&nbsp;<button onclick="document.querySelector('#list_container .search').value='';mutation_list.search();">Clear</button>
 </div>
 <!--Output Html_Mutation_Table_String-->
-<div id="mutation_list">
+<div id="mutation_list" class="compare_table">
+<div class="sticky_left_mask"></div>
+<div class="sticky_top_mask"></div>
 <table border="0" cellspacing="1" cellpadding="3">
 <thead>
 <tr><th colspan="9" align="left" class="mutation_header_row">Predicted mutations</th></tr><tr>
-<th>seq&nbsp;id</th>
+<th class="seq_id">seq&nbsp;id</th>
 <th class="position">position</th>
 <th class="mutation">mutation</th>
 <th class="freq">gd</th>
