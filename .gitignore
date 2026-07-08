@@ -62,8 +62,8 @@ tests/*/test.done
 tests/*/test.log
 tests/*/test.result
 tests/lambda_mixed_pop_cl_tabulate/contingency_loci.csv
-tests/*_local*/
-tests/data/*_local*/
+tests/*-local*/
+tests/data/*-local*/
 
 src/breseq/breseq/
 src/breseq/breseq
