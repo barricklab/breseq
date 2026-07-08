@@ -192,8 +192,8 @@ cFileParseErrors cGenomeDiff::read(const string& filename, bool suppress_errors)
         this->add_breseq_data(key, second_half);
         continue;
       } else {
-        //Warn if unknown header lines are encountered.
-        parse_errors.add_line_error(line_number, whole_line, "Metadata header line not recognized and will be ignored.", false);
+        //Unknown metadata header lines are a fatal formatting error.
+        parse_errors.add_line_error(line_number, whole_line, "Metadata header line not recognized.", true);
       }
     }
   }
@@ -4938,8 +4938,9 @@ void cGenomeDiff::read_vcf(const string &file_name)
 {
   //VCF Column order.
   enum {CHROM = 0, POS, ID, REF, ALT, QUAL, FILTER, INFO};
-  
+
   ifstream in(file_name.c_str());
+  ASSERT(in.good(), "Could not open file for reading: " + file_name);
   string line = "";
   
   while (!in.eof()) {
@@ -4958,7 +4959,7 @@ void cGenomeDiff::read_vcf(const string &file_name)
       //        de[POSITION] = tokens[POS];
       //        de[SIZE]     = to_string(tokens[ALT].size());
       //        de[NEW_SEQ]  = tokens[ALT];
-      WARN("Can't classify line: " + line);
+      ERROR("Can't classify VCF line (unsupported multi-allelic or complex variant): " + line);
       continue;
     }
     if (rseq.size() > aseq.size()) {

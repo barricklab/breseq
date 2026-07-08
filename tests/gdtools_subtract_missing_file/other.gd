@@ -1,0 +1,2 @@
+#=GENOME_DIFF 1.0
+SNP	1	.	chr	100	A

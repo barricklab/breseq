@@ -131,12 +131,28 @@ do_breseq() {
 	echo "BRESEQ COMMAND:"
 	echo $TESTCMD
 	eval "${TESTCMD}"
-	if [[ "$?" -ne 0 ]]; then
-        echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        echo "Failed check"
-        echo "Non-zero error code returned."
-        echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-        exit -1
+	local actual=$?
+	# EXPECTED_EXIT_CODE (default 0) lets a test assert that its command must FAIL.
+	#   0        => command must succeed (any non-zero is a test failure; default behavior)
+	#   non-zero => command must fail (a zero exit is a test failure). The specific non-zero
+	#               value is not compared, since gdtools may return 1 (ERROR/exit) or 255 (return -1).
+	local expected=${EXPECTED_EXIT_CODE:-0}
+	if [[ "${expected}" -eq 0 ]]; then
+		if [[ "${actual}" -ne 0 ]]; then
+			echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+			echo "Failed check"
+			echo "Non-zero error code returned."
+			echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+			exit -1
+		fi
+	else
+		if [[ "${actual}" -eq 0 ]]; then
+			echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+			echo "Failed check"
+			echo "Expected a non-zero exit code (command should have failed) but it returned 0."
+			echo "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+			exit -1
+		fi
 	fi
 }
 

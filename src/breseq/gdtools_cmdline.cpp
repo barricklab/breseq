@@ -80,7 +80,7 @@ int do_intersection(int argc, char *argv[])
 
 	if (options.count("help")) {
 		options.printUsage();
-		return -1;
+		return 0;
 	}
 	
   if (options.getArgc() < 2) {
@@ -127,7 +127,7 @@ int do_merge(int argc, char *argv[])
 
 	if (options.count("help")) {
 		options.printUsage();
-		return -1;
+		return 0;
 	}
 	
 	/*
@@ -183,7 +183,7 @@ int do_apply(int argc, char *argv[])
 	
 	if (options.count("help")) {
 		options.printUsage();
-		return -1;
+		return 0;
 	}
 	
   if (!options.count("reference")) {
@@ -270,7 +270,20 @@ int do_apply(int argc, char *argv[])
 		}
 		new_ref_seq_info = kept_ref_seq_info;
 	}
-	
+
+	// A zero-length applied genome is a clearly-broken result (e.g. all sequence deleted by the
+	// mutations). Fail rather than write an empty genome that a downstream step would trust.
+	// Iterate the sequence container directly (as get_total_length does) rather than via the
+	// seq_id index, which is not rebuilt when sequences are filtered with -s above.
+	uint64_t total_output_length = 0;
+	for (cReferenceSequences::iterator it = new_ref_seq_info.begin(); it != new_ref_seq_info.end(); it++) {
+		total_output_length += it->get_sequence_length();
+	}
+	if (total_output_length == 0) {
+		cerr << "gdtools APPLY failed: applying the mutations produced a zero-length genome." << endl;
+		return 1;
+	}
+
   uout("Writing output file in " + format + " format");
 
   if (format == "FASTA") {
@@ -318,7 +331,7 @@ int do_subtract(int argc, char *argv[])
 	
 	if (options.count("help")) {
 		options.printUsage();
-		return -1;
+		return 0;
 	}
 
   const bool verbose = options.count("verbose");
@@ -357,7 +370,7 @@ int do_weights(int argc, char* argv[])
 
 	if (options.count("help")) {
 		options.printUsage();
-		return -1;
+		return 0;
 	}
 	
   if (options.getArgc() < 2) {
@@ -442,7 +455,7 @@ int do_validate(int argc, char *argv[])
 
 	if (options.count("help")) {
 		options.printUsage();
-		return -1;
+		return 0;
 	}
 	
 	bool verbose = options.count("verbose");
@@ -507,8 +520,9 @@ int do_validate(int argc, char *argv[])
 	} else {
 			cerr << "  Files with formatting errors:  " << setw(6) << num_files_with_errors << endl;
 	}
-	
-	return 0;
+
+	// Exit non-zero if any file failed validation so callers can detect it from the exit code.
+	return (num_files_with_errors > 0) ? 1 : 0;
 }
 
 int do_check(int argc, char *argv[])
@@ -537,7 +551,7 @@ int do_check(int argc, char *argv[])
 	
 	if (options.count("help")) {
 		options.printUsage();
-		return -1;
+		return 0;
 	}
 	
   if (options.getArgc() != 2) {
@@ -610,7 +624,7 @@ int do_convert(int argc, char* argv[], string forced_format = "")
 
 	if (options.count("help")) {
 		options.printUsage();
-		return -1;
+		return 0;
 	}
 
 	UserOutput uout(usage_command);
@@ -732,7 +746,7 @@ int do_not_evidence(int argc, char *argv[])
 
 	if (options.count("help")) {
 		options.printUsage();
-		return -1;
+		return 0;
 	}
 	
   if( options.getArgc() != 1 ){
@@ -902,7 +916,7 @@ int do_annotate(int argc, char* argv[])
 	
 	if (options.count("help")) {
 		options.printUsage();
-		return -1;
+		return 0;
 	}
 
   string genbank_field_for_seq_id = to_upper(options["genbank-field-for-seq-id"]);
@@ -1181,7 +1195,7 @@ int do_mutations(int argc, char* argv[])
 	
 	if (options.count("help")) {
 		options.printUsage();
-		return -1;
+		return 0;
 	}
 	
 	UserOutput uout("MUTATIONS");
@@ -1244,7 +1258,7 @@ int do_phylogeny(int argc, char* argv[])
 	
 	if (options.count("help")) {
 		options.printUsage();
-		return -1;
+		return 0;
 	}
 	
 	UserOutput uout("PHYLOGENY");
@@ -1436,7 +1450,7 @@ int do_count(int argc, char* argv[])
 	
 	if (options.count("help")) {
 		options.printUsage();
-		return -1;
+		return 0;
 	}
 	
   UserOutput uout("COUNT");
@@ -1531,7 +1545,7 @@ int do_normalize_gd(int argc, char* argv[])
 
 	if (options.count("help")) {
 		options.printUsage();
-		return -1;
+		return 0;
 	}
 	
   if (!options.count("reference")) {
@@ -1608,25 +1622,35 @@ int do_normalize_gd(int argc, char* argv[])
 		gd.reassign_unique_ids();
 	}
 	
+	bool apply_test_failed = false;
 	if (!options.count("dont-check-apply")) {
 		uout("Using APPLY to check that normalization didn't change the mutated sequence.");
 		cReferenceSequences	verify_ref_seq_info = cReferenceSequences::deep_copy(ref_seq_info);
 		cGenomeDiff verify_gd(input); // must load new copy or positions will be shifted by apply_to_sequences
 		verify_gd.apply_to_sequences(ref_seq_info, verify_ref_seq_info, false, kDistanceToRepeat, settings.size_cutoff_AMP_becomes_INS_DEL_mutation);
-		
+
 		vector<string> seq_ids = verify_ref_seq_info.seq_ids();
 		vector<string> new_seq_ids = new_ref_seq_info.seq_ids();
-		
+
 		for (vector<string>::const_iterator it = seq_ids.begin(); it != seq_ids.end(); it++)
 		{
 			if (new_ref_seq_info[*it].m_fasta_sequence.get_sequence() != verify_ref_seq_info[*it].m_fasta_sequence.get_sequence()) {
 				WARN("Failed APPLY test. Discrepancies between sequences produced before and after NORMALIZE. Check ordering of mutations.");
+				apply_test_failed = true;
 			}
 		}
 	}
-	
+
 	uout("Writing output Genome Diff file", options["output"]);
 	gd.write(options["output"]);
+
+	// A failed self-consistency check means NORMALIZE altered the mutated sequence, so the
+	// output cannot be trusted. Return non-zero even though output was written (the caller
+	// discards the declared output on a non-zero exit).
+	if (apply_test_failed) {
+		cerr << "gdtools NORMALIZE failed: APPLY self-consistency check did not pass (see warning above)." << endl;
+		return 1;
+	}
 
   return 0;
 }
@@ -1668,7 +1692,7 @@ int do_remove_gd(int argc, char* argv[])
 	
 	if (options.count("help")) {
 		options.printUsage();
-		return -1;
+		return 0;
 	}
 	
   UserOutput uout("REMOVE");
@@ -1898,7 +1922,7 @@ int do_mummer2mask(int argc, char* argv[])
 
 	if (options.count("help")) {
 		options.printUsage();
-		return -1;
+		return 0;
 	}
 	
 	if (options.getArgc() != 1) {
@@ -1968,7 +1992,7 @@ int do_mask_gd(int argc, char* argv[])
 
 	if (options.count("help")) {
 		options.printUsage();
-		return -1;
+		return 0;
 	}
 
 	UserOutput uout("MASK");
@@ -2021,7 +2045,7 @@ int do_read_count(int argc, char* argv[])
 	
 	if (options.count("help")) {
 		options.printNormalUsage();
-		return -1;
+		return 0;
 	}
 	
 	if (options.getArgc() == 0) {
@@ -2106,7 +2130,7 @@ int do_simulate_mutations(int argc, char *argv[])
 
 	if (options.count("help")) {
 		options.printUsage();
-		return -1;
+		return 0;
 	}
 	
   if(argc <= 1)  {
@@ -2177,7 +2201,7 @@ int do_mutations_to_evidence(int argc, char *argv[])
 	
 	if (options.count("help")) {
 		options.printUsage();
-		return -1;
+		return 0;
 	}
 	
   if(argc == 1)  {
@@ -2236,7 +2260,7 @@ int do_header(int argc, char* argv[])
 
 	if (options.count("help")) {
 		options.printUsage();
-		return -1;
+		return 0;
 	}
 	
   if (!options.count("reference") && !options.count("tag") && !options.getArgc()) {
@@ -2321,7 +2345,7 @@ int do_reheader(int argc, char* argv[])
 	
 	if (options.count("help")) {
 		options.printUsage();
-		return -1;
+		return 0;
 	}
 	
 	if (options.getArgc() != 2) {
@@ -2365,7 +2389,7 @@ int do_download(int argc, char *argv[])
 
 	if (options.count("help")) {
 		options.printUsage();
-		return -1;
+		return 0;
 	}
 	
   //! Step: Confirm genome diff files have been input.
@@ -2597,6 +2621,8 @@ int do_download(int argc, char *argv[])
         printf("\t[%s]: %s\n", j->first.c_str(), j->second.c_str());
       }
     }
+    // Downloads/format checks failed for at least one file; report failure via exit code.
+    return 1;
   }
 
 
@@ -2620,7 +2646,7 @@ int do_gd2coverage(int argc, char* argv[])
 
 	if (options.count("help")) {
 		options.printUsage();
-		return -1;
+		return 0;
 	}
 	
 	if (!options.count("reference")) {
@@ -2659,7 +2685,7 @@ int do_deleted_genes(int argc, char* argv[])
 	
 	if (options.count("help")) {
 		options.printUsage();
-		return -1;
+		return 0;
 	}
 	
 	if (!options.count("reference")) {
@@ -2848,6 +2874,7 @@ int main(int argc, char* argv[]) {
   } else {
     cout << "Unrecognized command: " << command << endl;
     gdtools_usage();
+    return -1;
   }
   return 0;
 

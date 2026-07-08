@@ -401,7 +401,7 @@ namespace breseq {
         }
         
       } else {
-        if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Field " + kvp + " is not a key=value pair. Ignoring this key.", false);
+        if (file_parse_errors) file_parse_errors->add_line_error(line_number, line, "Field " + kvp + " is not a key=value pair.", true);
       }
       ++COLUMN;
     }
