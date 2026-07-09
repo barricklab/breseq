@@ -1015,6 +1015,9 @@ int do_annotate(int argc, char* argv[])
 		
 		load_merge_multiple_gd_files(gd, gd_list, gd_path_names, gd_titles, ref_seq_info, true, &polymorphism_search_found, compare_mode, options, uout);
 
+		// Renumber so the per-row data-key in the HTML matches the keys emitted by gdtools PHYLOGENY.
+		gd.reassign_unique_ids();
+
 		uout("Annotating mutations");
 		
 		ref_seq_info.annotate_mutations(gd, false, options.count("ignore-pseudogenes"), compare_mode, kBreseq_large_mutation_size_cutoff, false, from_string<double>(options["inactivating-overlap-fraction"]), from_string<uint32_t>(options["inactivating-size-cutoff"]), from_string<uint32_t>(options["promoter-distance"]) );
