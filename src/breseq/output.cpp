@@ -3814,8 +3814,10 @@ void Html_Mutation_Table_String::Item_Lines()
     add_html_fields_to_mutation(mut, options);
     
     // ###### PRINT THE TABLE ROW ####
+    // Emit a hidden, render-safe data-key (<id>_<type>_<position>) so a downstream tool
+    // can find/replace a row by its mutation key (matches gdtools PHYLOGENY's key file).
     ss << endl << "<!-- Print The Table Row -->" << endl;
-    ss << start_tr("class=\"" + row_class + "\"") << endl;
+    ss << start_tr("class=\"" + row_class + "\" data-key=\"" + mut.to_key() + "\"") << endl;
 
     if (!settings.no_evidence) {
       

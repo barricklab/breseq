@@ -367,6 +367,11 @@ namespace breseq {
       }
       return s;
     }
+
+    //! Compact stable key of the form <id>_<type>_<position> (e.g. "5_SNP_1261").
+    string to_key() const {
+      return _id + "_" + to_string(_type) + "_" + (entry_exists(POSITION) ? get(POSITION) : "");
+    }
     
     //!---- Reject Reasons Field ---- !//
     
