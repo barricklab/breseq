@@ -1420,16 +1420,18 @@ void cGenomeDiff::merge(const cGenomeDiff& in_merge_gd, bool reassign_ids, bool 
     }
   }
  
-  // If we are not phylogeny aware...
-  // Save this info in field that won't affect comparisons - for current entry
-    
+  // If we are not phylogeny aware, hide phylogeny_id in a field that won't affect
+  // comparisons so that entries differing only in phylogeny_id are treated as equal.
+  // In phylogeny aware mode we leave phylogeny_id in place so that compare() keeps
+  // such entries distinct (and so the tag survives into the merged output).
+
   if (!phylogeny_id_aware) {
 
     // We want to iterate through all entries and strip this information
     diff_entry_list_t mut_list = this->mutation_list();
     diff_entry_list_t mut_list_merge = merge_gd.mutation_list();
     mut_list.insert(mut_list.end(), mut_list_merge.begin(), mut_list_merge.end());
-    
+
     for (diff_entry_list_t::iterator it_new = mut_list.begin(); it_new != mut_list.end(); it_new++) {
       cDiffEntry& entry = **it_new;
 
@@ -1440,28 +1442,7 @@ void cGenomeDiff::merge(const cGenomeDiff& in_merge_gd, bool reassign_ids, bool 
       entry.erase("phylogeny_id");
     }
   }
-  
-  else {
-    
-    // We want to iterate through all entries and strip this information
-    diff_entry_list_t mut_list = this->mutation_list();
-    diff_entry_list_t mut_list_merge = merge_gd.mutation_list();
-    mut_list.insert(mut_list.end(), mut_list_merge.begin(), mut_list_merge.end());
-    
-    for (diff_entry_list_t::iterator it_new = mut_list.begin(); it_new != mut_list.end(); it_new++) {
-      cDiffEntry& entry = **it_new;
 
-      if (entry.entry_exists("phylogeny_id")) {
-        entry["_phylogeny_id"] = entry["phylogeny_id"];
-      }
-      if (entry.entry_exists("population_id")) {
-        entry["_population_id"] = entry["population_id"];
-      }
-      entry.erase("phylogeny_id");
-      entry.erase("population_id");
-    }
-  }
-  
   /////////////////////////////////////////////////////////////
   /// Check for which entries are new in the list to be merged
   /////////////////////////////////////////////////////////////
