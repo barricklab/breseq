@@ -907,7 +907,7 @@ void alignment_output::create_alignment ( const string& region, cOutputEvidenceI
     
     
     // Add flanking limits while staying in bounds
-    last_truncation_position = min<int32_t>(m_aligned_annotation.aligned_bases.length(), first_truncation_position+this->m_maximum_flanking_columns);
+    last_truncation_position = min<int32_t>(m_aligned_annotation.aligned_bases.length(), last_truncation_position+this->m_maximum_flanking_columns);
     first_truncation_position = max<int32_t>(0, first_truncation_position-this->m_maximum_flanking_columns);
     
     // Truncate all parts of the alignment!
