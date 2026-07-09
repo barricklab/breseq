@@ -1313,6 +1313,10 @@ int do_phylogeny(int argc, char* argv[])
 	vector<string> dummy_title_list;
 	cGenomeDiff::tabulate_mutation_frequencies_from_multiple_gds(gd, gd_list, dummy_title_list, options.count("phylogeny-aware"), options.count("population-aware"));
 
+	// Renumber entries so the merged GD file and the mutation key file below share a
+	// clean, consistent set of IDs.
+	gd.reassign_unique_ids();
+
 	// Save merged GD file
 	string merged_gd_file_name =  output_base_name + ".merged.gd";
 	gd.write(merged_gd_file_name);
@@ -1405,7 +1409,7 @@ int do_phylogeny(int argc, char* argv[])
 	uint32_t i=0;
 	for(diff_entry_list_t::iterator it = mut_list.begin(); it != mut_list.end(); it++) {
 			cDiffEntry& mut = **it;
-			mutation_key << to_string(mut._type) + "-" + mut[POSITION] + "-" + mut[GENE_NAME] << endl;
+			mutation_key << mut.to_key() << endl;
 	}
 	
 	// Create sample key file

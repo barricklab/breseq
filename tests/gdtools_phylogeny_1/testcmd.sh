@@ -5,6 +5,8 @@ SELF=`dirname ${BASH_SOURCE}`
 
 CURRENT_OUTPUTS[0]="${SELF}/output.tre"
 EXPECTED_OUTPUTS[0]="${SELF}/expected.tre"
+CURRENT_OUTPUTS[1]="${SELF}/output.mutation.key.txt"
+EXPECTED_OUTPUTS[1]="${SELF}/expected.mutation.key.txt"
 
 TESTCMD="\
     ${GDTOOLS} \

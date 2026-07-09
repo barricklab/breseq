@@ -64,6 +64,9 @@ tests/*/test.result
 tests/lambda_mixed_pop_cl_tabulate/contingency_loci.csv
 tests/*_local*/
 tests/data/*_local*/
+# ...but keep checked-in expected outputs even when they end in an otherwise-ignored
+# extension (e.g. *.txt above); runtime output* files stay ignored.
+!tests/*/expected*.txt
 
 src/breseq/breseq/
 src/breseq/breseq
