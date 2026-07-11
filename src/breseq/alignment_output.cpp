@@ -1583,6 +1583,11 @@ string alignment_output::text_alignment_line(const alignment_output::Alignment_B
   if (a.mapping_quality != -1) {
     output += " (MQ=" + to_string<>(a.mapping_quality) + ")";
   }
+
+  if (a.pair_is_paired) {
+    string pairing_class = a.pair_is_proper ? "PC" : "PD";
+    output += " {" + a.pair_orientation + ":" + to_string(a.pair_distance) + "}";
+  }
   
   return output;
 }
@@ -1627,6 +1632,11 @@ json alignment_output::json_alignment_line(const alignment_output::Alignment_Bas
   j["read_end"] = to_string<uint32_t>(a.end);
 
   j["mapping_quality"] = to_string<uint32_t>(a.end);
+
+  if (a.pair_is_paired) {
+    j["read_pair_orientation"] = a.pair_orientation;
+    j["read_pair_distance"] = to_string<uint32_t>(a.pair_distance);
+  }
   
   return j;
 }
