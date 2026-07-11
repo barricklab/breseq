@@ -49,6 +49,10 @@ struct cRepeatMatch {
 // group_repeats()) it was left ungrouped rather than merged with the others.
 // min_percent_identity is the weakest pairwise identity within the group, and
 // is only meaningful when group_size > 1.
+// strand is +1/-1 giving this region's orientation relative to the forward
+// reference: the canonical (sorted-first) region of each group is the forward
+// anchor (+1), and every other member is +1 or -1 according to whether it
+// matched that anchor in the same or reverse-complement orientation.
 struct cRepeatRegion {
   uint32_t group_id;
   uint32_t group_size;
@@ -56,6 +60,7 @@ struct cRepeatRegion {
   uint32_t start;
   uint32_t end;
   uint32_t length;
+  int8_t   strand;
   double   min_percent_identity;
 };
 

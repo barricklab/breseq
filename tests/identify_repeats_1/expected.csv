@@ -1,5 +1,5 @@
-group_id,group_size,seq_id,start,end,length,min_percent_identity
-1,2,"REL606-5",362,438,77,100.00
-1,2,"REL606-5",8365,8441,77,100.00
-2,2,"REL606-5",9767,10534,768,99.74
-2,2,"REL606-5",31302,32069,768,99.74
+group_id,group_size,seq_id,start,end,length,strand,min_percent_identity
+1,2,"REL606-5",362,438,77,1,100.00
+1,2,"REL606-5",8365,8441,77,1,100.00
+2,2,"REL606-5",9767,10534,768,1,99.74
+2,2,"REL606-5",31302,32069,768,1,99.74

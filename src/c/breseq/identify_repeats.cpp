@@ -111,8 +111,12 @@ struct cRegionKey {
 vector<cRepeatRegion> group_repeats(const vector<cRepeatMatch>& matches)
 {
   // Build the undirected match graph: one node per distinct region, edges
-  // connecting the two regions of each match.
+  // connecting the two regions of each match. edge_strand records each edge's
+  // relative orientation (m.strand_2, i.e. whether the two sides matched in the
+  // same or reverse-complement orientation) in both directions -- orientation is
+  // symmetric between the two sides of a match.
   map<cRegionKey, set<cRegionKey> > adjacency;
+  map<pair<cRegionKey, cRegionKey>, int8_t> edge_strand;
   map<cRegionKey, uint32_t> region_length;
 
   for (vector<cRepeatMatch>::const_iterator it = matches.begin(); it != matches.end(); it++) {
@@ -122,6 +126,8 @@ vector<cRepeatRegion> group_repeats(const vector<cRepeatMatch>& matches)
 
     adjacency[k1].insert(k2);
     adjacency[k2].insert(k1);
+    edge_strand[make_pair(k1, k2)] = m.strand_2;
+    edge_strand[make_pair(k2, k1)] = m.strand_2;
     region_length[k1] = m.length_1;
     region_length[k2] = m.length_2;
   }
@@ -139,11 +145,16 @@ vector<cRepeatRegion> group_repeats(const vector<cRepeatMatch>& matches)
   for (size_t i = 0; i < all_nodes.size(); i++) {
     if (visited.count(all_nodes[i])) continue;
 
-    // Breadth-first traversal to find this node's connected component.
+    // Breadth-first traversal to find this node's connected component. As we go,
+    // assign each node a strand relative to the seed node all_nodes[i] -- the
+    // sorted-minimum region, hence the canonical forward anchor (+1) of this
+    // component -- by multiplying in each traversed edge's relative orientation.
     vector<cRegionKey> component;
+    map<cRegionKey, int8_t> node_strand;
     vector<cRegionKey> to_visit;
     to_visit.push_back(all_nodes[i]);
     visited.insert(all_nodes[i]);
+    node_strand[all_nodes[i]] = 1;
     while (!to_visit.empty()) {
       cRegionKey node = to_visit.back();
       to_visit.pop_back();
@@ -153,6 +164,7 @@ vector<cRepeatRegion> group_repeats(const vector<cRepeatMatch>& matches)
       for (set<cRegionKey>::const_iterator nit = neighbors.begin(); nit != neighbors.end(); nit++) {
         if (!visited.count(*nit)) {
           visited.insert(*nit);
+          node_strand[*nit] = node_strand[node] * edge_strand[make_pair(node, *nit)];
           to_visit.push_back(*nit);
         }
       }
@@ -187,6 +199,7 @@ vector<cRepeatRegion> group_repeats(const vector<cRepeatMatch>& matches)
         r.start = component[c].start;
         r.end = component[c].end;
         r.length = region_length[component[c]];
+        r.strand = node_strand[component[c]];
         r.min_percent_identity = min_identity;
         result.push_back(r);
       }
@@ -206,6 +219,7 @@ vector<cRepeatRegion> group_repeats(const vector<cRepeatMatch>& matches)
         r.start = component[c].start;
         r.end = component[c].end;
         r.length = region_length[component[c]];
+        r.strand = 1;
         r.min_percent_identity = 0;
         result.push_back(r);
       }
@@ -223,7 +237,7 @@ void write_repeats_csv(const vector<cRepeatRegion>& regions, const string& file_
   ofstream out(file_name.c_str());
   out << join(make_vector<string>
               ("group_id")("group_size")
-              ("seq_id")("start")("end")("length")
+              ("seq_id")("start")("end")("length")("strand")
               ("min_percent_identity"),
               ",") << endl;
 
@@ -233,9 +247,10 @@ void write_repeats_csv(const vector<cRepeatRegion>& regions, const string& file_
                 (to_string(r.group_id))
                 (to_string(r.group_size))
                 (double_quote(r.seq_id))
-                (to_string(r.start))
-                (to_string(r.end))
+                ( (r.start < r.end) ? to_string(r.start) : to_string(r.end))
+                ( (r.start < r.end) ? to_string(r.end) : to_string(r.start))
                 (to_string(r.length))
+                (to_string(static_cast<int32_t>(r.strand)))
                 (r.group_size > 1 ? to_string(r.min_percent_identity, 2) : string("")),
                 ",") << endl;
   }
@@ -258,7 +273,7 @@ vector<cRepeatRegion> read_repeats_csv(const string& file_name)
     }
 
     vector<string> f = split_csv_line(line);
-    ASSERT(f.size() == 7, "Expected 7 columns in repeats CSV file, found "
+    ASSERT(f.size() == 8, "Expected 8 columns in repeats CSV file, found "
            + to_string(f.size()) + " on line:\n" + line);
 
     cRepeatRegion r;
@@ -268,7 +283,8 @@ vector<cRepeatRegion> read_repeats_csv(const string& file_name)
     r.start      = from_string<uint32_t>(f[3]);
     r.end        = from_string<uint32_t>(f[4]);
     r.length     = from_string<uint32_t>(f[5]);
-    r.min_percent_identity = f[6].empty() ? 0 : from_string<double>(f[6]);
+    r.strand     = from_string<int32_t>(f[6]);
+    r.min_percent_identity = f[7].empty() ? 0 : from_string<double>(f[7]);
 
     regions.push_back(r);
   }
@@ -340,9 +356,9 @@ void identify_repeats(
   vector<cRepeatRegion> grouped = group_repeats(filtered);
   write_repeats_csv(grouped, output_file_name);
 
-  remove_file(fasta_path);
-  remove_file(delta_path);
-  remove_file(coords_path);
+  //remove_file(fasta_path);
+  //remove_file(delta_path);
+  //remove_file(coords_path);
 }
 
 }
