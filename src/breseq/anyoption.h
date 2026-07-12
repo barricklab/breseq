@@ -24,10 +24,14 @@
 
 // Option visibility tiers. Each higher level is cumulative: printing a level
 // shows all lower levels too (BASIC only; NORMAL = BASIC+NORMAL via -h;
-// EXPERT = everything via --expert-help). An unscoped enum (not int) is used
-// deliberately so that integer default values passed to operator() bind to the
-// template's default-value parameter rather than being mistaken for a tier.
-enum OptionLevel { BASIC_OPTION = 0, NORMAL_OPTION = 1, EXPERT_OPTION = 2 };
+// EXPERT = everything via --expert-help). DEPRECATED_OPTION sits above every
+// printable tier: such an option is still registered and parsed normally (so it
+// does not error if supplied), but it is never emitted in any help output. Use
+// it for backward-compatible options whose deprecation is handled by the caller.
+// An unscoped enum (not int) is used deliberately so that integer default values
+// passed to operator() bind to the template's default-value parameter rather
+// than being mistaken for a tier.
+enum OptionLevel { BASIC_OPTION = 0, NORMAL_OPTION = 1, EXPERT_OPTION = 2, DEPRECATED_OPTION = 3 };
 
 #define TAKES_NO_ARGUMENT	((void*)NULL)
 #define USAGE_LEFT_COLUMN_WIDTH	35
