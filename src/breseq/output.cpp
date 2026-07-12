@@ -4515,11 +4515,32 @@ void create_evidence_page(const Settings& settings)
   out << "  }\n";
   out << "\n";
   out << "  function showError(msg) {\n";
-  out << "    document.getElementById('status').textContent = msg;\n";
+  out << "    var status = document.getElementById('status');\n";
+  out << "    status.style.display = '';\n";
+  out << "    status.textContent = msg;\n";
   out << "  }\n";
   out << "\n";
-  out << "  window.addEventListener('load', function() {\n";
+  // Remove any previously-rendered evidence view (img/iframe) so navigating
+  // between evidence items replaces the prior view instead of stacking it, and
+  // a slow async render can't leave a stale node behind.
+  out << "  function resetView() {\n";
+  out << "    var status = document.getElementById('status');\n";
+  out << "    Array.prototype.slice.call(document.body.childNodes).forEach(function(node) {\n";
+  out << "      if (node !== status) document.body.removeChild(node);\n";
+  out << "    });\n";
+  out << "    status.style.display = '';\n";
+  out << "    document.body.style.margin = '';\n";
+  out << "  }\n";
+  out << "\n";
+  // Render the evidence file named in location.hash. Registered for both 'load'
+  // and 'hashchange' so clicking an evidence.html#... cross-link (which only
+  // changes the top-window hash, not reloading the page) re-renders the view.
+  out << "  var lastRenderedHash = null;\n";
+  out << "  function render() {\n";
   out << "    var fname = location.hash ? location.hash.slice(1) : '';\n";
+  out << "    if (fname === lastRenderedHash) return;\n";
+  out << "    lastRenderedHash = fname;\n";
+  out << "    resetView();\n";
   out << "    if (!fname) { showError('No evidence file specified in URL hash.'); return; }\n";
   out << "    document.getElementById('status').textContent = 'Loading ' + fname + '...';\n";
   out << "    loadZip().then(function(zip) {\n";
@@ -4563,6 +4584,15 @@ void create_evidence_page(const Settings& settings)
   out << "        html = html.replace(/charset=iso-8859-1/gi, 'charset=utf-8');\n";
   out << "        return inlineImages(html, zip);\n";
   out << "      }).then(function(html) {\n";
+  out << "        // Give the rendered page a concrete, current base URL. A srcdoc\n";
+  out << "        // document's own URL is about:srcdoc, whose relative-link resolution\n";
+  out << "        // is unreliable across browsers, so the page's relative\n";
+  out << "        // evidence.html#... cross-links (and any non-inlined images) would\n";
+  out << "        // otherwise break -- notably after the output folder is moved.\n";
+  out << "        // baseHref is recomputed from the live location on every render, so\n";
+  out << "        // links always resolve against evidence.html's actual directory.\n";
+  out << "        var baseHref = location.href.replace(/[#?].*$/, '').replace(/[^\\/]*$/, '');\n";
+  out << "        html = html.replace('<base target=\"_top\">', '<base href=\"' + baseHref + '\" target=\"_top\">');\n";
   out << "        // Display in a full-page iframe so the address bar keeps the\n";
   out << "        // meaningful evidence.html#RA_123.html URL rather than\n";
   out << "        // showing an opaque blob: URL.\n";
@@ -4583,7 +4613,9 @@ void create_evidence_page(const Settings& settings)
   out << "      }\n";
   out << "      showError(msg);\n";
   out << "    });\n";
-  out << "  });\n";
+  out << "  }\n";
+  out << "  window.addEventListener('load', render);\n";
+  out << "  window.addEventListener('hashchange', render);\n";
   out << "})();\n";
   out << "</script>\n";
   out << "</head>\n";
