@@ -317,7 +317,8 @@ namespace breseq
     options.addUsage("", NORMAL_OPTION);
     options.addUsage("Bowtie2 Mapping/Alignment Options", NORMAL_OPTION);
     options
-    ("paired-mapping", "Detect read files whose names differ only in a '1'/'2' character as a paired-end set, for reporting and paired-aware FASTQ normalization. Reads are still aligned independently in single-end mode. (DEFAULT=OFF)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("paired-mapping", "DEPRECATED: paired-mapping is now the default. Use --no-paired-mapping to opt out.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION)
+    ("no-paired-mapping", "Disable paired-end detection of read files whose names differ only in a '1'/'2' character. By default (paired-mapping ON) such files are grouped as a paired-end set for reporting and paired-aware FASTQ normalization; reads are still aligned independently in single-end mode. Pass this flag to treat every read file as an independent single-end set. (DEFAULT=OFF, i.e. paired-mapping is ON)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("bowtie2-stage1", "Complete settings (scoring scheme, alignment mode, and mapping criteria) used for the stage 1 alignment. This step is normally meant for quickly aligning near-perfect matches. (DEFAULT=\"" + this->bowtie2_stage1 + "\")", "", EXPERT_OPTION)
     ("bowtie2-stage2", "Complete settings (scoring scheme, alignment mode, and mapping criteria) used for the stage 2 alignment. If set to the empty string \"\", then stage 2 alignment is skipped. This step is normally meant for exhaustively mapping reads that were unmapped by stage 1. (DEFAULT=\"" + this->bowtie2_stage2 + "\")", "", EXPERT_OPTION)
     ("bowtie2-junction", "Complete settings (scoring scheme, alignment mode, and mapping criteria) used in aligning reads to candidate junctions. (DEFAULT=\"" + this->bowtie2_junction + "\")", "", EXPERT_OPTION)
@@ -339,7 +340,7 @@ namespace breseq
     ("junction-minimum-side-match", "Minimum number of bases a read must extend past any overlap or read-only sequence at the breakpoint of a junction on each side to count as support for the junction (DEFAULT = consensus mode, 1; polymorphism mode, 6)", "", NORMAL_OPTION)
     ("junction-minimum-pr-no-read-start-per-position", "Minimum probablilty assigned that no mapped read will start at a given position and strand for junction prediction", 0.1, NORMAL_OPTION)
     ("junction-allow-suboptimal-matches", "Assign a read to the junction candidate with the most overall support as long as its match to this junction is better than to any location in the reference sequence, even if it matches a different junction candidate better. This behavior was the default before v0.35.0. It will align more reads to junctions but risks misassigning some reads to the wrong junction candidates. It is only recommended that you use this option in CONSENSUS mode", TAKES_NO_ARGUMENT, NORMAL_OPTION)
-    ("concordant-pairs-to-make-unique", "With --paired-mapping, minimum number of concordant read pairs that must agree before a redundant junction side is reassigned to the specific repeat copy their mates map next to (and marked unique). Higher values make false disambiguations rarer. (DEFAULT = 3)", 3, EXPERT_OPTION)
+    ("concordant-pairs-to-make-unique", "When paired-mapping is enabled (the default; disable with --no-paired-mapping), minimum number of concordant read pairs that must agree before a redundant junction side is reassigned to the specific repeat copy their mates map next to (and marked unique). Higher values make false disambiguations rarer. (DEFAULT = 3)", 3, EXPERT_OPTION)
     ;
     
     options.addUsage("", NORMAL_OPTION);
@@ -494,7 +495,15 @@ namespace breseq
       cerr << output_divider << endl;
       this->skip_new_junction_prediction = true;
     }
-    this->paired_mapping = options.count("paired-mapping");
+    this->paired_mapping = !options.count("no-paired-mapping");
+
+    // Backward compatibility: --paired-mapping is now the default. Accept it, but warn.
+    if (options.count("paired-mapping")) {
+      cerr << "WARNING: The --paired-mapping option is DEPRECATED. Paired-mapping detection is now" << endl;
+      cerr << "         enabled by default, so this flag has no effect. To turn paired-mapping OFF," << endl;
+      cerr << "         use --no-paired-mapping instead." << endl;
+      cerr << output_divider << endl;
+    }
     this->read_file_sets.Init(read_file_names, this->aligned_sam_mode, this->paired_mapping);
     
     if (options.count("limit-fold-coverage")) {
@@ -950,7 +959,7 @@ namespace breseq
     this->read_file_long_read_trigger_length = 1000;
     this->read_file_long_read_split_length = 200;
     this->read_file_long_read_distribute_remainder = false;
-    this->paired_mapping = false;
+    this->paired_mapping = true;
 
     //! Options that control which parts of the pipeline to execute
     this->skip_read_filtering = false;

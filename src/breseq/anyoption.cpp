@@ -941,9 +941,11 @@ namespace breseq {
 	AnyOption::addUsage( string line , OptionLevel level)
 	{
     // Cumulative: a line appears in its own tier and every higher tier.
+    // DEPRECATED_OPTION is above every printable tier, so it lands in no buffer:
+    // the option is still registered/parsed, but never shown in any help output.
     if (level <= BASIC_OPTION)  usage_lines.push_back(line);
     if (level <= NORMAL_OPTION) normal_lines.push_back(line);
-    expert_lines.push_back(line);
+    if (level <= EXPERT_OPTION) expert_lines.push_back(line);
 	}
 
   void
