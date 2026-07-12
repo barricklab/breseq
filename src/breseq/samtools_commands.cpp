@@ -32,7 +32,11 @@ void samtools_index(const string& bam_file_name) {
 }
 
 void samtools_sort(const string& unsorted_bam_file_name, const string& sorted_bam_file_name, uint32_t const num_threads) {
-  string cmd = "samtools sort --threads " + to_string(num_threads)
+  // samtools sort's --threads/-@ is the number of *additional* worker threads on
+  // top of the CPU-active main merge thread, so total busy threads = num_threads+1.
+  // Pass num_threads-1 (min 0 = single-threaded) so total matches the -j budget.
+  uint32_t const sort_threads = (num_threads > 0) ? num_threads - 1 : 0;
+  string cmd = "samtools sort --threads " + to_string(sort_threads)
              + " -o " + double_quote(sorted_bam_file_name)
              + " -T " + double_quote(sorted_bam_file_name)
              + " " + double_quote(unsorted_bam_file_name);

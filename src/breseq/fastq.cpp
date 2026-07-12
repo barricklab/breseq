@@ -509,8 +509,14 @@ namespace breseq {
       PairResult pr;
 
       cFastqQualityConverter fqc(pass_quality_format, "SANGER");
-      cFastqFile out_r1(r1_convert_file_name.c_str(), fstream::out, num_threads);
-      cFastqFile out_r2(r2_convert_file_name.c_str(), fstream::out, num_threads);
+      // Two output streams are open at once here, each with its own compressor
+      // thread pool. Split the -j budget so the two pools sum to ~num_threads
+      // rather than 2*num_threads. (At num_threads==1 this rounds up to 1 each,
+      // i.e. 2 total; avoiding that last overshoot would require the two streams
+      // to share a single pool.)
+      unsigned int const per_stream_threads = std::max<unsigned int>(1, num_threads / 2);
+      cFastqFile out_r1(r1_convert_file_name.c_str(), fstream::out, per_stream_threads);
+      cFastqFile out_r2(r2_convert_file_name.c_str(), fstream::out, per_stream_threads);
 
       uint64_t local_current_bases = starting_read_file_bases;
       uint32_t on_read = 1;

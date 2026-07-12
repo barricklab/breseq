@@ -287,7 +287,7 @@ namespace breseq
 
     //! Settings: Read Alignment and Candidate Junction Read Alignment
     
-    int32_t num_processors;       // Defaults = 2
+    int32_t num_processors;       // Default = 1
 
     // bowtie2 options. Each of bowtie2_stage1/stage2/junction is a complete, independent
     // command-line string -- match/mismatch/gap scoring, alignment mode, and mapping cutoffs
