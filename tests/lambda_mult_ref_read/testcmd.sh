@@ -14,6 +14,7 @@ TESTCMD="\
     ${BRESEQ_TEST_THREAD_ARG} \
     -o ${SELF} \
     ${REFERENCE_ARG} \
+    --unzipped-html \
     -l 50 \
     ${DATADIR}/lambda/empty.fastq \
     ${DATADIR}/lambda/only_bad.fastq \

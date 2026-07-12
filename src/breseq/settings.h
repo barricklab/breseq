@@ -452,7 +452,7 @@ namespace breseq
     //!
     bool output_unmapped_reads;                             // Default = false COMMAND-LINE OPTION
     bool no_evidence_html;                                  // Default = false COMMAND-LINE OPTION
-    bool zip_html;                                          // Default = false COMMAND-LINE OPTION
+    bool zip_html;                                          // Default = true COMMAND-LINE OPTION (disable with --unzipped-html)
     
     //! Don't include javascript in HTML output (provided for Galaxy integration)
     bool no_javascript;                                     // Default = false COMMAND-LINE OPTION
