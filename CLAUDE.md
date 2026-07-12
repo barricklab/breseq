@@ -8,19 +8,24 @@ breseq is a computational pipeline for finding mutations in haploid microbial ge
 
 ## Build System
 
-breseq uses GNU autotools. The build flow is:
+breseq uses GNU autotools. **A fresh checkout or worktree has no `configure` script and no
+`Makefile` — you MUST run `./bootstrap.sh` then `./configure` before the first `make`, or `make`
+fails with "No targets specified and no makefile found".** This bites us repeatedly; do not skip it.
 
 ```bash
-# First time or after adding source files:
-./bootstrap.sh
-./configure
+# REQUIRED first build in any new checkout/worktree (generates configure + Makefile):
+./bootstrap.sh          # regenerates ./configure (also re-run after adding a .cpp source file)
+./configure             # generates Makefile / config.h from configure.ac + *.am
 
-# Normal rebuild:
+# Normal rebuild (only works AFTER bootstrap + configure have been run once):
 make
 
 # Install:
 make install
 ```
+
+Quick check before building: if `./configure` or `Makefile` is missing (`ls configure Makefile`),
+you still need the bootstrap + configure step above.
 
 **Dependencies for building and running tests** (use conda with `dev-environment.yml`):
 
@@ -52,22 +57,34 @@ make test
 # Run all tests including long tests
 make test-long
 
-# Run a single test (or 'all' for every test) directly, without Snakemake
-./tests/run.sh lambda_mixed_pop
-
 # Clean test outputs (always run this between testing cycles to clear stale results)
 make clean-tests
-
-# Rebuild expected output after intentional changes (re-runs the test; 'all' rebuilds everything)
-./tests/rebuild.sh lambda_mixed_pop
-
-# Promote a failed run's existing output to be the new expected output (no re-run)
-./tests/build.sh lambda_mixed_pop
 ```
 
+**To run a single test, use `tests/test.sh <action> <name>`** — this is the canonical single-test
+entry point (streams output live, no Snakemake). Prefer it over the thin `run.sh`/`rebuild.sh`/
+`build.sh` wrappers, which all just dispatch to the same `tests/<name>/testcmd.sh <action>`:
+
+```bash
+# Run one test:
+./tests/test.sh test lambda_mixed_pop
+
+# Rebuild its expected output after intentional changes (re-runs the test):
+./tests/test.sh rebuild lambda_mixed_pop
+
+# Promote a failed run's existing output to be the new expected output (no re-run):
+./tests/test.sh build lambda_mixed_pop
+
+# Clean just one test's output:
+./tests/test.sh clean lambda_mixed_pop
+```
+
+(Use `tests` as the name — e.g. `./tests/test.sh test tests` — to batch every discovered test
+serially; `make test` is preferred for the full suite since it runs them in parallel.)
+
 A plain `make`/`make all` writes `tests/test.config` (sets `TESTBINPREFIX`, `BRESEQ_DATA_PATH`) as
-part of `all-local`, so running a single test directly (`./tests/run.sh`, `build.sh`, `rebuild.sh`)
-never requires a prior `make test`. `make test`/`make test-long` also (re)write it before running
+part of `all-local`, so running a single test directly (`./tests/test.sh <action> <name>`)
+never requires a prior `make test` (but it does require a successful `make` first — see Build System). `make test`/`make test-long` also (re)write it before running
 all discovered tests **in parallel** via Snakemake (`tests/Snakefile`), bounded by a total core
 budget. The shared test infra (the `do_build`/`do_check`/`do_clean`/... conventions that every
 `testcmd.sh` dispatches into) lives in `tests/common.sh`; `Snakefile` only discovers and launches
@@ -85,8 +102,8 @@ budget. The shared test infra (the `do_build`/`do_check`/`do_clean`/... conventi
   `lambda_mixed_pop`) declares this with `TEST_DEPENDS=<name>[,<name>...]` next to `TEST_CORES`
   in its `testcmd.sh`. `Snakefile` reads this to add a real dependency edge so the prerequisite
   test finishes successfully first — `common.sh` ignores the variable, and the serial
-  `./tests/run.sh`/`build.sh`/`rebuild.sh all` runners don't need it since their sorted discovery
-  order already happens to run dependencies first.
+  `./tests/test.sh <action> tests` runner (and its `run.sh`/`build.sh`/`rebuild.sh` wrappers)
+  doesn't need it since their sorted discovery order already happens to run dependencies first.
 - **Logs**: each test's output is captured to `tests/<test_name>/test.log`; `make clean-tests`
   removes these (along with `test.result`, `test.done`, and Snakemake's `.snakemake/` directory).
 - **Summary & CI**: after the run, `tests/print_test_summary.sh` prints a PASS/FAIL + timing table
@@ -95,7 +112,7 @@ budget. The shared test infra (the `do_build`/`do_check`/`do_clean`/... conventi
 
 Test directories prefixed with `_` are skipped. Directories with `long` in their name are only run with `make test-long`.
 
-A test directory whose name ends in `_disabled` is skipped by both `make test` and `make test-long` — it runs *only* when invoked explicitly by name (e.g. `./tests/run.sh <name>_disabled`, `./tests/rebuild.sh <name>_disabled`). There is deliberately no `make` target that runs disabled tests in bulk (the serial `all` runners skip them too). Use this to park a temporarily-broken test in the tree without failing CI. `make clean-tests` still cleans disabled dirs' output.
+A test directory whose name ends in `_disabled` is skipped by both `make test` and `make test-long` — it runs *only* when invoked explicitly by name (e.g. `./tests/test.sh test <name>_disabled`, `./tests/test.sh rebuild <name>_disabled`). There is deliberately no `make` target that runs disabled tests in bulk (the serial `all` runners skip them too). Use this to park a temporarily-broken test in the tree without failing CI. `make clean-tests` still cleans disabled dirs' output.
 
 A test directory whose name matches `tests/*_local*/` (e.g. `tests/<name>_local`) is gitignored and understood to be an intentionally untracked, personal/in-progress test — it's still discovered and run normally by `make test`/`make test-long`, since test discovery is filesystem-based (`tests/Snakefile`'s glob over `tests/*/testcmd.sh`, and equivalently `tests/test.sh`) and doesn't care about git tracking status. The suffixes compose: a `tests/<name>_local_disabled` directory is both untracked (matches `*_local*`) and disabled (ends in `_disabled`), i.e. an uncommitted test that only runs when named explicitly. The matching gitignore patterns for untracked data are `tests/*_local*/` and `tests/data/*_local*/`.
 
@@ -198,7 +215,7 @@ breseq writes to `-o <output_dir>` (default: current directory):
   1. When running inside a git worktree, use the shared conda env at `../../../env` (i.e., `breseq/env` in the main repo) via `conda run -p ../../../env <command>`. If that env is absent, fall back to creating one locally as described in `DEVELOPER`.
   2. When explicitly told to, you may merge changes back to the `master` branch in the main repo.
 - **Run `make test` as part of the development cycle** — run the full test suite before considering a feature or fix complete.
-- **Run tests and rebuild scripts from the worktree root** — `./tests/run.sh`, `./tests/rebuild.sh`, and `make test` must be invoked from the top of the worktree (not from a subdirectory). A worktree needs its own `tests/test.config` (set `TESTBINPREFIX` to `<worktree>/src/breseq` and `BRESEQ_DATA_PATH` to `<worktree>/src/share/breseq`); a plain `make` now generates it automatically as part of `all-local`, so it's normally already there by the time you run a test directly.
+- **Run tests from the worktree root** — `./tests/test.sh <action> <name>` (single test) and `make test` (full suite) must be invoked from the top of the worktree (not from a subdirectory). `make` auto-generates this worktree's `tests/test.config` as part of `all-local` and points `TESTBINPREFIX` at this worktree's `src/breseq` — you don't create or edit it by hand. (It also exports `BRESEQ_DATA_PATH=./src/share/breseq`, but that export is redundant for in-tree runs: a binary built at `src/breseq/` already finds its data at the sibling `src/share/breseq/` on its own — see the next bullet — so `BRESEQ_DATA_PATH` only actually matters if the executable is moved away from that sibling.)
 - **A freshly built `breseq`/`gdtools` runs standalone with no env vars needed** — the runtime data files (`breseq_icon.png`, `jszip.min.js`, etc.) live in `src/share/breseq/`, a sibling of `src/breseq/` where the binaries are built, matching the relative `bin/`↔`share/<pkg>/` layout autotools already computes between `--bindir`/`--datadir`. `BRESEQ_DATA_PATH` is only needed to override this (e.g. a relocated/custom install).
 
 ## Distribution
