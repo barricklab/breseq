@@ -400,7 +400,8 @@ namespace breseq
     ("header-genome-diff,g", "Include header information from this GenomeDiff file in output.gd", "", NORMAL_OPTION)
     ("output-unmapped-reads", "Output unmapped reads to file: " + this->unmapped_reads_fastq_file_name, TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("no-evidence-html", "Don't create output files for evidence (e.g., read alignments and coverage plots)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
-    ("zip-html", "Bundle evidence files into a ZIP archive (evidence.zip) and add JavaScript to load evidence pages directly from the archive to the main output files", TAKES_NO_ARGUMENT, NORMAL_OPTION)
+    ("zip-html", "DEPRECATED: HTML evidence is now bundled into a ZIP archive (evidence.zip) by default. Use --unzipped-html to opt out.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION)
+    ("unzipped-html", "Do not bundle evidence files into a ZIP archive. By default, evidence pages are bundled into evidence.zip and loaded from the archive via JavaScript in the main output files. Pass this flag to instead write the individual evidence files to disk uncompressed. (DEFAULT=OFF, i.e. HTML evidence is zipped)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("no-javascript", "Don't include javascript in the HTML output", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("max-flanking-columns", "Maximum number of columns in aligned reads to show flanking the region of interest in the HTML output for an evidence item (0=ALL)", 100, NORMAL_OPTION)
     ("max-displayed-reads", "Maximum number of reads to display in the HTML output for an evidence item (0=ALL)", 100, NORMAL_OPTION)
@@ -831,7 +832,15 @@ namespace breseq
     this->max_displayed_reads = from_string<int32_t>(options["max-displayed-reads"]);
     this->max_flanking_columns = from_string<int32_t>(options["max-flanking-columns"]);
     this->no_evidence_html = options.count("no-evidence-html");
-    this->zip_html = options.count("zip-html");
+    this->zip_html = !options.count("unzipped-html");
+
+    // Backward compatibility: --zip-html is now the default. Accept it, but warn.
+    if (options.count("zip-html")) {
+      cerr << "WARNING: The --zip-html option is DEPRECATED. Bundling HTML evidence into a ZIP" << endl;
+      cerr << "         archive is now enabled by default, so this flag has no effect. To turn" << endl;
+      cerr << "         ZIP bundling OFF, use --unzipped-html instead." << endl;
+      cerr << output_divider << endl;
+    }
     this->no_javascript = options.count("no-javascript");
     this->output_unmapped_reads = options.count("output-unmapped-reads");
     
@@ -861,12 +870,12 @@ namespace breseq
     //////// Check here for any conflicting options
 
     if (this->zip_html && this->no_javascript) {
-      cerr << "WARNING: --zip-html requires JavaScript and has been disabled because --no-javascript was also specified." << endl;
+      cerr << "WARNING: HTML evidence is not being bundled into a ZIP archive because --no-javascript was specified (ZIP bundling requires JavaScript)." << endl;
       this->zip_html = false;
     }
 
     if (this->zip_html && !file_exists((this->program_data_path + "/jszip.min.js").c_str())) {
-      cerr << "WARNING: --zip-html has been disabled because a required data file (jszip.min.js) is missing from this breseq installation's data path: " << this->program_data_path << endl;
+      cerr << "WARNING: HTML evidence is not being bundled into a ZIP archive because a required data file (jszip.min.js) is missing from this breseq installation's data path: " << this->program_data_path << endl;
       this->zip_html = false;
     }
 
@@ -1086,7 +1095,7 @@ namespace breseq
 		this->lenski_format = false;
 		this->no_evidence = false;
     this->no_javascript = false;
-    this->zip_html = false;
+    this->zip_html = true;
     this->no_list_js = false;
     this->add_metadata_to_gd = true;
     
