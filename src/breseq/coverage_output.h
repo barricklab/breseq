@@ -36,7 +36,8 @@ namespace breseq
   {
   protected:
     
-    string    m_output_format; 
+    string    m_output_format;
+    string    m_table_delimiter; // field separator used when writing tables ("\t" for tsv, "," for csv)
     uint32_t  m_downsample;
     bool      m_total_only;
     uint32_t  m_shaded_flanking;
@@ -81,7 +82,7 @@ namespace breseq
   public:
     
     coverage_output( const string& bam, const string& fasta, const int thread_id = 0, const string& intermediate_path = "/tmp" )
-      : pileup_base(bam, fasta), m_output_format("png"), m_downsample(0), m_total_only(false)
+      : pileup_base(bam, fasta), m_output_format("png"), m_table_delimiter("\t"), m_downsample(0), m_total_only(false)
       , m_shaded_flanking(0), m_show_average(false), m_fixed_coverage_scale(0.0)
       , m_thread_id(thread_id)
       , m_intermediate_path(intermediate_path)
@@ -99,8 +100,9 @@ namespace breseq
       if (_output_format.length() > 0)
       {
         m_output_format = to_lower(_output_format);
-        ASSERT( (m_output_format=="png") || (m_output_format=="pdf") || (m_output_format=="svg"),
-                "Unrecognized coverage plot output format '" + m_output_format + "'.\nValid options are: png, pdf, or svg");
+        ASSERT( (m_output_format=="png") || (m_output_format=="pdf") || (m_output_format=="svg")
+                || (m_output_format=="tsv") || (m_output_format=="csv"),
+                "Unrecognized coverage output format '" + m_output_format + "'.\nValid options are: png, pdf, svg, tsv, or csv");
       }
       return m_output_format; 
     }

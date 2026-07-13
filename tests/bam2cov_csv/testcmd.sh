@@ -3,18 +3,18 @@
 SELF=`dirname ${BASH_SOURCE}`
 . ${SELF}/../common.sh
 
-CURRENT_OUTPUTS[0]="${SELF}/output.tab"
-EXPECTED_OUTPUTS[0]="${SELF}/expected.tab"
+CURRENT_OUTPUTS[0]="${SELF}/output.csv"
+EXPECTED_OUTPUTS[0]="${SELF}/expected.csv"
 REFERENCE_ARG="-r ${DATADIR}/bull/bull_1.gbk"
 
 TESTCMD="\
     ${BRESEQ} BAM2COV \
-    -t \
+    --format CSV \
     -a \
     --summary-json-file $SELF/summary.json \
     -f ${DATADIR}/bull/bull_1.fasta \
     -b ${DATADIR}/bull/bull_1.bam \
-    -o ${SELF}/output.tab \
+    -o ${SELF}/output.csv \
     -r rachael:657-2167 \
     "
 

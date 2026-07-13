@@ -291,7 +291,7 @@ int do_bam2cov(int argc, char* argv[]) {
   Settings settings;
   
   // setup and parse configuration options:
-	AnyOption options("Usage: breseq BAM2COV [-b reference.bam -f reference.fasta --format PNG -o output.png] [region1 region2 region3 ...]");
+	AnyOption options("Usage: breseq BAM2COV [-b reference.bam -f reference.fasta --format PNG -o output.png] [region1 region2 region3 ...]\n       breseq BAM2COV --format TSV [-b reference.bam -f reference.fasta -o output.tsv] [region1 region2 region3 ...]");
   options.addUsage("");
   options.addUsage("Create a coverage plot(s) or table(s). These will be for a certain region or regions, if provided. If not, defaults to creating coverage plots for each reference sequence.");
   options.addUsage("");
@@ -305,8 +305,8 @@ int do_bam2cov(int argc, char* argv[]) {
   options("output,o", "Output path. If there is just one region, the name of the output file (DEFAULT=region1.*). If there are multiple regions or no region is provided, this argument must be a directory path, and all output files will be output here with names region1.*, region2.*, ... (DEFAULT=.)");
   options("prefix,x", "Output prefix. If there are multiple regions or no region is provided, this will be used as a prefix in front of the automatically generated names.", "");
   options("region,r", "Regions to create alignments for. Must be provided as sequence regions in the format ACCESSION:START-END, where ACCESSION is a valid identifier for one of the sequences in the FASTA file, and START and END are 1-indexed coordinates of the beginning and end positions. Any read overlapping these positions will be shown. A separate output file is created for each region. Regions may be provided at the end of the command line as unnamed arguments. If no regions are provided, then an output file will be created for each sequence in the FASTA file.");
-  options("format", "Format of output plot(s): PNG, PDF, or SVG", "PNG");
-  options("table,t", "Create tab-delimited file of coverage instead of a plot", TAKES_NO_ARGUMENT);
+  options("format", "Format of output: PNG, PDF, or SVG for a coverage plot; TSV (tab-separated) or CSV (comma-separated) for a coverage table", "PNG");
+  options("table,t", "DEPRECATED: use --format TSV instead. Setting this creates a tab-delimited (TSV) coverage table.", TAKES_NO_ARGUMENT, DEPRECATED_OPTION);
   options.addUsage("", NORMAL_OPTION);
   options.addUsage("Advanced Output Options", NORMAL_OPTION);
   options("total-only,1", "Only plot/tabulate the total coverage at a position. That is, do not not output the coverage on each genomic strand", TAKES_NO_ARGUMENT, NORMAL_OPTION);
@@ -391,22 +391,36 @@ int do_bam2cov(int argc, char* argv[]) {
   }
   
   cerr << "COMMAND: BAM2COV" << endl;
-  
+
+  // Resolve the output format. TSV and CSV produce coverage tables; PNG/PDF/SVG produce plots.
+  string output_format = to_lower(options["format"]);
+  string table_extension = "." + output_format; // .tsv / .csv for the new table formats
+
+  // Backward compatibility: --table (-t) is DEPRECATED. Accept it, but warn and map it to TSV.
   if (options.count("table")) {
+    cerr << "WARNING: The --table (-t) option is DEPRECATED. Use --format TSV instead." << endl;
+    cerr << "         Setting the output format to TSV." << endl;
+    output_format   = "tsv";
+    table_extension = ".tab"; // keep the legacy extension for the deprecated flag
+  }
+
+  bool table_mode = (output_format == "tsv") || (output_format == "csv");
+
+  if (table_mode) {
     cerr << "+++   Tabulating coverage..." << endl;
   } else {
     cerr << "Plotting coverage..." << endl;
   }
-      
+
   // generate coverage table/plot!
   coverage_output co(
                       options["bam"],
                       options["fasta"]
                       );
-  
+
   // Set options
   co.total_only(options.count("total-only"));
-  co.output_format( options["format"] );
+  co.output_format( output_format );
   if (options.count("show-average")) {
     co.show_average( options.count("show-average"), options["summary-json-file"] );
   }
@@ -458,11 +472,16 @@ int do_bam2cov(int argc, char* argv[]) {
     cerr << "  Region : " << region << endl;
 
     string file_name;
+    // When the user supplies a single explicit output file name, it is used verbatim
+    // (they include the extension). Otherwise breseq generates the name and appends the
+    // extension that matches the output format below.
+    bool explicit_output_file = false;
     if (!tiling_mode && (region_list.size() == 1)) {
       if (options["output"].empty()) {
         file_name = *it;
       } else {
         file_name = options["output"];
+        explicit_output_file = true;
       }
     } else {
       if (options["output"].empty()) {
@@ -471,18 +490,20 @@ int do_bam2cov(int argc, char* argv[]) {
         file_name = options["output"] + "/" + options["prefix"] + region;
       }
     }
-    
+
+    // Append the format-derived extension for auto-generated names only.
+    if (!explicit_output_file) {
+      file_name += table_mode ? table_extension : ("." + output_format);
+    }
+
     // Create the output path if necessary
     string path = path_to_dirname(file_name);
     create_path(path);
-    
-    if (options.count("table")) {
-      file_name += ".tab";
-      cerr << "    File : " << file_name << endl;
+
+    cerr << "    File : " << file_name << endl;
+    if (table_mode) {
       co.table(region, file_name, from_string<uint32_t>(options["resolution"]));
     } else {
-      file_name += "." + to_lower(options["format"]);
-      cerr << "    File : " << file_name << endl;
       co.plot(region, file_name , from_string<uint32_t>(options["resolution"]));
     }
   }

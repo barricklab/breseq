@@ -127,10 +127,11 @@ FASTA file of reference sequences (DEFAULT=`data/reference.fasta`).
 
 `-o <path>, --output <path>`
 
-Output path. If there is just one region, the name of the output file
-(DEFAULT=region1.*). If there are multiple regions, this argument must
-be a directory path, and all output files will be output here with names
-`region1.*`, `region2.*`, ... (DEFAULT=.).
+Output path. If there is just one region, this is the name of the output file and is
+used exactly as given (include the desired extension, e.g. `region1.png` or
+`region1.tsv`). If there are multiple regions, this argument must be a directory path,
+and all output files will be written there with automatically generated names
+`region1.<ext>`, `region2.<ext>`, ... where `<ext>` matches the `--format` (DEFAULT=.).
 
 `-r <region>, --region <region>`
 
@@ -142,13 +143,16 @@ Any read overlapping these positions will be shown. A separate output
 file is created for each region. Regions may be provided at the end of
 the command line as unnamed arguments.
 
-`--format <PNG/PDF>`
+`--format <PNG/PDF/SVG/TSV/CSV>`
 
-Format of output plot: PNG or PDF. (DEFAULT=PNG).
+Format of output. `PNG`, `PDF`, or `SVG` create a coverage **plot**. `TSV`
+(tab-separated) or `CSV` (comma-separated) create a coverage **table** instead of a
+plot. `TSV` reproduces the output of the deprecated `--table` option. (DEFAULT=PNG).
 
 `-t, --table`
 
-Create tab-delimited file of coverage instead of a plot.
+**DEPRECATED** — use `--format TSV` instead. If provided, the output format is set to
+`TSV` (a tab-delimited coverage table) and a deprecation warning is printed.
 
 `-1, --total-only`
 

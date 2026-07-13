@@ -208,20 +208,24 @@ void coverage_output::table(const string& region, const string& output_file_name
   m_reference_average_coverage = m_show_average ? m_summary.references.reference[seq_id].coverage_average : 0;
 
   m_output_table.open(output_file_name.c_str());
-  
+
   if (m_read_begin_output_file_name.length() > 0) m_read_begin_output.open(m_read_begin_output_file_name.c_str());
   if (m_gc_output_file_name.length() > 0) m_gc_output.open(m_gc_output_file_name.c_str());
-  
+
+  // Select the field separator based on the output format (comma for csv, tab otherwise)
+  m_table_delimiter = (m_output_format == "csv") ? "," : "\t";
+  const string& d = m_table_delimiter;
+
   if (m_total_only) {
-    m_output_table << "position" << "\t" << "ref_base" << "\t"
-      << "unique_cov" << "\t" << "redundant_cov" << "\t" "total_cov"
+    m_output_table << "position" << d << "ref_base" << d
+      << "unique_cov" << d << "redundant_cov" << d << "total_cov"
       << std::endl;
   } else {
-    m_output_table << "position" << "\t" << "ref_base" << "\t"
-      << "unique_top_cov" << "\t" << "unique_bot_cov" << "\t"
-      << "redundant_top_cov" << "\t" << "redundant_bot_cov" << "\t"
-      << "raw_redundant_top_cov" << "\t" << "raw_redundant_bot_cov" << "\t"
-      << "unique_top_begin" << "\t" << "unique_bot_begin"
+    m_output_table << "position" << d << "ref_base" << d
+      << "unique_top_cov" << d << "unique_bot_cov" << d
+      << "redundant_top_cov" << d << "redundant_bot_cov" << d
+      << "raw_redundant_top_cov" << d << "raw_redundant_bot_cov" << d
+      << "unique_top_begin" << d << "unique_bot_begin"
       << std::endl;
   }
     
@@ -235,13 +239,13 @@ void coverage_output::table(const string& region, const string& output_file_name
   
   // Write the averages over the region and the reference average (if available) as a commented addendum at the end
   if (m_show_average) {
-    m_output_table << "#\treference_unique_average_cov\t" << m_reference_average_coverage << std::endl;
+    m_output_table << "#" << d << "reference_unique_average_cov" << d << m_reference_average_coverage << std::endl;
   }
-   
-  m_output_table << "#\tregion_unique_average_cov\t" << ( m_region_average_unique_coverage / m_region_num_positions) << std::endl;
-  m_output_table << "#\tregion_repeat_average_cov\t" << ( m_region_average_repeat_coverage / m_region_num_positions) << std::endl;
-  m_output_table << "#\tregion_average_cov\t" << ( m_region_average_coverage / m_region_num_positions) << std::endl;
-  m_output_table << "#\tnumber_of_positions\t" << m_region_num_positions << std::endl;
+
+  m_output_table << "#" << d << "region_unique_average_cov" << d << ( m_region_average_unique_coverage / m_region_num_positions) << std::endl;
+  m_output_table << "#" << d << "region_repeat_average_cov" << d << ( m_region_average_repeat_coverage / m_region_num_positions) << std::endl;
+  m_output_table << "#" << d << "region_average_cov" << d << ( m_region_average_coverage / m_region_num_positions) << std::endl;
+  m_output_table << "#" << d << "number_of_positions" << d << m_region_num_positions << std::endl;
   
   m_output_table.close();
 }
@@ -272,13 +276,14 @@ void coverage_output::pileup_callback(const breseq::pileup& p) {
   if (pos==0) return;
   
   // print positions not called because there were no reads
+  const string& d = m_table_delimiter;
   for (uint32_t i=m_last_position_1+1; i<pos; i++) {
     if (m_total_only) {
-      m_output_table << i << "\t" << refseq[i-1] << "\t" << 0 << "\t" << 0 << "\t" << 0
+      m_output_table << i << d << refseq[i-1] << d << 0 << d << 0 << d << 0
       << std::endl;
     } else {
-      m_output_table << i << "\t" << refseq[i-1] << "\t" << 0 << "\t" << 0 << "\t"
-        << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << "\t" << 0 << std::endl;
+      m_output_table << i << d << refseq[i-1] << d << 0 << d << 0 << d
+        << 0 << d << 0 << d << 0 << d << 0 << d << 0 << d << 0 << std::endl;
     }
     
     // Add to the positions, but don't add to the coverage
@@ -402,17 +407,17 @@ void coverage_output::pileup_callback(const breseq::pileup& p) {
   m_region_average_coverage += unique_cov[0] + unique_cov[1] + redundant_cov[0] + redundant_cov[1];
   
   if (m_total_only) {
-    m_output_table << pos << "\t" << ref_base << "\t"
-      << (unique_cov[0] + unique_cov[1]) << "\t"
-      << (redundant_cov[0] + redundant_cov[1]) << "\t"
+    m_output_table << pos << d << ref_base << d
+      << (unique_cov[0] + unique_cov[1]) << d
+      << (redundant_cov[0] + redundant_cov[1]) << d
       << (unique_cov[0] + unique_cov[1] + redundant_cov[0] + redundant_cov[1])
       << std::endl;
   } else {
-    m_output_table << pos << "\t" << ref_base << "\t"
-      << unique_cov[0] << "\t" << unique_cov[1] << "\t"
-      << redundant_cov[0] << "\t" << redundant_cov[1] << "\t"
-      << raw_redundant_cov[0] << "\t" << raw_redundant_cov[1] << "\t"
-      << unique_begin_reads[0] << "\t" << unique_begin_reads[1]
+    m_output_table << pos << d << ref_base << d
+      << unique_cov[0] << d << unique_cov[1] << d
+      << redundant_cov[0] << d << redundant_cov[1] << d
+      << raw_redundant_cov[0] << d << raw_redundant_cov[1] << d
+      << unique_begin_reads[0] << d << unique_begin_reads[1]
       << std::endl;
   }
 }
