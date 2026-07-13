@@ -4542,15 +4542,15 @@ void shift_indels_in_cigar_array(vector<pair<char,uint16_t> >& cigar_pair_array,
     }
 
     // We must be between two 'M' for shifting to work
-    // This catches cases of I and D next to each other in minimap2 output with nanopore reads
-    char before_op = 'M';
-    if (it != cigar_pair_array.begin()) {
-      before_op = (it - 1)->first;
-    }
-    char after_op = 'M';
-    if (it != cigar_pair_array.end()-1 ) {
-      after_op = (it + 1)->first;
-    }
+    // This catches cases of I and D next to each other in minimap2 output with nanopore reads.
+    // A *missing* neighbor (leading/trailing indel) is NOT shiftable: shifting a homopolymer indel
+    // needs a real 'M' on both sides. This matters when callers pass a split CIGAR half whose first/
+    // last op can be a bare indel (write_moved_alignment) -- without this guard the boundary branches
+    // below would prepend/append an 'M' with no compensating decrement and inflate the query length.
+    bool has_before = (it != cigar_pair_array.begin());
+    bool has_after  = (it != cigar_pair_array.end() - 1);
+    char before_op  = has_before ? (it - 1)->first : 'X';   // sentinel: no neighbor -> not 'M'
+    char after_op   = has_after  ? (it + 1)->first : 'X';
     bool valid_for_shift = (before_op == 'M') && (after_op == 'M');
 
     if (op == 'D')
@@ -4576,17 +4576,10 @@ void shift_indels_in_cigar_array(vector<pair<char,uint16_t> >& cigar_pair_array,
             cout << "Shifting D by " << shift_amount << endl;
           }
 
-          if (it != cigar_pair_array.begin())
-            (it - 1)->second += shift_amount;
-          else
-            cigar_pair_array.insert(it, make_pair('M', shift_amount));
-
-          // Don't shift more than the length of the next CIGAR item!!
-
-          if (it != cigar_pair_array.end())
-            (it + 1)->second -= shift_amount;
-          else
-            cigar_pair_array.push_back(make_pair('M', shift_amount));
+          // valid_for_shift guarantees real 'M' neighbors on both sides, so no boundary
+          // insert/append is ever needed (and (it-1)/(it+1) are always valid here).
+          (it - 1)->second += shift_amount;
+          (it + 1)->second -= shift_amount;
         }
 
         ref_seq_index += len + shift_amount;
@@ -4620,15 +4613,10 @@ void shift_indels_in_cigar_array(vector<pair<char,uint16_t> >& cigar_pair_array,
             cout << "Shifting I by " << shift_amount << endl;
           }
 
-          if (it != cigar_pair_array.begin())
-            (it - 1)->second += shift_amount;
-          else
-            cigar_pair_array.insert(it, make_pair('M', shift_amount));
-
-          if (it != cigar_pair_array.end())
-            (it + 1)->second -= shift_amount;
-          else
-            cigar_pair_array.push_back(make_pair('M', shift_amount));
+          // valid_for_shift guarantees real 'M' neighbors on both sides, so no boundary
+          // insert/append is ever needed (and (it-1)/(it+1) are always valid here).
+          (it - 1)->second += shift_amount;
+          (it + 1)->second -= shift_amount;
         }
 
         read_seq_index += len + shift_amount;

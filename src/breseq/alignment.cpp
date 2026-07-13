@@ -1361,7 +1361,13 @@ void bam_file::write_moved_alignment(
 	string l = join(ll, "\t") + "\n";
 	if (verbose) cout << l;
 
-	assert(cigar_length == q_length);
+	// Always-on invariant check. This was previously a plain C assert(), which is compiled out
+	// under NDEBUG in release builds -- so a malformed CIGAR silently reached htslib and aborted
+	// with a cryptic "CIGAR and query sequence are of different length". breseq's ASSERT (always
+	// on) makes any future CIGAR-length bug fail loudly here, at the source, with a useful message.
+	ASSERT(cigar_length == q_length,
+	       "Split-read CIGAR query length (" + to_string(cigar_length) + ") does not match read length ("
+	       + to_string(q_length) + ") for read " + a.read_name() + "\nCIGAR: " + cigar_string);
   {
     kstring_t ks = KS_INITIALIZE;
     kputs(l.c_str(), &ks);
