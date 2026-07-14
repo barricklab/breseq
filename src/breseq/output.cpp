@@ -4616,6 +4616,13 @@ void create_evidence_page(const Settings& settings)
   out << "  }\n";
   out << "  window.addEventListener('load', render);\n";
   out << "  window.addEventListener('hashchange', render);\n";
+  // Re-render when the page is restored from the back/forward cache. On a
+  // bfcache restore neither 'load' nor 'hashchange' fires, and the browser may
+  // drop the iframe's srcdoc content, so navigating back to the same evidence
+  // item (unchanged hash) would otherwise show a blank page until a manual reload.
+  out << "  window.addEventListener('pageshow', function(e) {\n";
+  out << "    if (e.persisted) { lastRenderedHash = null; render(); }\n";
+  out << "  });\n";
   out << "})();\n";
   out << "</script>\n";
   out << "</head>\n";
