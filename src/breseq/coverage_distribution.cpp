@@ -111,13 +111,19 @@ CensoredNegativeBinomialFitResult fit_censored_negative_binomial(const vector<do
   for (uint32_t i = 1; i <= N; i++) m += i * n[i];
   m /= total_positions;
 
+  // Guard the sample variance: with a single covered position total_positions == 1,
+  // so v /= (total_positions - 1) would be 0/0 = NaN (and relative_variance NaN/Inf).
+  // A NaN here is later serialized as JSON null and crashes on read-back, so keep
+  // these finite (0) for degenerate histograms.
   double v = 0;
-  for (uint32_t i = 1; i <= N; i++) v += n[i] * (i - m) * (i - m);
-  v /= (total_positions - 1);
+  if (total_positions > 1) {
+    for (uint32_t i = 1; i <= N; i++) v += n[i] * (i - m) * (i - m);
+    v /= (total_positions - 1);
+  }
 
   result.average = m;
   result.variance = v;
-  result.relative_variance = v / m;
+  result.relative_variance = (m > 0) ? v / m : 0.0;
 
   // 5-point centered moving average, to more reliably find the peak.
   // Matches R's filter(X$n, c(1,1,1,1,1)/5): undefined within 2 positions of

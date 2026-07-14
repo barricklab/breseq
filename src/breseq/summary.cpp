@@ -27,7 +27,20 @@ using nlohmann::json;
 
 namespace breseq
 {
- 
+
+// A non-finite double (NaN/Inf) gets written by json::dump() as the JSON token
+// `null` (the JSON spec has no NaN/Inf), and a resumed or older summary file may
+// also omit a key entirely. Either way, read it as a neutral default instead of
+// letting j.at(...).get<double>() throw std::domain_error ("type must be number,
+// but is null"). NaN coverage-fit values (e.g. variance of a single-position
+// contig) are the concrete case this guards against.
+static double get_double_or_default(const json& j, const char* key, double dflt = 0.0)
+{
+  auto it = j.find(key);
+  if (it == j.end() || it->is_null()) return dflt;
+  return it->get<double>();
+}
+
 // ReadFileSummary
 void to_json(json& j, const ReadFileSummary& s)
 {
@@ -73,8 +86,8 @@ void to_json(json& j, const AlignmentResolutionReferenceSummary& s)
 
 void from_json(const json& j, AlignmentResolutionReferenceSummary& s)
 {
-  s.reads_mapped_to_reference = j.at("reads_mapped_to_reference").get<double>();
-  s.bases_mapped_to_reference = j.at("bases_mapped_to_reference").get<double>();
+  s.reads_mapped_to_reference = get_double_or_default(j, "reads_mapped_to_reference");
+  s.bases_mapped_to_reference = get_double_or_default(j, "bases_mapped_to_reference");
 }
   
 // AlignmentResolutionSummary
@@ -129,16 +142,16 @@ void to_json(json& j, const CoverageSummary& s)
 
 void from_json(const json& j, CoverageSummary& s)
 {
-  s.deletion_coverage_propagation_cutoff = j.at("deletion_coverage_propagation_cutoff").get<double>();
-  s.deletion_coverage_seed_cutoff = j.at("deletion_coverage_seed_cutoff").get<double>();
-  s.nbinom_size_parameter = j.at("nbinom_size_parameter").get<double>();
-  s.nbinom_mean_parameter = j.at("nbinom_mean_parameter").get<double>();
-  s.nbinom_prob_parameter = j.at("nbinom_prob_parameter").get<double>();
-  s.nbinom_variance = j.at("nbinom_variance").get<double>();
-  s.nbinom_relative_variance = j.at("nbinom_relative_variance").get<double>();
-  s.average = j.at("average").get<double>();
-  s.variance = j.at("variance").get<double>();
-  s.relative_variance = j.at("relative_variance").get<double>();
+  s.deletion_coverage_propagation_cutoff = get_double_or_default(j, "deletion_coverage_propagation_cutoff");
+  s.deletion_coverage_seed_cutoff = get_double_or_default(j, "deletion_coverage_seed_cutoff");
+  s.nbinom_size_parameter = get_double_or_default(j, "nbinom_size_parameter");
+  s.nbinom_mean_parameter = get_double_or_default(j, "nbinom_mean_parameter");
+  s.nbinom_prob_parameter = get_double_or_default(j, "nbinom_prob_parameter");
+  s.nbinom_variance = get_double_or_default(j, "nbinom_variance");
+  s.nbinom_relative_variance = get_double_or_default(j, "nbinom_relative_variance");
+  s.average = get_double_or_default(j, "average");
+  s.variance = get_double_or_default(j, "variance");
+  s.relative_variance = get_double_or_default(j, "relative_variance");
 }
   
 // AnalyzeFastqSummary
@@ -169,7 +182,7 @@ void from_json(const json& j, AnalyzeFastqSummary& s)
 {
   s.read_length_min = j.at("read_length_min").get<uint32_t>();
   s.read_length_max = j.at("read_length_max").get<uint32_t>();
-  s.read_length_avg = j.at("read_length_avg").get<double>();
+  s.read_length_avg = get_double_or_default(j, "read_length_avg");
   s.num_original_reads = j.at("num_original_reads").get<uint64_t>();
   s.num_filtered_too_short_reads = j.at("num_filtered_too_short_reads").get<uint64_t>();
   s.num_filtered_same_base_reads = j.at("num_filtered_same_base_reads").get<uint64_t>();
@@ -253,7 +266,7 @@ void to_json(json& j, const SequenceConversionSummary& s)
 
 void from_json(const json& j, SequenceConversionSummary& s)
 {
-  s.read_length_avg = j.at("read_length_avg").get<float>();
+  s.read_length_avg = static_cast<float>(get_double_or_default(j, "read_length_avg"));
   s.max_qual = j.at("max_qual").get<uint32_t>();
   s.num_reads = j.at("num_reads").get<uint64_t>();
   s.num_original_reads = j.at("num_original_reads").get<uint64_t>();
@@ -275,7 +288,7 @@ void to_json(json& j, const ErrorCountSummary& s)
 
 void from_json(const json& j, ErrorCountSummary& s)
 {
-  s.no_pos_hash_per_position_pr = j.at("no_pos_hash_per_position_pr").get<double>();
+  s.no_pos_hash_per_position_pr = get_double_or_default(j, "no_pos_hash_per_position_pr");
 }
   
 void to_json(json& j, const CoverageSummaries& s)
@@ -321,9 +334,9 @@ void to_json(json& j, const PairedMappingDistanceDistributionSummary& s)
 
 void from_json(const json& j, PairedMappingDistanceDistributionSummary& s)
 {
-  s.median = j.at("median").get<double>();
-  s.mad = j.at("mad").get<double>();
-  s.distance_cutoff = j.at("distance_cutoff").get<double>();
+  s.median = get_double_or_default(j, "median");
+  s.mad = get_double_or_default(j, "mad");
+  s.distance_cutoff = get_double_or_default(j, "distance_cutoff");
   s.majority_orientation = j.at("majority_orientation").get<string>();
   s.mapped_pairs = j.value("mapped_pairs", 0.0);
   s.concordant_pairs = j.value("concordant_pairs", 0.0);
@@ -358,7 +371,7 @@ void from_json(const json& j, SoftClippingSummary& s)
 {
   s.total_spanning_read_bases = j.at("total_spanning_read_bases").get<uint64_t>();
   s.total_clipped_read_ends = j.at("total_clipped_read_ends").get<uint64_t>();
-  s.soft_clipping_rate = j.at("soft_clipping_rate").get<double>();
+  s.soft_clipping_rate = get_double_or_default(j, "soft_clipping_rate");
 }
 
 void to_json(json& j, const Summary& s)
@@ -642,7 +655,7 @@ void from_json(const json& j, PublicReadFileSummary& s)
 {
   s.read_length_min = j.at("read_length_min").get<uint32_t>();
   s.read_length_max = j.at("read_length_max").get<uint32_t>();
-  s.read_length_avg = j.at("read_length_avg").get<double>();
+  s.read_length_avg = get_double_or_default(j, "read_length_avg");
   s.num_original_reads = j.at("num_original_reads").get<uint64_t>();
   s.num_filtered_too_short_reads = j.at("num_filtered_too_short_reads").get<uint64_t>();
   s.num_filtered_same_base_reads = j.at("num_filtered_same_base_reads").get<uint64_t>();
@@ -659,8 +672,8 @@ void from_json(const json& j, PublicReadFileSummary& s)
 
   s.num_aligned_reads = j.at("num_aligned_reads").get<uint64_t>();
   s.num_aligned_bases = j.at("num_aligned_bases").get<uint64_t>();
-  s.fraction_aligned_reads = j.at("fraction_aligned_reads").get<double>();
-  s.fraction_aligned_bases = j.at("fraction_aligned_bases").get<double>();
+  s.fraction_aligned_reads = get_double_or_default(j, "fraction_aligned_reads");
+  s.fraction_aligned_bases = get_double_or_default(j, "fraction_aligned_bases");
 }
   
 void to_json(json& j, const PublicReadFileSummaries& s)
@@ -699,8 +712,8 @@ void from_json(const json& j, PublicReadSummary& s)
   s.total_bases = j.at("total_bases").get<uint64_t>();
   s.total_aligned_reads = j.at("total_aligned_reads").get<uint64_t>();
   s.total_aligned_bases = j.at("total_aligned_bases").get<uint64_t>();
-  s.total_fraction_aligned_reads = j.at("total_fraction_aligned_reads").get<double>();
-  s.total_fraction_aligned_bases = j.at("total_fraction_aligned_bases").get<double>();
+  s.total_fraction_aligned_reads = get_double_or_default(j, "total_fraction_aligned_reads");
+  s.total_fraction_aligned_bases = get_double_or_default(j, "total_fraction_aligned_bases");
   s.read_file = j.at("read_file").get<PublicReadFileSummaries>();
 }
   
@@ -739,19 +752,19 @@ void from_json(const json& j, PublicReferenceSummary& s)
   s.num_genes = j.at("num_genes").get<uint64_t>();
   s.num_repeats = j.at("num_repeats").get<uint64_t>();
   
-  s.num_reads_mapped_to_reference = j.at("num_reads_mapped_to_reference").get<double>();
-  s.num_bases_mapped_to_reference = j.at("num_bases_mapped_to_reference").get<double>();
+  s.num_reads_mapped_to_reference = get_double_or_default(j, "num_reads_mapped_to_reference");
+  s.num_bases_mapped_to_reference = get_double_or_default(j, "num_bases_mapped_to_reference");
   
-  s.coverage_deletion_coverage_propagation_cutoff = j.at("coverage_deletion_coverage_propagation_cutoff").get<double>();
-  s.coverage_deletion_coverage_seed_cutoff = j.at("coverage_deletion_coverage_seed_cutoff").get<double>();
-  s.coverage_nbinom_size_parameter = j.at("coverage_nbinom_size_parameter").get<double>();
-  s.coverage_nbinom_mean_parameter = j.at("coverage_nbinom_mean_parameter").get<double>();
-  s.coverage_nbinom_prob_parameter = j.at("coverage_nbinom_prob_parameter").get<double>();
-  s.coverage_nbinom_variance = j.at("coverage_nbinom_variance").get<double>();
-  s.coverage_nbinom_relative_variance = j.at("coverage_nbinom_relative_variance").get<double>();
-  s.coverage_average = j.at("coverage_average").get<double>();
-  s.coverage_variance = j.at("coverage_variance").get<double>();
-  s.coverage_relative_variance = j.at("coverage_relative_variance").get<double>();
+  s.coverage_deletion_coverage_propagation_cutoff = get_double_or_default(j, "coverage_deletion_coverage_propagation_cutoff");
+  s.coverage_deletion_coverage_seed_cutoff = get_double_or_default(j, "coverage_deletion_coverage_seed_cutoff");
+  s.coverage_nbinom_size_parameter = get_double_or_default(j, "coverage_nbinom_size_parameter");
+  s.coverage_nbinom_mean_parameter = get_double_or_default(j, "coverage_nbinom_mean_parameter");
+  s.coverage_nbinom_prob_parameter = get_double_or_default(j, "coverage_nbinom_prob_parameter");
+  s.coverage_nbinom_variance = get_double_or_default(j, "coverage_nbinom_variance");
+  s.coverage_nbinom_relative_variance = get_double_or_default(j, "coverage_nbinom_relative_variance");
+  s.coverage_average = get_double_or_default(j, "coverage_average");
+  s.coverage_variance = get_double_or_default(j, "coverage_variance");
+  s.coverage_relative_variance = get_double_or_default(j, "coverage_relative_variance");
   
   
   s.coverage_group = j.at("coverage_group").get<int32_t>();
