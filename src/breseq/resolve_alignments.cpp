@@ -397,6 +397,10 @@ void resolve_alignments(
 	list<JunctionTestInfo> junction_test_info_list; // scoring information about junctions
 	list<JunctionTestInfo> passed_junction_test_info_list;
 	list<JunctionTestInfo> rejected_junction_test_info_list;
+	// Failing (marginal) junctions are resolved in a second pass, after every passing
+	// junction has claimed its reads, so that failing-junction read assignment cannot
+	// affect the passing junctions.
+	list<JunctionTestInfo> deferred_failed_junction_test_info_list;
   
   ////
   // Score all of the matches.
@@ -491,7 +495,68 @@ void resolve_alignments(
   }
   
   PosHashProbabilityTable pos_hash_p_value_calculator(summary, settings);
-  
+
+  // Runs the pass/fail guard battery on a (freshly scored) junction: appends any
+  // reject reasons to junction_test_info.reject_reasons, sets its neg_log10_pos_hash_p_value,
+  // and returns whether the junction should be recorded in the genome diff at all.
+  // Used for the passing junctions in the first pass and again for the failing
+  // (marginal) junctions in the second pass, so both are judged by identical criteria --
+  // there, on the basis of the reads each junction keeps after deduplication.
+  auto test_junction_guards = [&](JunctionTestInfo& junction_test_info, ResolveJunctionInfo& junction_info) -> bool {
+
+    bool record = true;
+
+    ///////////////////////////////////////////////////////////////
+    // Tests related to the pos hash score (coverage evenness)
+
+    // One can actually have a passing E-value score with a pos_hash score of zero under some circumstances...
+    if (junction_test_info.pos_hash_score == 0) {
+      junction_test_info.reject_reasons.push_back("COVERAGE_EVENNESS_SKEW");
+    }
+
+    // Check that it met the minimum pos hash score criterion
+    if (junction_test_info.pos_hash_score < settings.minimum_alignment_resolution_pos_hash_score) {
+      junction_test_info.reject_reasons.push_back("COVERAGE_EVENNESS_SKEW");
+    }
+
+    // We don't even record junctions in the genome diff if they don't meet the minimum_alignment_resolution_pos_hash_score
+    // criterion, or if they just have no matches, unless they are user-defined junction
+    record = (junction_test_info.reject_reasons.size() == 0) || junction_info.user_defined;
+
+
+    // If both are on a junction-only sequence then don't count it -- EVEN IF USER DEFINED
+    // This is purposeful after re-accepting user_defined junctions
+    if ( settings.junction_only_seq_id_set().count(junction_info.sides[0].seq_id) && settings.junction_only_seq_id_set().count(junction_info.sides[1].seq_id) ) {
+      junction_test_info.reject_reasons.push_back("BETWEEN_TWO_JUNCTION_ONLY_SEQUENCES");
+    }
+
+    // If no two reads have different start and end values from each other, regardless of strand, then fail (Chuck it!)
+    if (!junction_test_info.has_reads_with_both_different_start_and_end) {
+      junction_test_info.reject_reasons.push_back("COVERAGE_EVENNESS_SKEW");
+    }
+
+      junction_test_info.neg_log10_pos_hash_p_value = -1;
+
+    // In targeted mode it can be rejected for the reasons above, but we don't have a coverage distribution so we can't reject it on that basis
+    // Zero junction_pos_hash_neg_log10_p_value_cutoff means calculating this p-value is off
+    if (!settings.targeted_sequencing && settings.junction_pos_hash_neg_log10_p_value_cutoff) {
+
+      double neg_log10_p_value_1 = pos_hash_p_value_calculator.probability(junction_info.sides[0].seq_id, junction_test_info.pos_hash_score, junction_test_info.max_pos_hash_score);
+      double neg_log10_p_value_2 = pos_hash_p_value_calculator.probability(junction_info.sides[1].seq_id, junction_test_info.pos_hash_score, junction_test_info.max_pos_hash_score);
+
+      // Take the *least* significantly below pos_hash cutoff
+      // Why this way? Consider an element moving from a plasmid to a genome
+      // we don't want to penalize it with requiring coverage typical of the plasmid.
+      junction_test_info.neg_log10_pos_hash_p_value = min(neg_log10_p_value_1, neg_log10_p_value_2);
+
+      if (junction_test_info.neg_log10_pos_hash_p_value > settings.junction_pos_hash_neg_log10_p_value_cutoff) {
+        junction_test_info.reject_reasons.push_back("COVERAGE_EVENNESS_SKEW");
+      }
+    }
+
+    return record;
+  };
+
   while(!junction_test_info_list.empty() ) {
     
     JunctionTestInfo& junction_test_info = junction_test_info_list.back();
@@ -513,60 +578,12 @@ void resolve_alignments(
     
     
     ResolveJunctionInfo junction_info(junction_id);
-    
-    // Test the best-scoring junction.
-    bool failed = false;  
-    bool record = true;
-    
-    ///////////////////////////////////////////////////////////////
-    // Tests related to the pos hash score (coverage evenness)
-    
-    // One can actually have a passing E-value score with a pos_hash score of zero under some circumstances...
-    if (junction_test_info.pos_hash_score == 0) {
-      junction_test_info.reject_reasons.push_back("COVERAGE_EVENNESS_SKEW");
-    }
-    
-    // Check that it met the minimum pos hash score criterion
-    if (junction_test_info.pos_hash_score < settings.minimum_alignment_resolution_pos_hash_score) {
-      junction_test_info.reject_reasons.push_back("COVERAGE_EVENNESS_SKEW");
-    }
-    
-    // We don't even record junctions in the genome diff if they don't meet the minimum_alignment_resolution_pos_hash_score
-    // criterion, or if they just have no matches, unless they are user-defined junction
-    record = (junction_test_info.reject_reasons.size() == 0) || junction_info.user_defined;
-    
-    
-    // If both are on a junction-only sequence then don't count it -- EVEN IF USER DEFINED
-    // This is purposeful after re-accepting user_defined junctions
-    if ( settings.junction_only_seq_id_set().count(junction_info.sides[0].seq_id) && settings.junction_only_seq_id_set().count(junction_info.sides[1].seq_id) ) {
-      junction_test_info.reject_reasons.push_back("BETWEEN_TWO_JUNCTION_ONLY_SEQUENCES");
-    }
-    
-    // If no two reads have different start and end values from each other, regardless of strand, then fail (Chuck it!)
-    if (!junction_test_info.has_reads_with_both_different_start_and_end) {
-      junction_test_info.reject_reasons.push_back("COVERAGE_EVENNESS_SKEW");
-    }
-    
-      junction_test_info.neg_log10_pos_hash_p_value = -1;
-    
-    // In targeted mode it can be rejected for the reasons above, but we don't have a coverage distribution so we can't reject it on that basis
-    // Zero junction_pos_hash_neg_log10_p_value_cutoff means calculating this p-value is off
-    if (!settings.targeted_sequencing && settings.junction_pos_hash_neg_log10_p_value_cutoff) {
-      
-      double neg_log10_p_value_1 = pos_hash_p_value_calculator.probability(junction_info.sides[0].seq_id, junction_test_info.pos_hash_score, junction_test_info.max_pos_hash_score);
-      double neg_log10_p_value_2 = pos_hash_p_value_calculator.probability(junction_info.sides[1].seq_id, junction_test_info.pos_hash_score, junction_test_info.max_pos_hash_score);
-      
-      // Take the *least* significantly below pos_hash cutoff
-      // Why this way? Consider an element moving from a plasmid to a genome
-      // we don't want to penalize it with requiring coverage typical of the plasmid.
-      junction_test_info.neg_log10_pos_hash_p_value = min(neg_log10_p_value_1, neg_log10_p_value_2);
-      
-      if (junction_test_info.neg_log10_pos_hash_p_value > settings.junction_pos_hash_neg_log10_p_value_cutoff) {
-        junction_test_info.reject_reasons.push_back("COVERAGE_EVENNESS_SKEW");
-      }
-    }
-        
-    if (verbose) 
+
+    // Test the best-scoring junction. (record is recomputed for deferred failing
+    // junctions in the second pass, so it is not stored here.)
+    test_junction_guards(junction_test_info, junction_info);
+
+    if (verbose)
     {
       cout << "Testing Junction: " << junction_id << endl;
       cout << "  " << (junction_test_info.reject_reasons.size() ? "FAILED" : "SUCCESS") << endl;
@@ -579,7 +596,84 @@ void resolve_alignments(
       cout << "  Number of total_non_overlap reads: " << junction_test_info.total_non_overlap_reads  << endl;
     }
     
-    // Resolve junction no matter what. DO NOT break out of this loop before getting here.
+    if (!junction_test_info.reject_reasons.size()) {
+      // PASSED: resolve now. This claims the junction's reads and removes them from all
+      // inferior candidates (including failing ones), exactly as before.
+      resolve_junction(
+                       settings,
+                       summary,
+                       ref_seq_info,
+                       junction_ref_seq_info,
+                       trims_list,
+                       junction_trims_list,
+                       junction_test_info.junction_id,
+                       unique_junction_match_map,
+                       repeat_junction_match_map,
+                       resolved_reference_tam,
+                       resolved_junction_tam,
+                       false, // passed
+                       junction_test_info.total_non_overlap_reads > 0
+                       );
+      // record is always true here (no reject reasons)
+      passed_junction_test_info_list.push_back(junction_test_info);
+    }
+    else {
+      // FAILED: defer resolution to the second pass. Deferring leaves this junction's
+      // reads in the maps (just as the old failing branch did, which never purged), so
+      // every passing junction still sees the identical map state -- passing results are
+      // unchanged.
+      deferred_failed_junction_test_info_list.push_back(junction_test_info);
+    }
+
+    junction_test_info_list.pop_back();
+
+    // @JEB 2019-06-12 List is now sorted after each one accepted to ensure best results
+    junction_test_info_list.sort();
+  }
+
+  ///
+  // Resolve failing (marginal) junctions, best first.
+  //
+  // Now that every passing junction has claimed its reads, resolve the failing junctions
+  // the same winner-take-all way: the best remaining marginal junction claims each shared
+  // read and it is removed from inferior marginal candidates. Because this happens only
+  // after the passing pass, it cannot change any passing-junction assignment.
+  ///
+  deferred_failed_junction_test_info_list.sort();
+
+  while (!deferred_failed_junction_test_info_list.empty()) {
+
+    JunctionTestInfo& junction_test_info = deferred_failed_junction_test_info_list.back();
+    const string& junction_id = junction_test_info.junction_id;
+
+    // Re-score against the current maps so pos_hash_score, read counts, and coverage
+    // reflect only the reads this marginal junction actually keeps (after passing junctions
+    // and better marginals took theirs). score_junction() overwrites the whole struct,
+    // including reject_reasons.
+    score_junction(
+                   settings,
+                   summary,
+                   junction_id,
+                   unique_junction_match_map,
+                   repeat_junction_match_map,
+                   resolved_junction_tam,
+                   junction_test_info,
+                   junction_info_list,
+                   ref_seq_info,
+                   junction_ref_seq_info
+                   );
+
+    // Re-run the pass/fail guards on the deduplicated scores. A marginal junction's support
+    // can only shrink here (reads only leave), so it can never turn into a passing junction;
+    // but one whose deduplicated pos_hash_score now falls below the recording threshold is
+    // dropped entirely (record == false) instead of being shown as a marginal supported by
+    // reads that really belong to a better junction.
+    ResolveJunctionInfo junction_info(junction_id);
+    bool record = test_junction_guards(junction_test_info, junction_info);
+
+    // Resolve with the winner-take-all failing behavior: claim reads for this junction and
+    // remove them from inferior marginal candidates. Done even when the junction is not
+    // recorded, so its reads are still deduplicated away from the other marginals.
     resolve_junction(
                      settings,
                      summary,
@@ -592,24 +686,21 @@ void resolve_alignments(
                      repeat_junction_match_map,
                      resolved_reference_tam,
                      resolved_junction_tam,
-                     junction_test_info.reject_reasons.size(),
+                     junction_test_info.reject_reasons.size(), // failed
                      junction_test_info.total_non_overlap_reads > 0
-                     ); 
-    
-    // However, we record only some junctions...
+                     );
+
     if (record) {
-      if (!junction_test_info.reject_reasons.size())
-        passed_junction_test_info_list.push_back(junction_test_info);
-      else
-        rejected_junction_test_info_list.push_back(junction_test_info);
+      rejected_junction_test_info_list.push_back(junction_test_info);
     }
-    
-    junction_test_info_list.pop_back();
-    
-    // @JEB 2019-06-12 List is now sorted after each one accepted to ensure best results
-    junction_test_info_list.sort();
+
+    deferred_failed_junction_test_info_list.pop_back();
+
+    // Re-sort so the next best-remaining marginal (whose score may have dropped after this
+    // one claimed shared reads) is processed next.
+    deferred_failed_junction_test_info_list.sort();
   }
-    
+
   PosHashScoreDistribution accepted_pos_hash_score_distribution;
   for(list<JunctionTestInfo>::iterator it = passed_junction_test_info_list.begin(); it != passed_junction_test_info_list.end(); it++)
   {
@@ -2118,36 +2209,51 @@ void resolve_junction(
 			}
       
 			// Failure for this candidate junction...
-			// Remove just the degenerate hits to this candidate junction
-			// Once all have failed, then we need to add the reference alignments (if any)!
+			// This is the best remaining (failing/marginal) junction for this read, so it
+			// claims the read exclusively -- exactly mirroring the passing branch above.
+			// The read is purged from every inferior candidate so that different marginal
+			// junctions are not supported by the same reads. Because failing junctions are
+			// resolved only after all passing junctions have already claimed their reads,
+			// this never steals a read from a passing junction.
 			else
 			{
-				repeat_match.degenerate_count--;
-        
-				if (verbose) cout << "New Degenerate match count: " << repeat_match.degenerate_count << endl;
-        
-				// This degenerate match missed on all opportunities,
-				// we should add it to the reference sequence
-				if (repeat_match.degenerate_count == 0)
-				{
-					alignment_list& this_reference_al = repeat_match.reference_alignments;
-					_write_reference_matches(settings, summary, ref_seq_info, trims_list, this_reference_al, resolved_reference_tam, fastq_file_index);
-				}
-        
+        // Purge all references to this read from the degenerate match hash
+        // so that it cannot be counted or written for any inferior junction,
+        // and collapse to the single alignment for THIS junction.
         counted_ptr<bam_alignment> matched_alignment(NULL);
-        for (alignment_list::iterator it2=repeat_match.junction_alignments.begin(); it2 !=repeat_match.junction_alignments.end(); it2++)
+        for (alignment_list::iterator it2=repeat_match.junction_alignments.begin(); it2 !=repeat_match.junction_alignments.end(); )
 				{
-					counted_ptr<bam_alignment>& candidate_a = *it2; //this is the one for the current candidate junction
-					if (candidate_a->reference_target_id() == junction_tid)
+          // we make a copy and then increment, in case the current iterator value will be erased
+					counted_ptr<bam_alignment> a = *it2; it2++;
+          string test_junction_seq_id = resolved_junction_tam.target_name(*a);
+
+          //this is the one for the current candidate junction
+          if (a->reference_target_id() == junction_tid)
           {
-						matched_alignment = candidate_a;
-            break;
+            matched_alignment = a;
+          }
+          else
+          {
+            repeat_junction_match_map[test_junction_seq_id].erase(a->read_name());
+          }
+
+          if (repeat_junction_match_map[test_junction_seq_id].size() == 0)
+          {
+            repeat_junction_match_map.erase(test_junction_seq_id);
           }
         }
-        
-        // Write alignment to SAM file for candidate junctions regardless of success...
-        // Note that successful ones get written below, because they were pushed to the other list
+
         assert(matched_alignment.get() != NULL);
+        repeat_match.junction_alignments.clear();
+        repeat_match.junction_alignments.push_back(matched_alignment);
+
+        // This read's best candidate junction is a rejected one, so its true home is the
+        // reference genome. (Any read that also matched a passing junction would already
+        // have been claimed by it in the earlier pass and removed from here, so a read
+        // reaching this point failed on every real junction.) Write it back once.
+        _write_reference_matches(settings, summary, ref_seq_info, trims_list, repeat_match.reference_alignments, resolved_reference_tam, fastq_file_index);
+
+        // Write the read's alignment to the (marginal) junction SAM file once.
         if (has_non_overlap_alignment) {
           alignment_list alignments;
           alignments.read_base_quality_char_string = repeat_match.junction_alignments.read_base_quality_char_string;

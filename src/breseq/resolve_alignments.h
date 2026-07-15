@@ -117,7 +117,7 @@ namespace breseq {
     uint32_t side_1_continuation;
     uint32_t side_2_continuation;
     vector<string> reject_reasons;
-    
+
     bool operator <(const JunctionTestInfo& _in) const
     {
       // sort by pos_hash_score, unique_matches_size, repeat_matches_size
