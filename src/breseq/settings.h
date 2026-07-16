@@ -398,8 +398,8 @@ namespace breseq
 
     //! Settings: Soft-Clipping Evidence
     bool     predict_soft_clipping;                       // Default = false     COMMAND-LINE OPTION
-    uint32_t soft_clipping_minimum_bases;                 // Default = 8         COMMAND-LINE OPTION
-    double   soft_clipping_log10_e_value_cutoff;          // Default = 2.0       COMMAND-LINE OPTION
+    uint32_t soft_clipping_minimum_bases;                 // Default = 12        COMMAND-LINE OPTION
+    double   soft_clipping_log10_e_value_cutoff;          // Default = 3.0       COMMAND-LINE OPTION
     
     //! These are mutually exclusive settings (polymorphism prediction overrides mixed_base_prediction)
     bool polymorphism_prediction;                         // Default = false COMMAND-LINE OPTION

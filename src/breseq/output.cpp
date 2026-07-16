@@ -2469,6 +2469,7 @@ string html_soft_clipping_table_string(diff_entry_list_t& list_ref, bool show_de
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
   size_t total_cols = link ? 11 : 10;
 
+  ss << "<thead>" << endl;
   if (title != "") {
     ss << tr(th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"soft_clipping_header_row\"", title)) << endl;
   }
@@ -2486,6 +2487,8 @@ string html_soft_clipping_table_string(diff_entry_list_t& list_ref, bool show_de
   ss << th("gene") << endl;
   ss << th("width=\"100%\"", "product") << endl;
   ss << "</tr>" << endl;
+  ss << "</thead>" << endl;
+  ss << endl;
   ss << "<tbody class=\"list\">" << endl;
 
   for (diff_entry_list_t::iterator itr = list_ref.begin(); itr != list_ref.end(); itr++) {
@@ -4237,7 +4240,8 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, const cGeno
                  (PREFIX, "SC")
                  (SEQ_ID, (*item)[SEQ_ID])
                  (START, to_string(pos))
-                 (END, to_string(pos)));
+                 (END, to_string(pos))
+                 ("sc_minimum_clipped_bases", to_string(settings.soft_clipping_minimum_bases)));
   }
 
   // now create evidence files

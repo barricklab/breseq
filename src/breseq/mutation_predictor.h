@@ -61,6 +61,9 @@ namespace breseq {
     void ignore_evidence_near_contig_ends(Settings& settings, Summary& summary, cGenomeDiff& gd);
     void remove_mutations_near_contig_ends(Settings& settings, Summary& summary, cGenomeDiff& gd);
 
+    // Remove SC evidence whose clip window is already explained by a predicted mutation
+    void remove_soft_clipping_near_mutations(Settings& settings, cGenomeDiff& gd);
+
     // Cleans up indel positions by shifting them and adds addition fiels for simple sequence repeats 
     void normalize_and_annotate_tandem_repeat_mutations(Settings& settings, Summary& summary, cGenomeDiff& gd);
     

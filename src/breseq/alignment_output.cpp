@@ -59,6 +59,10 @@ alignment_output::Alignment_Output_Pileup::Alignment_Output_Pileup (
         : pileup_base ( bam, fasta )
         , _show_ambiguously_mapped(show_ambiguously_mapped)
         , _minimum_mapping_quality(minimum_mapping_quality)
+        , m_is_soft_clipping ( false )
+        , m_sc_position ( 0 )
+        , m_sc_direction ( 0 )
+        , m_sc_minimum_clipped_bases ( 0 )
         , unique_start ( 0 )
         , unique_end ( 0 )
 {
@@ -300,7 +304,32 @@ void alignment_output::Alignment_Output_Pileup::fetch_callback ( const alignment
   aligned_read.qual_sequence = a.read_base_quality_bam_string();
   aligned_read.is_redundant = a.is_redundant();
   aligned_read.read_name_style =  ambiguously_mapped ? "AM" : "NC";
-  
+
+  // For an SC (soft-clipping) evidence view, highlight the read name if this read is one of
+  // the reads counted as clipped at the SC position/direction. This recomputes exactly the
+  // eligibility and criterion used by tabulate_soft_clipping_counts() (soft_clipping.cpp):
+  // skip multiply-mapped (X1 > 1) and junction-side (XJ) reads, then require a leading clip
+  // (direction -1) at reference_start_1 or a trailing clip (direction +1) at reference_end_1
+  // of at least m_sc_minimum_clipped_bases bases.
+  if (m_is_soft_clipping) {
+    uint32_t num_equivalent_alignments;
+    bool multiply_mapped = a.aux_get_i("X1", num_equivalent_alignments) && (num_equivalent_alignments > 1);
+    uint32_t junction_side;
+    bool is_junction_side = a.aux_get_i("XJ", junction_side);
+    if (!multiply_mapped && !is_junction_side) {
+      uint32_t read_length = a.cigar_query_length();
+      if (m_sc_direction < 0) {
+        uint32_t query_begin_soft_clipping = a.query_start_1() - 1;
+        if ((query_begin_soft_clipping >= m_sc_minimum_clipped_bases) && (a.reference_start_1() == m_sc_position))
+          aligned_read.read_name_style = "SC";
+      } else {
+        uint32_t query_end_soft_clipping = read_length - a.query_end_1();
+        if ((query_end_soft_clipping >= m_sc_minimum_clipped_bases) && (a.reference_end_1() == m_sc_position))
+          aligned_read.read_name_style = "SC";
+      }
+    }
+  }
+
   aligned_read.mapping_quality = a.mapping_quality();
   
   aligned_read.reference_start = a.reference_start_1();
@@ -374,6 +403,8 @@ void alignment_output::create_alignment ( const string& region, cOutputEvidenceI
   // Check for special output in reference and legend lines for junctions
   m_is_junction = false;
   m_is_junction_junction = false;
+  m_is_soft_clipping = false;
+  m_alignment_output_pileup.m_is_soft_clipping = false;
 
   if (output_evidence_item_ptr != NULL) {
     if ((*output_evidence_item_ptr)[PREFIX] == "JC") {
@@ -382,6 +413,16 @@ void alignment_output::create_alignment ( const string& region, cOutputEvidenceI
     } else if ( ((*output_evidence_item_ptr)[PREFIX] == "JC_SIDE_1")
              || ((*output_evidence_item_ptr)[PREFIX] == "JC_SIDE_2") ) {
        m_is_junction = true;
+    } else if ((*output_evidence_item_ptr)[PREFIX] == "SC") {
+      // Soft-clipping evidence: highlight the names of reads counted as clipped at this
+      // position/direction. The criterion mirrors tabulate_soft_clipping_counts().
+      cDiffEntry& sc_item = *(output_evidence_item_ptr->item);
+      m_is_soft_clipping = true;
+      m_alignment_output_pileup.m_is_soft_clipping = true;
+      m_alignment_output_pileup.m_sc_position   = from_string<uint32_t>(sc_item[POSITION]);
+      m_alignment_output_pileup.m_sc_direction  = from_string<int32_t>(sc_item[STRAND]);
+      m_alignment_output_pileup.m_sc_minimum_clipped_bases =
+          from_string<uint32_t>((*output_evidence_item_ptr)["sc_minimum_clipped_bases"]);
     }
   }
   
@@ -1251,6 +1292,7 @@ string alignment_output::html_header_string()
   header_style_string += ".AP {color: rgb(0,0,0); background-color: rgb(255,229,204)}\n";         // ambiguous overlap (junctions) - but only due to target site duplication
   header_style_string += ".PC {color: rgb(0,0,0); background-color: rgb(224,255,255)}\n";         // paired, concordant (light cyan)
   header_style_string += ".PD {color: rgb(0,0,0); background-color: rgb(255,224,178)}\n";         // paired, discordant (light orange)
+  header_style_string += ".SC {color: rgb(0,0,0); background-color: rgb(255,255,204)}\n";         // read counted as soft-clipped (light yellow)
 
   
   // Colors used by characters in alignments
@@ -1537,10 +1579,14 @@ string alignment_output::html_legend()
   }
   
   if (m_is_junction) {
-    
+
     output += tr(th(ALIGN_LEFT, "Reads not counted as support for junction"));
     output += tr(td("<font class=\"AO\">read_name</font></code> Not counted due to insufficient overlap past the breakpoint."));
     output += tr(td("<font class=\"AP\">read_name</font></code> Not counted due to not crossing MOB target site duplication."));
+  }
+
+  if (m_is_soft_clipping) {
+    output += tr(td("Reads counted as soft-clipped at this position: <code><font class=\"SC\">read_name</font></code>"));
   }
 
   output += end_table();

@@ -2181,16 +2181,93 @@ namespace breseq {
           }
         }
       }
-      
+
       if (advance_it) ++it;
     }
-    
+
+  }
+
+
+  // Remove SC (soft-clipping) evidence that is already explained by nearby
+  // evidence. For an SC entry at POSITION clipped in direction STRAND, look at the
+  // reference "clip window" of soft_clipping_minimum_bases bases immediately in the
+  // clip direction (POSITION+1..POSITION+N for STRAND>0, POSITION-N..POSITION-1 for
+  // STRAND<0). If any predicted mutation OR rejected RA evidence on the same seq_id
+  // overlaps that window, the soft-clipping is redundant and the SC entry is
+  // removed entirely. Rejected RA is included because a variant was detected at
+  // that position but not promoted to a mutation, which still explains the clip.
+  void MutationPredictor::remove_soft_clipping_near_mutations(Settings& settings, cGenomeDiff& gd)
+  {
+    const int32_t N = static_cast<int32_t>(settings.soft_clipping_minimum_bases);
+
+    // Collect the reference spans that can explain a soft-clipping event:
+    // predicted mutations plus rejected RA evidence. Copies of the pointer lists
+    // stay valid while we erase SC entries from the underlying entry list below.
+    struct explaining_span { string seq_id; int32_t start; int32_t end; };
+    vector<explaining_span> spans;
+
+    diff_entry_list_t muts = gd.mutation_list();
+    for (diff_entry_list_t::iterator mit = muts.begin(); mit != muts.end(); mit++) {
+      cDiffEntry& de = **mit;
+      explaining_span span;
+      span.seq_id = de[SEQ_ID];
+      span.start  = de.get_reference_coordinate_start().get_position();
+      span.end    = de.get_reference_coordinate_end().get_position();
+      spans.push_back(span);
+    }
+
+    diff_entry_list_t ra = gd.get_list(make_vector<gd_entry_type>(RA));
+    for (diff_entry_list_t::iterator rit = ra.begin(); rit != ra.end(); rit++) {
+      cDiffEntry& de = **rit;
+      if (!de.is_rejected()) continue;   // only standard "reject" field counts
+      explaining_span span;
+      span.seq_id = de[SEQ_ID];
+      span.start  = de.get_reference_coordinate_start().get_position();
+      span.end    = de.get_reference_coordinate_end().get_position();
+      spans.push_back(span);
+    }
+
+    diff_entry_list_t* mutable_entry_list = gd.get_mutable_list_ptr();
+
+    diff_entry_list_t::iterator it = mutable_entry_list->begin();
+    while (it != mutable_entry_list->end())
+    {
+      cDiffEntry& sc = **it;
+      if (sc._type != SC) { ++it; continue; }
+
+      const string& seq_id = sc[SEQ_ID];
+      int32_t position = n(sc[POSITION]);
+      int32_t strand = n(sc[STRAND]);
+
+      int32_t window_start, window_end;
+      if (strand > 0) {
+        window_start = position + 1;
+        window_end   = position + N;
+      } else {
+        window_start = position - N;
+        window_end   = position - 1;
+      }
+
+      bool explained = false;
+      for (vector<explaining_span>::iterator sp = spans.begin(); sp != spans.end(); sp++) {
+        if (sp->seq_id != seq_id) continue;
+        if (sp->start <= window_end && sp->end >= window_start) {
+          explained = true;
+          break;
+        }
+      }
+
+      if (explained) {
+        it = gd.remove(it);
+      } else {
+        ++it;
+      }
+    }
   }
 
 
 
-  
-  
+
   // Normalizes INS/DEL mutations by shifting them to the highest coordinates possible
   // by repeat units.
   
@@ -2629,6 +2706,12 @@ namespace breseq {
     // Need to remove any mutations that overlap contig ends
     // This catches SUB from JC evidence.
     remove_mutations_near_contig_ends(settings, summary, gd);
+
+    // Remove SC evidence that is redundant because a predicted mutation already
+    // explains the reference bases in the clip direction.
+    if (settings.predict_soft_clipping) {
+      remove_soft_clipping_near_mutations(settings, gd);
+    }
     // 32  189  51 bp→32 bp  57.0%  intergenic (–/+224)  – / ← INEPCCPE_03363  –/tRNA‑Ala(tgc)
 
     

@@ -384,8 +384,8 @@ namespace breseq
     options.addUsage("Soft Clipping (SC) Evidence Options (HIGHLY EXPERIMENTAL)", NORMAL_OPTION);
     options
     ("predict-soft-clipping", "Predict soft clipping (SC) evidence: positions where reads are unexpectedly soft clipped at their ends, which may indicate unannotated structural variation. This evidence type is experimental and disabled by default.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
-    ("soft-clipping-minimum-bases", "Minimum number of soft-clipped bases at a read end to count as a soft-clipping event", 8, NORMAL_OPTION)
-    ("soft-clipping-score-cutoff", "Log10 E-value cutoff for soft-clipping evidence (DEFAULT = 2)", 2.0, NORMAL_OPTION)
+    ("soft-clipping-minimum-bases", "Minimum number of soft-clipped bases at a read end to count as a soft-clipping event", 12, NORMAL_OPTION)
+    ("soft-clipping-score-cutoff", "Log10 E-value cutoff for soft-clipping evidence (DEFAULT = 3)", 3.0, NORMAL_OPTION)
     ;
     
     options.addUsage("", NORMAL_OPTION);
@@ -1057,8 +1057,8 @@ namespace breseq
     this->deletion_coverage_seed_cutoff = 0;
     this->call_mutations_overlapping_missing_coverage = false;
     this->predict_soft_clipping = false;
-    this->soft_clipping_minimum_bases = 8;
-    this->soft_clipping_log10_e_value_cutoff = 2.0;
+    this->soft_clipping_minimum_bases = 12;
+    this->soft_clipping_log10_e_value_cutoff = 3.0;
       
     this->polymorphism_prediction = false;
     this->mixed_base_prediction = true;

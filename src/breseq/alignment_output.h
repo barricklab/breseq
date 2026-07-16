@@ -268,7 +268,14 @@ namespace breseq
       
       bool _show_ambiguously_mapped;
       uint32_t _minimum_mapping_quality;
-      
+
+      // Soft-clipping (SC) evidence: highlight the names of reads counted as clipped.
+      // Set only for an SC evidence view (see create_alignment); false otherwise.
+      bool m_is_soft_clipping;
+      uint32_t m_sc_position;             // SC event reference position (1-based)
+      int32_t m_sc_direction;             // -1 = leading clip, +1 = trailing clip
+      uint32_t m_sc_minimum_clipped_bases;
+
       Aligned_Reads aligned_reads;
       Aligned_References aligned_references;
       Aligned_Annotation aligned_annotation;
@@ -296,6 +303,7 @@ namespace breseq
     bool m_show_ambiguously_mapped;
     uint32_t m_minimum_mapping_quality; // Show reads as redundantly matched if their mapping quality is below this
     bool m_is_junction, m_is_junction_junction; // Former for JC, latter for JC+junction part of it
+    bool m_is_soft_clipping; // SC evidence: highlight reads counted as soft-clipped (drives legend)
     
     // Characters substituted for gaps and reference matches
     static char s_internal_gap_character;             // Default = "-"
