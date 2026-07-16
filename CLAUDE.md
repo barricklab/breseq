@@ -170,6 +170,15 @@ and restored on restart, so cleanup still happens even when the producing stage 
 pattern (same `done_key`, same `do_preprocess`/gating guards) whenever you emit a companion file next to
 an existing tracked one, so it shares that file's lifecycle instead of leaking.
 
+**Re-running a single pipeline stage for verification** — the trick of "delete a stage's done-file and
+re-run breseq so only that stage re-executes" **only works if the original run used `-k`/`--keep-intermediates`**.
+Without `-k`, the intermediate files that stage *consumes* have already been deleted by cleanup, so the
+re-run crashes (e.g. "Could not open file for reading ..."). Normal test runs (`make test`,
+`tests/test.sh`) do **not** pass `-k`, so their output dirs can't be poked this way. To iterate on, say,
+the Output/HTML stage: run breseq once with `-k` into a scratch `-o` dir, then (with intermediates kept)
+edit an intermediate `.gd` and remove just that stage's done-file to re-render. The last-stage
+`data/annotated.gd` may linger even without `-k`, but the upstream files the stage needs will not.
+
 ### Genome Diff (`.gd`) format
 
 The central data structure is `cGenomeDiff` (`genome_diff.h`/`genome_diff.cpp`) containing a list of `cDiffEntry` objects (`genome_diff_entry.h`/`genome_diff_entry.cpp`).

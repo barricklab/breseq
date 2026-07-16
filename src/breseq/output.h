@@ -252,6 +252,13 @@ string html_soft_clipping_table_string(
                                        const string& relative_link = ""
                                        );
 
+string html_discordant_pair_table_string(diff_entry_list_t& dp,
+                                          const Settings& settings,
+                                          bool show_details,
+                                          const string& title = "Discordant pair evidence",
+                                          const string& relative_link = ""
+                                          );
+
 string html_genome_diff_item_table_string(const Settings& settings, const cGenomeDiff& gd, diff_entry_list_t& list_ref);
 string html_deletion_coverage_values_table_string(const Settings& settings, cReferenceSequences& ref_seq_info, Summary& summary);
 /*-----------------------------------------------------------------------------

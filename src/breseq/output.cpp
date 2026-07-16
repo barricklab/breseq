@@ -185,6 +185,7 @@ string header_style_string()
   ss << ".new_junction_header_row {background-color: rgb(0,0,155);}"       << endl;
   ss << ".copy_number_header_row {background-color: rgb(153,102,0);}"      << endl;
   ss << ".soft_clipping_header_row {background-color: rgb(128,0,128);}"   << endl;
+  ss << ".discordant_pair_header_row {background-color: rgb(200,0,120);}" << endl;
   ss << ".alternate_table_row_0 {background-color: rgb(255,255,255);}"     << endl;
   ss << ".alternate_table_row_1 {background-color: rgb(235,235,235);}"     << endl;
   ss << ".gray_table_row {background-color: rgb(230,230,245);}"            << endl;
@@ -540,6 +541,10 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   sc.remove_if(cDiffEntry::rejected_and_not_user_defined());
   sc.remove_if(cDiffEntry::field_exists(IGNORE));
 
+  diff_entry_list_t dp = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(DP)));
+  dp.remove_if(cDiffEntry::rejected_and_not_user_defined());
+  dp.remove_if(cDiffEntry::field_exists(IGNORE));
+
   // Open list container before sticky header so the .search input is inside it
   if (!settings.no_javascript) {
     if (!settings.no_list_js) {
@@ -558,7 +563,7 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
     HTML << "<p>" << mutation_filter_input_string() << endl;
   }
 
-  if (mc.size() + jc.size() + cn.size() + sc.size() > 0) {
+  if (mc.size() + jc.size() + cn.size() + sc.size() + dp.size() > 0) {
     HTML << "<p>Jump to: <a href=\"#mutation_list\">Predicted mutations</a>";
     HTML << " | Unassigned evidence: ";
     vector<string> jump_link_list;
@@ -570,6 +575,8 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
       jump_link_list.push_back("<a href=\"#copy_number_list\">copy number</a>");
     if (sc.size() > 0)
       jump_link_list.push_back("<a href=\"#soft_clipping_list\">soft clipping</a>");
+    if (dp.size() > 0)
+      jump_link_list.push_back("<a href=\"#discordant_pair_list\">discordant pair</a>");
     HTML << join(jump_link_list, ", ");
     HTML << endl;
   }
@@ -620,9 +627,17 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
     HTML << "<p>" << html_soft_clipping_table_string(sc, false, "Unassigned soft clipping evidence", relative_path);
   }
 
+  /////////////////////////
+  // Unassigned DP evidence
+  /////////////////////////
+
+  if (dp.size() > 0) {
+    HTML << "<p>" << html_discordant_pair_table_string(dp, settings, false, "Discordant pair unassigned evidence", relative_path);
+  }
+
 
   // This code prints out a message if there was nothing in the previous tables
-  if (muts.size() + cn.size() + mc.size() + jc.size() + sc.size() == 0) {
+  if (muts.size() + cn.size() + mc.size() + jc.size() + sc.size() + dp.size() == 0) {
     HTML << "<p>No mutations predicted." << endl;
   }
 
@@ -2364,7 +2379,120 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
 
   return ss.str();
 }
-  
+
+// Modeled on html_new_junction_table_string. Each DP entry produces two rows
+// (side 1 and side 2), like a JC entry. Read-pair counts and a discordance
+// p-value stand in for the junction read counts and pos-hash p-value.
+string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Settings& settings, bool show_details, const string& title, const string& relative_link)
+{
+  (void)settings;
+  (void)show_details;
+  if (list_ref.size()==0) return "";
+
+  stringstream ss; //!<< Main Build Object for Function
+
+  ss << "<div id=\"discordant_pair_list\">" << endl;
+  ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
+  size_t total_cols = 8;
+
+  ss << "<thead>" << endl;
+  if (title != "") {
+    ss << tr(th("colspan=\"" + to_string(total_cols) + "\" align=\"left\" class=\"discordant_pair_header_row\"", title)) << endl;
+  }
+// #
+// #   #####################
+// #   #### HEADER LINE ####
+// #   #####################
+  ss << "<!-- Header Lines for Discordant Pair -->" << endl;
+  ss << "<tr>" << endl;
+  ss << th("seq&nbsp;id")   << endl <<
+        th("position")      << endl <<
+        th("pairs")         << endl <<   // side_1 / side_2 pair count
+        th("disc&nbsp;pairs") << endl <<  // discordant_pair_count
+        th("skew")          << endl <<   // neg_log10_discordance_p_value
+        th("annotation")    << endl <<
+        th("gene")          << endl;
+  ss << th("width=\"100%\"","product") << endl;
+  ss << "</tr>" << endl;
+  ss << "</thead>" << endl;
+  ss << endl;
+  ss << "<tbody class=\"list\">" << endl;
+// #
+// #   ####################
+// #   #### ITEM LINES ####
+// #   ####################
+  ss << "<!-- Item Lines for Discordant Pair -->" << endl;
+  uint32_t row_bg_color_index = 0;
+
+  for (diff_entry_list_t::iterator itr = list_ref.begin(); itr != list_ref.end(); itr ++)
+  {
+    cDiffEntry& c = **itr;
+// #     ##############
+// #     ### Side 1 ###
+// #     ##############
+    ss << "<!-- Side 1 Item Lines for Discordant Pair -->" << endl;
+
+    if (itr != list_ref.begin()) {
+      ss << tr("class=\"new_junction_entry_sep\"", td("colspan=\"" + to_string(total_cols) + "\"", "")) << endl;
+    }
+
+    string key = "side_1";
+    ss << start_tr("class=\"mutation_table_row_" + to_string(row_bg_color_index) + "\"") << endl;
+
+      ss << td("rowspan=\"1\"", nonbreaking(c[key + "_seq_id"])) << endl;
+
+      if (from_string<int32_t>(c[key + "_strand"]) == 1) {
+        ss << td("align=\"center\"", c[key + "_position"] + "&nbsp;=");
+      } else {
+        ss << td("align=\"center\"", "=&nbsp;" + c[key + "_position"]);
+      }
+
+      ss << td("align=\"center\"", c[key + "_pair_count"]);
+
+      ss << td("rowspan=\"2\" align=\"center\"", c["discordant_pair_count"]) << endl;
+      ss << td("rowspan=\"2\" align=\"center\"", c["neg_log10_discordance_p_value"]) << endl;
+
+      ss << td("align=\"center\"",
+              nonbreaking(substitute(c[key + "_" + GENE_POSITION], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) << endl;
+      ss << td("align=\"center\"",
+              i(nonbreaking(substitute(c[key + "_" + GENE_NAME], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator)))) << endl;
+      ss << td(htmlize(substitute(c[key + "_" + GENE_PRODUCT], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) << endl;
+    ss << end_tr() << endl;
+
+// #     ##############
+// #     ### Side 2 ###
+// #     ##############
+    ss << "<!-- Side 2 Item Lines for Discordant Pair -->" << endl;
+    key = "side_2";
+    ss << start_tr("class=\"mutation_table_row_" + to_string(row_bg_color_index) + "\"") << endl;
+
+      ss << td("rowspan=\"1\"", nonbreaking(c[key + "_seq_id"])) << endl;
+
+      if (from_string<int32_t>(c[key + "_strand"]) == 1) {
+        ss << td("align=\"center\"", c[key + "_position"] + "&nbsp;=") << endl;
+      } else {
+        ss << td("align=\"center\"", "=&nbsp;" + c[key + "_position"]) << endl;
+      }
+
+      ss << td("align=\"center\"", c[key + "_pair_count"]);
+
+      ss << td("align=\"center\"",
+              nonbreaking(substitute(c[key + "_" + GENE_POSITION], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) << endl;
+      ss << td("align=\"center\"",
+              i(nonbreaking(substitute(c[key + "_" + GENE_NAME], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator)))) << endl;
+      ss << td(htmlize(substitute(c[key + "_" + GENE_PRODUCT], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) << endl;
+    ss << end_tr() << endl;
+
+    row_bg_color_index = (row_bg_color_index+1) % 2;
+
+  }// End list_ref Loop
+  ss << "</tbody>" << endl;
+  ss << "</table>" << endl;
+  ss << "</div>" << endl;
+
+  return ss.str();
+}
+
 string html_copy_number_table_string(diff_entry_list_t& list_ref, bool show_details, const string& title, const string& relative_link)
 {
   if (list_ref.size()==0) return "";
