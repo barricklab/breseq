@@ -35,7 +35,7 @@ tr {background-color: rgb(255,255,255);}
 .unhidden { display: block; }
 .breseq-sticky-header { position: sticky; top: 0; z-index: 100; background-color: white; border-bottom: 1px solid #ccc; padding: 4px 0; margin: 0; }
 .breseq-sticky-header p { margin: 0.3em 0; }
-thead th { position: sticky; top: 0; z-index: 50; }
+body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; }
 #mutation_list.compare_table td.evidence, #mutation_list.compare_table td.seq_id, #mutation_list.compare_table td.position, #mutation_list.compare_table td.mutation { position: sticky; z-index: 5; background-color: inherit; }
 #mutation_list.compare_table thead th.evidence, #mutation_list.compare_table thead th.seq_id, #mutation_list.compare_table thead th.position, #mutation_list.compare_table thead th.mutation { z-index: 60; }
 #mutation_list.compare_table .evidence, #mutation_list.compare_table .seq_id, #mutation_list.compare_table .position, #mutation_list.compare_table .mutation { box-shadow: -1px 0 0 0 rgb(1,0,0), 1px 0 0 0 rgb(1,0,0); }
@@ -45,7 +45,7 @@ thead th { position: sticky; top: 0; z-index: 50; }
 </style>
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
 </head>
-<body>
+<body class="sticky_tables">
 <!--Output Html_Mutation_Table_String-->
 <div id="mutation_list">
 <table border="0" cellspacing="1" cellpadding="3">

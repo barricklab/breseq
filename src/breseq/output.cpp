@@ -200,7 +200,7 @@ string header_style_string()
   ss << ".unhidden { display: block; }"                                    << endl;
   ss << ".breseq-sticky-header { position: sticky; top: 0; z-index: 100; background-color: white; border-bottom: 1px solid #ccc; padding: 4px 0; margin: 0; }" << endl;
   ss << ".breseq-sticky-header p { margin: 0.3em 0; }"                         << endl;
-  ss << "thead th { position: sticky; top: 0; z-index: 50; }"                  << endl;
+  ss << "body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; }" << endl;
   // Sticky left columns for gdtools COMPARE/ANNOTATE multi-sample tables:
   // freeze every column up to and including "mutation" (evidence/seq id are optional).
   // Per-column left offsets are assigned at runtime by alignStickyColumns().
@@ -820,7 +820,7 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   HTML.close();
 }
 
-string html_header(const string& title, const Settings& settings)
+string html_header(const string& title, const Settings& settings, bool sticky_table_headers)
 {
   stringstream ss(ios_base::out | ios_base::app);
   
@@ -846,7 +846,11 @@ string html_header(const string& title, const Settings& settings)
     ss << javascript_string() << endl;
   }
   ss << "</head>" << endl;
-  ss << "<body>" << endl;
+  if (sticky_table_headers) {
+    ss << "<body class=\"sticky_tables\">" << endl;
+  } else {
+    ss << "<body>" << endl;
+  }
   return ss.str();
 }
 
@@ -4295,7 +4299,7 @@ cOutputEvidenceFiles::html_evidence_file (
   }
   
   // Build HTML Head
-  HTML << html_header("BRESEQ :: Evidence", settings);
+  HTML << html_header("BRESEQ :: Evidence", settings, false);
 
   if (settings.zip_html) {
     // This page is only ever displayed inside evidence.html's own full-page

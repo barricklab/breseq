@@ -153,7 +153,7 @@ extern const char* ALIGN_LEFT;
 
   
   //Specific to Breseq HTML Files
-  string html_header(const string& title, const Settings& settings);
+  string html_header(const string& title, const Settings& settings, bool sticky_table_headers = true);
   string breseq_header_string(const Settings& settings);
   string mutation_filter_input_string();
 
