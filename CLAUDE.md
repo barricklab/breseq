@@ -170,6 +170,15 @@ and restored on restart, so cleanup still happens even when the producing stage 
 pattern (same `done_key`, same `do_preprocess`/gating guards) whenever you emit a companion file next to
 an existing tracked one, so it shares that file's lifecycle instead of leaking.
 
+**Re-running a single stage while debugging: delete only its `*.done` file, never the whole stage
+directory.** To force one step to re-run, remove just its done-file (e.g. `rm output/output.done`) and
+re-invoke breseq. Do NOT `rm -rf` a numbered stage directory (`0*_.../`) to "reset" a step: some output
+artifacts are produced once by an early stage and are not regenerated when a *later* stage re-runs — e.g.
+the paired-mapping-distance plot (`evidence/#.pair_distance.svg`) is drawn only in stage 3, so deleting
+its directory (or the whole `evidence/` dir) leaves the Output step unable to recreate it, and the
+`summary.html` link silently drops. Deleting only the done-file preserves the on-disk intermediates that
+skipped-but-upstream stages already wrote.
+
 ### Genome Diff (`.gd`) format
 
 The central data structure is `cGenomeDiff` (`genome_diff.h`/`genome_diff.cpp`) containing a list of `cDiffEntry` objects (`genome_diff_entry.h`/`genome_diff_entry.cpp`).

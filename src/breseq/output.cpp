@@ -1012,7 +1012,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
       string distance_href = settings.zip_html
         ? settings.local_html_evidence_file_name + "#" + distance_basename
         : Settings::relative_path(distance_plot, settings.output_path);
-      HTML << td( file_exists(distance_plot.c_str()) ? a(distance_href, "distribution") : "");
+      HTML << td( file_exists(distance_plot.c_str()) ? a(distance_href, "distribution") : "distribution");
       HTML << td(rfs.m_base_name);
       // Final-pass (data/reference.bam flag-assignment) pair counts + preliminary fit stats.
       const PairedMappingDistanceDistributionSummary& pmdd = summary.paired_mapping_distance_distribution[rfs.m_base_name];

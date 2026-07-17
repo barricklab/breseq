@@ -2594,7 +2594,10 @@ int breseq_default_action(int argc, char* argv[])
 		output::html_summary(settings.summary_html_file_name, settings, summary, ref_seq_info);
 
     // Remove the individual evidence files now that everything is archived.
-    if (settings.zip_html) {
+    // Skipped under --keep-intermediates so the raw evidence/ dir (plots, alignments)
+    // is preserved alongside the other kept intermediates -- e.g. for re-running a
+    // single output step without losing stage-only artifacts like #.pair_distance.svg.
+    if (settings.zip_html && !settings.keep_all_intermediates) {
       cerr << "Removing evidence directory (files are archived in " << settings.local_html_archive_file_name << ")..." << endl;
       remove_folder(settings.evidence_path, /*silent=*/false, /*ignore_errors=*/true);
     }
