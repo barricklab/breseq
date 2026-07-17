@@ -396,6 +396,9 @@ namespace breseq
     
     bool call_mutations_overlapping_missing_coverage;     // Default = false      COMMAND-LINE OPTION
 
+    //! Settings: Discordant Pair (DP) Evidence
+    int32_t discordant_pair_seed;                         // Default = 3;         COMMAND-LINE OPTION
+
     //! Settings: Soft-Clipping Evidence
     bool     predict_soft_clipping;                       // Default = false     COMMAND-LINE OPTION
     uint32_t soft_clipping_minimum_bases;                 // Default = 12        COMMAND-LINE OPTION
@@ -590,8 +593,9 @@ namespace breseq
 		string mutation_identification_per_position_file_name;
 		string complete_coverage_text_file_name;
     string ra_mc_genome_diff_file_name;
+    string dp_candidate_regions_file_name;
 
-    
+
 		//! Paths: Copy Number Variation
     string copy_number_variation_path;
     string copy_number_variation_done_file_name;

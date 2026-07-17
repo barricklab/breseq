@@ -350,7 +350,13 @@ namespace breseq
     ("deletion-coverage-propagation-cutoff","Value for coverage above which MC ends stop. 0 = calculated from coverage distribution", 0, NORMAL_OPTION)
     ("call-mutations-overlapping-MC", "If provided, don't ignore mutations predicted from RA evidence that overlap MC evidence", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ;
-    
+
+    options.addUsage("", NORMAL_OPTION);
+    options.addUsage("Discordant Pair (DP) Evidence Options", NORMAL_OPTION);
+    options
+    ("discordant-pair-seed", "Minimum number of discordant read pairs within a paired-mapping-distance window required to seed a DP candidate region. (DEFAULT = 3)", 3, NORMAL_OPTION)
+    ;
+
     options.addUsage("", NORMAL_OPTION);
     options.addUsage("Consensus Read Alignment (RA) Evidence Options", NORMAL_OPTION);
     options
@@ -606,6 +612,9 @@ namespace breseq
     ASSERT(this->deletion_coverage_propagation_cutoff >= 0, "Argument --deletion-coverage-seed-cutoff must be >= 0")
     
     this->call_mutations_overlapping_missing_coverage = options.count("call-mutations-overlapping-MC");
+
+    this->discordant_pair_seed = from_string<int32_t>(options["discordant-pair-seed"]);
+    ASSERT(this->discordant_pair_seed >= 0, "Argument --discordant-pair-seed must be >= 0")
 
     this->predict_soft_clipping = options.count("predict-soft-clipping");
     this->soft_clipping_minimum_bases = from_string<uint32_t>(options["soft-clipping-minimum-bases"]);
@@ -1056,6 +1065,7 @@ namespace breseq
     this->deletion_coverage_propagation_cutoff = 0;
     this->deletion_coverage_seed_cutoff = 0;
     this->call_mutations_overlapping_missing_coverage = false;
+    this->discordant_pair_seed = 3;
     this->predict_soft_clipping = false;
     this->soft_clipping_minimum_bases = 12;
     this->soft_clipping_log10_e_value_cutoff = 3.0;
@@ -1242,6 +1252,7 @@ namespace breseq
 		this->mutation_identification_per_position_file_name = this->mutation_identification_path + "/per_position_file.tab";
 		this->complete_coverage_text_file_name = this->mutation_identification_path + "/@.coverage.tab";
 		this->ra_mc_genome_diff_file_name = this->mutation_identification_path + "/ra_mc_evidence.gd";
+		this->dp_candidate_regions_file_name = this->mutation_identification_path + "/DP_candidate_regions.csv";
 
 
     //! Paths: Copy Number Variation

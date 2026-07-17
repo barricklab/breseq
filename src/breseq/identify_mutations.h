@@ -27,6 +27,8 @@
 #include "genome_diff.h"
 #include "pileup_base.h"
 
+#include <deque>
+
 using namespace std;
 
 namespace breseq {
@@ -235,7 +237,35 @@ namespace breseq {
 			int coverage_unique_uncalled;
 			int coverage_unique_called;
 		};
-		
+
+    //! Discordant Pair (DP) candidate-region detection ----
+    //! Candidates are binned by (focal-read strand) x (pair orientation): index = strand*3 + orient,
+    //! strand 0=forward/1=reverse, orient 0=FR/1=RF/2=FF. 6 independent detectors per read group.
+    static const int kDPnBins = 6;
+    //! One discordant read currently inside a bin's sliding window.
+    struct dp_read {
+      uint32_t start_pos;  //!< reference start (1-based) of this read
+      string   key;        //!< condensed descriptor: <read1_name>__<read2_name>__<r1_insert_size>
+    };
+    //! Per paired read group: window width (median + 2.42*MAD), R1/R2 file ids (for name/role
+    //! reconstruction), and the reads currently in-window for each of the 6 bins.
+    struct dp_group {
+      double          window_width;
+      uint32_t        r1_m_id;      //!< m_files[0].m_id (R1 fastq file index)
+      uint32_t        r2_m_id;      //!< m_files[1].m_id (R2 fastq file index)
+      deque<dp_read>  reads[kDPnBins];
+    };
+    //! A completed candidate region: discordant read pairs of a single focal strand and orientation.
+    struct dp_candidate_region {
+      string   seq_id;
+      uint32_t start;
+      uint32_t end;
+      char     strand;            //!< focal-read strand for this region: 'F' or 'R'
+      string   orientation;       //!< pair orientation for this region: FR / RF / FF
+      uint32_t max_count;         //!< peak in-window discordant count over the region
+      string   discordant_pairs;  //!< ';'-joined <read1>__<read2>__<insert_size> keys
+    };
+
 		
 		//! Constructor.
 		identify_mutations_pileup(
@@ -272,11 +302,17 @@ namespace breseq {
 
     //! Add SC (soft-clipping) evidence entries to the genome diff
     void add_sc_evidence(const Summary& summary, const cReferenceSequences& ref_seq_info);
-    
-    
+
+    //! Write the accumulated DP candidate regions to a CSV (one operation, after the pileup).
+    void write_dp_candidate_regions(const string& filename);
+
+
 	protected:
 		//! Helper method to track deletions.
 		void check_deletion_completion(uint32_t seq_id, uint32_t position, char ref_base_char, const position_coverage& this_position_coverage, double e_value_call);
+
+		//! Helper method to track discordant-pair candidate regions (called once per column).
+		void check_discordant_completion(uint32_t seq_id, uint32_t position);
 
 		//! Helper method to track unknowns.
 		void update_unknown_intervals(uint32_t position, uint32_t seq_id, bool base_predicted, bool this_position_unique_only_coverage);
@@ -347,6 +383,17 @@ namespace breseq {
     
 		// these are state variables used by the unknown prediction method.
 		uint32_t _last_start_unknown_interval;
+
+		// these are state variables used by the discordant-pair (DP) region method.
+		// All per-bin state is indexed by bin = strand*3 + orient (see kDPnBins / dp_group).
+		int32_t _dp_seed;                                   //!< --discordant-pair-seed threshold (applied per bin)
+		vector<dp_group> _dp_groups;                        //!< one entry per paired read group with valid stats
+		map<uint32_t, int> _fastq_index_to_dp_group;        //!< cReadFile::m_id -> index into _dp_groups (absent = not paired)
+		int32_t _dp_metric[kDPnBins];                       //!< running count of in-window discordant reads, per bin
+		uint32_t _dp_region_start[kDPnBins];                //!< UNDEFINED_UINT32 = not currently in a region, per bin
+		uint32_t _dp_region_max_count[kDPnBins];            //!< peak metric while the current region is open, per bin
+		vector<string> _dp_region_descriptors[kDPnBins];    //!< read-pair keys for the open region, per bin
+		vector<dp_candidate_region> _dp_candidate_regions;  //!< all completed regions (written once after the pileup)
 	};
 
   

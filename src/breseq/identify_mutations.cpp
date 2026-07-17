@@ -65,6 +65,8 @@ void identify_mutations(
 							);
 	imp.do_pileup(settings.call_mutations_seq_id_set());
   if (settings.predict_soft_clipping) imp.add_sc_evidence(summary, ref_seq_info);
+  // Write discordant-pair candidate regions accumulated during the pileup (single operation).
+  imp.write_dp_candidate_regions(settings.dp_candidate_regions_file_name);
   imp.write_gd(gd_file);
 }
 
@@ -684,11 +686,19 @@ identify_mutations_pileup::identify_mutations_pileup(
 , _this_deletion_redundant_reached_zero(false)
 , _last_position_coverage_printed(0)
 , _print_per_position_file(print_per_position_file)
+, _dp_seed(settings.discordant_pair_seed)
 {
-	
+
   // remove once used
   (void)settings;
-  
+
+  // Initialize per-bin discordant-pair region state (bin = strand*3 + orient; see kDPnBins).
+  for (int bin = 0; bin < kDPnBins; bin++) {
+    _dp_metric[bin] = 0;
+    _dp_region_start[bin] = UNDEFINED_UINT32;
+    _dp_region_max_count[bin] = 0;
+  }
+
   set_print_progress(true);
   
   ASSERT(m_bam_header->n_targets == (int32_t)_deletion_propagation_cutoffs.size(), 
@@ -725,7 +735,29 @@ identify_mutations_pileup::identify_mutations_pileup(
   if (_settings.user_evidence_genome_diff_file_name != "") {
     load_user_ra_evidence_from_gd();
   }
-  
+
+  // Set up discordant-pair (DP) candidate-region detection.
+  // For each PAIRED read group with a valid paired-mapping-distance fit, build a sliding-window
+  // group with width W = median + 2.42 * MAD, and map each member file's BAM index (cReadFile::m_id)
+  // to that group so we can classify a read's group by its fastq_file_index() during the pileup.
+  const PairedMappingDistanceDistributionSummaries& pmdd = summary.preliminary_paired_mapping_distance_distribution;
+  for (vector<cReadFileSet>::const_iterator rfs = settings.read_file_sets.begin(); rfs != settings.read_file_sets.end(); rfs++) {
+    if (!rfs->is_paired()) continue;
+    PairedMappingDistanceDistributionSummaries::const_iterator it = pmdd.find(rfs->m_base_name);
+    if (it == pmdd.end()) continue;
+    if (it->second.median <= 0.0) continue;
+
+    dp_group g;
+    g.window_width = it->second.median + 2.42 * it->second.mad;
+    g.r1_m_id = rfs->m_files[0].m_id;  // R1 fastq file index
+    g.r2_m_id = rfs->m_files[1].m_id;  // R2 fastq file index
+    int group_index = static_cast<int>(_dp_groups.size());
+    _dp_groups.push_back(g);
+    for (vector<cReadFile>::const_iterator rf = rfs->m_files.begin(); rf != rfs->m_files.end(); rf++) {
+      _fastq_index_to_dp_group[rf->m_id] = group_index;
+    }
+  }
+
 }
 
 void identify_mutations_pileup::load_user_ra_evidence_from_gd()
@@ -862,6 +894,66 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
     
 		//## for each alignment within this pileup:
 		for(pileup::const_iterator i=p.begin(); i!=p.end(); ++i) {
+
+      //## Discordant-pair (DP) region detection: incremental "enter" step.
+      //## Add each discordant read to its paired read group's sliding window exactly ONCE, at its
+      //## leftmost reference column (so it is counted a single time as it enters the window). Done
+      //## here (piggybacking on this per-read loop) to avoid a second per-column scan; guarded to
+      //## the first insert slot and to the read's start column.
+      if ((insert_count == 0) && !_dp_groups.empty() && (i->reference_start_1() == position)) {
+        if (i->is_paired() && !i->unmapped() && !i->proper_pair() &&
+            !(i->flag() & (BAM_FSECONDARY | BAM_FSUPPLEMENTARY | BAM_FMUNMAP))) {
+          map<uint32_t, int>::const_iterator gi = _fastq_index_to_dp_group.find(i->fastq_file_index());
+          if (gi != _fastq_index_to_dp_group.end()) {
+            const dp_group& g = _dp_groups[gi->second];
+
+            // Bin by (focal-read strand) x (pair orientation). Strand: 0 = forward, 1 = reverse.
+            int s = i->reversed() ? 1 : 0;
+            // Orientation from the XP tag written by mark_pair_info: FR / RF / FF (RR folded to FF).
+            string orientation;
+            int o;
+            if (!i->aux_get_Z("XP", orientation)) continue;  // no orientation -> not a countable DP read
+            if      (orientation == "FR") o = 0;
+            else if (orientation == "RF") o = 1;
+            else if (orientation == "FF") o = 2;
+            else continue;                                    // unexpected orientation -> skip
+            int bin = s * 3 + o;
+
+            // Build the condensed read-pair key: <read1_name>__<read2_name>__<r1_insert_size>.
+            // breseq names mates <file_index>:<read_num> sharing read_num (fastq.cpp), and never sets
+            // BAM_FREAD1/2, so R1/R2 role comes from fastq_file_index() vs the group's R1/R2 file ids.
+            bool focal_is_r1 = (i->fastq_file_index() == g.r1_m_id);
+            string fname = i->read_name();
+            size_t colon = fname.find(':');
+            string read1_name, read2_name;
+            if (colon != string::npos) {
+              string counter = fname.substr(colon + 1);
+              read1_name = to_string(g.r1_m_id + 1) + ":" + counter;
+              read2_name = to_string(g.r2_m_id + 1) + ":" + counter;
+            } else {
+              // Fallback for unexpected naming: use the focal name for its own slot only.
+              read1_name = focal_is_r1 ? fname : "";
+              read2_name = focal_is_r1 ? "" : fname;
+            }
+            // Insert size from R1's perspective (identical for both mates): negate when focal is R2.
+            int32_t r1_insert_size = focal_is_r1 ? i->insert_size() : -i->insert_size();
+            string key = read1_name + "__" + read2_name + "__" + to_string(r1_insert_size);
+
+            dp_read dr;
+            dr.start_pos = position;
+            dr.key = key;
+            _dp_groups[gi->second].reads[bin].push_back(dr);
+            ++_dp_metric[bin];
+            // If a region in this bin is already open (from a previous column), this newly entering
+            // read belongs to it, so append its key now. Reads entering on the column that OPENS a
+            // region are instead captured by the open-time snapshot in check_discordant_completion
+            // (which runs after this loop), so they are never double-counted.
+            if (_dp_region_start[bin] != UNDEFINED_UINT32) {
+              _dp_region_descriptors[bin].push_back(key);
+            }
+          }
+        }
+      }
 
       //## After these substitutions...
       //## Indel is -1 if the ref base is deleted in the read,
@@ -1035,7 +1127,16 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
 		
     if(!_settings.skip_missing_coverage_prediction && (insert_count == 0))
       check_deletion_completion(p.target(), position, ref_base_char, this_position_coverage, consensus_bonferroni_score);
-		
+
+		//###
+		//## DISCORDANT PAIR DISCORDANT PAIR DISCORDANT PAIR
+		//###
+
+    // Runs once per reference column (including empty columns) so the sliding window advances and
+    // regions close correctly even where there is no coverage.
+    if(!_dp_groups.empty() && (insert_count == 0))
+      check_discordant_completion(p.target(), position);
+
 		//###
 		//## POLYMORPHISM POLYMORPHISM POLYMORPHISM
 		//###								
@@ -1319,7 +1420,16 @@ void identify_mutations_pileup::at_target_start(const uint32_t tid)
 	_last_deletion_redundant_start_position = UNDEFINED_UINT32;
 	_last_deletion_redundant_end_position = UNDEFINED_UINT32;
 	_last_start_unknown_interval = UNDEFINED_UINT32;
-  
+
+  // Reset the Discordant Pair (DP) evidence variables (regions do not span reference boundaries)
+  for (int bin = 0; bin < kDPnBins; bin++) {
+    for (vector<dp_group>::iterator g = _dp_groups.begin(); g != _dp_groups.end(); g++) g->reads[bin].clear();
+    _dp_metric[bin] = 0;
+    _dp_region_start[bin] = UNDEFINED_UINT32;
+    _dp_region_max_count[bin] = 0;
+    _dp_region_descriptors[bin].clear();
+  }
+
 }
   
 /*! Called at the end of a reference sequence fragment
@@ -1332,6 +1442,11 @@ void identify_mutations_pileup::at_target_end(const uint32_t tid) {
     check_deletion_completion(tid, target_length(tid)+1, '.', position_coverage(numeric_limits<double>::quiet_NaN()), numeric_limits<double>::quiet_NaN());
   }
   update_unknown_intervals(target_length(tid)+1, tid, true, false);
+
+  // Flush any open discordant-pair (DP) region at the end of this reference sequence.
+  if (!_dp_groups.empty()) {
+    check_discordant_completion(tid, target_length(tid)+1);
+  }
 
   // if this target failed to have its coverage fit, mark the entire thing as a deletion
   double _this_deletion_propagation_cutoff = _deletion_propagation_cutoffs[tid];
@@ -1467,9 +1582,103 @@ void identify_mutations_pileup::check_deletion_completion(uint32_t seq_id, uint3
 }
 
 
+/*! Helper method to track discordant-pair (DP) candidate regions.
+
+ Called once per reference column (including empty columns), and once past the end of each reference
+ sequence (position = target_length+1) to flush an open region. Maintains, per paired read group, a
+ sliding window of width (median + 2.42*MAD) over the reference start positions of discordant reads.
+ Reads are added once at their start column ("enter", in pileup_callback) and removed once here when
+ they fall out of the window ("exit"). A candidate region is a maximal run of columns where the total
+ in-window discordant count reaches --discordant-pair-seed.
+
+ @JEB expects 1-indexed positions.
+ */
+void identify_mutations_pileup::check_discordant_completion(uint32_t seq_id, uint32_t position)
+{
+  static const char* kOrientName[3] = { "FR", "RF", "FF" };
+
+  // Run an independent detector for each (focal strand x orientation) bin, so a breakpoint's
+  // forward/reverse shoulders and its distinct orientations each become separate regions.
+  for (int bin = 0; bin < kDPnBins; bin++) {
+
+    // "Exit" step: drop discordant reads that have fallen out of each group's bin window.
+    for (vector<dp_group>::iterator g = _dp_groups.begin(); g != _dp_groups.end(); g++) {
+      while (!g->reads[bin].empty() &&
+             (static_cast<double>(position) - static_cast<double>(g->reads[bin].front().start_pos) >= g->window_width)) {
+        g->reads[bin].pop_front();
+        --_dp_metric[bin];
+      }
+    }
+
+    // Never "above" once past the end of the sequence: closes an open region at the flush sentinel
+    // and prevents opening a spurious region that would never close.
+    bool above = (_dp_metric[bin] >= _dp_seed) && (position <= target_length(seq_id));
+
+    if (above) {
+      if (_dp_region_start[bin] == UNDEFINED_UINT32) {
+        // Open a new region; snapshot the bin's reads currently in-window as its initial keys.
+        _dp_region_start[bin] = position;
+        _dp_region_max_count[bin] = static_cast<uint32_t>(_dp_metric[bin]);
+        _dp_region_descriptors[bin].clear();
+        for (vector<dp_group>::iterator g = _dp_groups.begin(); g != _dp_groups.end(); g++) {
+          for (deque<dp_read>::iterator r = g->reads[bin].begin(); r != g->reads[bin].end(); r++) {
+            _dp_region_descriptors[bin].push_back(r->key);
+          }
+        }
+      } else if (static_cast<uint32_t>(_dp_metric[bin]) > _dp_region_max_count[bin]) {
+        _dp_region_max_count[bin] = static_cast<uint32_t>(_dp_metric[bin]);
+      }
+    } else if (_dp_region_start[bin] != UNDEFINED_UINT32) {
+      // Close the open region (its last in-region column was position-1).
+      dp_candidate_region region;
+      region.seq_id = target_name(seq_id);
+      region.start = _dp_region_start[bin];
+      region.end = position - 1;
+      region.strand = (bin / 3 == 0) ? 'F' : 'R';
+      region.orientation = kOrientName[bin % 3];
+      region.max_count = _dp_region_max_count[bin];
+      string joined;
+      for (size_t k = 0; k < _dp_region_descriptors[bin].size(); k++) {
+        if (k) joined += ";";
+        joined += _dp_region_descriptors[bin][k];
+      }
+      region.discordant_pairs = joined;
+      _dp_candidate_regions.push_back(region);
+
+      _dp_region_start[bin] = UNDEFINED_UINT32;
+      _dp_region_max_count[bin] = 0;
+      _dp_region_descriptors[bin].clear();
+    }
+  }
+}
+
+
+/*! Write all accumulated DP candidate regions to a CSV in one pass (after the pileup completes). */
+void identify_mutations_pileup::write_dp_candidate_regions(const string& filename)
+{
+  // Sort by (seq_id, start, strand, orientation) so subregions of one breakpoint appear adjacent.
+  sort(_dp_candidate_regions.begin(), _dp_candidate_regions.end(),
+       [](const dp_candidate_region& a, const dp_candidate_region& b) {
+         if (a.seq_id != b.seq_id) return a.seq_id < b.seq_id;
+         if (a.start != b.start) return a.start < b.start;
+         if (a.strand != b.strand) return a.strand < b.strand;
+         return a.orientation < b.orientation;
+       });
+
+  ofstream out(filename.c_str());
+  ASSERT(!out.fail(), "Could not open output file: " + filename);
+  out << "seq_id,start,end,strand,orientation,length,max_discordant_count,discordant_pairs" << endl;
+  for (vector<dp_candidate_region>::const_iterator r = _dp_candidate_regions.begin(); r != _dp_candidate_regions.end(); r++) {
+    out << r->seq_id << "," << r->start << "," << r->end << "," << r->strand << "," << r->orientation << ","
+        << (r->end - r->start + 1) << "," << r->max_count << "," << r->discordant_pairs << endl;
+  }
+  out.close();
+}
+
+
 /*! Helper method to track unknowns.
  */
-void identify_mutations_pileup::update_unknown_intervals(uint32_t position, uint32_t seq_id, bool base_predicted, bool this_position_unique_only_coverage) 
+void identify_mutations_pileup::update_unknown_intervals(uint32_t position, uint32_t seq_id, bool base_predicted, bool this_position_unique_only_coverage)
 {
   //debug
   /*

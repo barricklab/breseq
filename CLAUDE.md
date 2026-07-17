@@ -179,6 +179,13 @@ the Output/HTML stage: run breseq once with `-k` into a scratch `-o` dir, then (
 edit an intermediate `.gd` and remove just that stage's done-file to re-render. The last-stage
 `data/annotated.gd` may linger even without `-k`, but the upstream files the stage needs will not.
 
+**Also remove the top-level `output/output.done`.** Before any per-stage `do_step` check, breseq
+short-circuits the *entire* pipeline if `settings.output_done_file_name` (`output/output.done`) exists
+(`breseq_cmdline.cpp` ~line 1437: prints only "ALREADY COMPLETE Output" and returns). So deleting a
+mid-pipeline stage's done-file alone does nothing — the run exits immediately. To re-run e.g. stage 08,
+remove **both** `output/output.done` and `08_mutation_identification/mutation_identification.done`;
+breseq then reports "ALREADY COMPLETE" for stages 01–07 (cached) and re-runs 08 onward.
+
 ### Genome Diff (`.gd`) format
 
 The central data structure is `cGenomeDiff` (`genome_diff.h`/`genome_diff.cpp`) containing a list of `cDiffEntry` objects (`genome_diff_entry.h`/`genome_diff_entry.cpp`).
