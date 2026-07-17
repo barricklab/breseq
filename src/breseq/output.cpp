@@ -200,7 +200,13 @@ string header_style_string()
   ss << ".unhidden { display: block; }"                                    << endl;
   ss << ".breseq-sticky-header { position: sticky; top: 0; z-index: 100; background-color: white; border-bottom: 1px solid #ccc; padding: 4px 0; margin: 0; }" << endl;
   ss << ".breseq-sticky-header p { margin: 0.3em 0; }"                         << endl;
-  ss << "body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; }" << endl;
+  // Sticky column-header cells. The tables use cellspacing="1" over a near-black table
+  // background, so a 1px gap surrounds every cell. The sticky th covers its own box but not
+  // that gap, so rows scrolling up flash through the 1px band at the header's bottom edge.
+  // A 1px box-shadow ring in the table-background color, painted at the sticky cell's own
+  // stacking level (above the scrolling body), seals the gap on all sides. It coincides with
+  // the existing cellspacing grid line, so it is invisible when the table is not scrolled.
+  ss << "body.sticky_tables thead th { position: sticky; top: 0; z-index: 50; box-shadow: 0 0 0 1px rgb(1,0,0); }" << endl;
   // Sticky left columns for gdtools COMPARE/ANNOTATE multi-sample tables:
   // freeze every column up to and including "mutation" (evidence/seq id are optional).
   // Per-column left offsets are assigned at runtime by alignStickyColumns().
