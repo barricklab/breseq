@@ -1253,6 +1253,8 @@ namespace breseq
 		this->complete_coverage_text_file_name = this->mutation_identification_path + "/@.coverage.tab";
 		this->ra_mc_genome_diff_file_name = this->mutation_identification_path + "/ra_mc_evidence.gd";
 		this->dp_candidate_regions_file_name = this->mutation_identification_path + "/DP_candidate_regions.csv";
+		this->discordant_pair_done_file_name = this->mutation_identification_path + "/discordant_pair.done";
+		this->dp_genome_diff_file_name = this->mutation_identification_path + "/dp_evidence.gd";
 
 
     //! Paths: Copy Number Variation

@@ -1543,6 +1543,10 @@ string html_genome_diff_item_table_string(const Settings& settings, const cGenom
     {
       return html_soft_clipping_table_string(list_ref,true, "Soft clipping evidence", relative_link);
     }
+    else if(first_item._type == DP)
+    {
+      return html_discordant_pair_table_string(list_ref, settings, true, "Discordant pair evidence", relative_link);
+    }
   }
   return "";
 }
@@ -2390,10 +2394,18 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
   if (list_ref.size()==0) return "";
 
   stringstream ss; //!<< Main Build Object for Function
+  cDiffEntry& test_item = *list_ref.front();
+
+  // '*' flagship link (empty-table page) + per-side '?' links (read-pair plots), when
+  // cOutputEvidenceFiles has assigned them.
+  bool link = test_item.entry_exists(_EVIDENCE_FILE_NAME);
+  bool side_link = test_item.entry_exists(_SIDE_1_EVIDENCE_FILE_NAME) &&
+                   test_item.entry_exists(_SIDE_2_EVIDENCE_FILE_NAME);
+  int link_cols = (link ? 1 : 0) + (side_link ? 1 : 0);
 
   ss << "<div id=\"discordant_pair_list\">" << endl;
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
-  size_t total_cols = 8;
+  size_t total_cols = 8 + link_cols;
 
   ss << "<thead>" << endl;
   if (title != "") {
@@ -2405,6 +2417,9 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
 // #   #####################
   ss << "<!-- Header Lines for Discordant Pair -->" << endl;
   ss << "<tr>" << endl;
+  if (link_cols > 0) {
+    ss << th("colspan=\"" + to_string(link_cols) + "\"", "&nbsp;") << endl;
+  }
   ss << th("seq&nbsp;id")   << endl <<
         th("position")      << endl <<
         th("pairs")         << endl <<   // side_1 / side_2 pair count
@@ -2439,6 +2454,13 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
     string key = "side_1";
     ss << start_tr("class=\"mutation_table_row_" + to_string(row_bg_color_index) + "\"") << endl;
 
+      if (link) {
+        ss << td("rowspan=\"2\"", a(relative_link + c[_EVIDENCE_FILE_NAME], "*")) << endl;
+      }
+      if (side_link) {
+        ss << td("rowspan=\"1\"", a(relative_link + c[_SIDE_1_EVIDENCE_FILE_NAME], "?")) << endl;
+      }
+
       ss << td("rowspan=\"1\"", nonbreaking(c[key + "_seq_id"])) << endl;
 
       if (from_string<int32_t>(c[key + "_strand"]) == 1) {
@@ -2447,9 +2469,9 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
         ss << td("align=\"center\"", "=&nbsp;" + c[key + "_position"]);
       }
 
-      ss << td("align=\"center\"", c[key + "_pair_count"]);
+      ss << td("align=\"center\"", c[key + "_concordant_count"]);
 
-      ss << td("rowspan=\"2\" align=\"center\"", c["discordant_pair_count"]) << endl;
+      ss << td("rowspan=\"2\" align=\"center\"", c["discordant_count"]) << endl;
       ss << td("rowspan=\"2\" align=\"center\"", c["neg_log10_discordance_p_value"]) << endl;
 
       ss << td("align=\"center\"",
@@ -2466,6 +2488,11 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
     key = "side_2";
     ss << start_tr("class=\"mutation_table_row_" + to_string(row_bg_color_index) + "\"") << endl;
 
+      // (the '*' flagship column is covered by side 1's rowspan=2 cell)
+      if (side_link) {
+        ss << td("rowspan=\"1\"", a(relative_link + c[_SIDE_2_EVIDENCE_FILE_NAME], "?")) << endl;
+      }
+
       ss << td("rowspan=\"1\"", nonbreaking(c[key + "_seq_id"])) << endl;
 
       if (from_string<int32_t>(c[key + "_strand"]) == 1) {
@@ -2474,7 +2501,7 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
         ss << td("align=\"center\"", "=&nbsp;" + c[key + "_position"]) << endl;
       }
 
-      ss << td("align=\"center\"", c[key + "_pair_count"]);
+      ss << td("align=\"center\"", c[key + "_concordant_count"]);
 
       ss << td("align=\"center\"",
               nonbreaking(substitute(c[key + "_" + GENE_POSITION], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) << endl;
@@ -4329,7 +4356,51 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, const cGeno
                  (PREFIX, "JC_SIDE_2")
                  );
   }
-  
+
+  // Discordant pair evidence.
+  //  '*' flagship: the joined plot bridging the two flanks (stamped by draw_discordant_pair_evidence_
+  //  plots); if that SVG is absent it falls back to an empty page (just the item's DP table).
+  //  per-side '?': a plot page showing the counted concordant/discordant reads at that side; the SVG
+  //  filename was stamped onto the entry by draw_discordant_pair_evidence_plots (run earlier in output).
+  diff_entry_list_t items_DP = gd.show_list(make_vector<gd_entry_type>(DP));
+
+  for (diff_entry_list_t::iterator itr = items_DP.begin(); itr != items_DP.end(); itr ++)
+  {
+    diff_entry_ptr_t item = *itr;
+
+    map<string,string> dp_flagship = make_map<string,string>
+                 (PREFIX, "DP")
+                 (SEQ_ID, (*item)[SIDE_1_SEQ_ID])
+                 (START, (*item)[SIDE_1_POSITION])
+                 (END, (*item)[SIDE_1_POSITION]);
+    if (item->entry_exists("_dp_plot_file_name"))
+      dp_flagship[PLOT] = (*item)["_dp_plot_file_name"];
+    add_evidence(_EVIDENCE_FILE_NAME, item, item, dp_flagship);
+
+    if (item->entry_exists("_side_1_dp_plot_file_name")) {
+      add_evidence(_SIDE_1_EVIDENCE_FILE_NAME,
+                   item,
+                   item,
+                   make_map<string,string>
+                   (PREFIX, "DP_SIDE_1")
+                   (SEQ_ID, (*item)[SIDE_1_SEQ_ID])
+                   (START, (*item)[SIDE_1_POSITION])
+                   (END, (*item)[SIDE_1_POSITION])
+                   (PLOT, (*item)["_side_1_dp_plot_file_name"]));
+    }
+    if (item->entry_exists("_side_2_dp_plot_file_name")) {
+      add_evidence(_SIDE_2_EVIDENCE_FILE_NAME,
+                   item,
+                   item,
+                   make_map<string,string>
+                   (PREFIX, "DP_SIDE_2")
+                   (SEQ_ID, (*item)[SIDE_2_SEQ_ID])
+                   (START, (*item)[SIDE_2_POSITION])
+                   (END, (*item)[SIDE_2_POSITION])
+                   (PLOT, (*item)["_side_2_dp_plot_file_name"]));
+    }
+  }
+
   // Copy number evidence
   diff_entry_list_t items_CN = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(CN)));
   
@@ -4468,34 +4539,33 @@ cOutputEvidenceFiles::html_evidence_file (
     } else {
       HTML << div(ALIGN_LEFT, "Failed to generate coverage plot.");
     }
-  } else {
+  } else if ( item.entry_exists(BAM_PATH) && item.entry_exists(FASTA_PATH)
+              && file_exists(item[BAM_PATH].c_str()) && file_exists(item[FASTA_PATH].c_str()) ) {
     stringstream ss;
-    
+
     ss << item[SEQ_ID] << ":" << item[START];
-    
+
     if (item[INSERT_START].size() > 0)
     {
       ss << "." << item[INSERT_START];
     }
-    
+
     ss << "-" << item[END];
-    
+
     if (item[INSERT_END].size())
     {
       ss << "." << item[INSERT_END];
     }
     cerr << "Creating read alignment for region: " << ss.str() << endl;
-    
+
     if (settings.base_quality_cutoff != 0)
       item["base_quality_cutoff"] = to_string(settings.base_quality_cutoff);
-    
-    if ( file_exists(item[BAM_PATH].c_str()) && file_exists(item[FASTA_PATH].c_str()) ) {
-      alignment_output ao(item[BAM_PATH], item[FASTA_PATH], settings.max_flanking_columns, settings.max_displayed_reads, settings.base_quality_cutoff, settings.junction_minimum_side_match, settings.alignment_mask_ref_matches, false, settings.minimum_mapping_quality );
-    
-      HTML << ao.html_alignment(ss.str(), &item);
-    }
-    
+
+    alignment_output ao(item[BAM_PATH], item[FASTA_PATH], settings.max_flanking_columns, settings.max_displayed_reads, settings.base_quality_cutoff, settings.junction_minimum_side_match, settings.alignment_mask_ref_matches, false, settings.minimum_mapping_quality );
+
+    HTML << ao.html_alignment(ss.str(), &item);
   }
+  // else: no plot and no alignment inputs (e.g. the DP stub) -> just the item table(s) above.
 
 
   

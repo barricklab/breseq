@@ -40,6 +40,7 @@ libbreseq_la_SOURCES = \
 	contingency_loci.cpp \
 	coverage_output.cpp \
 	coverage_distribution.cpp \
+	dp_evidence.cpp \
 	error_count.cpp \
 	fasta.cpp \
 	fastq.cpp \
@@ -71,6 +72,7 @@ libbreseq_la_SOURCES = \
 	contingency_loci.h \
 	coverage_distribution.h \
 	coverage_output.h \
+	dp_evidence.h \
 	error_count.h \
 	fasta.h \
 	fastq.h \

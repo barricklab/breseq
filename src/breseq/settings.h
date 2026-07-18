@@ -594,6 +594,8 @@ namespace breseq
 		string complete_coverage_text_file_name;
     string ra_mc_genome_diff_file_name;
     string dp_candidate_regions_file_name;
+    string discordant_pair_done_file_name;
+    string dp_genome_diff_file_name;
 
 
 		//! Paths: Copy Number Variation

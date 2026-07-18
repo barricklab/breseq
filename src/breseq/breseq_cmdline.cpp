@@ -35,6 +35,7 @@
 #include "fastq.h"
 #include "genome_diff.h"
 #include "identify_mutations.h"
+#include "dp_evidence.h"
 #include "resolve_alignments.h"
 #include "samtools_commands.h"
 #include "soft_clipping.h"
@@ -2370,6 +2371,19 @@ int breseq_default_action(int argc, char* argv[])
 		}
 	}
 
+    //
+    // Discordant Pair (DP) evidence
+    // Pair up discordant-pair candidate regions (from the identify_mutations CSV) into DP evidence.
+    //
+  if (settings.paired_mapping) {
+    if (settings.do_step(settings.discordant_pair_done_file_name, "Examining discordant pairing evidence")) {
+
+      predict_discordant_pairs(settings, summary, ref_seq_info);
+
+      settings.done_step(settings.discordant_pair_done_file_name);
+    }
+  }
+
     /*
      * 09 Copy number variation
      * --------------------------------
@@ -2426,7 +2440,14 @@ int breseq_default_action(int argc, char* argv[])
       cGenomeDiff evidence_gd;
       evidence_gd.merge_preserving_duplicates(jc_gd);
       evidence_gd.merge_preserving_duplicates(ra_mc_gd);
-      
+
+      // Discordant pair (DP) evidence (only produced when paired mapping is enabled).
+      if (settings.paired_mapping && file_exists(settings.dp_genome_diff_file_name.c_str())) {
+        cGenomeDiff dp_gd(settings.dp_genome_diff_file_name);
+        evidence_gd.merge_preserving_duplicates(dp_gd);
+      }
+
+
       // there is a copy number genome diff for each sequence separately
       if (settings.predict_copy_number) {
         for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); ++it) {
@@ -2559,6 +2580,11 @@ int breseq_default_action(int argc, char* argv[])
     cerr << "Drawing coverage plots..." << endl;
     output::draw_coverage(settings, ref_seq_info, gd);
     output::draw_discordant_pairs_plot(settings, ref_seq_info);
+
+    // Per-side read-pair plots for DP evidence (stamps plot filenames onto the DP entries so
+    // cOutputEvidenceFiles can surface them as per-side '?' pages). Must run before that step.
+    if (!settings.no_evidence_html && settings.paired_mapping)
+      breseq::draw_discordant_pair_evidence_plots(settings, summary, ref_seq_info, gd);
 
     // !!! Currently, we need to wait for the creation of coverage plots to finish
     // b/c we check whether files exist in creating the HTML files next.
