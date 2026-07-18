@@ -148,6 +148,19 @@ string nonbreaking(const string& input)
 /*-----------------------------------------------------------------------------
  *  HTML Utility for Encoding HTML
  *-----------------------------------------------------------------------------*/
+string html_escape(const string& input)
+{
+  string retval = input;
+
+  /* ampersand must be substituted first, or it would double-escape the others */
+  retval = substitute(retval, "&", "&amp;");
+  retval = substitute(retval, "<", "&lt;");
+  retval = substitute(retval, ">", "&gt;");
+  retval = substitute(retval, "\"", "&quot;");
+
+  return retval;
+}
+
 string htmlize(const string& input)
 {
   string retval = input;
@@ -198,8 +211,13 @@ string header_style_string()
   ss << ".new_junction_entry_sep td {height: 0px; padding: 0; line-height: 0; font-size: 0;}" << endl;
   ss << ".hidden { display: none; }"                                       << endl;
   ss << ".unhidden { display: block; }"                                    << endl;
-  ss << ".breseq-sticky-header { position: sticky; top: 0; z-index: 100; background-color: white; border-bottom: 1px solid #ccc; padding: 4px 0; margin: 0; }" << endl;
-  ss << ".breseq-sticky-header p { margin: 0.3em 0; }"                         << endl;
+  // Box model is kept separate from the sticky positioning so that pages which
+  // are not sticky (the evidence entry pages) can share the exact same header
+  // geometry and the header does not shift when navigating between them.
+  ss << ".breseq-page-header { background-color: white; border-bottom: 1px solid #ccc; padding: 4px 0; margin: 0; }" << endl;
+  ss << ".breseq-page-header p { margin: 0.3em 0; }"                           << endl;
+  ss << ".breseq-sticky-header { position: sticky; top: 0; z-index: 100; }"    << endl;
+  ss << ".sample_name { font-size: 14pt; font-weight: bold; text-align: left; margin: 0 0 4px 0; }" << endl;
   // Sticky column-header cells. The tables use cellspacing="1" over a near-black table
   // background, so a 1px gap surrounds every cell. The sticky th covers its own box but not
   // that gap, so rows scrolling up flash through the 1px band at the header's bottom edge.
@@ -557,7 +575,7 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
   // Sticky header: breseq nav + filter + jump links
   /////////////////////////
 
-  HTML << "<div class=\"breseq-sticky-header\">" << endl;
+  HTML << "<div class=\"breseq-page-header breseq-sticky-header\">" << endl;
   HTML << breseq_header_string(settings) << endl;
 
   if (!settings.no_javascript && !settings.no_list_js) {
@@ -781,7 +799,7 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   // Sticky header: breseq nav + jump links
   /////////////////////////
 
-  HTML << "<div class=\"breseq-sticky-header\">" << endl;
+  HTML << "<div class=\"breseq-page-header breseq-sticky-header\">" << endl;
   HTML << breseq_header_string(settings) << endl;
 
   if (ra_list.size() > 0 || jc_list.size() > 0) {
@@ -890,7 +908,7 @@ void html_compare(
   }
 
   if (!settings.no_javascript && !settings.no_list_js) {
-    HTML << "<div class=\"breseq-sticky-header\">" << endl;
+    HTML << "<div class=\"breseq-page-header breseq-sticky-header\">" << endl;
     HTML << "<p>" << mutation_filter_input_string() << endl;
     HTML << "</div>" << endl;
   }
@@ -917,7 +935,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << html_header("BRESEQ :: Summary Statistics", settings);
 
   // Sticky header with navigation
-  HTML << "<div class=\"breseq-sticky-header\">" << endl;
+  HTML << "<div class=\"breseq-page-header breseq-sticky-header\">" << endl;
   HTML << breseq_header_string(settings) << endl;
   HTML << "</div>" << endl;
   HTML << "<p>" << endl;
@@ -1462,31 +1480,36 @@ string html_deletion_coverage_values_table_string(const Settings& settings, cRef
   return ss.str();
 }
 
-string breseq_header_string(const Settings& settings)
+string breseq_header_string(const Settings& settings, const string& path_prefix)
 {
   stringstream ss(ios_base::out | ios_base::app);
-  
+
   //copy over the breseq_graphic which we need if it doesn't exist - don't show command
   if (!file_exists(settings.breseq_icon_graphic_to_file_name.c_str())) {
     copy_file(settings.breseq_icon_graphic_from_file_name, settings.breseq_icon_graphic_to_file_name);
   }
-  
+
+  // Name of the sample being reported on, shown above the graphic/version table.
+  if (!settings.sample_name.empty()) {
+    ss << "<div class=\"sample_name\">" << html_escape(settings.sample_name) << "</div>" << endl;
+  }
+
   ss << "<table width=\"100%\" border=\"0\" cellspacing=\"0\" cellpadding=\"3\">" << endl;
   ss << "<tr>" << endl;
-  ss << td(a(settings.website, img(Settings::relative_path(settings.breseq_icon_graphic_to_file_name, settings.output_path))));
+  ss << td(a(settings.website, img(path_prefix + Settings::relative_path(settings.breseq_icon_graphic_to_file_name, settings.output_path))));
   ss << endl;
   ss << start_td("width=\"100%\"") << endl;
   ss << settings.byline << endl;
   ss << "<br>";
-  ss << a(Settings::relative_path(settings.index_html_file_name, settings.output_path), "mutation predictions");
+  ss << a(path_prefix + Settings::relative_path(settings.index_html_file_name, settings.output_path), "mutation predictions");
   ss << " | " << endl;
-  ss << a(Settings::relative_path(settings.marginal_html_file_name, settings.output_path), "marginal predictions");
+  ss << a(path_prefix + Settings::relative_path(settings.marginal_html_file_name, settings.output_path), "marginal predictions");
   ss << " | " << endl;
-  ss << a(Settings::relative_path(settings.summary_html_file_name, settings.output_path), "summary statistics");
+  ss << a(path_prefix + Settings::relative_path(settings.summary_html_file_name, settings.output_path), "summary statistics");
   ss << " | " << endl;
-  ss << a(Settings::relative_path(settings.final_genome_diff_file_name, settings.output_path), "genome diff");
+  ss << a(path_prefix + Settings::relative_path(settings.final_genome_diff_file_name, settings.output_path), "genome diff");
   ss << " | " << endl;
-  ss << a(Settings::relative_path(settings.log_file_name, settings.output_path), "command line log");
+  ss << a(path_prefix + Settings::relative_path(settings.log_file_name, settings.output_path), "command line log");
   ss << endl;
   ss << "</td></tr></table>" << endl;
   return ss.str();
@@ -4316,6 +4339,21 @@ cOutputEvidenceFiles::html_evidence_file (
     HTML << "<base target=\"_top\">" << endl;
   }
 
+  // Same graphic/version/navigation table as the main pages, so evidence pages
+  // are not dead ends. No "Filter Mutations:" box (nothing to filter here) and
+  // no sticky-header wrapper.
+  //
+  // Evidence pages live one directory below the other output pages
+  // (output/evidence/), so their links need a "../" prefix -- EXCEPT under
+  // zip_html, where the page is rendered inside evidence.html's iframe with a
+  // runtime <base href> pointing at evidence.html's own directory (output/),
+  // which is already where the link targets live. See create_evidence_page().
+  // Same .breseq-page-header box as the main pages (but not sticky, since these
+  // are single-entry pages) so the header lands on identical pixels and does not
+  // shift as the user navigates between an evidence page and a list page.
+  HTML << "<div class=\"breseq-page-header\">" << endl;
+  HTML << breseq_header_string(settings, settings.zip_html ? "" : "../") << endl;
+  HTML << "</div>" << endl;
 
   // print a table for the main item
   // followed by auxiliary tables for each piece of evidence
@@ -4428,6 +4466,19 @@ void create_evidence_archive(const Settings& settings)
         }
       }
       globfree(&g);
+    }
+  }
+
+  // The evidence pages show the breseq graphic in their header, but it lives in
+  // output/ rather than the evidence directory globbed above. Include it so the
+  // viewer inlines it as a data URI instead of relying on <base href> resolution.
+  if (file_exists(settings.breseq_icon_graphic_to_file_name.c_str())) {
+    if (!mz_zip_writer_add_file(&zip, "breseq_icon.png",
+                                settings.breseq_icon_graphic_to_file_name.c_str(),
+                                NULL, 0, MZ_DEFAULT_COMPRESSION)) {
+      cerr << "WARNING: could not add to evidence archive: " << settings.breseq_icon_graphic_to_file_name << endl;
+    } else {
+      any_added = true;
     }
   }
 
