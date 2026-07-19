@@ -71,6 +71,7 @@ const char* MC_SIDE_1="mc_side_1";
 const char* MC_SIDE_2="mc_side_2";
 const char* NO_SHOW="no_show";
 const char* PLOT="plot";
+const char* PLOT_MESSAGE="plot_message";
 const char* PREFIX="prefix";
 const char* TRUNCATE_END="truncate_end";
 const char* TRUNCATE_START="truncate_start";
@@ -4462,29 +4463,31 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, const cGeno
                  (END, (*item)[SIDE_1_POSITION]);
     if (item->entry_exists("_dp_plot_file_name"))
       dp_flagship[PLOT] = (*item)["_dp_plot_file_name"];
+    if (item->entry_exists("_dp_plot_message"))
+      dp_flagship[PLOT_MESSAGE] = (*item)["_dp_plot_message"];
     add_evidence(_EVIDENCE_FILE_NAME, item, item, dp_flagship);
 
     if (item->entry_exists("_side_1_dp_plot_file_name")) {
-      add_evidence(_SIDE_1_EVIDENCE_FILE_NAME,
-                   item,
-                   item,
-                   make_map<string,string>
+      map<string,string> side_1_map = make_map<string,string>
                    (PREFIX, "DP_SIDE_1")
                    (SEQ_ID, (*item)[SIDE_1_SEQ_ID])
                    (START, (*item)[SIDE_1_POSITION])
                    (END, (*item)[SIDE_1_POSITION])
-                   (PLOT, (*item)["_side_1_dp_plot_file_name"]));
+                   (PLOT, (*item)["_side_1_dp_plot_file_name"]);
+      if (item->entry_exists("_side_1_dp_plot_message"))
+        side_1_map[PLOT_MESSAGE] = (*item)["_side_1_dp_plot_message"];
+      add_evidence(_SIDE_1_EVIDENCE_FILE_NAME, item, item, side_1_map);
     }
     if (item->entry_exists("_side_2_dp_plot_file_name")) {
-      add_evidence(_SIDE_2_EVIDENCE_FILE_NAME,
-                   item,
-                   item,
-                   make_map<string,string>
+      map<string,string> side_2_map = make_map<string,string>
                    (PREFIX, "DP_SIDE_2")
                    (SEQ_ID, (*item)[SIDE_2_SEQ_ID])
                    (START, (*item)[SIDE_2_POSITION])
                    (END, (*item)[SIDE_2_POSITION])
-                   (PLOT, (*item)["_side_2_dp_plot_file_name"]));
+                   (PLOT, (*item)["_side_2_dp_plot_file_name"]);
+      if (item->entry_exists("_side_2_dp_plot_message"))
+        side_2_map[PLOT_MESSAGE] = (*item)["_side_2_dp_plot_message"];
+      add_evidence(_SIDE_2_EVIDENCE_FILE_NAME, item, item, side_2_map);
     }
   }
 
@@ -4592,6 +4595,10 @@ cOutputEvidenceFiles::html_evidence_file (
     HTML << "<base target=\"_top\">" << endl;
   }
 
+  // Message for a capped plot (e.g. "Only 100 of 201 mapped read pairs displayed.") at the top of the page.
+  if (item.entry_exists(PLOT_MESSAGE) && !item[PLOT_MESSAGE].empty()) {
+    HTML << "<p>" << b(item[PLOT_MESSAGE]) << "</p>" << endl;
+  }
 
   // print a table for the main item
   // followed by auxiliary tables for each piece of evidence

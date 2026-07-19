@@ -28,6 +28,8 @@
 #include <set>
 #include <limits>
 #include <cmath>
+#include <random>
+#include <algorithm>
 
 using namespace std;
 
@@ -1231,6 +1233,25 @@ namespace breseq {
   }
 
   // Extract the read-number (the part after ':') from a QNAME "<prefix>:<num>".
+  // If v holds more than max_display entries, randomly down-sample it to max_display (seeded so runs are
+  // reproducible) and return the ORIGINAL size; otherwise leave v alone and return 0. Used to bound the
+  // number of read/pair lanes drawn in a DP plot (0 = show all).
+  template <typename T>
+  static size_t dp_cap_for_display(vector<T>& v, uint32_t max_display, uint32_t seed)
+  {
+    size_t total = v.size();
+    if (max_display == 0 || total <= max_display) return 0;
+    std::mt19937 rng(seed);
+    std::shuffle(v.begin(), v.end(), rng);
+    v.resize(max_display);
+    return total;
+  }
+
+  static string dp_capped_message(uint32_t shown, size_t total)
+  {
+    return "Only " + to_string(shown) + " of " + to_string(total) + " mapped read pairs displayed.";
+  }
+
   void draw_discordant_pair_evidence_plots(const Settings& settings, Summary& summary,
                                            cReferenceSequences& ref_seq_info, cGenomeDiff& gd)
   {
@@ -1276,14 +1297,20 @@ namespace breseq {
       int32_t s1_tid = g.tid_for_seq_id(s1_seq);
       int32_t s2_tid = g.tid_for_seq_id(s2_seq);
 
-      // Side 1 -- render the per-side plot and keep the discordant reads for the joined plot.
+      uint32_t max_display = settings.max_displayed_reads;
+
+      // Side 1 -- render the per-side plot and keep the (FULL) discordant reads for the joined plot.
       g.gather(s1_seq, s1_pos, s1_str, s1_fwd, s2_tid, s2_pos, s2_fwd, D);
       vector<dp_draw_read> s1_disc;
       for (vector<dp_draw_read>::const_iterator r = g.reads().begin(); r != g.reads().end(); r++)
         if (r->category == 1) s1_disc.push_back(*r);
       {
+        // Cap a COPY for the plot (concordant + discordant lanes); the joined plot below keeps s1_disc full.
+        vector<dp_draw_read> plot_reads = g.reads();
+        size_t total = dp_cap_for_display(plot_reads, max_display, static_cast<uint32_t>(s1_pos));
+        if (total) dp["_side_1_dp_plot_message"] = dp_capped_message(max_display, total);
         string svg = settings.evidence_path + "/DP_SIDE_1_" + dp._id + ".svg";
-        render_dp_side_plot(svg, g.reads(), s1_pos, s1_str, mate_prefix, DP_SIDE1_COLOR);
+        render_dp_side_plot(svg, plot_reads, s1_pos, s1_str, mate_prefix, DP_SIDE1_COLOR);
         make_svg_responsive(svg);
         dp["_side_1_dp_plot_file_name"] = Settings::relative_path(svg, settings.evidence_path);
       }
@@ -1294,8 +1321,11 @@ namespace breseq {
       for (vector<dp_draw_read>::const_iterator r = g.reads().begin(); r != g.reads().end(); r++)
         if (r->category == 1) s2_disc.push_back(*r);
       {
+        vector<dp_draw_read> plot_reads = g.reads();
+        size_t total = dp_cap_for_display(plot_reads, max_display, static_cast<uint32_t>(s2_pos));
+        if (total) dp["_side_2_dp_plot_message"] = dp_capped_message(max_display, total);
         string svg = settings.evidence_path + "/DP_SIDE_2_" + dp._id + ".svg";
-        render_dp_side_plot(svg, g.reads(), s2_pos, s2_str, mate_prefix, DP_SIDE2_COLOR);
+        render_dp_side_plot(svg, plot_reads, s2_pos, s2_str, mate_prefix, DP_SIDE2_COLOR);
         make_svg_responsive(svg);
         dp["_side_2_dp_plot_file_name"] = Settings::relative_path(svg, settings.evidence_path);
       }
@@ -1316,6 +1346,8 @@ namespace breseq {
           q.s2_start = b.read_start; q.s2_end = b.read_end; q.s2_anchor = b.anchor; q.s2_rev = b.read_reversed; q.s2_name = b.name;
           pairs.push_back(q);
         }
+        size_t total = dp_cap_for_display(pairs, max_display, static_cast<uint32_t>(s1_pos) ^ (static_cast<uint32_t>(s2_pos) << 1));
+        if (total) dp["_dp_plot_message"] = dp_capped_message(max_display, total);
         string svg = settings.evidence_path + "/DP_" + dp._id + ".svg";
         render_dp_joined_plot(svg, pairs, s1_pos, s1_str, s2_pos, s2_str);
         make_svg_responsive(svg);

@@ -66,6 +66,7 @@ extern const char* MC_SIDE_1;
 extern const char* MC_SIDE_2;
 extern const char* NO_SHOW;
 extern const char* PLOT;
+extern const char* PLOT_MESSAGE;
 extern const char* PREFIX;
 extern const char* TRUNCATE_END;
 extern const char* TRUNCATE_START;
