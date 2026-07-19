@@ -789,13 +789,29 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   }
 
   /////////////////////////
+  // Marginal DP evidence
+  /////////////////////////
+
+  // DP items rejected for CONCORDANT_PAIR_SKEW (discordant support too low vs the concordant crossing).
+  diff_entry_list_t dp_list = gd.filter_used_as_evidence(gd.get_list(make_vector<gd_entry_type>(DP)));
+  dp_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
+  dp_list.remove_if(cDiffEntry::field_exists(NO_SHOW));
+
+  string marginal_dp_title = "Marginal discordant pair evidence";
+  if (dp_list.size() > 0) {
+    // Highest skew (most anomalously low support) first.
+    dp_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>("neg_log10_discordance_p_value")));
+    marginal_dp_title += " (sorted from high to low skew)";
+  }
+
+  /////////////////////////
   // Sticky header: breseq nav + jump links
   /////////////////////////
 
   HTML << "<div class=\"breseq-sticky-header\">" << endl;
   HTML << breseq_header_string(settings) << endl;
 
-  if (ra_list.size() > 0 || jc_list.size() > 0) {
+  if (ra_list.size() > 0 || jc_list.size() > 0 || dp_list.size() > 0) {
     bool first_link = true;
     vector<string> jump_link_list;
 
@@ -805,6 +821,9 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
     }
     if (jc_list.size() > 0) {
       jump_link_list.push_back("<a href=\"#new_junction_list\">new junction</a>");
+    }
+    if (dp_list.size() > 0) {
+      jump_link_list.push_back("<a href=\"#discordant_pair_list\">discordant pair</a>");
     }
     HTML << join(jump_link_list, ", ");
 
@@ -828,8 +847,13 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
     HTML << html_new_junction_table_string(jc_list, settings, false, marginal_jc_title, relative_path);
   }
 
+  if (dp_list.size() > 0) {
+    HTML << "<p>" << endl;
+    HTML << html_discordant_pair_table_string(dp_list, settings, true, marginal_dp_title, relative_path);
+  }
+
   // This code prints out a message if there was nothing in the previous tables
-  if (ra_list.size() + jc_list.size() == 0) {
+  if (ra_list.size() + jc_list.size() + dp_list.size() == 0) {
     HTML << "<p>No marginal predictions." << endl;
   }
 
@@ -2441,7 +2465,6 @@ string html_new_junction_table_string(diff_entry_list_t& list_ref, const Setting
 string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Settings& settings, bool show_details, const string& title, const string& relative_link)
 {
   (void)settings;
-  (void)show_details;
   if (list_ref.size()==0) return "";
 
   stringstream ss; //!<< Main Build Object for Function
@@ -2560,6 +2583,15 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
               i(nonbreaking(substitute(c[key + "_" + GENE_NAME], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator)))) << endl;
       ss << td(htmlize(substitute(c[key + "_" + GENE_PRODUCT], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) << endl;
     ss << end_tr() << endl;
+
+    if (show_details && c.entry_exists(REJECT)) {
+      vector<string> reject_reasons = c.get_reject_reasons();
+      for (vector<string>::iterator it = reject_reasons.begin(); it != reject_reasons.end(); it++) {
+        ss << tr("class=\"reject_table_row\"",
+                 td("colspan=\"" + to_string(total_cols) + "\"",
+                    "Rejected: " + decode_reject_reason(*it))) << endl;
+      }
+    }
 
     row_bg_color_index = (row_bg_color_index+1) % 2;
 
@@ -2753,6 +2785,10 @@ string decode_reject_reason(const string& reject)
   if (reject == "COVERAGE_EVENNESS_SKEW")
   {
     return "Coverage evenness skew score above cutoff.";
+  }
+  else if (reject == "CONCORDANT_PAIR_SKEW")
+  {
+    return "Concordant pair skew score above cutoff.";
   }
   else if (reject == "BETWEEN_TWO_JUNCTION_ONLY_SEQUENCES")
   {

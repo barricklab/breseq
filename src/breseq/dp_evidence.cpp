@@ -885,6 +885,15 @@ namespace breseq {
       }
       dp[NEG_LOG10_DISCORDANCE_P_VALUE] = std::isnan(dp_score) ? string("NT") : to_string(dp_score, 1, false);
 
+      // Reject weakly-supported junctions: a skew above the cutoff means the discordant support (k) is
+      // anomalously low relative to the concordant crossing expected at this coverage -- i.e. too few
+      // discordant pairs where many concordant pairs still span the locus, so it reads as a contiguous
+      // (non-junction) position. Rejected DP items are moved to marginal.html (0 = cutoff off).
+      if (!std::isnan(dp_score) && settings.discordant_pair_skew_cutoff > 0.0
+          && dp_score > settings.discordant_pair_skew_cutoff) {
+        dp.add_reject_reason("CONCORDANT_PAIR_SKEW");
+      }
+
       dp_gd.add(dp);
     }
 
