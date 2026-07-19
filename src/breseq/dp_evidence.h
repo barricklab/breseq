@@ -48,6 +48,11 @@ namespace breseq {
   //  Call during the Output stage, before cOutputEvidenceFiles.
   void draw_discordant_pair_evidence_plots(const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info, cGenomeDiff& gd);
 
+  //! Draw the run-wide concordant-pair crossing distribution plot and the per-sequence
+  //  empirical-vs-projected overlay plots (from the tab files written during resolve_alignments).
+  //  Call during the Output stage, before summary.html is generated.
+  void draw_concordant_pair_crossing_plots(const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info);
+
 } // namespace breseq
 
 #endif

@@ -1291,6 +1291,8 @@ namespace breseq
 
 		this->output_calibration_path = this->evidence_path;
 		this->unique_only_coverage_plot_file_name = this->output_calibration_path + "/@.unique_coverage.svg";
+		this->concordant_pair_crossing_plot_file_name = this->output_calibration_path + "/concordant_pair_crossing.svg";
+		this->concordant_pair_crossing_seq_plot_file_name = this->output_calibration_path + "/#.concordant_pair_crossing.svg";
 		this->error_rates_plot_file_name = this->output_calibration_path + "/#.error_rates.svg";
 		this->paired_mapping_distance_plot_file_name = this->output_calibration_path + "/#.pair_distance.svg";
 		this->discordant_pairs_plot_file_name = this->output_calibration_path + "/discordant_pairs.svg";
@@ -1301,6 +1303,9 @@ namespace breseq
     //! Paths: Data
 		this->data_path = "data";
 		if (this->base_output_path.size() > 0) this->data_path = this->base_output_path + "/" + this->data_path;
+
+		// Per-seq_id concordant-pair crossing histogram tab (written in resolve, persists in data/).
+		this->concordant_pair_crossing_distribution_file_name = this->data_path + "/#.concordant_pair_crossing.tab";
 
 		this->reference_bam_file_name = this->data_path + "/reference.bam";
 		this->reference_fasta_file_name = this->data_path + "/reference.fasta";

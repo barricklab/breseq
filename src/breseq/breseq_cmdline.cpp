@@ -2581,6 +2581,10 @@ int breseq_default_action(int argc, char* argv[])
     output::draw_coverage(settings, ref_seq_info, gd);
     output::draw_discordant_pairs_plot(settings, ref_seq_info);
 
+    // Run-wide + per-sequence concordant-pair crossing distribution plots (the DP null distribution).
+    if (settings.paired_mapping)
+      breseq::draw_concordant_pair_crossing_plots(settings, summary, ref_seq_info);
+
     // Per-side read-pair plots for DP evidence (stamps plot filenames onto the DP entries so
     // cOutputEvidenceFiles can surface them as per-side '?' pages). Must run before that step.
     if (!settings.no_evidence_html && settings.paired_mapping)

@@ -1125,6 +1125,13 @@ void load_junction_alignments(
   cFastqQualityConverter fqc("SANGER", "SANGER");
   uint32_t fastq_file_index = 0;
 
+  // Per-reference-position difference array counting concordant read pairs whose inner gap spans each
+  // position, pooled across all paired read-file sets. Indexed by BAM target id (consistent across sets
+  // -- same reference). Lazily allocated on the first paired set; fit to a negative binomial after the
+  // loop as the null distribution for scoring Discordant Pair evidence.
+  vector<vector<int32_t> > crossing_diff;
+  vector<string> crossing_seq_id;  // target id -> seq_id (captured so it survives header deletion)
+
   for (cReadFileSets::iterator rfs_it = read_files.begin(); rfs_it != read_files.end(); rfs_it++)
   {
     const cReadFileSet& rfs = *rfs_it;
@@ -1400,6 +1407,19 @@ void load_junction_alignments(
     bam_file* reference_tam_1 = new bam_file(reference_sam_file_name_1, settings.reference_fasta_file_name, ios::in);
     bam_file* reference_tam_2 = new bam_file(reference_sam_file_name_2, settings.reference_fasta_file_name, ios::in);
 
+    // Lazily allocate the per-position concordant-pair-crossing accumulator on the first paired set
+    // (the reference header is identical across sets, so target ids stay consistent).
+    if (crossing_diff.empty()) {
+      int32_t nt = reference_tam_1->bam_header->n_targets;
+      crossing_diff.resize(nt);
+      crossing_seq_id.resize(nt);
+      for (int32_t t = 0; t < nt; t++) {
+        string sid = reference_tam_1->bam_header->target_name[t];
+        crossing_seq_id[t] = sid;
+        crossing_diff[t].assign(ref_seq_info[sid].get_sequence_length() + 2, 0);
+      }
+    }
+
     bam_file* junction_tam_1 = NULL;
     bam_file* junction_tam_2 = NULL;
     if (junction_prediction)
@@ -1533,6 +1553,21 @@ void load_junction_alignments(
           // Count this flag-assigned pair for the final summary (concordant vs discordant).
           ++mapped_pairs;
           if (pairing.any_concordant_combo_exists) ++concordant_pairs;
+
+          // Tally the concordant pair's inner gap into the per-position crossing accumulator (the null
+          // distribution for DP scoring): +1 over [left_read.end+1, right_read.start-1].
+          if (pairing.any_concordant_combo_exists && same_tid && !crossing_diff.empty()) {
+            int32_t tid = a1->reference_target_id();
+            int32_t s1 = a1->reference_start_1(), e1 = a1->reference_end_1();
+            int32_t s2 = a2->reference_start_1(), e2 = a2->reference_end_1();
+            int32_t gap_lo = ((s1 <= s2) ? e1 : e2) + 1;   // end of the earlier-starting read + 1
+            int32_t gap_hi = ((s1 <= s2) ? s2 : s1) - 1;   // start of the later-starting read - 1
+            vector<int32_t>& d = crossing_diff[tid];
+            if (gap_hi >= gap_lo && gap_lo >= 1 && static_cast<size_t>(gap_hi) + 1 < d.size()) {
+              d[gap_lo]++;
+              d[gap_hi + 1]--;
+            }
+          }
         }
 
         _write_reference_matches(settings, summary, ref_seq_info, trims_list, m1.this_reference_alignments, resolved_reference_tam, fastq_file_index_1);
@@ -1604,6 +1639,34 @@ void load_junction_alignments(
     delete reference_tam_2;
 
   } // End of Read File Set loop
+
+  // Write each reference sequence's INTERIOR concordant-pair crossing histogram to a tab file (the null
+  // distribution used to score DP evidence). Interior = >= distance_cutoff (max insert) from each end --
+  // the only positions a pair can fully span (near-end positions are crossing-depleted). Prefix-sum the
+  // difference array into per-position counts. Distributions are CSV intermediates, not summary JSON.
+  double dist_cutoff = 0.0;
+  for (PairedMappingDistanceDistributionSummaries::const_iterator it = summary.preliminary_paired_mapping_distance_distribution.begin();
+       it != summary.preliminary_paired_mapping_distance_distribution.end(); it++)
+    if (it->second.distance_cutoff > dist_cutoff) dist_cutoff = it->second.distance_cutoff;
+  int32_t margin = static_cast<int32_t>(dist_cutoff);
+
+  for (size_t t = 0; t < crossing_diff.size(); t++) {
+    vector<int32_t>& d = crossing_diff[t];
+    for (size_t pos = 1; pos < d.size(); pos++) d[pos] += d[pos - 1];
+    int32_t seqlen = static_cast<int32_t>(d.size()) - 2;
+    int32_t lo = margin + 1, hi = seqlen - margin;
+    map<int32_t, uint64_t> hist;
+    for (int32_t pos = lo; pos <= hi; pos++) {
+      int32_t c = d[pos]; if (c < 0) c = 0;
+      hist[c]++;
+    }
+    string fn = Settings::file_name(settings.concordant_pair_crossing_distribution_file_name, "#", crossing_seq_id[t]);
+    ofstream out(fn.c_str());
+    out << "crossing\tcount" << endl;
+    int32_t maxc = hist.empty() ? 0 : hist.rbegin()->first;
+    for (int32_t c = 0; c <= maxc; c++) out << c << "\t" << (hist.count(c) ? hist[c] : 0) << endl;
+    out.close();
+  }
 
   if (unmapped_fastq != NULL) delete unmapped_fastq;
 }

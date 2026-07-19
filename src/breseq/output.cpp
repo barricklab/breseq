@@ -1044,6 +1044,17 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
         : Settings::relative_path(discordant_plot, settings.output_path);
       HTML << "<p>" << a(discordant_href, "Discordant read-pair plot") << "</p>" << endl;
     }
+
+    // Single run-wide concordant-pair crossing distribution (the null distribution for DP-evidence
+    // scoring; per-sequence versions are linked from the Reference Sequence Information table).
+    string crossing_plot = settings.concordant_pair_crossing_plot_file_name;
+    if (file_exists(crossing_plot.c_str())) {
+      string crossing_basename = cString(crossing_plot).get_base_name();
+      string crossing_href = settings.zip_html
+        ? settings.local_html_evidence_file_name + "#" + crossing_basename
+        : Settings::relative_path(crossing_plot, settings.output_path);
+      HTML << "<p>" << a(crossing_href, "Concordant pair crossing distribution") << "</p>" << endl;
+    }
   }
 
   ////
@@ -1054,6 +1065,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   HTML << "<p>" << endl;
   HTML << "<table border=\"0\" cellspacing=\"1\" cellpadding=\"5\" >" << endl;
   HTML << "<tr>" << th() <<
+                    th() <<
                     th() <<
                     th("seq id") <<
                     th("length") <<
@@ -1119,6 +1131,21 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
           : Settings::relative_path(dist_plot, settings.output_path);
         HTML << td( a(dist_href, "distribution") );
       }
+
+      // Per-sequence concordant-pair crossing plot: this sequence's empirical crossing distribution
+      // overlaid with the run-wide reference projected to its coverage (the DP null actually used).
+      {
+        string cross_plot = settings.file_name(settings.concordant_pair_crossing_seq_plot_file_name, "#", it->m_seq_id);
+        if (file_exists(cross_plot.c_str())) {
+          string cross_basename = cString(cross_plot).get_base_name();
+          string cross_href = settings.zip_html
+            ? settings.local_html_evidence_file_name + "#" + cross_basename
+            : Settings::relative_path(cross_plot, settings.output_path);
+          HTML << td( a(cross_href, "crossing pairs") );
+        } else {
+          HTML << td("");
+        }
+      }
       //}
       //else {
       //  HTML << td("");
@@ -1126,7 +1153,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
     }
     // Junction-Only reference sequence
     else {
-      HTML << td("colspan=\"2\" align=\"center\"", nonbreaking("junction-only"));
+      HTML << td("colspan=\"3\" align=\"center\"", nonbreaking("junction-only"));
     }
         
     HTML << td(it->m_seq_id);
@@ -1150,6 +1177,7 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
   }
   
   HTML << "<tr class=\"highlight_table_row\">";
+  HTML << td();
   HTML << td();
   HTML << td();
   HTML << td(b("total"));

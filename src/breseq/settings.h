@@ -560,6 +560,9 @@ namespace breseq
 		string resolved_junction_sam_file_name;
 		string alignment_resolution_summary_file_name;
 		string resolved_paired_mapping_distance_summary_file_name;
+		// Per-seq_id interior concordant-pair crossing histogram (crossing<TAB>count), written in resolve
+		// as a CSV/tab intermediate; read by the DP score and the crossing plots (# = seq_id).
+		string concordant_pair_crossing_distribution_file_name;
     string jc_genome_diff_file_name;
     
     string junction_debug_file_name;
@@ -634,6 +637,8 @@ namespace breseq
     
 		string output_calibration_path;
 		string unique_only_coverage_plot_file_name;
+		string concordant_pair_crossing_plot_file_name;       // single run-wide reference plot (no token)
+		string concordant_pair_crossing_seq_plot_file_name;   // per-seq empirical-vs-projected overlay (# = seq_id)
 		string error_rates_plot_file_name;
     
 		string breseq_icon_graphic_from_file_name;

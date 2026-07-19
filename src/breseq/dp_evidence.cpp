@@ -22,8 +22,11 @@
 #include "genome_diff.h"
 #include "genome_diff_entry.h"
 #include "pileup.h"   // pileup_base + alignment_wrapper + BAM flag macros
+#include "stats.h"    // nbdtr (negative binomial CDF), incompletegamma (Poisson CDF)
 
 #include <set>
+#include <limits>
+#include <cmath>
 
 using namespace std;
 
@@ -348,11 +351,247 @@ namespace breseq {
     return false;
   }
 
+  static const double kDPMaxScore = 999999.0;
+
+  // Read a per-seq_id interior crossing histogram tab (crossing<TAB>count) into `hist` indexed by
+  // crossing value. Returns false if absent/empty.
+  static bool dp_read_crossing_hist(const string& fn, vector<double>& hist)
+  {
+    hist.clear();
+    if (!file_exists(fn.c_str())) return false;
+    ifstream in(fn.c_str());
+    string line;
+    getline(in, line);  // header "crossing\tcount"
+    double total = 0.0;
+    while (getline(in, line)) {
+      if (line.empty()) continue;
+      vector<string> f = split(line, "\t");
+      if (f.size() < 2) continue;
+      int c = from_string<int>(f[0]);
+      double n = from_string<double>(f[1]);
+      if (c < 0) continue;
+      if (static_cast<int>(hist.size()) <= c) hist.resize(c + 1, 0.0);
+      hist[c] = n; total += n;
+    }
+    return total > 0.0;
+  }
+
+  // Average coverage for a seq_id (unique-only fit if available, else the preliminary preprocess value).
+  // Only the RATIO between sequences matters for the crossing coverage-projection, so any consistent
+  // average-coverage measure works; unique_coverage is preferred (more accurate) and available at the
+  // DP scoring and output-plot stages.
+  static double dp_seq_coverage(const Summary& summary, const string& seq_id)
+  {
+    CoverageSummaries::const_iterator u = summary.unique_coverage.find(seq_id);
+    if (u != summary.unique_coverage.end() && u->second.average > 0.0) return u->second.average;
+    CoverageSummaries::const_iterator p = summary.preprocess_coverage.find(seq_id);
+    if (p != summary.preprocess_coverage.end() && p->second.average > 0.0) return p->second.average;
+    return 0.0;
+  }
+
+  // Censor window [lo, hi] on the crossing distribution to the NORMAL bulk -- excluding the near-zero
+  // deletion spike (deletions/no-coverage positions, which otherwise pollute the lower tail) and the
+  // high repeat outliers. Peak (mode) is found ignoring the crossing=0 bin; window = [0.25, 2.5]*peak,
+  // matching the "normal support" used in offline validation.
+  static void dp_crossing_censor(const vector<double>& hist, int32_t& lo, int32_t& hi)
+  {
+    // Find the BULK peak (mode) on a 5-point moving average, ignoring the crossing=0 bin -- so an
+    // isolated low-crossing spike (e.g. deletion-edge positions at crossing 1) doesn't masquerade as
+    // the mode.
+    int32_t n = static_cast<int32_t>(hist.size());
+    double peak = 0.0; int32_t peak_x = 1;
+    for (int32_t i = 1; i < n; i++) {
+      double sm = 0.0; int32_t cnt = 0;
+      for (int32_t j = max(1, i - 2); j <= min(n - 1, i + 2); j++) { sm += hist[j]; cnt++; }
+      sm = (cnt > 0) ? sm / cnt : 0.0;
+      if (sm > peak) { peak = sm; peak_x = i; }
+    }
+    lo = max(1, static_cast<int32_t>(0.25 * peak_x));
+    hi = min(n - 1, static_cast<int32_t>(2.5 * peak_x));
+    if (hi < lo) { lo = 1; hi = n - 1; }
+  }
+
+  // The run-wide reference crossing distribution = the histogram of the LONGEST sequence (best-sampled,
+  // most interior positions), read from its tab; C_ref = its preliminary average coverage; [lo,hi] =
+  // its normal-bulk censor window. Returns false if unavailable.
+  static bool dp_load_crossing_reference(const Settings& settings, const Summary& summary,
+                                         cReferenceSequences& ref_seq_info,
+                                         vector<double>& hist_ref, double& C_ref, string& ref_seq_id,
+                                         int32_t& censor_lo, int32_t& censor_hi)
+  {
+    ref_seq_id = ""; size_t best_len = 0;
+    for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); it++)
+      if (it->get_sequence_length() > best_len) { best_len = it->get_sequence_length(); ref_seq_id = it->m_seq_id; }
+    if (ref_seq_id.empty()) return false;
+    C_ref = dp_seq_coverage(summary, ref_seq_id);
+    if (!(C_ref > 0.0)) return false;
+    string fn = Settings::file_name(settings.concordant_pair_crossing_distribution_file_name, "#", ref_seq_id);
+    if (!dp_read_crossing_hist(fn, hist_ref)) return false;
+    dp_crossing_censor(hist_ref, censor_lo, censor_hi);
+    return true;
+  }
+
+  // Probability a normal position on a sequence at relative coverage r (=avgcov/C_ref) is spanned by
+  // <= k concordant pairs, by PROJECTING the normal reference distribution (censored to [lo,hi]):
+  // binomial thinning for r<=1 (lowering coverage = randomly dropping reads -- exact; validated),
+  // Poisson up-scaling for r>1. P is floored at 0.5/total_normal (the empirical resolution limit).
+  static double dp_crossing_cdf(const vector<double>& hist_ref, int32_t lo, int32_t hi, double r, uint32_t k)
+  {
+    double total = 0.0;
+    for (int32_t c = lo; c <= hi && c < static_cast<int32_t>(hist_ref.size()); c++) total += hist_ref[c];
+    if (!(total > 0.0) || !(r > 0.0)) return std::numeric_limits<double>::quiet_NaN();
+    double P = 0.0;
+    for (int32_t c = lo; c <= hi && c < static_cast<int32_t>(hist_ref.size()); c++) {
+      if (hist_ref[c] <= 0.0) continue;
+      double cdf;
+      if (r <= 1.0) cdf = (static_cast<double>(k) >= static_cast<double>(c)) ? 1.0 : bdtr(static_cast<double>(k), static_cast<double>(c), r);
+      else { double mu = r * static_cast<double>(c); cdf = (mu > 0.0) ? incompletegamma(static_cast<double>(k) + 1.0, mu, /*complemented=*/true) : 1.0; }
+      P += hist_ref[c] * cdf;
+    }
+    double Pf = P / total;
+    double floorP = 0.5 / total;   // resolution limit -> skew capped at ~log10(2*total_normal)
+    return (Pf < floorP) ? floorP : Pf;
+  }
+
+  // DP "skew" score: -log10 P(crossing <= k), projecting the normal reference to seq X's coverage.
+  static double dp_discordance_skew(const vector<double>& hist_ref, int32_t lo, int32_t hi,
+                                    double C_ref, double avgcov_X, uint32_t k)
+  {
+    if (hist_ref.empty() || !(C_ref > 0.0) || !(avgcov_X > 0.0)) return std::numeric_limits<double>::quiet_NaN();
+    double P = dp_crossing_cdf(hist_ref, lo, hi, avgcov_X / C_ref, k);
+    if (std::isnan(P)) return P;
+    double sc = (P > 0.0) ? (-log10(P)) : kDPMaxScore;
+    if (sc < 0.0) sc = 0.0;   // P==1 -> -log10 gives -0.0
+    return (sc > kDPMaxScore) ? kDPMaxScore : sc;
+  }
+
+  // Poisson pmf P(X=v; mu).
+  static double dp_poisson_pmf(uint32_t v, double mu)
+  {
+    if (mu <= 0.0) return (v == 0) ? 1.0 : 0.0;
+    return exp(-mu + static_cast<double>(v) * log(mu) - lgamma(static_cast<double>(v) + 1.0));
+  }
+
+  // Projected crossing pmf for a sequence at relative coverage r, scaled to `scale` total counts, using
+  // only the normal reference bins [clo,chi]: out[v] = scale * Σ_c (hist_ref[c]/total_normal) · PMF(v;c,r)
+  // (binomial for r<=1, Poisson for r>1).
+  static void dp_project_crossing(const vector<double>& hist_ref, int32_t clo, int32_t chi, double r,
+                                  uint32_t maxv, double scale, vector<double>& out)
+  {
+    out.assign(maxv + 1, 0.0);
+    double total = 0.0;
+    for (int32_t c = clo; c <= chi && c < static_cast<int32_t>(hist_ref.size()); c++) total += hist_ref[c];
+    if (!(total > 0.0) || !(r > 0.0)) return;
+    for (int32_t c = clo; c <= chi && c < static_cast<int32_t>(hist_ref.size()); c++) {
+      if (hist_ref[c] <= 0.0) continue;
+      double w = hist_ref[c] / total;
+      if (r <= 1.0) {
+        uint32_t vhi = static_cast<uint32_t>(min<int32_t>(c, static_cast<int32_t>(maxv)));
+        for (uint32_t v = 0; v <= vhi; v++) out[v] += w * binomial(r, c, static_cast<int32_t>(v));
+      } else {
+        double mu = r * static_cast<double>(c);
+        for (uint32_t v = 0; v <= maxv; v++) out[v] += w * dp_poisson_pmf(v, mu);
+      }
+    }
+    for (uint32_t v = 0; v <= maxv; v++) out[v] *= scale;
+  }
+
+  // Render a crossing-distribution SVG in the coverage-plot style: empirical histogram as points,
+  // colored black inside the normal window [clo,chi] and red outside (censored deletions/repeats), plus
+  // an optional projected line (blue). `emp`/`proj` are indexed by crossing value (counts).
+  static void render_crossing_plot(const string& svg, const vector<double>& emp, const vector<double>& proj,
+                                   int32_t clo, int32_t chi, const string& title, const string& xlabel,
+                                   const string& emp_label, const string& proj_label)
+  {
+    // Peak / y-scale from the NORMAL window (so the crossing=0 deletion spike and repeats don't dominate
+    // the axes and hide the bulk).
+    uint32_t maxv = 0; double peak = 0.0, max_y = 0.0; uint32_t peak_i = static_cast<uint32_t>(max(1, clo));
+    for (uint32_t i = 0; i < emp.size(); i++) if (emp[i] > 0) maxv = i;
+    for (int32_t i = clo; i <= chi && i < static_cast<int32_t>(emp.size()); i++) {
+      if (emp[i] > peak) { peak = emp[i]; peak_i = static_cast<uint32_t>(i); }
+      if (emp[i] > max_y) max_y = emp[i];
+    }
+    for (uint32_t i = 0; i < proj.size(); i++) { if (proj[i] > max_y) max_y = proj[i]; if (proj[i] > 0) maxv = max(maxv, i); }
+    if (peak <= 0.0) return;
+    uint32_t graph_end = static_cast<uint32_t>(chi) + static_cast<uint32_t>((chi - clo) / 4 + 1);
+    graph_end = min(graph_end, maxv + 1);
+    if (graph_end < static_cast<uint32_t>(1.2 * peak_i)) graph_end = static_cast<uint32_t>(1.2 * peak_i);
+
+    string emp_tab = svg + ".emp.tab";
+    { ofstream o(emp_tab.c_str()); for (uint32_t i = 0; i < emp.size(); i++) o << i << "\t" << emp[i] << endl; }
+    bool has_proj = !proj.empty();
+    string proj_tab = svg + ".proj.tab";
+    if (has_proj) { ofstream o(proj_tab.c_str()); for (uint32_t i = 0; i < proj.size(); i++) o << i << "\t" << proj[i] << endl; }
+
+    ostringstream s;
+    s << "set terminal svg size 1320,720 font ',16'" << endl;
+    s << "set output " << double_quote(svg) << endl;
+    s << "set tics out" << endl;
+    s << "set border lw 2" << endl;
+    s << "set title " << double_quote(title) << " font ',20'" << endl;
+    s << "set xlabel " << double_quote(xlabel) << endl;
+    s << "set ylabel 'Number of reference positions'" << endl;
+    s << "set xrange [0:" << graph_end << "]" << endl;
+    s << "set yrange [0:" << to_string(max_y * 1.05, 6) << "]" << endl;
+    s << "set key top right font ',16' spacing 2" << endl;
+    vector<string> cl;
+    cl.push_back(double_quote(emp_tab) + " using ($1>=" + to_string(clo) + "&&$1<=" + to_string(chi) + "?$1:NaN):2 with points pt 6 lc rgb 'black' title " + double_quote(emp_label));
+    cl.push_back(double_quote(emp_tab) + " using ($1<" + to_string(clo) + "||$1>" + to_string(chi) + "?$1:NaN):2 with points pt 6 lc rgb 'red' title 'censored'");
+    if (has_proj) cl.push_back(double_quote(proj_tab) + " using 1:2 with lines lw 3 lc rgb 'blue' title " + double_quote(proj_label));
+    s << "plot " << join(cl, string(", \\\n     ")) << endl;
+
+    string base = svg + "." + to_string(getpid());
+    run_gnuplot_script(s.str(), base + ".gp", base + ".gp.log");
+    make_svg_responsive(svg);
+    remove((base + ".gp.log").c_str());
+    remove(emp_tab.c_str());
+    if (has_proj) remove(proj_tab.c_str());
+  }
+
+  void draw_concordant_pair_crossing_plots(const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info)
+  {
+    vector<double> hist_ref; double C_ref = 0.0; string R; int32_t ref_lo = 0, ref_hi = 0;
+    if (!dp_load_crossing_reference(settings, summary, ref_seq_info, hist_ref, C_ref, R, ref_lo, ref_hi)) return;
+    create_path(settings.evidence_path);
+
+    // Run-wide reference distribution (the null actually used; from the longest sequence R).
+    render_crossing_plot(settings.concordant_pair_crossing_plot_file_name, hist_ref, vector<double>(),
+                         ref_lo, ref_hi, "Concordant Pair Crossing Distribution",
+                         "Concordant pairs spanning a position",
+                         "Crossing distribution (" + R + ")", "");
+
+    // Per-seq overlays: each sequence's empirical distribution vs the reference projected to its coverage.
+    for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); it++) {
+      string seq_id = it->m_seq_id;
+      vector<double> emp;
+      string fn = Settings::file_name(settings.concordant_pair_crossing_distribution_file_name, "#", seq_id);
+      if (!dp_read_crossing_hist(fn, emp)) continue;
+      double avgcov = dp_seq_coverage(summary, seq_id);
+      if (!(avgcov > 0.0) || !(C_ref > 0.0)) continue;
+      uint32_t maxv = emp.empty() ? 0 : static_cast<uint32_t>(emp.size() - 1);
+      int32_t seq_lo = 0, seq_hi = 0; dp_crossing_censor(emp, seq_lo, seq_hi);  // this seq's own normal window
+      // Scale the projected pmf to the count of *normal* interior positions (the empirical mass inside the
+      // seq's own censor window) -- NOT the grand total, which is dominated by the deletion spike at
+      // crossing 0 and the censored tails. At r=1 (seq == reference) this makes projected overlay empirical.
+      double total_norm = 0.0;
+      for (int32_t v = seq_lo; v <= seq_hi && v < static_cast<int32_t>(emp.size()); v++) total_norm += emp[v];
+      vector<double> proj;  // project the normal reference [ref_lo,ref_hi] to this seq's coverage
+      dp_project_crossing(hist_ref, ref_lo, ref_hi, avgcov / C_ref, maxv, total_norm, proj);
+      string svg = Settings::file_name(settings.concordant_pair_crossing_seq_plot_file_name, "#", seq_id);
+      render_crossing_plot(svg, emp, proj, seq_lo, seq_hi, "Concordant Pair Crossing: " + seq_id,
+                           "Concordant pairs spanning a position",
+                           "empirical (" + seq_id + ")", "projected from " + R);
+    }
+  }
+
   void predict_discordant_pairs(const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info)
   {
-    (void)ref_seq_info;
-
     cGenomeDiff dp_gd;
+
+    // Run-wide reference crossing distribution + reference coverage + normal-bulk censor window.
+    vector<double> crossing_hist_ref; double crossing_C_ref = 0.0; string crossing_ref_seq_id;
+    int32_t crossing_lo = 0, crossing_hi = 0;
+    bool have_crossing = dp_load_crossing_reference(settings, summary, ref_seq_info, crossing_hist_ref, crossing_C_ref, crossing_ref_seq_id, crossing_lo, crossing_hi);
 
     //
     // Step 0: library orientation (inner3p) + rescan window (distance_cutoff). FF/RR unsupported.
@@ -522,6 +761,7 @@ namespace breseq {
       // Heuristic count from region overlap; kept so we can see the rescan hold steady or increase.
       dp["candidate_discordant_count"] = to_string(weight);
 
+      int k_support = weight;
       if (scanner) {
         // Count the three read categories at each (now refined) side.
         scanner->scan(s1_seq_id, s1_pos, s1_strand, s1_fwd, s2_tid, s2_pos, s2_fwd, distance_cutoff);
@@ -535,7 +775,8 @@ namespace breseq {
           WARN("DP supporting count differs between sides (" + to_string(c1a) + " vs " + to_string(c1b) +
                ") for " + s1_seq_id + ":" + to_string(s1_pos) + " <-> " + s2_seq_id + ":" + to_string(s2_pos));
         }
-        dp["discordant_count"] = to_string(max(c1a, c1b));
+        k_support = max(c1a, c1b);
+        dp["discordant_count"] = to_string(k_support);
         dp["side_1_concordant_count"] = to_string(c2a);
         dp["side_2_concordant_count"] = to_string(c2b);
         dp["side_1_unpaired_count"] = to_string(c3a);
@@ -544,6 +785,15 @@ namespace breseq {
         // No BAM available: fall back to the heuristic count.
         dp["discordant_count"] = to_string(weight);
       }
+
+      // Discordance "skew" score: -log10 P(a normal position on side_1's seq_id is spanned by <= k
+      // concordant pairs), projecting the run-wide reference distribution to this seq_id's coverage.
+      double dp_score = std::numeric_limits<double>::quiet_NaN();
+      if (have_crossing) {
+        double avgcov = dp_seq_coverage(summary, s1_seq_id);
+        dp_score = dp_discordance_skew(crossing_hist_ref, crossing_lo, crossing_hi, crossing_C_ref, avgcov, static_cast<uint32_t>(k_support < 0 ? 0 : k_support));
+      }
+      dp[NEG_LOG10_DISCORDANCE_P_VALUE] = std::isnan(dp_score) ? string("NT") : to_string(dp_score, 1, false);
 
       dp_gd.add(dp);
     }
