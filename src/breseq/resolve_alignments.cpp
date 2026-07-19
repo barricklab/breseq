@@ -28,6 +28,7 @@
 #include "reference_sequence.h"
 #include "stats.h"
 #include "output.h"
+#include "coverage_distribution.h"
 
 using namespace std;
 
@@ -170,24 +171,60 @@ void calculate_continuation(
 PosHashProbabilityTable::PosHashProbabilityTable(Summary& summary, const Settings& settings)
 {
   average_read_length = static_cast<int32_t>(round(summary.sequence_conversion.read_length_avg));
+
+  // Cache each coverage group's empirical unique-coverage histogram (read once per group) plus the
+  // empirical-vs-nbinom decision. The histogram comes from the preprocess coverage tab
+  // (candidate_junction_path/@.unique_only_coverage_distribution.tab), which is kept alive to this
+  // stage (see breseq_cmdline.cpp -- re-keyed to alignment_correction_done_file_name).
+  map<uint32_t, coverage_histogram_t> group_hist;
+
   for (map<string,CoverageSummary>::iterator it=summary.preprocess_coverage.begin();
        it != summary.preprocess_coverage.end(); it++) {
-    
+
     string seq_id = it->first;
     CoverageSummary& cov = it->second;
-    
+
     double no_pos_hash_per_position_pr = summary.preprocess_error_count[seq_id].no_pos_hash_per_position_pr;
     if (no_pos_hash_per_position_pr < settings.minimum_pr_no_read_start_per_position) {
       no_pos_hash_per_position_pr = settings.minimum_pr_no_read_start_per_position;
     }
-    
+
     Parameters p = {
           cov.nbinom_size_parameter,
           cov.nbinom_prob_parameter,
           no_pos_hash_per_position_pr,
-          cov.nbinom_mean_parameter
+          cov.nbinom_mean_parameter,
+          false, // use_empirical (set below)
+          0,     // deletion_floor
+          0.0,   // coverage_hist_total
+          vector<double>()
     };
-    
+
+    // Load this seq_id's coverage-group histogram and decide empirical vs nbinom. Only meaningful when
+    // there is a fitted coverage distribution (average > 0); otherwise probability() short-circuits.
+    if (cov.nbinom_mean_parameter > 0) {
+      uint32_t group = settings.seq_id_to_coverage_group(seq_id);
+      if (!group_hist.count(group)) {
+        string hist_file = settings.file_name(settings.coverage_junction_distribution_file_name, "@", to_string<uint32_t>(group));
+        if (file_exists(hist_file.c_str())) {
+          group_hist[group] = read_coverage_histogram(hist_file);
+        } else {
+          group_hist[group] = coverage_histogram_t(); // empty -> stays on nbinom
+        }
+      }
+      const coverage_histogram_t& hist = group_hist[group];
+      if (!hist.n.empty()) {
+        double N = 0.0; int32_t deletion_floor = 0;
+        bool use_emp = use_empirical_pos_hash_coverage(hist, cov.nbinom_mean_parameter,
+                                                       settings.junction_pos_hash_neg_log10_p_value_cutoff,
+                                                       N, deletion_floor);
+        p.use_empirical = use_emp;
+        p.deletion_floor = deletion_floor;
+        p.coverage_hist_total = N;
+        if (use_emp) p.coverage_hist = hist.n;
+      }
+    }
+
     param[it->first] = p;
   }
 }
@@ -212,49 +249,84 @@ double PosHashProbabilityTable::probability(string& seq_id, uint32_t pos_hash_sc
     if (verbose) cout << "No coverage fit for fragment: " << seq_id << endl;
     return 999999;
   }
-  // Calculate this entry in the table -- 
+  // Calculate this entry in the table --
   uint32_t max_coverage = static_cast<uint32_t>(round(10*p.average_coverage));
-        
+
   double pr = 0;
-  
+
   if (verbose) {
     cout << "Calculating: seq_id " << seq_id << " pos_hash_score " << pos_hash_score << " max_pos_hash_score " << max_pos_hash_score << endl;
     cout << "Coverage from 1 to " << max_coverage << endl;
+    cout << "Coverage model: " << (p.use_empirical ? "EMPIRICAL" : "negative binomial") << endl;
     cout << "Negative Binomial Fit: Size = " << p.negative_binomial_size << " Prob = " << p.negative_binomial_prob << endl;
   }
-  
-  // This calculation can be incredibly slow when there is very high coverage 100,000s
-  // estimate using this many equal sized bins.
-  const   int32_t target_num_bins_for_estimate = 10000;
-  int32_t bin_size = trunc(static_cast<double>(max_coverage)/target_num_bins_for_estimate)+1;
-  
-  for (uint32_t this_coverage=bin_size; this_coverage<= max_coverage; this_coverage+=bin_size) {
-    
-    // This calculation takes care of the bin size, we are getting the
-    // full probabiliy all the way in the range from this_coverage to this_coverage + bin_size - 1
-    double this_cov_pr =  nbdtr(this_coverage, p.negative_binomial_size, p.negative_binomial_prob)
-                        - nbdtr(this_coverage-bin_size, p.negative_binomial_size, p.negative_binomial_prob);
 
-    // This calculation uses the middle coverage value in the bin as an estimate for the
-    // probability across the entire bin
-    double this_coverage_middle = this_coverage + (bin_size-1) / 2;
-    double this_ratio_of_coverage_to_average = this_coverage_middle / static_cast<double>(p.average_coverage);
-    double this_chance_per_pos_strand_read_start = 1 - pow(p.chance_per_pos_strand_no_read_start, this_ratio_of_coverage_to_average);
+  // Marginalize over local coverage. The coverage WEIGHT is either the empirical unique-coverage
+  // histogram (faithful low-coverage tail; used for large references) or the fitted negative binomial
+  // (parametric tail with no 1/N floor; used for small references). Everything else -- the per-position
+  // read-start chance and the binomial pos_hash CDF -- is identical for both.
+  if (p.use_empirical) {
 
-    double this_pos_hash_pr = 0;
-    for (uint32_t i=0; i <= pos_hash_score; i++) {
+    // Bin the histogram like the nbinom path so very high coverage stays bounded.
+    int32_t hist_max = static_cast<int32_t>(p.coverage_hist.size()) - 1;
+    const int32_t target_num_bins_for_estimate = 10000;
+    int32_t bin_size = trunc(static_cast<double>(hist_max)/target_num_bins_for_estimate)+1;
 
-      //chance of getting pos_hash_score or lower
-      this_pos_hash_pr += binomial(this_chance_per_pos_strand_read_start, max_pos_hash_score, i);
+    for (int32_t bin_start = p.deletion_floor + 1; bin_start <= hist_max; bin_start += bin_size) {
+      int32_t bin_end = min(bin_start + bin_size - 1, hist_max);
+      double bin_count = 0;
+      for (int32_t c = bin_start; c <= bin_end; c++) bin_count += p.coverage_hist[c];
+      if (bin_count <= 0) continue;
+
+      double this_cov_pr = bin_count / p.coverage_hist_total;
+      double this_coverage_middle = (bin_start + bin_end) / 2.0;
+      double this_ratio_of_coverage_to_average = this_coverage_middle / static_cast<double>(p.average_coverage);
+      double this_chance_per_pos_strand_read_start = 1 - pow(p.chance_per_pos_strand_no_read_start, this_ratio_of_coverage_to_average);
+
+      double this_pos_hash_pr = 0;
+      for (uint32_t i=0; i <= pos_hash_score; i++) {
+        //chance of getting pos_hash_score or lower
+        this_pos_hash_pr += binomial(this_chance_per_pos_strand_read_start, max_pos_hash_score, i);
+      }
+
+      pr += this_cov_pr * this_pos_hash_pr;
     }
-        
-    double this_pr = this_cov_pr*this_pos_hash_pr;
-    pr += this_pr;
-    
-    if (verbose) {
-      cout << "  Cov: " << this_coverage << " Cov Pr: " << this_cov_pr << " Pos Hash Pr: " << this_pos_hash_pr << " Read Start Pr: " << this_chance_per_pos_strand_read_start << endl;
-      cout << "  This Pr: " << this_pr << " Cumulative Pr: " << pr << endl;
-    }    
+
+  } else {
+
+    // This calculation can be incredibly slow when there is very high coverage 100,000s
+    // estimate using this many equal sized bins.
+    const   int32_t target_num_bins_for_estimate = 10000;
+    int32_t bin_size = trunc(static_cast<double>(max_coverage)/target_num_bins_for_estimate)+1;
+
+    for (uint32_t this_coverage=bin_size; this_coverage<= max_coverage; this_coverage+=bin_size) {
+
+      // This calculation takes care of the bin size, we are getting the
+      // full probabiliy all the way in the range from this_coverage to this_coverage + bin_size - 1
+      double this_cov_pr =  nbdtr(this_coverage, p.negative_binomial_size, p.negative_binomial_prob)
+                          - nbdtr(this_coverage-bin_size, p.negative_binomial_size, p.negative_binomial_prob);
+
+      // This calculation uses the middle coverage value in the bin as an estimate for the
+      // probability across the entire bin
+      double this_coverage_middle = this_coverage + (bin_size-1) / 2;
+      double this_ratio_of_coverage_to_average = this_coverage_middle / static_cast<double>(p.average_coverage);
+      double this_chance_per_pos_strand_read_start = 1 - pow(p.chance_per_pos_strand_no_read_start, this_ratio_of_coverage_to_average);
+
+      double this_pos_hash_pr = 0;
+      for (uint32_t i=0; i <= pos_hash_score; i++) {
+
+        //chance of getting pos_hash_score or lower
+        this_pos_hash_pr += binomial(this_chance_per_pos_strand_read_start, max_pos_hash_score, i);
+      }
+
+      double this_pr = this_cov_pr*this_pos_hash_pr;
+      pr += this_pr;
+
+      if (verbose) {
+        cout << "  Cov: " << this_coverage << " Cov Pr: " << this_cov_pr << " Pos Hash Pr: " << this_pos_hash_pr << " Read Start Pr: " << this_chance_per_pos_strand_read_start << endl;
+        cout << "  This Pr: " << this_pr << " Cumulative Pr: " << pr << endl;
+      }
+    }
   }
   double log_pr = -log(pr)/log(10);
   probability_table[seq_id][pos_hash_score][max_pos_hash_score] = log_pr;

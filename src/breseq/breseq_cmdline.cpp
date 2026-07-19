@@ -1880,12 +1880,18 @@ int breseq_default_action(int argc, char* argv[])
 
 
 
-      CoverageDistribution::analyze_unique_coverage_distributions(settings, 
-                                                                  summary, 
+      // NOTE: step_key is alignment_correction_done_file_name (the resolve stage), NOT
+      // coverage_junction_done_file_name. resolve_alignments() is now the last consumer of the
+      // preprocess unique-coverage histogram tab: PosHashProbabilityTable reads it to build the
+      // empirical coverage null for the JC pos_hash (skew) p-value. Keying the tab (and its plot) to
+      // the resolve done-file keeps it alive past this stage's cleanup (done_step below) and deletes
+      // it right after resolve completes.
+      CoverageDistribution::analyze_unique_coverage_distributions(settings,
+                                                                  summary,
                                                                   ref_seq_info,
-                                                                  settings.coverage_junction_plot_file_name, 
+                                                                  settings.coverage_junction_plot_file_name,
                                                                   settings.coverage_junction_distribution_file_name,
-                                                                  settings.coverage_junction_done_file_name
+                                                                  settings.alignment_correction_done_file_name
                                                                   );
 
       // Note that storing from unique_coverage and reloading in preprocess_coverage is by design

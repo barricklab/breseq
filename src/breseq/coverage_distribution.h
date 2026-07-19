@@ -33,6 +33,29 @@ using namespace std;
 
 namespace breseq {
 
+  // A unique-only coverage histogram: n[k] is the number of reference positions with unique-only
+  // coverage depth k, for k=1..max_coverage. n[0] is unused (the *.unique_only_coverage_distribution.tab
+  // file has no row for coverage=0; see error_count_pileup::print_coverage).
+  struct coverage_histogram_t {
+    vector<double> n;
+    uint32_t max_coverage;
+  };
+
+  // Read a two-column (coverage, n) *.unique_only_coverage_distribution.tab file into a histogram.
+  coverage_histogram_t read_coverage_histogram(const string& distribution_file_name);
+
+  // Decide whether the JC pos_hash "skew" p-value should marginalize coverage over the EMPIRICAL
+  // coverage histogram (returns true) or the fitted negative binomial (returns false). Empirical is
+  // used only when the histogram has enough non-deletion positions that its resolution ceiling
+  // (~log10(N)) clears the reject cutoff with a fixed 1-decade margin:
+  //   deletion_floor = max(1, round(0.05*average));  N = sum of n[c] for c > deletion_floor;
+  //   empirical iff N > 0 and log10(N) >= neg_log10_p_value_cutoff + 1.0.
+  // Sets out_N and out_deletion_floor. (For small references N is tiny, so the empirical p-value would
+  // be floored near 1/N and could never fail skew -- hence the fall back to the parametric nbinom.)
+  bool use_empirical_pos_hash_coverage(const coverage_histogram_t& hist, double average,
+                                       double neg_log10_p_value_cutoff,
+                                       double& out_N, int32_t& out_deletion_floor);
+
   // Result of fitting a negative binomial distribution to a unique-only
   // coverage histogram (see CoverageDistribution::fit).
   struct CoverageDistributionFitResult

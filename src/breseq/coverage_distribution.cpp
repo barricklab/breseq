@@ -29,17 +29,8 @@ using namespace std;
 
 namespace breseq {
 
-namespace {
-
-// A unique-only coverage histogram: n[k] is the number of reference
-// positions with unique-only coverage depth k, for k=1..max_coverage.
-// n[0] is unused (the *.unique_only_coverage_distribution.tab file has no
-// row for coverage=0; see error_count_pileup::print_coverage).
-struct coverage_histogram_t {
-  vector<double> n;
-  uint32_t max_coverage;
-};
-
+// Externally-visible (declared in coverage_distribution.h) so resolve_alignments/output can build the
+// empirical coverage null for the JC pos_hash p-value. Kept out of the anonymous namespace below.
 coverage_histogram_t read_coverage_histogram(const string& distribution_file_name)
 {
   coverage_histogram_t hist;
@@ -72,6 +63,28 @@ coverage_histogram_t read_coverage_histogram(const string& distribution_file_nam
 
   return hist;
 }
+
+bool use_empirical_pos_hash_coverage(const coverage_histogram_t& hist, double average,
+                                     double neg_log10_p_value_cutoff,
+                                     double& out_N, int32_t& out_deletion_floor)
+{
+  // Treat near-zero coverage as deletions (not valid junction sites). 0.05*average sits well below any
+  // real low-coverage shoulder, so it removes only the deletion spike; it must NOT be the nbinom-derived
+  // deletion_coverage_propagation_cutoff, which can land mid-shoulder precisely because that fit's lower
+  // tail is too thin (the very flaw the empirical null fixes).
+  int32_t deletion_floor = max(1, static_cast<int32_t>(round(0.05 * average)));
+  out_deletion_floor = deletion_floor;
+
+  double N = 0.0;
+  for (int32_t c = deletion_floor + 1; c < static_cast<int32_t>(hist.n.size()); c++)
+    N += hist.n[c];
+  out_N = N;
+
+  // Empirical resolution ceiling is ~log10(N); require a fixed 1-decade margin above the reject cutoff.
+  return (N > 0.0) && (log(N) / log(10.0) >= neg_log10_p_value_cutoff + 1.0);
+}
+
+namespace {
 
 // Result of fitting a negative binomial distribution to a censored count histogram via
 // fit_censored_negative_binomial. Distribution-agnostic -- reused by both coverage and

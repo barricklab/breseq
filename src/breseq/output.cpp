@@ -22,6 +22,7 @@
 #include "anyoption.h"
 #include "alignment_output.h"
 #include "coverage_output.h"
+#include "coverage_distribution.h"
 #include "pileup_base.h"
 // MINIZ_NO_ZLIB_COMPATIBLE_NAMES is set via MINIZ_CFLAGS in AM_CPPFLAGS
 // (configure.ac) to avoid clashing with the system libz that is also linked.
@@ -1231,37 +1232,50 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
 
     HTML << h3("Junction Skew Score Calculation") << endl;
     HTML << "<p>" << endl;
-    
-    //stringstream num;
-    //num << scientific << setprecision(2) << settings.junction_accept_pr;
-    //HTML << "E-value cutoff: " <<  num.str() << endl;
-    //HTML << "<p>" << endl;
+
     HTML << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"5\"") << endl;
     HTML << start_tr() <<
     th("reference sequence") <<
     th("pr(no read start)") <<
-    //    th("pos hash score cutoff") <<
-    //    th("distance score cutoff") <<
+    th("coverage model") <<
     end_tr() << endl;
-    
-    size_t total_length = 0;
+
     for(cReferenceSequences::iterator it=ref_seq_info.begin(); it!=ref_seq_info.end(); it++) {
-      
+
       HTML << start_tr() << endl;
       HTML << td(it->m_seq_id);
       // this score is always an integer for now, even though it is typed as a double
       bool fragment_with_fit_coverage = (summary.unique_coverage[it->m_seq_id].nbinom_mean_parameter != 0);
-      
+
       if (!fragment_with_fit_coverage) {
+        HTML << td(ALIGN_CENTER, "NA");
         HTML << td(ALIGN_CENTER, "NA");
       } else {
         HTML << td(ALIGN_CENTER, to_string(summary.preprocess_error_count[it->m_seq_id].no_pos_hash_per_position_pr, 5));
+
+        // Report which coverage null the pos_hash (skew) p-value used for this sequence's group. The
+        // preprocess histogram is deleted by now, so recompute the decision from the persisted final
+        // unique-coverage histogram -- N is a whole-genome count and is essentially identical to the
+        // preprocess N that drove the actual decision.
+        string model_cell = "negative binomial";
+        uint32_t group = settings.seq_id_to_coverage_group(it->m_seq_id);
+        string hist_file = settings.file_name(settings.unique_only_coverage_distribution_file_name, "@", to_string<uint32_t>(group));
+        if (file_exists(hist_file.c_str())) {
+          coverage_histogram_t hist = read_coverage_histogram(hist_file);
+          double N = 0.0; int32_t deletion_floor = 0;
+          bool use_emp = use_empirical_pos_hash_coverage(hist, summary.unique_coverage[it->m_seq_id].average,
+                                                         settings.junction_pos_hash_neg_log10_p_value_cutoff,
+                                                         N, deletion_floor);
+          if (use_emp) model_cell = "empirical (" + to_string<uint64_t>(static_cast<uint64_t>(N)) + " positions)";
+        }
+        HTML << td(ALIGN_CENTER, model_cell);
       }
       HTML << end_tr();
     }
     HTML << end_table();
-    
+
     HTML << "<p>" << b("pr(no read start)") + " is the probability that there will not be an aligned read whose first base matches a given position on a given strand." << endl;
+    HTML << "<p>" << b("coverage model") + " is the coverage distribution over which the skew (position-hash) p-value is marginalized: the <i>empirical</i> per-position unique-coverage histogram when a sequence has enough non-deletion positions (log<sub>10</sub>N &ge; skew cutoff + 1), otherwise the fitted <i>negative binomial</i>. The empirical model faithfully captures the low-coverage shoulder, but because its p-value is bounded near 1/N its skew is capped near log<sub>10</sub>N, so small references fall back to the negative binomial." << endl;
     
     
     HTML << h3("Final Junction Predictions") << endl;

@@ -187,8 +187,17 @@ namespace breseq {
       double negative_binomial_prob;
       double chance_per_pos_strand_no_read_start;
       double average_coverage;
+      // Empirical unique-coverage null for the pos_hash (skew) p-value. When use_empirical is true,
+      // probability() marginalizes coverage over coverage_hist (the actual per-position histogram)
+      // instead of the negative binomial. Small references fall back to the nbinom (use_empirical=false)
+      // because the empirical p-value is floored near 1/coverage_hist_total. See
+      // use_empirical_pos_hash_coverage() in coverage_distribution.h.
+      bool use_empirical;
+      int32_t deletion_floor;         // coverage <= this is treated as deletion (excluded from the null)
+      double coverage_hist_total;     // N = # non-deletion positions (sum of coverage_hist above the floor)
+      vector<double> coverage_hist;   // n[c] = # reference positions at unique coverage c (index 0 unused)
     };
-    
+
     map<string, Parameters> param;
     uint32_t average_read_length;
     map<string, map<uint32_t, map<uint32_t, double> > > probability_table;
