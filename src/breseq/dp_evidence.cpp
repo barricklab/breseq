@@ -149,6 +149,14 @@ namespace breseq {
     return lo <= hi;
   }
 
+  // A read pair's identifying number, shared by its two mates (the two paired read files write names
+  // "<file-prefix>:<read-number>"; the prefix differs between mates, the number is common). Used to
+  // pair a read at one junction side with its mate at the other side (both count/plot logic rely on it).
+  static string dp_read_num(const string& name) {
+    size_t colon = name.find(':');
+    return (colon == string::npos) ? name : name.substr(colon + 1);
+  }
+
   // Counts the three read categories at a junction side (used to fill the DP evidence fields), and
   // provides a preliminary refinement pass over the discordant reads at a side.
   class dp_side_scanner : public pileup_base {
@@ -164,6 +172,7 @@ namespace breseq {
     {
       set_ctx(p, s, crossing_is_forward, other_tid, other_p, other_crossing_is_forward, D, /*guard=*/true);
       m_supporting = 0; m_concordant = 0; m_unpaired = 0;
+      m_supporting_nums.clear();
       m_collect_outside = false;
 
       int32_t lo, hi;
@@ -214,12 +223,16 @@ namespace breseq {
         }
         return;
       }
-      if      (cat == 1) m_supporting++;
+      if      (cat == 1) { m_supporting++; m_supporting_nums.insert(dp_read_num(a.read_name())); }
       else if (cat == 2) m_concordant++;
       else if (cat == 3) m_unpaired++;
     }
 
     int supporting() const { return m_supporting; }
+    // Read-pair numbers of the discordant (supporting) reads at the last-scanned side. Intersecting the
+    // two sides' sets gives the true count of pairs that bridge THIS junction (a read at a breakpoint
+    // shared with a neighboring junction appears on only one side and is excluded).
+    const set<string>& supporting_nums() const { return m_supporting_nums; }
     int concordant() const { return m_concordant; }
     int unpaired()   const { return m_unpaired; }
 
@@ -232,6 +245,7 @@ namespace breseq {
     }
     dp_side_ctx m_ctx;
     int     m_supporting, m_concordant, m_unpaired;
+    set<string> m_supporting_nums;
     bool    m_collect_outside;
     vector<int32_t> m_outside;
     bool    m_have_extent; int32_t m_extent;
@@ -834,17 +848,24 @@ namespace breseq {
         // Count the three read categories at each (now refined) side.
         scanner->scan(s1_seq_id, s1_pos, s1_strand, s1_fwd, s2_tid, s2_pos, s2_fwd, distance_cutoff);
         int c1a = scanner->supporting(), c2a = scanner->concordant(), c3a = scanner->unpaired();
+        set<string> support_nums_1 = scanner->supporting_nums();   // copy before the next scan overwrites
 
         scanner->scan(s2_seq_id, s2_pos, s2_strand, s2_fwd, s1_tid, s1_pos, s1_fwd, distance_cutoff);
         int c1b = scanner->supporting(), c2b = scanner->concordant(), c3b = scanner->unpaired();
+        const set<string>& support_nums_2 = scanner->supporting_nums();
 
-        // The two sides should agree on the supporting count (one mate of each pair per side).
-        if (c1a != c1b) {
-          WARN("DP supporting count differs between sides (" + to_string(c1a) + " vs " + to_string(c1b) +
-               ") for " + s1_seq_id + ":" + to_string(s1_pos) + " <-> " + s2_seq_id + ":" + to_string(s2_pos));
-        }
-        k_support = max(c1a, c1b);
+        // True support = read pairs whose BOTH mates qualify -- one at each side (intersect the sides'
+        // supporting read-pair numbers). A single-side per-side count (c1a/c1b) over-counts at a
+        // breakpoint SHARED with a neighboring junction: those reads' mates fall inside this junction's
+        // wide (+/-D) partner window but land at the neighbor's breakpoint, so they appear on only one
+        // side and drop out of the intersection. This matches exactly the pairs drawn in the joined plot.
+        k_support = 0;
+        for (set<string>::const_iterator n = support_nums_1.begin(); n != support_nums_1.end(); n++)
+          if (support_nums_2.count(*n)) k_support++;
+
         dp["discordant_count"] = to_string(k_support);
+        dp["side_1_discordant_count"] = to_string(c1a);   // raw per-side counts (may exceed the paired
+        dp["side_2_discordant_count"] = to_string(c1b);   // count when a side is a shared-breakpoint hub)
         dp["side_1_concordant_count"] = to_string(c2a);
         dp["side_2_concordant_count"] = to_string(c2b);
         dp["side_1_unpaired_count"] = to_string(c3a);
@@ -1201,11 +1222,6 @@ namespace breseq {
   }
 
   // Extract the read-number (the part after ':') from a QNAME "<prefix>:<num>".
-  static string dp_read_num(const string& name) {
-    size_t colon = name.find(':');
-    return (colon == string::npos) ? name : name.substr(colon + 1);
-  }
-
   void draw_discordant_pair_evidence_plots(const Settings& settings, Summary& summary,
                                            cReferenceSequences& ref_seq_info, cGenomeDiff& gd)
   {
