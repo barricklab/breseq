@@ -23,6 +23,7 @@
 #include "genome_diff_entry.h"
 #include "pileup.h"   // pileup_base + alignment_wrapper + BAM flag macros
 #include "stats.h"    // nbdtr (negative binomial CDF), incompletegamma (Poisson CDF)
+#include "coverage_distribution.h" // fit_negative_binomial_histogram (small-reference DP-skew fallback)
 
 #include <set>
 #include <limits>
@@ -417,8 +418,10 @@ namespace breseq {
   static bool dp_load_crossing_reference(const Settings& settings, const Summary& summary,
                                          cReferenceSequences& ref_seq_info,
                                          vector<double>& hist_ref, double& C_ref, string& ref_seq_id,
-                                         int32_t& censor_lo, int32_t& censor_hi)
+                                         int32_t& censor_lo, int32_t& censor_hi,
+                                         double& N, bool& use_empirical, double& nb_size, double& nb_mu)
   {
+    N = 0.0; use_empirical = true; nb_size = 0.0; nb_mu = 0.0;
     ref_seq_id = ""; size_t best_len = 0;
     for (cReferenceSequences::iterator it = ref_seq_info.begin(); it != ref_seq_info.end(); it++)
       if (it->get_sequence_length() > best_len) { best_len = it->get_sequence_length(); ref_seq_id = it->m_seq_id; }
@@ -428,37 +431,86 @@ namespace breseq {
     string fn = Settings::file_name(settings.concordant_pair_crossing_distribution_file_name, "#", ref_seq_id);
     if (!dp_read_crossing_hist(fn, hist_ref)) return false;
     dp_crossing_censor(hist_ref, censor_lo, censor_hi);
+
+    // N = # non-deletion (censor-window) positions in the reference crossing distribution. The empirical
+    // distribution is used only when its resolution ceiling (~log10(N)) clears the DP skew cutoff by a
+    // fixed 1-decade margin; smaller references fall back to a negative-binomial fit whose parametric
+    // tail is not floored at 0.5/N.
+    for (int32_t c = censor_lo; c <= censor_hi && c < static_cast<int32_t>(hist_ref.size()); c++) N += hist_ref[c];
+    use_empirical = (N > 0.0) && (log10(N) >= settings.discordant_pair_skew_cutoff + 1.0);
+    if (!use_empirical && !hist_ref.empty())
+      fit_negative_binomial_histogram(hist_ref, static_cast<uint32_t>(hist_ref.size() - 1), nb_size, nb_mu);
     return true;
   }
 
-  // Probability a normal position on a sequence at relative coverage r (=avgcov/C_ref) is spanned by
-  // <= k concordant pairs, by PROJECTING the normal reference distribution (censored to [lo,hi]):
-  // binomial thinning for r<=1 (lowering coverage = randomly dropping reads -- exact; validated),
-  // Poisson up-scaling for r>1. P is floored at 0.5/total_normal (the empirical resolution limit).
-  static double dp_crossing_cdf(const vector<double>& hist_ref, int32_t lo, int32_t hi, double r, uint32_t k)
+  // Negative-binomial pmf P(X=c) parametrized by (size, mu): mean mu, variance mu + mu^2/size.
+  static double dp_nbinom_pmf(int32_t c, double size, double mu)
   {
-    double total = 0.0;
-    for (int32_t c = lo; c <= hi && c < static_cast<int32_t>(hist_ref.size()); c++) total += hist_ref[c];
-    if (!(total > 0.0) || !(r > 0.0)) return std::numeric_limits<double>::quiet_NaN();
-    double P = 0.0;
-    for (int32_t c = lo; c <= hi && c < static_cast<int32_t>(hist_ref.size()); c++) {
-      if (hist_ref[c] <= 0.0) continue;
-      double cdf;
-      if (r <= 1.0) cdf = (static_cast<double>(k) >= static_cast<double>(c)) ? 1.0 : bdtr(static_cast<double>(k), static_cast<double>(c), r);
-      else { double mu = r * static_cast<double>(c); cdf = (mu > 0.0) ? incompletegamma(static_cast<double>(k) + 1.0, mu, /*complemented=*/true) : 1.0; }
-      P += hist_ref[c] * cdf;
+    if (!(size > 0.0) || !(mu > 0.0) || c < 0) return 0.0;
+    double prob = size / (size + mu);   // P(success); mean of failures = size*(1-prob)/prob = mu
+    return exp(lgamma(static_cast<double>(c) + size) - lgamma(size) - lgamma(static_cast<double>(c) + 1.0)
+               + size * log(prob) + static_cast<double>(c) * log(1.0 - prob));
+  }
+
+  // The per-position thinning CDF: probability that a reference position with crossing c, at relative
+  // coverage r, is spanned by <= k concordant pairs. Binomial thinning for r<=1 (lowering coverage =
+  // randomly dropping reads -- exact; validated), Poisson up-scaling for r>1.
+  static double dp_thin_cdf(int32_t c, double r, uint32_t k)
+  {
+    if (r <= 1.0) return (static_cast<double>(k) >= static_cast<double>(c)) ? 1.0 : bdtr(static_cast<double>(k), static_cast<double>(c), r);
+    double mu = r * static_cast<double>(c);
+    return (mu > 0.0) ? incompletegamma(static_cast<double>(k) + 1.0, mu, /*complemented=*/true) : 1.0;
+  }
+
+  // Probability a normal position on a sequence at relative coverage r (=avgcov/C_ref) is spanned by
+  // <= k concordant pairs, by PROJECTING the normal reference distribution to that coverage.
+  //  - Empirical (use_empirical): weight each reference crossing bin by hist_ref[c] over [lo,hi];
+  //    P is floored at 0.5/total_normal (the resolution limit -> skew capped at ~log10(2*total_normal)).
+  //  - Negative-binomial fallback (small reference, few positions): weight by the fitted NB pmf over a
+  //    broad range that captures the tail, and DO NOT floor -- the parametric tail lets the skew
+  //    extrapolate past log10(N). (Conservative: NB overshoots the crossing lower tail, lowering skew.)
+  static double dp_crossing_cdf(const vector<double>& hist_ref, int32_t lo, int32_t hi, double r, uint32_t k,
+                                bool use_empirical, double nb_size, double nb_mu)
+  {
+    if (!(r > 0.0)) return std::numeric_limits<double>::quiet_NaN();
+
+    if (use_empirical) {
+      double total = 0.0;
+      for (int32_t c = lo; c <= hi && c < static_cast<int32_t>(hist_ref.size()); c++) total += hist_ref[c];
+      if (!(total > 0.0)) return std::numeric_limits<double>::quiet_NaN();
+      double P = 0.0;
+      for (int32_t c = lo; c <= hi && c < static_cast<int32_t>(hist_ref.size()); c++) {
+        if (hist_ref[c] <= 0.0) continue;
+        P += hist_ref[c] * dp_thin_cdf(c, r, k);
+      }
+      double Pf = P / total;
+      double floorP = 0.5 / total;   // resolution limit -> skew capped at ~log10(2*total_normal)
+      return (Pf < floorP) ? floorP : Pf;
     }
-    double Pf = P / total;
-    double floorP = 0.5 / total;   // resolution limit -> skew capped at ~log10(2*total_normal)
-    return (Pf < floorP) ? floorP : Pf;
+
+    // Negative-binomial fallback: sum the NB pmf out to mean + 12 SD (essentially all mass), no floor.
+    if (!(nb_mu > 0.0)) return std::numeric_limits<double>::quiet_NaN();
+    double nb_var = nb_mu + (nb_size > 0.0 ? nb_mu * nb_mu / nb_size : 0.0);
+    int32_t cmax = static_cast<int32_t>(ceil(nb_mu + 12.0 * sqrt(nb_var)));
+    if (cmax < 1) cmax = 1;
+    if (cmax > 1000000) cmax = 1000000;
+    double wsum = 0.0, P = 0.0;
+    for (int32_t c = 1; c <= cmax; c++) {
+      double w = dp_nbinom_pmf(c, nb_size, nb_mu);
+      if (w <= 0.0) continue;
+      wsum += w;
+      P += w * dp_thin_cdf(c, r, k);
+    }
+    return (wsum > 0.0) ? (P / wsum) : std::numeric_limits<double>::quiet_NaN();
   }
 
   // DP "skew" score: -log10 P(crossing <= k), projecting the normal reference to seq X's coverage.
   static double dp_discordance_skew(const vector<double>& hist_ref, int32_t lo, int32_t hi,
-                                    double C_ref, double avgcov_X, uint32_t k)
+                                    double C_ref, double avgcov_X, uint32_t k,
+                                    bool use_empirical, double nb_size, double nb_mu)
   {
     if (hist_ref.empty() || !(C_ref > 0.0) || !(avgcov_X > 0.0)) return std::numeric_limits<double>::quiet_NaN();
-    double P = dp_crossing_cdf(hist_ref, lo, hi, avgcov_X / C_ref, k);
+    double P = dp_crossing_cdf(hist_ref, lo, hi, avgcov_X / C_ref, k, use_empirical, nb_size, nb_mu);
     if (std::isnan(P)) return P;
     double sc = (P > 0.0) ? (-log10(P)) : kDPMaxScore;
     if (sc < 0.0) sc = 0.0;   // P==1 -> -log10 gives -0.0
@@ -551,7 +603,9 @@ namespace breseq {
   void draw_concordant_pair_crossing_plots(const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info)
   {
     vector<double> hist_ref; double C_ref = 0.0; string R; int32_t ref_lo = 0, ref_hi = 0;
-    if (!dp_load_crossing_reference(settings, summary, ref_seq_info, hist_ref, C_ref, R, ref_lo, ref_hi)) return;
+    double ref_N = 0.0; bool ref_use_empirical = true; double ref_nb_size = 0.0, ref_nb_mu = 0.0;
+    if (!dp_load_crossing_reference(settings, summary, ref_seq_info, hist_ref, C_ref, R, ref_lo, ref_hi,
+                                    ref_N, ref_use_empirical, ref_nb_size, ref_nb_mu)) return;
     create_path(settings.evidence_path);
 
     // Run-wide reference distribution (the null actually used; from the longest sequence R).
@@ -584,14 +638,28 @@ namespace breseq {
     }
   }
 
+  string dp_crossing_model_description(const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info)
+  {
+    vector<double> hist_ref; double C_ref = 0.0; string R; int32_t ref_lo = 0, ref_hi = 0;
+    double N = 0.0; bool use_empirical = true; double nb_size = 0.0, nb_mu = 0.0;
+    if (!dp_load_crossing_reference(settings, summary, ref_seq_info, hist_ref, C_ref, R, ref_lo, ref_hi,
+                                    N, use_empirical, nb_size, nb_mu)) return "";
+    string npos = to_string(static_cast<uint64_t>(N)) + " positions in " + R;
+    return use_empirical ? ("empirical (" + npos + ")")
+                         : ("negative binomial (fallback; only " + npos + ")");
+  }
+
   void predict_discordant_pairs(const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info)
   {
     cGenomeDiff dp_gd;
 
-    // Run-wide reference crossing distribution + reference coverage + normal-bulk censor window.
+    // Run-wide reference crossing distribution + reference coverage + normal-bulk censor window, plus
+    // the empirical-vs-negative-binomial decision (small references fall back to the parametric fit).
     vector<double> crossing_hist_ref; double crossing_C_ref = 0.0; string crossing_ref_seq_id;
     int32_t crossing_lo = 0, crossing_hi = 0;
-    bool have_crossing = dp_load_crossing_reference(settings, summary, ref_seq_info, crossing_hist_ref, crossing_C_ref, crossing_ref_seq_id, crossing_lo, crossing_hi);
+    double crossing_N = 0.0; bool crossing_use_empirical = true; double crossing_nb_size = 0.0, crossing_nb_mu = 0.0;
+    bool have_crossing = dp_load_crossing_reference(settings, summary, ref_seq_info, crossing_hist_ref, crossing_C_ref, crossing_ref_seq_id, crossing_lo, crossing_hi,
+                                                    crossing_N, crossing_use_empirical, crossing_nb_size, crossing_nb_mu);
 
     //
     // Step 0: library orientation (inner3p) + rescan window (distance_cutoff). FF/RR unsupported.
@@ -791,7 +859,8 @@ namespace breseq {
       double dp_score = std::numeric_limits<double>::quiet_NaN();
       if (have_crossing) {
         double avgcov = dp_seq_coverage(summary, s1_seq_id);
-        dp_score = dp_discordance_skew(crossing_hist_ref, crossing_lo, crossing_hi, crossing_C_ref, avgcov, static_cast<uint32_t>(k_support < 0 ? 0 : k_support));
+        dp_score = dp_discordance_skew(crossing_hist_ref, crossing_lo, crossing_hi, crossing_C_ref, avgcov, static_cast<uint32_t>(k_support < 0 ? 0 : k_support),
+                                       crossing_use_empirical, crossing_nb_size, crossing_nb_mu);
       }
       dp[NEG_LOG10_DISCORDANCE_P_VALUE] = std::isnan(dp_score) ? string("NT") : to_string(dp_score, 1, false);
 

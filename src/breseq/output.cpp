@@ -23,6 +23,7 @@
 #include "alignment_output.h"
 #include "coverage_output.h"
 #include "coverage_distribution.h"
+#include "dp_evidence.h"
 #include "pileup_base.h"
 // MINIZ_NO_ZLIB_COMPATIBLE_NAMES is set via MINIZ_CFLAGS in AM_CPPFLAGS
 // (configure.ac) to avoid clashing with the system libz that is also linked.
@@ -1055,6 +1056,14 @@ void html_summary(const string &file_name, const Settings& settings, Summary& su
         ? settings.local_html_evidence_file_name + "#" + crossing_basename
         : Settings::relative_path(crossing_plot, settings.output_path);
       HTML << "<p>" << a(crossing_href, "Concordant pair crossing distribution") << "</p>" << endl;
+    }
+
+    // Which model the DP skew score used: the empirical crossing distribution, or the negative-binomial
+    // fallback when the run-wide reference has too few non-deletion positions (log10(N) < cutoff + 1).
+    string dp_model = dp_crossing_model_description(settings, summary, ref_seq_info);
+    if (!dp_model.empty()) {
+      HTML << "<p>" << b("Discordant pair skew model") + ": " + dp_model
+           << ". The DP skew p-value marginalizes over the empirical concordant-pair crossing distribution when its reference sequence has enough non-deletion positions (log<sub>10</sub>N &ge; discordant-pair-skew-cutoff + 1), otherwise a negative-binomial fit (conservative, but not capped near log<sub>10</sub>N)." << endl;
     }
   }
 

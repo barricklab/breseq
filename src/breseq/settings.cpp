@@ -355,6 +355,7 @@ namespace breseq
     options.addUsage("Discordant Pair (DP) Evidence Options", NORMAL_OPTION);
     options
     ("discordant-pair-seed", "Minimum number of discordant read pairs within a paired-mapping-distance window required to seed a DP candidate region. (DEFAULT = 3)", 3, NORMAL_OPTION)
+    ("discordant-pair-skew-cutoff", "Reference cutoff for the discordant-pair (DP) skew score. The DP skew marginalizes over the empirical concordant-pair crossing distribution when its reference sequence has at least 10^(cutoff+1) non-deletion positions; smaller references fall back to a negative-binomial fit (whose parametric tail is not capped near log10(N), but is conservative). (DEFAULT = 3.0)", 3.0, NORMAL_OPTION)
     ;
 
     options.addUsage("", NORMAL_OPTION);
@@ -615,6 +616,8 @@ namespace breseq
 
     this->discordant_pair_seed = from_string<int32_t>(options["discordant-pair-seed"]);
     ASSERT(this->discordant_pair_seed >= 0, "Argument --discordant-pair-seed must be >= 0")
+    this->discordant_pair_skew_cutoff = from_string<double>(options["discordant-pair-skew-cutoff"]);
+    ASSERT(this->discordant_pair_skew_cutoff >= 0, "Argument --discordant-pair-skew-cutoff must be >= 0")
 
     this->predict_soft_clipping = options.count("predict-soft-clipping");
     this->soft_clipping_minimum_bases = from_string<uint32_t>(options["soft-clipping-minimum-bases"]);
@@ -1066,6 +1069,7 @@ namespace breseq
     this->deletion_coverage_seed_cutoff = 0;
     this->call_mutations_overlapping_missing_coverage = false;
     this->discordant_pair_seed = 3;
+    this->discordant_pair_skew_cutoff = 3.0;
     this->predict_soft_clipping = false;
     this->soft_clipping_minimum_bases = 12;
     this->soft_clipping_log10_e_value_cutoff = 3.0;

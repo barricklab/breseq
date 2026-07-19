@@ -400,6 +400,16 @@ CoverageDistributionFitResult fit_coverage_distribution(
 
 } // anonymous namespace
 
+// Public wrapper around the file-local fit_censored_negative_binomial (declared in the header).
+bool fit_negative_binomial_histogram(const vector<double>& n, uint32_t maxidx,
+                                     double& out_size, double& out_mu)
+{
+  CensoredNegativeBinomialFitResult r = fit_censored_negative_binomial(n, maxidx);
+  out_size = r.nb_fit_size;
+  out_mu = r.nb_fit_mu;
+  return (out_size > 0.0) && (out_mu > 0.0);
+}
+
 /*! fit
  @abstract Fits a negative binomial to the unique-only coverage histogram
  natively (see fit_coverage_distribution above), then draws the diagnostic

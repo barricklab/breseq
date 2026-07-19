@@ -53,6 +53,11 @@ namespace breseq {
   //  Call during the Output stage, before summary.html is generated.
   void draw_concordant_pair_crossing_plots(const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info);
 
+  //! Human-readable description of which model the DP "skew" score used -- the empirical concordant-pair
+  //  crossing distribution or the negative-binomial fallback -- and the number of non-deletion reference
+  //  positions (N) that drove the choice. Empty string if unavailable. For the summary.html note.
+  string dp_crossing_model_description(const Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info);
+
 } // namespace breseq
 
 #endif

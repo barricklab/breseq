@@ -56,6 +56,13 @@ namespace breseq {
                                        double neg_log10_p_value_cutoff,
                                        double& out_N, int32_t& out_deletion_floor);
 
+  // Fit a negative binomial (size, mu) to a count histogram (n[i] = # observations with value i, i in
+  // [0,maxidx]) via the censored least-squares fitter. Returns true and sets out_size/out_mu on a valid
+  // fit (both > 0). Public wrapper so e.g. dp_evidence can build a parametric fallback for the
+  // concordant-pair crossing distribution when the empirical one is too sparse.
+  bool fit_negative_binomial_histogram(const vector<double>& n, uint32_t maxidx,
+                                       double& out_size, double& out_mu);
+
   // Result of fitting a negative binomial distribution to a unique-only
   // coverage histogram (see CoverageDistribution::fit).
   struct CoverageDistributionFitResult

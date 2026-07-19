@@ -398,6 +398,7 @@ namespace breseq
 
     //! Settings: Discordant Pair (DP) Evidence
     int32_t discordant_pair_seed;                         // Default = 3;         COMMAND-LINE OPTION
+    double discordant_pair_skew_cutoff;                   // Default = 3.0;       COMMAND-LINE OPTION
 
     //! Settings: Soft-Clipping Evidence
     bool     predict_soft_clipping;                       // Default = false     COMMAND-LINE OPTION
