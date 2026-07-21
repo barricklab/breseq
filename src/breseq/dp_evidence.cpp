@@ -66,10 +66,6 @@ namespace breseq {
     int32_t other_tid, other_p;   // the mate/other side
     bool    other_cross_fwd;      // crossing-read strand on the other side
     double  D;                    // distance_cutoff (window half-width / mate-proximity)
-    bool    guard_discordant;     // if true, a discordant read that extends past p is not counted (the
-                                  // same "kept-clear" guard used for concordant reads). Off during the
-                                  // preliminary refinement pass (which needs reads that reach past p to
-                                  // find where p should be), on for counting/plotting.
   };
 
   // Classify one fetched read at a junction side. Returns 0 = ignore, 1 = supporting/discordant,
@@ -105,13 +101,10 @@ namespace breseq {
       if (mpos < c.other_p - c.D || mpos > c.other_p + c.D) return 0;
       bool mate_forward = (a.flag() & BAM_FMREVERSE) == 0;
       if (mate_forward != c.other_cross_fwd) return 0;
-      // When counting (guard on), a discordant read must also lie entirely on the kept side and not
-      // extend past p -- the same guard as concordant. p has been shifted (predict step 4) to clear all
-      // the discordant reads, so this normally excludes nothing; it just enforces the invariant.
-      if (c.guard_discordant) {
-        bool kept_clear = (c.s == -1) ? (rend < c.p) : (rstart > c.p);
-        if (!kept_clear) return 0;
-      }
+      // A discordant read is classified by its BODY (outside end) being on the kept side (checked above)
+      // and its mate landing at the other side -- NOT by whether its junction-facing end reaches past p.
+      // This decouples the count from the exact refined boundary (reads reaching toward the junction are
+      // still supporting reads), so a shifted coordinate can't drop them.
       return 1;
     }
     // Concordant: count only if the pair cleanly BRACKETS p — this read entirely on the kept side and
@@ -172,7 +165,7 @@ namespace breseq {
     void scan(const string& seq_id, int32_t p, int32_t s, bool crossing_is_forward,
               int32_t other_tid, int32_t other_p, bool other_crossing_is_forward, double D)
     {
-      set_ctx(p, s, crossing_is_forward, other_tid, other_p, other_crossing_is_forward, D, /*guard=*/true);
+      set_ctx(p, s, crossing_is_forward, other_tid, other_p, other_crossing_is_forward, D);
       m_supporting = 0; m_concordant = 0; m_unpaired = 0;
       m_supporting_nums.clear();
       m_collect_outside = false;
@@ -182,20 +175,16 @@ namespace breseq {
       do_fetch(seq_id + ":" + to_string(lo) + "-" + to_string(hi));
     }
 
-    // Preliminary refinement pass: fetch the discordant (supporting) reads at this side (guard OFF, so
-    // reads reaching past p are included) and collect, per read: the "outside" coordinate -- the end
-    // facing AWAY from the junction (rstart for s=-1, rend for s=+1) -- and the "junction extent" -- the
-    // end facing TOWARD the junction (rend for s=-1, rstart for s=+1). Returns true if any discordant
-    // reads were found; sets median_outside (median of the outside coords; robust to a stray pair) and
-    // junction_extent (max rend for s=-1 / min rstart for s=+1 -- the furthest a read reaches toward the
-    // junction, used to shift p so no read overlaps it).
-    bool refine_outside_median(const string& seq_id, int32_t p, int32_t s, bool crossing_is_forward,
-                               int32_t other_tid, int32_t other_p, bool other_crossing_is_forward,
-                               double D, int32_t& median_outside, int32_t& junction_extent)
+    // Fetch the discordant (supporting) reads at this side and return the median of their "outside"
+    // coordinates -- the end facing AWAY from the junction (rstart for s=-1, rend for s=+1). The caller
+    // shifts this median toward the junction by half the median pair distance to place the breakpoint.
+    // Returns false (no placement) if no supporting reads are found. out_count = # supporting reads.
+    bool supporting_outer_median(const string& seq_id, int32_t p, int32_t s, bool crossing_is_forward,
+                                 int32_t other_tid, int32_t other_p, bool other_crossing_is_forward,
+                                 double D, int32_t& median_outer, size_t& out_count)
     {
-      set_ctx(p, s, crossing_is_forward, other_tid, other_p, other_crossing_is_forward, D, /*guard=*/false);
+      set_ctx(p, s, crossing_is_forward, other_tid, other_p, other_crossing_is_forward, D);
       m_outside.clear();
-      m_have_extent = false; m_extent = 0;
       m_collect_outside = true;
 
       int32_t lo, hi;
@@ -203,10 +192,10 @@ namespace breseq {
         do_fetch(seq_id + ":" + to_string(lo) + "-" + to_string(hi));
 
       m_collect_outside = false;
+      out_count = m_outside.size();
       if (m_outside.empty()) return false;
       sort(m_outside.begin(), m_outside.end());
-      median_outside = m_outside[m_outside.size() / 2];
-      junction_extent = m_extent;
+      median_outer = m_outside[m_outside.size() / 2];
       return true;
     }
 
@@ -217,11 +206,7 @@ namespace breseq {
         if (cat == 1) {
           int32_t rstart = static_cast<int32_t>(a.reference_start_1());
           int32_t rend   = static_cast<int32_t>(a.reference_end_1());
-          m_outside.push_back(m_ctx.s == -1 ? rstart : rend);
-          int32_t je = (m_ctx.s == -1) ? rend : rstart;   // junction-facing end
-          if (!m_have_extent)          { m_extent = je; m_have_extent = true; }
-          else if (m_ctx.s == -1)      { if (je > m_extent) m_extent = je; }
-          else                         { if (je < m_extent) m_extent = je; }
+          m_outside.push_back(m_ctx.s == -1 ? rstart : rend);   // outside (away-from-junction) end
         }
         return;
       }
@@ -240,17 +225,17 @@ namespace breseq {
 
   private:
     void set_ctx(int32_t p, int32_t s, bool crossing_is_forward,
-                 int32_t other_tid, int32_t other_p, bool other_crossing_is_forward, double D, bool guard) {
+                 int32_t other_tid, int32_t other_p, bool other_crossing_is_forward, double D) {
       m_ctx.p = p; m_ctx.s = s; m_ctx.cross_fwd = crossing_is_forward;
       m_ctx.other_tid = other_tid; m_ctx.other_p = other_p; m_ctx.other_cross_fwd = other_crossing_is_forward;
-      m_ctx.D = D; m_ctx.guard_discordant = guard;
+      m_ctx.D = D;
     }
     dp_side_ctx m_ctx;
     int     m_supporting, m_concordant, m_unpaired;
     set<string> m_supporting_nums;
     bool    m_collect_outside;
+    // Supporting reads' outside (away-from-junction) coordinates, accumulated during the collect pass.
     vector<int32_t> m_outside;
-    bool    m_have_extent; int32_t m_extent;
   };
 
   // One read to draw on a per-side plot (its pair anchored at this side).
@@ -261,6 +246,8 @@ namespace breseq {
     int32_t  anchor;        // junction-facing coordinate of this read
     int32_t  mate_start;    // concordant only
     bool     mate_reversed; // concordant only
+    int32_t  ref_left_clip;  // soft-clipped bases whose sequence maps just LEFT of read_start
+    int32_t  ref_right_clip; // soft-clipped bases whose sequence maps just RIGHT of read_end
     string   name;          // read (pair) QNAME, shown as the lane label
   };
 
@@ -278,7 +265,7 @@ namespace breseq {
     {
       m_ctx.p = p; m_ctx.s = s; m_ctx.cross_fwd = crossing_is_forward;
       m_ctx.other_tid = other_tid; m_ctx.other_p = other_p; m_ctx.other_cross_fwd = other_crossing_is_forward;
-      m_ctx.D = D; m_ctx.guard_discordant = true;  // plot the reads that are actually counted
+      m_ctx.D = D;  // same classification as the count, so the plot matches the reads that are counted
       m_reads.clear();
 
       int32_t lo, hi;
@@ -298,6 +285,11 @@ namespace breseq {
       r.anchor = anchor;
       r.mate_start = a.mate_start_1();
       r.mate_reversed = (a.flag() & BAM_FMREVERSE) != 0;
+      // Soft-clipped bases past each reference end. The BAM CIGAR is in reference-forward order, so its
+      // leading soft-clip is always the reference-LEFT clip and its trailing clip the reference-RIGHT,
+      // regardless of read strand.
+      r.ref_left_clip  = static_cast<int32_t>(a.query_start_1()) - 1;
+      r.ref_right_clip = static_cast<int32_t>(a.read_length()) - static_cast<int32_t>(a.query_end_1());
       r.name = a.read_name();
       m_reads.push_back(r);
     }
@@ -806,32 +798,16 @@ namespace breseq {
       int32_t s1_tid = scanner ? scanner->tid_for_seq_id(s1_seq_id) : -1;
       int32_t s2_tid = scanner ? scanner->tid_for_seq_id(s2_seq_id) : -1;
 
-      // Refine the two breakpoint coordinates from the discordant reads BEFORE counting. For each side
-      // we take the median "outside" position of its discordant reads (robust to a stray pair) and move
-      // the breakpoint from there toward the junction by half the concordant pair-distance median. Doing
-      // this on both sides rebalances the pair so the discordant reads sit centered between the two
-      // coordinates. Then we nudge the coordinate past the junction-facing end of every discordant read
-      // (max rend for s=-1 / min rstart for s=+1) so NO read overlaps it -- this is what lets counting
-      // apply the same "does not extend past p" guard to discordant reads as to concordant reads without
-      // discarding the very reads that support the junction. Both refinements use the region-based
-      // positions as input, then update together.
+      // Place each breakpoint coordinate at the supporting reads' median outside end, shifted toward the
+      // junction by half the median pair distance. (No edge-snapping/re-search refinement yet.)
       if (scanner && pair_median > 0.0) {
-        int32_t med1, ext1, med2, ext2;
-        bool r1 = scanner->refine_outside_median(s1_seq_id, s1_pos, s1_strand, s1_fwd, s2_tid, s2_pos, s2_fwd, distance_cutoff, med1, ext1);
-        bool r2 = scanner->refine_outside_median(s2_seq_id, s2_pos, s2_strand, s2_fwd, s1_tid, s1_pos, s1_fwd, distance_cutoff, med2, ext2);
-        int32_t half = static_cast<int32_t>(pair_median / 2.0 + 0.5);
-        if (r1) {
-          int32_t p = med1 + (s1_strand == -1 ? +half : -half);   // move toward the junction
-          if (s1_strand == -1) { if (p < ext1 + 1) p = ext1 + 1; } // clear all reads (rend < p)
-          else                 { if (p > ext1 - 1) p = ext1 - 1; } // clear all reads (rstart > p)
-          s1_pos = max(1, min(scanner->seq_length(s1_tid), p));
-        }
-        if (r2) {
-          int32_t p = med2 + (s2_strand == -1 ? +half : -half);
-          if (s2_strand == -1) { if (p < ext2 + 1) p = ext2 + 1; }
-          else                 { if (p > ext2 - 1) p = ext2 - 1; }
-          s2_pos = max(1, min(scanner->seq_length(s2_tid), p));
-        }
+        int32_t H = static_cast<int32_t>(pair_median / 2.0 + 0.5);
+        int32_t med1; size_t c1;
+        if (scanner->supporting_outer_median(s1_seq_id, s1_pos, s1_strand, s1_fwd, s2_tid, s2_pos, s2_fwd, distance_cutoff, med1, c1))
+          s1_pos = max(1, min(scanner->seq_length(s1_tid), med1 + (s1_strand == -1 ? +H : -H)));
+        int32_t med2; size_t c2;
+        if (scanner->supporting_outer_median(s2_seq_id, s2_pos, s2_strand, s2_fwd, s1_tid, s1_pos, s1_fwd, distance_cutoff, med2, c2))
+          s2_pos = max(1, min(scanner->seq_length(s2_tid), med2 + (s2_strand == -1 ? +H : -H)));
       }
 
       cDiffEntry dp(DP);
@@ -976,7 +952,7 @@ namespace breseq {
     int64_t lo = p, hi = p;
     for (int i = 0; i < n; i++) {
       const dp_draw_read& r = reads[i];
-      lo = min(lo, (int64_t)r.read_start); hi = max(hi, (int64_t)r.read_end);
+      lo = min(lo, (int64_t)(r.read_start - r.ref_left_clip)); hi = max(hi, (int64_t)(r.read_end + r.ref_right_clip));
       if (r.category == 2) {
         int64_t mlen = r.read_end - r.read_start;
         lo = min(lo, (int64_t)r.mate_start); hi = max(hi, (int64_t)r.mate_start + mlen);
@@ -1002,9 +978,12 @@ namespace breseq {
       const dp_draw_read& r = reads[i];
       int y = i + 1;
 
-      // The read as an arrow tail->head in its mapping direction.
-      int32_t tail = r.read_reversed ? r.read_end : r.read_start;
-      int32_t head = r.read_reversed ? r.read_start : r.read_end;
+      // The read as an arrow tail->head in its mapping direction, its extent grown to include any
+      // soft-clipped (trimmed) bases past each aligned end.
+      int32_t full_left  = r.read_start - r.ref_left_clip;
+      int32_t full_right = r.read_end   + r.ref_right_clip;
+      int32_t tail = r.read_reversed ? full_right : full_left;
+      int32_t head = r.read_reversed ? full_left  : full_right;
       if (r.category == 2) { cr << tail << "\t" << y << "\t" << (head - tail) << "\t0\n"; has_cr = true; }
       else                 { dr << tail << "\t" << y << "\t" << (head - tail) << "\t0\n"; has_dr = true; }
 
@@ -1078,7 +1057,7 @@ namespace breseq {
     // Vertical marker at the side position (plot center).
     s << "set arrow from " << p << ",0 to " << p << "," << (n + 1) << " nohead lc rgb 'gray50' lw 1 dt 3 back" << endl;
 
-    vector<string> clauses;  // connectors first so the arrows draw on top
+    vector<string> clauses;  // connectors first so the read arrows draw on top
     if (has_cc) clauses.push_back(double_quote(f_cc) + " using 1:2 with lines dt 2 lc rgb " + CONC + " lw 1 notitle");
     if (has_dc) clauses.push_back(double_quote(f_dc) + " using 1:2 with lines dt 2 lc rgb " + DISC + " lw 1 notitle");
     if (has_cr) clauses.push_back(double_quote(f_cr) + " using 1:2:3:4 with vectors head filled size screen 0.008,20,60 lc rgb " + CONC + " lw 2 notitle");
@@ -1097,6 +1076,7 @@ namespace breseq {
   struct dp_joined_pair {
     int32_t s1_start, s1_end, s1_anchor; bool s1_rev;   // side_1 read (genomic)
     int32_t s2_start, s2_end, s2_anchor; bool s2_rev;   // side_2 read (genomic)
+    int32_t s1_left_clip, s1_right_clip, s2_left_clip, s2_right_clip;  // soft-clip bases past each end
     string  s1_name, s2_name;
   };
 
@@ -1110,7 +1090,8 @@ namespace breseq {
   static void render_dp_joined_plot(const string& output_svg, vector<dp_joined_pair> pairs,
                                     int32_t p1, int32_t s1_str, int32_t p2, int32_t s2_str)
   {
-    // Genomic -> joined-x transforms (side_1 maps to <=0, side_2 to >=0).
+    // Genomic -> joined-x transforms: side_1 maps to <=0 (side_1_position at x=0), side_2 to >=0
+    // (side_2_position at x=0). The two positions are stitched together at the seam.
     auto j1 = [&](int32_t g) -> int64_t { return (s1_str == -1) ? (int64_t)(g - p1) : (int64_t)(p1 - g); };
     auto j2 = [&](int32_t g) -> int64_t { return (s2_str == -1) ? (int64_t)(p2 - g) : (int64_t)(g - p2); };
 
@@ -1125,8 +1106,8 @@ namespace breseq {
     int64_t reach = 10;
     for (int i = 0; i < n; i++) {
       const dp_joined_pair& q = pairs[i];
-      reach = max(reach, -min(j1(q.s1_start), j1(q.s1_end)));
-      reach = max(reach,  max(j2(q.s2_start), j2(q.s2_end)));
+      reach = max(reach, -min(j1(q.s1_start - q.s1_left_clip), j1(q.s1_end + q.s1_right_clip)));
+      reach = max(reach,  max(j2(q.s2_start - q.s2_left_clip), j2(q.s2_end + q.s2_right_clip)));
     }
     int64_t half = (int64_t)(1.1 * reach + 0.5);
     int64_t xmin = -half, xmax = half;
@@ -1140,13 +1121,15 @@ namespace breseq {
     for (int i = 0; i < n; i++) {
       const dp_joined_pair& q = pairs[i];
       int y = i + 1;
-      // side_1 read arrow (tail->head in mapping direction), transformed.
-      int64_t a_tail = j1(q.s1_rev ? q.s1_end : q.s1_start);
-      int64_t a_head = j1(q.s1_rev ? q.s1_start : q.s1_end);
+      // side_1 read arrow (tail->head in mapping direction), extent grown to include soft-clipped bases.
+      int32_t a_l = q.s1_start - q.s1_left_clip, a_r = q.s1_end + q.s1_right_clip;
+      int64_t a_tail = j1(q.s1_rev ? a_r : a_l);
+      int64_t a_head = j1(q.s1_rev ? a_l : a_r);
       fr << a_tail << "\t" << y << "\t" << (a_head - a_tail) << "\t0\n"; has_r = true;
       // side_2 mate arrow.
-      int64_t b_tail = j2(q.s2_rev ? q.s2_end : q.s2_start);
-      int64_t b_head = j2(q.s2_rev ? q.s2_start : q.s2_end);
+      int32_t b_l = q.s2_start - q.s2_left_clip, b_r = q.s2_end + q.s2_right_clip;
+      int64_t b_tail = j2(q.s2_rev ? b_r : b_l);
+      int64_t b_head = j2(q.s2_rev ? b_l : b_r);
       fr << b_tail << "\t" << y << "\t" << (b_head - b_tail) << "\t0\n"; has_r = true;
       // dashed connector between the two reads' junction-facing anchors, across the seam.
       fc << j1(q.s1_anchor) << "\t" << y << "\n" << j2(q.s2_anchor) << "\t" << y << "\n\n"; has_c = true;
@@ -1211,7 +1194,7 @@ namespace breseq {
       s << "unset y2tics" << endl;
     }
 
-    // Shade the two flanks: side_1 (left) light green, side_2 (right) light yellow.
+    // Shade the two flanks: side_1 (left) light green up to x=0, side_2 (right) light yellow from x=0.
     s << "set object 1 rectangle from " << xmin << ",0 to 0," << (n + 1)
       << " fc rgb " << DP_SIDE1_COLOR << " fs solid noborder behind" << endl;
     s << "set object 2 rectangle from 0,0 to " << xmax << "," << (n + 1)
@@ -1219,7 +1202,7 @@ namespace breseq {
     // Seam marker at x=0.
     s << "set arrow from 0,0 to 0," << (n + 1) << " nohead lc rgb 'gray50' lw 1 dt 3 back" << endl;
 
-    vector<string> clauses;
+    vector<string> clauses;  // connectors first so the read arrows draw on top
     if (has_c) clauses.push_back(double_quote(f_c) + " using 1:2 with lines dt 2 lc rgb " + DISC + " lw 1 notitle");
     if (has_r) clauses.push_back(double_quote(f_r) + " using 1:2:3:4 with vectors head filled size screen 0.008,20,60 lc rgb " + DISC + " lw 2 notitle");
     if (clauses.empty()) clauses.push_back("-1 notitle");
@@ -1344,6 +1327,8 @@ namespace breseq {
           dp_joined_pair q;
           q.s1_start = a.read_start; q.s1_end = a.read_end; q.s1_anchor = a.anchor; q.s1_rev = a.read_reversed; q.s1_name = a.name;
           q.s2_start = b.read_start; q.s2_end = b.read_end; q.s2_anchor = b.anchor; q.s2_rev = b.read_reversed; q.s2_name = b.name;
+          q.s1_left_clip = a.ref_left_clip; q.s1_right_clip = a.ref_right_clip;
+          q.s2_left_clip = b.ref_left_clip; q.s2_right_clip = b.ref_right_clip;
           pairs.push_back(q);
         }
         size_t total = dp_cap_for_display(pairs, max_display, static_cast<uint32_t>(s1_pos) ^ (static_cast<uint32_t>(s2_pos) << 1));
