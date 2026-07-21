@@ -245,6 +245,7 @@ namespace breseq
     //! Options that control which parts of the pipeline to execute
     string custom_run_name;                 // Default = <none> COMMAND-LINE OPTION
     string print_custom_run_name;           // custom_run_name with '_' replaced by ' '
+    string sample_name;                     // Name shown atop the HTML pages; resolved by resolve_sample_name()
     string genbank_field_for_seq_id;        // Header fields to use for seq_id Default = VERSION, other valid values are LOCUS and ACCESSION
     bool skip_read_filtering;               // Default = false
     bool skip_new_junction_prediction;      // Default = false COMMAND-LINE OPTION
@@ -920,6 +921,9 @@ namespace breseq
 
 		void pre_option_initialize(int argc = 0, char* argv[] = NULL);
 		void post_option_initialize();
+		//! Fills in sample_name from, in order of preference: --name, the title of
+		//! --header-genome-diff, the output directory name, or the read file names.
+		void resolve_sample_name();
     void init_installed();
     
 

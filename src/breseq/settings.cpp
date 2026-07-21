@@ -1331,6 +1331,59 @@ namespace breseq
     
     //! Multithreading
     Settings::pool.resize(this->num_processors);
+
+    //! Display name for the HTML output. Last, so that it can use the paths
+    //! and read file sets resolved above.
+    this->resolve_sample_name();
+  }
+
+  void Settings::resolve_sample_name()
+  {
+    // 1. An explicit --name always wins.
+    if (!this->print_custom_run_name.empty()) {
+      this->sample_name = this->print_custom_run_name;
+      return;
+    }
+
+    // 2. The title of the --header-genome-diff. Note that cGenomeDiff::read()
+    //    seeds the title from the file's own base name, so this is populated
+    //    even for a header GD with no explicit #=TITLE line. Guard on existence
+    //    because read() asserts on a file it cannot open -- reporting that is
+    //    the job of the check in do_breseq(), not of naming the sample.
+    if (!this->header_genome_diff_file_name.empty()
+        && file_exists(this->header_genome_diff_file_name.c_str())) {
+      cGenomeDiff header_gd;
+      header_gd.read(this->header_genome_diff_file_name, true);
+      string title = header_gd.get_title();
+      if (!title.empty()) {
+        // set_title() stores spaces as underscores; undo that for display, the
+        // same way print_custom_run_name is derived from custom_run_name.
+        this->sample_name = substitute(title, "_", " ");
+        return;
+      }
+    }
+
+    // 3. The name of the output directory.
+    string output_dir = this->base_output_path;
+    while ((output_dir.size() > 1) && (output_dir[output_dir.size()-1] == '/'))
+      output_dir.erase(output_dir.size()-1);
+    string output_dir_name = path_to_filename(output_dir);
+    if (!output_dir_name.empty() && (output_dir_name != ".") && (output_dir_name != "..")) {
+      this->sample_name = output_dir_name;
+      return;
+    }
+
+    // 4. Fall back to the read files. Uses the per-set names, which collapse a
+    //    read pair to a single entry (sample_R1 + sample_R2 => sample_RX).
+    vector<string> read_set_names;
+    for (cReadFileSets::const_iterator it = this->read_file_sets.begin(); it != this->read_file_sets.end(); it++) {
+      read_set_names.push_back(it->m_base_name);
+    }
+    // With no read files at all (e.g. the default-constructed Settings that
+    // gdtools uses) leave the name empty so that nothing is shown, rather than
+    // rendering a bare "Unnamed ()".
+    if (!read_set_names.empty())
+      this->sample_name = "Unnamed (" + join(read_set_names, ", ") + ")";
   }
 
 

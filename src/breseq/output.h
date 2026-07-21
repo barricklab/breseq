@@ -154,8 +154,13 @@ extern const char* ALIGN_LEFT;
 
   
   //Specific to Breseq HTML Files
-  string html_header(const string& title, const Settings& settings);
-  string breseq_header_string(const Settings& settings);
+  string html_header(const string& title, const Settings& settings, bool sticky_table_headers = true);
+  //! Escapes &, <, >, and " for safe inclusion in HTML text or attributes
+  string html_escape(const string& input);
+  //! path_prefix is prepended to every link/image target, so that pages living
+  //! below settings.output_path (e.g. the evidence pages in output/evidence/)
+  //! can reach them with a "../" prefix.
+  string breseq_header_string(const Settings& settings, const string& path_prefix = "");
   string mutation_filter_input_string();
 
   
