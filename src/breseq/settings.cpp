@@ -1187,6 +1187,7 @@ namespace breseq
     // Transient intermediate: written during preprocessing, consumed by the distance-distribution
     // fit/plot, then deleted (tracked under paired_mapping_distance_done_file_name).
     this->paired_mapping_distance_distribution_file_name = this->candidate_junction_path + "/#.pair_stats.csv";
+    // (paired_mapping_distance_histogram_file_name is assigned below, after data_path is set.)
 
     this->coverage_junction_done_file_name = this->candidate_junction_path + "/coverage_junction_alignment.done";
 		this->coverage_junction_best_bam_unsorted_file_name = this->candidate_junction_path + "/best.unsorted.bam";
@@ -1310,6 +1311,10 @@ namespace breseq
 
 		// Per-seq_id concordant-pair crossing histogram tab (written in resolve, persists in data/).
 		this->concordant_pair_crossing_distribution_file_name = this->data_path + "/#.concordant_pair_crossing.tab";
+
+		// Per-read-file-set majority-orientation insert histogram (the empirical insert PMF for the DP Bayes
+		// placement test), written by the fit in preprocessing and read back in Output; persists in data/.
+		this->paired_mapping_distance_histogram_file_name = this->data_path + "/#.pair_distance_histogram.tab";
 
 		this->reference_bam_file_name = this->data_path + "/reference.bam";
 		this->reference_fasta_file_name = this->data_path + "/reference.fasta";

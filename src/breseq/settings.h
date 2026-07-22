@@ -527,6 +527,8 @@ namespace breseq
 
     string paired_mapping_distance_done_file_name;
     string paired_mapping_distance_distribution_file_name;
+    string paired_mapping_distance_histogram_file_name;  // persisted majority-orientation distance->count
+                                                         // histogram (the empirical insert PMF for DP)
     string paired_mapping_distance_plot_file_name;
     string paired_mapping_distance_summary_file_name;
     string discordant_pairs_file_name;

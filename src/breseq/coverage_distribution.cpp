@@ -657,7 +657,8 @@ static uint32_t weighted_median(const vector<double>& n, uint32_t N, double tota
  !*/
 PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fit(
                                          string distribution_file_name,
-                                         string plot_file
+                                         string plot_file,
+                                         string histogram_file_name
                                          )
 {
   PairedMappingDistanceDistributionFitResult result;
@@ -768,8 +769,11 @@ PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fi
 
   // The condensed CSV covers all orientations and isn't directly plot-ready (3 comma-separated
   // columns) -- write the majority-orientation histogram to its own small 2-column table so
-  // gnuplot can plot it directly, exactly like the cutoff-line sidecar table below.
-  string hist_table_file_name = distribution_file_name + ".majority_hist.tab";
+  // gnuplot can plot it directly, exactly like the cutoff-line sidecar table below. When a
+  // histogram_file_name is supplied this doubles as the PERSISTED empirical insert histogram that DP
+  // evidence reads back (kept: not removed at the end); otherwise it is a temp sidecar for the plot.
+  string hist_table_file_name = histogram_file_name.empty() ? (distribution_file_name + ".majority_hist.tab")
+                                                            : histogram_file_name;
   {
     ofstream hist_out(hist_table_file_name.c_str());
     ASSERT(hist_out.is_open(), "Could not write to file: " + hist_table_file_name);
@@ -827,7 +831,7 @@ PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fi
   run_gnuplot_script(s.str(), gnuplot_script_name, log_file_name);
   make_svg_responsive(plot_file);
   remove(log_file_name.c_str());
-  remove(hist_table_file_name.c_str());
+  if (histogram_file_name.empty()) remove(hist_table_file_name.c_str());  // keep the persisted histogram
   remove(cutoff_table_file_name.c_str());
   remove(median_table_file_name.c_str());
 
@@ -845,9 +849,10 @@ void PairedMappingDistanceDistribution::fit_paired_mapping_distance_distribution
 {
   string distribution_file_name = Settings::file_name(settings.paired_mapping_distance_distribution_file_name, "#", read_file_set.m_base_name);
   string plot_file_name = Settings::file_name(settings.paired_mapping_distance_plot_file_name, "#", read_file_set.m_base_name);
+  string histogram_file_name = Settings::file_name(settings.paired_mapping_distance_histogram_file_name, "#", read_file_set.m_base_name);
 
   PairedMappingDistanceDistribution dist;
-  PairedMappingDistanceDistributionFitResult fit_result = dist.fit(distribution_file_name, plot_file_name);
+  PairedMappingDistanceDistributionFitResult fit_result = dist.fit(distribution_file_name, plot_file_name, histogram_file_name);
 
   // The pair_stats CSV is a transient intermediate: now that the plot is drawn and the stats are
   // extracted, mark it for deletion when this step completes (done_step honors keep-all-intermediates).

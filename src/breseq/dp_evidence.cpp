@@ -66,7 +66,16 @@ namespace breseq {
     int32_t other_tid, other_p;   // the mate/other side
     bool    other_cross_fwd;      // crossing-read strand on the other side
     double  D;                    // distance_cutoff (window half-width / mate-proximity)
+    bool    check_overlap;        // apply the overlapping-mate exclusion? ON for counting (the reported
+                                  // discordant support), OFF for the placement gathering / refinement
+                                  // re-scan (which want the raw innermost aligned read edge -- the overlap
+                                  // test references p and would wrongly drop junction-reaching reads when
+                                  // p is a re-anchored, far-from-the-reads position).
   };
+
+  // One supporting read pair, viewed from both sides: outer (away-from-junction) and inner (junction-facing)
+  // reference coordinates on each side. The inferred insert at (P1,P2) is reach1 + reach2 (dp_reach).
+  struct dp_pair_ends { int32_t o1, i1, o2, i2; };
 
   // Classify one fetched read at a junction side. Returns 0 = ignore, 1 = supporting/discordant,
   // 2 = concordant-crossing, 3 = unpaired. `anchor` is set (for kept reads) to the junction-facing
@@ -107,10 +116,12 @@ namespace breseq {
       // (the mate's aligned inner end to other_p). A negative sum means the reads overlap -> drop the pair.
       // The mate's junction-facing end follows its orientation (forward -> its right/rend faces the
       // junction, reverse -> its left/rstart), its length approximated by this read's length.
-      int32_t matelen = static_cast<int32_t>(a.read_length());
-      int32_t g_this  = (c.s == -1) ? (c.p - rend) : (rstart - c.p);
-      int32_t g_other = mate_forward ? (c.other_p - (mpos + matelen - 1)) : (mpos - c.other_p);
-      if (g_this + g_other < 0) return 0;
+      if (c.check_overlap) {
+        int32_t matelen = static_cast<int32_t>(a.read_length());
+        int32_t g_this  = (c.s == -1) ? (c.p - rend) : (rstart - c.p);
+        int32_t g_other = mate_forward ? (c.other_p - (mpos + matelen - 1)) : (mpos - c.other_p);
+        if (g_this + g_other < 0) return 0;
+      }
       return 1;
     }
     // Concordant: count only if the pair cleanly BRACKETS p — this read entirely on the kept side and
@@ -163,7 +174,8 @@ namespace breseq {
   class dp_side_scanner : public pileup_base {
   public:
     dp_side_scanner(const string& bam, const string& fasta)
-      : pileup_base(bam, fasta), m_collect_outside(false) { set_print_progress(false); }
+      : pileup_base(bam, fasta), m_collect_outside(false), m_collect_pairs(false),
+        m_gother_s(0), m_gread_len(0) { set_print_progress(false); }
 
     int32_t tid_for_seq_id(const string& seq_id) const { return dp_tid_for_seq_id(*this, seq_id); }
     int32_t seq_length(int32_t tid) const { return static_cast<int32_t>(target_length(tid)); }
@@ -171,7 +183,7 @@ namespace breseq {
     void scan(const string& seq_id, int32_t p, int32_t s, bool crossing_is_forward,
               int32_t other_tid, int32_t other_p, bool other_crossing_is_forward, double D)
     {
-      set_ctx(p, s, crossing_is_forward, other_tid, other_p, other_crossing_is_forward, D);
+      set_ctx(p, s, crossing_is_forward, other_tid, other_p, other_crossing_is_forward, D, /*check_overlap=*/true);
       m_supporting = 0; m_concordant = 0; m_unpaired = 0;
       m_supporting_nums.clear();
       m_collect_outside = false;
@@ -188,17 +200,21 @@ namespace breseq {
     //   inner_edge = the furthest a supporting read reaches TOWARD the junction (its junction-facing end
     //     INCLUDING its junction-facing soft-clip: rend+trail for s=-1, rstart-lead for s=+1). The caller
     //     clamps the placed coordinate out to this so no supporting read straddles the seam.
+    //   extreme_outer = the OUTERMOST outer coordinate (min for s=-1, max for s=+1) -- the supporting read
+    //     whose body reaches furthest AWAY from the junction. Used to re-anchor the wide window for the
+    //     refinement pass.
     // Returns false (no placement) if no supporting reads are found. out_count = # supporting reads.
     bool supporting_outer_median(const string& seq_id, int32_t p, int32_t s, bool crossing_is_forward,
                                  int32_t other_tid, int32_t other_p, bool other_crossing_is_forward,
-                                 double D, int32_t& median_outer, int32_t& inner_edge, size_t& out_count)
+                                 double D, int32_t& median_outer, int32_t& inner_edge,
+                                 int32_t& extreme_outer, size_t& out_count)
     {
-      set_ctx(p, s, crossing_is_forward, other_tid, other_p, other_crossing_is_forward, D);
+      set_ctx(p, s, crossing_is_forward, other_tid, other_p, other_crossing_is_forward, D, /*check_overlap=*/false);
       m_outside.clear();
       m_have_inner = false; m_inner_edge = 0;
       m_collect_outside = true;
 
-      int32_t lo, hi;
+      int32_t lo = p, hi = p;
       if (dp_side_window(*this, seq_id, p, s, D, lo, hi))
         do_fetch(seq_id + ":" + to_string(lo) + "-" + to_string(hi));
 
@@ -207,11 +223,59 @@ namespace breseq {
       if (m_outside.empty()) return false;
       sort(m_outside.begin(), m_outside.end());
       median_outer = m_outside[m_outside.size() / 2];
+      // Outermost supporting read WITHIN the fetch window. do_fetch also returns reads that merely OVERLAP
+      // the window (starting before its outer boundary); those outliers must not anchor the refinement's
+      // re-anchored window, or it would sit too far out and miss the junction-facing cluster. So take the
+      // extreme outer coordinate that still lies inside [lo, hi].
+      if (s == -1) {
+        vector<int32_t>::iterator it = lower_bound(m_outside.begin(), m_outside.end(), lo);
+        extreme_outer = (it != m_outside.end()) ? *it : lo;
+      } else {
+        vector<int32_t>::iterator it = upper_bound(m_outside.begin(), m_outside.end(), hi);
+        extreme_outer = (it != m_outside.begin()) ? *(it - 1) : hi;
+      }
       inner_edge = m_inner_edge;
       return true;
     }
 
+    // Gather the supporting read pairs at this side over a SYMMETRIC +/-D window (so reads on either side
+    // of the region position are seen -- outliers included, to be judged by the Bayes test). Each pair
+    // records both mates' outer and inner (junction-facing) reference coordinates. The mate's ends are
+    // approximated from its start + read_len (its CIGAR isn't in this record).
+    bool gather_pairs(const string& seq_id, int32_t p, int32_t s, bool crossing_is_forward,
+                      int32_t other_tid, int32_t other_p, bool other_crossing_is_forward, double D,
+                      int32_t other_s, int32_t read_len, vector<dp_pair_ends>& out) {
+      set_ctx(p, s, crossing_is_forward, other_tid, other_p, other_crossing_is_forward, D, /*check_overlap=*/false);
+      m_pairs.clear(); m_gother_s = other_s; m_gread_len = read_len; m_collect_pairs = true;
+      int32_t tid = tid_for_seq_id(seq_id);
+      if (tid >= 0) {
+        int32_t lo = max(1, static_cast<int32_t>(p - D)), hi = min(seq_length(tid), static_cast<int32_t>(p + D));
+        if (lo <= hi) do_fetch(seq_id + ":" + to_string(lo) + "-" + to_string(hi));
+      }
+      m_collect_pairs = false;
+      out = m_pairs;
+      return !out.empty();
+    }
+
     void fetch_callback(const alignment_wrapper& a) {
+      if (m_collect_pairs) {
+        // Minimal supporting classification (no body-side gate): crossing strand, discordant, mate at the
+        // other side in its crossing orientation.
+        if (a.flag() & (BAM_FSECONDARY | BAM_FSUPPLEMENTARY)) return;
+        if (a.unmapped() || !a.is_paired() || a.proper_pair()) return;
+        if ((!a.reversed()) != m_ctx.cross_fwd) return;
+        if (static_cast<int32_t>(a.mate_reference_target_id()) != m_ctx.other_tid) return;
+        int32_t mpos = a.mate_start_1();
+        if (mpos < m_ctx.other_p - m_ctx.D || mpos > m_ctx.other_p + m_ctx.D) return;
+        if (((a.flag() & BAM_FMREVERSE) == 0) != m_ctx.other_cross_fwd) return;
+        int32_t rs = static_cast<int32_t>(a.reference_start_1()), re = static_cast<int32_t>(a.reference_end_1());
+        dp_pair_ends e;
+        e.o1 = (m_ctx.s == -1) ? rs : re;                    e.i1 = (m_ctx.s == -1) ? re : rs;
+        e.o2 = (m_gother_s == -1) ? mpos : (mpos + m_gread_len - 1);
+        e.i2 = (m_gother_s == -1) ? (mpos + m_gread_len - 1) : mpos;
+        m_pairs.push_back(e);
+        return;
+      }
       int32_t anchor;
       int cat = dp_classify_side_read(a, m_ctx, anchor);
       if (m_collect_outside) {
@@ -243,10 +307,11 @@ namespace breseq {
 
   private:
     void set_ctx(int32_t p, int32_t s, bool crossing_is_forward,
-                 int32_t other_tid, int32_t other_p, bool other_crossing_is_forward, double D) {
+                 int32_t other_tid, int32_t other_p, bool other_crossing_is_forward, double D,
+                 bool check_overlap) {
       m_ctx.p = p; m_ctx.s = s; m_ctx.cross_fwd = crossing_is_forward;
       m_ctx.other_tid = other_tid; m_ctx.other_p = other_p; m_ctx.other_cross_fwd = other_crossing_is_forward;
-      m_ctx.D = D;
+      m_ctx.D = D; m_ctx.check_overlap = check_overlap;
     }
     dp_side_ctx m_ctx;
     int     m_supporting, m_concordant, m_unpaired;
@@ -256,6 +321,8 @@ namespace breseq {
     // plus the furthest junction-facing edge (soft-clip included) seen among them.
     vector<int32_t> m_outside;
     bool    m_have_inner; int32_t m_inner_edge;
+    // Pair-gathering pass (gather_pairs): both mates' ends, plus the other side's strand + read length.
+    bool    m_collect_pairs; vector<dp_pair_ends> m_pairs; int32_t m_gother_s, m_gread_len;
   };
 
   // One read to draw on a per-side plot (its pair anchored at this side).
@@ -283,7 +350,7 @@ namespace breseq {
     {
       m_ctx.p = p; m_ctx.s = s; m_ctx.cross_fwd = crossing_is_forward;
       m_ctx.other_tid = other_tid; m_ctx.other_p = other_p; m_ctx.other_cross_fwd = other_crossing_is_forward;
-      m_ctx.D = D;  // same classification as the count, so the plot matches the reads that are counted
+      m_ctx.D = D; m_ctx.check_overlap = true;  // same classification as the count, so the plot matches
       m_reads.clear();
 
       int32_t lo, hi;
@@ -374,6 +441,113 @@ namespace breseq {
   }
 
   static const double kDPMaxScore = 999999.0;
+
+  // ---------------------------------------------------------------------------------------------
+  // Bayesian outlier test for DP position shifts.
+  //
+  // A supporting pair, with the junction joined at (P1,P2), implies an insert size
+  //   d = reach1 + reach2 = (this mate's outer end -> P1) + (its mate's outer end -> P2).
+  // Under a mixture the pair's likelihood is L = (1-p_out)*f(d) + p_out*u, where f is the empirical
+  // insert PMF (overlapping-pair distances truncated out, as DP does), u is a uniform outlier
+  // likelihood, and p_out is the prior that a chance discordant pair lands in this DP's windows.
+  // A lone read whose own inferred insert is an outlier (BF_read = (1-p_out)f(d)/(p_out u) < 1/3) at
+  // the position set by the next read is dropped, so a one-off read cannot drag side_x_position.
+  // ---------------------------------------------------------------------------------------------
+  struct dp_insert_model {
+    vector<double> counts;   // counts[d] = # concordant pairs with mapping distance d (majority orient.)
+    double  total;           // sum of counts
+    int32_t trunc;           // 2 * read_length: distances below this (overlapping mates) are excluded
+    double  u;               // outlier insert likelihood (uniform over the inferred-insert range)
+    double  p_out;           // prior probability of a chance/outlier supporting read
+    dp_insert_model() : total(0.0), trunc(0), u(0.0), p_out(0.0) {}
+    bool ok() const { return total > 0.0 && trunc > 0; }
+    // Empirical PMF f(d): +/-5 bp triangular-free smoothing, a small floor, and 0 below the truncation.
+    double f(int32_t d) const {
+      double floor = 1.0 / (total * 1000.0);
+      if (d < trunc) return floor;
+      double s = 0.0;
+      for (int32_t x = d - 5; x <= d + 5; x++)
+        if (x >= 0 && x < static_cast<int32_t>(counts.size())) s += counts[x];
+      double p = s / (total * 11.0);
+      return p > floor ? p : floor;
+    }
+    double BF_read(int32_t d) const { return ((1.0 - p_out) * f(d)) / (p_out * u); }  // inlier:outlier odds
+  };
+
+  // Read the persisted majority-orientation distance histogram (distance<TAB>count) into m.counts / m.total.
+  static bool dp_read_insert_hist(const string& fn, dp_insert_model& m) {
+    m.counts.clear(); m.total = 0.0;
+    if (!file_exists(fn.c_str())) return false;
+    ifstream in(fn.c_str());
+    string line;
+    while (getline(in, line)) {
+      if (line.empty()) continue;
+      vector<string> f = split(line, "\t");
+      if (f.size() < 2) continue;
+      int d = from_string<int>(f[0]);
+      double n = from_string<double>(f[1]);
+      if (d < 0) continue;
+      if (static_cast<int>(m.counts.size()) <= d) m.counts.resize(d + 1, 0.0);
+      m.counts[d] = n; m.total += n;
+    }
+    return m.total > 0.0;
+  }
+
+  static int32_t dp_reach(int32_t P, int32_t outer, int32_t s) { return (s == -1) ? (P - outer) : (outer - P); }
+
+  // Robust innermost edge on ONE side: process that side's reads innermost-first and drop the innermost
+  // whenever ITS inferred insert (at the position set by the next distinct read) is an outlier; stop at the
+  // first read that fits and return its inner edge. `this_side` selects which side's inner edge varies.
+  static int32_t dp_robust_edge(vector<dp_pair_ends> pr, bool this_is_side1,
+                                int32_t s_this, int32_t p_other, int32_t s_other, const dp_insert_model& m) {
+    // innermost-first sort by this side's inner edge
+    if (this_is_side1) sort(pr.begin(), pr.end(), [&](const dp_pair_ends&a,const dp_pair_ends&b){ return s_this==-1 ? a.i1>b.i1 : a.i1<b.i1; });
+    else               sort(pr.begin(), pr.end(), [&](const dp_pair_ends&a,const dp_pair_ends&b){ return s_this==-1 ? a.i2>b.i2 : a.i2<b.i2; });
+    auto inner = [&](const dp_pair_ends& p){ return this_is_side1 ? p.i1 : p.i2; };
+    size_t i = 0;
+    while (i + 1 < pr.size()) {
+      size_t j = i + 1;
+      while (j < pr.size() && inner(pr[j]) == inner(pr[i])) j++;   // next DISTINCT inner edge
+      if (j >= pr.size()) break;
+      int32_t p_rest = inner(pr[j]);
+      int32_t reach_this  = this_is_side1 ? dp_reach(p_rest, pr[i].o1, s_this) : dp_reach(p_rest, pr[i].o2, s_this);
+      int32_t reach_other = this_is_side1 ? dp_reach(p_other, pr[i].o2, s_other) : dp_reach(p_other, pr[i].o1, s_other);
+      if (m.BF_read(reach_this + reach_other) >= 1.0 / 3.0) break;  // innermost read fits -> keep
+      i = j;                                                        // outlier -> peel to next distinct edge
+    }
+    return inner(pr[i]);
+  }
+
+  // Load the empirical insert PMF for the main paired library + derive the mixture's u and p_out.
+  //   u     = 1/(2*distance_cutoff): uniform outlier likelihood over the inferred-insert range.
+  //   p_out = 1 - (1 - (w/G)^2)^N: prior that >=1 chance discordant pair lands in this DP's windows,
+  //           with w = region window (median + 2.42*MAD), G = total reference length, N = genome-wide
+  //           discordant pairs (mapped - concordant). Returns false (no Bayes test) if unavailable.
+  static bool dp_load_insert_model(const Settings& settings, const Summary& summary,
+                                   cReferenceSequences& ref_seq_info, dp_insert_model& m)
+  {
+    const PairedMappingDistanceDistributionSummaries& pmdd = summary.preliminary_paired_mapping_distance_distribution;
+    string base; double best_mapped = -1.0, median = 0, mad = 0, dcut = 0, mapped = 0, concord = 0;
+    for (PairedMappingDistanceDistributionSummaries::const_iterator it = pmdd.begin(); it != pmdd.end(); it++) {
+      if (it->second.mapped_pairs > best_mapped) {
+        best_mapped = it->second.mapped_pairs; base = it->first;
+        median = it->second.median; mad = it->second.mad; dcut = it->second.distance_cutoff;
+        mapped = it->second.mapped_pairs; concord = it->second.concordant_pairs;
+      }
+    }
+    if (base.empty()) return false;
+    string fn = Settings::file_name(settings.paired_mapping_distance_histogram_file_name, "#", base);
+    if (!dp_read_insert_hist(fn, m)) return false;
+    int32_t readlen = static_cast<int32_t>(summary.sequence_conversion.read_length_avg + 0.5);
+    m.trunc = 2 * readlen;
+    m.u = (dcut > 0.0) ? 1.0 / (2.0 * dcut) : 0.0;
+    double w = median + 2.42 * mad;
+    double G = static_cast<double>(ref_seq_info.get_total_length());
+    double Nd = mapped - concord;
+    double per = (G > 0.0) ? (w / G) * (w / G) : 0.0;
+    m.p_out = (Nd > 0.0) ? (1.0 - pow(1.0 - per, Nd)) : 0.0;
+    return m.ok() && m.u > 0.0 && m.p_out > 0.0;
+  }
 
   // Read a per-seq_id interior crossing histogram tab (crossing<TAB>count) into `hist` indexed by
   // crossing value. Returns false if absent/empty.
@@ -693,6 +867,11 @@ namespace breseq {
       return;
     }
 
+    // Empirical-insert mixture model for the Bayes outlier test on breakpoint placement (optional: if the
+    // persisted insert histogram is missing, placement falls back to the raw innermost read edge).
+    dp_insert_model insert_model;
+    bool have_insert = dp_load_insert_model(settings, summary, ref_seq_info, insert_model);
+
     //
     // Step 1: Re-read the candidate regions CSV.
     //  columns: seq_id,start,end,strand,orientation,length,max_discordant_count,discordant_pairs
@@ -823,16 +1002,66 @@ namespace breseq {
         int32_t H = static_cast<int32_t>(pair_median / 2.0 + 0.5);
         // Side 1: gather with the region other-side position; its shifted median (mh1) then becomes the
         // reference the side-2 gather uses, so both sides' overlap tests share one consistent junction.
-        int32_t med1 = 0, med2 = 0; size_t c1 = 0, c2 = 0;
-        h1 = scanner->supporting_outer_median(s1_seq_id, s1_pos, s1_strand, s1_fwd, s2_tid, s2_pos, s2_fwd, distance_cutoff, med1, edge1, c1);
+        int32_t med1 = 0, med2 = 0, outer1 = 0, outer2 = 0; size_t c1 = 0, c2 = 0;
+        h1 = scanner->supporting_outer_median(s1_seq_id, s1_pos, s1_strand, s1_fwd, s2_tid, s2_pos, s2_fwd, distance_cutoff, med1, edge1, outer1, c1);
         if (h1) mh1 = med1 + (s1_strand == -1 ? +H : -H);
-        h2 = scanner->supporting_outer_median(s2_seq_id, s2_pos, s2_strand, s2_fwd, s1_tid, mh1, s1_fwd, distance_cutoff, med2, edge2, c2);
+        h2 = scanner->supporting_outer_median(s2_seq_id, s2_pos, s2_strand, s2_fwd, s1_tid, mh1, s1_fwd, distance_cutoff, med2, edge2, outer2, c2);
         if (h2) mh2 = med2 + (s2_strand == -1 ? +H : -H);
-        // Report/display the coordinate CLAMPED outward to the furthest supporting read's junction-facing
-        // edge (max for s=-1, min for s=+1) so no supporting read straddles the seam; classification below
-        // still uses the un-clamped mh1/mh2 so the overlap test keeps a consistent junction reference.
-        if (h1) s1_pos = max(1, min(scanner->seq_length(s1_tid), (s1_strand == -1) ? max(mh1, edge1) : min(mh1, edge1)));
-        if (h2) s2_pos = max(1, min(scanner->seq_length(s2_tid), (s2_strand == -1) ? max(mh2, edge2) : min(mh2, edge2)));
+        // Placement strategy. Conservative (default): put each coordinate at its side's innermost aligned
+        // read edge (edge1/edge2) -- aligned reads cannot extend past the breakpoint, so this never
+        // overshoots it. The median+half path (max/min of mh and the edge) is retained but disabled -- we
+        // will iterate on placement / confidence limits next. Either way, the counting below classifies at
+        // the un-clamped mh1/mh2 so the overlap test keeps a consistent junction reference for both sides.
+        const bool conservative_edge_placement = true;
+        if (h1) {
+          int32_t p1 = conservative_edge_placement ? edge1
+                     : ((s1_strand == -1) ? max(mh1, edge1) : min(mh1, edge1));
+          s1_pos = max(1, min(scanner->seq_length(s1_tid), p1));
+        }
+        if (h2) {
+          int32_t p2 = conservative_edge_placement ? edge2
+                     : ((s2_strand == -1) ? max(mh2, edge2) : min(mh2, edge2));
+          s2_pos = max(1, min(scanner->seq_length(s2_tid), p2));
+        }
+
+        // Refinement. Re-anchor the wide (+/-D) window so the OUTERMOST supporting read sits on its outer
+        // boundary -- a [p-D,p] window at p = outer+D is exactly [outer, outer+D] -- and re-scan for
+        // discordant pairs whose reads fall in the re-anchored windows on both sides. That window is a
+        // superset of the initial one, so the supporting count can only rise; a drop means a logic error.
+        // If reads were added, move each coordinate out to the new innermost aligned read edge.
+        if (h1 && h2) {
+          int32_t Di = static_cast<int32_t>(distance_cutoff);
+          int32_t p1r = outer1 + (s1_strand == -1 ? +Di : -Di);
+          int32_t p2r = outer2 + (s2_strand == -1 ? +Di : -Di);
+          int32_t rmed = 0, router = 0, e1r = edge1, e2r = edge2; size_t rc1 = 0, rc2 = 0;
+          bool r1 = scanner->supporting_outer_median(s1_seq_id, p1r, s1_strand, s1_fwd, s2_tid, p2r, s2_fwd, distance_cutoff, rmed, e1r, router, rc1);
+          bool r2 = scanner->supporting_outer_median(s2_seq_id, p2r, s2_strand, s2_fwd, s1_tid, p1r, s1_fwd, distance_cutoff, rmed, e2r, router, rc2);
+          if (rc1 < c1 || rc2 < c2)
+            WARN("DP refine: supporting count dropped at " + s1_seq_id + ":" + to_string(s1_pos) +
+                 " (side1 " + to_string(c1) + "->" + to_string(rc1) + ", side2 " + to_string(c2) + "->" + to_string(rc2) + ")");
+          // Move each coordinate only when the re-scan added reads, and only TOWARD the junction: take the
+          // more-inward of the initial and refined aligned edges (aligned edges never pass the breakpoint,
+          // so this can only extend to the true edge, never overshoot or retreat).
+          if (r1 && rc1 >= c1)
+            s1_pos = max(1, min(scanner->seq_length(s1_tid), s1_strand == -1 ? max(edge1, e1r) : min(edge1, e1r)));
+          if (r2 && rc2 >= c2)
+            s2_pos = max(1, min(scanner->seq_length(s2_tid), s2_strand == -1 ? max(edge2, e2r) : min(edge2, e2r)));
+        }
+      }
+
+      // Bayes outlier test on placement: gather the supporting pairs over a symmetric window and move each
+      // coordinate to the innermost read edge that is NOT a one-off insert-size outlier -- a lone read
+      // whose own inferred insert is anomalous (BF < 1/3) can't drag side_x_position off the cluster.
+      if (have_insert && scanner) {
+        int32_t readlen = static_cast<int32_t>(summary.sequence_conversion.read_length_avg + 0.5);
+        vector<dp_pair_ends> pr;
+        if (scanner->gather_pairs(s1_seq_id, s1_pos, s1_strand, s1_fwd, s2_tid, s2_pos, s2_fwd, distance_cutoff, s2_strand, readlen, pr)
+            && pr.size() >= 2) {
+          int32_t r1 = dp_robust_edge(pr, /*this_is_side1=*/true,  s1_strand, s2_pos, s2_strand, insert_model);
+          int32_t r2 = dp_robust_edge(pr, /*this_is_side1=*/false, s2_strand, r1,     s1_strand, insert_model);
+          s1_pos = max(1, min(scanner->seq_length(s1_tid), r1));
+          s2_pos = max(1, min(scanner->seq_length(s2_tid), r2));
+        }
       }
 
       cDiffEntry dp(DP);

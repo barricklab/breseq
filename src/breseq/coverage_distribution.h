@@ -140,7 +140,8 @@ namespace breseq {
     // histogram (ignoring rows for other orientations), and draws a diagnostic plot.
     static PairedMappingDistanceDistributionFitResult fit(
                                                           string distribution_file_name,
-                                                          string plot_file
+                                                          string plot_file,
+                                                          string histogram_file_name = ""
                                                           );
 
     // Fits and plots the paired-mapping distance distribution for one paired read file set,
