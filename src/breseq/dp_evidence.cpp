@@ -539,6 +539,40 @@ namespace breseq {
     return inner(pr[i]);
   }
 
+  // Total log-likelihood of a set of supporting pairs' inferred inserts given a junction at (P1,P2),
+  // under the mixture L = (1-p_out)*g(d) + p_out*u with the length-bias-corrected insert null g (m.f).
+  // Used by the JC-snap test: compare this at the DP position vs a candidate JC position.
+  static double dp_pairs_logL(const vector<dp_pair_ends>& pr, int32_t P1, int32_t s1,
+                              int32_t P2, int32_t s2, const dp_insert_model& m) {
+    double lp = 0.0;
+    for (vector<dp_pair_ends>::const_iterator e = pr.begin(); e != pr.end(); e++) {
+      int32_t d = dp_reach(P1, e->o1, s1) + dp_reach(P2, e->o2, s2);
+      lp += log((1.0 - m.p_out) * m.f(d) + m.p_out * m.u);
+    }
+    return lp;
+  }
+
+  // One passing JC breakpoint side pair, for snapping a nearby DP's coordinates onto it.
+  struct dp_jc_sides { string s1seq; int32_t p1, st1; string s2seq; int32_t p2, st2; };
+
+  // Load the passing (non-rejected) junction (JC) evidence breakpoints from jc_evidence.gd. A DP whose
+  // pair-based edges land within the snap window of one of these validated split-read breakpoints is
+  // snapped onto it (see the snap block in predict_discordant_pairs).
+  static void dp_load_passing_jcs(const string& fn, vector<dp_jc_sides>& out) {
+    out.clear();
+    if (!file_exists(fn.c_str())) return;
+    cGenomeDiff jc_gd(fn);
+    diff_entry_list_t jl = jc_gd.get_list(make_vector<gd_entry_type>(JC));
+    for (diff_entry_list_t::iterator it = jl.begin(); it != jl.end(); it++) {
+      cDiffEntry& j = **it;
+      if (j.entry_exists("reject")) continue;
+      dp_jc_sides s;
+      s.s1seq = j[SIDE_1_SEQ_ID]; s.p1 = from_string<int32_t>(j[SIDE_1_POSITION]); s.st1 = from_string<int32_t>(j[SIDE_1_STRAND]);
+      s.s2seq = j[SIDE_2_SEQ_ID]; s.p2 = from_string<int32_t>(j[SIDE_2_POSITION]); s.st2 = from_string<int32_t>(j[SIDE_2_STRAND]);
+      out.push_back(s);
+    }
+  }
+
   // Load the empirical insert PMF for the main paired library + derive the mixture's u and p_out.
   //   u     = 1/(2*distance_cutoff): uniform outlier likelihood over the inferred-insert range.
   //   p_out = 1 - (1 - (w/G)^2)^N: prior that >=1 chance discordant pair lands in this DP's windows,
@@ -909,6 +943,13 @@ namespace breseq {
     dp_insert_model insert_model;
     bool have_insert = dp_load_insert_model(settings, summary, ref_seq_info, insert_model);
 
+    // Passing split-read junction (JC) breakpoints, for snapping DP coordinates onto a validated
+    // junction when the pair evidence is consistent with it (see the snap block below). The snap
+    // window +/-(median - 2*read_length) is the neighborhood a DP edge can plausibly be off by.
+    vector<dp_jc_sides> passing_jcs;
+    if (have_insert) dp_load_passing_jcs(settings.jc_genome_diff_file_name, passing_jcs);
+    int32_t snap_win = static_cast<int32_t>(pair_median - 2.0 * (summary.sequence_conversion.read_length_avg) + 0.5);
+
     //
     // Step 1: Re-read the candidate regions CSV.
     //  columns: seq_id,start,end,strand,orientation,length,max_discordant_count,discordant_pairs
@@ -1103,6 +1144,39 @@ namespace breseq {
           int32_t r2 = dp_robust_edge(pr, /*this_is_side1=*/false, s2_strand, r1,     s1_strand, insert_model);
           s1_pos = max(1, min(scanner->seq_length(s1_tid), r1));
           s2_pos = max(1, min(scanner->seq_length(s2_tid), r2));
+        }
+      }
+
+      // JC snap: the pair-based edge is coarse; a passing split-read junction (JC) gives a base-
+      // resolution breakpoint. If a passing JC matches this DP (both sides same seq_id and within
+      // snap_win), snap the DP coordinates onto it -- unless the supporting pairs favor the current
+      // DP position over the JC by more than 3x under the (length-bias-corrected) insert model.
+      if (have_insert && scanner && !passing_jcs.empty()) {
+        // Nearest matching passing JC (either side order), by total offset.
+        const dp_jc_sides* best = NULL; int32_t best_off = 0; int32_t jp1 = 0, jp2 = 0;
+        for (vector<dp_jc_sides>::const_iterator j = passing_jcs.begin(); j != passing_jcs.end(); j++) {
+          for (int order = 0; order < 2; order++) {
+            const string& a_seq = order ? j->s2seq : j->s1seq; int32_t a_pos = order ? j->p2 : j->p1;
+            const string& b_seq = order ? j->s1seq : j->s2seq; int32_t b_pos = order ? j->p1 : j->p2;
+            if (a_seq != s1_seq_id || b_seq != s2_seq_id) continue;
+            if (abs(s1_pos - a_pos) > snap_win || abs(s2_pos - b_pos) > snap_win) continue;
+            int32_t off = abs(s1_pos - a_pos) + abs(s2_pos - b_pos);
+            if (!best || off < best_off) { best = &(*j); best_off = off; jp1 = a_pos; jp2 = b_pos; }
+          }
+        }
+        if (best && (jp1 != s1_pos || jp2 != s2_pos)) {
+          int32_t readlen = static_cast<int32_t>(summary.sequence_conversion.read_length_avg + 0.5);
+          vector<dp_pair_ends> pr;
+          if (scanner->gather_pairs(s1_seq_id, s1_pos, s1_strand, s1_fwd, s2_tid, s2_pos, s2_fwd, distance_cutoff, init1, init2, s2_strand, readlen, pr)
+              && !pr.empty()) {
+            double lp_dp = dp_pairs_logL(pr, s1_pos, s1_strand, s2_pos, s2_strand, insert_model);
+            double lp_jc = dp_pairs_logL(pr, jp1,   s1_strand, jp2,   s2_strand, insert_model);
+            // Snap unless the pairs favor DP over JC by more than 3x (BF_DP:JC > 3).
+            if (lp_jc - lp_dp >= log(1.0 / 3.0)) {
+              s1_pos = max(1, min(scanner->seq_length(s1_tid), jp1));
+              s2_pos = max(1, min(scanner->seq_length(s2_tid), jp2));
+            }
+          }
         }
       }
 
