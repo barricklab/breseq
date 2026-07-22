@@ -66,11 +66,12 @@ namespace breseq {
     int32_t other_tid, other_p;   // the mate/other side
     bool    other_cross_fwd;      // crossing-read strand on the other side
     double  D;                    // distance_cutoff (window half-width / mate-proximity)
-    bool    check_overlap;        // apply the overlapping-mate exclusion? ON for counting (the reported
-                                  // discordant support), OFF for the placement gathering / refinement
-                                  // re-scan (which want the raw innermost aligned read edge -- the overlap
-                                  // test references p and would wrongly drop junction-reaching reads when
-                                  // p is a re-anchored, far-from-the-reads position).
+    int32_t ovl_p, ovl_other_p;   // reference positions for the overlapping-mate exclusion (the current
+                                  // best breakpoint estimate: the initial region estimate during the
+                                  // placement/gathering passes, the final placed positions for the count).
+                                  // Kept separate from p/other_p -- those are the classification + fetch-
+                                  // window position for this pass, which may be a re-anchored, far-from-
+                                  // the-reads position that would wrongly drive the overlap test.
   };
 
   // One supporting read pair, viewed from both sides: outer (away-from-junction) and inner (junction-facing)
@@ -115,11 +116,13 @@ namespace breseq {
       // the inner gap when the pair is joined across the junction = (this read's aligned inner end to p) +
       // (the mate's aligned inner end to other_p). A negative sum means the reads overlap -> drop the pair.
       // The mate's junction-facing end follows its orientation (forward -> its right/rend faces the
-      // junction, reverse -> its left/rstart), its length approximated by this read's length.
-      if (c.check_overlap) {
+      // junction, reverse -> its left/rstart), its length approximated by this read's length. The
+      // inner gaps are measured against the overlap reference (ovl_p/ovl_other_p = the current best
+      // breakpoint estimate), NOT the classification/window position p, which may be re-anchored.
+      {
         int32_t matelen = static_cast<int32_t>(a.read_length());
-        int32_t g_this  = (c.s == -1) ? (c.p - rend) : (rstart - c.p);
-        int32_t g_other = mate_forward ? (c.other_p - (mpos + matelen - 1)) : (mpos - c.other_p);
+        int32_t g_this  = (c.s == -1) ? (c.ovl_p - rend) : (rstart - c.ovl_p);
+        int32_t g_other = mate_forward ? (c.ovl_other_p - (mpos + matelen - 1)) : (mpos - c.ovl_other_p);
         if (g_this + g_other < 0) return 0;
       }
       return 1;
@@ -181,9 +184,10 @@ namespace breseq {
     int32_t seq_length(int32_t tid) const { return static_cast<int32_t>(target_length(tid)); }
 
     void scan(const string& seq_id, int32_t p, int32_t s, bool crossing_is_forward,
-              int32_t other_tid, int32_t other_p, bool other_crossing_is_forward, double D)
+              int32_t other_tid, int32_t other_p, bool other_crossing_is_forward, double D,
+              int32_t ovl_p, int32_t ovl_other_p)
     {
-      set_ctx(p, s, crossing_is_forward, other_tid, other_p, other_crossing_is_forward, D, /*check_overlap=*/true);
+      set_ctx(p, s, crossing_is_forward, other_tid, other_p, other_crossing_is_forward, D, ovl_p, ovl_other_p);
       m_supporting = 0; m_concordant = 0; m_unpaired = 0;
       m_supporting_nums.clear();
       m_collect_outside = false;
@@ -206,10 +210,10 @@ namespace breseq {
     // Returns false (no placement) if no supporting reads are found. out_count = # supporting reads.
     bool supporting_outer_median(const string& seq_id, int32_t p, int32_t s, bool crossing_is_forward,
                                  int32_t other_tid, int32_t other_p, bool other_crossing_is_forward,
-                                 double D, int32_t& median_outer, int32_t& inner_edge,
-                                 int32_t& extreme_outer, size_t& out_count)
+                                 double D, int32_t ovl_p, int32_t ovl_other_p, int32_t& median_outer,
+                                 int32_t& inner_edge, int32_t& extreme_outer, size_t& out_count)
     {
-      set_ctx(p, s, crossing_is_forward, other_tid, other_p, other_crossing_is_forward, D, /*check_overlap=*/false);
+      set_ctx(p, s, crossing_is_forward, other_tid, other_p, other_crossing_is_forward, D, ovl_p, ovl_other_p);
       m_outside.clear();
       m_have_inner = false; m_inner_edge = 0;
       m_collect_outside = true;
@@ -244,8 +248,9 @@ namespace breseq {
     // approximated from its start + read_len (its CIGAR isn't in this record).
     bool gather_pairs(const string& seq_id, int32_t p, int32_t s, bool crossing_is_forward,
                       int32_t other_tid, int32_t other_p, bool other_crossing_is_forward, double D,
+                      int32_t ovl_p, int32_t ovl_other_p,
                       int32_t other_s, int32_t read_len, vector<dp_pair_ends>& out) {
-      set_ctx(p, s, crossing_is_forward, other_tid, other_p, other_crossing_is_forward, D, /*check_overlap=*/false);
+      set_ctx(p, s, crossing_is_forward, other_tid, other_p, other_crossing_is_forward, D, ovl_p, ovl_other_p);
       m_pairs.clear(); m_gother_s = other_s; m_gread_len = read_len; m_collect_pairs = true;
       int32_t tid = tid_for_seq_id(seq_id);
       if (tid >= 0) {
@@ -267,8 +272,17 @@ namespace breseq {
         if (static_cast<int32_t>(a.mate_reference_target_id()) != m_ctx.other_tid) return;
         int32_t mpos = a.mate_start_1();
         if (mpos < m_ctx.other_p - m_ctx.D || mpos > m_ctx.other_p + m_ctx.D) return;
-        if (((a.flag() & BAM_FMREVERSE) == 0) != m_ctx.other_cross_fwd) return;
+        bool mate_forward = (a.flag() & BAM_FMREVERSE) == 0;
+        if (mate_forward != m_ctx.other_cross_fwd) return;
         int32_t rs = static_cast<int32_t>(a.reference_start_1()), re = static_cast<int32_t>(a.reference_end_1());
+        // Overlapping-mate exclusion, referenced to the current best breakpoint estimate (ovl_p/
+        // ovl_other_p), mirroring dp_classify_side_read: drop a pair whose two reads would overlap.
+        {
+          int32_t matelen = static_cast<int32_t>(a.read_length());
+          int32_t g_this  = (m_ctx.s == -1) ? (m_ctx.ovl_p - re) : (rs - m_ctx.ovl_p);
+          int32_t g_other = mate_forward ? (m_ctx.ovl_other_p - (mpos + matelen - 1)) : (mpos - m_ctx.ovl_other_p);
+          if (g_this + g_other < 0) return;
+        }
         dp_pair_ends e;
         e.o1 = (m_ctx.s == -1) ? rs : re;                    e.i1 = (m_ctx.s == -1) ? re : rs;
         e.o2 = (m_gother_s == -1) ? mpos : (mpos + m_gread_len - 1);
@@ -308,10 +322,10 @@ namespace breseq {
   private:
     void set_ctx(int32_t p, int32_t s, bool crossing_is_forward,
                  int32_t other_tid, int32_t other_p, bool other_crossing_is_forward, double D,
-                 bool check_overlap) {
+                 int32_t ovl_p, int32_t ovl_other_p) {
       m_ctx.p = p; m_ctx.s = s; m_ctx.cross_fwd = crossing_is_forward;
       m_ctx.other_tid = other_tid; m_ctx.other_p = other_p; m_ctx.other_cross_fwd = other_crossing_is_forward;
-      m_ctx.D = D; m_ctx.check_overlap = check_overlap;
+      m_ctx.D = D; m_ctx.ovl_p = ovl_p; m_ctx.ovl_other_p = ovl_other_p;
     }
     dp_side_ctx m_ctx;
     int     m_supporting, m_concordant, m_unpaired;
@@ -350,7 +364,10 @@ namespace breseq {
     {
       m_ctx.p = p; m_ctx.s = s; m_ctx.cross_fwd = crossing_is_forward;
       m_ctx.other_tid = other_tid; m_ctx.other_p = other_p; m_ctx.other_cross_fwd = other_crossing_is_forward;
-      m_ctx.D = D; m_ctx.check_overlap = true;  // same classification as the count, so the plot matches
+      m_ctx.D = D;
+      // Same classification as the count, so the plot matches. The plot gathers at the final placed
+      // positions (read from the .gd), so the overlap guard references those same positions.
+      m_ctx.ovl_p = p; m_ctx.ovl_other_p = other_p;
       m_reads.clear();
 
       int32_t lo, hi;
@@ -984,6 +1001,11 @@ namespace breseq {
         s2_seq_id = regions[a].seq_id; s2_pos = pos_a; s2_strand = strand_a;
       }
 
+      // Initial (region-derived) breakpoint estimate. The overlapping-mate exclusion in every
+      // placement/gathering pass below references these stable positions, not the re-anchored window
+      // position it scans at (the final count references the placed positions instead).
+      int32_t init1 = s1_pos, init2 = s2_pos;
+
       // Each side's crossing-read strand (same as the region strand that produced it).
       bool s1_fwd = (inner3p == (s1_strand == -1));
       bool s2_fwd = (inner3p == (s2_strand == -1));
@@ -1003,9 +1025,9 @@ namespace breseq {
         // Side 1: gather with the region other-side position; its shifted median (mh1) then becomes the
         // reference the side-2 gather uses, so both sides' overlap tests share one consistent junction.
         int32_t med1 = 0, med2 = 0, outer1 = 0, outer2 = 0; size_t c1 = 0, c2 = 0;
-        h1 = scanner->supporting_outer_median(s1_seq_id, s1_pos, s1_strand, s1_fwd, s2_tid, s2_pos, s2_fwd, distance_cutoff, med1, edge1, outer1, c1);
+        h1 = scanner->supporting_outer_median(s1_seq_id, s1_pos, s1_strand, s1_fwd, s2_tid, s2_pos, s2_fwd, distance_cutoff, init1, init2, med1, edge1, outer1, c1);
         if (h1) mh1 = med1 + (s1_strand == -1 ? +H : -H);
-        h2 = scanner->supporting_outer_median(s2_seq_id, s2_pos, s2_strand, s2_fwd, s1_tid, mh1, s1_fwd, distance_cutoff, med2, edge2, outer2, c2);
+        h2 = scanner->supporting_outer_median(s2_seq_id, s2_pos, s2_strand, s2_fwd, s1_tid, mh1, s1_fwd, distance_cutoff, init2, init1, med2, edge2, outer2, c2);
         if (h2) mh2 = med2 + (s2_strand == -1 ? +H : -H);
         // Placement strategy. Conservative (default): put each coordinate at its side's innermost aligned
         // read edge (edge1/edge2) -- aligned reads cannot extend past the breakpoint, so this never
@@ -1034,8 +1056,8 @@ namespace breseq {
           int32_t p1r = outer1 + (s1_strand == -1 ? +Di : -Di);
           int32_t p2r = outer2 + (s2_strand == -1 ? +Di : -Di);
           int32_t rmed = 0, router = 0, e1r = edge1, e2r = edge2; size_t rc1 = 0, rc2 = 0;
-          bool r1 = scanner->supporting_outer_median(s1_seq_id, p1r, s1_strand, s1_fwd, s2_tid, p2r, s2_fwd, distance_cutoff, rmed, e1r, router, rc1);
-          bool r2 = scanner->supporting_outer_median(s2_seq_id, p2r, s2_strand, s2_fwd, s1_tid, p1r, s1_fwd, distance_cutoff, rmed, e2r, router, rc2);
+          bool r1 = scanner->supporting_outer_median(s1_seq_id, p1r, s1_strand, s1_fwd, s2_tid, p2r, s2_fwd, distance_cutoff, init1, init2, rmed, e1r, router, rc1);
+          bool r2 = scanner->supporting_outer_median(s2_seq_id, p2r, s2_strand, s2_fwd, s1_tid, p1r, s1_fwd, distance_cutoff, init2, init1, rmed, e2r, router, rc2);
           if (rc1 < c1 || rc2 < c2)
             WARN("DP refine: supporting count dropped at " + s1_seq_id + ":" + to_string(s1_pos) +
                  " (side1 " + to_string(c1) + "->" + to_string(rc1) + ", side2 " + to_string(c2) + "->" + to_string(rc2) + ")");
@@ -1055,7 +1077,7 @@ namespace breseq {
       if (have_insert && scanner) {
         int32_t readlen = static_cast<int32_t>(summary.sequence_conversion.read_length_avg + 0.5);
         vector<dp_pair_ends> pr;
-        if (scanner->gather_pairs(s1_seq_id, s1_pos, s1_strand, s1_fwd, s2_tid, s2_pos, s2_fwd, distance_cutoff, s2_strand, readlen, pr)
+        if (scanner->gather_pairs(s1_seq_id, s1_pos, s1_strand, s1_fwd, s2_tid, s2_pos, s2_fwd, distance_cutoff, init1, init2, s2_strand, readlen, pr)
             && pr.size() >= 2) {
           int32_t r1 = dp_robust_edge(pr, /*this_is_side1=*/true,  s1_strand, s2_pos, s2_strand, insert_model);
           int32_t r2 = dp_robust_edge(pr, /*this_is_side1=*/false, s2_strand, r1,     s1_strand, insert_model);
@@ -1077,13 +1099,15 @@ namespace breseq {
 
       int k_support = weight;
       if (scanner) {
-        // Count the three read categories at each side, classifying at the un-clamped median+half (mh1/
-        // mh2) so the overlap test uses a consistent junction reference (see the placement note above).
-        scanner->scan(s1_seq_id, mh1, s1_strand, s1_fwd, s2_tid, mh2, s2_fwd, distance_cutoff);
+        // Count the three read categories at each side, classifying at the FINAL placed positions
+        // (s1_pos/s2_pos) so the counts describe the reported breakpoint. The overlapping-mate
+        // exclusion is referenced to those same placed positions (they are our best breakpoint
+        // estimate now that placement is done).
+        scanner->scan(s1_seq_id, s1_pos, s1_strand, s1_fwd, s2_tid, s2_pos, s2_fwd, distance_cutoff, s1_pos, s2_pos);
         int c1a = scanner->supporting(), c2a = scanner->concordant(), c3a = scanner->unpaired();
         set<string> support_nums_1 = scanner->supporting_nums();   // copy before the next scan overwrites
 
-        scanner->scan(s2_seq_id, mh2, s2_strand, s2_fwd, s1_tid, mh1, s1_fwd, distance_cutoff);
+        scanner->scan(s2_seq_id, s2_pos, s2_strand, s2_fwd, s1_tid, s1_pos, s1_fwd, distance_cutoff, s2_pos, s1_pos);
         int c1b = scanner->supporting(), c2b = scanner->concordant(), c3b = scanner->unpaired();
         const set<string>& support_nums_2 = scanner->supporting_nums();
 
