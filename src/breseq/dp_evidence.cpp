@@ -471,17 +471,21 @@ namespace breseq {
   // the position set by the next read is dropped, so a one-off read cannot drag side_x_position.
   // ---------------------------------------------------------------------------------------------
   struct dp_insert_model {
-    vector<double> counts;   // counts[d] = # concordant pairs with mapping distance d (majority orient.)
-    double  total;           // sum of counts
+    vector<double> counts;   // LENGTH-BIAS-WEIGHTED concordant-range density: counts[d] = (# concordant
+                             // pairs at distance d) * (d - trunc), for trunc <= d < cutoff, else 0.
+                             // (see dp_load_insert_model for why -- DP pairs are a length-biased sample)
+    double  total;           // sum of the weighted counts
     int32_t trunc;           // 2 * read_length: distances below this (overlapping mates) are excluded
+    int32_t cutoff;          // distance_cutoff: distances at/above this are outliers (concordant range end)
     double  u;               // outlier insert likelihood (uniform over the inferred-insert range)
     double  p_out;           // prior probability of a chance/outlier supporting read
-    dp_insert_model() : total(0.0), trunc(0), u(0.0), p_out(0.0) {}
-    bool ok() const { return total > 0.0 && trunc > 0; }
-    // Empirical PMF f(d): +/-5 bp triangular-free smoothing, a small floor, and 0 below the truncation.
+    dp_insert_model() : total(0.0), trunc(0), cutoff(0), u(0.0), p_out(0.0) {}
+    bool ok() const { return total > 0.0 && trunc > 0 && cutoff > trunc; }
+    // DP-pair inferred-insert null g(d): +/-5 bp smoothing of the length-bias-weighted concordant
+    // density, a small floor, and 0 outside the concordant range [trunc, cutoff).
     double f(int32_t d) const {
       double floor = 1.0 / (total * 1000.0);
-      if (d < trunc) return floor;
+      if (d < trunc || d >= cutoff) return floor;
       double s = 0.0;
       for (int32_t x = d - 5; x <= d + 5; x++)
         if (x >= 0 && x < static_cast<int32_t>(counts.size())) s += counts[x];
@@ -557,6 +561,22 @@ namespace breseq {
     if (!dp_read_insert_hist(fn, m)) return false;
     int32_t readlen = static_cast<int32_t>(summary.sequence_conversion.read_length_avg + 0.5);
     m.trunc = 2 * readlen;
+    m.cutoff = static_cast<int32_t>(dcut + 0.5);
+    // Length-bias-correct the null. DP supporting pairs are NOT an unbiased sample of the concordant
+    // fragment distribution f(L): a spanning fragment only survives as a DP pair if the breakpoint
+    // falls in its unsequenced middle gap (else a read crosses it and is soft-clipped into a JC
+    // -M1/-M2 read). That selection weights each fragment by L*f(L) [inspection-paradox: fragments
+    // crossing a fixed point are length-biased by L] times (L-2r)/L [fraction of crossing positions
+    // leaving both reads clean] = f(L)*(L-2r). So reweight the concordant-range histogram by (d-trunc)
+    // and renormalize; f() then reads out this corrected null g directly. (Uncorrected f is ~60 bp
+    // too short for DP pairs -- validated: median of g = 715 vs measured DP inferred insert 713.)
+    if (m.cutoff > m.trunc) {
+      m.total = 0.0;
+      for (int32_t d = 0; d < static_cast<int32_t>(m.counts.size()); d++) {
+        m.counts[d] = (d >= m.trunc && d < m.cutoff) ? m.counts[d] * (d - m.trunc) : 0.0;
+        m.total += m.counts[d];
+      }
+    }
     m.u = (dcut > 0.0) ? 1.0 / (2.0 * dcut) : 0.0;
     double w = median + 2.42 * mad;
     double G = static_cast<double>(ref_seq_info.get_total_length());
