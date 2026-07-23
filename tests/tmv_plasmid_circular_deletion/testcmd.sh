@@ -11,7 +11,7 @@ REFERENCE_ARG="-r ${DATADIR}/tmv_plasmid/tmv-plasmid.gbk"
 TESTCMD=" \
     ${BRESEQ} \
     ${BRESEQ_TEST_THREAD_ARG} \
-    --paired-mapping \
+    --predict-discordant-pairs \
     -o ${SELF} \
     ${REFERENCE_ARG} \
     ${DATADIR}/tmv_plasmid/D3-9_1P.fastq.gz \

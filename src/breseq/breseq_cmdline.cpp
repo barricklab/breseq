@@ -2381,7 +2381,7 @@ int breseq_default_action(int argc, char* argv[])
     // Discordant Pair (DP) evidence
     // Pair up discordant-pair candidate regions (from the identify_mutations CSV) into DP evidence.
     //
-  if (settings.paired_mapping) {
+  if (settings.paired_mapping && settings.predict_discordant_pairs) {
     if (settings.do_step(settings.discordant_pair_done_file_name, "Examining discordant pairing evidence")) {
 
       predict_discordant_pairs(settings, summary, ref_seq_info);

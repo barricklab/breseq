@@ -354,6 +354,7 @@ namespace breseq
     options.addUsage("", NORMAL_OPTION);
     options.addUsage("Discordant Pair (DP) Evidence Options", NORMAL_OPTION);
     options
+    ("predict-discordant-pairs", "Predict discordant read-pair (DP) evidence for structural variants. This functionality is experimental and OFF by default; requires paired-mapping (the default). (DEFAULT = OFF)", TAKES_NO_ARGUMENT, NORMAL_OPTION)
     ("discordant-pair-seed", "Minimum number of discordant read pairs within a paired-mapping-distance window required to seed a DP candidate region. (DEFAULT = 3)", 3, NORMAL_OPTION)
     ("discordant-pair-skew-cutoff", "Reference cutoff for the discordant-pair (DP) skew score. The DP skew marginalizes over the empirical concordant-pair crossing distribution when its reference sequence has at least 10^(cutoff+1) non-deletion positions; smaller references fall back to a negative-binomial fit (whose parametric tail is not capped near log10(N), but is conservative). (DEFAULT = 3.0)", 3.0, NORMAL_OPTION)
     ;
@@ -504,6 +505,16 @@ namespace breseq
       this->skip_new_junction_prediction = true;
     }
     this->paired_mapping = !options.count("no-paired-mapping");
+
+    // Discordant-pair (DP) evidence prediction is experimental and opt-in. It needs the paired-mapping
+    // insert distribution + candidate regions, so it is ignored (with a warning) under --no-paired-mapping.
+    this->predict_discordant_pairs = options.count("predict-discordant-pairs");
+    if (this->predict_discordant_pairs && !this->paired_mapping) {
+      cerr << "WARNING: --predict-discordant-pairs requires paired-mapping, but --no-paired-mapping was" << endl;
+      cerr << "         given. No discordant-pair (DP) evidence will be predicted." << endl;
+      cerr << output_divider << endl;
+      this->predict_discordant_pairs = false;
+    }
 
     // Backward compatibility: --paired-mapping is now the default. Accept it, but warn.
     if (options.count("paired-mapping")) {
@@ -981,6 +992,7 @@ namespace breseq
     this->read_file_long_read_split_length = 200;
     this->read_file_long_read_distribute_remainder = false;
     this->paired_mapping = true;
+    this->predict_discordant_pairs = false;
 
     //! Options that control which parts of the pipeline to execute
     this->skip_read_filtering = false;
