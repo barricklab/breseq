@@ -246,6 +246,7 @@ namespace breseq {
     struct dp_read {
       uint32_t start_pos;  //!< reference start (1-based) of this read
       string   key;        //!< condensed descriptor: <read1_name>__<read2_name>__<r1_insert_size>
+      bool     redundant;  //!< this discordant read maps redundantly (X1>1: a tie-broken multicopy side)
     };
     //! Per paired read group: window width (median + 2.42*MAD), R1/R2 file ids (for name/role
     //! reconstruction), and the reads currently in-window for each of the 6 bins.
@@ -263,6 +264,7 @@ namespace breseq {
       char     strand;            //!< focal-read strand for this region: 'F' or 'R'
       string   orientation;       //!< pair orientation for this region: FR / RF / FF
       uint32_t max_count;         //!< peak in-window discordant count over the region
+      bool     redundant;         //!< majority of this region's discordant reads mapped redundantly (multicopy side)
       string   discordant_pairs;  //!< ';'-joined <read1>__<read2>__<insert_size> keys
     };
 
@@ -393,6 +395,7 @@ namespace breseq {
 		uint32_t _dp_region_start[kDPnBins];                //!< UNDEFINED_UINT32 = not currently in a region, per bin
 		uint32_t _dp_region_max_count[kDPnBins];            //!< peak metric while the current region is open, per bin
 		vector<string> _dp_region_descriptors[kDPnBins];    //!< read-pair keys for the open region, per bin
+		uint32_t _dp_region_redundant_count[kDPnBins];      //!< how many of the open region's descriptor reads mapped redundantly
 		vector<dp_candidate_region> _dp_candidate_regions;  //!< all completed regions (written once after the pileup)
 	};
 

@@ -697,6 +697,7 @@ identify_mutations_pileup::identify_mutations_pileup(
     _dp_metric[bin] = 0;
     _dp_region_start[bin] = UNDEFINED_UINT32;
     _dp_region_max_count[bin] = 0;
+    _dp_region_redundant_count[bin] = 0;
   }
 
   set_print_progress(true);
@@ -942,6 +943,9 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
             dp_read dr;
             dr.start_pos = position;
             dr.key = key;
+            // A tie-broken redundant discordant pair keeps X1>1 on its marked alignment (see
+            // resolve_alignments.cpp); flag its DP side redundant so it propagates to DP evidence.
+            dr.redundant = (i->redundancy() > 1);
             _dp_groups[gi->second].reads[bin].push_back(dr);
             ++_dp_metric[bin];
             // If a region in this bin is already open (from a previous column), this newly entering
@@ -950,6 +954,7 @@ void identify_mutations_pileup::pileup_callback(const pileup& p) {
             // (which runs after this loop), so they are never double-counted.
             if (_dp_region_start[bin] != UNDEFINED_UINT32) {
               _dp_region_descriptors[bin].push_back(key);
+              if (dr.redundant) ++_dp_region_redundant_count[bin];
             }
           }
         }
@@ -1620,9 +1625,11 @@ void identify_mutations_pileup::check_discordant_completion(uint32_t seq_id, uin
         _dp_region_start[bin] = position;
         _dp_region_max_count[bin] = static_cast<uint32_t>(_dp_metric[bin]);
         _dp_region_descriptors[bin].clear();
+        _dp_region_redundant_count[bin] = 0;
         for (vector<dp_group>::iterator g = _dp_groups.begin(); g != _dp_groups.end(); g++) {
           for (deque<dp_read>::iterator r = g->reads[bin].begin(); r != g->reads[bin].end(); r++) {
             _dp_region_descriptors[bin].push_back(r->key);
+            if (r->redundant) ++_dp_region_redundant_count[bin];
           }
         }
       } else if (static_cast<uint32_t>(_dp_metric[bin]) > _dp_region_max_count[bin]) {
@@ -1637,6 +1644,10 @@ void identify_mutations_pileup::check_discordant_completion(uint32_t seq_id, uin
       region.strand = (bin / 3 == 0) ? 'F' : 'R';
       region.orientation = kOrientName[bin % 3];
       region.max_count = _dp_region_max_count[bin];
+      // Redundant side: a majority of the region's discordant reads mapped redundantly (i.e. the
+      // reads pile up here as a tie-broken multicopy element side). Propagated to DP evidence's
+      // side_N_redundant flag, mirroring how JC marks a redundant junction side.
+      region.redundant = (2 * _dp_region_redundant_count[bin] > _dp_region_descriptors[bin].size());
       string joined;
       for (size_t k = 0; k < _dp_region_descriptors[bin].size(); k++) {
         if (k) joined += ";";
@@ -1648,6 +1659,7 @@ void identify_mutations_pileup::check_discordant_completion(uint32_t seq_id, uin
       _dp_region_start[bin] = UNDEFINED_UINT32;
       _dp_region_max_count[bin] = 0;
       _dp_region_descriptors[bin].clear();
+      _dp_region_redundant_count[bin] = 0;
     }
   }
 }
@@ -1667,10 +1679,13 @@ void identify_mutations_pileup::write_dp_candidate_regions(const string& filenam
 
   ofstream out(filename.c_str());
   ASSERT(!out.fail(), "Could not open output file: " + filename);
-  out << "seq_id,start,end,strand,orientation,length,max_discordant_count,discordant_pairs" << endl;
+  // 'redundant' is a new column BEFORE 'discordant_pairs' (which must stay last: it is ';'-joined
+  // and parsed as the final field by dp_evidence). 1 = a majority of this region's reads were
+  // redundant (tie-broken multicopy side); 0 otherwise.
+  out << "seq_id,start,end,strand,orientation,length,max_discordant_count,redundant,discordant_pairs" << endl;
   for (vector<dp_candidate_region>::const_iterator r = _dp_candidate_regions.begin(); r != _dp_candidate_regions.end(); r++) {
     out << r->seq_id << "," << r->start << "," << r->end << "," << r->strand << "," << r->orientation << ","
-        << (r->end - r->start + 1) << "," << r->max_count << "," << r->discordant_pairs << endl;
+        << (r->end - r->start + 1) << "," << r->max_count << "," << (r->redundant ? 1 : 0) << "," << r->discordant_pairs << endl;
   }
   out.close();
 }

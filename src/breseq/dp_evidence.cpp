@@ -404,6 +404,7 @@ namespace breseq {
     uint32_t    start;   // lower coordinate of the region span
     uint32_t    end;     // higher coordinate
     char        strand;  // focal-read strand: 'F' or 'R'
+    bool        redundant; // majority of this region's discordant reads mapped redundantly (multicopy side)
     set<string> keys;    // distinct <read1>__<read2>__<insert_size> pair keys in this region
   };
 
@@ -952,7 +953,7 @@ namespace breseq {
 
     //
     // Step 1: Re-read the candidate regions CSV.
-    //  columns: seq_id,start,end,strand,orientation,length,max_discordant_count,discordant_pairs
+    //  columns: seq_id,start,end,strand,orientation,length,max_discordant_count,redundant,discordant_pairs
     //  discordant_pairs is the final field: ';'-joined keys, and never contains a comma.
     //
     if (!file_exists(settings.dp_candidate_regions_file_name.c_str())) {
@@ -976,8 +977,11 @@ namespace breseq {
         r.end    = from_string<uint32_t>(f[2]);
         r.strand = f[3].empty() ? 'F' : f[3][0];
 
-        // The keys field is column index 7 (empty if the region had no descriptors).
-        string key_field = (f.size() >= 8) ? f[7] : "";
+        // 'redundant' is column index 7 (1 = tie-broken multicopy side). Absent in older CSVs.
+        r.redundant = (f.size() >= 8 && f[7] == "1");
+
+        // The keys field is column index 8 (empty if the region had no descriptors).
+        string key_field = (f.size() >= 9) ? f[8] : "";
         vector<string> keys = split(key_field, ";");
         for (size_t i = 0; i < keys.size(); i++) {
           if (!keys[i].empty()) r.keys.insert(keys[i]);
@@ -1232,11 +1236,17 @@ namespace breseq {
       // Circular-origin artifact -> ignore (hidden in output like a CIRCULAR_CHROMOSOME JC).
       if (circular_dp) dp[IGNORE] = "CIRCULAR_CHROMOSOME";
       // Per-side annotate_key drives the HTML highlight exactly as for JC ("repeat" -> orange). A
-      // repeat/IS-element side also gets the same side_N_redundant flag JC uses.
-      dp["side_1_annotate_key"] = side1_repeat ? "repeat" : "gene";
-      dp["side_2_annotate_key"] = side2_repeat ? "repeat" : "gene";
-      if (side1_repeat) dp[SIDE_1_REDUNDANT] = "1";
-      if (side2_repeat) dp[SIDE_2_REDUNDANT] = "1";
+      // side is redundant if EITHER it snapped onto a repeat/IS boundary (side_N_repeat) OR its
+      // supporting reads mapped redundantly (region.redundant -- a tie-broken multicopy side, from
+      // the DP candidate-regions CSV). Both feed the same side_N_redundant flag JC uses.
+      bool side1_redundant_reads = a_is_side_1 ? regions[a].redundant : regions[b].redundant;
+      bool side2_redundant_reads = a_is_side_1 ? regions[b].redundant : regions[a].redundant;
+      bool side1_red = side1_repeat || side1_redundant_reads;
+      bool side2_red = side2_repeat || side2_redundant_reads;
+      dp["side_1_annotate_key"] = side1_red ? "repeat" : "gene";
+      dp["side_2_annotate_key"] = side2_red ? "repeat" : "gene";
+      if (side1_red) dp[SIDE_1_REDUNDANT] = "1";
+      if (side2_red) dp[SIDE_2_REDUNDANT] = "1";
 
       // Heuristic count from region overlap; kept so we can see the rescan hold steady or increase.
       dp["candidate_discordant_count"] = to_string(weight);

@@ -1140,6 +1140,25 @@ static void downselect_to_kept(alignment_list& alignments, const set<bam_alignme
   }
 }
 
+// Deterministic representative of a (possibly multiply-mapped) mate: the alignment with the lowest
+// (reference target id, reference start). Used to break the tie for a redundant discordant pair so
+// every read from the same multicopy element canonicalizes to ONE copy (see the tie-break block in
+// resolve_reference_pair). A size-1 list returns its sole alignment.
+static bam_alignment* pick_lowest_alignment(alignment_list& alignments)
+{
+  bam_alignment* best = NULL;
+  for (alignment_list::iterator it = alignments.begin(); it != alignments.end(); it++)
+  {
+    bam_alignment* a = it->get();
+    if (best == NULL
+        || a->reference_target_id() < best->reference_target_id()
+        || (a->reference_target_id() == best->reference_target_id()
+            && a->reference_start_1() < best->reference_start_1()))
+      best = a;
+  }
+  return best;
+}
+
 #ifdef BRESEQ_WRITE_DISCORDANT_PAIRS_CSV
 // Strand-aware 5' anchor position of an alignment: reference_start_1() if forward,
 // reference_end_1() if reversed (reference_stranded_bounds_1 already computes exactly this).
@@ -1640,6 +1659,25 @@ void load_junction_alignments(
               d[gap_hi + 1]--;
             }
           }
+        }
+        else if (!pairing.any_concordant_combo_exists &&
+                 ((m1.this_reference_alignments.size() > 1) || (m2.this_reference_alignments.size() > 1)))
+        {
+          // Redundant discordant pair: no concordant combination exists and at least one mate maps
+          // to multiple copies (e.g. a multicopy IS element). Break the tie deterministically by
+          // choosing each mate's lowest (tid, position) alignment so reads from the same element
+          // pile up at ONE canonical copy (letting the DP seed threshold be reached), and mark THAT
+          // pairing as discordant. Every other alignment of each read stays written/redundant/unpaired.
+          // We do NOT downselect, so both mates keep all their alignments (X1>1 preserved) and remain
+          // excluded from RA/coverage evidence; mark_pair_info touches only the two chosen alignments.
+          // Not counted in mapped_pairs/concordant_pairs and not fed to the crossing accumulator, so
+          // the resolution summary (and non-DP golden output) is unchanged -- this only adds BAM
+          // pairing flags consumed by discordant-pair (DP) region detection.
+          bam_alignment* a1 = pick_lowest_alignment(m1.this_reference_alignments);
+          bam_alignment* a2 = pick_lowest_alignment(m2.this_reference_alignments);
+          bool same_tid = (a1->reference_target_id() == a2->reference_target_id());
+          OrientationDistance od = same_tid ? compute_orientation_and_distance(a1, a2) : OrientationDistance{"NA", 0};
+          mark_pair_info(a1, a2, same_tid, od.orientation, od.distance, /*is_concordant=*/false);
         }
 
         _write_reference_matches(settings, summary, ref_seq_info, trims_list, m1.this_reference_alignments, resolved_reference_tam, fastq_file_index_1);
