@@ -570,7 +570,11 @@ void html_index(const string& file_name, const Settings& settings, Summary& summ
 
   diff_entry_list_t dp = gd.filter_used_as_evidence(gd.show_list(make_vector<gd_entry_type>(DP)));
   dp.remove_if(cDiffEntry::rejected_and_not_user_defined());
-  dp.remove_if(cDiffEntry::field_exists(IGNORE));
+  if (settings.hide_circular_genome_junctions) {
+    dp.remove_if(cDiffEntry::field_exists(IGNORE));
+  } else {
+    dp.remove_if(cDiffEntry::ignored_but_not_circular());   // keep circular-origin DP, drop other-ignored
+  }
 
   // Open list container before sticky header so the .search input is inside it
   if (!settings.no_javascript) {
@@ -2560,6 +2564,9 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
     }
 
     string key = "side_1";
+    // Orange highlight for a repeat/IS-element side, keyed on side_N_annotate_key exactly as the JC
+    // table (class .junction_repeat / .junction_gene already defined in header_style_string()).
+    string ak1 = c.entry_exists(key + "_annotate_key") ? (" class=\"junction_" + c[key + "_annotate_key"] + "\"") : "";
     ss << start_tr("class=\"mutation_table_row_" + to_string(row_bg_color_index) + "\"") << endl;
 
       if (link) {
@@ -2569,12 +2576,12 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
         ss << td("rowspan=\"1\"", a(relative_link + c[_SIDE_1_EVIDENCE_FILE_NAME], "?")) << endl;
       }
 
-      ss << td("rowspan=\"1\"", nonbreaking(c[key + "_seq_id"])) << endl;
+      ss << td("rowspan=\"1\"" + ak1, nonbreaking(c[key + "_seq_id"])) << endl;
 
       if (from_string<int32_t>(c[key + "_strand"]) == 1) {
-        ss << td("align=\"center\"", c[key + "_position"] + "&nbsp;=");
+        ss << td("align=\"center\"" + ak1, c[key + "_position"] + "&nbsp;=");
       } else {
-        ss << td("align=\"center\"", "=&nbsp;" + c[key + "_position"]);
+        ss << td("align=\"center\"" + ak1, "=&nbsp;" + c[key + "_position"]);
       }
 
       ss << td("align=\"center\"", c[key + "_concordant_count"]);
@@ -2582,11 +2589,12 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
       ss << td("rowspan=\"2\" align=\"center\"", c["discordant_count"]) << endl;
       ss << td("rowspan=\"2\" align=\"center\"", c["neg_log10_discordance_p_value"]) << endl;
 
-      ss << td("align=\"center\"",
+      ss << td("align=\"center\"" + ak1,
               nonbreaking(substitute(c[key + "_" + GENE_POSITION], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) << endl;
-      ss << td("align=\"center\"",
+      ss << td("align=\"center\"" + ak1,
               i(nonbreaking(substitute(c[key + "_" + GENE_NAME], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator)))) << endl;
-      ss << td(htmlize(substitute(c[key + "_" + GENE_PRODUCT], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) << endl;
+      ss << td("class=\"" + (c.entry_exists(key + "_annotate_key") ? ("junction_" + c[key + "_annotate_key"]) : string("")) + "\"",
+              htmlize(substitute(c[key + "_" + GENE_PRODUCT], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) << endl;
     ss << end_tr() << endl;
 
 // #     ##############
@@ -2594,6 +2602,7 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
 // #     ##############
     ss << "<!-- Side 2 Item Lines for Discordant Pair -->" << endl;
     key = "side_2";
+    string ak2 = c.entry_exists(key + "_annotate_key") ? (" class=\"junction_" + c[key + "_annotate_key"] + "\"") : "";
     ss << start_tr("class=\"mutation_table_row_" + to_string(row_bg_color_index) + "\"") << endl;
 
       // (the '*' flagship column is covered by side 1's rowspan=2 cell)
@@ -2601,21 +2610,22 @@ string html_discordant_pair_table_string(diff_entry_list_t& list_ref, const Sett
         ss << td("rowspan=\"1\"", a(relative_link + c[_SIDE_2_EVIDENCE_FILE_NAME], "?")) << endl;
       }
 
-      ss << td("rowspan=\"1\"", nonbreaking(c[key + "_seq_id"])) << endl;
+      ss << td("rowspan=\"1\"" + ak2, nonbreaking(c[key + "_seq_id"])) << endl;
 
       if (from_string<int32_t>(c[key + "_strand"]) == 1) {
-        ss << td("align=\"center\"", c[key + "_position"] + "&nbsp;=") << endl;
+        ss << td("align=\"center\"" + ak2, c[key + "_position"] + "&nbsp;=") << endl;
       } else {
-        ss << td("align=\"center\"", "=&nbsp;" + c[key + "_position"]) << endl;
+        ss << td("align=\"center\"" + ak2, "=&nbsp;" + c[key + "_position"]) << endl;
       }
 
       ss << td("align=\"center\"", c[key + "_concordant_count"]);
 
-      ss << td("align=\"center\"",
+      ss << td("align=\"center\"" + ak2,
               nonbreaking(substitute(c[key + "_" + GENE_POSITION], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) << endl;
-      ss << td("align=\"center\"",
+      ss << td("align=\"center\"" + ak2,
               i(nonbreaking(substitute(c[key + "_" + GENE_NAME], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator)))) << endl;
-      ss << td(htmlize(substitute(c[key + "_" + GENE_PRODUCT], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) << endl;
+      ss << td("class=\"" + (c.entry_exists(key + "_annotate_key") ? ("junction_" + c[key + "_annotate_key"]) : string("")) + "\"",
+              htmlize(substitute(c[key + "_" + GENE_PRODUCT], cReferenceSequences::multiple_separator, cReferenceSequences::html_multiple_separator))) << endl;
     ss << end_tr() << endl;
 
     if (show_details && c.entry_exists(REJECT)) {

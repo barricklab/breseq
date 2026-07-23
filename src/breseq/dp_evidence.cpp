@@ -1147,34 +1147,76 @@ namespace breseq {
         }
       }
 
-      // JC snap: the pair-based edge is coarse; a passing split-read junction (JC) gives a base-
-      // resolution breakpoint. If a passing JC matches this DP (both sides same seq_id and within
-      // snap_win), snap the DP coordinates onto it -- unless the supporting pairs favor the current
-      // DP position over the JC by more than 3x under the (length-bias-corrected) insert model.
-      if (have_insert && scanner && !passing_jcs.empty()) {
-        // Nearest matching passing JC (either side order), by total offset.
-        const dp_jc_sides* best = NULL; int32_t best_off = 0; int32_t jp1 = 0, jp2 = 0;
-        for (vector<dp_jc_sides>::const_iterator j = passing_jcs.begin(); j != passing_jcs.end(); j++) {
-          for (int order = 0; order < 2; order++) {
-            const string& a_seq = order ? j->s2seq : j->s1seq; int32_t a_pos = order ? j->p2 : j->p1;
-            const string& b_seq = order ? j->s1seq : j->s2seq; int32_t b_pos = order ? j->p1 : j->p2;
-            if (a_seq != s1_seq_id || b_seq != s2_seq_id) continue;
-            if (abs(s1_pos - a_pos) > snap_win || abs(s2_pos - b_pos) > snap_win) continue;
-            int32_t off = abs(s1_pos - a_pos) + abs(s2_pos - b_pos);
-            if (!best || off < best_off) { best = &(*j); best_off = off; jp1 = a_pos; jp2 = b_pos; }
-          }
-        }
-        if (best && (jp1 != s1_pos || jp2 != s2_pos)) {
-          int32_t readlen = static_cast<int32_t>(summary.sequence_conversion.read_length_avg + 0.5);
-          vector<dp_pair_ends> pr;
-          if (scanner->gather_pairs(s1_seq_id, s1_pos, s1_strand, s1_fwd, s2_tid, s2_pos, s2_fwd, distance_cutoff, init1, init2, s2_strand, readlen, pr)
-              && !pr.empty()) {
-            double lp_dp = dp_pairs_logL(pr, s1_pos, s1_strand, s2_pos, s2_strand, insert_model);
-            double lp_jc = dp_pairs_logL(pr, jp1,   s1_strand, jp2,   s2_strand, insert_model);
-            // Snap unless the pairs favor DP over JC by more than 3x (BF_DP:JC > 3).
-            if (lp_jc - lp_dp >= log(1.0 / 3.0)) {
+      // Snap the coarse pair-based edges onto a better-supported breakpoint. Three candidate snaps are
+      // tried in turn; each is gated by the SAME Bayesian probability requirement used for the JC snap:
+      // accept a candidate only if the supporting pairs' inferred inserts do NOT favor the current
+      // position over it by more than 3x -- i.e. lp(candidate) - lp(current) >= log(1/3) under the
+      // length-bias-corrected insert model. So a real near-origin junction, or a DP whose pairs
+      // contradict a nearby transposable element, is neither moved nor marked.
+      bool circular_dp = false, side1_repeat = false, side2_repeat = false;
+      if (have_insert && scanner) {
+        int32_t readlen = static_cast<int32_t>(summary.sequence_conversion.read_length_avg + 0.5);
+        vector<dp_pair_ends> pr;
+        if (scanner->gather_pairs(s1_seq_id, s1_pos, s1_strand, s1_fwd, s2_tid, s2_pos, s2_fwd, distance_cutoff, init1, init2, s2_strand, readlen, pr)
+            && !pr.empty()) {
+          const double kSnapLBF = log(1.0 / 3.0);   // accept a snap unless pairs favor current by > 3x
+          double lp_cur = dp_pairs_logL(pr, s1_pos, s1_strand, s2_pos, s2_strand, insert_model);
+
+          // (1) JC snap: a passing split-read junction (JC) gives a base-resolution breakpoint. Snap to
+          // the nearest passing JC matching both sides within snap_win (either side order).
+          if (!passing_jcs.empty()) {
+            const dp_jc_sides* best = NULL; int32_t best_off = 0; int32_t jp1 = 0, jp2 = 0;
+            for (vector<dp_jc_sides>::const_iterator j = passing_jcs.begin(); j != passing_jcs.end(); j++) {
+              for (int order = 0; order < 2; order++) {
+                const string& a_seq = order ? j->s2seq : j->s1seq; int32_t a_pos = order ? j->p2 : j->p1;
+                const string& b_seq = order ? j->s1seq : j->s2seq; int32_t b_pos = order ? j->p1 : j->p2;
+                if (a_seq != s1_seq_id || b_seq != s2_seq_id) continue;
+                if (abs(s1_pos - a_pos) > snap_win || abs(s2_pos - b_pos) > snap_win) continue;
+                int32_t off = abs(s1_pos - a_pos) + abs(s2_pos - b_pos);
+                if (!best || off < best_off) { best = &(*j); best_off = off; jp1 = a_pos; jp2 = b_pos; }
+              }
+            }
+            if (best && (jp1 != s1_pos || jp2 != s2_pos)
+                && dp_pairs_logL(pr, jp1, s1_strand, jp2, s2_strand, insert_model) - lp_cur >= kSnapLBF) {
               s1_pos = max(1, min(scanner->seq_length(s1_tid), jp1));
               s2_pos = max(1, min(scanner->seq_length(s2_tid), jp2));
+              lp_cur = dp_pairs_logL(pr, s1_pos, s1_strand, s2_pos, s2_strand, insert_model);
+            }
+          }
+
+          // (2) Circular-origin snap: a DP that just reconnects the two ends of a circular seq_id is an
+          // artifact (like a CIRCULAR_CHROMOSOME JC). Snap onto (1, length) and mark it ignored.
+          if (s1_seq_id == s2_seq_id && s1_strand != s2_strand && ref_seq_info.is_circular(s1_seq_id)) {
+            int32_t L = static_cast<int32_t>(ref_seq_info.get_sequence_length(s1_seq_id));
+            int32_t c1 = s1_pos, c2 = s2_pos; bool cand = false;
+            if (s1_pos <= snap_win && s2_pos >= L - snap_win + 1)      { c1 = 1; c2 = L; cand = true; }
+            else if (s2_pos <= snap_win && s1_pos >= L - snap_win + 1) { c1 = L; c2 = 1; cand = true; }
+            if (cand && (c1 != s1_pos || c2 != s2_pos)
+                && dp_pairs_logL(pr, c1, s1_strand, c2, s2_strand, insert_model) - lp_cur >= kSnapLBF) {
+              s1_pos = c1; s2_pos = c2; circular_dp = true;
+              lp_cur = dp_pairs_logL(pr, s1_pos, s1_strand, s2_pos, s2_strand, insert_model);
+            }
+          }
+
+          // (3) Transposable-element (repeat) end snap: a side within 50 bp of a repeat/IS boundary is
+          // snapped onto that boundary and marked redundant (same flags as JC), so it renders orange.
+          if (!circular_dp) {
+            int32_t md1 = 50;
+            cFeatureLocation* is1 = cReferenceSequences::find_closest_repeat_region_boundary(s1_pos, ref_seq_info[s1_seq_id].m_repeats, md1, s1_strand);
+            if (is1) {
+              int32_t c1 = (s1_strand == -1) ? is1->get_end_1() : is1->get_start_1();
+              if (dp_pairs_logL(pr, c1, s1_strand, s2_pos, s2_strand, insert_model) - lp_cur >= kSnapLBF) {
+                s1_pos = max(1, min(scanner->seq_length(s1_tid), c1)); side1_repeat = true;
+                lp_cur = dp_pairs_logL(pr, s1_pos, s1_strand, s2_pos, s2_strand, insert_model);
+              }
+            }
+            int32_t md2 = 50;
+            cFeatureLocation* is2 = cReferenceSequences::find_closest_repeat_region_boundary(s2_pos, ref_seq_info[s2_seq_id].m_repeats, md2, s2_strand);
+            if (is2) {
+              int32_t c2 = (s2_strand == -1) ? is2->get_end_1() : is2->get_start_1();
+              if (dp_pairs_logL(pr, s1_pos, s1_strand, c2, s2_strand, insert_model) - lp_cur >= kSnapLBF) {
+                s2_pos = max(1, min(scanner->seq_length(s2_tid), c2)); side2_repeat = true;
+              }
             }
           }
         }
@@ -1187,6 +1229,14 @@ namespace breseq {
       dp[SIDE_2_SEQ_ID]  = s2_seq_id;
       dp[SIDE_2_POSITION] = to_string(s2_pos);
       dp[SIDE_2_STRAND]  = to_string(s2_strand);
+      // Circular-origin artifact -> ignore (hidden in output like a CIRCULAR_CHROMOSOME JC).
+      if (circular_dp) dp[IGNORE] = "CIRCULAR_CHROMOSOME";
+      // Per-side annotate_key drives the HTML highlight exactly as for JC ("repeat" -> orange). A
+      // repeat/IS-element side also gets the same side_N_redundant flag JC uses.
+      dp["side_1_annotate_key"] = side1_repeat ? "repeat" : "gene";
+      dp["side_2_annotate_key"] = side2_repeat ? "repeat" : "gene";
+      if (side1_repeat) dp[SIDE_1_REDUNDANT] = "1";
+      if (side2_repeat) dp[SIDE_2_REDUNDANT] = "1";
 
       // Heuristic count from region overlap; kept so we can see the rescan hold steady or increase.
       dp["candidate_discordant_count"] = to_string(weight);
