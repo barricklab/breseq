@@ -828,10 +828,12 @@ inline string join(const list<string>& values, const string& separator)
 			return return_str;
 		}
 	}
-	inline string to_string (time_t& t)
-	{
-		return ctime(&t);
-	}
+	// NOTE: deliberately no `to_string(time_t&)` overload. `time_t` is `long` on
+	// LP64 platforms (Linux), which is the same type as `int64_t`, so such an
+	// overload silently hijacks every non-const `int64_t`/`long` lvalue passed to
+	// to_string() and formats it as a ctime() date string (only on Linux -- on
+	// macOS `int64_t` is `long long`, a distinct type, so the bug is invisible
+	// there). Format times explicitly (e.g. Settings::time2string / ctime) instead.
 
   // handle bool as either TRUE/FALSE or zero/non-zero number
   // Does not handle single-character T/F correctly 
