@@ -4661,8 +4661,8 @@ cOutputEvidenceFiles::html_evidence_file (
   HTML << "<p>";
   
   diff_entry_list_t evidence_list = gd.in_evidence_list(*parent_item);
-  
-  vector<gd_entry_type> types = make_vector<gd_entry_type>(RA)(MC)(JC);
+
+  vector<gd_entry_type> types = make_vector<gd_entry_type>(RA)(MC)(JC)(DP);
   
   for (vector<gd_entry_type>::iterator itr = types.begin(); itr != types.end(); itr ++)
   {

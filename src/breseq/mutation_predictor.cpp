@@ -2749,9 +2749,57 @@ namespace breseq {
       }
 
     }
-    
+
+    // Attach a matching discordant-pair (DP) evidence item to each mutation whose JC it matches.
+    add_matching_DP_evidence(gd);
+
 	}
-  
+
+  // Canonical, side-order-independent key for a junction's two sides (seq_id|position|strand each),
+  // so a DP and a JC describing the same breakpoint compare equal regardless of which side is side_1.
+  static string junction_side_key(cDiffEntry& e)
+  {
+    string a = e[SIDE_1_SEQ_ID] + "|" + e[SIDE_1_POSITION] + "|" + e[SIDE_1_STRAND];
+    string b = e[SIDE_2_SEQ_ID] + "|" + e[SIDE_2_POSITION] + "|" + e[SIDE_2_STRAND];
+    return (a < b) ? (a + "#" + b) : (b + "#" + a);
+  }
+
+  // Attach a discordant-pair (DP) evidence item as ALSO supporting a mutation when its sides exactly
+  // match (seq_id/position/strand, either order) a JC that already supports that mutation -- e.g. a DP
+  // that snapped onto that junction's split-read breakpoint. This makes the mutation show a "DP"
+  // evidence link and drops the DP from the "unassigned discordant pair evidence" table, both via the
+  // native evidence= machinery (in_evidence_list / filter_used_as_evidence).
+  void MutationPredictor::add_matching_DP_evidence(cGenomeDiff& gd)
+  {
+    // Index non-rejected DP evidence by side key (rejected DP live in the marginal table, not the
+    // unassigned one, so they are not promoted).
+    map<string, vector<string> > dp_by_key;
+    diff_entry_list_t dp_list = gd.get_list(make_vector<gd_entry_type>(DP));
+    for (diff_entry_list_t::iterator it = dp_list.begin(); it != dp_list.end(); it++) {
+      cDiffEntry& dp = **it;
+      if (dp.entry_exists(REJECT)) continue;
+      dp_by_key[junction_side_key(dp)].push_back(dp._id);
+    }
+    if (dp_by_key.empty()) return;
+
+    diff_entry_list_t muts = gd.mutation_list();
+    for (diff_entry_list_t::iterator it = muts.begin(); it != muts.end(); it++) {
+      cDiffEntry& mut = **it;
+      // Snapshot the current evidence ids (we append to mut._evidence inside the loop).
+      vector<string> evidence_now = mut._evidence;
+      for (vector<string>::iterator ev = evidence_now.begin(); ev != evidence_now.end(); ev++) {
+        diff_entry_ptr_t e = gd.find_by_id(*ev);
+        if (e.get() == NULL || e->_type != JC) continue;
+        map<string, vector<string> >::const_iterator m = dp_by_key.find(junction_side_key(*e));
+        if (m == dp_by_key.end()) continue;
+        for (vector<string>::const_iterator dpid = m->second.begin(); dpid != m->second.end(); dpid++) {
+          if (find(mut._evidence.begin(), mut._evidence.end(), *dpid) == mut._evidence.end())
+            mut._evidence.push_back(*dpid);
+        }
+      }
+    }
+  }
+
   // Returns the size of the minimum repeated subseqence
   void MutationPredictor::find_repeat_unit(string& mutation_sequence, uint32_t& repeat_size, string& repeat_sequence)
   {
