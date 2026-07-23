@@ -4489,6 +4489,13 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, const cGeno
   {
     diff_entry_ptr_t item = *itr;
 
+    // When this DP was assigned as evidence for a mutation (add_matching_DP_evidence), make the
+    // mutation the parent so its evidence page shows the mutation + all its evidence (RA/MC/JC/DP)
+    // at the top, matching JC evidence pages. Unassigned DP stay their own parent.
+    diff_entry_ptr_t parent_item;
+    diff_entry_list_t parents = gd.using_evidence_list(*item);
+    parent_item = parents.size() ? parents.front() : *itr;
+
     map<string,string> dp_flagship = make_map<string,string>
                  (PREFIX, "DP")
                  (SEQ_ID, (*item)[SIDE_1_SEQ_ID])
@@ -4498,7 +4505,7 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, const cGeno
       dp_flagship[PLOT] = (*item)["_dp_plot_file_name"];
     if (item->entry_exists("_dp_plot_message"))
       dp_flagship[PLOT_MESSAGE] = (*item)["_dp_plot_message"];
-    add_evidence(_EVIDENCE_FILE_NAME, item, item, dp_flagship);
+    add_evidence(_EVIDENCE_FILE_NAME, item, parent_item, dp_flagship);
 
     if (item->entry_exists("_side_1_dp_plot_file_name")) {
       map<string,string> side_1_map = make_map<string,string>
@@ -4509,7 +4516,7 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, const cGeno
                    (PLOT, (*item)["_side_1_dp_plot_file_name"]);
       if (item->entry_exists("_side_1_dp_plot_message"))
         side_1_map[PLOT_MESSAGE] = (*item)["_side_1_dp_plot_message"];
-      add_evidence(_SIDE_1_EVIDENCE_FILE_NAME, item, item, side_1_map);
+      add_evidence(_SIDE_1_EVIDENCE_FILE_NAME, item, parent_item, side_1_map);
     }
     if (item->entry_exists("_side_2_dp_plot_file_name")) {
       map<string,string> side_2_map = make_map<string,string>
@@ -4520,7 +4527,7 @@ cOutputEvidenceFiles::cOutputEvidenceFiles(const Settings& settings, const cGeno
                    (PLOT, (*item)["_side_2_dp_plot_file_name"]);
       if (item->entry_exists("_side_2_dp_plot_message"))
         side_2_map[PLOT_MESSAGE] = (*item)["_side_2_dp_plot_message"];
-      add_evidence(_SIDE_2_EVIDENCE_FILE_NAME, item, item, side_2_map);
+      add_evidence(_SIDE_2_EVIDENCE_FILE_NAME, item, parent_item, side_2_map);
     }
   }
 
@@ -4643,6 +4650,28 @@ cOutputEvidenceFiles::html_evidence_file (
   HTML << "<div class=\"breseq-page-header\">" << endl;
   HTML << breseq_header_string(settings, settings.zip_html ? "" : "../") << endl;
   HTML << "</div>" << endl;
+
+  // Highlight the evidence-table cell whose link targets THIS page, so it is obvious which of the
+  // several */? links corresponds to the view currently shown. The current file name is matched
+  // against each anchor's basename (works in both plain and zip/evidence.html# modes); the mutation
+  // table's own evidence-chip column (td class="evidence") is never highlighted. Kept inline here
+  // rather than in the shared header CSS, which is byte-compared by the gdtools_compare tests.
+  HTML << "<style>td.breseq-current-evidence { background: #FFFF00; font-weight: bold; }</style>" << endl;
+  HTML << "<script>\n"
+          "document.addEventListener('DOMContentLoaded', function() {\n"
+          "  var cur = \"" << item[FILE_NAME] << "\";\n"
+          "  var as = document.getElementsByTagName('a');\n"
+          "  for (var i = 0; i < as.length; i++) {\n"
+          "    var h = as[i].getAttribute('href'); if (!h) continue;\n"
+          "    if (h.split('#').pop().split('/').pop() !== cur) continue;\n"
+          "    var td = as[i].closest ? as[i].closest('td') : null;\n"
+          "    if (!td) { var p = as[i].parentNode; while (p && p.tagName !== 'TD') p = p.parentNode; td = p; }\n"
+          "    if (!td) continue;\n"
+          "    if (td.className && td.className.split(/\\s+/).indexOf('evidence') !== -1) continue;\n"
+          "    td.className += ' breseq-current-evidence';\n"
+          "  }\n"
+          "});\n"
+          "</script>" << endl;
 
   // Message for a capped plot (e.g. "Only 100 of 201 mapped read pairs displayed.") at the top of the page.
   if (item.entry_exists(PLOT_MESSAGE) && !item[PLOT_MESSAGE].empty()) {
