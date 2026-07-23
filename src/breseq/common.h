@@ -1097,6 +1097,39 @@ inline string join(const list<string>& values, const string& separator)
     return currentout;
   }
   
+  // Portable replacement for the Unix `which` command: returns the first entry
+  // in $PATH for which "<dir>/<program>" is an executable regular file, or ""
+  // if none is found. Reads $PATH fresh on every call so any PATH the caller
+  // has set (e.g. get_bin_path() prepended) is honored. Avoids depending on the
+  // `which` binary being installed, and never runs a subshell.
+  inline string which(const string& program)
+  {
+    if (program.empty()) return "";
+
+    // A name containing '/' is treated as a path, matching `which`.
+    if (program.find('/') != string::npos) {
+      struct stat st;
+      if (::access(program.c_str(), X_OK) == 0 &&
+          ::stat(program.c_str(), &st) == 0 && S_ISREG(st.st_mode))
+        return program;
+      return "";
+    }
+
+    const char* path_env = getenv("PATH");
+    if (path_env == NULL || path_env[0] == '\0') return "";
+
+    vector<string> dirs = split(path_env, ":");
+    for (size_t i = 0; i < dirs.size(); i++) {
+      string dir = dirs[i].empty() ? "." : dirs[i];   // POSIX: empty entry == "."
+      string candidate = dir + "/" + program;
+      struct stat st;
+      if (::access(candidate.c_str(), X_OK) == 0 &&
+          ::stat(candidate.c_str(), &st) == 0 && S_ISREG(st.st_mode))
+        return candidate;
+    }
+    return "";
+  }
+
   inline string SYSTEM_CAPTURE(string command, bool silent = false)
 	{
     if (!silent) cout << "[system] " << command << endl;

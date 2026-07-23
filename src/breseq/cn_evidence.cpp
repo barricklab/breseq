@@ -26,7 +26,7 @@ namespace breseq {
 void CNEvidence::predict(Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info)
 {
   if (settings.installed.count("cnery") == 0) {
-    settings.installed["cnery"] = SYSTEM_CAPTURE("which CNery", true);
+    settings.installed["cnery"] = which("CNery");
   }
   if (settings.installed["cnery"].size() == 0) {
     ERROR("Could not find 'CNery' command in $PATH.\n"

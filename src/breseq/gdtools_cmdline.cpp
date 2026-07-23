@@ -1353,14 +1353,14 @@ int do_phylogeny(int argc, char* argv[])
 		uout("DNAPARS command specified as: ", dnapars_command);
 	} else {
 		// See if `phylip` is installed
-		dnapars_command = SYSTEM_CAPTURE("which phylip", true);
+		dnapars_command = which("phylip");
 		if (dnapars_command.size() > 0) {
 			// Need to add the subcommand here
 			dnapars_command += " dnapars";
 		}
 		else {
 			// See if `dnapars` is installed
-			dnapars_command = SYSTEM_CAPTURE("which dnapars", true);
+			dnapars_command = which("dnapars");
 		}
 		// Didn't find one? Bail
 		if (dnapars_command.size() == 0) {

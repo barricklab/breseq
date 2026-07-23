@@ -1417,8 +1417,8 @@ namespace breseq
     }
     
     // detect bowtie2 and bowtie2-build system-wide install
-    this->installed["bowtie2"] = SYSTEM_CAPTURE("which bowtie2", true);
-    this->installed["bowtie2-build"] = SYSTEM_CAPTURE("which bowtie2-build", true);
+    this->installed["bowtie2"] = which("bowtie2");
+    this->installed["bowtie2-build"] = which("bowtie2-build");
     this->installed["bowtie2_version"] = "";
     this->installed["bowtie2_version_string"] = "";
     
@@ -1469,7 +1469,7 @@ namespace breseq
     //cerr << "Bowtie2: " << this->installed["bowtie2"] << " Bowtie2 version: " << this->installed["bowtie2_version_string"] << endl;
 
     // detect gnuplot, used to render all diagnostic plots
-    this->installed["gnuplot"] = SYSTEM_CAPTURE("which gnuplot", true);
+    this->installed["gnuplot"] = which("gnuplot");
     this->installed["gnuplot_version_string"] = "";
     this->installed["gnuplot_version"] = "";
 
@@ -1509,6 +1509,36 @@ namespace breseq
     }
 
     //cerr << "gnuplot: " << this->installed["gnuplot"] << " gnuplot version: " << this->installed["gnuplot_version_string"] << endl;
+
+    // detect samtools, used for BAM sort/index/faidx and in the bowtie2 pipes
+    this->installed["samtools"] = which("samtools");
+    this->installed["samtools_version_string"] = "";
+    this->installed["samtools_version"] = "";
+
+    if (this->installed["samtools"].size() > 0)
+    {
+      // first line is reported as e.g. "samtools 1.21"
+      string samtools_version = SYSTEM_CAPTURE("samtools --version", true);
+      size_t start_version_pos = samtools_version.find("samtools ");
+      if (start_version_pos != string::npos)
+      {
+        start_version_pos += 9;
+        size_t end_version_pos = samtools_version.find_first_of(" \t\r\n", start_version_pos);
+        string version_string = samtools_version.substr(start_version_pos, end_version_pos - start_version_pos);
+        this->installed["samtools_version_string"] = version_string;
+
+        // numeric form (major*1e6 + minor*1e3 + patch), consistent with gnuplot/bowtie2
+        vector<string> sv = split(version_string, ".");
+        while (sv.size() < 3) sv.push_back("0");
+        uint32_t numeric = from_string<uint32_t>(sv[0]) * 1000000
+                         + from_string<uint32_t>(sv[1]) * 1000
+                         + from_string<uint32_t>(sv[2]);
+        this->installed["samtools_version"] = to_string(numeric);
+      }
+      else {
+        this->installed["samtools_version_error_message"] = samtools_version;
+      }
+    }
 
 	}
 
@@ -1602,26 +1632,23 @@ namespace breseq
       cerr << color_green("---> gnuplot  :: version " + this->installed["gnuplot_version_string"] + " [" + this->installed["gnuplot"] + "]") << endl;
     }
     
-    /*
-
     if (this->installed["samtools"].size() == 0)
     {
       good_to_go = false;
-      cerr << "---> ERROR Required executable \"samtools\" not found." << endl;
-      cerr << "---> This should have been installed by the breseq installer." << endl;
+      cerr << color_red("---> ERROR Required executable \"samtools\" not found.") << endl;
+      cerr << color_red("---> See http://www.htslib.org") << endl;
     }
     else if (this->installed.count("samtools_version_error_message")) {
       good_to_go = false;
-      cerr << "---> ERROR Could not determine version of installed executable \"samtools\"." << endl;
-      cerr << "---> For found executable installed at [" << this->installed["samtools"] << "]" << endl;
-      cerr << "---> Command \"samtools\" returned:" << endl;
-      cerr << this->installed["samtools_version_error_message"] << endl;
+      cerr << color_red("---> ERROR Could not determine version of installed executable \"samtools\".") << endl;
+      cerr << color_red("---> For found executable installed at [" + this->installed["samtools"] + "]") << endl;
+      cerr << color_red("---> Command \"samtools --version\" returned:") << endl;
+      cerr << color_red(this->installed["samtools_version_error_message"]) << endl;
     }
     else {
-      cout << "---> samtools :: version " << this->installed["samtools_version_string"] << " [" << this->installed["samtools"] << "]" << endl;
+      cerr << color_green("---> samtools :: version " + this->installed["samtools_version_string"] + " [" + this->installed["samtools"] + "]") << endl;
     }
-    */
-    
+
 		if (!good_to_go) exit(0);
 	}
 
