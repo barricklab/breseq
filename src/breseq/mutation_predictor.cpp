@@ -2804,23 +2804,35 @@ namespace breseq {
     }
   }
 
+  // Repeat-copy region "seq:start-end" that (position, strand) sits in, if it belongs to repeat family
+  // repeat_name; else "". Used to map a JC/DP IS side to its specific copy.
+  static string mob_copy_region_for(cReferenceSequences& ref_seq_info, const string& seq_id, int32_t pos,
+                                     int32_t strand, const string& repeat_name)
+  {
+    int32_t md = 50;
+    cFeatureLocation* is = cReferenceSequences::find_closest_repeat_region_boundary(pos, ref_seq_info[seq_id].m_repeats, md, strand, true);
+    if (is == NULL || is->get_feature()->SafeGet("name") != repeat_name) return "";
+    return seq_id + ":" + to_string(is->get_start_1()) + "-" + to_string(is->get_end_1());
+  }
+
   void MutationPredictor::combine_DP_with_MOB_by_unique_side(cGenomeDiff& gd)
   {
-    // Collect non-rejected DP items with exactly one redundant (IS) side, recording their unique side
-    // (non-redundant), their IS side (redundant; snapped to a specific copy's end in dp_evidence), and
-    // support count.
+    // Collect non-rejected DP items, recording their unique side and IS side. The IS side is the one
+    // whose annotate_key is "repeat" (NOT the redundant flag -- a side that uniquely matched a variant
+    // copy is a repeat side but is flagged redundant=0).
     struct DPitem { string id; string useq; int32_t upos; int32_t ustr; string iseq; int32_t ipos; int32_t istr; int32_t count; };
     vector<DPitem> dps;
     diff_entry_list_t dp_list = gd.get_list(make_vector<gd_entry_type>(DP));
     for (diff_entry_list_t::iterator it = dp_list.begin(); it != dp_list.end(); it++) {
       cDiffEntry& dp = **it;
       if (dp.entry_exists(REJECT)) continue;
-      bool r1 = dp.entry_exists(SIDE_1_REDUNDANT) && n(dp[SIDE_1_REDUNDANT]);
-      bool r2 = dp.entry_exists(SIDE_2_REDUNDANT) && n(dp[SIDE_2_REDUNDANT]);
-      if (r1 == r2) continue;  // need exactly one IS (redundant) side and one unique side
+      string ak1 = dp.entry_exists("side_1_annotate_key") ? dp["side_1_annotate_key"] : "";
+      string ak2 = dp.entry_exists("side_2_annotate_key") ? dp["side_2_annotate_key"] : "";
+      string is, un;
+      if      (ak1 == "repeat" && ak2 != "repeat") { is = "side_1"; un = "side_2"; }
+      else if (ak2 == "repeat" && ak1 != "repeat") { is = "side_2"; un = "side_1"; }
+      else continue;  // need exactly one IS (repeat) side and one unique side
       DPitem d; d.id = dp._id;
-      string is = r1 ? "side_1" : "side_2";
-      string un = r1 ? "side_2" : "side_1";
       d.iseq = dp[is + "_seq_id"]; d.ipos = n(dp[is + "_position"]); d.istr = n(dp[is + "_strand"]);
       d.useq = dp[un + "_seq_id"]; d.upos = n(dp[un + "_position"]); d.ustr = n(dp[un + "_strand"]);
       d.count = dp.entry_exists("discordant_count") ? n(dp["discordant_count"]) : 0;
@@ -2828,32 +2840,56 @@ namespace breseq {
     }
     if (dps.empty()) return;
 
-    // A DP whose IS side lands on a different copy than the MOB's (consensus) IS side won't match by
-    // both sides, so match by the UNIQUE side only, within a small window and the same strand.
+    // A DP whose IS side lands on a different copy than the MOB's IS side won't match by both sides, so
+    // match by the UNIQUE side only, within a small window and the same strand.
     const int32_t SLOP = 20;
     diff_entry_list_t mobs = gd.get_list(make_vector<gd_entry_type>(MOB));
     for (diff_entry_list_t::iterator it = mobs.begin(); it != mobs.end(); it++) {
       cDiffEntry& mut = **it;
       string repeat_name = mut["repeat_name"];
+      string consensus = ref_seq_info.repeat_family_sequence(repeat_name, 1, NULL, NULL, NULL, false);
 
-      // The MOB's unique insertion locus/strand comes from its supporting JC(s)' unique (non-redundant)
-      // side; gather these to match DP unique sides against.
+      // Best NON-consensus (variant) copy that any supporting evidence localizes, driving mob_region:
+      //  priority 3 = a supporting JC's IS side (uniquely matched, redundant=0 -> not canonicalized)
+      //  priority 2 = a matched DP's IS side (tie-broken by discordant_count)
+      // A JC IS side with redundant=1 is canonicalized to the consensus copy, so it never localizes a
+      // variant. Higher priority wins; within a priority, higher tie wins.
+      int best_prio = 0; int32_t best_tie = -1; string best_region;
+      // Returns true and records the region when it is a non-consensus variant of this family.
+      // (defined as a lambda so both the JC and DP loops can call it.)
+      auto consider_variant = [&](const string& region, int prio, int32_t tie) {
+        if (region.empty()) return;
+        string reg = region;  // repeat_family_sequence takes a non-const string*
+        string specific = ref_seq_info.repeat_family_sequence(repeat_name, 1, &reg, NULL, NULL, false);
+        if (specific.empty() || specific == consensus) return;   // consensus copy -> no override
+        if (prio > best_prio || (prio == best_prio && tie > best_tie)) {
+          best_prio = prio; best_tie = tie; best_region = region;
+        }
+      };
+
+      // The MOB's unique insertion loci come from its supporting JC(s)' unique side (annotate_key !=
+      // "repeat"). Gather those AND any variant copy a JC IS side uniquely localizes.
       vector<pair<string, pair<int32_t, int32_t> > > jc_unique;  // (seq_id, (position, strand))
       for (vector<string>::iterator ev = mut._evidence.begin(); ev != mut._evidence.end(); ev++) {
         diff_entry_ptr_t e = gd.find_by_id(*ev);
         if (e.get() == NULL || e->_type != JC) continue;
         cDiffEntry& j = *e;
-        bool jr1 = j.entry_exists(SIDE_1_REDUNDANT) && n(j[SIDE_1_REDUNDANT]);
-        bool jr2 = j.entry_exists(SIDE_2_REDUNDANT) && n(j[SIDE_2_REDUNDANT]);
-        if (jr1 == jr2) continue;
-        string un = jr1 ? "side_2" : "side_1";
+        string ak1 = j.entry_exists("side_1_annotate_key") ? j["side_1_annotate_key"] : "";
+        string ak2 = j.entry_exists("side_2_annotate_key") ? j["side_2_annotate_key"] : "";
+        string is, un;
+        if      (ak1 == "repeat" && ak2 != "repeat") { is = "side_1"; un = "side_2"; }
+        else if (ak2 == "repeat" && ak1 != "repeat") { is = "side_2"; un = "side_1"; }
+        else continue;
         jc_unique.push_back(make_pair(j[un + "_seq_id"], make_pair(n(j[un + "_position"]), n(j[un + "_strand"]))));
+        // A uniquely-matched (redundant=0) JC IS side is the strongest variant localization.
+        bool is_redundant = j.entry_exists(is + "_redundant") && n(j[is + "_redundant"]);
+        if (!is_redundant)
+          consider_variant(mob_copy_region_for(ref_seq_info, j[is + "_seq_id"], n(j[is + "_position"]), n(j[is + "_strand"]), repeat_name), 3, 0);
       }
       if (jc_unique.empty()) continue;
 
-      // Attach every matching DP as evidence; the highest-support DP that localizes a NON-consensus IS
-      // copy drives mob_region (interim rule pending the DP-fragmentation revisit).
-      string best_region; int32_t best_count = -1;
+      // Attach every DP whose unique side matches a JC unique side; a matched DP that localizes a
+      // variant contributes a (weaker) mob_region candidate.
       for (vector<DPitem>::iterator d = dps.begin(); d != dps.end(); d++) {
         bool match = false;
         for (size_t k = 0; k < jc_unique.size(); k++) {
@@ -2866,17 +2902,9 @@ namespace breseq {
         if (find(mut._evidence.begin(), mut._evidence.end(), d->id) == mut._evidence.end())
           mut._evidence.push_back(d->id);
 
-        // Does the DP localize a specific IS copy whose sequence differs from the family consensus?
-        int32_t md = 50;
-        cFeatureLocation* is = cReferenceSequences::find_closest_repeat_region_boundary(d->ipos, ref_seq_info[d->iseq].m_repeats, md, d->istr, true);
-        if (is == NULL || is->get_feature()->SafeGet("name") != repeat_name) continue;
-        string region = d->iseq + ":" + s(is->get_start_1()) + "-" + s(is->get_end_1());
-        string consensus = ref_seq_info.repeat_family_sequence(repeat_name, 1, NULL, NULL, NULL, false);
-        string specific  = ref_seq_info.repeat_family_sequence(repeat_name, 1, &region, NULL, NULL, false);
-        if (!specific.empty() && specific != consensus && d->count > best_count) {
-          best_count = d->count; best_region = region;
-        }
+        consider_variant(mob_copy_region_for(ref_seq_info, d->iseq, d->ipos, d->istr, repeat_name), 2, d->count);
       }
+
       if (!best_region.empty()) mut["mob_region"] = best_region;
     }
   }
