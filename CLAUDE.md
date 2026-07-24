@@ -61,6 +61,23 @@ make test-long
 make clean-tests
 ```
 
+**CRITICAL — `make test` does NOT re-run tests whose output already exists; it reports STALE results.**
+Test runs are gated by per-test done-files (`tests/<name>/test.done`, `test.result`, and Snakemake's
+`.snakemake/`). If those are present from a previous run, `make test` skips the test and re-prints its
+**cached** PASS/FAIL — it does **not** rebuild `data/annotated.gd` or re-compare it. So after **any**
+code change (or `git` operation that changes the binary), running `make test` alone can report "all
+passed" even though the affected tests never actually ran against your new build. This has caused real
+regressions to be merged. Rules:
+- **Always run `make clean-tests` immediately before `make test`** after changing any `src/` file or
+  rebuilding — every time, not just "between cycles". For a single test, run
+  `./tests/test.sh clean <name>` (or `make clean-tests`) before `./tests/test.sh test <name>`.
+  (`./tests/test.sh rebuild <name>` cleans + re-runs on its own; a bare `test` action does not.)
+- **Sanity-check the timing.** `tests/print_test_summary.sh` prints a per-test time and an overall
+  total. A real full-suite run takes on the order of minutes; if the summary shows a near-zero total
+  (e.g. `total time 00:00:01` for 70+ tests), **nothing actually re-ran** — the results are stale.
+  Treat a suspiciously fast run as a failed run: `make clean-tests` and run again.
+- Do not commit/merge/push based on a `make test` result you did not first force to re-run this way.
+
 **To run a single test, use `tests/test.sh <action> <name>`** — this is the canonical single-test
 entry point (streams output live, no Snakemake). Prefer it over the thin `run.sh`/`rebuild.sh`/
 `build.sh` wrappers, which all just dispatch to the same `tests/<name>/testcmd.sh <action>`:
