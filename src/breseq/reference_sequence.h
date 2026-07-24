@@ -1171,6 +1171,16 @@ public:
 
     static cFeatureLocation* find_closest_repeat_region_boundary(int32_t position, const cSequenceFeatureList& repeat_list, int32_t& max_distance, int32_t direction, bool include_interior_matches = false);
     static cFeatureLocation* get_overlapping_feature(cFeatureLocationList& feature_list, int32_t pos);
+
+    // If (seq_id, position) lies within a repeat family, rewrite seq_id/position onto the
+    // LOWEST-coordinate copy whose element sequence is the family CONSENSUS (most common sequence),
+    // mapping from the nearer element end so length differences between a divergent variant copy and
+    // the consensus copy don't misplace it. side_strand (in/out) is the junction side's strand: used to
+    // locate the element, and FLIPPED when the consensus copy is on the opposite genomic strand from
+    // the original copy so position+strand stay consistent on the new copy. Returns true if it moved
+    // the side. Used to normalize redundant JC sides onto the consensus IS; the specific variant copy
+    // is carried instead by DP evidence / a MOB's mob_region.
+    bool canonicalize_redundant_side_to_consensus_copy(string& seq_id, int32_t& position, int32_t& side_strand);
     static char translate_codon(string seq, uint32_t translation_table, uint32_t codon_number_1, const string& gene="");
     static char translate_codon(string seq, string translation_table, string translation_table_1, uint32_t codon_number_1, const string& gene="");
     static string translate_protein(cAnnotatedSequence& seq, cSequenceFeature& loc, string translation_table, string translation_table_1);

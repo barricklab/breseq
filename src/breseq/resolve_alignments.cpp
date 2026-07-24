@@ -338,7 +338,13 @@ double PosHashProbabilityTable::probability(string& seq_id, uint32_t pos_hash_sc
   return log_pr;
 }
 
-  
+
+// Defined later (after the static resolve helpers it uses): votes the specific IS copy per unique
+// locus and writes the held pairs into the still-open resolved reference SAM.
+void write_held_discordant_pairs(Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info,
+                                 const SequenceTrimsList& trims_list, bam_file& resolved_reference_tam,
+                                 vector<HeldDiscordantPair>& held_discordant_pairs);
+
 // Compares matches to candidate junctions with matches to original genome
 void resolve_alignments(
                         Settings& settings,
@@ -415,6 +421,10 @@ void resolve_alignments(
   UniqueJunctionMatchMap unique_junction_match_map;    // Map of junction_id to MatchedJunction
 	RepeatJunctionMatchMap repeat_junction_match_map;  // Map of junction_id to read_name to MatchedJunction
 
+  // Ambiguous-IS-side discordant pairs held aside during the streaming pass; their specific copy is
+  // chosen by a per-locus vote and written back in the post-streaming merge-back (see below).
+  vector<HeldDiscordantPair> held_discordant_pairs;
+
   // stores all junction ids that we have encountered
   map<string,uint32_t> all_junction_ids;
   
@@ -432,7 +442,8 @@ void resolve_alignments(
                             junction_info_list,
                             unique_junction_match_map,
                             repeat_junction_match_map,
-                            resolved_reference_tam
+                            resolved_reference_tam,
+                            held_discordant_pairs
                             );
   } else {
     
@@ -842,6 +853,10 @@ void resolve_alignments(
 		gd.add(item);
 	}
 
+  // Post-streaming DP merge-back: vote the specific IS copy per unique locus and write the held
+  // ambiguous discordant pairs into the still-open resolved reference SAM (see the helper below).
+  write_held_discordant_pairs(settings, summary, ref_seq_info, trims_list, resolved_reference_tam, held_discordant_pairs);
+
   // Save summary statistics
 	summary.alignment_resolution.accepted_pos_hash_score_distribution = accepted_pos_hash_score_distribution;
   
@@ -1159,6 +1174,18 @@ static bam_alignment* pick_lowest_alignment(alignment_list& alignments)
   return best;
 }
 
+// Repeat-copy identifier "seq_id:start-end" for the copy an alignment sits in (interior or within a
+// short distance of a boundary), or "" if the alignment is not in an annotated repeat.
+static string dp_copy_id_for_alignment(cReferenceSequences& ref_seq_info, bam_alignment* a)
+{
+  string seq_id = ref_seq_info[a->reference_target_id()].m_seq_id;
+  int32_t md = 50;
+  cFeatureLocation* f = cReferenceSequences::find_closest_repeat_region_boundary(
+      a->reference_start_1(), ref_seq_info[seq_id].m_repeats, md, a->reversed() ? -1 : +1, true);
+  if (f == NULL) return "";
+  return seq_id + ":" + to_string(f->get_start_1()) + "-" + to_string(f->get_end_1());
+}
+
 #ifdef BRESEQ_WRITE_DISCORDANT_PAIRS_CSV
 // Strand-aware 5' anchor position of an alignment: reference_start_1() if forward,
 // reference_end_1() if reversed (reference_stranded_bounds_1 already computes exactly this).
@@ -1201,7 +1228,8 @@ void load_junction_alignments(
                               const vector<ResolveJunctionInfo>& junction_info_list,
                               UniqueJunctionMatchMap& unique_junction_match_map,
                               RepeatJunctionMatchMap& repeat_junction_match_map,
-                              bam_file& resolved_reference_tam
+                              bam_file& resolved_reference_tam,
+                              vector<HeldDiscordantPair>& held_discordant_pairs
                               )
 {
   bool verbose = false;
@@ -1633,6 +1661,7 @@ void load_junction_alignments(
         // orientation/distance fresh from these specific surviving alignments rather than
         // reusing pairing.best_a/best_b, which can point at a different alignment than the one
         // that survived downselection.
+        bool held_aside = false;   // set when an ambiguous discordant pair is deferred (see below)
         if ((m1.this_reference_alignments.size() == 1) && (m2.this_reference_alignments.size() == 1))
         {
           bam_alignment* a1 = m1.this_reference_alignments.front().get();
@@ -1664,24 +1693,45 @@ void load_junction_alignments(
                  ((m1.this_reference_alignments.size() > 1) || (m2.this_reference_alignments.size() > 1)))
         {
           // Redundant discordant pair: no concordant combination exists and at least one mate maps
-          // to multiple copies (e.g. a multicopy IS element). Break the tie deterministically by
-          // choosing each mate's lowest (tid, position) alignment so reads from the same element
-          // pile up at ONE canonical copy (letting the DP seed threshold be reached), and mark THAT
-          // pairing as discordant. Every other alignment of each read stays written/redundant/unpaired.
-          // We do NOT downselect, so both mates keep all their alignments (X1>1 preserved) and remain
-          // excluded from RA/coverage evidence; mark_pair_info touches only the two chosen alignments.
-          // Not counted in mapped_pairs/concordant_pairs and not fed to the crossing accumulator, so
-          // the resolution summary (and non-DP golden output) is unchanged -- this only adds BAM
-          // pairing flags consumed by discordant-pair (DP) region detection.
-          bam_alignment* a1 = pick_lowest_alignment(m1.this_reference_alignments);
-          bam_alignment* a2 = pick_lowest_alignment(m2.this_reference_alignments);
-          bool same_tid = (a1->reference_target_id() == a2->reference_target_id());
-          OrientationDistance od = same_tid ? compute_orientation_and_distance(a1, a2) : OrientationDistance{"NA", 0};
-          mark_pair_info(a1, a2, same_tid, od.orientation, od.distance, /*is_concordant=*/false);
+          // to multiple copies (e.g. a multicopy IS element). Which copy the discordant-pair flags
+          // land on determines which IS copy DP evidence reports, so we do NOT decide it per-pair
+          // here (the lowest copy is often a sequence variant). When exactly one mate is unique, HOLD
+          // THE PAIR ASIDE and let a global per-locus vote in the post-streaming merge-back pick the
+          // read-supported copy. Both mates' full alignment lists are kept (X1>1 coverage preserved);
+          // they are written there, not inline. Not counted in mapped_pairs/concordant_pairs.
+          bool m1_unique = (m1.this_reference_alignments.size() == 1);
+          bool m2_unique = (m2.this_reference_alignments.size() == 1);
+          if (m1_unique != m2_unique) {
+            HeldDiscordantPair h;
+            MateResolution& um = m1_unique ? m1 : m2;
+            MateResolution& rm = m1_unique ? m2 : m1;
+            h.unique_alignments = um.this_reference_alignments;
+            h.redundant_alignments = rm.this_reference_alignments;
+            h.unique_fastq_file_index = m1_unique ? fastq_file_index_1 : fastq_file_index_2;
+            h.redundant_fastq_file_index = m1_unique ? fastq_file_index_2 : fastq_file_index_1;
+            bam_alignment* ua = um.this_reference_alignments.front().get();
+            h.unique_seq_id = ref_seq_info[ua->reference_target_id()].m_seq_id;
+            h.unique_position = ua->reference_start_1();
+            h.window = distance_cutoff;
+            held_discordant_pairs.push_back(h);
+            held_aside = true;
+          } else {
+            // Both mates redundant (IS-to-IS): no unique anchor to vote by; fall back to marking each
+            // mate's lowest copy inline (written below with the rest).
+            bam_alignment* a1 = pick_lowest_alignment(m1.this_reference_alignments);
+            bam_alignment* a2 = pick_lowest_alignment(m2.this_reference_alignments);
+            bool same_tid = (a1->reference_target_id() == a2->reference_target_id());
+            OrientationDistance od = same_tid ? compute_orientation_and_distance(a1, a2) : OrientationDistance{"NA", 0};
+            mark_pair_info(a1, a2, same_tid, od.orientation, od.distance, /*is_concordant=*/false);
+          }
         }
 
-        _write_reference_matches(settings, summary, ref_seq_info, trims_list, m1.this_reference_alignments, resolved_reference_tam, fastq_file_index_1);
-        _write_reference_matches(settings, summary, ref_seq_info, trims_list, m2.this_reference_alignments, resolved_reference_tam, fastq_file_index_2);
+        // Held pairs are written in the post-streaming merge-back (after the copy vote); all others
+        // are written inline here exactly as before.
+        if (!held_aside) {
+          _write_reference_matches(settings, summary, ref_seq_info, trims_list, m1.this_reference_alignments, resolved_reference_tam, fastq_file_index_1);
+          _write_reference_matches(settings, summary, ref_seq_info, trims_list, m2.this_reference_alignments, resolved_reference_tam, fastq_file_index_2);
+        }
       }
       else
       {
@@ -1954,7 +2004,88 @@ void _write_reference_matches(const Settings& settings, Summary& summary, cRefer
   // any read whose ends it soft-clips), so we no longer precompute a Trims vector here.
 	reference_tam.write_alignments((int32_t)fastq_file_index, reference_alignments, &trims_list, &ref_seq_info, true, true);
 }
-  
+
+// Post-streaming DP merge-back. Held ambiguous discordant pairs (one unique mate + one IS mate that
+// maps to several near-identical copies) are clustered by unique locus; per cluster the IS copy
+// compatible with the MOST pairs wins the vote (ties -> lowest coordinate). Each pair is then written
+// to the resolved reference SAM: ALL best-score copies of the redundant mate (redundant coverage
+// preserved, X1>1) plus the unique mate, with the discordant-pair flags placed on the redundant
+// alignment sitting in the chosen copy (or the pair's own lowest copy when it has none there).
+void write_held_discordant_pairs(Settings& settings, Summary& summary, cReferenceSequences& ref_seq_info,
+                                 const SequenceTrimsList& trims_list, bam_file& resolved_reference_tam,
+                                 vector<HeldDiscordantPair>& held_discordant_pairs)
+{
+  if (held_discordant_pairs.empty()) return;
+
+  sort(held_discordant_pairs.begin(), held_discordant_pairs.end(),
+       [](const HeldDiscordantPair& a, const HeldDiscordantPair& b) {
+         if (a.unique_seq_id != b.unique_seq_id) return a.unique_seq_id < b.unique_seq_id;
+         return a.unique_position < b.unique_position;
+       });
+
+  size_t i = 0;
+  while (i < held_discordant_pairs.size())
+  {
+    // Cluster held pairs by unique locus (new cluster when the gap exceeds the running window).
+    size_t j = i + 1;
+    int32_t cluster_end = held_discordant_pairs[i].unique_position;
+    double w = max(1.0, held_discordant_pairs[i].window);
+    while (j < held_discordant_pairs.size()
+           && held_discordant_pairs[j].unique_seq_id == held_discordant_pairs[i].unique_seq_id
+           && (held_discordant_pairs[j].unique_position - cluster_end) <= w) {
+      cluster_end = held_discordant_pairs[j].unique_position;
+      w = max(w, held_discordant_pairs[j].window);
+      j++;
+    }
+
+    // Vote: each pair contributes its DISTINCT candidate IS copies; the copy compatible with the most
+    // pairs wins (ties -> lowest coordinate). Identical copies share a sequence, so the choice among
+    // them does not affect the downstream MOB mob_region comparison.
+    map<string,int> copy_votes;
+    for (size_t k = i; k < j; k++) {
+      set<string> pair_copies;
+      for (alignment_list::iterator it = held_discordant_pairs[k].redundant_alignments.begin();
+           it != held_discordant_pairs[k].redundant_alignments.end(); it++) {
+        string c = dp_copy_id_for_alignment(ref_seq_info, it->get());
+        if (!c.empty()) pair_copies.insert(c);
+      }
+      for (set<string>::iterator c = pair_copies.begin(); c != pair_copies.end(); c++)
+        copy_votes[*c]++;
+    }
+    string chosen_copy; int best_votes = -1; int32_t best_start = 0;
+    for (map<string,int>::iterator v = copy_votes.begin(); v != copy_votes.end(); v++) {
+      size_t colon = v->first.rfind(':');
+      size_t dash = (colon == string::npos) ? string::npos : v->first.find('-', colon);
+      int32_t start = (colon != string::npos && dash != string::npos)
+                      ? from_string<int32_t>(v->first.substr(colon + 1, dash - colon - 1)) : 0;
+      if (v->second > best_votes || (v->second == best_votes && start < best_start)) {
+        best_votes = v->second; best_start = start; chosen_copy = v->first;
+      }
+    }
+
+    for (size_t k = i; k < j; k++) {
+      HeldDiscordantPair& h = held_discordant_pairs[k];
+      bam_alignment* ua = h.unique_alignments.front().get();
+      bam_alignment* chosen = NULL;
+      if (!chosen_copy.empty()) {
+        for (alignment_list::iterator it = h.redundant_alignments.begin(); it != h.redundant_alignments.end(); it++) {
+          if (dp_copy_id_for_alignment(ref_seq_info, it->get()) == chosen_copy) { chosen = it->get(); break; }
+        }
+      }
+      if (chosen == NULL) chosen = pick_lowest_alignment(h.redundant_alignments);
+
+      bool same_tid = (ua->reference_target_id() == chosen->reference_target_id());
+      OrientationDistance od = same_tid ? compute_orientation_and_distance(ua, chosen) : OrientationDistance{"NA", 0};
+      mark_pair_info(ua, chosen, same_tid, od.orientation, od.distance, /*is_concordant=*/false);
+
+      _write_reference_matches(settings, summary, ref_seq_info, trims_list, h.unique_alignments, resolved_reference_tam, h.unique_fastq_file_index);
+      _write_reference_matches(settings, summary, ref_seq_info, trims_list, h.redundant_alignments, resolved_reference_tam, h.redundant_fastq_file_index);
+    }
+
+    i = j;
+  }
+}
+
 /*! Calculates various statistics about reads overlapping a junction
  */
 void score_junction(
@@ -2603,7 +2734,17 @@ cDiffEntry junction_to_diff_entry(
 		}
 
 	}
-  
+
+	// Normalize each redundant side onto the lowest-coordinate CONSENSUS copy of its repeat family, so
+	// a redundant JC side always reports the consensus IS. DP evidence carries the specific (possibly
+	// variant) copy and can override the MOB's IS via mob_region during prediction. MOB prediction is
+	// otherwise unaffected (it keys on the repeat family name and the unique side, not the copy).
+	for (uint32_t i = 0; i < 2; i++) {
+		if (jc.sides[i].redundant) {
+			ref_seq_info.canonicalize_redundant_side_to_consensus_copy(jc.sides[i].seq_id, jc.sides[i].position, jc.sides[i].strand);
+		}
+	}
+
 	// Flatten things to only what we want to keep
   cDiffEntry item(JC);
 	item

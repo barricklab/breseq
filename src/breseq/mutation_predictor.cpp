@@ -2753,6 +2753,10 @@ namespace breseq {
     // Attach a matching discordant-pair (DP) evidence item to each mutation whose JC it matches.
     add_matching_DP_evidence(gd);
 
+    // Also combine DP with MOBs by their unique side (IS sides may be on different copies); a DP that
+    // localizes a specific non-consensus IS copy sets the MOB's mob_region.
+    combine_DP_with_MOB_by_unique_side(gd);
+
 	}
 
   // Canonical, side-order-independent key for a junction's two sides (seq_id|position|strand each),
@@ -2797,6 +2801,83 @@ namespace breseq {
             mut._evidence.push_back(*dpid);
         }
       }
+    }
+  }
+
+  void MutationPredictor::combine_DP_with_MOB_by_unique_side(cGenomeDiff& gd)
+  {
+    // Collect non-rejected DP items with exactly one redundant (IS) side, recording their unique side
+    // (non-redundant), their IS side (redundant; snapped to a specific copy's end in dp_evidence), and
+    // support count.
+    struct DPitem { string id; string useq; int32_t upos; int32_t ustr; string iseq; int32_t ipos; int32_t istr; int32_t count; };
+    vector<DPitem> dps;
+    diff_entry_list_t dp_list = gd.get_list(make_vector<gd_entry_type>(DP));
+    for (diff_entry_list_t::iterator it = dp_list.begin(); it != dp_list.end(); it++) {
+      cDiffEntry& dp = **it;
+      if (dp.entry_exists(REJECT)) continue;
+      bool r1 = dp.entry_exists(SIDE_1_REDUNDANT) && n(dp[SIDE_1_REDUNDANT]);
+      bool r2 = dp.entry_exists(SIDE_2_REDUNDANT) && n(dp[SIDE_2_REDUNDANT]);
+      if (r1 == r2) continue;  // need exactly one IS (redundant) side and one unique side
+      DPitem d; d.id = dp._id;
+      string is = r1 ? "side_1" : "side_2";
+      string un = r1 ? "side_2" : "side_1";
+      d.iseq = dp[is + "_seq_id"]; d.ipos = n(dp[is + "_position"]); d.istr = n(dp[is + "_strand"]);
+      d.useq = dp[un + "_seq_id"]; d.upos = n(dp[un + "_position"]); d.ustr = n(dp[un + "_strand"]);
+      d.count = dp.entry_exists("discordant_count") ? n(dp["discordant_count"]) : 0;
+      dps.push_back(d);
+    }
+    if (dps.empty()) return;
+
+    // A DP whose IS side lands on a different copy than the MOB's (consensus) IS side won't match by
+    // both sides, so match by the UNIQUE side only, within a small window and the same strand.
+    const int32_t SLOP = 20;
+    diff_entry_list_t mobs = gd.get_list(make_vector<gd_entry_type>(MOB));
+    for (diff_entry_list_t::iterator it = mobs.begin(); it != mobs.end(); it++) {
+      cDiffEntry& mut = **it;
+      string repeat_name = mut["repeat_name"];
+
+      // The MOB's unique insertion locus/strand comes from its supporting JC(s)' unique (non-redundant)
+      // side; gather these to match DP unique sides against.
+      vector<pair<string, pair<int32_t, int32_t> > > jc_unique;  // (seq_id, (position, strand))
+      for (vector<string>::iterator ev = mut._evidence.begin(); ev != mut._evidence.end(); ev++) {
+        diff_entry_ptr_t e = gd.find_by_id(*ev);
+        if (e.get() == NULL || e->_type != JC) continue;
+        cDiffEntry& j = *e;
+        bool jr1 = j.entry_exists(SIDE_1_REDUNDANT) && n(j[SIDE_1_REDUNDANT]);
+        bool jr2 = j.entry_exists(SIDE_2_REDUNDANT) && n(j[SIDE_2_REDUNDANT]);
+        if (jr1 == jr2) continue;
+        string un = jr1 ? "side_2" : "side_1";
+        jc_unique.push_back(make_pair(j[un + "_seq_id"], make_pair(n(j[un + "_position"]), n(j[un + "_strand"]))));
+      }
+      if (jc_unique.empty()) continue;
+
+      // Attach every matching DP as evidence; the highest-support DP that localizes a NON-consensus IS
+      // copy drives mob_region (interim rule pending the DP-fragmentation revisit).
+      string best_region; int32_t best_count = -1;
+      for (vector<DPitem>::iterator d = dps.begin(); d != dps.end(); d++) {
+        bool match = false;
+        for (size_t k = 0; k < jc_unique.size(); k++) {
+          if (d->useq == jc_unique[k].first
+              && abs(d->upos - jc_unique[k].second.first) <= SLOP
+              && d->ustr == jc_unique[k].second.second) { match = true; break; }
+        }
+        if (!match) continue;
+
+        if (find(mut._evidence.begin(), mut._evidence.end(), d->id) == mut._evidence.end())
+          mut._evidence.push_back(d->id);
+
+        // Does the DP localize a specific IS copy whose sequence differs from the family consensus?
+        int32_t md = 50;
+        cFeatureLocation* is = cReferenceSequences::find_closest_repeat_region_boundary(d->ipos, ref_seq_info[d->iseq].m_repeats, md, d->istr, true);
+        if (is == NULL || is->get_feature()->SafeGet("name") != repeat_name) continue;
+        string region = d->iseq + ":" + s(is->get_start_1()) + "-" + s(is->get_end_1());
+        string consensus = ref_seq_info.repeat_family_sequence(repeat_name, 1, NULL, NULL, NULL, false);
+        string specific  = ref_seq_info.repeat_family_sequence(repeat_name, 1, &region, NULL, NULL, false);
+        if (!specific.empty() && specific != consensus && d->count > best_count) {
+          best_count = d->count; best_region = region;
+        }
+      }
+      if (!best_region.empty()) mut["mob_region"] = best_region;
     }
   }
 

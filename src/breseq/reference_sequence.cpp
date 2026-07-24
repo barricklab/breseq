@@ -2981,6 +2981,90 @@ cFeatureLocation* cReferenceSequences::find_closest_repeat_region_boundary(int32
   return repeat_ptr;
 }
 
+bool cReferenceSequences::canonicalize_redundant_side_to_consensus_copy(string& seq_id, int32_t& position, int32_t& side_strand)
+{
+  // 1. Identify the repeat element the side sits on (interior, or within a short distance of a
+  //    boundary once overlap resolution has nudged it there).
+  cAnnotatedSequence& orig_seq = (*this)[seq_id];
+  int32_t max_distance = 50;
+  cFeatureLocation* C = find_closest_repeat_region_boundary(position, orig_seq.m_repeats, max_distance, side_strand, true);
+  if (C == NULL) return false;
+
+  string family = C->get_feature()->SafeGet("name");
+  if (family.empty()) return false;
+
+  int32_t C_start = C->get_start_1(), C_end = C->get_end_1();
+  int8_t  C_strand = C->get_strand();
+
+  // 2. The consensus (most common) sequence of this family, normalized to the element's own 5'->3'
+  //    orientation -- exactly the normalization repeat_family_sequence uses internally (rev-comp of a
+  //    '-' strand copy), so a copy's normalized sequence can be compared to this directly.
+  string consensus_seq = repeat_family_sequence(family, +1, NULL, NULL, NULL, false);
+  if (consensus_seq.empty()) return false;
+
+  // 3. Collect every copy of this family across all reference sequences, ordered by
+  //    (reference order, start_1), and pick the LOWEST-coordinate copy whose element sequence IS the
+  //    consensus. JC always normalizes onto the consensus copy (DP carries the specific variant copy).
+  struct RepCopy { size_t seq_index; int32_t start_1; int32_t end_1; int8_t strand; cAnnotatedSequence* seq; };
+  vector<RepCopy> copies;
+  size_t si = 0;
+  for (vector<cAnnotatedSequence>::iterator itr = this->begin(); itr != this->end(); itr++, si++) {
+    for (cFeatureLocationList::iterator it = itr->m_repeat_locations.begin(); it != itr->m_repeat_locations.end(); it++) {
+      cFeatureLocation& rep = *it;
+      if (rep.get_feature()->SafeGet("name") != family) continue;
+      if (rep.get_feature()->m_pseudo) continue;
+      RepCopy rc; rc.seq_index = si; rc.start_1 = rep.get_start_1(); rc.end_1 = rep.get_end_1();
+      rc.strand = rep.get_strand(); rc.seq = &(*itr);
+      copies.push_back(rc);
+    }
+  }
+  sort(copies.begin(), copies.end(), [](const RepCopy& a, const RepCopy& b){
+    if (a.seq_index != b.seq_index) return a.seq_index < b.seq_index;
+    return a.start_1 < b.start_1;
+  });
+
+  const RepCopy* L = NULL;
+  for (size_t k = 0; k < copies.size(); k++) {
+    const RepCopy& rc = copies[k];
+    string seqL = rc.seq->get_sequence_1(rc.start_1, rc.end_1);
+    if (rc.strand == -1) seqL = reverse_complement(seqL);
+    if (seqL == consensus_seq) { L = &rc; break; }
+  }
+  if (L == NULL) return false;  // no annotated consensus copy found (shouldn't happen)
+
+  // Already on the lowest consensus copy -> nothing to do.
+  if ((L->seq == &orig_seq) && (L->start_1 == C_start) && (L->end_1 == C_end)) return false;
+
+  // 4. Map the side onto the consensus copy L from the NEARER element end (5' or 3', in element
+  //    orientation), so length differences between a divergent variant copy and the consensus copy
+  //    don't misplace it. ep = element-relative offset from the element 5' end.
+  int32_t C_len = C_end - C_start + 1;
+  int32_t L_len = L->end_1 - L->start_1 + 1;
+  int32_t ep = (C_strand == +1) ? (position - C_start) : (C_end - position);
+  int32_t ep_L;
+  if (ep <= C_len / 2) {
+    ep_L = ep;                               // nearer the element 5' end: preserve 5' offset
+  } else {
+    int32_t off3 = (C_len - 1) - ep;         // nearer the element 3' end: preserve 3' offset
+    ep_L = (L_len - 1) - off3;
+  }
+  int32_t new_pos = (L->strand == +1) ? (L->start_1 + ep_L) : (L->end_1 - ep_L);
+  int32_t L_seq_len = static_cast<int32_t>(L->seq->get_sequence_length());
+  if (new_pos < 1) new_pos = 1;
+  if (new_pos > L_seq_len) new_pos = L_seq_len;
+
+  // When the consensus copy is on the opposite genomic strand from the original copy, the flank's
+  // genomic direction reverses, so flip the side strand to keep position+strand consistent on the new
+  // copy (otherwise find_closest_repeat_region_boundary would look the wrong way and miss the copy,
+  // and the MOB-strand product side_strand*is_copy_strand would change). This keeps that product
+  // invariant, so downstream MOB prediction is unchanged in strand.
+  if (C_strand != L->strand) side_strand = -side_strand;
+
+  seq_id = L->seq->m_seq_id;
+  position = new_pos;
+  return true;
+}
+
 /*! Returns the last feature encountered that overlaps a position
  */
 cFeatureLocation* cReferenceSequences::get_overlapping_feature(cFeatureLocationList& feature_list, int32_t pos)

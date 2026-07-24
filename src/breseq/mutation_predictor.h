@@ -68,6 +68,13 @@ namespace breseq {
     // (seq_id/position/strand) exactly match a JC that already supports that mutation.
     void add_matching_DP_evidence(cGenomeDiff& gd);
 
+    // Combine a DP item with a MOB whose supporting JC unique side matches the DP unique side (within
+    // a small window + same strand), even when their IS (redundant) sides are on different copies of
+    // the element. Attaches the DP as evidence and, when the DP localizes a specific IS copy whose
+    // sequence differs from the family consensus, sets mob_region= to override the MOB's default
+    // consensus IS.
+    void combine_DP_with_MOB_by_unique_side(cGenomeDiff& gd);
+
     // Cleans up indel positions by shifting them and adds addition fiels for simple sequence repeats 
     void normalize_and_annotate_tandem_repeat_mutations(Settings& settings, Summary& summary, cGenomeDiff& gd);
     

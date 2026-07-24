@@ -252,10 +252,25 @@ namespace breseq {
                           cReadFileSets &read_files
                           );
   
+  // A discordant read pair whose IS (redundant) side maps to several near-identical repeat copies,
+  // held aside during the streaming resolve pass so the specific copy can be chosen by a global
+  // per-locus vote in the post-streaming merge-back. Every best-score copy of the redundant mate is
+  // kept (redundant coverage preserved when written) plus the single unique mate; the vote only
+  // decides WHICH copy carries the discordant-pair flags.
+  struct HeldDiscordantPair {
+    alignment_list unique_alignments;      // the unique mate (exactly one alignment)
+    alignment_list redundant_alignments;   // the IS mate (all best-score copies)
+    uint32_t unique_fastq_file_index;
+    uint32_t redundant_fastq_file_index;
+    string   unique_seq_id;
+    int32_t  unique_position;              // reference_start_1 of the unique mate (clustering key)
+    double   window;                       // per-read-set clustering window (paired distance cutoff)
+  };
+
   void load_junction_alignments(
-                                const Settings& settings, 
-                                Summary& summary, 
-                                cReadFileSets& read_files, 
+                                const Settings& settings,
+                                Summary& summary,
+                                cReadFileSets& read_files,
                                 cReferenceSequences& ref_seq_info,
                                 cReferenceSequences& junction_ref_seq_info,
                                 SequenceTrimsList& trims_list,
@@ -264,7 +279,8 @@ namespace breseq {
                                 const vector<ResolveJunctionInfo>& junction_info_list,
                                 UniqueJunctionMatchMap& unique_junction_match_map,
                                 RepeatJunctionMatchMap& repeat_junction_match_map,
-                                bam_file& resolved_reference_tam
+                                bam_file& resolved_reference_tam,
+                                vector<HeldDiscordantPair>& held_discordant_pairs
                                 );
   
   void load_sam_only_alignments(

@@ -1158,6 +1158,11 @@ namespace breseq {
       // length-bias-corrected insert model. So a real near-origin junction, or a DP whose pairs
       // contradict a nearby transposable element, is neither moved nor marked.
       bool circular_dp = false, side1_repeat = false, side2_repeat = false;
+      bool side1_jc_snapped = false, side2_jc_snapped = false;
+      // Which side's supporting reads mapped redundantly (from the DP candidate regions). A redundant
+      // IS side that is not pinned to a JC gets a guaranteed IS-end snap in the final pass below.
+      bool side1_redundant_reads = a_is_side_1 ? regions[a].redundant : regions[b].redundant;
+      bool side2_redundant_reads = a_is_side_1 ? regions[b].redundant : regions[a].redundant;
       if (have_insert && scanner) {
         int32_t readlen = static_cast<int32_t>(summary.sequence_conversion.read_length_avg + 0.5);
         vector<dp_pair_ends> pr;
@@ -1185,6 +1190,7 @@ namespace breseq {
               s1_pos = max(1, min(scanner->seq_length(s1_tid), jp1));
               s2_pos = max(1, min(scanner->seq_length(s2_tid), jp2));
               lp_cur = dp_pairs_logL(pr, s1_pos, s1_strand, s2_pos, s2_strand, insert_model);
+              side1_jc_snapped = true; side2_jc_snapped = true;   // both sides pinned to this JC
             }
           }
 
@@ -1226,6 +1232,31 @@ namespace breseq {
         }
       }
 
+      // Final pass (always runs, no Bayesian gate): guarantee that a redundant IS side NOT already
+      // pinned to a JC lands exactly on its IS element end -- on its OWN specific copy (no cross-copy
+      // move). This is the catch-all for cases the JC snap did not cover, so DP always reports a clean
+      // IS-end coordinate from which predict_mutations can read the specific copy.
+      if (!circular_dp) {
+        if (side1_redundant_reads && !side1_jc_snapped) {
+          int32_t md1 = 50;
+          cFeatureLocation* is1 = cReferenceSequences::find_closest_repeat_region_boundary(s1_pos, ref_seq_info[s1_seq_id].m_repeats, md1, s1_strand, true);
+          if (is1) {
+            int32_t c1 = (s1_strand == -1) ? is1->get_end_1() : is1->get_start_1();
+            s1_pos = max(1, min(static_cast<int32_t>(ref_seq_info.get_sequence_length(s1_seq_id)), c1));
+            side1_repeat = true;
+          }
+        }
+        if (side2_redundant_reads && !side2_jc_snapped) {
+          int32_t md2 = 50;
+          cFeatureLocation* is2 = cReferenceSequences::find_closest_repeat_region_boundary(s2_pos, ref_seq_info[s2_seq_id].m_repeats, md2, s2_strand, true);
+          if (is2) {
+            int32_t c2 = (s2_strand == -1) ? is2->get_end_1() : is2->get_start_1();
+            s2_pos = max(1, min(static_cast<int32_t>(ref_seq_info.get_sequence_length(s2_seq_id)), c2));
+            side2_repeat = true;
+          }
+        }
+      }
+
       cDiffEntry dp(DP);
       dp[SIDE_1_SEQ_ID]  = s1_seq_id;
       dp[SIDE_1_POSITION] = to_string(s1_pos);
@@ -1237,10 +1268,8 @@ namespace breseq {
       if (circular_dp) dp[IGNORE] = "CIRCULAR_CHROMOSOME";
       // Per-side annotate_key drives the HTML highlight exactly as for JC ("repeat" -> orange). A
       // side is redundant if EITHER it snapped onto a repeat/IS boundary (side_N_repeat) OR its
-      // supporting reads mapped redundantly (region.redundant -- a tie-broken multicopy side, from
-      // the DP candidate-regions CSV). Both feed the same side_N_redundant flag JC uses.
-      bool side1_redundant_reads = a_is_side_1 ? regions[a].redundant : regions[b].redundant;
-      bool side2_redundant_reads = a_is_side_1 ? regions[b].redundant : regions[a].redundant;
+      // supporting reads mapped redundantly (side_N_redundant_reads, derived above from
+      // region.redundant). Both feed the same side_N_redundant flag JC uses.
       bool side1_red = side1_repeat || side1_redundant_reads;
       bool side2_red = side2_repeat || side2_redundant_reads;
       dp["side_1_annotate_key"] = side1_red ? "repeat" : "gene";
