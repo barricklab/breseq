@@ -1201,8 +1201,11 @@ namespace breseq {
             int32_t c1 = s1_pos, c2 = s2_pos; bool cand = false;
             if (s1_pos <= snap_win && s2_pos >= L - snap_win + 1)      { c1 = 1; c2 = L; cand = true; }
             else if (s2_pos <= snap_win && s1_pos >= L - snap_win + 1) { c1 = L; c2 = 1; cand = true; }
-            if (cand && (c1 != s1_pos || c2 != s2_pos)
-                && dp_pairs_logL(pr, c1, s1_strand, c2, s2_strand, insert_model) - lp_cur >= kSnapLBF) {
+            // Mark it circular whenever it reconnects the origin (cand) and the pairs are consistent with
+            // (1, L) -- NOT only when the coordinates move. A DP already pinned to the origin (e.g. it
+            // snapped onto the circular JC in step 1) is at c1==s1_pos/c2==s2_pos, for which the log-
+            // likelihood difference is 0 (>= kSnapLBF), so it is still flagged/ignored.
+            if (cand && dp_pairs_logL(pr, c1, s1_strand, c2, s2_strand, insert_model) - lp_cur >= kSnapLBF) {
               s1_pos = c1; s2_pos = c2; circular_dp = true;
               lp_cur = dp_pairs_logL(pr, s1_pos, s1_strand, s2_pos, s2_strand, insert_model);
             }
