@@ -2210,6 +2210,14 @@ int breseq_default_action(int argc, char* argv[])
           ref_seq_info
         );
         summary.soft_clipping.store(settings.soft_clipping_summary_file_name);
+
+        // Written here (stage 07) but consumed by add_sc_evidence() in stage 08, so it is
+        // keyed to the mutation-identification done-file. The per-position clipped-tail
+        // consensus makes this file substantially larger than the counts alone.
+        settings.track_intermediate_file(
+          settings.mutation_identification_done_file_name,
+          settings.soft_clipping_counts_file_name
+        );
       }
 
       settings.done_step(settings.error_counts_done_file_name);

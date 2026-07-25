@@ -1,8 +1,8 @@
 #=GENOME_DIFF	1.0
 #=TITLE	header
 #=AUTHOR	Jeffrey Barrick
-#=CREATED	08:03:05 16 Jul 2026
-#=PROGRAM	breseq 0.50.0 revision f9a28d4b0241
+#=CREATED	12:43:07 25 Jul 2026
+#=PROGRAM	breseq 0.50.0 revision c8a8a1e4ad50
 #=COMMAND	./src/breseq/breseq -j 4 --predict-soft-clipping --polymorphism-prediction --header-genome-diff ./tests/lambda_polymorphism_soft_clipping/header.gd -o ./tests/lambda_polymorphism_soft_clipping -r ./tests/lambda_polymorphism_soft_clipping/../data/lambda/lambda.gbk ./tests/lambda_polymorphism_soft_clipping/../data/lambda/lambda_mixed_population.fastq.gz
 #=TIME	20
 #=CLONE	A
@@ -152,18 +152,4 @@ JC	137	.	NC_001416	21737	-1	NC_001416	27734	1	0	alignment_overlap=5	coverage_min
 UN	138	.	NC_001416	1	8
 UN	139	.	NC_001416	21738	27731
 UN	140	.	NC_001416	48502	48502
-SC	141	.	NC_001416	1900	-1	frequency=0.1000	gene_name=A	gene_position=coding (1190/1926 nt)	gene_product=DNA packaging protein	gene_strand=>	locus_tag=lambdap02	log10_e_value=6.1	read_count=4	total_count=40
-SC	142	.	NC_001416	2915	1	frequency=0.1143	gene_name=B	gene_position=coding (80/1602 nt)	gene_product=capsid component	gene_strand=>	locus_tag=lambdap04	log10_e_value=6.3	read_count=4	total_count=35
-SC	143	.	NC_001416	3399	-1	frequency=0.1667	gene_name=B	gene_position=coding (564/1602 nt)	gene_product=capsid component	gene_strand=>	locus_tag=lambdap04	log10_e_value=4.1	read_count=3	total_count=18
-SC	144	.	NC_001416	5060	-1	frequency=0.0645	gene_name=C	gene_position=coding (643/1320 nt)	gene_product=capsid component	gene_strand=>	locus_tag=lambdap05	log10_e_value=5.3	read_count=4	total_count=62
-SC	145	.	NC_001416	9685	-1	frequency=0.0851	gene_name=V	gene_position=coding (731/741 nt)	gene_product=tail component	gene_strand=>	locus_tag=lambdap13	log10_e_value=5.8	read_count=4	total_count=47
-SC	146	.	NC_001416	12543	1	frequency=0.0943	gene_name=H	gene_position=coding (2002/2562 nt)	gene_product=tail component	gene_strand=>	locus_tag=lambdap16	log10_e_value=8.6	read_count=5	total_count=53
-SC	147	.	NC_001416	12886	1	frequency=0.1786	gene_name=H	gene_position=coding (2345/2562 nt)	gene_product=tail component	gene_strand=>	locus_tag=lambdap16	log10_e_value=10.0	read_count=5	total_count=28
-SC	148	.	NC_001416	16686	-1	frequency=0.1190	gene_name=J	gene_position=coding (1182/3399 nt)	gene_product=tail:host specificity protein	gene_strand=>	locus_tag=lambdap21	log10_e_value=9.1	read_count=5	total_count=42
-SC	149	.	NC_001416	16996	1	frequency=0.1333	gene_name=J	gene_position=coding (1492/3399 nt)	gene_product=tail:host specificity protein	gene_strand=>	locus_tag=lambdap21	log10_e_value=6.6	read_count=4	total_count=30
-SC	150	.	NC_001416	35596	-1	frequency=0.0909	gene_name=N/rexb	gene_position=intergenic (-158/+229)	gene_product=early gene regulator/exclusion protein	gene_strand=</<	locus_tag=lambdap49/lambdap53	log10_e_value=11.1	read_count=6	total_count=66
-SC	151	.	NC_001416	39288	1	frequency=0.0678	gene_name=O	gene_position=coding (603/900 nt)	gene_product=DNA replication protein	gene_strand=>	locus_tag=lambdap89	log10_e_value=5.4	read_count=4	total_count=59
-SC	152	.	NC_001416	40550	1	frequency=0.1373	gene_name=ren	gene_position=coding (271/291 nt)	gene_product=ren exclusion protein	gene_strand=>	locus_tag=lambdap62	log10_e_value=15.0	read_count=7	total_count=51
-SC	153	.	NC_001416	42115	-1	frequency=0.0450	gene_name=NinD|NinE	gene_position=coding (166/174 nt)|coding (26/183 nt)	gene_product=NinD protein|NinE protein	gene_strand=>|>	locus_tag=lambdap65|lambdap66	log10_e_value=6.9	read_count=5	snp_type=|	total_count=111
-SC	154	.	NC_001416	43516	1	frequency=0.0938	gene_name=NinI	gene_position=coding (293/666 nt)	gene_product=NinI protein	gene_strand=>	locus_tag=lambdap70	log10_e_value=11.2	read_count=6	total_count=64
-SC	155	.	NC_001416	45301	1	frequency=0.1029	gene_name=S|S'	gene_position=coding (116/324 nt)|coding (110/318 nt)	gene_product=anti-holin|holin	gene_strand=>|>	locus_tag=lambdap74|lambdap92	log10_e_value=14.0	read_count=7	snp_type=|	total_count=68
+SC	141	.	NC_001416	2915	1	agree_read_count=3	clipped_sequence=GGGGGGGGGGGG	consensus_fraction=0.7500	frequency=0.2727	gene_name=B	gene_position=coding (80/1602 nt)	gene_product=capsid component	gene_strand=>	locus_tag=lambdap04	log10_e_value=0.8	read_count=4	reject=SCORE_CUTOFF	total_count=11

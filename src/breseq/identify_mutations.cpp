@@ -777,8 +777,22 @@ void identify_mutations_pileup::add_sc_evidence(const Summary& summary, const cR
 {
   if (!file_exists(_settings.soft_clipping_counts_file_name.c_str())) return;
 
-  double p0 = summary.soft_clipping.soft_clipping_rate;
-  if (p0 <= 0.0) return;
+  // The null model is estimated at tabulation time (soft_clipping.cpp), where the
+  // zero-clip positions it needs are still enumerable. The counts file only lists
+  // positions with at least one clip event, so it cannot be re-derived here.
+  double p0 = summary.soft_clipping.soft_clipping_null_rate;
+  double rho = summary.soft_clipping.soft_clipping_dispersion;
+
+  // Beta-binomial shape parameters. rho is the intra-class correlation, so the
+  // variance is inflated by (1 + (n-1)*rho) relative to a binomial; rho == 0 falls
+  // back to the plain binomial via bdtrc below.
+  double alpha = 0.0, beta = 0.0;
+  bool use_beta_binomial = (rho > 0.0) && (rho < 1.0);
+  if (use_beta_binomial) {
+    alpha = p0 * (1.0 - rho) / rho;
+    beta = (1.0 - p0) * (1.0 - rho) / rho;
+    if (!(alpha > 0.0) || !(beta > 0.0)) use_beta_binomial = false;
+  }
 
   // Bonferroni: 2 directions × total genome length positions
   uint64_t total_genome_length = 0;
@@ -790,42 +804,200 @@ void identify_mutations_pileup::add_sc_evidence(const Summary& summary, const cR
   ifstream in(_settings.soft_clipping_counts_file_name.c_str());
   if (!in.is_open()) return;
 
+  // Candidates are collected first and only turned into evidence at the end, because the
+  // local non-maximum suppression below needs to compare each one against its neighbors.
+  struct sc_candidate {
+    string   seq_id;
+    uint32_t position;
+    int32_t  direction;
+    uint32_t clipped_count;
+    uint32_t total_count;
+    uint32_t agree_count;
+    string   consensus_tail;
+    double   score;
+    double   frequency;
+    double   consensus_fraction;
+    bool     suppressed;
+
+    sc_candidate() : position(0), direction(0), clipped_count(0), total_count(0),
+                     agree_count(0), score(0.0), frequency(0.0), consensus_fraction(0.0),
+                     suppressed(false) {}
+
+    static bool by_seq_direction_position(const sc_candidate& a, const sc_candidate& b) {
+      if (a.seq_id != b.seq_id) return a.seq_id < b.seq_id;
+      if (a.direction != b.direction) return a.direction < b.direction;
+      return a.position < b.position;
+    }
+  };
+  vector<sc_candidate> candidates;
+
   string line;
-  getline(in, line); // skip header
+
+  // Parameter line. Guards against a counts file left over from a run with different
+  // tabulation settings, which the error-count done-file would otherwise let through.
+  getline(in, line);
+  ASSERT(!line.empty() && (line[0] == '#'),
+         "Soft-clipping counts file is missing its parameter header and is probably from an older run:\n  "
+         + _settings.soft_clipping_counts_file_name
+         + "\nDelete 07_error_calibration/error_counts.done and re-run to regenerate it.");
+  {
+    string expected = "#sc_format=2\tsoft_clipping_minimum_bases=" + to_string(_settings.soft_clipping_minimum_bases);
+    ASSERT(line.substr(0, expected.size()) == expected,
+           "Soft-clipping counts file was tabulated with different settings than the current run:\n  "
+           + line + "\nDelete 07_error_calibration/error_counts.done and re-run to regenerate it.");
+  }
+
+  getline(in, line); // column header
+
+  // Checked only after the header, so that a stale counts file reports the actionable
+  // error above rather than silently producing no evidence here.
+  ASSERT(p0 > 0.0,
+         "Soft-clipping null rate is zero. The summary in 07_error_calibration is probably from an "
+         "older run:\n  " + _settings.soft_clipping_summary_file_name
+         + "\nDelete 07_error_calibration/error_counts.done and re-run to regenerate it.");
 
   while (getline(in, line)) {
     vector<string> fields = split(line, "\t");
-    if (fields.size() < 5) continue;
+    ASSERT(fields.size() >= 7,
+           "Soft-clipping counts file has too few columns and is probably from an older run:\n  "
+           + _settings.soft_clipping_counts_file_name
+           + "\nDelete 07_error_calibration/error_counts.done and re-run to regenerate it.");
 
     string seq_id = fields[0];
     uint32_t position = from_string<uint32_t>(fields[1]);
     int32_t direction = from_string<int32_t>(fields[2]);
     uint32_t clipped_count = from_string<uint32_t>(fields[3]);
     uint32_t total_count = from_string<uint32_t>(fields[4]);
+    uint32_t agree_count = from_string<uint32_t>(fields[5]);
+    string consensus_tail = fields[6];
 
     if (clipped_count == 0 || total_count == 0) continue;
 
-    // P(X >= clipped_count | Binomial(total_count, p0))
-    double p_value = bdtrc(static_cast<double>(clipped_count - 1),
-                           static_cast<double>(total_count),
-                           p0);
+    // The quantity tested is the number of reads clipped here *with the same tail*.
+    // Reads clipped for uninteresting reasons disagree with each other, so this both
+    // sharpens the test and keeps such positions from inflating the null.
+    uint32_t test_count = agree_count;
+
+    //// TIER 1: hard discard. These entries never enter the genome diff at all.
+
+    if ((_settings.soft_clipping_minimum_read_count > 0) &&
+        (test_count < _settings.soft_clipping_minimum_read_count)) continue;
+    if (test_count == 0) continue;
+
+    double p_value;
+    if (use_beta_binomial) {
+      p_value = beta_binomial_sf(static_cast<double>(test_count),
+                                 static_cast<double>(total_count),
+                                 alpha, beta);
+    } else {
+      p_value = bdtrc(static_cast<double>(test_count - 1),
+                      static_cast<double>(total_count),
+                      p0);
+    }
     double log10_p_value = (p_value > 0.0) ? log10(p_value) : -300.0;
     double score = -(log10_p_value + log10_n_tests);
 
-    if (score >= _settings.soft_clipping_log10_e_value_cutoff) {
-      cDiffEntry sc_entry(SC);
-      sc_entry[SEQ_ID]           = seq_id;
-      sc_entry[POSITION]         = to_string(position);
-      sc_entry[STRAND]           = to_string(direction);
-      sc_entry[SC_READ_COUNT]    = to_string(clipped_count);
-      sc_entry[SC_TOTAL_COUNT]   = to_string(total_count);
-      // Soft-clipping frequency = clipped reads / (clipped reads + spanning reads).
-      // total_count already equals clipped_count + spanning (read-through) reads.
-      double sc_frequency = static_cast<double>(clipped_count) / static_cast<double>(total_count);
-      sc_entry[FREQUENCY]        = formatted_double(sc_frequency, 4).to_string();
-      sc_entry[SC_LOG10_E_VALUE] = formatted_double(score, kMutationScorePrecision).to_string();
-      _gd.add(sc_entry);
+    // Expected to occur by chance somewhere in the genome: hopeless, and keeping these
+    // would swamp the marginal evidence table. Mirrors the early-out in
+    // test_RA_evidence_CONSENSUS_mode().
+    if (score < 0.0) continue;
+
+    sc_candidate c;
+    c.seq_id             = seq_id;
+    c.position           = position;
+    c.direction          = direction;
+    c.clipped_count      = clipped_count;
+    c.total_count        = total_count;
+    c.agree_count        = agree_count;
+    c.consensus_tail     = consensus_tail;
+    c.score              = score;
+    c.frequency          = static_cast<double>(test_count) / static_cast<double>(total_count);
+    c.consensus_fraction = static_cast<double>(agree_count) / static_cast<double>(clipped_count);
+    candidates.push_back(c);
+  }
+
+  /*
+   * Local non-maximum suppression.
+   *
+   * The exact base at which an aligner places a clip is ambiguous when the reference and the
+   * donor share sequence at the junction, so the reads supporting one breakpoint smear over
+   * several adjacent positions. Measured on ADP1: position 2151230 carries 290 clipped reads
+   * and its neighbor 2151231 carries 12 whose consensus tail (TCAATACTCCTT) is one of
+   * 2151230's donor groups (CTCAATACTCCT) shifted by a single base -- the same reads, clipped
+   * one over. 2151232/33/34 hold a further 2-3 reads each. Only the strongest position in such
+   * a run is a real event; the rest are shadows of it.
+   *
+   * Suppression is per (seq_id, direction). It must NOT reach across directions: a mobile
+   * element insertion produces a -1 and a +1 junction a target-site duplication apart (ADP1
+   * 288908/288909 one base apart, 2311060/2311061, 600249/600253), and both are genuine.
+   *
+   * The ranking key is the score, not the raw clipped count. At 2151229-31 the highest clipped
+   * count belongs to 2151230, whose reads carry seven different donors and which is already
+   * discarded above for having no consensus; ranking by clipped count would let it suppress
+   * the genuine call at 2151229 (71 reads, 93% consensus, score 150). Ranking by score keeps
+   * 2151229 and removes only the shadow at 2151231.
+   */
+  {
+    const int32_t window = static_cast<int32_t>(_settings.soft_clipping_minimum_bases);
+
+    // Sort by (seq_id, direction, position) so each run of nearby same-direction candidates
+    // is contiguous and the sweep below only has to look forward.
+    sort(candidates.begin(), candidates.end(), sc_candidate::by_seq_direction_position);
+
+    for (size_t i = 0; i < candidates.size(); i++) {
+      for (size_t j = i + 1; j < candidates.size(); j++) {
+        if (candidates[j].seq_id != candidates[i].seq_id) break;
+        if (candidates[j].direction != candidates[i].direction) break;
+        if (static_cast<int32_t>(candidates[j].position) -
+            static_cast<int32_t>(candidates[i].position) > window) break;
+
+        // Strictly better score wins; ties go to the lower position so the result does not
+        // depend on input order.
+        if (candidates[j].score > candidates[i].score) candidates[i].suppressed = true;
+        else                                           candidates[j].suppressed = true;
+      }
     }
+  }
+
+  for (vector<sc_candidate>::const_iterator it = candidates.begin(); it != candidates.end(); it++) {
+    const sc_candidate& c = *it;
+
+    cDiffEntry sc_entry(SC);
+    sc_entry[SEQ_ID]           = c.seq_id;
+    sc_entry[POSITION]         = to_string(c.position);
+    sc_entry[STRAND]           = to_string(c.direction);
+    sc_entry[SC_READ_COUNT]    = to_string(c.clipped_count);
+    sc_entry[SC_AGREE_COUNT]   = to_string(c.agree_count);
+    sc_entry[SC_TOTAL_COUNT]   = to_string(c.total_count);
+    // Frequency of the event actually tested: consensus-supporting clipped reads over
+    // all reads reaching the position (total_count = clipped + read-through).
+    sc_entry[FREQUENCY]        = formatted_double(c.frequency, 4).to_string();
+    sc_entry[SC_CONSENSUS_FRACTION] = formatted_double(c.consensus_fraction, 4).to_string();
+    if (c.consensus_tail != ".") sc_entry[SC_CONSENSUS_TAIL] = c.consensus_tail;
+    sc_entry[SC_LOG10_E_VALUE] = formatted_double(c.score, kMutationScorePrecision).to_string();
+
+    //// TIER 2: soft reject. The entry is kept and shown as marginal evidence.
+
+    if (c.suppressed) {
+      sc_entry.add_reject_reason("NEARBY_BETTER_SOFT_CLIPPING");
+    }
+    if ((_settings.soft_clipping_log10_e_value_cutoff > 0.0) &&
+        (c.score < _settings.soft_clipping_log10_e_value_cutoff)) {
+      sc_entry.add_reject_reason("SCORE_CUTOFF");
+    }
+    // Only a frequency that is too LOW is a reason to reject: an unusually high clipped
+    // fraction is the signal itself, not a problem. (Unlike RA, which rejects at both ends.)
+    if ((_settings.soft_clipping_frequency_cutoff > 0.0) &&
+        (c.frequency < _settings.soft_clipping_frequency_cutoff - _settings.polymorphism_precision_decimal)) {
+      sc_entry.add_reject_reason("FREQUENCY_BELOW_CUTOFF");
+    }
+    if ((_settings.soft_clipping_consensus_base_fraction > 0.0) &&
+        (_settings.soft_clipping_consensus_fraction_cutoff > 0.0) &&
+        (c.consensus_fraction < _settings.soft_clipping_consensus_fraction_cutoff - _settings.polymorphism_precision_decimal)) {
+      sc_entry.add_reject_reason("CLIPPED_TAIL_CONSENSUS");
+    }
+
+    _gd.add(sc_entry);
   }
 }
 

@@ -731,6 +731,18 @@ void mark_gd_entries_no_show(const Settings& settings, cGenomeDiff& gd)
   //jc_list.sort(cDiffEntry::descending_by_scores(make_vector<string>(FREQUENCY)));
   mark_gd_entries_in_list_no_show(jc_list, settings.max_rejected_junction_evidence_to_show);
 
+  /////
+  // SC evidence
+  //////
+
+  // show_list() filters no_show, so this also keeps the evidence-file generator from
+  // rendering a read-alignment page for every rejected soft-clipping position.
+  vector<gd_entry_type> sc_types = make_vector<gd_entry_type>(SC);
+  diff_entry_list_t sc_list = gd.filter_used_as_evidence(gd.get_list(sc_types));
+  sc_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
+  sc_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>(SC_LOG10_E_VALUE)));
+  mark_gd_entries_in_list_no_show(sc_list, settings.max_rejected_soft_clipping_evidence_to_show);
+
 }
 
 void html_marginal_predictions(const string& file_name, const Settings& settings,Summary& summary,
@@ -834,13 +846,27 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
   }
 
   /////////////////////////
+  // Marginal SC evidence
+  /////////////////////////
+
+  diff_entry_list_t sc_list = gd.filter_used_as_evidence(gd.get_list(make_vector<gd_entry_type>(SC)));
+  sc_list.remove_if(not1(cDiffEntry::field_exists(REJECT)));
+  sc_list.remove_if(cDiffEntry::field_exists(NO_SHOW));
+
+  string marginal_sc_title = "Marginal soft clipping evidence";
+  if (sc_list.size() > 0) {
+    sc_list.sort(cDiffEntry::descending_by_scores(make_vector<diff_entry_key_t>(SC_LOG10_E_VALUE)));
+    marginal_sc_title += " (sorted from high to low score)";
+  }
+
+  /////////////////////////
   // Sticky header: breseq nav + jump links
   /////////////////////////
 
   HTML << "<div class=\"breseq-page-header breseq-sticky-header\">" << endl;
   HTML << breseq_header_string(settings) << endl;
 
-  if (ra_list.size() > 0 || jc_list.size() > 0 || dp_list.size() > 0) {
+  if (ra_list.size() > 0 || jc_list.size() > 0 || dp_list.size() > 0 || sc_list.size() > 0) {
     bool first_link = true;
     vector<string> jump_link_list;
 
@@ -853,6 +879,9 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
     }
     if (dp_list.size() > 0) {
       jump_link_list.push_back("<a href=\"#discordant_pair_list\">discordant pair</a>");
+    }
+    if (sc_list.size() > 0) {
+      jump_link_list.push_back("<a href=\"#soft_clipping_list\">soft clipping</a>");
     }
     HTML << join(jump_link_list, ", ");
 
@@ -881,8 +910,15 @@ void html_marginal_predictions(const string& file_name, const Settings& settings
     HTML << html_discordant_pair_table_string(dp_list, settings, true, marginal_dp_title, relative_path);
   }
 
+  if (sc_list.size() > 0) {
+    HTML << "<p>" << endl;
+    // show_details = false: the reject reasons belong on the per-item evidence page,
+    // not inline in the summary table -- same as the marginal RA and JC tables.
+    HTML << html_soft_clipping_table_string(sc_list, false, marginal_sc_title, relative_path);
+  }
+
   // This code prints out a message if there was nothing in the previous tables
-  if (ra_list.size() + jc_list.size() + dp_list.size() == 0) {
+  if (ra_list.size() + jc_list.size() + dp_list.size() + sc_list.size() == 0) {
     HTML << "<p>No marginal predictions." << endl;
   }
 
@@ -2749,7 +2785,7 @@ string html_soft_clipping_table_string(diff_entry_list_t& list_ref, bool show_de
 
   ss << "<div id=\"soft_clipping_list\">" << endl;
   ss << start_table("border=\"0\" cellspacing=\"1\" cellpadding=\"3\"") << endl;
-  size_t total_cols = link ? 11 : 10;
+  size_t total_cols = link ? 13 : 12;
 
   ss << "<thead>" << endl;
   if (title != "") {
@@ -2762,9 +2798,11 @@ string html_soft_clipping_table_string(diff_entry_list_t& list_ref, bool show_de
   ss << th("position") << endl;
   ss << th("direction") << endl;
   ss << th("clipped") << endl;
+  ss << th("agree") << endl;
   ss << th("total") << endl;
   ss << th("freq") << endl;
   ss << th("score") << endl;
+  ss << th(nonbreaking("clipped seq")) << endl;
   ss << th("annotation") << endl;
   ss << th("gene") << endl;
   ss << th("width=\"100%\"", "product") << endl;
@@ -2788,9 +2826,16 @@ string html_soft_clipping_table_string(diff_entry_list_t& list_ref, bool show_de
     ss << td(ALIGN_CENTER, dir_str) << endl;
 
     ss << td(ALIGN_RIGHT, nonbreaking(c[SC_READ_COUNT])) << endl;
+    ss << td(ALIGN_RIGHT, nonbreaking(c.entry_exists(SC_AGREE_COUNT) ? c[SC_AGREE_COUNT] : "&nbsp;")) << endl;
     ss << td(ALIGN_RIGHT, nonbreaking(c[SC_TOTAL_COUNT])) << endl;
     ss << td(string(CLASS_FREQ) + " " + string(ALIGN_RIGHT), Html_Mutation_Table_String::freq_to_string(c[FREQUENCY])) << endl;
     ss << td(ALIGN_RIGHT, nonbreaking(c[SC_LOG10_E_VALUE])) << endl;
+    // The consensus of the clipped read tails: the sequence that would have continued
+    // the reference here. Always stored reference-forward regardless of clip direction.
+    if (c.entry_exists(SC_CONSENSUS_TAIL))
+      ss << td(ALIGN_LEFT, nonbreaking(c[SC_CONSENSUS_TAIL])) << endl;
+    else
+      ss << td("&nbsp;") << endl;
 
     ss << td(ALIGN_CENTER, html_formatted_mutation_annotation(c)); // "Annotation" column; do NOT call nonbreaking on the whole thing
 
@@ -2878,7 +2923,21 @@ string decode_reject_reason(const string& reject)
   {
     return "Polymorphic base substitution creates a homopolymer stretch.";
   }
-  
+  else if (reject == "FREQUENCY_BELOW_CUTOFF")
+  {
+    // Distinct from FREQUENCY_CUTOFF: soft-clipping is only ever rejected for being
+    // too infrequent. A high clipped fraction means something really was detected.
+    return "Frequency below cutoff threshold.";
+  }
+  else if (reject == "CLIPPED_TAIL_CONSENSUS")
+  {
+    return "Clipped read tails do not agree on a consensus sequence.";
+  }
+  else if (reject == "NEARBY_BETTER_SOFT_CLIPPING")
+  {
+    return "Stronger soft-clipping evidence in the same direction within a few bases; probably the same breakpoint.";
+  }
+
   return "Unknown rejection reason.";
 }
 // #
