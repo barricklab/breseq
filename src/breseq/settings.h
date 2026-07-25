@@ -406,7 +406,23 @@ namespace breseq
     bool     predict_soft_clipping;                       // Default = false     COMMAND-LINE OPTION
     uint32_t soft_clipping_minimum_bases;                 // Default = 12        COMMAND-LINE OPTION
     double   soft_clipping_log10_e_value_cutoff;          // Default = 3.0       COMMAND-LINE OPTION
-    
+
+    //! Soft-clipping null model. These are used when the per-position counts are
+    //! tabulated (error-count step), so changing any of them requires deleting
+    //! 07_error_calibration/error_counts.done to take effect.
+    double   soft_clipping_consensus_base_fraction;       // Default = 0.95      COMMAND-LINE OPTION  0 = OFF
+    double   soft_clipping_dispersion_trim_frequency;     // Default = 0.25      COMMAND-LINE OPTION  0 = OFF
+    double   soft_clipping_maximum_dispersion;            // Default = 0.005     COMMAND-LINE OPTION  0 = OFF
+    double   soft_clipping_minimum_rate;                  // Default = 1e-5      COMMAND-LINE OPTION  0 = OFF
+
+    //! Soft-clipping accept/reject cutoffs. These are applied when evidence is
+    //! tested (mutation-identification step), so they can be re-tuned by deleting
+    //! only 08_mutation_identification/mutation_identification.done.
+    uint32_t soft_clipping_minimum_read_count;            // Default = 3         COMMAND-LINE OPTION  0 = OFF
+    double   soft_clipping_frequency_cutoff;              // Default = 0.05      COMMAND-LINE OPTION  0 = OFF
+    double   soft_clipping_consensus_fraction_cutoff;     // Default = 0.5       COMMAND-LINE OPTION  0 = OFF
+
+
     //! These are mutually exclusive settings (polymorphism prediction overrides mixed_base_prediction)
     bool polymorphism_prediction;                         // Default = false COMMAND-LINE OPTION
     //! Predict not only consensus genotype calls, but test mixed states between them.
@@ -474,6 +490,7 @@ namespace breseq
     uint32_t max_nucleotides_to_show_in_tables;      // Default = 8
     uint32_t max_rejected_read_alignment_evidence_to_show;  // Default = 20
 		uint32_t max_rejected_junction_evidence_to_show;        // Default = 10
+    uint32_t max_rejected_soft_clipping_evidence_to_show;  // Default = 20
 		bool hide_circular_genome_junctions;                    // Default = true
     //! special output for Blount paper - not implemented in C++!
 		bool lenski_format;                                     // Default = false (not a public option!)

@@ -392,8 +392,21 @@ namespace breseq
     options.addUsage("Soft Clipping (SC) Evidence Options (HIGHLY EXPERIMENTAL)", NORMAL_OPTION);
     options
     ("predict-soft-clipping", "Predict soft clipping (SC) evidence: positions where reads are unexpectedly soft clipped at their ends, which may indicate unannotated structural variation. This evidence type is experimental and disabled by default.", TAKES_NO_ARGUMENT, NORMAL_OPTION)
-    ("soft-clipping-minimum-bases", "Minimum number of soft-clipped bases at a read end to count as a soft-clipping event", 12, NORMAL_OPTION)
-    ("soft-clipping-score-cutoff", "Log10 E-value cutoff for soft-clipping evidence (DEFAULT = 3)", 3.0, NORMAL_OPTION)
+    ("soft-clipping-minimum-bases", "Minimum number of soft-clipped bases at a read end to count as a soft-clipping event. This also sets how much aligned sequence a read must have on BOTH sides of a position to count against soft clipping there, so raising it well beyond the read length leaves no reads to compare against.", 12, NORMAL_OPTION)
+    ("soft-clipping-score-cutoff", "Log10 E-value cutoff for soft-clipping evidence (DEFAULT = 3). 0 = OFF.", 3.0, NORMAL_OPTION)
+    // NOTE: these are registered with an empty default and only read below when the
+    // user actually passed them, so the exact values set in pre_option_initialize()
+    // survive. Passing a numeric default here would route it through
+    // to_string(double), which formats with only ONE decimal place -- 0.75 would
+    // become "0.8" and 0.005 and 1e-5 would both become "0.0" (i.e. silently OFF).
+    // This is the same pattern --polymorphism-frequency-cutoff uses.
+    ("soft-clipping-consensus-base-fraction", "Fraction of clipped bases that must match for a clipped read to count as sharing the same clipped sequence as the others at its position. Multiplied by the number of bases compared and rounded DOWN, so the default of 0.95 allows one mismatch in 12 bases. Reads clipped for uninteresting reasons (adapter read-through, low-quality tails) differ from each other, while reads spanning a real breakpoint all carry the same donor sequence. (DEFAULT = 0.95). 0 = OFF, count every clipped read.", "", NORMAL_OPTION)
+    ("soft-clipping-dispersion-trim-frequency", "Positions where at least this fraction of reads are clipped are excluded from the estimate of the background clipping-rate dispersion, so that genuine breakpoints do not inflate the null they are tested against (DEFAULT = 0.25). 0 = OFF.", "", NORMAL_OPTION)
+    ("soft-clipping-maximum-dispersion", "Upper bound on the estimated dispersion (intra-class correlation) of the clipping rate. Caps how conservative the null can become on references too small to estimate it reliably (DEFAULT = 0.005). 0 = OFF, use a plain binomial null.", "", NORMAL_OPTION)
+    ("soft-clipping-minimum-rate", "Lower bound on the estimated background clipping rate, preventing an unusually clean library from making every clipped position significant (DEFAULT = 1e-5). 0 = OFF.", "", NORMAL_OPTION)
+    ("soft-clipping-minimum-read-count", "Minimum number of consensus-supporting clipped reads required for a position to be reported at all (DEFAULT = 3). 0 = OFF.", 3, NORMAL_OPTION)
+    ("soft-clipping-frequency-cutoff", "Minimum fraction of reads that must be clipped at a position for the evidence to be accepted rather than rejected. Defaults to the same frequency used for predicting mutations (DEFAULT = consensus mode, 0.2; polymorphism mode, 0.05). 0 = OFF.", "", NORMAL_OPTION)
+    ("soft-clipping-consensus-fraction-cutoff", "Minimum fraction of the clipped reads at a position that must agree on the consensus clipped sequence for the evidence to be accepted rather than rejected (DEFAULT = 0.5). 0 = OFF.", "", NORMAL_OPTION)
     ;
     
     options.addUsage("", NORMAL_OPTION);
@@ -633,6 +646,35 @@ namespace breseq
     this->predict_soft_clipping = options.count("predict-soft-clipping");
     this->soft_clipping_minimum_bases = from_string<uint32_t>(options["soft-clipping-minimum-bases"]);
     this->soft_clipping_log10_e_value_cutoff = from_string<double>(options["soft-clipping-score-cutoff"]);
+    ASSERT(this->soft_clipping_log10_e_value_cutoff >= 0, "Argument --soft-clipping-score-cutoff must be >= 0")
+
+    // Only override the pre_option_initialize() values when the user actually supplied
+    // the option -- see the note on the registrations above.
+    if (options.count("soft-clipping-consensus-base-fraction"))
+      this->soft_clipping_consensus_base_fraction = from_string<double>(options["soft-clipping-consensus-base-fraction"]);
+    ASSERT((this->soft_clipping_consensus_base_fraction >= 0) && (this->soft_clipping_consensus_base_fraction <= 1),
+           "Argument --soft-clipping-consensus-base-fraction must be in the range [0,1]")
+    if (options.count("soft-clipping-dispersion-trim-frequency"))
+      this->soft_clipping_dispersion_trim_frequency = from_string<double>(options["soft-clipping-dispersion-trim-frequency"]);
+    ASSERT((this->soft_clipping_dispersion_trim_frequency >= 0) && (this->soft_clipping_dispersion_trim_frequency <= 1),
+           "Argument --soft-clipping-dispersion-trim-frequency must be in the range [0,1]")
+    if (options.count("soft-clipping-maximum-dispersion"))
+      this->soft_clipping_maximum_dispersion = from_string<double>(options["soft-clipping-maximum-dispersion"]);
+    ASSERT((this->soft_clipping_maximum_dispersion >= 0) && (this->soft_clipping_maximum_dispersion < 1),
+           "Argument --soft-clipping-maximum-dispersion must be in the range [0,1)")
+    if (options.count("soft-clipping-minimum-rate"))
+      this->soft_clipping_minimum_rate = from_string<double>(options["soft-clipping-minimum-rate"]);
+    ASSERT((this->soft_clipping_minimum_rate >= 0) && (this->soft_clipping_minimum_rate < 1),
+           "Argument --soft-clipping-minimum-rate must be in the range [0,1)")
+
+    this->soft_clipping_minimum_read_count = from_string<uint32_t>(options["soft-clipping-minimum-read-count"]);
+    // NOTE: --soft-clipping-frequency-cutoff is applied further below, after the
+    // prediction-mode defaults, because those overwrite it. See the block next to
+    // --polymorphism-frequency-cutoff.
+    if (options.count("soft-clipping-consensus-fraction-cutoff"))
+      this->soft_clipping_consensus_fraction_cutoff = from_string<double>(options["soft-clipping-consensus-fraction-cutoff"]);
+    ASSERT((this->soft_clipping_consensus_fraction_cutoff >= 0) && (this->soft_clipping_consensus_fraction_cutoff <= 1),
+           "Argument --soft-clipping-consensus-fraction-cutoff must be in the range [0,1]")
 
     // Soft-clipping evidence needs partially-aligned reads to be kept so their clipped
     // ends are visible for tabulation, so loosen the match-fraction requirement when
@@ -714,6 +756,8 @@ namespace breseq
       
       this->polymorphism_log10_e_value_cutoff = 2;
       this->polymorphism_frequency_cutoff = 0.05;
+      // Soft-clipping uses the same frequency floor as mutation prediction.
+      this->soft_clipping_frequency_cutoff = 0.05;
       this->polymorphism_minimum_variant_coverage = 0;
       this->polymorphism_minimum_total_coverage = 0;
       this->polymorphism_minimum_variant_coverage_each_strand = 2;
@@ -748,6 +792,8 @@ namespace breseq
       
       this->polymorphism_log10_e_value_cutoff = 10;
       this->polymorphism_frequency_cutoff = 0.2;
+      // Soft-clipping uses the same frequency floor as mutation prediction.
+      this->soft_clipping_frequency_cutoff = 0.2;
       this->polymorphism_minimum_variant_coverage = 0;
       this->polymorphism_minimum_total_coverage = 0;
       this->polymorphism_minimum_variant_coverage_each_strand = 0;
@@ -799,7 +845,15 @@ namespace breseq
     
     if (options.count("polymorphism-frequency-cutoff"))
       this->polymorphism_frequency_cutoff = from_string<double>(options["polymorphism-frequency-cutoff"]);
-    
+
+    // Must come after the prediction-mode defaults above, which set this to track
+    // polymorphism_frequency_cutoff and would otherwise clobber an explicit value.
+    if (options.count("soft-clipping-frequency-cutoff"))
+      this->soft_clipping_frequency_cutoff = from_string<double>(options["soft-clipping-frequency-cutoff"]);
+    ASSERT((this->soft_clipping_frequency_cutoff >= 0) && (this->soft_clipping_frequency_cutoff <= 1),
+           "Argument --soft-clipping-frequency-cutoff must be in the range [0,1]")
+
+
     if (options.count("polymorphism-minimum-variant-coverage"))
       this->polymorphism_minimum_variant_coverage = from_string<uint32_t>(options["polymorphism-minimum-variant-coverage"]);
     if (options.count("polymorphism-minimum-total-coverage"))
@@ -1085,7 +1139,15 @@ namespace breseq
     this->predict_soft_clipping = false;
     this->soft_clipping_minimum_bases = 12;
     this->soft_clipping_log10_e_value_cutoff = 3.0;
-      
+    this->soft_clipping_consensus_base_fraction = 0.95;
+    this->soft_clipping_dispersion_trim_frequency = 0.25;
+    this->soft_clipping_maximum_dispersion = 0.005;
+    this->soft_clipping_minimum_rate = 1e-5;
+    this->soft_clipping_minimum_read_count = 3;
+    // Overwritten per prediction mode below to track polymorphism_frequency_cutoff.
+    this->soft_clipping_frequency_cutoff = 0.2;
+    this->soft_clipping_consensus_fraction_cutoff = 0.5;
+
     this->polymorphism_prediction = false;
     this->mixed_base_prediction = true;
     
@@ -1116,6 +1178,7 @@ namespace breseq
     this->max_nucleotides_to_show_in_tables = 20;
 		this->max_rejected_read_alignment_evidence_to_show = 20;
 		this->max_rejected_junction_evidence_to_show = 10;
+    this->max_rejected_soft_clipping_evidence_to_show = 20;
 		this->hide_circular_genome_junctions = true;
     
 		this->lenski_format = false;

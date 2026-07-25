@@ -41,6 +41,14 @@ static double get_double_or_default(const json& j, const char* key, double dflt 
   return it->get<double>();
 }
 
+// Same guard for integer fields added after a summary file may already exist.
+static uint64_t get_uint64_or_default(const json& j, const char* key, uint64_t dflt = 0)
+{
+  auto it = j.find(key);
+  if (it == j.end() || it->is_null()) return dflt;
+  return it->get<uint64_t>();
+}
+
 // ReadFileSummary
 void to_json(json& j, const ReadFileSummary& s)
 {
@@ -364,6 +372,13 @@ void to_json(json& j, const SoftClippingSummary& s)
     {"total_spanning_read_bases", s.total_spanning_read_bases},
     {"total_clipped_read_ends", s.total_clipped_read_ends},
     {"soft_clipping_rate", s.soft_clipping_rate},
+    {"total_agreeing_clipped_read_ends", s.total_agreeing_clipped_read_ends},
+    {"soft_clipping_null_rate", s.soft_clipping_null_rate},
+    {"soft_clipping_dispersion", s.soft_clipping_dispersion},
+    {"soft_clipping_pearson_phi", s.soft_clipping_pearson_phi},
+    {"soft_clipping_tested_positions", s.soft_clipping_tested_positions},
+    {"soft_clipping_trimmed_positions", s.soft_clipping_trimmed_positions},
+    {"soft_clipping_mean_tested_reads", s.soft_clipping_mean_tested_reads},
   };
 }
 
@@ -372,6 +387,14 @@ void from_json(const json& j, SoftClippingSummary& s)
   s.total_spanning_read_bases = j.at("total_spanning_read_bases").get<uint64_t>();
   s.total_clipped_read_ends = j.at("total_clipped_read_ends").get<uint64_t>();
   s.soft_clipping_rate = get_double_or_default(j, "soft_clipping_rate");
+  // Defaulted: a summary written before these fields existed must still load.
+  s.total_agreeing_clipped_read_ends = get_uint64_or_default(j, "total_agreeing_clipped_read_ends");
+  s.soft_clipping_null_rate = get_double_or_default(j, "soft_clipping_null_rate");
+  s.soft_clipping_dispersion = get_double_or_default(j, "soft_clipping_dispersion");
+  s.soft_clipping_pearson_phi = get_double_or_default(j, "soft_clipping_pearson_phi");
+  s.soft_clipping_tested_positions = get_uint64_or_default(j, "soft_clipping_tested_positions");
+  s.soft_clipping_trimmed_positions = get_uint64_or_default(j, "soft_clipping_trimmed_positions");
+  s.soft_clipping_mean_tested_reads = get_double_or_default(j, "soft_clipping_mean_tested_reads");
 }
 
 void to_json(json& j, const Summary& s)

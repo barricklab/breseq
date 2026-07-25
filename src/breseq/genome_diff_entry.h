@@ -159,6 +159,9 @@ namespace breseq {
   extern const char* SC_READ_COUNT;
   extern const char* SC_TOTAL_COUNT;
   extern const char* SC_LOG10_E_VALUE;
+  extern const char* SC_AGREE_COUNT;
+  extern const char* SC_CONSENSUS_FRACTION;
+  extern const char* SC_CONSENSUS_TAIL;
 
   //For CN
   extern const char* COPY_NUMBER;

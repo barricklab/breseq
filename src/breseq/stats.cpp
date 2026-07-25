@@ -2077,6 +2077,59 @@ namespace breseq {
     return lngamma(n + 1, &sign) - lngamma(k + 1, &sign) - lngamma(n - k + 1, &sign);
   }
 
+  // log(Beta(a,b)) = lgamma(a) + lgamma(b) - lgamma(a+b)
+  double lbeta(double a, double b)
+  {
+    double sign;
+    return lngamma(a, &sign) + lngamma(b, &sign) - lngamma(a + b, &sign);
+  }
+
+  double beta_binomial_pmf(double k, double n, double alpha, double beta)
+  {
+    if ((k < 0.0) || (k > n)) return 0.0;
+    return exp(log_choose(n, k) + lbeta(k + alpha, n - k + beta) - lbeta(alpha, beta));
+  }
+
+  /*
+   * Upper tail P(X >= k) for X ~ BetaBinomial(n, alpha, beta).
+   *
+   * Summed forward from k using the pmf recurrence
+   *   pmf(i+1)/pmf(i) = [(n-i)/(i+1)] * [(i+alpha)/(n-i-1+beta)]
+   * (the binomial-coefficient ratio times the Beta ratio), with a geometric
+   * remainder bound for early exit. Typically terminates in ~10 iterations
+   * rather than n, with relative error at the 1e-16 level.
+   *
+   * Do NOT reimplement this as 1 - sum_{i<k} pmf(i): that loses the entire
+   * result to cancellation once the tail drops below ~1e-16, which is precisely
+   * where a real breakpoint lives. Concretely, at alpha=0.0499, beta=498.95
+   * (p0=1e-4, rho=0.002), the true values and what 1-CDF returns instead are:
+   *     k=20,  n=50    8.56e-26   ->  -3.73e-13   (negative probability)
+   *     k=200, n=2000  8.27e-24   ->  -1.40e-12   (negative probability)
+   * The binomial equivalent (bdtrc) only avoids this because it routes through
+   * incbet; there is no such shortcut here.
+   */
+  double beta_binomial_sf(double k, double n, double alpha, double beta)
+  {
+    if (n <= 0.0) return 1.0;
+    if (k <= 0.0) return 1.0;
+    if (k > n) return 0.0;
+    ASSERT((alpha > 0.0) && (beta > 0.0), "Domain error in beta_binomial_sf: alpha and beta must be positive.");
+
+    double term = beta_binomial_pmf(k, n, alpha, beta);
+    if (!std::isfinite(term)) return 1.0;
+
+    double sum = term;
+    for (double i = k; i < n; ) {
+      double r = ((n - i) / (i + 1.0)) * ((i + alpha) / (n - i - 1.0 + beta));
+      term *= r;
+      i += 1.0;
+      sum += term;
+      if ((r < 1.0) && (term * r / (1.0 - r) < 1e-16 * sum)) break;
+    }
+
+    return (sum > 1.0) ? 1.0 : sum;
+  }
+
   /*
    * Two-sided Fisher's exact test p-value for a 2x2 contingency table.
    * Equivalent to R's fisher.test(matrix(c(a,c,b,d), nrow=2), alternative="two.sided")$p.value

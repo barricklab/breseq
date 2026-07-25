@@ -333,14 +333,34 @@ namespace breseq{
   class SoftClippingSummary : public JSONStorable<SoftClippingSummary>
   {
   public:
-    uint64_t total_spanning_read_bases;      // read-through opportunities: reads extending >= min_bases past a position (both directions)
+    uint64_t total_spanning_read_bases;      // read-through opportunities: reads spanning a position with
+                                             // >= min_bases aligned on BOTH sides, counted once per direction
     uint64_t total_clipped_read_ends;  // total soft-clip events; a read with both ends clipped counts twice
-    double   soft_clipping_rate;       // baseline clip probability per read reaching a position (p0)
+    double   soft_clipping_rate;       // raw clip rate: total_clipped_read_ends / total opportunities
+
+    // Null model actually used by the test, computed at tabulation time. The
+    // per-position counts file only lists positions with >= 1 clip event, so the
+    // zero-clip positions needed for these estimates are not recoverable later --
+    // they must be carried forward here.
+    uint64_t total_agreeing_clipped_read_ends;  // clip events whose tail matches the position consensus
+    double   soft_clipping_null_rate;           // p0 used (agreeing rate, after the minimum-rate floor)
+    double   soft_clipping_dispersion;          // rho used; 0 => plain binomial
+    double   soft_clipping_pearson_phi;         // diagnostic: Pearson chi2 / (N-1) over the fitted positions
+    uint64_t soft_clipping_tested_positions;    // N' -- (position, direction) pairs entering the fit
+    uint64_t soft_clipping_trimmed_positions;   // positions excluded from the fit by the trim
+    double   soft_clipping_mean_tested_reads;   // mean n over the fitted positions
 
     SoftClippingSummary()
     : total_spanning_read_bases(0)
     , total_clipped_read_ends(0)
     , soft_clipping_rate(0.0)
+    , total_agreeing_clipped_read_ends(0)
+    , soft_clipping_null_rate(0.0)
+    , soft_clipping_dispersion(0.0)
+    , soft_clipping_pearson_phi(0.0)
+    , soft_clipping_tested_positions(0)
+    , soft_clipping_trimmed_positions(0)
+    , soft_clipping_mean_tested_reads(0.0)
     {}
   };
 

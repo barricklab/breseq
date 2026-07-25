@@ -27,7 +27,20 @@ namespace breseq {
   double bdtrc(double k, double n, double p);
   double bdtr(double k, double n, double p);
   double bdtri(double k, double n, double y);
-  
+
+  // Beta-binomial: an over-dispersed binomial. Parametrized here through the
+  // Beta prior's (alpha, beta); for a mean p0 and intra-class correlation rho,
+  //   alpha = p0 * (1 - rho) / rho,  beta = (1 - p0) * (1 - rho) / rho
+  // which gives Var = n*p0*(1-p0)*[1 + (n-1)*rho], i.e. rho is exactly the
+  // variance-inflation-per-extra-trial. rho -> 0 recovers the plain binomial.
+  double lbeta(double a, double b);
+  double beta_binomial_pmf(double k, double n, double alpha, double beta);
+  // Upper tail P(X >= k). Summed directly rather than as 1 - CDF: the lower-tail
+  // subtraction cancels catastrophically for exactly the strong signals we care
+  // about. At alpha=0.0499, beta=498.95 (p0=1e-4, rho=0.002), k=20 of n=50 is
+  // 8.56e-26, but computing it as 1 - CDF yields -3.7e-13 -- a negative probability.
+  double beta_binomial_sf(double k, double n, double alpha, double beta);
+
   inline double combination (int32_t num, int32_t choose)
   {
     

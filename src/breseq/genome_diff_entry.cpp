@@ -140,6 +140,9 @@ namespace breseq {
   const char* SC_READ_COUNT = "read_count";
   const char* SC_TOTAL_COUNT = "total_count";
   const char* SC_LOG10_E_VALUE = "log10_e_value";
+  const char* SC_AGREE_COUNT = "agree_read_count";
+  const char* SC_CONSENSUS_FRACTION = "consensus_fraction";
+  const char* SC_CONSENSUS_TAIL = "clipped_sequence";
 
   //For CN
   const char* COPY_NUMBER = "copy_number";
