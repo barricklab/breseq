@@ -838,6 +838,12 @@ PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fi
   plot_clauses.push_back(double_quote(hist_table_file_name) + " using 1:2 with points pt 6 lc rgb 'black' title 'Distance distribution'");
   plot_clauses.push_back(double_quote(median_table_file_name) + " with lines lw 2 lc rgb 'black' title 'Median'");
   plot_clauses.push_back(double_quote(cutoff_table_file_name) + " with lines lw 2 lc rgb 'red' title 'Distance cutoff'");
+  // A "set object" rectangle never appears in the key, so name the grey band with an empty
+  // (all-NaN) series styled to match it. Plotting a dummy series works in every gnuplot version,
+  // unlike the "keyentry" keyword, which requires 5.4 or newer.
+  if (min_nonoverlapping_distance > 0) {
+    plot_clauses.push_back("NaN with boxes fc rgb 'grey90' fillstyle solid 1.0 border lc rgb 'grey50' title 'Overlapping pairs (< 2x read length)'");
+  }
   s << "plot " << join(plot_clauses, string(", \\\n     ")) << endl;
 
   string script_base_name = plot_file + "." + to_string(getpid());
