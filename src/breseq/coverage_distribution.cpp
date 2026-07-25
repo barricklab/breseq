@@ -653,12 +653,15 @@ static uint32_t weighted_median(const vector<double>& n, uint32_t N, double tota
  histogram (ignoring rows for other orientations), then draws a diagnostic plot.
  @param distribution_file_name Input CSV.
  @param plot_file Output plot file (SVG).
+ @param min_nonoverlapping_distance Smallest distance a non-overlapping read pair can span
+ (2 x the read length), shaded grey on the plot. Pass 0 to omit the band.
  @return PairedMappingDistanceDistributionFitResult The computed statistics.
  !*/
 PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fit(
                                          string distribution_file_name,
                                          string plot_file,
-                                         string histogram_file_name
+                                         string histogram_file_name,
+                                         uint32_t min_nonoverlapping_distance
                                          )
 {
   PairedMappingDistanceDistributionFitResult result;
@@ -764,8 +767,17 @@ PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fi
   uint32_t graph_end_i = (result.distance_cutoff > 0) ? static_cast<uint32_t>(ceil(2 * result.distance_cutoff)) : N;
   graph_end_i = min(graph_end_i, N);
 
+  // For a heavily overlapping library (read length above the cutoff) the grey band below would
+  // cover the entire width, so widen the window enough to leave some unshaded region visible.
+  if (min_nonoverlapping_distance > 0)
+    graph_end_i = min(N, max(graph_end_i, static_cast<uint32_t>(ceil(1.25 * min_nonoverlapping_distance))));
+
   double max_y = 0;
   for (uint32_t i = 0; i <= graph_end_i; i++) max_y = max(max_y, n[i]);
+
+  // Top of the y axis. The median/cutoff sidecar segments below are drawn all the way to this
+  // value so they meet the top border of the plot frame rather than stopping at the tallest bin.
+  double plot_max_y = max_y * 1.05;
 
   // The condensed CSV covers all orientations and isn't directly plot-ready (3 comma-separated
   // columns) -- write the majority-orientation histogram to its own small 2-column table so
@@ -782,14 +794,14 @@ PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fi
   }
 
   // The cutoff line has no on-disk representation -- write it to its own small table (a single
-  // vertical segment at x=distance_cutoff spanning y=0 to y=max_y) so gnuplot can plot it like
-  // any other series.
+  // vertical segment at x=distance_cutoff spanning the full height of the y axis, y=0 to
+  // y=plot_max_y) so gnuplot can plot it like any other series.
   string cutoff_table_file_name = distribution_file_name + ".cutoff.tab";
   {
     ofstream cutoff_out(cutoff_table_file_name.c_str());
     ASSERT(cutoff_out.is_open(), "Could not write to file: " + cutoff_table_file_name);
     cutoff_out << to_string(result.distance_cutoff, 6) << "\t0" << endl;
-    cutoff_out << to_string(result.distance_cutoff, 6) << "\t" << to_string(max_y, 6) << endl;
+    cutoff_out << to_string(result.distance_cutoff, 6) << "\t" << to_string(plot_max_y, 6) << endl;
     cutoff_out.close();
   }
 
@@ -799,7 +811,7 @@ PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fi
     ofstream median_out(median_table_file_name.c_str());
     ASSERT(median_out.is_open(), "Could not write to file: " + median_table_file_name);
     median_out << to_string(result.median, 6) << "\t0" << endl;
-    median_out << to_string(result.median, 6) << "\t" << to_string(max_y, 6) << endl;
+    median_out << to_string(result.median, 6) << "\t" << to_string(plot_max_y, 6) << endl;
     median_out.close();
   }
 
@@ -812,12 +824,15 @@ PairedMappingDistanceDistributionFitResult PairedMappingDistanceDistribution::fi
   s << "set xlabel 'Distance between outermost read coordinates (bp)'" << endl;
   s << "set ylabel 'Number of read pairs'" << endl;
   s << "set xrange [0:" << graph_end_i << "]" << endl;
-  s << "set yrange [0:" << to_string(max_y * 1.05, 6) << "]" << endl;
+  s << "set yrange [0:" << to_string(plot_max_y, 6) << "]" << endl;
   s << "set key top right font ',16' spacing 2" << endl;
 
-  // Light grey band spanning [median-MAD, median+MAD], full plot height, drawn behind the data.
-  s << "set object 1 rectangle from " << to_string(result.median - result.mad, 6) << ", graph 0 to "
-    << to_string(result.median + result.mad, 6) << ", graph 1 fc rgb 'grey90' fillstyle solid 1.0 noborder behind" << endl;
+  // Light grey band over distances below 2x the read length -- shorter than any pair of
+  // non-overlapping reads can span -- at full plot height, drawn behind the data.
+  if (min_nonoverlapping_distance > 0) {
+    s << "set object 1 rectangle from 0, graph 0 to " << min_nonoverlapping_distance
+      << ", graph 1 fc rgb 'grey90' fillstyle solid 1.0 noborder behind" << endl;
+  }
 
   vector<string> plot_clauses;
   plot_clauses.push_back(double_quote(hist_table_file_name) + " using 1:2 with points pt 6 lc rgb 'black' title 'Distance distribution'");
@@ -851,8 +866,23 @@ void PairedMappingDistanceDistribution::fit_paired_mapping_distance_distribution
   string plot_file_name = Settings::file_name(settings.paired_mapping_distance_plot_file_name, "#", read_file_set.m_base_name);
   string histogram_file_name = Settings::file_name(settings.paired_mapping_distance_histogram_file_name, "#", read_file_set.m_base_name);
 
+  // A pair whose two reads do not overlap spans at least the sum of the two read lengths, so
+  // shorter distances mean overlapping (or otherwise degenerate) pairs. Take the maximum read
+  // length over this set's own read files -- 2x that -- so the shaded band on the plot is right
+  // even when a run mixes read-file sets of different lengths.
+  uint32_t set_read_length_max = 0;
+  for (size_t i = 0; i < read_file_set.m_files.size(); i++) {
+    map<string, AnalyzeFastqSummary>::const_iterator it = summary.sequence_conversion.reads.find(read_file_set.m_files[i].base_name());
+    if (it != summary.sequence_conversion.reads.end())
+      set_read_length_max = max(set_read_length_max, it->second.read_length_max);
+  }
+  // Fall back to the run-wide maximum if the per-read-file entries are missing; if that is also
+  // unavailable, leave it at 0 so the band is simply omitted rather than covering the whole plot.
+  if ((set_read_length_max == 0) && (summary.sequence_conversion.read_length_max != UNDEFINED_UINT32))
+    set_read_length_max = summary.sequence_conversion.read_length_max;
+
   PairedMappingDistanceDistribution dist;
-  PairedMappingDistanceDistributionFitResult fit_result = dist.fit(distribution_file_name, plot_file_name, histogram_file_name);
+  PairedMappingDistanceDistributionFitResult fit_result = dist.fit(distribution_file_name, plot_file_name, histogram_file_name, 2 * set_read_length_max);
 
   // The pair_stats CSV is a transient intermediate: now that the plot is drawn and the stats are
   // extracted, mark it for deletion when this step completes (done_step honors keep-all-intermediates).

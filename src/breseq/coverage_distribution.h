@@ -138,10 +138,13 @@ namespace breseq {
     // determines the majority orientation by total observation count, computes the median,
     // MAD, and a modified-z-score outlier cutoff for the majority-orientation distance
     // histogram (ignoring rows for other orientations), and draws a diagnostic plot.
+    // min_nonoverlapping_distance is the smallest distance a pair of non-overlapping reads can
+    // span (2 x the read length); it is shaded grey on the plot. Pass 0 to omit the band.
     static PairedMappingDistanceDistributionFitResult fit(
                                                           string distribution_file_name,
                                                           string plot_file,
-                                                          string histogram_file_name = ""
+                                                          string histogram_file_name = "",
+                                                          uint32_t min_nonoverlapping_distance = 0
                                                           );
 
     // Fits and plots the paired-mapping distance distribution for one paired read file set,
