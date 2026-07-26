@@ -364,6 +364,77 @@ namespace breseq{
     {}
   };
 
+  // Everything that decided which discordant-pair (DP) junctions were kept: the library shape the
+  // tests are derived from, the cutoffs actually in force, the background fitted to this run, and the
+  // resulting tally. Reported so a user can see WHY a run predicted few or many DP items -- most of
+  // these are derived per run rather than fixed, so the command line alone does not tell you.
+  class DiscordantPairSummary : public JSONStorable<DiscordantPairSummary>
+  {
+  public:
+    // Library shape (the paired-mapping distance fit the DP tests are built on).
+    double   read_length_avg;
+    double   pair_distance_median;
+    double   pair_distance_mad;
+    double   pair_distance_cutoff;
+    string   pair_orientation;                  // FR or RF (FF/RR are unsupported)
+
+    // Concordant-pair crossing model: the null for the skew score, and its effect size.
+    string   crossing_reference_seq_id;
+    double   crossing_reference_coverage;
+    double   expected_concordant_crossing;      // uncensored mean crossing at the reference = lambda
+    bool     crossing_use_empirical;            // false => negative-binomial fallback
+    uint64_t crossing_normal_positions;         // N inside the censor window
+
+    // Cutoffs in force for this run.
+    double   frequency_cutoff;                  // tracks the prediction mode
+    double   skew_cutoff;
+    double   minimum_crossing;                  // power gate on the skew test; 0 = always apply
+    bool     skew_in_force;                     // expected_concordant_crossing cleared minimum_crossing
+    double   background_e_value_cutoff;
+    int32_t  minimum_pairs_option;              // the user's absolute floor
+    int32_t  minimum_pairs_used;                // the floor actually used (raised by the background fit)
+
+    // Spurious-pair background fitted to this run's edge-weight spectrum.
+    uint64_t candidate_junctions;               // region pairs sharing at least one read pair
+    double   background_mean;
+    double   background_size;                   // negative binomial size; 0 => Poisson
+
+    // Outcome.
+    uint64_t items_tested;                      // DP items emitted (weight >= minimum_pairs_used)
+    uint64_t items_dropped_unsupported;         // cleared the floor, but no pair bridged the placed sides
+    uint64_t items_accepted;
+    uint64_t items_rejected_frequency;
+    uint64_t items_rejected_skew;
+    uint64_t items_ignored_circular;
+
+    DiscordantPairSummary()
+    : read_length_avg(0.0)
+    , pair_distance_median(0.0)
+    , pair_distance_mad(0.0)
+    , pair_distance_cutoff(0.0)
+    , crossing_reference_coverage(0.0)
+    , expected_concordant_crossing(0.0)
+    , crossing_use_empirical(true)
+    , crossing_normal_positions(0)
+    , frequency_cutoff(0.0)
+    , skew_cutoff(0.0)
+    , minimum_crossing(0.0)
+    , skew_in_force(false)
+    , background_e_value_cutoff(0.0)
+    , minimum_pairs_option(0)
+    , minimum_pairs_used(0)
+    , candidate_junctions(0)
+    , background_mean(0.0)
+    , background_size(0.0)
+    , items_tested(0)
+    , items_dropped_unsupported(0)
+    , items_accepted(0)
+    , items_rejected_frequency(0)
+    , items_rejected_skew(0)
+    , items_ignored_circular(0)
+    {}
+  };
+
 	class Summary : public JSONStorable<Summary>
 	{
 	public:
@@ -375,6 +446,7 @@ namespace breseq{
     SequenceConversionSummary sequence_conversion;
     ErrorCountSummaries preprocess_error_count;
     SoftClippingSummary soft_clipping;
+    DiscordantPairSummary discordant_pair;
     // Stage-03 preprocessing fit (median/upper-MAD/cutoff/orientation + preprocessing-tabulated counts).
     PairedMappingDistanceDistributionSummaries preliminary_paired_mapping_distance_distribution;
     // Final pass: same fit fields, plus mapped/concordant counts from BAM pair-flag assignment.
@@ -442,6 +514,10 @@ namespace breseq{
   // SoftClippingSummary
   void to_json(json& j, const SoftClippingSummary& s);
   void from_json(const json& j, SoftClippingSummary& s);
+
+  // DiscordantPairSummary
+  void to_json(json& j, const DiscordantPairSummary& s);
+  void from_json(const json& j, DiscordantPairSummary& s);
 
   // Summary
   void to_json(json& j, const Summary& s);
@@ -675,6 +751,7 @@ namespace breseq{
     PublicReferencesSummary references;
     PublicOptionsSummary options;
     SoftClippingSummary soft_clipping;
+    DiscordantPairSummary discordant_pair;
     PairedMappingDistanceDistributionSummaries preliminary_paired_mapping_distance_distribution;
     PairedMappingDistanceDistributionSummaries paired_mapping_distance_distribution;
 

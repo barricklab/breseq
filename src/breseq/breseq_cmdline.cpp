@@ -2393,9 +2393,13 @@ int breseq_default_action(int argc, char* argv[])
     if (settings.do_step(settings.discordant_pair_done_file_name, "Examining discordant pairing evidence")) {
 
       predict_discordant_pairs(settings, summary, ref_seq_info);
+      summary.discordant_pair.store(settings.discordant_pair_summary_file_name);
 
       settings.done_step(settings.discordant_pair_done_file_name);
     }
+    // Restore on a restart that skipped the step above: Output reports these gates in summary.html
+    // and summary.json, and they are not recoverable from the evidence .gd alone.
+    summary.discordant_pair.retrieve(settings.discordant_pair_summary_file_name);
   }
 
     /*
