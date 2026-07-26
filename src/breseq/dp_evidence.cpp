@@ -780,7 +780,9 @@ namespace breseq {
     double P = dp_crossing_cdf(hist_ref, lo, hi, avgcov_X / C_ref, k, use_empirical, nb_size, nb_mu);
     if (std::isnan(P)) return P;
     double sc = (P > 0.0) ? (-log10(P)) : kDPMaxScore;
-    if (sc < 0.0) sc = 0.0;   // P==1 -> -log10 gives -0.0
+    // P==1 gives -log10 = -0.0, which compares EQUAL to 0.0 (so a "< 0.0" test misses it) but still
+    // prints with its sign as "-0.0". Use <= so the negative zero is normalized away.
+    if (sc <= 0.0) sc = 0.0;
     return (sc > kDPMaxScore) ? kDPMaxScore : sc;
   }
 
@@ -1386,6 +1388,20 @@ namespace breseq {
     return 100000;
   }
 
+  // Left margin, in base-font character widths, so the leftmost x tick label is not clipped.
+  //
+  // These plots carry no y-axis labels (read names sit on the RIGHT via y2tics), so gnuplot leaves the
+  // left axis almost no margin. But an x tick label is CENTERED on its tick and drawn at a larger font
+  // than the terminal's base font, so about half of the leftmost label hangs past the plot edge and is
+  // cut off by the canvas. Reserve half a label's width, converted from label-font to base-font
+  // character units (the average-character-width factor cancels in the ratio), plus a character of slack.
+  static int dp_lmargin_for_labels(size_t max_label_chars, double label_font, double base_font)
+  {
+    if (!(base_font > 0.0)) return 8;
+    double chars = ceil((static_cast<double>(max_label_chars) * label_font / 2.0) / base_font);
+    return static_cast<int>(chars) + 1;
+  }
+
   // Build a gnuplot explicit-tics list ("label" pos, ...) at multiples of `step` within [lo, hi],
   // with comma-formatted whole-number labels.
   static string dp_xtics_list(int64_t lo, int64_t hi, int64_t step)
@@ -1493,10 +1509,13 @@ namespace breseq {
     string tics = dp_xtics_list(xmin, xmax, step);
     s << "set xtics (" << tics << ") nomirror font ',16'" << endl;
     s << "set x2tics (" << tics << ") font ',16'" << endl;
+    // Keep the widest label (the extremes of the range) inside the canvas.
+    s << "set lmargin " << dp_lmargin_for_labels(max(dp_commafy(xmin).size(), dp_commafy(xmax).size()), 16.0, 11.0) << endl;
 
     // Read-pair names as lane labels down the right side. For a concordant pair (both mates drawn) the
     // label shows both read names; a discordant lane shows the single in-window read.
-    s << "unset ytics" << endl;
+    // Unlabeled tick marks at each read lane on the left axis; the names stay on the right only.
+    s << "set ytics 1 nomirror format ''" << endl;
     {
       ostringstream y2;
       for (int i = 0; i < n; i++) {
@@ -1632,9 +1651,19 @@ namespace breseq {
       int64_t step = dp_nice_tick(xmax - xmin);
       ostringstream tks;
       bool first = true;
+      // Longest single ROW of a label -- these labels are two-row (embedded "\n"), and only the wider
+      // row governs how far the centered label sticks out past the plot edge.
+      size_t widest_row = 0;
       auto emit = [&](int64_t x, const string& label) {
         if (!first) tks << ", "; first = false;
         tks << double_quote(label) << " " << x;
+        for (size_t b = 0; b <= label.size(); ) {
+          size_t e = label.find("\\n", b);
+          size_t len = (e == string::npos ? label.size() : e) - b;
+          if (len > widest_row) widest_row = len;
+          if (e == string::npos) break;
+          b = e + 2;
+        }
       };
       // Seam: side_1_position (upper) over side_2_position (lower).
       emit(0, dp_commafy(p1) + "\\n" + dp_commafy(p2));
@@ -1650,10 +1679,12 @@ namespace breseq {
       }
       s << "set xtics ("  << tks.str() << ") nomirror font ',16'" << endl;  // bottom axis
       s << "set x2tics (" << tks.str() << ") font ',16'" << endl;           // top axis (same two rows)
+      s << "set lmargin " << dp_lmargin_for_labels(widest_row, 16.0, 11.0) << endl;
     }
 
     // Read-pair names down the right side (both mates).
-    s << "unset ytics" << endl;
+    // Unlabeled tick marks at each read lane on the left axis; the names stay on the right only.
+    s << "set ytics 1 nomirror format ''" << endl;
     if (n) {
       ostringstream y2;
       for (int i = 0; i < n; i++) {
