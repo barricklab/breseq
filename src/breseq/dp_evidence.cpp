@@ -945,11 +945,21 @@ namespace breseq {
     bool have_insert = dp_load_insert_model(settings, summary, ref_seq_info, insert_model);
 
     // Passing split-read junction (JC) breakpoints, for snapping DP coordinates onto a validated
-    // junction when the pair evidence is consistent with it (see the snap block below). The snap
-    // window +/-(median - 2*read_length) is the neighborhood a DP edge can plausibly be off by.
+    // junction when the pair evidence is consistent with it (see the snap block below).
+    //
+    // The snap window is how far a pair-derived coordinate can plausibly sit from the true breakpoint.
+    // Placement puts it at the innermost supporting read's aligned edge, and the breakpoint lies
+    // somewhere in that fragment's unsequenced middle gap, so the error is bounded by the LARGEST such
+    // gap: distance_cutoff - 2*read_length. (It was previously median - 2*read_length, which is not a
+    // bound on anything and goes NEGATIVE whenever the paired-mapping distance distribution is shorter
+    // than two reads -- exactly the short-insert libraries at issue here. Every `abs(...) > snap_win`
+    // test then always fired, so neither the JC snap nor the circular-origin snap could ever run, and
+    // circular-origin artifacts were reported as ordinary DP junctions.) Widening this is safe: each
+    // snap is separately gated on the supporting pairs' inferred inserts favoring the candidate.
     vector<dp_jc_sides> passing_jcs;
     if (have_insert) dp_load_passing_jcs(settings.jc_genome_diff_file_name, passing_jcs);
-    int32_t snap_win = static_cast<int32_t>(pair_median - 2.0 * (summary.sequence_conversion.read_length_avg) + 0.5);
+    double read_len_avg = summary.sequence_conversion.read_length_avg;
+    int32_t snap_win = static_cast<int32_t>(max(read_len_avg, distance_cutoff - 2.0 * read_len_avg) + 0.5);
 
     //
     // Step 1: Re-read the candidate regions CSV.
